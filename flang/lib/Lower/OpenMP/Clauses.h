@@ -8,8 +8,6 @@
 #ifndef FORTRAN_LOWER_OPENMP_CLAUSES_H
 #define FORTRAN_LOWER_OPENMP_CLAUSES_H
 
-#include "ClauseT.h"
-
 #include "flang/Evaluate/expression.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
@@ -17,6 +15,7 @@
 #include "flang/Semantics/symbol.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Frontend/OpenMP/ClauseT.h"
 
 #include <optional>
 #include <type_traits>
@@ -28,19 +27,19 @@ using SomeType = evaluate::SomeType;
 using SomeExpr = semantics::SomeExpr;
 using MaybeExpr = semantics::MaybeExpr;
 
-using SymIdent = semantics::Symbol *;
-using SymReference = SomeExpr;
+using TypeTy = SomeType;
+using IdentTy = semantics::Symbol *;
+using ExprTy = SomeExpr;
 
 template <typename T>
 using List = tomp::ListT<T>;
 } // namespace Fortran::lower::omp
 
-namespace tomp {
+namespace tomp::type {
 template <>
-struct ObjectT<Fortran::lower::omp::SymIdent,
-               Fortran::lower::omp::SymReference> {
-  using IdType = Fortran::lower::omp::SymIdent;
-  using ExprType = Fortran::lower::omp::SymReference;
+struct ObjectT<Fortran::lower::omp::IdentTy, Fortran::lower::omp::ExprTy> {
+  using IdType = Fortran::lower::omp::IdentTy;
+  using ExprType = Fortran::lower::omp::ExprTy;
 
   const IdType &id() const { return symbol; }
   const std::optional<ExprType> &ref() const { return designator; }
@@ -48,12 +47,12 @@ struct ObjectT<Fortran::lower::omp::SymIdent,
   IdType symbol;
   std::optional<ExprType> designator;
 };
-} // namespace tomp
+} // namespace tomp::type
 
 namespace Fortran::lower::omp {
 
-using Object = tomp::ObjectT<SymIdent, SymReference>;
-using ObjectList = tomp::ObjectListT<SymIdent, SymReference>;
+using Object = tomp::ObjectT<IdentTy, ExprTy>;
+using ObjectList = tomp::ObjectListT<IdentTy, ExprTy>;
 
 Object makeObject(const parser::OmpObject &object,
                   semantics::SemanticsContext &semaCtx);
@@ -94,11 +93,14 @@ inline ObjectList makeList(const parser::OmpObjectList &objects,
   return makeList(objects.v, makeObjectF(semaCtx));
 }
 
-template <typename F, typename T, typename U = std::invoke_result_t<F, T>>
-std::optional<U> maybeApply(F &&func, const std::optional<T> &inp) {
-  if (!inp)
+template <typename FuncTy, //
+          typename ArgTy,  //
+          typename ResultTy = std::invoke_result_t<FuncTy, ArgTy>>
+std::optional<ResultTy> maybeApply(FuncTy &&func,
+                                   const std::optional<ArgTy> &arg) {
+  if (!arg)
     return std::nullopt;
-  return std::move(func(*inp));
+  return std::move(func(*arg));
 }
 
 std::optional<Object>
@@ -106,93 +108,130 @@ getBaseObject(const Object &object,
               Fortran::semantics::SemanticsContext &semaCtx);
 
 namespace clause {
-using DefinedOperator = tomp::clause::DefinedOperatorT<SymIdent, SymReference>;
-using ProcedureDesignator =
-    tomp::clause::ProcedureDesignatorT<SymIdent, SymReference>;
-using ReductionOperator =
-    tomp::clause::ReductionOperatorT<SymIdent, SymReference>;
+using DefinedOperator = tomp::type::DefinedOperatorT<IdentTy, ExprTy>;
+using ProcedureDesignator = tomp::type::ProcedureDesignatorT<IdentTy, ExprTy>;
+using ReductionOperator = tomp::type::ReductionIdentifierT<IdentTy, ExprTy>;
 
-#ifdef EMPTY_CLASS
-#undef EMPTY_CLASS
-#endif
-#define EMPTY_CLASS(cls)                                                       \
-  using cls = tomp::clause::cls##T<SymIdent, SymReference>
-
-#ifdef WRAPPER_CLASS
-#undef WRAPPER_CLASS
-#endif
-#define WRAPPER_CLASS(cls, content)                                            \
-  [[maybe_unused]] extern int xyzzy_semicolon_absorber
-#define GEN_FLANG_CLAUSE_PARSER_CLASSES
-#include "llvm/Frontend/OpenMP/OMP.inc"
-#undef EMPTY_CLASS
-#undef WRAPPER_CLASS
-
-using Aligned = tomp::clause::AlignedT<SymIdent, SymReference>;
-using Allocate = tomp::clause::AllocateT<SymIdent, SymReference>;
-using Allocator = tomp::clause::AllocatorT<SymIdent, SymReference>;
+using AcqRel = tomp::clause::AcqRelT<TypeTy, IdentTy, ExprTy>;
+using Acquire = tomp::clause::AcquireT<TypeTy, IdentTy, ExprTy>;
+using AdjustArgs = tomp::clause::AdjustArgsT<TypeTy, IdentTy, ExprTy>;
+using Affinity = tomp::clause::AffinityT<TypeTy, IdentTy, ExprTy>;
+using Aligned = tomp::clause::AlignedT<TypeTy, IdentTy, ExprTy>;
+using Align = tomp::clause::AlignT<TypeTy, IdentTy, ExprTy>;
+using Allocate = tomp::clause::AllocateT<TypeTy, IdentTy, ExprTy>;
+using Allocator = tomp::clause::AllocatorT<TypeTy, IdentTy, ExprTy>;
+using AppendArgs = tomp::clause::AppendArgsT<TypeTy, IdentTy, ExprTy>;
 using AtomicDefaultMemOrder =
-    tomp::clause::AtomicDefaultMemOrderT<SymIdent, SymReference>;
-using Collapse = tomp::clause::CollapseT<SymIdent, SymReference>;
-using Copyin = tomp::clause::CopyinT<SymIdent, SymReference>;
-using Copyprivate = tomp::clause::CopyprivateT<SymIdent, SymReference>;
-using Defaultmap = tomp::clause::DefaultmapT<SymIdent, SymReference>;
-using Default = tomp::clause::DefaultT<SymIdent, SymReference>;
-using Depend = tomp::clause::DependT<SymIdent, SymReference>;
-using Device = tomp::clause::DeviceT<SymIdent, SymReference>;
-using DeviceType = tomp::clause::DeviceTypeT<SymIdent, SymReference>;
-using DistSchedule = tomp::clause::DistScheduleT<SymIdent, SymReference>;
-using Enter = tomp::clause::EnterT<SymIdent, SymReference>;
-using Filter = tomp::clause::FilterT<SymIdent, SymReference>;
-using Final = tomp::clause::FinalT<SymIdent, SymReference>;
-using Firstprivate = tomp::clause::FirstprivateT<SymIdent, SymReference>;
-using From = tomp::clause::FromT<SymIdent, SymReference>;
-using Grainsize = tomp::clause::GrainsizeT<SymIdent, SymReference>;
-using HasDeviceAddr = tomp::clause::HasDeviceAddrT<SymIdent, SymReference>;
-using Hint = tomp::clause::HintT<SymIdent, SymReference>;
-using If = tomp::clause::IfT<SymIdent, SymReference>;
-using InReduction = tomp::clause::InReductionT<SymIdent, SymReference>;
-using IsDevicePtr = tomp::clause::IsDevicePtrT<SymIdent, SymReference>;
-using Lastprivate = tomp::clause::LastprivateT<SymIdent, SymReference>;
-using Linear = tomp::clause::LinearT<SymIdent, SymReference>;
-using Link = tomp::clause::LinkT<SymIdent, SymReference>;
-using Map = tomp::clause::MapT<SymIdent, SymReference>;
-using Nocontext = tomp::clause::NocontextT<SymIdent, SymReference>;
-using Nontemporal = tomp::clause::NontemporalT<SymIdent, SymReference>;
-using Novariants = tomp::clause::NovariantsT<SymIdent, SymReference>;
-using NumTasks = tomp::clause::NumTasksT<SymIdent, SymReference>;
-using NumTeams = tomp::clause::NumTeamsT<SymIdent, SymReference>;
-using NumThreads = tomp::clause::NumThreadsT<SymIdent, SymReference>;
+    tomp::clause::AtomicDefaultMemOrderT<TypeTy, IdentTy, ExprTy>;
+using At = tomp::clause::AtT<TypeTy, IdentTy, ExprTy>;
+using Bind = tomp::clause::BindT<TypeTy, IdentTy, ExprTy>;
+using CancellationConstructType =
+    tomp::clause::CancellationConstructTypeT<TypeTy, IdentTy, ExprTy>;
+using Capture = tomp::clause::CaptureT<TypeTy, IdentTy, ExprTy>;
+using Collapse = tomp::clause::CollapseT<TypeTy, IdentTy, ExprTy>;
+using Compare = tomp::clause::CompareT<TypeTy, IdentTy, ExprTy>;
+using Copyin = tomp::clause::CopyinT<TypeTy, IdentTy, ExprTy>;
+using Copyprivate = tomp::clause::CopyprivateT<TypeTy, IdentTy, ExprTy>;
+using Defaultmap = tomp::clause::DefaultmapT<TypeTy, IdentTy, ExprTy>;
+using Default = tomp::clause::DefaultT<TypeTy, IdentTy, ExprTy>;
+using Depend = tomp::clause::DependT<TypeTy, IdentTy, ExprTy>;
+using Depobj = tomp::clause::DepobjT<TypeTy, IdentTy, ExprTy>;
+using Destroy = tomp::clause::DestroyT<TypeTy, IdentTy, ExprTy>;
+using Detach = tomp::clause::DetachT<TypeTy, IdentTy, ExprTy>;
+using Device = tomp::clause::DeviceT<TypeTy, IdentTy, ExprTy>;
+using DeviceType = tomp::clause::DeviceTypeT<TypeTy, IdentTy, ExprTy>;
+using DistSchedule = tomp::clause::DistScheduleT<TypeTy, IdentTy, ExprTy>;
+using Doacross = tomp::clause::DoacrossT<TypeTy, IdentTy, ExprTy>;
+using DynamicAllocators =
+    tomp::clause::DynamicAllocatorsT<TypeTy, IdentTy, ExprTy>;
+using Enter = tomp::clause::EnterT<TypeTy, IdentTy, ExprTy>;
+using Exclusive = tomp::clause::ExclusiveT<TypeTy, IdentTy, ExprTy>;
+using Fail = tomp::clause::FailT<TypeTy, IdentTy, ExprTy>;
+using Filter = tomp::clause::FilterT<TypeTy, IdentTy, ExprTy>;
+using Final = tomp::clause::FinalT<TypeTy, IdentTy, ExprTy>;
+using Firstprivate = tomp::clause::FirstprivateT<TypeTy, IdentTy, ExprTy>;
+using Flush = tomp::clause::FlushT<TypeTy, IdentTy, ExprTy>;
+using From = tomp::clause::FromT<TypeTy, IdentTy, ExprTy>;
+using Full = tomp::clause::FullT<TypeTy, IdentTy, ExprTy>;
+using Grainsize = tomp::clause::GrainsizeT<TypeTy, IdentTy, ExprTy>;
+using HasDeviceAddr = tomp::clause::HasDeviceAddrT<TypeTy, IdentTy, ExprTy>;
+using Hint = tomp::clause::HintT<TypeTy, IdentTy, ExprTy>;
+using If = tomp::clause::IfT<TypeTy, IdentTy, ExprTy>;
+using Inbranch = tomp::clause::InbranchT<TypeTy, IdentTy, ExprTy>;
+using Inclusive = tomp::clause::InclusiveT<TypeTy, IdentTy, ExprTy>;
+using Indirect = tomp::clause::IndirectT<TypeTy, IdentTy, ExprTy>;
+using Init = tomp::clause::InitT<TypeTy, IdentTy, ExprTy>;
+using InReduction = tomp::clause::InReductionT<TypeTy, IdentTy, ExprTy>;
+using IsDevicePtr = tomp::clause::IsDevicePtrT<TypeTy, IdentTy, ExprTy>;
+using Lastprivate = tomp::clause::LastprivateT<TypeTy, IdentTy, ExprTy>;
+using Linear = tomp::clause::LinearT<TypeTy, IdentTy, ExprTy>;
+using Link = tomp::clause::LinkT<TypeTy, IdentTy, ExprTy>;
+using Map = tomp::clause::MapT<TypeTy, IdentTy, ExprTy>;
+using Match = tomp::clause::MatchT<TypeTy, IdentTy, ExprTy>;
+using MemoryOrder = tomp::clause::MemoryOrderT<TypeTy, IdentTy, ExprTy>;
+using Mergeable = tomp::clause::MergeableT<TypeTy, IdentTy, ExprTy>;
+using Message = tomp::clause::MessageT<TypeTy, IdentTy, ExprTy>;
+using Nocontext = tomp::clause::NocontextT<TypeTy, IdentTy, ExprTy>;
+using Nogroup = tomp::clause::NogroupT<TypeTy, IdentTy, ExprTy>;
+using Nontemporal = tomp::clause::NontemporalT<TypeTy, IdentTy, ExprTy>;
+using Notinbranch = tomp::clause::NotinbranchT<TypeTy, IdentTy, ExprTy>;
+using Novariants = tomp::clause::NovariantsT<TypeTy, IdentTy, ExprTy>;
+using Nowait = tomp::clause::NowaitT<TypeTy, IdentTy, ExprTy>;
+using NumTasks = tomp::clause::NumTasksT<TypeTy, IdentTy, ExprTy>;
+using NumTeams = tomp::clause::NumTeamsT<TypeTy, IdentTy, ExprTy>;
+using NumThreads = tomp::clause::NumThreadsT<TypeTy, IdentTy, ExprTy>;
+using OmpxAttribute = tomp::clause::OmpxAttributeT<TypeTy, IdentTy, ExprTy>;
+using OmpxBare = tomp::clause::OmpxBareT<TypeTy, IdentTy, ExprTy>;
 using OmpxDynCgroupMem =
-    tomp::clause::OmpxDynCgroupMemT<SymIdent, SymReference>;
-using Ordered = tomp::clause::OrderedT<SymIdent, SymReference>;
-using Order = tomp::clause::OrderT<SymIdent, SymReference>;
-using Partial = tomp::clause::PartialT<SymIdent, SymReference>;
-using Priority = tomp::clause::PriorityT<SymIdent, SymReference>;
-using Private = tomp::clause::PrivateT<SymIdent, SymReference>;
-using ProcBind = tomp::clause::ProcBindT<SymIdent, SymReference>;
-using Reduction = tomp::clause::ReductionT<SymIdent, SymReference>;
-using Safelen = tomp::clause::SafelenT<SymIdent, SymReference>;
-using Schedule = tomp::clause::ScheduleT<SymIdent, SymReference>;
-using Shared = tomp::clause::SharedT<SymIdent, SymReference>;
-using Simdlen = tomp::clause::SimdlenT<SymIdent, SymReference>;
-using Sizes = tomp::clause::SizesT<SymIdent, SymReference>;
-using TaskReduction = tomp::clause::TaskReductionT<SymIdent, SymReference>;
-using ThreadLimit = tomp::clause::ThreadLimitT<SymIdent, SymReference>;
-using To = tomp::clause::ToT<SymIdent, SymReference>;
-using Uniform = tomp::clause::UniformT<SymIdent, SymReference>;
-using UseDeviceAddr = tomp::clause::UseDeviceAddrT<SymIdent, SymReference>;
-using UseDevicePtr = tomp::clause::UseDevicePtrT<SymIdent, SymReference>;
+    tomp::clause::OmpxDynCgroupMemT<TypeTy, IdentTy, ExprTy>;
+using Ordered = tomp::clause::OrderedT<TypeTy, IdentTy, ExprTy>;
+using Order = tomp::clause::OrderT<TypeTy, IdentTy, ExprTy>;
+using Partial = tomp::clause::PartialT<TypeTy, IdentTy, ExprTy>;
+using Priority = tomp::clause::PriorityT<TypeTy, IdentTy, ExprTy>;
+using Private = tomp::clause::PrivateT<TypeTy, IdentTy, ExprTy>;
+using ProcBind = tomp::clause::ProcBindT<TypeTy, IdentTy, ExprTy>;
+using Read = tomp::clause::ReadT<TypeTy, IdentTy, ExprTy>;
+using Reduction = tomp::clause::ReductionT<TypeTy, IdentTy, ExprTy>;
+using Relaxed = tomp::clause::RelaxedT<TypeTy, IdentTy, ExprTy>;
+using Release = tomp::clause::ReleaseT<TypeTy, IdentTy, ExprTy>;
+using ReverseOffload = tomp::clause::ReverseOffloadT<TypeTy, IdentTy, ExprTy>;
+using Safelen = tomp::clause::SafelenT<TypeTy, IdentTy, ExprTy>;
+using Schedule = tomp::clause::ScheduleT<TypeTy, IdentTy, ExprTy>;
+using SeqCst = tomp::clause::SeqCstT<TypeTy, IdentTy, ExprTy>;
+using Severity = tomp::clause::SeverityT<TypeTy, IdentTy, ExprTy>;
+using Shared = tomp::clause::SharedT<TypeTy, IdentTy, ExprTy>;
+using Simdlen = tomp::clause::SimdlenT<TypeTy, IdentTy, ExprTy>;
+using Simd = tomp::clause::SimdT<TypeTy, IdentTy, ExprTy>;
+using Sizes = tomp::clause::SizesT<TypeTy, IdentTy, ExprTy>;
+using TaskReduction = tomp::clause::TaskReductionT<TypeTy, IdentTy, ExprTy>;
+using ThreadLimit = tomp::clause::ThreadLimitT<TypeTy, IdentTy, ExprTy>;
+using Threadprivate = tomp::clause::ThreadprivateT<TypeTy, IdentTy, ExprTy>;
+using Threads = tomp::clause::ThreadsT<TypeTy, IdentTy, ExprTy>;
+using To = tomp::clause::ToT<TypeTy, IdentTy, ExprTy>;
+using UnifiedAddress = tomp::clause::UnifiedAddressT<TypeTy, IdentTy, ExprTy>;
+using UnifiedSharedMemory =
+    tomp::clause::UnifiedSharedMemoryT<TypeTy, IdentTy, ExprTy>;
+using Uniform = tomp::clause::UniformT<TypeTy, IdentTy, ExprTy>;
+using Unknown = tomp::clause::UnknownT<TypeTy, IdentTy, ExprTy>;
+using Untied = tomp::clause::UntiedT<TypeTy, IdentTy, ExprTy>;
+using Update = tomp::clause::UpdateT<TypeTy, IdentTy, ExprTy>;
+using UseDeviceAddr = tomp::clause::UseDeviceAddrT<TypeTy, IdentTy, ExprTy>;
+using UseDevicePtr = tomp::clause::UseDevicePtrT<TypeTy, IdentTy, ExprTy>;
+using UsesAllocators = tomp::clause::UsesAllocatorsT<TypeTy, IdentTy, ExprTy>;
+using Use = tomp::clause::UseT<TypeTy, IdentTy, ExprTy>;
+using Weak = tomp::clause::WeakT<TypeTy, IdentTy, ExprTy>;
+using When = tomp::clause::WhenT<TypeTy, IdentTy, ExprTy>;
+using Write = tomp::clause::WriteT<TypeTy, IdentTy, ExprTy>;
 } // namespace clause
 
-struct Clause : public tomp::ClauseT<SymIdent, SymReference> {
+struct Clause : public tomp::ClauseT<TypeTy, IdentTy, ExprTy> {
   parser::CharBlock source;
 };
 
 template <typename Specific>
 Clause makeClause(llvm::omp::Clause id, Specific &&specific,
                   parser::CharBlock source = {}) {
-  return Clause{id, specific, source};
+  return Clause{{id, specific}, source};
 }
 
 Clause makeClause(const Fortran::parser::OmpClause &cls,

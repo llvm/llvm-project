@@ -70,6 +70,103 @@ static void genNestedEvaluations(Fortran::lower::AbstractConverter &converter,
     converter.genEval(e);
 }
 
+//===----------------------------------------------------------------------===//
+// Directive decomposition
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct CompositeInfo
+    : public tomp::CompositeInfoBase<TypeTy, IdentTy, ExprTy, CompositeInfo> {
+  CompositeInfo(const mlir::ModuleOp &modOp,
+                Fortran::semantics::SemanticsContext &semaCtx,
+                Fortran::lower::pft::Evaluation &ev,
+                llvm::omp::Directive compDir,
+                const Fortran::parser::OmpClauseList &clauseList)
+      : CompositeInfoBase<TypeTy, IdentTy, ExprTy, CompositeInfo>(
+            getOpenMPVersion(modOp), compDir, *this),
+        semaCtx(semaCtx), mod(modOp), eval(ev) {
+    // Convert each parser::OmpClause to our representation, append to list
+    for (auto &parserClause : clauseList.v) {
+      clauses.push_back(Fortran::lower::omp::makeClause(parserClause, semaCtx));
+      add(&clauses.back()); // Tell the base class about the clause.
+    }
+  }
+
+  // Produce a clause with empty source from the bare clause provided.
+  Clause *makeClause(tomp::ClauseT<TypeTy, IdentTy, ExprTy> &&specific) {
+    clauses.push_back(Clause{{std::move(specific)}, {}});
+    return &clauses.back();
+  }
+
+  // Given an object, return its base object if one exists.
+  std::optional<Object> getBaseObject(const Object &object) {
+    return Fortran::lower::omp::getBaseObject(object, semaCtx);
+  }
+
+  // Return the iteration variable of the associated loop if any.
+  std::optional<Object> getIterVar() {
+    Fortran::semantics::Symbol *symbol = getIterationVariableSymbol(eval);
+    if (symbol)
+      return Object{symbol, /*designator=*/{}};
+    return std::nullopt;
+  }
+
+  Fortran::semantics::SemanticsContext &semaCtx;
+  const mlir::ModuleOp &mod;
+  Fortran::lower::pft::Evaluation &eval;
+  // Beware of invalidating clause addresses: use std::list.
+  std::list<Clause> clauses;
+};
+} // namespace
+
+#if 0
+[[maybe_unused]] static llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os, const DirectiveInfo &dirInfo) {
+  os << llvm::omp::getOpenMPDirectiveName(dirInfo.id);
+  for (auto [index, clause] : llvm::enumerate(dirInfo.clauses)) {
+    os << (index == 0 ? '\t' : ' ');
+    os << llvm::omp::getOpenMPClauseName(clause->id);
+  }
+  return os;
+}
+
+// XXX
+[[maybe_unused]] static llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os, const CompositeInfo &compInfo) {
+  for (const auto &[index, dirInfo] : llvm::enumerate(compInfo.leafs))
+    os << "leaf[" << index << "]: " << dirInfo << '\n';
+
+  os << "syms:\n";
+  for (const auto &[sym, clauses] : compInfo.syms) {
+    os << *sym << " -> {";
+    for (const auto *clause : clauses)
+      os << ' ' << llvm::omp::getOpenMPClauseName(clause->id);
+    os << " }\n";
+  }
+  os << "mapBases: {";
+  for (const auto &sym : compInfo.mapBases)
+    os << ' ' << *sym;
+  os << " }\n";
+  return os;
+}
+#endif
+
+static void splitCompositeConstruct(
+    const mlir::ModuleOp &modOp, Fortran::semantics::SemanticsContext &semaCtx,
+    Fortran::lower::pft::Evaluation &eval, llvm::omp::Directive compDir,
+    const Fortran::parser::OmpClauseList &clauseList) {
+  llvm::errs() << "composite name:"
+               << llvm::omp::getOpenMPDirectiveName(compDir) << '\n';
+
+  CompositeInfo compInfo(modOp, semaCtx, eval, compDir, clauseList);
+
+  bool success = compInfo.split();
+  llvm::errs() << "success:" << success << '\n';
+
+  for (auto &s : compInfo.leafs)
+    llvm::errs() << s << '\n';
+}
+
 static fir::GlobalOp globalInitialization(
     Fortran::lower::AbstractConverter &converter,
     fir::FirOpBuilder &firOpBuilder, const Fortran::semantics::Symbol &sym,
@@ -572,7 +669,7 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> reductionSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::Parallel, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_parallel, ifClauseOperand);
   cp.processNumThreads(stmtCtx, numThreadsClauseOperand);
   cp.processProcBind(procBindKindAttr);
   cp.processDefault();
@@ -675,7 +772,7 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
       dependOperands;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::Task, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_task, ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processDefault();
   cp.processFinal(stmtCtx, finalClauseOperand);
@@ -734,7 +831,7 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::TargetData, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_target_data, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processUseDevicePtr(devicePtrOperands, useDeviceTypes, useDeviceLocs,
                          useDeviceSymbols);
@@ -765,23 +862,19 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> mapOperands, dependOperands;
   llvm::SmallVector<mlir::Attribute> dependTypeOperands;
 
-  clause::If::DirectiveNameModifier directiveName;
   llvm::omp::Directive directive;
   if constexpr (std::is_same_v<OpTy, mlir::omp::EnterDataOp>) {
-    directiveName = clause::If::DirectiveNameModifier::TargetEnterData;
     directive = llvm::omp::Directive::OMPD_target_enter_data;
   } else if constexpr (std::is_same_v<OpTy, mlir::omp::ExitDataOp>) {
-    directiveName = clause::If::DirectiveNameModifier::TargetExitData;
     directive = llvm::omp::Directive::OMPD_target_exit_data;
   } else if constexpr (std::is_same_v<OpTy, mlir::omp::UpdateDataOp>) {
-    directiveName = clause::If::DirectiveNameModifier::TargetUpdate;
     directive = llvm::omp::Directive::OMPD_target_update;
   } else {
     return nullptr;
   }
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(directiveName, ifClauseOperand);
+  cp.processIf(directive, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processDepend(dependTypeOperands, dependOperands);
   cp.processNowait(nowaitAttr);
@@ -973,7 +1066,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> mapSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::Target, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_target, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processThreadLimit(stmtCtx, threadLimitOperand);
   cp.processDepend(dependTypeOperands, dependOperands);
@@ -983,9 +1076,8 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
 
   cp.processTODO<clause::Private, clause::Firstprivate, clause::IsDevicePtr,
                  clause::HasDeviceAddr, clause::Reduction, clause::InReduction,
-                 clause::Allocate, clause::UsesAllocators,
-                 clause::Defaultmap>(currentLocation,
-                                     llvm::omp::Directive::OMPD_target);
+                 clause::Allocate, clause::UsesAllocators, clause::Defaultmap>(
+      currentLocation, llvm::omp::Directive::OMPD_target);
 
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the
@@ -1086,7 +1178,7 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::Teams, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_teams, ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processDefault();
   cp.processNumTeams(stmtCtx, numTeamsClauseOperand);
@@ -1401,7 +1493,7 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
                      loopVarTypeSize);
   cp.processScheduleChunk(stmtCtx, scheduleChunkClauseOperand);
   cp.processReduction(loc, reductionVars, reductionDeclSymbols);
-  cp.processIf(clause::If::DirectiveNameModifier::Simd, ifClauseOperand);
+  cp.processIf(llvm::omp::Directive::OMPD_simd, ifClauseOperand);
   cp.processSimdlen(simdlenClauseOperand);
   cp.processSafelen(safelenClauseOperand);
   cp.processTODO<clause::Aligned, clause::Allocate, clause::Linear,
@@ -1551,6 +1643,10 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                    const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
   const auto &beginLoopDirective =
       std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t);
+  // Test call
+  splitCompositeConstruct(converter.getFirOpBuilder().getModule(), semaCtx,
+                          eval, std::get<0>(beginLoopDirective.t).v,
+                          std::get<1>(beginLoopDirective.t));
   const auto &loopOpClauseList =
       std::get<Fortran::parser::OmpClauseList>(beginLoopDirective.t);
   mlir::Location currentLocation =
