@@ -93,15 +93,13 @@ uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_num_vtable(const VTableProfData *Begin,
                                        const VTableProfData *End) {
-  // Convert pointers to intptr_t to use integer arithmetic.
-  intptr_t EndI = (intptr_t)End, BeginI = (intptr_t)Begin;
-  return (EndI - BeginI) / sizeof(VTableProfData);
+  return End - Begin;
 }
 
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_vtable_section_size(const VTableProfData *Begin,
                                                 const VTableProfData *End) {
-  return __llvm_profile_get_num_vtable(Begin, End) * sizeof(VTableProfData);
+  return (intptr_t)(End) - (intptr_t)(Begin);
 }
 
 COMPILER_RT_VISIBILITY size_t __llvm_profile_counter_entry_size(void) {
