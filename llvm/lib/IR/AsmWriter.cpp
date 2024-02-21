@@ -1139,6 +1139,7 @@ void SlotTracker::processFunctionMetadata(const Function &F) {
 }
 
 void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
+  CreateMetadataSlot(DR.getDebugLoc());
   if (const DPValue *DPV = dyn_cast<const DPValue>(&DR)) {
     CreateMetadataSlot(DPV->getVariable());
     CreateMetadataSlot(DPV->getDebugLoc());
