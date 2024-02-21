@@ -674,7 +674,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           !(dummyIsAssumedShape || dummyIsAssumedRank ||
               (actualIsPointer && dummyIsPointer))) { // C1539 & C1540
         messages.Say(
-            "ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous %s"_err_en_US,
+            "ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE %s"_err_en_US,
             dummyName);
       }
     }

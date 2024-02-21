@@ -25,6 +25,7 @@ using namespace Fortran::parser::literals;
 namespace Fortran::evaluate::characteristics {
 
 // Copy attributes from a symbol to dst based on the mapping in pairs.
+// An ASYNCHRONOUS attribute counts even if it is implied.
 template <typename A, typename B>
 static void CopyAttrs(const semantics::Symbol &src, A &dst,
     const std::initializer_list<std::pair<semantics::Attr, B>> &pairs) {

@@ -551,7 +551,9 @@ struct ExecutionPartConstruct {
 };
 
 // R509 execution-part -> executable-construct [execution-part-construct]...
-WRAPPER_CLASS(ExecutionPart, std::list<ExecutionPartConstruct>);
+// R1101 block -> [execution-part-construct]...
+using Block = std::list<ExecutionPartConstruct>;
+WRAPPER_CLASS(ExecutionPart, Block);
 
 // R502 program-unit ->
 //        main-program | external-subprogram | module | submodule | block-data
@@ -2114,9 +2116,6 @@ struct ForallConstruct {
       Statement<EndForallStmt>>
       t;
 };
-
-// R1101 block -> [execution-part-construct]...
-using Block = std::list<ExecutionPartConstruct>;
 
 // R1105 selector -> expr | variable
 struct Selector {
