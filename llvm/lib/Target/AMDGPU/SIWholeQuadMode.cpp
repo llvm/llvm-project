@@ -484,6 +484,10 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
   bool HasImplicitDerivatives =
       MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS;
 
+  // Force soft WQM to be full WQM if requested.
+  if (MF.getFunction().hasFnAttribute("amdgpu-requires-wqm"))
+    GlobalFlags |= StateWQM;
+
   // We need to visit the basic blocks in reverse post-order so that we visit
   // defs before uses, in particular so that we don't accidentally mark an
   // instruction as needing e.g. WQM before visiting it and realizing it needs

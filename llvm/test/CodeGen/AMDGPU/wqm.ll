@@ -3312,6 +3312,71 @@ main_body:
   ret void
 }
 
+; Check WQM is enabled for softwqm when "amdgpu-requires-wqm" is set
+define amdgpu_ps void @test_requires_wqm_softwqm(float %x, float %y) #8 {
+; GFX9-W64-LABEL: test_requires_wqm_softwqm:
+; GFX9-W64:       ; %bb.0: ; %entry
+; GFX9-W64-NEXT:    s_mov_b64 s[0:1], exec
+; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
+; GFX9-W64-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-W64-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
+; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[0:1]
+; GFX9-W64-NEXT:    v_mov_b32_e32 v1, 1.0
+; GFX9-W64-NEXT:    exp mrt0 v0, v1, v1, v1 done vm
+; GFX9-W64-NEXT:    s_endpgm
+;
+; GFX10-W32-LABEL: test_requires_wqm_softwqm:
+; GFX10-W32:       ; %bb.0: ; %entry
+; GFX10-W32-NEXT:    s_mov_b32 s0, exec_lo
+; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX10-W32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
+; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s0
+; GFX10-W32-NEXT:    v_mov_b32_e32 v1, 1.0
+; GFX10-W32-NEXT:    exp mrt0 v0, v1, v1, v1 done vm
+; GFX10-W32-NEXT:    s_endpgm
+entry:
+  %val = fadd float %x, %y
+  %wqm.val = call float @llvm.amdgcn.softwqm.f32(float %val)
+  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 15, float %wqm.val, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, i1 immarg true, i1 immarg true) #11
+  ret void
+}
+
+; Check WQM is enabled for set.inactive when "amdgpu-requires-wqm" is set
+define amdgpu_ps void @test_requires_wqm_set_inactive(float %val) #8 {
+; GFX9-W64-LABEL: test_requires_wqm_set_inactive:
+; GFX9-W64:       ; %bb.0: ; %entry
+; GFX9-W64-NEXT:    s_mov_b64 s[0:1], exec
+; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
+; GFX9-W64-NEXT:    v_mov_b32_e32 v1, v0
+; GFX9-W64-NEXT:    s_not_b64 exec, exec
+; GFX9-W64-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-W64-NEXT:    s_not_b64 exec, exec
+; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[0:1]
+; GFX9-W64-NEXT:    v_mov_b32_e32 v0, 1.0
+; GFX9-W64-NEXT:    exp mrt0 v1, v0, v0, v0 done vm
+; GFX9-W64-NEXT:    s_endpgm
+;
+; GFX10-W32-LABEL: test_requires_wqm_set_inactive:
+; GFX10-W32:       ; %bb.0: ; %entry
+; GFX10-W32-NEXT:    s_mov_b32 s0, exec_lo
+; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX10-W32-NEXT:    v_mov_b32_e32 v1, v0
+; GFX10-W32-NEXT:    s_not_b32 exec_lo, exec_lo
+; GFX10-W32-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-W32-NEXT:    s_not_b32 exec_lo, exec_lo
+; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s0
+; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 1.0
+; GFX10-W32-NEXT:    exp mrt0 v1, v0, v0, v0 done vm
+; GFX10-W32-NEXT:    s_endpgm
+entry:
+  %val.0 = bitcast float %val to i32
+  %val.1 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %val.0, i32 0)
+  %wqm.val = bitcast i32 %val.1 to float
+  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 15, float %wqm.val, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, i1 immarg true, i1 immarg true) #11
+  ret void
+}
+
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
 declare void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float>, i32, i32, <8 x i32>, i32, i32) #1
 
@@ -3351,6 +3416,7 @@ declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #2
 declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #2
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32)
 declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32 immarg) #7
+declare float @llvm.amdgcn.softwqm.f32(float) #3
 
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readonly }
@@ -3359,3 +3425,4 @@ attributes #4 = { nounwind readnone convergent }
 attributes #5 = { "amdgpu-ps-wqm-outputs" }
 attributes #6 = { nounwind "InitialPSInputAddr"="2" }
 attributes #7 = { nounwind readnone willreturn }
+attributes #8 = { "amdgpu-requires-wqm" }
