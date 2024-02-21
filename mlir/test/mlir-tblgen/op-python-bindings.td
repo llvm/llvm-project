@@ -123,7 +123,7 @@ def AttributedOp : TestOp<"attributed_op"> {
   // CHECK:   attributes = {}
   // CHECK:   regions = None
   // CHECK:   attributes["i32attr"] = (i32attr if (
-  // CHECK-NEXT:   issubclass(type(i32attr), _ods_ir.Attribute) or
+  // CHECK-NEXT:   isinstance(i32attr, _ods_ir.Attribute) or
   // CHECK-NEXT:   not _ods_ir.AttrBuilder.contains('I32Attr')
   // CHECK-NEXT:   _ods_ir.AttrBuilder.get('I32Attr')(i32attr, context=_ods_context)
   // CHECK:   if optionalF32Attr is not None: attributes["optionalF32Attr"] = (optionalF32Attr

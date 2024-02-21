@@ -534,7 +534,7 @@ constexpr const char *multiResultAppendTemplate = "results.extend({0})";
 /// there is no method registered to make it an Attribute.
 constexpr const char *initAttributeWithBuilderTemplate =
     R"Py(attributes["{1}"] = ({0} if (
-    issubclass(type({0}), _ods_ir.Attribute) or
+    isinstance({0}, _ods_ir.Attribute) or
     not _ods_ir.AttrBuilder.contains('{2}')) else
       _ods_ir.AttrBuilder.get('{2}')({0}, context=_ods_context)))Py";
 
@@ -547,7 +547,7 @@ constexpr const char *initAttributeWithBuilderTemplate =
 /// there is no method registered to make it an Attribute.
 constexpr const char *initOptionalAttributeWithBuilderTemplate =
     R"Py(if {0} is not None: attributes["{1}"] = ({0} if (
-        issubclass(type({0}), _ods_ir.Attribute) or
+        isinstance({0}, _ods_ir.Attribute) or
         not _ods_ir.AttrBuilder.contains('{2}')) else
           _ods_ir.AttrBuilder.get('{2}')({0}, context=_ods_context)))Py";
 
