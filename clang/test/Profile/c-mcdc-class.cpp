@@ -36,23 +36,23 @@ Value::~Value(void) {
 // SHIFT FIRST CONDITION WITH ID = 0.
 // MCDCCTOR:  %[[LAB1:[0-9]+]] = load i32, ptr %value, align 4
 // MCDCCTOR-DAG:  %[[BOOL:cmp[0-9]*]] = icmp ne i32 %[[LAB1]], 2
-// MCDCCTOR-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
-// MCDCCTOR-DAG:  %[[LAB2:[0-9]+]] = zext i1 %[[BOOL]] to i32
-// MCDCCTOR-DAG:  %[[LAB3:[0-9]+]] = shl i32 %[[LAB2]], 0
-// MCDCCTOR-DAG:  %[[LAB4:[0-9]+]] = or i32 %[[TEMP]], %[[LAB3]]
+// MCDCCTOR-DAG:  %[[TEMP:mcdc.*]] = load i32, ptr %mcdc.addr, align 4
+// MCDCCTOR-DAG:  %[[LAB2:[0-9]+]] = add i32 %[[TEMP]], 0
+// MCDCCTOR-DAG:  %[[LAB3:[0-9]+]] = add i32 %[[TEMP]], 0
+// MCDCCTOR-DAG:  %[[LAB4:[0-9]+]] = select i1 %[[BOOL]], i32 %[[LAB2]], i32 %[[LAB3]]
 // MCDCCTOR-DAG:  store i32 %[[LAB4]], ptr %mcdc.addr, align 4
 
 // SHIFT SECOND CONDITION WITH ID = 1.
 // MCDCCTOR:  %[[LAB1:[0-9]+]] = load i32, ptr %value2, align 4
 // MCDCCTOR-DAG:  %[[BOOL:cmp[0-9]*]] = icmp ne i32 %[[LAB1]], 6
-// MCDCCTOR-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
-// MCDCCTOR-DAG:  %[[LAB2:[0-9]+]] = zext i1 %[[BOOL]] to i32
-// MCDCCTOR-DAG:  %[[LAB3:[0-9]+]] = shl i32 %[[LAB2]], 1
-// MCDCCTOR-DAG:  %[[LAB4:[0-9]+]] = or i32 %[[TEMP]], %[[LAB3]]
+// MCDCCTOR-DAG:  %[[TEMP:mcdc.*]] = load i32, ptr %mcdc.addr, align 4
+// MCDCCTOR-DAG:  %[[LAB2:[0-9]+]] = add i32 %[[TEMP]], 2
+// MCDCCTOR-DAG:  %[[LAB3:[0-9]+]] = add i32 %[[TEMP]], 1
+// MCDCCTOR-DAG:  %[[LAB4:[0-9]+]] = select i1 %[[BOOL]], i32 %[[LAB2]], i32 %[[LAB3]]
 // MCDCCTOR-DAG:  store i32 %[[LAB4]], ptr %mcdc.addr, align 4
 
 // UPDATE FINAL BITMASK WITH RESULT.
-// MCDCCTOR-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
+// MCDCCTOR-DAG:  %[[TEMP:mcdc.*]] = load i32, ptr %mcdc.addr, align 4
 // MCDCCTOR:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
 // MCDCCTOR:  %[[LAB2:[0-9]+]] = zext i32 %[[LAB1]] to i64
 // MCDCCTOR:  %[[LAB3:[0-9]+]] = add i64 ptrtoint (ptr @__profbm__ZN5ValueC2Ev to i64), %[[LAB2]]
@@ -75,23 +75,23 @@ Value::~Value(void) {
 // SHIFT FIRST CONDITION WITH ID = 0.
 // MCDCDTOR:  %[[LAB1:[0-9]+]] = load i32, ptr %value, align 4
 // MCDCDTOR-DAG:  %[[BOOL:cmp[0-9]*]] = icmp ne i32 %[[LAB1]], 2
-// MCDCDTOR-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
-// MCDCDTOR-DAG:  %[[LAB2:[0-9]+]] = zext i1 %[[BOOL]] to i32
-// MCDCDTOR-DAG:  %[[LAB3:[0-9]+]] = shl i32 %[[LAB2]], 0
-// MCDCDTOR-DAG:  %[[LAB4:[0-9]+]] = or i32 %[[TEMP]], %[[LAB3]]
+// MCDCDTOR-DAG:  %[[TEMP:mcdc.*]] = load i32, ptr %mcdc.addr, align 4
+// MCDCDTOR-DAG:  %[[LAB2:[0-9]+]] = add i32 %[[TEMP]], 0
+// MCDCDTOR-DAG:  %[[LAB3:[0-9]+]] = add i32 %[[TEMP]], 0
+// MCDCDTOR-DAG:  %[[LAB4:[0-9]+]] = select i1 %[[BOOL]], i32 %[[LAB2]], i32 %[[LAB3]]
 // MCDCDTOR-DAG:  store i32 %[[LAB4]], ptr %mcdc.addr, align 4
 
 // SHIFT SECOND CONDITION WITH ID = 1.
 // MCDCDTOR:  %[[LAB1:[0-9]+]] = load i32, ptr %value2, align 4
 // MCDCDTOR-DAG:  %[[BOOL:cmp[0-9]*]] = icmp ne i32 %[[LAB1]], 3
-// MCDCDTOR-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
-// MCDCDTOR-DAG:  %[[LAB2:[0-9]+]] = zext i1 %[[BOOL]] to i32
-// MCDCDTOR-DAG:  %[[LAB3:[0-9]+]] = shl i32 %[[LAB2]], 1
-// MCDCDTOR-DAG:  %[[LAB4:[0-9]+]] = or i32 %[[TEMP]], %[[LAB3]]
+// MCDCDTOR-DAG:  %[[TEMP:mcdc.*]] = load i32, ptr %mcdc.addr, align 4
+// MCDCDTOR-DAG:  %[[LAB2:[0-9]+]] = add i32 %[[TEMP]], 2
+// MCDCDTOR-DAG:  %[[LAB3:[0-9]+]] = add i32 %[[TEMP]], 1
+// MCDCDTOR-DAG:  %[[LAB4:[0-9]+]] = select i1 %[[BOOL]], i32 %[[LAB2]], i32 %[[LAB3]]
 // MCDCDTOR-DAG:  store i32 %[[LAB4]], ptr %mcdc.addr, align 4
 
 // UPDATE FINAL BITMASK WITH RESULT.
-// MCDCDTOR-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
+// MCDCDTOR-DAG:  %[[TEMP:mcdc.*]] = load i32, ptr %mcdc.addr, align 4
 // MCDCDTOR:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
 // MCDCDTOR:  %[[LAB2:[0-9]+]] = zext i32 %[[LAB1]] to i64
 // MCDCDTOR:  %[[LAB3:[0-9]+]] = add i64 ptrtoint (ptr @__profbm__ZN5ValueD2Ev to i64), %[[LAB2]]
