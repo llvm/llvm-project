@@ -97,6 +97,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`run-clang-tidy.py` script. Added argument `-source-filter`
+  to filter out source files from the compilation database.
+
 New checks
 ^^^^^^^^^^
 

@@ -475,9 +475,10 @@ def main():
             source_filter_re = re.compile(args.source_filter)
         except:
             print(
-                "Error: unable to compile regex from arg -source-filter.",
+                "Error: unable to compile regex from arg -source-filter:",
                 file=sys.stderr,
             )
+            traceback.print_exc()
             sys.exit(1)
         files = {f for f in files if source_filter_re.match(f)}
 
