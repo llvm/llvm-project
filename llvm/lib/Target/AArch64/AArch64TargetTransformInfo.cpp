@@ -2974,7 +2974,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
                                          Op2Info);
   case ISD::FREM:
     // Pass nullptr as fmod/fmodf calls are emitted by the backend even when
-    // those functions are not delcared in the module.
+    // those functions are not declared in the module.
     if (!Ty->isVectorTy())
       return getCallInstrCost(/*Function*/ nullptr, Ty, {Ty, Ty}, CostKind);
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
