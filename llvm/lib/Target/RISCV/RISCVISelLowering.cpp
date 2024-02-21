@@ -13397,6 +13397,7 @@ struct NodeExtensionHelper {
     case ExtKind::FPExt:
       return RISCVISD::FP_EXTEND_VL;
     }
+    llvm_unreachable("Unknown ExtKind enum");
   }
 
   /// Get or create a value that can feed \p Root with the given extension \p
@@ -13451,7 +13452,7 @@ struct NodeExtensionHelper {
                     ? MVT::getFloatingPointVT(NarrowSize)
                     : MVT::getIntegerVT(NarrowSize);
 
-    assert(NarrowSize >= (SupportsExt == ExtKind::FPExt ? 16 : 8) &&
+    assert((int)NarrowSize >= (SupportsExt == ExtKind::FPExt ? 16 : 8) &&
            "Trying to extend something we can't represent");
     MVT NarrowVT = MVT::getVectorVT(EltVT, VT.getVectorElementCount());
     return NarrowVT;
