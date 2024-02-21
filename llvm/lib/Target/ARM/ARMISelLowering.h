@@ -738,6 +738,8 @@ class VectorType;
     Align getABIAlignmentForCallingConv(Type *ArgTy,
                                         const DataLayout &DL) const override;
 
+    const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
+
     bool isDesirableToCommuteWithShift(const SDNode *N,
                                        CombineLevel Level) const override;
 
