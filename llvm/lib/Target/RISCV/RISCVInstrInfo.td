@@ -365,7 +365,7 @@ def CSRSystemRegister : AsmOperandClass {
   let DiagnosticType = "InvalidCSRSystemRegister";
 }
 
-def csr_sysreg : RISCVOp, ImmLeaf<XLenVT, "return isUInt<12>(Imm);"> {
+def csr_sysreg : RISCVOp, TImmLeaf<XLenVT, "return isUInt<12>(Imm);"> {
   let ParserMatchClass = CSRSystemRegister;
   let PrintMethod = "printCSRSystemRegister";
   let DecoderMethod = "decodeUImmOperand<12>";
