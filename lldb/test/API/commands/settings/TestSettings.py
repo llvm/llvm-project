@@ -937,7 +937,7 @@ class SettingsCommandTestCase(TestBase):
         self.runCmd("settings set target.arg0 %s" % arg_value)
 
         settings_json = self.get_setting_json()
-        self.assertEqual(settings_json["auto-confirm"], True)
+        self.assertTrue(settings_json["auto-confirm"])
         self.assertEqual(settings_json["tab-size"], 4)
         self.assertEqual(settings_json["target"]["arg0"], arg_value)
 
