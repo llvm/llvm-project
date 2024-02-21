@@ -62,7 +62,8 @@
 #define INSTR_PROF_VISIBILITY
 #endif
 
-// clang-format off:re-enable clang-format after `issue #82426` is fixed
+// clang-format off:consider re-enabling clang-format if auto-formatted C macros
+// are readable (e.g., after `issue #82426` is fixed)
 /* INSTR_PROF_DATA start. */
 /* Definition of member fields of the per-function control structure. */
 #ifndef INSTR_PROF_DATA
@@ -639,7 +640,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 
 /*============================================================================*/
 
-// clang-format off:re-enable clang-format after `issue #82426` is fixed
+// clang-format off:consider re-enabling clang-format if auto-formatted C macros
+// are readable (e.g., after `issue #82426` is fixed)
 #ifndef INSTR_PROF_DATA_DEFINED
 
 #ifndef INSTR_PROF_DATA_INC
