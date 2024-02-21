@@ -172,7 +172,7 @@ using FnCheck = std::function<void(const StreamChecker *, const FnDescription *,
                                    const CallEvent &, CheckerContext &)>;
 
 using ArgNoTy = unsigned int;
-const ArgNoTy ArgNone = std::numeric_limits<ArgNoTy>::max();
+static const ArgNoTy ArgNone = std::numeric_limits<ArgNoTy>::max();
 
 struct FnDescription {
   FnCheck PreFn;
@@ -181,8 +181,9 @@ struct FnDescription {
 };
 
 [[nodiscard]] ProgramStateRef
-escapeArgsAfterIndex(ProgramStateRef State, CheckerContext &C,
-                     const CallEvent &Call, unsigned FirstEscapingArgIndex) {
+escapeArgsStartingFromIndex(ProgramStateRef State, CheckerContext &C,
+                            const CallEvent &Call,
+                            unsigned FirstEscapingArgIndex) {
   const auto *CE = Call.getOriginExpr();
   assert(CE);
 
@@ -1054,7 +1055,8 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
     return;
 
   // The pointers passed to fscanf escape and get invalidated.
-  State = escapeArgsAfterIndex(State, C, Call, /*FirstEscapingArgIndex=*/2);
+  State =
+      escapeArgsStartingFromIndex(State, C, Call, /*FirstEscapingArgIndex=*/2);
 
   // Add the success state.
   // In this context "success" means there is not an EOF or other read error
