@@ -96,6 +96,11 @@ C++20 Feature Support
   behavior can use the flag '-Xclang -fno-skip-odr-check-in-gmf'.
   (`#79240 <https://github.com/llvm/llvm-project/issues/79240>`_).
 
+- Implemented the `__is_layout_compatible` intrinsic to support
+  `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
+  Note: `CWG2759: [[no_unique_address] and common initial sequence <https://cplusplus.github.io/CWG/issues/2759.html>`_
+  is not yet implemented.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -113,6 +118,10 @@ Resolutions to C++ Defect Reports
 - Substitute template parameter pack, when it is not explicitly specified
   in the template parameters, but is deduced from a previous argument.
   (`#78449: <https://github.com/llvm/llvm-project/issues/78449>`_).
+
+- Type qualifications are now ignored when evaluating layout compatibility
+  of two types.
+  (`CWG1719: Layout compatibility and cv-qualification revisited <https://cplusplus.github.io/CWG/issues/1719.html>`_).
 
 C Language Changes
 ------------------
@@ -134,6 +143,11 @@ C23 Feature Support
      int i alignas(8) /* was accepted, now rejected */ ;
 
   Fixes (`#81472 <https://github.com/llvm/llvm-project/issues/81472>`_).
+
+- Clang now generates predefined macros of the form ``__TYPE_FMTB__`` and
+  ``__TYPE_FMTb__`` (e.g., ``__UINT_FAST64_FMTB__``) in C23 mode for use with
+  macros typically exposed from ``<inttypes.h>``, such as ``PRIb8``.
+  (`#81896: <https://github.com/llvm/llvm-project/issues/81896>`_).
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -167,6 +181,8 @@ Modified Compiler Flags
 Removed Compiler Flags
 -------------------------
 
+- The ``-freroll-loops`` flag has been removed. It had no effect since Clang 13.
+
 Attribute Changes in Clang
 --------------------------
 
@@ -187,6 +203,18 @@ Improvements to Clang's diagnostics
 
 - Added diagnostics for C11 keywords being incompatible with language standards
   before C11, under a new warning group: ``-Wpre-c11-compat``.
+
+- Now diagnoses an enumeration constant whose value is larger than can be
+  represented by ``unsigned long long``, which can happen with a large constant
+  using the ``wb`` or ``uwb`` suffix. The maximal underlying type is currently
+  ``unsigned long long``, but this behavior may change in the future when Clang
+  implements
+  `WG14 N3029 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_.
+  Fixes `#69352 <https://github.com/llvm/llvm-project/issues/69352>`_.
+
+- Clang now diagnoses extraneous template parameter lists as a language extension.
+
+- Clang now diagnoses declarative nested name specifiers that name alias templates.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -254,6 +282,8 @@ Bug Fixes to C++ Support
   Fixes (`#68490 <https://github.com/llvm/llvm-project/issues/68490>`_)
 - Fix a crash when trying to call a varargs function that also has an explicit object parameter.
   Fixes (`#80971 ICE when explicit object parameter be a function parameter pack`)
+- Reject explicit object parameters on `new` and `delete` operators.
+  Fixes (`#82249 <https://github.com/llvm/llvm-project/issues/82249>` _)
 - Fixed a bug where abbreviated function templates would append their invented template parameters to
   an empty template parameter lists.
 - Clang now classifies aggregate initialization in C++17 and newer as constant
@@ -267,6 +297,10 @@ Bug Fixes to C++ Support
   was only accepted at namespace scope but not at local function scope.
 - Clang no longer tries to call consteval constructors at runtime when they appear in a member initializer.
   (`#782154 <https://github.com/llvm/llvm-project/issues/82154>`_`)
+- Fix crash when using an immediate-escalated function at global scope.
+  (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
+- Correctly immediate-escalate lambda conversion functions.
+  (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -291,8 +325,6 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
-
-- Fixed the incorrect definition of the __ARM_ARCH macro for architectures greater than or equal to v8.1.
 
 Android Support
 ^^^^^^^^^^^^^^^

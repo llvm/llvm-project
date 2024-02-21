@@ -125,6 +125,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   auto allIntScalars = {s8, s16, s32, s64};
 
+  auto allFloatScalars = {s16, s32, s64};
+
   auto allFloatScalarsAndVectors = {
       s16,   s32,   s64,   v2s16, v2s32, v2s64, v3s16,  v3s32,  v3s64,
       v4s16, v4s32, v4s64, v8s16, v8s32, v8s64, v16s16, v16s32, v16s64};
@@ -204,6 +206,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_ATOMICRMW_SUB, G_ATOMICRMW_XOR,
                                G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN})
       .legalForCartesianProduct(allIntScalars, allWritablePtrs);
+
+  getActionDefinitionsBuilder(
+      {G_ATOMICRMW_FADD, G_ATOMICRMW_FSUB, G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
+      .legalForCartesianProduct(allFloatScalars, allWritablePtrs);
 
   getActionDefinitionsBuilder(G_ATOMICRMW_XCHG)
       .legalForCartesianProduct(allFloatAndIntScalars, allWritablePtrs);

@@ -85,8 +85,9 @@ class ModuleLoadedNotifysTestCase(TestBase):
                         # when reading dyld from the expanded shared cache.
                         exe_basename = lldb.SBFileSpec(exe).basename
                         if module.file.basename not in ["dyld", exe_basename]:
-                            self.assertTrue(
-                                module not in already_loaded_modules,
+                            self.assertNotIn(
+                                module,
+                                already_loaded_modules,
                                 "{} is already loaded".format(module),
                             )
                         already_loaded_modules.append(module)
