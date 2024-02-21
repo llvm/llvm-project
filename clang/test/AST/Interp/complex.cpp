@@ -77,6 +77,8 @@ constexpr int ignored() {
   (int)D1;
   (double)D1;
   (_Complex float)I2;
+  (bool)D1;
+  (bool)I2;
   return 0;
 }
 static_assert(ignored() == 0, "");

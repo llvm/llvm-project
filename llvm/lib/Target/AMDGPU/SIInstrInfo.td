@@ -1289,9 +1289,8 @@ def IntVRegInputMods : InputMods <IntVRegInputModsMatchClass> {
 
 class PackedFPInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "PackedFP"#opSize#"InputMods";
-  let ParserMethod = "parseRegOrImm";
-  let PredicateMethod = "isRegOrImm";
-//  let PredicateMethod = "isPackedFP"#opSize#"InputMods";
+  let ParserMethod = "parseRegOrImmWithFPInputMods";
+  let PredicateMethod = "isPackedFP"#opSize#"InputMods";
 }
 
 class PackedIntInputModsMatchClass <int opSize> : AsmOperandClass {
@@ -1305,7 +1304,7 @@ def PackedF16InputModsMatchClass : PackedFPInputModsMatchClass<16>;
 def PackedI16InputModsMatchClass : PackedIntInputModsMatchClass<16>;
 
 class PackedFPInputMods <PackedFPInputModsMatchClass matchClass> : InputMods <matchClass> {
-//  let PrintMethod = "printPackedFPInputMods";
+  let PrintMethod = "printOperandAndFPInputMods";
 }
 
 class PackedIntInputMods <PackedIntInputModsMatchClass matchClass> : InputMods <matchClass> {
@@ -1606,8 +1605,11 @@ class getSrcMod <ValueType VT, bit IsTrue16 = 0> {
 }
 
 class getOpSelMod <ValueType VT> {
-  Operand ret = !if(!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
-                    FP16InputMods, IntOpSelMods);
+  Operand ret = !cond(!eq(VT, f16) : FP16InputMods,
+                      !eq(VT, bf16) : FP16InputMods,
+                      !eq(VT, v2f16) : PackedF16InputMods,
+                      !eq(VT, v2bf16) : PackedF16InputMods,
+                      1 : IntOpSelMods);
 }
 
 // Return type of input modifiers operand specified input operand for DPP
@@ -2494,7 +2496,7 @@ def VOP_V2I16_I32_I32 : VOPProfile <[v2i16, i32, i32, untyped]>;
 
 def VOP_F16_V2F16_V2F16_F16 : VOPProfile <[f16, v2f16, v2f16, f16]>;
 def VOP_BF16_V2BF16_V2BF16_BF16: VOPProfile <[bf16, v2bf16, v2bf16, bf16]>;
-def VOP_F32_V2I16_V2I16_F32 : VOPProfile <[f32, v2i16, v2i16, f32]>;
+def VOP_F32_V2BF16_V2BF16_F32 : VOPProfile <[f32, v2bf16, v2bf16, f32]>;
 
 def VOP_F32_V2F16_V2F16_V2F16 : VOPProfile <[f32, v2f16, v2f16, v2f16]>;
 
