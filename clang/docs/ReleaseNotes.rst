@@ -408,6 +408,14 @@ Moved checkers
 Sanitizers
 ----------
 
+- ``-fsanitize=signed-integer-overflow`` now instruments signed arithmetic even
+  when ``-fwrapv`` is enabled. Previously, only division checks were enabled.
+
+  Users with ``-fwrapv`` as well as a sanitizer group like
+  ``-fsanitize=undefined`` or ``-fsanitize=integer`` enabled may want to
+  manually disable potentially noisy signed integer overflow checks with
+  ``-fno-sanitize=signed-integer-overflow``
+
 Python Binding Changes
 ----------------------
 

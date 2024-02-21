@@ -723,7 +723,9 @@ public:
     if (Ops.Ty->isSignedIntegerOrEnumerationType()) {
       switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined:
-        return Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
+        if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+          return Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
+        [[fallthrough]];
       case LangOptions::SOB_Undefined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
           return Builder.CreateNSWMul(Ops.LHS, Ops.RHS, "mul");
@@ -2568,7 +2570,9 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
   StringRef Name = IsInc ? "inc" : "dec";
   switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
   case LangOptions::SOB_Defined:
-    return Builder.CreateAdd(InVal, Amount, Name);
+    if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+      return Builder.CreateAdd(InVal, Amount, Name);
+    [[fallthrough]];
   case LangOptions::SOB_Undefined:
     if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
       return Builder.CreateNSWAdd(InVal, Amount, Name);
@@ -3913,7 +3917,9 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
   if (op.Ty->isSignedIntegerOrEnumerationType()) {
     switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
-      return Builder.CreateAdd(op.LHS, op.RHS, "add");
+      if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        return Builder.CreateAdd(op.LHS, op.RHS, "add");
+      [[fallthrough]];
     case LangOptions::SOB_Undefined:
       if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
         return Builder.CreateNSWAdd(op.LHS, op.RHS, "add");
@@ -4067,7 +4073,9 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
     if (op.Ty->isSignedIntegerOrEnumerationType()) {
       switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined:
-        return Builder.CreateSub(op.LHS, op.RHS, "sub");
+        if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+          return Builder.CreateSub(op.LHS, op.RHS, "sub");
+        [[fallthrough]];
       case LangOptions::SOB_Undefined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
           return Builder.CreateNSWSub(op.LHS, op.RHS, "sub");
