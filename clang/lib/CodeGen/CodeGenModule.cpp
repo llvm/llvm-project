@@ -8295,16 +8295,13 @@ int CodeGenModule::getWorkGroupSizeSPMDHelper(const OMPExecutableDirective &D) {
     clang::Expr::EvalResult Result;
     if (ThreadLimitExpr->EvaluateAsInt(Result, getContext())) {
       int ThreadLimitEval = Result.Val.getInt().getExtValue();
-      if (ThreadLimitEval > 0 && ThreadLimitEval < ThreadLimit)
+      if (ThreadLimitEval > 0 && ThreadLimitEval <= ThreadLimit) {
         ThreadLimit = ThreadLimitEval;
+        // Prioritize value from clause over command-line option.
+        WorkGroupSz = ThreadLimit;
+      }
     }
   }
-
-  // If the command line work group size is less than any default or user
-  // specified thread limit then it is honored otherwise the thread limit
-  // determined above will be used.
-  if (WorkGroupSz > ThreadLimit)
-    WorkGroupSz = ThreadLimit;
 
   // Set the actual number of threads if the user requests a value different
   // then the default. If the value is greater than the currently computed
