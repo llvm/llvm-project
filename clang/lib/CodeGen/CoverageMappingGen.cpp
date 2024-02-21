@@ -2016,8 +2016,8 @@ struct CounterCoverageMappingBuilder
   void RewindDecision(unsigned Since) {
 #ifndef NDEBUG
     llvm::DenseSet<mcdc::ConditionID> SeenIDs;
-#endif
     unsigned NConds = 0;
+#endif
 
     assert(Since <= SourceRegions.size());
     auto I = SourceRegions.begin() + Since;
@@ -2025,9 +2025,11 @@ struct CounterCoverageMappingBuilder
       if (I->isMCDCDecision()) {
         assert(I->getMCDCDecisionParams().BitmapIdx == 0 &&
                "It should be valid");
+#ifndef NDEBUG
         assert(NConds == 0 && "Duplicate MCDCDecision");
         NConds = I->getMCDCDecisionParams().NumConditions;
         assert(NConds > 0 && "Malformed MCDCDecision");
+#endif
         I = SourceRegions.erase(I);
         continue;
       }
@@ -2043,7 +2045,6 @@ struct CounterCoverageMappingBuilder
 
     assert(NConds > 0 && "MCDCDecision wasn't found");
     assert(SeenIDs.size() == NConds && "Unexpected number of MCDCBranch(es)");
-    (void)NConds;
   }
 
   void VisitBinLAnd(const BinaryOperator *E) {
