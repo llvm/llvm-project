@@ -158,7 +158,7 @@ void UseDesignatedInitializersCheck::check(
              "use designated init expression to initialize field '%0'");
     Diag << InitExpr->getSourceRange();
     const auto Designator = Designators[InitExpr->getBeginLoc()];
-    if (Designator && Designator->front() == '.') {
+    if (!Designator->empty() && Designator->front() == '.') {
       Diag << Designator->substr(1); // Strip leading dot
       Diag << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
                                          (*Designator + "=").str());
