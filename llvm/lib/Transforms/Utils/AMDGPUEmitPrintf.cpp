@@ -292,7 +292,7 @@ static uint32_t getSizeFromVectorSpec(StringRef Spec) {
 // or "%v" specifier.
 static void locateCStringsAndVectors(SparseBitVector<8> &BV,
                                      SparseBitVector<8> &OV, StringRef Str,
-                                     SmallVectorImpl<uint> &VecSizes) {
+                                     SmallVectorImpl<uint32_t> &VecSizes) {
   static const char ConvSpecifiers[] = "diouxXfFeEgGaAcspn";
   size_t SpecPos = 0;
   // Skip the first argument, the format string.
@@ -340,7 +340,7 @@ static Value *callBufferedPrintfStart(
     IRBuilder<> &Builder, ArrayRef<Value *> Args, Value *Fmt,
     bool isConstFmtStr, SparseBitVector<8> &SpecIsCString,
     SparseBitVector<8> &OCLVectors, SmallVectorImpl<StringData> &StringContents,
-    SmallVectorImpl<uint> &VecSizes, Value *&ArgSize) {
+    SmallVectorImpl<uint32_t> &VecSizes, Value *&ArgSize) {
   Module *M = Builder.GetInsertBlock()->getModule();
   Value *NonConstStrLen = nullptr;
   Value *LenWithNull = nullptr;
@@ -490,7 +490,7 @@ callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
                           Value *PtrToStore, SparseBitVector<8> &SpecIsCString,
                           SparseBitVector<8> &OCLVectors,
                           SmallVectorImpl<StringData> &StringContents,
-                          SmallVectorImpl<uint> &VecSizes, bool IsConstFmtStr) {
+                          SmallVectorImpl<uint32_t> &VecSizes, bool IsConstFmtStr) {
   Module *M = Builder.GetInsertBlock()->getModule();
   const DataLayout &DL = M->getDataLayout();
   auto StrIt = StringContents.begin();
@@ -587,7 +587,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
   SparseBitVector<8> SpecIsCString;
   SparseBitVector<8> OCLVectors;
   bool IsConstFmtStr = !FmtStr.empty();
-  SmallVector<uint, 8> VecSizes;
+  SmallVector<uint32_t, 8> VecSizes;
 
   if (IsConstFmtStr)
     locateCStringsAndVectors(SpecIsCString, OCLVectors, FmtStr, VecSizes);
