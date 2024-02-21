@@ -18,7 +18,7 @@
 
 // Types
 
-template<typename T, typename DifferenceT = std::ptrdiff_t>
+template <typename T, typename DifferenceT = std::ptrdiff_t>
 using ValueType = std::tuple<DifferenceT, T>;
 
 struct RangeView : std::ranges::view_base {
