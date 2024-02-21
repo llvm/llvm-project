@@ -78,8 +78,8 @@ define half @test_si_si_i8_add(i8 noundef %x_in, i8 noundef %y_in) {
 ; CHECK-LABEL: @test_si_si_i8_add(
 ; CHECK-NEXT:    [[X:%.*]] = or i8 [[X_IN:%.*]], -64
 ; CHECK-NEXT:    [[Y:%.*]] = or i8 [[Y_IN:%.*]], -64
-; CHECK-NEXT:    [[ADDCONV:%.*]] = add nsw i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sitofp i8 [[ADDCONV]] to half
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sitofp i8 [[TMP1]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = or i8 %x_in, -64
@@ -204,8 +204,8 @@ define half @test_si_si_i8_sub_fail_overflow(i8 noundef %x_in, i8 noundef %y_in)
 define half @test_si_si_i8_sub_C(i8 noundef %x_in) {
 ; CHECK-LABEL: @test_si_si_i8_sub_C(
 ; CHECK-NEXT:    [[X:%.*]] = and i8 [[X_IN:%.*]], 63
-; CHECK-NEXT:    [[ADDCONV:%.*]] = or disjoint i8 [[X]], 64
-; CHECK-NEXT:    [[R:%.*]] = sitofp i8 [[ADDCONV]] to half
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i8 [[X]], 64
+; CHECK-NEXT:    [[R:%.*]] = sitofp i8 [[TMP1]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i8 %x_in, 63
