@@ -18,4 +18,5 @@ clang_target_link_libraries(clang-installapi
   clangDriver
   clangFrontend
   clangTooling
+  clangSerialization
   )
