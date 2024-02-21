@@ -1449,3 +1449,231 @@ entry:
   %res = select i1 %cond, i32 %a, i32 %c
   ret i32 %res
 }
+
+define i32 @select_cst_not1(i32 signext %a, i32 signext %b) {
+; RV32IM-LABEL: select_cst_not1:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    mv a2, a0
+; RV32IM-NEXT:    li a0, 5
+; RV32IM-NEXT:    blt a2, a1, .LBB37_2
+; RV32IM-NEXT:  # %bb.1:
+; RV32IM-NEXT:    li a0, -6
+; RV32IM-NEXT:  .LBB37_2:
+; RV32IM-NEXT:    ret
+;
+; RV64IM-LABEL: select_cst_not1:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    mv a2, a0
+; RV64IM-NEXT:    li a0, 5
+; RV64IM-NEXT:    blt a2, a1, .LBB37_2
+; RV64IM-NEXT:  # %bb.1:
+; RV64IM-NEXT:    li a0, -6
+; RV64IM-NEXT:  .LBB37_2:
+; RV64IM-NEXT:    ret
+;
+; RV64IMXVTCONDOPS-LABEL: select_cst_not1:
+; RV64IMXVTCONDOPS:       # %bb.0:
+; RV64IMXVTCONDOPS-NEXT:    slt a0, a0, a1
+; RV64IMXVTCONDOPS-NEXT:    li a1, -6
+; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a1, a1, a0
+; RV64IMXVTCONDOPS-NEXT:    li a2, 5
+; RV64IMXVTCONDOPS-NEXT:    vt.maskc a0, a2, a0
+; RV64IMXVTCONDOPS-NEXT:    or a0, a0, a1
+; RV64IMXVTCONDOPS-NEXT:    ret
+;
+; CHECKZICOND-LABEL: select_cst_not1:
+; CHECKZICOND:       # %bb.0:
+; CHECKZICOND-NEXT:    slt a0, a0, a1
+; CHECKZICOND-NEXT:    li a1, -6
+; CHECKZICOND-NEXT:    czero.nez a1, a1, a0
+; CHECKZICOND-NEXT:    li a2, 5
+; CHECKZICOND-NEXT:    czero.eqz a0, a2, a0
+; CHECKZICOND-NEXT:    or a0, a0, a1
+; CHECKZICOND-NEXT:    ret
+  %cond = icmp slt i32 %a, %b
+  %ret = select i1 %cond, i32 5, i32 -6
+  ret i32 %ret
+}
+
+define i32 @select_cst_not2(i32 signext %a) {
+; CHECK-LABEL: select_cst_not2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a0, a0, 31
+; CHECK-NEXT:    xori a0, a0, -6
+; CHECK-NEXT:    ret
+  %cond = icmp slt i32 %a, 0
+  %ret = select i1 %cond, i32 5, i32 -6
+  ret i32 %ret
+}
+
+define i32 @select_cst_not3(i32 signext %a) {
+; CHECK-LABEL: select_cst_not3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a0, a0, 31
+; CHECK-NEXT:    xori a0, a0, 5
+; CHECK-NEXT:    ret
+  %cond = icmp sgt i32 %a, -1
+  %ret = select i1 %cond, i32 5, i32 -6
+  ret i32 %ret
+}
+
+define i32 @select_cst_not4(i32 signext %a, i32 signext %b) {
+; RV32IM-LABEL: select_cst_not4:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    slt a0, a0, a1
+; RV32IM-NEXT:    lui a1, 524288
+; RV32IM-NEXT:    addi a1, a1, -1
+; RV32IM-NEXT:    add a0, a0, a1
+; RV32IM-NEXT:    ret
+;
+; RV64IM-LABEL: select_cst_not4:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    mv a2, a0
+; RV64IM-NEXT:    lui a0, 524288
+; RV64IM-NEXT:    blt a2, a1, .LBB40_2
+; RV64IM-NEXT:  # %bb.1:
+; RV64IM-NEXT:    addiw a0, a0, -1
+; RV64IM-NEXT:  .LBB40_2:
+; RV64IM-NEXT:    ret
+;
+; RV64IMXVTCONDOPS-LABEL: select_cst_not4:
+; RV64IMXVTCONDOPS:       # %bb.0:
+; RV64IMXVTCONDOPS-NEXT:    slt a0, a0, a1
+; RV64IMXVTCONDOPS-NEXT:    lui a1, 524288
+; RV64IMXVTCONDOPS-NEXT:    addiw a2, a1, -1
+; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a2, a2, a0
+; RV64IMXVTCONDOPS-NEXT:    vt.maskc a0, a1, a0
+; RV64IMXVTCONDOPS-NEXT:    or a0, a0, a2
+; RV64IMXVTCONDOPS-NEXT:    ret
+;
+; RV32IMZICOND-LABEL: select_cst_not4:
+; RV32IMZICOND:       # %bb.0:
+; RV32IMZICOND-NEXT:    slt a0, a0, a1
+; RV32IMZICOND-NEXT:    lui a1, 524288
+; RV32IMZICOND-NEXT:    addi a1, a1, -1
+; RV32IMZICOND-NEXT:    add a0, a0, a1
+; RV32IMZICOND-NEXT:    ret
+;
+; RV64IMZICOND-LABEL: select_cst_not4:
+; RV64IMZICOND:       # %bb.0:
+; RV64IMZICOND-NEXT:    slt a0, a0, a1
+; RV64IMZICOND-NEXT:    lui a1, 524288
+; RV64IMZICOND-NEXT:    addiw a2, a1, -1
+; RV64IMZICOND-NEXT:    czero.nez a2, a2, a0
+; RV64IMZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV64IMZICOND-NEXT:    or a0, a0, a2
+; RV64IMZICOND-NEXT:    ret
+  %cond = icmp slt i32 %a, %b
+  %ret = select i1 %cond, i32 -2147483648, i32 2147483647
+  ret i32 %ret
+}
+
+define i32 @select_cst_not5(i32 signext %a, i32 signext %b) {
+; RV32IM-LABEL: select_cst_not5:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    blt a0, a1, .LBB41_2
+; RV32IM-NEXT:  # %bb.1:
+; RV32IM-NEXT:    lui a0, 16
+; RV32IM-NEXT:    addi a0, a0, -5
+; RV32IM-NEXT:    ret
+; RV32IM-NEXT:  .LBB41_2:
+; RV32IM-NEXT:    lui a0, 1048560
+; RV32IM-NEXT:    addi a0, a0, 4
+; RV32IM-NEXT:    ret
+;
+; RV64IM-LABEL: select_cst_not5:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    blt a0, a1, .LBB41_2
+; RV64IM-NEXT:  # %bb.1:
+; RV64IM-NEXT:    lui a0, 16
+; RV64IM-NEXT:    addiw a0, a0, -5
+; RV64IM-NEXT:    ret
+; RV64IM-NEXT:  .LBB41_2:
+; RV64IM-NEXT:    lui a0, 1048560
+; RV64IM-NEXT:    addiw a0, a0, 4
+; RV64IM-NEXT:    ret
+;
+; RV64IMXVTCONDOPS-LABEL: select_cst_not5:
+; RV64IMXVTCONDOPS:       # %bb.0:
+; RV64IMXVTCONDOPS-NEXT:    slt a0, a0, a1
+; RV64IMXVTCONDOPS-NEXT:    lui a1, 16
+; RV64IMXVTCONDOPS-NEXT:    addiw a1, a1, -5
+; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a1, a1, a0
+; RV64IMXVTCONDOPS-NEXT:    lui a2, 1048560
+; RV64IMXVTCONDOPS-NEXT:    addiw a2, a2, 4
+; RV64IMXVTCONDOPS-NEXT:    vt.maskc a0, a2, a0
+; RV64IMXVTCONDOPS-NEXT:    or a0, a0, a1
+; RV64IMXVTCONDOPS-NEXT:    ret
+;
+; RV32IMZICOND-LABEL: select_cst_not5:
+; RV32IMZICOND:       # %bb.0:
+; RV32IMZICOND-NEXT:    slt a0, a0, a1
+; RV32IMZICOND-NEXT:    lui a1, 16
+; RV32IMZICOND-NEXT:    addi a1, a1, -5
+; RV32IMZICOND-NEXT:    czero.nez a1, a1, a0
+; RV32IMZICOND-NEXT:    lui a2, 1048560
+; RV32IMZICOND-NEXT:    addi a2, a2, 4
+; RV32IMZICOND-NEXT:    czero.eqz a0, a2, a0
+; RV32IMZICOND-NEXT:    or a0, a0, a1
+; RV32IMZICOND-NEXT:    ret
+;
+; RV64IMZICOND-LABEL: select_cst_not5:
+; RV64IMZICOND:       # %bb.0:
+; RV64IMZICOND-NEXT:    slt a0, a0, a1
+; RV64IMZICOND-NEXT:    lui a1, 16
+; RV64IMZICOND-NEXT:    addiw a1, a1, -5
+; RV64IMZICOND-NEXT:    czero.nez a1, a1, a0
+; RV64IMZICOND-NEXT:    lui a2, 1048560
+; RV64IMZICOND-NEXT:    addiw a2, a2, 4
+; RV64IMZICOND-NEXT:    czero.eqz a0, a2, a0
+; RV64IMZICOND-NEXT:    or a0, a0, a1
+; RV64IMZICOND-NEXT:    ret
+  %cond = icmp slt i32 %a, %b
+  %ret = select i1 %cond, i32 -65532, i32 65531
+  ret i32 %ret
+}
+
+define i32 @select_cst_unknown(i32 signext %a, i32 signext %b) {
+; RV32IM-LABEL: select_cst_unknown:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    mv a2, a0
+; RV32IM-NEXT:    li a0, 5
+; RV32IM-NEXT:    blt a2, a1, .LBB42_2
+; RV32IM-NEXT:  # %bb.1:
+; RV32IM-NEXT:    li a0, -7
+; RV32IM-NEXT:  .LBB42_2:
+; RV32IM-NEXT:    ret
+;
+; RV64IM-LABEL: select_cst_unknown:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    mv a2, a0
+; RV64IM-NEXT:    li a0, 5
+; RV64IM-NEXT:    blt a2, a1, .LBB42_2
+; RV64IM-NEXT:  # %bb.1:
+; RV64IM-NEXT:    li a0, -7
+; RV64IM-NEXT:  .LBB42_2:
+; RV64IM-NEXT:    ret
+;
+; RV64IMXVTCONDOPS-LABEL: select_cst_unknown:
+; RV64IMXVTCONDOPS:       # %bb.0:
+; RV64IMXVTCONDOPS-NEXT:    slt a0, a0, a1
+; RV64IMXVTCONDOPS-NEXT:    li a1, -7
+; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a1, a1, a0
+; RV64IMXVTCONDOPS-NEXT:    li a2, 5
+; RV64IMXVTCONDOPS-NEXT:    vt.maskc a0, a2, a0
+; RV64IMXVTCONDOPS-NEXT:    or a0, a0, a1
+; RV64IMXVTCONDOPS-NEXT:    ret
+;
+; CHECKZICOND-LABEL: select_cst_unknown:
+; CHECKZICOND:       # %bb.0:
+; CHECKZICOND-NEXT:    slt a0, a0, a1
+; CHECKZICOND-NEXT:    li a1, -7
+; CHECKZICOND-NEXT:    czero.nez a1, a1, a0
+; CHECKZICOND-NEXT:    li a2, 5
+; CHECKZICOND-NEXT:    czero.eqz a0, a2, a0
+; CHECKZICOND-NEXT:    or a0, a0, a1
+; CHECKZICOND-NEXT:    ret
+  %cond = icmp slt i32 %a, %b
+  %ret = select i1 %cond, i32 5, i32 -7
+  ret i32 %ret
+}
