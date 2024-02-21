@@ -312,13 +312,6 @@ public:
     return Invocation->getFrontendOpts();
   }
 
-  InstallAPIOptions &getInstallAPIOpts() {
-    return Invocation->getInstallAPIOpts();
-  }
-  const InstallAPIOptions &getInstallAPIOpts() const {
-    return Invocation->getInstallAPIOpts();
-  }
-
   HeaderSearchOptions &getHeaderSearchOpts() {
     return Invocation->getHeaderSearchOpts();
   }

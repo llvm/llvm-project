@@ -101,9 +101,6 @@ enum ActionKind {
   /// Only execute frontend initialization.
   InitOnly,
 
-  // Create TextAPI stub.
-  InstallAPI,
-
   /// Dump information about a module file.
   ModuleFileInfo,
 
