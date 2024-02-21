@@ -784,7 +784,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       setOperationAction(ISD::FP_EXTEND, VT, Custom);
       setOperationAction(ISD::FP_ROUND, VT, Custom);
     }
-    setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
   }
 
   // sm_80 only has conversions between f32 and bf16. Custom lower all other
@@ -2526,15 +2525,13 @@ SDValue NVPTXTargetLowering::LowerFP_EXTEND(SDValue Op,
         (STI.getSmVersion() < 90 || STI.getPTXVersion() < 78)) {
       EVT F32 = NarrowVT.isVector() ? NarrowVT.changeVectorElementType(MVT::f32)
                                     : MVT::f32;
-      EVT F64 = NarrowVT.isVector() ? NarrowVT.changeVectorElementType(MVT::f64)
-                                    : MVT::f64;
       SDLoc Loc(Op);
       if (STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 71) {
         Op = DAG.getNode(ISD::FP_EXTEND, Loc, F32, Narrow);
       } else {
         Op = DAG.getNode(ISD::BF16_TO_FP, Loc, F32, Narrow);
       }
-      return DAG.getNode(ISD::FP_EXTEND, Loc, F64, Op);
+      return DAG.getNode(ISD::FP_EXTEND, Loc, WideVT, Op);
     }
   }
 
