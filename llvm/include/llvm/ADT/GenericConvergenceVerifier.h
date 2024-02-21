@@ -32,11 +32,12 @@ public:
 
   void initialize(raw_ostream *OS,
                   function_ref<void(const Twine &Message)> FailureCB,
-                  const FunctionT &F) {
+                  const FunctionT &F, bool _IsSSA) {
     clear();
     this->OS = OS;
     this->FailureCB = FailureCB;
     Context = ContextT(&F);
+    IsSSA = _IsSSA;
   }
 
   void clear();
@@ -52,6 +53,7 @@ private:
   DominatorTreeT *DT;
   CycleInfoT CI;
   ContextT Context;
+  bool IsSSA;
 
   /// Whether the current function has convergencectrl operand bundles.
   enum {
@@ -59,6 +61,10 @@ private:
     UncontrolledConvergence,
     NoConvergence
   } ConvergenceKind = NoConvergence;
+
+  /// The control token operation performed by a convergence control Intrinsic
+  /// in LLVM IR, or by a CONVERGENCECTRL* instruction in MIR
+  enum ConvOpKind { CONV_ANCHOR, CONV_ENTRY, CONV_LOOP, CONV_NONE };
 
   // Cache token uses found so far. Note that we track the unique definitions
   // and not the token values.
@@ -68,6 +74,7 @@ private:
 
   static bool isInsideConvergentFunction(const InstructionT &I);
   static bool isConvergent(const InstructionT &I);
+  static ConvOpKind getConvOp(const InstructionT &I);
   const InstructionT *findAndCheckConvergenceTokenUsed(const InstructionT &I);
 
   void reportFailure(const Twine &Message, ArrayRef<Printable> Values);

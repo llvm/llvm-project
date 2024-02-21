@@ -4401,6 +4401,7 @@ public:
     SmallVector<ISD::InputArg, 32> Ins;
     SmallVector<SDValue, 4> InVals;
     const ConstantInt *CFIType = nullptr;
+    SDValue ConvergenceControlToken;
 
     CallLoweringInfo(SelectionDAG &DAG)
         : RetSExt(false), RetZExt(false), IsVarArg(false), IsInReg(false),
@@ -4531,6 +4532,11 @@ public:
 
     CallLoweringInfo &setCFIType(const ConstantInt *Type) {
       CFIType = Type;
+      return *this;
+    }
+
+    CallLoweringInfo &setConvergenceControlToken(SDValue Token) {
+      ConvergenceControlToken = Token;
       return *this;
     }
 
