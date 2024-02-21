@@ -1,0 +1,34 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+// RUN: %clang_cc1 -x objective-c -triple arm64-apple-ios13.0.0 -installapi \
+// RUN: -fapplication-extension -current_version 1 -install_name /usr/lib/basic.dylib \
+// RUN: %t/basic_inputs.json -o %t/basic.tbd 2>&1 | FileCheck %s --allow-empty
+// RUN: llvm-readtapi -compare %t/basic.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty
+
+// CHECK-NOT: error:  
+// CHECK-NOT: warning:  
+
+//--- basic_inputs.json
+
+//--- expected.tbd
+{
+  "main_library": {
+    "compatibility_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "install_names": [
+      {
+        "name": "/usr/lib/basic.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13.0.0",
+        "target": "arm64-ios"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

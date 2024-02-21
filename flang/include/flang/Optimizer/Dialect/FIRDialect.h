@@ -70,6 +70,9 @@ bool canLegallyInline(mlir::Operation *, mlir::Operation *, bool);
 // Register the FIRInlinerInterface to FIROpsDialect
 void addFIRInlinerExtension(mlir::DialectRegistry &registry);
 
+// Register implementation of LLVMTranslationDialectInterface.
+void addFIRToLLVMIRExtension(mlir::DialectRegistry &registry);
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRDIALECT_H

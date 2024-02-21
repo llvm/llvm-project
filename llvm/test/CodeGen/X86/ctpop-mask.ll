@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=+popcnt | FileCheck %s -check-prefixes=X86-POPCOUNT
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+popcnt | FileCheck %s -check-prefixes=X64-POPCOUNT
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=-popcnt | FileCheck %s -check-prefixes=X86-NO-POPCOUNT
+; RUN: llc < %s -mtriple=i686-unknown -mattr=+sse2 -mattr=-popcnt | FileCheck %s -check-prefixes=X86-NO-POPCOUNT
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=-popcnt | FileCheck %s -check-prefixes=X64-NO-POPCOUNT
 
 declare i8 @llvm.ctpop.i8(i8) nounwind readnone
@@ -548,7 +549,6 @@ define i64 @ctpop_shifted_mask8(i64 %x) nounwind readnone {
 ; X86-POPCOUNT-LABEL: ctpop_shifted_mask8:
 ; X86-POPCOUNT:       # %bb.0:
 ; X86-POPCOUNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-POPCOUNT-NEXT:    shll $8, %eax
 ; X86-POPCOUNT-NEXT:    popcntl %eax, %eax
 ; X86-POPCOUNT-NEXT:    xorl %edx, %edx
 ; X86-POPCOUNT-NEXT:    retl

@@ -17,27 +17,35 @@ class UniqueTypesTestCase4(TestBase):
         )
         # FIXME: these should successfully print the values
         self.expect(
-            "expression ns::Foo<double>::value", substrs=["'Foo' in namespace 'ns'"], error=True
+            "expression ns::Foo<double>::value",
+            substrs=["'Foo' in namespace 'ns'"],
+            error=True,
         )
         self.expect(
-            "expression ns::Foo<int>::value", substrs=["'Foo' in namespace 'ns'"], error=True
+            "expression ns::Foo<int>::value",
+            substrs=["'Foo' in namespace 'ns'"],
+            error=True,
         )
         self.expect(
-            "expression ns::Bar<double>::value", substrs=["'Bar' in namespace 'ns'"], error=True
+            "expression ns::Bar<double>::value",
+            substrs=["'Bar' in namespace 'ns'"],
+            error=True,
         )
         self.expect(
-            "expression ns::Bar<int>::value", substrs=["'Bar' in namespace 'ns'"], error=True
+            "expression ns::Bar<int>::value",
+            substrs=["'Bar' in namespace 'ns'"],
+            error=True,
         )
         self.expect_expr("ns::FooDouble::value", result_type="double", result_value="0")
         self.expect_expr("ns::FooInt::value", result_type="int", result_value="0")
 
-    @skipIfWindows # https://github.com/llvm/llvm-project/issues/75936
+    @skipIfWindows  # https://github.com/llvm/llvm-project/issues/75936
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler_version=["<", "15.0"])
     def test_simple_template_names(self):
         self.do_test(dict(CFLAGS_EXTRAS="-gsimple-template-names"))
 
-    @skipIfWindows # https://github.com/llvm/llvm-project/issues/75936
+    @skipIfWindows  # https://github.com/llvm/llvm-project/issues/75936
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler_version=["<", "15.0"])
     def test_no_simple_template_names(self):

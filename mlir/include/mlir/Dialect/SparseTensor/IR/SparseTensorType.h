@@ -18,6 +18,18 @@
 namespace mlir {
 namespace sparse_tensor {
 
+/// A simple structure that encodes a range of levels in the sparse tensors that
+/// forms a COO segment.
+struct COOSegment {
+  std::pair<Level, Level> lvlRange; // [low, high)
+  bool isSoA;
+
+  bool isSegmentStart(Level l) const { return l == lvlRange.first; }
+  bool inSegment(Level l) const {
+    return l >= lvlRange.first && l < lvlRange.second;
+  }
+};
+
 //===----------------------------------------------------------------------===//
 /// A wrapper around `RankedTensorType`, which has three goals:
 ///
@@ -291,7 +303,7 @@ public:
     return isLooseCompressedLT(getLvlType(l));
   }
   bool isSingletonLvl(Level l) const { return isSingletonLT(getLvlType(l)); }
-  bool is2OutOf4Lvl(Level l) const { return is2OutOf4LT(getLvlType(l)); }
+  bool isNOutOfMLvl(Level l) const { return isNOutOfMLT(getLvlType(l)); }
   bool isOrderedLvl(Level l) const { return isOrderedLT(getLvlType(l)); }
   bool isUniqueLvl(Level l) const { return isUniqueLT(getLvlType(l)); }
   bool isWithPos(Level l) const { return isWithPosLT(getLvlType(l)); }
@@ -329,6 +341,9 @@ public:
 
   /// Returns [un]ordered COO type for this sparse tensor type.
   RankedTensorType getCOOType(bool ordered) const;
+
+  /// Returns a list of COO segments in the sparse tensor types.
+  SmallVector<COOSegment> getCOOSegments() const;
 
 private:
   // These two must be const, to ensure coherence of the memoized fields.

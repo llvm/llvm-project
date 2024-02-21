@@ -561,6 +561,8 @@ void LeftRightQualifierAlignmentFixer::fixQualifierAlignment(
 
     for (const auto *Tok = First; Tok && Tok != Last && Tok->Next;
          Tok = Tok->Next) {
+      if (Tok->MustBreakBefore)
+        break;
       if (Tok->is(tok::comment))
         continue;
       if (RightAlign) {

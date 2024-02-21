@@ -27,10 +27,9 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   SpecialIntrins
 ]>;
 
-
-// CHECK:      const uint8_t *GenMyCombiner::getMatchTable() const {
+//      CHECK: const uint8_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
-// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2(114), GIMT_Encode2(116), /*)*//*default:*//*Label 2*/ GIMT_Encode4(132),
+// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2(115), GIMT_Encode2(117), /*)*//*default:*//*Label 2*/ GIMT_Encode4(132),
 // CHECK-NEXT:     /*TargetOpcode::G_INTRINSIC*//*Label 0*/ GIMT_Encode4(18),
 // CHECK-NEXT:     /*TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS*//*Label 1*/ GIMT_Encode4(73),
 // CHECK-NEXT:     // Label 0: @18

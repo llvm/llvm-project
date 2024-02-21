@@ -1012,7 +1012,7 @@ protected:
 private:
   friend class TransformRewriter;
 
-  void notifyOperationRemoved(Operation *op) override;
+  void notifyOperationErased(Operation *op) override;
 
   void notifyOperationReplaced(Operation *op, ValueRange newValues) override;
   using Listener::notifyOperationReplaced;

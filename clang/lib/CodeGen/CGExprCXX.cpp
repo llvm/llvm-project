@@ -1423,6 +1423,7 @@ namespace {
     };
 
     unsigned NumPlacementArgs : 31;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned PassAlignmentToPlacementDelete : 1;
     const FunctionDecl *OperatorDelete;
     ValueTy Ptr;

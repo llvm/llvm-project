@@ -787,6 +787,27 @@ class CommandLineCompletionTestCase(TestBase):
         # register write can only take exact one register name as argument
         self.complete_from_to("register write rbx ", [])
 
+    def test_register_read_and_write_generic(self):
+        """Test the completion of the commands register read and write on x86"""
+
+        self.build()
+        self.main_source_spec = lldb.SBFileSpec("main.cpp")
+        lldbutil.run_to_source_breakpoint(self, "// Break here", self.main_source_spec)
+
+        # test cases for register read
+        self.complete_from_to("register read f", ["fp"])
+        # register read can take multiple register names as arguments
+        self.complete_from_to("register read sp ", ["sp", "fp"])
+        # complete with prefix '$'
+        self.complete_from_to("register read sp $", ["$sp", "$fp"])
+        self.complete_from_to("register read $x0 ", ["sp", "fp"])
+
+        # test cases for register write
+        self.complete_from_to("register write ", ["fp", "sp"])
+        self.complete_from_to("register write f", ["fp"])
+        # register write can only take exact one register name as argument
+        self.complete_from_to("register write fp ", [])
+
     def test_common_completion_target_stophook_ids(self):
         subcommands = ["delete", "enable", "disable"]
 

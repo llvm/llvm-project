@@ -111,6 +111,8 @@ public:
   void processLocation(const Module &M, const DILocation *Loc);
   // Process a DPValue, much like a DbgVariableIntrinsic.
   void processDPValue(const Module &M, const DPValue &DPV);
+  /// Dispatch to DbgRecord subclasses handlers.
+  void processDbgRecord(const Module &M, const DbgRecord &DPE);
 
   /// Process subprogram.
   void processSubprogram(DISubprogram *SP);

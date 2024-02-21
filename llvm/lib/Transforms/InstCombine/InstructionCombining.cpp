@@ -2615,10 +2615,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         Value *V;
         if ((has_single_bit(TyAllocSize) &&
              match(GEP.getOperand(1),
-                   m_Exact(m_AShr(m_Value(V),
-                                  m_SpecificInt(countr_zero(TyAllocSize)))))) ||
+                   m_Exact(m_Shr(m_Value(V),
+                                 m_SpecificInt(countr_zero(TyAllocSize)))))) ||
             match(GEP.getOperand(1),
-                  m_Exact(m_SDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
+                  m_Exact(m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
           GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
               Builder.getInt8Ty(), GEP.getPointerOperand(), V);
           NewGEP->setIsInBounds(GEP.isInBounds());
@@ -3105,8 +3105,22 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
 }
 
 Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
-  // Nothing for now.
-  return nullptr;
+  Value *RetVal = RI.getReturnValue();
+  if (!RetVal || !AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
+    return nullptr;
+
+  Function *F = RI.getFunction();
+  FPClassTest ReturnClass = F->getAttributes().getRetNoFPClass();
+  if (ReturnClass == fcNone)
+    return nullptr;
+
+  KnownFPClass KnownClass;
+  Value *Simplified =
+      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, 0, &RI);
+  if (!Simplified)
+    return nullptr;
+
+  return ReturnInst::Create(RI.getContext(), Simplified);
 }
 
 // WARNING: keep in sync with SimplifyCFGOpt::simplifyUnreachable()!
@@ -4470,7 +4484,8 @@ void InstCombinerImpl::tryToSinkInstructionDPValues(
     // For all instruction/variable pairs needing extra filtering, find the
     // latest assignment.
     for (const Instruction *Inst : DupSet) {
-      for (DPValue &DPV : llvm::reverse(Inst->getDbgValueRange())) {
+      for (DPValue &DPV :
+           llvm::reverse(DPValue::filter(Inst->getDbgValueRange()))) {
         DebugVariable DbgUserVariable =
             DebugVariable(DPV.getVariable(), DPV.getExpression(),
                           DPV.getDebugLoc()->getInlinedAt());

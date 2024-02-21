@@ -110,6 +110,25 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
 }
 
 void StackInfoBuilder::visit(Instruction &Inst) {
+  // Visit non-intrinsic debug-info records attached to Inst.
+  for (DbgRecord &DR : Inst.getDbgValueRange()) {
+    DPValue &DPV = cast<DPValue>(DR);
+    auto AddIfInteresting = [&](Value *V) {
+      if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
+        if (!isInterestingAlloca(*AI))
+          return;
+        AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
+        auto &DPVVec = AInfo.DbgVariableRecords;
+        if (DPVVec.empty() || DPVVec.back() != &DPV)
+          DPVVec.push_back(&DPV);
+      }
+    };
+
+    for_each(DPV.location_ops(), AddIfInteresting);
+    if (DPV.isDbgAssign())
+      AddIfInteresting(DPV.getAddress());
+  }
+
   if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
     if (CI->canReturnTwice()) {
       Info.CallsReturnTwice = true;
@@ -138,30 +157,19 @@ void StackInfoBuilder::visit(Instruction &Inst) {
     return;
   }
   if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
-    for (Value *V : DVI->location_ops()) {
+    auto AddIfInteresting = [&](Value *V) {
       if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
         if (!isInterestingAlloca(*AI))
-          continue;
+          return;
         AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
         auto &DVIVec = AInfo.DbgVariableIntrinsics;
         if (DVIVec.empty() || DVIVec.back() != DVI)
           DVIVec.push_back(DVI);
       }
-    }
-  }
-
-  // Check for non-intrinsic debug-info records.
-  for (auto &DPV : Inst.getDbgValueRange()) {
-    for (Value *V : DPV.location_ops()) {
-      if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
-        if (!isInterestingAlloca(*AI))
-          continue;
-        AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
-        auto &DPVVec = AInfo.DbgVariableRecords;
-        if (DPVVec.empty() || DPVVec.back() != &DPV)
-          DPVVec.push_back(&DPV);
-      }
-    }
+    };
+    for_each(DVI->location_ops(), AddIfInteresting);
+    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
+      AddIfInteresting(DAI->getAddress());
   }
 
   Instruction *ExitUntag = getUntagLocationIfFunctionExit(Inst);
