@@ -1653,12 +1653,7 @@ static void emitReductionListCopy(
         break;
       }
       case TEK_Complex: {
-        CodeGenFunction::ComplexPairTy Elem = CGF.EmitLoadOfComplex(
-            CGF.MakeAddrLValue(SrcElementAddr, Private->getType()),
-            Private->getExprLoc());
-        CGF.EmitStoreOfComplex(
-            Elem, CGF.MakeAddrLValue(DestElementAddr, Private->getType()),
-            /*isInit=*/false);
+        llvm_unreachable("OpenMP Complex reduction not handled.");
         break;
       }
       case TEK_Aggregate:
@@ -2232,9 +2227,7 @@ static llvm::Value *emitListToGlobalCopyFunction(
       break;
     }
     case TEK_Complex: {
-      CodeGenFunction::ComplexPairTy V = CGF.EmitLoadOfComplex(
-          CGF.MakeAddrLValue(ElemPtr, Private->getType()), Loc);
-      CGF.EmitStoreOfComplex(V, GlobLVal, /*isInit=*/false);
+      llvm_unreachable("OpenMP Complex reduction not handled.");
       break;
     }
     case TEK_Aggregate:
@@ -2439,9 +2432,7 @@ static llvm::Value *emitGlobalToListCopyFunction(
       break;
     }
     case TEK_Complex: {
-      CodeGenFunction::ComplexPairTy V = CGF.EmitLoadOfComplex(GlobLVal, Loc);
-      CGF.EmitStoreOfComplex(V, CGF.MakeAddrLValue(ElemPtr, Private->getType()),
-                             /*isInit=*/false);
+      llvm_unreachable("OpenMP Complex reduction not handled.");
       break;
     }
     case TEK_Aggregate:
