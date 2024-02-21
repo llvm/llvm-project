@@ -124,6 +124,9 @@ void UseDesignatedInitializersCheck::check(
   if (SyntacticInitList->getNumInits() - NumberOfDesignated >
       Designators.size())
     return;
+
+  // If the whole initializer list is un-designated, issue only one warning and
+  // a single fix-it for the whole expression.
   if (0 == NumberOfDesignated) {
     if (IgnoreMacros && InitList->getBeginLoc().isMacroID())
       return;
@@ -142,6 +145,9 @@ void UseDesignatedInitializersCheck::check(
          DiagnosticIDs::Note);
     return;
   }
+
+  // In case that a only few elements are un-designated (not all as before), the
+  // check offers dedicated issues and fix-its for each of them.
   for (const auto *InitExpr : *SyntacticInitList) {
     if (isa<DesignatedInitExpr>(InitExpr))
       continue;
