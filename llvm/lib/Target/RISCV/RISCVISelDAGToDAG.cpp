@@ -577,9 +577,8 @@ void RISCVDAGToDAGISel::selectVSETVLI(SDNode *Node) {
   SDValue VLOperand;
   unsigned Opcode = RISCV::PseudoVSETVLI;
   if (auto *C = dyn_cast<ConstantSDNode>(Node->getOperand(1))) {
-    const unsigned VLEN = Subtarget->getRealMinVLen();
-    if (VLEN == Subtarget->getRealMaxVLen())
-      if (VLEN / RISCVVType::getSEWLMULRatio(SEW, VLMul) == C->getZExtValue())
+    if (auto VLEN = Subtarget->getRealVLen())
+      if (*VLEN / RISCVVType::getSEWLMULRatio(SEW, VLMul) == C->getZExtValue())
         VLMax = true;
   }
   if (VLMax || isAllOnesConstant(Node->getOperand(1))) {

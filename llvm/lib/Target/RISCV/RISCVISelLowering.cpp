@@ -8092,12 +8092,11 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     // If we're compiling for an exact VLEN value, we can always perform
     // the insert in m1 as we can determine the register corresponding to
     // the index in the register group.
-    const unsigned MinVLen = Subtarget.getRealMinVLen();
-    const unsigned MaxVLen = Subtarget.getRealMaxVLen();
     const MVT M1VT = getLMUL1VT(ContainerVT);
-    if (MinVLen == MaxVLen && ContainerVT.bitsGT(M1VT)) {
+    if (auto VLEN = Subtarget.getRealVLen();
+        VLEN && ContainerVT.bitsGT(M1VT)) {
       EVT ElemVT = VecVT.getVectorElementType();
-      unsigned ElemsPerVReg = MinVLen / ElemVT.getFixedSizeInBits();
+      unsigned ElemsPerVReg = *VLEN / ElemVT.getFixedSizeInBits();
       unsigned RemIdx = OrigIdx % ElemsPerVReg;
       unsigned SubRegIdx = OrigIdx / ElemsPerVReg;
       unsigned ExtractIdx =

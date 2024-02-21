@@ -283,8 +283,8 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   // Optimize for constant VLEN.
-  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
-    const int64_t VLENB = STI.getRealMinVLen() / 8;
+  if (auto VLEN = STI.getRealVLen()) {
+    const int64_t VLENB = *VLEN / 8;
     int64_t Offset = VLENB * LMUL;
     STI.getInstrInfo()->movImm(MBB, II, DL, VL, Offset);
   } else {
@@ -360,8 +360,8 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   // Optimize for constant VLEN.
-  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
-    const int64_t VLENB = STI.getRealMinVLen() / 8;
+  if (auto VLEN = STI.getRealVLen()) {
+    const int64_t VLENB = *VLEN / 8;
     int64_t Offset = VLENB * LMUL;
     STI.getInstrInfo()->movImm(MBB, II, DL, VL, Offset);
   } else {
