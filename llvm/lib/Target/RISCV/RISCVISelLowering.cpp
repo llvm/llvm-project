@@ -11734,14 +11734,14 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue LoCounter, HiCounter;
     MVT XLenVT = Subtarget.getXLenVT();
     if (N->getOpcode() == ISD::READCYCLECOUNTER) {
-      LoCounter = DAG.getConstant(
+      LoCounter = DAG.getTargetConstant(
           RISCVSysReg::lookupSysRegByName("CYCLE")->Encoding, DL, XLenVT);
-      HiCounter = DAG.getConstant(
+      HiCounter = DAG.getTargetConstant(
           RISCVSysReg::lookupSysRegByName("CYCLEH")->Encoding, DL, XLenVT);
     } else {
-      LoCounter = DAG.getConstant(
+      LoCounter = DAG.getTargetConstant(
           RISCVSysReg::lookupSysRegByName("TIME")->Encoding, DL, XLenVT);
-      HiCounter = DAG.getConstant(
+      HiCounter = DAG.getTargetConstant(
           RISCVSysReg::lookupSysRegByName("TIMEH")->Encoding, DL, XLenVT);
     }
     SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32, MVT::Other);
