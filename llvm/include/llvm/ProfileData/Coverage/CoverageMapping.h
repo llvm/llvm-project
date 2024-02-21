@@ -551,7 +551,20 @@ public:
 };
 
 namespace mcdc {
-/// Compute Indices from Branch-like structure
+/// Compute TestVector Indices "TVIdx" from the Conds graph.
+///
+/// Clang CodeGen handles the bitmap index based on TVIdx.
+/// llvm-cov reconstructs conditions from TVIdx.
+///
+/// For each leaf "The final decision",
+/// - TVIdx should be unique.
+/// - TVIdx has the Width.
+///   - The width represents the number of possible paths.
+///   - The minimum width is 1 "deterministic".
+/// - The order of leaves are sorted by Width DESC. It expects
+///   latter TVIdx(s) (with Width=1) could be pruned and altered to
+///   other simple branch conditions.
+///
 class TVIdxBuilder {
 public:
   struct MCDCNode {
@@ -580,6 +593,7 @@ public:
 public:
   /// Calculate and assign Indices
   /// \param NextIDs The list of {FalseID, TrueID} indexed by ID
+  ///        The first element [0] should be the root node.
   /// \param Offset Offset of index to final decisions.
   TVIdxBuilder(const SmallVectorImpl<ConditionIDs> &NextIDs, int Offset = 0);
 };
