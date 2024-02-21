@@ -16,7 +16,6 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
@@ -181,15 +180,6 @@ RValue CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E) {
       E, this, GetVprintfDeclaration(CGM.getModule()), false);
 }
 
-// Deterimines if an argument is a string
-static bool isString(const clang::Type *argXTy) {
-  if ((argXTy->isPointerType() || argXTy->isConstantArrayType()) &&
-      argXTy->getPointeeOrArrayElementType()->isCharType())
-    return true;
-  else
-    return false;
-}
-
 RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
   assert(getTarget().getTriple().getArch() == llvm::Triple::amdgcn);
   assert(E->getBuiltinCallee() == Builtin::BIprintf ||
@@ -214,8 +204,6 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
     }
 
     llvm::Value *Arg = A.getRValue(*this).getScalarVal();
-    if (isString(A.getType().getTypePtr()) && CGM.getLangOpts().OpenCL)
-      Arg = Builder.CreateAddrSpaceCast(Arg, CGM.Int8PtrTy);
     Args.push_back(Arg);
   }
 
@@ -227,17 +215,12 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
     if (FmtStr.empty())
       FmtStr = StringRef("", 1);
   } else {
-    if (CGM.getLangOpts().OpenCL) {
-      llvm::DiagnosticInfoUnsupported UnsupportedFormatStr(
-          *IRB.GetInsertBlock()->getParent(),
-          "printf format string must be a trivially resolved constant string "
-          "global variable",
-          IRB.getCurrentDebugLocation());
-      IRB.getContext().diagnose(UnsupportedFormatStr);
-    }
+    assert(!CGM.getLangOpts().OpenCL &&
+           "OpenCL needs compile time resolvable format string");
   }
 
-  auto Printf = llvm::emitAMDGPUPrintfCall(IRB, Args, FmtStr, isBuffered);
+  auto Printf = llvm::emitAMDGPUPrintfCall(IRB, Args, FmtStr, isBuffered,
+                                           CGM.getLangOpts().OpenCL);
   Builder.SetInsertPoint(IRB.GetInsertBlock(), IRB.GetInsertPoint());
   return RValue::get(Printf);
 }

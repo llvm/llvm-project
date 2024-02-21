@@ -207,8 +207,10 @@ static Value *appendVectorArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
 
 static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
                          bool SpecIsCString, bool IsLast, bool IsBuffered,
-                         uint VecSize) {
+                         uint VecSize, bool IsOpenCL) {
   if (SpecIsCString && isa<PointerType>(Arg->getType())) {
+    if (IsOpenCL)
+      Arg = Builder.CreateAddrSpaceCast(Arg, Builder.getPtrTy());
     return appendString(Builder, Desc, Arg, IsLast);
   }
 
@@ -576,7 +578,8 @@ callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
 }
 
 Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
-                                  StringRef FmtStr, bool IsBuffered) {
+                                  StringRef FmtStr, bool IsBuffered,
+                                  bool IsOpenCL) {
   auto NumOps = Args.size();
   assert(NumOps >= 1);
 
@@ -672,6 +675,8 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
   }
 
   auto Desc = callPrintfBegin(Builder, Builder.getIntN(64, 0));
+  if (IsOpenCL)
+    Fmt = Builder.CreateAddrSpaceCast(Fmt, Builder.getPtrTy());
   Desc = appendString(Builder, Desc, Fmt, NumOps == 1);
 
   // FIXME: This invokes hostcall once for each argument. We can pack up to
@@ -683,7 +688,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
     bool IsCString = SpecIsCString.test(i);
     bool IsVector = OCLVectors.test(i);
     Desc = processArg(Builder, Desc, Args[i], IsCString, IsLast, IsBuffered,
-                      IsVector ? VecSizes[VecIdx] : 0);
+                      IsVector ? VecSizes[VecIdx] : 0, IsOpenCL);
     if (IsVector)
       VecIdx++;
   }
