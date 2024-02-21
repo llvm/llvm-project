@@ -31053,6 +31053,18 @@ static SDValue LowerCTPOP(SDValue N, const X86Subtarget &Subtarget,
     unsigned ActiveBits = Known.getBitWidth() - LZ;
     unsigned ShiftedActiveBits = Known.getBitWidth() - (LZ + TZ);
 
+    // i2 CTPOP - "ctpop(x) --> sub(x, (x >> 1))".
+    if (ShiftedActiveBits <= 2) {
+      if (ActiveBits > 2)
+        Op = DAG.getNode(ISD::SRL, DL, VT, Op,
+                         DAG.getShiftAmountConstant(TZ, VT, DL));
+      Op = DAG.getZExtOrTrunc(Op, DL, MVT::i32);
+      Op = DAG.getNode(ISD::SUB, DL, MVT::i32, Op,
+                       DAG.getNode(ISD::SRL, DL, MVT::i32, Op,
+                                   DAG.getShiftAmountConstant(1, VT, DL)));
+      return DAG.getZExtOrTrunc(Op, DL, VT);
+    }
+
     // i8 CTPOP - with efficient i32 MUL, then attempt multiply-mask-multiply.
     if (ShiftedActiveBits <= 8) {
       SDValue Mask11 = DAG.getConstant(0x11111111U, DL, MVT::i32);

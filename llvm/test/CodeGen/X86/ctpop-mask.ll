@@ -33,22 +33,19 @@ define i64 @ctpop_mask2(i64 %x) nounwind readnone {
 ; X86-NO-POPCOUNT:       # %bb.0:
 ; X86-NO-POPCOUNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NO-POPCOUNT-NEXT:    andl $3, %eax
-; X86-NO-POPCOUNT-NEXT:    imull $134480385, %eax, %eax # imm = 0x8040201
-; X86-NO-POPCOUNT-NEXT:    shrl $3, %eax
-; X86-NO-POPCOUNT-NEXT:    andl $17895697, %eax # imm = 0x1111111
-; X86-NO-POPCOUNT-NEXT:    imull $286331153, %eax, %eax # imm = 0x11111111
-; X86-NO-POPCOUNT-NEXT:    shrl $28, %eax
+; X86-NO-POPCOUNT-NEXT:    movl %eax, %ecx
+; X86-NO-POPCOUNT-NEXT:    shrl %ecx
+; X86-NO-POPCOUNT-NEXT:    subl %ecx, %eax
 ; X86-NO-POPCOUNT-NEXT:    xorl %edx, %edx
 ; X86-NO-POPCOUNT-NEXT:    retl
 ;
 ; X64-NO-POPCOUNT-LABEL: ctpop_mask2:
 ; X64-NO-POPCOUNT:       # %bb.0:
-; X64-NO-POPCOUNT-NEXT:    andl $3, %edi
-; X64-NO-POPCOUNT-NEXT:    imull $134480385, %edi, %eax # imm = 0x8040201
-; X64-NO-POPCOUNT-NEXT:    shrl $3, %eax
-; X64-NO-POPCOUNT-NEXT:    andl $17895697, %eax # imm = 0x1111111
-; X64-NO-POPCOUNT-NEXT:    imull $286331153, %eax, %eax # imm = 0x11111111
-; X64-NO-POPCOUNT-NEXT:    shrl $28, %eax
+; X64-NO-POPCOUNT-NEXT:    movq %rdi, %rax
+; X64-NO-POPCOUNT-NEXT:    andl $3, %eax
+; X64-NO-POPCOUNT-NEXT:    movl %eax, %ecx
+; X64-NO-POPCOUNT-NEXT:    shrl %ecx
+; X64-NO-POPCOUNT-NEXT:    subl %ecx, %eax
 ; X64-NO-POPCOUNT-NEXT:    retq
   %mask = and i64 %x, 3
   %count = tail call i64 @llvm.ctpop.i64(i64 %mask)
@@ -71,25 +68,22 @@ define i32 @ctpop_shifted_mask2(i32 %x) nounwind readnone {
 ;
 ; X86-NO-POPCOUNT-LABEL: ctpop_shifted_mask2:
 ; X86-NO-POPCOUNT:       # %bb.0:
-; X86-NO-POPCOUNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NO-POPCOUNT-NEXT:    movl $1572864, %eax # imm = 0x180000
+; X86-NO-POPCOUNT-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NO-POPCOUNT-NEXT:    movl %eax, %ecx
+; X86-NO-POPCOUNT-NEXT:    shrl $20, %ecx
 ; X86-NO-POPCOUNT-NEXT:    shrl $19, %eax
-; X86-NO-POPCOUNT-NEXT:    andl $3, %eax
-; X86-NO-POPCOUNT-NEXT:    imull $134480385, %eax, %eax # imm = 0x8040201
-; X86-NO-POPCOUNT-NEXT:    shrl $3, %eax
-; X86-NO-POPCOUNT-NEXT:    andl $17895697, %eax # imm = 0x1111111
-; X86-NO-POPCOUNT-NEXT:    imull $286331153, %eax, %eax # imm = 0x11111111
-; X86-NO-POPCOUNT-NEXT:    shrl $28, %eax
+; X86-NO-POPCOUNT-NEXT:    subl %ecx, %eax
 ; X86-NO-POPCOUNT-NEXT:    retl
 ;
 ; X64-NO-POPCOUNT-LABEL: ctpop_shifted_mask2:
 ; X64-NO-POPCOUNT:       # %bb.0:
-; X64-NO-POPCOUNT-NEXT:    shrl $19, %edi
-; X64-NO-POPCOUNT-NEXT:    andl $3, %edi
-; X64-NO-POPCOUNT-NEXT:    imull $134480385, %edi, %eax # imm = 0x8040201
-; X64-NO-POPCOUNT-NEXT:    shrl $3, %eax
-; X64-NO-POPCOUNT-NEXT:    andl $17895697, %eax # imm = 0x1111111
-; X64-NO-POPCOUNT-NEXT:    imull $286331153, %eax, %eax # imm = 0x11111111
-; X64-NO-POPCOUNT-NEXT:    shrl $28, %eax
+; X64-NO-POPCOUNT-NEXT:    movl %edi, %eax
+; X64-NO-POPCOUNT-NEXT:    andl $1572864, %eax # imm = 0x180000
+; X64-NO-POPCOUNT-NEXT:    movl %eax, %ecx
+; X64-NO-POPCOUNT-NEXT:    shrl $20, %ecx
+; X64-NO-POPCOUNT-NEXT:    shrl $19, %eax
+; X64-NO-POPCOUNT-NEXT:    subl %ecx, %eax
 ; X64-NO-POPCOUNT-NEXT:    retq
   %mask = and i32 %x, 1572864 ; 3 << 19
   %count = tail call i32 @llvm.ctpop.i32(i32 %mask)
