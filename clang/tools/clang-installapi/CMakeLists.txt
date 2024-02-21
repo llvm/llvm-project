@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   TargetParser
   TextAPI
+  Option
   )
 
 add_clang_tool(clang-installapi
