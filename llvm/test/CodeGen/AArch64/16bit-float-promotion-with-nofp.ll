@@ -8,13 +8,24 @@ define half @f2h(float %a) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    and w0, w0, #0xffff
-; CHECK-NEXT:    bl __gnu_h2f_ieee
-; CHECK-NEXT:    bl __gnu_f2h_ieee
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %0 = fptrunc float %a to half
   ret half %0
+}
+
+define bfloat @f2bfloat(float %a) {
+; CHECK-LABEL: f2bfloat:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    bl __truncsfbf2
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %0 = fptrunc float %a to bfloat
+  ret bfloat %0
 }
 
