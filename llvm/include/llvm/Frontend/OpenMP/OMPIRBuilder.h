@@ -342,6 +342,8 @@ public:
     OMPTargetGlobalVarEntryNone = 0x3,
     /// Mark the entry as a declare target indirect global.
     OMPTargetGlobalVarEntryIndirect = 0x8,
+    /// Mark the entry as a register requires global.
+    OMPTargetGlobalRegisterRequires = 0x10,
   };
 
   /// Kind of device clause for declare target variables
@@ -2628,16 +2630,6 @@ public:
   /// \param Name Name of the variable.
   GlobalVariable *getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
                                               unsigned AddressSpace = 0);
-
-  /// Create a global function to register OpenMP requires flags into the
-  /// runtime, according to the `Config`.
-  ///
-  /// This function should be added to the list of constructors of the
-  /// compilation unit in order to be called before other OpenMP runtime
-  /// functions.
-  ///
-  /// \param Name  Name of the created function.
-  Function *createRegisterRequires(StringRef Name);
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.

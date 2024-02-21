@@ -19124,14 +19124,15 @@ static bool isLayoutCompatible(ASTContext &C, QualType T1, QualType T2) {
   if (T1.isNull() || T2.isNull())
     return false;
 
-  // C++11 [basic.types] p11:
-  // If two types T1 and T2 are the same type, then T1 and T2 are
-  // layout-compatible types.
-  if (C.hasSameType(T1, T2))
-    return true;
-
+  // C++20 [basic.types] p11:
+  // Two types cv1 T1 and cv2 T2 are layout-compatible types
+  // if T1 and T2 are the same type, layout-compatible enumerations (9.7.1),
+  // or layout-compatible standard-layout class types (11.4).
   T1 = T1.getCanonicalType().getUnqualifiedType();
   T2 = T2.getCanonicalType().getUnqualifiedType();
+
+  if (C.hasSameType(T1, T2))
+    return true;
 
   const Type::TypeClass TC1 = T1->getTypeClass();
   const Type::TypeClass TC2 = T2->getTypeClass();
