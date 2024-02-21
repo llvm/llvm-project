@@ -301,10 +301,11 @@ def main():
         "displayed.",
     )
     parser.add_argument(
-        "-source-ignore",
+        "-source-filter",
         default=None,
         help="Regular expression matching the names of the "
-        "source files from compilation database to ignore.",
+        "source files from compilation database to output "
+        "diagnostics from.",
     )
     parser.add_argument(
         "-line-filter",
@@ -468,17 +469,17 @@ def main():
         [make_absolute(entry["file"], entry["directory"]) for entry in database]
     )
 
-    # Remove source file to be ignored from database.
-    if args.source_ignore:
+    # Filter source files from compilation database.
+    if args.source_filter:
         try:
-            source_ignore_re = re.compile(args.source_ignore)
+            source_filter_re = re.compile(args.source_filter)
         except:
             print(
-                "Error: unable to compile regex from arg -source-ignore.",
+                "Error: unable to compile regex from arg -source-filter.",
                 file=sys.stderr,
             )
             sys.exit(1)
-        files = {f for f in files if not source_ignore_re.match(f)}
+        files = {f for f in files if source_filter_re.match(f)}
 
     max_task = args.j
     if max_task == 0:
