@@ -621,10 +621,10 @@ s_setreg_b32  hwreg(3,0,33), s2
 // CHECK-NEXT:{{^}}                        ^
 
 //==============================================================================
-// invalid code of hardware register: only 6-bit values are legal
+// invalid hardware register: only 6-bit values are legal
 
 s_setreg_b32  hwreg(0x40), s2
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid code of hardware register: only 6-bit values are legal
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: only 6-bit values are legal
 // CHECK-NEXT:{{^}}s_setreg_b32  hwreg(0x40), s2
 // CHECK-NEXT:{{^}}                    ^
 
@@ -1158,10 +1158,10 @@ v_movrels_b32_sdwa v0, shared_base
 // CHECK-NEXT:{{^}}                       ^
 
 //==============================================================================
-// specified hardware register is not supported on this GPU
+// invalid hardware register: not supported on this GPU
 
 s_getreg_b32 s2, hwreg(HW_REG_SHADER_CYCLES)
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 // CHECK-NEXT:{{^}}s_getreg_b32 s2, hwreg(HW_REG_SHADER_CYCLES)
 // CHECK-NEXT:{{^}}                       ^
 
