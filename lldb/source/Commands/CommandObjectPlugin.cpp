@@ -36,13 +36,6 @@ public:
 
   ~CommandObjectPluginLoad() override = default;
 
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
-  }
-
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     size_t argc = command.GetArgumentCount();

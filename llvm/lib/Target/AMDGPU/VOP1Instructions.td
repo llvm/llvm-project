@@ -1,3 +1,4 @@
+
 //===-- VOP1Instructions.td - Vector Instruction Definitions --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -565,7 +566,7 @@ class VOPProfile_Base_CVT_F32_F8<ValueType vt> : VOPProfileI2F <vt, i32> {
 def VOPProfileCVT_F32_F8    : VOPProfile_Base_CVT_F32_F8 <f32>;
 def VOPProfileCVT_PK_F32_F8 : VOPProfile_Base_CVT_F32_F8 <v2f32>;
 
-let SubtargetPredicate = HasFP8ConversionInsts, mayRaiseFPException = 0,
+let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
     SchedRW = [WriteFloatCvt] in {
   defm V_CVT_F32_FP8    : VOP1Inst<"v_cvt_f32_fp8", VOPProfileCVT_F32_F8>;
   defm V_CVT_F32_BF8    : VOP1Inst<"v_cvt_f32_bf8", VOPProfileCVT_F32_F8>;
@@ -653,7 +654,7 @@ class Cvt_F32_F8_Pat_OpSel<SDPatternOperator node, bits<2> index,
          (inst_e32 $src))
 >;
 
-let SubtargetPredicate = isGFX12Plus in {
+let SubtargetPredicate = isGFX12Plus, OtherPredicates = [HasFP8ConversionInsts] in {
   foreach Index = [0, 1, 2, 3] in {
     def : Cvt_F32_F8_Pat_OpSel<int_amdgcn_cvt_f32_fp8, Index,
                                V_CVT_F32_FP8_e32, V_CVT_F32_FP8_OP_SEL_e64>;
@@ -670,7 +671,7 @@ class Cvt_PK_F32_F8_Pat_OpSel<SDPatternOperator node, int index,
          (inst_e32 $src))
 >;
 
-let SubtargetPredicate = isGFX12Plus in {
+let SubtargetPredicate = isGFX12Plus, OtherPredicates = [HasFP8ConversionInsts] in {
   foreach Index = [0, -1] in {
     def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_fp8, Index,
                                   V_CVT_PK_F32_FP8_e32, V_CVT_PK_F32_FP8_OP_SEL_e64>;
