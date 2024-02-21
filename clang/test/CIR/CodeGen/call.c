@@ -31,18 +31,18 @@ void d(void) {
 // CHECK:     %6 = cir.load %2 : cir.ptr <!s32i>, !s32i
 // CHECK:     cir.return %6
 // CHECK:   }
-// CHECK:   cir.func @c(%arg0: f64 {{.*}}, %arg1: f64 {{.*}}) -> f64
-// CHECK:     %0 = cir.alloca f64, cir.ptr <f64>, ["a", init]
-// CHECK:     %1 = cir.alloca f64, cir.ptr <f64>, ["b", init]
-// CHECK:     %2 = cir.alloca f64, cir.ptr <f64>, ["__retval"]
-// CHECK:     cir.store %arg0, %0 : f64, cir.ptr <f64>
-// CHECK:     cir.store %arg1, %1 : f64, cir.ptr <f64>
-// CHECK:     %3 = cir.load %0 : cir.ptr <f64>, f64
-// CHECK:     %4 = cir.load %1 : cir.ptr <f64>, f64
-// CHECK:     %5 = cir.binop(add, %3, %4) : f64
-// CHECK:     cir.store %5, %2 : f64, cir.ptr <f64>
-// CHECK:     %6 = cir.load %2 : cir.ptr <f64>, f64
-// CHECK:     cir.return %6 : f64
+// CHECK:   cir.func @c(%arg0: !cir.double {{.*}}, %arg1: !cir.double {{.*}}) -> !cir.double
+// CHECK:     %0 = cir.alloca !cir.double, cir.ptr <!cir.double>, ["a", init]
+// CHECK:     %1 = cir.alloca !cir.double, cir.ptr <!cir.double>, ["b", init]
+// CHECK:     %2 = cir.alloca !cir.double, cir.ptr <!cir.double>, ["__retval"]
+// CHECK:     cir.store %arg0, %0 : !cir.double, cir.ptr <!cir.double>
+// CHECK:     cir.store %arg1, %1 : !cir.double, cir.ptr <!cir.double>
+// CHECK:     %3 = cir.load %0 : cir.ptr <!cir.double>, !cir.double
+// CHECK:     %4 = cir.load %1 : cir.ptr <!cir.double>, !cir.double
+// CHECK:     %5 = cir.binop(add, %3, %4) : !cir.double
+// CHECK:     cir.store %5, %2 : !cir.double, cir.ptr <!cir.double>
+// CHECK:     %6 = cir.load %2 : cir.ptr <!cir.double>, !cir.double
+// CHECK:     cir.return %6 : !cir.double
 // CHECK:   }
 // CHECK:   cir.func @d()
 // CHECK:     call @a() : () -> ()
@@ -69,18 +69,18 @@ void d(void) {
 // CXX-NEXT:     %6 = cir.load %2 : cir.ptr <!s32i>, !s32i
 // CXX-NEXT:     cir.return %6
 // CXX-NEXT:   }
-// CXX-NEXT:   cir.func @_Z1cdd(%arg0: f64 {{.*}}, %arg1: f64 {{.*}}) -> f64
-// CXX-NEXT:     %0 = cir.alloca f64, cir.ptr <f64>, ["a", init]
-// CXX-NEXT:     %1 = cir.alloca f64, cir.ptr <f64>, ["b", init]
-// CXX-NEXT:     %2 = cir.alloca f64, cir.ptr <f64>, ["__retval"]
-// CXX-NEXT:     cir.store %arg0, %0 : f64, cir.ptr <f64>
-// CXX-NEXT:     cir.store %arg1, %1 : f64, cir.ptr <f64>
-// CXX-NEXT:     %3 = cir.load %0 : cir.ptr <f64>, f64
-// CXX-NEXT:     %4 = cir.load %1 : cir.ptr <f64>, f64
-// CXX-NEXT:     %5 = cir.binop(add, %3, %4) : f64
-// CXX-NEXT:     cir.store %5, %2 : f64, cir.ptr <f64>
-// CXX-NEXT:     %6 = cir.load %2 : cir.ptr <f64>, f64
-// CXX-NEXT:     cir.return %6 : f64
+// CXX-NEXT:   cir.func @_Z1cdd(%arg0: !cir.double {{.*}}, %arg1: !cir.double {{.*}}) -> !cir.double
+// CXX-NEXT:     %0 = cir.alloca !cir.double, cir.ptr <!cir.double>, ["a", init]
+// CXX-NEXT:     %1 = cir.alloca !cir.double, cir.ptr <!cir.double>, ["b", init]
+// CXX-NEXT:     %2 = cir.alloca !cir.double, cir.ptr <!cir.double>, ["__retval"]
+// CXX-NEXT:     cir.store %arg0, %0 : !cir.double, cir.ptr <!cir.double>
+// CXX-NEXT:     cir.store %arg1, %1 : !cir.double, cir.ptr <!cir.double>
+// CXX-NEXT:     %3 = cir.load %0 : cir.ptr <!cir.double>, !cir.double
+// CXX-NEXT:     %4 = cir.load %1 : cir.ptr <!cir.double>, !cir.double
+// CXX-NEXT:     %5 = cir.binop(add, %3, %4) : !cir.double
+// CXX-NEXT:     cir.store %5, %2 : !cir.double, cir.ptr <!cir.double>
+// CXX-NEXT:     %6 = cir.load %2 : cir.ptr <!cir.double>, !cir.double
+// CXX-NEXT:     cir.return %6 : !cir.double
 // CXX-NEXT:   }
 // CXX-NEXT:   cir.func @_Z1dv()
 // CXX-NEXT:     call @_Z1av() : () -> ()

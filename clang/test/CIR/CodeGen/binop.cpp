@@ -103,11 +103,11 @@ void b3(int a, int b, int c, int d) {
 
 void testFloatingPointBinOps(float a, float b) {
   a * b;
-  // CHECK: cir.binop(mul, %{{.+}}, %{{.+}}) : f32
+  // CHECK: cir.binop(mul, %{{.+}}, %{{.+}}) : !cir.float
   a / b;
-  // CHECK: cir.binop(div, %{{.+}}, %{{.+}}) : f32
+  // CHECK: cir.binop(div, %{{.+}}, %{{.+}}) : !cir.float
   a + b;
-  // CHECK: cir.binop(add, %{{.+}}, %{{.+}}) : f32
+  // CHECK: cir.binop(add, %{{.+}}, %{{.+}}) : !cir.float
   a - b;
-  // CHECK: cir.binop(sub, %{{.+}}, %{{.+}}) : f32
+  // CHECK: cir.binop(sub, %{{.+}}, %{{.+}}) : !cir.float
 }

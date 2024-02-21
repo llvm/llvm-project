@@ -25,6 +25,7 @@
 #include "mlir/Support/LogicalResult.h"
 
 #include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -623,6 +624,54 @@ IntType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
   }
 
   return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// Floating-point type definitions
+//===----------------------------------------------------------------------===//
+
+const llvm::fltSemantics &SingleType::getFloatSemantics() const {
+  return llvm::APFloat::IEEEsingle();
+}
+
+llvm::TypeSize
+SingleType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                              mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(getWidth());
+}
+
+uint64_t
+SingleType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                            mlir::DataLayoutEntryListRef params) const {
+  return (uint64_t)(getWidth() / 8);
+}
+
+uint64_t
+SingleType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
+                                  ::mlir::DataLayoutEntryListRef params) const {
+  return (uint64_t)(getWidth() / 8);
+}
+
+const llvm::fltSemantics &DoubleType::getFloatSemantics() const {
+  return llvm::APFloat::IEEEdouble();
+}
+
+llvm::TypeSize
+DoubleType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                              mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(getWidth());
+}
+
+uint64_t
+DoubleType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                            mlir::DataLayoutEntryListRef params) const {
+  return (uint64_t)(getWidth() / 8);
+}
+
+uint64_t
+DoubleType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
+                                  ::mlir::DataLayoutEntryListRef params) const {
+  return (uint64_t)(getWidth() / 8);
 }
 
 //===----------------------------------------------------------------------===//

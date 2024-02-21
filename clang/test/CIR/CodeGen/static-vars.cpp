@@ -33,5 +33,5 @@ void func2(void) {
   static char i;
   // CHECK-DAG: cir.global "private" internal @_ZZ5func2vE1i = #cir.int<0> : !s8i
   static float j;
-  // CHECK-DAG: cir.global "private" internal @_ZZ5func2vE1j = 0.000000e+00 : f32
+  // CHECK-DAG: cir.global "private" internal @_ZZ5func2vE1j = #cir.fp<0.000000e+00> : !cir.float
 }

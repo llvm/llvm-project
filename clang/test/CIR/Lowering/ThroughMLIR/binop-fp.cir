@@ -3,44 +3,44 @@
 
 module {
   cir.func @foo() {
-    %0 = cir.alloca f32, cir.ptr <f32>, ["c"] {alignment = 4 : i64}
-    %1 = cir.alloca f32, cir.ptr <f32>, ["d"] {alignment = 4 : i64}
-    %2 = cir.alloca f32, cir.ptr <f32>, ["y", init] {alignment = 4 : i64}
-    %3 = cir.alloca f64, cir.ptr <f64>, ["e"] {alignment = 8 : i64}
-    %4 = cir.alloca f64, cir.ptr <f64>, ["f"] {alignment = 8 : i64}
-    %5 = cir.alloca f64, cir.ptr <f64>, ["g", init] {alignment = 8 : i64}
-    %6 = cir.load %0 : cir.ptr <f32>, f32
-    %7 = cir.load %1 : cir.ptr <f32>, f32
-    %8 = cir.binop(mul, %6, %7) : f32
-    cir.store %8, %2 : f32, cir.ptr <f32>
-    %9 = cir.load %2 : cir.ptr <f32>, f32
-    %10 = cir.load %1 : cir.ptr <f32>, f32
-    %11 = cir.binop(div, %9, %10) : f32
-    cir.store %11, %2 : f32, cir.ptr <f32>
-    %12 = cir.load %2 : cir.ptr <f32>, f32
-    %13 = cir.load %1 : cir.ptr <f32>, f32
-    %14 = cir.binop(add, %12, %13) : f32
-    cir.store %14, %2 : f32, cir.ptr <f32>
-    %15 = cir.load %2 : cir.ptr <f32>, f32
-    %16 = cir.load %1 : cir.ptr <f32>, f32
-    %17 = cir.binop(sub, %15, %16) : f32
-    cir.store %17, %2 : f32, cir.ptr <f32>
-    %18 = cir.load %3 : cir.ptr <f64>, f64
-    %19 = cir.load %4 : cir.ptr <f64>, f64
-    %20 = cir.binop(add, %18, %19) : f64
-    cir.store %20, %5 : f64, cir.ptr <f64>
-    %21 = cir.load %3 : cir.ptr <f64>, f64
-    %22 = cir.load %4 : cir.ptr <f64>, f64
-    %23 = cir.binop(sub, %21, %22) : f64
-    cir.store %23, %5 : f64, cir.ptr <f64>
-    %24 = cir.load %3 : cir.ptr <f64>, f64
-    %25 = cir.load %4 : cir.ptr <f64>, f64
-    %26 = cir.binop(mul, %24, %25) : f64
-    cir.store %26, %5 : f64, cir.ptr <f64>
-    %27 = cir.load %3 : cir.ptr <f64>, f64
-    %28 = cir.load %4 : cir.ptr <f64>, f64
-    %29 = cir.binop(div, %27, %28) : f64
-    cir.store %29, %5 : f64, cir.ptr <f64>
+    %0 = cir.alloca !cir.float, cir.ptr <!cir.float>, ["c"] {alignment = 4 : i64}
+    %1 = cir.alloca !cir.float, cir.ptr <!cir.float>, ["d"] {alignment = 4 : i64}
+    %2 = cir.alloca !cir.float, cir.ptr <!cir.float>, ["y", init] {alignment = 4 : i64}
+    %3 = cir.alloca !cir.double, cir.ptr <!cir.double>, ["e"] {alignment = 8 : i64}
+    %4 = cir.alloca !cir.double, cir.ptr <!cir.double>, ["f"] {alignment = 8 : i64}
+    %5 = cir.alloca !cir.double, cir.ptr <!cir.double>, ["g", init] {alignment = 8 : i64}
+    %6 = cir.load %0 : cir.ptr <!cir.float>, !cir.float
+    %7 = cir.load %1 : cir.ptr <!cir.float>, !cir.float
+    %8 = cir.binop(mul, %6, %7) : !cir.float
+    cir.store %8, %2 : !cir.float, cir.ptr <!cir.float>
+    %9 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
+    %10 = cir.load %1 : cir.ptr <!cir.float>, !cir.float
+    %11 = cir.binop(div, %9, %10) : !cir.float
+    cir.store %11, %2 : !cir.float, cir.ptr <!cir.float>
+    %12 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
+    %13 = cir.load %1 : cir.ptr <!cir.float>, !cir.float
+    %14 = cir.binop(add, %12, %13) : !cir.float
+    cir.store %14, %2 : !cir.float, cir.ptr <!cir.float>
+    %15 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
+    %16 = cir.load %1 : cir.ptr <!cir.float>, !cir.float
+    %17 = cir.binop(sub, %15, %16) : !cir.float
+    cir.store %17, %2 : !cir.float, cir.ptr <!cir.float>
+    %18 = cir.load %3 : cir.ptr <!cir.double>, !cir.double
+    %19 = cir.load %4 : cir.ptr <!cir.double>, !cir.double
+    %20 = cir.binop(add, %18, %19) : !cir.double
+    cir.store %20, %5 : !cir.double, cir.ptr <!cir.double>
+    %21 = cir.load %3 : cir.ptr <!cir.double>, !cir.double
+    %22 = cir.load %4 : cir.ptr <!cir.double>, !cir.double
+    %23 = cir.binop(sub, %21, %22) : !cir.double
+    cir.store %23, %5 : !cir.double, cir.ptr <!cir.double>
+    %24 = cir.load %3 : cir.ptr <!cir.double>, !cir.double
+    %25 = cir.load %4 : cir.ptr <!cir.double>, !cir.double
+    %26 = cir.binop(mul, %24, %25) : !cir.double
+    cir.store %26, %5 : !cir.double, cir.ptr <!cir.double>
+    %27 = cir.load %3 : cir.ptr <!cir.double>, !cir.double
+    %28 = cir.load %4 : cir.ptr <!cir.double>, !cir.double
+    %29 = cir.binop(div, %27, %28) : !cir.double
+    cir.store %29, %5 : !cir.double, cir.ptr <!cir.double>
     cir.return
   }
 }

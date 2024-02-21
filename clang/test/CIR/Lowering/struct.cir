@@ -6,7 +6,7 @@
 !u32i = !cir.int<u, 32>
 !ty_22S22 = !cir.struct<struct "S" {!u8i, !s32i}>
 !ty_22S2A22 = !cir.struct<struct "S2A" {!s32i} #cir.record.decl.ast>
-!ty_22S122 = !cir.struct<struct "S1" {!s32i, f32, !cir.ptr<!s32i>} #cir.record.decl.ast>
+!ty_22S122 = !cir.struct<struct "S1" {!s32i, !cir.float, !cir.ptr<!s32i>} #cir.record.decl.ast>
 !ty_22S222 = !cir.struct<struct "S2" {!ty_22S2A22} #cir.record.decl.ast>
 !ty_22S322 = !cir.struct<struct "S3" {!s32i} #cir.record.decl.ast>
 
@@ -39,12 +39,12 @@ module {
   // CHECK: }
 
   // Should lower basic #cir.const_struct initializer.
-  cir.global external @s1 = #cir.const_struct<{#cir.int<1> : !s32i, 1.000000e-01 : f32, #cir.ptr<null> : !cir.ptr<!s32i>}> : !ty_22S122
+  cir.global external @s1 = #cir.const_struct<{#cir.int<1> : !s32i, #cir.fp<1.000000e-01> : !cir.float, #cir.ptr<null> : !cir.ptr<!s32i>}> : !ty_22S122
   // CHECK: llvm.mlir.global external @s1() {addr_space = 0 : i32} : !llvm.struct<"struct.S1", (i32, f32, ptr)> {
   // CHECK:   %0 = llvm.mlir.undef : !llvm.struct<"struct.S1", (i32, f32, ptr)>
   // CHECK:   %1 = llvm.mlir.constant(1 : i32) : i32
   // CHECK:   %2 = llvm.insertvalue %1, %0[0] : !llvm.struct<"struct.S1", (i32, f32, ptr)>
-  // CHECK:   %3 = llvm.mlir.constant(1.000000e-01 : f32) : f32
+  // CHECK:   %3 = llvm.mlir.constant(0.099999994 : f32) : f32
   // CHECK:   %4 = llvm.insertvalue %3, %2[1] : !llvm.struct<"struct.S1", (i32, f32, ptr)>
   // CHECK:   %5 = llvm.mlir.zero : !llvm.ptr
   // CHECK:   %6 = llvm.insertvalue %5, %4[2] : !llvm.struct<"struct.S1", (i32, f32, ptr)>

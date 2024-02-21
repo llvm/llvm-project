@@ -33,7 +33,7 @@ void func2(void) {
   static char i;
   // CHECK-DAG: cir.global "private" internal @func2.i = #cir.int<0> : !s8i
   static float j;
-  // CHECK-DAG: cir.global "private" internal @func2.j = 0.000000e+00 : f32
+  // CHECK-DAG: cir.global "private" internal @func2.j = #cir.fp<0.000000e+00> : !cir.float
 }
 
 // Should const initialize static vars with constant addresses.

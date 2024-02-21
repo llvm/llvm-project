@@ -155,29 +155,29 @@ int *inc_p(int *i) {
 
 void floats(float f) {
 // CHECK: cir.func @{{.+}}floats{{.+}}
-  +f; // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : f32, f32
-  -f; // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : f32, f32
-  ++f; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : f32, f32
-  --f; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : f32, f32
-  f++; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : f32, f32
-  f--; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : f32, f32
+  +f; // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : !cir.float, !cir.float
+  -f; // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : !cir.float, !cir.float
+  ++f; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : !cir.float, !cir.float
+  --f; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : !cir.float, !cir.float
+  f++; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : !cir.float, !cir.float
+  f--; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : !cir.float, !cir.float
 
   !f;
-  // CHECK: %[[#F_BOOL:]] = cir.cast(float_to_bool, %{{[0-9]+}} : f32), !cir.bool
+  // CHECK: %[[#F_BOOL:]] = cir.cast(float_to_bool, %{{[0-9]+}} : !cir.float), !cir.bool
   // CHECK: = cir.unary(not, %[[#F_BOOL]]) : !cir.bool, !cir.bool
 }
 
 void doubles(double d) {
 // CHECK: cir.func @{{.+}}doubles{{.+}}
-  +d; // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : f64, f64
-  -d; // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : f64, f64
-  ++d; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : f64, f64
-  --d; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : f64, f64
-  d++; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : f64, f64
-  d--; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : f64, f64
+  +d; // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : !cir.double, !cir.double
+  -d; // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : !cir.double, !cir.double
+  ++d; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : !cir.double, !cir.double
+  --d; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : !cir.double, !cir.double
+  d++; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : !cir.double, !cir.double
+  d--; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : !cir.double, !cir.double
 
   !d;
-  // CHECK: %[[#D_BOOL:]] = cir.cast(float_to_bool, %{{[0-9]+}} : f64), !cir.bool
+  // CHECK: %[[#D_BOOL:]] = cir.cast(float_to_bool, %{{[0-9]+}} : !cir.double), !cir.bool
   // CHECK: = cir.unary(not, %[[#D_BOOL]]) : !cir.bool, !cir.bool
 }
 

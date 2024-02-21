@@ -70,49 +70,49 @@ void vector_double_test(int x, double y) {
   // Vector constant. Not yet implemented. Expected results will change from
   // cir.vec.create to cir.const.
   vd2 a = { 1.5, 2.5 };
-  // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}} : f64, f64) : <f64 x 2>
+  // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}} : !cir.double, !cir.double) : <!cir.double x 2>
 
   // Non-const vector initialization.
   vd2 b = { y, y + 1.0 };
-  // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}} : f64, f64) : <f64 x 2>
+  // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}} : !cir.double, !cir.double) : <!cir.double x 2>
 
   // Extract element
   double c = a[x];
-  // CHECK: %{{[0-9]+}} = cir.vec.extract %{{[0-9]+}}[%{{[0-9]+}} : !s32i] : <f64 x 2>
+  // CHECK: %{{[0-9]+}} = cir.vec.extract %{{[0-9]+}}[%{{[0-9]+}} : !s32i] : <!cir.double x 2>
 
   // Insert element
   a[x] = y;
-  // CHECK: %[[#LOADEDVF:]] = cir.load %[[#STORAGEVF:]] : cir.ptr <!cir.vector<f64 x 2>>, !cir.vector<f64 x 2>
-  // CHECK: %[[#UPDATEDVF:]] = cir.vec.insert %{{[0-9]+}}, %[[#LOADEDVF]][%{{[0-9]+}} : !s32i] : <f64 x 2>
-  // CHECK: cir.store %[[#UPDATEDVF]], %[[#STORAGEVF]] : !cir.vector<f64 x 2>, cir.ptr <!cir.vector<f64 x 2>>
+  // CHECK: %[[#LOADEDVF:]] = cir.load %[[#STORAGEVF:]] : cir.ptr <!cir.vector<!cir.double x 2>>, !cir.vector<!cir.double x 2>
+  // CHECK: %[[#UPDATEDVF:]] = cir.vec.insert %{{[0-9]+}}, %[[#LOADEDVF]][%{{[0-9]+}} : !s32i] : <!cir.double x 2>
+  // CHECK: cir.store %[[#UPDATEDVF]], %[[#STORAGEVF]] : !cir.vector<!cir.double x 2>, cir.ptr <!cir.vector<!cir.double x 2>>
 
   // Binary arithmetic operations
   vd2 d = a + b;
-  // CHECK: %{{[0-9]+}} = cir.binop(add, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<f64 x 2>
+  // CHECK: %{{[0-9]+}} = cir.binop(add, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!cir.double x 2>
   vd2 e = a - b;
-  // CHECK: %{{[0-9]+}} = cir.binop(sub, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<f64 x 2>
+  // CHECK: %{{[0-9]+}} = cir.binop(sub, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!cir.double x 2>
   vd2 f = a * b;
-  // CHECK: %{{[0-9]+}} = cir.binop(mul, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<f64 x 2>
+  // CHECK: %{{[0-9]+}} = cir.binop(mul, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!cir.double x 2>
   vd2 g = a / b;
-  // CHECK: %{{[0-9]+}} = cir.binop(div, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<f64 x 2>
+  // CHECK: %{{[0-9]+}} = cir.binop(div, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!cir.double x 2>
 
   // Unary arithmetic operations
   vd2 l = +a;
-  // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : !cir.vector<f64 x 2>, !cir.vector<f64 x 2>
+  // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : !cir.vector<!cir.double x 2>, !cir.vector<!cir.double x 2>
   vd2 m = -a;
-  // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : !cir.vector<f64 x 2>, !cir.vector<f64 x 2>
+  // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : !cir.vector<!cir.double x 2>, !cir.vector<!cir.double x 2>
 
   // Comparisons
   vll2 o = a == b;
-  // CHECK: %{{[0-9]+}} = cir.vec.cmp(eq, %{{[0-9]+}}, %{{[0-9]+}}) : <f64 x 2>, <!s64i x 2>
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(eq, %{{[0-9]+}}, %{{[0-9]+}}) : <!cir.double x 2>, <!s64i x 2>
   vll2 p = a != b;
-  // CHECK: %{{[0-9]+}} = cir.vec.cmp(ne, %{{[0-9]+}}, %{{[0-9]+}}) : <f64 x 2>, <!s64i x 2>
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(ne, %{{[0-9]+}}, %{{[0-9]+}}) : <!cir.double x 2>, <!s64i x 2>
   vll2 q = a < b;
-  // CHECK: %{{[0-9]+}} = cir.vec.cmp(lt, %{{[0-9]+}}, %{{[0-9]+}}) : <f64 x 2>, <!s64i x 2>
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(lt, %{{[0-9]+}}, %{{[0-9]+}}) : <!cir.double x 2>, <!s64i x 2>
   vll2 r = a > b;
-  // CHECK: %{{[0-9]+}} = cir.vec.cmp(gt, %{{[0-9]+}}, %{{[0-9]+}}) : <f64 x 2>, <!s64i x 2>
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(gt, %{{[0-9]+}}, %{{[0-9]+}}) : <!cir.double x 2>, <!s64i x 2>
   vll2 s = a <= b;
-  // CHECK: %{{[0-9]+}} = cir.vec.cmp(le, %{{[0-9]+}}, %{{[0-9]+}}) : <f64 x 2>, <!s64i x 2>
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(le, %{{[0-9]+}}, %{{[0-9]+}}) : <!cir.double x 2>, <!s64i x 2>
   vll2 t = a >= b;
-  // CHECK: %{{[0-9]+}} = cir.vec.cmp(ge, %{{[0-9]+}}, %{{[0-9]+}}) : <f64 x 2>, <!s64i x 2>
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(ge, %{{[0-9]+}}, %{{[0-9]+}}) : <!cir.double x 2>, <!s64i x 2>
 }

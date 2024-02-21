@@ -27,34 +27,34 @@ module {
 // LLVM: = add i32 %[[#]], 1
 // LLVM: = sub i32 %[[#]], 1
 
-  cir.func @floatingPoint(%arg0: f32, %arg1: f64) {
+  cir.func @floatingPoint(%arg0: !cir.float, %arg1: !cir.double) {
   // MLIR: llvm.func @floatingPoint
-    %0 = cir.alloca f32, cir.ptr <f32>, ["f", init] {alignment = 4 : i64}
-    %1 = cir.alloca f64, cir.ptr <f64>, ["d", init] {alignment = 8 : i64}
-    cir.store %arg0, %0 : f32, cir.ptr <f32>
-    cir.store %arg1, %1 : f64, cir.ptr <f64>
+    %0 = cir.alloca !cir.float, cir.ptr <!cir.float>, ["f", init] {alignment = 4 : i64}
+    %1 = cir.alloca !cir.double, cir.ptr <!cir.double>, ["d", init] {alignment = 8 : i64}
+    cir.store %arg0, %0 : !cir.float, cir.ptr <!cir.float>
+    cir.store %arg1, %1 : !cir.double, cir.ptr <!cir.double>
 
-    %2 = cir.load %0 : cir.ptr <f32>, f32
-    %3 = cir.unary(inc, %2) : f32, f32
-    cir.store %3, %0 : f32, cir.ptr <f32>
+    %2 = cir.load %0 : cir.ptr <!cir.float>, !cir.float
+    %3 = cir.unary(inc, %2) : !cir.float, !cir.float
+    cir.store %3, %0 : !cir.float, cir.ptr <!cir.float>
     // MLIR: %[[#F_ONE:]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
     // MLIR: = llvm.fadd %[[#F_ONE]], %{{[0-9]+}}  : f32
 
-    %4 = cir.load %0 : cir.ptr <f32>, f32
-    %5 = cir.unary(dec, %4) : f32, f32
-    cir.store %5, %0 : f32, cir.ptr <f32>
+    %4 = cir.load %0 : cir.ptr <!cir.float>, !cir.float
+    %5 = cir.unary(dec, %4) : !cir.float, !cir.float
+    cir.store %5, %0 : !cir.float, cir.ptr <!cir.float>
     // MLIR: %[[#D_ONE:]] = llvm.mlir.constant(-1.000000e+00 : f32) : f32
     // MLIR: = llvm.fsub %[[#D_ONE]], %{{[0-9]+}}  : f32
 
-    %6 = cir.load %1 : cir.ptr <f64>, f64
-    %7 = cir.unary(inc, %6) : f64, f64
-    cir.store %7, %1 : f64, cir.ptr <f64>
+    %6 = cir.load %1 : cir.ptr <!cir.double>, !cir.double
+    %7 = cir.unary(inc, %6) : !cir.double, !cir.double
+    cir.store %7, %1 : !cir.double, cir.ptr <!cir.double>
     // MLIR: %[[#D_ONE:]] = llvm.mlir.constant(1.000000e+00 : f64) : f64
     // MLIR: = llvm.fadd %[[#D_ONE]], %{{[0-9]+}}  : f64
 
-    %8 = cir.load %1 : cir.ptr <f64>, f64
-    %9 = cir.unary(dec, %8) : f64, f64
-    cir.store %9, %1 : f64, cir.ptr <f64>
+    %8 = cir.load %1 : cir.ptr <!cir.double>, !cir.double
+    %9 = cir.unary(dec, %8) : !cir.double, !cir.double
+    cir.store %9, %1 : !cir.double, cir.ptr <!cir.double>
     // MLIR: %[[#D_ONE:]] = llvm.mlir.constant(-1.000000e+00 : f64) : f64
     // MLIR: = llvm.fsub %[[#D_ONE]], %{{[0-9]+}}  : f64
 

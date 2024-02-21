@@ -26,16 +26,16 @@ module {
 // MLIR: %[[ZERO:[a-z0-9_]+]] = llvm.mlir.constant(0 : i32)
 // MLIR: llvm.sub %[[ZERO]], %[[#INPUT_MINUS]]
 
-  cir.func @floatingPoints(%arg0: f64) {
+  cir.func @floatingPoints(%arg0: !cir.double) {
   // MLIR: llvm.func @floatingPoints(%arg0: f64)
-    %0 = cir.alloca f64, cir.ptr <f64>, ["X", init] {alignment = 8 : i64}
-    cir.store %arg0, %0 : f64, cir.ptr <f64>
-    %1 = cir.load %0 : cir.ptr <f64>, f64
-    %2 = cir.unary(plus, %1) : f64, f64
+    %0 = cir.alloca !cir.double, cir.ptr <!cir.double>, ["X", init] {alignment = 8 : i64}
+    cir.store %arg0, %0 : !cir.double, cir.ptr <!cir.double>
+    %1 = cir.load %0 : cir.ptr <!cir.double>, !cir.double
+    %2 = cir.unary(plus, %1) : !cir.double, !cir.double
     // MLIR: llvm.store %arg0, %[[#F_PLUS:]] : f64, !llvm.ptr
     // MLIR: %{{[0-9]}} = llvm.load %[[#F_PLUS]] : !llvm.ptr -> f64
-    %3 = cir.load %0 : cir.ptr <f64>, f64
-    %4 = cir.unary(minus, %3) : f64, f64
+    %3 = cir.load %0 : cir.ptr <!cir.double>, !cir.double
+    %4 = cir.unary(minus, %3) : !cir.double, !cir.double
     // MLIR: %[[#F_MINUS:]] = llvm.load %{{[0-9]}} : !llvm.ptr -> f64
     // MLIR: %{{[0-9]}} = llvm.fneg %[[#F_MINUS]] : f64
     cir.return

@@ -16,13 +16,13 @@ void valueNegation(int i, short s, long l, float f, double d) {
   // CHECK: %[[#LONG_TO_BOOL:]] = cir.cast(int_to_bool, %[[#LONG]] : !s64i), !cir.bool
   // CHECK: = cir.unary(not, %[[#LONG_TO_BOOL]]) : !cir.bool, !cir.bool
   !f;
-  // CHECK: %[[#FLOAT:]] = cir.load %{{[0-9]+}} : cir.ptr <f32>, f32
-  // CHECK: %[[#FLOAT_TO_BOOL:]] = cir.cast(float_to_bool, %[[#FLOAT]] : f32), !cir.bool
+  // CHECK: %[[#FLOAT:]] = cir.load %{{[0-9]+}} : cir.ptr <!cir.float>, !cir.float
+  // CHECK: %[[#FLOAT_TO_BOOL:]] = cir.cast(float_to_bool, %[[#FLOAT]] : !cir.float), !cir.bool
   // CHECK: %[[#FLOAT_NOT:]] = cir.unary(not, %[[#FLOAT_TO_BOOL]]) : !cir.bool, !cir.bool
   // CHECK: = cir.cast(bool_to_int, %[[#FLOAT_NOT]] : !cir.bool), !s32i
   !d;
-  // CHECK: %[[#DOUBLE:]] = cir.load %{{[0-9]+}} : cir.ptr <f64>, f64
-  // CHECK: %[[#DOUBLE_TO_BOOL:]] = cir.cast(float_to_bool, %[[#DOUBLE]] : f64), !cir.bool
+  // CHECK: %[[#DOUBLE:]] = cir.load %{{[0-9]+}} : cir.ptr <!cir.double>, !cir.double
+  // CHECK: %[[#DOUBLE_TO_BOOL:]] = cir.cast(float_to_bool, %[[#DOUBLE]] : !cir.double), !cir.bool
   // CHECK: %[[#DOUBLE_NOT:]] = cir.unary(not, %[[#DOUBLE_TO_BOOL]]) : !cir.bool, !cir.bool
   // CHECK: = cir.cast(bool_to_int, %[[#DOUBLE_NOT]] : !cir.bool), !s32i
 }

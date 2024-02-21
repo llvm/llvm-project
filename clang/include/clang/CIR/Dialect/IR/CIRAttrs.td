@@ -216,6 +216,33 @@ def IntAttr : CIR_Attr<"Int", "int", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// FPAttr
+//===----------------------------------------------------------------------===//
+
+def FPAttr : CIR_Attr<"FP", "fp", [TypedAttrInterface]> {
+  let summary = "An attribute containing a floating-point value";
+  let description = [{
+    An fp attribute is a literal attribute that represents a floating-point
+    value of the specified floating-point type.
+  }];
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type, "APFloat":$value);
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "const APFloat &":$value), [{
+      return $_get(type.getContext(), type, value);
+    }]>,
+  ];
+  let extraClassDeclaration = [{
+    static FPAttr getZero(mlir::Type type);
+  }];
+  let genVerifyDecl = 1;
+
+  let assemblyFormat = [{
+    `<` custom<FloatLiteral>($value, ref($type)) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ConstPointerAttr
 //===----------------------------------------------------------------------===//
 

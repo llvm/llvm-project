@@ -6,7 +6,7 @@ typedef union { yolo y; struct { int lifecnt; }; } yolm;
 typedef union { yolo y; struct { int *lifecnt; int genpad; }; } yolm2;
 typedef union { yolo y; struct { bool life; int genpad; }; } yolm3;
 
-// CHECK-DAG: !ty_22U23A3ADummy22 = !cir.struct<struct "U2::Dummy" {!cir.int<s, 16>, f32} #cir.record.decl.ast>
+// CHECK-DAG: !ty_22U23A3ADummy22 = !cir.struct<struct "U2::Dummy" {!cir.int<s, 16>, !cir.float} #cir.record.decl.ast>
 // CHECK-DAG: !ty_22anon2E522 = !cir.struct<struct "anon.5" {!cir.bool, !cir.int<s, 32>} #cir.record.decl.ast>
 // CHECK-DAG: !ty_22anon2E122 = !cir.struct<struct "anon.1" {!cir.int<s, 32>} #cir.record.decl.ast>
 // CHECK-DAG: !ty_22yolo22 = !cir.struct<struct "yolo" {!cir.int<s, 32>} #cir.record.decl.ast>
@@ -24,7 +24,7 @@ union U {
   float f;
   double d;
 };
-// CHECK-DAG: !ty_22U22 = !cir.struct<union "U" {!cir.bool, !cir.int<s, 16>, !cir.int<s, 32>, f32, f64}>
+// CHECK-DAG: !ty_22U22 = !cir.struct<union "U" {!cir.bool, !cir.int<s, 16>, !cir.int<s, 32>, !cir.float, !cir.double}>
 
 // Should generate unions with complex members.
 union U2 {
@@ -34,14 +34,14 @@ union U2 {
     float f;
   } s;
 } u2;
-// CHECK-DAG: !cir.struct<union "U2" {!cir.bool, !cir.struct<struct "U2::Dummy" {!cir.int<s, 16>, f32} #cir.record.decl.ast>} #cir.record.decl.ast>
+// CHECK-DAG: !cir.struct<union "U2" {!cir.bool, !cir.struct<struct "U2::Dummy" {!cir.int<s, 16>, !cir.float} #cir.record.decl.ast>} #cir.record.decl.ast>
 
 // Should genereate unions without padding.
 union U3 {
   short b;
   U u;
 } u3;
-// CHECK-DAG: !ty_22U322 = !cir.struct<union "U3" {!cir.int<s, 16>, !cir.struct<union "U" {!cir.bool, !cir.int<s, 16>, !cir.int<s, 32>, f32, f64}>} #cir.record.decl.ast>
+// CHECK-DAG: !ty_22U322 = !cir.struct<union "U3" {!cir.int<s, 16>, !cir.struct<union "U" {!cir.bool, !cir.int<s, 16>, !cir.int<s, 32>, !cir.float, !cir.double}>} #cir.record.decl.ast>
 
 void m() {
   yolm q;
@@ -66,13 +66,13 @@ void shouldGenerateUnionAccess(union U u) {
   u.i;
   // CHECK: %[[#BASE:]] = cir.get_member %0[2] {name = "i"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!s32i>
   u.f = 0.1F;
-  // CHECK: %[[#BASE:]] = cir.get_member %0[3] {name = "f"} : !cir.ptr<!ty_22U22> -> !cir.ptr<f32>
-  // CHECK: cir.store %{{.+}}, %[[#BASE]] : f32, cir.ptr <f32>
+  // CHECK: %[[#BASE:]] = cir.get_member %0[3] {name = "f"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!cir.float>
+  // CHECK: cir.store %{{.+}}, %[[#BASE]] : !cir.float, cir.ptr <!cir.float>
   u.f;
-  // CHECK: %[[#BASE:]] = cir.get_member %0[3] {name = "f"} : !cir.ptr<!ty_22U22> -> !cir.ptr<f32>
+  // CHECK: %[[#BASE:]] = cir.get_member %0[3] {name = "f"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!cir.float>
   u.d = 0.1;
-  // CHECK: %[[#BASE:]] = cir.get_member %0[4] {name = "d"} : !cir.ptr<!ty_22U22> -> !cir.ptr<f64>
-  // CHECK: cir.store %{{.+}}, %[[#BASE]] : f64, cir.ptr <f64>
+  // CHECK: %[[#BASE:]] = cir.get_member %0[4] {name = "d"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!cir.double>
+  // CHECK: cir.store %{{.+}}, %[[#BASE]] : !cir.double, cir.ptr <!cir.double>
   u.d;
-  // CHECK: %[[#BASE:]] = cir.get_member %0[4] {name = "d"} : !cir.ptr<!ty_22U22> -> !cir.ptr<f64>
+  // CHECK: %[[#BASE:]] = cir.get_member %0[4] {name = "d"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!cir.double>
 }

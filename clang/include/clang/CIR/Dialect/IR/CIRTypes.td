@@ -15,15 +15,18 @@
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
+include "clang/CIR/Interfaces/CIRFPTypeInterface.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Types
 //===----------------------------------------------------------------------===//
 
-class CIR_Type<string name, string typeMnemonic, list<Trait> traits = []> :
-    TypeDef<CIR_Dialect, name, traits> {
+class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
+               string baseCppClass = "::mlir::Type">
+    : TypeDef<CIR_Dialect, name, traits, baseCppClass> {
   let mnemonic = typeMnemonic;
 }
 
@@ -93,6 +96,37 @@ def SInt8  : SInt<8>;
 def SInt16 : SInt<16>;
 def SInt32 : SInt<32>;
 def SInt64 : SInt<64>;
+
+//===----------------------------------------------------------------------===//
+// FloatType
+//===----------------------------------------------------------------------===//
+
+class CIR_FloatType<string name, string mnemonic> 
+    : CIR_Type<name, mnemonic,
+          [
+            DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+            DeclareTypeInterfaceMethods<CIRFPTypeInterface>,
+          ]> {}
+
+def CIR_Single : CIR_FloatType<"Single", "float"> {
+  let summary = "CIR single-precision float type";
+  let description = [{
+    Floating-point type that represents the `float` type in C/C++. Its
+    underlying floating-point format is the IEEE-754 binary32 format.
+  }];
+}
+
+def CIR_Double : CIR_FloatType<"Double", "double"> {
+  let summary = "CIR double-precision float type";
+  let description = [{
+    Floating-point type that represents the `double` type in C/C++. Its
+    underlying floating-point format is the IEEE-754 binar64 format.
+  }];
+}
+
+// Constraints
+
+def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double]>;
 
 //===----------------------------------------------------------------------===//
 // PointerType
@@ -318,7 +352,7 @@ def CIR_StructType : Type<CPred<"$_self.isa<::mlir::cir::StructType>()">,
 
 def CIR_AnyType : AnyTypeOf<[
   CIR_IntType, CIR_PointerType, CIR_BoolType, CIR_ArrayType, CIR_VectorType,
-  CIR_FuncType, CIR_VoidType, CIR_StructType, CIR_ExceptionInfo, AnyFloat,
+  CIR_FuncType, CIR_VoidType, CIR_StructType, CIR_ExceptionInfo, CIR_AnyFloat,
 ]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

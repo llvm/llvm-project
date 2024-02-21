@@ -2,8 +2,8 @@
 
 !u32i = !cir.int<u, 32>
 module {
-  cir.func @foo(%arg0: f64) -> f64 {
-    %0 = cir.fabs %arg0 : f64
-    cir.return %0 : f64
+  cir.func @foo(%arg0: !cir.double) -> !cir.double {
+    %0 = cir.fabs %arg0 : !cir.double
+    cir.return %0 : !cir.double
   }
 }
