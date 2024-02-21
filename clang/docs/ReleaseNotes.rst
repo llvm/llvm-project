@@ -98,9 +98,8 @@ C++20 Feature Support
 
 - Implemented the `__is_layout_compatible` intrinsic to support
   `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
-  Note: `CWG1719: Layout compatibility and cv-qualification revisited  <https://cplusplus.github.io/CWG/issues/1719.html>`_
-  and `CWG2759: [[no_unique_address] and common initial sequence <https://cplusplus.github.io/CWG/issues/2759.html>`_
-  are not yet implemented.
+  Note: `CWG2759: [[no_unique_address] and common initial sequence <https://cplusplus.github.io/CWG/issues/2759.html>`_
+  is not yet implemented.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -119,6 +118,10 @@ Resolutions to C++ Defect Reports
 - Substitute template parameter pack, when it is not explicitly specified
   in the template parameters, but is deduced from a previous argument.
   (`#78449: <https://github.com/llvm/llvm-project/issues/78449>`_).
+
+- Type qualifications are now ignored when evaluating layout compatibility
+  of two types.
+  (`CWG1719: Layout compatibility and cv-qualification revisited <https://cplusplus.github.io/CWG/issues/1719.html>`_).
 
 C Language Changes
 ------------------
@@ -279,6 +282,8 @@ Bug Fixes to C++ Support
   Fixes (`#68490 <https://github.com/llvm/llvm-project/issues/68490>`_)
 - Fix a crash when trying to call a varargs function that also has an explicit object parameter.
   Fixes (`#80971 ICE when explicit object parameter be a function parameter pack`)
+- Reject explicit object parameters on `new` and `delete` operators.
+  Fixes (`#82249 <https://github.com/llvm/llvm-project/issues/82249>` _)
 - Fixed a bug where abbreviated function templates would append their invented template parameters to
   an empty template parameter lists.
 - Clang now classifies aggregate initialization in C++17 and newer as constant
@@ -292,6 +297,10 @@ Bug Fixes to C++ Support
   was only accepted at namespace scope but not at local function scope.
 - Clang no longer tries to call consteval constructors at runtime when they appear in a member initializer.
   (`#782154 <https://github.com/llvm/llvm-project/issues/82154>`_`)
+- Fix crash when using an immediate-escalated function at global scope.
+  (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
+- Correctly immediate-escalate lambda conversion functions.
+  (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
 - Fix for clang incorrectly rejecting the default construction of a union with
   nontrivial member when another member has an initializer.
   (`#81774 <https://github.com/llvm/llvm-project/issues/81774>`_)
@@ -401,6 +410,14 @@ Moved checkers
 
 Sanitizers
 ----------
+
+- ``-fsanitize=signed-integer-overflow`` now instruments signed arithmetic even
+  when ``-fwrapv`` is enabled. Previously, only division checks were enabled.
+
+  Users with ``-fwrapv`` as well as a sanitizer group like
+  ``-fsanitize=undefined`` or ``-fsanitize=integer`` enabled may want to
+  manually disable potentially noisy signed integer overflow checks with
+  ``-fno-sanitize=signed-integer-overflow``
 
 Python Binding Changes
 ----------------------
