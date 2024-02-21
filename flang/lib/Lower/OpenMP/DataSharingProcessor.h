@@ -12,6 +12,7 @@
 #ifndef FORTRAN_LOWER_DATASHARINGPROCESSOR_H
 #define FORTRAN_LOWER_DATASHARINGPROCESSOR_H
 
+#include "Clauses.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/OpenMP.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -33,14 +34,15 @@ class DataSharingProcessor {
   llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInNestedRegions;
   llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInParentRegions;
   Fortran::lower::AbstractConverter &converter;
+  Fortran::semantics::SemanticsContext &semaCtx;
   fir::FirOpBuilder &firOpBuilder;
-  const Fortran::parser::OmpClauseList &opClauseList;
+  omp::List<omp::Clause> clauses;
   Fortran::lower::pft::Evaluation &eval;
 
   bool needBarrier();
   void collectSymbols(Fortran::semantics::Symbol::Flag flag);
   void collectOmpObjectListSymbol(
-      const Fortran::parser::OmpObjectList &ompObjectList,
+      const omp::ObjectList &objects,
       llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet);
   void collectSymbolsForPrivatization();
   void insertBarrier();
@@ -57,11 +59,12 @@ class DataSharingProcessor {
 
 public:
   DataSharingProcessor(Fortran::lower::AbstractConverter &converter,
+                       Fortran::semantics::SemanticsContext &semaCtx,
                        const Fortran::parser::OmpClauseList &opClauseList,
                        Fortran::lower::pft::Evaluation &eval)
-      : hasLastPrivateOp(false), converter(converter),
-        firOpBuilder(converter.getFirOpBuilder()), opClauseList(opClauseList),
-        eval(eval) {}
+      : hasLastPrivateOp(false), converter(converter), semaCtx(semaCtx),
+        firOpBuilder(converter.getFirOpBuilder()),
+        clauses(omp::makeList(opClauseList, semaCtx)), eval(eval) {}
   // Privatisation is split into two steps.
   // Step1 performs cloning of all privatisation clauses and copying for
   // firstprivates. Step1 is performed at the place where process/processStep1

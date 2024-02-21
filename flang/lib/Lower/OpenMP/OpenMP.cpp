@@ -372,7 +372,7 @@ static void createBodyOfOp(Op &op, OpWithBodyGenInfo &info) {
   std::optional<DataSharingProcessor> tempDsp;
   if (privatize) {
     if (!info.dsp) {
-      tempDsp.emplace(info.converter, *info.clauses, info.eval);
+      tempDsp.emplace(info.converter, info.semaCtx, *info.clauses, info.eval);
       tempDsp->processStep1();
     }
   }
@@ -1383,7 +1383,7 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
                const Fortran::parser::OmpClauseList &loopOpClauseList,
                mlir::Location loc) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  DataSharingProcessor dsp(converter, loopOpClauseList, eval);
+  DataSharingProcessor dsp(converter, semaCtx, loopOpClauseList, eval);
   dsp.processStep1();
 
   Fortran::lower::StatementContext stmtCtx;
@@ -1439,7 +1439,7 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
                          const Fortran::parser::OmpClauseList *endClauseList,
                          mlir::Location loc) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  DataSharingProcessor dsp(converter, beginClauseList, eval);
+  DataSharingProcessor dsp(converter, semaCtx, beginClauseList, eval);
   dsp.processStep1();
 
   Fortran::lower::StatementContext stmtCtx;
