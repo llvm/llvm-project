@@ -220,6 +220,7 @@ const MCSymbolRefExpr *MCSymbolRefExpr::create(StringRef Name, VariantKind Kind,
 
 StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   switch (Kind) {
+    // clang-format off
   case VK_Invalid: return "<<invalid>>";
   case VK_None: return "<<none>>";
 
@@ -232,13 +233,16 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_GOTPCREL: return "GOTPCREL";
   case VK_GOTPCREL_NORELAX: return "GOTPCREL_NORELAX";
   case VK_GOTTPOFF: return "GOTTPOFF";
+  case VK_GOTTPOFF_FDPIC: return "gottpoff_fdpic";
   case VK_INDNTPOFF: return "INDNTPOFF";
   case VK_NTPOFF: return "NTPOFF";
   case VK_GOTNTPOFF: return "GOTNTPOFF";
   case VK_PLT: return "PLT";
   case VK_TLSGD: return "TLSGD";
+  case VK_TLSGD_FDPIC: return "tlsgd_fdpic";
   case VK_TLSLD: return "TLSLD";
   case VK_TLSLDM: return "TLSLDM";
+  case VK_TLSLDM_FDPIC: return "tlsldm_fdpic";
   case VK_TPOFF: return "TPOFF";
   case VK_TPREL: return "TPREL";
   case VK_TLSCALL: return "tlscall";
@@ -253,6 +257,9 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_SECREL: return "SECREL32";
   case VK_SIZE: return "SIZE";
   case VK_WEAKREF: return "WEAKREF";
+  case VK_FUNCDESC: return "FUNCDESC";
+  case VK_GOTFUNCDESC: return "GOTFUNCDESC";
+  case VK_GOTOFFFUNCDESC: return "GOTOFFFUNCDESC";
   case VK_X86_ABS8: return "ABS8";
   case VK_X86_PLTOFF: return "PLTOFF";
   case VK_ARM_NONE: return "none";
@@ -386,6 +393,7 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_VE_TLS_GD_LO32: return "tls_gd_lo";
   case VK_VE_TPOFF_HI32: return "tpoff_hi";
   case VK_VE_TPOFF_LO32: return "tpoff_lo";
+    // clang-format on
   }
   llvm_unreachable("Invalid variant kind");
 }
@@ -493,13 +501,6 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("ie", VK_Hexagon_IE)
     .Case("ldgot", VK_Hexagon_LD_GOT)
     .Case("ldplt", VK_Hexagon_LD_PLT)
-    .Case("none", VK_ARM_NONE)
-    .Case("got_prel", VK_ARM_GOT_PREL)
-    .Case("target1", VK_ARM_TARGET1)
-    .Case("target2", VK_ARM_TARGET2)
-    .Case("prel31", VK_ARM_PREL31)
-    .Case("sbrel", VK_ARM_SBREL)
-    .Case("tlsldo", VK_ARM_TLSLDO)
     .Case("lo8", VK_AVR_LO8)
     .Case("hi8", VK_AVR_HI8)
     .Case("hlo8", VK_AVR_HLO8)
