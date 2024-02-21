@@ -656,7 +656,7 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
                                     unsigned rank, int maskRank,
                                     mlir::Type elementType,
                                     mlir::Type maskElemType,
-                                    mlir::Type resultElemTy) {
+                                    mlir::Type resultElemTy, bool isDim) {
   auto init = [isMax](fir::FirOpBuilder builder, mlir::Location loc,
                       mlir::Type elementType) {
     if (auto ty = elementType.dyn_cast<mlir::FloatType>()) {
@@ -858,16 +858,27 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
                             maskElemType, resultArr, maskRank == 0);
 
   // Store newly created output array to the reference passed in
-  fir::SequenceType::Shape resultShape(1, rank);
-  mlir::Type outputArrTy = fir::SequenceType::get(resultShape, resultElemTy);
-  mlir::Type outputHeapTy = fir::HeapType::get(outputArrTy);
-  mlir::Type outputBoxTy = fir::BoxType::get(outputHeapTy);
-  mlir::Type outputRefTy = builder.getRefType(outputBoxTy);
-  mlir::Value outputArr = builder.create<fir::ConvertOp>(
-      loc, outputRefTy, funcOp.front().getArgument(0));
+  if (isDim) {
+    mlir::Type resultBoxTy =
+        fir::BoxType::get(fir::HeapType::get(resultElemTy));
+    mlir::Value outputArr = builder.create<fir::ConvertOp>(
+        loc, builder.getRefType(resultBoxTy), funcOp.front().getArgument(0));
+    mlir::Value resultArrScalar = builder.create<fir::ConvertOp>(
+        loc, fir::HeapType::get(resultElemTy), resultArrInit);
+    mlir::Value resultBox =
+        builder.create<fir::EmboxOp>(loc, resultBoxTy, resultArrScalar);
+    builder.create<fir::StoreOp>(loc, resultBox, outputArr);
+  } else {
+    fir::SequenceType::Shape resultShape(1, rank);
+    mlir::Type outputArrTy = fir::SequenceType::get(resultShape, resultElemTy);
+    mlir::Type outputHeapTy = fir::HeapType::get(outputArrTy);
+    mlir::Type outputBoxTy = fir::BoxType::get(outputHeapTy);
+    mlir::Type outputRefTy = builder.getRefType(outputBoxTy);
+    mlir::Value outputArr = builder.create<fir::ConvertOp>(
+        loc, outputRefTy, funcOp.front().getArgument(0));
+    builder.create<fir::StoreOp>(loc, resultArr, outputArr);
+  }
 
-  // Store nearly created array to output array
-  builder.create<fir::StoreOp>(loc, resultArr, outputArr);
   builder.create<mlir::func::ReturnOp>(loc);
 }
 
@@ -1146,11 +1157,14 @@ void SimplifyIntrinsicsPass::simplifyMinMaxlocReduction(
 
   mlir::Operation::operand_range args = call.getArgs();
 
-  mlir::Value back = args[6];
+  mlir::SymbolRefAttr callee = call.getCalleeAttr();
+  mlir::StringRef funcNameBase = callee.getLeafReference().getValue();
+  bool isDim = funcNameBase.ends_with("Dim");
+  mlir::Value back = args[isDim ? 7 : 6];
   if (isTrueOrNotConstant(back))
     return;
 
-  mlir::Value mask = args[5];
+  mlir::Value mask = args[isDim ? 6 : 5];
   mlir::Value maskDef = findMaskDef(mask);
 
   // maskDef is set to NULL when the defining op is not one we accept.
@@ -1159,10 +1173,8 @@ void SimplifyIntrinsicsPass::simplifyMinMaxlocReduction(
   if (maskDef == NULL)
     return;
 
-  mlir::SymbolRefAttr callee = call.getCalleeAttr();
-  mlir::StringRef funcNameBase = callee.getLeafReference().getValue();
   unsigned rank = getDimCount(args[1]);
-  if (funcNameBase.ends_with("Dim") || !(rank > 0))
+  if ((isDim && rank != 1) || !(rank > 0))
     return;
 
   fir::FirOpBuilder builder{getSimplificationBuilder(call, kindMap)};
@@ -1203,22 +1215,24 @@ void SimplifyIntrinsicsPass::simplifyMinMaxlocReduction(
 
   llvm::raw_string_ostream nameOS(funcName);
   outType.print(nameOS);
+  if (isDim)
+    nameOS << '_' << inputType;
   nameOS << '_' << fmfString;
 
   auto typeGenerator = [rank](fir::FirOpBuilder &builder) {
     return genRuntimeMinlocType(builder, rank);
   };
   auto bodyGenerator = [rank, maskRank, inputType, logicalElemType, outType,
-                        isMax](fir::FirOpBuilder &builder,
-                               mlir::func::FuncOp &funcOp) {
+                        isMax, isDim](fir::FirOpBuilder &builder,
+                                      mlir::func::FuncOp &funcOp) {
     genRuntimeMinMaxlocBody(builder, funcOp, isMax, rank, maskRank, inputType,
-                            logicalElemType, outType);
+                            logicalElemType, outType, isDim);
   };
 
   mlir::func::FuncOp newFunc =
       getOrCreateFunction(builder, funcName, typeGenerator, bodyGenerator);
   builder.create<fir::CallOp>(loc, newFunc,
-                              mlir::ValueRange{args[0], args[1], args[5]});
+                              mlir::ValueRange{args[0], args[1], mask});
   call->dropAllReferences();
   call->erase();
 }
