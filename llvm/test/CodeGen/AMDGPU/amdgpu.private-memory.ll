@@ -209,8 +209,8 @@ for.end:
 
 ; R600-VECT: MOVA_INT
 
-; SI-ALLOCA-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:6 ; encoding: [0x06,0x00,0x68,0xe0
-; SI-ALLOCA-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4 ; encoding: [0x04,0x00,0x68,0xe0
+; SI-ALLOCA-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:2 ; encoding: [0x02,0x00,0x68,0xe0
+; SI-ALLOCA-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ; encoding: [0x00,0x00,0x68,0xe0
 ; Loaded value is 0 or 1, so sext will become zext, so we get buffer_load_ushort instead of buffer_load_sshort.
 ; SI-ALLOCA: buffer_load_sshort v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0
 
@@ -238,8 +238,8 @@ entry:
 ; SI-PROMOTE-VECT-DAG: s_lshl_b32
 ; SI-PROMOTE-VECT-DAG: v_lshrrev
 
-; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4 ; encoding: [0x04,0x00,0x60,0xe0
-; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:5 ; encoding: [0x05,0x00,0x60,0xe0
+; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ; encoding: [0x00,0x00,0x60,0xe0
+; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:1 ; encoding: [0x01,0x00,0x60,0xe0
 define amdgpu_kernel void @char_array(ptr addrspace(1) %out, i32 %index) #0 {
 entry:
   %0 = alloca [2 x i8], addrspace(5)
@@ -258,7 +258,7 @@ entry:
 ; FUNC-LABEL: {{^}}no_overlap:
 ;
 ; A total of 5 bytes should be allocated and used.
-; SI: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4 ;
+; SI: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ;
 define amdgpu_kernel void @no_overlap(ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %0 = alloca [3 x i8], align 1, addrspace(5)

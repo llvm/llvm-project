@@ -305,6 +305,43 @@ void CommandObject::HandleCompletion(CompletionRequest &request) {
   }
 }
 
+void CommandObject::HandleArgumentCompletion(
+    CompletionRequest &request, OptionElementVector &opt_element_vector) {
+  size_t num_arg_entries = GetNumArgumentEntries();
+  if (num_arg_entries != 1)
+    return;
+
+  CommandArgumentEntry *entry_ptr = GetArgumentEntryAtIndex(0);
+  if (!entry_ptr) {
+    assert(entry_ptr && "We said there was one entry, but there wasn't.");
+    return; // Not worth crashing if asserts are off...
+  }
+  
+  CommandArgumentEntry &entry = *entry_ptr;
+  // For now, we only handle the simple case of one homogenous argument type.
+  if (entry.size() != 1)
+    return;
+
+  // Look up the completion type, and if it has one, invoke it:
+  const CommandObject::ArgumentTableEntry *arg_entry =
+      FindArgumentDataByType(entry[0].arg_type);
+  const ArgumentRepetitionType repeat = entry[0].arg_repetition;
+
+  if (arg_entry == nullptr || arg_entry->completion_type == lldb::eNoCompletion)
+    return;
+
+  // FIXME: This should be handled higher in the Command Parser.
+  // Check the case where this command only takes one argument, and don't do
+  // the completion if we aren't on the first entry:
+  if (repeat == eArgRepeatPlain && request.GetCursorIndex() != 0)
+    return;
+
+  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+      GetCommandInterpreter(), arg_entry->completion_type, request, nullptr);
+
+}
+
+
 bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
                                          bool search_short_help,
                                          bool search_long_help,
@@ -445,6 +482,23 @@ bool CommandObject::IsPairType(ArgumentRepetitionType arg_repeat_type) {
          (arg_repeat_type == eArgRepeatPairStar) ||
          (arg_repeat_type == eArgRepeatPairRange) ||
          (arg_repeat_type == eArgRepeatPairRangeOptional);
+}
+
+std::optional<ArgumentRepetitionType> 
+CommandObject::ArgRepetitionFromString(llvm::StringRef string) {
+  return llvm::StringSwitch<ArgumentRepetitionType>(string)
+  .Case("plain", eArgRepeatPlain)  
+  .Case("optional", eArgRepeatOptional)
+  .Case("plus", eArgRepeatPlus)
+  .Case("star", eArgRepeatStar) 
+  .Case("range", eArgRepeatRange)
+  .Case("pair-plain", eArgRepeatPairPlain)
+  .Case("pair-optional", eArgRepeatPairOptional)
+  .Case("pair-plus", eArgRepeatPairPlus)
+  .Case("pair-star", eArgRepeatPairStar)
+  .Case("pair-range", eArgRepeatPairRange)
+  .Case("pair-range-optional", eArgRepeatPairRangeOptional)
+  .Default({});
 }
 
 static CommandObject::CommandArgumentEntry
@@ -748,6 +802,7 @@ void CommandObjectParsed::Execute(const char *args_string,
           Cleanup();
           return;
         }
+        m_interpreter.IncreaseCommandUsage(*this);
         DoExecute(cmd_args, result);
       }
     }

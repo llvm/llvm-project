@@ -249,6 +249,20 @@ void Flang::AddRISCVTargetArgs(const ArgList &Args,
   }
 }
 
+void Flang::AddX86_64TargetArgs(const ArgList &Args,
+                                ArgStringList &CmdArgs) const {
+  if (Arg *A = Args.getLastArg(options::OPT_masm_EQ)) {
+    StringRef Value = A->getValue();
+    if (Value == "intel" || Value == "att") {
+      CmdArgs.push_back(Args.MakeArgString("-mllvm"));
+      CmdArgs.push_back(Args.MakeArgString("-x86-asm-syntax=" + Value));
+    } else {
+      getToolChain().getDriver().Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Value;
+    }
+  }
+}
+
 static void addVSDefines(const ToolChain &TC, const ArgList &Args,
                          ArgStringList &CmdArgs) {
 
@@ -374,6 +388,7 @@ void Flang::addTargetOptions(const ArgList &Args,
     break;
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddX86_64TargetArgs(Args, CmdArgs);
     break;
   }
 

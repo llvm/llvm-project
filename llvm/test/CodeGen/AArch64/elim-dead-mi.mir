@@ -1,5 +1,6 @@
 # RUN: llc -mtriple=aarch64 -o - %s \
 # RUN: -run-pass dead-mi-elimination | FileCheck %s
+# RUN: llc -mtriple=aarch64 -o - %s -p dead-mi-elimination | FileCheck %s
 --- |
   @c = internal unnamed_addr global [3 x i8] zeroinitializer, align 4
   @d = common dso_local local_unnamed_addr global i32 0, align 4

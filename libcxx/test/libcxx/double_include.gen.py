@@ -8,7 +8,7 @@
 
 # Test that we can include each header in two TU's and link them together.
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
 sys.path.append(sys.argv[1])

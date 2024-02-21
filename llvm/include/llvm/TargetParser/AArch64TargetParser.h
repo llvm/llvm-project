@@ -805,6 +805,12 @@ inline constexpr CpuInfo CpuInfos[] = {
          {AArch64::AEK_FP16, AArch64::AEK_RAND, AArch64::AEK_SM4,
           AArch64::AEK_SHA3, AArch64::AEK_SHA2, AArch64::AEK_AES,
           AArch64::AEK_MTE, AArch64::AEK_SB, AArch64::AEK_SSBS}))},
+    {"ampere1b", ARMV8_7A,
+     (AArch64::ExtensionBitset({AArch64::AEK_FP16, AArch64::AEK_RAND,
+                                AArch64::AEK_SM4, AArch64::AEK_SHA3,
+                                AArch64::AEK_SHA2, AArch64::AEK_AES,
+                                AArch64::AEK_MTE, AArch64::AEK_SB,
+                                AArch64::AEK_SSBS, AArch64::AEK_CSSC}))},
 };
 
 // An alias for a CPU.

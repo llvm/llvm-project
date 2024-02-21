@@ -216,6 +216,7 @@ module {
     %dv = sparse_tensor.convert %arg0 : tensor<?xf64, #SparseVector> to tensor<?xf64>
     %3 = vector.transfer_read %dv[%c0], %d0: tensor<?xf64>, vector<32xf64>
     vector.print %3 : vector<32xf64>
+    bufferization.dealloc_tensor %dv : tensor<?xf64>
     return
   }
 
@@ -231,6 +232,7 @@ module {
     %dv = sparse_tensor.convert %arg0 : tensor<?xi32, #SparseVector> to tensor<?xi32>
     %3 = vector.transfer_read %dv[%c0], %d0: tensor<?xi32>, vector<32xi32>
     vector.print %3 : vector<32xi32>
+    bufferization.dealloc_tensor %dv : tensor<?xi32>
     return
   }
 
@@ -244,6 +246,7 @@ module {
     %dm = sparse_tensor.convert %arg0 : tensor<?x?xf64, #DCSR> to tensor<?x?xf64>
     %3 = vector.transfer_read %dm[%c0, %c0], %d0: tensor<?x?xf64>, vector<4x8xf64>
     vector.print %3 : vector<4x8xf64>
+    bufferization.dealloc_tensor %dm : tensor<?x?xf64>
     return
   }
 

@@ -2778,6 +2778,26 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_None;
   std::string ComplexRangeStr = "";
 
+  // Lambda to set fast-math options. This is also used by -ffp-model=fast
+  auto applyFastMath = [&]() {
+    HonorINFs = false;
+    HonorNaNs = false;
+    MathErrno = false;
+    AssociativeMath = true;
+    ReciprocalMath = true;
+    ApproxFunc = true;
+    SignedZeros = false;
+    TrappingMath = false;
+    RoundingFPMath = false;
+    FPExceptionBehavior = "";
+    // If fast-math is set then set the fp-contract mode to fast.
+    FPContract = "fast";
+    // ffast-math enables limited range rules for complex multiplication and
+    // division.
+    Range = LangOptions::ComplexRangeKind::CX_Limited;
+    SeenUnsafeMathModeOption = true;
+  };
+
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
     CmdArgs.push_back(A->getValue());
@@ -2842,9 +2862,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
             << Args.MakeArgString("-ffp-model=" + FPModel)
             << Args.MakeArgString("-ffp-model=" + Val);
       if (Val.equals("fast")) {
-        optID = options::OPT_ffast_math;
         FPModel = Val;
-        FPContract = "fast";
+        applyFastMath();
       } else if (Val.equals("precise")) {
         optID = options::OPT_ffp_contract;
         FPModel = Val;
@@ -3061,22 +3080,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         continue;
       [[fallthrough]];
     case options::OPT_ffast_math: {
-      HonorINFs = false;
-      HonorNaNs = false;
-      MathErrno = false;
-      AssociativeMath = true;
-      ReciprocalMath = true;
-      ApproxFunc = true;
-      SignedZeros = false;
-      TrappingMath = false;
-      RoundingFPMath = false;
-      FPExceptionBehavior = "";
-      // If fast-math is set then set the fp-contract mode to fast.
-      FPContract = "fast";
-      SeenUnsafeMathModeOption = true;
-      // ffast-math enables fortran rules for complex multiplication and
-      // division.
-      Range = LangOptions::ComplexRangeKind::CX_Limited;
+      applyFastMath();
       break;
     }
     case options::OPT_fno_fast_math:
@@ -4935,6 +4939,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (Arg *ExtractAPIIgnoresFileArg =
             Args.getLastArg(options::OPT_extract_api_ignores_EQ))
       ExtractAPIIgnoresFileArg->render(Args, CmdArgs);
+  } else if (isa<InstallAPIJobAction>(JA)) {
+    if (!Triple.isOSDarwin())
+      D.Diag(diag::err_drv_installapi_unsupported) << Triple.str();
+
+    CmdArgs.push_back("-installapi");
+    // Add necessary library arguments for InstallAPI.
+    if (const Arg *A = Args.getLastArg(options::OPT_install__name))
+      A->render(Args, CmdArgs);
+    if (const Arg *A = Args.getLastArg(options::OPT_current__version))
+      A->render(Args, CmdArgs);
+
   } else {
     assert((isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) &&
            "Invalid action for clang tool.");
@@ -5972,6 +5987,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << A->getAsString(Args) << A->getValue();
       else
         A->render(Args, CmdArgs);
+    } else if (Triple.isAArch64() && Triple.isOSBinFormatELF()) {
+      // "all" is not supported on AArch64 since branch relaxation creates new
+      // basic blocks for some cross-section branches.
+      if (Val != "labels" && Val != "none" && !Val.starts_with("list="))
+        D.Diag(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+      else
+        A->render(Args, CmdArgs);
     } else if (Triple.isNVPTX()) {
       // Do not pass the option to the GPU compilation. We still want it enabled
       // for the host-side compilation, so seeing it here is not an error.
@@ -6636,11 +6659,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (A->getOption().matches(options::OPT_fno_strict_overflow))
       CmdArgs.push_back("-fwrapv");
   }
-
-  if (Arg *A = Args.getLastArg(options::OPT_freroll_loops,
-                               options::OPT_fno_reroll_loops))
-    if (A->getOption().matches(options::OPT_freroll_loops))
-      CmdArgs.push_back("-freroll-loops");
 
   Args.AddLastArg(CmdArgs, options::OPT_ffinite_loops,
                   options::OPT_fno_finite_loops);

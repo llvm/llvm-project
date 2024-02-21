@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseOverrideCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -228,9 +229,14 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   if (HasVirtual) {
     for (Token Tok : Tokens) {
       if (Tok.is(tok::kw_virtual)) {
-        Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-            Tok.getLocation(), Tok.getLocation()));
-        break;
+        std::optional<Token> NextToken =
+            utils::lexer::findNextTokenIncludingComments(
+                Tok.getEndLoc(), Sources, getLangOpts());
+        if (NextToken.has_value()) {
+          Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
+              Tok.getLocation(), NextToken->getLocation()));
+          break;
+        }
       }
     }
   }

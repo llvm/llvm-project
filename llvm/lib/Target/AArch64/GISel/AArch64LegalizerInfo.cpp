@@ -343,10 +343,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   auto IsPtrVecPred = [=](const LegalityQuery &Query) {
     const LLT &ValTy = Query.Types[0];
-    if (!ValTy.isVector())
-      return false;
-    const LLT EltTy = ValTy.getElementType();
-    return EltTy.isPointer() && EltTy.getAddressSpace() == 0;
+    return ValTy.isPointerVector() && ValTy.getAddressSpace() == 0;
   };
 
   getActionDefinitionsBuilder(G_LOAD)
@@ -521,7 +518,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) {
             const LLT &Ty = Query.Types[0];
             const LLT &SrcTy = Query.Types[1];
-            return Ty.isVector() && !SrcTy.getElementType().isPointer() &&
+            return Ty.isVector() && !SrcTy.isPointerVector() &&
                    Ty.getElementType() != SrcTy.getElementType();
           },
           0, 1)
@@ -555,7 +552,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) {
             const LLT &Ty = Query.Types[0];
             const LLT &SrcTy = Query.Types[1];
-            return Ty.isVector() && !SrcTy.getElementType().isPointer() &&
+            return Ty.isVector() && !SrcTy.isPointerVector() &&
                    Ty.getElementType() != SrcTy.getElementType();
           },
           0, 1)
@@ -615,9 +612,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lowerIf([=](const LegalityQuery &Query) {
         LLT DstTy = Query.Types[0];
         LLT SrcTy = Query.Types[1];
-        return DstTy.isVector() && (SrcTy.getSizeInBits() > 128 ||
-                                    (DstTy.getScalarSizeInBits() * 2 <
-                                     SrcTy.getScalarSizeInBits()));
+        return DstTy.isVector() && SrcTy.getSizeInBits() > 128 &&
+               DstTy.getScalarSizeInBits() * 2 <= SrcTy.getScalarSizeInBits();
       })
 
       .alwaysLegal();
@@ -867,6 +863,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
+      .clampMaxNumElements(1, s8, 16)
       .clampMaxNumElements(1, p0, 2);
 
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
@@ -1161,10 +1158,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .legalFor({{s64, s32}, {s64, s64}});
 
-  // TODO: Custom legalization for vector types.
   // TODO: Custom legalization for mismatched types.
-  // TODO: s16 support.
-  getActionDefinitionsBuilder(G_FCOPYSIGN).customFor({{s32, s32}, {s64, s64}});
+  getActionDefinitionsBuilder(G_FCOPYSIGN)
+      .moreElementsIf(
+          [](const LegalityQuery &Query) { return Query.Types[0].isScalar(); },
+          [=](const LegalityQuery &Query) {
+            const LLT Ty = Query.Types[0];
+            return std::pair(0, LLT::fixed_vector(Ty == s16 ? 4 : 2, Ty));
+          })
+      .lower();
 
   getActionDefinitionsBuilder(G_FMAD).lower();
 
@@ -1221,8 +1223,6 @@ bool AArch64LegalizerInfo::legalizeCustom(
   case TargetOpcode::G_MEMMOVE:
   case TargetOpcode::G_MEMSET:
     return legalizeMemOps(MI, Helper);
-  case TargetOpcode::G_FCOPYSIGN:
-    return legalizeFCopySign(MI, Helper);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return legalizeExtractVectorElt(MI, MRI, Helper);
   case TargetOpcode::G_DYN_STACKALLOC:
@@ -1649,7 +1649,7 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
     return true;
   }
 
-  if (!ValTy.isVector() || !ValTy.getElementType().isPointer() ||
+  if (!ValTy.isPointerVector() ||
       ValTy.getElementType().getAddressSpace() != 0) {
     LLVM_DEBUG(dbgs() << "Tried to do custom legalization on wrong load/store");
     return false;
@@ -1962,66 +1962,6 @@ bool AArch64LegalizerInfo::legalizeMemOps(MachineInstr &MI,
   }
 
   return false;
-}
-
-bool AArch64LegalizerInfo::legalizeFCopySign(MachineInstr &MI,
-                                             LegalizerHelper &Helper) const {
-  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
-  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
-  Register Dst = MI.getOperand(0).getReg();
-  LLT DstTy = MRI.getType(Dst);
-  assert(DstTy.isScalar() && "Only expected scalars right now!");
-  const unsigned DstSize = DstTy.getSizeInBits();
-  assert((DstSize == 32 || DstSize == 64) && "Unexpected dst type!");
-  assert(MRI.getType(MI.getOperand(2).getReg()) == DstTy &&
-         "Expected homogeneous types!");
-
-  // We want to materialize a mask with the high bit set.
-  uint64_t EltMask;
-  LLT VecTy;
-
-  // TODO: s16 support.
-  switch (DstSize) {
-  default:
-    llvm_unreachable("Unexpected type for G_FCOPYSIGN!");
-  case 64: {
-    // AdvSIMD immediate moves cannot materialize out mask in a single
-    // instruction for 64-bit elements. Instead, materialize zero and then
-    // negate it.
-    EltMask = 0;
-    VecTy = LLT::fixed_vector(2, DstTy);
-    break;
-  }
-  case 32:
-    EltMask = 0x80000000ULL;
-    VecTy = LLT::fixed_vector(4, DstTy);
-    break;
-  }
-
-  // Widen In1 and In2 to 128 bits. We want these to eventually become
-  // INSERT_SUBREGs.
-  auto Undef = MIRBuilder.buildUndef(VecTy);
-  auto Zero = MIRBuilder.buildConstant(DstTy, 0);
-  auto Ins1 = MIRBuilder.buildInsertVectorElement(
-      VecTy, Undef, MI.getOperand(1).getReg(), Zero);
-  auto Ins2 = MIRBuilder.buildInsertVectorElement(
-      VecTy, Undef, MI.getOperand(2).getReg(), Zero);
-
-  // Construct the mask.
-  auto Mask = MIRBuilder.buildConstant(VecTy, EltMask);
-  if (DstSize == 64)
-    Mask = MIRBuilder.buildFNeg(VecTy, Mask);
-
-  auto Sel = MIRBuilder.buildInstr(AArch64::G_BSP, {VecTy}, {Mask, Ins2, Ins1});
-
-  // Build an unmerge whose 0th elt is the original G_FCOPYSIGN destination. We
-  // want this to eventually become an EXTRACT_SUBREG.
-  SmallVector<Register, 2> DstRegs(1, Dst);
-  for (unsigned I = 1, E = VecTy.getNumElements(); I < E; ++I)
-    DstRegs.push_back(MRI.createGenericVirtualRegister(DstTy));
-  MIRBuilder.buildUnmerge(DstRegs, Sel);
-  MI.eraseFromParent();
-  return true;
 }
 
 bool AArch64LegalizerInfo::legalizeExtractVectorElt(

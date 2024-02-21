@@ -104,12 +104,19 @@ int main(int, char**) {
     assert(a.outer_allocator() == A1<int>(4));
     assert((a.inner_allocator() == std::scoped_allocator_adaptor<A2<int>, A3<int>>(A2<int>(5), A3<int>(6))));
   }
-  //  Test for LWG2782
   {
+    //  Test for LWG2782
     static_assert(!std::is_convertible<A1<int>, A2<int>>::value, "");
     static_assert(
         !std::is_convertible< std::scoped_allocator_adaptor<A1<int>>, std::scoped_allocator_adaptor<A2<int>>>::value,
         "");
+  }
+  {
+    // Test construction from convertible-to-allocator types (https://github.com/llvm/llvm-project/issues/78754)
+    typedef std::scoped_allocator_adaptor<A1<int>, A1<int>> A;
+    A a(A1<char>(4), A1<char>(5));
+    assert(a.outer_allocator() == A1<int>(4));
+    assert(a.inner_allocator() == A1<int>(5));
   }
 
   return 0;

@@ -3,7 +3,7 @@
 ; RUN:              -code-model=medium -relocation-model=static \
 ; RUN:   | FileCheck %s
 
-@ptr = external global i32*
+@ptr = external global ptr
 @dst = external global i32
 @src = external global i32
 
@@ -14,13 +14,13 @@ define void @test0() nounwind {
 ; CHECK-NEXT:    move.l src, dst
 ; CHECK-NEXT:    rts
 entry:
-    store i32* @dst, i32** @ptr
-    %tmp.s = load i32, i32* @src
-    store i32 %tmp.s, i32* @dst
+    store ptr @dst, ptr @ptr
+    %tmp.s = load i32, ptr @src
+    store i32 %tmp.s, ptr @dst
     ret void
 }
 
-@ptr2 = global i32* null
+@ptr2 = global ptr null
 @dst2 = global i32 0
 @src2 = global i32 0
 
@@ -31,13 +31,13 @@ define void @test1() nounwind {
 ; CHECK-NEXT:    move.l src2, dst2
 ; CHECK-NEXT:    rts
 entry:
-    store i32* @dst2, i32** @ptr2
-    %tmp.s = load i32, i32* @src2
-    store i32 %tmp.s, i32* @dst2
+    store ptr @dst2, ptr @ptr2
+    %tmp.s = load i32, ptr @src2
+    store i32 %tmp.s, ptr @dst2
     ret void
 }
 
-declare i8* @malloc(i32)
+declare ptr @malloc(i32)
 
 define void @test2() nounwind {
 ; CHECK-LABEL: test2:
@@ -48,12 +48,12 @@ define void @test2() nounwind {
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
-    %ptr = call i8* @malloc(i32 40)
+    %ptr = call ptr @malloc(i32 40)
     ret void
 }
 
-@pfoo = external global void(...)*
-declare void(...)* @afoo(...)
+@pfoo = external global ptr
+declare ptr @afoo(...)
 
 
 define void @test3() nounwind {
@@ -66,9 +66,9 @@ define void @test3() nounwind {
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
-    %tmp = call void(...)*(...) @afoo()
-    store void(...)* %tmp, void(...)** @pfoo
-    %tmp1 = load void(...)*, void(...)** @pfoo
+    %tmp = call ptr(...) @afoo()
+    store ptr %tmp, ptr @pfoo
+    %tmp1 = load ptr, ptr @pfoo
     call void(...) %tmp1()
     ret void
 }
@@ -87,7 +87,7 @@ entry:
     ret void
 }
 
-@ptr6 = internal global i32* null
+@ptr6 = internal global ptr null
 @dst6 = internal global i32 0
 @src6 = internal global i32 0
 
@@ -98,9 +98,9 @@ define void @test5() nounwind {
 ; CHECK-NEXT:    move.l src6, dst6
 ; CHECK-NEXT:    rts
 entry:
-    store i32* @dst6, i32** @ptr6
-    %tmp.s = load i32, i32* @src6
-    store i32 %tmp.s, i32* @dst6
+    store ptr @dst6, ptr @ptr6
+    %tmp.s = load i32, ptr @src6
+    store i32 %tmp.s, ptr @dst6
     ret void
 }
 

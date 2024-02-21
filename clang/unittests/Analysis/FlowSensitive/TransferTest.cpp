@@ -2093,7 +2093,7 @@ TEST(TransferTest, TemporaryObject) {
 
 TEST(TransferTest, ElidableConstructor) {
   // This test is effectively the same as TransferTest.TemporaryObject, but
-  // the code is compiled as C++ 14.
+  // the code is compiled as C++14.
   std::string Code = R"(
     struct A {
       int Bar;
@@ -2311,6 +2311,91 @@ TEST(TransferTest, AssignmentOperatorWithInitAndInheritance) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {});
+}
+
+TEST(TransferTest, AssignmentOperatorReturnsVoid) {
+  // This is a crash repro.
+  std::string Code = R"(
+    struct S {
+      void operator=(S&& other);
+    };
+    void target() {
+      S s;
+      s = S();
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
+}
+
+TEST(TransferTest, AssignmentOperatorReturnsByValue) {
+  // This is a crash repro.
+  std::string Code = R"(
+    struct S {
+      S operator=(S&& other);
+    };
+    void target() {
+      S s;
+      s = S();
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
+}
+
+TEST(TransferTest, InitListExprAsXValue) {
+  // This is a crash repro.
+  std::string Code = R"(
+    void target() {
+      bool&& Foo{false};
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const auto &FooVal = getValueForDecl<BoolValue>(ASTCtx, Env, "Foo");
+        ASSERT_TRUE(FooVal.formula().isLiteral(false));
+      });
+}
+
+TEST(TransferTest, InitListExprAsUnion) {
+  // This is a crash repro.
+  std::string Code = R"cc(
+    class target {
+      union {
+        int *a;
+        bool *b;
+      } F;
+
+     public:
+      constexpr target() : F{nullptr} {
+        int *null = nullptr;
+        F.b;  // Make sure we reference 'b' so it is modeled.
+        // [[p]]
+      }
+    };
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto &FLoc = getFieldLoc<RecordStorageLocation>(
+            *Env.getThisPointeeStorageLocation(), "F", ASTCtx);
+        auto *AVal = cast<PointerValue>(getFieldValue(&FLoc, "a", ASTCtx, Env));
+        ASSERT_EQ(AVal, &getValueForDecl<PointerValue>(ASTCtx, Env, "null"));
+        ASSERT_EQ(getFieldValue(&FLoc, "b", ASTCtx, Env), nullptr);
+      });
 }
 
 TEST(TransferTest, CopyConstructor) {

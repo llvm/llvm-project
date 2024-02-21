@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=+popcnt | FileCheck %s -check-prefixes=X86-POPCOUNT
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+popcnt | FileCheck %s -check-prefixes=X64-POPCOUNT
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=-popcnt | FileCheck %s -check-prefixes=X86-NO-POPCOUNT
+; RUN: llc < %s -mtriple=i686-unknown -mattr=+sse2 -mattr=-popcnt | FileCheck %s -check-prefixes=X86-NO-POPCOUNT
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=-popcnt | FileCheck %s -check-prefixes=X64-NO-POPCOUNT
 
 declare i8 @llvm.ctpop.i8(i8) nounwind readnone
@@ -25,7 +26,7 @@ define i64 @ctpop_mask2(i64 %x) nounwind readnone {
 ; X64-POPCOUNT-LABEL: ctpop_mask2:
 ; X64-POPCOUNT:       # %bb.0:
 ; X64-POPCOUNT-NEXT:    andl $3, %edi
-; X64-POPCOUNT-NEXT:    popcntq %rdi, %rax
+; X64-POPCOUNT-NEXT:    popcntl %edi, %eax
 ; X64-POPCOUNT-NEXT:    retq
 ;
 ; X86-NO-POPCOUNT-LABEL: ctpop_mask2:
@@ -189,7 +190,7 @@ define i64 @ctpop_mask4(i64 %x) nounwind readnone {
 ; X64-POPCOUNT-LABEL: ctpop_mask4:
 ; X64-POPCOUNT:       # %bb.0:
 ; X64-POPCOUNT-NEXT:    andl $15, %edi
-; X64-POPCOUNT-NEXT:    popcntq %rdi, %rax
+; X64-POPCOUNT-NEXT:    popcntl %edi, %eax
 ; X64-POPCOUNT-NEXT:    retq
 ;
 ; X86-NO-POPCOUNT-LABEL: ctpop_mask4:
@@ -271,7 +272,7 @@ define i64 @ctpop_mask5(i64 %x) nounwind readnone {
 ; X64-POPCOUNT-LABEL: ctpop_mask5:
 ; X64-POPCOUNT:       # %bb.0:
 ; X64-POPCOUNT-NEXT:    andl $31, %edi
-; X64-POPCOUNT-NEXT:    popcntq %rdi, %rax
+; X64-POPCOUNT-NEXT:    popcntl %edi, %eax
 ; X64-POPCOUNT-NEXT:    retq
 ;
 ; X86-NO-POPCOUNT-LABEL: ctpop_mask5:
@@ -392,7 +393,7 @@ define i64 @ctpop_shifted_mask6(i64 %x) nounwind readnone {
 ; X64-POPCOUNT-LABEL: ctpop_shifted_mask6:
 ; X64-POPCOUNT:       # %bb.0:
 ; X64-POPCOUNT-NEXT:    andl $26112, %edi # imm = 0x6600
-; X64-POPCOUNT-NEXT:    popcntq %rdi, %rax
+; X64-POPCOUNT-NEXT:    popcntl %edi, %eax
 ; X64-POPCOUNT-NEXT:    retq
 ;
 ; X86-NO-POPCOUNT-LABEL: ctpop_shifted_mask6:
@@ -548,7 +549,6 @@ define i64 @ctpop_shifted_mask8(i64 %x) nounwind readnone {
 ; X86-POPCOUNT-LABEL: ctpop_shifted_mask8:
 ; X86-POPCOUNT:       # %bb.0:
 ; X86-POPCOUNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-POPCOUNT-NEXT:    shll $8, %eax
 ; X86-POPCOUNT-NEXT:    popcntl %eax, %eax
 ; X86-POPCOUNT-NEXT:    xorl %edx, %edx
 ; X86-POPCOUNT-NEXT:    retl
@@ -556,7 +556,7 @@ define i64 @ctpop_shifted_mask8(i64 %x) nounwind readnone {
 ; X64-POPCOUNT-LABEL: ctpop_shifted_mask8:
 ; X64-POPCOUNT:       # %bb.0:
 ; X64-POPCOUNT-NEXT:    andl $65280, %edi # imm = 0xFF00
-; X64-POPCOUNT-NEXT:    popcntq %rdi, %rax
+; X64-POPCOUNT-NEXT:    popcntl %edi, %eax
 ; X64-POPCOUNT-NEXT:    retq
 ;
 ; X86-NO-POPCOUNT-LABEL: ctpop_shifted_mask8:

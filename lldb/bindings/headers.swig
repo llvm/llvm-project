@@ -54,6 +54,7 @@
 #include "lldb/API/SBScriptObject.h"
 #include "lldb/API/SBSection.h"
 #include "lldb/API/SBSourceManager.h"
+#include "lldb/API/SBStatisticsOptions.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
