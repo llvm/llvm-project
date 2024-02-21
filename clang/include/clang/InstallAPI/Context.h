@@ -28,7 +28,7 @@ struct InstallAPIContext {
   llvm::Triple TargetTriple{};
 
   /// File Path of output location.
-  StringRef OutputLoc{};
+  llvm::StringRef OutputLoc{};
 
   /// What encoding to write output as.
   llvm::MachO::FileType FT = llvm::MachO::FileType::TBD_V5;
