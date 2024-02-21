@@ -5157,8 +5157,10 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     // iff there was no token on the call.
     if (MachineInstr *Def = MRI.getVRegDef(MO.getReg())) {
       if (Def->getOpcode() != TargetOpcode::IMPLICIT_DEF) {
-        Def->dump();
-        MO.dump();
+        LLVM_DEBUG({
+          Def->dump();
+          MO.dump();
+        });
         MO.setImplicit();
         MIB.add(MO);
       }
