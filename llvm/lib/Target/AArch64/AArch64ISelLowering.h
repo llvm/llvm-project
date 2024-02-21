@@ -524,7 +524,7 @@ enum Rounding {
 const unsigned RoundingBitsPos = 22;
 
 // Reserved bits should be preserved when modifying FPCR.
-const uint64_t ReservedFPControlBits = 0xfe0fe0f8;
+const uint64_t ReservedFPControlBits = 0xfffffffff80040f8;
 
 // Registers used to pass function arguments.
 ArrayRef<MCPhysReg> getGPRArgRegs();
