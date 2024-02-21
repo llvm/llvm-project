@@ -4262,20 +4262,20 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GFX9-NEXT:    v_fma_f32 v8, v12, v9, v11
 ; GFX9-NEXT:    v_fma_f32 v2, v12, v5, v2
 ; GFX9-NEXT:    v_bfe_u32 v5, v7, 16, 1
-; GFX9-NEXT:    v_and_b32_e32 v9, 0x80000000, v7
+; GFX9-NEXT:    v_and_b32_e32 v9, 0xff800000, v7
 ; GFX9-NEXT:    v_bfe_u32 v11, v1, 16, 1
-; GFX9-NEXT:    v_and_b32_e32 v12, 0x80000000, v1
+; GFX9-NEXT:    v_and_b32_e32 v12, 0xff800000, v1
 ; GFX9-NEXT:    v_add3_u32 v5, v5, v7, s2
 ; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v9
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_bfe_u32 v13, v8, 16, 1
-; GFX9-NEXT:    v_and_b32_e32 v14, 0x80000000, v8
+; GFX9-NEXT:    v_and_b32_e32 v14, 0xff800000, v8
 ; GFX9-NEXT:    v_add3_u32 v11, v11, v1, s2
 ; GFX9-NEXT:    v_or_b32_e32 v12, 0x400000, v12
 ; GFX9-NEXT:    v_cndmask_b32_e32 v5, v5, v9, vcc
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX9-NEXT:    v_bfe_u32 v15, v2, 16, 1
-; GFX9-NEXT:    v_and_b32_e32 v16, 0x80000000, v2
+; GFX9-NEXT:    v_and_b32_e32 v16, 0xff800000, v2
 ; GFX9-NEXT:    v_add3_u32 v13, v13, v8, s2
 ; GFX9-NEXT:    v_or_b32_e32 v14, 0x400000, v14
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v11, v12, vcc
@@ -4298,20 +4298,20 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GFX9-NEXT:    v_fma_f32 v2, v4, v10, v2
 ; GFX9-NEXT:    v_fma_f32 v4, v4, v6, v7
 ; GFX9-NEXT:    v_bfe_u32 v5, v1, 16, 1
-; GFX9-NEXT:    v_and_b32_e32 v6, 0x80000000, v1
+; GFX9-NEXT:    v_and_b32_e32 v6, 0xff800000, v1
 ; GFX9-NEXT:    v_bfe_u32 v7, v3, 16, 1
-; GFX9-NEXT:    v_and_b32_e32 v8, 0x80000000, v3
+; GFX9-NEXT:    v_and_b32_e32 v8, 0xff800000, v3
 ; GFX9-NEXT:    v_add3_u32 v5, v5, v1, s2
 ; GFX9-NEXT:    v_or_b32_e32 v6, 0x400000, v6
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX9-NEXT:    v_bfe_u32 v9, v2, 16, 1
-; GFX9-NEXT:    v_and_b32_e32 v10, 0x80000000, v2
+; GFX9-NEXT:    v_and_b32_e32 v10, 0xff800000, v2
 ; GFX9-NEXT:    v_add3_u32 v7, v7, v3, s2
 ; GFX9-NEXT:    v_or_b32_e32 v8, 0x400000, v8
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v5, v6, vcc
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
 ; GFX9-NEXT:    v_bfe_u32 v11, v4, 16, 1
-; GFX9-NEXT:    v_and_b32_e32 v12, 0x80000000, v4
+; GFX9-NEXT:    v_and_b32_e32 v12, 0xff800000, v4
 ; GFX9-NEXT:    v_add3_u32 v9, v9, v2, s2
 ; GFX9-NEXT:    v_or_b32_e32 v10, 0x400000, v10
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, v7, v8, vcc
@@ -4332,7 +4332,7 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x10
 ; GFX10-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 3, v0
-; GFX10-NEXT:    s_brev_b32 s2, 1
+; GFX10-NEXT:    s_mov_b32 s2, 0xff800000
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x2
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v6, s[0:1]
@@ -4416,7 +4416,7 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[0:1], 0x10
 ; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v6, 3, v0
-; GFX11-NEXT:    s_brev_b32 s0, 1
+; GFX11-NEXT:    s_mov_b32 s0, 0xff800000
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x2
 ; GFX11-NEXT:    global_load_b64 v[0:1], v6, s[2:3]
