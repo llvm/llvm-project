@@ -13,8 +13,8 @@ include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-
 //===----------------------------------------------------------------------===//
 // ApplyOptimizeSharedMemoryReadsAndWritesOp
 //===----------------------------------------------------------------------===//
@@ -28,7 +28,9 @@ def ApplyOptimizeSharedMemoryReadsAndWritesOp :
     reads/writes with the goal of avoiding bank conflicts.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target);
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                    DefaultValuedOptionalAttr<I64Attr, "128">:$kSharedMemoryLineSizeBytes,
+                    DefaultValuedOptionalAttr<I64Attr, "128">:$kDefaultVectorSizeBits);
   let results = (outs);
 
   let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
