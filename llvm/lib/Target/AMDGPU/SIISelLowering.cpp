@@ -98,7 +98,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   addRegisterClass(MVT::f64, V64RegClass);
   addRegisterClass(MVT::v2f32, V64RegClass);
-  addRegisterClass(MVT::Untyped, V64RegClass);
 
   addRegisterClass(MVT::v3i32, &AMDGPU::SGPR_96RegClass);
   addRegisterClass(MVT::v3f32, TRI->getVGPRClassForBitWidth(96));
@@ -3813,9 +3812,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i64));
   }
 
-  if (!IsTailCall)
-    Ops.push_back(CLI.ConvergenceControlToken);
-
   if (IsTailCall) {
     // Each tail call may have to adjust the stack by a different amount, so
     // this information must travel along with the operation for eventual
@@ -5143,28 +5139,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MachineInstrBuilder MIB;
     MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL), ReturnAddrReg);
 
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
-      MachineOperand &MO = MI.getOperand(I);
-      if (I != 2) {
-        MIB.add(MO);
-        continue;
-      }
-    }
-
-    MachineOperand &MO = MI.getOperand(2);
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    // The token operand is always a register, whose definition is IMPLICIT_DEF
-    // iff there was no token on the call.
-    if (MachineInstr *Def = MRI.getVRegDef(MO.getReg())) {
-      if (Def->getOpcode() != TargetOpcode::IMPLICIT_DEF) {
-        LLVM_DEBUG({
-          Def->dump();
-          MO.dump();
-        });
-        MO.setImplicit();
-        MIB.add(MO);
-      }
-    }
+    for (const MachineOperand &MO : MI.operands())
+      MIB.add(MO);
 
     MIB.cloneMemRefs(MI);
     MI.eraseFromParent();
