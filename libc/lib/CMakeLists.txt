@@ -35,18 +35,12 @@ foreach(archive IN ZIP_LISTS
   )
   if(LLVM_LIBC_FULL_BUILD)
     target_link_libraries(${archive_1} PUBLIC libc-headers)
+    if(TARGET libc-startup)
+      add_dependencies(${archive_1} libc-startup)
+    endif()
   endif()
   list(APPEND added_archive_targets ${archive_1})
 endforeach()
-
-if(LIBC_TARGET_TRIPLE)
-  set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBC_TARGET_TRIPLE})
-elseif(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT LIBC_GPU_BUILD)
-  set(LIBC_INSTALL_LIBRARY_DIR
-      lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE})
-else()
-  set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX})
-endif()
 
 install(
   TARGETS ${added_archive_targets}

@@ -131,7 +131,8 @@ foreach(target IN LISTS startup_components)
   set(fq_target_name libc.startup.linux.${target})
   add_dependencies(libc-startup ${fq_target_name})
   install(FILES $<TARGET_OBJECTS:${fq_target_name}>
-          DESTINATION ${CMAKE_INSTALL_LIBDIR}
+          DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
           RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
+          EXCLUDE_FROM_ALL
           COMPONENT libc)
 endforeach()
