@@ -2,7 +2,6 @@
 
 namespace a {
 struct S;
-template <typename T> T x = {};
 }
 namespace b {
 using a::S;
@@ -22,10 +21,4 @@ typedef S e; // check the same UsingType is reused.
 // CHECK-NEXT:   `-UsingType [[TYPE_ADDR]] 'a::S' sugar
 // CHECK-NEXT:     |-UsingShadow [[SHADOW_ADDR]] 'S'
 // CHECK-NEXT:     `-RecordType {{.*}} 'a::S'
-using a::x;
-
-void foo() {
-  x<int> = 3;
-  // CHECK: DeclRefExpr {{.*}} 'x' {{.*}} (UsingShadow {{.*}} 'x')
-}
 }

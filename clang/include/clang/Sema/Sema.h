@@ -8538,7 +8538,7 @@ public:
   /// if the arguments are dependent.
   ExprResult CheckVarTemplateId(const CXXScopeSpec &SS,
                                 const DeclarationNameInfo &NameInfo,
-                                VarTemplateDecl *Template, NamedDecl *FoundD,
+                                VarTemplateDecl *Template,
                                 SourceLocation TemplateLoc,
                                 const TemplateArgumentListInfo *TemplateArgs);
 
