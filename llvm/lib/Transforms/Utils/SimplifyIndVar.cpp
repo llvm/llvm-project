@@ -25,6 +25,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
@@ -643,10 +644,21 @@ bool SimplifyIndvar::replaceIVUserWithLoopInvariant(Instruction *I) {
   }
 
   auto *Invariant = Rewriter.expandCodeFor(S, I->getType(), IP);
+  bool NeedToEmitLCSSAPhis = false;
+  if (!LI->replacementPreservesLCSSAForm(I, Invariant))
+    NeedToEmitLCSSAPhis = true;
 
   I->replaceAllUsesWith(Invariant);
   LLVM_DEBUG(dbgs() << "INDVARS: Replace IV user: " << *I
                     << " with loop invariant: " << *S << '\n');
+
+  if (NeedToEmitLCSSAPhis) {
+    SmallVector<Instruction *, 1> NeedsLCSSAPhis;
+    NeedsLCSSAPhis.push_back(cast<Instruction>(Invariant));
+    formLCSSAForInstructions(NeedsLCSSAPhis, *DT, *LI, SE);
+    LLVM_DEBUG(dbgs() << " INDVARS: Replacement breaks LCSSA form"
+                      << " inserting LCSSA Phis" << '\n');
+  }
   ++NumFoldedUser;
   Changed = true;
   DeadInsts.emplace_back(I);
