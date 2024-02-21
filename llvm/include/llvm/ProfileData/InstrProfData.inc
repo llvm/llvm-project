@@ -166,8 +166,8 @@ INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta,
 INSTR_PROF_RAW_HEADER(uint64_t, BitmapDelta,
                       (uintptr_t)BitmapBegin - (uintptr_t)DataBegin)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesDelta, (uintptr_t)NamesBegin)
-INSTR_PROF_RAW_HEADER(uint64_t, VNamesSize, VNamesSize)
 INSTR_PROF_RAW_HEADER(uint64_t, NumVTables, NumVTables)
+INSTR_PROF_RAW_HEADER(uint64_t, VNamesSize, VNamesSize)
 INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 #undef INSTR_PROF_RAW_HEADER
 /* INSTR_PROF_RAW_HEADER  end */
