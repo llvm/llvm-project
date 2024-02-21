@@ -297,6 +297,10 @@ Bug Fixes to C++ Support
   was only accepted at namespace scope but not at local function scope.
 - Clang no longer tries to call consteval constructors at runtime when they appear in a member initializer.
   (`#782154 <https://github.com/llvm/llvm-project/issues/82154>`_`)
+- Fix crash when using an immediate-escalated function at global scope.
+  (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
+- Correctly immediate-escalate lambda conversion functions.
+  (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
