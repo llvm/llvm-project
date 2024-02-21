@@ -7239,6 +7239,16 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // select c, ~x, x --> xor -c, x
+  if (isa<ConstantSDNode>(TrueV) && isa<ConstantSDNode>(FalseV)) {
+    const APInt &TrueVal = TrueV->getAsAPIntVal();
+    const APInt &FalseVal = FalseV->getAsAPIntVal();
+    if (~TrueVal == FalseVal) {
+      SDValue Neg = DAG.getNegative(CondV, DL, VT);
+      return DAG.getNode(ISD::XOR, DL, VT, Neg, FalseV);
+    }
+  }
+
   // Try to fold (select (setcc lhs, rhs, cc), truev, falsev) into bitwise ops
   // when both truev and falsev are also setcc.
   if (CondV.getOpcode() == ISD::SETCC && TrueV.getOpcode() == ISD::SETCC &&
