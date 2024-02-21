@@ -14,6 +14,7 @@
 #include <cinttypes>
 #include <cstring>
 #include <ctype.h>
+#include <utility>
 
 namespace Fortran::decimal {
 
@@ -275,7 +276,12 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
         if (guard != 0) {
           flags |= Underflow;
         }
-        return {Binary{}, static_cast<enum ConversionResultFlags>(flags)};
+        Binary zero;
+        if (isNegative) {
+          zero.Negate();
+        }
+        return {
+            std::move(zero), static_cast<enum ConversionResultFlags>(flags)};
       }
     }
   } else {
