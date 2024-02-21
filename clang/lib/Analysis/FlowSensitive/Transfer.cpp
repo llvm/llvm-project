@@ -663,14 +663,7 @@ public:
   void VisitInitListExpr(const InitListExpr *S) {
     QualType Type = S->getType();
 
-    if (Type->isUnionType()) {
-      // FIXME: Initialize unions properly.
-      if (auto *Val = Env.createValue(Type))
-        Env.setValue(*S, *Val);
-      return;
-    }
-
-    if (!Type->isStructureOrClassType()) {
+    if (!Type->isRecordType()) {
       // Until array initialization is implemented, we don't need to care about
       // cases where `getNumInits() > 1`.
       if (S->getNumInits() == 1)
@@ -688,10 +681,9 @@ public:
     llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
 
     // This only contains the direct fields for the given type.
-    std::vector<FieldDecl *> FieldsForInit =
-        getFieldsForInitListExpr(Type->getAsRecordDecl());
+    std::vector<const FieldDecl *> FieldsForInit = getFieldsForInitListExpr(S);
 
-    // `S->inits()` contains all the initializer epressions, including the
+    // `S->inits()` contains all the initializer expressions, including the
     // ones for direct base classes.
     auto Inits = S->inits();
     size_t InitIdx = 0;
@@ -729,6 +721,17 @@ public:
                Init->getType().getCanonicalType()));
       auto& Loc = Env.createObject(Field->getType(), Init);
       FieldLocs.insert({Field, &Loc});
+    }
+
+    // In the case of a union, we don't in general have initializers for all
+    // of the fields. Create storage locations for the remaining fields (but
+    // don't associate them with values).
+    if (Type->isUnionType()) {
+      for (const FieldDecl *Field :
+           Env.getDataflowAnalysisContext().getModeledFields(Type)) {
+        if (auto [it, inserted] = FieldLocs.insert({Field, nullptr}); inserted)
+          it->second = &Env.createStorageLocation(Field->getType());
+      }
     }
 
     // Check that we satisfy the invariant that a `RecordStorageLoation`
