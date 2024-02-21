@@ -52,7 +52,6 @@ template <class ContextT> void GenericConvergenceVerifier<ContextT>::clear() {
   Tokens.clear();
   CI.clear();
   ConvergenceKind = NoConvergence;
-  IsSSA = false;
 }
 
 template <class ContextT>
@@ -62,16 +61,12 @@ void GenericConvergenceVerifier<ContextT>::visit(const BlockT &BB) {
 
 template <class ContextT>
 void GenericConvergenceVerifier<ContextT>::visit(const InstructionT &I) {
-  ConvOpKind ConvOp = getConvOp(I);
-  if (!IsSSA) {
-    Check(ConvOp == CONV_NONE, "Convergence control requires SSA.",
-          {Context.print(&I)});
-    return;
-  }
+  auto ID = ContextT::getIntrinsicID(I);
   auto *TokenDef = findAndCheckConvergenceTokenUsed(I);
+  bool IsCtrlIntrinsic = true;
 
-  switch (ConvOp) {
-  case CONV_ENTRY:
+  switch (ID) {
+  case Intrinsic::experimental_convergence_entry:
     Check(isInsideConvergentFunction(I),
           "Entry intrinsic can occur only in a convergent function.",
           {Context.print(&I)});
@@ -83,13 +78,13 @@ void GenericConvergenceVerifier<ContextT>::visit(const InstructionT &I) {
           "same basic block.",
           {Context.print(&I)});
     LLVM_FALLTHROUGH;
-  case CONV_ANCHOR:
+  case Intrinsic::experimental_convergence_anchor:
     Check(!TokenDef,
           "Entry or anchor intrinsic cannot have a convergencectrl token "
           "operand.",
           {Context.print(&I)});
     break;
-  case CONV_LOOP:
+  case Intrinsic::experimental_convergence_loop:
     Check(TokenDef, "Loop intrinsic must have a convergencectrl token operand.",
           {Context.print(&I)});
     Check(!SeenFirstConvOp,
@@ -98,13 +93,14 @@ void GenericConvergenceVerifier<ContextT>::visit(const InstructionT &I) {
           {Context.print(&I)});
     break;
   default:
+    IsCtrlIntrinsic = false;
     break;
   }
 
   if (isConvergent(I))
     SeenFirstConvOp = true;
 
-  if (TokenDef || ConvOp != CONV_NONE) {
+  if (TokenDef || IsCtrlIntrinsic) {
     Check(isConvergent(I),
           "Convergence control token can only be used in a convergent call.",
           {Context.print(&I)});
@@ -165,7 +161,8 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
       return;
     }
 
-    Check(getConvOp(*User) == CONV_LOOP,
+    Check(ContextT::getIntrinsicID(*User) ==
+              Intrinsic::experimental_convergence_loop,
           "Convergence token used by an instruction other than "
           "llvm.experimental.convergence.loop in a cycle that does "
           "not contain the token's definition.",
@@ -202,7 +199,7 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
     for (auto &I : *BB) {
       if (auto *Token = Tokens.lookup(&I))
         checkToken(Token, &I, LiveTokens);
-      if (getConvOp(I) != CONV_NONE)
+      if (isConvergenceControlIntrinsic(ContextT::getIntrinsicID(I)))
         LiveTokens.push_back(&I);
     }
 

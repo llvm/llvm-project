@@ -60,7 +60,6 @@ define amdgpu_kernel void @test_kernel(i32 %val) #0 {
 ; CHECK-NEXT:    ; implicit-def: $sgpr15
 ; CHECK-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; CHECK-NEXT:    s_mov_b64 s[2:3], s[22:23]
-; CHECK-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    s_or_saveexec_b64 s[34:35], -1
