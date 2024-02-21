@@ -475,10 +475,20 @@ GetNominal(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node) {
   return {};
 }
 
+bool 
+TypeSystemSwiftTypeRef::IsBuiltinType(CompilerType type) {
+  assert(type.GetTypeSystem().isa_and_nonnull<TypeSystemSwift>() &&
+         "Unexpected type system!");
+  Demangler dem;
+  auto *node = GetDemangledType(dem, type.GetMangledTypeName());
+  if (!node)
+    return false;
+  return node->getKind() == Node::Kind::BuiltinTypeName;
+}
+
 /// Return a pair of module name and type name, given a mangled name.
 static std::optional<std::pair<StringRef, StringRef>>
-GetNominal(llvm::StringRef mangled_name) {
-  swift::Demangle::Demangler dem;
+GetNominal(llvm::StringRef mangled_name, swift::Demangle::Demangler &dem) {
   auto *node = GetDemangledType(dem, mangled_name);
   /// Builtin names belong to the builtin module, and are stored only with their
   /// mangled name.
@@ -1827,7 +1837,9 @@ TypeSystemSwiftTypeRef::FindTypeInModule(opaque_compiler_type_t opaque_type) {
   auto *M = GetModule();
   if (!M)
     return {};
-  auto module_type = GetNominal(AsMangledName(opaque_type));
+
+  swift::Demangle::Demangler dem;
+  auto module_type = GetNominal(AsMangledName(opaque_type), dem);
   if (!module_type)
     return {};
   // DW_AT_linkage_name is not part of the accelerator table, so
@@ -1835,7 +1847,8 @@ TypeSystemSwiftTypeRef::FindTypeInModule(opaque_compiler_type_t opaque_type) {
   ConstString module(module_type->first);
   ConstString type(module_type->second);
   llvm::SmallVector<CompilerContext, 2> decl_context;
-  decl_context.push_back({CompilerContextKind::Module, module});
+  if (!module.IsEmpty())
+    decl_context.push_back({CompilerContextKind::Module, module});
   decl_context.push_back({CompilerContextKind::AnyType, type});
 
   TypeQuery query(decl_context, TypeQueryOptions::e_find_one |
@@ -3339,6 +3352,12 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     return impl();
 #ifndef NDEBUG
   auto result = impl();
+  if (ShouldSkipValidation(type))
+    return result;
+
+  if (!ModuleList::GetGlobalModuleListProperties().GetSwiftValidateTypeSystem())
+    return result;
+
   // FIXME:
   // No point comparing the results if the reflection data has more
   // information.  There's a nasty chicken & egg problem buried here:
@@ -3348,8 +3367,6 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   if (get_ast_num_children() <
       runtime->GetNumChildren({weak_from_this(), type}, exe_scope)
           .value_or(0))
-    return result;
-  if (ShouldSkipValidation(type))
     return result;
   // When the child compiler type is an anonymous clang type,
   // GetChildCompilerTypeAtIndex will return the clang type directly. In this
@@ -3369,9 +3386,6 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   bool ast_child_is_deref_of_parent = false;
   uint64_t ast_language_flags = 0;
   auto defer = llvm::make_scope_exit([&] {
-    if (!ModuleList::GetGlobalModuleListProperties()
-             .GetSwiftValidateTypeSystem())
-      return;
     // Ignore if SwiftASTContext got no result.
     if (ast_child_name.empty())
       return;
