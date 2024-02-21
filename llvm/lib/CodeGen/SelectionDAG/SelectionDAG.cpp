@@ -3647,7 +3647,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       }
     } else if (Op.getResNo() == 0) {
       KnownBits Known0(!LD->getMemoryVT().isScalableVT()
-                           ? LD->getMemoryVT().getSizeInBits()
+                           ? LD->getMemoryVT().getFixedSizeInBits()
                            : BitWidth);
       EVT VT = Op.getValueType();
       // Fill in any known bits from range information. There are 3 types being
