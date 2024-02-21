@@ -9242,9 +9242,8 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
 }
 
 void VPReductionRecipe::execute(VPTransformState &State) {
-  // TODO: Store scalar value for in-loop reductions as {Part, 0}.
   assert(!State.Instance && "Reduction being replicated.");
-  Value *PrevInChain = State.get(getChainOp(), 0);
+  Value *PrevInChain = State.get(getChainOp(), VPIteration(0, 0));
   RecurKind Kind = RdxDesc.getRecurrenceKind();
   bool IsOrdered = State.ILV->useOrderedReductions(RdxDesc);
   // Propagate the fast-math flags carried by the underlying instruction.
@@ -9253,8 +9252,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     Value *NewVecOp = State.get(getVecOp(), Part);
     if (VPValue *Cond = getCondOp()) {
-      Value *NewCond = State.VF.isVector() ? State.get(Cond, Part)
-                                           : State.get(Cond, {Part, 0});
+      Value *NewCond = State.get(Cond, Part, State.VF.isScalar());
       VectorType *VecTy = dyn_cast<VectorType>(NewVecOp->getType());
       Type *ElementTy = VecTy ? VecTy->getElementType() : NewVecOp->getType();
       Value *Iden = RdxDesc.getRecurrenceIdentity(Kind, ElementTy,
@@ -9279,7 +9277,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
             NewVecOp);
       PrevInChain = NewRed;
     } else {
-      PrevInChain = State.get(getChainOp(), Part);
+      PrevInChain = State.get(getChainOp(), VPIteration(Part, 0));
       NewRed = createTargetReduction(State.Builder, RdxDesc, NewVecOp);
     }
     if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
@@ -9290,7 +9288,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
     else
       NextInChain = State.Builder.CreateBinOp(
           (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), NewRed, PrevInChain);
-    State.set(this, NextInChain, Part);
+    State.set(this, NextInChain, VPIteration(Part, 0));
   }
 }
 

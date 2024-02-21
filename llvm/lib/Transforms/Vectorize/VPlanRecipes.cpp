@@ -425,7 +425,7 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     Type *PhiTy = OrigPhi->getType();
     VectorParts RdxParts(State.UF);
     for (unsigned Part = 0; Part < State.UF; ++Part)
-      RdxParts[Part] = State.get(LoopExitingDef, Part);
+      RdxParts[Part] = State.get(LoopExitingDef, Part, PhiR->isInLoop());
 
     // If the vector reduction can be performed in a smaller type, we truncate
     // then extend the loop exit value to enable InstCombine to evaluate the
@@ -1810,7 +1810,10 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
     Instruction *EntryPart = PHINode::Create(VecTy, 2, "vec.phi");
     EntryPart->insertBefore(HeaderBB->getFirstInsertionPt());
-    State.set(this, EntryPart, Part);
+    if (IsInLoop)
+      State.set(this, EntryPart, VPIteration(Part, 0));
+    else
+      State.set(this, EntryPart, Part);
   }
 
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
@@ -1842,8 +1845,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   }
 
   for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
-    Value *EntryPart = IsInLoop ? State.get(this, VPIteration(Part, 0))
-                                : State.get(this, Part);
+    Value *EntryPart = State.get(this, Part, IsInLoop);
     // Make sure to add the reduction start value only to the
     // first unroll part.
     Value *StartVal = (Part == 0) ? StartV : Iden;

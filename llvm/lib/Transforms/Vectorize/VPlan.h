@@ -288,6 +288,8 @@ struct VPTransformState {
 
   /// Set the generated Value for a given VPValue and a given Part.
   void set(VPValue *Def, Value *V, unsigned Part) {
+    assert((VF.isScalar() || V->getType()->isVectorTy()) &&
+           "scalar values must be stored as (Part, 0)");
     if (!Data.PerPartOutput.count(Def)) {
       DataState::PerPartValuesTy Entry(UF);
       Data.PerPartOutput[Def] = Entry;
