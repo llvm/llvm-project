@@ -58,7 +58,7 @@ struct __bounded_iter {
 
   // Create a singular iterator.
   //
-  // Such an iterator point past the end of an empty span, so it is not dereferenceable.
+  // Such an iterator points past the end of an empty span, so it is not dereferenceable.
   // Observing operations like comparison and assignment are valid.
   _LIBCPP_HIDE_FROM_ABI __bounded_iter() = default;
 
@@ -126,7 +126,7 @@ public:
 
   // Arithmetic operations.
   //
-  // These operations check the iterator remains within `[begin, end]`.
+  // These operations check that the iterator remains within `[begin, end]`.
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __bounded_iter& operator++() _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __current_ != __end_, "__bounded_iter::operator++: Attempt to advance an iterator past the end");
