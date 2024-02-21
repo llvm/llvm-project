@@ -111,7 +111,8 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
 
 void StackInfoBuilder::visit(Instruction &Inst) {
   // Visit non-intrinsic debug-info records attached to Inst.
-  for (auto &DPV : Inst.getDbgValueRange()) {
+  for (DbgRecord &DR : Inst.getDbgValueRange()) {
+    DPValue &DPV = cast<DPValue>(DR);
     auto AddIfInteresting = [&](Value *V) {
       if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
         if (!isInterestingAlloca(*AI))
