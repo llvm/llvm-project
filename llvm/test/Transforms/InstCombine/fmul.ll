@@ -1051,7 +1051,7 @@ define float @fmul_fdiv_factor_extra_use(float %x, float %y) {
   ret float %mul
 }
 
-define void @fmul_loop_invariant_fdiv(float* %a, float %x) {
+define void @fmul_loop_invariant_fdiv(ptr %a, float %x) {
 ; CHECK-LABEL: @fmul_loop_invariant_fdiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -1078,10 +1078,10 @@ for.cond.cleanup:
 for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %idxprom = zext i32 %i.08 to i64
-  %arrayidx = getelementptr inbounds float, float* %a, i64 %idxprom
-  %f = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %idxprom
+  %f = load float, ptr %arrayidx, align 4
   %m = fmul fast float %f, %d
-  store float %m, float* %arrayidx, align 4
+  store float %m, ptr %arrayidx, align 4
   %inc = add nuw nsw i32 %i.08, 1
   %cmp.not = icmp eq i32 %inc, 1024
   br i1 %cmp.not, label %for.cond.cleanup, label %for.body

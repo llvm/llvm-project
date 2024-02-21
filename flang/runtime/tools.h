@@ -10,6 +10,7 @@
 #define FORTRAN_RUNTIME_TOOLS_H_
 
 #include "freestanding-tools.h"
+#include "stat.h"
 #include "terminator.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
@@ -108,8 +109,8 @@ static inline RT_API_ATTRS std::optional<std::int64_t> GetInt64Safe(
   case 16: {
     using Int128 = CppTypeFor<TypeCategory::Integer, 16>;
     auto n{*reinterpret_cast<const Int128 *>(p)};
-    std::int64_t result = n;
-    if (result == n) {
+    std::int64_t result{static_cast<std::int64_t>(n)};
+    if (static_cast<Int128>(result) == n) {
       return result;
     }
     return std::nullopt;
@@ -435,6 +436,28 @@ RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous);
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
+
+// Ensures that a character string is null-terminated, allocating a /p length +1
+// size memory for null-terminator if necessary. Returns the original or a newly
+// allocated null-terminated string (responsibility for deallocation is on the
+// caller).
+RT_API_ATTRS char *EnsureNullTerminated(
+    char *str, std::size_t length, Terminator &terminator);
+
+RT_API_ATTRS bool IsValidCharDescriptor(const Descriptor *value);
+
+RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *intVal);
+
+// Copy a null-terminated character array \p rawValue to descriptor \p value.
+// The copy starts at the given \p offset, if not present then start at 0.
+// If descriptor `errmsg` is provided, error messages will be stored to it.
+// Returns stats specified in standard.
+RT_API_ATTRS std::int32_t CopyCharsToDescriptor(const Descriptor &value,
+    const char *rawValue, std::size_t rawValueLength,
+    const Descriptor *errmsg = nullptr, std::size_t offset = 0);
+
+RT_API_ATTRS void StoreIntToDescriptor(
+    const Descriptor *length, std::int64_t value, Terminator &terminator);
 
 // Defines a utility function for copying and padding characters
 template <typename TO, typename FROM>

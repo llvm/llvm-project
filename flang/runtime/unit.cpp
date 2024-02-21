@@ -11,6 +11,7 @@
 #include "lock.h"
 #include "tools.h"
 #include "unit-map.h"
+#include "flang/Runtime/magic-numbers.h"
 #include <cstdio>
 #include <limits>
 #include <utility>
@@ -220,21 +221,24 @@ UnitMap &ExternalFileUnit::CreateUnitMap() {
   UnitMap &newUnitMap{*New<UnitMap>{terminator}().release()};
 
   bool wasExtant{false};
-  ExternalFileUnit &out{*newUnitMap.LookUpOrCreate(6, terminator, wasExtant)};
+  ExternalFileUnit &out{*newUnitMap.LookUpOrCreate(
+      FORTRAN_DEFAULT_OUTPUT_UNIT, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
   out.Predefine(1);
   handler.SignalError(out.SetDirection(Direction::Output));
   out.isUnformatted = false;
   defaultOutput = &out;
 
-  ExternalFileUnit &in{*newUnitMap.LookUpOrCreate(5, terminator, wasExtant)};
+  ExternalFileUnit &in{*newUnitMap.LookUpOrCreate(
+      FORTRAN_DEFAULT_INPUT_UNIT, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
   in.Predefine(0);
   handler.SignalError(in.SetDirection(Direction::Input));
   in.isUnformatted = false;
   defaultInput = &in;
 
-  ExternalFileUnit &error{*newUnitMap.LookUpOrCreate(0, terminator, wasExtant)};
+  ExternalFileUnit &error{
+      *newUnitMap.LookUpOrCreate(FORTRAN_ERROR_UNIT, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
   error.Predefine(2);
   handler.SignalError(error.SetDirection(Direction::Output));
@@ -675,6 +679,7 @@ void ExternalFileUnit::Rewind(IoErrorHandler &handler) {
     handler.SignalError(IostatRewindNonSequential,
         "REWIND(UNIT=%d) on non-sequential file", unitNumber());
   } else {
+    DoImpliedEndfile(handler);
     SetPosition(0, handler);
     currentRecordNumber = 1;
     leftTabLimit.reset();
@@ -683,7 +688,6 @@ void ExternalFileUnit::Rewind(IoErrorHandler &handler) {
 }
 
 void ExternalFileUnit::SetPosition(std::int64_t pos, IoErrorHandler &handler) {
-  DoImpliedEndfile(handler);
   frameOffsetInFile_ = pos;
   recordOffsetInFrame_ = 0;
   if (access == Access::Direct) {
@@ -702,6 +706,12 @@ bool ExternalFileUnit::SetStreamPos(
     handler.SignalError(
         "POS=%zd is invalid", static_cast<std::intmax_t>(oneBasedPos));
     return false;
+  }
+  // A backwards POS= implies truncation after writing, at least in
+  // Intel and NAG.
+  if (static_cast<std::size_t>(oneBasedPos - 1) <
+      frameOffsetInFile_ + recordOffsetInFrame_) {
+    DoImpliedEndfile(handler);
   }
   SetPosition(oneBasedPos - 1, handler);
   // We no longer know which record we're in.  Set currentRecordNumber to

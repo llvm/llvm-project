@@ -412,13 +412,15 @@ public:
 
   /// Abbreviation describing the encoding of Name Index entries.
   struct Abbrev {
-    uint32_t Code;  ///< Abbreviation code
+    uint64_t AbbrevOffset; /// < Abbreviation offset in the .debug_names section
+    uint32_t Code;         ///< Abbreviation code
     dwarf::Tag Tag; ///< Dwarf Tag of the described entity.
     std::vector<AttributeEncoding> Attributes; ///< List of index attributes.
 
-    Abbrev(uint32_t Code, dwarf::Tag Tag,
+    Abbrev(uint32_t Code, dwarf::Tag Tag, uint64_t AbbrevOffset,
            std::vector<AttributeEncoding> Attributes)
-        : Code(Code), Tag(Tag), Attributes(std::move(Attributes)) {}
+        : AbbrevOffset(AbbrevOffset), Code(Code), Tag(Tag),
+          Attributes(std::move(Attributes)) {}
 
     void dump(ScopedPrinter &W) const;
   };
@@ -460,6 +462,16 @@ public:
     /// Returns the Offset of the DIE within the containing CU or TU.
     std::optional<uint64_t> getDIEUnitOffset() const;
 
+    /// Returns true if this Entry has information about its parent DIE (i.e. if
+    /// it has an IDX_parent attribute)
+    bool hasParentInformation() const;
+
+    /// Returns the Entry corresponding to the parent of the DIE represented by
+    /// `this` Entry. If the parent is not in the table, nullopt is returned.
+    /// Precondition: hasParentInformation() == true.
+    /// An error is returned for ill-formed tables.
+    Expected<std::optional<DWARFDebugNames::Entry>> getParentDIEEntry() const;
+
     /// Return the Abbreviation that can be used to interpret the raw values of
     /// this Accelerator Entry.
     const Abbrev &getAbbrev() const { return *Abbr; }
@@ -469,6 +481,7 @@ public:
     std::optional<DWARFFormValue> lookup(dwarf::Index Index) const;
 
     void dump(ScopedPrinter &W) const;
+    void dumpParentIdx(ScopedPrinter &W, const DWARFFormValue &FormValue) const;
 
     friend class NameIndex;
     friend class ValueIterator;
@@ -530,6 +543,19 @@ public:
     const char *getString() const {
       uint64_t Off = StringOffset;
       return StrData.getCStr(&Off);
+    }
+
+    /// Compares the name of this entry against Target, returning true if they
+    /// are equal. This is more efficient in hot code paths that do not need the
+    /// length of the name.
+    bool sameNameAs(StringRef Target) const {
+      // Note: this is not the name, but the rest of debug_str starting from
+      // name. This handles corrupt data (non-null terminated) without
+      // overrunning the buffer.
+      StringRef Data = StrData.getData().substr(StringOffset);
+      size_t TargetSize = Target.size();
+      return Data.size() > TargetSize && !Data[TargetSize] &&
+             strncmp(Data.data(), Target.data(), TargetSize) == 0;
     }
 
     /// Returns the offset of the first Entry in the list.
@@ -608,6 +634,13 @@ public:
     }
 
     Expected<Entry> getEntry(uint64_t *Offset) const;
+
+    /// Returns the Entry at the relative `Offset` from the start of the Entry
+    /// pool.
+    Expected<Entry> getEntryAtRelativeOffset(uint64_t Offset) const {
+      auto OffsetFromSection = Offset + this->EntriesBase;
+      return getEntry(&OffsetFromSection);
+    }
 
     /// Look up all entries in this Name Index matching \c Key.
     iterator_range<ValueIterator> equal_range(StringRef Key) const;

@@ -319,11 +319,25 @@ func.func @insert_strided_slice(%a: vector<4x4xf32>, %b: vector<4x8x16xf32>) {
   return
 }
 
+// CHECK-LABEL: @insert_strided_slice_scalable
+func.func @insert_strided_slice_scalable(%a: vector<4x[16]xf32>, %b: vector<4x8x[16]xf32>) {
+  // CHECK: vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [2, 2, 0], strides = [1, 1]} : vector<4x[16]xf32> into vector<4x8x[16]xf32>
+  %1 = vector.insert_strided_slice %a, %b {offsets = [2, 2, 0], strides = [1, 1]} : vector<4x[16]xf32> into vector<4x8x[16]xf32>
+  return
+}
+
 // CHECK-LABEL: @extract_strided_slice
 func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) -> vector<2x2x16xf32> {
   // CHECK: vector.extract_strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x8x16xf32>
   %1 = vector.extract_strided_slice %arg0 {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x8x16xf32> to vector<2x2x16xf32>
   return %1: vector<2x2x16xf32>
+}
+
+// CHECK-LABEL: @extract_strided_slice_scalable
+func.func @extract_strided_slice_scalable(%arg0: vector<4x[8]x16xf32>) -> vector<2x[8]x16xf32> {
+  // CHECK: vector.extract_strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 8], strides = [1, 1]} : vector<4x[8]x16xf32>
+  %1 = vector.extract_strided_slice %arg0 {offsets = [2, 0], sizes = [2, 8], strides = [1, 1]} : vector<4x[8]x16xf32> to vector<2x[8]x16xf32>
+  return %1: vector<2x[8]x16xf32>
 }
 
 #contraction_to_scalar_accesses = [
@@ -1066,4 +1080,39 @@ func.func @fastmath(%x: vector<42xf32>) -> f32 {
   // CHECK: vector.reduction <minnumf>, %{{.*}} fastmath<reassoc,nnan,ninf>
   %min = vector.reduction <minnumf>, %x fastmath<reassoc,nnan,ninf> : vector<42xf32> into f32
   return %min: f32
+}
+
+// CHECK-LABEL: @interleave_0d
+func.func @interleave_0d(%a: vector<f32>, %b: vector<f32>) -> vector<2xf32> {
+  // CHECK: vector.interleave %{{.*}}, %{{.*}} : vector<f32>
+  %0 = vector.interleave %a, %b : vector<f32>
+  return %0 : vector<2xf32>
+}
+
+// CHECK-LABEL: @interleave_1d
+func.func @interleave_1d(%a: vector<4xf32>, %b: vector<4xf32>) -> vector<8xf32> {
+  // CHECK: vector.interleave %{{.*}}, %{{.*}} : vector<4xf32>
+  %0 = vector.interleave %a, %b : vector<4xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: @interleave_1d_scalable
+func.func @interleave_1d_scalable(%a: vector<[8]xi16>, %b: vector<[8]xi16>) -> vector<[16]xi16> {
+  // CHECK: vector.interleave %{{.*}}, %{{.*}} : vector<[8]xi16>
+  %0 = vector.interleave %a, %b : vector<[8]xi16>
+  return %0 : vector<[16]xi16>
+}
+
+// CHECK-LABEL: @interleave_2d
+func.func @interleave_2d(%a: vector<2x8xf32>, %b: vector<2x8xf32>) -> vector<2x16xf32> {
+  // CHECK: vector.interleave %{{.*}}, %{{.*}} : vector<2x8xf32>
+  %0 = vector.interleave %a, %b : vector<2x8xf32>
+  return %0 : vector<2x16xf32>
+}
+
+// CHECK-LABEL: @interleave_2d_scalable
+func.func @interleave_2d_scalable(%a: vector<2x[2]xf64>, %b: vector<2x[2]xf64>) -> vector<2x[4]xf64> {
+  // CHECK: vector.interleave %{{.*}}, %{{.*}} : vector<2x[2]xf64>
+  %0 = vector.interleave %a, %b : vector<2x[2]xf64>
+  return %0 : vector<2x[4]xf64>
 }

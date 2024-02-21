@@ -17,6 +17,7 @@
 namespace Fortran::runtime {
 
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
 
 void RTDEF(Initialize)(
     const Descriptor &descriptor, const char *sourceFile, int sourceLine) {
@@ -166,5 +167,6 @@ void RTDEF(DestroyWithoutFinalization)(const Descriptor &descriptor) {
   }
 }
 
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

@@ -65,14 +65,14 @@ elseif( CMAKE_HOST_UNIX )
     set(system_libs ${system_libs} m)
   endif()
   if( UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS" )
-    set(system_libs ${system_libs} kstat)
+    set(system_libs ${system_libs} kstat socket)
   endif()
   if( FUCHSIA )
     set(system_libs ${system_libs} zircon)
   endif()
   if ( HAIKU )
     add_compile_definitions(_BSD_SOURCE)
-    set(system_libs ${system_libs} bsd)
+    set(system_libs ${system_libs} bsd network)
   endif()
 endif( MSVC OR MINGW )
 
@@ -176,6 +176,7 @@ add_llvm_component_library(LLVMSupport
   ELFAttributes.cpp
   Error.cpp
   ErrorHandling.cpp
+  ExponentialBackoff.cpp
   ExtensibleRTTI.cpp
   FileCollector.cpp
   FileUtilities.cpp

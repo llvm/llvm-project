@@ -12,6 +12,8 @@
 
 using namespace clang::ast_matchers;
 
+namespace clang::tidy::modernize {
+
 namespace {
 
 AST_MATCHER(clang::TypeLoc, hasValidBeginLoc) {
@@ -38,16 +40,32 @@ AST_MATCHER(clang::ParmVarDecl, isArgvOfMain) {
 
 } // namespace
 
-namespace clang::tidy::modernize {
+AvoidCArraysCheck::AvoidCArraysCheck(StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      AllowStringArrays(Options.get("AllowStringArrays", false)) {}
+
+void AvoidCArraysCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AllowStringArrays", AllowStringArrays);
+}
 
 void AvoidCArraysCheck::registerMatchers(MatchFinder *Finder) {
+  ast_matchers::internal::Matcher<TypeLoc> IgnoreStringArrayIfNeededMatcher =
+      anything();
+  if (AllowStringArrays)
+    IgnoreStringArrayIfNeededMatcher =
+        unless(typeLoc(loc(hasCanonicalType(incompleteArrayType(
+                           hasElementType(isAnyCharacter())))),
+                       hasParent(varDecl(hasInitializer(stringLiteral()),
+                                         unless(parmVarDecl())))));
+
   Finder->addMatcher(
       typeLoc(hasValidBeginLoc(), hasType(arrayType()),
               unless(anyOf(hasParent(parmVarDecl(isArgvOfMain())),
                            hasParent(varDecl(isExternC())),
                            hasParent(fieldDecl(
                                hasParent(recordDecl(isExternCContext())))),
-                           hasAncestor(functionDecl(isExternC())))))
+                           hasAncestor(functionDecl(isExternC())))),
+              std::move(IgnoreStringArrayIfNeededMatcher))
           .bind("typeloc"),
       this);
 }

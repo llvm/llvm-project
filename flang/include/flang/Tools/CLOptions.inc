@@ -10,6 +10,7 @@
 /// debugging the test tools. This file must be included into the tool.
 
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
@@ -273,6 +274,7 @@ inline void createHLFIRToFIRPassPipeline(
 /// rather than the host device.
 inline void createOpenMPFIRPassPipeline(
     mlir::PassManager &pm, bool isTargetDevice) {
+  pm.addPass(fir::createOMPDescriptorMapInfoGenPass());
   pm.addPass(fir::createOMPMarkDeclareTargetPass());
   if (isTargetDevice)
     pm.addPass(fir::createOMPFunctionFilteringPass());
@@ -310,6 +312,27 @@ inline void createDefaultFIRCodeGenPassPipeline(
 
   if (config.VScaleMin != 0)
     pm.addPass(fir::createVScaleAttrPass({config.VScaleMin, config.VScaleMax}));
+
+  // Add function attributes
+  fir::FunctionAttrTypes functionAttrs;
+
+  if (config.FramePointerKind != llvm::FramePointerKind::None ||
+      config.NoInfsFPMath || config.NoNaNsFPMath || config.ApproxFuncFPMath ||
+      config.NoSignedZerosFPMath || config.UnsafeFPMath) {
+    if (config.FramePointerKind == llvm::FramePointerKind::NonLeaf)
+      functionAttrs.framePointerKind =
+          mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
+    else if (config.FramePointerKind == llvm::FramePointerKind::All)
+      functionAttrs.framePointerKind =
+          mlir::LLVM::framePointerKind::FramePointerKind::All;
+    else
+      functionAttrs.framePointerKind =
+          mlir::LLVM::framePointerKind::FramePointerKind::None;
+
+    pm.addPass(fir::createFunctionAttrPass(functionAttrs, config.NoInfsFPMath,
+        config.NoNaNsFPMath, config.ApproxFuncFPMath,
+        config.NoSignedZerosFPMath, config.UnsafeFPMath));
+  }
 
   fir::addFIRToLLVMPass(pm, config);
 }

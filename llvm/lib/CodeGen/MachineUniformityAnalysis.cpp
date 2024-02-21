@@ -165,25 +165,6 @@ MachineUniformityInfo llvm::computeMachineUniformityInfo(
 
 namespace {
 
-/// Legacy analysis pass which computes a \ref MachineUniformityInfo.
-class MachineUniformityAnalysisPass : public MachineFunctionPass {
-  MachineUniformityInfo UI;
-
-public:
-  static char ID;
-
-  MachineUniformityAnalysisPass();
-
-  MachineUniformityInfo &getUniformityInfo() { return UI; }
-  const MachineUniformityInfo &getUniformityInfo() const { return UI; }
-
-  bool runOnMachineFunction(MachineFunction &F) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  void print(raw_ostream &OS, const Module *M = nullptr) const override;
-
-  // TODO: verify analysis
-};
-
 class MachineUniformityInfoPrinterPass : public MachineFunctionPass {
 public:
   static char ID;

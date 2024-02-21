@@ -1025,7 +1025,7 @@ security.insecureAPI.vfork (C)
 
 security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""
- Warn on occurrences of unsafe or deprecated buffer handling functions, which now have a secure variant: ``sprintf, vsprintf, scanf, wscanf, fscanf, fwscanf, vscanf, vwscanf, vfscanf, vfwscanf, sscanf, swscanf, vsscanf, vswscanf, swprintf, snprintf, vswprintf, vsnprintf, memcpy, memmove, strncpy, strncat, memset``
+ Warn on occurrences of unsafe or deprecated buffer handling functions, which now have a secure variant: ``sprintf, fprintf, vsprintf, scanf, wscanf, fscanf, fwscanf, vscanf, vwscanf, vfscanf, vfwscanf, sscanf, swscanf, vsscanf, vswscanf, swprintf, snprintf, vswprintf, vsnprintf, memcpy, memmove, strncpy, strncat, memset``
 
 .. code-block:: c
 
@@ -1890,28 +1890,6 @@ the locking/unlocking of ``mtx_t`` mutexes.
    mtx_lock(&mtx1); // warn: This lock has already been acquired
  }
 
-.. _alpha-core-CallAndMessageUnInitRefArg:
-
-alpha.core.CallAndMessageUnInitRefArg (C,C++, ObjC)
-"""""""""""""""""""""""""""""""""""""""""""""""""""
-Check for logical errors for function calls and Objective-C
-message expressions (e.g., uninitialized arguments, null function pointers, and pointer to undefined variables).
-
-.. code-block:: c
-
- void test(void) {
-   int t;
-   int &p = t;
-   int &s = p;
-   int &q = s;
-   foo(q); // warn
- }
-
- void test(void) {
-   int x;
-   foo(&x); // warn
- }
-
 .. _alpha-core-CastSize:
 
 alpha.core.CastSize (C)
@@ -2093,6 +2071,21 @@ This checker is a part of ``core.StackAddressEscape``, but is temporarily disabl
    };
    return outer; // warn: address of stack-allocated block is captured by a
                  //       returned block
+ }
+
+.. _alpha-core-StdVariant:
+
+alpha.core.StdVariant (C++)
+"""""""""""""""""""""""""""
+Check if a value of active type is retrieved from an ``std::variant`` instance with ``std::get``.
+In case of bad variant type access (the accessed type differs from the active type)
+a warning is emitted. Currently, this checker does not take exception handling into account.
+
+.. code-block:: cpp
+
+ void test() {
+   std::variant<int, char> v = 25;
+   char c = stg::get<char>(v); // warn: "int" is the active alternative
  }
 
 .. _alpha-core-TestAfterDivZero:

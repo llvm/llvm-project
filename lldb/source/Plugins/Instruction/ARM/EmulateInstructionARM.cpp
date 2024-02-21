@@ -830,7 +830,8 @@ uint32_t EmulateInstructionARM::GetFramePointerRegisterNumber() const {
   case llvm::Triple::IOS:
   case llvm::Triple::TvOS:
   case llvm::Triple::WatchOS:
-  // NEED_BRIDGEOS_TRIPLE case llvm::Triple::BridgeOS:
+  case llvm::Triple::XROS:
+  case llvm::Triple::BridgeOS:
     is_apple = true;
     break;
   default:

@@ -86,7 +86,8 @@ public:
   static char ID;
   PPCMergeStringPool() : ModulePass(ID) {}
 
-  bool runOnModule(Module &M) override { return mergeModuleStringPool(M); }
+  bool doInitialization(Module &M) override { return mergeModuleStringPool(M); }
+  bool runOnModule(Module &M) override { return false; }
 
   StringRef getPassName() const override { return "PPC Merge String Pool"; }
 
@@ -267,6 +268,17 @@ bool PPCMergeStringPool::mergeModuleStringPool(Module &M) {
     // Access to the pooled constant strings require an offset. Add a GEP
     // before every use in order to compute this offset.
     replaceUsesWithGEP(GV, PooledGlobal, ElementIndex);
+
+    // Replace all the uses by metadata.
+    if (GV->isUsedByMetadata()) {
+      Constant *Indices[2] = {
+          ConstantInt::get(Type::getInt32Ty(*Context), 0),
+          ConstantInt::get(Type::getInt32Ty(*Context), ElementIndex)};
+      Constant *ConstGEP = ConstantExpr::getInBoundsGetElementPtr(
+          PooledStructType, PooledGlobal, Indices);
+      ValueAsMetadata::handleRAUW(GV, ConstGEP);
+    }
+    assert(!GV->isUsedByMetadata() && "Should be no metadata use anymore");
 
     // This GV has no more uses so we can erase it.
     if (GV->use_empty())

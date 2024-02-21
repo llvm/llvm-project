@@ -9,7 +9,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x2aaaaaab), %bb.2(0x55555555)
   ; CHECK-NEXT:   liveins: $edi
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[MOV32r0_:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags, implicit-def [[MOV32r0_]]
+  ; CHECK-NEXT:   undef [[MOV32r0_:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
   ; CHECK-NEXT:   JCC_1 %bb.2, 5, implicit killed undef $eflags
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -28,7 +28,7 @@ body:             |
   ; CHECK-NEXT:   JCC_1 %bb.5, 5, implicit killed undef $eflags
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
-  ; CHECK-NEXT:   dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def $al, implicit-def $al
+  ; CHECK-NEXT:   dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def $al
   ; CHECK-NEXT:   RET 0, killed undef $al
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:

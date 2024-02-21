@@ -20,13 +20,13 @@ RUN: llvm-dwarfdump -a %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Resources/DW
 RUN: FileCheck %s --input-file %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Info.plist
 
 ### --------------------------------------------
-### Repeat the steps for --linker llvm
+### Repeat the steps for --linker parallel
 
 RUN: rm -rf %t
 RUN: mkdir -p %t/dsymdest
 RUN: cp %p/../Inputs/basic.macho.x86_64 %t/basic.macho.x86_64
 
-RUN: dsymutil --linker llvm -accelerator=Pub -oso-prepend-path=%p/.. %t/basic.macho.x86_64
+RUN: dsymutil --linker parallel -accelerator=Pub -oso-prepend-path=%p/.. %t/basic.macho.x86_64
 
 Check that the object file in the bundle exists and is sane:
 RUN: llvm-dwarfdump -a %t/basic.macho.x86_64.dSYM/Contents/Resources/DWARF/basic.macho.x86_64 | FileCheck %S/basic-linking-x86.test
@@ -39,7 +39,7 @@ RUN: llvm-dwarfdump -a %t/basic.macho.x86_64.dSYM | FileCheck %S/basic-linking-x
 
 RUN: FileCheck %s --input-file %t/basic.macho.x86_64.dSYM/Contents/Info.plist
 
-RUN: dsymutil --linker llvm -oso-prepend-path=%p/.. %t/basic.macho.x86_64 \
+RUN: dsymutil --linker parallel -oso-prepend-path=%p/.. %t/basic.macho.x86_64 \
 RUN:   -o %t/dsymdest/basic.macho.x86_64.dSYM
 RUN: llvm-dwarfdump -a %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Resources/DWARF/basic.macho.x86_64 | FileCheck %S/basic-linking-x86.test
 RUN: FileCheck %s --input-file %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Info.plist

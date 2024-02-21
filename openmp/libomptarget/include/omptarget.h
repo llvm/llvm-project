@@ -91,10 +91,6 @@ enum tgt_map_type {
 enum OpenMPOffloadingDeclareTargetFlags {
   /// Mark the entry global as having a 'link' attribute.
   OMP_DECLARE_TARGET_LINK = 0x01,
-  /// Mark the entry kernel as being a global constructor.
-  OMP_DECLARE_TARGET_CTOR = 0x02,
-  /// Mark the entry kernel as being a global destructor.
-  OMP_DECLARE_TARGET_DTOR = 0x04,
   /// Mark the entry global as being an indirectly callable function.
   OMP_DECLARE_TARGET_INDIRECT = 0x08
 };
@@ -103,7 +99,9 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_DEVICE = 0,
   TARGET_ALLOC_HOST,
   TARGET_ALLOC_SHARED,
-  TARGET_ALLOC_DEFAULT
+  TARGET_ALLOC_DEFAULT,
+  /// The allocation will not block on other streams.
+  TARGET_ALLOC_DEVICE_NON_BLOCKING,
 };
 
 inline KernelArgsTy CTorDTorKernelArgs = {1,       0,       nullptr,   nullptr,

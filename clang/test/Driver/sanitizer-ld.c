@@ -896,7 +896,6 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-SCUDO-LINUX %s
 // CHECK-SCUDO-LINUX: "{{.*}}ld{{(.exe)?}}"
-// CHECK-SCUDO-LINUX: "-pie"
 // CHECK-SCUDO-LINUX: "--whole-archive" "{{.*}}libclang_rt.scudo_standalone-i386.a" "--no-whole-archive"
 // CHECK-SCUDO-LINUX-NOT: "-lstdc++"
 // CHECK-SCUDO-LINUX: "-lpthread"

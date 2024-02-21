@@ -135,14 +135,14 @@ void Thumb1InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 void Thumb1InstrInfo::expandLoadStackGuard(
     MachineBasicBlock::iterator MI) const {
   MachineFunction &MF = *MI->getParent()->getParent();
-  const TargetMachine &TM = MF.getTarget();
   const ARMSubtarget &ST = MF.getSubtarget<ARMSubtarget>();
+  const auto *GV = cast<GlobalValue>((*MI->memoperands_begin())->getValue());
 
   assert(MF.getFunction().getParent()->getStackProtectorGuard() != "tls" &&
          "TLS stack protector not supported for Thumb1 targets");
 
   unsigned Instr;
-  if (TM.isPositionIndependent())
+  if (!GV->isDSOLocal())
     Instr = ARM::tLDRLIT_ga_pcrel;
   else if (ST.genExecuteOnly() && ST.hasV8MBaselineOps())
     Instr = ARM::t2MOVi32imm;

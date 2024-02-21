@@ -379,6 +379,13 @@ declare_mlir_dialect_python_bindings(
 )
 
 declare_mlir_dialect_python_bindings(
+    ADD_TO_PARENT MLIRPythonSources.Dialects
+    ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+    TD_FILE dialects/SPIRVOps.td
+    SOURCES dialects/spirv.py
+    DIALECT_NAME spirv)
+
+declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/TensorOps.td
@@ -473,6 +480,19 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPILinalg
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.LLVM.Pybind
+  MODULE_NAME _mlirDialectsLLVM
+  ADD_TO_PARENT MLIRPythonSources.Dialects.llvm
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    DialectLLVM.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPILLVM
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind

@@ -104,10 +104,15 @@ bool ModuleListProperties::SetEnableExternalLookup(bool new_value) {
   return SetPropertyAtIndex(ePropertyEnableExternalLookup, new_value);
 }
 
-bool ModuleListProperties::GetEnableBackgroundLookup() const {
-  const uint32_t idx = ePropertyEnableBackgroundLookup;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_modulelist_properties[idx].default_uint_value != 0);
+SymbolDownload ModuleListProperties::GetSymbolAutoDownload() const {
+  // Backward compatibility alias.
+  if (GetPropertyAtIndexAs<bool>(ePropertyEnableBackgroundLookup, false))
+    return eSymbolDownloadBackground;
+
+  const uint32_t idx = ePropertyAutoDownload;
+  return GetPropertyAtIndexAs<lldb::SymbolDownload>(
+      idx, static_cast<lldb::SymbolDownload>(
+               g_modulelist_properties[idx].default_uint_value));
 }
 
 FileSpec ModuleListProperties::GetClangModulesCachePath() const {
@@ -164,7 +169,7 @@ void ModuleListProperties::UpdateSymlinkMappings() {
   llvm::sys::ScopedWriter lock(m_symlink_paths_mutex);
   const bool notify = false;
   m_symlink_paths.Clear(notify);
-  for (FileSpec symlink : list) {
+  for (auto symlink : list) {
     FileSpec resolved;
     Status status = FileSystem::Instance().Readlink(symlink, resolved);
     if (status.Success())
@@ -211,7 +216,29 @@ ModuleList::~ModuleList() = default;
 void ModuleList::AppendImpl(const ModuleSP &module_sp, bool use_notifier) {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-    m_modules.push_back(module_sp);
+    // We are required to keep the first element of the Module List as the
+    // executable module.  So check here and if the first module is NOT an 
+    // but the new one is, we insert this module at the beginning, rather than 
+    // at the end.
+    // We don't need to do any of this if the list is empty:
+    if (m_modules.empty()) {
+      m_modules.push_back(module_sp);
+    } else {
+      // Since producing the ObjectFile may take some work, first check the 0th
+      // element, and only if that's NOT an executable look at the incoming
+      // ObjectFile.  That way in the normal case we only look at the element
+      // 0 ObjectFile. 
+      const bool elem_zero_is_executable 
+          = m_modules[0]->GetObjectFile()->GetType() 
+              == ObjectFile::Type::eTypeExecutable;
+      lldb_private::ObjectFile *obj = module_sp->GetObjectFile();
+      if (!elem_zero_is_executable && obj 
+          && obj->GetType() == ObjectFile::Type::eTypeExecutable) {
+        m_modules.insert(m_modules.begin(), module_sp);
+      } else {
+        m_modules.push_back(module_sp);
+      }
+    }
     if (use_notifier && m_notifier)
       m_notifier->NotifyModuleAdded(*this, module_sp);
   }
@@ -324,7 +351,7 @@ bool ModuleList::RemoveIfOrphaned(const Module *module_ptr) {
     collection::iterator pos, end = m_modules.end();
     for (pos = m_modules.begin(); pos != end; ++pos) {
       if (pos->get() == module_ptr) {
-        if (pos->unique()) {
+        if (pos->use_count() == 1) {
           pos = RemoveImpl(pos);
           return true;
         } else
@@ -355,7 +382,7 @@ size_t ModuleList::RemoveOrphans(bool mandatory) {
     made_progress = false;
     collection::iterator pos = m_modules.begin();
     while (pos != m_modules.end()) {
-      if (pos->unique()) {
+      if (pos->use_count() == 1) {
         pos = RemoveImpl(pos);
         ++remove_count;
         // We did make progress.

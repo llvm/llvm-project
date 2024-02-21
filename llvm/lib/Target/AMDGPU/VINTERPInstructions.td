@@ -78,7 +78,7 @@ def VOP3_VINTERP_F32 : VOPProfile<[f32, f32, f32, f32]> {
                    Src1Mod:$src1_modifiers, VRegSrc_32:$src1,
                    Src2Mod:$src2_modifiers, VRegSrc_32:$src2,
                    clampmod:$clamp,
-                   wait_exp:$waitexp);
+                   WaitEXP:$waitexp);
 
   let Asm64 = " $vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$waitexp";
 }
@@ -96,7 +96,7 @@ class VOP3_VINTERP_F16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
                    Src1Mod:$src1_modifiers, VRegSrc_32:$src1,
                    Src2Mod:$src2_modifiers, VRegSrc_32:$src2,
                    clampmod:$clamp, op_sel0:$op_sel,
-                   wait_exp:$waitexp);
+                   WaitEXP:$waitexp);
 
   let Asm64 = " $vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$op_sel$waitexp";
 }

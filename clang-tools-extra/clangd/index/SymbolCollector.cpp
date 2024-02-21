@@ -174,7 +174,10 @@ bool isSpelled(SourceLocation Loc, const NamedDecl &ND) {
   auto Name = ND.getDeclName();
   const auto NameKind = Name.getNameKind();
   if (NameKind != DeclarationName::Identifier &&
-      NameKind != DeclarationName::CXXConstructorName)
+      NameKind != DeclarationName::CXXConstructorName &&
+      NameKind != DeclarationName::ObjCZeroArgSelector &&
+      NameKind != DeclarationName::ObjCOneArgSelector &&
+      NameKind != DeclarationName::ObjCMultiArgSelector)
     return false;
   const auto &AST = ND.getASTContext();
   const auto &SM = AST.getSourceManager();
@@ -182,8 +185,10 @@ bool isSpelled(SourceLocation Loc, const NamedDecl &ND) {
   clang::Token Tok;
   if (clang::Lexer::getRawToken(Loc, Tok, SM, LO))
     return false;
-  auto StrName = Name.getAsString();
-  return clang::Lexer::getSpelling(Tok, SM, LO) == StrName;
+  auto TokSpelling = clang::Lexer::getSpelling(Tok, SM, LO);
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&ND))
+    return TokSpelling == MD->getSelector().getNameForSlot(0);
+  return TokSpelling == Name.getAsString();
 }
 } // namespace
 
@@ -821,7 +826,8 @@ void SymbolCollector::setIncludeLocation(const Symbol &S, SourceLocation DefLoc,
 
   // Use the expansion location to get the #include header since this is
   // where the symbol is exposed.
-  IncludeFiles[S.ID] = SM.getDecomposedExpansionLoc(DefLoc).first;
+  if (FileID FID = SM.getDecomposedExpansionLoc(DefLoc).first; FID.isValid())
+    IncludeFiles[S.ID] = FID;
 
   // We update providers for a symbol with each occurence, as SymbolCollector
   // might run while parsing, rather than at the end of a translation unit.
@@ -879,16 +885,15 @@ void SymbolCollector::finish() {
     const Symbol *S = Symbols.find(SID);
     if (!S)
       continue;
-    assert(IncludeFiles.contains(SID));
 
-    const auto FID = IncludeFiles.at(SID);
+    FileID FID = IncludeFiles.lookup(SID);
     // Determine if the FID is #include'd or #import'ed.
     Symbol::IncludeDirective Directives = Symbol::Invalid;
     auto CollectDirectives = shouldCollectIncludePath(S->SymInfo.Kind);
     if ((CollectDirectives & Symbol::Include) != 0)
       Directives |= Symbol::Include;
     // Only allow #import for symbols from ObjC-like files.
-    if ((CollectDirectives & Symbol::Import) != 0) {
+    if ((CollectDirectives & Symbol::Import) != 0 && FID.isValid()) {
       auto [It, Inserted] = FileToContainsImportsOrObjC.try_emplace(FID);
       if (Inserted)
         It->second = FilesWithObjCConstructs.contains(FID) ||

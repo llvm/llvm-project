@@ -47,7 +47,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
 
   void MacroDefined(const Token &MacroNameTok,
@@ -76,8 +77,8 @@ void DuplicateIncludeCallbacks::FileChanged(SourceLocation Loc,
 void DuplicateIncludeCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   if (llvm::is_contained(Files.back(), FileName)) {
     // We want to delete the entire line, so make sure that [Start,End] covers
     // everything.

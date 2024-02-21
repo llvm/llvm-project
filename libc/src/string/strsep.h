@@ -11,7 +11,7 @@
 
 namespace LIBC_NAMESPACE {
 
-char *strsep(char **stringp, const char *delim);
+char *strsep(char **__restrict stringp, const char *__restrict delim);
 
 } // namespace LIBC_NAMESPACE
 

@@ -1,5 +1,9 @@
 ; RUN: llc < %s | FileCheck %s -check-prefix=ASM
 ; RUN: llc < %s -O0 -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after livedebugvalues -o - | FileCheck %s -check-prefix=MIR
+
+; RUN: llc --try-experimental-debuginfo-iterators < %s | FileCheck %s -check-prefix=ASM
+; RUN: llc --try-experimental-debuginfo-iterators < %s -O0 -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after livedebugvalues -o - | FileCheck %s -check-prefix=MIR
+
 ; PR9055
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32-n8:16:32"
 target triple = "i686-pc-linux-gnu"

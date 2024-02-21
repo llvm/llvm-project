@@ -318,6 +318,18 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
+def OMPDescriptorMapInfoGenPass
+    : Pass<"omp-descriptor-map-info-gen", "mlir::func::FuncOp"> {
+  let summary = "expands OpenMP MapInfo operations containing descriptors";
+  let description = [{
+    Expands MapInfo operations containing descriptor types into multiple 
+    MapInfo's for each pointer element in the descriptor that requires 
+    explicit individual mapping by the OpenMP runtime.
+  }];
+  let constructor = "::fir::createOMPDescriptorMapInfoGenPass()";
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
 def OMPMarkDeclareTargetPass
     : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
   let summary = "Marks all functions called by an OpenMP declare target function as declare target";
@@ -347,6 +359,42 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
            "vector scale range">,
   ];
   let constructor = "::fir::createVScaleAttrPass()";
+}
+
+def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
+  let summary = "Pass that adds function attributes expected at LLVM IR level";
+  let description = [{ This feature introduces a general attribute aimed at
+     customizing function characteristics. 
+     Options include:
+     Add "frame-pointer" attribute to functions: Set an attribute for the frame 
+     pointer on functions, to avoid saving the frame pointer in a register in 
+     functions where it is unnecessary. This eliminates the need for
+     instructions to save, establish, and restore frame pointers, while also
+     freeing up an additional register in numerous functions. However, this
+     approach can make debugging unfeasible on certain machines.
+  }];
+  let options = [
+    Option<"framePointerKind", "frame-pointer",
+           "mlir::LLVM::framePointerKind::FramePointerKind", 
+           /*default=*/"mlir::LLVM::framePointerKind::FramePointerKind{}",
+           "frame pointer">,
+    Option<"noInfsFPMath", "no-infs-fp-math",
+           "bool", /*default=*/"false",
+           "Set the no-infs-fp-math attribute on functions in the module.">,
+    Option<"noNaNsFPMath", "no-nans-fp-math",
+           "bool", /*default=*/"false",
+           "Set the no-nans-fp-math attribute on functions in the module.">,
+    Option<"approxFuncFPMath", "approx-func-fp-math",
+           "bool", /*default=*/"false",
+           "Set the approx-func-fp-math attribute on functions in the module.">,
+    Option<"noSignedZerosFPMath", "no-signed-zeros-fp-math",
+           "bool", /*default=*/"false",
+           "Set the no-signed-zeros-fp-math attribute on functions in the module.">,
+    Option<"unsafeFPMath", "unsafe-fp-math",
+           "bool", /*default=*/"false",
+           "Set the unsafe-fp-math attribute on functions in the module.">,
+  ];
+  let constructor = "::fir::createFunctionAttrPass()";
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

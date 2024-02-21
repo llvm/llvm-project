@@ -157,6 +157,8 @@ public:
   explicit LazyValueInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Wrapper around LazyValueInfo.

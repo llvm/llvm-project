@@ -20,14 +20,16 @@ namespace Fortran::runtime {
 class Descriptor;
 
 template <typename CHAR>
-int CharacterScalarCompare(
+RT_API_ATTRS int CharacterScalarCompare(
     const CHAR *x, const CHAR *y, std::size_t xChars, std::size_t yChars);
-extern template int CharacterScalarCompare<char>(
+extern template RT_API_ATTRS int CharacterScalarCompare<char>(
     const char *x, const char *y, std::size_t xChars, std::size_t yChars);
-extern template int CharacterScalarCompare<char16_t>(const char16_t *x,
-    const char16_t *y, std::size_t xChars, std::size_t yChars);
-extern template int CharacterScalarCompare<char32_t>(const char32_t *x,
-    const char32_t *y, std::size_t xChars, std::size_t yChars);
+extern template RT_API_ATTRS int CharacterScalarCompare<char16_t>(
+    const char16_t *x, const char16_t *y, std::size_t xChars,
+    std::size_t yChars);
+extern template RT_API_ATTRS int CharacterScalarCompare<char32_t>(
+    const char32_t *x, const char32_t *y, std::size_t xChars,
+    std::size_t yChars);
 
 extern "C" {
 
@@ -36,12 +38,12 @@ extern "C" {
 // initialized CHARACTER allocatable scalar or array descriptor -- use
 // AllocatableInitCharacter() to set one up.  Crashes when not
 // conforming.  Assumes independence of data.
-void RTNAME(CharacterConcatenate)(Descriptor &accumulator,
+void RTDECL(CharacterConcatenate)(Descriptor &accumulator,
     const Descriptor &from, const char *sourceFile = nullptr,
     int sourceLine = 0);
 
 // Convenience specialization for ASCII scalars concatenation.
-void RTNAME(CharacterConcatenateScalar1)(
+void RTDECL(CharacterConcatenateScalar1)(
     Descriptor &accumulator, const char *from, std::size_t chars);
 
 // CHARACTER comparisons.  The kinds must match.  Like std::memcmp(),
@@ -52,77 +54,77 @@ void RTNAME(CharacterConcatenateScalar1)(
 // N.B.: Calls to the restricted specific intrinsic functions LGE, LGT, LLE,
 // & LLT are converted into calls to these during lowering; they don't have
 // to be able to be passed as actual procedure arguments.
-int RTNAME(CharacterCompareScalar)(const Descriptor &, const Descriptor &);
-int RTNAME(CharacterCompareScalar1)(
+int RTDECL(CharacterCompareScalar)(const Descriptor &, const Descriptor &);
+int RTDECL(CharacterCompareScalar1)(
     const char *x, const char *y, std::size_t xChars, std::size_t yChars);
-int RTNAME(CharacterCompareScalar2)(const char16_t *x, const char16_t *y,
+int RTDECL(CharacterCompareScalar2)(const char16_t *x, const char16_t *y,
     std::size_t xChars, std::size_t yChars);
-int RTNAME(CharacterCompareScalar4)(const char32_t *x, const char32_t *y,
+int RTDECL(CharacterCompareScalar4)(const char32_t *x, const char32_t *y,
     std::size_t xChars, std::size_t yChars);
 
 // General CHARACTER comparison; the result is a LOGICAL(KIND=1) array that
 // is established and populated.
-void RTNAME(CharacterCompare)(
+void RTDECL(CharacterCompare)(
     Descriptor &result, const Descriptor &, const Descriptor &);
 
 // Special-case support for optimized ASCII scalar expressions.
 
 // Copies data from 'rhs' to the remaining space (lhsLength - offset)
 // in 'lhs', if any.  Returns the new offset.  Assumes independence.
-std::size_t RTNAME(CharacterAppend1)(char *lhs, std::size_t lhsBytes,
+std::size_t RTDECL(CharacterAppend1)(char *lhs, std::size_t lhsBytes,
     std::size_t offset, const char *rhs, std::size_t rhsBytes);
 
 // Appends any necessary spaces to a CHARACTER(KIND=1) scalar.
-void RTNAME(CharacterPad1)(char *lhs, std::size_t bytes, std::size_t offset);
+void RTDECL(CharacterPad1)(char *lhs, std::size_t bytes, std::size_t offset);
 
 // Intrinsic functions
 // The result descriptors below are all established by the runtime.
-void RTNAME(Adjustl)(Descriptor &result, const Descriptor &,
+void RTDECL(Adjustl)(Descriptor &result, const Descriptor &,
     const char *sourceFile = nullptr, int sourceLine = 0);
-void RTNAME(Adjustr)(Descriptor &result, const Descriptor &,
+void RTDECL(Adjustr)(Descriptor &result, const Descriptor &,
     const char *sourceFile = nullptr, int sourceLine = 0);
-std::size_t RTNAME(LenTrim1)(const char *, std::size_t);
-std::size_t RTNAME(LenTrim2)(const char16_t *, std::size_t);
-std::size_t RTNAME(LenTrim4)(const char32_t *, std::size_t);
-void RTNAME(LenTrim)(Descriptor &result, const Descriptor &, int kind,
+std::size_t RTDECL(LenTrim1)(const char *, std::size_t);
+std::size_t RTDECL(LenTrim2)(const char16_t *, std::size_t);
+std::size_t RTDECL(LenTrim4)(const char32_t *, std::size_t);
+void RTDECL(LenTrim)(Descriptor &result, const Descriptor &, int kind,
     const char *sourceFile = nullptr, int sourceLine = 0);
-void RTNAME(Repeat)(Descriptor &result, const Descriptor &string,
+void RTDECL(Repeat)(Descriptor &result, const Descriptor &string,
     std::int64_t ncopies, const char *sourceFile = nullptr, int sourceLine = 0);
-void RTNAME(Trim)(Descriptor &result, const Descriptor &string,
+void RTDECL(Trim)(Descriptor &result, const Descriptor &string,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
-void RTNAME(CharacterMax)(Descriptor &accumulator, const Descriptor &x,
+void RTDECL(CharacterMax)(Descriptor &accumulator, const Descriptor &x,
     const char *sourceFile = nullptr, int sourceLine = 0);
-void RTNAME(CharacterMin)(Descriptor &accumulator, const Descriptor &x,
+void RTDECL(CharacterMin)(Descriptor &accumulator, const Descriptor &x,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
-std::size_t RTNAME(Index1)(const char *, std::size_t, const char *substring,
+std::size_t RTDECL(Index1)(const char *, std::size_t, const char *substring,
     std::size_t, bool back = false);
-std::size_t RTNAME(Index2)(const char16_t *, std::size_t,
+std::size_t RTDECL(Index2)(const char16_t *, std::size_t,
     const char16_t *substring, std::size_t, bool back = false);
-std::size_t RTNAME(Index4)(const char32_t *, std::size_t,
+std::size_t RTDECL(Index4)(const char32_t *, std::size_t,
     const char32_t *substring, std::size_t, bool back = false);
-void RTNAME(Index)(Descriptor &result, const Descriptor &string,
+void RTDECL(Index)(Descriptor &result, const Descriptor &string,
     const Descriptor &substring, const Descriptor *back /*can be null*/,
     int kind, const char *sourceFile = nullptr, int sourceLine = 0);
 
-std::size_t RTNAME(Scan1)(
+std::size_t RTDECL(Scan1)(
     const char *, std::size_t, const char *set, std::size_t, bool back = false);
-std::size_t RTNAME(Scan2)(const char16_t *, std::size_t, const char16_t *set,
+std::size_t RTDECL(Scan2)(const char16_t *, std::size_t, const char16_t *set,
     std::size_t, bool back = false);
-std::size_t RTNAME(Scan4)(const char32_t *, std::size_t, const char32_t *set,
+std::size_t RTDECL(Scan4)(const char32_t *, std::size_t, const char32_t *set,
     std::size_t, bool back = false);
-void RTNAME(Scan)(Descriptor &result, const Descriptor &string,
+void RTDECL(Scan)(Descriptor &result, const Descriptor &string,
     const Descriptor &set, const Descriptor *back /*can be null*/, int kind,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
-std::size_t RTNAME(Verify1)(
+std::size_t RTDECL(Verify1)(
     const char *, std::size_t, const char *set, std::size_t, bool back = false);
-std::size_t RTNAME(Verify2)(const char16_t *, std::size_t, const char16_t *set,
+std::size_t RTDECL(Verify2)(const char16_t *, std::size_t, const char16_t *set,
     std::size_t, bool back = false);
-std::size_t RTNAME(Verify4)(const char32_t *, std::size_t, const char32_t *set,
+std::size_t RTDECL(Verify4)(const char32_t *, std::size_t, const char32_t *set,
     std::size_t, bool back = false);
-void RTNAME(Verify)(Descriptor &result, const Descriptor &string,
+void RTDECL(Verify)(Descriptor &result, const Descriptor &string,
     const Descriptor &set, const Descriptor *back /*can be null*/, int kind,
     const char *sourceFile = nullptr, int sourceLine = 0);
 }

@@ -11,6 +11,7 @@
 
 #include "AArch64TargetMachine.h"
 #include "AArch64.h"
+#include "AArch64LoopIdiomTransform.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64MachineScheduler.h"
 #include "AArch64MacroFusion.h"
@@ -43,6 +44,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -202,6 +204,11 @@ static cl::opt<bool>
                    cl::desc("Enable sinking and folding of instruction copies"),
                    cl::init(true), cl::Hidden);
 
+static cl::opt<bool>
+    EnableMachinePipeliner("aarch64-enable-pipeliner",
+                           cl::desc("Enable Machine Pipeliner for AArch64"),
+                           cl::init(false), cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   // Register the target.
   RegisterTargetMachine<AArch64leTargetMachine> X(getTheAArch64leTarget());
@@ -222,6 +229,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64DeadRegisterDefinitionsPass(*PR);
   initializeAArch64ExpandPseudoPass(*PR);
   initializeAArch64LoadStoreOptPass(*PR);
+  initializeAArch64LoopIdiomTransformLegacyPassPass(*PR);
   initializeAArch64MIPeepholeOptPass(*PR);
   initializeAArch64SIMDInstrOptPass(*PR);
   initializeAArch64O0PreLegalizerCombinerPass(*PR);
@@ -537,6 +545,14 @@ public:
 
 } // end anonymous namespace
 
+void AArch64TargetMachine::registerPassBuilderCallbacks(
+    PassBuilder &PB, bool PopulateClassToPassNames) {
+  PB.registerLateLoopOptimizationsEPCallback(
+      [=](LoopPassManager &LPM, OptimizationLevel Level) {
+        LPM.addPass(AArch64LoopIdiomTransformPass());
+      });
+}
+
 TargetTransformInfo
 AArch64TargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(AArch64TTIImpl(this, F));
@@ -621,8 +637,12 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createSMEABIPass());
 
   // Add Control Flow Guard checks.
-  if (TM->getTargetTriple().isOSWindows())
-    addPass(createCFGuardCheckPass());
+  if (TM->getTargetTriple().isOSWindows()) {
+    if (TM->getTargetTriple().isWindowsArm64EC())
+      addPass(createAArch64Arm64ECCallLoweringPass());
+    else
+      addPass(createCFGuardCheckPass());
+  }
 
   if (TM->Options.JMCInstrument)
     addPass(createJMCInstrumenterPass());
@@ -764,6 +784,8 @@ void AArch64PassConfig::addPreRegAlloc() {
     // be register coalescer friendly.
     addPass(&PeepholeOptimizerID);
   }
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
+    addPass(&MachinePipelinerID);
 }
 
 void AArch64PassConfig::addPostRegAlloc() {

@@ -1,11 +1,21 @@
-// RUN: mlir-opt  -test-tiling-interface=tile-using-scf-forall -split-input-file %s | FileCheck %s
+// RUN: mlir-opt  -transform-interpreter -split-input-file --cse %s | FileCheck %s
 
 func.func @simple_matmul(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
     %arg2 : tensor<?x?xf32>) -> tensor<?x?xf32> {
-  %0 = linalg.matmul {__internal_transform__ = "simple_gemm"}
+  %0 = linalg.matmul
     ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b = transform.test.tile_using_forall %matmul [10, 20] mapping = [#gpu.block<y>, #gpu.block<x>]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 //  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0)[s0] -> (10, -d0 + s0)>
 //  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0)[s0] -> (20, -d0 + s0)>
@@ -39,6 +49,48 @@ func.func @simple_matmul(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
 
 // -----
 
+func.func @simple_matmul_memref(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>,
+    %arg2 : memref<?x?xf32>) {
+  linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
+      outs(%arg2 : memref<?x?xf32>)
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b = transform.test.tile_using_forall %matmul [10, 20]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+//  CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0)[s0] -> (10, -d0 + s0)>
+//  CHECK-DAG: #[[$MAP1:.+]] = affine_map<(d0)[s0] -> (20, -d0 + s0)>
+//      CHECK-LABEL: func.func @simple_matmul_memref(
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: memref<?x?xf32>
+// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//  CHECK-DAG:   %[[M:.+]] = memref.dim %[[ARG0]], %[[C0]]
+//  CHECK-DAG:   %[[K:.+]] = memref.dim %[[ARG0]], %[[C1]]
+//  CHECK-DAG:   %[[N:.+]] = memref.dim %[[ARG1]], %[[C1]]
+//      CHECK:   scf.forall (%[[IV0:[a-zA-Z0-9]+]], %[[IV1:[a-zA-Z0-9]+]]) = (0, 0) to (%[[M]], %[[N]]) step (10, 20) {
+//  CHECK-DAG:     %[[TS_M:.+]] = affine.min #[[$MAP0]](%[[IV0]])[%[[M]]]
+//  CHECK-DAG:     %[[TS_N:.+]] = affine.min #[[$MAP1]](%[[IV1]])[%[[N]]]
+//  CHECK-DAG:     %[[LHS_TILE:.+]] = memref.subview %[[ARG0]]
+// CHECK-SAME:         [%[[IV0]], 0] [%[[TS_M]], %[[K]]] [1, 1]
+//  CHECK-DAG:     %[[RHS_TILE:.+]] = memref.subview %[[ARG1]]
+// CHECK-SAME:         [0, %[[IV1]]] [%[[K]], %[[TS_N]]] [1, 1]
+//  CHECK-DAG:     %[[OUT_TILE:.+]] = memref.subview %[[ARG2]]
+// CHECK-SAME:         [%[[IV0]], %[[IV1]]] [%[[TS_M]], %[[TS_N]]] [1, 1]
+//      CHECK:     linalg.matmul
+// CHECK-SAME:             ins(%[[LHS_TILE]], %[[RHS_TILE]] :
+// CHECK-SAME:             outs(%[[OUT_TILE]] :
+
+// -----
+
 #map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 #map1 = affine_map<(d0, d1, d2) -> (d0, d2, d1)>
 #map2 = affine_map<(d0, d1, d2) -> (d2, d0, d1)>
@@ -48,13 +100,22 @@ func.func @multi_result(%arg0 : tensor<128x200x300xf32>) -> (tensor<128x300x200x
   %0:2 = linalg.generic {
       indexing_maps = [#map0, #map1, #map2],
       iterator_types = ["parallel", "parallel", "parallel"]}
-      {__internal_transform__ = "parallel_generic_transpose"}
       ins(%arg0 : tensor<128x200x300xf32>)
       outs(%init0, %init1 : tensor<128x300x200xf32>, tensor<300x128x200xf32>) {
     ^bb0(%b0 : f32, %b1 : f32, %b2 : f32):
       linalg.yield %b0, %b0 : f32, f32
     } -> (tensor<128x300x200xf32>, tensor<300x128x200xf32>)
   return %0#0, %0#1 : tensor<128x300x200xf32>, tensor<300x128x200xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b = transform.test.tile_using_forall %generic [10, 0, 20]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 //  CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0) -> (10, -d0 + 128)>
 //      CHECK-LABEL: func.func @multi_result(
@@ -85,11 +146,20 @@ func.func @conv2D(%arg0 : tensor<?x?x?x?xf32>, %arg1 : tensor<?x?x?x?xf32>,
     %arg2 : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   %0 = linalg.conv_2d_nhwc_hwcf {
       strides = dense<[2, 3]> : tensor<2xi64>,
-      dilation = dense<[4, 5]> : tensor<2xi64>,
-      __internal_transform__ = "simple_conv"}
+      dilation = dense<[4, 5]> : tensor<2xi64>}
       ins(%arg0, %arg1 : tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>)
       outs(%arg2 : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
   return %0 : tensor<?x?x?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %conv = transform.structured.match ops{["linalg.conv_2d_nhwc_hwcf"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b = transform.test.tile_using_forall %conv [0, 0, 0, 0, 10, 20, 30]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 //  CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0)[s0] -> (10, -d0 + s0)>
 //  CHECK-DAG: #[[$MAP1:.+]] = affine_map<(d0)[s0] -> (20, -d0 + s0)>
@@ -144,7 +214,6 @@ func.func @indexed_semantics(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> 
     indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                      affine_map<(d0, d1) -> (d0, d1)>],
     iterator_types = ["parallel", "parallel"]}
-    {__internal_transform__ = "indexed_semantics"}
     ins(%arg0: tensor<?x?xf32>)
     outs(%arg1: tensor<?x?xf32>) {
   ^bb0(%arg2: f32, %arg3: f32):
@@ -158,6 +227,17 @@ func.func @indexed_semantics(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> 
   } -> (tensor<?x?xf32>)
   return %0 : tensor<?x?xf32>
 }
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b = transform.test.tile_using_forall %generic [10, 20]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
 // CHECK-LABEL: @indexed_semantics
 //       CHECK: scf.forall (%[[I0:.+]], %[[I1:.+]]) =
 //       CHECK:   %[[INDEX0:.+]] = linalg.index 0
@@ -165,3 +245,107 @@ func.func @indexed_semantics(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> 
 //       CHECK:   %[[INDEX1:.+]] = linalg.index 1
 //       CHECK:   %[[INDEX1_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[INDEX1]], %[[I1]])
 //       CHECK:   arith.addi %[[INDEX0_AMENDED]], %[[INDEX1_AMENDED]]
+
+// -----
+
+func.func @interchange_matmul(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
+    %arg2 : tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.matmul ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+      outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b = transform.test.tile_using_forall %matmul [10, 20] interchange = [1, 0] mapping = [#gpu.block<y>, #gpu.block<x>]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+//  CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0)[s0] -> (20, -d0 + s0)>
+//  CHECK-DAG: #[[$MAP2:.+]] = affine_map<(d0)[s0] -> (10, -d0 + s0)>
+//      CHECK-LABEL: func.func @interchange_matmul(
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//  CHECK-DAG:   %[[M:.+]] = tensor.dim %[[ARG0]], %[[C0]]
+//  CHECK-DAG:   %[[K:.+]] = tensor.dim %[[ARG0]], %[[C1]]
+//  CHECK-DAG:   %[[N:.+]] = tensor.dim %[[ARG1]], %[[C1]]
+//      CHECK:   %[[OUTER:[a-zA-Z0-9]+]] = scf.forall (%[[IV0:[a-zA-Z0-9]+]], %[[IV1:[a-zA-Z0-9]+]]
+// CHECK-SAME:       (0, 0) to (%[[N]], %[[M]]) step (20, 10)
+// CHECK-SAME:       shared_outs(%[[INIT0:.+]] = %[[ARG2]])
+//  CHECK-DAG:     %[[TS_N:.+]] = affine.min #[[$MAP0]](%[[IV0]])[%[[N]]]
+//  CHECK-DAG:     %[[TS_M:.+]] = affine.min #[[$MAP2]](%[[IV1]])[%[[M]]]
+//  CHECK-DAG:     %[[LHS_TILE:.+]] = tensor.extract_slice %[[ARG0]]
+// CHECK-SAME:         [%[[IV1]], 0] [%[[TS_M]], %[[K]]] [1, 1]
+//  CHECK-DAG:     %[[RHS_TILE:.+]] = tensor.extract_slice %[[ARG1]]
+// CHECK-SAME:         [0, %[[IV0]]] [%[[K]], %[[TS_N]]] [1, 1]
+//  CHECK-DAG:     %[[INIT_TILE:.+]] = tensor.extract_slice %[[INIT0]]
+// CHECK-SAME:         [%[[IV1]], %[[IV0]]] [%[[TS_M]], %[[TS_N]]] [1, 1]
+//      CHECK:     %[[GEMM_TILE:.+]] = linalg.matmul
+// CHECK-SAME:         ins(%[[LHS_TILE]], %[[RHS_TILE]] :
+// CHECK-SAME:         outs(%[[INIT_TILE]] :
+//      CHECK:     scf.forall.in_parallel {
+//      CHECK:       tensor.parallel_insert_slice %[[GEMM_TILE]] into %[[INIT0]]
+// CHECK-SAME:           [%[[IV1]], %[[IV0]]] [%[[TS_M]], %[[TS_N]]] [1, 1]
+//      CHECK:     } {mapping = [#gpu.block<y>, #gpu.block<x>]}
+//      CHECK:   return %[[OUTER]]
+
+// -----
+
+func.func @check_scalar_operation(%arg0 : tensor<f32>) -> tensor<f32> {
+  %init = tensor.empty() : tensor<f32>
+  %0 = linalg.generic {
+      indexing_maps = [affine_map<() -> ()>, affine_map<() -> ()>],
+      iterator_types = []}      
+      ins(%arg0 : tensor<f32>) outs(%init : tensor<f32>){
+    ^bb0(%b0 : f32, %b1 : f32):
+      %1 = arith.mulf %b0, %b0 : f32
+      linalg.yield %1 : f32
+  } -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a = transform.test.tile_using_forall %generic []
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
+}
+// CHECK-LABEL: func @check_scalar_operation
+//   CHECK-NOT:   scf.for
+//       CHECK:   linalg.generic
+
+// -----
+
+func.func @check_scalar_memref_operation(%arg0 : memref<f32>, %arg1 : memref<f32>){
+  linalg.generic {
+      indexing_maps = [affine_map<() -> ()>, affine_map<() -> ()>],
+      iterator_types = []}      
+      ins(%arg0 : memref<f32>) outs(%arg1 : memref<f32>){
+    ^bb0(%b0 : f32, %b1 : f32):
+      %1 = arith.mulf %b0, %b0 : f32
+      linalg.yield %1 : f32
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a = transform.test.tile_using_forall %generic []
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
+}
+// CHECK-LABEL: func @check_scalar_memref_operation
+//   CHECK-NOT:   scf.for
+//       CHECK:   linalg.generic

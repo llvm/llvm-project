@@ -450,8 +450,9 @@ body: |
     ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %and:_(s32) = G_SELECT %cond(s1), %zero, %variable
+    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(ne), %reg(s32), %zero
+    ; CHECK-NEXT: %select:_(s32) = G_SEXT %cond(s1)
+    ; CHECK-NEXT: %and:_(s32) = G_AND %select, %variable
     ; CHECK-NEXT: S_ENDPGM 0, implicit %and(s32)
     %reg:_(s32) = COPY $vgpr0
     %variable:_(s32) = COPY $vgpr0
@@ -476,7 +477,8 @@ body: |
     ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %and:_(s32) = G_SELECT %cond(s1), %variable, %zero
+    ; CHECK-NEXT: %select:_(s32) = G_SEXT %cond(s1)
+    ; CHECK-NEXT: %and:_(s32) = G_AND %select, %variable
     ; CHECK-NEXT: S_ENDPGM 0, implicit %and(s32)
     %reg:_(s32) = COPY $vgpr0
     %variable:_(s32) = COPY $vgpr0
@@ -500,9 +502,9 @@ body: |
     ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %neg1:_(s32) = G_CONSTANT i32 -1
-    ; CHECK-NEXT: %or:_(s32) = G_SELECT %cond(s1), %variable, %neg1
+    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(ne), %reg(s32), %zero
+    ; CHECK-NEXT: %select:_(s32) = G_SEXT %cond(s1)
+    ; CHECK-NEXT: %or:_(s32) = G_OR %select, %variable
     ; CHECK-NEXT: S_ENDPGM 0, implicit %or(s32)
     %reg:_(s32) = COPY $vgpr0
     %variable:_(s32) = COPY $vgpr0
@@ -527,8 +529,8 @@ body: |
     ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %neg1:_(s32) = G_CONSTANT i32 -1
-    ; CHECK-NEXT: %or:_(s32) = G_SELECT %cond(s1), %neg1, %variable
+    ; CHECK-NEXT: %select:_(s32) = G_SEXT %cond(s1)
+    ; CHECK-NEXT: %or:_(s32) = G_OR %select, %variable
     ; CHECK-NEXT: S_ENDPGM 0, implicit %or(s32)
     %reg:_(s32) = COPY $vgpr0
     %variable:_(s32) = COPY $vgpr0
@@ -667,9 +669,9 @@ body: |
     ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %neg1:_(s32) = G_CONSTANT i32 -1
     ; CHECK-NEXT: %otherconst:_(s32) = G_CONSTANT i32 123
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %neg1, %otherconst
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT %cond(s1)
+    ; CHECK-NEXT: %select:_(s32) = G_OR [[SEXT]], %otherconst
     ; CHECK-NEXT: %or:_(s32) = G_OR %select, %variable
     ; CHECK-NEXT: S_ENDPGM 0, implicit %or(s32)
     %reg:_(s32) = COPY $vgpr0
@@ -749,8 +751,7 @@ body: |
     ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %srem:_(s32) = G_SELECT %cond(s1), [[C]], %zero
+    ; CHECK-NEXT: %srem:_(s32) = G_ZEXT %cond(s1)
     ; CHECK-NEXT: S_ENDPGM 0, implicit %srem(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
@@ -802,8 +803,7 @@ body: |
     ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %udiv:_(s32) = G_SELECT %cond(s1), [[C]], %zero
+    ; CHECK-NEXT: %udiv:_(s32) = G_ZEXT %cond(s1)
     ; CHECK-NEXT: S_ENDPGM 0, implicit %udiv(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0

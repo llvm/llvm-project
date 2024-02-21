@@ -1154,4 +1154,3 @@ define <vscale x 8 x i64> @vrol_vx_nxv8i64(<vscale x 8 x i64> %a, i64 %b) {
   %x = call <vscale x 8 x i64> @llvm.fshl.nxv8i64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %a, <vscale x 8 x i64> %b.splat)
   ret <vscale x 8 x i64> %x
 }
-

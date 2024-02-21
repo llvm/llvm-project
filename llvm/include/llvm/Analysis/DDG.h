@@ -427,6 +427,7 @@ public:
   explicit DDGAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  static bool isRequired() { return true; }
 
 private:
   raw_ostream &OS;

@@ -4,8 +4,8 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64"
 
-  define i8 @load_acq_i8(i8* %ptr) {
-    %v = load atomic i8, i8* %ptr acquire, align 8
+  define i8 @load_acq_i8(ptr %ptr) {
+    %v = load atomic i8, ptr %ptr acquire, align 8
     ret i8 %v
   }
 

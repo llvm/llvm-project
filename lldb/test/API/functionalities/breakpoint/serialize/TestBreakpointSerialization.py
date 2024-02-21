@@ -49,6 +49,42 @@ class BreakpointSerialization(TestBase):
         self.setup_targets_and_cleanup()
         self.do_check_extra_args()
 
+    def test_resolver_serialization(self):
+        """Test that breakpoint resolvers contain the expected information"""
+        self.build()
+        self.setup_targets_and_cleanup()
+
+        exe_path = self.getBuildArtifact("a.out")
+        exe_module = self.orig_target.module["a.out"]
+        self.assertTrue(
+            exe_module.IsValid(), "Failed to find the executable module in target"
+        )
+        sym_ctx_list = exe_module.FindFunctions("main")
+        self.assertTrue(sym_ctx_list.GetSize() == 1, "Unable to find function 'main'")
+        sym_ctx = sym_ctx_list.GetContextAtIndex(0)
+        self.assertTrue(
+            sym_ctx.IsValid(), "SBSymbolContext representing function 'main' is invalid"
+        )
+        main_func = sym_ctx.GetFunction()
+        self.assertTrue(
+            main_func.IsValid(), "SBFunction representing 'main' is invalid"
+        )
+        main_addr = main_func.GetStartAddress()
+
+        bkpt = self.orig_target.BreakpointCreateBySBAddress(main_addr)
+        self.assertTrue(
+            bkpt.IsValid(), "Could not place breakpoint on 'main' by address"
+        )
+        stream = lldb.SBStream()
+        sd = bkpt.SerializeToStructuredData()
+        sd.GetAsJSON(stream)
+        serialized_data = json.loads(stream.GetData())
+
+        self.assertIn(
+            exe_path,
+            serialized_data["Breakpoint"]["BKPTResolver"]["Options"]["ModuleName"],
+        )
+
     def test_structured_data_serialization(self):
         target = self.dbg.GetDummyTarget()
         self.assertTrue(target.IsValid(), VALID_TARGET)

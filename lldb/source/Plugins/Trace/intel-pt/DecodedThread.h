@@ -14,9 +14,10 @@
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include <deque>
 #include <optional>
 #include <utility>
-#include <vector>
+#include <variant>
 
 namespace lldb_private {
 namespace trace_intel_pt {
@@ -265,30 +266,19 @@ private:
   /// to update \a CalculateApproximateMemoryUsage() accordingly.
   lldb::ThreadSP m_thread_sp;
 
-  /// We use a union to optimize the memory usage for the different kinds of
-  /// trace items.
-  union TraceItemStorage {
-    /// The load addresses of this item if it's an instruction.
-    uint64_t load_address;
-
-    /// The event kind of this item if it's an event
-    lldb::TraceEvent event;
-
-    /// The string message of this item if it's an error
-    std::string error;
-  };
+  using TraceItemStorage =
+      std::variant<std::string, lldb::TraceEvent, lldb::addr_t>;
 
   /// Create a new trace item.
   ///
   /// \return
   ///   The index of the new item.
-  DecodedThread::TraceItemStorage &CreateNewTraceItem(lldb::TraceItemKind kind);
+  template <typename Data>
+  DecodedThread::TraceItemStorage &CreateNewTraceItem(lldb::TraceItemKind kind,
+                                                      Data &&data);
 
   /// Most of the trace data is stored here.
-  std::vector<TraceItemStorage> m_item_data;
-  /// The TraceItemKind for each trace item encoded as uint8_t. We don't include
-  /// it in TraceItemStorage to avoid padding.
-  std::vector<uint8_t> m_item_kinds;
+  std::deque<TraceItemStorage> m_item_data;
 
   /// This map contains the TSCs of the decoded trace items. It maps
   /// `item index -> TSC`, where `item index` is the first index

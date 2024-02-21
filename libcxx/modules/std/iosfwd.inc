@@ -14,7 +14,9 @@ export namespace std {
 #endif
   using std::u16streampos;
   using std::u32streampos;
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
   using std::u8streampos;
+#endif
 
   using std::basic_osyncstream;
   using std::basic_syncbuf;

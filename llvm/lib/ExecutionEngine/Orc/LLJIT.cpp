@@ -734,6 +734,12 @@ Error LLJITBuilderState::prepareForConstruction() {
     case Triple::aarch64:
       UseJITLink = !TT.isOSBinFormatCOFF();
       break;
+    case Triple::arm:
+    case Triple::armeb:
+    case Triple::thumb:
+    case Triple::thumbeb:
+      UseJITLink = TT.isOSBinFormatELF();
+      break;
     case Triple::x86_64:
       UseJITLink = !TT.isOSBinFormatCOFF();
       break;
@@ -768,11 +774,11 @@ Error LLJITBuilderState::prepareForConstruction() {
   // create a default one.
   if (!SetupProcessSymbolsJITDylib && LinkProcessSymbolsByDefault) {
     LLVM_DEBUG(dbgs() << "Creating default Process JD setup function\n");
-    SetupProcessSymbolsJITDylib = [this](LLJIT &J) -> Expected<JITDylibSP> {
+    SetupProcessSymbolsJITDylib = [](LLJIT &J) -> Expected<JITDylibSP> {
       auto &JD =
           J.getExecutionSession().createBareJITDylib("<Process Symbols>");
-      auto G = orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-          DL->getGlobalPrefix());
+      auto G = EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
+          J.getExecutionSession());
       if (!G)
         return G.takeError();
       JD.addGenerator(std::move(*G));

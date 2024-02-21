@@ -304,6 +304,10 @@ public:
 
   bool isLegalMaskedExpandLoad(Type *DataType) const { return false; }
 
+  bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const {
+    return false;
+  }
+
   bool enableOrderedReductions() const { return false; }
 
   bool hasDivRemOp(Type *DataType, bool IsSigned) const { return false; }
@@ -363,10 +367,6 @@ public:
 
   bool supportsTailCalls() const { return true; }
 
-  bool supportsTailCallFor(const CallBase *CB) const {
-    return supportsTailCalls();
-  }
-
   bool enableAggressiveInterleaving(bool LoopHasReductions) const {
     return false;
   }
@@ -377,6 +377,15 @@ public:
   }
 
   bool enableSelectOptimize() const { return true; }
+
+  bool shouldTreatInstructionLikeSelect(const Instruction *I) {
+    // If the select is a logical-and/logical-or then it is better treated as a
+    // and/or by the backend.
+    using namespace llvm::PatternMatch;
+    return isa<SelectInst>(I) &&
+           !match(I, m_CombineOr(m_LogicalAnd(m_Value(), m_Value()),
+                                 m_LogicalOr(m_Value(), m_Value())));
+  }
 
   bool enableInterleavedAccessVectorization() const { return false; }
 
@@ -501,6 +510,8 @@ public:
     llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
   }
 
+  std::optional<unsigned> getMinPageSize() const { return {}; }
+
   unsigned getPrefetchDistance() const { return 0; }
   unsigned getMinPrefetchStride(unsigned NumMemAccesses,
                                 unsigned NumStridedMemAccesses,
@@ -552,6 +563,13 @@ public:
         return 3;
 
     return 1;
+  }
+
+  InstructionCost getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
+                                  unsigned Opcode1,
+                                  const SmallBitVector &OpcodeMask,
+                                  TTI::TargetCostKind CostKind) const {
+    return InstructionCost::getInvalid();
   }
 
   InstructionCost
@@ -667,6 +685,14 @@ public:
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I = nullptr) const {
     return 1;
+  }
+
+  InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
+                                         const Value *Ptr, bool VariableMask,
+                                         Align Alignment,
+                                         TTI::TargetCostKind CostKind,
+                                         const Instruction *I = nullptr) const {
+    return InstructionCost::getInvalid();
   }
 
   unsigned getInterleavedMemoryOpCost(
@@ -1041,7 +1067,7 @@ public:
         if (TargetType->isScalableTy())
           return TTI::TCC_Basic;
         int64_t ElementSize =
-            DL.getTypeAllocSize(GTI.getIndexedType()).getFixedValue();
+            GTI.getSequentialElementStride(DL).getFixedValue();
         if (ConstIdx) {
           BaseOffset +=
               ConstIdx->getValue().sextOrTrunc(PtrSizeBits) * ElementSize;
@@ -1396,6 +1422,10 @@ public:
     InstructionCost Cost = TargetTTI->getInstructionCost(
         I, Ops, TargetTransformInfo::TCK_SizeAndLatency);
     return Cost >= TargetTransformInfo::TCC_Expensive;
+  }
+
+  bool supportsTailCallFor(const CallBase *CB) const {
+    return static_cast<const T *>(this)->supportsTailCalls();
   }
 };
 } // namespace llvm

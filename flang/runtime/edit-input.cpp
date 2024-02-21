@@ -21,7 +21,8 @@ namespace Fortran::runtime::io {
 static inline bool IsCharValueSeparator(const DataEdit &edit, char32_t ch) {
   char32_t comma{
       edit.modes.editingFlags & decimalComma ? char32_t{';'} : char32_t{','}};
-  return ch == ' ' || ch == '\t' || ch == '/' || ch == comma;
+  return ch == ' ' || ch == '\t' || ch == comma || ch == '/' ||
+      (edit.IsNamelist() && (ch == '&' || ch == '$'));
 }
 
 static bool CheckCompleteListDirectedField(
@@ -79,6 +80,8 @@ static bool EditBOZInput(
     } else if (LOG2_BASE >= 4 && ch >= '8' && ch <= '9') {
     } else if (LOG2_BASE >= 4 && ch >= 'A' && ch <= 'F') {
     } else if (LOG2_BASE >= 4 && ch >= 'a' && ch <= 'f') {
+    } else if (ch == ',') {
+      break; // end non-list-directed field early
     } else {
       io.GetIoErrorHandler().SignalError(
           "Bad character '%lc' in B/O/Z input field", ch);
@@ -213,6 +216,8 @@ bool EditIntegerInput(
     int digit{0};
     if (ch >= '0' && ch <= '9') {
       digit = ch - '0';
+    } else if (ch == ',') {
+      break; // end non-list-directed field early
     } else {
       io.GetIoErrorHandler().SignalError(
           "Bad character '%lc' in INTEGER input field", ch);
@@ -243,10 +248,21 @@ bool EditIntegerInput(
   if (sign == '-') {
     value = -value;
   }
-  if (any || !io.GetConnectionState().IsAtEOF()) {
-    std::memcpy(n, &value, kind); // a blank field means zero
+  if (any || !io.GetIoErrorHandler().InError()) {
+    // The value is stored in the lower order bits on big endian platform.
+    // When memcpy, shift the value to the higher order bit.
+    auto shft{static_cast<int>(sizeof(value.low())) - kind};
+    // For kind==8 (i.e. shft==0), the value is stored in low_ in big endian.
+    if (!isHostLittleEndian && shft >= 0) {
+      auto l{value.low() << (8 * shft)};
+      std::memcpy(n, &l, kind);
+    } else {
+      std::memcpy(n, &value, kind); // a blank field means zero
+    }
+    return true;
+  } else {
+    return false;
   }
-  return any;
 }
 
 // Parses a REAL input number from the input source as a normalized
@@ -279,7 +295,8 @@ static ScannedRealInput ScanRealInput(
   }
   bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
   int exponent{0};
-  if (!next || (!bzMode && *next == ' ')) {
+  if (!next || (!bzMode && *next == ' ') ||
+      (!(edit.modes.editingFlags & decimalComma) && *next == ',')) {
     if (!edit.IsListDirected() && !io.GetConnectionState().IsAtEOF()) {
       // An empty/blank field means zero when not list-directed.
       // A fixed-width field containing only a sign is also zero;
@@ -461,7 +478,7 @@ static ScannedRealInput ScanRealInput(
     while (next && (*next == ' ' || *next == '\t')) {
       next = io.NextInField(remaining, edit);
     }
-    if (next) {
+    if (next && (*next != ',' || (edit.modes.editingFlags & decimalComma))) {
       return {}; // error: unused nonblank character in fixed-width field
     }
   }
@@ -908,6 +925,10 @@ static bool EditListDirectedCharacterInput(
     case '/':
       isSep = true;
       break;
+    case '&':
+    case '$':
+      isSep = edit.IsNamelist();
+      break;
     case ',':
       isSep = !(edit.modes.editingFlags & decimalComma);
       break;
@@ -992,7 +1013,12 @@ bool EditCharacterInput(IoStatementState &io, const DataEdit &edit, CHAR *x,
       if (skipping) {
         --skipChars;
       } else if (auto ucs{DecodeUTF8(input)}) {
-        *x++ = *ucs;
+        if ((sizeof *x == 1 && *ucs > 0xff) ||
+            (sizeof *x == 2 && *ucs > 0xffff)) {
+          *x++ = '?';
+        } else {
+          *x++ = *ucs;
+        }
         --lengthChars;
       } else if (chunkBytes == 0) {
         // error recovery: skip bad encoding
@@ -1006,7 +1032,12 @@ bool EditCharacterInput(IoStatementState &io, const DataEdit &edit, CHAR *x,
       } else {
         char32_t buffer{0};
         std::memcpy(&buffer, input, chunkBytes);
-        *x++ = buffer;
+        if ((sizeof *x == 1 && buffer > 0xff) ||
+            (sizeof *x == 2 && buffer > 0xffff)) {
+          *x++ = '?';
+        } else {
+          *x++ = buffer;
+        }
         --lengthChars;
       }
     } else if constexpr (sizeof *x > 1) {

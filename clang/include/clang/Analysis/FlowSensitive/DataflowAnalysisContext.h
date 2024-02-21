@@ -100,6 +100,8 @@ public:
   /// to add to a `RecordStorageLocation` of a given type.
   /// Typically, this is called from the constructor of a `DataflowAnalysis`
   ///
+  /// The field types returned by the callback may not have reference type.
+  ///
   /// To maintain the invariant that all `RecordStorageLocation`s of a given
   /// type have the same fields:
   /// *  The callback must always return the same result for a given type
@@ -205,8 +207,17 @@ public:
   /// type.
   llvm::StringMap<QualType> getSyntheticFields(QualType Type) {
     assert(Type->isRecordType());
-    if (SyntheticFieldCallback)
-      return SyntheticFieldCallback(Type);
+    if (SyntheticFieldCallback) {
+      llvm::StringMap<QualType> Result = SyntheticFieldCallback(Type);
+      // Synthetic fields are not allowed to have reference type.
+      assert([&Result] {
+        for (const auto &Entry : Result)
+          if (Entry.getValue()->isReferenceType())
+            return false;
+        return true;
+      }());
+      return Result;
+    }
     return {};
   }
 

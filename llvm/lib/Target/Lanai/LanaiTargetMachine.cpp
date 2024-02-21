@@ -93,6 +93,7 @@ public:
     return getTM<LanaiTargetMachine>();
   }
 
+  void addIRPasses() override;
   bool addInstSelector() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -102,6 +103,12 @@ public:
 TargetPassConfig *
 LanaiTargetMachine::createPassConfig(PassManagerBase &PassManager) {
   return new LanaiPassConfig(*this, &PassManager);
+}
+
+void LanaiPassConfig::addIRPasses() {
+  addPass(createAtomicExpandPass());
+
+  TargetPassConfig::addIRPasses();
 }
 
 // Install an instruction selector pass.

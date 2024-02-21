@@ -80,6 +80,20 @@ constexpr bool test() {
     assert(e.has_value());
   }
 
+  // CheckForInvalidWrites
+  {
+    {
+      CheckForInvalidWrites<true> e;
+      e.emplace();
+      assert(e.check());
+    }
+    {
+      CheckForInvalidWrites<false> e;
+      e.emplace();
+      assert(e.check());
+    }
+  }
+
   return true;
 }
 

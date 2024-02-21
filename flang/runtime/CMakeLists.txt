@@ -46,6 +46,23 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif ()
   include_directories(BEFORE
     ${FLANG_SOURCE_DIR}/include)
+
+  # The out of tree builds of the compiler and the Fortran runtime
+  # must use the same setting of FLANG_RUNTIME_F128_MATH_LIB
+  # to be composable. Failure to synchronize this setting may result
+  # in linking errors or fatal failures in F128 runtime functions.
+  set(FLANG_RUNTIME_F128_MATH_LIB "" CACHE STRING
+    "Specifies the target library used for implementing IEEE-754 128-bit float \
+    math in F18 runtime, e.g. it might be libquadmath for targets where \
+    REAL(16) is mapped to __float128, or libm for targets where REAL(16) \
+    is mapped to long double, etc."
+    )
+
+  if (NOT FLANG_RUNTIME_F128_MATH_LIB STREQUAL "")
+    add_compile_definitions(
+      -DFLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}"
+      )
+  endif()
 endif()
 
 include(CheckCXXSymbolExists)
@@ -83,6 +100,9 @@ add_definitions(-U_GLIBCXX_ASSERTIONS)
 add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
 
 add_subdirectory(FortranMain)
+if (NOT ${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "")
+  add_subdirectory(Float128Math)
+endif()
 
 set(sources
   ISO_Fortran_binding.cpp
@@ -90,21 +110,22 @@ set(sources
   array-constructor.cpp
   assign.cpp
   buffer.cpp
+  character.cpp
   command.cpp
   complex-powi.cpp
   complex-reduction.c
-  copy.cpp
-  character.cpp
   connection.cpp
-  derived.cpp
+  copy.cpp
   derived-api.cpp
-  descriptor.cpp
+  derived.cpp
   descriptor-io.cpp
+  descriptor.cpp
   dot-product.cpp
   edit-input.cpp
   edit-output.cpp
   environment.cpp
   exceptions.cpp
+  execute.cpp
   extensions.cpp
   extrema.cpp
   file.cpp
@@ -112,10 +133,10 @@ set(sources
   format.cpp
   inquiry.cpp
   internal-unit.cpp
-  iostat.cpp
   io-api.cpp
   io-error.cpp
   io-stmt.cpp
+  iostat.cpp
   main.cpp
   matmul-transpose.cpp
   matmul.cpp
@@ -124,11 +145,11 @@ set(sources
   namelist.cpp
   non-tbp-dio.cpp
   numeric.cpp
+  pointer.cpp
+  product.cpp
   ragged.cpp
   random.cpp
   reduction.cpp
-  pointer.cpp
-  product.cpp
   stat.cpp
   stop.cpp
   sum.cpp
@@ -140,8 +161,8 @@ set(sources
   transformational.cpp
   type-code.cpp
   type-info.cpp
-  unit.cpp
   unit-map.cpp
+  unit.cpp
   utf.cpp
 )
 
@@ -153,13 +174,25 @@ option(FLANG_EXPERIMENTAL_CUDA_RUNTIME
 set(supported_files
   ISO_Fortran_binding.cpp
   allocatable.cpp
+  array-constructor.cpp
   assign.cpp
-  derived.cpp
+  character.cpp
+  copy.cpp
   derived-api.cpp
+  derived.cpp
   descriptor.cpp
+  dot-product.cpp
+  extrema.cpp
+  findloc.cpp
+  inquiry.cpp
   matmul-transpose.cpp
   matmul.cpp
+  memory.cpp
+  misc-intrinsic.cpp
   numeric.cpp
+  pointer.cpp
+  product.cpp
+  ragged.cpp
   stat.cpp
   sum.cpp
   support.cpp

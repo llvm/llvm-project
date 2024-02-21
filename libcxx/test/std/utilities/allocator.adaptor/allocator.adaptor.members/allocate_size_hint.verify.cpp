@@ -20,6 +20,7 @@
 #include "allocators.h"
 
 void f() {
-    std::scoped_allocator_adaptor<A1<int>> a;
-    a.allocate(10, (const void*)0); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::scoped_allocator_adaptor<A1<int>> a;
+  a.allocate(10, (const void*)0);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
