@@ -322,176 +322,176 @@ define i32 @cmp_int_eq(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 x
 define i32 @cmp_int_ne(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 x i8> %argv64i8, <128 x i8> %argv128i8, i16 %arg16, <8 x i16> %argv8i16, <16 x i16> %argv16i16, <32 x i16> %argv32i16, <64 x i16> %argv64i16, i32 %arg32, <4 x i32> %argv4i32, <8 x i32> %argv8i32, <16 x i32> %argv16i32, <32 x i32> %argv32i32, i64 %arg64, <2 x i64> %argv2i64, <4 x i64> %argv4i64, <8 x i64> %argv8i64, <16 x i64> %argv16i64) {
 ; SSE2-LABEL: 'cmp_int_ne'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ne i8 %arg8, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ne i16 %arg16, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ne i32 %arg32, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ne i64 %arg64, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_ne'
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ne i8 %arg8, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ne i16 %arg16, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ne i32 %arg32, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ne i64 %arg64, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_ne'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ne i8 %arg8, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ne i16 %arg16, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ne i32 %arg32, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ne i64 %arg64, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_ne'
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ne i8 %arg8, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ne i16 %arg16, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ne i32 %arg32, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ne i64 %arg64, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_ne'
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ne i8 %arg8, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ne i16 %arg16, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ne i32 %arg32, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ne i64 %arg64, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX1-LABEL: 'cmp_int_ne'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ne i8 %arg8, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ne i16 %arg16, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ne i32 %arg32, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ne i64 %arg64, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'cmp_int_ne'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ne i8 %arg8, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ne i16 %arg16, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ne i32 %arg32, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ne i64 %arg64, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'cmp_int_ne'
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ne i8 %arg8, 0
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ne i16 %arg16, 0
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ne i32 %arg32, 0
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
@@ -553,47 +553,47 @@ define i32 @cmp_int_ne(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 x
 ; XOPAVX2-LABEL: 'cmp_int_ne'
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ne i8 %arg8, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ne i16 %arg16, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ne i32 %arg32, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ne i64 %arg64, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'cmp_int_ne'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ne i8 %arg8, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp ne <16 x i8> %argv16i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ne <32 x i8> %argv32i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ne <64 x i8> %argv64i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ne <128 x i8> %argv128i8, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ne i16 %arg16, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp ne <8 x i16> %argv8i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ne <16 x i16> %argv16i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ne <32 x i16> %argv32i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ne <64 x i16> %argv64i16, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ne i32 %arg32, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ne <4 x i32> %argv4i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp ne <8 x i32> %argv8i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp ne <16 x i32> %argv16i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp ne <32 x i32> %argv32i32, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ne i64 %arg64, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp ne <2 x i64> %argv2i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp ne <4 x i64> %argv4i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp ne <8 x i64> %argv8i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp ne <16 x i64> %argv16i64, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I8 = icmp ne i8 %arg8, zeroinitializer
@@ -626,176 +626,176 @@ define i32 @cmp_int_ne(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 x
 define i32 @cmp_int_sge(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 x i8> %argv64i8, <128 x i8> %argv128i8, i16 %arg16, <8 x i16> %argv8i16, <16 x i16> %argv16i16, <32 x i16> %argv32i16, <64 x i16> %argv64i16, i32 %arg32, <4 x i32> %argv4i32, <8 x i32> %argv8i32, <16 x i32> %argv16i32, <32 x i32> %argv32i32, i64 %arg64, <2 x i64> %argv2i64, <4 x i64> %argv4i64, <8 x i64> %argv8i64, <16 x i64> %argv16i64) {
 ; SSE2-LABEL: 'cmp_int_sge'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sge i8 %arg8, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sge i16 %arg16, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sge i32 %arg32, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sge i64 %arg64, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_sge'
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sge i8 %arg8, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sge i16 %arg16, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sge i32 %arg32, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sge i64 %arg64, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_sge'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sge i8 %arg8, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sge i16 %arg16, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sge i32 %arg32, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sge i64 %arg64, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_sge'
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sge i8 %arg8, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sge i16 %arg16, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sge i32 %arg32, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sge i64 %arg64, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_sge'
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sge i8 %arg8, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sge i16 %arg16, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sge i32 %arg32, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sge i64 %arg64, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX1-LABEL: 'cmp_int_sge'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sge i8 %arg8, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sge i16 %arg16, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sge i32 %arg32, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sge i64 %arg64, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'cmp_int_sge'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sge i8 %arg8, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sge i16 %arg16, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sge i32 %arg32, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sge i64 %arg64, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'cmp_int_sge'
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sge i8 %arg8, 0
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sge i16 %arg16, 0
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sge i32 %arg32, 0
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
@@ -857,47 +857,47 @@ define i32 @cmp_int_sge(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; XOPAVX2-LABEL: 'cmp_int_sge'
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sge i8 %arg8, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sge i16 %arg16, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sge i32 %arg32, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sge i64 %arg64, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'cmp_int_sge'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sge i8 %arg8, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sge <16 x i8> %argv16i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sge <32 x i8> %argv32i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sge <64 x i8> %argv64i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sge <128 x i8> %argv128i8, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sge i16 %arg16, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sge <8 x i16> %argv8i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sge <16 x i16> %argv16i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sge <32 x i16> %argv32i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sge <64 x i16> %argv64i16, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sge i32 %arg32, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sge <4 x i32> %argv4i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sge <8 x i32> %argv8i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sge <16 x i32> %argv16i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sge <32 x i32> %argv32i32, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sge i64 %arg64, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp sge <2 x i64> %argv2i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp sge <4 x i64> %argv4i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp sge <8 x i64> %argv8i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp sge <16 x i64> %argv16i64, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I8 = icmp sge i8 %arg8, zeroinitializer
@@ -940,15 +940,15 @@ define i32 @cmp_int_uge(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp uge <32 x i16> %argv32i16, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp uge <64 x i16> %argv64i16, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp uge i32 %arg32, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = icmp uge <4 x i32> %argv4i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = icmp uge <8 x i32> %argv8i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I32 = icmp uge <16 x i32> %argv16i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I32 = icmp uge <32 x i32> %argv32i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp uge <4 x i32> %argv4i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp uge <8 x i32> %argv8i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp uge <16 x i32> %argv16i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp uge <32 x i32> %argv32i32, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp uge i64 %arg64, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_uge'
@@ -963,15 +963,15 @@ define i32 @cmp_int_uge(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp uge <32 x i16> %argv32i16, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp uge <64 x i16> %argv64i16, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp uge i32 %arg32, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = icmp uge <4 x i32> %argv4i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = icmp uge <8 x i32> %argv8i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I32 = icmp uge <16 x i32> %argv16i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I32 = icmp uge <32 x i32> %argv32i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp uge <4 x i32> %argv4i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp uge <8 x i32> %argv8i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp uge <16 x i32> %argv16i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp uge <32 x i32> %argv32i32, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp uge i64 %arg64, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_uge'
@@ -986,15 +986,15 @@ define i32 @cmp_int_uge(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp uge <32 x i16> %argv32i16, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp uge <64 x i16> %argv64i16, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp uge i32 %arg32, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = icmp uge <4 x i32> %argv4i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = icmp uge <8 x i32> %argv8i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I32 = icmp uge <16 x i32> %argv16i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I32 = icmp uge <32 x i32> %argv32i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp uge <4 x i32> %argv4i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp uge <8 x i32> %argv8i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp uge <16 x i32> %argv16i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp uge <32 x i32> %argv32i32, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp uge i64 %arg64, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_uge'
@@ -1014,10 +1014,10 @@ define i32 @cmp_int_uge(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp uge <16 x i32> %argv16i32, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp uge <32 x i32> %argv32i32, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp uge i64 %arg64, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_uge'
@@ -1037,10 +1037,10 @@ define i32 @cmp_int_uge(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp uge <16 x i32> %argv16i32, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp uge <32 x i32> %argv32i32, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp uge i64 %arg64, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX1-LABEL: 'cmp_int_uge'
@@ -1060,10 +1060,10 @@ define i32 @cmp_int_uge(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16I32 = icmp uge <16 x i32> %argv16i32, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V32I32 = icmp uge <32 x i32> %argv32i32, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp uge i64 %arg64, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'cmp_int_uge'
@@ -1083,10 +1083,10 @@ define i32 @cmp_int_uge(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp uge <16 x i32> %argv16i32, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp uge <32 x i32> %argv32i32, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp uge i64 %arg64, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'cmp_int_uge'
@@ -1176,9 +1176,9 @@ define i32 @cmp_int_uge(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp uge <32 x i32> %argv32i32, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp uge i64 %arg64, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'cmp_int_uge'
@@ -1198,10 +1198,10 @@ define i32 @cmp_int_uge(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp uge <16 x i32> %argv16i32, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp uge <32 x i32> %argv32i32, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp uge i64 %arg64, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = icmp uge <2 x i64> %argv2i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I64 = icmp uge <4 x i64> %argv4i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I64 = icmp uge <8 x i64> %argv8i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16I64 = icmp uge <16 x i64> %argv16i64, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I8 = icmp uge i8 %arg8, zeroinitializer
@@ -1538,176 +1538,176 @@ define i32 @cmp_int_sgt(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 define i32 @cmp_int_ugt(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 x i8> %argv64i8, <128 x i8> %argv128i8, i16 %arg16, <8 x i16> %argv8i16, <16 x i16> %argv16i16, <32 x i16> %argv32i16, <64 x i16> %argv64i16, i32 %arg32, <4 x i32> %argv4i32, <8 x i32> %argv8i32, <16 x i32> %argv16i32, <32 x i32> %argv32i32, i64 %arg64, <2 x i64> %argv2i64, <4 x i64> %argv4i64, <8 x i64> %argv8i64, <16 x i64> %argv16i64) {
 ; SSE2-LABEL: 'cmp_int_ugt'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ugt i8 %arg8, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ugt i16 %arg16, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ugt i32 %arg32, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ugt i64 %arg64, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_ugt'
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ugt i8 %arg8, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ugt i16 %arg16, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ugt i32 %arg32, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ugt i64 %arg64, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_ugt'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ugt i8 %arg8, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ugt i16 %arg16, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ugt i32 %arg32, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ugt i64 %arg64, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_ugt'
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ugt i8 %arg8, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ugt i16 %arg16, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ugt i32 %arg32, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ugt i64 %arg64, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_ugt'
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ugt i8 %arg8, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ugt i16 %arg16, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ugt i32 %arg32, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ugt i64 %arg64, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX1-LABEL: 'cmp_int_ugt'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ugt i8 %arg8, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ugt i16 %arg16, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ugt i32 %arg32, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ugt i64 %arg64, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'cmp_int_ugt'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ugt i8 %arg8, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ugt i16 %arg16, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ugt i32 %arg32, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ugt i64 %arg64, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'cmp_int_ugt'
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ugt i8 %arg8, 0
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ugt i16 %arg16, 0
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ugt i32 %arg32, 0
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
@@ -1769,47 +1769,47 @@ define i32 @cmp_int_ugt(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; XOPAVX2-LABEL: 'cmp_int_ugt'
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ugt i8 %arg8, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ugt i16 %arg16, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ugt i32 %arg32, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ugt i64 %arg64, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'cmp_int_ugt'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ugt i8 %arg8, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ugt <16 x i8> %argv16i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ugt <32 x i8> %argv32i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ugt <64 x i8> %argv64i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ugt <128 x i8> %argv128i8, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ugt i16 %arg16, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ugt <8 x i16> %argv8i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ugt <16 x i16> %argv16i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ugt <32 x i16> %argv32i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ugt <64 x i16> %argv64i16, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ugt i32 %arg32, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ugt <4 x i32> %argv4i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ugt <8 x i32> %argv8i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ugt <16 x i32> %argv16i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ugt <32 x i32> %argv32i32, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ugt i64 %arg64, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp ugt <2 x i64> %argv2i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp ugt <4 x i64> %argv4i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp ugt <8 x i64> %argv8i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp ugt <16 x i64> %argv16i64, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I8 = icmp ugt i8 %arg8, zeroinitializer
@@ -1842,176 +1842,176 @@ define i32 @cmp_int_ugt(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 define i32 @cmp_int_sle(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 x i8> %argv64i8, <128 x i8> %argv128i8, i16 %arg16, <8 x i16> %argv8i16, <16 x i16> %argv16i16, <32 x i16> %argv32i16, <64 x i16> %argv64i16, i32 %arg32, <4 x i32> %argv4i32, <8 x i32> %argv8i32, <16 x i32> %argv16i32, <32 x i32> %argv32i32, i64 %arg64, <2 x i64> %argv2i64, <4 x i64> %argv4i64, <8 x i64> %argv8i64, <16 x i64> %argv16i64) {
 ; SSE2-LABEL: 'cmp_int_sle'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sle i8 %arg8, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sle i16 %arg16, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sle i32 %arg32, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sle i64 %arg64, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_sle'
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sle i8 %arg8, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sle i16 %arg16, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sle i32 %arg32, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sle i64 %arg64, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_sle'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sle i8 %arg8, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sle i16 %arg16, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sle i32 %arg32, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sle i64 %arg64, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_sle'
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sle i8 %arg8, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sle i16 %arg16, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sle i32 %arg32, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sle i64 %arg64, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_sle'
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sle i8 %arg8, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sle i16 %arg16, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sle i32 %arg32, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sle i64 %arg64, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX1-LABEL: 'cmp_int_sle'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sle i8 %arg8, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sle i16 %arg16, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sle i32 %arg32, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sle i64 %arg64, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'cmp_int_sle'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sle i8 %arg8, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sle i16 %arg16, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sle i32 %arg32, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sle i64 %arg64, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'cmp_int_sle'
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sle i8 %arg8, 0
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sle i16 %arg16, 0
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sle i32 %arg32, 0
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
@@ -2073,47 +2073,47 @@ define i32 @cmp_int_sle(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; XOPAVX2-LABEL: 'cmp_int_sle'
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sle i8 %arg8, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sle i16 %arg16, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sle i32 %arg32, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sle i64 %arg64, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'cmp_int_sle'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sle i8 %arg8, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sle <16 x i8> %argv16i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sle <32 x i8> %argv32i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sle <64 x i8> %argv64i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sle <128 x i8> %argv128i8, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sle i16 %arg16, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sle <8 x i16> %argv8i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sle <16 x i16> %argv16i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sle <32 x i16> %argv32i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sle <64 x i16> %argv64i16, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sle i32 %arg32, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sle <4 x i32> %argv4i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sle <8 x i32> %argv8i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sle <16 x i32> %argv16i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sle <32 x i32> %argv32i32, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sle i64 %arg64, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp sle <2 x i64> %argv2i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp sle <4 x i64> %argv4i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp sle <8 x i64> %argv8i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp sle <16 x i64> %argv16i64, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I8 = icmp sle i8 %arg8, zeroinitializer
@@ -2156,15 +2156,15 @@ define i32 @cmp_int_ule(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ule <32 x i16> %argv32i16, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ule <64 x i16> %argv64i16, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ule i32 %arg32, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = icmp ule <4 x i32> %argv4i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = icmp ule <8 x i32> %argv8i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I32 = icmp ule <16 x i32> %argv16i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I32 = icmp ule <32 x i32> %argv32i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ule <4 x i32> %argv4i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ule <8 x i32> %argv8i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ule <16 x i32> %argv16i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ule <32 x i32> %argv32i32, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ule i64 %arg64, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_ule'
@@ -2179,15 +2179,15 @@ define i32 @cmp_int_ule(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ule <32 x i16> %argv32i16, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ule <64 x i16> %argv64i16, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ule i32 %arg32, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = icmp ule <4 x i32> %argv4i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = icmp ule <8 x i32> %argv8i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I32 = icmp ule <16 x i32> %argv16i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I32 = icmp ule <32 x i32> %argv32i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ule <4 x i32> %argv4i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ule <8 x i32> %argv8i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ule <16 x i32> %argv16i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ule <32 x i32> %argv32i32, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ule i64 %arg64, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_ule'
@@ -2202,15 +2202,15 @@ define i32 @cmp_int_ule(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ule <32 x i16> %argv32i16, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ule <64 x i16> %argv64i16, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ule i32 %arg32, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = icmp ule <4 x i32> %argv4i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = icmp ule <8 x i32> %argv8i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I32 = icmp ule <16 x i32> %argv16i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I32 = icmp ule <32 x i32> %argv32i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ule <4 x i32> %argv4i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ule <8 x i32> %argv8i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ule <16 x i32> %argv16i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ule <32 x i32> %argv32i32, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ule i64 %arg64, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_ule'
@@ -2230,10 +2230,10 @@ define i32 @cmp_int_ule(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ule <16 x i32> %argv16i32, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ule <32 x i32> %argv32i32, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ule i64 %arg64, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_ule'
@@ -2253,10 +2253,10 @@ define i32 @cmp_int_ule(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ule <16 x i32> %argv16i32, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ule <32 x i32> %argv32i32, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ule i64 %arg64, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX1-LABEL: 'cmp_int_ule'
@@ -2276,10 +2276,10 @@ define i32 @cmp_int_ule(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16I32 = icmp ule <16 x i32> %argv16i32, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V32I32 = icmp ule <32 x i32> %argv32i32, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ule i64 %arg64, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'cmp_int_ule'
@@ -2299,10 +2299,10 @@ define i32 @cmp_int_ule(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp ule <16 x i32> %argv16i32, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp ule <32 x i32> %argv32i32, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ule i64 %arg64, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'cmp_int_ule'
@@ -2392,9 +2392,9 @@ define i32 @cmp_int_ule(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp ule <32 x i32> %argv32i32, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ule i64 %arg64, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'cmp_int_ule'
@@ -2414,10 +2414,10 @@ define i32 @cmp_int_ule(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ule <16 x i32> %argv16i32, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ule <32 x i32> %argv32i32, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ule i64 %arg64, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = icmp ule <2 x i64> %argv2i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I64 = icmp ule <4 x i64> %argv4i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I64 = icmp ule <8 x i64> %argv8i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16I64 = icmp ule <16 x i64> %argv16i64, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I8 = icmp ule i8 %arg8, zeroinitializer
@@ -2754,176 +2754,176 @@ define i32 @cmp_int_slt(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 define i32 @cmp_int_ult(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 x i8> %argv64i8, <128 x i8> %argv128i8, i16 %arg16, <8 x i16> %argv8i16, <16 x i16> %argv16i16, <32 x i16> %argv32i16, <64 x i16> %argv64i16, i32 %arg32, <4 x i32> %argv4i32, <8 x i32> %argv8i32, <16 x i32> %argv16i32, <32 x i32> %argv32i32, i64 %arg64, <2 x i64> %argv2i64, <4 x i64> %argv4i64, <8 x i64> %argv8i64, <16 x i64> %argv16i64) {
 ; SSE2-LABEL: 'cmp_int_ult'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ult i8 %arg8, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ult i16 %arg16, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ult i32 %arg32, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ult i64 %arg64, 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_ult'
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ult i8 %arg8, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ult i16 %arg16, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ult i32 %arg32, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ult i64 %arg64, 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_ult'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ult i8 %arg8, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ult i16 %arg16, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ult i32 %arg32, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ult i64 %arg64, 0
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_ult'
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ult i8 %arg8, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ult i16 %arg16, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ult i32 %arg32, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ult i64 %arg64, 0
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_ult'
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ult i8 %arg8, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ult i16 %arg16, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ult i32 %arg32, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ult i64 %arg64, 0
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX1-LABEL: 'cmp_int_ult'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ult i8 %arg8, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ult i16 %arg16, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ult i32 %arg32, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ult i64 %arg64, 0
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'cmp_int_ult'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ult i8 %arg8, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ult i16 %arg16, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ult i32 %arg32, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ult i64 %arg64, 0
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'cmp_int_ult'
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ult i8 %arg8, 0
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ult i16 %arg16, 0
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ult i32 %arg32, 0
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
@@ -2985,47 +2985,47 @@ define i32 @cmp_int_ult(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 
 ; XOPAVX2-LABEL: 'cmp_int_ult'
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ult i8 %arg8, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ult i16 %arg16, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ult i32 %arg32, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ult i64 %arg64, 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'cmp_int_ult'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ult i8 %arg8, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ult <16 x i8> %argv16i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ult <32 x i8> %argv32i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ult <64 x i8> %argv64i8, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ult <128 x i8> %argv128i8, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ult i16 %arg16, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ult <8 x i16> %argv8i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ult <16 x i16> %argv16i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ult <32 x i16> %argv32i16, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ult <64 x i16> %argv64i16, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ult i32 %arg32, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ult <4 x i32> %argv4i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ult <8 x i32> %argv8i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ult <16 x i32> %argv16i32, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ult <32 x i32> %argv32i32, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ult i64 %arg64, 0
-; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
-; SLM-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp ult <2 x i64> %argv2i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp ult <4 x i64> %argv4i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp ult <8 x i64> %argv8i64, zeroinitializer
+; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp ult <16 x i64> %argv16i64, zeroinitializer
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I8 = icmp ult i8 %arg8, zeroinitializer
