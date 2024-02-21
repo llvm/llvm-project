@@ -920,9 +920,9 @@ func.func @infer_dest_shape_unpack(%src: tensor<10x20x30x40x16xf32>, %dest: tens
 // CHECK-LABEL: func.func @infer_dest_shape_unpack
 // CHECK-SAME:    %[[SRC:[0-9a-zA-Z]+]]
 // CHECK-SAME:    %[[DEST:[0-9a-zA-Z]+]]
-// CHECK:         %[[CAST_DEST:.+]] = tensor.cast %[[DEST]] : tensor<?x?x?x?xf32> to tensor<30x20x?x10xf32>
+// CHECK:         %[[CAST_DEST:.+]] = tensor.cast %[[DEST]] : tensor<?x?x?x?xf32> to tensor<40x20x?x30xf32>
 // CHECK:         %[[UNPACK:.+]] = tensor.unpack %[[SRC]] {{.+}} into %[[CAST_DEST]]
-// CHECK:         %[[CAST_UNPACK:.+]] = tensor.cast %[[UNPACK]] : tensor<30x20x?x10xf32> to tensor<?x?x?x?xf32>
+// CHECK:         %[[CAST_UNPACK:.+]] = tensor.cast %[[UNPACK]] : tensor<40x20x?x30xf32> to tensor<?x?x?x?xf32>
 // CHECK:         return %[[CAST_UNPACK]]
 
 // -----
@@ -938,7 +938,7 @@ func.func @infer_src_shape_unpack(%src: tensor<?x?x?x?x16xf32>, %dest: tensor<30
 // CHECK-LABEL: func.func @infer_src_shape_unpack
 // CHECK-SAME:    %[[SRC:[0-9a-zA-Z]+]]
 // CHECK-SAME:    %[[DEST:[0-9a-zA-Z]+]]
-// CHECK:         %[[CAST_SRC:.+]] = tensor.cast %[[SRC]] : tensor<?x?x?x?x16xf32> to tensor<10x20x30x?x16xf32>
+// CHECK:         %[[CAST_SRC:.+]] = tensor.cast %[[SRC]] : tensor<?x?x?x?x16xf32> to tensor<?x20x10x30x16xf32>
 // CHECK:         %[[UNPACK:.+]] = tensor.unpack %[[CAST_SRC]]
 // CHECK:         return %[[UNPACK]]
 
