@@ -224,7 +224,7 @@ def XeGPU_UpdateNDOffsetOp : XeGPU_Op<"update_nd_offset", []> {
 }
 
 def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure]> {
-  let summary = "create scattered tensor descritors (TensorDesc).";
+  let summary = "create scattered tensor descriptors (TensorDesc).";
   let description = [{
     "create_tdesc" is similar to "create_nd_tdesc" in terms that it creates 
     a Tensor Descriptor (TensorDescType) for a memory region. While "create_nd_tdesc" 
