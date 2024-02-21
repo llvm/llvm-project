@@ -198,22 +198,15 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
   llvm_unreachable("Unhandled opcode");
 }
 
-VPTypeAnalysis::VPTypeAnalysis(VPlan &Plan, LLVMContext &Ctx) : Ctx(Ctx) {
-  auto *CanIV = Plan.getCanonicalIV();
-  Type *CanIVTy = inferScalarType(CanIV);
-  CachedTypes[&Plan.getVectorTripCount()] = CanIVTy;
-  CachedTypes[&Plan.getVFxUF()] = CanIVTy;
-  CachedTypes[Plan.getTripCount()] = CanIVTy;
-  if (auto *BTC = Plan.getBackedgeTakenCount())
-    CachedTypes[BTC] = CanIVTy;
-}
-
 Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (Type *CachedTy = CachedTypes.lookup(V))
     return CachedTy;
 
-  if (V->isLiveIn())
-    return V->getLiveInIRValue()->getType();
+  if (V->isLiveIn()) {
+    if (auto *IRValue = V->getLiveInIRValue())
+      return IRValue->getType();
+    return CanonicalIVTy;
+  }
 
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())

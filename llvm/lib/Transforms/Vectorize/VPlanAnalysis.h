@@ -36,6 +36,7 @@ class Type;
 /// of the previously inferred types.
 class VPTypeAnalysis {
   DenseMap<const VPValue *, Type *> CachedTypes;
+  Type *CanonicalIVTy;
   LLVMContext &Ctx;
 
   Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
@@ -48,7 +49,8 @@ class VPTypeAnalysis {
   Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 
 public:
-  VPTypeAnalysis(VPlan &Plan, LLVMContext &Ctx);
+  VPTypeAnalysis(Type *CanonicalIVTy, LLVMContext &Ctx)
+      : CanonicalIVTy(CanonicalIVTy), Ctx(Ctx) {}
 
   /// Infer the type of \p V. Returns the scalar type of \p V.
   Type *inferScalarType(const VPValue *V);
