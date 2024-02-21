@@ -83,15 +83,13 @@ define float @test_2_neg(i32 %a, i32 %b) {
   ret float %res
 }
 
-; This test demonstrates overly conservative legality check. The float addition
-; can be replaced with the integer addition because the result of the operation
-; can be represented in float, but we don't do that now.
+; can be represented in float.
 define float @test_3(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_3(
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[A:%.*]], 24
 ; CHECK-NEXT:    [[N:%.*]] = and i32 [[M]], [[B:%.*]]
-; CHECK-NEXT:    [[O:%.*]] = sitofp i32 [[N]] to float
-; CHECK-NEXT:    [[P:%.*]] = fadd float [[O]], 1.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[N]], 1
+; CHECK-NEXT:    [[P:%.*]] = sitofp i32 [[TMP1]] to float
 ; CHECK-NEXT:    ret float [[P]]
 ;
   %m = lshr i32 %a, 24
