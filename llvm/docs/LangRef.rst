@@ -143,7 +143,7 @@ It also shows a convention that we follow in this document. When
 demonstrating instructions, we will follow an instruction with a comment
 that defines the type and name of value produced.
 
-.. _strings:
+.. _string_constants:
 
 String constants
 ----------------
@@ -26981,8 +26981,8 @@ Syntax:
 
 ::
 
-      declare i32 @llvm.objectsize.i32(ptr <object>, i1 <min>, i1 <nullunknown>, i1 <dynamic>)
-      declare i64 @llvm.objectsize.i64(ptr <object>, i1 <min>, i1 <nullunknown>, i1 <dynamic>)
+      declare i32 @llvm.objectsize.i32(ptr <object>, i1 <min>, i1 <nullunknown>, i1 <dynamic>, i1 <wholeobj>, i64 <subobj_size>, i64 <subobj_offset>)
+      declare i64 @llvm.objectsize.i64(ptr <object>, i1 <min>, i1 <nullunknown>, i1 <dynamic>, i1 <wholeobj>, i64 <subobj_size>, i64 <subobj_offset>)
 
 Overview:
 """""""""
@@ -26996,18 +26996,38 @@ class, structure, array, or other object.
 Arguments:
 """"""""""
 
-The ``llvm.objectsize`` intrinsic takes four arguments. The first argument is a
-pointer to or into the ``object``. The second argument determines whether
-``llvm.objectsize`` returns 0 (if true) or -1 (if false) when the object size is
-unknown. The third argument controls how ``llvm.objectsize`` acts when ``null``
-in address space 0 is used as its pointer argument. If it's ``false``,
-``llvm.objectsize`` reports 0 bytes available when given ``null``. Otherwise, if
-the ``null`` is in a non-zero address space or if ``true`` is given for the
-third argument of ``llvm.objectsize``, we assume its size is unknown. The fourth
-argument to ``llvm.objectsize`` determines if the value should be evaluated at
-runtime.
+The ``llvm.objectsize`` intrinsic takes six arguments:
 
-The second, third, and fourth arguments only accept constants.
+- The first argument is a pointer to or into the ``object``.
+- The second argument controls which value to return when the size is unknown:
+
+  - If it's ``false``, ``llvm.objectsize`` returns ``-1``.
+  - If it's ``true``, ``llvm.objectsize`` returns ``0``.
+
+- The third argument controls how ``llvm.objectsize`` acts when ``null`` in
+  address space 0 is used as its pointer argument:
+
+  - If it's ``false``, ``llvm.objectsize`` reports 0 bytes available when given
+    ``null``.
+  - If it's ``true``, or the ``null`` pointer is in a non-zero address space,
+    the size is assumed to be unknown.
+
+- The fourth argument to ``llvm.objectsize`` determines if the value should be
+  evaluated at runtime.
+- The fifth argument controls which size ``llvm.objectsize`` returns:
+
+  - If it's ``false``, ``llvm.objectsize`` returns the size of the closest
+    surrounding subobject.
+  - If it's ``true``, ``llvm.objectsize`` returns the size of the whole object.
+
+- If non-zero, the sixth and seventh arguments encode the size and offset
+  information, respectively, of the original subobject's layout and is used
+  when the fifth argument is ``false``.
+- The seventh argument encodes the offset information of the original
+  subobject's layout and is used when the fifth argument is ``false``.
+
+The second, third, fourth, fifth, sixth, and seventh arguments accept only
+constants.
 
 Semantics:
 """"""""""

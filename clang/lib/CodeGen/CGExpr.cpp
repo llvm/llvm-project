@@ -742,13 +742,18 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
       // FIXME: If Address Sanitizer is enabled, insert dynamic instrumentation
       //        to check this.
       // FIXME: Get object address space
-      llvm::Type *Tys[2] = { IntPtrTy, Int8PtrTy };
-      llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::objectsize, Tys);
+      llvm::Function *F =
+          CGM.getIntrinsic(llvm::Intrinsic::objectsize, {IntPtrTy, Int8PtrTy});
       llvm::Value *Min = Builder.getFalse();
       llvm::Value *NullIsUnknown = Builder.getFalse();
       llvm::Value *Dynamic = Builder.getFalse();
+      llvm::Value *WholeObj = Builder.getTrue();
+      llvm::Value *SubobjectSize = Builder.getInt64(0);
+      llvm::Value *SubobjectOffset = Builder.getInt64(0);
       llvm::Value *LargeEnough = Builder.CreateICmpUGE(
-          Builder.CreateCall(F, {Ptr, Min, NullIsUnknown, Dynamic}), Size);
+          Builder.CreateCall(F, {Ptr, Min, NullIsUnknown, Dynamic, WholeObj,
+                                 SubobjectSize, SubobjectOffset}),
+          Size);
       Checks.push_back(std::make_pair(LargeEnough, SanitizerKind::ObjectSize));
     }
   }

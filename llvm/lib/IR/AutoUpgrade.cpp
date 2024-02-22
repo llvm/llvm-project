@@ -4388,12 +4388,69 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     break;
 
   case Intrinsic::objectsize: {
-    Value *NullIsUnknownSize =
-        CI->arg_size() == 2 ? Builder.getFalse() : CI->getArgOperand(2);
-    Value *Dynamic =
-        CI->arg_size() < 4 ? Builder.getFalse() : CI->getArgOperand(3);
-    NewCall = Builder.CreateCall(
-        NewFn, {CI->getArgOperand(0), CI->getArgOperand(1), NullIsUnknownSize, Dynamic});
+    // The default behavior before the addition of the '<wholeobj>' argument
+    // was to return the size of the whole object.
+    Value *UnknownVal = nullptr;
+    Value *NullIsUnknownSize = nullptr;
+    Value *Dynamic = nullptr;
+    Value *WholeObj = nullptr;
+    Value *SubobjectSize = nullptr;
+    Value *SubobjectOffset = nullptr;
+
+    switch (CI->arg_size()) {
+    case 2:
+      UnknownVal = CI->getArgOperand(1);
+      NullIsUnknownSize = Builder.getFalse();
+      Dynamic = Builder.getFalse();
+      WholeObj = Builder.getTrue();
+      SubobjectSize = Builder.getInt64(0);
+      SubobjectOffset = Builder.getInt64(0);
+      break;
+    case 3:
+      UnknownVal = CI->getArgOperand(1);
+      NullIsUnknownSize = CI->getArgOperand(2);
+      Dynamic = Builder.getFalse();
+      WholeObj = Builder.getTrue();
+      SubobjectSize = Builder.getInt64(0);
+      SubobjectOffset = Builder.getInt64(0);
+      break;
+    case 4:
+      UnknownVal = CI->getArgOperand(1);
+      NullIsUnknownSize = CI->getArgOperand(2);
+      Dynamic = CI->getArgOperand(3);
+      WholeObj = Builder.getTrue();
+      SubobjectSize = Builder.getInt64(0);
+      SubobjectOffset = Builder.getInt64(0);
+      break;
+    case 5:
+      UnknownVal = CI->getArgOperand(1);
+      NullIsUnknownSize = CI->getArgOperand(2);
+      Dynamic = CI->getArgOperand(3);
+      WholeObj = CI->getArgOperand(4);
+      SubobjectSize = Builder.getInt64(0);
+      SubobjectOffset = Builder.getInt64(0);
+      break;
+    case 6:
+      UnknownVal = CI->getArgOperand(1);
+      NullIsUnknownSize = CI->getArgOperand(2);
+      Dynamic = CI->getArgOperand(3);
+      WholeObj = CI->getArgOperand(4);
+      SubobjectSize = CI->getArgOperand(5);
+      SubobjectOffset = Builder.getInt64(0);
+      break;
+    case 7:
+      UnknownVal = CI->getArgOperand(1);
+      NullIsUnknownSize = CI->getArgOperand(2);
+      Dynamic = CI->getArgOperand(3);
+      WholeObj = CI->getArgOperand(4);
+      SubobjectSize = CI->getArgOperand(5);
+      SubobjectOffset = CI->getArgOperand(6);
+      break;
+    }
+
+    NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0), UnknownVal,
+                                         NullIsUnknownSize, Dynamic, WholeObj,
+                                         SubobjectSize, SubobjectOffset});
     break;
   }
 

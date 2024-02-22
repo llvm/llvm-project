@@ -26,6 +26,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -1052,11 +1053,144 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
   return Builder.CreateSelect(Cmp, Res, ConstantInt::get(ResType, 0, IsSigned));
 }
 
+namespace {
+
+/// SubobjectFinder - A simple visitor to find the "sub-object" pointed to by a
+/// __builtin_dynamic_object_size call. Information gathered from the
+/// sub-object is used by the back-end to determine the correct size when the
+/// 'TYPE' of the __bdos call has the least significant bit set (i.e. asking
+/// for the sub-object size).
+///
+/// The expectation is that we'll eventually hit one of three expression types:
+///
+///   1. DeclRefExpr - This is the expression for the base of the structure.
+///      It's exactly what we want to build an access to the \p counted_by
+///      field.
+///   2. MemberExpr - This is the field in the structure.
+///   3. CompoundLiteralExpr - This is for people who create something
+///      heretical like (struct foo has a flexible array member):
+///
+///        (struct foo){ 1, 2 }.blah[idx];
+///
+/// All other expressions can be correctly handled with the current code.
+struct SubobjectFinder
+    : public ConstStmtVisitor<SubobjectFinder, const Expr *> {
+  SubobjectFinder() = default;
+
+  //===--------------------------------------------------------------------===//
+  //                            Visitor Methods
+  //===--------------------------------------------------------------------===//
+
+  const Expr *VisitStmt(const Stmt *S) { return nullptr; }
+
+  const Expr *VisitDeclRefExpr(const DeclRefExpr *E) { return E; }
+  const Expr *VisitMemberExpr(const MemberExpr *E) { return E; }
+  const Expr *VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
+    return E;
+  }
+
+  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+    return Visit(E->getBase());
+  }
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitParenExpr(const ParenExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+};
+
+} // end anonymous namespace
+
+/// getFieldInfo - Gather the size and offset of the field \p VD in \p RD.
+static std::pair<uint64_t, uint64_t> getFieldInfo(CodeGenFunction &CGF,
+                                                  const RecordDecl *RD,
+                                                  const ValueDecl *VD,
+                                                  uint64_t Offset = 0) {
+  if (!RD)
+    return std::make_pair(0, 0);
+
+  ASTContext &Ctx = CGF.getContext();
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
+  unsigned FieldNo = 0;
+
+  for (const Decl *D : RD->decls()) {
+    if (const auto *Record = dyn_cast<RecordDecl>(D)) {
+      std::pair<uint64_t, uint64_t> Res =
+          getFieldInfo(CGF, Record->getDefinition(), VD,
+                       Offset + Layout.getFieldOffset(FieldNo));
+      if (Res.first != 0)
+        return Res;
+      continue;
+    }
+
+    if (const auto *FD = dyn_cast<FieldDecl>(D); FD && FD == VD) {
+      Offset += Layout.getFieldOffset(FieldNo);
+      return std::make_pair(Ctx.getTypeSizeInChars(FD->getType()).getQuantity(),
+                            Ctx.toCharUnitsFromBits(Offset).getQuantity());
+    }
+
+    if (isa<FieldDecl>(D))
+      ++FieldNo;
+  }
+
+  return std::make_pair(0, 0);
+}
+
+/// getSubobjectInfo - Find the sub-object that \p E points to. If it lives
+/// inside a struct, return the "size" and "offset" of that sub-object.
+static std::pair<uint64_t, uint64_t> getSubobjectInfo(CodeGenFunction &CGF,
+                                                      const Expr *E) {
+  const Expr *Subobject = SubobjectFinder().Visit(E);
+  if (!Subobject)
+    return std::make_pair(0, 0);
+
+  const RecordDecl *OuterRD = nullptr;
+  const ValueDecl *VD = nullptr;
+
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Subobject)) {
+    VD = DRE->getDecl();
+    QualType Ty = VD->getType();
+    if (Ty->isPointerType())
+      Ty = Ty->getPointeeType();
+    OuterRD = Ty->getAsRecordDecl();
+  } else if (const auto *ME = dyn_cast<MemberExpr>(Subobject)) {
+    VD = ME->getMemberDecl();
+    OuterRD = VD->getDeclContext()->getOuterLexicalRecordContext();
+  } else {
+    if (!isa<CompoundLiteralExpr>(Subobject))
+      llvm_unreachable("unexpected expression");
+
+    // We encounter a CompoundLiteralExpr if we have something like this:
+    //
+    //     __builtin_dynamic_object_size(&(struct x){ 1, 2, 3 }, 1)
+    //
+    // In that case, we want the size of the whole struct. So we don't have to
+    // worry about finding a suboject.
+    return std::make_pair(0, 0);
+  }
+
+  if (!VD || !OuterRD)
+    // The expression is referencing an object that's not in a struct.
+    return std::make_pair(0, 0);
+
+  return getFieldInfo(CGF, OuterRD->getDefinition(), VD);
+}
+
 /// Returns a Value corresponding to the size of the given expression.
 /// This Value may be either of the following:
-///   - A llvm::Argument (if E is a param with the pass_object_size attribute on
-///     it)
-///   - A call to the @llvm.objectsize intrinsic
+///
+///   - An Argument if E is a param with the pass_object_size attribute on
+///     it,
+///   - An Instruction representing the calculation of the value, when a
+///     flexible array member is involved, or
+///   - A call to the @llvm.objectsize intrinsic.
 ///
 /// EmittedE is the result of emitting `E` as a scalar expr. If it's non-null
 /// and we wouldn't otherwise try to reference a pass_object_size parameter,
@@ -1084,18 +1218,31 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
     }
   }
 
-  if (IsDynamic) {
-    // Emit special code for a flexible array member with the "counted_by"
-    // attribute.
-    if (Value *V = emitFlexibleArrayMemberSize(E, Type, ResType))
-      return V;
-  }
-
   // LLVM can't handle Type=3 appropriately, and __builtin_object_size shouldn't
   // evaluate E for side-effects. In either case, we shouldn't lower to
   // @llvm.objectsize.
   if (Type == 3 || (!EmittedE && E->HasSideEffects(getContext())))
     return getDefaultBuiltinObjectSizeResult(Type, ResType);
+
+  std::pair<Value *, Value *> SubobjectInfo =
+      std::make_pair(Builder.getInt64(0), Builder.getInt64(0));
+
+  if (IsDynamic) {
+    // Emit special code for a flexible array member with the "counted_by"
+    // attribute.
+    if (Value *V = emitFlexibleArrayMemberSize(E, Type, ResType))
+      return V;
+
+    if ((Type & 1) != 0) {
+      // The object size is constrained to the sub-object containing the
+      // element. If it's in a structure, get the size and offset information
+      // for back-end processing.
+      std::pair<uint64_t, uint64_t> Info = getSubobjectInfo(*this, E);
+      if (Info.first != 0)
+        SubobjectInfo = std::make_pair(Builder.getInt64(Info.first),
+                                       Builder.getInt64(Info.second));
+    }
+  }
 
   Value *Ptr = EmittedE ? EmittedE : EmitScalarExpr(E);
   assert(Ptr->getType()->isPointerTy() &&
@@ -1109,7 +1256,12 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   // For GCC compatibility, __builtin_object_size treat NULL as unknown size.
   Value *NullIsUnknown = Builder.getTrue();
   Value *Dynamic = Builder.getInt1(IsDynamic);
-  return Builder.CreateCall(F, {Ptr, Min, NullIsUnknown, Dynamic});
+  // If the least significant bit is clear, objects are whole variables. If
+  // it's set, a closest surrounding subobject is considered the object a
+  // pointer points to.
+  Value *WholeObj = Builder.getInt1((Type & 1) == 0);
+  return Builder.CreateCall(F, {Ptr, Min, NullIsUnknown, Dynamic, WholeObj,
+                                SubobjectInfo.first, SubobjectInfo.second});
 }
 
 namespace {
