@@ -43,7 +43,7 @@
 # RUN: ld.lld --gc-sections main.o a.so def.so def-hidden.o --fatal-warnings -o /dev/null
 
 # CHECK-NOT:   error:
-# CHECK:       error: undefined reference due to --no-allow-shlib-undefined: x1{{$}}
+# CHECK:       error: undefined reference: x1{{$}}
 # CHECK-NEXT:  >>> referenced by a.so{{$}}
 # CHECK-NOT:   {{.}}
 
