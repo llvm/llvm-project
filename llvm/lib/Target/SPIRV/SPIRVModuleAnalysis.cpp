@@ -1063,10 +1063,40 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::ExpectAssumeKHR);
     }
     break;
+  case SPIRV::OpPtrCastToCrossWorkgroupINTEL:
+  case SPIRV::OpCrossWorkgroupCastToPtrINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes);
+      Reqs.addCapability(SPIRV::Capability::USMStorageClassesINTEL);
+    }
+    break;
   case SPIRV::OpConstantFunctionPointerINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
+    }
+    break;
+  case SPIRV::OpGroupNonUniformRotateKHR:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_subgroup_rotate))
+      report_fatal_error("OpGroupNonUniformRotateKHR instruction requires the "
+                         "following SPIR-V extension: SPV_KHR_subgroup_rotate",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_subgroup_rotate);
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniformRotateKHR);
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniform);
+    break;
+  case SPIRV::OpGroupIMulKHR:
+  case SPIRV::OpGroupFMulKHR:
+  case SPIRV::OpGroupBitwiseAndKHR:
+  case SPIRV::OpGroupBitwiseOrKHR:
+  case SPIRV::OpGroupBitwiseXorKHR:
+  case SPIRV::OpGroupLogicalAndKHR:
+  case SPIRV::OpGroupLogicalOrKHR:
+  case SPIRV::OpGroupLogicalXorKHR:
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_KHR_uniform_group_instructions)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_uniform_group_instructions);
+      Reqs.addCapability(SPIRV::Capability::GroupUniformArithmeticKHR);
     }
     break;
   case SPIRV::OpFunctionPointerCallINTEL:

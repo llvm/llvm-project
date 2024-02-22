@@ -444,3 +444,32 @@ void test_noexcept(int *i) {
 }
 #undef TEST_TYPE
 } // end namespace test_launder
+
+namespace clz {
+  char clz1[__builtin_clz(1) == BITSIZE(int) - 1 ? 1 : -1];
+  char clz2[__builtin_clz(7) == BITSIZE(int) - 3 ? 1 : -1];
+  char clz3[__builtin_clz(1 << (BITSIZE(int) - 1)) == 0 ? 1 : -1];
+  int clz4 = __builtin_clz(0);
+  char clz5[__builtin_clzl(0xFL) == BITSIZE(long) - 4 ? 1 : -1];
+  char clz6[__builtin_clzll(0xFFLL) == BITSIZE(long long) - 8 ? 1 : -1];
+  char clz7[__builtin_clzs(0x1) == BITSIZE(short) - 1 ? 1 : -1];
+  char clz8[__builtin_clzs(0xf) == BITSIZE(short) - 4 ? 1 : -1];
+  char clz9[__builtin_clzs(0xfff) == BITSIZE(short) - 12 ? 1 : -1];
+}
+
+namespace ctz {
+  char ctz1[__builtin_ctz(1) == 0 ? 1 : -1];
+  char ctz2[__builtin_ctz(8) == 3 ? 1 : -1];
+  char ctz3[__builtin_ctz(1 << (BITSIZE(int) - 1)) == BITSIZE(int) - 1 ? 1 : -1];
+  int ctz4 = __builtin_ctz(0);
+  char ctz5[__builtin_ctzl(0x10L) == 4 ? 1 : -1];
+  char ctz6[__builtin_ctzll(0x100LL) == 8 ? 1 : -1];
+  char ctz7[__builtin_ctzs(1 << (BITSIZE(short) - 1)) == BITSIZE(short) - 1 ? 1 : -1];
+}
+
+namespace bswap {
+  extern int f(void);
+  int h3 = __builtin_bswap16(0x1234) == 0x3412 ? 1 : f();
+  int h4 = __builtin_bswap32(0x1234) == 0x34120000 ? 1 : f();
+  int h5 = __builtin_bswap64(0x1234) == 0x3412000000000000 ? 1 : f();
+}

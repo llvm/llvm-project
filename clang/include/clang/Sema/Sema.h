@@ -1158,7 +1158,9 @@ public:
       if (FD) {
         FD->setWillHaveBody(true);
         S.ExprEvalContexts.back().InImmediateFunctionContext =
-            FD->isImmediateFunction();
+            FD->isImmediateFunction() ||
+            S.ExprEvalContexts[S.ExprEvalContexts.size() - 2]
+                .isConstantEvaluated();
         S.ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
             S.getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
       } else
@@ -14078,6 +14080,8 @@ private:
   bool SemaValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum);
 
 public:
+  bool IsLayoutCompatible(QualType T1, QualType T2) const;
+
   // Used by C++ template instantiation.
   ExprResult SemaBuiltinShuffleVector(CallExpr *TheCall);
   ExprResult SemaConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,

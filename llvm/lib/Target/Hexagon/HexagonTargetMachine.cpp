@@ -92,6 +92,10 @@ static cl::opt<bool>
 static cl::opt<bool> DisableHSDR("disable-hsdr", cl::init(false), cl::Hidden,
   cl::desc("Disable splitting double registers"));
 
+static cl::opt<bool>
+    EnableGenMemAbs("hexagon-mem-abs", cl::init(true), cl::Hidden,
+                    cl::desc("Generate absolute set instructions"));
+
 static cl::opt<bool> EnableBitSimplify("hexagon-bit", cl::init(true),
   cl::Hidden, cl::desc("Bit simplification"));
 
@@ -155,6 +159,7 @@ namespace llvm {
   void initializeHexagonCopyToCombinePass(PassRegistry&);
   void initializeHexagonEarlyIfConversionPass(PassRegistry&);
   void initializeHexagonExpandCondsetsPass(PassRegistry&);
+  void initializeHexagonGenMemAbsolutePass(PassRegistry &);
   void initializeHexagonGenMuxPass(PassRegistry&);
   void initializeHexagonHardwareLoopsPass(PassRegistry&);
   void initializeHexagonLoopIdiomRecognizeLegacyPassPass(PassRegistry &);
@@ -182,6 +187,7 @@ namespace llvm {
   FunctionPass *createHexagonFixupHwLoops();
   FunctionPass *createHexagonGenExtract();
   FunctionPass *createHexagonGenInsert();
+  FunctionPass *createHexagonGenMemAbsolute();
   FunctionPass *createHexagonGenMux();
   FunctionPass *createHexagonGenPredicate();
   FunctionPass *createHexagonHardwareLoops();
@@ -217,6 +223,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   initializeHexagonConstPropagationPass(PR);
   initializeHexagonCopyToCombinePass(PR);
   initializeHexagonEarlyIfConversionPass(PR);
+  initializeHexagonGenMemAbsolutePass(PR);
   initializeHexagonGenMuxPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
@@ -421,6 +428,8 @@ void HexagonPassConfig::addPreRegAlloc() {
       insertPass(&RegisterCoalescerID, &HexagonExpandCondsetsID);
     if (!DisableStoreWidening)
       addPass(createHexagonStoreWidening());
+    if (EnableGenMemAbs)
+      addPass(createHexagonGenMemAbsolute());
     if (!DisableHardwareLoops)
       addPass(createHexagonHardwareLoops());
   }
