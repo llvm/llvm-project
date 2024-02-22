@@ -66,6 +66,7 @@ public:
   }
 
 private:
+  BinaryContext &BC;
   bool NeedToCreate = false;
   BumpPtrAllocator Allocator;
   DebugStrWriter &MainBinaryStrWriter;

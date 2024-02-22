@@ -18,7 +18,7 @@ namespace bolt {
 DWARF5AcceleratorTable::DWARF5AcceleratorTable(
     const bool CreateDebugNames, BinaryContext &BC,
     DebugStrWriter &MainBinaryStrWriter)
-    : MainBinaryStrWriter(MainBinaryStrWriter) {
+    : BC(BC), MainBinaryStrWriter(MainBinaryStrWriter) {
   NeedToCreate = CreateDebugNames || BC.getDebugNamesSection();
   if (!NeedToCreate)
     return;
@@ -44,18 +44,19 @@ DWARF5AcceleratorTable::DWARF5AcceleratorTable(
       const char *CStr = StrData.getCStr(&Offset, &Err);
       if (Err) {
         NeedToCreate = false;
-        errs() << "BOLT-WARNING: [internal-dwarf-error]: Could not extract "
-                  "string from .debug_str section at offset: "
-               << Twine::utohexstr(StrOffset) << ".\n";
+        BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: Could not extract "
+                     "string from .debug_str section at offset: "
+                  << Twine::utohexstr(StrOffset) << ".\n";
         return;
       }
       auto R = StrCacheToOffsetMap.try_emplace(
           llvm::hash_value(llvm::StringRef(CStr)), StrOffset);
       if (!R.second)
-        errs() << "BOLT-WARNING: [internal-dwarf-error]: collision occured on "
-               << CStr << " at offset : 0x" << Twine::utohexstr(StrOffset)
-               << ". Previous string offset is: 0x"
-               << Twine::utohexstr(R.first->second) << ".\n";
+        BC.errs()
+            << "BOLT-WARNING: [internal-dwarf-error]: collision occured on "
+            << CStr << " at offset : 0x" << Twine::utohexstr(StrOffset)
+            << ". Previous string offset is: 0x"
+            << Twine::utohexstr(R.first->second) << ".\n";
       StrOffset = Offset;
     }
   }
@@ -88,8 +89,7 @@ void DWARF5AcceleratorTable::addUnit(DWARFUnit &Unit,
       auto Iter = CUOffsetsToPatch.insert({*DWOID, CUList.size()});
       if (Iter.second)
         CUList.push_back(0xBADBAD);
-      ForeignTUList.push_back(
-          cast_or_null<DWARFTypeUnit>(&Unit)->getTypeHash());
+      ForeignTUList.push_back(cast<DWARFTypeUnit>(&Unit)->getTypeHash());
     } else {
       LocalTUList.push_back(CurrentUnitOffset);
     }
@@ -249,10 +249,11 @@ void DWARF5AcceleratorTable::addAccelTableEntry(
     if (IsTU && DWOID) {
       auto Iter = CUOffsetsToPatch.find(*DWOID);
       if (Iter == CUOffsetsToPatch.end())
-        errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "
-                  "DWO ID in CU offsets for second Unit Index "
-               << Name << ". For DIE at offset: "
-               << Twine::utohexstr(CurrentUnitOffset + Die.getOffset()) << ".";
+        BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "
+                     "DWO ID in CU offsets for second Unit Index "
+                  << Name << ". For DIE at offset: "
+                  << Twine::utohexstr(CurrentUnitOffset + Die.getOffset())
+                  << ".\n";
       SecondIndex = Iter->second;
     }
     It.Values.push_back(new (Allocator) BOLTDWARF5AccelTableData(
