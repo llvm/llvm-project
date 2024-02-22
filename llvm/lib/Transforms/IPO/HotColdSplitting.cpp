@@ -367,6 +367,7 @@ static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
   return Penalty;
 }
 
+// Determine if it is beneficial to split the \p Region.
 bool HotColdSplitting::isSplittingBeneficial(CodeExtractor &CE,
                                              const BlockSequence &Region,
                                              TargetTransformInfo &TTI) {
@@ -387,11 +388,13 @@ bool HotColdSplitting::isSplittingBeneficial(CodeExtractor &CE,
   return true;
 }
 
+// Split the single \p EntryPoint cold region. \p CE is the region code
+// extractor.
 Function *HotColdSplitting::extractColdRegion(
-    BasicBlock *BB, CodeExtractor &CE, const CodeExtractorAnalysisCache &CEAC,
-    BlockFrequencyInfo *BFI, TargetTransformInfo &TTI,
-    OptimizationRemarkEmitter &ORE) {
-  Function *OrigF = BB->getParent();
+    BasicBlock &EntryPoint, CodeExtractor &CE,
+    const CodeExtractorAnalysisCache &CEAC, BlockFrequencyInfo *BFI,
+    TargetTransformInfo &TTI, OptimizationRemarkEmitter &ORE) {
+  Function *OrigF = EntryPoint.getParent();
   if (Function *OutF = CE.extractCodeRegion(CEAC)) {
     User *U = *OutF->user_begin();
     CallInst *CI = cast<CallInst>(U);
@@ -413,7 +416,8 @@ Function *HotColdSplitting::extractColdRegion(
 
     LLVM_DEBUG(llvm::dbgs() << "Outlined Region: " << *OutF);
     ORE.emit([&]() {
-      return OptimizationRemark(DEBUG_TYPE, "HotColdSplit", &*BB->begin())
+      return OptimizationRemark(DEBUG_TYPE, "HotColdSplit",
+                                &*EntryPoint.begin())
              << ore::NV("Original", OrigF) << " split cold code into "
              << ore::NV("Split", OutF);
     });
@@ -421,8 +425,10 @@ Function *HotColdSplitting::extractColdRegion(
   }
 
   ORE.emit([&]() {
-    return OptimizationRemarkMissed(DEBUG_TYPE, "ExtractFailed", &*BB->begin())
-           << "Failed to extract region at block " << ore::NV("Block", BB);
+    return OptimizationRemarkMissed(DEBUG_TYPE, "ExtractFailed",
+                                    &*EntryPoint.begin())
+           << "Failed to extract region at block "
+           << ore::NV("Block", &EntryPoint);
   });
   return nullptr;
 }
@@ -621,7 +627,8 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
   // Set of cold blocks obtained with RPOT.
   SmallPtrSet<BasicBlock *, 4> AnnotatedColdBlocks;
 
-  // The worklist of non-intersecting regions left to outline.
+  // The worklist of non-intersecting regions left to outline. The first member
+  // of the pair is the entry point into the region to be outlined.
   SmallVector<std::pair<BasicBlock *, CodeExtractor>, 2> OutliningWorklist;
 
   // Set up an RPO traversal. Experimentally, this performs better (outlines
@@ -739,7 +746,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
   CodeExtractorAnalysisCache CEAC(F);
   for (auto &BCE : OutliningWorklist) {
     Function *Outlined =
-        extractColdRegion(BCE.first, BCE.second, CEAC, BFI, TTI, ORE);
+        extractColdRegion(*BCE.first, BCE.second, CEAC, BFI, TTI, ORE);
     assert(Outlined && "Should be outlined");
   }
 
