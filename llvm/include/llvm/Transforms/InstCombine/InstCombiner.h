@@ -91,6 +91,11 @@ protected:
   /// Order of predecessors to canonicalize phi nodes towards.
   SmallDenseMap<BasicBlock *, SmallVector<BasicBlock *>, 8> PredOrder;
 
+  /// ValueTrackingCache is used for detecting information loss.
+#ifndef NDEBUG
+  ValueTrackingCache *VTC = nullptr;
+#endif
+
 public:
   InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder,
                bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
@@ -402,6 +407,10 @@ public:
       V->takeName(&I);
 
     I.replaceAllUsesWith(V);
+#ifndef NDEBUG
+    if (&I == VTC->getFromInst())
+      VTC->detectInformationLoss(V, SQ);
+#endif
     return &I;
   }
 

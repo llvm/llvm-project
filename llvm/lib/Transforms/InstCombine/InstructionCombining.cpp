@@ -4683,6 +4683,10 @@ bool InstCombinerImpl::run() {
 #endif
     LLVM_DEBUG(raw_string_ostream SS(OrigI); I->print(SS); OrigI = SS.str(););
     LLVM_DEBUG(dbgs() << "IC: Visiting: " << OrigI << '\n');
+#ifndef NDEBUG
+    ValueTrackingCache Cache(I, SQ);
+    VTC = &Cache;
+#endif
 
     if (Instruction *Result = visit(*I)) {
       ++NumCombined;
@@ -4718,6 +4722,9 @@ bool InstCombinerImpl::run() {
         Worklist.pushUsersToWorkList(*Result);
         Worklist.push(Result);
 
+#ifndef NDEBUG
+        Cache.detectInformationLoss(Result, SQ);
+#endif
         eraseInstFromFunction(*I);
       } else {
         LLVM_DEBUG(dbgs() << "IC: Mod = " << OrigI << '\n'

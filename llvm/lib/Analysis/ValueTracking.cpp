@@ -78,6 +78,7 @@
 #include <cstdint>
 #include <optional>
 #include <utility>
+#include <variant>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -87,6 +88,9 @@ using namespace llvm::PatternMatch;
 static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
                                               cl::Hidden, cl::init(20));
 
+// Checks whether we will lose information after simplification.
+static cl::opt<bool> DetectInformationLoss("detect-information-loss",
+                                           cl::Hidden, cl::init(false));
 
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,
 /// returns the element type's bitwidth.
@@ -9053,3 +9057,101 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
 
   return CR;
 }
+
+#ifndef NDEBUG
+llvm::ValueTrackingCache::ValueTrackingCache(Instruction *FromInst,
+                                             const SimplifyQuery &SQ)
+    : From(FromInst) {
+  if (!DetectInformationLoss)
+    return;
+
+  NoPoison = isGuaranteedNotToBePoison(From, SQ.AC, From, SQ.DT);
+  NoUndef = isGuaranteedNotToBeUndef(From, SQ.AC, From, SQ.DT);
+
+  Type *Ty = From->getType();
+  if (Ty->isIntOrIntVectorTy() || Ty->isPtrOrPtrVectorTy()) {
+    // KnownBits
+    KnownBits Known =
+        computeKnownBits(From, /*Depth=*/0, SQ.getWithInstruction(From));
+    if (!Known.isUnknown())
+      BeforeKnown = Known;
+  } else if (Ty->isFPOrFPVectorTy()) {
+    // KnownFPClass
+    // TODO: use FMF flags
+    KnownFPClass Known = computeKnownFPClass(From, fcAllFlags, /*Depth=*/0,
+                                             SQ.getWithInstruction(From));
+    if (Known.KnownFPClasses != fcAllFlags || Known.SignBit)
+      BeforeKnown = Known;
+  }
+}
+
+void llvm::ValueTrackingCache::detectInformationLoss(Value *To,
+                                                     const SimplifyQuery &SQ) {
+  if (!DetectInformationLoss)
+    return;
+
+  Instruction *ToInst = dyn_cast<Instruction>(To);
+  if (!ToInst)
+    return;
+
+  bool Inserted = false;
+  if (!ToInst->getParent()) {
+    ToInst->insertBefore(From);
+    Inserted = true;
+  }
+
+  auto WarnOnInformationLoss = [&](StringRef Attr) {
+    errs() << "Warning: the attribute " << Attr << " got lost when simplifying "
+           << *From << " into " << *To << '\n';
+  };
+
+  // Poison
+  if (NoPoison && !isGuaranteedNotToBePoison(To, SQ.AC, From, SQ.DT))
+    WarnOnInformationLoss("non-poison");
+
+  // Undef
+  if (NoUndef && !isGuaranteedNotToBeUndef(To, SQ.AC, From, SQ.DT))
+    WarnOnInformationLoss("non-undef");
+
+  Type *Ty = From->getType();
+  if ((Ty->isIntOrIntVectorTy() || Ty->isPtrOrPtrVectorTy()) &&
+      std::holds_alternative<KnownBits>(BeforeKnown)) {
+    KnownBits &Before = std::get<KnownBits>(BeforeKnown);
+    KnownBits After =
+        computeKnownBits(To, /*Depth=*/0, SQ.getWithInstruction(From));
+    // KnownBits of From should be a subset of KnownBits of To.
+    if (!Before.Zero.isSubsetOf(After.Zero) ||
+        !Before.One.isSubsetOf(After.One)) {
+      WarnOnInformationLoss("knownbits");
+      errs() << "Before: " << Before << '\n';
+      errs() << "After:  " << After << '\n';
+    }
+    assert((Before.One & After.Zero).isZero() && "Possible miscompilation");
+    assert((Before.Zero & After.One).isZero() && "Possible miscompilation");
+  } else if (Ty->isFPOrFPVectorTy() &&
+             std::holds_alternative<KnownFPClass>(BeforeKnown)) {
+    // KnownFPClass
+    KnownFPClass &Before = std::get<KnownFPClass>(BeforeKnown);
+    // TODO: use FMF flags
+    KnownFPClass After = computeKnownFPClass(To, fcAllFlags, /*Depth=*/0,
+                                             SQ.getWithInstruction(From));
+    // KnownFPClass of From should be a subset of KnownFPClass of To.
+    if ((Before.KnownFPClasses & After.KnownFPClasses) !=
+        Before.KnownFPClasses) {
+      WarnOnInformationLoss("fpclasses");
+      errs() << "Before: " << Before.KnownFPClasses << '\n';
+      errs() << "After:  " << After.KnownFPClasses << '\n';
+    }
+    assert((Before.KnownFPClasses & After.KnownFPClasses) != fcNone &&
+           "Possible miscompilation");
+    if (Before.SignBit.has_value() && !After.SignBit.has_value())
+      WarnOnInformationLoss("sign");
+    assert((!Before.SignBit.has_value() || !After.SignBit.has_value() ||
+            Before.SignBit == After.SignBit) &&
+           "Possible miscompilation");
+  }
+
+  if (Inserted)
+    ToInst->removeFromParent();
+}
+#endif

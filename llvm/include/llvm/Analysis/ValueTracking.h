@@ -24,6 +24,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include <cassert>
 #include <cstdint>
+#include <variant>
 
 namespace llvm {
 
@@ -1195,6 +1196,23 @@ std::optional<bool> isImpliedByDomCondition(CmpInst::Predicate Pred,
                                             const Value *LHS, const Value *RHS,
                                             const Instruction *ContextI,
                                             const DataLayout &DL);
+
+/// A helper class to see whether we will lose information (KnownBits,
+/// KnownFPClass...) after replacing all uses of \p From to \p To . It will help
+/// us salvage information during transformation.
+class ValueTrackingCache final {
+  Instruction *From;
+
+  bool NoPoison;
+  bool NoUndef;
+
+  std::variant<std::monostate, KnownBits, KnownFPClass> BeforeKnown;
+
+public:
+  explicit ValueTrackingCache(Instruction *FromInst, const SimplifyQuery &SQ);
+  void detectInformationLoss(Value *To, const SimplifyQuery &SQ);
+  Instruction *getFromInst() const noexcept { return From; }
+};
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_VALUETRACKING_H
