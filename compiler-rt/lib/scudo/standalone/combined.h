@@ -1086,12 +1086,6 @@ private:
         atomic_load(&RingBufferAddress, memory_order_acquire));
   }
 
-  AllocationRingBuffer *getRingBufferIfEnabled(const Options &Options) {
-    if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)))
-      return nullptr;
-    return getRingBuffer();
-  }
-
   // The following might get optimized out by the compiler.
   NOINLINE void performSanityChecks() {
     // Verify that the header offset field can hold the maximum offset. In the
@@ -1280,7 +1274,9 @@ private:
   }
 
   void storePrimaryAllocationStackMaybe(const Options &Options, void *Ptr) {
-    AllocationRingBuffer *RB = getRingBufferIfEnabled(Options);
+    if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)))
+      return;
+    AllocationRingBuffer *RB = getRingBuffer();
     if (!RB)
       return;
     auto *Ptr32 = reinterpret_cast<u32 *>(Ptr);
@@ -1315,7 +1311,9 @@ private:
 
   void storeSecondaryAllocationStackMaybe(const Options &Options, void *Ptr,
                                           uptr Size) {
-    auto *RB = getRingBufferIfEnabled(Options);
+    if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)))
+      return;
+    AllocationRingBuffer *RB = getRingBuffer();
     if (!RB)
       return;
     u32 Trace = collectStackTrace(RB->Depot);
@@ -1330,7 +1328,9 @@ private:
 
   void storeDeallocationStackMaybe(const Options &Options, void *Ptr,
                                    u8 PrevTag, uptr Size) {
-    auto *RB = getRingBufferIfEnabled(Options);
+    if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)))
+      return;
+    AllocationRingBuffer *RB = getRingBuffer();
     if (!RB)
       return;
     auto *Ptr32 = reinterpret_cast<u32 *>(Ptr);
