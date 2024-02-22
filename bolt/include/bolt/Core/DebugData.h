@@ -450,10 +450,16 @@ public:
     return std::move(StrOffsetsBuffer);
   }
 
-private:
   /// Initializes Buffer and Stream.
   void initialize(DWARFUnit &Unit);
 
+  /// Clear data.
+  void clear() {
+    IndexToAddressMap.clear();
+    StrOffsets.clear();
+  }
+
+private:
   std::unique_ptr<DebugStrOffsetsBufferVector> StrOffsetsBuffer;
   std::unique_ptr<raw_svector_ostream> StrOffsetsStream;
   std::map<uint32_t, uint32_t> IndexToAddressMap;
