@@ -169,4 +169,5 @@ document soon.
    ELF/linker_script
    ELF/start-stop-gc
    ELF/warn_backrefs
+   ELF/large_sections
    MachO/index
