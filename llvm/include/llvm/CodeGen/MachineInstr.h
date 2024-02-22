@@ -1438,7 +1438,7 @@ public:
   unsigned getBundleSize() const;
 
   /// Return true if the MachineInstr reads the specified register.
-  /// If TargetRegisterInfo is passed, then it also checks if there
+  /// If TargetRegisterInfo is non-null, then it also checks if there
   /// is a read of a super-register.
   /// This does not count partial redefines of virtual registers as reads:
   ///   %reg1024:6 = OP.
@@ -1461,7 +1461,7 @@ public:
                                 SmallVectorImpl<unsigned> *Ops = nullptr) const;
 
   /// Return true if the MachineInstr kills the specified register.
-  /// If TargetRegisterInfo is passed, then it also checks if there is
+  /// If TargetRegisterInfo is non-null, then it also checks if there is
   /// a kill of a super-register.
   bool killsRegister(Register Reg,
                      const TargetRegisterInfo *TRI = nullptr) const {
@@ -1469,7 +1469,7 @@ public:
   }
 
   /// Return true if the MachineInstr fully defines the specified register.
-  /// If TargetRegisterInfo is passed, then it also checks
+  /// If TargetRegisterInfo is non-null, then it also checks
   /// if there is a def of a super-register.
   /// NOTE: It's ignoring subreg indices on virtual registers.
   bool definesRegister(Register Reg,
@@ -1486,7 +1486,7 @@ public:
   }
 
   /// Returns true if the register is dead in this machine instruction.
-  /// If TargetRegisterInfo is passed, then it also checks
+  /// If TargetRegisterInfo is non-null, then it also checks
   /// if there is a dead def of a super-register.
   bool registerDefIsDead(Register Reg,
                          const TargetRegisterInfo *TRI = nullptr) const {
