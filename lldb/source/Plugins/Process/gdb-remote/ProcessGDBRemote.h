@@ -366,7 +366,7 @@ protected:
   lldb::ThreadSP
   SetThreadStopInfo(lldb::tid_t tid,
                     ExpeditedRegisterMap &expedited_register_map, uint8_t signo,
-                    const std::string &thread_name, const std::string &reason,
+                    const std::string &thread_name, std::string reason,
                     const std::string &description, uint32_t exc_type,
                     const std::vector<lldb::addr_t> &exc_data,
                     lldb::addr_t thread_dispatch_qaddr, bool queue_vars_valid,
