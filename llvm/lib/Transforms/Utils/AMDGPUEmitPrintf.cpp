@@ -485,12 +485,11 @@ static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
     WhatToStore.push_back(ConstantInt::get(Builder.getInt32Ty(), 0));
 }
 
-static void
-callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
-                          Value *PtrToStore, SparseBitVector<8> &SpecIsCString,
-                          SparseBitVector<8> &OCLVectors,
-                          SmallVectorImpl<StringData> &StringContents,
-                          SmallVectorImpl<uint32_t> &VecSizes, bool IsConstFmtStr) {
+static void callBufferedPrintfArgPush(
+    IRBuilder<> &Builder, ArrayRef<Value *> Args, Value *PtrToStore,
+    SparseBitVector<8> &SpecIsCString, SparseBitVector<8> &OCLVectors,
+    SmallVectorImpl<StringData> &StringContents,
+    SmallVectorImpl<uint32_t> &VecSizes, bool IsConstFmtStr) {
   Module *M = Builder.GetInsertBlock()->getModule();
   const DataLayout &DL = M->getDataLayout();
   auto StrIt = StringContents.begin();
