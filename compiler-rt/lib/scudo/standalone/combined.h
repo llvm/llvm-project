@@ -688,12 +688,14 @@ public:
     Quarantine.disable();
     Primary.disable();
     Secondary.disable();
-    Depot->disable();
+    if (Depot)
+      Depot->disable();
   }
 
   void enable() NO_THREAD_SAFETY_ANALYSIS {
     initThreadMaybe();
-    Depot->enable();
+    if (Depot)
+      Depot->enable();
     Secondary.enable();
     Primary.enable();
     Quarantine.enable();
@@ -1520,7 +1522,12 @@ private:
     constexpr u32 kStacksPerRingBufferEntry = 2;
     constexpr u32 kMaxU32Pow2 = ~(UINT32_MAX >> 1);
     static_assert(isPowerOfTwo(kMaxU32Pow2));
-    constexpr u32 kFramesPerStack = 8;
+    // On Android we always have 3 frames at the bottom: __start_main,
+    // __libc_init, main, and 3 at the top: malloc, scudo_malloc and
+    // Allocator::allocate. This leaves 10 frames for the user app. The next
+    // smallest power of two (8) would only leave 2, which is clearly too
+    // little.
+    constexpr u32 kFramesPerStack = 16;
     static_assert(isPowerOfTwo(kFramesPerStack));
 
     // We need StackDepot to be aligned to 8-bytes so the ring we store after

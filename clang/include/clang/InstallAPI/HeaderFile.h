@@ -21,6 +21,8 @@
 
 namespace clang::installapi {
 enum class HeaderType {
+  /// Unset or unknown type.
+  Unknown,
   /// Represents declarations accessible to all clients.
   Public,
   /// Represents declarations accessible to a disclosed set of clients.
@@ -41,6 +43,7 @@ class HeaderFile {
   std::optional<clang::Language> Language;
 
 public:
+  HeaderFile() = delete;
   HeaderFile(StringRef FullPath, HeaderType Type,
              StringRef IncludeName = StringRef(),
              std::optional<clang::Language> Language = std::nullopt)
