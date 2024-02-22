@@ -2049,7 +2049,6 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // `CALLSEQ_END` is added.
   SmallVector<SDValue, 16> TempProxyRegOps;
 
-
   // Generate loads from param memory/moves from registers for result
   if (Ins.size() > 0) {
     SmallVector<EVT, 16> VTs;
@@ -2202,7 +2201,6 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Chain = Repl.getValue(1);
     InGlue = Repl.getValue(2);
   }
-
 
   // set isTailCall to false for now, until we figure out how to express
   // tail call optimization in PTX
