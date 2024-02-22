@@ -463,7 +463,7 @@ public:
 
     // Store the updated result through the lvalue
     if (LV.isBitField())
-      llvm_unreachable("no bitfield inc/dec yet");
+      CGF.buildStoreThroughBitfieldLValue(RValue::get(value), LV, value);
     else
       CGF.buildStoreThroughLValue(RValue::get(value), LV);
 
@@ -1836,7 +1836,7 @@ LValue ScalarExprEmitter::buildCompoundAssignLValue(
   // 'An assignment expression has the value of the left operand after the
   // assignment...'.
   if (LHSLV.isBitField())
-    assert(0 && "not yet implemented");
+    CGF.buildStoreThroughBitfieldLValue(RValue::get(Result), LHSLV, Result);
   else
     CGF.buildStoreThroughLValue(RValue::get(Result), LHSLV);
 

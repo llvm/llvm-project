@@ -833,10 +833,6 @@ def UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
     `cir.unary` performs the unary operation according to
     the specified opcode kind: [inc, dec, plus, minus, not].
 
-    Note for inc and dec: the operation corresponds only to the
-    addition/subtraction, its input is expect to come from a load
-    and the result to be used by a corresponding store.
-
     It requires one input operand and has one result, both types
     should be the same.
 
