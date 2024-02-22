@@ -59,6 +59,7 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
@@ -3287,6 +3288,17 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
   if (auto *JMD = J->getMetadata(LLVMContext::MD_invariant_group))
     if (isa<LoadInst>(K) || isa<StoreInst>(K))
       K->setMetadata(LLVMContext::MD_invariant_group, JMD);
+
+  // Merge MMRAs.
+  // This is handled separately because we also want to handle cases where K
+  // doesn't have tags but J does.
+
+  auto JTags = MMRAMetadata(J->getMetadata(LLVMContext::MD_MMRA));
+  auto KTags = MMRAMetadata(K->getMetadata(LLVMContext::MD_MMRA));
+  if (JTags || KTags) {
+    K->setMetadata(LLVMContext::MD_MMRA,
+                   JTags.combine(KTags).getAsMD(K->getContext()));
+  }
 }
 
 void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
@@ -3306,7 +3318,8 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
                          LLVMContext::MD_preserve_access_index,
                          LLVMContext::MD_prof,
                          LLVMContext::MD_nontemporal,
-                         LLVMContext::MD_noundef};
+                         LLVMContext::MD_noundef,
+                         LLVMContext::MD_MMRA};
   combineMetadata(K, J, KnownIDs, KDominatesJ);
 }
 

@@ -2477,12 +2477,29 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
   AtomicPseudoMIs.push_back(MI);
   bool Changed = false;
 
+  // Refine based on MMRAs. They can override the OrderingAddrSpace
+  auto OrderingAddrSpace = MOI.getOrderingAddrSpace();
+
+  // TODO: Use an enum/parse this sooner?
+  // TODO: Do we need to handle these MMRAs on load/stores/atomicrmw as well?
+  if (auto MMRA = MMRAMetadata(MI->getMMRAMetadata())) {
+    SIAtomicAddrSpace NewAddrSpace = SIAtomicAddrSpace::NONE;
+    if (MMRA.hasTag("opencl-fence-mem", "global"))
+      NewAddrSpace |= SIAtomicAddrSpace::GLOBAL;
+    if (MMRA.hasTag("opencl-fence-mem", "local"))
+      NewAddrSpace |= SIAtomicAddrSpace::LDS;
+    if (MMRA.hasTag("opencl-fence-mem", "image"))
+      NewAddrSpace |= SIAtomicAddrSpace::SCRATCH;
+
+    if (NewAddrSpace != SIAtomicAddrSpace::NONE)
+      OrderingAddrSpace = NewAddrSpace;
+  }
+
   if (MOI.isAtomic()) {
     if (MOI.getOrdering() == AtomicOrdering::Acquire)
-      Changed |= CC->insertWait(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
-                                SIMemOp::LOAD | SIMemOp::STORE,
-                                MOI.getIsCrossAddressSpaceOrdering(),
-                                Position::BEFORE);
+      Changed |= CC->insertWait(
+          MI, MOI.getScope(), OrderingAddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+          MOI.getIsCrossAddressSpaceOrdering(), Position::BEFORE);
 
     if (MOI.getOrdering() == AtomicOrdering::Release ||
         MOI.getOrdering() == AtomicOrdering::AcquireRelease ||
@@ -2494,8 +2511,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
       /// generate a fence. Could add support in this file for
       /// barrier. SIInsertWaitcnt.cpp could then stop unconditionally
       /// adding S_WAITCNT before a S_BARRIER.
-      Changed |= CC->insertRelease(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
+      Changed |= CC->insertRelease(MI, MOI.getScope(), OrderingAddrSpace,
                                    MOI.getIsCrossAddressSpaceOrdering(),
                                    Position::BEFORE);
 
@@ -2507,8 +2523,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
     if (MOI.getOrdering() == AtomicOrdering::Acquire ||
         MOI.getOrdering() == AtomicOrdering::AcquireRelease ||
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
-      Changed |= CC->insertAcquire(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
+      Changed |= CC->insertAcquire(MI, MOI.getScope(), OrderingAddrSpace,
                                    Position::BEFORE);
 
     return Changed;

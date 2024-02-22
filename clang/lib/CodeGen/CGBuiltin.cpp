@@ -55,6 +55,7 @@
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -17943,6 +17944,25 @@ llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
   return Arg;
 }
 
+void CodeGenFunction::AddAMDGCNAddressSpaceMMRA(llvm::Instruction *Inst,
+                                                llvm::Value *ASMask) {
+  constexpr const char *Tag = "opencl-fence-mem";
+
+  uint64_t Mask = cast<llvm::ConstantInt>(ASMask)->getZExtValue();
+  if (Mask == 0)
+    return;
+
+  // 3 bits can be set: local, global, image in that order.
+  MMRAMetadata MMRAs;
+  if (Mask & (1 << 0))
+    MMRAs.addTag(Tag, "local");
+  if (Mask & (1 << 1))
+    MMRAs.addTag(Tag, "global");
+  if (Mask & (1 << 2))
+    MMRAs.addTag(Tag, "image");
+  Inst->setMetadata(LLVMContext::MD_MMRA, MMRAs.getAsMD(getLLVMContext()));
+}
+
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
@@ -18621,6 +18641,13 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(0)),
                             EmitScalarExpr(E->getArg(1)), AO, SSID);
     return Builder.CreateFence(AO, SSID);
+  }
+  case AMDGPU::BI__builtin_amdgcn_fence_opencl: {
+    ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(1)),
+                            EmitScalarExpr(E->getArg(2)), AO, SSID);
+    FenceInst *Fence = Builder.CreateFence(AO, SSID);
+    AddAMDGCNAddressSpaceMMRA(Fence, EmitScalarExpr(E->getArg(0)));
+    return Fence;
   }
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
   case AMDGPU::BI__builtin_amdgcn_atomic_inc64:

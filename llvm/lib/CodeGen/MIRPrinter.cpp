@@ -850,6 +850,13 @@ void MIPrinter::print(const MachineInstr &MI) {
     PCSections->printAsOperand(OS, MST);
     NeedComma = true;
   }
+  if (MDNode *MMRA = MI.getMMRAMetadata()) {
+    if (NeedComma)
+      OS << ',';
+    OS << " mmra ";
+    MMRA->printAsOperand(OS, MST);
+    NeedComma = true;
+  }
   if (uint32_t CFIType = MI.getCFIType()) {
     if (NeedComma)
       OS << ',';

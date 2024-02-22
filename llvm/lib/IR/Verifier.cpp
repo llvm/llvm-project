@@ -99,6 +99,7 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
@@ -116,6 +117,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -507,6 +509,7 @@ private:
   void visitMemProfMetadata(Instruction &I, MDNode *MD);
   void visitCallsiteMetadata(Instruction &I, MDNode *MD);
   void visitDIAssignIDMetadata(Instruction &I, MDNode *MD);
+  void visitMMRAMetadata(Instruction &I, MDNode *MD);
   void visitAnnotationMetadata(MDNode *Annotation);
   void visitAliasScopeMetadata(const MDNode *MD);
   void visitAliasScopeListMetadata(const MDNode *MD);
@@ -4749,6 +4752,27 @@ void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
   }
 }
 
+void Verifier::visitMMRAMetadata(Instruction &I, MDNode *MD) {
+  Check(canInstructionHaveMMRAs(I),
+        "!mmra metadata attached to unexpected instruction kind", I, MD);
+
+  const auto IsLeaf = [](const Metadata *CurMD) {
+    const MDNode *Tuple = dyn_cast<MDTuple>(CurMD);
+    return Tuple && Tuple->getNumOperands() == 2 &&
+           isa<MDString>(Tuple->getOperand(0)) &&
+           isa<MDString>(Tuple->getOperand(1));
+  };
+
+  // Simple MMRA metadata like !{!"foo", "!bar"} -> ok.
+  if (IsLeaf(MD))
+    return;
+
+  Check(isa<MDTuple>(MD), "!mmra expected to be a metadata tuple", I, MD);
+  for (const MDOperand &MDOp : MD->operands())
+    Check(IsLeaf(MDOp), "!mmra metadata tuple operand is not an MMRA tag", I,
+          MDOp.get());
+}
+
 void Verifier::visitCallStackMetadata(MDNode *MD) {
   // Call stack metadata should consist of a list of at least 1 constant int
   // (representing a hash of the location).
@@ -5060,6 +5084,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_DIAssignID))
     visitDIAssignIDMetadata(I, MD);
+
+  if (MDNode *MMRA = I.getMetadata(LLVMContext::MD_MMRA))
+    visitMMRAMetadata(I, MMRA);
 
   if (MDNode *Annotation = I.getMetadata(LLVMContext::MD_annotation))
     visitAnnotationMetadata(Annotation);

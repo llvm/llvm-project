@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
@@ -455,7 +456,8 @@ void Instruction::dropUBImplyingAttrsAndMetadata() {
   // !noundef and various AA metadata must be dropped, as it generally produces
   // immediate undefined behavior.
   unsigned KnownIDs[] = {LLVMContext::MD_annotation, LLVMContext::MD_range,
-                         LLVMContext::MD_nonnull, LLVMContext::MD_align};
+                         LLVMContext::MD_nonnull, LLVMContext::MD_align,
+                         LLVMContext::MD_MMRA};
   dropUBImplyingAttrsAndUnknownMetadata(KnownIDs);
 }
 
@@ -719,6 +721,16 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
   auto I1 = this;
   assert(I1->getOpcode() == I2->getOpcode() &&
          "Can not compare special state of different instructions");
+
+  // MMRAs may change semantics of an operation, e.g. make a fence only
+  // affect a given address space.
+  //
+  // FIXME: Not sure if this stinks or not. Maybe we should just look at
+  // all callers and make them check MMRAs.
+  // OTOH, MMRAs can really alter semantics so this is technically correct
+  // (the best kind of correct).
+  if (MMRAMetadata(*this) != MMRAMetadata(*I2))
+    return false;
 
   if (const AllocaInst *AI = dyn_cast<AllocaInst>(I1))
     return AI->getAllocatedType() == cast<AllocaInst>(I2)->getAllocatedType() &&
