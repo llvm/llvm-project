@@ -1600,6 +1600,9 @@ private:
   }
 
   void swapOutRingBuffer(AllocationRingBuffer *NewRB) {
+    // To allow resizeRingBuffer to be called in a multi-threaded context by apps,
+    // we do not actually unmap, but only madvise(DONTNEED) the pages. That way,
+    // straggler threads will not crash.
     AllocationRingBuffer *PrevRB = reinterpret_cast<AllocationRingBuffer *>(
         atomic_exchange(&RingBufferAddress, reinterpret_cast<uptr>(NewRB),
                         memory_order_acq_rel));
