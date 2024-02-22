@@ -9134,14 +9134,83 @@ bool SIInstrInfo::isAsmOnlyOpcode(int MCOp) const {
   }
 }
 
+bool SIInstrInfo::isRenamedInGFX9(int Opcode) const {
+  switch(Opcode) {
+    case AMDGPU::V_ADDC_U32_dpp:
+    case AMDGPU::V_ADDC_U32_e32:
+    case AMDGPU::V_ADDC_U32_e64:
+    case AMDGPU::V_ADDC_U32_e64_dpp:
+    case AMDGPU::V_ADDC_U32_sdwa: 
+    //
+    case AMDGPU::V_ADD_CO_U32_dpp:
+    case AMDGPU::V_ADD_CO_U32_e32:
+    case AMDGPU::V_ADD_CO_U32_e64:
+    case AMDGPU::V_ADD_CO_U32_e64_dpp:
+    case AMDGPU::V_ADD_CO_U32_sdwa:
+    //
+    case AMDGPU::V_ADD_U32_dpp:
+    case AMDGPU::V_ADD_U32_e32:
+    case AMDGPU::V_ADD_U32_e64:
+    case AMDGPU::V_ADD_U32_e64_dpp:
+    case AMDGPU::V_ADD_U32_sdwa:
+    //
+    case AMDGPU::V_DIV_FIXUP_F16_gfx9_e64:
+    case AMDGPU::V_FMA_F16_gfx9_e64:
+    case AMDGPU::V_INTERP_P2_F16:
+    case AMDGPU::V_MAD_F16_e64:
+    case AMDGPU::V_MAD_U16_e64:
+    case AMDGPU::V_MAD_I16_e64:
+    //
+    case AMDGPU::V_SUBBREV_U32_dpp:
+    case AMDGPU::V_SUBBREV_U32_e32:
+    case AMDGPU::V_SUBBREV_U32_e64:
+    case AMDGPU::V_SUBBREV_U32_e64_dpp:
+    case AMDGPU::V_SUBBREV_U32_sdwa:
+    //
+    case AMDGPU::V_SUBB_U32_dpp:    
+    case AMDGPU::V_SUBB_U32_e32:
+    case AMDGPU::V_SUBB_U32_e64:
+    case AMDGPU::V_SUBB_U32_e64_dpp:
+    case AMDGPU::V_SUBB_U32_sdwa:
+    //
+    case AMDGPU::V_SUBREV_CO_U32_dpp:
+    case AMDGPU::V_SUBREV_CO_U32_e32:
+    case AMDGPU::V_SUBREV_CO_U32_e64:
+    case AMDGPU::V_SUBREV_CO_U32_e64_dpp:
+    case AMDGPU::V_SUBREV_CO_U32_sdwa:
+    //
+    case AMDGPU::V_SUBREV_U32_dpp:
+    case AMDGPU::V_SUBREV_U32_e32:
+    case AMDGPU::V_SUBREV_U32_e64:
+    case AMDGPU::V_SUBREV_U32_e64_dpp:
+    case AMDGPU::V_SUBREV_U32_sdwa:
+    //
+    case AMDGPU::V_SUB_CO_U32_dpp:
+    case AMDGPU::V_SUB_CO_U32_e32:
+    case AMDGPU::V_SUB_CO_U32_e64:
+    case AMDGPU::V_SUB_CO_U32_e64_dpp:
+    case AMDGPU::V_SUB_CO_U32_sdwa:
+    //
+    case AMDGPU::V_SUB_U32_dpp:
+    case AMDGPU::V_SUB_U32_e32:
+    case AMDGPU::V_SUB_U32_e64:
+    case AMDGPU::V_SUB_U32_e64_dpp:
+    case AMDGPU::V_SUB_U32_sdwa:
+    return true;
+  default:
+    return false;
+  }
+}
+
 int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(Opcode);
 
   unsigned Gen = subtargetEncodingFamily(ST);
 
-  if ((get(Opcode).TSFlags & SIInstrFlags::renamedInGFX9) != 0 &&
-    ST.getGeneration() == AMDGPUSubtarget::GFX9)
+  if (isRenamedInGFX9(Opcode) &&
+    ST.getGeneration() == AMDGPUSubtarget::GFX9){
     Gen = SIEncodingFamily::GFX9;
+    }
 
   // Adjust the encoding family to GFX80 for D16 buffer instructions when the
   // subtarget has UnpackedD16VMem feature.
