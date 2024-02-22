@@ -49,6 +49,12 @@ cl::list<SPIRV::Extension::Extension> Extensions(
         clEnumValN(SPIRV::Extension::SPV_INTEL_optnone, "SPV_INTEL_optnone",
                    "Adds OptNoneINTEL value for Function Control mask that "
                    "indicates a request to not optimize the function."),
+        clEnumValN(SPIRV::Extension::SPV_INTEL_usm_storage_classes,
+                   "SPV_INTEL_usm_storage_classes",
+                   "Introduces two new storage classes that are sub classes of "
+                   "the CrossWorkgroup storage class "
+                   "that provides additional information that can enable "
+                   "optimization."),
         clEnumValN(SPIRV::Extension::SPV_INTEL_subgroups, "SPV_INTEL_subgroups",
                    "Allows work items in a subgroup to share data without the "
                    "use of local memory and work group barriers, and to "
