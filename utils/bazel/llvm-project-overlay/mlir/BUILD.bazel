@@ -5540,7 +5540,6 @@ cc_library(
         ":SCFDialect",
         ":SPIRVDialect",
         ":SPIRVTarget",
-        ":SerializeToCubin_stub",
         ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
@@ -5577,44 +5576,6 @@ cc_library(
         "@cuda//:cuda_headers",
         "@cuda//:libcuda",
     ]),
-)
-
-write_file(
-    name = "SerializeToCubin_stub_cc",
-    out = "SerializeToCubin_stub.cc",
-    content = [
-        """
-#include "mlir/Dialect/GPU/Transforms/Passes.h"
-
-// Provide a weak registration stub in case the real SerializeToCubin is not
-// linked in.
-
-#if defined(_MSC_VER)
-// This might not work correctly, but it avoids a compilation error because
-// MSVC does not support __attribute__((weak)).
-void mlir::registerGpuSerializeToCubinPass() {}
-#else
-__attribute__((weak)) void mlir::registerGpuSerializeToCubinPass() {}
-#endif
-""",
-    ],
-)
-
-cc_library(
-    name = "SerializeToCubin_stub",
-    srcs = [":SerializeToCubin_stub_cc"],
-    hdrs = glob(["include/mlir/Dialect/GPU/Transforms/*.h"]),
-    includes = ["include"],
-    deps = [
-        ":GPUDialect",
-        ":GPUPassIncGen",
-        ":IR",
-        ":Pass",
-        ":SPIRVDialect",
-        ":Support",
-        ":VectorDialect",
-        "//llvm:Support",
-    ],
 )
 
 td_library(
@@ -13192,7 +13153,6 @@ cc_library(
         "//llvm:Support",
     ],
 )
-
 
 ##---------------------------------------------------------------------------##
 # Allocation interfaces
