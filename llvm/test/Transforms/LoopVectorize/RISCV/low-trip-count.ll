@@ -74,4 +74,4 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-attributes #0 = { "target-features"="+v,+d" }
+attributes #0 = { "target-features"="+v,+d" vscale_range(2, 1024) }
