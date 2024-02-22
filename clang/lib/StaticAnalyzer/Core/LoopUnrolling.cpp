@@ -235,8 +235,8 @@ static bool isPossiblyEscaped(ExplodedNode *N, const DeclRefExpr *DR) {
     }
 
 
-    if (const SwitchStmt *SS = dyn_cast<SwitchStmt>(S)) {
-      if (const CompoundStmt *CST = dyn_cast<CompoundStmt>(SS->getBody())) {
+    if (const auto *SS = dyn_cast<SwitchStmt>(S)) {
+      if (const auto *CST = dyn_cast<CompoundStmt>(SS->getBody())) {
         for (const Stmt *CB : CST->body()) {
           if (isFoundInStmt(CB, VD))
             return false;
