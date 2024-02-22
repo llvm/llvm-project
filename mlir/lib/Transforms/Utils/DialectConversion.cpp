@@ -544,12 +544,8 @@ FailureOr<Block *> ArgConverter::convertSignature(
     Block *block, const TypeConverter *converter,
     ConversionValueMapping &mapping,
     SmallVectorImpl<BlockArgument> &argReplacements) {
-  // Check if the block was already converted.
-  // * If the block is mapped in `conversionInfo`, it is a converted block.
-  // * If the block is detached, conservatively assume that it is going to be
-  //   deleted; it is likely the old block (before it was converted).
-  if (conversionInfo.count(block) || !block->getParent())
-    return block;
+  assert(block->getParent() && "cannot convert signature of detached block");
+
   // If a converter wasn't provided, and the block wasn't already converted,
   // there is nothing we can do.
   if (!converter)
@@ -570,7 +566,7 @@ Block *ArgConverter::applySignatureConversion(
   // If no arguments are being changed or added, there is nothing to do.
   unsigned origArgCount = block->getNumArguments();
   auto convertedTypes = signatureConversion.getConvertedTypes();
-  if (origArgCount == 0 && convertedTypes.empty())
+  if (llvm::equal(block->getArgumentTypes(), convertedTypes))
     return block;
 
   // Split the block at the beginning to get a new block to use for the updated

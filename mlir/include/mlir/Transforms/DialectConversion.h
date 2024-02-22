@@ -663,6 +663,8 @@ public:
   /// Apply a signature conversion to the entry block of the given region. This
   /// replaces the entry block with a new block containing the updated
   /// signature. The new entry block to the region is returned for convenience.
+  /// If no block argument types are changing, the entry original block will be
+  /// left in place and returned.
   ///
   /// If provided, `converter` will be used for any materializations.
   Block *
@@ -671,8 +673,11 @@ public:
                            const TypeConverter *converter = nullptr);
 
   /// Convert the types of block arguments within the given region. This
-  /// replaces each block with a new block containing the updated signature. The
-  /// entry block may have a special conversion if `entryConversion` is
+  /// replaces each block with a new block containing the updated signature. If
+  /// an updated signature would match the current signature, the respective
+  /// block is left in place as is.
+  ///
+  /// The entry block may have a special conversion if `entryConversion` is
   /// provided. On success, the new entry block to the region is returned for
   /// convenience. Otherwise, failure is returned.
   FailureOr<Block *> convertRegionTypes(
@@ -681,7 +686,8 @@ public:
 
   /// Convert the types of block arguments within the given region except for
   /// the entry region. This replaces each non-entry block with a new block
-  /// containing the updated signature.
+  /// containing the updated signature. If an updated signature would match the
+  /// current signature, the respective block is left in place as is.
   ///
   /// If special conversion behavior is needed for the non-entry blocks (for
   /// example, we need to convert only a subset of a BB arguments), such
