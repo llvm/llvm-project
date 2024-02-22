@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -verify=expected %s
-// RUN: %clang_cc1 -std=c++11 -verify=expected %s
-// RUN: %clang_cc1 -std=c++14 -verify=expected %s
-// RUN: %clang_cc1 -std=c++17 -verify=expected %s
-// RUN: %clang_cc1 -std=c++20 -verify=expected %s
-// RUN: %clang_cc1 -std=c++23 -verify=expected,since-cxx23 %s
-// RUN: %clang_cc1 -std=c++2c -verify=expected,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -verify=expected,since-cxx23 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -verify=expected,since-cxx23,since-cxx26 %s
 
 #if __cplusplus <= 202002L
 // expected-no-diagnostics
