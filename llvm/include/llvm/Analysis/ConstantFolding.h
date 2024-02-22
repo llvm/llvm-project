@@ -24,7 +24,7 @@
 namespace llvm {
 
 namespace Intrinsic {
-typedef unsigned ID;
+using ID = unsigned;
 }
 
 class APInt;
@@ -192,7 +192,7 @@ Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                            const TargetLibraryInfo *TLI = nullptr);
 
 Constant *ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
-                                      Constant *RHS);
+                                      Constant *RHS, Type *Ty);
 
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to

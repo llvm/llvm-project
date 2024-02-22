@@ -921,10 +921,10 @@ CallInst *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
 Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
                                             Value *RHS, Instruction *FMFSource,
                                             const Twine &Name) {
-  if (auto *V = Folder.FoldBinaryIntrinsic(ID, LHS, RHS))
-    return V;
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getDeclaration(M, ID, { LHS->getType() });
+  if (auto *V = Folder.FoldBinaryIntrinsic(ID, LHS, RHS, Fn->getReturnType()))
+    return V;
   return createCallHelper(Fn, {LHS, RHS}, Name, FMFSource);
 }
 
