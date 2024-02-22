@@ -262,17 +262,33 @@ func.func @aligned_sitofp_2d(%a: vector<8x32xi4>) -> vector<8x32xf32> {
   return %0 : vector<8x32xf32>
 }
 
+// CHECK-LABEL: func.func @aligned_trunci(
+func.func @aligned_trunci(%a: vector<8xi32>) -> vector<8xi4> {
+// CHECK-SAME:    %[[IN:.*]]: vector<8xi32>) -> vector<8xi4> {
+// CHECK-DAG:       %[[LOW_MASK:.*]] = arith.constant dense<15> : vector<4xi8>
+// CHECK-DAG:       %[[I4_BITS:.*]] = arith.constant dense<4> : vector<4xi8>
+// CHECK:           %[[I8:.*]] = arith.trunci %[[IN]] : vector<8xi32> to vector<8xi8>
+// CHECK:           %[[LOW:.*]] = vector.shuffle %[[I8]], %[[I8]] [0, 2, 4, 6] : vector<8xi8>, vector<8xi8>
+// CHECK:           %[[HIGH:.*]] = vector.shuffle %[[I8]], %[[I8]] [1, 3, 5, 7] : vector<8xi8>, vector<8xi8>
+// CHECK:           %[[ZEROED_LOW:.*]] = arith.andi %[[LOW]], %[[LOW_MASK]] : vector<4xi8>
+// CHECK:           %[[SHL_HIGH:.*]] = arith.shli %[[HIGH]], %[[I4_BITS]] : vector<4xi8>
+// CHECK:           %[[MERGED:.*]] = arith.ori %[[ZEROED_LOW]], %[[SHL_HIGH]] : vector<4xi8>
+// CHECK:           %[[I4:.*]] = vector.bitcast %[[MERGED]] : vector<4xi8> to vector<8xi4>
+  %0 = arith.trunci %a : vector<8xi32> to vector<8xi4>
+  return %0 : vector<8xi4>
+}
+
 // CHECK-LABEL: func.func @aligned_trunci_base_case(
 func.func @aligned_trunci_base_case(%a: vector<8xi8>) -> vector<8xi4> {
-// CHECK-SAME:    %[[VAL_0:.*]]: vector<8xi8>) -> vector<8xi4> {
-// CHECK:           %[[VAL_1:.*]] = arith.constant dense<4> : vector<4xi8>
-// CHECK:           %[[VAL_2:.*]] = arith.constant dense<15> : vector<8xi8>
-// CHECK:           %[[VAL_3:.*]] = arith.andi %[[VAL_0]], %[[VAL_2]] : vector<8xi8>
-// CHECK:           %[[VAL_4:.*]] = vector.shuffle %[[VAL_3]], %[[VAL_3]] [0, 2, 4, 6] : vector<8xi8>, vector<8xi8>
-// CHECK:           %[[VAL_5:.*]] = vector.shuffle %[[VAL_3]], %[[VAL_3]] [1, 3, 5, 7] : vector<8xi8>, vector<8xi8>
-// CHECK:           %[[VAL_6:.*]] = arith.shli %[[VAL_5]], %[[VAL_1]] : vector<4xi8>
-// CHECK:           %[[VAL_7:.*]] = arith.ori %[[VAL_6]], %[[VAL_4]] : vector<4xi8>
-// CHECK:           %[[VAL_8:.*]] = vector.bitcast %[[VAL_7]] : vector<4xi8> to vector<8xi4>
+// CHECK-SAME:    %[[IN:.*]]: vector<8xi8>) -> vector<8xi4> {
+// CHECK:           %[[LOW_MASK:.*]] = arith.constant dense<15> : vector<4xi8>
+// CHECK:           %[[I4_BITS:.*]] = arith.constant dense<4> : vector<4xi8>
+// CHECK:           %[[LOW:.*]] = vector.shuffle %[[IN]], %[[IN]] [0, 2, 4, 6] : vector<8xi8>, vector<8xi8>
+// CHECK:           %[[HIGH:.*]] = vector.shuffle %[[IN]], %[[IN]] [1, 3, 5, 7] : vector<8xi8>, vector<8xi8>
+// CHECK:           %[[ZEROED_LOW:.*]] = arith.andi %[[LOW]], %[[LOW_MASK]] : vector<4xi8>
+// CHECK:           %[[SHL_HIGH:.*]] = arith.shli %[[HIGH]], %[[I4_BITS]] : vector<4xi8>
+// CHECK:           %[[MERGED:.*]] = arith.ori %[[ZEROED_LOW]], %[[SHL_HIGH]] : vector<4xi8>
+// CHECK:           %[[I4:.*]] = vector.bitcast %[[MERGED]] : vector<4xi8> to vector<8xi4>
   %0 = arith.trunci %a : vector<8xi8> to vector<8xi4>
   return %0 : vector<8xi4>
 }

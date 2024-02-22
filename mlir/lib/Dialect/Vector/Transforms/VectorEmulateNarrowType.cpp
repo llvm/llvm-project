@@ -903,21 +903,21 @@ static Value rewriteI8ToI4Trunc(PatternRewriter &rewriter, Location loc,
       loc, srcValue, srcValue,
       rewriter.getI64ArrayAttr(deinterleaveHighMaskValues));
 
-  // 2. Move high i4 values to upper side of the byte.
-  constexpr int8_t bitsToShift = 4;
-  VectorType deinterI8VecType = highShuffleOp.getResultVectorType();
-  auto shiftValues = rewriter.create<arith::ConstantOp>(
-      loc, DenseElementsAttr::get(deinterI8VecType, bitsToShift));
-  Value shlHigh =
-      rewriter.create<arith::ShLIOp>(loc, highShuffleOp, shiftValues);
-
-  // 3. Zero out the upper side of each low i8 element.
+  // 2. Zero out the upper side of each low i8 element.
   constexpr int8_t i8LowBitMask = 0x0F;
   Value zeroOutMask = rewriter.create<arith::ConstantOp>(
       loc,
       DenseElementsAttr::get(lowShuffleOp.getResultVectorType(), i8LowBitMask));
   Value zeroOutLow =
       rewriter.create<arith::AndIOp>(loc, lowShuffleOp, zeroOutMask);
+
+  // 3. Move high i4 values to upper side of the byte.
+  constexpr int8_t bitsToShift = 4;
+  VectorType deinterI8VecType = highShuffleOp.getResultVectorType();
+  auto shiftValues = rewriter.create<arith::ConstantOp>(
+      loc, DenseElementsAttr::get(deinterI8VecType, bitsToShift));
+  Value shlHigh =
+      rewriter.create<arith::ShLIOp>(loc, highShuffleOp, shiftValues);
 
   // 4. Merge high and low i4 values.
   auto mergedHiLowOp = rewriter.create<arith::OrIOp>(loc, shlHigh, zeroOutLow);
@@ -1100,23 +1100,18 @@ struct RewriteAlignedSubByteIntSignedExt : OpRewritePattern<ConversionOpType> {
 /// LLVM to scramble with peephole optimizations.
 ///
 /// For example:
-///    arith.extsi %in : vector<8xi4> to vector<8xi32>
+///    arith.trunci %in : vector<8xi32> to vector<8xi4>
 ///      is rewriten as
-///        %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
-///        %1 = arith.shli %0, 4 : vector<4xi8>
-///        %2 = arith.shrsi %1, 4 : vector<4xi8>
-///        %3 = arith.shrsi %0, 4 : vector<4xi8>
-///        %4 = vector.interleave %2, %3 : vector<4xi8>
-///        %5 = arith.extsi %4 : vector<8xi8> to vector<8xi32>
 ///
-///    arith.sitofp %in : vector<8xi4> to vector<8xf32>
-///      is rewriten as
-///        %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
-///        %1 = arith.shli %0, 4 : vector<4xi8>
-///        %2 = arith.shrsi %1, 4 : vector<4xi8>
-///        %3 = arith.shrsi %0, 4 : vector<4xi8>
-///        %4 = vector.interleave %2, %3 : vector<4xi8>
-///        %5 = arith.sitofp %4 : vector<8xi8> to vector<8xf32>
+///        %cst = arith.constant dense<15> : vector<4xi8>
+///        %cst_0 = arith.constant dense<4> : vector<4xi8>
+///        %0 = arith.trunci %in : vector<8xi32> to vector<8xi8>
+///        %1 = vector.shuffle %0, %0 [0, 2, 4, 6] : vector<8xi8>, vector<8xi8>
+///        %2 = vector.shuffle %0, %0 [1, 3, 5, 7] : vector<8xi8>, vector<8xi8>
+///        %3 = arith.andi %1, %cst : vector<4xi8>
+///        %4 = arith.shli %2, %cst_0 : vector<4xi8>
+///        %5 = arith.ori %3, %4 : vector<4xi8>
+///        %6 = vector.bitcast %5 : vector<4xi8> to vector<8xi4>
 ///
 struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
   using OpRewritePattern<arith::TruncIOp>::OpRewritePattern;
