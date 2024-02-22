@@ -438,6 +438,7 @@ lltok::Kind LLLexer::LexCaret() {
 
 /// Lex all tokens that start with a # character.
 ///    AttrGrpID ::= #[0-9]+
+///    Hash ::= #
 lltok::Kind LLLexer::LexHash() {
   // Handle AttrGrpID: #[0-9]+
   if (isdigit(static_cast<unsigned char>(CurPtr[0])))

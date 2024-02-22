@@ -6500,10 +6500,8 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
 }
 
 /// parseDebugProgramValue
-///   ::= #dbg_Type '{' (ValueAsMetadata|DIArgList|MDNode) ',' MetadataID ','
-///   DIExpression ','
-///   (DIAssignID',' (ValueAsMetadata|MDNode)',' DIExpression] ',')?
-///   DILocation '}'
+///   ::= #dbg_type '(' Metadata ',' MDNode ',' Metadata ','
+///                 (MDNode ',' Metadata ',' Metadata ',')? MDNode ')'
 bool LLParser::parseDebugProgramValue(DPValue *&DPV, PerFunctionState &PFS) {
   using LocType = DPValue::LocationType;
   LocTy DPVLoc = Lex.getLoc();
