@@ -201,12 +201,12 @@ struct Value_bind {
 
 inline Value_bind m_Value(SDValue &N) { return Value_bind(N); }
 
-template <typename Pattern> struct TLI_pred_match {
+template <typename Pattern, typename PredFuncT> struct TLI_pred_match {
   Pattern P;
-  std::function<bool(const TargetLowering &, SDValue)> PredFunc;
+  PredFuncT PredFunc;
 
-  TLI_pred_match(decltype(PredFunc) &&Pred, const Pattern &P)
-      : P(P), PredFunc(std::move(Pred)) {}
+  TLI_pred_match(const PredFuncT &Pred, const Pattern &P)
+      : P(P), PredFunc(Pred) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
@@ -215,14 +215,18 @@ template <typename Pattern> struct TLI_pred_match {
   }
 };
 
+// Explicit deduction guide.
+template <typename PredFuncT, typename Pattern>
+TLI_pred_match(const PredFuncT &Pred, const Pattern &P)
+    -> TLI_pred_match<Pattern, PredFuncT>;
+
 /// Match legal SDNodes based on the information provided by TargetLowering.
-template <typename Pattern>
-inline TLI_pred_match<Pattern> m_LegalOp(const Pattern &P) {
-  return TLI_pred_match<Pattern>(
-      [](const TargetLowering &TLI, SDValue N) {
-        return TLI.isOperationLegal(N->getOpcode(), N.getValueType());
-      },
-      P);
+template <typename Pattern> inline auto m_LegalOp(const Pattern &P) {
+  return TLI_pred_match{[](const TargetLowering &TLI, SDValue N) {
+                          return TLI.isOperationLegal(N->getOpcode(),
+                                                      N.getValueType());
+                        },
+                        P};
 }
 
 /// Switch to a different MatchContext for subsequent patterns.
@@ -331,13 +335,11 @@ inline auto m_ScalableVectorVT() {
 }
 
 /// Match legal ValueTypes based on the information provided by TargetLowering.
-template <typename Pattern>
-inline TLI_pred_match<Pattern> m_LegalType(const Pattern &P) {
-  return TLI_pred_match<Pattern>(
-      [](const TargetLowering &TLI, SDValue N) {
-        return TLI.isTypeLegal(N.getValueType());
-      },
-      P);
+template <typename Pattern> inline auto m_LegalType(const Pattern &P) {
+  return TLI_pred_match{[](const TargetLowering &TLI, SDValue N) {
+                          return TLI.isTypeLegal(N.getValueType());
+                        },
+                        P};
 }
 
 // === Patterns combinators ===
@@ -387,47 +389,29 @@ template <typename... Preds> Or<Preds...> m_AnyOf(Preds &&...preds) {
 }
 
 // === Generic node matching ===
-template <typename... OpndPreds> struct Node_match {
-  unsigned Opcode;
-  unsigned OpIdx;
-
-  Node_match(unsigned Opc, unsigned OpIdx) : Opcode(Opc), OpIdx(OpIdx) {}
-
+template <unsigned OpIdx, typename... OpndPreds> struct Operands_match {
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (OpIdx == 0) {
-      // Check opcode
-      if (!sd_context_match(N, Ctx, m_Opc(Opcode)))
-        return false;
-    }
-
     // Returns false if there are more operands than predicates;
     return N->getNumOperands() == OpIdx;
   }
 };
 
-template <typename OpndPred, typename... OpndPreds>
-struct Node_match<OpndPred, OpndPreds...> : Node_match<OpndPreds...> {
-  unsigned Opcode;
-  unsigned OpIdx;
+template <unsigned OpIdx, typename OpndPred, typename... OpndPreds>
+struct Operands_match<OpIdx, OpndPred, OpndPreds...>
+    : Operands_match<OpIdx + 1, OpndPreds...> {
   OpndPred P;
 
-  Node_match(unsigned Opc, unsigned OpIdx, OpndPred &&p, OpndPreds &&...preds)
-      : Node_match<OpndPreds...>(Opc, OpIdx + 1,
-                                 std::forward<OpndPreds>(preds)...),
-        Opcode(Opc), OpIdx(OpIdx), P(std::forward<OpndPred>(p)) {}
+  Operands_match(OpndPred &&p, OpndPreds &&...preds)
+      : Operands_match<OpIdx + 1, OpndPreds...>(
+            std::forward<OpndPreds>(preds)...),
+        P(std::forward<OpndPred>(p)) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (OpIdx == 0) {
-      // Check opcode
-      if (!sd_context_match(N, Ctx, m_Opc(Opcode)))
-        return false;
-    }
-
     if (OpIdx < N->getNumOperands())
       return P.match(Ctx, N->getOperand(OpIdx)) &&
-             Node_match<OpndPreds...>::match(Ctx, N);
+             Operands_match<OpIdx + 1, OpndPreds...>::match(Ctx, N);
 
     // This is the case where there are more predicates than operands.
     return false;
@@ -435,8 +419,9 @@ struct Node_match<OpndPred, OpndPreds...> : Node_match<OpndPreds...> {
 };
 
 template <typename... OpndPreds>
-Node_match<OpndPreds...> m_Node(unsigned Opcode, OpndPreds &&...preds) {
-  return Node_match<OpndPreds...>(Opcode, 0, std::forward<OpndPreds>(preds)...);
+auto m_Node(unsigned Opcode, OpndPreds &&...preds) {
+  return m_AllOf(m_Opc(Opcode), Operands_match<0, OpndPreds...>(
+                                    std::forward<OpndPreds>(preds)...));
 }
 
 /// Provide number of operands that are not chain or glue, as well as the first
@@ -448,14 +433,14 @@ template <bool ExcludeChain> struct EffectiveOperands {
   explicit EffectiveOperands(SDValue N) {
     const unsigned TotalNumOps = N->getNumOperands();
     FirstIndex = TotalNumOps;
-    for (unsigned i = 0; i < TotalNumOps; ++i) {
+    for (unsigned I = 0; I < TotalNumOps; ++I) {
       // Count the number of non-chain and non-glue nodes (we ignore chain
       // and glue by default) and retreive the operand index offset.
-      EVT VT = N->getOperand(i).getValueType();
+      EVT VT = N->getOperand(I).getValueType();
       if (VT != MVT::Glue && VT != MVT::Other) {
         ++Size;
         if (FirstIndex == TotalNumOps)
-          FirstIndex = i;
+          FirstIndex = I;
       }
     }
   }
@@ -689,8 +674,8 @@ inline SpecificInt_match m_AllOnes() { return m_SpecificInt(~0U); }
 
 /// Match true boolean value based on the information provided by
 /// TargetLowering.
-inline TLI_pred_match<Value_match> m_True() {
-  return TLI_pred_match<Value_match>(
+inline auto m_True() {
+  return TLI_pred_match{
       [](const TargetLowering &TLI, SDValue N) {
         APInt ConstVal;
         if (sd_match(N, m_ConstInt(ConstVal)))
@@ -705,12 +690,12 @@ inline TLI_pred_match<Value_match> m_True() {
 
         return false;
       },
-      m_Value());
+      m_Value()};
 }
 /// Match false boolean value based on the information provided by
 /// TargetLowering.
-inline TLI_pred_match<Value_match> m_False() {
-  return TLI_pred_match<Value_match>(
+inline auto m_False() {
+  return TLI_pred_match{
       [](const TargetLowering &TLI, SDValue N) {
         APInt ConstVal;
         if (sd_match(N, m_ConstInt(ConstVal)))
@@ -724,7 +709,7 @@ inline TLI_pred_match<Value_match> m_False() {
 
         return false;
       },
-      m_Value());
+      m_Value()};
 }
 } // namespace SDPatternMatch
 } // namespace llvm
