@@ -493,7 +493,13 @@ protected:
       result.AppendError(error.AsCString());
 
     }
+    VariableSP var_sp;
     ValueObjectSP valobj_sp;
+    // Temporary variable, used to control whether to use DIL parser/evaluator
+    // or not for 'frame variable' command.
+    TargetSP target_sp = frame->CalculateTarget();
+    // bool use_DIL = target_sp->GetUseDIL(&m_exe_ctx);
+    bool use_DIL = true;
 
     TypeSummaryImplSP summary_format_sp;
     if (!m_option_variable.summary.IsCurrentValueEmpty())
@@ -568,15 +574,23 @@ protected:
           } else // No regex, either exact variable names or variable
                  // expressions.
           {
-            Status error;
+            Status error, error2;
             uint32_t expr_path_options =
                 StackFrame::eExpressionPathOptionCheckPtrVsMember |
                 StackFrame::eExpressionPathOptionsAllowDirectIVarAccess |
                 StackFrame::eExpressionPathOptionsInspectAnonymousUnions;
             lldb::VariableSP var_sp;
-            valobj_sp = frame->GetValueForVariableExpressionPath(
-                entry.ref(), m_varobj_options.use_dynamic, expr_path_options,
-                var_sp, error);
+            if (use_DIL) {
+              // Use the DIL parser/evaluator.
+              valobj_sp = frame->DILEvaluateVariableExpression(
+                  entry.ref(), m_varobj_options.use_dynamic, expr_path_options,
+                  var_sp, error);
+            } else {
+              // Original 'frame variable' execution path
+              valobj_sp = frame->GetValueForVariableExpressionPath(
+                  entry.ref(), m_varobj_options.use_dynamic, expr_path_options,
+                  var_sp, error);
+            }
             if (valobj_sp) {
               std::string scope_string;
               if (m_option_variable.show_scope)
@@ -614,7 +628,7 @@ protected:
         const size_t num_variables = variable_list->GetSize();
         if (num_variables > 0) {
           for (size_t i = 0; i < num_variables; i++) {
-            VariableSP var_sp = variable_list->GetVariableAtIndex(i);
+            var_sp = variable_list->GetVariableAtIndex(i);
             if (!ScopeRequested(var_sp->GetScope()))
                 continue;
             std::string scope_string;

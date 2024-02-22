@@ -8,6 +8,8 @@
 
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/DILEval.h"
+#include "lldb/Core/DILParser.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Mangled.h"
@@ -503,6 +505,48 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
   }
 
   return var_list_sp;
+}
+
+ValueObjectSP StackFrame::DILEvaluateVariableExpression(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error)
+{
+  ValueObjectSP ret_val;
+  auto source = DILSourceManager::Create(var_expr.data());
+
+  const bool check_ptr_vs_member =
+      (options & eExpressionPathOptionCheckPtrVsMember) != 0;
+  const bool no_fragile_ivar =
+      (options & eExpressionPathOptionsNoFragileObjcIvar) != 0;
+  const bool no_synth_child =
+      (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
+
+  // Parse the expression.
+  Status parse_error, eval_error;
+  DILParser parser(source, shared_from_this(), use_dynamic, !no_synth_child);
+  ParseResult tree = parser.Run(parse_error);
+  if (parse_error.Fail()) {
+    error = parse_error;
+    return ValueObjectSP();
+  }
+
+  // Evaluate the parsed expression.
+  lldb::TargetSP target = this->CalculateTarget();
+  DILInterpreter interpreter(target, source, use_dynamic);
+
+  ret_val = interpreter.DILEval(tree.get(), target, eval_error);
+  if (eval_error.Fail()) {
+    error = eval_error;
+    return ValueObjectSP();
+  }
+
+  if (ret_val) {
+    var_sp = ret_val->GetVariable();
+    if (!var_sp && ret_val->GetParent()) {
+      var_sp = ret_val->GetParent()->GetVariable();
+    }
+  }
+  return ret_val;
 }
 
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(

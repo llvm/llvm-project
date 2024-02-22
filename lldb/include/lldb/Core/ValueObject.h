@@ -441,6 +441,19 @@ public:
 
   virtual int64_t GetValueAsSigned(int64_t fail_value, bool *success = nullptr);
 
+  llvm::APSInt GetValueAsAPSInt();
+
+  llvm::APFloat GetValueAsFloat();
+
+  bool GetValueAsBool();
+
+  /// Update the value of the current object to be the integer in the 'value'
+  /// parameter.
+  void UpdateIntegerValue(const llvm::APInt &value);
+
+  /// Assign the integer value 'new_val_sp' to the current object.
+  void UpdateIntegerValue(lldb::ValueObjectSP new_val_sp);
+
   virtual bool SetValueFromCString(const char *value_str, Status &error);
 
   /// Return the module associated with this value object in case the value is
@@ -618,6 +631,24 @@ public:
   virtual lldb::ValueObjectSP CastPointerType(const char *name,
                                               lldb::TypeSP &type_sp);
 
+  /// Return the target load address assocaited with this value object.
+  lldb::addr_t GetLoadAddress();
+
+  lldb::ValueObjectSP CastDerivedToBaseType(CompilerType type,
+                                            const std::vector<uint32_t> &idx);
+
+  lldb::ValueObjectSP CastBaseToDerivedType(CompilerType type, uint64_t offset);
+
+  lldb::ValueObjectSP CastScalarToBasicType(CompilerType type, Status &error);
+
+  lldb::ValueObjectSP CastEnumToBasicType(CompilerType type);
+
+  lldb::ValueObjectSP CastPointerToBasicType(CompilerType type);
+
+  lldb::ValueObjectSP CastIntegerOrEnumToEnumType(CompilerType type);
+
+  lldb::ValueObjectSP CastFloatToEnumType(CompilerType type, Status &error);
+
   /// If this object represents a C++ class with a vtable, return an object
   /// that represents the virtual function table. If the object isn't a class
   /// with a vtable, return a valid ValueObject with the error set correctly.
@@ -667,6 +698,32 @@ public:
   static lldb::ValueObjectSP
   CreateValueObjectFromData(llvm::StringRef name, const DataExtractor &data,
                             const ExecutionContext &exe_ctx, CompilerType type);
+
+  static lldb::ValueObjectSP
+  CreateValueObjectFromBytes(lldb::TargetSP target_sp, const void *bytes,
+                             CompilerType type);
+
+  static lldb::ValueObjectSP CreateValueObjectFromBytes(lldb::TargetSP target,
+                                                        const void *bytes,
+                                                        lldb::BasicType type);
+
+  static lldb::ValueObjectSP CreateValueObjectFromAPInt(lldb::TargetSP target,
+                                                        const llvm::APInt &v,
+                                                        CompilerType type);
+
+  static lldb::ValueObjectSP
+  CreateValueObjectFromAPFloat(lldb::TargetSP target, const llvm::APFloat &v,
+                               CompilerType type);
+
+  static lldb::ValueObjectSP CreateValueObjectFromPointer(lldb::TargetSP target,
+                                                          uintptr_t addr,
+                                                          CompilerType type);
+
+  static lldb::ValueObjectSP CreateValueObjectFromBool(lldb::TargetSP target,
+                                                       bool value);
+
+  static lldb::ValueObjectSP CreateValueObjectFromNullptr(lldb::TargetSP target,
+                                                          CompilerType type);
 
   lldb::ValueObjectSP Persist();
 
@@ -718,6 +775,10 @@ public:
     m_type_summary_sp = std::move(format);
     ClearUserVisibleData(eClearUserVisibleDataItemsSummary);
   }
+
+  void SetDerefValobj(ValueObject *deref) { m_deref_valobj = deref; }
+
+  ValueObject *GetDerefValobj() { return m_deref_valobj; }
 
   void SetValueFormat(lldb::TypeFormatImplSP format) {
     m_type_format_sp = std::move(format);
