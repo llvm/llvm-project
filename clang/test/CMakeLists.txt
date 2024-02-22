@@ -144,6 +144,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-strip
     llvm-symbolizer
     llvm-windres
+    obj2yaml
     opt
     split-file
     yaml2obj
