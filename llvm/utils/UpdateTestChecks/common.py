@@ -387,27 +387,37 @@ def itertests(
             )
 
 
+# Returns a tuple of two bools, where the first value indicates whether the line should be added to the output, and the second indicates whether the line is a CHECK line
 def should_add_line_to_output(
-    input_line, prefix_set, skip_global_checks=False, comment_marker=";"
+    input_line,
+    prefix_set,
+    skip_global_checks=False,
+    skip_same_checks=False,
+    comment_marker=";",
 ):
     # Skip any blank comment lines in the IR.
     if not skip_global_checks and input_line.strip() == comment_marker:
-        return False
+        return False, False
     # Skip a special double comment line we use as a separator.
     if input_line.strip() == comment_marker + SEPARATOR:
-        return False
+        return False, False
     # Skip any blank lines in the IR.
     # if input_line.strip() == '':
     #  return False
     # And skip any CHECK lines. We're building our own.
     m = CHECK_RE.match(input_line)
     if m and m.group(1) in prefix_set:
+        if skip_same_checks and CHECK_SAME_RE.match(input_line):
+            # The previous CHECK line was removed, so don't leave this dangling
+            return False, True
         if skip_global_checks:
+            # Skip checks only if they are of global value definitions
             global_ir_value_re = re.compile(r"(\[\[|@)", flags=(re.M))
-            return not global_ir_value_re.search(input_line)
-        return False
+            is_global = global_ir_value_re.search(input_line)
+            return not is_global, True
+        return False, True
 
-    return True
+    return True, False
 
 
 # Perform lit-like substitutions
@@ -483,6 +493,7 @@ PREFIX_RE = re.compile("^[a-zA-Z0-9_-]+$")
 CHECK_RE = re.compile(
     r"^\s*(?://|[;#])\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL|-SAME|-EMPTY)?:"
 )
+CHECK_SAME_RE = re.compile(r"^\s*(?://|[;#])\s*([^:]+?)(?:-SAME)?:")
 
 UTC_ARGS_KEY = "UTC_ARGS:"
 UTC_ARGS_CMD = re.compile(r".*" + UTC_ARGS_KEY + r"\s*(?P<cmd>.*)\s*$")
