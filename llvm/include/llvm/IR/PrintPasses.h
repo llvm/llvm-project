@@ -94,8 +94,8 @@ public:
 };
 
 template <typename T>
-ScopedDbgInfoFormatSetter(T &Obj,
-                          bool NewState) -> ScopedDbgInfoFormatSetter<T>;
+ScopedDbgInfoFormatSetter(T &Obj, bool NewState)
+    -> ScopedDbgInfoFormatSetter<T>;
 
 } // namespace llvm
 
