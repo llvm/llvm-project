@@ -290,3 +290,68 @@ if.end:
   %phi = phi i64 [%val, %bb1], [0, %entry]
   ret i64 %phi
 }
+
+define i8 @test_smax_to_umax_nneg(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_smax_to_umax_nneg(
+; CHECK-NEXT:    [[NNEG_A:%.*]] = and i8 [[A:%.*]], 127
+; CHECK-NEXT:    [[NNEG_B:%.*]] = and i8 [[B:%.*]], 127
+; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.smax.i8(i8 [[NNEG_A]], i8 [[NNEG_B]])
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %nneg_a = and i8 %a, 127
+  %nneg_b = and i8 %b, 127
+  %ret = call i8 @llvm.smax.i8(i8 %nneg_a, i8 %nneg_b)
+  ret i8 %ret
+}
+
+define i8 @test_smax_to_umax_neg(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_smax_to_umax_neg(
+; CHECK-NEXT:    [[NEG_A:%.*]] = or i8 [[A:%.*]], -128
+; CHECK-NEXT:    [[NEG_B:%.*]] = or i8 [[B:%.*]], -128
+; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.smax.i8(i8 [[NEG_A]], i8 [[NEG_B]])
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %neg_a = or i8 %a, 128
+  %neg_b = or i8 %b, 128
+  %ret = call i8 @llvm.smax.i8(i8 %neg_a, i8 %neg_b)
+  ret i8 %ret
+}
+
+define i8 @test_smin_to_umin_nneg(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_smin_to_umin_nneg(
+; CHECK-NEXT:    [[NNEG_A:%.*]] = and i8 [[A:%.*]], 127
+; CHECK-NEXT:    [[NNEG_B:%.*]] = and i8 [[B:%.*]], 127
+; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.smin.i8(i8 [[NNEG_A]], i8 [[NNEG_B]])
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %nneg_a = and i8 %a, 127
+  %nneg_b = and i8 %b, 127
+  %ret = call i8 @llvm.smin.i8(i8 %nneg_a, i8 %nneg_b)
+  ret i8 %ret
+}
+
+define i8 @test_smin_to_umin_neg(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_smin_to_umin_neg(
+; CHECK-NEXT:    [[NEG_A:%.*]] = or i8 [[A:%.*]], -128
+; CHECK-NEXT:    [[NEG_B:%.*]] = or i8 [[B:%.*]], -128
+; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.smin.i8(i8 [[NEG_A]], i8 [[NEG_B]])
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %neg_a = or i8 %a, 128
+  %neg_b = or i8 %b, 128
+  %ret = call i8 @llvm.smin.i8(i8 %neg_a, i8 %neg_b)
+  ret i8 %ret
+}
+
+define i8 @test_umax_nneg(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_umax_nneg(
+; CHECK-NEXT:    [[NNEG_A:%.*]] = and i8 [[A:%.*]], 127
+; CHECK-NEXT:    [[NNEG_B:%.*]] = and i8 [[B:%.*]], 127
+; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.umax.i8(i8 [[NNEG_A]], i8 [[NNEG_B]])
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %nneg_a = and i8 %a, 127
+  %nneg_b = and i8 %b, 127
+  %ret = call i8 @llvm.umax.i8(i8 %nneg_a, i8 %nneg_b)
+  ret i8 %ret
+}
