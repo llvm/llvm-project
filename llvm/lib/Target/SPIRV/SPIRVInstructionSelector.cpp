@@ -828,8 +828,18 @@ static bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
   }
 }
 
+static bool isUSMStorageClass(SPIRV::StorageClass::StorageClass SC) {
+  switch (SC) {
+  case SPIRV::StorageClass::DeviceOnlyINTEL:
+  case SPIRV::StorageClass::HostOnlyINTEL:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // In SPIR-V address space casting can only happen to and from the Generic
-// storage class. We can also only case Workgroup, CrossWorkgroup, or Function
+// storage class. We can also only cast Workgroup, CrossWorkgroup, or Function
 // pointers to and from Generic pointers. As such, we can convert e.g. from
 // Workgroup to Function by going via a Generic pointer as an intermediary. All
 // other combinations can only be done by a bitcast, and are probably not safe.
@@ -862,13 +872,17 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
   SPIRV::StorageClass::StorageClass SrcSC = GR.getPointerStorageClass(SrcPtr);
   SPIRV::StorageClass::StorageClass DstSC = GR.getPointerStorageClass(ResVReg);
 
-  // Casting from an eligable pointer to Generic.
+  // don't generate a cast between identical storage classes
+  if (SrcSC == DstSC)
+    return true;
+
+  // Casting from an eligible pointer to Generic.
   if (DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC))
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpPtrCastToGeneric);
-  // Casting from Generic to an eligable pointer.
+  // Casting from Generic to an eligible pointer.
   if (SrcSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(DstSC))
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpGenericCastToPtr);
-  // Casting between 2 eligable pointers using Generic as an intermediary.
+  // Casting between 2 eligible pointers using Generic as an intermediary.
   if (isGenericCastablePtr(SrcSC) && isGenericCastablePtr(DstSC)) {
     Register Tmp = MRI->createVirtualRegister(&SPIRV::IDRegClass);
     SPIRVType *GenericPtrTy = GR.getOrCreateSPIRVPointerType(
@@ -886,6 +900,16 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
                           .addUse(Tmp)
                           .constrainAllUses(TII, TRI, RBI);
   }
+
+  // Check if instructions from the SPV_INTEL_usm_storage_classes extension may
+  // be applied
+  if (isUSMStorageClass(SrcSC) && DstSC == SPIRV::StorageClass::CrossWorkgroup)
+    return selectUnOp(ResVReg, ResType, I,
+                      SPIRV::OpPtrCastToCrossWorkgroupINTEL);
+  if (SrcSC == SPIRV::StorageClass::CrossWorkgroup && isUSMStorageClass(DstSC))
+    return selectUnOp(ResVReg, ResType, I,
+                      SPIRV::OpCrossWorkgroupCastToPtrINTEL);
+
   // TODO Should this case just be disallowed completely?
   // We're casting 2 other arbitrary address spaces, so have to bitcast.
   return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
@@ -1545,7 +1569,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   }
   SPIRVType *ResType = GR.getOrCreateSPIRVPointerType(
       PointerBaseType, I, TII,
-      addressSpaceToStorageClass(GV->getAddressSpace()));
+      addressSpaceToStorageClass(GV->getAddressSpace(), STI));
 
   std::string GlobalIdent;
   if (!GV->hasName()) {
@@ -1618,7 +1642,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
 
   unsigned AddrSpace = GV->getAddressSpace();
   SPIRV::StorageClass::StorageClass Storage =
-      addressSpaceToStorageClass(AddrSpace);
+      addressSpaceToStorageClass(AddrSpace, STI);
   bool HasLnkTy = GV->getLinkage() != GlobalValue::InternalLinkage &&
                   Storage != SPIRV::StorageClass::Function;
   SPIRV::LinkageType::LinkageType LnkType =

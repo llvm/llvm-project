@@ -27,6 +27,7 @@ class MachineRegisterInfo;
 class Register;
 class StringRef;
 class SPIRVInstrInfo;
+class SPIRVSubtarget;
 
 // Add the given string as a series of integer operand, inserting null
 // terminators and padding to make sure the operands all have 32-bit
@@ -62,7 +63,7 @@ unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC);
 
 // Convert an LLVM IR address space to a SPIR-V storage class.
 SPIRV::StorageClass::StorageClass
-addressSpaceToStorageClass(unsigned AddrSpace);
+addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI);
 
 SPIRV::MemorySemantics::MemorySemantics
 getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC);

@@ -709,7 +709,10 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     // TODO: change the implementation once opaque pointers are supported
     // in the SPIR-V specification.
     SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
-    auto SC = addressSpaceToStorageClass(PType->getAddressSpace());
+    // Get access to information about available extensions
+    const SPIRVSubtarget *ST =
+        static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+    auto SC = addressSpaceToStorageClass(PType->getAddressSpace(), *ST);
     // Null pointer means we have a loop in type definitions, make and
     // return corresponding OpTypeForwardPointer.
     if (SpvElementType == nullptr) {
