@@ -1387,13 +1387,13 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     } else {
       // We increase the template depth before recursing into a requires-clause.
       //
-      // This depth is used for setting up a LambdaScopeInfo (at
-      // Sema::RecordParsingTemplateParameterDepth), which participates in the
-      // invented template parameters later at InventTemplateParameter.
+      // This depth is used for setting up a LambdaScopeInfo (in
+      // Sema::RecordParsingTemplateParameterDepth), which is used later when
+      // inventing template parameters in InventTemplateParameter.
       //
       // This way, abbreviated generic lambdas could have different template
-      // depths, avoiding substitution into wrong template parameters during the
-      // satisfaction check.
+      // depths, avoiding substitution into the wrong template parameters during
+      // constraint satisfaction check.
       ++CurTemplateDepthTracker;
       ExprResult RequiresClause;
       if (TryConsumeToken(tok::kw_requires)) {
