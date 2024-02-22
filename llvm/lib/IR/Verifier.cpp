@@ -545,6 +545,7 @@ private:
   void visit(DPValue &DPV);
   // InstVisitor overrides...
   using InstVisitor<Verifier>::visit;
+  void visitDbgRecords(Instruction &I);
   void visit(Instruction &I);
 
   void visitTruncInst(TruncInst &I);
@@ -670,9 +671,19 @@ private:
     }                                                                          \
   } while (false)
 
-void Verifier::visit(Instruction &I) {
-  for (auto &DPV : I.getDbgValueRange())
+void Verifier::visitDbgRecords(Instruction &I) {
+  if (!I.DbgMarker)
+    return;
+  CheckDI(I.DbgMarker->MarkedInstr == &I, "Instruction has invalid DbgMarker", &I);
+  CheckDI(!isa<PHINode>(&I) || !I.hasDbgValues(), "PHI Node must not have any attached DbgRecords", &I);
+  for (auto &DPV : I.getDbgValueRange()) {
+    CheckDI(DPV.getMarker() == I.DbgMarker, "DbgRecord had invalid DbgMarker", &I, &DPV);
     visit(DPV);
+  }
+}
+
+void Verifier::visit(Instruction &I) {
+  visitDbgRecords(I);
   for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i)
     Check(I.getOperand(i) != nullptr, "Operand is null", &I);
   InstVisitor<Verifier>::visit(I);
@@ -3000,6 +3011,7 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
 
   // Confirm that no issues arise from the debug program.
   if (BB.IsNewDbgInfoFormat) {
+    CheckDI(!BB.getTrailingDPValues(), "Basic Block has trailing DbgRecords!", &BB);
     // Configure the validate function to not fire assertions, instead print
     // errors and return true if there's a problem.
     bool RetVal = BB.validateDbgValues(false, true, OS);
@@ -6176,33 +6188,24 @@ void Verifier::visit(DPValue &DPV) {
               DPV.getType() == DPValue::LocationType::Declare ||
               DPV.getType() == DPValue::LocationType::Assign,
           "invalid #dbg record type", &DPV, DPV.getType());
-  StringRef Kind;
-  switch (DPV.getType()) {
-  case DPValue::LocationType::Value:
-    Kind = "value";
-    break;
-  case DPValue::LocationType::Declare:
-    Kind = "declare";
-    break;
-  case DPValue::LocationType::Assign:
-    Kind = "assign";
-    break;
-  default:
-    llvm_unreachable("Tried to print a DPValue with an invalid LocationType!");
-  };
+  // The location for a DPValue must be either a ValueAsMetadata, DIArgList, or
+  // an empty MDNode (which is a legacy representation for an "undef" location).
   auto *MD = DPV.getRawLocation();
   CheckDI(isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
               (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands()),
-          "invalid #dbg_" + Kind + " address/value", &DPV, MD);
+          "invalid #dbg record address/value", &DPV, MD);
   CheckDI(isa<DILocalVariable>(DPV.getRawVariable()),
-          "invalid #dbg_" + Kind + " variable", &DPV, DPV.getRawVariable());
-  CheckDI(DPV.getExpression(), "missing #dbg_" + Kind + " expression", &DPV,
+          "invalid #dbg record variable", &DPV, DPV.getRawVariable());
+  CheckDI(DPV.getExpression(), "missing #dbg record expression", &DPV,
           DPV.getExpression());
 
   if (DPV.isDbgAssign()) {
     CheckDI(isa<DIAssignID>(DPV.getRawAssignID()),
             "invalid #dbg_assign DIAssignID", &DPV, DPV.getRawAssignID());
     const auto *RawAddr = DPV.getRawAddress();
+    // Similarly to the location above, the address for an assign DPValue must
+    // be a ValueAsMetadata or an empty MDNode, which represents an undef
+    // address.
     CheckDI(
         isa<ValueAsMetadata>(RawAddr) ||
             (isa<MDNode>(RawAddr) && !cast<MDNode>(RawAddr)->getNumOperands()),
@@ -6217,7 +6220,7 @@ void Verifier::visit(DPValue &DPV) {
   }
 
   if (MDNode *N = DPV.getDebugLoc().getAsMDNode()) {
-    CheckDI(isa<DILocation>(N), "invalid #dbg_" + Kind + " location", &DPV, N);
+    CheckDI(isa<DILocation>(N), "invalid #dbg record location", &DPV, N);
     visitDILocation(*cast<DILocation>(N));
   }
 
@@ -6227,7 +6230,7 @@ void Verifier::visit(DPValue &DPV) {
   // The scopes for variables and !dbg attachments must agree.
   DILocalVariable *Var = DPV.getVariable();
   DILocation *Loc = DPV.getDebugLoc();
-  CheckDI(Loc, "missing #dbg_" + Kind + " DILocation", &DPV, BB, F);
+  CheckDI(Loc, "missing #dbg record DILocation", &DPV, BB, F);
 
   DISubprogram *VarSP = getSubprogram(Var->getRawScope());
   DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
@@ -6235,8 +6238,7 @@ void Verifier::visit(DPValue &DPV) {
     return; // Broken scope chains are checked elsewhere.
 
   CheckDI(VarSP == LocSP,
-          "mismatched subprogram between #dbg_" + Kind +
-              " variable and DILocation",
+          "mismatched subprogram between #dbg record variable and DILocation",
           &DPV, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
           Loc->getScope()->getSubprogram());
 
