@@ -43,6 +43,8 @@ with open(
 #  error "Do not include this header directly, include individual headers instead"
 #endif
 
+namespace std { inline namespace __1 { } }
+
 #include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
