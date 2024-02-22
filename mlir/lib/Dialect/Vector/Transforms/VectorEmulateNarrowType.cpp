@@ -873,14 +873,7 @@ static Value rewriteI4ToI8SignedExt(PatternRewriter &rewriter, Location loc,
   Value low = rewriter.create<arith::ShRSIOp>(loc, shl, shiftValues);
   Value high = rewriter.create<arith::ShRSIOp>(loc, i8Vector, shiftValues);
 
-  // 3. Interleave low and high i8 elements using a shuffle.
-  SmallVector<int64_t> interleaveMaskValues;
-  interleaveMaskValues.reserve(vecDimSize);
-  for (int i = 0, end = vecDimSize / 2; i < end; ++i) {
-    interleaveMaskValues.push_back(i);
-    interleaveMaskValues.push_back(i + (vecDimSize / 2));
-  }
-
+  // 3. Interleave low and high i8 elements.
   return rewriter.create<vector::InterleaveOp>(loc, low, high);
 }
 
