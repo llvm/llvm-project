@@ -636,6 +636,13 @@ size_t PyMlirContext::getLiveCount() { return getLiveContexts().size(); }
 
 size_t PyMlirContext::getLiveOperationCount() { return liveOperations.size(); }
 
+std::vector<PyOperation *> PyMlirContext::getLiveOperationObjects() {
+  std::vector<PyOperation *> liveObjects;
+  for (auto &entry : liveOperations)
+    liveObjects.push_back(entry.second.second);
+  return liveObjects;
+}
+
 size_t PyMlirContext::clearLiveOperations() {
   for (auto &op : liveOperations)
     op.second.second->setInvalid();
@@ -670,6 +677,10 @@ void PyMlirContext::clearOperationsInside(PyOperationBase &op) {
   };
   mlirOperationWalk(op.getOperation(), invalidatingCallback,
                     static_cast<void *>(&data), MlirWalkPreOrder);
+}
+void PyMlirContext::clearOperationsInside(MlirOperation op) {
+  PyOperationRef opRef = PyOperation::forOperation(getRef(), op);
+  clearOperationsInside(opRef->getOperation());
 }
 
 size_t PyMlirContext::getLiveModuleCount() { return liveModules.size(); }
@@ -2546,7 +2557,12 @@ void mlir::python::populateIRCore(py::module &m) {
              return ref.releaseObject();
            })
       .def("_get_live_operation_count", &PyMlirContext::getLiveOperationCount)
+      .def("_get_live_operation_objects",
+           &PyMlirContext::getLiveOperationObjects)
       .def("_clear_live_operations", &PyMlirContext::clearLiveOperations)
+      .def("_clear_live_operations_inside",
+           py::overload_cast<MlirOperation>(
+               &PyMlirContext::clearOperationsInside))
       .def("_get_live_module_count", &PyMlirContext::getLiveModuleCount)
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyMlirContext::getCapsule)

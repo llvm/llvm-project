@@ -236,9 +236,7 @@ struct VPIteration {
 struct VPTransformState {
   VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
                    DominatorTree *DT, IRBuilderBase &Builder,
-                   InnerLoopVectorizer *ILV, VPlan *Plan, LLVMContext &Ctx)
-      : VF(VF), UF(UF), LI(LI), DT(DT), Builder(Builder), ILV(ILV), Plan(Plan),
-        LVer(nullptr), TypeAnalysis(Ctx) {}
+                   InnerLoopVectorizer *ILV, VPlan *Plan, LLVMContext &Ctx);
 
   /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
   ElementCount VF;
@@ -261,10 +259,7 @@ struct VPTransformState {
     DenseMap<VPValue *, ScalarsPerPartValuesTy> PerPartScalars;
   } Data;
 
-  /// Get the generated Value for a given VPValue and a given Part. Note that
-  /// as some Defs are still created by ILV and managed in its ValueMap, this
-  /// method will delegate the call to ILV in such cases in order to provide
-  /// callers a consistent API.
+  /// Get the generated Value for the given VPValue \p Def and the given \p Part.
   /// \see set.
   Value *get(VPValue *Def, unsigned Part);
 
@@ -1177,9 +1172,6 @@ private:
   bool isFPMathOp() const;
 #endif
 
-protected:
-  void setUnderlyingInstr(Instruction *I) { setUnderlyingValue(I); }
-
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
                 const Twine &Name = "")
@@ -1257,22 +1249,7 @@ public:
   }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    if (getOperand(0) != Op)
-      return false;
-    switch (getOpcode()) {
-    default:
-      return false;
-    case VPInstruction::ActiveLaneMask:
-    case VPInstruction::CalculateTripCountMinusVF:
-    case VPInstruction::CanonicalIVIncrementForPart:
-    case VPInstruction::BranchOnCount:
-      return true;
-    };
-    llvm_unreachable("switch should return");
-  }
+  bool onlyFirstLaneUsed(const VPValue *Op) const override;
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
   bool onlyFirstPartUsed(const VPValue *Op) const override {
@@ -1745,7 +1722,7 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Returns true if only scalar values will be generated.
-  bool onlyScalarsGenerated(ElementCount VF);
+  bool onlyScalarsGenerated(bool IsScalable);
 
   /// Returns the induction descriptor for the recipe.
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
@@ -1757,17 +1734,17 @@ public:
 #endif
 };
 
-/// A recipe for handling header phis that are widened in the vector loop.
+/// A recipe for handling phis that are widened in the vector loop.
 /// In the VPlan native path, all incoming VPValues & VPBasicBlock pairs are
 /// managed in the recipe directly.
-class VPWidenPHIRecipe : public VPHeaderPHIRecipe {
+class VPWidenPHIRecipe : public VPSingleDefRecipe {
   /// List of incoming blocks. Only used in the VPlan native path.
   SmallVector<VPBasicBlock *, 2> IncomingBlocks;
 
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start.
   VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr)
-      : VPHeaderPHIRecipe(VPDef::VPWidenPHISC, Phi) {
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi) {
     if (Start)
       addOperand(Start);
   }
@@ -2100,8 +2077,11 @@ public:
   ~VPReplicateRecipe() override = default;
 
   VPRecipeBase *clone() override {
-    return new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
-                                 isPredicated() ? getMask() : nullptr);
+    auto *Copy =
+        new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
+                              isPredicated() ? getMask() : nullptr);
+    Copy->transferFlags(*this);
+    return Copy;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReplicateSC)
@@ -2966,6 +2946,9 @@ public:
   }
 
   bool hasVF(ElementCount VF) { return VFs.count(VF); }
+  bool hasScalableVF() {
+    return any_of(VFs, [](ElementCount VF) { return VF.isScalable(); });
+  }
 
   bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
 
@@ -3385,10 +3368,10 @@ public:
 namespace vputils {
 
 /// Returns true if only the first lane of \p Def is used.
-bool onlyFirstLaneUsed(VPValue *Def);
+bool onlyFirstLaneUsed(const VPValue *Def);
 
 /// Returns true if only the first part of \p Def is used.
-bool onlyFirstPartUsed(VPValue *Def);
+bool onlyFirstPartUsed(const VPValue *Def);
 
 /// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p
 /// Expr is a SCEVConstant or SCEVUnknown, return a VPValue wrapping the live-in

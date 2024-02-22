@@ -15,7 +15,7 @@ entry:
 ;; Perform tail call optimization for external symbol.
 ;; Bytes copied should be large enough, otherwise the memcpy call would be optimized to multiple ld/st insns.
 @dest = global [2 x i8] zeroinitializer
-declare void @llvm.memcpy.p0i8.p0i8.i32(ptr, ptr, i32, i1)
+declare void @llvm.memcpy.p0.p0.i32(ptr, ptr, i32, i1)
 define void @caller_extern(ptr %src) optsize {
 ; CHECK-LABEL: caller_extern:
 ; CHECK:       # %bb.0: # %entry
@@ -25,7 +25,7 @@ define void @caller_extern(ptr %src) optsize {
 ; CHECK-NEXT:    ori $a2, $zero, 33
 ; CHECK-NEXT:    b %plt(memcpy)
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(ptr getelementptr inbounds ([2 x i8], ptr @dest, i32 0, i32 0), ptr %src, i32 33, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i32(ptr @dest, ptr %src, i32 33, i1 false)
   ret void
 }
 

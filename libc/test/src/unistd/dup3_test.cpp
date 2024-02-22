@@ -25,7 +25,7 @@
 
 TEST(LlvmLibcdupTest, ReadAndWriteViaDup) {
   constexpr int DUPFD = 0xD0;
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *FILENAME = "dup3.test";

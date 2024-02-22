@@ -103,6 +103,13 @@ std::string expectedResult(Annotations Test, llvm::StringRef NewName) {
   return Result;
 }
 
+std::vector<SymbolRange> symbolRanges(llvm::ArrayRef<Range> Ranges) {
+  std::vector<SymbolRange> Result;
+  for (const auto &R : Ranges)
+    Result.emplace_back(R);
+  return Result;
+}
+
 TEST(RenameTest, WithinFileRename) {
   // For each "^" this test moves cursor to its location and applies renaming
   // while checking that all identifiers in [[]] ranges are also renamed.
@@ -876,6 +883,157 @@ TEST(RenameTest, WithinFileRename) {
   }
 }
 
+TEST(RenameTest, ObjCWithinFileRename) {
+  struct TestCase {
+    /// Annotated source code that should be renamed. Every point (indicated by
+    /// `^`) will be used as a rename location.
+    llvm::StringRef Input;
+    /// The new name that should be given to the rename locaitons.
+    llvm::StringRef NewName;
+    /// The expected rename source code or `nullopt` if we expect rename to
+    /// fail.
+    std::optional<llvm::StringRef> Expected;
+  };
+  TestCase Tests[] = {// Simple rename
+                      {
+                          // Input
+                          R"cpp(
+        @interface Foo
+        - (int)performA^ction:(int)action w^ith:(int)value;
+        @end
+        @implementation Foo
+        - (int)performAc^tion:(int)action w^ith:(int)value {
+          return [self performAction:action with:value];
+        }
+        @end
+      )cpp",
+                          // New name
+                          "performNewAction:by:",
+                          // Expected
+                          R"cpp(
+        @interface Foo
+        - (int)performNewAction:(int)action by:(int)value;
+        @end
+        @implementation Foo
+        - (int)performNewAction:(int)action by:(int)value {
+          return [self performNewAction:action by:value];
+        }
+        @end
+      )cpp",
+                      },
+                      // Rename selector with macro
+                      {
+                          // Input
+                          R"cpp(
+        #define mySelector - (int)performAction:(int)action with:(int)value
+        @interface Foo
+        ^mySelector;
+        @end
+        @implementation Foo
+        mySelector {
+          return [self performAction:action with:value];
+        }
+        @end
+      )cpp",
+                          // New name
+                          "performNewAction:by:",
+                          // Expected error
+                          std::nullopt,
+                      },
+                      // Rename selector in macro definition
+                      {
+                          // Input
+                          R"cpp(
+        #define mySelector - (int)perform^Action:(int)action with:(int)value
+        @interface Foo
+        mySelector;
+        @end
+        @implementation Foo
+        mySelector {
+          return [self performAction:action with:value];
+        }
+        @end
+      )cpp",
+                          // New name
+                          "performNewAction:by:",
+                          // Expected error
+                          std::nullopt,
+                      },
+                      // Don't rename `@selector`
+                      // `@selector` is not tied to a single selector. Eg. there
+                      // might be multiple
+                      // classes in the codebase that implement that selector.
+                      // It's thus more like
+                      // a string literal and we shouldn't rename it.
+                      {
+                          // Input
+                          R"cpp(
+        @interface Foo
+        - (void)performA^ction:(int)action with:(int)value;
+        @end
+        @implementation Foo
+        - (void)performAction:(int)action with:(int)value {
+          SEL mySelector = @selector(performAction:with:);
+        }
+        @end
+      )cpp",
+                          // New name
+                          "performNewAction:by:",
+                          // Expected
+                          R"cpp(
+        @interface Foo
+        - (void)performNewAction:(int)action by:(int)value;
+        @end
+        @implementation Foo
+        - (void)performNewAction:(int)action by:(int)value {
+          SEL mySelector = @selector(performAction:with:);
+        }
+        @end
+      )cpp",
+                      },
+                      // Fail if rename initiated inside @selector
+                      {
+                          // Input
+                          R"cpp(
+        @interface Foo
+        - (void)performAction:(int)action with:(int)value;
+        @end
+        @implementation Foo
+        - (void)performAction:(int)action with:(int)value {
+          SEL mySelector = @selector(perfo^rmAction:with:);
+        }
+        @end
+      )cpp",
+                          // New name
+                          "performNewAction:by:",
+                          // Expected
+                          std::nullopt,
+                      }};
+  for (TestCase T : Tests) {
+    SCOPED_TRACE(T.Input);
+    Annotations Code(T.Input);
+    auto TU = TestTU::withCode(Code.code());
+    TU.ExtraArgs.push_back("-xobjective-c");
+    auto AST = TU.build();
+    auto Index = TU.index();
+    for (const auto &RenamePos : Code.points()) {
+      auto RenameResult =
+          rename({RenamePos, T.NewName, AST, testPath(TU.Filename),
+                  getVFSFromAST(AST), Index.get()});
+      if (std::optional<StringRef> Expected = T.Expected) {
+        ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
+        ASSERT_EQ(1u, RenameResult->GlobalChanges.size());
+        EXPECT_EQ(
+            applyEdits(std::move(RenameResult->GlobalChanges)).front().second,
+            *Expected);
+      } else {
+        ASSERT_FALSE(bool(RenameResult));
+        consumeError(RenameResult.takeError());
+      }
+    }
+  }
+}
+
 TEST(RenameTest, Renameable) {
   struct Case {
     const char *Code;
@@ -926,12 +1084,38 @@ TEST(RenameTest, Renameable) {
         void f(X x) {x+^+;})cpp",
           "no symbol", HeaderFile},
 
-      {R"cpp(// disallow rename on non-normal identifiers.
+      {R"cpp(
          @interface Foo {}
-         -(int) fo^o:(int)x; // Token is an identifier, but declaration name isn't a simple identifier.
+         - (int)[[fo^o]]:(int)x;
          @end
        )cpp",
-       "not a supported kind", HeaderFile},
+       nullptr, HeaderFile, "newName:"},
+      {R"cpp(//disallow as : count must match
+         @interface Foo {}
+         - (int)fo^o:(int)x;
+         @end
+       )cpp",
+       "invalid name: the chosen name \"MockName\" is not a valid identifier",
+       HeaderFile},
+      {R"cpp(
+         @interface Foo {}
+         - (int)[[o^ne]]:(int)one two:(int)two;
+         @end
+       )cpp",
+       nullptr, HeaderFile, "a:two:"},
+      {R"cpp(
+         @interface Foo {}
+         - (int)[[o^ne]]:(int)one [[two]]:(int)two;
+         @end
+       )cpp",
+       nullptr, HeaderFile, "a:b:"},
+      {R"cpp(
+         @interface Foo {}
+         - (int)o^ne:(int)one [[two]]:(int)two;
+         @end
+       )cpp",
+       nullptr, HeaderFile, "one:three:"},
+
       {R"cpp(
          void foo(int);
          void foo(char);
@@ -1137,7 +1321,7 @@ TEST(RenameTest, Renameable) {
           int [[V^ar]];
         }
       )cpp",
-        nullptr, !HeaderFile},
+       nullptr, !HeaderFile},
   };
 
   for (const auto& Case : Cases) {
@@ -1778,8 +1962,8 @@ TEST(CrossFileRenameTests, BuildRenameEdits) {
   Annotations Code("[[😂]]");
   auto LSPRange = Code.range();
   llvm::StringRef FilePath = "/test/TestTU.cpp";
-  llvm::StringRef NewName = "abc";
-  auto Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, NewName);
+  llvm::SmallVector<llvm::StringRef, 2> NewNames = {"abc"};
+  auto Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, NewNames);
   ASSERT_TRUE(bool(Edit)) << Edit.takeError();
   ASSERT_EQ(1UL, Edit->Replacements.size());
   EXPECT_EQ(FilePath, Edit->Replacements.begin()->getFilePath());
@@ -1787,7 +1971,7 @@ TEST(CrossFileRenameTests, BuildRenameEdits) {
 
   // Test invalid range.
   LSPRange.end = {10, 0}; // out of range
-  Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, NewName);
+  Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, NewNames);
   EXPECT_FALSE(Edit);
   EXPECT_THAT(llvm::toString(Edit.takeError()),
               testing::HasSubstr("fail to convert"));
@@ -1798,10 +1982,11 @@ TEST(CrossFileRenameTests, BuildRenameEdits) {
               [[range]]
       [[range]]
   )cpp");
-  Edit = buildRenameEdit(FilePath, T.code(), T.ranges(), NewName);
+  Edit =
+      buildRenameEdit(FilePath, T.code(), symbolRanges(T.ranges()), NewNames);
   ASSERT_TRUE(bool(Edit)) << Edit.takeError();
   EXPECT_EQ(applyEdits(FileEdits{{T.code(), std::move(*Edit)}}).front().second,
-            expectedResult(T, NewName));
+            expectedResult(T, NewNames[0]));
 }
 
 TEST(CrossFileRenameTests, adjustRenameRanges) {
@@ -1855,8 +2040,9 @@ TEST(CrossFileRenameTests, adjustRenameRanges) {
   for (const auto &T : Tests) {
     SCOPED_TRACE(T.DraftCode);
     Annotations Draft(T.DraftCode);
-    auto ActualRanges = adjustRenameRanges(
-        Draft.code(), "x", Annotations(T.IndexedCode).ranges(), LangOpts);
+    auto ActualRanges = adjustRenameRanges(Draft.code(), "x",
+                                           Annotations(T.IndexedCode).ranges(),
+                                           LangOpts, std::nullopt);
     if (!ActualRanges)
        EXPECT_THAT(Draft.ranges(), testing::IsEmpty());
     else
@@ -1970,11 +2156,11 @@ TEST(RangePatchingHeuristic, GetMappedRanges) {
   for (const auto &T : Tests) {
     SCOPED_TRACE(T.IndexedCode);
     auto Lexed = Annotations(T.LexedCode);
-    auto LexedRanges = Lexed.ranges();
-    std::vector<Range> ExpectedMatches;
+    auto LexedRanges = symbolRanges(Lexed.ranges());
+    std::vector<SymbolRange> ExpectedMatches;
     for (auto P : Lexed.points()) {
-      auto Match = llvm::find_if(LexedRanges, [&P](const Range& R) {
-        return R.start == P;
+      auto Match = llvm::find_if(LexedRanges, [&P](const SymbolRange &R) {
+        return R.range().start == P;
       });
       ASSERT_NE(Match, LexedRanges.end());
       ExpectedMatches.push_back(*Match);
@@ -2093,8 +2279,8 @@ TEST(CrossFileRenameTests, adjustmentCost) {
     std::vector<size_t> MappedIndex;
     for (size_t I = 0; I < C.ranges("lex").size(); ++I)
       MappedIndex.push_back(I);
-    EXPECT_EQ(renameRangeAdjustmentCost(C.ranges("idx"), C.ranges("lex"),
-                                        MappedIndex),
+    EXPECT_EQ(renameRangeAdjustmentCost(
+                  C.ranges("idx"), symbolRanges(C.ranges("lex")), MappedIndex),
               T.ExpectedCost);
   }
 }

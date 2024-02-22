@@ -61,10 +61,8 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   if (isa<tosa::AbsOp>(op) && isa<IntegerType>(elementTy)) {
     auto zero = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getZeroAttr(elementTy));
-    auto cmp = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt,
-                                              args[0], zero);
     auto neg = rewriter.create<arith::SubIOp>(loc, zero, args[0]);
-    return rewriter.create<arith::SelectOp>(loc, cmp, args[0], neg);
+    return rewriter.create<arith::MaxSIOp>(loc, args[0], neg);
   }
 
   // tosa::AddOp
@@ -348,9 +346,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   }
 
   if (isa<tosa::MaximumOp>(op) && elementTy.isSignlessInteger()) {
-    auto predicate = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::sgt, args[0], args[1]);
-    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::MaxSIOp>(loc, args[0], args[1]);
   }
 
   // tosa::MinimumOp
@@ -359,9 +355,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   }
 
   if (isa<tosa::MinimumOp>(op) && elementTy.isSignlessInteger()) {
-    auto predicate = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::slt, args[0], args[1]);
-    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::MinSIOp>(loc, args[0], args[1]);
   }
 
   // tosa::CeilOp
@@ -1000,9 +994,7 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
   }
 
   if (isa<tosa::ReduceMinOp>(op) && isa<IntegerType>(elementTy)) {
-    auto predicate = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::slt, args[0], args[1]);
-    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::MinSIOp>(loc, args[0], args[1]);
   }
 
   if (isa<tosa::ReduceMaxOp>(op) && isa<FloatType>(elementTy)) {
@@ -1010,9 +1002,7 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
   }
 
   if (isa<tosa::ReduceMaxOp>(op) && isa<IntegerType>(elementTy)) {
-    auto predicate = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::sgt, args[0], args[1]);
-    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::MaxSIOp>(loc, args[0], args[1]);
   }
 
   if (isa<tosa::ReduceAllOp>(op) && elementTy.isInteger(1))
@@ -2010,7 +2000,8 @@ public:
     }
 
     bool didEncounterError = false;
-    auto maps = AffineMap::inferFromExprList({srcExprs, dstExprs, dstExprs});
+    auto maps = AffineMap::inferFromExprList({srcExprs, dstExprs, dstExprs},
+                                             rewriter.getContext());
     auto linalgOp = rewriter.create<linalg::GenericOp>(
         loc, ArrayRef<Type>({resultTy, resultMaxTy}), input,
         ValueRange({filledTensorIdx, filledTensorMax}), maps, iteratorTypes,
@@ -2351,9 +2342,11 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
         createZeroTensor(rewriter, loc, outputType, dynamicSizes)};
 
     // Indexing maps for input and output tensors
-    auto indexingMaps = AffineMap::inferFromExprList(llvm::ArrayRef{
-        affineDimsExpr(rewriter, 0, 3, 4), affineDimsExpr(rewriter, 0, 1, 2),
-        affineDimsExpr(rewriter, 0, 1, 2)});
+    auto indexingMaps = AffineMap::inferFromExprList(
+        llvm::ArrayRef{affineDimsExpr(rewriter, 0, 3, 4),
+                       affineDimsExpr(rewriter, 0, 1, 2),
+                       affineDimsExpr(rewriter, 0, 1, 2)},
+        rewriter.getContext());
 
     // Width and height dimensions of the original input.
     auto dimH = rewriter.createOrFold<tensor::DimOp>(loc, input, 1);
@@ -2463,7 +2456,8 @@ struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
         ArrayRef{RFFT2dConverter::affineDimsExpr(rewriter, 0, 3, 4),
                  RFFT2dConverter::affineDimsExpr(rewriter, 0, 3, 4),
                  RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2),
-                 RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2)});
+                 RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2)},
+        rewriter.getContext());
 
     // Width and height dimensions of the original input.
     auto dimH = rewriter.createOrFold<tensor::DimOp>(loc, input_real, 1);

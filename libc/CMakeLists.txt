@@ -225,6 +225,15 @@ else()
   set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
 endif()
 
+if(LIBC_TARGET_TRIPLE)
+  set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBC_TARGET_TRIPLE})
+elseif(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT LIBC_GPU_BUILD)
+  set(LIBC_INSTALL_LIBRARY_DIR
+      lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE})
+else()
+  set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX})
+endif()
+
 if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
   include(prepare_libc_gpu_build)
   set(LIBC_ENABLE_UNITTESTS OFF)
@@ -340,8 +349,8 @@ set(TARGET_ENTRYPOINT_NAME_LIST "")
 foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   string(FIND ${entrypoint} "." last_dot_loc REVERSE)
   if(${last_dot_loc} EQUAL -1)
-    message(FATAL "Invalid entrypoint target name ${entrypoint}; Expected a '.' "
-                  "(dot) in the name.")
+    message(FATAL_ERROR "Invalid entrypoint target name ${entrypoint}; Expected"
+                        " a '.' (dot) in the name.")
   endif()
   math(EXPR name_loc "${last_dot_loc} + 1")
   string(SUBSTRING ${entrypoint} ${name_loc} -1 entrypoint_name)

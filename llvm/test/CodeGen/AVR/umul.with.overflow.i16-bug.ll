@@ -10,14 +10,14 @@ define hidden void @setServoAngle(i16) {
   ; CHECK-LABEL: entry
 entry:
   %adjustedAngle = alloca %Vs6UInt16, align 2
-  %1 = bitcast %Vs6UInt16* %adjustedAngle to i8*
-  %adjustedAngle._value = getelementptr inbounds %Vs6UInt16, %Vs6UInt16* %adjustedAngle, i32 0, i32 0
-  store i16 %0, i16* %adjustedAngle._value, align 2
+  %1 = bitcast ptr %adjustedAngle to ptr
+  %adjustedAngle._value = getelementptr inbounds %Vs6UInt16, ptr %adjustedAngle, i32 0, i32 0
+  store i16 %0, ptr %adjustedAngle._value, align 2
 
 ;print(unsignedInt: adjustedAngle &* UInt16(11))
 ; breaks here
-  %adjustedAngle._value2 = getelementptr inbounds %Vs6UInt16, %Vs6UInt16* %adjustedAngle, i32 0, i32 0
-  %2 = load i16, i16* %adjustedAngle._value2, align 2
+  %adjustedAngle._value2 = getelementptr inbounds %Vs6UInt16, ptr %adjustedAngle, i32 0, i32 0
+  %2 = load i16, ptr %adjustedAngle._value2, align 2
 
 ; CHECK: mov r22, r24
 ; CHECK: mov r23, r25

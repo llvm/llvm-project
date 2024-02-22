@@ -12935,42 +12935,74 @@ static SDValue NormalizeBuildVector(SDValue Op,
   return DAG.getBuildVector(VT, dl, Ops);
 }
 
-static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG) {
+static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG,
+                                   const AArch64Subtarget *ST) {
   EVT VT = Op.getValueType();
+  assert((VT.getSizeInBits() == 64 || VT.getSizeInBits() == 128) &&
+         "Expected a legal NEON vector");
 
   APInt DefBits(VT.getSizeInBits(), 0);
   APInt UndefBits(VT.getSizeInBits(), 0);
   BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Op.getNode());
   if (resolveBuildVector(BVN, DefBits, UndefBits)) {
-    SDValue NewOp;
-    if ((NewOp = tryAdvSIMDModImm64(AArch64ISD::MOVIedit, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm32(AArch64ISD::MOVIshift, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm321s(AArch64ISD::MOVImsl, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm16(AArch64ISD::MOVIshift, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm8(AArch64ISD::MOVI, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImmFP(AArch64ISD::FMOV, Op, DAG, DefBits)))
-      return NewOp;
+    auto TryMOVIWithBits = [&](APInt DefBits) {
+      SDValue NewOp;
+      if ((NewOp =
+               tryAdvSIMDModImm64(AArch64ISD::MOVIedit, Op, DAG, DefBits)) ||
+          (NewOp =
+               tryAdvSIMDModImm32(AArch64ISD::MOVIshift, Op, DAG, DefBits)) ||
+          (NewOp =
+               tryAdvSIMDModImm321s(AArch64ISD::MOVImsl, Op, DAG, DefBits)) ||
+          (NewOp =
+               tryAdvSIMDModImm16(AArch64ISD::MOVIshift, Op, DAG, DefBits)) ||
+          (NewOp = tryAdvSIMDModImm8(AArch64ISD::MOVI, Op, DAG, DefBits)) ||
+          (NewOp = tryAdvSIMDModImmFP(AArch64ISD::FMOV, Op, DAG, DefBits)))
+        return NewOp;
 
-    DefBits = ~DefBits;
-    if ((NewOp = tryAdvSIMDModImm32(AArch64ISD::MVNIshift, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm321s(AArch64ISD::MVNImsl, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm16(AArch64ISD::MVNIshift, Op, DAG, DefBits)))
-      return NewOp;
+      APInt NotDefBits = ~DefBits;
+      if ((NewOp = tryAdvSIMDModImm32(AArch64ISD::MVNIshift, Op, DAG,
+                                      NotDefBits)) ||
+          (NewOp = tryAdvSIMDModImm321s(AArch64ISD::MVNImsl, Op, DAG,
+                                        NotDefBits)) ||
+          (NewOp =
+               tryAdvSIMDModImm16(AArch64ISD::MVNIshift, Op, DAG, NotDefBits)))
+        return NewOp;
+      return SDValue();
+    };
+    if (SDValue R = TryMOVIWithBits(DefBits))
+      return R;
+    if (SDValue R = TryMOVIWithBits(UndefBits))
+      return R;
 
-    DefBits = UndefBits;
-    if ((NewOp = tryAdvSIMDModImm64(AArch64ISD::MOVIedit, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm32(AArch64ISD::MOVIshift, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm321s(AArch64ISD::MOVImsl, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm16(AArch64ISD::MOVIshift, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm8(AArch64ISD::MOVI, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImmFP(AArch64ISD::FMOV, Op, DAG, DefBits)))
-      return NewOp;
+    // See if a fneg of the constant can be materialized with a MOVI, etc
+    auto TryWithFNeg = [&](APInt DefBits, MVT FVT) {
+      // FNegate each sub-element of the constant
+      assert(VT.getSizeInBits() % FVT.getScalarSizeInBits() == 0);
+      APInt Neg = APInt::getHighBitsSet(FVT.getSizeInBits(), 1)
+                      .zext(VT.getSizeInBits());
+      APInt NegBits(VT.getSizeInBits(), 0);
+      unsigned NumElts = VT.getSizeInBits() / FVT.getScalarSizeInBits();
+      for (unsigned i = 0; i < NumElts; i++)
+        NegBits |= Neg << (FVT.getScalarSizeInBits() * i);
+      NegBits = DefBits ^ NegBits;
 
-    DefBits = ~UndefBits;
-    if ((NewOp = tryAdvSIMDModImm32(AArch64ISD::MVNIshift, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm321s(AArch64ISD::MVNImsl, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm16(AArch64ISD::MVNIshift, Op, DAG, DefBits)))
-      return NewOp;
+      // Try to create the new constants with MOVI, and if so generate a fneg
+      // for it.
+      if (SDValue NewOp = TryMOVIWithBits(NegBits)) {
+        SDLoc DL(Op);
+        MVT VFVT = NumElts == 1 ? FVT : MVT::getVectorVT(FVT, NumElts);
+        return DAG.getNode(
+            AArch64ISD::NVCAST, DL, VT,
+            DAG.getNode(ISD::FNEG, DL, VFVT,
+                        DAG.getNode(AArch64ISD::NVCAST, DL, VFVT, NewOp)));
+      }
+      return SDValue();
+    };
+    SDValue R;
+    if ((R = TryWithFNeg(DefBits, MVT::f32)) ||
+        (R = TryWithFNeg(DefBits, MVT::f64)) ||
+        (ST->hasFullFP16() && (R = TryWithFNeg(DefBits, MVT::f16))))
+      return R;
   }
 
   return SDValue();
@@ -13019,7 +13051,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
         return Op;
   }
 
-  if (SDValue V = ConstantBuildVector(Op, DAG))
+  if (SDValue V = ConstantBuildVector(Op, DAG, Subtarget))
     return V;
 
   // Scan through the operands to find some interesting properties we can
@@ -13244,7 +13276,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       ConstantValueAPInt = C->getAPIntValue().zextOrTrunc(BitSize);
     if (!isNullConstant(ConstantValue) && !isNullFPConstant(ConstantValue) &&
         !ConstantValueAPInt.isAllOnes()) {
-      Val = ConstantBuildVector(Val, DAG);
+      Val = ConstantBuildVector(Val, DAG, Subtarget);
       if (!Val)
         // Otherwise, materialize the constant and splat it.
         Val = DAG.getNode(AArch64ISD::DUP, dl, VT, ConstantValue);
@@ -18299,50 +18331,23 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  // Optimise concat_vectors of two [us]avgceils or [us]avgfloors that use
-  // extracted subvectors from the same original vectors. Combine these into a
-  // single avg that operates on the two original vectors.
-  // avgceil is the target independant name for rhadd, avgfloor is a hadd.
-  // Example:
-  //  (concat_vectors (v8i8 (avgceils (extract_subvector (v16i8 OpA, <0>),
-  //                                   extract_subvector (v16i8 OpB, <0>))),
-  //                  (v8i8 (avgceils (extract_subvector (v16i8 OpA, <8>),
-  //                                   extract_subvector (v16i8 OpB, <8>)))))
-  // ->
-  //  (v16i8(avgceils(v16i8 OpA, v16i8 OpB)))
-  if (N->getNumOperands() == 2 && N0Opc == N1Opc &&
+  // Optimise concat_vectors of two [us]avgceils or [us]avgfloors with a 128-bit
+  // destination size, combine into an avg of two contacts of the source
+  // vectors. eg: concat(uhadd(a,b), uhadd(c, d)) -> uhadd(concat(a, c),
+  // concat(b, d))
+  if (N->getNumOperands() == 2 && N0Opc == N1Opc && VT.is128BitVector() &&
       (N0Opc == ISD::AVGCEILU || N0Opc == ISD::AVGCEILS ||
-       N0Opc == ISD::AVGFLOORU || N0Opc == ISD::AVGFLOORS)) {
+       N0Opc == ISD::AVGFLOORU || N0Opc == ISD::AVGFLOORS) &&
+      N0->hasOneUse() && N1->hasOneUse()) {
     SDValue N00 = N0->getOperand(0);
     SDValue N01 = N0->getOperand(1);
     SDValue N10 = N1->getOperand(0);
     SDValue N11 = N1->getOperand(1);
 
-    EVT N00VT = N00.getValueType();
-    EVT N10VT = N10.getValueType();
-
-    if (N00->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-        N01->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-        N10->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-        N11->getOpcode() == ISD::EXTRACT_SUBVECTOR && N00VT == N10VT) {
-      SDValue N00Source = N00->getOperand(0);
-      SDValue N01Source = N01->getOperand(0);
-      SDValue N10Source = N10->getOperand(0);
-      SDValue N11Source = N11->getOperand(0);
-
-      if (N00Source == N10Source && N01Source == N11Source &&
-          N00Source.getValueType() == VT && N01Source.getValueType() == VT) {
-        assert(N0.getValueType() == N1.getValueType());
-
-        uint64_t N00Index = N00.getConstantOperandVal(1);
-        uint64_t N01Index = N01.getConstantOperandVal(1);
-        uint64_t N10Index = N10.getConstantOperandVal(1);
-        uint64_t N11Index = N11.getConstantOperandVal(1);
-
-        if (N00Index == N01Index && N10Index == N11Index && N00Index == 0 &&
-            N10Index == N00VT.getVectorNumElements())
-          return DAG.getNode(N0Opc, dl, VT, N00Source, N01Source);
-      }
+    if (!N00.isUndef() && !N01.isUndef() && !N10.isUndef() && !N11.isUndef()) {
+      SDValue Concat0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, N00, N10);
+      SDValue Concat1 = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, N01, N11);
+      return DAG.getNode(N0Opc, dl, VT, Concat0, Concat1);
     }
   }
 
@@ -20273,9 +20278,6 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_uqsub_x:
     return DAG.getNode(ISD::USUBSAT, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2));
-  case Intrinsic::aarch64_sve_urshr:
-    return DAG.getNode(AArch64ISD::URSHR_I_PRED, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_asrd:
     return DAG.getNode(AArch64ISD::SRAD_MERGE_OP1, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
@@ -23175,9 +23177,12 @@ static SDValue performDUPCombine(SDNode *N,
 }
 
 /// Get rid of unnecessary NVCASTs (that don't change the type).
-static SDValue performNVCASTCombine(SDNode *N) {
+static SDValue performNVCASTCombine(SDNode *N, SelectionDAG &DAG) {
   if (N->getValueType(0) == N->getOperand(0).getValueType())
     return N->getOperand(0);
+  if (N->getOperand(0).getOpcode() == AArch64ISD::NVCAST)
+    return DAG.getNode(AArch64ISD::NVCAST, SDLoc(N), N->getValueType(0),
+                       N->getOperand(0).getOperand(0));
 
   return SDValue();
 }
@@ -24171,7 +24176,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::DUPLANE128:
     return performDupLane128Combine(N, DAG);
   case AArch64ISD::NVCAST:
-    return performNVCASTCombine(N);
+    return performNVCASTCombine(N, DAG);
   case AArch64ISD::SPLICE:
     return performSpliceCombine(N, DAG);
   case AArch64ISD::UUNPKLO:
@@ -24642,7 +24647,8 @@ void AArch64TargetLowering::ReplaceBITCASTResults(
     return;
   }
 
-  if (SrcVT.isVector() && SrcVT.getVectorElementType() == MVT::i1)
+  if (SrcVT.isVector() && SrcVT.getVectorElementType() == MVT::i1 &&
+      !VT.isVector())
     return replaceBoolVectorBitcast(N, Results, DAG);
 
   if (VT != MVT::i16 || (SrcVT != MVT::f16 && SrcVT != MVT::bf16))
@@ -25727,7 +25733,9 @@ AArch64TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
   case AArch64::BLR:
   case AArch64::BLRNoIP:
   case AArch64::TCRETURNri:
-  case AArch64::TCRETURNriBTI:
+  case AArch64::TCRETURNrix16x17:
+  case AArch64::TCRETURNrix17:
+  case AArch64::TCRETURNrinotx16:
     break;
   default:
     llvm_unreachable("Unexpected CFI call opcode");
@@ -26790,7 +26798,7 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
 
   // Ignore two operands if no SVE2 or all index numbers couldn't
   // be represented.
-  if (!IsSingleOp && (!Subtarget.hasSVE2() || MinSVESize != MaxSVESize))
+  if (!IsSingleOp && !Subtarget.hasSVE2())
     return SDValue();
 
   EVT VTOp1 = Op.getOperand(0).getValueType();
@@ -26798,18 +26806,39 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   unsigned IndexLen = MinSVESize / BitsPerElt;
   unsigned ElementsPerVectorReg = VTOp1.getVectorNumElements();
   uint64_t MaxOffset = APInt(BitsPerElt, -1, false).getZExtValue();
+  EVT MaskEltType = VTOp1.getVectorElementType().changeTypeToInteger();
+  EVT MaskType = EVT::getVectorVT(*DAG.getContext(), MaskEltType, IndexLen);
+  bool MinMaxEqual = (MinSVESize == MaxSVESize);
   assert(ElementsPerVectorReg <= IndexLen && ShuffleMask.size() <= IndexLen &&
          "Incorrectly legalised shuffle operation");
 
   SmallVector<SDValue, 8> TBLMask;
+  // If MinSVESize is not equal to MaxSVESize then we need to know which
+  // TBL mask element needs adjustment.
+  SmallVector<SDValue, 8> AddRuntimeVLMask;
+
+  // Bail out for 8-bits element types, because with 2048-bit SVE register
+  // size 8 bits is only sufficient to index into the first source vector.
+  if (!IsSingleOp && !MinMaxEqual && BitsPerElt == 8)
+    return SDValue();
+
   for (int Index : ShuffleMask) {
     // Handling poison index value.
     if (Index < 0)
       Index = 0;
-    // If we refer to the second operand then we have to add elements
-    // number in hardware register minus number of elements in a type.
-    if ((unsigned)Index >= ElementsPerVectorReg)
-      Index += IndexLen - ElementsPerVectorReg;
+    // If the mask refers to elements in the second operand, then we have to
+    // offset the index by the number of elements in a vector. If this is number
+    // is not known at compile-time, we need to maintain a mask with 'VL' values
+    // to add at runtime.
+    if ((unsigned)Index >= ElementsPerVectorReg) {
+      if (MinMaxEqual) {
+        Index += IndexLen - ElementsPerVectorReg;
+      } else {
+        Index = Index - ElementsPerVectorReg;
+        AddRuntimeVLMask.push_back(DAG.getConstant(1, DL, MVT::i64));
+      }
+    } else if (!MinMaxEqual)
+      AddRuntimeVLMask.push_back(DAG.getConstant(0, DL, MVT::i64));
     // For 8-bit elements and 1024-bit SVE registers and MaxOffset equals
     // to 255, this might point to the last element of in the second operand
     // of the shufflevector, thus we are rejecting this transform.
@@ -26822,11 +26851,12 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   // value where it would perform first lane duplication for out of
   // index elements. For i8 elements an out-of-range index could be a valid
   // for 2048-bit vector register size.
-  for (unsigned i = 0; i < IndexLen - ElementsPerVectorReg; ++i)
+  for (unsigned i = 0; i < IndexLen - ElementsPerVectorReg; ++i) {
     TBLMask.push_back(DAG.getConstant((int)MaxOffset, DL, MVT::i64));
+    if (!MinMaxEqual)
+      AddRuntimeVLMask.push_back(DAG.getConstant(0, DL, MVT::i64));
+  }
 
-  EVT MaskEltType = EVT::getIntegerVT(*DAG.getContext(), BitsPerElt);
-  EVT MaskType = EVT::getVectorVT(*DAG.getContext(), MaskEltType, IndexLen);
   EVT MaskContainerVT = getContainerForFixedLengthVector(DAG, MaskType);
   SDValue VecMask =
       DAG.getBuildVector(MaskType, DL, ArrayRef(TBLMask.data(), IndexLen));
@@ -26838,13 +26868,29 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
         DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
                     DAG.getConstant(Intrinsic::aarch64_sve_tbl, DL, MVT::i32),
                     Op1, SVEMask);
-  else if (Subtarget.hasSVE2())
+  else if (Subtarget.hasSVE2()) {
+    if (!MinMaxEqual) {
+      unsigned MinNumElts = AArch64::SVEBitsPerBlock / BitsPerElt;
+      SDValue VScale = (BitsPerElt == 64)
+                           ? DAG.getVScale(DL, MVT::i64, APInt(64, MinNumElts))
+                           : DAG.getVScale(DL, MVT::i32, APInt(32, MinNumElts));
+      SDValue VecMask =
+          DAG.getBuildVector(MaskType, DL, ArrayRef(TBLMask.data(), IndexLen));
+      SDValue MulByMask = DAG.getNode(
+          ISD::MUL, DL, MaskType,
+          DAG.getNode(ISD::SPLAT_VECTOR, DL, MaskType, VScale),
+          DAG.getBuildVector(MaskType, DL,
+                             ArrayRef(AddRuntimeVLMask.data(), IndexLen)));
+      SDValue UpdatedVecMask =
+          DAG.getNode(ISD::ADD, DL, MaskType, VecMask, MulByMask);
+      SVEMask = convertToScalableVector(
+          DAG, getContainerForFixedLengthVector(DAG, MaskType), UpdatedVecMask);
+    }
     Shuffle =
         DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
                     DAG.getConstant(Intrinsic::aarch64_sve_tbl2, DL, MVT::i32),
                     Op1, Op2, SVEMask);
-  else
-    llvm_unreachable("Cannot lower shuffle without SVE2 TBL");
+  }
   Shuffle = convertFromScalableVector(DAG, VT, Shuffle);
   return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Shuffle);
 }

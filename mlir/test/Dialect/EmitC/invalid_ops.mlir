@@ -324,5 +324,10 @@ emitc.func @func_variadic(...)
 
 // -----
 
-// expected-error@+1 {{'emitc.func' op does not support empty function bodies}}
-emitc.func private @empty()
+// expected-error@+1 {{'emitc.declare_func' op 'bar' does not reference a valid function}}
+emitc.declare_func @bar
+
+// -----
+
+// expected-error@+1 {{'emitc.declare_func' op requires attribute 'sym_name'}}
+"emitc.declare_func"()  : () -> ()

@@ -15,7 +15,7 @@
 #define LLVM_TEXTAPI_RECORDSLICE_H
 
 #include "llvm/Support/Allocator.h"
-#include "llvm/TextAPI/InterfaceFile.h"
+#include "llvm/TextAPI/FileTypes.h"
 #include "llvm/TextAPI/PackedVersion.h"
 #include "llvm/TextAPI/Record.h"
 #include "llvm/TextAPI/RecordVisitor.h"
@@ -191,6 +191,7 @@ private:
 };
 
 using Records = llvm::SmallVector<std::shared_ptr<RecordsSlice>, 4>;
+class InterfaceFile;
 std::unique_ptr<InterfaceFile> convertToInterfaceFile(const Records &Slices);
 
 } // namespace MachO

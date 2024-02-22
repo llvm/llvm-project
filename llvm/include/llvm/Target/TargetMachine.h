@@ -465,11 +465,6 @@ public:
                                    inconvertibleErrorCode());
   }
 
-  virtual std::pair<StringRef, bool> getPassNameFromLegacyName(StringRef) {
-    llvm_unreachable(
-        "getPassNameFromLegacyName parseMIRPipeline is not overridden");
-  }
-
   /// Add passes to the specified pass manager to get machine code emitted with
   /// the MCJIT. This method returns true if machine code is not supported. It
   /// fills the MCContext Ctx pointer which can be used to build custom

@@ -173,9 +173,9 @@ define double @foo4(double %x0, ptr %ptr1, ptr %ptr2, ptr %ptr3, <vscale x 8 x d
 ; CHECK-NEXT:    st1d { z5.d }, p0, [x2]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 8 x double> %x1, <vscale x 8 x double>* %ptr1
-  store volatile <vscale x 8 x double> %x2, <vscale x 8 x double>* %ptr2
-  store volatile <vscale x 2 x double> %x3, <vscale x 2 x double>* %ptr3
+  store volatile <vscale x 8 x double> %x1, ptr %ptr1
+  store volatile <vscale x 8 x double> %x2, ptr %ptr2
+  store volatile <vscale x 2 x double> %x3, ptr %ptr3
   ret double %x0
 }
 
@@ -198,8 +198,8 @@ define double @foo5(i32 %i0, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, ptr %p
 ; CHECK-NEXT:    st1d { z5.d }, p0, [x7, #1, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 8 x double> %x1, <vscale x 8 x double>* %ptr1
-  store volatile <vscale x 8 x double> %x2, <vscale x 8 x double>* %ptr2
+  store volatile <vscale x 8 x double> %x1, ptr %ptr1
+  store volatile <vscale x 8 x double> %x2, ptr %ptr2
   ret double %x0
 }
 
@@ -219,8 +219,8 @@ define double @foo6(double %x0, double %x1, ptr %ptr1, ptr %ptr2, <vscale x 8 x 
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x1]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 8 x double> %x2, <vscale x 8 x double>* %ptr1
-  store volatile <vscale x 6 x double> %x3, <vscale x 6 x double>* %ptr2
+  store volatile <vscale x 8 x double> %x2, ptr %ptr1
+  store volatile <vscale x 6 x double> %x3, ptr %ptr2
   ret double %x0
 }
 
@@ -244,15 +244,15 @@ define void @aavpcs1(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32 %
 ; CHECK-NEXT:    st1w { z3.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 4 x i32> %s7, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s8, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s9, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s11, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s12, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s13, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s14, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s15, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s16, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s7, ptr %ptr
+  store volatile <vscale x 4 x i32> %s8, ptr %ptr
+  store volatile <vscale x 4 x i32> %s9, ptr %ptr
+  store volatile <vscale x 4 x i32> %s11, ptr %ptr
+  store volatile <vscale x 4 x i32> %s12, ptr %ptr
+  store volatile <vscale x 4 x i32> %s13, ptr %ptr
+  store volatile <vscale x 4 x i32> %s14, ptr %ptr
+  store volatile <vscale x 4 x i32> %s15, ptr %ptr
+  store volatile <vscale x 4 x i32> %s16, ptr %ptr
   ret void
 }
 
@@ -282,15 +282,15 @@ define void @aavpcs2(float %s0, float %s1, float %s2, float %s3, float %s4, floa
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 4 x float> %s7, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s7, ptr %ptr
+  store volatile <vscale x 4 x float> %s8, ptr %ptr
+  store volatile <vscale x 4 x float> %s9, ptr %ptr
+  store volatile <vscale x 4 x float> %s11, ptr %ptr
+  store volatile <vscale x 4 x float> %s12, ptr %ptr
+  store volatile <vscale x 4 x float> %s13, ptr %ptr
+  store volatile <vscale x 4 x float> %s14, ptr %ptr
+  store volatile <vscale x 4 x float> %s15, ptr %ptr
+  store volatile <vscale x 4 x float> %s16, ptr %ptr
   ret void
 }
 
@@ -322,15 +322,15 @@ define void @aavpcs3(float %s0, float %s1, float %s2, float %s3, float %s4, floa
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s10, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s8, ptr %ptr
+  store volatile <vscale x 4 x float> %s9, ptr %ptr
+  store volatile <vscale x 4 x float> %s10, ptr %ptr
+  store volatile <vscale x 4 x float> %s11, ptr %ptr
+  store volatile <vscale x 4 x float> %s12, ptr %ptr
+  store volatile <vscale x 4 x float> %s13, ptr %ptr
+  store volatile <vscale x 4 x float> %s14, ptr %ptr
+  store volatile <vscale x 4 x float> %s15, ptr %ptr
+  store volatile <vscale x 4 x float> %s16, ptr %ptr
   ret void
 }
 
@@ -354,15 +354,15 @@ define void @aavpcs4(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32 %
 ; CHECK-NEXT:    st1w { z24.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 4 x i32> %s8, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s9, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s10, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s11, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s12, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s13, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s14, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s15, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s16, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s8, ptr %ptr
+  store volatile <vscale x 4 x i32> %s9, ptr %ptr
+  store volatile <vscale x 4 x i32> %s10, ptr %ptr
+  store volatile <vscale x 4 x i32> %s11, ptr %ptr
+  store volatile <vscale x 4 x i32> %s12, ptr %ptr
+  store volatile <vscale x 4 x i32> %s13, ptr %ptr
+  store volatile <vscale x 4 x i32> %s14, ptr %ptr
+  store volatile <vscale x 4 x i32> %s15, ptr %ptr
+  store volatile <vscale x 4 x i32> %s16, ptr %ptr
   ret void
 }
 
@@ -394,15 +394,15 @@ define <vscale x 4 x float> @aavpcs5(float %s0, float %s1, float %s2, float %s3,
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s10, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s8, ptr %ptr
+  store volatile <vscale x 4 x float> %s9, ptr %ptr
+  store volatile <vscale x 4 x float> %s10, ptr %ptr
+  store volatile <vscale x 4 x float> %s11, ptr %ptr
+  store volatile <vscale x 4 x float> %s12, ptr %ptr
+  store volatile <vscale x 4 x float> %s13, ptr %ptr
+  store volatile <vscale x 4 x float> %s14, ptr %ptr
+  store volatile <vscale x 4 x float> %s15, ptr %ptr
+  store volatile <vscale x 4 x float> %s16, ptr %ptr
   ret <vscale x 4 x float> %s8
 }
 
@@ -432,15 +432,15 @@ define void @aapcs1(float %s0, float %s1, float %s2, float %s3, float %s4, float
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s10, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s8, ptr %ptr
+  store volatile <vscale x 4 x float> %s9, ptr %ptr
+  store volatile <vscale x 4 x float> %s10, ptr %ptr
+  store volatile <vscale x 4 x float> %s11, ptr %ptr
+  store volatile <vscale x 4 x float> %s12, ptr %ptr
+  store volatile <vscale x 4 x float> %s13, ptr %ptr
+  store volatile <vscale x 4 x float> %s14, ptr %ptr
+  store volatile <vscale x 4 x float> %s15, ptr %ptr
+  store volatile <vscale x 4 x float> %s16, ptr %ptr
   ret void
 }
 
@@ -567,30 +567,30 @@ define <vscale x 4 x float> @sve_caller_non_sve_callee_high_range(<vscale x 4 x 
 ; CHECK-NEXT:    bl non_sve_callee_high_range
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #3
-; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
@@ -659,30 +659,30 @@ define <vscale x 4 x float> @sve_ret_caller_non_sve_callee_high_range()  {
 ; CHECK-NEXT:    fmov s7, #7.00000000
 ; CHECK-NEXT:    bl non_sve_callee_high_range
 ; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload

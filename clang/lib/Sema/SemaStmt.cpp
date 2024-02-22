@@ -2326,7 +2326,8 @@ Sema::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
         FirstType = QualType();
         TemplateDeductionResult Result = DeduceAutoType(
             D->getTypeSourceInfo()->getTypeLoc(), DeducedInit, FirstType, Info);
-        if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed)
+        if (Result != TemplateDeductionResult::Success &&
+            Result != TemplateDeductionResult::AlreadyDiagnosed)
           DiagnoseAutoDeductionFailure(D, DeducedInit);
         if (FirstType.isNull()) {
           D->setInvalidDecl();
@@ -2394,9 +2395,10 @@ static bool FinishForRangeVarDecl(Sema &SemaRef, VarDecl *Decl, Expr *Init,
     SemaRef.Diag(Loc, DiagID) << Init->getType();
   } else {
     TemplateDeductionInfo Info(Init->getExprLoc());
-    Sema::TemplateDeductionResult Result = SemaRef.DeduceAutoType(
+    TemplateDeductionResult Result = SemaRef.DeduceAutoType(
         Decl->getTypeSourceInfo()->getTypeLoc(), Init, InitType, Info);
-    if (Result != Sema::TDK_Success && Result != Sema::TDK_AlreadyDiagnosed)
+    if (Result != TemplateDeductionResult::Success &&
+        Result != TemplateDeductionResult::AlreadyDiagnosed)
       SemaRef.Diag(Loc, DiagID) << Init->getType();
   }
 
@@ -3865,14 +3867,14 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
     TemplateDeductionResult Res = DeduceAutoType(
         OrigResultType, RetExpr, Deduced, Info, /*DependentDeduction=*/false,
         /*IgnoreConstraints=*/false, &FailedTSC);
-    if (Res != TDK_Success && FD->isInvalidDecl())
+    if (Res != TemplateDeductionResult::Success && FD->isInvalidDecl())
       return true;
     switch (Res) {
-    case TDK_Success:
+    case TemplateDeductionResult::Success:
       break;
-    case TDK_AlreadyDiagnosed:
+    case TemplateDeductionResult::AlreadyDiagnosed:
       return true;
-    case TDK_Inconsistent: {
+    case TemplateDeductionResult::Inconsistent: {
       //  If a function with a declared return type that contains a placeholder
       //  type has multiple return statements, the return type is deduced for
       //  each return statement. [...] if the type deduced is not the same in
@@ -4381,6 +4383,7 @@ Sema::ActOnObjCAutoreleasePoolStmt(SourceLocation AtLoc, Stmt *Body) {
 namespace {
 class CatchHandlerType {
   QualType QT;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsPointer : 1;
 
   // This is a special constructor to be used only with DenseMapInfo's

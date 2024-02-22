@@ -41,7 +41,8 @@ def Mesh_MeshAxesAttr : DenseArrayAttrBase<"DenseI16ArrayAttr", "int16_t", "i16"
 // Mesh Enums.
 //===----------------------------------------------------------------------===//
 
-def Mesh_Partial : I32EnumAttr<"Partial", "partial type of a distributed tensor", [
+def Mesh_ReductionKind : I32EnumAttr<"ReductionKind",
+  "Reduction of an iterator/mesh dimension.", [
   I32EnumAttrCase<"Sum", 1, "sum">,
   I32EnumAttrCase<"Max", 2, "max">,
   I32EnumAttrCase<"Min", 3, "min">,
@@ -51,24 +52,8 @@ def Mesh_Partial : I32EnumAttr<"Partial", "partial type of a distributed tensor"
   let cppNamespace = "::mlir::mesh";
 }
 
-def Mesh_PartialAttr : EnumAttr<Mesh_Dialect, Mesh_Partial, "partial"> {
+def Mesh_ReductionKindAttr : EnumAttr<Mesh_Dialect, Mesh_ReductionKind, "partial"> {
   let assemblyFormat = "`<` $value `>`";
-}
-
-// Mesh_IteratorType and Mesh_Partial are used to annotate different aspects of
-// distributed tensors. Mesh_IteratorType annotates loops in an operation, while
-// Mesh_Partial indicates whether a tensor is sharded on a specific dimension or
-// is partial.
-def Mesh_IteratorType : I32EnumAttr<"IteratorType", "Iterator type", [
-  I32EnumAttrCase<"Parallel", 1, "parallel">,
-  I32EnumAttrCase<"ReductionSum", 2, "reduction_sum">,
-  I32EnumAttrCase<"ReductionMax", 3, "reduction_max">,
-  I32EnumAttrCase<"ReductionMin", 4, "reduction_min">,
-  I32EnumAttrCase<"ReductionGeneric", 5, "reduction_generic">,
-  I32EnumAttrCase<"Invalid", 100, "invalid">
-]> {
-    let genSpecializedAttr = 0;
-    let cppNamespace = "::mlir::mesh";
 }
 
 //===----------------------------------------------------------------------===//
@@ -83,14 +68,15 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
      "The mesh on which tensors are sharded.">:$mesh,
     ArrayRefParameter<"MeshAxesAttr">:$split_axes,
     OptionalArrayRefParameter<"MeshAxis">:$partial_axes,
-    OptionalParameter<"::mlir::mesh::Partial">:$partial_type
+    OptionalParameter<"::mlir::mesh::ReductionKind">:$partial_type
   );
 
   let summary = "Attribute that extends tensor type to distributed tensor type.";
 
   let description = [{
-    The MeshSharding attribute could be used in the encoding of a
-    `RankedTensorType` or the mesh.shard op. it contains three sub-attributes:
+    The MeshSharding attribute is used in a `mesh.shard` operation.
+    It specifies how a tensor is sharded and distributed across the process
+    mesh.
 
     1. `mesh`: this attribute is a FlatSymbolRefAttr that refers to the device
     mesh where the distributed tensor is placed. The symbol must resolve to a
@@ -107,13 +93,7 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
 
     4. `partial_type`: indicates the reduction type of the possible all-reduce
     op. It has 4 possible values:
-    - `partial_sum`: denotes it's an all-reduce-sum
-    - `partial_max`: denotes it's an all-reduce-max
-    - `partial_min`: denotes it's an all-reduce-min
-    - `partial_generic`: denotes that the all-reduce type is complex and cannot
-    be represented merely by a simple sum, max, or min. The exact reduction
-    computation may be derived from the semantics of the corresponding operation
-    or from the reduction computation IR
+    `generic`: is not an allowed value inside a shard attribute.
 
     Example:
 
@@ -149,7 +129,7 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
     AttrBuilder<(ins "FlatSymbolRefAttr":$mesh,
                      "ArrayRef<SmallVector<MeshAxis>>":$split_axes,
                      "ArrayRef<MeshAxis>": $partial_axes,
-                     "mesh::Partial": $partial_type), [{
+                     "mesh::ReductionKind": $partial_type), [{
       SmallVector<MeshAxesAttr> splitAxesAttr = llvm::map_to_vector(
                   split_axes, [&](ArrayRef<MeshAxis> array) {
           return MeshAxesAttr::get($_ctxt, array);
@@ -159,7 +139,7 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
     }]>,
     AttrBuilder<(ins "FlatSymbolRefAttr":$mesh,
                      "ArrayRef<SmallVector<MeshAxis>>":$split_axes), [{
-      return MeshShardingAttr::get($_ctxt, mesh, split_axes, {}, Partial::Sum);
+      return MeshShardingAttr::get($_ctxt, mesh, split_axes, {}, ReductionKind::Sum);
     }]>
   ];
 

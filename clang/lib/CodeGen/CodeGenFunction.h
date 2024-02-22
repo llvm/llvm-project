@@ -26,6 +26,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
@@ -203,6 +204,7 @@ template <> struct DominatingValue<RValue> {
 
     llvm::Value *Value;
     llvm::Type *ElementType;
+    LLVM_PREFERRED_TYPE(Kind)
     unsigned K : 3;
     unsigned Align : 29;
     saved_type(llvm::Value *v, llvm::Type *e, Kind k, unsigned a = 0)
@@ -650,9 +652,11 @@ public:
   struct LifetimeExtendedCleanupHeader {
     /// The size of the following cleanup object.
     unsigned Size;
-    /// The kind of cleanup to push: a value from the CleanupKind enumeration.
+    /// The kind of cleanup to push.
+    LLVM_PREFERRED_TYPE(CleanupKind)
     unsigned Kind : 31;
     /// Whether this is a conditional cleanup.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsConditional : 1;
 
     size_t getSize() const { return Size; }
@@ -3837,6 +3841,15 @@ private:
   void EmitSections(const OMPExecutableDirective &S);
 
 public:
+  //===--------------------------------------------------------------------===//
+  //                         OpenACC Emission
+  //===--------------------------------------------------------------------===//
+  void EmitOpenACCComputeConstruct(const OpenACCComputeConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // simply emitting its structured block, but in the future we will implement
+    // some sort of IR.
+    EmitStmt(S.getStructuredBlock());
+  }
 
   //===--------------------------------------------------------------------===//
   //                         LValue Expression Emission

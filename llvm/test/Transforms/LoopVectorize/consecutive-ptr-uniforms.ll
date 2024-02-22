@@ -210,7 +210,7 @@ for.end:
 ; INTER:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]], i32 0
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
-define void @predicated_store(%pair *%p, i32 %x, i64 %n) {
+define void @predicated_store(ptr %p, i32 %x, i64 %n) {
 entry:
   br label %for.body
 
@@ -459,7 +459,7 @@ for.end:
 ; INTER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INTER:         br i1 {{.*}}, label %middle.block, label %vector.body
 ;
-define void @pointer_operand_geps_with_different_indexed_types(i64* %A, i8* %B, i64 %n) {
+define void @pointer_operand_geps_with_different_indexed_types(ptr %A, ptr %B, i64 %n) {
 entry:
   br label %for.body
 

@@ -210,6 +210,7 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   const Register DefReg = I.getOperand(0).getReg();
   const LLT DefTy = MRI->getType(DefReg);
+
   if (DefTy == LLT::scalar(1)) {
     if (!AllowRiskySelect) {
       LLVM_DEBUG(dbgs() << "Skipping risky boolean phi\n");
@@ -3552,8 +3553,6 @@ bool AMDGPUInstructionSelector::selectStackRestore(MachineInstr &MI) const {
 }
 
 bool AMDGPUInstructionSelector::select(MachineInstr &I) {
-  if (I.isPHI())
-    return selectPHI(I);
 
   if (!I.isPreISelOpcode()) {
     if (I.isCopy())
@@ -3696,6 +3695,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectWaveAddress(I);
   case AMDGPU::G_STACKRESTORE:
     return selectStackRestore(I);
+  case AMDGPU::G_PHI:
+    return selectPHI(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -4105,7 +4106,7 @@ InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectWMMAVISrc(MachineOperand &Root) const {
   std::optional<FPValueAndVReg> FPValReg;
   if (mi_match(Root.getReg(), *MRI, m_GFCstOrSplat(FPValReg))) {
-    if (TII.isInlineConstant(FPValReg->Value.bitcastToAPInt())) {
+    if (TII.isInlineConstant(FPValReg->Value)) {
       return {{[=](MachineInstrBuilder &MIB) {
         MIB.addImm(FPValReg->Value.bitcastToAPInt().getSExtValue());
       }}};
@@ -5745,16 +5746,8 @@ void AMDGPUInstructionSelector::renderFPPow2ToExponent(MachineInstrBuilder &MIB,
   MIB.addImm(ExpVal);
 }
 
-bool AMDGPUInstructionSelector::isInlineImmediate16(int64_t Imm) const {
-  return AMDGPU::isInlinableLiteral16(Imm, STI.hasInv2PiInlineImm());
-}
-
-bool AMDGPUInstructionSelector::isInlineImmediate32(int64_t Imm) const {
-  return AMDGPU::isInlinableLiteral32(Imm, STI.hasInv2PiInlineImm());
-}
-
-bool AMDGPUInstructionSelector::isInlineImmediate64(int64_t Imm) const {
-  return AMDGPU::isInlinableLiteral64(Imm, STI.hasInv2PiInlineImm());
+bool AMDGPUInstructionSelector::isInlineImmediate(const APInt &Imm) const {
+  return TII.isInlineConstant(Imm);
 }
 
 bool AMDGPUInstructionSelector::isInlineImmediate(const APFloat &Imm) const {

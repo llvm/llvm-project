@@ -679,6 +679,15 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
 
     Function *OutlinedFn = Extractor.extractCodeRegion(CEAC);
 
+    // Forward target-cpu, target-features attributes to the outlined function.
+    auto TargetCpuAttr = OuterFn->getFnAttribute("target-cpu");
+    if (TargetCpuAttr.isStringAttribute())
+      OutlinedFn->addFnAttr(TargetCpuAttr);
+
+    auto TargetFeaturesAttr = OuterFn->getFnAttribute("target-features");
+    if (TargetFeaturesAttr.isStringAttribute())
+      OutlinedFn->addFnAttr(TargetFeaturesAttr);
+
     LLVM_DEBUG(dbgs() << "After      outlining: " << *OuterFn << "\n");
     LLVM_DEBUG(dbgs() << "   Outlined function: " << *OutlinedFn << "\n");
     assert(OutlinedFn->getReturnType()->isVoidTy() &&
@@ -6593,6 +6602,17 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
       llvm_unreachable("Unsupported entry kind.");
     }
   }
+
+  // Emit requires directive globals to a special entry so the runtime can
+  // register them when the device image is loaded.
+  // TODO: This reduces the offloading entries to a 32-bit integer. Offloading
+  //       entries should be redesigned to better suit this use-case.
+  if (Config.hasRequiresFlags() && !Config.isTargetDevice())
+    offloading::emitOffloadingEntry(
+        M, Constant::getNullValue(PointerType::getUnqual(M.getContext())),
+        /*Name=*/"",
+        /*Size=*/0, OffloadEntriesInfoManager::OMPTargetGlobalRegisterRequires,
+        Config.getRequiresFlags(), "omp_offloading_entries");
 }
 
 void TargetRegionEntryInfo::getTargetRegionEntryFnName(
@@ -6870,35 +6890,6 @@ void OpenMPIRBuilder::loadOffloadInfoMetadata(StringRef HostFilePath) {
   }
 
   loadOffloadInfoMetadata(*M.get());
-}
-
-Function *OpenMPIRBuilder::createRegisterRequires(StringRef Name) {
-  // Skip the creation of the registration function if this is device codegen
-  if (Config.isTargetDevice())
-    return nullptr;
-
-  Builder.ClearInsertionPoint();
-
-  // Create registration function prototype
-  auto *RegFnTy = FunctionType::get(Builder.getVoidTy(), {});
-  auto *RegFn = Function::Create(
-      RegFnTy, GlobalVariable::LinkageTypes::InternalLinkage, Name, M);
-  RegFn->setSection(".text.startup");
-  RegFn->addFnAttr(Attribute::NoInline);
-  RegFn->addFnAttr(Attribute::NoUnwind);
-
-  // Create registration function body
-  auto *BB = BasicBlock::Create(M.getContext(), "entry", RegFn);
-  ConstantInt *FlagsVal =
-      ConstantInt::getSigned(Builder.getInt64Ty(), Config.getRequiresFlags());
-  Function *RTLRegFn = getOrCreateRuntimeFunctionPtr(
-      omp::RuntimeFunction::OMPRTL___tgt_register_requires);
-
-  Builder.SetInsertPoint(BB);
-  Builder.CreateCall(RTLRegFn, {FlagsVal});
-  Builder.CreateRetVoid();
-
-  return RegFn;
 }
 
 //===----------------------------------------------------------------------===//

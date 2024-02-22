@@ -166,6 +166,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  truncf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    truncf128_test.cpp
+  HDRS
+    TruncTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.truncf128
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
   ceil_test
   SUITE
     libc-math-smoke-tests
@@ -208,6 +224,22 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.ceill
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  ceilf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ceilf128_test.cpp
+  HDRS
+    CeilTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ceilf128
     libc.src.__support.FPUtil.fp_bits
   # FIXME: Currently fails on the GPU build.
   UNIT_TEST_ONLY
@@ -262,6 +294,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  floorf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    floorf128_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.floorf128
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
   round_test
   SUITE
     libc-math-smoke-tests
@@ -304,6 +352,22 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.roundl
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  roundf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundf128_test.cpp
+  HDRS
+    RoundTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.roundf128
     libc.src.__support.FPUtil.fp_bits
   # FIXME: Currently fails on the GPU build.
   UNIT_TEST_ONLY
@@ -715,9 +779,7 @@ add_fp_unittest(
   HDRS
     FrexpTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.frexp
-    libc.src.__support.FPUtil.basic_operations
 )
 
 add_fp_unittest(
@@ -729,9 +791,7 @@ add_fp_unittest(
   HDRS
     FrexpTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.frexpf
-    libc.src.__support.FPUtil.basic_operations
 )
 
 add_fp_unittest(
@@ -743,9 +803,19 @@ add_fp_unittest(
   HDRS
     FrexpTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.frexpl
-    libc.src.__support.FPUtil.basic_operations
+)
+
+add_fp_unittest(
+  frexpf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    frexpf128_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexpf128
 )
 
 # FIXME: These tests are currently broken for NVPTX.
@@ -808,7 +878,6 @@ add_fp_unittest(
   HDRS
     LdExpTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.ldexp
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
@@ -824,7 +893,6 @@ add_fp_unittest(
   HDRS
     LdExpTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.ldexpf
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
@@ -840,8 +908,22 @@ add_fp_unittest(
   HDRS
     LdExpTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.ldexpl
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
+  ldexpf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ldexpf128_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.src.math.ldexpf128
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
@@ -943,7 +1025,6 @@ add_fp_unittest(
   HDRS
     FDimTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.fdimf
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
@@ -958,7 +1039,6 @@ add_fp_unittest(
   HDRS
     FDimTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.fdim
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
@@ -973,8 +1053,21 @@ add_fp_unittest(
   HDRS
     FDimTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.fdiml
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fdimf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fdimf128_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.src.math.fdimf128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
 )

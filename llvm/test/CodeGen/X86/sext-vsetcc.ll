@@ -228,7 +228,7 @@ define <4 x i32> @cmp_ult_load_const(ptr %x) nounwind {
 ; AVX-LABEL: cmp_ult_load_const:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; AVX-NEXT:    vpmovsxwd {{.*#+}} xmm1 = [42,214,0,255]
+; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm1 = [42,214,0,255]
 ; AVX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %loadx = load <4 x i8>, ptr %x
