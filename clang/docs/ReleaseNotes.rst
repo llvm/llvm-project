@@ -83,8 +83,6 @@ C++20 Feature Support
 
 - Implemented the `__is_layout_compatible` intrinsic to support
   `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
-  Note: `CWG2759: [[no_unique_address] and common initial sequence <https://cplusplus.github.io/CWG/issues/2759.html>`_
-  is not yet implemented.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -107,6 +105,10 @@ Resolutions to C++ Defect Reports
 - Type qualifications are now ignored when evaluating layout compatibility
   of two types.
   (`CWG1719: Layout compatibility and cv-qualification revisited <https://cplusplus.github.io/CWG/issues/1719.html>`_).
+
+- ``[[no_unique_address]]`` is now respected when evaluating layout
+  compatibility of two types.
+  (`CWG2759: [[no_unique_address] and common initial sequence  <https://cplusplus.github.io/CWG/issues/2759.html>`_).
 
 C Language Changes
 ------------------
