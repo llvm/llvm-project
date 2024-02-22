@@ -176,8 +176,8 @@ define i8 @test15(i8 %x) {
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sge i8 [[X:%.*]], 41
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 42)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 42)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %lim = icmp sge i8 %x, 41
   call void @llvm.assume(i1 %lim)
@@ -189,8 +189,8 @@ define i8 @test16(i8 %x) {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sge i8 [[X:%.*]], 41
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 42)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 42)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %lim = icmp sge i8 %x, 41
   call void @llvm.assume(i1 %lim)
@@ -295,8 +295,8 @@ define i8 @test_smax_to_umax_nneg(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_smax_to_umax_nneg(
 ; CHECK-NEXT:    [[NNEG_A:%.*]] = and i8 [[A:%.*]], 127
 ; CHECK-NEXT:    [[NNEG_B:%.*]] = and i8 [[B:%.*]], 127
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.smax.i8(i8 [[NNEG_A]], i8 [[NNEG_B]])
-; CHECK-NEXT:    ret i8 [[RET]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[NNEG_A]], i8 [[NNEG_B]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %nneg_a = and i8 %a, 127
   %nneg_b = and i8 %b, 127
@@ -308,8 +308,8 @@ define i8 @test_smax_to_umax_neg(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_smax_to_umax_neg(
 ; CHECK-NEXT:    [[NEG_A:%.*]] = or i8 [[A:%.*]], -128
 ; CHECK-NEXT:    [[NEG_B:%.*]] = or i8 [[B:%.*]], -128
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.smax.i8(i8 [[NEG_A]], i8 [[NEG_B]])
-; CHECK-NEXT:    ret i8 [[RET]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[NEG_A]], i8 [[NEG_B]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %neg_a = or i8 %a, 128
   %neg_b = or i8 %b, 128
@@ -321,8 +321,8 @@ define i8 @test_smin_to_umin_nneg(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_smin_to_umin_nneg(
 ; CHECK-NEXT:    [[NNEG_A:%.*]] = and i8 [[A:%.*]], 127
 ; CHECK-NEXT:    [[NNEG_B:%.*]] = and i8 [[B:%.*]], 127
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.smin.i8(i8 [[NNEG_A]], i8 [[NNEG_B]])
-; CHECK-NEXT:    ret i8 [[RET]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[NNEG_A]], i8 [[NNEG_B]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %nneg_a = and i8 %a, 127
   %nneg_b = and i8 %b, 127
@@ -334,8 +334,8 @@ define i8 @test_smin_to_umin_neg(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_smin_to_umin_neg(
 ; CHECK-NEXT:    [[NEG_A:%.*]] = or i8 [[A:%.*]], -128
 ; CHECK-NEXT:    [[NEG_B:%.*]] = or i8 [[B:%.*]], -128
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.smin.i8(i8 [[NEG_A]], i8 [[NEG_B]])
-; CHECK-NEXT:    ret i8 [[RET]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[NEG_A]], i8 [[NEG_B]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %neg_a = or i8 %a, 128
   %neg_b = or i8 %b, 128
