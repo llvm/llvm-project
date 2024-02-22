@@ -1,0 +1,58 @@
+# RUN: llc -march=hexagon -run-pass=hexagon-postincopt %s -o /dev/null
+# REQUIRES: asserts
+# Test that we do not hit unreachable code dealt with L4_ior_memoph_io.
+
+...
+---
+name:            foo
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.4(0x30000000), %bb.5(0x50000000)
+    liveins: $r0, $r1, $r2
+
+    %9:intregs = COPY $r2
+    %8:intregs = COPY $r1
+    %7:intregs = COPY $r0
+    %21:intregs = COPY %7
+    %20:intregs = COPY %7
+    %12:predregs = C2_cmpeqi %7, 0
+    J2_jumpt %12, %bb.4, implicit-def $pc
+
+  bb.5:
+    successors: %bb.1(0x80000000)
+
+    %11:intregs = A2_tfrsi 0
+    J2_loop1r %bb.1, %21, implicit-def $lc1, implicit-def $sa1
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+    %0:intregs = PHI %11, %bb.5, %6, %bb.3
+    %13:intregs = M2_mpyi %0, %7
+    %1:intregs = S2_addasl_rrri %8, %13, 1
+    J2_loop0r %bb.2, %20, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+
+  bb.2:
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+
+    %3:intregs = PHI %1, %bb.1, %5, %bb.2
+    %14:intregs = L2_loadruh_io %3, 0
+    L4_ior_memoph_io %3:intregs, 0, 21
+    %15:intregs = A2_add %14, %9
+    %5:intregs = S2_storerh_pi %3, 2, %15
+    ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.3, implicit-def dead $pc
+
+  bb.3:
+    successors: %bb.4(0x04000000), %bb.1(0x7c000000)
+
+    %6:intregs = nuw A2_addi %0, 1
+    ENDLOOP1 %bb.1, implicit-def $pc, implicit-def $lc1, implicit $sa1, implicit $lc1
+    J2_jump %bb.4, implicit-def dead $pc
+
+  bb.4:
+    PS_jmpret $r31, implicit-def dead $pc
+
+...

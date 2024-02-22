@@ -9304,8 +9304,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
       default:
         break;
       }
-      CastCost += TTI->getCastInstrCost(
-          Opcode, DstVecTy, SrcVecTy, CCH, TTI::TCK_RecipThroughput);
+      CastCost += TTI->getCastInstrCost(Opcode, DstVecTy, SrcVecTy, CCH,
+                                        TTI::TCK_RecipThroughput);
       Cost += CastCost;
       LLVM_DEBUG(dbgs() << "SLP: Adding cost " << CastCost
                         << " for final resize for reduction from " << SrcVecTy

@@ -21,7 +21,7 @@
 using namespace llvm;
 using namespace llvm::sys;
 
-PluginManager *PM;
+PluginManager *PM = nullptr;
 
 // List of all plugins that can support offloading.
 static const char *RTLNames[] = {ENABLED_OFFLOAD_PLUGINS};
@@ -198,6 +198,12 @@ static void registerImageIntoTranslationTable(TranslationTable &TT,
 
 void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   PM->RTLsMtx.lock();
+
+  // Add in all the OpenMP requirements associated with this binary.
+  for (__tgt_offload_entry &Entry :
+       llvm::make_range(Desc->HostEntriesBegin, Desc->HostEntriesEnd))
+    if (Entry.flags == OMP_REGISTER_REQUIRES)
+      PM->addRequirements(Entry.data);
 
   // Extract the exectuable image and extra information if availible.
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)

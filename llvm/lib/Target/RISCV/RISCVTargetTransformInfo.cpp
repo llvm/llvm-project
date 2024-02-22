@@ -436,6 +436,22 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     if (Index == 0)
       return TTI::TCC_Free;
 
+    // If we're extracting a subvector of at most m1 size at a sub-register
+    // boundary - which unfortunately we need exact vlen to identify - this is
+    // a subregister extract at worst and thus won't require a vslidedown.
+    // TODO: Extend for aligned m2, m4 subvector extracts
+    // TODO: Extend for misalgined (but contained) extracts
+    // TODO: Extend for scalable subvector types
+    if (std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
+        SubLT.second.isValid() && SubLT.second.isFixedLengthVector()) {
+      const unsigned MinVLen = ST->getRealMinVLen();
+      const unsigned MaxVLen = ST->getRealMaxVLen();
+      if (MinVLen == MaxVLen &&
+          SubLT.second.getScalarSizeInBits() * Index % MinVLen == 0 &&
+          SubLT.second.getSizeInBits() <= MinVLen)
+        return TTI::TCC_Free;
+    }
+
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslidedown.vi  v8, v9, 2
