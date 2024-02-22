@@ -488,11 +488,11 @@ TEST(CallDescription, NegativeMatchQualifiedNames) {
 }
 
 TEST(CallDescription, MatchBuiltins) {
-  // Test CDF_MaybeBuiltin - a flag that allows matching weird builtins.
+  // Test CDM::CLibrary - a flag that allows matching weird builtins.
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
           {{{{"memset"}, 3}, false},
-           {{CDF_MaybeBuiltin, {"memset"}, 3}, true}})),
+           {{CDM::CLibrary, {"memset"}, 3}, true}})),
       "void foo() {"
       "  int x;"
       "  __builtin___memset_chk(&x, 0, sizeof(x),"
@@ -503,8 +503,8 @@ TEST(CallDescription, MatchBuiltins) {
     SCOPED_TRACE("multiple similar builtins");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDF_MaybeBuiltin, {"memcpy"}, 3}, false},
-             {{CDF_MaybeBuiltin, {"wmemcpy"}, 3}, true}})),
+            {{{CDM::CLibrary, {"memcpy"}, 3}, false},
+             {{CDM::CLibrary, {"wmemcpy"}, 3}, true}})),
         R"(void foo(wchar_t *x, wchar_t *y) {
             __builtin_wmemcpy(x, y, sizeof(wchar_t));
           })"));
@@ -513,8 +513,8 @@ TEST(CallDescription, MatchBuiltins) {
     SCOPED_TRACE("multiple similar builtins reversed order");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDF_MaybeBuiltin, {"wmemcpy"}, 3}, true},
-             {{CDF_MaybeBuiltin, {"memcpy"}, 3}, false}})),
+            {{{CDM::CLibrary, {"wmemcpy"}, 3}, true},
+             {{CDM::CLibrary, {"memcpy"}, 3}, false}})),
         R"(void foo(wchar_t *x, wchar_t *y) {
             __builtin_wmemcpy(x, y, sizeof(wchar_t));
           })"));
@@ -523,7 +523,7 @@ TEST(CallDescription, MatchBuiltins) {
     SCOPED_TRACE("lookbehind and lookahead mismatches");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDF_MaybeBuiltin, {"func"}}, false}})),
+            {{{CDM::CLibrary, {"func"}}, false}})),
         R"(
           void funcXXX();
           void XXXfunc();
@@ -538,7 +538,7 @@ TEST(CallDescription, MatchBuiltins) {
     SCOPED_TRACE("lookbehind and lookahead matches");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDF_MaybeBuiltin, {"func"}}, true}})),
+            {{{CDM::CLibrary, {"func"}}, true}})),
         R"(
           void func();
           void func_XXX();
