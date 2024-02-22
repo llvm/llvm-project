@@ -30,6 +30,7 @@ namespace llvm {
 
 /// A format-neutral container for source line information.
 struct DILineInfo {
+  static constexpr const char *const ApproxString = "(approximate)";
   // DILineInfo contains "<invalid>" for function/filename it cannot fetch.
   static constexpr const char *const BadString = "<invalid>";
   // Use "??" instead of "<invalid>" to make our output closer to addr2line.
@@ -50,6 +51,7 @@ struct DILineInfo {
   // DWARF-specific.
   uint32_t Discriminator = 0;
 
+  bool IsApproximatedLine = 0;
   DILineInfo()
       : FileName(BadString), FunctionName(BadString), StartFileName(BadString) {
   }

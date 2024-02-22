@@ -1,16 +1,30 @@
 # REQUIRES: x86-registered-target
 
 # RUN: llvm-mc -g -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: llvm-symbolizer --obj=%t.o 0xa | FileCheck --check-prefix=APPROX-NONE %s
+# RUN: llvm-symbolizer --obj=%t.o 0xa | FileCheck --check-prefixes=APPROX-NONE %s
 # RUN: llvm-symbolizer --obj=%t.o --approximate-line-info=before 0xa | FileCheck --check-prefix=APPROX-BEFORE %s
 # RUN: llvm-symbolizer --obj=%t.o --approximate-line-info=after 0xa | FileCheck --check-prefix=APPROX-AFTER %s
+# RUN: llvm-symbolizer --obj=%t.o --approximate-line-info=before 0xa 0x10 | FileCheck --check-prefixes=APPROX-BEFORE,NO-APPROX %s
+# RUN: llvm-symbolizer --obj=%t.o --approximate-line-info=before --verbose 0xa | FileCheck --check-prefix=APPROX-VERBOSE %s
+# RUN: llvm-symbolizer --obj=%t.o --approximate-line-info=before --output-style=JSON 0xa | FileCheck --check-prefix=APPROX-JSON %s
 
 # APPROX-NONE: main
 # APPROX-NONE-NEXT: /home/ampandey/test-hip/main.c:0:6
 # APPROX-BEFORE: main
-# APPROX-BEFORE-NEXT: /home/ampandey/test-hip/main.c:4:6
+# APPROX-BEFORE-NEXT: /home/ampandey/test-hip/main.c:4:6 (approximate)
 # APPROX-AFTER: main
-# APPROX-AFTER-NEXT: /home/ampandey/test-hip/main.c:8:2
+# APPROX-AFTER-NEXT: /home/ampandey/test-hip/main.c:8:2 (approximate)
+# NO-APPROX: main
+# NO-APPROX-NEXT: /home/ampandey/test-hip/main.c:8:2
+
+#APPROX-VERBOSE: main
+#APPROX-VERBOSE-NEXT: Filename: /home/ampandey/test-hip/main.c
+#APPROX-VERBOSE-NEXT: Function start address: 0x0
+#APPROX-VERBOSE-NEXT: Line: 4
+#APPROX-VERBOSE-NEXT: Column: 6
+#APPROX-VERBOSE-NEXT: Approximate: 1
+
+#APPROX-JSON: [{"Address":"0xa","ModuleName":"{{.*}}/test/tools/llvm-symbolizer/Output/approximate-line-info.s.tmp.o","Symbol":[{"Approximate":true,"Column":6,"Discriminator":0,"FileName":"/home/ampandey/test-hip/main.c","FunctionName":"main","Line":4,"StartAddress":"0x0","StartFileName":"","StartLine":0}]}]
 
 ## Generated from C Code
 ##

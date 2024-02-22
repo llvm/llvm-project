@@ -240,7 +240,7 @@ public:
 
     /// Returns the index of the row with file/line info for a given address,
     /// or UnknownRowIndex if there is no such row.
-    uint32_t
+    std::pair<uint32_t, bool>
     lookupAddress(object::SectionedAddress Address,
                   DILineInfoSpecifier::ApproximateLineKind LineKind) const;
 
@@ -303,7 +303,7 @@ public:
     getSourceByIndex(uint64_t FileIndex,
                      DILineInfoSpecifier::FileLineInfoKind Kind) const;
 
-    uint32_t
+    std::pair<uint32_t, bool>
     lookupAddressImpl(object::SectionedAddress Address,
                       DILineInfoSpecifier::ApproximateLineKind LineKind) const;
 
