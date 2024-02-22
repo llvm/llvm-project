@@ -339,12 +339,12 @@ def UseSampleProfile : StrBoolAttr<"use-sample-profile">;
 def DenormalFPMath : ComplexStrAttr<"denormal-fp-math", [FnAttr]>;
 def DenormalFPMathF32 : ComplexStrAttr<"denormal-fp-math-f32", [FnAttr]>;
 
-// Attiribute compatiblity rules are generated to check the attribute of the
+// Attribute compatiblity rules are generated to check the attribute of the
 // caller and callee and decide whether inlining should be allowed. CompatRule
 // and child classes are used for the rule generation. CompatRule takes only a
 // compare function which could be templated with the attribute type.
-// CompatRuleStrAttr takes the compare function and the string for checking the
-// string attributes.
+// CompatRuleStrAttr takes the compare function and the string attribute for
+// checking compatibility for inline substitution.
 class CompatRule<string F> {
   // The function's signature must match "bool(const Function&, const
   // Function&)", where the first parameter is the reference to the caller and
