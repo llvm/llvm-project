@@ -28,17 +28,17 @@ entry:
   %v = alloca i8, align 1
   store ptr addrspace(1) %dst, ptr %dst.addr, align 4
   store i8 0, ptr %v, align 1
-  %0 = load i8, ptr %v, align 1
+  %value = load i8, ptr %v, align 1
 ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt8]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]]
-  %call = call spir_func signext i8 @_Z16sub_group_rotateci(i8 noundef signext %0, i32 noundef 2) #2
-  %1 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx = getelementptr inbounds i8, ptr addrspace(1) %1, i32 0
+  %call = call spir_func signext i8 @_Z16sub_group_rotateci(i8 noundef signext %value, i32 noundef 2) #2
+  %data = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx = getelementptr inbounds i8, ptr addrspace(1) %data, i32 0
   store i8 %call, ptr addrspace(1) %arrayidx, align 1
-  %2 = load i8, ptr %v, align 1
+  %value_clustered = load i8, ptr %v, align 1
 ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt8]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]] %[[ConstInt4]]
-  %call1 = call spir_func signext i8 @_Z26sub_group_clustered_rotatecij(i8 noundef signext %2, i32 noundef 2, i32 noundef 4) #2
-  %3 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx2 = getelementptr inbounds i8, ptr addrspace(1) %3, i32 1
+  %call1 = call spir_func signext i8 @_Z26sub_group_clustered_rotatecij(i8 noundef signext %value_clustered, i32 noundef 2, i32 noundef 4) #2
+  %data2 = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx2 = getelementptr inbounds i8, ptr addrspace(1) %data2, i32 1
   store i8 %call1, ptr addrspace(1) %arrayidx2, align 1
   ret void
 }
@@ -56,17 +56,17 @@ entry:
   %v = alloca i8, align 1
   store ptr addrspace(1) %dst, ptr %dst.addr, align 4
   store i8 0, ptr %v, align 1
-  %0 = load i8, ptr %v, align 1
+  %value = load i8, ptr %v, align 1
 ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt8]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]]
-  %call = call spir_func zeroext i8 @_Z16sub_group_rotatehi(i8 noundef zeroext %0, i32 noundef 2) #2
-  %1 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx = getelementptr inbounds i8, ptr addrspace(1) %1, i32 0
+  %call = call spir_func zeroext i8 @_Z16sub_group_rotatehi(i8 noundef zeroext %value, i32 noundef 2) #2
+  %data = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx = getelementptr inbounds i8, ptr addrspace(1) %data, i32 0
   store i8 %call, ptr addrspace(1) %arrayidx, align 1
-  %2 = load i8, ptr %v, align 1
+  %value_clustered = load i8, ptr %v, align 1
 ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt8]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]] %[[ConstInt4]]
-  %call1 = call spir_func zeroext i8 @_Z26sub_group_clustered_rotatehij(i8 noundef zeroext %2, i32 noundef 2, i32 noundef 4) #2
-  %3 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx2 = getelementptr inbounds i8, ptr addrspace(1) %3, i32 1
+  %call1 = call spir_func zeroext i8 @_Z26sub_group_clustered_rotatehij(i8 noundef zeroext %value_clustered, i32 noundef 2, i32 noundef 4) #2
+  %data2 = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx2 = getelementptr inbounds i8, ptr addrspace(1) %data2, i32 1
   store i8 %call1, ptr addrspace(1) %arrayidx2, align 1
   ret void
 }
@@ -84,17 +84,17 @@ entry:
   %v = alloca i16, align 2
   store ptr addrspace(1) %dst, ptr %dst.addr, align 4
   store i16 0, ptr %v, align 2
-  %0 = load i16, ptr %v, align 2
+  %value = load i16, ptr %v, align 2
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt16]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]]
-  %call = call spir_func signext i16 @_Z16sub_group_rotatesi(i16 noundef signext %0, i32 noundef 2) #2
-  %1 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx = getelementptr inbounds i16, ptr addrspace(1) %1, i32 0
+  %call = call spir_func signext i16 @_Z16sub_group_rotatesi(i16 noundef signext %value, i32 noundef 2) #2
+  %data = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx = getelementptr inbounds i16, ptr addrspace(1) %data, i32 0
   store i16 %call, ptr addrspace(1) %arrayidx, align 2
-  %2 = load i16, ptr %v, align 2
+  %value_clustered = load i16, ptr %v, align 2
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt16]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]] %[[ConstInt4]]
-  %call1 = call spir_func signext i16 @_Z26sub_group_clustered_rotatesij(i16 noundef signext %2, i32 noundef 2, i32 noundef 4) #2
-  %3 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx2 = getelementptr inbounds i16, ptr addrspace(1) %3, i32 1
+  %call1 = call spir_func signext i16 @_Z26sub_group_clustered_rotatesij(i16 noundef signext %value_clustered, i32 noundef 2, i32 noundef 4) #2
+  %data2 = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx2 = getelementptr inbounds i16, ptr addrspace(1) %data2, i32 1
   store i16 %call1, ptr addrspace(1) %arrayidx2, align 2
   ret void
 }
@@ -112,17 +112,17 @@ entry:
   %v = alloca i16, align 2
   store ptr addrspace(1) %dst, ptr %dst.addr, align 4
   store i16 0, ptr %v, align 2
-  %0 = load i16, ptr %v, align 2
+  %value = load i16, ptr %v, align 2
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt16]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]]
-  %call = call spir_func zeroext i16 @_Z16sub_group_rotateti(i16 noundef zeroext %0, i32 noundef 2) #2
-  %1 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx = getelementptr inbounds i16, ptr addrspace(1) %1, i32 0
+  %call = call spir_func zeroext i16 @_Z16sub_group_rotateti(i16 noundef zeroext %value, i32 noundef 2) #2
+  %data = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx = getelementptr inbounds i16, ptr addrspace(1) %data, i32 0
   store i16 %call, ptr addrspace(1) %arrayidx, align 2
-  %2 = load i16, ptr %v, align 2
+  %value_clustered = load i16, ptr %v, align 2
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt16]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]] %[[ConstInt4]]
-  %call1 = call spir_func zeroext i16 @_Z26sub_group_clustered_rotatetij(i16 noundef zeroext %2, i32 noundef 2, i32 noundef 4) #2
-  %3 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx2 = getelementptr inbounds i16, ptr addrspace(1) %3, i32 1
+  %call1 = call spir_func zeroext i16 @_Z26sub_group_clustered_rotatetij(i16 noundef zeroext %value_clustered, i32 noundef 2, i32 noundef 4) #2
+  %data2 = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx2 = getelementptr inbounds i16, ptr addrspace(1) %data2, i32 1
   store i16 %call1, ptr addrspace(1) %arrayidx2, align 2
   ret void
 }
@@ -140,17 +140,17 @@ entry:
   %v = alloca i32, align 4
   store ptr addrspace(1) %dst, ptr %dst.addr, align 4
   store i32 0, ptr %v, align 4
-  %0 = load i32, ptr %v, align 4
+  %value = load i32, ptr %v, align 4
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt32]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]]
-  %call = call spir_func i32 @_Z16sub_group_rotateii(i32 noundef %0, i32 noundef 2) #2
-  %1 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %1, i32 0
+  %call = call spir_func i32 @_Z16sub_group_rotateii(i32 noundef %value, i32 noundef 2) #2
+  %data = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %data, i32 0
   store i32 %call, ptr addrspace(1) %arrayidx, align 4
-  %2 = load i32, ptr %v, align 4
+  %value_clustered = load i32, ptr %v, align 4
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt32]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]] %[[ConstInt4]]
-  %call1 = call spir_func i32 @_Z26sub_group_clustered_rotateiij(i32 noundef %2, i32 noundef 2, i32 noundef 4) #2
-  %3 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %3, i32 1
+  %call1 = call spir_func i32 @_Z26sub_group_clustered_rotateiij(i32 noundef %value_clustered, i32 noundef 2, i32 noundef 4) #2
+  %data2 = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %data2, i32 1
   store i32 %call1, ptr addrspace(1) %arrayidx2, align 4
   ret void
 }
@@ -168,17 +168,17 @@ entry:
   %v = alloca i32, align 4
   store ptr addrspace(1) %dst, ptr %dst.addr, align 4
   store i32 0, ptr %v, align 4
-  %0 = load i32, ptr %v, align 4
+  %value = load i32, ptr %v, align 4
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt32]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]]
-  %call = call spir_func i32 @_Z16sub_group_rotateji(i32 noundef %0, i32 noundef 2) #2
-  %1 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %1, i32 0
+  %call = call spir_func i32 @_Z16sub_group_rotateji(i32 noundef %value, i32 noundef 2) #2
+  %data = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %data, i32 0
   store i32 %call, ptr addrspace(1) %arrayidx, align 4
-  %2 = load i32, ptr %v, align 4
+  %value_clustered = load i32, ptr %v, align 4
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt32]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]] %[[ConstInt4]]
-  %call1 = call spir_func i32 @_Z26sub_group_clustered_rotatejij(i32 noundef %2, i32 noundef 2, i32 noundef 4) #2
-  %3 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %3, i32 1
+  %call1 = call spir_func i32 @_Z26sub_group_clustered_rotatejij(i32 noundef %value_clustered, i32 noundef 2, i32 noundef 4) #2
+  %data2 = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %data2, i32 1
   store i32 %call1, ptr addrspace(1) %arrayidx2, align 4
   ret void
 }
@@ -196,17 +196,17 @@ entry:
   %v = alloca i64, align 8
   store ptr addrspace(1) %dst, ptr %dst.addr, align 4
   store i64 0, ptr %v, align 8
-  %0 = load i64, ptr %v, align 8
+  %value = load i64, ptr %v, align 8
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt64]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]]
-  %call = call spir_func i64 @_Z16sub_group_rotateli(i64 noundef %0, i32 noundef 2) #2
-  %1 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx = getelementptr inbounds i64, ptr addrspace(1) %1, i32 0
+  %call = call spir_func i64 @_Z16sub_group_rotateli(i64 noundef %value, i32 noundef 2) #2
+  %data = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx = getelementptr inbounds i64, ptr addrspace(1) %data, i32 0
   store i64 %call, ptr addrspace(1) %arrayidx, align 8
-  %2 = load i64, ptr %v, align 8
+  %value_clustered = load i64, ptr %v, align 8
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt64]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]] %[[ConstInt4]]
-  %call1 = call spir_func i64 @_Z26sub_group_clustered_rotatelij(i64 noundef %2, i32 noundef 2, i32 noundef 4) #2
-  %3 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx2 = getelementptr inbounds i64, ptr addrspace(1) %3, i32 1
+  %call1 = call spir_func i64 @_Z26sub_group_clustered_rotatelij(i64 noundef %value_clustered, i32 noundef 2, i32 noundef 4) #2
+  %data2 = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx2 = getelementptr inbounds i64, ptr addrspace(1) %data2, i32 1
   store i64 %call1, ptr addrspace(1) %arrayidx2, align 8
   ret void
 }
@@ -224,17 +224,17 @@ entry:
   %v = alloca i64, align 8
   store ptr addrspace(1) %dst, ptr %dst.addr, align 4
   store i64 0, ptr %v, align 8
-  %0 = load i64, ptr %v, align 8
+  %value = load i64, ptr %v, align 8
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt64]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]]
-  %call = call spir_func i64 @_Z16sub_group_rotatemi(i64 noundef %0, i32 noundef 2) #2
-  %1 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx = getelementptr inbounds i64, ptr addrspace(1) %1, i32 0
+  %call = call spir_func i64 @_Z16sub_group_rotatemi(i64 noundef %value, i32 noundef 2) #2
+  %data = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx = getelementptr inbounds i64, ptr addrspace(1) %data, i32 0
   store i64 %call, ptr addrspace(1) %arrayidx, align 8
-  %2 = load i64, ptr %v, align 8
+  %value_clustered = load i64, ptr %v, align 8
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyInt64]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]] %[[ConstInt4]]
-  %call1 = call spir_func i64 @_Z26sub_group_clustered_rotatemij(i64 noundef %2, i32 noundef 2, i32 noundef 4) #2
-  %3 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx2 = getelementptr inbounds i64, ptr addrspace(1) %3, i32 1
+  %call1 = call spir_func i64 @_Z26sub_group_clustered_rotatemij(i64 noundef %value_clustered, i32 noundef 2, i32 noundef 4) #2
+  %data2 = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx2 = getelementptr inbounds i64, ptr addrspace(1) %data2, i32 1
   store i64 %call1, ptr addrspace(1) %arrayidx2, align 8
   ret void
 }
@@ -252,17 +252,17 @@ entry:
   %v = alloca float, align 4
   store ptr addrspace(1) %dst, ptr %dst.addr, align 4
   store float 0.000000e+00, ptr %v, align 4
-  %0 = load float, ptr %v, align 4
+  %value = load float, ptr %v, align 4
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyFloat]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]]
-  %call = call spir_func float @_Z16sub_group_rotatefi(float noundef %0, i32 noundef 2) #2
-  %1 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx = getelementptr inbounds float, ptr addrspace(1) %1, i32 0
+  %call = call spir_func float @_Z16sub_group_rotatefi(float noundef %value, i32 noundef 2) #2
+  %data = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx = getelementptr inbounds float, ptr addrspace(1) %data, i32 0
   store float %call, ptr addrspace(1) %arrayidx, align 4
-  %2 = load float, ptr %v, align 4
+  %value_clustered = load float, ptr %v, align 4
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyFloat]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]] %[[ConstInt4]]
-  %call1 = call spir_func float @_Z26sub_group_clustered_rotatefij(float noundef %2, i32 noundef 2, i32 noundef 4) #2
-  %3 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx2 = getelementptr inbounds float, ptr addrspace(1) %3, i32 1
+  %call1 = call spir_func float @_Z26sub_group_clustered_rotatefij(float noundef %value_clustered, i32 noundef 2, i32 noundef 4) #2
+  %data2 = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr addrspace(1) %data2, i32 1
   store float %call1, ptr addrspace(1) %arrayidx2, align 4
   ret void
 }
@@ -280,17 +280,17 @@ entry:
   %v = alloca half, align 2
   store ptr addrspace(1) %dst, ptr %dst.addr, align 4
   store half 0xH0000, ptr %v, align 2
-  %0 = load half, ptr %v, align 2
+  %value = load half, ptr %v, align 2
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyHalf]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]]
-  %call = call spir_func half @_Z16sub_group_rotateDhi(half noundef %0, i32 noundef 2) #2
-  %1 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx = getelementptr inbounds half, ptr addrspace(1) %1, i32 0
+  %call = call spir_func half @_Z16sub_group_rotateDhi(half noundef %value, i32 noundef 2) #2
+  %data = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx = getelementptr inbounds half, ptr addrspace(1) %data, i32 0
   store half %call, ptr addrspace(1) %arrayidx, align 2
-  %2 = load half, ptr %v, align 2
+  %value_clustered = load half, ptr %v, align 2
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyHalf]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]] %[[ConstInt4]]
-  %call1 = call spir_func half @_Z26sub_group_clustered_rotateDhij(half noundef %2, i32 noundef 2, i32 noundef 4) #2
-  %3 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx2 = getelementptr inbounds half, ptr addrspace(1) %3, i32 1
+  %call1 = call spir_func half @_Z26sub_group_clustered_rotateDhij(half noundef %value_clustered, i32 noundef 2, i32 noundef 4) #2
+  %data2 = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx2 = getelementptr inbounds half, ptr addrspace(1) %data2, i32 1
   store half %call1, ptr addrspace(1) %arrayidx2, align 2
   ret void
 }
@@ -308,17 +308,17 @@ entry:
   %v = alloca double, align 8
   store ptr addrspace(1) %dst, ptr %dst.addr, align 4
   store double 0.000000e+00, ptr %v, align 8
-  %0 = load double, ptr %v, align 8
+  %value = load double, ptr %v, align 8
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyDouble]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]]
-  %call = call spir_func double @_Z16sub_group_rotatedi(double noundef %0, i32 noundef 2) #2
-  %1 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx = getelementptr inbounds double, ptr addrspace(1) %1, i32 0
+  %call = call spir_func double @_Z16sub_group_rotatedi(double noundef %value, i32 noundef 2) #2
+  %data = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx = getelementptr inbounds double, ptr addrspace(1) %data, i32 0
   store double %call, ptr addrspace(1) %arrayidx, align 8
-  %2 = load double, ptr %v, align 8
+  %value_clustered = load double, ptr %v, align 8
   ; CHECK: OpGroupNonUniformRotateKHR %[[TyDouble]] %[[ScopeSubgroup]] %[[#]] %[[ConstInt2]] %[[ConstInt4]]
-  %call1 = call spir_func double @_Z26sub_group_clustered_rotatedij(double noundef %2, i32 noundef 2, i32 noundef 4) #2
-  %3 = load ptr addrspace(1), ptr %dst.addr, align 4
-  %arrayidx2 = getelementptr inbounds double, ptr addrspace(1) %3, i32 1
+  %call1 = call spir_func double @_Z26sub_group_clustered_rotatedij(double noundef %value_clustered, i32 noundef 2, i32 noundef 4) #2
+  %data2 = load ptr addrspace(1), ptr %dst.addr, align 4
+  %arrayidx2 = getelementptr inbounds double, ptr addrspace(1) %data2, i32 1
   store double %call1, ptr addrspace(1) %arrayidx2, align 8
   ret void
 }
