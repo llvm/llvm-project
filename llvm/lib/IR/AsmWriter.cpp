@@ -292,8 +292,8 @@ static const Module *getModuleFromDPI(const DPMarker *Marker) {
   return M ? M->getParent() : nullptr;
 }
 
-static const Module *getModuleFromDPI(const DPValue *DPV) {
-  return DPV->getMarker() ? getModuleFromDPI(DPV->getMarker()) : nullptr;
+static const Module *getModuleFromDPI(const DbgRecord *DR) {
+  return DR->getMarker() ? getModuleFromDPI(DR->getMarker()) : nullptr;
 }
 
 static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
@@ -1505,16 +1505,39 @@ static void WriteAPFloatInternal(raw_ostream &Out, const APFloat &APF) {
 static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
                                   AsmWriterContext &WriterCtx) {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {
-    if (CI->getType()->isIntegerTy(1)) {
-      Out << (CI->getZExtValue() ? "true" : "false");
-      return;
+    Type *Ty = CI->getType();
+
+    if (Ty->isVectorTy()) {
+      Out << "splat (";
+      WriterCtx.TypePrinter->print(Ty->getScalarType(), Out);
+      Out << " ";
     }
-    Out << CI->getValue();
+
+    if (Ty->getScalarType()->isIntegerTy(1))
+      Out << (CI->getZExtValue() ? "true" : "false");
+    else
+      Out << CI->getValue();
+
+    if (Ty->isVectorTy())
+      Out << ")";
+
     return;
   }
 
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV)) {
+    Type *Ty = CFP->getType();
+
+    if (Ty->isVectorTy()) {
+      Out << "splat (";
+      WriterCtx.TypePrinter->print(Ty->getScalarType(), Out);
+      Out << " ";
+    }
+
     WriteAPFloatInternal(Out, CFP->getValueAPF());
+
+    if (Ty->isVectorTy())
+      Out << ")";
+
     return;
   }
 
@@ -2777,6 +2800,7 @@ public:
   void printInstruction(const Instruction &I);
   void printDPMarker(const DPMarker &DPI);
   void printDPValue(const DPValue &DPI);
+  void printDPLabel(const DPLabel &DPL);
   void printDbgRecord(const DbgRecord &DPI);
 
   void printUseListOrder(const Value *V, const std::vector<unsigned> &Shuffle);
@@ -4685,8 +4709,10 @@ void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
 void AssemblyWriter::printDbgRecord(const DbgRecord &DR) {
   if (auto *DPV = dyn_cast<DPValue>(&DR))
     printDPValue(*DPV);
+  else if (auto *DPL = dyn_cast<DPLabel>(&DR))
+    printDPLabel(*DPL);
   else
-    llvm_unreachable("unsupported dbg record");
+    llvm_unreachable("Unexpected DbgRecord kind");
 }
 
 void AssemblyWriter::printDPValue(const DPValue &Value) {
@@ -4725,6 +4751,16 @@ void AssemblyWriter::printDPValue(const DPValue &Value) {
   }
   WriteAsOperandInternal(Out, Value.getDebugLoc().get(), WriterCtx, true);
   Out << " marker @" << Value.getMarker();
+  Out << " }";
+}
+
+void AssemblyWriter::printDPLabel(const DPLabel &Label) {
+  // There's no formal representation of a DPLabel -- print purely as
+  // a debugging aid.
+  Out << "  DPLabel { ";
+  auto WriterCtx = getContext();
+  WriteAsOperandInternal(Out, Label.getLabel(), WriterCtx, true);
+  Out << " marker @" << Label.getMarker();
   Out << " }";
 }
 
@@ -4991,6 +5027,12 @@ void DPMarker::print(raw_ostream &ROS, ModuleSlotTracker &MST,
   W.printDPMarker(*this);
 }
 
+void DPLabel::print(raw_ostream &ROS, bool IsForDebug) const {
+
+  ModuleSlotTracker MST(getModuleFromDPI(this), true);
+  print(ROS, MST, IsForDebug);
+}
+
 void DPValue::print(raw_ostream &ROS, ModuleSlotTracker &MST,
                     bool IsForDebug) const {
   // There's no formal representation of a DPValue -- print purely as a
@@ -5008,6 +5050,24 @@ void DPValue::print(raw_ostream &ROS, ModuleSlotTracker &MST,
                           : nullptr);
   AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
   W.printDPValue(*this);
+}
+
+void DPLabel::print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                    bool IsForDebug) const {
+  // There's no formal representation of a DbgLabelRecord -- print purely as
+  // a debugging aid.
+  formatted_raw_ostream OS(ROS);
+  SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
+  SlotTracker &SlotTable =
+      MST.getMachine() ? *MST.getMachine() : EmptySlotTable;
+  auto incorporateFunction = [&](const Function *F) {
+    if (F)
+      MST.incorporateFunction(*F);
+  };
+  incorporateFunction(Marker->getParent() ? Marker->getParent()->getParent()
+                                          : nullptr);
+  AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
+  W.printDPLabel(*this);
 }
 
 void Value::print(raw_ostream &ROS, bool IsForDebug) const {

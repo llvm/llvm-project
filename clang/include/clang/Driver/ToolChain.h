@@ -121,6 +121,11 @@ public:
     RM_Disabled,
   };
 
+  enum ExceptionsMode {
+    EM_Enabled,
+    EM_Disabled,
+  };
+
   struct BitCodeLibraryInfo {
     std::string Path;
     bool ShouldInternalize;
@@ -141,6 +146,8 @@ private:
   const llvm::opt::Arg *const CachedRTTIArg;
 
   const RTTIMode CachedRTTIMode;
+
+  const ExceptionsMode CachedExceptionsMode;
 
   /// The list of toolchain specific path prefixes to search for libraries.
   path_list LibraryPaths;
@@ -326,6 +333,9 @@ public:
 
   // Returns the RTTIMode for the toolchain with the current arguments.
   RTTIMode getRTTIMode() const { return CachedRTTIMode; }
+
+  // Returns the ExceptionsMode for the toolchain with the current arguments.
+  ExceptionsMode getExceptionsMode() const { return CachedExceptionsMode; }
 
   /// Return any implicit target and/or mode flag for an invocation of
   /// the compiler driver as `ProgName`.
