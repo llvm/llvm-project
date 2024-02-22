@@ -37,6 +37,7 @@ add_lldb_tool(lldb-dap
   RunInTerminal.cpp
   SourceBreakpoint.cpp
   DAP.cpp
+  Watchpoint.cpp
 
   LINK_LIBS
     liblldb
