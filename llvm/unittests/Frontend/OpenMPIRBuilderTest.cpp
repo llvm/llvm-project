@@ -3327,8 +3327,8 @@ TEST_F(OpenMPIRBuilderTest, SingleDirective) {
     EXPECT_NE(IPBB->end(), IP.getPoint());
   };
 
-  Builder.restoreIP(OMPBuilder.createSingle(
-      Builder, BodyGenCB, FiniCB, /*IsNowait*/ false, /*DidIt*/ nullptr));
+  Builder.restoreIP(
+      OMPBuilder.createSingle(Builder, BodyGenCB, FiniCB, /*IsNowait*/ false));
   Value *EntryBBTI = EntryBB->getTerminator();
   EXPECT_NE(EntryBBTI, nullptr);
   EXPECT_TRUE(isa<BranchInst>(EntryBBTI));
@@ -3417,8 +3417,8 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveNowait) {
     EXPECT_NE(IPBB->end(), IP.getPoint());
   };
 
-  Builder.restoreIP(OMPBuilder.createSingle(
-      Builder, BodyGenCB, FiniCB, /*IsNowait*/ true, /*DidIt*/ nullptr));
+  Builder.restoreIP(
+      OMPBuilder.createSingle(Builder, BodyGenCB, FiniCB, /*IsNowait*/ true));
   Value *EntryBBTI = EntryBB->getTerminator();
   EXPECT_NE(EntryBBTI, nullptr);
   EXPECT_TRUE(isa<BranchInst>(EntryBBTI));
@@ -3464,6 +3464,26 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveNowait) {
   EXPECT_EQ(ExitBarrier, nullptr);
 }
 
+// Helper class to check each instruction of a BB.
+class BBInstIter {
+  BasicBlock *BB;
+  BasicBlock::iterator BBI;
+
+public:
+  BBInstIter(BasicBlock *BB) : BB(BB), BBI(BB->begin()) {}
+
+  bool hasNext() const { return BBI != BB->end(); }
+
+  template <typename InstTy> InstTy *next() {
+    if (!hasNext())
+      return nullptr;
+    Instruction *Cur = &*BBI++;
+    if (!isa<InstTy>(Cur))
+      return nullptr;
+    return cast<InstTy>(Cur);
+  }
+};
+
 TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
@@ -3485,8 +3505,6 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
       Builder.getVoidTy(), {Builder.getPtrTy(), Builder.getPtrTy()}, false);
   Function *CopyFunc =
       Function::Create(CopyFuncTy, Function::PrivateLinkage, "copy_var", *M);
-
-  Value *DidIt = Builder.CreateAlloca(Type::getInt32Ty(Builder.getContext()));
 
   auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
     if (AllocaIP.isSet())
@@ -3514,11 +3532,12 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
 
   auto FiniCB = [&](InsertPointTy IP) {
     BasicBlock *IPBB = IP.getBlock();
+    // IP must be before the unconditional branch to ExitBB
     EXPECT_NE(IPBB->end(), IP.getPoint());
   };
 
   Builder.restoreIP(OMPBuilder.createSingle(Builder, BodyGenCB, FiniCB,
-                                            /*IsNowait*/ false, DidIt, {CPVar},
+                                            /*IsNowait*/ false, {CPVar},
                                             {CopyFunc}));
   Value *EntryBBTI = EntryBB->getTerminator();
   EXPECT_NE(EntryBBTI, nullptr);
@@ -3537,33 +3556,47 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
   EXPECT_EQ(SingleEntryCI->getCalledFunction()->getName(), "__kmpc_single");
   EXPECT_TRUE(isa<GlobalVariable>(SingleEntryCI->getArgOperand(0)));
 
-  CallInst *SingleEndCI = nullptr;
-  for (auto &FI : *ThenBB) {
-    Instruction *Cur = &FI;
-    if (isa<CallInst>(Cur)) {
-      SingleEndCI = cast<CallInst>(Cur);
-      if (SingleEndCI->getCalledFunction()->getName() == "__kmpc_end_single")
-        break;
-      SingleEndCI = nullptr;
-    }
-  }
+  // check ThenBB
+  BBInstIter ThenBBI(ThenBB);
+  // load PrivAI
+  auto *PrivLI = ThenBBI.next<LoadInst>();
+  EXPECT_NE(PrivLI, nullptr);
+  EXPECT_EQ(PrivLI->getPointerOperand(), PrivAI);
+  // icmp
+  EXPECT_TRUE(ThenBBI.next<ICmpInst>());
+  // store 1, DidIt
+  auto *DidItSI = ThenBBI.next<StoreInst>();
+  EXPECT_NE(DidItSI, nullptr);
+  EXPECT_EQ(DidItSI->getValueOperand(),
+            ConstantInt::get(Type::getInt32Ty(Ctx), 1));
+  Value *DidIt = DidItSI->getPointerOperand();
+  // call __kmpc_end_single
+  auto *SingleEndCI = ThenBBI.next<CallInst>();
   EXPECT_NE(SingleEndCI, nullptr);
+  EXPECT_EQ(SingleEndCI->getCalledFunction()->getName(), "__kmpc_end_single");
   EXPECT_EQ(SingleEndCI->arg_size(), 2U);
   EXPECT_TRUE(isa<GlobalVariable>(SingleEndCI->getArgOperand(0)));
   EXPECT_EQ(SingleEndCI->getArgOperand(1), SingleEntryCI->getArgOperand(1));
+  // br ExitBB
+  auto *ExitBBBI = ThenBBI.next<BranchInst>();
+  EXPECT_NE(ExitBBBI, nullptr);
+  EXPECT_TRUE(ExitBBBI->isUnconditional());
+  EXPECT_EQ(ExitBBBI->getOperand(0), ExitBB);
+  EXPECT_FALSE(ThenBBI.hasNext());
 
-  CallInst *CopyPrivateCI = nullptr;
-  bool FoundBarrier = false;
-  for (auto &FI : *ExitBB) {
-    Instruction *Cur = &FI;
-    if (auto *CI = dyn_cast<CallInst>(Cur)) {
-      if (CI->getCalledFunction()->getName() == "__kmpc_barrier")
-        FoundBarrier = true;
-      else if (CI->getCalledFunction()->getName() == "__kmpc_copyprivate")
-        CopyPrivateCI = CI;
-    }
-  }
-  EXPECT_FALSE(FoundBarrier);
+  // check ExitBB
+  BBInstIter ExitBBI(ExitBB);
+  // call __kmpc_global_thread_num
+  auto *ThreadNumCI = ExitBBI.next<CallInst>();
+  EXPECT_NE(ThreadNumCI, nullptr);
+  EXPECT_EQ(ThreadNumCI->getCalledFunction()->getName(),
+            "__kmpc_global_thread_num");
+  // load DidIt
+  auto *DidItLI = ExitBBI.next<LoadInst>();
+  EXPECT_NE(DidItLI, nullptr);
+  EXPECT_EQ(DidItLI->getPointerOperand(), DidIt);
+  // call __kmpc_copyprivate
+  auto *CopyPrivateCI = ExitBBI.next<CallInst>();
   EXPECT_NE(CopyPrivateCI, nullptr);
   EXPECT_EQ(CopyPrivateCI->arg_size(), 6U);
   EXPECT_TRUE(isa<AllocaInst>(CopyPrivateCI->getArgOperand(3)));
@@ -3571,8 +3604,9 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
   EXPECT_TRUE(isa<Function>(CopyPrivateCI->getArgOperand(4)));
   EXPECT_EQ(CopyPrivateCI->getArgOperand(4), CopyFunc);
   EXPECT_TRUE(isa<LoadInst>(CopyPrivateCI->getArgOperand(5)));
-  LoadInst *DidItLI = cast<LoadInst>(CopyPrivateCI->getArgOperand(5));
+  DidItLI = cast<LoadInst>(CopyPrivateCI->getArgOperand(5));
   EXPECT_EQ(DidItLI->getOperand(0), DidIt);
+  EXPECT_FALSE(ExitBBI.hasNext());
 }
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicReadFlt) {

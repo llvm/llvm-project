@@ -4002,14 +4002,16 @@ OpenMPIRBuilder::createCopyPrivate(const LocationDescription &Loc,
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSingle(
     const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
-    FinalizeCallbackTy FiniCB, bool IsNowait, llvm::Value *DidIt,
-    ArrayRef<llvm::Value *> CPVars, ArrayRef<llvm::Function *> CPFuncs) {
+    FinalizeCallbackTy FiniCB, bool IsNowait, ArrayRef<llvm::Value *> CPVars,
+    ArrayRef<llvm::Function *> CPFuncs) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  // If needed (i.e. not null), initialize `DidIt` with 0
-  if (DidIt) {
+  // If needed allocate and initialize `DidIt` with 0
+  llvm::Value *DidIt = nullptr;
+  if (!CPVars.empty()) {
+    DidIt = Builder.CreateAlloca(llvm::Type::getInt32Ty(Builder.getContext()));
     Builder.CreateStore(Builder.getInt32(0), DidIt);
   }
 

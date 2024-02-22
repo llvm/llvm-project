@@ -669,13 +669,9 @@ convertOmpSingle(omp::SingleOp &singleOp, llvm::IRBuilderBase &builder,
     llvmCPFuncs.push_back(
         moduleTranslation.lookupFunction(llvmFuncOp.getName()));
   }
-  llvm::Value *didIt = nullptr;
-  if (!llvmCPVars.empty())
-    didIt = builder.CreateAlloca(llvm::Type::getInt32Ty(builder.getContext()));
 
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createSingle(
-      ompLoc, bodyCB, finiCB, singleOp.getNowait(), didIt, llvmCPVars,
-      llvmCPFuncs));
+      ompLoc, bodyCB, finiCB, singleOp.getNowait(), llvmCPVars, llvmCPFuncs));
   return bodyGenStatus;
 }
 
