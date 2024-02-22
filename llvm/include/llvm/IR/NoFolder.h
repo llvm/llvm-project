@@ -113,7 +113,7 @@ public:
   }
 
   Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource = nullptr) const override {
+                             Instruction *FMFSource) const override {
     return nullptr;
   }
 

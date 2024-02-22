@@ -192,7 +192,7 @@ public:
   }
 
   Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource = nullptr) const override {
+                             Instruction *FMFSource) const override {
     auto *C1 = dyn_cast<Constant>(LHS);
     auto *C2 = dyn_cast<Constant>(RHS);
     if (C1 && C2)
