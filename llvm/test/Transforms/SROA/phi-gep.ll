@@ -546,6 +546,47 @@ bb11:                                             ; preds = %bb9, %bb
   ret void
 }
 
+define void @test_gep_phi_nonconst(i64 %arg) {
+; CHECK-LABEL: @test_gep_phi_nonconst(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [[T1:%.*]], align 8
+; CHECK-NEXT:    switch i64 [[ARG:%.*]], label [[BB9:%.*]] [
+; CHECK-NEXT:      i64 0, label [[BB11:%.*]]
+; CHECK-NEXT:      i64 1, label [[BB10:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb9:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[ARG]], [[BB10]] ], [ 16, [[BB:%.*]] ]
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, ptr [[ALLOCA]], i64 [[PHI]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GETELEMENTPTR]], align 8
+; CHECK-NEXT:    br label [[BB11]]
+; CHECK:       bb10:
+; CHECK-NEXT:    br label [[BB9]]
+; CHECK:       bb11:
+; CHECK-NEXT:    [[PHI12:%.*]] = phi ptr [ [[LOAD]], [[BB9]] ], [ undef, [[BB]] ]
+; CHECK-NEXT:    store i8 0, ptr [[PHI12]], align 1
+; CHECK-NEXT:    ret void
+;
+bb:
+  %alloca = alloca %t1, align 8
+  switch i64 %arg, label %bb9 [
+  i64 0, label %bb11
+  i64 1, label %bb10
+  ]
+
+bb9:                                              ; preds = %bb10, %bb
+  %phi = phi i64 [ %arg , %bb10 ], [ 16, %bb ]
+  %getelementptr = getelementptr i8, ptr %alloca, i64 %phi
+  %load = load ptr, ptr %getelementptr, align 8
+  br label %bb11
+
+bb10:                                             ; preds = %bb
+  br label %bb9
+
+bb11:                                             ; preds = %bb9, %bb
+  %phi12 = phi ptr [ %load, %bb9 ], [ undef, %bb ]
+  store i8 0, ptr %phi12, align 1
+  ret void
+}
 declare ptr @foo()
 
 declare i32 @__gxx_personality_v0(...)
