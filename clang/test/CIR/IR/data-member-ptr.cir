@@ -1,0 +1,46 @@
+// RUN: cir-opt %s | cir-opt | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!ty_22Foo22 = !cir.struct<struct "Foo" {!s32i}>
+
+#global_ptr = #cir.data_member<0> : !cir.data_member<!s32i in !ty_22Foo22>
+
+module {
+  cir.func @null_member() {
+    %0 = cir.const(#cir.data_member<null> : !cir.data_member<!s32i in !ty_22Foo22>) : !cir.data_member<!s32i in !ty_22Foo22>
+    cir.return
+  }
+
+  cir.func @get_runtime_member(%arg0: !cir.ptr<!ty_22Foo22>) {
+    %0 = cir.const(#cir.data_member<0> : !cir.data_member<!s32i in !ty_22Foo22>) : !cir.data_member<!s32i in !ty_22Foo22>
+    %1 = cir.get_runtime_member %arg0[%0 : !cir.data_member<!s32i in !ty_22Foo22>] : !cir.ptr<!ty_22Foo22> -> !cir.ptr<!s32i>
+    cir.return
+  }
+
+  cir.func @get_global_member(%arg0: !cir.ptr<!ty_22Foo22>) {
+    %0 = cir.const(#global_ptr) : !cir.data_member<!s32i in !ty_22Foo22>
+    %1 = cir.get_runtime_member %arg0[%0 : !cir.data_member<!s32i in !ty_22Foo22>] : !cir.ptr<!ty_22Foo22> -> !cir.ptr<!s32i>
+    cir.return
+  }
+}
+
+//      CHECK: module {
+
+// CHECK-NEXT:   cir.func @null_member() {
+// CHECK-NEXT:     %0 = cir.const(#cir.data_member<null> : !cir.data_member<!s32i in !ty_22Foo22>) : !cir.data_member<!s32i in !ty_22Foo22>
+// CHECK-NEXT:     cir.return
+// CHECK-NEXT:   }
+
+// CHECK-NEXT:   cir.func @get_runtime_member(%arg0: !cir.ptr<!ty_22Foo22>) {
+// CHECK-NEXT:      %0 = cir.const(#cir.data_member<0> : !cir.data_member<!s32i in !ty_22Foo22>) : !cir.data_member<!s32i in !ty_22Foo22>
+// CHECK-NEXT:      %1 = cir.get_runtime_member %arg0[%0 : !cir.data_member<!s32i in !ty_22Foo22>] : !cir.ptr<!ty_22Foo22> -> !cir.ptr<!s32i>
+// CHECK-NEXT:      cir.return
+// CHECK-NEXT:   }
+
+// CHECK-NEXT:   cir.func @get_global_member(%arg0: !cir.ptr<!ty_22Foo22>) {
+// CHECK-NEXT:     %0 = cir.const(#cir.data_member<0> : !cir.data_member<!s32i in !ty_22Foo22>) : !cir.data_member<!s32i in !ty_22Foo22>
+// CHECK-NEXT:     %1 = cir.get_runtime_member %arg0[%0 : !cir.data_member<!s32i in !ty_22Foo22>] : !cir.ptr<!ty_22Foo22> -> !cir.ptr<!s32i>
+// CHECK-NEXT:     cir.return
+// CHECK-NEXT:   }
+
+//      CHECK: }

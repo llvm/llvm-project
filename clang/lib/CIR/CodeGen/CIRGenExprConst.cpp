@@ -1763,6 +1763,21 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
     return buildArrayConstant(CGM, Desired, CommonElementType, NumElements,
                               Elts, typedFiller);
   }
+  case APValue::MemberPointer: {
+    assert(!UnimplementedFeature::cxxABI());
+
+    const ValueDecl *memberDecl = Value.getMemberPointerDecl();
+    assert(!Value.isMemberPointerToDerivedMember() && "NYI");
+
+    if (const auto *memberFuncDecl = dyn_cast<CXXMethodDecl>(memberDecl))
+      assert(0 && "not implemented");
+
+    auto cirTy =
+        CGM.getTypes().ConvertType(DestType).cast<mlir::cir::DataMemberType>();
+
+    const auto *fieldDecl = cast<FieldDecl>(memberDecl);
+    return builder.getDataMemberAttr(cirTy, fieldDecl->getFieldIndex());
+  }
   case APValue::LValue:
     return ConstantLValueEmitter(*this, Value, DestType).tryEmit();
   case APValue::Struct:
@@ -1773,7 +1788,6 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
   case APValue::ComplexFloat:
   case APValue::Vector:
   case APValue::AddrLabelDiff:
-  case APValue::MemberPointer:
     assert(0 && "not implemented");
   }
   llvm_unreachable("Unknown APValue kind");
@@ -1800,6 +1814,26 @@ mlir::Value CIRGenModule::buildNullConstant(QualType T, mlir::Location loc) {
 
   llvm_unreachable("NYI");
   return {};
+}
+
+mlir::Value CIRGenModule::buildMemberPointerConstant(const UnaryOperator *E) {
+  assert(!UnimplementedFeature::cxxABI());
+
+  auto loc = getLoc(E->getSourceRange());
+
+  const auto *decl = cast<DeclRefExpr>(E->getSubExpr())->getDecl();
+
+  // A member function pointer.
+  // Member function pointer is not supported yet.
+  if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl))
+    assert(0 && "not implemented");
+
+  auto ty = getCIRType(E->getType()).cast<mlir::cir::DataMemberType>();
+
+  // Otherwise, a member data pointer.
+  const auto *fieldDecl = cast<FieldDecl>(decl);
+  return builder.create<mlir::cir::ConstantOp>(
+      loc, ty, builder.getDataMemberAttr(ty, fieldDecl->getFieldIndex()));
 }
 
 mlir::Attribute ConstantEmitter::emitAbstract(const Expr *E,

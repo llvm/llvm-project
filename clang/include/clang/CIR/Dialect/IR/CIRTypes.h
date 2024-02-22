@@ -21,13 +21,6 @@
 #include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
 
 //===----------------------------------------------------------------------===//
-// CIR Dialect Tablegen'd Types
-//===----------------------------------------------------------------------===//
-
-#define GET_TYPEDEF_CLASSES
-#include "clang/CIR/Dialect/IR/CIROpsTypes.h.inc"
-
-//===----------------------------------------------------------------------===//
 // CIR StructType
 //
 // The base type for all RecordDecls.
@@ -183,5 +176,12 @@ private:
 
 } // namespace cir
 } // namespace mlir
+
+//===----------------------------------------------------------------------===//
+// CIR Dialect Tablegen'd Types
+//===----------------------------------------------------------------------===//
+
+#define GET_TYPEDEF_CLASSES
+#include "clang/CIR/Dialect/IR/CIROpsTypes.h.inc"
 
 #endif // MLIR_DIALECT_CIR_IR_CIRTYPES_H_

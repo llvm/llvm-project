@@ -1771,6 +1771,63 @@ def GetMemberOp : CIR_Op<"get_member"> {
 }
 
 //===----------------------------------------------------------------------===//
+// GetRuntimeMemberOp
+//===----------------------------------------------------------------------===//
+
+def GetRuntimeMemberOp : CIR_Op<"get_runtime_member"> {
+  let summary = "Get the address of a member of a struct";
+  let description = [{
+    The `cir.get_runtime_member` operation gets the address of a member from
+    the input record. The target member is given by a value of type
+    `!cir.data_member` (i.e. a pointer-to-data-member value).
+
+    This operation differs from `cir.get_member` in when the target member can
+    be determined. For the `cir.get_member` operation, the target member is
+    specified as a constant index so the member it returns access to is known
+    when the operation is constructed. For the `cir.get_runtime_member`
+    operation, the target member is given through a pointer-to-data-member
+    value which is unknown until the program being compiled is executed. In
+    other words, `cir.get_member` represents a normal member access through the
+    `.` operator in C/C++:
+
+    ```cpp
+    struct Foo { int x; };
+    Foo f;
+    (void)f.x;  // cir.get_member
+    ```
+
+    And `cir.get_runtime_member` represents a member access through the `.*` or
+    the `->*` operator in C++:
+
+    ```cpp
+    struct Foo { int x; }
+    Foo f;
+    Foo *p;
+    int Foo::*member;
+
+    (void)f.*member;   // cir.get_runtime_member
+    (void)f->*member;  // cir.get_runtime_member
+    ```
+
+    This operation expects a pointer to the base record as well as the pointer
+    to the target member.
+  }];
+
+  let arguments = (ins
+    Arg<StructPtr, "address of the struct object", [MemRead]>:$addr,
+    Arg<CIR_DataMemberType, "pointer to the target member">:$member);
+
+  let results = (outs Res<CIR_PointerType, "">:$result);
+
+  let assemblyFormat = [{
+    $addr `[` $member `:` qualified(type($member)) `]` attr-dict
+    `:` qualified(type($addr)) `->` qualified(type($result))
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // VecInsertOp
 //===----------------------------------------------------------------------===//
 

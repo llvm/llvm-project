@@ -405,6 +405,27 @@ uint64_t PointerType::getPreferredAlignment(
 }
 
 llvm::TypeSize
+DataMemberType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
+                                  ::mlir::DataLayoutEntryListRef params) const {
+  // FIXME: consider size differences under different ABIs
+  return llvm::TypeSize::getFixed(64);
+}
+
+uint64_t
+DataMemberType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                                ::mlir::DataLayoutEntryListRef params) const {
+  // FIXME: consider alignment differences under different ABIs
+  return 8;
+}
+
+uint64_t DataMemberType::getPreferredAlignment(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
+  // FIXME: consider alignment differences under different ABIs
+  return 8;
+}
+
+llvm::TypeSize
 ArrayType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                              ::mlir::DataLayoutEntryListRef params) const {
   return getSize() * dataLayout.getTypeSizeInBits(getEltType());

@@ -891,6 +891,30 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
   llvm_unreachable("Unhandled DeclRefExpr");
 }
 
+LValue
+CIRGenFunction::buildPointerToDataMemberBinaryExpr(const BinaryOperator *E) {
+  assert((E->getOpcode() == BO_PtrMemD || E->getOpcode() == BO_PtrMemI) &&
+         "unexpected binary operator opcode");
+
+  auto baseAddr = Address::invalid();
+  if (E->getOpcode() == BO_PtrMemD)
+    baseAddr = buildLValue(E->getLHS()).getAddress();
+  else
+    baseAddr = buildPointerWithAlignment(E->getLHS());
+
+  const auto *memberPtrTy = E->getRHS()->getType()->castAs<MemberPointerType>();
+
+  auto memberPtr = buildScalarExpr(E->getRHS());
+
+  LValueBaseInfo baseInfo;
+  // TODO(cir): add TBAA
+  assert(!UnimplementedFeature::tbaa());
+  auto memberAddr = buildCXXMemberDataPointerAddress(E, baseAddr, memberPtr,
+                                                     memberPtrTy, &baseInfo);
+
+  return makeAddrLValue(memberAddr, memberPtrTy->getPointeeType(), baseInfo);
+}
+
 LValue CIRGenFunction::buildBinaryOperatorLValue(const BinaryOperator *E) {
   // Comma expressions just emit their LHS then their RHS as an l-value.
   if (E->getOpcode() == BO_Comma) {
@@ -899,7 +923,7 @@ LValue CIRGenFunction::buildBinaryOperatorLValue(const BinaryOperator *E) {
   }
 
   if (E->getOpcode() == BO_PtrMemD || E->getOpcode() == BO_PtrMemI)
-    assert(0 && "not implemented");
+    return buildPointerToDataMemberBinaryExpr(E);
 
   assert(E->getOpcode() == BO_Assign && "unexpected binary l-value");
 

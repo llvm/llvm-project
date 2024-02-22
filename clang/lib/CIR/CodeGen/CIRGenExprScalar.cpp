@@ -498,7 +498,9 @@ public:
   }
 
   mlir::Value VisitUnaryAddrOf(const UnaryOperator *E) {
-    assert(!llvm::isa<MemberPointerType>(E->getType()) && "not implemented");
+    if (llvm::isa<MemberPointerType>(E->getType()))
+      return CGF.CGM.buildMemberPointerConstant(E);
+
     return CGF.buildLValue(E->getSubExpr()).getPointer();
   }
 
@@ -653,8 +655,13 @@ public:
     return Visit(E->getRHS());
   }
 
-  mlir::Value VisitBinPtrMemD(const Expr *E) { llvm_unreachable("NYI"); }
-  mlir::Value VisitBinPtrMemI(const Expr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitBinPtrMemD(const BinaryOperator *E) {
+    return buildLoadOfLValue(E);
+  }
+
+  mlir::Value VisitBinPtrMemI(const BinaryOperator *E) {
+    return buildLoadOfLValue(E);
+  }
 
   mlir::Value VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *E) {
     llvm_unreachable("NYI");
@@ -1447,8 +1454,18 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         mlir::cir::ConstPtrAttr::get(Builder.getContext(), Ty, 0));
   }
 
-  case CK_NullToMemberPointer:
-    llvm_unreachable("NYI");
+  case CK_NullToMemberPointer: {
+    if (MustVisitNullValue(E))
+      CGF.buildIgnoredExpr(E);
+
+    assert(!UnimplementedFeature::cxxABI());
+
+    const MemberPointerType *MPT = CE->getType()->getAs<MemberPointerType>();
+    assert(!MPT->isMemberFunctionPointerType() && "NYI");
+
+    auto Ty = CGF.getCIRType(DestTy).cast<mlir::cir::DataMemberType>();
+    return Builder.getNullDataMemberPtr(Ty, CGF.getLoc(E->getExprLoc()));
+  }
   case CK_ReinterpretMemberPointer:
     llvm_unreachable("NYI");
   case CK_BaseToDerivedMemberPointer:
