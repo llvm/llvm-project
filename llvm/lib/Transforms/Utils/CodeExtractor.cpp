@@ -1585,22 +1585,21 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     return cast<DILocalVariable>(NewVar);
   };
 
-  auto UpdateDbgLabel =
-      [&](auto *LabelRecord) {
-        // Point the label record to a fresh label within the new function if
-        // the record was not inlined from some other function.
-        if (LabelRecord->getDebugLoc().getInlinedAt())
-          return;
-        DILabel *OldLabel = LabelRecord->getLabel();
-        DINode *&NewLabel = RemappedMetadata[OldLabel];
-        if (!NewLabel) {
-          DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
-              *OldLabel->getScope(), *NewSP, Ctx, Cache);
-          NewLabel = DILabel::get(Ctx, NewScope, OldLabel->getName(),
-                                  OldLabel->getFile(), OldLabel->getLine());
-        }
-        LabelRecord->setLabel(cast<DILabel>(NewLabel));
-      };
+  auto UpdateDbgLabel = [&](auto *LabelRecord) {
+    // Point the label record to a fresh label within the new function if
+    // the record was not inlined from some other function.
+    if (LabelRecord->getDebugLoc().getInlinedAt())
+      return;
+    DILabel *OldLabel = LabelRecord->getLabel();
+    DINode *&NewLabel = RemappedMetadata[OldLabel];
+    if (!NewLabel) {
+      DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
+          *OldLabel->getScope(), *NewSP, Ctx, Cache);
+      NewLabel = DILabel::get(Ctx, NewScope, OldLabel->getName(),
+                              OldLabel->getFile(), OldLabel->getLine());
+    }
+    LabelRecord->setLabel(cast<DILabel>(NewLabel));
+  };
 
   auto UpdateDbgRecordsOnInst = [&](Instruction &I) -> void {
     for (DbgRecord &DR : I.getDbgValueRange()) {
