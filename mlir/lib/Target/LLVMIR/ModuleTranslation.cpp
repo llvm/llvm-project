@@ -51,10 +51,14 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <optional>
+
+#define DEBUG_TYPE "llvm-dialect-to-llvm-ir"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -1042,17 +1046,77 @@ LogicalResult ModuleTranslation::convertGlobals() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     if (Block *initializer = op.getInitializerBlock()) {
       llvm::IRBuilder<> builder(llvmModule->getContext());
+
+      int numConstantsHit = 0;
+      int numConstantsErased = 0;
+      DenseMap<llvm::ConstantAggregate *, int> constantAggregateUseMap;
+
       for (auto &op : initializer->without_terminator()) {
         if (failed(convertOperation(op, builder)) ||
             !isa<llvm::Constant>(lookupValue(op.getResult(0))))
           return emitError(op.getLoc(), "unemittable constant value");
+
+        // When emitting an LLVM constant, a new constant is created and the old
+        // constant may become dangling and take space. We should remove the
+        // dangling constants to avoid memory explosion especially for constant
+        // arrays whose number of elements is large.
+        // Because multiple operations may refer to the same constant, we need
+        // to count the number of uses of each constant array and remove it only
+        // when the count becomes zero.
+        if (op.getNumResults() == 1) {
+          Value result = op.getResult(0);
+          auto cst = dyn_cast<llvm::ConstantAggregate>(lookupValue(result));
+          if (!cst)
+            continue;
+          numConstantsHit++;
+          auto iter = constantAggregateUseMap.find(cst);
+          int numUsers = std::distance(result.use_begin(), result.use_end());
+          if (iter == constantAggregateUseMap.end())
+            constantAggregateUseMap.try_emplace(cst, numUsers);
+          else
+            iter->second += numUsers;
+        }
+        for (Value v : op.getOperands()) {
+          auto cst = dyn_cast<llvm::ConstantAggregate>(lookupValue(v));
+          if (!cst)
+            continue;
+          auto iter = constantAggregateUseMap.find(cst);
+          assert(iter != constantAggregateUseMap.end() && "constant not found");
+          iter->second--;
+          if (iter->second == 0) {
+            cst->removeDeadConstantUsers();
+            if (cst->user_empty()) {
+              cst->destroyConstant();
+              numConstantsErased++;
+            }
+            constantAggregateUseMap.erase(iter);
+          }
+        }
       }
+
       ReturnOp ret = cast<ReturnOp>(initializer->getTerminator());
       llvm::Constant *cst =
           cast<llvm::Constant>(lookupValue(ret.getOperand(0)));
       auto *global = cast<llvm::GlobalVariable>(lookupGlobal(op));
       if (!shouldDropGlobalInitializer(global->getLinkage(), cst))
         global->setInitializer(cst);
+
+      // Try to remove the dangling constants again after all operations are
+      // converted.
+      for (auto it : constantAggregateUseMap) {
+        auto cst = it.first;
+        cst->removeDeadConstantUsers();
+        if (cst->user_empty()) {
+          cst->destroyConstant();
+          numConstantsErased++;
+        }
+      }
+
+      LLVM_DEBUG(llvm::dbgs()
+                     << "Convert initializer for " << op.getName() << "\n";
+                 llvm::dbgs() << numConstantsHit << " new constants hit\n";
+                 llvm::dbgs()
+                 << numConstantsErased << " dangling constants erased\n";);
     }
   }
 
