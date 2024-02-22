@@ -386,8 +386,8 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     if (Part != 0)
       return nullptr;
     // First create the compare.
-    Value *IV = State.get(getOperand(0), VPIteration(Part, 0));
-    Value *TC = State.get(getOperand(1), VPIteration(Part, 0));
+    Value *IV = State.get(getOperand(0), Part, /*IsScalar*/ true);
+    Value *TC = State.get(getOperand(1), Part, /*IsScalar*/ true);
     Value *Cond = Builder.CreateICmpEQ(IV, TC);
 
     // Now create the branch.
@@ -408,7 +408,7 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
   }
   case VPInstruction::ComputeReductionResult: {
     if (Part != 0)
-      return State.get(this, VPIteration(0, 0));
+      return State.get(this, 0, /*IsScalar*/ true);
 
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
     // and will be removed by breaking up the recipe further.
@@ -521,10 +521,11 @@ void VPInstruction::execute(VPTransformState &State) {
       assert((getOpcode() == VPInstruction::ComputeReductionResult ||
               State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
              "scalar value but not only first lane used");
-      State.set(this, GeneratedValue, VPIteration(Part, 0));
+      State.set(this, GeneratedValue, Part, /*IsScalar*/ true);
     }
   }
 }
+
 bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   if (Instruction::isBinaryOp(getOpcode()))
@@ -1353,7 +1354,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
       PartPtr = Builder.CreateGEP(IndexedTy, Ptr, Increment, "", InBounds);
     }
 
-    State.set(this, PartPtr, VPIteration(Part, 0));
+    State.set(this, PartPtr, Part, /*IsScalar*/ true);
   }
 }
 
@@ -1649,7 +1650,7 @@ void VPCanonicalIVPHIRecipe::execute(VPTransformState &State) {
   EntryPart->addIncoming(Start, VectorPH);
   EntryPart->setDebugLoc(getDebugLoc());
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
-    State.set(this, EntryPart, VPIteration(Part, 0));
+    State.set(this, EntryPart, Part, /*IsScalar*/ true);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1720,7 +1721,7 @@ void VPExpandSCEVRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
-  Value *CanonicalIV = State.get(getOperand(0), VPIteration(0, 0));
+  Value *CanonicalIV = State.get(getOperand(0), 0, /*IsScalar*/ true);
   Type *STy = CanonicalIV->getType();
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   ElementCount VF = State.VF;
@@ -1788,7 +1789,6 @@ void VPFirstOrderRecurrencePHIRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPReductionPHIRecipe::execute(VPTransformState &State) {
-  // TODO: Store scalar value for in-loop reductions as {Part, 0}.
   auto &Builder = State.Builder;
 
   // Reductions do not have to start at zero. They can start with
@@ -1811,10 +1811,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
     Instruction *EntryPart = PHINode::Create(VecTy, 2, "vec.phi");
     EntryPart->insertBefore(HeaderBB->getFirstInsertionPt());
-    if (IsInLoop)
-      State.set(this, EntryPart, VPIteration(Part, 0));
-    else
-      State.set(this, EntryPart, Part);
+    State.set(this, EntryPart, Part, IsInLoop);
   }
 
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);

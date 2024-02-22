@@ -242,7 +242,16 @@ Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
   return Extract;
 }
 
-Value *VPTransformState::get(VPValue *Def, unsigned Part) {
+Value *VPTransformState::get(VPValue *Def, unsigned Part, bool NeedsScalar) {
+  if (NeedsScalar) {
+    assert((VF.isScalar() || Def->isLiveIn() ||
+            (hasScalarValue(Def, VPIteration(Part, 0)) &&
+             Data.PerPartScalars[Def][Part].size() == 1)) &&
+           "Trying to access a single scalar per part but has multiple scalars "
+           "per part.");
+    return get(Def, VPIteration(Part, 0));
+  }
+
   // If Values have been set for this Def return the one relevant for \p Part.
   if (hasVectorValue(Def, Part))
     return Data.PerPartOutput[Def][Part];
@@ -332,13 +341,6 @@ Value *VPTransformState::get(VPValue *Def, unsigned Part) {
   }
   Builder.restoreIP(OldIP);
   return VectorValue;
-}
-
-Value *VPTransformState::get(VPValue *Def, unsigned Part,
-                             unsigned NeedsScalar) {
-  if (NeedsScalar)
-    return get(Def, VPIteration(Part, 0));
-  return get(Def, Part);
 }
 
 BasicBlock *VPTransformState::CFGState::getPreheaderBBFor(VPRecipeBase *R) {

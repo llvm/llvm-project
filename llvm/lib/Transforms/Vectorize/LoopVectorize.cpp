@@ -9127,7 +9127,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
          "Unexpected type.");
 
   auto *IVR = getParent()->getPlan()->getCanonicalIV();
-  PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, VPIteration(0, 0)));
+  PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, 0, /*IsScalar*/ true));
 
   if (onlyScalarsGenerated(State.VF.isScalable())) {
     // This is the normalized GEP that starts counting at zero.
@@ -9243,7 +9243,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
 
 void VPReductionRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "Reduction being replicated.");
-  Value *PrevInChain = State.get(getChainOp(), VPIteration(0, 0));
+  Value *PrevInChain = State.get(getChainOp(), 0, /*IsScalar*/ true);
   RecurKind Kind = RdxDesc.getRecurrenceKind();
   bool IsOrdered = State.ILV->useOrderedReductions(RdxDesc);
   // Propagate the fast-math flags carried by the underlying instruction.
@@ -9277,7 +9277,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
             NewVecOp);
       PrevInChain = NewRed;
     } else {
-      PrevInChain = State.get(getChainOp(), VPIteration(Part, 0));
+      PrevInChain = State.get(getChainOp(), Part, /*IsScalar*/ true);
       NewRed = createTargetReduction(State.Builder, RdxDesc, NewVecOp);
     }
     if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
@@ -9288,7 +9288,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
     else
       NextInChain = State.Builder.CreateBinOp(
           (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), NewRed, PrevInChain);
-    State.set(this, NextInChain, VPIteration(Part, 0));
+    State.set(this, NextInChain, Part, /*IsScalar*/ true);
   }
 }
 
@@ -9403,7 +9403,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
           // We don't want to update the value in the map as it might be used in
           // another expression. So don't call resetVectorValue(StoredVal).
         }
-        auto *VecPtr = State.get(getAddr(), VPIteration(Part, 0));
+        auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
         if (isMaskRequired)
           NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment,
                                             BlockInMaskParts[Part]);
@@ -9427,7 +9427,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
                                          nullptr, "wide.masked.gather");
       State.addMetadata(NewLI, LI);
     } else {
-      auto *VecPtr = State.get(getAddr(), VPIteration(Part, 0));
+      auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
       if (isMaskRequired)
         NewLI = Builder.CreateMaskedLoad(
             DataTy, VecPtr, Alignment, BlockInMaskParts[Part],
