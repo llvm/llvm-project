@@ -1686,8 +1686,8 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     unsigned RegOp = CurOp++;
     unsigned CC = MI.getOperand(CurOp++).getImm();
     emitByte(BaseOpcode + CC, CB);
-    emitMemModRMByte(MI, MemOp, getX86RegNum(MI.getOperand(RegOp)),
-                     TSFlags, Kind, StartByte, CB, Fixups, STI);
+    emitMemModRMByte(MI, MemOp, getX86RegNum(MI.getOperand(RegOp)), TSFlags,
+                     Kind, StartByte, CB, Fixups, STI);
     break;
   }
   case X86II::MRMSrcReg: {
