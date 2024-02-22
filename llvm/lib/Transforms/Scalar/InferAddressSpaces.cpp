@@ -1315,8 +1315,9 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
           CurUser->replaceUsesOfWith(
               V, new AddrSpaceCastInst(NewV, V->getType(), "", &*InsertPos));
         } else {
-          CurUser->replaceUsesOfWith(V, ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV),
-                                               V->getType()));
+          CurUser->replaceUsesOfWith(
+              V, ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV),
+                                                V->getType()));
         }
       }
     }
