@@ -155,17 +155,14 @@ static bool isJirl(uint32_t insn) {
 }
 
 static void handleUleb128(uint8_t *loc, uint64_t val) {
-  const char *err = nullptr;
   const uint32_t maxcount = 1 + (config->is64 ? 64 : 32) / 7;
   uint32_t count;
-  uint64_t orig = decodeULEB128(loc, &count, nullptr, &err);
-  if (err)
-    fatal(getErrorLocation(loc) + "could not decode uleb128 value: " + err);
+  uint64_t orig = decodeULEB128(loc, &count);
   if (count > maxcount)
     errorOrWarn(getErrorLocation(loc) + "extra space for uleb128");
   uint64_t mask = config->is64 ? -1 : -1u;
   if (count < maxcount)
-    mask = (1 << 7 * count) - 1;
+    mask = (1ULL << 7 * count) - 1;
 
   val = (orig + val) & mask;
   encodeULEB128(val, loc, count);
