@@ -1418,7 +1418,8 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
         StoreBasePtr, *StoreAlign, LoadBasePtr, *LoadAlign, NumBytes, StoreSize,
         AATags.TBAA, AATags.TBAAStruct, AATags.Scope, AATags.NoAlias);
   }
-  NewCall->setDebugLoc(TheStore->getDebugLoc());
+  
+  NewCall->dropLocation();
 
   if (MSSAU) {
     MemoryAccess *NewMemAcc = MSSAU->createMemoryAccessInBB(
