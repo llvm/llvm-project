@@ -260,6 +260,12 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
 endif()
 
 function(add_link_opts target_name)
+  # Newer lld defaults to no-undefined-version, which we don't expect
+  if(LLVM_LINKER_IS_LLD)
+    set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+      LINK_FLAGS " -Wl,-undefined-version")
+  endif()
+
   get_llvm_distribution(${target_name} in_distribution in_distribution_var)
   if(NOT in_distribution)
     # Don't LTO optimize targets that aren't part of any distribution.
