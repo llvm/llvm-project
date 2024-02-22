@@ -1168,12 +1168,12 @@ static mlir::omp::DeclareTargetDeviceType getDeclareTargetInfo(
   return deviceType;
 }
 
-static void insertDeferredDeclareTargets(
+static void collectDeferredDeclareTargets(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenMPDeclareTargetConstruct &declareTargetConstruct,
-    llvm::SmallVectorImpl<Fortran::lower::OMPDeferredDeclTarInfo>
+    llvm::SmallVectorImpl<Fortran::lower::OMPDeferredDeclareTargetInfo>
         &deferredDeclareTarget) {
   llvm::SmallVector<DeclareTargetCapturePair, 0> symbolAndClause;
   mlir::omp::DeclareTargetDeviceType devType = getDeclareTargetInfo(
@@ -1183,18 +1183,12 @@ static void insertDeferredDeclareTargets(
   mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
 
   for (const DeclareTargetCapturePair &symClause : symbolAndClause) {
-    mlir::Operation *op = mod.lookupSymbol(
-        converter.mangleName(std::get<Fortran::semantics::Symbol>(symClause)));
+    mlir::Operation *op = mod.lookupSymbol(converter.mangleName(
+        std::get<const Fortran::semantics::Symbol &>(symClause)));
 
     if (!op) {
-      deferredDeclareTarget.push_back(std::make_tuple(
-          static_cast<
-              std::underlying_type_t<mlir::omp::DeclareTargetCaptureClause>>(
-              std::get<0>(symClause)),
-          static_cast<
-              std::underlying_type_t<mlir::omp::DeclareTargetDeviceType>>(
-              devType),
-          std::get<1>(symClause)));
+      deferredDeclareTarget.push_back(
+          {std::get<0>(symClause), devType, std::get<1>(symClause)});
     }
   }
 }
@@ -1214,8 +1208,8 @@ getDeclareTargetFunctionDevice(
   // directive is a function or subroutine
   mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
   for (const DeclareTargetCapturePair &symClause : symbolAndClause) {
-    mlir::Operation *op = mod.lookupSymbol(
-        converter.mangleName(std::get<Fortran::semantics::Symbol>(symClause)));
+    mlir::Operation *op = mod.lookupSymbol(converter.mangleName(
+        std::get<const Fortran::semantics::Symbol &>(symClause)));
 
     if (mlir::isa_and_nonnull<mlir::func::FuncOp>(op))
       return deviceType;
@@ -1968,6 +1962,7 @@ markDeclareTarget(mlir::Operation *op,
                   Fortran::lower::AbstractConverter &converter,
                   mlir::omp::DeclareTargetCaptureClause captureClause,
                   mlir::omp::DeclareTargetDeviceType deviceType) {
+  // TODO: Add support for program local variables with declare target applied
   auto declareTargetOp = llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(op);
   if (!declareTargetOp)
     fir::emitFatalError(
@@ -2000,11 +1995,11 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       converter, semaCtx, eval, declareTargetConstruct, symbolAndClause);
 
   for (const DeclareTargetCapturePair &symClause : symbolAndClause) {
-    mlir::Operation *op = mod.lookupSymbol(
-        converter.mangleName(std::get<Fortran::semantics::Symbol>(symClause)));
+    mlir::Operation *op = mod.lookupSymbol(converter.mangleName(
+        std::get<const Fortran::semantics::Symbol &>(symClause)));
 
     // Some symbols are deferred until later in the module, these are handled
-    // apon finalization of the module for OpenMP inside of Bridge, so we simply
+    // upon finalization of the module for OpenMP inside of Bridge, so we simply
     // skip for now.
     if (!op)
       continue;
@@ -2475,12 +2470,13 @@ void Fortran::lower::gatherOpenMPDeferredDeclareTargets(
     Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenMPDeclarativeConstruct &ompDecl,
-    llvm::SmallVectorImpl<OMPDeferredDeclTarInfo> &deferredDeclareTarget) {
+    llvm::SmallVectorImpl<OMPDeferredDeclareTargetInfo>
+        &deferredDeclareTarget) {
   std::visit(
       Fortran::common::visitors{
           [&](const Fortran::parser::OpenMPDeclareTargetConstruct &ompReq) {
-            insertDeferredDeclareTargets(converter, semaCtx, eval, ompReq,
-                                         deferredDeclareTarget);
+            collectDeferredDeclareTargets(converter, semaCtx, eval, ompReq,
+                                          deferredDeclareTarget);
           },
           [&](const auto &) {},
       },
@@ -2515,32 +2511,27 @@ bool Fortran::lower::isOpenMPDeviceDeclareTarget(
 // on the module.
 bool Fortran::lower::markOpenMPDeferredDeclareTargetFunctions(
     mlir::Operation *mod,
-    llvm::SmallVectorImpl<OMPDeferredDeclTarInfo> &deferredDeclareTargets,
+    llvm::SmallVectorImpl<OMPDeferredDeclareTargetInfo> &deferredDeclareTargets,
     AbstractConverter &converter) {
   bool deviceCodeFound = false;
-  if (auto modOp = llvm::dyn_cast<mlir::ModuleOp>(mod)) {
-    for (auto sym : deferredDeclareTargets) {
-      mlir::Operation *op =
-          modOp.lookupSymbol(converter.mangleName(std::get<2>(sym)));
+  auto modOp = llvm::dyn_cast<mlir::ModuleOp>(mod);
+  for (auto declTar : deferredDeclareTargets) {
+    mlir::Operation *op = modOp.lookupSymbol(converter.mangleName(declTar.sym));
 
-      // Due to interfaces being optionally emitted on usage in a module,
-      // not finding an operation at this point cannot be a hard error, we
-      // simply ignore it for now.
-      if (!op)
-        continue;
+    // Due to interfaces being optionally emitted on usage in a module,
+    // not finding an operation at this point cannot be a hard error, we
+    // simply ignore it for now.
+    // TODO: Add semantic checks for detecting cases where an erronous
+    // (undefined) symbol has been supplied to a declare target clause
+    if (!op)
+      continue;
 
-      auto devType =
-          static_cast<mlir::omp::DeclareTargetDeviceType>(std::get<1>(sym));
-      if (!deviceCodeFound &&
-          devType != mlir::omp::DeclareTargetDeviceType::host) {
-        deviceCodeFound = true;
-      }
+    auto devType = declTar.declareTargetDeviceType;
+    if (!deviceCodeFound && devType != mlir::omp::DeclareTargetDeviceType::host)
+      deviceCodeFound = true;
 
-      markDeclareTarget(
-          op, converter,
-          static_cast<mlir::omp::DeclareTargetCaptureClause>(std::get<0>(sym)),
-          devType);
-    }
+    markDeclareTarget(op, converter, declTar.declareTargetCaptureClause,
+                      devType);
   }
 
   return deviceCodeFound;

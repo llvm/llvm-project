@@ -5029,8 +5029,7 @@ private:
       bool deferredDeviceFuncFound =
           Fortran::lower::markOpenMPDeferredDeclareTargetFunctions(
               getModuleOp().getOperation(), ompDeferredDeclareTarget, *this);
-      if (!ompDeviceCodeFound)
-        ompDeviceCodeFound = deferredDeviceFuncFound;
+      ompDeviceCodeFound = ompDeviceCodeFound || deferredDeviceFuncFound;
     }
 
     // Set the module attribute related to OpenMP requires directives
@@ -5093,7 +5092,7 @@ private:
   /// processed at the time of lowering the declare target construct, such
   /// as certain cases where interfaces are declared but not defined within
   /// a module.
-  llvm::SmallVector<Fortran::lower::OMPDeferredDeclTarInfo, 2>
+  llvm::SmallVector<Fortran::lower::OMPDeferredDeclareTargetInfo, 2>
       ompDeferredDeclareTarget;
 
   const Fortran::lower::ExprToValueMap *exprValueOverrides{nullptr};
