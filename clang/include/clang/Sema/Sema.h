@@ -13261,19 +13261,6 @@ public:
   /// from \p Caller context and erases all functions with lower
   /// calling priority.
   void EraseUnwantedCUDAMatches(
-      const FunctionDecl *Caller,
-      SmallVectorImpl<std::pair<DeclAccessPair, FunctionDecl *>> &Matches);
-
-  /// Given a implicit special member, infer its CUDA target from the
-  /// calls it needs to make to underlying base/field special members.
-  /// \param ClassDecl the class for which the member is being created.
-  /// \param CSM the kind of special member.
-  /// \param MemberDecl the special member itself.
-  /// \param ConstRHS true if this is a copy operation with a const object on
-  ///        its RHS.
-  /// \param Diagnose true if this call should emit diagnostics.
-  /// \return true if there was an error inferring.
-  /// The result of this call is implicit CUDA target attribute(s) attached to
   /// the member declaration.
   bool inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
                                                CXXSpecialMember CSM,
@@ -13300,7 +13287,6 @@ public:
   void checkCUDATargetOverload(FunctionDecl *NewFD,
                                const LookupResult &Previous);
   /// Copies target attributes from the template TD to the function FD.
-  void inheritCUDATargetAttrs(FunctionDecl *FD, const FunctionTemplateDecl &TD);
 
   /// Returns the name of the launch configuration function.  This is the name
   /// of the function that will be called to configure kernel call, with the
