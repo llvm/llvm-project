@@ -1,0 +1,12 @@
+[
+    {
+        "command": "cc -c -I. ../poison.h",
+        "directory": "/home/thebesttv/vul/llvm-project/graph-generation/segFault/build",
+        "file": "/home/thebesttv/vul/llvm-project/graph-generation/segFault/poison.h"
+    },
+    {
+        "command": "cc -c -I. ../poison.h",
+        "directory": "/home/thebesttv/vul/llvm-project/graph-generation/segFault/build-static",
+        "file": "/home/thebesttv/vul/llvm-project/graph-generation/segFault/poison.h"
+    }
+]
