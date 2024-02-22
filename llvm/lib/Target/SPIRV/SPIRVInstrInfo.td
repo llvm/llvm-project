@@ -430,6 +430,10 @@ def OpGenericCastToPtrExplicit : Op<123, (outs ID:$r), (ins TYPE:$t, ID:$p, Stor
                               "$r = OpGenericCastToPtrExplicit $t $p $s">;
 def OpBitcast : UnOp<"OpBitcast", 124>;
 
+// SPV_INTEL_usm_storage_classes
+def OpPtrCastToCrossWorkgroupINTEL : UnOp<"OpPtrCastToCrossWorkgroupINTEL", 5934>;
+def OpCrossWorkgroupCastToPtrINTEL : UnOp<"OpCrossWorkgroupCastToPtrINTEL", 5938>;
+
 // 3.42.12 Composite Instructions
 
 def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),
@@ -764,6 +768,11 @@ def OpGroupNonUniformBitwiseXor: OpGroupNUGroup<"BitwiseXor", 361>;
 def OpGroupNonUniformLogicalAnd: OpGroupNUGroup<"LogicalAnd", 362>;
 def OpGroupNonUniformLogicalOr: OpGroupNUGroup<"LogicalOr", 363>;
 def OpGroupNonUniformLogicalXor: OpGroupNUGroup<"LogicalXor", 364>;
+
+// SPV_KHR_subgroup_rotate
+def OpGroupNonUniformRotateKHR: Op<4431, (outs ID:$res),
+                  (ins TYPE:$type, ID:$scope, ID:$value, ID:$delta, variable_ops),
+                  "$res = OpGroupNonUniformRotateKHR $type $scope $value $delta">;
 
 // 3.49.7, Constant-Creation Instructions
 
