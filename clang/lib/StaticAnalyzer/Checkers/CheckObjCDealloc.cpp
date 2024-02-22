@@ -27,14 +27,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -93,10 +93,8 @@ namespace {
 class ObjCDeallocChecker
     : public Checker<check::ASTDecl<ObjCImplementationDecl>,
                      check::PreObjCMessage, check::PostObjCMessage,
-                     check::PreCall,
-                     check::BeginFunction, check::EndFunction,
-                     eval::Assume,
-                     check::PointerEscape,
+                     check::PreCall, check::BeginFunction, check::EndFunction,
+                     eval::Assume, check::PointerEscape,
                      check::PreStmt<ReturnStmt>> {
 
   mutable const IdentifierInfo *NSObjectII = nullptr;
@@ -116,7 +114,7 @@ class ObjCDeallocChecker
                                        categories::MemoryRefCount};
 
 public:
-  void checkASTDecl(const ObjCImplementationDecl *D, AnalysisManager& Mgr,
+  void checkASTDecl(const ObjCImplementationDecl *D, AnalysisManager &Mgr,
                     BugReporter &BR) const;
   void checkBeginFunction(CheckerContext &Ctx) const;
   void checkPreObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
@@ -149,7 +147,7 @@ private:
   const ObjCIvarRegion *getIvarRegionForIvarSymbol(SymbolRef IvarSym) const;
   SymbolRef getInstanceSymbolFromIvarSymbol(SymbolRef IvarSym) const;
 
-  const ObjCPropertyImplDecl*
+  const ObjCPropertyImplDecl *
   findPropertyOnDeallocatingInstance(SymbolRef IvarSym,
                                      CheckerContext &C) const;
 
@@ -183,12 +181,10 @@ private:
 };
 } // End anonymous namespace.
 
-
 /// Maps from the symbol for a class instance to the set of
 /// symbols remaining that must be released in -dealloc.
 REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(SymbolSet, SymbolRef)
 REGISTER_MAP_WITH_PROGRAMSTATE(UnreleasedIvarMap, SymbolRef, SymbolSet)
-
 
 /// An AST check that diagnose when the class requires a -dealloc method and
 /// is missing one.
@@ -234,7 +230,7 @@ void ObjCDeallocChecker::checkASTDecl(const ObjCImplementationDecl *D,
   }
 
   if (!MD) { // No dealloc found.
-    const char* Name = "Missing -dealloc";
+    const char *Name = "Missing -dealloc";
 
     std::string Buf;
     llvm::raw_string_ostream OS(Buf);
@@ -256,8 +252,7 @@ void ObjCDeallocChecker::checkASTDecl(const ObjCImplementationDecl *D,
 /// If this is the beginning of -dealloc, mark the values initially stored in
 /// instance variables that must be released by the end of -dealloc
 /// as unreleased in the state.
-void ObjCDeallocChecker::checkBeginFunction(
-    CheckerContext &C) const {
+void ObjCDeallocChecker::checkBeginFunction(CheckerContext &C) const {
   initIdentifierInfoAndSelectors(C.getASTContext());
 
   // Only do this if the current method is -dealloc.
@@ -333,8 +328,8 @@ ObjCDeallocChecker::getInstanceSymbolFromIvarSymbol(SymbolRef IvarSym) const {
 
 /// If we are in -dealloc or -dealloc is on the stack, handle the call if it is
 /// a release or a nilling-out property setter.
-void ObjCDeallocChecker::checkPreObjCMessage(
-    const ObjCMethodCall &M, CheckerContext &C) const {
+void ObjCDeallocChecker::checkPreObjCMessage(const ObjCMethodCall &M,
+                                             CheckerContext &C) const {
   // Only run if -dealloc is on the stack.
   SVal DeallocedInstance;
   if (!instanceDeallocIsOnStack(C, DeallocedInstance))
@@ -352,7 +347,7 @@ void ObjCDeallocChecker::checkPreObjCMessage(
   if (ReleasedValue) {
     // An instance variable symbol was released with -release:
     //    [_property release];
-    if (diagnoseExtraRelease(ReleasedValue,M, C))
+    if (diagnoseExtraRelease(ReleasedValue, M, C))
       return;
   } else {
     // An instance variable symbol was released nilling out its property:
@@ -385,8 +380,8 @@ void ObjCDeallocChecker::checkPreCall(const CallEvent &Call,
 }
 /// If the message was a call to '[super dealloc]', diagnose any missing
 /// releases.
-void ObjCDeallocChecker::checkPostObjCMessage(
-    const ObjCMethodCall &M, CheckerContext &C) const {
+void ObjCDeallocChecker::checkPostObjCMessage(const ObjCMethodCall &M,
+                                              CheckerContext &C) const {
   // We perform this check post-message so that if the super -dealloc
   // calls a helper method and that this class overrides, any ivars released in
   // the helper method will be recorded before checking.
@@ -396,14 +391,14 @@ void ObjCDeallocChecker::checkPostObjCMessage(
 
 /// Check for missing releases even when -dealloc does not call
 /// '[super dealloc]'.
-void ObjCDeallocChecker::checkEndFunction(
-    const ReturnStmt *RS, CheckerContext &C) const {
+void ObjCDeallocChecker::checkEndFunction(const ReturnStmt *RS,
+                                          CheckerContext &C) const {
   diagnoseMissingReleases(C);
 }
 
 /// Check for missing releases on early return.
-void ObjCDeallocChecker::checkPreStmt(
-    const ReturnStmt *RS, CheckerContext &C) const {
+void ObjCDeallocChecker::checkPreStmt(const ReturnStmt *RS,
+                                      CheckerContext &C) const {
   diagnoseMissingReleases(C);
 }
 
@@ -478,7 +473,6 @@ ProgramStateRef ObjCDeallocChecker::checkPointerEscape(
       // them.
       State = State->remove<UnreleasedIvarMap>(Sym);
     }
-
 
     SymbolRef InstanceSymbol = getInstanceSymbolFromIvarSymbol(Sym);
     if (!InstanceSymbol)
@@ -573,8 +567,7 @@ void ObjCDeallocChecker::diagnoseMissingReleases(CheckerContext &C) const {
     assert(PropDecl->getSetterKind() == ObjCPropertyDecl::Copy ||
            PropDecl->getSetterKind() == ObjCPropertyDecl::Retain);
 
-    OS << "The '" << *IvarDecl << "' ivar in '" << *ImplDecl
-       << "' was ";
+    OS << "The '" << *IvarDecl << "' ivar in '" << *ImplDecl << "' was ";
 
     if (PropDecl->getSetterKind() == ObjCPropertyDecl::Retain)
       OS << "retained";
@@ -685,13 +678,11 @@ bool ObjCDeallocChecker::diagnoseExtraRelease(SymbolRef ReleasedValue,
   assert(PropDecl->getSetterKind() == ObjCPropertyDecl::Weak ||
          (PropDecl->getSetterKind() == ObjCPropertyDecl::Assign &&
           !PropDecl->isReadOnly()) ||
-         isReleasedByCIFilterDealloc(PropImpl)
-         );
+         isReleasedByCIFilterDealloc(PropImpl));
 
   const ObjCImplDecl *Container = getContainingObjCImpl(C.getLocationContext());
-  OS << "The '" << *PropImpl->getPropertyIvarDecl()
-     << "' ivar in '" << *Container;
-
+  OS << "The '" << *PropImpl->getPropertyIvarDecl() << "' ivar in '"
+     << *Container;
 
   if (isReleasedByCIFilterDealloc(PropImpl)) {
     OS << "' will be released by '-[CIFilter dealloc]' but also released here";
@@ -703,7 +694,7 @@ bool ObjCDeallocChecker::diagnoseExtraRelease(SymbolRef ReleasedValue,
     else
       OS << "an assign, readwrite";
 
-    OS <<  " property but was released in 'dealloc'";
+    OS << " property but was released in 'dealloc'";
   }
 
   auto BR = std::make_unique<PathSensitiveBugReport>(ExtraReleaseBugType,
@@ -757,8 +748,7 @@ bool ObjCDeallocChecker::diagnoseMistakenDealloc(SymbolRef DeallocedValue,
   return true;
 }
 
-void ObjCDeallocChecker::initIdentifierInfoAndSelectors(
-    ASTContext &Ctx) const {
+void ObjCDeallocChecker::initIdentifierInfoAndSelectors(ASTContext &Ctx) const {
   if (NSObjectII)
     return;
 
@@ -775,8 +765,7 @@ void ObjCDeallocChecker::initIdentifierInfoAndSelectors(
 }
 
 /// Returns true if M is a call to '[super dealloc]'.
-bool ObjCDeallocChecker::isSuperDeallocMessage(
-    const ObjCMethodCall &M) const {
+bool ObjCDeallocChecker::isSuperDeallocMessage(const ObjCMethodCall &M) const {
   if (M.getOriginExpr()->getReceiverKind() != ObjCMessageExpr::SuperInstance)
     return false;
 
@@ -1001,7 +990,7 @@ bool ObjCDeallocChecker::instanceDeallocIsOnStack(const CheckerContext &C,
 bool ObjCDeallocChecker::classHasSeparateTeardown(
     const ObjCInterfaceDecl *ID) const {
   // Suppress if the class is not a subclass of NSObject.
-  for ( ; ID ; ID = ID->getSuperClass()) {
+  for (; ID; ID = ID->getSuperClass()) {
     IdentifierInfo *II = ID->getIdentifier();
 
     if (II == NSObjectII)
@@ -1040,7 +1029,7 @@ bool ObjCDeallocChecker::isReleasedByCIFilterDealloc(
 
   const ObjCInterfaceDecl *ID =
       PropImpl->getPropertyIvarDecl()->getContainingInterface();
-  for ( ; ID ; ID = ID->getSuperClass()) {
+  for (; ID; ID = ID->getSuperClass()) {
     IdentifierInfo *II = ID->getIdentifier();
     if (II == CIFilterII)
       return true;

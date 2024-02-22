@@ -27,8 +27,7 @@ constexpr llvm::StringLiteral WarnAtNode = "iter";
 
 class PointerIterationChecker : public Checker<check::ASTCodeBody> {
 public:
-  void checkASTCodeBody(const Decl *D,
-                        AnalysisManager &AM,
+  void checkASTCodeBody(const Decl *D, AnalysisManager &AM,
                         BugReporter &BR) const;
 };
 
@@ -41,9 +40,8 @@ static void emitDiagnostics(const BoundNodes &Match, const Decl *D,
   assert(MarkedStmt);
 
   auto Range = MarkedStmt->getSourceRange();
-  auto Location = PathDiagnosticLocation::createBegin(MarkedStmt,
-                                                      BR.getSourceManager(),
-                                                      ADC);
+  auto Location = PathDiagnosticLocation::createBegin(
+      MarkedStmt, BR.getSourceManager(), ADC);
   std::string Diagnostics;
   llvm::raw_string_ostream OS(Diagnostics);
   OS << "Iteration of pointer-like elements "
@@ -65,23 +63,21 @@ static void emitDiagnostics(const BoundNodes &Match, const Decl *D,
 
 auto matchUnorderedIterWithPointers() -> decltype(decl()) {
 
-  auto UnorderedContainerM = declRefExpr(to(varDecl(hasType(
-                               recordDecl(hasName("std::unordered_set")
-                             )))));
+  auto UnorderedContainerM = declRefExpr(
+      to(varDecl(hasType(recordDecl(hasName("std::unordered_set"))))));
 
   auto PointerTypeM = varDecl(hasType(hasCanonicalType(pointerType())));
 
-  auto PointerIterM = stmt(cxxForRangeStmt(
-                             hasLoopVariable(PointerTypeM),
-                             hasRangeInit(UnorderedContainerM)
-                      )).bind(WarnAtNode);
+  auto PointerIterM = stmt(cxxForRangeStmt(hasLoopVariable(PointerTypeM),
+                                           hasRangeInit(UnorderedContainerM)))
+                          .bind(WarnAtNode);
 
   return decl(forEachDescendant(PointerIterM));
 }
 
 void PointerIterationChecker::checkASTCodeBody(const Decl *D,
-                                             AnalysisManager &AM,
-                                             BugReporter &BR) const {
+                                               AnalysisManager &AM,
+                                               BugReporter &BR) const {
   auto MatcherM = matchUnorderedIterWithPointers();
 
   auto Matches = match(MatcherM, *D, AM.getASTContext());

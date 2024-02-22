@@ -109,9 +109,7 @@ public:
     return Msg;
   }
 
-  virtual std::string getMessageForSymbolNotFound() {
-    return Msg;
-  }
+  virtual std::string getMessageForSymbolNotFound() { return Msg; }
 };
 
 /// This class provides an interface through which checkers can create
@@ -125,7 +123,7 @@ protected:
   friend class BugReporter;
 
   Kind K;
-  const BugType& BT;
+  const BugType &BT;
   std::string ShortDescription;
   std::string Description;
 
@@ -146,7 +144,7 @@ public:
 
   Kind getKind() const { return K; }
 
-  const BugType& getBugType() const { return BT; }
+  const BugType &getBugType() const { return BT; }
 
   /// A verbose warning message that is appropriate for displaying next to
   /// the source code that introduces the problem. The description should be
@@ -157,8 +155,8 @@ public:
   StringRef getDescription() const { return Description; }
 
   /// A short general warning message that is appropriate for displaying in
-  /// the list of all reported bugs. It should describe what kind of bug is found
-  /// but does not need to try to go into details of that specific bug.
+  /// the list of all reported bugs. It should describe what kind of bug is
+  /// found but does not need to try to go into details of that specific bug.
   /// Grammatical conventions of getDescription() apply here as well.
   StringRef getShortDescription(bool UseFallback = true) const {
     if (ShortDescription.empty() && UseFallback)
@@ -220,15 +218,14 @@ public:
   /// node will be used; add a single invalid range to specify absence of
   /// ranges.
   void addRange(SourceRange R) {
-    assert((R.isValid() || Ranges.empty()) && "Invalid range can only be used "
-                           "to specify that the report does not have a range.");
+    assert((R.isValid() || Ranges.empty()) &&
+           "Invalid range can only be used "
+           "to specify that the report does not have a range.");
     Ranges.push_back(R);
   }
 
   /// Get the SourceRanges associated with the report.
-  virtual ArrayRef<SourceRange> getRanges() const {
-    return Ranges;
-  }
+  virtual ArrayRef<SourceRange> getRanges() const { return Ranges; }
 
   /// Add a fix-it hint to the bug report.
   ///
@@ -237,15 +234,13 @@ public:
   /// as conservative as possible because it is not uncommon for the user
   /// to blindly apply all fixits to their project. Note that it is very hard
   /// to produce a good fix-it hint for most path-sensitive warnings.
-  void addFixItHint(const FixItHint &F) {
-    Fixits.push_back(F);
-  }
+  void addFixItHint(const FixItHint &F) { Fixits.push_back(F); }
 
   llvm::ArrayRef<FixItHint> getFixits() const { return Fixits; }
 
   /// Reports are uniqued to ensure that we do not emit multiple diagnostics
   /// for each bug.
-  virtual void Profile(llvm::FoldingSetNodeID& hash) const = 0;
+  virtual void Profile(llvm::FoldingSetNodeID &hash) const = 0;
 };
 
 class BasicBugReport : public BugReport {
@@ -265,17 +260,13 @@ public:
     return Location;
   }
 
-  const Decl *getDeclWithIssue() const override {
-    return DeclWithIssue;
-  }
+  const Decl *getDeclWithIssue() const override { return DeclWithIssue; }
 
   PathDiagnosticLocation getUniqueingLocation() const override {
     return getLocation();
   }
 
-  const Decl *getUniqueingDecl() const override {
-    return getDeclWithIssue();
-  }
+  const Decl *getUniqueingDecl() const override { return getDeclWithIssue(); }
 
   /// Specifically set the Decl where an issue occurred. This isn't necessary
   /// for BugReports that cover a path as it will be automatically inferred.
@@ -283,7 +274,7 @@ public:
     DeclWithIssue = declWithIssue;
   }
 
-  void Profile(llvm::FoldingSetNodeID& hash) const override;
+  void Profile(llvm::FoldingSetNodeID &hash) const override;
 };
 
 class PathSensitiveBugReport : public BugReport {
@@ -414,9 +405,7 @@ public:
   }
 
   /// Get the declaration containing the uniqueing location.
-  const Decl *getUniqueingDecl() const override {
-    return UniqueingDecl;
-  }
+  const Decl *getUniqueingDecl() const override { return UniqueingDecl; }
 
   const Decl *getDeclWithIssue() const override;
 
@@ -465,9 +454,7 @@ public:
   ///
   /// Invalid reports are those that have been classified as likely false
   /// positives after the fact.
-  bool isValid() const {
-    return Invalidations.empty();
-  }
+  bool isValid() const { return Invalidations.empty(); }
 
   /// Marks the current report as invalid, meaning that it is probably a false
   /// positive and should not be reported to the user.
@@ -495,7 +482,7 @@ public:
   void addVisitor(std::unique_ptr<BugReporterVisitor> visitor);
 
   template <class VisitorType, class... Args>
-  void addVisitor(Args &&... ConstructorArgs) {
+  void addVisitor(Args &&...ConstructorArgs) {
     addVisitor(
         std::make_unique<VisitorType>(std::forward<Args>(ConstructorArgs)...));
   }
@@ -527,9 +514,8 @@ public:
 
   /// Produce the hint for the given node. The node contains
   /// information about the call for which the diagnostic can be generated.
-  std::string
-  getCallStackMessage(PathDiagnosticPieceRef Piece,
-                      const ExplodedNode *N) const {
+  std::string getCallStackMessage(PathDiagnosticPieceRef Piece,
+                                  const ExplodedNode *N) const {
     auto I = StackHints.find(Piece);
     if (I != StackHints.end())
       return I->second->getMessage(N);
@@ -556,7 +542,7 @@ public:
 
   ArrayRef<std::unique_ptr<BugReport>> getReports() const { return Reports; }
 
-  void Profile(llvm::FoldingSetNodeID& ID) const {
+  void Profile(llvm::FoldingSetNodeID &ID) const {
     assert(!Reports.empty());
     Reports.front()->Profile(ID);
   }
@@ -570,7 +556,7 @@ class BugReporterData {
 public:
   virtual ~BugReporterData() = default;
 
-  virtual ArrayRef<PathDiagnosticConsumer*> getPathDiagnosticConsumers() = 0;
+  virtual ArrayRef<PathDiagnosticConsumer *> getPathDiagnosticConsumers() = 0;
   virtual ASTContext &getASTContext() = 0;
   virtual SourceManager &getSourceManager() = 0;
   virtual AnalyzerOptions &getAnalyzerOptions() = 0;
@@ -584,10 +570,10 @@ public:
 /// The base class is used for generating path-insensitive
 class BugReporter {
 private:
-  BugReporterData& D;
+  BugReporterData &D;
 
   /// Generate and flush the diagnostics for the given bug report.
-  void FlushReport(BugReportEquivClass& EQ);
+  void FlushReport(BugReportEquivClass &EQ);
 
   /// The set of bug reports tracked by the BugReporter.
   llvm::FoldingSet<BugReportEquivClass> EQClasses;
@@ -605,7 +591,7 @@ public:
   /// Generate and flush diagnostics for all bug reports.
   void FlushReports();
 
-  ArrayRef<PathDiagnosticConsumer*> getPathDiagnosticConsumers() {
+  ArrayRef<PathDiagnosticConsumer *> getPathDiagnosticConsumers() {
     return D.getPathDiagnosticConsumers();
   }
 
@@ -666,7 +652,7 @@ protected:
 
 /// GRBugReporter is used for generating path-sensitive reports.
 class PathSensitiveBugReporter final : public BugReporter {
-  ExprEngine& Eng;
+  ExprEngine &Eng;
 
   BugReport *findReportInEquivalenceClass(
       BugReportEquivClass &eqClass,
@@ -677,8 +663,9 @@ class PathSensitiveBugReporter final : public BugReporter {
   generateDiagnosticForConsumerMap(BugReport *exampleReport,
                                    ArrayRef<PathDiagnosticConsumer *> consumers,
                                    ArrayRef<BugReport *> bugReports) override;
+
 public:
-  PathSensitiveBugReporter(BugReporterData& d, ExprEngine& eng)
+  PathSensitiveBugReporter(BugReporterData &d, ExprEngine &eng)
       : BugReporter(d), Eng(eng) {}
 
   /// getGraph - Get the exploded graph created by the analysis engine
@@ -694,13 +681,12 @@ public:
   /// \return A mapping from consumers to the corresponding diagnostics.
   /// Iterates through the bug reports within a single equivalence class,
   /// stops at a first non-invalidated report.
-  std::unique_ptr<DiagnosticForConsumerMapTy> generatePathDiagnostics(
-      ArrayRef<PathDiagnosticConsumer *> consumers,
-      ArrayRef<PathSensitiveBugReport *> &bugReports);
+  std::unique_ptr<DiagnosticForConsumerMapTy>
+  generatePathDiagnostics(ArrayRef<PathDiagnosticConsumer *> consumers,
+                          ArrayRef<PathSensitiveBugReport *> &bugReports);
 
   void emitReport(std::unique_ptr<BugReport> R) override;
 };
-
 
 class BugReporterContext {
   PathSensitiveBugReporter &BR;
@@ -712,17 +698,13 @@ public:
 
   virtual ~BugReporterContext() = default;
 
-  PathSensitiveBugReporter& getBugReporter() { return BR; }
+  PathSensitiveBugReporter &getBugReporter() { return BR; }
 
-  ProgramStateManager& getStateManager() const {
-    return BR.getStateManager();
-  }
+  ProgramStateManager &getStateManager() const { return BR.getStateManager(); }
 
-  ASTContext &getASTContext() const {
-    return BR.getContext();
-  }
+  ASTContext &getASTContext() const { return BR.getContext(); }
 
-  const SourceManager& getSourceManager() const {
+  const SourceManager &getSourceManager() const {
     return BR.getSourceManager();
   }
 
@@ -749,7 +731,7 @@ public:
 
   public:
     template <class DataTagType, class... Args>
-    const DataTagType *make(Args &&... ConstructorArgs) {
+    const DataTagType *make(Args &&...ConstructorArgs) {
       // We cannot use std::make_unique because we cannot access the private
       // constructor from inside it.
       Tags.emplace_back(

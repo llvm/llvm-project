@@ -322,9 +322,8 @@ private:
 /// Returns true if T is a primitive type. An object of a primitive type only
 /// needs to be analyzed as much as checking whether their value is undefined.
 inline bool isPrimitiveType(const QualType &T) {
-  return T->isBuiltinType() || T->isEnumeralType() ||
-         T->isFunctionType() || T->isAtomicType() ||
-         T->isVectorType() || T->isScalarType();
+  return T->isBuiltinType() || T->isEnumeralType() || T->isFunctionType() ||
+         T->isAtomicType() || T->isVectorType() || T->isScalarType();
 }
 
 inline bool isDereferencableType(const QualType &T) {

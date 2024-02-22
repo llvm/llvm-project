@@ -106,7 +106,6 @@ public:
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const {
     checkReturnAux(RS, C);
   }
-
 };
 } // end anonymous namespace
 
@@ -132,7 +131,7 @@ static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C,
   while (const MemRegion *MR = Sym->getOriginRegion()) {
     const auto *VR = dyn_cast<VarRegion>(MR);
     if (VR && VR->hasStackParametersStorage() &&
-           VR->getStackFrame()->inTopFrame())
+        VR->getStackFrame()->inTopFrame())
       return cast<ParmVarDecl>(VR->getDecl());
 
     const SymbolicRegion *SR = MR->getSymbolicBase();
@@ -165,7 +164,8 @@ static bool isInMIGCall(CheckerContext &C) {
     // FIXME: AnyCall doesn't support blocks yet, so they remain unchecked
     // for now.
     if (!AC->getReturnType(C.getASTContext())
-             .getCanonicalType()->isSignedIntegerType())
+             .getCanonicalType()
+             ->isSignedIntegerType())
       return false;
   }
 
@@ -174,7 +174,7 @@ static bool isInMIGCall(CheckerContext &C) {
 
   // See if there's an annotated method in the superclass.
   if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
-    for (const auto *OMD: MD->overridden_methods())
+    for (const auto *OMD : MD->overridden_methods())
       if (OMD->hasAttr<MIGServerRoutineAttr>())
         return true;
 
@@ -186,8 +186,8 @@ void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
     // If the code is doing reference counting over the parameter,
     // it opens up an opportunity for safely calling a destructor function.
     // TODO: We should still check for over-releases.
-    if (const ParmVarDecl *PVD =
-            getOriginParam(Call.getArgSVal(0), C, /*IncludeBaseRegions=*/true)) {
+    if (const ParmVarDecl *PVD = getOriginParam(Call.getArgSVal(0), C,
+                                                /*IncludeBaseRegions=*/true)) {
       // We never need to clean up the program state because these are
       // top-level parameters anyway, so they're always live.
       C.addTransition(C.getState()->add<RefCountedParameters>(PVD));
@@ -213,7 +213,7 @@ void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
     return;
 
   const NoteTag *T =
-    C.getNoteTag([this, PVD](PathSensitiveBugReport &BR) -> std::string {
+      C.getNoteTag([this, PVD](PathSensitiveBugReport &BR) -> std::string {
         if (&BR.getBugType() != &BT)
           return "";
         SmallString<64> Str;
@@ -296,6 +296,4 @@ void ento::registerMIGChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<MIGChecker>();
 }
 
-bool ento::shouldRegisterMIGChecker(const CheckerManager &mgr) {
-  return true;
-}
+bool ento::shouldRegisterMIGChecker(const CheckerManager &mgr) { return true; }

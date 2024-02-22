@@ -101,14 +101,10 @@ public:
   }
 
   // Include the evaluation of the default argument.
-  void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
-    Visit(E->getExpr());
-  }
+  void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) { Visit(E->getExpr()); }
 
   // Include the evaluation of the default initializers in a class.
-  void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
-    Visit(E->getExpr());
-  }
+  void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) { Visit(E->getExpr()); }
 
   // Adds may-call edges for the ObjC message sends.
   void VisitObjCMessageExpr(ObjCMessageExpr *ME) {
@@ -146,9 +142,7 @@ void CallGraph::addNodesForBlocks(DeclContext *D) {
       addNodesForBlocks(DC);
 }
 
-CallGraph::CallGraph() {
-  Root = getOrInsertNode(nullptr);
-}
+CallGraph::CallGraph() { Root = getOrInsertNode(nullptr); }
 
 CallGraph::~CallGraph() = default;
 
@@ -175,7 +169,7 @@ bool CallGraph::includeCalleeInGraph(const Decl *D) {
   return true;
 }
 
-void CallGraph::addNodeForDecl(Decl* D, bool IsGlobal) {
+void CallGraph::addNodeForDecl(Decl *D, bool IsGlobal) {
   assert(D);
 
   // Allocate a new node, mark it as root, and process its calls.
@@ -196,7 +190,8 @@ void CallGraph::addNodeForDecl(Decl* D, bool IsGlobal) {
 
 CallGraphNode *CallGraph::getNode(const Decl *F) const {
   FunctionMapTy::const_iterator I = FunctionMap.find(F);
-  if (I == FunctionMap.end()) return nullptr;
+  if (I == FunctionMap.end())
+    return nullptr;
   return I->second.get();
 }
 
@@ -222,7 +217,9 @@ void CallGraph::print(raw_ostream &OS) const {
   // sure the output is deterministic.
   llvm::ReversePostOrderTraversal<const CallGraph *> RPOT(this);
   for (llvm::ReversePostOrderTraversal<const CallGraph *>::rpo_iterator
-         I = RPOT.begin(), E = RPOT.end(); I != E; ++I) {
+           I = RPOT.begin(),
+           E = RPOT.end();
+       I != E; ++I) {
     const CallGraphNode *N = *I;
 
     OS << "  Function: ";
@@ -232,8 +229,8 @@ void CallGraph::print(raw_ostream &OS) const {
       N->print(OS);
 
     OS << " calls: ";
-    for (CallGraphNode::const_iterator CI = N->begin(),
-                                       CE = N->end(); CI != CE; ++CI) {
+    for (CallGraphNode::const_iterator CI = N->begin(), CE = N->end(); CI != CE;
+         ++CI) {
       assert(CI->Callee != Root && "No one can call the root node.");
       CI->Callee->print(OS);
       OS << " ";
@@ -243,29 +240,23 @@ void CallGraph::print(raw_ostream &OS) const {
   OS.flush();
 }
 
-LLVM_DUMP_METHOD void CallGraph::dump() const {
-  print(llvm::errs());
-}
+LLVM_DUMP_METHOD void CallGraph::dump() const { print(llvm::errs()); }
 
-void CallGraph::viewGraph() const {
-  llvm::ViewGraph(this, "CallGraph");
-}
+void CallGraph::viewGraph() const { llvm::ViewGraph(this, "CallGraph"); }
 
 void CallGraphNode::print(raw_ostream &os) const {
   if (const NamedDecl *ND = dyn_cast_or_null<NamedDecl>(FD))
-      return ND->printQualifiedName(os);
+    return ND->printQualifiedName(os);
   os << "< >";
 }
 
-LLVM_DUMP_METHOD void CallGraphNode::dump() const {
-  print(llvm::errs());
-}
+LLVM_DUMP_METHOD void CallGraphNode::dump() const { print(llvm::errs()); }
 
 namespace llvm {
 
 template <>
-struct DOTGraphTraits<const CallGraph*> : public DefaultDOTGraphTraits {
-  DOTGraphTraits (bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
+struct DOTGraphTraits<const CallGraph *> : public DefaultDOTGraphTraits {
+  DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
   static std::string getNodeLabel(const CallGraphNode *Node,
                                   const CallGraph *CG) {

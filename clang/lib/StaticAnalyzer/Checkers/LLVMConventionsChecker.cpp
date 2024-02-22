@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "llvm/ADT/SmallString.h"
@@ -128,6 +128,7 @@ public:
   }
   void VisitStmt(Stmt *S) { VisitChildren(S); }
   void VisitDeclStmt(DeclStmt *DS);
+
 private:
   void VisitVarDecl(VarDecl *VD);
 };
@@ -179,7 +180,7 @@ void StringRefCheckerVisitor::VisitVarDecl(VarDecl *VD) {
   const char *desc = "StringRef should not be bound to temporary "
                      "std::string that it outlives";
   PathDiagnosticLocation VDLoc =
-    PathDiagnosticLocation::createBegin(VD, BR.getSourceManager());
+      PathDiagnosticLocation::createBegin(VD, BR.getSourceManager());
   BR.EmitBasicReport(DeclWithIssue, Checker, desc, "LLVM Conventions", desc,
                      VDLoc, Init->getSourceRange());
 }
@@ -212,7 +213,7 @@ static bool IsPartOfAST(const CXXRecordDecl *R) {
 
 namespace {
 class ASTFieldVisitor {
-  SmallVector<FieldDecl*, 10> FieldChain;
+  SmallVector<FieldDecl *, 10> FieldChain;
   const CXXRecordDecl *Root;
   BugReporter &BR;
   const CheckerBase *Checker;
@@ -264,8 +265,9 @@ void ASTFieldVisitor::ReportError(QualType T) {
   if (FieldChain.size() > 1) {
     os << " via the following chain: ";
     bool isFirst = true;
-    for (SmallVectorImpl<FieldDecl*>::iterator I=FieldChain.begin(),
-         E=FieldChain.end(); I!=E; ++I) {
+    for (SmallVectorImpl<FieldDecl *>::iterator I = FieldChain.begin(),
+                                                E = FieldChain.end();
+         I != E; ++I) {
       if (!isFirst)
         os << '.';
       else
@@ -283,7 +285,7 @@ void ASTFieldVisitor::ReportError(QualType T) {
   // class, as that heuristic doesn't always work (the complete definition of
   // the class may be in the header file, for example).
   PathDiagnosticLocation L = PathDiagnosticLocation::createBegin(
-                               FieldChain.front(), BR.getSourceManager());
+      FieldChain.front(), BR.getSourceManager());
   BR.EmitBasicReport(Root, Checker, "AST node allocates heap memory",
                      "LLVM Conventions", os.str(), L);
 }
@@ -293,22 +295,21 @@ void ASTFieldVisitor::ReportError(QualType T) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-class LLVMConventionsChecker : public Checker<
-                                                check::ASTDecl<CXXRecordDecl>,
-                                                check::ASTCodeBody > {
+class LLVMConventionsChecker
+    : public Checker<check::ASTDecl<CXXRecordDecl>, check::ASTCodeBody> {
 public:
-  void checkASTDecl(const CXXRecordDecl *R, AnalysisManager& mgr,
+  void checkASTDecl(const CXXRecordDecl *R, AnalysisManager &mgr,
                     BugReporter &BR) const {
     if (R->isCompleteDefinition())
       CheckASTMemory(R, BR, this);
   }
 
-  void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
+  void checkASTCodeBody(const Decl *D, AnalysisManager &mgr,
                         BugReporter &BR) const {
     CheckStringRefAssignedTemporary(D, BR, this);
   }
 };
-}
+} // namespace
 
 void ento::registerLLVMConventionsChecker(CheckerManager &mgr) {
   mgr.registerChecker<LLVMConventionsChecker>();

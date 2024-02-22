@@ -28,8 +28,8 @@ namespace clang {
 //===----------------------------------------------------------------------===//
 
 namespace dataflow {
-  struct forward_analysis_tag {};
-  struct backward_analysis_tag {};
+struct forward_analysis_tag {};
+struct backward_analysis_tag {};
 } // end namespace dataflow
 
 //===----------------------------------------------------------------------===//
@@ -37,7 +37,7 @@ namespace dataflow {
 //===----------------------------------------------------------------------===//
 
 template <typename ValueTypes,
-          typename _AnalysisDirTag = dataflow::forward_analysis_tag >
+          typename _AnalysisDirTag = dataflow::forward_analysis_tag>
 class DataflowValues {
 
   //===--------------------------------------------------------------------===//
@@ -45,12 +45,12 @@ class DataflowValues {
   //===--------------------------------------------------------------------===//
 
 public:
-  typedef typename ValueTypes::ValTy               ValTy;
-  typedef typename ValueTypes::AnalysisDataTy      AnalysisDataTy;
-  typedef _AnalysisDirTag                          AnalysisDirTag;
-  typedef llvm::DenseMap<ProgramPoint, ValTy>      EdgeDataMapTy;
-  typedef llvm::DenseMap<const CFGBlock*, ValTy>   BlockDataMapTy;
-  typedef llvm::DenseMap<const Stmt*, ValTy>       StmtDataMapTy;
+  typedef typename ValueTypes::ValTy ValTy;
+  typedef typename ValueTypes::AnalysisDataTy AnalysisDataTy;
+  typedef _AnalysisDirTag AnalysisDirTag;
+  typedef llvm::DenseMap<ProgramPoint, ValTy> EdgeDataMapTy;
+  typedef llvm::DenseMap<const CFGBlock *, ValTy> BlockDataMapTy;
+  typedef llvm::DenseMap<const Stmt *, ValTy> StmtDataMapTy;
 
   //===--------------------------------------------------------------------===//
   // Predicates.
@@ -66,7 +66,7 @@ public:
   bool isBackwardAnalysis() { return !isForwardAnalysis(); }
 
 private:
-  bool isForwardAnalysis(dataflow::forward_analysis_tag)  { return true; }
+  bool isForwardAnalysis(dataflow::forward_analysis_tag) { return true; }
   bool isForwardAnalysis(dataflow::backward_analysis_tag) { return false; }
 
   //===--------------------------------------------------------------------===//
@@ -79,33 +79,32 @@ public:
 
   /// InitializeValues - Invoked by the solver to initialize state needed for
   ///  dataflow analysis.  This method is usually specialized by subclasses.
-  void InitializeValues(const CFG& cfg) {}
-
+  void InitializeValues(const CFG &cfg) {}
 
   /// getEdgeData - Retrieves the dataflow values associated with a
   ///  CFG edge.
-  ValTy& getEdgeData(const BlockEdge &E) {
+  ValTy &getEdgeData(const BlockEdge &E) {
     typename EdgeDataMapTy::iterator I = EdgeDataMap.find(E);
-    assert (I != EdgeDataMap.end() && "No data associated with Edge.");
+    assert(I != EdgeDataMap.end() && "No data associated with Edge.");
     return I->second;
   }
 
-  const ValTy& getEdgeData(const BlockEdge &E) const {
-    return reinterpret_cast<DataflowValues*>(this)->getEdgeData(E);
+  const ValTy &getEdgeData(const BlockEdge &E) const {
+    return reinterpret_cast<DataflowValues *>(this)->getEdgeData(E);
   }
 
   /// getBlockData - Retrieves the dataflow values associated with a
   ///  specified CFGBlock.  If the dataflow analysis is a forward analysis,
   ///  this data is associated with the END of the block.  If the analysis
   ///  is a backwards analysis, it is associated with the ENTRY of the block.
-  ValTy& getBlockData(const CFGBlock *B) {
+  ValTy &getBlockData(const CFGBlock *B) {
     typename BlockDataMapTy::iterator I = BlockDataMap.find(B);
-    assert (I != BlockDataMap.end() && "No data associated with block.");
+    assert(I != BlockDataMap.end() && "No data associated with block.");
     return I->second;
   }
 
-  const ValTy& getBlockData(const CFGBlock *B) const {
-    return const_cast<DataflowValues*>(this)->getBlockData(B);
+  const ValTy &getBlockData(const CFGBlock *B) const {
+    return const_cast<DataflowValues *>(this)->getBlockData(B);
   }
 
   /// getStmtData - Retrieves the dataflow values associated with a
@@ -114,58 +113,59 @@ public:
   ///  If the analysis is a backwards analysis, it is associated with
   ///  the point after a Stmt.  This data is only computed for block-level
   ///  expressions, and only when requested when the analysis is executed.
-  ValTy& getStmtData(const Stmt *S) {
-    assert (StmtDataMap && "Dataflow values were not computed for statements.");
+  ValTy &getStmtData(const Stmt *S) {
+    assert(StmtDataMap && "Dataflow values were not computed for statements.");
     typename StmtDataMapTy::iterator I = StmtDataMap->find(S);
-    assert (I != StmtDataMap->end() && "No data associated with statement.");
+    assert(I != StmtDataMap->end() && "No data associated with statement.");
     return I->second;
   }
 
-  const ValTy& getStmtData(const Stmt *S) const {
-    return const_cast<DataflowValues*>(this)->getStmtData(S);
+  const ValTy &getStmtData(const Stmt *S) const {
+    return const_cast<DataflowValues *>(this)->getStmtData(S);
   }
 
   /// getEdgeDataMap - Retrieves the internal map between CFG edges and
   ///  dataflow values.  Usually used by a dataflow solver to compute
   ///  values for blocks.
-  EdgeDataMapTy& getEdgeDataMap() { return EdgeDataMap; }
-  const EdgeDataMapTy& getEdgeDataMap() const { return EdgeDataMap; }
+  EdgeDataMapTy &getEdgeDataMap() { return EdgeDataMap; }
+  const EdgeDataMapTy &getEdgeDataMap() const { return EdgeDataMap; }
 
   /// getBlockDataMap - Retrieves the internal map between CFGBlocks and
   /// dataflow values.  If the dataflow analysis operates in the forward
   /// direction, the values correspond to the dataflow values at the start
   /// of the block.  Otherwise, for a backward analysis, the values correspond
   /// to the dataflow values at the end of the block.
-  BlockDataMapTy& getBlockDataMap() { return BlockDataMap; }
-  const BlockDataMapTy& getBlockDataMap() const { return BlockDataMap; }
+  BlockDataMapTy &getBlockDataMap() { return BlockDataMap; }
+  const BlockDataMapTy &getBlockDataMap() const { return BlockDataMap; }
 
   /// getStmtDataMap - Retrieves the internal map between Stmts and
   /// dataflow values.
-  StmtDataMapTy& getStmtDataMap() {
-    if (!StmtDataMap) StmtDataMap = new StmtDataMapTy();
+  StmtDataMapTy &getStmtDataMap() {
+    if (!StmtDataMap)
+      StmtDataMap = new StmtDataMapTy();
     return *StmtDataMap;
   }
 
-  const StmtDataMapTy& getStmtDataMap() const {
-    return const_cast<DataflowValues*>(this)->getStmtDataMap();
+  const StmtDataMapTy &getStmtDataMap() const {
+    return const_cast<DataflowValues *>(this)->getStmtDataMap();
   }
 
   /// getAnalysisData - Retrieves the meta data associated with a
   ///  dataflow analysis for analyzing a particular CFG.
   ///  This is typically consumed by transfer function code (via the solver).
   ///  This can also be used by subclasses to interpret the dataflow values.
-  AnalysisDataTy& getAnalysisData() { return AnalysisData; }
-  const AnalysisDataTy& getAnalysisData() const { return AnalysisData; }
+  AnalysisDataTy &getAnalysisData() { return AnalysisData; }
+  const AnalysisDataTy &getAnalysisData() const { return AnalysisData; }
 
   //===--------------------------------------------------------------------===//
   // Internal data.
   //===--------------------------------------------------------------------===//
 
 protected:
-  EdgeDataMapTy      EdgeDataMap;
-  BlockDataMapTy     BlockDataMap;
-  StmtDataMapTy*     StmtDataMap;
-  AnalysisDataTy     AnalysisData;
+  EdgeDataMapTy EdgeDataMap;
+  BlockDataMapTy BlockDataMap;
+  StmtDataMapTy *StmtDataMap;
+  AnalysisDataTy AnalysisData;
 };
 
 } // end namespace clang

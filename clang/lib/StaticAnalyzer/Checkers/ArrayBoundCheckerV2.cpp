@@ -279,11 +279,13 @@ static std::pair<ProgramStateRef, ProgramStateRef>
 compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
                         SValBuilder &SVB, bool CheckEquality = false) {
   if (auto ConcreteThreshold = Threshold.getAs<nonloc::ConcreteInt>()) {
-    std::tie(Value, Threshold) = getSimplifiedOffsets(Value, *ConcreteThreshold, SVB);
+    std::tie(Value, Threshold) =
+        getSimplifiedOffsets(Value, *ConcreteThreshold, SVB);
   }
   if (auto ConcreteThreshold = Threshold.getAs<nonloc::ConcreteInt>()) {
     QualType T = Value.getType(SVB.getContext());
-    if (T->isUnsignedIntegerType() && ConcreteThreshold->getValue().isNegative()) {
+    if (T->isUnsignedIntegerType() &&
+        ConcreteThreshold->getValue().isNegative()) {
       // In this case we reduced the bound check to a comparison of the form
       //   (symbol or value with unsigned type) < (negative number)
       // which is always false. We are handling these cases separately because

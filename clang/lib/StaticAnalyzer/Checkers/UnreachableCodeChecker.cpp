@@ -12,10 +12,10 @@
 // A similar flow-sensitive only check exists in Analysis/ReachableCode.cpp
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -34,6 +34,7 @@ class UnreachableCodeChecker : public Checker<check::EndAnalysis> {
 public:
   void checkEndAnalysis(ExplodedGraph &G, BugReporter &B,
                         ExprEngine &Eng) const;
+
 private:
   typedef llvm::SmallSet<unsigned, 32> CFGBlocksSet;
 
@@ -44,10 +45,9 @@ private:
   static bool isInvalidPath(const CFGBlock *CB, const ParentMap &PM);
   static inline bool isEmptyCFGBlock(const CFGBlock *CB);
 };
-}
+} // namespace
 
-void UnreachableCodeChecker::checkEndAnalysis(ExplodedGraph &G,
-                                              BugReporter &B,
+void UnreachableCodeChecker::checkEndAnalysis(ExplodedGraph &G, BugReporter &B,
                                               ExprEngine &Eng) const {
   CFGBlocksSet reachable, visited;
 
@@ -126,8 +126,8 @@ void UnreachableCodeChecker::checkEndAnalysis(ExplodedGraph &G,
     // such as llvm_unreachable.
     if (!CB->empty()) {
       bool foundUnreachable = false;
-      for (CFGBlock::const_iterator ci = CB->begin(), ce = CB->end();
-           ci != ce; ++ci) {
+      for (CFGBlock::const_iterator ci = CB->begin(), ce = CB->end(); ci != ce;
+           ++ci) {
         if (std::optional<CFGStmt> S = (*ci).getAs<CFGStmt>())
           if (const CallExpr *CE = dyn_cast<CallExpr>(S->getStmt())) {
             if (CE->getBuiltinCallee() == Builtin::BI__builtin_unreachable ||
@@ -159,8 +159,7 @@ void UnreachableCodeChecker::checkEndAnalysis(ExplodedGraph &G,
       SL = DL.asLocation();
       if (SR.isInvalid() || !SL.isValid())
         continue;
-    }
-    else
+    } else
       continue;
 
     // Check if the SourceLocation is in a system header
@@ -229,9 +228,9 @@ bool UnreachableCodeChecker::isInvalidPath(const CFGBlock *CB,
   // Get the predecessor block's terminator condition
   const Stmt *cond = pred->getTerminatorCondition();
 
-  //assert(cond && "CFGBlock's predecessor has a terminator condition");
-  // The previous assertion is invalid in some cases (eg do/while). Leaving
-  // reporting of these situations on at the moment to help triage these cases.
+  // assert(cond && "CFGBlock's predecessor has a terminator condition");
+  //  The previous assertion is invalid in some cases (eg do/while). Leaving
+  //  reporting of these situations on at the moment to help triage these cases.
   if (!cond)
     return false;
 
@@ -243,9 +242,9 @@ bool UnreachableCodeChecker::isInvalidPath(const CFGBlock *CB,
 
 // Returns true if the given CFGBlock is empty
 bool UnreachableCodeChecker::isEmptyCFGBlock(const CFGBlock *CB) {
-  return CB->getLabel() == nullptr // No labels
-      && CB->size() == 0           // No statements
-      && !CB->getTerminatorStmt(); // No terminator
+  return CB->getLabel() == nullptr    // No labels
+         && CB->size() == 0           // No statements
+         && !CB->getTerminatorStmt(); // No terminator
 }
 
 void ento::registerUnreachableCodeChecker(CheckerManager &mgr) {

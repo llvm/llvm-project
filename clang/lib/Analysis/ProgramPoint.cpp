@@ -21,26 +21,26 @@ ProgramPointTag::~ProgramPointTag() {}
 
 ProgramPoint ProgramPoint::getProgramPoint(const Stmt *S, ProgramPoint::Kind K,
                                            const LocationContext *LC,
-                                           const ProgramPointTag *tag){
+                                           const ProgramPointTag *tag) {
   switch (K) {
-    default:
-      llvm_unreachable("Unhandled ProgramPoint kind");
-    case ProgramPoint::PreStmtKind:
-      return PreStmt(S, LC, tag);
-    case ProgramPoint::PostStmtKind:
-      return PostStmt(S, LC, tag);
-    case ProgramPoint::PreLoadKind:
-      return PreLoad(S, LC, tag);
-    case ProgramPoint::PostLoadKind:
-      return PostLoad(S, LC, tag);
-    case ProgramPoint::PreStoreKind:
-      return PreStore(S, LC, tag);
-    case ProgramPoint::PostLValueKind:
-      return PostLValue(S, LC, tag);
-    case ProgramPoint::PostStmtPurgeDeadSymbolsKind:
-      return PostStmtPurgeDeadSymbols(S, LC, tag);
-    case ProgramPoint::PreStmtPurgeDeadSymbolsKind:
-      return PreStmtPurgeDeadSymbols(S, LC, tag);
+  default:
+    llvm_unreachable("Unhandled ProgramPoint kind");
+  case ProgramPoint::PreStmtKind:
+    return PreStmt(S, LC, tag);
+  case ProgramPoint::PostStmtKind:
+    return PostStmt(S, LC, tag);
+  case ProgramPoint::PreLoadKind:
+    return PreLoad(S, LC, tag);
+  case ProgramPoint::PostLoadKind:
+    return PostLoad(S, LC, tag);
+  case ProgramPoint::PreStoreKind:
+    return PreStore(S, LC, tag);
+  case ProgramPoint::PostLValueKind:
+    return PostLValue(S, LC, tag);
+  case ProgramPoint::PostStmtPurgeDeadSymbolsKind:
+    return PostStmtPurgeDeadSymbols(S, LC, tag);
+  case ProgramPoint::PreStmtPurgeDeadSymbolsKind:
+    return PreStmtPurgeDeadSymbols(S, LC, tag);
   }
 }
 
@@ -58,8 +58,7 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
   Out << "\"kind\": \"";
   switch (getKind()) {
   case ProgramPoint::BlockEntranceKind:
-    Out << "BlockEntrance\""
-        << ", \"block_id\": "
+    Out << "BlockEntrance\"" << ", \"block_id\": "
         << castAs<BlockEntrance>().getBlock()->getBlockID();
     break;
 
@@ -157,7 +156,7 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
             LHS->printJson(Out, nullptr, PP, AddQuotes);
           } else {
             Out << "null";
-	  }
+          }
 
           Out << ", \"rhs\": ";
           if (const Stmt *RHS = C->getRHS()) {
@@ -188,8 +187,8 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
     assert(S != nullptr && "Expecting non-null Stmt");
 
     Out << "Statement\", \"stmt_kind\": \"" << S->getStmtClassName()
-        << "\", \"stmt_id\": " << S->getID(Context)
-        << ", \"pointer\": \"" << (const void *)S << "\", ";
+        << "\", \"stmt_id\": " << S->getID(Context) << ", \"pointer\": \""
+        << (const void *)S << "\", ";
     if (const auto *CS = dyn_cast<CastExpr>(S))
       Out << "\"cast_kind\": \"" << CS->getCastKindName() << "\", ";
 
@@ -236,8 +235,6 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
 
 SimpleProgramPointTag::SimpleProgramPointTag(StringRef MsgProvider,
                                              StringRef Msg)
-  : Desc((MsgProvider + " : " + Msg).str()) {}
+    : Desc((MsgProvider + " : " + Msg).str()) {}
 
-StringRef SimpleProgramPointTag::getTagDescription() const {
-  return Desc;
-}
+StringRef SimpleProgramPointTag::getTagDescription() const { return Desc; }

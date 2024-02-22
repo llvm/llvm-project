@@ -48,9 +48,7 @@ public:
 
   /// \return Stored value, assuming that the value is known.
   /// Crashes otherwise.
-  bool getValue() const {
-    return *Val;
-  }
+  bool getValue() const { return *Val; }
 
   /// Return true if the constraint is perfectly constrained to 'true'.
   bool isConstrainedTrue() const { return Val && *Val; }
@@ -105,7 +103,7 @@ public:
   /// Note that a ConstraintManager is not obligated to return a concretized
   /// value for a symbol, even if it is perfectly constrained.
   /// It might return null.
-  virtual const llvm::APSInt* getSymVal(ProgramStateRef state,
+  virtual const llvm::APSInt *getSymVal(ProgramStateRef state,
                                         SymbolRef sym) const {
     return nullptr;
   }
@@ -129,7 +127,7 @@ public:
   /// Scan all symbols referenced by the constraints. If the symbol is not
   /// alive, remove it.
   virtual ProgramStateRef removeDeadBindings(ProgramStateRef state,
-                                                 SymbolReaper& SymReaper) = 0;
+                                             SymbolReaper &SymReaper) = 0;
 
   virtual void printJson(raw_ostream &Out, ProgramStateRef State,
                          const char *NL, unsigned int Space,

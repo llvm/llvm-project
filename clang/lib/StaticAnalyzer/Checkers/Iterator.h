@@ -25,7 +25,6 @@ namespace iterator {
 // of operators in a common way by using a symbolic position.
 struct IteratorPosition {
 private:
-
   // Container the iterator belongs to
   const MemRegion *Cont;
 
@@ -111,31 +110,40 @@ class IteratorSymbolMap {};
 class IteratorRegionMap {};
 class ContainerMap {};
 
-using IteratorSymbolMapTy =
-  CLANG_ENTO_PROGRAMSTATE_MAP(SymbolRef, IteratorPosition);
-using IteratorRegionMapTy =
-  CLANG_ENTO_PROGRAMSTATE_MAP(const MemRegion *, IteratorPosition);
-using ContainerMapTy =
-  CLANG_ENTO_PROGRAMSTATE_MAP(const MemRegion *, ContainerData);
+using IteratorSymbolMapTy = CLANG_ENTO_PROGRAMSTATE_MAP(SymbolRef,
+                                                        IteratorPosition);
+using IteratorRegionMapTy = CLANG_ENTO_PROGRAMSTATE_MAP(const MemRegion *,
+                                                        IteratorPosition);
+using ContainerMapTy = CLANG_ENTO_PROGRAMSTATE_MAP(const MemRegion *,
+                                                   ContainerData);
 
 } // namespace iterator
 
-template<>
+template <>
 struct ProgramStateTrait<iterator::IteratorSymbolMap>
-  : public ProgramStatePartialTrait<iterator::IteratorSymbolMapTy> {
-  static void *GDMIndex() { static int Index; return &Index; }
+    : public ProgramStatePartialTrait<iterator::IteratorSymbolMapTy> {
+  static void *GDMIndex() {
+    static int Index;
+    return &Index;
+  }
 };
 
-template<>
+template <>
 struct ProgramStateTrait<iterator::IteratorRegionMap>
-  : public ProgramStatePartialTrait<iterator::IteratorRegionMapTy> {
-  static void *GDMIndex() { static int Index; return &Index; }
+    : public ProgramStatePartialTrait<iterator::IteratorRegionMapTy> {
+  static void *GDMIndex() {
+    static int Index;
+    return &Index;
+  }
 };
 
-template<>
+template <>
 struct ProgramStateTrait<iterator::ContainerMap>
-  : public ProgramStatePartialTrait<iterator::ContainerMapTy> {
-  static void *GDMIndex() { static int Index; return &Index; }
+    : public ProgramStatePartialTrait<iterator::ContainerMapTy> {
+  static void *GDMIndex() {
+    static int Index;
+    return &Index;
+  }
 };
 
 namespace iterator {

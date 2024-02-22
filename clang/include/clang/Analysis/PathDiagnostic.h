@@ -116,8 +116,7 @@ public:
 
     bool empty() const { return Set.empty(); }
 
-    void addDiagnostic(const PathDiagnostic &PD,
-                       StringRef ConsumerName,
+    void addDiagnostic(const PathDiagnostic &PD, StringRef ConsumerName,
                        StringRef fileName);
 
     PDFileEntry::ConsumerFiles *getFiles(const PathDiagnostic &PD);
@@ -245,8 +244,7 @@ public:
   }
 
   /// Create a location corresponding to the given declaration.
-  static PathDiagnosticLocation create(const Decl *D,
-                                       const SourceManager &SM) {
+  static PathDiagnosticLocation create(const Decl *D, const SourceManager &SM) {
     return PathDiagnosticLocation(D, SM);
   }
 
@@ -264,25 +262,25 @@ public:
   }
 
   /// Create a location for the beginning of the statement.
-  static PathDiagnosticLocation createBegin(const Stmt *S,
-                                            const SourceManager &SM,
-                                            const LocationOrAnalysisDeclContext LAC);
+  static PathDiagnosticLocation
+  createBegin(const Stmt *S, const SourceManager &SM,
+              const LocationOrAnalysisDeclContext LAC);
 
   /// Create a location for the end of the statement.
   ///
   /// If the statement is a CompoundStatement, the location will point to the
   /// closing brace instead of following it.
-  static PathDiagnosticLocation createEnd(const Stmt *S,
-                                          const SourceManager &SM,
-                                       const LocationOrAnalysisDeclContext LAC);
+  static PathDiagnosticLocation
+  createEnd(const Stmt *S, const SourceManager &SM,
+            const LocationOrAnalysisDeclContext LAC);
 
   /// Create the location for the operator of the binary expression.
   /// Assumes the statement has a valid location.
   static PathDiagnosticLocation createOperatorLoc(const BinaryOperator *BO,
                                                   const SourceManager &SM);
-  static PathDiagnosticLocation createConditionalColonLoc(
-                                                  const ConditionalOperator *CO,
-                                                  const SourceManager &SM);
+  static PathDiagnosticLocation
+  createConditionalColonLoc(const ConditionalOperator *CO,
+                            const SourceManager &SM);
 
   /// For member expressions, return the location of the '.' or '->'.
   /// Assumes the statement has a valid location.
@@ -307,15 +305,15 @@ public:
   /// Constructs a location for the end of the enclosing declaration body.
   /// Defaults to the end of brace.
   static PathDiagnosticLocation createDeclEnd(const LocationContext *LC,
-                                                   const SourceManager &SM);
+                                              const SourceManager &SM);
 
   /// Create a location corresponding to the given valid ProgramPoint.
   static PathDiagnosticLocation create(const ProgramPoint &P,
                                        const SourceManager &SMng);
 
   /// Convert the given location into a single kind location.
-  static PathDiagnosticLocation createSingleLocation(
-                                             const PathDiagnosticLocation &PDL);
+  static PathDiagnosticLocation
+  createSingleLocation(const PathDiagnosticLocation &PDL);
 
   /// Construct a source location that corresponds to either the beginning
   /// or the end of the given statement, or a nearby valid source location
@@ -332,38 +330,39 @@ public:
     return !(*this == X);
   }
 
-  bool isValid() const {
-    return SM != nullptr;
-  }
+  bool isValid() const { return SM != nullptr; }
 
-  FullSourceLoc asLocation() const {
-    return Loc;
-  }
+  FullSourceLoc asLocation() const { return Loc; }
 
-  PathDiagnosticRange asRange() const {
-    return Range;
-  }
+  PathDiagnosticRange asRange() const { return Range; }
 
-  const Stmt *asStmt() const { assert(isValid()); return S; }
+  const Stmt *asStmt() const {
+    assert(isValid());
+    return S;
+  }
   const Stmt *getStmtOrNull() const {
     if (!isValid())
       return nullptr;
     return asStmt();
   }
 
-  const Decl *asDecl() const { assert(isValid()); return D; }
+  const Decl *asDecl() const {
+    assert(isValid());
+    return D;
+  }
 
   bool hasRange() const { return K == StmtK || K == RangeK || K == DeclK; }
 
   bool hasValidLocation() const { return asLocation().isValid(); }
 
-  void invalidate() {
-    *this = PathDiagnosticLocation();
-  }
+  void invalidate() { *this = PathDiagnosticLocation(); }
 
   void flatten();
 
-  const SourceManager& getManager() const { assert(isValid()); return *SM; }
+  const SourceManager &getManager() const {
+    assert(isValid());
+    return *SM;
+  }
 
   void Profile(llvm::FoldingSetNodeID &ID) const;
 
@@ -400,7 +399,7 @@ public:
 // Path "pieces" for path-sensitive diagnostics.
 //===----------------------------------------------------------------------===//
 
-class PathDiagnosticPiece: public llvm::FoldingSetNode {
+class PathDiagnosticPiece : public llvm::FoldingSetNode {
 public:
   enum Kind { ControlFlow, Event, Macro, Call, Note, PopUp };
   enum DisplayHint { Above, Below };
@@ -463,12 +462,10 @@ public:
   void addRange(SourceLocation B, SourceLocation E) {
     if (!B.isValid() || !E.isValid())
       return;
-    ranges.push_back(SourceRange(B,E));
+    ranges.push_back(SourceRange(B, E));
   }
 
-  void addFixit(FixItHint F) {
-    fixits.push_back(F);
-  }
+  void addFixit(FixItHint F) { fixits.push_back(F); }
 
   /// Return the SourceRanges associated with this PathDiagnosticPiece.
   ArrayRef<SourceRange> getRanges() const { return ranges; }
@@ -478,13 +475,9 @@ public:
 
   virtual void Profile(llvm::FoldingSetNodeID &ID) const;
 
-  void setAsLastInMainSourceFile() {
-    LastInMainSourceFile = true;
-  }
+  void setAsLastInMainSourceFile() { LastInMainSourceFile = true; }
 
-  bool isLastInMainSourceFile() const {
-    return LastInMainSourceFile;
-  }
+  bool isLastInMainSourceFile() const { return LastInMainSourceFile; }
 
   virtual void dump() const = 0;
 };
@@ -510,14 +503,13 @@ private:
   PathDiagnosticLocation Pos;
 
 public:
-  PathDiagnosticSpotPiece(const PathDiagnosticLocation &pos,
-                          StringRef s,
-                          PathDiagnosticPiece::Kind k,
-                          bool addPosRange = true)
+  PathDiagnosticSpotPiece(const PathDiagnosticLocation &pos, StringRef s,
+                          PathDiagnosticPiece::Kind k, bool addPosRange = true)
       : PathDiagnosticPiece(s, k), Pos(pos) {
     assert(Pos.isValid() && Pos.hasValidLocation() &&
            "PathDiagnosticSpotPiece's must have a valid location.");
-    if (addPosRange && Pos.hasRange()) addRange(Pos.asRange());
+    if (addPosRange && Pos.hasRange())
+      addRange(Pos.asRange());
   }
 
   PathDiagnosticLocation getLocation() const override { return Pos; }
@@ -535,8 +527,8 @@ class PathDiagnosticEventPiece : public PathDiagnosticSpotPiece {
   std::optional<bool> IsPrunable;
 
 public:
-  PathDiagnosticEventPiece(const PathDiagnosticLocation &pos,
-                           StringRef s, bool addPosRange = true)
+  PathDiagnosticEventPiece(const PathDiagnosticLocation &pos, StringRef s,
+                           bool addPosRange = true)
       : PathDiagnosticSpotPiece(pos, s, Event, addPosRange) {}
   ~PathDiagnosticEventPiece() override;
 
@@ -580,8 +572,8 @@ class PathDiagnosticCallPiece : public PathDiagnosticPiece {
       : PathDiagnosticPiece(Call), Caller(callerD), NoExit(false),
         callReturn(callReturnPos) {}
   PathDiagnosticCallPiece(PathPieces &oldPath, const Decl *caller)
-      : PathDiagnosticPiece(Call), Caller(caller), NoExit(true),
-        path(oldPath) {}
+      : PathDiagnosticPiece(Call), Caller(caller), NoExit(true), path(oldPath) {
+  }
 
 public:
   PathDiagnosticLocation callEnter;
@@ -614,8 +606,7 @@ public:
   }
 
   static std::shared_ptr<PathDiagnosticCallPiece>
-  construct(const CallExitEnd &CE,
-            const SourceManager &SM);
+  construct(const CallExitEnd &CE, const SourceManager &SM);
 
   static PathDiagnosticCallPiece *construct(PathPieces &pieces,
                                             const Decl *caller);
@@ -664,9 +655,7 @@ public:
     LPairs[0].setStart(L);
   }
 
-  void setEndLocation(const PathDiagnosticLocation &L) {
-    LPairs[0].setEnd(L);
-  }
+  void setEndLocation(const PathDiagnosticLocation &L) { LPairs[0].setEnd(L); }
 
   void push_back(const PathDiagnosticLocationPair &X) { LPairs.push_back(X); }
 
@@ -722,7 +711,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 };
 
-class PathDiagnosticNotePiece: public PathDiagnosticSpotPiece {
+class PathDiagnosticNotePiece : public PathDiagnosticSpotPiece {
 public:
   PathDiagnosticNotePiece(const PathDiagnosticLocation &Pos, StringRef S,
                           bool AddPosRange = true)
@@ -738,7 +727,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 };
 
-class PathDiagnosticPopUpPiece: public PathDiagnosticSpotPiece {
+class PathDiagnosticPopUpPiece : public PathDiagnosticSpotPiece {
 public:
   PathDiagnosticPopUpPiece(const PathDiagnosticLocation &Pos, StringRef S,
                            bool AddPosRange = true)
@@ -803,15 +792,16 @@ public:
   }
 
   /// Return a mutable version of 'path'.
-  PathPieces &getMutablePieces() {
-    return pathImpl;
-  }
+  PathPieces &getMutablePieces() { return pathImpl; }
 
   /// Return the unrolled size of the path.
   unsigned full_size();
 
   void pushActivePath(PathPieces *p) { pathStack.push_back(p); }
-  void popActivePath() { if (!pathStack.empty()) pathStack.pop_back(); }
+  void popActivePath() {
+    if (!pathStack.empty())
+      pathStack.pop_back();
+  }
 
   bool isWithinCall() const { return !pathStack.empty(); }
 
@@ -844,40 +834,26 @@ public:
   meta_iterator meta_end() const { return OtherDesc.end(); }
   void addMeta(StringRef s) { OtherDesc.push_back(std::string(s)); }
 
-  const FilesToLineNumsMap &getExecutedLines() const {
-    return *ExecutedLines;
-  }
+  const FilesToLineNumsMap &getExecutedLines() const { return *ExecutedLines; }
 
-  FilesToLineNumsMap &getExecutedLines() {
-    return *ExecutedLines;
-  }
+  FilesToLineNumsMap &getExecutedLines() { return *ExecutedLines; }
 
   /// Return the semantic context where an issue occurred.  If the
   /// issue occurs along a path, this represents the "central" area
   /// where the bug manifests.
   const Decl *getDeclWithIssue() const { return DeclWithIssue; }
 
-  void setDeclWithIssue(const Decl *D) {
-    DeclWithIssue = D;
-  }
+  void setDeclWithIssue(const Decl *D) { DeclWithIssue = D; }
 
-  PathDiagnosticLocation getLocation() const {
-    return Loc;
-  }
+  PathDiagnosticLocation getLocation() const { return Loc; }
 
-  void setLocation(PathDiagnosticLocation NewLoc) {
-    Loc = NewLoc;
-  }
+  void setLocation(PathDiagnosticLocation NewLoc) { Loc = NewLoc; }
 
   /// Get the location on which the report should be uniqued.
-  PathDiagnosticLocation getUniqueingLoc() const {
-    return UniqueingLoc;
-  }
+  PathDiagnosticLocation getUniqueingLoc() const { return UniqueingLoc; }
 
   /// Get the declaration containing the uniqueing location.
-  const Decl *getUniqueingDecl() const {
-    return UniqueingDecl;
-  }
+  const Decl *getUniqueingDecl() const { return UniqueingDecl; }
 
   void flattenLocations() {
     Loc.flatten();

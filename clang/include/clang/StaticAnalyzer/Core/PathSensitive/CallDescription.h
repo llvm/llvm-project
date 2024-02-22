@@ -107,7 +107,8 @@ public:
     return CD1.matches(Call);
   }
 
-  /// \copydoc clang::ento::CallDescription::matchesAny(const CallEvent &, const CallDescription &)
+  /// \copydoc clang::ento::CallDescription::matchesAny(const CallEvent &, const
+  /// CallDescription &)
   template <typename... Ts>
   friend bool matchesAny(const CallEvent &Call, const CallDescription &CD1,
                          const Ts &...CDs) {
@@ -145,7 +146,8 @@ public:
     return CD1.matchesAsWritten(CE);
   }
 
-  /// \copydoc clang::ento::CallDescription::matchesAnyAsWritten(const CallExpr &, const CallDescription &)
+  /// \copydoc clang::ento::CallDescription::matchesAnyAsWritten(const CallExpr
+  /// &, const CallDescription &)
   template <typename... Ts>
   friend bool matchesAnyAsWritten(const CallExpr &CE,
                                   const CallDescription &CD1,

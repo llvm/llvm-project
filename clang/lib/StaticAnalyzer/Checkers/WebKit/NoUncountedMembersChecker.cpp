@@ -77,9 +77,9 @@ public:
       if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl()) {
         // If we don't see the definition we just don't know.
         if (MemberCXXRD->hasDefinition()) {
-            std::optional<bool> isRCAble = isRefCountable(MemberCXXRD);
-            if (isRCAble && *isRCAble)
-                reportBug(Member, MemberType, MemberCXXRD, RD);
+          std::optional<bool> isRCAble = isRefCountable(MemberCXXRD);
+          if (isRCAble && *isRCAble)
+            reportBug(Member, MemberType, MemberCXXRD, RD);
         }
       }
     }
@@ -152,7 +152,6 @@ void ento::registerNoUncountedMemberChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<NoUncountedMemberChecker>();
 }
 
-bool ento::shouldRegisterNoUncountedMemberChecker(
-    const CheckerManager &Mgr) {
+bool ento::shouldRegisterNoUncountedMemberChecker(const CheckerManager &Mgr) {
   return true;
 }

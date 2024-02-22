@@ -40,23 +40,23 @@ using namespace threadSafety;
 // From ThreadSafetyUtil.h
 std::string threadSafety::getSourceLiteralString(const Expr *CE) {
   switch (CE->getStmtClass()) {
-    case Stmt::IntegerLiteralClass:
-      return toString(cast<IntegerLiteral>(CE)->getValue(), 10, true);
-    case Stmt::StringLiteralClass: {
-      std::string ret("\"");
-      ret += cast<StringLiteral>(CE)->getString();
-      ret += "\"";
-      return ret;
-    }
-    case Stmt::CharacterLiteralClass:
-    case Stmt::CXXNullPtrLiteralExprClass:
-    case Stmt::GNUNullExprClass:
-    case Stmt::CXXBoolLiteralExprClass:
-    case Stmt::FloatingLiteralClass:
-    case Stmt::ImaginaryLiteralClass:
-    case Stmt::ObjCStringLiteralClass:
-    default:
-      return "#lit";
+  case Stmt::IntegerLiteralClass:
+    return toString(cast<IntegerLiteral>(CE)->getValue(), 10, true);
+  case Stmt::StringLiteralClass: {
+    std::string ret("\"");
+    ret += cast<StringLiteral>(CE)->getString();
+    ret += "\"";
+    return ret;
+  }
+  case Stmt::CharacterLiteralClass:
+  case Stmt::CXXNullPtrLiteralExprClass:
+  case Stmt::GNUNullExprClass:
+  case Stmt::CXXBoolLiteralExprClass:
+  case Stmt::FloatingLiteralClass:
+  case Stmt::ImaginaryLiteralClass:
+  case Stmt::ObjCStringLiteralClass:
+  default:
+    return "#lit";
   }
 }
 
@@ -127,18 +127,18 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   if (!DeclExp)
     /* We'll use Self. */;
   else if (const auto *ME = dyn_cast<MemberExpr>(DeclExp)) {
-    Ctx.SelfArg   = ME->getBase();
+    Ctx.SelfArg = ME->getBase();
     Ctx.SelfArrow = ME->isArrow();
   } else if (const auto *CE = dyn_cast<CXXMemberCallExpr>(DeclExp)) {
-    Ctx.SelfArg   = CE->getImplicitObjectArgument();
+    Ctx.SelfArg = CE->getImplicitObjectArgument();
     Ctx.SelfArrow = isCalleeArrow(CE->getCallee());
-    Ctx.NumArgs   = CE->getNumArgs();
-    Ctx.FunArgs   = CE->getArgs();
+    Ctx.NumArgs = CE->getNumArgs();
+    Ctx.FunArgs = CE->getArgs();
   } else if (const auto *CE = dyn_cast<CallExpr>(DeclExp)) {
     Ctx.NumArgs = CE->getNumArgs();
     Ctx.FunArgs = CE->getArgs();
   } else if (const auto *CE = dyn_cast<CXXConstructExpr>(DeclExp)) {
-    Ctx.SelfArg = nullptr;  // Will be set below
+    Ctx.SelfArg = nullptr; // Will be set below
     Ctx.NumArgs = CE->getNumArgs();
     Ctx.FunArgs = CE->getArgs();
   }
@@ -158,14 +158,14 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
           ClassifyDiagnostic(
               cast<CXXMethodDecl>(D)->getFunctionObjectParameterType()),
           false);
-    else  // For most attributes.
+    else // For most attributes.
       return translateAttrExpr(AttrExp, &Ctx);
   }
 
   // If the attribute has no arguments, then assume the argument is "this".
   if (!AttrExp)
     return translateAttrExpr(cast<const Expr *>(Ctx.SelfArg), nullptr);
-  else  // For most attributes.
+  else // For most attributes.
     return translateAttrExpr(AttrExp, &Ctx);
 }
 
@@ -176,7 +176,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   if (!AttrExp)
     return CapabilityExpr();
 
-  if (const auto* SLit = dyn_cast<StringLiteral>(AttrExp)) {
+  if (const auto *SLit = dyn_cast<StringLiteral>(AttrExp)) {
     if (SLit->getString() == StringRef("*"))
       // The "*" expr is a universal lock, which essentially turns off
       // checks until it is removed from the lockset.
@@ -193,8 +193,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
       Neg = true;
       AttrExp = OE->getArg(0);
     }
-  }
-  else if (const auto *UO = dyn_cast<UnaryOperator>(AttrExp)) {
+  } else if (const auto *UO = dyn_cast<UnaryOperator>(AttrExp)) {
     if (UO->getOpcode() == UO_LNot) {
       Neg = true;
       AttrExp = UO->getSubExpr();
@@ -264,11 +263,11 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
   case Stmt::ArraySubscriptExprClass:
     return translateArraySubscriptExpr(cast<ArraySubscriptExpr>(S), Ctx);
   case Stmt::ConditionalOperatorClass:
-    return translateAbstractConditionalOperator(
-             cast<ConditionalOperator>(S), Ctx);
+    return translateAbstractConditionalOperator(cast<ConditionalOperator>(S),
+                                                Ctx);
   case Stmt::BinaryConditionalOperatorClass:
     return translateAbstractConditionalOperator(
-             cast<BinaryConditionalOperator>(S), Ctx);
+        cast<BinaryConditionalOperator>(S), Ctx);
 
   // We treat these as no-ops
   case Stmt::ConstantExprClass:
@@ -381,7 +380,7 @@ static const CXXMethodDecl *getFirstVirtualDecl(const CXXMethodDecl *D) {
     D = D->getCanonicalDecl();
     auto OverriddenMethods = D->overridden_methods();
     if (OverriddenMethods.begin() == OverriddenMethods.end())
-      return D;  // Method does not override anything
+      return D; // Method does not override anything
     // FIXME: this does not work with multiple inheritance.
     D = *OverriddenMethods.begin();
   }
@@ -391,7 +390,7 @@ static const CXXMethodDecl *getFirstVirtualDecl(const CXXMethodDecl *D) {
 til::SExpr *SExprBuilder::translateMemberExpr(const MemberExpr *ME,
                                               CallingContext *Ctx) {
   til::SExpr *BE = translate(ME->getBase(), Ctx);
-  til::SExpr *E  = new (Arena) til::SApply(BE);
+  til::SExpr *E = new (Arena) til::SApply(BE);
 
   const auto *D = cast<ValueDecl>(ME->getMemberDecl()->getCanonicalDecl());
   if (const auto *VD = dyn_cast<CXXMethodDecl>(D))
@@ -443,8 +442,9 @@ til::SExpr *SExprBuilder::translateCallExpr(const CallExpr *CE,
   return new (Arena) til::Call(E, CE);
 }
 
-til::SExpr *SExprBuilder::translateCXXMemberCallExpr(
-    const CXXMemberCallExpr *ME, CallingContext *Ctx) {
+til::SExpr *
+SExprBuilder::translateCXXMemberCallExpr(const CXXMemberCallExpr *ME,
+                                         CallingContext *Ctx) {
   if (CapabilityExprMode) {
     // Ignore calls to get() on smart pointers.
     if (ME->getMethodDecl()->getNameAsString() == "get" &&
@@ -458,8 +458,9 @@ til::SExpr *SExprBuilder::translateCXXMemberCallExpr(
                            ME->getImplicitObjectArgument());
 }
 
-til::SExpr *SExprBuilder::translateCXXOperatorCallExpr(
-    const CXXOperatorCallExpr *OCE, CallingContext *Ctx) {
+til::SExpr *
+SExprBuilder::translateCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE,
+                                           CallingContext *Ctx) {
   if (CapabilityExprMode) {
     // Ignore operator * and operator -> on smart pointers.
     OverloadedOperatorKind k = OCE->getOperator();
@@ -503,13 +504,13 @@ til::SExpr *SExprBuilder::translateUnaryOperator(const UnaryOperator *UO,
 
   case UO_Minus:
     return new (Arena)
-      til::UnaryOp(til::UOP_Minus, translate(UO->getSubExpr(), Ctx));
+        til::UnaryOp(til::UOP_Minus, translate(UO->getSubExpr(), Ctx));
   case UO_Not:
     return new (Arena)
-      til::UnaryOp(til::UOP_BitNot, translate(UO->getSubExpr(), Ctx));
+        til::UnaryOp(til::UOP_BitNot, translate(UO->getSubExpr(), Ctx));
   case UO_LNot:
     return new (Arena)
-      til::UnaryOp(til::UOP_LogicNot, translate(UO->getSubExpr(), Ctx));
+        til::UnaryOp(til::UOP_LogicNot, translate(UO->getSubExpr(), Ctx));
 
   // Currently unsupported
   case UO_Real:
@@ -524,18 +525,17 @@ til::SExpr *SExprBuilder::translateUnaryOperator(const UnaryOperator *UO,
 til::SExpr *SExprBuilder::translateBinOp(til::TIL_BinaryOpcode Op,
                                          const BinaryOperator *BO,
                                          CallingContext *Ctx, bool Reverse) {
-   til::SExpr *E0 = translate(BO->getLHS(), Ctx);
-   til::SExpr *E1 = translate(BO->getRHS(), Ctx);
-   if (Reverse)
-     return new (Arena) til::BinaryOp(Op, E1, E0);
-   else
-     return new (Arena) til::BinaryOp(Op, E0, E1);
+  til::SExpr *E0 = translate(BO->getLHS(), Ctx);
+  til::SExpr *E1 = translate(BO->getRHS(), Ctx);
+  if (Reverse)
+    return new (Arena) til::BinaryOp(Op, E1, E0);
+  else
+    return new (Arena) til::BinaryOp(Op, E0, E1);
 }
 
 til::SExpr *SExprBuilder::translateBinAssign(til::TIL_BinaryOpcode Op,
                                              const BinaryOperator *BO,
-                                             CallingContext *Ctx,
-                                             bool Assign) {
+                                             CallingContext *Ctx, bool Assign) {
   const Expr *LHS = BO->getLHS();
   const Expr *RHS = BO->getRHS();
   til::SExpr *E0 = translate(LHS, Ctx);
@@ -565,37 +565,67 @@ til::SExpr *SExprBuilder::translateBinaryOperator(const BinaryOperator *BO,
   case BO_PtrMemI:
     return new (Arena) til::Undefined(BO);
 
-  case BO_Mul:  return translateBinOp(til::BOP_Mul, BO, Ctx);
-  case BO_Div:  return translateBinOp(til::BOP_Div, BO, Ctx);
-  case BO_Rem:  return translateBinOp(til::BOP_Rem, BO, Ctx);
-  case BO_Add:  return translateBinOp(til::BOP_Add, BO, Ctx);
-  case BO_Sub:  return translateBinOp(til::BOP_Sub, BO, Ctx);
-  case BO_Shl:  return translateBinOp(til::BOP_Shl, BO, Ctx);
-  case BO_Shr:  return translateBinOp(til::BOP_Shr, BO, Ctx);
-  case BO_LT:   return translateBinOp(til::BOP_Lt,  BO, Ctx);
-  case BO_GT:   return translateBinOp(til::BOP_Lt,  BO, Ctx, true);
-  case BO_LE:   return translateBinOp(til::BOP_Leq, BO, Ctx);
-  case BO_GE:   return translateBinOp(til::BOP_Leq, BO, Ctx, true);
-  case BO_EQ:   return translateBinOp(til::BOP_Eq,  BO, Ctx);
-  case BO_NE:   return translateBinOp(til::BOP_Neq, BO, Ctx);
-  case BO_Cmp:  return translateBinOp(til::BOP_Cmp, BO, Ctx);
-  case BO_And:  return translateBinOp(til::BOP_BitAnd,   BO, Ctx);
-  case BO_Xor:  return translateBinOp(til::BOP_BitXor,   BO, Ctx);
-  case BO_Or:   return translateBinOp(til::BOP_BitOr,    BO, Ctx);
-  case BO_LAnd: return translateBinOp(til::BOP_LogicAnd, BO, Ctx);
-  case BO_LOr:  return translateBinOp(til::BOP_LogicOr,  BO, Ctx);
+  case BO_Mul:
+    return translateBinOp(til::BOP_Mul, BO, Ctx);
+  case BO_Div:
+    return translateBinOp(til::BOP_Div, BO, Ctx);
+  case BO_Rem:
+    return translateBinOp(til::BOP_Rem, BO, Ctx);
+  case BO_Add:
+    return translateBinOp(til::BOP_Add, BO, Ctx);
+  case BO_Sub:
+    return translateBinOp(til::BOP_Sub, BO, Ctx);
+  case BO_Shl:
+    return translateBinOp(til::BOP_Shl, BO, Ctx);
+  case BO_Shr:
+    return translateBinOp(til::BOP_Shr, BO, Ctx);
+  case BO_LT:
+    return translateBinOp(til::BOP_Lt, BO, Ctx);
+  case BO_GT:
+    return translateBinOp(til::BOP_Lt, BO, Ctx, true);
+  case BO_LE:
+    return translateBinOp(til::BOP_Leq, BO, Ctx);
+  case BO_GE:
+    return translateBinOp(til::BOP_Leq, BO, Ctx, true);
+  case BO_EQ:
+    return translateBinOp(til::BOP_Eq, BO, Ctx);
+  case BO_NE:
+    return translateBinOp(til::BOP_Neq, BO, Ctx);
+  case BO_Cmp:
+    return translateBinOp(til::BOP_Cmp, BO, Ctx);
+  case BO_And:
+    return translateBinOp(til::BOP_BitAnd, BO, Ctx);
+  case BO_Xor:
+    return translateBinOp(til::BOP_BitXor, BO, Ctx);
+  case BO_Or:
+    return translateBinOp(til::BOP_BitOr, BO, Ctx);
+  case BO_LAnd:
+    return translateBinOp(til::BOP_LogicAnd, BO, Ctx);
+  case BO_LOr:
+    return translateBinOp(til::BOP_LogicOr, BO, Ctx);
 
-  case BO_Assign:    return translateBinAssign(til::BOP_Eq,  BO, Ctx, true);
-  case BO_MulAssign: return translateBinAssign(til::BOP_Mul, BO, Ctx);
-  case BO_DivAssign: return translateBinAssign(til::BOP_Div, BO, Ctx);
-  case BO_RemAssign: return translateBinAssign(til::BOP_Rem, BO, Ctx);
-  case BO_AddAssign: return translateBinAssign(til::BOP_Add, BO, Ctx);
-  case BO_SubAssign: return translateBinAssign(til::BOP_Sub, BO, Ctx);
-  case BO_ShlAssign: return translateBinAssign(til::BOP_Shl, BO, Ctx);
-  case BO_ShrAssign: return translateBinAssign(til::BOP_Shr, BO, Ctx);
-  case BO_AndAssign: return translateBinAssign(til::BOP_BitAnd, BO, Ctx);
-  case BO_XorAssign: return translateBinAssign(til::BOP_BitXor, BO, Ctx);
-  case BO_OrAssign:  return translateBinAssign(til::BOP_BitOr,  BO, Ctx);
+  case BO_Assign:
+    return translateBinAssign(til::BOP_Eq, BO, Ctx, true);
+  case BO_MulAssign:
+    return translateBinAssign(til::BOP_Mul, BO, Ctx);
+  case BO_DivAssign:
+    return translateBinAssign(til::BOP_Div, BO, Ctx);
+  case BO_RemAssign:
+    return translateBinAssign(til::BOP_Rem, BO, Ctx);
+  case BO_AddAssign:
+    return translateBinAssign(til::BOP_Add, BO, Ctx);
+  case BO_SubAssign:
+    return translateBinAssign(til::BOP_Sub, BO, Ctx);
+  case BO_ShlAssign:
+    return translateBinAssign(til::BOP_Shl, BO, Ctx);
+  case BO_ShrAssign:
+    return translateBinAssign(til::BOP_Shr, BO, Ctx);
+  case BO_AndAssign:
+    return translateBinAssign(til::BOP_BitAnd, BO, Ctx);
+  case BO_XorAssign:
+    return translateBinAssign(til::BOP_BitXor, BO, Ctx);
+  case BO_OrAssign:
+    return translateBinAssign(til::BOP_BitOr, BO, Ctx);
 
   case BO_Comma:
     // The clang CFG should have already processed both sides.
@@ -645,8 +675,7 @@ SExprBuilder::translateArraySubscriptExpr(const ArraySubscriptExpr *E,
   return new (Arena) til::ArrayIndex(E0, E1);
 }
 
-til::SExpr *
-SExprBuilder::translateAbstractConditionalOperator(
+til::SExpr *SExprBuilder::translateAbstractConditionalOperator(
     const AbstractConditionalOperator *CO, CallingContext *Ctx) {
   auto *C = translate(CO->getCond(), Ctx);
   auto *T = translate(CO->getTrueExpr(), Ctx);
@@ -654,13 +683,13 @@ SExprBuilder::translateAbstractConditionalOperator(
   return new (Arena) til::IfThenElse(C, T, E);
 }
 
-til::SExpr *
-SExprBuilder::translateDeclStmt(const DeclStmt *S, CallingContext *Ctx) {
+til::SExpr *SExprBuilder::translateDeclStmt(const DeclStmt *S,
+                                            CallingContext *Ctx) {
   DeclGroupRef DGrp = S->getDeclGroup();
   for (auto *I : DGrp) {
     if (auto *VD = dyn_cast_or_null<VarDecl>(I)) {
       Expr *E = VD->getInit();
-      til::SExpr* SE = translate(E, Ctx);
+      til::SExpr *SE = translate(E, Ctx);
 
       // Add local variables with trivial type to the variable map
       QualType T = VD->getType();
@@ -678,7 +707,7 @@ SExprBuilder::translateDeclStmt(const DeclStmt *S, CallingContext *Ctx) {
 // update the statement map so that S refers to E.  Returns a new variable
 // that refers to E.
 // If E is trivial returns E.
-til::SExpr *SExprBuilder::addStatement(til::SExpr* E, const Stmt *S,
+til::SExpr *SExprBuilder::addStatement(til::SExpr *E, const Stmt *S,
                                        const ValueDecl *VD) {
   if (!E || !CurrentBB || E->block() || til::ThreadSafetyTIL::isTrivial(E))
     return E;
@@ -725,7 +754,7 @@ til::SExpr *SExprBuilder::updateVarDecl(const ValueDecl *VD, til::SExpr *E) {
   auto It = LVarIdxMap.find(VD);
   if (It == LVarIdxMap.end()) {
     til::SExpr *Ptr = new (Arena) til::LiteralPtr(VD);
-    til::SExpr *St  = new (Arena) til::Store(Ptr, E);
+    til::SExpr *St = new (Arena) til::Store(Ptr, E);
     return St;
   }
   CurrentLVarMap.makeWritable();
@@ -785,12 +814,12 @@ void SExprBuilder::mergeEntryMap(LVarDefinitionMap Map) {
     return;
   }
   if (CurrentLVarMap.sameAs(Map))
-    return;  // Easy merge: maps from different predecessors are unchanged.
+    return; // Easy merge: maps from different predecessors are unchanged.
 
   unsigned NPreds = CurrentBB->numPredecessors();
   unsigned ESz = CurrentLVarMap.size();
   unsigned MSz = Map.size();
-  unsigned Sz  = std::min(ESz, MSz);
+  unsigned Sz = std::min(ESz, MSz);
 
   for (unsigned i = 0; i < Sz; ++i) {
     if (CurrentLVarMap[i].first != Map[i].first) {
@@ -880,7 +909,7 @@ void SExprBuilder::enterCFG(CFG *Cfg, const NamedDecl *D,
     // FIXME: right now we emulate params with loads; that should be fixed.
     til::SExpr *Lp = new (Arena) til::LiteralPtr(Pm);
     til::SExpr *Ld = new (Arena) til::Load(Lp);
-    til::SExpr *V  = addStatement(Ld, nullptr, Pm);
+    til::SExpr *V = addStatement(Ld, nullptr, Pm);
     addVarDecl(Pm, V);
   }
 }
@@ -920,8 +949,8 @@ void SExprBuilder::handlePredecessorBackEdge(const CFGBlock *Pred) {
 void SExprBuilder::enterCFGBlockBody(const CFGBlock *B) {
   // The merge*() methods have created arguments.
   // Push those arguments onto the basic block.
-  CurrentBB->arguments().reserve(
-    static_cast<unsigned>(CurrentArguments.size()), Arena);
+  CurrentBB->arguments().reserve(static_cast<unsigned>(CurrentArguments.size()),
+                                 Arena);
   for (auto *A : CurrentArguments)
     CurrentBB->addArgument(A);
 }
@@ -942,7 +971,7 @@ void SExprBuilder::handleDestructorCall(const VarDecl *VD,
 
 void SExprBuilder::exitCFGBlockBody(const CFGBlock *B) {
   CurrentBB->instructions().reserve(
-    static_cast<unsigned>(CurrentInstructions.size()), Arena);
+      static_cast<unsigned>(CurrentInstructions.size()), Arena);
   for (auto *V : CurrentInstructions)
     CurrentBB->addInstruction(V);
 
@@ -955,8 +984,7 @@ void SExprBuilder::exitCFGBlockBody(const CFGBlock *B) {
     unsigned Idx = BB ? BB->findPredecessorIndex(CurrentBB) : 0;
     auto *Tm = new (Arena) til::Goto(BB, Idx);
     CurrentBB->setTerminator(Tm);
-  }
-  else if (N == 2) {
+  } else if (N == 2) {
     til::SExpr *C = translate(B->getTerminatorCondition(true), nullptr);
     til::BasicBlock *BB1 = *It ? lookupBlock(*It) : nullptr;
     ++It;

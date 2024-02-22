@@ -72,13 +72,11 @@ static const Stmt *ignoreTransparentExprs(const Stmt *S) {
 }
 
 EnvironmentEntry::EnvironmentEntry(const Stmt *S, const LocationContext *L)
-    : std::pair<const Stmt *,
-                const StackFrameContext *>(ignoreTransparentExprs(S),
-                                           L ? L->getStackFrame()
-                                             : nullptr) {}
+    : std::pair<const Stmt *, const StackFrameContext *>(
+          ignoreTransparentExprs(S), L ? L->getStackFrame() : nullptr) {}
 
 SVal Environment::lookupExpr(const EnvironmentEntry &E) const {
-  const SVal* X = ExprBindings.lookup(E);
+  const SVal *X = ExprBindings.lookup(E);
   if (X) {
     SVal V = *X;
     return V;
@@ -87,7 +85,7 @@ SVal Environment::lookupExpr(const EnvironmentEntry &E) const {
 }
 
 SVal Environment::getSVal(const EnvironmentEntry &Entry,
-                          SValBuilder& svalBuilder) const {
+                          SValBuilder &svalBuilder) const {
   const Stmt *S = Entry.getStmt();
   assert(!isa<ObjCForCollectionStmt>(S) &&
          "Use ExprEngine::hasMoreIteration()!");
@@ -136,8 +134,7 @@ SVal Environment::getSVal(const EnvironmentEntry &Entry,
 }
 
 Environment EnvironmentManager::bindExpr(Environment Env,
-                                         const EnvironmentEntry &E,
-                                         SVal V,
+                                         const EnvironmentEntry &E, SVal V,
                                          bool Invalidate) {
   if (V.isUnknown()) {
     if (Invalidate)
@@ -176,10 +173,9 @@ public:
 //   - Mark their reachable symbols live in SymbolReaper,
 //     see ScanReachableSymbols.
 //   - Mark the region in DRoots if the binding is a loc::MemRegionVal.
-Environment
-EnvironmentManager::removeDeadBindings(Environment Env,
-                                       SymbolReaper &SymReaper,
-                                       ProgramStateRef ST) {
+Environment EnvironmentManager::removeDeadBindings(Environment Env,
+                                                   SymbolReaper &SymReaper,
+                                                   ProgramStateRef ST) {
   // We construct a new Environment object entirely, as this is cheaper than
   // individually removing all the subexpression bindings (which will greatly
   // outnumber block-level expression bindings).
@@ -188,9 +184,8 @@ EnvironmentManager::removeDeadBindings(Environment Env,
   MarkLiveCallback CB(SymReaper);
   ScanReachableSymbols RSScaner(ST, CB);
 
-  llvm::ImmutableMapRef<EnvironmentEntry, SVal>
-    EBMapRef(NewEnv.ExprBindings.getRootWithoutRetain(),
-             F.getTreeFactory());
+  llvm::ImmutableMapRef<EnvironmentEntry, SVal> EBMapRef(
+      NewEnv.ExprBindings.getRootWithoutRetain(), F.getTreeFactory());
 
   // Iterate over the block-expr bindings.
   for (Environment::iterator I = Env.begin(), End = Env.end(); I != End; ++I) {

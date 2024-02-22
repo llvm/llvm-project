@@ -101,12 +101,12 @@ public:
     case Value::Kind::FormulaBool:
       break;
     case Value::Kind::Pointer:
-      JOS.attributeObject(
-          "pointee", [&] { dump(cast<PointerValue>(V).getPointeeLoc()); });
+      JOS.attributeObject("pointee",
+                          [&] { dump(cast<PointerValue>(V).getPointeeLoc()); });
       break;
     }
 
-    for (const auto& Prop : V.properties())
+    for (const auto &Prop : V.properties())
       JOS.attributeObject(("p:" + Prop.first()).str(),
                           [&] { dump(*Prop.second); });
 
@@ -143,7 +143,7 @@ public:
     }
   }
 
-  llvm::DenseSet<const void*> Visited;
+  llvm::DenseSet<const void *> Visited;
   llvm::json::OStream &JOS;
   const Environment &Env;
 };
@@ -241,9 +241,7 @@ public:
       BlockConverged[B.getBlockID()] = false;
     ElementIndex = 0;
   }
-  void enterElement(const CFGElement &E) override {
-    ++ElementIndex;
-  }
+  void enterElement(const CFGElement &E) override { ++ElementIndex; }
 
   static std::string blockID(unsigned Block) {
     return llvm::formatv("B{0}", Block);
@@ -421,7 +419,7 @@ private:
     std::vector<TokenInfo> State(Code.size());
     for (const auto *Block : CFC->getCFG()) {
       unsigned EltIndex = 0;
-      for (const auto& Elt : *Block) {
+      for (const auto &Elt : *Block) {
         ++EltIndex;
         if (const auto S = Elt.getAs<CFGStmt>()) {
           auto EltRange = clang::Lexer::makeFileCharRange(
@@ -458,7 +456,7 @@ private:
     for (unsigned I = 0; I < Code.size(); ++I) {
       // Don't actually write a <span> around each character, only break spans
       // when the TokenInfo changes.
-      bool NeedOpen = I == 0 || !(State[I] == State[I-1]);
+      bool NeedOpen = I == 0 || !(State[I] == State[I - 1]);
       bool NeedClose = I + 1 == Code.size() || !(State[I] == State[I + 1]);
       if (NeedOpen) {
         *OS << "<span ";
@@ -469,7 +467,8 @@ private:
         *OS << "</code>\n<code class='line' data-line='" << Line++ << "'>";
       else
         llvm::printHTMLEscaped(Code.substr(I, 1), *OS);
-      if (NeedClose) *OS << "</span>";
+      if (NeedClose)
+        *OS << "</span>";
     }
     *OS << "</code>\n";
     *OS << "</template>";

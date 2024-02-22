@@ -28,10 +28,9 @@ class TaintTesterChecker : public Checker<check::PostStmt<Expr>> {
 public:
   void checkPostStmt(const Expr *E, CheckerContext &C) const;
 };
-}
+} // namespace
 
-void TaintTesterChecker::checkPostStmt(const Expr *E,
-                                       CheckerContext &C) const {
+void TaintTesterChecker::checkPostStmt(const Expr *E, CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   if (!State)
     return;

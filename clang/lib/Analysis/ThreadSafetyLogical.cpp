@@ -106,6 +106,6 @@ bool implies(const LExpr *LHS, const LExpr *RHS) {
   // Start out by assuming that LHS and RHS are not negated.
   return ::implies(LHS, false, RHS, false);
 }
-}
-}
-}
+} // namespace lexpr
+} // namespace threadSafety
+} // namespace clang

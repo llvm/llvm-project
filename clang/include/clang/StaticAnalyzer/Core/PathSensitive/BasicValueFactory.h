@@ -19,9 +19,9 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableList.h"
@@ -53,10 +53,10 @@ public:
 
   QualType getType() const { return T; }
 
-  static void Profile(llvm::FoldingSetNodeID& ID, QualType T,
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType T,
                       llvm::ImmutableList<SVal> L);
 
-  void Profile(llvm::FoldingSetNodeID& ID) { Profile(ID, T, L); }
+  void Profile(llvm::FoldingSetNodeID &ID) { Profile(ID, T, L); }
 };
 
 class LazyCompoundValData : public llvm::FoldingSetNode {
@@ -76,11 +76,10 @@ public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
   const TypedValueRegion *getRegion() const { return region; }
 
-  static void Profile(llvm::FoldingSetNodeID& ID,
-                      const StoreRef &store,
+  static void Profile(llvm::FoldingSetNodeID &ID, const StoreRef &store,
                       const TypedValueRegion *region);
 
-  void Profile(llvm::FoldingSetNodeID& ID) { Profile(ID, store, region); }
+  void Profile(llvm::FoldingSetNodeID &ID) { Profile(ID, store, region); }
 };
 
 class PointerToMemberData : public llvm::FoldingSetNode {
@@ -115,7 +114,7 @@ class BasicValueFactory {
       llvm::FoldingSet<llvm::FoldingSetNodeWrapper<llvm::APSInt>>;
 
   ASTContext &Ctx;
-  llvm::BumpPtrAllocator& BPAlloc;
+  llvm::BumpPtrAllocator &BPAlloc;
 
   APSIntSetTy APSIntSet;
   void *PersistentSVals = nullptr;
@@ -123,13 +122,13 @@ class BasicValueFactory {
 
   llvm::ImmutableList<SVal>::Factory SValListFactory;
   llvm::ImmutableList<const CXXBaseSpecifier *>::Factory CXXBaseListFactory;
-  llvm::FoldingSet<CompoundValData>  CompoundValDataSet;
+  llvm::FoldingSet<CompoundValData> CompoundValDataSet;
   llvm::FoldingSet<LazyCompoundValData> LazyCompoundValDataSet;
   llvm::FoldingSet<PointerToMemberData> PointerToMemberDataSet;
 
   // This is private because external clients should use the factory
   // method that takes a QualType.
-  const llvm::APSInt& getValue(uint64_t X, unsigned BitWidth, bool isUnsigned);
+  const llvm::APSInt &getValue(uint64_t X, unsigned BitWidth, bool isUnsigned);
 
 public:
   BasicValueFactory(ASTContext &ctx, llvm::BumpPtrAllocator &Alloc)
@@ -140,9 +139,9 @@ public:
 
   ASTContext &getContext() const { return Ctx; }
 
-  const llvm::APSInt& getValue(const llvm::APSInt& X);
-  const llvm::APSInt& getValue(const llvm::APInt& X, bool isUnsigned);
-  const llvm::APSInt& getValue(uint64_t X, QualType T);
+  const llvm::APSInt &getValue(const llvm::APSInt &X);
+  const llvm::APSInt &getValue(const llvm::APInt &X, bool isUnsigned);
+  const llvm::APSInt &getValue(uint64_t X, QualType T);
 
   /// Returns the type of the APSInt used to store values of the given QualType.
   APSIntType getAPSIntType(QualType T) const {
@@ -165,8 +164,8 @@ public:
 
   /// Convert - Create a new persistent APSInt with the same value as 'From'
   ///  but with the bitwidth and signedness of 'To'.
-  const llvm::APSInt &Convert(const llvm::APSInt& To,
-                              const llvm::APSInt& From) {
+  const llvm::APSInt &Convert(const llvm::APSInt &To,
+                              const llvm::APSInt &From) {
     APSIntType TargetType(To);
     if (TargetType == APSIntType(From))
       return From;
@@ -244,8 +243,8 @@ public:
   const CompoundValData *getCompoundValData(QualType T,
                                             llvm::ImmutableList<SVal> Vals);
 
-  const LazyCompoundValData *getLazyCompoundValData(const StoreRef &store,
-                                            const TypedValueRegion *region);
+  const LazyCompoundValData *
+  getLazyCompoundValData(const StoreRef &store, const TypedValueRegion *region);
 
   const PointerToMemberData *
   getPointerToMemberData(const NamedDecl *ND,
@@ -263,9 +262,9 @@ public:
     return CXXBaseListFactory.getEmptyList();
   }
 
-  llvm::ImmutableList<const CXXBaseSpecifier *> prependCXXBase(
-      const CXXBaseSpecifier *CBS,
-      llvm::ImmutableList<const CXXBaseSpecifier *> L) {
+  llvm::ImmutableList<const CXXBaseSpecifier *>
+  prependCXXBase(const CXXBaseSpecifier *CBS,
+                 llvm::ImmutableList<const CXXBaseSpecifier *> L) {
     return CXXBaseListFactory.add(CBS, L);
   }
 
@@ -273,17 +272,17 @@ public:
   accumCXXBase(llvm::iterator_range<CastExpr::path_const_iterator> PathRange,
                const nonloc::PointerToMember &PTM, const clang::CastKind &kind);
 
-  const llvm::APSInt* evalAPSInt(BinaryOperator::Opcode Op,
-                                     const llvm::APSInt& V1,
-                                     const llvm::APSInt& V2);
+  const llvm::APSInt *evalAPSInt(BinaryOperator::Opcode Op,
+                                 const llvm::APSInt &V1,
+                                 const llvm::APSInt &V2);
 
-  const std::pair<SVal, uintptr_t>&
-  getPersistentSValWithData(const SVal& V, uintptr_t Data);
+  const std::pair<SVal, uintptr_t> &getPersistentSValWithData(const SVal &V,
+                                                              uintptr_t Data);
 
-  const std::pair<SVal, SVal>&
-  getPersistentSValPair(const SVal& V1, const SVal& V2);
+  const std::pair<SVal, SVal> &getPersistentSValPair(const SVal &V1,
+                                                     const SVal &V2);
 
-  const SVal* getPersistentSVal(SVal X);
+  const SVal *getPersistentSVal(SVal X);
 };
 
 } // namespace ento

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
@@ -24,7 +24,7 @@ namespace {
 class WalkAST : public StmtVisitor<WalkAST> {
   BugReporter &BR;
   const CheckerBase *Checker;
-  AnalysisDeclContext* AC;
+  AnalysisDeclContext *AC;
 
 public:
   WalkAST(BugReporter &br, const CheckerBase *checker, AnalysisDeclContext *ac)
@@ -33,7 +33,7 @@ public:
   void VisitStmt(Stmt *S) { VisitChildren(S); }
   void VisitChildren(Stmt *S);
 };
-}
+} // namespace
 
 void WalkAST::VisitChildren(Stmt *S) {
   for (Stmt *Child : S->children())
@@ -46,8 +46,8 @@ void WalkAST::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E) {
   if (E->getKind() != UETT_SizeOf)
     return;
 
-  // If an explicit type is used in the code, usually the coder knows what they are
-  // doing.
+  // If an explicit type is used in the code, usually the coder knows what they
+  // are doing.
   if (E->isArgumentType())
     return;
 
@@ -62,7 +62,7 @@ void WalkAST::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E) {
       return;
 
     PathDiagnosticLocation ELoc =
-      PathDiagnosticLocation::createBegin(E, BR.getSourceManager(), AC);
+        PathDiagnosticLocation::createBegin(E, BR.getSourceManager(), AC);
     BR.EmitBasicReport(AC->getDecl(), Checker,
                        "Potential unintended use of sizeof() on pointer type",
                        categories::LogicError,
@@ -79,13 +79,13 @@ void WalkAST::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E) {
 namespace {
 class SizeofPointerChecker : public Checker<check::ASTCodeBody> {
 public:
-  void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
+  void checkASTCodeBody(const Decl *D, AnalysisManager &mgr,
                         BugReporter &BR) const {
     WalkAST walker(BR, this, mgr.getAnalysisDeclContext(D));
     walker.Visit(D->getBody());
   }
 };
-}
+} // namespace
 
 void ento::registerSizeofPointerChecker(CheckerManager &mgr) {
   mgr.registerChecker<SizeofPointerChecker>();

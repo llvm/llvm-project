@@ -186,7 +186,7 @@ public:
     Size -= n;
   }
 
-  void setValues(unsigned Sz, const T& C) {
+  void setValues(unsigned Sz, const T &C) {
     assert(Sz <= Capacity);
     Size = Sz;
     for (unsigned i = 0; i < Sz; ++i) {
@@ -223,7 +223,7 @@ private:
   size_t Capacity = 0;
 };
 
-}  // namespace til
+} // namespace til
 
 // A copy on write vector.
 // The vector can be in one of three states:
@@ -231,8 +231,7 @@ private:
 // * read-only -- read operations are permitted.
 // * writable -- read and write operations are permitted.
 // The init(), destroy(), and makeWritable() methods will change state.
-template<typename T>
-class CopyOnWriteVector {
+template <typename T> class CopyOnWriteVector {
   class VectorData {
   public:
     unsigned NumRefs = 1;
@@ -264,7 +263,7 @@ public:
   ~CopyOnWriteVector() { destroy(); }
 
   // Returns true if this holds a valid vector.
-  bool valid() const  { return Data; }
+  bool valid() const { return Data; }
 
   // Returns true if this vector is writable.
   bool writable() const { return Data && Data->NumRefs == 1; }
@@ -294,7 +293,7 @@ public:
       return;
     }
     if (Data->NumRefs == 1)
-      return;   // already writeable.
+      return; // already writeable.
     --Data->NumRefs;
     Data = new VectorData(*Data);
   }
@@ -309,7 +308,7 @@ public:
   const_iterator begin() const { return elements().cbegin(); }
   const_iterator end() const { return elements().cend(); }
 
-  const T& operator[](unsigned i) const { return elements()[i]; }
+  const T &operator[](unsigned i) const { return elements()[i]; }
 
   unsigned size() const { return Data ? elements().size() : 0; }
 
@@ -330,7 +329,7 @@ public:
 
   // Gets a mutable reference to the element at index(i).
   // The vector must be writable.
-  T& elem(unsigned i) {
+  T &elem(unsigned i) {
     assert(writable() && "Vector is not writable!");
     return Data->Vect[i];
   }
@@ -351,7 +350,7 @@ private:
   VectorData *Data = nullptr;
 };
 
-inline std::ostream& operator<<(std::ostream& ss, const StringRef str) {
+inline std::ostream &operator<<(std::ostream &ss, const StringRef str) {
   return ss.write(str.data(), str.size());
 }
 

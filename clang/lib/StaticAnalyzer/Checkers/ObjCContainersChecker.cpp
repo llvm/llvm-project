@@ -15,8 +15,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -27,9 +27,9 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class ObjCContainersChecker : public Checker< check::PreStmt<CallExpr>,
-                                             check::PostStmt<CallExpr>,
-                                             check::PointerEscape> {
+class ObjCContainersChecker
+    : public Checker<check::PreStmt<CallExpr>, check::PostStmt<CallExpr>,
+                     check::PointerEscape> {
   const BugType BT{this, "CFArray API", categories::CoreFoundationObjectiveC};
 
   inline SymbolRef getArraySym(const Expr *E, CheckerContext &C) const {
@@ -49,8 +49,8 @@ public:
                                      const CallEvent *Call,
                                      PointerEscapeKind Kind) const;
 
-  void printState(raw_ostream &OS, ProgramStateRef State,
-                  const char *NL, const char *Sep) const override;
+  void printState(raw_ostream &OS, ProgramStateRef State, const char *NL,
+                  const char *Sep) const override;
 };
 } // end anonymous namespace
 
@@ -148,11 +148,9 @@ void ObjCContainersChecker::checkPreStmt(const CallExpr *CE,
   }
 }
 
-ProgramStateRef
-ObjCContainersChecker::checkPointerEscape(ProgramStateRef State,
-                                          const InvalidatedSymbols &Escaped,
-                                          const CallEvent *Call,
-                                          PointerEscapeKind Kind) const {
+ProgramStateRef ObjCContainersChecker::checkPointerEscape(
+    ProgramStateRef State, const InvalidatedSymbols &Escaped,
+    const CallEvent *Call, PointerEscapeKind Kind) const {
   for (const auto &Sym : Escaped) {
     // When a symbol for a mutable array escapes, we can't reason precisely
     // about its size any more -- so remove it from the map.

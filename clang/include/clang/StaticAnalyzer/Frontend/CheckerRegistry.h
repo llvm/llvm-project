@@ -98,7 +98,6 @@ public:
   /// checkers that depend on them.
   void initializeRegistry(const CheckerManager &Mgr);
 
-
 private:
   /// Default initialization function for checkers -- since CheckerManager
   /// includes this header, we need to make it a template parameter, and since

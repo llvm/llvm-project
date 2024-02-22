@@ -157,12 +157,12 @@ public:
       // The default implementation reduces to just comparison, since comparison
       // is required by the API, even if no widening is performed.
       switch (compare(Type, Prev, PrevEnv, Current, CurrentEnv)) {
-        case ComparisonResult::Same:
-          return &Prev;
-        case ComparisonResult::Different:
-          return &Current;
-        case ComparisonResult::Unknown:
-          return nullptr;
+      case ComparisonResult::Same:
+        return &Prev;
+      case ComparisonResult::Different:
+        return &Current;
+      case ComparisonResult::Unknown:
+        return nullptr;
       }
       llvm_unreachable("all cases in switch covered");
     }
@@ -542,22 +542,17 @@ public:
   }
 
   /// Returns an atomic boolean value.
-  BoolValue &makeAtomicBoolValue() const {
-    return arena().makeAtomValue();
-  }
+  BoolValue &makeAtomicBoolValue() const { return arena().makeAtomValue(); }
 
   /// Returns a unique instance of boolean Top.
-  BoolValue &makeTopBoolValue() const {
-    return arena().makeTopValue();
-  }
+  BoolValue &makeTopBoolValue() const { return arena().makeTopValue(); }
 
   /// Returns a boolean value that represents the conjunction of `LHS` and
   /// `RHS`. Subsequent calls with the same arguments, regardless of their
   /// order, will return the same result. If the given boolean values represent
   /// the same value, the result will be the value itself.
   BoolValue &makeAnd(BoolValue &LHS, BoolValue &RHS) const {
-    return arena().makeBoolValue(
-        arena().makeAnd(LHS.formula(), RHS.formula()));
+    return arena().makeBoolValue(arena().makeAnd(LHS.formula(), RHS.formula()));
   }
 
   /// Returns a boolean value that represents the disjunction of `LHS` and
@@ -565,8 +560,7 @@ public:
   /// order, will return the same result. If the given boolean values represent
   /// the same value, the result will be the value itself.
   BoolValue &makeOr(BoolValue &LHS, BoolValue &RHS) const {
-    return arena().makeBoolValue(
-        arena().makeOr(LHS.formula(), RHS.formula()));
+    return arena().makeBoolValue(arena().makeOr(LHS.formula(), RHS.formula()));
   }
 
   /// Returns a boolean value that represents the negation of `Val`. Subsequent

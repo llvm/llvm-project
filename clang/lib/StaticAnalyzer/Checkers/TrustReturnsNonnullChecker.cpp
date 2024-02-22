@@ -41,7 +41,7 @@ private:
   /// \returns Whether the method declaration has the attribute returns_nonnull.
   bool isNonNullPtr(const CallEvent &Call) const {
     QualType ExprRetType = Call.getResultType();
-    const Decl *CallDeclaration =  Call.getDecl();
+    const Decl *CallDeclaration = Call.getDecl();
     if (!ExprRetType->isAnyPointerType() || !CallDeclaration)
       return false;
 

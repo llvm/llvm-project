@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -23,7 +23,7 @@ using namespace ento;
 
 namespace {
 class UndefinedArraySubscriptChecker
-  : public Checker< check::PreStmt<ArraySubscriptExpr> > {
+    : public Checker<check::PreStmt<ArraySubscriptExpr>> {
   const BugType BT{this, "Array subscript is undefined"};
 
 public:
@@ -31,9 +31,8 @@ public:
 };
 } // end anonymous namespace
 
-void
-UndefinedArraySubscriptChecker::checkPreStmt(const ArraySubscriptExpr *A,
-                                             CheckerContext &C) const {
+void UndefinedArraySubscriptChecker::checkPreStmt(const ArraySubscriptExpr *A,
+                                                  CheckerContext &C) const {
   const Expr *Index = A->getIdx();
   if (!C.getSVal(Index).isUndef())
     return;
@@ -59,6 +58,7 @@ void ento::registerUndefinedArraySubscriptChecker(CheckerManager &mgr) {
   mgr.registerChecker<UndefinedArraySubscriptChecker>();
 }
 
-bool ento::shouldRegisterUndefinedArraySubscriptChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterUndefinedArraySubscriptChecker(
+    const CheckerManager &mgr) {
   return true;
 }

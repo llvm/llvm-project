@@ -11,13 +11,13 @@
 //    of bytes to copy.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TypeTraits.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
@@ -29,10 +29,10 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class WalkAST: public StmtVisitor<WalkAST> {
+class WalkAST : public StmtVisitor<WalkAST> {
   const CheckerBase *Checker;
   BugReporter &BR;
-  AnalysisDeclContext* AC;
+  AnalysisDeclContext *AC;
 
   /// Check if two expressions refer to the same declaration.
   bool sameDecl(const Expr *A1, const Expr *A2) {
@@ -106,9 +106,7 @@ public:
 
   // Statement visitor methods.
   void VisitChildren(Stmt *S);
-  void VisitStmt(Stmt *S) {
-    VisitChildren(S);
-  }
+  void VisitStmt(Stmt *S) { VisitChildren(S); }
   void VisitCallExpr(CallExpr *CE);
 };
 } // end anonymous namespace
@@ -178,7 +176,8 @@ bool WalkAST::containsBadStrlcpyStrlcatPattern(const CallExpr *CE) {
   // - integral value
   // We try to figure out if the last argument is possibly longer
   // than the destination can possibly handle if its size can be defined.
-  if (const auto *IL = dyn_cast<IntegerLiteral>(LenArg->IgnoreParenImpCasts())) {
+  if (const auto *IL =
+          dyn_cast<IntegerLiteral>(LenArg->IgnoreParenImpCasts())) {
     uint64_t ILRawVal = IL->getValue().getZExtValue();
 
     // Case when there is pointer arithmetic on the destination buffer
@@ -189,7 +188,8 @@ bool WalkAST::containsBadStrlcpyStrlcatPattern(const CallExpr *CE) {
               dyn_cast<BinaryOperator>(DstArg->IgnoreParenImpCasts())) {
         DstArgDRE = dyn_cast<DeclRefExpr>(BE->getLHS()->IgnoreParenImpCasts());
         if (BE->getOpcode() == BO_Add) {
-          if ((IL = dyn_cast<IntegerLiteral>(BE->getRHS()->IgnoreParenImpCasts()))) {
+          if ((IL = dyn_cast<IntegerLiteral>(
+                   BE->getRHS()->IgnoreParenImpCasts()))) {
             DstOff = IL->getValue().getZExtValue();
           }
         }
@@ -219,8 +219,8 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
     if (containsBadStrncatPattern(CE)) {
       const Expr *DstArg = CE->getArg(0);
       const Expr *LenArg = CE->getArg(2);
-      PathDiagnosticLocation Loc =
-        PathDiagnosticLocation::createBegin(LenArg, BR.getSourceManager(), AC);
+      PathDiagnosticLocation Loc = PathDiagnosticLocation::createBegin(
+          LenArg, BR.getSourceManager(), AC);
 
       StringRef DstName = getPrintableName(DstArg);
 
@@ -228,8 +228,10 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
       llvm::raw_svector_ostream os(S);
       os << "Potential buffer overflow. ";
       if (!DstName.empty()) {
-        os << "Replace with 'sizeof(" << DstName << ") "
-              "- strlen(" << DstName <<") - 1'";
+        os << "Replace with 'sizeof(" << DstName
+           << ") "
+              "- strlen("
+           << DstName << ") - 1'";
         os << " or u";
       } else
         os << "U";
@@ -244,24 +246,25 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
     if (containsBadStrlcpyStrlcatPattern(CE)) {
       const Expr *DstArg = CE->getArg(0);
       const Expr *LenArg = CE->getArg(2);
-      PathDiagnosticLocation Loc =
-        PathDiagnosticLocation::createBegin(LenArg, BR.getSourceManager(), AC);
+      PathDiagnosticLocation Loc = PathDiagnosticLocation::createBegin(
+          LenArg, BR.getSourceManager(), AC);
 
       StringRef DstName = getPrintableName(DstArg);
 
       SmallString<256> S;
       llvm::raw_svector_ostream os(S);
-      os << "The third argument allows to potentially copy more bytes than it should. ";
+      os << "The third argument allows to potentially copy more bytes than it "
+            "should. ";
       os << "Replace with the value ";
       if (!DstName.empty())
-          os << "sizeof(" << DstName << ")";
+        os << "sizeof(" << DstName << ")";
       else
-          os << "sizeof(<destination buffer>)";
+        os << "sizeof(<destination buffer>)";
       os << " or lower";
 
       BR.EmitBasicReport(FD, Checker, "Anti-pattern in the argument",
-              "C String API", os.str(), Loc,
-              LenArg->getSourceRange());
+                         "C String API", os.str(), Loc,
+                         LenArg->getSourceRange());
     }
   }
 
@@ -276,16 +279,15 @@ void WalkAST::VisitChildren(Stmt *S) {
 }
 
 namespace {
-class CStringSyntaxChecker: public Checker<check::ASTCodeBody> {
+class CStringSyntaxChecker : public Checker<check::ASTCodeBody> {
 public:
-
-  void checkASTCodeBody(const Decl *D, AnalysisManager& Mgr,
-      BugReporter &BR) const {
+  void checkASTCodeBody(const Decl *D, AnalysisManager &Mgr,
+                        BugReporter &BR) const {
     WalkAST walker(this, BR, Mgr.getAnalysisDeclContext(D));
     walker.Visit(D->getBody());
   }
 };
-}
+} // namespace
 
 void ento::registerCStringSyntaxChecker(CheckerManager &mgr) {
   mgr.registerChecker<CStringSyntaxChecker>();

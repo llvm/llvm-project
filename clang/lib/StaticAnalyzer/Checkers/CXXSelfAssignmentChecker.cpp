@@ -31,7 +31,7 @@ public:
   CXXSelfAssignmentChecker();
   void checkBeginFunction(CheckerContext &C) const;
 };
-}
+} // namespace
 
 CXXSelfAssignmentChecker::CXXSelfAssignmentChecker() {}
 
@@ -46,14 +46,13 @@ void CXXSelfAssignmentChecker::checkBeginFunction(CheckerContext &C) const {
     return;
   auto &State = C.getState();
   auto &SVB = C.getSValBuilder();
-  auto ThisVal =
-      State->getSVal(SVB.getCXXThis(MD, LCtx->getStackFrame()));
+  auto ThisVal = State->getSVal(SVB.getCXXThis(MD, LCtx->getStackFrame()));
   auto Param = SVB.makeLoc(State->getRegion(MD->getParamDecl(0), LCtx));
   auto ParamVal = State->getSVal(Param);
 
   ProgramStateRef SelfAssignState = State->bindLoc(Param, ThisVal, LCtx);
   const NoteTag *SelfAssignTag =
-    C.getNoteTag([MD](PathSensitiveBugReport &BR) -> std::string {
+      C.getNoteTag([MD](PathSensitiveBugReport &BR) -> std::string {
         SmallString<256> Msg;
         llvm::raw_svector_ostream Out(Msg);
         Out << "Assuming " << MD->getParamDecl(0)->getName() << " == *this";
@@ -63,7 +62,7 @@ void CXXSelfAssignmentChecker::checkBeginFunction(CheckerContext &C) const {
 
   ProgramStateRef NonSelfAssignState = State->bindLoc(Param, ParamVal, LCtx);
   const NoteTag *NonSelfAssignTag =
-    C.getNoteTag([MD](PathSensitiveBugReport &BR) -> std::string {
+      C.getNoteTag([MD](PathSensitiveBugReport &BR) -> std::string {
         SmallString<256> Msg;
         llvm::raw_svector_ostream Out(Msg);
         Out << "Assuming " << MD->getParamDecl(0)->getName() << " != *this";

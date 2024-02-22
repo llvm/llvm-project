@@ -28,9 +28,8 @@ using namespace ento;
 
 namespace {
 class DereferenceChecker
-    : public Checker< check::Location,
-                      check::Bind,
-                      EventDispatcher<ImplicitNullDerefEvent> > {
+    : public Checker<check::Location, check::Bind,
+                     EventDispatcher<ImplicitNullDerefEvent>> {
   enum DerefKind { NullPointer, UndefinedPointerValue };
 
   BugType BT_Null{this, "Dereference of null pointer", categories::LogicError};
@@ -43,7 +42,7 @@ class DereferenceChecker
   bool suppressReport(CheckerContext &C, const Expr *E) const;
 
 public:
-  void checkLocation(SVal location, bool isLoad, const Stmt* S,
+  void checkLocation(SVal location, bool isLoad, const Stmt *S,
                      CheckerContext &C) const;
   void checkBind(SVal L, SVal V, const Stmt *S, CheckerContext &C) const;
 
@@ -57,46 +56,42 @@ public:
 };
 } // end anonymous namespace
 
-void
-DereferenceChecker::AddDerefSource(raw_ostream &os,
-                                   SmallVectorImpl<SourceRange> &Ranges,
-                                   const Expr *Ex,
-                                   const ProgramState *state,
-                                   const LocationContext *LCtx,
-                                   bool loadedFrom) {
+void DereferenceChecker::AddDerefSource(
+    raw_ostream &os, SmallVectorImpl<SourceRange> &Ranges, const Expr *Ex,
+    const ProgramState *state, const LocationContext *LCtx, bool loadedFrom) {
   Ex = Ex->IgnoreParenLValueCasts();
   switch (Ex->getStmtClass()) {
-    default:
-      break;
-    case Stmt::DeclRefExprClass: {
-      const DeclRefExpr *DR = cast<DeclRefExpr>(Ex);
-      if (const VarDecl *VD = dyn_cast<VarDecl>(DR->getDecl())) {
-        os << " (" << (loadedFrom ? "loaded from" : "from")
-           << " variable '" <<  VD->getName() << "')";
-        Ranges.push_back(DR->getSourceRange());
-      }
-      break;
+  default:
+    break;
+  case Stmt::DeclRefExprClass: {
+    const DeclRefExpr *DR = cast<DeclRefExpr>(Ex);
+    if (const VarDecl *VD = dyn_cast<VarDecl>(DR->getDecl())) {
+      os << " (" << (loadedFrom ? "loaded from" : "from") << " variable '"
+         << VD->getName() << "')";
+      Ranges.push_back(DR->getSourceRange());
     }
-    case Stmt::MemberExprClass: {
-      const MemberExpr *ME = cast<MemberExpr>(Ex);
-      os << " (" << (loadedFrom ? "loaded from" : "via")
-         << " field '" << ME->getMemberNameInfo() << "')";
-      SourceLocation L = ME->getMemberLoc();
-      Ranges.push_back(SourceRange(L, L));
-      break;
-    }
-    case Stmt::ObjCIvarRefExprClass: {
-      const ObjCIvarRefExpr *IV = cast<ObjCIvarRefExpr>(Ex);
-      os << " (" << (loadedFrom ? "loaded from" : "via")
-         << " ivar '" << IV->getDecl()->getName() << "')";
-      SourceLocation L = IV->getLocation();
-      Ranges.push_back(SourceRange(L, L));
-      break;
-    }
+    break;
+  }
+  case Stmt::MemberExprClass: {
+    const MemberExpr *ME = cast<MemberExpr>(Ex);
+    os << " (" << (loadedFrom ? "loaded from" : "via") << " field '"
+       << ME->getMemberNameInfo() << "')";
+    SourceLocation L = ME->getMemberLoc();
+    Ranges.push_back(SourceRange(L, L));
+    break;
+  }
+  case Stmt::ObjCIvarRefExprClass: {
+    const ObjCIvarRefExpr *IV = cast<ObjCIvarRefExpr>(Ex);
+    os << " (" << (loadedFrom ? "loaded from" : "via") << " ivar '"
+       << IV->getDecl()->getName() << "')";
+    SourceLocation L = IV->getLocation();
+    Ranges.push_back(SourceRange(L, L));
+    break;
+  }
   }
 }
 
-static const Expr *getDereferenceExpr(const Stmt *S, bool IsBind=false){
+static const Expr *getDereferenceExpr(const Stmt *S, bool IsBind = false) {
   const Expr *E = nullptr;
 
   // Walk through lvalue casts to get the original expression
@@ -183,40 +178,40 @@ void DereferenceChecker::reportBug(DerefKind K, ProgramStateRef State,
   case Stmt::ArraySubscriptExprClass: {
     os << "Array access";
     const ArraySubscriptExpr *AE = cast<ArraySubscriptExpr>(S);
-    AddDerefSource(os, Ranges, AE->getBase()->IgnoreParenCasts(),
-                   State.get(), N->getLocationContext());
+    AddDerefSource(os, Ranges, AE->getBase()->IgnoreParenCasts(), State.get(),
+                   N->getLocationContext());
     os << DerefStr1;
     break;
   }
   case Stmt::OMPArraySectionExprClass: {
     os << "Array access";
     const OMPArraySectionExpr *AE = cast<OMPArraySectionExpr>(S);
-    AddDerefSource(os, Ranges, AE->getBase()->IgnoreParenCasts(),
-                   State.get(), N->getLocationContext());
+    AddDerefSource(os, Ranges, AE->getBase()->IgnoreParenCasts(), State.get(),
+                   N->getLocationContext());
     os << DerefStr1;
     break;
   }
   case Stmt::UnaryOperatorClass: {
     os << BT->getDescription();
     const UnaryOperator *U = cast<UnaryOperator>(S);
-    AddDerefSource(os, Ranges, U->getSubExpr()->IgnoreParens(),
-                   State.get(), N->getLocationContext(), true);
+    AddDerefSource(os, Ranges, U->getSubExpr()->IgnoreParens(), State.get(),
+                   N->getLocationContext(), true);
     break;
   }
   case Stmt::MemberExprClass: {
     const MemberExpr *M = cast<MemberExpr>(S);
     if (M->isArrow() || isDeclRefExprToReference(M->getBase())) {
       os << "Access to field '" << M->getMemberNameInfo() << "'" << DerefStr2;
-      AddDerefSource(os, Ranges, M->getBase()->IgnoreParenCasts(),
-                     State.get(), N->getLocationContext(), true);
+      AddDerefSource(os, Ranges, M->getBase()->IgnoreParenCasts(), State.get(),
+                     N->getLocationContext(), true);
     }
     break;
   }
   case Stmt::ObjCIvarRefExprClass: {
     const ObjCIvarRefExpr *IV = cast<ObjCIvarRefExpr>(S);
     os << "Access to instance variable '" << *IV->getDecl() << "'" << DerefStr2;
-    AddDerefSource(os, Ranges, IV->getBase()->IgnoreParenCasts(),
-                   State.get(), N->getLocationContext(), true);
+    AddDerefSource(os, Ranges, IV->getBase()->IgnoreParenCasts(), State.get(),
+                   N->getLocationContext(), true);
     break;
   }
   default:
@@ -228,14 +223,15 @@ void DereferenceChecker::reportBug(DerefKind K, ProgramStateRef State,
 
   bugreporter::trackExpressionValue(N, bugreporter::getDerefExpr(S), *report);
 
-  for (SmallVectorImpl<SourceRange>::iterator
-       I = Ranges.begin(), E = Ranges.end(); I!=E; ++I)
+  for (SmallVectorImpl<SourceRange>::iterator I = Ranges.begin(),
+                                              E = Ranges.end();
+       I != E; ++I)
     report->addRange(*I);
 
   C.emitReport(std::move(report));
 }
 
-void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
+void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt *S,
                                        CheckerContext &C) const {
   // Check for dereference of an undefined value.
   if (l.isUndef()) {

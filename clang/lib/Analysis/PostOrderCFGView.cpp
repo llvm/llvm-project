@@ -23,7 +23,8 @@ PostOrderCFGView::PostOrderCFGView(const CFG *cfg) {
   CFGBlockSet BSet(cfg);
 
   for (po_iterator I = po_iterator::begin(cfg, BSet),
-                   E = po_iterator::end(cfg, BSet); I != E; ++I) {
+                   E = po_iterator::end(cfg, BSet);
+       I != E; ++I) {
     BlockOrder[*I] = Blocks.size() + 1;
     Blocks.push_back(*I);
   }
@@ -37,7 +38,10 @@ PostOrderCFGView::create(AnalysisDeclContext &ctx) {
   return std::make_unique<PostOrderCFGView>(cfg);
 }
 
-const void *PostOrderCFGView::getTag() { static int x; return &x; }
+const void *PostOrderCFGView::getTag() {
+  static int x;
+  return &x;
+}
 
 bool PostOrderCFGView::BlockOrderCompare::operator()(const CFGBlock *b1,
                                                      const CFGBlock *b2) const {

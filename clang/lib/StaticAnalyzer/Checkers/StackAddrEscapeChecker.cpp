@@ -125,7 +125,8 @@ bool StackAddrEscapeChecker::isNotInCurrentFrame(const MemRegion *R,
 
 bool StackAddrEscapeChecker::isSemaphoreCaptured(const BlockDecl &B) const {
   if (!dispatch_semaphore_tII)
-    dispatch_semaphore_tII = &B.getASTContext().Idents.get("dispatch_semaphore_t");
+    dispatch_semaphore_tII =
+        &B.getASTContext().Idents.get("dispatch_semaphore_t");
   for (const auto &C : B.captures()) {
     const auto *T = C.getVariable()->getType()->getAs<TypedefType>();
     if (T && T->getDecl()->getIdentifier() == dispatch_semaphore_tII)

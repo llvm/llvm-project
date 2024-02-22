@@ -28,14 +28,13 @@ namespace {
 class UncountedCallArgsChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
   BugType Bug{this,
-            "Uncounted call argument for a raw pointer/reference parameter",
-            "WebKit coding guidelines"};
+              "Uncounted call argument for a raw pointer/reference parameter",
+              "WebKit coding guidelines"};
   mutable BugReporter *BR;
 
   TrivialFunctionAnalysis TFA;
 
 public:
-
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
     BR = &BRArg;
@@ -70,7 +69,8 @@ public:
     if (auto *F = CE->getDirectCallee()) {
       // Skip the first argument for overloaded member operators (e. g. lambda
       // or std::function call operator).
-      unsigned ArgIdx = isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
+      unsigned ArgIdx =
+          isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
 
       if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE)) {
         if (auto *MD = MemberCallExpr->getMethodDecl()) {

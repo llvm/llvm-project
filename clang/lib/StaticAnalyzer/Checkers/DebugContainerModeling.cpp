@@ -25,8 +25,7 @@ using namespace iterator;
 
 namespace {
 
-class DebugContainerModeling
-  : public Checker<eval::Call> {
+class DebugContainerModeling : public Checker<eval::Call> {
 
   const BugType DebugMsgBugType{this, "Checking analyzer assumptions", "debug",
                                 /*SuppressOnSink=*/true};
@@ -39,7 +38,7 @@ class DebugContainerModeling
   ExplodedNode *reportDebugMsg(llvm::StringRef Msg, CheckerContext &C) const;
 
   typedef void (DebugContainerModeling::*FnCheck)(const CallExpr *,
-                                                 CheckerContext &) const;
+                                                  CheckerContext &) const;
 
   CallDescriptionMap<FnCheck> Callbacks = {
       {{{"clang_analyzer_container_begin"}, 1},
@@ -90,14 +89,13 @@ void DebugContainerModeling::analyzerContainerDataField(const CallExpr *CE,
         // Progpagate interestingness from the container's data (marked
         // interesting by an `ExprInspection` debug call to the container
         // itself.
-        const NoteTag *InterestingTag =
-          C.getNoteTag(
-              [Cont, Field](PathSensitiveBugReport &BR) -> std::string {
-                if (BR.isInteresting(Field)) {
-                  BR.markInteresting(Cont);
-                }
-                return "";
-              });
+        const NoteTag *InterestingTag = C.getNoteTag(
+            [Cont, Field](PathSensitiveBugReport &BR) -> std::string {
+              if (BR.isInteresting(Field)) {
+                BR.markInteresting(Cont);
+              }
+              return "";
+            });
         C.addTransition(State, InterestingTag);
         return;
       }
@@ -105,22 +103,21 @@ void DebugContainerModeling::analyzerContainerDataField(const CallExpr *CE,
   }
 
   auto &BVF = C.getSValBuilder().getBasicValueFactory();
-  State = State->BindExpr(CE, C.getLocationContext(),
-                   nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(0))));
+  State =
+      State->BindExpr(CE, C.getLocationContext(),
+                      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(0))));
 }
 
 void DebugContainerModeling::analyzerContainerBegin(const CallExpr *CE,
                                                     CheckerContext &C) const {
-  analyzerContainerDataField(CE, C, [](const ContainerData *D) {
-      return D->getBegin();
-    });
+  analyzerContainerDataField(
+      CE, C, [](const ContainerData *D) { return D->getBegin(); });
 }
 
 void DebugContainerModeling::analyzerContainerEnd(const CallExpr *CE,
                                                   CheckerContext &C) const {
-  analyzerContainerDataField(CE, C, [](const ContainerData *D) {
-      return D->getEnd();
-    });
+  analyzerContainerDataField(
+      CE, C, [](const ContainerData *D) { return D->getEnd(); });
 }
 
 ExplodedNode *DebugContainerModeling::reportDebugMsg(llvm::StringRef Msg,

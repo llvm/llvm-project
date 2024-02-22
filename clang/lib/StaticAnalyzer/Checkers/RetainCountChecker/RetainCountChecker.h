@@ -14,7 +14,6 @@
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_RETAINCOUNTCHECKER_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_RETAINCOUNTCHECKER_H
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "RetainCountDiagnostics.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
@@ -23,9 +22,10 @@
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Analysis/RetainSummaryManager.h"
+#include "clang/Analysis/SelectorExtras.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Analysis/SelectorExtras.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -50,17 +50,17 @@ namespace retaincountchecker {
 class RefVal {
 public:
   enum Kind {
-    Owned = 0, // Owning reference.
-    NotOwned,  // Reference is not owned by still valid (not freed).
-    Released,  // Object has been released.
-    ReturnedOwned, // Returned object passes ownership to caller.
+    Owned = 0,        // Owning reference.
+    NotOwned,         // Reference is not owned by still valid (not freed).
+    Released,         // Object has been released.
+    ReturnedOwned,    // Returned object passes ownership to caller.
     ReturnedNotOwned, // Return object does not pass ownership to caller.
     ERROR_START,
     ErrorDeallocNotOwned, // -dealloc called on non-owned object.
     ErrorUseAfterRelease, // Object used after released.
     ErrorReleaseNotOwned, // Release of an object that was not owned.
     ERROR_LEAK_START,
-    ErrorLeak,  // A memory leak due to excessive reference counts.
+    ErrorLeak,         // A memory leak due to excessive reference counts.
     ErrorLeakReturned, // A memory leak due to the returning method not having
                        // the correct naming conventions.
     ErrorOverAutorelease,
@@ -108,9 +108,9 @@ private:
 
   RefVal(Kind k, ObjKind o, unsigned cnt, unsigned acnt, QualType t,
          IvarAccessHistory IvarAccess)
-    : Cnt(cnt), ACnt(acnt), T(t), RawKind(static_cast<unsigned>(k)),
-      RawObjectKind(static_cast<unsigned>(o)),
-      RawIvarAccessHistory(static_cast<unsigned>(IvarAccess)) {
+      : Cnt(cnt), ACnt(acnt), T(t), RawKind(static_cast<unsigned>(k)),
+        RawObjectKind(static_cast<unsigned>(o)),
+        RawIvarAccessHistory(static_cast<unsigned>(IvarAccess)) {
     assert(getKind() == k && "not enough bits for the kind");
     assert(getObjKind() == o && "not enough bits for the object kind");
     assert(getIvarAccessHistory() == IvarAccess && "not enough bits");
@@ -119,9 +119,7 @@ private:
 public:
   Kind getKind() const { return static_cast<Kind>(RawKind); }
 
-  ObjKind getObjKind() const {
-    return static_cast<ObjKind>(RawObjectKind);
-  }
+  ObjKind getObjKind() const { return static_cast<ObjKind>(RawObjectKind); }
 
   unsigned getCount() const { return Cnt; }
   unsigned getAutoreleaseCount() const { return ACnt; }
@@ -130,12 +128,8 @@ public:
     Cnt = 0;
     ACnt = 0;
   }
-  void setCount(unsigned i) {
-    Cnt = i;
-  }
-  void setAutoreleaseCount(unsigned i) {
-    ACnt = i;
-  }
+  void setCount(unsigned i) { Cnt = i; }
+  void setAutoreleaseCount(unsigned i) { ACnt = i; }
 
   QualType getType() const { return T; }
 
@@ -148,21 +142,13 @@ public:
     return static_cast<IvarAccessHistory>(RawIvarAccessHistory);
   }
 
-  bool isOwned() const {
-    return getKind() == Owned;
-  }
+  bool isOwned() const { return getKind() == Owned; }
 
-  bool isNotOwned() const {
-    return getKind() == NotOwned;
-  }
+  bool isNotOwned() const { return getKind() == NotOwned; }
 
-  bool isReturnedOwned() const {
-    return getKind() == ReturnedOwned;
-  }
+  bool isReturnedOwned() const { return getKind() == ReturnedOwned; }
 
-  bool isReturnedNotOwned() const {
-    return getKind() == ReturnedNotOwned;
-  }
+  bool isReturnedNotOwned() const { return getKind() == ReturnedNotOwned; }
 
   /// Create a state for an object whose lifetime is the responsibility of the
   /// current function, at least partially.
@@ -191,13 +177,13 @@ public:
   }
 
   RefVal operator^(Kind k) const {
-    return RefVal(k, getObjKind(), getCount(), getAutoreleaseCount(),
-                  getType(), getIvarAccessHistory());
+    return RefVal(k, getObjKind(), getCount(), getAutoreleaseCount(), getType(),
+                  getIvarAccessHistory());
   }
 
   RefVal autorelease() const {
-    return RefVal(getKind(), getObjKind(), getCount(), getAutoreleaseCount()+1,
-                  getType(), getIvarAccessHistory());
+    return RefVal(getKind(), getObjKind(), getCount(),
+                  getAutoreleaseCount() + 1, getType(), getIvarAccessHistory());
   }
 
   RefVal withIvarAccess() const {
@@ -218,11 +204,11 @@ public:
            getIvarAccessHistory() == X.getIvarAccessHistory();
   }
 
-  bool operator==(const RefVal& X) const {
+  bool operator==(const RefVal &X) const {
     return T == X.T && hasSameState(X) && getObjKind() == X.getObjKind();
   }
 
-  void Profile(llvm::FoldingSetNodeID& ID) const {
+  void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.Add(T);
     ID.AddInteger(RawKind);
     ID.AddInteger(Cnt);
@@ -235,20 +221,13 @@ public:
 };
 
 class RetainCountChecker
-  : public Checker< check::Bind,
-                    check::DeadSymbols,
-                    check::BeginFunction,
-                    check::EndFunction,
-                    check::PostStmt<BlockExpr>,
-                    check::PostStmt<CastExpr>,
-                    check::PostStmt<ObjCArrayLiteral>,
-                    check::PostStmt<ObjCDictionaryLiteral>,
-                    check::PostStmt<ObjCBoxedExpr>,
-                    check::PostStmt<ObjCIvarRefExpr>,
-                    check::PostCall,
-                    check::RegionChanges,
-                    eval::Assume,
-                    eval::Call > {
+    : public Checker<
+          check::Bind, check::DeadSymbols, check::BeginFunction,
+          check::EndFunction, check::PostStmt<BlockExpr>,
+          check::PostStmt<CastExpr>, check::PostStmt<ObjCArrayLiteral>,
+          check::PostStmt<ObjCDictionaryLiteral>,
+          check::PostStmt<ObjCBoxedExpr>, check::PostStmt<ObjCIvarRefExpr>,
+          check::PostCall, check::RegionChanges, eval::Assume, eval::Call> {
 
 public:
   std::unique_ptr<RefCountBug> UseAfterRelease;
@@ -287,8 +266,8 @@ public:
     return getSummaryManager(C.getASTContext());
   }
 
-  void printState(raw_ostream &Out, ProgramStateRef State,
-                  const char *NL, const char *Sep) const override;
+  void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
+                  const char *Sep) const override;
 
   void checkBind(SVal loc, SVal val, const Stmt *S, CheckerContext &C) const;
   void checkPostStmt(const BlockExpr *BE, CheckerContext &C) const;
@@ -305,33 +284,32 @@ public:
   void checkSummary(const RetainSummary &Summ, const CallEvent &Call,
                     CheckerContext &C) const;
 
-  void processSummaryOfInlined(const RetainSummary &Summ,
-                               const CallEvent &Call,
+  void processSummaryOfInlined(const RetainSummary &Summ, const CallEvent &Call,
                                CheckerContext &C) const;
 
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 
   ProgramStateRef evalAssume(ProgramStateRef state, SVal Cond,
-                                 bool Assumption) const;
+                             bool Assumption) const;
 
   ProgramStateRef
   checkRegionChanges(ProgramStateRef state,
                      const InvalidatedSymbols *invalidated,
                      ArrayRef<const MemRegion *> ExplicitRegions,
                      ArrayRef<const MemRegion *> Regions,
-                     const LocationContext* LCtx,
-                     const CallEvent *Call) const;
+                     const LocationContext *LCtx, const CallEvent *Call) const;
 
-  ExplodedNode* checkReturnWithRetEffect(const ReturnStmt *S, CheckerContext &C,
-                                ExplodedNode *Pred, RetEffect RE, RefVal X,
-                                SymbolRef Sym, ProgramStateRef state) const;
+  ExplodedNode *checkReturnWithRetEffect(const ReturnStmt *S, CheckerContext &C,
+                                         ExplodedNode *Pred, RetEffect RE,
+                                         RefVal X, SymbolRef Sym,
+                                         ProgramStateRef state) const;
 
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
   void checkBeginFunction(CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
 
-  ProgramStateRef updateSymbol(ProgramStateRef state, SymbolRef sym,
-                               RefVal V, ArgEffect E, RefVal::Kind &hasErr,
+  ProgramStateRef updateSymbol(ProgramStateRef state, SymbolRef sym, RefVal V,
+                               ArgEffect E, RefVal::Kind &hasErr,
                                CheckerContext &C) const;
 
   const RefCountBug &errorKindToBugKind(RefVal::Kind ErrorKind,
@@ -343,16 +321,16 @@ public:
 
   void processObjCLiterals(CheckerContext &C, const Expr *Ex) const;
 
-  ProgramStateRef handleSymbolDeath(ProgramStateRef state,
-                                    SymbolRef sid, RefVal V,
+  ProgramStateRef handleSymbolDeath(ProgramStateRef state, SymbolRef sid,
+                                    RefVal V,
                                     SmallVectorImpl<SymbolRef> &Leaked) const;
 
-  ProgramStateRef
-  handleAutoreleaseCounts(ProgramStateRef state, ExplodedNode *Pred,
-                          const ProgramPointTag *Tag, CheckerContext &Ctx,
-                          SymbolRef Sym,
-                          RefVal V,
-                          const ReturnStmt *S=nullptr) const;
+  ProgramStateRef handleAutoreleaseCounts(ProgramStateRef state,
+                                          ExplodedNode *Pred,
+                                          const ProgramPointTag *Tag,
+                                          CheckerContext &Ctx, SymbolRef Sym,
+                                          RefVal V,
+                                          const ReturnStmt *S = nullptr) const;
 
   ExplodedNode *processLeaks(ProgramStateRef state,
                              SmallVectorImpl<SymbolRef> &Leaked,
@@ -369,7 +347,7 @@ private:
   /// Perform the necessary checks and state adjustments at the end of the
   /// function.
   /// \p S Return statement, may be null.
-  ExplodedNode * processReturn(const ReturnStmt *S, CheckerContext &C) const;
+  ExplodedNode *processReturn(const ReturnStmt *S, CheckerContext &C) const;
 };
 
 //===----------------------------------------------------------------------===//

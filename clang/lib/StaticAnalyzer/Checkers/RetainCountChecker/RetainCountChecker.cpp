@@ -49,66 +49,71 @@ void RefVal::print(raw_ostream &Out) const {
     Out << "Tracked " << T << " | ";
 
   switch (getKind()) {
-    default: llvm_unreachable("Invalid RefVal kind");
-    case Owned: {
-      Out << "Owned";
-      unsigned cnt = getCount();
-      if (cnt) Out << " (+ " << cnt << ")";
-      break;
-    }
+  default:
+    llvm_unreachable("Invalid RefVal kind");
+  case Owned: {
+    Out << "Owned";
+    unsigned cnt = getCount();
+    if (cnt)
+      Out << " (+ " << cnt << ")";
+    break;
+  }
 
-    case NotOwned: {
-      Out << "NotOwned";
-      unsigned cnt = getCount();
-      if (cnt) Out << " (+ " << cnt << ")";
-      break;
-    }
+  case NotOwned: {
+    Out << "NotOwned";
+    unsigned cnt = getCount();
+    if (cnt)
+      Out << " (+ " << cnt << ")";
+    break;
+  }
 
-    case ReturnedOwned: {
-      Out << "ReturnedOwned";
-      unsigned cnt = getCount();
-      if (cnt) Out << " (+ " << cnt << ")";
-      break;
-    }
+  case ReturnedOwned: {
+    Out << "ReturnedOwned";
+    unsigned cnt = getCount();
+    if (cnt)
+      Out << " (+ " << cnt << ")";
+    break;
+  }
 
-    case ReturnedNotOwned: {
-      Out << "ReturnedNotOwned";
-      unsigned cnt = getCount();
-      if (cnt) Out << " (+ " << cnt << ")";
-      break;
-    }
+  case ReturnedNotOwned: {
+    Out << "ReturnedNotOwned";
+    unsigned cnt = getCount();
+    if (cnt)
+      Out << " (+ " << cnt << ")";
+    break;
+  }
 
-    case Released:
-      Out << "Released";
-      break;
+  case Released:
+    Out << "Released";
+    break;
 
-    case ErrorDeallocNotOwned:
-      Out << "-dealloc (not-owned)";
-      break;
+  case ErrorDeallocNotOwned:
+    Out << "-dealloc (not-owned)";
+    break;
 
-    case ErrorLeak:
-      Out << "Leaked";
-      break;
+  case ErrorLeak:
+    Out << "Leaked";
+    break;
 
-    case ErrorLeakReturned:
-      Out << "Leaked (Bad naming)";
-      break;
+  case ErrorLeakReturned:
+    Out << "Leaked (Bad naming)";
+    break;
 
-    case ErrorUseAfterRelease:
-      Out << "Use-After-Release [ERROR]";
-      break;
+  case ErrorUseAfterRelease:
+    Out << "Use-After-Release [ERROR]";
+    break;
 
-    case ErrorReleaseNotOwned:
-      Out << "Release of Not-Owned [ERROR]";
-      break;
+  case ErrorReleaseNotOwned:
+    Out << "Release of Not-Owned [ERROR]";
+    break;
 
-    case RefVal::ErrorOverAutorelease:
-      Out << "Over-autoreleased";
-      break;
+  case RefVal::ErrorOverAutorelease:
+    Out << "Over-autoreleased";
+    break;
 
-    case RefVal::ErrorReturnedNotOwned:
-      Out << "Non-owned object returned instead of owned";
-      break;
+  case RefVal::ErrorReturnedNotOwned:
+    Out << "Non-owned object returned instead of owned";
+    break;
   }
 
   switch (getIvarAccessHistory()) {
@@ -129,6 +134,7 @@ void RefVal::print(raw_ostream &Out) const {
 namespace {
 class StopTrackingCallback final : public SymbolVisitor {
   ProgramStateRef state;
+
 public:
   StopTrackingCallback(ProgramStateRef st) : state(std::move(st)) {}
   ProgramStateRef getState() const { return state; }
@@ -162,7 +168,7 @@ void RetainCountChecker::checkPostStmt(const BlockExpr *BE,
   // FIXME: For now we invalidate the tracking of all symbols passed to blocks
   // via captured variables, even though captured variables result in a copy
   // and in implicit increment/decrement of a retain count.
-  SmallVector<const MemRegion*, 10> Regions;
+  SmallVector<const MemRegion *, 10> Regions;
   const LocationContext *LC = C.getLocationContext();
   MemRegionManager &MemMgr = C.getSValBuilder().getRegionManager();
 
@@ -195,26 +201,26 @@ void RetainCountChecker::checkPostStmt(const CastExpr *CE,
   ArgEffect AE = ArgEffect(IncRef, K);
 
   switch (BE->getBridgeKind()) {
-    case OBC_Bridge:
-      // Do nothing.
-      return;
-    case OBC_BridgeRetained:
-      AE = AE.withKind(IncRef);
-      break;
-    case OBC_BridgeTransfer:
-      AE = AE.withKind(DecRefBridgedTransferred);
-      break;
+  case OBC_Bridge:
+    // Do nothing.
+    return;
+  case OBC_BridgeRetained:
+    AE = AE.withKind(IncRef);
+    break;
+  case OBC_BridgeTransfer:
+    AE = AE.withKind(DecRefBridgedTransferred);
+    break;
   }
 
   ProgramStateRef state = C.getState();
   SymbolRef Sym = C.getSVal(CE).getAsLocSymbol();
   if (!Sym)
     return;
-  const RefVal* T = getRefBinding(state, Sym);
+  const RefVal *T = getRefBinding(state, Sym);
   if (!T)
     return;
 
-  RefVal::Kind hasErr = (RefVal::Kind) 0;
+  RefVal::Kind hasErr = (RefVal::Kind)0;
   state = updateSymbol(state, Sym, *T, AE, hasErr, C);
 
   if (hasErr) {
@@ -232,8 +238,8 @@ void RetainCountChecker::processObjCLiterals(CheckerContext &C,
   for (const Stmt *Child : Ex->children()) {
     SVal V = pred->getSVal(Child);
     if (SymbolRef sym = V.getAsSymbol())
-      if (const RefVal* T = getRefBinding(state, sym)) {
-        RefVal::Kind hasErr = (RefVal::Kind) 0;
+      if (const RefVal *T = getRefBinding(state, sym)) {
+        RefVal::Kind hasErr = (RefVal::Kind)0;
         state = updateSymbol(state, sym, *T,
                              ArgEffect(MayEscape, ObjKind::ObjC), hasErr, C);
         if (hasErr) {
@@ -246,7 +252,7 @@ void RetainCountChecker::processObjCLiterals(CheckerContext &C,
   // Return the object as autoreleased.
   //  RetEffect RE = RetEffect::MakeNotOwned(ObjKind::ObjC);
   if (SymbolRef sym =
-        state->getSVal(Ex, pred->getLocationContext()).getAsSymbol()) {
+          state->getSVal(Ex, pred->getLocationContext()).getAsSymbol()) {
     QualType ResultTy = Ex->getType();
     state = setRefBinding(state, sym,
                           RefVal::makeNotOwned(ObjKind::ObjC, ResultTy));
@@ -352,9 +358,8 @@ const static RetainSummary *getSummary(RetainSummaryManager &Summaries,
                                        const CallEvent &Call,
                                        QualType ReceiverType) {
   const Expr *CE = Call.getOriginExpr();
-  AnyCall C =
-      CE ? *AnyCall::forExpr(CE)
-         : AnyCall(cast<CXXDestructorDecl>(Call.getDecl()));
+  AnyCall C = CE ? *AnyCall::forExpr(CE)
+                 : AnyCall(cast<CXXDestructorDecl>(Call.getDecl()));
   return Summaries.getSummary(C, Call.hasNonZeroCallbackArg(),
                               isReceiverUnconsumedSelf(Call), ReceiverType);
 }
@@ -404,8 +409,8 @@ static QualType GetReturnType(const Expr *RetE, ASTContext &Ctx) {
         // is a call to a class method whose type we can resolve.  In such
         // cases, promote the return type to XXX* (where XXX is the class).
         const ObjCInterfaceDecl *D = ME->getReceiverInterface();
-        return !D ? RetTy :
-                    Ctx.getObjCObjectPointerType(Ctx.getObjCInterfaceType(D));
+        return !D ? RetTy
+                  : Ctx.getObjCObjectPointerType(Ctx.getObjCInterfaceType(D));
       }
 
   return RetTy;
@@ -433,7 +438,7 @@ static bool isPointerToObject(QualType QT) {
 /// Whether the tracked value should be escaped on a given call.
 /// OSObjects are escaped when passed to void * / etc.
 static bool shouldEscapeOSArgumentOnCall(const CallEvent &CE, unsigned ArgIdx,
-                                       const RefVal *TrackedValue) {
+                                         const RefVal *TrackedValue) {
   if (TrackedValue->getObjKind() != ObjKind::OS)
     return false;
   if (ArgIdx >= CE.parameters().size())
@@ -485,11 +490,10 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
 }
 
 static bool isSmartPtrField(const MemRegion *MR) {
-  const auto *TR = dyn_cast<TypedValueRegion>(
-    cast<SubRegion>(MR)->getSuperRegion());
+  const auto *TR =
+      dyn_cast<TypedValueRegion>(cast<SubRegion>(MR)->getSuperRegion());
   return TR && RetainSummaryManager::isKnownSmartPointer(TR->getValueType());
 }
-
 
 /// A value escapes in these possible cases:
 ///
@@ -607,7 +611,7 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
   ProgramStateRef state = C.getState();
 
   // Evaluate the effect of the arguments.
-  RefVal::Kind hasErr = (RefVal::Kind) 0;
+  RefVal::Kind hasErr = (RefVal::Kind)0;
   SourceRange ErrorRange;
   SymbolRef ErrorSym = nullptr;
 
@@ -644,8 +648,8 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
       if (SymbolRef Sym = MsgInvocation->getReceiverSVal().getAsLocSymbol()) {
         if (const RefVal *T = getRefBinding(state, Sym)) {
           ReceiverIsTracked = true;
-          state = updateSymbol(state, Sym, *T,
-                               Summ.getReceiverEffect(), hasErr, C);
+          state =
+              updateSymbol(state, Sym, *T, Summ.getReceiverEffect(), hasErr, C);
           if (hasErr) {
             ErrorRange = MsgInvocation->getOriginExpr()->getReceiverRange();
             ErrorSym = Sym;
@@ -657,8 +661,7 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
     } else if (const auto *MCall = dyn_cast<CXXMemberCall>(&CallOrMsg)) {
       if (SymbolRef Sym = MCall->getCXXThisVal().getAsLocSymbol()) {
         if (const RefVal *T = getRefBinding(state, Sym)) {
-          state = updateSymbol(state, Sym, *T, Summ.getThisEffect(),
-                               hasErr, C);
+          state = updateSymbol(state, Sym, *T, Summ.getThisEffect(), hasErr, C);
           if (hasErr) {
             ErrorRange = MCall->getOriginExpr()->getSourceRange();
             ErrorSym = Sym;
@@ -737,103 +740,103 @@ ProgramStateRef RetainCountChecker::updateSymbol(ProgramStateRef state,
   }
 
   switch (AE.getKind()) {
-    case UnretainedOutParameter:
-    case RetainedOutParameter:
-    case RetainedOutParameterOnZero:
-    case RetainedOutParameterOnNonZero:
-      llvm_unreachable("Applies to pointer-to-pointer parameters, which should "
-                       "not have ref state.");
+  case UnretainedOutParameter:
+  case RetainedOutParameter:
+  case RetainedOutParameterOnZero:
+  case RetainedOutParameterOnNonZero:
+    llvm_unreachable("Applies to pointer-to-pointer parameters, which should "
+                     "not have ref state.");
 
-    case Dealloc: // NB. we only need to add a note in a non-error case.
-      switch (V.getKind()) {
-        default:
-          llvm_unreachable("Invalid RefVal state for an explicit dealloc.");
-        case RefVal::Owned:
-          // The object immediately transitions to the released state.
+  case Dealloc: // NB. we only need to add a note in a non-error case.
+    switch (V.getKind()) {
+    default:
+      llvm_unreachable("Invalid RefVal state for an explicit dealloc.");
+    case RefVal::Owned:
+      // The object immediately transitions to the released state.
+      V = V ^ RefVal::Released;
+      V.clearCounts();
+      return setRefBinding(state, sym, V);
+    case RefVal::NotOwned:
+      V = V ^ RefVal::ErrorDeallocNotOwned;
+      hasErr = V.getKind();
+      break;
+    }
+    break;
+
+  case MayEscape:
+    if (V.getKind() == RefVal::Owned) {
+      V = V ^ RefVal::NotOwned;
+      break;
+    }
+
+    [[fallthrough]];
+
+  case DoNothing:
+    return state;
+
+  case Autorelease:
+    // Update the autorelease counts.
+    V = V.autorelease();
+    break;
+
+  case StopTracking:
+  case StopTrackingHard:
+    return removeRefBinding(state, sym);
+
+  case IncRef:
+    switch (V.getKind()) {
+    default:
+      llvm_unreachable("Invalid RefVal state for a retain.");
+    case RefVal::Owned:
+    case RefVal::NotOwned:
+      V = V + 1;
+      break;
+    }
+    break;
+
+  case DecRef:
+  case DecRefBridgedTransferred:
+  case DecRefAndStopTrackingHard:
+    switch (V.getKind()) {
+    default:
+      // case 'RefVal::Released' handled above.
+      llvm_unreachable("Invalid RefVal state for a release.");
+
+    case RefVal::Owned:
+      assert(V.getCount() > 0);
+      if (V.getCount() == 1) {
+        if (AE.getKind() == DecRefBridgedTransferred ||
+            V.getIvarAccessHistory() ==
+                RefVal::IvarAccessHistory::AccessedDirectly)
+          V = V ^ RefVal::NotOwned;
+        else
           V = V ^ RefVal::Released;
-          V.clearCounts();
-          return setRefBinding(state, sym, V);
-        case RefVal::NotOwned:
-          V = V ^ RefVal::ErrorDeallocNotOwned;
-          hasErr = V.getKind();
-          break;
-      }
-      break;
-
-    case MayEscape:
-      if (V.getKind() == RefVal::Owned) {
-        V = V ^ RefVal::NotOwned;
-        break;
+      } else if (AE.getKind() == DecRefAndStopTrackingHard) {
+        return removeRefBinding(state, sym);
       }
 
-      [[fallthrough]];
-
-    case DoNothing:
-      return state;
-
-    case Autorelease:
-      // Update the autorelease counts.
-      V = V.autorelease();
+      V = V - 1;
       break;
 
-    case StopTracking:
-    case StopTrackingHard:
-      return removeRefBinding(state, sym);
-
-    case IncRef:
-      switch (V.getKind()) {
-        default:
-          llvm_unreachable("Invalid RefVal state for a retain.");
-        case RefVal::Owned:
-        case RefVal::NotOwned:
-          V = V + 1;
-          break;
+    case RefVal::NotOwned:
+      if (V.getCount() > 0) {
+        if (AE.getKind() == DecRefAndStopTrackingHard)
+          return removeRefBinding(state, sym);
+        V = V - 1;
+      } else if (V.getIvarAccessHistory() ==
+                 RefVal::IvarAccessHistory::AccessedDirectly) {
+        // Assume that the instance variable was holding on the object at
+        // +1, and we just didn't know.
+        if (AE.getKind() == DecRefAndStopTrackingHard)
+          return removeRefBinding(state, sym);
+        V = V.releaseViaIvar() ^ RefVal::Released;
+      } else {
+        V = V ^ RefVal::ErrorReleaseNotOwned;
+        hasErr = V.getKind();
       }
       break;
-
-    case DecRef:
-    case DecRefBridgedTransferred:
-    case DecRefAndStopTrackingHard:
-      switch (V.getKind()) {
-        default:
-          // case 'RefVal::Released' handled above.
-          llvm_unreachable("Invalid RefVal state for a release.");
-
-        case RefVal::Owned:
-          assert(V.getCount() > 0);
-          if (V.getCount() == 1) {
-            if (AE.getKind() == DecRefBridgedTransferred ||
-                V.getIvarAccessHistory() ==
-                  RefVal::IvarAccessHistory::AccessedDirectly)
-              V = V ^ RefVal::NotOwned;
-            else
-              V = V ^ RefVal::Released;
-          } else if (AE.getKind() == DecRefAndStopTrackingHard) {
-            return removeRefBinding(state, sym);
-          }
-
-          V = V - 1;
-          break;
-
-        case RefVal::NotOwned:
-          if (V.getCount() > 0) {
-            if (AE.getKind() == DecRefAndStopTrackingHard)
-              return removeRefBinding(state, sym);
-            V = V - 1;
-          } else if (V.getIvarAccessHistory() ==
-                       RefVal::IvarAccessHistory::AccessedDirectly) {
-            // Assume that the instance variable was holding on the object at
-            // +1, and we just didn't know.
-            if (AE.getKind() == DecRefAndStopTrackingHard)
-              return removeRefBinding(state, sym);
-            V = V.releaseViaIvar() ^ RefVal::Released;
-          } else {
-            V = V ^ RefVal::ErrorReleaseNotOwned;
-            hasErr = V.getKind();
-          }
-          break;
-      }
-      break;
+    }
+    break;
   }
   return setRefBinding(state, sym, V);
 }
@@ -842,16 +845,16 @@ const RefCountBug &
 RetainCountChecker::errorKindToBugKind(RefVal::Kind ErrorKind,
                                        SymbolRef Sym) const {
   switch (ErrorKind) {
-    case RefVal::ErrorUseAfterRelease:
-      return *UseAfterRelease;
-    case RefVal::ErrorReleaseNotOwned:
-      return *ReleaseNotOwned;
-    case RefVal::ErrorDeallocNotOwned:
-      if (Sym->getType()->getPointeeCXXRecordDecl())
-        return *FreeNotOwned;
-      return *DeallocNotOwned;
-    default:
-      llvm_unreachable("Unhandled error.");
+  case RefVal::ErrorUseAfterRelease:
+    return *UseAfterRelease;
+  case RefVal::ErrorReleaseNotOwned:
+    return *ReleaseNotOwned;
+  case RefVal::ErrorDeallocNotOwned:
+    if (Sym->getType()->getPointeeCXXRecordDecl())
+      return *FreeNotOwned;
+    return *DeallocNotOwned;
+  default:
+    llvm_unreachable("Unhandled error.");
   }
 }
 
@@ -874,9 +877,9 @@ void RetainCountChecker::processNonLeakError(ProgramStateRef St,
   if (!N)
     return;
 
-  auto report = std::make_unique<RefCountReport>(
-      errorKindToBugKind(ErrorKind, Sym),
-      C.getASTContext().getLangOpts(), N, Sym);
+  auto report =
+      std::make_unique<RefCountReport>(errorKindToBugKind(ErrorKind, Sym),
+                                       C.getASTContext().getLangOpts(), N, Sym);
   report->addRange(ErrorRange);
   C.emitReport(std::move(report));
 }
@@ -952,7 +955,6 @@ bool RetainCountChecker::evalCall(const CallEvent &Call,
       // output are non-zero.
       if (auto L = RetVal.getAs<DefinedOrUnknownSVal>())
         state = state->assume(*L, /*assumption=*/true);
-
     }
   }
 
@@ -960,8 +962,8 @@ bool RetainCountChecker::evalCall(const CallEvent &Call,
   return true;
 }
 
-ExplodedNode * RetainCountChecker::processReturn(const ReturnStmt *S,
-                                                 CheckerContext &C) const {
+ExplodedNode *RetainCountChecker::processReturn(const ReturnStmt *S,
+                                                CheckerContext &C) const {
   ExplodedNode *Pred = C.getPredecessor();
 
   // Only adjust the reference count if this is the top-level call frame,
@@ -996,27 +998,27 @@ ExplodedNode * RetainCountChecker::processReturn(const ReturnStmt *S,
   RefVal X = *T;
 
   switch (X.getKind()) {
-    case RefVal::Owned: {
-      unsigned cnt = X.getCount();
-      assert(cnt > 0);
+  case RefVal::Owned: {
+    unsigned cnt = X.getCount();
+    assert(cnt > 0);
+    X.setCount(cnt - 1);
+    X = X ^ RefVal::ReturnedOwned;
+    break;
+  }
+
+  case RefVal::NotOwned: {
+    unsigned cnt = X.getCount();
+    if (cnt) {
       X.setCount(cnt - 1);
       X = X ^ RefVal::ReturnedOwned;
-      break;
+    } else {
+      X = X ^ RefVal::ReturnedNotOwned;
     }
+    break;
+  }
 
-    case RefVal::NotOwned: {
-      unsigned cnt = X.getCount();
-      if (cnt) {
-        X.setCount(cnt - 1);
-        X = X ^ RefVal::ReturnedOwned;
-      } else {
-        X = X ^ RefVal::ReturnedNotOwned;
-      }
-      break;
-    }
-
-    default:
-      return Pred;
+  default:
+    return Pred;
   }
 
   // Update the binding.
@@ -1063,12 +1065,9 @@ ExplodedNode * RetainCountChecker::processReturn(const ReturnStmt *S,
   return checkReturnWithRetEffect(S, C, Pred, RE, X, Sym, state);
 }
 
-ExplodedNode * RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
-                                                  CheckerContext &C,
-                                                  ExplodedNode *Pred,
-                                                  RetEffect RE, RefVal X,
-                                                  SymbolRef Sym,
-                                                  ProgramStateRef state) const {
+ExplodedNode *RetainCountChecker::checkReturnWithRetEffect(
+    const ReturnStmt *S, CheckerContext &C, ExplodedNode *Pred, RetEffect RE,
+    RefVal X, SymbolRef Sym, ProgramStateRef state) const {
   // HACK: Ignore retain-count issues on values accessed through ivars,
   // because of cases like this:
   //   [_contentView retain];
@@ -1104,7 +1103,7 @@ ExplodedNode * RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
   } else if (X.isReturnedNotOwned()) {
     if (RE.isOwned()) {
       if (X.getIvarAccessHistory() ==
-            RefVal::IvarAccessHistory::AccessedDirectly) {
+          RefVal::IvarAccessHistory::AccessedDirectly) {
         // Assume the method was trying to transfer a +1 reference from a
         // strong ivar to the caller.
         state = setRefBinding(state, Sym,
@@ -1114,8 +1113,8 @@ ExplodedNode * RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
         // owned object.
         state = setRefBinding(state, Sym, X ^ RefVal::ErrorReturnedNotOwned);
 
-        static CheckerProgramPointTag
-            ReturnNotOwnedTag(this, "ReturnNotOwnedForOwned");
+        static CheckerProgramPointTag ReturnNotOwnedTag(
+            this, "ReturnNotOwnedForOwned");
 
         ExplodedNode *N = C.addTransition(state, Pred, &ReturnNotOwnedTag);
         if (N) {
@@ -1147,8 +1146,7 @@ void RetainCountChecker::checkBind(SVal loc, SVal val, const Stmt *S,
   }
 }
 
-ProgramStateRef RetainCountChecker::evalAssume(ProgramStateRef state,
-                                               SVal Cond,
+ProgramStateRef RetainCountChecker::evalAssume(ProgramStateRef state, SVal Cond,
                                                bool Assumption) const {
   // FIXME: We may add to the interface of evalAssume the list of symbols
   //  whose assumptions have changed.  For now we just iterate through the
@@ -1203,14 +1201,9 @@ ProgramStateRef RetainCountChecker::checkRegionChanges(
   return state;
 }
 
-ProgramStateRef
-RetainCountChecker::handleAutoreleaseCounts(ProgramStateRef state,
-                                            ExplodedNode *Pred,
-                                            const ProgramPointTag *Tag,
-                                            CheckerContext &Ctx,
-                                            SymbolRef Sym,
-                                            RefVal V,
-                                            const ReturnStmt *S) const {
+ProgramStateRef RetainCountChecker::handleAutoreleaseCounts(
+    ProgramStateRef state, ExplodedNode *Pred, const ProgramPointTag *Tag,
+    CheckerContext &Ctx, SymbolRef Sym, RefVal V, const ReturnStmt *S) const {
   unsigned ACnt = V.getAutoreleaseCount();
 
   // No autorelease counts?  Nothing to be done.
@@ -1281,10 +1274,9 @@ RetainCountChecker::handleAutoreleaseCounts(ProgramStateRef state,
   return nullptr;
 }
 
-ProgramStateRef
-RetainCountChecker::handleSymbolDeath(ProgramStateRef state,
-                                      SymbolRef sid, RefVal V,
-                                    SmallVectorImpl<SymbolRef> &Leaked) const {
+ProgramStateRef RetainCountChecker::handleSymbolDeath(
+    ProgramStateRef state, SymbolRef sid, RefVal V,
+    SmallVectorImpl<SymbolRef> &Leaked) const {
   bool hasLeak;
 
   // HACK: Ignore retain-count issues on values accessed through ivars,
@@ -1309,11 +1301,9 @@ RetainCountChecker::handleSymbolDeath(ProgramStateRef state,
   return setRefBinding(state, sid, V ^ RefVal::ErrorLeak);
 }
 
-ExplodedNode *
-RetainCountChecker::processLeaks(ProgramStateRef state,
-                                 SmallVectorImpl<SymbolRef> &Leaked,
-                                 CheckerContext &Ctx,
-                                 ExplodedNode *Pred) const {
+ExplodedNode *RetainCountChecker::processLeaks(
+    ProgramStateRef state, SmallVectorImpl<SymbolRef> &Leaked,
+    CheckerContext &Ctx, ExplodedNode *Pred) const {
   // Generate an intermediate node representing the leak point.
   ExplodedNode *N = Ctx.addTransition(state, Pred);
   const LangOptions &LOpts = Ctx.getASTContext().getLangOpts();
@@ -1384,8 +1374,8 @@ void RetainCountChecker::checkEndFunction(const ReturnStmt *RS,
   }
 
   for (auto &I : B) {
-    state = handleAutoreleaseCounts(state, Pred, /*Tag=*/nullptr, Ctx,
-                                    I.first, I.second);
+    state = handleAutoreleaseCounts(state, Pred, /*Tag=*/nullptr, Ctx, I.first,
+                                    I.second);
     if (!state)
       return;
   }
@@ -1414,7 +1404,7 @@ void RetainCountChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   SmallVector<SymbolRef, 10> Leaked;
 
   // Update counts from autorelease pools
-  for (const auto &I: state->get<RefBindings>()) {
+  for (const auto &I : state->get<RefBindings>()) {
     SymbolRef Sym = I.first;
     if (SymReaper.isDead(Sym)) {
       static CheckerProgramPointTag Tag(this, "DeadSymbolAutorelease");

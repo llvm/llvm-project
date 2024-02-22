@@ -24,16 +24,15 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class ReturnPointerRangeChecker :
-    public Checker< check::PreStmt<ReturnStmt> > {
+class ReturnPointerRangeChecker : public Checker<check::PreStmt<ReturnStmt>> {
   // FIXME: This bug correspond to CWE-466.  Eventually we should have bug
   // types explicitly reference such exploit categories (when applicable).
   const BugType BT{this, "Buffer overflow"};
 
 public:
-    void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
+  void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
 };
-}
+} // namespace
 
 void ReturnPointerRangeChecker::checkPreStmt(const ReturnStmt *RS,
                                              CheckerContext &C) const {

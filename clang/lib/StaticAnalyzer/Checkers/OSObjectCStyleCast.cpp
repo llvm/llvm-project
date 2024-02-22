@@ -11,8 +11,8 @@
 // as an explicit static or dynamic cast should be used instead.
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -48,8 +48,7 @@ AST_MATCHER_P(StringLiteral, mentionsBoundType, std::string, BindingID) {
 } // end namespace ast_matchers
 } // end namespace clang
 
-static void emitDiagnostics(const BoundNodes &Nodes,
-                            BugReporter &BR,
+static void emitDiagnostics(const BoundNodes &Nodes, BugReporter &BR,
                             AnalysisDeclContext *ADC,
                             const OSObjectCStyleCastChecker *Checker) {
   const auto *CE = Nodes.getNodeAs<CastExpr>(WarnAtNode);
@@ -63,14 +62,11 @@ static void emitDiagnostics(const BoundNodes &Nodes,
      << RD->getNameAsString() << "', or 'OSDynamicCast' followed by "
      << "a null check if unsure",
 
-  BR.EmitBasicReport(
-    ADC->getDecl(),
-    Checker,
-    /*Name=*/"OSObject C-Style Cast",
-    categories::SecurityError,
-    OS.str(),
-    PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), ADC),
-    CE->getSourceRange());
+      BR.EmitBasicReport(
+          ADC->getDecl(), Checker,
+          /*Name=*/"OSObject C-Style Cast", categories::SecurityError, OS.str(),
+          PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), ADC),
+          CE->getSourceRange());
 }
 
 static decltype(auto) hasTypePointingTo(DeclarationMatcher DeclM) {

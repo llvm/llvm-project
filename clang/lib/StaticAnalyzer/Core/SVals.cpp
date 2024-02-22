@@ -45,7 +45,7 @@ using namespace ento;
 
 const FunctionDecl *SVal::getAsFunctionDecl() const {
   if (std::optional<loc::MemRegionVal> X = getAs<loc::MemRegionVal>()) {
-    const MemRegion* R = X->getRegion();
+    const MemRegion *R = X->getRegion();
     if (const FunctionCodeRegion *CTR = R->getAs<FunctionCodeRegion>())
       if (const auto *FD = dyn_cast<FunctionDecl>(CTR->getDecl()))
         return FD;
@@ -188,11 +188,11 @@ const MemRegion *loc::MemRegionVal::stripCasts(bool StripBaseCasts) const {
 }
 
 const void *nonloc::LazyCompoundVal::getStore() const {
-  return static_cast<const LazyCompoundValData*>(Data)->getStore();
+  return static_cast<const LazyCompoundValData *>(Data)->getStore();
 }
 
 const TypedValueRegion *nonloc::LazyCompoundVal::getRegion() const {
-  return static_cast<const LazyCompoundValData*>(Data)->getRegion();
+  return static_cast<const LazyCompoundValData *>(Data)->getRegion();
 }
 
 bool nonloc::PointerToMember::isNullMemberPointer() const {
@@ -255,9 +255,7 @@ bool SVal::isConstant(int I) const {
   return false;
 }
 
-bool SVal::isZeroConstant() const {
-  return isConstant(0);
-}
+bool SVal::isZeroConstant() const { return isConstant(0); }
 
 //===----------------------------------------------------------------------===//
 // Pretty-Printing.
@@ -302,62 +300,60 @@ void NonLoc::dumpToStream(raw_ostream &os) const {
        << 'b';
     break;
   }
-    case nonloc::SymbolValKind:
-      os << castAs<nonloc::SymbolVal>().getSymbol();
-      break;
+  case nonloc::SymbolValKind:
+    os << castAs<nonloc::SymbolVal>().getSymbol();
+    break;
 
-    case nonloc::LocAsIntegerKind: {
-      const nonloc::LocAsInteger& C = castAs<nonloc::LocAsInteger>();
-      os << C.getLoc() << " [as " << C.getNumBits() << " bit integer]";
-      break;
-    }
-    case nonloc::CompoundValKind: {
-      const nonloc::CompoundVal& C = castAs<nonloc::CompoundVal>();
-      os << "compoundVal{";
-      bool first = true;
-      for (const auto &I : C) {
-        if (first) {
-          os << ' '; first = false;
-        }
-        else
-          os << ", ";
+  case nonloc::LocAsIntegerKind: {
+    const nonloc::LocAsInteger &C = castAs<nonloc::LocAsInteger>();
+    os << C.getLoc() << " [as " << C.getNumBits() << " bit integer]";
+    break;
+  }
+  case nonloc::CompoundValKind: {
+    const nonloc::CompoundVal &C = castAs<nonloc::CompoundVal>();
+    os << "compoundVal{";
+    bool first = true;
+    for (const auto &I : C) {
+      if (first) {
+        os << ' ';
+        first = false;
+      } else
+        os << ", ";
 
-        I.dumpToStream(os);
-      }
-      os << "}";
-      break;
+      I.dumpToStream(os);
     }
-    case nonloc::LazyCompoundValKind: {
-      const nonloc::LazyCompoundVal &C = castAs<nonloc::LazyCompoundVal>();
-      os << "lazyCompoundVal{" << const_cast<void *>(C.getStore())
-         << ',' << C.getRegion()
-         << '}';
-      break;
-    }
-    case nonloc::PointerToMemberKind: {
-      os << "pointerToMember{";
-      const nonloc::PointerToMember &CastRes =
-          castAs<nonloc::PointerToMember>();
-      if (CastRes.getDecl())
-        os << "|" << CastRes.getDecl()->getQualifiedNameAsString() << "|";
-      bool first = true;
-      for (const auto &I : CastRes) {
-        if (first) {
-          os << ' '; first = false;
-        }
-        else
-          os << ", ";
+    os << "}";
+    break;
+  }
+  case nonloc::LazyCompoundValKind: {
+    const nonloc::LazyCompoundVal &C = castAs<nonloc::LazyCompoundVal>();
+    os << "lazyCompoundVal{" << const_cast<void *>(C.getStore()) << ','
+       << C.getRegion() << '}';
+    break;
+  }
+  case nonloc::PointerToMemberKind: {
+    os << "pointerToMember{";
+    const nonloc::PointerToMember &CastRes = castAs<nonloc::PointerToMember>();
+    if (CastRes.getDecl())
+      os << "|" << CastRes.getDecl()->getQualifiedNameAsString() << "|";
+    bool first = true;
+    for (const auto &I : CastRes) {
+      if (first) {
+        os << ' ';
+        first = false;
+      } else
+        os << ", ";
 
-        os << I->getType();
-      }
+      os << I->getType();
+    }
 
-      os << '}';
-      break;
-    }
-    default:
-      assert(false && "Pretty-printed not implemented for this NonLoc.");
-      break;
-    }
+    os << '}';
+    break;
+  }
+  default:
+    assert(false && "Pretty-printed not implemented for this NonLoc.");
+    break;
+  }
 }
 
 void Loc::dumpToStream(raw_ostream &os) const {

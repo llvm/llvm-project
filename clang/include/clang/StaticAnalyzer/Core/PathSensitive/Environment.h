@@ -32,8 +32,8 @@ class SymbolReaper;
 /// This allows the environment to manage context-sensitive bindings,
 /// which is essentially for modeling recursive function analysis, among
 /// other things.
-class EnvironmentEntry : public std::pair<const Stmt *,
-                                          const StackFrameContext *> {
+class EnvironmentEntry
+    : public std::pair<const Stmt *, const StackFrameContext *> {
 public:
   EnvironmentEntry(const Stmt *s, const LocationContext *L);
 
@@ -41,15 +41,12 @@ public:
   const LocationContext *getLocationContext() const { return second; }
 
   /// Profile an EnvironmentEntry for inclusion in a FoldingSet.
-  static void Profile(llvm::FoldingSetNodeID &ID,
-                      const EnvironmentEntry &E) {
+  static void Profile(llvm::FoldingSetNodeID &ID, const EnvironmentEntry &E) {
     ID.AddPointer(E.getStmt());
     ID.AddPointer(E.getLocationContext());
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
-    Profile(ID, *this);
-  }
+  void Profile(llvm::FoldingSetNodeID &ID) const { Profile(ID, *this); }
 };
 
 /// An immutable map from EnvironemntEntries to SVals.
@@ -77,17 +74,15 @@ public:
 
   /// Profile - Profile the contents of an Environment object for use
   ///  in a FoldingSet.
-  static void Profile(llvm::FoldingSetNodeID& ID, const Environment* env) {
+  static void Profile(llvm::FoldingSetNodeID &ID, const Environment *env) {
     env->ExprBindings.Profile(ID);
   }
 
   /// Profile - Used to profile the contents of this object for inclusion
   ///  in a FoldingSet.
-  void Profile(llvm::FoldingSetNodeID& ID) const {
-    Profile(ID, this);
-  }
+  void Profile(llvm::FoldingSetNodeID &ID) const { Profile(ID, this); }
 
-  bool operator==(const Environment& RHS) const {
+  bool operator==(const Environment &RHS) const {
     return ExprBindings == RHS.ExprBindings;
   }
 
@@ -105,16 +100,13 @@ private:
 public:
   EnvironmentManager(llvm::BumpPtrAllocator &Allocator) : F(Allocator) {}
 
-  Environment getInitialEnvironment() {
-    return Environment(F.getEmptyMap());
-  }
+  Environment getInitialEnvironment() { return Environment(F.getEmptyMap()); }
 
   /// Bind a symbolic value to the given environment entry.
   Environment bindExpr(Environment Env, const EnvironmentEntry &E, SVal V,
                        bool Invalidate);
 
-  Environment removeDeadBindings(Environment Env,
-                                 SymbolReaper &SymReaper,
+  Environment removeDeadBindings(Environment Env, SymbolReaper &SymReaper,
                                  ProgramStateRef state);
 };
 

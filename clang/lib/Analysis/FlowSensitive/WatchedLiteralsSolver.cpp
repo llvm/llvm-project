@@ -23,9 +23,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
-
+#include "llvm/ADT/SmallVector.h"
 
 namespace clang {
 namespace dataflow {
@@ -191,8 +190,7 @@ struct CNFFormula {
 /// proper SAT solver.
 struct CNFFormulaBuilder {
   // Formula should outlive CNFFormulaBuilder.
-  explicit CNFFormulaBuilder(CNFFormula &CNF)
-      : Formula(CNF) {}
+  explicit CNFFormulaBuilder(CNFFormula &CNF) : Formula(CNF) {}
 
   /// Adds the `L1 v ... v Ln` clause to the formula. Applies
   /// simplifications, based on single-literal clauses.
@@ -209,8 +207,7 @@ struct CNFFormulaBuilder {
     llvm::SmallVector<Literal> Simplified;
     for (auto L : Literals) {
       assert(L != NullLit &&
-             llvm::all_of(Simplified,
-                          [L](Literal S) { return  S != L; }));
+             llvm::all_of(Simplified, [L](Literal S) { return S != L; }));
       auto X = var(L);
       if (trueVars.contains(X)) { // X must be true
         if (isPosLit(L))

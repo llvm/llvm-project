@@ -28,7 +28,7 @@ public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 };
 
-}
+} // namespace
 
 bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
                                       CheckerContext &C) const {
@@ -46,7 +46,7 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
 
   case Builtin::BI__builtin_assume:
   case Builtin::BI__assume: {
-    assert (Call.getNumArgs() > 0);
+    assert(Call.getNumArgs() > 0);
     SVal Arg = Call.getArgSVal(0);
     if (Arg.isUndef())
       return true; // Return true to model purity.
@@ -74,7 +74,7 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
     // just return the value of the subexpression.
     // __builtin_addressof is going from a reference to a pointer, but those
     // are represented the same way in the analyzer.
-    assert (Call.getNumArgs() > 0);
+    assert(Call.getNumArgs() > 0);
     SVal Arg = Call.getArgSVal(0);
     C.addTransition(state->BindExpr(CE, LCtx, Arg));
     return true;
@@ -107,7 +107,8 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
     SValBuilder &SVB = C.getSValBuilder();
     SVal V = UnknownVal();
     Expr::EvalResult EVResult;
-    if (CE->EvaluateAsInt(EVResult, C.getASTContext(), Expr::SE_NoSideEffects)) {
+    if (CE->EvaluateAsInt(EVResult, C.getASTContext(),
+                          Expr::SE_NoSideEffects)) {
       // Make sure the result has the correct type.
       llvm::APSInt Result = EVResult.Val.getInt();
       BasicValueFactory &BVF = SVB.getBasicValueFactory();

@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/DomainSpecific/ObjCNoReturn.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/Analysis/DomainSpecific/ObjCNoReturn.h"
 
 using namespace clang;
 
@@ -26,24 +26,22 @@ static bool isSubclass(const ObjCInterfaceDecl *Class, IdentifierInfo *II) {
 }
 
 ObjCNoReturn::ObjCNoReturn(ASTContext &C)
-  : RaiseSel(GetNullarySelector("raise", C)),
-    NSExceptionII(&C.Idents.get("NSException"))
-{
+    : RaiseSel(GetNullarySelector("raise", C)),
+      NSExceptionII(&C.Idents.get("NSException")) {
   // Generate selectors.
-  SmallVector<IdentifierInfo*, 3> II;
+  SmallVector<IdentifierInfo *, 3> II;
 
   // raise:format:
   II.push_back(&C.Idents.get("raise"));
   II.push_back(&C.Idents.get("format"));
   NSExceptionInstanceRaiseSelectors[0] =
-    C.Selectors.getSelector(II.size(), &II[0]);
+      C.Selectors.getSelector(II.size(), &II[0]);
 
   // raise:format:arguments:
   II.push_back(&C.Idents.get("arguments"));
   NSExceptionInstanceRaiseSelectors[1] =
-    C.Selectors.getSelector(II.size(), &II[0]);
+      C.Selectors.getSelector(II.size(), &II[0]);
 }
-
 
 bool ObjCNoReturn::isImplicitNoReturn(const ObjCMessageExpr *ME) {
   Selector S = ME->getSelector();

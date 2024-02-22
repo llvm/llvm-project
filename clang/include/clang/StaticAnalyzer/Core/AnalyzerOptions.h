@@ -35,7 +35,7 @@ class CheckerBase;
 enum AnalysisConstraints {
 #define ANALYSIS_CONSTRAINTS(NAME, CMDFLAG, DESC, CREATFN) NAME##Model,
 #include "clang/StaticAnalyzer/Core/Analyses.def"
-NumConstraints
+  NumConstraints
 };
 
 /// AnalysisDiagClients - Set of available diagnostic clients for rendering
@@ -43,22 +43,23 @@ NumConstraints
 enum AnalysisDiagClients {
 #define ANALYSIS_DIAGNOSTICS(NAME, CMDFLAG, DESC, CREATFN) PD_##NAME,
 #include "clang/StaticAnalyzer/Core/Analyses.def"
-PD_NONE,
-NUM_ANALYSIS_DIAG_CLIENTS
+  PD_NONE,
+  NUM_ANALYSIS_DIAG_CLIENTS
 };
 
 /// AnalysisPurgeModes - Set of available strategies for dead symbol removal.
 enum AnalysisPurgeMode {
 #define ANALYSIS_PURGE(NAME, CMDFLAG, DESC) NAME,
 #include "clang/StaticAnalyzer/Core/Analyses.def"
-NumPurgeModes
+  NumPurgeModes
 };
 
-/// AnalysisInlineFunctionSelection - Set of inlining function selection heuristics.
+/// AnalysisInlineFunctionSelection - Set of inlining function selection
+/// heuristics.
 enum AnalysisInliningMode {
 #define ANALYSIS_INLINING_MODE(NAME, CMDFLAG, DESC) NAME,
 #include "clang/StaticAnalyzer/Core/Analyses.def"
-NumInliningModes
+  NumInliningModes
 };
 
 /// Describes the different kinds of C++ member functions which can be
@@ -253,8 +254,7 @@ public:
                                              SHALLOW_VAL, DEEP_VAL)            \
   ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL)
 
-#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
-  TYPE NAME;
+#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL) TYPE NAME;
 
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
 #undef ANALYZER_OPTION
@@ -373,17 +373,14 @@ public:
   bool mayInlineCXXMemberFunction(CXXInlineableMemberKind K) const;
 
   ento::PathDiagnosticConsumerOptions getDiagOpts() const {
-    return {FullCompilerInvocation,
-            ShouldDisplayMacroExpansions,
+    return {FullCompilerInvocation, ShouldDisplayMacroExpansions,
             ShouldSerializeStats,
             // The stable report filename option is deprecated because
             // file names are now always stable. Now the old option acts as
             // an alias to the new verbose filename option because this
             // closely mimics the behavior under the old option.
             ShouldWriteStableReportFilename || ShouldWriteVerboseReportFilename,
-            AnalyzerWerror,
-            ShouldApplyFixIts,
-            ShouldDisplayCheckerNameForText};
+            AnalyzerWerror, ShouldApplyFixIts, ShouldDisplayCheckerNameForText};
   }
 };
 

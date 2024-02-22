@@ -21,15 +21,14 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class UndefinedAssignmentChecker
-  : public Checker<check::Bind> {
+class UndefinedAssignmentChecker : public Checker<check::Bind> {
   const BugType BT{this, "Assigned value is garbage or undefined"};
 
 public:
   void checkBind(SVal location, SVal val, const Stmt *S,
                  CheckerContext &C) const;
 };
-}
+} // namespace
 
 void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
                                            const Stmt *StoreE,
@@ -40,7 +39,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
   // Do not report assignments of uninitialized values inside swap functions.
   // This should allow to swap partially uninitialized structs
   if (const FunctionDecl *EnclosingFunctionDecl =
-      dyn_cast<FunctionDecl>(C.getStackFrame()->getDecl()))
+          dyn_cast<FunctionDecl>(C.getStackFrame()->getDecl()))
     if (C.getCalleeName(EnclosingFunctionDecl) == "swap")
       return;
 

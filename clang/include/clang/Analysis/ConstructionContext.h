@@ -16,9 +16,9 @@
 #ifndef LLVM_CLANG_ANALYSIS_CONSTRUCTIONCONTEXT_H
 #define LLVM_CLANG_ANALYSIS_CONSTRUCTIONCONTEXT_H
 
-#include "clang/Analysis/Support/BumpVector.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/Analysis/Support/BumpVector.h"
 
 namespace clang {
 
@@ -48,17 +48,26 @@ public:
 
   LLVM_DUMP_METHOD static StringRef getKindAsString(ItemKind K) {
     switch (K) {
-      case VariableKind:            return "construct into local variable";
-      case NewAllocatorKind:        return "construct into new-allocator";
-      case ReturnKind:              return "construct into return address";
-      case MaterializationKind:     return "materialize temporary";
-      case TemporaryDestructorKind: return "destroy temporary";
-      case ElidedDestructorKind:    return "elide destructor";
-      case ElidableConstructorKind: return "elide constructor";
-      case ArgumentKind:            return "construct into argument";
-      case LambdaCaptureKind:
-        return "construct into lambda captured variable";
-      case InitializerKind:         return "construct into member variable";
+    case VariableKind:
+      return "construct into local variable";
+    case NewAllocatorKind:
+      return "construct into new-allocator";
+    case ReturnKind:
+      return "construct into return address";
+    case MaterializationKind:
+      return "materialize temporary";
+    case TemporaryDestructorKind:
+      return "destroy temporary";
+    case ElidedDestructorKind:
+      return "elide destructor";
+    case ElidableConstructorKind:
+      return "elide constructor";
+    case ArgumentKind:
+      return "construct into argument";
+    case LambdaCaptureKind:
+      return "construct into lambda captured variable";
+    case InitializerKind:
+      return "construct into member variable";
     };
     llvm_unreachable("Unknown ItemKind");
   }
@@ -69,8 +78,7 @@ private:
   const unsigned Index = 0;
 
   bool hasStatement() const {
-    return Kind >= STATEMENT_KIND_BEGIN &&
-           Kind <= STATEMENT_KIND_END;
+    return Kind >= STATEMENT_KIND_BEGIN && Kind <= STATEMENT_KIND_END;
   }
 
   bool hasIndex() const {
@@ -79,22 +87,19 @@ private:
   }
 
   bool hasInitializer() const {
-    return Kind >= INITIALIZER_KIND_BEGIN &&
-           Kind <= INITIALIZER_KIND_END;
+    return Kind >= INITIALIZER_KIND_BEGIN && Kind <= INITIALIZER_KIND_END;
   }
 
 public:
   // ConstructionContextItem should be simple enough so that it was easy to
   // re-construct it from the AST node it captures. For that reason we provide
   // simple implicit conversions from all sorts of supported AST nodes.
-  ConstructionContextItem(const DeclStmt *DS)
-      : Data(DS), Kind(VariableKind) {}
+  ConstructionContextItem(const DeclStmt *DS) : Data(DS), Kind(VariableKind) {}
 
   ConstructionContextItem(const CXXNewExpr *NE)
       : Data(NE), Kind(NewAllocatorKind) {}
 
-  ConstructionContextItem(const ReturnStmt *RS)
-      : Data(RS), Kind(ReturnKind) {}
+  ConstructionContextItem(const ReturnStmt *RS) : Data(RS), Kind(ReturnKind) {}
 
   ConstructionContextItem(const MaterializeTemporaryExpr *MTE)
       : Data(MTE), Kind(MaterializationKind) {}
@@ -235,7 +240,6 @@ public:
   bool isStrictlyMoreSpecificThan(const ConstructionContextLayer *Other) const;
 };
 
-
 /// ConstructionContext's subclasses describe different ways of constructing
 /// an object in C++. The context re-captures the essential parent AST nodes
 /// of the CXXConstructExpr it is assigned to and presents these nodes
@@ -292,9 +296,9 @@ private:
   // object also needs to be materialized and delegates to
   // createMaterializedTemporaryFromLayers() if necessary.
   static const ConstructionContext *
-  createBoundTemporaryFromLayers(
-      BumpVectorContext &C, const CXXBindTemporaryExpr *BTE,
-      const ConstructionContextLayer *ParentLayer);
+  createBoundTemporaryFromLayers(BumpVectorContext &C,
+                                 const CXXBindTemporaryExpr *BTE,
+                                 const ConstructionContextLayer *ParentLayer);
 
 public:
   /// Consume the construction context layer, together with its parent layers,
@@ -333,8 +337,7 @@ public:
   }
 
   static bool classof(const ConstructionContext *CC) {
-    return CC->getKind() >= VARIABLE_BEGIN &&
-           CC->getKind() <= VARIABLE_END;
+    return CC->getKind() >= VARIABLE_BEGIN && CC->getKind() <= VARIABLE_END;
   }
 };
 
@@ -501,9 +504,7 @@ protected:
 public:
   /// CXXBindTemporaryExpr here is non-null as long as the temporary has
   /// a non-trivial destructor.
-  const CXXBindTemporaryExpr *getCXXBindTemporaryExpr() const {
-    return BTE;
-  }
+  const CXXBindTemporaryExpr *getCXXBindTemporaryExpr() const { return BTE; }
 
   /// MaterializeTemporaryExpr is non-null as long as the temporary is actually
   /// used after construction, eg. by binding to a reference (lifetime
@@ -621,11 +622,12 @@ public:
 /// Represents a temporary object that is being immediately returned from a
 /// function by value, eg. return t; or return T(123); in C++17.
 /// In C++17 there is not going to be an elidable copy constructor at the
-/// return site.  However, the usual temporary-related bureaucracy (CXXBindTemporaryExpr,
-/// MaterializeTemporaryExpr) is normally located in the caller function's AST.
-/// Note that if the object has trivial destructor, then this code is
-/// indistinguishable from a simple returned value constructor on the AST level;
-/// in this case we provide a simple returned value construction context.
+/// return site.  However, the usual temporary-related bureaucracy
+/// (CXXBindTemporaryExpr, MaterializeTemporaryExpr) is normally located in the
+/// caller function's AST. Note that if the object has trivial destructor, then
+/// this code is indistinguishable from a simple returned value constructor on
+/// the AST level; in this case we provide a simple returned value construction
+/// context.
 class CXX17ElidedCopyReturnedValueConstructionContext
     : public ReturnedValueConstructionContext {
   const CXXBindTemporaryExpr *BTE;
@@ -664,8 +666,7 @@ class ArgumentConstructionContext : public ConstructionContext {
 
   explicit ArgumentConstructionContext(const Expr *CE, unsigned Index,
                                        const CXXBindTemporaryExpr *BTE)
-      : ConstructionContext(ArgumentKind), CE(CE),
-        Index(Index), BTE(BTE) {
+      : ConstructionContext(ArgumentKind), CE(CE), Index(Index), BTE(BTE) {
     assert(isa<CallExpr>(CE) || isa<CXXConstructExpr>(CE) ||
            isa<ObjCMessageExpr>(CE));
     // BTE is optional.

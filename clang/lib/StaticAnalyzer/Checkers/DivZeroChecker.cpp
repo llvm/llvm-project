@@ -25,7 +25,7 @@ using namespace ento;
 using namespace taint;
 
 namespace {
-class DivZeroChecker : public Checker< check::PreStmt<BinaryOperator> > {
+class DivZeroChecker : public Checker<check::PreStmt<BinaryOperator>> {
   const BugType BT{this, "Division by zero"};
   const BugType TaintBT{this, "Division by zero", categories::TaintedData};
   void reportBug(StringRef Msg, ProgramStateRef StateZero,
@@ -70,10 +70,7 @@ void DivZeroChecker::reportTaintBug(
 void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
                                   CheckerContext &C) const {
   BinaryOperator::Opcode Op = B->getOpcode();
-  if (Op != BO_Div &&
-      Op != BO_Rem &&
-      Op != BO_DivAssign &&
-      Op != BO_RemAssign)
+  if (Op != BO_Div && Op != BO_Rem && Op != BO_DivAssign && Op != BO_RemAssign)
     return;
 
   if (!B->getRHS()->getType()->isScalarType())

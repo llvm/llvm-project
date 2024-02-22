@@ -59,9 +59,7 @@ public:
   /// declaration.
   ///
   /// Recursively walks the declaration to find all the dependent Decls as well.
-  void addToCallGraph(Decl *D) {
-    TraverseDecl(D);
-  }
+  void addToCallGraph(Decl *D) { TraverseDecl(D); }
 
   /// Determine if a declaration should be included in the graph.
   static bool includeInGraph(const Decl *D);
@@ -84,9 +82,9 @@ public:
   /// Iterators through all the elements in the graph. Note, this gives
   /// non-deterministic order.
   iterator begin() { return FunctionMap.begin(); }
-  iterator end()   { return FunctionMap.end();   }
+  iterator end() { return FunctionMap.end(); }
   const_iterator begin() const { return FunctionMap.begin(); }
-  const_iterator end()   const { return FunctionMap.end();   }
+  const_iterator end() const { return FunctionMap.end(); }
 
   /// Get the number of nodes in the graph.
   unsigned size() const { return FunctionMap.size(); }
@@ -240,30 +238,31 @@ template <> struct DenseMapInfo<clang::CallGraphNode::CallRecord> {
 };
 
 // Graph traits for iteration, viewing.
-template <> struct GraphTraits<clang::CallGraphNode*> {
+template <> struct GraphTraits<clang::CallGraphNode *> {
   using NodeType = clang::CallGraphNode;
   using NodeRef = clang::CallGraphNode *;
   using ChildIteratorType = NodeType::iterator;
 
   static NodeType *getEntryNode(clang::CallGraphNode *CGN) { return CGN; }
-  static ChildIteratorType child_begin(NodeType *N) { return N->begin();  }
+  static ChildIteratorType child_begin(NodeType *N) { return N->begin(); }
   static ChildIteratorType child_end(NodeType *N) { return N->end(); }
 };
 
-template <> struct GraphTraits<const clang::CallGraphNode*> {
+template <> struct GraphTraits<const clang::CallGraphNode *> {
   using NodeType = const clang::CallGraphNode;
   using NodeRef = const clang::CallGraphNode *;
   using ChildIteratorType = NodeType::const_iterator;
 
   static NodeType *getEntryNode(const clang::CallGraphNode *CGN) { return CGN; }
-  static ChildIteratorType child_begin(NodeType *N) { return N->begin();}
+  static ChildIteratorType child_begin(NodeType *N) { return N->begin(); }
   static ChildIteratorType child_end(NodeType *N) { return N->end(); }
 };
 
-template <> struct GraphTraits<clang::CallGraph*>
-  : public GraphTraits<clang::CallGraphNode*> {
+template <>
+struct GraphTraits<clang::CallGraph *>
+    : public GraphTraits<clang::CallGraphNode *> {
   static NodeType *getEntryNode(clang::CallGraph *CGN) {
-    return CGN->getRoot();  // Start at the external node!
+    return CGN->getRoot(); // Start at the external node!
   }
 
   static clang::CallGraphNode *
@@ -279,15 +278,16 @@ template <> struct GraphTraits<clang::CallGraph*>
     return nodes_iterator(CG->begin(), &CGGetValue);
   }
 
-  static nodes_iterator nodes_end  (clang::CallGraph *CG) {
+  static nodes_iterator nodes_end(clang::CallGraph *CG) {
     return nodes_iterator(CG->end(), &CGGetValue);
   }
 
   static unsigned size(clang::CallGraph *CG) { return CG->size(); }
 };
 
-template <> struct GraphTraits<const clang::CallGraph*> :
-  public GraphTraits<const clang::CallGraphNode*> {
+template <>
+struct GraphTraits<const clang::CallGraph *>
+    : public GraphTraits<const clang::CallGraphNode *> {
   static NodeType *getEntryNode(const clang::CallGraph *CGN) {
     return CGN->getRoot();
   }

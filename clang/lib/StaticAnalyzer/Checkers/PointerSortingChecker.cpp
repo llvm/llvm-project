@@ -27,8 +27,7 @@ constexpr llvm::StringLiteral WarnAtNode = "sort";
 
 class PointerSortingChecker : public Checker<check::ASTCodeBody> {
 public:
-  void checkASTCodeBody(const Decl *D,
-                        AnalysisManager &AM,
+  void checkASTCodeBody(const Decl *D, AnalysisManager &AM,
                         BugReporter &BR) const;
 };
 
@@ -41,9 +40,8 @@ static void emitDiagnostics(const BoundNodes &Match, const Decl *D,
   assert(MarkedStmt);
 
   auto Range = MarkedStmt->getSourceRange();
-  auto Location = PathDiagnosticLocation::createBegin(MarkedStmt,
-                                                      BR.getSourceManager(),
-                                                      ADC);
+  auto Location = PathDiagnosticLocation::createBegin(
+      MarkedStmt, BR.getSourceManager(), ADC);
   std::string Diagnostics;
   llvm::raw_string_ostream OS(Diagnostics);
   OS << "Sorting pointer-like elements "
@@ -68,23 +66,16 @@ decltype(auto) callsName(const char *FunctionName) {
 // sort-unique-erase and the sort call will emit a report.
 auto matchSortWithPointers() -> decltype(decl()) {
   // Match any of these function calls.
-  auto SortFuncM = anyOf(
-                     callsName("std::is_sorted"),
-                     callsName("std::nth_element"),
-                     callsName("std::partial_sort"),
-                     callsName("std::partition"),
-                     callsName("std::sort"),
-                     callsName("std::stable_partition"),
-                     callsName("std::stable_sort")
-                    );
+  auto SortFuncM =
+      anyOf(callsName("std::is_sorted"), callsName("std::nth_element"),
+            callsName("std::partial_sort"), callsName("std::partition"),
+            callsName("std::sort"), callsName("std::stable_partition"),
+            callsName("std::stable_sort"));
 
   // Match only if the container has pointer-type elements.
-  auto IteratesPointerEltsM = hasArgument(0,
-                                hasType(cxxRecordDecl(has(
-                                  fieldDecl(hasType(hasCanonicalType(
-                                    pointsTo(hasCanonicalType(pointerType()))
-                                  )))
-                              ))));
+  auto IteratesPointerEltsM = hasArgument(
+      0, hasType(cxxRecordDecl(has(fieldDecl(hasType(
+             hasCanonicalType(pointsTo(hasCanonicalType(pointerType())))))))));
 
   auto PointerSortM = traverse(
       TK_AsIs,
@@ -93,8 +84,7 @@ auto matchSortWithPointers() -> decltype(decl()) {
   return decl(forEachDescendant(PointerSortM));
 }
 
-void PointerSortingChecker::checkASTCodeBody(const Decl *D,
-                                             AnalysisManager &AM,
+void PointerSortingChecker::checkASTCodeBody(const Decl *D, AnalysisManager &AM,
                                              BugReporter &BR) const {
   auto MatcherM = matchSortWithPointers();
 

@@ -34,7 +34,7 @@ bool containsStaticLocal(const Stmt *S);
 bool containsBuiltinOffsetOf(const Stmt *S);
 template <class T> bool containsStmt(const Stmt *S) {
   if (isa<T>(S))
-      return true;
+    return true;
 
   for (const Stmt *Child : S->children())
     if (Child && containsStmt<T>(Child))

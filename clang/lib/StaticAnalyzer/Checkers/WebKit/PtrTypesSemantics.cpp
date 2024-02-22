@@ -53,8 +53,7 @@ hasPublicMethodInBase(const CXXBaseSpecifier *Base, const char *NameToMatch) {
   return hasPublicMethodInBaseClass(R, NameToMatch) ? R : nullptr;
 }
 
-std::optional<bool> isRefCountable(const CXXRecordDecl* R)
-{
+std::optional<bool> isRefCountable(const CXXRecordDecl *R) {
   assert(R);
 
   R = R->getDefinition();
@@ -143,8 +142,7 @@ bool isReturnValueRefCounted(const clang::FunctionDecl *F) {
   return false;
 }
 
-std::optional<bool> isUncounted(const CXXRecordDecl* Class)
-{
+std::optional<bool> isUncounted(const CXXRecordDecl *Class) {
   // Keep isRefCounted first as it's cheaper.
   if (isRefCounted(Class))
     return false;
@@ -156,8 +154,7 @@ std::optional<bool> isUncounted(const CXXRecordDecl* Class)
   return (*IsRefCountable);
 }
 
-std::optional<bool> isUncountedPtr(const Type* T)
-{
+std::optional<bool> isUncountedPtr(const Type *T) {
   assert(T);
 
   if (T->isPointerType() || T->isReferenceType()) {
@@ -168,8 +165,7 @@ std::optional<bool> isUncountedPtr(const Type* T)
   return false;
 }
 
-std::optional<bool> isGetterOfRefCounted(const CXXMethodDecl* M)
-{
+std::optional<bool> isGetterOfRefCounted(const CXXMethodDecl *M) {
   assert(M);
 
   if (isa<CXXMethodDecl>(M)) {

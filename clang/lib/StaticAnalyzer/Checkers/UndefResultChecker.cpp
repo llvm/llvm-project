@@ -25,8 +25,7 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class UndefResultChecker
-  : public Checker< check::PostStmt<BinaryOperator> > {
+class UndefResultChecker : public Checker<check::PostStmt<BinaryOperator>> {
 
   const BugType BT{this, "Result of operation is garbage or undefined"};
 
@@ -65,7 +64,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
     // Do not report assignments of uninitialized values inside swap functions.
     // This should allow to swap partially uninitialized structs
     if (const FunctionDecl *EnclosingFunctionDecl =
-        dyn_cast<FunctionDecl>(C.getStackFrame()->getDecl()))
+            dyn_cast<FunctionDecl>(C.getStackFrame()->getDecl()))
       if (C.getCalleeName(EnclosingFunctionDecl) == "swap")
         return;
 
@@ -82,8 +81,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
     if (C.getSVal(B->getLHS()).isUndef()) {
       Ex = B->getLHS()->IgnoreParenCasts();
       isLeft = true;
-    }
-    else if (C.getSVal(B->getRHS()).isUndef()) {
+    } else if (C.getSVal(B->getRHS()).isUndef()) {
       Ex = B->getRHS()->IgnoreParenCasts();
       isLeft = false;
     }
@@ -104,8 +102,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
     if (Ex) {
       report->addRange(Ex->getSourceRange());
       bugreporter::trackExpressionValue(N, Ex, *report);
-    }
-    else
+    } else
       bugreporter::trackExpressionValue(N, B, *report);
 
     C.emitReport(std::move(report));

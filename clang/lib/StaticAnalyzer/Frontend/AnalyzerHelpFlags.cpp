@@ -78,24 +78,18 @@ OPTIONS:
   using OptionAndDescriptionTy = std::pair<StringRef, std::string>;
   OptionAndDescriptionTy PrintableOptions[] = {
 #define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
-    {                                                                          \
-      CMDFLAG,                                                                 \
-      llvm::Twine(llvm::Twine() + "(" +                                        \
-                  (StringRef(#TYPE) == "StringRef" ? "string" : #TYPE ) +      \
-                  ") " DESC                                                    \
-                  " (default: " #DEFAULT_VAL ")").str()                        \
-    },
+  {CMDFLAG, llvm::Twine(llvm::Twine() + "(" +                                  \
+                        (StringRef(#TYPE) == "StringRef" ? "string" : #TYPE) + \
+                        ") " DESC " (default: " #DEFAULT_VAL ")")              \
+                .str()},
 
 #define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
                                              SHALLOW_VAL, DEEP_VAL)            \
-    {                                                                          \
-      CMDFLAG,                                                                 \
-      llvm::Twine(llvm::Twine() + "(" +                                        \
-                  (StringRef(#TYPE) == "StringRef" ? "string" : #TYPE ) +      \
-                  ") " DESC                                                    \
-                  " (default: " #SHALLOW_VAL " in shallow mode, " #DEEP_VAL    \
-                  " in deep mode)").str()                                      \
-    },
+  {CMDFLAG, llvm::Twine(llvm::Twine() + "(" +                                  \
+                        (StringRef(#TYPE) == "StringRef" ? "string" : #TYPE) + \
+                        ") " DESC " (default: " #SHALLOW_VAL                   \
+                        " in shallow mode, " #DEEP_VAL " in deep mode)")       \
+                .str()},
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
 #undef ANALYZER_OPTION
 #undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE

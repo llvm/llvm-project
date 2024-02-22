@@ -85,8 +85,8 @@ protected:
   llvm::PointerIntPair<void *, 2> Data2;
 
   CFGElement(Kind kind, const void *Ptr1, const void *Ptr2 = nullptr)
-      : Data1(const_cast<void*>(Ptr1), ((unsigned) kind) & 0x3),
-        Data2(const_cast<void*>(Ptr2), (((unsigned) kind) >> 2) & 0x3) {
+      : Data1(const_cast<void *>(Ptr1), ((unsigned)kind) & 0x3),
+        Data2(const_cast<void *>(Ptr2), (((unsigned)kind) >> 2) & 0x3) {
     assert(getKind() == kind);
   }
 
@@ -95,11 +95,10 @@ protected:
 public:
   /// Convert to the specified CFGElement type, asserting that this
   /// CFGElement is of the desired type.
-  template<typename T>
-  T castAs() const {
+  template <typename T> T castAs() const {
     assert(T::isKind(*this));
     T t;
-    CFGElement& e = t;
+    CFGElement &e = t;
     e = *this;
     return t;
   }
@@ -110,7 +109,7 @@ public:
     if (!T::isKind(*this))
       return std::nullopt;
     T t;
-    CFGElement& e = t;
+    CFGElement &e = t;
     e = *this;
     return t;
   }
@@ -119,14 +118,12 @@ public:
     unsigned x = Data2.getInt();
     x <<= 2;
     x |= Data1.getInt();
-    return (Kind) x;
+    return (Kind)x;
   }
 
   void dumpToStream(llvm::raw_ostream &OS) const;
 
-  void dump() const {
-    dumpToStream(llvm::errs());
-  }
+  void dump() const { dumpToStream(llvm::errs()); }
 };
 
 class CFGStmt : public CFGElement {
@@ -171,9 +168,7 @@ private:
 
   CFGConstructor() = default;
 
-  static bool isKind(const CFGElement &E) {
-    return E.getKind() == Constructor;
-  }
+  static bool isKind(const CFGElement &E) { return E.getKind() == Constructor; }
 };
 
 /// Represents a function call that returns a C++ object by value. This, like
@@ -229,8 +224,8 @@ public:
   explicit CFGInitializer(const CXXCtorInitializer *initializer)
       : CFGElement(Initializer, initializer) {}
 
-  CXXCtorInitializer* getInitializer() const {
-    return static_cast<CXXCtorInitializer*>(Data1.getPointer());
+  CXXCtorInitializer *getInitializer() const {
+    return static_cast<CXXCtorInitializer *>(Data1.getPointer());
   }
 
 private:
@@ -238,16 +233,13 @@ private:
 
   CFGInitializer() = default;
 
-  static bool isKind(const CFGElement &E) {
-    return E.getKind() == Initializer;
-  }
+  static bool isKind(const CFGElement &E) { return E.getKind() == Initializer; }
 };
 
 /// Represents C++ allocator call.
 class CFGNewAllocator : public CFGElement {
 public:
-  explicit CFGNewAllocator(const CXXNewExpr *S)
-    : CFGElement(NewAllocator, S) {}
+  explicit CFGNewAllocator(const CXXNewExpr *S) : CFGElement(NewAllocator, S) {}
 
   // Get the new expression.
   const CXXNewExpr *getAllocatorExpr() const {
@@ -322,7 +314,7 @@ public:
 
   // Get statement that triggered a new scope.
   const Stmt *getTriggerStmt() const {
-    return static_cast<Stmt*>(Data2.getPointer());
+    return static_cast<Stmt *>(Data2.getPointer());
   }
 
   // Get VD that triggered a new scope.
@@ -368,7 +360,7 @@ protected:
   CFGImplicitDtor() = default;
 
   CFGImplicitDtor(Kind kind, const void *data1, const void *data2 = nullptr)
-    : CFGElement(kind, data1, data2) {
+      : CFGElement(kind, data1, data2) {
     assert(kind >= DTOR_BEGIN && kind <= DTOR_END);
   }
 
@@ -414,18 +406,18 @@ private:
 /// Represents C++ object destructor implicitly generated for automatic object
 /// or temporary bound to const reference at the point of leaving its local
 /// scope.
-class CFGAutomaticObjDtor: public CFGImplicitDtor {
+class CFGAutomaticObjDtor : public CFGImplicitDtor {
 public:
   CFGAutomaticObjDtor(const VarDecl *var, const Stmt *stmt)
       : CFGImplicitDtor(AutomaticObjectDtor, var, stmt) {}
 
   const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl*>(Data1.getPointer());
+    return static_cast<VarDecl *>(Data1.getPointer());
   }
 
   // Get statement end of which triggered the destructor call.
   const Stmt *getTriggerStmt() const {
-    return static_cast<Stmt*>(Data2.getPointer());
+    return static_cast<Stmt *>(Data2.getPointer());
   }
 
 private:
@@ -445,7 +437,7 @@ public:
       : CFGImplicitDtor(DeleteDtor, RD, DE) {}
 
   const CXXRecordDecl *getCXXRecordDecl() const {
-    return static_cast<CXXRecordDecl*>(Data1.getPointer());
+    return static_cast<CXXRecordDecl *>(Data1.getPointer());
   }
 
   // Get Delete expression which triggered the destructor call.
@@ -467,11 +459,10 @@ private:
 /// destructor.
 class CFGBaseDtor : public CFGImplicitDtor {
 public:
-  CFGBaseDtor(const CXXBaseSpecifier *base)
-      : CFGImplicitDtor(BaseDtor, base) {}
+  CFGBaseDtor(const CXXBaseSpecifier *base) : CFGImplicitDtor(BaseDtor, base) {}
 
   const CXXBaseSpecifier *getBaseSpecifier() const {
-    return static_cast<const CXXBaseSpecifier*>(Data1.getPointer());
+    return static_cast<const CXXBaseSpecifier *>(Data1.getPointer());
   }
 
 private:
@@ -479,9 +470,7 @@ private:
 
   CFGBaseDtor() = default;
 
-  static bool isKind(const CFGElement &E) {
-    return E.getKind() == BaseDtor;
-  }
+  static bool isKind(const CFGElement &E) { return E.getKind() == BaseDtor; }
 };
 
 /// Represents C++ object destructor implicitly generated for member object in
@@ -492,7 +481,7 @@ public:
       : CFGImplicitDtor(MemberDtor, field, nullptr) {}
 
   const FieldDecl *getFieldDecl() const {
-    return static_cast<const FieldDecl*>(Data1.getPointer());
+    return static_cast<const FieldDecl *>(Data1.getPointer());
   }
 
 private:
@@ -500,9 +489,7 @@ private:
 
   CFGMemberDtor() = default;
 
-  static bool isKind(const CFGElement &E) {
-    return E.getKind() == MemberDtor;
-  }
+  static bool isKind(const CFGElement &E) { return E.getKind() == MemberDtor; }
 };
 
 /// Represents C++ object destructor implicitly generated at the end of full
@@ -564,15 +551,11 @@ public:
   const Stmt *getStmt() const { return Data.getPointer(); }
   Kind getKind() const { return static_cast<Kind>(Data.getInt()); }
 
-  bool isStmtBranch() const {
-    return getKind() == StmtBranch;
-  }
+  bool isStmtBranch() const { return getKind() == StmtBranch; }
   bool isTemporaryDtorsBranch() const {
     return getKind() == TemporaryDtorsBranch;
   }
-  bool isVirtualBaseBranch() const {
-    return getKind() == VirtualBaseBranch;
-  }
+  bool isVirtualBaseBranch() const { return getKind() == VirtualBaseBranch; }
 };
 
 /// Represents a single basic block in a source-level CFG.
@@ -619,7 +602,7 @@ class CFGBlock {
     void push_back(CFGElement e, BumpVectorContext &C) { Impl.push_back(e, C); }
 
     reverse_iterator insert(reverse_iterator I, size_t Cnt, CFGElement E,
-        BumpVectorContext &C) {
+                            BumpVectorContext &C) {
       return Impl.insert(I, Cnt, E, C);
     }
 
@@ -635,7 +618,7 @@ class CFGBlock {
     const_reverse_iterator rbegin() const { return Impl.begin(); }
     const_reverse_iterator rend() const { return Impl.end(); }
 
-    CFGElement operator[](size_t i) const  {
+    CFGElement operator[](size_t i) const {
       assert(i < Impl.size());
       return Impl[Impl.size() - 1 - i];
     }
@@ -692,9 +675,7 @@ class CFGBlock {
       (*this)->dumpToStream(OS);
     }
 
-    void dump() const {
-      dumpToStream(llvm::errs());
-    }
+    void dump() const { dumpToStream(llvm::errs()); }
   };
 
   template <bool IsReverse, bool IsConst> class ElementRefIterator {
@@ -817,11 +798,7 @@ public:
   /// where a block was substituted because the original (now alternate) block
   /// is unreachable.
   class AdjacentBlock {
-    enum Kind {
-      AB_Normal,
-      AB_Unreachable,
-      AB_Alternate
-    };
+    enum Kind { AB_Normal, AB_Unreachable, AB_Alternate };
 
     CFGBlock *ReachableBlock;
     llvm::PointerIntPair<CFGBlock *, 2> UnreachableBlock;
@@ -835,9 +812,7 @@ public:
     AdjacentBlock(CFGBlock *B, CFGBlock *AlternateBlock);
 
     /// Get the reachable block, if one exists.
-    CFGBlock *getReachableBlock() const {
-      return ReachableBlock;
-    }
+    CFGBlock *getReachableBlock() const { return ReachableBlock; }
 
     /// Get the potentially unreachable block.
     CFGBlock *getPossiblyUnreachableBlock() const {
@@ -846,20 +821,14 @@ public:
 
     /// Provide an implicit conversion to CFGBlock* so that
     /// AdjacentBlock can be substituted for CFGBlock*.
-    operator CFGBlock*() const {
-      return getReachableBlock();
-    }
+    operator CFGBlock *() const { return getReachableBlock(); }
 
-    CFGBlock& operator *() const {
-      return *getReachableBlock();
-    }
+    CFGBlock &operator*() const { return *getReachableBlock(); }
 
-    CFGBlock* operator ->() const {
-      return getReachableBlock();
-    }
+    CFGBlock *operator->() const { return getReachableBlock(); }
 
     bool isReachable() const {
-      Kind K = (Kind) UnreachableBlock.getInt();
+      Kind K = (Kind)UnreachableBlock.getInt();
       return K == AB_Normal || K == AB_Alternate;
     }
   };
@@ -898,18 +867,18 @@ public:
 
   size_t getIndexInCFG() const;
 
-  CFGElement                 front()       const { return Elements.front();   }
-  CFGElement                 back()        const { return Elements.back();    }
+  CFGElement front() const { return Elements.front(); }
+  CFGElement back() const { return Elements.back(); }
 
-  iterator                   begin()             { return Elements.begin();   }
-  iterator                   end()               { return Elements.end();     }
-  const_iterator             begin()       const { return Elements.begin();   }
-  const_iterator             end()         const { return Elements.end();     }
+  iterator begin() { return Elements.begin(); }
+  iterator end() { return Elements.end(); }
+  const_iterator begin() const { return Elements.begin(); }
+  const_iterator end() const { return Elements.end(); }
 
-  reverse_iterator           rbegin()            { return Elements.rbegin();  }
-  reverse_iterator           rend()              { return Elements.rend();    }
-  const_reverse_iterator     rbegin()      const { return Elements.rbegin();  }
-  const_reverse_iterator     rend()        const { return Elements.rend();    }
+  reverse_iterator rbegin() { return Elements.rbegin(); }
+  reverse_iterator rend() { return Elements.rend(); }
+  const_reverse_iterator rbegin() const { return Elements.rbegin(); }
+  const_reverse_iterator rend() const { return Elements.rend(); }
 
   using CFGElementRef = ElementRefImpl<false>;
   using ConstCFGElementRef = ElementRefImpl<true>;
@@ -943,10 +912,10 @@ public:
     return {rref_begin(), rref_end()};
   }
 
-  unsigned                   size()        const { return Elements.size();    }
-  bool                       empty()       const { return Elements.empty();   }
+  unsigned size() const { return Elements.size(); }
+  bool empty() const { return Elements.empty(); }
 
-  CFGElement operator[](size_t i) const  { return Elements[i]; }
+  CFGElement operator[](size_t i) const { return Elements[i]; }
 
   // CFG iterators
   using pred_iterator = AdjacentBlocks::iterator;
@@ -963,48 +932,43 @@ public:
   using succ_range = llvm::iterator_range<succ_iterator>;
   using succ_const_range = llvm::iterator_range<const_succ_iterator>;
 
-  pred_iterator                pred_begin()        { return Preds.begin();   }
-  pred_iterator                pred_end()          { return Preds.end();     }
-  const_pred_iterator          pred_begin()  const { return Preds.begin();   }
-  const_pred_iterator          pred_end()    const { return Preds.end();     }
+  pred_iterator pred_begin() { return Preds.begin(); }
+  pred_iterator pred_end() { return Preds.end(); }
+  const_pred_iterator pred_begin() const { return Preds.begin(); }
+  const_pred_iterator pred_end() const { return Preds.end(); }
 
-  pred_reverse_iterator        pred_rbegin()       { return Preds.rbegin();  }
-  pred_reverse_iterator        pred_rend()         { return Preds.rend();    }
-  const_pred_reverse_iterator  pred_rbegin() const { return Preds.rbegin();  }
-  const_pred_reverse_iterator  pred_rend()   const { return Preds.rend();    }
+  pred_reverse_iterator pred_rbegin() { return Preds.rbegin(); }
+  pred_reverse_iterator pred_rend() { return Preds.rend(); }
+  const_pred_reverse_iterator pred_rbegin() const { return Preds.rbegin(); }
+  const_pred_reverse_iterator pred_rend() const { return Preds.rend(); }
 
-  pred_range preds() {
-    return pred_range(pred_begin(), pred_end());
-  }
+  pred_range preds() { return pred_range(pred_begin(), pred_end()); }
 
   pred_const_range preds() const {
     return pred_const_range(pred_begin(), pred_end());
   }
 
-  succ_iterator                succ_begin()        { return Succs.begin();   }
-  succ_iterator                succ_end()          { return Succs.end();     }
-  const_succ_iterator          succ_begin()  const { return Succs.begin();   }
-  const_succ_iterator          succ_end()    const { return Succs.end();     }
+  succ_iterator succ_begin() { return Succs.begin(); }
+  succ_iterator succ_end() { return Succs.end(); }
+  const_succ_iterator succ_begin() const { return Succs.begin(); }
+  const_succ_iterator succ_end() const { return Succs.end(); }
 
-  succ_reverse_iterator        succ_rbegin()       { return Succs.rbegin();  }
-  succ_reverse_iterator        succ_rend()         { return Succs.rend();    }
-  const_succ_reverse_iterator  succ_rbegin() const { return Succs.rbegin();  }
-  const_succ_reverse_iterator  succ_rend()   const { return Succs.rend();    }
+  succ_reverse_iterator succ_rbegin() { return Succs.rbegin(); }
+  succ_reverse_iterator succ_rend() { return Succs.rend(); }
+  const_succ_reverse_iterator succ_rbegin() const { return Succs.rbegin(); }
+  const_succ_reverse_iterator succ_rend() const { return Succs.rend(); }
 
-  succ_range succs() {
-    return succ_range(succ_begin(), succ_end());
-  }
+  succ_range succs() { return succ_range(succ_begin(), succ_end()); }
 
   succ_const_range succs() const {
     return succ_const_range(succ_begin(), succ_end());
   }
 
-  unsigned                     succ_size()   const { return Succs.size();    }
-  bool                         succ_empty()  const { return Succs.empty();   }
+  unsigned succ_size() const { return Succs.size(); }
+  bool succ_empty() const { return Succs.empty(); }
 
-  unsigned                     pred_size()   const { return Preds.size();    }
-  bool                         pred_empty()  const { return Preds.empty();   }
-
+  unsigned pred_size() const { return Preds.size(); }
+  bool pred_empty() const { return Preds.empty(); }
 
   class FilterOptions {
   public:
@@ -1018,10 +982,9 @@ public:
   };
 
   static bool FilterEdge(const FilterOptions &F, const CFGBlock *Src,
-       const CFGBlock *Dst);
+                         const CFGBlock *Dst);
 
-  template <typename IMPL, bool IsPred>
-  class FilteredCFGBlockIterator {
+  template <typename IMPL, bool IsPred> class FilteredCFGBlockIterator {
   private:
     IMPL I, E;
     const FilterOptions F;
@@ -1039,7 +1002,9 @@ public:
     bool hasMore() const { return I != E; }
 
     FilteredCFGBlockIterator &operator++() {
-      do { ++I; } while (hasMore() && Filter(*I));
+      do {
+        ++I;
+      } while (hasMore() && Filter(*I));
       return *this;
     }
 
@@ -1092,7 +1057,7 @@ public:
   Stmt *getTerminatorCondition(bool StripParens = true);
 
   const Stmt *getTerminatorCondition(bool StripParens = true) const {
-    return const_cast<CFGBlock*>(this)->getTerminatorCondition(StripParens);
+    return const_cast<CFGBlock *>(this)->getTerminatorCondition(StripParens);
   }
 
   const Stmt *getLoopTarget() const { return LoopTarget; }
@@ -1108,8 +1073,9 @@ public:
 
   void dump() const;
 
-  void dump(const CFG *cfg, const LangOptions &LO, bool ShowColors = false) const;
-  void print(raw_ostream &OS, const CFG* cfg, const LangOptions &LO,
+  void dump(const CFG *cfg, const LangOptions &LO,
+            bool ShowColors = false) const;
+  void print(raw_ostream &OS, const CFG *cfg, const LangOptions &LO,
              bool ShowColors) const;
 
   void printTerminator(raw_ostream &OS, const LangOptions &LO) const;
@@ -1132,19 +1098,17 @@ public:
     Elements.push_back(CFGConstructor(CE, CC), C);
   }
 
-  void appendCXXRecordTypedCall(Expr *E,
-                                const ConstructionContext *CC,
+  void appendCXXRecordTypedCall(Expr *E, const ConstructionContext *CC,
                                 BumpVectorContext &C) {
     Elements.push_back(CFGCXXRecordTypedCall(E, CC), C);
   }
 
   void appendInitializer(CXXCtorInitializer *initializer,
-                        BumpVectorContext &C) {
+                         BumpVectorContext &C) {
     Elements.push_back(CFGInitializer(initializer), C);
   }
 
-  void appendNewAllocator(CXXNewExpr *NE,
-                          BumpVectorContext &C) {
+  void appendNewAllocator(CXXNewExpr *NE, BumpVectorContext &C) {
     Elements.push_back(CFGNewAllocator(NE), C);
   }
 
@@ -1185,7 +1149,8 @@ public:
     Elements.push_back(CFGLoopExit(LoopStmt), C);
   }
 
-  void appendDeleteDtor(CXXRecordDecl *RD, CXXDeleteExpr *DE, BumpVectorContext &C) {
+  void appendDeleteDtor(CXXRecordDecl *RD, CXXDeleteExpr *DE,
+                        BumpVectorContext &C) {
     Elements.push_back(CFGDeleteDtor(RD, DE), C);
   }
 };
@@ -1288,13 +1253,13 @@ public:
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-  CFGBlock &                front()                { return *Blocks.front(); }
-  CFGBlock &                back()                 { return *Blocks.back(); }
+  CFGBlock &front() { return *Blocks.front(); }
+  CFGBlock &back() { return *Blocks.back(); }
 
-  iterator                  begin()                { return Blocks.begin(); }
-  iterator                  end()                  { return Blocks.end(); }
-  const_iterator            begin()       const    { return Blocks.begin(); }
-  const_iterator            end()         const    { return Blocks.end(); }
+  iterator begin() { return Blocks.begin(); }
+  iterator end() { return Blocks.end(); }
+  const_iterator begin() const { return Blocks.begin(); }
+  const_iterator end() const { return Blocks.end(); }
 
   iterator nodes_begin() { return iterator(Blocks.begin()); }
   iterator nodes_end() { return iterator(Blocks.end()); }
@@ -1307,10 +1272,10 @@ public:
   const_iterator nodes_begin() const { return const_iterator(Blocks.begin()); }
   const_iterator nodes_end() const { return const_iterator(Blocks.end()); }
 
-  reverse_iterator          rbegin()               { return Blocks.rbegin(); }
-  reverse_iterator          rend()                 { return Blocks.rend(); }
-  const_reverse_iterator    rbegin()      const    { return Blocks.rbegin(); }
-  const_reverse_iterator    rend()        const    { return Blocks.rend(); }
+  reverse_iterator rbegin() { return Blocks.rbegin(); }
+  reverse_iterator rend() { return Blocks.rend(); }
+  const_reverse_iterator rbegin() const { return Blocks.rbegin(); }
+  const_reverse_iterator rend() const { return Blocks.rend(); }
 
   llvm::iterator_range<reverse_iterator> reverse_nodes() {
     return {rbegin(), rend()};
@@ -1319,13 +1284,13 @@ public:
     return {rbegin(), rend()};
   }
 
-  CFGBlock &                getEntry()             { return *Entry; }
-  const CFGBlock &          getEntry()    const    { return *Entry; }
-  CFGBlock &                getExit()              { return *Exit; }
-  const CFGBlock &          getExit()     const    { return *Exit; }
+  CFGBlock &getEntry() { return *Entry; }
+  const CFGBlock &getEntry() const { return *Entry; }
+  CFGBlock &getExit() { return *Exit; }
+  const CFGBlock &getExit() const { return *Exit; }
 
-  CFGBlock *       getIndirectGotoBlock() { return IndirectGotoBlock; }
-  const CFGBlock * getIndirectGotoBlock() const { return IndirectGotoBlock; }
+  CFGBlock *getIndirectGotoBlock() { return IndirectGotoBlock; }
+  const CFGBlock *getIndirectGotoBlock() const { return IndirectGotoBlock; }
 
   using try_block_iterator = std::vector<const CFGBlock *>::const_iterator;
   using try_block_range = llvm::iterator_range<try_block_iterator>;
@@ -1334,9 +1299,7 @@ public:
     return TryDispatchBlocks.begin();
   }
 
-  try_block_iterator try_blocks_end() const {
-    return TryDispatchBlocks.end();
-  }
+  try_block_iterator try_blocks_end() const { return TryDispatchBlocks.end(); }
 
   try_block_range try_blocks() const {
     return try_block_range(try_blocks_begin(), try_blocks_end());
@@ -1350,8 +1313,7 @@ public:
   ///
   /// The CFG uses synthetic DeclStmts when a single AST DeclStmt contains
   /// multiple decls.
-  void addSyntheticDeclStmt(const DeclStmt *Synthetic,
-                            const DeclStmt *Source) {
+  void addSyntheticDeclStmt(const DeclStmt *Synthetic, const DeclStmt *Source) {
     assert(Synthetic->isSingleDecl() && "Can handle single declarations only");
     assert(Synthetic != Source && "Don't include original DeclStmts in map");
     assert(!SyntheticDeclStmts.count(Synthetic) && "Already in map");
@@ -1426,22 +1388,18 @@ public:
 
   CFG() : Blocks(BlkBVC, 10) {}
 
-  llvm::BumpPtrAllocator& getAllocator() {
-    return BlkBVC.getAllocator();
-  }
+  llvm::BumpPtrAllocator &getAllocator() { return BlkBVC.getAllocator(); }
 
-  BumpVectorContext &getBumpVectorContext() {
-    return BlkBVC;
-  }
+  BumpVectorContext &getBumpVectorContext() { return BlkBVC; }
 
 private:
   CFGBlock *Entry = nullptr;
   CFGBlock *Exit = nullptr;
 
   // Special block to contain collective dispatch for indirect gotos
-  CFGBlock* IndirectGotoBlock = nullptr;
+  CFGBlock *IndirectGotoBlock = nullptr;
 
-  unsigned  NumBlockIDs = 0;
+  unsigned NumBlockIDs = 0;
 
   BumpVectorContext BlkBVC;
 
@@ -1468,7 +1426,7 @@ namespace llvm {
 
 /// Implement simplify_type for CFGTerminator, so that we can dyn_cast from
 /// CFGTerminator to a specific Stmt class.
-template <> struct simplify_type< ::clang::CFGTerminator> {
+template <> struct simplify_type<::clang::CFGTerminator> {
   using SimpleType = ::clang::Stmt *;
 
   static SimpleType getSimplifiedValue(::clang::CFGTerminator Val) {
@@ -1478,7 +1436,7 @@ template <> struct simplify_type< ::clang::CFGTerminator> {
 
 // Traits for: CFGBlock
 
-template <> struct GraphTraits< ::clang::CFGBlock *> {
+template <> struct GraphTraits<::clang::CFGBlock *> {
   using NodeRef = ::clang::CFGBlock *;
   using ChildIteratorType = ::clang::CFGBlock::succ_iterator;
 
@@ -1487,7 +1445,7 @@ template <> struct GraphTraits< ::clang::CFGBlock *> {
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 };
 
-template <> struct GraphTraits< const ::clang::CFGBlock *> {
+template <> struct GraphTraits<const ::clang::CFGBlock *> {
   using NodeRef = const ::clang::CFGBlock *;
   using ChildIteratorType = ::clang::CFGBlock::const_succ_iterator;
 
@@ -1496,7 +1454,7 @@ template <> struct GraphTraits< const ::clang::CFGBlock *> {
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 };
 
-template <> struct GraphTraits<Inverse< ::clang::CFGBlock *>> {
+template <> struct GraphTraits<Inverse<::clang::CFGBlock *>> {
   using NodeRef = ::clang::CFGBlock *;
   using ChildIteratorType = ::clang::CFGBlock::const_pred_iterator;
 
@@ -1522,55 +1480,60 @@ template <> struct GraphTraits<Inverse<const ::clang::CFGBlock *>> {
 
 // Traits for: CFG
 
-template <> struct GraphTraits< ::clang::CFG* >
-    : public GraphTraits< ::clang::CFGBlock *>  {
+template <>
+struct GraphTraits<::clang::CFG *> : public GraphTraits<::clang::CFGBlock *> {
   using nodes_iterator = ::clang::CFG::iterator;
 
   static NodeRef getEntryNode(::clang::CFG *F) { return &F->getEntry(); }
-  static nodes_iterator nodes_begin(::clang::CFG* F) { return F->nodes_begin();}
-  static nodes_iterator   nodes_end(::clang::CFG* F) { return F->nodes_end(); }
-  static unsigned              size(::clang::CFG* F) { return F->size(); }
+  static nodes_iterator nodes_begin(::clang::CFG *F) {
+    return F->nodes_begin();
+  }
+  static nodes_iterator nodes_end(::clang::CFG *F) { return F->nodes_end(); }
+  static unsigned size(::clang::CFG *F) { return F->size(); }
 };
 
-template <> struct GraphTraits<const ::clang::CFG* >
-    : public GraphTraits<const ::clang::CFGBlock *>  {
+template <>
+struct GraphTraits<const ::clang::CFG *>
+    : public GraphTraits<const ::clang::CFGBlock *> {
   using nodes_iterator = ::clang::CFG::const_iterator;
 
   static NodeRef getEntryNode(const ::clang::CFG *F) { return &F->getEntry(); }
 
-  static nodes_iterator nodes_begin( const ::clang::CFG* F) {
+  static nodes_iterator nodes_begin(const ::clang::CFG *F) {
     return F->nodes_begin();
   }
 
-  static nodes_iterator nodes_end( const ::clang::CFG* F) {
+  static nodes_iterator nodes_end(const ::clang::CFG *F) {
     return F->nodes_end();
   }
 
-  static unsigned size(const ::clang::CFG* F) {
-    return F->size();
-  }
+  static unsigned size(const ::clang::CFG *F) { return F->size(); }
 };
 
-template <> struct GraphTraits<Inverse< ::clang::CFG *>>
-  : public GraphTraits<Inverse< ::clang::CFGBlock *>> {
+template <>
+struct GraphTraits<Inverse<::clang::CFG *>>
+    : public GraphTraits<Inverse<::clang::CFGBlock *>> {
   using nodes_iterator = ::clang::CFG::iterator;
 
   static NodeRef getEntryNode(::clang::CFG *F) { return &F->getExit(); }
-  static nodes_iterator nodes_begin( ::clang::CFG* F) {return F->nodes_begin();}
-  static nodes_iterator nodes_end( ::clang::CFG* F) { return F->nodes_end(); }
+  static nodes_iterator nodes_begin(::clang::CFG *F) {
+    return F->nodes_begin();
+  }
+  static nodes_iterator nodes_end(::clang::CFG *F) { return F->nodes_end(); }
 };
 
-template <> struct GraphTraits<Inverse<const ::clang::CFG *>>
-  : public GraphTraits<Inverse<const ::clang::CFGBlock *>> {
+template <>
+struct GraphTraits<Inverse<const ::clang::CFG *>>
+    : public GraphTraits<Inverse<const ::clang::CFGBlock *>> {
   using nodes_iterator = ::clang::CFG::const_iterator;
 
   static NodeRef getEntryNode(const ::clang::CFG *F) { return &F->getExit(); }
 
-  static nodes_iterator nodes_begin(const ::clang::CFG* F) {
+  static nodes_iterator nodes_begin(const ::clang::CFG *F) {
     return F->nodes_begin();
   }
 
-  static nodes_iterator nodes_end(const ::clang::CFG* F) {
+  static nodes_iterator nodes_end(const ::clang::CFG *F) {
     return F->nodes_end();
   }
 };

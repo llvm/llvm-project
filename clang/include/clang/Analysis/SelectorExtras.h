@@ -15,7 +15,7 @@ namespace clang {
 
 template <typename... IdentifierInfos>
 static inline Selector getKeywordSelector(ASTContext &Ctx,
-                                          IdentifierInfos *... IIs) {
+                                          IdentifierInfos *...IIs) {
   static_assert(sizeof...(IdentifierInfos) > 0,
                 "keyword selectors must have at least one argument");
   SmallVector<IdentifierInfo *, 10> II({&Ctx.Idents.get(IIs)...});
@@ -25,7 +25,7 @@ static inline Selector getKeywordSelector(ASTContext &Ctx,
 
 template <typename... IdentifierInfos>
 static inline void lazyInitKeywordSelector(Selector &Sel, ASTContext &Ctx,
-                                           IdentifierInfos *... IIs) {
+                                           IdentifierInfos *...IIs) {
   if (!Sel.isNull())
     return;
   Sel = getKeywordSelector(Ctx, IIs...);

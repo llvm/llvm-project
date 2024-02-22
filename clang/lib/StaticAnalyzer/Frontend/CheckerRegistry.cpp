@@ -419,13 +419,10 @@ void CheckerRegistry::addPackage(StringRef FullName) {
   Data.Packages.emplace_back(PackageInfo(FullName));
 }
 
-void CheckerRegistry::addPackageOption(StringRef OptionType,
-                                       StringRef PackageFullName,
-                                       StringRef OptionName,
-                                       StringRef DefaultValStr,
-                                       StringRef Description,
-                                       StringRef DevelopmentStatus,
-                                       bool IsHidden) {
+void CheckerRegistry::addPackageOption(
+    StringRef OptionType, StringRef PackageFullName, StringRef OptionName,
+    StringRef DefaultValStr, StringRef Description, StringRef DevelopmentStatus,
+    bool IsHidden) {
   Data.PackageOptions.emplace_back(
       PackageFullName, CmdLineOption{OptionType, OptionName, DefaultValStr,
                                      Description, DevelopmentStatus, IsHidden});
@@ -446,13 +443,10 @@ void CheckerRegistry::addChecker(RegisterCheckerFn Rfn,
   }
 }
 
-void CheckerRegistry::addCheckerOption(StringRef OptionType,
-                                       StringRef CheckerFullName,
-                                       StringRef OptionName,
-                                       StringRef DefaultValStr,
-                                       StringRef Description,
-                                       StringRef DevelopmentStatus,
-                                       bool IsHidden) {
+void CheckerRegistry::addCheckerOption(
+    StringRef OptionType, StringRef CheckerFullName, StringRef OptionName,
+    StringRef DefaultValStr, StringRef Description, StringRef DevelopmentStatus,
+    bool IsHidden) {
   Data.CheckerOptions.emplace_back(
       CheckerFullName, CmdLineOption{OptionType, OptionName, DefaultValStr,
                                      Description, DevelopmentStatus, IsHidden});

@@ -108,7 +108,8 @@ public:
 
   /// Evaluates a given SVal. If the SVal has only one possible (integer) value,
   /// that value is returned. Otherwise, returns NULL.
-  virtual const llvm::APSInt *getKnownValue(ProgramStateRef state, SVal val) = 0;
+  virtual const llvm::APSInt *getKnownValue(ProgramStateRef state,
+                                            SVal val) = 0;
 
   /// Tries to get the minimal possible (integer) value of a given SVal. If the
   /// constraint manager cannot provide an useful answer, this returns NULL.
@@ -124,14 +125,14 @@ public:
   virtual SVal simplifySVal(ProgramStateRef State, SVal Val) = 0;
 
   /// Constructs a symbolic expression for two non-location values.
-  SVal makeSymExprValNN(BinaryOperator::Opcode op,
-                        NonLoc lhs, NonLoc rhs, QualType resultTy);
+  SVal makeSymExprValNN(BinaryOperator::Opcode op, NonLoc lhs, NonLoc rhs,
+                        QualType resultTy);
 
   SVal evalUnaryOp(ProgramStateRef state, UnaryOperator::Opcode opc,
-                 SVal operand, QualType type);
+                   SVal operand, QualType type);
 
-  SVal evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
-                 SVal lhs, SVal rhs, QualType type);
+  SVal evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op, SVal lhs,
+                 SVal rhs, QualType type);
 
   /// \return Whether values in \p lhs and \p rhs are equal at \p state.
   ConditionTruthVal areEqual(ProgramStateRef state, SVal lhs, SVal rhs);
@@ -150,9 +151,7 @@ public:
     return Context.getLangOpts().CPlusPlus ? Context.BoolTy : Context.IntTy;
   }
 
-  QualType getArrayIndexType() const {
-    return ArrayIndexTy;
-  }
+  QualType getArrayIndexType() const { return ArrayIndexTy; }
 
   BasicValueFactory &getBasicValueFactory() { return BasicVals; }
   const BasicValueFactory &getBasicValueFactory() const { return BasicVals; }
@@ -167,15 +166,14 @@ public:
 
   // Forwarding methods to SymbolManager.
 
-  const SymbolConjured* conjureSymbol(const Stmt *stmt,
+  const SymbolConjured *conjureSymbol(const Stmt *stmt,
                                       const LocationContext *LCtx,
-                                      QualType type,
-                                      unsigned visitCount,
+                                      QualType type, unsigned visitCount,
                                       const void *symbolTag = nullptr) {
     return SymMgr.conjureSymbol(stmt, LCtx, type, visitCount, symbolTag);
   }
 
-  const SymbolConjured* conjureSymbol(const Expr *expr,
+  const SymbolConjured *conjureSymbol(const Expr *expr,
                                       const LocationContext *LCtx,
                                       unsigned visitCount,
                                       const void *symbolTag = nullptr) {
@@ -194,19 +192,15 @@ public:
   /// The advantage of symbols derived/built from other symbols is that we
   /// preserve the relation between related(or even equivalent) expressions, so
   /// conjured symbols should be used sparingly.
-  DefinedOrUnknownSVal conjureSymbolVal(const void *symbolTag,
-                                        const Expr *expr,
+  DefinedOrUnknownSVal conjureSymbolVal(const void *symbolTag, const Expr *expr,
                                         const LocationContext *LCtx,
                                         unsigned count);
-  DefinedOrUnknownSVal conjureSymbolVal(const void *symbolTag,
-                                        const Expr *expr,
+  DefinedOrUnknownSVal conjureSymbolVal(const void *symbolTag, const Expr *expr,
                                         const LocationContext *LCtx,
-                                        QualType type,
-                                        unsigned count);
+                                        QualType type, unsigned count);
   DefinedOrUnknownSVal conjureSymbolVal(const Stmt *stmt,
                                         const LocationContext *LCtx,
-                                        QualType type,
-                                        unsigned visitCount);
+                                        QualType type, unsigned visitCount);
 
   /// Conjure a symbol representing heap allocated memory region.
   ///
@@ -232,13 +226,13 @@ public:
                                        const LocationContext *LCtx,
                                        unsigned Count);
 
-  DefinedOrUnknownSVal getDerivedRegionValueSymbolVal(
-      SymbolRef parentSymbol, const TypedValueRegion *region);
+  DefinedOrUnknownSVal
+  getDerivedRegionValueSymbolVal(SymbolRef parentSymbol,
+                                 const TypedValueRegion *region);
 
   DefinedSVal getMetadataSymbolVal(const void *symbolTag,
-                                   const MemRegion *region,
-                                   const Expr *expr, QualType type,
-                                   const LocationContext *LCtx,
+                                   const MemRegion *region, const Expr *expr,
+                                   QualType type, const LocationContext *LCtx,
                                    unsigned count);
 
   DefinedSVal getMemberPointer(const NamedDecl *ND);
@@ -283,10 +277,10 @@ public:
 
   SVal convertToArrayIndex(SVal val);
 
-  nonloc::ConcreteInt makeIntVal(const IntegerLiteral* integer) {
-    return nonloc::ConcreteInt(
-        BasicVals.getValue(integer->getValue(),
-                     integer->getType()->isUnsignedIntegerOrEnumerationType()));
+  nonloc::ConcreteInt makeIntVal(const IntegerLiteral *integer) {
+    return nonloc::ConcreteInt(BasicVals.getValue(
+        integer->getValue(),
+        integer->getType()->isUnsignedIntegerOrEnumerationType()));
   }
 
   nonloc::ConcreteInt makeBoolVal(const ObjCBoolLiteralExpr *boolean) {
@@ -295,7 +289,7 @@ public:
 
   nonloc::ConcreteInt makeBoolVal(const CXXBoolLiteralExpr *boolean);
 
-  nonloc::ConcreteInt makeIntVal(const llvm::APSInt& integer) {
+  nonloc::ConcreteInt makeIntVal(const llvm::APSInt &integer) {
     return nonloc::ConcreteInt(BasicVals.getValue(integer));
   }
 
@@ -303,7 +297,7 @@ public:
     return loc::ConcreteInt(BasicVals.getValue(integer));
   }
 
-  NonLoc makeIntVal(const llvm::APInt& integer, bool isUnsigned) {
+  NonLoc makeIntVal(const llvm::APInt &integer, bool isUnsigned) {
     return nonloc::ConcreteInt(BasicVals.getValue(integer, isUnsigned));
   }
 
@@ -408,7 +402,7 @@ public:
                                const StackFrameContext *SFC);
 };
 
-SValBuilder* createSimpleSValBuilder(llvm::BumpPtrAllocator &alloc,
+SValBuilder *createSimpleSValBuilder(llvm::BumpPtrAllocator &alloc,
                                      ASTContext &context,
                                      ProgramStateManager &stateMgr);
 

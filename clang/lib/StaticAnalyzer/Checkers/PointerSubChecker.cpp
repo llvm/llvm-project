@@ -23,14 +23,13 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class PointerSubChecker
-  : public Checker< check::PreStmt<BinaryOperator> > {
+class PointerSubChecker : public Checker<check::PreStmt<BinaryOperator>> {
   const BugType BT{this, "Pointer subtraction"};
 
 public:
   void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
 };
-}
+} // namespace
 
 void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
                                      CheckerContext &C) const {

@@ -27,10 +27,10 @@ using namespace iterator;
 namespace {
 
 class IteratorRangeChecker
-  : public Checker<check::PreCall, check::PreStmt<UnaryOperator>,
-                   check::PreStmt<BinaryOperator>,
-                   check::PreStmt<ArraySubscriptExpr>,
-                   check::PreStmt<MemberExpr>> {
+    : public Checker<check::PreCall, check::PreStmt<UnaryOperator>,
+                     check::PreStmt<BinaryOperator>,
+                     check::PreStmt<ArraySubscriptExpr>,
+                     check::PreStmt<MemberExpr>> {
 
   const BugType OutOfRangeBugType{this, "Iterator out of range",
                                   "Misuse of STL APIs"};
@@ -102,8 +102,7 @@ void IteratorRangeChecker::checkPreCall(const CallEvent &Call,
         if (Call.getNumArgs() >= 1 &&
             Call.getArgExpr(0)->getType()->isIntegralOrEnumerationType()) {
           verifyRandomIncrOrDecr(C, Func->getOverloadedOperator(),
-                                 InstCall->getCXXThisVal(),
-                                 Call.getArgSVal(0));
+                                 InstCall->getCXXThisVal(), Call.getArgSVal(0));
         }
       } else {
         if (Call.getNumArgs() >= 2 &&
@@ -202,14 +201,16 @@ void IteratorRangeChecker::verifyDereference(CheckerContext &C,
 
 void IteratorRangeChecker::verifyIncrement(CheckerContext &C, SVal Iter) const {
   auto &BVF = C.getSValBuilder().getBasicValueFactory();
-  verifyRandomIncrOrDecr(C, OO_Plus, Iter,
-                     nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
+  verifyRandomIncrOrDecr(
+      C, OO_Plus, Iter,
+      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
 }
 
 void IteratorRangeChecker::verifyDecrement(CheckerContext &C, SVal Iter) const {
   auto &BVF = C.getSValBuilder().getBasicValueFactory();
-  verifyRandomIncrOrDecr(C, OO_Minus, Iter,
-                     nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
+  verifyRandomIncrOrDecr(
+      C, OO_Minus, Iter,
+      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
 }
 
 void IteratorRangeChecker::verifyRandomIncrOrDecr(CheckerContext &C,
@@ -242,15 +243,15 @@ void IteratorRangeChecker::verifyRandomIncrOrDecr(CheckerContext &C,
     auto *N = C.generateErrorNode(State);
     if (!N)
       return;
-    reportBug("Iterator decremented ahead of its valid range.", LHS,
-                        C, N);
+    reportBug("Iterator decremented ahead of its valid range.", LHS, C, N);
   }
   if (isBehindPastTheEnd(State, *PosAfter)) {
     auto *N = C.generateErrorNode(State);
     if (!N)
       return;
     reportBug("Iterator incremented behind the past-the-end "
-                        "iterator.", LHS, C, N);
+              "iterator.",
+              LHS, C, N);
   }
 }
 

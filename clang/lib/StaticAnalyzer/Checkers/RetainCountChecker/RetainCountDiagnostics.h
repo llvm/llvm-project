@@ -16,8 +16,8 @@
 
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Analysis/RetainSummaryManager.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 
 namespace clang {
@@ -53,12 +53,10 @@ protected:
 
 public:
   RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
-              ExplodedNode *n, SymbolRef sym,
-              bool isLeak=false);
+                 ExplodedNode *n, SymbolRef sym, bool isLeak = false);
 
   RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
-              ExplodedNode *n, SymbolRef sym,
-              StringRef endText);
+                 ExplodedNode *n, SymbolRef sym, StringRef endText);
 
   ArrayRef<SourceRange> getRanges() const override {
     if (!isLeak)

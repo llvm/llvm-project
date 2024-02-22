@@ -89,13 +89,11 @@ class ExplodedNode : public llvm::FoldingSetNode {
     uintptr_t P;
 
   public:
-    NodeGroup(bool Flag = false) : P(Flag) {
-      assert(getFlag() == Flag);
-    }
+    NodeGroup(bool Flag = false) : P(Flag) { assert(getFlag() == Flag); }
 
-    ExplodedNode * const *begin() const;
+    ExplodedNode *const *begin() const;
 
-    ExplodedNode * const *end() const;
+    ExplodedNode *const *end() const;
 
     unsigned size() const;
 
@@ -114,9 +112,7 @@ class ExplodedNode : public llvm::FoldingSetNode {
     void replaceNode(ExplodedNode *node);
 
     /// Returns whether this group was created with its flag set.
-    bool getFlag() const {
-      return (P & 1);
-    }
+    bool getFlag() const { return (P & 1); }
   };
 
   /// Location - The program location (within a function body) associated
@@ -177,16 +173,14 @@ public:
     return getState()->getSVal(S, getLocationContext());
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID,
-                      const ProgramPoint &Loc,
-                      const ProgramStateRef &state,
-                      bool IsSink) {
+  static void Profile(llvm::FoldingSetNodeID &ID, const ProgramPoint &Loc,
+                      const ProgramStateRef &state, bool IsSink) {
     ID.Add(Loc);
     ID.AddPointer(state.get());
     ID.AddBoolean(IsSink);
   }
 
-  void Profile(llvm::FoldingSetNodeID& ID) const {
+  void Profile(llvm::FoldingSetNodeID &ID) const {
     // We avoid copy constructors by not using accessors.
     Profile(ID, Location, State, isSink());
   }
@@ -202,16 +196,14 @@ public:
 
   bool isSink() const { return Succs.getFlag(); }
 
-  bool hasSinglePred() const {
-    return (pred_size() == 1);
-  }
+  bool hasSinglePred() const { return (pred_size() == 1); }
 
   ExplodedNode *getFirstPred() {
     return pred_empty() ? nullptr : *(pred_begin());
   }
 
   const ExplodedNode *getFirstPred() const {
-    return const_cast<ExplodedNode*>(this)->getFirstPred();
+    return const_cast<ExplodedNode *>(this)->getFirstPred();
   }
 
   ExplodedNode *getFirstSucc() {
@@ -219,20 +211,20 @@ public:
   }
 
   const ExplodedNode *getFirstSucc() const {
-    return const_cast<ExplodedNode*>(this)->getFirstSucc();
+    return const_cast<ExplodedNode *>(this)->getFirstSucc();
   }
 
   // Iterators over successor and predecessor vertices.
-  using succ_iterator = ExplodedNode * const *;
+  using succ_iterator = ExplodedNode *const *;
   using succ_range = llvm::iterator_range<succ_iterator>;
 
-  using const_succ_iterator = const ExplodedNode * const *;
+  using const_succ_iterator = const ExplodedNode *const *;
   using const_succ_range = llvm::iterator_range<const_succ_iterator>;
 
-  using pred_iterator = ExplodedNode * const *;
+  using pred_iterator = ExplodedNode *const *;
   using pred_range = llvm::iterator_range<pred_iterator>;
 
-  using const_pred_iterator = const ExplodedNode * const *;
+  using const_pred_iterator = const ExplodedNode *const *;
   using const_pred_range = llvm::iterator_range<const_pred_iterator>;
 
   pred_iterator pred_begin() { return Preds.begin(); }
@@ -240,10 +232,10 @@ public:
   pred_range preds() { return {Preds.begin(), Preds.end()}; }
 
   const_pred_iterator pred_begin() const {
-    return const_cast<ExplodedNode*>(this)->pred_begin();
+    return const_cast<ExplodedNode *>(this)->pred_begin();
   }
   const_pred_iterator pred_end() const {
-    return const_cast<ExplodedNode*>(this)->pred_end();
+    return const_cast<ExplodedNode *>(this)->pred_end();
   }
   const_pred_range preds() const { return {Preds.begin(), Preds.end()}; }
 
@@ -252,10 +244,10 @@ public:
   succ_range succs() { return {Succs.begin(), Succs.end()}; }
 
   const_succ_iterator succ_begin() const {
-    return const_cast<ExplodedNode*>(this)->succ_begin();
+    return const_cast<ExplodedNode *>(this)->succ_begin();
   }
   const_succ_iterator succ_end() const {
-    return const_cast<ExplodedNode*>(this)->succ_end();
+    return const_cast<ExplodedNode *>(this)->succ_end();
   }
   const_succ_range succs() const { return {Succs.begin(), Succs.end()}; }
 
@@ -350,17 +342,14 @@ public:
   ///  this pair exists, it is created. IsNew is set to true if
   ///  the node was freshly created.
   ExplodedNode *getNode(const ProgramPoint &L, ProgramStateRef State,
-                        bool IsSink = false,
-                        bool* IsNew = nullptr);
+                        bool IsSink = false, bool *IsNew = nullptr);
 
   /// Create a node for a (Location, State) pair,
   ///  but don't store it for deduplication later.  This
   ///  is useful when copying an already completed
   ///  ExplodedGraph for further processing.
-  ExplodedNode *createUncachedNode(const ProgramPoint &L,
-    ProgramStateRef State,
-    int64_t Id,
-    bool IsSink = false);
+  ExplodedNode *createUncachedNode(const ProgramPoint &L, ProgramStateRef State,
+                                   int64_t Id, bool IsSink = false);
 
   std::unique_ptr<ExplodedGraph> MakeEmptyGraph() const {
     return std::make_unique<ExplodedGraph>();
@@ -416,7 +405,7 @@ public:
 
   const_eop_iterator eop_end() const { return EndNodes.end(); }
 
-  llvm::BumpPtrAllocator & getAllocator() { return BVC.getAllocator(); }
+  llvm::BumpPtrAllocator &getAllocator() { return BVC.getAllocator(); }
   BumpVectorContext &getNodeAllocator() { return BVC; }
 
   using NodeMap = llvm::DenseMap<const ExplodedNode *, ExplodedNode *>;
@@ -461,21 +450,22 @@ class ExplodedNodeSet {
 
 public:
   ExplodedNodeSet(ExplodedNode *N) {
-    assert(N && !static_cast<ExplodedNode*>(N)->isSink());
+    assert(N && !static_cast<ExplodedNode *>(N)->isSink());
     Impl.insert(N);
   }
 
   ExplodedNodeSet() = default;
 
   void Add(ExplodedNode *N) {
-    if (N && !static_cast<ExplodedNode*>(N)->isSink()) Impl.insert(N);
+    if (N && !static_cast<ExplodedNode *>(N)->isSink())
+      Impl.insert(N);
   }
 
   using iterator = ImplTy::iterator;
   using const_iterator = ImplTy::const_iterator;
 
-  unsigned size() const { return Impl.size();  }
-  bool empty()    const { return Impl.empty(); }
+  unsigned size() const { return Impl.size(); }
+  bool empty() const { return Impl.empty(); }
   bool erase(ExplodedNode *N) { return Impl.remove(N); }
 
   void clear() { Impl.clear(); }
@@ -502,40 +492,34 @@ public:
 // GraphTraits
 
 namespace llvm {
-  template <> struct GraphTraits<clang::ento::ExplodedGraph *> {
-    using GraphTy = clang::ento::ExplodedGraph *;
-    using NodeRef = clang::ento::ExplodedNode *;
-    using ChildIteratorType = clang::ento::ExplodedNode::succ_iterator;
-    using nodes_iterator = llvm::df_iterator<GraphTy>;
+template <> struct GraphTraits<clang::ento::ExplodedGraph *> {
+  using GraphTy = clang::ento::ExplodedGraph *;
+  using NodeRef = clang::ento::ExplodedNode *;
+  using ChildIteratorType = clang::ento::ExplodedNode::succ_iterator;
+  using nodes_iterator = llvm::df_iterator<GraphTy>;
 
-    static NodeRef getEntryNode(const GraphTy G) {
-      return *G->roots_begin();
-    }
+  static NodeRef getEntryNode(const GraphTy G) { return *G->roots_begin(); }
 
-    static bool predecessorOfTrivial(NodeRef N) {
-      return N->succ_size() == 1 && N->getFirstSucc()->isTrivial();
-    }
+  static bool predecessorOfTrivial(NodeRef N) {
+    return N->succ_size() == 1 && N->getFirstSucc()->isTrivial();
+  }
 
-    static ChildIteratorType child_begin(NodeRef N) {
-      if (predecessorOfTrivial(N))
-        return child_begin(*N->succ_begin());
-      return N->succ_begin();
-    }
+  static ChildIteratorType child_begin(NodeRef N) {
+    if (predecessorOfTrivial(N))
+      return child_begin(*N->succ_begin());
+    return N->succ_begin();
+  }
 
-    static ChildIteratorType child_end(NodeRef N) {
-      if (predecessorOfTrivial(N))
-        return child_end(N->getFirstSucc());
-      return N->succ_end();
-    }
+  static ChildIteratorType child_end(NodeRef N) {
+    if (predecessorOfTrivial(N))
+      return child_end(N->getFirstSucc());
+    return N->succ_end();
+  }
 
-    static nodes_iterator nodes_begin(const GraphTy G) {
-      return df_begin(G);
-    }
+  static nodes_iterator nodes_begin(const GraphTy G) { return df_begin(G); }
 
-    static nodes_iterator nodes_end(const GraphTy G) {
-      return df_end(G);
-    }
-  };
+  static nodes_iterator nodes_end(const GraphTy G) { return df_end(G); }
+};
 } // namespace llvm
 
 #endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_EXPLODEDGRAPH_H

@@ -41,11 +41,12 @@ struct NoteTagTemplate {
 };
 
 constexpr NoteTagTemplate NoteTagTemplates[] = {
-  {"", "right operand of bit shift is less than "},
-  {"left operand of bit shift is non-negative", " and right operand is less than "},
-  {"right operand of bit shift is non-negative", " but less than "},
-  {"both operands of bit shift are non-negative", " and right operand is less than "}
-};
+    {"", "right operand of bit shift is less than "},
+    {"left operand of bit shift is non-negative",
+     " and right operand is less than "},
+    {"right operand of bit shift is non-negative", " but less than "},
+    {"both operands of bit shift are non-negative",
+     " and right operand is less than "}};
 
 /// An implementation detail class which is introduced to split the checker
 /// logic into several methods while maintaining a consistently updated state
@@ -80,9 +81,11 @@ private:
     return PedanticFlag && !Ctx.getASTContext().getLangOpts().CPlusPlus20;
   }
 
-  bool assumeRequirement(OperandSide Side, BinaryOperator::Opcode Cmp, unsigned Limit);
+  bool assumeRequirement(OperandSide Side, BinaryOperator::Opcode Cmp,
+                         unsigned Limit);
 
-  void recordAssumption(OperandSide Side, BinaryOperator::Opcode Cmp, unsigned Limit);
+  void recordAssumption(OperandSide Side, BinaryOperator::Opcode Cmp,
+                        unsigned Limit);
   const NoteTag *createNoteTag() const;
 
   BugReportPtr createBugReport(StringRef ShortMsg, StringRef Msg) const;
@@ -182,10 +185,10 @@ BugReportPtr BitwiseShiftValidator::checkOvershift() {
     }
   }
 
-  std::string ShortMsg = formatv(
-      "{0} shift{1}{2} overflows the capacity of '{3}'",
-      isLeftShift() ? "Left" : "Right", RightOpStr.empty() ? "" : " by",
-      RightOpStr, LHSTy.getAsString());
+  std::string ShortMsg =
+      formatv("{0} shift{1}{2} overflows the capacity of '{3}'",
+              isLeftShift() ? "Left" : "Right", RightOpStr.empty() ? "" : " by",
+              RightOpStr, LHSTy.getAsString());
   std::string Msg = formatv(
       "The result of {0} shift is undefined because the right "
       "operand{1} is{2} not smaller than {3}, the capacity of '{4}'",
@@ -212,15 +215,15 @@ BugReportPtr BitwiseShiftValidator::checkOperandNegative(OperandSide Side) {
   if (assumeRequirement(Side, BO_GE, 0))
     return nullptr;
 
-  std::string ShortMsg = formatv("{0} operand is negative in {1} shift",
-                                 Side == OperandSide::Left ? "Left" : "Right",
-                                 shiftDir())
-                             .str();
-  std::string Msg = formatv("The result of {0} shift is undefined "
-                            "because the {1} operand is negative",
-                            shiftDir(),
-                            Side == OperandSide::Left ? "left" : "right")
-                        .str();
+  std::string ShortMsg =
+      formatv("{0} operand is negative in {1} shift",
+              Side == OperandSide::Left ? "Left" : "Right", shiftDir())
+          .str();
+  std::string Msg =
+      formatv("The result of {0} shift is undefined "
+              "because the {1} operand is negative",
+              shiftDir(), Side == OperandSide::Left ? "left" : "right")
+          .str();
 
   return createBugReport(ShortMsg, Msg);
 }
@@ -265,8 +268,8 @@ BugReportPtr BitwiseShiftValidator::checkLeftShiftOverflow() {
 
   const std::string CapacityMsg =
       formatv("because '{0}' can hold only {1} bits ({2} the sign bit)",
-                    LHSTy.getAsString(), LeftAvailableBitWidth,
-                    ShouldPreserveSignBit ? "excluding" : "including");
+              LHSTy.getAsString(), LeftAvailableBitWidth,
+              ShouldPreserveSignBit ? "excluding" : "including");
 
   const SVal Right = Ctx.getSVal(Op->getRHS());
 
@@ -277,9 +280,9 @@ BugReportPtr BitwiseShiftValidator::checkLeftShiftOverflow() {
     const unsigned RHS = ConcreteRight->getValue().getExtValue();
     assert(RHS > MaximalAllowedShift);
     const unsigned OverflownBits = RHS - MaximalAllowedShift;
-    ShortMsg = formatv(
-        "The shift '{0} << {1}' overflows the capacity of '{2}'",
-        Left->getValue(), ConcreteRight->getValue(), LHSTy.getAsString());
+    ShortMsg = formatv("The shift '{0} << {1}' overflows the capacity of '{2}'",
+                       Left->getValue(), ConcreteRight->getValue(),
+                       LHSTy.getAsString());
     Msg = formatv(
         "The shift '{0} << {1}' is undefined {2}, so {3} bit{4} overflow{5}",
         Left->getValue(), ConcreteRight->getValue(), CapacityMsg, OverflownBits,
@@ -287,9 +290,8 @@ BugReportPtr BitwiseShiftValidator::checkLeftShiftOverflow() {
   } else {
     ShortMsg = formatv("Left shift of '{0}' overflows the capacity of '{1}'",
                        Left->getValue(), LHSTy.getAsString());
-    Msg = formatv(
-        "Left shift of '{0}' is undefined {1}, so some bits overflow",
-        Left->getValue(), CapacityMsg);
+    Msg = formatv("Left shift of '{0}' is undefined {1}, so some bits overflow",
+                  Left->getValue(), CapacityMsg);
   }
 
   return createBugReport(ShortMsg, Msg);
@@ -298,18 +300,18 @@ BugReportPtr BitwiseShiftValidator::checkLeftShiftOverflow() {
 void BitwiseShiftValidator::recordAssumption(OperandSide Side,
                                              BinaryOperator::Opcode Comparison,
                                              unsigned Limit) {
-  switch (Comparison)  {
-    case BO_GE:
-      assert(Limit == 0);
-      NonNegOperands |= (Side == OperandSide::Left ? NonNegLeft : NonNegRight);
-      break;
-    case BO_LT:
-      assert(Side == OperandSide::Right);
-      if (!UpperBoundBitCount || Limit < UpperBoundBitCount.value())
-        UpperBoundBitCount = Limit;
-      break;
-    default:
-      llvm_unreachable("this checker does not use other comparison operators");
+  switch (Comparison) {
+  case BO_GE:
+    assert(Limit == 0);
+    NonNegOperands |= (Side == OperandSide::Left ? NonNegLeft : NonNegRight);
+    break;
+  case BO_LT:
+    assert(Side == OperandSide::Right);
+    if (!UpperBoundBitCount || Limit < UpperBoundBitCount.value())
+      UpperBoundBitCount = Limit;
+    break;
+  default:
+    llvm_unreachable("this checker does not use other comparison operators");
   }
 }
 
@@ -330,7 +332,8 @@ const NoteTag *BitwiseShiftValidator::createNoteTag() const {
 }
 
 std::unique_ptr<PathSensitiveBugReport>
-BitwiseShiftValidator::createBugReport(StringRef ShortMsg, StringRef Msg) const {
+BitwiseShiftValidator::createBugReport(StringRef ShortMsg,
+                                       StringRef Msg) const {
   ProgramStateRef State = Ctx.getState();
   if (ExplodedNode *ErrNode = Ctx.generateErrorNode(State)) {
     auto BR =

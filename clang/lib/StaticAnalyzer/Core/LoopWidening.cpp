@@ -13,10 +13,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "clang/StaticAnalyzer/Core/PathSensitive/LoopWidening.h"
 #include "clang/AST/AST.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/LoopWidening.h"
 
 using namespace clang;
 using namespace ento;
@@ -79,7 +79,6 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
     ITraits.setTrait(VarMem,
                      RegionAndSymbolInvalidationTraits::TK_PreserveContents);
   }
-
 
   // 'this' pointer is not an lvalue, we should not invalidate it. If the loop
   // is located in a method, constructor or destructor, the value of 'this'

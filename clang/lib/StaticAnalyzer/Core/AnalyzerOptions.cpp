@@ -14,8 +14,8 @@
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -32,8 +32,7 @@ using namespace ento;
 using namespace llvm;
 
 void AnalyzerOptions::printFormattedEntry(
-    llvm::raw_ostream &Out,
-    std::pair<StringRef, StringRef> EntryDescPair,
+    llvm::raw_ostream &Out, std::pair<StringRef, StringRef> EntryDescPair,
     size_t InitialPad, size_t EntryWidth, size_t MinLineWidth) {
 
   llvm::formatted_raw_ostream FOut(Out);
@@ -62,8 +61,7 @@ void AnalyzerOptions::printFormattedEntry(
   }
 }
 
-ExplorationStrategyKind
-AnalyzerOptions::getExplorationStrategy() const {
+ExplorationStrategyKind AnalyzerOptions::getExplorationStrategy() const {
   auto K =
       llvm::StringSwitch<std::optional<ExplorationStrategyKind>>(
           ExplorationStrategy)
@@ -105,9 +103,8 @@ IPAKind AnalyzerOptions::getIPAMode() const {
   return *K;
 }
 
-bool
-AnalyzerOptions::mayInlineCXXMemberFunction(
-                                          CXXInlineableMemberKind Param) const {
+bool AnalyzerOptions::mayInlineCXXMemberFunction(
+    CXXInlineableMemberKind Param) const {
   if (getIPAMode() < IPAK_Inlining)
     return false;
 
@@ -154,8 +151,8 @@ StringRef AnalyzerOptions::getCheckerStringOption(StringRef CheckerName,
 StringRef AnalyzerOptions::getCheckerStringOption(const ento::CheckerBase *C,
                                                   StringRef OptionName,
                                                   bool SearchInParents) const {
-  return getCheckerStringOption(
-                           C->getTagDescription(), OptionName, SearchInParents);
+  return getCheckerStringOption(C->getTagDescription(), OptionName,
+                                SearchInParents);
 }
 
 bool AnalyzerOptions::getCheckerBooleanOption(StringRef CheckerName,
@@ -178,17 +175,17 @@ bool AnalyzerOptions::getCheckerBooleanOption(StringRef CheckerName,
 bool AnalyzerOptions::getCheckerBooleanOption(const ento::CheckerBase *C,
                                               StringRef OptionName,
                                               bool SearchInParents) const {
-  return getCheckerBooleanOption(
-             C->getTagDescription(), OptionName, SearchInParents);
+  return getCheckerBooleanOption(C->getTagDescription(), OptionName,
+                                 SearchInParents);
 }
 
 int AnalyzerOptions::getCheckerIntegerOption(StringRef CheckerName,
                                              StringRef OptionName,
                                              bool SearchInParents) const {
   int Ret = 0;
-  bool HasFailed = getCheckerStringOption(CheckerName, OptionName,
-                                          SearchInParents)
-                     .getAsInteger(0, Ret);
+  bool HasFailed =
+      getCheckerStringOption(CheckerName, OptionName, SearchInParents)
+          .getAsInteger(0, Ret);
   assert(!HasFailed &&
          "This option should be numeric, and should've been validated by "
          "CheckerRegistry!");
@@ -199,6 +196,6 @@ int AnalyzerOptions::getCheckerIntegerOption(StringRef CheckerName,
 int AnalyzerOptions::getCheckerIntegerOption(const ento::CheckerBase *C,
                                              StringRef OptionName,
                                              bool SearchInParents) const {
-  return getCheckerIntegerOption(
-                           C->getTagDescription(), OptionName, SearchInParents);
+  return getCheckerIntegerOption(C->getTagDescription(), OptionName,
+                                 SearchInParents);
 }

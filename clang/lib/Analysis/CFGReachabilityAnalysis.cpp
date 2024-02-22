@@ -24,7 +24,7 @@ CFGReverseBlockReachabilityAnalysis::CFGReverseBlockReachabilityAnalysis(
     : analyzed(cfg.getNumBlockIDs(), false) {}
 
 bool CFGReverseBlockReachabilityAnalysis::isReachable(const CFGBlock *Src,
-                                          const CFGBlock *Dst) {
+                                                      const CFGBlock *Dst) {
   const unsigned DstBlockID = Dst->getBlockID();
 
   // If we haven't analyzed the destination node, run the analysis now
@@ -62,13 +62,13 @@ void CFGReverseBlockReachabilityAnalysis::mapReachability(const CFGBlock *Dst) {
     if (!firstRun) {
       // Don't insert Dst -> Dst unless it was a predecessor of itself
       DstReachability[block->getBlockID()] = true;
-    }
-    else
+    } else
       firstRun = false;
 
     // Add the predecessors to the worklist.
     for (CFGBlock::const_pred_iterator i = block->pred_begin(),
-         e = block->pred_end(); i != e; ++i) {
+                                       e = block->pred_end();
+         i != e; ++i) {
       if (*i)
         worklist.push_back(*i);
     }

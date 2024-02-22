@@ -248,8 +248,8 @@ public:
   void dumpToStream(raw_ostream &Out) const;
 
   static bool isCompoundType(QualType T) {
-    return T->isArrayType() || T->isRecordType() ||
-           T->isAnyComplexType() || T->isVectorType();
+    return T->isArrayType() || T->isRecordType() || T->isAnyComplexType() ||
+           T->isVectorType();
   }
 
   static bool classof(SVal V) {
@@ -290,13 +290,9 @@ public:
   }
 
   LLVM_ATTRIBUTE_RETURNS_NONNULL
-  SymbolRef getSymbol() const {
-    return (const SymExpr *) Data;
-  }
+  SymbolRef getSymbol() const { return (const SymExpr *)Data; }
 
-  bool isExpression() const {
-    return !isa<SymbolData>(getSymbol());
-  }
+  bool isExpression() const { return !isa<SymbolData>(getSymbol()); }
 
   static bool classof(SVal V) { return V.getKind() == SymbolValKind; }
 };
@@ -343,7 +339,7 @@ class CompoundVal : public NonLoc {
 
 public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
-  const CompoundValData* getValue() const {
+  const CompoundValData *getValue() const {
     return castDataAs<CompoundValData>();
   }
 
@@ -402,8 +398,7 @@ public:
 
   const NamedDecl *getDecl() const;
 
-  template<typename AdjustedDecl>
-  const AdjustedDecl *getDeclAs() const {
+  template <typename AdjustedDecl> const AdjustedDecl *getDeclAs() const {
     return dyn_cast_or_null<AdjustedDecl>(getDecl());
   }
 
@@ -450,10 +445,9 @@ public:
 
   /// Get the underlining region and strip casts.
   LLVM_ATTRIBUTE_RETURNS_NONNULL
-  const MemRegion* stripCasts(bool StripBaseCasts = true) const;
+  const MemRegion *stripCasts(bool StripBaseCasts = true) const;
 
-  template <typename REGION>
-  const REGION* getRegionAs() const {
+  template <typename REGION> const REGION *getRegionAs() const {
     return dyn_cast<REGION>(getRegion());
   }
 

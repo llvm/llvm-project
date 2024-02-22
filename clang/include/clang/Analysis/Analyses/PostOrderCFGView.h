@@ -40,7 +40,9 @@ public:
   public:
     // po_iterator requires this iterator, but the only interface needed is the
     // value_type type.
-    struct iterator { using value_type = const CFGBlock *; };
+    struct iterator {
+      using value_type = const CFGBlock *;
+    };
 
     CFGBlockSet() = default;
     CFGBlockSet(const CFG *G) : VisitedBlockIDs(G->getNumBlockIDs(), false) {}
@@ -135,9 +137,7 @@ public:
     bool operator()(const CFGBlock *b1, const CFGBlock *b2) const;
   };
 
-  BlockOrderCompare getComparator() const {
-    return BlockOrderCompare(*this);
-  }
+  BlockOrderCompare getComparator() const { return BlockOrderCompare(*this); }
 
   // Used by AnalyisContext to construct this object.
   static const void *getTag();

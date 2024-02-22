@@ -31,22 +31,23 @@ public:
   llvm::ImmutableSet<const Expr *>::Factory ESetFact;
   llvm::ImmutableSet<const VarDecl *>::Factory DSetFact;
   llvm::ImmutableSet<const BindingDecl *>::Factory BSetFact;
-  llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues> blocksEndToLiveness;
-  llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues> blocksBeginToLiveness;
+  llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues>
+      blocksEndToLiveness;
+  llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues>
+      blocksBeginToLiveness;
   llvm::DenseMap<const Stmt *, LiveVariables::LivenessValues> stmtsToLiveness;
   llvm::DenseMap<const DeclRefExpr *, unsigned> inAssignment;
   const bool killAtAssign;
 
-  LiveVariables::LivenessValues
-  merge(LiveVariables::LivenessValues valsA,
-        LiveVariables::LivenessValues valsB);
+  LiveVariables::LivenessValues merge(LiveVariables::LivenessValues valsA,
+                                      LiveVariables::LivenessValues valsB);
 
   LiveVariables::LivenessValues
   runOnBlock(const CFGBlock *block, LiveVariables::LivenessValues val,
              LiveVariables::Observer *obs = nullptr);
 
-  void dumpBlockLiveness(const SourceManager& M);
-  void dumpExprLiveness(const SourceManager& M);
+  void dumpBlockLiveness(const SourceManager &M);
+  void dumpExprLiveness(const SourceManager &M);
 
   LiveVariablesImpl(AnalysisDeclContext &ac, bool KillAtAssign)
       : analysisContext(ac),
@@ -56,9 +57,7 @@ public:
 };
 } // namespace
 
-static LiveVariablesImpl &getImpl(void *x) {
-  return *((LiveVariablesImpl *) x);
-}
+static LiveVariablesImpl &getImpl(void *x) { return *((LiveVariablesImpl *)x); }
 
 //===----------------------------------------------------------------------===//
 // Operations and queries on LivenessValues.
@@ -84,19 +83,18 @@ bool LiveVariables::LivenessValues::isLive(const VarDecl *D) const {
 }
 
 namespace {
-  template <typename SET>
-  SET mergeSets(SET A, SET B) {
-    if (A.isEmpty())
-      return B;
+template <typename SET> SET mergeSets(SET A, SET B) {
+  if (A.isEmpty())
+    return B;
 
-    for (typename SET::iterator it = B.begin(), ei = B.end(); it != ei; ++it) {
-      A = A.add(*it);
-    }
-    return A;
+  for (typename SET::iterator it = B.begin(), ei = B.end(); it != ei; ++it) {
+    A = A.add(*it);
   }
+  return A;
+}
 } // namespace
 
-void LiveVariables::Observer::anchor() { }
+void LiveVariables::Observer::anchor() {}
 
 LiveVariables::LivenessValues
 LiveVariablesImpl::merge(LiveVariables::LivenessValues valsA,
@@ -107,13 +105,15 @@ LiveVariablesImpl::merge(LiveVariables::LivenessValues valsA,
       SSetRefB(valsB.liveExprs.getRootWithoutRetain(),
                ESetFact.getTreeFactory());
 
-  llvm::ImmutableSetRef<const VarDecl *>
-    DSetRefA(valsA.liveDecls.getRootWithoutRetain(), DSetFact.getTreeFactory()),
-    DSetRefB(valsB.liveDecls.getRootWithoutRetain(), DSetFact.getTreeFactory());
+  llvm::ImmutableSetRef<const VarDecl *> DSetRefA(
+      valsA.liveDecls.getRootWithoutRetain(), DSetFact.getTreeFactory()),
+      DSetRefB(valsB.liveDecls.getRootWithoutRetain(),
+               DSetFact.getTreeFactory());
 
-  llvm::ImmutableSetRef<const BindingDecl *>
-    BSetRefA(valsA.liveBindings.getRootWithoutRetain(), BSetFact.getTreeFactory()),
-    BSetRefB(valsB.liveBindings.getRootWithoutRetain(), BSetFact.getTreeFactory());
+  llvm::ImmutableSetRef<const BindingDecl *> BSetRefA(
+      valsA.liveBindings.getRootWithoutRetain(), BSetFact.getTreeFactory()),
+      BSetRefB(valsB.liveBindings.getRootWithoutRetain(),
+               BSetFact.getTreeFactory());
 
   SSetRefA = mergeSets(SSetRefA, SSetRefB);
   DSetRefA = mergeSets(DSetRefA, DSetRefB);
@@ -134,9 +134,7 @@ bool LiveVariables::LivenessValues::equals(const LivenessValues &V) const {
 // Query methods.
 //===----------------------------------------------------------------------===//
 
-static bool isAlwaysAlive(const VarDecl *D) {
-  return D->hasGlobalStorage();
-}
+static bool isAlwaysAlive(const VarDecl *D) { return D->hasGlobalStorage(); }
 
 bool LiveVariables::isLive(const CFGBlock *B, const VarDecl *D) {
   return isAlwaysAlive(D) || getImpl(impl).blocksEndToLiveness[B].isLive(D);
@@ -160,12 +158,12 @@ class TransferFunctions : public StmtVisitor<TransferFunctions> {
   LiveVariables::LivenessValues &val;
   LiveVariables::Observer *observer;
   const CFGBlock *currentBlock;
+
 public:
-  TransferFunctions(LiveVariablesImpl &im,
-                    LiveVariables::LivenessValues &Val,
+  TransferFunctions(LiveVariablesImpl &im, LiveVariables::LivenessValues &Val,
                     LiveVariables::Observer *Observer,
                     const CFGBlock *CurrentBlock)
-  : LV(im), val(Val), observer(Observer), currentBlock(CurrentBlock) {}
+      : LV(im), val(Val), observer(Observer), currentBlock(CurrentBlock) {}
 
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitBlockExpr(BlockExpr *BE);
@@ -227,93 +225,93 @@ void TransferFunctions::Visit(Stmt *S) {
   // Mark all children expressions live.
 
   switch (S->getStmtClass()) {
-    default:
-      break;
-    case Stmt::StmtExprClass: {
-      // For statement expressions, look through the compound statement.
-      S = cast<StmtExpr>(S)->getSubStmt();
-      break;
+  default:
+    break;
+  case Stmt::StmtExprClass: {
+    // For statement expressions, look through the compound statement.
+    S = cast<StmtExpr>(S)->getSubStmt();
+    break;
+  }
+  case Stmt::CXXMemberCallExprClass: {
+    // Include the implicit "this" pointer as being live.
+    CXXMemberCallExpr *CE = cast<CXXMemberCallExpr>(S);
+    if (Expr *ImplicitObj = CE->getImplicitObjectArgument()) {
+      AddLiveExpr(val.liveExprs, LV.ESetFact, ImplicitObj);
     }
-    case Stmt::CXXMemberCallExprClass: {
-      // Include the implicit "this" pointer as being live.
-      CXXMemberCallExpr *CE = cast<CXXMemberCallExpr>(S);
-      if (Expr *ImplicitObj = CE->getImplicitObjectArgument()) {
-        AddLiveExpr(val.liveExprs, LV.ESetFact, ImplicitObj);
+    break;
+  }
+  case Stmt::ObjCMessageExprClass: {
+    // In calls to super, include the implicit "self" pointer as being live.
+    ObjCMessageExpr *CE = cast<ObjCMessageExpr>(S);
+    if (CE->getReceiverKind() == ObjCMessageExpr::SuperInstance)
+      val.liveDecls =
+          LV.DSetFact.add(val.liveDecls, LV.analysisContext.getSelfDecl());
+    break;
+  }
+  case Stmt::DeclStmtClass: {
+    const DeclStmt *DS = cast<DeclStmt>(S);
+    if (const VarDecl *VD = dyn_cast<VarDecl>(DS->getSingleDecl())) {
+      for (const VariableArrayType *VA = FindVA(VD->getType()); VA != nullptr;
+           VA = FindVA(VA->getElementType())) {
+        AddLiveExpr(val.liveExprs, LV.ESetFact, VA->getSizeExpr());
       }
-      break;
     }
-    case Stmt::ObjCMessageExprClass: {
-      // In calls to super, include the implicit "self" pointer as being live.
-      ObjCMessageExpr *CE = cast<ObjCMessageExpr>(S);
-      if (CE->getReceiverKind() == ObjCMessageExpr::SuperInstance)
-        val.liveDecls = LV.DSetFact.add(val.liveDecls,
-                                        LV.analysisContext.getSelfDecl());
-      break;
-    }
-    case Stmt::DeclStmtClass: {
-      const DeclStmt *DS = cast<DeclStmt>(S);
-      if (const VarDecl *VD = dyn_cast<VarDecl>(DS->getSingleDecl())) {
-        for (const VariableArrayType* VA = FindVA(VD->getType());
-             VA != nullptr; VA = FindVA(VA->getElementType())) {
-          AddLiveExpr(val.liveExprs, LV.ESetFact, VA->getSizeExpr());
-        }
-      }
-      break;
-    }
-    case Stmt::PseudoObjectExprClass: {
-      // A pseudo-object operation only directly consumes its result
-      // expression.
-      Expr *child = cast<PseudoObjectExpr>(S)->getResultExpr();
-      if (!child) return;
-      if (OpaqueValueExpr *OV = dyn_cast<OpaqueValueExpr>(child))
-        child = OV->getSourceExpr();
-      child = child->IgnoreParens();
-      val.liveExprs = LV.ESetFact.add(val.liveExprs, child);
+    break;
+  }
+  case Stmt::PseudoObjectExprClass: {
+    // A pseudo-object operation only directly consumes its result
+    // expression.
+    Expr *child = cast<PseudoObjectExpr>(S)->getResultExpr();
+    if (!child)
       return;
-    }
+    if (OpaqueValueExpr *OV = dyn_cast<OpaqueValueExpr>(child))
+      child = OV->getSourceExpr();
+    child = child->IgnoreParens();
+    val.liveExprs = LV.ESetFact.add(val.liveExprs, child);
+    return;
+  }
 
-    // FIXME: These cases eventually shouldn't be needed.
-    case Stmt::ExprWithCleanupsClass: {
-      S = cast<ExprWithCleanups>(S)->getSubExpr();
-      break;
-    }
-    case Stmt::CXXBindTemporaryExprClass: {
-      S = cast<CXXBindTemporaryExpr>(S)->getSubExpr();
-      break;
-    }
-    case Stmt::UnaryExprOrTypeTraitExprClass: {
-      // No need to unconditionally visit subexpressions.
-      return;
-    }
-    case Stmt::IfStmtClass: {
-      // If one of the branches is an expression rather than a compound
-      // statement, it will be bad if we mark it as live at the terminator
-      // of the if-statement (i.e., immediately after the condition expression).
-      AddLiveExpr(val.liveExprs, LV.ESetFact, cast<IfStmt>(S)->getCond());
-      return;
-    }
-    case Stmt::WhileStmtClass: {
-      // If the loop body is an expression rather than a compound statement,
-      // it will be bad if we mark it as live at the terminator of the loop
-      // (i.e., immediately after the condition expression).
-      AddLiveExpr(val.liveExprs, LV.ESetFact, cast<WhileStmt>(S)->getCond());
-      return;
-    }
-    case Stmt::DoStmtClass: {
-      // If the loop body is an expression rather than a compound statement,
-      // it will be bad if we mark it as live at the terminator of the loop
-      // (i.e., immediately after the condition expression).
-      AddLiveExpr(val.liveExprs, LV.ESetFact, cast<DoStmt>(S)->getCond());
-      return;
-    }
-    case Stmt::ForStmtClass: {
-      // If the loop body is an expression rather than a compound statement,
-      // it will be bad if we mark it as live at the terminator of the loop
-      // (i.e., immediately after the condition expression).
-      AddLiveExpr(val.liveExprs, LV.ESetFact, cast<ForStmt>(S)->getCond());
-      return;
-    }
-
+  // FIXME: These cases eventually shouldn't be needed.
+  case Stmt::ExprWithCleanupsClass: {
+    S = cast<ExprWithCleanups>(S)->getSubExpr();
+    break;
+  }
+  case Stmt::CXXBindTemporaryExprClass: {
+    S = cast<CXXBindTemporaryExpr>(S)->getSubExpr();
+    break;
+  }
+  case Stmt::UnaryExprOrTypeTraitExprClass: {
+    // No need to unconditionally visit subexpressions.
+    return;
+  }
+  case Stmt::IfStmtClass: {
+    // If one of the branches is an expression rather than a compound
+    // statement, it will be bad if we mark it as live at the terminator
+    // of the if-statement (i.e., immediately after the condition expression).
+    AddLiveExpr(val.liveExprs, LV.ESetFact, cast<IfStmt>(S)->getCond());
+    return;
+  }
+  case Stmt::WhileStmtClass: {
+    // If the loop body is an expression rather than a compound statement,
+    // it will be bad if we mark it as live at the terminator of the loop
+    // (i.e., immediately after the condition expression).
+    AddLiveExpr(val.liveExprs, LV.ESetFact, cast<WhileStmt>(S)->getCond());
+    return;
+  }
+  case Stmt::DoStmtClass: {
+    // If the loop body is an expression rather than a compound statement,
+    // it will be bad if we mark it as live at the terminator of the loop
+    // (i.e., immediately after the condition expression).
+    AddLiveExpr(val.liveExprs, LV.ESetFact, cast<DoStmt>(S)->getCond());
+    return;
+  }
+  case Stmt::ForStmtClass: {
+    // If the loop body is an expression rather than a compound statement,
+    // it will be bad if we mark it as live at the terminator of the loop
+    // (i.e., immediately after the condition expression).
+    AddLiveExpr(val.liveExprs, LV.ESetFact, cast<ForStmt>(S)->getCond());
+    return;
+  }
   }
 
   // HACK + FIXME: What is this? One could only guess that this is an attempt to
@@ -326,8 +324,7 @@ void TransferFunctions::Visit(Stmt *S) {
 }
 
 static bool writeShouldKill(const VarDecl *VD) {
-  return VD && !VD->getType()->isReferenceType() &&
-    !isAlwaysAlive(VD);
+  return VD && !VD->getType()->isReferenceType() && !isAlwaysAlive(VD);
 }
 
 void TransferFunctions::VisitBinaryOperator(BinaryOperator *B) {
@@ -344,10 +341,10 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *B) {
     Expr *LHS = B->getLHS()->IgnoreParens();
 
     if (DeclRefExpr *DR = dyn_cast<DeclRefExpr>(LHS)) {
-      const Decl* D = DR->getDecl();
+      const Decl *D = DR->getDecl();
       bool Killed = false;
 
-      if (const BindingDecl* BD = dyn_cast<BindingDecl>(D)) {
+      if (const BindingDecl *BD = dyn_cast<BindingDecl>(D)) {
         Killed = !BD->getType()->isReferenceType();
         if (Killed) {
           if (const auto *HV = BD->getHoldingVar())
@@ -359,7 +356,6 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *B) {
         Killed = writeShouldKill(VD);
         if (Killed)
           val.liveDecls = LV.DSetFact.remove(val.liveDecls, VD);
-
       }
 
       if (Killed && observer)
@@ -378,7 +374,7 @@ void TransferFunctions::VisitBlockExpr(BlockExpr *BE) {
 }
 
 void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *DR) {
-  const Decl* D = DR->getDecl();
+  const Decl *D = DR->getDecl();
   bool InAssignment = LV.inAssignment[DR];
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
     if (!InAssignment) {
@@ -421,8 +417,8 @@ void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *OS) {
   Stmt *element = OS->getElement();
   if (DeclStmt *DS = dyn_cast<DeclStmt>(element)) {
     VD = cast<VarDecl>(DS->getSingleDecl());
-  }
-  else if ((DR = dyn_cast<DeclRefExpr>(cast<Expr>(element)->IgnoreParens()))) {
+  } else if ((DR =
+                  dyn_cast<DeclRefExpr>(cast<Expr>(element)->IgnoreParens()))) {
     VD = cast<VarDecl>(DR->getDecl());
   }
 
@@ -433,9 +429,8 @@ void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *OS) {
   }
 }
 
-void TransferFunctions::
-VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE)
-{
+void TransferFunctions::VisitUnaryExprOrTypeTraitExpr(
+    UnaryExprOrTypeTraitExpr *UE) {
   // While sizeof(var) doesn't technically extend the liveness of 'var', it
   // does extent the liveness of metadata if 'var' is a VariableArrayType.
   // We handle that special case here.
@@ -484,11 +479,12 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
 
   // Visit the terminator (if any).
   if (const Stmt *term = block->getTerminatorStmt())
-    TF.Visit(const_cast<Stmt*>(term));
+    TF.Visit(const_cast<Stmt *>(term));
 
   // Apply the transfer function for all Stmts in the block.
   for (CFGBlock::const_reverse_iterator it = block->rbegin(),
-       ei = block->rend(); it != ei; ++it) {
+                                        ei = block->rend();
+       it != ei; ++it) {
     const CFGElement &elem = *it;
 
     if (std::optional<CFGAutomaticObjDtor> Dtor =
@@ -501,7 +497,7 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
       continue;
 
     const Stmt *S = elem.castAs<CFGStmt>().getStmt();
-    TF.Visit(const_cast<Stmt*>(S));
+    TF.Visit(const_cast<Stmt *>(S));
     stmtsToLiveness[S] = val;
   }
   return val;
@@ -515,9 +511,7 @@ void LiveVariables::runOnAllBlocks(LiveVariables::Observer &obs) {
 
 LiveVariables::LiveVariables(void *im) : impl(im) {}
 
-LiveVariables::~LiveVariables() {
-  delete (LiveVariablesImpl*) impl;
-}
+LiveVariables::~LiveVariables() { delete (LiveVariablesImpl *)impl; }
 
 std::unique_ptr<LiveVariables>
 LiveVariables::computeLiveness(AnalysisDeclContext &AC, bool killAtAssign) {
@@ -552,7 +546,8 @@ LiveVariables::computeLiveness(AnalysisDeclContext &AC, bool killAtAssign) {
     // Merge the values of all successor blocks.
     LivenessValues val;
     for (CFGBlock::const_succ_iterator it = block->succ_begin(),
-                                       ei = block->succ_end(); it != ei; ++it) {
+                                       ei = block->succ_end();
+         it != ei; ++it) {
       if (const CFGBlock *succ = *it) {
         val = LV->merge(val, LV->blocksBeginToLiveness[succ]);
       }
@@ -582,7 +577,8 @@ void LiveVariables::dumpBlockLiveness(const SourceManager &M) {
 void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
   std::vector<const CFGBlock *> vec;
   for (llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues>::iterator
-       it = blocksEndToLiveness.begin(), ei = blocksEndToLiveness.end();
+           it = blocksEndToLiveness.begin(),
+           ei = blocksEndToLiveness.end();
        it != ei; ++it) {
     vec.push_back(it->first);
   }
@@ -590,19 +586,20 @@ void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
     return A->getBlockID() < B->getBlockID();
   });
 
-  std::vector<const VarDecl*> declVec;
+  std::vector<const VarDecl *> declVec;
 
-  for (std::vector<const CFGBlock *>::iterator
-        it = vec.begin(), ei = vec.end(); it != ei; ++it) {
+  for (std::vector<const CFGBlock *>::iterator it = vec.begin(), ei = vec.end();
+       it != ei; ++it) {
     llvm::errs() << "\n[ B" << (*it)->getBlockID()
                  << " (live variables at block exit) ]\n";
 
     LiveVariables::LivenessValues vals = blocksEndToLiveness[*it];
     declVec.clear();
 
-    for (llvm::ImmutableSet<const VarDecl *>::iterator si =
-          vals.liveDecls.begin(),
-          se = vals.liveDecls.end(); si != se; ++si) {
+    for (llvm::ImmutableSet<const VarDecl *>::iterator
+             si = vals.liveDecls.begin(),
+             se = vals.liveDecls.end();
+         si != se; ++si) {
       declVec.push_back(*si);
     }
 
@@ -610,10 +607,10 @@ void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
       return A->getBeginLoc() < B->getBeginLoc();
     });
 
-    for (std::vector<const VarDecl*>::iterator di = declVec.begin(),
-         de = declVec.end(); di != de; ++di) {
-      llvm::errs() << " " << (*di)->getDeclName().getAsString()
-                   << " <";
+    for (std::vector<const VarDecl *>::iterator di = declVec.begin(),
+                                                de = declVec.end();
+         di != de; ++di) {
+      llvm::errs() << " " << (*di)->getDeclName().getAsString() << " <";
       (*di)->getLocation().print(llvm::errs(), M);
       llvm::errs() << ">\n";
     }
@@ -639,5 +636,11 @@ void LiveVariablesImpl::dumpExprLiveness(const SourceManager &M) {
   }
 }
 
-const void *LiveVariables::getTag() { static int x; return &x; }
-const void *RelaxedLiveVariables::getTag() { static int x; return &x; }
+const void *LiveVariables::getTag() {
+  static int x;
+  return &x;
+}
+const void *RelaxedLiveVariables::getTag() {
+  static int x;
+  return &x;
+}

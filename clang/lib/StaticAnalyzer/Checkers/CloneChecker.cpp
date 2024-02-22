@@ -12,9 +12,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/Analysis/CloneDetection.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -191,14 +191,16 @@ void ento::registerCloneChecker(CheckerManager &Mgr) {
       Checker, "MinimumCloneComplexity");
 
   if (Checker->MinComplexity < 0)
-    Mgr.reportInvalidCheckerOptionValue(
-        Checker, "MinimumCloneComplexity", "a non-negative value");
+    Mgr.reportInvalidCheckerOptionValue(Checker, "MinimumCloneComplexity",
+                                        "a non-negative value");
 
-  Checker->ReportNormalClones = Mgr.getAnalyzerOptions().getCheckerBooleanOption(
-      Checker, "ReportNormalClones");
+  Checker->ReportNormalClones =
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(Checker,
+                                                       "ReportNormalClones");
 
-  Checker->IgnoredFilesPattern = Mgr.getAnalyzerOptions()
-    .getCheckerStringOption(Checker, "IgnoredFilesPattern");
+  Checker->IgnoredFilesPattern =
+      Mgr.getAnalyzerOptions().getCheckerStringOption(Checker,
+                                                      "IgnoredFilesPattern");
 }
 
 bool ento::shouldRegisterCloneChecker(const CheckerManager &mgr) {
