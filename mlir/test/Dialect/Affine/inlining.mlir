@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -inline="default-pipeline=''" | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -inline="pre-inline-pipeline=''" | FileCheck %s
 
 // Basic test that functions within affine operations are inlined.
 func.func @func_with_affine_ops(%N: index) {
