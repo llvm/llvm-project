@@ -107,7 +107,7 @@ New checks
 - New :doc:`bugprone-unsafe-crtp
   <clang-tidy/checks/bugprone/unsafe-crtp>` check.
 
-  Detects error-prone CRTP usage.
+  Detects error-prone CRTP usage, when the CRTP can be constructed outside itself and the derived class.
 
 - New :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check.

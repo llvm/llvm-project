@@ -13,7 +13,8 @@
 
 namespace clang::tidy::bugprone {
 
-/// Detects error-prone CRTP usage.
+/// Detects error-prone CRTP usage, when the CRTP can be constructed outside
+/// itself and the derived class.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unsafe-crtp.html

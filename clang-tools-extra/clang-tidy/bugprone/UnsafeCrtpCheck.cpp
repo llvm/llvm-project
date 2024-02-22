@@ -14,17 +14,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-namespace {
-// Finds a node if it's already a bound node.
-AST_MATCHER_P(CXXRecordDecl, isBoundNode, std::string, ID) {
-  return Builder->removeBindings(
-      [&](const ast_matchers::internal::BoundNodesMap &Nodes) {
-        const auto *BoundRecord = Nodes.getNodeAs<CXXRecordDecl>(ID);
-        return BoundRecord != &Node;
-      });
-}
-
-bool hasPrivateConstructor(const CXXRecordDecl *RD) {
+static bool hasPrivateConstructor(const CXXRecordDecl *RD) {
   for (auto &&Ctor : RD->ctors()) {
     if (Ctor->getAccess() == AS_private)
       return true;
@@ -33,8 +23,8 @@ bool hasPrivateConstructor(const CXXRecordDecl *RD) {
   return false;
 }
 
-bool isDerivedParameterBefriended(const CXXRecordDecl *CRTP,
-                                  const NamedDecl *Param) {
+static bool isDerivedParameterBefriended(const CXXRecordDecl *CRTP,
+                                         const NamedDecl *Param) {
   for (auto &&Friend : CRTP->friends()) {
     const auto *TTPT =
         dyn_cast<TemplateTypeParmType>(Friend->getFriendType()->getType());
@@ -46,8 +36,8 @@ bool isDerivedParameterBefriended(const CXXRecordDecl *CRTP,
   return false;
 }
 
-bool isDerivedClassBefriended(const CXXRecordDecl *CRTP,
-                              const CXXRecordDecl *Derived) {
+static bool isDerivedClassBefriended(const CXXRecordDecl *CRTP,
+                                     const CXXRecordDecl *Derived) {
   for (auto &&Friend : CRTP->friends()) {
     if (Friend->getFriendType()->getType()->getAsCXXRecordDecl() == Derived)
       return true;
@@ -56,7 +46,7 @@ bool isDerivedClassBefriended(const CXXRecordDecl *CRTP,
   return false;
 }
 
-std::optional<const NamedDecl *>
+static std::optional<const NamedDecl *>
 getDerivedParameter(const ClassTemplateSpecializationDecl *CRTP,
                     const CXXRecordDecl *Derived) {
   size_t Idx = 0;
@@ -76,10 +66,10 @@ getDerivedParameter(const ClassTemplateSpecializationDecl *CRTP,
   return CRTP->getSpecializedTemplate()->getTemplateParameters()->getParam(Idx);
 }
 
-std::vector<FixItHint> hintMakeCtorPrivate(const CXXConstructorDecl *Ctor,
-                                           const std::string &OriginalAccess,
-                                           const SourceManager &SM,
-                                           const LangOptions &LangOpts) {
+static std::vector<FixItHint>
+hintMakeCtorPrivate(const CXXConstructorDecl *Ctor,
+                    const std::string &OriginalAccess, const SourceManager &SM,
+                    const LangOptions &LangOpts) {
   std::vector<FixItHint> Hints;
 
   Hints.emplace_back(FixItHint::CreateInsertion(
@@ -94,14 +84,14 @@ std::vector<FixItHint> hintMakeCtorPrivate(const CXXConstructorDecl *Ctor,
 
   return Hints;
 }
-} // namespace
 
 void UnsafeCrtpCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       classTemplateSpecializationDecl(
           decl().bind("crtp"),
           hasAnyTemplateArgument(refersToType(recordType(hasDeclaration(
-              cxxRecordDecl(isDerivedFrom(cxxRecordDecl(isBoundNode("crtp"))))
+              cxxRecordDecl(
+                  isDerivedFrom(cxxRecordDecl(equalsBoundNode("crtp"))))
                   .bind("derived")))))),
       this);
 }

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-unsafe-crtp %t
+// RUN: %check_clang_tidy %s bugprone-unsafe-crtp %t -- -- -fno-delayed-template-parsing
 
 namespace class_implicit_ctor {
 template <typename T>
