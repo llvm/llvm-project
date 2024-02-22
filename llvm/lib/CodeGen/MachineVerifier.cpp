@@ -39,8 +39,6 @@
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineConvergenceVerifier.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -221,11 +219,6 @@ namespace {
     LiveIntervals *LiveInts = nullptr;
     LiveStacks *LiveStks = nullptr;
     SlotIndexes *Indexes = nullptr;
-
-    // This is calculated only when trying to verify convergence control tokens.
-    // Similar to the LLVM IR verifier, we calculate this locally instead of
-    // relying on the pass manager.
-    MachineDomTree DT;
 
     void visitMachineFunctionBefore();
     void visitMachineBasicBlockBefore(const MachineBasicBlock *MBB);
@@ -2962,34 +2955,7 @@ void MachineVerifier::checkPHIOps(const MachineBasicBlock &MBB) {
   }
 }
 
-static void
-verifyConvergenceControl(const MachineFunction &MF, MachineDomTree &DT,
-                         std::function<void(const Twine &Message)> FailureCB) {
-  using MFP = MachineFunctionProperties::Property;
-  const MachineFunctionProperties &Properties = MF.getProperties();
-  bool IsSSA = Properties.hasProperty(MFP::IsSSA);
-
-  MachineConvergenceVerifier CV;
-  CV.initialize(&errs(), FailureCB, MF, IsSSA);
-
-  for (const auto &MBB : MF) {
-    CV.visit(MBB);
-    for (const auto &MI : MBB.instrs())
-      CV.visit(MI);
-  }
-
-  if (CV.sawTokens()) {
-    DT.recalculate(const_cast<MachineFunction &>(MF));
-    CV.verify(DT);
-  }
-}
-
 void MachineVerifier::visitMachineFunctionAfter() {
-  auto FailureCB = [this](const Twine &Message) {
-    report(Message.str().c_str(), MF);
-  };
-  verifyConvergenceControl(*MF, DT, FailureCB);
-
   calcRegsPassed();
 
   for (const MachineBasicBlock &MBB : *MF)

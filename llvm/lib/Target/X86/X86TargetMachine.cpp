@@ -102,6 +102,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeX86ReturnThunksPass(PR);
   initializeX86DAGToDAGISelPass(PR);
   initializeX86ArgumentStackSlotPassPass(PR);
+  initializeX86FixupInstTuningPassPass(PR);
+  initializeX86FixupVectorConstantsPassPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {

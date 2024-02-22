@@ -36,7 +36,7 @@ class TestObjCSuperMethod(TestBase):
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(process, bpt)
 
         # Make sure we stopped at the first breakpoint.
-        self.assertTrue(len(thread_list) != 0, "No thread stopped at our breakpoint.")
+        self.assertNotEqual(len(thread_list), 0, "No thread stopped at our breakpoint.")
         self.assertEqual(
             len(thread_list), 1, "More than one thread stopped at our breakpoint."
         )

@@ -362,13 +362,13 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (Ptr.isInitialized())
     return true;
 
+  if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
+      VD && VD->hasGlobalStorage()) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+    S.Note(VD->getLocation(), diag::note_declared_at);
+  }
   if (!S.checkingPotentialConstantExpression()) {
-    if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
-        VD && VD->hasGlobalStorage()) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
-      S.Note(VD->getLocation(), diag::note_declared_at);
-    }
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
         << AK << /*uninitialized=*/true << S.Current->getRange(OpPC);
   }

@@ -2686,8 +2686,9 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
             attributesPermitTailCall(F, CI, RetI, *TLI)) {
           // Either we return void or the return value must be the first
           // argument of a known intrinsic or library function.
-          if (!V || (isIntrinsicOrLFToBeTailCalled(TLInfo, CI) &&
-                     V == CI->getArgOperand(0))) {
+          if (!V || isa<UndefValue>(V) ||
+              (isIntrinsicOrLFToBeTailCalled(TLInfo, CI) &&
+               V == CI->getArgOperand(0))) {
             TailCallBBs.push_back(Pred);
           }
         }
