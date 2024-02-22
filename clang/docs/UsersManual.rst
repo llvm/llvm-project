@@ -2454,7 +2454,7 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: console
 
-     $ llvm-profgen --binary=./code --output=code.prof--perfdata=perf.data
+     $ llvm-profgen --binary=./code --output=code.prof --perfdata=perf.data
 
 
 4. Build the code again using the collected profile. This step feeds
