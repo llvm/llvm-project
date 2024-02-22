@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include <optional>
 
@@ -68,12 +68,12 @@ public:
       : SValBuilder(alloc, context, stateMgr) {}
   ~SimpleSValBuilder() override {}
 
-  SVal evalBinOpNN(ProgramStateRef state, BinaryOperator::Opcode op,
-                   NonLoc lhs, NonLoc rhs, QualType resultTy) override;
-  SVal evalBinOpLL(ProgramStateRef state, BinaryOperator::Opcode op,
-                   Loc lhs, Loc rhs, QualType resultTy) override;
-  SVal evalBinOpLN(ProgramStateRef state, BinaryOperator::Opcode op,
-                   Loc lhs, NonLoc rhs, QualType resultTy) override;
+  SVal evalBinOpNN(ProgramStateRef state, BinaryOperator::Opcode op, NonLoc lhs,
+                   NonLoc rhs, QualType resultTy) override;
+  SVal evalBinOpLL(ProgramStateRef state, BinaryOperator::Opcode op, Loc lhs,
+                   Loc rhs, QualType resultTy) override;
+  SVal evalBinOpLN(ProgramStateRef state, BinaryOperator::Opcode op, Loc lhs,
+                   NonLoc rhs, QualType resultTy) override;
 
   /// Evaluates a given SVal by recursively evaluating and
   /// simplifying the children SVals. If the SVal has only one possible
@@ -125,9 +125,9 @@ static bool isNegationValuePreserving(const llvm::APSInt &Value,
 //===----------------------------------------------------------------------===//
 
 SVal SimpleSValBuilder::MakeSymIntVal(const SymExpr *LHS,
-                                    BinaryOperator::Opcode op,
-                                    const llvm::APSInt &RHS,
-                                    QualType resultTy) {
+                                      BinaryOperator::Opcode op,
+                                      const llvm::APSInt &RHS,
+                                      QualType resultTy) {
   bool isIdempotent = false;
 
   // Check for a few special cases with known reductions first.
@@ -266,8 +266,7 @@ static bool isWithinConstantOverflowBounds(SymbolRef Sym,
 // Same for the concrete integers: see if I is within [min/4, max/4].
 static bool isWithinConstantOverflowBounds(llvm::APSInt I) {
   APSIntType AT(I);
-  assert(!AT.isUnsigned() &&
-         "This only works with signed integers!");
+  assert(!AT.isUnsigned() && "This only works with signed integers!");
 
   llvm::APSInt Max = AT.getMaxValue() / AT.getValue(4), Min = -Max;
   return (I <= Max) && (I >= -Max);
@@ -277,10 +276,9 @@ static std::pair<SymbolRef, llvm::APSInt>
 decomposeSymbol(SymbolRef Sym, BasicValueFactory &BV) {
   if (const auto *SymInt = dyn_cast<SymIntExpr>(Sym))
     if (BinaryOperator::isAdditiveOp(SymInt->getOpcode()))
-      return std::make_pair(SymInt->getLHS(),
-                            (SymInt->getOpcode() == BO_Add) ?
-                            (SymInt->getRHS()) :
-                            (-SymInt->getRHS()));
+      return std::make_pair(SymInt->getLHS(), (SymInt->getOpcode() == BO_Add)
+                                                  ? (SymInt->getRHS())
+                                                  : (-SymInt->getRHS()));
 
   // Fail to decompose: "reduce" the problem to the "$x + 0" case.
   return std::make_pair(Sym, BV.getValue(0, Sym->getType()));
@@ -290,16 +288,15 @@ decomposeSymbol(SymbolRef Sym, BasicValueFactory &BV) {
 // same signed integral type and no overflows occur (which should be checked
 // by the caller).
 static NonLoc doRearrangeUnchecked(ProgramStateRef State,
-                                   BinaryOperator::Opcode Op,
-                                   SymbolRef LSym, llvm::APSInt LInt,
-                                   SymbolRef RSym, llvm::APSInt RInt) {
+                                   BinaryOperator::Opcode Op, SymbolRef LSym,
+                                   llvm::APSInt LInt, SymbolRef RSym,
+                                   llvm::APSInt RInt) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   BasicValueFactory &BV = SVB.getBasicValueFactory();
   SymbolManager &SymMgr = SVB.getSymbolManager();
 
   QualType SymTy = LSym->getType();
-  assert(SymTy == RSym->getType() &&
-         "Symbols are not of the same type!");
+  assert(SymTy == RSym->getType() && "Symbols are not of the same type!");
   assert(APSIntType(LInt) == BV.getAPSIntType(SymTy) &&
          "Integers are not of the same type as symbols!");
   assert(APSIntType(RInt) == BV.getAPSIntType(SymTy) &&
@@ -314,8 +311,9 @@ static NonLoc doRearrangeUnchecked(ProgramStateRef State,
     llvm_unreachable("Operation not suitable for unchecked rearrangement!");
 
   if (LSym == RSym)
-    return SVB.evalBinOpNN(State, Op, nonloc::ConcreteInt(LInt),
-                           nonloc::ConcreteInt(RInt), ResultTy)
+    return SVB
+        .evalBinOpNN(State, Op, nonloc::ConcreteInt(LInt),
+                     nonloc::ConcreteInt(RInt), ResultTy)
         .castAs<NonLoc>();
 
   SymbolRef ResultSym = nullptr;
@@ -357,10 +355,9 @@ static NonLoc doRearrangeUnchecked(ProgramStateRef State,
 // overflow bounds.
 static bool shouldRearrange(ProgramStateRef State, BinaryOperator::Opcode Op,
                             SymbolRef Sym, llvm::APSInt Int, QualType Ty) {
-  return Sym->getType() == Ty &&
-    (!BinaryOperator::isComparisonOp(Op) ||
-     (isWithinConstantOverflowBounds(Sym, State) &&
-      isWithinConstantOverflowBounds(Int)));
+  return Sym->getType() == Ty && (!BinaryOperator::isComparisonOp(Op) ||
+                                  (isWithinConstantOverflowBounds(Sym, State) &&
+                                   isWithinConstantOverflowBounds(Int)));
 }
 
 static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
@@ -419,9 +416,8 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
 }
 
 SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
-                                  BinaryOperator::Opcode op,
-                                  NonLoc lhs, NonLoc rhs,
-                                  QualType resultTy)  {
+                                    BinaryOperator::Opcode op, NonLoc lhs,
+                                    NonLoc rhs, QualType resultTy) {
   NonLoc InputLHS = lhs;
   NonLoc InputRHS = rhs;
 
@@ -437,25 +433,25 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
   // Handle trivial case where left-side and right-side are the same.
   if (lhs == rhs)
     switch (op) {
-      default:
-        break;
-      case BO_EQ:
-      case BO_LE:
-      case BO_GE:
-        return makeTruthVal(true, resultTy);
-      case BO_LT:
-      case BO_GT:
-      case BO_NE:
-        return makeTruthVal(false, resultTy);
-      case BO_Xor:
-      case BO_Sub:
-        if (resultTy->isIntegralOrEnumerationType())
-          return makeIntVal(0, resultTy);
-        return evalCast(makeIntVal(0, /*isUnsigned=*/false), resultTy,
-                        QualType{});
-      case BO_Or:
-      case BO_And:
-        return evalCast(lhs, resultTy, QualType{});
+    default:
+      break;
+    case BO_EQ:
+    case BO_LE:
+    case BO_GE:
+      return makeTruthVal(true, resultTy);
+    case BO_LT:
+    case BO_GT:
+    case BO_NE:
+      return makeTruthVal(false, resultTy);
+    case BO_Xor:
+    case BO_Sub:
+      if (resultTy->isIntegralOrEnumerationType())
+        return makeIntVal(0, resultTy);
+      return evalCast(makeIntVal(0, /*isUnsigned=*/false), resultTy,
+                      QualType{});
+    case BO_Or:
+    case BO_And:
+      return evalCast(lhs, resultTy, QualType{});
     }
 
   while (true) {
@@ -469,12 +465,12 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
            RPTM = rhs.castAs<nonloc::PointerToMember>();
       auto LPTMD = LPTM.getPTMData(), RPTMD = RPTM.getPTMData();
       switch (op) {
-        case BO_EQ:
-          return makeTruthVal(LPTMD == RPTMD, resultTy);
-        case BO_NE:
-          return makeTruthVal(LPTMD != RPTMD, resultTy);
-        default:
-          return UnknownVal();
+      case BO_EQ:
+        return makeTruthVal(LPTMD == RPTMD, resultTy);
+      case BO_NE:
+        return makeTruthVal(LPTMD != RPTMD, resultTy);
+      default:
+        return UnknownVal();
       }
     }
     case nonloc::LocAsIntegerKind: {
@@ -509,17 +505,17 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
           BasicVals.getAPSIntType(Context.VoidPtrTy).apply(i);
         return evalBinOpLL(state, op, lhsL, makeLoc(i), resultTy);
       }
+      default:
+        switch (op) {
+        case BO_EQ:
+          return makeTruthVal(false, resultTy);
+        case BO_NE:
+          return makeTruthVal(true, resultTy);
         default:
-          switch (op) {
-            case BO_EQ:
-              return makeTruthVal(false, resultTy);
-            case BO_NE:
-              return makeTruthVal(true, resultTy);
-            default:
-              // This case also handles pointer arithmetic.
-              return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
-          }
+          // This case also handles pointer arithmetic.
+          return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
         }
+      }
     }
     case nonloc::ConcreteIntKind: {
       llvm::APSInt LHSValue = lhs.castAs<nonloc::ConcreteInt>().getValue();
@@ -531,8 +527,8 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
           // We're looking for a type big enough to compare the two values.
           // FIXME: This is not correct. char + short will result in a promotion
           // to int. Unfortunately we have lost types by this point.
-          APSIntType CompareType = std::max(APSIntType(LHSValue),
-                                            APSIntType(RHSValue));
+          APSIntType CompareType =
+              std::max(APSIntType(LHSValue), APSIntType(RHSValue));
           CompareType.apply(LHSValue);
           CompareType.apply(RHSValue);
         } else if (!BinaryOperator::isShiftOp(op)) {
@@ -542,7 +538,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         }
 
         const llvm::APSInt *Result =
-          BasicVals.evalAPSInt(op, LHSValue, RHSValue);
+            BasicVals.evalAPSInt(op, LHSValue, RHSValue);
         if (!Result) {
           if (op == BO_Shl || op == BO_Shr) {
             // FIXME: At this point the constant folding claims that the result
@@ -645,15 +641,14 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
           case BO_GE:
           case BO_EQ:
           case BO_NE:
-            assert(resultTy->isBooleanType() ||
-                   resultTy == getConditionType());
+            assert(resultTy->isBooleanType() || resultTy == getConditionType());
             assert(symIntExpr->getType()->isBooleanType() ||
                    getContext().hasSameUnqualifiedType(symIntExpr->getType(),
                                                        getConditionType()));
             // Negate the comparison and make a value.
             opc = BinaryOperator::negateComparisonOp(opc);
-            return makeNonLoc(symIntExpr->getLHS(), opc,
-                symIntExpr->getRHS(), resultTy);
+            return makeNonLoc(symIntExpr->getLHS(), opc, symIntExpr->getRHS(),
+                              resultTy);
           }
         }
 
@@ -787,9 +782,8 @@ static void assertEqualBitWidths(ProgramStateRef State, Loc RhsLoc,
 
 // FIXME: all this logic will change if/when we have MemRegion::getLocation().
 SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
-                                  BinaryOperator::Opcode op,
-                                  Loc lhs, Loc rhs,
-                                  QualType resultTy) {
+                                    BinaryOperator::Opcode op, Loc lhs, Loc rhs,
+                                    QualType resultTy) {
 
   // Assert that bitwidth of lhs and rhs are the same.
   // This can happen if two different address spaces are used,
@@ -977,7 +971,7 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     // relying on us.
     if (LeftBase != RightBase &&
         ((!isa<SymbolicRegion>(LeftBase) && !isa<SymbolicRegion>(RightBase)) ||
-         (isa<HeapSpaceRegion>(LeftMS) || isa<HeapSpaceRegion>(RightMS))) ){
+         (isa<HeapSpaceRegion>(LeftMS) || isa<HeapSpaceRegion>(RightMS)))) {
       switch (op) {
       default:
         return UnknownVal();
@@ -1029,8 +1023,8 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     const FieldRegion *RightFR = dyn_cast<FieldRegion>(RightMR);
     const FieldRegion *LeftFR = dyn_cast<FieldRegion>(LeftMR);
     if (RightFR && LeftFR) {
-      SVal R = evalBinOpFieldRegionFieldRegion(LeftFR, RightFR, op, resultTy,
-                                               *this);
+      SVal R =
+          evalBinOpFieldRegionFieldRegion(LeftFR, RightFR, op, resultTy, *this);
       if (!R.isUnknown())
         return R;
     }
@@ -1046,20 +1040,20 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
       int64_t right = RightOffset.getOffset();
 
       switch (op) {
-        default:
-          return UnknownVal();
-        case BO_LT:
-          return makeTruthVal(left < right, resultTy);
-        case BO_GT:
-          return makeTruthVal(left > right, resultTy);
-        case BO_LE:
-          return makeTruthVal(left <= right, resultTy);
-        case BO_GE:
-          return makeTruthVal(left >= right, resultTy);
-        case BO_EQ:
-          return makeTruthVal(left == right, resultTy);
-        case BO_NE:
-          return makeTruthVal(left != right, resultTy);
+      default:
+        return UnknownVal();
+      case BO_LT:
+        return makeTruthVal(left < right, resultTy);
+      case BO_GT:
+        return makeTruthVal(left > right, resultTy);
+      case BO_LE:
+        return makeTruthVal(left <= right, resultTy);
+      case BO_GE:
+        return makeTruthVal(left >= right, resultTy);
+      case BO_EQ:
+        return makeTruthVal(left == right, resultTy);
+      case BO_NE:
+        return makeTruthVal(left != right, resultTy);
       }
     }
 
@@ -1139,14 +1133,14 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
 
       // Compute the adjusted pointer.
       switch (op) {
-        case BO_Add:
-          rightI = leftI + rightI;
-          break;
-        case BO_Sub:
-          rightI = leftI - rightI;
-          break;
-        default:
-          llvm_unreachable("Invalid pointer arithmetic operation");
+      case BO_Add:
+        rightI = leftI + rightI;
+        break;
+      case BO_Sub:
+        rightI = leftI - rightI;
+        break;
+      default:
+        llvm_unreachable("Invalid pointer arithmetic operation");
       }
       return loc::ConcreteInt(getBasicValueFactory().getValue(rightI));
     }
@@ -1163,12 +1157,11 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
 
     if (const ElementRegion *elemReg = dyn_cast<ElementRegion>(region)) {
       assert(op == BO_Add || op == BO_Sub);
-      index = evalBinOpNN(state, op, elemReg->getIndex(), rhs,
-                          getArrayIndexType());
+      index =
+          evalBinOpNN(state, op, elemReg->getIndex(), rhs, getArrayIndexType());
       superR = cast<SubRegion>(elemReg->getSuperRegion());
       elementType = elemReg->getElementType();
-    }
-    else if (isa<SubRegion>(region)) {
+    } else if (isa<SubRegion>(region)) {
       assert(op == BO_Add || op == BO_Sub);
       index = (op == BO_Add) ? rhs : evalMinus(rhs);
       superR = cast<SubRegion>(region);
@@ -1187,8 +1180,8 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
       elementType = getContext().CharTy;
 
     if (std::optional<NonLoc> indexV = index.getAs<NonLoc>()) {
-      return loc::MemRegionVal(MemMgr.getElementRegion(elementType, *indexV,
-                                                       superR, getContext()));
+      return loc::MemRegionVal(
+          MemMgr.getElementRegion(elementType, *indexV, superR, getContext()));
     }
   }
   return UnknownVal();
@@ -1283,9 +1276,7 @@ SVal SimpleSValBuilder::simplifySValOnce(ProgramStateRef State, SVal V) {
       return V;
     }
 
-    SVal skip(SymbolRef Sym) {
-      return cache(Sym, SVB.makeSymbolVal(Sym));
-    }
+    SVal skip(SymbolRef Sym) { return cache(Sym, SVB.makeSymbolVal(Sym)); }
 
     // Return the known const value for the Sym if available, or return Undef
     // otherwise.
@@ -1407,8 +1398,7 @@ SVal SimpleSValBuilder::simplifySValOnce(ProgramStateRef State, SVal V) {
       if (isUnchanged(S->getOperand(), Op))
         return skip(S);
 
-      return cache(
-          S, SVB.evalUnaryOp(State, S->getOpcode(), Op, S->getType()));
+      return cache(S, SVB.evalUnaryOp(State, S->getOpcode(), Op, S->getType()));
     }
 
     SVal VisitSymExpr(SymbolRef S) { return nonloc::SymbolVal(S); }

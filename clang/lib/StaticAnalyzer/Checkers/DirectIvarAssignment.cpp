@@ -1,4 +1,5 @@
-//=- DirectIvarAssignment.cpp - Check rules on ObjC properties -*- C++ ----*-==//
+//=- DirectIvarAssignment.cpp - Check rules on ObjC properties -*- C++
+//----*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,10 +21,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
@@ -48,11 +49,11 @@ static bool DefaultMethodFilter(const ObjCMethodDecl *M) {
          M->getSelector().getNameForSlot(0).contains("Init");
 }
 
-class DirectIvarAssignment :
-  public Checker<check::ASTDecl<ObjCImplementationDecl> > {
+class DirectIvarAssignment
+    : public Checker<check::ASTDecl<ObjCImplementationDecl>> {
 
-  typedef llvm::DenseMap<const ObjCIvarDecl*,
-                         const ObjCPropertyDecl*> IvarToPropertyMapTy;
+  typedef llvm::DenseMap<const ObjCIvarDecl *, const ObjCPropertyDecl *>
+      IvarToPropertyMapTy;
 
   /// A helper class, which walks the AST and locates all assignments to ivars
   /// in the given function.
@@ -87,19 +88,19 @@ public:
 
   DirectIvarAssignment() : ShouldSkipMethod(&DefaultMethodFilter) {}
 
-  void checkASTDecl(const ObjCImplementationDecl *D, AnalysisManager& Mgr,
+  void checkASTDecl(const ObjCImplementationDecl *D, AnalysisManager &Mgr,
                     BugReporter &BR) const;
 };
 
-static const ObjCIvarDecl *findPropertyBackingIvar(const ObjCPropertyDecl *PD,
-                                               const ObjCInterfaceDecl *InterD,
-                                               ASTContext &Ctx) {
+static const ObjCIvarDecl *
+findPropertyBackingIvar(const ObjCPropertyDecl *PD,
+                        const ObjCInterfaceDecl *InterD, ASTContext &Ctx) {
   // Check for synthesized ivars.
   ObjCIvarDecl *ID = PD->getPropertyIvarDecl();
   if (ID)
     return ID;
 
-  ObjCInterfaceDecl *NonConstInterD = const_cast<ObjCInterfaceDecl*>(InterD);
+  ObjCInterfaceDecl *NonConstInterD = const_cast<ObjCInterfaceDecl *>(InterD);
 
   // Check for existing "_PropName".
   ID = NonConstInterD->lookupInstanceVariable(PD->getDefaultSynthIvarName(Ctx));
@@ -114,18 +115,17 @@ static const ObjCIvarDecl *findPropertyBackingIvar(const ObjCPropertyDecl *PD,
 }
 
 void DirectIvarAssignment::checkASTDecl(const ObjCImplementationDecl *D,
-                                       AnalysisManager& Mgr,
-                                       BugReporter &BR) const {
+                                        AnalysisManager &Mgr,
+                                        BugReporter &BR) const {
   const ObjCInterfaceDecl *InterD = D->getClassInterface();
-
 
   IvarToPropertyMapTy IvarToPropMap;
 
   // Find all properties for this class.
   for (const auto *PD : InterD->instance_properties()) {
     // Find the corresponding IVar.
-    const ObjCIvarDecl *ID = findPropertyBackingIvar(PD, InterD,
-                                                     Mgr.getASTContext());
+    const ObjCIvarDecl *ID =
+        findPropertyBackingIvar(PD, InterD, Mgr.getASTContext());
 
     if (!ID)
       continue;
@@ -163,12 +163,12 @@ static bool isAnnotatedToAllowDirectAssignment(const Decl *D) {
 }
 
 void DirectIvarAssignment::MethodCrawler::VisitBinaryOperator(
-                                                    const BinaryOperator *BO) {
+    const BinaryOperator *BO) {
   if (!BO->isAssignmentOp())
     return;
 
   const ObjCIvarRefExpr *IvarRef =
-          dyn_cast<ObjCIvarRefExpr>(BO->getLHS()->IgnoreParenCasts());
+      dyn_cast<ObjCIvarRefExpr>(BO->getLHS()->IgnoreParenCasts());
 
   if (!IvarRef)
     return;
@@ -205,10 +205,11 @@ void DirectIvarAssignment::MethodCrawler::VisitBinaryOperator(
     }
   }
 }
-}
+} // namespace
 
 // Register the checker that checks for direct accesses in functions annotated
-// with __attribute__((annotate("objc_no_direct_instance_variable_assignment"))).
+// with
+// __attribute__((annotate("objc_no_direct_instance_variable_assignment"))).
 static bool AttrFilter(const ObjCMethodDecl *M) {
   for (const auto *Ann : M->specific_attrs<AnnotateAttr>())
     if (Ann->getAnnotation() == "objc_no_direct_instance_variable_assignment")

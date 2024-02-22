@@ -43,8 +43,7 @@ StoreManager::StoreManager(ProgramStateManager &stateMgr)
     : svalBuilder(stateMgr.getSValBuilder()), StateMgr(stateMgr),
       MRMgr(svalBuilder.getRegionManager()), Ctx(stateMgr.getContext()) {}
 
-StoreRef StoreManager::enterStackFrame(Store OldStore,
-                                       const CallEvent &Call,
+StoreRef StoreManager::enterStackFrame(Store OldStore, const CallEvent &Call,
                                        const StackFrameContext *LCtx) {
   StoreRef Store = StoreRef(OldStore, *this);
 
@@ -117,113 +116,113 @@ std::optional<const MemRegion *> StoreManager::castRegion(const MemRegion *R,
 
   // Process region cast according to the kind of the region being cast.
   switch (R->getKind()) {
-    case MemRegion::CXXThisRegionKind:
-    case MemRegion::CodeSpaceRegionKind:
-    case MemRegion::StackLocalsSpaceRegionKind:
-    case MemRegion::StackArgumentsSpaceRegionKind:
-    case MemRegion::HeapSpaceRegionKind:
-    case MemRegion::UnknownSpaceRegionKind:
-    case MemRegion::StaticGlobalSpaceRegionKind:
-    case MemRegion::GlobalInternalSpaceRegionKind:
-    case MemRegion::GlobalSystemSpaceRegionKind:
-    case MemRegion::GlobalImmutableSpaceRegionKind: {
-      llvm_unreachable("Invalid region cast");
+  case MemRegion::CXXThisRegionKind:
+  case MemRegion::CodeSpaceRegionKind:
+  case MemRegion::StackLocalsSpaceRegionKind:
+  case MemRegion::StackArgumentsSpaceRegionKind:
+  case MemRegion::HeapSpaceRegionKind:
+  case MemRegion::UnknownSpaceRegionKind:
+  case MemRegion::StaticGlobalSpaceRegionKind:
+  case MemRegion::GlobalInternalSpaceRegionKind:
+  case MemRegion::GlobalSystemSpaceRegionKind:
+  case MemRegion::GlobalImmutableSpaceRegionKind: {
+    llvm_unreachable("Invalid region cast");
+  }
+
+  case MemRegion::FunctionCodeRegionKind:
+  case MemRegion::BlockCodeRegionKind:
+  case MemRegion::BlockDataRegionKind:
+  case MemRegion::StringRegionKind:
+    // FIXME: Need to handle arbitrary downcasts.
+  case MemRegion::SymbolicRegionKind:
+  case MemRegion::AllocaRegionKind:
+  case MemRegion::CompoundLiteralRegionKind:
+  case MemRegion::FieldRegionKind:
+  case MemRegion::ObjCIvarRegionKind:
+  case MemRegion::ObjCStringRegionKind:
+  case MemRegion::NonParamVarRegionKind:
+  case MemRegion::ParamVarRegionKind:
+  case MemRegion::CXXTempObjectRegionKind:
+  case MemRegion::CXXLifetimeExtendedObjectRegionKind:
+  case MemRegion::CXXBaseObjectRegionKind:
+  case MemRegion::CXXDerivedObjectRegionKind:
+    return MakeElementRegion(cast<SubRegion>(R), PointeeTy);
+
+  case MemRegion::ElementRegionKind: {
+    // If we are casting from an ElementRegion to another type, the
+    // algorithm is as follows:
+    //
+    // (1) Compute the "raw offset" of the ElementRegion from the
+    //     base region.  This is done by calling 'getAsRawOffset()'.
+    //
+    // (2a) If we get a 'RegionRawOffset' after calling
+    //      'getAsRawOffset()', determine if the absolute offset
+    //      can be exactly divided into chunks of the size of the
+    //      casted-pointee type.  If so, create a new ElementRegion with
+    //      the pointee-cast type as the new ElementType and the index
+    //      being the offset divded by the chunk size.  If not, create
+    //      a new ElementRegion at offset 0 off the raw offset region.
+    //
+    // (2b) If we don't a get a 'RegionRawOffset' after calling
+    //      'getAsRawOffset()', it means that we are at offset 0.
+    //
+    // FIXME: Handle symbolic raw offsets.
+
+    const ElementRegion *elementR = cast<ElementRegion>(R);
+    const RegionRawOffset &rawOff = elementR->getAsArrayOffset();
+    const MemRegion *baseR = rawOff.getRegion();
+
+    // If we cannot compute a raw offset, throw up our hands and return
+    // a NULL MemRegion*.
+    if (!baseR)
+      return std::nullopt;
+
+    CharUnits off = rawOff.getOffset();
+
+    if (off.isZero()) {
+      // Edge case: we are at 0 bytes off the beginning of baseR. We check to
+      // see if the type we are casting to is the same as the type of the base
+      // region. If so, just return the base region.
+      if (IsSameRegionType(baseR, CanonPointeeTy))
+        return baseR;
+      // Otherwise, create a new ElementRegion at offset 0.
+      return MakeElementRegion(cast<SubRegion>(baseR), PointeeTy);
     }
 
-    case MemRegion::FunctionCodeRegionKind:
-    case MemRegion::BlockCodeRegionKind:
-    case MemRegion::BlockDataRegionKind:
-    case MemRegion::StringRegionKind:
-      // FIXME: Need to handle arbitrary downcasts.
-    case MemRegion::SymbolicRegionKind:
-    case MemRegion::AllocaRegionKind:
-    case MemRegion::CompoundLiteralRegionKind:
-    case MemRegion::FieldRegionKind:
-    case MemRegion::ObjCIvarRegionKind:
-    case MemRegion::ObjCStringRegionKind:
-    case MemRegion::NonParamVarRegionKind:
-    case MemRegion::ParamVarRegionKind:
-    case MemRegion::CXXTempObjectRegionKind:
-    case MemRegion::CXXLifetimeExtendedObjectRegionKind:
-    case MemRegion::CXXBaseObjectRegionKind:
-    case MemRegion::CXXDerivedObjectRegionKind:
-      return MakeElementRegion(cast<SubRegion>(R), PointeeTy);
+    // We have a non-zero offset from the base region.  We want to determine
+    // if the offset can be evenly divided by sizeof(PointeeTy).  If so,
+    // we create an ElementRegion whose index is that value.  Otherwise, we
+    // create two ElementRegions, one that reflects a raw offset and the other
+    // that reflects the cast.
 
-    case MemRegion::ElementRegionKind: {
-      // If we are casting from an ElementRegion to another type, the
-      // algorithm is as follows:
-      //
-      // (1) Compute the "raw offset" of the ElementRegion from the
-      //     base region.  This is done by calling 'getAsRawOffset()'.
-      //
-      // (2a) If we get a 'RegionRawOffset' after calling
-      //      'getAsRawOffset()', determine if the absolute offset
-      //      can be exactly divided into chunks of the size of the
-      //      casted-pointee type.  If so, create a new ElementRegion with
-      //      the pointee-cast type as the new ElementType and the index
-      //      being the offset divded by the chunk size.  If not, create
-      //      a new ElementRegion at offset 0 off the raw offset region.
-      //
-      // (2b) If we don't a get a 'RegionRawOffset' after calling
-      //      'getAsRawOffset()', it means that we are at offset 0.
-      //
-      // FIXME: Handle symbolic raw offsets.
+    // Compute the index for the new ElementRegion.
+    int64_t newIndex = 0;
+    const MemRegion *newSuperR = nullptr;
 
-      const ElementRegion *elementR = cast<ElementRegion>(R);
-      const RegionRawOffset &rawOff = elementR->getAsArrayOffset();
-      const MemRegion *baseR = rawOff.getRegion();
-
-      // If we cannot compute a raw offset, throw up our hands and return
-      // a NULL MemRegion*.
-      if (!baseR)
-        return std::nullopt;
-
-      CharUnits off = rawOff.getOffset();
-
-      if (off.isZero()) {
-        // Edge case: we are at 0 bytes off the beginning of baseR. We check to
-        // see if the type we are casting to is the same as the type of the base
-        // region. If so, just return the base region.
-        if (IsSameRegionType(baseR, CanonPointeeTy))
-          return baseR;
-        // Otherwise, create a new ElementRegion at offset 0.
-        return MakeElementRegion(cast<SubRegion>(baseR), PointeeTy);
-      }
-
-      // We have a non-zero offset from the base region.  We want to determine
-      // if the offset can be evenly divided by sizeof(PointeeTy).  If so,
-      // we create an ElementRegion whose index is that value.  Otherwise, we
-      // create two ElementRegions, one that reflects a raw offset and the other
-      // that reflects the cast.
-
-      // Compute the index for the new ElementRegion.
-      int64_t newIndex = 0;
-      const MemRegion *newSuperR = nullptr;
-
-      // We can only compute sizeof(PointeeTy) if it is a complete type.
-      if (!PointeeTy->isIncompleteType()) {
-        // Compute the size in **bytes**.
-        CharUnits pointeeTySize = Ctx.getTypeSizeInChars(PointeeTy);
-        if (!pointeeTySize.isZero()) {
-          // Is the offset a multiple of the size?  If so, we can layer the
-          // ElementRegion (with elementType == PointeeTy) directly on top of
-          // the base region.
-          if (off % pointeeTySize == 0) {
-            newIndex = off / pointeeTySize;
-            newSuperR = baseR;
-          }
+    // We can only compute sizeof(PointeeTy) if it is a complete type.
+    if (!PointeeTy->isIncompleteType()) {
+      // Compute the size in **bytes**.
+      CharUnits pointeeTySize = Ctx.getTypeSizeInChars(PointeeTy);
+      if (!pointeeTySize.isZero()) {
+        // Is the offset a multiple of the size?  If so, we can layer the
+        // ElementRegion (with elementType == PointeeTy) directly on top of
+        // the base region.
+        if (off % pointeeTySize == 0) {
+          newIndex = off / pointeeTySize;
+          newSuperR = baseR;
         }
       }
-
-      if (!newSuperR) {
-        // Create an intermediate ElementRegion to represent the raw byte.
-        // This will be the super region of the final ElementRegion.
-        newSuperR = MakeElementRegion(cast<SubRegion>(baseR), Ctx.CharTy,
-                                      off.getQuantity());
-      }
-
-      return MakeElementRegion(cast<SubRegion>(newSuperR), PointeeTy, newIndex);
     }
+
+    if (!newSuperR) {
+      // Create an intermediate ElementRegion to represent the raw byte.
+      // This will be the super region of the final ElementRegion.
+      newSuperR = MakeElementRegion(cast<SubRegion>(baseR), Ctx.CharTy,
+                                    off.getQuantity());
+    }
+
+    return MakeElementRegion(cast<SubRegion>(newSuperR), PointeeTy, newIndex);
+  }
   }
 
   llvm_unreachable("unreachable");
@@ -267,8 +266,7 @@ SVal StoreManager::evalDerivedToBase(SVal Derived, const CXXBasePath &Path) {
   // Walk through the path to create nested CXXBaseRegions.
   SVal Result = Derived;
   for (const auto &I : Path)
-    Result = evalDerivedToBase(Result, I.Base->getType(),
-                               I.Base->isVirtual());
+    Result = evalDerivedToBase(Result, I.Base->getType(), I.Base->isVirtual());
   return Result;
 }
 
@@ -400,7 +398,7 @@ SVal StoreManager::getLValueFieldOrIvar(const Decl *D, SVal Base) {
     return Base;
 
   Loc BaseL = Base.castAs<Loc>();
-  const SubRegion* BaseR = nullptr;
+  const SubRegion *BaseR = nullptr;
 
   switch (BaseL.getKind()) {
   case loc::MemRegionValKind:
@@ -482,8 +480,8 @@ SVal StoreManager::getLValueElement(QualType elementType, NonLoc Offset,
     //   p[1] = 8;
     //
     //  Observe that 'p' binds to an AllocaRegion.
-    return loc::MemRegionVal(MRMgr.getElementRegion(elementType, Offset,
-                                                    BaseRegion, Ctx));
+    return loc::MemRegionVal(
+        MRMgr.getElementRegion(elementType, Offset, BaseRegion, Ctx));
   }
 
   SVal BaseIdx = ElemR->getIndex();
@@ -505,24 +503,24 @@ SVal StoreManager::getLValueElement(QualType elementType, NonLoc Offset,
         elementType, Offset, cast<SubRegion>(ElemR->getSuperRegion()), Ctx));
   }
 
-  const llvm::APSInt& OffI = Offset.castAs<nonloc::ConcreteInt>().getValue();
+  const llvm::APSInt &OffI = Offset.castAs<nonloc::ConcreteInt>().getValue();
   assert(BaseIdxI.isSigned());
 
   // Compute the new index.
-  nonloc::ConcreteInt NewIdx(svalBuilder.getBasicValueFactory().getValue(BaseIdxI +
-                                                                    OffI));
+  nonloc::ConcreteInt NewIdx(
+      svalBuilder.getBasicValueFactory().getValue(BaseIdxI + OffI));
 
   // Construct the new ElementRegion.
   const SubRegion *ArrayR = cast<SubRegion>(ElemR->getSuperRegion());
-  return loc::MemRegionVal(MRMgr.getElementRegion(elementType, NewIdx, ArrayR,
-                                                  Ctx));
+  return loc::MemRegionVal(
+      MRMgr.getElementRegion(elementType, NewIdx, ArrayR, Ctx));
 }
 
 StoreManager::BindingsHandler::~BindingsHandler() = default;
 
-bool StoreManager::FindUniqueBinding::HandleBinding(StoreManager& SMgr,
+bool StoreManager::FindUniqueBinding::HandleBinding(StoreManager &SMgr,
                                                     Store store,
-                                                    const MemRegion* R,
+                                                    const MemRegion *R,
                                                     SVal val) {
   SymbolRef SymV = val.getAsLocSymbol();
   if (!SymV || SymV != Sym)
@@ -531,8 +529,7 @@ bool StoreManager::FindUniqueBinding::HandleBinding(StoreManager& SMgr,
   if (Binding) {
     First = false;
     return false;
-  }
-  else
+  } else
     Binding = R;
 
   return true;

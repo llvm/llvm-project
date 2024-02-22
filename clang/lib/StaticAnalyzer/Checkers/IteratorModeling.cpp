@@ -87,8 +87,8 @@ namespace {
 class IteratorModeling
     : public Checker<check::PostCall, check::PostStmt<UnaryOperator>,
                      check::PostStmt<BinaryOperator>,
-                     check::PostStmt<MaterializeTemporaryExpr>,
-                     check::Bind, check::LiveSymbols, check::DeadSymbols> {
+                     check::PostStmt<MaterializeTemporaryExpr>, check::Bind,
+                     check::LiveSymbols, check::DeadSymbols> {
 
   using AdvanceFn = void (IteratorModeling::*)(CheckerContext &, const Expr *,
                                                SVal, SVal, SVal) const;
@@ -219,9 +219,13 @@ void IteratorModeling::checkPostCall(const CallEvent &Call,
   // FIXME: Add a more conservative mode
   for (unsigned i = 0; i < Call.getNumArgs(); ++i) {
     if (isIteratorType(Call.getArgExpr(i)->getType()) &&
-        Call.getArgExpr(i)->getType().getNonReferenceType().getDesugaredType(
-            C.getASTContext()).getTypePtr() ==
-        Call.getResultType().getDesugaredType(C.getASTContext()).getTypePtr()) {
+        Call.getArgExpr(i)
+                ->getType()
+                .getNonReferenceType()
+                .getDesugaredType(C.getASTContext())
+                .getTypePtr() == Call.getResultType()
+                                     .getDesugaredType(C.getASTContext())
+                                     .getTypePtr()) {
       if (const auto *Pos = getIteratorPosition(State, Call.getArgSVal(i))) {
         assignToContainer(C, OrigExpr, Call.getReturnValue(),
                           Pos->getContainer());
@@ -344,88 +348,84 @@ void IteratorModeling::checkDeadSymbols(SymbolReaper &SR,
   C.addTransition(State);
 }
 
-void
-IteratorModeling::handleOverloadedOperator(CheckerContext &C,
-                                           const CallEvent &Call,
-                                           OverloadedOperatorKind Op) const {
-    if (isSimpleComparisonOperator(Op)) {
-      const auto *OrigExpr = Call.getOriginExpr();
-      if (!OrigExpr)
-        return;
-
-      if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
-        handleComparison(C, OrigExpr, Call.getReturnValue(),
-                         InstCall->getCXXThisVal(), Call.getArgSVal(0), Op);
-        return;
-      }
-
-      handleComparison(C, OrigExpr, Call.getReturnValue(), Call.getArgSVal(0),
-                         Call.getArgSVal(1), Op);
+void IteratorModeling::handleOverloadedOperator(
+    CheckerContext &C, const CallEvent &Call, OverloadedOperatorKind Op) const {
+  if (isSimpleComparisonOperator(Op)) {
+    const auto *OrigExpr = Call.getOriginExpr();
+    if (!OrigExpr)
       return;
-    } else if (isRandomIncrOrDecrOperator(Op)) {
-      const auto *OrigExpr = Call.getOriginExpr();
-      if (!OrigExpr)
-        return;
 
-      if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
-        if (Call.getNumArgs() >= 1 &&
-              Call.getArgExpr(0)->getType()->isIntegralOrEnumerationType()) {
-          handleRandomIncrOrDecr(C, OrigExpr, Op, Call.getReturnValue(),
-                                 InstCall->getCXXThisVal(), Call.getArgSVal(0));
-          return;
-        }
-      } else if (Call.getNumArgs() >= 2) {
-        const Expr *FirstArg = Call.getArgExpr(0);
-        const Expr *SecondArg = Call.getArgExpr(1);
-        const QualType FirstType = FirstArg->getType();
-        const QualType SecondType = SecondArg->getType();
-
-        if (FirstType->isIntegralOrEnumerationType() ||
-            SecondType->isIntegralOrEnumerationType()) {
-          // In case of operator+ the iterator can be either on the LHS (eg.:
-          // it + 1), or on the RHS (eg.: 1 + it). Both cases are modeled.
-          const bool IsIterFirst = FirstType->isStructureOrClassType();
-          const SVal FirstArg = Call.getArgSVal(0);
-          const SVal SecondArg = Call.getArgSVal(1);
-          SVal Iterator = IsIterFirst ? FirstArg : SecondArg;
-          SVal Amount = IsIterFirst ? SecondArg : FirstArg;
-
-          handleRandomIncrOrDecr(C, OrigExpr, Op, Call.getReturnValue(),
-                                 Iterator, Amount);
-          return;
-        }
-      }
-    } else if (isIncrementOperator(Op)) {
-      if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
-        handleIncrement(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
-                        Call.getNumArgs());
-        return;
-      }
-
-      handleIncrement(C, Call.getReturnValue(), Call.getArgSVal(0),
-                      Call.getNumArgs());
-      return;
-    } else if (isDecrementOperator(Op)) {
-      if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
-        handleDecrement(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
-                        Call.getNumArgs());
-        return;
-      }
-
-      handleDecrement(C, Call.getReturnValue(), Call.getArgSVal(0),
-                        Call.getNumArgs());
+    if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
+      handleComparison(C, OrigExpr, Call.getReturnValue(),
+                       InstCall->getCXXThisVal(), Call.getArgSVal(0), Op);
       return;
     }
+
+    handleComparison(C, OrigExpr, Call.getReturnValue(), Call.getArgSVal(0),
+                     Call.getArgSVal(1), Op);
+    return;
+  } else if (isRandomIncrOrDecrOperator(Op)) {
+    const auto *OrigExpr = Call.getOriginExpr();
+    if (!OrigExpr)
+      return;
+
+    if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
+      if (Call.getNumArgs() >= 1 &&
+          Call.getArgExpr(0)->getType()->isIntegralOrEnumerationType()) {
+        handleRandomIncrOrDecr(C, OrigExpr, Op, Call.getReturnValue(),
+                               InstCall->getCXXThisVal(), Call.getArgSVal(0));
+        return;
+      }
+    } else if (Call.getNumArgs() >= 2) {
+      const Expr *FirstArg = Call.getArgExpr(0);
+      const Expr *SecondArg = Call.getArgExpr(1);
+      const QualType FirstType = FirstArg->getType();
+      const QualType SecondType = SecondArg->getType();
+
+      if (FirstType->isIntegralOrEnumerationType() ||
+          SecondType->isIntegralOrEnumerationType()) {
+        // In case of operator+ the iterator can be either on the LHS (eg.:
+        // it + 1), or on the RHS (eg.: 1 + it). Both cases are modeled.
+        const bool IsIterFirst = FirstType->isStructureOrClassType();
+        const SVal FirstArg = Call.getArgSVal(0);
+        const SVal SecondArg = Call.getArgSVal(1);
+        SVal Iterator = IsIterFirst ? FirstArg : SecondArg;
+        SVal Amount = IsIterFirst ? SecondArg : FirstArg;
+
+        handleRandomIncrOrDecr(C, OrigExpr, Op, Call.getReturnValue(), Iterator,
+                               Amount);
+        return;
+      }
+    }
+  } else if (isIncrementOperator(Op)) {
+    if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
+      handleIncrement(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
+                      Call.getNumArgs());
+      return;
+    }
+
+    handleIncrement(C, Call.getReturnValue(), Call.getArgSVal(0),
+                    Call.getNumArgs());
+    return;
+  } else if (isDecrementOperator(Op)) {
+    if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
+      handleDecrement(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
+                      Call.getNumArgs());
+      return;
+    }
+
+    handleDecrement(C, Call.getReturnValue(), Call.getArgSVal(0),
+                    Call.getNumArgs());
+    return;
+  }
 }
 
-void
-IteratorModeling::handleAdvanceLikeFunction(CheckerContext &C,
-                                            const CallEvent &Call,
-                                            const Expr *OrigExpr,
-                                            const AdvanceFn *Handler) const {
+void IteratorModeling::handleAdvanceLikeFunction(
+    CheckerContext &C, const CallEvent &Call, const Expr *OrigExpr,
+    const AdvanceFn *Handler) const {
   if (!C.wasInlined) {
-    (this->**Handler)(C, OrigExpr, Call.getReturnValue(),
-                      Call.getArgSVal(0), Call.getArgSVal(1));
+    (this->**Handler)(C, OrigExpr, Call.getReturnValue(), Call.getArgSVal(0),
+                      Call.getArgSVal(1));
     return;
   }
 
@@ -506,8 +506,8 @@ void IteratorModeling::processComparison(CheckerContext &C,
                                          OverloadedOperatorKind Op) const {
   if (const auto TruthVal = RetVal.getAs<nonloc::ConcreteInt>()) {
     if ((State = relateSymbols(State, Sym1, Sym2,
-                              (Op == OO_EqualEqual) ==
-                               (TruthVal->getValue() != 0)))) {
+                               (Op == OO_EqualEqual) ==
+                                   (TruthVal->getValue() != 0)))) {
       C.addTransition(State);
     } else {
       C.generateSink(State, C.getPredecessor());
@@ -542,8 +542,8 @@ void IteratorModeling::handleIncrement(CheckerContext &C, SVal RetVal,
     return;
 
   auto NewState =
-    advancePosition(State, Iter, OO_Plus,
-                    nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
+      advancePosition(State, Iter, OO_Plus,
+                      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
   assert(NewState &&
          "Advancing position by concrete int should always be successful");
 
@@ -568,8 +568,8 @@ void IteratorModeling::handleDecrement(CheckerContext &C, SVal RetVal,
     return;
 
   auto NewState =
-    advancePosition(State, Iter, OO_Minus,
-                    nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
+      advancePosition(State, Iter, OO_Minus,
+                      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
   assert(NewState &&
          "Advancing position by concrete int should always be successful");
 
@@ -740,7 +740,7 @@ void IteratorModeling::printState(raw_ostream &Out, ProgramStateRef State,
       const auto Pos = Sym.second;
       Out << (Pos.isValid() ? "Valid" : "Invalid") << " ; Container == ";
       Pos.getContainer()->dumpToStream(Out);
-      Out<<" ; Offset == ";
+      Out << " ; Offset == ";
       Pos.getOffset()->dumpToStream(Out);
     }
 
@@ -753,7 +753,7 @@ void IteratorModeling::printState(raw_ostream &Out, ProgramStateRef State,
       const auto Pos = Reg.second;
       Out << (Pos.isValid() ? "Valid" : "Invalid") << " ; Container == ";
       Pos.getContainer()->dumpToStream(Out);
-      Out<<" ; Offset == ";
+      Out << " ; Offset == ";
       Pos.getOffset()->dumpToStream(Out);
     }
   }
@@ -791,8 +791,8 @@ ProgramStateRef relateSymbols(ProgramStateRef State, SymbolRef Sym1,
   // 3. Compare the result to 0.
   // 4. Assume the result of the comparison.
   const auto comparison =
-    SVB.evalBinOp(State, BO_EQ, nonloc::SymbolVal(Sym1),
-                  nonloc::SymbolVal(Sym2), SVB.getConditionType());
+      SVB.evalBinOp(State, BO_EQ, nonloc::SymbolVal(Sym1),
+                    nonloc::SymbolVal(Sym2), SVB.getConditionType());
 
   assert(isa<DefinedSVal>(comparison) &&
          "Symbol comparison must be a `DefinedSVal`");

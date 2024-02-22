@@ -16,8 +16,8 @@ APSIntType::testInRange(const llvm::APSInt &Value,
                         bool AllowSignConversions) const {
 
   // Negative numbers cannot be losslessly converted to unsigned type.
-  if (IsUnsigned && !AllowSignConversions &&
-      Value.isSigned() && Value.isNegative())
+  if (IsUnsigned && !AllowSignConversions && Value.isSigned() &&
+      Value.isNegative())
     return RTR_Below;
 
   unsigned MinBits;

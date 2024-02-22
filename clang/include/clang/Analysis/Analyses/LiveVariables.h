@@ -29,7 +29,6 @@ class LiveVariables : public ManagedAnalysis {
 public:
   class LivenessValues {
   public:
-
     llvm::ImmutableSet<const Expr *> liveExprs;
     llvm::ImmutableSet<const VarDecl *> liveDecls;
     llvm::ImmutableSet<const BindingDecl *> liveBindings;
@@ -37,7 +36,7 @@ public:
     bool equals(const LivenessValues &V) const;
 
     LivenessValues()
-      : liveExprs(nullptr), liveDecls(nullptr), liveBindings(nullptr) {}
+        : liveExprs(nullptr), liveDecls(nullptr), liveBindings(nullptr) {}
 
     LivenessValues(llvm::ImmutableSet<const Expr *> liveExprs,
                    llvm::ImmutableSet<const VarDecl *> LiveDecls,
@@ -53,14 +52,14 @@ public:
 
   class Observer {
     virtual void anchor();
+
   public:
     virtual ~Observer() {}
 
     /// A callback invoked right before invoking the
     ///  liveness transfer function on the given statement.
-    virtual void observeStmt(const Stmt *S,
-                             const CFGBlock *currentBlock,
-                             const LivenessValues& V) {}
+    virtual void observeStmt(const Stmt *S, const CFGBlock *currentBlock,
+                             const LivenessValues &V) {}
 
     /// Called when the live variables analysis registers
     /// that a variable is killed.

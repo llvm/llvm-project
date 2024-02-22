@@ -25,8 +25,7 @@ using namespace iterator;
 
 namespace {
 
-class DebugIteratorModeling
-  : public Checker<eval::Call> {
+class DebugIteratorModeling : public Checker<eval::Call> {
 
   const BugType DebugMsgBugType{this, "Checking analyzer assumptions", "debug",
                                 /*SuppressOnSink=*/true};
@@ -95,26 +94,35 @@ void DebugIteratorModeling::analyzerIteratorDataField(const CallExpr *CE,
 void DebugIteratorModeling::analyzerIteratorPosition(const CallExpr *CE,
                                                      CheckerContext &C) const {
   auto &BVF = C.getSValBuilder().getBasicValueFactory();
-  analyzerIteratorDataField(CE, C, [](const IteratorPosition *P) {
-      return nonloc::SymbolVal(P->getOffset());
-    }, nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(0))));
+  analyzerIteratorDataField(
+      CE, C,
+      [](const IteratorPosition *P) {
+        return nonloc::SymbolVal(P->getOffset());
+      },
+      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(0))));
 }
 
 void DebugIteratorModeling::analyzerIteratorContainer(const CallExpr *CE,
                                                       CheckerContext &C) const {
   auto &BVF = C.getSValBuilder().getBasicValueFactory();
-  analyzerIteratorDataField(CE, C, [](const IteratorPosition *P) {
-      return loc::MemRegionVal(P->getContainer());
-    }, loc::ConcreteInt(BVF.getValue(llvm::APSInt::get(0))));
+  analyzerIteratorDataField(
+      CE, C,
+      [](const IteratorPosition *P) {
+        return loc::MemRegionVal(P->getContainer());
+      },
+      loc::ConcreteInt(BVF.getValue(llvm::APSInt::get(0))));
 }
 
 void DebugIteratorModeling::analyzerIteratorValidity(const CallExpr *CE,
                                                      CheckerContext &C) const {
   auto &BVF = C.getSValBuilder().getBasicValueFactory();
-  analyzerIteratorDataField(CE, C, [&BVF](const IteratorPosition *P) {
-      return
-        nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get((P->isValid()))));
-    }, nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(0))));
+  analyzerIteratorDataField(
+      CE, C,
+      [&BVF](const IteratorPosition *P) {
+        return nonloc::ConcreteInt(
+            BVF.getValue(llvm::APSInt::get((P->isValid()))));
+      },
+      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(0))));
 }
 
 ExplodedNode *DebugIteratorModeling::reportDebugMsg(llvm::StringRef Msg,

@@ -39,21 +39,22 @@ public:
 
   class Factory {
     void *F;
+
   public:
-    Factory(llvm::BumpPtrAllocator& Alloc);
+    Factory(llvm::BumpPtrAllocator &Alloc);
     ~Factory();
 
     BlockCounter GetEmptyCounter();
     BlockCounter IncrementCount(BlockCounter BC,
-                                  const StackFrameContext *CallSite,
-                                  unsigned BlockID);
+                                const StackFrameContext *CallSite,
+                                unsigned BlockID);
   };
 
   friend class Factory;
 };
 
-} // end GR namespace
+} // namespace ento
 
-} // end clang namespace
+} // namespace clang
 
 #endif

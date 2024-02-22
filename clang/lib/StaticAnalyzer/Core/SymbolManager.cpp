@@ -135,36 +135,36 @@ void SymExpr::symbol_iterator::expand() {
   const SymExpr *SE = itr.pop_back_val();
 
   switch (SE->getKind()) {
-    case SymExpr::SymbolRegionValueKind:
-    case SymExpr::SymbolConjuredKind:
-    case SymExpr::SymbolDerivedKind:
-    case SymExpr::SymbolExtentKind:
-    case SymExpr::SymbolMetadataKind:
-      return;
-    case SymExpr::SymbolCastKind:
-      itr.push_back(cast<SymbolCast>(SE)->getOperand());
-      return;
-    case SymExpr::UnarySymExprKind:
-      itr.push_back(cast<UnarySymExpr>(SE)->getOperand());
-      return;
-    case SymExpr::SymIntExprKind:
-      itr.push_back(cast<SymIntExpr>(SE)->getLHS());
-      return;
-    case SymExpr::IntSymExprKind:
-      itr.push_back(cast<IntSymExpr>(SE)->getRHS());
-      return;
-    case SymExpr::SymSymExprKind: {
-      const auto *x = cast<SymSymExpr>(SE);
-      itr.push_back(x->getLHS());
-      itr.push_back(x->getRHS());
-      return;
-    }
+  case SymExpr::SymbolRegionValueKind:
+  case SymExpr::SymbolConjuredKind:
+  case SymExpr::SymbolDerivedKind:
+  case SymExpr::SymbolExtentKind:
+  case SymExpr::SymbolMetadataKind:
+    return;
+  case SymExpr::SymbolCastKind:
+    itr.push_back(cast<SymbolCast>(SE)->getOperand());
+    return;
+  case SymExpr::UnarySymExprKind:
+    itr.push_back(cast<UnarySymExpr>(SE)->getOperand());
+    return;
+  case SymExpr::SymIntExprKind:
+    itr.push_back(cast<SymIntExpr>(SE)->getLHS());
+    return;
+  case SymExpr::IntSymExprKind:
+    itr.push_back(cast<IntSymExpr>(SE)->getRHS());
+    return;
+  case SymExpr::SymSymExprKind: {
+    const auto *x = cast<SymSymExpr>(SE);
+    itr.push_back(x->getLHS());
+    itr.push_back(x->getRHS());
+    return;
+  }
   }
   llvm_unreachable("unhandled expansion case");
 }
 
-const SymbolRegionValue*
-SymbolManager::getRegionValueSymbol(const TypedValueRegion* R) {
+const SymbolRegionValue *
+SymbolManager::getRegionValueSymbol(const TypedValueRegion *R) {
   llvm::FoldingSetNodeID profile;
   SymbolRegionValue::Profile(profile, R);
   void *InsertPos;
@@ -178,17 +178,17 @@ SymbolManager::getRegionValueSymbol(const TypedValueRegion* R) {
   return cast<SymbolRegionValue>(SD);
 }
 
-const SymbolConjured* SymbolManager::conjureSymbol(const Stmt *E,
+const SymbolConjured *SymbolManager::conjureSymbol(const Stmt *E,
                                                    const LocationContext *LCtx,
-                                                   QualType T,
-                                                   unsigned Count,
+                                                   QualType T, unsigned Count,
                                                    const void *SymbolTag) {
   llvm::FoldingSetNodeID profile;
   SymbolConjured::Profile(profile, E, T, Count, LCtx, SymbolTag);
   void *InsertPos;
   SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
-    SD = new (BPAlloc) SymbolConjured(SymbolCounter, E, LCtx, T, Count, SymbolTag);
+    SD = new (BPAlloc)
+        SymbolConjured(SymbolCounter, E, LCtx, T, Count, SymbolTag);
     DataSet.InsertNode(SD, InsertPos);
     ++SymbolCounter;
   }
@@ -196,7 +196,7 @@ const SymbolConjured* SymbolManager::conjureSymbol(const Stmt *E,
   return cast<SymbolConjured>(SD);
 }
 
-const SymbolDerived*
+const SymbolDerived *
 SymbolManager::getDerivedSymbol(SymbolRef parentSymbol,
                                 const TypedValueRegion *R) {
   llvm::FoldingSetNodeID profile;
@@ -212,8 +212,7 @@ SymbolManager::getDerivedSymbol(SymbolRef parentSymbol,
   return cast<SymbolDerived>(SD);
 }
 
-const SymbolExtent*
-SymbolManager::getExtentSymbol(const SubRegion *R) {
+const SymbolExtent *SymbolManager::getExtentSymbol(const SubRegion *R) {
   llvm::FoldingSetNodeID profile;
   SymbolExtent::Profile(profile, R);
   void *InsertPos;
@@ -228,15 +227,16 @@ SymbolManager::getExtentSymbol(const SubRegion *R) {
 }
 
 const SymbolMetadata *
-SymbolManager::getMetadataSymbol(const MemRegion* R, const Stmt *S, QualType T,
-                                 const LocationContext *LCtx,
-                                 unsigned Count, const void *SymbolTag) {
+SymbolManager::getMetadataSymbol(const MemRegion *R, const Stmt *S, QualType T,
+                                 const LocationContext *LCtx, unsigned Count,
+                                 const void *SymbolTag) {
   llvm::FoldingSetNodeID profile;
   SymbolMetadata::Profile(profile, R, S, T, LCtx, Count, SymbolTag);
   void *InsertPos;
   SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
-    SD = new (BPAlloc) SymbolMetadata(SymbolCounter, R, S, T, LCtx, Count, SymbolTag);
+    SD = new (BPAlloc)
+        SymbolMetadata(SymbolCounter, R, S, T, LCtx, Count, SymbolTag);
     DataSet.InsertNode(SD, InsertPos);
     ++SymbolCounter;
   }
@@ -244,9 +244,8 @@ SymbolManager::getMetadataSymbol(const MemRegion* R, const Stmt *S, QualType T,
   return cast<SymbolMetadata>(SD);
 }
 
-const SymbolCast*
-SymbolManager::getCastSymbol(const SymExpr *Op,
-                             QualType From, QualType To) {
+const SymbolCast *SymbolManager::getCastSymbol(const SymExpr *Op, QualType From,
+                                               QualType To) {
   llvm::FoldingSetNodeID ID;
   SymbolCast::Profile(ID, Op, From, To);
   void *InsertPos;
@@ -261,7 +260,7 @@ SymbolManager::getCastSymbol(const SymExpr *Op,
 
 const SymIntExpr *SymbolManager::getSymIntExpr(const SymExpr *lhs,
                                                BinaryOperator::Opcode op,
-                                               const llvm::APSInt& v,
+                                               const llvm::APSInt &v,
                                                QualType t) {
   llvm::FoldingSetNodeID ID;
   SymIntExpr::Profile(ID, lhs, op, v, t);
@@ -276,10 +275,9 @@ const SymIntExpr *SymbolManager::getSymIntExpr(const SymExpr *lhs,
   return cast<SymIntExpr>(data);
 }
 
-const IntSymExpr *SymbolManager::getIntSymExpr(const llvm::APSInt& lhs,
+const IntSymExpr *SymbolManager::getIntSymExpr(const llvm::APSInt &lhs,
                                                BinaryOperator::Opcode op,
-                                               const SymExpr *rhs,
-                                               QualType t) {
+                                               const SymExpr *rhs, QualType t) {
   llvm::FoldingSetNodeID ID;
   IntSymExpr::Profile(ID, lhs, op, rhs, t);
   void *InsertPos;
@@ -295,8 +293,7 @@ const IntSymExpr *SymbolManager::getIntSymExpr(const llvm::APSInt& lhs,
 
 const SymSymExpr *SymbolManager::getSymSymExpr(const SymExpr *lhs,
                                                BinaryOperator::Opcode op,
-                                               const SymExpr *rhs,
-                                               QualType t) {
+                                               const SymExpr *rhs, QualType t) {
   llvm::FoldingSetNodeID ID;
   SymSymExpr::Profile(ID, lhs, op, rhs, t);
   void *InsertPos;
@@ -325,26 +322,18 @@ const UnarySymExpr *SymbolManager::getUnarySymExpr(const SymExpr *Operand,
   return cast<UnarySymExpr>(data);
 }
 
-QualType SymbolConjured::getType() const {
-  return T;
-}
+QualType SymbolConjured::getType() const { return T; }
 
-QualType SymbolDerived::getType() const {
-  return R->getValueType();
-}
+QualType SymbolDerived::getType() const { return R->getValueType(); }
 
 QualType SymbolExtent::getType() const {
   ASTContext &Ctx = R->getMemRegionManager().getContext();
   return Ctx.getSizeType();
 }
 
-QualType SymbolMetadata::getType() const {
-  return T;
-}
+QualType SymbolMetadata::getType() const { return T; }
 
-QualType SymbolRegionValue::getType() const {
-  return R->getValueType();
-}
+QualType SymbolRegionValue::getType() const { return R->getValueType(); }
 
 bool SymbolManager::canSymbolicate(QualType T) {
   T = T.getCanonicalType();
@@ -370,8 +359,8 @@ void SymbolManager::addSymbolDependency(const SymbolRef Primary,
   dependencies->push_back(Dependent);
 }
 
-const SymbolRefSmallVectorTy *SymbolManager::getDependentSymbols(
-                                                     const SymbolRef Primary) {
+const SymbolRefSmallVectorTy *
+SymbolManager::getDependentSymbols(const SymbolRef Primary) {
   SymbolDependTy::const_iterator I = SymbolDependencies.find(Primary);
   if (I == SymbolDependencies.end())
     return nullptr;
@@ -507,8 +496,8 @@ bool SymbolReaper::isLive(SymbolRef sym) {
   return KnownLive;
 }
 
-bool
-SymbolReaper::isLive(const Expr *ExprVal, const LocationContext *ELCtx) const {
+bool SymbolReaper::isLive(const Expr *ExprVal,
+                          const LocationContext *ELCtx) const {
   if (LCtx == nullptr)
     return false;
 
@@ -528,7 +517,8 @@ SymbolReaper::isLive(const Expr *ExprVal, const LocationContext *ELCtx) const {
   return LCtx->getAnalysis<RelaxedLiveVariables>()->isLive(Loc, ExprVal);
 }
 
-bool SymbolReaper::isLive(const VarRegion *VR, bool includeStoreBindings) const{
+bool SymbolReaper::isLive(const VarRegion *VR,
+                          bool includeStoreBindings) const {
   const StackFrameContext *VarContext = VR->getStackFrame();
 
   if (!VarContext)
@@ -555,7 +545,7 @@ bool SymbolReaper::isLive(const VarRegion *VR, bool includeStoreBindings) const{
       return false;
 
     unsigned &cachedQuery =
-      const_cast<SymbolReaper *>(this)->includedRegionCache[VR];
+        const_cast<SymbolReaper *>(this)->includedRegionCache[VR];
 
     if (cachedQuery) {
       return cachedQuery == 1;
@@ -564,7 +554,7 @@ bool SymbolReaper::isLive(const VarRegion *VR, bool includeStoreBindings) const{
     // Query the store to see if the region occurs in any live bindings.
     if (Store store = reapedStore.getStore()) {
       bool hasRegion =
-        reapedStore.getStoreManager().includedInBindings(store, VR);
+          reapedStore.getStoreManager().includedInBindings(store, VR);
       cachedQuery = hasRegion ? 1 : 2;
       return hasRegion;
     }

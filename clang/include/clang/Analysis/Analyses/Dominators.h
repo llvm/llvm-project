@@ -18,9 +18,9 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/Support/GenericIteratedDominanceFrontier.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
+#include "llvm/Support/GenericIteratedDominanceFrontier.h"
 #include "llvm/Support/raw_ostream.h"
 
 // FIXME: There is no good reason for the domtree to require a print method
@@ -38,8 +38,7 @@ namespace clang {
 using DomTreeNode = llvm::DomTreeNodeBase<CFGBlock>;
 
 /// Dominator tree builder for Clang's CFG based on llvm::DominatorTreeBase.
-template <bool IsPostDom>
-class CFGDominatorTreeImpl : public ManagedAnalysis {
+template <bool IsPostDom> class CFGDominatorTreeImpl : public ManagedAnalysis {
   virtual void anchor();
 
 public:
@@ -47,9 +46,7 @@ public:
 
   CFGDominatorTreeImpl() = default;
 
-  CFGDominatorTreeImpl(CFG *cfg) {
-    buildDominatorTree(cfg);
-  }
+  CFGDominatorTreeImpl(CFG *cfg) { buildDominatorTree(cfg); }
 
   ~CFGDominatorTreeImpl() override = default;
 
@@ -58,14 +55,10 @@ public:
   CFG *getCFG() { return cfg; }
 
   /// \returns the root CFGBlock of the dominators tree.
-  CFGBlock *getRoot() const {
-    return DT.getRoot();
-  }
+  CFGBlock *getRoot() const { return DT.getRoot(); }
 
   /// \returns the root DomTreeNode, which is the wrapper for CFGBlock.
-  DomTreeNode *getRootNode() {
-    return DT.getRootNode();
-  }
+  DomTreeNode *getRootNode() { return DT.getRootNode(); }
 
   /// Compares two dominator trees.
   /// \returns false if the other dominator tree matches this dominator tree,
@@ -94,8 +87,7 @@ public:
   void dump() {
     llvm::errs() << "Immediate " << (IsPostDom ? "post " : "")
                  << "dominance tree (Node#,IDom#):\n";
-    for (CFG::const_iterator I = cfg->begin(),
-        E = cfg->end(); I != E; ++I) {
+    for (CFG::const_iterator I = cfg->begin(), E = cfg->end(); I != E; ++I) {
 
       assert(*I &&
              "LLVM's Dominator tree builder uses nullpointers to signify the "
@@ -103,10 +95,8 @@ public:
 
       DomTreeNode *IDom = DT.getNode(*I)->getIDom();
       if (IDom && IDom->getBlock())
-        llvm::errs() << "(" << (*I)->getBlockID()
-                     << ","
-                     << IDom->getBlock()->getBlockID()
-                     << ")\n";
+        llvm::errs() << "(" << (*I)->getBlockID() << ","
+                     << IDom->getBlock()->getBlockID() << ")\n";
       else {
         bool IsEntryBlock = *I == &(*I)->getParent()->getEntry();
         bool IsExitBlock = *I == &(*I)->getParent()->getExit();
@@ -125,8 +115,8 @@ public:
         (void)IsDomTreeRoot;
         (void)IsPostDomTreeRoot;
 
-        llvm::errs() << "(" << (*I)->getBlockID()
-                     << "," << (*I)->getBlockID() << ")\n";
+        llvm::errs() << "(" << (*I)->getBlockID() << "," << (*I)->getBlockID()
+                     << ")\n";
       }
     }
   }
@@ -170,7 +160,7 @@ public:
   virtual void releaseMemory() { DT.reset(); }
 
   /// Converts the dominator tree to human readable form.
-  virtual void print(raw_ostream &OS, const llvm::Module* M= nullptr) const {
+  virtual void print(raw_ostream &OS, const llvm::Module *M = nullptr) const {
     DT.print(OS);
   }
 
@@ -182,8 +172,8 @@ private:
 using CFGDomTree = CFGDominatorTreeImpl</*IsPostDom*/ false>;
 using CFGPostDomTree = CFGDominatorTreeImpl</*IsPostDom*/ true>;
 
-template<> void CFGDominatorTreeImpl<true>::anchor();
-template<> void CFGDominatorTreeImpl<false>::anchor();
+template <> void CFGDominatorTreeImpl<true>::anchor();
+template <> void CFGDominatorTreeImpl<false>::anchor();
 
 } // end of namespace clang
 
@@ -191,8 +181,7 @@ namespace llvm {
 namespace IDFCalculatorDetail {
 
 /// Specialize ChildrenGetterTy to skip nullpointer successors.
-template <bool IsPostDom>
-struct ChildrenGetterTy<clang::CFGBlock, IsPostDom> {
+template <bool IsPostDom> struct ChildrenGetterTy<clang::CFGBlock, IsPostDom> {
   using NodeRef = typename GraphTraits<clang::CFGBlock *>::NodeRef;
   using ChildrenTy = SmallVector<NodeRef, 8>;
 
@@ -224,7 +213,7 @@ class ControlDependencyCalculator : public ManagedAnalysis {
 
 public:
   ControlDependencyCalculator(CFG *cfg)
-    : PostDomTree(cfg), IDFCalc(PostDomTree.getBase()) {}
+      : PostDomTree(cfg), IDFCalc(PostDomTree.getBase()) {}
 
   const CFGPostDomTree &getCFGPostDomTree() const { return PostDomTree; }
 
@@ -261,10 +250,8 @@ public:
              "virtual root!");
 
       for (CFGBlock *isControlDependency : getControlDependencies(BB))
-        llvm::errs() << "(" << BB->getBlockID()
-                     << ","
-                     << isControlDependency->getBlockID()
-                     << ")\n";
+        llvm::errs() << "(" << BB->getBlockID() << ","
+                     << isControlDependency->getBlockID() << ")\n";
     }
   }
 };
@@ -297,7 +284,8 @@ template <> struct GraphTraits<clang::DomTreeNode *> {
   }
 };
 
-template <> struct GraphTraits<clang::CFGDomTree *>
+template <>
+struct GraphTraits<clang::CFGDomTree *>
     : public GraphTraits<clang::DomTreeNode *> {
   static NodeRef getEntryNode(clang::CFGDomTree *DT) {
     return DT->getRootNode();

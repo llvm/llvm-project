@@ -52,8 +52,7 @@ using namespace ento;
 
 static StringRef StripTrailingDots(StringRef s) { return s.rtrim('.'); }
 
-PathDiagnosticPiece::PathDiagnosticPiece(StringRef s,
-                                         Kind k, DisplayHint hint)
+PathDiagnosticPiece::PathDiagnosticPiece(StringRef s, Kind k, DisplayHint hint)
     : str(StripTrailingDots(s)), kind(k), Hint(hint) {}
 
 PathDiagnosticPiece::PathDiagnosticPiece(Kind k, DisplayHint hint)
@@ -288,19 +287,19 @@ static std::optional<bool> comparePiece(const PathDiagnosticPiece &X,
   }
 
   switch (X.getKind()) {
-    case PathDiagnosticPiece::ControlFlow:
-      return compareControlFlow(cast<PathDiagnosticControlFlowPiece>(X),
-                                cast<PathDiagnosticControlFlowPiece>(Y));
-    case PathDiagnosticPiece::Macro:
-      return compareMacro(cast<PathDiagnosticMacroPiece>(X),
-                          cast<PathDiagnosticMacroPiece>(Y));
-    case PathDiagnosticPiece::Call:
-      return compareCall(cast<PathDiagnosticCallPiece>(X),
-                         cast<PathDiagnosticCallPiece>(Y));
-    case PathDiagnosticPiece::Event:
-    case PathDiagnosticPiece::Note:
-    case PathDiagnosticPiece::PopUp:
-      return std::nullopt;
+  case PathDiagnosticPiece::ControlFlow:
+    return compareControlFlow(cast<PathDiagnosticControlFlowPiece>(X),
+                              cast<PathDiagnosticControlFlowPiece>(Y));
+  case PathDiagnosticPiece::Macro:
+    return compareMacro(cast<PathDiagnosticMacroPiece>(X),
+                        cast<PathDiagnosticMacroPiece>(Y));
+  case PathDiagnosticPiece::Call:
+    return compareCall(cast<PathDiagnosticCallPiece>(X),
+                       cast<PathDiagnosticCallPiece>(Y));
+  case PathDiagnosticPiece::Event:
+  case PathDiagnosticPiece::Note:
+  case PathDiagnosticPiece::PopUp:
+    return std::nullopt;
   }
   llvm_unreachable("all cases handled");
 }
@@ -388,7 +387,7 @@ static bool compare(const PathDiagnostic &X, const PathDiagnostic &Y) {
   PathDiagnostic::meta_iterator YI = Y.meta_begin(), YE = Y.meta_end();
   if (XE - XI != YE - YI)
     return (XE - XI) < (YE - YI);
-  for ( ; XI != XE ; ++XI, ++YI) {
+  for (; XI != XE; ++XI, ++YI) {
     if (*XI != *YI)
       return (*XI) < (*YI);
   }
@@ -396,7 +395,7 @@ static bool compare(const PathDiagnostic &X, const PathDiagnostic &Y) {
 }
 
 void PathDiagnosticConsumer::FlushDiagnostics(
-                                     PathDiagnosticConsumer::FilesMade *Files) {
+    PathDiagnosticConsumer::FilesMade *Files) {
   if (flushed)
     return;
 
@@ -447,12 +446,11 @@ void PathDiagnosticConsumer::FilesMade::addDiagnostic(const PathDiagnostic &PD,
   }
 
   // Allocate persistent storage for the file name.
-  char *FileName_cstr = (char*) Alloc.Allocate(FileName.size(), 1);
+  char *FileName_cstr = (char *)Alloc.Allocate(FileName.size(), 1);
   memcpy(FileName_cstr, FileName.data(), FileName.size());
 
-  Entry->files.push_back(std::make_pair(ConsumerName,
-                                        StringRef(FileName_cstr,
-                                                  FileName.size())));
+  Entry->files.push_back(
+      std::make_pair(ConsumerName, StringRef(FileName_cstr, FileName.size())));
 }
 
 PathDiagnosticConsumer::PDFileEntry::ConsumerFiles *
@@ -481,10 +479,10 @@ SourceLocation PathDiagnosticLocation::getValidSourceLocation(
   // source code, so find an enclosing statement and use its location.
   if (!L.isValid()) {
     AnalysisDeclContext *ADC;
-    if (LAC.is<const LocationContext*>())
-      ADC = LAC.get<const LocationContext*>()->getAnalysisDeclContext();
+    if (LAC.is<const LocationContext *>())
+      ADC = LAC.get<const LocationContext *>()->getAnalysisDeclContext();
     else
-      ADC = LAC.get<AnalysisDeclContext*>();
+      ADC = LAC.get<AnalysisDeclContext *>();
 
     ParentMap &PM = ADC->getParentMap();
 
@@ -510,7 +508,7 @@ SourceLocation PathDiagnosticLocation::getValidSourceLocation(
   }
 
   // FIXME: Ironically, this assert actually fails in some cases.
-  //assert(L.isValid());
+  // assert(L.isValid());
   return L;
 }
 
@@ -525,17 +523,17 @@ getLocationForCaller(const StackFrameContext *SFC,
   case CFGElement::Statement:
   case CFGElement::Constructor:
   case CFGElement::CXXRecordTypedCall:
-    return PathDiagnosticLocation(Source.castAs<CFGStmt>().getStmt(),
-                                  SM, CallerCtx);
+    return PathDiagnosticLocation(Source.castAs<CFGStmt>().getStmt(), SM,
+                                  CallerCtx);
   case CFGElement::Initializer: {
     const CFGInitializer &Init = Source.castAs<CFGInitializer>();
-    return PathDiagnosticLocation(Init.getInitializer()->getInit(),
-                                  SM, CallerCtx);
+    return PathDiagnosticLocation(Init.getInitializer()->getInit(), SM,
+                                  CallerCtx);
   }
   case CFGElement::AutomaticObjectDtor: {
     const CFGAutomaticObjDtor &Dtor = Source.castAs<CFGAutomaticObjDtor>();
-    return PathDiagnosticLocation::createEnd(Dtor.getTriggerStmt(),
-                                             SM, CallerCtx);
+    return PathDiagnosticLocation::createEnd(Dtor.getTriggerStmt(), SM,
+                                             CallerCtx);
   }
   case CFGElement::DeleteDtor: {
     const CFGDeleteDtor &Dtor = Source.castAs<CFGDeleteDtor>();
@@ -573,23 +571,19 @@ getLocationForCaller(const StackFrameContext *SFC,
 }
 
 PathDiagnosticLocation
-PathDiagnosticLocation::createBegin(const Decl *D,
-                                    const SourceManager &SM) {
+PathDiagnosticLocation::createBegin(const Decl *D, const SourceManager &SM) {
   return PathDiagnosticLocation(D->getBeginLoc(), SM, SingleLocK);
 }
 
 PathDiagnosticLocation
-PathDiagnosticLocation::createBegin(const Stmt *S,
-                                    const SourceManager &SM,
+PathDiagnosticLocation::createBegin(const Stmt *S, const SourceManager &SM,
                                     LocationOrAnalysisDeclContext LAC) {
   assert(S && "Statement cannot be null");
-  return PathDiagnosticLocation(getValidSourceLocation(S, LAC),
-                                SM, SingleLocK);
+  return PathDiagnosticLocation(getValidSourceLocation(S, LAC), SM, SingleLocK);
 }
 
 PathDiagnosticLocation
-PathDiagnosticLocation::createEnd(const Stmt *S,
-                                  const SourceManager &SM,
+PathDiagnosticLocation::createEnd(const Stmt *S, const SourceManager &SM,
                                   LocationOrAnalysisDeclContext LAC) {
   if (const auto *CS = dyn_cast<CompoundStmt>(S))
     return createEndBrace(CS, SM);
@@ -604,9 +598,8 @@ PathDiagnosticLocation::createOperatorLoc(const BinaryOperator *BO,
 }
 
 PathDiagnosticLocation
-PathDiagnosticLocation::createConditionalColonLoc(
-                                            const ConditionalOperator *CO,
-                                            const SourceManager &SM) {
+PathDiagnosticLocation::createConditionalColonLoc(const ConditionalOperator *CO,
+                                                  const SourceManager &SM) {
   return PathDiagnosticLocation(CO->getColonLoc(), SM, SingleLocK);
 }
 
@@ -659,9 +652,9 @@ PathDiagnosticLocation::createDeclEnd(const LocationContext *LC,
 }
 
 PathDiagnosticLocation
-PathDiagnosticLocation::create(const ProgramPoint& P,
+PathDiagnosticLocation::create(const ProgramPoint &P,
                                const SourceManager &SMng) {
-  const Stmt* S = nullptr;
+  const Stmt *S = nullptr;
   if (std::optional<BlockEdge> BE = P.getAs<BlockEdge>()) {
     const CFGBlock *BSrc = BE->getSrc();
     if (BSrc->getTerminator().isVirtualBaseBranch()) {
@@ -676,7 +669,8 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
         // If the BlockEdge has no terminator condition statement but its
         // source is the entry of the CFG (e.g. a checker crated the branch at
         // the beginning of a function), use the function's declaration instead.
-        assert(BSrc == &BSrc->getParent()->getEntry() && "CFGBlock has no "
+        assert(BSrc == &BSrc->getParent()->getEntry() &&
+               "CFGBlock has no "
                "TerminatorCondition and is not the enrty block of the CFG");
         return PathDiagnosticLocation::createBegin(
             P.getLocationContext()->getDecl(), SMng);
@@ -696,12 +690,10 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
     return PathDiagnosticLocation(PIE->getLocation(), SMng);
   } else if (std::optional<CallEnter> CE = P.getAs<CallEnter>()) {
     return getLocationForCaller(CE->getCalleeContext(),
-                                CE->getLocationContext(),
-                                SMng);
+                                CE->getLocationContext(), SMng);
   } else if (std::optional<CallExitEnd> CEE = P.getAs<CallExitEnd>()) {
     return getLocationForCaller(CEE->getCalleeContext(),
-                                CEE->getLocationContext(),
-                                SMng);
+                                CEE->getLocationContext(), SMng);
   } else if (auto CEB = P.getAs<CallExitBegin>()) {
     if (const ReturnStmt *RS = CEB->getReturnStmt())
       return PathDiagnosticLocation::createBegin(RS, SMng,
@@ -733,93 +725,92 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
 }
 
 PathDiagnosticLocation PathDiagnosticLocation::createSingleLocation(
-                                           const PathDiagnosticLocation &PDL) {
+    const PathDiagnosticLocation &PDL) {
   FullSourceLoc L = PDL.asLocation();
   return PathDiagnosticLocation(L, L.getManager(), SingleLocK);
 }
 
 FullSourceLoc
-  PathDiagnosticLocation::genLocation(SourceLocation L,
-                                      LocationOrAnalysisDeclContext LAC) const {
+PathDiagnosticLocation::genLocation(SourceLocation L,
+                                    LocationOrAnalysisDeclContext LAC) const {
   assert(isValid());
   // Note that we want a 'switch' here so that the compiler can warn us in
   // case we add more cases.
   switch (K) {
-    case SingleLocK:
-    case RangeK:
+  case SingleLocK:
+  case RangeK:
+    break;
+  case StmtK:
+    // Defensive checking.
+    if (!S)
       break;
-    case StmtK:
-      // Defensive checking.
-      if (!S)
-        break;
-      return FullSourceLoc(getValidSourceLocation(S, LAC),
-                           const_cast<SourceManager&>(*SM));
-    case DeclK:
-      // Defensive checking.
-      if (!D)
-        break;
-      return FullSourceLoc(D->getLocation(), const_cast<SourceManager&>(*SM));
+    return FullSourceLoc(getValidSourceLocation(S, LAC),
+                         const_cast<SourceManager &>(*SM));
+  case DeclK:
+    // Defensive checking.
+    if (!D)
+      break;
+    return FullSourceLoc(D->getLocation(), const_cast<SourceManager &>(*SM));
   }
 
-  return FullSourceLoc(L, const_cast<SourceManager&>(*SM));
+  return FullSourceLoc(L, const_cast<SourceManager &>(*SM));
 }
 
 PathDiagnosticRange
-  PathDiagnosticLocation::genRange(LocationOrAnalysisDeclContext LAC) const {
+PathDiagnosticLocation::genRange(LocationOrAnalysisDeclContext LAC) const {
   assert(isValid());
   // Note that we want a 'switch' here so that the compiler can warn us in
   // case we add more cases.
   switch (K) {
-    case SingleLocK:
-      return PathDiagnosticRange(SourceRange(Loc,Loc), true);
-    case RangeK:
+  case SingleLocK:
+    return PathDiagnosticRange(SourceRange(Loc, Loc), true);
+  case RangeK:
+    break;
+  case StmtK: {
+    const Stmt *S = asStmt();
+    switch (S->getStmtClass()) {
+    default:
       break;
-    case StmtK: {
-      const Stmt *S = asStmt();
-      switch (S->getStmtClass()) {
-        default:
-          break;
-        case Stmt::DeclStmtClass: {
-          const auto *DS = cast<DeclStmt>(S);
-          if (DS->isSingleDecl()) {
-            // Should always be the case, but we'll be defensive.
-            return SourceRange(DS->getBeginLoc(),
-                               DS->getSingleDecl()->getLocation());
-          }
-          break;
-        }
-          // FIXME: Provide better range information for different
-          //  terminators.
-        case Stmt::IfStmtClass:
-        case Stmt::WhileStmtClass:
-        case Stmt::DoStmtClass:
-        case Stmt::ForStmtClass:
-        case Stmt::ChooseExprClass:
-        case Stmt::IndirectGotoStmtClass:
-        case Stmt::SwitchStmtClass:
-        case Stmt::BinaryConditionalOperatorClass:
-        case Stmt::ConditionalOperatorClass:
-        case Stmt::ObjCForCollectionStmtClass: {
-          SourceLocation L = getValidSourceLocation(S, LAC);
-          return SourceRange(L, L);
-        }
+    case Stmt::DeclStmtClass: {
+      const auto *DS = cast<DeclStmt>(S);
+      if (DS->isSingleDecl()) {
+        // Should always be the case, but we'll be defensive.
+        return SourceRange(DS->getBeginLoc(),
+                           DS->getSingleDecl()->getLocation());
       }
-      SourceRange R = S->getSourceRange();
-      if (R.isValid())
-        return R;
       break;
     }
-    case DeclK:
-      if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
-        return MD->getSourceRange();
-      if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-        if (Stmt *Body = FD->getBody())
-          return Body->getSourceRange();
-      }
-      else {
-        SourceLocation L = D->getLocation();
-        return PathDiagnosticRange(SourceRange(L, L), true);
-      }
+      // FIXME: Provide better range information for different
+      //  terminators.
+    case Stmt::IfStmtClass:
+    case Stmt::WhileStmtClass:
+    case Stmt::DoStmtClass:
+    case Stmt::ForStmtClass:
+    case Stmt::ChooseExprClass:
+    case Stmt::IndirectGotoStmtClass:
+    case Stmt::SwitchStmtClass:
+    case Stmt::BinaryConditionalOperatorClass:
+    case Stmt::ConditionalOperatorClass:
+    case Stmt::ObjCForCollectionStmtClass: {
+      SourceLocation L = getValidSourceLocation(S, LAC);
+      return SourceRange(L, L);
+    }
+    }
+    SourceRange R = S->getSourceRange();
+    if (R.isValid())
+      return R;
+    break;
+  }
+  case DeclK:
+    if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
+      return MD->getSourceRange();
+    if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+      if (Stmt *Body = FD->getBody())
+        return Body->getSourceRange();
+    } else {
+      SourceLocation L = D->getLocation();
+      return PathDiagnosticRange(SourceRange(L, L), true);
+    }
   }
 
   return SourceRange(Loc, Loc);
@@ -830,8 +821,7 @@ void PathDiagnosticLocation::flatten() {
     K = RangeK;
     S = nullptr;
     D = nullptr;
-  }
-  else if (K == DeclK) {
+  } else if (K == DeclK) {
     K = SingleLocK;
     S = nullptr;
     D = nullptr;
@@ -846,16 +836,14 @@ std::shared_ptr<PathDiagnosticCallPiece>
 PathDiagnosticCallPiece::construct(const CallExitEnd &CE,
                                    const SourceManager &SM) {
   const Decl *caller = CE.getLocationContext()->getDecl();
-  PathDiagnosticLocation pos = getLocationForCaller(CE.getCalleeContext(),
-                                                    CE.getLocationContext(),
-                                                    SM);
+  PathDiagnosticLocation pos =
+      getLocationForCaller(CE.getCalleeContext(), CE.getLocationContext(), SM);
   return std::shared_ptr<PathDiagnosticCallPiece>(
       new PathDiagnosticCallPiece(caller, pos));
 }
 
 PathDiagnosticCallPiece *
-PathDiagnosticCallPiece::construct(PathPieces &path,
-                                   const Decl *caller) {
+PathDiagnosticCallPiece::construct(PathPieces &path, const Decl *caller) {
   std::shared_ptr<PathDiagnosticCallPiece> C(
       new PathDiagnosticCallPiece(path, caller));
   path.clear();
@@ -879,9 +867,9 @@ void PathDiagnosticCallPiece::setCallee(const CallEnter &CE,
   // Unless set here, the IsCalleeAnAutosynthesizedPropertyAccessor flag
   // defaults to false.
   if (const auto *MD = dyn_cast<ObjCMethodDecl>(Callee))
-    IsCalleeAnAutosynthesizedPropertyAccessor = (
-        MD->isPropertyAccessor() &&
-        CalleeCtx->getAnalysisDeclContext()->isBodyAutosynthesized());
+    IsCalleeAnAutosynthesizedPropertyAccessor =
+        (MD->isPropertyAccessor() &&
+         CalleeCtx->getAnalysisDeclContext()->isBodyAutosynthesized());
 }
 
 static void describeTemplateParameters(raw_ostream &Out,
@@ -903,8 +891,8 @@ static void describeTemplateParameter(raw_ostream &Out,
 
 static void describeTemplateParameters(raw_ostream &Out,
                                        const ArrayRef<TemplateArgument> TAList,
-                                       const LangOptions &LO,
-                                       StringRef Prefix, StringRef Postfix) {
+                                       const LangOptions &LO, StringRef Prefix,
+                                       StringRef Postfix) {
   if (TAList.empty())
     return;
 
@@ -969,11 +957,11 @@ static bool describeCodeDecl(raw_ostream &Out, const Decl *D,
         Out << "'" << *MD << "'";
       }
     } else if (MD->isCopyAssignmentOperator()) {
-        Out << "copy assignment operator";
-        describeClass(Out, MD->getParent(), " for ");
+      Out << "copy assignment operator";
+      describeClass(Out, MD->getParent(), " for ");
     } else if (MD->isMoveAssignmentOperator()) {
-        Out << "move assignment operator";
-        describeClass(Out, MD->getParent(), " for ");
+      Out << "move assignment operator";
+      describeClass(Out, MD->getParent(), " for ");
     } else {
       if (MD->getParent()->getIdentifier())
         Out << "'" << *MD->getParent() << "::" << *MD << "'";
@@ -989,7 +977,7 @@ static bool describeCodeDecl(raw_ostream &Out, const Decl *D,
   // Adding template parameters.
   if (const auto FD = dyn_cast<FunctionDecl>(D))
     if (const TemplateArgumentList *TAList =
-                                    FD->getTemplateSpecializationArgs())
+            FD->getTemplateSpecializationArgs())
       describeTemplateParameters(Out, TAList->asArray(), FD->getLangOpts(), "<",
                                  ">");
 
@@ -1050,9 +1038,9 @@ PathDiagnosticCallPiece::getCallExitEvent() const {
   if (!CallStackMessage.empty()) {
     Out << CallStackMessage;
   } else {
-    bool DidDescribe = describeCodeDecl(Out, Callee,
-                                        /*ExtendedDescription=*/false,
-                                        "Returning from ");
+    bool DidDescribe =
+        describeCodeDecl(Out, Callee,
+                         /*ExtendedDescription=*/false, "Returning from ");
     if (!DidDescribe)
       Out << "Returning to caller";
   }
@@ -1088,10 +1076,10 @@ void PathDiagnosticLocation::Profile(llvm::FoldingSetNodeID &ID) const {
 }
 
 void PathDiagnosticPiece::Profile(llvm::FoldingSetNodeID &ID) const {
-  ID.AddInteger((unsigned) getKind());
+  ID.AddInteger((unsigned)getKind());
   ID.AddString(str);
   // FIXME: Add profiling support for code hints.
-  ID.AddInteger((unsigned) getDisplayHint());
+  ID.AddInteger((unsigned)getDisplayHint());
   ArrayRef<SourceRange> Ranges = getRanges();
   for (const auto &I : Ranges) {
     ID.Add(I.getBegin());

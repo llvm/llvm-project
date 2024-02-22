@@ -55,9 +55,7 @@ public:
   UninitUse(const Expr *User, bool AlwaysUninit)
       : User(User), AlwaysUninit(AlwaysUninit) {}
 
-  void addUninitBranch(Branch B) {
-    UninitBranches.push_back(B);
-  }
+  void addUninitBranch(Branch B) { UninitBranches.push_back(B); }
 
   void setUninitAfterCall() { UninitAfterCall = true; }
   void setUninitAfterDecl() { UninitAfterDecl = true; }
@@ -87,10 +85,11 @@ public:
 
   /// Get the kind of uninitialized use.
   Kind getKind() const {
-    return AlwaysUninit ? Always :
-           UninitAfterCall ? AfterCall :
-           UninitAfterDecl ? AfterDecl :
-           !branch_empty() ? Sometimes : Maybe;
+    return AlwaysUninit      ? Always
+           : UninitAfterCall ? AfterCall
+           : UninitAfterDecl ? AfterDecl
+           : !branch_empty() ? Sometimes
+                             : Maybe;
   }
 
   using branch_iterator = SmallVectorImpl<Branch>::const_iterator;

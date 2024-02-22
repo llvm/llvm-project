@@ -34,18 +34,18 @@ public:
 
   /// Returns a new CFGMap for the given CFG.  It is the caller's
   /// responsibility to 'delete' this object when done using it.
-  static CFGStmtMap *Build(CFG* C, ParentMap *PM);
+  static CFGStmtMap *Build(CFG *C, ParentMap *PM);
 
   /// Returns the CFGBlock the specified Stmt* appears in.  For Stmt* that
   /// are terminators, the CFGBlock is the block they appear as a terminator,
   /// and not the block they appear as a block-level expression (e.g, '&&').
   /// CaseStmts and LabelStmts map to the CFGBlock they label.
-  CFGBlock *getBlock(Stmt * S);
+  CFGBlock *getBlock(Stmt *S);
 
-  const CFGBlock *getBlock(const Stmt * S) const {
-    return const_cast<CFGStmtMap*>(this)->getBlock(const_cast<Stmt*>(S));
+  const CFGBlock *getBlock(const Stmt *S) const {
+    return const_cast<CFGStmtMap *>(this)->getBlock(const_cast<Stmt *>(S));
   }
 };
 
-} // end clang namespace
+} // namespace clang
 #endif

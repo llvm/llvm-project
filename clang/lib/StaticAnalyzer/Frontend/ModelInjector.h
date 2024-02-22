@@ -11,10 +11,10 @@
 /// clang::CodeInjector interface. This class is responsible for injecting
 /// function definitions that were synthesized from model files.
 ///
-/// Model files allow definitions of functions to be lazily constituted for functions
-/// which lack bodies in the original source code.  This allows the analyzer
-/// to more precisely analyze code that calls such functions, analyzing the
-/// artificial definitions (which typically approximate the semantics of the
+/// Model files allow definitions of functions to be lazily constituted for
+/// functions which lack bodies in the original source code.  This allows the
+/// analyzer to more precisely analyze code that calls such functions, analyzing
+/// the artificial definitions (which typically approximate the semantics of the
 /// called function) when called by client code.  These definitions are
 /// reconstituted lazily, on-demand, by the static analyzer engine.
 ///
@@ -60,7 +60,7 @@ private:
   // BodyFarm.
   llvm::StringMap<Stmt *> Bodies;
 };
-}
-}
+} // namespace ento
+} // namespace clang
 
 #endif

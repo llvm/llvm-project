@@ -30,7 +30,7 @@
 namespace clang {
 
 class BumpVectorContext {
-  llvm::PointerIntPair<llvm::BumpPtrAllocator*, 1> Alloc;
+  llvm::PointerIntPair<llvm::BumpPtrAllocator *, 1> Alloc;
 
 public:
   /// Construct a new BumpVectorContext that creates a new BumpPtrAllocator
@@ -64,17 +64,14 @@ public:
   llvm::BumpPtrAllocator &getAllocator() { return *Alloc.getPointer(); }
 };
 
-template<typename T>
-class BumpVector {
+template <typename T> class BumpVector {
   T *Begin = nullptr;
   T *End = nullptr;
   T *Capacity = nullptr;
 
 public:
   // Default ctor - Initialize to empty.
-  explicit BumpVector(BumpVectorContext &C, unsigned N) {
-    reserve(C, N);
-  }
+  explicit BumpVector(BumpVectorContext &C, unsigned N) { reserve(C, N); }
 
   ~BumpVector() {
     if (std::is_class<T>::value) {
@@ -105,14 +102,16 @@ public:
 
   // reverse iterator creation methods.
   reverse_iterator rbegin() { return reverse_iterator(end()); }
-  const_reverse_iterator rbegin() const{ return const_reverse_iterator(end()); }
+  const_reverse_iterator rbegin() const {
+    return const_reverse_iterator(end());
+  }
   reverse_iterator rend() { return reverse_iterator(begin()); }
   const_reverse_iterator rend() const {
     return const_reverse_iterator(begin());
   }
 
   bool empty() const { return Begin == End; }
-  size_type size() const { return End-Begin; }
+  size_type size() const { return End - Begin; }
 
   reference operator[](unsigned idx) {
     assert(Begin + idx < End);
@@ -123,19 +122,11 @@ public:
     return Begin[idx];
   }
 
-  reference front() {
-    return begin()[0];
-  }
-  const_reference front() const {
-    return begin()[0];
-  }
+  reference front() { return begin()[0]; }
+  const_reference front() const { return begin()[0]; }
 
-  reference back() {
-    return end()[-1];
-  }
-  const_reference back() const {
-    return end()[-1];
-  }
+  reference back() { return end()[-1]; }
+  const_reference back() const { return end()[-1]; }
 
   void pop_back() {
     --End;
@@ -156,14 +147,10 @@ public:
   }
 
   /// data - Return a pointer to the vector's buffer, even if empty().
-  pointer data() {
-    return pointer(Begin);
-  }
+  pointer data() { return pointer(Begin); }
 
   /// data - Return a pointer to the vector's buffer, even if empty().
-  const_pointer data() const {
-    return const_pointer(Begin);
-  }
+  const_pointer data() const { return const_pointer(Begin); }
 
   void push_back(const_reference Elt, BumpVectorContext &C) {
     if (End < Capacity) {
@@ -179,7 +166,7 @@ public:
   /// insert - Insert some number of copies of element into a position. Return
   /// iterator to position after last inserted copy.
   iterator insert(iterator I, size_t Cnt, const_reference E,
-      BumpVectorContext &C) {
+                  BumpVectorContext &C) {
     assert(I >= Begin && I <= End && "Iterator out of bounds.");
     if (End + Cnt <= Capacity) {
     Retry:
@@ -195,7 +182,7 @@ public:
   }
 
   void reserve(BumpVectorContext &C, unsigned N) {
-    if (unsigned(Capacity-Begin) < N)
+    if (unsigned(Capacity - Begin) < N)
       grow(C, N);
   }
 
@@ -232,9 +219,9 @@ private:
 // Define this out-of-line to dissuade the C++ compiler from inlining it.
 template <typename T>
 void BumpVector<T>::grow(BumpVectorContext &C, size_t MinSize) {
-  size_t CurCapacity = Capacity-Begin;
+  size_t CurCapacity = Capacity - Begin;
   size_t CurSize = size();
-  size_t NewCapacity = 2*CurCapacity;
+  size_t NewCapacity = 2 * CurCapacity;
   if (NewCapacity < MinSize)
     NewCapacity = MinSize;
 
@@ -256,8 +243,8 @@ void BumpVector<T>::grow(BumpVectorContext &C, size_t MinSize) {
   // For now, leak 'Begin'.  We can add it back to a freelist in
   // BumpVectorContext.
   Begin = NewElts;
-  End = NewElts+CurSize;
-  Capacity = Begin+NewCapacity;
+  End = NewElts + CurSize;
+  Capacity = Begin + NewCapacity;
 }
 
 } // namespace clang

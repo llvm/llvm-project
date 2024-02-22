@@ -21,8 +21,8 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 
 using namespace clang;
@@ -58,7 +58,7 @@ class DynamicTypeChecker : public Checker<check::PostStmt<ImplicitCastExpr>> {
 public:
   void checkPostStmt(const ImplicitCastExpr *CE, CheckerContext &C) const;
 };
-}
+} // namespace
 
 void DynamicTypeChecker::reportTypeError(QualType DynamicType,
                                          QualType StaticType,

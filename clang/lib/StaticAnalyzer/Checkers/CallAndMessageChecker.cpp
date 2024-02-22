@@ -117,8 +117,7 @@ private:
   void emitNilReceiverBug(CheckerContext &C, const ObjCMethodCall &msg,
                           ExplodedNode *N) const;
 
-  void HandleNilReceiver(CheckerContext &C,
-                         ProgramStateRef state,
+  void HandleNilReceiver(CheckerContext &C, ProgramStateRef state,
                          const ObjCMethodCall &msg) const;
 
   void LazyInit_BT(const char *desc, std::unique_ptr<BugType> &BT) const {
@@ -138,7 +137,8 @@ void CallAndMessageChecker::emitBadCall(BugType *BT, CheckerContext &C,
   if (!N)
     return;
 
-  auto R = std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
+  auto R =
+      std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
   if (BadE) {
     R->addRange(BadE->getSourceRange());
     if (BadE->isGLValue())
@@ -194,7 +194,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(
     return false;
 
   // No parameter declaration available, i.e. variadic function argument.
-  if(!ParamDecl)
+  if (!ParamDecl)
     return false;
 
   // If parameter is declared as pointer to const in function declaration,
@@ -212,7 +212,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(
   } else
     return false;
 
-  if(!ParamDecl->getType()->getPointeeType().isConstQualified())
+  if (!ParamDecl->getType()->getPointeeType().isConstQualified())
     return false;
 
   if (const MemRegion *SValMemRegion = V.getAsRegion()) {
@@ -275,16 +275,10 @@ public:
 };
 } // namespace
 
-bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
-                                               SVal V,
-                                               SourceRange ArgRange,
-                                               const Expr *ArgEx,
-                                               int ArgumentNumber,
-                                               bool CheckUninitFields,
-                                               const CallEvent &Call,
-                                               std::unique_ptr<BugType> &BT,
-                                               const ParmVarDecl *ParamDecl
-                                               ) const {
+bool CallAndMessageChecker::PreVisitProcessArg(
+    CheckerContext &C, SVal V, SourceRange ArgRange, const Expr *ArgEx,
+    int ArgumentNumber, bool CheckUninitFields, const CallEvent &Call,
+    std::unique_ptr<BugType> &BT, const ParmVarDecl *ParamDecl) const {
   const char *BD = "Uninitialized argument value";
 
   if (uninitRefOrPointer(C, V, ArgRange, ArgEx, BT, ParamDecl, BD,
@@ -338,7 +332,9 @@ bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
           os << " (e.g., via the field chain: '";
           bool first = true;
           for (SmallVectorImpl<const FieldDecl *>::iterator
-               DI = F.FieldChain.begin(), DE = F.FieldChain.end(); DI!=DE;++DI){
+                   DI = F.FieldChain.begin(),
+                   DE = F.FieldChain.end();
+               DI != DE; ++DI) {
             if (first)
               first = false;
             else
@@ -606,7 +602,8 @@ void CallAndMessageChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
       }
       assert(BT && "Unknown message kind.");
 
-      auto R = std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
+      auto R = std::make_unique<PathSensitiveBugReport>(
+          *BT, BT->getDescription(), N);
       const ObjCMessageExpr *ME = msg.getOriginExpr();
       R->addRange(ME->getReceiverRange());
 
@@ -666,7 +663,7 @@ void CallAndMessageChecker::emitNilReceiverBug(CheckerContext &C,
 static bool supportsNilWithFloatRet(const llvm::Triple &triple) {
   return (triple.getVendor() == llvm::Triple::Apple &&
           (triple.isiOS() || triple.isWatchOS() ||
-           !triple.isMacOSXVersionLT(10,5)));
+           !triple.isMacOSXVersionLT(10, 5)));
 }
 
 void CallAndMessageChecker::HandleNilReceiver(CheckerContext &C,
@@ -689,19 +686,18 @@ void CallAndMessageChecker::HandleNilReceiver(CheckerContext &C,
   }
 
   // Other cases: check if sizeof(return type) > sizeof(void*)
-  if (CanRetTy != Ctx.VoidTy && C.getLocationContext()->getParentMap()
-                                  .isConsumedExpr(Msg.getOriginExpr())) {
+  if (CanRetTy != Ctx.VoidTy &&
+      C.getLocationContext()->getParentMap().isConsumedExpr(
+          Msg.getOriginExpr())) {
     // Compute: sizeof(void *) and sizeof(return type)
     const uint64_t voidPtrSize = Ctx.getTypeSize(Ctx.VoidPtrTy);
     const uint64_t returnTypeSize = Ctx.getTypeSize(CanRetTy);
 
-    if (CanRetTy.getTypePtr()->isReferenceType()||
+    if (CanRetTy.getTypePtr()->isReferenceType() ||
         (voidPtrSize < returnTypeSize &&
          !(supportsNilWithFloatRet(Ctx.getTargetInfo().getTriple()) &&
-           (Ctx.FloatTy == CanRetTy ||
-            Ctx.DoubleTy == CanRetTy ||
-            Ctx.LongDoubleTy == CanRetTy ||
-            Ctx.LongLongTy == CanRetTy ||
+           (Ctx.FloatTy == CanRetTy || Ctx.DoubleTy == CanRetTy ||
+            Ctx.LongDoubleTy == CanRetTy || Ctx.LongLongTy == CanRetTy ||
             Ctx.UnsignedLongLongTy == CanRetTy)))) {
       if (ExplodedNode *N = C.generateErrorNode(state, &Tag))
         emitNilReceiverBug(C, Msg, N);

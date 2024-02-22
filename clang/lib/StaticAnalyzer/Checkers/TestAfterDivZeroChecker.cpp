@@ -172,7 +172,7 @@ void TestAfterDivZeroChecker::reportBug(SVal Val, CheckerContext &C) const {
         N);
 
     R->addVisitor(std::make_unique<DivisionBRVisitor>(Val.getAsSymbol(),
-                                                       C.getStackFrame()));
+                                                      C.getStackFrame()));
     C.emitReport(std::move(R));
   }
 }

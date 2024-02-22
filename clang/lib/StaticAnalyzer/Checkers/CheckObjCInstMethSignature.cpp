@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/PathDiagnostic.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "llvm/ADT/DenseMap.h"
@@ -30,7 +30,7 @@ static bool AreTypesCompatible(QualType Derived, QualType Ancestor,
 
   // Right now don't compare the compatibility of pointers.  That involves
   // looking at subtyping relationships.  FIXME: Future patch.
-  if (Derived->isAnyPointerType() &&  Ancestor->isAnyPointerType())
+  if (Derived->isAnyPointerType() && Ancestor->isAnyPointerType())
     return true;
 
   return C.typesAreCompatible(Derived, Ancestor);
@@ -49,8 +49,7 @@ static void CompareReturnTypes(const ObjCMethodDecl *MethDerived,
     std::string sbuf;
     llvm::raw_string_ostream os(sbuf);
 
-    os << "The Objective-C class '"
-       << *MethDerived->getClassInterface()
+    os << "The Objective-C class '" << *MethDerived->getClassInterface()
        << "', which is derived from class '"
        << *MethAncestor->getClassInterface()
        << "', defines the instance method '";
@@ -64,8 +63,7 @@ static void CompareReturnTypes(const ObjCMethodDecl *MethDerived,
           "behavior for clients of these classes.";
 
     PathDiagnosticLocation MethDLoc =
-      PathDiagnosticLocation::createBegin(MethDerived,
-                                          BR.getSourceManager());
+        PathDiagnosticLocation::createBegin(MethDerived, BR.getSourceManager());
 
     BR.EmitBasicReport(
         MethDerived, Checker, "Incompatible instance method return type",
@@ -86,7 +84,7 @@ static void CheckObjCInstMethSignature(const ObjCImplementationDecl *ID,
   ASTContext &Ctx = BR.getContext();
 
   // Build a DenseMap of the methods for quick querying.
-  typedef llvm::DenseMap<Selector,ObjCMethodDecl*> MapTy;
+  typedef llvm::DenseMap<Selector, ObjCMethodDecl *> MapTy;
   MapTy IMeths;
   unsigned NumMethods = 0;
 
@@ -122,15 +120,15 @@ static void CheckObjCInstMethSignature(const ObjCImplementationDecl *ID,
 //===----------------------------------------------------------------------===//
 
 namespace {
-class ObjCMethSigsChecker : public Checker<
-                                      check::ASTDecl<ObjCImplementationDecl> > {
+class ObjCMethSigsChecker
+    : public Checker<check::ASTDecl<ObjCImplementationDecl>> {
 public:
-  void checkASTDecl(const ObjCImplementationDecl *D, AnalysisManager& mgr,
+  void checkASTDecl(const ObjCImplementationDecl *D, AnalysisManager &mgr,
                     BugReporter &BR) const {
     CheckObjCInstMethSignature(D, BR, this);
   }
 };
-}
+} // namespace
 
 void ento::registerObjCMethSigsChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCMethSigsChecker>();

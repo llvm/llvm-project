@@ -242,8 +242,7 @@ void ento::createSarifHTMLDiagnosticConsumer(
 //===----------------------------------------------------------------------===//
 
 void HTMLDiagnostics::FlushDiagnosticsImpl(
-  std::vector<const PathDiagnostic *> &Diags,
-  FilesMade *filesMade) {
+    std::vector<const PathDiagnostic *> &Diags, FilesMade *filesMade) {
   for (const auto Diag : Diags)
     ReportDiag(*Diag, filesMade);
 }
@@ -260,14 +259,14 @@ static llvm::SmallString<32> getIssueHash(const PathDiagnostic &D,
                       D.getDeclWithIssue(), PP.getLangOpts());
 }
 
-void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
+void HTMLDiagnostics::ReportDiag(const PathDiagnostic &D,
                                  FilesMade *filesMade) {
   // Create the HTML directory if it is missing.
   if (!createdDir) {
     createdDir = true;
     if (std::error_code ec = llvm::sys::fs::create_directories(Directory)) {
-      llvm::errs() << "warning: could not create directory '"
-                   << Directory << "': " << ec.message() << '\n';
+      llvm::errs() << "warning: could not create directory '" << Directory
+                   << "': " << ec.message() << '\n';
       noDir = true;
       return;
     }
@@ -284,24 +283,23 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
   const SourceManager &SMgr = path.front()->getLocation().getManager();
 
   // Create a new rewriter to generate HTML.
-  Rewriter R(const_cast<SourceManager&>(SMgr), PP.getLangOpts());
+  Rewriter R(const_cast<SourceManager &>(SMgr), PP.getLangOpts());
 
   // Get the function/method name
   SmallString<128> declName("unknown");
   int offsetDecl = 0;
   if (const Decl *DeclWithIssue = D.getDeclWithIssue()) {
-      if (const auto *ND = dyn_cast<NamedDecl>(DeclWithIssue))
-          declName = ND->getDeclName().getAsString();
+    if (const auto *ND = dyn_cast<NamedDecl>(DeclWithIssue))
+      declName = ND->getDeclName().getAsString();
 
-      if (const Stmt *Body = DeclWithIssue->getBody()) {
-          // Retrieve the relative position of the declaration which will be used
-          // for the file name
-          FullSourceLoc L(
-              SMgr.getExpansionLoc(path.back()->getLocation().asLocation()),
-              SMgr);
-          FullSourceLoc FunL(SMgr.getExpansionLoc(Body->getBeginLoc()), SMgr);
-          offsetDecl = L.getExpansionLineNumber() - FunL.getExpansionLineNumber();
-      }
+    if (const Stmt *Body = DeclWithIssue->getBody()) {
+      // Retrieve the relative position of the declaration which will be used
+      // for the file name
+      FullSourceLoc L(
+          SMgr.getExpansionLoc(path.back()->getLocation().asLocation()), SMgr);
+      FullSourceLoc FunL(SMgr.getExpansionLoc(Body->getBeginLoc()), SMgr);
+      offsetDecl = L.getExpansionLineNumber() - FunL.getExpansionLineNumber();
+    }
   }
 
   SmallString<32> IssueHash = getIssueHash(D, PP);
@@ -377,8 +375,10 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
   os << report;
 }
 
-std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
-    const SourceManager& SMgr, const PathPieces& path, const char *declName) {
+std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic &D, Rewriter &R,
+                                          const SourceManager &SMgr,
+                                          const PathPieces &path,
+                                          const char *declName) {
   // Rewrite source files as HTML for every new file the path crosses
   std::vector<FileID> FileIDs;
   for (auto I : path) {
@@ -450,16 +450,14 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
   return file;
 }
 
-void HTMLDiagnostics::dumpCoverageData(
-    const PathDiagnostic &D,
-    const PathPieces &path,
-    llvm::raw_string_ostream &os) {
+void HTMLDiagnostics::dumpCoverageData(const PathDiagnostic &D,
+                                       const PathPieces &path,
+                                       llvm::raw_string_ostream &os) {
 
   const FilesToLineNumsMap &ExecutedLines = D.getExecutedLines();
 
   os << "var relevant_lines = {";
-  for (auto I = ExecutedLines.begin(),
-            E = ExecutedLines.end(); I != E; ++I) {
+  for (auto I = ExecutedLines.begin(), E = ExecutedLines.end(); I != E; ++I) {
     if (I != ExecutedLines.begin())
       os << ", ";
 
@@ -476,8 +474,9 @@ void HTMLDiagnostics::dumpCoverageData(
   os << "};";
 }
 
-std::string HTMLDiagnostics::showRelevantLinesJavascript(
-      const PathDiagnostic &D, const PathPieces &path) {
+std::string
+HTMLDiagnostics::showRelevantLinesJavascript(const PathDiagnostic &D,
+                                             const PathPieces &path) {
   std::string s;
   llvm::raw_string_ostream os(s);
   os << "<script type='text/javascript'>\n";
@@ -562,8 +561,10 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic &D, Rewriter &R,
     DirName += '/';
   }
 
-  int LineNumber = path.back()->getLocation().asLocation().getExpansionLineNumber();
-  int ColumnNumber = path.back()->getLocation().asLocation().getExpansionColumnNumber();
+  int LineNumber =
+      path.back()->getLocation().asLocation().getExpansionLineNumber();
+  int ColumnNumber =
+      path.back()->getLocation().asLocation().getExpansionColumnNumber();
 
   R.InsertTextBefore(SMgr.getLocForStartOfFile(FID), showHelpJavascript());
 
@@ -585,29 +586,23 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic &D, Rewriter &R,
     os << "<!-- REPORTHEADER -->\n"
        << "<h3>Bug Summary</h3>\n<table class=\"simpletable\">\n"
           "<tr><td class=\"rowname\">File:</td><td>"
-       << html::EscapeText(DirName)
-       << html::EscapeText(Entry.getName())
+       << html::EscapeText(DirName) << html::EscapeText(Entry.getName())
        << "</td></tr>\n<tr><td class=\"rowname\">Warning:</td><td>"
           "<a href=\"#EndPath\">line "
-       << LineNumber
-       << ", column "
-       << ColumnNumber
-       << "</a><br />"
+       << LineNumber << ", column " << ColumnNumber << "</a><br />"
        << D.getVerboseDescription() << "</td></tr>\n";
 
     // The navigation across the extra notes pieces.
     unsigned NumExtraPieces = 0;
     for (const auto &Piece : path) {
       if (const auto *P = dyn_cast<PathDiagnosticNotePiece>(Piece.get())) {
-        int LineNumber =
-            P->getLocation().asLocation().getExpansionLineNumber();
+        int LineNumber = P->getLocation().asLocation().getExpansionLineNumber();
         int ColumnNumber =
             P->getLocation().asLocation().getExpansionColumnNumber();
         ++NumExtraPieces;
-        os << "<tr><td class=\"rowname\">Note:</td><td>"
-           << "<a href=\"#Note" << NumExtraPieces << "\">line "
-           << LineNumber << ", column " << ColumnNumber << "</a><br />"
-           << P->getString() << "</td></tr>";
+        os << "<tr><td class=\"rowname\">Note:</td><td>" << "<a href=\"#Note"
+           << NumExtraPieces << "\">line " << LineNumber << ", column "
+           << ColumnNumber << "</a><br />" << P->getString() << "</td></tr>";
       }
     }
 
@@ -669,20 +664,17 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic &D, Rewriter &R,
 
     os << "\n<!-- BUGFILE " << DirName << Entry.getName() << " -->\n";
 
-    os << "\n<!-- FILENAME " << llvm::sys::path::filename(Entry.getName()) << " -->\n";
+    os << "\n<!-- FILENAME " << llvm::sys::path::filename(Entry.getName())
+       << " -->\n";
 
-    os  << "\n<!-- FUNCTIONNAME " <<  declName << " -->\n";
+    os << "\n<!-- FUNCTIONNAME " << declName << " -->\n";
 
     os << "\n<!-- ISSUEHASHCONTENTOFLINEINCONTEXT " << getIssueHash(D, PP)
        << " -->\n";
 
-    os << "\n<!-- BUGLINE "
-       << LineNumber
-       << " -->\n";
+    os << "\n<!-- BUGLINE " << LineNumber << " -->\n";
 
-    os << "\n<!-- BUGCOLUMN "
-      << ColumnNumber
-      << " -->\n";
+    os << "\n<!-- BUGCOLUMN " << ColumnNumber << " -->\n";
 
     os << "\n<!-- BUGPATHLENGTH " << getPathSizeWithoutArrows(path) << " -->\n";
 
@@ -908,8 +900,8 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
   // Compute the column number.  Rewind from the current position to the start
   // of the line.
   unsigned ColNo = SM.getColumnNumber(LPosInfo.first, LPosInfo.second);
-  const char *TokInstantiationPtr =Pos.getExpansionLoc().getCharacterData();
-  const char *LineStart = TokInstantiationPtr-ColNo;
+  const char *TokInstantiationPtr = Pos.getExpansionLoc().getCharacterData();
+  const char *LineStart = TokInstantiationPtr - ColNo;
 
   // Compute LineEnd.
   const char *LineEnd = TokInstantiationPtr;
@@ -919,7 +911,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
 
   // Compute the margin offset by counting tabs and non-tabs.
   unsigned PosNo = 0;
-  for (const char* c = LineStart; c != TokInstantiationPtr; ++c)
+  for (const char *c = LineStart; c != TokInstantiationPtr; ++c)
     PosNo += *c == '\t' ? 8 : 1;
 
   // Create the html for the message.
@@ -928,10 +920,16 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
   bool IsNote = false;
   bool SuppressIndex = (max == 1);
   switch (P.getKind()) {
-  case PathDiagnosticPiece::Event: Kind = "Event"; break;
-  case PathDiagnosticPiece::ControlFlow: Kind = "Control"; break;
+  case PathDiagnosticPiece::Event:
+    Kind = "Event";
+    break;
+  case PathDiagnosticPiece::ControlFlow:
+    Kind = "Control";
+    break;
     // Setting Kind to "Control" is intentional.
-  case PathDiagnosticPiece::Macro: Kind = "Control"; break;
+  case PathDiagnosticPiece::Macro:
+    Kind = "Control";
+    break;
   case PathDiagnosticPiece::Note:
     Kind = "Note";
     IsNote = true;
@@ -975,7 +973,8 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
       case ' ':
       case '\t':
       case '\n':
-        if (cnt > max_token) max_token = cnt;
+        if (cnt > max_token)
+          max_token = cnt;
         cnt = 0;
       }
 
@@ -1003,10 +1002,9 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
       em = characters / 2;
     }
 
-    if (em < max_line/2)
+    if (em < max_line / 2)
       os << "; max-width:" << em << "em";
-  }
-  else
+  } else
     os << "; max-width:100em";
 
   os << "\">";
@@ -1014,14 +1012,13 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
   if (!SuppressIndex) {
     os << "<table class=\"msgT\"><tr><td valign=\"top\">";
     os << "<div class=\"PathIndex";
-    if (Kind) os << " PathIndex" << Kind;
+    if (Kind)
+      os << " PathIndex" << Kind;
     os << "\">" << num << "</div>";
 
     if (num > 1) {
-      os << "</td><td><div class=\"PathNav\"><a href=\"#Path"
-         << (num - 1)
-         << "\" title=\"Previous event ("
-         << (num - 1)
+      os << "</td><td><div class=\"PathNav\"><a href=\"#Path" << (num - 1)
+         << "\" title=\"Previous event (" << (num - 1)
          << ")\">&#x2190;</a></div>";
     }
 
@@ -1037,7 +1034,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
       assert(L.isFileID());
       StringRef BufferInfo = L.getBufferData();
       std::pair<FileID, unsigned> LocInfo = L.getDecomposedLoc();
-      const char* MacroName = LocInfo.second + BufferInfo.data();
+      const char *MacroName = LocInfo.second + BufferInfo.data();
       Lexer rawLexer(SM.getLocForStartOfFile(LocInfo.first), PP.getLangOpts(),
                      BufferInfo.begin(), MacroName, BufferInfo.end());
 
@@ -1057,9 +1054,8 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
           os << "EndPath";
         else
           os << "Path" << (num + 1);
-        os << "\" title=\"Next event ("
-        << (num + 1)
-        << ")\">&#x2192;</a></div></td>";
+        os << "\" title=\"Next event (" << (num + 1)
+           << ")\">&#x2192;</a></div></td>";
       }
 
       os << "</tr></table>";
@@ -1067,8 +1063,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
 
     // Within a macro piece.  Write out each event.
     ProcessMacroPiece(os, *MP, 0);
-  }
-  else {
+  } else {
     os << html::EscapeText(P.getString());
 
     if (!SuppressIndex) {
@@ -1079,8 +1074,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
           os << "EndPath";
         else
           os << "Path" << (num + 1);
-        os << "\" title=\"Next event ("
-           << (num + 1)
+        os << "\" title=\"Next event (" << (num + 1)
            << ")\">&#x2192;</a></div></td>";
       }
 
@@ -1093,7 +1087,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
   // Insert the new html.
   unsigned DisplayPos = LineEnd - FileStart;
   SourceLocation Loc =
-    SM.getLocForStartOfFile(LPosInfo.first).getLocWithOffset(DisplayPos);
+      SM.getLocForStartOfFile(LPosInfo.first).getLocWithOffset(DisplayPos);
 
   R.InsertTextBefore(Loc, os.str());
 
@@ -1119,7 +1113,7 @@ static void EmitAlphaCounter(raw_ostream &os, unsigned n) {
 }
 
 unsigned HTMLDiagnostics::ProcessMacroPiece(raw_ostream &os,
-                                            const PathDiagnosticMacroPiece& P,
+                                            const PathDiagnosticMacroPiece &P,
                                             unsigned num) {
   for (const auto &subPiece : P.subPieces) {
     if (const auto *MP = dyn_cast<PathDiagnosticMacroPiece>(subPiece.get())) {
@@ -1134,8 +1128,7 @@ unsigned HTMLDiagnostics::ProcessMacroPiece(raw_ostream &os,
             "<td valign=\"top\"><div class=\"PathIndex PathIndexEvent\">";
       EmitAlphaCounter(os, num++);
       os << "</div></td><td valign=\"top\">"
-         << html::EscapeText(EP->getString())
-         << "</td></tr></table></div>\n";
+         << html::EscapeText(EP->getString()) << "</td></tr></table></div>\n";
     }
   }
 
@@ -1240,7 +1233,7 @@ unsigned HTMLDiagnostics::ProcessControlFlowPiece(
   return Number;
 }
 
-void HTMLDiagnostics::HighlightRange(Rewriter& R, FileID BugFileID,
+void HTMLDiagnostics::HighlightRange(Rewriter &R, FileID BugFileID,
                                      SourceRange Range,
                                      const char *HighlightStart,
                                      const char *HighlightEnd) {
@@ -1266,14 +1259,13 @@ void HTMLDiagnostics::HighlightRange(Rewriter& R, FileID BugFileID,
 
   if (EndColNo) {
     // Add in the length of the token, so that we cover multi-char tokens.
-    EndColNo += Lexer::MeasureTokenLength(Range.getEnd(), SM, LangOpts)-1;
+    EndColNo += Lexer::MeasureTokenLength(Range.getEnd(), SM, LangOpts) - 1;
   }
 
   // Highlight the range.  Make the span tag the outermost tag for the
   // selected range.
 
-  SourceLocation E =
-    InstantiationEnd.getLocWithOffset(EndColNo - OldEndColNo);
+  SourceLocation E = InstantiationEnd.getLocWithOffset(EndColNo - OldEndColNo);
 
   html::HighlightRange(R, InstantiationStart, E, HighlightStart, HighlightEnd);
 }

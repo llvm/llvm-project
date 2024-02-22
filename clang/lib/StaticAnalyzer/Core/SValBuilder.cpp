@@ -125,7 +125,7 @@ SVal SValBuilder::convertToArrayIndex(SVal val) {
   // Common case: we have an appropriately sized integer.
   if (std::optional<nonloc::ConcreteInt> CI =
           val.getAs<nonloc::ConcreteInt>()) {
-    const llvm::APSInt& I = CI->getValue();
+    const llvm::APSInt &I = CI->getValue();
     if (I.getBitWidth() == ArrayIndexWidth && I.isSigned())
       return val;
   }
@@ -133,7 +133,8 @@ SVal SValBuilder::convertToArrayIndex(SVal val) {
   return evalCast(val, ArrayIndexTy, QualType{});
 }
 
-nonloc::ConcreteInt SValBuilder::makeBoolVal(const CXXBoolLiteralExpr *boolean){
+nonloc::ConcreteInt
+SValBuilder::makeBoolVal(const CXXBoolLiteralExpr *boolean) {
   return makeTruthVal(boolean->getValue());
 }
 
@@ -210,10 +211,8 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const Stmt *stmt,
   return nonloc::SymbolVal(sym);
 }
 
-DefinedOrUnknownSVal
-SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
-                                      const LocationContext *LCtx,
-                                      unsigned VisitCount) {
+DefinedOrUnknownSVal SValBuilder::getConjuredHeapSymbolVal(
+    const Expr *E, const LocationContext *LCtx, unsigned VisitCount) {
   QualType T = E->getType();
   return getConjuredHeapSymbolVal(E, LCtx, T, VisitCount);
 }
@@ -257,7 +256,7 @@ DefinedSVal SValBuilder::getMetadataSymbolVal(const void *symbolTag,
 
 DefinedOrUnknownSVal
 SValBuilder::getDerivedRegionValueSymbolVal(SymbolRef parentSymbol,
-                                             const TypedValueRegion *region) {
+                                            const TypedValueRegion *region) {
   QualType T = region->getValueType();
 
   if (T->isNullPtrType())
@@ -298,10 +297,10 @@ DefinedSVal SValBuilder::getBlockPointer(const BlockDecl *block,
                                          CanQualType locTy,
                                          const LocationContext *locContext,
                                          unsigned blockCount) {
-  const BlockCodeRegion *BC =
-    MemMgr.getBlockCodeRegion(block, locTy, locContext->getAnalysisDeclContext());
-  const BlockDataRegion *BD = MemMgr.getBlockDataRegion(BC, locContext,
-                                                        blockCount);
+  const BlockCodeRegion *BC = MemMgr.getBlockCodeRegion(
+      block, locTy, locContext->getAnalysisDeclContext());
+  const BlockDataRegion *BD =
+      MemMgr.getBlockDataRegion(BC, locContext, blockCount);
   return loc::MemRegionVal(BD);
 }
 
@@ -426,9 +425,8 @@ std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
   }
 }
 
-SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
-                                   NonLoc LHS, NonLoc RHS,
-                                   QualType ResultTy) {
+SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op, NonLoc LHS,
+                                   NonLoc RHS, QualType ResultTy) {
   SymbolRef symLHS = LHS.getAsSymbol();
   SymbolRef symRHS = RHS.getAsSymbol();
 
@@ -437,7 +435,7 @@ SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
   const unsigned MaxComp = AnOpts.MaxSymbolComplexity;
 
   if (symLHS && symRHS &&
-      (symLHS->computeComplexity() + symRHS->computeComplexity()) <  MaxComp)
+      (symLHS->computeComplexity() + symRHS->computeComplexity()) < MaxComp)
     return makeNonLoc(symLHS, Op, symRHS, ResultTy);
 
   if (symLHS && symLHS->computeComplexity() < MaxComp)
@@ -478,7 +476,7 @@ SVal SValBuilder::evalComplement(NonLoc X) {
 }
 
 SVal SValBuilder::evalUnaryOp(ProgramStateRef state, UnaryOperator::Opcode opc,
-                 SVal operand, QualType type) {
+                              SVal operand, QualType type) {
   auto OpN = operand.getAs<NonLoc>();
   if (!OpN)
     return UnknownVal();
@@ -560,7 +558,7 @@ DefinedOrUnknownSVal SValBuilder::evalEQ(ProgramStateRef state,
 /// and restrict qualifiers. Also, assume that all types are similar to 'void'.
 /// Assumes the input types are canonical.
 static bool shouldBeModeledWithNoOp(ASTContext &Context, QualType ToTy,
-                                                         QualType FromTy) {
+                                    QualType FromTy) {
   while (Context.UnwrapSimilarTypes(ToTy, FromTy)) {
     Qualifiers Quals1, Quals2;
     ToTy = Context.getUnqualifiedArrayType(ToTy, Quals1);

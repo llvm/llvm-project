@@ -10,10 +10,8 @@
 
 namespace clang {
 
-template <>
-void CFGDominatorTreeImpl</*IsPostDom=*/true>::anchor() {}
+template <> void CFGDominatorTreeImpl</*IsPostDom=*/true>::anchor() {}
 
-template <>
-void CFGDominatorTreeImpl</*IsPostDom=*/false>::anchor() {}
+template <> void CFGDominatorTreeImpl</*IsPostDom=*/false>::anchor() {}
 
 } // end of namespace clang

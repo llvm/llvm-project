@@ -65,15 +65,15 @@ public:
 /// subclasses.
 template <typename ImplClass, typename RetTy = void> class SymExprVisitor {
 public:
-
-#define DISPATCH(CLASS) \
-    return static_cast<ImplClass *>(this)->Visit ## CLASS(cast<CLASS>(S))
+#define DISPATCH(CLASS)                                                        \
+  return static_cast<ImplClass *>(this)->Visit##CLASS(cast<CLASS>(S))
 
   RetTy Visit(SymbolRef S) {
     // Dispatch to VisitSymbolFoo for each SymbolFoo.
     switch (S->getKind()) {
-#define SYMBOL(Id, Parent) \
-    case SymExpr::Id ## Kind: DISPATCH(Id);
+#define SYMBOL(Id, Parent)                                                     \
+  case SymExpr::Id##Kind:                                                      \
+    DISPATCH(Id);
 #include "clang/StaticAnalyzer/Core/PathSensitive/Symbols.def"
     }
     llvm_unreachable("Unknown SymExpr kind!");
@@ -81,7 +81,8 @@ public:
 
   // If the implementation chooses not to implement a certain visit method, fall
   // back on visiting the superclass.
-#define SYMBOL(Id, Parent) RetTy Visit ## Id(const Id *S) { DISPATCH(Parent); }
+#define SYMBOL(Id, Parent)                                                     \
+  RetTy Visit##Id(const Id *S) { DISPATCH(Parent); }
 #define ABSTRACT_SYMBOL(Id, Parent) SYMBOL(Id, Parent)
 #include "clang/StaticAnalyzer/Core/PathSensitive/Symbols.def"
 
@@ -95,14 +96,15 @@ public:
 /// subclasses.
 template <typename ImplClass, typename RetTy = void> class MemRegionVisitor {
 public:
-
-#define DISPATCH(CLASS) \
-  return static_cast<ImplClass *>(this)->Visit ## CLASS(cast<CLASS>(R))
+#define DISPATCH(CLASS)                                                        \
+  return static_cast<ImplClass *>(this)->Visit##CLASS(cast<CLASS>(R))
 
   RetTy Visit(const MemRegion *R) {
     // Dispatch to VisitFooRegion for each FooRegion.
     switch (R->getKind()) {
-#define REGION(Id, Parent) case MemRegion::Id ## Kind: DISPATCH(Id);
+#define REGION(Id, Parent)                                                     \
+  case MemRegion::Id##Kind:                                                    \
+    DISPATCH(Id);
 #include "clang/StaticAnalyzer/Core/PathSensitive/Regions.def"
     }
     llvm_unreachable("Unknown MemRegion kind!");
@@ -110,10 +112,9 @@ public:
 
   // If the implementation chooses not to implement a certain visit method, fall
   // back on visiting the superclass.
-#define REGION(Id, Parent) \
-  RetTy Visit ## Id(const Id *R) { DISPATCH(Parent); }
-#define ABSTRACT_REGION(Id, Parent) \
-  REGION(Id, Parent)
+#define REGION(Id, Parent)                                                     \
+  RetTy Visit##Id(const Id *R) { DISPATCH(Parent); }
+#define ABSTRACT_REGION(Id, Parent) REGION(Id, Parent)
 #include "clang/StaticAnalyzer/Core/PathSensitive/Regions.def"
 
   // Base case, ignore it. :)

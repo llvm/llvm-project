@@ -138,8 +138,7 @@ static const NoteTag *getNoteTag(CheckerContext &C,
 
 static const NoteTag *getNoteTag(CheckerContext &C,
                                  SmallVector<QualType, 4> CastToTyVec,
-                                 const Expr *Object,
-                                 bool IsKnownCast) {
+                                 const Expr *Object, bool IsKnownCast) {
   Object = Object->IgnoreParenImpCasts();
 
   return C.getNoteTag(
@@ -161,14 +160,15 @@ static const NoteTag *getNoteTag(CheckerContext &C,
         Out << " is";
 
         bool First = true;
-        for (QualType CastToTy: CastToTyVec) {
+        for (QualType CastToTy : CastToTyVec) {
           std::string CastToName =
               CastToTy->getAsCXXRecordDecl()
                   ? CastToTy->getAsCXXRecordDecl()->getNameAsString()
                   : CastToTy.getAsString();
-          Out << ' ' << ((CastToTyVec.size() == 1) ? "not" :
-                         (First ? "neither" : "nor")) << " a '" << CastToName
-              << '\'';
+          Out << ' '
+              << ((CastToTyVec.size() == 1) ? "not"
+                                            : (First ? "neither" : "nor"))
+              << " a '" << CastToName << '\'';
           First = false;
         }
 
@@ -266,7 +266,7 @@ static void addInstanceOfTransition(const CallEvent &Call,
   for (unsigned idx = 0; idx < FD->getTemplateSpecializationArgs()->size() - 1;
        ++idx) {
     TemplateArgument CastToTempArg =
-      FD->getTemplateSpecializationArgs()->get(idx);
+        FD->getTemplateSpecializationArgs()->get(idx);
     switch (CastToTempArg.getKind()) {
     default:
       return;
@@ -274,7 +274,7 @@ static void addInstanceOfTransition(const CallEvent &Call,
       CastToTyVec.push_back(CastToTempArg.getAsType());
       break;
     case TemplateArgument::Pack:
-      for (TemplateArgument ArgInPack: CastToTempArg.pack_elements())
+      for (TemplateArgument ArgInPack : CastToTempArg.pack_elements())
         CastToTyVec.push_back(ArgInPack.getAsType());
       break;
     }
@@ -286,7 +286,7 @@ static void addInstanceOfTransition(const CallEvent &Call,
 
   bool Success = false;
   bool IsAnyKnown = false;
-  for (QualType CastToTy: CastToTyVec) {
+  for (QualType CastToTy : CastToTyVec) {
     if (CastFromTy->isPointerType())
       CastToTy = C.getASTContext().getPointerType(CastToTy);
     else if (CastFromTy->isReferenceType())
@@ -295,7 +295,7 @@ static void addInstanceOfTransition(const CallEvent &Call,
       return;
 
     const DynamicCastInfo *CastInfo =
-      getDynamicCastInfo(State, MR, CastFromTy, CastToTy);
+        getDynamicCastInfo(State, MR, CastFromTy, CastToTy);
 
     bool CastSucceeds;
     if (CastInfo)
@@ -313,11 +313,11 @@ static void addInstanceOfTransition(const CallEvent &Call,
 
     if (CastSucceeds) {
       Success = true;
-      C.addTransition(
-          NewState->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
-                             C.getSValBuilder().makeTruthVal(true)),
-          getNoteTag(C, CastInfo, CastToTy, Call.getArgExpr(0), true,
-                     IsKnownCast));
+      C.addTransition(NewState->BindExpr(Call.getOriginExpr(),
+                                         C.getLocationContext(),
+                                         C.getSValBuilder().makeTruthVal(true)),
+                      getNoteTag(C, CastInfo, CastToTy, Call.getArgExpr(0),
+                                 true, IsKnownCast));
       if (IsKnownCast)
         return;
     } else if (CastInfo && CastInfo->succeeds()) {
@@ -327,10 +327,10 @@ static void addInstanceOfTransition(const CallEvent &Call,
   }
 
   if (!Success) {
-    C.addTransition(
-        State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
-                        C.getSValBuilder().makeTruthVal(false)),
-        getNoteTag(C, CastToTyVec, Call.getArgExpr(0), IsAnyKnown));
+    C.addTransition(State->BindExpr(Call.getOriginExpr(),
+                                    C.getLocationContext(),
+                                    C.getSValBuilder().makeTruthVal(false)),
+                    getNoteTag(C, CastToTyVec, Call.getArgExpr(0), IsAnyKnown));
   }
 }
 

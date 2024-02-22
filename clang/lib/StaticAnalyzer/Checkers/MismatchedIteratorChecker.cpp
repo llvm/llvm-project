@@ -18,7 +18,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
-
 #include "Iterator.h"
 
 using namespace clang;
@@ -28,7 +27,7 @@ using namespace iterator;
 namespace {
 
 class MismatchedIteratorChecker
-  : public Checker<check::PreCall, check::PreStmt<BinaryOperator>> {
+    : public Checker<check::PreCall, check::PreStmt<BinaryOperator>> {
 
   const BugType MismatchedBugType{this, "Iterator(s) mismatched",
                                   "Misuse of STL APIs",
@@ -44,7 +43,6 @@ class MismatchedIteratorChecker
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreStmt(const BinaryOperator *BO, CheckerContext &C) const;
-
 };
 
 } // namespace
@@ -223,8 +221,8 @@ void MismatchedIteratorChecker::verifyMatch(CheckerContext &C, SVal Iter,
     if (!N) {
       return;
     }
-    reportBug("Container accessed using foreign iterator argument.",
-                        Iter, Cont, C, N);
+    reportBug("Container accessed using foreign iterator argument.", Iter, Cont,
+              C, N);
   }
 }
 
@@ -262,7 +260,8 @@ void MismatchedIteratorChecker::verifyMatch(CheckerContext &C, SVal Iter1,
     if (!N)
       return;
     reportBug("Iterators of different containers used where the "
-                        "same container is expected.", Iter1, Iter2, C, N);
+              "same container is expected.",
+              Iter1, Iter2, C, N);
   }
 }
 

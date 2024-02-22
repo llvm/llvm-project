@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -34,7 +34,7 @@ public:
       : BR(B), Checker(Checker), AC(A) {}
   bool VisitCastExpr(const CastExpr *CE);
 };
-}
+} // namespace
 
 bool CastToStructVisitor::VisitCastExpr(const CastExpr *CE) {
   const Expr *E = CE->getSubExpr();
@@ -62,12 +62,13 @@ bool CastToStructVisitor::VisitCastExpr(const CastExpr *CE) {
   if (!OrigPointeeTy->isRecordType()) {
     SourceRange Sr[1] = {CE->getSourceRange()};
     PathDiagnosticLocation Loc(CE, BR.getSourceManager(), AC);
-    BR.EmitBasicReport(
-        AC->getDecl(), Checker, "Cast from non-struct type to struct type",
-        categories::LogicError, "Casting a non-structure type to a structure "
-                                "type and accessing a field can lead to memory "
-                                "access errors or data corruption.",
-        Loc, Sr);
+    BR.EmitBasicReport(AC->getDecl(), Checker,
+                       "Cast from non-struct type to struct type",
+                       categories::LogicError,
+                       "Casting a non-structure type to a structure "
+                       "type and accessing a field can lead to memory "
+                       "access errors or data corruption.",
+                       Loc, Sr);
   } else {
     // Don't warn when size of data is unknown.
     const auto *U = dyn_cast<UnaryOperator>(E);
@@ -83,8 +84,7 @@ bool CastToStructVisitor::VisitCastExpr(const CastExpr *CE) {
     if (!VD || VD->getType()->isReferenceType())
       return true;
 
-    if (ToPointeeTy->isIncompleteType() ||
-        OrigPointeeTy->isIncompleteType())
+    if (ToPointeeTy->isIncompleteType() || OrigPointeeTy->isIncompleteType())
       return true;
 
     // Warn when there is widening cast.

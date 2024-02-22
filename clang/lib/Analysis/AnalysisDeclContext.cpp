@@ -50,7 +50,8 @@
 
 using namespace clang;
 
-using ManagedAnalysisMap = llvm::DenseMap<const void *, std::unique_ptr<ManagedAnalysis>>;
+using ManagedAnalysisMap =
+    llvm::DenseMap<const void *, std::unique_ptr<ManagedAnalysis>>;
 
 AnalysisDeclContext::AnalysisDeclContext(AnalysisDeclContextManager *ADCMgr,
                                          const Decl *D,
@@ -104,8 +105,7 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
       }
     }
     return Body;
-  }
-  else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+  } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     Stmt *Body = MD->getBody();
     if (ADCMgr && ADCMgr->synthesizeBodies()) {
       Stmt *SynthesizedBody = ADCMgr->getBodyFarm().getBody(MD);
@@ -183,7 +183,7 @@ void AnalysisDeclContext::registerForcedBlockExpression(const Stmt *stmt) {
   // Default construct an entry for 'stmt'.
   if (const auto *e = dyn_cast<Expr>(stmt))
     stmt = e->IgnoreParens();
-  (void) (*forcedBlkExprs)[stmt];
+  (void)(*forcedBlkExprs)[stmt];
 }
 
 const CFGBlock *
@@ -192,7 +192,7 @@ AnalysisDeclContext::getBlockForRegisteredExpression(const Stmt *stmt) {
   if (const auto *e = dyn_cast<Expr>(stmt))
     stmt = e->IgnoreParens();
   CFG::BuildOptions::ForcedBlkExprs::const_iterator itr =
-    forcedBlkExprs->find(stmt);
+      forcedBlkExprs->find(stmt);
   assert(itr != forcedBlkExprs->end());
   return itr->second;
 }
@@ -259,7 +259,8 @@ CFGStmtMap *AnalysisDeclContext::getCFGStmtMap() {
   return nullptr;
 }
 
-CFGReverseBlockReachabilityAnalysis *AnalysisDeclContext::getCFGReachablityAnalysis() {
+CFGReverseBlockReachabilityAnalysis *
+AnalysisDeclContext::getCFGReachablityAnalysis() {
   if (CFA)
     return CFA.get();
 
@@ -400,8 +401,7 @@ LocationContextManager &AnalysisDeclContext::getLocationContextManager() {
 // FoldingSet profiling.
 //===----------------------------------------------------------------------===//
 
-void LocationContext::ProfileCommon(llvm::FoldingSetNodeID &ID,
-                                    ContextKind ck,
+void LocationContext::ProfileCommon(llvm::FoldingSetNodeID &ID, ContextKind ck,
                                     AnalysisDeclContext *ctx,
                                     const LocationContext *parent,
                                     const void *data) {
@@ -430,8 +430,8 @@ const StackFrameContext *LocationContextManager::getStackFrame(
   llvm::FoldingSetNodeID ID;
   StackFrameContext::Profile(ID, ctx, parent, s, blk, blockCount, idx);
   void *InsertPos;
-  auto *L =
-   cast_or_null<StackFrameContext>(Contexts.FindNodeOrInsertPos(ID, InsertPos));
+  auto *L = cast_or_null<StackFrameContext>(
+      Contexts.FindNodeOrInsertPos(ID, InsertPos));
   if (!L) {
     L = new StackFrameContext(ctx, parent, s, blk, blockCount, idx, ++NewID);
     Contexts.InsertNode(L, InsertPos);
@@ -445,9 +445,8 @@ const BlockInvocationContext *LocationContextManager::getBlockInvocationContext(
   llvm::FoldingSetNodeID ID;
   BlockInvocationContext::Profile(ID, ADC, ParentLC, BD, Data);
   void *InsertPos;
-  auto *L =
-    cast_or_null<BlockInvocationContext>(Contexts.FindNodeOrInsertPos(ID,
-                                                                    InsertPos));
+  auto *L = cast_or_null<BlockInvocationContext>(
+      Contexts.FindNodeOrInsertPos(ID, InsertPos));
   if (!L) {
     L = new BlockInvocationContext(ADC, ParentLC, BD, Data, ++NewID);
     Contexts.InsertNode(L, InsertPos);
@@ -588,14 +587,15 @@ LLVM_DUMP_METHOD void LocationContext::dump() const { printJson(llvm::errs()); }
 
 namespace {
 
-class FindBlockDeclRefExprsVals : public StmtVisitor<FindBlockDeclRefExprsVals>{
+class FindBlockDeclRefExprsVals
+    : public StmtVisitor<FindBlockDeclRefExprsVals> {
   BumpVector<const VarDecl *> &BEVals;
   BumpVectorContext &BC;
   llvm::SmallPtrSet<const VarDecl *, 4> Visited;
   llvm::SmallPtrSet<const DeclContext *, 4> IgnoredContexts;
 
 public:
-  FindBlockDeclRefExprsVals(BumpVector<const VarDecl*> &bevals,
+  FindBlockDeclRefExprsVals(BumpVector<const VarDecl *> &bevals,
                             BumpVectorContext &bc)
       : BEVals(bevals), BC(bc) {}
 
@@ -623,7 +623,8 @@ public:
 
   void VisitPseudoObjectExpr(PseudoObjectExpr *PE) {
     for (PseudoObjectExpr::semantics_iterator it = PE->semantics_begin(),
-         et = PE->semantics_end(); it != et; ++it) {
+                                              et = PE->semantics_end();
+         it != et; ++it) {
       Expr *Semantic = *it;
       if (auto *OVE = dyn_cast<OpaqueValueExpr>(Semantic))
         Semantic = OVE->getSourceExpr();
@@ -636,14 +637,13 @@ public:
 
 using DeclVec = BumpVector<const VarDecl *>;
 
-static DeclVec* LazyInitializeReferencedDecls(const BlockDecl *BD,
-                                              void *&Vec,
+static DeclVec *LazyInitializeReferencedDecls(const BlockDecl *BD, void *&Vec,
                                               llvm::BumpPtrAllocator &A) {
   if (Vec)
-    return (DeclVec*) Vec;
+    return (DeclVec *)Vec;
 
   BumpVectorContext BC(A);
-  DeclVec *BV = (DeclVec*) A.Allocate<DeclVec>();
+  DeclVec *BV = (DeclVec *)A.Allocate<DeclVec>();
   new (BV) DeclVec(BC, 10);
 
   // Go through the capture list.
@@ -662,17 +662,18 @@ static DeclVec* LazyInitializeReferencedDecls(const BlockDecl *BD,
 llvm::iterator_range<AnalysisDeclContext::referenced_decls_iterator>
 AnalysisDeclContext::getReferencedBlockVars(const BlockDecl *BD) {
   if (!ReferencedBlockVars)
-    ReferencedBlockVars = new llvm::DenseMap<const BlockDecl*,void*>();
+    ReferencedBlockVars = new llvm::DenseMap<const BlockDecl *, void *>();
 
   const DeclVec *V =
       LazyInitializeReferencedDecls(BD, (*ReferencedBlockVars)[BD], A);
   return llvm::make_range(V->begin(), V->end());
 }
 
-std::unique_ptr<ManagedAnalysis> &AnalysisDeclContext::getAnalysisImpl(const void *tag) {
+std::unique_ptr<ManagedAnalysis> &
+AnalysisDeclContext::getAnalysisImpl(const void *tag) {
   if (!ManagedAnalyses)
     ManagedAnalyses = new ManagedAnalysisMap();
-  ManagedAnalysisMap *M = (ManagedAnalysisMap*) ManagedAnalyses;
+  ManagedAnalysisMap *M = (ManagedAnalysisMap *)ManagedAnalyses;
   return (*M)[tag];
 }
 
@@ -685,18 +686,17 @@ ManagedAnalysis::~ManagedAnalysis() = default;
 AnalysisDeclContext::~AnalysisDeclContext() {
   delete forcedBlkExprs;
   delete ReferencedBlockVars;
-  delete (ManagedAnalysisMap*) ManagedAnalyses;
+  delete (ManagedAnalysisMap *)ManagedAnalyses;
 }
 
 LocationContext::~LocationContext() = default;
 
-LocationContextManager::~LocationContextManager() {
-  clear();
-}
+LocationContextManager::~LocationContextManager() { clear(); }
 
 void LocationContextManager::clear() {
   for (llvm::FoldingSet<LocationContext>::iterator I = Contexts.begin(),
-       E = Contexts.end(); I != E; ) {
+                                                   E = Contexts.end();
+       I != E;) {
     LocationContext *LC = &*I;
     ++I;
     delete LC;

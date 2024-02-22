@@ -53,8 +53,7 @@ class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
 
   void initIdentifierInfo(ASTContext &Ctx) const;
 
-  void reportBlockInCritSection(SymbolRef FileDescSym,
-                                const CallEvent &call,
+  void reportBlockInCritSection(SymbolRef FileDescSym, const CallEvent &call,
                                 CheckerContext &C) const;
 
 public:
@@ -79,17 +78,19 @@ void BlockInCriticalSectionChecker::initIdentifierInfo(ASTContext &Ctx) const {
      * function is called instead of early returning it. To avoid this, a bool
      * variable (IdentifierInfoInitialized) is used and the function will be run
      * only once. */
-    IILockGuard  = &Ctx.Idents.get(ClassLockGuard);
+    IILockGuard = &Ctx.Idents.get(ClassLockGuard);
     IIUniqueLock = &Ctx.Idents.get(ClassUniqueLock);
     IdentifierInfoInitialized = true;
   }
 }
 
-bool BlockInCriticalSectionChecker::isBlockingFunction(const CallEvent &Call) const {
+bool BlockInCriticalSectionChecker::isBlockingFunction(
+    const CallEvent &Call) const {
   return matchesAny(Call, SleepFn, GetcFn, FgetsFn, ReadFn, RecvFn);
 }
 
-bool BlockInCriticalSectionChecker::isLockFunction(const CallEvent &Call) const {
+bool BlockInCriticalSectionChecker::isLockFunction(
+    const CallEvent &Call) const {
   if (const auto *Ctor = dyn_cast<CXXConstructorCall>(&Call)) {
     auto IdentifierInfo = Ctor->getDecl()->getParent()->getIdentifier();
     if (IdentifierInfo == IILockGuard || IdentifierInfo == IIUniqueLock)
@@ -100,7 +101,8 @@ bool BlockInCriticalSectionChecker::isLockFunction(const CallEvent &Call) const 
                     MtxTimedLock, MtxTryLock);
 }
 
-bool BlockInCriticalSectionChecker::isUnlockFunction(const CallEvent &Call) const {
+bool BlockInCriticalSectionChecker::isUnlockFunction(
+    const CallEvent &Call) const {
   if (const auto *Dtor = dyn_cast<CXXDestructorCall>(&Call)) {
     const auto *DRecordDecl = cast<CXXRecordDecl>(Dtor->getDecl()->getParent());
     auto IdentifierInfo = DRecordDecl->getIdentifier();
@@ -115,9 +117,8 @@ void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
                                                   CheckerContext &C) const {
   initIdentifierInfo(C.getASTContext());
 
-  if (!isBlockingFunction(Call)
-      && !isLockFunction(Call)
-      && !isUnlockFunction(Call))
+  if (!isBlockingFunction(Call) && !isLockFunction(Call) &&
+      !isUnlockFunction(Call))
     return;
 
   ProgramStateRef State = C.getState();
@@ -155,6 +156,7 @@ void ento::registerBlockInCriticalSectionChecker(CheckerManager &mgr) {
   mgr.registerChecker<BlockInCriticalSectionChecker>();
 }
 
-bool ento::shouldRegisterBlockInCriticalSectionChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterBlockInCriticalSectionChecker(
+    const CheckerManager &mgr) {
   return true;
 }

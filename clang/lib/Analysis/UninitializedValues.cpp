@@ -64,7 +64,8 @@ static bool isTrackedVar(const VarDecl *vd, const DeclContext *dc) {
     QualType ty = vd->getType();
     if (const auto *RD = ty->getAsRecordDecl())
       return recordIsNotEmpty(RD);
-    return ty->isScalarType() || ty->isVectorType() || ty->isRVVSizelessBuiltinType();
+    return ty->isScalarType() || ty->isVectorType() ||
+           ty->isRVVSizelessBuiltinType();
   }
   return false;
 }
@@ -96,8 +97,8 @@ public:
 void DeclToIndex::computeMap(const DeclContext &dc) {
   unsigned count = 0;
   DeclContext::specific_decl_iterator<VarDecl> I(dc.decls_begin()),
-                                               E(dc.decls_end());
-  for ( ; I != E; ++I) {
+      E(dc.decls_end());
+  for (; I != E; ++I) {
     const VarDecl *vd = *I;
     if (isTrackedVar(vd, &dc))
       map[vd] = count++;
@@ -117,18 +118,16 @@ std::optional<unsigned> DeclToIndex::getValueIndex(const VarDecl *d) const {
 
 // These values are defined in such a way that a merge can be done using
 // a bitwise OR.
-enum Value { Unknown = 0x0,         /* 00 */
-             Initialized = 0x1,     /* 01 */
-             Uninitialized = 0x2,   /* 10 */
-             MayUninitialized = 0x3 /* 11 */ };
+enum Value {
+  Unknown = 0x0,         /* 00 */
+  Initialized = 0x1,     /* 01 */
+  Uninitialized = 0x2,   /* 10 */
+  MayUninitialized = 0x3 /* 11 */
+};
 
-static bool isUninitialized(const Value v) {
-  return v >= Uninitialized;
-}
+static bool isUninitialized(const Value v) { return v >= Uninitialized; }
 
-static bool isAlwaysUninit(const Value v) {
-  return v == Uninitialized;
-}
+static bool isAlwaysUninit(const Value v) { return v == Uninitialized; }
 
 namespace {
 
@@ -155,9 +154,7 @@ public:
   void mergeIntoScratch(ValueVector const &source, bool isFirst);
   bool updateValueVectorWithScratch(const CFGBlock *block);
 
-  bool hasNoDeclarations() const {
-    return declToIndex.size() == 0;
-  }
+  bool hasNoDeclarations() const { return declToIndex.size() == 0; }
 
   void resetScratch();
 
@@ -187,8 +184,7 @@ void CFGBlockValues::computeSetOfDeclarations(const DeclContext &dc) {
 }
 
 #if DEBUG_LOGGING
-static void printVector(const CFGBlock *block, ValueVector &bv,
-                        unsigned num) {
+static void printVector(const CFGBlock *block, ValueVector &bv, unsigned num) {
   llvm::errs() << block->getBlockID() << " :";
   for (const auto &i : bv)
     llvm::errs() << ' ' << i;
@@ -201,8 +197,7 @@ void CFGBlockValues::setAllScratchValues(Value V) {
     scratch[I] = V;
 }
 
-void CFGBlockValues::mergeIntoScratch(ValueVector const &source,
-                                      bool isFirst) {
+void CFGBlockValues::mergeIntoScratch(ValueVector const &source, bool isFirst) {
   if (isFirst)
     scratch = source;
   else
@@ -220,9 +215,7 @@ bool CFGBlockValues::updateValueVectorWithScratch(const CFGBlock *block) {
   return changed;
 }
 
-void CFGBlockValues::resetScratch() {
-  scratch.reset();
-}
+void CFGBlockValues::resetScratch() { scratch.reset(); }
 
 ValueVector::reference CFGBlockValues::operator[](const VarDecl *vd) {
   return scratch[*declToIndex.getValueIndex(vd)];
@@ -279,21 +272,13 @@ namespace {
 /// escaped the analysis and will be treated as an initialization.
 class ClassifyRefs : public StmtVisitor<ClassifyRefs> {
 public:
-  enum Class {
-    Init,
-    Use,
-    SelfInit,
-    ConstRefUse,
-    Ignore
-  };
+  enum Class { Init, Use, SelfInit, ConstRefUse, Ignore };
 
 private:
   const DeclContext *DC;
   llvm::DenseMap<const DeclRefExpr *, Class> Classification;
 
-  bool isTrackedVar(const VarDecl *VD) const {
-    return ::isTrackedVar(VD, DC);
-  }
+  bool isTrackedVar(const VarDecl *VD) const { return ::isTrackedVar(VD, DC); }
 
   void classify(const Expr *E, Class C);
 
@@ -310,8 +295,8 @@ public:
   void operator()(Stmt *S) { Visit(S); }
 
   Class get(const DeclRefExpr *DRE) const {
-    llvm::DenseMap<const DeclRefExpr*, Class>::const_iterator I
-        = Classification.find(DRE);
+    llvm::DenseMap<const DeclRefExpr *, Class>::const_iterator I =
+        Classification.find(DRE);
     if (I != Classification.end())
       return I->second;
 
@@ -443,8 +428,8 @@ void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
   // conservatively do not assume that it is used.
   // If a value is passed by const reference to a function,
   // it should already be initialized.
-  for (CallExpr::arg_iterator I = CE->arg_begin(), E = CE->arg_end();
-       I != E; ++I) {
+  for (CallExpr::arg_iterator I = CE->arg_begin(), E = CE->arg_end(); I != E;
+       ++I) {
     if ((*I)->isGLValue()) {
       if ((*I)->getType().isConstQualified())
         classify((*I), isTrivialBody ? Ignore : ConstRefUse);
@@ -487,9 +472,8 @@ class TransferFunctions : public StmtVisitor<TransferFunctions> {
   UninitVariablesHandler &handler;
 
 public:
-  TransferFunctions(CFGBlockValues &vals, const CFG &cfg,
-                    const CFGBlock *block, AnalysisDeclContext &ac,
-                    const ClassifyRefs &classification,
+  TransferFunctions(CFGBlockValues &vals, const CFG &cfg, const CFGBlock *block,
+                    AnalysisDeclContext &ac, const ClassifyRefs &classification,
                     UninitVariablesHandler &handler)
       : vals(vals), cfg(cfg), block(block), ac(ac),
         classification(classification), objCNoRet(ac.getASTContext()),
@@ -569,7 +553,7 @@ public:
     // 'n' is definitely uninitialized for two edges into block 7 (from blocks 2
     // and 4), so we report that any time either of those edges is taken (in
     // each case when 'b == false'), 'n' is used uninitialized.
-    SmallVector<const CFGBlock*, 32> Queue;
+    SmallVector<const CFGBlock *, 32> Queue;
     SmallVector<unsigned, 32> SuccsVisited(cfg.getNumBlockIDs(), 0);
     Queue.push_back(block);
     // Specify that we've already visited all successors of the starting block.
@@ -633,7 +617,8 @@ public:
         // to a post-dominator block, and the variable is uninitialized on that
         // edge, we have found a bug.
         for (CFGBlock::const_succ_iterator I = Block->succ_begin(),
-             E = Block->succ_end(); I != E; ++I) {
+                                           E = Block->succ_end();
+             I != E; ++I) {
           const CFGBlock *Succ = *I;
           if (Succ && SuccsVisited[Succ->getBlockID()] >= Succ->succ_size() &&
               vals.getValue(Block, Succ, vd) == Uninitialized) {
@@ -721,8 +706,7 @@ void TransferFunctions::VisitCallExpr(CallExpr *ce) {
       // mark variables as initialized if they have an initializer which is
       // reachable from here.
       vals.setAllScratchValues(Initialized);
-    }
-    else if (Callee->hasAttr<AnalyzerNoReturnAttr>()) {
+    } else if (Callee->hasAttr<AnalyzerNoReturnAttr>()) {
       // Functions labeled like "analyzer_noreturn" are often used to denote
       // "panic" functions that in special debug situations can still return,
       // but for the most part should not be treated as returning.  This is a
@@ -843,7 +827,8 @@ static bool runOnBlock(const CFGBlock *block, const CFG &cfg,
   // Merge in values of predecessor blocks.
   bool isFirst = true;
   for (CFGBlock::const_pred_iterator I = block->pred_begin(),
-       E = block->pred_end(); I != E; ++I) {
+                                     E = block->pred_end();
+       I != E; ++I) {
     const CFGBlock *pred = *I;
     if (!pred)
       continue;
@@ -909,11 +894,8 @@ struct PruneBlocksHandler : public UninitVariablesHandler {
 } // namespace
 
 void clang::runUninitializedVariablesAnalysis(
-    const DeclContext &dc,
-    const CFG &cfg,
-    AnalysisDeclContext &ac,
-    UninitVariablesHandler &handler,
-    UninitVariablesAnalysisStats &stats) {
+    const DeclContext &dc, const CFG &cfg, AnalysisDeclContext &ac,
+    UninitVariablesHandler &handler, UninitVariablesAnalysisStats &stats) {
   CFGBlockValues vals(cfg);
   vals.computeSetOfDeclarations(dc);
   if (vals.hasNoDeclarations())
@@ -945,8 +927,8 @@ void clang::runUninitializedVariablesAnalysis(
     PBH.currentBlock = block->getBlockID();
 
     // Did the block change?
-    bool changed = runOnBlock(block, cfg, ac, vals,
-                              classification, wasAnalyzed, PBH);
+    bool changed =
+        runOnBlock(block, cfg, ac, vals, classification, wasAnalyzed, PBH);
     ++stats.NumBlockVisits;
     if (changed || !previouslyVisited[block->getBlockID()])
       worklist.enqueueSuccessors(block);

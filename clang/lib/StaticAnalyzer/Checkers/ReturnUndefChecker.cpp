@@ -23,17 +23,18 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class ReturnUndefChecker : public Checker< check::PreStmt<ReturnStmt> > {
+class ReturnUndefChecker : public Checker<check::PreStmt<ReturnStmt>> {
   const BugType BT_Undef{this, "Garbage return value"};
   const BugType BT_NullReference{this, "Returning null reference"};
 
   void emitUndef(CheckerContext &C, const Expr *RetE) const;
   void checkReference(CheckerContext &C, const Expr *RetE,
                       DefinedOrUnknownSVal RetVal) const;
+
 public:
   void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
 };
-}
+} // namespace
 
 void ReturnUndefChecker::checkPreStmt(const ReturnStmt *RS,
                                       CheckerContext &C) const {

@@ -25,7 +25,7 @@ public:
       : BitWidth(Width), IsUnsigned(Unsigned) {}
 
   /* implicit */ APSIntType(const llvm::APSInt &Value)
-    : BitWidth(Value.getBitWidth()), IsUnsigned(Value.isUnsigned()) {}
+      : BitWidth(Value.getBitWidth()), IsUnsigned(Value.isUnsigned()) {}
 
   uint32_t getBitWidth() const { return BitWidth; }
   bool isUnsigned() const { return IsUnsigned; }
@@ -102,7 +102,7 @@ public:
   }
 };
 
-} // end ento namespace
-} // end clang namespace
+} // namespace ento
+} // namespace clang
 
 #endif

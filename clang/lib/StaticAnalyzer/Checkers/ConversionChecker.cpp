@@ -23,8 +23,8 @@
 // is an alternative to those checks.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -52,7 +52,7 @@ private:
   void reportBug(ExplodedNode *N, const Expr *E, CheckerContext &C,
                  const char Msg[]) const;
 };
-}
+} // namespace
 
 void ConversionChecker::checkPreStmt(const ImplicitCastExpr *Cast,
                                      CheckerContext &C) const {

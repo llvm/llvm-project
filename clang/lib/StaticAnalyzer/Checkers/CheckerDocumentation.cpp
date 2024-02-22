@@ -33,30 +33,17 @@ namespace ento {
 /// checking.
 ///
 /// \sa CheckerContext
-class CheckerDocumentation : public Checker< check::PreStmt<ReturnStmt>,
-                                       check::PostStmt<DeclStmt>,
-                                       check::PreObjCMessage,
-                                       check::PostObjCMessage,
-                                       check::ObjCMessageNil,
-                                       check::PreCall,
-                                       check::PostCall,
-                                       check::BranchCondition,
-                                       check::NewAllocator,
-                                       check::Location,
-                                       check::Bind,
-                                       check::DeadSymbols,
-                                       check::BeginFunction,
-                                       check::EndFunction,
-                                       check::EndAnalysis,
-                                       check::EndOfTranslationUnit,
-                                       eval::Call,
-                                       eval::Assume,
-                                       check::LiveSymbols,
-                                       check::RegionChanges,
-                                       check::PointerEscape,
-                                       check::ConstPointerEscape,
-                                       check::Event<ImplicitNullDerefEvent>,
-                                       check::ASTDecl<FunctionDecl> > {
+class CheckerDocumentation
+    : public Checker<
+          check::PreStmt<ReturnStmt>, check::PostStmt<DeclStmt>,
+          check::PreObjCMessage, check::PostObjCMessage, check::ObjCMessageNil,
+          check::PreCall, check::PostCall, check::BranchCondition,
+          check::NewAllocator, check::Location, check::Bind, check::DeadSymbols,
+          check::BeginFunction, check::EndFunction, check::EndAnalysis,
+          check::EndOfTranslationUnit, eval::Call, eval::Assume,
+          check::LiveSymbols, check::RegionChanges, check::PointerEscape,
+          check::ConstPointerEscape, check::Event<ImplicitNullDerefEvent>,
+          check::ASTDecl<FunctionDecl>> {
 public:
   /// Pre-visit the Statement.
   ///
@@ -179,7 +166,6 @@ public:
   /// check::DeadSymbols
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const {}
 
-
   /// Called when the analyzer core starts analyzing a function,
   /// regardless of whether it is analyzed at the top level or is inlined.
   ///
@@ -202,16 +188,14 @@ public:
   /// See IdempotentOperationChecker for a usage example.
   ///
   /// check::EndAnalysis
-  void checkEndAnalysis(ExplodedGraph &G,
-                        BugReporter &BR,
+  void checkEndAnalysis(ExplodedGraph &G, BugReporter &BR,
                         ExprEngine &Eng) const {}
 
   /// Called after analysis of a TranslationUnit is complete.
   ///
   /// check::EndOfTranslationUnit
   void checkEndOfTranslationUnit(const TranslationUnitDecl *TU,
-                                 AnalysisManager &Mgr,
-                                 BugReporter &BR) const {}
+                                 AnalysisManager &Mgr, BugReporter &BR) const {}
 
   /// Evaluates function call.
   ///
@@ -236,9 +220,10 @@ public:
   /// performed on the symbols of interest and change the state accordingly.
   ///
   /// eval::Assume
-  ProgramStateRef evalAssume(ProgramStateRef State,
-                                 SVal Cond,
-                                 bool Assumption) const { return State; }
+  ProgramStateRef evalAssume(ProgramStateRef State, SVal Cond,
+                             bool Assumption) const {
+    return State;
+  }
 
   /// Allows modifying SymbolReaper object. For example, checkers can explicitly
   /// register symbols of interest as live. These symbols will not be marked
@@ -270,12 +255,11 @@ public:
   ///
   /// check::RegionChanges
   ProgramStateRef
-    checkRegionChanges(ProgramStateRef State,
-                       const InvalidatedSymbols *Invalidated,
-                       ArrayRef<const MemRegion *> ExplicitRegions,
-                       ArrayRef<const MemRegion *> Regions,
-                       const LocationContext *LCtx,
-                       const CallEvent *Call) const {
+  checkRegionChanges(ProgramStateRef State,
+                     const InvalidatedSymbols *Invalidated,
+                     ArrayRef<const MemRegion *> ExplicitRegions,
+                     ArrayRef<const MemRegion *> Regions,
+                     const LocationContext *LCtx, const CallEvent *Call) const {
     return State;
   }
 
@@ -304,9 +288,9 @@ public:
   /// Note: in most cases checkPointerEscape callback is sufficient.
   /// \sa checkPointerEscape
   ProgramStateRef checkConstPointerEscape(ProgramStateRef State,
-                                     const InvalidatedSymbols &Escaped,
-                                     const CallEvent *Call,
-                                     PointerEscapeKind Kind) const {
+                                          const InvalidatedSymbols &Escaped,
+                                          const CallEvent *Call,
+                                          PointerEscapeKind Kind) const {
     return State;
   }
 
@@ -321,14 +305,12 @@ public:
   /// FunctionDecl.
   ///
   /// check::ASTDecl<FunctionDecl>
-  void checkASTDecl(const FunctionDecl *D,
-                    AnalysisManager &Mgr,
+  void checkASTDecl(const FunctionDecl *D, AnalysisManager &Mgr,
                     BugReporter &BR) const {}
 };
 
 void CheckerDocumentation::checkPostStmt(const DeclStmt *DS,
-                                         CheckerContext &C) const {
-}
+                                         CheckerContext &C) const {}
 
 } // end namespace ento
 } // end namespace clang

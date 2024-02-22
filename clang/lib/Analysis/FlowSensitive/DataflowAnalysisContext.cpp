@@ -143,8 +143,7 @@ void DataflowAnalysisContext::addFlowConditionConstraint(
     Atom Token, const Formula &Constraint) {
   auto Res = FlowConditionConstraints.try_emplace(Token, &Constraint);
   if (!Res.second) {
-    Res.first->second =
-        &arena().makeAnd(*Res.first->second, Constraint);
+    Res.first->second = &arena().makeAnd(*Res.first->second, Constraint);
   }
 }
 
@@ -155,9 +154,8 @@ Atom DataflowAnalysisContext::forkFlowCondition(Atom Token) {
   return ForkToken;
 }
 
-Atom
-DataflowAnalysisContext::joinFlowConditions(Atom FirstToken,
-                                            Atom SecondToken) {
+Atom DataflowAnalysisContext::joinFlowConditions(Atom FirstToken,
+                                                 Atom SecondToken) {
   Atom Token = arena().makeFlowConditionToken();
   FlowConditionDeps[Token].insert(FirstToken);
   FlowConditionDeps[Token].insert(SecondToken);

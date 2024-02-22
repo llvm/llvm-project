@@ -16,7 +16,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
-
 #include "Iterator.h"
 
 using namespace clang;
@@ -26,10 +25,10 @@ using namespace iterator;
 namespace {
 
 class InvalidatedIteratorChecker
-  : public Checker<check::PreCall, check::PreStmt<UnaryOperator>,
-                   check::PreStmt<BinaryOperator>,
-                   check::PreStmt<ArraySubscriptExpr>,
-                   check::PreStmt<MemberExpr>> {
+    : public Checker<check::PreCall, check::PreStmt<UnaryOperator>,
+                     check::PreStmt<BinaryOperator>,
+                     check::PreStmt<ArraySubscriptExpr>,
+                     check::PreStmt<MemberExpr>> {
 
   const BugType InvalidatedBugType{this, "Iterator invalidated",
                                    "Misuse of STL APIs"};
@@ -44,7 +43,6 @@ public:
   void checkPreStmt(const BinaryOperator *BO, CheckerContext &C) const;
   void checkPreStmt(const ArraySubscriptExpr *ASE, CheckerContext &C) const;
   void checkPreStmt(const MemberExpr *ME, CheckerContext &C) const;
-
 };
 
 } // namespace

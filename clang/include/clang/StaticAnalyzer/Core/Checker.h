@@ -21,33 +21,31 @@
 
 namespace clang {
 namespace ento {
-  class BugReporter;
+class BugReporter;
 
 namespace check {
 
-template <typename DECL>
-class ASTDecl {
+template <typename DECL> class ASTDecl {
   template <typename CHECKER>
-  static void _checkDecl(void *checker, const Decl *D, AnalysisManager& mgr,
+  static void _checkDecl(void *checker, const Decl *D, AnalysisManager &mgr,
                          BugReporter &BR) {
     ((const CHECKER *)checker)->checkASTDecl(cast<DECL>(D), mgr, BR);
   }
 
-  static bool _handlesDecl(const Decl *D) {
-    return isa<DECL>(D);
-  }
+  static bool _handlesDecl(const Decl *D) { return isa<DECL>(D); }
+
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForDecl(CheckerManager::CheckDeclFunc(checker,
-                                                       _checkDecl<CHECKER>),
-                         _handlesDecl);
+    mgr._registerForDecl(
+        CheckerManager::CheckDeclFunc(checker, _checkDecl<CHECKER>),
+        _handlesDecl);
   }
 };
 
 class ASTCodeBody {
   template <typename CHECKER>
-  static void _checkBody(void *checker, const Decl *D, AnalysisManager& mgr,
+  static void _checkBody(void *checker, const Decl *D, AnalysisManager &mgr,
                          BugReporter &BR) {
     ((const CHECKER *)checker)->checkASTCodeBody(D, mgr, BR);
   }
@@ -55,64 +53,59 @@ class ASTCodeBody {
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForBody(CheckerManager::CheckDeclFunc(checker,
-                                                       _checkBody<CHECKER>));
+    mgr._registerForBody(
+        CheckerManager::CheckDeclFunc(checker, _checkBody<CHECKER>));
   }
 };
 
 class EndOfTranslationUnit {
   template <typename CHECKER>
-  static void _checkEndOfTranslationUnit(void *checker,
-                                         const TranslationUnitDecl *TU,
-                                         AnalysisManager& mgr,
-                                         BugReporter &BR) {
+  static void
+  _checkEndOfTranslationUnit(void *checker, const TranslationUnitDecl *TU,
+                             AnalysisManager &mgr, BugReporter &BR) {
     ((const CHECKER *)checker)->checkEndOfTranslationUnit(TU, mgr, BR);
   }
 
 public:
   template <typename CHECKER>
-  static void _register(CHECKER *checker, CheckerManager &mgr){
+  static void _register(CHECKER *checker, CheckerManager &mgr) {
     mgr._registerForEndOfTranslationUnit(
-                              CheckerManager::CheckEndOfTranslationUnit(checker,
-                                          _checkEndOfTranslationUnit<CHECKER>));
+        CheckerManager::CheckEndOfTranslationUnit(
+            checker, _checkEndOfTranslationUnit<CHECKER>));
   }
 };
 
-template <typename STMT>
-class PreStmt {
+template <typename STMT> class PreStmt {
   template <typename CHECKER>
   static void _checkStmt(void *checker, const Stmt *S, CheckerContext &C) {
     ((const CHECKER *)checker)->checkPreStmt(cast<STMT>(S), C);
   }
 
-  static bool _handlesStmt(const Stmt *S) {
-    return isa<STMT>(S);
-  }
+  static bool _handlesStmt(const Stmt *S) { return isa<STMT>(S); }
+
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForPreStmt(CheckerManager::CheckStmtFunc(checker,
-                                                          _checkStmt<CHECKER>),
-                            _handlesStmt);
+    mgr._registerForPreStmt(
+        CheckerManager::CheckStmtFunc(checker, _checkStmt<CHECKER>),
+        _handlesStmt);
   }
 };
 
-template <typename STMT>
-class PostStmt {
+template <typename STMT> class PostStmt {
   template <typename CHECKER>
   static void _checkStmt(void *checker, const Stmt *S, CheckerContext &C) {
     ((const CHECKER *)checker)->checkPostStmt(cast<STMT>(S), C);
   }
 
-  static bool _handlesStmt(const Stmt *S) {
-    return isa<STMT>(S);
-  }
+  static bool _handlesStmt(const Stmt *S) { return isa<STMT>(S); }
+
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForPostStmt(CheckerManager::CheckStmtFunc(checker,
-                                                           _checkStmt<CHECKER>),
-                             _handlesStmt);
+    mgr._registerForPostStmt(
+        CheckerManager::CheckStmtFunc(checker, _checkStmt<CHECKER>),
+        _handlesStmt);
   }
 };
 
@@ -126,8 +119,8 @@ class PreObjCMessage {
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForPreObjCMessage(
-     CheckerManager::CheckObjCMessageFunc(checker, _checkObjCMessage<CHECKER>));
+    mgr._registerForPreObjCMessage(CheckerManager::CheckObjCMessageFunc(
+        checker, _checkObjCMessage<CHECKER>));
   }
 };
 
@@ -141,8 +134,8 @@ class ObjCMessageNil {
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForObjCMessageNil(
-     CheckerManager::CheckObjCMessageFunc(checker, _checkObjCMessage<CHECKER>));
+    mgr._registerForObjCMessageNil(CheckerManager::CheckObjCMessageFunc(
+        checker, _checkObjCMessage<CHECKER>));
   }
 };
 
@@ -156,8 +149,8 @@ class PostObjCMessage {
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForPostObjCMessage(
-     CheckerManager::CheckObjCMessageFunc(checker, _checkObjCMessage<CHECKER>));
+    mgr._registerForPostObjCMessage(CheckerManager::CheckObjCMessageFunc(
+        checker, _checkObjCMessage<CHECKER>));
   }
 };
 
@@ -172,7 +165,7 @@ public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
     mgr._registerForPreCall(
-     CheckerManager::CheckCallFunc(checker, _checkCall<CHECKER>));
+        CheckerManager::CheckCallFunc(checker, _checkCall<CHECKER>));
   }
 };
 
@@ -187,7 +180,7 @@ public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
     mgr._registerForPostCall(
-     CheckerManager::CheckCallFunc(checker, _checkCall<CHECKER>));
+        CheckerManager::CheckCallFunc(checker, _checkCall<CHECKER>));
   }
 };
 
@@ -202,7 +195,7 @@ public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
     mgr._registerForLocation(
-           CheckerManager::CheckLocationFunc(checker, _checkLocation<CHECKER>));
+        CheckerManager::CheckLocationFunc(checker, _checkLocation<CHECKER>));
   }
 };
 
@@ -217,7 +210,7 @@ public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
     mgr._registerForBind(
-           CheckerManager::CheckBindFunc(checker, _checkBind<CHECKER>));
+        CheckerManager::CheckBindFunc(checker, _checkBind<CHECKER>));
   }
 };
 
@@ -231,8 +224,8 @@ class EndAnalysis {
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForEndAnalysis(
-     CheckerManager::CheckEndAnalysisFunc(checker, _checkEndAnalysis<CHECKER>));
+    mgr._registerForEndAnalysis(CheckerManager::CheckEndAnalysisFunc(
+        checker, _checkEndAnalysis<CHECKER>));
   }
 };
 
@@ -260,24 +253,23 @@ class EndFunction {
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForEndFunction(
-     CheckerManager::CheckEndFunctionFunc(checker, _checkEndFunction<CHECKER>));
+    mgr._registerForEndFunction(CheckerManager::CheckEndFunctionFunc(
+        checker, _checkEndFunction<CHECKER>));
   }
 };
 
 class BranchCondition {
   template <typename CHECKER>
   static void _checkBranchCondition(void *checker, const Stmt *Condition,
-                                    CheckerContext & C) {
+                                    CheckerContext &C) {
     ((const CHECKER *)checker)->checkBranchCondition(Condition, C);
   }
 
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForBranchCondition(
-      CheckerManager::CheckBranchConditionFunc(checker,
-                                               _checkBranchCondition<CHECKER>));
+    mgr._registerForBranchCondition(CheckerManager::CheckBranchConditionFunc(
+        checker, _checkBranchCondition<CHECKER>));
   }
 };
 
@@ -291,9 +283,8 @@ class NewAllocator {
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForNewAllocator(
-        CheckerManager::CheckNewAllocatorFunc(checker,
-                                              _checkNewAllocator<CHECKER>));
+    mgr._registerForNewAllocator(CheckerManager::CheckNewAllocatorFunc(
+        checker, _checkNewAllocator<CHECKER>));
   }
 };
 
@@ -307,65 +298,58 @@ class LiveSymbols {
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForLiveSymbols(
-     CheckerManager::CheckLiveSymbolsFunc(checker, _checkLiveSymbols<CHECKER>));
+    mgr._registerForLiveSymbols(CheckerManager::CheckLiveSymbolsFunc(
+        checker, _checkLiveSymbols<CHECKER>));
   }
 };
 
 class DeadSymbols {
   template <typename CHECKER>
-  static void _checkDeadSymbols(void *checker,
-                                SymbolReaper &SR, CheckerContext &C) {
+  static void _checkDeadSymbols(void *checker, SymbolReaper &SR,
+                                CheckerContext &C) {
     ((const CHECKER *)checker)->checkDeadSymbols(SR, C);
   }
 
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForDeadSymbols(
-     CheckerManager::CheckDeadSymbolsFunc(checker, _checkDeadSymbols<CHECKER>));
+    mgr._registerForDeadSymbols(CheckerManager::CheckDeadSymbolsFunc(
+        checker, _checkDeadSymbols<CHECKER>));
   }
 };
 
 class RegionChanges {
   template <typename CHECKER>
   static ProgramStateRef
-  _checkRegionChanges(void *checker,
-                      ProgramStateRef state,
+  _checkRegionChanges(void *checker, ProgramStateRef state,
                       const InvalidatedSymbols *invalidated,
                       ArrayRef<const MemRegion *> Explicits,
                       ArrayRef<const MemRegion *> Regions,
-                      const LocationContext *LCtx,
-                      const CallEvent *Call) {
-    return ((const CHECKER *) checker)->checkRegionChanges(state, invalidated,
-                                                           Explicits, Regions,
-                                                           LCtx, Call);
+                      const LocationContext *LCtx, const CallEvent *Call) {
+    return ((const CHECKER *)checker)
+        ->checkRegionChanges(state, invalidated, Explicits, Regions, LCtx,
+                             Call);
   }
 
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForRegionChanges(
-          CheckerManager::CheckRegionChangesFunc(checker,
-                                                 _checkRegionChanges<CHECKER>));
+    mgr._registerForRegionChanges(CheckerManager::CheckRegionChangesFunc(
+        checker, _checkRegionChanges<CHECKER>));
   }
 };
 
 class PointerEscape {
   template <typename CHECKER>
   static ProgramStateRef
-  _checkPointerEscape(void *Checker,
-                     ProgramStateRef State,
-                     const InvalidatedSymbols &Escaped,
-                     const CallEvent *Call,
-                     PointerEscapeKind Kind,
-                     RegionAndSymbolInvalidationTraits *ETraits) {
+  _checkPointerEscape(void *Checker, ProgramStateRef State,
+                      const InvalidatedSymbols &Escaped, const CallEvent *Call,
+                      PointerEscapeKind Kind,
+                      RegionAndSymbolInvalidationTraits *ETraits) {
 
     if (!ETraits)
-      return ((const CHECKER *)Checker)->checkPointerEscape(State,
-                                                            Escaped,
-                                                            Call,
-                                                            Kind);
+      return ((const CHECKER *)Checker)
+          ->checkPointerEscape(State, Escaped, Call, Kind);
 
     InvalidatedSymbols RegularEscape;
     for (SymbolRef Sym : Escaped)
@@ -378,30 +362,25 @@ class PointerEscape {
     if (RegularEscape.empty())
       return State;
 
-    return ((const CHECKER *)Checker)->checkPointerEscape(State,
-                                                          RegularEscape,
-                                                          Call,
-                                                          Kind);
+    return ((const CHECKER *)Checker)
+        ->checkPointerEscape(State, RegularEscape, Call, Kind);
   }
 
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForPointerEscape(
-          CheckerManager::CheckPointerEscapeFunc(checker,
-                                                _checkPointerEscape<CHECKER>));
+    mgr._registerForPointerEscape(CheckerManager::CheckPointerEscapeFunc(
+        checker, _checkPointerEscape<CHECKER>));
   }
 };
 
 class ConstPointerEscape {
   template <typename CHECKER>
   static ProgramStateRef
-  _checkConstPointerEscape(void *Checker,
-                      ProgramStateRef State,
-                      const InvalidatedSymbols &Escaped,
-                      const CallEvent *Call,
-                      PointerEscapeKind Kind,
-                      RegionAndSymbolInvalidationTraits *ETraits) {
+  _checkConstPointerEscape(void *Checker, ProgramStateRef State,
+                           const InvalidatedSymbols &Escaped,
+                           const CallEvent *Call, PointerEscapeKind Kind,
+                           RegionAndSymbolInvalidationTraits *ETraits) {
 
     if (!ETraits)
       return State;
@@ -418,37 +397,33 @@ class ConstPointerEscape {
     if (ConstEscape.empty())
       return State;
 
-    return ((const CHECKER *)Checker)->checkConstPointerEscape(State,
-                                                               ConstEscape,
-                                                               Call,
-                                                               Kind);
+    return ((const CHECKER *)Checker)
+        ->checkConstPointerEscape(State, ConstEscape, Call, Kind);
   }
 
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForPointerEscape(
-      CheckerManager::CheckPointerEscapeFunc(checker,
-                                            _checkConstPointerEscape<CHECKER>));
+    mgr._registerForPointerEscape(CheckerManager::CheckPointerEscapeFunc(
+        checker, _checkConstPointerEscape<CHECKER>));
   }
 };
 
-
-template <typename EVENT>
-class Event {
+template <typename EVENT> class Event {
   template <typename CHECKER>
   static void _checkEvent(void *checker, const void *event) {
     ((const CHECKER *)checker)->checkEvent(*(const EVENT *)event);
   }
+
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
     mgr._registerListenerForEvent<EVENT>(
-                 CheckerManager::CheckEventFunc(checker, _checkEvent<CHECKER>));
+        CheckerManager::CheckEventFunc(checker, _checkEvent<CHECKER>));
   }
 };
 
-} // end check namespace
+} // namespace check
 
 namespace eval {
 
@@ -463,7 +438,7 @@ public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
     mgr._registerForEvalAssume(
-                 CheckerManager::EvalAssumeFunc(checker, _evalAssume<CHECKER>));
+        CheckerManager::EvalAssumeFunc(checker, _evalAssume<CHECKER>));
   }
 };
 
@@ -478,11 +453,11 @@ public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
     mgr._registerForEvalCall(
-                     CheckerManager::EvalCallFunc(checker, _evalCall<CHECKER>));
+        CheckerManager::EvalCallFunc(checker, _evalCall<CHECKER>));
   }
 };
 
-} // end eval namespace
+} // namespace eval
 
 class CheckerBase : public ProgramPointTag {
   CheckerNameRef Name;
@@ -494,11 +469,11 @@ public:
 
   /// See CheckerManager::runCheckersForPrintState.
   virtual void printState(raw_ostream &Out, ProgramStateRef State,
-                          const char *NL, const char *Sep) const { }
+                          const char *NL, const char *Sep) const {}
 };
 
 /// Dump checker name to stream.
-raw_ostream& operator<<(raw_ostream &Out, const CheckerBase &Checker);
+raw_ostream &operator<<(raw_ostream &Out, const CheckerBase &Checker);
 
 /// Tag that can use a checker name as a message provider
 /// (see SimpleProgramPointTag).
@@ -527,9 +502,9 @@ public:
   }
 };
 
-template <typename EVENT>
-class EventDispatcher {
+template <typename EVENT> class EventDispatcher {
   CheckerManager *Mgr = nullptr;
+
 public:
   EventDispatcher() = default;
 
@@ -539,9 +514,7 @@ public:
     static_cast<EventDispatcher<EVENT> *>(checker)->Mgr = &mgr;
   }
 
-  void dispatchEvent(const EVENT &event) const {
-    Mgr->_dispatchEvent(event);
-  }
+  void dispatchEvent(const EVENT &event) const { Mgr->_dispatchEvent(event); }
 };
 
 /// We dereferenced a location that may be null.
@@ -558,8 +531,8 @@ struct ImplicitNullDerefEvent {
   static int Tag;
 };
 
-} // end ento namespace
+} // namespace ento
 
-} // end clang namespace
+} // namespace clang
 
 #endif

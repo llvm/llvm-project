@@ -53,7 +53,7 @@ StringRef RefCountBug::getDescription() const {
   case DeallocNotOwned:
     return "-dealloc sent to object that may be referenced elsewhere";
   case FreeNotOwned:
-    return  "'free' called on an object that may be referenced elsewhere";
+    return "'free' called on an object that may be referenced elsewhere";
   case OverAutorelease:
     return "Object autoreleased too many times";
   case ReturnNotOwnedForOwned:
@@ -92,8 +92,7 @@ static std::string getPrettyTypeName(QualType QT) {
 /// Write information about the type state change to @c os,
 /// return whether the note should be generated.
 static bool shouldGenerateNote(llvm::raw_string_ostream &os,
-                               const RefVal *PrevT,
-                               const RefVal &CurrV,
+                               const RefVal *PrevT, const RefVal &CurrV,
                                bool DeallocSent) {
   // Get the previous type state.
   RefVal PrevV = *PrevT;
@@ -194,7 +193,6 @@ static std::optional<std::string> findMetaClassAlloc(const Expr *Callee) {
 
       if (const auto *RD = dyn_cast<CXXRecordDecl>(VD->getDeclContext()))
         return RD->getNameAsString();
-
     }
   }
   return std::nullopt;
@@ -300,7 +298,6 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
       } else if (CurrSt->isNonNull(RV).isConstrainedTrue()) {
         os << " (assuming the call returns non-zero)";
       }
-
     }
   }
 }
@@ -348,7 +345,6 @@ private:
 } // end namespace ento
 } // end namespace clang
 
-
 /// Find the first node with the parent stack frame.
 static const ExplodedNode *getCalleeNode(const ExplodedNode *Pred) {
   const StackFrameContext *SC = Pred->getStackFrame();
@@ -364,7 +360,6 @@ static const ExplodedNode *getCalleeNode(const ExplodedNode *Pred) {
   }
   return N;
 }
-
 
 /// Insert a diagnostic piece at function exit
 /// if a function parameter is annotated as "os_consumed",
@@ -384,7 +379,7 @@ annotateConsumedSummaryMismatch(const ExplodedNode *N,
   std::string sbuf;
   llvm::raw_string_ostream os(sbuf);
   ArrayRef<const ParmVarDecl *> Parameters = Call->parameters();
-  for (unsigned I=0; I < Call->getNumArgs() && I < Parameters.size(); ++I) {
+  for (unsigned I = 0; I < Call->getNumArgs() && I < Parameters.size(); ++I) {
     const ParmVarDecl *PVD = Parameters[I];
 
     if (!PVD->hasAttr<OSConsumedAttr>())
@@ -453,7 +448,7 @@ PathDiagnosticPieceRef
 RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
                                  PathSensitiveBugReport &BR) {
 
-  const auto &BT = static_cast<const RefCountBug&>(BR.getBugType());
+  const auto &BT = static_cast<const RefCountBug &>(BR.getBugType());
 
   bool IsFreeUnowned = BT.getBugType() == RefCountBug::FreeNotOwned ||
                        BT.getBugType() == RefCountBug::DeallocNotOwned;
@@ -478,7 +473,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   ProgramStateRef CurrSt = N->getState();
   const LocationContext *LCtx = N->getLocationContext();
 
-  const RefVal* CurrT = getRefBinding(CurrSt, Sym);
+  const RefVal *CurrT = getRefBinding(CurrSt, Sym);
   if (!CurrT)
     return nullptr;
 
@@ -558,7 +553,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
       // was ever passed as an argument.
       unsigned i = 0;
 
-      for (auto AI=CE->arg_begin(), AE=CE->arg_end(); AI!=AE; ++AI, ++i) {
+      for (auto AI = CE->arg_begin(), AE = CE->arg_end(); AI != AE; ++AI, ++i) {
 
         // Retrieve the value of the argument.  Is it the symbol
         // we are interested in?
@@ -570,8 +565,8 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
       }
     } else if (const ObjCMessageExpr *ME = dyn_cast<ObjCMessageExpr>(S)) {
       if (const Expr *receiver = ME->getInstanceReceiver()) {
-        if (CurrSt->getSValAsScalarOrLoc(receiver, LCtx)
-              .getAsLocSymbol() == Sym) {
+        if (CurrSt->getSValAsScalarOrLoc(receiver, LCtx).getAsLocSymbol() ==
+            Sym) {
           // The symbol we are tracking is the receiver.
           DeallocSent = true;
         }
@@ -587,7 +582,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
 
   const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                                N->getLocationContext());
+                             N->getLocationContext());
   auto P = std::make_shared<PathDiagnosticEventPiece>(Pos, os.str());
 
   // Add the range by scanning the children of the statement for any bindings
@@ -654,13 +649,12 @@ namespace {
 // the leak. The function can also return a location context, which should be
 // treated as interesting.
 struct AllocationInfo {
-  const ExplodedNode* N;
+  const ExplodedNode *N;
   const MemRegion *R;
   const LocationContext *InterestingMethodContext;
-  AllocationInfo(const ExplodedNode *InN,
-                 const MemRegion *InR,
-                 const LocationContext *InInterestingMethodContext) :
-    N(InN), R(InR), InterestingMethodContext(InInterestingMethodContext) {}
+  AllocationInfo(const ExplodedNode *InN, const MemRegion *InR,
+                 const LocationContext *InInterestingMethodContext)
+      : N(InN), R(InR), InterestingMethodContext(InInterestingMethodContext) {}
 };
 } // end anonymous namespace
 
@@ -700,10 +694,10 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
     // AllocationNodeInCurrentContext, is the last node in the current or
     // parent context in which the symbol was tracked.
     //
-    // Note that the allocation site might be in the parent context. For example,
-    // the case where an allocation happens in a block that captures a reference
-    // to it and that reference is overwritten/dropped by another call to
-    // the block.
+    // Note that the allocation site might be in the parent context. For
+    // example, the case where an allocation happens in a block that captures a
+    // reference to it and that reference is overwritten/dropped by another call
+    // to the block.
     if (NContext == LeakContext || NContext->isParentOf(LeakContext))
       AllocationNodeInCurrentOrParentContext = N;
 
@@ -742,7 +736,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
 
   if (AllocationNodeInCurrentOrParentContext &&
       AllocationNodeInCurrentOrParentContext->getLocationContext() !=
-      LeakContext)
+          LeakContext)
     FirstBinding = nullptr;
 
   return AllocationInfo(AllocationNodeInCurrentOrParentContext, FirstBinding,

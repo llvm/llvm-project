@@ -210,7 +210,7 @@ void ExplodedNode::addPredecessor(ExplodedNode *V, ExplodedGraph &G) {
 void ExplodedNode::NodeGroup::replaceNode(ExplodedNode *node) {
   assert(!getFlag());
 
-  GroupStorage &Storage = reinterpret_cast<GroupStorage&>(P);
+  GroupStorage &Storage = reinterpret_cast<GroupStorage &>(P);
   assert(Storage.is<ExplodedNode *>());
   Storage = node;
   assert(Storage.is<ExplodedNode *>());
@@ -219,7 +219,7 @@ void ExplodedNode::NodeGroup::replaceNode(ExplodedNode *node) {
 void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
   assert(!getFlag());
 
-  GroupStorage &Storage = reinterpret_cast<GroupStorage&>(P);
+  GroupStorage &Storage = reinterpret_cast<GroupStorage &>(P);
   if (Storage.isNull()) {
     Storage = N;
     assert(Storage.is<ExplodedNode *>());
@@ -256,7 +256,7 @@ unsigned ExplodedNode::NodeGroup::size() const {
   return 1;
 }
 
-ExplodedNode * const *ExplodedNode::NodeGroup::begin() const {
+ExplodedNode *const *ExplodedNode::NodeGroup::begin() const {
   if (getFlag())
     return nullptr;
 
@@ -268,7 +268,7 @@ ExplodedNode * const *ExplodedNode::NodeGroup::begin() const {
   return Storage.getAddrOfPtr1();
 }
 
-ExplodedNode * const *ExplodedNode::NodeGroup::end() const {
+ExplodedNode *const *ExplodedNode::NodeGroup::end() const {
   if (getFlag())
     return nullptr;
 
@@ -353,18 +353,18 @@ const Stmt *ExplodedNode::getNextStmtForDiagnostics() const {
       // Check if the statement is '?' or '&&'/'||'.  These are "merges",
       // not actual statement points.
       switch (S->getStmtClass()) {
-        case Stmt::ChooseExprClass:
-        case Stmt::BinaryConditionalOperatorClass:
-        case Stmt::ConditionalOperatorClass:
+      case Stmt::ChooseExprClass:
+      case Stmt::BinaryConditionalOperatorClass:
+      case Stmt::ConditionalOperatorClass:
+        continue;
+      case Stmt::BinaryOperatorClass: {
+        BinaryOperatorKind Op = cast<BinaryOperator>(S)->getOpcode();
+        if (Op == BO_LAnd || Op == BO_LOr)
           continue;
-        case Stmt::BinaryOperatorClass: {
-          BinaryOperatorKind Op = cast<BinaryOperator>(S)->getOpcode();
-          if (Op == BO_LAnd || Op == BO_LOr)
-            continue;
-          break;
-        }
-        default:
-          break;
+        break;
+      }
+      default:
+        break;
       }
       // We found the statement, so return it.
       return S;
@@ -390,22 +390,20 @@ const Stmt *ExplodedNode::getCurrentOrPreviousStmtForDiagnostics() const {
 }
 
 ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,
-                                     ProgramStateRef State,
-                                     bool IsSink,
-                                     bool* IsNew) {
+                                     ProgramStateRef State, bool IsSink,
+                                     bool *IsNew) {
   // Profile 'State' to determine if we already have an existing node.
   llvm::FoldingSetNodeID profile;
   void *InsertPos = nullptr;
 
   NodeTy::Profile(profile, L, State, IsSink);
-  NodeTy* V = Nodes.FindNodeOrInsertPos(profile, InsertPos);
+  NodeTy *V = Nodes.FindNodeOrInsertPos(profile, InsertPos);
 
   if (!V) {
     if (!FreeNodes.empty()) {
       V = FreeNodes.back();
       FreeNodes.pop_back();
-    }
-    else {
+    } else {
       // Allocate a new node.
       V = getAllocator().Allocate<NodeTy>();
     }
@@ -419,18 +417,17 @@ ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,
     // Insert the node into the node set and return it.
     Nodes.InsertNode(V, InsertPos);
 
-    if (IsNew) *IsNew = true;
-  }
-  else
-    if (IsNew) *IsNew = false;
+    if (IsNew)
+      *IsNew = true;
+  } else if (IsNew)
+    *IsNew = false;
 
   return V;
 }
 
 ExplodedNode *ExplodedGraph::createUncachedNode(const ProgramPoint &L,
                                                 ProgramStateRef State,
-                                                int64_t Id,
-                                                bool IsSink) {
+                                                int64_t Id, bool IsSink) {
   NodeTy *V = getAllocator().Allocate<NodeTy>();
   new (V) NodeTy(L, State, Id, IsSink);
   return V;
@@ -450,7 +447,7 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
   InterExplodedGraphMap Pass2Scratch;
   Pass2Ty &Pass2 = ForwardMap ? *ForwardMap : Pass2Scratch;
 
-  SmallVector<const ExplodedNode*, 10> WL1, WL2;
+  SmallVector<const ExplodedNode *, 10> WL1, WL2;
 
   // ===- Pass 1 (reverse DFS) -===
   for (const auto Sink : Sinks)
@@ -497,7 +494,8 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     Pass2[N] = NewN;
 
     // Also record the reverse mapping from the new node to the old node.
-    if (InverseMap) (*InverseMap)[NewN] = N;
+    if (InverseMap)
+      (*InverseMap)[NewN] = N;
 
     // If this node is a root, designate it as such in the graph.
     if (N->Preds.empty())

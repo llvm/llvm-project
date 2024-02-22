@@ -977,30 +977,29 @@ void GenericTaintRule::process(const GenericTaintChecker &Checker,
   /// Propagate taint where it is necessary.
   auto &F = State->getStateManager().get_context<ArgIdxFactory>();
   ImmutableSet<ArgIdxTy> Result = F.getEmptySet();
-  ForEachCallArg(
-      [&](ArgIdxTy I, const Expr *E, SVal V) {
-        if (PropDstArgs.contains(I)) {
-          LLVM_DEBUG(llvm::dbgs() << "PreCall<"; Call.dump(llvm::dbgs());
-                     llvm::dbgs()
-                     << "> prepares tainting arg index: " << I << '\n';);
-          Result = F.add(Result, I);
-        }
+  ForEachCallArg([&](ArgIdxTy I, const Expr *E, SVal V) {
+    if (PropDstArgs.contains(I)) {
+      LLVM_DEBUG(llvm::dbgs() << "PreCall<"; Call.dump(llvm::dbgs());
+                 llvm::dbgs()
+                 << "> prepares tainting arg index: " << I << '\n';);
+      Result = F.add(Result, I);
+    }
 
-        // Taint property gets lost if the variable is passed as a
-        // non-const pointer or reference to a function which is
-        // not inlined. For matching rules we want to preserve the taintedness.
-        // TODO: We should traverse all reachable memory regions via the
-        // escaping parameter. Instead of doing that we simply mark only the
-        // referred memory region as tainted.
-        if (WouldEscape(V, E->getType()) && getTaintedPointeeOrPointer(State, V)) {
-          LLVM_DEBUG(if (!Result.contains(I)) {
-            llvm::dbgs() << "PreCall<";
-            Call.dump(llvm::dbgs());
-            llvm::dbgs() << "> prepares tainting arg index: " << I << '\n';
-          });
-          Result = F.add(Result, I);
-        }
+    // Taint property gets lost if the variable is passed as a
+    // non-const pointer or reference to a function which is
+    // not inlined. For matching rules we want to preserve the taintedness.
+    // TODO: We should traverse all reachable memory regions via the
+    // escaping parameter. Instead of doing that we simply mark only the
+    // referred memory region as tainted.
+    if (WouldEscape(V, E->getType()) && getTaintedPointeeOrPointer(State, V)) {
+      LLVM_DEBUG(if (!Result.contains(I)) {
+        llvm::dbgs() << "PreCall<";
+        Call.dump(llvm::dbgs());
+        llvm::dbgs() << "> prepares tainting arg index: " << I << '\n';
       });
+      Result = F.add(Result, I);
+    }
+  });
 
   if (!Result.isEmpty())
     State = State->set<TaintArgsOnPostVisit>(C.getStackFrame(), Result);

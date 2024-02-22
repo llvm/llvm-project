@@ -20,12 +20,7 @@ namespace lexpr {
 
 class LExpr {
 public:
-  enum Opcode {
-    Terminal,
-    And,
-    Or,
-    Not
-  };
+  enum Opcode { Terminal, And, Or, Not };
   Opcode kind() const { return Kind; }
 
   /// Logical implication. Returns true if the LExpr implies RHS, i.e. if
@@ -55,7 +50,8 @@ class BinOp : public LExpr {
   LExpr *LHS, *RHS;
 
 protected:
-  BinOp(LExpr *LHS, LExpr *RHS, Opcode Code) : LExpr(Code), LHS(LHS), RHS(RHS) {}
+  BinOp(LExpr *LHS, LExpr *RHS, Opcode Code)
+      : LExpr(Code), LHS(LHS), RHS(RHS) {}
 
 public:
   const LExpr *left() const { return LHS; }
@@ -99,9 +95,8 @@ bool LExpr::implies(const LExpr *RHS) const {
   return lexpr::implies(this, RHS);
 }
 
-}
-}
-}
+} // namespace lexpr
+} // namespace threadSafety
+} // namespace clang
 
 #endif
-

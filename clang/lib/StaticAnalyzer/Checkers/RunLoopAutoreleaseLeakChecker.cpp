@@ -22,10 +22,10 @@
 //===----------------------------------------------------------------------===//
 //
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -40,19 +40,17 @@ using namespace ast_matchers;
 
 namespace {
 
-const char * RunLoopBind = "NSRunLoopM";
-const char * RunLoopRunBind = "RunLoopRunM";
-const char * OtherMsgBind = "OtherMessageSentM";
-const char * AutoreleasePoolBind = "AutoreleasePoolM";
-const char * OtherStmtAutoreleasePoolBind = "OtherAutoreleasePoolM";
+const char *RunLoopBind = "NSRunLoopM";
+const char *RunLoopRunBind = "RunLoopRunM";
+const char *OtherMsgBind = "OtherMessageSentM";
+const char *AutoreleasePoolBind = "AutoreleasePoolM";
+const char *OtherStmtAutoreleasePoolBind = "OtherAutoreleasePoolM";
 
 class RunLoopAutoreleaseLeakChecker : public Checker<check::ASTCodeBody> {
 
 public:
-  void checkASTCodeBody(const Decl *D,
-                        AnalysisManager &AM,
+  void checkASTCodeBody(const Decl *D, AnalysisManager &AM,
                         BugReporter &BR) const;
-
 };
 
 } // end anonymous namespace
@@ -64,7 +62,8 @@ public:
 /// but useful enough in this case.
 static bool seenBefore(const Stmt *Parent, const Stmt *A, const Stmt *B) {
   for (const Stmt *C : Parent->children()) {
-    if (!C) continue;
+    if (!C)
+      continue;
 
     if (C == A)
       return true;
@@ -77,9 +76,7 @@ static bool seenBefore(const Stmt *Parent, const Stmt *A, const Stmt *B) {
   return false;
 }
 
-static void emitDiagnostics(BoundNodes &Match,
-                            const Decl *D,
-                            BugReporter &BR,
+static void emitDiagnostics(BoundNodes &Match, const Decl *D, BugReporter &BR,
                             AnalysisManager &AM,
                             const RunLoopAutoreleaseLeakChecker *Checker) {
 
@@ -109,42 +106,41 @@ static void emitDiagnostics(BoundNodes &Match,
   if (HasAutoreleasePool && (OAP != AP))
     return;
 
-  PathDiagnosticLocation Location = PathDiagnosticLocation::createBegin(
-    ME, BR.getSourceManager(), ADC);
+  PathDiagnosticLocation Location =
+      PathDiagnosticLocation::createBegin(ME, BR.getSourceManager(), ADC);
   SourceRange Range = ME->getSourceRange();
 
-  BR.EmitBasicReport(ADC->getDecl(), Checker,
-                     /*Name=*/"Memory leak inside autorelease pool",
-                     /*BugCategory=*/"Memory",
-                     /*Name=*/
-                     (Twine("Temporary objects allocated in the") +
-                      " autorelease pool " +
-                      (HasAutoreleasePool ? "" : "of last resort ") +
-                      "followed by the launch of " +
-                      (RL ? "main run loop " : "xpc_main ") +
-                      "may never get released; consider moving them to a "
-                      "separate autorelease pool")
-                         .str(),
-                     Location, Range);
+  BR.EmitBasicReport(
+      ADC->getDecl(), Checker,
+      /*Name=*/"Memory leak inside autorelease pool",
+      /*BugCategory=*/"Memory",
+      /*Name=*/
+      (Twine("Temporary objects allocated in the") + " autorelease pool " +
+       (HasAutoreleasePool ? "" : "of last resort ") +
+       "followed by the launch of " + (RL ? "main run loop " : "xpc_main ") +
+       "may never get released; consider moving them to a "
+       "separate autorelease pool")
+          .str(),
+      Location, Range);
 }
 
 static StatementMatcher getRunLoopRunM(StatementMatcher Extra = anything()) {
   StatementMatcher MainRunLoopM =
       objcMessageExpr(hasSelector("mainRunLoop"),
-                      hasReceiverType(asString("NSRunLoop")),
-                      Extra)
+                      hasReceiverType(asString("NSRunLoop")), Extra)
           .bind(RunLoopBind);
 
-  StatementMatcher MainRunLoopRunM = objcMessageExpr(hasSelector("run"),
-                         hasReceiver(MainRunLoopM),
-                         Extra).bind(RunLoopRunBind);
+  StatementMatcher MainRunLoopRunM =
+      objcMessageExpr(hasSelector("run"), hasReceiver(MainRunLoopM), Extra)
+          .bind(RunLoopRunBind);
 
   StatementMatcher XPCRunM =
       callExpr(callee(functionDecl(hasName("xpc_main")))).bind(RunLoopRunBind);
   return anyOf(MainRunLoopRunM, XPCRunM);
 }
 
-static StatementMatcher getOtherMessageSentM(StatementMatcher Extra = anything()) {
+static StatementMatcher
+getOtherMessageSentM(StatementMatcher Extra = anything()) {
   return objcMessageExpr(unless(anyOf(equalsBoundNode(RunLoopBind),
                                       equalsBoundNode(RunLoopRunBind))),
                          Extra)
@@ -156,12 +152,12 @@ checkTempObjectsInSamePool(const Decl *D, AnalysisManager &AM, BugReporter &BR,
                            const RunLoopAutoreleaseLeakChecker *Chkr) {
   StatementMatcher RunLoopRunM = getRunLoopRunM();
   StatementMatcher OtherMessageSentM = getOtherMessageSentM(
-    hasAncestor(autoreleasePoolStmt().bind(OtherStmtAutoreleasePoolBind)));
+      hasAncestor(autoreleasePoolStmt().bind(OtherStmtAutoreleasePoolBind)));
 
   StatementMatcher RunLoopInAutorelease =
-      autoreleasePoolStmt(
-        hasDescendant(RunLoopRunM),
-        hasDescendant(OtherMessageSentM)).bind(AutoreleasePoolBind);
+      autoreleasePoolStmt(hasDescendant(RunLoopRunM),
+                          hasDescendant(OtherMessageSentM))
+          .bind(AutoreleasePoolBind);
 
   DeclarationMatcher GroupM = decl(hasDescendant(RunLoopInAutorelease));
 
@@ -179,22 +175,18 @@ checkTempObjectsInNoPool(const Decl *D, AnalysisManager &AM, BugReporter &BR,
   StatementMatcher RunLoopRunM = getRunLoopRunM(NoPoolM);
   StatementMatcher OtherMessageSentM = getOtherMessageSentM(NoPoolM);
 
-  DeclarationMatcher GroupM = functionDecl(
-    isMain(),
-    hasDescendant(RunLoopRunM),
-    hasDescendant(OtherMessageSentM)
-  );
+  DeclarationMatcher GroupM = functionDecl(isMain(), hasDescendant(RunLoopRunM),
+                                           hasDescendant(OtherMessageSentM));
 
   auto Matches = match(GroupM, *D, AM.getASTContext());
 
   for (BoundNodes Match : Matches)
     emitDiagnostics(Match, D, BR, AM, Chkr);
-
 }
 
 void RunLoopAutoreleaseLeakChecker::checkASTCodeBody(const Decl *D,
-                        AnalysisManager &AM,
-                        BugReporter &BR) const {
+                                                     AnalysisManager &AM,
+                                                     BugReporter &BR) const {
   checkTempObjectsInSamePool(D, AM, BR, this);
   checkTempObjectsInNoPool(D, AM, BR, this);
 }
@@ -203,6 +195,7 @@ void ento::registerRunLoopAutoreleaseLeakChecker(CheckerManager &mgr) {
   mgr.registerChecker<RunLoopAutoreleaseLeakChecker>();
 }
 
-bool ento::shouldRegisterRunLoopAutoreleaseLeakChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterRunLoopAutoreleaseLeakChecker(
+    const CheckerManager &mgr) {
   return true;
 }

@@ -30,7 +30,7 @@ extern "C" void clang_registerCheckers(CheckerRegistry &registry) {
   registry.addChecker(registerMyChecker, shouldRegisterMyChecker,
                       "example.MyChecker", "Example Description",
                       "example.mychecker.documentation.nonexistent.html",
-                      /*isHidden*/false);
+                      /*isHidden*/ false);
 
   registry.addCheckerOption(/*OptionType*/ "bool",
                             /*CheckerFullName*/ "example.MyChecker",

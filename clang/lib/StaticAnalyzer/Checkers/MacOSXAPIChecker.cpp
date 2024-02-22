@@ -31,7 +31,7 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class MacOSXAPIChecker : public Checker< check::PreStmt<CallExpr> > {
+class MacOSXAPIChecker : public Checker<check::PreStmt<CallExpr>> {
   const BugType BT_dispatchOnce{this, "Improper use of 'dispatch_once'",
                                 categories::AppleAPIMisuse};
 
@@ -47,7 +47,7 @@ public:
                                                const CallExpr *,
                                                StringRef FName) const;
 };
-} //end anonymous namespace
+} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 // dispatch_once and dispatch_once_f
@@ -155,12 +155,10 @@ void MacOSXAPIChecker::checkPreStmt(const CallExpr *CE,
     return;
 
   SubChecker SC =
-    llvm::StringSwitch<SubChecker>(Name)
-      .Cases("dispatch_once",
-             "_dispatch_once",
-             "dispatch_once_f",
-             &MacOSXAPIChecker::CheckDispatchOnce)
-      .Default(nullptr);
+      llvm::StringSwitch<SubChecker>(Name)
+          .Cases("dispatch_once", "_dispatch_once", "dispatch_once_f",
+                 &MacOSXAPIChecker::CheckDispatchOnce)
+          .Default(nullptr);
 
   if (SC)
     (this->*SC)(C, CE, Name);

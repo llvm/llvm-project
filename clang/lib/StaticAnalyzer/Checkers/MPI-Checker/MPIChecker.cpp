@@ -181,9 +181,9 @@ void MPIChecker::allRegionsUsedByWait(
   }
 }
 
-} // end of namespace: mpi
-} // end of namespace: ento
-} // end of namespace: clang
+} // namespace mpi
+} // namespace ento
+} // namespace clang
 
 // Registers the checker for static analysis.
 void clang::ento::registerMPIChecker(CheckerManager &MGR) {

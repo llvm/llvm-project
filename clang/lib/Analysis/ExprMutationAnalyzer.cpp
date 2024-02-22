@@ -181,8 +181,12 @@ const auto isMoveOnly = [] {
 };
 
 template <class T> struct NodeID;
-template <> struct NodeID<Expr> { static constexpr StringRef value = "expr"; };
-template <> struct NodeID<Decl> { static constexpr StringRef value = "decl"; };
+template <> struct NodeID<Expr> {
+  static constexpr StringRef value = "expr";
+};
+template <> struct NodeID<Decl> {
+  static constexpr StringRef value = "decl";
+};
 constexpr StringRef NodeID<Expr>::value;
 constexpr StringRef NodeID<Decl>::value;
 

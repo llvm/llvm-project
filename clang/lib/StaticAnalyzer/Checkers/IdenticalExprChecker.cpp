@@ -15,8 +15,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -37,9 +37,9 @@ class FindIdenticalExprVisitor
   BugReporter &BR;
   const CheckerBase *Checker;
   AnalysisDeclContext *AC;
+
 public:
-  explicit FindIdenticalExprVisitor(BugReporter &B,
-                                    const CheckerBase *Checker,
+  explicit FindIdenticalExprVisitor(BugReporter &B, const CheckerBase *Checker,
                                     AnalysisDeclContext *A)
       : BR(B), Checker(Checker), AC(A) {}
   // FindIdenticalExprVisitor only visits nodes
@@ -68,10 +68,8 @@ void FindIdenticalExprVisitor::reportIdenticalExpr(const BinaryOperator *B,
 
   PathDiagnosticLocation ELoc =
       PathDiagnosticLocation::createOperatorLoc(B, BR.getSourceManager());
-  BR.EmitBasicReport(AC->getDecl(), Checker,
-                     "Use of identical expressions",
-                     categories::LogicError,
-                     Message, ELoc, Sr);
+  BR.EmitBasicReport(AC->getDecl(), Checker, "Use of identical expressions",
+                     categories::LogicError, Message, ELoc, Sr);
 }
 
 void FindIdenticalExprVisitor::checkBitwiseOrLogicalOp(const BinaryOperator *B,
@@ -115,12 +113,15 @@ bool FindIdenticalExprVisitor::VisitIfStmt(const IfStmt *I) {
   if (const CompoundStmt *CS = dyn_cast<CompoundStmt>(Stmt1)) {
     if (!CS->body_empty()) {
       const IfStmt *InnerIf = dyn_cast<IfStmt>(*CS->body_begin());
-      if (InnerIf && isIdenticalStmt(AC->getASTContext(), I->getCond(), InnerIf->getCond(), /*IgnoreSideEffects=*/ false)) {
-        PathDiagnosticLocation ELoc(InnerIf->getCond(), BR.getSourceManager(), AC);
-        BR.EmitBasicReport(AC->getDecl(), Checker, "Identical conditions",
-          categories::LogicError,
-          "conditions of the inner and outer statements are identical",
-          ELoc);
+      if (InnerIf &&
+          isIdenticalStmt(AC->getASTContext(), I->getCond(), InnerIf->getCond(),
+                          /*IgnoreSideEffects=*/false)) {
+        PathDiagnosticLocation ELoc(InnerIf->getCond(), BR.getSourceManager(),
+                                    AC);
+        BR.EmitBasicReport(
+            AC->getDecl(), Checker, "Identical conditions",
+            categories::LogicError,
+            "conditions of the inner and outer statements are identical", ELoc);
       }
     }
   }
@@ -168,12 +169,11 @@ bool FindIdenticalExprVisitor::VisitIfStmt(const IfStmt *I) {
   }
 
   if (isIdenticalStmt(AC->getASTContext(), Stmt1, Stmt2, true)) {
-      PathDiagnosticLocation ELoc =
-          PathDiagnosticLocation::createBegin(I, BR.getSourceManager(), AC);
-      BR.EmitBasicReport(AC->getDecl(), Checker,
-                         "Identical branches",
-                         categories::LogicError,
-                         "true and false branches are identical", ELoc);
+    PathDiagnosticLocation ELoc =
+        PathDiagnosticLocation::createBegin(I, BR.getSourceManager(), AC);
+    BR.EmitBasicReport(AC->getDecl(), Checker, "Identical branches",
+                       categories::LogicError,
+                       "true and false branches are identical", ELoc);
   }
   return true;
 }
@@ -273,8 +273,8 @@ bool FindIdenticalExprVisitor::VisitConditionalOperator(
   // Check if expressions in conditional expression are identical
   // from a symbolic point of view.
 
-  if (isIdenticalStmt(AC->getASTContext(), C->getTrueExpr(),
-                      C->getFalseExpr(), true)) {
+  if (isIdenticalStmt(AC->getASTContext(), C->getTrueExpr(), C->getFalseExpr(),
+                      true)) {
     PathDiagnosticLocation ELoc =
         PathDiagnosticLocation::createConditionalColonLoc(
             C, BR.getSourceManager());
@@ -360,8 +360,8 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
   case Stmt::NullStmtClass:
     return true;
   case Stmt::CStyleCastExprClass: {
-    const CStyleCastExpr* CastExpr1 = cast<CStyleCastExpr>(Stmt1);
-    const CStyleCastExpr* CastExpr2 = cast<CStyleCastExpr>(Stmt2);
+    const CStyleCastExpr *CastExpr1 = cast<CStyleCastExpr>(Stmt1);
+    const CStyleCastExpr *CastExpr2 = cast<CStyleCastExpr>(Stmt2);
 
     return CastExpr1->getTypeAsWritten() == CastExpr2->getTypeAsWritten();
   }
@@ -471,7 +471,7 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
     llvm::APInt I2 = IntLit2->getValue();
     if (I1.getBitWidth() != I2.getBitWidth())
       return false;
-    return  I1 == I2;
+    return I1 == I2;
   }
   case Stmt::FloatingLiteralClass: {
     const FloatingLiteral *FloatLit1 = cast<FloatingLiteral>(Stmt1);

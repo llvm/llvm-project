@@ -48,7 +48,6 @@ public:
                      CheckerContext &C) const;
 
 private:
-
   void diagnoseCallArguments(const CallEvent &CE, CheckerContext &C) const;
 
   void reportUseAfterDealloc(SymbolRef Sym, StringRef Desc, const Stmt *S,
@@ -129,7 +128,7 @@ void ObjCSuperDeallocChecker::checkPostObjCMessage(const ObjCMethodCall &M,
 }
 
 void ObjCSuperDeallocChecker::checkLocation(SVal L, bool IsLoad, const Stmt *S,
-                                  CheckerContext &C) const {
+                                            CheckerContext &C) const {
   SymbolRef BaseSym = L.getLocSymbolInBase();
   if (!BaseSym)
     return;
@@ -162,8 +161,8 @@ void ObjCSuperDeallocChecker::checkLocation(SVal L, bool IsLoad, const Stmt *S,
   std::string Buf;
   llvm::raw_string_ostream OS(Buf);
   if (IvarRegion) {
-    OS << "Use of instance variable '" << *IvarRegion->getDecl() <<
-          "' after 'self' has been deallocated";
+    OS << "Use of instance variable '" << *IvarRegion->getDecl()
+       << "' after 'self' has been deallocated";
     Desc = OS.str();
   }
 
@@ -214,8 +213,8 @@ void ObjCSuperDeallocChecker::diagnoseCallArguments(const CallEvent &CE,
   }
 }
 
-void
-ObjCSuperDeallocChecker::initIdentifierInfoAndSelectors(ASTContext &Ctx) const {
+void ObjCSuperDeallocChecker::initIdentifierInfoAndSelectors(
+    ASTContext &Ctx) const {
   if (IIdealloc)
     return;
 
@@ -225,8 +224,8 @@ ObjCSuperDeallocChecker::initIdentifierInfoAndSelectors(ASTContext &Ctx) const {
   SELdealloc = Ctx.Selectors.getSelector(0, &IIdealloc);
 }
 
-bool
-ObjCSuperDeallocChecker::isSuperDeallocMessage(const ObjCMethodCall &M) const {
+bool ObjCSuperDeallocChecker::isSuperDeallocMessage(
+    const ObjCMethodCall &M) const {
   if (M.getOriginExpr()->getReceiverKind() != ObjCMessageExpr::SuperInstance)
     return false;
 

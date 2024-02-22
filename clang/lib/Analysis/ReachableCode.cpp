@@ -45,8 +45,7 @@ static bool isTrivialExpression(const Expr *Ex) {
   Ex = Ex->IgnoreParenCasts();
   return isa<IntegerLiteral>(Ex) || isa<StringLiteral>(Ex) ||
          isa<CXXBoolLiteralExpr>(Ex) || isa<ObjCBoolLiteralExpr>(Ex) ||
-         isa<CharacterLiteral>(Ex) ||
-         isEnumConstant(Ex);
+         isa<CharacterLiteral>(Ex) || isEnumConstant(Ex);
 }
 
 static bool isTrivialDoWhile(const CFGBlock *B, const Stmt *S) {
@@ -71,7 +70,7 @@ static bool isBuiltinUnreachable(const Stmt *S) {
 
 static bool isBuiltinAssumeFalse(const CFGBlock *B, const Stmt *S,
                                  ASTContext &C) {
-  if (B->empty())  {
+  if (B->empty()) {
     // Happens if S is B's terminator and B contains nothing else
     // (e.g. a CFGBlock containing only a goto).
     return false;
@@ -147,8 +146,7 @@ static SourceLocation getTopMostMacro(SourceLocation Loc, SourceManager &SM) {
 }
 
 /// Returns true if the statement is expanded from a configuration macro.
-static bool isExpandedFromConfigurationMacro(const Stmt *S,
-                                             Preprocessor &PP,
+static bool isExpandedFromConfigurationMacro(const Stmt *S, Preprocessor &PP,
                                              bool IgnoreYES_NO = false) {
   // FIXME: This is not very precise.  Here we just check to see if the
   // value comes from a macro, but we can do much better.  This is likely
@@ -186,8 +184,7 @@ static bool isConfigurationValue(const ValueDecl *D, Preprocessor &PP);
 /// "sometimes unreachable" code.  Such code is usually not interesting
 /// to report as unreachable, and may mask truly unreachable code within
 /// those blocks.
-static bool isConfigurationValue(const Stmt *S,
-                                 Preprocessor &PP,
+static bool isConfigurationValue(const Stmt *S, Preprocessor &PP,
                                  SourceRange *SilenceableCondVal = nullptr,
                                  bool IncludeIntegers = true,
                                  bool WrappedInParens = false) {
@@ -212,62 +209,61 @@ static bool isConfigurationValue(const Stmt *S,
   bool IgnoreYES_NO = false;
 
   switch (S->getStmtClass()) {
-    case Stmt::CallExprClass: {
-      const FunctionDecl *Callee =
+  case Stmt::CallExprClass: {
+    const FunctionDecl *Callee =
         dyn_cast_or_null<FunctionDecl>(cast<CallExpr>(S)->getCalleeDecl());
-      return Callee ? Callee->isConstexpr() : false;
+    return Callee ? Callee->isConstexpr() : false;
+  }
+  case Stmt::DeclRefExprClass:
+    return isConfigurationValue(cast<DeclRefExpr>(S)->getDecl(), PP);
+  case Stmt::ObjCBoolLiteralExprClass:
+    IgnoreYES_NO = true;
+    [[fallthrough]];
+  case Stmt::CXXBoolLiteralExprClass:
+  case Stmt::IntegerLiteralClass: {
+    const Expr *E = cast<Expr>(S);
+    if (IncludeIntegers) {
+      if (SilenceableCondVal && !SilenceableCondVal->getBegin().isValid())
+        *SilenceableCondVal = E->getSourceRange();
+      return WrappedInParens ||
+             isExpandedFromConfigurationMacro(E, PP, IgnoreYES_NO);
     }
-    case Stmt::DeclRefExprClass:
-      return isConfigurationValue(cast<DeclRefExpr>(S)->getDecl(), PP);
-    case Stmt::ObjCBoolLiteralExprClass:
-      IgnoreYES_NO = true;
-      [[fallthrough]];
-    case Stmt::CXXBoolLiteralExprClass:
-    case Stmt::IntegerLiteralClass: {
-      const Expr *E = cast<Expr>(S);
-      if (IncludeIntegers) {
-        if (SilenceableCondVal && !SilenceableCondVal->getBegin().isValid())
-          *SilenceableCondVal = E->getSourceRange();
-        return WrappedInParens ||
-               isExpandedFromConfigurationMacro(E, PP, IgnoreYES_NO);
-      }
+    return false;
+  }
+  case Stmt::MemberExprClass:
+    return isConfigurationValue(cast<MemberExpr>(S)->getMemberDecl(), PP);
+  case Stmt::UnaryExprOrTypeTraitExprClass:
+    return true;
+  case Stmt::BinaryOperatorClass: {
+    const BinaryOperator *B = cast<BinaryOperator>(S);
+    // Only include raw integers (not enums) as configuration
+    // values if they are used in a logical or comparison operator
+    // (not arithmetic).
+    IncludeIntegers &= (B->isLogicalOp() || B->isComparisonOp());
+    return isConfigurationValue(B->getLHS(), PP, SilenceableCondVal,
+                                IncludeIntegers) ||
+           isConfigurationValue(B->getRHS(), PP, SilenceableCondVal,
+                                IncludeIntegers);
+  }
+  case Stmt::UnaryOperatorClass: {
+    const UnaryOperator *UO = cast<UnaryOperator>(S);
+    if (UO->getOpcode() != UO_LNot && UO->getOpcode() != UO_Minus)
       return false;
-    }
-    case Stmt::MemberExprClass:
-      return isConfigurationValue(cast<MemberExpr>(S)->getMemberDecl(), PP);
-    case Stmt::UnaryExprOrTypeTraitExprClass:
-      return true;
-    case Stmt::BinaryOperatorClass: {
-      const BinaryOperator *B = cast<BinaryOperator>(S);
-      // Only include raw integers (not enums) as configuration
-      // values if they are used in a logical or comparison operator
-      // (not arithmetic).
-      IncludeIntegers &= (B->isLogicalOp() || B->isComparisonOp());
-      return isConfigurationValue(B->getLHS(), PP, SilenceableCondVal,
-                                  IncludeIntegers) ||
-             isConfigurationValue(B->getRHS(), PP, SilenceableCondVal,
-                                  IncludeIntegers);
-    }
-    case Stmt::UnaryOperatorClass: {
-      const UnaryOperator *UO = cast<UnaryOperator>(S);
-      if (UO->getOpcode() != UO_LNot && UO->getOpcode() != UO_Minus)
-        return false;
-      bool SilenceableCondValNotSet =
-          SilenceableCondVal && SilenceableCondVal->getBegin().isInvalid();
-      bool IsSubExprConfigValue =
-          isConfigurationValue(UO->getSubExpr(), PP, SilenceableCondVal,
-                               IncludeIntegers, WrappedInParens);
-      // Update the silenceable condition value source range only if the range
-      // was set directly by the child expression.
-      if (SilenceableCondValNotSet &&
-          SilenceableCondVal->getBegin().isValid() &&
-          *SilenceableCondVal ==
-              UO->getSubExpr()->IgnoreCasts()->getSourceRange())
-        *SilenceableCondVal = UO->getSourceRange();
-      return IsSubExprConfigValue;
-    }
-    default:
-      return false;
+    bool SilenceableCondValNotSet =
+        SilenceableCondVal && SilenceableCondVal->getBegin().isInvalid();
+    bool IsSubExprConfigValue =
+        isConfigurationValue(UO->getSubExpr(), PP, SilenceableCondVal,
+                             IncludeIntegers, WrappedInParens);
+    // Update the silenceable condition value source range only if the range
+    // was set directly by the child expression.
+    if (SilenceableCondValNotSet && SilenceableCondVal->getBegin().isValid() &&
+        *SilenceableCondVal ==
+            UO->getSubExpr()->IgnoreCasts()->getSourceRange())
+      *SilenceableCondVal = UO->getSourceRange();
+    return IsSubExprConfigValue;
+  }
+  default:
+    return false;
   }
 }
 
@@ -314,14 +310,13 @@ static bool shouldTreatSuccessorsAsReachable(const CFGBlock *B,
   return isConfigurationValue(Cond, PP);
 }
 
-static unsigned scanFromBlock(const CFGBlock *Start,
-                              llvm::BitVector &Reachable,
+static unsigned scanFromBlock(const CFGBlock *Start, llvm::BitVector &Reachable,
                               Preprocessor *PP,
                               bool IncludeSometimesUnreachableEdges) {
   unsigned count = 0;
 
   // Prep work queue
-  SmallVector<const CFGBlock*, 32> WL;
+  SmallVector<const CFGBlock *, 32> WL;
 
   // The entry block may have already been marked reachable
   // by the caller.
@@ -347,25 +342,26 @@ static unsigned scanFromBlock(const CFGBlock *Start,
       TreatAllSuccessorsAsReachable = false;
 
     for (CFGBlock::const_succ_iterator I = item->succ_begin(),
-         E = item->succ_end(); I != E; ++I) {
+                                       E = item->succ_end();
+         I != E; ++I) {
       const CFGBlock *B = *I;
-      if (!B) do {
-        const CFGBlock *UB = I->getPossiblyUnreachableBlock();
-        if (!UB)
-          break;
+      if (!B)
+        do {
+          const CFGBlock *UB = I->getPossiblyUnreachableBlock();
+          if (!UB)
+            break;
 
-        if (!TreatAllSuccessorsAsReachable) {
-          assert(PP);
-          TreatAllSuccessorsAsReachable =
-            shouldTreatSuccessorsAsReachable(item, *PP);
-        }
+          if (!TreatAllSuccessorsAsReachable) {
+            assert(PP);
+            TreatAllSuccessorsAsReachable =
+                shouldTreatSuccessorsAsReachable(item, *PP);
+          }
 
-        if (*TreatAllSuccessorsAsReachable) {
-          B = UB;
-          break;
-        }
-      }
-      while (false);
+          if (*TreatAllSuccessorsAsReachable) {
+            B = UB;
+            break;
+          }
+        } while (false);
 
       if (B) {
         unsigned blockID = B->getBlockID();
@@ -391,37 +387,34 @@ static unsigned scanMaybeReachableFromBlock(const CFGBlock *Start,
 //===----------------------------------------------------------------------===//
 
 namespace {
-  class DeadCodeScan {
-    llvm::BitVector Visited;
-    llvm::BitVector &Reachable;
-    SmallVector<const CFGBlock *, 10> WorkList;
-    Preprocessor &PP;
-    ASTContext &C;
+class DeadCodeScan {
+  llvm::BitVector Visited;
+  llvm::BitVector &Reachable;
+  SmallVector<const CFGBlock *, 10> WorkList;
+  Preprocessor &PP;
+  ASTContext &C;
 
-    typedef SmallVector<std::pair<const CFGBlock *, const Stmt *>, 12>
-    DeferredLocsTy;
+  typedef SmallVector<std::pair<const CFGBlock *, const Stmt *>, 12>
+      DeferredLocsTy;
 
-    DeferredLocsTy DeferredLocs;
+  DeferredLocsTy DeferredLocs;
 
-  public:
-    DeadCodeScan(llvm::BitVector &reachable, Preprocessor &PP, ASTContext &C)
-    : Visited(reachable.size()),
-      Reachable(reachable),
-      PP(PP), C(C) {}
+public:
+  DeadCodeScan(llvm::BitVector &reachable, Preprocessor &PP, ASTContext &C)
+      : Visited(reachable.size()), Reachable(reachable), PP(PP), C(C) {}
 
-    void enqueue(const CFGBlock *block);
-    unsigned scanBackwards(const CFGBlock *Start,
-    clang::reachable_code::Callback &CB);
+  void enqueue(const CFGBlock *block);
+  unsigned scanBackwards(const CFGBlock *Start,
+                         clang::reachable_code::Callback &CB);
 
-    bool isDeadCodeRoot(const CFGBlock *Block);
+  bool isDeadCodeRoot(const CFGBlock *Block);
 
-    const Stmt *findDeadCode(const CFGBlock *Block);
+  const Stmt *findDeadCode(const CFGBlock *Block);
 
-    void reportDeadCode(const CFGBlock *B,
-                        const Stmt *S,
-                        clang::reachable_code::Callback &CB);
-  };
-}
+  void reportDeadCode(const CFGBlock *B, const Stmt *S,
+                      clang::reachable_code::Callback &CB);
+};
+} // namespace
 
 void DeadCodeScan::enqueue(const CFGBlock *block) {
   unsigned blockID = block->getBlockID();
@@ -435,7 +428,8 @@ bool DeadCodeScan::isDeadCodeRoot(const clang::CFGBlock *Block) {
   bool isDeadRoot = true;
 
   for (CFGBlock::const_pred_iterator I = Block->pred_begin(),
-       E = Block->pred_end(); I != E; ++I) {
+                                     E = Block->pred_end();
+       I != E; ++I) {
     if (const CFGBlock *PredBlock = *I) {
       unsigned blockID = PredBlock->getBlockID();
       if (Visited[blockID]) {
@@ -505,7 +499,8 @@ static bool isValidDeadStmt(const Stmt *S, const clang::CFGBlock *Block) {
 }
 
 const Stmt *DeadCodeScan::findDeadCode(const clang::CFGBlock *Block) {
-  for (CFGBlock::const_iterator I = Block->begin(), E = Block->end(); I!=E; ++I)
+  for (CFGBlock::const_iterator I = Block->begin(), E = Block->end(); I != E;
+       ++I)
     if (std::optional<CFGStmt> CS = I->getAs<CFGStmt>()) {
       const Stmt *S = CS->getStmt();
       if (isValidDeadStmt(S, Block))
@@ -551,7 +546,8 @@ unsigned DeadCodeScan::scanBackwards(const clang::CFGBlock *Start,
     if (!S) {
       // No dead code.  Possibly an empty block.  Look at dead predecessors.
       for (CFGBlock::const_pred_iterator I = Block->pred_begin(),
-           E = Block->pred_end(); I != E; ++I) {
+                                         E = Block->pred_end();
+           I != E; ++I) {
         if (const CFGBlock *predBlock = *I)
           enqueue(predBlock);
       }
@@ -567,8 +563,7 @@ unsigned DeadCodeScan::scanBackwards(const clang::CFGBlock *Start,
     if (isDeadCodeRoot(Block)) {
       reportDeadCode(Block, S, CB);
       count += scanMaybeReachableFromBlock(Block, PP, Reachable);
-    }
-    else {
+    } else {
       // Record this statement as the possibly best location in a
       // strongly-connected component of dead code for emitting a
       // warning.
@@ -592,8 +587,7 @@ unsigned DeadCodeScan::scanBackwards(const clang::CFGBlock *Start,
   return count;
 }
 
-static SourceLocation GetUnreachableLoc(const Stmt *S,
-                                        SourceRange &R1,
+static SourceLocation GetUnreachableLoc(const Stmt *S, SourceRange &R1,
                                         SourceRange &R2) {
   R1 = R2 = SourceRange();
 
@@ -601,64 +595,63 @@ static SourceLocation GetUnreachableLoc(const Stmt *S,
     S = Ex->IgnoreParenImpCasts();
 
   switch (S->getStmtClass()) {
-    case Expr::BinaryOperatorClass: {
-      const BinaryOperator *BO = cast<BinaryOperator>(S);
-      return BO->getOperatorLoc();
-    }
-    case Expr::UnaryOperatorClass: {
-      const UnaryOperator *UO = cast<UnaryOperator>(S);
-      R1 = UO->getSubExpr()->getSourceRange();
-      return UO->getOperatorLoc();
-    }
-    case Expr::CompoundAssignOperatorClass: {
-      const CompoundAssignOperator *CAO = cast<CompoundAssignOperator>(S);
-      R1 = CAO->getLHS()->getSourceRange();
-      R2 = CAO->getRHS()->getSourceRange();
-      return CAO->getOperatorLoc();
-    }
-    case Expr::BinaryConditionalOperatorClass:
-    case Expr::ConditionalOperatorClass: {
-      const AbstractConditionalOperator *CO =
-      cast<AbstractConditionalOperator>(S);
-      return CO->getQuestionLoc();
-    }
-    case Expr::MemberExprClass: {
-      const MemberExpr *ME = cast<MemberExpr>(S);
-      R1 = ME->getSourceRange();
-      return ME->getMemberLoc();
-    }
-    case Expr::ArraySubscriptExprClass: {
-      const ArraySubscriptExpr *ASE = cast<ArraySubscriptExpr>(S);
-      R1 = ASE->getLHS()->getSourceRange();
-      R2 = ASE->getRHS()->getSourceRange();
-      return ASE->getRBracketLoc();
-    }
-    case Expr::CStyleCastExprClass: {
-      const CStyleCastExpr *CSC = cast<CStyleCastExpr>(S);
-      R1 = CSC->getSubExpr()->getSourceRange();
-      return CSC->getLParenLoc();
-    }
-    case Expr::CXXFunctionalCastExprClass: {
-      const CXXFunctionalCastExpr *CE = cast <CXXFunctionalCastExpr>(S);
-      R1 = CE->getSubExpr()->getSourceRange();
-      return CE->getBeginLoc();
-    }
-    case Stmt::CXXTryStmtClass: {
-      return cast<CXXTryStmt>(S)->getHandler(0)->getCatchLoc();
-    }
-    case Expr::ObjCBridgedCastExprClass: {
-      const ObjCBridgedCastExpr *CSC = cast<ObjCBridgedCastExpr>(S);
-      R1 = CSC->getSubExpr()->getSourceRange();
-      return CSC->getLParenLoc();
-    }
-    default: ;
+  case Expr::BinaryOperatorClass: {
+    const BinaryOperator *BO = cast<BinaryOperator>(S);
+    return BO->getOperatorLoc();
+  }
+  case Expr::UnaryOperatorClass: {
+    const UnaryOperator *UO = cast<UnaryOperator>(S);
+    R1 = UO->getSubExpr()->getSourceRange();
+    return UO->getOperatorLoc();
+  }
+  case Expr::CompoundAssignOperatorClass: {
+    const CompoundAssignOperator *CAO = cast<CompoundAssignOperator>(S);
+    R1 = CAO->getLHS()->getSourceRange();
+    R2 = CAO->getRHS()->getSourceRange();
+    return CAO->getOperatorLoc();
+  }
+  case Expr::BinaryConditionalOperatorClass:
+  case Expr::ConditionalOperatorClass: {
+    const AbstractConditionalOperator *CO =
+        cast<AbstractConditionalOperator>(S);
+    return CO->getQuestionLoc();
+  }
+  case Expr::MemberExprClass: {
+    const MemberExpr *ME = cast<MemberExpr>(S);
+    R1 = ME->getSourceRange();
+    return ME->getMemberLoc();
+  }
+  case Expr::ArraySubscriptExprClass: {
+    const ArraySubscriptExpr *ASE = cast<ArraySubscriptExpr>(S);
+    R1 = ASE->getLHS()->getSourceRange();
+    R2 = ASE->getRHS()->getSourceRange();
+    return ASE->getRBracketLoc();
+  }
+  case Expr::CStyleCastExprClass: {
+    const CStyleCastExpr *CSC = cast<CStyleCastExpr>(S);
+    R1 = CSC->getSubExpr()->getSourceRange();
+    return CSC->getLParenLoc();
+  }
+  case Expr::CXXFunctionalCastExprClass: {
+    const CXXFunctionalCastExpr *CE = cast<CXXFunctionalCastExpr>(S);
+    R1 = CE->getSubExpr()->getSourceRange();
+    return CE->getBeginLoc();
+  }
+  case Stmt::CXXTryStmtClass: {
+    return cast<CXXTryStmt>(S)->getHandler(0)->getCatchLoc();
+  }
+  case Expr::ObjCBridgedCastExprClass: {
+    const ObjCBridgedCastExpr *CSC = cast<ObjCBridgedCastExpr>(S);
+    R1 = CSC->getSubExpr()->getSourceRange();
+    return CSC->getLParenLoc();
+  }
+  default:;
   }
   R1 = S->getSourceRange();
   return S->getBeginLoc();
 }
 
-void DeadCodeScan::reportDeadCode(const CFGBlock *B,
-                                  const Stmt *S,
+void DeadCodeScan::reportDeadCode(const CFGBlock *B, const Stmt *S,
                                   clang::reachable_code::Callback &CB) {
   // Classify the unreachable code found, or suppress it in some cases.
   reachable_code::UnreachableKind UK = reachable_code::UK_Other;
@@ -668,8 +661,7 @@ void DeadCodeScan::reportDeadCode(const CFGBlock *B,
   } else if (isTrivialDoWhile(B, S) || isBuiltinUnreachable(S) ||
              isBuiltinAssumeFalse(B, S, C)) {
     return;
-  }
-  else if (isDeadReturn(B, S)) {
+  } else if (isDeadReturn(B, S)) {
     UK = reachable_code::UK_Return;
   }
 
@@ -721,9 +713,10 @@ void DeadCodeScan::reportDeadCode(const CFGBlock *B,
 // Reachability APIs.
 //===----------------------------------------------------------------------===//
 
-namespace clang { namespace reachable_code {
+namespace clang {
+namespace reachable_code {
 
-void Callback::anchor() { }
+void Callback::anchor() {}
 
 unsigned ScanReachableFromBlock(const CFGBlock *Start,
                                 llvm::BitVector &Reachable) {
@@ -741,7 +734,7 @@ void FindUnreachableCode(AnalysisDeclContext &AC, Preprocessor &PP,
   // If there are no unreachable blocks, we're done.
   llvm::BitVector reachable(cfg->getNumBlockIDs());
   unsigned numReachable =
-    scanMaybeReachableFromBlock(&cfg->getEntry(), PP, reachable);
+      scanMaybeReachableFromBlock(&cfg->getEntry(), PP, reachable);
   if (numReachable == cfg->getNumBlockIDs())
     return;
 
@@ -769,4 +762,5 @@ void FindUnreachableCode(AnalysisDeclContext &AC, Preprocessor &PP,
   }
 }
 
-}} // end namespace clang::reachable_code
+} // namespace reachable_code
+} // namespace clang

@@ -102,8 +102,7 @@ public:
           continue;
 
         reportPiece(NoteID, Piece->getLocation().asLocation(),
-                    Piece->getString(), Piece->getRanges(),
-                    Piece->getFixits());
+                    Piece->getString(), Piece->getRanges(), Piece->getFixits());
       }
 
       if (!ShouldDisplayPathNotes)
@@ -116,8 +115,7 @@ public:
           continue;
 
         reportPiece(NoteID, Piece->getLocation().asLocation(),
-                    Piece->getString(), Piece->getRanges(),
-                    Piece->getFixits());
+                    Piece->getString(), Piece->getRanges(), Piece->getFixits());
       }
     }
 

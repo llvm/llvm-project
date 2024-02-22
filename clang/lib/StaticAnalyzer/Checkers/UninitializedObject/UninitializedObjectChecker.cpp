@@ -17,10 +17,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "UninitializedObject.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
@@ -544,10 +544,9 @@ static bool hasUnguardedAccess(const FieldDecl *FD, ProgramStateRef State) {
 
   auto NoReturnFuncM = callExpr(callee(functionDecl(isNoReturn())));
 
-  auto GuardM =
-      stmt(anyOf(ifStmt(), switchStmt(), conditionalOperator(), AssertLikeM,
-            NoReturnFuncM))
-          .bind("guard");
+  auto GuardM = stmt(anyOf(ifStmt(), switchStmt(), conditionalOperator(),
+                           AssertLikeM, NoReturnFuncM))
+                    .bind("guard");
 
   for (const CXXMethodDecl *M : Parent->methods()) {
     const Stmt *MethodBody = getMethodBody(M);
@@ -604,10 +603,10 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   UninitObjCheckerOptions &ChOpts = Chk->Opts;
 
   ChOpts.IsPedantic = AnOpts.getCheckerBooleanOption(Chk, "Pedantic");
-  ChOpts.ShouldConvertNotesToWarnings = AnOpts.getCheckerBooleanOption(
-      Chk, "NotesAsWarnings");
-  ChOpts.CheckPointeeInitialization = AnOpts.getCheckerBooleanOption(
-      Chk, "CheckPointeeInitialization");
+  ChOpts.ShouldConvertNotesToWarnings =
+      AnOpts.getCheckerBooleanOption(Chk, "NotesAsWarnings");
+  ChOpts.CheckPointeeInitialization =
+      AnOpts.getCheckerBooleanOption(Chk, "CheckPointeeInitialization");
   ChOpts.IgnoredRecordsWithFieldPattern =
       std::string(AnOpts.getCheckerStringOption(Chk, "IgnoreRecordsWithField"));
   ChOpts.IgnoreGuardedFields =
@@ -615,9 +614,11 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
 
   std::string ErrorMsg;
   if (!llvm::Regex(ChOpts.IgnoredRecordsWithFieldPattern).isValid(ErrorMsg))
-    Mgr.reportInvalidCheckerOptionValue(Chk, "IgnoreRecordsWithField",
+    Mgr.reportInvalidCheckerOptionValue(
+        Chk, "IgnoreRecordsWithField",
         "a valid regex, building failed with error message "
-        "\"" + ErrorMsg + "\"");
+        "\"" +
+            ErrorMsg + "\"");
 }
 
 bool ento::shouldRegisterUninitializedObjectChecker(const CheckerManager &mgr) {

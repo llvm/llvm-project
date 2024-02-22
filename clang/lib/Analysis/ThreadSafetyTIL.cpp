@@ -18,37 +18,57 @@ using namespace til;
 
 StringRef til::getUnaryOpcodeString(TIL_UnaryOpcode Op) {
   switch (Op) {
-    case UOP_Minus:    return "-";
-    case UOP_BitNot:   return "~";
-    case UOP_LogicNot: return "!";
+  case UOP_Minus:
+    return "-";
+  case UOP_BitNot:
+    return "~";
+  case UOP_LogicNot:
+    return "!";
   }
   return {};
 }
 
 StringRef til::getBinaryOpcodeString(TIL_BinaryOpcode Op) {
   switch (Op) {
-    case BOP_Mul:      return "*";
-    case BOP_Div:      return "/";
-    case BOP_Rem:      return "%";
-    case BOP_Add:      return "+";
-    case BOP_Sub:      return "-";
-    case BOP_Shl:      return "<<";
-    case BOP_Shr:      return ">>";
-    case BOP_BitAnd:   return "&";
-    case BOP_BitXor:   return "^";
-    case BOP_BitOr:    return "|";
-    case BOP_Eq:       return "==";
-    case BOP_Neq:      return "!=";
-    case BOP_Lt:       return "<";
-    case BOP_Leq:      return "<=";
-    case BOP_Cmp:      return "<=>";
-    case BOP_LogicAnd: return "&&";
-    case BOP_LogicOr:  return "||";
+  case BOP_Mul:
+    return "*";
+  case BOP_Div:
+    return "/";
+  case BOP_Rem:
+    return "%";
+  case BOP_Add:
+    return "+";
+  case BOP_Sub:
+    return "-";
+  case BOP_Shl:
+    return "<<";
+  case BOP_Shr:
+    return ">>";
+  case BOP_BitAnd:
+    return "&";
+  case BOP_BitXor:
+    return "^";
+  case BOP_BitOr:
+    return "|";
+  case BOP_Eq:
+    return "==";
+  case BOP_Neq:
+    return "!=";
+  case BOP_Lt:
+    return "<";
+  case BOP_Leq:
+    return "<=";
+  case BOP_Cmp:
+    return "<=>";
+  case BOP_LogicAnd:
+    return "&&";
+  case BOP_LogicOr:
+    return "||";
   }
   return {};
 }
 
-SExpr* Future::force() {
+SExpr *Future::force() {
   Status = FS_evaluating;
   Result = compute();
   Status = FS_done;
@@ -140,9 +160,9 @@ void til::simplifyIncompleteArg(til::Phi *Ph) {
   for (unsigned i = 1, n = Ph->values().size(); i < n; ++i) {
     SExpr *Ei = simplifyToCanonicalVal(Ph->values()[i]);
     if (Ei == Ph)
-      continue;  // Recursive reference to itself.  Don't count.
+      continue; // Recursive reference to itself.  Don't count.
     if (Ei != E0) {
-      return;    // Status is already set to MultiVal.
+      return; // Status is already set to MultiVal.
     }
   }
   Ph->setStatus(Phi::PH_SingleVal);
@@ -164,7 +184,8 @@ unsigned BasicBlock::renumberInstrs(unsigned ID) {
 // block, and ID should be the total number of blocks.
 unsigned BasicBlock::topologicalSort(SimpleArray<BasicBlock *> &Blocks,
                                      unsigned ID) {
-  if (Visited) return ID;
+  if (Visited)
+    return ID;
   Visited = true;
   for (auto *Block : successors())
     ID = Block->topologicalSort(Blocks, ID);
@@ -190,7 +211,8 @@ unsigned BasicBlock::topologicalFinalSort(SimpleArray<BasicBlock *> &Blocks,
                                           unsigned ID) {
   // Visited is assumed to have been set by the topologicalSort.  This pass
   // assumes !Visited means that we've visited this node before.
-  if (!Visited) return ID;
+  if (!Visited)
+    return ID;
   Visited = false;
   if (DominatorNode.Parent)
     ID = DominatorNode.Parent->topologicalFinalSort(Blocks, ID);
@@ -210,7 +232,8 @@ void BasicBlock::computeDominator() {
   // Walk backwards from each predecessor to find the common dominator node.
   for (auto *Pred : Predecessors) {
     // Skip back-edges
-    if (Pred->BlockID >= BlockID) continue;
+    if (Pred->BlockID >= BlockID)
+      continue;
     // If we don't yet have a candidate for dominator yet, take this one.
     if (Candidate == nullptr) {
       Candidate = Pred;
@@ -237,7 +260,8 @@ void BasicBlock::computePostDominator() {
   // Walk back from each predecessor to find the common post-dominator node.
   for (auto *Succ : successors()) {
     // Skip back-edges
-    if (Succ->BlockID <= BlockID) continue;
+    if (Succ->BlockID <= BlockID)
+      continue;
     // If we don't yet have a candidate for post-dominator yet, take this one.
     if (Candidate == nullptr) {
       Candidate = Succ;
@@ -279,7 +303,7 @@ static inline void computeNodeID(BasicBlock *B,
   BasicBlock::TopologyNode *N = &(B->*TN);
   if (N->Parent) {
     BasicBlock::TopologyNode *P = &(N->Parent->*TN);
-    N->NodeID += P->NodeID;    // Fix NodeIDs relative to starting node.
+    N->NodeID += P->NodeID; // Fix NodeIDs relative to starting node.
   }
 }
 
@@ -308,7 +332,7 @@ void SCFG::computeNormalForm() {
   // Once dominators have been computed, the final sort may be performed.
   unsigned NumBlocks = Exit->topologicalFinalSort(Blocks, 0);
   assert(static_cast<size_t>(NumBlocks) == Blocks.size());
-  (void) NumBlocks;
+  (void)NumBlocks;
 
   // Renumber the instructions now that we have a final sort.
   renumberInstrs();

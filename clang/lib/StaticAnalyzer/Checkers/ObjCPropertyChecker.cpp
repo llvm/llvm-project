@@ -22,8 +22,7 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class ObjCPropertyChecker
-    : public Checker<check::ASTDecl<ObjCPropertyDecl>> {
+class ObjCPropertyChecker : public Checker<check::ASTDecl<ObjCPropertyDecl>> {
   void checkCopyMutable(const ObjCPropertyDecl *D, BugReporter &BR) const;
 
 public:
@@ -47,9 +46,10 @@ void ObjCPropertyChecker::checkCopyMutable(const ObjCPropertyDecl *D,
   if (!T->isObjCObjectPointerType())
     return;
 
-  const std::string &PropTypeName(T->getPointeeType().getCanonicalType()
-                                                     .getUnqualifiedType()
-                                                     .getAsString());
+  const std::string &PropTypeName(T->getPointeeType()
+                                      .getCanonicalType()
+                                      .getUnqualifiedType()
+                                      .getAsString());
   if (!StringRef(PropTypeName).starts_with("NSMutable"))
     return;
 

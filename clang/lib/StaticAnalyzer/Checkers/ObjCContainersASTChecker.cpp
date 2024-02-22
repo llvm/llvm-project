@@ -10,10 +10,10 @@
 // 'CFDictionary', 'CFSet' APIs.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
@@ -27,7 +27,7 @@ namespace {
 class WalkAST : public StmtVisitor<WalkAST> {
   BugReporter &BR;
   const CheckerBase *Checker;
-  AnalysisDeclContext* AC;
+  AnalysisDeclContext *AC;
   ASTContext &ASTC;
   uint64_t PtrWidth;
 
@@ -87,7 +87,7 @@ static StringRef getCalleeName(CallExpr *CE) {
     return StringRef();
 
   IdentifierInfo *II = FD->getIdentifier();
-  if (!II)   // if no identifier, not a simple C function
+  if (!II) // if no identifier, not a simple C function
     return StringRef();
 
   return II->getName();
@@ -107,7 +107,7 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
     ArgNum = 1;
     Arg = CE->getArg(ArgNum)->IgnoreParenCasts();
     if (hasPointerToPointerSizedType(Arg))
-        return;
+      return;
   } else if (Name.equals("CFDictionaryCreate")) {
     if (CE->getNumArgs() != 6)
       return;
@@ -129,7 +129,7 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
 
     SmallString<64> BufName;
     llvm::raw_svector_ostream OsName(BufName);
-    OsName << " Invalid use of '" << Name << "'" ;
+    OsName << " Invalid use of '" << Name << "'";
 
     SmallString<256> Buf;
     llvm::raw_svector_ostream Os(Buf);
@@ -159,14 +159,13 @@ void WalkAST::VisitChildren(Stmt *S) {
 namespace {
 class ObjCContainersASTChecker : public Checker<check::ASTCodeBody> {
 public:
-
-  void checkASTCodeBody(const Decl *D, AnalysisManager& Mgr,
+  void checkASTCodeBody(const Decl *D, AnalysisManager &Mgr,
                         BugReporter &BR) const {
     WalkAST walker(BR, this, Mgr.getAnalysisDeclContext(D));
     walker.Visit(D->getBody());
   }
 };
-}
+} // namespace
 
 void ento::registerObjCContainersASTChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCContainersASTChecker>();

@@ -38,32 +38,21 @@ public:
   /// call was inlined.  In all other cases it will be false.
   const bool wasInlined;
 
-  CheckerContext(NodeBuilder &builder,
-                 ExprEngine &eng,
-                 ExplodedNode *pred,
-                 const ProgramPoint &loc,
-                 bool wasInlined = false)
-    : Eng(eng),
-      Pred(pred),
-      Changed(false),
-      Location(loc),
-      NB(builder),
-      wasInlined(wasInlined) {
+  CheckerContext(NodeBuilder &builder, ExprEngine &eng, ExplodedNode *pred,
+                 const ProgramPoint &loc, bool wasInlined = false)
+      : Eng(eng), Pred(pred), Changed(false), Location(loc), NB(builder),
+        wasInlined(wasInlined) {
     assert(Pred->getState() &&
            "We should not call the checkers on an empty state.");
   }
 
-  AnalysisManager &getAnalysisManager() {
-    return Eng.getAnalysisManager();
-  }
+  AnalysisManager &getAnalysisManager() { return Eng.getAnalysisManager(); }
 
   ConstraintManager &getConstraintManager() {
     return Eng.getConstraintManager();
   }
 
-  StoreManager &getStoreManager() {
-    return Eng.getStoreManager();
-  }
+  StoreManager &getStoreManager() { return Eng.getStoreManager(); }
 
   /// Returns the previous node in the exploded graph, which includes
   /// the state of the program before the checker ran. Note, checkers should
@@ -77,13 +66,9 @@ public:
 
   /// Returns the number of times the current block has been visited
   /// along the analyzed path.
-  unsigned blockCount() const {
-    return NB.getContext().blockCount();
-  }
+  unsigned blockCount() const { return NB.getContext().blockCount(); }
 
-  ASTContext &getASTContext() {
-    return Eng.getContext();
-  }
+  ASTContext &getASTContext() { return Eng.getContext(); }
 
   const ASTContext &getASTContext() const { return Eng.getContext(); }
 
@@ -100,11 +85,9 @@ public:
   }
 
   /// Return true if the current LocationContext has no caller context.
-  bool inTopFrame() const { return getLocationContext()->inTopFrame();  }
+  bool inTopFrame() const { return getLocationContext()->inTopFrame(); }
 
-  BugReporter &getBugReporter() {
-    return Eng.getBugReporter();
-  }
+  BugReporter &getBugReporter() { return Eng.getBugReporter(); }
 
   const SourceManager &getSourceManager() {
     return getBugReporter().getSourceManager();
@@ -112,17 +95,13 @@ public:
 
   Preprocessor &getPreprocessor() { return getBugReporter().getPreprocessor(); }
 
-  SValBuilder &getSValBuilder() {
-    return Eng.getSValBuilder();
-  }
+  SValBuilder &getSValBuilder() { return Eng.getSValBuilder(); }
 
   SymbolManager &getSymbolManager() {
     return getSValBuilder().getSymbolManager();
   }
 
-  ProgramStateManager &getStateManager() {
-    return Eng.getStateManager();
-  }
+  ProgramStateManager &getStateManager() { return Eng.getStateManager(); }
 
   AnalysisDeclContext *getCurrentAnalysisDeclContext() const {
     return Pred->getLocationContext()->getAnalysisDeclContext();
@@ -141,14 +120,12 @@ public:
   static const MemRegion *getLocationRegionIfPostStore(const ExplodedNode *N) {
     ProgramPoint L = N->getLocation();
     if (std::optional<PostStore> PSL = L.getAs<PostStore>())
-      return reinterpret_cast<const MemRegion*>(PSL->getLocationValue());
+      return reinterpret_cast<const MemRegion *>(PSL->getLocationValue());
     return nullptr;
   }
 
   /// Get the value of arbitrary expressions at this point in the path.
-  SVal getSVal(const Stmt *S) const {
-    return Pred->getSVal(S);
-  }
+  SVal getSVal(const Stmt *S) const { return Pred->getSVal(S); }
 
   /// Returns true if the value of \p E is greater than or equal to \p
   /// Val under unsigned comparison
@@ -208,8 +185,7 @@ public:
   ///        the default tag for the checker will be used.
   ExplodedNode *generateErrorNode(ProgramStateRef State = nullptr,
                                   const ProgramPointTag *Tag = nullptr) {
-    return generateSink(State, Pred,
-                       (Tag ? Tag : Location.getTag()));
+    return generateSink(State, Pred, (Tag ? Tag : Location.getTag()));
   }
 
   /// Generate a transition to a node that will be used to report
@@ -221,11 +197,9 @@ public:
   ///             to the newly generated node.
   /// @param Tag The tag to uniquely identify the creation site. If null,
   ///        the default tag for the checker will be used.
-  ExplodedNode *generateErrorNode(ProgramStateRef State,
-                                  ExplodedNode *Pred,
+  ExplodedNode *generateErrorNode(ProgramStateRef State, ExplodedNode *Pred,
                                   const ProgramPointTag *Tag = nullptr) {
-    return generateSink(State, Pred,
-                       (Tag ? Tag : Location.getTag()));
+    return generateSink(State, Pred, (Tag ? Tag : Location.getTag()));
   }
 
   /// Generate a transition to a node that will be used to report
@@ -251,8 +225,7 @@ public:
   /// @param Tag The tag to uniquely identify the creation site. If null,
   ///        the default tag for the checker will be used.
   ExplodedNode *
-  generateNonFatalErrorNode(ProgramStateRef State,
-                            ExplodedNode *Pred,
+  generateNonFatalErrorNode(ProgramStateRef State, ExplodedNode *Pred,
                             const ProgramPointTag *Tag = nullptr) {
     return addTransition(State, Pred, (Tag ? Tag : Location.getTag()));
   }
@@ -285,13 +258,12 @@ public:
   /// @param IsPrunable Whether the note is prunable. It allows BugReporter
   ///        to omit the note from the report if it would make the displayed
   ///        bug path significantly shorter.
-  const NoteTag
-  *getNoteTag(std::function<std::string(PathSensitiveBugReport &)> &&Cb,
-              bool IsPrunable = false) {
-    return getNoteTag(
-        [Cb](BugReporterContext &,
-             PathSensitiveBugReport &BR) { return Cb(BR); },
-        IsPrunable);
+  const NoteTag *
+  getNoteTag(std::function<std::string(PathSensitiveBugReport &)> &&Cb,
+             bool IsPrunable = false) {
+    return getNoteTag([Cb](BugReporterContext &,
+                           PathSensitiveBugReport &BR) { return Cb(BR); },
+                      IsPrunable);
   }
 
   /// A shorthand version of getNoteTag that doesn't require you to accept
@@ -303,9 +275,9 @@ public:
   ///        bug path significantly shorter.
   const NoteTag *getNoteTag(std::function<std::string()> &&Cb,
                             bool IsPrunable = false) {
-    return getNoteTag([Cb](BugReporterContext &,
-                           PathSensitiveBugReport &) { return Cb(); },
-                      IsPrunable);
+    return getNoteTag(
+        [Cb](BugReporterContext &, PathSensitiveBugReport &) { return Cb(); },
+        IsPrunable);
   }
 
   /// A shorthand version of getNoteTag that accepts a plain note.
@@ -317,7 +289,7 @@ public:
   const NoteTag *getNoteTag(StringRef Note, bool IsPrunable = false) {
     return getNoteTag(
         [Note = std::string(Note)](BugReporterContext &,
-               PathSensitiveBugReport &) { return Note; },
+                                   PathSensitiveBugReport &) { return Note; },
         IsPrunable);
   }
 
@@ -328,9 +300,9 @@ public:
   /// @param IsPrunable Whether the note is prunable. It allows BugReporter
   ///        to omit the note from the report if it would make the displayed
   ///        bug path significantly shorter.
-  const NoteTag *getNoteTag(
-      std::function<void(PathSensitiveBugReport &BR, llvm::raw_ostream &OS)> &&Cb,
-      bool IsPrunable = false) {
+  const NoteTag *getNoteTag(std::function<void(PathSensitiveBugReport &BR,
+                                               llvm::raw_ostream &OS)> &&Cb,
+                            bool IsPrunable = false) {
     return getNoteTag(
         [Cb](PathSensitiveBugReport &BR) -> std::string {
           llvm::SmallString<128> Str;
@@ -391,10 +363,9 @@ public:
   StringRef getMacroNameOrSpelling(SourceLocation &Loc);
 
 private:
-  ExplodedNode *addTransitionImpl(ProgramStateRef State,
-                                 bool MarkAsSink,
-                                 ExplodedNode *P = nullptr,
-                                 const ProgramPointTag *Tag = nullptr) {
+  ExplodedNode *addTransitionImpl(ProgramStateRef State, bool MarkAsSink,
+                                  ExplodedNode *P = nullptr,
+                                  const ProgramPointTag *Tag = nullptr) {
     // The analyzer may stop exploring if it sees a state it has previously
     // visited ("cache out"). The early return here is a defensive check to
     // prevent accidental caching out by checker API clients. Unless there is a
@@ -424,8 +395,8 @@ private:
   }
 };
 
-} // end GR namespace
+} // namespace ento
 
-} // end clang namespace
+} // namespace clang
 
 #endif

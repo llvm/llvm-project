@@ -278,6 +278,6 @@ bool MPIFunctionClassifier::isWaitType(const IdentifierInfo *IdentInfo) const {
   return IdentInfo == IdentInfo_MPI_Wait || IdentInfo == IdentInfo_MPI_Waitall;
 }
 
-} // end of namespace: mpi
-} // end of namespace: ento
-} // end of namespace: clang
+} // namespace mpi
+} // namespace ento
+} // namespace clang

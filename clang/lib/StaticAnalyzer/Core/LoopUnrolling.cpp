@@ -12,11 +12,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/LoopUnrolling.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/LoopUnrolling.h"
 #include <optional>
 
 using namespace clang;
@@ -343,5 +343,5 @@ bool isUnrolledState(ProgramStateRef State) {
     return false;
   return true;
 }
-}
-}
+} // namespace ento
+} // namespace clang

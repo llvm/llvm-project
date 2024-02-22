@@ -10,9 +10,9 @@
 // as it builds the ExplodedGraph.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -23,15 +23,15 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class TraversalDumper : public Checker< check::BranchCondition,
-                                        check::BeginFunction,
-                                        check::EndFunction > {
+class TraversalDumper
+    : public Checker<check::BranchCondition, check::BeginFunction,
+                     check::EndFunction> {
 public:
   void checkBranchCondition(const Stmt *Condition, CheckerContext &C) const;
   void checkBeginFunction(CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
 };
-}
+} // namespace
 
 void TraversalDumper::checkBranchCondition(const Stmt *Condition,
                                            CheckerContext &C) const {
@@ -71,13 +71,12 @@ bool ento::shouldRegisterTraversalDumper(const CheckerManager &mgr) {
 //------------------------------------------------------------------------------
 
 namespace {
-class CallDumper : public Checker< check::PreCall,
-                                   check::PostCall > {
+class CallDumper : public Checker<check::PreCall, check::PostCall> {
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
 };
-}
+} // namespace
 
 void CallDumper::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
   unsigned Indentation = 0;
@@ -116,6 +115,4 @@ void ento::registerCallDumper(CheckerManager &mgr) {
   mgr.registerChecker<CallDumper>();
 }
 
-bool ento::shouldRegisterCallDumper(const CheckerManager &mgr) {
-  return true;
-}
+bool ento::shouldRegisterCallDumper(const CheckerManager &mgr) { return true; }

@@ -31,7 +31,7 @@ using namespace iterator;
 namespace {
 
 class ContainerModeling
-  : public Checker<check::PostCall, check::LiveSymbols, check::DeadSymbols> {
+    : public Checker<check::PostCall, check::LiveSymbols, check::DeadSymbols> {
 
   void handleBegin(CheckerContext &C, const Expr *CE, SVal RetVal,
                    SVal Cont) const;
@@ -135,16 +135,16 @@ ProgramStateRef reassignAllIteratorPositionsUnless(ProgramStateRef State,
                                                    SymbolRef Offset,
                                                    BinaryOperator::Opcode Opc);
 ProgramStateRef rebaseSymbolInIteratorPositionsIf(
-    ProgramStateRef State, SValBuilder &SVB, SymbolRef OldSym,
-    SymbolRef NewSym, SymbolRef CondSym, BinaryOperator::Opcode Opc);
+    ProgramStateRef State, SValBuilder &SVB, SymbolRef OldSym, SymbolRef NewSym,
+    SymbolRef CondSym, BinaryOperator::Opcode Opc);
 SymbolRef rebaseSymbol(ProgramStateRef State, SValBuilder &SVB, SymbolRef Expr,
-                        SymbolRef OldSym, SymbolRef NewSym);
+                       SymbolRef OldSym, SymbolRef NewSym);
 bool hasLiveIterators(ProgramStateRef State, const MemRegion *Cont);
 
 } // namespace
 
 void ContainerModeling::checkPostCall(const CallEvent &Call,
-                                     CheckerContext &C) const {
+                                      CheckerContext &C) const {
   const auto *Func = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
   if (!Func)
     return;
@@ -156,7 +156,7 @@ void ContainerModeling::checkPostCall(const CallEvent &Call,
       const auto *InstCall = cast<CXXInstanceCall>(&Call);
       if (cast<CXXMethodDecl>(Func)->isMoveAssignmentOperator()) {
         handleAssignment(C, InstCall->getCXXThisVal(), Call.getOriginExpr(),
-                     Call.getArgSVal(0));
+                         Call.getArgSVal(0));
         return;
       }
 
@@ -212,12 +212,12 @@ void ContainerModeling::checkLiveSymbols(ProgramStateRef State,
     const auto CData = Cont.second;
     if (CData.getBegin()) {
       SR.markLive(CData.getBegin());
-      if(const auto *SIE = dyn_cast<SymIntExpr>(CData.getBegin()))
+      if (const auto *SIE = dyn_cast<SymIntExpr>(CData.getBegin()))
         SR.markLive(SIE->getLHS());
     }
     if (CData.getEnd()) {
       SR.markLive(CData.getEnd());
-      if(const auto *SIE = dyn_cast<SymIntExpr>(CData.getEnd()))
+      if (const auto *SIE = dyn_cast<SymIntExpr>(CData.getEnd()))
         SR.markLive(SIE->getLHS());
     }
   }
@@ -243,7 +243,7 @@ void ContainerModeling::checkDeadSymbols(SymbolReaper &SR,
 }
 
 void ContainerModeling::handleBegin(CheckerContext &C, const Expr *CE,
-                                   SVal RetVal, SVal Cont) const {
+                                    SVal RetVal, SVal Cont) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -265,7 +265,7 @@ void ContainerModeling::handleBegin(CheckerContext &C, const Expr *CE,
 }
 
 void ContainerModeling::handleEnd(CheckerContext &C, const Expr *CE,
-                                 SVal RetVal, SVal Cont) const {
+                                  SVal RetVal, SVal Cont) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -399,8 +399,7 @@ void ContainerModeling::handleClear(CheckerContext &C, SVal Cont,
       }
     }
   }
-  const NoteTag *ChangeTag =
-    getChangeTag(C, "became empty", ContReg, ContE);
+  const NoteTag *ChangeTag = getChangeTag(C, "became empty", ContReg, ContE);
   State = invalidateAllIteratorPositions(State, ContReg);
   C.addTransition(State, ChangeTag);
 }
@@ -434,12 +433,12 @@ void ContainerModeling::handlePushBack(CheckerContext &C, SVal Cont,
     auto &BVF = SymMgr.getBasicVals();
     auto &SVB = C.getSValBuilder();
     const auto newEndSym =
-      SVB.evalBinOp(State, BO_Add,
-                    nonloc::SymbolVal(EndSym),
-                    nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
-                    SymMgr.getType(EndSym)).getAsSymbol();
+        SVB.evalBinOp(State, BO_Add, nonloc::SymbolVal(EndSym),
+                      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
+                      SymMgr.getType(EndSym))
+            .getAsSymbol();
     const NoteTag *ChangeTag =
-      getChangeTag(C, "extended to the back by 1 position", ContReg, ContE);
+        getChangeTag(C, "extended to the back by 1 position", ContReg, ContE);
     State = setContainerData(State, ContReg, CData->newEnd(newEndSym));
     C.addTransition(State, ChangeTag);
   }
@@ -463,12 +462,12 @@ void ContainerModeling::handlePopBack(CheckerContext &C, SVal Cont,
     auto &BVF = SymMgr.getBasicVals();
     auto &SVB = C.getSValBuilder();
     const auto BackSym =
-      SVB.evalBinOp(State, BO_Sub,
-                    nonloc::SymbolVal(EndSym),
-                    nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
-                    SymMgr.getType(EndSym)).getAsSymbol();
+        SVB.evalBinOp(State, BO_Sub, nonloc::SymbolVal(EndSym),
+                      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
+                      SymMgr.getType(EndSym))
+            .getAsSymbol();
     const NoteTag *ChangeTag =
-      getChangeTag(C, "shrank from the back by 1 position", ContReg, ContE);
+        getChangeTag(C, "shrank from the back by 1 position", ContReg, ContE);
     // For vector-like and deque-like containers invalidate the last and the
     // past-end iterator positions. For list-like containers only invalidate
     // the last position
@@ -508,12 +507,12 @@ void ContainerModeling::handlePushFront(CheckerContext &C, SVal Cont,
       auto &BVF = SymMgr.getBasicVals();
       auto &SVB = C.getSValBuilder();
       const auto newBeginSym =
-        SVB.evalBinOp(State, BO_Sub,
-                      nonloc::SymbolVal(BeginSym),
-                      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
-                      SymMgr.getType(BeginSym)).getAsSymbol();
-      const NoteTag *ChangeTag =
-        getChangeTag(C, "extended to the front by 1 position", ContReg, ContE);
+          SVB.evalBinOp(State, BO_Sub, nonloc::SymbolVal(BeginSym),
+                        nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
+                        SymMgr.getType(BeginSym))
+              .getAsSymbol();
+      const NoteTag *ChangeTag = getChangeTag(
+          C, "extended to the front by 1 position", ContReg, ContE);
       State = setContainerData(State, ContReg, CData->newBegin(newBeginSym));
       C.addTransition(State, ChangeTag);
     }
@@ -545,12 +544,12 @@ void ContainerModeling::handlePopFront(CheckerContext &C, SVal Cont,
     auto &BVF = SymMgr.getBasicVals();
     auto &SVB = C.getSValBuilder();
     const auto newBeginSym =
-      SVB.evalBinOp(State, BO_Add,
-                    nonloc::SymbolVal(BeginSym),
-                    nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
-                    SymMgr.getType(BeginSym)).getAsSymbol();
+        SVB.evalBinOp(State, BO_Add, nonloc::SymbolVal(BeginSym),
+                      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
+                      SymMgr.getType(BeginSym))
+            .getAsSymbol();
     const NoteTag *ChangeTag =
-      getChangeTag(C, "shrank from the front by 1 position", ContReg, ContE);
+        getChangeTag(C, "shrank from the front by 1 position", ContReg, ContE);
     State = setContainerData(State, ContReg, CData->newBegin(newBeginSym));
     C.addTransition(State, ChangeTag);
   }
@@ -658,7 +657,7 @@ void ContainerModeling::handleErase(CheckerContext &C, SVal Cont, SVal Iter1,
 }
 
 void ContainerModeling::handleEraseAfter(CheckerContext &C, SVal Cont,
-                                        SVal Iter) const {
+                                         SVal Iter) const {
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Iter);
   if (!Pos)
@@ -670,10 +669,10 @@ void ContainerModeling::handleEraseAfter(CheckerContext &C, SVal Cont,
   auto &BVF = SymMgr.getBasicVals();
   auto &SVB = C.getSValBuilder();
   const auto NextSym =
-    SVB.evalBinOp(State, BO_Add,
-                  nonloc::SymbolVal(Pos->getOffset()),
-                  nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
-                  SymMgr.getType(Pos->getOffset())).getAsSymbol();
+      SVB.evalBinOp(State, BO_Add, nonloc::SymbolVal(Pos->getOffset()),
+                    nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
+                    SymMgr.getType(Pos->getOffset()))
+          .getAsSymbol();
   State = invalidateIteratorPositions(State, NextSym, BO_EQ);
   C.addTransition(State);
 }
@@ -700,9 +699,9 @@ const NoteTag *ContainerModeling::getChangeTag(CheckerContext &C,
   // First try to get the name of the variable from the region
   if (const auto *DR = dyn_cast<DeclRegion>(ContReg)) {
     Name = DR->getDecl()->getName();
-  // If the region is not a `DeclRegion` then use the expression instead
+    // If the region is not a `DeclRegion` then use the expression instead
   } else if (const auto *DRE =
-             dyn_cast<DeclRefExpr>(ContE->IgnoreParenCasts())) {
+                 dyn_cast<DeclRefExpr>(ContE->IgnoreParenCasts())) {
     Name = DRE->getDecl()->getName();
   }
 
@@ -713,14 +712,14 @@ const NoteTag *ContainerModeling::getChangeTag(CheckerContext &C,
 
         SmallString<256> Msg;
         llvm::raw_svector_ostream Out(Msg);
-        Out << "Container " << (!Name.empty() ? ("'" + Name.str() + "' ") : "" )
+        Out << "Container " << (!Name.empty() ? ("'" + Name.str() + "' ") : "")
             << Text;
         return std::string(Out.str());
       });
 }
 
 void ContainerModeling::printState(raw_ostream &Out, ProgramStateRef State,
-                                  const char *NL, const char *Sep) const {
+                                   const char *NL, const char *Sep) const {
   auto ContMap = State->get<ContainerMap>();
 
   if (!ContMap.isEmpty()) {
@@ -845,8 +844,8 @@ ProgramStateRef createContainerBegin(ProgramStateRef State,
     return State;
 
   auto &SymMgr = State->getSymbolManager();
-  const SymbolConjured *Sym = SymMgr.conjureSymbol(E, LCtx, T, BlockCount,
-                                                   "begin");
+  const SymbolConjured *Sym =
+      SymMgr.conjureSymbol(E, LCtx, T, BlockCount, "begin");
   State = assumeNoOverflow(State, Sym, 4);
 
   if (CDataPtr) {
@@ -868,8 +867,8 @@ ProgramStateRef createContainerEnd(ProgramStateRef State, const MemRegion *Cont,
     return State;
 
   auto &SymMgr = State->getSymbolManager();
-  const SymbolConjured *Sym = SymMgr.conjureSymbol(E, LCtx, T, BlockCount,
-                                                  "end");
+  const SymbolConjured *Sym =
+      SymMgr.conjureSymbol(E, LCtx, T, BlockCount, "end");
   State = assumeNoOverflow(State, Sym, 4);
 
   if (CDataPtr) {
@@ -989,7 +988,7 @@ ProgramStateRef reassignAllIteratorPositionsUnless(ProgramStateRef State,
                                                    BinaryOperator::Opcode Opc) {
   auto MatchContAndCompare = [&](const IteratorPosition &Pos) {
     return Pos.getContainer() == Cont &&
-    !compare(State, Pos.getOffset(), Offset, Opc);
+           !compare(State, Pos.getOffset(), Offset, Opc);
   };
   auto ReAssign = [&](const IteratorPosition &Pos) {
     return Pos.reAssign(NewCont);
@@ -1001,14 +1000,13 @@ ProgramStateRef reassignAllIteratorPositionsUnless(ProgramStateRef State,
 // `OldSym - Int` to `NewSym - Int` and  `OldSym` to `NewSym` in any iterator
 // position offsets where `CondSym` is true.
 ProgramStateRef rebaseSymbolInIteratorPositionsIf(
-    ProgramStateRef State, SValBuilder &SVB, SymbolRef OldSym,
-    SymbolRef NewSym, SymbolRef CondSym, BinaryOperator::Opcode Opc) {
+    ProgramStateRef State, SValBuilder &SVB, SymbolRef OldSym, SymbolRef NewSym,
+    SymbolRef CondSym, BinaryOperator::Opcode Opc) {
   auto LessThanEnd = [&](const IteratorPosition &Pos) {
     return compare(State, Pos.getOffset(), CondSym, Opc);
   };
   auto RebaseSymbol = [&](const IteratorPosition &Pos) {
-    return Pos.setTo(rebaseSymbol(State, SVB, Pos.getOffset(), OldSym,
-                                   NewSym));
+    return Pos.setTo(rebaseSymbol(State, SVB, Pos.getOffset(), OldSym, NewSym));
   };
   return processIteratorPositions(State, LessThanEnd, RebaseSymbol);
 }
@@ -1020,16 +1018,18 @@ SymbolRef rebaseSymbol(ProgramStateRef State, SValBuilder &SVB,
                        SymbolRef OrigExpr, SymbolRef OldExpr,
                        SymbolRef NewSym) {
   auto &SymMgr = SVB.getSymbolManager();
-  auto Diff = SVB.evalBinOpNN(State, BO_Sub, nonloc::SymbolVal(OrigExpr),
-                              nonloc::SymbolVal(OldExpr),
-                              SymMgr.getType(OrigExpr));
+  auto Diff =
+      SVB.evalBinOpNN(State, BO_Sub, nonloc::SymbolVal(OrigExpr),
+                      nonloc::SymbolVal(OldExpr), SymMgr.getType(OrigExpr));
 
   const auto DiffInt = Diff.getAs<nonloc::ConcreteInt>();
   if (!DiffInt)
     return OrigExpr;
 
-  return SVB.evalBinOpNN(State, BO_Add, *DiffInt, nonloc::SymbolVal(NewSym),
-                         SymMgr.getType(OrigExpr)).getAsSymbol();
+  return SVB
+      .evalBinOpNN(State, BO_Add, *DiffInt, nonloc::SymbolVal(NewSym),
+                   SymMgr.getType(OrigExpr))
+      .getAsSymbol();
 }
 
 bool hasLiveIterators(ProgramStateRef State, const MemRegion *Cont) {
@@ -1061,7 +1061,7 @@ bool ento::shouldRegisterContainerModeling(const CheckerManager &mgr) {
   if (!mgr.getAnalyzerOptions().ShouldAggressivelySimplifyBinaryOperation) {
     mgr.getASTContext().getDiagnostics().Report(
         diag::err_analyzer_checker_incompatible_analyzer_option)
-      << "aggressive-binary-operation-simplification" << "false";
+        << "aggressive-binary-operation-simplification" << "false";
     return false;
   }
 

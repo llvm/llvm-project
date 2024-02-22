@@ -105,8 +105,7 @@ private:
 
   void setBlockCounter(BlockCounter C);
 
-  void generateNode(const ProgramPoint &Loc,
-                    ProgramStateRef State,
+  void generateNode(const ProgramPoint &Loc, ProgramStateRef State,
                     ExplodedNode *Pred);
 
   void HandleBlockEdge(const BlockEdge &E, ExplodedNode *Pred);
@@ -134,8 +133,7 @@ private:
 
 public:
   /// Construct a CoreEngine object to analyze the provided CFG.
-  CoreEngine(ExprEngine &exprengine,
-             FunctionSummariesTy *FS,
+  CoreEngine(ExprEngine &exprengine, FunctionSummariesTy *FS,
              AnalyzerOptions &Opts);
 
   CoreEngine(const CoreEngine &) = delete;
@@ -150,22 +148,21 @@ public:
                        ProgramStateRef InitState);
 
   /// Returns true if there is still simulation state on the worklist.
-  bool ExecuteWorkListWithInitialState(const LocationContext *L,
-                                       unsigned Steps,
+  bool ExecuteWorkListWithInitialState(const LocationContext *L, unsigned Steps,
                                        ProgramStateRef InitState,
                                        ExplodedNodeSet &Dst);
 
   /// Dispatch the work list item based on the given location information.
   /// Use Pred parameter as the predecessor state.
-  void dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,
-                        const WorkListUnit& WU);
+  void dispatchWorkItem(ExplodedNode *Pred, ProgramPoint Loc,
+                        const WorkListUnit &WU);
 
   // Functions for external checking of whether we have unfinished work
   bool wasBlockAborted() const { return !blocksAborted.empty(); }
   bool wasBlocksExhausted() const { return !blocksExhausted.empty(); }
-  bool hasWorkRemaining() const { return wasBlocksExhausted() ||
-                                         WList->hasWork() ||
-                                         wasBlockAborted(); }
+  bool hasWorkRemaining() const {
+    return wasBlocksExhausted() || WList->hasWork() || wasBlockAborted();
+  }
 
   /// Inform the CoreEngine that a basic block was aborted because
   /// it could not be completely analyzed.
@@ -220,9 +217,8 @@ struct NodeBuilderContext {
   /// Returns the number of times the current basic block has been
   /// visited on the exploded graph path.
   unsigned blockCount() const {
-    return Eng.WList->getBlockCounter().getNumVisited(
-                    LC->getStackFrame(),
-                    Block->getBlockID());
+    return Eng.WList->getBlockCounter().getNumVisited(LC->getStackFrame(),
+                                                      Block->getBlockID());
   }
 };
 
@@ -252,12 +248,10 @@ protected:
   ExplodedNodeSet &Frontier;
 
   /// Checks if the results are ready.
-  virtual bool checkResults() {
-    return Finalized;
-  }
+  virtual bool checkResults() { return Finalized; }
 
   bool hasNoSinksInFrontier() {
-    for (const auto  I : Frontier)
+    for (const auto I : Frontier)
       if (I->isSink())
         return false;
     return true;
@@ -266,10 +260,8 @@ protected:
   /// Allow subclasses to finalize results before result_begin() is executed.
   virtual void finalizeResults() {}
 
-  ExplodedNode *generateNodeImpl(const ProgramPoint &PP,
-                                 ProgramStateRef State,
-                                 ExplodedNode *Pred,
-                                 bool MarkAsSink = false);
+  ExplodedNode *generateNodeImpl(const ProgramPoint &PP, ProgramStateRef State,
+                                 ExplodedNode *Pred, bool MarkAsSink = false);
 
 public:
   NodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
@@ -288,8 +280,7 @@ public:
   virtual ~NodeBuilder() = default;
 
   /// Generates a node in the ExplodedGraph.
-  ExplodedNode *generateNode(const ProgramPoint &PP,
-                             ProgramStateRef State,
+  ExplodedNode *generateNode(const ProgramPoint &PP, ProgramStateRef State,
                              ExplodedNode *Pred) {
     return generateNodeImpl(
         PP, State, Pred,
@@ -301,8 +292,7 @@ public:
   /// When a node is marked as sink, the exploration from the node is stopped -
   /// the node becomes the last node on the path and certain kinds of bugs are
   /// suppressed.
-  ExplodedNode *generateSink(const ProgramPoint &PP,
-                             ProgramStateRef State,
+  ExplodedNode *generateSink(const ProgramPoint &PP, ProgramStateRef State,
                              ExplodedNode *Pred) {
     return generateNodeImpl(PP, State, Pred, true);
   }
@@ -342,11 +332,11 @@ public:
 
 /// \class NodeBuilderWithSinks
 /// This node builder keeps track of the generated sink nodes.
-class NodeBuilderWithSinks: public NodeBuilder {
+class NodeBuilderWithSinks : public NodeBuilder {
   void anchor() override;
 
 protected:
-  SmallVector<ExplodedNode*, 2> sinksGenerated;
+  SmallVector<ExplodedNode *, 2> sinksGenerated;
   ProgramPoint &Location;
 
 public:
@@ -354,8 +344,7 @@ public:
                        const NodeBuilderContext &Ctx, ProgramPoint &L)
       : NodeBuilder(Pred, DstSet, Ctx), Location(L) {}
 
-  ExplodedNode *generateNode(ProgramStateRef State,
-                             ExplodedNode *Pred,
+  ExplodedNode *generateNode(ProgramStateRef State, ExplodedNode *Pred,
                              const ProgramPointTag *Tag = nullptr) {
     const ProgramPoint &LocalLoc = (Tag ? Location.withTag(Tag) : Location);
     return NodeBuilder::generateNode(LocalLoc, State, Pred);
@@ -370,7 +359,7 @@ public:
     return N;
   }
 
-  const SmallVectorImpl<ExplodedNode*> &getSinks() const {
+  const SmallVectorImpl<ExplodedNode *> &getSinks() const {
     return sinksGenerated;
   }
 };
@@ -379,7 +368,7 @@ public:
 /// This builder class is useful for generating nodes that resulted from
 /// visiting a statement. The main difference from its parent NodeBuilder is
 /// that it creates a statement specific ProgramPoint.
-class StmtNodeBuilder: public NodeBuilder {
+class StmtNodeBuilder : public NodeBuilder {
   NodeBuilder *EnclosingBldr;
 
 public:
@@ -408,30 +397,28 @@ public:
   using NodeBuilder::generateNode;
   using NodeBuilder::generateSink;
 
-  ExplodedNode *generateNode(const Stmt *S,
-                             ExplodedNode *Pred,
-                             ProgramStateRef St,
-                             const ProgramPointTag *tag = nullptr,
-                             ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
-    const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                  Pred->getLocationContext(), tag);
+  ExplodedNode *
+  generateNode(const Stmt *S, ExplodedNode *Pred, ProgramStateRef St,
+               const ProgramPointTag *tag = nullptr,
+               ProgramPoint::Kind K = ProgramPoint::PostStmtKind) {
+    const ProgramPoint &L =
+        ProgramPoint::getProgramPoint(S, K, Pred->getLocationContext(), tag);
     return NodeBuilder::generateNode(L, St, Pred);
   }
 
-  ExplodedNode *generateSink(const Stmt *S,
-                             ExplodedNode *Pred,
-                             ProgramStateRef St,
-                             const ProgramPointTag *tag = nullptr,
-                             ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
-    const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                  Pred->getLocationContext(), tag);
+  ExplodedNode *
+  generateSink(const Stmt *S, ExplodedNode *Pred, ProgramStateRef St,
+               const ProgramPointTag *tag = nullptr,
+               ProgramPoint::Kind K = ProgramPoint::PostStmtKind) {
+    const ProgramPoint &L =
+        ProgramPoint::getProgramPoint(S, K, Pred->getLocationContext(), tag);
     return NodeBuilder::generateSink(L, St, Pred);
   }
 };
 
 /// BranchNodeBuilder is responsible for constructing the nodes
 /// corresponding to the two branches of the if statement - true and false.
-class BranchNodeBuilder: public NodeBuilder {
+class BranchNodeBuilder : public NodeBuilder {
   const CFGBlock *DstT;
   const CFGBlock *DstF;
 
@@ -442,8 +429,8 @@ class BranchNodeBuilder: public NodeBuilder {
 
 public:
   BranchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-                    const NodeBuilderContext &C,
-                    const CFGBlock *dstT, const CFGBlock *dstF)
+                    const NodeBuilderContext &C, const CFGBlock *dstT,
+                    const CFGBlock *dstF)
       : NodeBuilder(SrcNode, DstSet, C), DstT(dstT), DstF(dstF),
         InFeasibleTrue(!DstT), InFeasibleFalse(!DstF) {
     // The branch node builder does not generate autotransitions.
@@ -452,8 +439,8 @@ public:
   }
 
   BranchNodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
-                    const NodeBuilderContext &C,
-                    const CFGBlock *dstT, const CFGBlock *dstF)
+                    const NodeBuilderContext &C, const CFGBlock *dstT,
+                    const CFGBlock *dstF)
       : NodeBuilder(SrcSet, DstSet, C), DstT(dstT), DstF(dstF),
         InFeasibleTrue(!DstT), InFeasibleFalse(!DstF) {
     takeNodes(SrcSet);
@@ -479,7 +466,7 @@ public:
 };
 
 class IndirectGotoNodeBuilder {
-  CoreEngine& Eng;
+  CoreEngine &Eng;
   const CFGBlock *Src;
   const CFGBlock &DispatchBlock;
   const Expr *E;
@@ -487,7 +474,8 @@ class IndirectGotoNodeBuilder {
 
 public:
   IndirectGotoNodeBuilder(ExplodedNode *pred, const CFGBlock *src,
-                    const Expr *e, const CFGBlock *dispatch, CoreEngine* eng)
+                          const Expr *e, const CFGBlock *dispatch,
+                          CoreEngine *eng)
       : Eng(*eng), Src(src), DispatchBlock(*dispatch), E(e), Pred(pred) {}
 
   class iterator {
@@ -503,23 +491,23 @@ public:
     // loops work.
     const iterator &operator*() const { return *this; }
 
-    iterator &operator++() { ++I; return *this; }
+    iterator &operator++() {
+      ++I;
+      return *this;
+    }
     bool operator!=(const iterator &X) const { return I != X.I; }
 
     const LabelDecl *getLabel() const {
       return cast<LabelStmt>((*I)->getLabel())->getDecl();
     }
 
-    const CFGBlock *getBlock() const {
-      return *I;
-    }
+    const CFGBlock *getBlock() const { return *I; }
   };
 
   iterator begin() { return iterator(DispatchBlock.succ_begin()); }
   iterator end() { return iterator(DispatchBlock.succ_end()); }
 
-  ExplodedNode *generateNode(const iterator &I,
-                             ProgramStateRef State,
+  ExplodedNode *generateNode(const iterator &I, ProgramStateRef State,
                              bool isSink = false);
 
   const Expr *getTarget() const { return E; }
@@ -532,14 +520,14 @@ public:
 };
 
 class SwitchNodeBuilder {
-  CoreEngine& Eng;
+  CoreEngine &Eng;
   const CFGBlock *Src;
   const Expr *Condition;
   ExplodedNode *Pred;
 
 public:
   SwitchNodeBuilder(ExplodedNode *pred, const CFGBlock *src,
-                    const Expr *condition, CoreEngine* eng)
+                    const Expr *condition, CoreEngine *eng)
       : Eng(*eng), Src(src), Condition(condition), Pred(pred) {}
 
   class iterator {
@@ -550,28 +538,26 @@ public:
     iterator(CFGBlock::const_succ_reverse_iterator i) : I(i) {}
 
   public:
-    iterator &operator++() { ++I; return *this; }
+    iterator &operator++() {
+      ++I;
+      return *this;
+    }
     bool operator!=(const iterator &X) const { return I != X.I; }
     bool operator==(const iterator &X) const { return I == X.I; }
 
-    const CaseStmt *getCase() const {
-      return cast<CaseStmt>((*I)->getLabel());
-    }
+    const CaseStmt *getCase() const { return cast<CaseStmt>((*I)->getLabel()); }
 
-    const CFGBlock *getBlock() const {
-      return *I;
-    }
+    const CFGBlock *getBlock() const { return *I; }
   };
 
-  iterator begin() { return iterator(Src->succ_rbegin()+1); }
+  iterator begin() { return iterator(Src->succ_rbegin() + 1); }
   iterator end() { return iterator(Src->succ_rend()); }
 
   const SwitchStmt *getSwitch() const {
     return cast<SwitchStmt>(Src->getTerminator());
   }
 
-  ExplodedNode *generateCaseStmtNode(const iterator &I,
-                                     ProgramStateRef State);
+  ExplodedNode *generateCaseStmtNode(const iterator &I, ProgramStateRef State);
 
   ExplodedNode *generateDefaultCaseNode(ProgramStateRef State,
                                         bool isSink = false);

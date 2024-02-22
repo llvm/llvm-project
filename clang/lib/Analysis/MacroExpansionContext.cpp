@@ -229,4 +229,3 @@ void MacroExpansionContext::onTokenLexed(const Token &Tok) {
   if (!Inserted)
     It->getSecond().append(TokenAsString);
 }
-

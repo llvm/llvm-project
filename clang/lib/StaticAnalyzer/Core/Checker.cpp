@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 
 using namespace clang;
 using namespace ento;
@@ -26,13 +26,13 @@ CheckerNameRef CheckerBase::getCheckerName() const { return Name; }
 
 CheckerProgramPointTag::CheckerProgramPointTag(StringRef CheckerName,
                                                StringRef Msg)
-  : SimpleProgramPointTag(CheckerName, Msg) {}
+    : SimpleProgramPointTag(CheckerName, Msg) {}
 
 CheckerProgramPointTag::CheckerProgramPointTag(const CheckerBase *Checker,
                                                StringRef Msg)
     : SimpleProgramPointTag(Checker->getCheckerName().getName(), Msg) {}
 
-raw_ostream& clang::ento::operator<<(raw_ostream &Out,
+raw_ostream &clang::ento::operator<<(raw_ostream &Out,
                                      const CheckerBase &Checker) {
   Out << Checker.getCheckerName().getName();
   return Out;

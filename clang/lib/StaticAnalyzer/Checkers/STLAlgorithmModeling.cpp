@@ -1,4 +1,5 @@
-//===-- STLAlgorithmModeling.cpp -----------------------------------*- C++ -*--//
+//===-- STLAlgorithmModeling.cpp -----------------------------------*- C++
+//-*--//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,32 +31,32 @@ class STLAlgorithmModeling : public Checker<eval::Call> {
   void Find(CheckerContext &C, const CallExpr *CE, unsigned paramNum) const;
 
   using FnCheck = bool (STLAlgorithmModeling::*)(CheckerContext &,
-                                                const CallExpr *) const;
+                                                 const CallExpr *) const;
 
   const CallDescriptionMap<FnCheck> Callbacks = {
-    {{{"std", "find"}, 3}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_if"}, 3}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_if"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_if_not"}, 3}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_if_not"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_first_of"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_first_of"}, 5}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_first_of"}, 6}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_end"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_end"}, 5}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_end"}, 6}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "lower_bound"}, 3}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "lower_bound"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "upper_bound"}, 3}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "upper_bound"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "search"}, 3}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "search"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "search"}, 5}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "search"}, 6}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "search_n"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "search_n"}, 5}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "search_n"}, 6}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "find"}, 3}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "find"}, 4}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "find_if"}, 3}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "find_if"}, 4}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "find_if_not"}, 3}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "find_if_not"}, 4}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "find_first_of"}, 4}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "find_first_of"}, 5}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "find_first_of"}, 6}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "find_end"}, 4}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "find_end"}, 5}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "find_end"}, 6}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "lower_bound"}, 3}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "lower_bound"}, 4}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "upper_bound"}, 3}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "upper_bound"}, 4}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "search"}, 3}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "search"}, 4}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "search"}, 5}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "search"}, 6}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "search_n"}, 4}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "search_n"}, 5}, &STLAlgorithmModeling::evalFind},
+      {{{"std", "search_n"}, 6}, &STLAlgorithmModeling::evalFind},
   };
 
 public:
@@ -127,10 +128,9 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallExpr *CE,
     const auto *NewPos = getIteratorPosition(StateFound, RetVal);
     assert(NewPos && "Failed to create new iterator position.");
 
-    SVal GreaterOrEqual = SVB.evalBinOp(StateFound, BO_GE,
-                                        nonloc::SymbolVal(NewPos->getOffset()),
-                                        nonloc::SymbolVal(Pos->getOffset()),
-                                        SVB.getConditionType());
+    SVal GreaterOrEqual = SVB.evalBinOp(
+        StateFound, BO_GE, nonloc::SymbolVal(NewPos->getOffset()),
+        nonloc::SymbolVal(Pos->getOffset()), SVB.getConditionType());
     assert(isa<DefinedSVal>(GreaterOrEqual) &&
            "Symbol comparison must be a `DefinedSVal`");
     StateFound = StateFound->assume(GreaterOrEqual.castAs<DefinedSVal>(), true);
@@ -149,10 +149,9 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallExpr *CE,
     const auto *NewPos = getIteratorPosition(StateFound, RetVal);
     assert(NewPos && "Failed to create new iterator position.");
 
-    SVal Less = SVB.evalBinOp(StateFound, BO_LT,
-                              nonloc::SymbolVal(NewPos->getOffset()),
-                              nonloc::SymbolVal(Pos->getOffset()),
-                              SVB.getConditionType());
+    SVal Less = SVB.evalBinOp(
+        StateFound, BO_LT, nonloc::SymbolVal(NewPos->getOffset()),
+        nonloc::SymbolVal(Pos->getOffset()), SVB.getConditionType());
     assert(isa<DefinedSVal>(Less) &&
            "Symbol comparison must be a `DefinedSVal`");
     StateFound = StateFound->assume(Less.castAs<DefinedSVal>(), true);
@@ -171,11 +170,10 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallExpr *CE,
 void ento::registerSTLAlgorithmModeling(CheckerManager &Mgr) {
   auto *Checker = Mgr.registerChecker<STLAlgorithmModeling>();
   Checker->AggressiveStdFindModeling =
-      Mgr.getAnalyzerOptions().getCheckerBooleanOption(Checker,
-                                                  "AggressiveStdFindModeling");
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(
+          Checker, "AggressiveStdFindModeling");
 }
 
 bool ento::shouldRegisterSTLAlgorithmModeling(const CheckerManager &mgr) {
   return true;
 }
-

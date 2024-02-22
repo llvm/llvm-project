@@ -12,12 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Analysis/PathDiagnostic.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
@@ -61,13 +61,14 @@ private:
 // ObjCSuperCallChecker
 //===----------------------------------------------------------------------===//
 
-class ObjCSuperCallChecker : public Checker<
-                                      check::ASTDecl<ObjCImplementationDecl> > {
+class ObjCSuperCallChecker
+    : public Checker<check::ASTDecl<ObjCImplementationDecl>> {
 public:
   ObjCSuperCallChecker() = default;
 
   void checkASTDecl(const ObjCImplementationDecl *D, AnalysisManager &Mgr,
                     BugReporter &BR) const;
+
 private:
   bool isCheckableClass(const ObjCImplementationDecl *D,
                         StringRef &SuperclassName) const;
@@ -78,7 +79,7 @@ private:
   mutable bool IsInitialized = false;
 };
 
-}
+} // namespace
 
 /// Determine whether the given class has a superclass that we want
 /// to check. The name of the found superclass is stored in SuperclassName.
@@ -88,8 +89,7 @@ private:
 bool ObjCSuperCallChecker::isCheckableClass(const ObjCImplementationDecl *D,
                                             StringRef &SuperclassName) const {
   const ObjCInterfaceDecl *ID = D->getClassInterface()->getSuperClass();
-  for ( ; ID ; ID = ID->getSuperClass())
-  {
+  for (; ID; ID = ID->getSuperClass()) {
     SuperclassName = ID->getIdentifier()->getName();
     if (SelectorsForClass.count(SuperclassName))
       return true;
@@ -118,42 +118,39 @@ void ObjCSuperCallChecker::initializeSelectors(ASTContext &Ctx) const {
 
   { // Initialize selectors for: UIViewController
     const SelectorDescriptor Selectors[] = {
-      { "addChildViewController", 1 },
-      { "viewDidAppear", 1 },
-      { "viewDidDisappear", 1 },
-      { "viewWillAppear", 1 },
-      { "viewWillDisappear", 1 },
-      { "removeFromParentViewController", 0 },
-      { "didReceiveMemoryWarning", 0 },
-      { "viewDidUnload", 0 },
-      { "viewDidLoad", 0 },
-      { "viewWillUnload", 0 },
-      { "updateViewConstraints", 0 },
-      { "encodeRestorableStateWithCoder", 1 },
-      { "restoreStateWithCoder", 1 }};
+        {"addChildViewController", 1},
+        {"viewDidAppear", 1},
+        {"viewDidDisappear", 1},
+        {"viewWillAppear", 1},
+        {"viewWillDisappear", 1},
+        {"removeFromParentViewController", 0},
+        {"didReceiveMemoryWarning", 0},
+        {"viewDidUnload", 0},
+        {"viewDidLoad", 0},
+        {"viewWillUnload", 0},
+        {"updateViewConstraints", 0},
+        {"encodeRestorableStateWithCoder", 1},
+        {"restoreStateWithCoder", 1}};
 
     fillSelectors(Ctx, Selectors, "UIViewController");
   }
 
   { // Initialize selectors for: UIResponder
-    const SelectorDescriptor Selectors[] = {
-      { "resignFirstResponder", 0 }};
+    const SelectorDescriptor Selectors[] = {{"resignFirstResponder", 0}};
 
     fillSelectors(Ctx, Selectors, "UIResponder");
   }
 
   { // Initialize selectors for: NSResponder
     const SelectorDescriptor Selectors[] = {
-      { "encodeRestorableStateWithCoder", 1 },
-      { "restoreStateWithCoder", 1 }};
+        {"encodeRestorableStateWithCoder", 1}, {"restoreStateWithCoder", 1}};
 
     fillSelectors(Ctx, Selectors, "NSResponder");
   }
 
   { // Initialize selectors for: NSDocument
     const SelectorDescriptor Selectors[] = {
-      { "encodeRestorableStateWithCoder", 1 },
-      { "restoreStateWithCoder", 1 }};
+        {"encodeRestorableStateWithCoder", 1}, {"restoreStateWithCoder", 1}};
 
     fillSelectors(Ctx, Selectors, "NSDocument");
   }
@@ -175,7 +172,6 @@ void ObjCSuperCallChecker::checkASTDecl(const ObjCImplementationDecl *D,
   if (!isCheckableClass(D, SuperclassName))
     return;
 
-
   // Iterate over all instance methods.
   for (auto *MD : D->instance_methods()) {
     Selector S = MD->getSelector();
@@ -184,25 +180,23 @@ void ObjCSuperCallChecker::checkASTDecl(const ObjCImplementationDecl *D,
       continue;
 
     // Check if the method calls its superclass implementation.
-    if (MD->getBody())
-    {
+    if (MD->getBody()) {
       FindSuperCallVisitor Visitor(S);
       Visitor.TraverseDecl(MD);
 
       // It doesn't call super, emit a diagnostic.
       if (!Visitor.DoesCallSuper) {
-        PathDiagnosticLocation DLoc =
-          PathDiagnosticLocation::createEnd(MD->getBody(),
-                                            BR.getSourceManager(),
-                                            Mgr.getAnalysisDeclContext(D));
+        PathDiagnosticLocation DLoc = PathDiagnosticLocation::createEnd(
+            MD->getBody(), BR.getSourceManager(),
+            Mgr.getAnalysisDeclContext(D));
 
         const char *Name = "Missing call to superclass";
         SmallString<320> Buf;
         llvm::raw_svector_ostream os(Buf);
 
-        os << "The '" << S.getAsString()
-           << "' instance method in " << SuperclassName.str() << " subclass '"
-           << *D << "' is missing a [super " << S.getAsString() << "] call";
+        os << "The '" << S.getAsString() << "' instance method in "
+           << SuperclassName.str() << " subclass '" << *D
+           << "' is missing a [super " << S.getAsString() << "] call";
 
         BR.EmitBasicReport(MD, this, Name, categories::CoreFoundationObjectiveC,
                            os.str(), DLoc);
@@ -210,7 +204,6 @@ void ObjCSuperCallChecker::checkASTDecl(const ObjCImplementationDecl *D,
     }
   }
 }
-
 
 //===----------------------------------------------------------------------===//
 // Check registration.

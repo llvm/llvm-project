@@ -41,14 +41,14 @@ public:
   int ProtExecOv;
   int ProtReadOv;
 };
-}
+} // namespace
 
 int MmapWriteExecChecker::ProtWrite = 0x02;
-int MmapWriteExecChecker::ProtExec  = 0x04;
-int MmapWriteExecChecker::ProtRead  = 0x01;
+int MmapWriteExecChecker::ProtExec = 0x04;
+int MmapWriteExecChecker::ProtRead = 0x01;
 
 void MmapWriteExecChecker::checkPreCall(const CallEvent &Call,
-                                         CheckerContext &C) const {
+                                        CheckerContext &C) const {
   if (matchesAny(Call, MmapFn, MprotectFn)) {
     SVal ProtVal = Call.getArgSVal(2);
     auto ProtLoc = ProtVal.getAs<nonloc::ConcreteInt>();
@@ -82,14 +82,11 @@ void MmapWriteExecChecker::checkPreCall(const CallEvent &Call,
 }
 
 void ento::registerMmapWriteExecChecker(CheckerManager &mgr) {
-  MmapWriteExecChecker *Mwec =
-      mgr.registerChecker<MmapWriteExecChecker>();
+  MmapWriteExecChecker *Mwec = mgr.registerChecker<MmapWriteExecChecker>();
   Mwec->ProtExecOv =
-    mgr.getAnalyzerOptions()
-      .getCheckerIntegerOption(Mwec, "MmapProtExec");
+      mgr.getAnalyzerOptions().getCheckerIntegerOption(Mwec, "MmapProtExec");
   Mwec->ProtReadOv =
-    mgr.getAnalyzerOptions()
-      .getCheckerIntegerOption(Mwec, "MmapProtRead");
+      mgr.getAnalyzerOptions().getCheckerIntegerOption(Mwec, "MmapProtRead");
 }
 
 bool ento::shouldRegisterMmapWriteExecChecker(const CheckerManager &mgr) {

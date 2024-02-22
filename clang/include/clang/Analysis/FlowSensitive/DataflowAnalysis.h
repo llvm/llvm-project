@@ -138,8 +138,8 @@ private:
 
   // The first-choice implementation: use `widen` when it is available.
   template <typename T>
-  static auto widenInternal(Rank0, T &Current, const T &Prev)
-      -> decltype(Current.widen(Prev)) {
+  static auto widenInternal(Rank0, T &Current,
+                            const T &Prev) -> decltype(Current.widen(Prev)) {
     return Current.widen(Prev);
   }
 
@@ -247,13 +247,13 @@ runDataflowAnalysis(
 // FIXME: Make all classes derived from `DataflowAnalysis` take an `Environment`
 // parameter in their constructor so that we can get rid of this abomination.
 template <typename AnalysisT>
-auto createAnalysis(ASTContext &ASTCtx, Environment &Env)
-    -> decltype(AnalysisT(ASTCtx, Env)) {
+auto createAnalysis(ASTContext &ASTCtx,
+                    Environment &Env) -> decltype(AnalysisT(ASTCtx, Env)) {
   return AnalysisT(ASTCtx, Env);
 }
 template <typename AnalysisT>
-auto createAnalysis(ASTContext &ASTCtx, Environment &Env)
-    -> decltype(AnalysisT(ASTCtx)) {
+auto createAnalysis(ASTContext &ASTCtx,
+                    Environment &Env) -> decltype(AnalysisT(ASTCtx)) {
   return AnalysisT(ASTCtx);
 }
 

@@ -689,7 +689,7 @@ public:
     size_t InitIdx = 0;
 
     // Initialize base classes.
-    if (auto* R = S->getType()->getAsCXXRecordDecl()) {
+    if (auto *R = S->getType()->getAsCXXRecordDecl()) {
       assert(FieldsForInit.size() + R->getNumBases() == Inits.size());
       for ([[maybe_unused]] const CXXBaseSpecifier &Base : R->bases()) {
         assert(InitIdx < Inits.size());
@@ -719,7 +719,7 @@ public:
           (Field->getType()->isReferenceType() &&
            Field->getType().getCanonicalType()->getPointeeType() ==
                Init->getType().getCanonicalType()));
-      auto& Loc = Env.createObject(Field->getType(), Init);
+      auto &Loc = Env.createObject(Field->getType(), Init);
       FieldLocs.insert({Field, &Loc});
     }
 

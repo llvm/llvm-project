@@ -1,4 +1,5 @@
-//===- ObjCAutoreleaseWriteChecker.cpp ----------------------------*- C++ -*-==//
+//===- ObjCAutoreleaseWriteChecker.cpp ----------------------------*- C++
+//-*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,8 +27,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
@@ -49,54 +50,44 @@ const char *IsARPBind = "isautoreleasepoolbind";
 
 class ObjCAutoreleaseWriteChecker : public Checker<check::ASTCodeBody> {
 public:
-  void checkASTCodeBody(const Decl *D,
-                        AnalysisManager &AM,
+  void checkASTCodeBody(const Decl *D, AnalysisManager &AM,
                         BugReporter &BR) const;
+
 private:
   std::vector<std::string> SelectorsWithAutoreleasingPool = {
       // Common to NSArray,  NSSet, NSOrderedSet
-      "enumerateObjectsUsingBlock:",
-      "enumerateObjectsWithOptions:usingBlock:",
+      "enumerateObjectsUsingBlock:", "enumerateObjectsWithOptions:usingBlock:",
 
       // Common to NSArray and NSOrderedSet
       "enumerateObjectsAtIndexes:options:usingBlock:",
       "indexOfObjectAtIndexes:options:passingTest:",
       "indexesOfObjectsAtIndexes:options:passingTest:",
-      "indexOfObjectPassingTest:",
-      "indexOfObjectWithOptions:passingTest:",
+      "indexOfObjectPassingTest:", "indexOfObjectWithOptions:passingTest:",
       "indexesOfObjectsPassingTest:",
       "indexesOfObjectsWithOptions:passingTest:",
 
       // NSDictionary
       "enumerateKeysAndObjectsUsingBlock:",
       "enumerateKeysAndObjectsWithOptions:usingBlock:",
-      "keysOfEntriesPassingTest:",
-      "keysOfEntriesWithOptions:passingTest:",
+      "keysOfEntriesPassingTest:", "keysOfEntriesWithOptions:passingTest:",
 
       // NSSet
-      "objectsPassingTest:",
-      "objectsWithOptions:passingTest:",
+      "objectsPassingTest:", "objectsWithOptions:passingTest:",
       "enumerateIndexPathsWithOptions:usingBlock:",
 
       // NSIndexSet
-      "enumerateIndexesWithOptions:usingBlock:",
-      "enumerateIndexesUsingBlock:",
+      "enumerateIndexesWithOptions:usingBlock:", "enumerateIndexesUsingBlock:",
       "enumerateIndexesInRange:options:usingBlock:",
-      "enumerateRangesUsingBlock:",
-      "enumerateRangesWithOptions:usingBlock:",
-      "enumerateRangesInRange:options:usingBlock:",
-      "indexPassingTest:",
-      "indexesPassingTest:",
-      "indexWithOptions:passingTest:",
-      "indexesWithOptions:passingTest:",
-      "indexInRange:options:passingTest:",
-      "indexesInRange:options:passingTest:"
-  };
+      "enumerateRangesUsingBlock:", "enumerateRangesWithOptions:usingBlock:",
+      "enumerateRangesInRange:options:usingBlock:", "indexPassingTest:",
+      "indexesPassingTest:", "indexWithOptions:passingTest:",
+      "indexesWithOptions:passingTest:", "indexInRange:options:passingTest:",
+      "indexesInRange:options:passingTest:"};
 
   std::vector<std::string> FunctionsWithAutoreleasingPool = {
       "dispatch_async", "dispatch_group_async", "dispatch_barrier_async"};
 };
-}
+} // namespace
 
 static inline std::vector<llvm::StringRef>
 toRefs(const std::vector<std::string> &V) {
@@ -168,8 +159,8 @@ static void emitDiagnostics(BoundNodes &Match, const Decl *D, BugReporter &BR,
 }
 
 void ObjCAutoreleaseWriteChecker::checkASTCodeBody(const Decl *D,
-                                                  AnalysisManager &AM,
-                                                  BugReporter &BR) const {
+                                                   AnalysisManager &AM,
+                                                   BugReporter &BR) const {
 
   auto DoublePointerParamM =
       parmVarDecl(hasType(hasCanonicalType(pointerType(
@@ -180,35 +171,29 @@ void ObjCAutoreleaseWriteChecker::checkASTCodeBody(const Decl *D,
       declRefExpr(to(parmVarDecl(DoublePointerParamM))).bind(CapturedBind);
 
   // Write into a binded object, e.g. *ParamBind = X.
-  auto WritesIntoM = binaryOperator(
-    hasLHS(unaryOperator(
-        hasOperatorName("*"),
-        hasUnaryOperand(
-          ignoringParenImpCasts(ReferencedParamM))
-    )),
-    hasOperatorName("=")
-  ).bind(ProblematicWriteBind);
+  auto WritesIntoM =
+      binaryOperator(hasLHS(unaryOperator(hasOperatorName("*"),
+                                          hasUnaryOperand(ignoringParenImpCasts(
+                                              ReferencedParamM)))),
+                     hasOperatorName("="))
+          .bind(ProblematicWriteBind);
 
-  auto ArgumentCaptureM = hasAnyArgument(
-    ignoringParenImpCasts(ReferencedParamM));
-  auto CapturedInParamM = stmt(anyOf(
-      callExpr(ArgumentCaptureM),
-      objcMessageExpr(ArgumentCaptureM)));
+  auto ArgumentCaptureM =
+      hasAnyArgument(ignoringParenImpCasts(ReferencedParamM));
+  auto CapturedInParamM = stmt(
+      anyOf(callExpr(ArgumentCaptureM), objcMessageExpr(ArgumentCaptureM)));
 
   // WritesIntoM happens inside a block passed as an argument.
-  auto WritesOrCapturesInBlockM = hasAnyArgument(allOf(
-      hasType(hasCanonicalType(blockPointerType())),
-      forEachDescendant(
-        stmt(anyOf(WritesIntoM, CapturedInParamM))
-      )));
+  auto WritesOrCapturesInBlockM = hasAnyArgument(
+      allOf(hasType(hasCanonicalType(blockPointerType())),
+            forEachDescendant(stmt(anyOf(WritesIntoM, CapturedInParamM)))));
 
-  auto BlockPassedToMarkedFuncM = stmt(anyOf(
-    callExpr(allOf(
-      callsNames(FunctionsWithAutoreleasingPool), WritesOrCapturesInBlockM)),
-    objcMessageExpr(allOf(
-       hasAnySelector(toRefs(SelectorsWithAutoreleasingPool)),
-       WritesOrCapturesInBlockM))
-  ));
+  auto BlockPassedToMarkedFuncM =
+      stmt(anyOf(callExpr(allOf(callsNames(FunctionsWithAutoreleasingPool),
+                                WritesOrCapturesInBlockM)),
+                 objcMessageExpr(allOf(
+                     hasAnySelector(toRefs(SelectorsWithAutoreleasingPool)),
+                     WritesOrCapturesInBlockM))));
 
   // WritesIntoM happens inside an explicit @autoreleasepool.
   auto WritesOrCapturesInPoolM =
@@ -221,10 +206,10 @@ void ObjCAutoreleaseWriteChecker::checkASTCodeBody(const Decl *D,
             anyOf(forEachDescendant(BlockPassedToMarkedFuncM),
                   forEachDescendant(WritesOrCapturesInPoolM)));
 
-  auto MatcherM = decl(anyOf(
-      objcMethodDecl(HasParamAndWritesInMarkedFuncM).bind(IsMethodBind),
-      functionDecl(HasParamAndWritesInMarkedFuncM),
-      blockDecl(HasParamAndWritesInMarkedFuncM)));
+  auto MatcherM = decl(
+      anyOf(objcMethodDecl(HasParamAndWritesInMarkedFuncM).bind(IsMethodBind),
+            functionDecl(HasParamAndWritesInMarkedFuncM),
+            blockDecl(HasParamAndWritesInMarkedFuncM)));
 
   auto Matches = match(MatcherM, *D, AM.getASTContext());
   for (BoundNodes Match : Matches)

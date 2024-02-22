@@ -32,16 +32,16 @@ using namespace ento;
 
 #define DEBUG_TYPE "ExprEngine"
 
-STATISTIC(NumOfDynamicDispatchPathSplits,
-  "The # of times we split the path due to imprecise dynamic dispatch info");
+STATISTIC(
+    NumOfDynamicDispatchPathSplits,
+    "The # of times we split the path due to imprecise dynamic dispatch info");
 
-STATISTIC(NumInlinedCalls,
-  "The # of times we inlined a call");
+STATISTIC(NumInlinedCalls, "The # of times we inlined a call");
 
 STATISTIC(NumReachedInlineCountMax,
-  "The # of times we reached inline count maximum");
+          "The # of times we reached inline count maximum");
 
-void ExprEngine::processCallEnter(NodeBuilderContext& BC, CallEnter CE,
+void ExprEngine::processCallEnter(NodeBuilderContext &BC, CallEnter CE,
                                   ExplodedNode *Pred) {
   // Get the entry block in the CFG of the callee.
   const StackFrameContext *calleeCtx = CE.getCalleeContext();
@@ -74,8 +74,8 @@ void ExprEngine::processCallEnter(NodeBuilderContext& BC, CallEnter CE,
 
 // Find the last statement on the path to the exploded node and the
 // corresponding Block.
-static std::pair<const Stmt*,
-                 const CFGBlock*> getLastStmt(const ExplodedNode *Node) {
+static std::pair<const Stmt *, const CFGBlock *>
+getLastStmt(const ExplodedNode *Node) {
   const Stmt *S = nullptr;
   const CFGBlock *Blk = nullptr;
   const StackFrameContext *SF = Node->getStackFrame();
@@ -162,7 +162,7 @@ static SVal adjustReturnValue(SVal V, QualType ExpectedTy, QualType ActualTy,
   return UnknownVal();
 }
 
-void ExprEngine::removeDeadOnEndOfFunction(NodeBuilderContext& BC,
+void ExprEngine::removeDeadOnEndOfFunction(NodeBuilderContext &BC,
                                            ExplodedNode *Pred,
                                            ExplodedNodeSet &Dst) {
   // Find the last statement in the function and the corresponding basic block.
@@ -186,8 +186,9 @@ void ExprEngine::removeDeadOnEndOfFunction(NodeBuilderContext& BC,
              ProgramPoint::PostStmtPurgeDeadSymbolsKind);
 }
 
-static bool wasDifferentDeclUsedForInlining(CallEventRef<> Call,
-    const StackFrameContext *calleeCtx) {
+static bool
+wasDifferentDeclUsedForInlining(CallEventRef<> Call,
+                                const StackFrameContext *calleeCtx) {
   const Decl *RuntimeCallee = calleeCtx->getDecl();
   const Decl *StaticDecl = Call->getDecl();
   assert(RuntimeCallee);
@@ -258,8 +259,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
 
   // The parent context might not be a stack frame, so make sure we
   // look up the first enclosing stack frame.
-  const StackFrameContext *callerCtx =
-    calleeCtx->getParent()->getStackFrame();
+  const StackFrameContext *callerCtx = calleeCtx->getParent()->getStackFrame();
 
   const Stmt *CE = calleeCtx->getCallSite();
   ProgramStateRef state = CEBNode->getState();
@@ -301,7 +301,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
       // Ensure that the return type matches the type of the returned Expr.
       if (wasDifferentDeclUsedForInlining(Call, calleeCtx)) {
         QualType ReturnedTy =
-          CallEvent::getDeclaredResultType(calleeCtx->getDecl());
+            CallEvent::getDeclaredResultType(calleeCtx->getDecl());
         if (!ReturnedTy.isNull()) {
           if (const Expr *Ex = dyn_cast<Expr>(CE)) {
             V = adjustReturnValue(V, Ex->getType(), ReturnedTy,
@@ -316,7 +316,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     // Bind the constructed object value to CXXConstructExpr.
     if (const CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(CE)) {
       loc::MemRegionVal This =
-        svalBuilder.getCXXThis(CCE->getConstructor()->getParent(), calleeCtx);
+          svalBuilder.getCXXThis(CCE->getConstructor()->getParent(), calleeCtx);
       SVal ThisV = state->getSVal(This);
       ThisV = state->getSVal(ThisV.castAs<Loc>());
       state = state->BindExpr(CCE, callerCtx, ThisV);
@@ -419,8 +419,8 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     } else if (CE &&
                !(isa<CXXNewExpr>(CE) && // Called when visiting CXXNewExpr.
                  AMgr.getAnalyzerOptions().MayInlineCXXAllocator)) {
-      getCheckerManager().runCheckersForPostStmt(Dst, DstPostCall, CE,
-                                                 *this, /*wasInlined=*/true);
+      getCheckerManager().runCheckersForPostStmt(Dst, DstPostCall, CE, *this,
+                                                 /*wasInlined=*/true);
     } else {
       Dst.insert(DstPostCall);
     }
@@ -456,7 +456,7 @@ bool ExprEngine::isHuge(AnalysisDeclContext *ADC) const {
 }
 
 void ExprEngine::examineStackFrames(const Decl *D, const LocationContext *LCtx,
-                               bool &IsRecursive, unsigned &StackDepth) {
+                                    bool &IsRecursive, unsigned &StackDepth) {
   IsRecursive = false;
   StackDepth = 0;
 
@@ -489,14 +489,14 @@ void ExprEngine::examineStackFrames(const Decl *D, const LocationContext *LCtx,
 // This is the map from the receiver region to a bool, specifying either we
 // consider this region's information precise or not along the given path.
 namespace {
-  enum DynamicDispatchMode {
-    DynamicDispatchModeInlined = 1,
-    DynamicDispatchModeConservative
-  };
+enum DynamicDispatchMode {
+  DynamicDispatchModeInlined = 1,
+  DynamicDispatchModeConservative
+};
 } // end anonymous namespace
 
-REGISTER_MAP_WITH_PROGRAMSTATE(DynamicDispatchBifurcationMap,
-                               const MemRegion *, unsigned)
+REGISTER_MAP_WITH_PROGRAMSTATE(DynamicDispatchBifurcationMap, const MemRegion *,
+                               unsigned)
 REGISTER_TRAIT_WITH_PROGRAMSTATE(CTUDispatchBifurcation, bool)
 
 void ExprEngine::ctuBifurcate(const CallEvent &Call, const Decl *D,
@@ -540,9 +540,8 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
     const BlockDataRegion *BR = cast<BlockCall>(Call).getBlockRegion();
     assert(BR && "If we have the block definition we should have its region");
     AnalysisDeclContext *BlockCtx = AMgr.getAnalysisDeclContext(D);
-    ParentOfCallee = BlockCtx->getBlockInvocationContext(CallerSFC,
-                                                         cast<BlockDecl>(D),
-                                                         BR);
+    ParentOfCallee =
+        BlockCtx->getBlockInvocationContext(CallerSFC, cast<BlockDecl>(D), BR);
   }
 
   // This may be NULL, but that's fine.
@@ -622,8 +621,7 @@ void ExprEngine::VisitCallExpr(const CallExpr *CE, ExplodedNode *Pred,
   // the created nodes in 'Dst'.
   // Note that if the call was inlined, dstCallEvaluated will be empty.
   // The post-CallExpr check will occur in processCallExit.
-  getCheckerManager().runCheckersForPostStmt(dst, dstCallEvaluated, CE,
-                                             *this);
+  getCheckerManager().runCheckersForPostStmt(dst, dstCallEvaluated, CE, *this);
 }
 
 ProgramStateRef ExprEngine::finishArgumentConstruction(ProgramStateRef State,
@@ -641,7 +639,8 @@ ProgramStateRef ExprEngine::finishArgumentConstruction(ProgramStateRef State,
       SVal VV = *V;
       (void)VV;
       assert(cast<VarRegion>(VV.castAs<loc::MemRegionVal>().getRegion())
-                 ->getStackFrame()->getParent()
+                 ->getStackFrame()
+                 ->getParent()
                  ->getStackFrame() == LC->getStackFrame());
       State = finishObjectConstruction(State, {E, I}, LC);
     }
@@ -680,8 +679,7 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
 
   // Run any pre-call checks using the generic call interface.
   ExplodedNodeSet dstPreVisit;
-  getCheckerManager().runCheckersForPreCall(dstPreVisit, Pred,
-                                            Call, *this);
+  getCheckerManager().runCheckersForPreCall(dstPreVisit, Pred, Call, *this);
 
   // Actually evaluate the function call.  We try each of the checkers
   // to see if the can evaluate the function call, and get a callback at
@@ -723,7 +721,8 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
         if (Pointee.isConstQualified() || Pointee->isVoidType())
           continue;
         if (const MemRegion *MR = Call.getArgSVal(Arg).getAsRegion())
-          Escaped.emplace_back(loc::MemRegionVal(MR), State->getSVal(MR, Pointee));
+          Escaped.emplace_back(loc::MemRegionVal(MR),
+                               State->getSVal(MR, Pointee));
       }
     }
 
@@ -756,7 +755,8 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
       return State->BindExpr(E, LCtx, Msg->getReceiverSVal());
     }
     }
-  } else if (const CXXConstructorCall *C = dyn_cast<CXXConstructorCall>(&Call)){
+  } else if (const CXXConstructorCall *C =
+                 dyn_cast<CXXConstructorCall>(&Call)) {
     SVal ThisV = C->getCXXThisVal();
     ThisV = State->getSVal(ThisV.castAs<Loc>());
     return State->BindExpr(E, LCtx, ThisV);
@@ -781,7 +781,8 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     // the structure is a product of conservative evaluation
     // and therefore contains nothing interesting at this point.
     RegionAndSymbolInvalidationTraits ITraits;
-    ITraits.setTrait(TargetR,
+    ITraits.setTrait(
+        TargetR,
         RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
     State = State->invalidateRegions(TargetR, E, Count, LCtx,
                                      /* CausesPointerEscape=*/false, nullptr,
@@ -829,7 +830,8 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 // Conservatively evaluate call by invalidating regions and binding
 // a conjured return value.
 void ExprEngine::conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
-                                      ExplodedNode *Pred, ProgramStateRef State) {
+                                      ExplodedNode *Pred,
+                                      ProgramStateRef State) {
   State = Call.invalidateRegions(currBldrCtx->blockCount(), State);
   State = bindReturnValue(Call, Pred->getLocationContext(), State);
 
@@ -862,8 +864,8 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     const CXXConstructExpr *CtorExpr = Ctor.getOriginExpr();
 
     auto CCE = getCurrentCFGElement().getAs<CFGConstructor>();
-    const ConstructionContext *CC = CCE ? CCE->getConstructionContext()
-                                        : nullptr;
+    const ConstructionContext *CC =
+        CCE ? CCE->getConstructionContext() : nullptr;
 
     if (llvm::isa_and_nonnull<NewAllocatedObjectConstructionContext>(CC) &&
         !Opts.MayInlineCXXAllocator)
@@ -931,8 +933,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     }
 
     // Allow disabling temporary destructor inlining with a separate option.
-    if (CallOpts.IsTemporaryCtorOrDtor &&
-        !Opts.MayInlineCXXTemporaryDtors)
+    if (CallOpts.IsTemporaryCtorOrDtor && !Opts.MayInlineCXXTemporaryDtors)
       return CIP_DisallowedOnce;
 
     // If we did not find the correct this-region, it would be pointless
@@ -974,8 +975,7 @@ static bool hasMember(const ASTContext &Ctx, const CXXRecordDecl *RD,
 /// Our heuristic for this is whether it contains a method named 'begin()' or a
 /// nested type named 'iterator' or 'iterator_category'.
 static bool isContainerClass(const ASTContext &Ctx, const CXXRecordDecl *RD) {
-  return hasMember(Ctx, RD, "begin") ||
-         hasMember(Ctx, RD, "iterator") ||
+  return hasMember(Ctx, RD, "begin") || hasMember(Ctx, RD, "iterator") ||
          hasMember(Ctx, RD, "iterator_category");
 }
 
@@ -984,8 +984,7 @@ static bool isContainerClass(const ASTContext &Ctx, const CXXRecordDecl *RD) {
 ///
 /// We generally do a poor job modeling most containers right now, and might
 /// prefer not to inline their methods.
-static bool isContainerMethod(const ASTContext &Ctx,
-                              const FunctionDecl *FD) {
+static bool isContainerMethod(const ASTContext &Ctx, const FunctionDecl *FD) {
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD))
     return isContainerClass(Ctx, MD->getParent());
   return false;
@@ -1001,7 +1000,7 @@ static bool isCXXSharedPtrDtor(const FunctionDecl *FD) {
   const CXXRecordDecl *RD = Dtor->getParent();
   if (const IdentifierInfo *II = RD->getDeclName().getAsIdentifierInfo())
     if (II->isStr("shared_ptr"))
-        return true;
+      return true;
 
   return false;
 }
@@ -1266,17 +1265,16 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
   conservativeEvalCall(*Call, Bldr, Pred, State);
 }
 
-void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
-                               const CallEvent &Call, const Decl *D,
-                               NodeBuilder &Bldr, ExplodedNode *Pred) {
+void ExprEngine::BifurcateCall(const MemRegion *BifurReg, const CallEvent &Call,
+                               const Decl *D, NodeBuilder &Bldr,
+                               ExplodedNode *Pred) {
   assert(BifurReg);
   BifurReg = BifurReg->StripCasts();
 
   // Check if we've performed the split already - note, we only want
   // to split the path once per memory region.
   ProgramStateRef State = Pred->getState();
-  const unsigned *BState =
-                        State->get<DynamicDispatchBifurcationMap>(BifurReg);
+  const unsigned *BState = State->get<DynamicDispatchBifurcationMap>(BifurReg);
   if (BState) {
     // If we are on "inline path", keep inlining if possible.
     if (*BState == DynamicDispatchModeInlined)
@@ -1290,14 +1288,12 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
 
   // If we got here, this is the first time we process a message to this
   // region, so split the path.
-  ProgramStateRef IState =
-      State->set<DynamicDispatchBifurcationMap>(BifurReg,
-                                               DynamicDispatchModeInlined);
+  ProgramStateRef IState = State->set<DynamicDispatchBifurcationMap>(
+      BifurReg, DynamicDispatchModeInlined);
   ctuBifurcate(Call, D, Bldr, Pred, IState);
 
-  ProgramStateRef NoIState =
-      State->set<DynamicDispatchBifurcationMap>(BifurReg,
-                                               DynamicDispatchModeConservative);
+  ProgramStateRef NoIState = State->set<DynamicDispatchBifurcationMap>(
+      BifurReg, DynamicDispatchModeConservative);
   conservativeEvalCall(Call, Bldr, Pred, NoIState);
 
   NumOfDynamicDispatchPathSplits++;
@@ -1312,7 +1308,8 @@ void ExprEngine::VisitReturnStmt(const ReturnStmt *RS, ExplodedNode *Pred,
 
   if (RS->getRetValue()) {
     for (ExplodedNodeSet::iterator it = dstPreVisit.begin(),
-                                  ei = dstPreVisit.end(); it != ei; ++it) {
+                                   ei = dstPreVisit.end();
+         it != ei; ++it) {
       B.generateNode(RS, *it, (*it)->getState());
     }
   }
