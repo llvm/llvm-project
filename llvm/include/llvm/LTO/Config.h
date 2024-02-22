@@ -60,7 +60,7 @@ struct Config {
   bool VerifyEach = false;
   bool DisableVerify = false;
 
-  /// Use pre-link pipeline.
+  /// Use pre-link optimization pipeline.
   bool UsePreLinkPipeline = false;
 
   /// Flag to indicate that the optimizer should not assume builtins are present
