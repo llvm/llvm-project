@@ -885,13 +885,7 @@ static Value rewriteI8ToI4Trunc(PatternRewriter &rewriter, Location loc,
   assert(srcVecType.getElementType().isSignlessInteger(8) &&
          "Expected i8 type");
 
-  // 1. Zero out the upper side of each i8 element.
-  constexpr int8_t i8BitMask = 0x0F;
-  Value zeroOutMask = rewriter.create<arith::ConstantOp>(
-      loc, DenseElementsAttr::get(srcVecType, i8BitMask));
-  Value zeroOutSrc = rewriter.create<arith::AndIOp>(loc, srcValue, zeroOutMask);
-
-  // 2. De-interleave low and high i8 elements.
+  // 1. De-interleave low and high i8 elements.
   int64_t vecDimSize = srcVecType.getShape().back();
   SmallVector<int64_t> deinterleaveLowMaskValues;
   SmallVector<int64_t> deinterleaveHighMaskValues;
@@ -903,21 +897,30 @@ static Value rewriteI8ToI4Trunc(PatternRewriter &rewriter, Location loc,
   }
 
   auto lowShuffleOp = rewriter.create<vector::ShuffleOp>(
-      loc, zeroOutSrc, zeroOutSrc,
+      loc, srcValue, srcValue,
       rewriter.getI64ArrayAttr(deinterleaveLowMaskValues));
   auto highShuffleOp = rewriter.create<vector::ShuffleOp>(
-      loc, zeroOutSrc, zeroOutSrc,
+      loc, srcValue, srcValue,
       rewriter.getI64ArrayAttr(deinterleaveHighMaskValues));
 
-  // 3. Move high i4 values to upper side of the byte.
+  // 2. Move high i4 values to upper side of the byte.
   constexpr int8_t bitsToShift = 4;
   VectorType deinterI8VecType = highShuffleOp.getResultVectorType();
   auto shiftValues = rewriter.create<arith::ConstantOp>(
       loc, DenseElementsAttr::get(deinterI8VecType, bitsToShift));
-  auto shlHighOp = rewriter.create<arith::ShLIOp>(loc, highShuffleOp, shiftValues);
+  Value shlHigh =
+      rewriter.create<arith::ShLIOp>(loc, highShuffleOp, shiftValues);
+
+  // 3. Zero out the upper side of each low i8 element.
+  constexpr int8_t i8LowBitMask = 0x0F;
+  Value zeroOutMask = rewriter.create<arith::ConstantOp>(
+      loc,
+      DenseElementsAttr::get(lowShuffleOp.getResultVectorType(), i8LowBitMask));
+  Value zeroOutLow =
+      rewriter.create<arith::AndIOp>(loc, lowShuffleOp, zeroOutMask);
 
   // 4. Merge high and low i4 values.
-  auto mergedHiLowOp = rewriter.create<arith::OrIOp>(loc, shlHighOp, lowShuffleOp);
+  auto mergedHiLowOp = rewriter.create<arith::OrIOp>(loc, shlHigh, zeroOutLow);
 
   // 5. Generate a bitcast vector<Xxi8> -> vector<2Xxi4>.
   auto i4VecType = srcVecType.cloneWith(std::nullopt, rewriter.getI4Type());
@@ -1130,8 +1133,7 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
     if (srcVecType.getRank() != 1)
       return failure();
 
-    if (failed(
-            commonConversionPrecondition(rewriter, srcVecType, truncOp)))
+    if (failed(commonConversionPrecondition(rewriter, srcVecType, truncOp)))
       return failure();
 
     // Check general alignment preconditions. We invert the src/dst type order
@@ -1143,7 +1145,8 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
     // Create a new iX -> i8 truncation op.
     Location loc = truncOp.getLoc();
     auto i8VecType = srcVecType.cloneWith(std::nullopt, rewriter.getI8Type());
-    Value i8TruncVal = rewriter.create<arith::TruncIOp>(loc, i8VecType, srcValue);
+    Value i8TruncVal =
+        rewriter.create<arith::TruncIOp>(loc, i8VecType, srcValue);
 
     // Rewrite the i8 -> i4 truncation part.
     Value subByteTrunc = rewriteI8ToI4Trunc(rewriter, loc, i8TruncVal);
@@ -1153,7 +1156,6 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
     return success();
   }
 };
-
 
 /// Rewrite a sub-byte vector transpose into a sequence of instructions that
 /// perform the transpose on wider (byte) element types.
@@ -1228,8 +1230,8 @@ void vector::populateVectorNarrowTypeRewritePatterns(
   // generate better performance for aligned cases.
   patterns.add<RewriteAlignedSubByteIntSignedExt<arith::ExtSIOp>,
                RewriteAlignedSubByteIntSignedExt<arith::SIToFPOp>,
-               RewriteAlignedSubByteIntTrunc>(
-      patterns.getContext(), benefit.getBenefit() + 1);
+               RewriteAlignedSubByteIntTrunc>(patterns.getContext(),
+                                              benefit.getBenefit() + 1);
 }
 
 void vector::populateVectorTransposeNarrowTypeRewritePatterns(
