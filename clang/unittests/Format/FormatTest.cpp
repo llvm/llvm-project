@@ -13503,8 +13503,8 @@ TEST_F(FormatTest, IncorrectCodeUnbalancedBraces) {
   verifyFormat("{");
   verifyFormat("#})");
   verifyNoCrash("(/**/[:!] ?[).");
-  verifyNoCrash("struct X{"
-                "  operator iunt("
+  verifyNoCrash("struct X {\n"
+                "  operator iunt(\n"
                 "};");
 }
 
