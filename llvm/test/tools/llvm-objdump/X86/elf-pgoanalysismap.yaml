@@ -47,9 +47,9 @@ Symbols:
 
 # RUN: yaml2obj %s --docnum=2 -o %t2
 # RUN: llvm-objdump %t2 -d --symbolize-operands --no-show-raw-insn --no-leading-addr | \
-# RUN:   FileCheck %s --check-prefix=ENTRYCOUNT-BLOCKFREQ
+# RUN:   FileCheck --match-full-lines %s --check-prefix=ENTRYCOUNT-BLOCKFREQ
 # RUN: llvm-objdump %t2 -d --symbolize-operands --pretty-pgo-analysis-map --no-show-raw-insn --no-leading-addr | \
-# RUN:   FileCheck %s --check-prefix=ENTRYCOUNT-BLOCKFREQ-PRETTY
+# RUN:   FileCheck --match-full-lines %s --check-prefix=ENTRYCOUNT-BLOCKFREQ-PRETTY
 
 --- !ELF
 FileHeader:
@@ -117,9 +117,9 @@ Symbols:
 
 # RUN: yaml2obj %s --docnum=3 -o %t3
 # RUN: llvm-objdump %t3 -d --symbolize-operands --no-show-raw-insn --no-leading-addr | \
-# RUN:   FileCheck %s --check-prefix=ENTRY-FREQ-PROB
+# RUN:   FileCheck --match-full-lines %s --check-prefix=ENTRY-FREQ-PROB
 # RUN: llvm-objdump %t3 -d --symbolize-operands --pretty-pgo-analysis-map --no-show-raw-insn --no-leading-addr | \
-# RUN:   FileCheck %s --check-prefix=ENTRY-FREQ-PROB-PRETTY
+# RUN:   FileCheck --match-full-lines %s --check-prefix=ENTRY-FREQ-PROB-PRETTY
 # RUN: llvm-objdump %t3 -d --pretty-pgo-analysis-map --no-show-raw-insn --no-leading-addr 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=MISSING-SYMBOLIZE-OPERANDS
 
