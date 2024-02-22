@@ -257,7 +257,11 @@ class MCDCRecordProcessor {
   /// Actual executed Test Vectors for the boolean expression, based on
   /// ExecutedTestVectorBitmap.
   MCDCRecord::TestVectors ExecVectors;
+
+  /// Temporary use
   std::array<MCDCRecord::TestVectors, 2> ExecVectorsByCond;
+
+  /// Number of False items in ExecVectors
   unsigned NumExecVectorsF;
 
 public:
@@ -311,6 +315,7 @@ private:
     MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
     buildTestVector(TV, 0, 0);
 
+    // Fill ExecVectors order by False items and True items.
     auto &[ExecVectorsF, ExecVectorsT] = ExecVectorsByCond;
     NumExecVectorsF = ExecVectorsF.size();
     ExecVectors = std::move(ExecVectorsF);
