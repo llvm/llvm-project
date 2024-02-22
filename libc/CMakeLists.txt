@@ -57,9 +57,14 @@ if(LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
   endif()
 endif()
 
+foreach(name default ${LLVM_RUNTIME_TARGETS} ${LLVM_EXTRA_RUNTIME_TARGETS})
+  if("libc" IN_LIST LLVM_ENABLE_RUNTIMES OR "libc" IN_LIST RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES)
+    set(LIBC_RUNTIMES_BUILD ON)
+  endif()
+endforeach()
+
 option(LIBC_HDRGEN_ONLY "Only build the 'libc-hdrgen' executable" OFF)
-if(("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT LLVM_RUNTIMES_BUILD) OR 
-   LIBC_HDRGEN_ONLY)
+if((LIBC_RUNTIMES_BUILD AND NOT LLVM_RUNTIMES_BUILD) OR LIBC_HDRGEN_ONLY)
   # When libc is build as part of the runtimes/bootstrap build's CMake run, we
   # only need to build the host tools to build the libc. So, we just do enough
   # to build libc-hdrgen and return.
