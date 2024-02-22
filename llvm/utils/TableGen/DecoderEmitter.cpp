@@ -28,6 +28,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -49,6 +50,13 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "decoder-emitter"
+
+extern cl::OptionCategory DisassemblerEmitterCat;
+
+cl::opt<bool> DecoderEmitterSuppressDuplicates(
+    "suppress-per-hwmode-duplicates",
+    cl::desc("Suppress duplication of instrs into per-HwMode decoder tables"),
+    cl::init(false), cl::cat(DisassemblerEmitterCat));
 
 namespace {
 
@@ -2496,10 +2504,15 @@ void DecoderEmitter::run(raw_ostream &o) {
       }
     }
     // This instruction is encoded the same on all HwModes. Emit it for all
-    // HwModes.
-    for (StringRef HwModeName : HwModeNames)
+    // HwModes by default, otherwise leave it in a single common table.
+    if (DecoderEmitterSuppressDuplicates) {
       NumberedEncodings.emplace_back(NumberedInstruction->TheDef,
-                                     NumberedInstruction, HwModeName);
+                                     NumberedInstruction, "AllModes");
+    } else {
+      for (StringRef HwModeName : HwModeNames)
+        NumberedEncodings.emplace_back(NumberedInstruction->TheDef,
+                                       NumberedInstruction, HwModeName);
+    }
   }
   for (const auto &NumberedAlias :
        RK.getAllDerivedDefinitions("AdditionalEncoding"))
