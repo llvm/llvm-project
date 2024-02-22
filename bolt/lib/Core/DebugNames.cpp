@@ -451,22 +451,7 @@ void DWARF5AcceleratorTable::writeEntries() {
 
 void DWARF5AcceleratorTable::writeAugmentationString() {
   // String needs to be multiple of 4 bytes.
-  support::endian::write(*AugStringtream, static_cast<uint8_t>('B'),
-                         llvm::endianness::little);
-  support::endian::write(*AugStringtream, static_cast<uint8_t>('O'),
-                         llvm::endianness::little);
-  support::endian::write(*AugStringtream, static_cast<uint8_t>('L'),
-                         llvm::endianness::little);
-  support::endian::write(*AugStringtream, static_cast<uint8_t>('T'),
-                         llvm::endianness::little);
-  support::endian::write(*AugStringtream, static_cast<uint8_t>('0'),
-                         llvm::endianness::little);
-  support::endian::write(*AugStringtream, static_cast<uint8_t>('0'),
-                         llvm::endianness::little);
-  support::endian::write(*AugStringtream, static_cast<uint8_t>('0'),
-                         llvm::endianness::little);
-  support::endian::write(*AugStringtream, static_cast<uint8_t>('0'),
-                         llvm::endianness::little);
+  *AugStringtream << "BOLT";
   AugmentationStringSize = AugStringBuffer->size();
 }
 
