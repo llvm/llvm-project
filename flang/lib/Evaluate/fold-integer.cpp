@@ -719,6 +719,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       // CharacterUtils<2>::ICHAR(). Can't find a work-around,
       // so remove the FromInt64 error checking lambda that
       // seems to have caused the proble.
+                      (void)FromInt64;
                       [](const Scalar<Char> &c) {
                         return CharacterUtils<Char::kind>::ICHAR(
                             CharacterUtils<Char::kind>::Resize(c, 1));
