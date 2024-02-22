@@ -160,6 +160,25 @@ enum LanguageRuntimeDescriptionDisplayVerbosity {
                                                       // output
 };
 
+// Loading mode for Swift module files
+typedef enum SwiftModuleLoadingMode {
+  eSwiftModuleLoadingModePreferSerialized, // Prefer loading via .swiftmodule,
+                                           // falling back to .swiftinterface
+  eSwiftModuleLoadingModePreferInterface,  // Prefer Loading via
+                                           // .swiftinterface, falling back to
+                                           // .swiftmodule
+  eSwiftModuleLoadingModeOnlySerialized,   // Load via .swiftmodule only
+  eSwiftModuleLoadingModeOnlyInterface,    // Load via .swiftinterface only
+} SwiftModuleLoadingMode;
+
+// BEGIN SWIFT
+enum EnableSwiftCxxInterop {
+  eAutoDetectSwiftCxxInterop,
+  eEnableSwiftCxxInterop,
+  eDisableSwiftCxxInterop
+};
+// END SWIFT
+
 // Loading modules from memory
 enum MemoryModuleLoadLevel {
   eMemoryModuleLoadLevelMinimal,  // Load sections only

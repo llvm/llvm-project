@@ -1,6 +1,6 @@
 // rm -rf %t && mkdir %t
 
-// RUN: %clang_cc1 -fmodules -emit-module -fmodule-name=mod %S/Inputs/pch-shared-module/module.modulemap -o %t/mod.pcm
+// RUN: %clang_cc1 -fmodules -emit-module -fmodule-related-to-pch -fmodule-name=mod %S/Inputs/pch-shared-module/module.modulemap -o %t/mod.pcm
 
 // RUN: %clang_cc1 -fmodules -emit-pch %S/Inputs/pch-shared-module/pch.h -o %t/pch.h.gch \
 // RUN:   -fmodule-file=%t/mod.pcm -fmodule-map-file=%S/Inputs/pch-shared-module/module.modulemap

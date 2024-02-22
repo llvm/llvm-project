@@ -464,17 +464,23 @@ static std::error_code rename_internal(HANDLE FromHandle, const Twine &To,
                                   (ToWide.size() * sizeof(wchar_t)));
   FILE_RENAME_INFO &RenameInfo =
       *reinterpret_cast<FILE_RENAME_INFO *>(RenameInfoBuf.data());
-  RenameInfo.ReplaceIfExists = ReplaceIfExists;
+  RenameInfo.Flags = FILE_RENAME_FLAG_POSIX_SEMANTICS
+                   | (ReplaceIfExists ? FILE_RENAME_FLAG_REPLACE_IF_EXISTS : 0);
   RenameInfo.RootDirectory = 0;
   RenameInfo.FileNameLength = ToWide.size() * sizeof(wchar_t);
   std::copy(ToWide.begin(), ToWide.end(), &RenameInfo.FileName[0]);
 
   SetLastError(ERROR_SUCCESS);
-  if (!SetFileInformationByHandle(FromHandle, FileRenameInfo, &RenameInfo,
+  if (!SetFileInformationByHandle(FromHandle, FileRenameInfoEx, &RenameInfo,
                                   RenameInfoBuf.size())) {
     unsigned Error = GetLastError();
     if (Error == ERROR_SUCCESS)
       Error = ERROR_CALL_NOT_IMPLEMENTED; // Wine doesn't always set error code.
+    else if (Error == ERROR_INVALID_PARAMETER) {
+      // This operation can fail on file systems that do not properly support
+      // the extended POSIX semantics for renames.
+      Error = ERROR_CALL_NOT_IMPLEMENTED;
+    }
     return mapWindowsError(Error);
   }
 
@@ -1321,8 +1327,14 @@ Expected<size_t> readNativeFileSlice(file_t FileHandle,
   return readNativeFileImpl(FileHandle, Buf, &Overlapped);
 }
 
-std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
-  DWORD Flags = LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY;
+std::error_code getRealPathFromHandle(file_t Handle,
+                                      SmallVectorImpl<char> &RealPath) {
+  return realPathFromHandle(Handle, RealPath);
+}
+
+std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout, bool Exclusive) {
+  DWORD Flags = Exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
+  Flags |= LOCKFILE_FAIL_IMMEDIATELY;
   OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
   auto Start = std::chrono::steady_clock::now();
@@ -1332,6 +1344,8 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
       return std::error_code();
     DWORD Error = ::GetLastError();
     if (Error == ERROR_LOCK_VIOLATION) {
+      if (Timeout.count() == 0)
+        break;
       ::Sleep(1);
       continue;
     }
@@ -1340,8 +1354,8 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
   return mapWindowsError(ERROR_LOCK_VIOLATION);
 }
 
-std::error_code lockFile(int FD) {
-  DWORD Flags = LOCKFILE_EXCLUSIVE_LOCK;
+std::error_code lockFile(int FD, bool Exclusive) {
+  DWORD Flags = Exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
   OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
   if (::LockFileEx(File, Flags, 0, MAXDWORD, MAXDWORD, &OV))

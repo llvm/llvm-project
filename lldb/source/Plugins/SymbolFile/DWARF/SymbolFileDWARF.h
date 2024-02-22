@@ -20,6 +20,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Threading.h"
 
+#include "lldb/Host/Config.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Expression/DWARFExpressionList.h"
@@ -44,6 +45,11 @@ class DWARFASTParserClang;
 namespace llvm {
 class DWARFDebugAbbrev;
 } // namespace llvm
+
+namespace lldb_private {
+  class ClangASTImporter;
+  class SwiftASTContext;
+}
 
 namespace lldb_private::plugin {
 namespace dwarf {
@@ -83,6 +89,10 @@ public:
   friend class DWARFCompileUnit;
   friend class DWARFDIE;
   friend class DWARFASTParser;
+  friend class ::DWARFASTParserClang;
+#ifdef LLDB_ENABLE_SWIFT
+  friend class ::DWARFASTParserSwift;
+#endif
 
   // Static Functions
   static void Initialize();
@@ -108,6 +118,8 @@ public:
   void InitializeObject() override;
 
   // Compile Unit function calls
+  llvm::VersionTuple
+  GetProducerVersion(CompileUnit &comp_unit) override;
 
   lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) override;
 
@@ -200,6 +212,9 @@ public:
   CompilerDeclContext FindNamespace(ConstString name,
                                     const CompilerDeclContext &parent_decl_ctx,
                                     bool only_root_namespaces) override;
+
+  bool GetCompileOption(const char *option, std::string &value,
+                        CompileUnit *cu = nullptr) override;
 
   void PreloadSymbols() override;
 
@@ -500,6 +515,15 @@ protected:
 
   void UpdateExternalModuleListIfNeeded();
 
+  lldb_private::ClangASTImporter &GetClangASTImporter();
+
+  lldb_private::SwiftASTContext *
+  GetSwiftASTContextForCU(Status *error, DWARFCompileUnit &cu);
+
+  lldb::user_id_t GetTypeUIDFromTypeAttribute(const DWARFFormValue &type_attr);
+
+  lldb::TypeSP ResolveTypeFromAttribute(const DWARFFormValue &type_attr);
+
   void BuildCuTranslationTable();
   std::optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
@@ -527,6 +551,7 @@ protected:
 
   std::unique_ptr<llvm::DWARFDebugAbbrev> m_abbr;
   std::unique_ptr<GlobalVariableMap> m_global_aranges_up;
+  std::unique_ptr<lldb_private::ClangASTImporter> m_clang_ast_importer_up;
 
   typedef std::unordered_map<lldb::offset_t, DebugMacrosSP> DebugMacrosMap;
   DebugMacrosMap m_debug_macros_map;

@@ -33,9 +33,11 @@ class Tool;
 struct CrashReportInfo {
   StringRef Filename;
   StringRef VFSPath;
+  StringRef IndexStorePath;
 
-  CrashReportInfo(StringRef Filename, StringRef VFSPath)
-      : Filename(Filename), VFSPath(VFSPath) {}
+  CrashReportInfo(StringRef Filename, StringRef VFSPath,
+                  StringRef IndexStorePath)
+      : Filename(Filename), VFSPath(VFSPath), IndexStorePath(IndexStorePath) {}
 };
 
 // Encodes the kind of response file supported for a command invocation.
@@ -143,6 +145,7 @@ class Command {
 
   /// See Command::setEnvironment
   std::vector<const char *> Environment;
+  std::vector<const char *> EnvironmentDisplay;
 
   /// Optional redirection for stdin, stdout, stderr.
   std::vector<std::optional<std::string>> RedirectFiles;
@@ -218,6 +221,9 @@ public:
     Arguments = std::move(List);
   }
 
+  /// Sets the environment to display in `-###`.
+  virtual void setEnvironmentDisplay(llvm::ArrayRef<const char *> Display);
+
   void replaceExecutable(const char *Exe) { Executable = Exe; }
 
   const char *getExecutable() const { return Executable; }
@@ -248,6 +254,24 @@ public:
              ArrayRef<InputInfo> Inputs,
              ArrayRef<InputInfo> Outputs = std::nullopt,
              const char *PrependArg = nullptr);
+
+  void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
+             CrashReportInfo *CrashInfo = nullptr) const override;
+
+  int Execute(ArrayRef<std::optional<StringRef>> Redirects, std::string *ErrMsg,
+              bool *ExecutionFailed) const override;
+
+  void setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) override;
+};
+
+/// Automatically cache -cc1 commands when possible.
+class CachingCC1Command : public CC1Command {
+public:
+  CachingCC1Command(const Action &Source, const Tool &Creator,
+                    ResponseFileSupport ResponseSupport, const char *Executable,
+                    const llvm::opt::ArgStringList &Arguments,
+                    ArrayRef<InputInfo> Inputs,
+                    ArrayRef<InputInfo> Outputs = std::nullopt);
 
   void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
              CrashReportInfo *CrashInfo = nullptr) const override;

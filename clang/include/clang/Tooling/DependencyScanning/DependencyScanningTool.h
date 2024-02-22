@@ -12,14 +12,26 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
+#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/CAS/CASID.h"
+#include "llvm/Support/PrefixMapper.h"
 #include <optional>
 #include <string>
 #include <vector>
 
+namespace llvm {
+namespace cas {
+class ObjectProxy;
+} // namespace cas
+} // namespace llvm
+
 namespace clang {
+namespace cas {
+class IncludeTreeRoot;
+}
 namespace tooling {
 namespace dependencies {
 
@@ -54,6 +66,12 @@ struct TranslationUnitDeps {
   /// This may include modules with a different context hash when it can be
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
+
+  /// The CASID for input file dependency tree.
+  std::optional<std::string> CASFileSystemRootID;
+
+  /// The include-tree for input file dependency tree.
+  std::optional<std::string> IncludeTreeID;
 
   /// The sequence of commands required to build the translation unit. Commands
   /// should be executed in order.
@@ -116,6 +134,35 @@ public:
                                         MakeformatOutputPath);
   }
 
+  /// Collect dependency tree.
+  llvm::Expected<llvm::cas::ObjectProxy>
+  getDependencyTree(const std::vector<std::string> &CommandLine, StringRef CWD);
+
+  /// If \p DiagGenerationAsCompilation is true it will generate error
+  /// diagnostics same way as the normal compilation, with "N errors generated"
+  /// message and the serialized diagnostics file emitted if the
+  /// \p DiagOpts.DiagnosticSerializationFile setting is set for the invocation.
+  llvm::Expected<llvm::cas::ObjectProxy>
+  getDependencyTreeFromCompilerInvocation(
+      std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
+      DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
+      bool DiagGenerationAsCompilation);
+
+  Expected<cas::IncludeTreeRoot>
+  getIncludeTree(cas::ObjectStore &DB,
+                 const std::vector<std::string> &CommandLine, StringRef CWD,
+                 LookupModuleOutputCallback LookupModuleOutput);
+
+  /// If \p DiagGenerationAsCompilation is true it will generate error
+  /// diagnostics same way as the normal compilation, with "N errors generated"
+  /// message and the serialized diagnostics file emitted if the
+  /// \p DiagOpts.DiagnosticSerializationFile setting is set for the invocation.
+  Expected<cas::IncludeTreeRoot> getIncludeTreeFromCompilerInvocation(
+      cas::ObjectStore &DB, std::shared_ptr<CompilerInvocation> Invocation,
+      StringRef CWD, LookupModuleOutputCallback LookupModuleOutput,
+      DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
+      bool DiagGenerationAsCompilation);
+
   /// Given a Clang driver command-line for a translation unit, gather the
   /// modular dependencies and return the information needed for explicit build.
   ///
@@ -143,6 +190,31 @@ public:
       StringRef ModuleName, const std::vector<std::string> &CommandLine,
       StringRef CWD, const llvm::DenseSet<ModuleID> &AlreadySeen,
       LookupModuleOutputCallback LookupModuleOutput);
+
+  ScanningOutputFormat getScanningFormat() const {
+    return Worker.getScanningFormat();
+  }
+
+  const CASOptions &getCASOpts() const { return Worker.getCASOpts(); }
+
+  CachingOnDiskFileSystemPtr getCachingFileSystem() {
+    return Worker.getCASFS();
+  }
+
+  /// If \p DependencyScanningService enabled sharing of \p FileManager this
+  /// will return the same instance, otherwise it will create a new one for
+  /// each invocation.
+  llvm::IntrusiveRefCntPtr<FileManager> getOrCreateFileManager() const {
+    return Worker.getOrCreateFileManager();
+  }
+
+  static std::unique_ptr<DependencyActionController>
+  createActionController(DependencyScanningWorker &Worker,
+                         LookupModuleOutputCallback LookupModuleOutput);
+
+private:
+  std::unique_ptr<DependencyActionController>
+  createActionController(LookupModuleOutputCallback LookupModuleOutput);
 
 private:
   DependencyScanningWorker Worker;
@@ -179,6 +251,14 @@ public:
     ContextHash = std::move(Hash);
   }
 
+  void handleCASFileSystemRootID(std::string ID) override {
+    CASFileSystemRootID = std::move(ID);
+  }
+
+  void handleIncludeTreeID(std::string ID) override {
+    IncludeTreeID = std::move(ID);
+  }
+
   TranslationUnitDeps takeTranslationUnitDeps();
   ModuleDepsGraph takeModuleGraphDeps();
 
@@ -189,6 +269,8 @@ private:
   std::vector<ModuleID> DirectModuleDeps;
   std::vector<Command> Commands;
   std::string ContextHash;
+  std::optional<std::string> CASFileSystemRootID;
+  std::optional<std::string> IncludeTreeID;
   std::vector<std::string> OutputPaths;
   const llvm::DenseSet<ModuleID> &AlreadySeen;
 };

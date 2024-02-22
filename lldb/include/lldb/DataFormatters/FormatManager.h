@@ -64,6 +64,17 @@ public:
     }
   }
 
+  void EnableCategory(ConstString category_name,
+                      TypeCategoryMap::Position pos = TypeCategoryMap::Default,
+                      std::initializer_list<lldb::LanguageType> langs = {}) {
+    lldb::TypeCategoryImplSP category_sp;
+    if (m_categories_map.Get(category_name, category_sp) && category_sp) {
+      m_categories_map.Enable(category_sp, pos);
+      for (const lldb::LanguageType lang : langs)
+        category_sp->AddLanguage(lang);
+    }
+  }
+
   void DisableCategory(ConstString category_name) {
     m_categories_map.Disable(category_name);
   }
@@ -192,6 +203,7 @@ private:
   ConstString m_default_category_name;
   ConstString m_system_category_name;
   ConstString m_vectortypes_category_name;
+  ConstString m_runtime_synths_category_name;
 
   template <typename ImplSP>
   ImplSP Get(ValueObject &valobj, lldb::DynamicValueType use_dynamic);

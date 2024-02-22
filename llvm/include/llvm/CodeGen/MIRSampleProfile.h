@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/Discriminator.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 #include <string>
 
@@ -63,6 +64,8 @@ private:
   std::unique_ptr<MIRProfileLoader> MIRSampleLoader;
   /// Hold the information of the basic block frequency.
   MachineBlockFrequencyInfo *MBFI;
+
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
 };
 
 } // namespace llvm

@@ -86,6 +86,7 @@ extern "C"
     // TODO: dlsym won't work on Windows.
     void *dlsym(void* handle, const char* symbol);
     int (*ptr__tsan_get_report_loc_object_type)(void *report, unsigned long idx, const char **object_type);
+    int (*ptr__tsan_get_report_tag)(void *report, unsigned long *tag);
 }
 )";
 
@@ -98,6 +99,7 @@ struct {
     void *report;
     const char *description;
     int report_count;
+    unsigned long tag;
 
     void *sleep_trace[REPORT_TRACE_SIZE];
 
@@ -160,9 +162,13 @@ struct {
 } t = {0};
 
 ptr__tsan_get_report_loc_object_type = (typeof(ptr__tsan_get_report_loc_object_type))(void *)dlsym((void*)-2 /*RTLD_DEFAULT*/, "__tsan_get_report_loc_object_type");
+ptr__tsan_get_report_tag = (typeof(ptr__tsan_get_report_tag))(void *)dlsym((void*)-2 /*RTLD_DEFAULT*/, "__tsan_get_report_tag");
 
 t.report = __tsan_get_current_report();
 __tsan_get_report_data(t.report, &t.description, &t.report_count, &t.stack_count, &t.mop_count, &t.loc_count, &t.mutex_count, &t.thread_count, &t.unique_tid_count, t.sleep_trace, REPORT_TRACE_SIZE);
+
+if (ptr__tsan_get_report_tag)
+    ptr__tsan_get_report_tag(t.report, &t.tag);
 
 if (t.stack_count > REPORT_ARRAY_SIZE) t.stack_count = REPORT_ARRAY_SIZE;
 for (int i = 0; i < t.stack_count; i++) {
@@ -345,8 +351,11 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
   dict->AddIntegerItem("report_count",
                        main_value->GetValueForExpressionPath(".report_count")
                            ->GetValueAsUnsigned(0));
-  dict->AddItem("sleep_trace", CreateStackTrace(
-                                   main_value, ".sleep_trace"));
+  dict->AddItem("sleep_trace", StructuredData::ObjectSP(CreateStackTrace(
+                                   main_value, ".sleep_trace")));
+  dict->AddIntegerItem(
+      "tag",
+      main_value->GetValueForExpressionPath(".tag")->GetValueAsUnsigned(0));
 
   StructuredData::ArraySP stacks = ConvertToStructuredArray(
       main_value, ".stacks", ".stack_count",
@@ -489,7 +498,8 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
 }
 
 std::string
-InstrumentationRuntimeTSan::FormatDescription(StructuredData::ObjectSP report) {
+InstrumentationRuntimeTSan::FormatDescription(StructuredData::ObjectSP report,
+                                              bool &is_swift_access_race) {
   std::string description = std::string(report->GetAsDictionary()
                                             ->GetValueForKey("issue_type")
                                             ->GetAsString()
@@ -524,8 +534,18 @@ InstrumentationRuntimeTSan::FormatDescription(StructuredData::ObjectSP report) {
   } else if (description == "lock-order-inversion") {
     return "Lock order inversion (potential deadlock)";
   } else if (description == "external-race") {
+    auto tag = report->GetAsDictionary()
+                   ->GetValueForKey("tag")
+                   ->GetAsUnsignedInteger()
+                   ->GetValue();
+    static const unsigned long kSwiftAccessRaceTag = 0x1;
+    if (tag == kSwiftAccessRaceTag) {
+      is_swift_access_race = true;
+      return "Swift access race";
+    }
     return "Race on a library object";
   } else if (description == "swift-access-race") {
+    is_swift_access_race = true;
     return "Swift access race";
   }
 
@@ -619,9 +639,13 @@ InstrumentationRuntimeTSan::GenerateSummary(StructuredData::ObjectSP report) {
                                         ->GetValueForKey("description")
                                         ->GetAsString()
                                         ->GetValue());
+  bool is_swift_access_race = report->GetAsDictionary()
+                                  ->GetValueForKey("is_swift_access_race")
+                                  ->GetAsBoolean()
+                                  ->GetValue();
   bool skip_one_frame =
-      report->GetObjectForDotSeparatedPath("issue_type")->GetStringValue() ==
-      "external-race";
+      (report->GetObjectForDotSeparatedPath("issue_type")->GetStringValue() ==
+      "external-race") && (!is_swift_access_race);
 
   addr_t pc = 0;
   if (report->GetAsDictionary()
@@ -812,8 +836,12 @@ bool InstrumentationRuntimeTSan::NotifyBreakpointHit(
       "unknown thread sanitizer fault (unable to extract thread sanitizer "
       "report)";
   if (report) {
-    std::string issue_description = instance->FormatDescription(report);
+    bool is_swift_access_race = false;
+    std::string issue_description =
+        instance->FormatDescription(report, is_swift_access_race);
     report->GetAsDictionary()->AddStringItem("description", issue_description);
+    report->GetAsDictionary()->AddBooleanItem("is_swift_access_race",
+                                              is_swift_access_race);
     stop_reason_description = issue_description + " detected";
     report->GetAsDictionary()->AddStringItem("stop_description",
                                              stop_reason_description);

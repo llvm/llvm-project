@@ -510,6 +510,17 @@ def run_break_set_by_file_colon_line(
     return get_bpno_from_match(break_results)
 
 
+def run_break_set_by_exception(test, language, exception_typename=None):
+    command = "breakpoint set -E " + language
+    if exception_typename:
+        command += " --exception-typename " + exception_typename
+
+    break_results = run_break_set_command(test, command)
+    # No call to check_breakpoint_result as there's nothing to check. In
+    # particular, the exception breakpoint isn't yet guaranteed to be resolved.
+    return get_bpno_from_match(break_results)
+
+
 def run_break_set_command(test, command):
     """Run the command passed in - it must be some break set variant - and analyze the result.
     Returns a dictionary of information gleaned from the command-line results.
@@ -1526,6 +1537,83 @@ class RecursiveDecentFormatter(BasicFormatter):
                     BasicFormatter.format(self, child, buffer=output, indent=new_indent)
 
         return output.getvalue()
+
+
+def check_expression(test, frame, expression, expected_result, use_summary=True):
+    """Asserts that the result of evaluating the given expression gives the passed expected result"""
+    value = frame.EvaluateExpression(expression)
+    test.assertTrue(value.IsValid(), expression + "returned a valid value")
+    answer = value.GetSummary() if use_summary else value.GetValue()
+    report_str = "%s expected: %s got: %s" % (expression, expected_result, answer)
+    test.assertTrue(answer == expected_result, report_str)
+
+
+def check_variable(
+    test,
+    valobj,
+    use_dynamic=False,
+    summary=None,
+    value=None,
+    typename=None,
+    num_children=None,
+    use_synthetic=True,
+):
+    name = valobj.GetName()
+    test.assertTrue(
+        valobj.IsValid(), "variable %s is not valid" % (name if valobj else "<unknown>")
+    )
+    if use_dynamic:
+        valobj = valobj.GetDynamicValue(lldb.eDynamicCanRunTarget)
+        test.assertTrue(
+            valobj.IsValid(),
+            "dynamic value of %s is not valid" % (name if valobj else "<unknown>"),
+        )
+        test.assertTrue(
+            valobj.IsDynamic(),
+            "dynamic value of %s is not dynamic" % (name if valobj else "<unknown>"),
+        )
+    if use_synthetic:
+        valobj.SetPreferSyntheticValue(True)
+    if summary:
+        valobj_summary = valobj.GetSummary()
+        test.assertTrue(
+            valobj_summary == summary,
+            "expected summary: '%s' - actual summary: '%s'"
+            % (summary, valobj_summary if valobj else "<unknown>"),
+        )
+    if value:
+        valobj_value = valobj.GetValue()
+        test.assertTrue(
+            valobj_value == value,
+            "expected value: '%s' - actual value: '%s'"
+            % (value, valobj_value if valobj else "<unknown>"),
+        )
+    if typename:
+        valobj_typename = valobj.GetTypeName()
+        test.assertTrue(
+            valobj_typename == typename,
+            "expected typename: '%s' - actual typename: '%s'"
+            % (typename, valobj_typename if valobj else "<unknown>"),
+        )
+    if num_children:
+        valobj_num_children = valobj.GetNumChildren()
+        test.assertTrue(
+            valobj_num_children == num_children,
+            "expected num children: '%s' - actual num children: '%s'"
+            % (num_children, valobj_num_children if valobj else "<unknown>"),
+        )
+
+
+def check_children(test, valobj, thecallable):
+    test.assertTrue(
+        valobj.IsValid(),
+        "variable %s is not valid" % (valobj.GetName() if valobj else "<unknown>"),
+    )
+    i = 0
+    while i < valobj.GetNumChildren():
+        child = valobj.GetChildAtIndex(i)
+        test.assertTrue(thecallable(child, i), "child %d failed the test" % (i))
+        i = i + 1
 
 
 # ===========================================================

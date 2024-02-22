@@ -569,6 +569,9 @@ bool IOHandlerEditline::GetLines(StringList &lines, bool &interrupted) {
 #if LLDB_ENABLE_LIBEDIT
   }
 #endif
+  // BEGIN SWIFT
+  m_current_lines_ptr = NULL;
+  // END SWIFT
   return success;
 }
 

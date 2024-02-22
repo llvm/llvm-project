@@ -59,6 +59,7 @@ struct file_magic {
     offload_bundle,            ///< Clang offload bundle file
     offload_bundle_compressed, ///< Compressed clang offload bundle file
     spirv_object,              ///< A binary SPIR-V file
+    cas_id,                    ///< Embedded CAS ID // MCCAS
   };
 
   bool is_object() const { return V != unknown; }
@@ -81,6 +82,9 @@ file_magic identify_magic(StringRef magic);
 /// @returns errc::success if result has been successfully set, otherwise a
 ///          platform-specific error_code.
 std::error_code identify_magic(const Twine &path, file_magic &result);
+
+constexpr const char *casidObjectMagicPrefix = "CASID:"; // MCCAS
+
 } // namespace llvm
 
 #endif

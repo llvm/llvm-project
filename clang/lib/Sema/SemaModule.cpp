@@ -427,6 +427,7 @@ Sema::ActOnPrivateModuleFragmentDecl(SourceLocation ModuleLoc,
   switch (ModuleScopes.empty() ? Module::ExplicitGlobalModuleFragment
                                : ModuleScopes.back().Module->Kind) {
   case Module::ModuleMapModule:
+  case Module::IncludeTreeModuleMap:
   case Module::ExplicitGlobalModuleFragment:
   case Module::ImplicitGlobalModuleFragment:
   case Module::ModulePartitionImplementation:

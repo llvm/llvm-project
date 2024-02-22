@@ -155,6 +155,8 @@ void AArch64MCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
   fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
 }
 
+//===----------------------------------------------------------------------===//
+
 const AArch64AuthMCExpr *AArch64AuthMCExpr::create(const MCExpr *Expr,
                                                    uint16_t Discriminator,
                                                    AArch64PACKey::ID Key,
@@ -196,5 +198,6 @@ bool AArch64AuthMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
     report_fatal_error("Auth relocation can't reference two symbols");
 
   Res = MCValue::get(Res.getSymA(), nullptr, Res.getConstant(), getKind());
+
   return true;
 }

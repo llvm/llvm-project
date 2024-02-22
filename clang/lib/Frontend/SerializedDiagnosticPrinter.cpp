@@ -91,6 +91,7 @@ class SDiagsMerger : SerializedDiagnosticReader {
   AbbrevLookup FileLookup;
   AbbrevLookup CategoryLookup;
   AbbrevLookup DiagFlagLookup;
+  llvm::DenseSet<unsigned> ContentsWritten;
 
 public:
   SDiagsMerger(SDiagsWriter &Writer) : Writer(Writer) {}
@@ -110,6 +111,12 @@ protected:
   std::error_code visitFilenameRecord(unsigned ID, unsigned Size,
                                       unsigned Timestamp,
                                       StringRef Name) override;
+  std::error_code visitSourceFileContentsRecord(
+      unsigned ID,
+      const Location &OriginalStartLoc,
+      const Location &OriginalEndLoc,
+      StringRef Contents) override;
+
   std::error_code visitFixitRecord(const serialized_diags::Location &Start,
                                    const serialized_diags::Location &End,
                                    StringRef CodeToInsert) override;
@@ -140,10 +147,11 @@ class SDiagsWriter : public DiagnosticConsumer {
         State(std::move(State)) {}
 
 public:
-  SDiagsWriter(StringRef File, DiagnosticOptions *Diags, bool MergeChildRecords)
+  SDiagsWriter(StringRef File, std::unique_ptr<raw_ostream> OS,
+               DiagnosticOptions *Diags, bool MergeChildRecords)
       : LangOpts(nullptr), OriginalInstance(true),
         MergeChildRecords(MergeChildRecords),
-        State(std::make_shared<SharedState>(File, Diags)) {
+        State(std::make_shared<SharedState>(File, std::move(OS), Diags)) {
     if (MergeChildRecords)
       RemoveOldDiagnostics();
     EmitPreamble();
@@ -242,9 +250,10 @@ private:
   /// State that is shared among the various clones of this diagnostic
   /// consumer.
   struct SharedState {
-    SharedState(StringRef File, DiagnosticOptions *Diags)
+    SharedState(StringRef File, std::unique_ptr<raw_ostream> OS,
+                DiagnosticOptions *Diags)
         : DiagOpts(Diags), Stream(Buffer), OutputFile(File.str()),
-          EmittedAnyDiagBlocks(false) {}
+          OutputStream(std::move(OS)), EmittedAnyDiagBlocks(false) {}
 
     /// Diagnostic options.
     IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
@@ -257,6 +266,9 @@ private:
 
     /// The name of the diagnostics file.
     std::string OutputFile;
+
+    /// Optional output stream instead of writing directly to a file.
+    std::unique_ptr<raw_ostream> OutputStream;
 
     /// The set of constructed record abbreviations.
     AbbreviationMap Abbrevs;
@@ -295,9 +307,12 @@ private:
 
 namespace clang {
 namespace serialized_diags {
-std::unique_ptr<DiagnosticConsumer>
-create(StringRef OutputFile, DiagnosticOptions *Diags, bool MergeChildRecords) {
-  return std::make_unique<SDiagsWriter>(OutputFile, Diags, MergeChildRecords);
+std::unique_ptr<DiagnosticConsumer> create(StringRef OutputFile,
+                                           DiagnosticOptions *Diags,
+                                           bool MergeChildRecords,
+                                           std::unique_ptr<raw_ostream> OS) {
+  return std::make_unique<SDiagsWriter>(OutputFile, std::move(OS), Diags,
+                                        MergeChildRecords);
 }
 
 } // end namespace serialized_diags
@@ -452,6 +467,8 @@ void SDiagsWriter::EmitBlockInfoBlock() {
   EmitRecordID(RECORD_DIAG_FLAG, "DiagFlag", Stream, Record);
   EmitRecordID(RECORD_FILENAME, "FileName", Stream, Record);
   EmitRecordID(RECORD_FIXIT, "FixIt", Stream, Record);
+  EmitRecordID(
+      RECORD_SOURCE_FILE_CONTENTS, "SourceFileContents", Stream, Record);
 
   // Emit abbreviation for RECORD_DIAG.
   Abbrev = std::make_shared<BitCodeAbbrev>();
@@ -507,6 +524,16 @@ void SDiagsWriter::EmitBlockInfoBlock() {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));      // FixIt text.
   Abbrevs.set(RECORD_FIXIT, Stream.EmitBlockInfoAbbrev(BLOCK_DIAG,
                                                        Abbrev));
+
+  // Emit the abbreviation for RECORD_SOURCE_FILE_CONTENTS.
+  Abbrev = std::make_shared<BitCodeAbbrev>();
+  Abbrev->Add(BitCodeAbbrevOp(RECORD_SOURCE_FILE_CONTENTS));
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 10)); // File ID.
+  AddRangeLocationAbbrev(*Abbrev);
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 16)); // File size.
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // File contents.
+  Abbrevs.set(RECORD_SOURCE_FILE_CONTENTS,
+              Stream.EmitBlockInfoAbbrev(BLOCK_DIAG, Abbrev));
 
   Stream.ExitBlock();
 }
@@ -578,6 +605,9 @@ void SDiagsWriter::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
         << diagnostic;
     return;
   }
+
+  // Call base class to update diagnostic counts.
+  DiagnosticConsumer::HandleDiagnostic(DiagLevel, Info);
 
   // Enter the block for a non-note diagnostic immediately, rather than waiting
   // for beginDiagnostic, in case associated notes are emitted before we get
@@ -794,6 +824,15 @@ void SDiagsWriter::finish() {
         getMetaDiags()->Report(diag::warn_fe_serialized_diag_merge_failure);
   }
 
+  if (State->OutputStream) {
+    // Write the generated bitstream to "Out".
+    State->OutputStream->write((char *)&State->Buffer.front(),
+                               State->Buffer.size());
+    State->OutputStream->flush();
+    State->OutputStream.reset();
+    return;
+  }
+
   std::error_code EC;
   auto OS = std::make_unique<llvm::raw_fd_ostream>(State->OutputFile.c_str(),
                                                     EC, llvm::sys::fs::OF_None);
@@ -868,6 +907,28 @@ std::error_code SDiagsMerger::visitFilenameRecord(unsigned ID, unsigned Size,
                                                   unsigned Timestamp,
                                                   StringRef Name) {
   FileLookup[ID] = Writer.getEmitFile(Name.str().c_str());
+  return std::error_code();
+}
+
+std::error_code SDiagsMerger::visitSourceFileContentsRecord(
+    unsigned ID,
+    const Location &OriginalStartLoc,
+    const Location &OriginalEndLoc,
+    StringRef Contents) {
+  unsigned MappedID = FileLookup[ID];
+  if (!ContentsWritten.insert(MappedID).second)
+    return std::error_code();
+
+  RecordData::value_type Record[] = {
+      RECORD_SOURCE_FILE_CONTENTS, MappedID,
+      FileLookup[OriginalStartLoc.FileID],
+      OriginalStartLoc.Line, OriginalStartLoc.Col, OriginalStartLoc.Offset,
+      FileLookup[OriginalEndLoc.FileID], OriginalEndLoc.Line,
+      OriginalEndLoc.Col, OriginalEndLoc.Offset,
+    Contents.size()};
+
+  Writer.State->Stream.EmitRecordWithBlob(
+      Writer.State->Abbrevs.get(RECORD_SOURCE_FILE_CONTENTS), Record, Contents);
   return std::error_code();
 }
 

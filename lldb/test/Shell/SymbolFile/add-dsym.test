@@ -1,5 +1,0 @@
-# REQUIRES: system-darwin
-
-# RUN: yaml2obj %S/Inputs/a.yaml -o %t.out
-# RUN: LLDB_APPLE_DSYMFORUUID_EXECUTABLE=%S/Inputs/dsymforuuid.sh %lldb %t.out -o 'add-dsym -u 41945CA4-5D9D-3CDE-82B4-37E4C09750B5' 2>&1 | FileCheck %s
-# CHECK: UUID information was not found

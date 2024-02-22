@@ -8,6 +8,9 @@ option(LLVM_INSTALL_TOOLCHAIN_ONLY "Only include toolchain files in the 'install
 
 find_package(LLVM REQUIRED CONFIG HINTS ${LLVM_DIR} NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang REQUIRED CONFIG HINTS ${Clang_DIR} ${LLVM_DIR}/../clang NO_CMAKE_FIND_ROOT_PATH)
+if(LLDB_ENABLE_SWIFT_SUPPORT)
+  find_package(Swift REQUIRED CONFIG HINTS "${Swift_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+endif()
 
 # We set LLVM_CMAKE_DIR so that GetSVN.cmake is found correctly when building SVNVersion.inc
 set(LLVM_CMAKE_DIR ${LLVM_CMAKE_DIR} CACHE PATH "Path to LLVM CMake modules")
@@ -34,7 +37,6 @@ function(append_configuration_directories input_dir output_dirs)
   endforeach()
   set(${output_dirs} ${dirs_list} PARENT_SCOPE)
 endfunction()
-
 
 append_configuration_directories(${LLVM_TOOLS_BINARY_DIR} config_dirs)
 find_program(lit_full_path ${lit_file_name} ${config_dirs} NO_DEFAULT_PATH)
@@ -83,7 +85,11 @@ endif()
 
 # We append the directory in which LLVMConfig.cmake lives. We expect LLVM's
 # CMake modules to be in that directory as well.
+file(TO_CMAKE_PATH ${LLVM_DIR} LLVM_DIR)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
+if(LLDB_ENABLE_SWIFT_SUPPORT)
+  list(APPEND CMAKE_MODULE_PATH "${SWIFT_CMAKE_DIR}")
+endif()
 
 include(AddLLVM)
 include(TableGen)
@@ -97,7 +103,13 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(
   "${CMAKE_BINARY_DIR}/include"
   "${LLVM_INCLUDE_DIRS}"
-  "${CLANG_INCLUDE_DIRS}")
+  "${CLANG_INCLUDE_DIRS}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/source")
+if(LLDB_ENABLE_SWIFT_SUPPORT)
+  include_directories(
+    "${SWIFT_INCLUDE_DIRS}"
+    "${SWIFT_MAIN_SRC_DIR}/include")
+endif()
 
 if(LLDB_INCLUDE_TESTS)
   # Build the gtest library needed for unittests, if we have LLVM sources

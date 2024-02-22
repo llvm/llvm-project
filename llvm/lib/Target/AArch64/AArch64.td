@@ -1664,7 +1664,7 @@ def : ProcessorModel<"thunderx3t110", ThunderX3T110Model,
 def : ProcessorModel<"tsv110", TSV110Model, ProcessorFeatures.TSV110,
                      [TuneTSV110]>;
 
-// Support cyclone as an alias for apple-a7 so we can still LTO old bitcode.
+// Support some CPU codenames as aliases for apple-aN so we can still LTO old bitcode.
 def : ProcessorModel<"cyclone", CycloneModel, ProcessorFeatures.AppleA7,
                      [TuneAppleA7]>;
 

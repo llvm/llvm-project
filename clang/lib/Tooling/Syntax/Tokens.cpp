@@ -225,6 +225,13 @@ llvm::StringRef FileRange::text(const SourceManager &SM) const {
   return Text.substr(Begin, length());
 }
 
+UnexpandedTokenBuffer::UnexpandedTokenBuffer(StringRef Code,
+                                             const LangOptions &LangOpts) {
+  SrcMgr = std::make_unique<SourceManagerForFile>("mock_file_name.cpp", Code);
+  Tokens = syntax::tokenize(sourceManager().getMainFileID(), sourceManager(),
+                            LangOpts);
+}
+
 void TokenBuffer::indexExpandedTokens() {
   // No-op if the index is already created.
   if (!ExpandedTokIndex.empty())

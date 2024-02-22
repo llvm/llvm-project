@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Disassembler.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -27,12 +28,14 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/MCCAS/MCCASObjectV1.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -210,6 +213,31 @@ static cl::opt<bool> LexMotorolaIntegers(
 static cl::opt<bool> NoExecStack("no-exec-stack",
                                  cl::desc("File doesn't need an exec stack"),
                                  cl::cat(MCCategory));
+
+// BEGIN MCCAS
+static cl::opt<std::string> CASPath("cas", cl::desc("CAS Path"),
+                                    cl::cat(MCCategory));
+
+static cl::opt<bool> UseMCCASBackend("cas-backend",
+                                     cl::desc("Use MCCAS backend"),
+                                     cl::cat(MCCategory));
+
+static cl::opt<CASBackendMode> MCCASBackendMode(
+    cl::desc("MC CAS Backend Mode"), cl::init(CASBackendMode::Verify),
+    cl::values(clEnumValN(CASBackendMode::Verify, "mccas-verify",
+                          "Native object with verifier"),
+               clEnumValN(CASBackendMode::Native, "mccas-native",
+                          "Native object without verifier"),
+               clEnumValN(CASBackendMode::CASID, "mccas-casid",
+                          "CASID file output")),
+    cl::cat(MCCategory));
+
+static cl::opt<bool>
+    EmitCASIDFile("mccas-emit-casid-file",
+                  cl::desc("Emit a .casid file next to the generated .o file "
+                           "when mccas is enabled"),
+                  cl::cat(MCCategory));
+// END MCCAS
 
 enum ActionType {
   AC_AsLex,
@@ -499,6 +527,19 @@ int main(int argc, char **argv) {
   if (!Out)
     return 1;
 
+  std::unique_ptr<ToolOutputFile> CasIDOS;
+  std::string OutputPathCASIDFile;
+  StringRef OutputFile = StringRef(Out->outputFilename());
+  if (UseMCCASBackend && EmitCASIDFile &&
+      MCCASBackendMode != CASBackendMode::CASID && FileType == OFT_ObjectFile &&
+      OutputFile != "-") {
+    OutputPathCASIDFile = std::string(OutputFile);
+    OutputPathCASIDFile.append(".casid");
+    CasIDOS = GetOutputStream(OutputPathCASIDFile, sys::fs::OF_None);
+    if (!CasIDOS)
+      return 1;
+  }
+
   std::unique_ptr<ToolOutputFile> DwoOut;
   if (!SplitDwarfFile.empty()) {
     if (FileType != OFT_ObjectFile) {
@@ -513,6 +554,19 @@ int main(int argc, char **argv) {
   std::unique_ptr<buffer_ostream> BOS;
   raw_pwrite_stream *OS = &Out->os();
   std::unique_ptr<MCStreamer> Str;
+  // BEGIN MCCAS
+  std::shared_ptr<cas::ObjectStore> CAS;
+  if (CASPath.empty())
+    CAS = cas::createInMemoryCAS();
+  else {
+    auto MaybeCAS = cas::createCASFromIdentifier(CASPath);
+    if (!MaybeCAS) {
+      WithColor::error() << toString(MaybeCAS.takeError()) << "\n";
+      return 1;
+    }
+    CAS = std::move(*MaybeCAS);
+  }
+  // END MCCAS
 
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
@@ -569,9 +623,42 @@ int main(int argc, char **argv) {
 
     MCCodeEmitter *CE = TheTarget->createMCCodeEmitter(*MCII, Ctx);
     MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions);
+
+    // BEGIN MCCAS
+    std::unique_ptr<MCObjectWriter> CASBackendWriter;
+    bool UseCASBackend = UseMCCASBackend ||
+                         ((TheTriple.getObjectFormat() == Triple::MachO) &&
+                          llvm::sys::Process::GetEnv("LLVM_TEST_CAS_BACKEND"));
+
+    if (UseCASBackend) {
+      std::function<const cas::ObjectProxy(
+          llvm::MachOCASWriter &, llvm::MCAssembler &,
+          const llvm::MCAsmLayout &, cas::ObjectStore &, raw_ostream *)>
+          CreateFromMcAssembler =
+              [](llvm::MachOCASWriter &Writer, llvm::MCAssembler &Asm,
+                 const llvm::MCAsmLayout &Layout, cas::ObjectStore &CAS,
+                 raw_ostream *DebugOS = nullptr) -> const cas::ObjectProxy {
+        auto Schema = std::make_unique<mccasformats::v1::MCSchema>(CAS);
+        return cantFail(
+            Schema->createFromMCAssembler(Writer, Asm, Layout, DebugOS));
+      };
+      std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
+          SerializeObjectFile = [](cas::ObjectProxy RootNode,
+                                   cas::ObjectStore &CAS,
+                                   raw_ostream &OS) -> Error {
+        auto Schema = std::make_unique<mccasformats::v1::MCSchema>(CAS);
+        return Schema->serializeObjectFile(RootNode, OS);
+      };
+      CASBackendWriter = MAB->createCASObjectWriter(
+          *OS, TheTriple, *CAS, MCOptions, MCCASBackendMode,
+          CreateFromMcAssembler, SerializeObjectFile,
+          CasIDOS ? &CasIDOS->os() : nullptr);
+    }
+    // END MCCAS
     Str.reset(TheTarget->createMCObjectStreamer(
         TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB),
-        DwoOut ? MAB->createDwoObjectWriter(*OS, DwoOut->os())
+        UseCASBackend ? std::move(CASBackendWriter) // MCCAS
+        : DwoOut ? MAB->createDwoObjectWriter(*OS, DwoOut->os())
                : MAB->createObjectWriter(*OS),
         std::unique_ptr<MCCodeEmitter>(CE), *STI, MCOptions.MCRelaxAll,
         MCOptions.MCIncrementalLinkerCompatible,
@@ -612,6 +699,8 @@ int main(int argc, char **argv) {
   // Keep output if no errors.
   if (Res == 0) {
     Out->keep();
+    if (CasIDOS)
+      CasIDOS->keep();
     if (DwoOut)
       DwoOut->keep();
   }

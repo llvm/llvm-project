@@ -31,6 +31,13 @@ public:
   static llvm::StringRef GetDistributionId();
   static FileSpec GetProgramFileSpec();
 
+  static llvm::Expected<llvm::StringRef> GetSDKRoot(SDKOptions options) {
+    if (options.XcodeSDKSelection &&
+        options.XcodeSDKSelection->GetType() == XcodeSDK::Type::Linux)
+      return "/";
+    return llvm::make_error<HostInfoError>("cannot determine SDK root");
+  }
+
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);

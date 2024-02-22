@@ -23,6 +23,15 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
 
+#ifdef LLDB_ENABLE_SWIFT
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
+#include "llvm/ADT/DenseMap.h"
+#include "swift/Demangling/Demangle.h"
+#endif // LLDB_ENABLE_SWIFT
+// BEGIN SWIFT
+#include "lldb/Utility/ThreadSafeDenseMap.h"
+// END SWIFT
+
 #include <mutex>
 #include <string>
 #include <string_view>
@@ -35,6 +44,23 @@ using namespace lldb_private;
 static inline bool cstring_is_mangled(llvm::StringRef s) {
   return Mangled::GetManglingScheme(s) != Mangled::eManglingSchemeNone;
 }
+
+#ifdef LLDB_ENABLE_SWIFT
+#pragma mark DisplayDemangledNamesCache
+
+// make the key type be a const char* because that gives us usable
+// DenseMapInfo for free making DenseMap work for ConstString requires
+// us to provide two "invalid" values: the empty key and the tombstone
+// key; but for ConstString, we really don't have any well-known
+// invalid value other than ConstString(nullptr) so, just use const
+// char* as the key as LLVM knows how to do proper DenseMapInfo for
+// pointers
+static ThreadSafeDenseMap<const char *, ConstString>&
+GetDisplayDemangledNamesCache() {
+  static ThreadSafeDenseMap<const char *, ConstString> g_cache;
+  return g_cache;
+}
+#endif // LLDB_ENABLE_SWIFT
 
 #pragma mark Mangled
 
@@ -257,7 +283,10 @@ bool Mangled::GetRichManglingInfo(RichManglingContext &context,
 // class will need to use this accessor if it wishes to decode the demangled
 // name. The result is cached and will be kept until a new string value is
 // supplied to this object, or until the end of the object's lifetime.
-ConstString Mangled::GetDemangledName() const {
+ConstString Mangled::GetDemangledName(// BEGIN SWIFT
+                                      const SymbolContext *sc
+                                      // END SWIFT
+                                      ) const {
   // Check to make sure we have a valid mangled name and that we haven't
   // already decoded our mangled name.
   if (m_mangled && m_demangled.IsNull()) {
@@ -287,7 +316,30 @@ ConstString Mangled::GetDemangledName() const {
       case eManglingSchemeSwift:
         // Demangling a swift name requires the swift compiler. This is
         // explicitly unsupported on llvm.org.
-        break;
+#ifdef LLDB_ENABLE_SWIFT
+      {
+        Log *log = GetLog(LLDBLog::Demangle);
+        LLDB_LOGF(log, "demangle swift: %s", mangled_name);
+        std::string demangled(SwiftLanguageRuntime::DemangleSymbolAsString(
+            mangled_name, SwiftLanguageRuntime::eTypeName, sc));
+        // Don't cache the demangled name the function isn't available yet.
+        if (!sc || !sc->function) {
+          LLDB_LOGF(log, "demangle swift: %s -> \"%s\" (not cached)",
+                    mangled_name, demangled.c_str());
+          return ConstString(demangled);
+        }
+        if (demangled.empty()) {
+          LLDB_LOGF(log, "demangle swift: %s -> error: failed to demangle",
+                    mangled_name);
+        } else {
+          LLDB_LOGF(log, "demangle swift: %s -> \"%s\"", mangled_name,
+                    demangled.c_str());
+          m_demangled.SetStringWithMangledCounterpart(demangled, m_mangled);
+        }
+        return m_demangled;
+      }
+#endif // LLDB_ENABLE_SWIFT
+      break;
       case eManglingSchemeNone:
         llvm_unreachable("eManglingSchemeNone was handled already");
       }
@@ -307,8 +359,41 @@ ConstString Mangled::GetDemangledName() const {
   return m_demangled;
 }
 
-ConstString Mangled::GetDisplayDemangledName() const {
-  return GetDemangledName();
+ConstString Mangled::GetDisplayDemangledName(
+// BEGIN SWIFT
+                                             const SymbolContext *sc
+                                             ) const {
+  ConstString demangled;
+#ifdef LLDB_ENABLE_SWIFT
+  if (m_mangled) {
+    do {
+      const char *mangled = m_mangled.GetCString();
+
+      if (mangled) {
+        if (SwiftLanguageRuntime::IsSwiftMangledName(m_mangled.GetStringRef())) {
+          auto& display_cache = ::GetDisplayDemangledNamesCache();
+          if (display_cache.Lookup(mangled, demangled) &&
+              demangled)
+            break;
+
+          std::string demangled_std =
+              SwiftLanguageRuntime::DemangleSymbolAsString(
+                  m_mangled.GetStringRef(), SwiftLanguageRuntime::eSimplified,
+                  sc);
+          if (!demangled_std.empty()) {
+            demangled.SetCString(demangled_std.c_str());
+            display_cache.Insert(mangled, demangled);
+            break;
+          }
+        }
+      }
+    } while (0);
+  }
+#endif // LLDB_ENABLE_SWIFT
+  if (!demangled)
+    demangled = GetDemangledName();
+  return demangled ? demangled : m_mangled;
+// END SWIFT
 }
 
 bool Mangled::NameMatches(const RegularExpression &regex) const {
@@ -320,13 +405,17 @@ bool Mangled::NameMatches(const RegularExpression &regex) const {
 }
 
 // Get the demangled name if there is one, else return the mangled name.
-ConstString Mangled::GetName(Mangled::NamePreference preference) const {
+ConstString Mangled::GetName(Mangled::NamePreference preference,
+                             // BEGIN SWIFT
+                             const SymbolContext *sc
+                             // END SWIFT
+                             ) const {
   if (preference == ePreferMangled && m_mangled)
     return m_mangled;
 
   // Call the accessor to make sure we get a demangled name in case it hasn't
   // been demangled yet...
-  ConstString demangled = GetDemangledName();
+  ConstString demangled = GetDemangledName(sc);
 
   if (preference == ePreferDemangledWithoutArguments) {
     if (Language *lang = Language::FindPlugin(GuessLanguage())) {

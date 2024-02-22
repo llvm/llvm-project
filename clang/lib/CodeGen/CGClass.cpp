@@ -921,6 +921,9 @@ namespace {
       Qualifiers Qual = F->getType().getQualifiers();
       if (Qual.hasVolatile() || Qual.hasObjCLifetime())
         return false;
+      if (PointerAuthQualifier Q = F->getType().getPointerAuth())
+        if (Q.isAddressDiscriminated())
+          return false;
       return true;
     }
 
@@ -2574,6 +2577,13 @@ void CodeGenFunction::InitializeVTablePointer(const VPtr &Vptr) {
   // the same addr space. Note that this might not be LLVM address space 0.
   VTableField = VTableField.withElementType(PtrTy);
 
+  if (auto &Schema = CGM.getCodeGenOpts().PointerAuth.CXXVTablePointers) {
+    CGPointerAuthInfo PointerAuth = EmitPointerAuthInfo(Schema, nullptr,
+                                                        GlobalDecl(),
+                                                        QualType());
+    VTableAddressPoint = EmitPointerAuthSign(PointerAuth, VTableAddressPoint);
+  }
+
   llvm::StoreInst *Store = Builder.CreateStore(VTableAddressPoint, VTableField);
   TBAAAccessInfo TBAAInfo = CGM.getTBAAVTablePtrAccessInfo(PtrTy);
   CGM.DecorateInstructionWithTBAA(Store, TBAAInfo);
@@ -2672,6 +2682,13 @@ llvm::Value *CodeGenFunction::GetVTablePtr(Address This,
   llvm::Instruction *VTable = Builder.CreateLoad(VTablePtrSrc, "vtable");
   TBAAAccessInfo TBAAInfo = CGM.getTBAAVTablePtrAccessInfo(VTableTy);
   CGM.DecorateInstructionWithTBAA(VTable, TBAAInfo);
+
+  if (auto &Schema = CGM.getCodeGenOpts().PointerAuth.CXXVTablePointers) {
+    CGPointerAuthInfo PointerAuth = EmitPointerAuthInfo(Schema, nullptr,
+                                                        GlobalDecl(),
+                                                        QualType());
+    VTable = cast<llvm::Instruction>(EmitPointerAuthAuth(PointerAuth, VTable));
+  }
 
   if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
       CGM.getCodeGenOpts().StrictVTablePointers)

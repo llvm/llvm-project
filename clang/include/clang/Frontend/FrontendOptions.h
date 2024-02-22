@@ -15,6 +15,7 @@
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CAS/CASReference.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cassert>
 #include <map>
@@ -230,6 +231,9 @@ class FrontendInputFile {
   /// that it outlives any users.
   std::optional<llvm::MemoryBufferRef> Buffer;
 
+  /// The input, if it comes from \p FrontendOptions::CASIncludeTreeID.
+  std::optional<cas::ObjectRef> IncludeTree;
+
   /// The kind of input, e.g., C source, AST file, LLVM IR.
   InputKind Kind;
 
@@ -243,6 +247,14 @@ public:
   FrontendInputFile(llvm::MemoryBufferRef Buffer, InputKind Kind,
                     bool IsSystem = false)
       : Buffer(Buffer), Kind(Kind), IsSystem(IsSystem) {}
+  FrontendInputFile(cas::ObjectRef Tree, StringRef File, InputKind Kind,
+                    bool IsSystem = false)
+      : File(File.str()), IncludeTree(std::move(Tree)), Kind(Kind),
+        IsSystem(IsSystem) {}
+  FrontendInputFile(cas::ObjectRef Tree, llvm::MemoryBufferRef Buffer,
+                    InputKind Kind, bool IsSystem = false)
+      : Buffer(Buffer), IncludeTree(std::move(Tree)), Kind(Kind),
+        IsSystem(IsSystem) {}
 
   InputKind getKind() const { return Kind; }
   bool isSystem() const { return IsSystem; }
@@ -250,6 +262,7 @@ public:
   bool isEmpty() const { return File.empty() && Buffer == std::nullopt; }
   bool isFile() const { return !isBuffer(); }
   bool isBuffer() const { return Buffer != std::nullopt; }
+  bool isIncludeTree() const { return IncludeTree.has_value(); }
   bool isPreprocessed() const { return Kind.isPreprocessed(); }
   bool isHeader() const { return Kind.isHeader(); }
   InputKind::HeaderUnitKind getHeaderUnitKind() const {
@@ -264,6 +277,11 @@ public:
   llvm::MemoryBufferRef getBuffer() const {
     assert(isBuffer());
     return *Buffer;
+  }
+
+  cas::ObjectRef getIncludeTree() const {
+    assert(isIncludeTree());
+    return *IncludeTree;
   }
 };
 
@@ -375,6 +393,32 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsSystemModule : 1;
 
+  unsigned IndexIgnoreSystemSymbols : 1;
+  unsigned IndexRecordCodegenName : 1;
+  unsigned IndexIgnoreMacros : 1;
+  unsigned IndexIgnorePcms : 1;
+
+  /// Cache -cc1 compilations when possible. Ignored unless CASFileSystemRootID
+  /// is specified.
+  unsigned CacheCompileJob : 1;
+
+  /// Whether this invocation is dependency scanning for include-tree. Used to
+  /// separate module cache for include-tree from cas-fs.
+  unsigned ForIncludeTreeScan : 1;
+
+  /// Avoid checking if the compile job is already cached, force compilation and
+  /// caching of compilation outputs. This is used for testing purposes.
+  unsigned DisableCachedCompileJobReplay : 1;
+
+  /// Keep the diagnostic client open for receiving diagnostics after the source
+  /// files have been processed.
+  unsigned MayEmitDiagnosticsAfterProcessingSourceFiles : 1;
+
+  /// When using CacheCompileJob, write a CASID for the output file.
+  ///
+  /// FIXME: Add clang tests for this functionality.
+  unsigned WriteOutputAsCASID : 1;
+
   /// Output (and read) PCM files regardless of compiler errors.
   LLVM_PREFERRED_TYPE(bool)
   unsigned AllowPCMWithCompilerErrors : 1;
@@ -454,12 +498,18 @@ public:
   std::string MTMigrateDir;
   std::string ARCMTMigrateReportOut;
 
+  std::string IndexStorePath;
+  std::string IndexUnitOutputPath;
+
   /// The input kind, either specified via -x argument or deduced from the input
   /// file name.
   InputKind DashX;
 
   /// The input files and their types.
   SmallVector<FrontendInputFile, 0> Inputs;
+
+  /// Use the provided CAS include tree.
+  std::string CASIncludeTreeID;
 
   /// When the input is a module map, the original module map file from which
   /// that map was inferred, if any (for umbrella modules).
@@ -486,6 +536,14 @@ public:
   // Currently this is only used as part of the `-extract-api` action.
   /// The name of the product the input files belong too.
   std::string ProductName;
+
+  /// Socket path for remote caching service.
+  std::string CompilationCachingServicePath;
+
+  /// When caching is enabled, represents remappings for all the file paths that
+  /// the compilation may access. This is useful for canonicalizing the
+  /// compilation for caching purposes.
+  std::vector<std::string> PathPrefixMappings;
 
   // Currently this is only used as part of the `-extract-api` action.
   // A comma seperated list of files providing a list of APIs to
@@ -523,6 +581,10 @@ public:
   /// The list of AST files to merge.
   std::vector<std::string> ASTMergeFiles;
 
+  /// The list of prebuilt module file paths to make available by reading their
+  /// contents from the \c ActionCache with the given compile job cache key.
+  std::vector<std::pair<std::string, std::string>> ModuleCacheKeys;
+
   /// A list of arguments to forward to LLVM's option processing; this
   /// should only be used for debugging and experimental features.
   std::vector<std::string> LLVMArgs;
@@ -559,9 +621,11 @@ public:
         GenerateGlobalModuleIndex(true), ASTDumpDecls(false),
         ASTDumpLookups(false), BuildingImplicitModule(false),
         BuildingImplicitModuleUsesLock(true), ModulesEmbedAllFiles(false),
-        IncludeTimestamps(true), UseTemporary(true),
-        AllowPCMWithCompilerErrors(false), ModulesShareFileManager(true),
-        TimeTraceGranularity(500) {}
+        IncludeTimestamps(true), UseTemporary(true), CacheCompileJob(false),
+        ForIncludeTreeScan(false), DisableCachedCompileJobReplay(false),
+        MayEmitDiagnosticsAfterProcessingSourceFiles(false),
+        WriteOutputAsCASID(false), AllowPCMWithCompilerErrors(false),
+        ModulesShareFileManager(true), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/APINotes/APINotesReader.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangStandard.h"
@@ -19,8 +21,12 @@
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
+#include "clang/CAS/IncludeTree.h"
 #include "clang/Config/config.h"
+#include "clang/Frontend/CASDependencyCollector.h"
 #include "clang/Frontend/ChainedDiagnosticConsumer.h"
+#include "clang/Frontend/CompileJobCacheKey.h"
+#include "clang/Frontend/CompileJobCacheResult.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -31,6 +37,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Frontend/VerifyDiagnosticConsumer.h"
+#include "clang/Index/IndexingAction.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -42,6 +49,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -54,6 +63,8 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/VirtualOutputBackends.h"
+#include "llvm/Support/VirtualOutputError.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include <optional>
@@ -89,6 +100,11 @@ bool CompilerInstance::shouldBuildGlobalModuleIndex() const {
 
 void CompilerInstance::setDiagnostics(DiagnosticsEngine *Value) {
   Diagnostics = Value;
+}
+
+bool CompilerInstance::isSourceNonReproducible() const {
+  assert(PP && "Need to have preprocessor");
+  return PP->isSourceNonReproducible();
 }
 
 void CompilerInstance::setVerboseOutputStream(raw_ostream &Value) {
@@ -379,7 +395,7 @@ FileManager *CompilerInstance::createFileManager(
   if (!VFS)
     VFS = FileMgr ? &FileMgr->getVirtualFileSystem()
                   : createVFSFromCompilerInvocation(getInvocation(),
-                                                    getDiagnostics());
+                                                    getDiagnostics(), CAS);
   assert(VFS && "FileManager has no VFS?");
   FileMgr = new FileManager(getFileSystemOpts(), std::move(VFS));
   return FileMgr.get();
@@ -486,7 +502,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   PP->setPreprocessedOutput(getPreprocessorOutputOpts().ShowCPP);
 
   if (PP->getLangOpts().Modules && PP->getLangOpts().ImplicitModules) {
-    std::string ModuleHash = getInvocation().getModuleHash();
+    std::string ModuleHash = getInvocation().getModuleHash(getDiagnostics());
     PP->getHeaderSearchInfo().setModuleHash(ModuleHash);
     PP->getHeaderSearchInfo().setModuleCachePath(
         getSpecificModuleCachePath(ModuleHash));
@@ -495,7 +511,8 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   // Handle generating dependencies, if requested.
   const DependencyOutputOptions &DepOpts = getDependencyOutputOpts();
   if (!DepOpts.OutputFile.empty())
-    addDependencyCollector(std::make_shared<DependencyFileGenerator>(DepOpts));
+    addDependencyCollector(
+        std::make_shared<DependencyFileGenerator>(DepOpts, TheOutputBackend));
   if (!DepOpts.DOTOutputFile.empty())
     AttachDependencyGraphGen(*PP, DepOpts.DOTOutputFile,
                              getHeaderSearchOpts().Sysroot);
@@ -515,6 +532,10 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
     collectIncludePCH(*this, ModuleDepCollector);
     collectVFSEntries(*this, ModuleDepCollector);
   }
+
+  // Modules need an output manager.
+  if (!hasOutputBackend())
+    createOutputBackend();
 
   for (auto &Listener : DependencyCollectors)
     Listener->attachToPreprocessor(*PP);
@@ -606,12 +627,35 @@ struct ReadModuleNames : ASTReaderListener {
     LoadedModules.clear();
   }
 };
+
+class CompileCacheASTReaderHelper : public ASTReaderListener {
+public:
+  CompileCacheASTReaderHelper(cas::ObjectStore &CAS, cas::ActionCache &Cache,
+                              InMemoryModuleCache &ModuleCache,
+                              DiagnosticsEngine &Diags)
+      : CAS(CAS), Cache(Cache), ModuleCache(ModuleCache), Diags(Diags) {}
+
+  bool readCASFileSystemRootID(StringRef RootID, bool Complain) override;
+  bool readIncludeTreeID(StringRef ID, bool Complain) override;
+  bool readModuleCacheKey(StringRef ModuleName, StringRef Filename,
+                          StringRef CacheKey) override;
+
+private:
+  bool checkCASID(bool Complain, StringRef RootID, unsigned ParseDiagID,
+                  unsigned MissingDiagID);
+
+  cas::ObjectStore &CAS;
+  cas::ActionCache &Cache;
+  InMemoryModuleCache &ModuleCache;
+  DiagnosticsEngine &Diags;
+};
 } // namespace
 
 void CompilerInstance::createPCHExternalASTSource(
     StringRef Path, DisableValidationForModuleKind DisableValidation,
     bool AllowPCHWithCompilerErrors, void *DeserializationListener,
-    bool OwnDeserializationListener) {
+    bool OwnDeserializationListener,
+    std::unique_ptr<llvm::MemoryBuffer> PCHBuffer) {
   bool Preamble = getPreprocessorOpts().PrecompiledPreambleBytes.first != 0;
   TheASTReader = createPCHExternalASTSource(
       Path, getHeaderSearchOpts().Sysroot, DisableValidation,
@@ -619,7 +663,8 @@ void CompilerInstance::createPCHExternalASTSource(
       getASTContext(), getPCHContainerReader(),
       getFrontendOpts().ModuleFileExtensions, DependencyCollectors,
       DeserializationListener, OwnDeserializationListener, Preamble,
-      getFrontendOpts().UseGlobalModuleIndex);
+      getFrontendOpts().UseGlobalModuleIndex,
+      getOrCreateObjectStore(), getOrCreateActionCache(), std::move(PCHBuffer));
 }
 
 IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
@@ -631,7 +676,9 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
     void *DeserializationListener, bool OwnDeserializationListener,
-    bool Preamble, bool UseGlobalModuleIndex) {
+    bool Preamble, bool UseGlobalModuleIndex,
+    cas::ObjectStore &CAS, cas::ActionCache &Cache,
+    std::unique_ptr<llvm::MemoryBuffer> PCHBuffer) {
   HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   IntrusiveRefCntPtr<ASTReader> Reader(new ASTReader(
@@ -652,10 +699,17 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
   for (auto &Listener : DependencyCollectors)
     Listener->attachToASTReader(*Reader);
 
+  Reader->addListener(std::make_unique<CompileCacheASTReaderHelper>(
+      CAS, Cache, ModuleCache, PP.getDiagnostics()));
+
   auto Listener = std::make_unique<ReadModuleNames>(PP);
   auto &ListenerRef = *Listener;
   ASTReader::ListenerScope ReadModuleNamesListener(*Reader,
                                                    std::move(Listener));
+
+  if (PCHBuffer) {
+    Reader->addInMemoryBuffer(Path, std::move(PCHBuffer));
+  }
 
   switch (Reader->ReadAST(Path,
                           Preamble ? serialization::MK_Preamble
@@ -743,6 +797,52 @@ CompilerInstance::createCodeCompletionConsumer(Preprocessor &PP,
   return new PrintingCodeCompleteConsumer(Opts, OS);
 }
 
+static void loadAPINotesFromIncludeTree(cas::ObjectStore &DB,
+                                        api_notes::APINotesManager &APINotes,
+                                        DiagnosticsEngine &Diags,
+                                        StringRef IncludeTreeRootID) {
+  Expected<llvm::cas::CASID> RootID = DB.parseID(IncludeTreeRootID);
+  if (!RootID) {
+    llvm::consumeError(RootID.takeError());
+    Diags.Report(diag::err_cas_cannot_parse_include_tree_id)
+        << IncludeTreeRootID;
+    return;
+  }
+  std::optional<llvm::cas::ObjectRef> Ref = DB.getReference(*RootID);
+  if (!Ref) {
+    Diags.Report(diag::err_cas_missing_include_tree_id) << IncludeTreeRootID;
+    return;
+  }
+  auto Root = cas::IncludeTreeRoot::get(DB, *Ref);
+  if (!Root) {
+    consumeError(Root.takeError());
+    Diags.Report(diag::err_cas_missing_include_tree_id) << IncludeTreeRootID;
+    return;
+  }
+  auto Notes = Root->getAPINotes();
+  if (!Notes) {
+    consumeError(Notes.takeError());
+    Diags.Report(diag::err_cas_cannot_load_api_notes_include_tree)
+        << IncludeTreeRootID;
+    return;
+  }
+  if (!*Notes)
+    return;
+  std::vector<StringRef> Buffers;
+
+  if (auto E = (*Notes)->forEachAPINotes([&](StringRef Buffer) {
+        Buffers.push_back(Buffer);
+        return llvm::Error::success();
+      })) {
+    consumeError(std::move(E));
+    Diags.Report(diag::err_cas_cannot_load_api_notes_include_tree)
+        << IncludeTreeRootID;
+    return;
+  }
+
+  APINotes.loadCurrentModuleAPINotesFromBuffer(Buffers);
+}
+
 void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
@@ -751,18 +851,35 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
   // Set up API notes.
   TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);
 
+  // If we're building a module and are supposed to load API notes,
+  // notify the API notes manager.
+  if (auto currentModule = getPreprocessor().getCurrentModule()) {
+    // If using include tree, APINotes for current module is loaded from include
+    // tree.
+    if (getFrontendOpts().CASIncludeTreeID.empty())
+      (void)TheSema->APINotes.loadCurrentModuleAPINotes(
+          currentModule, getLangOpts().APINotesModules,
+          getAPINotesOpts().ModuleSearchPaths);
+    else
+      loadAPINotesFromIncludeTree(
+          *getCASOpts().getOrCreateDatabases(getDiagnostics()).first,
+          TheSema->APINotes, getDiagnostics(),
+          getFrontendOpts().CASIncludeTreeID);
+
+    // Check for any attributes we should add to the module
+    for (auto reader : TheSema->APINotes.getCurrentModuleReaders()) {
+      // swift_infer_import_as_member
+      if (reader->getModuleOptions().SwiftInferImportAsMember) {
+        currentModule->IsSwiftInferImportAsMember = true;
+        break;
+      }
+    }
+  }
+
   // Attach the external sema source if there is any.
   if (ExternalSemaSrc) {
     TheSema->addExternalSource(ExternalSemaSrc.get());
     ExternalSemaSrc->InitializeSema(*TheSema);
-  }
-
-  // If we're building a module and are supposed to load API notes,
-  // notify the API notes manager.
-  if (auto *currentModule = getPreprocessor().getCurrentModule()) {
-    (void)TheSema->APINotes.loadCurrentModuleAPINotes(
-        currentModule, getLangOpts().APINotesModules,
-        getAPINotesOpts().ModuleSearchPaths);
   }
 }
 
@@ -771,32 +888,19 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
 void CompilerInstance::clearOutputFiles(bool EraseFiles) {
   // The ASTConsumer can own streams that write to the output files.
   assert(!hasASTConsumer() && "ASTConsumer should be reset");
-  // Ignore errors that occur when trying to discard the temp file.
-  for (OutputFile &OF : OutputFiles) {
-    if (EraseFiles) {
-      if (OF.File)
-        consumeError(OF.File->discard());
-      if (!OF.Filename.empty())
-        llvm::sys::fs::remove(OF.Filename);
-      continue;
-    }
-
-    if (!OF.File)
-      continue;
-
-    if (OF.File->TmpName.empty()) {
-      consumeError(OF.File->discard());
-      continue;
-    }
-
-    llvm::Error E = OF.File->keep(OF.Filename);
-    if (!E)
-      continue;
-
-    getDiagnostics().Report(diag::err_unable_to_rename_temp)
-        << OF.File->TmpName << OF.Filename << std::move(E);
-
-    llvm::sys::fs::remove(OF.File->TmpName);
+  if (!EraseFiles) {
+    for (auto &O : OutputFiles)
+      llvm::handleAllErrors(
+          O.keep(),
+          [&](const llvm::vfs::TempFileOutputError &E) {
+            getDiagnostics().Report(diag::err_unable_to_rename_temp)
+                << E.getTempPath() << E.getOutputPath()
+                << E.convertToErrorCode().message();
+          },
+          [&](const llvm::vfs::OutputError &E) {
+            getDiagnostics().Report(diag::err_fe_unable_to_open_output)
+                << E.getOutputPath() << E.convertToErrorCode().message();
+          });
   }
   OutputFiles.clear();
   if (DeleteBuiltModules) {
@@ -828,6 +932,49 @@ std::unique_ptr<raw_pwrite_stream> CompilerInstance::createDefaultOutputFile(
 
 std::unique_ptr<raw_pwrite_stream> CompilerInstance::createNullOutputFile() {
   return std::make_unique<llvm::raw_null_ostream>();
+}
+
+void CompilerInstance::setOutputBackend(
+    IntrusiveRefCntPtr<llvm::vfs::OutputBackend> NewOutputs) {
+  assert(!TheOutputBackend && "Already has an output manager");
+  TheOutputBackend = std::move(NewOutputs);
+}
+
+void CompilerInstance::createOutputBackend() {
+  assert(!TheOutputBackend && "Already has an output manager");
+  TheOutputBackend = llvm::makeIntrusiveRefCnt<llvm::vfs::OnDiskOutputBackend>();
+}
+
+llvm::vfs::OutputBackend &CompilerInstance::getOutputBackend() {
+  assert(TheOutputBackend);
+  return *TheOutputBackend;
+}
+
+llvm::vfs::OutputBackend &CompilerInstance::getOrCreateOutputBackend() {
+  if (!hasOutputBackend())
+    createOutputBackend();
+  return getOutputBackend();
+}
+
+void CompilerInstance::createCASDatabases() {
+  // Create a new CAS databases from the CompilerInvocation. Future calls to
+  // createFileManager() will use the same CAS.
+  std::tie(CAS, ActionCache) =
+      getInvocation().getCASOpts().getOrCreateDatabases(
+          getDiagnostics(),
+          /*CreateEmptyCASOnFailure=*/true);
+}
+
+llvm::cas::ObjectStore &CompilerInstance::getOrCreateObjectStore() {
+  if (!CAS)
+    createCASDatabases();
+  return *CAS;
+}
+
+llvm::cas::ActionCache &CompilerInstance::getOrCreateActionCache() {
+  if (!ActionCache)
+    createCASDatabases();
+  return *ActionCache;
 }
 
 std::unique_ptr<raw_pwrite_stream>
@@ -864,98 +1011,20 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
     OutputPath = *AbsPath;
   }
 
-  std::unique_ptr<llvm::raw_fd_ostream> OS;
-  std::optional<StringRef> OSFile;
+  using namespace llvm::vfs;
+  Expected<OutputFile> O = getOrCreateOutputBackend().createFile(
+      OutputPath,
+      OutputConfig()
+          .setTextWithCRLF(!Binary)
+          .setDiscardOnSignal(RemoveFileOnSignal)
+          .setAtomicWrite(UseTemporary)
+          .setImplyCreateDirectories(UseTemporary && CreateMissingDirectories));
+  if (!O)
+    return O.takeError();
 
-  if (UseTemporary) {
-    if (OutputPath == "-")
-      UseTemporary = false;
-    else {
-      llvm::sys::fs::file_status Status;
-      llvm::sys::fs::status(OutputPath, Status);
-      if (llvm::sys::fs::exists(Status)) {
-        // Fail early if we can't write to the final destination.
-        if (!llvm::sys::fs::can_write(OutputPath))
-          return llvm::errorCodeToError(
-              make_error_code(llvm::errc::operation_not_permitted));
-
-        // Don't use a temporary if the output is a special file. This handles
-        // things like '-o /dev/null'
-        if (!llvm::sys::fs::is_regular_file(Status))
-          UseTemporary = false;
-      }
-    }
-  }
-
-  std::optional<llvm::sys::fs::TempFile> Temp;
-  if (UseTemporary) {
-    // Create a temporary file.
-    // Insert -%%%%%%%% before the extension (if any), and because some tools
-    // (noticeable, clang's own GlobalModuleIndex.cpp) glob for build
-    // artifacts, also append .tmp.
-    StringRef OutputExtension = llvm::sys::path::extension(OutputPath);
-    SmallString<128> TempPath =
-        StringRef(OutputPath).drop_back(OutputExtension.size());
-    TempPath += "-%%%%%%%%";
-    TempPath += OutputExtension;
-    TempPath += ".tmp";
-    llvm::sys::fs::OpenFlags BinaryFlags =
-        Binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_Text;
-    Expected<llvm::sys::fs::TempFile> ExpectedFile =
-        llvm::sys::fs::TempFile::create(
-            TempPath, llvm::sys::fs::all_read | llvm::sys::fs::all_write,
-            BinaryFlags);
-
-    llvm::Error E = handleErrors(
-        ExpectedFile.takeError(), [&](const llvm::ECError &E) -> llvm::Error {
-          std::error_code EC = E.convertToErrorCode();
-          if (CreateMissingDirectories &&
-              EC == llvm::errc::no_such_file_or_directory) {
-            StringRef Parent = llvm::sys::path::parent_path(OutputPath);
-            EC = llvm::sys::fs::create_directories(Parent);
-            if (!EC) {
-              ExpectedFile = llvm::sys::fs::TempFile::create(
-                  TempPath, llvm::sys::fs::all_read | llvm::sys::fs::all_write,
-                  BinaryFlags);
-              if (!ExpectedFile)
-                return llvm::errorCodeToError(
-                    llvm::errc::no_such_file_or_directory);
-            }
-          }
-          return llvm::errorCodeToError(EC);
-        });
-
-    if (E) {
-      consumeError(std::move(E));
-    } else {
-      Temp = std::move(ExpectedFile.get());
-      OS.reset(new llvm::raw_fd_ostream(Temp->FD, /*shouldClose=*/false));
-      OSFile = Temp->TmpName;
-    }
-    // If we failed to create the temporary, fallback to writing to the file
-    // directly. This handles the corner case where we cannot write to the
-    // directory, but can write to the file.
-  }
-
-  if (!OS) {
-    OSFile = OutputPath;
-    std::error_code EC;
-    OS.reset(new llvm::raw_fd_ostream(
-        *OSFile, EC,
-        (Binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_TextWithCRLF)));
-    if (EC)
-      return llvm::errorCodeToError(EC);
-  }
-
-  // Add the output file -- but don't try to remove "-", since this means we are
-  // using stdin.
-  OutputFiles.emplace_back(((OutputPath != "-") ? OutputPath : "").str(),
-                           std::move(Temp));
-
-  if (!Binary || OS->supportsSeeking())
-    return std::move(OS);
-
-  return std::make_unique<llvm::buffer_unique_ostream>(std::move(OS));
+  O->discardOnDestroy([](llvm::Error E) { consumeError(std::move(E)); });
+  OutputFiles.push_back(std::move(*O));
+  return OutputFiles.back().createProxy();
 }
 
 // Initialization Utilities
@@ -1019,8 +1088,10 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   noteBottomOfStack();
 
   auto FinishDiagnosticClient = llvm::make_scope_exit([&]() {
-    // Notify the diagnostic client that all files were processed.
-    getDiagnosticClient().finish();
+    if (!getFrontendOpts().MayEmitDiagnosticsAfterProcessingSourceFiles) {
+      // Notify the diagnostic client that all files were processed.
+      getDiagnosticClient().finish();
+    }
   });
 
   raw_ostream &OS = getVerboseOutputStream();
@@ -1061,30 +1132,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
     }
   }
 
-  if (getDiagnosticOpts().ShowCarets) {
-    // We can have multiple diagnostics sharing one diagnostic client.
-    // Get the total number of warnings/errors from the client.
-    unsigned NumWarnings = getDiagnostics().getClient()->getNumWarnings();
-    unsigned NumErrors = getDiagnostics().getClient()->getNumErrors();
-
-    if (NumWarnings)
-      OS << NumWarnings << " warning" << (NumWarnings == 1 ? "" : "s");
-    if (NumWarnings && NumErrors)
-      OS << " and ";
-    if (NumErrors)
-      OS << NumErrors << " error" << (NumErrors == 1 ? "" : "s");
-    if (NumWarnings || NumErrors) {
-      OS << " generated";
-      if (getLangOpts().CUDA) {
-        if (!getLangOpts().CUDAIsDevice) {
-          OS << " when compiling for host";
-        } else {
-          OS << " when compiling for " << getTargetOpts().CPU;
-        }
-      }
-      OS << ".\n";
-    }
-  }
+  printDiagnosticStats();
 
   if (getFrontendOpts().ShowStats) {
     if (hasFileManager()) {
@@ -1110,6 +1158,36 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   }
 
   return !getDiagnostics().getClient()->getNumErrors();
+}
+
+void CompilerInstance::printDiagnosticStats() {
+  if (!getDiagnosticOpts().ShowCarets)
+    return;
+
+  raw_ostream &OS = getVerboseOutputStream();
+
+  // We can have multiple diagnostics sharing one diagnostic client.
+  // Get the total number of warnings/errors from the client.
+  unsigned NumWarnings = getDiagnostics().getClient()->getNumWarnings();
+  unsigned NumErrors = getDiagnostics().getClient()->getNumErrors();
+
+  if (NumWarnings)
+    OS << NumWarnings << " warning" << (NumWarnings == 1 ? "" : "s");
+  if (NumWarnings && NumErrors)
+    OS << " and ";
+  if (NumErrors)
+    OS << NumErrors << " error" << (NumErrors == 1 ? "" : "s");
+  if (NumWarnings || NumErrors) {
+    OS << " generated";
+    if (getLangOpts().CUDA) {
+      if (!getLangOpts().CUDAIsDevice) {
+        OS << " when compiling for host";
+      } else {
+        OS << " when compiling for " << getTargetOpts().CPU;
+      }
+    }
+    OS << ".\n";
+  }
 }
 
 void CompilerInstance::LoadRequestedPlugins() {
@@ -1216,6 +1294,7 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   // Force implicitly-built modules to hash the content of the module file.
   HSOpts.ModulesHashContent = true;
   FrontendOpts.Inputs = {Input};
+  FrontendOpts.MayEmitDiagnosticsAfterProcessingSourceFiles = false;
 
   // Don't free the remapped file buffers; they are owned by our caller.
   PPOpts.RetainRemappedFileBuffers = true;
@@ -1223,8 +1302,10 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   DiagnosticOptions &DiagOpts = Invocation->getDiagnosticOpts();
 
   DiagOpts.VerifyDiagnostics = 0;
-  assert(ImportingInstance.getInvocation().getModuleHash() ==
-         Invocation->getModuleHash() && "Module hash mismatch!");
+  assert(ImportingInstance.getInvocation().getModuleHash(
+             ImportingInstance.getDiagnostics()) ==
+             Invocation->getModuleHash(ImportingInstance.getDiagnostics()) &&
+         "Module hash mismatch!");
 
   // Construct a compiler instance that will be used to actually create the
   // module.  Since we're sharing an in-memory module cache,
@@ -1257,6 +1338,15 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   SourceMgr.pushModuleBuildStack(ModuleName,
     FullSourceLoc(ImportLoc, ImportingInstance.getSourceManager()));
 
+  // Pass along the GenModuleActionWrapper callback
+  auto WrapGenModuleAction = ImportingInstance.getGenModuleActionWrapper();
+  Instance.setGenModuleActionWrapper(WrapGenModuleAction);
+
+  // Share an output manager.
+  assert(ImportingInstance.hasOutputBackend() &&
+         "Expected an output manager to already be set up");
+  Instance.setOutputBackend(&ImportingInstance.getOutputBackend());
+
   // If we're collecting module dependencies, we need to share a collector
   // between all of the module CompilerInstances. Other than that, we don't
   // want to produce any dependency output from the module build.
@@ -1273,8 +1363,11 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   // thread so that we get a stack large enough.
   bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnThread(
       [&]() {
-        GenerateModuleFromModuleMapAction Action;
-        Instance.ExecuteAction(Action);
+        std::unique_ptr<FrontendAction> Action(
+            new GenerateModuleFromModuleMapAction);
+        if (WrapGenModuleAction)
+          Action = WrapGenModuleAction(FrontendOpts, std::move(Action));
+        Instance.ExecuteAction(*Action);
       },
       DesiredStackSize);
 
@@ -1718,6 +1811,10 @@ void CompilerInstance::createASTReader() {
 
   for (auto &Listener : DependencyCollectors)
     Listener->attachToASTReader(*TheASTReader);
+
+  TheASTReader->addListener(std::make_unique<CompileCacheASTReaderHelper>(
+      getOrCreateObjectStore(), getOrCreateActionCache(), getModuleCache(),
+      getDiagnostics()));
 }
 
 bool CompilerInstance::loadModuleFile(
@@ -1883,9 +1980,16 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
     // Check whether M refers to the file in the prebuilt module path.
     if (M && M->getASTFile())
-      if (auto ModuleFile = FileMgr->getFile(ModuleFilename))
+      if (auto ModuleFile = FileMgr->getOptionalFileRef(ModuleFilename)) {
         if (*ModuleFile == M->getASTFile())
           return M;
+#if !defined(__APPLE__)
+        // Workaround for ext4 file system. Also check bypass file if exists.
+        if (auto Bypass = FileMgr->getBypassFile(*ModuleFile))
+          if (*Bypass == M->getASTFile())
+            return M;
+#endif
+      }
 
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_prebuilt)
         << ModuleName;
@@ -2318,4 +2422,118 @@ void CompilerInstance::resetAndLeakSema() { llvm::BuryPointer(takeSema()); }
 void CompilerInstance::setExternalSemaSource(
     IntrusiveRefCntPtr<ExternalSemaSource> ESS) {
   ExternalSemaSrc = std::move(ESS);
+}
+
+static bool addCachedModuleFileToInMemoryCache(
+    StringRef Path, StringRef CacheKey, StringRef Provider,
+    cas::ObjectStore &CAS, cas::ActionCache &Cache,
+    InMemoryModuleCache &ModuleCache, DiagnosticsEngine &Diags) {
+
+  if (ModuleCache.lookupPCM(Path))
+    return false;
+
+  auto ID = CAS.parseID(CacheKey);
+  if (!ID) {
+    Diags.Report(diag::err_cas_cannot_get_module_cache_key)
+        << CacheKey << Provider << ID.takeError();
+    return true;
+  }
+
+  auto Value = Cache.get(*ID);
+  if (!Value || !*Value) {
+    auto Diag = Diags.Report(diag::err_cas_cannot_get_module_cache_key)
+                << CacheKey << Provider;
+    if (!Value) {
+      Diag << Value.takeError();
+    } else {
+      std::string ErrStr("no such entry in action cache; expected compile:\n");
+      llvm::raw_string_ostream Err(ErrStr);
+      if (auto E = printCompileJobCacheKey(CAS, *ID, Err))
+        Diag << std::move(E);
+      else
+        Diag << Err.str();
+    }
+    return true;
+  }
+  auto ValueRef = CAS.getReference(**Value);
+  if (!ValueRef) {
+    Diags.Report(diag::err_cas_cannot_get_module_cache_key)
+        << CacheKey << Provider << "result module doesn't exist in CAS";
+
+    return true;
+  }
+
+  std::optional<cas::CompileJobCacheResult> Result;
+  cas::CompileJobResultSchema Schema(CAS);
+  if (llvm::Error E = Schema.load(*ValueRef).moveInto(Result)) {
+    Diags.Report(diag::err_cas_cannot_get_module_cache_key)
+        << CacheKey << Provider << std::move(E);
+    return true;
+  }
+  auto Output =
+      Result->getOutput(cas::CompileJobCacheResult::OutputKind::MainOutput);
+  if (!Output)
+    llvm::report_fatal_error("missing main output");
+  // FIXME: We wait to materialize each module file before proceeding, which
+  // introduces latency for a network CAS. Instead we should collect all the
+  // module keys and materialize them concurrently using \c getProxyFuture, for
+  // better network utilization.
+  auto OutputProxy = CAS.getProxy(Output->Object);
+  if (!OutputProxy) {
+    Diags.Report(diag::err_cas_cannot_get_module_cache_key)
+        << CacheKey << Provider << OutputProxy.takeError();
+    return true;
+  }
+
+  ModuleCache.addPCM(Path, OutputProxy->getMemoryBuffer());
+  return false;
+}
+
+bool CompilerInstance::addCachedModuleFile(StringRef Path, StringRef CacheKey,
+                                           StringRef Provider) {
+  return addCachedModuleFileToInMemoryCache(
+      Path, CacheKey, Provider, getOrCreateObjectStore(),
+      getOrCreateActionCache(), getModuleCache(), getDiagnostics());
+}
+
+bool CompileCacheASTReaderHelper::readModuleCacheKey(StringRef ModuleName,
+                                                     StringRef Filename,
+                                                     StringRef CacheKey) {
+  // FIXME: add name/path of the importing module?
+  return addCachedModuleFileToInMemoryCache(
+      Filename, CacheKey, "imported module", CAS, Cache, ModuleCache, Diags);
+}
+
+/// Verify that ID is in the CAS. Otherwise the module cache probably was
+/// created with a different CAS.
+bool CompileCacheASTReaderHelper::checkCASID(bool Complain, StringRef RootID,
+                                             unsigned ParseDiagID,
+                                             unsigned MissingDiagID) {
+  std::optional<cas::CASID> ID;
+  if (errorToBool(CAS.parseID(RootID).moveInto(ID))) {
+    if (Complain)
+      Diags.Report(ParseDiagID) << RootID;
+    return true;
+  }
+  if (errorToBool(CAS.getProxy(*ID).takeError())) {
+    if (Complain) {
+      Diags.Report(MissingDiagID) << RootID;
+    }
+    return true;
+  }
+  return false;
+}
+
+bool CompileCacheASTReaderHelper::readCASFileSystemRootID(StringRef RootID,
+                                                          bool Complain) {
+  return checkCASID(Complain, RootID, diag::err_cas_cannot_parse_root_id,
+                    diag::err_cas_missing_root_id);
+}
+
+bool CompileCacheASTReaderHelper::readIncludeTreeID(StringRef ID,
+                                                    bool Complain) {
+  // Verify that ID is in the CAS. Otherwise the module cache probably was
+  // created with a different CAS.
+  return checkCASID(Complain, ID, diag::err_cas_cannot_parse_include_tree_id,
+                    diag::err_cas_missing_include_tree_id);
 }

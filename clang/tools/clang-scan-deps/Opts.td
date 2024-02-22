@@ -31,6 +31,21 @@ def deprecated_driver_command : F<"deprecated-driver-command", "use a single dri
 
 defm resource_dir_recipe : Eq<"resource-dir-recipe", "How to produce missing '-resource-dir' argument">;
 
+def emit_cas_compdb : F<"emit-cas-compdb", "Emit compilation DB with updated clang arguments for CAS based dependency scanning build.">;
+
+defm cas_path : Eq<"cas-path", "Path for on-disk CAS.">;
+
+defm fcas_plugin_path : Eq<"fcas-plugin-path", "Path to a shared library implementing the LLVM CAS plugin API">;
+defm fcas_plugin_option : Eq<"fcas-plugin-option", "Option to pass to the CAS plugin">;
+
+def in_memory_cas : F<"in-memory-cas", "Use an in-memory CAS instead of on-disk.">;
+
+defm prefix_map_toolchain : Eq<"prefix-map-toolchain", "Path to remap toolchain path to.">;
+
+defm prefix_map_sdk : Eq<"prefix-map-sdk", "Path to remap SDK path to.">;
+
+defm prefix_map : Eq<"prefix-map", "Path to remap, as \"<old>=<new>\".">;
+
 def print_timing : F<"print-timing", "Print timing information">;
 
 def verbose : F<"v", "Use verbose output">;

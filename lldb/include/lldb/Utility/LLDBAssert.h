@@ -19,7 +19,7 @@
 // __FILE__ but only renders the last path component (the filename) instead of
 // an invocation dependent full path to that file.
 #define lldbassert(x)                                                          \
-  lldb_private::lldb_assert(static_cast<bool>(x), #x, __FUNCTION__,            \
+  ::lldb_private::lldb_assert(static_cast<bool>(x), #x, __FUNCTION__,            \
                             __FILE_NAME__, __LINE__)
 #else
 #define lldbassert(x)                                                          \

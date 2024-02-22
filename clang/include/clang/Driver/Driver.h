@@ -752,6 +752,7 @@ private:
   /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
   void setLTOMode(const llvm::opt::ArgList &Args);
 
+public:
   /// Retrieves a ToolChain for a particular \p Target triple.
   ///
   /// Will cache ToolChains for the life of the driver object, and create them
@@ -760,6 +761,7 @@ private:
                                 const llvm::Triple &Target) const;
 
   /// @}
+private:
 
   /// Retrieves a ToolChain for a particular device \p Target triple
   ///
@@ -844,6 +846,9 @@ bool IsClangCL(StringRef DriverMode);
 llvm::Error expandResponseFiles(SmallVectorImpl<const char *> &Args,
                                 bool ClangCLMode, llvm::BumpPtrAllocator &Alloc,
                                 llvm::vfs::FileSystem *FS = nullptr);
+
+/// Checks whether the value produced by getDriverMode is for 'cache' mode.
+bool isClangCache(StringRef DriverMode);
 
 } // end namespace driver
 } // end namespace clang

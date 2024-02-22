@@ -12,7 +12,9 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFileOnDemand.h"
+#include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
@@ -103,6 +105,12 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFileSP objfile_sp) {
     }
   }
   return best_symfile_up.release();
+}
+
+std::vector<lldb::DataBufferSP>
+SymbolFile::GetASTData(lldb::LanguageType language) {
+  // SymbolFile subclasses must add this functionality
+  return std::vector<lldb::DataBufferSP>();
 }
 
 uint32_t

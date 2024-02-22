@@ -679,6 +679,9 @@ public:
   virtual size_t ReadSectionData(Section *section,
                                  DataExtractor &section_data);
 
+  const char *GetCStrFromSection(Section *section,
+                                 lldb::offset_t section_offset) const;
+
   // Returns the section data size. This is special-cased for PECOFF
   // due to file alignment.
   virtual size_t GetSectionDataSize(Section *section) {

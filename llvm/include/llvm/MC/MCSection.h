@@ -49,6 +49,7 @@ public:
     SV_XCOFF,
     SV_SPIRV,
     SV_DXContainer,
+    SV_CAS, // MCCAS
   };
 
   /// Express the state of bundle locked groups while emitting code.

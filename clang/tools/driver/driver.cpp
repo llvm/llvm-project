@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Driver.h"
+#include "CacheLauncherMode.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/HeaderInclude.h"
 #include "clang/Basic/Stack.h"
@@ -31,6 +33,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/RemoteCachingService/RemoteCachingService.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -52,6 +55,11 @@
 #include <optional>
 #include <set>
 #include <system_error>
+
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+
 using namespace clang;
 using namespace clang::driver;
 using namespace llvm::opt;
@@ -207,6 +215,12 @@ static void ApplyQAOverride(SmallVectorImpl<const char*> &Args,
 
 extern int cc1_main(ArrayRef<const char *> Argv, const char *Argv0,
                     void *MainAddr);
+#if LLVM_ON_UNIX
+extern int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
+                            void *MainAddr);
+extern int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
+                           void *MainAddr);
+#endif /* LLVM_ON_UNIX */
 extern int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0,
                       void *MainAddr);
 extern int cc1gen_reproducer_main(ArrayRef<const char *> Argv,
@@ -361,8 +375,28 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   }
   StringRef Tool = ArgV[1];
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
-  if (Tool == "-cc1")
+  if (Tool == "-cc1") {
+    if (std::getenv("CLANG_CACHE_TEST_DETERMINISTIC_OUTPUTS") &&
+        find(ArgV, StringRef("-fcache-compile-job")) != ArgV.end()) {
+      // With caching enabled, perform the compile twice in order to catch
+      // differences in the output.
+      // FIXME: while it is unlikely caching will be enabled when the output
+      // is to stdout (e.g. `-E`, or `-S -o -`), we should avoid writing
+      // output twice.
+      int RC = cc1_main(ArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
+      if (RC != 0)
+        return RC;
+    }
     return cc1_main(ArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
+  }
+#if LLVM_ON_UNIX
+  if (Tool == "-cc1depscand")
+    return cc1depscand_main(ArrayRef(ArgV).slice(2), ArgV[0],
+                            GetExecutablePathVP);
+  if (Tool == "-cc1depscan")
+    return cc1depscan_main(ArrayRef(ArgV).slice(2), ArgV[0],
+                           GetExecutablePathVP);
+#endif /* LLVM_ON_UNIX */
   if (Tool == "-cc1as")
     return cc1as_main(ArrayRef(ArgV).slice(2), ArgV[0], GetExecutablePathVP);
   if (Tool == "-cc1gen-reproducer")
@@ -392,9 +426,15 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
 
   const char *ProgName =
       ToolContext.NeedsPrependArg ? ToolContext.PrependArg : ToolContext.Path;
+  StringRef DriverMode = getDriverMode(ProgName, llvm::ArrayRef(Args).slice(1));
+  if (isClangCache(DriverMode)) {
+    if (std::optional<int> ExitCode = handleClangCacheInvocation(Args, Saver))
+      return *ExitCode;
+    // handleClangCacheInvocation resets the ProgName.
+    ProgName = Args[0];
+  }
 
-  bool ClangCLMode =
-      IsClangCL(getDriverMode(ProgName, llvm::ArrayRef(Args).slice(1)));
+  bool ClangCLMode = IsClangCL(DriverMode);
 
   if (llvm::Error Err = expandResponseFiles(Args, ClangCLMode, A)) {
     llvm::errs() << toString(std::move(Err)) << '\n';

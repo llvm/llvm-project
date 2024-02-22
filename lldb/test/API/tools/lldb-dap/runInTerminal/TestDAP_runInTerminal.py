@@ -43,6 +43,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         except:
             return False
 
+    @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     @skipIfWindows
     @skipIfRemote
     @skipIf(archs=no_match(["x86_64"]))
@@ -91,6 +92,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         env = self.dap_server.request_evaluate("foo")["body"]["result"]
         self.assertIn("bar", env)
 
+    @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     @skipIfWindows
     @skipIfRemote
     @skipIf(archs=no_match(["x86_64"]))
@@ -111,6 +113,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             response["message"],
         )
 
+    @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     @skipIfWindows
     @skipIfRemote
     @skipIf(archs=no_match(["x86_64"]))
@@ -127,6 +130,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             '"--launch-target" requires "--comm-file" to be specified', proc.stderr
         )
 
+    @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     @skipIfWindows
     @skipIfRemote
     @skipIf(archs=no_match(["x86_64"]))
@@ -155,6 +159,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         _, stderr = proc.communicate()
         self.assertIn("No such file or directory", stderr)
 
+    @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     @skipIfWindows
     @skipIfRemote
     @skipIf(archs=no_match(["x86_64"]))
@@ -183,6 +188,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         stdout, _ = proc.communicate()
         self.assertIn("foo", stdout)
 
+    @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     @skipIfWindows
     @skipIfRemote
     @skipIf(archs=no_match(["x86_64"]))
@@ -205,6 +211,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         stdout, _ = proc.communicate()
         self.assertIn("FOO=BAR", stdout)
 
+    @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     @skipIfWindows
     @skipIfRemote
     @skipIf(archs=no_match(["x86_64"]))

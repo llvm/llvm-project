@@ -1,0 +1,1 @@
+@import weird_objc;

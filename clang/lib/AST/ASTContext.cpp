@@ -40,6 +40,7 @@
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/StableHash.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/TemplateBase.h"
@@ -3084,6 +3085,16 @@ QualType ASTContext::removeAddrSpaceQualType(QualType T) const {
     return QualType(TypeNode, Quals.getFastQualifiers());
 }
 
+uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) {
+  assert(!T->isDependentType() &&
+         "cannot compute type discriminator of a dependent type");
+  SmallString<256> Str;
+  llvm::raw_svector_ostream Out(Str);
+  std::unique_ptr<MangleContext> MC(createMangleContext());
+  MC->mangleCanonicalTypeName(T, Out);
+  return getPointerAuthStringDiscriminator(*this, Str.c_str());
+}
+
 QualType ASTContext::getObjCGCQualType(QualType T,
                                        Qualifiers::GC GCAttr) const {
   QualType CanT = getCanonicalType(T);
@@ -5383,10 +5394,6 @@ ASTContext::applyObjCProtocolQualifiers(QualType type,
                   bool allowOnPointerType) const {
   hasError = false;
 
-  if (const auto *objT = dyn_cast<ObjCTypeParamType>(type.getTypePtr())) {
-    return getObjCTypeParamType(objT->getDecl(), protocols);
-  }
-
   // Apply protocol qualifiers to ObjCObjectPointerType.
   if (allowOnPointerType) {
     if (const auto *objPtr =
@@ -5483,11 +5490,13 @@ void ASTContext::adjustObjCTypeParamBoundType(const ObjCTypeParamDecl *Orig,
                                               ObjCTypeParamDecl *New) const {
   New->setTypeSourceInfo(getTrivialTypeSourceInfo(Orig->getUnderlyingType()));
   // Update TypeForDecl after updating TypeSourceInfo.
-  auto NewTypeParamTy = cast<ObjCTypeParamType>(New->getTypeForDecl());
-  SmallVector<ObjCProtocolDecl *, 8> protocols;
-  protocols.append(NewTypeParamTy->qual_begin(), NewTypeParamTy->qual_end());
-  QualType UpdatedTy = getObjCTypeParamType(New, protocols);
-  New->setTypeForDecl(UpdatedTy.getTypePtr());
+  if (const Type *TypeForDecl = New->getTypeForDecl()) {
+    auto NewTypeParamTy = cast<ObjCTypeParamType>(TypeForDecl);
+    SmallVector<ObjCProtocolDecl *, 8> protocols;
+    protocols.append(NewTypeParamTy->qual_begin(), NewTypeParamTy->qual_end());
+    QualType UpdatedTy = getObjCTypeParamType(New, protocols);
+    New->setTypeForDecl(UpdatedTy.getTypePtr());
+  }
 }
 
 /// ObjCObjectAdoptsQTypeProtocols - Checks that protocols in IC's
@@ -7550,6 +7559,9 @@ bool ASTContext::BlockRequiresCopying(QualType Ty,
 
     return true;
   }
+
+  if (Ty.hasAddressDiscriminatedPointerAuth())
+    return true;
 
   // The block needs copy/destroy helpers if Ty is non-trivial to destructively
   // move or destroy.
@@ -10602,6 +10614,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     if (LQuals.getCVRQualifiers() != RQuals.getCVRQualifiers() ||
         LQuals.getAddressSpace() != RQuals.getAddressSpace() ||
         LQuals.getObjCLifetime() != RQuals.getObjCLifetime() ||
+        LQuals.getPointerAuth() != RQuals.getPointerAuth() ||
         LQuals.hasUnaligned() != RQuals.hasUnaligned())
       return {};
 

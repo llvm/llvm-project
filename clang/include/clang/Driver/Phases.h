@@ -15,6 +15,7 @@ namespace phases {
   /// ID - Ordered values for successive stages in the
   /// compilation process which interact with user options.
   enum ID {
+    Depscan,
     Preprocess,
     Precompile,
     Compile,

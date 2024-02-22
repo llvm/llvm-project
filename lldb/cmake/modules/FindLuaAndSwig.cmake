@@ -7,7 +7,7 @@
 if(LUA_LIBRARIES AND LUA_INCLUDE_DIR AND LLDB_ENABLE_SWIG)
   set(LUAANDSWIG_FOUND TRUE)
 else()
-  if (LLDB_ENABLE_SWIG)
+  if (LLDB_ENABLE_SWIG OR LLDB_USE_STATIC_BINDINGS)
     find_package(Lua 5.3 EXACT)
     if(LUA_FOUND)
       mark_as_advanced(
@@ -25,6 +25,5 @@ else()
                                       LUAANDSWIG_FOUND
                                     REQUIRED_VARS
                                       LUA_LIBRARIES
-                                      LUA_INCLUDE_DIR
-                                      LLDB_ENABLE_SWIG)
+                                      LUA_INCLUDE_DIR)
 endif()

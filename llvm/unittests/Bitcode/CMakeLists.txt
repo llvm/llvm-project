@@ -8,5 +8,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(BitcodeTests
   BitReaderTest.cpp
+  RecordLayout.cpp
   DataLayoutUpgradeTest.cpp
   )

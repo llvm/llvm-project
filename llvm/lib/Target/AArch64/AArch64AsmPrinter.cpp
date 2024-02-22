@@ -28,6 +28,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -43,6 +44,9 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/GlobalPtrAuthInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
@@ -67,6 +71,16 @@
 
 using namespace llvm;
 
+enum PtrauthCheckMode { Default, Unchecked, Poison, Trap };
+static cl::opt<PtrauthCheckMode>
+PtrauthAuthChecks("aarch64-ptrauth-auth-checks", cl::Hidden,
+                  cl::values(
+                    clEnumValN(Unchecked, "none", "don't test for failure"),
+                    clEnumValN(Poison, "poison", "poison on failure"),
+                    clEnumValN(Trap, "trap", "trap on failure")),
+                  cl::desc("Check pointer authentication auth/resign failures"),
+                  cl::init(Default));
+
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
@@ -89,6 +103,9 @@ public:
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const {
     return MCInstLowering.lowerOperand(MO, MCOp);
   }
+
+  const MCExpr *
+  lowerPtrAuthGlobalConstant(const GlobalPtrAuthInfo &PAI) override;
 
   void emitStartOfAsmFile(Module &M) override;
   void emitJumpTableInfo() override;
@@ -186,6 +203,9 @@ private:
   void emitFunctionBodyEnd() override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
+
+  void EmitPtrAuthVersion(Module &M);
+
   void emitEndOfAsmFile(Module &M) override;
 
   AArch64FunctionInfo *AArch64FI = nullptr;
@@ -247,6 +267,9 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     OutStreamer->emitAssignment(
         S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
   }
+
+  if (TM.getTargetTriple().isOSBinFormatMachO())
+    EmitPtrAuthVersion(M);
 
   if (!TT.isOSBinFormatELF())
     return;
@@ -542,6 +565,59 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   OutStreamer->emitLabel(Pass);
 }
 
+class PtrauthABIVersionDiagnosticInfo : public DiagnosticInfo {
+  int V1, V2;
+  bool K1, K2;
+public:
+  PtrauthABIVersionDiagnosticInfo(int V1, bool K1, int V2, bool K2)
+      : DiagnosticInfo(DK_Linker, DS_Warning), V1(V1), V2(V2), K1(K1), K2(K2) {}
+  void print(DiagnosticPrinter &DP) const override {
+    const char *Mode1 = K1 ? "kernel" : "user";
+    const char *Mode2 = K2 ? "kernel" : "user";
+    DP << "incompatible ptrauth ABI versions: " << V1 << " (" << Mode1
+       << ") and " << V2 << " (" << Mode2 << "), falling back to 63 (user)";
+  }
+};
+
+void AArch64AsmPrinter::EmitPtrAuthVersion(Module &M) {
+  // Emit the ptrauth ABI version, if any.
+  SmallVector<Module::PtrAuthABIVersion, 2> Versions =
+      M.getPtrAuthABIVersions();
+  if (Versions.size() == 0)
+    return;
+
+  // The ptrauth ABI version is an arm64e concept, only implemented for MachO.
+  const Triple &TT = TM.getTargetTriple();
+  if (!TT.isOSBinFormatMachO())
+    report_fatal_error("ptrauth ABI version support not yet implemented");
+
+  LLVMContext &Ctx = M.getContext();
+
+  Module::PtrAuthABIVersion V = Versions[0];
+  if (Versions.size() == 1) {
+    if (V.Version > 63) {
+      Ctx.emitError("invalid ptrauth ABI version: " + utostr(V.Version));
+      V.Version = 63;
+      V.Kernel = false;
+    }
+  }
+  // If there are multiple versions, there's a mismatch.  In that case, fall
+  // back to version "15", and emit a warning through the context.
+  if (Versions.size() == 2) {
+    int LV = Versions[0].Version;
+    bool LK = Versions[0].Kernel;
+    int RV = Versions[1].Version;
+    bool RK = Versions[1].Kernel;
+    V.Version = 63;
+    V.Kernel = false;
+    Ctx.diagnose(PtrauthABIVersionDiagnosticInfo(LV, LK, RV, RK));
+  }
+  assert(Versions.size() <= 2 &&
+         "Mismatch between more than two ptrauth abi versions.");
+
+  OutStreamer->EmitPtrAuthABIVersion(V.Version, V.Kernel);
+}
+
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   Register Reg = MI.getOperand(0).getReg();
   bool IsShort =
@@ -792,11 +868,39 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
   }
 }
 
+static void
+emitAuthenticatedPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
+                         const MachineModuleInfoMachO::AuthStubInfo &StubInfo) {
+  // L_foo$addend$auth_ptr$ib$23:
+  OutStreamer.emitLabel(StubLabel);
+  OutStreamer.emitValue(StubInfo.Pointer, /*size=*/8);
+}
+
 void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
   emitHwasanMemaccessSymbols(M);
 
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
+
+    // Output authenticated pointers as indirect symbols, if we have any.
+    MachineModuleInfoMachO &MMIMacho =
+        MMI->getObjFileInfo<MachineModuleInfoMachO>();
+
+    auto Stubs = MMIMacho.getAuthGVStubList();
+
+    if (!Stubs.empty()) {
+      // Switch to the "__auth_ptr" section.
+      OutStreamer->switchSection(
+          OutContext.getMachOSection("__DATA", "__auth_ptr", MachO::S_REGULAR,
+                                     SectionKind::getMetadata()));
+      emitAlignment(Align(8));
+
+      for (auto &Stub : Stubs)
+        emitAuthenticatedPointer(*OutStreamer, Stub.first, Stub.second);
+
+      OutStreamer->addBlankLine();
+    }
+
     // Funny Darwin hack: This flag tells the linker that no global symbols
     // contain code that falls through to other global symbols (e.g. the obvious
     // implementation of multiple entry points).  If this doesn't occur, the
@@ -1464,6 +1568,53 @@ void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
   }
 }
 
+
+const MCExpr *
+AArch64AsmPrinter::lowerPtrAuthGlobalConstant(const GlobalPtrAuthInfo &PAI) {
+  MCContext &Ctx = OutContext;
+
+  // Figure out the base symbol and the addend, if any.
+  APInt Offset(64, 0);
+  const Value *BaseGV =
+    PAI.getPointer()->stripAndAccumulateConstantOffsets(
+      getDataLayout(), Offset, /*AllowNonInbounds=*/true);
+
+  auto *BaseGVB = dyn_cast<GlobalValue>(BaseGV);
+
+  // If we can't understand the referenced ConstantExpr, there's nothing
+  // else we can do: emit an error.
+  if (!BaseGVB) {
+    BaseGVB = PAI.getGV();
+
+    std::string Buf;
+    raw_string_ostream OS(Buf);
+    OS << "Couldn't resolve target base/addend of llvm.ptrauth global '"
+      << *BaseGVB << "'";
+    BaseGV->getContext().emitError(OS.str());
+  }
+
+  // If there is an addend, turn that into the appropriate MCExpr.
+  const MCExpr *Sym = MCSymbolRefExpr::create(getSymbol(BaseGVB), Ctx);
+  if (Offset.sgt(0))
+    Sym = MCBinaryExpr::createAdd(
+        Sym, MCConstantExpr::create(Offset.getSExtValue(), Ctx), Ctx);
+  else if (Offset.slt(0))
+    Sym = MCBinaryExpr::createSub(
+        Sym, MCConstantExpr::create((-Offset).getSExtValue(), Ctx), Ctx);
+
+  auto *Disc = PAI.getDiscriminator();
+  uint64_t KeyID = PAI.getKey()->getZExtValue();
+  if (!isUInt<2>(KeyID))
+    BaseGV->getContext().emitError(
+        "Invalid AArch64 PAC Key ID '" + utostr(KeyID) + "' in llvm.ptrauth global '" +
+        BaseGV->getName() + "'");
+
+  // Finally build the complete @AUTH expr.
+  return AArch64AuthMCExpr::create(Sym, Disc->getZExtValue(),
+                                   AArch64PACKey::ID(KeyID),
+                                   PAI.hasAddressDiversity(), Ctx);
+}
+
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "AArch64GenMCPseudoLowering.inc"
@@ -1588,6 +1739,167 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
   }
 
+  case AArch64::AUT:
+  case AArch64::AUTPAC: {
+    const bool IsAUTPAC = MI->getOpcode() == AArch64::AUTPAC;
+
+    // We can expand AUT/AUTPAC into 3 possible sequences:
+    // - unchecked:
+    //      autia x16, x0
+    //      pacib x16, x1 ; if AUTPAC
+    //
+    // - checked and clearing:
+    //      mov x17, x16
+    //      autia x16, x0
+    //      xpaci x17
+    //      cmp x16, x17
+    //      pacib x16, x1
+    //      csel x16, x16, x17, eq
+    //   Where we only emit the AUT if we started with an AUT.
+    //
+    // - checked and trapping:
+    //      mov x17, x16
+    //      autia x16, x0
+    //      xpaci x17
+    //      cmp x16, x17
+    //      b.eq Lsuccess
+    //      brk #<0xc470 + aut key>
+    //     Lsuccess:
+    //      pacib x16, x1 ; if AUTPAC
+    //   Where the b.eq skips over the trap if the PAC is valid.
+    //
+    // This sequence is expensive, but we need more information to be able to
+    // do better.
+    //
+    // We can't TBZ the poison bit because EnhancedPAC2 XORs the PAC bits
+    // on failure.
+    // We can't TST the PAC bits because we don't always know how the address
+    // space is setup for the target environment (and the bottom PAC bit is
+    // based on that).
+    // Either way, we also don't always know whether TBI is enabled or not for
+    // the specific target environment.
+    //
+    // FIXME: we could re-use AUTReg as a temporary register, but that would
+    // require splitting the XZR cases into separate opcodes.
+
+    // By default, auth/resign sequences check for auth failures.
+    bool ShouldCheck = true;
+    // In the checked sequence, we only trap if explicitly requested.
+    bool ShouldTrap = MF->getFunction().hasFnAttribute("ptrauth-auth-traps");
+
+    // However, command-line flags can override this, for experimentation.
+    switch (PtrauthAuthChecks) {
+    case PtrauthCheckMode::Default: break;
+    case PtrauthCheckMode::Unchecked:
+      ShouldCheck = ShouldTrap = false;
+      break;
+    case PtrauthCheckMode::Poison:
+      ShouldCheck = true;
+      ShouldTrap = false;
+      break;
+    case PtrauthCheckMode::Trap:
+      ShouldCheck = ShouldTrap = true;
+      break;
+    }
+
+    const auto AUTKey = (AArch64PACKey::ID)MI->getOperand(0).getImm();
+    const unsigned AUTReg = MI->getOperand(1).getReg();
+
+    const unsigned XPACOpc = getXPACOpcodeForKey(AUTKey);
+    const bool AUTZero = AUTReg == AArch64::XZR;
+    const unsigned AUTOpc = getAUTOpcodeForKey(AUTKey, AUTZero);
+
+    // Checked AUTPACs and trapping AUTs need a temporary copy of the input: x17
+    if ((IsAUTPAC && ShouldCheck) || ShouldTrap) {
+      //  mov x17, x16
+      EmitToStreamer(*OutStreamer,
+        MCInstBuilder(AArch64::ORRXrs)
+          .addReg(AArch64::X17)
+          .addReg(AArch64::XZR)
+          .addReg(AArch64::X16)
+          .addImm(0));
+    }
+
+    //  autia x16, x0
+    MCInst AUTInst;
+    AUTInst.setOpcode(AUTOpc);
+    AUTInst.addOperand(MCOperand::createReg(AArch64::X16));
+    AUTInst.addOperand(MCOperand::createReg(AArch64::X16));
+    if (!AUTZero)
+      AUTInst.addOperand(MCOperand::createReg(AUTReg));
+    EmitToStreamer(*OutStreamer, AUTInst);
+
+    // Unchecked or checked-but-non-trapping AUT is just an "AUT": we're done.
+    if (!IsAUTPAC && (!ShouldCheck || !ShouldTrap))
+      return;
+
+    // Checked sequences do an additional strip-and-compare.
+    if (ShouldCheck) {
+      //  xpaci x17
+      EmitToStreamer(*OutStreamer,
+        MCInstBuilder(XPACOpc)
+          .addReg(AArch64::X17)
+          .addReg(AArch64::X17));
+
+      //  cmp x16, x17
+      EmitToStreamer(*OutStreamer,
+        MCInstBuilder(AArch64::SUBSXrs)
+          .addReg(AArch64::XZR)
+          .addReg(AArch64::X16)
+          .addReg(AArch64::X17)
+          .addImm(0));
+
+      // Trapping sequences do a 'brk'.
+      if (ShouldTrap) {
+        //  b.eq Lsuccess
+        //   where Lsuccess is encoded as 2 (the offset from this instruction to
+        //   what's after the brk, divided by 4)
+        EmitToStreamer(*OutStreamer,
+          MCInstBuilder(AArch64::Bcc)
+            .addImm(AArch64CC::EQ)
+            .addImm(2));
+
+        //  brk #<0xc470 + aut key>
+        EmitToStreamer(*OutStreamer,
+          MCInstBuilder(AArch64::BRK)
+            .addImm(0xc470 | AUTKey));
+      }
+    }
+
+    // We already emitted unchecked and checked-but-non-trapping AUTs.
+    // That left us with trapping AUTs, and AUTPACs.
+    // Trapping AUTs don't need PAC: we're done.
+    if (!IsAUTPAC)
+      return;
+
+    const auto PACKey = (AArch64PACKey::ID)MI->getOperand(2).getImm();
+    const unsigned PACReg = MI->getOperand(3).getReg();
+    const bool PACZero = PACReg == AArch64::XZR;
+    const unsigned PACOpc = getPACOpcodeForKey(PACKey, PACZero);
+
+    //  pacib x16, x9
+    MCInst PACInst;
+    PACInst.setOpcode(PACOpc);
+    PACInst.addOperand(MCOperand::createReg(AArch64::X16));
+    PACInst.addOperand(MCOperand::createReg(AArch64::X16));
+    if (!PACZero)
+      PACInst.addOperand(MCOperand::createReg(PACReg));
+    EmitToStreamer(*OutStreamer, PACInst);
+
+    // Non-trapping AUTPAC selects the result based on the xpac check.
+    // Trapping AUTPAC already trapped; unchecked AUTPAC didn't even check.
+    if (ShouldTrap || !ShouldCheck)
+      return;
+
+    //  csel x16, x16, x17, eq
+    EmitToStreamer(*OutStreamer,
+      MCInstBuilder(AArch64::CSELXr)
+        .addReg(AArch64::X16)
+        .addReg(AArch64::X16)
+        .addReg(AArch64::X17)
+        .addImm(0));
+    return;
+  }
   case AArch64::EMITMTETAGGED: {
     ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
@@ -1602,6 +1914,23 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   // Tail calls use pseudo instructions so they have the proper code-gen
   // attributes (isCall, isReturn, etc.). We lower them to the real
   // instruction here.
+  case AArch64::AUTH_TCRETURNrii:
+  case AArch64::AUTH_TCRETURNriri: {
+    const bool isZero = MI->getOpcode() == AArch64::AUTH_TCRETURNrii;
+    const uint64_t Key = MI->getOperand(2).getImm();
+    assert (Key < 2 && "Unknown key kind for authenticating tail-call return");
+
+    const unsigned Opcodes[2][2] = {{AArch64::BRAA, AArch64::BRAAZ},
+                                    {AArch64::BRAB, AArch64::BRABZ}};
+
+    MCInst TmpInst;
+    TmpInst.setOpcode(Opcodes[Key][isZero]);
+    TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+    if (!isZero)
+      TmpInst.addOperand(MCOperand::createReg(MI->getOperand(3).getReg()));
+    EmitToStreamer(*OutStreamer, TmpInst);
+    return;
+  }
   case AArch64::TCRETURNri:
   case AArch64::TCRETURNrix16x17:
   case AArch64::TCRETURNrix17:
@@ -1711,7 +2040,22 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::JumpTableDest8:
     LowerJumpTableDest(*OutStreamer, *MI);
     return;
+  case AArch64::JumpTableAnchor: {
+    int JTI = MI->getOperand(1).getIndex();
+    assert(!AArch64FI->getJumpTableEntryPCRelSymbol(JTI) &&
+           "unsupported compressed jump table");
 
+    auto Label = MF->getContext().createTempSymbol();
+    auto LabelE = MCSymbolRefExpr::create(Label, MF->getContext());
+    AArch64FI->setJumpTableEntryInfo(JTI, 4, Label);
+
+    OutStreamer->emitLabel(Label);
+    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADR)
+                                     .addReg(MI->getOperand(0).getReg())
+                                     .addExpr(LabelE));
+    return;
+  }
+  
   case AArch64::FMOVH0:
   case AArch64::FMOVS0:
   case AArch64::FMOVD0:
@@ -2094,8 +2438,9 @@ void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
 
 const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV) {
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
-    return MCSymbolRefExpr::create(MCInstLowering.GetGlobalValueSymbol(GV, 0),
-                                   OutContext);
+    if (GV->getSection() != "llvm.ptrauth")
+      return MCSymbolRefExpr::create(MCInstLowering.GetGlobalValueSymbol(GV, 0),
+                                     OutContext);
   }
 
   return AsmPrinter::lowerConstant(CV);

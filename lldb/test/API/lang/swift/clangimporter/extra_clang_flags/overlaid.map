@@ -1,0 +1,4 @@
+module FromOverlay {
+  header "a.h"
+  header "hidden.h"
+}

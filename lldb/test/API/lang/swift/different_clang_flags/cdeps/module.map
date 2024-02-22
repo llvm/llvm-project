@@ -1,0 +1,4 @@
+module modaModule {
+  header "myModule.h"
+  export *
+}

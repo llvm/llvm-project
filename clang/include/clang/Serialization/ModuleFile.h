@@ -138,6 +138,17 @@ public:
   /// The file name of the module file.
   std::string FileName;
 
+  /// The \c ActionCache key for this module, or empty.
+  std::string ModuleCacheKey;
+
+  /// The CAS filesystem root ID for implicit modules built with the dependency
+  /// scanner, or empty.
+  std::string CASFileSystemRootID;
+
+  /// The include-tree root ID for implicit modules built with the dependency
+  /// scanner, or empty.
+  std::string IncludeTreeID;
+
   /// The name of the module.
   std::string ModuleName;
 
@@ -378,12 +389,6 @@ public:
 
   const PPEntityOffset *PreprocessedEntityOffsets = nullptr;
   unsigned NumPreprocessedEntities = 0;
-
-  /// Base ID for preprocessed skipped ranges local to this module.
-  unsigned BasePreprocessedSkippedRangeID = 0;
-
-  const PPSkippedRange *PreprocessedSkippedRangeOffsets = nullptr;
-  unsigned NumPreprocessedSkippedRanges = 0;
 
   // === Header search information ===
 

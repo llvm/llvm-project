@@ -15,6 +15,7 @@
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
+#include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include <optional>
@@ -27,6 +28,9 @@ class DependencyOutputOptions;
 namespace tooling {
 namespace dependencies {
 
+using CachingOnDiskFileSystemPtr =
+    llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem>;
+
 class DependencyScanningWorkerFilesystem;
 
 /// A command-line tool invocation that is part of building a TU.
@@ -35,6 +39,9 @@ class DependencyScanningWorkerFilesystem;
 struct Command {
   std::string Executable;
   std::vector<std::string> Arguments;
+
+  /// The \c ActionCache key for this translation unit, if any.
+  std::optional<std::string> TUCacheKey;
 };
 
 class DependencyConsumer {
@@ -59,6 +66,10 @@ public:
   virtual void handleDirectModuleDependency(ModuleID MD) = 0;
 
   virtual void handleContextHash(std::string Hash) = 0;
+
+  virtual void handleCASFileSystemRootID(std::string ID) {}
+
+  virtual void handleIncludeTreeID(std::string ID) {}
 };
 
 /// Dependency scanner callbacks that are used during scanning to influence the
@@ -69,6 +80,31 @@ public:
 
   virtual std::string lookupModuleOutput(const ModuleID &ID,
                                          ModuleOutputKind Kind) = 0;
+
+  virtual llvm::Error initialize(CompilerInstance &ScanInstance,
+                                 CompilerInvocation &NewInvocation) {
+    return llvm::Error::success();
+  }
+
+  virtual llvm::Error finalize(CompilerInstance &ScanInstance,
+                               CompilerInvocation &NewInvocation) {
+    return llvm::Error::success();
+  }
+
+  virtual llvm::Error
+  initializeModuleBuild(CompilerInstance &ModuleScanInstance) {
+    return llvm::Error::success();
+  }
+
+  virtual llvm::Error
+  finalizeModuleBuild(CompilerInstance &ModuleScanInstance) {
+    return llvm::Error::success();
+  }
+
+  virtual llvm::Error finalizeModuleInvocation(CowCompilerInvocation &CI,
+                                               const ModuleDeps &MD) {
+    return llvm::Error::success();
+  }
 };
 
 /// An individual dependency scanning worker that is able to run on its own
@@ -102,6 +138,28 @@ public:
       DependencyConsumer &Consumer, DependencyActionController &Controller,
       std::optional<StringRef> ModuleName = std::nullopt);
 
+  /// Scan from a compiler invocation.
+  /// If \p DiagGenerationAsCompilation is true it will generate error
+  /// diagnostics same way as the normal compilation, with "N errors generated"
+  /// message and the serialized diagnostics file emitted if the
+  /// \p DiagOpts.DiagnosticSerializationFile setting is set for the invocation.
+  void computeDependenciesFromCompilerInvocation(
+      std::shared_ptr<CompilerInvocation> Invocation,
+      StringRef WorkingDirectory, DependencyConsumer &Consumer,
+      DependencyActionController &Controller, DiagnosticConsumer &DiagsConsumer,
+      raw_ostream *VerboseOS, bool DiagGenerationAsCompilation);
+
+  ScanningOutputFormat getScanningFormat() const { return Format; }
+
+  CachingOnDiskFileSystemPtr getCASFS() { return CacheFS; }
+  const CASOptions &getCASOpts() const { return CASOpts; }
+  std::shared_ptr<cas::ObjectStore> getCAS() const { return CAS; }
+
+  /// If \p DependencyScanningService enabled sharing of \p FileManager this
+  /// will return the same instance, otherwise it will create a new one for
+  /// each invocation.
+  llvm::IntrusiveRefCntPtr<FileManager> getOrCreateFileManager() const;
+
   bool shouldEagerLoadModules() const { return EagerLoadModules; }
 
 private:
@@ -119,6 +177,13 @@ private:
   ScanningOptimizations OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
   bool EagerLoadModules;
+
+  /// The caching file system.
+  CachingOnDiskFileSystemPtr CacheFS;
+  /// The CAS Dependency Filesytem. This is not set at the sametime as DepFS;
+  llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
+  CASOptions CASOpts;
+  std::shared_ptr<cas::ObjectStore> CAS;
 };
 
 } // end namespace dependencies

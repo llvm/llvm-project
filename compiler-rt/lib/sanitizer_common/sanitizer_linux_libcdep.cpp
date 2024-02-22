@@ -634,12 +634,137 @@ struct DlIteratePhdrData {
   bool first;
 };
 
+class DynamicSegment {
+  ElfW(Addr) base_addr;
+  size_t symbol_count;
+  ElfW(Sym *) symbol_table;
+  const char *string_table;
+
+ public:
+  DynamicSegment(ElfW(Addr) base_addr, ElfW(Addr) segment_addr)
+      : base_addr(base_addr),
+        symbol_count(0),
+        symbol_table(nullptr),
+        string_table(nullptr) {
+    initialize(segment_addr);
+    CHECK(symbol_count > 0 && symbol_table && string_table);
+  }
+
+  size_t symbolCount() const { return symbol_count; }
+
+  const char *getSymbolName(size_t index) const {
+    auto str_index = symbol_table[index].st_name;
+    return &string_table[str_index];
+  }
+
+ private:
+  // Elf_Addr -> dereferenceable pointer
+  template <typename Type>
+  Type *toPtr(ElfW(Addr) addr_or_offset) const {
+    bool offset = addr_or_offset < base_addr;
+    ElfW(Addr) ptr = offset ? (base_addr + addr_or_offset) : addr_or_offset;
+    return reinterpret_cast<Type *>(ptr);
+  }
+
+  void initialize(ElfW(Addr) segment_addr) {
+    auto *entry = toPtr<ElfW(Dyn)>(segment_addr);
+    for (; entry->d_tag != DT_NULL; entry++) {
+      auto addr = entry->d_un.d_ptr;
+      switch (entry->d_tag) {
+        case DT_HASH:
+          symbol_count = getSymbolCountFromHash(addr);
+          break;
+        case DT_GNU_HASH:
+          // DT_HASH takes precedence over DT_GNU_HASH
+          if (symbol_count > 0)
+            break;
+          symbol_count = getSymbolCountFromGnuHash(addr);
+          break;
+        case DT_SYMTAB:
+          CHECK_EQ(symbol_table, nullptr);
+          symbol_table = toPtr<ElfW(Sym)>(addr);
+          break;
+        case DT_STRTAB:
+          CHECK_EQ(string_table, nullptr);
+          string_table = toPtr<const char>(addr);
+          break;
+      }
+    }
+  }
+
+  size_t getSymbolCountFromHash(ElfW(Addr) hashtable_addr) const {
+    struct ht_header {
+      uint32_t bucket_count;
+      uint32_t chain_count;
+    };
+    return toPtr<ht_header>(hashtable_addr)->chain_count;
+  }
+
+  size_t getSymbolCountFromGnuHash(ElfW(Addr) hashtable_addr) const {
+    struct ht_header {
+      uint32_t bucket_count;
+      uint32_t symoffset;
+      uint32_t bloom_size;
+      uint32_t bloom_shift;
+    };
+    auto header = toPtr<ht_header>(hashtable_addr);
+    auto word_size = FIRST_32_SECOND_64(sizeof(uint32_t), sizeof(uint64_t));
+    auto buckets_addr =
+        hashtable_addr + sizeof(ht_header) + (word_size * header->bloom_size);
+    auto buckets = toPtr<uint32_t>(buckets_addr);
+    auto chains_addr =
+        buckets_addr + (header->bucket_count * sizeof(buckets[0]));
+    auto chains = toPtr<uint32_t>(chains_addr);
+
+    // Locate the chain that handles the largest index bucket.
+    uint32_t last_symbol = 0;
+    for (uint32_t i = 0; i < header->bucket_count; i++) {
+      last_symbol = Max(buckets[i], last_symbol);
+    }
+
+    if (last_symbol < header->symoffset) {
+      return header->symoffset;
+    }
+
+    // Walk the bucket's chain to add the chain length to the total.
+    uint32_t chain_entry;
+    do {
+      chain_entry = chains[last_symbol - header->symoffset];
+      last_symbol++;
+    } while ((chain_entry & 1) == 0);
+
+    return last_symbol;
+  }
+};
+
+static bool IsModuleInstrumented(dl_phdr_info *info) {
+  // Iterate all headers of the library.
+  for (size_t header = 0; header < info->dlpi_phnum; header++) {
+    // We are only interested in dynamic segments.
+    if (info->dlpi_phdr[header].p_type != PT_DYNAMIC)
+      continue;
+
+    auto base_addr = info->dlpi_addr;
+    auto segment_addr = info->dlpi_phdr[header].p_vaddr;
+    DynamicSegment segment(base_addr, segment_addr);
+
+    // Iterate symbol table.
+    for (size_t i = 0; i < segment.symbolCount(); i++) {
+      auto *name = segment.getSymbolName(i);
+      if (internal_strcmp(name, "__tsan_init") == 0)
+        return true;
+    }
+  }
+  return false;
+}
+
 static int AddModuleSegments(const char *module_name, dl_phdr_info *info,
                              InternalMmapVectorNoCtor<LoadedModule> *modules) {
   if (module_name[0] == '\0')
     return 0;
   LoadedModule cur_module;
-  cur_module.set(module_name, info->dlpi_addr);
+  bool instrumented = IsModuleInstrumented(info);
+  cur_module.set(module_name, info->dlpi_addr, instrumented);
   for (int i = 0; i < (int)info->dlpi_phnum; i++) {
     const Elf_Phdr *phdr = &info->dlpi_phdr[i];
     if (phdr->p_type == PT_LOAD) {

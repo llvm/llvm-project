@@ -426,9 +426,13 @@ public:
   ///
   /// \param[in] range
   ///     The section offset based address for this function.
+  ///
+  /// \param[in] can_throw
+  ///     Pass in true if this is a function know to throw
   Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
            lldb::user_id_t func_type_uid, const Mangled &mangled,
-           Type *func_type, const AddressRange &range);
+           Type *func_type, const AddressRange &range,
+           bool can_throw = false, bool generic_trampoline = false);
 
   /// Destructor.
   ~Function() override;
@@ -519,11 +523,11 @@ public:
   ///     A const compile unit object pointer.
   const DWARFExpressionList &GetFrameBaseExpression() const { return m_frame_base; }
 
-  ConstString GetName() const;
+  ConstString GetName(const SymbolContext *sc = nullptr) const;
 
-  ConstString GetNameNoArguments() const;
+  ConstString GetNameNoArguments(const SymbolContext *sc = nullptr) const;
 
-  ConstString GetDisplayName() const;
+  ConstString GetDisplayName(const SymbolContext *sc = nullptr) const;
 
   const Mangled &GetMangled() const { return m_mangled; }
 
@@ -545,6 +549,10 @@ public:
   /// \return
   ///     A type object pointer.
   Type *GetType();
+
+  bool IsGenericTrampoline() const {
+    return m_is_generic_trampoline;
+  }
 
   /// Get const accessor for the type that describes the function return value
   /// type, and parameter types.
@@ -618,6 +626,8 @@ public:
   ///     Returns 'true' if this function is a top-level function,
   ///     'false' otherwise.
   bool IsTopLevelFunction();
+  
+  bool CanThrow() const { return m_flags.Test(flagsFunctionCanThrow); }
 
   lldb::DisassemblerSP GetInstructions(const ExecutionContext &exe_ctx,
                                        const char *flavor,
@@ -629,7 +639,10 @@ public:
 protected:
   enum {
     /// Whether we already tried to calculate the prologue size.
-    flagsCalculatedPrologueSize = (1 << 0)
+    flagsCalculatedPrologueSize = (1 << 0),
+
+    /// Whether we know this function throws.
+    flagsFunctionCanThrow = (1 << 1)
   };
 
   /// The compile unit that owns this function.
@@ -645,6 +658,8 @@ protected:
   /// The mangled function name if any. If empty, there is no mangled
   /// information.
   Mangled m_mangled;
+
+  bool m_is_generic_trampoline;
 
   /// All lexical blocks contained in this function.
   Block m_block;

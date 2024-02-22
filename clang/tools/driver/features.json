@@ -1,0 +1,39 @@
+{
+  "features": [
+    {
+      "name": "index-unit-output-path"
+    },
+    {
+      "name": "vfs-directory-remap"
+    },
+    {
+      "name": "allow-pcm-with-compiler-errors"
+    },
+    {
+      "name": "vfs-redirecting-with"
+    },
+    {
+      "name": "depscan-prefix-map"
+    },
+    {
+      "name": "libclang-cache-queries"
+    },
+    {
+      "name": "Wsystem-headers-in-module"
+    },
+    {
+      "name": "deployment-target-environment-variables",
+      "value": [
+        "MACOSX_DEPLOYMENT_TARGET",
+        "IPHONEOS_DEPLOYMENT_TARGET",
+        "TVOS_DEPLOYMENT_TARGET",
+        "WATCHOS_DEPLOYMENT_TARGET",
+        "BRIDGEOS_DEPLOYMENT_TARGET",
+        "DRIVERKIT_DEPLOYMENT_TARGET"
+      ]
+    },
+    {
+      "name": "resource-dir-uses-major-version-only"
+    }
+  ]
+}

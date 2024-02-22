@@ -1,3 +1,5 @@
+; REQUIRES: upstream-llvm.org-sources
+
 ; AppleClang-700 uses a debug info version that isn't recognized by llvm.org
 ; compilers. However, it does produce valid bitcode which should parse without
 ; crashing the metadata loader.

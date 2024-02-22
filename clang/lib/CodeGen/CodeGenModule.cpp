@@ -442,7 +442,9 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   }
 }
 
-CodeGenModule::~CodeGenModule() {}
+CodeGenModule::~CodeGenModule() {
+  destroyConstantSignedPointerCaches();
+}
 
 void CodeGenModule::createObjCRuntime() {
   // This is just isGNUFamily(), but we want to force implementors of
@@ -1214,6 +1216,11 @@ void CodeGenModule::Release() {
   // HLSL related end of code gen work items.
   if (LangOpts.HLSL)
     getHLSLRuntime().finishCodeGen();
+
+  if (LangOpts.PointerAuthABIVersionEncoded)
+    TheModule.setPtrAuthABIVersion(
+        {static_cast<int>(LangOpts.PointerAuthABIVersion),
+         static_cast<bool>(LangOpts.PointerAuthKernelABIVersion)});
 
   if (uint32_t PLevel = Context.getLangOpts().PICLevel) {
     assert(PLevel < 3 && "Invalid PIC Level");

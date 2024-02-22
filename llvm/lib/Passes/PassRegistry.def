@@ -130,6 +130,8 @@ MODULE_PASS("scc-oz-module-inliner",
 MODULE_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass())
 MODULE_PASS("strip", StripSymbolsPass())
 MODULE_PASS("strip-dead-debug-info", StripDeadDebugInfoPass())
+MODULE_PASS("pseudo-probe", SampleProfileProbePass(TM))
+MODULE_PASS("soft-ptrauth", SoftPointerAuthPass())
 MODULE_PASS("strip-dead-prototypes", StripDeadPrototypesPass())
 MODULE_PASS("strip-debug-declare", StripDebugDeclarePass())
 MODULE_PASS("strip-nondebug", StripNonDebugSymbolsPass())

@@ -159,6 +159,17 @@ LANGOPT(Coroutines        , 1, 0, "C++20 coroutines")
 LANGOPT(CoroAlignedAllocation, 1, 0, "prefer Aligned Allocation according to P2014 Option 2")
 LANGOPT(DllExportInlines  , 1, 1, "dllexported classes dllexport inline methods")
 LANGOPT(RelaxedTemplateTemplateArgs, 1, 0, "C++17 relaxed matching of template template arguments")
+LANGOPT(PointerAuthIntrinsics, 1, 0, "pointer authentication intrinsics")
+LANGOPT(PointerAuthCalls  , 1, 0, "function pointer authentication")
+LANGOPT(PointerAuthReturns, 1, 0, "return pointer authentication")
+LANGOPT(PointerAuthIndirectGotos, 1, 0, "indirect gotos pointer authentication")
+LANGOPT(PointerAuthAuthTraps, 1, 0, "pointer authentication failure traps")
+LANGOPT(SoftPointerAuth   , 1, 0, "software emulation of pointer authentication")
+VALUE_LANGOPT(PointerAuthABIVersion, 32, 0, "pointer authentication ABI version")
+LANGOPT(PointerAuthKernelABIVersion, 1, 0, "controls whether the pointer auth abi version represents a kernel ABI")
+LANGOPT(PointerAuthABIVersionEncoded, 1, 0, "controls whether the pointer auth abi version should be encoded in the IR")
+
+LANGOPT(Unstable          , 1, 0, "Enable unstable and experimental features")
 LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library features")
 
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
@@ -189,6 +200,7 @@ COMPATIBLE_LANGOPT(ModulesValidateTextualHeaderIncludes, 1, 1, "validation of te
 BENIGN_LANGOPT(ModulesErrorRecovery, 1, 1, "automatically importing modules as needed when performing error recovery")
 BENIGN_LANGOPT(ImplicitModules, 1, 1, "building modules that are not specified via -fmodule-file")
 COMPATIBLE_LANGOPT(ModulesLocalVisibility, 1, 0, "local submodule visibility")
+COMPATIBLE_LANGOPT(ModulesHashErrorDiags, 1, 0, "hash out diagnostic errors as part of the module hash")
 COMPATIBLE_LANGOPT(Optimize          , 1, 0, "__OPTIMIZE__ predefined macro")
 COMPATIBLE_LANGOPT(OptimizeSize      , 1, 0, "__OPTIMIZE_SIZE__ predefined macro")
 COMPATIBLE_LANGOPT(Static            , 1, 0, "__STATIC__ predefined macro (as opposed to __DYNAMIC__)")
@@ -410,9 +422,9 @@ LANGOPT(ApplePragmaPack, 1, 0, "Apple gcc-compatible #pragma pack handling")
 LANGOPT(XLPragmaPack, 1, 0, "IBM XL #pragma pack handling")
 
 LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
-
 LANGOPT(APINotes, 1, 0, "use external API notes")
 LANGOPT(APINotesModules, 1, 0, "use module-based external API notes")
+LANGOPT(NeededByPCHOrCompilationUsesPCH, 1, 0, "compilation involves pch")
 
 LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
                                            "field padding (0: none, 1:least "
@@ -485,6 +497,8 @@ VALUE_LANGOPT(FuchsiaAPILevel, 32, 0, "Fuchsia API level")
 // supports all operations (like division or float-to-integer conversion)
 // on large _BitInts.
 BENIGN_VALUE_LANGOPT(MaxBitIntWidth, 32, 128, "Maximum width of a _BitInt")
+
+LANGOPT(IgnoreConflictingTypes, 1, 0, "Suppress conflicting type errors from mismatching declarations")
 
 COMPATIBLE_LANGOPT(IncrementalExtensions, 1, 0, " True if we want to process statements"
         "on the global scope, ignore EOF token and continue later on (thus "

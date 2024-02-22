@@ -46,6 +46,8 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned IncludeModuleFiles : 1; ///< Include module file dependencies.
   LLVM_PREFERRED_TYPE(bool)
+  unsigned SkipUnusedModuleMaps : 1; ///< Skip unused module map dependencies.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ShowSkippedHeaderIncludes : 1; ///< With ShowHeaderIncludes, show
                                           /// also includes that were skipped
                                           /// due to the "include guard
@@ -89,7 +91,7 @@ public:
 public:
   DependencyOutputOptions()
       : IncludeSystemHeaders(0), ShowHeaderIncludes(0), UsePhonyTargets(0),
-        AddMissingHeaderDeps(0), IncludeModuleFiles(0),
+        AddMissingHeaderDeps(0), IncludeModuleFiles(0), SkipUnusedModuleMaps(0),
         ShowSkippedHeaderIncludes(0), HeaderIncludeFormat(HIFMT_Textual),
         HeaderIncludeFiltering(HIFIL_None) {}
 };

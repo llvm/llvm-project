@@ -79,6 +79,8 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
     .Default(false);
   if (IsInclude)
     return !HaveCrashVFS;
+  if (StringRef(Flag).starts_with("-index-store-path"))
+    return true;
 
   // The remaining flags are treated as a single argument.
 
@@ -99,6 +101,8 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
   if (IsInclude)
     return !HaveCrashVFS;
   if (FlagRef.starts_with("-fmodules-cache-path="))
+    return true;
+  if (FlagRef.starts_with("-fapinotes-cache-path="))
     return true;
 
   SkipNum = 0;
@@ -206,6 +210,15 @@ rewriteIncludes(const llvm::ArrayRef<const char *> &Args, size_t Idx,
 
 void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
                     CrashReportInfo *CrashInfo) const {
+  // Print the environment to display, if relevant.
+  if (!EnvironmentDisplay.empty()) {
+    OS << " env";
+    for (const char *NameValue : EnvironmentDisplay) {
+      OS << ' ';
+      llvm::sys::printArg(OS, NameValue, /*Quote=*/true);
+    }
+  }
+
   // Always quote the exe.
   OS << ' ';
   llvm::sys::printArg(OS, Executable, /*Quote=*/true);
@@ -221,6 +234,7 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
   }
 
   bool HaveCrashVFS = CrashInfo && !CrashInfo->VFSPath.empty();
+  bool HaveIndexStorePath = CrashInfo && !CrashInfo->IndexStorePath.empty();
   for (size_t i = 0, e = Args.size(); i < e; ++i) {
     const char *const Arg = Args[i];
 
@@ -285,6 +299,24 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
     llvm::sys::printArg(OS, ModCachePath, Quote);
   }
 
+  if (CrashInfo && HaveIndexStorePath) {
+    SmallString<128> IndexStoreDir;
+
+    if (HaveCrashVFS) {
+      IndexStoreDir = llvm::sys::path::parent_path(
+          llvm::sys::path::parent_path(CrashInfo->VFSPath));
+      llvm::sys::path::append(IndexStoreDir, "index-store");
+    } else {
+      IndexStoreDir = "index-store";
+    }
+
+    OS << ' ';
+    llvm::sys::printArg(OS, "-index-store-path", Quote);
+    OS << ' ';
+    llvm::sys::printArg(OS, IndexStoreDir.c_str(), Quote);
+  }
+
+
   if (ResponseFile != nullptr) {
     OS << "\n Arguments passed via response file:\n";
     writeResponseFile(OS);
@@ -308,6 +340,11 @@ void Command::setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) {
   Environment.reserve(NewEnvironment.size() + 1);
   Environment.assign(NewEnvironment.begin(), NewEnvironment.end());
   Environment.push_back(nullptr);
+}
+
+void Command::setEnvironmentDisplay(llvm::ArrayRef<const char *> Display) {
+  EnvironmentDisplay.reserve(Display.size());
+  EnvironmentDisplay.assign(Display.begin(), Display.end());
 }
 
 void Command::setRedirectFiles(

@@ -479,6 +479,9 @@ if config.target_triple:
     if not config.target_triple.startswith(("nvptx", "xcore")):
         config.available_features.add("object-emission")
 
+if lit.util.isMacOSTriple(config.target_triple):
+   config.available_features.add('darwin')
+
 if config.have_llvm_driver:
     config.available_features.add("llvm-driver")
 
@@ -558,7 +561,7 @@ llvm_config.feature_config(
     ]
 )
 
-if "darwin" == sys.platform:
+if lit.util.isMacOSTriple(config.target_triple):
     cmd = ["sysctl", "hw.optional.fma"]
     sysctl_cmd = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 
@@ -602,9 +605,18 @@ if config.have_opt_viewer_modules:
 if config.expensive_checks:
     config.available_features.add("expensive_checks")
 
+if config.have_ondisk_cas:
+    config.available_features.add('ondisk_cas')
+
 if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add("use_msan_with_origins")
 
+
+# Restrict the size of the on-disk CAS for tests. This allows testing in
+# constrained environments (e.g. small TMPDIR). It also prevents leaving
+# behind large files on file systems that do not support sparse files if a test
+# crashes before resizing the file.
+config.environment["LLVM_CAS_MAX_MAPPING_SIZE"] = "%d" % (100 * 1024 * 1024)
 
 # Some tools support an environment variable "OBJECT_MODE" on AIX OS, which
 # controls the kind of objects they will support. If there is no "OBJECT_MODE"

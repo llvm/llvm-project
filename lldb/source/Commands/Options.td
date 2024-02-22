@@ -189,6 +189,18 @@ let Command = "breakpoint set" in {
     Arg<"Boolean">, Desc<"Set the breakpoint on exception throW.">;
   def breakpoint_set_on_catch : Option<"on-catch", "h">, Group<10>,
     Arg<"Boolean">, Desc<"Set the breakpoint on exception catcH.">;
+
+  // BEGIN SWIFT
+  def breakpoint_set_exception_typename : Option<"exception-typename", "O">,
+    Group<10>,
+    Arg<"TypeName">, Desc<"The breakpoint will only stop if an exception "
+    "Object of this type is thrown. Can be repeated multiple times to stop for "
+    "multiple object types. If you just specify the type's base name it will "
+    "match against that type in all modules, or you can specify the full type "
+    "name including modules. Other submatches are not supported at present."
+    "Only supported for Swift at present.">;
+  // END SWIFT
+
   def breakpoint_set_language : Option<"language", "L">, GroupRange<3, 8>,
     Arg<"Language">,
     Desc<"Specifies the Language to use when interpreting the breakpoint's "
@@ -213,12 +225,6 @@ let Command = "breakpoint set" in {
   def breakpoint_set_file_colon_line : Option<"joint-specifier", "y">, Group<12>, Arg<"FileLineColumn">,
     Required, Completion<"SourceFile">,
     Desc<"A specifier in the form filename:line[:column] for setting file & line breakpoints.">;
-  /* Don't add this option till it actually does something useful...
-  def breakpoint_set_exception_typename : Option<"exception-typename", "O">,
-    Arg<"TypeName">, Desc<"The breakpoint will only stop if an "
-    "exception Object of this type is thrown.  Can be repeated multiple times "
-    "to stop for multiple object types">;
-   */
 }
 
 let Command = "breakpoint clear" in {
@@ -398,6 +404,12 @@ let Command = "expression" in {
     Desc<"Persist expression result in a variable for subsequent use. "
     "Expression results will be labeled with $-prefixed variables, e.g. $0, "
     "$1, etc.">;
+  // BEGIN SWIFT
+  def bind_generic_types : Option<"bind-generic-types", "\\x31">,
+    EnumArg<"BindGenTypeParamValue">, Desc<"Controls whether any "
+    "generic types in the current context should be bound to their dynamic "
+    "type before evaluating. Defaults to auto.">;
+  // END SWIFT
 }
 
 let Command = "frame diag" in {

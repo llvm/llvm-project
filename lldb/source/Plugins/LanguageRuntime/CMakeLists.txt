@@ -1,2 +1,5 @@
 add_subdirectory(CPlusPlus)
 add_subdirectory(ObjC)
+if (LLDB_ENABLE_SWIFT_SUPPORT)
+  add_subdirectory(Swift)
+endif()

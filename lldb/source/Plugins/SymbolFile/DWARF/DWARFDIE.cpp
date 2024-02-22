@@ -203,6 +203,13 @@ const char *DWARFDIE::GetMangledName() const {
     return nullptr;
 }
 
+bool DWARFDIE::IsGenericTrampoline() const {
+  if (IsValid())
+    return m_die->GetIsGenericTrampoline(m_cu);
+  else
+    return false;
+}
+
 const char *DWARFDIE::GetPubname() const {
   if (IsValid())
     return m_die->GetPubname(m_cu);
@@ -352,14 +359,14 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
   }
 }
 
-lldb_private::Type *DWARFDIE::ResolveType() const {
+Type *DWARFDIE::ResolveType() const {
   if (IsValid())
     return GetDWARF()->ResolveType(*this, true);
   else
     return nullptr;
 }
 
-lldb_private::Type *DWARFDIE::ResolveTypeUID(const DWARFDIE &die) const {
+Type *DWARFDIE::ResolveTypeUID(const DWARFDIE &die) const {
   if (SymbolFileDWARF *dwarf = GetDWARF())
     return dwarf->ResolveTypeUID(die, true);
   return nullptr;
@@ -510,7 +517,7 @@ bool DWARFDIE::GetDIENamesAndRanges(
     std::optional<int> &decl_file, std::optional<int> &decl_line,
     std::optional<int> &decl_column, std::optional<int> &call_file,
     std::optional<int> &call_line, std::optional<int> &call_column,
-    lldb_private::DWARFExpressionList *frame_base) const {
+    DWARFExpressionList *frame_base) const {
   if (IsValid()) {
     return m_die->GetDIENamesAndRanges(
         GetCU(), name, mangled, ranges, decl_file, decl_line, decl_column,

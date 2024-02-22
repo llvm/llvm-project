@@ -23,6 +23,7 @@
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Index/IndexingAction.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/StaticAnalyzer/Frontend/AnalyzerHelpFlags.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
@@ -178,6 +179,11 @@ CreateFrontendAction(CompilerInstance &CI) {
   }
 #endif
 
+  if (!FEOpts.IndexStorePath.empty()) {
+    CI.getCodeGenOpts().ClearASTBeforeBackend = false;
+    Act = index::createIndexDataRecordingAction(FEOpts, std::move(Act));
+    CI.setGenModuleActionWrapper(&index::createIndexDataRecordingAction);
+  }
   // Wrap the base FE action in an extract api action to generate
   // symbol graph as a biproduct of compilation ( enabled with
   // --emit-symbol-graph option )

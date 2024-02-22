@@ -539,6 +539,16 @@ enum DynamicValueType {
   eDynamicDontRunTarget = 2
 };
 
+// BEGIN SWIFT
+//  Enumeration to control whether generic type parameters should be bound or
+//  not in expression evaluation.
+enum BindGenericTypes { 
+  eBindAuto = 0, 
+  eBind = 1, 
+  eDontBind = 2 
+};
+// END SWIFT
+
 enum StopShowColumn {
   eStopShowColumnAnsiOrCaret = 0,
   eStopShowColumnAnsi = 1,
@@ -650,6 +660,9 @@ enum CommandArgumentType {
   eArgTypeConnectURL,
   eArgTypeTargetID,
   eArgTypeStopHookID,
+  // BEGIN SWIFT
+  eArgTypeBindGenTypeParamValue,
+  // END SWIFT
   eArgTypeCompletionType,
   eArgTypeRemotePath,
   eArgTypeRemoteFilename,
@@ -692,7 +705,8 @@ enum SymbolType {
   eSymbolTypeObjCClass,
   eSymbolTypeObjCMetaClass,
   eSymbolTypeObjCIVar,
-  eSymbolTypeReExported
+  eSymbolTypeReExported,
+  eSymbolTypeASTFile   // A symbol whose name is the path to a compiler AST file
 };
 
 enum SectionType {
@@ -760,6 +774,7 @@ enum SectionType {
   eSectionTypeDWARFDebugLocListsDwo,
   eSectionTypeDWARFDebugTuIndex,
   eSectionTypeCTF,
+  eSectionTypeLLDBTypeSummaries,
   eSectionTypeSwiftModules,
 };
 
@@ -889,6 +904,13 @@ enum FormatterMatchType {
   eFormatterMatchCallback,
 
   eLastFormatterMatchType = eFormatterMatchCallback,
+};
+
+/// Kind of argument for generics, either bound or unbound.
+enum GenericKind {
+  eNullGenericKindType = 0,
+  eBoundGenericKindType,
+  eUnboundGenericKindType
 };
 
 /// Options that can be set for a formatter to alter its behavior. Not
@@ -1084,12 +1106,12 @@ enum PathType {
   ePathTypePythonDir,            ///< Find Python modules (PYTHONPATH) directory
   ePathTypeLLDBSystemPlugins,    ///< System plug-ins directory
   ePathTypeLLDBUserPlugins,      ///< User plug-ins directory
-  ePathTypeLLDBTempSystemDir, ///< The LLDB temp directory for this system that
-                              ///< will be cleaned up on exit
-  ePathTypeGlobalLLDBTempSystemDir, ///< The LLDB temp directory for this
-                                    ///< system, NOT cleaned up on a process
-                                    ///< exit.
-  ePathTypeClangDir ///< Find path to Clang builtin headers
+  ePathTypeLLDBTempSystemDir,    ///< The LLDB temp directory for this system that
+                                 ///< will be cleaned up on exit
+  ePathTypeGlobalLLDBTempSystemDir, ///< The LLDB temp directory for this system,
+                                    ///< NOT cleaned up on a process exit.
+  ePathTypeClangDir,                ///< Find path to Clang builtin headers
+  ePathTypeSwiftDir                 ///< Find path to Swift libraries
 };
 
 /// Kind of member function.
@@ -1122,7 +1144,15 @@ FLAGS_ENUM(TypeFlags){
     eTypeIsVector = (1u << 16),         eTypeIsScalar = (1u << 17),
     eTypeIsInteger = (1u << 18),        eTypeIsFloat = (1u << 19),
     eTypeIsComplex = (1u << 20),        eTypeIsSigned = (1u << 21),
-    eTypeInstanceIsPointer = (1u << 22)};
+    eTypeInstanceIsPointer = (1u << 22),
+    eTypeIsSwift = (1u << 23),
+    eTypeIsGenericTypeParam = (1u << 24),
+    eTypeIsProtocol = (1u << 25),
+    eTypeIsTuple = (1u << 26),
+    eTypeIsMetatype = (1u << 27),
+    eTypeHasUnboundGeneric = (1u << 28),
+    eTypeHasDynamicSelf = (1u << 29),
+    eTypeIsPack = (1u << 30)};
 
 FLAGS_ENUM(CommandFlags){
     /// eCommandRequiresTarget

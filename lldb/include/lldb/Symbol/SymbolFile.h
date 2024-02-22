@@ -30,6 +30,7 @@
 #include "llvm/Support/Errc.h"
 
 #include <mutex>
+#include <vector>
 #include <optional>
 #include <unordered_map>
 
@@ -146,6 +147,9 @@ public:
 
   virtual Symtab *GetSymtab() = 0;
 
+  virtual llvm::VersionTuple GetProducerVersion(CompileUnit &comp_unit) {
+    return {};
+  }
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   /// Return the Xcode SDK comp_unit was compiled against.
   virtual XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) { return {}; }
@@ -357,6 +361,32 @@ public:
   /// Notify the SymbolFile that the file addresses in the Sections
   /// for this module have been changed.
   virtual void SectionFileAddressesChanged() = 0;
+
+  virtual bool GetCompileOption(const char *option, std::string &value,
+                                CompileUnit *cu = nullptr) {
+    value.clear();
+    return false;
+  }
+
+  /// Retrieve all the AST data blobs from the SymbolFile.
+  ///
+  /// Symbol files can store AST data for any language that wants to
+  /// store the native AST format supported by the current compiler.
+  /// This information is often only usable by a compiler that is in
+  /// sync with the compiler sources that were used to build LLDB so
+  /// any data should be versioned appropriately so the compiler can
+  /// try to load the data and know if the data will be able to be
+  /// used.
+  ///
+  /// @param[in] language
+  ///   The language for which AST data is being requested.
+  ///   A given file can contain ASTs for more than one language.
+  ///
+  /// @return
+  ///   Zero or more buffers, each of which contain the raw data
+  ///   of an AST in the requested language.
+  virtual std::vector<lldb::DataBufferSP>
+  GetASTData(lldb::LanguageType language);
 
   struct RegisterInfoResolver {
     virtual ~RegisterInfoResolver(); // anchor

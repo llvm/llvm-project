@@ -16,6 +16,13 @@
 
 namespace llvm {
 
+// BEGIN MCCAS
+namespace cas {
+class ObjectStore;
+class CASID;
+} // namespace cas
+// END MCCAS
+
 enum class ExceptionHandling {
   None,     ///< No exception support
   DwarfCFI, ///< DWARF-like instruction based exceptions
@@ -33,6 +40,17 @@ enum class EmitDwarfUnwindType {
   NoCompactUnwind, // Only emit if compact unwind isn't available
   Default,         // Default behavior is based on the target
 };
+
+// BEGIN MCCAS
+enum class CASBackendMode {
+  // Emit normal object file but serialized from CAS.
+  Native,
+  // Emit CASID output file.
+  CASID,
+  // Verify the output by comparing normal object writer with CAS object writer.
+  Verify,
+};
+// END MCCAS
 
 class StringRef;
 
@@ -106,6 +124,15 @@ public:
   /// the textual name of the assembly language that we will use for this
   /// target, e.g. masm.
   StringRef getAssemblyLanguage() const;
+
+  // BEGIN MCCAS
+  std::shared_ptr<cas::ObjectStore> CAS;
+
+  using ResultCallBackTy = std::function<Error(const cas::CASID &)>;
+  std::optional<ResultCallBackTy> ResultCallBack;
+
+  CASBackendMode CASObjMode;
+  // END MCCAS
 };
 
 } // end namespace llvm

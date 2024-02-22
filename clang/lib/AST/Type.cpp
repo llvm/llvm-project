@@ -1288,54 +1288,49 @@ struct SubstObjCTypeArgsVisitor
                            ObjCSubstitutionContext context)
       : BaseType(ctx), TypeArgs(typeArgs), SubstContext(context) {}
 
-  QualType VisitObjCTypeParamType(const ObjCTypeParamType *OTPTy) {
+  QualType VisitTypedefType(const TypedefType *typedefTy) {
     // Replace an Objective-C type parameter reference with the corresponding
     // type argument.
-    ObjCTypeParamDecl *typeParam = OTPTy->getDecl();
-    // If we have type arguments, use them.
-    if (!TypeArgs.empty()) {
-      QualType argType = TypeArgs[typeParam->getIndex()];
-      if (OTPTy->qual_empty())
+    if (auto *typeParam = dyn_cast<ObjCTypeParamDecl>(typedefTy->getDecl())) {
+      // If we have type arguments, use them.
+      if (!TypeArgs.empty()) {
+        // FIXME: Introduce SubstObjCTypeParamType ?
+        QualType argType = TypeArgs[typeParam->getIndex()];
         return argType;
+      }
 
-      // Apply protocol lists if exists.
-      bool hasError;
-      SmallVector<ObjCProtocolDecl *, 8> protocolsVec;
-      protocolsVec.append(OTPTy->qual_begin(), OTPTy->qual_end());
-      ArrayRef<ObjCProtocolDecl *> protocolsToApply = protocolsVec;
-      return Ctx.applyObjCProtocolQualifiers(
-          argType, protocolsToApply, hasError, true/*allowOnPointerType*/);
-    }
-
-    switch (SubstContext) {
-    case ObjCSubstitutionContext::Ordinary:
-    case ObjCSubstitutionContext::Parameter:
-    case ObjCSubstitutionContext::Superclass:
-      // Substitute the bound.
-      return typeParam->getUnderlyingType();
-
-    case ObjCSubstitutionContext::Result:
-    case ObjCSubstitutionContext::Property: {
-      // Substitute the __kindof form of the underlying type.
-      const auto *objPtr =
-          typeParam->getUnderlyingType()->castAs<ObjCObjectPointerType>();
-
-      // __kindof types, id, and Class don't need an additional
-      // __kindof.
-      if (objPtr->isKindOfType() || objPtr->isObjCIdOrClassType())
+      switch (SubstContext) {
+      case ObjCSubstitutionContext::Ordinary:
+      case ObjCSubstitutionContext::Parameter:
+      case ObjCSubstitutionContext::Superclass:
+        // Substitute the bound.
         return typeParam->getUnderlyingType();
 
-      // Add __kindof.
-      const auto *obj = objPtr->getObjectType();
-      QualType resultTy = Ctx.getObjCObjectType(
-          obj->getBaseType(), obj->getTypeArgsAsWritten(), obj->getProtocols(),
-          /*isKindOf=*/true);
+      case ObjCSubstitutionContext::Result:
+      case ObjCSubstitutionContext::Property: {
+        // Substitute the __kindof form of the underlying type.
+        const auto *objPtr = typeParam->getUnderlyingType()
+          ->castAs<ObjCObjectPointerType>();
 
-      // Rebuild object pointer type.
-      return Ctx.getObjCObjectPointerType(resultTy);
+        // __kindof types, id, and Class don't need an additional
+        // __kindof.
+        if (objPtr->isKindOfType() || objPtr->isObjCIdOrClassType())
+          return typeParam->getUnderlyingType();
+
+        // Add __kindof.
+        const auto *obj = objPtr->getObjectType();
+        QualType resultTy = Ctx.getObjCObjectType(obj->getBaseType(),
+                                                  obj->getTypeArgsAsWritten(),
+                                                  obj->getProtocols(),
+                                                  /*isKindOf=*/true);
+
+        // Rebuild object pointer type.
+        return Ctx.getObjCObjectPointerType(resultTy);
+      }
+      }
+      llvm_unreachable("Unexpected ObjCSubstitutionContext!");
     }
-    }
-    llvm_unreachable("Unexpected ObjCSubstitutionContext!");
+    return BaseType::VisitTypedefType(typedefTy);
   }
 
   QualType VisitFunctionType(const FunctionType *funcType) {
@@ -2815,6 +2810,8 @@ QualType::PrimitiveCopyKind QualType::isNonTrivialToPrimitiveCopy() const {
   case Qualifiers::OCL_Weak:
     return PCK_ARCWeak;
   default:
+    if (hasAddressDiscriminatedPointerAuth())
+      return PCK_PtrAuth;
     return Qs.hasVolatile() ? PCK_VolatileTrivial : PCK_Trivial;
   }
 }

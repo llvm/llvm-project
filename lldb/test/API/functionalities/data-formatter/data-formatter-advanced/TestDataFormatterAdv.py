@@ -40,6 +40,7 @@ class AdvDataFormatterTestCase(TestBase):
             self.runCmd("type format clear", check=False)
             self.runCmd("type summary clear", check=False)
             self.runCmd("settings set target.max-children-count 256", check=False)
+            self.runCmd("settings clear target.max-children-depth", check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -351,3 +352,30 @@ class AdvDataFormatterTestCase(TestBase):
             matching=False,
             substrs=["..."],
         )
+
+        # The below tests need the hex formatting of int removed.
+        self.runCmd("type format delete int")
+
+        # First, check the following:
+        #   1. Verify the default max-children-depth (6) is applied
+        #   2. Ensure the one-time warning is printed
+        warning = "*** Some of the displayed variables have a greater depth"
+        self.expect(
+            "frame variable quite_nested",
+            matching=True,
+            substrs=["six ={...}", warning],
+        )
+        self.expect(
+            "frame variable quite_nested",
+            matching=False,
+            substrs=["leaf = 41", warning],
+        )
+
+        # Check that both ways of overriding max-children-depth work.
+        self.expect(
+            "frame variable --depth 8 quite_nested",
+            matching=True,
+            substrs=["leaf = 41"],
+        )
+        self.runCmd("settings set target.max-children-depth 8")
+        self.expect("frame variable quite_nested", matching=True, substrs=["leaf = 41"])

@@ -166,6 +166,7 @@ public:
 
   bool IsEnumerationType(bool &is_signed) const;
 
+
   bool IsIntegerOrEnumerationType(bool &is_signed) const;
 
   bool IsPolymorphicClass() const;
@@ -271,7 +272,9 @@ public:
 
   ConstString GetTypeName(bool BaseOnly = false) const;
 
-  ConstString GetDisplayTypeName() const;
+  ConstString GetDisplayTypeName(const SymbolContext *sc = nullptr) const;
+
+  ConstString GetMangledTypeName() const;
 
   uint32_t
   GetTypeInfo(CompilerType *pointee_or_element_compiler_type = nullptr) const;
@@ -379,6 +382,9 @@ public:
   std::optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope) const;
   /// Return the size of the type in bits.
   std::optional<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
+  /// Return the stride of the type in bits.
+  std::optional<uint64_t>
+  GetByteStride(ExecutionContextScope *exe_scope) const;
 
   lldb::Encoding GetEncoding(uint64_t &count) const;
 
@@ -398,7 +404,7 @@ public:
       std::function<bool(const CompilerType &integer_type, ConstString name,
                          const llvm::APSInt &value)> const &callback) const;
 
-  uint32_t GetNumFields() const;
+  uint32_t GetNumFields(ExecutionContext *exe_ctx = nullptr) const;
 
   CompilerType GetFieldAtIndex(size_t idx, std::string &name,
                                uint64_t *bit_offset_ptr,
@@ -433,6 +439,7 @@ public:
   /// Lookup a child given a name. This function will match base class names and
   /// member member names in "clang_type" only, not descendants.
   uint32_t GetIndexOfChildWithName(llvm::StringRef name,
+                                   ExecutionContext *exe_ctx,
                                    bool omit_empty_base_classes) const;
 
   /// Lookup a child member given a name. This function will match member names
@@ -442,7 +449,7 @@ public:
   /// vector<vector<uint32_t>>
   /// so we catch all names that match a given child name, not just the first.
   size_t
-  GetIndexOfChildMemberWithName(llvm::StringRef name,
+  GetIndexOfChildMemberWithName(llvm::StringRef name, ExecutionContext *exe_ctx,
                                 bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) const;
 
@@ -487,18 +494,21 @@ public:
   bool DumpTypeValue(Stream *s, lldb::Format format, const DataExtractor &data,
                      lldb::offset_t data_offset, size_t data_byte_size,
                      uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-                     ExecutionContextScope *exe_scope);
+                     ExecutionContextScope *exe_scope, bool is_base_class);
 
   /// Dump to stdout.
-  void DumpTypeDescription(lldb::DescriptionLevel level =
-                           lldb::eDescriptionLevelFull) const;
+  void DumpTypeDescription(
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull,
+      ExecutionContextScope *exe_scope = nullptr) const;
 
   /// Print a description of the type to a stream. The exact implementation
   /// varies, but the expectation is that eDescriptionLevelFull returns a
   /// source-like representation of the type, whereas eDescriptionLevelVerbose
   /// does a dump of the underlying AST if applicable.
-  void DumpTypeDescription(Stream *s, lldb::DescriptionLevel level =
-                                          lldb::eDescriptionLevelFull) const;
+  void DumpTypeDescription(
+      Stream *s,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull,
+      ExecutionContextScope *exe_scope = nullptr) const;
   /// \}
 
   bool GetValueAsScalar(const DataExtractor &data, lldb::offset_t data_offset,

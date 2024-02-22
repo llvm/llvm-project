@@ -1148,6 +1148,11 @@ private:
   /// location.
   TransferTracker *TTracker = nullptr;
 
+  // BEGIN SWIFT
+  /// Whether this is a Swift async function.
+  bool IsSwiftAsyncFunction = false;
+  // END SWIFT
+
   /// Blocks which are artificial, i.e. blocks which exclusively contain
   /// instructions without DebugLocs, or with line 0 locations.
   SmallPtrSet<MachineBasicBlock *, 16> ArtificialBlocks;

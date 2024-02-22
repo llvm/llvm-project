@@ -533,6 +533,16 @@ thinlto_code_gen_t thinlto_create_codegen(void) {
     assert(CGOptLevelOrNone);
     CodeGen->setCodeGenOptLevel(*CGOptLevelOrNone);
   }
+  // Set up remote cache if environment is set.
+  if (sys::Process::GetEnv("LLVM_THINLTO_USE_REMOTE_CACHE")) {
+    if (auto CacheSocket =
+            sys::Process::GetEnv("LLVM_CACHE_REMOTE_SERVICE_SOCKET_PATH")) {
+      std::string Path = std::string("grpc:") + *CacheSocket;
+      auto Err = CodeGen->setCacheDir(Path);
+      if (Err)
+        report_fatal_error(std::move(Err));
+    }
+  }
   return wrap(CodeGen);
 }
 
@@ -605,7 +615,10 @@ void thinlto_codegen_set_cpu(thinlto_code_gen_t cg, const char *cpu) {
 
 void thinlto_codegen_set_cache_dir(thinlto_code_gen_t cg,
                                    const char *cache_dir) {
-  return unwrap(cg)->setCacheDir(cache_dir);
+  // FIXME: need to return error somehow.
+  Error Err = unwrap(cg)->setCacheDir(cache_dir);
+  if (Err)
+    sLastErrorString = toString(std::move(Err));
 }
 
 void thinlto_codegen_set_cache_pruning_interval(thinlto_code_gen_t cg,

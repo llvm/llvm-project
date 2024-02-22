@@ -58,7 +58,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 attributes #0 = { mustprogress noinline norecurse nounwind optnone "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn }
 
 !llvm.dbg.cu = !{!0}
 !llvm.linker.options = !{}

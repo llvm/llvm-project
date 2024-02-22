@@ -1,0 +1,19 @@
+RUN: rm -rf %t ;mkdir %t
+
+RUN: llvm-cas --cas %t/cas --merge > %t/empty.id
+RUN: llvm-cas --cas %t/cas --merge %S/Inputs/oneline @%t/empty.id > %t/one-file1.id
+RUN: llvm-cas --cas %t/cas --merge %S/Inputs/oneline > %t/one-file2.id
+RUN: llvm-cas --cas %t/cas --merge %S/Inputs/directory > %t/dir.id
+RUN: llvm-cas --cas %t/cas --merge %S/Inputs/directory %S/Inputs/oneline > %t/all1.id
+RUN: llvm-cas --cas %t/cas --merge %S/Inputs/directory @%t/one-file1.id > %t/all2.id
+RUN: llvm-cas --cas %t/cas --merge @%t/dir.id %S/Inputs/oneline > %t/all3.id
+RUN: llvm-cas --cas %t/cas --merge @%t/dir.id @%t/one-file1.id > %t/all4.id
+
+RUN: diff %t/one-file1.id %t/one-file2.id
+RUN: diff %t/all1.id %t/all2.id
+RUN: diff %t/all1.id %t/all3.id
+RUN: diff %t/all1.id %t/all4.id
+
+RUN: llvm-cas --cas %t/cas --ls-tree-recursive @%t/all1.id | FileCheck %s
+CHECK: llvm-cas/Inputs/directory/file
+CHECK: llvm-cas/Inputs/oneline

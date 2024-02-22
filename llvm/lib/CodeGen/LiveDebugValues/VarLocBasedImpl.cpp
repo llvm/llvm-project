@@ -426,6 +426,8 @@ private:
       assert(MI.isDebugValue() && "not a DBG_VALUE");
       assert((MI.isDebugValueList() || MI.getNumOperands() == 4) &&
              "malformed DBG_VALUE");
+      if (Expr && Expr->isEntryValue())
+        EVKind = EntryValueLocKind::EntryValueKind;
       for (const MachineOperand &Op : MI.debug_operands()) {
         MachineLoc ML = GetLocForOp(Op);
         auto It = find(Locs, ML);
@@ -443,8 +445,7 @@ private:
 
       // We create the debug entry values from the factory functions rather
       // than from this ctor.
-      assert(EVKind != EntryValueLocKind::EntryValueKind &&
-             !isEntryBackupLoc());
+      assert(!isEntryBackupLoc());
     }
 
     static MachineLoc GetLocForOp(const MachineOperand &Op) {

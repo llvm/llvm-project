@@ -1825,7 +1825,9 @@ void Driver::generateCompilationDiagnostics(
     C.addTempFile(TempFile);
 
   // Assume associated files are based off of the first temporary file.
-  CrashReportInfo CrashInfo(TempFiles[0], VFS);
+  CrashReportInfo CrashInfo(
+      TempFiles[0], VFS,
+      C.getArgs().getLastArgValue(options::OPT_index_store_path));
 
   llvm::SmallString<128> Script(CrashInfo.Filename);
   llvm::sys::path::replace_extension(Script, "sh");
@@ -4150,6 +4152,14 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       if (OffloadBuilder->addHostDependenceToDeviceActions(Current, InputArg))
         break;
 
+    // FIXME: To avoid globally adding the depscan phase to all the input types,
+    // we try to inject depscan phase here if the first phase is preprocess and
+    // -fdepscan is used.
+    if (PL.front() == phases::Preprocess)
+      if (Arg *A = Args.getLastArg(options::OPT_fdepscan_EQ))
+        if (A->getValue() != llvm::StringLiteral("off"))
+          PL.insert(PL.begin(), phases::Depscan);
+
     for (phases::ID Phase : PL) {
 
       // Add any offload action the host action depends on.
@@ -4692,6 +4702,8 @@ Action *Driver::ConstructPhaseAction(
     llvm_unreachable("link action invalid here.");
   case phases::IfsMerge:
     llvm_unreachable("ifsmerge action invalid here.");
+  case phases::Depscan:
+    return C.MakeAction<DepscanJobAction>(Input, types::TY_ResponseFile);
   case phases::Preprocess: {
     types::ID OutputTy;
     // -M and -MM specify the dependency file name by altering the output type,
@@ -4700,9 +4712,12 @@ Action *Driver::ConstructPhaseAction(
         !Args.hasArg(options::OPT_MD, options::OPT_MMD)) {
       OutputTy = types::TY_Dependencies;
     } else {
-      OutputTy = Input->getType();
-      // For these cases, the preprocessor is only translating forms, the Output
-      // still needs preprocessing.
+      // If the previous is action is depscan, bypass the output kind from
+      // depscan.
+      if (Input->getKind() == AssembleJobAction::DepscanJobClass)
+        OutputTy = Input->getInputs().front()->getType();
+      else
+        OutputTy = Input->getType();
       if (!Args.hasFlag(options::OPT_frewrite_includes,
                         options::OPT_fno_rewrite_includes, false) &&
           !Args.hasFlag(options::OPT_frewrite_imports,
@@ -4890,11 +4905,20 @@ void Driver::BuildJobs(Compilation &C) const {
                        /*TargetDeviceOffloadKind*/ Action::OFK_None);
   }
 
+  // DepScan introduces a new DepScan binding that cannot be merged so it will
+  // end up having 2 jobs instead of 1 but we still should run the command
+  // in-process if possible.
+  bool ShouldInProcessDepScan =
+      C.getJobs().size() == 2 &&
+      isa<DepscanJobAction>(C.getJobs().begin()->getSource());
+
   // If we have more than one job, then disable integrated-cc1 for now. Do this
   // also when we need to report process execution statistics.
-  if (C.getJobs().size() > 1 || CCPrintProcessStats)
+  if ((C.getJobs().size() > 1 && !ShouldInProcessDepScan) ||
+      CCPrintProcessStats) {
     for (auto &J : C.getJobs())
       J.InProcess = false;
+  }
 
   if (CCPrintProcessStats) {
     C.setPostCallback([=](const Command &Cmd, int Res) {
@@ -5265,6 +5289,14 @@ class ToolSelector final {
     Inputs = NewInputs;
   }
 
+  void combineWithDepscan(const Tool *T, const JobAction *Current,
+                          ActionList &Inputs) {
+    for (Action *A : Inputs) {
+      if (auto *DepScan = dyn_cast<DepscanJobAction>(A))
+        DepScan->setScanningJobAction(Current);
+    }
+  }
+
 public:
   ToolSelector(const JobAction *BaseAction, const ToolChain &TC,
                const Compilation &C, bool SaveTemps, bool EmbedBitcode)
@@ -5321,6 +5353,8 @@ public:
     }
 
     combineWithPreprocessor(T, Inputs, CollapsedOffloadAction);
+
+    combineWithDepscan(T, BaseAction, Inputs);
     return T;
   }
 };
@@ -6660,4 +6694,8 @@ llvm::Error driver::expandResponseFiles(SmallVectorImpl<const char *> &Args,
   }
 
   return llvm::Error::success();
+}
+
+bool driver::isClangCache(StringRef DriverMode) {
+  return DriverMode == "cache";
 }

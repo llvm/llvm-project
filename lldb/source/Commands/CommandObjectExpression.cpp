@@ -25,6 +25,10 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 
+// BEGIN SWIFT
+#include "lldb/Symbol/CompileUnit.h"
+// END SWIFT
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -147,7 +151,6 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
           option_arg.str().c_str());
     break;
   }
-
   case '\x01': {
     bool success;
     bool persist_result =
@@ -160,6 +163,17 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
           option_arg.str().c_str());
     break;
   }
+
+  // BEGIN SWIFT
+  case '\x31': {
+    int32_t result;
+    result = OptionArgParser::ToOptionEnum(option_arg, BindGenTypeParamValue(),
+                                           0, error);
+    if (error.Success())
+      bind_generic_types = (BindGenericTypes)result;
+    break;
+  }
+  // END SWIFT
 
   default:
     llvm_unreachable("Unimplemented option");
@@ -190,6 +204,10 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
   top_level = false;
   allow_jit = true;
   suppress_persistent_result = eLazyBoolCalculate;
+  // BEGIN SWIFT
+  bind_generic_types = eBindAuto;
+  // END SWIFT
+
 }
 
 llvm::ArrayRef<OptionDefinition>
@@ -234,6 +252,10 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
     options.SetTimeout(std::chrono::microseconds(timeout));
   else
     options.SetTimeout(std::nullopt);
+
+  // BEGIN SWIFT
+  options.SetBindGenericTypes(bind_generic_types);
+  // END SWIFT
   return options;
 }
 
@@ -258,9 +280,11 @@ CommandObjectExpression::CommandObjectExpression(
                        eCommandProcessMustBePaused | eCommandTryTargetAPILock),
       IOHandlerDelegate(IOHandlerDelegate::Completion::Expression),
       m_format_options(eFormatDefault),
-      m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into REPL", false,
-                    true),
-      m_expr_line_count(0) {
+      // BEGIN SWIFT
+      m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into Swift REPL",
+                    false, true),
+      // END SWIFT
+      m_command_options(), m_expr_line_count(0) {
   SetHelpLong(
       R"(
 Single and multi-line expressions:
@@ -550,12 +574,38 @@ void CommandObjectExpression::GetMultilineExpression() {
   m_expr_lines.clear();
   m_expr_line_count = 0;
 
+  // BEGIN SWIFT
+  // If we didn't set the language, make sure we get the Swift language right
+  // if we are stopped in a swift compile unit. This will help us use the
+  // correct input reader name so our C/C++/ObjC expression history will be
+  // separate from the Swift expression history
+  if (m_command_options.language == eLanguageTypeUnknown) {
+    StackFrame *frame = m_exe_ctx.GetFramePtr();
+    if (frame) {
+      SymbolContext sym_ctx =
+          frame->GetSymbolContext(lldb::eSymbolContextCompUnit);
+      if (sym_ctx.comp_unit &&
+          sym_ctx.comp_unit->GetLanguage() == lldb::eLanguageTypeSwift)
+        m_command_options.language = lldb::eLanguageTypeSwift;
+    }
+  }
+  // END SWIFT
+  
   Debugger &debugger = GetCommandInterpreter().GetDebugger();
   bool color_prompt = debugger.GetUseColor();
   const bool multiple_lines = true; // Get multiple lines
+
+  // BEGIN SWIFT
+  const char *input_reader_name =
+      m_command_options.language == lldb::eLanguageTypeSwift ? "lldb-swift"
+  // END SWIFT
+                                                             : "lldb-expr";
+
   IOHandlerSP io_handler_sp(
       new IOHandlerEditline(debugger, IOHandler::Type::Expression,
-                            "lldb-expr", // Name of input reader for history
+                            // BEGIN SWIFT
+                            input_reader_name, // Name of input reader for history
+                            // END SWIFT
                             llvm::StringRef(), // No prompt
                             llvm::StringRef(), // Continuation prompt
                             multiple_lines, color_prompt,

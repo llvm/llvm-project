@@ -16,6 +16,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/LangStandard.h"
+#include "clang/CAS/CASOptions.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MigratorOptions.h"
@@ -41,6 +42,11 @@ namespace vfs {
 class FileSystem;
 
 } // namespace vfs
+
+namespace cas {
+
+class ObjectStore;
+}
 
 } // namespace llvm
 
@@ -96,6 +102,9 @@ protected:
   /// Options controlling API notes.
   std::shared_ptr<APINotesOptions> APINotesOpts;
 
+  /// Options configuring the CAS.
+  std::shared_ptr<CASOptions> CASOpts;
+
   /// Options controlling IRgen and the backend.
   std::shared_ptr<CodeGenOptions> CodeGenOpts;
 
@@ -136,6 +145,7 @@ public:
   const AnalyzerOptions &getAnalyzerOpts() const { return *AnalyzerOpts; }
   const MigratorOptions &getMigratorOpts() const { return *MigratorOpts; }
   const APINotesOptions &getAPINotesOpts() const { return *APINotesOpts; }
+  const CASOptions &getCASOpts() const { return *CASOpts; }
   const CodeGenOptions &getCodeGenOpts() const { return *CodeGenOpts; }
   const FileSystemOptions &getFileSystemOpts() const { return *FSOpts; }
   const FrontendOptions &getFrontendOpts() const { return *FrontendOpts; }
@@ -199,7 +209,24 @@ private:
                                   const std::string &OutputFile,
                                   const LangOptions *LangOpts);
   /// @}
+
+public:
+  /// Generate command line options from CASOptions.
+  static void GenerateCASArgs(const CASOptions &Opts,
+                              ArgumentConsumer Consumer);
+  static void GenerateCASArgs(const CASOptions &Opts,
+                              SmallVectorImpl<const char *> &Args,
+                              StringAllocator SA) {
+    GenerateCASArgs(Opts, [&](const Twine &Arg) {
+      // No need to allocate static string literals.
+      Args.push_back(Arg.isSingleStringLiteral()
+                         ? Arg.getSingleStringRef().data()
+                         : SA(Arg));
+    });
+  }
 };
+
+class CowCompilerInvocation;
 
 /// Helper class for holding the data necessary to invoke the compiler.
 ///
@@ -220,6 +247,9 @@ public:
   }
   ~CompilerInvocation() = default;
 
+  explicit CompilerInvocation(const CowCompilerInvocation &X);
+  CompilerInvocation &operator=(const CowCompilerInvocation &X);
+
   /// Const getters.
   /// @{
   // Note: These need to be pulled in manually. Otherwise, they get hidden by
@@ -232,6 +262,7 @@ public:
   using CompilerInvocationBase::getAnalyzerOpts;
   using CompilerInvocationBase::getMigratorOpts;
   using CompilerInvocationBase::getAPINotesOpts;
+  using CompilerInvocationBase::getCASOpts;
   using CompilerInvocationBase::getCodeGenOpts;
   using CompilerInvocationBase::getFileSystemOpts;
   using CompilerInvocationBase::getFrontendOpts;
@@ -249,6 +280,7 @@ public:
   AnalyzerOptions &getAnalyzerOpts() { return *AnalyzerOpts; }
   MigratorOptions &getMigratorOpts() { return *MigratorOpts; }
   APINotesOptions &getAPINotesOpts() { return *APINotesOpts; }
+  CASOptions &getCASOpts() { return *CASOpts; }
   CodeGenOptions &getCodeGenOpts() { return *CodeGenOpts; }
   FileSystemOptions &getFileSystemOpts() { return *FSOpts; }
   FrontendOptions &getFrontendOpts() { return *FrontendOpts; }
@@ -301,7 +333,7 @@ public:
 
   /// Retrieve a module hash string that is suitable for uniquely
   /// identifying the conditions under which the module was built.
-  std::string getModuleHash() const;
+  std::string getModuleHash(DiagnosticsEngine &Diags) const;
 
   /// Check that \p Args can be parsed and re-serialized without change,
   /// emiting diagnostics for any differences.
@@ -322,6 +354,10 @@ public:
   /// implicit modules.
   void clearImplicitModuleBuildOptions();
 
+  /// Parse command line options that map to \p CASOptions.
+  static bool ParseCASArgs(CASOptions &Opts, const llvm::opt::ArgList &Args,
+                           DiagnosticsEngine &Diags);
+
 private:
   static bool CreateFromArgsImpl(CompilerInvocation &Res,
                                  ArrayRef<const char *> CommandLineArgs,
@@ -338,7 +374,10 @@ private:
                                InputKind IK, DiagnosticsEngine &Diags,
                                const llvm::Triple &T,
                                const std::string &OutputFile,
-                               const LangOptions &LangOptsRef);
+                               const LangOptions &LangOptsRef,
+                               const FileSystemOptions &FSOpts,
+                               const FrontendOptions &FEOpts,
+                               const CASOptions &CASOpts);
 };
 
 /// Same as \c CompilerInvocation, but with copy-on-write optimization.
@@ -376,6 +415,7 @@ public:
   AnalyzerOptions &getMutAnalyzerOpts();
   MigratorOptions &getMutMigratorOpts();
   APINotesOptions &getMutAPINotesOpts();
+  CASOptions &getMutCASOpts();
   CodeGenOptions &getMutCodeGenOpts();
   FileSystemOptions &getMutFileSystemOpts();
   FrontendOptions &getMutFrontendOpts();
@@ -384,9 +424,9 @@ public:
   /// @}
 };
 
-IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-createVFSFromCompilerInvocation(const CompilerInvocation &CI,
-                                DiagnosticsEngine &Diags);
+IntrusiveRefCntPtr<llvm::vfs::FileSystem> createVFSFromCompilerInvocation(
+    const CompilerInvocation &CI, DiagnosticsEngine &Diags,
+    std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS = nullptr);
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem> createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,

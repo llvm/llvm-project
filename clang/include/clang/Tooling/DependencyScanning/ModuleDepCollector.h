@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/CAS/CASID.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <string>
@@ -38,11 +39,13 @@ struct PrebuiltModuleDep {
   std::string ModuleName;
   std::string PCMFile;
   std::string ModuleMapFile;
+  std::optional<std::string> ModuleCacheKey;
 
   explicit PrebuiltModuleDep(const Module *M)
       : ModuleName(M->getTopLevelModuleName()),
         PCMFile(M->getASTFile()->getName()),
-        ModuleMapFile(M->PresumedModuleMapFile) {}
+        ModuleMapFile(M->PresumedModuleMapFile),
+        ModuleCacheKey(M->getModuleCacheKey()) {}
 };
 
 /// This is used to identify a specific module.
@@ -137,6 +140,15 @@ struct ModuleDeps {
   /// This may include modules with a different context hash when it can be
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
+
+  /// The CASID for the module input dependency tree, if any.
+  std::optional<llvm::cas::CASID> CASFileSystemRootID;
+
+  /// The CASID for the module include-tree, if any.
+  std::optional<std::string> IncludeTreeID;
+
+  /// The \c ActionCache key for this module, if any.
+  std::optional<std::string> ModuleCacheKey;
 
   /// Get (or compute) the compiler invocation that can be used to build this
   /// module. Does not include argv[0].

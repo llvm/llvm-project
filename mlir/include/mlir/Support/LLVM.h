@@ -18,7 +18,7 @@
 #ifndef MLIR_SUPPORT_LLVM_H
 #define MLIR_SUPPORT_LLVM_H
 
-// We include this header because it cannot be practically forward
+// We include these two headers because they cannot be practically forward
 // declared, and are effectively language features.
 #include "llvm/Support/Casting.h"
 #include <vector>

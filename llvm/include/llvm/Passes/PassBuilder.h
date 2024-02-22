@@ -21,6 +21,7 @@
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/PGOOptions.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/IPO/ModuleInliner.h"
@@ -584,6 +585,10 @@ public:
       const std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>)>
           &C);
 
+  /// Enable or disable the hot/cold splitting optimization. By default, it is
+  /// disabled.
+  void setEnableHotColdSplitting(bool Enabled);
+
   /// Add PGOInstrumenation passes for O0 only.
   void addPGOInstrPassesForO0(ModulePassManager &MPM, bool RunProfileGen,
                               bool IsCS, bool AtomicCounterUpdate,
@@ -730,6 +735,8 @@ private:
   // AA callbacks
   SmallVector<std::function<bool(StringRef Name, AAManager &AA)>, 2>
       AAParsingCallbacks;
+  // Tunable passes
+  bool SplitColdCode = false;
   // Machine pass callbackcs
   SmallVector<std::function<void(MachineFunctionAnalysisManager &)>, 2>
       MachineFunctionAnalysisRegistrationCallbacks;

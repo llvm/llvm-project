@@ -22,5 +22,6 @@ clang_target_link_libraries(BasicTests
 
 target_link_libraries(BasicTests
   PRIVATE
+  LLVMCAS
   LLVMTestingSupport
 )

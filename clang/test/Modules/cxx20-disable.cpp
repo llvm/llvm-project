@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir %t
-// RUN: %clang_cc1 -x objective-c++ -std=c++20                  -I %t %s -verify=enabled
-// RUN: %clang_cc1 -x objective-c++ -std=c++20 -fno-cxx-modules -I %t %s -verify=disabled
+// RUN: %clang_cc1 -x objective-c++ -std=c++20 -fcxx-modules -I %t %s -verify=enabled -fmodules-local-submodule-visibility
+// RUN: %clang_cc1 -x objective-c++ -std=c++20               -I %t %s -verify=disabled
 
 // enabled-no-diagnostics
 

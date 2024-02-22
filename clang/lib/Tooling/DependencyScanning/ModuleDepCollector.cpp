@@ -8,12 +8,17 @@
 
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 
+#include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/MakeSupport.h"
+#include "clang/Frontend/CompileJobCacheKey.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CAS/CASID.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/StringSaver.h"
 #include <optional>
 
@@ -148,7 +153,10 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   // differ between identical modules discovered from different translation
   // units.
   CI.getFrontendOpts().Inputs.clear();
-  CI.getFrontendOpts().OutputFile.clear();
+  // CAS: OutputFile cannot be empty when computing a cache key.
+  CI.getFrontendOpts().OutputFile = "-";
+  // FIXME: a build system may want to provide a new path.
+  CI.getFrontendOpts().IndexUnitOutputPath.clear();
   // LLVM options are not going to affect the AST
   CI.getFrontendOpts().LLVMArgs.clear();
 
@@ -168,7 +176,9 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
     CI.getDiagnosticOpts().DiagnosticSerializationFile = "-";
   if (!CI.getDependencyOutputOpts().OutputFile.empty())
     CI.getDependencyOutputOpts().OutputFile = "-";
-  CI.getDependencyOutputOpts().Targets.clear();
+  // CAS: -MT must be preserved for cache key.
+  if (!CI.getDependencyOutputOpts().Targets.empty())
+    CI.getDependencyOutputOpts().Targets = {"-"};
 
   CI.getFrontendOpts().ProgramAction = frontend::GenerateModule;
   CI.getFrontendOpts().ARCMTAction = FrontendOptions::ARCMT_None;
@@ -239,8 +249,12 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
   }
 
   // Report the prebuilt modules this module uses.
-  for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps)
+  for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps) {
     CI.getMutFrontendOpts().ModuleFiles.push_back(PrebuiltModule.PCMFile);
+    if (PrebuiltModule.ModuleCacheKey)
+      CI.getMutFrontendOpts().ModuleCacheKeys.emplace_back(
+          PrebuiltModule.PCMFile, *PrebuiltModule.ModuleCacheKey);
+  }
 
   // Add module file inputs from dependencies.
   addModuleFiles(CI, Deps.ClangModuleDeps);
@@ -290,6 +304,13 @@ void ModuleDepCollector::addModuleFiles(
   for (const ModuleID &MID : ClangModuleDeps) {
     std::string PCMPath =
         Controller.lookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
+
+    ModuleDeps *MD = ModuleDepsByID.lookup(MID);
+    assert(MD && "Inconsistent dependency info");
+    if (MD->ModuleCacheKey)
+      CI.getFrontendOpts().ModuleCacheKeys.emplace_back(PCMPath,
+                                                        *MD->ModuleCacheKey);
+
     if (EagerLoadModules)
       CI.getFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
     else
@@ -303,6 +324,13 @@ void ModuleDepCollector::addModuleFiles(
   for (const ModuleID &MID : ClangModuleDeps) {
     std::string PCMPath =
         Controller.lookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
+
+    ModuleDeps *MD = ModuleDepsByID.lookup(MID);
+    assert(MD && "Inconsistent dependency info");
+    if (MD->ModuleCacheKey)
+      CI.getMutFrontendOpts().ModuleCacheKeys.emplace_back(PCMPath,
+                                                           *MD->ModuleCacheKey);
+
     if (EagerLoadModules)
       CI.getMutFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
     else
@@ -358,6 +386,22 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
       HashBuilder;
   SmallString<32> Scratch;
 
+  auto FormatHash = [&](llvm::BLAKE3Result<16> Hash) {
+    std::array<uint64_t, 2> Words;
+    static_assert(sizeof(Hash) == sizeof(Words), "Hash must match Words");
+    std::memcpy(Words.data(), Hash.data(), sizeof(Hash));
+    return toString(llvm::APInt(sizeof(Words) * 8, Words), 36,
+                    /*Signed=*/false);
+  };
+
+  if (MD.ModuleCacheKey) {
+    // Cache keys have better canonicalization, so use them as the context hash.
+    // This reduces the number of modules needed when compatible configurations
+    // are used (e.g. change in -fmessage-length).
+    HashBuilder.add(*MD.ModuleCacheKey);
+    return FormatHash(HashBuilder.final());
+  }
+
   // Hash the compiler version and serialization version to ensure the module
   // will be readable.
   HashBuilder.add(getClangFullRepositoryVersion());
@@ -365,6 +409,15 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   llvm::ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory();
   if (CWD)
     HashBuilder.add(*CWD);
+
+  // Save and restore options that should not affect the hash, e.g. the exact
+  // contents of input files, or prefix mappings.
+  auto &FSOpts = const_cast<FileSystemOptions &>(CI.getFileSystemOpts());
+  auto &FEOpts = const_cast<FrontendOptions &>(CI.getFrontendOpts());
+  auto &CASOpts = const_cast<CASOptions &>(CI.getCASOpts());
+  llvm::SaveAndRestore RestoreCASFSRootID(FSOpts.CASFileSystemRootID, {});
+  llvm::SaveAndRestore RestorePrefixMappings(FEOpts.PathPrefixMappings, {});
+  llvm::SaveAndRestore RestoreCASOptions(CASOpts, {});
 
   // Hash the BuildInvocation without any input files.
   SmallString<0> ArgVec;
@@ -386,13 +439,30 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   }
 
   HashBuilder.add(EagerLoadModules);
-
-  llvm::BLAKE3Result<16> Hash = HashBuilder.final();
-  std::array<uint64_t, 2> Words;
-  static_assert(sizeof(Hash) == sizeof(Words), "Hash must match Words");
-  std::memcpy(Words.data(), Hash.data(), sizeof(Hash));
-  return toString(llvm::APInt(sizeof(Words) * 8, Words), 36, /*Signed=*/false);
+  return FormatHash(HashBuilder.final());
 }
+
+#ifndef NDEBUG
+static void checkCompileCacheKeyMatch(cas::ObjectStore &CAS,
+                                      StringRef OldKeyStr, cas::CASID NewKey) {
+  if (NewKey.toString() == OldKeyStr)
+    return;
+
+  // Mismatched keys, report error.
+  auto OldKey = CAS.parseID(OldKeyStr);
+  if (!OldKey)
+    llvm::report_fatal_error(OldKey.takeError());
+  SmallString<256> Err;
+  llvm::raw_svector_ostream OS(Err);
+  OS << "Compile cache key for module changed; previously:";
+  if (auto E = printCompileJobCacheKey(CAS, *OldKey, OS))
+    OS << std::move(E);
+  OS << "\nkey is now:";
+  if (auto E = printCompileJobCacheKey(CAS, NewKey, OS))
+    OS << std::move(E);
+  llvm::report_fatal_error(OS.str());
+}
+#endif
 
 void ModuleDepCollector::associateWithContextHash(
     const CowCompilerInvocation &CI, ModuleDeps &Deps) {
@@ -414,7 +484,8 @@ void ModuleDepCollectorPP::LexedFileChanged(FileID FID,
   // This has to be delayed as the context hash can change at the start of
   // `CompilerInstance::ExecuteAction`.
   if (MDC.ContextHash.empty()) {
-    MDC.ContextHash = MDC.ScanInstance.getInvocation().getModuleHash();
+    MDC.ContextHash = MDC.ScanInstance.getInvocation().getModuleHash(
+        MDC.ScanInstance.getDiagnostics());
     MDC.Consumer.handleContextHash(MDC.ContextHash);
   }
 
@@ -589,6 +660,19 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         MD.ModuleMapFileDeps.emplace_back(IFI.FilenameAsRequested);
       });
 
+  if (!MF->IncludeTreeID.empty())
+    MD.IncludeTreeID = MF->IncludeTreeID;
+
+  if (!MF->CASFileSystemRootID.empty()) {
+    auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
+    if (auto Err = CAS.parseID(MF->CASFileSystemRootID)
+                       .moveInto(MD.CASFileSystemRootID)) {
+      MDC.ScanInstance.getDiagnostics().Report(
+          diag::err_cas_cannot_parse_root_id_for_module)
+          << MF->CASFileSystemRootID << MD.ID.ModuleName;
+    }
+  }
+
   CowCompilerInvocation CI =
       MDC.getInvocationAdjustedForModuleBuildWithoutOutputs(
           MD, [&](CowCompilerInvocation &BuildInvocation) {
@@ -603,10 +687,32 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
                   BuildInvocation.getFrontendOpts().IsSystemModule);
           });
 
+  auto &Diags = MDC.ScanInstance.getDiagnostics();
+
+  if (auto E = MDC.Controller.finalizeModuleInvocation(CI, MD))
+    Diags.Report(diag::err_cas_depscan_failed) << std::move(E);
+
+  // Compute the cache key, if needed. Requires dependencies.
+  if (MDC.ScanInstance.getFrontendOpts().CacheCompileJob) {
+    auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
+    if (auto Key = createCompileJobCacheKey(CAS, Diags, CI))
+      MD.ModuleCacheKey = Key->toString();
+  }
+
   MDC.associateWithContextHash(CI, MD);
 
   // Finish the compiler invocation. Requires dependencies and the context hash.
   MDC.addOutputPaths(CI, MD);
+
+#ifndef NDEBUG
+  // Verify the key has not changed with final arguments.
+  if (MD.ModuleCacheKey) {
+    auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
+    auto Key = createCompileJobCacheKey(CAS, Diags, CI);
+    assert(Key);
+    checkCompileCacheKeyMatch(CAS, *MD.ModuleCacheKey, *Key);
+  }
+#endif
 
   MD.BuildInfo = std::move(CI);
 
@@ -720,7 +826,7 @@ bool ModuleDepCollector::isPrebuiltModule(const Module *M) {
   if (PrebuiltModuleFileIt == PrebuiltModuleFiles.end())
     return false;
   assert("Prebuilt module came from the expected AST file" &&
-         PrebuiltModuleFileIt->second == M->getASTFile()->getName());
+         PrebuiltModuleFileIt->second == M->getASTFile()->getNameAsRequested());
   return true;
 }
 

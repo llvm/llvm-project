@@ -50,6 +50,9 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 #include "ObjectFileMachO.h"
+#ifdef LLDB_ENABLE_SWIFT
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
+#endif //LLDB_ENABLE_SWIFT
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -1201,6 +1204,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeDWARFAppleObjC:
         case eSectionTypeDWARFGNUDebugAltLink:
         case eSectionTypeCTF:
+        case eSectionTypeLLDBTypeSummaries:
         case eSectionTypeSwiftModules:
           return AddressClass::eDebug;
 
@@ -1287,6 +1291,8 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
       return AddressClass::eRuntime;
     case eSymbolTypeReExported:
       return AddressClass::eRuntime;
+    case eSymbolTypeASTFile:
+      return AddressClass::eDebug;
     }
   }
   return AddressClass::eUnknown;
@@ -1476,6 +1482,7 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_data("__data");
   static ConstString g_sect_name_go_symtab("__gosymtab");
   static ConstString g_sect_name_ctf("__ctf");
+  static ConstString g_sect_name_lldb_summaries("__lldbsummaries");
   static ConstString g_sect_name_swift_ast("__swift_ast");
 
   if (section_name == g_sect_name_dwarf_debug_abbrev)
@@ -1556,6 +1563,8 @@ static lldb::SectionType GetSectionType(uint32_t flags,
     return eSectionTypeGoSymtab;
   if (section_name == g_sect_name_ctf)
     return eSectionTypeCTF;
+  if (section_name == g_sect_name_lldb_summaries)
+    return lldb::eSectionTypeLLDBTypeSummaries;
   if (section_name == g_sect_name_swift_ast)
     return eSectionTypeSwiftModules;
   if (section_name == g_sect_name_objc_data ||
@@ -2652,6 +2661,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   std::vector<TrieEntryWithOffset> reexport_trie_entries;
   std::vector<TrieEntryWithOffset> external_sym_trie_entries;
   std::set<lldb::addr_t> resolver_addresses;
+  std::set<lldb::addr_t> symbol_file_addresses;
 
   const size_t dyld_trie_data_size = dyld_trie_data.GetByteSize();
   if (dyld_trie_data_size > 0) {
@@ -3484,6 +3494,13 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                         }
                       }
                       if (symbol_section) {
+                        // Keep track of the symbols we added by address in
+                        // case we have other sources
+                        // for symbols where we only want to add a symbol if
+                        // it isn't already in the
+                        // symbol table.
+                        symbol_file_addresses.insert(nlist.n_value);
+
                         const addr_t section_file_addr =
                             symbol_section->GetFileAddress();
                         if (symbol_byte_size == 0 &&
@@ -4113,6 +4130,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           type = eSymbolTypeAdditional;
           break;
 
+        case N_AST:
+          // A path to a compiler AST file
+          type = eSymbolTypeASTFile;
+          break;
+
         default:
           break;
         }
@@ -4345,6 +4367,13 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       }
 
       if (symbol_section) {
+        // Keep track of the symbols we added by address in case we have
+        // other sources
+        // for symbols where we only want to add a symbol if it isn't
+        // already in the
+        // symbol table.
+        symbol_file_addresses.insert(nlist.n_value);
+
         const addr_t section_file_addr = symbol_section->GetFileAddress();
         if (symbol_byte_size == 0 && function_starts_count > 0) {
           addr_t symbol_lookup_file_addr = nlist.n_value;

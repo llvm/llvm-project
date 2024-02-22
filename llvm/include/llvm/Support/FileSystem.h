@@ -1185,12 +1185,24 @@ openNativeFileForRead(const Twine &Name, OpenFlags Flags = OF_None,
 /// descriptor.
 std::error_code
 tryLockFile(int FD,
-            std::chrono::milliseconds Timeout = std::chrono::milliseconds(0));
+            std::chrono::milliseconds Timeout = std::chrono::milliseconds(0),
+            bool Exclusive = true);
+
+/// Get RealPath from file handle.
+///
+/// @param Handle      The descriptor representing the file.
+/// @param RealPath    RealPath is stored in this location on success.
+/// @returns errc::success if RealPath is successfully obtained.
+std::error_code getRealPathFromHandle(file_t Handle,
+                                      SmallVectorImpl<char> &RealPath);
 
 /// Lock the file.
 ///
 /// This function acts as @ref tryLockFile but it waits infinitely.
-std::error_code lockFile(int FD);
+/// \param FD file descriptor to use for locking.
+/// \param Exclusive if \p true use exclusive/writer lock, otherwise use
+/// shared/reader lock.
+std::error_code lockFile(int FD, bool Exclusive = true);
 
 /// Unlock the file.
 ///
@@ -1330,6 +1342,9 @@ public:
 
   size_t size() const;
   char *data() const;
+
+  /// Write changes to disk and synchronize. Equivalent to POSIX msync.
+  std::error_code sync() const;
 
   /// Get a const view of the data. Modifying this memory has undefined
   /// behavior.

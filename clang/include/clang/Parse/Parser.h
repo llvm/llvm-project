@@ -3080,6 +3080,8 @@ private:
                                SourceLocation *endLoc = nullptr);
   ExprResult ParseExtIntegerArgument();
 
+  void ParsePtrauthQualifier(ParsedAttributes &Attrs);
+
   VirtSpecifiers::Specifier isCXX11VirtSpecifier(const Token &Tok) const;
   VirtSpecifiers::Specifier isCXX11VirtSpecifier() const {
     return isCXX11VirtSpecifier(Tok);
@@ -3700,18 +3702,6 @@ private:
   ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
                          SourceLocation &DeclEnd);
 
-  /// Parse the given string as a type.
-  ///
-  /// This is a dangerous utility function currently employed only by API notes.
-  /// It is not a general entry-point for safely parsing types from strings.
-  ///
-  /// \param TypeStr The string to be parsed as a type.
-  /// \param Context The name of the context in which this string is being
-  /// parsed, which will be used in diagnostics.
-  /// \param IncludeLoc The location at which this parse was triggered.
-  TypeResult ParseTypeFromString(StringRef TypeStr, StringRef Context,
-                                 SourceLocation IncludeLoc);
-
   //===--------------------------------------------------------------------===//
   // Modules
   DeclGroupPtrTy ParseModuleDecl(Sema::ModuleImportState &ImportState);
@@ -3735,10 +3725,24 @@ private:
   // C++11/G++: Type Traits [Type-Traits.html in the GCC manual]
   ExprResult ParseTypeTrait();
 
+  /// Parse the given string as a type.
+  ///
+  /// This is a dangerous utility function currently employed only by API notes.
+  /// It is not a general entry-point for safely parsing types from strings.
+  ///
+  /// \param typeStr The string to be parsed as a type.
+  /// \param context The name of the context in which this string is being
+  /// parsed, which will be used in diagnostics.
+  /// \param includeLoc The location at which this parse was triggered.
+  TypeResult parseTypeFromString(StringRef typeStr, StringRef context,
+                                 SourceLocation includeLoc);
+
   //===--------------------------------------------------------------------===//
   // Embarcadero: Arary and Expression Traits
   ExprResult ParseArrayTypeTrait();
   ExprResult ParseExpressionTrait();
+
+  ExprResult ParseBuiltinPtrauthTypeDiscriminator();
 
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through

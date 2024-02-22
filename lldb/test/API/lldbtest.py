@@ -87,6 +87,19 @@ class LLDBTest(TestFormat):
         if timeoutInfo:
             return lit.Test.TIMEOUT, output
 
+        # Temporary fix to a flaky CI error. See rdar://52221547
+        # After unit tests have finished, a race during lldb shutdown can
+        # result in this innocuous and trouble causing failure:
+        #
+        # libc++abi.dylib: terminating with uncaught exception of type \
+        # std::__1::system_error: recursive_mutex lock failed: Invalid argument
+        if (
+            'RESULT: PASSED' in err and
+            'recursive_mutex lock failed' in err and
+            exitCode != 0
+        ):
+            return lit.Test.FLAKYPASS, output
+
         # Parse the dotest output from stderr. First get the # of total tests, in order to infer the # of passes.
         # Example: "Ran 5 tests in 0.042s"
         num_ran_regex = r"^Ran (\d+) tests? in "

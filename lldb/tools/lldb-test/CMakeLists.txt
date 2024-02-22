@@ -23,6 +23,10 @@ add_lldb_tool(lldb-test
     Support
   )
 
+# BEGIN Swift Mods
+add_properties_for_swift_modules(lldb-test "../")
+# END Swift Mods
+
 if(Python3_RPATH)
   set_property(TARGET lldb-test APPEND PROPERTY INSTALL_RPATH "${Python3_RPATH}")
   set_property(TARGET lldb-test APPEND PROPERTY BUILD_RPATH   "${Python3_RPATH}")

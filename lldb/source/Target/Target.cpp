@@ -26,6 +26,7 @@
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
+#include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/REPL.h"
@@ -42,6 +43,8 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
@@ -70,6 +73,11 @@
 #include <mutex>
 #include <optional>
 #include <sstream>
+
+#ifdef LLDB_ENABLE_SWIFT
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
+#endif // LLDB_ENABLE_SWIFT
 
 using namespace lldb;
 using namespace lldb_private;
@@ -273,6 +281,16 @@ void Target::SetREPL(lldb::LanguageType language, lldb::REPLSP repl_sp) {
   lldbassert(!m_repl_map.count(language));
 
   m_repl_map[language] = repl_sp;
+
+  if (language == eLanguageTypeSwift) {
+    // The DWARFImporter always claims to be able to load a module, even if it
+    // doesn't exist, because it doesn't "import" anything until the first type is
+    // requested. To make the REPL behave more like the compiler and diagnose when
+    // Clang modules can't be located up front, the DWARFImporter is disabled in
+    // the REPL. There are use-cases for loading Clang types from debug info, but
+    // this needs a better diagnostic mechanism before it can be enabled.
+    ModuleList::GetGlobalModuleListProperties().SetUseSwiftDWARFImporter(repl_sp == NULL);
+  }
 }
 
 void Target::Destroy() {
@@ -412,9 +430,15 @@ BreakpointSP Target::CreateBreakpoint(const FileSpecList *containingModules,
       break;
 
     case eInlineBreakpointsHeaders:
-      if (remapped_file.IsSourceImplementationFile())
-        check_inlines = eLazyBoolNo;
-      else
+      if (remapped_file.IsSourceImplementationFile()) {
+        // Swift can inline a lot of code from other swift files so always
+        // check inlines for swift source files
+        static ConstString g_swift_extension("swift");
+        if (remapped_file.GetFileNameExtension() == g_swift_extension)
+          check_inlines = eLazyBoolYes;
+        else
+          check_inlines = eLazyBoolNo;
+      } else
         check_inlines = eLazyBoolYes;
       break;
 
@@ -1454,6 +1478,94 @@ static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
                                                   feedback_stream.GetData());
 }
 
+// Load type summaries embedded in the binary. These are type summaries provided
+// by the authors of the code.
+static void LoadTypeSummariesForModule(ModuleSP module_sp) {
+  auto *sections = module_sp->GetSectionList();
+  if (!sections)
+    return;
+
+  auto summaries_sp =
+      sections->FindSectionByType(eSectionTypeLLDBTypeSummaries, true);
+  if (!summaries_sp)
+    return;
+
+  Log *log = GetLog(LLDBLog::DataFormatters);
+  const char *module_name = module_sp->GetFileSpec().GetFilename().GetCString();
+
+  TypeCategoryImplSP category;
+  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+
+  // The type summary record is serialized as follows.
+  //
+  // Each record contains, in order:
+  //   * Version number of the record format
+  //   * The remaining size of the record
+  //   * The size of the type identifier
+  //   * The type identifier, either a type name, or a regex
+  //   * The size of the summary string
+  //   * The summary string
+  //
+  // Integers are encoded using ULEB.
+  //
+  // Strings are encoded with first a length (ULEB), then the string contents,
+  // and lastly a null terminator. The length includes the null.
+
+  DataExtractor extractor;
+  auto section_size = summaries_sp->GetSectionData(extractor);
+  lldb::offset_t offset = 0;
+  while (offset < section_size) {
+    // Skip null bytes. Can happen with alignment padding.
+    while (true) {
+      auto next_offset = offset;
+      if (extractor.GetU8(&next_offset) != 0) {
+        break;
+      }
+      // Move past the null byte, using the advanced offset.
+      offset = next_offset;
+    }
+
+    uint64_t version = extractor.GetULEB128(&offset);
+    uint64_t record_size = extractor.GetULEB128(&offset);
+    if (record_size == 0) {
+      LLDB_LOGF(log,
+                "Skipping empty (malformed) embedded type summary of version "
+                "%llu in %s.",
+                version, module_name);
+      continue;
+    }
+
+    if (version == 1) {
+      uint64_t type_size = extractor.GetULEB128(&offset);
+      llvm::StringRef type_name = extractor.GetCStr(&offset, type_size);
+      uint64_t summary_size = extractor.GetULEB128(&offset);
+      llvm::StringRef summary_string = extractor.GetCStr(&offset, summary_size);
+      if (!type_name.empty() && !summary_string.empty()) {
+        TypeSummaryImpl::Flags flags;
+        auto summary_sp =
+            std::make_shared<StringSummaryFormat>(flags, summary_string.data());
+        FormatterMatchType match_type = eFormatterMatchExact;
+        if (type_name.front() == '^')
+          match_type = eFormatterMatchRegex;
+        category->AddTypeSummary(type_name, match_type, summary_sp);
+        LLDB_LOGF(log, "Loaded embedded type summary for '%s' from %s.",
+                  type_name.data(), module_name);
+      } else {
+        if (type_name.empty())
+          LLDB_LOGF(log, "Missing string(s) in embedded type summary in %s.",
+                    module_name);
+      }
+    } else {
+      // Skip unsupported record.
+      offset += record_size;
+      LLDB_LOGF(
+          log,
+          "Skipping unsupported embedded type summary of version %llu in %s.",
+          version, module_name);
+    }
+  }
+}
+
 void Target::ClearModules(bool delete_locations) {
   ModulesDidUnload(m_images, delete_locations);
   m_section_load_history.Clear();
@@ -1698,12 +1810,35 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     for (size_t idx = 0; idx < num_images; ++idx) {
       ModuleSP module_sp(module_list.GetModuleAtIndex(idx));
       LoadScriptingResourceForModule(module_sp, this);
+      LoadTypeSummariesForModule(module_sp);
     }
     m_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     if (m_process_sp) {
       m_process_sp->ModulesDidLoad(module_list);
     }
+    // Notify all the ASTContext(s).
+    auto notify_callback = [&](lldb::TypeSystemSP type_system) {
+#ifdef LLDB_ENABLE_SWIFT
+      auto *swift_scratch_ctx =
+          llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
+              type_system.get());
+      if (!swift_scratch_ctx)
+        return true;
+      swift_scratch_ctx->ModulesDidLoad(module_list);
+#endif // LLDB_ENABLE_SWIFT
+      return true;
+    };
+    m_scratch_type_system_map.ForEach(notify_callback);
+
+    // This is a DenseMap, but we're fine iterating over it because
+    // it doens't matter in which order we notify the ASTContext(s).
+    for (auto &language : m_scratch_typesystem_for_module) {
+      TypeSystemSP type_system = language.second;
+      notify_callback(type_system);
+    }
+
+    module_list.ClearModuleDependentCaches();
     auto data_sp =
         std::make_shared<TargetEventData>(shared_from_this(), module_list);
     BroadcastEvent(eBroadcastBitModulesLoaded, data_sp);
@@ -2417,7 +2552,8 @@ void Target::ImageSearchPathsChanged(const PathMappingList &path_list,
 
 llvm::Expected<lldb::TypeSystemSP>
 Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
-                                        bool create_on_demand) {
+                                        bool create_on_demand,
+                                        const char *compiler_options) {
   if (!m_valid)
     return llvm::make_error<llvm::StringError>("Invalid Target",
                                                llvm::inconvertibleErrorCode());
@@ -2440,8 +2576,118 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
     }
   }
 
-  return m_scratch_type_system_map.GetTypeSystemForLanguage(language, this,
-                                                            create_on_demand);
+  if (m_cant_make_scratch_type_system.count(language))
+    return llvm::make_error<llvm::StringError>(
+        "unable to construct scratch type system",
+        llvm::inconvertibleErrorCode());
+
+  auto type_system_or_err = m_scratch_type_system_map.GetTypeSystemForLanguage(
+      language, this, create_on_demand, compiler_options);
+  if (!type_system_or_err)
+    return type_system_or_err.takeError();
+
+#ifdef LLDB_ENABLE_SWIFT
+  if (language == eLanguageTypeSwift) {
+    if (auto *swift_scratch_ctx =
+            llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
+                type_system_or_err->get())) {
+      auto *swift_ast_ctx =
+          llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
+              swift_scratch_ctx->GetSwiftASTContextOrNull(nullptr));
+      // Replace the scratch context if it contains fatal errors or
+      // needs to be replaced because new lldb::Modules were loaded.
+      if (swift_ast_ctx && (swift_ast_ctx->CheckProcessChanged() ||
+                            swift_ast_ctx->HasFatalErrors())) {
+        // If it is safe to replace the scratch context, do so. If
+        // try_lock() fails, then a higher stack frame (or another
+        // thread) is holding a read lock to the scratch context and
+        // replacing it could cause a use-after-free later on.
+        auto &lock = GetSwiftScratchContextLock();
+        if (lock.try_lock()) {
+          std::lock_guard<std::shared_mutex> unlock(lock, std::adopt_lock);
+          if (m_use_scratch_typesystem_per_module)
+            DisplayFallbackSwiftContextErrors(swift_ast_ctx);
+          else if (StreamSP errs = GetDebugger().GetAsyncErrorStream()) {
+            if (swift_ast_ctx->HasFatalErrors()) {
+              errs->Printf(
+                  "warning: Swift error in scratch context: %s.\n",
+                  swift_ast_ctx->GetFatalErrors().AsCString("unknown error"));
+              auto *module_name = GetExecutableModule()
+                                      ->GetPlatformFileSpec()
+                                      .GetFilename()
+                                      .AsCString();
+              errs->Printf("Shared Swift state for %s has developed fatal "
+                           "errors and is being discarded.\n",
+                           module_name);
+              errs->PutCString("REPL definitions and persistent names/types "
+                               "will be lost.\n\n");
+              errs->Flush();
+            }
+          }
+
+          m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
+          type_system_or_err =
+              m_scratch_type_system_map.GetTypeSystemForLanguage(
+                  language, this, create_on_demand, compiler_options);
+          if (!type_system_or_err)
+            return type_system_or_err.takeError();
+
+          if (auto *new_swift_scratch_ctx =
+                  llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
+                      type_system_or_err->get())) {
+            auto report_error = [&](std::string message) {
+              m_cant_make_scratch_type_system[language] = true;
+              m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
+              type_system_or_err = llvm::make_error<llvm::StringError>(
+                  message, llvm::inconvertibleErrorCode());
+            };
+            auto *new_swift_ast_ctx =
+                new_swift_scratch_ctx->GetSwiftASTContext(nullptr);
+            if (!new_swift_ast_ctx)
+              report_error("Failed to construct SwiftASTContextForExpressions");
+            else if (new_swift_ast_ctx->HasFatalErrors()) {
+              DiagnosticManager diag_mgr;
+              new_swift_ast_ctx->PrintDiagnostics(diag_mgr);
+              std::string error_diagnostics = diag_mgr.GetString();
+              if (StreamSP error_stream_sp =
+                      GetDebugger().GetAsyncErrorStream()) {
+                error_stream_sp->PutCString(
+                    "Can't construct shared Swift state "
+                    "for this process after repeated "
+                    "attempts.\n");
+                error_stream_sp->PutCString("Giving up.  Fatal errors:\n");
+                error_stream_sp->PutCString(error_diagnostics.c_str());
+                error_stream_sp->Flush();
+              }
+              report_error(error_diagnostics);
+            }
+          }
+        }
+      }
+    } else if (create_on_demand) {
+      if (StreamSP error_stream_sp = GetDebugger().GetAsyncErrorStream()) {
+        auto module = GetExecutableModule();
+        const char *module_name = "[no executable module]";
+        if (module)
+          module_name = GetExecutableModule()
+                            ->GetPlatformFileSpec()
+                            .GetFilename()
+                            .AsCString();
+        error_stream_sp->Printf(
+            "Shared Swift state for %s could not be initialized.\n",
+            module_name);
+        error_stream_sp->PutCString(
+            "The REPL and expressions are unavailable.\n");
+        error_stream_sp->Flush();
+      }
+    }
+  }
+#endif // LLDB_ENABLE_SWIFT
+  return type_system_or_err;
+}
+
+const TypeSystemMap &Target::GetTypeSystemMap() {
+  return m_scratch_type_system_map;
 }
 
 CompilerType Target::GetRegisterType(const std::string &name,
@@ -2507,6 +2753,19 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
            Language::GetNameForLanguageType(language));
   return nullptr;
 }
+
+#ifdef LLDB_ENABLE_SWIFT
+SwiftPersistentExpressionState *
+Target::GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope) {
+  Status error;
+  auto maybe_swift_ast_context =
+      GetSwiftScratchContext(error, exe_scope, true);
+  if (!maybe_swift_ast_context)
+    return nullptr;
+  return (SwiftPersistentExpressionState *)
+      maybe_swift_ast_context->get()->GetPersistentExpressionState();
+}
+#endif // LLDB_ENABLE_SWIFT
 
 UserExpression *Target::GetUserExpressionForLanguage(
     llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
@@ -2598,6 +2857,275 @@ Target::CreateUtilityFunction(std::string expression, std::string name,
 
   return std::move(utility_fn);
 }
+
+#ifdef LLDB_ENABLE_SWIFT
+std::optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
+    Status &error, ExecutionContextScope &exe_scope, bool create_on_demand) {
+  Log *log = GetLog(LLDBLog::Target | LLDBLog::Types | LLDBLog::Expressions);
+  LLDB_SCOPED_TIMER();
+
+  const SymbolContext *sc = nullptr;
+  Module *lldb_module = nullptr;
+  if (lldb::StackFrameSP stack_frame = exe_scope.CalculateStackFrame()) {
+    sc = &stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
+    lldb_module = sc->module_sp.get();
+  }
+  
+  // Opt into the per-module scratch context if we find incompatible triples.
+  if (!m_use_scratch_typesystem_per_module) {
+    TargetSP target_sp = exe_scope.CalculateTarget();
+    if (lldb_module) {
+      auto module_arch = lldb_module->GetArchitecture();
+      auto target_arch = target_sp->GetArchitecture();
+      auto module_triple = module_arch.GetTriple();
+      auto target_triple = target_arch.GetTriple();
+      if (!module_arch.IsCompatibleMatch(target_arch) ||
+          (module_triple.isArm64e() != target_triple.isArm64e())) {
+        m_use_scratch_typesystem_per_module = true;
+        std::string module_name = lldb_module->GetSpecificationDescription();
+        const char *msg = "%sModule \"%s\" uses triple \"%s\", which is "
+                          "not compatible with the target triple \"%s\". "
+                          "Enabling per-module Swift scratch context.\n";
+
+        StreamSP errs = GetDebugger().GetAsyncErrorStream();
+        if (errs)
+          errs->Printf(msg, "warning: ", module_name.c_str(),
+                       module_triple.str().c_str(),
+                       target_triple.str().c_str());
+        if (log)
+          log->Printf(msg, "", module_name.c_str(), module_triple.str().c_str(),
+                      target_triple.str().c_str());
+      }
+    }
+  }
+
+  auto get_cached_module_ts =
+      [&](Module *lldb_module) -> TypeSystemSwiftTypeRefForExpressions * {
+    ModuleLanguage key = {lldb_module, lldb::eLanguageTypeSwift};
+    auto cached = m_scratch_typesystem_for_module.find(key);
+    if (cached != m_scratch_typesystem_for_module.end())
+      return llvm::cast<TypeSystemSwiftTypeRefForExpressions>(cached->second.get());
+    return nullptr;
+  };
+
+  auto maybe_create_fallback_context = [&]() {
+    ModuleLanguage key = {lldb_module, lldb::eLanguageTypeSwift};
+    if (auto *cached_ts = get_cached_module_ts(lldb_module)) {
+      auto *cached_ast_ctx =
+          llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
+              cached_ts->GetSwiftASTContext(sc));
+      if (cached_ast_ctx && cached_ast_ctx->HasFatalErrors() &&
+          !m_cant_make_scratch_type_system.count(lldb::eLanguageTypeSwift)) {
+        DisplayFallbackSwiftContextErrors(cached_ast_ctx);
+        // Try again.
+        // FIXME: Shouldn't this continue rather than return?
+        auto &lock = GetSwiftScratchContextLock();
+        if (!lock.try_lock()) {
+          if (log)
+            log->Printf("module scratch context has errors but couldn't "
+                        "acquire scratch context lock\n");
+          return;
+        }
+        std::lock_guard<std::shared_mutex> unlock(lock, std::adopt_lock);
+        m_scratch_typesystem_for_module.erase(key);
+        if (log)
+          log->Printf("erased module-wide scratch context with errors\n");
+        return;
+      }
+      if (log)
+        log->PutCString("returned cached module-wide scratch context");
+      return;
+    }
+
+    if (!create_on_demand) {
+      if (log)
+        log->PutCString("not allowed to create a new context");
+      return;
+    }
+
+    // Call for its side effects of establishing the Swift scratch type
+    // system.
+    auto type_system_or_err =
+        GetScratchTypeSystemForLanguage(eLanguageTypeSwift, false);
+    if (!type_system_or_err) {
+      llvm::consumeError(type_system_or_err.takeError());
+      return;
+    }
+
+    auto &lock = GetSwiftScratchContextLock();
+    if (!lock.try_lock()) {
+      if (log)
+        log->PutCString("couldn't acquire scratch context lock");
+      return;
+    }
+    std::lock_guard<std::shared_mutex> unlock(lock, std::adopt_lock);
+
+    // With the lock held, get the current scratch type system. This ensures
+    // the current instance is used even in the unlikely event it was changed
+    // during the brief window between the call to
+    // `GetScratchTypeSystemForLanguage` and taking the lock.
+    type_system_or_err = m_scratch_type_system_map.GetTypeSystemForLanguage(
+        eLanguageTypeSwift, this, false);
+    if (!type_system_or_err) {
+      llvm::consumeError(type_system_or_err.takeError());
+      return;
+    }
+
+    if (auto *global_scratch_ctx =
+            llvm::cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
+                type_system_or_err->get()))
+      if (auto *swift_ast_ctx =
+              llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
+                  global_scratch_ctx->GetSwiftASTContext(sc)))
+        DisplayFallbackSwiftContextErrors(swift_ast_ctx);
+
+    auto typesystem_sp = std::make_shared<TypeSystemSwiftTypeRefForExpressions>(
+        lldb::eLanguageTypeSwift, *this, *lldb_module);
+    typesystem_sp->GetSwiftASTContext(sc);
+    m_scratch_typesystem_for_module.insert({key, typesystem_sp});
+    if (log)
+      log->PutCString("created module-wide scratch context");
+    return;
+  };
+
+  std::optional<SwiftScratchContextReader> reader;
+  if (lldb_module && m_use_scratch_typesystem_per_module) {
+    maybe_create_fallback_context();
+    std::shared_lock<std::shared_mutex> lock(GetSwiftScratchContextLock());
+    if (auto *cached_ts = get_cached_module_ts(lldb_module)) {
+      reader = SwiftScratchContextReader(std::move(lock), *cached_ts);
+      if (log)
+        log->PutCString("returned project-wide scratch context");
+    }
+  }
+  // FIXME: Don't return the project-wide context after requesting the
+  // module-wide one.
+  if (!reader) {
+    std::shared_lock<std::shared_mutex> lock(GetSwiftScratchContextLock());
+    auto type_system_or_err =
+        GetScratchTypeSystemForLanguage(eLanguageTypeSwift, create_on_demand);
+    if (type_system_or_err) {
+      if (auto *ts = llvm::cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
+              type_system_or_err->get())) {
+        reader = SwiftScratchContextReader(std::move(lock), *ts);
+        if (log)
+          log->PutCString("returned project-wide scratch context");
+      }
+    } else
+      llvm::consumeError(type_system_or_err.takeError());
+  }
+
+  if (reader) {
+    // Perform compile unit imports.
+    assert(reader->get());
+    StackFrameSP frame_sp = exe_scope.CalculateStackFrame();
+    if (frame_sp && frame_sp.get()) {
+      SymbolContext sc =
+          frame_sp->GetSymbolContext(lldb::eSymbolContextEverything);
+      Status status = reader->get()->PerformCompileUnitImports(sc);
+      if (status.Fail())
+        Debugger::ReportError(status.AsCString(), GetDebugger().GetID());
+    }
+  }
+  return reader;
+}
+
+static std::shared_mutex *
+GetSwiftScratchContextMutex(const ExecutionContext *exe_ctx) {
+  if (!exe_ctx)
+    return nullptr;
+  ExecutionContextScope *exe_scope = exe_ctx->GetBestExecutionContextScope();
+  if (auto target = exe_scope->CalculateTarget())
+    return &target->GetSwiftScratchContextLock();
+  return nullptr;
+}
+
+SwiftScratchContextReader::SwiftScratchContextReader(
+    std::shared_lock<std::shared_mutex> &&lock,
+    TypeSystemSwiftTypeRefForExpressions &ts)
+    : m_lock(std::move(lock)), m_ts(&ts) {}
+
+SwiftScratchContextLock::SwiftScratchContextLock(
+    const ExecutionContext *exe_ctx) {
+  if (auto *mutex = GetSwiftScratchContextMutex(exe_ctx)) {
+    std::shared_lock<std::shared_mutex> tmp(*mutex);
+    lock.swap(tmp);
+  }
+}
+
+static std::shared_mutex *
+GetSwiftScratchContextMutex(const ExecutionContextRef *exe_ctx_ref) {
+  if (!exe_ctx_ref)
+    return nullptr;
+  ExecutionContext exe_ctx(exe_ctx_ref);
+  return GetSwiftScratchContextMutex(&exe_ctx);
+}
+
+SwiftScratchContextLock::SwiftScratchContextLock(
+    const ExecutionContextRef *exe_ctx_ref) {
+  if (auto *mutex = GetSwiftScratchContextMutex(exe_ctx_ref)) {
+    std::shared_lock<std::shared_mutex> tmp(*mutex);
+    lock.swap(tmp);
+  }
+}
+
+void Target::DisplayFallbackSwiftContextErrors(
+    SwiftASTContextForExpressions *swift_ast_ctx) {
+  assert(m_use_scratch_typesystem_per_module);
+  StreamSP errs = GetDebugger().GetAsyncErrorStream();
+  if (!errs || m_did_display_scratch_fallback_warning ||
+      !swift_ast_ctx->HasFatalErrors())
+    return;
+
+  m_did_display_scratch_fallback_warning = true;
+  errs->Printf(
+      "warning: Swift error in fallback scratch context: %s\n\nnote: This "
+      "error message is displayed only once. If the error displayed above is "
+      "due to conflicting search paths to Clang modules in different images of "
+      "the debugged executable, this can slow down debugging of Swift code "
+      "significantly, since a fresh Swift context has to be created every time "
+      "a conflict is encountered.\n\n",
+      swift_ast_ctx->GetFatalErrors().AsCString("unknown error"));
+  errs->Flush();
+}
+
+bool Target::IsSwiftREPL() {
+  return m_debugger.REPLIsActive() &&
+         GetProcessLaunchInfo().GetArg0().endswith("repl_swift");
+}
+
+bool Target::IsSwiftCxxInteropEnabled() {
+  switch (m_is_swift_cxx_interop_enabled) {
+  case eLazyBoolYes:
+    return true;
+  case eLazyBoolNo:
+    return false;
+  case eLazyBoolCalculate:
+    break;
+  }
+
+  EnableSwiftCxxInterop interop_enabled = GetEnableSwiftCxxInterop();
+  switch (interop_enabled) {
+  case eEnableSwiftCxxInterop:
+    m_is_swift_cxx_interop_enabled = eLazyBoolYes;
+    break;
+  case eDisableSwiftCxxInterop:
+    m_is_swift_cxx_interop_enabled = eLazyBoolNo;
+    break;
+  case eAutoDetectSwiftCxxInterop: {
+    if (GetImages().IsEmpty())
+      m_is_swift_cxx_interop_enabled = eLazyBoolNo;
+    else
+      m_is_swift_cxx_interop_enabled =
+          GetImages().GetModuleAtIndex(0)->IsSwiftCxxInteropEnabled()
+              ? eLazyBoolYes
+              : eLazyBoolNo;
+  }
+  }
+  return m_is_swift_cxx_interop_enabled == eLazyBoolYes;
+}
+
+#endif // LLDB_ENABLE_SWIFT
 
 void Target::SettingsInitialize() { Process::SettingsInitialize(); }
 
@@ -3195,6 +3723,52 @@ bool Target::SetSectionUnloaded(const lldb::SectionSP &section_sp,
 }
 
 void Target::ClearAllLoadedSections() { m_section_load_history.Clear(); }
+
+lldb::addr_t Target::FindLoadAddrForNameInSymbolsAndPersistentVariables(
+    ConstString name_const_str, SymbolType symbol_type) {
+  lldb::addr_t symbol_addr = LLDB_INVALID_ADDRESS;
+  SymbolContextList sc_list;
+
+  GetImages().FindSymbolsWithNameAndType(name_const_str, symbol_type, sc_list);
+  if (!sc_list.IsEmpty()) {
+    SymbolContext desired_symbol;
+
+    if (sc_list.GetSize() == 1 &&
+        sc_list.GetContextAtIndex(0, desired_symbol)) {
+      if (desired_symbol.symbol) {
+        symbol_addr = desired_symbol.symbol->GetAddress().GetLoadAddress(this);
+      }
+    } else if (sc_list.GetSize() > 1) {
+      for (size_t i = 0; i < sc_list.GetSize(); i++) {
+        if (sc_list.GetContextAtIndex(i, desired_symbol)) {
+          if (desired_symbol.symbol) {
+            symbol_addr =
+                desired_symbol.symbol->GetAddress().GetLoadAddress(this);
+            if (symbol_addr != LLDB_INVALID_ADDRESS)
+              break;
+          }
+        }
+      }
+    }
+  }
+
+  if (symbol_addr == LLDB_INVALID_ADDRESS) {
+    // If we didn't find it in the symbols, check the ClangPersistentVariables,
+    // 'cause we may have
+    // made it by hand.
+    ConstString mangled_const_str;
+    if (name_const_str.GetMangledCounterpart(mangled_const_str))
+      symbol_addr = GetPersistentSymbol(mangled_const_str);
+  }
+
+  if (symbol_addr == LLDB_INVALID_ADDRESS) {
+    // Let's try looking for the name passed-in itself, as it might be a mangled
+    // name
+    symbol_addr = GetPersistentSymbol(name_const_str);
+  }
+
+  return symbol_addr;
+}
 
 void Target::SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info) {
   if (process_info.IsScriptedProcess()) {
@@ -4099,8 +4673,16 @@ static constexpr OptionEnumValueElement g_memory_module_load_level_values[] = {
     },
 };
 
+static constexpr OptionEnumValueElement g_enable_swift_cxx_interop_values[] = {
+    {eAutoDetectSwiftCxxInterop, "auto",
+     "Automatically detect if C++ interop mode should be enabled."},
+    {eEnableSwiftCxxInterop, "true", "Enable C++ interop."},
+    {eDisableSwiftCxxInterop, "false", "Disable C++ interop."},
+};
+
 #define LLDB_PROPERTIES_target
 #include "TargetProperties.inc"
+
 
 enum {
 #define LLDB_PROPERTIES_target
@@ -4255,6 +4837,111 @@ void TargetProperties::SetInjectLocalVariables(ExecutionContext *exe_ctx,
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
     exp_values->SetPropertyAtIndex(ePropertyInjectLocalVars, true, exe_ctx);
+}
+
+bool TargetProperties::GetSwiftReadMetadataFromFileCache() const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values
+        ->GetPropertyAtIndexAs<bool>(ePropertySwiftReadMetadataFromFileCache)
+        .value_or(true);
+
+  return true;
+}
+
+bool TargetProperties::GetSwiftUseReflectionSymbols() const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values
+        ->GetPropertyAtIndexAs<bool>(ePropertySwiftUseReflectionSymbols)
+        .value_or(true);
+  else
+    return true;
+}
+
+bool TargetProperties::GetSwiftReadMetadataFromDSYM() const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values
+        ->GetPropertyAtIndexAs<bool>(ePropertySwiftReadMetadataFromDSYM)
+        .value_or(true);
+
+  return true;
+}
+
+bool TargetProperties::GetSwiftDiscoverImplicitSearchPaths() const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values
+        ->GetPropertyAtIndexAs<bool>(ePropertySwiftDiscoverImplicitSearchPaths)
+        .value_or(true);
+
+  return true;
+}
+
+bool TargetProperties::GetSwiftEnableBareSlashRegex() const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values
+        ->GetPropertyAtIndexAs<bool>(ePropertySwiftEnableBareSlashRegex)
+        .value_or(true);
+
+  return true;
+}
+
+EnableSwiftCxxInterop TargetProperties::GetEnableSwiftCxxInterop() const {
+  const uint32_t idx = ePropertySwiftEnableCxxInterop;
+
+  EnableSwiftCxxInterop enable_interop =
+      (EnableSwiftCxxInterop)m_experimental_properties_up->GetValueProperties()
+          ->GetPropertyAtIndexAs<EnableSwiftCxxInterop>(idx)
+          .value_or(static_cast<EnableSwiftCxxInterop>(
+              g_target_properties[idx].default_uint_value));
+  return enable_interop;
+}
+
+bool TargetProperties::GetSwiftEnableFullDwarfDebugging() const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values
+        ->GetPropertyAtIndexAs<bool>(ePropertySwiftEnableFullDwarfDebugging)
+        .value_or(false);
+
+  return false;
+}
+
+Args TargetProperties::GetSwiftPluginServerForPath() const {
+  const uint32_t idx = ePropertySwiftPluginServerForPath;
+
+  llvm::StringMap<std::string> result;
+  Args property_plugin_server_path;
+  m_experimental_properties_up->GetValueProperties()->GetPropertyAtIndexAsArgs(
+      idx, property_plugin_server_path);
+  return property_plugin_server_path;
+}
+
+bool TargetProperties::GetSwiftAutoImportFrameworks() const {
+  const uint32_t idx = ePropertySwiftAutoImportFrameworks;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
@@ -4502,6 +5189,35 @@ FileSpecList TargetProperties::GetDebugFileSearchPaths() {
   return GetPropertyAtIndexAs<FileSpecList>(idx, {});
 }
 
+FileSpec &TargetProperties::GetSDKPath() {
+  const uint32_t idx = ePropertySDKPath;
+  OptionValueFileSpec *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(idx);
+  assert(option_value);
+  return option_value->GetCurrentValue();
+}
+
+FileSpecList TargetProperties::GetSwiftFrameworkSearchPaths() {
+  const uint32_t idx = ePropertySwiftFrameworkSearchPaths;
+  OptionValueFileSpecList *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
+  assert(option_value);
+  return option_value->GetCurrentValue();
+}
+
+FileSpecList TargetProperties::GetSwiftModuleSearchPaths() {
+  const uint32_t idx = ePropertySwiftModuleSearchPaths;
+  OptionValueFileSpecList *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
+  assert(option_value);
+  return option_value->GetCurrentValue();
+}
+
+llvm::StringRef TargetProperties::GetSwiftExtraClangFlags() const {
+  const uint32_t idx = ePropertySwiftExtraClangFlags;
+  return GetPropertyAtIndexAs<llvm::StringRef>(idx, "");
+}
+
 FileSpecList TargetProperties::GetClangModuleSearchPaths() {
   const uint32_t idx = ePropertyClangModuleSearchPaths;
   return GetPropertyAtIndexAs<FileSpecList>(idx, {});
@@ -4511,6 +5227,17 @@ bool TargetProperties::GetEnableAutoImportClangModules() const {
   const uint32_t idx = ePropertyAutoImportClangModules;
   return GetPropertyAtIndexAs<bool>(
       idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+bool TargetProperties::GetUseAllCompilerFlags() const {
+  const uint32_t idx = ePropertyUseAllCompilerFlags;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+void TargetProperties::SetUseAllCompilerFlags(bool b) {
+  const uint32_t idx = ePropertyUseAllCompilerFlags;
+  SetPropertyAtIndex(idx, b);
 }
 
 ImportStdModule TargetProperties::GetImportStdModule() const {
@@ -4891,8 +5618,22 @@ void TargetProperties::DisableSTDIOValueChangedCallback() {
     m_launch_info.GetFlags().Clear(lldb::eLaunchFlagDisableSTDIO);
 }
 
+uint32_t EvaluateExpressionOptions::GetExpressionNumber() const {
+  if (m_expr_number == 0) {
+    static uint32_t g_expr_idx = 0;
+    m_expr_number = ++g_expr_idx;
+  }
+  return m_expr_number;
+}
+
 bool TargetProperties::GetDebugUtilityExpression() const {
   const uint32_t idx = ePropertyDebugUtilityExpression;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+bool TargetProperties::GetEnableTrampolineSupport() const {
+  const uint32_t idx = ePropertyEnableTrampolineSupport;
   return GetPropertyAtIndexAs<bool>(
       idx, g_target_properties[idx].default_uint_value != 0);
 }

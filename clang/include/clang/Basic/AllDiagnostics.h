@@ -16,6 +16,7 @@
 
 #include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/DiagnosticAnalysis.h"
+#include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/DiagnosticCrossTU.h"
 #include "clang/Basic/DiagnosticDriver.h"

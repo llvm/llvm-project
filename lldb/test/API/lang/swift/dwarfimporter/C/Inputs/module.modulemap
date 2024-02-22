@@ -1,0 +1,8 @@
+module CModule {
+  header "c-header.h"
+  export *
+  module SubModule {
+    header "submodule.h"
+    export *
+  }
+}

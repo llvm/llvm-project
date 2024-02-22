@@ -8,6 +8,7 @@
 
 #include "ClangPersistentVariables.h"
 #include "ClangASTImporter.h"
+#include "lldb/Expression/IRExecutionUnit.h"
 #include "ClangModulesDeclVendor.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -47,28 +48,41 @@ ExpressionVariableSP ClangPersistentVariables::CreatePersistentVariable(
 
 void ClangPersistentVariables::RemovePersistentVariable(
     lldb::ExpressionVariableSP variable) {
+  if (!variable)
+    return;
+
   RemoveVariable(variable);
 
-  // Check if the removed variable was the last one that was created. If yes,
-  // reuse the variable id for the next variable.
+  const char *name = variable->GetName().AsCString();
 
-  // Nothing to do if we have not assigned a variable id so far.
-  if (m_next_persistent_variable_id == 0)
+  if (*name != '$')
     return;
+  name++;
 
-  llvm::StringRef name = variable->GetName().GetStringRef();
-  // Remove the prefix from the variable that only the indes is left.
-  if (!name.consume_front(GetPersistentVariablePrefix(false)))
-    return;
+  bool is_error = false;
 
-  // Check if the variable contained a variable id.
-  uint32_t variable_id;
-  if (name.getAsInteger(10, variable_id))
-    return;
-  // If it's the most recent variable id that was assigned, make sure that this
-  // variable id will be used for the next persistent variable.
-  if (variable_id == m_next_persistent_variable_id - 1)
-    m_next_persistent_variable_id--;
+  if (variable->GetCompilerType().GetTypeSystem()->SupportsLanguage(
+          lldb::eLanguageTypeSwift)) {
+    switch (*name) {
+    case 'R':
+      break;
+    case 'E':
+      is_error = true;
+      break;
+    default:
+      return;
+    }
+    name++;
+  }
+
+  uint32_t value = strtoul(name, nullptr, 0);
+  if (is_error) {
+    if (value == m_next_persistent_error_id - 1)
+      m_next_persistent_error_id--;
+  } else {
+    if (value == m_next_persistent_variable_id - 1)
+      m_next_persistent_variable_id--;
+  }
 }
 
 std::optional<CompilerType>

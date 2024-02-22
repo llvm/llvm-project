@@ -13,6 +13,7 @@
 #include "clang/Lex/DependencyDirectivesScanner.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/CAS/CASReference.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -29,11 +30,15 @@ using DependencyDirectivesTy =
 /// Contents and directive tokens of a cached file entry. Single instance can
 /// be shared between multiple entries.
 struct CachedFileContents {
-  CachedFileContents(std::unique_ptr<llvm::MemoryBuffer> Contents)
-      : Original(std::move(Contents)), DepDirectives(nullptr) {}
+  CachedFileContents(std::unique_ptr<llvm::MemoryBuffer> Contents,
+                     std::optional<cas::ObjectRef> CASContents)
+      : Original(std::move(Contents)), CASContents(std::move(CASContents)),
+        DepDirectives(nullptr) {}
 
   /// Owning storage for the original contents.
   std::unique_ptr<llvm::MemoryBuffer> Original;
+
+  std::optional<cas::ObjectRef> CASContents;
 
   /// The mutex that must be locked before mutating directive tokens.
   std::mutex ValueLock;
@@ -85,6 +90,13 @@ public:
     assert(!MaybeStat->isDirectory() && "not a file");
     assert(Contents && "contents not initialized");
     return Contents->Original->getBuffer();
+  }
+
+  std::optional<cas::ObjectRef> getObjectRefForContent() const {
+    assert(!isError() && "error");
+    assert(!MaybeStat->isDirectory() && "not a file");
+    assert(Contents && "contents not initialized");
+    return Contents->CASContents;
   }
 
   /// \returns The scanned preprocessor directive tokens of the file that are
@@ -187,7 +199,8 @@ public:
     /// with the unique ID and returns the result.
     const CachedFileSystemEntry &
     getOrEmplaceEntryForUID(llvm::sys::fs::UniqueID UID, llvm::vfs::Status Stat,
-                            std::unique_ptr<llvm::MemoryBuffer> Contents);
+                            std::unique_ptr<llvm::MemoryBuffer> Contents,
+                            std::optional<cas::ObjectRef> CASContents);
 
     /// Returns entry associated with the filename if there is some. Otherwise,
     /// associates the given entry with the filename and returns it.
@@ -264,6 +277,9 @@ public:
   }
 
   StringRef getContents() const { return Entry.getOriginalContents(); }
+  std::optional<cas::ObjectRef> getObjectRefForContent() const {
+    return Entry.getObjectRefForContent();
+  }
 
   std::optional<ArrayRef<dependency_directives_scan::Directive>>
   getDirectiveTokens() const {
@@ -327,10 +343,13 @@ private:
   struct TentativeEntry {
     llvm::vfs::Status Status;
     std::unique_ptr<llvm::MemoryBuffer> Contents;
+    std::optional<cas::ObjectRef> CASContents;
 
     TentativeEntry(llvm::vfs::Status Status,
-                   std::unique_ptr<llvm::MemoryBuffer> Contents = nullptr)
-        : Status(std::move(Status)), Contents(std::move(Contents)) {}
+                   std::unique_ptr<llvm::MemoryBuffer> Contents = nullptr,
+                   std::optional<cas::ObjectRef> CASContents = std::nullopt)
+        : Status(std::move(Status)), Contents(std::move(Contents)),
+          CASContents(std::move(CASContents)) {}
   };
 
   /// Reads file at the given path. Enforces consistency between the file size

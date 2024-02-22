@@ -514,6 +514,10 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
                                   PPCallbacks::LexedFileChangeReason::ExitFile,
                                   FileType, ExitedFID, Loc);
     }
+    if (auto *CActions = getPPCachedActions()) {
+      if (ExitedFID.isValid())
+        CActions->exitedFile(*this, ExitedFID);
+    }
 
     // Restore conditional stack as well as the recorded
     // \#pragma clang assume_nonnull from the preamble right after exiting

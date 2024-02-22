@@ -15,6 +15,7 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -471,6 +472,9 @@ public:
       return;
     }
 
+    // In the case where the value is of Swift generic type, unbox it.
+    CompilerType valobj_type = valobj_sp->GetCompilerType();
+
     if (m_is_reference) {
       DataExtractor valobj_extractor;
       Status extract_error;
@@ -501,6 +505,19 @@ public:
       const bool scalar_is_load_address = false;
       lldb::addr_t addr_of_valobj =
           valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
+
+      // BEGIN Swift.
+      if (addr_of_valobj != LLDB_INVALID_ADDRESS)
+        if (lldb::ProcessSP process_sp =
+                map.GetBestExecutionContextScope()->CalculateProcess())
+          if (auto runtime = process_sp->GetLanguageRuntime(
+                  valobj_type.GetMinimumLanguage())) {
+            Status read_error;
+            addr_of_valobj =
+                runtime->FixupAddress(addr_of_valobj, valobj_type, read_error);
+          }
+      // END Swift.
+
       if (addr_of_valobj != LLDB_INVALID_ADDRESS) {
         Status write_error;
         map.WritePointerToMemory(load_addr, addr_of_valobj, write_error);
@@ -516,6 +533,14 @@ public:
         Status extract_error;
         valobj_sp->GetData(data, extract_error);
         if (!extract_error.Success()) {
+          if (valobj_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
+            std::optional<uint64_t> size =
+                valobj_type.GetByteSize(frame_sp.get());
+            if (size && *size == 0) {
+              // We don't need to materialize empty structs in Swift.
+              return;
+            }
+          }
           err.SetErrorStringWithFormat("couldn't get the value of %s: %s",
                                        GetName().AsCString(),
                                        extract_error.AsCString());
@@ -627,6 +652,12 @@ public:
         return;
       }
 
+      // In the case where the value is of Swift generic type, resolve its
+      // dynamic type, because we may
+      // need to unbox the target.
+
+      CompilerType valobj_type = valobj_sp->GetCompilerType();
+
       lldb_private::DataExtractor data;
 
       Status extract_error;
@@ -635,6 +666,14 @@ public:
                         valobj_sp->GetByteSize().value_or(0), extract_error);
 
       if (!extract_error.Success()) {
+        if (valobj_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
+          std::optional<uint64_t> size =
+              valobj_type.GetByteSize(frame_sp.get());
+          if (size && *size == 0)
+            // We don't need to dematerialize empty structs in Swift.
+            return;
+        }
+        
         err.SetErrorStringWithFormat("couldn't get the data for variable %s",
                                      GetName().AsCString());
         return;
@@ -1014,16 +1053,33 @@ public:
       return;
     }
 
-    auto type_system_or_err =
-        target_sp->GetScratchTypeSystemForLanguage(m_type.GetMinimumLanguage());
+    PersistentExpressionState *persistent_state = nullptr;
 
-    if (auto error = type_system_or_err.takeError()) {
-      err.SetErrorStringWithFormat("Couldn't dematerialize a result variable: "
-                                   "couldn't get the corresponding type "
-                                   "system: %s",
-                                   llvm::toString(std::move(error)).c_str());
-      return;
-    }
+    if (m_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
+#ifdef LLDB_ENABLE_SWIFT
+      Status status;
+      std::optional<SwiftScratchContextReader> maybe_type_system =
+          target_sp->GetSwiftScratchContext(status, *exe_scope);
+      if (!maybe_type_system) {
+        err.SetErrorStringWithFormat("Couldn't dematerialize a result variable: "
+                                     "couldn't get the corresponding type "
+                                     "system: %s", status.AsCString());
+        return;
+      }
+      persistent_state = target_sp->GetPersistentExpressionStateForLanguage(
+          lldb::eLanguageTypeSwift);
+#endif // LLDB_ENABLE_SWIFT
+    } else {
+      auto type_system_or_err =
+          target_sp->GetScratchTypeSystemForLanguage(m_type.GetMinimumLanguage());
+
+      if (auto error = type_system_or_err.takeError()) {
+        err.SetErrorStringWithFormat("Couldn't dematerialize a result variable: "
+                                    "couldn't get the corresponding type "
+                                    "system: %s",
+                                    llvm::toString(std::move(error)).c_str());
+        return;
+      }
     auto ts = *type_system_or_err;
     if (!ts) {
       err.SetErrorStringWithFormat("Couldn't dematerialize a result variable: "
@@ -1031,8 +1087,8 @@ public:
                                    "no longer live.");
       return;
     }
-    PersistentExpressionState *persistent_state =
-        ts->GetPersistentExpressionState();
+      persistent_state = ts->GetPersistentExpressionState();
+    }
 
     if (!persistent_state) {
       err.SetErrorString("Couldn't dematerialize a result variable: "
@@ -1491,6 +1547,8 @@ uint32_t Materializer::AddRegister(const RegisterInfo &register_info,
   return ret;
 }
 
+Materializer::Materializer(LLVMCastKind kind) : m_kind(kind) {}
+
 Materializer::~Materializer() {
   DematerializerSP dematerializer_sp = m_dematerializer_wp.lock();
 
@@ -1580,6 +1638,9 @@ void Materializer::Dematerializer::Dematerialize(Status &error,
       if (!error.Success())
         break;
     }
+
+    // Okay now if there's an error and it is not empty, then report that,
+    // otherwise report the regular error...
   }
 
   Wipe();

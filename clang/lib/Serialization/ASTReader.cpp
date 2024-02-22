@@ -253,6 +253,21 @@ bool ChainedASTReaderListener::visitInputFile(StringRef Filename,
                                        isExplicitModule);
   return Continue;
 }
+bool ChainedASTReaderListener::readCASFileSystemRootID(StringRef RootID,
+                                                       bool Complain) {
+  return First->readCASFileSystemRootID(RootID, Complain) ||
+         Second->readCASFileSystemRootID(RootID, Complain);
+}
+bool ChainedASTReaderListener::readIncludeTreeID(StringRef ID, bool Complain) {
+  return First->readIncludeTreeID(ID, Complain) ||
+         Second->readIncludeTreeID(ID, Complain);
+}
+bool ChainedASTReaderListener::readModuleCacheKey(StringRef ModuleName,
+                                                  StringRef Filename,
+                                                  StringRef CacheKey) {
+  return First->readModuleCacheKey(ModuleName, Filename, CacheKey) ||
+         Second->readModuleCacheKey(ModuleName, Filename, CacheKey);
+}
 
 void ChainedASTReaderListener::readModuleFileExtension(
        const ModuleFileExtensionMetadata &Metadata) {
@@ -2619,6 +2634,10 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       Change MTimeChange = {Change::ModTime, StoredTime,
                             File->getModificationTime()};
 
+      // FIXME: Ignore ModificationTime == 0 because that is from CAS.
+      if (File->getModificationTime() == 0)
+        return Change{Change::None};
+
       // In case the modification time changes but not the content,
       // accept the cached file as legit.
       if (ValidateASTInputFilesContent)
@@ -2769,14 +2788,6 @@ ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
       bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
       if (ParseTargetOptions(Record, Complain, Listener,
                              AllowCompatibleConfigurationMismatch))
-        Result = ConfigurationMismatch;
-      break;
-    }
-
-    case FILE_SYSTEM_OPTIONS: {
-      bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
-      if (!AllowCompatibleConfigurationMismatch &&
-          ParseFileSystemOptions(Record, Complain, Listener))
         Result = ConfigurationMismatch;
       break;
     }
@@ -3054,6 +3065,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
         std::string ImportedName = ReadString(Record, Idx);
         std::string ImportedFile;
+        std::string ImportedCacheKey;
 
         // For prebuilt and explicit modules first consult the file map for
         // an override. Note that here we don't search prebuilt module
@@ -3072,11 +3084,25 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             // Use BaseDirectoryAsWritten to ensure we use the same path in the
             // ModuleCache as when writing.
             ImportedFile = ReadPath(BaseDirectoryAsWritten, Record, Idx);
-          } else
+            ImportedCacheKey = ReadString(Record, Idx);
+          } else {
             SkipPath(Record, Idx);
+            SkipString(Record, Idx);
+          }
         } else if (ImportedFile.empty()) {
           Diag(clang::diag::err_failed_to_find_module_file) << ImportedName;
           return Missing;
+        }
+
+        if (!ImportedCacheKey.empty()) {
+          if (!Listener || Listener->readModuleCacheKey(
+                               ImportedName, ImportedFile, ImportedCacheKey)) {
+            Diag(diag::err_ast_file_not_found)
+                << moduleKindForDiagnostic(ImportedKind) << ImportedFile << true
+                << std::string("missing or unloadable module cache key") +
+                       ImportedCacheKey;
+            return Failure;
+          }
         }
 
         // If our client can't cope with us being out of date, we can't cope with
@@ -3188,6 +3214,29 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       F.InputFilesLoaded.resize(NumInputs);
       F.InputFileInfosLoaded.resize(NumInputs);
       F.NumUserInputFiles = NumUserInputs;
+      break;
+
+    case MODULE_CACHE_KEY:
+      F.ModuleCacheKey = Blob.str();
+      break;
+
+    case CASFS_ROOT_ID:
+      F.CASFileSystemRootID = Blob.str();
+      if (Listener) {
+        bool Complain =
+            !canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities);
+        if (Listener->readCASFileSystemRootID(F.CASFileSystemRootID, Complain))
+          return OutOfDate;
+      }
+      break;
+    case CAS_INCLUDE_TREE_ID:
+      F.IncludeTreeID = Blob.str();
+      if (Listener) {
+        bool Complain =
+            !canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities);
+        if (Listener->readIncludeTreeID(F.IncludeTreeID, Complain))
+          return OutOfDate;
+      }
       break;
     }
   }
@@ -3755,24 +3804,6 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
             F.BasePreprocessedEntityID - LocalBasePreprocessedEntityID));
       }
 
-      break;
-    }
-
-    case PPD_SKIPPED_RANGES: {
-      F.PreprocessedSkippedRangeOffsets = (const PPSkippedRange*)Blob.data();
-      assert(Blob.size() % sizeof(PPSkippedRange) == 0);
-      F.NumPreprocessedSkippedRanges = Blob.size() / sizeof(PPSkippedRange);
-
-      if (!PP.getPreprocessingRecord())
-        PP.createPreprocessingRecord();
-      if (!PP.getPreprocessingRecord()->getExternalSource())
-        PP.getPreprocessingRecord()->SetExternalSource(*this);
-      F.BasePreprocessedSkippedRangeID = PP.getPreprocessingRecord()
-          ->allocateSkippedRanges(F.NumPreprocessedSkippedRanges);
-
-      if (F.NumPreprocessedSkippedRanges > 0)
-        GlobalSkippedRangeMap.insert(
-            std::make_pair(F.BasePreprocessedSkippedRangeID, &F));
       break;
     }
 
@@ -4875,6 +4906,11 @@ ASTReader::readUnhashedControlBlock(ModuleFile &F, bool WasImportedBy,
     return Failure;
   }
 
+  // FIXME: Should we check the signature even if DisableValidation?
+  if (PP.getLangOpts().NeededByPCHOrCompilationUsesPCH || DisableValidation ||
+      (AllowConfigurationMismatch && Result == ConfigurationMismatch))
+    return Success;
+
   if (Result == OutOfDate && F.Kind == MK_ImplicitModule) {
     // If this module has already been finalized in the ModuleCache, we're stuck
     // with it; we can only load a single version of each module.
@@ -4985,6 +5021,14 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
         Result = ConfigurationMismatch;
       break;
     }
+    case FILE_SYSTEM_OPTIONS: {
+      bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
+      if (!AllowCompatibleConfigurationMismatch &&
+          ParseFileSystemOptions(Record, Complain, *Listener))
+        Result = ConfigurationMismatch;
+      break;
+    }
+
     case DIAG_PRAGMA_MAPPINGS:
       if (!F)
         break;
@@ -5611,6 +5655,9 @@ bool ASTReader::readASTFileControlBlock(
         std::string ModuleName = ReadString(Record, Idx);
         std::string Filename = ReadString(Record, Idx);
         ResolveImportedPath(Filename, ModuleDir);
+        std::string CacheKey = ReadString(Record, Idx);
+        if (!CacheKey.empty())
+          Listener.readModuleCacheKey(ModuleName, Filename, CacheKey);
         Listener.visitImport(ModuleName, Filename);
       }
       break;
@@ -5759,7 +5806,10 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       break;
 
     case SUBMODULE_DEFINITION: {
-      if (Record.size() < 13)
+      // Factor this out into a separate constant to make it easier to resolve
+      // merge conflicts.
+      static const unsigned NUM_SWIFT_SPECIFIC_FIELDS = 1;
+      if (Record.size() < 13 + NUM_SWIFT_SPECIFIC_FIELDS)
         return llvm::createStringError(std::errc::illegal_byte_sequence,
                                        "malformed module definition");
 
@@ -5768,6 +5818,11 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       SubmoduleID GlobalID = getGlobalSubmoduleID(F, Record[Idx++]);
       SubmoduleID Parent = getGlobalSubmoduleID(F, Record[Idx++]);
       Module::ModuleKind Kind = (Module::ModuleKind)Record[Idx++];
+
+      // SWIFT-SPECIFIC FIELDS HERE. Handling them separately helps avoid merge
+      // conflicts. See also NUM_SWIFT_SPECIFIC_FIELDS above.
+      bool IsSwiftInferImportAsMember = Record[Idx++];
+
       SourceLocation DefinitionLoc = ReadSourceLocation(F, Record[Idx++]);
       bool IsFramework = Record[Idx++];
       bool IsExplicit = Record[Idx++];
@@ -5816,6 +5871,8 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
         F.DidReadTopLevelSubmodule = true;
         CurrentModule->setASTFile(F.File);
         CurrentModule->PresumedModuleMapFile = F.ModuleMapPath;
+        if (!F.ModuleCacheKey.empty())
+          CurrentModule->setModuleCacheKey(F.ModuleCacheKey);
       }
 
       CurrentModule->Kind = Kind;
@@ -5830,6 +5887,11 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       CurrentModule->ConfigMacrosExhaustive = ConfigMacrosExhaustive;
       CurrentModule->ModuleMapIsPrivate = ModuleMapIsPrivate;
       CurrentModule->NamedModuleHasInit = NamedModuleHasInit;
+
+      // SWIFT-SPECIFIC FIELDS HERE. Putting them last helps avoid merge
+      // conflicts.
+      CurrentModule->IsSwiftInferImportAsMember = IsSwiftInferImportAsMember;
+
       if (DeserializationListener)
         DeserializationListener->ModuleRead(GlobalID, CurrentModule);
 
@@ -6113,7 +6175,6 @@ bool ASTReader::ParseHeaderSearchOptions(const RecordData &Record,
   HeaderSearchOptions HSOpts;
   unsigned Idx = 0;
   HSOpts.Sysroot = ReadString(Record, Idx);
-
   HSOpts.ResourceDir = ReadString(Record, Idx);
   HSOpts.ModuleCachePath = ReadString(Record, Idx);
   HSOpts.ModuleUserBuildPath = ReadString(Record, Idx);
@@ -6131,7 +6192,8 @@ bool ASTReader::ParseHeaderSearchOptions(const RecordData &Record,
                                           Complain);
 }
 
-bool ASTReader::ParseHeaderSearchPaths(const RecordData &Record, bool Complain,
+bool ASTReader::ParseHeaderSearchPaths(const RecordData &Record,
+                                       bool Complain,
                                        ASTReaderListener &Listener) {
   HeaderSearchOptions HSOpts;
   unsigned Idx = 0;
@@ -6233,20 +6295,6 @@ ASTReader::getModuleFileLevelDecls(ModuleFile &Mod) {
       ModuleDeclIterator(this, &Mod, Mod.FileSortedDecls),
       ModuleDeclIterator(this, &Mod,
                          Mod.FileSortedDecls + Mod.NumFileSortedDecls));
-}
-
-SourceRange ASTReader::ReadSkippedRange(unsigned GlobalIndex) {
-  auto I = GlobalSkippedRangeMap.find(GlobalIndex);
-  assert(I != GlobalSkippedRangeMap.end() &&
-    "Corrupted global skipped range map");
-  ModuleFile *M = I->second;
-  unsigned LocalIndex = GlobalIndex - M->BasePreprocessedSkippedRangeID;
-  assert(LocalIndex < M->NumPreprocessedSkippedRanges);
-  PPSkippedRange RawRange = M->PreprocessedSkippedRangeOffsets[LocalIndex];
-  SourceRange Range(TranslateSourceLocation(*M, RawRange.getBegin()),
-                    TranslateSourceLocation(*M, RawRange.getEnd()));
-  assert(Range.isValid());
-  return Range;
 }
 
 PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {

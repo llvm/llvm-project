@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #ifdef _MSC_VER
 /* For _alloca. */
 #include <malloc.h>
@@ -64,6 +65,7 @@ static const char *getPNSStr(ProfileNameSpecifier PNS) {
 }
 
 #define MAX_PID_SIZE 16
+#define MAX_SIGNAL_HANDLERS 16
 /* Data structure holding the result of parsed filename pattern. */
 typedef struct lprofFilename {
   /* File name string possibly with %p or %h specifiers. */
@@ -85,11 +87,13 @@ typedef struct lprofFilename {
    * 2 profile data files. %1m is equivalent to %m. Also %m specifier
    * can only appear once at the end of the name pattern. */
   unsigned MergePoolSize;
+  char ExitOnSignals[MAX_SIGNAL_HANDLERS];
+  unsigned NumExitSignals;
   ProfileNameSpecifier PNS;
 } lprofFilename;
 
-static lprofFilename lprofCurFilename = {0,   0, 0, {0}, NULL,
-                                         {0}, 0, 0, 0,   PNS_unknown};
+static lprofFilename lprofCurFilename = {0, 0, 0, {0}, NULL, {0},
+                                         0, 0, 0, {0}, 0,    PNS_unknown};
 
 static int ProfileMergeRequested = 0;
 static int getProfileFileSizeForMerging(FILE *ProfileFile,
@@ -597,6 +601,19 @@ static void truncateCurrentFile(void) {
   fclose(File);
 }
 
+static void exitSignalHandler(int sig) {
+  (void)sig;
+  exit(0);
+}
+
+static void installExitSignalHandlers(void) {
+  unsigned I;
+  for (I = 0; I < lprofCurFilename.NumExitSignals; ++I) {
+    lprofInstallSignalHandler(lprofCurFilename.ExitOnSignals[I],
+                              exitSignalHandler);
+  }
+}
+
 /* Write a partial profile to \p Filename, which is required to be backed by
  * the open file object \p File. */
 static int writeProfileWithFileObject(const char *Filename, FILE *File) {
@@ -721,6 +738,10 @@ static void resetFilenameToDefault(void) {
   lprofCurFilename.PNS = PNS_default;
 }
 
+static int isDigit(char C) { return C >= '0' && C <= '9'; }
+
+static int isNonZeroDigit(char C) { return C >= '1' && C <= '9'; }
+
 static unsigned getMergePoolSize(const char *FilenamePat, int *I) {
   unsigned J = 0, Num = 0;
   for (;; ++J) {
@@ -739,6 +760,13 @@ static unsigned getMergePoolSize(const char *FilenamePat, int *I) {
   return 0;
 }
 
+static int containsExitOnSignalSpecifier(const char *FilenamePat, int I) {
+  if (!isNonZeroDigit(FilenamePat[I]))
+    return 0;
+  return (FilenamePat[I + 1] == 'x') ||
+         (isDigit(FilenamePat[I + 1]) && FilenamePat[I + 2] == 'x');
+}
+
 /* Assert that Idx does index past a string null terminator. Return the
  * result of the check. */
 static int checkBounds(int Idx, int Strlen) {
@@ -754,6 +782,7 @@ static int parseFilenamePattern(const char *FilenamePat,
   char *PidChars = &lprofCurFilename.PidChars[0];
   char *Hostname = &lprofCurFilename.Hostname[0];
   int MergingEnabled = 0;
+  char SignalNo;
   int FilenamePatLen = strlen(FilenamePat);
 
 #ifdef __GNUC__
@@ -830,6 +859,22 @@ static int parseFilenamePattern(const char *FilenamePat,
                         " ELF and COFF formats.");
         return -1;
 #endif
+      } else if (containsExitOnSignalSpecifier(FilenamePat, I)) {
+        if (lprofCurFilename.NumExitSignals == MAX_SIGNAL_HANDLERS) {
+          PROF_WARN("%%x specifier has been specified too many times in %s.\n",
+                    FilenamePat);
+          return -1;
+        }
+        /* Grab the signal number. */
+        SignalNo = FilenamePat[I] - '0';
+        I++; /* advance to either another digit, or 'x' */
+        if (FilenamePat[I] != 'x') {
+          SignalNo = (SignalNo * 10) + (FilenamePat[I] - '0');
+          I++; /* advance to 'x' */
+        }
+        lprofCurFilename.ExitOnSignals[lprofCurFilename.NumExitSignals] =
+            SignalNo;
+        ++lprofCurFilename.NumExitSignals;
       } else {
         unsigned MergePoolSize = getMergePoolSize(FilenamePat, &I);
         if (!MergePoolSize)
@@ -888,6 +933,7 @@ static void parseAndSetFilename(const char *FilenamePat,
   truncateCurrentFile();
   if (__llvm_profile_is_continuous_mode_enabled())
     initializeProfileForContinuousMode();
+  installExitSignalHandlers();
 }
 
 /* Return buffer length that is required to store the current profile
@@ -896,11 +942,13 @@ static void parseAndSetFilename(const char *FilenamePat,
 #define SIGLEN 24
 static int getCurFilenameLength(void) {
   int Len;
+  unsigned I;
   if (!lprofCurFilename.FilenamePat || !lprofCurFilename.FilenamePat[0])
     return 0;
 
   if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts ||
-        lprofCurFilename.TmpDir || lprofCurFilename.MergePoolSize))
+        lprofCurFilename.TmpDir || lprofCurFilename.MergePoolSize ||
+        lprofCurFilename.NumExitSignals))
     return strlen(lprofCurFilename.FilenamePat);
 
   Len = strlen(lprofCurFilename.FilenamePat) +
@@ -909,6 +957,11 @@ static int getCurFilenameLength(void) {
         (lprofCurFilename.TmpDir ? (strlen(lprofCurFilename.TmpDir) - 1) : 0);
   if (lprofCurFilename.MergePoolSize)
     Len += SIGLEN;
+  for (I = 0; I < lprofCurFilename.NumExitSignals; ++I) {
+    Len -= 3; /* Drop the '%', signal number, and the 'x'. */
+    if (lprofCurFilename.ExitOnSignals[I] >= 10)
+      --Len; /* Drop the second digit of the signal number. */
+  }
   return Len;
 }
 
@@ -926,7 +979,8 @@ static const char *getCurFilename(char *FilenameBuf, int ForceUseBuf) {
 
   if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts ||
         lprofCurFilename.TmpDir || lprofCurFilename.MergePoolSize ||
-        __llvm_profile_is_continuous_mode_enabled())) {
+        __llvm_profile_is_continuous_mode_enabled() ||
+        lprofCurFilename.NumExitSignals)) {
     if (!ForceUseBuf)
       return lprofCurFilename.FilenamePat;
 
@@ -948,6 +1002,9 @@ static const char *getCurFilename(char *FilenameBuf, int ForceUseBuf) {
       } else if (FilenamePat[I] == 'h') {
         memcpy(FilenameBuf + J, lprofCurFilename.Hostname, HostNameLength);
         J += HostNameLength;
+      } else if (containsExitOnSignalSpecifier(FilenamePat, I)) {
+        while (FilenamePat[I] != 'x')
+          ++I;
       } else if (FilenamePat[I] == 't') {
         memcpy(FilenameBuf + J, lprofCurFilename.TmpDir, TmpDirLength);
         FilenameBuf[J + TmpDirLength] = DIR_SEPARATOR;

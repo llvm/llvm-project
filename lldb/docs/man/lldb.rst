@@ -18,7 +18,8 @@ a set of reusable components which highly leverage existing libraries in the
 larger LLVM Project, such as the Clang expression parser and LLVM disassembler.
 
 :program:`lldb` is the default debugger in Xcode on macOS and supports
-debugging C, Objective-C and C++ on the desktop and iOS devices and simulator.
+debugging Swift, C, Objective-C and C++ on the desktop and iOS devices and
+simulator.
 
 All of the code in the LLDB project is available under the Apache 2.0 License
 with LLVM exceptions.

@@ -131,6 +131,36 @@ bool lldb_private::formatters::NSTimeZoneSummaryProvider(
       stream.Printf("%s", summary_stream.GetData());
       return true;
     }
+  } else if (class_name == "_NSSwiftTimeZone") {
+    // CFTimeZoneRef is declared as follows:
+    //     typedef const struct CF_BRIDGED_TYPE(NSTimeZone) __CFTimeZone *
+    //     CFTimeZoneRef;
+    // From the available debug info, this appears to lldb as pointer to an
+    // opaque type, not an ObjC object. As a result, lldb does not correctly
+    // determine the correct dynamic type (because it doesn't try ObjC). With no
+    // dynamic type, this summary provider cannot access the inner `identifier`
+    // property.
+    //
+    // The fix here is to explicitly cast the value as `id`, and get the dynamic
+    // value from there.
+    ValueObjectSP dyn_valobj_sp;
+    if (valobj.GetTypeName() == "CFTimeZoneRef") {
+      auto id_type =
+          valobj.GetCompilerType().GetBasicTypeFromAST(lldb::eBasicTypeObjCID);
+      dyn_valobj_sp = valobj.Cast(id_type)->GetDynamicValue(
+          DynamicValueType::eDynamicDontRunTarget);
+    }
+
+    ValueObject &time_zone = dyn_valobj_sp ? *dyn_valobj_sp : valobj;
+    llvm::ArrayRef<llvm::StringRef> identifier_path = {
+        "some", "timeZone", "_timeZone", "some", "identifier"};
+    if (auto identifier_sp = time_zone.GetChildAtNamePath(identifier_path)) {
+      std::string desc;
+      if (identifier_sp->GetSummaryAsCString(desc, options)) {
+        stream.PutCString(desc);
+        return true;
+      }
+    }
   }
 
   return false;

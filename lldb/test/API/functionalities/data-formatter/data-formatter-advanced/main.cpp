@@ -125,6 +125,31 @@ struct VeryLong
     int z_2;
 };
 
+struct QuiteNested {
+  struct One {
+    struct Two {
+      struct Three {
+        struct Four {
+          struct Five {
+            struct Six {
+              struct Seven {
+                int leaf = 41;
+              };
+              Seven seven;
+            };
+            Six six;
+          };
+          Five five;
+        };
+        Four four;
+      };
+      Three three;
+    };
+    Two two;
+  };
+  One one;
+};
+
 int main (int argc, const char * argv[])
 {
     
@@ -165,6 +190,8 @@ int main (int argc, const char * argv[])
     Simple a_simple_object(3,0.14,'E');
     
     VeryLong a_long_guy;
+    
+    QuiteNested quite_nested;
 
     std::string some_string = "012345678901234567890123456789"
                               "012345678901234567890123456789"

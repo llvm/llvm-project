@@ -1013,7 +1013,8 @@ RemapModule(OptionalClangModuleID from_id,
   OptionalClangModuleID parent = RemapModule(
       from_source.GetIDForModule(module->Parent), from_source, to_source);
   TypeSystemClang &to_ts = to_source.GetTypeSystem();
-  return to_ts.GetOrCreateClangModule(module->Name, parent, module->IsFramework,
+  return to_ts.GetOrCreateClangModule(module->Name, parent,
+                                      module->APINotesFile, module->IsFramework,
                                       module->IsExplicit);
 }
 

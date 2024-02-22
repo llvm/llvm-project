@@ -29,7 +29,10 @@ class ObjCDataFormatterNSError(ObjCDataFormatterTestCase):
             "frame variable nserrorptr", substrs=['domain: @"Foobar" - code: 12']
         )
 
-        self.expect("frame variable nserror->_userInfo", substrs=["2 key/value pairs"])
+        # FIXME: <rdar://problem/25587546> On llvm.org this works without the `-d run`!
+        self.expect(
+            "frame variable -d run -- nserror->_userInfo", substrs=["2 key/value pairs"]
+        )
 
         self.expect(
             "frame variable nserror->_userInfo --ptr-depth 1 -d run-target",

@@ -15,7 +15,8 @@ config.test_source_root = config.test_exec_root
 if not config.parallelism_group:
   config.parallelism_group = 'shadow-memory'
 
-if config.host_os == 'Darwin':
+# For Swift, the following also applies on Linux.
+if config.host_os == 'Darwin' or config.host_os == 'Linux':
   # On Darwin, we default to ignore_noninstrumented_modules=1, which also
   # suppresses some races the tests are supposed to find.  See tsan/lit.cfg.py.
   if 'TSAN_OPTIONS' in config.environment:

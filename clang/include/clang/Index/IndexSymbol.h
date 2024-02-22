@@ -54,6 +54,8 @@ enum class SymbolKind : uint8_t {
 
   Parameter,
   Using,
+
+  CommentTag,
   TemplateTypeParm,
   TemplateTemplateParm,
   NonTypeTemplateParm,
@@ -78,9 +80,32 @@ enum class SymbolSubKind : uint8_t {
   UsingTypename,
   UsingValue,
   UsingEnum,
+
+  // Swift sub-kinds
+
+  SwiftAccessorWillSet,
+  SwiftAccessorDidSet,
+  SwiftAccessorAddressor,
+  SwiftAccessorMutableAddressor,
+  SwiftAccessorRead,
+  SwiftAccessorModify,
+
+  SwiftExtensionOfStruct,
+  SwiftExtensionOfClass,
+  SwiftExtensionOfEnum,
+  SwiftExtensionOfProtocol,
+
+  SwiftPrefixOperator,
+  SwiftPostfixOperator,
+  SwiftInfixOperator,
+
+  SwiftSubscript,
+  SwiftAssociatedType,
+  SwiftGenericTypeParam,
+  SwiftAccessorInit,
 };
 
-typedef uint16_t SymbolPropertySet;
+typedef uint32_t SymbolPropertySet;
 /// Set of properties that provide additional info about a symbol.
 enum class SymbolProperty : SymbolPropertySet {
   Generic                       = 1 << 0,
@@ -93,8 +118,10 @@ enum class SymbolProperty : SymbolPropertySet {
   Local                         = 1 << 7,
   /// Symbol is part of a protocol interface.
   ProtocolInterface             = 1 << 8,
+
+  /// Swift-only properties
+  SwiftAsync                    = 1 << 16,
 };
-static const unsigned SymbolPropertyBitNum = 9;
 
 /// Set of roles that are attributed to symbol occurrences.
 ///

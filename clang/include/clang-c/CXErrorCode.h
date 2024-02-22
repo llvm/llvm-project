@@ -53,8 +53,46 @@ enum CXErrorCode {
   /**
    * An AST deserialization error has occurred.
    */
-  CXError_ASTReadError = 4
+  CXError_ASTReadError = 4,
+
+  /**
+  * \brief A refactoring action is not available at the given location
+  * or in the given source range.
+  */
+  CXError_RefactoringActionUnavailable = 5,
+
+  /**
+  * \brief A refactoring action is not able to use the given name because
+  * it contains an unexpected number of strings.
+  */
+  CXError_RefactoringNameSizeMismatch = 6,
+
+  /**
+  * \brief A name of a symbol is invalid, i.e. it is reserved by the source
+  * language and can't be used as a name for this symbol.
+  */
+  CXError_RefactoringNameInvalid = 7
 };
+
+/**
+ * Represents an error with error code and description string.
+ */
+typedef struct CXOpaqueError *CXError;
+
+/**
+ * \returns the error code.
+ */
+CINDEX_LINKAGE enum CXErrorCode clang_Error_getCode(CXError);
+
+/**
+ * \returns the error description string.
+ */
+CINDEX_LINKAGE const char *clang_Error_getDescription(CXError);
+
+/**
+ * Dispose of a \c CXError object.
+ */
+CINDEX_LINKAGE void clang_Error_dispose(CXError);
 
 LLVM_CLANG_C_EXTERN_C_END
 

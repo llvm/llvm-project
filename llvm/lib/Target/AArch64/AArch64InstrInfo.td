@@ -1088,6 +1088,22 @@ def JumpTableDest8 : Pseudo<(outs GPR64:$dst, GPR64sp:$scratch),
                      Sched<[]>;
 }
 
+let isNotDuplicable = 1 in
+def JumpTableAnchor : Pseudo<(outs GPR64:$pc), (ins i32imm:$jti), []>,
+                      Sched<[WriteI]>;
+
+let isNotDuplicable = 1 in
+def BR_JumpTable : Pseudo<(outs), (ins i32imm:$jti), []>,
+                   Sched<[]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+  let isIndirectBranch = 1;
+  let isBarrier = 1;
+  let Defs = [X16,X17,NZCV];
+  let Uses = [X16];
+  let Size = 44; // 28 fixed + 16 variable, for table size materialization
+}
+
 // Space-consuming pseudo to aid testing of placement and reachability
 // algorithms. Immediate operand is the number of bytes this "instruction"
 // occupies; register operands can be used to enforce dependency and constrain
@@ -1494,6 +1510,17 @@ let Predicates = [HasComplxNum, HasNEON] in {
   }
 }
 
+def AArch64authcall : SDNode<"AArch64ISD::AUTH_CALL",
+                             SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                              SDNPVariadic]>;
+
+def AArch64authtcret: SDNode<"AArch64ISD::AUTH_TC_RETURN",
+                             SDTypeProfile<0, 4, [SDTCisPtrTy<0>,
+                                                  SDTCisVT<2, i32>,
+                                                  SDTCisVT<3, i64>]>,
+                             [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
+
 multiclass FCMLA_PATS<ValueType ty, DAGOperand Reg> {
   def : Pat<(ty (int_aarch64_neon_vcmla_rot0 (ty Reg:$Rd), (ty Reg:$Rn), (ty Reg:$Rm))),
             (!cast<Instruction>("FCMLA" # ty) $Rd, $Rn, $Rm, 0)>;
@@ -1603,6 +1630,17 @@ def PAUTH_BLEND : Pseudo<(outs GPR64:$disc),
 
 // These pointer authentication instructions require armv8.3a
 let Predicates = [HasPAuth] in {
+  multiclass SignAuth<bits<3> prefix, bits<3> prefix_z, string asm,
+                      SDPatternOperator op> {
+    def IA   : SignAuthOneData<prefix, 0b00, !strconcat(asm,  "ia"), op>;
+    def IB   : SignAuthOneData<prefix, 0b01, !strconcat(asm,  "ib"), op>;
+    def DA   : SignAuthOneData<prefix, 0b10, !strconcat(asm,  "da"), op>;
+    def DB   : SignAuthOneData<prefix, 0b11, !strconcat(asm,  "db"), op>;
+    def IZA  : SignAuthZero<prefix_z,  0b00, !strconcat(asm, "iza"), op>;
+    def DZA  : SignAuthZero<prefix_z,  0b10, !strconcat(asm, "dza"), op>;
+    def IZB  : SignAuthZero<prefix_z,  0b01, !strconcat(asm, "izb"), op>;
+    def DZB  : SignAuthZero<prefix_z,  0b11, !strconcat(asm, "dzb"), op>;
+  }
 
   // When PA is enabled, a better mnemonic should be emitted.
   def : InstAlias<"paciaz", (PACIAZ), 1>;
@@ -1619,24 +1657,16 @@ let Predicates = [HasPAuth] in {
   def : InstAlias<"autib1716", (AUTIB1716), 1>;
   def : InstAlias<"xpaclri", (XPACLRI), 1>;
 
-  multiclass SignAuth<bits<3> prefix, bits<3> prefix_z, string asm,
-                      SDPatternOperator op> {
-    def IA   : SignAuthOneData<prefix, 0b00, !strconcat(asm,  "ia"), op>;
-    def IB   : SignAuthOneData<prefix, 0b01, !strconcat(asm,  "ib"), op>;
-    def DA   : SignAuthOneData<prefix, 0b10, !strconcat(asm,  "da"), op>;
-    def DB   : SignAuthOneData<prefix, 0b11, !strconcat(asm,  "db"), op>;
-    def IZA  : SignAuthZero<prefix_z,  0b00, !strconcat(asm, "iza"), op>;
-    def DZA  : SignAuthZero<prefix_z,  0b10, !strconcat(asm, "dza"), op>;
-    def IZB  : SignAuthZero<prefix_z,  0b01, !strconcat(asm, "izb"), op>;
-    def DZB  : SignAuthZero<prefix_z,  0b11, !strconcat(asm, "dzb"), op>;
-  }
-
   defm PAC : SignAuth<0b000, 0b010, "pac", int_ptrauth_sign>;
   defm AUT : SignAuth<0b001, 0b011, "aut", null_frag>;
 
   def XPACI : ClearAuth<0, "xpaci">;
-  def : Pat<(int_ptrauth_strip GPR64:$Rd, 0), (XPACI GPR64:$Rd)>;
-  def : Pat<(int_ptrauth_strip GPR64:$Rd, 1), (XPACI GPR64:$Rd)>;
+  // Pseudo of the previous instruction with untied operands. Lowers to:
+  // mov $dst, $src
+  // xpaci $dst
+  def XPACIuntied : Pseudo<(outs GPR64:$dst), (ins GPR64:$src), []>, Sched<[]>;
+  def : Pat<(int_ptrauth_strip GPR64:$Rd, 0), (XPACIuntied GPR64:$Rd)>;
+  def : Pat<(int_ptrauth_strip GPR64:$Rd, 1), (XPACIuntied GPR64:$Rd)>;
 
   def XPACD : ClearAuth<1, "xpacd">;
   def : Pat<(int_ptrauth_strip GPR64:$Rd, 2), (XPACD GPR64:$Rd)>;
@@ -1663,6 +1693,15 @@ let Predicates = [HasPAuth] in {
     def BLRABZ  : AuthOneOperand<0b001, 1, "blrabz">;
   }
 
+  def : Pat<(AArch64authcall GPR64:$Rn, (i32 0), GPR64sp:$Rm),
+            (BLRAA GPR64:$Rn, GPR64:$Rm)>;
+  def : Pat<(AArch64authcall GPR64:$Rn, (i32 1), GPR64sp:$Rm),
+            (BLRAB GPR64:$Rn, GPR64:$Rm)>;
+  def : Pat<(AArch64authcall GPR64:$Rn, (i32 0), (i64 0)),
+            (BLRAAZ GPR64:$Rn)>;
+  def : Pat<(AArch64authcall GPR64:$Rn, (i32 1), (i64 0)),
+            (BLRABZ GPR64:$Rn)>;
+
   let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
     def RETAA   : AuthReturn<0b010, 0, "retaa">;
     def RETAB   : AuthReturn<0b010, 1, "retab">;
@@ -1672,6 +1711,66 @@ let Predicates = [HasPAuth] in {
 
   defm LDRAA  : AuthLoad<0, "ldraa", simm10Scaled>;
   defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
+
+  // AUT pseudo.
+  // This directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def AUT : Pseudo<(outs), (ins i32imm:$Key, GPR64all:$Rn), []>,
+            Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Defs = [X16,X17,NZCV];
+    let Uses = [X16,X17];
+    let Size = 24;
+  }
+
+  // AUT and re-PAC a value, using different keys/data.
+  // This directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def AUTPAC : Pseudo<(outs), (ins i32imm:$AUTKey, GPR64:$AUTRn,
+                                   i32imm:$PACKey, GPR64:$PACRn), []>,
+               Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Defs = [X16,X17,NZCV];
+    let Uses = [X16,X17];
+    let Size = 28;
+  }
+
+  // Materialize a signed global address.
+  def MOVaddrPAC : Pseudo<(outs),
+                          (ins i64imm:$Addr, i64imm:$Offset, i32imm:$Key,
+                               GPR64:$AddrDisc, i64imm:$Disc), []>,
+               Sched<[WriteI, ReadI]> {
+    let isReMaterializable = 1;
+    let isCodeGenOnly = 1;
+    let Size = 28; // ranges from 12 to 28
+    let Defs = [X16,X17];
+    let Uses = [X16,X17];
+  }
+
+  let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
+      Uses = [SP] in {
+    def AUTH_TCRETURNriri : Pseudo<(outs), (ins tcGPR64:$dst, i32imm:$FPDiff,
+                                                i32imm:$Key, tcGPR64:$Rn),
+                                 []>, Sched<[WriteBrReg]>;
+    def AUTH_TCRETURNrii : Pseudo<(outs), (ins tcGPR64:$dst, i32imm:$FPDiff,
+                                                i32imm:$Key),
+                                 []>, Sched<[WriteBrReg]>;
+  }
+
+  def : Pat<(AArch64authtcret tcGPR64:$dst, (i32 timm:$FPDiff), (i32 timm:$Key),
+                              tcGPR64:$Rn),
+            (AUTH_TCRETURNriri tcGPR64:$dst, imm:$FPDiff, imm:$Key,
+                               tcGPR64:$Rn)>;
+
+  def : Pat<(AArch64authtcret tcGPR64:$dst, (i32 timm:$FPDiff), (i32 timm:$Key),
+                              (i64 0)),
+            (AUTH_TCRETURNrii tcGPR64:$dst, imm:$FPDiff, imm:$Key)>;
 
 }
 
@@ -9305,6 +9404,16 @@ def : Pat<(i64x8 (LS64_BUILD GPR64:$x0, GPR64:$x1, GPR64:$x2, GPR64:$x3,
 foreach i = 0-7 in {
   def : Pat<(i64 (LS64_EXTRACT (i64x8 GPR64x8:$val), (i32 i))),
             (EXTRACT_SUBREG $val, !cast<SubRegIndex>("x8sub_"#i))>;
+}
+
+//-----------------------------------------------------------------------------
+// v8.3 Pointer Authentication late patterns
+
+let Predicates = [HasPAuth] in {
+def : Pat<(int_ptrauth_blend GPR64:$Rd, imm64_0_65535:$imm),
+          (MOVKXi GPR64:$Rd, (trunc_imm imm64_0_65535:$imm), 48)>;
+def : Pat<(int_ptrauth_blend GPR64:$Rd, GPR64:$Rn),
+          (BFMXri GPR64:$Rd, GPR64:$Rn, 16, 15)>;
 }
 
 let Predicates = [HasLS64] in {

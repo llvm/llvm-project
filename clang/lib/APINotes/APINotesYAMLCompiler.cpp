@@ -28,6 +28,119 @@
 using namespace clang;
 using namespace api_notes;
 
+/*
+
+ YAML Format specification.
+
+ Nullability should be expressed using one of the following values:
+   O - Optional (or Nullable)
+   N - Not Optional
+   S - Scalar
+   U - Unknown
+ Note, the API is considered 'audited' when at least the return value or a
+ parameter has a nullability value. For 'audited' APIs, we assume the default
+ nullability for any underspecified type.
+
+---
+ Name: AppKit             # The name of the framework
+
+ Availability: OSX        # Optional: Specifies which platform the API is
+                          # available on. [OSX / iOS / none/
+                          #                available / nonswift]
+
+ AvailabilityMsg: ""  # Optional: Custom availability message to display to
+                          # the user, when API is not available.
+
+ Classes:                 # List of classes
+ ...
+ Protocols:               # List of protocols
+ ...
+ Functions:               # List of functions
+ ...
+ Globals:                 # List of globals
+ ...
+ Enumerators:             # List of enumerators
+ ...
+ Tags:                    # List of tags (struct/union/enum/C++ class)
+ ...
+ Typedefs:                # List of typedef-names and C++11 type aliases
+ ...
+
+ Each class and protocol is defined as following:
+
+ - Name: NSView                       # The name of the class
+
+   AuditedForNullability: false       # Optional: Specifies if the whole class
+                                      # has been audited for nullability.
+                                      # If yes, we assume all the methods and
+                                      # properties of the class have default
+                                      # nullability unless it is overwritten by
+                                      # a method/property specific info below.
+                                      # This applies to all classes, extensions,
+                                      # and categories of the class defined in
+                                      # the current framework/module.
+                                      # (false/true)
+
+   Availability: OSX
+
+   AvailabilityMsg: ""
+
+   Methods:
+     - Selector: "setSubviews:"       # Full name
+
+       MethodKind: Instance           # [Class/Instance]
+
+       Nullability: [N, N, O, S]      # The nullability of parameters in
+                                      # the signature.
+
+       NullabilityOfRet: O            # The nullability of the return value.
+
+       Availability: OSX
+
+       AvailabilityMsg: ""
+
+       DesignatedInit: false          # Optional: Specifies if this method is a
+                                      # designated initializer (false/true)
+
+       Required: false                # Optional: Specifies if this method is a
+                                      # required initializer (false/true)
+
+   Properties:
+     - Name: window
+
+       Nullability: O
+
+       Availability: OSX
+
+       AvailabilityMsg: ""
+
+ The protocol definition format is the same as the class definition.
+
+ Each function definition is of the following form:
+
+ - Name: "myGlobalFunction"           # Full name
+
+   Nullability: [N, N, O, S]          # The nullability of parameters in
+                                      # the signature.
+
+   NullabilityOfRet: O                # The nullability of the return value.
+
+   Availability: OSX
+
+   AvailabilityMsg: ""
+
+Each global variable definition is of the following form:
+
+ - Name: MyGlobalVar
+
+   Nullability: O
+
+   Availability: OSX
+
+   AvailabilityMsg: ""
+
+*/
+
 namespace {
 enum class APIAvailability {
   Available = 0,
@@ -734,7 +847,7 @@ public:
                          StringRef APIName) {
     convertCommonEntity(Common, Info, APIName);
     if (Common.SwiftBridge)
-      Info.setSwiftBridge(std::string(*Common.SwiftBridge));
+      Info.setSwiftBridge(std::make_optional(std::string(*Common.SwiftBridge)));
     Info.setNSErrorDomain(Common.NSErrorDomain);
   }
 

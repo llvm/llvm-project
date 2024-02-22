@@ -101,6 +101,9 @@ public:
   void SetDetachKeepsStopped(bool keep_stopped);
   bool GetWarningsOptimization() const;
   bool GetWarningsUnsupportedLanguage() const;
+#ifdef LLDB_ENABLE_SWIFT
+  bool GetWarningsToolchainMismatch() const;
+#endif
   bool GetStopOnExec() const;
   std::chrono::seconds GetUtilityExpressionTimeout() const;
   std::chrono::seconds GetInterruptTimeout() const;
@@ -1398,6 +1401,12 @@ public:
   ///     pre-computed.
   void PrintWarningOptimization(const SymbolContext &sc);
 
+#ifdef LLDB_ENABLE_SWIFT
+  /// Print a user-visible warning about Swift CUs compiled with a
+  /// different Swift compiler than the one embedded in LLDB.
+  void PrintWarningToolchainMismatch(const SymbolContext &sc);
+#endif
+
   /// Print a user-visible warning about a function written in a
   /// language that this version of LLDB doesn't support.
   ///
@@ -2290,13 +2299,19 @@ public:
   ///     the process
   ///     needs to have its process IOHandler popped.
   ///
+  /// \param[out] pop_command_interpreter
+  ///     This variable will be set to \b true or \b false ot indicate if the
+  ///     process needs
+  ///     to have its command interpreter popped.
+  ///
   /// \return
   ///     \b true if the event describes a process state changed event, \b false
   ///     otherwise.
   static bool
   HandleProcessStateChangedEvent(const lldb::EventSP &event_sp, Stream *stream,
                                  SelectMostRelevant select_most_relevant,
-                                 bool &pop_process_io_handler);
+                                 bool &pop_process_io_handler,
+                                 bool &pop_command_interpreter);
 
   Event *PeekAtStateChangedEvents();
 
@@ -2367,6 +2382,18 @@ bool PruneThreadPlansForTID(lldb::tid_t tid);
 
 /// Prune ThreadPlanStacks for all unreported threads.
 void PruneThreadPlans();
+
+  void SynchronizeThreadPlans();
+
+  /// From the detached thread plan stacks, find the first stack that explains
+  /// the stop represented by the thread and the event.
+  lldb::ThreadPlanSP FindDetachedPlanExplainingStop(Thread &thread, Event *event_ptr);
+
+  /// Helper function for FindDetachedPlanExplainingStop. Exists only to be
+  /// marked as a C++ friend of `ThreadPlan`.
+  lldb::ThreadPlanSP DoesStackExplainStopNoLock(ThreadPlanStack &stack,
+                                                Thread &thread,
+                                                Event *event_ptr);
 
   /// Find the thread plan stack associated with thread with \a tid.
   ///
@@ -3110,14 +3137,15 @@ protected:
 
   bool m_clear_thread_plans_on_stop;
   bool m_force_next_event_delivery;
+  bool m_destroy_in_process;
+  bool m_destroy_complete;
   lldb::StateType m_last_broadcast_state; /// This helps with the Public event
                                           /// coalescing in
                                           /// ShouldBroadcastEvent.
   std::map<lldb::addr_t, lldb::addr_t> m_resolved_indirect_addresses;
-  bool m_destroy_in_process;
-  bool m_can_interpret_function_calls; // Some targets, e.g the OSX kernel,
-                                       // don't support the ability to modify
-                                       // the stack.
+  bool m_can_interpret_function_calls;  // Some targets, e.g the OSX kernel,
+                                        // don't support the ability to modify
+                                        // the stack.
   std::mutex m_run_thread_plan_lock;
   llvm::StringMap<lldb::StructuredDataPluginSP> m_structured_data_plugin_map;
 
@@ -3186,7 +3214,7 @@ protected:
 
   bool PushProcessIOHandler();
 
-  bool PopProcessIOHandler();
+  bool PopProcessIOHandler(bool pop_command_interpreter);
 
   bool ProcessIOHandlerIsActive();
 

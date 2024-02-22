@@ -116,7 +116,14 @@ def delete_module_cache(path):
 
 if is_configured("llvm_use_sanitizer"):
     if "Address" in config.llvm_use_sanitizer:
-        config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
+        # Begin Swift mod.
+        # Swift's libReflection builds without ASAN, which causes a known
+        # false positive in std::vector. We also want to support testing a sanitized
+        # lldb using unsanitized llvm, clang, and swift libraries.
+        config.environment[
+            "ASAN_OPTIONS"
+        ] = "detect_container_overflow=0:detect_stack_use_after_return=1"
+        # End Swift mod.
         if "Darwin" in config.host_os:
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
                 "libclang_rt.asan_osx_dynamic.dylib"
@@ -182,6 +189,9 @@ if is_configured("dotest_common_args_str"):
 # Library path may be needed to locate just-built clang and libcxx.
 if is_configured("llvm_libs_dir"):
     dotest_cmd += ["--env", "LLVM_LIBS_DIR=" + config.llvm_libs_dir]
+# Library path may be needed to locate just-built compiler-rt.
+if is_configured("lldb_libs_dir"):
+    dotest_cmd += ["--env", "LLDB_LIBS_DIR=" + config.lldb_libs_dir]
 
 # Include path may be needed to locate just-built libcxx.
 if is_configured("llvm_include_dir"):
@@ -223,11 +233,24 @@ if is_configured("clang_module_cache"):
     delete_module_cache(config.clang_module_cache)
     dotest_cmd += ["--clang-module-cache-dir", config.clang_module_cache]
 
+if is_configured("swift_libs_dir"):
+    dotest_cmd += ["--swift-libs-dir", config.swift_libs_dir]
+
 if is_configured("lldb_executable"):
     dotest_cmd += ["--executable", config.lldb_executable]
 
 if is_configured("test_compiler"):
     dotest_cmd += ["--compiler", config.test_compiler]
+
+# swift_stdlibs_dir is where the built swift standard libraries live, e.g. in a
+# x86 build: ../Ninja-RelWithDebInfoAssert/swift-macosx-x86_64/lib/swift/
+swift_stdlibs_dir = None
+
+if is_configured("test_swift_compiler"):
+    dotest_cmd += ["--swift-compiler", config.test_swift_compiler]
+    swift_stdlibs_dir = os.path.join(
+        os.path.dirname(config.test_swift_compiler), "..", "lib", "swift"
+    )
 
 if is_configured("dsymutil"):
     dotest_cmd += ["--dsymutil", config.dsymutil]
@@ -249,6 +272,12 @@ if (
     or "lldb-repro-replay" in config.available_features
 ):
     dotest_cmd += ["--skip-category=lldb-dap", "--skip-category=std-module"]
+
+# Skip the swiftmaccatalyst category if its stdlib support is missing.
+if swift_stdlibs_dir and not os.path.isdir(
+    os.path.join(swift_stdlibs_dir, "maccatalyst")
+):
+    dotest_cmd += ["--skip-category=swiftmaccatalyst"]
 
 if "lldb-simulator-ios" in config.available_features:
     dotest_cmd += ["--apple-sdk", "iphonesimulator", "--platform-name", "ios-simulator"]

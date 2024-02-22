@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_BASIC_CODEGENOPTIONS_H
 #define LLVM_CLANG_BASIC_CODEGENOPTIONS_H
 
+#include "clang/Basic/PointerAuthOptions.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/XRayInstr.h"
 #include "llvm/ADT/FloatingPointMode.h"
@@ -163,6 +164,8 @@ public:
     Enabled,
     Forced,
   };
+  /// The callback for mc result.
+  std::optional<llvm::MCTargetOptions::ResultCallBackTy> MCCallBack;
 
   /// The code model to use (-mcmodel).
   std::string CodeModel;
@@ -387,6 +390,9 @@ public:
   std::vector<std::string> NoBuiltinFuncs;
 
   std::vector<std::string> Reciprocals;
+
+  /// Configuration for pointer-signing.
+  PointerAuthOptions PointerAuth;
 
   /// The preferred width for auto-vectorization transforms. This is intended to
   /// override default transforms based on the width of the architected vector

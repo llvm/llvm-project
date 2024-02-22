@@ -461,6 +461,12 @@ unsigned AArch64FastISel::materializeGV(const GlobalValue *GV) {
   Register ADRPReg = createResultReg(&AArch64::GPR64commonRegClass);
   unsigned ResultReg;
 
+  // Authenticated global references have special handling.
+  // Fallback to SDAG.
+  if (const GlobalVariable *GVB = dyn_cast<GlobalVariable>(GV))
+    if (GVB->getSection() == "llvm.ptrauth")
+      return 0;
+
   if (OpFlags & AArch64II::MO_GOT) {
     // ADRP + LDRX
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::ADRP),

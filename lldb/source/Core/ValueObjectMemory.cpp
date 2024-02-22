@@ -121,9 +121,13 @@ ConstString ValueObjectMemory::GetTypeName() {
 }
 
 ConstString ValueObjectMemory::GetDisplayTypeName() {
+  const SymbolContext *sc = nullptr;
+  if (GetFrameSP())
+    sc = &GetFrameSP()->GetSymbolContext(eSymbolContextFunction);
+
   if (m_type_sp)
-    return m_type_sp->GetForwardCompilerType().GetDisplayTypeName();
-  return m_compiler_type.GetDisplayTypeName();
+    return m_type_sp->GetForwardCompilerType().GetDisplayTypeName(sc);
+  return m_compiler_type.GetDisplayTypeName(sc);
 }
 
 size_t ValueObjectMemory::CalculateNumChildren(uint32_t max) {

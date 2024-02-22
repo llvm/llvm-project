@@ -21,6 +21,7 @@ from . import lldbtest_config
 from lldbsuite.support import funcutils
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbplatformutil
+import swift
 
 
 class DecorateMode:
@@ -738,14 +739,48 @@ def skipUnlessWindows(func):
 
 
 def skipUnlessDarwin(func):
-    """Decorate the item to skip tests that should be skipped on any non Darwin platform."""
+    """Decorate the item to skip tests that should be skipped on any non-Darwin platform."""
     return skipUnlessPlatform(lldbplatformutil.getDarwinOSTriples())(func)
+
+
+def skipUnlessFoundation(func):
+    """Decorate the item to skip tests that should be skipped on any non-Foundation platform."""
+    # FIXME: This is just an alias for Darwin and is consistent with Swift's test suite.
+    return skipUnlessDarwin(func)
+
+
+def skipUnlessObjCInterop(func):
+    """Decorate the item to skip tests that should be skipped on any non-Objective-C platform."""
+    # FIXME: This is just an alias for Darwin and is consistent with Swift's test suite.
+    return skipUnlessDarwin(func)
 
 
 def skipUnlessTargetAndroid(func):
     return unittest.skipUnless(
         lldbplatformutil.target_is_android(), "requires target to be Android"
     )(func)
+
+
+def swiftTest(func):
+    """Decorate the item as a Swift test (Darwin/Linux only, no i386)."""
+
+    def is_not_swift_compatible(self):
+        if not _get_bool_config("swift", fail_value=False):
+            return "Swift plugin not enabled"
+        if self.getDebugInfo() == "gmodules":
+            return "skipping (gmodules only makes sense for clang tests)"
+
+        if "i386" == self.getArchitecture():
+            return "skipping Swift test because i386 is not a supported architecture"
+        elif not (any(x in sys.platform for x in ["darwin", "linux"])):
+            return (
+                "skipping Swift test because only Darwin and Linux are supported OSes"
+            )
+        else:
+            # This configuration is Swift-compatible
+            return None
+
+    return skipTestIfFn(is_not_swift_compatible)(func)
 
 
 def skipIfHostIncompatibleWithTarget(func):
@@ -989,6 +1024,44 @@ def skipUnlessAddressSanitizer(func):
         return None
 
     return skipTestIfFn(is_compiler_with_address_sanitizer)(func)
+
+
+def skipUnlessSwiftAddressSanitizer(func):
+    """Decorate the item to skip test unless Swift -sanitize=address is supported."""
+
+    def is_swift_compiler_with_address_sanitizer(self):
+        if is_running_under_asan():
+            return "Address sanitizer tests are disabled when runing under ASAN"
+        swiftc = swift.getSwiftCompiler()
+        f = tempfile.NamedTemporaryFile()
+        cmd = "echo 'print(1)' | %s -o %s -" % (swiftc, f.name)
+        if os.popen(cmd).close() is not None:
+            return None  # The compiler cannot compile at all, let's *not* skip the test
+        cmd = "echo 'print(1)' | %s -sanitize=address -o %s -" % (swiftc, f.name)
+        if os.popen(cmd).close() is not None:
+            return "Compiler cannot compile with -sanitize=address"
+        return None
+
+    return skipTestIfFn(is_swift_compiler_with_address_sanitizer)(func)
+
+
+def skipUnlessSwiftThreadSanitizer(func):
+    """Decorate the item to skip test unless Swift -sanitize=thread is supported."""
+
+    def is_swift_compiler_with_thread_sanitizer(self):
+        if is_running_under_asan():
+            return "Thread sanitizer tests are disabled when runing under ASAN"
+        swiftc = swift.getSwiftCompiler()
+        f = tempfile.NamedTemporaryFile()
+        cmd = "echo 'print(1)' | %s -o %s -" % (swiftc, f.name)
+        if os.popen(cmd).close() is not None:
+            return None  # The compiler cannot compile at all, let's *not* skip the test
+        cmd = "echo 'print(1)' | %s -sanitize=thread -o %s -" % (swiftc, f.name)
+        if os.popen(cmd).close() is not None:
+            return "Compiler cannot compile with -sanitize=thread"
+        return None
+
+    return skipTestIfFn(is_swift_compiler_with_thread_sanitizer)(func)
 
 
 def skipIfAsan(func):

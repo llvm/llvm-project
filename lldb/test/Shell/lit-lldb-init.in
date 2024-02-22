@@ -1,4 +1,6 @@
 # LLDB init file for the LIT tests.
+# Prefer the just-built standard library over the system one.
+env DYLD_LIBRARY_PATH='@LLDB_SWIFT_LIBS@/macosx' LD_LIBRARY_PATH='@LLDB_SWIFT_LIBS@/@CMAKE_SYSTEM_PROCESSOR@' SIMCTL_CHILD_DYLD_LIBRARY_PATH='@LLDB_SWIFT_LIBS@/macosx'
 settings set symbols.enable-external-lookup false
 settings set plugin.process.gdb-remote.packet-timeout 60
 settings set interpreter.echo-comment-commands false
@@ -6,3 +8,4 @@ settings set symbols.clang-modules-cache-path "@LLDB_TEST_MODULE_CACHE_LLDB@"
 settings set target.auto-apply-fixits false
 settings set target.inherit-tcc true
 settings set target.detach-on-error false
+settings set symbols.swift-validate-typesystem true

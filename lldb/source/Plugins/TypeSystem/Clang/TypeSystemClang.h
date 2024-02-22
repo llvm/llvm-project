@@ -143,7 +143,8 @@ public:
   static llvm::StringRef GetPluginNameStatic() { return "clang"; }
 
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
-                                           Module *module, Target *target);
+                                           Module *module, Target *target,
+                                           const char *compiler_options);
 
   static LanguageSet GetSupportedLanguagesForTypes();
   static LanguageSet GetSupportedLanguagesForExpressions();
@@ -317,6 +318,7 @@ public:
   /// Synthesize a clang::Module and return its ID or a default-constructed ID.
   OptionalClangModuleID GetOrCreateClangModule(llvm::StringRef name,
                                                OptionalClangModuleID parent,
+                                               llvm::StringRef apinotes = {},
                                                bool is_framework = false,
                                                bool is_explicit = false);
 
@@ -728,7 +730,8 @@ public:
   ConstString GetTypeName(lldb::opaque_compiler_type_t type,
                           bool base_only) override;
 
-  ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) override;
+  ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type,
+                                 const SymbolContext *sc = nullptr) override;
 
   uint32_t GetTypeInfo(lldb::opaque_compiler_type_t type,
                        CompilerType *pointee_or_element_compiler_type) override;
@@ -824,6 +827,12 @@ public:
   std::optional<uint64_t> GetBitSize(lldb::opaque_compiler_type_t type,
                                      ExecutionContextScope *exe_scope) override;
 
+  std::optional<uint64_t>
+  GetByteStride(lldb::opaque_compiler_type_t type,
+                ExecutionContextScope *exe_scope) override {
+    return {};
+  }
+
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                              uint64_t &count) override;
 
@@ -848,7 +857,8 @@ public:
                          ConstString name,
                          const llvm::APSInt &value)> const &callback) override;
 
-  uint32_t GetNumFields(lldb::opaque_compiler_type_t type) override;
+  uint32_t GetNumFields(lldb::opaque_compiler_type_t type,
+                        ExecutionContext *exe_ctx = nullptr) override;
 
   CompilerType GetFieldAtIndex(lldb::opaque_compiler_type_t type, size_t idx,
                                std::string &name, uint64_t *bit_offset_ptr,
@@ -882,6 +892,7 @@ public:
   // member member names in "clang_type" only, not descendants.
   uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                                    llvm::StringRef name,
+                                   ExecutionContext *exe_ctx,
                                    bool omit_empty_base_classes) override;
 
   // Lookup a child member given a name. This function will match member names
@@ -892,7 +903,7 @@ public:
   // so we catch all names that match a given child name, not just the first.
   size_t
   GetIndexOfChildMemberWithName(lldb::opaque_compiler_type_t type,
-                                llvm::StringRef name,
+                                llvm::StringRef name, ExecutionContext *exe_ctx,
                                 bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) override;
 
@@ -1043,15 +1054,18 @@ public:
                      lldb::Format format, const DataExtractor &data,
                      lldb::offset_t data_offset, size_t data_byte_size,
                      uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-                     ExecutionContextScope *exe_scope) override;
+                     ExecutionContextScope *exe_scope,
+                     bool is_base_class) override;
 
   void DumpTypeDescription(
       lldb::opaque_compiler_type_t type,
-      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull,
+      ExecutionContextScope *exe_scope = nullptr) override;
 
   void DumpTypeDescription(
       lldb::opaque_compiler_type_t type, Stream &s,
-      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull,
+      ExecutionContextScope *exe_scope = nullptr) override;
 
   static void DumpTypeName(const CompilerType &type);
 

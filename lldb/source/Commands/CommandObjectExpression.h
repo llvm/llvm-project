@@ -57,6 +57,9 @@ public:
     LanguageRuntimeDescriptionDisplayVerbosity m_verbosity;
     LazyBool auto_apply_fixits;
     LazyBool suppress_persistent_result;
+// BEGIN SWIFT
+    lldb::BindGenericTypes bind_generic_types;
+// END SWIFT
   };
 
   CommandObjectExpression(CommandInterpreter &interpreter);

@@ -741,6 +741,26 @@ class CastExpressionIdValidator final : public CorrectionCandidateCallback {
 };
 }
 
+ExprResult Parser::ParseBuiltinPtrauthTypeDiscriminator() {
+  SourceLocation Loc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume())
+    return ExprError();
+
+  TypeResult Ty = ParseTypeName();
+  if (Ty.isInvalid()) {
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return ExprError();
+  }
+
+  SourceLocation EndLoc = Tok.getLocation();
+  T.consumeClose();
+  return Actions.ActOnUnaryExprOrTypeTraitExpr(
+      Loc, UETT_PtrAuthTypeDiscriminator,
+      /*isType=*/true, Ty.get().getAsOpaquePtr(), SourceRange(Loc, EndLoc));
+}
+
 /// Parse a cast-expression, or, if \pisUnaryExpression is true, parse
 /// a unary-expression.
 ///
@@ -1775,6 +1795,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       *NotPrimaryExpression = true;
     Res = ParseArrayTypeTrait();
     break;
+
+  case tok::kw___builtin_ptrauth_type_discriminator:
+    return ParseBuiltinPtrauthTypeDiscriminator();
 
   case tok::kw___is_lvalue_expr:
   case tok::kw___is_rvalue_expr:

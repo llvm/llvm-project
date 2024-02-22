@@ -892,6 +892,17 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT LLVM_ENABLE_WARNINGS)
   append("-w" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
+# Enable '-index-store-path' on a Debug build, if the compiler supports it and for non-IDE generators.
+option(LLVM_DISABLE_INDEX_STORE "Disable '-index-store-path' flag" Off)
+if (NOT LLVM_DISABLE_INDEX_STORE AND NOT XCODE AND NOT MSVC_IDE AND uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+  set(INDEX_DATA_STORE_PATH "${PROJECT_BINARY_DIR}/IndexStore" CACHE STRING "Index store path")
+
+  check_c_compiler_flag("-Werror -index-store-path \"${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/IndexStore\"" "C_SUPPORTS_INDEX_STORE")
+  append_if("C_SUPPORTS_INDEX_STORE" "-index-store-path \"${INDEX_DATA_STORE_PATH}\"" CMAKE_C_FLAGS)
+  check_cxx_compiler_flag("-Werror -index-store-path \"${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/IndexStore\"" "CXX_SUPPORTS_INDEX_STORE")
+  append_if("CXX_SUPPORTS_INDEX_STORE" "-index-store-path \"${INDEX_DATA_STORE_PATH}\"" CMAKE_CXX_FLAGS)
+endif()
+
 macro(append_common_sanitizer_flags)
   if (NOT MSVC OR CLANG_CL)
     # Append -fno-omit-frame-pointer and turn on debug info to get better
@@ -1345,6 +1356,76 @@ if(LLVM_USE_RELATIVE_PATHS_IN_DEBUG_INFO)
   append_if(SUPPORTS_FDEBUG_PREFIX_MAP "-fdebug-prefix-map=${source_root}/=${LLVM_SOURCE_PREFIX}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   add_flag_if_supported("-no-canonical-prefixes" NO_CANONICAL_PREFIXES)
 endif()
+
+set(LLVM_ENABLE_EXPERIMENTAL_DEPSCAN OFF CACHE BOOL
+  "Use the experimental -fdepscan and related flags")
+set(LLVM_DEPSCAN_MODE "" CACHE STRING "Mode for -fdepscan if used")
+set(LLVM_DEPSCAN_DAEMON "" CACHE STRING "Path to existing DepScan daemon to use")
+set(LLVM_CAS_BUILTIN_PATH "" CACHE STRING "Path to pass for -fcas-builtin-path")
+set(LLVM_CAS_BUILTIN_PATH_Default "/^llvm::cas::builtin::default/llvm.cas.builtin.default")
+if (LLVM_CAS_BUILTIN_PATH)
+  set(LLVM_CAS_BUILTIN_PATH_Default "${LLVM_CAS_BUILTIN_PATH}")
+endif()
+if(LLVM_ENABLE_EXPERIMENTAL_DEPSCAN)
+  # Don't daemonize when running the check.
+  check_c_compiler_flag("-fdepscan=off" SUPPORTS_DEPSCAN)
+
+  # Check LLVM_DEPSCAN_MODE before entering if() in order to claim it.
+  if(LLVM_DEPSCAN_MODE)
+    append_if(SUPPORTS_DEPSCAN "-fdepscan=${LLVM_DEPSCAN_MODE}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  else()
+    append_if(SUPPORTS_DEPSCAN "-fdepscan" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  endif()
+
+  if(SUPPORTS_DEPSCAN)
+    if(LLVM_DEPSCAN_DAEMON)
+      append("-fdepscan-daemon=${LLVM_DEPSCAN_DAEMON}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    else()
+      check_c_compiler_flag("-fdepscan=off -fdepscan-share-stop=cmake" SUPPORTS_DEPSCAN_SHARE)
+      if(SUPPORTS_DEPSCAN_SHARE)
+        get_filename_component(CMAKE_MAKE_PROGRAM_NAME "${CMAKE_MAKE_PROGRAM}" NAME)
+        if(CMAKE_GENERATOR STREQUAL "Ninja")
+          # Ninja should always be direct parent of clang invocations (except
+          # during configuration). Avoid unnecessary ancestor searches.
+          set(fdepscan_share "-fdepscan-share-parent")
+        else()
+          # Other build systems may use subshells.
+          set(fdepscan_share "-fdepscan-share")
+        endif()
+
+        append("${fdepscan_share}=${CMAKE_MAKE_PROGRAM_NAME}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+        append("-fdepscan-share-stop=cmake" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      endif()
+    endif()
+
+    if(LLVM_ENABLE_PROJECTS_USED)
+      get_filename_component(source_root "${LLVM_MAIN_SRC_DIR}/.." ABSOLUTE)
+    else()
+      set(source_root "${LLVM_MAIN_SRC_DIR}")
+    endif()
+
+    append("-fdepscan-prefix-map-sdk=/^sdk" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    append("-fdepscan-prefix-map-toolchain=/^toolchain" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    append("-fdepscan-prefix-map=${source_root}=/^source" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    append("-fdepscan-prefix-map=${CMAKE_BINARY_DIR}=/^build" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    if(LLVM_CAS_BUILTIN_PATH)
+      append("-Xclang -fcas-path -Xclang ${LLVM_CAS_BUILTIN_PATH}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    endif()
+
+    # Create a LLDB init file to remap prefix map back to original path.
+    # TODO: Remap SDK and toolchain path.
+    set(lldb_prefix_remap_init_file "${CMAKE_BINARY_DIR}/.lldbinit")
+    file(WRITE ${lldb_prefix_remap_init_file} "settings set target.source-map /^source ${source_root} /^build ${CMAKE_BINARY_DIR}")
+
+    check_c_compiler_flag("-greproducible" SUPPORTS_GREPRODUCIBLE)
+    if(SUPPORTS_GREPRODUCIBLE)
+      append("-greproducible"
+        CMAKE_C_FLAGS CMAKE_CXX_FLAGS
+        CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+    endif()
+  endif()
+endif()
+
 
 option(LLVM_USE_RELATIVE_PATHS_IN_FILES "Use relative paths in sources and debug info" OFF)
 

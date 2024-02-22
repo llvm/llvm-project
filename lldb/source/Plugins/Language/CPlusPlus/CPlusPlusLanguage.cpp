@@ -376,15 +376,19 @@ bool CPlusPlusLanguage::MethodName::ContainsPath(llvm::StringRef path) {
 }
 
 bool CPlusPlusLanguage::IsCPPMangledName(llvm::StringRef name) {
-  // FIXME!! we should really run through all the known C++ Language plugins
-  // and ask each one if this is a C++ mangled name
-
   Mangled::ManglingScheme scheme = Mangled::GetManglingScheme(name);
-
-  if (scheme == Mangled::eManglingSchemeNone)
+  switch (scheme) {
+  case Mangled::eManglingSchemeMSVC:
+  case Mangled::eManglingSchemeItanium:
+    return true;
+  case Mangled::eManglingSchemeNone:
+  case Mangled::eManglingSchemeRustV0:
+  case Mangled::eManglingSchemeD:
+#ifdef LLDB_ENABLE_SWIFT
+  case Mangled::eManglingSchemeSwift:
+#endif
     return false;
-
-  return true;
+  }
 }
 
 bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path,

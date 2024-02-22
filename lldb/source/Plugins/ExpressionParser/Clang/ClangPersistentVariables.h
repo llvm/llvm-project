@@ -17,6 +17,17 @@
 #include "lldb/Expression/ExpressionVariable.h"
 #include <optional>
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
+
+#include <set>
+#include <string>
+#include <unordered_map>
+
+namespace clang {
+class TypeDecl;
+}
+
 namespace lldb_private {
 
 class ClangASTImporter;
@@ -57,6 +68,22 @@ public:
 
   ConstString GetNextPersistentVariableName(bool is_error = false) override;
 
+  // This just adds this module to the list of hand-loaded modules, it doesn't
+  // actually load it.
+  void AddHandLoadedModule(ConstString module_name) {
+    m_hand_loaded_modules.insert(module_name);
+  }
+
+  using HandLoadedModuleCallback = std::function<bool(const ConstString)>;
+
+  bool RunOverHandLoadedModules(HandLoadedModuleCallback callback) {
+    for (ConstString name : m_hand_loaded_modules) {
+      if (!callback(name))
+        return false;
+    }
+    return true;
+  }
+
   /// Returns the next file name that should be used for user expressions.
   std::string GetNextExprFileName() {
     std::string name;
@@ -93,6 +120,26 @@ private:
   uint32_t m_next_user_file_id = 0;
   // The counter used by GetNextPersistentVariableName
   uint32_t m_next_persistent_variable_id = 0;
+  /// The counter used by GetNextResultName when is_error is true.
+  uint32_t m_next_persistent_error_id;
+
+  typedef llvm::DenseMap<const char *, clang::TypeDecl *>
+      ClangPersistentTypeMap;
+  ClangPersistentTypeMap
+      m_clang_persistent_types; ///< The persistent types declared by the user.
+
+  typedef std::set<lldb::IRExecutionUnitSP> ExecutionUnitSet;
+  ExecutionUnitSet
+      m_execution_units; ///< The execution units that contain valuable symbols.
+
+  typedef std::set<lldb_private::ConstString> HandLoadedModuleSet;
+  HandLoadedModuleSet m_hand_loaded_modules; ///< These are the names of modules
+                                             ///that we have loaded by
+  ///< hand into the Contexts we make for parsing.
+
+  typedef llvm::DenseMap<const char *, lldb::addr_t> SymbolMap;
+  SymbolMap
+      m_symbol_map; ///< The addresses of the symbols in m_execution_units.
 
   struct PersistentDecl {
     /// The persistent decl.

@@ -67,6 +67,9 @@ public:
     return Major == 0 && Minor == 0 && Subminor == 0 && Build == 0;
   }
 
+  /// Whether this is a non-empty version tuple.
+  explicit operator bool () const { return !empty(); }
+
   /// Retrieve the major version number.
   unsigned getMajor() const { return Major; }
 

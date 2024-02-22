@@ -23,6 +23,9 @@
 #OS X specific files.
 .DS_store
 
+# Temporary file created by the automerger tool.
+.am.txt
+
 # Ignore the user specified CMake presets in subproject directories.
 /*/CMakeUserPresets.json
 

@@ -348,7 +348,7 @@ bool DWARFTypePrinter::appendTemplateParameters(DWARFDie D,
         appendQualifiedName(T);
         OS << ')';
         auto V = C.find(DW_AT_const_value);
-        OS << std::to_string(*V->getAsSignedConstant());
+        OS << to_string(*V->getAsSignedConstant());
         continue;
       }
       // /Maybe/ we could do pointer type parameters, looking for the
@@ -365,26 +365,26 @@ bool DWARFTypePrinter::appendTemplateParameters(DWARFDie D,
         OS << (*V->getAsUnsignedConstant() ? "true" : "false");
       } else if (Name == "short") {
         OS << "(short)";
-        OS << std::to_string(*V->getAsSignedConstant());
+        OS << to_string(*V->getAsSignedConstant());
       } else if (Name == "unsigned short") {
         OS << "(unsigned short)";
-        OS << std::to_string(*V->getAsSignedConstant());
+        OS << to_string(*V->getAsSignedConstant());
       } else if (Name == "int")
-        OS << std::to_string(*V->getAsSignedConstant());
+        OS << to_string(*V->getAsSignedConstant());
       else if (Name == "long") {
-        OS << std::to_string(*V->getAsSignedConstant());
+        OS << to_string(*V->getAsSignedConstant());
         OS << "L";
       } else if (Name == "long long") {
-        OS << std::to_string(*V->getAsSignedConstant());
+        OS << to_string(*V->getAsSignedConstant());
         OS << "LL";
       } else if (Name == "unsigned int") {
-        OS << std::to_string(*V->getAsUnsignedConstant());
+        OS << to_string(*V->getAsUnsignedConstant());
         OS << "U";
       } else if (Name == "unsigned long") {
-        OS << std::to_string(*V->getAsUnsignedConstant());
+        OS << to_string(*V->getAsUnsignedConstant());
         OS << "UL";
       } else if (Name == "unsigned long long") {
-        OS << std::to_string(*V->getAsUnsignedConstant());
+        OS << to_string(*V->getAsUnsignedConstant());
         OS << "ULL";
       } else if (Name == "char" ||
                  (IsQualifiedChar =

@@ -79,6 +79,12 @@ public:
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Target *target);
 
+  // BEGIN SWIFT
+  static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
+                                           Target *target,
+                                           const char *compiler_options);
+  // END SWIFT
+
   /// Free up any resources associated with this TypeSystem.  Done before
   /// removing all the TypeSystems from the TypeSystemMap.
   virtual void Finalize() {}
@@ -204,6 +210,15 @@ public:
   // TypeSystems can support more than one language
   virtual bool SupportsLanguage(lldb::LanguageType language) = 0;
 
+  // Check if the current module or target that was used to create this
+  // type system is compatible with the TypeSystem plug-in.
+  //
+  // Sometimes as languages are being developed the language can change
+  // and the version of the runtime information in a module is out of date
+  // with this type system. For such cases, languages can check and return
+  // an error.
+  virtual Status IsCompatible();
+
   // Type Completion
 
   virtual bool GetCompleteType(lldb::opaque_compiler_type_t type) = 0;
@@ -221,7 +236,15 @@ public:
   virtual ConstString GetTypeName(lldb::opaque_compiler_type_t type,
                                   bool BaseOnly) = 0;
 
-  virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) = 0;
+  // Defaults to GetTypeName(type).  Override if your language desires
+  // specialized behavior.
+  // \param sc  An optional symbol context of the function the type appears in.
+  virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type,
+                                         const SymbolContext *sc = nullptr) = 0;
+
+  // Defaults to GetTypeName(type).  Override if your language desires
+  // specialized behavior.
+  virtual ConstString GetMangledTypeName(lldb::opaque_compiler_type_t type);
 
   virtual uint32_t
   GetTypeInfo(lldb::opaque_compiler_type_t type,
@@ -295,6 +318,10 @@ public:
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) = 0;
 
+  virtual std::optional<uint64_t>
+  GetByteStride(lldb::opaque_compiler_type_t type,
+                ExecutionContextScope *exe_scope) = 0;
+
   virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                                      uint64_t &count) = 0;
 
@@ -315,7 +342,8 @@ public:
                          ConstString name,
                          const llvm::APSInt &value)> const &callback) {}
 
-  virtual uint32_t GetNumFields(lldb::opaque_compiler_type_t type) = 0;
+  virtual uint32_t GetNumFields(lldb::opaque_compiler_type_t type,
+                                ExecutionContext *exe_ctx = nullptr) = 0;
 
   virtual CompilerType GetFieldAtIndex(lldb::opaque_compiler_type_t type,
                                        size_t idx, std::string &name,
@@ -350,6 +378,7 @@ public:
   // member member names in "clang_type" only, not descendants.
   virtual uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                                            llvm::StringRef name,
+                                           ExecutionContext *exe_ctx,
                                            bool omit_empty_base_classes) = 0;
 
   // Lookup a child member given a name. This function will match member names
@@ -358,9 +387,11 @@ public:
   // TODO: Return all matches for a given name by returning a
   // vector<vector<uint32_t>>
   // so we catch all names that match a given child name, not just the first.
-  virtual size_t GetIndexOfChildMemberWithName(
-      lldb::opaque_compiler_type_t type, llvm::StringRef name,
-      bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) = 0;
+  virtual size_t
+  GetIndexOfChildMemberWithName(lldb::opaque_compiler_type_t type,
+                                llvm::StringRef name, ExecutionContext *exe_ctx,
+                                bool omit_empty_base_classes,
+                                std::vector<uint32_t> &child_indexes) = 0;
 
   virtual bool IsTemplateType(lldb::opaque_compiler_type_t type);
 
@@ -390,12 +421,14 @@ public:
                              lldb::offset_t data_offset, size_t data_byte_size,
                              uint32_t bitfield_bit_size,
                              uint32_t bitfield_bit_offset,
-                             ExecutionContextScope *exe_scope) = 0;
+                             ExecutionContextScope *exe_scope,
+                             bool is_base_class) = 0;
 
   /// Dump the type to stdout.
   virtual void DumpTypeDescription(
       lldb::opaque_compiler_type_t type,
-      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) = 0;
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull,
+      ExecutionContextScope *exe_scope = nullptr) = 0;
 
   /// Print a description of the type to a stream. The exact implementation
   /// varies, but the expectation is that eDescriptionLevelFull returns a
@@ -403,7 +436,8 @@ public:
   /// does a dump of the underlying AST if applicable.
   virtual void DumpTypeDescription(
       lldb::opaque_compiler_type_t type, Stream &s,
-      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) = 0;
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull,
+      ExecutionContextScope *exe_scope = nullptr) = 0;
 
   /// Dump a textual representation of the internal TypeSystem state to the
   /// given stream.
@@ -507,6 +541,12 @@ public:
   // meaningless type itself, instead preferring to use the dynamic type
   virtual bool IsMeaninglessWithoutDynamicResolution(void *type);
 
+  /// A TypeSystem may belong to more than one debugger, so it doesn't
+  /// have a way to communicate errors. This method can be called by a
+  /// process to tell the TypeSystem to send any diagnostics to the
+  /// process so they can be surfaced to the user.
+  virtual void DiagnoseWarnings(Process &process, Module &module) const;
+
   virtual std::optional<llvm::json::Value> ReportStatistics();
 
   bool GetHasForcefullyCompletedTypes() const {
@@ -521,7 +561,12 @@ protected:
 class TypeSystemMap {
 public:
   TypeSystemMap();
+  TypeSystemMap(const TypeSystemMap &rhs);
   ~TypeSystemMap();
+
+  // Clear calls Finalize on all the TypeSystems managed by this map, and then
+  // empties the map.
+  void operator=(const TypeSystemMap &rhs);
 
   // Clear calls Finalize on all the TypeSystems managed by this map, and then
   // empties the map.
@@ -538,6 +583,14 @@ public:
   llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language, Target *target,
                            bool can_create);
+
+  // BEGIN SWIFT
+  llvm::Expected<lldb::TypeSystemSP>
+  GetTypeSystemForLanguage(lldb::LanguageType language, Target *target,
+                           bool can_create, const char *compiler_options);
+
+  void RemoveTypeSystemsForLanguage(lldb::LanguageType language);
+  // END SWIFT
 
   /// Check all type systems in the map to see if any have forcefully completed
   /// types;

@@ -79,6 +79,7 @@ public:
 
   dwarf::Form getForm() const { return Form; }
   uint64_t getRawUValue() const { return Value.uval; }
+  int64_t getRawSValue() const { return Value.sval; }
 
   bool isFormClass(FormClass FC) const;
   const DWARFUnit *getUnit() const { return U; }

@@ -55,6 +55,11 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 
+#ifdef LLDB_ENABLE_SWIFT
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
+#endif // LLDB_ENABLE_SWIFT
+
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DJB.h"
@@ -646,6 +651,10 @@ Module::LookupInfo::LookupInfo(ConstString name,
               Language::LanguageIsObjC(language)) &&
              ObjCLanguage::IsPossibleObjCMethodName(name_cstr))
       m_name_type_mask = eFunctionNameTypeFull;
+#ifdef LLDB_ENABLE_SWIFT
+    else if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetStringRef()))
+      m_name_type_mask = eFunctionNameTypeFull;
+#endif // LLDB_ENABLE_SWIFT
     else if (Language::LanguageIsC(language)) {
       m_name_type_mask = eFunctionNameTypeFull;
     } else {
@@ -655,7 +664,20 @@ Module::LookupInfo::LookupInfo(ConstString name,
         m_name_type_mask |= eFunctionNameTypeSelector;
 
       CPlusPlusLanguage::MethodName cpp_method(name);
-      basename = cpp_method.GetBasename();
+
+#ifdef LLDB_ENABLE_SWIFT
+      SwiftLanguageRuntime::MethodName swift_method(name, true);
+
+      if ((language == eLanguageTypeUnknown ||
+           language == eLanguageTypeSwift) &&
+          swift_method.IsValid())
+        basename = swift_method.GetBasename();
+#endif // LLDB_ENABLE_SWIFT
+      if ((language == eLanguageTypeUnknown ||
+           Language::LanguageIsCFamily(language)) &&
+           cpp_method.IsValid())
+        basename = cpp_method.GetBasename();
+
       if (basename.empty()) {
         if (CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
                                                            basename))
@@ -673,6 +695,13 @@ Module::LookupInfo::LookupInfo(ConstString name,
       // If they've asked for a CPP method or function name and it can't be
       // that, we don't even need to search for CPP methods or names.
       CPlusPlusLanguage::MethodName cpp_method(name);
+
+#ifdef LLDB_ENABLE_SWIFT
+      SwiftLanguageRuntime::MethodName swift_method(name, true);
+      if (swift_method.IsValid())
+        basename = swift_method.GetBasename();
+#endif // LLDB_ENABLE_SWIFT
+
       if (cpp_method.IsValid()) {
         basename = cpp_method.GetBasename();
 
@@ -771,7 +800,12 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
       if (!sc_list.GetContextAtIndex(i, sc))
         break;
 
+      bool is_trampoline =
+          Target::GetGlobalProperties().GetEnableTrampolineSupport() &&
+          sc.function && sc.function->IsGenericTrampoline();
+
       bool keep_it =
+          !is_trampoline &&
           NameMatchesLookupInfo(sc.GetFunctionName(), sc.GetLanguage());
       if (keep_it)
         ++i;
@@ -1099,6 +1133,74 @@ void Module::ReportWarningUnsupportedLanguage(
   Debugger::ReportWarning(std::string(ss.GetString()), debugger_id,
                           &m_language_warning);
 }
+
+#ifdef LLDB_ENABLE_SWIFT
+static llvm::VersionTuple GetAdjustedVersion(llvm::VersionTuple version) {
+  return version;
+}
+
+void Module::ReportWarningToolchainMismatch(
+    CompileUnit &comp_unit, std::optional<lldb::user_id_t> debugger_id) {
+  if (SymbolFile *sym_file = GetSymbolFile()) {
+    llvm::VersionTuple sym_file_version =
+        GetAdjustedVersion(sym_file->GetProducerVersion(comp_unit));
+    llvm::VersionTuple swift_version =
+        GetAdjustedVersion(swift::version::getCurrentCompilerVersion());
+    if (sym_file_version != swift_version) {
+      std::string str = llvm::formatv(
+          "{0} was compiled with a different Swift compiler "
+          "(version '{1}') than the Swift compiler integrated into LLDB "
+          "(version '{2}'). Swift expression evaluation requires a matching "
+          "compiler and debugger from the same toolchain.",
+          GetFileSpec().GetFilename(), sym_file_version.getAsString(),
+          swift_version.getAsString());
+      Debugger::ReportWarning(str, debugger_id, &m_toolchain_mismatch_warning);
+    }
+  }
+}
+
+bool Module::IsSwiftCxxInteropEnabled() {
+  switch (m_is_swift_cxx_interop_enabled) {
+  case eLazyBoolYes:
+    return true;
+  case eLazyBoolNo:
+    return false;
+  case eLazyBoolCalculate:
+    break;
+  }
+  EnableSwiftCxxInterop interop_enabled =
+      Target::GetGlobalProperties().GetEnableSwiftCxxInterop();
+  switch (interop_enabled) {
+  case eEnableSwiftCxxInterop:
+    m_is_swift_cxx_interop_enabled = eLazyBoolYes;
+    break;
+  case eDisableSwiftCxxInterop:
+    m_is_swift_cxx_interop_enabled = eLazyBoolNo;
+    break;
+  case eAutoDetectSwiftCxxInterop: {
+    // Look for the "-enable-experimental-cxx-interop" compile flag in the args
+    // of the compile units this module is composed of.
+    auto *sym_file = GetSymbolFile();
+    if (sym_file) {
+      auto options = sym_file->GetCompileOptions();
+      for (auto &[_, args] : options) {
+        for (const char *arg : args.GetArgumentArrayRef()) {
+          if (strcmp(arg, "-enable-experimental-cxx-interop") == 0) {
+            m_is_swift_cxx_interop_enabled = eLazyBoolYes;
+            break;
+          }
+        }
+        if (m_is_swift_cxx_interop_enabled == eLazyBoolYes)
+          break;
+      }
+    }
+    if (m_is_swift_cxx_interop_enabled == eLazyBoolCalculate)
+      m_is_swift_cxx_interop_enabled = eLazyBoolNo;
+  }
+  }
+  return m_is_swift_cxx_interop_enabled == eLazyBoolYes;
+}
+#endif
 
 void Module::ReportErrorIfModifyDetected(
     const llvm::formatv_object_base &payload) {
@@ -1492,6 +1594,17 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
 bool Module::SetArchitecture(const ArchSpec &new_arch) {
   if (!m_arch.IsValid()) {
     m_arch = new_arch;
+    auto type_system_or_err = m_type_system_map.GetTypeSystemForLanguage(
+        eLanguageTypeSwift, this, false);
+    if (!type_system_or_err) {
+      llvm::consumeError(type_system_or_err.takeError());
+      return true;
+    }
+#ifdef LLDB_ENABLE_SWIFT
+    if (auto ts =
+            llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get()))
+      ts->SetTriple(new_arch.GetTriple());
+#endif // LLDB_ENABLE_SWIFT
     return true;
   }
   return m_arch.IsCompatibleMatch(new_arch);
@@ -1612,6 +1725,57 @@ bool Module::GetIsDynamicLinkEditor() {
 
   return false;
 }
+
+// BEGIN SWIFT
+void Module::ClearModuleDependentCaches() {
+  auto type_system_or_err = m_type_system_map.GetTypeSystemForLanguage(
+      eLanguageTypeSwift, this, false);
+  if (!type_system_or_err) {
+    llvm::consumeError(type_system_or_err.takeError());
+    return;
+  }
+
+#ifdef LLDB_ENABLE_SWIFT
+  if (auto *ts =
+          llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get()))
+    ts->ClearModuleDependentCaches();
+#endif // LLDB_ENABLE_SWIFT
+}
+
+std::vector<DataBufferSP>
+Module::GetASTData(lldb::LanguageType language) {
+  std::vector<DataBufferSP> ast_datas;
+
+  if (language != eLanguageTypeSwift)
+    return ast_datas;
+
+  // Sometimes the AST Section data is found from the module, so look there
+  // first:
+  SectionList *section_list = GetSectionList();
+
+  if (section_list) {
+    SectionSP section_sp(
+        section_list->FindSectionByType(eSectionTypeSwiftModules, true));
+    if (section_sp) {
+      DataExtractor section_data;
+
+      if (section_sp->GetSectionData(section_data)) {
+        ast_datas.push_back(DataBufferSP(
+            new DataBufferHeap((const char *)section_data.GetDataStart(),
+                               section_data.GetByteSize())));
+        return ast_datas;
+      }
+    }
+  }
+
+  // If we couldn't find it in the Module, then look for it in the SymbolFile:
+  SymbolFile *sym_file = GetSymbolFile();
+  if (sym_file)
+    ast_datas = sym_file->GetASTData(language);
+
+  return ast_datas;
+}
+// END SWIFT
 
 uint32_t Module::Hash() {
   std::string identifier;

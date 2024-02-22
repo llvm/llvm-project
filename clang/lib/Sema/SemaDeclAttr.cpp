@@ -2640,6 +2640,15 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   AvailabilityChange Introduced = AL.getAvailabilityIntroduced();
   AvailabilityChange Deprecated = AL.getAvailabilityDeprecated();
   AvailabilityChange Obsoleted = AL.getAvailabilityObsoleted();
+  if (II->getName() == "macos" || II->getName() == "macos_app_extension") {
+    // Canonicalize macOS availability versions.
+    Introduced.Version = llvm::Triple::getCanonicalVersionForOS(
+        llvm::Triple::MacOSX, Introduced.Version);
+    Deprecated.Version = llvm::Triple::getCanonicalVersionForOS(
+        llvm::Triple::MacOSX, Deprecated.Version);
+    Obsoleted.Version = llvm::Triple::getCanonicalVersionForOS(
+        llvm::Triple::MacOSX, Obsoleted.Version);
+  }
   bool IsUnavailable = AL.getUnavailableLoc().isValid();
   bool IsStrict = AL.getStrictLoc().isValid();
   StringRef Str;
@@ -6251,33 +6260,35 @@ static void handleObjCRequiresSuperAttr(Sema &S, Decl *D,
 
 static void handleNSErrorDomain(Sema &S, Decl *D, const ParsedAttr &Attr) {
   if (!isa<TagDecl>(D)) {
-    S.Diag(D->getBeginLoc(), diag::err_nserrordomain_invalid_decl) << 0;
+    S.Diag(D->getBeginLoc(), diag::err_nserrordomain_invalid_decl)
+        << 0;
     return;
   }
-
-  IdentifierLoc *IdentLoc =
+  IdentifierLoc *identLoc =
       Attr.isArgIdent(0) ? Attr.getArgAsIdent(0) : nullptr;
-  if (!IdentLoc || !IdentLoc->Ident) {
-    // Try to locate the argument directly.
-    SourceLocation Loc = Attr.getLoc();
+  if (!identLoc || !identLoc->Ident) {
+    // Try to locate the argument directly
+    SourceLocation loc = Attr.getLoc();
     if (Attr.isArgExpr(0) && Attr.getArgAsExpr(0))
-      Loc = Attr.getArgAsExpr(0)->getBeginLoc();
+      loc = Attr.getArgAsExpr(0)->getBeginLoc();
 
-    S.Diag(Loc, diag::err_nserrordomain_invalid_decl) << 0;
+    S.Diag(loc, diag::err_nserrordomain_invalid_decl) << 0;
     return;
   }
 
-  // Verify that the identifier is a valid decl in the C decl namespace.
-  LookupResult Result(S, DeclarationName(IdentLoc->Ident), SourceLocation(),
-                      Sema::LookupNameKind::LookupOrdinaryName);
-  if (!S.LookupName(Result, S.TUScope) || !Result.getAsSingle<VarDecl>()) {
-    S.Diag(IdentLoc->Loc, diag::err_nserrordomain_invalid_decl)
-        << 1 << IdentLoc->Ident;
+  // Verify that the identifier is a valid decl in the C decl namespace
+  LookupResult lookupResult(S, DeclarationName(identLoc->Ident),
+                            SourceLocation(),
+                            Sema::LookupNameKind::LookupOrdinaryName);
+  if (!S.LookupName(lookupResult, S.TUScope) ||
+      !lookupResult.getAsSingle<VarDecl>()) {
+    S.Diag(identLoc->Loc, diag::err_nserrordomain_invalid_decl)
+        << 1 << identLoc->Ident;
     return;
   }
 
   D->addAttr(::new (S.Context)
-                 NSErrorDomainAttr(S.Context, Attr, IdentLoc->Ident));
+                 NSErrorDomainAttr(S.Context, Attr, identLoc->Ident));
 }
 
 static void handleObjCBridgeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -6991,6 +7002,12 @@ static void handleSwiftAsyncName(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
 
   D->addAttr(::new (S.Context) SwiftAsyncNameAttr(S.Context, AL, Name));
+}
+
+static void handleTransparentStepping(Sema &S, Decl *D,
+                                          const ParsedAttr &AL) {
+  D->addAttr(::new (S.Context)
+                 TransparentSteppingAttr(S.Context, AL));
 }
 
 static void handleSwiftNewType(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -9505,6 +9522,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleObjCDirectMembersAttr(S, D, AL);
     handleSimpleAttribute<ObjCDirectMembersAttr>(S, D, AL);
     break;
+  case ParsedAttr::AT_ObjCCompleteDefinition:
+    handleSimpleAttribute<ObjCCompleteDefinitionAttr>(S, D, AL);
+    break;
   case ParsedAttr::AT_ObjCExplicitProtocolImpl:
     handleObjCSuppresProtocolAttr(S, D, AL);
     break;
@@ -9549,6 +9569,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_NoDebug:
     handleNoDebugAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_TransparentStepping:
+    handleTransparentStepping(S, D, AL);
     break;
   case ParsedAttr::AT_CmseNSEntry:
     handleCmseNSEntryAttr(S, D, AL);
@@ -10146,6 +10169,9 @@ void Sema::ProcessDeclAttributes(Scope *S, Decl *D, const Declarator &PD) {
 
   // Apply additional attributes specified by '#pragma clang attribute'.
   AddPragmaAttributes(S, D);
+
+  // Look for API notes that map to attributes.
+  ProcessAPINotes(D);
 }
 
 /// Is the given declaration allowed to use a forbidden type?

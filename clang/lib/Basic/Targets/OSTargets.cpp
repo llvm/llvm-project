@@ -11,6 +11,7 @@
 
 #include "OSTargets.h"
 #include "clang/Basic/MacroBuilder.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace clang;
@@ -30,6 +31,13 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
   // by default on Darwin.
   if (Opts.Sanitize.has(SanitizerKind::Address))
     Builder.defineMacro("_FORTIFY_SOURCE", "0");
+
+  if (Opts.PointerAuthIntrinsics)
+    Builder.defineMacro("__PTRAUTH_INTRINSICS__");
+
+  if (Opts.PointerAuthABIVersionEncoded)
+    Builder.defineMacro("__ptrauth_abi_version__",
+                        llvm::utostr(Opts.PointerAuthABIVersion));
 
   // Darwin defines __weak, __strong, and __unsafe_unretained even in C mode.
   if (!Opts.ObjC) {

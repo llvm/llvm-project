@@ -72,6 +72,19 @@ public:
   void SetCancelCallback(lldb::ExpressionCancelCallback callback, void *baton);
 #endif
 
+  bool GetPlaygroundTransformEnabled() const;
+
+  void SetPlaygroundTransformEnabled(bool enable_playground_transform = true);
+
+  bool GetPlaygroundTransformHighPerformance() const;
+
+  void
+  SetPlaygroundTransformHighPerformance(bool playground_transforms_hp = true);
+
+  bool GetREPLMode() const;
+
+  void SetREPLMode(bool enable_repl_mode = true);
+
   bool GetGenerateDebugInfo();
 
   void SetGenerateDebugInfo(bool b = true);

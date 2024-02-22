@@ -1,0 +1,74 @@
+//,,,-- llvm/MC/CAS/MCCASObjectV1.def - MCCASObjectV1 -----------*- C++ -*-,,,//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//,,,----------------------------------------------------------------------,,,//
+//
+// Definitions for MCCASObjectV1
+//
+//,,,----------------------------------------------------------------------,,,//
+
+#ifdef CASV1_SIMPLE_DATA_REF
+
+CASV1_SIMPLE_DATA_REF(HeaderRef, mc:header)
+CASV1_SIMPLE_DATA_REF(RelocationsRef, mc:relocations)
+CASV1_SIMPLE_DATA_REF(DataInCodeRef, mc:data_in_code)
+CASV1_SIMPLE_DATA_REF(CStringRef, mc:cstring)
+CASV1_SIMPLE_DATA_REF(MergedFragmentRef, mc:merged_fragment)
+CASV1_SIMPLE_DATA_REF(DebugStrRef, mc:debug_string)
+CASV1_SIMPLE_DATA_REF(DebugLineRef, mc:debug_line)
+CASV1_SIMPLE_DATA_REF(DebugLineUnoptRef, mc:debug_line_unopt)
+CASV1_SIMPLE_DATA_REF(DebugInfoUnoptRef, mc:debug_info_unopt)
+CASV1_SIMPLE_DATA_REF(DebugAbbrevUnoptRef, mc:debug_abbrev_unopt)
+CASV1_SIMPLE_DATA_REF(DistinctDebugLineRef, mc:debug_line_distinct_data)
+CASV1_SIMPLE_DATA_REF(DIEAbbrevRef, mc:debug_DIE_abbrev)
+CASV1_SIMPLE_DATA_REF(DIEDistinctDataRef, mc:debug_DIE_distinct_data)
+CASV1_SIMPLE_DATA_REF(DIEDataRef, mc:debug_DIE_data)
+CASV1_SIMPLE_DATA_REF(AddendsRef, mc:addends)
+
+#undef CASV1_SIMPLE_DATA_REF
+#endif /* CASV1_SIMPLE_DATA_REF */
+
+#ifdef CASV1_SIMPLE_GROUP_REF
+
+CASV1_SIMPLE_GROUP_REF(GroupRef, mc:group)
+CASV1_SIMPLE_GROUP_REF(SectionRef, mc:section)
+CASV1_SIMPLE_GROUP_REF(DebugAbbrevSectionRef, mc:debug_abbrev_section)
+CASV1_SIMPLE_GROUP_REF(DebugLineSectionRef, mc:debug_line_section)
+CASV1_SIMPLE_GROUP_REF(AtomRef, mc:atom)
+CASV1_SIMPLE_GROUP_REF(SymbolTableRef, mc:symbol_table)
+CASV1_SIMPLE_GROUP_REF(DebugStringSectionRef, mc:debug_string_section)
+CASV1_SIMPLE_GROUP_REF(DIEAbbrevSetRef, mc:debug_DIE_abbrev_set)
+CASV1_SIMPLE_GROUP_REF(DIETopLevelRef, mc:debug_DIE_top_level)
+CASV1_SIMPLE_GROUP_REF(DIEDedupeTopLevelRef, mc:debug_DIE_Dedupe_top_level)
+
+#undef CASV1_SIMPLE_GROUP_REF
+#endif /* CASV1_SIMPLE_GPOUP_REF */
+
+#ifdef MCFRAGMENT_NODE_REF
+
+#ifndef MCFRAGMENT_ENCODED_FRAGMENT_ONLY
+MCFRAGMENT_NODE_REF(MCAlignFragment, FT_Align, mc:align)
+MCFRAGMENT_NODE_REF(MCBoundaryAlignFragment, FT_BoundaryAlign, mc:boundary_align)
+MCFRAGMENT_NODE_REF(MCCVInlineLineTableFragment, FT_CVInlineLines, mc:cv_inline_lines)
+MCFRAGMENT_NODE_REF(MCDummyFragment, FT_Dummy, mc:dummy)
+MCFRAGMENT_NODE_REF(MCFillFragment, FT_Fill, mc:fill)
+MCFRAGMENT_NODE_REF(MCLEBFragment, FT_LEB, mc:leb)
+MCFRAGMENT_NODE_REF(MCNopsFragment, FT_Nops, mc:nops)
+MCFRAGMENT_NODE_REF(MCOrgFragment, FT_Org, mc:org)
+MCFRAGMENT_NODE_REF(MCSymbolIdFragment, FT_SymbolId, mc:symbol_id)
+#endif /* MCFRAGMENT_ENCODED_FRAGMENT_ONLY */
+#undef MCFRAGMENT_ENCODED_FRAGMENT_ONLY
+
+MCFRAGMENT_NODE_REF(MCDataFragment, FT_Data, mc:data)
+MCFRAGMENT_NODE_REF(MCCompactEncodedInstFragment, FT_CompactEncodedInst, mc:compact_coded_inst)
+MCFRAGMENT_NODE_REF(MCRelaxableFragment, FT_Relaxable, mc:relaxable)
+MCFRAGMENT_NODE_REF(MCDwarfLineAddrFragment, FT_Dwarf, mc:dwarf)
+MCFRAGMENT_NODE_REF(MCDwarfCallFrameFragment, FT_DwarfFrame, mc:dwarf_frame)
+MCFRAGMENT_NODE_REF(MCCVDefRangeFragment, FT_CVDefRange, mc:cv_def_range)
+MCFRAGMENT_NODE_REF(MCPseudoProbeAddrFragment, FT_PseudoProbe, mc:presudo_pro)
+
+#undef MCFRAGMENT_NODE_REF
+#endif /* MCFRAGMENT_NODE_REF */

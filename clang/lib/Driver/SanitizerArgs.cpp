@@ -559,6 +559,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   Kinds |= Default;
 
+  if (TC.getTriple().isOSDarwin() && !TC.getTriple().isX86())
+    Kinds &= ~SanitizerKind::Function;
+
   // We disable the vptr sanitizer if it was enabled by group expansion but RTTI
   // is disabled.
   if ((Kinds & SanitizerKind::Vptr) && (RTTIMode == ToolChain::RM_Disabled)) {
@@ -965,7 +968,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     AsanUseOdrIndicator =
         Args.hasFlag(options::OPT_fsanitize_address_use_odr_indicator,
                      options::OPT_fno_sanitize_address_use_odr_indicator,
-                     !TC.getTriple().isOSWindows());
+                     !TC.getTriple().isOSWindows() && !TC.getTriple().isOSDarwin());
 
     if (AllAddedKinds & SanitizerKind::PointerCompare & ~AllRemove) {
       AsanInvalidPointerCmp = true;

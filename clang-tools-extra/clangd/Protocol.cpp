@@ -298,6 +298,7 @@ SymbolKind adjustKindToCapability(SymbolKind Kind,
 SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
   switch (Kind) {
   case index::SymbolKind::Unknown:
+  case index::SymbolKind::CommentTag:
     return SymbolKind::Variable;
   case index::SymbolKind::Module:
     return SymbolKind::Module;
@@ -1202,6 +1203,15 @@ llvm::json::Value toJSON(const PrepareRenameResult &PRR) {
       {"range", toJSON(PRR.range)},
       {"placeholder", PRR.placeholder},
   };
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              IndexedRenameParams &IndexedRename, llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("textDocument", IndexedRename.textDocument) &&
+         O.map("oldName", IndexedRename.oldName) &&
+         O.map("newName", IndexedRename.newName) &&
+         O.map("positions", IndexedRename.positions);
 }
 
 llvm::json::Value toJSON(const DocumentHighlight &DH) {

@@ -34,8 +34,10 @@ class BackendConsumer : public ASTConsumer {
   const CodeGenOptions &CodeGenOpts;
   const TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
+  const CASOptions &CASOpts; // MCCAS
   const FileManager &FileMgr;
   std::unique_ptr<raw_pwrite_stream> AsmOutStream;
+  std::unique_ptr<raw_pwrite_stream> CasIDStream;
   ASTContext *Context;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
 
@@ -75,11 +77,16 @@ public:
                   const HeaderSearchOptions &HeaderSearchOpts,
                   const PreprocessorOptions &PPOpts,
                   const CodeGenOptions &CodeGenOpts,
-                  const TargetOptions &TargetOpts, const LangOptions &LangOpts,
-                  const FileManager &FileMgr, const std::string &InFile,
+                  const TargetOptions &TargetOpts,
+                  const LangOptions &LangOpts,
+                  const CASOptions &CASOpts,
+		  const FileManager &FileMgr,
+                  const std::string &InFile,
                   SmallVector<LinkModule, 4> LinkModules,
-                  std::unique_ptr<raw_pwrite_stream> OS, llvm::LLVMContext &C,
-                  CoverageSourceInfo *CoverageInfo = nullptr);
+                  std::unique_ptr<raw_pwrite_stream> OS,
+                  llvm::LLVMContext &C,
+                  CoverageSourceInfo *CoverageInfo = nullptr,
+                  std::unique_ptr<raw_pwrite_stream> CasIDOS = nullptr);
 
   // This constructor is used in installing an empty BackendConsumer
   // to use the clang diagnostic handler for IR input files. It avoids
@@ -89,8 +96,11 @@ public:
                   const HeaderSearchOptions &HeaderSearchOpts,
                   const PreprocessorOptions &PPOpts,
                   const CodeGenOptions &CodeGenOpts,
-                  const TargetOptions &TargetOpts, const LangOptions &LangOpts,
-                  const FileManager &FileMgr, llvm::Module *Module,
+                  const TargetOptions &TargetOpts,
+                  const LangOptions &LangOpts,
+                  const CASOptions &CASOpts,
+                  const FileManager &FileMgr,
+                  llvm::Module *Module,
                   SmallVector<LinkModule, 4> LinkModules, llvm::LLVMContext &C,
                   CoverageSourceInfo *CoverageInfo = nullptr);
 

@@ -40,6 +40,8 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using tooling::SymbolName;
+
 std::optional<std::string> filePath(const SymbolLocation &Loc,
                                     llvm::StringRef HintFilePath) {
   if (!Loc)
@@ -1017,6 +1019,46 @@ bool operator!=(const SymbolRange &LHS, const SymbolRange &RHS) {
 }
 bool operator<(const SymbolRange &LHS, const SymbolRange &RHS) {
   return LHS.range() < RHS.range();
+}
+
+llvm::Expected<FileEdits>
+editsForLocations(const llvm::StringMap<std::vector<Range>> &Ranges,
+                  const SymbolName &OldName, const SymbolName &NewName,
+                  llvm::vfs::FileSystem &FS, const LangOptions &LangOpts) {
+  FileEdits Results;
+  for (auto &FileAndOccurrences : Ranges) {
+    llvm::StringRef FilePath = FileAndOccurrences.first();
+
+    auto ExpBuffer = FS.getBufferForFile(FilePath);
+    if (!ExpBuffer) {
+      elog("Fail to read file content: Fail to open file {0}: {1}", FilePath,
+           ExpBuffer.getError().message());
+      continue;
+    }
+    std::string RenameIdentifier = OldName.getNamePieces()[0];
+    llvm::SmallVector<llvm::StringRef, 8> NewNames(NewName.getNamePieces());
+
+    auto AffectedFileCode = (*ExpBuffer)->getBuffer();
+    auto RenameRanges = adjustRenameRanges(AffectedFileCode, RenameIdentifier,
+                                           std::move(FileAndOccurrences.second),
+                                           LangOpts, std::nullopt);
+    if (!RenameRanges) {
+      // Our heuristics fails to adjust rename ranges to the current state of
+      // the file, it is most likely the index is stale, so we give up the
+      // entire rename.
+      return error("Index results don't match the content of file {0} "
+                   "(the index may be stale)",
+                   FilePath);
+    }
+    auto RenameEdit =
+        buildRenameEdit(FilePath, AffectedFileCode, *RenameRanges, NewNames);
+    if (!RenameEdit)
+      return error("failed to rename in file {0}: {1}", FilePath,
+                   RenameEdit.takeError());
+    if (!RenameEdit->Replacements.empty())
+      Results.insert({FilePath, std::move(*RenameEdit)});
+  }
+  return Results;
 }
 
 llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {

@@ -11,6 +11,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/lldb-public.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
@@ -68,6 +69,10 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
+
+// BEGIN SWIFT
+#include "lldb/Breakpoint/BreakpointPrecondition.h"
+// END SWIFT
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1027,6 +1032,20 @@ SBTarget::BreakpointCreateForException(lldb::LanguageType language,
                                        bool catch_bp, bool throw_bp) {
   LLDB_INSTRUMENT_VA(this, language, catch_bp, throw_bp);
 
+  // BEGIN SWIFT
+  SBStringList no_extra_args;
+  return BreakpointCreateForException(
+      language, catch_bp, throw_bp, no_extra_args);
+  // END SWIFT
+}
+
+// BEGIN SWIFT
+lldb::SBBreakpoint
+SBTarget::BreakpointCreateForException(lldb::LanguageType language,
+                                       bool catch_bp, bool throw_bp,
+                                       SBStringList &extra_args) {
+  LLDB_INSTRUMENT_VA(this, language, catch_bp, throw_bp, extra_args);
+
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1034,10 +1053,27 @@ SBTarget::BreakpointCreateForException(lldb::LanguageType language,
     const bool hardware = false;
     sb_bp = target_sp->CreateExceptionBreakpoint(language, catch_bp, throw_bp,
                                                   hardware);
+    size_t num_extra_args = extra_args.GetSize();
+    if (num_extra_args > 0) {
+      // Have to convert this to Args, and pass it to the precondition:
+      if (num_extra_args % 2 == 0) {
+        Args args;
+        for (size_t i = 0; i < num_extra_args; i += 2) {
+          args.AppendArgument(extra_args.GetStringAtIndex(i));
+          args.AppendArgument(extra_args.GetStringAtIndex(i + 1));
+        }
+        BreakpointSP bkpt = sb_bp.GetSP();
+        BreakpointPreconditionSP pre_condition_sp =
+            bkpt->GetPrecondition();
+        if (pre_condition_sp)
+          pre_condition_sp->ConfigurePrecondition(args);
+      }
+    }
   }
 
   return sb_bp;
 }
+// END SWIFT
 
 lldb::SBBreakpoint SBTarget::BreakpointCreateFromScript(
     const char *class_name, SBStructuredData &extra_args,
@@ -1819,15 +1855,26 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
     if (type_sp)
       return SBType(type_sp);
     // Didn't find the type in the symbols; Try the loaded language runtimes.
+    // BEGIN SWIFT
+    // FIXME: This depends on clang, but should be able to support any
+    // TypeSystem/compiler.
     if (auto process_sp = target_sp->GetProcessSP()) {
       for (auto *runtime : process_sp->GetLanguageRuntimes()) {
         if (auto vendor = runtime->GetDeclVendor()) {
-          auto types = vendor->FindTypes(const_typename, /*max_matches*/ 1);
-          if (!types.empty())
-            return SBType(types.front());
+          std::vector<CompilerDecl> decls;
+          if (vendor->FindDecls(const_typename, /*append*/ true,
+                                /*max_matches*/ 1, decls) > 0) {
+            auto compiler_decl = decls.front();
+            auto *ctx = llvm::dyn_cast<TypeSystemClang>(compiler_decl.GetTypeSystem());
+            if (ctx)
+              if (CompilerType type =
+                      ctx->GetTypeForDecl(compiler_decl.GetOpaqueDecl()))
+                return SBType(type);
+          }
         }
       }
     }
+    // END SWIFT
 
     // No matches, search for basic typename matches.
     for (auto type_system_sp : target_sp->GetScratchTypeSystems())
@@ -1865,16 +1912,27 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
       sb_type_list.Append(SBType(type_sp));
 
     // Try the loaded language runtimes
+    // BEGIN SWIFT
+    // FIXME: This depends on clang, but should be able to support any
+    // TypeSystem/compiler.
     if (auto process_sp = target_sp->GetProcessSP()) {
       for (auto *runtime : process_sp->GetLanguageRuntimes()) {
         if (auto *vendor = runtime->GetDeclVendor()) {
-          auto types =
-              vendor->FindTypes(const_typename, /*max_matches*/ UINT32_MAX);
-          for (auto type : types)
-            sb_type_list.Append(SBType(type));
+          std::vector<CompilerDecl> decls;
+          if (vendor->FindDecls(const_typename, /*append*/ true,
+                                /*max_matches*/ 1, decls) > 0) {
+            for (auto decl : decls) {
+              auto *ctx = llvm::dyn_cast<TypeSystemClang>(decl.GetTypeSystem());
+              if (ctx)
+                if (CompilerType type =
+                        ctx->GetTypeForDecl(decl.GetOpaqueDecl()))
+                  sb_type_list.Append(SBType(type));
+            }
+          }
         }
       }
     }
+    // END SWIFT
 
     if (sb_type_list.GetSize() == 0) {
       // No matches, search for basic typename matches

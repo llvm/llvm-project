@@ -2475,7 +2475,7 @@ def Rotl : MSLangBuiltin {
 def Lrotl : MSLangBuiltin {
   let Spellings = ["_lrotl"];
   let Attributes = [NoThrow, Constexpr];
-  let Prototype = "unsigned long int(unsigned long int, int)";
+  let Prototype = "msuint32_t(msuint32_t, int)";
 }
 
 def Rotl64 : MSLangBuiltin {
@@ -2505,7 +2505,7 @@ def Rotr : MSLangBuiltin {
 def Lrotr : MSLangBuiltin {
   let Spellings = ["_lrotr"];
   let Attributes = [NoThrow, Constexpr];
-  let Prototype = "unsigned long int(unsigned long int, int)";
+  let Prototype = "msuint32_t(msuint32_t, int)";
 }
 
 def Rotr64 : MSLangBuiltin {
@@ -4322,6 +4322,55 @@ def CoroSuspend : CoroLangBuiltin {
   let Spellings = ["__builtin_coro_suspend"];
   let Attributes = [NoThrow];
   let Prototype = "char(_Constant bool)";
+}
+
+// Pointer authentication builtins.
+def PtrauthStrip : Builtin {
+  let Spellings = ["__builtin_ptrauth_strip"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "void*(void*,int)";
+}
+
+def PtrauthBlendDiscriminator : Builtin {
+  let Spellings = ["__builtin_ptrauth_blend_discriminator"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "size_t(void*,int)";
+}
+
+def PtrauthSignUnauthenticated : Builtin {
+  let Spellings = ["__builtin_ptrauth_sign_unauthenticated"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "void*(void*,int,void*)";
+}
+
+def PtrauthSignConstant : Builtin {
+  let Spellings = ["__builtin_ptrauth_sign_constant"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const, Constexpr];
+  let Prototype = "void*(void*,int,void*)";
+}
+
+def PtrauthSignGenericData : Builtin {
+  let Spellings = ["__builtin_ptrauth_sign_generic_data"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "size_t(void*,void*)";
+}
+
+def PtrauthAuthAndResign : Builtin {
+  let Spellings = ["__builtin_ptrauth_auth_and_resign"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*,int,void*,int,void*)";
+}
+
+def PtrauthAuth : Builtin {
+  let Spellings = ["__builtin_ptrauth_auth"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*,int,void*)";
+}
+
+def PtrauthStringDiscriminator : Builtin {
+  let Spellings = ["__builtin_ptrauth_string_discriminator"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "size_t(char const*)";
 }
 
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.

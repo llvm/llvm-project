@@ -52,6 +52,12 @@ enum NodeType : unsigned {
   WrapperLarge, // 4-instruction MOVZ/MOVK sequence for 64-bit addresses.
   CALL,         // Function call.
 
+  // Function call, authenticating the callee value first:
+  // AUTH_CALL chain, callee, auth key #, discriminator, operands.
+  AUTH_CALL,
+  // AUTH_TC_RETURN chain, callee, fpdiff, auth key #, discriminator, operands.
+  AUTH_TC_RETURN,
+
   // Pseudo for a OBJC call that gets emitted together with a special `mov
   // x29, x29` marker instruction.
   CALL_RVMARKER,
@@ -907,6 +913,10 @@ public:
     return true;
   }
 
+  bool supportPtrAuthBundles() const override {
+    return true;
+  }
+
   bool supportKCFIBundles() const override { return true; }
 
   MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
@@ -1097,6 +1107,12 @@ private:
   SDValue LowerELFTLSDescCallSeq(SDValue SymAddr, const SDLoc &DL,
                                  SelectionDAG &DAG) const;
   SDValue LowerWindowsGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerPtrAuthGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerPtrAuthGlobalAddressViaGOT(SDValue Wrapper,
+                                          AArch64PACKey::ID Key,
+                                          bool HasAddrDiversity,
+                                          GlobalAddressSDNode *PtrBaseGA,
+                                          SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;

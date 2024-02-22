@@ -216,9 +216,13 @@ namespace llvm {
     /// \param SizeInBits  Size of the type.
     /// \param Encoding    DWARF encoding code, e.g., dwarf::DW_ATE_float.
     /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
+    /// \param NumExtraInhabitants The number of extra inhabitants of the type.
+    /// An extra inhabitant is a bit pattern that does not represent a valid
+    /// value for objects of a given type.
     DIBasicType *createBasicType(StringRef Name, uint64_t SizeInBits,
                                  unsigned Encoding,
-                                 DINode::DIFlags Flags = DINode::FlagZero);
+                                 DINode::DIFlags Flags = DINode::FlagZero,
+                                 uint32_t NumExtraInhabitants = 0);
 
     /// Create debugging information entry for a string
     /// type.
@@ -261,6 +265,11 @@ namespace llvm {
                       uint32_t AlignInBits = 0,
                       std::optional<unsigned> DWARFAddressSpace = std::nullopt,
                       StringRef Name = "", DINodeArray Annotations = nullptr);
+
+    /// Create a __ptrauth qualifier.
+    DIDerivedType *createPtrAuthQualifiedType(DIType *FromTy, unsigned Key,
+                                              bool IsAddressDiscriminated,
+                                              unsigned ExtraDiscriminator);
 
     /// Create debugging information entry for a pointer to member.
     /// \param PointeeTy Type pointed to by this pointer.
@@ -450,11 +459,18 @@ namespace llvm {
     /// \param Elements     Struct elements.
     /// \param RunTimeLang  Optional parameter, Objective-C runtime version.
     /// \param UniqueIdentifier A unique identifier for the struct.
+    /// \param SpecificationOf The type that this type completes (is a
+    /// specification of). For example, this could be a templated type whose
+    /// template parameters have been substituted in.
+    /// \param NumExtraInhabitants The number of extra inhabitants of the type.
+    /// An extra inhabitant is a bit pattern that does not represent a valid
+    /// value for objects of a given type.
     DICompositeType *createStructType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
         DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang = 0,
-        DIType *VTableHolder = nullptr, StringRef UniqueIdentifier = "");
+        DIType *VTableHolder = nullptr, StringRef UniqueIdentifier = "",
+        DIType *SpecificationOf = nullptr, uint32_t NumExtraInhabitants = 0);
 
     /// Create debugging information entry for an union.
     /// \param Scope        Scope in which this union is defined.
@@ -488,13 +504,17 @@ namespace llvm {
     /// \param Discriminator Discriminant member
     /// \param Elements     Variant elements.
     /// \param UniqueIdentifier A unique identifier for the union.
-    DICompositeType *createVariantPart(DIScope *Scope, StringRef Name,
-				       DIFile *File, unsigned LineNumber,
-				       uint64_t SizeInBits, uint32_t AlignInBits,
-				       DINode::DIFlags Flags,
-				       DIDerivedType *Discriminator,
-				       DINodeArray Elements,
-				       StringRef UniqueIdentifier = "");
+    /// \param OffsetInBits The offset of the variant payload in the variant
+    /// type.
+    /// \param SpareBitMask A mask of spare bits of the payload, spare bits are
+    /// bits that aren't used in any of the variant's cases.
+    DICompositeType *
+    createVariantPart(DIScope *Scope, StringRef Name, DIFile *File,
+                      unsigned LineNumber, uint64_t SizeInBits,
+                      uint32_t AlignInBits, DINode::DIFlags Flags,
+                      DIDerivedType *Discriminator, DINodeArray Elements,
+                      StringRef UniqueIdentifier = "",
+                      uint64_t OffsetInBits = 0, APInt SpareBitsMask = APInt());
 
     /// Create debugging information for template
     /// type parameter.

@@ -24,7 +24,7 @@ class TestVLA(TestBase):
         for value in all_locals:
             self.assertNotIn("vla_expr", value.name)
 
-    @decorators.skipIf(compiler="clang", compiler_version=["<", "8.0"])
+    @skipIf(compiler="clang", compiler_version=["<", "8.0"])
     def test_vla(self):
         self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(

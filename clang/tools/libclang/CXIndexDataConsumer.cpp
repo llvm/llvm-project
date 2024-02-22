@@ -1234,6 +1234,7 @@ static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K, SymbolLanguage 
   case SymbolKind::Macro:
   case SymbolKind::ClassProperty:
   case SymbolKind::Using:
+  case SymbolKind::CommentTag:
   case SymbolKind::TemplateTypeParm:
   case SymbolKind::TemplateTemplateParm:
   case SymbolKind::NonTypeTemplateParm:

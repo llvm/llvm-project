@@ -363,6 +363,8 @@ public:
 
   bool tryIndexedLoad(SDNode *N);
 
+  bool tryAuthLoad(SDNode *N);
+
   bool trySelectStackSlotTagP(SDNode *N);
   void SelectTagP(SDNode *N);
 
@@ -1557,6 +1559,133 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
   ReplaceUses(SDValue(N, 0), LoadedVal);
   ReplaceUses(SDValue(N, 1), SDValue(Res, 0));
   ReplaceUses(SDValue(N, 2), SDValue(Res, 2));
+  CurDAG->RemoveDeadNode(N);
+  return true;
+}
+
+bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
+  LoadSDNode *LD = cast<LoadSDNode>(N);
+  EVT VT = LD->getMemoryVT();
+  if (VT != MVT::i64)
+    return false;
+
+  assert(LD->getExtensionType() == ISD::NON_EXTLOAD && "invalid 64bit extload");
+
+  ISD::MemIndexedMode AM = LD->getAddressingMode();
+  bool isPre = AM == ISD::PRE_INC;
+  if (!isPre && AM != ISD::UNINDEXED)
+    return false;
+
+  SDValue Chain = LD->getChain();
+  SDValue Ptr = LD->getBasePtr();
+
+  SDValue Base = Ptr;
+
+  int64_t OffsetVal = 0;
+  if (isPre) {
+    OffsetVal = cast<ConstantSDNode>(LD->getOffset())->getSExtValue();
+  } else if (CurDAG->isBaseWithConstantOffset(Base)) {
+    // We support both 'base' and 'base + constant offset' modes.
+    ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(Base.getOperand(1));
+    if (!RHS)
+      return false;
+    OffsetVal = RHS->getSExtValue();
+    Base = Base.getOperand(0);
+  }
+
+  if (!isShiftedInt<10, 3>(OffsetVal))
+    return false;
+
+  // The base must be of the form:
+  //   (int_ptrauth_auth <signedbase>, da/db, 0)
+  if (Base.getOpcode() != ISD::INTRINSIC_WO_CHAIN)
+    return false;
+
+  unsigned IntID = cast<ConstantSDNode>(Base.getOperand(0))->getZExtValue();
+  if (IntID != Intrinsic::ptrauth_auth)
+    return false;
+  unsigned IntKey = cast<ConstantSDNode>(Base.getOperand(2))->getZExtValue();
+  if (!isNullConstant(Base.getOperand(3)))
+    return false;
+
+  // If the pointer is an address computation based on an intermediate auth
+  // that's used more than once, it's not worth folding the auth, as we can't
+  // writeback just the auth result (without the address computation).
+  //
+  // FIXME: we can turn it into an unchecked auth though.
+  if (OffsetVal && !Base.hasOneUse())
+    return false;
+
+  Base = Base.getOperand(1);
+
+  // If this is an indexed pre-inc load, we obviously need the writeback form.
+  bool needsWriteback = isPre;
+  // If not, but the base authenticated pointer has any other use, it's
+  // beneficial to use the writeback form, to "writeback" the auth, even if
+  // there is no base+offset addition.
+  if (!Ptr.hasOneUse()) {
+    needsWriteback = true;
+
+    // However, we can only do that if we don't introduce cycles between the
+    // load node and any other user of the pointer computation nodes.  That can
+    // happen if the load node uses any of said other users.
+    // In other words: we can only do this transformation if none of the other
+    // uses of the pointer computation to be folded are predecessors of the load
+    // we're folding into.
+    //
+    // Visited is a cache containing nodes that are known predecessors of N.
+    // Worklist is the set of nodes we're looking for predecessors of.
+    // For the first lookup, that only contains the load node N.  Each call to
+    // hasPredecessorHelper adds any of the potential predecessors of N to the
+    // Worklist.
+    SmallPtrSet<const SDNode *, 32> Visited;
+    SmallVector<const SDNode *, 16> Worklist;
+    Worklist.push_back(N);
+    for (SDNode *U : Ptr.getNode()->uses())
+      if (SDNode::hasPredecessorHelper(U, Visited, Worklist, /*Max=*/32,
+                                       /*TopologicalPrune=*/true))
+        return false;
+  }
+
+  unsigned Opc = 0;
+  switch (IntKey) {
+  case AArch64PACKey::DA:
+    Opc = needsWriteback ? AArch64::LDRAAwriteback : AArch64::LDRAAindexed;
+    break;
+  case AArch64PACKey::DB:
+    Opc = needsWriteback ? AArch64::LDRABwriteback : AArch64::LDRABindexed;
+    break;
+  default:
+    return false;
+  }
+
+  SDLoc DL(N);
+  // The offset is encoded as scaled, for an element size of 8 bytes.
+  SDValue Offset = CurDAG->getTargetConstant(OffsetVal / 8, DL, MVT::i64);
+  SDValue Ops[] = { Base, Offset, Chain };
+  SDNode *Res = needsWriteback ?
+    CurDAG->getMachineNode(Opc, DL, MVT::i64, MVT::i64, MVT::Other, Ops) :
+    CurDAG->getMachineNode(Opc, DL, MVT::i64, MVT::Other, Ops);
+
+  if (isPre) {
+    // If the original load was pre-inc, the resulting LDRA is writeback.
+    assert(needsWriteback && "preinc loads can't be selected into non-wb ldra");
+    ReplaceUses(SDValue(N, 1), SDValue(Res, 0)); // writeback
+    ReplaceUses(SDValue(N, 0), SDValue(Res, 1)); // loaded value
+    ReplaceUses(SDValue(N, 2), SDValue(Res, 2)); // chain
+  } else if (needsWriteback) {
+    // If the original load was unindexed, but we emitted a writeback form,
+    // we need to replace the uses of the original auth(signedbase)[+offset]
+    // computation.
+    ReplaceUses(Ptr,           SDValue(Res, 0)); // writeback
+    ReplaceUses(SDValue(N, 0), SDValue(Res, 1)); // loaded value
+    ReplaceUses(SDValue(N, 1), SDValue(Res, 2)); // chain
+  } else {
+    // Otherwise, we selected a simple load to a simple non-wb ldra.
+    assert(Ptr.hasOneUse() && "reused auth ptr should be folded into ldra");
+    ReplaceUses(SDValue(N, 0), SDValue(Res, 0)); // loaded value
+    ReplaceUses(SDValue(N, 1), SDValue(Res, 1)); // chain
+  }
   CurDAG->RemoveDeadNode(N);
   return true;
 }
@@ -4389,8 +4518,8 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     break;
 
   case ISD::LOAD: {
-    // Try to select as an indexed load. Fall through to normal processing
-    // if we can't.
+    if (tryAuthLoad(Node))
+      return;
     if (tryIndexedLoad(Node))
       return;
     break;
@@ -5263,6 +5392,67 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                                            : AArch64::TBXv16i8Four,
                   true);
       return;
+    case Intrinsic::ptrauth_resign: {
+      SDLoc DL(Node);
+      // IntrinsicID is operand #0
+      SDValue Val = Node->getOperand(1);
+      SDValue AUTKey = Node->getOperand(2);
+      SDValue AUTDisc = Node->getOperand(3);
+      SDValue PACKey = Node->getOperand(4);
+      SDValue PACDisc = Node->getOperand(5);
+
+      unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
+      unsigned PACKeyC = cast<ConstantSDNode>(PACKey)->getZExtValue();
+
+      AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
+      PACKey = CurDAG->getTargetConstant(PACKeyC, DL, MVT::i64);
+
+      SDValue ImpDef = SDValue(
+        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i64), 0);
+      SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
+                                             AArch64::X16, Val, SDValue());
+      SDValue X17Copy =
+        CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL, AArch64::X17,
+                             ImpDef, X16Copy.getValue(1));
+
+      SDValue Ops[] = {AUTKey, AUTDisc, PACKey, PACDisc, X17Copy.getValue(1)};
+      SDVTList VTs = CurDAG->getVTList(MVT::Other, MVT::Glue);
+      SDNode *N = CurDAG->getMachineNode(AArch64::AUTPAC, DL, VTs, Ops);
+      N = CurDAG->getCopyFromReg(SDValue(N, 0), DL, AArch64::X16, MVT::i64,
+                                 SDValue(N, 1)).getNode();
+      ReplaceNode(Node, N);
+      return;
+    }
+
+
+    case Intrinsic::ptrauth_auth: {
+      SDLoc DL(Node);
+      // IntrinsicID is operand #0
+      SDValue Val = Node->getOperand(1);
+      SDValue AUTKey = Node->getOperand(2);
+      SDValue AUTDisc = Node->getOperand(3);
+
+      unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
+      AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
+
+      SDValue ImpDef = SDValue(
+        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i64), 0);
+      SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
+                                             AArch64::X16, Val, SDValue());
+      SDValue X17Copy =
+        CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL, AArch64::X17,
+                             ImpDef, X16Copy.getValue(1));
+
+      SDValue Ops[] = {AUTKey, AUTDisc, X17Copy.getValue(1)};
+
+      SDVTList VTs = CurDAG->getVTList(MVT::Other, MVT::Glue);
+      SDNode *N = CurDAG->getMachineNode(AArch64::AUT, DL, VTs, Ops);
+      N = CurDAG->getCopyFromReg(SDValue(N, 0), DL, AArch64::X16, MVT::i64,
+                                 SDValue(N, 1)).getNode();
+      ReplaceNode(Node, N);
+      return;
+    }
+
     case Intrinsic::aarch64_sve_srshl_single_x2:
       if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
               Node->getValueType(0),

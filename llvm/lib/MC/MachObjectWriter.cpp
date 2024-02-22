@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -135,7 +136,9 @@ uint64_t MachObjectWriter::getPaddingSize(const MCSection *Sec,
 void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
                                    unsigned NumLoadCommands,
                                    unsigned LoadCommandsSize,
-                                   bool SubsectionsViaSymbols) {
+                                   bool SubsectionsViaSymbols,
+                                   std::optional<unsigned> PtrAuthABIVersion,
+                                   bool PtrAuthKernelABIVersion) {
   uint32_t Flags = 0;
 
   if (SubsectionsViaSymbols)
@@ -150,7 +153,22 @@ void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
   W.write<uint32_t>(is64Bit() ? MachO::MH_MAGIC_64 : MachO::MH_MAGIC);
 
   W.write<uint32_t>(TargetObjectWriter->getCPUType());
-  W.write<uint32_t>(TargetObjectWriter->getCPUSubtype());
+
+  uint32_t Cpusubtype = TargetObjectWriter->getCPUSubtype();
+  if (PtrAuthABIVersion) {
+    assert(TargetObjectWriter->getCPUType() == MachO::CPU_TYPE_ARM64 &&
+           Cpusubtype == MachO::CPU_SUBTYPE_ARM64E &&
+           "ptrauth ABI version is only supported on arm64e");
+    // Changes to this format should be reflected in MachO::getCPUSubType to
+    // support LTO.
+    // FIXME: Use MachO::getCPUSubType here. We can't use it for now because at
+    // the time we create TargetObjectWriter, we don't know if the assembler
+    // encountered any directives that affect the result.
+    Cpusubtype = MachO::CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(
+        *PtrAuthABIVersion, PtrAuthKernelABIVersion);
+  }
+
+  W.write<uint32_t>(Cpusubtype);
 
   W.write<uint32_t>(Type);
   W.write<uint32_t>(NumLoadCommands);
@@ -754,12 +772,11 @@ void MachObjectWriter::populateAddrSigSection(MCAssembler &Asm) {
   }
 }
 
-uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
-                                       const MCAsmLayout &Layout) {
-  uint64_t StartOffset = W.OS.tell();
-
+// BEGIN MCCAS
+void MachObjectWriter::prepareObject(MCAssembler &Asm,
+                                     const MCAsmLayout &Layout) {
+// END MCCAS
   populateAddrSigSection(Asm);
-
   // Compute symbol table information and bind symbol indices.
   computeSymbolTable(Asm, LocalSymbolData, ExternalSymbolData,
                      UndefinedSymbolData);
@@ -780,7 +797,11 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
       support::endian::write(OS, CGPE.Count, W.Endian);
     }
   }
-
+}
+// BEGIN MCCAS
+void MachObjectWriter::writeMachOHeader(MCAssembler &Asm,
+                                      const MCAsmLayout &Layout) {
+// END MCCAS
   unsigned NumSections = Asm.size();
   const MCAssembler::VersionInfoType &VersionInfo =
     Layout.getAssembler().getVersionInfo();
@@ -820,15 +841,17 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
   }
 
   // Add the loh load command size, if used.
-  uint64_t LOHRawSize = Asm.getLOHContainer().getEmitSize(*this, Layout);
-  uint64_t LOHSize = alignTo(LOHRawSize, is64Bit() ? 8 : 4);
+  // MCCAS: the two variable below became members.
+  LOHRawSize = Asm.getLOHContainer().getEmitSize(*this, Layout);
+  LOHSize = alignTo(LOHRawSize, is64Bit() ? 8 : 4);
   if (LOHSize) {
     ++NumLoadCommands;
     LoadCommandsSize += sizeof(MachO::linkedit_data_command);
   }
 
   // Add the symbol table load command sizes, if used.
-  unsigned NumSymbols = LocalSymbolData.size() + ExternalSymbolData.size() +
+  // MCCAS: the variable below became a member.
+  NumSymbols = LocalSymbolData.size() + ExternalSymbolData.size() +
     UndefinedSymbolData.size();
   if (NumSymbols) {
     NumLoadCommands += 2;
@@ -867,13 +890,24 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
   // The section data is padded to pointer size bytes.
   //
   // FIXME: Is this machine dependent?
-  unsigned SectionDataPadding =
+  // MCCAS: the variable below became a member.
+  SectionDataPadding =
       offsetToAlignment(SectionDataFileSize, is64Bit() ? Align(8) : Align(4));
   SectionDataFileSize += SectionDataPadding;
 
+  // The ptrauth ABI version is limited to 4 bits.
+  std::optional<unsigned> PtrAuthABIVersion = Asm.getPtrAuthABIVersion();
+  if (PtrAuthABIVersion && *PtrAuthABIVersion > 63) {
+    Asm.getContext().reportError(SMLoc(), "invalid ptrauth ABI version: " +
+                                              utostr(*PtrAuthABIVersion));
+    PtrAuthABIVersion = 63;
+  }
+  bool PtrAuthKernelABIVersion = Asm.getPtrAuthKernelABIVersion();
+
   // Write the prolog, starting with the header and load command...
   writeHeader(MachO::MH_OBJECT, NumLoadCommands, LoadCommandsSize,
-              Asm.getSubsectionsViaSymbols());
+              Asm.getSubsectionsViaSymbols(), PtrAuthABIVersion,
+              PtrAuthKernelABIVersion);
   uint32_t Prot =
       MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
   writeSegmentLoadCommand("", NumSections, 0, VMSize, SectionDataStart,
@@ -986,7 +1020,12 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
   // Write the linker options load commands.
   for (const auto &Option : Asm.getLinkerOptions())
     writeLinkerOptionsLoadCommand(Option);
+// BEGIN MCCAS
+}
 
+void MachObjectWriter::writeSectionData(MCAssembler &Asm,
+                                        const MCAsmLayout &Layout) {
+// END MCCAS
   // Write the actual section data.
   for (const MCSection &Sec : Asm) {
     Asm.writeSectionData(W.OS, &Sec, Layout);
@@ -997,7 +1036,12 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
 
   // Write the extra padding.
   W.OS.write_zeros(SectionDataPadding);
+// BEGIN MCCAS
+}
 
+void MachObjectWriter::writeRelocations(MCAssembler &Asm,
+                                        const MCAsmLayout &Layout) {
+// END MCCAS
   // Write the relocation entries.
   for (const MCSection &Sec : Asm) {
     // Write the section relocation entries, in reverse order to match 'as'
@@ -1008,7 +1052,12 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
       W.write<uint32_t>(Rel.MRE.r_word1);
     }
   }
+// BEGIN MCCAS
+}
 
+void MachObjectWriter::writeDataInCodeRegion(MCAssembler &Asm,
+                                             const MCAsmLayout &Layout) {
+// END MCCAS
   // Write out the data-in-code region payload, if there is one.
   for (MCAssembler::const_data_region_iterator
          it = Asm.data_region_begin(), ie = Asm.data_region_end();
@@ -1074,13 +1123,33 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
          {&LocalSymbolData, &ExternalSymbolData, &UndefinedSymbolData})
       for (MachSymbolData &Entry : *SymbolData)
         writeNlist(Entry, Layout);
+// BEGIN MCCAS
+  }
+}
 
+void MachObjectWriter::writeSymbolTable(MCAssembler &Asm,
+                                        const MCAsmLayout &Layout) {
+  if (NumSymbols)
+// END MCCAS
     // Write the string table.
     StringTable.write(W.OS);
-  }
+// BEGIN MCCAS
+}
+
+uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
+                                       const MCAsmLayout &Layout) {
+  uint64_t StartOffset = W.OS.tell();
+
+  prepareObject(Asm, Layout);
+  writeMachOHeader(Asm, Layout);
+  writeSectionData(Asm, Layout);
+  writeRelocations(Asm, Layout);
+  writeDataInCodeRegion(Asm, Layout);
+  writeSymbolTable(Asm, Layout);
 
   return W.OS.tell() - StartOffset;
 }
+// END MCCAS
 
 std::unique_ptr<MCObjectWriter>
 llvm::createMachObjectWriter(std::unique_ptr<MCMachObjectTargetWriter> MOTW,

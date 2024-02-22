@@ -779,6 +779,13 @@ public:
       LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate,
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
 
+  virtual lldb::ThreadPlanSP QueueThreadPlanForStepInRangeNoShouldStop(
+      bool abort_other_plans, const AddressRange &range,
+      const SymbolContext &addr_context, const char *step_in_target,
+      lldb::RunMode stop_other_threads, Status &status,
+      LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate,
+      LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
+
   // Helper function that takes a LineEntry to step, insted of an AddressRange.
   // This may combine multiple LineEntries of the same source line number to
   // step over a longer address range in a single operation.
@@ -925,6 +932,27 @@ public:
                                 bool abort_other_plans, bool stop_other_threads,
                                 Status &status);
 
+  /// Gets the plan used to step through a function with a generic trampoline. A
+  /// generic trampoline is one without a function target, which the thread plan
+  /// will attempt to step through until it finds a place where it makes sense
+  /// to stop at. 
+  /// \param[in] abort_other_plans
+  ///    \b true if we discard the currently queued plans and replace them with
+  ///    this one.
+  ///    Otherwise this plan will go on the end of the plan stack.
+  ///
+  /// \param[in] stop_other_threads
+  ///    \b true if we will stop other threads while we single step this one.
+  ///
+  /// \param[out] status
+  ///     A status with an error if queuing failed.
+  ///
+  /// \return
+  ///     A shared pointer to the newly queued thread plan, or nullptr if the
+  ///     plan could not be queued.
+  virtual lldb::ThreadPlanSP QueueThreadPlanForStepThroughGenericTrampoline(
+      bool abort_other_plans, lldb::RunMode stop_other_threads, Status &status);
+
   /// Gets the plan used to continue from the current PC.
   /// This is a simple plan, mostly useful as a backstop when you are continuing
   /// for some particular purpose.
@@ -990,10 +1018,14 @@ public:
 
   /// Gets the outer-most return value from the completed plans
   ///
+  /// \param[out] is_swift_error_value
+  ///     If non-NULL, will be set to true if this is a Swift error value
+  ///     not a true return.
+  ///
   /// \return
   ///     A ValueObjectSP, either empty if there is no return value,
   ///     or containing the return value.
-  lldb::ValueObjectSP GetReturnValueObject() const;
+  lldb::ValueObjectSP GetReturnValueObject(bool *is_swift_error_value);
 
   /// Gets the outer-most expression variable from the completed plans
   ///

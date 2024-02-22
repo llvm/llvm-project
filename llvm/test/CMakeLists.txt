@@ -23,6 +23,8 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_EXPENSIVE_CHECKS
   LLVM_ENABLE_REVERSE_ITERATION
   LLVM_INCLUDE_DXIL_TESTS
+  LLVM_ENABLE_ONDISK_CAS
+  LLVM_CAS_ENABLE_REMOTE_CACHE
   LLVM_TOOL_LLVM_DRIVER_BUILD
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   )
@@ -56,6 +58,7 @@ configure_lit_site_cfg(
 # NOTE: Sync the substitutions in test/lit.cfg when adding to this list.
 set(LLVM_TEST_DEPENDS
           BugpointPasses
+          CASPluginTest
           FileCheck
           LLVMHello
           LLVMWindowsDriver
@@ -71,6 +74,9 @@ set(LLVM_TEST_DEPENDS
           llvm-bcanalyzer
           llvm-bitcode-strip
           llvm-c-test
+          llvm-cas
+          llvm-cas-object-format
+          llvm-cas-dump
           llvm-cat
           llvm-cfi-verify
           llvm-config
@@ -165,6 +171,10 @@ endif()
 
 if(TARGET LTO)
   set(LLVM_TEST_DEPENDS ${LLVM_TEST_DEPENDS} LTO)
+endif()
+
+if(TARGET llvm-remote-cache-test)
+  set(LLVM_TEST_DEPENDS ${LLVM_TEST_DEPENDS} llvm-remote-cache-test)
 endif()
 
 if(LLVM_BUILD_EXAMPLES)

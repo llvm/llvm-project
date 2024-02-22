@@ -31,6 +31,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 #include "llvm/Support/Chrono.h"
 
 #include <atomic>
@@ -815,6 +816,14 @@ public:
   ReportWarningUnsupportedLanguage(lldb::LanguageType language,
                                    std::optional<lldb::user_id_t> debugger_id);
 
+#ifdef LLDB_ENABLE_SWIFT
+  void
+  ReportWarningToolchainMismatch(CompileUnit &comp_unit,
+                                 std::optional<lldb::user_id_t> debugger_id);
+
+  bool IsSwiftCxxInteropEnabled();
+#endif
+
   // Return true if the file backing this module has changed since the module
   // was originally created  since we saved the initial file modification time
   // when the module first gets created.
@@ -864,6 +873,14 @@ public:
   ///     \a path was successfully located.
   std::optional<std::string> RemapSourceFile(llvm::StringRef path) const;
   bool RemapSourceFile(const char *, std::string &) const = delete;
+
+  void ClearModuleDependentCaches();
+
+  void SetTypeSystemMap(const TypeSystemMap &type_system_map) {
+    m_type_system_map = type_system_map;
+  }
+
+  std::vector<lldb::DataBufferSP> GetASTData(lldb::LanguageType language);
 
   /// Update the ArchSpec to a more specific variant.
   bool MergeArchitecture(const ArchSpec &arch_spec);
@@ -1059,6 +1076,9 @@ protected:
 
   std::once_flag m_optimization_warning;
   std::once_flag m_language_warning;
+#ifdef LLDB_ENABLE_SWIFT
+  std::once_flag m_toolchain_mismatch_warning;
+#endif
 
   void SymbolIndicesToSymbolContextList(Symtab *symtab,
                                         std::vector<uint32_t> &symbol_indexes,
@@ -1086,6 +1106,9 @@ private:
   void ReportWarning(const llvm::formatv_object_base &payload);
   void ReportError(const llvm::formatv_object_base &payload);
   void ReportErrorIfModifyDetected(const llvm::formatv_object_base &payload);
+#ifdef LLDB_ENABLE_SWIFT
+  LazyBool m_is_swift_cxx_interop_enabled = eLazyBoolCalculate;
+#endif
 };
 
 } // namespace lldb_private

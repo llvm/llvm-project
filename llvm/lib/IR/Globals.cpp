@@ -98,6 +98,11 @@ void GlobalValue::eraseFromParent() {
 GlobalObject::~GlobalObject() { setComdat(nullptr); }
 
 bool GlobalValue::isInterposable() const {
+  // Be conservative with llvm.ptrauth wrappers.
+  // FIXME: this is gross but necessary with our current representation.
+  if (isa<GlobalVariable>(this) &&
+      getSection() == "llvm.ptrauth")
+    return true;
   if (isInterposableLinkage(getLinkage()))
     return true;
   return getParent() && getParent()->getSemanticInterposition() &&
@@ -139,6 +144,15 @@ void GlobalObject::copyAttributesFrom(const GlobalObject *Src) {
   GlobalValue::copyAttributesFrom(Src);
   setAlignment(Src->getAlign());
   setSection(Src->getSection());
+}
+
+bool GlobalValue::hasExternalWeakLinkage() const {
+  // Be conservative with llvm.ptrauth wrappers.
+  // FIXME: this is gross but necessary with our current representation.
+  if (isa<GlobalVariable>(this) &&
+      getSection() == "llvm.ptrauth")
+    return true;
+  return isExternalWeakLinkage(getLinkage());
 }
 
 std::string GlobalValue::getGlobalIdentifier(StringRef Name,

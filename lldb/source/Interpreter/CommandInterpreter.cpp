@@ -23,6 +23,7 @@
 #include "Commands/CommandObjectFrame.h"
 #include "Commands/CommandObjectGUI.h"
 #include "Commands/CommandObjectHelp.h"
+#include "Commands/CommandObjectHealthcheck.h"
 #include "Commands/CommandObjectLanguage.h"
 #include "Commands/CommandObjectLog.h"
 #include "Commands/CommandObjectMemory.h"
@@ -445,6 +446,12 @@ void CommandInterpreter::Initialize() {
           "objects in memory, and will call po on them.");
       poarray_alias->SetHelpLong("");
     }
+
+#ifdef LLDB_ENABLE_SWIFT
+    // FIXME: Upstream the REPL command together with support for a default
+    // language, similar to what exists for scripting.
+    AddAlias("repl", cmd_obj_sp, "--repl --language swift -- ");
+#endif
   }
 
   cmd_obj_sp = GetCommandSPExact("platform shell");
@@ -548,6 +555,9 @@ void CommandInterpreter::LoadCommandDictionary() {
   REGISTER_COMMAND_OBJECT("frame", CommandObjectMultiwordFrame);
   REGISTER_COMMAND_OBJECT("gui", CommandObjectGUI);
   REGISTER_COMMAND_OBJECT("help", CommandObjectHelp);
+#ifdef LLDB_ENABLE_SWIFT
+  REGISTER_COMMAND_OBJECT("swift-healthcheck", CommandObjectHealthcheck);
+#endif
   REGISTER_COMMAND_OBJECT("log", CommandObjectLog);
   REGISTER_COMMAND_OBJECT("memory", CommandObjectMemory);
   REGISTER_COMMAND_OBJECT("platform", CommandObjectPlatform);
@@ -866,6 +876,8 @@ void CommandInterpreter::LoadCommandDictionary() {
         list_regex_cmd_up->AddRegexCommand(
             "^-([[:digit:]]+)[[:space:]]*$",
             "source list --reverse --count %1") &&
+        list_regex_cmd_up->AddRegexCommand("^([^.]+\\.[^.[:space:]]+)[[:space:]]*$",
+                                           "source list --file \"%1\"") &&
         list_regex_cmd_up->AddRegexCommand("^(.+)$",
                                            "source list --name \"%1\"") &&
         list_regex_cmd_up->AddRegexCommand("^$", "source list")) {

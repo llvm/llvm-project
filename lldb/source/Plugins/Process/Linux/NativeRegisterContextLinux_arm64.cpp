@@ -529,7 +529,6 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
           if (m_sve_header_is_valid && vg_value == GetSVERegVG())
             return error;
         }
-
         return Status("SVE vector length update failed.");
       }
 

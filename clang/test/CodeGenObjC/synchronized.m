@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple i686-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -o - %s -O2 | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple i686-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -o - %s -O2 -fno-split-cold-code | FileCheck %s
 
 @interface MyClass
 {

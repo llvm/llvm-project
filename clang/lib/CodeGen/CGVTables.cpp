@@ -814,11 +814,17 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
 
       nextVTableThunkIndex++;
       fnPtr = maybeEmitThunk(GD, thunkInfo, /*ForVTable=*/true);
+      if (CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers) {
+        assert(thunkInfo.Method &&  "Method not set");
+        GD = GD.getWithDecl(thunkInfo.Method);
+      }
 
     // Otherwise we can use the method definition directly.
     } else {
       llvm::Type *fnTy = CGM.getTypes().GetFunctionTypeForVTable(GD);
       fnPtr = CGM.GetAddrOfFunction(GD, fnTy, /*ForVTable=*/true);
+      if (CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers)
+        GD = getItaniumVTableContext().findOriginalMethod(GD);
     }
 
     if (useRelativeLayout()) {
@@ -836,6 +842,9 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       if (FnAS != GVAS)
         fnPtr =
             llvm::ConstantExpr::getAddrSpaceCast(fnPtr, CGM.GlobalsInt8PtrTy);
+      if (auto &schema =
+          CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers)
+        return builder.addSignedPointer(fnPtr, schema, GD, QualType());
       return builder.add(fnPtr);
     }
   }

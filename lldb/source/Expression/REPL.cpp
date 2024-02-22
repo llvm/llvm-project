@@ -324,9 +324,22 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       expr_options.SetUseDynamic(m_varobj_options.use_dynamic);
       expr_options.SetGenerateDebugInfo(true);
       expr_options.SetREPLEnabled(true);
+      expr_options.SetTrapExceptions(false);
       expr_options.SetColorizeErrors(colorize_err);
       expr_options.SetPoundLine(m_repl_source_path.c_str(),
                                 m_code.GetSize() + 1);
+
+      // There is no point in trying to run REPL expressions on just the
+      // current thread of the program, since the REPL tracks the states of
+      // individual threads as you would in a regular debugging session.
+      // Interrupting the process to switch from one thread to many has
+      // observable effects (for instance it causes anything waiting in the
+      // kernel to be interrupted). Since we aren't getting any benefit from
+      // doing this in the REPL, let's not.
+      expr_options.SetStopOthers(false);
+
+      // Don't time out REPL expressions.
+      expr_options.SetTimeout(std::nullopt);
 
       expr_options.SetLanguage(GetLanguage());
 
@@ -335,6 +348,13 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       if (!persistent_state)
         return;
 
+      if (!persistent_state)
+      {
+        error_sp->PutCString("error getting the expression "
+                             "context for the REPL.\n");
+        io_handler.SetIsDone(true);
+        return;
+      }
       const size_t var_count_before = persistent_state->GetSize();
 
       const char *expr_prefix = nullptr;
@@ -520,7 +540,7 @@ void REPL::IOHandlerComplete(IOHandler &io_handler,
   // Strip spaces from the line and see if we had only spaces
   if (request.GetRawLine().trim().empty()) {
     // Only spaces on this line, so just indent
-    request.AddCompletion(m_indent_str);
+    request.AddCompletion(m_indent_str, "", CompletionMode::Partial);
     return;
   }
 

@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCMachOCASWriter.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -20,6 +22,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 using namespace llvm;
 
@@ -60,6 +63,30 @@ MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
     llvm_unreachable("unexpected object format");
   }
 }
+
+// BEGIN MCCAS
+std::unique_ptr<MCObjectWriter> MCAsmBackend::createCASObjectWriter(
+    raw_pwrite_stream &OS, const Triple &TT, cas::ObjectStore &CAS,
+    const MCTargetOptions &MCOpts, CASBackendMode Mode,
+    std::function<const cas::ObjectProxy(
+        llvm::MachOCASWriter &, llvm::MCAssembler &, const llvm::MCAsmLayout &,
+        cas::ObjectStore &, raw_ostream *)>
+        CreateFromMcAssembler,
+    std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
+        SerializeObjectFile,
+    raw_pwrite_stream *CasIDOS) const {
+  auto TW = createObjectTargetWriter();
+  switch (TW->getFormat()) {
+  case Triple::MachO:
+    return createMachOCASWriter(cast<MCMachObjectTargetWriter>(std::move(TW)),
+                                TT, CAS, Mode, OS, Endian == endianness::little,
+                                CreateFromMcAssembler, SerializeObjectFile,
+                                MCOpts.ResultCallBack, CasIDOS);
+  default:
+    llvm_unreachable("unexpected object format");
+  }
+}
+// END MCCAS
 
 std::unique_ptr<MCObjectWriter>
 MCAsmBackend::createDwoObjectWriter(raw_pwrite_stream &OS,

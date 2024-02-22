@@ -790,6 +790,8 @@ static StringRef ModuleKindName(Module::ModuleKind MK) {
   switch (MK) {
   case Module::ModuleMapModule:
     return "Module Map Module";
+  case Module::IncludeTreeModuleMap:
+    return "Include Tree Module";
   case Module::ModuleInterfaceUnit:
     return "Interface Unit";
   case Module::ModuleImplementationUnit:
@@ -1167,6 +1169,7 @@ void GetDependenciesByModuleNameAction::ExecuteAction() {
   Preprocessor &PP = CI.getPreprocessor();
   SourceManager &SM = PP.getSourceManager();
   FileID MainFileID = SM.getMainFileID();
+  PP.EnterSourceFile(MainFileID, nullptr, SourceLocation());
   SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
   IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);

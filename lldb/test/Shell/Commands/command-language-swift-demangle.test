@@ -1,0 +1,5 @@
+# RUN: %lldb -s %s 2>&1 | FileCheck %s
+language swift demangle $s6Module3oneSiyF
+language swift demangle s6Module3twoyyF
+# CHECK: Module.one() -> Swift.Int
+# CHECK: Module.two() -> ()

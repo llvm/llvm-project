@@ -76,6 +76,24 @@ class ModuleListProperties : public Properties {
 public:
   ModuleListProperties();
 
+  // BEGIN SWIFT
+  bool GetUseSwiftClangImporter() const;
+  bool GetUseSwiftDWARFImporter() const;
+  bool SetUseSwiftDWARFImporter(bool new_value);
+  bool GetUseSwiftTypeRefTypeSystem() const;
+  bool SetUseSwiftTypeRefTypeSystem(bool new_value);
+  bool GetSwiftValidateTypeSystem() const;
+  SwiftModuleLoadingMode GetSwiftModuleLoadingMode() const;
+  bool SetSwiftModuleLoadingMode(SwiftModuleLoadingMode);
+
+  bool GetUseSwiftPreciseCompilerInvocation() const;
+  bool GetEnableSwiftMetadataCache() const;
+  uint64_t GetSwiftMetadataCacheMaxByteSize();
+  uint64_t GetSwiftMetadataCacheExpirationDays();
+  FileSpec GetSwiftMetadataCachePath() const;
+  bool SetSwiftMetadataCachePath(const FileSpec &path);
+  // END SWIFT
+
   FileSpec GetClangModulesCachePath() const;
   bool SetClangModulesCachePath(const FileSpec &path);
   bool GetEnableExternalLookup() const;
@@ -489,6 +507,8 @@ public:
   /// This function is thread-safe.
   void ForEach(std::function<bool(const lldb::ModuleSP &module_sp)> const
                    &callback) const;
+
+  void ClearModuleDependentCaches();
 
   /// Returns true if 'callback' returns true for one of the modules
   /// in this ModuleList.

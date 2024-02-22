@@ -4423,6 +4423,10 @@ struct MDAPSIntField : public MDFieldImpl<APSInt> {
   MDAPSIntField() : ImplTy(APSInt()) {}
 };
 
+struct MDAPIntField : public MDFieldImpl<APInt> {
+  MDAPIntField() : ImplTy(APInt()) {}
+};
+
 struct MDSignedField : public MDFieldImpl<int64_t> {
   int64_t Min = INT64_MIN;
   int64_t Max = INT64_MAX;
@@ -5095,12 +5099,14 @@ bool LLParser::parseDIBasicType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
+  OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));           \
   OPTIONAL(flags, DIFlagField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
   Result = GET_OR_DISTINCT(DIBasicType, (Context, tag.Val, name.Val, size.Val,
-                                         align.Val, encoding.Val, flags.Val));
+                                         align.Val, encoding.Val,
+                                         num_extra_inhabitants.Val, flags.Val));
   return false;
 }
 
@@ -5130,7 +5136,9 @@ bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
 ///   ::= !DIDerivedType(tag: DW_TAG_pointer_type, name: "int", file: !0,
 ///                      line: 7, scope: !1, baseType: !2, size: 32,
 ///                      align: 32, offset: 0, flags: 0, extraData: !3,
-///                      dwarfAddressSpace: 3)
+///                      dwarfAddressSpace: 3, ptrAuthKey: 1,
+///                      ptrAuthIsAddressDiscriminated: true,
+///                      ptrAuthExtraDiscriminator: 0x1234)
 bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(tag, DwarfTagField, );                                              \
@@ -5145,19 +5153,27 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(extraData, MDField, );                                              \
   OPTIONAL(dwarfAddressSpace, MDUnsignedField, (UINT32_MAX, UINT32_MAX));      \
-  OPTIONAL(annotations, MDField, );
+  OPTIONAL(annotations, MDField, );                                            \
+  OPTIONAL(ptrAuthKey, MDUnsignedField, (0, 7));                               \
+  OPTIONAL(ptrAuthIsAddressDiscriminated, MDBoolField, );                      \
+  OPTIONAL(ptrAuthExtraDiscriminator, MDUnsignedField, (0, 0xffff));
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
   std::optional<unsigned> DWARFAddressSpace;
   if (dwarfAddressSpace.Val != UINT32_MAX)
     DWARFAddressSpace = dwarfAddressSpace.Val;
+  std::optional<DIDerivedType::PtrAuthData> PtrAuthData;
+  if (ptrAuthKey.Val)
+    PtrAuthData = DIDerivedType::PtrAuthData(
+        (unsigned)ptrAuthKey.Val, ptrAuthIsAddressDiscriminated.Val,
+        (unsigned)ptrAuthExtraDiscriminator.Val);
 
   Result = GET_OR_DISTINCT(DIDerivedType,
                            (Context, tag.Val, name.Val, file.Val, line.Val,
                             scope.Val, baseType.Val, size.Val, align.Val,
-                            offset.Val, DWARFAddressSpace, flags.Val,
-                            extraData.Val, annotations.Val));
+                            offset.Val, DWARFAddressSpace, PtrAuthData,
+                            flags.Val, extraData.Val, annotations.Val));
   return false;
 }
 
@@ -5183,7 +5199,10 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(associated, MDField, );                                             \
   OPTIONAL(allocated, MDField, );                                              \
   OPTIONAL(rank, MDSignedOrMDField, );                                         \
-  OPTIONAL(annotations, MDField, );
+  OPTIONAL(annotations, MDField, );                                            \
+  OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));           \
+  OPTIONAL(specification_of, MDField, );                                       \
+  OPTIONAL(spare_bits_mask, MDAPSIntField, );                                  
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5198,10 +5217,12 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   if (identifier.Val)
     if (auto *CT = DICompositeType::buildODRType(
             Context, *identifier.Val, tag.Val, name.Val, file.Val, line.Val,
-            scope.Val, baseType.Val, size.Val, align.Val, offset.Val, flags.Val,
-            elements.Val, runtimeLang.Val, vtableHolder.Val, templateParams.Val,
-            discriminator.Val, dataLocation.Val, associated.Val, allocated.Val,
-            Rank, annotations.Val)) {
+            scope.Val, baseType.Val, size.Val, align.Val, offset.Val,
+            specification_of.Val, num_extra_inhabitants.Val,
+            spare_bits_mask.Val, flags.Val, elements.Val, runtimeLang.Val,
+            vtableHolder.Val, templateParams.Val, discriminator.Val,
+            dataLocation.Val, associated.Val, allocated.Val, Rank,
+            annotations.Val)) {
       Result = CT;
       return false;
     }
@@ -5214,7 +5235,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
        size.Val, align.Val, offset.Val, flags.Val, elements.Val,
        runtimeLang.Val, vtableHolder.Val, templateParams.Val, identifier.Val,
        discriminator.Val, dataLocation.Val, associated.Val, allocated.Val, Rank,
-       annotations.Val));
+       annotations.Val, specification_of.Val, num_extra_inhabitants.Val,
+       spare_bits_mask.Val));
   return false;
 }
 

@@ -11,6 +11,10 @@
 #include "lldb/Version/Version.inc"
 #include "clang/Basic/Version.h"
 
+#ifdef LLDB_ENABLE_SWIFT
+#include "swift/Basic/Version.h"
+#endif // LLDB_ENABLE_SWIFT
+
 static const char *GetLLDBVersion() {
 #ifdef LLDB_FULL_VERSION_STRING
   return LLDB_FULL_VERSION_STRING;
@@ -56,6 +60,13 @@ const char *lldb_private::GetVersion() {
       g_version_str += ")";
     }
 
+#ifdef LLDB_ENABLE_SWIFT
+    auto const swift_version = swift::version::getSwiftFullVersion();
+    g_version_str += "\n" + swift_version;
+#else
+    // getSwiftFullVersion() also prints clang and llvm versions, no
+    // need to print them again. We keep this code here to not diverge
+    // too much from upstream.
     std::string clang_rev(clang::getClangRevision());
     if (clang_rev.length() > 0) {
       g_version_str += "\n  clang revision ";
@@ -67,6 +78,7 @@ const char *lldb_private::GetVersion() {
       g_version_str += "\n  llvm revision ";
       g_version_str += llvm_rev;
     }
+#endif // LLDB_ENABLE_SWIFT
   }
 
   return g_version_str.c_str();

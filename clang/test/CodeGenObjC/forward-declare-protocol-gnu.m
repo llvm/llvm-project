@@ -3,11 +3,9 @@
 // Regression test: check that we don't crash when referencing a forward-declared protocol.
 @protocol P;
 
-@interface I <P>
-@end
-
-@implementation I
-
-@end
+Protocol *getProtocol(void)
+{
+	        return @protocol(P);
+}
 
 // CHECK: @.objc_protocol

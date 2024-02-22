@@ -35,6 +35,8 @@
 // stack size log lower than expected
 // XFAIL: target={{.*(freebsd|netbsd).*}}
 
+// XFAIL: !rdar109379358
+
 // FIXME: Fix this test for dynamic runtime on arm linux.
 // UNSUPPORTED: (arm-linux || armhf-linux) && asan-dynamic-runtime
 

@@ -170,6 +170,12 @@ static cl::opt<DwarfDebug::MinimizeAddrInV5> MinimizeAddrInV5Option(
                           "Stuff")),
     cl::init(DwarfDebug::MinimizeAddrInV5::Default));
 
+// BEGIN MCCAS
+static cl::opt<bool> CasFriendlyDebugInfo(
+    "cas-friendly-debug-info", cl::Hidden,
+    cl::desc("Emit debug information that is cas friendly"), cl::init(false));
+// END MCCAS
+
 static constexpr unsigned ULEB128PadSize = 4;
 
 void DebugLocDwarfExpression::emitOp(uint8_t Op, const char *Comment) {
@@ -440,6 +446,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
   Asm->OutStreamer->getContext().setDwarfFormat(Dwarf64 ? dwarf::DWARF64
                                                         : dwarf::DWARF32);
+
+  Asm->OutStreamer->setGenerateCasFriendlyDebugInfo(CasFriendlyDebugInfo);
 }
 
 // Define out of line so we don't have to include DwarfUnit.h in DwarfDebug.h.
@@ -1605,6 +1613,20 @@ static bool validThroughout(LexicalScopes &LScopes,
   if (LSRange.size() == 0)
     return false;
 
+  // BEGIN SWIFT
+  // Swift async function handling.
+  {
+    auto &MI = *DbgValue;
+    auto MF = MBB->getParent();
+    auto *Expr = MI.getDebugExpression();
+    if (Expr && Expr->isEntryValue())
+      for (const MachineOperand &MO : MI.debug_operands())
+        if (MO.isReg() && MO.getReg() != 0)
+          if (isSwiftAsyncContext(*MF, MO.getReg()))
+            return true;
+  }
+  // END SWIFT
+
   const MachineInstr *LScopeBegin = LSRange.front().first;
   // If the scope starts before the DBG_VALUE then we may have a negative
   // result. Otherwise the location is live coming into the scope and we
@@ -2250,7 +2272,8 @@ void DwarfDebug::terminateLineTable(const DwarfCompileUnit *CU) {
       getDwarfCompileUnitIDForLineTable(*CU));
   // Add the last range label for the given CU.
   LineTable.getMCLineSections().addEndEntry(
-      const_cast<MCSymbol *>(CURanges.back().End));
+      const_cast<MCSymbol *>(CURanges.back().End),
+      Asm->OutStreamer->getGenerateCasFriendlyDebugInfo());
 }
 
 void DwarfDebug::skippedNonDebugFunction() {
@@ -2343,6 +2366,24 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
   // Construct call site entries.
   constructCallSiteEntryDIEs(*SP, TheCU, ScopeDIE, *MF);
 
+  // BEGIN MCCAS
+  // If the GenerateCasFriendlyDebugInfo flag is true, this indicates to us that
+  // we want to split up the line tables by function. To do this, we want to
+  // emit a DW_LNE_end_sequence at the end of a function's contribution to the
+  // line table.
+  if (Asm->OutStreamer->getGenerateCasFriendlyDebugInfo()) {
+    MCSymbol *LineSym = Asm->OutStreamer->getContext().createTempSymbol();
+    Asm->OutStreamer->emitLabel(LineSym);
+    MCDwarfLoc DwarfLoc(
+        1, 1, 0, DWARF2_LINE_DEFAULT_IS_STMT ? DWARF2_FLAG_IS_STMT : 0, 0, 0);
+    MCDwarfLineEntry LineEntry(LineSym, DwarfLoc, /*IsEndOfFunction*/ true);
+    Asm->OutStreamer->getContext()
+        .getMCDwarfLineTable(
+            Asm->OutStreamer->getContext().getDwarfCompileUnitID())
+        .getMCLineSections()
+        .addLineEntry(LineEntry, Asm->OutStreamer->getCurrentSectionOnly());
+  }
+  // END MCCAS
   // Clear debug info
   // Ownership of DbgVariables is a bit subtle - ScopeVariables owns all the
   // DbgVariables except those that are also in AbstractVariables (since they

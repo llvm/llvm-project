@@ -13,12 +13,14 @@ used to replace the signed pointer value.
 At the IR level, it is represented using:
 
 * a [set of intrinsics](#intrinsics) (to sign/authenticate pointers)
+* a [special section and relocation](#authenticated-global-relocation)
+  (to sign globals)
 * a [call operand bundle](#operand-bundle) (to authenticate called pointers)
 
 The current implementation leverages the
 [Armv8.3-A PAuth/Pointer Authentication Code](#armv8-3-a-pauth-pointer-authentication-code)
 instructions in the [AArch64 backend](#aarch64-support).
-This support is used to implement the Darwin arm64e ABI, as well as the
+This support is used to implement the Darwin [arm64e](#arm64e) ABI, as well as the
 [PAuth ABI Extension to ELF](https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst).
 
 
@@ -262,6 +264,72 @@ but with the added guarantee that `%fp_i`, `%fp_auth`, and `%fp_auth_p`
 are not stored to (and reloaded from) memory.
 
 
+### Function Attributes
+
+Two function attributes are used to describe other pointer authentication
+operations that are not otherwise explicitly expressed in IR.
+
+#### ``ptrauth-returns``
+
+``ptrauth-returns`` specifies that returns from functions should be
+authenticated, and that saved return addresses should be signed.
+
+Note that this describes the execution environment that can be assumed by
+this function, not the semantics of return instructions in this function alone.
+
+The semantics of
+[``llvm.returnaddress``](LangRef.html#llvm-returnaddress-intrinsic) are not
+changed (it still returns a raw, unauthenticated, return address), so it might
+require an implicit strip/authenticate operation.  This applies to return
+addresses stored in deeper stack frames.
+
+#### ``ptrauth-calls``
+
+``ptrauth-calls`` specifies that calls emitted in this function should be
+authenticated according to the platform ABI.
+
+Calls represented by ``call``/``invoke`` instructions in IR are not affected by
+this attribute, as they should already be annotated with the
+[``ptrauth`` operand bundle](#operand-bundle).
+
+The ``ptrauth-calls`` attribute only describes calls emitted by the backend,
+as part of target-specific lowering (e.g., runtime calls for TLS accesses).
+
+
+### Authenticated Global Relocation
+
+[Intrinsics](#intrinsics) can be used to produce signed pointers dynamically,
+in code, but not for signed pointers referenced by constants, in, e.g., global
+initializers.
+
+The latter are represented using a special kind of global describing an
+authenticated relocation (producing a signed pointer).
+
+These special global must live in section '``llvm.ptrauth``', and have a
+specific type.
+
+```llvm
+@fp.ptrauth = constant { i8*, i32, i64, i64 }
+                       { i8* <value>,
+                         i32 <key>,
+                         i64 <address discriminator>,
+                         i64 <integer discriminator>
+                       }, section "llvm.ptrauth"
+```
+
+is equivalent to ``@fp.ptrauth`` being initialized with:
+
+```llvm
+  %disc = call i64 @llvm.ptrauth.blend.i64(i64 <address discriminator>, i64 <integer discriminator>)
+  %signed_fp = call i64 @llvm.ptrauth.sign.i64(i64 bitcast (i8* <value> to i64), i32 <key>, i64 %disc)
+  %fp_p_loc = bitcast { i8*, i32, i64, i64 }* @fp.ptrauth to i64*
+  store i64 %signed_fp, i8* %fp_p_loc
+```
+
+Note that this is a temporary representation, chosen to minimize divergence with
+upstream.  Ideally, this would simply be a new kind of ConstantExpr.
+
+
 ## AArch64 Support
 
 AArch64 is currently the only architecture with full support of the pointer
@@ -311,18 +379,34 @@ using the `@AUTH` modifier:
 ```
 
 where:
-* `key` is the Armv8.3-A key identifier (`ia`, `ib`, `da`, `db`)
-* `discriminator` is the 16-bit unsigned discriminator value
-* `addr` signifies that the authenticated pointer is address-discriminated
+* ``key`` is the ARMv8.3 key identifier (``ia``, ``ib``, ``da``, ``db``)
+* ``discriminator`` is the 16-bit unsigned discriminator value
+* ``addr`` signifies that the authenticated pointer is address-discriminated
   (that is, that the relocation's target address is to be blended into the
-  `discriminator` before it is used in the sign operation.
+  ``discriminator`` before it is used in the sign operation.
 
 For example:
 ```asm
   _authenticated_reference_to_sym:
     .quad _sym@AUTH(db,0)
+
   _authenticated_reference_to_sym_addr_disc:
     .quad _sym@AUTH(ia,12,addr)
+```
+
+#### MachO Object File Representation
+
+At the binary object file level,
+[Authenticated Relocations](#authenticated-global-relocation) are represented
+using the ``ARM64_RELOC_AUTHENTICATED_POINTER`` relocation kind (with value
+``11``).
+
+The pointer authentication information is encoded into the addend, as such:
+
+```
+| 63 | 62 | 61-51 | 50-49 |   48   | 47     -     32 | 31  -  0 |
+| -- | -- | ----- | ----- | ------ | --------------- | -------- |
+|  1 |  0 |   0   |  key  |  addr  |  discriminator  |  addend  |
 ```
 
 #### ELF Object File Representation
@@ -337,4 +421,25 @@ as follows:
 | 63                | 62       | 61:60    | 59:48    |  47:32        | 31:0                |
 | ----------------- | -------- | -------- | -------- | ------------- | ------------------- |
 | address diversity | reserved | key      | reserved | discriminator | reserved for addend |
+```
+
+### arm64e
+
+Darwin supports ARMv8.3 Pointer Authentication Codes via the arm64e MachO
+architecture slice.
+
+#### CPU Subtype
+
+The arm64e slice is an extension of the ``arm64`` slice (so uses the same
+MachO ``cpu_type``, ``CPU_TYPE_ARM64``).
+
+It is mainly represented using the ``cpu_subtype`` 2, or ``CPU_SUBTYPE_ARM64E``.
+
+The subtype also encodes the version of the pointer authentication ABI used in
+the object:
+
+```
+| 31-28 |     28-25    |      24-0      |
+| ----- | ------------ | -------------- |
+|  0000 |  ABI version | 0000 0000 0010 |
 ```

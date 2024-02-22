@@ -69,6 +69,7 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <deque>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -1023,9 +1024,9 @@ public:
     OpaqueParser = P;
   }
 
-  /// Callback to the parser to parse a type expressed as a string.
+  /// \brief Callback to the parser to parse a type expressed as a string.
   std::function<TypeResult(StringRef, StringRef, SourceLocation)>
-      ParseTypeFromStringCallback;
+    ParseTypeFromStringCallback;
 
   class DelayedDiagnostics;
 
@@ -3041,6 +3042,9 @@ public:
                             SourceLocation AtomicQualLoc = SourceLocation(),
                             SourceLocation UnalignedQualLoc = SourceLocation());
 
+  void diagnosePointerAuthDisabled(SourceLocation loc, SourceRange range);
+  bool checkConstantPointerAuthKey(Expr *keyExpr, unsigned &key);
+
   static bool adjustContextForLocalExternDecl(DeclContext *&DC);
   void DiagnoseFunctionSpecifiers(const DeclSpec &DS);
   NamedDecl *getShadowedDeclaration(const TypedefNameDecl *D,
@@ -3141,7 +3145,7 @@ public:
   ParmVarDecl *BuildParmVarDeclForTypedef(DeclContext *DC,
                                           SourceLocation Loc,
                                           QualType T);
-  QualType AdjustParameterTypeForObjCAutoRefCount(QualType T,
+  QualType adjustParameterTypeForObjCAutoRefCount(QualType T,
                                                   SourceLocation NameLoc,
                                                   TypeSourceInfo *TSInfo);
   ParmVarDecl *CheckParameter(DeclContext *DC, SourceLocation StartLoc,
@@ -4883,6 +4887,12 @@ public:
   bool checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A,
                                     bool SkipArgCountCheck = false);
 
+  /// Map any API notes provided for this declaration to attributes on the
+  /// declaration.
+  ///
+  /// Triggered by declaration-attribute processing.
+  void ProcessAPINotes(Decl *D);
+
   /// Determine if type T is a valid subject for a nonnull and similar
   /// attributes. By default, we look through references (the behavior used by
   /// nonnull), but if the second parameter is true, then we treat a reference
@@ -4945,25 +4955,25 @@ public:
   /// Check whether a nullability type specifier can be added to the given
   /// type through some means not written in source (e.g. API notes).
   ///
-  /// \param Type The type to which the nullability specifier will be
+  /// \param type The type to which the nullability specifier will be
   /// added. On success, this type will be updated appropriately.
   ///
-  /// \param Nullability The nullability specifier to add.
+  /// \param nullability The nullability specifier to add.
   ///
-  /// \param DiagLoc The location to use for diagnostics.
+  /// \param diagLoc The location to use for diagnostics.
   ///
-  /// \param AllowArrayTypes Whether to accept nullability specifiers on an
+  /// \param allowArrayTypes Whether to accept nullability specifiers on an
   /// array type (e.g., because it will decay to a pointer).
   ///
-  /// \param OverrideExisting Whether to override an existing, locally-specified
+  /// \param overrideExisting Whether to override an existing, locally-specified
   /// nullability specifier rather than complaining about the conflict.
   ///
   /// \returns true if nullability cannot be applied, false otherwise.
-  bool CheckImplicitNullabilityTypeSpecifier(QualType &Type,
-                                             NullabilityKind Nullability,
-                                             SourceLocation DiagLoc,
-                                             bool AllowArrayTypes,
-                                             bool OverrideExisting);
+  bool checkImplicitNullabilityTypeSpecifier(QualType &type,
+                                             NullabilityKind nullability,
+                                             SourceLocation diagLoc,
+                                             bool allowArrayTypes,
+                                             bool overrideExisting);
 
   /// Process the attributes before creating an attributed statement. Returns
   /// the semantic attributes that have been processed.
@@ -10972,6 +10982,12 @@ public:
     RTC_Incompatible,
     RTC_Unknown
   };
+
+  /// Check whether the declared result type of the given Objective-C
+  /// method declaration is compatible with the method's class.
+  ResultTypeCompatibilityKind
+  checkRelatedResultTypeCompatibility(const ObjCMethodDecl *Method,
+                                      const ObjCInterfaceDecl *CurrentClass);
 
   void CheckObjCMethodDirectOverrides(ObjCMethodDecl *method,
                                       ObjCMethodDecl *overridden);

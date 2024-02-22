@@ -81,6 +81,7 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   case file_magic::windows_resource:
     return WindowsResource::createWindowsResource(Buffer);
   case file_magic::pdb:
+  case file_magic::cas_id:
     // PDB does not support the Binary interface.
     return errorCodeToError(object_error::invalid_file_type);
   case file_magic::unknown:

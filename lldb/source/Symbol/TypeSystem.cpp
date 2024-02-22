@@ -11,6 +11,7 @@
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include <optional>
@@ -40,12 +41,14 @@ TypeSystem::TypeSystem() = default;
 TypeSystem::~TypeSystem() = default;
 
 static TypeSystemSP CreateInstanceHelper(lldb::LanguageType language,
-                                         Module *module, Target *target) {
+                                         Module *module, Target *target,
+                                         const char *compiler_options) {
   uint32_t i = 0;
   TypeSystemCreateInstance create_callback;
   while ((create_callback = PluginManager::GetTypeSystemCreateCallbackAtIndex(
               i++)) != nullptr) {
-    if (auto type_system_sp = create_callback(language, module, target))
+    if (auto type_system_sp =
+        create_callback(language, module, target, compiler_options))
       return type_system_sp;
   }
 
@@ -54,12 +57,18 @@ static TypeSystemSP CreateInstanceHelper(lldb::LanguageType language,
 
 lldb::TypeSystemSP TypeSystem::CreateInstance(lldb::LanguageType language,
                                               Module *module) {
-  return CreateInstanceHelper(language, module, nullptr);
+  return CreateInstanceHelper(language, module, nullptr, nullptr);
 }
 
 lldb::TypeSystemSP TypeSystem::CreateInstance(lldb::LanguageType language,
                                               Target *target) {
-  return CreateInstanceHelper(language, nullptr, target);
+  return CreateInstanceHelper(language, nullptr, target, nullptr);
+}
+
+lldb::TypeSystemSP TypeSystem::CreateInstance(lldb::LanguageType language,
+                                              Target *target,
+                                              const char *compiler_options) {
+  return CreateInstanceHelper(language, nullptr, target, compiler_options);
 }
 
 #ifndef NDEBUG
@@ -152,6 +161,18 @@ bool TypeSystem::IsMeaninglessWithoutDynamicResolution(void *type) {
   return false;
 }
 
+void TypeSystem::DiagnoseWarnings(Process &process, Module &module) const {}
+
+Status TypeSystem::IsCompatible() {
+  // Assume a language is compatible. Override this virtual function
+  // in your TypeSystem plug-in if version checking is desired.
+  return Status();
+}
+
+ConstString TypeSystem::GetMangledTypeName(void *type) {
+  return GetTypeName(type, false);
+}
+
 ConstString TypeSystem::DeclGetMangledName(void *opaque_decl) {
   return ConstString();
 }
@@ -206,6 +227,8 @@ TypeSystem::GetCompilerDeclContextForType(const CompilerType &type) {
 TypeSystemMap::TypeSystemMap() : m_mutex(), m_map() {}
 
 TypeSystemMap::~TypeSystemMap() = default;
+
+void TypeSystemMap::operator=(const TypeSystemMap &rhs) { m_map = rhs.m_map; }
 
 void TypeSystemMap::Clear() {
   collection map;
@@ -336,3 +359,30 @@ TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
   }
   return GetTypeSystemForLanguage(language);
 }
+
+// BEGIN SWIFT
+llvm::Expected<TypeSystemSP>
+TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
+                                        Target *target, bool can_create,
+                                        const char *compiler_options) {
+  if (can_create) {
+    return GetTypeSystemForLanguage(
+        language,
+        std::optional<CreateCallback>([language, target, compiler_options]() {
+          return TypeSystem::CreateInstance(language, target, compiler_options);
+        }));
+  }
+  return GetTypeSystemForLanguage(language);
+}
+
+void TypeSystemMap::RemoveTypeSystemsForLanguage(lldb::LanguageType language) {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  collection::iterator pos = m_map.find(language);
+  // If we are clearing the map, we don't need to remove this individual item.
+  // It will go away soon enough.
+  if (!m_clear_in_progress) {
+    if (pos != m_map.end())
+      m_map.erase(pos);
+  }
+}
+// END SWIFT

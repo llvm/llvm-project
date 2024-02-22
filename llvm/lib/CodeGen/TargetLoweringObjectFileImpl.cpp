@@ -806,6 +806,8 @@ static MCSection *selectExplicitSectionGlobal(
   Kind = getELFKindForNamedSection(SectionName, Kind);
 
   unsigned Flags = getELFSectionFlags(Kind);
+  if (SectionName == ".swift1_autolink_entries")
+    Flags |= ELF::SHF_EXCLUDE;
   auto [Group, IsComdat, ExtraFlags] = getGlobalObjectInfo(GO, TM);
   Flags |= ExtraFlags;
 

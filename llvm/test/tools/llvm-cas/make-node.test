@@ -1,0 +1,40 @@
+RUN: rm -rf %t
+RUN: mkdir %t
+
+# Make some empty objects.
+RUN: llvm-cas --cas %t/cas --make-node \
+RUN:   --data - </dev/null >%t/empty.casid
+
+RUN: llvm-cas --cas %t/cas --cat-node-data @%t/empty.casid |\
+RUN:   FileCheck %s -check-prefix CHECK-EMPTY -allow-empty
+RUN: llvm-cas --cas %t/cas --ls-node-refs @%t/empty.casid |\
+RUN:   FileCheck %s -check-prefix CHECK-EMPTY -allow-empty
+CHECK-EMPTY-NOT: {{.}}
+
+RUN: llvm-cas --cas %t/cas --print-kind @%t/empty.casid |\
+RUN:   FileCheck %s -check-prefix CHECK-NO-KIND
+### FIXME: Node ObjectKind with no reference is Blob kind in BuiltinCAS.
+CHECK-NO-KIND: object
+
+# Make a complex object, which references existing ones. Reference a blob and
+# other objects, and reference one of them twice to be sure they don't get
+# deduped.
+RUN: llvm-cas --cas %t/cas --make-blob --data /dev/null \
+RUN:   >%t/empty-blob.casid
+RUN: cat %t/empty.casid %t/empty.casid %t/empty-blob.casid \
+RUN:   >%t/complex.refs
+RUN: cat %t/complex.refs | sed -e 's,^.,CHECK: ,' > %t/complex.check
+RUN: llvm-cas --cas %t/cas --make-node \
+RUN:   --data %S/Inputs/oneline @%t/complex.refs \
+RUN:   >%t/complex.casid
+RUN: llvm-cas --cas %t/cas --print-kind \
+RUN:   @%t/complex.casid | FileCheck %s -check-prefix COMPLEX-KIND
+RUN: llvm-cas --cas %t/cas --cat-node-data \
+RUN:   @%t/complex.casid | FileCheck %s -check-prefix COMPLEX-DATA
+RUN: llvm-cas --cas %t/cas --ls-node-refs @%t/complex.casid |\
+RUN:   FileCheck %t/complex.check
+COMPLEX-KIND: object
+COMPLEX-DATA: content
+
+RUN: not llvm-cas --cas  %t/cas --ls-tree @%t/complex.casid 2>&1 | FileCheck %s --check-prefix=CHECK-WRONG-TYPE
+CHECK-WRONG-TYPE: llvm-cas: ls-tree: not a tree object

@@ -1,0 +1,4 @@
+module IndexMacrosMod {
+  header "IndexMacrosMod.h"
+  export *
+}

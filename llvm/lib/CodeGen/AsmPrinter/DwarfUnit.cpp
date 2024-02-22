@@ -456,30 +456,31 @@ void DwarfUnit::addConstantFPValue(DIE &Die, const ConstantFP *CFP) {
 }
 
 void DwarfUnit::addConstantValue(DIE &Die, const ConstantInt *CI,
-                                 const DIType *Ty) {
-  addConstantValue(Die, CI->getValue(), Ty);
+                                 const DIType *Ty, dwarf::Attribute Attribute) {
+  addConstantValue(Die, CI->getValue(), Ty, Attribute);
 }
 
-void DwarfUnit::addConstantValue(DIE &Die, uint64_t Val, const DIType *Ty) {
-  addConstantValue(Die, DD->isUnsignedDIType(Ty), Val);
+void DwarfUnit::addConstantValue(DIE &Die, uint64_t Val, const DIType *Ty, dwarf::Attribute Attribute) {
+  addConstantValue(Die, DD->isUnsignedDIType(Ty), Val, Attribute);
 }
 
-void DwarfUnit::addConstantValue(DIE &Die, bool Unsigned, uint64_t Val) {
+void DwarfUnit::addConstantValue(DIE &Die, bool Unsigned, uint64_t Val, dwarf::Attribute Attribute) {
   // FIXME: This is a bit conservative/simple - it emits negative values always
   // sign extended to 64 bits rather than minimizing the number of bytes.
-  addUInt(Die, dwarf::DW_AT_const_value,
+  addUInt(Die, Attribute,
           Unsigned ? dwarf::DW_FORM_udata : dwarf::DW_FORM_sdata, Val);
 }
 
-void DwarfUnit::addConstantValue(DIE &Die, const APInt &Val, const DIType *Ty) {
-  addConstantValue(Die, Val, DD->isUnsignedDIType(Ty));
+void DwarfUnit::addConstantValue(DIE &Die, const APInt &Val, const DIType *Ty, dwarf::Attribute Attribute) {
+  addConstantValue(Die, Val, DD->isUnsignedDIType(Ty), Attribute);
 }
 
-void DwarfUnit::addConstantValue(DIE &Die, const APInt &Val, bool Unsigned) {
+void DwarfUnit::addConstantValue(DIE &Die, const APInt &Val, bool Unsigned, dwarf::Attribute Attribute) {
   unsigned CIBitWidth = Val.getBitWidth();
   if (CIBitWidth <= 64) {
     addConstantValue(Die, Unsigned,
-                     Unsigned ? Val.getZExtValue() : Val.getSExtValue());
+                     Unsigned ? Val.getZExtValue() : Val.getSExtValue(),
+                     Attribute);
     return;
   }
 
@@ -501,7 +502,7 @@ void DwarfUnit::addConstantValue(DIE &Die, const APInt &Val, bool Unsigned) {
     addUInt(*Block, dwarf::DW_FORM_data1, c);
   }
 
-  addBlock(Die, dwarf::DW_AT_const_value, Block);
+  addBlock(Die, Attribute, Block);
 }
 
 void DwarfUnit::addLinkageName(DIE &Die, StringRef LinkageName) {
@@ -711,6 +712,10 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIBasicType *BTy) {
     addUInt(Buffer, dwarf::DW_AT_endianity, std::nullopt, dwarf::DW_END_big);
   else if (BTy->isLittleEndian())
     addUInt(Buffer, dwarf::DW_AT_endianity, std::nullopt, dwarf::DW_END_little);
+
+  if (uint32_t NumExtraInhabitants = BTy->getNumExtraInhabitants())
+    addUInt(Buffer, dwarf::DW_AT_APPLE_num_extra_inhabitants, std::nullopt,
+            NumExtraInhabitants);
 }
 
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIStringType *STy) {
@@ -803,6 +808,14 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   if (DTy->getDWARFAddressSpace())
     addUInt(Buffer, dwarf::DW_AT_address_class, dwarf::DW_FORM_data4,
             *DTy->getDWARFAddressSpace());
+  if (auto Key = DTy->getPtrAuthKey())
+    addUInt(Buffer, dwarf::DW_AT_LLVM_ptrauth_key, dwarf::DW_FORM_data1, *Key);
+  if (auto AddrDisc = DTy->isPtrAuthAddressDiscriminated())
+    if (AddrDisc)
+      addFlag(Buffer, dwarf::DW_AT_LLVM_ptrauth_address_discriminated);
+  if (auto Disc = DTy->getPtrAuthExtraDiscriminator())
+    addUInt(Buffer, dwarf::DW_AT_LLVM_ptrauth_extra_discriminator,
+            dwarf::DW_FORM_data2, *Disc);
 }
 
 void DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
@@ -999,6 +1012,11 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
         addUInt(Buffer, dwarf::DW_AT_calling_convention, dwarf::DW_FORM_data1,
                 CC);
     }
+
+    if (auto *SpecifiedFrom = CTy->getSpecificationOf())
+      addDIEEntry(Buffer, dwarf::DW_AT_specification,
+                  *getOrCreateContextDIE(SpecifiedFrom));
+
     break;
   }
   default:
@@ -1008,6 +1026,11 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   // Add name if not anonymous or intermediate type.
   if (!Name.empty())
     addString(Buffer, dwarf::DW_AT_name, Name);
+
+  // For Swift, mangled names are put into DW_AT_linkage_name; human-readable
+  // names are emitted put into DW_AT_name and the accelerator table.
+  if (CTy->getRuntimeLang() == dwarf::DW_LANG_Swift && CTy->getRawIdentifier())
+    addString(Buffer, dwarf::DW_AT_linkage_name, CTy->getIdentifier());
 
   addAnnotation(Buffer, CTy->getAnnotations());
 
@@ -1038,13 +1061,24 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     // No harm in adding the runtime language to the declaration.
     unsigned RLang = CTy->getRuntimeLang();
     if (RLang)
-      addUInt(Buffer, dwarf::DW_AT_APPLE_runtime_class, dwarf::DW_FORM_data1,
-              RLang);
+      addUInt(Buffer, dwarf::DW_AT_APPLE_runtime_class, std::nullopt, RLang);
 
     // Add align info if available.
     if (uint32_t AlignInBytes = CTy->getAlignInBytes())
       addUInt(Buffer, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
               AlignInBytes);
+
+    if (uint32_t NumExtraInhabitants = CTy->getNumExtraInhabitants())
+      addUInt(Buffer, dwarf::DW_AT_APPLE_num_extra_inhabitants,
+            std::nullopt, NumExtraInhabitants);
+
+  } else if (Tag == dwarf::DW_TAG_variant_part) {
+    auto SpareBitsMask = CTy->getSpareBitsMask();
+    if (!SpareBitsMask.isZero())
+      addConstantValue(Buffer, SpareBitsMask, false,
+                       dwarf::DW_AT_APPLE_spare_bits_mask);
+    if (auto OffsetInBits = CTy->getOffsetInBits()) 
+      addUInt(Buffer, dwarf::DW_AT_bit_offset, std::nullopt, OffsetInBits);
   }
 }
 
@@ -1345,6 +1379,9 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
   if (!SP->getTargetFuncName().empty())
     addString(SPDie, dwarf::DW_AT_trampoline, SP->getTargetFuncName());
+
+  if (SP->getIsTransparentStepping())
+    addFlag(SPDie, dwarf::DW_AT_trampoline);
 
   if (DD->getDwarfVersion() >= 5 && SP->isDeleted())
     addFlag(SPDie, dwarf::DW_AT_deleted);

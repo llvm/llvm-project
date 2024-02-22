@@ -18,6 +18,43 @@ let Definition = "modulelist" in {
     Global,
     DefaultStringValue<"">,
     Desc<"The path to the clang modules cache directory (-fmodules-cache-path).">;
+// BEGIN SWIFT
+  def UseSwiftClangImporter: Property<"use-swift-clangimporter", "Boolean">,
+    DefaultTrue,
+    Desc<"Reconstruct Clang module dependencies from headers when debugging Swift code">;
+  def UseSwiftDWARFImporter: Property<"use-swift-dwarfimporter", "Boolean">,
+    DefaultTrue,
+    Desc<"Reconstruct Clang module dependencies from DWARF when debugging Swift code">;
+  def UseSwiftTypeRefTypeSystem: Property<"use-swift-typeref-typesystem", "Boolean">,
+    DefaultTrue,
+    Desc<"Prefer Swift Remote Mirrors over Remote AST">;
+  def SwiftValidateTypeSystem: Property<"swift-validate-typesystem", "Boolean">,
+    DefaultFalse,
+    Desc<"Validate all Swift typesystem queries. Used for testing an asserts-enabled LLDB only.">;
+  def UseSwiftPreciseCompilerInvocation: Property<"swift-precise-compiler-invocation", "Boolean">,
+    DefaultTrue,
+    Desc<"In the Swift expression evaluator, create many Swift compiler instances with the precise invocation for the current context, instead of a single compiler instance that merges all flags from the entire project.">;
+  def SwiftModuleLoadingMode: Property<"swift-module-loading-mode", "Enum">,
+    DefaultEnumValue<"eSwiftModuleLoadingModePreferSerialized">,
+    EnumValues<"OptionEnumValues(g_swift_module_loading_mode_enums)">,
+    Desc<"The module loading mode to use when loading modules for Swift.">;
+  def EnableSwiftMetadataCache: Property<"enable-swift-metadata-cache", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Enable caching for Swift reflection metadata in LLDB.">;
+  def SwiftMetadataCachePath: Property<"swift-metadata-cache-path", "FileSpec">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"The path to LLDB's Swift reflection cache directory.">;
+  def SwiftMetadataCacheMaxByteSize: Property<"swift-metadata-cache-max-byte-size", "UInt64">,
+    Global,
+    DefaultUnsignedValue<0>,
+    Desc<"The maximum size for LLDB's Swift reflection cache directory in bytes. A value over the amount of available space on the disk will be reduced to the amount of available space. A value of 0 disables the absolute size-based pruning.">;
+  def SwiftMetadataCacheExpirationDays: Property<"swift-metadata-cache-expiration-days", "UInt64">,
+    Global,
+    DefaultUnsignedValue<7>,
+    Desc<"The expiration time in days for a Swift reflection cache file. When a file hasn't been accessed for the specified amount of days, it is removed from the cache. A value of 0 disables the expiration-based pruning.">;
+// END SWIFT
   def SymLinkPaths: Property<"debug-info-symlink-paths", "FileSpecList">,
     Global,
     DefaultStringValue<"">,

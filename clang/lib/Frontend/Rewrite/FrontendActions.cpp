@@ -213,8 +213,14 @@ public:
 
   void visitModuleFile(StringRef Filename,
                        serialization::ModuleKind Kind) override {
-    auto File = CI.getFileManager().getFile(Filename);
+    auto File = CI.getFileManager().getOptionalFileRef(Filename);
     assert(File && "missing file for loaded module?");
+
+#if !defined(__APPLE__)
+    // Workaround for ext4 file system.
+    if (auto Bypass = CI.getFileManager().getBypassFile(*File))
+      File = *Bypass;
+#endif
 
     // Only rewrite each module file once.
     if (!Rewritten.insert(*File).second)

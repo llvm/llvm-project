@@ -8,6 +8,8 @@
 
 #include "lldb/Core/ValueObject.h"
 
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Declaration.h"
 #include "lldb/Core/Module.h"
@@ -50,6 +52,11 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-private-types.h"
 
+#ifdef LLDB_ENABLE_SWIFT
+#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#endif //LLDB_ENABLE_SWIFT
+
 #include "llvm/Support/Compiler.h"
 
 #include <algorithm>
@@ -77,6 +84,14 @@ using namespace lldb;
 using namespace lldb_private;
 
 static user_id_t g_value_obj_uid = 0;
+
+#ifdef LLDB_ENABLE_SWIFT
+static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
+  return (valobj.GetPreferredDisplayLanguage() == eLanguageTypeSwift)
+             ? &valobj.GetExecutionContextRef()
+             : nullptr;
+}
+#endif // LLDB_ENABLE_SWIFT
 
 // ValueObject constructor
 ValueObject::ValueObject(ValueObject &parent)
@@ -113,6 +128,17 @@ ValueObject::~ValueObject() = default;
 bool ValueObject::UpdateValueIfNeeded(bool update_format) {
 
   bool did_change_formats = false;
+
+  // BEGIN SWIFT
+  // Swift: Check whether the dynamic type system became stale.
+  if (m_dynamic_value) {
+    auto *dyn_val = static_cast<ValueObjectDynamicValue *>(m_dynamic_value);
+    if (dyn_val->DynamicValueTypeInfoNeedsUpdate()) {
+      dyn_val->SetNeedsUpdate();
+      SetNeedsUpdate();
+    }
+  }
+  // END SWIFT
 
   if (update_format)
     did_change_formats = UpdateFormatsIfNeeded();
@@ -212,7 +238,8 @@ bool ValueObject::UpdateFormatsIfNeeded() {
 
   bool any_change = false;
 
-  if ((m_last_format_mgr_revision != DataVisualization::GetCurrentRevision())) {
+  if (GetCompilerType().IsValid() &&
+      (m_last_format_mgr_revision != DataVisualization::GetCurrentRevision())) {
     m_last_format_mgr_revision = DataVisualization::GetCurrentRevision();
     any_change = true;
 
@@ -266,6 +293,64 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
     if (std::optional<CompilerType> complete_type =
             runtime->GetRuntimeType(compiler_type)) {
       m_override_type = *complete_type;
+      if (m_override_type.IsValid())
+        return m_override_type;
+    }
+  }
+
+  std::vector<clang::NamedDecl *> decls;
+  CompilerType class_type;
+  bool is_pointer_type = false;
+  if (TypeSystemClang::IsObjCObjectPointerType(compiler_type, &class_type))
+    is_pointer_type = true;
+  else if (TypeSystemClang::IsObjCObjectOrInterfaceType(compiler_type))
+    class_type = compiler_type;
+  else
+    return compiler_type;
+
+  ConstString class_name(class_type.GetTypeName());
+  if (!class_name)
+    return compiler_type;
+
+  // try the modules
+  if (TargetSP target_sp = GetTargetSP()) {
+    auto *persistent_state = llvm::cast<ClangPersistentVariables>(
+      target_sp->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
+    if (!persistent_state)
+      return compiler_type;
+
+    if (auto clang_modules_decl_vendor =
+            persistent_state->GetClangModulesDeclVendor()) {
+      ConstString key_cs(class_name);
+      auto types = clang_modules_decl_vendor->FindTypes(
+          key_cs, /*max_matches*/ UINT32_MAX);
+      if (!types.empty()) {
+        auto module_type = types.front();
+        m_override_type =
+            is_pointer_type ? module_type.GetPointerType() : module_type;
+      }
+
+      if (m_override_type.IsValid())
+        return m_override_type;
+    }
+  }
+
+  // then try the runtime
+  if (auto *objc_language_runtime = ObjCLanguageRuntime::Get(*process_sp)) {
+    if (auto *runtime_vendor = objc_language_runtime->GetDeclVendor()) {
+      std::vector<CompilerDecl> compiler_decls;
+      runtime_vendor->FindDecls(class_name, false, UINT32_MAX, compiler_decls);
+      if (!compiler_decls.empty()) {
+        auto *ctx =
+            llvm::dyn_cast<TypeSystemClang>(compiler_decls[0].GetTypeSystem());
+        if (ctx) {
+          CompilerType runtime_type =
+              ctx->GetTypeForDecl(compiler_decls[0].GetOpaqueDecl());
+          m_override_type =
+              is_pointer_type ? runtime_type.GetPointerType() : runtime_type;
+        }
+      }
+
       if (m_override_type.IsValid())
         return m_override_type;
     }
@@ -408,7 +493,8 @@ ValueObject::GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names) {
 
 size_t ValueObject::GetIndexOfChildWithName(llvm::StringRef name) {
   bool omit_empty_base_classes = true;
-  return GetCompilerType().GetIndexOfChildWithName(name,
+  ExecutionContext exe_ctx(GetExecutionContextRef());
+  return GetCompilerType().GetIndexOfChildWithName(name, &exe_ctx,
                                                    omit_empty_base_classes);
 }
 
@@ -427,9 +513,10 @@ ValueObjectSP ValueObject::GetChildMemberWithName(llvm::StringRef name,
   if (!GetCompilerType().IsValid())
     return ValueObjectSP();
 
+  ExecutionContext exe_ctx(GetExecutionContextRef());
   const size_t num_child_indexes =
       GetCompilerType().GetIndexOfChildMemberWithName(
-          name, omit_empty_base_classes, child_indexes);
+          name, &exe_ctx, omit_empty_base_classes, child_indexes);
   if (num_child_indexes == 0)
     return nullptr;
 
@@ -1519,6 +1606,18 @@ bool ValueObject::GetDeclaration(Declaration &decl) {
   return false;
 }
 
+#ifdef LLDB_ENABLE_SWIFT
+std::optional<SwiftScratchContextReader> ValueObject::GetSwiftScratchContext() {
+  lldb::TargetSP target_sp(GetTargetSP());
+  if (!target_sp)
+    return std::nullopt;
+  Status error;
+  ExecutionContext ctx = GetExecutionContextRef().Lock(false);
+  auto *exe_scope = ctx.GetBestExecutionContextScope();
+  return target_sp->GetSwiftScratchContext(error, *exe_scope);
+}
+#endif // LLDB_ENABLE_SWIFT
+
 void ValueObject::AddSyntheticChild(ConstString key,
                                     ValueObject *valobj) {
   m_synthetic_children[key] = valobj;
@@ -2527,6 +2626,9 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
 void ValueObject::Dump(Stream &s) { Dump(s, DumpValueObjectOptions(*this)); }
 
 void ValueObject::Dump(Stream &s, const DumpValueObjectOptions &options) {
+#ifdef LLDB_ENABLE_SWIFT
+  auto swift_scratch_ctx_lock = SwiftScratchContextLock(GetSwiftExeCtx(*this));
+#endif // LLDB_ENABLE_SWIFT
   ValueObjectPrinter printer(*this, &s, options);
   printer.PrintValueObject();
 }
@@ -3101,9 +3203,18 @@ ValueObjectSP ValueObject::Persist() {
   if (!target_sp)
     return nullptr;
 
-  PersistentExpressionState *persistent_state =
-      target_sp->GetPersistentExpressionStateForLanguage(
-          GetPreferredDisplayLanguage());
+  PersistentExpressionState *persistent_state;
+#ifdef LLDB_ENABLE_SWIFT
+  if (GetPreferredDisplayLanguage() == eLanguageTypeSwift) {
+    ExecutionContext ctx = GetExecutionContextRef().Lock(false);
+    auto *exe_scope = ctx.GetBestExecutionContextScope();
+    if (!exe_scope)
+      return nullptr;
+    persistent_state = target_sp->GetSwiftPersistentExpressionState(*exe_scope);
+  } else
+#endif // LLDB_ENABLE_SWIFT
+    persistent_state = target_sp->GetPersistentExpressionStateForLanguage(
+        GetPreferredDisplayLanguage());
 
   if (!persistent_state)
     return nullptr;

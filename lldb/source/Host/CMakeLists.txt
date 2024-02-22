@@ -47,6 +47,12 @@ add_host_subdirectory(common
   common/ZipFileResolver.cpp
   )
 
+  if(LLDB_ENABLE_SWIFT_SUPPORT)
+    add_host_subdirectory(posix
+      common/HostInfoSwift.cpp
+      )
+  endif()
+
 if (LLDB_ENABLE_LIBEDIT)
   add_host_subdirectory(common
     common/Editline.cpp
@@ -71,6 +77,12 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     windows/ProcessLauncherWindows.cpp
     windows/ProcessRunLock.cpp
     )
+    if(LLDB_ENABLE_SWIFT_SUPPORT)
+    add_host_subdirectory(posix
+      windows/HostInfoWindowsSwift.cpp
+      )
+    endif()
+
 else()
   add_host_subdirectory(posix
     posix/DomainSocket.cpp
@@ -84,6 +96,12 @@ else()
     posix/ProcessLauncherPosixFork.cpp
     )
 
+  if(LLDB_ENABLE_SWIFT_SUPPORT)
+    add_host_subdirectory(posix
+      posix/HostInfoPosixSwift.cpp
+      )
+  endif()
+  
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     add_subdirectory(macosx/objcxx)
     set(LLDBObjCLibs lldbHostMacOSXObjCXX)

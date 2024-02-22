@@ -1509,6 +1509,7 @@ TEST(RenameTest, PrepareRename) {
                                   /*NewName=*/std::nullopt, {});
   // Verify that for multi-file rename, we only return main-file occurrences.
   ASSERT_TRUE(bool(Results)) << Results.takeError();
+  ASSERT_EQ(Results->Placeholder, "func");
   // We don't know the result is complete in prepareRename (passing a nullptr
   // index internally), so GlobalChanges should be empty.
   EXPECT_TRUE(Results->GlobalChanges.empty());
@@ -1537,6 +1538,38 @@ TEST(RenameTest, PrepareRename) {
     Results = runPrepareRename(Server, FooCCPath, FooCC.point(),
                                /*NewName=*/GoodIdent, {});
     EXPECT_TRUE(bool(Results));
+  }
+}
+
+TEST(RenameTest, PrepareRenameObjC) {
+  Annotations Input(R"cpp(
+    @interface Foo
+    - (int)performA^ction:(int)action w^ith:(int)value;
+    @end
+    @implementation Foo
+    - (int)performA^ction:(int)action w^ith:(int)value {
+      return [self ^performAction^:action ^w^ith^:value];
+    }
+    @end
+  )cpp");
+  std::string Path = testPath("foo.m");
+  MockFS FS;
+  FS.Files[Path] = std::string(Input.code());
+
+  auto ServerOpts = ClangdServer::optsForTest();
+  ServerOpts.BuildDynamicSymbolIndex = true;
+
+  trace::TestTracer Tracer;
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags = {"-xobjective-c"};
+  ClangdServer Server(CDB, FS, ServerOpts);
+  runAddDocument(Server, Path, Input.code());
+
+  for (Position Point : Input.points()) {
+    auto Results = runPrepareRename(Server, Path, Point,
+                                    /*NewName=*/std::nullopt, {});
+    ASSERT_TRUE(bool(Results)) << Results.takeError();
+    ASSERT_EQ(Results->Placeholder, "performAction:with:");
   }
 }
 
@@ -1943,6 +1976,146 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
   }
 }
 
+TEST(CrossFileRenameTests, DISABLED_ObjC) { // rdar://123113498
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags = {"-xobjective-c"};
+  // rename is runnning on all "^" points in FooH.
+  struct Case {
+    llvm::StringRef FooH;
+    llvm::StringRef FooM;
+    llvm::StringRef NewName;
+    llvm::StringRef ExpectedFooH;
+    llvm::StringRef ExpectedFooM;
+  };
+  Case Cases[] = {
+    // --- Zero arg selector
+    {
+      // Input
+      R"cpp(
+        @interface Foo
+        - (int)performA^ction;
+        @end
+      )cpp",
+      R"cpp(
+        @implementation Foo
+        - (int)performAction {
+          [self performAction];
+        }
+        @end
+      )cpp",
+      // New name
+      "performNewAction",
+      // Expected
+      R"cpp(
+        @interface Foo
+        - (int)performNewAction;
+        @end
+      )cpp",
+      R"cpp(
+        @implementation Foo
+        - (int)performNewAction {
+          [self performNewAction];
+        }
+        @end
+      )cpp",
+    },
+    // --- Single arg selector
+    {
+      // Input
+      R"cpp(
+        @interface Foo
+        - (int)performA^ction:(int)action;
+        @end
+      )cpp",
+      R"cpp(
+        @implementation Foo
+        - (int)performAction:(int)action {
+          [self performAction:action];
+        }
+        @end
+      )cpp",
+      // New name
+      "performNewAction:",
+      // Expected
+      R"cpp(
+        @interface Foo
+        - (int)performNewAction:(int)action;
+        @end
+      )cpp",
+      R"cpp(
+        @implementation Foo
+        - (int)performNewAction:(int)action {
+          [self performNewAction:action];
+        }
+        @end
+      )cpp",
+    },
+    // --- Multi arg selector
+    {
+      // Input
+      R"cpp(
+        @interface Foo
+        - (int)performA^ction:(int)action with:(int)value;
+        @end
+      )cpp",
+      R"cpp(
+        @implementation Foo
+        - (int)performAction:(int)action with:(int)value {
+          [self performAction:action with:value];
+        }
+        @end
+      )cpp",
+      // New name
+      "performNewAction:by:",
+      // Expected
+      R"cpp(
+        @interface Foo
+        - (int)performNewAction:(int)action by:(int)value;
+        @end
+      )cpp",
+      R"cpp(
+        @implementation Foo
+        - (int)performNewAction:(int)action by:(int)value {
+          [self performNewAction:action by:value];
+        }
+        @end
+      )cpp",
+    }
+  };
+
+  trace::TestTracer Tracer;
+  for (const auto &T : Cases) {
+    SCOPED_TRACE(T.FooH);
+    Annotations FooH(T.FooH);
+    Annotations FooM(T.FooM);
+    std::string FooHPath = testPath("foo.h");
+    std::string FooMPath = testPath("foo.m");
+
+    MockFS FS;
+    FS.Files[FooHPath] = std::string(FooH.code());
+    FS.Files[FooMPath] = std::string(FooM.code());
+
+    auto ServerOpts = ClangdServer::optsForTest();
+    ServerOpts.BuildDynamicSymbolIndex = true;
+    ClangdServer Server(CDB, FS, ServerOpts);
+
+    // Add all files to clangd server to make sure the dynamic index has been
+    // built.
+    runAddDocument(Server, FooHPath, FooH.code());
+    runAddDocument(Server, FooMPath, FooM.code());
+
+    for (const auto &RenamePos : FooH.points()) {
+      EXPECT_THAT(Tracer.takeMetric("rename_files"), SizeIs(0));
+      auto FileEditsList =
+          llvm::cantFail(runRename(Server, FooHPath, RenamePos, T.NewName, {}));
+      EXPECT_THAT(Tracer.takeMetric("rename_files"), ElementsAre(2));
+      EXPECT_THAT(applyEdits(std::move(FileEditsList.GlobalChanges)),
+                  UnorderedElementsAre(Pair(Eq(FooHPath), Eq(T.ExpectedFooH)),
+                                       Pair(Eq(FooMPath), Eq(T.ExpectedFooM))));
+    }
+  }
+}
+
 TEST(CrossFileRenameTests, CrossFileOnLocalSymbol) {
   // cross-file rename should work for function-local symbols, even there is no
   // index provided.
@@ -2283,6 +2456,132 @@ TEST(CrossFileRenameTests, adjustmentCost) {
                   C.ranges("idx"), symbolRanges(C.ranges("lex")), MappedIndex),
               T.ExpectedCost);
   }
+}
+
+static URIForFile uriForPath(StringRef Path) {
+  URI Uri = llvm::cantFail(URI::parse(("file://" + Path).str()));
+  return llvm::cantFail(URIForFile::fromURI(Uri, /*HintPath=*/""));
+}
+
+TEST(IndexedRename, IndexedRename) {
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags = {"-xobjective-c"};
+  // rename is runnning on all "^" points in FooH, and "[[]]" ranges are the
+  // expected rename occurrences.
+  struct Case {
+    llvm::StringRef FooH;
+    llvm::StringRef FooM;
+    llvm::StringRef OldName;
+    llvm::StringRef NewName;
+    llvm::StringRef ExpectedFooH;
+    llvm::StringRef ExpectedFooM;
+  };
+  Case Cases[] = {
+    {
+      // Input
+      R"cpp(
+        void ^foo();
+      )cpp",
+      R"cpp(
+        void ^foo() {
+          return ^foo();
+        }
+      )cpp",
+      // Old name
+      "foo",
+      // New name
+      "bar",
+      // Expected
+      R"cpp(
+        void bar();
+      )cpp",
+      R"cpp(
+        void bar() {
+          return bar();
+        }
+      )cpp",
+    },
+    #if 0 // // rdar://123113381
+    {
+      // Input
+      R"cpp(
+        @interface Foo
+        - (int)^performAction:(int)action with:(int)value;
+        @end
+      )cpp",
+      R"cpp(
+        @implementation Foo
+        - (int)^performAction:(int)action with:(int)value {
+          [self ^performAction:action with:value];
+        }
+        @end
+      )cpp",
+      // Old name
+      "performAction:with:",
+      // New name
+      "performNewAction:by:",
+      // Expected
+      R"cpp(
+        @interface Foo
+        - (int)performNewAction:(int)action by:(int)value;
+        @end
+      )cpp",
+      R"cpp(
+        @implementation Foo
+        - (int)performNewAction:(int)action by:(int)value {
+          [self performNewAction:action by:value];
+        }
+        @end
+      )cpp",
+    }
+    #endif
+  };
+  trace::TestTracer Tracer;
+  for (const auto &T : Cases) {
+    SCOPED_TRACE(T.FooH);
+    Annotations FooH(T.FooH);
+    Annotations FooM(T.FooM);
+    std::string FooHPath = testPath("foo.h");
+    std::string FooMPath = testPath("foo.m");
+
+    MockFS FS;
+    FS.Files[FooHPath] = std::string(FooH.code());
+    FS.Files[FooMPath] = std::string(FooM.code());
+
+    auto ServerOpts = ClangdServer::optsForTest();
+    ClangdServer Server(CDB, FS, ServerOpts);
+
+    std::map<URIForFile, std::vector<Position>> Positions;
+    Positions[uriForPath(FooHPath)] = FooH.points();
+    Positions[uriForPath(FooMPath)] = FooM.points();
+    FileEdits Edits = llvm::cantFail(
+        runIndexedRename(Server, Positions, FooHPath, T.OldName, T.NewName));
+
+    EXPECT_THAT(applyEdits(std::move(Edits)),
+                UnorderedElementsAre(Pair(Eq(FooHPath), Eq(T.ExpectedFooH)),
+                                     Pair(Eq(FooMPath), Eq(T.ExpectedFooM))));
+  }
+}
+
+TEST(IndexedRename, IndexedRenameDoesntCrashIfNoCompilerCommandsExistForFile) {
+  Annotations FooM(R"cpp(
+    void ^foo();
+  )cpp");
+  std::string Path = testPath("foo.swift");
+
+  MockFS FS;
+  FS.Files[Path] = std::string(FooM.code());
+
+  auto ServerOpts = ClangdServer::optsForTest();
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, FS, ServerOpts);
+
+  std::map<URIForFile, std::vector<Position>> Positions;
+  Positions[uriForPath(Path)] = FooM.points();
+  llvm::Expected<FileEdits> Edits =
+      runIndexedRename(Server, Positions, Path, "cFunc", "dFunc");
+  EXPECT_FALSE((bool)Edits);
+  consumeError(Edits.takeError());
 }
 
 } // namespace

@@ -19,12 +19,7 @@ public:
   // Constructors and Destructors
   StackID() = default;
 
-  explicit StackID(lldb::addr_t pc, lldb::addr_t cfa,
-                   SymbolContextScope *symbol_scope)
-      : m_pc(pc), m_cfa(cfa), m_symbol_scope(symbol_scope) {}
-
-  StackID(const StackID &rhs)
-      : m_pc(rhs.m_pc), m_cfa(rhs.m_cfa), m_symbol_scope(rhs.m_symbol_scope) {}
+  StackID(const StackID &rhs) = default;
 
   ~StackID() = default;
 
@@ -41,6 +36,7 @@ public:
   void Clear() {
     m_pc = LLDB_INVALID_ADDRESS;
     m_cfa = LLDB_INVALID_ADDRESS;
+    m_cfa_on_stack = eLazyBoolCalculate;
     m_symbol_scope = nullptr;
   }
 
@@ -55,13 +51,24 @@ public:
     if (this != &rhs) {
       m_pc = rhs.m_pc;
       m_cfa = rhs.m_cfa;
+      m_cfa_on_stack = rhs.m_cfa_on_stack;
       m_symbol_scope = rhs.m_symbol_scope;
     }
     return *this;
   }
 
+  /// Check if the CFA is on the stack, or elsewhere in the process, such as on
+  /// the heap.
+  bool IsCFAOnStack(Process &process) const;
+
+  /// Determine if the first StackID is "younger" than the second.
+  static bool IsYounger(const StackID &lhs, const StackID &rhs,
+                        Process &process);
+
 protected:
   friend class StackFrame;
+
+  explicit StackID(lldb::addr_t pc, lldb::addr_t cfa) : m_pc(pc), m_cfa(cfa) {}
 
   void SetPC(lldb::addr_t pc) { m_pc = pc; }
 
@@ -78,6 +85,9 @@ protected:
                             // at the beginning of the function that uniquely
                             // identifies this frame (along with m_symbol_scope
                             // below)
+  // True if the CFA is an address on the stack, false if it's an address
+  // elsewhere (ie heap).
+  mutable LazyBool m_cfa_on_stack = eLazyBoolCalculate;
   SymbolContextScope *m_symbol_scope =
       nullptr; // If nullptr, there is no block or symbol for this frame.
                // If not nullptr, this will either be the scope for the
@@ -90,9 +100,6 @@ protected:
 
 bool operator==(const StackID &lhs, const StackID &rhs);
 bool operator!=(const StackID &lhs, const StackID &rhs);
-
-// frame_id_1 < frame_id_2 means "frame_id_1 is YOUNGER than frame_id_2"
-bool operator<(const StackID &lhs, const StackID &rhs);
 
 } // namespace lldb_private
 

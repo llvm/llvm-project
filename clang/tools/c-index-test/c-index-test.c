@@ -214,6 +214,10 @@ static void describeLibclangFailure(enum CXErrorCode Err) {
   case CXError_ASTReadError:
     fprintf(stderr, "Failure: AST deserialization error occurred\n");
     return;
+
+  default:
+    fprintf(stderr, "Failure (other)\n");
+    return;
   }
 }
 
@@ -4773,7 +4777,8 @@ static void printFixIts(CXDiagnostic D, unsigned indent) {
   }  
 }
 
-static void printDiagnosticSet(CXDiagnosticSet Diags, unsigned indent) {
+static void printDiagnosticSet(
+    CXDiagnosticSet Diags, unsigned indent, CXDiagnosticSet TopDiags) {
   unsigned i, n;
 
   if (!Diags)
@@ -4787,7 +4792,8 @@ static void printDiagnosticSet(CXDiagnosticSet Diags, unsigned indent) {
     CXString FileName, DiagSpelling, DiagOption, DiagCat;
     unsigned line, column, offset;
     const char *FileNameStr = 0, *DiagOptionStr = 0, *DiagCatStr = 0;
-    
+    const char *FileContents = 0;
+
     D = clang_getDiagnosticInSet(Diags, i);
     DiagLoc = clang_getDiagnosticLocation(D);
     clang_getExpansionLocation(DiagLoc, &File, &line, &column, &offset);
@@ -4820,15 +4826,37 @@ static void printDiagnosticSet(CXDiagnosticSet Diags, unsigned indent) {
     
     printRanges(D, indent);
     printFixIts(D, indent);
-    
+
+    // If we have the source file contents for this file, print them now.
+    FileContents = clang_getDiagnosticFileContents(TopDiags, File, 0);
+    if (FileContents) {
+      CXSourceRange OriginalSourceRange;
+
+      fprintf(stderr, "CONTENTS OF FILE %s:\n",
+              FileNameStr ? FileNameStr : "(null)");
+
+      OriginalSourceRange = clang_getDiagnosticFileOriginalSourceRange(
+          TopDiags, File);
+      if (!clang_equalRanges(clang_getNullRange(), OriginalSourceRange)) {
+        printIndent(indent);
+        fprintf(stderr, "Original source range: ");
+        printLocation(clang_getRangeStart(OriginalSourceRange));
+        fprintf(stderr, " - ");
+        printLocation(clang_getRangeEnd(OriginalSourceRange));
+        fprintf(stderr, "\n");
+      }
+
+      fprintf(stderr, "%s\nEND CONTENTS OF FILE\n", FileContents);
+    }
+
     /* Print subdiagnostics. */
-    printDiagnosticSet(clang_getChildDiagnostics(D), indent+2);
+    printDiagnosticSet(clang_getChildDiagnostics(D), indent+2, TopDiags);
 
     clang_disposeString(FileName);
     clang_disposeString(DiagSpelling);
     clang_disposeString(DiagOption);
     clang_disposeString(DiagCat);
-  }  
+  }
 }
 
 static int read_diagnostics(const char *filename) {
@@ -4845,7 +4873,7 @@ static int read_diagnostics(const char *filename) {
     return 1;
   }
   
-  printDiagnosticSet(Diags, 0);
+  printDiagnosticSet(Diags, 0, Diags);
   fprintf(stderr, "Number of diagnostics: %d\n",
           clang_getNumDiagnosticsInSet(Diags));
   clang_disposeDiagnosticSet(Diags);

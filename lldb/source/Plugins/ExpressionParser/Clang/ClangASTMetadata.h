@@ -20,7 +20,15 @@ public:
   ClangASTMetadata()
       : m_user_id(0), m_union_is_user_id(false), m_union_is_isa_ptr(false),
         m_has_object_ptr(false), m_is_self(false), m_is_dynamic_cxx(true),
-        m_is_forcefully_completed(false) {}
+        m_is_forcefully_completed(false)
+        // BEGIN SWIFT
+        // This is initialized to true because in the off-chance we don't parse
+        // this type in debug info we should stil take the regular, expensive
+        // path to figure out if the type is a Swift interop type or not.
+        ,
+        m_is_potentially_swift_interop_type(true)
+  // END SWIFT
+  {}
 
   bool GetIsDynamicCXXType() const { return m_is_dynamic_cxx; }
 
@@ -93,6 +101,16 @@ public:
     m_is_forcefully_completed = true;
   }
 
+  // BEGIN SWIFT
+  bool GetIsPotentiallySwiftInteropType() {
+    return m_is_potentially_swift_interop_type;
+  }
+
+  void SetIsPotentiallySwiftInteropType(bool is_swift_interop_type) {
+    m_is_potentially_swift_interop_type = is_swift_interop_type;
+  }
+  // END SWIFT
+
   void Dump(Stream *s);
 
 private:
@@ -102,7 +120,12 @@ private:
   };
 
   bool m_union_is_user_id : 1, m_union_is_isa_ptr : 1, m_has_object_ptr : 1,
-      m_is_self : 1, m_is_dynamic_cxx : 1, m_is_forcefully_completed : 1;
+      m_is_self : 1, m_is_dynamic_cxx : 1,
+      m_is_forcefully_completed : 1
+      // BEGIN SWIFT
+      , m_is_potentially_swift_interop_type : 1
+      // END SWIFT
+      ;
 };
 
 } // namespace lldb_private

@@ -581,7 +581,8 @@ TypeSystemClang::~TypeSystemClang() { Finalize(); }
 
 lldb::TypeSystemSP TypeSystemClang::CreateInstance(lldb::LanguageType language,
                                                    lldb_private::Module *module,
-                                                   Target *target) {
+                                                   Target *target,
+                                                   const char *compiler_options) {
   if (!TypeSystemClangSupportsLanguage(language))
     return lldb::TypeSystemSP();
   ArchSpec arch;
@@ -768,6 +769,7 @@ void TypeSystemClang::CreateASTContext() {
 
 TypeSystemClang *TypeSystemClang::GetASTContext(clang::ASTContext *ast) {
   TypeSystemClang *clang_ast = GetASTMap().Lookup(ast);
+  lldbassert(clang_ast && "Orphaned clang::ASTContext");
   return clang_ast;
 }
 
@@ -1234,10 +1236,9 @@ void TypeSystemClang::SetOwningModule(clang::Decl *decl,
   decl->setModuleOwnershipKind(clang::Decl::ModuleOwnershipKind::Visible);
 }
 
-OptionalClangModuleID
-TypeSystemClang::GetOrCreateClangModule(llvm::StringRef name,
-                                        OptionalClangModuleID parent,
-                                        bool is_framework, bool is_explicit) {
+OptionalClangModuleID TypeSystemClang::GetOrCreateClangModule(
+    llvm::StringRef name, OptionalClangModuleID parent,
+    llvm::StringRef apinotes, bool is_framework, bool is_explicit) {
   // Get the external AST source which holds the modules.
   auto *ast_source = llvm::dyn_cast_or_null<ClangExternalASTSourceCallbacks>(
       getASTContext().getExternalSource());
@@ -1266,6 +1267,7 @@ TypeSystemClang::GetOrCreateClangModule(llvm::StringRef name,
   if (!created)
     return ast_source->GetIDForModule(module);
 
+  module->APINotesFile = std::string(apinotes);
   return ast_source->RegisterModule(module);
 }
 
@@ -3763,7 +3765,8 @@ ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type,
 }
 
 ConstString
-TypeSystemClang::GetDisplayTypeName(lldb::opaque_compiler_type_t type) {
+TypeSystemClang::GetDisplayTypeName(lldb::opaque_compiler_type_t type,
+                                    const SymbolContext *sc) {
   if (!type)
     return ConstString();
 
@@ -5519,7 +5522,8 @@ void TypeSystemClang::ForEachEnumerator(
 
 #pragma mark Aggregate Types
 
-uint32_t TypeSystemClang::GetNumFields(lldb::opaque_compiler_type_t type) {
+uint32_t TypeSystemClang::GetNumFields(lldb::opaque_compiler_type_t type,
+                                       ExecutionContext *exe_ctx) {
   if (!type)
     return 0;
 
@@ -6606,7 +6610,8 @@ uint32_t TypeSystemClang::GetIndexForRecordChild(
 
 size_t TypeSystemClang::GetIndexOfChildMemberWithName(
     lldb::opaque_compiler_type_t type, llvm::StringRef name,
-    bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
+    ExecutionContext *exe_ctx, bool omit_empty_base_classes,
+    std::vector<uint32_t> &child_indexes) {
   if (type && !name.empty()) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -6633,7 +6638,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
             CompilerType field_type = GetType(field->getType());
             child_indexes.push_back(child_idx);
             if (field_type.GetIndexOfChildMemberWithName(
-                    name, omit_empty_base_classes, child_indexes))
+                    name, exe_ctx, omit_empty_base_classes, child_indexes))
               return child_indexes.size();
             child_indexes.pop_back();
 
@@ -6745,7 +6750,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
                   GetType(getASTContext().getObjCInterfaceType(
                       superclass_interface_decl));
               if (superclass_clang_type.GetIndexOfChildMemberWithName(
-                      name, omit_empty_base_classes, child_indexes)) {
+                      name, exe_ctx, omit_empty_base_classes, child_indexes)) {
                 // We did find an ivar in a superclass so just return the
                 // results!
                 return child_indexes.size();
@@ -6765,7 +6770,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           llvm::cast<clang::ObjCObjectPointerType>(qual_type.getTypePtr())
               ->getPointeeType());
       return objc_object_clang_type.GetIndexOfChildMemberWithName(
-          name, omit_empty_base_classes, child_indexes);
+          name, exe_ctx, omit_empty_base_classes, child_indexes);
     } break;
 
     case clang::Type::ConstantArray: {
@@ -6817,7 +6822,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
 
       if (pointee_clang_type.IsAggregateType()) {
         return pointee_clang_type.GetIndexOfChildMemberWithName(
-            name, omit_empty_base_classes, child_indexes);
+            name, exe_ctx, omit_empty_base_classes, child_indexes);
       }
     } break;
 
@@ -6826,7 +6831,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
 
       if (pointee_clang_type.IsAggregateType()) {
         return pointee_clang_type.GetIndexOfChildMemberWithName(
-            name, omit_empty_base_classes, child_indexes);
+            name, exe_ctx, omit_empty_base_classes, child_indexes);
       }
     } break;
 
@@ -6841,10 +6846,9 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
 // doesn't descend into the children, but only looks one level deep and name
 // matches can include base class names.
 
-uint32_t
-TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                         llvm::StringRef name,
-                                         bool omit_empty_base_classes) {
+uint32_t TypeSystemClang::GetIndexOfChildWithName(
+    lldb::opaque_compiler_type_t type, llvm::StringRef name,
+    ExecutionContext *exe_ctx, bool omit_empty_base_classes) {
   if (type && !name.empty()) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
 
@@ -6944,7 +6948,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
           llvm::cast<clang::ObjCObjectPointerType>(qual_type.getTypePtr())
               ->getPointeeType());
       return pointee_clang_type.GetIndexOfChildWithName(
-          name, omit_empty_base_classes);
+          name, exe_ctx, omit_empty_base_classes);
     } break;
 
     case clang::Type::ConstantArray: {
@@ -6994,7 +6998,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       CompilerType pointee_type = GetType(reference_type->getPointeeType());
 
       if (pointee_type.IsAggregateType()) {
-        return pointee_type.GetIndexOfChildWithName(name,
+        return pointee_type.GetIndexOfChildWithName(name, exe_ctx,
                                                     omit_empty_base_classes);
       }
     } break;
@@ -7005,7 +7009,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       CompilerType pointee_type = GetType(pointer_type->getPointeeType());
 
       if (pointee_type.IsAggregateType()) {
-        return pointee_type.GetIndexOfChildWithName(name,
+        return pointee_type.GetIndexOfChildWithName(name, exe_ctx,
                                                     omit_empty_base_classes);
       } else {
         //                    if (parent_name)
@@ -8562,7 +8566,7 @@ bool TypeSystemClang::DumpTypeValue(
     lldb::opaque_compiler_type_t type, Stream &s, lldb::Format format,
     const lldb_private::DataExtractor &data, lldb::offset_t byte_offset,
     size_t byte_size, uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-    ExecutionContextScope *exe_scope) {
+    ExecutionContextScope *exe_scope, bool is_base_class) {
   if (!type)
     return false;
   if (IsAggregateType(type)) {
@@ -8575,7 +8579,7 @@ bool TypeSystemClang::DumpTypeValue(
     if (type_class == clang::Type::Elaborated) {
       qual_type = llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType();
       return DumpTypeValue(qual_type.getAsOpaquePtr(), s, format, data, byte_offset, byte_size,
-                           bitfield_bit_size, bitfield_bit_offset, exe_scope);
+                           bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
     }
 
     switch (type_class) {
@@ -8601,7 +8605,7 @@ bool TypeSystemClang::DumpTypeValue(
                              // treat as a bitfield
           bitfield_bit_offset, // Offset in bits of a bitfield value if
                                // bitfield_bit_size != 0
-          exe_scope);
+          exe_scope, is_base_class);
     } break;
 
     case clang::Type::Enum:
@@ -8683,7 +8687,8 @@ bool TypeSystemClang::DumpTypeValue(
 }
 
 void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
-                                          lldb::DescriptionLevel level) {
+                                          lldb::DescriptionLevel level,
+                                          ExecutionContextScope *) {
   StreamFile s(stdout, false);
   DumpTypeDescription(type, s, level);
 
@@ -8697,7 +8702,8 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
 
 void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
                                           Stream &s,
-                                          lldb::DescriptionLevel level) {
+                                          lldb::DescriptionLevel level,
+                                          ExecutionContextScope *) {
   if (type) {
     clang::QualType qual_type =
         RemoveWrappingTypes(GetQualType(type), {clang::Type::Typedef});
@@ -8781,7 +8787,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
     if (buf.size() > 0) {
       s.Write(buf.data(), buf.size());
     }
-}
+  }
 }
 
 void TypeSystemClang::DumpTypeName(const CompilerType &type) {

@@ -993,7 +993,8 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
                                     const Driver &D, const ArgList &Args,
                                     ArgStringList &CmdArgs,
                                     const InputInfo &Output,
-                                    const InputInfoList &Inputs) const {
+                                    const InputInfoList &Inputs,
+                                    std::optional<StringRef> &Sysroot) const {
   const bool IsIAMCU = getToolChain().getTriple().isOSIAMCU();
 
   CheckPreprocessingOptions(D, Args);
@@ -1031,6 +1032,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     }
     CmdArgs.push_back("-dependency-file");
     CmdArgs.push_back(DepFile);
+    CmdArgs.push_back("-skip-unused-modulemap-deps");
 
     bool HasTarget = false;
     for (const Arg *A : Args.filtered(options::OPT_MT, options::OPT_MQ)) {
@@ -1260,10 +1262,15 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // -isysroot to the CC1 invocation.
   StringRef sysroot = C.getSysRoot();
   if (sysroot != "") {
-    if (!Args.hasArg(options::OPT_isysroot)) {
+    if (Arg *A = Args.getLastArg(options::OPT_isysroot)) {
+      Sysroot = A->getValue();
+    } else {
       CmdArgs.push_back("-isysroot");
       CmdArgs.push_back(C.getArgs().MakeArgString(sysroot));
+      Sysroot = sysroot;
     }
+  } else if (Arg *A = Args.getLastArg(options::OPT_isysroot)) {
+    Sysroot = A->getValue();
   }
 
   // Parse additional include paths from environment variables.
@@ -4650,13 +4657,80 @@ static void ProcessVSRuntimeLibrary(const ArgList &Args,
   }
 }
 
-void Clang::ConstructJob(Compilation &C, const JobAction &JA,
+void Clang::AddPrefixMappingOptions(const ArgList &Args, ArgStringList &CmdArgs,
+                                    const Driver &D,
+                                    std::optional<StringRef> Sysroot) const {
+  auto IsPathApplicableAsPrefix = [](std::optional<StringRef> Path) {
+    return Path && llvm::sys::path::is_absolute(*Path) &&
+           *Path != llvm::sys::path::root_path(*Path);
+  };
+
+  if (Arg *A = Args.getLastArg(options::OPT_fdepscan_prefix_map_sdk_EQ)) {
+    if (IsPathApplicableAsPrefix(Sysroot)) {
+      CmdArgs.push_back(Args.MakeArgString(Twine("-fdepscan-prefix-map=") +
+                                           *Sysroot + "=" + A->getValue()));
+    } else {
+      // FIXME: warning if we cannot infer sdk
+    }
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_fdepscan_prefix_map_toolchain_EQ)) {
+    StringRef ResourceDir = D.ResourceDir;
+    StringRef Guess = llvm::sys::path::parent_path(ResourceDir);
+    for (StringRef Dir : {"clang", "lib", "usr"}) {
+      if (llvm::sys::path::filename(Guess) != Dir)
+        break;
+      Guess = llvm::sys::path::parent_path(Guess);
+    }
+    if (IsPathApplicableAsPrefix(Guess)) {
+      CmdArgs.push_back(Args.MakeArgString(Twine("-fdepscan-prefix-map=") +
+                                           Guess + "=" + A->getValue()));
+    } else {
+      // FIXME: warning if we cannot infer toolchain
+    }
+  }
+
+  for (const Arg *A : Args.filtered(options::OPT_fdepscan_prefix_map_EQ)) {
+    A->claim();
+    StringRef Map = A->getValue();
+    StringRef Prefix = Map.split('=').first;
+    if (Prefix.size() == Map.size() || !IsPathApplicableAsPrefix(Prefix)) {
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << A->getValue() << A->getOption().getName();
+    } else {
+      A->render(Args, CmdArgs);
+    }
+  }
+}
+
+static void addCachingOptions(ArgStringList &CmdArgs) {
+  if (std::getenv("CLANG_CACHE_TEST_DETERMINISTIC_OUTPUTS"))
+    CmdArgs.push_back("-fcache-disable-replay");
+
+  if (std::getenv("CLANG_CACHE_REDACT_TIME_MACROS")) {
+    // Remove use of these macros to get reproducible outputs. This can
+    // accompany CLANG_CACHE_TEST_DETERMINISTIC_OUTPUTS to avoid fatal errors
+    // when the source uses these macros.
+    CmdArgs.push_back("-Wno-builtin-macro-redefined");
+    CmdArgs.push_back("-D__DATE__=\"redacted\"");
+    CmdArgs.push_back("-D__TIMESTAMP__=\"redacted\"");
+    CmdArgs.push_back("-D__TIME__=\"redacted\"");
+  }
+
+  if (std::getenv("CLANG_CACHE_CHECK_REPRODUCIBLE_CACHING_ISSUES"))
+    CmdArgs.push_back("-Werror=reproducible-caching");
+}
+
+void Clang::ConstructJob(Compilation &C, const JobAction &Job,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
   const auto &TC = getToolChain();
   const llvm::Triple &RawTriple = TC.getTriple();
   const llvm::Triple &Triple = TC.getEffectiveTriple();
   const std::string &TripleStr = Triple.getTriple();
+  const JobAction &JA = isa<DepscanJobAction>(Job)
+                            ? cast<DepscanJobAction>(Job).getScanningJobAction()
+                            : Job;
 
   bool KernelOrKext =
       Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext);
@@ -4738,10 +4812,79 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (IsIAMCU && types::isCXX(Input.getType()))
     D.Diag(diag::err_drv_clang_unsupported) << "C++ for IAMCU";
 
+  {
+    const OptSpecifier DepScanOpts[] = {options::OPT_fdepscan_EQ,
+                                        options::OPT_fdepscan_include_tree,
+                                        options::OPT_fdepscan_share_EQ,
+                                        options::OPT_fdepscan_share_identifier,
+                                        options::OPT_fdepscan_share_parent,
+                                        options::OPT_fdepscan_share_parent_EQ,
+                                        options::OPT_fno_depscan_share,
+                                        options::OPT_fdepscan_share_stop_EQ,
+                                        options::OPT_fdepscan_daemon_EQ};
+
+    // Handle depscan.
+    if (Job.getKind() == Action::DepscanJobClass) {
+      CmdArgs.push_back("-cc1depscan");
+
+      // Pass depscan related options to cc1depscan.
+      Args.addAllArgs(CmdArgs, DepScanOpts);
+
+      assert(Output.isFilename() && "Depscan needs to have file output");
+      CmdArgs.push_back("-o");
+      CmdArgs.push_back(Output.getFilename());
+      CmdArgs.push_back("-cc1-args");
+    } else if (Arg *A = Args.getLastArg(options::OPT_fdepscan_EQ)) {
+      if (A->getValue() == llvm::StringLiteral("off")) {
+        // Claim depscan args.
+        for (auto Opt : DepScanOpts)
+          Args.ClaimAllArgs(Opt);
+      }
+    }
+  }
+
   // Invoke ourselves in -cc1 mode.
   //
   // FIXME: Implement custom jobs for internal actions.
   CmdArgs.push_back("-cc1");
+
+  // Handle response file input.
+  if (Inputs.front().getType() == types::TY_ResponseFile) {
+    // Render response file input first.
+    assert(Inputs.size() == 1 && "Only one response file input");
+    auto &II = Inputs.front();
+    assert(II.isFilename() && "Should be response file");
+    SmallString<128> InputName("@");
+    InputName += II.getFilename();
+    CmdArgs.push_back(C.getArgs().MakeArgString(InputName));
+
+    // FIXME: The -cc1depscan job should include the -o for the -cc1 job that
+    // follows it in -cc1-args, but it doesn't currently have access to that
+    // filename. To fix this, we need to somehow route the final output type
+    // into Depscan ConstructJob.
+    // FIXME: This intermediate output file will adds 3-4% of overhead comparing
+    // to passing all the cc1 args in the memory. The fix might be pin DepScan
+    // job in-process and pass cc1 args in memory instead of creating an actual
+    // file here.
+    if (Output.isFilename()) {
+      CmdArgs.push_back("-o");
+      CmdArgs.push_back(Output.getFilename());
+    }
+    // FIXME: Clean up this code and factor out the common logic (see the end of
+    // the function)
+    const char *Exec = D.getClangProgramPath();
+    if (D.CC1Main && !D.CCGenDiagnostics) {
+      // Invoke the CC1 directly in this process
+      C.addCommand(std::make_unique<CC1Command>(
+          Job, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs,
+          Output));
+    } else {
+      C.addCommand(std::make_unique<Command>(Job, *this,
+                                             ResponseFileSupport::AtFileUTF8(),
+                                             Exec, CmdArgs, Inputs, Output));
+    }
+    return;
+  }
 
   // Add the "effective" target triple.
   CmdArgs.push_back("-triple");
@@ -4940,7 +5083,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             Args.getLastArg(options::OPT_extract_api_ignores_EQ))
       ExtractAPIIgnoresFileArg->render(Args, CmdArgs);
   } else {
-    assert((isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) &&
+    assert((isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA) || isa<DepscanJobAction>(JA)) &&
            "Invalid action for clang tool.");
     if (JA.getType() == types::TY_Nothing) {
       CmdArgs.push_back("-fsyntax-only");
@@ -5167,7 +5310,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
 
     C.addCommand(std::make_unique<Command>(
-        JA, *this, ResponseFileSupport::AtFileUTF8(), D.getClangProgramPath(),
+        Job, *this, ResponseFileSupport::AtFileUTF8(), D.getClangProgramPath(),
         CmdArgs, Inputs, Output, D.getPrependArg()));
     return;
   }
@@ -6066,12 +6209,42 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   RenderARCMigrateToolOptions(D, Args, CmdArgs);
 
+  if (Args.hasArg(options::OPT_index_store_path)) {
+    Args.AddLastArg(CmdArgs, options::OPT_index_store_path);
+    Args.AddLastArg(CmdArgs, options::OPT_index_ignore_system_symbols);
+    Args.AddLastArg(CmdArgs, options::OPT_index_record_codegen_name);
+    Args.AddLastArg(CmdArgs, options::OPT_index_unit_output_path);
+    Args.AddLastArg(CmdArgs, options::OPT_index_ignore_macros);
+    Args.AddLastArg(CmdArgs, options::OPT_index_ignore_pcms);
+
+    // If '-o' is passed along with '-fsyntax-only' pass it along the cc1
+    // invocation so that the index action knows what the out file is.
+    if (isa<CompileJobAction>(JA) && JA.getType() == types::TY_Nothing) {
+      Args.AddLastArg(CmdArgs, options::OPT_o);
+    }
+  }
+
+  if (const char *IdxStorePath = ::getenv("CLANG_PROJECT_INDEX_PATH")) {
+    CmdArgs.push_back("-index-store-path");
+    CmdArgs.push_back(IdxStorePath);
+    CmdArgs.push_back("-index-ignore-system-symbols");
+    CmdArgs.push_back("-index-record-codegen-name");
+  }
+
+
   // Add preprocessing options like -I, -D, etc. if we are using the
   // preprocessor.
   //
   // FIXME: Support -fpreprocessed
+  std::optional<StringRef> Sysroot;
   if (types::getPreprocessedType(InputType) != types::TY_INVALID)
-    AddPreprocessingOptions(C, JA, D, Args, CmdArgs, Output, Inputs);
+    AddPreprocessingOptions(C, JA, D, Args, CmdArgs, Output, Inputs, Sysroot);
+
+  // Handle -fdepscan-prefix-map-* options
+  AddPrefixMappingOptions(Args, CmdArgs, D, Sysroot);
+
+  // Handle compile caching options.
+  addCachingOptions(CmdArgs);
 
   // Don't warn about "clang -c -DPIC -fPIC test.i" because libtool.m4 assumes
   // that "The compiler can only warn and ignore the option if not recognized".
@@ -6625,6 +6798,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_ftrapv);
   Args.AddLastArg(CmdArgs, options::OPT_malign_double);
   Args.AddLastArg(CmdArgs, options::OPT_fno_temp_file);
+  Args.AddLastArg(CmdArgs, options::OPT_fsuppress_conflicting_types);
 
   if (const char *Name = C.getTimeTraceFile(&JA)) {
     CmdArgs.push_back(Args.MakeArgString("-ftime-trace=" + Twine(Name)));
@@ -6786,12 +6960,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptOutFlag(CmdArgs, options::OPT_fassume_sane_operator_new,
                      options::OPT_fno_assume_sane_operator_new);
 
-  if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes, false))
-    CmdArgs.push_back("-fapinotes");
-  if (Args.hasFlag(options::OPT_fapinotes_modules,
-                   options::OPT_fno_apinotes_modules, false))
-    CmdArgs.push_back("-fapinotes-modules");
-  Args.AddLastArg(CmdArgs, options::OPT_fapinotes_swift_version);
+  if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes, false) ||
+      Args.hasFlag(options::OPT_fapinotes_modules,
+                   options::OPT_fno_apinotes_modules, false) ||
+      Args.hasArg(options::OPT_iapinotes_modules)) {
+    if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes, false))
+      CmdArgs.push_back("-fapinotes");
+    if (Args.hasFlag(options::OPT_fapinotes_modules,
+                     options::OPT_fno_apinotes_modules, false))
+      CmdArgs.push_back("-fapinotes-modules");
+
+    Args.AddLastArg(CmdArgs, options::OPT_fapinotes_swift_version);
+  }
 
   // -fblocks=0 is default.
   if (Args.hasFlag(options::OPT_fblocks, options::OPT_fno_blocks,
@@ -7171,6 +7351,30 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // -fno-common is the default, set -fcommon only when that flag is set.
   Args.addOptInFlag(CmdArgs, options::OPT_fcommon, options::OPT_fno_common);
 
+  if (Args.hasFlag(options::OPT_fptrauth_intrinsics,
+                   options::OPT_fno_ptrauth_intrinsics, false))
+    CmdArgs.push_back("-fptrauth-intrinsics");
+
+  if (Args.hasFlag(options::OPT_fptrauth_calls,
+                   options::OPT_fno_ptrauth_calls, false))
+    CmdArgs.push_back("-fptrauth-calls");
+
+  if (Args.hasFlag(options::OPT_fptrauth_returns,
+                   options::OPT_fno_ptrauth_returns, false))
+    CmdArgs.push_back("-fptrauth-returns");
+
+  if (Args.hasFlag(options::OPT_fptrauth_indirect_gotos,
+                   options::OPT_fno_ptrauth_indirect_gotos, false))
+    CmdArgs.push_back("-fptrauth-indirect-gotos");
+
+  if (Args.hasFlag(options::OPT_fptrauth_auth_traps,
+                   options::OPT_fno_ptrauth_auth_traps, false))
+    CmdArgs.push_back("-fptrauth-auth-traps");
+
+  if (Args.hasFlag(options::OPT_fptrauth_soft,
+                   options::OPT_fno_ptrauth_soft, false))
+    CmdArgs.push_back("-fptrauth-soft");
+
   // -fsigned-bitfields is default, and clang doesn't yet support
   // -funsigned-bitfields.
   if (!Args.hasFlag(options::OPT_fsigned_bitfields,
@@ -7399,12 +7603,21 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Exec = D.getClangProgramPath();
 
+  // Check if there's a request for reproducible debug info. Pass it through
+  // but also use it.
+  bool GReproducible =
+      Args.hasFlag(options::OPT_greproducible,
+                   options::OPT_gno_reproducible, false);
+  if (GReproducible)
+    CmdArgs.push_back("-greproducible");
+
   // Optionally embed the -cc1 level arguments into the debug info or a
   // section, for build analysis.
   // Also record command line arguments into the debug info if
   // -grecord-gcc-switches options is set on.
   // By default, -gno-record-gcc-switches is set on and no recording.
   auto GRecordSwitches =
+      !GReproducible &&
       Args.hasFlag(options::OPT_grecord_command_line,
                    options::OPT_gno_record_command_line, false);
   auto FRecordSwitches =
@@ -7750,11 +7963,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (D.CC1Main && !D.CCGenDiagnostics) {
     // Invoke the CC1 directly in this process
     C.addCommand(std::make_unique<CC1Command>(
-        JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs,
+        Job, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs,
         Output, D.getPrependArg()));
   } else {
     C.addCommand(std::make_unique<Command>(
-        JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs,
+        Job, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs,
         Output, D.getPrependArg()));
   }
 
@@ -8257,6 +8470,46 @@ void ClangAs::AddRISCVTargetArgs(const ArgList &Args,
   }
 }
 
+void ClangAs::AddAArch64TargetArgs(const ArgList &Args,
+                                   ArgStringList &CmdArgs) const {
+  const llvm::Triple &Triple = getToolChain().getTriple();
+
+  // In the assembler, arm64e support mostly consists of setting an ABI version.
+  // It also enables various preprocessor macros, but that's done before -cc1as.
+  if (Triple.isArm64e()) {
+    // The ptrauth ABI version is 0 by default, but can be overridden.
+    static const constexpr unsigned DefaultPtrauthABIVersion = 0;
+
+    unsigned PtrAuthABIVersion = DefaultPtrauthABIVersion;
+    const Arg *A = Args.getLastArg(options::OPT_fptrauth_abi_version_EQ,
+                                   options::OPT_fno_ptrauth_abi_version);
+    bool HasVersionArg =
+        A && A->getOption().matches(options::OPT_fptrauth_abi_version_EQ);
+    if (HasVersionArg) {
+      unsigned PtrAuthABIVersionArg;
+      if (StringRef(A->getValue()).getAsInteger(10, PtrAuthABIVersionArg))
+        getToolChain().getDriver().Diag(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+      else
+        PtrAuthABIVersion = PtrAuthABIVersionArg;
+    }
+
+    // Pass the ABI version to -cc1, regardless of its value, if the user asked
+    // for it or if the user didn't explicitly disable it.
+    if (HasVersionArg || !Args.hasArg(options::OPT_fno_ptrauth_abi_version)) {
+      CmdArgs.push_back(Args.MakeArgString("-fptrauth-abi-version=" +
+                                           llvm::utostr(PtrAuthABIVersion)));
+
+      // -f(no-)ptrauth-kernel-abi-version can override -mkernel and
+      // -fapple-kext
+      if (Args.hasArg(options::OPT_fptrauth_kernel_abi_version,
+                      options::OPT_mkernel, options::OPT_fapple_kext) &&
+          !Args.hasArg(options::OPT_fno_ptrauth_kernel_abi_version))
+        CmdArgs.push_back("-fptrauth-kernel-abi-version");
+    }
+  }
+}
+
 void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
                            const InputInfo &Output, const InputInfoList &Inputs,
                            const ArgList &Args,
@@ -8438,6 +8691,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-mllvm");
       CmdArgs.push_back("-aarch64-mark-bti-property");
     }
+    AddAArch64TargetArgs(Args, CmdArgs);
     break;
 
   case llvm::Triple::loongarch32:

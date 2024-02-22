@@ -220,7 +220,7 @@ lldb::FrameComparison ThreadPlanStepRange::CompareCurrentFrameToStartFrame() {
 
   if (cur_frame_id == m_stack_id) {
     frame_order = eFrameCompareEqual;
-  } else if (cur_frame_id < m_stack_id) {
+  } else if (IsYounger(cur_frame_id, m_stack_id)) {
     frame_order = eFrameCompareYounger;
   } else {
     StackFrameSP cur_parent_frame = thread.GetStackFrameAtIndex(1);
@@ -432,24 +432,24 @@ StateType ThreadPlanStepRange::GetPlanRunState() {
 }
 
 bool ThreadPlanStepRange::MischiefManaged() {
-  // If we have pushed some plans between ShouldStop & MischiefManaged, then
-  // we're not done...
-  // I do this check first because we might have stepped somewhere that will
-  // fool InRange into
-  // thinking it needs to step past the end of that line.  This happens, for
-  // instance, when stepping over inlined code that is in the middle of the
-  // current line.
-
-  if (!m_no_more_plans)
-    return false;
-
   bool done = true;
   if (!IsPlanComplete()) {
-    if (InRange()) {
+    // If we have pushed some plans between ShouldStop &
+    // MischiefManaged, then we're not done...  I do this check first
+    // because we might have stepped somewhere that will fool InRange
+    // into thinking it needs to step past the end of that line.  This
+    // happens, for instance, when stepping over inlined code that is
+    // in the middle of the current line.
+
+    if (!m_no_more_plans)
       done = false;
-    } else {
-      FrameComparison frame_order = CompareCurrentFrameToStartFrame();
-      done = (frame_order != eFrameCompareOlder) ? m_no_more_plans : true;
+    else {
+      if (InRange()) {
+        done = false;
+      } else {
+        FrameComparison frame_order = CompareCurrentFrameToStartFrame();
+        done = (frame_order != eFrameCompareOlder) ? m_no_more_plans : true;
+      }
     }
   }
 
@@ -493,4 +493,36 @@ bool ThreadPlanStepRange::IsPlanStale() {
     }
   }
   return false;
+}
+
+
+bool ThreadPlanStepRange::DoPlanExplainsStop(Event *event_ptr) {
+  // For crashes, breakpoint hits, signals, etc, let the base plan (or some
+  // plan above us) handle the stop.  That way the user can see the stop, step
+  // around, and then when they are done, continue and have their step
+  // complete.  The exception is if we've hit our "run to next branch"
+  // breakpoint. Note, unlike the step in range plan, we don't mark ourselves
+  // complete if we hit an unexplained breakpoint/crash.
+
+  Log *log = GetLog(LLDBLog::Step);
+  StopInfoSP stop_info_sp = GetPrivateStopInfo();
+  bool return_value;
+
+  if (stop_info_sp) {
+    StopReason reason = stop_info_sp->GetStopReason();
+
+    if (reason == eStopReasonTrace) {
+      return_value = true;
+    } else if (reason == eStopReasonBreakpoint) {
+      return_value = NextRangeBreakpointExplainsStop(stop_info_sp);
+    } else {
+      if (log)
+        log->PutCString("ThreadPlanStepRange got asked if it explains the "
+                        "stop for some reason other than step.");
+      return_value = false;
+    }
+  } else
+    return_value = true;
+
+  return return_value;
 }

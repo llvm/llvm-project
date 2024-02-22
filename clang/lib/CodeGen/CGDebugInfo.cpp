@@ -69,6 +69,12 @@ static uint32_t getDeclAlignIfRequired(const Decl *D, const ASTContext &Ctx) {
   return D->hasAttr<AlignedAttr>() ? D->getMaxAlignment() : 0;
 }
 
+static bool getIsTransparentStepping(const Decl *D) {
+  if (!D)
+    return false;
+  return D->hasAttr<TransparentSteppingAttr>();
+}
+
 CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
     : CGM(CGM), DebugKind(CGM.getCodeGenOpts().getDebugInfo()),
       DebugTypeExtRefs(CGM.getCodeGenOpts().DebugTypeExtRefs),
@@ -995,7 +1001,16 @@ llvm::DIType *CGDebugInfo::CreateQualifiedType(QualType Ty,
   // We will create one Derived type for one qualifier and recurse to handle any
   // additional ones.
   llvm::dwarf::Tag Tag = getNextQualifier(Qc);
-  if (!Tag) {
+  if (!Tag && Qc.getPointerAuth().isPresent()) {
+    unsigned Key = Qc.getPointerAuth().getKey();
+    bool IsDiscr = Qc.getPointerAuth().isAddressDiscriminated();
+    unsigned ExtraDiscr = Qc.getPointerAuth().getExtraDiscriminator();
+    Qc.removePtrAuth();
+    assert(Qc.empty() && "Unknown type qualifier for debug info");
+    auto *FromTy = getOrCreateType(QualType(T, 0), Unit);
+    return DBuilder.createPtrAuthQualifiedType(FromTy, Key, IsDiscr,
+                                               ExtraDiscr);
+  } else if (!Tag) {
     assert(Qc.empty() && "Unknown type qualifier for debug info");
     return getOrCreateType(QualType(T, 0), Unit);
   }
@@ -1440,8 +1455,7 @@ static unsigned getDwarfCC(CallingConv CC) {
   case CC_Swift:
     return llvm::dwarf::DW_CC_LLVM_Swift;
   case CC_SwiftAsync:
-    // [FIXME: swiftasynccc] Update to SwiftAsync once LLVM support lands.
-    return llvm::dwarf::DW_CC_LLVM_Swift;
+    return llvm::dwarf::DW_CC_LLVM_SwiftTail;
   case CC_PreserveMost:
     return llvm::dwarf::DW_CC_LLVM_PreserveMost;
   case CC_PreserveAll:
@@ -1993,6 +2007,8 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
   if (CGM.getLangOpts().Optimize)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
+  if (getIsTransparentStepping(Method))
+    SPFlags |= llvm::DISubprogram::SPFlagIsTransparentStepping;
 
   // In this debug mode, emit type info for a class when its constructor type
   // info is emitted.
@@ -2946,7 +2962,7 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
   std::string IncludePath = Mod.getPath().str();
   llvm::DIModule *DIMod =
       DBuilder.createModule(Parent, Mod.getModuleName(), ConfigMacros,
-                            RemapPath(IncludePath));
+                            RemapPath(IncludePath), M ? M->APINotesFile : "");
   ModuleCache[M].reset(DIMod);
   return DIMod;
 }
@@ -3970,6 +3986,8 @@ llvm::DISubprogram *CGDebugInfo::getFunctionFwdDeclOrStub(GlobalDecl GD,
   if (Stub) {
     Flags |= getCallSiteRelatedAttrs();
     SPFlags |= llvm::DISubprogram::SPFlagDefinition;
+    if (getIsTransparentStepping(FD))
+      SPFlags |= llvm::DISubprogram::SPFlagIsTransparentStepping;
     return DBuilder.createFunction(
         DContext, Name, LinkageName, Unit, Line,
         getOrCreateFunctionType(GD.getDecl(), FnType, Unit), 0, Flags, SPFlags,
@@ -4119,6 +4137,8 @@ llvm::DISubprogram *CGDebugInfo::getObjCMethodDeclaration(
   if (It == TypeCache.end())
     return nullptr;
   auto *InterfaceType = cast<llvm::DICompositeType>(It->second);
+  if (getIsTransparentStepping(D))
+    SPFlags |= llvm::DISubprogram::SPFlagIsTransparentStepping;
   llvm::DISubprogram *FD = DBuilder.createFunction(
       InterfaceType, getObjCMethodName(OMD), StringRef(),
       InterfaceType->getFile(), LineNo, FnType, LineNo, Flags, SPFlags);
@@ -4286,6 +4306,8 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
   if (CGM.getLangOpts().Optimize)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
+  if (getIsTransparentStepping(D))
+    SPFlags |= llvm::DISubprogram::SPFlagIsTransparentStepping;
 
   llvm::DINode::DIFlags FlagsForDef = Flags | getCallSiteRelatedAttrs();
   llvm::DISubprogram::DISPFlags SPFlagsForDef =
@@ -4372,6 +4394,9 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 
   llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(D);
   llvm::DISubroutineType *STy = getOrCreateFunctionType(D, FnType, Unit);
+  if (getIsTransparentStepping(D))
+    SPFlags |= llvm::DISubprogram::SPFlagIsTransparentStepping;
+
   llvm::DISubprogram *SP = DBuilder.createFunction(
       FDContext, Name, LinkageName, Unit, LineNo, STy, ScopeLine, Flags,
       SPFlags, TParamsArray.get(), nullptr, nullptr, Annotations);

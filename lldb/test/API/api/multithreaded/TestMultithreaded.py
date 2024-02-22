@@ -6,8 +6,10 @@ import subprocess
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+import unittest2
 
 
+@unittest2.skip("skipping due to frequent timeouts: rdar://28183131")
 @skipIfNoSBHeaders
 class SBBreakpointCallbackCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True

@@ -197,6 +197,14 @@ if(TARGET clang)
   endif()
 endif()
 
+# BEGIN Swift Mods
+if(swift IN_LIST LLVM_EXTERNAL_PROJECTS)
+  add_lldb_test_dependency(
+    swift-frontend
+    repl_swift)
+endif()
+# END Swift Mods
+
 if (LLDB_BUILT_STANDALONE)
   set(LLVM_HOST_TRIPLE ${LLVM_TARGET_TRIPLE})
 endif()
@@ -242,6 +250,12 @@ llvm_canonicalize_cmake_booleans(
   LLDB_USE_SYSTEM_DEBUGSERVER
   LLDB_IS_64_BITS)
 
+# BEGIN SWIFT
+llvm_canonicalize_cmake_booleans(
+  LLDB_ENABLE_SWIFT_SUPPORT
+)
+# END SWIFT
+
 # Configure the individual test suites.
 add_subdirectory(API)
 add_subdirectory(Shell)
@@ -261,6 +275,14 @@ add_lit_testsuite(check-lldb "Running lldb lit test suite"
     lldb-shell-test-deps
     lldb-unit-test-deps)
 set_target_properties(check-lldb PROPERTIES FOLDER "lldb tests")
+
+# BEGIN SWIFT MOD
+add_lit_testsuite(check-lldb-swift
+  "Running swift tests"
+  ${CMAKE_CURRENT_BINARY_DIR}
+  ARGS "--filter=[sS]wift"
+  DEPENDS lldb-test-deps)
+# END SWIFT MOD
 
 if(LLDB_BUILT_STANDALONE)
   # This has to happen *AFTER* add_lit_testsuite.

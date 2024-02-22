@@ -1,0 +1,12 @@
+module ModTop {
+  header "ModTop.h"
+  export *
+  module Sub1 {
+    header "ModTopSub1.h"
+  }
+  module Sub2 {
+    header "ModTopSub2.h"
+  }
+}
+module ModDep { header "ModDep.h" export * }
+module ModSystem [system] { header "ModSystem.h" export * }

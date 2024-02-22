@@ -9,6 +9,7 @@
 #ifndef LLDB_CORE_VALUEOBJECT_H
 #define LLDB_CORE_VALUEOBJECT_H
 
+#include "lldb/Core/SwiftScratchContextReader.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
@@ -362,6 +363,10 @@ public:
   virtual lldb::ValueType GetValueType() const = 0;
 
   // Subclasses can implement the functions below.
+  virtual ConstString GetMangledTypeName() {
+    return GetCompilerType().GetMangledTypeName();
+  }
+
   virtual ConstString GetTypeName() { return GetCompilerType().GetTypeName(); }
 
   virtual ConstString GetDisplayTypeName() { return GetTypeName(); }
@@ -578,6 +583,10 @@ public:
   lldb::ValueObjectSP GetSyntheticValue();
 
   virtual bool HasSyntheticValue();
+
+#ifdef LLDB_ENABLE_SWIFT
+  std::optional<SwiftScratchContextReader> GetSwiftScratchContext();
+#endif // LLDB_ENABLE_SWIFT
 
   virtual bool IsSynthetic() { return false; }
 
@@ -918,8 +927,8 @@ protected:
   } m_flags;
 
   friend class ValueObjectChild;
-  friend class ExpressionVariable;     // For SetName
-  friend class Target;                 // For SetName
+  friend class ExpressionVariable; // For SetName
+  friend class Target;             // For SetName
   friend class ValueObjectConstResultImpl;
   friend class ValueObjectSynthetic; // For ClearUserVisibleData
 

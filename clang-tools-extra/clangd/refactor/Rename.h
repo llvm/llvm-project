@@ -13,6 +13,7 @@
 #include "SourceCode.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Tooling/Refactoring/Rename/SymbolName.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 #include <optional>
@@ -51,6 +52,22 @@ struct RenameInputs {
 
   RenameOptions Opts = {};
 };
+
+/// Compute the edits that need to be applied to rename symbols in `Ranges` from
+/// `OldName` to `NewName`. The key of `Ranges` is the file path of the file in
+/// which the range resides.
+///
+/// If `OldName` and `NewName` are single-piece identifiers, this just creates
+/// edits to change the ranges to `NewName`.
+///
+/// If `OldName` and `NewName` are multi-piece Objective-C selectors, only the
+/// start of the ranges is considered and the file is lexed to find the argument
+/// labels of the selector to rename.
+llvm::Expected<FileEdits>
+editsForLocations(const llvm::StringMap<std::vector<Range>> &Ranges,
+                  const tooling::SymbolName &OldName,
+                  const tooling::SymbolName &NewName, llvm::vfs::FileSystem &FS,
+                  const LangOptions &LangOpts);
 
 struct RenameResult {
   // The range of the symbol that the user can attempt to rename.

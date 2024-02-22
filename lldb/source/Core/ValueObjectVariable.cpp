@@ -21,6 +21,7 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
@@ -30,6 +31,10 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
+
+#if defined(LLDB_ENABLE_SWIFT)
+#include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
+#endif
 
 #include "llvm/ADT/StringRef.h"
 
@@ -82,8 +87,12 @@ ConstString ValueObjectVariable::GetTypeName() {
 
 ConstString ValueObjectVariable::GetDisplayTypeName() {
   Type *var_type = m_variable_sp->GetType();
-  if (var_type)
-    return var_type->GetForwardCompilerType().GetDisplayTypeName();
+  if (var_type) {
+      const SymbolContext *sc = nullptr;
+      if (GetFrameSP())
+        sc = &GetFrameSP()->GetSymbolContext(lldb::eSymbolContextFunction);
+      return var_type->GetForwardCompilerType().GetDisplayTypeName(sc);
+  }
   return ConstString();
 }
 
@@ -128,6 +137,20 @@ bool ValueObjectVariable::UpdateValue() {
   m_error.Clear();
 
   Variable *variable = m_variable_sp.get();
+  // Check if the type has size 0. If so, there is nothing to update,
+  // unless the type is C++ where even empty structs have a non-zero
+  // size.
+  CompilerType var_type(GetCompilerTypeImpl());
+  if (var_type.IsValid() && var_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
+    ExecutionContext exe_ctx(GetExecutionContextRef());
+    std::optional<uint64_t> size =
+      var_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+    if (size && *size == 0) {
+      m_value.SetCompilerType(var_type);
+      return m_error.Success();
+    }
+  }
+
   DWARFExpressionList &expr_list = variable->LocationExpressionList();
 
   if (variable->GetLocationIsConstantValueData()) {
@@ -141,6 +164,7 @@ bool ValueObjectVariable::UpdateValue() {
       m_error.SetErrorString("empty constant data");
     // constant bytes can't be edited - sorry
     m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
+    SetAddressTypeOfChildren(eAddressTypeInvalid);
   } else {
     lldb::addr_t loclist_base_load_addr = LLDB_INVALID_ADDRESS;
     ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -194,6 +218,29 @@ bool ValueObjectVariable::UpdateValue() {
 
       Process *process = exe_ctx.GetProcessPtr();
       const bool process_is_alive = process && process->IsAlive();
+
+#ifdef LLDB_ENABLE_SWIFT
+      if (auto type = variable->GetType())
+        if (type->GetForwardCompilerType()
+                .GetTypeSystem()
+                .dyn_cast_or_null<TypeSystemSwift>() &&
+            TypePayloadSwift(type->GetPayload()).IsFixedValueBuffer())
+          if (auto process_sp = GetProcessSP())
+            if (auto runtime = process_sp->GetLanguageRuntime(
+                    compiler_type.GetMinimumLanguage())) {
+              if (!runtime->IsStoredInlineInBuffer(compiler_type)) {
+                lldb::addr_t addr =
+                    m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+                if (addr != LLDB_INVALID_ADDRESS) {
+                  Target &target = process_sp->GetTarget();
+                  size_t ptr_size = process_sp->GetAddressByteSize();
+                  lldb::addr_t deref_addr;
+                  target.ReadMemory(addr, &deref_addr, ptr_size, m_error, true);
+                  m_value.GetScalar() = deref_addr;
+                }
+              }
+          }
+#endif // LLDB_ENABLE_SWIFT
 
       switch (value_type) {
       case Value::ValueType::Invalid:

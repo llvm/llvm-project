@@ -84,6 +84,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalPtrAuthInfo.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InlineAsm.h"
@@ -840,6 +841,14 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
     }
   }
 
+  if (GV.getSection() == "llvm.ptrauth") {
+    if (auto Err = GlobalPtrAuthInfo::tryAnalyze(&GV).takeError()) {
+      CheckFailed("invalid llvm.ptrauth global: " + toString(std::move(Err)),
+             &GV);
+      return;
+    }
+  }
+
   // Visit any debug info attachments.
   SmallVector<MDNode *, 1> MDs;
   GV.getMetadata(LLVMContext::MD_dbg, MDs);
@@ -849,6 +858,40 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
     else
       CheckDI(false, "!dbg attachment of global variable must be a "
                      "DIGlobalVariableExpression");
+  }
+
+  MDs.clear();
+  GV.getMetadata(LLVMContext::MD_vcall_visibility, MDs);
+  for (auto *MD : MDs) {
+    Check(MD->getNumOperands() >= 1, "bad !vcall_visibility attachment");
+    Check(isa<ConstantAsMetadata>(MD->getOperand(0)),
+          "bad !vcall_visibility attachment");
+    auto *Op0Val = cast<ConstantAsMetadata>(MD->getOperand(0))->getValue();
+    Check(isa<ConstantInt>(Op0Val), "bad !vcall_visibility attachment");
+    auto Op0Int = cast<ConstantInt>(Op0Val)->getValue();
+    Check(Op0Int.uge(0) && Op0Int.ult(std::numeric_limits<uint64_t>::max()),
+          "bad !vcall_visibility attachment");
+    if (MD->getNumOperands() == 3) {
+      Check(isa<ConstantAsMetadata>(MD->getOperand(1)),
+            "bad !vcall_visibility attachment");
+      auto *Op1Val = cast<ConstantAsMetadata>(MD->getOperand(1))->getValue();
+      Check(isa<ConstantInt>(Op1Val), "bad !vcall_visibility attachment");
+      auto Op1Int = cast<ConstantInt>(Op1Val)->getValue();
+      Check(Op1Int.uge(0) && Op1Int.ult(std::numeric_limits<uint64_t>::max()),
+            "bad !vcall_visibility attachment");
+
+      Check(isa<ConstantAsMetadata>(MD->getOperand(2)),
+            "bad !vcall_visibility attachment");
+      auto *Op2Val = cast<ConstantAsMetadata>(MD->getOperand(2))->getValue();
+      Check(isa<ConstantInt>(Op2Val), "bad !vcall_visibility attachment");
+      auto Op2Int = cast<ConstantInt>(Op2Val)->getValue();
+      Check(Op2Int.uge(0) && Op2Int.ult(std::numeric_limits<uint64_t>::max()),
+            "bad !vcall_visibility attachment");
+
+      Check(Op1Int.ule(Op2Int), "bad !vcall_visibility attachment");
+    } else {
+      Check(MD->getNumOperands() == 1, "bad !vcall_visibility attachment");
+    }
   }
 
   // Scalable vectors cannot be global variables, since we don't know
@@ -976,6 +1019,34 @@ void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
       continue;
 
     visitMDNode(*MD, AreDebugLocsAllowed::Yes);
+  }
+
+  if (NMD.getName() == "llvm.used.conditional") {
+    for (const MDNode *MD : NMD.operands()) {
+      Check(MD->getNumOperands() == 3, "invalid llvm.used.conditional member");
+      auto *TargetMD = MD->getOperand(0).get();
+      if (TargetMD != nullptr) {
+        Check(mdconst::dyn_extract<GlobalValue>(TargetMD),
+              "invalid llvm.used.conditional member");
+      }
+      auto *TypeMD = mdconst::extract_or_null<ConstantInt>(MD->getOperand(1));
+      int64_t Type = TypeMD->getValue().getSExtValue();
+      Check(Type == 0 || Type == 1, "invalid llvm.used.conditional member");
+      auto *DependenciesMD = dyn_cast<MDNode>(MD->getOperand(2).get());
+      Check(DependenciesMD, "invalid llvm.used.conditional member");
+      Check(DependenciesMD->getNumOperands() > 0,
+            "invalid llvm.used.conditional member");
+      for (auto &DependencyMD : DependenciesMD->operands()) {
+        auto *Dependency = DependencyMD.get();
+        if (!Dependency)
+          continue; // Allow null, skip.
+        auto *C =
+            mdconst::dyn_extract<Constant>(Dependency)->stripPointerCasts();
+        if (dyn_cast<UndefValue>(C) || dyn_cast<ConstantPointerNull>(C))
+          continue; // Allow undef and null, skip.
+        Check(isa<GlobalValue>(C), "invalid llvm.used.conditional member");
+      }
+    }
   }
 }
 
@@ -1181,6 +1252,7 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
               N.getTag() == dwarf::DW_TAG_volatile_type ||
               N.getTag() == dwarf::DW_TAG_restrict_type ||
               N.getTag() == dwarf::DW_TAG_atomic_type ||
+              N.getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ||
               N.getTag() == dwarf::DW_TAG_member ||
               (N.getTag() == dwarf::DW_TAG_variable && N.isStaticMember()) ||
               N.getTag() == dwarf::DW_TAG_inheritance ||
@@ -3686,7 +3758,26 @@ static AttrBuilder getParameterABIAttributes(LLVMContext& C, unsigned I, Attribu
   return Copy;
 }
 
+static cl::opt<bool>
+EnableSwiftTailCCMustTailCheck("enable-swifttailcc-musttail-check",
+cl::init(false), cl::desc("Check that tail calls from swifttailcc functions to"
+                          " swifttailcc functions are marked musttail."));
+
 void Verifier::verifyMustTailCall(CallInst &CI) {
+  if (!CI.isMustTailCall()) {
+#ifndef NDEBUG
+    if (EnableSwiftTailCCMustTailCheck &&
+        CI.getCallingConv() == CallingConv::SwiftTail &&
+        CI.getCaller()->getCallingConv() == CallingConv::SwiftTail &&
+        isa_and_nonnull<ReturnInst>(CI.getNextNode())) {
+      Check(false,
+            "tail call from swifttail->swiftail should be marked musttail",
+            &CI);
+    }
+#endif
+    return;
+  }
+
   Check(!CI.isInlineAsm(), "cannot use musttail call with inline asm", &CI);
 
   Function *F = CI.getParent()->getParent();
@@ -3775,9 +3866,7 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
 
 void Verifier::visitCallInst(CallInst &CI) {
   visitCallBase(CI);
-
-  if (CI.isMustTailCall())
-    verifyMustTailCall(CI);
+  verifyMustTailCall(CI);
 }
 
 void Verifier::visitInvokeInst(InvokeInst &II) {

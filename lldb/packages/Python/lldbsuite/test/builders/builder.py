@@ -36,6 +36,10 @@ class Builder:
         """Returns the ARCH_CFLAGS for the make system."""
         return []
 
+    def getSwiftTargetFlags(self, architecture):
+        """Returns TARGET_SWIFTFLAGS for the make system."""
+        return []
+
     def getMake(self, test_subdir, test_name):
         """Returns the invocation for GNU make.
         The first argument is a tuple of the relative path to the testcase
@@ -113,6 +117,24 @@ class Builder:
             return ['CC="%s"' % cc]
         return []
 
+    def getSwiftCSpec(self):
+        """
+        Helper function to return the key-value string to specify the Swift
+        compiler used for the make system.
+        """
+        if configuration.swiftCompiler:
+            return ['SWIFTC="{}"'.format(configuration.swiftCompiler)]
+        return []
+
+    def getPythonSpec(self):
+        """
+        Helper function to return the key-value string to specify the Python
+        interpreter used for the make system.
+        """
+        if configuration.python:
+            return ['PYTHON="{}"'.format(configuration.python)]
+        return []
+
     def getSDKRootSpec(self):
         """
         Helper function to return the key-value string to specify the SDK root
@@ -148,6 +170,11 @@ class Builder:
             return libcpp_args
         return []
 
+    def getLLDBSwiftLibs(self):
+        if configuration.swift_libs_dir:
+            return ["SWIFT_LIBS_DIR={}".format(configuration.swift_libs_dir)]
+        return []
+
     def _getDebugInfoArgs(self, debug_info):
         if debug_info is None:
             return []
@@ -180,11 +207,15 @@ class Builder:
             make_targets,
             self.getArchCFlags(architecture),
             self.getArchSpec(architecture),
+            self.getSwiftTargetFlags(architecture),
             self.getCCSpec(compiler),
+            self.getSwiftCSpec(),
+            self.getPythonSpec(),
             self.getExtraMakeArgs(),
             self.getSDKRootSpec(),
             self.getModuleCacheSpec(),
             self.getLibCxxArgs(),
+            self.getLLDBSwiftLibs(),
             self.getCmdLine(dictionary),
         ]
         command = list(itertools.chain(*command_parts))

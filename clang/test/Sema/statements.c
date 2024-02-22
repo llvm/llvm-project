@@ -64,7 +64,7 @@ int test12(enum Numbers num) {
 enum x { a, b, c, d, e, f, g };
 
 void foo(enum x X) {
-  switch (X) { // expected-warning {{enumeration value 'g' not handled in switch}}
+  switch (X) { // expected-warning {{enumeration value 'g' not handled in switch}} expected-note {{add missing switch cases}}
   case a:
   case b:
   case c:
@@ -74,7 +74,7 @@ void foo(enum x X) {
     break;
   }
 
-  switch (X) { // expected-warning {{enumeration values 'f' and 'g' not handled in switch}}
+  switch (X) { // expected-warning {{enumeration values 'f' and 'g' not handled in switch}} expected-note {{add missing switch cases}}
   case a:
   case b:
   case c:
@@ -83,7 +83,7 @@ void foo(enum x X) {
     break;
   }
 
-  switch (X) {  // expected-warning {{enumeration values 'e', 'f', and 'g' not handled in switch}}
+  switch (X) {  // expected-warning {{enumeration values 'e', 'f', and 'g' not handled in switch}} expected-note {{add missing switch cases}}
     case a:
     case b:
     case c:
@@ -91,7 +91,7 @@ void foo(enum x X) {
       break;
   }
 
-  switch (X) { // expected-warning {{5 enumeration values not handled in switch: 'c', 'd', 'e'...}}
+  switch (X) { // expected-warning {{5 enumeration values not handled in switch: 'c', 'd', 'e'...}} expected-note {{add missing switch cases}}
   case a:
   case b:
     break;

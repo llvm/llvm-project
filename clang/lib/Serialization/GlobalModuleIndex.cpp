@@ -655,6 +655,9 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(FileEntryRef File) {
                                       Record.begin() + Idx + Length);
         Idx += Length;
 
+        // Skip the module cache key.
+        Idx += Record[Idx] + 1;
+
         // Find the imported module file.
         auto DependsOnFile =
             FileMgr.getOptionalFileRef(ImportedFile, /*OpenFile=*/false,

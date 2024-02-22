@@ -1042,8 +1042,8 @@ void f(void) {
 // CHECK-NEXT:   "offset": {{[0-9]+}},
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 60,
-// CHECK-NEXT:   "col": 1,
-// CHECK-NEXT:   "tokLen": 1
+// CHECK-NEXT:   "col": 22, 
+// CHECK-NEXT:   "tokLen": 27
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {

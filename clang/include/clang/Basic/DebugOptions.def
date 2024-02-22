@@ -105,6 +105,9 @@ ENUM_DEBUGOPT(DebugSimpleTemplateNames,
 ENUM_DEBUGOPT(DebugInfo, llvm::codegenoptions::DebugInfoKind, 4,
               llvm::codegenoptions::NoDebugInfo)
 
+/// Whether to make debug info reproducible.
+DEBUGOPT(ReproducibleDebugInfo, 1, 0)
+
 /// Whether to generate macro debug info.
 DEBUGOPT(MacroDebugInfo, 1, 0)
 

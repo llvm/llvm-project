@@ -23,6 +23,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/OptionParsing.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
@@ -556,7 +557,7 @@ void SymbolFileDWARF::InitializeFirstCodeAddress() {
 }
 
 void SymbolFileDWARF::InitializeFirstCodeAddressRecursive(
-    const lldb_private::SectionList &section_list) {
+    const SectionList &section_list) {
   for (SectionSP section_sp : section_list) {
     if (section_sp->GetChildren().GetSize() > 0) {
       InitializeFirstCodeAddressRecursive(section_sp->GetChildren());
@@ -980,6 +981,16 @@ bool SymbolFileDWARF::FixupAddress(Address &addr) {
   // This is a normal DWARF file, no address fixups need to happen
   return true;
 }
+
+llvm::VersionTuple SymbolFileDWARF::GetProducerVersion(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
+  if (dwarf_cu)
+    return dwarf_cu->GetProducerVersion();
+  else
+    return {};
+}
+
 lldb::LanguageType SymbolFileDWARF::ParseLanguage(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
@@ -1042,7 +1053,7 @@ size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
 
 bool SymbolFileDWARF::ForEachExternalModule(
     CompileUnit &comp_unit,
-    llvm::DenseSet<lldb_private::SymbolFile *> &visited_symbol_files,
+    llvm::DenseSet<SymbolFile *> &visited_symbol_files,
     llvm::function_ref<bool(Module &)> lambda) {
   // Only visit each symbol file once.
   if (!visited_symbol_files.insert(this).second)
@@ -1161,15 +1172,16 @@ bool SymbolFileDWARF::ParseIsOptimized(CompileUnit &comp_unit) {
 }
 
 bool SymbolFileDWARF::ParseImportedModules(
-    const lldb_private::SymbolContext &sc,
+    const SymbolContext &sc,
     std::vector<SourceModule> &imported_modules) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   assert(sc.comp_unit);
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (!dwarf_cu)
     return false;
-  if (!ClangModulesDeclVendor::LanguageSupportsClangModules(
-          sc.comp_unit->GetLanguage()))
+  auto lang = sc.comp_unit->GetLanguage();
+  if (!ClangModulesDeclVendor::LanguageSupportsClangModules(lang) &&
+      lang != eLanguageTypeSwift)
     return false;
   UpdateExternalModuleListIfNeeded();
 
@@ -1178,7 +1190,8 @@ bool SymbolFileDWARF::ParseImportedModules(
     return false;
 
   for (DWARFDIE child_die : die.children()) {
-    if (child_die.Tag() != DW_TAG_imported_declaration)
+    if (child_die.Tag() != DW_TAG_imported_declaration &&
+        child_die.Tag() != DW_TAG_imported_module)
       continue;
 
     DWARFDIE module_die = child_die.GetReferencedDIE(DW_AT_import);
@@ -1277,7 +1290,7 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   return true;
 }
 
-lldb_private::DebugMacrosSP
+DebugMacrosSP
 SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset) {
   auto iter = m_debug_macros_map.find(*offset);
   if (iter != m_debug_macros_map.end())
@@ -1288,7 +1301,7 @@ SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset) {
   if (debug_macro_data.GetByteSize() == 0)
     return DebugMacrosSP();
 
-  lldb_private::DebugMacrosSP debug_macros_sp(new lldb_private::DebugMacros());
+  DebugMacrosSP debug_macros_sp(new DebugMacros());
   m_debug_macros_map[*offset] = debug_macros_sp;
 
   const DWARFDebugMacroHeader &header =
@@ -1325,7 +1338,7 @@ bool SymbolFileDWARF::ParseDebugMacros(CompileUnit &comp_unit) {
 }
 
 size_t SymbolFileDWARF::ParseBlocksRecursive(
-    lldb_private::CompileUnit &comp_unit, Block *parent_block,
+    CompileUnit &comp_unit, Block *parent_block,
     const DWARFDIE &orig_die, addr_t subprogram_low_pc, uint32_t depth) {
   size_t blocks_added = 0;
   DWARFDIE die = orig_die;
@@ -1536,7 +1549,7 @@ Type *SymbolFileDWARF::ResolveTypeUID(lldb::user_id_t type_uid) {
 }
 
 std::optional<SymbolFile::ArrayInfo> SymbolFileDWARF::GetDynamicArrayInfoForUID(
-    lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
+    lldb::user_id_t type_uid, const ExecutionContext *exe_ctx) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (DWARFDIE type_die = GetDIE(type_uid))
     return DWARFASTParser::ParseChildArrayInfo(type_die, exe_ctx);
@@ -1881,6 +1894,12 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
                 dwo_name, cu_die.GetOffset());
     }
   }
+
+  // BEGIN SWIFT move this check earlier in this method
+  // to avoid unnecessry fstat of fissioned PCM/PCH.
+  if (dwo_file.GetFileNameExtension() == ".pcm" ||
+      dwo_file.GetFileNameExtension() == ".pch")
+    return nullptr;
 
   if (!found) {
     // Try adding the DW_AT_dwo_name ( e.g. "c/d/main-main.dwo"), and just the
@@ -2296,7 +2315,7 @@ std::recursive_mutex &SymbolFileDWARF::GetModuleMutex() const {
 }
 
 bool SymbolFileDWARF::DeclContextMatchesThisSymbolFile(
-    const lldb_private::CompilerDeclContext &decl_ctx) {
+    const CompilerDeclContext &decl_ctx) {
   if (!decl_ctx.IsValid()) {
     // Invalid namespace decl which means we aren't matching only things in
     // this symbol file, so return true to indicate it matches this symbol
@@ -3234,6 +3253,66 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
   return type_sp;
 }
 
+bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
+                                       CompileUnit *cu) {
+  value.clear();
+
+  DWARFDebugInfo &debug_info = DebugInfo();
+
+  const uint32_t num_compile_units = GetNumCompileUnits();
+
+  if (cu) {
+    auto *dwarf_cu =
+        llvm::dyn_cast_or_null<DWARFCompileUnit>(GetDWARFCompileUnit(cu));
+
+    if (dwarf_cu) {
+      // GetDWARFCompileUnit() only looks up by CU#. Make sure that
+      // this is actually the correct SymbolFile by converting it
+      // back to a CompileUnit.
+      if (GetCompUnitForDWARFCompUnit(*dwarf_cu) != cu)
+        return false;
+
+      const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+      if (die) {
+        const char *flags =
+            die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
+
+        if (flags) {
+          if (strstr(flags, option)) {
+            Args compiler_args(flags);
+
+            return OptionParsing::GetOptionValueAsString(compiler_args,
+                                                         option, value);
+          }
+        }
+      }
+    }
+  } else {
+    for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
+      DWARFUnit *dwarf_cu = debug_info.GetUnitAtIndex(cu_idx);
+
+      if (dwarf_cu) {
+        const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+        if (die) {
+          const char *flags =
+              die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
+
+          if (flags) {
+            if (strstr(flags, option)) {
+              Args compiler_args(flags);
+
+              return OptionParsing::GetOptionValueAsString(compiler_args,
+                                                           option, value);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
                                   bool *type_is_new_ptr) {
   if (!die)
@@ -3578,6 +3657,12 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     }
   }
 
+#ifdef LLDB_ENABLE_SWIFT
+  if (tag == DW_TAG_variable && mangled &&
+      sc.comp_unit->GetLanguage() == eLanguageTypeSwift)
+    mangled = nullptr;
+#endif
+
   // Prefer DW_AT_location over DW_AT_const_value. Both can be emitted e.g.
   // for static constexpr member variables -- DW_AT_const_value and
   // DW_AT_location will both be present in the DIE defining the member.
@@ -3758,10 +3843,18 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                           die.GetCU()->GetAddressByteSize());
   }
 
+  // Swift let-bindings are marked by a DW_TAG_const_type.
+  bool is_constant = false;
+  if (sc.comp_unit->GetLanguage() == eLanguageTypeSwift) {
+    DWARFDIE type_die = die.GetReferencedDIE(llvm::dwarf::DW_AT_type);
+    if (type_die && type_die.Tag() == llvm::dwarf::DW_TAG_const_type)
+      is_constant = true;
+  }
+
   return std::make_shared<Variable>(
       die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
       scope_ranges, &decl, location_list, is_external, is_artificial,
-      location_is_const_value_data, is_static_member);
+      location_is_const_value_data, is_static_member, is_constant);
 }
 
 DWARFDIE
@@ -3958,7 +4051,7 @@ size_t SymbolFileDWARF::ParseVariablesInFunctionContext(
 // The uninserted variables for the current block are accumulated in
 // |accumulator|.
 size_t SymbolFileDWARF::ParseVariablesInFunctionContextRecursive(
-    const lldb_private::SymbolContext &sc, const DWARFDIE &die,
+    const SymbolContext &sc, const DWARFDIE &die,
     lldb::addr_t func_low_pc, DIEArray &accumulator) {
   size_t vars_added = 0;
   dw_tag_t tag = die.Tag();
@@ -4025,7 +4118,7 @@ size_t SymbolFileDWARF::ParseVariablesInFunctionContextRecursive(
 }
 
 size_t SymbolFileDWARF::PopulateBlockVariableList(
-    VariableList &variable_list, const lldb_private::SymbolContext &sc,
+    VariableList &variable_list, const SymbolContext &sc,
     llvm::ArrayRef<DIERef> variable_dies, lldb::addr_t func_low_pc) {
   // Parse the variable DIEs and insert them to the list.
   for (auto &die : variable_dies) {
@@ -4084,7 +4177,7 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
 }
 
 /// Collect call graph edges present in a function DIE.
-std::vector<std::unique_ptr<lldb_private::CallEdge>>
+std::vector<std::unique_ptr<CallEdge>>
 SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   // Check if the function has a supported call site-related attribute.
   // TODO: In the future it may be worthwhile to support call_all_source_calls.
@@ -4241,8 +4334,8 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   return call_edges;
 }
 
-std::vector<std::unique_ptr<lldb_private::CallEdge>>
-SymbolFileDWARF::ParseCallEdgesInFunction(lldb_private::UserID func_id) {
+std::vector<std::unique_ptr<CallEdge>>
+SymbolFileDWARF::ParseCallEdgesInFunction(UserID func_id) {
   // ParseCallEdgesInFunction must be called at the behest of an exclusively
   // locked lldb::Function instance. Storage for parsed call edges is owned by
   // the lldb::Function instance: locking at the SymbolFile level would be too
@@ -4254,7 +4347,7 @@ SymbolFileDWARF::ParseCallEdgesInFunction(lldb_private::UserID func_id) {
   return {};
 }
 
-void SymbolFileDWARF::Dump(lldb_private::Stream &s) {
+void SymbolFileDWARF::Dump(Stream &s) {
   SymbolFileCommon::Dump(s);
   m_index->Dump(s);
 }
@@ -4513,7 +4606,7 @@ Status SymbolFileDWARF::CalculateFrameVariableError(StackFrame &frame) {
 }
 
 void SymbolFileDWARF::GetCompileOptions(
-    std::unordered_map<lldb::CompUnitSP, lldb_private::Args> &args) {
+    std::unordered_map<lldb::CompUnitSP, Args> &args) {
 
   const uint32_t num_compile_units = GetNumCompileUnits();
 

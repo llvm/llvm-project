@@ -26,6 +26,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/VirtualCachedDirectoryEntry.h"
 #include <cassert>
 #include <cstdint>
 #include <ctime>
@@ -42,6 +43,10 @@ namespace llvm {
 class MemoryBuffer;
 class MemoryBufferRef;
 class Twine;
+
+namespace cas {
+class ObjectRef;
+}
 
 namespace vfs {
 
@@ -131,6 +136,11 @@ public:
   virtual llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBuffer(const Twine &Name, int64_t FileSize = -1,
             bool RequiresNullTerminator = true, bool IsVolatile = false) = 0;
+
+  /// Get the CAS reference for the contents of the file.
+  /// \returns \p None if the underlying \p FileSystem doesn't support providing
+  /// CAS references.
+  virtual llvm::ErrorOr<std::optional<cas::ObjectRef>> getObjectRefForContent();
 
   /// Closes the file.
   virtual std::error_code close() = 0;
@@ -280,7 +290,15 @@ public:
   /// closes the file.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(const Twine &Name, int64_t FileSize = -1,
-                   bool RequiresNullTerminator = true, bool IsVolatile = false);
+                   bool RequiresNullTerminator = true, bool IsVolatile = false,
+                   std::optional<cas::ObjectRef> *CASContents = nullptr);
+
+  /// This is a convenience method that opens a file, gets the \p cas::ObjectRef
+  /// for its contents if supported by the file system, and then closes the
+  /// file. If both the buffer and its `cas::ObjectRef` are needed use \p
+  /// getBufferForFile to avoid the extra file lookup.
+  llvm::ErrorOr<std::optional<cas::ObjectRef>>
+  getObjectRefForFileContent(const Twine &Name);
 
   /// Get a directory_iterator for \p Dir.
   /// \note The 'end' iterator is directory_iterator().
@@ -300,8 +318,49 @@ public:
   virtual std::error_code getRealPath(const Twine &Path,
                                       SmallVectorImpl<char> &Output) const;
 
-  /// Check whether a file exists. Provided for convenience.
-  bool exists(const Twine &Path);
+  /// Gets access to the directory entry for \p Path. Among other things, this
+  /// exposes the filesystem tree's actual path to \p Path.
+  ///
+  /// If \p FollowSymlinks and \p Path refers to a symbol link, this returns
+  /// the directory entry for the link's target, evaluated recursively (as if
+  /// calling \a getRealPath()). Otherwise, it returns the entry for the
+  /// symbolic link itself (as if \a getRealPath() had been called only on the
+  /// parent path).
+  ///
+  /// For example, given:
+  ///
+  ///     /a/sym -> b
+  ///     /a/b/c
+  ///
+  /// The following table explains the object returned, and its tree path:
+  ///
+  ///     Path      Follow     NoFollow
+  ///     ====      ======     ========
+  ///     /a/sym    /a/b       /a/sym
+  ///     /a/sym/   /a/b       /a/b
+  ///     /a/sym/c  /a/b/c     /a/b/c
+  ///
+  /// Paths are made absolute before lookup.
+  ///
+  /// FIXME: Make this non-const, since it can do work? (Why is \a
+  /// getRealPath() const?)
+  ///
+  /// FIXME: Add \a getCachedDirectoryEntry(), which is const-qualified and
+  /// never does work?
+  ///
+  /// FIXME: Follow symlinks by default (can make the virtual function end in
+  /// Impl to avoid virtual/default parameter shenanigans)?
+  virtual Expected<const CachedDirectoryEntry *>
+  getDirectoryEntry(const Twine &Path, bool FollowSymlinks) const {
+    // FIXME: Consider providing a defualt imlementation that calls \a
+    // getRealPath() on the parent path and reappending the filename (assuming
+    // it exists).
+    return createFileError(Path, make_error_code(std::errc::not_supported));
+  }
+
+  /// Check whether \p Path exists. By default this uses \c status(), but
+  /// filesystems may provide a more efficient implementation if available.
+  virtual bool exists(const Twine &Path);
 
   /// Is the file mounted on a local filesystem?
   virtual std::error_code isLocal(const Twine &Path, bool &Result);
@@ -318,6 +377,9 @@ public:
   /// \returns success if \a path has been made absolute, otherwise a
   ///          platform-specific error_code.
   virtual std::error_code makeAbsolute(SmallVectorImpl<char> &Path) const;
+
+  /// Check if files are loaded from a CAS.
+  virtual bool isCASFS() const { return false; }
 
   enum class PrintType { Summary, Contents, RecursiveContents };
   void print(raw_ostream &OS, PrintType Type = PrintType::Contents,
@@ -386,6 +448,7 @@ public:
   void pushOverlay(IntrusiveRefCntPtr<FileSystem> FS);
 
   llvm::ErrorOr<Status> status(const Twine &Path) override;
+  bool exists(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<File>>
   openFileForRead(const Twine &Path) override;
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
@@ -439,6 +502,7 @@ public:
   llvm::ErrorOr<Status> status(const Twine &Path) override {
     return FS->status(Path);
   }
+  bool exists(const Twine &Path) override { return FS->exists(Path); }
   llvm::ErrorOr<std::unique_ptr<File>>
   openFileForRead(const Twine &Path) override {
     return FS->openFileForRead(Path);
@@ -1049,6 +1113,7 @@ public:
          bool UseExternalNames, FileSystem &ExternalFS);
 
   ErrorOr<Status> status(const Twine &Path) override;
+  bool exists(const Twine &Path) override;
   ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override;
 
   std::error_code getRealPath(const Twine &Path,

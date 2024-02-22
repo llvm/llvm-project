@@ -37,6 +37,7 @@ using namespace clang;
 Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
                bool IsFramework, bool IsExplicit, unsigned VisibilityID)
     : Name(Name), DefinitionLoc(DefinitionLoc), Parent(Parent),
+      Directory(), Umbrella(), ASTFile(std::nullopt),
       VisibilityID(VisibilityID), IsUnimportable(false),
       HasIncompatibleModuleFile(false), IsAvailable(true),
       IsFromModuleFile(false), IsFramework(IsFramework), IsExplicit(IsExplicit),
@@ -44,6 +45,11 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
       NoUndeclaredIncludes(false), ModuleMapIsPrivate(false),
+
+      // SWIFT-SPECIFIC FIELDS HERE. Handling them separately helps avoid merge
+      // conflicts.
+      IsSwiftInferImportAsMember(false),
+
       NamedModuleHasInit(true), NameVisibility(Hidden) {
   if (Parent) {
     IsAvailable = Parent->isAvailable();
@@ -491,6 +497,8 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
       OS << " [system]";
     if (IsExternC)
       OS << " [extern_c]";
+    if (IsSwiftInferImportAsMember)
+      OS << " [swift_infer_import_as_member]";
   }
 
   OS << " {\n";

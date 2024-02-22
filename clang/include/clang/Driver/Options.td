@@ -324,6 +324,7 @@ class PreprocessorOutputOpts<string base>
   : KeyPathAndMacro<"PreprocessorOutputOpts.", base, "PREPROCESSOR_OUTPUT_"> {}
 class DependencyOutputOpts<string base>
   : KeyPathAndMacro<"DependencyOutputOpts.", base, "DEPENDENCY_OUTPUT_"> {}
+class CASOpts<string base> : KeyPathAndMacro<"CASOpts.", base, "CAS_"> {}
 class CodeGenOpts<string base>
   : KeyPathAndMacro<"CodeGenOpts.", base, "CODEGEN_"> {}
 class HeaderSearchOpts<string base>
@@ -608,6 +609,7 @@ defvar hip = LangOpts<"HIP">;
 defvar gnu_mode = LangOpts<"GNUMode">;
 defvar asm_preprocessor = LangOpts<"AsmPreprocessor">;
 defvar hlsl = LangOpts<"HLSL">;
+defvar objc = LangOpts<"ObjC">;
 
 defvar std = !strconcat("LangStandard::getLangStandardForKind(", lang_std.KeyPath, ")");
 
@@ -778,6 +780,31 @@ def : Joined<["-"], "objcmt-whitelist-dir-path=">,
 def : Joined<["-"], "objcmt-white-list-dir-path=">,
   Visibility<[ClangOption, CC1Option]>,
   Alias<objcmt_allowlist_dir_path>;
+
+def index_store_path : Separate<["-"], "index-store-path">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable indexing with the specified data store path">,
+  MarshallingInfoString<FrontendOpts<"IndexStorePath">>;
+def index_ignore_system_symbols : Flag<["-"], "index-ignore-system-symbols">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Ignore symbols from system headers">,
+  MarshallingInfoFlag<FrontendOpts<"IndexIgnoreSystemSymbols">>;
+def index_record_codegen_name : Flag<["-"], "index-record-codegen-name">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Record the codegen name for symbols">,
+  MarshallingInfoFlag<FrontendOpts<"IndexRecordCodegenName">>;
+def index_unit_output_path : Separate<["-"], "index-unit-output-path">, MetaVarName<"<path>">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Use <path> as the output path for this compilation unit in the index unit file">,
+  MarshallingInfoString<FrontendOpts<"IndexUnitOutputPath">>;
+def index_ignore_macros : Flag<["-"], "index-ignore-macros">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Ignore macros during indexing">,
+  MarshallingInfoFlag<FrontendOpts<"IndexIgnoreMacros">>;
+def index_ignore_pcms : Flag<["-"], "index-ignore-pcms">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Ignore symbols from imported pcm modules">,
+  MarshallingInfoFlag<FrontendOpts<"IndexIgnorePcms">>;
 
 // Make sure all other -ccc- options are rejected.
 def ccc_ : Joined<["-"], "ccc-">, Group<internal_Group>, Flags<[Unsupported]>;
@@ -1829,6 +1856,9 @@ def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<version>">,
   HelpText<"Specify the Swift version to use when filtering API notes">;
+def fapinotes_cache_path : Joined<["-"], "fapinotes-cache-path=">,
+  Group<i_Group>, Flags<[NoXarchOption]>, MetaVarName<"<directory>">,
+  HelpText<"Does nothing; API notes are no longer cached separately from modules">;
 
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
@@ -1965,9 +1995,10 @@ defm async_exceptions: BoolFOption<"async-exceptions",
           "Enable EH Asynchronous exceptions">,
   NegFlag<SetFalse>>;
 defm cxx_modules : BoolFOption<"cxx-modules",
-  LangOpts<"CPlusPlusModules">, Default<cpp20.KeyPath>,
+  // FIXME: improve tblgen to not need strconcat here.
+  LangOpts<"CPlusPlusModules">, Default<!strconcat(cpp20.KeyPath, " && !", objc.KeyPath)>,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Disable">,
-  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   BothFlags<[], [], " modules for C++">>,
   ShouldParseIf<cplusplus.KeyPath>;
 def fdebug_pass_arguments : Flag<["-"], "fdebug-pass-arguments">, Group<f_Group>;
@@ -3004,6 +3035,9 @@ defm prebuilt_implicit_modules : BoolFOption<"prebuilt-implicit-modules",
   HeaderSearchOpts<"EnablePrebuiltImplicitModules">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Look up implicit modules in the prebuilt module path">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
+def fmodule_related_to_pch : Flag<["-"], "fmodule-related-to-pch">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Mark module as related to a PCH">;
 
 def fmodule_output_EQ : Joined<["-"], "fmodule-output=">,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option]>,
@@ -3108,10 +3142,10 @@ defm pch_codegen: OptInCC1FFlag<"pch-codegen", "Generate ", "Do not generate ",
 defm pch_debuginfo: OptInCC1FFlag<"pch-debuginfo", "Generate ", "Do not generate ",
   "debug info for types in an object file built from this PCH and do not generate them elsewhere">;
 
-def fimplicit_module_maps : Flag <["-"], "fimplicit-module-maps">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option, CLOption]>,
-  HelpText<"Implicitly search the file system for module map files.">,
-  MarshallingInfoFlag<HeaderSearchOpts<"ImplicitModuleMaps">>;
+defm implicit_module_maps : BoolFOption<"implicit-module-maps",
+  HeaderSearchOpts<"ImplicitModuleMaps">, DefaultFalse,
+  PosFlag<SetTrue, [], [], "Implicitly search the file system for module map files.">,
+  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option, CLOption]>>;
 defm modules : BoolFOption<"modules",
   LangOpts<"Modules">, Default<fcxx_modules.KeyPath>,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -3232,7 +3266,6 @@ def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
     MarshallingInfoEnum<CodeGenOpts<"VecLib">, "NoLibrary">;
 def fno_lax_vector_conversions : Flag<["-"], "fno-lax-vector-conversions">, Group<f_Group>,
   Alias<flax_vector_conversions_EQ>, AliasArgs<["none"]>;
-def fno_implicit_module_maps : Flag <["-"], "fno-implicit-module-maps">, Group<f_Group>;
 def fno_module_maps : Flag <["-"], "fno-module-maps">, Alias<fno_implicit_module_maps>;
 def fno_modules_strict_decluse : Flag <["-"], "fno-strict-modules-decluse">, Group<f_Group>;
 def fmodule_file_deps : Flag <["-"], "fmodule-file-deps">, Group<f_Group>;
@@ -4068,6 +4101,43 @@ defm strict_return : BoolFOption<"strict-return",
             " of a non-void function as unreachable">,
   PosFlag<SetTrue>>;
 
+let Group = f_Group in {
+  let Visibility = [ClangOption, CC1Option] in {
+    def fptrauth_intrinsics : Flag<["-"], "fptrauth-intrinsics">,
+      HelpText<"Enable pointer-authentication intrinsics">;
+    def fptrauth_calls : Flag<["-"], "fptrauth-calls">,
+      HelpText<"Enable signing and authentication of all indirect calls">;
+    def fptrauth_returns : Flag<["-"], "fptrauth-returns">,
+      HelpText<"Enable signing and authentication of return addresses">;
+    def fptrauth_indirect_gotos : Flag<["-"], "fptrauth-indirect-gotos">,
+      HelpText<"Enable signing and authentication of indirect goto targets">;
+    def fptrauth_auth_traps : Flag<["-"], "fptrauth-auth-traps">,
+      HelpText<"Enable traps on authentication failures">;
+    def fptrauth_soft : Flag<["-"], "fptrauth-soft">,
+      HelpText<"Enable software lowering of pointer authentication">;
+  }
+  def fno_ptrauth_intrinsics : Flag<["-"], "fno-ptrauth-intrinsics">;
+  def fno_ptrauth_calls : Flag<["-"], "fno-ptrauth-calls">;
+  def fno_ptrauth_returns : Flag<["-"], "fno-ptrauth-returns">;
+  def fno_ptrauth_indirect_gotos : Flag<["-"], "fno-ptrauth-indirect-gotos">;
+  def fno_ptrauth_auth_traps : Flag<["-"], "fno-ptrauth-auth-traps">;
+  def fno_ptrauth_soft : Flag<["-"], "fno-ptrauth-soft">;
+}
+
+let Group = f_Group in {
+  def fptrauth_abi_version_EQ : Joined<["-"], "fptrauth-abi-version=">,
+    Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+    HelpText<"Pointer Authentication ABI version">;
+  def fno_ptrauth_abi_version : Flag<["-"], "fno-ptrauth-abi-version">,
+    HelpText<"Disable Pointer Authentication ABI versioning">;
+
+  def fptrauth_kernel_abi_version : Flag<["-"], "fptrauth-kernel-abi-version">,
+    Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+    HelpText<"Enable Pointer Authentication kernel ABI version">;
+  def fno_ptrauth_kernel_abi_version : Flag<["-"], "fno-ptrauth-kernel-abi-version">,
+    HelpText<"Disable Pointer Authentication kernel ABI versioning">;
+}
+
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
     HelpText<"Enable matrix data type and related builtin functions">,
@@ -4206,6 +4276,11 @@ def gcoff : Joined<["-"], "gcoff">, Group<g_Group>, Flags<[Unsupported]>;
 def gxcoff : Joined<["-"], "gxcoff">, Group<g_Group>, Flags<[Unsupported]>;
 def gvms : Joined<["-"], "gvms">, Group<g_Group>, Flags<[Unsupported]>;
 def gtoggle : Flag<["-"], "gtoggle">, Group<g_flags_Group>, Flags<[Unsupported]>;
+defm reproducible : BoolOption<"g", "reproducible",
+  CodeGenOpts<"ReproducibleDebugInfo">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Tune debug info to be reproducible.">,
+  NegFlag<SetFalse>>, Group<g_flags_Group>;
 def grecord_command_line : Flag<["-"], "grecord-command-line">,
   Group<g_flags_Group>;
 def gno_record_command_line : Flag<["-"], "gno-record-command-line">,
@@ -6906,6 +6981,10 @@ def fdump_vtable_layouts : Flag<["-"], "fdump-vtable-layouts">,
 def fmerge_functions : Flag<["-"], "fmerge-functions">,
   HelpText<"Permit merging of identical functions when optimizing.">,
   MarshallingInfoFlag<CodeGenOpts<"MergeFunctions">>;
+def fsplit_cold_code : Flag<["-"], "fsplit-cold-code">,
+  HelpText<"Permit splitting of cold code when optimizing (off by default).">;
+def fno_split_cold_code : Flag<["-"], "fno-split-cold-code">,
+  HelpText<"Disable splitting of cold code when optimizing.">;
 def : Joined<["-"], "coverage-data-file=">,
   MarshallingInfoString<CodeGenOpts<"CoverageDataFile">>;
 def : Joined<["-"], "coverage-notes-file=">,
@@ -7143,6 +7222,9 @@ let Visibility = [CC1Option] in {
 def sys_header_deps : Flag<["-"], "sys-header-deps">,
   HelpText<"Include system headers in dependency output">,
   MarshallingInfoFlag<DependencyOutputOpts<"IncludeSystemHeaders">>;
+def skip_unused_modulemap_file_deps : Flag<["-"], "skip-unused-modulemap-deps">,
+  HelpText<"Include module map files only for imported modules in dependency output">,
+  MarshallingInfoFlag<DependencyOutputOpts<"SkipUnusedModuleMaps">>;
 def module_file_deps : Flag<["-"], "module-file-deps">,
   HelpText<"Include module files in dependency output">,
   MarshallingInfoFlag<DependencyOutputOpts<"IncludeModuleFiles">>;
@@ -7327,12 +7409,13 @@ defm fimplicit_modules_use_lock : BoolOption<"f", "implicit-modules-use-lock",
           "duplicating work in competing clang invocations.">>;
 // FIXME: We only need this in C++ modules if we might textually
 // enter a different module (eg, when building a header unit).
-def fmodules_local_submodule_visibility :
-  Flag<["-"], "fmodules-local-submodule-visibility">,
-  HelpText<"Enforce name visibility rules across submodules of the same "
-           "top-level module.">,
-  MarshallingInfoFlag<LangOpts<"ModulesLocalVisibility">>,
-  ImpliedByAnyOf<[fcxx_modules.KeyPath]>;
+defm modules_local_submodule_visibility :
+   BoolFOption<"modules-local-submodule-visibility",
+     LangOpts<"ModulesLocalVisibility">,
+     Default<fcxx_modules.KeyPath>,
+     PosFlag<SetTrue, [], [ClangOption], "Enforce">,
+     NegFlag<SetFalse, [], [ClangOption], "Do not enforce">,
+     BothFlags<[], [ClangOption], " name visibility rules across submodules of the same top-level module">>;
 def fmodules_codegen :
   Flag<["-"], "fmodules-codegen">,
   HelpText<"Generate code for uses of this module that assumes an explicit "
@@ -7347,10 +7430,19 @@ def fmodule_format_EQ : Joined<["-"], "fmodule-format=">,
   HelpText<"Select the container format for clang modules and PCH. "
            "Supported options are 'raw' and 'obj'.">,
   MarshallingInfoString<HeaderSearchOpts<"ModuleFormat">, [{"raw"}]>;
+def fmodules_hash_error_diagnostics : Flag<["-"], "fmodules-hash-error-diagnostics">,
+  HelpText<"Use a separate module cache for modules compiled with conflicting -Werror options">,
+  MarshallingInfoFlag<LangOpts<"ModulesHashErrorDiags">>;
 def ftest_module_file_extension_EQ :
   Joined<["-"], "ftest-module-file-extension=">,
   HelpText<"introduce a module file extension for testing purposes. "
            "The argument is parsed as blockname:major:minor:hashed:user info">;
+def fmodule_file_cache_key : MultiArg<["-"], "fmodule-file-cache-key", 2>,
+  MetaVarName<"<path> <key>">,
+  HelpText<"Make the module with the given compile job cache key available as "
+           "if it were at <path>. This option may be combined with "
+           "-fmodule-file= to import the module. The module must have "
+           "previously been built with -fcache-compile-job.">;
 
 defm recovery_ast : BoolOption<"f", "recovery-ast",
   LangOpts<"RecoveryAST">, DefaultTrue,
@@ -7859,6 +7951,221 @@ def fsycl_is_host : Flag<["-"], "fsycl-is-host">,
   HelpText<"SYCL host compilation">,
   Visibility<[CC1Option]>,
   MarshallingInfoFlag<LangOpts<"SYCLIsHost">>;
+
+//===----------------------------------------------------------------------===//
+// CAS Options
+//===----------------------------------------------------------------------===//
+
+// Example command-lines we expect:
+//
+// For building against some pre-ingested, CAS-based filesystem in the builtin
+// on-disk CAS:
+// ```
+// % clang -fcas-path=auto -fcas-fs=llvmcas://1af12fa2afa1af2a1fa
+// % clang -fcas-path=path/to/cas -fcas-fs=llvmcas://1af12fa2afa1af2a1fa
+// ```
+//
+// For building against some pre-ingested, CAS-based filesystem using a plugin:
+// ```
+// % clang -fcas-plugin=path/to/some/cas-plugind \
+//         -fcas-plugin-args=-X,-Y,-Z            \
+//         -fcas-fs=llvmcas://1af12fa2afa1af2a1fa
+// ```
+//
+// For automatically ingesting from the live filesystem into a CAS,
+// canonicalizing the paths, and running the `-cc1` against the CAS tree:
+// ```
+// % clang -fdepscan                              \
+//         -fdepscan-prefix-map=/my/sources=/^src \
+//         -fdepscan-prefix-map=/my/build/dir=/^build
+// ```
+//
+// For pruning and canonicalizing even when starting from a pre-ingested,
+// CAS-based filesystem:
+// ```
+// % clang -fcas-path=path/to/the/cas             \
+//         -fcas-fs=llvmcas://1af12fa2afa1af2a1fa \
+//         -fdepscan                              \
+//         -fdepscan-prefix-map=/my/sources=/^src \
+//         -fdepscan-prefix-map=/my/build/dir=/^build
+// ```
+
+// Driver CAS options.
+def fdepscan_EQ : Joined<["-"], "fdepscan=">,
+    Group<f_Group>,
+    HelpText<"Scan for dependencies ahead of compiling, generating a"
+             " pruned CAS tree to send to -fcas-fs. Values are"
+             " 'auto',"
+             " 'daemon' (see -fdepscan-share and -fdepscan-share-parent),"
+             " 'inline', or"
+             " 'off' (default).">;
+def fdepscan : Flag<["-"], "fdepscan">,
+    Group<f_Group>, HelpText<"Turn on -fdepscan=auto.">,
+    Alias<fdepscan_EQ>, AliasArgs<["auto"]>;
+def fno_depscan : Flag<["-"], "fno-depscan">,
+    Group<f_Group>,
+    Alias<fdepscan_EQ>, AliasArgs<["off"]>;
+def fdepscan_share_EQ : Joined<["-"], "fdepscan-share=">,
+    Group<f_Group>,
+    HelpText<"If the argument is the name of a command in the process tree,"
+             " share state based on its PID."
+             " E.g., -fdepscan -fdepscan-share=ninja will search for 'ninja'"
+             " in the process tree and share state based on its PID if found."
+             " See also -fdepscan-share-stop.">;
+def fdepscan_share_parent_EQ : Joined<["-"], "fdepscan-share-parent=">,
+    Group<f_Group>,
+    HelpText<"Share state based on the PID of the parent command if the name"
+             " matches."
+             " See also -fdepscan-share-stop.">;
+def fdepscan_share_parent : Flag<["-"], "fdepscan-share-parent">,
+    Group<f_Group>,
+    HelpText<"Share state based on the PID of the parent command."
+             " See also -fdepscan-share-stop.">;
+def fno_depscan_share : Flag<["-"], "fno-depscan-share">,
+    Group<f_Group>,
+    HelpText<"Turn off -fdepscan-share and -fdepscan-share-parent.">;
+def fdepscan_share_stop_EQ : Joined<["-"], "fdepscan-share-stop=">,
+    Group<f_Group>,
+    HelpText<"Stop looking for the command named by -fdepscan-share if a"
+             " process with the name of the provided argument is found first."
+             " Also blocks -fdepscan-share=parent if the parent has this name."
+             " E.g., -fdepscan -fdepscan-share=ninja"
+             " -fdepscan-share-stop=cmake looks for 'ninja' and 'cmake' in the"
+             " process tree; if 'ninja' is found first, state is shared based"
+             " on ninja's PID; if 'cmake' is found first, state is not"
+             " shared.">;
+def fdepscan_share_identifier : Separate<["-"], "fdepscan-share-identifier">,
+    Group<f_Group>,
+    HelpText<"Share depscan daemon for Clang invocations using the same string "
+             "identifier.">;
+def fdepscan_share_identifier_EQ : Joined<["-"], "fdepscan-share-identifier=">,
+    Alias<fdepscan_share_identifier>;
+def fdepscan_daemon_EQ : Joined<["-"], "fdepscan-daemon=">, Group<f_Group>,
+    HelpText<"Specify the path to the daemon to be used. Clang will use the"
+             " daemon specified, rather than try to spawn its own based on"
+             " parent processes.">;
+
+def fdepscan_include_tree : Flag<["-"], "fdepscan-include-tree">,
+    Group<f_Group>, HelpText<"Set dep-scanner to produce the include tree">;
+
+// CAS prefix map options.
+//
+// FIXME: Add DepscanOption flag.
+def fdepscan_prefix_map_EQ : Joined<["-"], "fdepscan-prefix-map=">,
+    Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+    MetaVarName<"<old>=<new>">,
+    HelpText<"With -fdepscan, seamlessly filter the CAS filesystem to"
+             " apply the given prefix, updating the command-line to match.">,
+    MarshallingInfoStringVector<FrontendOpts<"PathPrefixMappings">>;
+def fdepscan_prefix_map_sdk_EQ :
+    Joined<["-"], "fdepscan-prefix-map-sdk=">,
+    Group<f_Group>, MetaVarName<"<new>">,
+    HelpText<"With -fdepscan, auto-detect the SDK path on-disk and remap"
+             " it to the given path (see -fdepscan-prefix-map=).">;
+def fdepscan_prefix_map_toolchain_EQ :
+    Joined<["-"], "fdepscan-prefix-map-toolchain=">,
+    Group<f_Group>, MetaVarName<"<new>">,
+    HelpText<"With -fdepscan, auto-detect the toolchain path on-disk and"
+             " remap it to the given path (see -fdepscan-prefix-map=).">;
+
+// -cc1depscan options.
+//
+// FIXME: Add to their own group; add NoDriverOption and DepscanOption flags.
+def cc1_args : Option<["-"], "cc1-args", KIND_REMAINING_ARGS>,
+    HelpText<"pass cc1 options to depscan afterwards">;
+def dump_depscan_tree_EQ : Option<["-"], "dump-depscan-tree=", KIND_JOINED>,
+    HelpText<"emit the CAS identifier for the tree instead of the full -cc1">;
+
+// -cc1 options. These should be available in the driver too, but the driver
+// doesn't currently support most of them. For example, the driver should
+// read only from -fcas-fs if specified, in which case the -fdepscan
+// should scan to prune the CAS filesystem. Also, -fdepscan shouldn't
+// override -fcas / etc., it should just add those if not already specified.
+let Visibility = [CC1Option] in {
+
+// FIXME: Add to driver once it's supported by (not clobbered by) -fdepscan.
+//
+// The driver should also have:
+// - '-fcas-path=<dir>|auto' ('='-joined alias).
+// - '-fno-cas-path' (same as '-fcas-path ""', the default).
+def fcas_path : Separate<["-"], "fcas-path">,
+    Group<f_Group>, MetaVarName<"<dir>|auto">,
+    HelpText<"Path to a persistent on-disk backing store for the builtin CAS."
+             " '-fcas-path=auto' chooses a path in the user's system cache.">,
+    MarshallingInfoString<CASOpts<"CASPath">>;
+
+def fcas_plugin_path : Separate<["-"], "fcas-plugin-path">,
+    Group<f_Group>, MetaVarName<"<pathname>">,
+    HelpText<"Path to a shared library implementing the LLVM CAS plugin API.">,
+    MarshallingInfoString<CASOpts<"PluginPath">>;
+
+def fcas_plugin_option : Separate<["-"], "fcas-plugin-option">,
+    Group<f_Group>, MetaVarName<"<name>=<value>">,
+    HelpText<"Option to pass to the CAS plugin.">,
+    MarshallingInfoStringPairVector<CASOpts<"PluginOptions">>;
+
+// FIXME: Add to driver once it's supported by -fdepscan.
+def fcas_fs : Separate<["-"], "fcas-fs">,
+    Group<f_Group>, MetaVarName<"<tree>">,
+    HelpText<"Configure the filesystem to read from the provided CAS tree."
+             " See also -fcas-builtin-path for loading a tree.">,
+    MarshallingInfoString<FileSystemOpts<"CASFileSystemRootID">>;
+
+// FIXME: Remove / merge with -fworking-directory?
+def fcas_fs_working_directory : Separate<["-"], "fcas-fs-working-directory">,
+    Group<f_Group>, MetaVarName<"<dir>">,
+    HelpText<"Working directory for -fcas-fs (if not the root).">,
+    ShouldParseIf<!strconcat("!", fcas_fs.KeyPath, ".empty()")>,
+    MarshallingInfoString<FileSystemOpts<"CASFileSystemWorkingDirectory">>;
+
+def fcas_include_tree : Separate<["-"], "fcas-include-tree">,
+    Group<f_Group>, MetaVarName<"<tree>">,
+    HelpText<"Configure the frontend to use a CAS include tree.">,
+    MarshallingInfoString<FrontendOpts<"CASIncludeTreeID">>;
+
+// FIXME: Add to driver under -fexperimental-cache=compile-job.
+defm cache_compile_job : BoolFOption<"cache-compile-job",
+    FrontendOpts<"CacheCompileJob">, DefaultFalse,
+    PosFlag<SetTrue, [], [ClangOption], "Try to cache full compilation job (-cc1). Ignored"
+                         " (for now) without -fcas-fs.">,
+    NegFlag<SetFalse>>;
+
+defm cache_disable_replay : BoolFOption<"cache-disable-replay",
+    FrontendOpts<"DisableCachedCompileJobReplay">, DefaultFalse,
+    PosFlag<SetTrue, [], [ClangOption], "Disable replaying a cached compile job">,
+    NegFlag<SetFalse>>;
+
+def fcompilation_caching_service_path : Separate<["-"], "fcompilation-caching-service-path">,
+    Group<f_Group>, MetaVarName<"<pathname>">,
+    HelpText<"Specify the socket path for connecting to a remote caching service">,
+    MarshallingInfoString<FrontendOpts<"CompilationCachingServicePath">>;
+
+defm casid_output : BoolFOption<"casid-output",
+    FrontendOpts<"WriteOutputAsCASID">, DefaultFalse,
+    PosFlag<SetTrue, [], [ClangOption], "When using -fexperimental-cache-compile,"
+                         " write a CASID for the output file.">,
+    NegFlag<SetFalse>>;
+
+/// BEGIN MCCAS
+defm cas_backend : BoolFOption<"cas-backend",
+    CodeGenOpts<"UseCASBackend">, DefaultFalse,
+    PosFlag<SetTrue, [], [ClangOption], "Enable using CASBackend for object file output">,
+    NegFlag<SetFalse>>;
+
+defm cas_emit_casid_file : BoolFOption<"cas-emit-casid-file",
+    CodeGenOpts<"EmitCASIDFile">, DefaultFalse,
+    PosFlag<SetTrue, [], [], "Emit .casid file next to object file when using cas backend">,
+    NegFlag<SetFalse>>;
+
+def fcas_backend_mode : Joined<["-"], "fcas-backend-mode=">,
+    Group<f_Group>, MetaVarName<"<native|casid|verify>">,
+    HelpText<"CASBackendMode for output kind">,
+    Values<"native,casid,verify">, NormalizedValuesScope<"llvm::CASBackendMode">,
+    NormalizedValues<["Native", "CASID", "Verify"]>,
+    MarshallingInfoEnum<CodeGenOpts<"CASObjMode">, "Native">;
+/// END MCCAS
+
+} // let Visibility = [CC1Option]
 
 def sycl_std_EQ : Joined<["-"], "sycl-std=">, Group<sycl_Group>,
   Flags<[NoArgumentUnused]>,
@@ -8540,6 +8847,12 @@ def dxc_entrypoint : Option<["--", "/", "-"], "E", KIND_JOINED_OR_SEPARATE>,
                      Group<dxc_Group>,
                      Visibility<[DXCOption]>,
                      HelpText<"Entry point name">;
+
+def fsuppress_conflicting_types: Flag<["-"], "fsuppress-conflicting-types">, Group<f_Group>,
+  MarshallingInfoFlag<LangOpts<"IgnoreConflictingTypes">>,
+  HelpText<"Ignore errors from conflicting types in function declarations">,
+  Visibility<[ClangOption, CC1Option]>;
+
 def dxc_validator_path_EQ : Joined<["--"], "dxv-path=">, Group<dxc_Group>,
   HelpText<"DXIL validator installation path">;
 def dxc_disable_validation : DXCFlag<"Vd">,

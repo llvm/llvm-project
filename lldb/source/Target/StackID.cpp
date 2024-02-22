@@ -10,14 +10,30 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/Thread.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;
 
+bool StackID::IsCFAOnStack(Process &process) const {
+  if (m_cfa_on_stack == eLazyBoolCalculate) {
+    m_cfa_on_stack = eLazyBoolNo;
+    if (m_cfa != LLDB_INVALID_ADDRESS) {
+      MemoryRegionInfo mem_info;
+      if (process.GetMemoryRegionInfo(m_cfa, mem_info).Success())
+        if (mem_info.IsStackMemory() == MemoryRegionInfo::eYes)
+          m_cfa_on_stack = eLazyBoolYes;
+    }
+  }
+  return m_cfa_on_stack == eLazyBoolYes;
+}
+
 void StackID::Dump(Stream *s) {
   s->Printf("StackID (pc = 0x%16.16" PRIx64 ", cfa = 0x%16.16" PRIx64
-            ", symbol_scope = %p",
-            m_pc, m_cfa, static_cast<void *>(m_symbol_scope));
+            ", cfa_on_stack = %d, symbol_scope = %p",
+            m_pc, m_cfa, m_cfa_on_stack, static_cast<void *>(m_symbol_scope));
   if (m_symbol_scope) {
     SymbolContext sc;
 
@@ -57,7 +73,17 @@ bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
   return lhs_scope != rhs_scope;
 }
 
-bool lldb_private::operator<(const StackID &lhs, const StackID &rhs) {
+bool StackID::IsYounger(const StackID &lhs, const StackID &rhs,
+                        Process &process) {
+  // FIXME: rdar://76119439
+  // At the boundary between an async parent frame calling a regular child
+  // frame, the CFA of the parent async function is a heap addresses, and the
+  // CFA of concrete child function is a stack address. Therefore, if lhs is
+  // on stack, and rhs is not, lhs is considered less than rhs, independent of
+  // address values.
+  if (lhs.IsCFAOnStack(process) && !rhs.IsCFAOnStack(process))
+    return true;
+
   const lldb::addr_t lhs_cfa = lhs.GetCallFrameAddress();
   const lldb::addr_t rhs_cfa = rhs.GetCallFrameAddress();
 

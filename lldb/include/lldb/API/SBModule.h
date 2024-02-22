@@ -290,6 +290,8 @@ public:
   lldb::SBAddress GetObjectFileHeaderAddress() const;
   lldb::SBAddress GetObjectFileEntryPointAddress() const;
 
+  lldb::SBError IsTypeSystemCompatible(lldb::LanguageType language);
+
   /// Get the number of global modules.
   static uint32_t GetNumberAllocatedModules();
 

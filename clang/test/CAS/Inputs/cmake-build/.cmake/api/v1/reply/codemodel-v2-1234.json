@@ -1,0 +1,145 @@
+{
+  "configurations":
+      [
+        {
+          "directories":
+              [
+                {
+                  "build": ".",
+                  "childIndexes":
+                      [
+                        1,
+                        7,
+                        9,
+                        10
+                      ],
+                  "hasInstallRule": true,
+                  "projectIndex": 0,
+                  "source": "."
+                },
+                {
+                  "build": "tools",
+                  "childIndexes":
+                      [
+                        2,
+                        3
+                      ],
+                  "hasInstallRule": true,
+                  "parentIndex": 0,
+                  "projectIndex": 0,
+                  "source": "tools"
+                },
+                {
+                  "build": "tools/llc",
+                  "hasInstallRule": true,
+                  "parentIndex": 1,
+                  "projectIndex": 0,
+                  "source": "tools/llc"
+                },
+                {
+                  "build": "tools/clang",
+                  "childIndexes":
+                      [
+                        4,
+                        5
+                      ],
+                  "hasInstallRule": true,
+                  "parentIndex": 1,
+                  "projectIndex": 0,
+                  "source": "/llvm/llvm-project/clang"
+                },
+                {
+                  "build": "tools/clang/include",
+                  "parentIndex": 3,
+                  "projectIndex": 0,
+                  "source": "/llvm/llvm-project/clang/include"
+                },
+                {
+                  "build": "tools/clang/tools",
+                  "childIndexes":
+                      [
+                        6
+                      ],
+                  "hasInstallRule": true,
+                  "parentIndex": 3,
+                  "projectIndex": 0,
+                  "source": "/llvm/llvm-project/clang/tools"
+                },
+                {
+                  "build": "tools/clang/tools/extra",
+                  "hasInstallRule": true,
+                  "parentIndex": 5,
+                  "projectIndex": 0,
+                  "source": "/llvm/llvm-project/clang-tools-extra"
+                },
+                {
+                  "build": "third-party/benchmark",
+                  "childIndexes":
+                      [
+                        8
+                      ],
+                  "parentIndex": 0,
+                  "projectIndex": 1,
+                  "source": "/llvm/llvm-project/third-party/benchmark"
+                },
+                {
+                  "build": "third-party/benchmark/src",
+                  "parentIndex": 7,
+                  "projectIndex": 1,
+                  "source": "/llvm/llvm-project/third-party/benchmark/src"
+                },
+                {
+                  "build": "other/benchmark",
+                  "parentIndex": 0,
+                  "projectIndex": 1,
+                  "source": "/llvm/llvm-project/other/benchmark"
+                },
+                {
+                  "build": "another/benchmark",
+                  "parentIndex": 0,
+                  "projectIndex": 1,
+                  "source": "/llvm/llvm-project/another/benchmark"
+                }
+              ],
+          "name": "Debug",
+          "projects":
+              [
+                {
+                  "directoryIndexes":
+                      [
+                        0,
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6
+                      ],
+                  "name": "LLVM"
+                },
+                {
+                  "directoryIndexes":
+                      [
+                        7,
+                        8,
+                        9,
+                        10
+                      ],
+                  "name": "benchmark",
+                  "parentIndex": 0
+                }
+              ]
+        }
+      ],
+  "kind": "codemodel",
+  "paths":
+      {
+        "build": "/llvm/build",
+        "source": "/llvm/llvm-project/llvm"
+      },
+  "version":
+      {
+        "major": 2,
+        "minor": 2
+      }
+}

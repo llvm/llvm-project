@@ -13,6 +13,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/CAS/CASOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
@@ -77,6 +78,7 @@
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
+#include "llvm/Transforms/Instrumentation/SoftPointerAuth.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
@@ -126,6 +128,7 @@ class EmitAssemblyHelper {
   const CodeGenOptions &CodeGenOpts;
   const clang::TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
+  const CASOptions &CASOpts; // MCCAS
   llvm::Module *TheModule;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
 
@@ -156,7 +159,8 @@ class EmitAssemblyHelper {
   ///
   /// \return True on success.
   bool AddEmitPasses(legacy::PassManager &CodeGenPasses, BackendAction Action,
-                     raw_pwrite_stream &OS, raw_pwrite_stream *DwoOS);
+                     raw_pwrite_stream &OS, raw_pwrite_stream *DwoOS,
+                     raw_pwrite_stream *CasIDOS = nullptr);
 
   std::unique_ptr<llvm::ToolOutputFile> openOutputFile(StringRef Path) {
     std::error_code EC;
@@ -174,7 +178,8 @@ class EmitAssemblyHelper {
       std::unique_ptr<llvm::ToolOutputFile> &ThinLinkOS, BackendConsumer *BC);
   void RunCodegenPipeline(BackendAction Action,
                           std::unique_ptr<raw_pwrite_stream> &OS,
-                          std::unique_ptr<llvm::ToolOutputFile> &DwoOS);
+                          std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
+                          std::unique_ptr<raw_pwrite_stream> &CasIDOS);
 
   /// Check whether we should emit a module summary for regular LTO.
   /// The module summary should be emitted by default for regular LTO
@@ -191,10 +196,13 @@ public:
                      const HeaderSearchOptions &HeaderSearchOpts,
                      const CodeGenOptions &CGOpts,
                      const clang::TargetOptions &TOpts,
-                     const LangOptions &LOpts, llvm::Module *M,
+                     const LangOptions &LOpts,
+                     const CASOptions &CASOpts, // MCCAS
+                     llvm::Module *M,
                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
       : Diags(_Diags), HSOpts(HeaderSearchOpts), CodeGenOpts(CGOpts),
-        TargetOpts(TOpts), LangOpts(LOpts), TheModule(M), VFS(std::move(VFS)),
+        TargetOpts(TOpts), LangOpts(LOpts), CASOpts(CASOpts), // MCCAS
+        TheModule(M), VFS(std::move(VFS)),
         CodeGenerationTime("codegen", "Code Generation Time"),
         TargetTriple(TheModule->getTargetTriple()) {}
 
@@ -207,7 +215,8 @@ public:
 
   // Emit output using the new pass manager for the optimization pipeline.
   void EmitAssembly(BackendAction Action, std::unique_ptr<raw_pwrite_stream> OS,
-                    BackendConsumer *BC);
+                    std::unique_ptr<raw_pwrite_stream> CasIDOS = nullptr,
+                    BackendConsumer *BC = nullptr);
 };
 } // namespace
 
@@ -307,6 +316,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
                               const CodeGenOptions &CodeGenOpts,
                               const clang::TargetOptions &TargetOpts,
                               const LangOptions &LangOpts,
+                              const CASOptions &CASOpts, // MCCAS
                               const HeaderSearchOptions &HSOpts) {
   switch (LangOpts.getThreadModel()) {
   case LangOptions::ThreadModelKind::POSIX:
@@ -434,6 +444,12 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
     break;
   }
 
+  // BEGIN MCCAS
+  Options.UseCASBackend = CodeGenOpts.UseCASBackend; // MCCAS
+  Options.MCOptions.CAS = CASOpts.getOrCreateDatabases(Diags).first;
+  Options.MCOptions.ResultCallBack = CodeGenOpts.MCCallBack;
+  Options.MCOptions.CASObjMode = CodeGenOpts.getCASObjMode();
+  // END MCCAS
   Options.MCOptions.SplitDwarfFile = CodeGenOpts.SplitDwarfFile;
   Options.MCOptions.EmitDwarfUnwind = CodeGenOpts.getEmitDwarfUnwind();
   Options.MCOptions.EmitCompactUnwindNonCanonical =
@@ -546,6 +562,7 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
 
   llvm::TargetOptions Options;
   if (!initTargetOptions(Diags, Options, CodeGenOpts, TargetOpts, LangOpts,
+                         CASOpts, // MCCAS
                          HSOpts))
     return;
   TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
@@ -556,7 +573,8 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
 bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
                                        BackendAction Action,
                                        raw_pwrite_stream &OS,
-                                       raw_pwrite_stream *DwoOS) {
+                                       raw_pwrite_stream *DwoOS,
+                                       raw_pwrite_stream *CasIDOS) {
   // Add LibraryInfo.
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       llvm::driver::createTLII(TargetTriple, CodeGenOpts.getVecLib()));
@@ -573,7 +591,8 @@ bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
     CodeGenPasses.add(createObjCARCContractPass());
 
   if (TM->addPassesToEmitFile(CodeGenPasses, OS, DwoOS, CGFT,
-                              /*DisableVerify=*/!CodeGenOpts.VerifyModule)) {
+                              /*DisableVerify=*/!CodeGenOpts.VerifyModule,
+                              nullptr, CasIDOS)) {
     Diags.Report(diag::err_fe_unable_to_interface_with_target);
     return false;
   }
@@ -921,6 +940,9 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     const bool PrepareForThinLTO = CodeGenOpts.PrepareForThinLTO;
     const bool PrepareForLTO = CodeGenOpts.PrepareForLTO;
 
+    // -f[no-]split-cold-code
+    PB.setEnableHotColdSplitting(CodeGenOpts.SplitColdCode);
+
     if (LangOpts.ObjCAutoRefCount) {
       PB.registerPipelineStartEPCallback(
           [](ModulePassManager &MPM, OptimizationLevel Level) {
@@ -984,6 +1006,12 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       addSanitizers(TargetTriple, CodeGenOpts, LangOpts, PB);
       addKCFIPass(TargetTriple, LangOpts, PB);
     }
+
+    if (LangOpts.SoftPointerAuth)
+      PB.registerOptimizerLastEPCallback(
+          [](ModulePassManager &MPM, OptimizationLevel Level) {
+            MPM.addPass(SoftPointerAuthPass());
+          });
 
     if (std::optional<GCOVOptions> Options =
             getGCOVOptions(CodeGenOpts, LangOpts))
@@ -1111,7 +1139,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 
 void EmitAssemblyHelper::RunCodegenPipeline(
     BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
-    std::unique_ptr<llvm::ToolOutputFile> &DwoOS) {
+    std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
+    std::unique_ptr<raw_pwrite_stream> &CasIDOS) {
   // We still use the legacy PM to run the codegen pipeline since the new PM
   // does not work with the codegen pipeline.
   // FIXME: make the new PM work with the codegen pipeline.
@@ -1130,7 +1159,7 @@ void EmitAssemblyHelper::RunCodegenPipeline(
         return;
     }
     if (!AddEmitPasses(CodeGenPasses, Action, *OS,
-                       DwoOS ? &DwoOS->os() : nullptr))
+                       DwoOS ? &DwoOS->os() : nullptr, CasIDOS.get()))
       // FIXME: Should we handle this error differently?
       return;
     break;
@@ -1152,9 +1181,9 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   }
 }
 
-void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
-                                      std::unique_ptr<raw_pwrite_stream> OS,
-                                      BackendConsumer *BC) {
+void EmitAssemblyHelper::EmitAssembly(
+    BackendAction Action, std::unique_ptr<raw_pwrite_stream> OS,
+    std::unique_ptr<raw_pwrite_stream> CasIDOS, BackendConsumer *BC) {
   TimeRegion Region(CodeGenOpts.TimePasses ? &CodeGenerationTime : nullptr);
   setCommandLineOpts(CodeGenOpts);
 
@@ -1171,7 +1200,7 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
 
   std::unique_ptr<llvm::ToolOutputFile> ThinLinkOS, DwoOS;
   RunOptimizationPipeline(Action, OS, ThinLinkOS, BC);
-  RunCodegenPipeline(Action, OS, DwoOS);
+  RunCodegenPipeline(Action, OS, DwoOS, CasIDOS);
 
   if (ThinLinkOS)
     ThinLinkOS->keep();
@@ -1179,13 +1208,15 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
     DwoOS->keep();
 }
 
-static void runThinLTOBackend(
-    DiagnosticsEngine &Diags, ModuleSummaryIndex *CombinedIndex,
-    llvm::Module *M, const HeaderSearchOptions &HeaderOpts,
-    const CodeGenOptions &CGOpts, const clang::TargetOptions &TOpts,
-    const LangOptions &LOpts, std::unique_ptr<raw_pwrite_stream> OS,
-    std::string SampleProfile, std::string ProfileRemapping,
-    BackendAction Action) {
+static void
+runThinLTOBackend(DiagnosticsEngine &Diags, ModuleSummaryIndex *CombinedIndex,
+                  llvm::Module *M, const HeaderSearchOptions &HeaderOpts,
+                  const CodeGenOptions &CGOpts,
+                  const clang::TargetOptions &TOpts, const LangOptions &LOpts,
+                  const CASOptions &CASOpts, // MCCAS
+                  std::unique_ptr<raw_pwrite_stream> OS,
+                  std::string SampleProfile, std::string ProfileRemapping,
+                  BackendAction Action) {
   DenseMap<StringRef, DenseMap<GlobalValue::GUID, GlobalValueSummary *>>
       ModuleToDefinedGVSummaries;
   CombinedIndex->collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
@@ -1222,7 +1253,9 @@ static void runThinLTOBackend(
   assert(OptLevelOrNone && "Invalid optimization level!");
   Conf.CGOptLevel = *OptLevelOrNone;
   Conf.OptLevel = CGOpts.OptimizationLevel;
-  initTargetOptions(Diags, Conf.Options, CGOpts, TOpts, LOpts, HeaderOpts);
+  initTargetOptions(Diags, Conf.Options, CGOpts, TOpts, LOpts,
+                    CASOpts, // MCCAS
+                    HeaderOpts);
   Conf.SampleProfile = std::move(SampleProfile);
   Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
   // For historical reasons, loop interleaving is set to mirror setting for loop
@@ -1287,9 +1320,12 @@ static void runThinLTOBackend(
 void clang::EmitBackendOutput(
     DiagnosticsEngine &Diags, const HeaderSearchOptions &HeaderOpts,
     const CodeGenOptions &CGOpts, const clang::TargetOptions &TOpts,
-    const LangOptions &LOpts, StringRef TDesc, llvm::Module *M,
-    BackendAction Action, IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-    std::unique_ptr<raw_pwrite_stream> OS, BackendConsumer *BC) {
+    const LangOptions &LOpts,
+    const CASOptions &CASOpts, // MCCAS
+    StringRef TDesc, llvm::Module *M, BackendAction Action,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+    std::unique_ptr<raw_pwrite_stream> OS,
+    std::unique_ptr<raw_pwrite_stream> CasIDOS, BackendConsumer *BC) {
 
   llvm::TimeTraceScope TimeScope("Backend");
 
@@ -1315,7 +1351,8 @@ void clang::EmitBackendOutput(
     if (CombinedIndex) {
       if (!CombinedIndex->skipModuleByDistributedBackend()) {
         runThinLTOBackend(Diags, CombinedIndex.get(), M, HeaderOpts, CGOpts,
-                          TOpts, LOpts, std::move(OS), CGOpts.SampleProfileFile,
+                          TOpts, LOpts, CASOpts, // MCCAS
+                          std::move(OS), CGOpts.SampleProfileFile,
                           CGOpts.ProfileRemappingFile, Action);
         return;
       }
@@ -1331,8 +1368,10 @@ void clang::EmitBackendOutput(
     }
   }
 
-  EmitAssemblyHelper AsmHelper(Diags, HeaderOpts, CGOpts, TOpts, LOpts, M, VFS);
-  AsmHelper.EmitAssembly(Action, std::move(OS), BC);
+  EmitAssemblyHelper AsmHelper(Diags, HeaderOpts, CGOpts, TOpts, LOpts,
+                               CASOpts, // MCCAS
+                               M, VFS);
+  AsmHelper.EmitAssembly(Action, std::move(OS), std::move(CasIDOS), BC);
 
   // Verify clang's TargetInfo DataLayout against the LLVM TargetMachine's
   // DataLayout.

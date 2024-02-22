@@ -1,0 +1,50 @@
+{
+  "cmake":
+      {
+        "generator":
+            {
+              "multiConfig": false,
+              "name": "Ninja"
+            },
+        "paths":
+            {
+              "cmake": "/bin/cmake",
+              "cpack": "/bin/cpack",
+              "ctest": "/bin/ctest",
+              "root": "/share/cmake-3.19"
+            },
+        "version":
+            {
+              "isDirty": true,
+              "major": 3,
+              "minor": 19,
+              "patch": 6,
+              "string": "3.19.6"
+            }
+      },
+  "objects":
+      [
+        {
+          "jsonFile": "codemodel-v2-1234.json",
+          "kind": "codemodel",
+          "version":
+              {
+                "major": 2,
+                "minor": 2
+              }
+        }
+      ],
+  "reply":
+      {
+        "codemodel-v2":
+            {
+              "jsonFile": "codemodel-v2-1234.json",
+              "kind": "codemodel",
+              "version":
+                  {
+                    "major": 2,
+                    "minor": 2
+                  }
+            }
+      }
+}

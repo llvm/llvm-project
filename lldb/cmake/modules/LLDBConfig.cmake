@@ -51,6 +51,16 @@ macro(add_optional_dependency variable description package found)
 endmacro()
 
 add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
+
+# BEGIN SWIFT MOD
+if (LLDB_ENABLE_SWIG)
+  set(LLDB_ENABLE_STATIC_BINDINGS FALSE)
+else()
+  set(LLDB_ENABLE_STATIC_BINDINGS TRUE)
+endif()
+option(LLDB_USE_STATIC_BINDINGS "Use the static Python bindings." ${LLDB_ENABLE_STATIC_BINDINGS})
+# END SWIFT MOD
+
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
 add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
@@ -67,6 +77,22 @@ option(LLDB_SKIP_STRIP "Whether to skip stripping of binaries when installing ll
 option(LLDB_SKIP_DSYM "Whether to skip generating a dSYM when installing lldb." OFF)
 option(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS
   "Fail to configure if certain requirements are not met for testing." OFF)
+
+# BEGIN SWIFT MOD
+option(LLDB_ENABLE_WERROR "Fail and stop if a warning is triggered." ${LLVM_ENABLE_WERROR})
+if(LLDB_ENABLE_SWIFT_SUPPORT)
+  add_definitions( -DLLDB_ENABLE_SWIFT )
+else()
+  # LLVM_DISTRIBUTION_COMPONENTS may have swift-specific things in them (e.g.
+  # repl_swift). This may be set in a cache where LLDB_ENABLE_SWIFT_SUPPORT does
+  # not yet have a value. We have to touch up LLVM_DISTRIBUTION_COMPONENTS after
+  # the fact.
+  if(LLVM_DISTRIBUTION_COMPONENTS)
+    list(REMOVE_ITEM LLVM_DISTRIBUTION_COMPONENTS repl_swift)
+    set(LLVM_DISTRIBUTION_COMPONENTS ${LLVM_DISTRIBUTION_COMPONENTS} CACHE STRING "" FORCE)
+  endif()
+endif()
+# END SWIFT CODE
 
 set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
   "Path to the global lldbinit directory. Relative paths are resolved relative to the
@@ -89,6 +115,13 @@ if(LLDB_BUILD_FRAMEWORK)
   set(LLDB_FRAMEWORK_VERSION A CACHE STRING "LLDB.framework version (default is A)")
   set(LLDB_FRAMEWORK_BUILD_DIR bin CACHE STRING "Output directory for LLDB.framework")
   set(LLDB_FRAMEWORK_INSTALL_DIR Library/Frameworks CACHE STRING "Install directory for LLDB.framework")
+  if (LLDB_ENABLE_SWIFT_SUPPORT)
+    set(should_copy_swift_resources ON)
+  else()
+    set(should_copy_swift_resources OFF)
+  endif()
+
+  set(LLDB_FRAMEWORK_COPY_SWIFT_RESOURCES ${should_copy_swift_resources} CACHE BOOL "Copy the Swift headers into the resource directory of the LLDB.framework")
 
   get_filename_component(LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR ${LLDB_FRAMEWORK_BUILD_DIR} ABSOLUTE
     BASE_DIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR})
@@ -180,6 +213,21 @@ else ()
 endif ()
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/../clang/include")
 
+if(LLDB_ENABLE_SWIFT_SUPPORT)
+  if(NOT LLDB_BUILT_STANDALONE)
+    if (LLVM_EXTERNAL_SWIFT_SOURCE_DIR)
+      include_directories(${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}/include)
+      include_directories(${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}/stdlib/public/SwiftShims)
+    else ()
+      include_directories(${CMAKE_SOURCE_DIR}/tools/swift/include)
+      include_directories(${CMAKE_SOURCE_DIR}/tools/swift/stdlib/public/SwiftShims)
+    endif ()
+    include_directories("${CMAKE_CURRENT_BINARY_DIR}/../swift/include")
+  else ()
+    include_directories("${SWIFT_INCLUDE_DIRS}")
+  endif()
+endif()
+
 # GCC silently accepts any -Wno-<foo> option, but warns about those options
 # being unrecognized only if the compilation triggers other warnings to be
 # printed. Therefore, check for whether the compiler supports options in the
@@ -222,6 +270,15 @@ endif()
 # Use the Unicode (UTF-16) APIs by default on Win32
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     add_definitions( -D_UNICODE -DUNICODE )
+endif()
+
+if(LLDB_ENABLE_WERROR)
+  set(flag_werror "-Werror")
+  if(MSVC)
+    set(flag_werror "/WX")
+  endif()
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${flag_werror}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag_werror}")
 endif()
 
 # If LLDB_VERSION_* is specified, use it, if not use LLVM_VERSION_*.

@@ -12,6 +12,7 @@ let Component = "Frontend" in {
 
 def err_fe_error_opening : Error<"error opening '%0': %1">;
 def err_fe_error_reading : Error<"error reading '%0': %1">;
+def err_fe_error_writing : Error<"error writing '%0': %1">;
 def err_fe_error_reading_stdin : Error<"error reading stdin: %0">;
 def err_fe_error_backend : Error<"error in backend: %0">, DefaultFatal;
 
@@ -139,6 +140,13 @@ def err_fe_invalid_exception_model
 def err_fe_invalid_source_date_epoch : Error<
     "environment variable 'SOURCE_DATE_EPOCH' ('%0') must be a non-negative decimal integer <= %1">;
 
+def err_fe_incompatible_option_with_remote_cache : Error<
+  "'%0' is incompatible with remote caching backend">;
+def err_fe_unable_to_load_include_tree : Error<
+  "unable to load the CAS include-tree '%0': '%1'">;
+def err_unable_to_load_include_tree_node : Error<
+  "unable to load a node from the CAS include-tree: '%0'">;
+
 def err_fe_unable_to_load_basic_block_sections_file : Error<
     "unable to load basic block sections function list: '%0'">;
 
@@ -224,6 +232,8 @@ def err_missing_module_name : Error<
   DefaultFatal;
 def err_missing_module : Error<
   "no module named '%0' declared in module map file '%1'">, DefaultFatal;
+def err_missing_module_include_tree : Error<
+  "no module named '%0' declared in include-tree module map '%1'">, DefaultFatal;
 def err_no_submodule : Error<"no submodule named %0 in module '%1'">;
 def err_no_submodule_suggest : Error<
   "no submodule named %0 in module '%1'; did you mean '%2'?">;
@@ -257,6 +267,10 @@ def err_modules_embed_file_not_found :
   DefaultFatal;
 def err_module_header_file_not_found :
   Error<"module header file '%0' not found">, DefaultFatal;
+
+def remark_index_producing_module_file_data : Remark<"producing index data for "
+  "module file '%0'">,
+  InGroup<IndexStore>;
 
 def err_test_module_file_extension_version : Error<
   "test module file extension '%0' has different version (%1.%2) than expected "

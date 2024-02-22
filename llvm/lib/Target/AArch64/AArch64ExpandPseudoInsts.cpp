@@ -816,11 +816,56 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
   // Mark the sequence as bundle, to avoid passes moving other code in between.
   MachineInstr &MI = *MBBI;
   MachineOperand &RVTarget = MI.getOperand(0);
+  MachineOperand &CallTarget = MI.getOperand(1);
   assert(RVTarget.isGlobal() && "invalid operand for attached call");
-  MachineInstr *OriginalCall =
+
+  MachineInstr *OriginalCall = nullptr;
+
+  if (MI.getOperand(2).isImm()) {
+    // Pointer auth call.
+    MachineOperand &Discriminator = MI.getOperand(3);
+    assert(MI.getOperand(2).isImm() &&
+           "first operand of ptrauth call must be an immediate");
+    int64_t Imm = MI.getOperand(2).getImm();
+    assert((Imm == 0 || Imm == 1) && "invalid ptrauth immediate");
+    assert(Discriminator.isReg() &&
+           "ptrauth discriminator call must be a register");
+
+    if (Discriminator.getReg() != AArch64::XZR) {
+      unsigned Opc = Imm == 0 ? AArch64::BLRAA : AArch64::BLRAB;
+      OriginalCall =
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
+      OriginalCall->addOperand(CallTarget);
+      OriginalCall->addOperand(Discriminator);
+    } else {
+      assert(Discriminator.getReg() == AArch64::XZR &&
+             "*z versions of ptrauth calls need XZR as register operand");
+      unsigned Opc = Imm == 0 ? AArch64::BLRAAZ : AArch64::BLRABZ;
+      OriginalCall =
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
+      OriginalCall->addOperand(CallTarget);
+    }
+
+    unsigned RegMaskStartIdx = 4;
+    // Skip register arguments. Those are added during ISel, but are not
+    // needed for the concrete branch.
+    while (!MI.getOperand(RegMaskStartIdx).isRegMask()) {
+      auto MOP = MI.getOperand(RegMaskStartIdx);
+      assert(MOP.isReg() && "can only add register operands");
+      OriginalCall->addOperand(MachineOperand::CreateReg(
+          MOP.getReg(), /*Def=*/false, /*Implicit=*/true, /*isKill=*/false,
+          /*isDead=*/false, /*isUndef=*/MOP.isUndef()));
+      RegMaskStartIdx++;
+    }
+    for (const MachineOperand &MO :
+         llvm::drop_begin(MI.operands(), RegMaskStartIdx))
+      OriginalCall->addOperand(MO);
+  } else {
+    OriginalCall =
       createCall(MBB, MBBI, TII, MI.getOperand(1),
                  // Regmask starts after the RV and call targets.
                  /*RegMaskStartIdx=*/2);
+  }
 
   BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
                      .addReg(AArch64::FP, RegState::Define)
@@ -1454,6 +1499,37 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     transferImpOps(MI, MIB, MIB);
     MI.eraseFromParent();
     return true;
+   }
+   case AArch64::XPACIuntied: {
+     const MachineOperand &LHS = MI.getOperand(0);
+     const MachineOperand &RHS = MI.getOperand(1);
+     // If the registrs are the same, just lower to the "tied" version.
+     // $x0 = XPACIuntied $x0 -> $x0 = XPACI $x0.
+     if (LHS.getReg() == RHS.getReg()) {
+       MachineInstrBuilder DefMIB =
+           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::XPACI))
+               .add(LHS)
+               .add(RHS);
+       transferImpOps(MI, DefMIB, DefMIB);
+     } else {
+       // $x0 = XPACIuntied $x1
+       // ->
+       // mov $x0, $x1
+       // XPACI $x0.
+       MachineInstrBuilder DefMIB =
+           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
+               .addReg(LHS.getReg())
+               .addReg(AArch64::XZR)
+               .add(RHS)
+               .addImm(0);
+       MachineInstrBuilder UseMIB =
+           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::XPACI),
+                   LHS.getReg())
+               .addReg(LHS.getReg());
+       transferImpOps(MI, UseMIB, DefMIB);
+     }
+     MI.eraseFromParent();
+     return true;
    }
    case AArch64::IRGstack: {
      MachineFunction &MF = *MBB.getParent();

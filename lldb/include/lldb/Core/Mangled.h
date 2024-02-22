@@ -126,13 +126,13 @@ public:
   ///
   /// \return
   ///     A const reference to the demangled name string object.
-  ConstString GetDemangledName() const;
+  ConstString GetDemangledName(const SymbolContext *sc = nullptr) const;
 
   /// Display demangled name get accessor.
   ///
   /// \return
   ///     A const reference to the display demangled name string object.
-  ConstString GetDisplayDemangledName() const;
+  ConstString GetDisplayDemangledName(const SymbolContext *sc = nullptr) const;
 
   void SetDemangledName(ConstString name) { m_demangled = name; }
 
@@ -159,7 +159,8 @@ public:
   ///     A const reference to the preferred name string object if this
   ///     object has a valid name of that kind, else a const reference to the
   ///     other name is returned.
-  ConstString GetName(NamePreference preference = ePreferDemangled) const;
+  ConstString GetName(NamePreference preference = ePreferDemangled,
+                      const SymbolContext *sc = nullptr) const;
 
   /// Check if "name" matches either the mangled or demangled name.
   ///

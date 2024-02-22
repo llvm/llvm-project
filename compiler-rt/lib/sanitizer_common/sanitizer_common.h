@@ -830,7 +830,8 @@ class LoadedModule {
     internal_memset(uuid_, 0, kModuleUUIDSize);
     ranges_.clear();
   }
-  void set(const char *module_name, uptr base_address);
+  void set(const char *module_name, uptr base_address,
+           bool instrumented = false);
   void set(const char *module_name, uptr base_address, ModuleArch arch,
            u8 uuid[kModuleUUIDSize], bool instrumented);
   void setUuid(const char *uuid, uptr size);

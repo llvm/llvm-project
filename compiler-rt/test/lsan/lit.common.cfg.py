@@ -135,3 +135,8 @@ if "hwasan" in config.available_features and not config.has_lld:
     config.unsupported = True
 
 config.suffixes = [".c", ".cpp", ".mm"]
+
+# Apple-Clang: Disable LSan
+if config.host_os == "Darwin":
+  lit_config.note("Disabling LSan tests on Darwin")
+  config.unsupported = True

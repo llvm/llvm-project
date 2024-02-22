@@ -28,6 +28,7 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/ModuleMap.h"
+#include "clang/Lex/PPCachedActions.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
@@ -243,6 +244,9 @@ class Preprocessor {
 
   /// True if we are pre-expanding macro arguments.
   bool InMacroArgPreExpansion;
+
+  /// True if we encountered any of the non-deterministic macros.
+  bool IsSourceNonReproducible;
 
   /// Mapping/lookup information for all identifiers in
   /// the program, including program keywords.
@@ -798,6 +802,10 @@ private:
   /// encountered (e.g. a file is \#included, etc).
   std::unique_ptr<PPCallbacks> Callbacks;
 
+  /// Actions that can override certain preprocessor activities, like handling
+  /// of \#include directives.
+  std::unique_ptr<PPCachedActions> CachedActions;
+
   struct MacroExpandsInfo {
     Token Tok;
     MacroDefinition MD;
@@ -1252,6 +1260,8 @@ public:
   void setPragmasEnabled(bool Enabled) { PragmasEnabled = Enabled; }
   bool getPragmasEnabled() const { return PragmasEnabled; }
 
+  bool isSourceNonReproducible() const { return IsSourceNonReproducible; }
+
   void SetSuppressIncludeNotFoundError(bool Suppress) {
     SuppressIncludeNotFoundError = Suppress;
   }
@@ -1307,6 +1317,11 @@ public:
     Callbacks = std::move(C);
   }
   /// \}
+
+  PPCachedActions *getPPCachedActions() const { return CachedActions.get(); }
+  void setPPCachedActions(std::unique_ptr<PPCachedActions> CA) {
+    CachedActions = std::move(CA);
+  }
 
   /// Get the number of tokens processed so far.
   unsigned getTokenCount() const { return TokenCount; }

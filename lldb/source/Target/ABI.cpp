@@ -85,10 +85,11 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
   // work.
 
   if (persistent) {
+    lldb::LanguageType lang = ast_type.GetMinimumLanguage();
+    PersistentExpressionState *persistent_expression_state;
     Target &target = *thread.CalculateTarget();
-    PersistentExpressionState *persistent_expression_state =
-        target.GetPersistentExpressionStateForLanguage(
-            ast_type.GetMinimumLanguage());
+    persistent_expression_state =
+        target.GetPersistentExpressionStateForLanguage(lang);
 
     if (!persistent_expression_state)
       return {};

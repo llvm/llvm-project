@@ -84,6 +84,7 @@ tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 tools = [
     "apinotes-test",
     "c-index-test",
+    "cache-build-session",
     "clang-diff",
     "clang-format",
     "clang-repl",
@@ -99,6 +100,7 @@ tools = [
     "llvm-lto2",
     "llvm-profdata",
     "llvm-readtapi",
+    ToolSubst('%clang-cache', command=FindTool('clang-cache')),
     ToolSubst(
         "%clang_extdef_map",
         command=FindTool("clang-extdef-mapping"),
@@ -280,11 +282,14 @@ if re.match(r"^arm64(e)?-apple-(macos|darwin)", config.target_triple):
 if platform.system() not in ["Windows"]:
     config.available_features.add("can-remove-opened-file")
 
+# *-apple-macosx should also be XFAILED when 'darwin' is XFAILED.
+if lit.util.isMacOSTriple(config.target_triple):
+   config.available_features.add('darwin')
+
 # Features
 known_arches = ["x86_64", "mips64", "ppc64", "aarch64"]
 if any(config.target_triple.startswith(x) for x in known_arches):
     config.available_features.add("clang-target-64-bits")
-
 
 def calculate_arch_features(arch_string):
     features = []
@@ -330,9 +335,14 @@ if config.enable_shared:
 if config.clang_vendor_uti:
     config.available_features.add("clang-vendor=" + config.clang_vendor_uti)
 
+if config.have_ondisk_cas:
+    config.available_features.add('ondisk_cas')
+
 if config.have_llvm_driver:
     config.available_features.add("llvm-driver")
 
+if os.path.exists(os.path.join(config.clang_obj_root, 'TeSt')):
+    config.available_features.add('case_insensitive_build_dir')
 
 # Some tests perform deep recursion, which requires a larger pthread stack size
 # than the relatively low default of 192 KiB for 64-bit processes on AIX. The
@@ -361,3 +371,9 @@ if "system-aix" in config.available_features:
 # possibly be present in system and user configuration files, so disable
 # default configs for the test runs.
 config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
+
+# Restrict the size of the on-disk CAS for tests. This allows testing in
+# constrained environments (e.g. small TMPDIR). It also prevents leaving
+# behind large files on file systems that do not support sparse files if a test
+# crashes before resizing the file.
+config.environment["LLVM_CAS_MAX_MAPPING_SIZE"] = "%d" % (100 * 1024 * 1024)

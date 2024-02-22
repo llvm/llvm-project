@@ -10,10 +10,13 @@
 #define LLVM_MC_MCASMBACKEND_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/MC/MCDirectives.h"
+#include "llvm/MC/MCMachOCASWriter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/Support/Endian.h"
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
@@ -76,6 +79,21 @@ public:
   /// emit the final object file.
   std::unique_ptr<MCObjectWriter>
   createObjectWriter(raw_pwrite_stream &OS) const;
+
+  // BEGIN MCCAS
+  /// Create a CAS object writer for the assembler backend.
+  std::unique_ptr<MCObjectWriter> createCASObjectWriter(
+      raw_pwrite_stream &OS, const Triple &TT, cas::ObjectStore &CAS,
+      const MCTargetOptions &MCOpts, CASBackendMode Mode,
+      std::function<const cas::ObjectProxy(
+          llvm::MachOCASWriter &, llvm::MCAssembler &,
+          const llvm::MCAsmLayout &, cas::ObjectStore &, raw_ostream *)>
+          CreateFromMcAssembler,
+      std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
+          SerializeObjectFile,
+      raw_pwrite_stream *CasIDOS = nullptr) const;
+  // END MCCAS
+
 
   /// Create an MCObjectWriter that writes two object files: a .o file which is
   /// linked into the final program and a .dwo file which is used by debuggers.

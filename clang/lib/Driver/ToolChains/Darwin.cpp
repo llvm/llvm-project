@@ -557,6 +557,102 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
+namespace {
+/// Environment. By default, same as the host application.
+class VirtualEnvironment {
+public:
+  /// Get the environment block, only if it has been overridden. This is a valid
+  /// environment block and includes the terminating \a nullptr.
+  std::optional<ArrayRef<const char *>> getEnvironmentIfOverridden() const {
+    if (Environment)
+      return ArrayRef(*Environment);
+    return std::nullopt;
+  }
+
+  /// Get the parts of the environment that have been overridden. Not a valid
+  /// environment block.
+  ArrayRef<const char *> getOverriddenEnvironment() const {
+    return OverriddenEnvironment;
+  }
+
+  void set(StringRef Name, StringRef Value,
+           llvm::function_ref<const char *(StringRef)> SaveString);
+
+private:
+  static const char **findName(const char **I, StringRef Name,
+                               std::optional<StringRef> &Existing);
+  static const char **getHostEnvironment();
+  void copyHostEnvironment(const char **I = nullptr);
+  std::optional<SmallVector<const char *>> Environment;
+  SmallVector<const char *> OverriddenEnvironment;
+};
+} // end namespace
+
+const char **VirtualEnvironment::findName(const char **I, StringRef Name,
+                                          std::optional<StringRef> &Existing) {
+  std::string Prefix = (Name + Twine("=")).str();
+  for (; *I; ++I) {
+    StringRef NameValue = *I;
+    if (!NameValue.starts_with(Prefix))
+      continue;
+    Existing = NameValue;
+    break;
+  }
+  return I;
+}
+
+extern char **environ;
+const char **VirtualEnvironment::getHostEnvironment() {
+  return const_cast<const char **>(environ);
+}
+
+void VirtualEnvironment::copyHostEnvironment(const char **Hint) {
+  assert(!Environment);
+  const char **B = getHostEnvironment();
+  const char **I = Hint ? Hint : B;
+  while (*I)
+    ++I;
+
+  Environment.emplace();
+
+  // Include room for nullptr plus 1 new variable.
+  Environment->reserve(I - B + 2);
+
+  // Include nullptr.
+  Environment->append(B, I + 1);
+}
+
+/// Set an environment variable.
+///
+/// FIXME: Not portable.
+void VirtualEnvironment::set(
+    StringRef Name, StringRef Value,
+    llvm::function_ref<const char *(StringRef)> SaveString) {
+  const char **B =
+      Environment ? Environment->data() : const_cast<const char **>(environ);
+  std::optional<StringRef> Existing;
+  const char **I = findName(B, Name, Existing);
+  if (Existing && Existing->drop_front(Name.size() + 1) == Value)
+    return;
+
+  SmallString<128> Storage;
+  const char *NameValue =
+      SaveString((Name + Twine("=") + Value).toStringRef(Storage));
+
+  // Record what has been overridden.
+  OverriddenEnvironment.push_back(NameValue);
+
+  // Update the environment block.
+  if (!Environment)
+    copyHostEnvironment(I);
+  if (*I) {
+    (*Environment)[I - B] = NameValue;
+    return;
+  }
+  Environment->back() = NameValue;
+  Environment->push_back(nullptr);
+}
+
 static void AppendPlatformPrefix(SmallString<128> &Path, const llvm::Triple &T);
 
 void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -576,6 +672,12 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // comes from specs (starting with link_command). Consult gcc for
   // more information.
   ArgStringList CmdArgs;
+
+  Args.ClaimAllArgs(options::OPT_index_store_path);
+  Args.ClaimAllArgs(options::OPT_index_ignore_system_symbols);
+  Args.ClaimAllArgs(options::OPT_index_record_codegen_name);
+  Args.ClaimAllArgs(options::OPT_index_ignore_macros);
+  Args.ClaimAllArgs(options::OPT_index_ignore_pcms);
 
   /// Hack(tm) to ignore linking errors when we are doing ARC migration.
   if (Args.hasArg(options::OPT_ccc_arcmt_check,
@@ -801,9 +903,27 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                        "-filelist"};
   }
 
+  // Set the environment to include ZERO_AR_FLAGS.
+  //
+  // FIXME: Add a flag to the linkers to support this without an environment
+  // variable, and use that when the linkers are new enough.
+  VirtualEnvironment Environment;
+  if (Args.hasFlag(options::OPT_greproducible,
+                   options::OPT_gno_reproducible, false))
+    Environment.set("ZERO_AR_DATE", "1",
+                    [&](StringRef S) { return Args.MakeArgString(S); });
+
   std::unique_ptr<Command> Cmd = std::make_unique<Command>(
       JA, *this, ResponseSupport, Exec, CmdArgs, Inputs, Output);
   Cmd->setInputFileList(std::move(InputFileList));
+
+  // Set the environment, if it has been overridden.
+  if (std::optional<ArrayRef<const char *>> Env =
+          Environment.getEnvironmentIfOverridden()) {
+    Cmd->setEnvironment(Env->drop_back());
+    Cmd->setEnvironmentDisplay(Environment.getOverriddenEnvironment());
+  }
+
   C.addCommand(std::move(Cmd));
 }
 
@@ -1163,6 +1283,69 @@ void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
     // as that can impact calling conventions.
     if (!isTargetMacOS())
       CC1Args.push_back("-Werror=implicit-function-declaration");
+  }
+}
+
+void DarwinClang::addClangTargetOptions(
+  const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+  Action::OffloadKind DeviceOffloadKind) const{
+
+  Darwin::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+
+  // On arm64e, enable pointer authentication (for the return address and
+  // indirect calls), as well as usage of the intrinsics.
+  if (getArchName() == "arm64e") {
+    // The ptrauth ABI version is 0 by default, but can be overridden.
+    static const constexpr unsigned DefaultPtrauthABIVersion = 0;
+
+    unsigned PtrAuthABIVersion = DefaultPtrauthABIVersion;
+    const Arg *A = DriverArgs.getLastArg(options::OPT_fptrauth_abi_version_EQ,
+                                         options::OPT_fno_ptrauth_abi_version);
+    bool HasVersionArg =
+        A && A->getOption().matches(options::OPT_fptrauth_abi_version_EQ);
+    if (HasVersionArg) {
+      unsigned PtrAuthABIVersionArg;
+      if (StringRef(A->getValue()).getAsInteger(10, PtrAuthABIVersionArg))
+        getDriver().Diag(diag::err_drv_invalid_value)
+          << A->getAsString(DriverArgs) << A->getValue();
+      else
+        PtrAuthABIVersion = PtrAuthABIVersionArg;
+    }
+
+    // Pass the ABI version to -cc1, regardless of its value, if the user asked
+    // for it or if the user didn't explicitly disable it.
+    if (HasVersionArg ||
+        !DriverArgs.hasArg(options::OPT_fno_ptrauth_abi_version)) {
+      CC1Args.push_back(DriverArgs.MakeArgString(
+          "-fptrauth-abi-version=" + llvm::utostr(PtrAuthABIVersion)));
+
+      // -f(no-)ptrauth-kernel-abi-version can override -mkernel and
+      // -fapple-kext
+      if (DriverArgs.hasArg(options::OPT_fptrauth_kernel_abi_version,
+                            options::OPT_mkernel, options::OPT_fapple_kext) &&
+          !DriverArgs.hasArg(options::OPT_fno_ptrauth_kernel_abi_version))
+        CC1Args.push_back("-fptrauth-kernel-abi-version");
+    }
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
+                           options::OPT_fno_ptrauth_returns))
+      CC1Args.push_back("-fptrauth-returns");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
+                           options::OPT_fno_ptrauth_intrinsics))
+      CC1Args.push_back("-fptrauth-intrinsics");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
+                           options::OPT_fno_ptrauth_calls))
+      CC1Args.push_back("-fptrauth-calls");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_indirect_gotos,
+                           options::OPT_fno_ptrauth_indirect_gotos))
+      CC1Args.push_back("-fptrauth-indirect-gotos");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
+                           options::OPT_fno_ptrauth_auth_traps))
+      CC1Args.push_back("-fptrauth-auth-traps");
   }
 }
 
@@ -3421,6 +3604,9 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::ObjCCast;
+
+  // Apple-Clang: Don't support LSan. rdar://problem/45841334
+  Res &= ~SanitizerKind::Leak;
 
   // Prior to 10.9, macOS shipped a version of the C++ standard library without
   // C++11 support. The same is true of iOS prior to version 5. These OS'es are

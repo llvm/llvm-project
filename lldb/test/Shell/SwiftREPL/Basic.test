@@ -1,0 +1,7 @@
+// Basic sanity checking of the REPL.
+// REQUIRES: swift
+
+// RUN: %lldb --repl --repl-language swift
+
+// RUN: echo '2 + 3' | %lldb --repl | FileCheck %s --check-prefix=INT
+// INT: $R0: Int = 5

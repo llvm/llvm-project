@@ -155,20 +155,21 @@ void RemoveANSIEscapeSequencesFromString(char *str) {
   *z = '\0';
 }
 
-void LoadedModule::set(const char *module_name, uptr base_address) {
+void LoadedModule::set(const char *module_name, uptr base_address,
+                       bool instrumented) {
   clear();
   full_name_ = internal_strdup(module_name);
   base_address_ = base_address;
+  instrumented_ = instrumented;
 }
 
 void LoadedModule::set(const char *module_name, uptr base_address,
                        ModuleArch arch, u8 uuid[kModuleUUIDSize],
                        bool instrumented) {
-  set(module_name, base_address);
+  set(module_name, base_address, instrumented);
   arch_ = arch;
   internal_memcpy(uuid_, uuid, sizeof(uuid_));
   uuid_size_ = kModuleUUIDSize;
-  instrumented_ = instrumented;
 }
 
 void LoadedModule::setUuid(const char *uuid, uptr size) {

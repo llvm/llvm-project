@@ -109,6 +109,7 @@ add_clang_library(clangAST
   RecordLayoutBuilder.cpp
   ScanfFormatString.cpp
   SelectorLocationsKind.cpp
+  StableHash.cpp
   Stmt.cpp
   StmtCXX.cpp
   StmtIterator.cpp

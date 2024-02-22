@@ -16,6 +16,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StreamString.h"
@@ -183,7 +184,7 @@ public:
 
   SymbolFile *
   GetSymbolFile(bool can_create = true,
-                lldb_private::Stream *feedback_strm = nullptr) override {
+                Stream *feedback_strm = nullptr) override {
     // Scope for locker
     if (m_symfile_up.get() || !can_create)
       return m_symfile_up ? m_symfile_up->GetSymbolFile() : nullptr;
@@ -653,7 +654,7 @@ SymbolFileDWARFDebugMap::GetCompUnitInfo(const CompileUnit &comp_unit) {
 }
 
 size_t SymbolFileDWARFDebugMap::GetCompUnitInfosForModule(
-    const lldb_private::Module *module,
+    const Module *module,
     std::vector<CompileUnitInfo *> &cu_infos) {
   const uint32_t cu_count = GetNumCompileUnits();
   for (uint32_t i = 0; i < cu_count; ++i) {
@@ -661,6 +662,15 @@ size_t SymbolFileDWARFDebugMap::GetCompUnitInfosForModule(
       cu_infos.push_back(&m_compile_unit_infos[i]);
   }
   return cu_infos.size();
+}
+
+llvm::VersionTuple
+SymbolFileDWARFDebugMap::GetProducerVersion(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
+  if (oso_dwarf)
+    return oso_dwarf->GetProducerVersion(comp_unit);
+  return {};
 }
 
 lldb::LanguageType
@@ -682,7 +692,7 @@ XcodeSDK SymbolFileDWARFDebugMap::ParseXcodeSDK(CompileUnit &comp_unit) {
 
 llvm::SmallSet<lldb::LanguageType, 4>
 SymbolFileDWARFDebugMap::ParseAllLanguages(
-    lldb_private::CompileUnit &comp_unit) {
+    CompileUnit &comp_unit) {
   llvm::SmallSet<lldb::LanguageType, 4> langs;
   auto *info = GetCompUnitInfo(comp_unit);
   for (auto &comp_unit : info->compile_units_sps) {
@@ -717,7 +727,7 @@ bool SymbolFileDWARFDebugMap::ParseDebugMacros(CompileUnit &comp_unit) {
 
 bool SymbolFileDWARFDebugMap::ForEachExternalModule(
     CompileUnit &comp_unit,
-    llvm::DenseSet<lldb_private::SymbolFile *> &visited_symbol_files,
+    llvm::DenseSet<SymbolFile *> &visited_symbol_files,
     llvm::function_ref<bool(Module &)> f) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
@@ -792,7 +802,7 @@ Type *SymbolFileDWARFDebugMap::ResolveTypeUID(lldb::user_id_t type_uid) {
 
 std::optional<SymbolFile::ArrayInfo>
 SymbolFileDWARFDebugMap::GetDynamicArrayInfoForUID(
-    lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
+    lldb::user_id_t type_uid, const ExecutionContext *exe_ctx) {
   const uint64_t oso_idx = GetOSOIndexFromUserID(type_uid);
   SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
   if (oso_dwarf)
@@ -1128,9 +1138,9 @@ void SymbolFileDWARFDebugMap::GetTypes(SymbolContextScope *sc_scope,
   }
 }
 
-std::vector<std::unique_ptr<lldb_private::CallEdge>>
+std::vector<std::unique_ptr<CallEdge>>
 SymbolFileDWARFDebugMap::ParseCallEdgesInFunction(
-    lldb_private::UserID func_id) {
+    UserID func_id) {
   uint32_t oso_idx = GetOSOIndexFromUserID(func_id.GetID());
   SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
   if (oso_dwarf)
@@ -1238,7 +1248,7 @@ void SymbolFileDWARFDebugMap::FindTypes(const TypeQuery &query,
 }
 
 CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
-    lldb_private::ConstString name, const CompilerDeclContext &parent_decl_ctx,
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
     bool only_root_namespaces) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   CompilerDeclContext matching_namespace;
@@ -1253,6 +1263,17 @@ CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
   return matching_namespace;
 }
 
+bool SymbolFileDWARFDebugMap::GetCompileOption(const char *option,
+                                               std::string &value,
+                                               CompileUnit *cu) {
+  bool success = false;
+  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
+    success |= oso_dwarf->GetCompileOption(option, value, cu);
+    return success;
+  });
+  return success;
+}
+
 void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
   ForEachSymbolFile([&s](SymbolFileDWARF *oso_dwarf) -> bool {
     oso_dwarf->DumpClangAST(s);
@@ -1264,7 +1285,7 @@ void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
 }
 
 bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
-    lldb_private::StructuredData::Dictionary &d, bool errors_only) {
+    StructuredData::Dictionary &d, bool errors_only) {
   StructuredData::Array separate_debug_info_files;
   const uint32_t cu_count = GetNumCompileUnits();
   for (uint32_t cu_idx = 0; cu_idx < cu_count; ++cu_idx) {
@@ -1388,7 +1409,7 @@ SymbolFileDWARFDebugMap::GetCompilerContextForUID(lldb::user_id_t type_uid) {
 }
 
 void SymbolFileDWARFDebugMap::ParseDeclsForContext(
-    lldb_private::CompilerDeclContext decl_ctx) {
+    CompilerDeclContext decl_ctx) {
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
     oso_dwarf->ParseDeclsForContext(decl_ctx);
     return true; // Keep iterating
@@ -1517,6 +1538,85 @@ SymbolFileDWARFDebugMap::AddOSOARanges(SymbolFileDWARF *dwarf2Data,
   return num_line_entries_added;
 }
 
+std::vector<DataBufferSP>
+SymbolFileDWARFDebugMap::GetASTData(lldb::LanguageType language) {
+  Log *log = GetLog(DWARFLog::DebugMap);
+
+  std::vector<DataBufferSP> ast_datas;
+  if (language != eLanguageTypeSwift) {
+    if (log)
+      log->Printf("SymbolFileDWARFDebugMap::%s() - ignoring because not Swift",
+                  __FUNCTION__);
+    return ast_datas;
+  }
+
+  Symtab *symtab = m_objfile_sp->GetSymtab();
+  if (!symtab) {
+    if (log)
+      log->Printf("SymbolFileDWARFDebugMap::%s() - ignoring because the obj "
+                  "file has no symbol table",
+                  __FUNCTION__);
+    return ast_datas;
+  }
+
+  uint32_t next_idx = 0;
+  bool done = false;
+  do {
+    Symbol *symbol =
+        symtab->FindSymbolWithType(eSymbolTypeASTFile, Symtab::eDebugAny,
+                                   Symtab::eVisibilityAny, next_idx);
+    if (symbol == nullptr) {
+      // We didn't find any more symbols of type eSymbolTypeASTFile.  We are
+      // done looping for them.
+      done = true;
+    } else {
+      // Try to load the specified file.
+      FileSpec file_spec(symbol->GetName().GetCString());
+      bool exists = FileSystem::Instance().Exists(file_spec);
+      if (!exists)
+        if (file_spec.GetDirectory().IsEmpty() && m_objfile_sp) {
+          // For relative paths, search next to the binary.
+          file_spec.SetDirectory(m_objfile_sp->GetFileSpec().GetDirectory());
+          exists = FileSystem::Instance().Exists(file_spec);
+        }
+      if (exists) {
+        // We found the source data for the AST data blob.
+        // Read it in and add it to our return vector.
+        DataBufferSP data_buf_sp =
+            FileSystem::Instance().CreateDataBuffer(file_spec.GetPath());
+        if (data_buf_sp) {
+          ast_datas.push_back(data_buf_sp);
+          if (log)
+            log->Printf("SymbolFileDWARFDebugMap::%s() - found and loaded AST "
+                        "data from file %s",
+                        __FUNCTION__, file_spec.GetPath().c_str());
+        } else if (log) {
+          if (log)
+            log->Printf("SymbolFileDWARFDebugMap::%s() - got empty data buffer "
+                        "SP from extant file %s",
+                        __FUNCTION__, file_spec.GetPath().c_str());
+        }
+      } else {
+        if (log)
+          log->Printf("SymbolFileDWARFDebugMap::%s() - found reference to AST "
+                      "file %s, but could not find the file, ignoring",
+                      __FUNCTION__, file_spec.GetPath().c_str());
+      }
+
+      // Regardless of whether we could find the specified file, start the next
+      // symbol search at the index past the one we just found.
+      ++next_idx;
+    }
+  } while (!done);
+
+  // Return the vector of AST data blobs
+  if (log)
+    log->Printf("SymbolFileDWARFDebugMap::%s() - returning %d AST data blobs",
+                __FUNCTION__, (int)ast_datas.size());
+
+  return ast_datas;
+}
+
 ModuleList SymbolFileDWARFDebugMap::GetDebugInfoModules() {
   ModuleList oso_modules;
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
@@ -1577,7 +1677,7 @@ Status SymbolFileDWARFDebugMap::CalculateFrameVariableError(StackFrame &frame) {
 }
 
 void SymbolFileDWARFDebugMap::GetCompileOptions(
-    std::unordered_map<lldb::CompUnitSP, lldb_private::Args> &args) {
+    std::unordered_map<lldb::CompUnitSP, Args> &args) {
 
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
     oso_dwarf->GetCompileOptions(args);

@@ -1,3 +1,13 @@
+## BEGIN SWIFT
+set(LLVM_NO_RTTI 1)
+
+include(AddLLVM)
+
+if (LLDB_ENABLE_SWIFT_SUPPORT)
+  include(SwiftAddCustomCommandTarget)
+endif()
+## END SWIFT
+
 get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 
 if(LLDB_BUILD_FRAMEWORK)
@@ -113,6 +123,9 @@ add_lldb_library(liblldb SHARED ${option_framework}
     lldbUtility
     lldbVersion
     ${LLDB_ALL_PLUGINS}
+## BEGIN SWIFT
+    ${SWIFT_ALL_LIBS}
+## END SWIFT
   LINK_COMPONENTS
     Support
 
@@ -128,10 +141,29 @@ if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX A
 endif()
 
 if(Python3_RPATH)
-  set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "${Python3_RPATH}")
-  set_property(TARGET liblldb APPEND PROPERTY BUILD_RPATH   "${Python3_RPATH}")
+  lldb_setup_rpaths(liblldb
+    BUILD_RPATH
+      "${Python3_RPATH}"
+    INSTALL_RPATH
+      "@loader_path/../../../../../../../../Library/Frameworks/"
+      "@loader_path/../../../../../Developer/Library/Frameworks/"
+      "@loader_path/../../../../Developer/Library/Frameworks/"
+      "@loader_path/../../../../Frameworks"
+      "@loader_path/../../../"
+      "/Library/Developer/CommandLineTools/Library/Frameworks"
+      "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/"
+    )
 endif()
 
+# BEGIN Swift Mods
+# Note that add_properties_for_swift_modules appends RPATHs so it's critical
+# that this is called after lldb_setup_rpaths.
+if(LLDB_BUILD_FRAMEWORK)
+  add_properties_for_swift_modules(liblldb "../../../../../../usr/" "../../../../")
+else()
+  add_properties_for_swift_modules(liblldb "../")
+endif()
+# END Swift Mods
 
 if(LLDB_ENABLE_PYTHON)
   add_dependencies(liblldb swig_wrapper_python)
@@ -276,3 +308,63 @@ if(LLDB_BUILD_FRAMEWORK)
       lldb-framework-cleanup)
   endif()
 endif()
+
+## BEGIN SWIFT
+set(lib_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX}")
+
+if(EXISTS ${SWIFT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/swift/clang)
+  set(CLANG_RESOURCE_PATH "${SWIFT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/swift/clang")
+elseif(LLDB_BUILT_STANDALONE)
+  set(CLANG_RESOURCE_PATH ${LLDB_EXTERNAL_CLANG_RESOURCE_DIR})
+elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
+  set(CLANG_RESOURCE_PATH "${LLVM_LIBRARY_OUTPUT_INTDIR}/swift/clang")
+else()
+  message(SEND_ERROR "unified build cannot locate clang resource directory")
+endif()
+
+set(clang_headers_target ${CLANG_RESOURCE_PATH}/include)
+set(SWIFT_RESOURCE_PATH "${SWIFT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/swift")
+if(NOT LLDB_BUILT_STANDALONE)
+  set(clang_headers_target clang-resource-headers symlink_clang_headers)
+endif()
+
+# Copy the clang resource directory.
+if (LLDB_ENABLE_SWIFT_SUPPORT)
+add_custom_command_target(
+    copy-clang-resource-dir
+    COMMAND "${CMAKE_COMMAND}" "-E" "copy_directory" "${CLANG_RESOURCE_PATH}" "${lib_dir}/lldb/clang/"
+    OUTPUT "${lib_dir}/lldb/clang/"
+    VERBATIM
+    ALL
+    DEPENDS ${clang_headers_target})
+
+# Only copy the swift resource directory if you are building lldb standalone.
+# Otherwise, just rely on the swift libdir available from the swift build.
+if(LLDB_BUILT_STANDALONE)
+  add_custom_command_target(
+      copy-swift-resource-dir
+      COMMAND "${CMAKE_COMMAND}" "-E" "copy_directory" "${SWIFT_RESOURCE_PATH}" "${lib_dir}/lldb/swift/"
+      OUTPUT "${lib_dir}/lldb/swift/"
+      VERBATIM
+      ALL
+      DEPENDS ${SWIFT_RESOURCE_PATH})
+endif()
+
+add_dependencies(liblldb ${copy-clang-resource-dir} ${copy-swift-resource-dir})
+endif()
+
+install(
+  CODE "file(MAKE_DIRECTORY ${lib_dir}/lldb)")
+
+install(
+  DIRECTORY "${lib_dir}/lldb/clang"
+  DESTINATION lib${LLVM_LIBDIR_SUFFIX}/lldb/)
+
+if(LLDB_ENABLE_SWIFT_SUPPORT)
+if(LLDB_BUILT_STANDALONE)
+  install(
+    DIRECTORY "${lib_dir}/lldb/swift"
+    DESTINATION lib${LLVM_LIBDIR_SUFFIX}/lldb/)
+endif()
+endif()
+## END SWIFT

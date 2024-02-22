@@ -563,26 +563,26 @@
 // RUN: not %clang --target=i386-pc-openbsd -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-OPENBSD
 // CHECK-MSAN-OPENBSD: unsupported option '-fsanitize=memory' for target 'i386-pc-openbsd'
 
-// RUN: %clang --target=x86_64-apple-darwin -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-DARWIN
-// CHECK-LSAN-X86-64-DARWIN-NOT: unsupported option
+// RUN: not %clang --target=x86_64-apple-darwin -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-DARWIN
+// CHECK-LSAN-X86-64-DARWIN: unsupported option
 
-// RUN: %clang --target=x86_64-apple-ios-simulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-IOSSIMULATOR
-// CHECK-LSAN-X86-64-IOSSIMULATOR-NOT: unsupported option
+// RUN: not %clang --target=x86_64-apple-ios-simulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-IOSSIMULATOR
+// CHECK-LSAN-X86-64-IOSSIMULATOR: unsupported option
 
-// RUN: %clang --target=x86_64-apple-tvos-simulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-TVOSSIMULATOR
-// CHECK-LSAN-X86-64-TVOSSIMULATOR-NOT: unsupported option
+// RUN: not %clang --target=x86_64-apple-tvos-simulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-TVOSSIMULATOR
+// CHECK-LSAN-X86-64-TVOSSIMULATOR: unsupported option
 
-// RUN: %clang --target=i386-apple-darwin -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-DARWIN
-// CHECK-LSAN-I386-DARWIN-NOT: unsupported option
+// RUN: not %clang --target=i386-apple-darwin -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-DARWIN
+// CHECK-LSAN-I386-DARWIN: unsupported option
 
-// RUN: %clang --target=arm-apple-ios -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-ARM-IOS
-// CHECK-LSAN-ARM-IOS-NOT: unsupported option
+// RUN: not %clang --target=arm-apple-ios -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-ARM-IOS
+// CHECK-LSAN-ARM-IOS: unsupported option
 
-// RUN: %clang --target=i386-apple-ios-simulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-IOSSIMULATOR
-// CHECK-LSAN-I386-IOSSIMULATOR-NOT: unsupported option
+// RUN: not %clang --target=i386-apple-ios-simulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-IOSSIMULATOR
+// CHECK-LSAN-I386-IOSSIMULATOR: unsupported option
 
-// RUN: %clang --target=i386-apple-tvos-simulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-TVOSSIMULATOR
-// CHECK-LSAN-I386-TVOSSIMULATOR-NOT: unsupported option
+// RUN: not %clang --target=i386-apple-tvos-simulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-TVOSSIMULATOR
+// CHECK-LSAN-I386-TVOSSIMULATOR: unsupported option
 
 
 // RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI

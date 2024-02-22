@@ -1,0 +1,29 @@
+{
+    "regexs" : [".*github.*apple.*swift-lldb.*stable.*"],
+    "repos" : [
+        {"name": "llvm",
+         "vcs": "git",
+         "url": "https://github.com/apple/swift-llvm.git",
+         "ref": "stable"},
+
+        {"name": "clang",
+         "vcs": "git",
+         "url": "https://github.com/apple/swift-clang.git",
+         "ref": "stable"},
+
+        {"name": "swift",
+         "vcs": "git",
+         "url": "https://github.com/apple/swift.git",
+         "ref": "master"},
+
+        {"name": "cmark",
+         "vcs": "git",
+         "url": "https://github.com/apple/swift-cmark.git",
+         "ref": "master"},
+
+        {"name": "ninja",
+         "vcs": "git",
+         "url": "https://github.com/ninja-build/ninja.git",
+         "ref": "master"}
+    ]
+}

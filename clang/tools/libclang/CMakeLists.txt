@@ -22,6 +22,8 @@ endif()
 set(SOURCES
   ARCMigrate.cpp
   BuildSystem.cpp
+  CCAS.cpp
+  CDependencies.cpp
   CIndex.cpp
   CIndexCXX.cpp
   CIndexCodeCompletion.cpp
@@ -30,8 +32,10 @@ set(SOURCES
   CIndexInclusionStack.cpp
   CIndexUSRs.cpp
   CIndexer.cpp
+  CRefactor.cpp
   CXComment.cpp
   CXCursor.cpp
+  CXError.cpp
   CXExtractAPI.cpp
   CXIndexDataConsumer.cpp
   CXCompilationDatabase.cpp
@@ -40,6 +44,7 @@ set(SOURCES
   CXStoredDiagnostic.cpp
   CXString.cpp
   CXType.cpp
+  Driver.cpp
   Indexing.cpp
   FatalErrorHandler.cpp
   Rewrite.cpp
@@ -59,7 +64,10 @@ set(SOURCES
 
 set(LIBS
   clangAST
+  clangASTMatchers
+  clangAPINotes
   clangBasic
+  clangDependencyScanning
   clangDriver
   clangExtractAPI
   clangFrontend
@@ -69,6 +77,8 @@ set(LIBS
   clangSema
   clangSerialization
   clangTooling
+  clangToolingRefactor
+  clangToolingSyntax
 )
 
 if (CLANG_ENABLE_ARCMT)
@@ -151,6 +161,10 @@ add_clang_library(libclang ${ENABLE_SHARED} ${ENABLE_STATIC} INSTALL_WITH_TOOLCH
   Core
   Support
   TargetParser
+  # NOTE: The following were added to keep BUILD_SHARED_LIBS=TRUE working on
+  # Apple's downstream branch. They are not required upstream at the moment.
+  Option
+  FrontendOpenMP
   )
 
 if(ENABLE_STATIC)

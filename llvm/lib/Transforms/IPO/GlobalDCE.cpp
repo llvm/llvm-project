@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
+#include "llvm/IR/GlobalPtrAuthInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -25,6 +26,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
@@ -86,11 +88,12 @@ void GlobalDCEPass::UpdateGVDependencies(GlobalValue &GV) {
     ComputeDependencies(User, Deps);
   Deps.erase(&GV); // Remove self-reference.
   for (GlobalValue *GVU : Deps) {
-    // If this is a dep from a vtable to a virtual function, and we have
-    // complete information about all virtual call sites which could call
-    // though this vtable, then skip it, because the call site information will
-    // be more precise.
-    if (VFESafeVTables.count(GVU) && isa<Function>(&GV)) {
+    // If this is a dep from a vtable to a virtual function, and it's within the
+    // range specified in !vcall_visibility, and we have complete information
+    // about all virtual call sites which could call though this vtable, then
+    // skip it, because the call site information will be more precise.
+    if (VFESafeVTablesAndFns.count(GVU) &&
+        VFESafeVTablesAndFns[GVU].contains(&GV)) {
       LLVM_DEBUG(dbgs() << "Ignoring dep " << GVU->getName() << " -> "
                         << GV.getName() << "\n");
       continue;
@@ -112,6 +115,63 @@ void GlobalDCEPass::MarkLive(GlobalValue &GV,
     for (auto &&CM : make_range(ComdatMembers.equal_range(C))) {
       MarkLive(*CM.second, Updates); // Recursion depth is only two because only
                                      // globals in the same comdat are visited.
+    }
+  }
+}
+
+void GlobalDCEPass::PropagateLivenessInGlobalValues() {
+  // Propagate liveness from collected Global Values through the computed
+  // dependencies.
+  SmallVector<GlobalValue *, 8> NewLiveGVs{AliveGlobals.begin(),
+                                           AliveGlobals.end()};
+  while (!NewLiveGVs.empty()) {
+    GlobalValue *LGV = NewLiveGVs.pop_back_val();
+    for (auto *GVD : GVDependencies[LGV])
+      MarkLive(*GVD, &NewLiveGVs);
+  }
+}
+
+/// Recursively iterate over the (sub-)constants in the vtable and look for
+/// vptrs, if their offset is within [RangeStart..RangeEnd), add them to VFuncs.
+static void FindVirtualFunctionsInVTable(Module &M, Constant *C,
+                                         uint64_t RangeStart, uint64_t RangeEnd,
+                                         SmallPtrSet<GlobalValue *, 8> *VFuncs,
+                                         uint64_t BaseOffset = 0) {
+  if (auto *GV = dyn_cast<GlobalValue>(C)) {
+    if (RangeStart <= BaseOffset && BaseOffset < RangeEnd) {
+      if (auto *F = dyn_cast<Function>(GV))
+        VFuncs->insert(F);
+      else if (auto PAI = GlobalPtrAuthInfo::analyze(GV))
+        if (isa<Function>(PAI->getPointer()->stripPointerCasts()))
+          VFuncs->insert(GV);
+    }
+
+    // Do not recurse outside of the current global.
+    return;
+  }
+
+  if (auto *S = dyn_cast<ConstantStruct>(C)) {
+    StructType *STy = dyn_cast<StructType>(S->getType());
+    const StructLayout *SL = M.getDataLayout().getStructLayout(STy);
+    for (auto EI : llvm::enumerate(STy->elements())) {
+      auto Offset = SL->getElementOffset(EI.index());
+      unsigned Op = SL->getElementContainingOffset(Offset);
+      FindVirtualFunctionsInVTable(M, cast<Constant>(S->getOperand(Op)),
+                                   RangeStart, RangeEnd, VFuncs,
+                                   BaseOffset + Offset);
+    }
+  } else if (auto *A = dyn_cast<ConstantArray>(C)) {
+    ArrayType *ATy = A->getType();
+    auto EltSize = M.getDataLayout().getTypeAllocSize(ATy->getElementType());
+    for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i) {
+      FindVirtualFunctionsInVTable(M, cast<Constant>(A->getOperand(i)),
+                                   RangeStart, RangeEnd, VFuncs,
+                                   BaseOffset + EltSize * i);
+    }
+  } else {
+    for (auto &Op : C->operands()) {
+      FindVirtualFunctionsInVTable(M, cast<Constant>(Op), RangeStart, RangeEnd,
+                                   VFuncs, BaseOffset);
     }
   }
 }
@@ -149,7 +209,14 @@ void GlobalDCEPass::ScanVTables(Module &M) {
           (InLTOPostLink &&
            TypeVis == GlobalObject::VCallVisibilityLinkageUnit)) {
         LLVM_DEBUG(dbgs() << GV.getName() << " is safe for VFE\n");
-        VFESafeVTables.insert(&GV);
+
+        // Find and record all the vfunctions that are within the offset range
+        // specified in the !vcall_visibility attribute.
+        auto Range = GO->getVTableOffsetRange();
+        SmallPtrSet<GlobalValue *, 8> VFuncs;
+        FindVirtualFunctionsInVTable(M, GV.getInitializer(), std::get<0>(Range),
+                                     std::get<1>(Range), &VFuncs);
+        VFESafeVTablesAndFns[&GV] = VFuncs;
       }
     }
   }
@@ -166,14 +233,21 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
                            *Caller->getParent(), VTable);
     if (!Ptr) {
       LLVM_DEBUG(dbgs() << "can't find pointer in vtable!\n");
-      VFESafeVTables.erase(VTable);
+      VFESafeVTablesAndFns.erase(VTable);
       continue;
     }
 
-    auto Callee = dyn_cast<Function>(Ptr->stripPointerCasts());
+    Ptr = Ptr->stripPointerCasts();
+
+    GlobalValue *Callee = dyn_cast<Function>(Ptr);
+    if (!Callee)
+      if (GlobalPtrAuthInfo::analyze(Ptr))
+        Callee = dyn_cast<GlobalValue>(Ptr);
+
     if (!Callee) {
-      LLVM_DEBUG(dbgs() << "vtable entry is not function pointer!\n");
-      VFESafeVTables.erase(VTable);
+      LLVM_DEBUG(dbgs() << "vtable entry is not function pointer or a .ptrauth "
+                           "global variable!\n");
+      VFESafeVTablesAndFns.erase(VTable);
       continue;
     }
 
@@ -209,7 +283,7 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
         // type.checked.load with a non-constant offset, so assume every entry
         // in every matching vtable is used.
         for (const auto &VTableInfo : TypeIdMap[TypeId]) {
-          VFESafeVTables.erase(VTableInfo.first);
+          VFESafeVTablesAndFns.erase(VTableInfo.first);
         }
       }
     }
@@ -234,16 +308,151 @@ void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
 
   ScanVTables(M);
 
-  if (VFESafeVTables.empty())
+  if (VFESafeVTablesAndFns.empty())
     return;
 
   ScanTypeCheckedLoadIntrinsics(M);
 
-  LLVM_DEBUG(
-    dbgs() << "VFE safe vtables:\n";
-    for (auto *VTable : VFESafeVTables)
-      dbgs() << "  " << VTable->getName() << "\n";
-  );
+  LLVM_DEBUG(dbgs() << "VFE safe vtables:\n";
+             for (auto &Entry
+                  : VFESafeVTablesAndFns) dbgs()
+             << "  " << Entry.first->getName() << "\n";);
+}
+
+static bool RemoveConditionalTargetsFromUsedList(Module &M) {
+  auto *Used = M.getGlobalVariable("llvm.used");
+  if (!Used)
+    return false;
+
+  auto *UsedConditional = M.getNamedMetadata("llvm.used.conditional");
+  if (!UsedConditional)
+    return false;
+  if (UsedConditional->getNumOperands() == 0)
+    return false;
+
+  // Construct a set of conditionally used targets.
+  SmallPtrSet<GlobalValue *, 8> Targets;
+  for (auto *M : UsedConditional->operands()) {
+    assert(M->getNumOperands() == 3);
+    auto *V = mdconst::extract_or_null<GlobalValue>(M->getOperand(0));
+    if (!V)
+      continue;
+    Targets.insert(V);
+  }
+
+  if (Targets.empty())
+    return false;
+
+  // Now remove all targets from @llvm.used.
+  SmallPtrSet<GlobalValue *, 8> NewUsedArray;
+  const ConstantArray *UsedList = cast<ConstantArray>(Used->getInitializer());
+  for (Value *Op : UsedList->operands()) {
+    GlobalValue *G = cast<GlobalValue>(Op->stripPointerCasts());
+    if (Targets.contains(G))
+      continue;
+    NewUsedArray.insert(G);
+  }
+  Used = setUsedInitializer(*Used, NewUsedArray);
+  return true;
+}
+
+// Parse one entry from !llvm.used.conditional list as a triplet of
+// { target, type, dependencies } and evaluate the conditional dependency, i.e.
+// check liveness of all dependencies and based on type conclude whether the
+// target is supposed to be declared alive. If yes, return the target, otherwise
+// return nullptr.
+GlobalValue *GlobalDCEPass::TargetFromConditionalUsedIfLive(MDNode *M) {
+  assert(M->getNumOperands() == 3);
+  auto *Target = mdconst::extract_or_null<GlobalValue>(M->getOperand(0));
+  if (!Target)
+    return nullptr;
+
+  auto *DependenciesMD = dyn_cast_or_null<MDNode>(M->getOperand(2).get());
+  SmallPtrSet<GlobalValue *, 8> Dependencies;
+  if (DependenciesMD == nullptr) {
+    Dependencies.insert(nullptr);
+  } else {
+    for (auto &DependencyMD : DependenciesMD->operands()) {
+      auto *Dependency = DependencyMD.get();
+      if (!Dependency)
+        continue; // Allow null, skip.
+      auto *C =
+          mdconst::extract_or_null<Constant>(Dependency)->stripPointerCasts();
+      if (dyn_cast<UndefValue>(C))
+        continue; // Allow undef, skip.
+      Dependencies.insert(cast<GlobalValue>(C));
+    }
+  }
+
+  bool AllDependenciesAlive = Dependencies.empty() ? false : true;
+  bool AnyDependencyAlive = false;
+  for (auto *Dep : Dependencies) {
+    GlobalObject *GlobalObjectDep = dyn_cast<GlobalObject>(Dep);
+    bool Live;
+    // For the purposes of llvm.used.conditional based stripping,
+    // consider all dependencies that are declarations to be live.
+    if (GlobalObjectDep && GlobalObjectDep->isDeclaration())
+      Live = true;
+    else
+      Live = AliveGlobals.count(Dep) != 0;
+    if (Live)
+      AnyDependencyAlive = true;
+    else
+      AllDependenciesAlive = false;
+  }
+
+  auto *Type = mdconst::extract_or_null<ConstantInt>(M->getOperand(1));
+  switch (Type->getValue().getSExtValue()) {
+  case 0:
+    return AnyDependencyAlive ? Target : nullptr;
+  case 1:
+    return AllDependenciesAlive ? Target : nullptr;
+  default:
+    llvm_unreachable("bad !llvm.used.conditional type");
+  }
+}
+
+void GlobalDCEPass::PropagateLivenessToConditionallyUsed(Module &M) {
+  auto *Used = M.getGlobalVariable("llvm.used");
+  if (!Used)
+    return;
+  auto *UsedConditional = M.getNamedMetadata("llvm.used.conditional");
+  if (!UsedConditional)
+    return;
+
+  SmallPtrSet<GlobalValue *, 8> NewUsedArray;
+  const ConstantArray *UsedList = cast<ConstantArray>(Used->getInitializer());
+  for (Value *Op : UsedList->operands()) {
+    NewUsedArray.insert(cast<GlobalValue>(Op->stripPointerCasts()));
+  }
+
+  // Repeat the liveness propagation iteraticely, one iteration might force
+  // other conditionally used globals to become alive.
+  while (true) {
+    PropagateLivenessInGlobalValues();
+
+    unsigned OldSize = NewUsedArray.size();
+    for (auto *M : UsedConditional->operands()) {
+      auto *Target = TargetFromConditionalUsedIfLive(M);
+      if (!Target) continue;
+
+      NewUsedArray.insert(Target);
+      MarkLive(*Target);
+      LLVM_DEBUG(dbgs() << "Conditionally used target alive: "
+                        << Target->getName() << "\n");
+    }
+
+    unsigned NewSize = NewUsedArray.size();
+    LLVM_DEBUG(dbgs() << "Conditionally used iteration end, old size: "
+                      << OldSize << " new size: " << NewSize << "\n");
+
+    // Stop the iteration once we reach a steady state (no new additions to
+    // @llvm.used).
+    if (NewSize == OldSize) break;
+  }
+
+  Used = setUsedInitializer(*Used, NewUsedArray);
+  MarkLive(*Used);
 }
 
 PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
@@ -275,6 +484,11 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   // Add dependencies between virtual call sites and the virtual functions they
   // might call, if we have that information.
   AddVirtualFunctionDependencies(M);
+
+  // Process the !llvm.used.conditional list and (temporarily, see below)
+  // remove all "targets" from @llvm.used. No effect if `!llvm.used.conditional`
+  // is not present in the module.
+  bool UsedConditionalPresent = RemoveConditionalTargetsFromUsedList(M);
 
   // Loop over the module, adding globals which are obviously necessary.
   for (GlobalObject &GO : M.global_objects()) {
@@ -309,15 +523,13 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
     UpdateGVDependencies(GIF);
   }
 
-  // Propagate liveness from collected Global Values through the computed
-  // dependencies.
-  SmallVector<GlobalValue *, 8> NewLiveGVs{AliveGlobals.begin(),
-                                           AliveGlobals.end()};
-  while (!NewLiveGVs.empty()) {
-    GlobalValue *LGV = NewLiveGVs.pop_back_val();
-    for (auto *GVD : GVDependencies[LGV])
-      MarkLive(*GVD, &NewLiveGVs);
+  // Step 2 of !llvm.used.conditional processing: If any conditionally used
+  // "targets" are alive, put them back into @llvm.used.
+  if (UsedConditionalPresent) {
+    PropagateLivenessToConditionallyUsed(M);
   }
+
+  PropagateLivenessInGlobalValues();
 
   // Now that all globals which are needed are in the AliveGlobals set, we loop
   // through the program, deleting those which are not alive.
@@ -393,8 +605,19 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   }
 
   NumVariables += DeadGlobalVars.size();
-  for (GlobalVariable *GV : DeadGlobalVars)
+  for (GlobalVariable *GV : DeadGlobalVars) {
+    if (!GV->use_empty()) {
+      // Normally, a vtable only contain Function references that are eliminated
+      // by VFE, and their "leftover uses" are handled by the for loop above.
+      // But with ptrauth on, we can also get "leftover uses" of GlobalVariables
+      // because the vtable references the .ptrauth wrappers instead. So we need
+      // to apply the same use-erasing logic as above. The same reasoning as
+      // above applies: These are proven to be unused, so they're safe to
+      // replace with null.
+      GV->replaceNonMetadataUsesWith(ConstantPointerNull::get(GV->getType()));
+    }
     EraseUnusedGlobalValue(GV);
+  }
 
   NumAliases += DeadAliases.size();
   for (GlobalAlias *GA : DeadAliases)
@@ -410,7 +633,7 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   GVDependencies.clear();
   ComdatMembers.clear();
   TypeIdMap.clear();
-  VFESafeVTables.clear();
+  VFESafeVTablesAndFns.clear();
 
   if (Changed)
     return PreservedAnalyses::none();

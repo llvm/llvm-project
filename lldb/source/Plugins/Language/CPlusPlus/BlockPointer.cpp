@@ -148,8 +148,8 @@ public:
       return UINT32_MAX;
 
     const bool omit_empty_base_classes = false;
-    return m_block_struct_type.GetIndexOfChildWithName(name.AsCString(),
-                                                       omit_empty_base_classes);
+    return m_block_struct_type.GetIndexOfChildWithName(
+        name.AsCString(), nullptr, omit_empty_base_classes);
   }
 
 private:

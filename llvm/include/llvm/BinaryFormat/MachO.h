@@ -1641,7 +1641,38 @@ enum CPUSubTypeARM64 {
   CPU_SUBTYPE_ARM64_ALL = 0,
   CPU_SUBTYPE_ARM64_V8 = 1,
   CPU_SUBTYPE_ARM64E = 2,
+
+  // arm64 reserves bits in the high byte for subtype-specific flags.
+  // On arm64e, the 6 low bits represent the ptrauth ABI version.
+  CPU_SUBTYPE_ARM64E_PTRAUTH_MASK = 0x3f000000,
+  // On arm64e, the top bit tells whether the Mach-O is versioned.
+  CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK = 0x80000000,
+  // On arm64e, the 2nd high bit tells whether the Mach-O is using kernel ABI.
+  CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_ABI_MASK = 0x40000000
 };
+
+inline int CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(unsigned ST) {
+  return (ST & CPU_SUBTYPE_ARM64E_PTRAUTH_MASK) >> 24;
+}
+
+inline unsigned
+CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(unsigned PtrAuthABIVersion,
+                                        bool PtrAuthKernelABIVersion) {
+  assert((PtrAuthABIVersion <= 0x3F) &&
+         "ptrauth abi version must fit in 6 bits");
+  return CPU_SUBTYPE_ARM64E | CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK |
+         (PtrAuthKernelABIVersion ? CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_ABI_MASK
+                                  : 0) |
+         (PtrAuthABIVersion << 24);
+}
+
+inline unsigned CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(unsigned ST) {
+  return ST & CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK;
+}
+
+inline unsigned CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(unsigned ST) {
+  return ST & CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_ABI_MASK;
+}
 
 enum CPUSubTypeARM64_32 { CPU_SUBTYPE_ARM64_32_V8 = 1 };
 
@@ -1668,6 +1699,8 @@ enum CPUSubTypePowerPC {
 
 Expected<uint32_t> getCPUType(const Triple &T);
 Expected<uint32_t> getCPUSubType(const Triple &T);
+Expected<uint32_t> getCPUSubType(const Triple &T, unsigned PtrAuthABIVersion,
+                                 bool PtrAuthKernelABIVersion);
 
 struct x86_thread_state32_t {
   uint32_t eax;

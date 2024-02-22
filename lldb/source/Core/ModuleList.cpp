@@ -62,7 +62,27 @@ class Target;
 using namespace lldb;
 using namespace lldb_private;
 
+// BEGIN SWIFT
+static bool KeepLookingInDylinker(SymbolContextList &sc_list, size_t start_idx);
+// END SWIFT
+
 namespace {
+
+// BEGIN SWIFT
+static constexpr OptionEnumValueElement g_swift_module_loading_mode_enums[] = {
+  {eSwiftModuleLoadingModePreferInterface, "prefer-interface",
+    "Prefer loading Swift modules via their .swiftinterface file, but fall back "
+    " to the .swiftmodule if it is missing."},
+  {eSwiftModuleLoadingModePreferSerialized, "prefer-serialized",
+    "Prefer loading Swift module via their .swiftmodule file if present, but "
+    "fall back to the .swiftinterface if it is missing or invalid (default)."},
+  {eSwiftModuleLoadingModeOnlyInterface, "only-interface",
+    "Only load Swift modules via their .swiftinterface file - ignore "
+    ".swiftmodule files."},
+  {eSwiftModuleLoadingModeOnlySerialized, "only-serialized",
+    "Only load Swift modules via their .swiftmodule file - ignore "
+    ".swiftinterface files."} };
+// END SWIFT
 
 #define LLDB_PROPERTIES_modulelist
 #include "CoreProperties.inc"
@@ -85,6 +105,18 @@ ModuleListProperties::ModuleListProperties() {
     lldbassert(SetClangModulesCachePath(FileSpec(path)));
   }
 
+  // BEGIN SWIFT
+  SetSwiftModuleLoadingMode(eSwiftModuleLoadingModePreferSerialized);
+
+  path.clear();
+  if (llvm::sys::path::cache_directory(path)) {
+    llvm::sys::path::append(path, "lldb");
+    llvm::sys::path::append(path, "SwiftMetadataCache");
+    bool success = SetSwiftMetadataCachePath(FileSpec(path));
+    lldbassert(success);
+  }
+  // END SWIFT
+  
   path.clear();
   if (llvm::sys::path::cache_directory(path)) {
     llvm::sys::path::append(path, "lldb");
@@ -125,6 +157,89 @@ bool ModuleListProperties::SetClangModulesCachePath(const FileSpec &path) {
   return SetPropertyAtIndex(idx, path);
 }
 
+// BEGIN SWIFT
+bool ModuleListProperties::GetUseSwiftClangImporter() const {
+  const uint32_t idx = ePropertyUseSwiftClangImporter;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+bool ModuleListProperties::GetUseSwiftDWARFImporter() const {
+  const uint32_t idx = ePropertyUseSwiftDWARFImporter;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+bool ModuleListProperties::SetUseSwiftDWARFImporter(bool new_value) {
+  const uint32_t idx = ePropertyUseSwiftDWARFImporter;
+  return SetPropertyAtIndex(idx, new_value);
+}
+
+bool ModuleListProperties::GetUseSwiftTypeRefTypeSystem() const {
+  const uint32_t idx = ePropertyUseSwiftTypeRefTypeSystem;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+bool ModuleListProperties::GetSwiftValidateTypeSystem() const {
+  const uint32_t idx = ePropertySwiftValidateTypeSystem;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+bool ModuleListProperties::GetUseSwiftPreciseCompilerInvocation() const {
+  const uint32_t idx = ePropertyUseSwiftPreciseCompilerInvocation;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+bool ModuleListProperties::SetUseSwiftTypeRefTypeSystem(bool new_value) {
+  const uint32_t idx = ePropertyUseSwiftTypeRefTypeSystem;
+  return SetPropertyAtIndex(idx, new_value);
+}
+
+SwiftModuleLoadingMode ModuleListProperties::GetSwiftModuleLoadingMode() const {
+  const uint32_t idx = ePropertySwiftModuleLoadingMode;
+  return GetPropertyAtIndexAs<SwiftModuleLoadingMode>(
+      idx, static_cast<SwiftModuleLoadingMode>(
+               g_modulelist_properties[idx].default_uint_value));
+}
+
+bool ModuleListProperties::SetSwiftModuleLoadingMode(SwiftModuleLoadingMode mode) {
+  const uint32_t idx = ePropertySwiftModuleLoadingMode;
+  return SetPropertyAtIndex(idx, mode);
+}
+
+FileSpec ModuleListProperties::GetSwiftMetadataCachePath() const {
+  return m_collection_sp
+      ->GetPropertyAtIndexAsOptionValueFileSpec(ePropertySwiftMetadataCachePath)
+      ->GetCurrentValue();
+}
+
+bool ModuleListProperties::SetSwiftMetadataCachePath(const FileSpec &path) {
+  const uint32_t idx = ePropertySwiftMetadataCachePath;
+  return SetPropertyAtIndex(idx, path);
+}
+
+bool ModuleListProperties::GetEnableSwiftMetadataCache() const {
+  const uint32_t idx = ePropertyEnableSwiftMetadataCache;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+uint64_t ModuleListProperties::GetSwiftMetadataCacheMaxByteSize() {
+  const uint32_t idx = ePropertySwiftMetadataCacheMaxByteSize;
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_modulelist_properties[idx].default_uint_value);
+}
+
+uint64_t ModuleListProperties::GetSwiftMetadataCacheExpirationDays() {
+  const uint32_t idx = ePropertySwiftMetadataCacheExpirationDays;
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_modulelist_properties[idx].default_uint_value);
+}
+// END SWIFT
+
 FileSpec ModuleListProperties::GetLLDBIndexCachePath() const {
   const uint32_t idx = ePropertyLLDBIndexCachePath;
   return GetPropertyAtIndexAs<FileSpec>(idx, {});
@@ -142,7 +257,8 @@ bool ModuleListProperties::GetEnableLLDBIndexCache() const {
 }
 
 bool ModuleListProperties::SetEnableLLDBIndexCache(bool new_value) {
-  return SetPropertyAtIndex(ePropertyEnableLLDBIndexCache, new_value);
+  const uint32_t idx = ePropertyEnableLLDBIndexCache;
+  return SetPropertyAtIndex(idx, new_value);
 }
 
 uint64_t ModuleListProperties::GetLLDBIndexCacheMaxByteSize() {
@@ -495,9 +611,28 @@ void ModuleList::FindFunctionSymbols(ConstString name,
 void ModuleList::FindFunctions(const RegularExpression &name,
                                const ModuleFunctionSearchOptions &options,
                                SymbolContextList &sc_list) {
+  // BEGIN SWIFT
+  const size_t initial_size = sc_list.GetSize();
+  // END SWIFT
+
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-  for (const ModuleSP &module_sp : m_modules)
-    module_sp->FindFunctions(name, options, sc_list);
+  collection::const_iterator pos, end = m_modules.end();
+  // BEGIN SWIFT
+  collection dylinker_modules;
+  for (pos = m_modules.begin(); pos != end; ++pos) {
+    if (!(*pos)->GetIsDynamicLinkEditor())
+      (*pos)->FindFunctions(name, options, sc_list);
+    else
+      dylinker_modules.push_back(*pos);
+  }
+  bool keep_looking = KeepLookingInDylinker(sc_list, initial_size);
+
+  if (keep_looking) {
+    end = dylinker_modules.end();
+    for (pos = dylinker_modules.begin(); pos != end; pos++)
+      (*pos)->FindFunctions(name, options, sc_list);
+  }
+  // END SWIFT
 }
 
 void ModuleList::FindCompileUnits(const FileSpec &path,
@@ -524,20 +659,91 @@ void ModuleList::FindGlobalVariables(const RegularExpression &regex,
     module_sp->FindGlobalVariables(regex, max_matches, variable_list);
 }
 
+// BEGIN SWIFT
+
+// We don't want to find symbols in the dylinker file if we've found
+// a viable candidate anywhere else.  This function looks at the symbols
+// added to the sc_list since start_idx, and if there's one in there that
+// looks real, returns false, in which case we should terminate the search.
+// If it returns true, we should go on to look in the dylinker.
+
+static bool KeepLookingInDylinker(SymbolContextList &sc_list,
+                                  size_t start_idx) {
+  bool keep_looking = true;
+  if (sc_list.GetSize() == start_idx) {
+    return true;
+  }
+
+  SymbolContext sc;
+  size_t num_symbols = sc_list.GetSize();
+  for (size_t idx = start_idx; idx < num_symbols; idx++) {
+    sc_list.GetContextAtIndex(idx, sc);
+    if (sc.symbol && sc.symbol->GetType() != lldb::eSymbolTypeUndefined) {
+      keep_looking = false;
+      break;
+    }
+    // If we have a function it's not going to be an undefined symbol...
+    if (sc.function) {
+      keep_looking = false;
+      break;
+    }
+  }
+  return keep_looking;
+}
+// END SWIFT
+
 void ModuleList::FindSymbolsWithNameAndType(ConstString name,
                                             SymbolType symbol_type,
                                             SymbolContextList &sc_list) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-  for (const ModuleSP &module_sp : m_modules)
-    module_sp->FindSymbolsWithNameAndType(name, symbol_type, sc_list);
+  // BEGIN SWIFT
+  const size_t initial_size = sc_list.GetSize();
+
+  collection::const_iterator pos, end = m_modules.end();
+  collection dylinker_modules;
+  for (pos = m_modules.begin(); pos != end; ++pos) {
+    if (!(*pos)->GetIsDynamicLinkEditor())
+      (*pos)->FindSymbolsWithNameAndType(name, symbol_type, sc_list);
+    else
+      dylinker_modules.push_back(*pos);
+  }
+
+  // Lets see if we found anything but undefined symbols.  If so, then we'll
+  // also look in the dylinker.
+  bool keep_looking = KeepLookingInDylinker(sc_list, initial_size);
+
+  if (keep_looking) {
+    end = dylinker_modules.end();
+    for (pos = dylinker_modules.begin(); pos != end; ++pos)
+      (*pos)->FindSymbolsWithNameAndType(name, symbol_type, sc_list);
+  }
+  // END SWIFT
 }
 
 void ModuleList::FindSymbolsMatchingRegExAndType(
     const RegularExpression &regex, lldb::SymbolType symbol_type,
     SymbolContextList &sc_list) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-  for (const ModuleSP &module_sp : m_modules)
-    module_sp->FindSymbolsMatchingRegExAndType(regex, symbol_type, sc_list);
+  // BEGIN SWIFT
+  const size_t initial_size = sc_list.GetSize();
+
+  collection::const_iterator pos, end = m_modules.end();
+  collection dylinker_modules;
+  for (pos = m_modules.begin(); pos != end; ++pos) {
+    if (!(*pos)->GetIsDynamicLinkEditor())
+      (*pos)->FindSymbolsMatchingRegExAndType(regex, symbol_type, sc_list);
+    else
+      dylinker_modules.push_back(*pos);
+  }
+
+  bool keep_looking = KeepLookingInDylinker(sc_list, initial_size);
+
+  if (keep_looking) {
+    end = dylinker_modules.end();
+    for (pos = dylinker_modules.begin(); pos != end; ++pos)
+      (*pos)->FindSymbolsMatchingRegExAndType(regex, symbol_type, sc_list);
+  }
+  // END SWIFT
 }
 
 void ModuleList::FindModules(const ModuleSpec &module_spec,
@@ -1077,6 +1283,14 @@ void ModuleList::ForEach(
       break;
   }
 }
+
+// BEGIN SWIFT
+void ModuleList::ClearModuleDependentCaches() {
+  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  for (const auto &module : m_modules)
+    module->ClearModuleDependentCaches();
+}
+// END SWIFT
 
 bool ModuleList::AnyOf(
     std::function<bool(lldb_private::Module &module_sp)> const &callback)

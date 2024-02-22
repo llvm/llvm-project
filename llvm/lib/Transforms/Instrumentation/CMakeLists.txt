@@ -19,6 +19,7 @@ add_llvm_component_library(LLVMInstrumentation
   PoisonChecking.cpp
   SanitizerCoverage.cpp
   SanitizerBinaryMetadata.cpp
+  SoftPointerAuth.cpp
   ValueProfileCollector.cpp
   ThreadSanitizer.cpp
   HWAddressSanitizer.cpp

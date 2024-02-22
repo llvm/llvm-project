@@ -348,6 +348,9 @@ def err_drv_omp_host_ir_file_not_found : Error<
   "target regions but cannot be found">;
 def err_drv_omp_host_target_not_supported : Error<
   "target '%0' is not a supported OpenMP host target">;
+def err_drv_ptrauth_not_supported : Error<
+  "target '%0' does not support native pointer authentication">;
+
 def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
   "'-fopenmp-targets' must be used in conjunction with a '-fopenmp' option "
   "compatible with offloading; e.g., '-fopenmp=libomp' or '-fopenmp=libiomp5'">;
@@ -540,6 +543,9 @@ def err_test_module_file_extension_format : Error<
 def err_drv_module_output_with_multiple_arch : Error<
   "option '-fmodule-output' can't be used with multiple arch options">;
 
+def err_modules_no_lsv : Error<"standard C++ modules require "
+  "the -fmodules-local-submodule-visibility -cc1 option">;
+  
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
   InGroup<DiagGroup<"delayed-template-parsing-in-cxx20">>;
@@ -742,6 +748,11 @@ def warn_target_override_arm64ec : Warning<
 
 def err_drv_target_variant_invalid : Error<
   "unsupported '%0' value '%1'; use 'ios-macabi' instead">;
+
+def err_drv_inputs_and_include_tree : Error<
+  "passing input files is incompatible with '-fcas-include-tree'">;
+def err_drv_incompatible_option_include_tree : Error<
+  "passing incompatible option '%0' with '-fcas-include-tree'">;
 
 def err_drv_invalid_directx_shader_module : Error<
   "invalid profile : %0">;

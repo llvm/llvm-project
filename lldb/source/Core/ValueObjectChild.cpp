@@ -11,6 +11,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Scalar.h"
@@ -76,7 +77,10 @@ ConstString ValueObjectChild::GetQualifiedTypeName() {
 }
 
 ConstString ValueObjectChild::GetDisplayTypeName() {
-  ConstString display_name = GetCompilerType().GetDisplayTypeName();
+  const SymbolContext *sc = nullptr;
+  if (GetFrameSP())
+    sc = &GetFrameSP()->GetSymbolContext(lldb::eSymbolContextFunction);
+  ConstString display_name = GetCompilerType().GetDisplayTypeName(sc);
   AdjustForBitfieldness(display_name, m_bitfield_bit_size);
   return display_name;
 }
@@ -117,7 +121,29 @@ bool ValueObjectChild::UpdateValue() {
            (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
 
       if (parent->GetCompilerType().ShouldTreatScalarValueAsAddress()) {
-        m_value.GetScalar() = parent->GetPointerValue();
+        // BEGIN SWIFT MOD
+        lldb::addr_t addr = parent->GetPointerValue();
+
+        if (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer))
+          if (auto process_sp = GetProcessSP())
+            if (auto runtime = process_sp->GetLanguageRuntime(
+                    parent_type.GetMinimumLanguage())) {
+              bool deref;
+              std::tie(addr, deref) =
+                  runtime->FixupPointerValue(addr, parent_type);
+              // The runtime will always return an address in the target.
+              // So make sure we force that here.
+              parent->SetAddressTypeOfChildren(eAddressTypeLoad);
+              if (deref) {
+                // Read the pointer to the Objective-C object.
+                Target &target = process_sp->GetTarget();
+                size_t ptr_size = process_sp->GetAddressByteSize();
+                target.ReadMemory(addr, &addr, ptr_size, m_error, true);
+              }
+            }
+
+        m_value.GetScalar() = addr;
+        // END SWIFT MOD
 
         switch (parent->GetAddressTypeOfChildren()) {
         case eAddressTypeFile: {
@@ -128,9 +154,19 @@ bool ValueObjectChild::UpdateValue() {
             m_value.SetValueType(Value::ValueType::FileAddress);
         } break;
         case eAddressTypeLoad:
-          m_value.SetValueType(is_instance_ptr_base
-                                   ? Value::ValueType::Scalar
-                                   : Value::ValueType::LoadAddress);
+          // BEGIN SWIFT MOD
+          // We need to detect when we cross TypeSystem boundaries,
+          // e.g. when we try to print Obj-C fields of a Swift object.
+          if (parent->GetCompilerType().GetTypeSystem()->SupportsLanguage(
+                  lldb::eLanguageTypeSwift) &&
+              GetCompilerType().GetTypeSystem()->SupportsLanguage(
+                  lldb::eLanguageTypeSwift))
+            m_value.SetValueType(is_instance_ptr_base
+                                     ? Value::ValueType::Scalar
+                                     : Value::ValueType::LoadAddress);
+          else
+            m_value.SetValueType(Value::ValueType::LoadAddress);
+          // END SWIFT MOD
           break;
         case eAddressTypeHost:
           m_value.SetValueType(Value::ValueType::HostAddress);
@@ -153,11 +189,12 @@ bool ValueObjectChild::UpdateValue() {
         } else if (addr == 0) {
           m_error.SetErrorString("parent is NULL");
         } else {
-          // If a bitfield doesn't fit into the child_byte_size'd window at
-          // child_byte_offset, move the window forward until it fits.  The
-          // problem here is that Value has no notion of bitfields and thus the
-          // Value's DataExtractor is sized like the bitfields CompilerType; a
-          // sequence of bitfields, however, can be larger than their underlying
+          // If a bitfield doesn't fit into the child_byte_size'd
+          // window at child_byte_offset, move the window forward
+          // until it fits.  The problem here is that Value has no
+          // notion of bitfields and thus the Value's DataExtractor
+          // is sized like the bitfields CompilerType; a sequence of
+          // bitfields, however, can be larger than their underlying
           // type.
           if (m_bitfield_bit_offset) {
             const bool thread_and_frame_only_if_stopped = true;

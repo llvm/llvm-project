@@ -82,6 +82,7 @@ protected:
   friend class SBFile;
   friend class SBFormat;
   friend class SBHostOS;
+  friend class SBModule;
   friend class SBPlatform;
   friend class SBProcess;
   friend class SBReproducer;

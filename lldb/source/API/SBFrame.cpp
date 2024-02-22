@@ -17,6 +17,7 @@
 #include "Utils.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -47,12 +48,20 @@
 #include "lldb/API/SBExpressionOptions.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBSymbolContext.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBVariablesOptions.h"
 
 #include "llvm/Support/PrettyStackTrace.h"
+
+// BEGIN SWIFT
+#include "lldb/Target/LanguageRuntime.h"
+#ifdef LLDB_ENABLE_SWIFT
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
+#endif
+// END SWIFT
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1224,6 +1233,46 @@ lldb::LanguageType SBFrame::GuessLanguage() const {
   }
   return eLanguageTypeUnknown;
 }
+
+lldb::SBStructuredData SBFrame::GetLanguageSpecificData() const {
+  std::unique_lock<std::recursive_mutex> lock;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  auto *process = exe_ctx.GetProcessPtr();
+  auto *frame = exe_ctx.GetFramePtr();
+  if (process && frame)
+    if (auto *runtime = process->GetLanguageRuntime(frame->GuessLanguage()))
+      if (auto *data = runtime->GetLanguageSpecificData(*frame))
+        return SBStructuredData(*data);
+
+  return {};
+}
+
+// BEGIN SWIFT
+bool SBFrame::IsSwiftThunk() const {
+  std::unique_lock<std::recursive_mutex> lock;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  
+  StackFrame *frame = nullptr;
+  Target *target = exe_ctx.GetTargetPtr();
+  Process *process = exe_ctx.GetProcessPtr();
+  if (!target || !process)
+    return false;
+  Process::StopLocker stop_locker;
+  if (!stop_locker.TryLock(&process->GetRunLock()))
+    return false;
+  frame = exe_ctx.GetFramePtr();
+  if (!frame)
+    return false;
+  SymbolContext sc;
+  sc = frame->GetSymbolContext(eSymbolContextSymbol);
+  if (!sc.symbol)
+    return false;
+  auto *runtime = process->GetLanguageRuntime(eLanguageTypeSwift);
+  if (!runtime)
+    return false;
+  return runtime->IsSymbolARuntimeThunk(*sc.symbol);
+}
+// END SWIFT
 
 const char *SBFrame::GetFunctionName() const {
   LLDB_INSTRUMENT_VA(this);

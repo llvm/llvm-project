@@ -26,6 +26,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Edit/RefactoringFixits.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
@@ -1610,6 +1611,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
 
       // Produce a nice diagnostic if multiple values aren't handled.
       if (!UnhandledNames.empty()) {
+        {
         auto DB = Diag(CondExpr->getExprLoc(), TheDefaultStmt
                                                    ? diag::warn_def_missing_case
                                                    : diag::warn_missing_case)
@@ -1618,6 +1620,12 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
         for (size_t I = 0, E = std::min(UnhandledNames.size(), (size_t)3);
              I != E; ++I)
           DB << UnhandledNames[I];
+        }
+        auto DB =
+            Diag(CondExpr->getExprLoc(), diag::note_fill_in_missing_cases);
+        edit::fillInMissingSwitchEnumCases(
+            Context, SS, ED, CurContext,
+            [&](const FixItHint &Hint) { DB << Hint; });
       }
 
       if (!hasCasesNotInSwitch)

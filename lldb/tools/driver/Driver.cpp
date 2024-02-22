@@ -309,6 +309,16 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
       m_option_data.m_repl_options = arg_value;
   }
 
+#ifdef LLDB_ENABLE_SWIFT
+  // For the Swift fork, we want to default to Swift if no REPL language is
+  // specified.
+  if (m_option_data.m_repl &&
+      m_option_data.m_repl_lang == eLanguageTypeUnknown) {
+    m_option_data.m_repl_lang = eLanguageTypeSwift;
+    m_debugger.SetREPLLanguage(eLanguageTypeSwift);
+  }
+#endif // LLDB_ENABLE_SWIFT
+
   // We need to process the options below together as their relative order
   // matters.
   for (auto *arg : args.filtered(OPT_source_on_crash, OPT_one_line_on_crash,

@@ -149,6 +149,25 @@ static constexpr OptionEnumValueElement g_running_mode[] = {
      "Run only this thread while stepping"},
 };
 
+
+// BEGIN SWIFT
+static constexpr OptionEnumValueElement g_bind_gen_type_params[] = {
+    {
+        lldb::eBindAuto,
+        "auto",
+        "Attempt to run the expression with bound generic parameters first, "
+        "fallback to unbound generic parameters if binding the type parameters "
+        "fails",
+    },
+    {lldb::eBind, "true", "Bind generic type parameters."},
+    {lldb::eDontBind, "false", "Don't bind generic type parameters."},
+};
+
+static constexpr OptionEnumValues BindGenTypeParamValue() {
+  return OptionEnumValues(g_bind_gen_type_params);
+}
+// END SWIFT
+
 static constexpr OptionEnumValueElement g_completion_type[] = {
     {lldb::eNoCompletion, "none", "No completion."},
     {lldb::eSourceFileCompletion, "source-file", "Completes to a source file."},
@@ -303,6 +322,9 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeConnectURL, "process-connect-url", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "A URL-style specification for a remote connection." },
     { lldb::eArgTypeTargetID, "target-id", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The index ID for an lldb Target." },
     { lldb::eArgTypeStopHookID, "stop-hook-id", lldb::CompletionType::eStopHookIDCompletion, {}, { nullptr, false }, "The ID you receive when you create a stop-hook." },
+    // BEGIN SWIFT
+    { lldb::eArgTypeBindGenTypeParamValue, "bind-generic-types", lldb::CompletionType::eNoCompletion, g_bind_gen_type_params, { nullptr, false }, "Controls whether any generic types in the current context should be bound to their dynamic type before evaluating. Defaults to auto." },
+    // END SWIFT
     { lldb::eArgTypeCompletionType, "completion-type", lldb::CompletionType::eNoCompletion, g_completion_type, { nullptr, false }, "The completion type to use when adding custom commands. If none is specified, the command won't use auto-completion." },
     { lldb::eArgTypeRemotePath, "remote-path", lldb::CompletionType::eRemoteDiskFileCompletion, {}, { nullptr, false }, "A path on the system managed by the current platform." },
     { lldb::eArgTypeRemoteFilename, "remote-filename", lldb::CompletionType::eRemoteDiskFileCompletion, {}, { nullptr, false }, "A file on the system managed by the current platform." },

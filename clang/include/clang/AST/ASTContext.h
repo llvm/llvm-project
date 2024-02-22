@@ -459,6 +459,14 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// This is the top-level (C++20) Named module we are building.
   Module *CurrentCXXNamedModule = nullptr;
 
+  /// The include tree that is being built, if any.
+  /// See \c FrontendOptions::CASIncludeTreeID.
+  std::optional<std::string> CASIncludeTreeID;
+
+  /// The cas-fs tree that is being built, if any.
+  /// See \c FileSystemOptions::CASFileSystemRootID.
+  std::optional<std::string> CASFileSystemRootID;
+
   static constexpr unsigned ConstantArrayTypesLog2InitSize = 8;
   static constexpr unsigned GeneralTypesLog2InitSize = 9;
   static constexpr unsigned FunctionProtoTypesLog2InitSize = 12;
@@ -1065,6 +1073,20 @@ public:
   /// Get module under construction, nullptr if this is not a C++20 module.
   Module *getCurrentNamedModule() const { return CurrentCXXNamedModule; }
 
+  std::optional<std::string> getCASIncludeTreeID() const {
+    return CASIncludeTreeID;
+  }
+  void setCASIncludeTreeID(std::string ID) {
+    CASIncludeTreeID = std::move(ID);
+  }
+
+  std::optional<std::string> getCASFileSystemRootID() const {
+    return CASFileSystemRootID;
+  }
+  void setCASFileSystemRootID(std::string ID) {
+    CASFileSystemRootID = std::move(ID);
+  }
+
   TranslationUnitDecl *getTranslationUnitDecl() const {
     return TUDecl->getMostRecentDecl();
   }
@@ -1244,6 +1266,9 @@ public:
   /// The return type should be T with all prior qualifiers minus the address
   /// space.
   QualType removeAddrSpaceQualType(QualType T) const;
+
+  /// Return the "other" type-specific discriminator for the given type.
+  uint16_t getPointerAuthTypeDiscriminator(QualType T);
 
   /// Apply Objective-C protocol qualifiers to the given type.
   /// \param allowOnPointerType specifies if we can apply protocol
@@ -2180,6 +2205,16 @@ public:
     Qualifiers Qs = type.getQualifiers();
     Qs.removeObjCLifetime();
     return getQualifiedType(type.getUnqualifiedType(), Qs);
+  }
+
+  /// \brief Return a type with the given __ptrauth qualifier.
+  QualType getPointerAuthType(QualType type, PointerAuthQualifier pointerAuth) {
+    assert(!type.getPointerAuth());
+    assert(pointerAuth);
+
+    Qualifiers qs;
+    qs.setPointerAuth(pointerAuth);
+    return getQualifiedType(type, qs);
   }
 
   unsigned char getFixedPointScale(QualType Ty) const;

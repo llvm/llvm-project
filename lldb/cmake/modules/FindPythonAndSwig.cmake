@@ -37,7 +37,7 @@ endmacro()
 if(Python3_LIBRARIES AND Python3_INCLUDE_DIRS AND Python3_EXECUTABLE AND LLDB_ENABLE_SWIG)
   set(PYTHONANDSWIG_FOUND TRUE)
 else()
-  if (LLDB_ENABLE_SWIG)
+  if (LLDB_ENABLE_SWIG OR LLDB_USE_STATIC_BINDINGS)
     FindPython3()
   else()
     message(STATUS "SWIG 4 or later is required for Python support in LLDB but could not be found")
@@ -61,6 +61,5 @@ else()
                                     REQUIRED_VARS
                                       Python3_LIBRARIES
                                       Python3_INCLUDE_DIRS
-                                      Python3_EXECUTABLE
-                                      LLDB_ENABLE_SWIG)
+                                      Python3_EXECUTABLE)
 endif()

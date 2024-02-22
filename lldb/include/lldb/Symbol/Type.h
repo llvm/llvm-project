@@ -475,6 +475,8 @@ public:
 
   const lldb_private::Declaration &GetDeclaration() const;
 
+  std::vector<lldb_private::CompilerContext> GetDeclContext() const;
+
   // Get the clang type, and resolve definitions for any
   // class/struct/union/enum types completely.
   CompilerType GetFullCompilerType();

@@ -121,6 +121,19 @@ class BuilderDarwin(Builder):
 
         return ["ARCH_CFLAGS=-target {} {}".format(triple, version_min)]
 
+    def getSwiftTargetFlags(self, arch):
+        if not arch:
+            arch = configuration.arch
+        if not arch:
+            return []
+        vendor, os, version, env = get_triple()
+        if vendor is None or os is None or version is None or env is None:
+            return []
+        return [
+            'TARGET_SWIFTFLAGS=-target {}-{}-{}{}{}'.format(
+                arch, vendor, os, version, (("-" + env) if env else ""))
+        ]
+
     def _getDebugInfoArgs(self, debug_info):
         if debug_info == "dsym":
             return ["MAKE_DSYM=YES"]

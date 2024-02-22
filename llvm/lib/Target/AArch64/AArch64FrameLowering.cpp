@@ -435,6 +435,13 @@ bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
            getSVEStackSize(MF));
 }
 
+bool AArch64FrameLowering::shouldAuthenticateLR(
+    const MachineFunction &MF) const {
+  // Return address authentication can be enabled at the function level, using
+  // the "ptrauth-returns" attribute.
+  return MF.getFunction().hasFnAttribute("ptrauth-returns");
+}
+
 /// hasFP - Return true if the specified function should have a dedicated frame
 /// pointer register.
 bool AArch64FrameLowering::hasFP(const MachineFunction &MF) const {
@@ -1693,6 +1700,18 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
         .setMIFlag(MachineInstr::FrameSetup);
   }
 
+  // If we're saving LR, sign it first.
+  if (shouldAuthenticateLR(MF)) {
+    if (LLVM_UNLIKELY(!Subtarget.hasPAuth()))
+      report_fatal_error("arm64e LR authentication requires ptrauth");
+    for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
+      if (Info.getReg() != AArch64::LR)
+        continue;
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACIBSP))
+          .setMIFlags(MachineInstr::FrameSetup);
+    }
+  }
+
   // We signal the presence of a Swift extended frame to external tools by
   // storing FP with 0b0001 in bits 63:60. In normal userland operation a simple
   // ORR is sufficient, it is assumed a Swift kernel would initialize the TBI
@@ -2201,6 +2220,32 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // prologue/epilogue.
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
+
+  // If we're restoring LR, authenticate it before returning.
+  // Use scope_exit to ensure we do that last on all return paths.
+  auto InsertAuthLROnExit = make_scope_exit([&]() {
+    if (shouldAuthenticateLR(MF)) {
+      if (LLVM_UNLIKELY(!Subtarget.hasPAuth()))
+        report_fatal_error("arm64e LR authentication requires ptrauth");
+      for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
+        if (Info.getReg() != AArch64::LR)
+          continue;
+        MachineBasicBlock::iterator TI = MBB.getFirstTerminator();
+        if (TI != MBB.end() && TI->getOpcode() == AArch64::RET_ReallyLR) {
+          // If there is a terminator and it's a RET, we can fold AUTH into it.
+          // Be careful to keep the implicitly returned registers.
+          // By now, we don't need the ReallyLR pseudo, since it's only there
+          // to make it possible for LR to be used for non-RET purposes, and
+          // that happens in RA and PEI.
+          BuildMI(MBB, TI, DL, TII->get(AArch64::RETAB)).copyImplicitOps(*TI);
+          MBB.erase(TI);
+        } else {
+          // Otherwise, we could be in a shrink-wrapped or tail-calling block.
+          BuildMI(MBB, TI, DL, TII->get(AArch64::AUTIBSP));
+        }
+      }
+    }
+  });
 
   // How much of the stack used by incoming arguments this function is expected
   // to restore in this particular epilogue.

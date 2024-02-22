@@ -266,10 +266,11 @@ DIBasicType *DIBuilder::createNullPtrType() {
 
 DIBasicType *DIBuilder::createBasicType(StringRef Name, uint64_t SizeInBits,
                                         unsigned Encoding,
-                                        DINode::DIFlags Flags) {
+                                        DINode::DIFlags Flags,
+                                        uint32_t NumExtraInhabitants) {
   assert(!Name.empty() && "Unable to create type without name");
   return DIBasicType::get(VMContext, dwarf::DW_TAG_base_type, Name, SizeInBits,
-                          0, Encoding, Flags);
+                          0, Encoding, NumExtraInhabitants, Flags);
 }
 
 DIStringType *DIBuilder::createStringType(StringRef Name, uint64_t SizeInBits) {
@@ -296,7 +297,19 @@ DIStringType *DIBuilder::createStringType(StringRef Name,
 
 DIDerivedType *DIBuilder::createQualifiedType(unsigned Tag, DIType *FromTy) {
   return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, FromTy, 0,
-                            0, 0, std::nullopt, DINode::FlagZero);
+                            0, 0, std::nullopt, std::nullopt, DINode::FlagZero);
+}
+
+DIDerivedType *
+DIBuilder::createPtrAuthQualifiedType(DIType *FromTy, unsigned Key,
+                                      bool IsAddressDiscriminated,
+                                      unsigned ExtraDiscriminator) {
+  return DIDerivedType::get(
+      VMContext, dwarf::DW_TAG_LLVM_ptrauth_type, "", nullptr, 0, nullptr,
+      FromTy, 0, 0, 0, std::nullopt,
+      std::optional<DIDerivedType::PtrAuthData>(
+          {Key, IsAddressDiscriminated, ExtraDiscriminator}),
+      DINode::FlagZero);
 }
 
 DIDerivedType *
@@ -307,7 +320,7 @@ DIBuilder::createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
   // FIXME: Why is there a name here?
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_pointer_type, Name,
                             nullptr, 0, nullptr, PointeeTy, SizeInBits,
-                            AlignInBits, 0, DWARFAddressSpace, DINode::FlagZero,
+                            AlignInBits, 0, DWARFAddressSpace, std::nullopt, DINode::FlagZero,
                             nullptr, Annotations);
 }
 
@@ -318,7 +331,7 @@ DIDerivedType *DIBuilder::createMemberPointerType(DIType *PointeeTy,
                                                   DINode::DIFlags Flags) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_ptr_to_member_type, "",
                             nullptr, 0, nullptr, PointeeTy, SizeInBits,
-                            AlignInBits, 0, std::nullopt, Flags, Base);
+                            AlignInBits, 0, std::nullopt, std::nullopt, Flags, Base);
 }
 
 DIDerivedType *
@@ -327,7 +340,7 @@ DIBuilder::createReferenceType(unsigned Tag, DIType *RTy, uint64_t SizeInBits,
                                std::optional<unsigned> DWARFAddressSpace) {
   assert(RTy && "Unable to create reference type");
   return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, RTy,
-                            SizeInBits, AlignInBits, 0, DWARFAddressSpace,
+                            SizeInBits, AlignInBits, 0, DWARFAddressSpace, {},
                             DINode::FlagZero);
 }
 
@@ -338,15 +351,15 @@ DIDerivedType *DIBuilder::createTypedef(DIType *Ty, StringRef Name,
                                         DINodeArray Annotations) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_typedef, Name, File,
                             LineNo, getNonCompileUnitScope(Context), Ty, 0,
-                            AlignInBits, 0, std::nullopt, Flags, nullptr,
-                            Annotations);
+                            AlignInBits, 0, std::nullopt, std::nullopt, Flags, 
+                            nullptr, Annotations);
 }
 
 DIDerivedType *DIBuilder::createFriend(DIType *Ty, DIType *FriendTy) {
   assert(Ty && "Invalid type!");
   assert(FriendTy && "Invalid friend type!");
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_friend, "", nullptr, 0, Ty,
-                            FriendTy, 0, 0, 0, std::nullopt, DINode::FlagZero);
+                            FriendTy, 0, 0, 0, std::nullopt, std::nullopt, DINode::FlagZero);
 }
 
 DIDerivedType *DIBuilder::createInheritance(DIType *Ty, DIType *BaseTy,
@@ -357,7 +370,7 @@ DIDerivedType *DIBuilder::createInheritance(DIType *Ty, DIType *BaseTy,
   Metadata *ExtraData = ConstantAsMetadata::get(
       ConstantInt::get(IntegerType::get(VMContext, 32), VBPtrOffset));
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_inheritance, "", nullptr,
-                            0, Ty, BaseTy, 0, 0, BaseOffset, std::nullopt,
+                            0, Ty, BaseTy, 0, 0, BaseOffset, std::nullopt, std::nullopt,
                             Flags, ExtraData);
 }
 
@@ -367,7 +380,7 @@ DIDerivedType *DIBuilder::createMemberType(
     DINode::DIFlags Flags, DIType *Ty, DINodeArray Annotations) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_member, Name, File,
                             LineNumber, getNonCompileUnitScope(Scope), Ty,
-                            SizeInBits, AlignInBits, OffsetInBits, std::nullopt,
+                            SizeInBits, AlignInBits, OffsetInBits, std::nullopt, std::nullopt,
                             Flags, nullptr, Annotations);
 }
 
@@ -383,7 +396,7 @@ DIDerivedType *DIBuilder::createVariantMemberType(
     Constant *Discriminant, DINode::DIFlags Flags, DIType *Ty) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_member, Name, File,
                             LineNumber, getNonCompileUnitScope(Scope), Ty,
-                            SizeInBits, AlignInBits, OffsetInBits, std::nullopt,
+                            SizeInBits, AlignInBits, OffsetInBits, std::nullopt, std::nullopt,
                             Flags, getConstantOrNull(Discriminant));
 }
 
@@ -394,8 +407,8 @@ DIDerivedType *DIBuilder::createBitFieldMemberType(
   Flags |= DINode::FlagBitField;
   return DIDerivedType::get(
       VMContext, dwarf::DW_TAG_member, Name, File, LineNumber,
-      getNonCompileUnitScope(Scope), Ty, SizeInBits, /*AlignInBits=*/0,
-      OffsetInBits, std::nullopt, Flags,
+      getNonCompileUnitScope(Scope), Ty, SizeInBits, /* AlignInBits=*/0,
+      OffsetInBits, std::nullopt, std::nullopt, Flags,
       ConstantAsMetadata::get(ConstantInt::get(IntegerType::get(VMContext, 64),
                                                StorageOffsetInBits)),
       Annotations);
@@ -409,7 +422,7 @@ DIBuilder::createStaticMemberType(DIScope *Scope, StringRef Name, DIFile *File,
   Flags |= DINode::FlagStaticMember;
   return DIDerivedType::get(VMContext, Tag, Name, File, LineNumber,
                             getNonCompileUnitScope(Scope), Ty, 0, AlignInBits,
-                            0, std::nullopt, Flags, getConstantOrNull(Val));
+                            0, std::nullopt, std::nullopt, Flags, getConstantOrNull(Val));
 }
 
 DIDerivedType *
@@ -419,7 +432,7 @@ DIBuilder::createObjCIVar(StringRef Name, DIFile *File, unsigned LineNumber,
                           DIType *Ty, MDNode *PropertyNode) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_member, Name, File,
                             LineNumber, getNonCompileUnitScope(File), Ty,
-                            SizeInBits, AlignInBits, OffsetInBits, std::nullopt,
+                            SizeInBits, AlignInBits, OffsetInBits, std::nullopt, std::nullopt,
                             Flags, PropertyNode);
 }
 
@@ -494,11 +507,14 @@ DICompositeType *DIBuilder::createStructType(
     DIScope *Context, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
     DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang,
-    DIType *VTableHolder, StringRef UniqueIdentifier) {
+    DIType *VTableHolder, StringRef UniqueIdentifier, DIType *SpecificationOf,
+    uint32_t NumExtraInhabitants) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_structure_type, Name, File, LineNumber,
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits, 0,
-      Flags, Elements, RunTimeLang, VTableHolder, nullptr, UniqueIdentifier);
+      Flags, Elements, RunTimeLang, VTableHolder, nullptr, UniqueIdentifier,
+      nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, SpecificationOf,
+      NumExtraInhabitants);
   trackIfUnresolved(R);
   return R;
 }
@@ -515,16 +531,17 @@ DICompositeType *DIBuilder::createUnionType(
   return R;
 }
 
-DICompositeType *
-DIBuilder::createVariantPart(DIScope *Scope, StringRef Name, DIFile *File,
-                             unsigned LineNumber, uint64_t SizeInBits,
-                             uint32_t AlignInBits, DINode::DIFlags Flags,
-                             DIDerivedType *Discriminator, DINodeArray Elements,
-                             StringRef UniqueIdentifier) {
+DICompositeType *DIBuilder::createVariantPart(
+    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
+    uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
+    DIDerivedType *Discriminator, DINodeArray Elements,
+    StringRef UniqueIdentifier, uint64_t OffsetInBits, APInt SpareBitsMask) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_variant_part, Name, File, LineNumber,
-      getNonCompileUnitScope(Scope), nullptr, SizeInBits, AlignInBits, 0, Flags,
-      Elements, 0, nullptr, nullptr, UniqueIdentifier, Discriminator);
+      getNonCompileUnitScope(Scope), nullptr, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, Elements, 0, nullptr, nullptr, UniqueIdentifier,
+      nullptr, 0, Discriminator, nullptr, nullptr, nullptr, {}, {},
+      SpareBitsMask);
   trackIfUnresolved(R);
   return R;
 }
@@ -558,7 +575,7 @@ DIDerivedType *DIBuilder::createSetType(DIScope *Scope, StringRef Name,
   auto *R =
       DIDerivedType::get(VMContext, dwarf::DW_TAG_set_type, Name, File, LineNo,
                          getNonCompileUnitScope(Scope), Ty, SizeInBits,
-                         AlignInBits, 0, std::nullopt, DINode::FlagZero);
+                         AlignInBits, 0, std::nullopt, std::nullopt, DINode::FlagZero);
   trackIfUnresolved(R);
   return R;
 }

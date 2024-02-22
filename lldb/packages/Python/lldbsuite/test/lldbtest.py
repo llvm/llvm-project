@@ -761,6 +761,13 @@ class Base(unittest.TestCase):
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir
             ),
+            # Enable the swift metadata cache in order to speed up tests.
+            "settings set symbols.enable-swift-metadata-cache true",
+            'settings set symbols.swift-metadata-cache-path "{}"'.format(
+                configuration.lldb_module_cache_dir
+            ),
+            # Enable expensive validations in TypeSystemSwiftTypeRef.
+            "settings set symbols.swift-validate-typesystem true",
             "settings set use-color false",
         ]
 
@@ -1314,7 +1321,7 @@ class Base(unittest.TestCase):
         """Returns the compiler binary the test suite is running with."""
         return lldbplatformutil.getCompilerBinary()
 
-    def getCompilerVersion(self):
+    def getCompilerVersion(self, compiler=None):
         """Returns a string that represents the compiler version.
         Supports: llvm, clang.
         """
@@ -1538,6 +1545,11 @@ class Base(unittest.TestCase):
     def findBuiltClang(self):
         """Tries to find and use Clang from the build directory as the compiler (instead of the system compiler)."""
         paths_to_try = [
+            # Begin Swift modifications
+            "llvm-build/Ninja-DebugAssert/llvm-macosx-x86_64/bin/clang",
+            "llvm-build/Ninja-ReleaseAssert/llvm-macosx-x86_64/bin/clang",
+            "llvm-build/Ninja-RelWithDebInfoAssert/llvm-macosx-x86_64/bin/clang",
+            # End Swift modifications
             "llvm-build/Release+Asserts/x86_64/bin/clang",
             "llvm-build/Debug+Asserts/x86_64/bin/clang",
             "llvm-build/Release/x86_64/bin/clang",

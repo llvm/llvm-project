@@ -383,7 +383,8 @@ public:
   addPassesToEmitFile(PassManagerBase &, raw_pwrite_stream &,
                       raw_pwrite_stream *, CodeGenFileType,
                       bool /*DisableVerify*/ = true,
-                      MachineModuleInfoWrapperPass *MMIWP = nullptr) {
+                      MachineModuleInfoWrapperPass *MMIWP = nullptr,
+                      raw_pwrite_stream *CasIDOS = nullptr) {
     return true;
   }
 
@@ -449,11 +450,11 @@ public:
   /// emitted.  Typically this will involve several steps of code generation.
   /// \p MMIWP is an optional parameter that, if set to non-nullptr,
   /// will be used to set the MachineModuloInfo for this PM.
-  bool
-  addPassesToEmitFile(PassManagerBase &PM, raw_pwrite_stream &Out,
-                      raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
-                      bool DisableVerify = true,
-                      MachineModuleInfoWrapperPass *MMIWP = nullptr) override;
+  bool addPassesToEmitFile(PassManagerBase &PM, raw_pwrite_stream &Out,
+                           raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+                           bool DisableVerify = true,
+                           MachineModuleInfoWrapperPass *MMIWP = nullptr,
+                           raw_pwrite_stream *CasIDOS = nullptr) override;
 
   virtual Error buildCodeGenPipeline(ModulePassManager &,
                                      MachineFunctionPassManager &,
@@ -483,11 +484,12 @@ public:
   /// machine code from the MI representation.
   bool addAsmPrinter(PassManagerBase &PM, raw_pwrite_stream &Out,
                      raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
-                     MCContext &Context);
+                     MCContext &Context, raw_pwrite_stream *CasIDOS = nullptr);
 
   Expected<std::unique_ptr<MCStreamer>>
   createMCStreamer(raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-                   CodeGenFileType FileType, MCContext &Ctx);
+                   CodeGenFileType FileType, MCContext &Ctx,
+                   raw_pwrite_stream *CasIDOS = nullptr);
 
   /// True if the target uses physical regs (as nearly all targets do). False
   /// for stack machines such as WebAssembly and other virtual-register

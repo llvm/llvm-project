@@ -12,7 +12,7 @@
 int main(void)
 {
 	Protocol *proto = @protocol(p1);
-        Protocol *fproto = @protocol(fproto); // expected-error {{@protocol is using a forward protocol declaration of 'fproto'}}
+        Protocol *fproto = @protocol(fproto); // expected-warning {{@protocol is using a forward protocol declaration of 'fproto'}}
 	Protocol *pp = @protocol(i); // expected-error {{cannot find protocol declaration for 'i'}}
 	Protocol *p1p = @protocol(cl); // expected-error {{cannot find protocol declaration for 'cl'}}
 }
@@ -25,9 +25,9 @@ int main(void)
 @end
 
 int doesConform(id foo) {
-  return [foo conformsToProtocol:@protocol(TestProtocol)]; // expected-error {{@protocol is using a forward protocol declaration of 'TestProtocol'}}
+  return [foo conformsToProtocol:@protocol(TestProtocol)]; // expected-warning {{@protocol is using a forward protocol declaration of 'TestProtocol'}}
 }
 
 int doesConformSuper(id foo) {
-  return [foo conformsToProtocol:@protocol(SuperProtocol)]; // expected-error {{@protocol is using a forward protocol declaration of 'SuperProtocol'}}
+  return [foo conformsToProtocol:@protocol(SuperProtocol)]; // expected-warning {{@protocol is using a forward protocol declaration of 'SuperProtocol'}}
 }

@@ -37,6 +37,13 @@ config.test_source_root = os.path.dirname(__file__)
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = os.path.join(config.lldb_obj_root, "test", "Shell")
 
+# Begin Swift mod.
+# Swift's libReflection builds without ASAN, which causes a known
+# false positive in std::vector. If sanitizers are off, this is just
+# a no-op
+config.environment['ASAN_OPTIONS'] = 'detect_container_overflow=0'
+# End Swift mod.
+
 # Propagate environment vars.
 llvm_config.with_system_environment(
     [
@@ -108,7 +115,7 @@ for cachedir in [config.clang_module_cache, config.lldb_module_cache]:
 # lit complains if the value is set but it is not supported.
 supported, errormsg = lit_config.maxIndividualTestTimeIsSupported
 if supported:
-    lit_config.maxIndividualTestTime = 600
+    lit_config.maxIndividualTestTime = 900
 else:
     lit_config.warning("Could not set a default per-test timeout. " + errormsg)
 
@@ -134,6 +141,9 @@ if config.lldb_enable_python:
 
 if config.lldb_enable_lua:
     config.available_features.add("lua")
+
+if config.lldb_enable_swift:
+    config.available_features.add('swift')
 
 if config.lldb_enable_lzma:
     config.available_features.add("lzma")

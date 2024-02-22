@@ -104,6 +104,8 @@ public:
   const char *GetMangledName(const DWARFUnit *cu,
                              bool substitute_name_allowed = true) const;
 
+  bool GetIsGenericTrampoline(const DWARFUnit *cu) const;
+
   const char *GetPubname(const DWARFUnit *cu) const;
 
   bool GetDIENamesAndRanges(DWARFUnit *cu, const char *&name,

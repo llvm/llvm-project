@@ -1,0 +1,9 @@
+// Test that input can't be redirected from non-existent file A.swift
+// REQUIRES: swift
+
+// RUN: mkdir -p %t
+// RUN: cd %t
+// RUN: %lldb --repl < %s 2>&1 | FileCheck %s --check-prefix=LLDB
+
+< A.swift
+// LLDB: no such file at path 'A.swift'

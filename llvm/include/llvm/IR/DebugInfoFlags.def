@@ -91,11 +91,12 @@ HANDLE_DISP_FLAG((1u << 8), MainSubprogram)
 // for defaulted functions
 HANDLE_DISP_FLAG((1u << 9), Deleted)
 HANDLE_DISP_FLAG((1u << 11), ObjCDirect)
+HANDLE_DISP_FLAG((1u << 12), IsTransparentStepping)
 
 #ifdef DISP_FLAG_LARGEST_NEEDED
 // Intended to be used with ADT/BitmaskEnum.h.
 // NOTE: Always must be equal to largest flag, check this when adding new flags.
-HANDLE_DISP_FLAG((1 << 11), Largest)
+HANDLE_DISP_FLAG((1 << 12), Largest)
 #undef DISP_FLAG_LARGEST_NEEDED
 #endif
 

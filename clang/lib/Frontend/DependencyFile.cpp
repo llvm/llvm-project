@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualOutputBackends.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -103,6 +104,36 @@ struct DepCollectorMMCallbacks : public ModuleMapCallbacks {
                          bool IsSystem) override {
     StringRef Filename = Entry.getName();
     DepCollector.maybeAddDependency(Filename, /*FromModule*/ false,
+                                    /*IsSystem*/ IsSystem,
+                                    /*IsModuleFile*/ false,
+                                    /*IsMissing*/ false);
+  }
+};
+
+// FIXME: This should not be separate from upstream, but we haven't
+// upstreamed support for SkipUnusedModuleMaps.
+struct DFGMMCallback : public ModuleMapCallbacks {
+  DependencyCollector &DepCollector;
+  bool SkipUnusedModuleMaps;
+  DFGMMCallback(DependencyCollector &DC, bool SkipUnusedModuleMaps)
+      : DepCollector(DC), SkipUnusedModuleMaps(SkipUnusedModuleMaps) {}
+
+  void moduleMapFileRead(SourceLocation Loc, FileEntryRef Entry,
+                         bool IsSystem) override {
+    if (SkipUnusedModuleMaps)
+      return;
+    StringRef Filename = Entry.getName();
+    DepCollector.maybeAddDependency(Filename, /*FromModule*/ false,
+                                    /*IsSystem*/ IsSystem,
+                                    /*IsModuleFile*/ false,
+                                    /*IsMissing*/ false);
+  }
+
+  void moduleMapFoundForModule(FileEntryRef Entry, const Module *M,
+                               bool IsSystem) override {
+    if (!SkipUnusedModuleMaps)
+      return;
+    DepCollector.maybeAddDependency(Entry.getName(), /*FromModule*/ false,
                                     /*IsSystem*/ IsSystem,
                                     /*IsModuleFile*/ false,
                                     /*IsMissing*/ false);
@@ -192,13 +223,17 @@ void DependencyCollector::attachToASTReader(ASTReader &R) {
 }
 
 DependencyFileGenerator::DependencyFileGenerator(
-    const DependencyOutputOptions &Opts)
-    : OutputFile(Opts.OutputFile), Targets(Opts.Targets),
-      IncludeSystemHeaders(Opts.IncludeSystemHeaders),
+    const DependencyOutputOptions &Opts,
+    IntrusiveRefCntPtr<llvm::vfs::OutputBackend> OB)
+    : OutputBackend(std::move(OB)), OutputFile(Opts.OutputFile),
+      Targets(Opts.Targets), IncludeSystemHeaders(Opts.IncludeSystemHeaders),
       PhonyTarget(Opts.UsePhonyTargets),
       AddMissingHeaderDeps(Opts.AddMissingHeaderDeps), SeenMissingHeader(false),
       IncludeModuleFiles(Opts.IncludeModuleFiles),
+      SkipUnusedModuleMaps(Opts.SkipUnusedModuleMaps),
       OutputFormat(Opts.OutputFormat), InputFileIndex(0) {
+  if (!OutputBackend)
+    OutputBackend = llvm::makeIntrusiveRefCnt<llvm::vfs::OnDiskOutputBackend>();
   for (const auto &ExtraDep : Opts.ExtraDeps) {
     if (addDependency(ExtraDep.first))
       ++InputFileIndex;
@@ -210,7 +245,11 @@ void DependencyFileGenerator::attachToPreprocessor(Preprocessor &PP) {
   if (AddMissingHeaderDeps)
     PP.SetSuppressIncludeNotFoundError(true);
 
-  DependencyCollector::attachToPreprocessor(PP);
+  // FIXME: Restore the call to DependencyCollector::attachToPreprocessor(PP);
+  // once the SkipUnusedModuleMaps is upstreamed.
+  PP.addPPCallbacks(std::make_unique<DepCollectorPPCallbacks>(*this, PP));
+  PP.getHeaderSearchInfo().getModuleMap().addModuleMapCallbacks(
+      std::make_unique<DFGMMCallback>(*this, SkipUnusedModuleMaps));
 }
 
 bool DependencyFileGenerator::sawDependency(StringRef Filename, bool FromModule,
@@ -319,19 +358,33 @@ static void PrintFilename(raw_ostream &OS, StringRef Filename,
 }
 
 void DependencyFileGenerator::outputDependencyFile(DiagnosticsEngine &Diags) {
+  // The use of NoAtomicWrite and calling discard on SeenMissingHeader
+  // preserves the previous behaviour: no temporary files are used, and when
+  // SeenMissingHeader is true it deletes a previously-existing file.
+  // FIXME: switch to atomic-write based on FrontendOptions::UseTemporary and
+  // and not deleting the previous file, if possible.
+  Expected<llvm::vfs::OutputFile> O =
+      OutputBackend->createFile(OutputFile, llvm::vfs::OutputConfig()
+                                                .setTextWithCRLF()
+                                                .setNoAtomicWrite()
+                                                .setNoDiscardOnSignal());
+
+  if (!O) {
+    Diags.Report(diag::err_fe_error_opening)
+        << OutputFile << toString(O.takeError());
+    return;
+  }
+
   if (SeenMissingHeader) {
-    llvm::sys::fs::remove(OutputFile);
+    consumeError(O->discard());
     return;
   }
 
-  std::error_code EC;
-  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_TextWithCRLF);
-  if (EC) {
-    Diags.Report(diag::err_fe_error_opening) << OutputFile << EC.message();
-    return;
-  }
+  outputDependencyFile(O->getOS());
 
-  outputDependencyFile(OS);
+  if (auto Err = O->keep())
+    Diags.Report(diag::err_fe_error_writing)
+        << OutputFile << toString(std::move(Err));
 }
 
 void DependencyFileGenerator::outputDependencyFile(llvm::raw_ostream &OS) {

@@ -16,11 +16,16 @@ add_clang_subdirectory(clang-installapi)
 if(HAVE_CLANG_REPL_SUPPORT)
   add_clang_subdirectory(clang-repl)
 endif()
+add_clang_subdirectory(clang-cas-test)
 
 add_clang_subdirectory(c-index-test)
+add_clang_subdirectory(IndexStore)
 
 add_clang_subdirectory(clang-rename)
 add_clang_subdirectory(clang-refactor)
+
+add_clang_subdirectory(clang-refactor-test)
+
 # For MinGW we only enable shared library if LLVM_LINK_LLVM_DYLIB=ON.
 # Without that option resulting library is too close to 2^16 DLL exports limit.
 if(UNIX OR (MINGW AND LLVM_LINK_LLVM_DYLIB))
@@ -46,6 +51,9 @@ endif()
 # to keep the primary Clang repository small and focused.
 # It also may be included by LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR.
 add_llvm_external_project(clang-tools-extra extra)
+
+# add tapi.
+add_llvm_external_project(tapi)
 
 # libclang may require clang-tidy in clang-tools-extra.
 add_clang_subdirectory(libclang)

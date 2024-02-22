@@ -14,7 +14,7 @@ void f() {
   int x; // expected-warning {{unused variable}}
   typedef int I; // expected-warning {{unused typedef 'I'}}
   E1 e;
-  switch (e) { // expected-warning {{enumeration value 'UsedEnumVal' not handled in switch}}
+  switch (e) { // expected-warning {{enumeration value 'UsedEnumVal' not handled in switch}} expected-note {{add missing}}
   }
 
   // Should not warn about these due to not being used.

@@ -139,6 +139,7 @@ namespace llvm {
           NoTrappingFPMath(true), NoSignedZerosFPMath(false),
           ApproxFuncFPMath(false), EnableAIXExtendedAltivecABI(false),
           HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
+          UseCASBackend(false), // MCCAS
           GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
           EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
           DisableIntegratedAS(false), RelaxELFRelocations(true),
@@ -221,6 +222,11 @@ namespace llvm {
     /// .bss section. This flag disables such behaviour (necessary, e.g. for
     /// crt*.o compiling).
     unsigned NoZerosInBSS : 1;
+
+    // BEGIN MCCAS
+    /// UseCASObject - Use CAS based object format as the output.
+    unsigned UseCASBackend : 1;
+    // END MCCAS
 
     /// GuaranteedTailCallOpt - This flag is enabled when -tailcallopt is
     /// specified on the commandline. When the flag is on, participating targets

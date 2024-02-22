@@ -1,0 +1,21 @@
+# REQUIRES: swift
+# RUN: rm -rf %t && mkdir %t
+# RUN: %target-swiftc -g \
+# RUN:          -module-cache-path %t/cache %S/Inputs/RuntimeInit.swift \
+# RUN:          -module-name a -o %t/a.out
+# RUN: %lldb %t/a.out -s %s | FileCheck %s
+
+# When SwiftLanguageRuntime initializes the global flag it uses to
+# communicate the Swift ABI version to the Swift runtime library
+# before it loaded the Objective-C module (as triggered by setting the
+# exception breakpoint) the flag would be wrong and dynamic type
+# resolution doesn't work.
+
+b -p here
+br set -E swift
+r
+target var p2
+# CHECK: (a.C) p2
+# CHECK-SAME: (p = 42)
+q
+

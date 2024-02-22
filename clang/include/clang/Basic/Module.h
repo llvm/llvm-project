@@ -121,6 +121,10 @@ public:
     /// This is a C++20 header unit.
     ModuleHeaderUnit,
 
+    /// This is a module that was defined by a module map and built out
+    /// of header files as part of an \c IncludeTree.
+    IncludeTreeModuleMap,
+
     /// This is a C++20 module interface unit.
     ModuleInterfaceUnit,
 
@@ -209,7 +213,9 @@ public:
 
   bool isPrivateModule() const { return Kind == PrivateModuleFragment; }
 
-  bool isModuleMapModule() const { return Kind == ModuleMapModule; }
+  bool isModuleMapModule() const {
+    return Kind == ModuleMapModule || Kind == IncludeTreeModuleMap;
+  }
 
 private:
   /// The submodules of this module, indexed by name.
@@ -222,6 +228,9 @@ private:
   /// The AST file if this is a top-level module which has a
   /// corresponding serialized AST file, or null otherwise.
   OptionalFileEntryRef ASTFile;
+
+  /// The \c ActionCache key for this module, if any.
+  std::optional<std::string> ModuleCacheKey;
 
   /// The top-level headers associated with this module.
   llvm::SmallSetVector<FileEntryRef, 2> TopHeaders;
@@ -375,6 +384,9 @@ public:
   /// to a regular (public) module map.
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModuleMapIsPrivate : 1;
+
+  /// \brief Whether this is a module who has its swift_names inferred.
+  unsigned IsSwiftInferImportAsMember : 1;
 
   /// Whether this C++20 named modules doesn't need an initializer.
   /// This is only meaningful for C++20 modules.
@@ -680,6 +692,15 @@ public:
   void setASTFile(OptionalFileEntryRef File) {
     assert((!getASTFile() || getASTFile() == File) && "file path changed");
     getTopLevelModule()->ASTFile = File;
+  }
+
+  std::optional<std::string> getModuleCacheKey() const {
+    return getTopLevelModule()->ModuleCacheKey;
+  }
+
+  void setModuleCacheKey(std::string Key) {
+    assert(!getModuleCacheKey() || *getModuleCacheKey() == Key);
+    getTopLevelModule()->ModuleCacheKey = std::move(Key);
   }
 
   /// Retrieve the umbrella directory as written.

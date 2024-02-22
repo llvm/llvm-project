@@ -23,6 +23,7 @@ const char *Action::getClassName(ActionClass AC) {
   case BindArchClass: return "bind-arch";
   case OffloadClass:
     return "offload";
+  case DepscanJobClass: return "depscan";
   case PreprocessJobClass: return "preprocessor";
   case PrecompileJobClass: return "precompiler";
   case ExtractAPIJobClass:
@@ -340,6 +341,11 @@ JobAction::JobAction(ActionClass Kind, Action *Input, types::ID Type)
 
 JobAction::JobAction(ActionClass Kind, const ActionList &Inputs, types::ID Type)
     : Action(Kind, Inputs, Type) {}
+
+void DepscanJobAction::anchor() {}
+
+DepscanJobAction::DepscanJobAction(Action *Input, types::ID OutputType)
+    : JobAction(DepscanJobClass, Input, OutputType), JA(this) {}
 
 void PreprocessJobAction::anchor() {}
 

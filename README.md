@@ -1,3 +1,11 @@
+# Apple's fork of llvm-project
+
+This is Apple's fork of llvm-project.  For more information on Apple's
+branching scheme, please see
+[apple-docs/AppleBranchingScheme.md](https://github.com/apple/llvm-project/tree/apple/main/apple-docs/AppleBranchingScheme.md).
+
+The LLVM project's main README follows.
+
 # The LLVM Compiler Infrastructure
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)

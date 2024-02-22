@@ -13,6 +13,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
@@ -26,6 +27,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/Basic/Visibility.h"
 #include "clang/Basic/XRayInstr.h"
+#include "clang/CAS/IncludeTree.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -56,6 +58,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/CAS/CASFileSystem.h"
+#include "llvm/CAS/ObjectStore.h"
+#include "llvm/CAS/TreeSchema.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -145,6 +150,7 @@ CompilerInvocationBase::CompilerInvocationBase()
       AnalyzerOpts(llvm::makeIntrusiveRefCnt<AnalyzerOptions>()),
       MigratorOpts(std::make_shared<MigratorOptions>()),
       APINotesOpts(std::make_shared<APINotesOptions>()),
+      CASOpts(std::make_shared<CASOptions>()),
       CodeGenOpts(std::make_shared<CodeGenOptions>()),
       FSOpts(std::make_shared<FileSystemOptions>()),
       FrontendOpts(std::make_shared<FrontendOptions>()),
@@ -162,6 +168,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
     AnalyzerOpts = makeIntrusiveRefCntCopy(X.getAnalyzerOpts());
     MigratorOpts = make_shared_copy(X.getMigratorOpts());
     APINotesOpts = make_shared_copy(X.getAPINotesOpts());
+    CASOpts = make_shared_copy(X.getCASOpts());
     CodeGenOpts = make_shared_copy(X.getCodeGenOpts());
     FSOpts = make_shared_copy(X.getFileSystemOpts());
     FrontendOpts = make_shared_copy(X.getFrontendOpts());
@@ -182,12 +189,24 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
     AnalyzerOpts = X.AnalyzerOpts;
     MigratorOpts = X.MigratorOpts;
     APINotesOpts = X.APINotesOpts;
+    CASOpts = X.CASOpts;
     CodeGenOpts = X.CodeGenOpts;
     FSOpts = X.FSOpts;
     FrontendOpts = X.FrontendOpts;
     DependencyOutputOpts = X.DependencyOutputOpts;
     PreprocessorOutputOpts = X.PreprocessorOutputOpts;
   }
+  return *this;
+}
+
+CompilerInvocation::CompilerInvocation(const CowCompilerInvocation &X)
+    : CompilerInvocationBase(EmptyConstructor{}) {
+  CompilerInvocationBase::deep_copy_assign(X);
+}
+
+CompilerInvocation &
+CompilerInvocation::operator=(const CowCompilerInvocation &X) {
+  CompilerInvocationBase::deep_copy_assign(X);
   return *this;
 }
 
@@ -237,6 +256,10 @@ MigratorOptions &CowCompilerInvocation::getMutMigratorOpts() {
 
 APINotesOptions &CowCompilerInvocation::getMutAPINotesOpts() {
   return ensureOwned(APINotesOpts);
+}
+
+CASOptions &CowCompilerInvocation::getMutCASOpts() {
+  return ensureOwned(CASOpts);
 }
 
 CodeGenOptions &CowCompilerInvocation::getMutCodeGenOpts() {
@@ -492,6 +515,30 @@ static void denormalizeStringVector(ArgumentConsumer Consumer,
   }
 }
 
+using StringPair = std::pair<std::string, std::string>;
+
+static std::optional<std::vector<std::pair<std::string, std::string>>>
+normalizeStringPairVector(OptSpecifier Opt, int, const ArgList &Args,
+                          DiagnosticsEngine &) {
+  std::vector<std::pair<std::string, std::string>> Pairs;
+  for (StringRef Arg : Args.getAllArgValues(Opt)) {
+    auto [L, R] = Arg.split('=');
+    Pairs.emplace_back(std::string(L), std::string(R));
+  }
+  return Pairs;
+}
+
+static void denormalizeStringPairVector(
+    ArgumentConsumer Consumer, const Twine &Spelling,
+    Option::OptionClass OptClass, unsigned TableIndex,
+    const std::vector<std::pair<std::string, std::string>> &Values) {
+  std::vector<std::string> Joined;
+  for (const auto &Pair : Values) {
+    Joined.push_back(Pair.first + "=" + Pair.second);
+  }
+  denormalizeStringVector(Consumer, Spelling, OptClass, TableIndex, Joined);
+}
+
 static std::optional<std::string> normalizeTriple(OptSpecifier Opt,
                                                   int TableIndex,
                                                   const ArgList &Args,
@@ -725,6 +772,17 @@ static void GenerateArg(ArgumentConsumer Consumer,
                         const Twine &Value) {
   Option Opt = getDriverOptTable().getOption(OptSpecifier);
   denormalizeString(Consumer, Opt.getPrefixedName(), Opt.getKind(), 0, Value);
+}
+
+static void GenerateMultiArg(ArgumentConsumer Consumer,
+                             llvm::opt::OptSpecifier OptSpecifier,
+                             ArrayRef<StringRef> Values) {
+  Option Opt = getDriverOptTable().getOption(OptSpecifier);
+  assert(Opt.getKind() == Option::MultiArgClass);
+  assert(Opt.getNumArgs() == Values.size());
+  Consumer(Opt.getPrefix() + Opt.getName());
+  for (StringRef Value : Values)
+    Consumer(Value);
 }
 
 // Parse command line arguments into CompilerInvocation.
@@ -1419,6 +1477,99 @@ static std::string serializeXRayInstrumentationBundle(const XRayInstrSet &S) {
   return Buffer;
 }
 
+static IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
+             const CASOptions &CASOpts, DiagnosticsEngine &Diags,
+             std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS) {
+  if (FSOpts.CASFileSystemRootID.empty() && FEOpts.CASIncludeTreeID.empty())
+    return llvm::vfs::getRealFileSystem();
+
+  // If no CAS was provided, create one with CASOptions.
+  std::shared_ptr<llvm::cas::ObjectStore> CAS = std::move(OverrideCAS);
+  if (!CAS)
+    CAS = CASOpts.getOrCreateDatabases(Diags).first;
+
+  // Helper for creating a valid (but empty) CASFS if an error is encountered.
+  auto makeEmptyCASFS = [&CAS]() {
+    // Try to use the configured CAS, if any.
+    std::optional<llvm::cas::CASID> EmptyRootID;
+    if (CAS) {
+      llvm::cas::TreeSchema Schema(*CAS);
+      // If we cannot create an empty tree, fall back to creating an empty
+      // in-memory CAS.
+      if (llvm::Error E = Schema.create(std::nullopt).moveInto(EmptyRootID)) {
+        consumeError(std::move(E));
+        CAS = nullptr;
+      }
+    }
+    // Create an empty in-memory CAS with an empty tree.
+    if (!CAS) {
+      CAS = llvm::cas::createInMemoryCAS();
+      llvm::cas::TreeSchema Schema(*CAS);
+      EmptyRootID = llvm::cantFail(Schema.create(std::nullopt));
+    }
+    return llvm::cantFail(
+        llvm::cas::createCASFileSystem(std::move(CAS), *EmptyRootID));
+  };
+
+  // CAS couldn't be created. The error was already reported to Diags.
+  if (!CAS)
+    return makeEmptyCASFS();
+
+  auto IsIncludeTreeFS = !FEOpts.CASIncludeTreeID.empty();
+
+  StringRef RootIDString =
+      IsIncludeTreeFS ? FEOpts.CASIncludeTreeID : FSOpts.CASFileSystemRootID;
+
+  Expected<llvm::cas::CASID> RootID = CAS->parseID(RootIDString);
+  if (!RootID) {
+    llvm::consumeError(RootID.takeError());
+    Diags.Report(diag::err_cas_cannot_parse_root_id) << RootIDString;
+    return makeEmptyCASFS();
+  }
+
+  auto makeIncludeTreeFS = [&](std::shared_ptr<llvm::cas::ObjectStore> CAS,
+                               llvm::cas::CASID &ID)
+      -> Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>> {
+    std::optional<llvm::cas::ObjectRef> Ref = CAS->getReference(ID);
+    if (!Ref)
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "RootID does not exist");
+    auto Root = cas::IncludeTreeRoot::get(*CAS, *Ref);
+    if (!Root)
+      return Root.takeError();
+    return cas::createIncludeTreeFileSystem(*Root);
+  };
+  auto makeCASFS = [&](std::shared_ptr<llvm::cas::ObjectStore> CAS,
+                       llvm::cas::CASID &ID)
+      -> Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>> {
+    Expected<std::unique_ptr<llvm::vfs::FileSystem>> ExpectedFS =
+        llvm::cas::createCASFileSystem(std::move(CAS), ID);
+    if (!ExpectedFS)
+      return ExpectedFS.takeError();
+    return std::move(*ExpectedFS);
+  };
+
+  auto ExpectedFS = IsIncludeTreeFS ? makeIncludeTreeFS(std::move(CAS), *RootID)
+                                    : makeCASFS(std::move(CAS), *RootID);
+  if (!ExpectedFS) {
+    llvm::consumeError(ExpectedFS.takeError());
+    Diags.Report(diag::err_cas_filesystem_cannot_be_initialized)
+        << RootIDString;
+    return makeEmptyCASFS();
+  }
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = std::move(*ExpectedFS);
+
+  // Try to change directories.
+  StringRef CWD = FSOpts.CASFileSystemWorkingDirectory;
+  if (!CWD.empty())
+    if (std::error_code EC = FS->setCurrentWorkingDirectory(CWD))
+      Diags.Report(diag::err_cas_filesystem_cannot_set_working_directory)
+          << CWD;
+
+  return FS;
+}
+
 // Set the profile kind using fprofile-instrument-use-path.
 static void setPGOUseInstrumentor(CodeGenOptions &Opts,
                                   const Twine &ProfileName,
@@ -1445,6 +1596,91 @@ static void setPGOUseInstrumentor(CodeGenOptions &Opts,
       Opts.setProfileUse(CodeGenOptions::ProfileIRInstr);
   } else
     Opts.setProfileUse(CodeGenOptions::ProfileClangInstr);
+}
+
+static bool parsePointerAuthOptions(PointerAuthOptions &Opts,
+                                    ArgList &Args,
+                                    const LangOptions &LangOpts,
+                                    const llvm::Triple &Triple,
+                                    DiagnosticsEngine &Diags) {
+  if (!LangOpts.PointerAuthCalls && !LangOpts.PointerAuthReturns &&
+      !LangOpts.PointerAuthIndirectGotos && !LangOpts.PointerAuthAuthTraps)
+    return true;
+
+  if (LangOpts.SoftPointerAuth) {
+    if (LangOpts.PointerAuthCalls) {
+      using Key = PointerAuthSchema::SoftKey;
+      using Discrimination = PointerAuthSchema::Discrimination;
+      Opts.FunctionPointers =
+        PointerAuthSchema(Key::FunctionPointers, false, Discrimination::None);
+      Opts.BlockInvocationFunctionPointers =
+        PointerAuthSchema(Key::BlockInvocationFunctionPointers, true,
+                          Discrimination::None);
+      Opts.BlockHelperFunctionPointers =
+        PointerAuthSchema(Key::BlockHelperFunctionPointers, true,
+                          Discrimination::None);
+      Opts.BlockByrefHelperFunctionPointers =
+        PointerAuthSchema(Key::BlockHelperFunctionPointers, true,
+                          Discrimination::None);
+      Opts.ObjCMethodListFunctionPointers =
+        PointerAuthSchema(Key::ObjCMethodListFunctionPointers, true,
+                          Discrimination::None);
+      Opts.CXXVTablePointers =
+      Opts.CXXVTTVTablePointers =
+        PointerAuthSchema(Key::CXXVTablePointers, false,
+                          Discrimination::None);
+      Opts.CXXVirtualFunctionPointers =
+      Opts.CXXVirtualVariadicFunctionPointers =
+        PointerAuthSchema(Key::CXXVirtualFunctionPointers, true,
+                          Discrimination::Decl);
+      Opts.CXXMemberFunctionPointers =
+        PointerAuthSchema(Key::CXXMemberFunctionPointers, false,
+                          Discrimination::Type);
+      Opts.ThunkCXXVirtualMemberPointers = false;
+    }
+
+    Opts.ReturnAddresses = LangOpts.PointerAuthReturns;
+    Opts.IndirectGotos = LangOpts.PointerAuthIndirectGotos;
+    Opts.AuthTraps = LangOpts.PointerAuthAuthTraps;
+    return true;
+  }
+
+  if (Triple.getArch() == llvm::Triple::aarch64) {
+    if (LangOpts.PointerAuthCalls) {
+      using Key = PointerAuthSchema::ARM8_3Key;
+      using Discrimination = PointerAuthSchema::Discrimination;
+      // If you change anything here, be sure to update <ptrauth.h>.
+      Opts.FunctionPointers =
+        PointerAuthSchema(Key::ASIA, false, Discrimination::None);
+      Opts.BlockInvocationFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+      Opts.BlockHelperFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+      Opts.BlockByrefHelperFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+      Opts.ObjCMethodListFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+      Opts.CXXVTablePointers =
+        PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+      Opts.CXXVTTVTablePointers =
+        PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+      Opts.CXXVirtualFunctionPointers =
+      Opts.CXXVirtualVariadicFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::Decl);
+      Opts.CXXMemberFunctionPointers =
+        PointerAuthSchema(Key::ASIA, false, Discrimination::Type);
+      Opts.ThunkCXXVirtualMemberPointers = false;
+    }
+
+    Opts.ReturnAddresses = LangOpts.PointerAuthReturns;
+    Opts.IndirectGotos = LangOpts.PointerAuthIndirectGotos;
+    Opts.AuthTraps = LangOpts.PointerAuthAuthTraps;
+    return true;
+  }
+
+  Diags.Report(diag::err_drv_ptrauth_not_supported)
+    << Triple.str();
+  return false;
 }
 
 void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
@@ -1678,6 +1914,10 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
 
+  if (!Opts.SplitColdCode && (Opts.OptimizationLevel > 0) &&
+      (Opts.OptimizeSize != 2))
+    GenerateArg(Consumer, OPT_fno_split_cold_code);
+
   switch (Opts.FiniteLoops) {
   case CodeGenOptions::FiniteLoopsKind::Language:
     break;
@@ -1695,7 +1935,10 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                                           DiagnosticsEngine &Diags,
                                           const llvm::Triple &T,
                                           const std::string &OutputFile,
-                                          const LangOptions &LangOptsRef) {
+                                          const LangOptions &LangOptsRef,
+                                          const FileSystemOptions &FSOpts,
+                                          const FrontendOptions &FEOpts,
+                                          const CASOptions &CASOpts) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
   unsigned OptimizationLevel = getOptimizationLevel(Args, IK, Diags);
@@ -1831,6 +2074,11 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         StringRef(A->getValue()) == "simple"
             ? llvm::codegenoptions::DebugTemplateNamesKind::Simple
             : llvm::codegenoptions::DebugTemplateNamesKind::Mangled);
+  }
+
+  if (!Opts.ProfileInstrumentUsePath.empty()) {
+    auto FS = createBaseFS(FSOpts, FEOpts, CASOpts, Diags, nullptr);
+    setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath, *FS, Diags);
   }
 
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
@@ -2145,6 +2393,17 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
+  parsePointerAuthOptions(Opts.PointerAuth, Args, LangOptsRef, T, Diags);
+
+  // -f[no-]split-cold-code
+  // This may only be enabled when optimizing, and when small code size
+  // increases are tolerable.
+  //
+  // swift-clang: Enable hot/cold splitting by default.
+  Opts.SplitColdCode =
+      (Opts.OptimizationLevel > 0) && (Opts.OptimizeSize != 2) &&
+      Args.hasFlag(OPT_fsplit_cold_code, OPT_fno_split_cold_code, true);
+
   if (Args.hasArg(options::OPT_ffinite_loops))
     Opts.FiniteLoops = CodeGenOptions::FiniteLoopsKind::Always;
   else if (Args.hasArg(options::OPT_fno_finite_loops))
@@ -2305,6 +2564,29 @@ static bool checkVerifyPrefixes(const std::vector<std::string> &VerifyPrefixes,
       Diags.Report(diag::note_drv_verify_prefix_spelling);
     }
   }
+  return Success;
+}
+
+void CompilerInvocationBase::GenerateCASArgs(const CASOptions &Opts,
+                                             ArgumentConsumer Consumer) {
+  const CASOptions &CASOpts = Opts;
+
+#define CAS_OPTION_WITH_MARSHALLING(...)                                       \
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
+#include "clang/Driver/Options.inc"
+#undef CAS_OPTION_WITH_MARSHALLING
+}
+
+bool CompilerInvocation::ParseCASArgs(CASOptions &Opts, const ArgList &Args,
+                                      DiagnosticsEngine &Diags) {
+  CASOptions &CASOpts = Opts;
+  bool Success = true;
+
+#define CAS_OPTION_WITH_MARSHALLING(...)                                       \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
+#include "clang/Driver/Options.inc"
+#undef CAS_OPTION_WITH_MARSHALLING
+
   return Success;
 }
 
@@ -2681,6 +2963,8 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
 
   for (const auto &ModuleFile : Opts.ModuleFiles)
     GenerateArg(Consumer, OPT_fmodule_file, ModuleFile);
+  for (const auto &A : Opts.ModuleCacheKeys)
+    GenerateMultiArg(Consumer, OPT_fmodule_file_cache_key, {A.first, A.second});
 
   if (Opts.AuxTargetCPU)
     GenerateArg(Consumer, OPT_aux_target_cpu, *Opts.AuxTargetCPU);
@@ -2760,11 +3044,57 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
 
   // OPT_INPUT has a unique class, generate it directly.
   for (const auto &Input : Opts.Inputs)
-    Consumer(Input.getFile());
+    if (!Input.isIncludeTree())
+      Consumer(Input.getFile());
+}
+
+static void determineInputFromIncludeTree(
+    StringRef IncludeTreeID, CASOptions &CASOpts, DiagnosticsEngine &Diags,
+    std::optional<cas::IncludeTreeRoot> &IncludeTree,
+    std::optional<llvm::MemoryBufferRef> &Buffer, StringRef &InputFilename) {
+  assert(!IncludeTreeID.empty());
+  auto reportError = [&](llvm::Error &&E) {
+    Diags.Report(diag::err_fe_unable_to_load_include_tree)
+        << IncludeTreeID << llvm::toString(std::move(E));
+  };
+  auto CAS = CASOpts.getOrCreateDatabases(Diags).first;
+  if (!CAS)
+    return;
+  auto ID = CAS->parseID(IncludeTreeID);
+  if (!ID)
+    return reportError(ID.takeError());
+  auto Object = CAS->getReference(*ID);
+  if (!Object)
+    return reportError(llvm::cas::ObjectStore::createUnknownObjectError(*ID));
+  auto Root = cas::IncludeTreeRoot::get(*CAS, *Object);
+  if (!Root)
+    return reportError(Root.takeError());
+  auto MainTree = Root->getMainFileTree();
+  if (!MainTree)
+    return reportError(MainTree.takeError());
+  auto BaseFile = MainTree->getBaseFile();
+  if (!BaseFile)
+    return reportError(BaseFile.takeError());
+  auto FilenameBlob = BaseFile->getFilename();
+  if (!FilenameBlob)
+    return reportError(FilenameBlob.takeError());
+
+  InputFilename = FilenameBlob->getData();
+  IncludeTree = *Root;
+
+  if (InputFilename != Module::getModuleInputBufferName())
+    return;
+
+  // Handle <module-include> buffer
+  auto Contents = BaseFile->getContents();
+  if (!Contents)
+    return reportError(Contents.takeError());
+  Buffer = llvm::MemoryBufferRef(Contents->getData(), InputFilename);
 }
 
 static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
-                              DiagnosticsEngine &Diags, bool &IsHeaderFile) {
+                              CASOptions &CASOpts, DiagnosticsEngine &Diags,
+                              bool &IsHeaderFile) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
   FrontendOptions &FrontendOpts = Opts;
@@ -2874,6 +3204,11 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     if (!Val.contains('='))
       Opts.ModuleFiles.push_back(std::string(Val));
   }
+  for (const Arg *A : Args.filtered(OPT_fmodule_file_cache_key)) {
+    ArrayRef<const char *> Values = A->getValues();
+    assert(Values.size() == 2);
+    Opts.ModuleCacheKeys.emplace_back(Values[0], Values[1]);
+  }
 
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
     Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
@@ -2974,6 +3309,20 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   // '-' is the default input if none is given.
   std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
   Opts.Inputs.clear();
+
+  std::optional<cas::IncludeTreeRoot> Tree;
+  std::optional<llvm::MemoryBufferRef> TreeInputBuffer;
+  if (!Opts.CASIncludeTreeID.empty()) {
+    if (!Inputs.empty()) {
+      Diags.Report(diag::err_drv_inputs_and_include_tree);
+    }
+    StringRef InputFilename;
+    determineInputFromIncludeTree(Opts.CASIncludeTreeID, CASOpts, Diags, Tree,
+                                  TreeInputBuffer, InputFilename);
+    if (!InputFilename.empty())
+      Inputs.push_back(InputFilename.str());
+  }
+
   if (Inputs.empty())
     Inputs.push_back("-");
 
@@ -3004,6 +3353,20 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     }
 
     Opts.Inputs.emplace_back(std::move(Inputs[i]), IK, IsSystem);
+  }
+
+  if (Tree) {
+    FrontendInputFile &InputFile = Opts.Inputs.back();
+    if (TreeInputBuffer) {
+      // This is automatically set to modulemap when building a module; revert
+      // to a source file for the module includes buffer.
+      auto Kind = InputFile.getKind().withFormat(InputKind::Source);
+      InputFile = FrontendInputFile(Tree->getRef(), *TreeInputBuffer, Kind,
+                                    InputFile.isSystem());
+    } else {
+      InputFile = FrontendInputFile(Tree->getRef(), InputFile.getFile(),
+                                    InputFile.getKind(), InputFile.isSystem());
+    }
   }
 
   Opts.DashX = DashX;
@@ -3286,6 +3649,51 @@ static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
   }
   for (const Arg *A : Args.filtered(OPT_iapinotes_modules))
     Opts.ModuleSearchPaths.push_back(A->getValue());
+
+  if (Args.hasFlag(OPT_fapinotes, OPT_fno_apinotes, false) &&
+      Args.hasArg(OPT_fcas_include_tree))
+    diags.Report(diag::err_drv_incompatible_option_include_tree)
+        << "-fapinotes";
+}
+
+static void GeneratePointerAuthArgs(const LangOptions &Opts,
+                                    ArgumentConsumer Consumer) {
+  if (Opts.PointerAuthIntrinsics)
+    GenerateArg(Consumer, OPT_fptrauth_intrinsics);
+  if (Opts.PointerAuthCalls)
+    GenerateArg(Consumer, OPT_fptrauth_calls);
+  if (Opts.PointerAuthReturns)
+    GenerateArg(Consumer, OPT_fptrauth_returns);
+  if (Opts.PointerAuthIndirectGotos)
+    GenerateArg(Consumer, OPT_fptrauth_indirect_gotos);
+  if (Opts.PointerAuthAuthTraps)
+    GenerateArg(Consumer, OPT_fptrauth_auth_traps);
+  if (Opts.SoftPointerAuth)
+    GenerateArg(Consumer, OPT_fptrauth_soft);
+
+  if (Opts.PointerAuthABIVersionEncoded) {
+    GenerateArg(Consumer, OPT_fptrauth_abi_version_EQ,
+                Twine(Opts.PointerAuthABIVersion));
+    if (Opts.PointerAuthKernelABIVersion)
+      GenerateArg(Consumer, OPT_fptrauth_kernel_abi_version);
+  }
+}
+
+static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
+                                 DiagnosticsEngine &Diags) {
+  Opts.PointerAuthIntrinsics = Args.hasArg(OPT_fptrauth_intrinsics);
+  Opts.PointerAuthCalls = Args.hasArg(OPT_fptrauth_calls);
+  Opts.PointerAuthReturns = Args.hasArg(OPT_fptrauth_returns);
+  Opts.PointerAuthIndirectGotos = Args.hasArg(OPT_fptrauth_indirect_gotos);
+  Opts.PointerAuthAuthTraps = Args.hasArg(OPT_fptrauth_auth_traps);
+  Opts.SoftPointerAuth = Args.hasArg(OPT_fptrauth_soft);
+
+  Opts.PointerAuthABIVersionEncoded =
+      Args.hasArg(OPT_fptrauth_abi_version_EQ) ||
+      Args.hasArg(OPT_fptrauth_kernel_abi_version);
+  Opts.PointerAuthABIVersion =
+      getLastArgIntValue(Args, OPT_fptrauth_abi_version_EQ, 0, Diags);
+  Opts.PointerAuthKernelABIVersion = Args.hasArg(OPT_fptrauth_kernel_abi_version);
 }
 
 /// Check if input file kind and language standard are compatible.
@@ -3417,6 +3825,9 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef LANG_OPTION_WITH_MARSHALLING
+
+  if (Opts.NeededByPCHOrCompilationUsesPCH)
+    GenerateArg(Consumer, OPT_fmodule_related_to_pch);
 
   // The '-fcf-protection=' option is generated by CodeGenOpts generator.
 
@@ -3759,6 +4170,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 #include "clang/Driver/Options.inc"
 #undef LANG_OPTION_WITH_MARSHALLING
 
+  if (Args.hasArg(OPT_fmodule_related_to_pch))
+    Opts.NeededByPCHOrCompilationUsesPCH = true;
+
   if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
     StringRef Name = A->getValue();
     if (Name == "full" || Name == "branch") {
@@ -3822,6 +4236,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.ObjCSubscriptingLegacyRuntime =
         (Opts.ObjCRuntime.getKind() == ObjCRuntime::FragileMacOSX);
   }
+
+  if (Opts.CPlusPlusModules && !Opts.ModulesLocalVisibility)
+    Diags.Report(diag::err_modules_no_lsv);
 
   if (Arg *A = Args.getLastArg(options::OPT_fgnuc_version_EQ)) {
     // Check that the version has 1 to 3 components and the minor and patch
@@ -4592,12 +5009,14 @@ bool CompilerInvocation::CreateFromArgsImpl(
           << ArgString << Nearest;
   }
 
+  ParseCASArgs(Res.getCASOpts(), Args, Diags);
   ParseFileSystemArgs(Res.getFileSystemOpts(), Args, Diags);
   ParseMigratorArgs(Res.getMigratorOpts(), Args, Diags);
   ParseAnalyzerArgs(Res.getAnalyzerOpts(), Args, Diags);
   ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                       /*DefaultDiagColor=*/false);
-  ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags, LangOpts.IsHeaderFile);
+  ParseFrontendArgs(Res.getFrontendOpts(), Args, Res.getCASOpts(), Diags,
+                    LangOpts.IsHeaderFile);
   // FIXME: We shouldn't have to pass the DashX option around here
   InputKind DashX = Res.getFrontendOpts().DashX;
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
@@ -4605,6 +5024,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
+  ParsePointerAuthArgs(LangOpts, Args, Diags);
 
   ParseLangArgs(LangOpts, Args, DashX, T, Res.getPreprocessorOpts().Includes,
                 Diags);
@@ -4630,7 +5050,20 @@ bool CompilerInvocation::CreateFromArgsImpl(
     Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
 
   ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags, T,
-                   Res.getFrontendOpts().OutputFile, LangOpts);
+                   Res.getFrontendOpts().OutputFile, LangOpts,
+                   Res.getFileSystemOpts(), Res.getFrontendOpts(),
+                   Res.getCASOpts());
+
+  // BEGIN MCCAS
+  if (!Res.getFrontendOpts().CompilationCachingServicePath.empty())
+    if (Res.getCodeGenOpts().UseCASBackend)
+      Diags.Report(diag::err_fe_incompatible_option_with_remote_cache)
+          << "-fcas-backend";
+  if (Res.getFrontendOpts().WriteOutputAsCASID) {
+    Diags.Report(diag::err_fe_incompatible_option_with_remote_cache)
+        << "-fcasid-output";
+  }
+  // END MCCAS
 
   // FIXME: Override value name discarding when asan or msan is used because the
   // backend passes depend on the name of the alloca in order to print out
@@ -4654,6 +5087,10 @@ bool CompilerInvocation::CreateFromArgsImpl(
       Res.getDependencyOutputOpts().Targets.empty())
     Diags.Report(diag::err_fe_dependency_file_requires_MT);
 
+  if (!Res.getPreprocessorOpts().ImplicitPCHInclude.empty() ||
+      Res.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
+    LangOpts.NeededByPCHOrCompilationUsesPCH = true;
+
   // If sanitizer is enabled, disable OPT_ffine_grained_bitfield_accesses.
   if (Res.getCodeGenOpts().FineGrainedBitfieldAccesses &&
       !Res.getLangOpts().Sanitize.empty()) {
@@ -4665,17 +5102,6 @@ bool CompilerInvocation::CreateFromArgsImpl(
   if (Res.getCodeGenOpts().CodeViewCommandLine) {
     Res.getCodeGenOpts().Argv0 = Argv0;
     append_range(Res.getCodeGenOpts().CommandLineArgs, CommandLineArgs);
-  }
-
-  // Set PGOOptions. Need to create a temporary VFS to read the profile
-  // to determine the PGO type.
-  if (!Res.getCodeGenOpts().ProfileInstrumentUsePath.empty()) {
-    auto FS =
-        createVFSFromOverlayFiles(Res.getHeaderSearchOpts().VFSOverlayFiles,
-                                  Diags, llvm::vfs::getRealFileSystem());
-    setPGOUseInstrumentor(Res.getCodeGenOpts(),
-                          Res.getCodeGenOpts().ProfileInstrumentUsePath, *FS,
-                          Diags);
   }
 
   FixupInvocation(Res, Diags, Args, DashX);
@@ -4702,7 +5128,16 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Invocation,
       Invocation, DummyInvocation, CommandLineArgs, Diags, Argv0);
 }
 
-std::string CompilerInvocation::getModuleHash() const {
+// Some extension diagnostics aren't explicitly mapped and require custom
+// logic in the dianognostic engine to be used, track -pedantic-errors
+static bool isExtHandlingFromDiagsError(DiagnosticsEngine &Diags) {
+  diag::Severity Ext = Diags.getExtensionHandlingBehavior();
+  if (Ext == diag::Severity::Warning && Diags.getWarningsAsErrors())
+    return true;
+  return Ext >= diag::Severity::Error;
+}
+
+std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
   // FIXME: Consider using SHA1 instead of MD5.
   llvm::HashBuilder<llvm::MD5, llvm::endianness::native> HBuilder;
 
@@ -4817,6 +5252,28 @@ std::string CompilerInvocation::getModuleHash() const {
   if (!SanHash.empty())
     HBuilder.add(SanHash.Mask);
 
+  // Check for a couple things (see checkDiagnosticMappings in ASTReader.cpp):
+  //  -Werror: consider all warnings into the hash
+  //  -Werror=something: consider only the specified into the hash
+  //  -pedantic-error
+  if (getLangOpts().ModulesHashErrorDiags) {
+    bool ConsiderAllWarningsAsErrors = Diags.getWarningsAsErrors();
+    HBuilder.add(isExtHandlingFromDiagsError(Diags));
+    for (auto DiagIDMappingPair : Diags.getDiagnosticMappings()) {
+      diag::kind DiagID = DiagIDMappingPair.first;
+      auto CurLevel = Diags.getDiagnosticLevel(DiagID, SourceLocation());
+      if (CurLevel < DiagnosticsEngine::Error && !ConsiderAllWarningsAsErrors)
+        continue; // not significant
+      HBuilder.add(
+          Diags.getDiagnosticIDs()->getWarningOptionForDiag(DiagID).str());
+    }
+  }
+
+  // Caching + implicit modules, which is only set in clang-scan-deps, puts
+  // additional CASIDs in the pcm for either cas-fs or include-tree.
+  HBuilder.add(getFrontendOpts().CacheCompileJob,
+               getFrontendOpts().ForIncludeTreeScan);
+
   llvm::MD5::MD5Result Result;
   HBuilder.getHasher().final(Result);
   uint64_t Hash = Result.high() ^ Result.low();
@@ -4827,6 +5284,7 @@ void CompilerInvocationBase::generateCC1CommandLine(
     ArgumentConsumer Consumer) const {
   llvm::Triple T(getTargetOpts().Triple);
 
+  GenerateCASArgs(getCASOpts(), Consumer);
   GenerateFileSystemArgs(getFileSystemOpts(), Consumer);
   GenerateMigratorArgs(getMigratorOpts(), Consumer);
   GenerateAnalyzerArgs(getAnalyzerOpts(), Consumer);
@@ -4836,6 +5294,7 @@ void CompilerInvocationBase::generateCC1CommandLine(
   GenerateTargetArgs(getTargetOpts(), Consumer);
   GenerateHeaderSearchArgs(getHeaderSearchOpts(), Consumer);
   GenerateAPINotesArgs(getAPINotesOpts(), Consumer);
+  GeneratePointerAuthArgs(getLangOpts(), Consumer);
   GenerateLangArgs(getLangOpts(), Consumer, T, getFrontendOpts().DashX);
   GenerateCodeGenArgs(getCodeGenOpts(), Consumer, T,
                       getFrontendOpts().OutputFile, &getLangOpts());
@@ -4872,10 +5331,13 @@ void CompilerInvocation::clearImplicitModuleBuildOptions() {
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-clang::createVFSFromCompilerInvocation(const CompilerInvocation &CI,
-                                       DiagnosticsEngine &Diags) {
-  return createVFSFromCompilerInvocation(CI, Diags,
-                                         llvm::vfs::getRealFileSystem());
+clang::createVFSFromCompilerInvocation(
+    const CompilerInvocation &CI, DiagnosticsEngine &Diags,
+    std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS) {
+  return createVFSFromCompilerInvocation(
+      CI, Diags,
+      createBaseFS(CI.getFileSystemOpts(), CI.getFrontendOpts(),
+                   CI.getCASOpts(), Diags, std::move(OverrideCAS)));
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>

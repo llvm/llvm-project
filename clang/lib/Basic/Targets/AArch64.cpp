@@ -14,6 +14,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -194,6 +195,9 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   else if (Triple.getOS() == llvm::Triple::UnknownOS)
     this->MCountName =
         Opts.EABIVersion == llvm::EABI::GNU ? "\01_mcount" : "mcount";
+
+  if (Triple.getArchName() == "arm64e")
+    PointerAuthSupported = true;
 }
 
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
@@ -1442,6 +1446,11 @@ int AArch64TargetInfo::getEHDataRegisterNumber(unsigned RegNo) const {
   if (RegNo == 1)
     return 1;
   return -1;
+}
+
+bool AArch64TargetInfo::validatePointerAuthKey(
+    const llvm::APSInt &value) const {
+  return 0 <= value && value <= 3;
 }
 
 bool AArch64TargetInfo::hasInt128Type() const { return true; }

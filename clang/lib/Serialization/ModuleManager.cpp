@@ -42,8 +42,18 @@ using namespace clang;
 using namespace serialization;
 
 ModuleFile *ModuleManager::lookupByFileName(StringRef Name) const {
-  auto Entry = FileMgr.getFile(Name, /*OpenFile=*/false,
-                               /*CacheFailure=*/false);
+  auto Entry = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/false,
+                                          /*CacheFailure=*/false);
+#if !defined(__APPLE__)
+  if (Entry) {
+    // On Linux ext4 FileManager's inode caching system does not
+    // provide us correct behaviour for ModuleCache directories.
+    // inode can be reused after PCM delete resulting in cache misleading.
+    if (auto BypassFile = FileMgr.getBypassFile(*Entry))
+      Entry = *BypassFile;
+  }
+#endif
+
   if (Entry)
     return lookup(*Entry);
 
@@ -443,6 +453,27 @@ bool ModuleManager::lookupModuleFile(StringRef FileName, off_t ExpectedSize,
   // opening the file.
   File = FileMgr.getOptionalFileRef(FileName, /*OpenFile=*/true,
                                     /*CacheFailure=*/false);
+
+#if !defined(__APPLE__)
+  if (File) {
+    // On Linux ext4 FileManager's inode caching system does not
+    // provide us correct behaviour for ModuleCache directories.
+    // inode can be reused after PCM delete resulting in cache misleading.
+    // Only use the bypass file if bypass succeed in case the underlying file
+    // system doesn't support bypass (thus there is no need for the workaround).
+    if (auto Bypass = FileMgr.getBypassFile(*File))
+      File = *Bypass;
+  }
+#endif
+
+  // If the file is known to the module cache but not in the filesystem, it is
+  // a memory buffer. Create a virtual file for it.
+  if (!File) {
+    if (auto *KnownBuffer = getModuleCache().lookupPCM(FileName)) {
+      File =
+          FileMgr.getVirtualFileRef(FileName, KnownBuffer->getBufferSize(), 0);
+    }
+  }
 
   if (File &&
       ((ExpectedSize && ExpectedSize != File->getSize()) ||

@@ -15,7 +15,7 @@ enum SwitchTwo {
 };
 
 void testSwitchTwo(enum SwitchTwo st) {
-  switch (st) {} // expected-warning{{enumeration values 'Vim' and 'Emacs' not handled in switch}}
+  switch (st) {} // expected-warning{{enumeration values 'Vim' and 'Emacs' not handled in switch}} expected-note{{add missing switch cases}}
 }
 
 enum SwitchThree {
@@ -23,5 +23,5 @@ enum SwitchThree {
 };
 
 void testSwitchThree(enum SwitchThree st) {
-  switch (st) {} // expected-warning{{enumeration value 'New' not handled in switch}}
+  switch (st) {} // expected-warning{{enumeration value 'New' not handled in switch}} expected-note{{add missing switch cases}}
 }

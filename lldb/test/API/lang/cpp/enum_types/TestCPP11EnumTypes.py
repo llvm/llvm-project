@@ -19,7 +19,7 @@ class CPP11EnumTypesTestCase(TestBase):
 
         self.expect(
             "image lookup -t " + enum_name,
-            patterns=["enum( struct| class) " + enum_name + " {"],
+            patterns=["enum( struct| class)? " + enum_name + " {"],
             substrs=["Case1", "Case2", "Case3"],
         )
         # Test each case in the enum.

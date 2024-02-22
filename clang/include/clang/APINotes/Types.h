@@ -148,8 +148,14 @@ public:
     return SwiftBridge;
   }
 
-  void setSwiftBridge(std::optional<std::string> SwiftType) {
+  void setSwiftBridge(const std::optional<std::string> &SwiftType) {
     SwiftBridge = SwiftType;
+  }
+
+  void setSwiftBridge(const std::optional<llvm::StringRef> &SwiftType) {
+    SwiftBridge = SwiftType
+                      ? std::optional<std::string>(std::string(*SwiftType))
+                      : std::nullopt;
   }
 
   const std::optional<std::string> &getNSErrorDomain() const {
@@ -638,6 +644,9 @@ public:
   }
 
   LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS);
+
+  void mergePropInfoIntoGetter(const ObjCPropertyInfo &pInfo);
+  void mergePropInfoIntoSetter(const ObjCPropertyInfo &pInfo);
 };
 
 inline bool operator==(const ObjCMethodInfo &LHS, const ObjCMethodInfo &RHS) {
@@ -758,9 +767,15 @@ inline bool operator==(const TypedefInfo &LHS, const TypedefInfo &RHS) {
 inline bool operator!=(const TypedefInfo &LHS, const TypedefInfo &RHS) {
   return !(LHS == RHS);
 }
+} // namespace api_notes
+} // namespace clang
 
+#include "llvm/ADT/ArrayRef.h"
+
+namespace clang {
+namespace api_notes {
 /// The file extension used for the source representation of API notes.
-static const constexpr char SOURCE_APINOTES_EXTENSION[] = "apinotes";
+static const char SOURCE_APINOTES_EXTENSION[] = "apinotes";
 
 /// Opaque context ID used to refer to an Objective-C class or protocol or a C++
 /// namespace.
@@ -793,6 +808,11 @@ struct Context {
 struct ObjCSelectorRef {
   unsigned NumArgs;
   llvm::ArrayRef<llvm::StringRef> Identifiers;
+};
+
+/// Descripts a series of options for a module
+struct ModuleOptions {
+  bool SwiftInferImportAsMember = false;
 };
 } // namespace api_notes
 } // namespace clang

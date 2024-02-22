@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/LinkAllAsmWriterComponents.h"
 #include "llvm/CodeGen/LinkAllCodegenComponents.h"
@@ -45,6 +46,7 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -209,6 +211,28 @@ static cl::opt<bool> TryUseNewDbgInfoFormat(
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
 
+// BEGIN MCCAS
+static cl::opt<std::string> CASPath("cas", cl::desc("CAS Path"));
+
+static cl::opt<bool> UseMCCASBackend("cas-backend",
+                                     cl::desc("Use MCCAS backend"));
+
+static cl::opt<CASBackendMode> MCCASBackendMode(
+    cl::desc("MC CAS Backend Mode"), cl::init(CASBackendMode::Verify),
+    cl::values(clEnumValN(CASBackendMode::Verify, "mccas-verify",
+                          "Native object with verifier"),
+               clEnumValN(CASBackendMode::Native, "mccas-native",
+                          "Native object without verifier"),
+               clEnumValN(CASBackendMode::CASID, "mccas-casid",
+                          "CASID file output")));
+
+static cl::opt<bool>
+    EmitCASIDFile("mccas-emit-casid-file",
+                  cl::desc("Emit a .casid file next to the generated .o file "
+                           "when MC CAS is enabled"),
+                  cl::init(false));
+// END MCCAS
+
 namespace {
 
 std::vector<std::string> &getRunPassNames() {
@@ -313,6 +337,38 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
 
   return FDOut;
 }
+
+// BEGIN MCCAS
+/// Returns a pointer to a CAS using the CLI parameters.
+static std::shared_ptr<cas::ObjectStore> getCAS() {
+  if (CASPath.empty())
+    return cas::createInMemoryCAS();
+  auto MaybeCAS =
+      CASPath == "auto"
+          ? cas::createCASFromIdentifier(cas::getDefaultOnDiskCASPath())
+          : cas::createCASFromIdentifier(CASPath);
+  if (MaybeCAS)
+    return std::move(*MaybeCAS);
+  reportError(toString(MaybeCAS.takeError()));
+}
+
+/// Returns true if the LLC should use a CAS backend.
+static bool shouldUseCASBackend(const Triple &TheTriple) {
+  return UseMCCASBackend ||
+         ((TheTriple.getObjectFormat() == Triple::MachO) &&
+          llvm::sys::Process::GetEnv("LLVM_TEST_CAS_BACKEND"));
+}
+
+/// Exits the program if a CAS backend is requested but would not be honored.
+static void verifyCASOptions(const Triple &TheTriple) {
+  bool CASRequested = shouldUseCASBackend(TheTriple);
+
+  if (CASRequested && codegen::getFileType() != CodeGenFileType::ObjectFile)
+    reportError("CAS Backend requires .obj output");
+  if (CASRequested && TheTriple.getObjectFormat() != Triple::MachO)
+    reportError("CAS Backend requires MachO format");
+}
+// END MCCAS
 
 // main - Entry point for the llc compiler.
 //
@@ -522,6 +578,14 @@ static int compileModule(char **argv, LLVMContext &Context) {
       Options.MCOptions.MCUseDwarfDirectory =
           MCTargetOptions::DefaultDwarfDirectory;
     }
+
+    // BEGIN MCCAS
+    // This is used for testing llc with a CAS backend.
+    verifyCASOptions(TheTriple);
+    Options.UseCASBackend = shouldUseCASBackend(TheTriple);
+    Options.MCOptions.CAS = getCAS();
+    Options.MCOptions.CASObjMode = MCCASBackendMode;
+    // END MCCAS
   };
 
   std::optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
@@ -616,6 +680,24 @@ static int compileModule(char **argv, LLVMContext &Context) {
   // Ensure the filename is passed down to CodeViewDebug.
   Target->Options.ObjectFilenameForDebug = Out->outputFilename();
 
+  std::unique_ptr<ToolOutputFile> CasIDOS;
+  std::string OutputPathCASIDFile;
+  StringRef OutputFile = StringRef(Out->outputFilename());
+  if (UseMCCASBackend && EmitCASIDFile &&
+      MCCASBackendMode != CASBackendMode::CASID &&
+      codegen::getFileType() == CodeGenFileType::ObjectFile &&
+      OutputFile != "-") {
+    OutputPathCASIDFile = std::string(OutputFile);
+    OutputPathCASIDFile.append(".casid");
+    std::error_code EC;
+    CasIDOS = std::make_unique<ToolOutputFile>(OutputPathCASIDFile, EC,
+                                               sys::fs::OF_None);
+    if (EC) {
+      reportError(EC.message());
+      return 1;
+    }
+  }
+
   std::unique_ptr<ToolOutputFile> DwoOut;
   if (!SplitDwarfOutputFile.empty()) {
     std::error_code EC;
@@ -709,7 +791,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
       PM.add(createFreeMachineFunctionPass());
     } else if (Target->addPassesToEmitFile(
                    PM, *OS, DwoOut ? &DwoOut->os() : nullptr,
-                   codegen::getFileType(), NoVerify, MMIWP)) {
+                   codegen::getFileType(), NoVerify, MMIWP,
+                   CasIDOS ? &CasIDOS->os() : nullptr)) {
       reportError("target does not support generation of this file type");
     }
 
@@ -766,6 +849,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
   Out->keep();
   if (DwoOut)
     DwoOut->keep();
+  if (CasIDOS)
+    CasIDOS->keep();
 
   return 0;
 }

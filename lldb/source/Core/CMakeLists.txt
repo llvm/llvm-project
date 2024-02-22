@@ -41,6 +41,7 @@ add_lldb_library(lldbCore
   Highlighter.cpp
   IOHandler.cpp
   IOHandlerCursesGUI.cpp
+  JITSection.cpp
   Mangled.cpp
   Module.cpp
   ModuleChild.cpp

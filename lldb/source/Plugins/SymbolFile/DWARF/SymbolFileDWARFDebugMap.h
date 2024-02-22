@@ -22,6 +22,7 @@
 #include "lldb/Utility/StructuredData.h"
 
 class DWARFASTParserClang;
+class DWARFASTParserSwift;
 
 namespace lldb_private::plugin {
 namespace dwarf {
@@ -29,6 +30,7 @@ class SymbolFileDWARF;
 class DWARFCompileUnit;
 class DWARFDebugAranges;
 class DWARFDeclContext;
+class DebugMapModule;
 
 class SymbolFileDWARFDebugMap : public SymbolFileCommon {
   /// LLVM RTTI support.
@@ -62,6 +64,8 @@ public:
   void InitializeObject() override;
 
   // Compile Unit function calls
+  llvm::VersionTuple
+  GetProducerVersion(CompileUnit &comp_unit) override;
   lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) override;
   XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) override;
   llvm::SmallSet<lldb::LanguageType, 4>
@@ -128,11 +132,17 @@ public:
   std::vector<std::unique_ptr<CallEdge>>
   ParseCallEdgesInFunction(UserID func_id) override;
 
+  std::vector<lldb::DataBufferSP>
+  GetASTData(lldb::LanguageType language) override;
+
   void DumpClangAST(Stream &s) override;
 
   /// List separate oso files.
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
                             bool errors_only) override;
+
+  bool GetCompileOption(const char *option, std::string &value,
+                        CompileUnit *cu) override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
@@ -147,6 +157,7 @@ protected:
   enum { kHaveInitializedOSOs = (1 << 0), kNumFlags };
 
   friend class DebugMapModule;
+  friend class DWARFASTParserSwift;
   friend class ::DWARFASTParserClang;
   friend class DWARFCompileUnit;
   friend class SymbolFileDWARF;

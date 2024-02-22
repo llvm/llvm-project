@@ -27,6 +27,11 @@
 
 #include <memory>
 
+#ifdef LLDB_ENABLE_SWIFT
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
+#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
+#endif //LLDB_ENABLE_SWIFT
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -110,7 +115,9 @@ ThreadPlanCallFunction::ThreadPlanCallFunction(
       m_return_valobj_sp(), m_takedown_done(false),
       m_should_clear_objc_exception_bp(false),
       m_should_clear_cxx_exception_bp(false),
-      m_stop_address(LLDB_INVALID_ADDRESS), m_return_type(return_type) {
+      m_stop_address(LLDB_INVALID_ADDRESS),
+      m_expression_language(options.GetLanguage()), m_hit_error_backstop(false),
+      m_return_type(return_type) {
   lldb::addr_t start_load_addr = LLDB_INVALID_ADDRESS;
   lldb::addr_t function_load_addr = LLDB_INVALID_ADDRESS;
   ABI *abi = nullptr;
@@ -350,9 +357,10 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
 
 bool ThreadPlanCallFunction::ShouldStop(Event *event_ptr) {
   // We do some computation in DoPlanExplainsStop that may or may not set the
-  // plan as complete. We need to do that here to make sure our state is
-  // correct.
-  DoPlanExplainsStop(event_ptr);
+  // plan as complete.
+  // We need to do that here to make sure our state is correct.
+  if (GetCachedPlanExplainsStop() == eLazyBoolCalculate)
+    DoPlanExplainsStop(event_ptr);
 
   if (IsPlanComplete()) {
     ReportRegisterState("Function completed.  Register state was:");
@@ -418,6 +426,27 @@ void ThreadPlanCallFunction::SetBreakpoints() {
       m_objc_language_runtime->SetExceptionBreakpoints();
     }
   }
+#ifdef LLDB_ENABLE_SWIFT
+  if (GetExpressionLanguage() == eLanguageTypeSwift) {
+    auto *swift_runtime 
+        = SwiftLanguageRuntime::Get(m_process.shared_from_this());
+    if (swift_runtime) {
+      llvm::StringRef backstop_name = swift_runtime->GetErrorBackstopName();
+      if (!backstop_name.empty()) {
+        FileSpecList stdlib_module_list;
+        stdlib_module_list.Append(
+            FileSpec(swift_runtime->GetStandardLibraryName().GetStringRef()));
+        const LazyBool skip_prologue = eLazyBoolNo;
+        const bool is_internal = true;
+        const bool is_hardware = false;
+        m_error_backstop_bp_sp = m_process.GetTarget().CreateBreakpoint(
+              &stdlib_module_list, NULL, backstop_name.str().c_str(),
+              eFunctionNameTypeFull, eLanguageTypeUnknown, 0, skip_prologue,
+              is_internal, is_hardware);
+      }
+    }
+  }
+#endif // LLDB_ENABLE_SWIFT
 }
 
 void ThreadPlanCallFunction::ClearBreakpoints() {
@@ -427,10 +456,16 @@ void ThreadPlanCallFunction::ClearBreakpoints() {
     if (m_objc_language_runtime && m_should_clear_objc_exception_bp)
       m_objc_language_runtime->ClearExceptionBreakpoints();
   }
+  if (m_error_backstop_bp_sp) {
+    GetTarget().RemoveBreakpointByID(m_error_backstop_bp_sp->GetID());
+  }
 }
 
 bool ThreadPlanCallFunction::BreakpointsExplainStop() {
   StopInfoSP stop_info_sp = GetPrivateStopInfo();
+
+  if (stop_info_sp->GetStopReason() != eStopReasonBreakpoint)
+    return false;
 
   if (m_trap_exceptions) {
     if ((m_cxx_language_runtime &&
@@ -450,6 +485,47 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
       // can't let that happen, so force the ShouldStop here.
       stop_info_sp->OverrideShouldStop(true);
       return true;
+    }
+  }
+  if (m_error_backstop_bp_sp) {
+    uint64_t break_site_id = stop_info_sp->GetValue();
+    if (m_process.GetBreakpointSiteList().StopPointSiteContainsBreakpoint(
+            break_site_id, m_error_backstop_bp_sp->GetID())) {
+      // Our expression threw an uncaught exception.  That will happen in REPL
+      // & Playground, though not in
+      // the regular expression parser.  In that case, we should fetch the
+      // actual return value from the
+      // argument passed to this function, and set that as the return value.
+      SetPlanComplete(true);
+      StackFrameSP frame_sp = GetThread().GetStackFrameAtIndex(0);
+      PersistentExpressionState *persistent_state =
+          GetTarget().GetPersistentExpressionStateForLanguage(
+              eLanguageTypeSwift);
+      if (!persistent_state)
+        return false;
+#ifdef LLDB_ENABLE_SWIFT
+      ConstString persistent_variable_name(
+          persistent_state->GetNextPersistentVariableName(/*is_error*/ true));
+      if ((m_return_valobj_sp = SwiftLanguageRuntime::CalculateErrorValue(
+               frame_sp, persistent_variable_name))) {
+
+        DataExtractor data;
+        Status data_error;
+        uint64_t data_size =
+            m_return_valobj_sp->GetStaticValue()->GetData(data, data_error);
+
+        if (data_size == data.GetAddressByteSize()) {
+          lldb::offset_t offset = 0;
+          lldb::addr_t addr = data.GetAddress(&offset);
+
+          SwiftLanguageRuntime::RegisterGlobalError(
+              GetTarget(), persistent_variable_name, addr);
+        }
+
+        m_hit_error_backstop = true;
+        return true;
+      }
+#endif // LLDB_ENABLE_SWIFT
     }
   }
 

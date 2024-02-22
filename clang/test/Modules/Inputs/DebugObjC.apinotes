@@ -1,0 +1,5 @@
+---
+Name: DebugObjC
+Classes:
+- Name: ObjCClass
+  SwiftName: ObjCClassInSwift

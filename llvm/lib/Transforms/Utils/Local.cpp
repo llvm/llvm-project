@@ -2565,6 +2565,11 @@ Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
   // *Not* to do: we should not attempt to salvage load instructions,
   // because the validity and lifetime of a dbg.value containing
   // DW_OP_deref becomes difficult to analyze. See PR40628 for examples.
+
+  if (auto *IInst = dyn_cast<llvm::IntrinsicInst>(&I))
+    if (IInst->getIntrinsicID() == Intrinsic::ptrauth_auth)
+      return IInst->getArgOperand(0);
+
   return nullptr;
 }
 

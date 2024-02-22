@@ -1,0 +1,3 @@
+struct CBar {
+  int j;
+};

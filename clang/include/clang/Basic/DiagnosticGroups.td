@@ -524,6 +524,7 @@ def ModuleImport : DiagGroup<"module-import">;
 def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def ModuleIncludeDirectiveTranslation : DiagGroup<"module-include-translation">;
+def IndexStore : DiagGroup<"index-store">;
 def RoundTripCC1Args : DiagGroup<"round-trip-cc1-args">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;
@@ -846,8 +847,7 @@ def DeallocInCategory:DiagGroup<"dealloc-in-category">;
 def SelectorTypeMismatch : DiagGroup<"selector-type-mismatch">;
 def Selector : DiagGroup<"selector", [SelectorTypeMismatch]>;
 def Protocol : DiagGroup<"protocol">;
-// No longer in use, preserve for backwards compatibility.
-def : DiagGroup<"at-protocol">;
+def AtProtocol : DiagGroup<"at-protocol">;
 def PropertyAccessDotSyntax: DiagGroup<"property-access-dot-syntax">;
 def PropertyAttr : DiagGroup<"property-attribute-mismatch">;
 def SuperSubClassMismatch : DiagGroup<"super-class-method-mismatch">;
@@ -864,6 +864,7 @@ def Visibility : DiagGroup<"visibility">;
 def ZeroLengthArray : DiagGroup<"zero-length-array">;
 def GNUZeroLineDirective : DiagGroup<"gnu-zero-line-directive">;
 def GNUZeroVariadicMacroArguments : DiagGroup<"gnu-zero-variadic-macro-arguments">;
+def PtrAuthNullPointers : DiagGroup<"ptrauth-null-pointers">;
 def MisleadingIndentation : DiagGroup<"misleading-indentation">;
 
 // This covers both the deprecated case (in C++98)
@@ -1471,6 +1472,13 @@ def WebAssemblyExceptionSpec : DiagGroup<"wasm-exception-spec">;
 def RTTI : DiagGroup<"rtti">;
 
 def OpenCLCoreFeaturesDiagGroup : DiagGroup<"pedantic-core-features">;
+
+// Remarks for cached -cc1.
+def CompileJobCacheMiss : DiagGroup<"compile-job-cache-miss">;
+def CompileJobCacheHit : DiagGroup<"compile-job-cache-hit">;
+def CompileJobCacheTiming : DiagGroup<"compile-job-cache-timing">;
+def CompileJobCache : DiagGroup<"compile-job-cache", [CompileJobCacheMiss,
+                                                      CompileJobCacheHit]>;
 
 // Warnings and extensions to make preprocessor macro usage pedantic.
 def PedanticMacros : DiagGroup<"pedantic-macros",

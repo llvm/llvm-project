@@ -212,6 +212,8 @@ add_llvm_component_library(LLVMSupport
   PGOOptions.cpp
   Parallel.cpp
   PluginLoader.cpp
+  PrefixMapper.cpp
+  PrefixMappingFileSystem.cpp
   PrettyStackTrace.cpp
   RandomNumberGenerator.cpp
   Regex.cpp
@@ -248,11 +250,17 @@ add_llvm_component_library(LLVMSupport
   UnicodeNameToCodepointGenerated.cpp
   VersionTuple.cpp
   VirtualFileSystem.cpp
+  VirtualOutputBackend.cpp
+  VirtualOutputBackends.cpp
+  VirtualOutputConfig.cpp
+  VirtualOutputError.cpp
+  VirtualOutputFile.cpp
   WithColor.cpp
   YAMLParser.cpp
   YAMLTraits.cpp
   raw_os_ostream.cpp
   raw_ostream.cpp
+  raw_ostream_proxy.cpp
   raw_socket_stream.cpp
   regcomp.c
   regerror.c
