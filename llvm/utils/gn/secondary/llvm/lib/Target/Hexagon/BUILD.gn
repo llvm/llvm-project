@@ -75,6 +75,7 @@ static_library("LLVMHexagonCodeGen") {
     "HexagonOptAddrMode.cpp",
     "HexagonOptimizeSZextends.cpp",
     "HexagonPeephole.cpp",
+    "HexagonPostIncOpt.cpp",
     "HexagonRDFOpt.cpp",
     "HexagonRegisterInfo.cpp",
     "HexagonSelectionDAGInfo.cpp",
