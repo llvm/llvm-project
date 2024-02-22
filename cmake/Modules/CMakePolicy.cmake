@@ -12,8 +12,10 @@ if(POLICY CMP0116)
 endif()
 
 +# Enable debug info compatible with SCCache
-# MSVC debug information format flags are selected by an
-# abstraction. New in CMake 3.25.
+# MSVC debug information format flags are selected via
+# CMAKE_MSVC_DEBUG_INFORMATION_FORMAT, instead of
+# embedding flags in e.g. CMAKE_CXX_FLAGS_RELEASE.
+# New in CMake 3.25.
 #
 # Supports debug info with SCCache
 # (https://github.com/mozilla/sccache?tab=readme-ov-file#usage)
