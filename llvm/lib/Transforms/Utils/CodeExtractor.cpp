@@ -1585,15 +1585,13 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     return cast<DILocalVariable>(NewVar);
   };
 
-  auto UpdateDbgRecordsOnInst = [&](Instruction &I) -> void {
-    for (DbgRecord &DR : I.getDbgValueRange()) {
-      if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-        // Point the intrinsic to a fresh label within the new function if the
-        // intrinsic was not inlined from some other function. Matches
-        // llvm.dbg.label intrinsic version in loop below.
-        if (DPL->getDebugLoc().getInlinedAt())
-          continue;
-        DILabel *OldLabel = DPL->getLabel();
+  auto UpdateDbgLabel =
+      [&](auto *LabelRecord) {
+        // Point the label record to a fresh label within the new function if
+        // the record was not inlined from some other function.
+        if (LabelRecord->getDebugLoc().getInlinedAt())
+          return;
+        DILabel *OldLabel = LabelRecord->getLabel();
         DINode *&NewLabel = RemappedMetadata[OldLabel];
         if (!NewLabel) {
           DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
@@ -1601,7 +1599,13 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
           NewLabel = DILabel::get(Ctx, NewScope, OldLabel->getName(),
                                   OldLabel->getFile(), OldLabel->getLine());
         }
-        DPL->setLabel(cast<DILabel>(NewLabel));
+        LabelRecord->setLabel(cast<DILabel>(NewLabel));
+      };
+
+  auto UpdateDbgRecordsOnInst = [&](Instruction &I) -> void {
+    for (DbgRecord &DR : I.getDbgValueRange()) {
+      if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
+        UpdateDbgLabel(DPL);
         continue;
       }
 
@@ -1631,17 +1635,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     // Point the intrinsic to a fresh label within the new function if the
     // intrinsic was not inlined from some other function.
     if (auto *DLI = dyn_cast<DbgLabelInst>(&I)) {
-      if (DLI->getDebugLoc().getInlinedAt())
-        continue;
-      DILabel *OldLabel = DLI->getLabel();
-      DINode *&NewLabel = RemappedMetadata[OldLabel];
-      if (!NewLabel) {
-        DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
-            *OldLabel->getScope(), *NewSP, Ctx, Cache);
-        NewLabel = DILabel::get(Ctx, NewScope, OldLabel->getName(),
-                                OldLabel->getFile(), OldLabel->getLine());
-      }
-      DLI->setArgOperand(0, MetadataAsValue::get(Ctx, NewLabel));
+      UpdateDbgLabel(DLI);
       continue;
     }
 
