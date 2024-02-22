@@ -7,7 +7,7 @@
 extern "C" {
 #include "ISO_Fortran_binding.h"
 }
-#include<iostream>
+#include <iostream>
 
 int main() {
   std::cout << "PASS\n";
@@ -15,6 +15,7 @@ int main() {
 }
 
 // CHECK: PASS
+// clang-format off
 //--- runtest.sh
 #!/bin/bash
 TMPDIR=$1
