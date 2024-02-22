@@ -2057,8 +2057,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
           if (sym->dsoDefined)
             continue;
           if (sym->isUndefined() && !sym->isWeak()) {
-            diagnose("undefined reference: " +
-                     toString(*sym) + "\n>>> referenced by " + toString(file) +
+            diagnose("undefined reference: " + toString(*sym) +
+                     "\n>>> referenced by " + toString(file) +
                      " (disallowed by --no-allow-shlib-undefined)");
           } else if (sym->isDefined() && sym->computeBinding() == STB_LOCAL) {
             diagnose("non-exported symbol '" + toString(*sym) + "' in '" +
