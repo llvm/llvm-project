@@ -2,6 +2,3 @@ revert: breaks MIOpen composableKernel build
 [clang][Sema] Add -Wswitch-default warning option (#73077)  
    https://ontrack-internal.amd.com/browse/SWDEV-436625
 
-revert: breaks offloading 
-87b410821148 [Libomptarget][NFC] Remove concept of optional plugin functions (#82681) 
-
