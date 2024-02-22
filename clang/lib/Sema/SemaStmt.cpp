@@ -3388,7 +3388,7 @@ Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
   // However, a 'break' in a 'switch' marked as a compute construct doesn't
   // count as 'branch out of' the compute construct.
   if (S->isOpenACCComputeConstructScope() ||
-      (!S->isDirectlySwitchScope() && S->getParent() &&
+      (S->isLoopScope() && S->getParent() &&
        S->getParent()->isOpenACCComputeConstructScope()))
     return StmtError(Diag(BreakLoc, diag::err_acc_branch_in_out)
                      << /*out of */ 0);

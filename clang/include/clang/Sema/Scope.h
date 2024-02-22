@@ -472,9 +472,13 @@ public:
     return false;
   }
 
-  /// Return true if this exact scope (and not one of it's parents) is a switch
-  /// scope.
-  bool isDirectlySwitchScope() const { return getFlags() & Scope::SwitchScope; }
+  /// Return true if this scope is a loop.
+  bool isLoopScope() const {
+    // 'switch' is the only loop that is not a 'break' scope as well, so we can
+    // just check BreakScope and not SwitchScope.
+    return (getFlags() & Scope::BreakScope) &&
+           !(getFlags() & Scope::SwitchScope);
+  }
 
   /// Determines whether this scope is the OpenMP directive scope
   bool isOpenMPDirectiveScope() const {
