@@ -240,9 +240,12 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     if (MCDCMaxCond == 0)
       return true;
 
-    /// At the top of the logical operator nest, reset the number of conditions.
-    if (LogOpStack.empty())
+    /// At the top of the logical operator nest, reset the number of conditions,
+    /// also forget previously seen split nesting cases.
+    if (LogOpStack.empty()) {
       NumCond = 0;
+      SplitNestedLogicalOp = false;
+    }
 
     if (const Expr *E = dyn_cast<Expr>(S)) {
       const BinaryOperator *BinOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
@@ -293,7 +296,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
                 "contains an operation with a nested boolean expression. "
                 "Expression will not be covered");
             Diag.Report(S->getBeginLoc(), DiagID);
-            return false;
+            return true;
           }
 
           /// Was the maximum number of conditions encountered?
@@ -304,7 +307,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
                 "number of conditions (%0) exceeds max (%1). "
                 "Expression will not be covered");
             Diag.Report(S->getBeginLoc(), DiagID) << NumCond << MCDCMaxCond;
-            return false;
+            return true;
           }
 
           // Otherwise, allocate the number of bytes required for the bitmap
