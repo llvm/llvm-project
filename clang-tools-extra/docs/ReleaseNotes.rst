@@ -134,6 +134,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unused-local-non-trivial-variable>` check by
   ignoring local variable with ``[maybe_unused]`` attribute.
 
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check to also handle
+  calls to ``std::forward``.
+
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
   giving false positives for deleted functions.
