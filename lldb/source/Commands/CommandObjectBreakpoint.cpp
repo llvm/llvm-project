@@ -64,6 +64,8 @@ public:
     Status error;
     const int short_option =
         g_breakpoint_modify_options[option_idx].short_option;
+    const char *long_option =
+        g_breakpoint_modify_options[option_idx].long_option;
 
     switch (short_option) {
     case 'c':
@@ -84,18 +86,17 @@ public:
     case 'G': {
       bool value, success;
       value = OptionArgParser::ToBoolean(option_arg, false, &success);
-      if (success) {
+      if (success)
         m_bp_opts.SetAutoContinue(value);
-      } else
-        error.SetErrorStringWithFormat(
-            "invalid boolean value '%s' passed for -G option",
-            option_arg.str().c_str());
+      else
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_bool_parsing_error_message);
     } break;
     case 'i': {
       uint32_t ignore_count;
       if (option_arg.getAsInteger(0, ignore_count))
-        error.SetErrorStringWithFormat("invalid ignore count '%s'",
-                                       option_arg.str().c_str());
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_int_parsing_error_message);
       else
         m_bp_opts.SetIgnoreCount(ignore_count);
     } break;
@@ -105,27 +106,29 @@ public:
       if (success) {
         m_bp_opts.SetOneShot(value);
       } else
-        error.SetErrorStringWithFormat(
-            "invalid boolean value '%s' passed for -o option",
-            option_arg.str().c_str());
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_bool_parsing_error_message);
     } break;
     case 't': {
       lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID;
       if (option_arg == "current") {
         if (!execution_context) {
-          error.SetErrorStringWithFormat("No context to determine current "
-                                         "thread");
+          error = CreateOptionParsingError(
+              option_arg, short_option, long_option,
+              "No context to determine current thread");
         } else {
           ThreadSP ctx_thread_sp = execution_context->GetThreadSP();
           if (!ctx_thread_sp || !ctx_thread_sp->IsValid()) {
-            error.SetErrorStringWithFormat("No currently selected thread");
+            error =
+                CreateOptionParsingError(option_arg, short_option, long_option,
+                                         "No currently selected thread");
           } else {
             thread_id = ctx_thread_sp->GetID();
           }
         }
       } else if (option_arg.getAsInteger(0, thread_id)) {
-        error.SetErrorStringWithFormat("invalid thread id string '%s'",
-                                       option_arg.str().c_str());
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_int_parsing_error_message);
       }
       if (thread_id != LLDB_INVALID_THREAD_ID)
         m_bp_opts.SetThreadID(thread_id);
@@ -139,8 +142,8 @@ public:
     case 'x': {
       uint32_t thread_index = UINT32_MAX;
       if (option_arg.getAsInteger(0, thread_index)) {
-        error.SetErrorStringWithFormat("invalid thread index string '%s'",
-                                       option_arg.str().c_str());
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_int_parsing_error_message);
       } else {
         m_bp_opts.GetThreadSpec()->SetIndex(thread_index);
       }
