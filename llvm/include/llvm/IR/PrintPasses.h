@@ -93,7 +93,9 @@ public:
   ~ScopedDbgInfoFormatSetter() { Obj.setIsNewDbgInfoFormat(OldState); }
 };
 
-template<typename T> ScopedDbgInfoFormatSetter(T &Obj, bool NewState) -> ScopedDbgInfoFormatSetter<T>;
+template <typename T>
+ScopedDbgInfoFormatSetter(T &Obj,
+                          bool NewState) -> ScopedDbgInfoFormatSetter<T>;
 
 } // namespace llvm
 
