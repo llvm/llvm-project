@@ -724,9 +724,8 @@ BitCastRewriter::BitCastRewriter(VectorType sourceVectorType,
 static LogicalResult commonConversionPrecondition(PatternRewriter &rewriter,
                                                   VectorType preconditionType,
                                                   Operation *op) {
-  if (!preconditionType || preconditionType.getRank() != 1 ||
-      preconditionType.isScalable())
-    return rewriter.notifyMatchFailure(op, "scalable or >1-D vector");
+  if (!preconditionType || preconditionType.isScalable())
+    return rewriter.notifyMatchFailure(op, "scalable vector");
 
   // TODO: consider relaxing this restriction in the future if we find ways
   // to really work with subbyte elements across the MLIR/LLVM boundary.
@@ -742,6 +741,9 @@ LogicalResult BitCastRewriter::commonPrecondition(PatternRewriter &rewriter,
                                                   Operation *op) {
   if (!enumerator.sourceVectorType || !enumerator.targetVectorType)
     return rewriter.notifyMatchFailure(op, "types are not vector");
+
+  if (!preconditionType || preconditionType.getRank() != 1)
+    return rewriter.notifyMatchFailure(op, "unsupported >1-D vector");
 
   return commonConversionPrecondition(rewriter, preconditionType, op);
 }
@@ -855,7 +857,6 @@ static Value rewriteI4ToI8SignedExt(PatternRewriter &rewriter, Location loc,
          "Expected i4 type");
 
   // 1. Generate a bitcast vector<Xxi4> -> vector<X/2xi8>.
-  int64_t vecDimSize = srcVecType.getShape().back();
   SmallVector<int64_t> i8VecShape = llvm::to_vector(srcVecType.getShape());
   constexpr int64_t i4Toi8BitwidthFactor = 2;
   i8VecShape.back() = i8VecShape.back() / i4Toi8BitwidthFactor;
@@ -871,16 +872,8 @@ static Value rewriteI4ToI8SignedExt(PatternRewriter &rewriter, Location loc,
   Value low = rewriter.create<arith::ShRSIOp>(loc, shl, shiftValues);
   Value high = rewriter.create<arith::ShRSIOp>(loc, i8Vector, shiftValues);
 
-  // 3. Interleave low and high i8 elements using a shuffle.
-  SmallVector<int64_t> interleaveMaskValues;
-  interleaveMaskValues.reserve(vecDimSize);
-  for (int i = 0, end = vecDimSize / 2; i < end; ++i) {
-    interleaveMaskValues.push_back(i);
-    interleaveMaskValues.push_back(i + (vecDimSize / 2));
-  }
-
-  return rewriter.create<vector::ShuffleOp>(
-      loc, low, high, rewriter.getI64ArrayAttr(interleaveMaskValues));
+  // 3. Interleave low and high i8 elements.
+  return rewriter.create<vector::InterleaveOp>(loc, low, high);
 }
 
 namespace {
@@ -1008,8 +1001,7 @@ struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
 ///        %1 = arith.shli %0, 4 : vector<4xi8>
 ///        %2 = arith.shrsi %1, 4 : vector<4xi8>
 ///        %3 = arith.shrsi %0, 4 : vector<4xi8>
-///        %4 = vector.shuffle %2, %3 [0, 4, 1, 5, 2, 6, 3, 7]
-///             : vector<4xi8>, vector<4xi8>
+///        %4 = vector.interleave %2, %3 : vector<4xi8>
 ///        %5 = arith.extsi %4 : vector<8xi8> to vector<8xi32>
 ///
 ///    arith.sitofp %in : vector<8xi4> to vector<8xf32>
@@ -1018,8 +1010,7 @@ struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
 ///        %1 = arith.shli %0, 4 : vector<4xi8>
 ///        %2 = arith.shrsi %1, 4 : vector<4xi8>
 ///        %3 = arith.shrsi %0, 4 : vector<4xi8>
-///        %4 = vector.shuffle %2, %3 [0, 4, 1, 5, 2, 6, 3, 7]
-///             : vector<4xi8>, vector<4xi8>
+///        %4 = vector.interleave %2, %3 : vector<4xi8>
 ///        %5 = arith.sitofp %4 : vector<8xi8> to vector<8xf32>
 ///
 template <typename ConversionOpType>
