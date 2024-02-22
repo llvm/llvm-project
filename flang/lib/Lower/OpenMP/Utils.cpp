@@ -29,6 +29,11 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 
+uint32_t getOpenMPVersion(mlir::ModuleOp mod) {
+  mlir::Attribute verAttr = mod->getAttr("omp.version");
+  return llvm::cast<mlir::omp::VersionAttr>(verAttr).getVersion();
+}
+
 void genObjectList(const ObjectList &objects,
                    Fortran::lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands) {

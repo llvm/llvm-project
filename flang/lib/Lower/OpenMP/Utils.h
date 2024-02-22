@@ -38,6 +38,8 @@ class AbstractConverter;
 
 namespace omp {
 
+uint32_t getOpenMPVersion(mlir::ModuleOp mod);
+
 using DeclareTargetCapturePair =
     std::pair<mlir::omp::DeclareTargetCaptureClause,
               Fortran::semantics::Symbol>;
