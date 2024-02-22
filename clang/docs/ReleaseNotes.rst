@@ -309,12 +309,12 @@ Arm and AArch64 Support
   Armv8-M without the Main Extension. Baremetal targets should check that the
   new default will work with their system configurations, since it requires
   that SCTLR.A is 0, SCTLR.U is 1, and that the memory in question is
-  configured as "normal" memory. We've made the value judgment that the
-  performance gains here outweigh breakages, since it is difficult to identify
-  performance loss from disabling unaligned access, but incorrect enabling
-  unaligned access will generate an obvious alignment fault on ARMv7+. This is
-  also the default setting for ARM's downstream compilers. We have not changed
-  the default behavior for ARMv6, but may revisit that decision in the future.
+  configured as "normal" memory. This brings Clang in-line with the default
+  settings for GCC and Arm Compiler. Aside from making Clang align with other
+  compilers, changing the default brings major performance and code size
+  improvements for most targets. We have not changed the default behavior for
+  ARMv6, but may revisit that decision in the future. Users can restore the old
+  behavior with -m[no-]unaligned-access.
 
 Android Support
 ^^^^^^^^^^^^^^^
