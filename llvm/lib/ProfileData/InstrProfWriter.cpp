@@ -456,7 +456,6 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   Header.BinaryIdOffset = 0;
   Header.TemporalProfTracesOffset = 0;
   Header.VTableNamesOffset = 0;
-  int N = sizeof(IndexedInstrProf::Header) / sizeof(uint64_t);
 
   // Only write out the first four fields. We need to remember the offset of the
   // remaining fields to allow back patching later.
