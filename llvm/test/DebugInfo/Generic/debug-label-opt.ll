@@ -3,12 +3,8 @@
 ; REQUIRES: asserts
 ; RUN: llc -debug-only=isel %s -o /dev/null 2> %t.debug
 ; RUN: cat %t.debug | FileCheck %s --check-prefix=CHECKMI
-;; FIXME: RemoveDIs debug output is slightly different, e.g.:
-;; -  DBG_LABEL "top", debug-location !9; debug-label-mi.c:4:1
-;; +  DBG_LABEL "top", debug-location !DILocation(line: 4, column: 1, scope: !4); debug-label-mi.c:4:1
-;; Disable these run lines until that is understood/fixed.
-; run: llc --try-experimental-debuginfo-iterators -debug-only=isel %s -o /dev/null 2> %t.debug
-; run: cat %t.debug | FileCheck %s --check-prefix=CHECKMI
+; RUN: llc --try-experimental-debuginfo-iterators -debug-only=isel %s -o /dev/null 2> %t.debug
+; RUN: cat %t.debug | FileCheck %s --check-prefix=CHECKMI
 ;
 ; CHECKMI: DBG_LABEL "end_sum", debug-location !17
 ; CHECKMI: DBG_LABEL "end", debug-location !19
