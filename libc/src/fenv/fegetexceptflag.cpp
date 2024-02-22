@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-types/fexcept_t.h"
 #include "src/fenv/fegetexceptflag.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
-
-#include <fenv.h>
 
 namespace LIBC_NAMESPACE {
 

@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/fenv-macros.h"
+#include "include/llvm-libc-types/fenv_t.h"
 #include "src/fenv/feupdateenv.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
 
-#include <fenv.h>
 
 namespace LIBC_NAMESPACE {
 
