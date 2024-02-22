@@ -3231,9 +3231,7 @@ cc_library(
         ":Transforms",
         ":VectorToLLVM",
         ":VectorTransforms",
-    ] + if_cuda_available([
-        ":SerializeToCubin",
-    ]),
+    ],
 )
 
 ##---------------------------------------------------------------------------##
@@ -5504,9 +5502,6 @@ cc_library(
             "lib/Dialect/GPU/Transforms/*.cpp",
             "lib/Dialect/GPU/Transforms/*.h",
         ],
-        exclude = [
-            "lib/Dialect/GPU/Transforms/SerializeToCubin.cpp",
-        ],
     ),
     hdrs = glob(["include/mlir/Dialect/GPU/Transforms/*.h"]),
     includes = ["include"],
@@ -5553,28 +5548,6 @@ cc_library(
     ] + if_cuda_available([
         ":NVVMToLLVMIRTranslation",
         "//llvm:NVPTXCodeGen",
-    ]),
-)
-
-cc_library(
-    name = "SerializeToCubin",
-    srcs = [
-        "lib/Dialect/GPU/Transforms/SerializeToCubin.cpp",
-    ],
-    local_defines = if_cuda_available(["MLIR_GPU_TO_CUBIN_PASS_ENABLE"]),
-    deps = [
-        ":GPUDialect",
-        ":GPUPassIncGen",
-        ":GPUTransforms",
-        ":NVVMDialect",
-        ":NVVMToLLVMIRTranslation",
-        ":Pass",
-        ":Support",
-        ":ToLLVMIRTranslation",
-        "//llvm:Support",
-    ] + if_cuda_available([
-        "@cuda//:cuda_headers",
-        "@cuda//:libcuda",
     ]),
 )
 
@@ -9190,7 +9163,6 @@ cc_binary(
         ":Pass",
         ":QuantOps",
         ":SCFToGPU",
-        ":SerializeToCubin",
         ":Support",
         ":Transforms",
         "//llvm:AllTargetsCodeGens",
