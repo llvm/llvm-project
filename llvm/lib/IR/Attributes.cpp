@@ -2043,7 +2043,7 @@ static bool checkStrictFP(const Function &Caller, const Function &Callee) {
   // Do not inline strictfp function into non-strictfp one. It would require
   // conversion of all FP operations in host function to constrained intrinsics.
   return !Callee.getAttributes().hasFnAttr(Attribute::StrictFP) ||
-           Caller.getAttributes().hasFnAttr(Attribute::StrictFP);
+         Caller.getAttributes().hasFnAttr(Attribute::StrictFP);
 }
 
 template<typename AttrClass>
