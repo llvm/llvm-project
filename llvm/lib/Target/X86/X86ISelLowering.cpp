@@ -31053,6 +31053,50 @@ static SDValue LowerCTPOP(SDValue N, const X86Subtarget &Subtarget,
     unsigned ActiveBits = Known.getBitWidth() - LZ;
     unsigned ShiftedActiveBits = Known.getBitWidth() - (LZ + TZ);
 
+    // i2 CTPOP - "ctpop(x) --> sub(x, (x >> 1))".
+    if (ShiftedActiveBits <= 2) {
+      if (ActiveBits > 2)
+        Op = DAG.getNode(ISD::SRL, DL, VT, Op,
+                         DAG.getShiftAmountConstant(TZ, VT, DL));
+      Op = DAG.getZExtOrTrunc(Op, DL, MVT::i32);
+      Op = DAG.getNode(ISD::SUB, DL, MVT::i32, Op,
+                       DAG.getNode(ISD::SRL, DL, MVT::i32, Op,
+                                   DAG.getShiftAmountConstant(1, VT, DL)));
+      return DAG.getZExtOrTrunc(Op, DL, VT);
+    }
+
+    // i3 CTPOP - perform LUT into i32 integer.
+    if (ShiftedActiveBits <= 3) {
+      if (ActiveBits > 3)
+        Op = DAG.getNode(ISD::SRL, DL, VT, Op,
+                         DAG.getShiftAmountConstant(TZ, VT, DL));
+      Op = DAG.getZExtOrTrunc(Op, DL, MVT::i32);
+      Op = DAG.getNode(ISD::SHL, DL, MVT::i32, Op,
+                       DAG.getShiftAmountConstant(1, VT, DL));
+      Op = DAG.getNode(ISD::SRL, DL, MVT::i32,
+                       DAG.getConstant(0b1110100110010100U, DL, MVT::i32), Op);
+      Op = DAG.getNode(ISD::AND, DL, MVT::i32, Op,
+                       DAG.getConstant(0x3, DL, MVT::i32));
+      return DAG.getZExtOrTrunc(Op, DL, VT);
+    }
+
+    // i4 CTPOP - perform LUT into i64 integer.
+    if (ShiftedActiveBits <= 4 &&
+        DAG.getTargetLoweringInfo().isTypeLegal(MVT::i64)) {
+      SDValue LUT = DAG.getConstant(0x4332322132212110ULL, DL, MVT::i64);
+      if (ActiveBits > 4)
+        Op = DAG.getNode(ISD::SRL, DL, VT, Op,
+                         DAG.getShiftAmountConstant(TZ, VT, DL));
+      Op = DAG.getZExtOrTrunc(Op, DL, MVT::i32);
+      Op = DAG.getNode(ISD::MUL, DL, MVT::i32, Op,
+                       DAG.getConstant(4, DL, MVT::i32));
+      Op = DAG.getNode(ISD::SRL, DL, MVT::i64, LUT,
+                       DAG.getShiftAmountOperand(MVT::i64, Op));
+      Op = DAG.getNode(ISD::AND, DL, MVT::i64, Op,
+                       DAG.getConstant(0x7, DL, MVT::i64));
+      return DAG.getZExtOrTrunc(Op, DL, VT);
+    }
+
     // i8 CTPOP - with efficient i32 MUL, then attempt multiply-mask-multiply.
     if (ShiftedActiveBits <= 8) {
       SDValue Mask11 = DAG.getConstant(0x11111111U, DL, MVT::i32);
@@ -36705,6 +36749,19 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     if (Known.countMinLeadingZeros() < BitWidth)
       Known.resetAll();
     Known = Known.trunc(BitWidth);
+    break;
+  }
+  case X86ISD::PSHUFB: {
+    SDValue Src = Op.getOperand(0);
+    SDValue Idx = Op.getOperand(1);
+
+    // If the index vector is never negative (MSB is zero), then all elements
+    // come from the source vector. This is useful for cases where
+    // PSHUFB is being used as a LUT (ctpop etc.) - the target shuffle handling
+    // below will handle the more common constant shuffle mask case.
+    KnownBits KnownIdx = DAG.computeKnownBits(Idx, DemandedElts, Depth + 1);
+    if (KnownIdx.isNonNegative())
+      Known = DAG.computeKnownBits(Src, Depth + 1);
     break;
   }
   case X86ISD::VBROADCAST: {
