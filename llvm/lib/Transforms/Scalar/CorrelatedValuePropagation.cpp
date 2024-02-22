@@ -530,15 +530,23 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
 // See if this min/max intrinsic always picks it's one specific operand.
 static bool processMinMaxIntrinsic(MinMaxIntrinsic *MM, LazyValueInfo *LVI) {
   CmpInst::Predicate Pred = CmpInst::getNonStrictPredicate(MM->getPredicate());
-  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
-      Pred, MM->getLHS(), MM->getRHS(), MM, /*UseBlockValue=*/true);
-  if (Result == LazyValueInfo::Unknown)
-    return false;
-
-  ++NumMinMax;
-  MM->replaceAllUsesWith(MM->getOperand(!Result));
-  MM->eraseFromParent();
-  return true;
+  ConstantRange LHS_CR = LVI->getConstantRangeAtUse(MM->getOperandUse(0),
+                                                    /*UndefAllowed*/ false);
+  ConstantRange RHS_CR = LVI->getConstantRangeAtUse(MM->getOperandUse(1),
+                                                    /*UndefAllowed*/ false);
+  if (LHS_CR.icmp(Pred, RHS_CR)) {
+    ++NumMinMax;
+    MM->replaceAllUsesWith(MM->getLHS());
+    MM->eraseFromParent();
+    return true;
+  }
+  if (RHS_CR.icmp(Pred, LHS_CR)) {
+    ++NumMinMax;
+    MM->replaceAllUsesWith(MM->getRHS());
+    MM->eraseFromParent();
+    return true;
+  }
+  return false;
 }
 
 // Rewrite this with.overflow intrinsic as non-overflowing.
