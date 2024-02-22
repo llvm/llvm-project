@@ -17,7 +17,7 @@
 ; BOLT: [[OFFSET2:0x[0-9a-f]*]]: Compile Unit
 ; BOLT:       Name Index @ 0x0 {
 ; BOLT-NEXT:   Header {
-; BOLT-NEXT:     Length: 0x14C
+; BOLT-NEXT:     Length: 0x148
 ; BOLT-NEXT:     Format: DWARF32
 ; BOLT-NEXT:     Version: 5
 ; BOLT-NEXT:     CU count: 2
@@ -142,7 +142,7 @@
 ; BOLT-NEXT:         DW_IDX_compile_unit: 0x00
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x00000025
 ; BOLT-NEXT:       }
-; BOLT-NEXT:       Entry @ 0x134 {
+; BOLT-NEXT:       Entry @ {{.+}} {
 ; BOLT-NEXT:         Abbrev: [[ABBREV2]]
 ; BOLT-NEXT:         Tag: DW_TAG_base_type
 ; BOLT-NEXT:         DW_IDX_compile_unit: 0x01

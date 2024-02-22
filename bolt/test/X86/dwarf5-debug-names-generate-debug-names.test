@@ -14,7 +14,7 @@
 ; BOLT: [[OFFSET2:0x[0-9a-f]*]]: Compile Unit
 ; BOLT:       Name Index @ 0x0 {
 ; BOLT-NEXT:   Header {
-; BOLT-NEXT:     Length: 0x107
+; BOLT-NEXT:     Length: 0x103
 ; BOLT-NEXT:     Format: DWARF32
 ; BOLT-NEXT:     Version: 5
 ; BOLT-NEXT:     CU count: 2

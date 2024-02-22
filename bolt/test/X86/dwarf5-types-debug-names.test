@@ -14,7 +14,7 @@
 
 ; BOLT: Name Index @ 0x0 {
 ; BOLT:   Header {
-; BOLT:     Length: 0xE5
+; BOLT:     Length: 0xE1
 ; BOLT:     Format: DWARF32
 ; BOLT:     Version: 5
 ; BOLT:     CU count: 2

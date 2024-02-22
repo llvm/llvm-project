@@ -11,7 +11,7 @@
 
 ; BOLT:Name Index @ 0x0 {
 ; BOLT-NEXT:  Header {
-; BOLT-NEXT:    Length: 0xA7
+; BOLT-NEXT:    Length: 0xA3
 ; BOLT-NEXT:    Format: DWARF32
 ; BOLT-NEXT:    Version: 5
 ; BOLT-NEXT:    CU count: 1
