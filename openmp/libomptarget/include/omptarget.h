@@ -312,6 +312,12 @@ void *llvm_omp_target_dynamic_shared_alloc();
 /// add the clauses of the requires directives in a given file
 void __tgt_register_requires(int64_t Flags);
 
+/// Initializes the runtime library.
+void __tgt_rtl_init();
+
+/// Deinitializes the runtime library.
+void __tgt_rtl_deinit();
+
 /// adds a target shared library to the target execution image
 void __tgt_register_lib(__tgt_bin_desc *Desc);
 
