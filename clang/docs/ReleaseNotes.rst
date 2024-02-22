@@ -280,6 +280,8 @@ Bug Fixes to C++ Support
   was only accepted at namespace scope but not at local function scope.
 - Clang no longer tries to call consteval constructors at runtime when they appear in a member initializer.
   (`#782154 <https://github.com/llvm/llvm-project/issues/82154>`_`)
+- Clang's __builtin_bit_cast will now produce a constant value for records with empty bases. See:
+  (`#82383 <https://github.com/llvm/llvm-project/pull/82383>`_`)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
