@@ -35,30 +35,18 @@ def BinaryUintCategory : DXILOpCategory<"Binary uint">;
 def UnaryFloatCategory : DXILOpCategory<"Unary float">;
 def ComputeIDCategory : DXILOpCategory<"Compute/Mesh/Amplification shader">;
 
-// Following are the scalar types supported by DXIL operations and are synonymous
-// to llvm_*_ty defined for readability and ease of use in the context of this file.
-
-def voidTy  : LLVMType<isVoid>;
-
-// Floating point types
-def f16Ty   : LLVMType<f16>;
-def f32Ty   : LLVMType<f32>;
-def f64Ty   : LLVMType<f64>;
-
-// Integer types
-def i1Ty   : LLVMType<i1>;
-def i8Ty   : LLVMType<i8>;
-def i16Ty  : LLVMType<i16>;
-def i32Ty  : LLVMType<i32>;
-def i64Ty  : LLVMType<i64>;
+// Represent as any pointer type with an option to change to a qualified pointer
+// type with address space specified.
+def dxil_handle_ty  : LLVMAnyPointerType;
+def dxil_cbuffer_ty : LLVMAnyPointerType;
+def dxil_resource_ty : LLVMAnyPointerType;
 
 // The parameter description for a DXIL operation
-class DXILOpParameter<int pos, string type, string name, string doc,
+class DXILOpParameter<int pos, LLVMType type, string name, string doc,
                  bit isConstant = 0, string enumName = "",
                  int maxValue = 0> {
   int Pos = pos;               // Position in parameter list
-  string Type = type;          // LLVM type name, $o for overload, $r for resource
-                               // type, $cb for legacy cbuffer, $u4 for u4 struct
+  LLVMType ParamType = type;   // Parameter type
   string Name = name;          // Short, unique parameter name
   string Doc = doc;            // Description of this parameter
   bit IsConstant = isConstant; // Whether this parameter requires a constant value in the IR
@@ -108,55 +96,55 @@ class DXILOperation<string name, int opCode, DXILOpClass opClass, DXILOpCategory
 class LLVMIntrinsic<Intrinsic llvm_intrinsic_> { Intrinsic llvm_intrinsic = llvm_intrinsic_; }
 
 def Sin : DXILOperation<"Sin", 13, UnaryClass, UnaryFloatCategory, "returns sine(theta) for theta in radians.",
-  [f16Ty,f32Ty], ReadNone,
+  [llvm_half_ty, llvm_float_ty], ReadNone,
   [
-    DXILOpParameter<0, "$o", "", "operation result">,
-    DXILOpParameter<1, "i32", "opcode", "DXIL opcode">,
-    DXILOpParameter<2, "$o", "value", "input value">
+    DXILOpParameter<0, llvm_anyfloat_ty, "", "operation result">,
+    DXILOpParameter<1, llvm_i32_ty, "opcode", "DXIL opcode">,
+    DXILOpParameter<2, llvm_anyfloat_ty, "value", "input value">
   ],
   ["floats"]>,
   LLVMIntrinsic<int_sin>;
 
-def UMax : DXILOperation< "UMax", 39,  BinaryClass,  BinaryUintCategory, "unsigned integer maximum. UMax(a,b) = a > b ? a : b",
-    [i16Ty,i32Ty,i64Ty],  ReadNone,
+def UMax : DXILOperation< "UMax", 39, BinaryClass, BinaryUintCategory, "unsigned integer maximum. UMax(a,b) = a > b ? a : b",
+    [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty], ReadNone,
   [
-    DXILOpParameter<0,  "$o",  "",  "operation result">,
-    DXILOpParameter<1,  "i32",  "opcode",  "DXIL opcode">,
-    DXILOpParameter<2,  "$o",  "a",  "input value">,
-    DXILOpParameter<3,  "$o",  "b",  "input value">
+    DXILOpParameter<0, llvm_anyint_ty, "", "operation result">,
+    DXILOpParameter<1, llvm_i32_ty, "opcode", "DXIL opcode">,
+    DXILOpParameter<2, llvm_anyint_ty, "a", "input value">,
+    DXILOpParameter<3, llvm_anyint_ty, "b", "input value">
   ],
   ["uints"]>,
   LLVMIntrinsic<int_umax>;
 
-def ThreadId : DXILOperation< "ThreadId", 93,  ThreadIdClass, ComputeIDCategory, "reads the thread ID", [i32Ty],  ReadNone,
+def ThreadId : DXILOperation< "ThreadId", 93, ThreadIdClass, ComputeIDCategory, "reads the thread ID", [llvm_i32_ty], ReadNone,
   [
-    DXILOpParameter<0,  "i32",  "",  "thread ID component">,
-    DXILOpParameter<1,  "i32",  "opcode",  "DXIL opcode">,
-    DXILOpParameter<2,  "i32",  "component",  "component to read (x,y,z)">
+    DXILOpParameter<0, llvm_i32_ty, "", "thread ID component">,
+    DXILOpParameter<1, llvm_i32_ty, "opcode", "DXIL opcode">,
+    DXILOpParameter<2, llvm_i32_ty, "component", "component to read (x,y,z)">
   ]>,
   LLVMIntrinsic<int_dx_thread_id>;
 
-def GroupId : DXILOperation< "GroupId", 94,  GroupIdClass, ComputeIDCategory, "reads the group ID (SV_GroupID)", [i32Ty],  ReadNone,
+def GroupId : DXILOperation< "GroupId", 94, GroupIdClass, ComputeIDCategory, "reads the group ID (SV_GroupID)", [llvm_i32_ty], ReadNone,
   [
-    DXILOpParameter<0,  "i32",  "",  "group ID component">,
-    DXILOpParameter<1,  "i32",  "opcode",  "DXIL opcode">,
-    DXILOpParameter<2,  "i32",  "component",  "component to read">
+    DXILOpParameter<0, llvm_i32_ty, "", "group ID component">,
+    DXILOpParameter<1, llvm_i32_ty, "opcode", "DXIL opcode">,
+    DXILOpParameter<2, llvm_i32_ty, "component", "component to read">
   ]>,
   LLVMIntrinsic<int_dx_group_id>;
 
-def ThreadIdInGroup : DXILOperation< "ThreadIdInGroup", 95,  ThreadIdInGroupClass, ComputeIDCategory,
-  "reads the thread ID within the group (SV_GroupThreadID)", [i32Ty],  ReadNone,
+def ThreadIdInGroup : DXILOperation< "ThreadIdInGroup", 95, ThreadIdInGroupClass, ComputeIDCategory,
+  "reads the thread ID within the group (SV_GroupThreadID)", [llvm_i32_ty], ReadNone,
   [
-    DXILOpParameter<0,  "i32",  "",  "thread ID in group component">,
-    DXILOpParameter<1,  "i32",  "opcode",  "DXIL opcode">,
-    DXILOpParameter<2,  "i32",  "component",  "component to read (x,y,z)">
+    DXILOpParameter<0, llvm_i32_ty, "", "thread ID in group component">,
+    DXILOpParameter<1, llvm_i32_ty, "opcode", "DXIL opcode">,
+    DXILOpParameter<2, llvm_i32_ty, "component", "component to read (x,y,z)">
   ]>,
   LLVMIntrinsic<int_dx_thread_id_in_group>;
 
-def FlattenedThreadIdInGroup : DXILOperation< "FlattenedThreadIdInGroup", 96,  FlattenedThreadIdInGroupClass, ComputeIDCategory,
-   "provides a flattened index for a given thread within a given group (SV_GroupIndex)", [i32Ty],  ReadNone,
+def FlattenedThreadIdInGroup : DXILOperation< "FlattenedThreadIdInGroup", 96, FlattenedThreadIdInGroupClass, ComputeIDCategory,
+   "provides a flattened index for a given thread within a given group (SV_GroupIndex)", [llvm_i32_ty], ReadNone,
   [
-    DXILOpParameter<0,  "i32",  "",  "result">,
-    DXILOpParameter<1,  "i32",  "opcode",  "DXIL opcode">
+    DXILOpParameter<0, llvm_i32_ty, "", "result">,
+    DXILOpParameter<1, llvm_i32_ty, "opcode", "DXIL opcode">
   ]>,
   LLVMIntrinsic<int_dx_flattened_thread_id_in_group>;
