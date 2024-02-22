@@ -13507,7 +13507,7 @@ TEST_F(FormatTest, IncorrectCodeUnbalancedBraces) {
                 "  operator iunt(\n"
                 "};");
   verifyNoCrash("struct Foo {\n"
-                "operator foo(bar\n"
+                "  operator foo(bar\n"
                 "};");
 }
 
