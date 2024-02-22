@@ -1311,7 +1311,9 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
 
           while (isa<PHINode>(InsertPos))
             ++InsertPos;
-          U.set(new AddrSpaceCastInst(NewV, V->getType(), "", &*InsertPos));
+          // This instruction may contain multiple uses of V, update them all.
+          U.getUser()->replaceUsesOfWith(
+              V, new AddrSpaceCastInst(NewV, V->getType(), "", &*InsertPos));
         } else {
           U.set(ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV),
                                                V->getType()));
