@@ -13506,6 +13506,9 @@ TEST_F(FormatTest, IncorrectCodeUnbalancedBraces) {
   verifyNoCrash("struct X {\n"
                 "  operator iunt(\n"
                 "};");
+  verifyNoCrash("struct Foo {\n"
+                "operator foo(bar\n"
+                "};");
 }
 
 TEST_F(FormatTest, IncorrectUnbalancedBracesInMacrosWithUnicode) {
