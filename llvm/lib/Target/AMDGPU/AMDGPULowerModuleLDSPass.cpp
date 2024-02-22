@@ -327,8 +327,6 @@ class AMDGPULowerModuleLDS {
     return convertUsersOfConstantsToInstructions(LDSGlobals);
   }
 
-  std::optional<bool> HasAbsoluteGVs;
-
 public:
   AMDGPULowerModuleLDS(const AMDGPUTargetMachine &TM_) : TM(TM_) {}
 
@@ -336,12 +334,13 @@ public:
 
   using VariableFunctionMap = DenseMap<GlobalVariable *, DenseSet<Function *>>;
 
-  void getUsesOfLDSByFunction(CallGraph const &CG, Module &M,
-                              FunctionVariableMap &kernels,
-                              FunctionVariableMap &functions) {
+  static void getUsesOfLDSByFunction(CallGraph const &CG, Module &M,
+                                     FunctionVariableMap &kernels,
+                                     FunctionVariableMap &functions) {
 
     // Get uses from the current function, excluding uses by called functions
     // Two output variables to avoid walking the globals list twice
+    std::optional<bool> HasAbsoluteGVs;
     for (auto &GV : M.globals()) {
       if (!AMDGPU::isLDSVariableToLower(GV)) {
         continue;
@@ -349,15 +348,16 @@ public:
 
       // Check if the module is consistent: either all GVs are absolute (happens
       // when we run the pass more than once), or none are.
+      const bool IsAbsolute = GV.isAbsoluteSymbolRef();
       if (HasAbsoluteGVs.has_value()) {
-        if (*HasAbsoluteGVs != GV.isAbsoluteSymbolRef()) {
+        if (*HasAbsoluteGVs != IsAbsolute) {
           report_fatal_error(
               "Module cannot mix absolute and non-absolute LDS GVs");
         }
       } else
-        HasAbsoluteGVs = GV.isAbsoluteSymbolRef();
+        HasAbsoluteGVs = IsAbsolute;
 
-      if (GV.isAbsoluteSymbolRef())
+      if (IsAbsolute)
         continue;
 
       for (User *V : GV.users()) {
@@ -378,7 +378,7 @@ public:
     FunctionVariableMap indirect_access;
   };
 
-  LDSUsesInfoTy getTransitiveUsesOfLDS(CallGraph const &CG, Module &M) {
+  static LDSUsesInfoTy getTransitiveUsesOfLDS(CallGraph const &CG, Module &M) {
 
     FunctionVariableMap direct_map_kernel;
     FunctionVariableMap direct_map_function;
