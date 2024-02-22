@@ -634,9 +634,9 @@ void mlir::collapseParallelLoops(
   SmallVector<Value, 3> lowerBounds, upperBounds, steps;
   auto cst0 = outsideBuilder.create<arith::ConstantIndexOp>(loc, 0);
   auto cst1 = outsideBuilder.create<arith::ConstantIndexOp>(loc, 1);
-  for (unsigned i = 0, e = sortedDimensions.size(); i < e; ++i) {
+  for (auto &sortedDimension : sortedDimensions) {
     Value newUpperBound = outsideBuilder.create<arith::ConstantIndexOp>(loc, 1);
-    for (auto idx : sortedDimensions[i]) {
+    for (auto idx : sortedDimension) {
       newUpperBound = outsideBuilder.create<arith::MulIOp>(
           loc, newUpperBound, normalizedUpperBounds[idx]);
     }

@@ -15,6 +15,8 @@ func.func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
   return
 }
 
+emitc.declare_func @func
+
 emitc.func @func(%arg0 : i32) {
   emitc.call_opaque "foo"(%arg0) : (i32) -> ()
   emitc.return

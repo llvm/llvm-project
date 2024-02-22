@@ -75,6 +75,10 @@ def InterpreterPass : Pass<"transform-interpreter"> {
            "Select the operation with 'transform.target_tag' attribute having "
            "the given value as payload IR root. If empty select the pass "
            "anchor operation as the payload IR root.">,
+    ListOption<"debugBindTrailingArgs", "debug-bind-trailing-args",
+               "std::string",
+               "Binds trailing arguments of the entry point to the payload "
+               "operations with specified names.">,
     Option<"disableExpensiveChecks", "disable-expensive-checks", "bool",
            "false",
            "Disable expensive checks in the interpreter for a faster run.">,

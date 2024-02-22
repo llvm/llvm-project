@@ -73,6 +73,7 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.imaxdiv_t
+    .llvm-libc-macros.inttypes_macros
 )
 
 add_gen_header(
@@ -101,6 +102,14 @@ add_gen_header(
     .llvm-libc-types.double_t
     .llvm-libc-types.float_t
     .llvm-libc-types.float128
+)
+
+add_gen_header(
+  stdfix
+  DEF_FILE stdfix.h.def
+  GEN_HDR stdfix.h
+  DEPENDS
+    .llvm-libc-macros.stdfix_macros
 )
 
 # TODO: This should be conditional on POSIX networking being included.

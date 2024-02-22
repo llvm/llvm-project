@@ -788,6 +788,23 @@ cc_library(
 )
 
 cc_library(
+    name = "TestMathToVCIX",
+    srcs = glob(["lib/Conversion/MathToVCIX/*.cpp"]),
+    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:MathDialect",
+        "//mlir:Pass",
+        "//mlir:TransformUtils",
+        "//mlir:VCIXDialect",
+        "//mlir:VectorDialect",
+    ],
+)
+
+cc_library(
     name = "TestMemRef",
     srcs = glob(["lib/Dialect/MemRef/*.cpp"]),
     defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],

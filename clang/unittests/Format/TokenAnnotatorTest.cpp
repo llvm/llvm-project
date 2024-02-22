@@ -2287,6 +2287,51 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenBangOperator);
   Tokens = Annotate("!cond");
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenCondOperator);
+
+  auto AnnotateValue = [this, &Style](llvm::StringRef Code) {
+    // Values are annotated only in specific context.
+    auto Result = annotate(("def X { let V = " + Code + "; }").str(), Style);
+    return decltype(Result){Result.begin() + 6, Result.end() - 3};
+  };
+  // Both of bang/cond operators.
+  Tokens = AnnotateValue("!cond(!eq(x, 0): 1, true: x)");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenCondOperator);
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_TableGenBangOperator);
+  EXPECT_TOKEN(Tokens[8], tok::colon, TT_TableGenCondOperatorColon);
+  EXPECT_TOKEN(Tokens[10], tok::comma, TT_TableGenCondOperatorComma);
+  EXPECT_TOKEN(Tokens[12], tok::colon, TT_TableGenCondOperatorColon);
+  // DAGArg values with operator identifier
+  Tokens = AnnotateValue("(ins type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpener);
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_TableGenDAGArgListColon);
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown); // $src1
+  EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListComma);
+  EXPECT_TOKEN(Tokens[7], tok::colon, TT_TableGenDAGArgListColon);
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
+  // List literal
+  Tokens = AnnotateValue("[1, 2, 3]");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_TableGenListOpener);
+  EXPECT_TOKEN(Tokens[6], tok::r_square, TT_TableGenListCloser);
+  // Suffixes of values
+  Tokens = AnnotateValue("valid.field");
+  ASSERT_EQ(Tokens.size(), 3u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::period, TT_TableGenValueSuffix);
+  // Code
+  Tokens = AnnotateValue("[{ code is multiline string }]");
+  ASSERT_EQ(Tokens.size(), 1u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::string_literal, TT_TableGenMultiLineString);
+
+  // The definition
+  Tokens = annotate("def Def : Parent<Child> {}", Style);
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens; // This contains eof.
+  // We use inheritance colon and function brace. They are enough.
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_InheritanceColon);
+  EXPECT_TOKEN(Tokens[4], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[6], tok::greater, TT_TemplateCloser);
+  EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_FunctionLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandConstructors) {

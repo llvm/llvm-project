@@ -2467,7 +2467,8 @@ void OmpAttributeVisitor::CheckDataCopyingClause(
       // either 'private' or 'threadprivate' in enclosing context.
       if (!checkSymbol->test(Symbol::Flag::OmpThreadprivate) &&
           !(HasSymbolInEnclosingScope(symbol, currScope()) &&
-              symbol.test(Symbol::Flag::OmpPrivate))) {
+              (symbol.test(Symbol::Flag::OmpPrivate) ||
+                  symbol.test(Symbol::Flag::OmpFirstPrivate)))) {
         context_.Say(name.source,
             "COPYPRIVATE variable '%s' is not PRIVATE or THREADPRIVATE in "
             "outer context"_err_en_US,

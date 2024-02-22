@@ -93,15 +93,9 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 #if LIBC_HAS_BUILTIN(__builtin_ctzs)
 ADD_SPECIALIZATION(countr_zero, unsigned short, __builtin_ctzs)
 #endif
-#if LIBC_HAS_BUILTIN(__builtin_ctz)
 ADD_SPECIALIZATION(countr_zero, unsigned int, __builtin_ctz)
-#endif
-#if LIBC_HAS_BUILTIN(__builtin_ctzl)
 ADD_SPECIALIZATION(countr_zero, unsigned long, __builtin_ctzl)
-#endif
-#if LIBC_HAS_BUILTIN(__builtin_ctzll)
 ADD_SPECIALIZATION(countr_zero, unsigned long long, __builtin_ctzll)
-#endif
 
 /// Count number of 0's from the most significant bit to the least
 ///   stopping at the first 1.
@@ -128,15 +122,9 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 #if LIBC_HAS_BUILTIN(__builtin_clzs)
 ADD_SPECIALIZATION(countl_zero, unsigned short, __builtin_clzs)
 #endif
-#if LIBC_HAS_BUILTIN(__builtin_clz)
 ADD_SPECIALIZATION(countl_zero, unsigned int, __builtin_clz)
-#endif
-#if LIBC_HAS_BUILTIN(__builtin_clzl)
 ADD_SPECIALIZATION(countl_zero, unsigned long, __builtin_clzl)
-#endif
-#if LIBC_HAS_BUILTIN(__builtin_clzll)
 ADD_SPECIALIZATION(countl_zero, unsigned long long, __builtin_clzll)
-#endif
 
 #undef ADD_SPECIALIZATION
 
@@ -236,6 +224,28 @@ LIBC_INLINE constexpr To bit_or_static_cast(const From &from) {
   } else {
     return static_cast<To>(from);
   }
+}
+
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int first_leading_zero(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0 : countl_one(value) + 1;
+}
+
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int first_leading_one(T value) {
+  return first_leading_zero(static_cast<T>(~value));
+}
+
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int first_trailing_zero(T value) {
+  return value == cpp::numeric_limits<T>::max()
+             ? 0
+             : countr_zero(static_cast<T>(~value)) + 1;
+}
+
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int first_trailing_one(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0 : countr_zero(value) + 1;
 }
 
 } // namespace LIBC_NAMESPACE::cpp

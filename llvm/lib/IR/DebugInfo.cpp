@@ -400,8 +400,8 @@ static MDNode *updateLoopMetadataDebugLocationsImpl(
   // Save space for the self-referential LoopID.
   SmallVector<Metadata *, 4> MDs = {nullptr};
 
-  for (const MDOperand &MDO : llvm::drop_begin(OrigLoopID->operands())) {
-    Metadata *MD = MDO;
+  for (unsigned i = 1; i < OrigLoopID->getNumOperands(); ++i) {
+    Metadata *MD = OrigLoopID->getOperand(i);
     if (!MD)
       MDs.push_back(nullptr);
     else if (Metadata *NewMD = Updater(MD))
@@ -2212,10 +2212,6 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
 bool AssignmentTrackingPass::runOnFunction(Function &F) {
   // No value in assignment tracking without optimisations.
   if (F.hasFnAttribute(Attribute::OptimizeNone))
-    return /*Changed*/ false;
-
-  // FIXME: https://github.com/llvm/llvm-project/issues/76545
-  if (F.hasFnAttribute(Attribute::SanitizeHWAddress))
     return /*Changed*/ false;
 
   bool Changed = false;

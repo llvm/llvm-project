@@ -27,6 +27,9 @@ namespace llvm {
 namespace object {
 
 class COFFImportFile : public SymbolicFile {
+private:
+  enum SymbolIndex { ImpSymbol, ThunkSymbol, ECAuxSymbol, ECThunkSymbol };
+
 public:
   COFFImportFile(MemoryBufferRef Source)
       : SymbolicFile(ID_COFFImportFile, Source) {}
@@ -36,9 +39,23 @@ public:
   void moveSymbolNext(DataRefImpl &Symb) const override { ++Symb.p; }
 
   Error printSymbolName(raw_ostream &OS, DataRefImpl Symb) const override {
-    if (Symb.p == 0)
+    switch (Symb.p) {
+    case ImpSymbol:
       OS << "__imp_";
-    OS << StringRef(Data.getBufferStart() + sizeof(coff_import_header));
+      break;
+    case ECAuxSymbol:
+      OS << "__imp_aux_";
+      break;
+    }
+    const char *Name = Data.getBufferStart() + sizeof(coff_import_header);
+    if (Symb.p != ECThunkSymbol && COFF::isArm64EC(getMachine())) {
+      if (std::optional<std::string> DemangledName =
+              getArm64ECDemangledFunctionName(Name)) {
+        OS << StringRef(*DemangledName);
+        return Error::success();
+      }
+    }
+    OS << StringRef(Name);
     return Error::success();
   }
 
@@ -52,7 +69,12 @@ public:
 
   basic_symbol_iterator symbol_end() const override {
     DataRefImpl Symb;
-    Symb.p = isData() ? 1 : 2;
+    if (isData())
+      Symb.p = ImpSymbol + 1;
+    else if (COFF::isArm64EC(getMachine()))
+      Symb.p = ECThunkSymbol + 1;
+    else
+      Symb.p = ThunkSymbol + 1;
     return BasicSymbolRef(Symb, this);
   }
 
@@ -66,6 +88,7 @@ public:
   uint16_t getMachine() const { return getCOFFImportHeader()->Machine; }
 
   StringRef getFileFormatName() const;
+  StringRef getExportName() const;
 
 private:
   bool isData() const {
@@ -91,6 +114,10 @@ struct COFFShortExport {
   /// file, this is "baz" in "EXPORTS\nfoo = bar == baz".
   std::string AliasTarget;
 
+  /// Specifies EXPORTAS name. In a .def file, this is "bar" in
+  /// "EXPORTS\nfoo EXPORTAS bar".
+  std::string ExportAs;
+
   uint16_t Ordinal = 0;
   bool Noname = false;
   bool Data = false;
@@ -108,9 +135,20 @@ struct COFFShortExport {
   }
 };
 
-Error writeImportLibrary(StringRef ImportName, StringRef Path,
-                         ArrayRef<COFFShortExport> Exports,
-                         COFF::MachineTypes Machine, bool MinGW);
+/// Writes a COFF import library containing entries described by the Exports
+/// array.
+///
+/// For hybrid targets such as ARM64EC, additional native entry points can be
+/// exposed using the NativeExports parameter. When NativeExports is used, the
+/// output import library will expose these native ARM64 imports alongside the
+/// entries described in the Exports array. Such a library can be used for
+/// linking both ARM64EC and pure ARM64 objects, and the linker will pick only
+/// the exports relevant to the target platform. For non-hybrid targets,
+/// the NativeExports parameter should not be used.
+Error writeImportLibrary(
+    StringRef ImportName, StringRef Path, ArrayRef<COFFShortExport> Exports,
+    COFF::MachineTypes Machine, bool MinGW,
+    ArrayRef<COFFShortExport> NativeExports = std::nullopt);
 
 } // namespace object
 } // namespace llvm

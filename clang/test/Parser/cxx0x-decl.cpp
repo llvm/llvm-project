@@ -157,7 +157,7 @@ namespace DuplicateSpecifier {
   struct A {
     friend constexpr int constexpr friend f(); // expected-warning {{duplicate 'friend' declaration specifier}} \
                                                // expected-error {{duplicate 'constexpr' declaration specifier}}
-    friend struct A friend; // expected-warning {{duplicate 'friend'}} expected-error {{'friend' must appear first}}
+    friend struct A friend; // expected-warning {{duplicate 'friend'}}
   };
 
   constinit constexpr int n1 = 0; // expected-error {{cannot combine with previous 'constinit'}}

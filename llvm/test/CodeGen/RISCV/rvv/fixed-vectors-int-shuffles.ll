@@ -719,3 +719,28 @@ define <8 x i32> @shuffle_v8i32_2(<8 x i32> %x, <8 x i32> %y) {
   %s = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i32> %s
 }
+
+; FIXME: This could be expressed as a vrgather.vv
+define <8 x i8> @shuffle_v64i8_v8i8(<64 x i8> %wide.vec) {
+; CHECK-LABEL: shuffle_v64i8_v8i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    vsll.vi v14, v12, 3
+; CHECK-NEXT:    vrgather.vv v12, v8, v14
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
+; CHECK-NEXT:    li a1, 240
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    lui a1, 98561
+; CHECK-NEXT:    addi a1, a1, -2048
+; CHECK-NEXT:    vmv.v.x v10, a1
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; CHECK-NEXT:    vrgather.vv v12, v8, v10, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v12
+; CHECK-NEXT:    ret
+  %s = shufflevector <64 x i8> %wide.vec, <64 x i8> poison, <8 x i32> <i32 0, i32 8, i32 16, i32 24, i32 32, i32 40, i32 48, i32 56>
+  ret <8 x i8> %s
+}

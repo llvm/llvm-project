@@ -40,7 +40,8 @@ protected:
 
   void initializeBOLT() {
     BC = cantFail(BinaryContext::createBinaryContext(
-        ObjFile.get(), true, DWARFContext::create(*ObjFile.get())));
+        ObjFile.get(), true, DWARFContext::create(*ObjFile.get()),
+        {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
   }
 

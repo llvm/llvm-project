@@ -1655,6 +1655,13 @@ bool HexagonInstrInfo::isPostIncrement(const MachineInstr &MI) const {
   return getAddrMode(MI) == HexagonII::PostInc;
 }
 
+bool HexagonInstrInfo::isPostIncWithImmOffset(const MachineInstr &MI) const {
+  unsigned BasePos, OffsetPos;
+  if (!getBaseAndOffsetPosition(MI, BasePos, OffsetPos))
+    return false;
+  return isPostIncrement(MI) && MI.getOperand(OffsetPos).isImm();
+}
+
 // Returns true if an instruction is predicated irrespective of the predicate
 // sense. For example, all of the following will return true.
 // if (p0) R1 = add(R2, R3)
@@ -2434,6 +2441,55 @@ bool HexagonInstrInfo::isLoopN(const MachineInstr &MI) const {
          Opcode == Hexagon::J2_loop1r    ||
          Opcode == Hexagon::J2_loop1iext ||
          Opcode == Hexagon::J2_loop1rext;
+}
+
+bool HexagonInstrInfo::isCircBufferInstr(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case Hexagon::L2_loadalignb_pci:
+  case Hexagon::L2_loadalignb_pcr:
+  case Hexagon::L2_loadalignh_pci:
+  case Hexagon::L2_loadalignh_pcr:
+  case Hexagon::L2_loadbsw2_pci:
+  case Hexagon::L2_loadbsw2_pcr:
+  case Hexagon::L2_loadbsw4_pci:
+  case Hexagon::L2_loadbsw4_pcr:
+  case Hexagon::L2_loadbzw2_pci:
+  case Hexagon::L2_loadbzw2_pcr:
+  case Hexagon::L2_loadbzw4_pci:
+  case Hexagon::L2_loadbzw4_pcr:
+  case Hexagon::L2_loadrb_pci:
+  case Hexagon::L2_loadrb_pcr:
+  case Hexagon::L2_loadrd_pci:
+  case Hexagon::L2_loadrd_pcr:
+  case Hexagon::L2_loadrh_pci:
+  case Hexagon::L2_loadrh_pcr:
+  case Hexagon::L2_loadri_pci:
+  case Hexagon::L2_loadri_pcr:
+  case Hexagon::L2_loadrub_pci:
+  case Hexagon::L2_loadrub_pcr:
+  case Hexagon::L2_loadruh_pci:
+  case Hexagon::L2_loadruh_pcr:
+  case Hexagon::S2_storerbnew_pci:
+  case Hexagon::S2_storerbnew_pcr:
+  case Hexagon::S2_storerb_pci:
+  case Hexagon::S2_storerb_pcr:
+  case Hexagon::S2_storerd_pci:
+  case Hexagon::S2_storerd_pcr:
+  case Hexagon::S2_storerf_pci:
+  case Hexagon::S2_storerf_pcr:
+  case Hexagon::S2_storerhnew_pci:
+  case Hexagon::S2_storerhnew_pcr:
+  case Hexagon::S2_storerh_pci:
+  case Hexagon::S2_storerh_pcr:
+  case Hexagon::S2_storerinew_pci:
+  case Hexagon::S2_storerinew_pcr:
+  case Hexagon::S2_storeri_pci:
+  case Hexagon::S2_storeri_pcr:
+    return true;
+  }
+  return false;
 }
 
 bool HexagonInstrInfo::isMemOp(const MachineInstr &MI) const {

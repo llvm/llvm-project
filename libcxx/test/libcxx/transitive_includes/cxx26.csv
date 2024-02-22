@@ -105,7 +105,6 @@ codecvt string
 codecvt tuple
 codecvt typeinfo
 codecvt version
-compare cmath
 compare cstddef
 compare cstdint
 compare limits
@@ -283,6 +282,7 @@ iostream istream
 iostream ostream
 iostream streambuf
 iostream version
+istream bitset
 istream cstddef
 istream ostream
 istream version

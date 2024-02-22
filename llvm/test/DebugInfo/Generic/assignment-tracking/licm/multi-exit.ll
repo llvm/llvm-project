@@ -72,7 +72,7 @@ entry:
   call void @llvm.dbg.assign(metadata i1 undef, metadata !35, metadata !DIExpression(), metadata !37, metadata ptr undef, metadata !DIExpression()), !dbg !38
   %a = alloca i32, align 4, !DIAssignID !39
   call void @llvm.dbg.assign(metadata i1 undef, metadata !36, metadata !DIExpression(), metadata !39, metadata ptr %a, metadata !DIExpression()), !dbg !38
-  call void @llvm.lifetime.start.p0i8(i64 4, ptr nonnull %a) #5, !dbg !40
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %a) #5, !dbg !40
   br label %for.cond.outer, !dbg !41
 
 for.cond.outer:                                   ; preds = %if.end3, %entry
@@ -108,7 +108,7 @@ if.end3:                                          ; preds = %if.end3.loopexit, %
 }
 
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #1
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #3
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #3
 declare !dbg !64 dso_local void @e(...) local_unnamed_addr #4
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 

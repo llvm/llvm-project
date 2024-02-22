@@ -110,6 +110,7 @@
   { include: [ "<__algorithm/ranges_binary_search.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/ranges_clamp.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/ranges_contains.h>", "private", "<algorithm>", "public" ] },
+  { include: [ "<__algorithm/ranges_contains_subrange.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/ranges_copy.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/ranges_copy_backward.h>", "private", "<algorithm>", "public" ] },
   { include: [ "<__algorithm/ranges_copy_if.h>", "private", "<algorithm>", "public" ] },
