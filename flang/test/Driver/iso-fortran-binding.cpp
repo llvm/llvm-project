@@ -1,9 +1,9 @@
-! UNSUPPORTED: system-windows
-! RUN: split-file %s %t
-! RUN: chmod +x %t/runtest.sh
-! RUN: %t/runtest.sh %t %t/cppfile.cpp %flang | FileCheck %s
+// UNSUPPORTED: system-windows
+// RUN: split-file %s %t
+// RUN: chmod +x %t/runtest.sh
+// RUN: %t/runtest.sh %t %t/cppfile.cpp %flang | FileCheck %s
 
-!--- cppfile.cpp
+//--- cppfile.cpp
 extern "C" {
 #include "ISO_Fortran_binding.h"
 }
@@ -15,7 +15,7 @@ int main() {
 }
 
 // CHECK: PASS
-!--- runtest.sh
+//--- runtest.sh
 #!/bin/bash
 TMPDIR=$1
 CPPFILE=$2
