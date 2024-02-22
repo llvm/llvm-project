@@ -23,7 +23,7 @@ CPPFILE=$2
 FLANG=$3
 BINDIR=`dirname $FLANG`
 CPPCOMP=$BINDIR/clang++
-if [ -x $CCOMP ]
+if [ -x $CPPCOMP ]
 then
   $CPPCOMP $CPPFILE -o $TMPDIR/a.out
   $TMPDIR/a.out # should print "PASS"
