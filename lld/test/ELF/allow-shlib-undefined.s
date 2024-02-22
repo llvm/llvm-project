@@ -48,14 +48,14 @@
 # CHECK-NOT:   {{.}}
 
 # CHECK2-NOT:  error:
-# CHECK2:      error: undefined reference due to --no-allow-shlib-undefined: x1
-# CHECK2-NEXT: >>> referenced by a.so
-# CHECK2:      error: undefined reference due to --no-allow-shlib-undefined: x1
-# CHECK2-NEXT: >>> referenced by b.so
+# CHECK2:      error: undefined reference: x1
+# CHECK2-NEXT: >>> referenced by a.so (disallowed by --no-allow-shlib-undefined)
+# CHECK2:      error: undefined reference: x1
+# CHECK2-NEXT: >>> referenced by b.so (disallowed by --no-allow-shlib-undefined)
 # CHECK2-NOT:  {{.}}
 
-# WARN:        warning: undefined reference due to --no-allow-shlib-undefined: x1
-# WARN-NEXT:   >>> referenced by a.so
+# WARN:        warning: undefined reference: x1
+# WARN-NEXT:   >>> referenced by a.so (disallowed by --no-allow-shlib-undefined)
 
 # NONEXPORTED-NOT: error:
 # NONEXPORTED:     error: non-exported symbol 'x1' in 'def-hidden.o' is referenced by DSO 'a.so'
