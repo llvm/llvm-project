@@ -5,4 +5,7 @@
 #
 # Use -sectcreate to create a section from a data file.
 
+# Jitlink does not support ARM64 COFF files.
+# UNSUPPORTED: target=aarch64-pc-windows-{{.*}}
+
 # jitlink-check: *{4}foo = 0x2a2a5a5a
