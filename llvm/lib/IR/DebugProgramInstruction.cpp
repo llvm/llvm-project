@@ -63,20 +63,24 @@ void DbgRecord::deleteRecord() {
   switch (RecordKind) {
   case ValueKind:
     delete cast<DPValue>(this);
-    break;
-  default:
-    llvm_unreachable("unsupported DbgRecord kind");
+    return;
+  case LabelKind:
+    delete cast<DPLabel>(this);
+    return;
   }
+  llvm_unreachable("unsupported DbgRecord kind");
 }
 
 void DbgRecord::print(raw_ostream &O, bool IsForDebug) const {
   switch (RecordKind) {
   case ValueKind:
     cast<DPValue>(this)->print(O, IsForDebug);
-    break;
-  default:
-    llvm_unreachable("unsupported DbgRecord kind");
+    return;
+  case LabelKind:
+    cast<DPLabel>(this)->print(O, IsForDebug);
+    return;
   };
+  llvm_unreachable("unsupported DbgRecord kind");
 }
 
 void DbgRecord::print(raw_ostream &O, ModuleSlotTracker &MST,
@@ -84,10 +88,12 @@ void DbgRecord::print(raw_ostream &O, ModuleSlotTracker &MST,
   switch (RecordKind) {
   case ValueKind:
     cast<DPValue>(this)->print(O, MST, IsForDebug);
-    break;
-  default:
-    llvm_unreachable("unsupported DbgRecord kind");
+    return;
+  case LabelKind:
+    cast<DPLabel>(this)->print(O, MST, IsForDebug);
+    return;
   };
+  llvm_unreachable("unsupported DbgRecord kind");
 }
 
 bool DbgRecord::isIdenticalToWhenDefined(const DbgRecord &R) const {
@@ -96,22 +102,14 @@ bool DbgRecord::isIdenticalToWhenDefined(const DbgRecord &R) const {
   switch (RecordKind) {
   case ValueKind:
     return cast<DPValue>(this)->isIdenticalToWhenDefined(*cast<DPValue>(&R));
-    break;
-  default:
-    llvm_unreachable("unsupported DbgRecord kind");
+  case LabelKind:
+    return cast<DPLabel>(this)->getLabel() == cast<DPLabel>(R).getLabel();
   };
+  llvm_unreachable("unsupported DbgRecord kind");
 }
 
 bool DbgRecord::isEquivalentTo(const DbgRecord &R) const {
-  if (RecordKind != R.RecordKind)
-    return false;
-  switch (RecordKind) {
-  case ValueKind:
-    return cast<DPValue>(this)->isEquivalentTo(*cast<DPValue>(&R));
-    break;
-  default:
-    llvm_unreachable("unsupported DbgRecord kind");
-  };
+  return getDebugLoc() == R.getDebugLoc() && isIdenticalToWhenDefined(R);
 }
 
 DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
@@ -314,12 +312,15 @@ DbgRecord *DbgRecord::clone() const {
   switch (RecordKind) {
   case ValueKind:
     return cast<DPValue>(this)->clone();
-  default:
-    llvm_unreachable("unsupported DbgRecord kind");
+  case LabelKind:
+    return cast<DPLabel>(this)->clone();
   };
+  llvm_unreachable("unsupported DbgRecord kind");
 }
 
 DPValue *DPValue::clone() const { return new DPValue(*this); }
+
+DPLabel *DPLabel::clone() const { return new DPLabel(Label, getDebugLoc()); }
 
 DbgVariableIntrinsic *
 DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {

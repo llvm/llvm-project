@@ -124,7 +124,7 @@ private:
   std::vector<std::unique_ptr<DIEAbbrev>> Abbreviations;
   BinaryContext &BC;
   DWARFContext *DwarfContext{nullptr};
-  bool IsDWO{false};
+  DWARFUnit *SkeletonCU{nullptr};
   uint64_t UnitSize{0};
   llvm::DenseSet<uint64_t> AllProcessed;
 
@@ -264,8 +264,12 @@ private:
   /// current Section.
   DIE *constructDIEFast(DWARFDie &DDie, DWARFUnit &U, uint32_t UnitId);
 
+  /// Returns true if this DIEBUilder is for DWO Unit.
+  bool isDWO() const { return SkeletonCU != nullptr; }
+
 public:
-  DIEBuilder(BinaryContext &BC, DWARFContext *DwarfContext, bool IsDWO = false);
+  DIEBuilder(BinaryContext &BC, DWARFContext *DwarfContext,
+             DWARFUnit *SkeletonCU = nullptr);
 
   /// Returns enum to what we are currently processing.
   ProcessingType getCurrentProcessingState() { return getState().Type; }
