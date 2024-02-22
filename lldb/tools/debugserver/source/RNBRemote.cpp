@@ -143,6 +143,39 @@ uint64_t decode_uint64(const char *p, int base, char **end = nullptr,
   return addr;
 }
 
+void append_hex_value(std::ostream &ostrm, const void *buf, size_t buf_size,
+                      bool swap) {
+  int i;
+  const uint8_t *p = (const uint8_t *)buf;
+  if (swap) {
+    for (i = static_cast<int>(buf_size) - 1; i >= 0; i--)
+      ostrm << RAWHEX8(p[i]);
+  } else {
+    for (size_t i = 0; i < buf_size; i++)
+      ostrm << RAWHEX8(p[i]);
+  }
+}
+
+std::string cstring_to_asciihex_string(const char *str) {
+  std::string hex_str;
+  hex_str.reserve(strlen(str) * 2);
+  while (str && *str) {
+    uint8_t c = *str++;
+    char hexbuf[5];
+    snprintf(hexbuf, sizeof(hexbuf), "%02x", c);
+    hex_str += hexbuf;
+  }
+  return hex_str;
+}
+
+void append_hexified_string(std::ostream &ostrm, const std::string &string) {
+  size_t string_size = string.size();
+  const char *string_buf = string.c_str();
+  for (size_t i = 0; i < string_size; i++) {
+    ostrm << RAWHEX8(*(string_buf + i));
+  }
+}
+
 extern void ASLLogCallback(void *baton, uint32_t flags, const char *format,
                            va_list args);
 
@@ -171,7 +204,8 @@ RNBRemote::RNBRemote()
       m_extended_mode(false), m_noack_mode(false),
       m_thread_suffix_supported(false), m_list_threads_in_stop_reply(false),
       m_compression_minsize(384), m_enable_compression_next_send_packet(false),
-      m_compression_mode(compression_types::none) {
+      m_compression_mode(compression_types::none),
+      m_enable_error_strings(false) {
   DNBLogThreadedIf(LOG_RNB_REMOTE, "%s", __PRETTY_FUNCTION__);
   CreatePacketTable();
 }
@@ -365,6 +399,11 @@ void RNBRemote::CreatePacketTable() {
   t.push_back(Packet(
       query_symbol_lookup, &RNBRemote::HandlePacket_qSymbol, NULL, "qSymbol:",
       "Notify that host debugger is ready to do symbol lookups"));
+  t.push_back(Packet(enable_error_strings,
+                     &RNBRemote::HandlePacket_QEnableErrorStrings, NULL,
+                     "QEnableErrorStrings",
+                     "Tell " DEBUGSERVER_PROGRAM_NAME
+                     " it can append descriptive error messages in replies."));
   t.push_back(Packet(json_query_thread_extended_info,
                      &RNBRemote::HandlePacket_jThreadExtendedInfo, NULL,
                      "jThreadExtendedInfo",
@@ -1566,11 +1605,13 @@ rnb_err_t RNBRemote::HandlePacket_qLaunchSuccess(const char *p) {
   if (m_ctx.HasValidProcessID() || m_ctx.LaunchStatus().Status() == 0)
     return SendPacket("OK");
   std::ostringstream ret_str;
-  std::string status_str;
-  std::string error_quoted = binary_encode_string
-               (m_ctx.LaunchStatusAsString(status_str));
-  ret_str << "E" << error_quoted;
-
+  ret_str << "E89";
+  if (m_enable_error_strings) {
+    std::string status_str;
+    std::string error_quoted =
+        cstring_to_asciihex_string(m_ctx.LaunchStatusAsString(status_str));
+    ret_str << ";" << error_quoted;
+  }
   return SendPacket(ret_str.str());
 }
 
@@ -2532,39 +2573,6 @@ rnb_err_t RNBRemote::HandlePacket_QSetProcessEvent(const char *p) {
     Context().PushProcessEvent(p);
   }
   return SendPacket("OK");
-}
-
-void append_hex_value(std::ostream &ostrm, const void *buf, size_t buf_size,
-                      bool swap) {
-  int i;
-  const uint8_t *p = (const uint8_t *)buf;
-  if (swap) {
-    for (i = static_cast<int>(buf_size) - 1; i >= 0; i--)
-      ostrm << RAWHEX8(p[i]);
-  } else {
-    for (size_t i = 0; i < buf_size; i++)
-      ostrm << RAWHEX8(p[i]);
-  }
-}
-
-std::string cstring_to_asciihex_string(const char *str) {
-  std::string hex_str;
-  hex_str.reserve (strlen (str) * 2);
-  while (str && *str) {
-    uint8_t c = *str++;
-    char hexbuf[5];
-    snprintf (hexbuf, sizeof(hexbuf), "%02x", c);
-    hex_str += hexbuf;
-  }
-  return hex_str;
-}
-
-void append_hexified_string(std::ostream &ostrm, const std::string &string) {
-  size_t string_size = string.size();
-  const char *string_buf = string.c_str();
-  for (size_t i = 0; i < string_size; i++) {
-    ostrm << RAWHEX8(*(string_buf + i));
-  }
 }
 
 void register_value_in_hex_fixed_width(std::ostream &ostrm, nub_process_t pid,
@@ -3908,10 +3916,13 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
     if (attach_pid == INVALID_NUB_PROCESS_ARCH) {
       DNBLogError("debugserver is x86_64 binary running in translation, attach "
                   "failed.");
-      std::string return_message = "E96;";
-      return_message +=
-          cstring_to_asciihex_string("debugserver is x86_64 binary running in "
-                                     "translation, attach failed.");
+      std::string return_message = "E96";
+      if (m_enable_error_strings) {
+        return_message += ";";
+        return_message += cstring_to_asciihex_string(
+            "debugserver is x86_64 binary running in "
+            "translation, attach failed.");
+      }
       SendPacket(return_message.c_str());
       return rnb_err;
     }
@@ -3944,15 +3955,22 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
         // The order of these checks is important.  
         if (process_does_not_exist (pid_attaching_to)) {
           DNBLogError("Tried to attach to pid that doesn't exist");
-          std::string return_message = "E96;";
-          return_message += cstring_to_asciihex_string("no such process.");
+          std::string return_message = "E96";
+          if (m_enable_error_strings) {
+            return_message += ";";
+            return_message += cstring_to_asciihex_string("no such process.");
+          }
           return SendPacket(return_message);
         }
         if (process_is_already_being_debugged (pid_attaching_to)) {
           DNBLogError("Tried to attach to process already being debugged");
-          std::string return_message = "E96;";
-          return_message += cstring_to_asciihex_string("tried to attach to "
+          std::string return_message = "E96";
+          if (m_enable_error_strings) {
+            return_message += ";";
+            return_message +=
+                cstring_to_asciihex_string("tried to attach to "
                                            "process already being debugged");
+          }
           return SendPacket(return_message);
         }
         uid_t my_uid, process_uid;
@@ -3969,30 +3987,43 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
             process_username = pw->pw_name;
           }
           DNBLogError("Tried to attach to process with uid mismatch");
-          std::string return_message = "E96;";
-          std::string msg = "tried to attach to process as user '" 
-                            + my_username + "' and process is running "
-                            "as user '" + process_username + "'";
-          return_message += cstring_to_asciihex_string(msg.c_str());
+          std::string return_message = "E96";
+          if (m_enable_error_strings) {
+            return_message += ";";
+            std::string msg = "tried to attach to process as user '" +
+                              my_username +
+                              "' and process is running "
+                              "as user '" +
+                              process_username + "'";
+            return_message += cstring_to_asciihex_string(msg.c_str());
+          }
           return SendPacket(return_message);
         }
         if (!login_session_has_gui_access() && !developer_mode_enabled()) {
           DNBLogError("Developer mode is not enabled and this is a "
                       "non-interactive session");
-          std::string return_message = "E96;";
-          return_message += cstring_to_asciihex_string("developer mode is "
+          std::string return_message = "E96";
+          if (m_enable_error_strings) {
+            return_message += ";";
+            return_message +=
+                cstring_to_asciihex_string("developer mode is "
                                            "not enabled on this machine "
                                            "and this is a non-interactive "
                                            "debug session.");
+          }
           return SendPacket(return_message);
         }
         if (!login_session_has_gui_access()) {
           DNBLogError("This is a non-interactive session");
-          std::string return_message = "E96;";
-          return_message += cstring_to_asciihex_string("this is a "
+          std::string return_message = "E96";
+          if (m_enable_error_strings) {
+            return_message += ";";
+            return_message +=
+                cstring_to_asciihex_string("this is a "
                                            "non-interactive debug session, "
                                            "cannot get permission to debug "
                                            "processes.");
+          }
           return SendPacket(return_message);
         }
       }
@@ -4013,9 +4044,12 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
         error_explainer += err_str;
         error_explainer += ")";
       }
-      std::string default_return_msg = "E96;";
-      default_return_msg += cstring_to_asciihex_string 
-                              (error_explainer.c_str());
+      std::string default_return_msg = "E96";
+      if (m_enable_error_strings) {
+        default_return_msg += ";";
+        default_return_msg +=
+            cstring_to_asciihex_string(error_explainer.c_str());
+      }
       SendPacket (default_return_msg);
       DNBLogError("Attach failed: \"%s\".", err_str);
       return rnb_err;
@@ -6193,6 +6227,11 @@ rnb_err_t RNBRemote::HandlePacket_qSymbol(const char *command) {
       reply << RAWHEX8(symbol_name[i]);
     return SendPacket(reply.str());
   }
+}
+
+rnb_err_t RNBRemote::HandlePacket_QEnableErrorStrings(const char *p) {
+  m_enable_error_strings = true;
+  return SendPacket("OK");
 }
 
 // Note that all numeric values returned by qProcessInfo are hex encoded,

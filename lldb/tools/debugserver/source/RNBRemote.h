@@ -137,6 +137,7 @@ public:
     set_detach_on_error,                // 'QSetDetachOnError:'
     query_transfer,                     // 'qXfer:'
     json_query_dyld_process_state,      // 'jGetDyldProcessState'
+    enable_error_strings,               // 'QEnableErrorStrings'
     unknown_type
   };
 
@@ -196,6 +197,7 @@ public:
   rnb_err_t HandlePacket_qGDBServerVersion(const char *p);
   rnb_err_t HandlePacket_qProcessInfo(const char *p);
   rnb_err_t HandlePacket_qSymbol(const char *p);
+  rnb_err_t HandlePacket_QEnableErrorStrings(const char *p);
   rnb_err_t HandlePacket_QStartNoAckMode(const char *p);
   rnb_err_t HandlePacket_QThreadSuffixSupported(const char *p);
   rnb_err_t HandlePacket_QSetLogging(const char *p);
@@ -405,6 +407,9 @@ protected:
   bool m_enable_compression_next_send_packet;
 
   compression_types m_compression_mode;
+
+  bool m_enable_error_strings; // Whether we can append asciihex error strings
+                               // after Exx error replies
 };
 
 /* We translate the /usr/include/mach/exception_types.h exception types
