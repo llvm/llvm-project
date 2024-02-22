@@ -23,7 +23,7 @@
 ; BOLT:     Bucket count: 6
 ; BOLT:     Name count: 6
 ; BOLT:     Abbreviations table size: 0x21
-; BOLT:     Augmentation: 'BOLT0000'
+; BOLT:     Augmentation: 'BOLT'
 ; BOLT:   }
 ; BOLT:   Compilation Unit offsets [
 ; BOLT:     CU[0]: [[OFFSET1]]
