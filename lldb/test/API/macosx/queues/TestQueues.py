@@ -457,9 +457,8 @@ class TestQueues(TestBase):
             "doing_the_work_2",
             "queue 2's pending item #0 should be doing_the_work_2",
         )
-        self.assertEqual(
+        self.assertFalse(
             queue_performer_2.GetPendingItemAtIndex(9999).IsValid(),
-            False,
             "queue 2's pending item #9999 is invalid",
         )
 

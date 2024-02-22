@@ -572,9 +572,9 @@ class BreakpointCommandTestCase(TestBase):
         res = target.GetStatistics().GetAsJSON(stream)
         self.assertTrue(res.Success())
         debug_stats = json.loads(stream.GetData())
-        self.assertEqual(
-            "targets" in debug_stats,
-            True,
+        self.assertIn(
+            "targets",
+            debug_stats,
             'Make sure the "targets" key in in target.GetStatistics()',
         )
         target_stats = debug_stats["targets"][0]
@@ -659,9 +659,9 @@ class BreakpointCommandTestCase(TestBase):
         res = target.GetStatistics().GetAsJSON(stream)
         self.assertTrue(res.Success())
         debug_stats = json.loads(stream.GetData())
-        self.assertEqual(
-            "targets" in debug_stats,
-            True,
+        self.assertIn(
+            "targets",
+            debug_stats,
             'Make sure the "targets" key in in target.GetStatistics()',
         )
         target_stats = debug_stats["targets"][0]

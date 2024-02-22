@@ -94,7 +94,7 @@ class TestKernVerStrLCNOTE(TestBase):
         self.target = self.dbg.CreateTarget("")
         err = lldb.SBError()
         self.process = self.target.LoadCore(self.corefile)
-        self.assertEqual(self.process.IsValid(), True)
+        self.assertTrue(self.process.IsValid())
         if self.TraceOn():
             self.runCmd("image list")
         self.assertEqual(self.target.GetNumModules(), 1)

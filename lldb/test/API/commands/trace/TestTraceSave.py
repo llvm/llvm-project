@@ -179,11 +179,11 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
         res = lldb.SBCommandReturnObject()
 
         ci.HandleCommand("thread trace dump instructions -c 10 --forwards", res)
-        self.assertEqual(res.Succeeded(), True)
+        self.assertTrue(res.Succeeded())
         first_ten_instructions = res.GetOutput()
 
         ci.HandleCommand("thread trace dump instructions -c 10", res)
-        self.assertEqual(res.Succeeded(), True)
+        self.assertTrue(res.Succeeded())
         last_ten_instructions = res.GetOutput()
 
         # Now, save the trace to <trace_copy_dir>
@@ -203,11 +203,11 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
 
         # Compare with instructions saved at the first time
         ci.HandleCommand("thread trace dump instructions -c 10 --forwards", res)
-        self.assertEqual(res.Succeeded(), True)
+        self.assertTrue(res.Succeeded())
         self.assertEqual(res.GetOutput(), first_ten_instructions)
 
         ci.HandleCommand("thread trace dump instructions -c 10", res)
-        self.assertEqual(res.Succeeded(), True)
+        self.assertTrue(res.Succeeded())
         self.assertEqual(res.GetOutput(), last_ten_instructions)
 
     def testSaveKernelTrace(self):
