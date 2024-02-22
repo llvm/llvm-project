@@ -462,33 +462,13 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // encodings
     if (isGFX11Plus() && Bytes.size() >= 12 ) {
       DecoderUInt128 DecW = eat12Bytes(Bytes);
-      Res =
-          tryDecodeInst(DecoderTableDPP8GFX1196, DecoderTableDPP8GFX11_FAKE1696,
-                        MI, DecW, Address, CS);
+      Res = tryDecodeInst(DecoderTableGFX1196, DecoderTableGFX11_FAKE1696, MI,
+                          DecW, Address, CS);
       if (Res)
         break;
 
-      Res =
-          tryDecodeInst(DecoderTableDPP8GFX1296, DecoderTableDPP8GFX12_FAKE1696,
-                        MI, DecW, Address, CS);
-      if (Res)
-        break;
-
-      Res = tryDecodeInst(DecoderTableDPPGFX1196, DecoderTableDPPGFX11_FAKE1696,
-                          MI, DecW, Address, CS);
-      if (Res)
-        break;
-
-      Res = tryDecodeInst(DecoderTableDPPGFX1296, DecoderTableDPPGFX12_FAKE1696,
-                          MI, DecW, Address, CS);
-      if (Res)
-        break;
-
-      Res = tryDecodeInst(DecoderTableGFX1196, MI, DecW, Address, CS);
-      if (Res)
-        break;
-
-      Res = tryDecodeInst(DecoderTableGFX1296, MI, DecW, Address, CS);
+      Res = tryDecodeInst(DecoderTableGFX1296, DecoderTableGFX12_FAKE1696, MI,
+                          DecW, Address, CS);
       if (Res)
         break;
 
@@ -507,33 +487,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         if (Res)
           break;
       }
-
-      Res = tryDecodeInst(DecoderTableDPP864, MI, QW, Address, CS);
-      if (Res)
-        break;
-
-      Res = tryDecodeInst(DecoderTableDPP8GFX1164,
-                          DecoderTableDPP8GFX11_FAKE1664, MI, QW, Address, CS);
-      if (Res)
-        break;
-
-      Res = tryDecodeInst(DecoderTableDPP8GFX1264,
-                          DecoderTableDPP8GFX12_FAKE1664, MI, QW, Address, CS);
-      if (Res)
-        break;
-
-      Res = tryDecodeInst(DecoderTableDPP64, MI, QW, Address, CS);
-      if (Res) break;
-
-      Res = tryDecodeInst(DecoderTableDPPGFX1164, DecoderTableDPPGFX11_FAKE1664,
-                          MI, QW, Address, CS);
-      if (Res)
-        break;
-
-      Res = tryDecodeInst(DecoderTableDPPGFX1264, DecoderTableDPPGFX12_FAKE1664,
-                          MI, QW, Address, CS);
-      if (Res)
-        break;
 
       if (STI.hasFeature(AMDGPU::FeatureUnpackedD16VMem)) {
         Res = tryDecodeInst(DecoderTableGFX80_UNPACKED64, MI, QW, Address, CS);
@@ -593,7 +546,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
     }
 
-    // Reinitialize Bytes as DPP64 could have eaten too much
+    // Reinitialize Bytes
     Bytes = Bytes_.slice(0, MaxInstBytesNum);
 
     // Try decode 32-bit instruction
