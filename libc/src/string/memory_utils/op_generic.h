@@ -95,10 +95,10 @@ template <typename T> T load(CPtr src) {
     return ::LIBC_NAMESPACE::load<T>(src);
   } else if constexpr (is_array_v<T>) {
     using value_type = typename T::value_type;
-    T Value;
-    for (size_t I = 0; I < array_size_v<T>; ++I)
-      Value[I] = load<value_type>(src + (I * sizeof(value_type)));
-    return Value;
+    T value;
+    for (size_t i = 0; i < array_size_v<T>; ++i)
+      value[i] = load<value_type>(src + (i * sizeof(value_type)));
+    return value;
   }
 }
 
@@ -390,7 +390,7 @@ private:
     if constexpr (cmp_is_expensive<T>::value) {
       if (!eq<T>(p1, p2, offset))
         return cmp_neq<T>(p1, p2, offset);
-      return MemcmpReturnType::ZERO();
+      return MemcmpReturnType::zero();
     } else {
       return cmp<T>(p1, p2, offset);
     }
@@ -443,7 +443,7 @@ public:
       for (; offset < count; offset += SIZE)
         if (auto value = cmp<T>(p1, p2, offset))
           return value;
-      return MemcmpReturnType::ZERO();
+      return MemcmpReturnType::zero();
     }
   }
 
@@ -453,7 +453,7 @@ public:
     if (LIBC_UNLIKELY(count >= threshold) && helper.not_aligned()) {
       if (auto value = block(p1, p2))
         return value;
-      adjust(helper.offset(), p1, p2, count);
+      adjust(helper.offset, p1, p2, count);
     }
     return loop_and_tail(p1, p2, count);
   }
@@ -475,7 +475,7 @@ template <typename T, typename... TS> struct MemcmpSequence {
     if constexpr (sizeof...(TS) > 0)
       return MemcmpSequence<TS...>::block(p1 + sizeof(T), p2 + sizeof(T));
     else
-      return MemcmpReturnType::ZERO();
+      return MemcmpReturnType::zero();
   }
 };
 
@@ -521,7 +521,7 @@ template <typename T> struct Bcmp {
       for (; offset < count; offset += SIZE)
         if (const auto value = neq<T>(p1, p2, offset))
           return value;
-      return BcmpReturnType::ZERO();
+      return BcmpReturnType::zero();
     }
   }
 
@@ -533,7 +533,7 @@ template <typename T> struct Bcmp {
     if (LIBC_UNLIKELY(count >= threshold) && helper.not_aligned()) {
       if (auto value = block(p1, p2))
         return value;
-      adjust(helper.offset(), p1, p2, count);
+      adjust(helper.offset, p1, p2, count);
     }
     return loop_and_tail(p1, p2, count);
   }
@@ -547,7 +547,7 @@ template <typename T, typename... TS> struct BcmpSequence {
     if constexpr (sizeof...(TS) > 0)
       return BcmpSequence<TS...>::block(p1 + sizeof(T), p2 + sizeof(T));
     else
-      return BcmpReturnType::ZERO();
+      return BcmpReturnType::zero();
   }
 };
 
