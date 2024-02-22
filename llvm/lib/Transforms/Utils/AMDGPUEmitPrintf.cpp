@@ -233,7 +233,7 @@ static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
 }
 
 // Find the vector size specified in format string, only sizes
-// valid are 2, 4, 6, 8 and 16. Remaining cases are considered
+// valid are 2, 3, 4, 8 and 16. Remaining cases are considered
 // to be invalid and function returns zero.
 
 static uint32_t getSizeFromVectorSpec(StringRef Spec) {
