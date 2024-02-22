@@ -1165,6 +1165,7 @@ public:
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
 
+protected:
   friend class Parser;
   friend class InitializationSequence;
   friend class ASTReader;
@@ -3524,8 +3525,6 @@ public:
   bool CheckRedeclarationInModule(NamedDecl *New, NamedDecl *Old);
   bool IsRedefinitionInModule(const NamedDecl *New, const NamedDecl *Old) const;
 
-  static bool mightHaveNonExternalLinkage(const DeclaratorDecl *FD);
-
   bool ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const;
 
   /// If it's a file scoped decl that must warn if not used, keep track
@@ -3673,6 +3672,8 @@ private:
   /// Map of current shadowing declarations to shadowed declarations. Warn if
   /// it looks like the user is trying to modify the shadowing declaration.
   llvm::DenseMap<const NamedDecl *, const NamedDecl *> ShadowingDecls;
+
+  static bool mightHaveNonExternalLinkage(const DeclaratorDecl *FD);
 
   ///@}
 
@@ -7796,24 +7797,6 @@ public:
 
   bool isModuleVisible(const Module *M, bool ModulePrivate = false);
 
-  /// Determine whether two declarations should be linked together, given that
-  /// the old declaration might not be visible and the new declaration might
-  /// not have external linkage.
-  bool shouldLinkPossiblyHiddenDecl(const NamedDecl *Old,
-                                    const NamedDecl *New) {
-    if (isVisible(Old))
-      return true;
-    // See comment in below overload for why it's safe to compute the linkage
-    // of the new declaration here.
-    if (New->isExternallyDeclarable()) {
-      assert(Old->isExternallyDeclarable() &&
-             "should not have found a non-externally-declarable previous decl");
-      return true;
-    }
-    return false;
-  }
-  bool shouldLinkPossiblyHiddenDecl(LookupResult &Old, const NamedDecl *New);
-
   /// Determine whether any declaration of an entity is visible.
   bool
   hasVisibleDeclaration(const NamedDecl *D,
@@ -7970,6 +7953,24 @@ private:
   }
 
   bool isAcceptableSlow(const NamedDecl *D, AcceptableKind Kind);
+
+  /// Determine whether two declarations should be linked together, given that
+  /// the old declaration might not be visible and the new declaration might
+  /// not have external linkage.
+  bool shouldLinkPossiblyHiddenDecl(const NamedDecl *Old,
+                                    const NamedDecl *New) {
+    if (isVisible(Old))
+      return true;
+    // See comment in below overload for why it's safe to compute the linkage
+    // of the new declaration here.
+    if (New->isExternallyDeclarable()) {
+      assert(Old->isExternallyDeclarable() &&
+             "should not have found a non-externally-declarable previous decl");
+      return true;
+    }
+    return false;
+  }
+  bool shouldLinkPossiblyHiddenDecl(LookupResult &Old, const NamedDecl *New);
 
   ///@}
 
