@@ -206,6 +206,12 @@ private:
   ProtectedObj<DeviceContainerTy> Devices;
 };
 
+/// Initialize the plugin manager and OpenMP runtime.
+void initRuntime();
+
+/// Deinitialize the plugin and delete it.
+void deinitRuntime();
+
 extern PluginManager *PM;
 
 #endif // OMPTARGET_PLUGIN_MANAGER_H

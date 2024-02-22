@@ -21,7 +21,7 @@
 using namespace llvm;
 using namespace llvm::sys;
 
-PluginManager *PM;
+PluginManager *PM = nullptr;
 
 // List of all plugins that can support offloading.
 static const char *RTLNames[] = {ENABLED_OFFLOAD_PLUGINS};
