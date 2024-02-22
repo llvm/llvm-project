@@ -371,13 +371,15 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
   const bool isOHOSFamily = ToolChain.getTriple().isOHOSFamily();
   const bool isAndroid = ToolChain.getTriple().isAndroid();
+  const bool isMusl = ToolChain.getTriple().isMusl();
   const bool IsIAMCU = ToolChain.getTriple().isOSIAMCU();
   const bool IsVE = ToolChain.getTriple().isVE();
   const bool IsStaticPIE = getStaticPIE(Args, ToolChain);
   const bool IsStatic = getStatic(Args);
   const bool HasCRTBeginEndFiles =
-      ToolChain.getTriple().hasEnvironment() ||
-      (ToolChain.getTriple().getVendor() != llvm::Triple::MipsTechnologies);
+    !isMusl && (ToolChain.getTriple().hasEnvironment() ||
+                (ToolChain.getTriple().getVendor()
+                 != llvm::Triple::MipsTechnologies));
 
   ArgStringList CmdArgs;
 
