@@ -18,7 +18,7 @@ body:             |
     ; CHECK: liveins: $agpr0_agpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; CHECK-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1
     ; CHECK-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1 :: (store (s32) into %stack.0, addrspace 5)
     ; CHECK-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
@@ -45,7 +45,7 @@ body:             |
     ; CHECK: liveins: $agpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; CHECK-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1
     ; CHECK-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1 :: (store (s32) into %stack.0, addrspace 5)
     ; CHECK-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
@@ -70,7 +70,7 @@ body:             |
     ; CHECK: liveins: $agpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; CHECK-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1
     ; CHECK-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1 :: (store (s32) into %stack.0, addrspace 5)
     ; CHECK-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec

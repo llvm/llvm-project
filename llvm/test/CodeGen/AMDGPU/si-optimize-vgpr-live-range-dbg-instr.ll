@@ -10,7 +10,7 @@ define void @__omp_offloading_35_36570d3__ZN6openmc31process_advance_particle_ev
 ; GCN-NEXT:    .cfi_startproc
 ; GCN-NEXT:  ; %bb.0: ; %bb
 ; GCN-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-; GCN-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+; GCN-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GCN-NEXT:    .cfi_undefined 2560
 ; GCN-NEXT:    .cfi_undefined 2561
 ; GCN-NEXT:    .cfi_undefined 2562

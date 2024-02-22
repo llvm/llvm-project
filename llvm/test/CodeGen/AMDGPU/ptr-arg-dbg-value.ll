@@ -15,7 +15,7 @@ define hidden void @ptr_arg_split_subregs(ptr %arg1) #0 !dbg !9 {
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-; CHECK-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+; CHECK-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; CHECK-NEXT:    .cfi_undefined 2562
 ; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_subregs:a <- [DW_OP_LLVM_fragment 32 32] [$vgpr1+0]
 ; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_subregs:a <- [DW_OP_LLVM_fragment 0 32] [$vgpr0+0]
@@ -47,7 +47,7 @@ define hidden void @ptr_arg_split_reg_mem(<30 x i32>, ptr %arg2) #0 !dbg !25 {
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-; CHECK-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+; CHECK-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; CHECK-NEXT:    .cfi_undefined 2560
 ; CHECK-NEXT:    .cfi_undefined 2591
 ; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_reg_mem:b <- [$vgpr30+0]
@@ -77,7 +77,7 @@ define hidden void @ptr_arg_in_memory(<32 x i32>, ptr %arg3) #0 !dbg !31 {
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-; CHECK-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+; CHECK-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; CHECK-NEXT:    .cfi_undefined 2560
 ; CHECK-NEXT:    .cfi_undefined 2561
 ; CHECK-NEXT:    .cfi_undefined 2562

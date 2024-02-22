@@ -16,7 +16,7 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-; CHECK-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+; CHECK-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; CHECK-NEXT:    .cfi_undefined 2560
 ; CHECK-NEXT:    .cfi_undefined 2561
 ; CHECK-NEXT:    .cfi_undefined 2562
@@ -455,42 +455,42 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    .cfi_offset 2601, 256
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v41, s16, 16
-; CHECK-NEXT:    .cfi_escape 0x10, 0x41, 0x06, 0x90, 0xa9, 0x14, 0xe9, 0x05, 0x40 ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 65, 2601, 16, 32
 ; CHECK-NEXT:    .cfi_def_cfa_register 65
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x10, 0xa8, 0x14, 0x10, 0x90, 0xa8, 0x14, 0x16, 0xe9, 0x05, 0x00, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40 ;
+; CHECK-NEXT:    .cfi_llvm_vector_offset 2600, 32, 17, 64, 0
 ; CHECK-NEXT:    v_writelane_b32 v41, s34, 0
-; CHECK-NEXT:    .cfi_escape 0x10, 0x42, 0x06, 0x90, 0xbe, 0x14, 0xe9, 0x05, 0x00 ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 66, 2601, 0, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s35, 1
-; CHECK-NEXT:    .cfi_escape 0x10, 0x43, 0x06, 0x90, 0xbe, 0x14, 0xe9, 0x05, 0x04 ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 67, 2601, 1, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s36, 2
-; CHECK-NEXT:    .cfi_escape 0x10, 0x44, 0x06, 0x90, 0xbe, 0x14, 0xe9, 0x05, 0x08 ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 68, 2601, 2, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s37, 3
-; CHECK-NEXT:    .cfi_escape 0x10, 0x45, 0x06, 0x90, 0xbe, 0x14, 0xe9, 0x05, 0x0c ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 69, 2601, 3, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s38, 4
-; CHECK-NEXT:    .cfi_escape 0x10, 0x46, 0x06, 0x90, 0xbe, 0x14, 0xe9, 0x05, 0x10 ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 70, 2601, 4, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s39, 5
-; CHECK-NEXT:    .cfi_escape 0x10, 0x47, 0x06, 0x90, 0xbe, 0x14, 0xe9, 0x05, 0x14 ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 71, 2601, 5, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s40, 6
-; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x06, 0x90, 0xbe, 0x14, 0xe9, 0x05, 0x18 ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 72, 2601, 6, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s41, 7
-; CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x06, 0x90, 0xbe, 0x14, 0xe9, 0x05, 0x1c ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 73, 2601, 7, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s42, 8
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x06, 0x90, 0xbe, 0x14, 0xe9, 0x05, 0x20 ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 74, 2601, 8, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s43, 9
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x06, 0x90, 0xbe, 0x14, 0xe9, 0x05, 0x24 ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 75, 2601, 9, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s44, 10
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4c, 0x06, 0x90, 0xbe, 0x14, 0xe9, 0x05, 0x28 ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 76, 2601, 10, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s45, 11
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x06, 0x90, 0xbe, 0x14, 0xe9, 0x05, 0x2c ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 77, 2601, 11, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s46, 12
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x06, 0x90, 0xbe, 0x14, 0xe9, 0x05, 0x30 ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 78, 2601, 12, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s47, 13
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x06, 0x90, 0xbe, 0x14, 0xe9, 0x05, 0x34 ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 79, 2601, 13, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s30, 14
 ; CHECK-NEXT:    v_writelane_b32 v41, s31, 15
-; CHECK-NEXT:    .cfi_escape 0x10, 0x10, 0x0e, 0x90, 0xbe, 0x14, 0x9d, 0x20, 0xc0, 0x03, 0x90, 0xbe, 0x14, 0x9d, 0x20, 0xe0, 0x03 ;
+; CHECK-NEXT:    .cfi_llvm_vector_registers 16, 2601, 14, 32, 2601, 15, 32
 ; CHECK-NEXT:    s_mov_b64 s[40:41], s[4:5]
 ; CHECK-NEXT:    ;DEBUG_VALUE: dummy:dummy <- undef
 ; CHECK-NEXT:  .Ltmp0:

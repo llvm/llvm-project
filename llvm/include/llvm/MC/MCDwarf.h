@@ -500,7 +500,34 @@ public:
     OpRegister,
     OpWindowSave,
     OpNegateRAState,
-    OpGnuArgsSize
+    OpGnuArgsSize,
+    OpLLVMRegisterPair,
+    OpLLVMVectorRegisters,
+    OpLLVMVectorOffset,
+  };
+
+  /// Some extra fields used when Operation is OpLLVMRegisterPair.
+  struct RegisterPairExtraFields {
+    unsigned Reg1, Reg2;
+    unsigned Reg1SizeInBits, Reg2SizeInBits;
+  };
+
+  struct VectorRegisterWithLane {
+    unsigned Register;
+    unsigned Lane;
+    unsigned SizeInBits;
+  };
+
+  /// Some extra fields used when Operation is OpLLVMVectorRegisters.
+  struct VectorRegistersExtraFields {
+    std::vector<VectorRegisterWithLane> VectorRegisters;
+  };
+
+  /// Some extra fields used when Operation is OpLLVMVectorOffset.
+  struct VectorOffsetExtraFields {
+    unsigned MaskRegister;
+    unsigned MaskRegisterSizeInBits;
+    unsigned RegisterSizeInBits;
   };
 
 private:
@@ -515,6 +542,13 @@ private:
   SMLoc Loc;
   std::vector<char> Values;
   std::string Comment;
+
+  // FIXME: We could probably save some space and complexity by moving all
+  // Operation-specific fields to this variant. Leaving them as-is for now to
+  // avoid a diff with upstream.
+  std::variant<std::monostate, RegisterPairExtraFields,
+               VectorRegistersExtraFields, VectorOffsetExtraFields>
+      ExtraFields;
 
   MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, SMLoc Loc,
                    StringRef V = "", StringRef Comment = "")
@@ -534,6 +568,12 @@ private:
         Loc(Loc) {
     assert(Op == OpLLVMDefAspaceCfa);
   }
+
+  template <class ExtraFieldsTy>
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O,
+                   ExtraFieldsTy &&ExtraFields, SMLoc Loc)
+      : Operation(Op), Label(L), Register(R), Offset(O),
+        ExtraFields(std::forward<ExtraFieldsTy>(ExtraFields)) {}
 
 public:
   /// .cfi_def_cfa defines a rule for computing CFA as: take address from
@@ -655,6 +695,47 @@ public:
     return MCCFIInstruction(OpGnuArgsSize, L, 0, Size, Loc);
   }
 
+  /// .cfi_llvm_register_pair Previous value of Register is saved in R1:R2.
+  static MCCFIInstruction
+  createLLVMRegisterPair(MCSymbol *L, unsigned Register, unsigned R1,
+                         unsigned R1SizeInBits, unsigned R2,
+                         unsigned R2SizeInBits, SMLoc Loc = {}) {
+    RegisterPairExtraFields Extra{R1, R2, R1SizeInBits, R2SizeInBits};
+    return MCCFIInstruction(OpLLVMRegisterPair, L, Register, 0, Extra, Loc);
+  }
+
+  /// .cfi_llvm_vector_registers Previous value of Register is saved in lanes of
+  /// vector registers.
+  static MCCFIInstruction
+  createLLVMVectorRegisters(MCSymbol *L, unsigned Register,
+                            std::vector<VectorRegisterWithLane> VectorRegisters,
+                            SMLoc Loc = {}) {
+    VectorRegistersExtraFields Extra{std::move(VectorRegisters)};
+    return MCCFIInstruction(OpLLVMVectorRegisters, L, Register, 0,
+                            std::move(Extra), Loc);
+  }
+
+  /// .cfi_llvm_vector_offset Previous value of Register is saved at Offset from
+  /// CFA. MaskRegister specifies the active lanes of register.
+  static MCCFIInstruction
+  createLLVMVectorOffset(MCSymbol *L, unsigned Register,
+                         unsigned RegisterSizeInBits, unsigned MaskRegister,
+                         unsigned MaskRegisterSizeInBits, int Offset,
+                         SMLoc Loc = {}) {
+    VectorOffsetExtraFields Extra{MaskRegister, MaskRegisterSizeInBits,
+                                  RegisterSizeInBits};
+    return MCCFIInstruction(OpLLVMVectorOffset, L, Register, Offset, Extra,
+                            Loc);
+  }
+
+  template <class ExtraFieldsTy> ExtraFieldsTy &getExtraFields() {
+    return std::get<ExtraFieldsTy>(ExtraFields);
+  }
+
+  template <class ExtraFieldsTy> const ExtraFieldsTy &getExtraFields() const {
+    return std::get<ExtraFieldsTy>(ExtraFields);
+  }
+
   OpType getOperation() const { return Operation; }
   MCSymbol *getLabel() const { return Label; }
 
@@ -663,7 +744,9 @@ public:
            Operation == OpRestore || Operation == OpUndefined ||
            Operation == OpSameValue || Operation == OpDefCfaRegister ||
            Operation == OpRelOffset || Operation == OpRegister ||
-           Operation == OpLLVMDefAspaceCfa);
+           Operation == OpLLVMDefAspaceCfa ||
+           Operation == OpLLVMVectorRegisters ||
+           Operation == OpLLVMRegisterPair || Operation == OpLLVMVectorOffset);
     return Register;
   }
 
@@ -681,7 +764,7 @@ public:
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRelOffset || Operation == OpDefCfaOffset ||
            Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize ||
-           Operation == OpLLVMDefAspaceCfa);
+           Operation == OpLLVMDefAspaceCfa || Operation == OpLLVMVectorOffset);
     return Offset;
   }
 
@@ -692,6 +775,9 @@ public:
 
   StringRef getComment() const { return Comment; }
   SMLoc getLoc() const { return Loc; }
+
+  /// Replaces in place all references to FromReg with ToReg.
+  void replaceRegister(unsigned FromReg, unsigned ToReg);
 };
 
 struct MCDwarfFrameInfo {

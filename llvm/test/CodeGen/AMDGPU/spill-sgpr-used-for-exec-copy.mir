@@ -22,7 +22,7 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4_lo16
@@ -71,7 +71,7 @@ body:             |
     ; GCN: liveins: $vcc, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
@@ -85,9 +85,9 @@ body:             |
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr2_lo16, 512
     ; GCN-NEXT: $exec = S_MOV_B64 killed $sgpr28_sgpr29
     ; GCN-NEXT: $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr34, 0, undef $vgpr2
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x42, 0x06, 0x90, 0x82, 0x14, 0xe9, 0x05, 0x00
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr34_lo16, $vgpr2_lo16, 0, 32
     ; GCN-NEXT: $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr35, 1, undef $vgpr2
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x43, 0x06, 0x90, 0x82, 0x14, 0xe9, 0x05, 0x04
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr35_lo16, $vgpr2_lo16, 1, 32
     ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr30, 0, killed $vgpr0
     ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr31, 1, killed $vgpr0
     ; GCN-NEXT: $sgpr34_sgpr35 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec

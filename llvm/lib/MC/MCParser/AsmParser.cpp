@@ -509,6 +509,9 @@ private:
     DK_CFI_LLVM_DEF_ASPACE_CFA,
     DK_CFI_OFFSET,
     DK_CFI_REL_OFFSET,
+    DK_CFI_LLVM_REGISTER_PAIR,
+    DK_CFI_LLVM_VECTOR_REGISTERS,
+    DK_CFI_LLVM_VECTOR_OFFSET,
     DK_CFI_PERSONALITY,
     DK_CFI_LSDA,
     DK_CFI_REMEMBER_STATE,
@@ -623,6 +626,9 @@ private:
   bool parseDirectiveCFIReturnColumn(SMLoc DirectiveLoc);
   bool parseDirectiveCFISignalFrame(SMLoc DirectiveLoc);
   bool parseDirectiveCFIUndefined(SMLoc DirectiveLoc);
+  bool parseDirectiveCFILLVMRegisterPair(SMLoc DirectiveLoc);
+  bool parseDirectiveCFILLVMVectorRegisters(SMLoc DirectiveLoc);
+  bool parseDirectiveCFILLVMVectorOffset(SMLoc DirectiveLoc);
 
   // macro directives
   bool parseDirectivePurgeMacro(SMLoc DirectiveLoc);
@@ -2206,6 +2212,12 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveCFIOffset(IDLoc);
     case DK_CFI_REL_OFFSET:
       return parseDirectiveCFIRelOffset(IDLoc);
+    case DK_CFI_LLVM_REGISTER_PAIR:
+      return parseDirectiveCFILLVMRegisterPair(IDLoc);
+    case DK_CFI_LLVM_VECTOR_REGISTERS:
+      return parseDirectiveCFILLVMVectorRegisters(IDLoc);
+    case DK_CFI_LLVM_VECTOR_OFFSET:
+      return parseDirectiveCFILLVMVectorOffset(IDLoc);
     case DK_CFI_PERSONALITY:
       return parseDirectiveCFIPersonalityOrLsda(true);
     case DK_CFI_LSDA:
@@ -4499,6 +4511,72 @@ bool AsmParser::parseDirectiveCFIUndefined(SMLoc DirectiveLoc) {
   return false;
 }
 
+/// parseDirectiveCFILLVMRegisterPair
+/// ::= .cfi_llvm_register_pair reg, r1, r1size, r2, r2size
+bool AsmParser::parseDirectiveCFILLVMRegisterPair(SMLoc DirectiveLoc) {
+  int64_t Register = 0;
+  int64_t R1 = 0, R2 = 0;
+  int64_t R1Size = 0, R2Size = 0;
+
+  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) || parseComma() ||
+      parseRegisterOrRegisterNumber(R1, DirectiveLoc) || parseComma() ||
+      parseAbsoluteExpression(R1Size) || parseComma() ||
+      parseRegisterOrRegisterNumber(R2, DirectiveLoc) || parseComma() ||
+      parseAbsoluteExpression(R2Size) || parseEOL())
+    return true;
+
+  getStreamer().emitCFILLVMRegisterPair(Register, R1, R1Size, R2, R2Size,
+                                        DirectiveLoc);
+  return false;
+}
+
+/// parseDirectiveCFILLVMVectorRegisters
+/// ::= .cfi_llvm_vector_registers reg, vreg0, vlane0, vreg0size,
+bool AsmParser::parseDirectiveCFILLVMVectorRegisters(SMLoc DirectiveLoc) {
+  int64_t Register = 0;
+  std::vector<MCCFIInstruction::VectorRegisterWithLane> VRs;
+
+  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) || parseComma())
+    return true;
+
+  do {
+    int64_t VectorRegister = 0;
+    int64_t Lane = 0;
+    int64_t Size = 0;
+    if (parseRegisterOrRegisterNumber(VectorRegister, DirectiveLoc) ||
+        parseComma() || parseIntToken(Lane, "expected a lane number") ||
+        parseComma() || parseAbsoluteExpression(Size))
+      return true;
+    VRs.push_back({unsigned(VectorRegister), unsigned(Lane), unsigned(Size)});
+  } while (parseOptionalToken(AsmToken::Comma));
+
+  if (parseEOL())
+    return true;
+
+  getStreamer().emitCFILLVMVectorRegisters(Register, std::move(VRs),
+                                           DirectiveLoc);
+  return false;
+}
+
+/// parseDirectiveCFILLVMVectorOffset
+/// ::= .cfi_llvm_vector_offset register, register-size, mask, mask-size, offset
+bool AsmParser::parseDirectiveCFILLVMVectorOffset(SMLoc DirectiveLoc) {
+  int64_t Register = 0, MaskRegister = 0;
+  int64_t RegisterSize = 0, MaskRegisterSize = 0;
+  int64_t Offset = 0;
+
+  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) || parseComma() ||
+      parseAbsoluteExpression(RegisterSize) || parseComma() ||
+      parseRegisterOrRegisterNumber(MaskRegister, DirectiveLoc) ||
+      parseComma() || parseAbsoluteExpression(MaskRegisterSize) ||
+      parseComma() || parseAbsoluteExpression(Offset) || parseEOL())
+    return true;
+
+  getStreamer().emitCFILLVMVectorOffset(Register, RegisterSize, MaskRegister,
+                                        MaskRegisterSize, Offset, DirectiveLoc);
+  return false;
+}
+
 /// parseDirectiveAltmacro
 /// ::= .altmacro
 /// ::= .noaltmacro
@@ -5559,6 +5637,9 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".cfi_llvm_def_aspace_cfa"] = DK_CFI_LLVM_DEF_ASPACE_CFA;
   DirectiveKindMap[".cfi_offset"] = DK_CFI_OFFSET;
   DirectiveKindMap[".cfi_rel_offset"] = DK_CFI_REL_OFFSET;
+  DirectiveKindMap[".cfi_llvm_register_pair"] = DK_CFI_LLVM_REGISTER_PAIR;
+  DirectiveKindMap[".cfi_llvm_vector_registers"] = DK_CFI_LLVM_VECTOR_REGISTERS;
+  DirectiveKindMap[".cfi_llvm_vector_offset"] = DK_CFI_LLVM_VECTOR_OFFSET;
   DirectiveKindMap[".cfi_personality"] = DK_CFI_PERSONALITY;
   DirectiveKindMap[".cfi_lsda"] = DK_CFI_LSDA;
   DirectiveKindMap[".cfi_remember_state"] = DK_CFI_REMEMBER_STATE;

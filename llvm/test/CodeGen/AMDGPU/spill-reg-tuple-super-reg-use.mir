@@ -23,7 +23,7 @@ body:             |
     ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
@@ -71,7 +71,7 @@ body:             |
     ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
@@ -115,7 +115,7 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8_lo16
     ; GCN-NEXT: renamable $vgpr1 = COPY $vgpr2, implicit $exec
@@ -149,7 +149,7 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
     ; GCN-NEXT: renamable $vgpr1 = COPY $vgpr2, implicit $exec
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store (s32) into %stack.0, addrspace 5)

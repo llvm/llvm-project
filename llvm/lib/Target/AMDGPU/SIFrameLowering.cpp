@@ -30,7 +30,6 @@ static cl::opt<bool> EnableSpillVGPRToAGPR(
   cl::init(true));
 
 static constexpr unsigned SGPRBitSize = 32;
-static constexpr unsigned SGPRByteSize = SGPRBitSize / 8;
 static constexpr unsigned VGPRLaneBitSize = 32;
 
 // Find a register matching \p RC from \p LiveUnits which is unused and
@@ -2203,41 +2202,15 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
   int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
   int DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
   assert(DwarfSGPR != -1 && DwarfVGPR != -1);
+  assert(Lane != -1 && "Expected a lane to be present");
 
-  // CFI for an SGPR spilled to a single lane of a VGPR is implemented as an
-  // expression(E) rule where E is a register location description referencing
-  // a VGPR register location storage at a byte offset of the lane index
-  // multiplied by the size of an SGPR (4 bytes). In other words we generate
-  // the following DWARF:
-  //
-  // DW_CFA_expression: <SGPR>,
-  //    (DW_OP_regx <VGPR>) (DW_OP_LLVM_offset_uconst <Lane>*4)
-  //
-  // The memory location description for the current CFA is pushed on the
-  // stack before E is evaluated, but we choose not to drop it as it would
-  // require a longer expression E and DWARF defines the result of the
-  // evaulation to be the location description on the top of the stack (i.e. the
-  // implictly pushed one is just ignored.)
-
-  SmallString<20> Block;
-  raw_svector_ostream OSBlock(Block);
-  encodeDwarfRegisterLocation(DwarfVGPR, OSBlock);
-  if (EmitHeterogeneousDwarfAsUserOps)
-    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-            << uint8_t(dwarf::DW_OP_LLVM_USER_offset_uconst);
-  else
-    OSBlock << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
-  encodeULEB128(Lane * SGPRByteSize, OSBlock);
-
-  SmallString<20> CFIInst;
-  raw_svector_ostream OSCFIInst(CFIInst);
-  OSCFIInst << uint8_t(dwarf::DW_CFA_expression);
-  encodeULEB128(DwarfSGPR, OSCFIInst);
-  encodeULEB128(Block.size(), OSCFIInst);
-  OSCFIInst << Block;
-
-  return buildCFI(MBB, MBBI, DL,
-           MCCFIInstruction::createEscape(nullptr, OSCFIInst.str()));
+  // Build a CFI instruction that represents a SGPR spilled to a single lane of
+  // a VGPR.
+  MCCFIInstruction::VectorRegisterWithLane VR{unsigned(DwarfVGPR),
+                                              unsigned(Lane), VGPRLaneBitSize};
+  auto CFIInst =
+      MCCFIInstruction::createLLVMVectorRegisters(nullptr, DwarfSGPR, {VR});
+  return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
 
 MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
@@ -2250,46 +2223,21 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
   int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
   assert(DwarfSGPR != -1);
 
-  // CFI for an SGPR spilled to a multiple lanes of VGPRs is implemented as an
-  // expression(E) rule where E is a composite location description
-  // with multiple parts each referencing
-  // VGPR register location storage with a bit offset of the lane index
-  // multiplied by the size of an SGPR (32 bits). In other words we generate
-  // the following DWARF:
-  //
-  // DW_CFA_expression: <SGPR>,
-  //    (DW_OP_regx <VGPR[0]>) (DW_OP_bit_piece 32, <Lane[0]>*32)
-  //    (DW_OP_regx <VGPR[1]>) (DW_OP_bit_piece 32, <Lane[1]>*32)
-  //    ...
-  //    (DW_OP_regx <VGPR[N]>) (DW_OP_bit_piece 32, <Lane[N]>*32)
-  //
-  // The memory location description for the current CFA is pushed on the
-  // stack before E is evaluated, but we choose not to drop it as it would
-  // require a longer expression E and DWARF defines the result of the
-  // evaulation to be the location description on the top of the stack (i.e. the
-  // implictly pushed one is just ignored.)
+  // Build a CFI instruction that represents a SGPR spilled to multiple lanes of
+  // multiple VGPRs.
 
-  SmallString<20> Block;
-  raw_svector_ostream OSBlock(Block);
-  // TODO: Detect when we can merge multiple adjacent pieces, or even reduce
-  // this to a register location description (when all pieces are adjacent).
+  std::vector<MCCFIInstruction::VectorRegisterWithLane> VGPRs;
   for (SIRegisterInfo::SpilledReg Spill : VGPRSpills) {
-    encodeDwarfRegisterLocation(MCRI.getDwarfRegNum(Spill.VGPR, false),
-                                OSBlock);
-    OSBlock << uint8_t(dwarf::DW_OP_bit_piece);
-    encodeULEB128(SGPRBitSize, OSBlock);
-    encodeULEB128(SGPRBitSize * Spill.Lane, OSBlock);
+    int DwarfVGPR = MCRI.getDwarfRegNum(Spill.VGPR, false);
+    assert(DwarfVGPR != -1);
+    assert(Spill.hasLane() && "Expected a lane to be present");
+    VGPRs.push_back(
+        {unsigned(DwarfVGPR), unsigned(Spill.Lane), VGPRLaneBitSize});
   }
 
-  SmallString<20> CFIInst;
-  raw_svector_ostream OSCFIInst(CFIInst);
-  OSCFIInst << uint8_t(dwarf::DW_CFA_expression);
-  encodeULEB128(DwarfSGPR, OSCFIInst);
-  encodeULEB128(Block.size(), OSCFIInst);
-  OSCFIInst << Block;
-
-  return buildCFI(MBB, MBBI, DL,
-                  MCCFIInstruction::createEscape(nullptr, OSCFIInst.str()));
+  auto CFIInst = MCCFIInstruction::createLLVMVectorRegisters(nullptr, DwarfSGPR,
+                                                             std::move(VGPRs));
+  return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
 
 MachineInstr *SIFrameLowering::buildCFIForSGPRToVMEMSpill(
@@ -2312,43 +2260,12 @@ MachineInstr *SIFrameLowering::buildCFIForVGPRToVMEMSpill(
   int DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
   assert(DwarfVGPR != -1);
 
-  SmallString<20> Block;
-  raw_svector_ostream OSBlock(Block);
-  encodeDwarfRegisterLocation(DwarfVGPR, OSBlock);
-  OSBlock << uint8_t(dwarf::DW_OP_swap);
-  if (EmitHeterogeneousDwarfAsUserOps)
-    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-            << uint8_t(dwarf::DW_OP_LLVM_USER_offset_uconst);
-  else
-    OSBlock << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
-  encodeULEB128(Offset, OSBlock);
-  if (EmitHeterogeneousDwarfAsUserOps)
-    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-            << uint8_t(dwarf::DW_OP_LLVM_USER_call_frame_entry_reg);
-  else
-    OSBlock << uint8_t(dwarf::DW_OP_LLVM_call_frame_entry_reg);
-  encodeULEB128(MCRI.getDwarfRegNum(
-                    ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false),
-                OSBlock);
-  OSBlock << uint8_t(dwarf::DW_OP_deref_size);
-  OSBlock << uint8_t(ST.getWavefrontSize() / 8);
-  if (EmitHeterogeneousDwarfAsUserOps)
-    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-            << uint8_t(dwarf::DW_OP_LLVM_USER_select_bit_piece);
-  else
-    OSBlock << uint8_t(dwarf::DW_OP_LLVM_select_bit_piece);
-  encodeULEB128(VGPRLaneBitSize, OSBlock);
-  encodeULEB128(ST.getWavefrontSize(), OSBlock);
-
-  SmallString<20> CFIInst;
-  raw_svector_ostream OSCFIInst(CFIInst);
-  OSCFIInst << uint8_t(dwarf::DW_CFA_expression);
-  encodeULEB128(DwarfVGPR, OSCFIInst);
-  encodeULEB128(Block.size(), OSCFIInst);
-  OSCFIInst << Block;
-
-  return buildCFI(MBB, MBBI, DL,
-                  MCCFIInstruction::createEscape(nullptr, OSCFIInst.str()));
+  unsigned MaskReg = MCRI.getDwarfRegNum(
+      ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false);
+  auto CFIInst = MCCFIInstruction::createLLVMVectorOffset(
+      nullptr, DwarfVGPR, VGPRLaneBitSize, MaskReg, ST.getWavefrontSize(),
+      Offset);
+  return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
 
 MachineInstr *SIFrameLowering::buildCFIForRegToSGPRPairSpill(
@@ -2367,37 +2284,7 @@ MachineInstr *SIFrameLowering::buildCFIForRegToSGPRPairSpill(
   int DwarfSGPR1 = MCRI.getDwarfRegNum(SGPR1, false);
   assert(DwarfReg != -1 && DwarfSGPR0 != 1 && DwarfSGPR1 != 1);
 
-  // CFI for a register spilled to a pair of SGPRs is implemented as an
-  // expression(E) rule where E is a composite location description with
-  // multiple parts each referencing SGPR register location storage with a bit
-  // offset of 0. In other words we generate the following DWARF:
-  //
-  // DW_CFA_expression: <Reg>,
-  //    (DW_OP_regx <SGPRPair[0]>) (DW_OP_piece 4)
-  //    (DW_OP_regx <SGPRPair[1]>) (DW_OP_piece 4)
-  //
-  // The memory location description for the current CFA is pushed on the stack
-  // before E is evaluated, but we choose not to drop it as it would require a
-  // longer expression E and DWARF defines the result of the evaulation to be
-  // the location description on the top of the stack (i.e. the implictly
-  // pushed one is just ignored.)
-
-  SmallString<10> Block;
-  raw_svector_ostream OSBlock(Block);
-  encodeDwarfRegisterLocation(DwarfSGPR0, OSBlock);
-  OSBlock << uint8_t(dwarf::DW_OP_piece);
-  encodeULEB128(SGPRByteSize, OSBlock);
-  encodeDwarfRegisterLocation(DwarfSGPR1, OSBlock);
-  OSBlock << uint8_t(dwarf::DW_OP_piece);
-  encodeULEB128(SGPRByteSize, OSBlock);
-
-  SmallString<20> CFIInst;
-  raw_svector_ostream OSCFIInst(CFIInst);
-  OSCFIInst << uint8_t(dwarf::DW_CFA_expression);
-  encodeULEB128(DwarfReg, OSCFIInst);
-  encodeULEB128(Block.size(), OSCFIInst);
-  OSCFIInst << Block;
-
-  return buildCFI(MBB, MBBI, DL,
-                  MCCFIInstruction::createEscape(nullptr, OSCFIInst.str()));
+  auto CFIInst = MCCFIInstruction::createLLVMRegisterPair(
+      nullptr, DwarfReg, DwarfSGPR0, SGPRBitSize, DwarfSGPR1, SGPRBitSize);
+  return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }

@@ -265,7 +265,7 @@ body:             |
   ; ASM-NEXT:    .cfi_startproc
   ; ASM-NEXT:  ; %bb.0: ; %entry
   ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
   ; ASM-NEXT:    .cfi_undefined 2560
   ; ASM-NEXT:    .cfi_undefined 36
   ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -336,7 +336,7 @@ body:             |
   ; ASM-NEXT:    .cfi_startproc
   ; ASM-NEXT:  ; %bb.0: ; %entry
   ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
   ; ASM-NEXT:    .cfi_undefined 2560
   ; ASM-NEXT:    .cfi_undefined 36
   ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -407,7 +407,7 @@ body:             |
   ; ASM-NEXT:    .cfi_startproc
   ; ASM-NEXT:  ; %bb.0: ; %entry
   ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
   ; ASM-NEXT:    .cfi_undefined 36
   ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
   ; ASM-NEXT:    ;;#ASMSTART
@@ -482,7 +482,7 @@ body:             |
   ; ASM-NEXT:    .cfi_startproc
   ; ASM-NEXT:  ; %bb.0: ; %entry
   ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
   ; ASM-NEXT:    .cfi_undefined 36
   ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
   ; ASM-NEXT:    ;;#ASMSTART
@@ -562,7 +562,7 @@ body:             |
   ; ASM-NEXT:    .cfi_startproc
   ; ASM-NEXT:  ; %bb.0: ; %entry
   ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
   ; ASM-NEXT:    .cfi_undefined 36
   ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
   ; ASM-NEXT:    ;;#ASMSTART
@@ -646,7 +646,7 @@ body:             |
   ; ASM-NEXT:    .cfi_startproc
   ; ASM-NEXT:  ; %bb.0: ; %entry
   ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
   ; ASM-NEXT:    .cfi_undefined 36
   ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
   ; ASM-NEXT:  ; %bb.1: ; %def
@@ -716,7 +716,7 @@ body:             |
   ; ASM-NEXT:    .cfi_startproc
   ; ASM-NEXT:  ; %bb.0: ; %entry
   ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
   ; ASM-NEXT:    .cfi_undefined 36
   ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
   ; ASM-NEXT:  ; %bb.1: ; %def
@@ -786,7 +786,7 @@ body:             |
   ; ASM-NEXT:    .cfi_startproc
   ; ASM-NEXT:  ; %bb.0: ; %entry
   ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
   ; ASM-NEXT:    .cfi_undefined 36
   ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
   ; ASM-NEXT:  ; %bb.1: ; %def
@@ -858,7 +858,7 @@ body:             |
   ; ASM-NEXT:    .cfi_startproc
   ; ASM-NEXT:  ; %bb.0: ; %entry
   ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
   ; ASM-NEXT:    .cfi_undefined 36
   ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
   ; ASM-NEXT:  ; %bb.1: ; %def
@@ -930,7 +930,7 @@ body:             |
   ; ASM-NEXT:    .cfi_startproc
   ; ASM-NEXT:  ; %bb.0: ; %entry
   ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
   ; ASM-NEXT:    .cfi_undefined 36
   ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
   ; ASM-NEXT:    ;;#ASMSTART

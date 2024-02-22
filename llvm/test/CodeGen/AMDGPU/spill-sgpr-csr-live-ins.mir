@@ -13,7 +13,7 @@ body:             |
     ; CHECK: liveins: $sgpr50, $vgpr63
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR $sgpr50, 0, $vgpr63
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x52, 0x06, 0x90, 0xbf, 0x14, 0xe9, 0x05, 0x00
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr50_lo16, $vgpr63_lo16, 0, 32
     ; CHECK-NEXT: S_NOP 0, implicit $sgpr50
     ; CHECK-NEXT: $sgpr50 = S_MOV_B32 0
     S_NOP 0, implicit $sgpr50

@@ -15,7 +15,7 @@ define hidden void @_Z9base_casev() #0 !dbg !6 {
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
-; CHECK-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+; CHECK-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    .loc 0 7 3 prologue_end ; file.cpp:7:3

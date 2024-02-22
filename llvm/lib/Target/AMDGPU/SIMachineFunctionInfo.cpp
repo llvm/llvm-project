@@ -324,6 +324,7 @@ void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
       break;
 
     MRI.replaceRegWith(Reg, NewReg);
+    MF.replaceFrameInstRegister(Reg, NewReg);
 
     // Update various tables with the new VGPR.
     SpillPhysVGPRs[I] = NewReg;

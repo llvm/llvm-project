@@ -2599,6 +2599,54 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   case MIToken::kw_cfi_aarch64_negate_ra_sign_state:
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
     break;
+  case MIToken::kw_cfi_llvm_register_pair: {
+    Register Reg, R1, R2;
+    unsigned R1Size, R2Size;
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIRegister(R1) || expectAndConsume(MIToken::comma) ||
+        getUnsigned(R1Size) || expectAndConsume(MIToken::comma) ||
+        parseCFIRegister(R2) || expectAndConsume(MIToken::comma) ||
+        getUnsigned(R2Size))
+      return true;
+
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMRegisterPair(
+        nullptr, Reg, R1, R1Size, R2, R2Size));
+    break;
+  }
+  case MIToken::kw_cfi_llvm_vector_registers: {
+    std::vector<MCCFIInstruction::VectorRegisterWithLane> VectorRegisters;
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma))
+      return true;
+    do {
+      Register VR;
+      unsigned Lane, Size;
+      if (parseCFIRegister(VR) || expectAndConsume(MIToken::comma) ||
+          getUnsigned(Lane) || expectAndConsume(MIToken::comma) ||
+          getUnsigned(Size))
+        return true;
+      VectorRegisters.push_back({VR, Lane, Size});
+    } while (expectAndConsume(MIToken::comma));
+
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMVectorRegisters(
+        nullptr, Reg, std::move(VectorRegisters)));
+    break;
+  }
+  case MIToken::kw_cfi_llvm_vector_offset: {
+    Register Reg, MaskReg;
+    unsigned RegSize, MaskRegSize;
+    int Offset = 0;
+
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        getUnsigned(RegSize) || expectAndConsume(MIToken::comma) ||
+        parseCFIRegister(MaskReg) || expectAndConsume(MIToken::comma) ||
+        getUnsigned(MaskRegSize) || expectAndConsume(MIToken::comma) ||
+        parseCFIOffset(Offset))
+      return true;
+
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMVectorOffset(
+        nullptr, Reg, RegSize, MaskReg, MaskRegSize, Offset));
+    break;
+  }
   case MIToken::kw_cfi_escape: {
     std::string Values;
     if (parseCFIEscapeValues(Values))
@@ -2953,6 +3001,9 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::kw_cfi_undefined:
   case MIToken::kw_cfi_window_save:
   case MIToken::kw_cfi_aarch64_negate_ra_sign_state:
+  case MIToken::kw_cfi_llvm_register_pair:
+  case MIToken::kw_cfi_llvm_vector_registers:
+  case MIToken::kw_cfi_llvm_vector_offset:
     return parseCFIOperand(Dest);
   case MIToken::kw_blockaddress:
     return parseBlockAddressOperand(Dest);

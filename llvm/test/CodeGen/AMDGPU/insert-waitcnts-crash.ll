@@ -10,7 +10,7 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr31, $vgpr40, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
@@ -193,12 +193,12 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset <badreg>, 0
   ; CHECK-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr17
   ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr16, 2, undef $vgpr40
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0x41, 0x06, 0x90, 0xa8, 0x0c, 0xe9, 0x05, 0x08
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr33_lo16, <badreg>, 2, 32
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_register $sgpr33_lo16
   ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr30, 0, killed $vgpr40, implicit-def $sgpr30_sgpr31, implicit $sgpr30_sgpr31
   ; CHECK-NEXT:   $sgpr32 = frame-setup S_ADDK_I32 $sgpr32, 512, implicit-def dead $scc
   ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr31, 1, killed $vgpr40, implicit $sgpr30_sgpr31
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x0c, 0x90, 0xff, 0x0c, 0x9d, 0x20, 0x00, 0x90, 0xff, 0x0c, 0x9d, 0x20, 0x20
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $pc_reg, <badreg>, 0, 32, <badreg>, 1, 32
   ; CHECK-NEXT:   BUNDLE implicit-def $sgpr16_sgpr17, implicit-def $sgpr16, implicit-def $sgpr16_lo16, implicit-def $sgpr16_hi16, implicit-def $sgpr17, implicit-def $sgpr17_lo16, implicit-def $sgpr17_hi16, implicit-def $scc {
   ; CHECK-NEXT:     $sgpr16_sgpr17 = S_GETPC_B64
   ; CHECK-NEXT:     $sgpr16 = S_ADD_U32 internal $sgpr16, target-flags(amdgpu-gotprel32-lo) @bar + 4, implicit-def $scc

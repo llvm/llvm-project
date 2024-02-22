@@ -645,6 +645,45 @@ void MCStreamer::emitCFIGnuArgsSize(int64_t Size, SMLoc Loc) {
   CurFrame->Instructions.push_back(Instruction);
 }
 
+void MCStreamer::emitCFILLVMRegisterPair(int64_t Register, int64_t R1,
+                                         int64_t R1Size, int64_t R2,
+                                         int64_t R2Size, SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction = MCCFIInstruction::createLLVMRegisterPair(
+      Label, Register, R1, R1Size, R2, R2Size, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
+void MCStreamer::emitCFILLVMVectorRegisters(
+    int64_t Register, std::vector<MCCFIInstruction::VectorRegisterWithLane> VRs,
+    SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction = MCCFIInstruction::createLLVMVectorRegisters(
+      Label, Register, std::move(VRs), Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
+void MCStreamer::emitCFILLVMVectorOffset(int64_t Register,
+                                         int64_t RegisterSizeInBits,
+                                         int64_t MaskRegister,
+                                         int64_t MaskRegisterSizeInBits,
+                                         int64_t Offset, SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction = MCCFIInstruction::createLLVMVectorOffset(
+      Label, Register, RegisterSizeInBits, MaskRegister, MaskRegisterSizeInBits,
+      Offset, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
 void MCStreamer::emitCFISignalFrame() {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)

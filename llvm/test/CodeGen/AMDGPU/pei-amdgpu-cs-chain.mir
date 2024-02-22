@@ -38,7 +38,7 @@ body:             |
     ; GCN: liveins: $sgpr0, $sgpr35, $vgpr8, $vgpr9
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2_lo16
@@ -182,7 +182,7 @@ body:             |
     ; GCN: liveins: $sgpr0, $sgpr35, $vgpr8, $vgpr9
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
@@ -344,7 +344,7 @@ body:             |
     ; GCN: liveins: $sgpr35, $vgpr8
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr35_lo16
     ; GCN-NEXT: renamable $vgpr8 = SI_SPILL_S32_TO_VGPR $sgpr35, 0, killed $vgpr8
@@ -376,7 +376,7 @@ body:             |
     ; GCN: liveins: $sgpr0, $sgpr35, $vgpr0, $vgpr8, $vgpr16
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
@@ -517,7 +517,7 @@ body:             |
     ; GCN: liveins: $sgpr0, $sgpr35, $vgpr0, $vgpr7, $vgpr8, $vgpr9
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
@@ -667,7 +667,7 @@ body:             |
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2_lo16

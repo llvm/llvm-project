@@ -26,7 +26,7 @@ body:             |
   ; GCN-NEXT:   liveins: $sgpr30, $sgpr31, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
   ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
   ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
   ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr2_lo16
@@ -462,29 +462,29 @@ body:             |
   ; GCN-NEXT:   frame-setup CFI_INSTRUCTION offset $vgpr40_lo16, 4352
   ; GCN-NEXT:   $exec = S_MOV_B64 killed $sgpr4_sgpr5
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr41, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 44, 0, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0xa9, 0x14, 0x11, 0x90, 0xa9, 0x14, 0x16, 0xe9, 0x05, 0x80, 0x16, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr41_lo16, 32, $exec, 64, 2816
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr42, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 40, 0, 0, implicit $exec :: (store (s32) into %stack.5, addrspace 5)
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0xaa, 0x14, 0x11, 0x90, 0xaa, 0x14, 0x16, 0xe9, 0x05, 0x80, 0x14, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr42_lo16, 32, $exec, 64, 2560
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr43, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 36, 0, 0, implicit $exec :: (store (s32) into %stack.6, addrspace 5)
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0xab, 0x14, 0x11, 0x90, 0xab, 0x14, 0x16, 0xe9, 0x05, 0x80, 0x12, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr43_lo16, 32, $exec, 64, 2304
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr44, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 32, 0, 0, implicit $exec :: (store (s32) into %stack.7, addrspace 5)
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0xac, 0x14, 0x11, 0x90, 0xac, 0x14, 0x16, 0xe9, 0x05, 0x80, 0x10, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr44_lo16, 32, $exec, 64, 2048
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr45, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec :: (store (s32) into %stack.8, addrspace 5)
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0xad, 0x14, 0x11, 0x90, 0xad, 0x14, 0x16, 0xe9, 0x05, 0x80, 0x0e, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr45_lo16, 32, $exec, 64, 1792
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr46, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0xae, 0x14, 0x11, 0x90, 0xae, 0x14, 0x16, 0xe9, 0x05, 0x80, 0x0c, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr46_lo16, 32, $exec, 64, 1536
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr56, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (store (s32) into %stack.10, addrspace 5)
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0xb8, 0x14, 0x11, 0x90, 0xb8, 0x14, 0x16, 0xe9, 0x05, 0x80, 0x0a, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr56_lo16, 32, $exec, 64, 1280
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr57, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (store (s32) into %stack.11, addrspace 5)
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0xb9, 0x14, 0x11, 0x90, 0xb9, 0x14, 0x16, 0xe9, 0x05, 0x80, 0x08, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr57_lo16, 32, $exec, 64, 1024
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr58, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (store (s32) into %stack.12, addrspace 5)
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0xba, 0x14, 0x11, 0x90, 0xba, 0x14, 0x16, 0xe9, 0x05, 0x80, 0x06, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr58_lo16, 32, $exec, 64, 768
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr59, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (store (s32) into %stack.13, addrspace 5)
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0xbb, 0x14, 0x11, 0x90, 0xbb, 0x14, 0x16, 0xe9, 0x05, 0x80, 0x04, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr59_lo16, 32, $exec, 64, 512
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr60, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.14, addrspace 5)
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0xbc, 0x14, 0x11, 0x90, 0xbc, 0x14, 0x16, 0xe9, 0x05, 0x80, 0x02, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr60_lo16, 32, $exec, 64, 256
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr61, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.15, addrspace 5)
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0xbd, 0x14, 0x10, 0x90, 0xbd, 0x14, 0x16, 0xe9, 0x05, 0x00, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr61_lo16, 32, $exec, 64, 0
   ; GCN-NEXT:   renamable $vgpr44 = COPY $vgpr13, implicit $exec
   ; GCN-NEXT:   renamable $vgpr43 = COPY $vgpr12, implicit $exec
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit undef $scc

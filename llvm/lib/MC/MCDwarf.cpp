@@ -1234,6 +1234,70 @@ void MCGenDwarfLabelEntry::Make(MCSymbol *Symbol, MCStreamer *MCOS,
       MCGenDwarfLabelEntry(Name, FileNumber, LineNumber, Label));
 }
 
+void MCCFIInstruction::replaceRegister(unsigned FromReg, unsigned ToReg) {
+  // Replace registers in the shared fields.
+  switch (Operation) {
+  case OpRegister:
+  case OpLLVMVectorOffset:
+    if (Register2 == FromReg)
+      Register2 = ToReg;
+
+    [[fallthrough]];
+  case OpDefCfa:
+  case OpOffset:
+  case OpRestore:
+  case OpUndefined:
+  case OpSameValue:
+  case OpDefCfaRegister:
+  case OpRelOffset:
+  case OpLLVMDefAspaceCfa:
+  case OpLLVMVectorRegisters:
+  case OpLLVMRegisterPair:
+    if (Register == FromReg)
+      Register = ToReg;
+    break;
+
+  case OpRememberState:
+  case OpRestoreState:
+  case OpDefCfaOffset:
+  case OpAdjustCfaOffset:
+  case OpEscape:
+  case OpWindowSave:
+  case OpNegateRAState:
+  case OpGnuArgsSize:
+    // No registers are used for these operations.
+    break;
+  }
+
+  // Replace registers in the "ExtraFields" structures.
+  switch (Operation) {
+  case OpLLVMRegisterPair: {
+    auto &Fields = getExtraFields<RegisterPairExtraFields>();
+    if (Fields.Reg1 == FromReg)
+      Fields.Reg1 = ToReg;
+    if (Fields.Reg2 == FromReg)
+      Fields.Reg2 = FromReg;
+    break;
+  }
+  case OpLLVMVectorRegisters: {
+    auto &Fields = getExtraFields<VectorRegistersExtraFields>();
+    for (auto &VR : Fields.VectorRegisters) {
+      if (VR.Register == FromReg)
+        VR.Register = ToReg;
+    }
+    break;
+  }
+  case OpLLVMVectorOffset: {
+    auto &Fields = getExtraFields<VectorOffsetExtraFields>();
+    if (Fields.MaskRegister == FromReg)
+      Fields.MaskRegister = ToReg;
+    break;
+  }
+  default:
+    break;
+  }
+}
+
 static int getDataAlignmentFactor(MCStreamer &streamer) {
   MCContext &context = streamer.getContext();
   const MCAsmInfo *asmInfo = context.getAsmInfo();
@@ -1317,6 +1381,16 @@ public:
 
 static void emitEncodingByte(MCObjectStreamer &Streamer, unsigned Encoding) {
   Streamer.emitInt8(Encoding);
+}
+
+static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {
+  assert(DwarfReg >= 0);
+  if (DwarfReg < 32) {
+    OS << uint8_t(dwarf::DW_OP_reg0 + DwarfReg);
+  } else {
+    OS << uint8_t(dwarf::DW_OP_regx);
+    encodeULEB128(DwarfReg, OS);
+  }
 }
 
 void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
@@ -1459,7 +1533,162 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
   case MCCFIInstruction::OpEscape:
     Streamer.emitBytes(Instr.getValues());
     return;
+
+  case MCCFIInstruction::OpLLVMRegisterPair: {
+    // CFI for a register spilled to a pair of SGPRs is implemented as an
+    // expression(E) rule where E is a composite location description with
+    // multiple parts each referencing SGPR register location storage with a bit
+    // offset of 0. In other words we generate the following DWARF:
+    //
+    // DW_CFA_expression: <Reg>,
+    //    (DW_OP_regx <SGPRPair[0]>) (DW_OP_piece <Size>)
+    //    (DW_OP_regx <SGPRPair[1]>) (DW_OP_piece <Size>)
+    //
+    // The memory location description for the current CFA is pushed on the
+    // stack before E is evaluated, but we choose not to drop it as it would
+    // require a longer expression E and DWARF defines the result of the
+    // evaulation to be the location description on the top of the stack (i.e.
+    // the implictly pushed one is just ignored.)
+
+    const auto &Fields =
+        Instr.getExtraFields<MCCFIInstruction::RegisterPairExtraFields>();
+
+    SmallString<10> Block;
+    raw_svector_ostream OSBlock(Block);
+    encodeDwarfRegisterLocation(Fields.Reg1, OSBlock);
+    if (Fields.Reg1SizeInBits % 8 == 0) {
+      OSBlock << uint8_t(dwarf::DW_OP_piece);
+      encodeULEB128(Fields.Reg1SizeInBits / 8, OSBlock);
+    } else {
+      OSBlock << uint8_t(dwarf::DW_OP_bit_piece);
+      encodeULEB128(Fields.Reg1SizeInBits, OSBlock);
+      encodeULEB128(0, OSBlock);
+    }
+    encodeDwarfRegisterLocation(Fields.Reg2, OSBlock);
+    if (Fields.Reg2SizeInBits % 8 == 0) {
+      OSBlock << uint8_t(dwarf::DW_OP_piece);
+      encodeULEB128(Fields.Reg2SizeInBits / 8, OSBlock);
+    } else {
+      OSBlock << uint8_t(dwarf::DW_OP_bit_piece);
+      encodeULEB128(Fields.Reg2SizeInBits, OSBlock);
+      encodeULEB128(0, OSBlock);
+    }
+
+    Streamer.emitInt8(dwarf::DW_CFA_expression);
+    Streamer.emitULEB128IntValue(Instr.getRegister());
+    Streamer.emitULEB128IntValue(Block.size());
+    Streamer.emitBinaryData(StringRef(&Block[0], Block.size()));
+    return;
   }
+
+  case MCCFIInstruction::OpLLVMVectorRegisters: {
+    // CFI for an SGPR spilled to a multiple lanes of VGPRs is implemented as an
+    // expression(E) rule where E is a composite location description with
+    // multiple parts each referencing VGPR register location storage with a bit
+    // offset of the lane index multiplied by the size of a lane. In other words
+    // we generate the following DWARF:
+    //
+    // DW_CFA_expression: <SGPR>,
+    //    (DW_OP_regx <VGPR[0]>) (DW_OP_bit_piece <Size>, <Lane[0]>*<Size>)
+    //    (DW_OP_regx <VGPR[1]>) (DW_OP_bit_piece <Size>, <Lane[1]>*<Size>)
+    //    ...
+    //    (DW_OP_regx <VGPR[N]>) (DW_OP_bit_piece <Size>, <Lane[N]>*<Size>)
+    //
+    // However if we're only using a single lane then we can emit a slightly
+    // more optimal form:
+    //
+    // DW_CFA_expression: <SGPR>,
+    //    (DW_OP_regx <VGPR[0]>) (DW_OP_LLVM_offset_uconst <Lane[0]>*<Size>)
+    //
+    // The memory location description for the current CFA is pushed on the
+    // stack before E is evaluated, but we choose not to drop it as it would
+    // require a longer expression E and DWARF defines the result of the
+    // evaulation to be the location description on the top of the stack (i.e.
+    // the implictly pushed one is just ignored.)
+
+    const auto &VRs =
+        Instr.getExtraFields<MCCFIInstruction::VectorRegistersExtraFields>()
+            .VectorRegisters;
+
+    SmallString<20> Block;
+    raw_svector_ostream OSBlock(Block);
+
+    if (VRs.size() == 1 && VRs[0].SizeInBits % 8 == 0) {
+      encodeDwarfRegisterLocation(VRs[0].Register, OSBlock);
+      if (EmitHeterogeneousDwarfAsUserOps) {
+        OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+                << uint8_t(dwarf::DW_OP_LLVM_USER_offset_uconst);
+      } else
+        OSBlock << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
+      encodeULEB128((VRs[0].SizeInBits / 8) * VRs[0].Lane, OSBlock);
+    } else {
+      for (const auto &VR : VRs) {
+        // TODO: Detect when we can merge multiple adjacent pieces, or even
+        // reduce this to a register location description (when all pieces are
+        // adjacent).
+        encodeDwarfRegisterLocation(VR.Register, OSBlock);
+        OSBlock << uint8_t(dwarf::DW_OP_bit_piece);
+        encodeULEB128(VR.SizeInBits, OSBlock);
+        encodeULEB128(VR.SizeInBits * VR.Lane, OSBlock);
+      }
+    }
+
+    Streamer.emitInt8(dwarf::DW_CFA_expression);
+    Streamer.emitULEB128IntValue(Instr.getRegister());
+    Streamer.emitULEB128IntValue(Block.size());
+    Streamer.emitBinaryData(StringRef(&Block[0], Block.size()));
+    return;
+  }
+
+  case MCCFIInstruction::OpLLVMVectorOffset: {
+    // CFI for a vector register spilled to memory is implemented as an
+    // expression(E) rule where E is a location description.
+    //
+    // DW_CFA_expression: <VGPR>,
+    //    (DW_OP_regx <VGPR>)
+    //    (DW_OP_swap)
+    //    (DW_OP_LLVM_offset_uconst <Offset>)
+    //    (DW_OP_LLVM_call_frame_entry_reg <Mask>)
+    //    (DW_OP_deref_size <MaskSize>)
+    //    (DW_OP_LLVM_select_bit_piece <VGPRSize> <MaskSize>)
+
+    const auto &Fields =
+        Instr.getExtraFields<MCCFIInstruction::VectorOffsetExtraFields>();
+
+    SmallString<20> Block;
+    raw_svector_ostream OSBlock(Block);
+    encodeDwarfRegisterLocation(Instr.getRegister(), OSBlock);
+    OSBlock << uint8_t(dwarf::DW_OP_swap);
+    if (EmitHeterogeneousDwarfAsUserOps)
+      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+              << uint8_t(dwarf::DW_OP_LLVM_USER_offset_uconst);
+    else
+      OSBlock << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
+    encodeULEB128(Instr.getOffset(), OSBlock);
+    if (EmitHeterogeneousDwarfAsUserOps)
+      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+              << uint8_t(dwarf::DW_OP_LLVM_USER_call_frame_entry_reg);
+    else
+      OSBlock << uint8_t(dwarf::DW_OP_LLVM_call_frame_entry_reg);
+    encodeULEB128(Fields.MaskRegister, OSBlock);
+    OSBlock << uint8_t(dwarf::DW_OP_deref_size);
+    OSBlock << uint8_t(Fields.MaskRegisterSizeInBits / 8);
+    if (EmitHeterogeneousDwarfAsUserOps)
+      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+              << uint8_t(dwarf::DW_OP_LLVM_USER_select_bit_piece);
+    else
+      OSBlock << uint8_t(dwarf::DW_OP_LLVM_select_bit_piece);
+    encodeULEB128(Fields.RegisterSizeInBits, OSBlock);
+    encodeULEB128(Fields.MaskRegisterSizeInBits, OSBlock);
+
+    Streamer.emitInt8(dwarf::DW_CFA_expression);
+    Streamer.emitULEB128IntValue(Instr.getRegister());
+    Streamer.emitULEB128IntValue(Block.size());
+    Streamer.emitBinaryData(StringRef(&Block[0], Block.size()));
+    return;
+  }
+  }
+
   llvm_unreachable("Unhandled case in switch");
 }
 

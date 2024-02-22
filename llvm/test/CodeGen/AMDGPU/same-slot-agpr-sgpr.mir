@@ -16,7 +16,7 @@ body: |
     ; CHECK: liveins: $agpr0, $agpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1_lo16
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4_lo16
@@ -55,7 +55,7 @@ body: |
     ; CHECK: liveins: $agpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0_lo16
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4_lo16
@@ -92,7 +92,7 @@ body: |
     ; CHECK: liveins: $agpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0_lo16
     ; CHECK-NEXT: $vgpr0 = IMPLICIT_DEF

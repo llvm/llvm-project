@@ -769,6 +769,49 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
     break;
+  case MCCFIInstruction::OpLLVMRegisterPair: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::RegisterPairExtraFields>();
+
+    OS << "llvm_register_pair ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", ";
+    printCFIRegister(Fields.Reg1, OS, TRI);
+    OS << ", " << Fields.Reg1SizeInBits << ", ";
+    printCFIRegister(Fields.Reg2, OS, TRI);
+    OS << ", " << Fields.Reg2SizeInBits;
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorRegisters: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::VectorRegistersExtraFields>();
+
+    OS << "llvm_vector_registers ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    for (auto [Reg, Lane, Size] : Fields.VectorRegisters) {
+      OS << ", ";
+      printCFIRegister(Reg, OS, TRI);
+      OS << ", " << Lane << ", " << Size;
+    }
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorOffset: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::VectorOffsetExtraFields>();
+
+    OS << "llvm_vector_offset ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", " << Fields.RegisterSizeInBits << ", ";
+    printCFIRegister(Fields.MaskRegister, OS, TRI);
+    OS << ", " << Fields.MaskRegisterSizeInBits << ", " << CFI.getOffset();
+    break;
+  }
   default:
     // TODO: Print the other CFI Operations.
     OS << "<unserializable cfi directive>";

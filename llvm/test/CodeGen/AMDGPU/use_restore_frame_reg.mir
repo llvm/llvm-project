@@ -40,7 +40,7 @@ body:             |
   ; MUBUF-NEXT:   liveins: $vgpr1, $vgpr2
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr4_lo16
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr5_lo16
@@ -77,7 +77,7 @@ body:             |
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION offset $vgpr2_lo16, 9961728
   ; MUBUF-NEXT:   $exec = S_MOV_B64 killed $sgpr6_sgpr7
   ; MUBUF-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, undef $vgpr2
-  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0x41, 0x06, 0x90, 0x82, 0x14, 0xe9, 0x05, 0x00
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr33_lo16, $vgpr2_lo16, 0, 32
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_register $sgpr33_lo16
   ; MUBUF-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 11010048, implicit-def dead $scc
   ; MUBUF-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
@@ -115,7 +115,7 @@ body:             |
   ; FLATSCR-NEXT:   liveins: $vgpr1, $vgpr2
   ; FLATSCR-NEXT: {{  $}}
   ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
-  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
   ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
   ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr4_lo16
   ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr5_lo16
@@ -152,7 +152,7 @@ body:             |
   ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION offset $vgpr2_lo16, 9961728
   ; FLATSCR-NEXT:   $exec = S_MOV_B64 killed $sgpr6_sgpr7
   ; FLATSCR-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, undef $vgpr2
-  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0x41, 0x06, 0x90, 0x82, 0x14, 0xe9, 0x05, 0x00
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr33_lo16, $vgpr2_lo16, 0, 32
   ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x41, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
   ; FLATSCR-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 172032, implicit-def dead $scc
   ; FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
