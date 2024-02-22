@@ -857,7 +857,6 @@ static Value rewriteI4ToI8SignedExt(PatternRewriter &rewriter, Location loc,
          "Expected i4 type");
 
   // 1. Generate a bitcast vector<Xxi4> -> vector<X/2xi8>.
-  int64_t vecDimSize = srcVecType.getShape().back();
   SmallVector<int64_t> i8VecShape = llvm::to_vector(srcVecType.getShape());
   constexpr int64_t i4Toi8BitwidthFactor = 2;
   i8VecShape.back() = i8VecShape.back() / i4Toi8BitwidthFactor;
