@@ -235,3 +235,64 @@ define i8 @test19(i8 %x) {
   %r = call i8 @llvm.smax(i8 %x, i8 42)
   ret i8 %r
 }
+
+declare void @body(i32)
+
+define void @test_bidirectional() {
+; CHECK-LABEL: @test_bidirectional(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[INDVAR]], i32 65535)
+; CHECK-NEXT:    call void @body(i32 [[SMAX]])
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[INDVAR]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INDVAR]], 65535
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvar = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %smax = call i32 @llvm.smax.i32(i32 %indvar, i32 65535)
+  call void @body(i32 %smax)
+  %inc = add nsw i32 %indvar, 1
+  %cmp = icmp slt i32 %indvar, 65535
+  br i1 %cmp, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+define i64 @test_at_use(i1 %cond, i64 %x) {
+; CHECK-LABEL: @test_at_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[IF_END:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[VAL:%.*]] = call i64 @llvm.smax.i64(i64 [[X:%.*]], i64 -1)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[X]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i64 0
+; CHECK:       if.end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[VAL]], [[BB1]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i64 [[PHI]]
+;
+entry:
+  br i1 %cond, label %bb1, label %if.end
+
+bb1:
+  %val = call i64 @llvm.smax.i64(i64 %x, i64 -1)
+  %cmp = icmp slt i64 %x, 0
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  ret i64 0
+
+if.end:
+  %phi = phi i64 [%val, %bb1], [0, %entry]
+  ret i64 %phi
+}
