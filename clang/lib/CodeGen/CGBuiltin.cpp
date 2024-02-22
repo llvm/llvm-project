@@ -1171,8 +1171,7 @@ CodeGenFunction::EmitConvergenceLoop(llvm::BasicBlock *BB,
   // Removing any old attributes.
   I->setNotConvergent();
 
-  assert(isa<llvm::IntrinsicInst>(I));
-  return dyn_cast<llvm::IntrinsicInst>(I);
+  return cast<llvm::IntrinsicInst>(I);
 }
 
 llvm::IntrinsicInst *
@@ -1193,7 +1192,7 @@ CodeGenFunction::getOrEmitConvergenceEntryToken(llvm::Function *F) {
   assert(isa<llvm::IntrinsicInst>(I));
   Builder.restoreIP(IP);
 
-  return dyn_cast<llvm::IntrinsicInst>(I);
+  return cast<llvm::IntrinsicInst>(I);
 }
 
 llvm::IntrinsicInst *
@@ -5892,14 +5891,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         {NDRange, Kernel, Block}));
   }
 
-  case Builtin::BI__builtin_hlsl_wave_active_count_bits: {
-    llvm::Type *BoolTy = llvm::IntegerType::get(getLLVMContext(), 1);
-    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
-    auto *CI =
-        EmitRuntimeCall(CGM.CreateRuntimeFunction(
-                            llvm::FunctionType::get(IntTy, {BoolTy}, false),
-                            "__hlsl_wave_active_count_bits", {}),
-                        {Src0});
+  case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
+    auto *CI = EmitRuntimeCall(CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(IntTy, {}, false), "__hlsl_wave_get_lane_index",
+        {}, false, true));
     if (getTarget().getTriple().isSPIRVLogical())
       CI = dyn_cast<CallInst>(AddControlledConvergenceAttr(CI));
     return RValue::get(CI);
