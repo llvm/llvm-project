@@ -3192,7 +3192,8 @@ static std::optional<uint64_t> getExactInteger(const APFloat &APF,
 // Note that this method will also match potentially unappealing index
 // sequences, like <i32 0, i32 50939494>, however it is left to the caller to
 // determine whether this is worth generating code for.
-static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
+static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op,
+                                                      unsigned EltSizeInBits) {
   unsigned NumElts = Op.getNumOperands();
   assert(Op.getOpcode() == ISD::BUILD_VECTOR && "Unexpected BUILD_VECTOR");
   bool IsInteger = Op.getValueType().isInteger();
@@ -3200,7 +3201,7 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
   std::optional<unsigned> SeqStepDenom;
   std::optional<int64_t> SeqStepNum, SeqAddend;
   std::optional<std::pair<uint64_t, unsigned>> PrevElt;
-  unsigned EltSizeInBits = Op.getValueType().getScalarSizeInBits();
+  assert(EltSizeInBits >= Op.getValueType().getScalarSizeInBits());
   for (unsigned Idx = 0; Idx < NumElts; Idx++) {
     // Assume undef elements match the sequence; we just have to be careful
     // when interpolating across them.
@@ -3213,14 +3214,14 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
       if (!isa<ConstantSDNode>(Op.getOperand(Idx)))
         return std::nullopt;
       Val = Op.getConstantOperandVal(Idx) &
-            maskTrailingOnes<uint64_t>(EltSizeInBits);
+            maskTrailingOnes<uint64_t>(Op.getScalarValueSizeInBits());
     } else {
       // The BUILD_VECTOR must be all constants.
       if (!isa<ConstantFPSDNode>(Op.getOperand(Idx)))
         return std::nullopt;
       if (auto ExactInteger = getExactInteger(
               cast<ConstantFPSDNode>(Op.getOperand(Idx))->getValueAPF(),
-              EltSizeInBits))
+              Op.getScalarValueSizeInBits()))
         Val = *ExactInteger;
       else
         return std::nullopt;
@@ -3276,11 +3277,11 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
     uint64_t Val;
     if (IsInteger) {
       Val = Op.getConstantOperandVal(Idx) &
-            maskTrailingOnes<uint64_t>(EltSizeInBits);
+            maskTrailingOnes<uint64_t>(Op.getScalarValueSizeInBits());
     } else {
       Val = *getExactInteger(
           cast<ConstantFPSDNode>(Op.getOperand(Idx))->getValueAPF(),
-          EltSizeInBits);
+          Op.getScalarValueSizeInBits());
     }
     uint64_t ExpectedVal =
         (int64_t)(Idx * (uint64_t)*SeqStepNum) / *SeqStepDenom;
@@ -3550,7 +3551,7 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   // Try and match index sequences, which we can lower to the vid instruction
   // with optional modifications. An all-undef vector is matched by
   // getSplatValue, above.
-  if (auto SimpleVID = isSimpleVIDSequence(Op)) {
+  if (auto SimpleVID = isSimpleVIDSequence(Op, Op.getScalarValueSizeInBits())) {
     int64_t StepNumerator = SimpleVID->StepNumerator;
     unsigned StepDenominator = SimpleVID->StepDenominator;
     int64_t Addend = SimpleVID->Addend;
@@ -15562,7 +15563,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     if (Index.getOpcode() == ISD::BUILD_VECTOR &&
         MGN->getExtensionType() == ISD::NON_EXTLOAD && isTypeLegal(VT)) {
-      if (std::optional<VIDSequence> SimpleVID = isSimpleVIDSequence(Index);
+      // The sequence will be XLenVT, not the type of Index. Tell
+      // isSimpleVIDSequence this so we avoid overflow.
+      if (std::optional<VIDSequence> SimpleVID =
+              isSimpleVIDSequence(Index, Subtarget.getXLen());
           SimpleVID && SimpleVID->StepDenominator == 1) {
         const int64_t StepNumerator = SimpleVID->StepNumerator;
         const int64_t Addend = SimpleVID->Addend;
