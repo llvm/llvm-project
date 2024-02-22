@@ -18,7 +18,8 @@
 #if __has_include(<gpu-none-llvm/rpc_server.h>)
 #include <gpu-none-llvm/rpc_server.h>
 #elif defined(LIBOMPTARGET_RPC_SUPPORT)
-#include <rpc_server.h>
+// Just pull this out of the source if available.
+#include "rpc_server.h"
 #endif
 
 using namespace llvm;

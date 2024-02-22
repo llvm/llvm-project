@@ -139,7 +139,7 @@ function(add_gen_header target_name)
             ${hdrgen_deps}
   )
 
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  if(LIBC_TARGET_OS_IS_GPU)
     file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-decls)
     set(decl_out_file ${LIBC_INCLUDE_DIR}/llvm-libc-decls/${relative_path})
     add_custom_command(

@@ -10,7 +10,6 @@ else()
                  "functions will be an external reference to the vendor libraries.")
 endif()
 
-find_package(CUDAToolkit QUIET)
 if(CUDAToolkit_FOUND)
   set(libdevice_path ${CUDAToolkit_BIN_DIR}/../nvvm/libdevice/libdevice.10.bc)
   if (EXISTS ${libdevice_path})
