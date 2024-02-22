@@ -34,18 +34,16 @@ uint32_t WasmRegisterContext::ConvertRegisterKindToRegisterNumber(
 size_t WasmRegisterContext::GetRegisterCount() { return 0; }
 
 const RegisterInfo *WasmRegisterContext::GetRegisterInfoAtIndex(size_t reg) {
-  uint32_t tag = (reg >> 30) & 0x03;
-  if (tag == 0) {
-    return m_reg_info_sp->GetRegisterInfoAtIndex(reg);
-  }
+  uint32_t tag = (reg >> kTagShift) & kTagMask;
+  if (tag == WasmVirtualRegisterKinds::eNotAWasmLocation)
+    return m_reg_info_sp->GetRegisterInfoAtIndex(reg & kIndexMask);
 
   auto it = m_register_map.find(reg);
   if (it == m_register_map.end()) {
-    WasmVirtualRegisterKinds kind =
-        static_cast<WasmVirtualRegisterKinds>(tag - 1);
+    WasmVirtualRegisterKinds kind = static_cast<WasmVirtualRegisterKinds>(tag);
     std::tie(it, std::ignore) = m_register_map.insert(
         {reg,
-         std::make_unique<WasmVirtualRegisterInfo>(kind, reg & 0x3fffffff)});
+         std::make_unique<WasmVirtualRegisterInfo>(kind, reg & kIndexMask)});
   }
   return it->second.get();
 }
@@ -58,9 +56,8 @@ const RegisterSet *WasmRegisterContext::GetRegisterSet(size_t reg_set) {
 
 bool WasmRegisterContext::ReadRegister(const RegisterInfo *reg_info,
                                        RegisterValue &value) {
-  if (reg_info->name) {
+  if (reg_info->name)
     return GDBRemoteRegisterContext::ReadRegister(reg_info, value);
-  }
 
   ThreadWasm *thread = static_cast<ThreadWasm *>(&GetThread());
   ProcessWasm *process = static_cast<ProcessWasm *>(thread->GetProcess().get());

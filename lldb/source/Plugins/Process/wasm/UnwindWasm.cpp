@@ -62,9 +62,8 @@ uint32_t UnwindWasm::DoGetFrameCount() {
 bool UnwindWasm::DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
                                        lldb::addr_t &pc,
                                        bool &behaves_like_zeroth_frame) {
-  if (m_frames.size() == 0) {
+  if (m_frames.size() == 0)
     DoGetFrameCount();
-  }
 
   if (frame_idx < m_frames.size()) {
     behaves_like_zeroth_frame = (frame_idx == 0);
