@@ -79,14 +79,13 @@ class raw_ostream;
 ///   deleteRecord
 ///   clone
 ///   isIdenticalToWhenDefined
-///   isEquivalentTo
 ///   both print methods
 class DbgRecord : public ilist_node<DbgRecord> {
 public:
   /// Marker that this DbgRecord is linked into.
   DPMarker *Marker = nullptr;
   /// Subclass discriminator.
-  enum Kind : uint8_t { ValueKind };
+  enum Kind : uint8_t { ValueKind, LabelKind };
 
 protected:
   DebugLoc DbgLoc;
@@ -104,8 +103,10 @@ public:
   void print(raw_ostream &O, bool IsForDebug = false) const;
   void print(raw_ostream &O, ModuleSlotTracker &MST, bool IsForDebug) const;
   bool isIdenticalToWhenDefined(const DbgRecord &R) const;
-  bool isEquivalentTo(const DbgRecord &R) const;
   ///@}
+
+  /// Same as isIdenticalToWhenDefined but checks DebugLoc too.
+  bool isEquivalentTo(const DbgRecord &R) const;
 
   Kind getRecordKind() const { return RecordKind; }
 
@@ -154,6 +155,31 @@ protected:
   /// cleanup.
   /// Use deleteRecord to delete a generic record.
   ~DbgRecord() = default;
+};
+
+/// Records a position in IR for a source label (DILabel). Corresponds to the
+/// llvm.dbg.label intrinsic.
+/// FIXME: Rename DbgLabelRecord when DPValue is renamed to DbgVariableRecord.
+class DPLabel : public DbgRecord {
+  DILabel *Label;
+
+public:
+  DPLabel(DILabel *Label, DebugLoc DL)
+      : DbgRecord(LabelKind, DL), Label(Label) {
+    assert(Label && "Unexpected nullptr");
+  }
+
+  DPLabel *clone() const;
+  void print(raw_ostream &O, bool IsForDebug = false) const;
+  void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
+
+  void setLabel(DILabel *NewLabel) { Label = NewLabel; }
+  DILabel *getLabel() const { return Label; }
+
+  /// Support type inquiry through isa, cast, and dyn_cast.
+  static bool classof(const DbgRecord *E) {
+    return E->getRecordKind() == LabelKind;
+  }
 };
 
 /// Record of a variable value-assignment, aka a non instruction representation
