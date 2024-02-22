@@ -281,8 +281,8 @@ func.func @aligned_trunci(%a: vector<8xi32>) -> vector<8xi4> {
 // CHECK-LABEL: func.func @aligned_trunci_base_case(
 func.func @aligned_trunci_base_case(%a: vector<8xi8>) -> vector<8xi4> {
 // CHECK-SAME:    %[[IN:.*]]: vector<8xi8>) -> vector<8xi4> {
-// CHECK:           %[[LOW_MASK:.*]] = arith.constant dense<15> : vector<4xi8>
-// CHECK:           %[[I4_BITS:.*]] = arith.constant dense<4> : vector<4xi8>
+// CHECK-DAG:       %[[LOW_MASK:.*]] = arith.constant dense<15> : vector<4xi8>
+// CHECK-DAG:       %[[I4_BITS:.*]] = arith.constant dense<4> : vector<4xi8>
 // CHECK:           %[[LOW:.*]] = vector.shuffle %[[IN]], %[[IN]] [0, 2, 4, 6] : vector<8xi8>, vector<8xi8>
 // CHECK:           %[[HIGH:.*]] = vector.shuffle %[[IN]], %[[IN]] [1, 3, 5, 7] : vector<8xi8>, vector<8xi8>
 // CHECK:           %[[ZEROED_LOW:.*]] = arith.andi %[[LOW]], %[[LOW_MASK]] : vector<4xi8>
@@ -291,6 +291,17 @@ func.func @aligned_trunci_base_case(%a: vector<8xi8>) -> vector<8xi4> {
 // CHECK:           %[[I4:.*]] = vector.bitcast %[[MERGED]] : vector<4xi8> to vector<8xi4>
   %0 = arith.trunci %a : vector<8xi8> to vector<8xi4>
   return %0 : vector<8xi4>
+}
+
+// CHECK-LABEL: func.func @aligned_trunci_2d(
+func.func @aligned_trunci_2d(%a: vector<8x32xi32>) -> vector<8x32xi4> {
+// CHECK-NOT:       vector.shuffle
+// CHECK-NOT:       vector.andi
+// CHECK-NOT:       vector.shli
+// CHECK-NOT:       vector.ori
+// CHECK:           arith.trunci
+  %0 = arith.trunci %a : vector<8x32xi32> to vector<8x32xi4>
+  return %0 : vector<8x32xi4>
 }
 
 // CHECK-LABEL: func.func @i4_transpose(

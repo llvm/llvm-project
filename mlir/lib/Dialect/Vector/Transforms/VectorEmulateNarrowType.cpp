@@ -1078,9 +1078,8 @@ struct RewriteAlignedSubByteIntSignedExt : OpRewritePattern<ConversionOpType> {
             commonConversionPrecondition(rewriter, dstVecType, conversionOp)))
       return failure();
 
-    // Check general alignment preconditions. We invert the src/dst type order
-    // to resue the extension preconditions.
-    if (failed(alignedConversionPrecondition(rewriter, dstVecType, srcVecType,
+    // Check general alignment preconditions.
+    if (failed(alignedConversionPrecondition(rewriter, srcVecType, dstVecType,
                                              conversionOp)))
       return failure();
 
