@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: not --crash opt -mtriple=x86_64 -mattr=-avx,-avx2,-avx512f,+sse,-sse2,-sse3,-sse4.2 -passes=loop-vectorize -S < %s
 ; RUN: not --crash opt -mtriple=x86_64 -mattr=-avx,-avx2,-avx512f,+sse,-sse2,-sse3,-sse4.2 -passes=loop-vectorize -force-vector-width=4 -S < %s
 ; REQUIRES: asserts
