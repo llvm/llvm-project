@@ -123,6 +123,8 @@ size_t __scudo_get_region_info_size(void);
 const char *__scudo_get_ring_buffer_addr(void);
 size_t __scudo_get_ring_buffer_size(void);
 
+bool __scudo_resize_ring_buffer(int);
+
 #ifndef M_DECAY_TIME
 #define M_DECAY_TIME -100
 #endif

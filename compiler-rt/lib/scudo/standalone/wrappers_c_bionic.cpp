@@ -72,4 +72,8 @@ INTERFACE size_t __scudo_get_ring_buffer_size() {
   return Allocator.getRingBufferSize();
 }
 
+INTERFACE bool __scudo_resize_ring_buffer(int new_size) {
+  return Allocator.resizeRingBuffer(new_size);
+}
+
 #endif // SCUDO_ANDROID && _BIONIC
