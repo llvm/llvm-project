@@ -4613,8 +4613,9 @@ evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
     SemanticsContext &context, common::TypeCategory category,
     const std::optional<parser::KindSelector> &selector) {
   evaluate::ExpressionAnalyzer analyzer{context};
+  CHECK(context.location().has_value());
   auto restorer{
-      analyzer.GetContextualMessages().SetLocation(context.location().value())};
+      analyzer.GetContextualMessages().SetLocation(*context.location())};
   return analyzer.AnalyzeKindSelector(category, selector);
 }
 
