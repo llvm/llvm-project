@@ -4581,7 +4581,7 @@ void AssemblyWriter::printDbgRecord(const DbgRecord &DR) {
   if (auto *DPV = dyn_cast<DPValue>(&DR))
     printDPValue(*DPV);
   else
-    llvm_unreachable("unsupported dbg record");
+    printDPLabel(cast<DPLabel>(DR));
 }
 
 void AssemblyWriter::printDPValue(const DPValue &Value) {

@@ -166,7 +166,7 @@ class DPLabel : public DbgRecord {
 public:
   DPLabel(DILabel *Label, DebugLoc DL)
       : DbgRecord(LabelKind, DL), Label(Label) {
-    assert(Label && "unexpected nullptr");
+    assert(Label && "Unexpected nullptr");
   }
 
   DPLabel *clone() const;
