@@ -49,23 +49,9 @@ public:
   }
 };
 
-template <typename MatchContext>
-using ctx_has_get_dag = decltype(std::declval<const MatchContext &>().getDAG());
-
-template <typename MatchContext>
-using ctx_has_get_tli = decltype(std::declval<const MatchContext &>().getTLI());
-
-template <typename MatchContext>
-using ctx_has_match = decltype(std::declval<const MatchContext &>().match(
-    std::declval<SDValue>(), std::declval<unsigned>()));
-
 template <typename Pattern, typename MatchContext>
 [[nodiscard]] bool sd_context_match(SDValue N, const MatchContext &Ctx,
                                     Pattern &&P) {
-  static_assert(is_detected<ctx_has_get_dag, MatchContext>::value,
-                "Match context has to implement getDAG().");
-  static_assert(is_detected<ctx_has_get_tli, MatchContext>::value,
-                "Match context has to implement getTLI().");
   return P.match(Ctx, N);
 }
 
@@ -143,16 +129,8 @@ struct Opcode_match {
   explicit Opcode_match(unsigned Opc) : Opcode(Opc) {}
 
   template <typename MatchContext>
-  std::enable_if_t<is_detected<ctx_has_match, MatchContext>::value, bool>
-  match(const MatchContext &Ctx, SDValue N) {
+  bool match(const MatchContext &Ctx, SDValue N) {
     return Ctx.match(N, Opcode);
-  }
-
-  // Default implementation.
-  template <typename MatchContext>
-  std::enable_if_t<!is_detected<ctx_has_match, MatchContext>::value, bool>
-  match(const MatchContext &, SDValue N) {
-    return N->getOpcode() == Opcode;
   }
 };
 
