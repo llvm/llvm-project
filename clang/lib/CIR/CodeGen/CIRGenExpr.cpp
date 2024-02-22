@@ -1145,9 +1145,26 @@ RValue CIRGenFunction::buildCall(clang::QualType CalleeType,
   if (isa<FunctionNoProtoType>(FnType) || Chain) {
     assert(!UnimplementedFeature::chainCalls());
     assert(!UnimplementedFeature::addressSpace());
+    auto CalleeTy = getTypes().GetFunctionType(FnInfo);
+    // get non-variadic function type
+    CalleeTy = mlir::cir::FuncType::get(CalleeTy.getInputs(),
+                                        CalleeTy.getReturnType(), false);
+    auto CalleePtrTy =
+        mlir::cir::PointerType::get(builder.getContext(), CalleeTy);
 
-    // Set no-proto function as callee.
-    auto Fn = llvm::dyn_cast<mlir::cir::FuncOp>(Callee.getFunctionPointer());
+    auto *Fn = Callee.getFunctionPointer();
+    mlir::Value Addr;
+    if (auto funcOp = llvm::dyn_cast<mlir::cir::FuncOp>(Fn)) {
+      Addr = builder.create<mlir::cir::GetGlobalOp>(
+          getLoc(E->getSourceRange()),
+          mlir::cir::PointerType::get(builder.getContext(),
+                                      funcOp.getFunctionType()),
+          funcOp.getSymName());
+    } else {
+      Addr = Fn->getResult(0);
+    }
+
+    Fn = builder.createBitcast(Addr, CalleePtrTy).getDefiningOp();
     Callee.setFunctionPointer(Fn);
   }
 

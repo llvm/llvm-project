@@ -64,9 +64,9 @@ void foo4(A* a1) {
 A create() { A a; return a; }
 
 // CHECK: cir.func {{.*@foo5}}
-// CHECK:   [[TMP0]] = cir.alloca !ty_22A22, cir.ptr <!ty_22A22>,
-// CHECK:   [[TMP1]] = cir.alloca !ty_22A22, cir.ptr <!ty_22A22>, ["tmp"] {alignment = 4 : i64}
-// CHECK:   [[TMP2]] = cir.call @create() : () -> !ty_22A22
+// CHECK:   [[TMP0:%.*]] = cir.alloca !ty_22A22, cir.ptr <!ty_22A22>,
+// CHECK:   [[TMP1:%.*]] = cir.alloca !ty_22A22, cir.ptr <!ty_22A22>, ["tmp"] {alignment = 4 : i64}
+// CHECK:   [[TMP2:%.*]] = cir.call @create() : () -> !ty_22A22
 // CHECK:   cir.store [[TMP2]], [[TMP1]] : !ty_22A22, cir.ptr <!ty_22A22>
 // CHECK:   cir.copy [[TMP1]] to [[TMP0]] : !cir.ptr<!ty_22A22> 
 void foo5() {
@@ -77,9 +77,9 @@ void foo5() {
 void foo6(A* a1) {
   A a2 = (*a1);
 // CHECK: cir.func {{.*@foo6}}
-// CHECK:   [[TMP0]] = cir.alloca !cir.ptr<!ty_22A22>, cir.ptr <!cir.ptr<!ty_22A22>>, ["a1", init] {alignment = 8 : i64}
-// CHECK:   [[TMP1]] = cir.alloca !ty_22A22, cir.ptr <!ty_22A22>, ["a2", init] {alignment = 4 : i64}
+// CHECK:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!ty_22A22>, cir.ptr <!cir.ptr<!ty_22A22>>, ["a1", init] {alignment = 8 : i64}
+// CHECK:   [[TMP1:%.*]] = cir.alloca !ty_22A22, cir.ptr <!ty_22A22>, ["a2", init] {alignment = 4 : i64}
 // CHECK:   cir.store %arg0, [[TMP0]] : !cir.ptr<!ty_22A22>, cir.ptr <!cir.ptr<!ty_22A22>>
-// CHECK:   [[TMP2]] = cir.load deref [[TMP0]] : cir.ptr <!cir.ptr<!ty_22A22>>, !cir.ptr<!ty_22A22>
+// CHECK:   [[TMP2:%.*]] = cir.load deref [[TMP0]] : cir.ptr <!cir.ptr<!ty_22A22>>, !cir.ptr<!ty_22A22>
 // CHECK:   cir.copy [[TMP2]] to [[TMP1]] : !cir.ptr<!ty_22A22>
 }

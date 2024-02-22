@@ -35,7 +35,9 @@ int test1(int x) {
 int noProto2();
 int test2(int x) {
   return noProto2(x);
-  // CHECK: %{{.+}} = cir.call @noProto2(%{{[0-9]+}}) : (!s32i) -> !s32i
+  // CHECK:  [[GGO:%.*]] = cir.get_global @noProto2 : cir.ptr <!cir.func<!s32i (!s32i)>>
+  // CHECK:  [[CAST:%.*]] = cir.cast(bitcast, %3 : !cir.ptr<!cir.func<!s32i (!s32i)>>), !cir.ptr<!cir.func<!s32i (!s32i)>>
+  // CHECK:  {{.*}} = cir.call [[CAST]](%{{[0-9]+}}) : (!cir.ptr<!cir.func<!s32i (!s32i)>>, !s32i) -> !s32i
 }
 int noProto2(int x) { return x; }
 // CHECK: cir.func no_proto @noProto2(%arg0: !s32i {{.+}}) -> !s32i
@@ -49,7 +51,9 @@ int noProto3();
 int test3(int x) {
 // CHECK: cir.func @test3
   return noProto3(x);
-  // CHECK: %{{.+}} = cir.call @noProto3(%{{[0-9]+}}) : (!s32i) -> !s32i
+  // CHECK:  [[GGO:%.*]] = cir.get_global @noProto3 : cir.ptr <!cir.func<!s32i (...)>>
+  // CHECK:  [[CAST:%.*]] = cir.cast(bitcast, [[GGO]] : !cir.ptr<!cir.func<!s32i (...)>>), !cir.ptr<!cir.func<!s32i (!s32i)>>
+  // CHECK:  {{%.*}} = cir.call [[CAST]](%{{[0-9]+}}) : (!cir.ptr<!cir.func<!s32i (!s32i)>>, !s32i) -> !s32i
 }
 
 
@@ -64,14 +68,18 @@ int noProto4() { return 0; }
 // cir.func private no_proto @noProto4() -> !s32i
 int test4(int x) {
   return noProto4(x); // Even if we know the definition, this should compile.
-  // CHECK: %{{.+}} = cir.call @noProto4(%{{.+}}) : (!s32i) -> !s32i
+  // CHECK:  [[GGO:%.*]] = cir.get_global @noProto4 : cir.ptr <!cir.func<!s32i ()>>
+  // CHECK:  [[CAST:%.*]] = cir.cast(bitcast, [[GGO]] : !cir.ptr<!cir.func<!s32i ()>>), !cir.ptr<!cir.func<!s32i (!s32i)>>
+  // CHECK:  {{%.*}} = cir.call [[CAST]]({{%.*}}) : (!cir.ptr<!cir.func<!s32i (!s32i)>>, !s32i) -> !s32i
 }
 
 // No-proto definition followed by an incorrect call due to lack of args.
 int noProto5();
 int test5(int x) {
   return noProto5();
-  // CHECK: %{{.+}} = cir.call @noProto5() : () -> !s32i
+  // CHECK:  [[GGO:%.*]] = cir.get_global @noProto5 : cir.ptr <!cir.func<!s32i (!s32i)>>
+  // CHECK:  [[CAST:%.*]] = cir.cast(bitcast, [[GGO]] : !cir.ptr<!cir.func<!s32i (!s32i)>>), !cir.ptr<!cir.func<!s32i ()>>
+  // CHECK:  {{%.*}} = cir.call [[CAST]]() : (!cir.ptr<!cir.func<!s32i ()>>) -> !s32i
 }
 int noProto5(int x) { return x; }
 // CHECK: cir.func no_proto @noProto5(%arg0: !s32i {{.+}}) -> !s32i
