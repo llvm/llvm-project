@@ -8854,17 +8854,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       auto VecCost = TTI->getArithmeticInstrCost(ShuffleOrOp, VecTy, CostKind,
                                                  Op1Info, Op2Info);
       // Some targets can replace frem with vector library calls.
-      if (ShuffleOrOp == Instruction::FRem) {
-        LibFunc Func;
-        if (TLI->getLibFunc(ShuffleOrOp, ScalarTy, Func) &&
-            TLI->isFunctionVectorizable(TLI->getName(Func),
-                                        VecTy->getElementCount())) {
-          auto VecCallCost = TTI->getCallInstrCost(
-              nullptr, VecTy, {ScalarTy, ScalarTy}, CostKind);
-          VecCost = std::min(VecCost, VecCallCost);
-        }
-      }
-      return VecCost + CommonCost;
+      InstructionCost VecCallCost =
+          getVecLibCallCost(VL0, TTI, TLI, VecTy, CostKind);
+      return std::min(VecInstrCost, VecCallCost) + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }

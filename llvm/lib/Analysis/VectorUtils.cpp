@@ -18,6 +18,7 @@
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
@@ -1054,6 +1055,22 @@ APInt llvm::possiblyDemandedEltsInMask(Value *Mask) {
       if (CV->getAggregateElement(i)->isNullValue())
         DemandedElts.clearBit(i);
   return DemandedElts;
+}
+
+InstructionCost
+llvm::getVecLibCallCost(const Instruction *I, const TargetTransformInfo *TTI,
+                        const TargetLibraryInfo *TLI, VectorType *VecTy,
+                        TargetTransformInfo::TargetCostKind CostKind) {
+  SmallVector<Type *, 4> OpTypes;
+  for (auto &Op : I->operands())
+    OpTypes.push_back(Op->getType());
+
+  LibFunc Func;
+  if (TLI->getLibFunc(I->getOpcode(), I->getType(), Func) &&
+      TLI->isFunctionVectorizable(TLI->getName(Func), VecTy->getElementCount()))
+    return TTI->getCallInstrCost(nullptr, VecTy, OpTypes, CostKind);
+
+  return InstructionCost::getInvalid();
 }
 
 bool InterleavedAccessInfo::isStrided(int Stride) {
