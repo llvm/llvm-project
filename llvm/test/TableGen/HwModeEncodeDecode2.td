@@ -44,55 +44,53 @@ def fooTypeEncB : InstructionEncoding {
 }
 
 let OutOperandList = (outs) in {
-def foo : Instruction {
-  let InOperandList = (ins i32imm:$factor);
-  let EncodingInfos = EncodingByHwMode<
-    [ModeA, ModeB], [fooTypeEncA,
-                      fooTypeEncB]
-  >;
-  let AsmString = "foo  $factor";
-}
+  def foo : Instruction {
+    let InOperandList = (ins i32imm:$factor);
+    let EncodingInfos = EncodingByHwMode<
+      [ModeA, ModeB], [fooTypeEncA, fooTypeEncB]
+    >;
+    let AsmString = "foo  $factor";
+  }
 
-// Encoding not overridden, same namespace:
-// In the default case, this instruction is duplicated into both ModeA and
-// ModeB decoder tables.
-// In the suppressed case, this instruction appears in a single decoder table.
-def bar: Instruction {
-  let InOperandList = (ins i32imm:$factor);
-  let Size = 4;
-  bits<32> Inst;
-  bits<32> SoftFail;
-  bits<8> factor;
-  let Inst{31...24} = factor;
-  let Inst{1...0} = 0b10;
-  let AsmString = "bar  $factor";
-}
+  // Encoding not overridden, same namespace:
+  // In the default case, this instruction is duplicated into both ModeA and
+  // ModeB decoder tables.
+  // In the suppressed case, this instruction appears in a single decoder table.
+  def bar: Instruction {
+    let InOperandList = (ins i32imm:$factor);
+    let Size = 4;
+    bits<32> Inst;
+    bits<32> SoftFail;
+    bits<8> factor;
+    let Inst{31...24} = factor;
+    let Inst{1...0} = 0b10;
+    let AsmString = "bar  $factor";
+  }
 
-def baz : Instruction {
-  let InOperandList = (ins i32imm:$factor);
-  bits<32> Inst;
-  let EncodingInfos = EncodingByHwMode<
-    [ModeB], [fooTypeEncA]
-  >;
-  let AsmString = "foo  $factor";
-}
+  def baz : Instruction {
+    let InOperandList = (ins i32imm:$factor);
+    bits<32> Inst;
+    let EncodingInfos = EncodingByHwMode<
+      [ModeB], [fooTypeEncA]
+    >;
+    let AsmString = "foo  $factor";
+  }
 
-// Encoding not overridden, different namespace:
-// In the default case, this instruction is duplicated into two Alt decoder
-// tables (ModeA and ModeB).
-// In the suppressed case, this instruction appears in a single decoder table.
-def unrelated: Instruction {
-  let DecoderNamespace = "Alt";
-  let InOperandList = (ins i32imm:$factor);
-  let Size = 4;
-  bits<32> Inst;
-  bits<32> SoftFail;
-  bits<8> factor;
-  let Inst{31...24} = factor;
-  let Inst{1...0} = 0b10;
-  let AsmString = "unrelated  $factor";
-}
-
+  // Encoding not overridden, different namespace:
+  // In the default case, this instruction is duplicated into two Alt decoder
+  // tables (ModeA and ModeB).
+  // In the suppressed case, this instruction appears in a single decoder table.
+  def unrelated: Instruction {
+    let DecoderNamespace = "Alt";
+    let InOperandList = (ins i32imm:$factor);
+    let Size = 4;
+    bits<32> Inst;
+    bits<32> SoftFail;
+    bits<8> factor;
+    let Inst{31...24} = factor;
+    let Inst{1...0} = 0b10;
+    let AsmString = "unrelated  $factor";
+  }
 }
 
 // DECODER-LABEL: DecoderTableAlt_ModeA32[] =
