@@ -91,6 +91,7 @@
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
@@ -1260,6 +1261,28 @@ static bool isFunctionPassName(StringRef Name, CallbacksT &Callbacks) {
 }
 
 template <typename CallbacksT>
+static bool isMachineFunctionPassName(StringRef Name, CallbacksT &Callbacks) {
+  // Explicitly handle pass manager names.
+  if (Name == "machine-function")
+    return true;
+
+  // Explicitly handle custom-parsed pass names.
+  if (parseRepeatPassName(Name))
+    return true;
+
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)                               \
+  if (Name == NAME)                                                            \
+    return true;
+#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)                           \
+  if (Name == "require<" NAME ">" || Name == "invalidate<" NAME ">")           \
+    return true;
+
+#include "llvm/Passes/MachinePassRegistry.def"
+
+  return callbacksAcceptPassName<MachineFunctionPassManager>(Name, Callbacks);
+}
+
+template <typename CallbacksT>
 static bool isLoopNestPassName(StringRef Name, CallbacksT &Callbacks,
                                bool &UseMemorySSA) {
   UseMemorySSA = false;
@@ -1392,6 +1415,13 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
       if (auto Err = parseCGSCCPassPipeline(CGPM, InnerPipeline))
         return Err;
       MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+      return Error::success();
+    }
+    if (Name == "machine-function") {
+      MachineFunctionPassManager MFPM;
+      if (auto Err = parseMachinePassPipeline(MFPM, InnerPipeline))
+        return Err;
+      MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
       return Error::success();
     }
     if (auto Params = parseFunctionPipelineName(Name)) {
@@ -1874,8 +1904,8 @@ Error PassBuilder::parseMachinePass(MachineFunctionPassManager &MFPM,
   }
 #include "llvm/Passes/MachinePassRegistry.def"
 
-  for (auto &C : MachinePipelineParsingCallbacks)
-    if (C(Name, MFPM))
+  for (auto &C : MachineFunctionPipelineParsingCallbacks)
+    if (C(Name, MFPM, E.InnerPipeline))
       return Error::success();
   return make_error<StringError>(
       formatv("unknown machine pass '{0}'", Name).str(),
@@ -1942,7 +1972,8 @@ Error PassBuilder::parseCGSCCPassPipeline(CGSCCPassManager &CGPM,
 void PassBuilder::crossRegisterProxies(LoopAnalysisManager &LAM,
                                        FunctionAnalysisManager &FAM,
                                        CGSCCAnalysisManager &CGAM,
-                                       ModuleAnalysisManager &MAM) {
+                                       ModuleAnalysisManager &MAM,
+                                       MachineFunctionAnalysisManager *MFAM) {
   MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
   MAM.registerPass([&] { return CGSCCAnalysisManagerModuleProxy(CGAM); });
   CGAM.registerPass([&] { return ModuleAnalysisManagerCGSCCProxy(MAM); });
@@ -1950,6 +1981,14 @@ void PassBuilder::crossRegisterProxies(LoopAnalysisManager &LAM,
   FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
   FAM.registerPass([&] { return LoopAnalysisManagerFunctionProxy(LAM); });
   LAM.registerPass([&] { return FunctionAnalysisManagerLoopProxy(FAM); });
+  if (MFAM) {
+    MAM.registerPass(
+        [&] { return MachineFunctionAnalysisManagerModuleProxy(*MFAM); });
+    MFAM->registerPass(
+        [&] { return ModuleAnalysisManagerMachineFunctionProxy(MAM); });
+    MFAM->registerPass(
+        [&] { return FunctionAnalysisManagerMachineFunctionProxy(FAM); });
+  }
 }
 
 Error PassBuilder::parseModulePassPipeline(ModulePassManager &MPM,
@@ -1991,6 +2030,9 @@ Error PassBuilder::parsePassPipeline(ModulePassManager &MPM,
                               UseMemorySSA)) {
       Pipeline = {{"function", {{UseMemorySSA ? "loop-mssa" : "loop",
                                  std::move(*Pipeline)}}}};
+    } else if (isMachineFunctionPassName(
+                   FirstName, MachineFunctionPipelineParsingCallbacks)) {
+      Pipeline = {{"machine-function", std::move(*Pipeline)}};
     } else {
       for (auto &C : TopLevelPipelineParsingCallbacks)
         if (C(MPM, *Pipeline))
