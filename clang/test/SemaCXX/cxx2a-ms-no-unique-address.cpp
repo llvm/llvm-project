@@ -21,6 +21,7 @@ struct [[msvc::no_unique_address]] S { // expected-error {{only applies to non-b
 struct CStructNoUniqueAddress {
   int one;
   [[no_unique_address]] int two;
+  // expected-warning@-1 {{unknown attribute 'no_unique_address' ignored}}
 };
 
 struct CStructMSVCNoUniqueAddress {
@@ -39,4 +40,5 @@ static_assert(__has_cpp_attribute(no_unique_address) == 0);
 // unsupported-error@-1 {{static assertion failed due to requirement '201803L == 0'}}
 static_assert(!__is_layout_compatible(CStructNoUniqueAddress, CStructMSVCNoUniqueAddress), "");
 static_assert(__is_layout_compatible(CStructMSVCNoUniqueAddress, CStructMSVCNoUniqueAddress), "");
-static_assert(__is_layout_compatible(CStructMSVCNoUniqueAddress, CStructMSVCNoUniqueAddress2), "");
+static_assert(!__is_layout_compatible(CStructMSVCNoUniqueAddress, CStructMSVCNoUniqueAddress2), "");
+// unsupported-error@-1 {{static assertion failed due to requirement '!__is_layout_compatible(CStructMSVCNoUniqueAddress, CStructMSVCNoUniqueAddress2)':}}
