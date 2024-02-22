@@ -282,13 +282,12 @@ def main():
                         )
                     has_checked_pre_function_globals = True
 
-                should_add, is_check_line = common.should_add_line_to_output(
+                if common.should_add_line_to_output(
                     input_line,
                     prefix_set,
                     not is_in_function,
                     skip_same_check_line,
-                )
-                if should_add:
+                ):
                     # This input line of the function body will go as-is into the output.
                     # Except make leading whitespace uniform: 2 spaces.
                     input_line = common.SCRUB_LEADING_WHITESPACE_RE.sub(
@@ -301,7 +300,7 @@ def main():
                         continue
                 else:
                     # If we are removing a check line, and the next line is CHECK-SAME, it MUST also be removed
-                    skip_same_check_line = is_check_line
+                    skip_same_check_line = True
 
                 if is_in_function:
                     continue

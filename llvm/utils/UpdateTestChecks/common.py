@@ -387,7 +387,6 @@ def itertests(
             )
 
 
-# Returns a tuple of two bools, where the first value indicates whether the line should be added to the output, and the second indicates whether the line is a CHECK line
 def should_add_line_to_output(
     input_line,
     prefix_set,
@@ -397,10 +396,10 @@ def should_add_line_to_output(
 ):
     # Skip any blank comment lines in the IR.
     if not skip_global_checks and input_line.strip() == comment_marker:
-        return False, False
+        return False
     # Skip a special double comment line we use as a separator.
     if input_line.strip() == comment_marker + SEPARATOR:
-        return False, False
+        return False
     # Skip any blank lines in the IR.
     # if input_line.strip() == '':
     #  return False
@@ -409,15 +408,15 @@ def should_add_line_to_output(
     if m and m.group(1) in prefix_set:
         if skip_same_checks and CHECK_SAME_RE.match(input_line):
             # The previous CHECK line was removed, so don't leave this dangling
-            return False, True
+            return False
         if skip_global_checks:
             # Skip checks only if they are of global value definitions
             global_ir_value_re = re.compile(r"(\[\[|@)", flags=(re.M))
             is_global = global_ir_value_re.search(input_line)
-            return not is_global, True
-        return False, True
+            return not is_global
+        return False
 
-    return True, False
+    return True
 
 
 # Perform lit-like substitutions
