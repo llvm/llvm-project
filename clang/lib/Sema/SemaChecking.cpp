@@ -19034,7 +19034,7 @@ static bool isLayoutCompatible(ASTContext &C, FieldDecl *Field1,
   }
 
   if (Field1->hasAttr<clang::NoUniqueAddressAttr>() ||
-      Field2->hasAttr<clang::NoUniqueAddressAttr>()) 
+      Field2->hasAttr<clang::NoUniqueAddressAttr>())
     return false;
   return true;
 }
