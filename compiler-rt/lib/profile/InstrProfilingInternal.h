@@ -22,9 +22,7 @@
 uint64_t __llvm_profile_get_size_for_buffer_internal(
     const __llvm_profile_data *DataBegin, const __llvm_profile_data *DataEnd,
     const char *CountersBegin, const char *CountersEnd, const char *BitmapBegin,
-    const char *BitmapEnd, const char *NamesBegin, const char *NamesEnd,
-    const VTableProfData *VTableBegin, const VTableProfData *VTableEnd,
-    const char *VNamesBegin, const char *VNamesEnd);
+    const char *BitmapEnd, const char *NamesBegin, const char *NamesEnd);
 
 /*!
  * \brief Write instrumentation data to the given buffer, given explicit
@@ -158,9 +156,7 @@ int lprofWriteDataImpl(ProfDataWriter *Writer,
                        const char *CountersBegin, const char *CountersEnd,
                        const char *BitmapBegin, const char *BitmapEnd,
                        VPDataReaderType *VPDataReader, const char *NamesBegin,
-                       const char *NamesEnd, const VTableProfData *VTableBegin,
-                       const VTableProfData *VTableEnd, const char *VNamesBegin,
-                       const char *VNamesEnd, int SkipNameDataWrite);
+                       const char *NamesEnd, int SkipNameDataWrite);
 
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */

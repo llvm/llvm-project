@@ -31,8 +31,7 @@ char *__llvm_profile_end_bitmap(void);
 uint64_t __llvm_profile_get_size_for_buffer_internal(
     const void *DataBegin, const void *DataEnd, const char *CountersBegin,
     const char *CountersEnd, const char *BitmapBegin, const char *BitmapEnd,
-    const char *NamesBegin, const char *NamesEnd, const void *VTableBegin,
-    const void *VTableEnd, const char *VNamesBegin, const char *VNamesEnd);
+    const char *NamesBegin, const char *NamesEnd);
 
 int __llvm_profile_write_buffer_internal(
     char *Buffer, const void *DataBegin, const void *DataEnd,
@@ -46,8 +45,7 @@ int main(int argc, const char *argv[]) {
       __llvm_profile_begin_data(), __llvm_profile_end_data(),
       __llvm_profile_begin_counters(), __llvm_profile_end_counters(),
       __llvm_profile_begin_bitmap(), __llvm_profile_end_bitmap(),
-      __llvm_profile_begin_names(), __llvm_profile_end_names(), NULL, NULL,
-      NULL, NULL);
+      __llvm_profile_begin_names(), __llvm_profile_end_names());
 
   char *buf = malloc(bufsize);
   int ret = __llvm_profile_write_buffer_internal(
