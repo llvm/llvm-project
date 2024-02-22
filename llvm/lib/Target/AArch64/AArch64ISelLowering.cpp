@@ -541,17 +541,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i32, Custom);
   setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i64, Custom);
   setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i128, Custom);
+  if (Subtarget->hasFPARMv8())
+    setOperationAction(ISD::FP_ROUND, MVT::f16, Custom);
   setOperationAction(ISD::FP_ROUND, MVT::f32, Custom);
   setOperationAction(ISD::FP_ROUND, MVT::f64, Custom);
-  setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Custom);
+  if (Subtarget->hasFPARMv8())
+    setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Custom);
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Custom);
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f64, Custom);
-
-  if (Subtarget->hasFPARMv8()) {
-    setOperationAction(ISD::BITCAST, MVT::i16, Custom);
-    setOperationAction(ISD::BITCAST, MVT::f16, Custom);
-    setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
-  }
 
   setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i32, Custom);
   setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
@@ -952,9 +949,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::f128, MVT::f32, Expand);
   setTruncStoreAction(MVT::f128, MVT::f16, Expand);
 
-  setOperationAction(ISD::BITCAST, MVT::i16, Custom);
-  setOperationAction(ISD::BITCAST, MVT::f16, Custom);
-  setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
+  if (Subtarget->hasFPARMv8()) {
+    setOperationAction(ISD::BITCAST, MVT::i16, Custom);
+    setOperationAction(ISD::BITCAST, MVT::f16, Custom);
+    setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
+  }
 
   // Indexed loads and stores are supported.
   for (unsigned im = (unsigned)ISD::PRE_INC;
@@ -24619,10 +24618,6 @@ void AArch64TargetLowering::ReplaceBITCASTResults(
   SDValue Op = N->getOperand(0);
   EVT VT = N->getValueType(0);
   EVT SrcVT = Op.getValueType();
-
-  if (!Subtarget->hasFPARMv8() &&
-      (SrcVT == MVT::f16 || SrcVT == MVT::i16 || SrcVT == MVT::bf16))
-    return;
 
   if (VT == MVT::v2i16 && SrcVT == MVT::i32) {
     CustomNonLegalBITCASTResults(N, Results, DAG, MVT::v2i32, MVT::v4i16);
