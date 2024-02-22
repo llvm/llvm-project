@@ -5013,9 +5013,9 @@ private:
   llvm::Value *EmitAArch64CpuInit();
   llvm::Value *
   FormAArch64ResolverCondition(const MultiVersionResolverOption &RO);
+  llvm::Value *EmitAArch64CpuSupports(const CallExpr *E);
   llvm::Value *EmitAArch64CpuSupports(ArrayRef<StringRef> FeatureStrs);
 };
-
 
 inline DominatingLLVMValue::saved_type
 DominatingLLVMValue::save(CodeGenFunction &CGF, llvm::Value *value) {

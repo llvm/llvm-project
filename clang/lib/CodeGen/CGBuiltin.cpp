@@ -10638,6 +10638,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID <= clang::AArch64::LastSMEBuiltin)
     return EmitAArch64SMEBuiltinExpr(BuiltinID, E);
 
+  if (BuiltinID == Builtin::BI__builtin_cpu_supports)
+    return EmitAArch64CpuSupports(E);
+
   unsigned HintID = static_cast<unsigned>(-1);
   switch (BuiltinID) {
   default: break;
@@ -14023,6 +14026,19 @@ Value *CodeGenFunction::EmitX86CpuInit() {
   cast<llvm::GlobalValue>(Func.getCallee())
       ->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
   return Builder.CreateCall(Func);
+}
+
+Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
+  const Expr *ArgExpr = E->getArg(0)->IgnoreParenCasts();
+  StringRef ArgStr = cast<StringLiteral>(ArgExpr)->getString();
+  llvm::SmallVector<StringRef, 8> Features;
+  ArgStr.split(Features, "+");
+  for (auto &Feature : Features) {
+    Feature = Feature.trim();
+    if (Feature != "default")
+      Features.push_back(Feature);
+  }
+  return EmitAArch64CpuSupports(Features);
 }
 
 llvm::Value *
