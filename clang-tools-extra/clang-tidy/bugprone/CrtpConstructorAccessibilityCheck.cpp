@@ -1,4 +1,4 @@
-//===--- UnsafeCrtpCheck.cpp - clang-tidy ---------------------------------===//
+//===--- CrtpConstructorAccessibilityCheck.cpp - clang-tidy ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "UnsafeCrtpCheck.h"
+#include "CrtpConstructorAccessibilityCheck.h"
 #include "../utils/LexerUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -85,7 +85,7 @@ hintMakeCtorPrivate(const CXXConstructorDecl *Ctor,
   return Hints;
 }
 
-void UnsafeCrtpCheck::registerMatchers(MatchFinder *Finder) {
+void CrtpConstructorAccessibilityCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       classTemplateSpecializationDecl(
           decl().bind("crtp"),
@@ -96,7 +96,7 @@ void UnsafeCrtpCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
+void CrtpConstructorAccessibilityCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CRTPInstantiation =
       Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>("crtp");
   const auto *DerivedRecord = Result.Nodes.getNodeAs<CXXRecordDecl>("derived");
@@ -154,7 +154,7 @@ void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-bool UnsafeCrtpCheck::isLanguageVersionSupported(
+bool CrtpConstructorAccessibilityCheck::isLanguageVersionSupported(
     const LangOptions &LangOpts) const {
   return LangOpts.CPlusPlus;
 }

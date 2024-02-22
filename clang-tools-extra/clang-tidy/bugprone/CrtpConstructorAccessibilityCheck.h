@@ -1,4 +1,4 @@
-//===--- UnsafeCrtpCheck.h - clang-tidy -------------------------*- C++ -*-===//
+//===--- CrtpConstructorAccessibilityCheck.h - clang-tidy -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNSAFECRTPCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNSAFECRTPCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CRTPCONSTRUCTORACCESSIBILITYCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CRTPCONSTRUCTORACCESSIBILITYCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -17,10 +17,10 @@ namespace clang::tidy::bugprone {
 /// itself and the derived class.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unsafe-crtp.html
-class UnsafeCrtpCheck : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/crtp-constructor-accessibility.html
+class CrtpConstructorAccessibilityCheck : public ClangTidyCheck {
 public:
-  UnsafeCrtpCheck(StringRef Name, ClangTidyContext *Context)
+  CrtpConstructorAccessibilityCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -29,4 +29,4 @@ public:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNSAFECRTPCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CRTPCONSTRUCTORACCESSIBILITYCHECK_H

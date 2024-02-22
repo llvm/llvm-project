@@ -79,7 +79,7 @@ add_clang_library(clangTidyBugproneModule
   UnhandledExceptionAtNewCheck.cpp
   UnhandledSelfAssignmentCheck.cpp
   UniquePtrArrayMismatchCheck.cpp
-  UnsafeCrtpCheck.cpp
+  CrtpConstructorAccessibilityCheck.cpp
   UnsafeFunctionsCheck.cpp
   UnusedLocalNonTrivialVariableCheck.cpp
   UnusedRaiiCheck.cpp

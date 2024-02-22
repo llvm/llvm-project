@@ -104,8 +104,8 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
-- New :doc:`bugprone-unsafe-crtp
-  <clang-tidy/checks/bugprone/unsafe-crtp>` check.
+- New :doc:`bugprone-crtp-constructor-accessibility
+  <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` check.
 
   Detects error-prone CRTP usage, when the CRTP can be constructed outside itself and the derived class.
 

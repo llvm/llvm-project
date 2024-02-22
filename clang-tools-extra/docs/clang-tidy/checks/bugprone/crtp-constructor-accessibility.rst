@@ -1,7 +1,7 @@
-.. title:: clang-tidy - bugprone-unsafe-crtp
+.. title:: clang-tidy - bugprone-crtp-constructor-accessibility
 
-bugprone-unsafe-crtp
-====================
+bugprone-crtp-constructor-accessibility
+=======================================
 
 Finds CRTP used in an error-prone way.
 
