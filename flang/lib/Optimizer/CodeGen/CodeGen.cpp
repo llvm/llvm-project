@@ -477,8 +477,15 @@ struct AddrOfOpConversion : public FIROpConversion<fir::AddrOfOp> {
   matchAndRewrite(fir::AddrOfOp addr, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto ty = convertType(addr.getType());
-    rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(
+    auto llvmAddrOf = rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(
         addr, ty, addr.getSymbol().getRootReference().getValue());
+
+    auto varAttr =
+        addr->getAttrOfType<mlir::LLVM::DILocalVariableAttr>("debug");
+    if (varAttr)
+      rewriter.create<mlir::LLVM::DbgDeclareOp>(llvmAddrOf.getLoc(), llvmAddrOf,
+                                                varAttr, nullptr);
+
     return mlir::success();
   }
 };
@@ -592,6 +599,12 @@ struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
     auto llvmAlloc = rewriter.create<mlir::LLVM::AllocaOp>(
         loc, ::getLlvmPtrType(alloc.getContext(), allocaAs), llvmObjectType,
         size);
+    auto varAttr =
+        alloc->getAttrOfType<mlir::LLVM::DILocalVariableAttr>("debug");
+    if (varAttr)
+      rewriter.create<mlir::LLVM::DbgDeclareOp>(llvmAlloc.getLoc(), llvmAlloc,
+                                                varAttr, nullptr);
+
     if (alloc.getPinned())
       llvmAlloc->setDiscardableAttr(alloc.getPinnedAttrName(),
                                     alloc.getPinnedAttr());
@@ -3042,6 +3055,14 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::GlobalOp global, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::LLVM::DIGlobalVariableExpressionAttr dbgExpr;
+
+    auto gvAttr =
+        global->getAttrOfType<mlir::LLVM::DIGlobalVariableAttr>("debug");
+    if (gvAttr)
+      dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
+          global.getContext(), gvAttr, mlir::LLVM::DIExpressionAttr());
+
     auto tyAttr = convertType(global.getType());
     if (auto boxType = mlir::dyn_cast<fir::BaseBoxType>(global.getType()))
       tyAttr = this->lowerTy().convertBoxTypeAsStruct(boxType);
@@ -3050,8 +3071,11 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
     assert(attributeTypeIsCompatible(global.getContext(), initAttr, tyAttr));
     auto linkage = convertLinkage(global.getLinkName());
     auto isConst = global.getConstant().has_value();
+    mlir::SymbolRefAttr comdat;
+    llvm::ArrayRef<mlir::NamedAttribute> attrs;
     auto g = rewriter.create<mlir::LLVM::GlobalOp>(
-        loc, tyAttr, isConst, linkage, global.getSymName(), initAttr);
+        loc, tyAttr, isConst, linkage, global.getSymName(), initAttr, 0, 0,
+        false, false, comdat, attrs, dbgExpr);
 
     auto module = global->getParentOfType<mlir::ModuleOp>();
     // Add comdat if necessary
@@ -3201,6 +3225,11 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
       else
         attachTBAATag(loadOp, load.getType(), load.getType(), nullptr);
       rewriter.replaceOp(load, loadOp.getResult());
+      auto varAttr =
+          load->getAttrOfType<mlir::LLVM::DILocalVariableAttr>("debug");
+      if (varAttr)
+        rewriter.create<mlir::LLVM::DbgDeclareOp>(
+            loadOp.getLoc(), loadOp.getAddr(), varAttr, nullptr);
     }
     return mlir::success();
   }
