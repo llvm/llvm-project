@@ -4580,8 +4580,10 @@ void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
 void AssemblyWriter::printDbgRecord(const DbgRecord &DR) {
   if (auto *DPV = dyn_cast<DPValue>(&DR))
     printDPValue(*DPV);
+  else if (auto *DPL = dyn_cast<DPLabel>(&DR))
+    printDPLabel(*DPL);
   else
-    printDPLabel(cast<DPLabel>(DR));
+    llvm_unreachable("Unexpected DbgRecord kind");
 }
 
 void AssemblyWriter::printDPValue(const DPValue &Value) {
