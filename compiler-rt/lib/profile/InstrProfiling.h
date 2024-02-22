@@ -117,8 +117,8 @@ char *__llvm_profile_begin_bitmap(void);
 char *__llvm_profile_end_bitmap(void);
 ValueProfNode *__llvm_profile_begin_vnodes();
 ValueProfNode *__llvm_profile_end_vnodes();
-VTableProfData *__llvm_profile_begin_vtables();
-VTableProfData *__llvm_profile_end_vtables();
+const VTableProfData *__llvm_profile_begin_vtables();
+const VTableProfData *__llvm_profile_end_vtables();
 uint32_t *__llvm_profile_begin_orderfile();
 
 /*!
