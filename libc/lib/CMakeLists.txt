@@ -2,11 +2,7 @@ set(libc_archive_targets "")
 set(libc_archive_names "")
 set(libc_archive_entrypoint_lists "")
 if(LLVM_LIBC_FULL_BUILD)
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-    list(APPEND libc_archive_names cgpu mgpu)
-  else()
-    list(APPEND libc_archive_names c m)
-  endif()
+  list(APPEND libc_archive_names c m)
   list(APPEND libc_archive_targets libc libm)
   list(APPEND libc_archive_entrypoint_lists
        TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS)
@@ -40,6 +36,27 @@ foreach(archive IN ZIP_LISTS
     endif()
   endif()
   list(APPEND added_archive_targets ${archive_1})
+
+  # Add the offloading version of the library for offloading languages. These
+  # are installed in the standard search path separate from the other libraries.
+  if(LIBC_TARGET_OS_IS_GPU)
+    set(libc_gpu_archive_target ${archive_1}gpu)
+    set(libc_gpu_archive_name ${archive_0}gpu-${LIBC_TARGET_ARCHITECTURE})
+
+    add_gpu_entrypoint_library(
+      ${libc_gpu_archive_target}
+      DEPENDS
+        ${${archive_2}}
+    )
+    set_target_properties(
+      ${libc_gpu_archive_target}
+      PROPERTIES
+        ARCHIVE_OUTPUT_NAME ${libc_gpu_archive_name}
+    )
+    set_target_properties(${libc_gpu_archive_target} PROPERTIES 
+                          ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBRARY_OUTPUT_INTDIR})
+    list(APPEND added_gpu_archive_targets ${libc_gpu_archive_target})
+  endif()
 endforeach()
 
 install(
@@ -47,6 +64,14 @@ install(
   ARCHIVE DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
   COMPONENT libc
 )
+
+if(LIBC_TARGET_OS_IS_GPU)
+  install(
+    TARGETS ${added_gpu_archive_targets}
+    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+    COMPONENT libc
+  )
+endif()
 
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
   # For now we will disable libc-startup installation for baremetal. The

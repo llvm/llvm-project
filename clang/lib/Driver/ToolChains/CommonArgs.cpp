@@ -1087,10 +1087,41 @@ static void addOpenMPDeviceLibC(const ToolChain &TC, const ArgList &Args,
                           "llvm-libc-decls");
   bool HasLibC = llvm::sys::fs::exists(LibCDecls) &&
                  llvm::sys::fs::is_directory(LibCDecls);
-  if (Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, HasLibC)) {
-    CmdArgs.push_back("-lcgpu");
-    CmdArgs.push_back("-lmgpu");
+  if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, HasLibC))
+    return;
+
+  // We don't have access to the offloading toolchains here, so determine from
+  // the arguments if we have any active NVPTX or AMDGPU toolchains.
+  llvm::DenseSet<const char *> Libraries;
+  if (const Arg *Targets = Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
+    if (llvm::any_of(Targets->getValues(),
+                     [](auto S) { return llvm::Triple(S).isAMDGPU(); })) {
+      Libraries.insert("-lcgpu-amdgpu");
+      Libraries.insert("-lmgpu-amdgpu");
+    }
+    if (llvm::any_of(Targets->getValues(),
+                     [](auto S) { return llvm::Triple(S).isNVPTX(); })) {
+      Libraries.insert("-lcgpu-nvptx");
+      Libraries.insert("-lmgpu-nvptx");
+    }
   }
+
+  for (StringRef Arch : Args.getAllArgValues(options::OPT_offload_arch_EQ)) {
+    if (llvm::any_of(llvm::split(Arch, ","), [](StringRef Str) {
+          return IsAMDGpuArch(StringToCudaArch(Str));
+        })) {
+      Libraries.insert("-lcgpu-amdgpu");
+      Libraries.insert("-lmgpu-amdgpu");
+    }
+    if (llvm::any_of(llvm::split(Arch, ","), [](StringRef Str) {
+          return IsNVIDIAGpuArch(StringToCudaArch(Str));
+        })) {
+      Libraries.insert("-lcgpu-nvptx");
+      Libraries.insert("-lmgpu-nvptx");
+    }
+  }
+
+  llvm::append_range(CmdArgs, Libraries);
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
