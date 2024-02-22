@@ -43,10 +43,10 @@ public:
 
   const TargetLowering *getTLI() const { return TLI; }
 
-  // Optional trait function(s)
-
   /// Return true if N effectively has opcode Opcode.
-  // bool match(SDValue N, unsigned Opcode)
+  bool match(SDValue N, unsigned Opcode) const {
+    return N->getOpcode() == Opcode;
+  }
 };
 
 template <typename MatchContext>
