@@ -62,6 +62,13 @@ When set, this flag disables support for floating point numbers and all their
 conversions (%a, %f, %e, %g); any floating point number conversion will be
 treated as invalid. This reduces code size.
 
+LIBC_COPT_PRINTF_DISABLE_FIXED_POINT
+------------------------------------
+When set, this flag disables support for fixed point numbers and all their
+conversions (%r, %k); any fixed point number conversion will be treated as
+invalid. This reduces code size. This has no effect if the current compiler does
+not support fixed point numbers.
+
 LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 ----------------------------------
 When set, this flag disables the nullptr checks in %n and %s.

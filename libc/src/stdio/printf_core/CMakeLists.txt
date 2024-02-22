@@ -76,6 +76,7 @@ add_object_library(
     float_inf_nan_converter.h
     float_hex_converter.h
     float_dec_converter.h
+    fixed_converter.h #TODO: Check if this should be disabled when fixed unavail
   DEPENDS
     .writer
     .core_structs
