@@ -11,8 +11,7 @@ define i1 @cmp_sext(i32 %a, i32 %b){
 ; CHECK-NEXT:    [[SA:%.*]] = sext i32 [[A]] to i64
 ; CHECK-NEXT:    [[SB:%.*]] = sext i32 [[B]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i64 [[SB]], [[ADD]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -43,8 +42,7 @@ define i1 @cmp_sext_add(i32 %a, i32 %b){
 ; CHECK-NEXT:    [[SA:%.*]] = sext i32 [[A1]] to i64
 ; CHECK-NEXT:    [[SB:%.*]] = sext i32 [[B1]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i64 [[SB]], [[ADD]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -77,8 +75,7 @@ define i1 @cmp_sext_dynamic_increment(i32 %a, i32 %b, i64 %c){
 ; CHECK-NEXT:    [[SA:%.*]] = sext i32 [[A]] to i64
 ; CHECK-NEXT:    [[SB:%.*]] = sext i32 [[B]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], [[C]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i64 [[SB]], [[ADD]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -109,8 +106,7 @@ define i1 @cmp_zext_nneg(i32 %a, i32 %b){
 ; CHECK-NEXT:    [[SA:%.*]] = zext nneg i32 [[A]] to i64
 ; CHECK-NEXT:    [[SB:%.*]] = zext nneg i32 [[B]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i64 [[SB]], [[ADD]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
