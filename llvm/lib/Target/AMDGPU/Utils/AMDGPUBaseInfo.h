@@ -870,15 +870,6 @@ struct Waitcnt {
       : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
         SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt) {}
 
-  static Waitcnt allZero(bool Extended, bool HasStorecnt) {
-    return Extended ? Waitcnt(0, 0, 0, 0, 0, 0, 0)
-                    : Waitcnt(0, 0, 0, HasStorecnt ? 0 : ~0u);
-  }
-
-  static Waitcnt allZeroExceptVsCnt(bool Extended) {
-    return Extended ? Waitcnt(0, 0, 0, ~0u, 0, 0, 0) : Waitcnt(0, 0, 0, ~0u);
-  }
-
   bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
 
   bool hasWaitExceptStoreCnt() const {
