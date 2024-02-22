@@ -717,7 +717,7 @@ def OMP_TargetData : Directive<"target data"> {
   let requiredClauses = [
     VersionedClause<OMPC_Map>,
     VersionedClause<OMPC_UseDevicePtr>,
-    VersionedClause<OMPC_UseDeviceAddr, 50> 
+    VersionedClause<OMPC_UseDeviceAddr, 50>
   ];
 }
 def OMP_TargetEnterData : Directive<"target enter data"> {
