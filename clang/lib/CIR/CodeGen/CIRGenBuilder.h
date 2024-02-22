@@ -221,6 +221,16 @@ public:
     return mlir::cir::TypeInfoAttr::get(anonStruct.getType(), fieldsAttr);
   }
 
+  mlir::cir::DataMemberAttr getDataMemberAttr(mlir::cir::DataMemberType ty,
+                                              size_t memberIndex) {
+    return mlir::cir::DataMemberAttr::get(getContext(), ty, memberIndex);
+  }
+
+  mlir::cir::DataMemberAttr
+  getNullDataMemberAttr(mlir::cir::DataMemberType ty) {
+    return mlir::cir::DataMemberAttr::get(getContext(), ty, std::nullopt);
+  }
+
   mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
     if (ty.isa<mlir::cir::IntType>())
       return mlir::cir::IntAttr::get(ty, 0);
@@ -551,6 +561,12 @@ public:
     return create<mlir::cir::ConstantOp>(loc, ty, getConstPtrAttr(ty, 0));
   }
 
+  /// Create constant nullptr for pointer-to-data-member type ty.
+  mlir::cir::ConstantOp getNullDataMemberPtr(mlir::cir::DataMemberType ty,
+                                             mlir::Location loc) {
+    return create<mlir::cir::ConstantOp>(loc, ty, getNullDataMemberAttr(ty));
+  }
+
   // Creates constant null value for integral type ty.
   mlir::cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
     return create<mlir::cir::ConstantOp>(loc, ty, getZeroInitAttr(ty));
@@ -864,6 +880,19 @@ public:
     } else {
       alloca->moveAfter(*std::prev(allocas.end()));
     }
+  }
+
+  mlir::cir::GetRuntimeMemberOp createGetIndirectMember(mlir::Location loc,
+                                                        mlir::Value objectPtr,
+                                                        mlir::Value memberPtr) {
+    auto memberPtrTy = memberPtr.getType().cast<mlir::cir::DataMemberType>();
+
+    // TODO(cir): consider address space.
+    assert(!UnimplementedFeature::addressSpace());
+    auto resultTy = getPointerTo(memberPtrTy.getMemberTy());
+
+    return create<mlir::cir::GetRuntimeMemberOp>(loc, resultTy, objectPtr,
+                                                 memberPtr);
   }
 
   mlir::Value createPtrIsNull(mlir::Value ptr) {

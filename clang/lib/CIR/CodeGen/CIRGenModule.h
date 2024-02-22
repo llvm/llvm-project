@@ -384,6 +384,12 @@ public:
                                            LValueBaseInfo *BaseInfo = nullptr,
                                            bool forPointeeType = false);
 
+  /// TODO: Add TBAAAccessInfo
+  clang::CharUnits
+  getDynamicOffsetAlignment(clang::CharUnits actualBaseAlign,
+                            const clang::CXXRecordDecl *baseDecl,
+                            clang::CharUnits expectedTargetAlign);
+
   mlir::cir::FuncOp getAddrOfCXXStructor(
       clang::GlobalDecl GD, const CIRGenFunctionInfo *FnInfo = nullptr,
       mlir::cir::FuncType FnType = nullptr, bool DontDefer = false,
@@ -510,6 +516,8 @@ public:
   /// expression of the given type.  This is usually, but not always, an LLVM
   /// null constant.
   mlir::Value buildNullConstant(QualType T, mlir::Location loc);
+
+  mlir::Value buildMemberPointerConstant(const UnaryOperator *E);
 
   llvm::StringRef getMangledName(clang::GlobalDecl GD);
 

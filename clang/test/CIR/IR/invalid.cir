@@ -764,3 +764,73 @@ cir.func @const_type_mismatch() -> () {
     %2 = cir.const(#cir.int<0> : !s8i) : !u8i
     cir.return
 }
+
+// -----
+
+!u16i = !cir.int<u, 16>
+
+// expected-error@+1 {{invalid kind of type specified}}
+#invalid_type = #cir.data_member<0> : !u16i
+
+// -----
+
+!u16i = !cir.int<u, 16>
+!u32i = !cir.int<u, 32>
+!struct1 = !cir.struct<struct "Struct1" {!u16i, !u32i}>
+
+// expected-error@+1 {{member type of a #cir.data_member attribute must match the attribute type}}
+#invalid_member_ty = #cir.data_member<0> : !cir.data_member<!u32i in !struct1>
+
+// -----
+
+!u16i = !cir.int<u, 16>
+!u32i = !cir.int<u, 32>
+!struct1 = !cir.struct<struct "Struct1" {!u16i, !u32i}>
+
+module {
+  cir.func @invalid_base_type(%arg0 : !cir.data_member<!u32i in !struct1>) {
+    %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["tmp"] {alignment = 4 : i64}
+    // expected-error@+1 {{'cir.get_runtime_member' op operand #0 must be !cir.struct*}}
+    %1 = cir.get_runtime_member %0[%arg0 : !cir.data_member<!u32i in !struct1>] : !cir.ptr<!u32i> -> !cir.ptr<!u32i>
+    cir.return
+  }
+}
+
+// -----
+
+!u16i = !cir.int<u, 16>
+!u32i = !cir.int<u, 32>
+!struct1 = !cir.struct<struct "Struct1" {!u16i, !u32i}>
+!struct2 = !cir.struct<struct "Struct2" {!u16i, !u32i}>
+
+module {
+  cir.func @invalid_base_type(%arg0 : !cir.data_member<!u32i in !struct1>) {
+    %0 = cir.alloca !struct2, cir.ptr <!struct2>, ["tmp"] {alignment = 4 : i64}
+    // expected-error@+1 {{record type does not match the member pointer type}}
+    %1 = cir.get_runtime_member %0[%arg0 : !cir.data_member<!u32i in !struct1>] : !cir.ptr<!struct2> -> !cir.ptr<!u32i>
+    cir.return
+  }
+}
+
+// -----
+
+!u16i = !cir.int<u, 16>
+!u32i = !cir.int<u, 32>
+!struct1 = !cir.struct<struct "Struct1" {!u16i, !u32i}>
+
+module {
+  cir.func @invalid_base_type(%arg0 : !cir.data_member<!u32i in !struct1>) {
+    %0 = cir.alloca !struct1, cir.ptr <!struct1>, ["tmp"] {alignment = 4 : i64}
+    // expected-error@+1 {{result type does not match the member pointer type}}
+    %1 = cir.get_runtime_member %0[%arg0 : !cir.data_member<!u32i in !struct1>] : !cir.ptr<!struct1> -> !cir.ptr<!u16i>
+    cir.return
+  }
+}
+
+// -----
+
+!u16i = !cir.int<u, 16>
+!incomplete_struct = !cir.struct<struct "Incomplete" incomplete>
+
+// expected-error@+1 {{incomplete 'cir.struct' cannot be used to build a non-null data member pointer}}
+#incomplete_cls_member = #cir.data_member<0> : !cir.data_member<!u16i in !incomplete_struct>

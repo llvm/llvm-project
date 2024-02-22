@@ -292,6 +292,12 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return op->emitOpError("nullptr expects pointer type");
   }
 
+  if (attrType.isa<DataMemberAttr>()) {
+    // More detailed type verifications are already done in
+    // DataMemberAttr::verify. Don't need to repeat here.
+    return success();
+  }
+
   if (attrType.isa<ZeroAttr>()) {
     if (opType.isa<::mlir::cir::StructType, ::mlir::cir::ArrayType>())
       return success();
@@ -2551,6 +2557,28 @@ LogicalResult GetMemberOp::verify() {
   if (!recordTy.isClass() &&
       recordTy.getMembers()[getIndex()] != getResultTy().getPointee())
     return emitError() << "member type mismatch";
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetRuntimeMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult GetRuntimeMemberOp::verify() {
+  auto recordTy =
+      getAddr().getType().cast<PointerType>().getPointee().cast<StructType>();
+  auto memberPtrTy = getMember().getType();
+
+  if (recordTy != memberPtrTy.getClsTy()) {
+    emitError() << "record type does not match the member pointer type";
+    return mlir::failure();
+  }
+
+  if (getType().getPointee() != memberPtrTy.getMemberTy()) {
+    emitError() << "result type does not match the member pointer type";
+    return mlir::failure();
+  }
 
   return mlir::success();
 }

@@ -1475,3 +1475,61 @@ mlir::Value CIRGenFunction::getVTablePtr(mlir::Location Loc, Address This,
 
   return VTable;
 }
+
+Address CIRGenFunction::buildCXXMemberDataPointerAddress(
+    const Expr *E, Address base, mlir::Value memberPtr,
+    const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo) {
+  assert(!UnimplementedFeature::cxxABI());
+
+  auto op = builder.createGetIndirectMember(getLoc(E->getSourceRange()),
+                                            base.getPointer(), memberPtr);
+
+  QualType memberType = memberPtrType->getPointeeType();
+  CharUnits memberAlign = CGM.getNaturalTypeAlignment(memberType, baseInfo);
+  memberAlign = CGM.getDynamicOffsetAlignment(
+      base.getAlignment(), memberPtrType->getClass()->getAsCXXRecordDecl(),
+      memberAlign);
+
+  return Address(op, convertTypeForMem(memberPtrType->getPointeeType()),
+                 memberAlign);
+}
+
+clang::CharUnits
+CIRGenModule::getDynamicOffsetAlignment(clang::CharUnits actualBaseAlign,
+                                        const clang::CXXRecordDecl *baseDecl,
+                                        clang::CharUnits expectedTargetAlign) {
+  // If the base is an incomplete type (which is, alas, possible with
+  // member pointers), be pessimistic.
+  if (!baseDecl->isCompleteDefinition())
+    return std::min(actualBaseAlign, expectedTargetAlign);
+
+  auto &baseLayout = getASTContext().getASTRecordLayout(baseDecl);
+  CharUnits expectedBaseAlign = baseLayout.getNonVirtualAlignment();
+
+  // If the class is properly aligned, assume the target offset is, too.
+  //
+  // This actually isn't necessarily the right thing to do --- if the
+  // class is a complete object, but it's only properly aligned for a
+  // base subobject, then the alignments of things relative to it are
+  // probably off as well.  (Note that this requires the alignment of
+  // the target to be greater than the NV alignment of the derived
+  // class.)
+  //
+  // However, our approach to this kind of under-alignment can only
+  // ever be best effort; after all, we're never going to propagate
+  // alignments through variables or parameters.  Note, in particular,
+  // that constructing a polymorphic type in an address that's less
+  // than pointer-aligned will generally trap in the constructor,
+  // unless we someday add some sort of attribute to change the
+  // assumed alignment of 'this'.  So our goal here is pretty much
+  // just to allow the user to explicitly say that a pointer is
+  // under-aligned and then safely access its fields and vtables.
+  if (actualBaseAlign >= expectedBaseAlign) {
+    return expectedTargetAlign;
+  }
+
+  // Otherwise, we might be offset by an arbitrary multiple of the
+  // actual alignment.  The correct adjustment is to take the min of
+  // the two alignments.
+  return std::min(actualBaseAlign, expectedTargetAlign);
+}

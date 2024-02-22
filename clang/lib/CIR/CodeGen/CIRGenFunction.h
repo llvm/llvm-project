@@ -787,6 +787,13 @@ public:
 
   LValue buildStmtExprLValue(const StmtExpr *E);
 
+  LValue buildPointerToDataMemberBinaryExpr(const BinaryOperator *E);
+
+  /// TODO: Add TBAAAccessInfo
+  Address buildCXXMemberDataPointerAddress(
+      const Expr *E, Address base, mlir::Value memberPtr,
+      const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo);
+
   /// Generate a call of the given function, expecting the given
   /// result type, and using the given argument list which specifies both the
   /// LLVM arguments and the types they were derived from.
