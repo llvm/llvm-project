@@ -788,13 +788,15 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // sm_80 only has conversions between f32 and bf16. Custom lower all other
   // bf16 conversions.
-  if (STI.hasBF16Math() &&
-      (STI.getSmVersion() < 90 || STI.getPTXVersion() < 78)) {
+  if (STI.getSmVersion() < 90 || STI.getPTXVersion() < 78) {
     for (MVT VT : {MVT::i1, MVT::i16, MVT::i32, MVT::i64}) {
       setOperationAction(
           {ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT},
           VT, Custom);
     }
+    setOperationAction(
+        {ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT},
+        MVT::bf16, Custom);
   }
 
   setOperationAction(ISD::FROUND, MVT::f16, Promote);

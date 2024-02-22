@@ -62,21 +62,6 @@ Clang Frontend Potentially Breaking Changes
   of ``-Wno-gnu-binary-literal`` will no longer silence this pedantic warning,
   which may break existing uses with ``-Werror``.
 
-Target OS macros extension
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-A new Clang extension (see :ref:`here <target_os_detail>`) is enabled for
-Darwin (Apple platform) targets. Clang now defines ``TARGET_OS_*`` macros for
-these targets, which could break existing code bases with improper checks for
-the ``TARGET_OS_`` macros. For example, existing checks might fail to include
-the ``TargetConditionals.h`` header from Apple SDKs and therefore leaving the
-macros undefined and guarded code unexercised.
-
-Affected code should be checked to see if it's still intended for the specific
-target and fixed accordingly.
-
-The extension can be turned off by the option ``-fno-define-target-os-macros``
-as a workaround.
-
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -160,17 +145,6 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
-
-.. _target_os_detail:
-
-Target OS macros extension
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-A pair of new flags ``-fdefine-target-os-macros`` and
-``-fno-define-target-os-macros`` has been added to Clang to enable/disable the
-extension to provide built-in definitions of a list of ``TARGET_OS_*`` macros
-based on the target triple.
-
-The extension is enabled by default for Darwin (Apple platform) targets.
 
 Deprecated Compiler Flags
 -------------------------
@@ -297,6 +271,10 @@ Bug Fixes to C++ Support
   was only accepted at namespace scope but not at local function scope.
 - Clang no longer tries to call consteval constructors at runtime when they appear in a member initializer.
   (`#782154 <https://github.com/llvm/llvm-project/issues/82154>`_`)
+- Fix crash when using an immediate-escalated function at global scope.
+  (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
+- Correctly immediate-escalate lambda conversion functions.
+  (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -403,6 +381,14 @@ Moved checkers
 
 Sanitizers
 ----------
+
+- ``-fsanitize=signed-integer-overflow`` now instruments signed arithmetic even
+  when ``-fwrapv`` is enabled. Previously, only division checks were enabled.
+
+  Users with ``-fwrapv`` as well as a sanitizer group like
+  ``-fsanitize=undefined`` or ``-fsanitize=integer`` enabled may want to
+  manually disable potentially noisy signed integer overflow checks with
+  ``-fno-sanitize=signed-integer-overflow``
 
 Python Binding Changes
 ----------------------
