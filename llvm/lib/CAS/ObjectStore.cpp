@@ -168,18 +168,6 @@ Expected<ObjectProxy> ObjectStore::createProxy(ArrayRef<ObjectRef> Refs,
   return getProxy(*Ref);
 }
 
-void ObjectStore::createProxyAsync(
-    ArrayRef<ObjectRef> Refs, StringRef Data,
-    unique_function<void(Expected<ObjectProxy>)> Callback) {
-  storeAsync(
-      Refs, arrayRefFromStringRef<char>(Data),
-      [this, Callback = std::move(Callback)](Expected<ObjectRef> Ref) mutable {
-        if (!Ref)
-          return Callback(Ref.takeError());
-        return Callback(getProxy(*Ref));
-      });
-}
-
 Expected<ObjectRef>
 ObjectStore::storeFromOpenFileImpl(sys::fs::file_t FD,
                                    std::optional<sys::fs::file_status> Status) {

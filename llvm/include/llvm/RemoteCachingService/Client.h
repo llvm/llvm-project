@@ -244,12 +244,6 @@ public:
     return putFileSyncImpl(std::move(FilePath), Refs);
   }
 
-  using PutCb = std::function<void(Expected<std::string>)>;
-  virtual void putDataAsync(std::string BlobData, ArrayRef<std::string> Refs,
-                            PutCb Callback) {
-    return putDataAsyncImpl(std::move(BlobData), Refs, std::move(Callback));
-  }
-
 protected:
   virtual Expected<LoadResponse>
   loadSyncImpl(std::string CASID, std::optional<std::string> OutFilePath) = 0;
@@ -267,8 +261,6 @@ protected:
                                                 ArrayRef<std::string> Refs) = 0;
   virtual Expected<std::string> putFileSyncImpl(std::string FilePath,
                                                 ArrayRef<std::string> Refs) = 0;
-  virtual void putDataAsyncImpl(std::string BlobData,
-                                ArrayRef<std::string> Refs, PutCb Callback) = 0;
 
 public:
   class LoadAsyncQueue : public AsyncQueueBase {

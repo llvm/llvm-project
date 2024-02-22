@@ -18,7 +18,6 @@ llcas_cas_options_set_option
 llcas_cas_prune_ondisk_data
 llcas_cas_set_ondisk_size_limit
 llcas_cas_store_object
-llcas_cas_store_object_async
 llcas_digest_parse
 llcas_digest_print
 llcas_get_plugin_version

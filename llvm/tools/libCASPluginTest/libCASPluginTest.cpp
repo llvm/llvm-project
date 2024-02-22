@@ -486,19 +486,6 @@ bool llcas_cas_store_object(llcas_cas_t c_cas, llcas_data_t c_data,
   return false;
 }
 
-void llcas_cas_store_object_async(llcas_cas_t c_cas, llcas_data_t c_data,
-                                  const llcas_objectid_t *c_refs,
-                                  size_t c_refs_count, void *ctx_cb,
-                                  llcas_cas_store_object_cb cb) {
-  unwrap(c_cas)->Pool.async([&] {
-    llcas_objectid_t id;
-    char *error;
-    bool has_error = llcas_cas_store_object(c_cas, c_data, c_refs, c_refs_count,
-                                            &id, &error);
-    cb(ctx_cb, has_error, id, error);
-  });
-}
-
 llcas_data_t llcas_loaded_object_get_data(llcas_cas_t c_cas,
                                           llcas_loaded_object_t c_obj) {
   auto &CAS = unwrap(c_cas)->DB->getGraphDB();

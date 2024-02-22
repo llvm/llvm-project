@@ -596,40 +596,28 @@ public:
   }
 
   void write(const MemoryBuffer &OutputBuffer, std::function<void()> Cb) final {
-    auto SaveStart = std::chrono::steady_clock::now();
-    CAS.createProxyAsync({}, OutputBuffer.getBuffer(), [=](auto MaybeProxy) {
+    std::optional<cas::ObjectProxy> Proxy;
+    if (Error E =
+            CAS.createProxy({}, OutputBuffer.getBuffer()).moveInto(Proxy)) {
+      handleCASError(std::move(E), Logger);
+      return Cb();
+    }
+
+    auto UpdateStart = std::chrono::steady_clock::now();
+    Cache.putAsync(ID, Proxy->getID(), /*Globally=*/true, [=](auto Err) {
       if (Logger) {
-        auto SaveEnd = std::chrono::steady_clock::now();
+        auto UpdateEnd = std::chrono::steady_clock::now();
         auto Seconds =
-            std::chrono::duration<double>(SaveEnd - SaveStart).count();
+            std::chrono::duration<double>(UpdateEnd - UpdateStart).count();
         Logger([&](raw_ostream &OS) {
-          OS << "LTO cache save '" << ID << "' in "
+          OS << "LTO cache update '" << ID << "' in "
              << llvm::format("%.6fs", Seconds) << "\n";
         });
       }
 
-      std::optional<cas::ObjectProxy> Proxy;
-      if (Error E = std::move(MaybeProxy).moveInto(Proxy)) {
-        handleCASError(std::move(E), Logger);
-        return Cb();
-      }
-
-      auto UpdateStart = std::chrono::steady_clock::now();
-      Cache.putAsync(ID, Proxy->getID(), /*Globally=*/true, [=](auto Err) {
-        if (Logger) {
-          auto UpdateEnd = std::chrono::steady_clock::now();
-          auto Seconds =
-              std::chrono::duration<double>(UpdateEnd - UpdateStart).count();
-          Logger([&](raw_ostream &OS) {
-            OS << "LTO cache update '" << ID << "' in "
-               << llvm::format("%.6fs", Seconds) << "\n";
-          });
-        }
-
-        if (Err)
-          report_fatal_error(std::move(Err));
-        Cb();
-      });
+      if (Err)
+        report_fatal_error(std::move(Err));
+      Cb();
     });
   }
 

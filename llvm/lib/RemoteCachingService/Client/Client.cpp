@@ -676,17 +676,6 @@ class CASDBClientImpl : public CASDBClient {
     return casPutSync(Request);
   }
 
-  void putDataAsyncImpl(std::string BlobData, ArrayRef<std::string> Refs,
-                        PutCb Callback) override {
-    CASPutRequest Request;
-    Request.mutable_data()->mutable_blob()->set_data(std::move(BlobData));
-    for (auto &Ref : Refs) {
-      CASDataID *NewRef = Request.mutable_data()->add_references();
-      NewRef->set_id(Ref);
-    }
-    return casPutAsync(std::move(Request), std::move(Callback));
-  }
-
   Expected<std::string> putFileSyncImpl(std::string FilePath,
                                         ArrayRef<std::string> Refs) override {
     assert(!FilePath.empty());
@@ -710,26 +699,6 @@ class CASDBClientImpl : public CASDBClient {
       return createStringError(inconvertibleErrorCode(),
                                Response.error().description());
     return Response.cas_id().id();
-  }
-
-  void casPutAsync(CASPutRequest Request,
-                   std::function<void(Expected<std::string>)> Callback) {
-    auto Context = std::make_shared<grpc::ClientContext>();
-    auto Response = std::make_shared<CASPutResponse>();
-    auto Req = std::make_shared<CASPutRequest>(std::move(Request));
-    Stub->async()->Put(
-        &*Context, &*Req, Response.get(), [&](grpc::Status Status) mutable {
-          (void)Context;
-          (void)Req;
-
-          if (!Status.ok())
-            return Callback(errorFromGRPCStatus(Status));
-
-          if (Response->has_error())
-            return Callback(createStringError(inconvertibleErrorCode(),
-                                              Response->error().description()));
-          return Callback(Response->cas_id().id());
-        });
   }
 
 public:
