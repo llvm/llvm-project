@@ -134,7 +134,8 @@ public:
   void crossRegisterProxies(LoopAnalysisManager &LAM,
                             FunctionAnalysisManager &FAM,
                             CGSCCAnalysisManager &CGAM,
-                            ModuleAnalysisManager &MAM);
+                            ModuleAnalysisManager &MAM,
+                            MachineFunctionAnalysisManager *MFAM = nullptr);
 
   /// Registers all available module analysis passes.
   ///
@@ -570,9 +571,9 @@ public:
     ModulePipelineParsingCallbacks.push_back(C);
   }
   void registerPipelineParsingCallback(
-      const std::function<bool(StringRef Name, MachineFunctionPassManager &)>
-          &C) {
-    MachinePipelineParsingCallbacks.push_back(C);
+      const std::function<bool(StringRef Name, MachineFunctionPassManager &,
+                               ArrayRef<PipelineElement>)> &C) {
+    MachineFunctionPipelineParsingCallbacks.push_back(C);
   }
   /// @}}
 
@@ -740,8 +741,10 @@ private:
   // Machine pass callbackcs
   SmallVector<std::function<void(MachineFunctionAnalysisManager &)>, 2>
       MachineFunctionAnalysisRegistrationCallbacks;
-  SmallVector<std::function<bool(StringRef, MachineFunctionPassManager &)>, 2>
-      MachinePipelineParsingCallbacks;
+  SmallVector<std::function<bool(StringRef, MachineFunctionPassManager &,
+                                 ArrayRef<PipelineElement>)>,
+              2>
+      MachineFunctionPipelineParsingCallbacks;
 };
 
 /// This utility template takes care of adding require<> and invalidate<>
