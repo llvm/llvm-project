@@ -75,6 +75,10 @@ cl::list<SPIRV::Extension::Extension> Extensions(
             "Allows to use the LinkOnceODR linkage type that is to let "
             "a function or global variable to be merged with other functions "
             "or global variables of the same name when linkage occurs."),
+        clEnumValN(SPIRV::Extension::SPV_KHR_subgroup_rotate,
+                   "SPV_KHR_subgroup_rotate",
+                   "Adds a new instruction that enables rotating values across "
+                   "invocations within a subgroup."),
         clEnumValN(SPIRV::Extension::SPV_INTEL_function_pointers,
                    "SPV_INTEL_function_pointers",
                    "Allows translation of function pointers.")));
