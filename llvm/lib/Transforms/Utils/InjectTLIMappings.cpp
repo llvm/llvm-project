@@ -35,7 +35,7 @@ STATISTIC(NumCompUsedAdded,
           "Number of `@llvm.compiler.used` operands that have been added.");
 
 static void removeIllegalAttributes(Function *Func, const FunctionType *FTy) {
-  // Vector types could not have attributes signext/zeroext.
+  // Vector types can not have attributes signext/zeroext.
   if (FTy->getReturnType()->isVectorTy()) {
     Func->removeRetAttr(Attribute::SExt);
     Func->removeRetAttr(Attribute::ZExt);
