@@ -21,11 +21,11 @@ private:
   using StorageType = typename FPBits::StorageType;
   using Sign = LIBC_NAMESPACE::fputil::Sign;
 
-  const T inf = T(FPBits::inf(Sign::POS));
-  const T neg_inf = T(FPBits::inf(Sign::NEG));
-  const T zero = T(FPBits::zero(Sign::POS));
-  const T neg_zero = T(FPBits::zero(Sign::NEG));
-  const T nan = T(FPBits::build_quiet_nan(1));
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::quiet_nan().get_val();
 
 public:
   void test_special_numbers(Func func) {
@@ -39,14 +39,16 @@ public:
     EXPECT_FP_EQ(func(inf, neg_inf, nan), nan);
 
     // Test underflow rounding up.
-    EXPECT_FP_EQ(func(T(0.5), FPBits::min_denormal(), FPBits::min_denormal()),
-                 T(FPBits(StorageType(2))));
+    EXPECT_FP_EQ(func(T(0.5), FPBits::min_subnormal().get_val(),
+                      FPBits::min_subnormal().get_val()),
+                 FPBits(StorageType(2)).get_val());
     // Test underflow rounding down.
-    T v = T(FPBits(FPBits::MIN_NORMAL + StorageType(1)));
+    StorageType MIN_NORMAL = FPBits::min_normal().uintval();
+    T v = FPBits(MIN_NORMAL + StorageType(1)).get_val();
     EXPECT_FP_EQ(
-        func(T(1) / T(FPBits::MIN_NORMAL << 1), v, FPBits::min_normal()), v);
+        func(T(1) / T(MIN_NORMAL << 1), v, FPBits::min_normal().get_val()), v);
     // Test overflow.
-    T z = FPBits::max_normal();
+    T z = FPBits::max_normal().get_val();
     EXPECT_FP_EQ(func(T(1.75), z, -z), T(0.75) * z);
     // Exact cancellation.
     EXPECT_FP_EQ(func(T(3.0), T(5.0), -T(15.0)), T(0.0));

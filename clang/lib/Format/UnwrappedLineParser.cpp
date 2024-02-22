@@ -495,12 +495,15 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     do {
       NextTok = Tokens->getNextToken();
     } while (NextTok->is(tok::comment));
-    while (NextTok->is(tok::hash) && !Line->InMacroBody) {
-      NextTok = Tokens->getNextToken();
-      do {
+    if (!Style.isTableGen()) {
+      // InTableGen, '#' is like binary operator. Not a preprocessor directive.
+      while (NextTok->is(tok::hash) && !Line->InMacroBody) {
         NextTok = Tokens->getNextToken();
-      } while (NextTok->is(tok::comment) ||
-               (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof)));
+        do {
+          NextTok = Tokens->getNextToken();
+        } while (NextTok->is(tok::comment) ||
+                 (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof)));
+      }
     }
 
     switch (Tok->Tok.getKind()) {
@@ -1661,7 +1664,8 @@ void UnwrappedLineParser::parseStructuralElement(
     // In Verilog labels can be any expression, so we don't do them here.
     // JS doesn't have macros, and within classes colons indicate fields, not
     // labels.
-    if (!Style.isJavaScript() && !Style.isVerilog() &&
+    // TableGen doesn't have labels.
+    if (!Style.isJavaScript() && !Style.isVerilog() && !Style.isTableGen() &&
         Tokens->peekNextToken()->is(tok::colon) && !Line->MustBeDeclaration) {
       nextToken();
       Line->Tokens.begin()->Tok->MustBreakBefore = true;
@@ -1759,8 +1763,8 @@ void UnwrappedLineParser::parseStructuralElement(
       break;
     }
     case tok::kw_enum:
-      // Ignore if this is part of "template <enum ...".
-      if (Previous && Previous->is(tok::less)) {
+      // Ignore if this is part of "template <enum ..." or "... -> enum".
+      if (Previous && Previous->isOneOf(tok::less, tok::arrow)) {
         nextToken();
         break;
       }
@@ -1789,6 +1793,12 @@ void UnwrappedLineParser::parseStructuralElement(
         parseBlock();
         addUnwrappedLine();
         return;
+      }
+      if (Style.isTableGen()) {
+        // Do nothing special. In this case the l_brace becomes FunctionLBrace.
+        // This is same as def and so on.
+        nextToken();
+        break;
       }
       [[fallthrough]];
     case tok::kw_struct:
@@ -2028,6 +2038,16 @@ void UnwrappedLineParser::parseStructuralElement(
         // initialisers are indented the same way.
         if (Style.isCSharp())
           FormatTok->setBlockKind(BK_BracedInit);
+        // TableGen's defset statement has syntax of the form,
+        // `defset <type> <name> = { <statement>... }`
+        if (Style.isTableGen() &&
+            Line->Tokens.begin()->Tok->is(Keywords.kw_defset)) {
+          FormatTok->setFinalizedType(TT_FunctionLBrace);
+          parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
+                     /*MunchSemi=*/false);
+          addUnwrappedLine();
+          break;
+        }
         nextToken();
         parseBracedList();
       } else if (Style.Language == FormatStyle::LK_Proto &&
@@ -2498,7 +2518,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         parseChildBlock();
       break;
     case tok::r_paren:
-      if (!MightBeStmtExpr &&
+      if (!MightBeStmtExpr && !Line->InMacroBody &&
           Style.RemoveParentheses > FormatStyle::RPS_Leave) {
         const auto *Prev = LeftParen->Previous;
         const auto *Next = Tokens->peekNextToken();
@@ -2739,6 +2759,14 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
         nextToken();
     } else if (FormatTok->isOneOf(Keywords.kw_final, Keywords.kw_property,
                                   Keywords.kw_sequence)) {
+      nextToken();
+    }
+  }
+
+  // TableGen's if statement has the form of `if <cond> then { ... }`.
+  if (Style.isTableGen()) {
+    while (!eof() && FormatTok->isNot(Keywords.kw_then)) {
+      // Simply skip until then. This range only contains a value.
       nextToken();
     }
   }
@@ -3421,11 +3449,6 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
         return false;
       }
       break;
-    case tok::r_paren:
-    case tok::pipepipe:
-      FormatTok = Tokens->setPosition(StoredPosition);
-      parseRequiresClause(RequiresToken);
-      return true;
     case tok::eof:
       // Break out of the loop.
       Lookahead = 50;
@@ -3433,6 +3456,7 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
     case tok::coloncolon:
       LastWasColonColon = true;
       break;
+    case tok::kw_decltype:
     case tok::identifier:
       if (FoundType && !LastWasColonColon && OpenAngles == 0) {
         FormatTok = Tokens->setPosition(StoredPosition);

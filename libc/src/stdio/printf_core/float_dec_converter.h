@@ -498,7 +498,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
 
   PaddingWriter padding_writer(to_conv, sign_char);
   FloatWriter float_writer(writer, has_decimal_point, padding_writer);
-  FloatToString<T> float_converter(static_cast<T>(float_bits));
+  FloatToString<T> float_converter(float_bits.get_val());
 
   const size_t positive_blocks = float_converter.get_positive_blocks();
 
@@ -608,7 +608,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
 
   PaddingWriter padding_writer(to_conv, sign_char);
   FloatWriter float_writer(writer, has_decimal_point, padding_writer);
-  FloatToString<T> float_converter(static_cast<T>(float_bits));
+  FloatToString<T> float_converter(float_bits.get_val());
 
   size_t digits_written = 0;
   int final_exponent = 0;
@@ -767,7 +767,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   // it has style E, so here we calculate the precision we'll use in that case.
   const unsigned int exp_precision = init_precision - 1;
 
-  FloatToString<T> float_converter(static_cast<T>(float_bits));
+  FloatToString<T> float_converter(float_bits.get_val());
 
   // Here we would subtract 1 to account for the fact that block 0 counts as a
   // positive block, but the loop below accounts for this by starting with

@@ -36,7 +36,7 @@ public:
   static_assert(std::numeric_limits<decltype(Reg)>::max() >= 0xFFFFFFFF,
                 "Reg isn't large enough to hold full range.");
 
-  /// isStackSlot - Sometimes it is useful the be able to store a non-negative
+  /// isStackSlot - Sometimes it is useful to be able to store a non-negative
   /// frame index in a variable that normally holds a register. isStackSlot()
   /// returns true if Reg is in the range used for stack slots.
   ///

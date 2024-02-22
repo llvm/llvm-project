@@ -136,7 +136,7 @@ std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
   if (auto *OMD = dyn_cast<ObjCMethodDecl>(D))
     return OMD->isClassMethod() ? HighlightingKind::StaticMethod
                                 : HighlightingKind::Method;
-  if (isa<FieldDecl, ObjCPropertyDecl>(D))
+  if (isa<FieldDecl, IndirectFieldDecl, ObjCPropertyDecl>(D))
     return HighlightingKind::Field;
   if (isa<EnumDecl>(D))
     return HighlightingKind::Enum;

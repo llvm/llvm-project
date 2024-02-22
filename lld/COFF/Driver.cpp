@@ -855,7 +855,7 @@ static std::string createResponseFile(const opt::InputArgList &args,
   for (StringRef path : filePaths)
     os << quote(relativeToRoot(path)) << "\n";
 
-  return std::string(data.str());
+  return std::string(data);
 }
 
 static unsigned parseDebugTypes(const opt::InputArgList &args) {
@@ -910,7 +910,7 @@ std::string LinkerDriver::getImplibPath() {
     return std::string(ctx.config.implib);
   SmallString<128> out = StringRef(ctx.config.outputFile);
   sys::path::replace_extension(out, ".lib");
-  return std::string(out.str());
+  return std::string(out);
 }
 
 // The import name is calculated as follows:
@@ -934,7 +934,7 @@ std::string LinkerDriver::getImportName(bool asLib) {
                                    (ctx.config.dll || asLib) ? ".dll" : ".exe");
   }
 
-  return std::string(out.str());
+  return std::string(out);
 }
 
 void LinkerDriver::createImportLibrary(bool asLib) {
@@ -1825,7 +1825,15 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     }
   } else {
     config->repro = false;
-    config->timestamp = time(nullptr);
+    if (std::optional<std::string> epoch =
+            Process::GetEnv("SOURCE_DATE_EPOCH")) {
+      StringRef value(*epoch);
+      if (value.getAsInteger(0, config->timestamp))
+        fatal(Twine("invalid SOURCE_DATE_EPOCH timestamp: ") + value +
+              ".  Expected 32-bit integer");
+    } else {
+      config->timestamp = time(nullptr);
+    }
   }
 
   // Handle /alternatename

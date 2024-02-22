@@ -148,7 +148,7 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
-    *sinp = x + FPBits::build_nan(FPBits::FRACTION_MASK);
+    *sinp = FPBits::quiet_nan().get_val();
     *cosp = *sinp;
     return;
   }

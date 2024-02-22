@@ -2,24 +2,44 @@
 #define mock_types_1103988513531
 
 template <typename T> struct Ref {
-  T t;
+  T *t;
 
   Ref() : t{} {};
-  Ref(T *) {}
-  T *get() { return nullptr; }
-  operator const T &() const { return t; }
-  operator T &() { return t; }
+  Ref(T &t)
+    : t(t) {
+    if (t)
+      t->ref();
+  }
+  ~Ref() {
+    if (t)
+      t->deref();
+  }
+  T *get() { return t; }
+  T *ptr() { return t; }
+  T *operator->() { return t; }
+  operator const T &() const { return *t; }
+  operator T &() { return *t; }
 };
 
 template <typename T> struct RefPtr {
   T *t;
 
   RefPtr() : t(new T) {}
-  RefPtr(T *t) : t(t) {}
+  RefPtr(T *t)
+    : t(t) {
+    if (t)
+      t->ref();
+  }
+  ~RefPtr() {
+    if (t)
+      t->deref();
+  }
   T *get() { return t; }
   T *operator->() { return t; }
+  const T *operator->() const { return t; }
   T &operator*() { return *t; }
   RefPtr &operator=(T *) { return *this; }
+  operator bool() { return t; }
 };
 
 template <typename T> bool operator==(const RefPtr<T> &, const RefPtr<T> &) {
@@ -39,6 +59,7 @@ template <typename T> bool operator!=(const RefPtr<T> &, T *) { return false; }
 template <typename T> bool operator!=(const RefPtr<T> &, T &) { return false; }
 
 struct RefCountable {
+  static Ref<RefCountable> create();
   void ref() {}
   void deref() {}
 };

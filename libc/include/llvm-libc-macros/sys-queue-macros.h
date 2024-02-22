@@ -160,7 +160,9 @@
 #define STAILQ_EMPTY(head) ((head)->first == NULL)
 #define STAILQ_FIRST(head) ((head)->first)
 #define STAILQ_LAST(head, type, field)                                         \
-  (STAILQ_EMPTY(head) ? NULL : __containerof((head)->last, type, field.next))
+  (STAILQ_EMPTY(head)                                                          \
+       ? NULL                                                                  \
+       : __containerof((head)->last, QUEUE_TYPEOF(type), field.next))
 #define STAILQ_NEXT(elem, field) ((elem)->field.next)
 
 #define STAILQ_FOREACH(var, head, field)                                       \

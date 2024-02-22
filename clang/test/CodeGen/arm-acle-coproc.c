@@ -24,6 +24,7 @@
 // RUN: %clang_cc1 -triple armv9.2a %s -E -dD -o - | FileCheck --check-prefix=CHECK-V8 %s
 // RUN: %clang_cc1 -triple armv9.3a %s -E -dD -o - | FileCheck --check-prefix=CHECK-V8 %s
 // RUN: %clang_cc1 -triple armv9.4a %s -E -dD -o - | FileCheck --check-prefix=CHECK-V8 %s
+// RUN: %clang_cc1 -triple armv9.5a %s -E -dD -o - | FileCheck --check-prefix=CHECK-V8 %s
 // RUN: %clang_cc1 -triple thumbv4 %s -E -dD -o - | FileCheck --check-prefix=CHECK-V4-THUMB %s
 // RUN: %clang_cc1 -triple thumbv4t %s -E -dD -o - | FileCheck --check-prefix=CHECK-V4-THUMB %s
 // RUN: %clang_cc1 -triple thumbv5 %s -E -dD -o - | FileCheck --check-prefix=CHECK-V5-THUMB %s
@@ -52,6 +53,7 @@
 // RUN: %clang_cc1 -triple thumbv9.2a %s -E -dD -o - | FileCheck --check-prefix=CHECK-V8 %s
 // RUN: %clang_cc1 -triple thumbv9.3a %s -E -dD -o - | FileCheck --check-prefix=CHECK-V8 %s
 // RUN: %clang_cc1 -triple thumbv9.4a %s -E -dD -o - | FileCheck --check-prefix=CHECK-V8 %s
+// RUN: %clang_cc1 -triple thumbv9.5a %s -E -dD -o - | FileCheck --check-prefix=CHECK-V8 %s
 // RUN: %clang_cc1 -triple thumbv8m.base %s -E -dD -o - | FileCheck --check-prefix=CHECK-V8-BASE %s
 // RUN: %clang_cc1 -triple thumbv8m.main %s -E -dD -o - | FileCheck --check-prefix=CHECK-V8-MAIN %s
 // RUN: %clang_cc1 -triple thumbv8.1m.main %s -E -dD -o - | FileCheck --check-prefix=CHECK-V8-MAIN %s

@@ -24,6 +24,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateArgumentVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeLocVisitor.h"
 #include "clang/AST/TypeVisitor.h"
 
 namespace clang {
@@ -132,6 +133,7 @@ class TextNodeDumper
       public ConstTemplateArgumentVisitor<TextNodeDumper>,
       public ConstStmtVisitor<TextNodeDumper>,
       public TypeVisitor<TextNodeDumper>,
+      public TypeLocVisitor<TextNodeDumper>,
       public ConstDeclVisitor<TextNodeDumper> {
   raw_ostream &OS;
   const bool ShowColors;
@@ -178,6 +180,8 @@ public:
   void Visit(const Type *T);
 
   void Visit(QualType T);
+
+  void Visit(TypeLoc);
 
   void Visit(const Decl *D);
 
@@ -291,6 +295,8 @@ public:
   void VisitTypeTraitExpr(const TypeTraitExpr *Node);
   void VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *Node);
   void VisitExpressionTraitExpr(const ExpressionTraitExpr *Node);
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node);
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *Node);
   void VisitExprWithCleanups(const ExprWithCleanups *Node);
   void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *Node);
@@ -336,6 +342,8 @@ public:
   void VisitInjectedClassNameType(const InjectedClassNameType *T);
   void VisitObjCInterfaceType(const ObjCInterfaceType *T);
   void VisitPackExpansionType(const PackExpansionType *T);
+
+  void VisitTypeLoc(TypeLoc TL);
 
   void VisitLabelDecl(const LabelDecl *D);
   void VisitTypedefDecl(const TypedefDecl *D);
@@ -393,6 +401,7 @@ public:
   void
   VisitLifetimeExtendedTemporaryDecl(const LifetimeExtendedTemporaryDecl *D);
   void VisitHLSLBufferDecl(const HLSLBufferDecl *D);
+  void VisitOpenACCConstructStmt(const OpenACCConstructStmt *S);
 };
 
 } // namespace clang

@@ -25,6 +25,12 @@ ARM64-SAME: -machine:arm64
 ARM64-SAME: -alternatename:__image_base__=__ImageBase
 ARM64-SAME: foo.o
 
+RUN: ld.lld -### foo.o -m arm64ecpe 2>&1 | FileCheck -check-prefix=ARM64EC %s
+ARM64EC:      -out:a.exe
+ARM64EC-SAME: -machine:arm64ec
+ARM64EC-SAME: -alternatename:__image_base__=__ImageBase
+ARM64EC-SAME: foo.o
+
 RUN: ld.lld -### foo.o -m i386pep -shared 2>&1 | FileCheck -check-prefix=SHARED %s
 RUN: ld.lld -### foo.o -m i386pep --shared 2>&1 | FileCheck -check-prefix=SHARED %s
 RUN: ld.lld -### foo.o -m i386pep --dll 2>&1 | FileCheck -check-prefix=SHARED %s
@@ -408,6 +414,13 @@ LTO_OPTS: -mllvm:-mcpu=x86-64 -opt:lldlto=2 -dwodir:foo -lto-cs-profile-generate
 
 RUN: ld.lld -### foo.o -m i386pep --lto-O2 --lto-CGO1 --lto-cs-profile-generate --lto-cs-profile-file=foo 2>&1 | FileCheck -check-prefix=LTO_OPTS2 %s
 LTO_OPTS2:-opt:lldlto=2 -opt:lldltocgo=1 -lto-cs-profile-generate -lto-cs-profile-file:foo
+
+RUN: ld.lld -### foo.o -m i386pe -plugin-opt=emit-asm 2>&1 | FileCheck -check-prefix=LTO_EMIT_ASM %s
+RUN: ld.lld -### foo.o -m i386pe --lto-emit-asm 2>&1 | FileCheck -check-prefix=LTO_EMIT_ASM %s
+LTO_EMIT_ASM: -lldemit:asm
+
+RUN: ld.lld -### foo.o -m i386pe -plugin-opt=emit-llvm 2>&1 | FileCheck -check-prefix=LTO_EMIT_LLVM %s
+LTO_EMIT_LLVM: -lldemit:llvm
 
 Test GCC specific LTO options that GCC passes unconditionally, that we ignore.
 

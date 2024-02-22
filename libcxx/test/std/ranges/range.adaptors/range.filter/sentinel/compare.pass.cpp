@@ -19,14 +19,14 @@
 #include "test_iterators.h"
 #include "../types.h"
 
-template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
+template <class Iter, class Sent = sentinel_wrapper<Iter>>
 constexpr void test() {
-  using View = minimal_view<Iterator, Sentinel>;
+  using View = minimal_view<Iter, Sent>;
 
   std::array<int, 5> array{0, 1, 2, 3, 4};
 
   {
-    View v(Iterator(array.data()), Sentinel(Iterator(array.data() + array.size())));
+    View v(Iter(array.data()), Sent(Iter(array.data() + array.size())));
     std::ranges::filter_view view(std::move(v), AlwaysTrue{});
     auto const it = view.begin();
     auto const sent = view.end();
@@ -34,7 +34,7 @@ constexpr void test() {
     assert(!result);
   }
   {
-    View v(Iterator(array.data()), Sentinel(Iterator(array.data() + array.size())));
+    View v(Iter(array.data()), Sent(Iter(array.data() + array.size())));
     std::ranges::filter_view view(std::move(v), [](auto) { return false; });
     auto const it = view.begin();
     auto const sent = view.end();

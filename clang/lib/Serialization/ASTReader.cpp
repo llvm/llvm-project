@@ -987,9 +987,12 @@ ASTIdentifierLookupTraitBase::ReadKey(const unsigned char* d, unsigned n) {
 /// Whether the given identifier is "interesting".
 static bool isInterestingIdentifier(ASTReader &Reader, IdentifierInfo &II,
                                     bool IsModule) {
+  bool IsInteresting =
+      II.getNotableIdentifierID() != tok::NotableIdentifierKind::not_notable ||
+      II.getBuiltinID() != Builtin::ID::NotBuiltin ||
+      II.getObjCKeywordID() != tok::ObjCKeywordKind::objc_not_keyword;
   return II.hadMacroDefinition() || II.isPoisoned() ||
-         (!IsModule && II.getObjCOrBuiltinID()) ||
-         II.hasRevertedTokenIDToIdentifier() ||
+         (!IsModule && IsInteresting) || II.hasRevertedTokenIDToIdentifier() ||
          (!(IsModule && Reader.getPreprocessor().getLangOpts().CPlusPlus) &&
           II.getFETokenInfo());
 }
@@ -4977,7 +4980,7 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
     }
     case HEADER_SEARCH_PATHS: {
       bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
-      if (!AllowCompatibleConfigurationMismatch &&
+      if (Listener && !AllowCompatibleConfigurationMismatch &&
           ParseHeaderSearchPaths(Record, Complain, *Listener))
         Result = ConfigurationMismatch;
       break;
@@ -4992,15 +4995,12 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
                                      Record.begin(), Record.end());
       break;
     case HEADER_SEARCH_ENTRY_USAGE:
-      if (!F)
-        break;
-      unsigned Count = Record[0];
-      const char *Byte = Blob.data();
-      F->SearchPathUsage = llvm::BitVector(Count, false);
-      for (unsigned I = 0; I < Count; ++Byte)
-        for (unsigned Bit = 0; Bit < 8 && I < Count; ++Bit, ++I)
-          if (*Byte & (1 << Bit))
-            F->SearchPathUsage[I] = true;
+      if (F)
+        F->SearchPathUsage = ReadBitVector(Record, Blob);
+      break;
+    case VFS_USAGE:
+      if (F)
+        F->VFSUsage = ReadBitVector(Record, Blob);
       break;
     }
   }
@@ -5398,7 +5398,8 @@ bool ASTReader::readASTFileControlBlock(
     StringRef Filename, FileManager &FileMgr,
     const InMemoryModuleCache &ModuleCache,
     const PCHContainerReader &PCHContainerRdr, bool FindModuleFileExtensions,
-    ASTReaderListener &Listener, bool ValidateDiagnosticOptions) {
+    ASTReaderListener &Listener, bool ValidateDiagnosticOptions,
+    unsigned ClientLoadCapabilities) {
   // Open the AST file.
   std::unique_ptr<llvm::MemoryBuffer> OwnedBuffer;
   llvm::MemoryBuffer *Buffer = ModuleCache.lookupPCM(Filename);
@@ -5453,7 +5454,7 @@ bool ASTReader::readASTFileControlBlock(
       switch (Entry.ID) {
       case OPTIONS_BLOCK_ID: {
         std::string IgnoredSuggestedPredefines;
-        if (ReadOptionsBlock(Stream, ARR_ConfigurationMismatch | ARR_OutOfDate,
+        if (ReadOptionsBlock(Stream, ClientLoadCapabilities,
                              /*AllowCompatibleConfigurationMismatch*/ false,
                              Listener, IgnoredSuggestedPredefines) != Success)
           return true;
@@ -5679,7 +5680,7 @@ bool ASTReader::readASTFileControlBlock(
 
   // Scan for the UNHASHED_CONTROL_BLOCK_ID block.
   if (readUnhashedControlBlockImpl(
-          nullptr, Bytes, ARR_ConfigurationMismatch | ARR_OutOfDate,
+          nullptr, Bytes, ClientLoadCapabilities,
           /*AllowCompatibleConfigurationMismatch*/ false, &Listener,
           ValidateDiagnosticOptions) != Success)
     return true;
@@ -6946,6 +6947,10 @@ void TypeLocReader::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
   TL.setRParenLoc(readSourceLocation());
 }
 
+void TypeLocReader::VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
+  TL.setEllipsisLoc(readSourceLocation());
+}
+
 void TypeLocReader::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
   TL.setKWLoc(readSourceLocation());
   TL.setLParenLoc(readSourceLocation());
@@ -7460,6 +7465,7 @@ ASTRecordReader::readTemplateArgumentLocInfo(TemplateArgument::ArgKind Kind) {
   case TemplateArgument::Integral:
   case TemplateArgument::Declaration:
   case TemplateArgument::NullPtr:
+  case TemplateArgument::StructuralValue:
   case TemplateArgument::Pack:
     // FIXME: Is this right?
     return TemplateArgumentLocInfo();
@@ -9311,6 +9317,18 @@ SourceRange ASTReader::ReadSourceRange(ModuleFile &F, const RecordData &Record,
   return SourceRange(beg, end);
 }
 
+llvm::BitVector ASTReader::ReadBitVector(const RecordData &Record,
+                                         const StringRef Blob) {
+  unsigned Count = Record[0];
+  const char *Byte = Blob.data();
+  llvm::BitVector Ret = llvm::BitVector(Count, false);
+  for (unsigned I = 0; I < Count; ++Byte)
+    for (unsigned Bit = 0; Bit < 8 && I < Count; ++Bit, ++I)
+      if (*Byte & (1 << Bit))
+        Ret[I] = true;
+  return Ret;
+}
+
 /// Read a floating-point value
 llvm::APFloat ASTRecordReader::readAPFloat(const llvm::fltSemantics &Sem) {
   return llvm::APFloat(Sem, readAPInt());
@@ -9533,12 +9551,21 @@ void ASTReader::finishPendingActions() {
       auto *FD = PendingDeducedFunctionTypes[I].first;
       FD->setType(GetType(PendingDeducedFunctionTypes[I].second));
 
-      // If we gave a function a deduced return type, remember that we need to
-      // propagate that along the redeclaration chain.
-      auto *DT = FD->getReturnType()->getContainedDeducedType();
-      if (DT && DT->isDeduced())
-        PendingDeducedTypeUpdates.insert(
-            {FD->getCanonicalDecl(), FD->getReturnType()});
+      if (auto *DT = FD->getReturnType()->getContainedDeducedType()) {
+        // If we gave a function a deduced return type, remember that we need to
+        // propagate that along the redeclaration chain.
+        if (DT->isDeduced()) {
+          PendingDeducedTypeUpdates.insert(
+              {FD->getCanonicalDecl(), FD->getReturnType()});
+          continue;
+        }
+
+        // The function has undeduced DeduceType return type. We hope we can
+        // find the deduced type by iterating the redecls in other modules
+        // later.
+        PendingUndeducedFunctionDecls.push_back(FD);
+        continue;
+      }
     }
     PendingDeducedFunctionTypes.clear();
 
@@ -9733,6 +9760,9 @@ void ASTReader::finishPendingActions() {
 
         if (!FD->isLateTemplateParsed() &&
             !NonConstDefn->isLateTemplateParsed() &&
+            // We only perform ODR checks for decls not in the explicit
+            // global module fragment.
+            !shouldSkipCheckingODR(FD) &&
             FD->getODRHash() != NonConstDefn->getODRHash()) {
           if (!isa<CXXMethodDecl>(FD)) {
             PendingFunctionOdrMergeFailures[FD].push_back(NonConstDefn);
@@ -10104,6 +10134,13 @@ void ASTReader::FinishedDeserializing() {
         getContext().adjustDeducedFunctionResultType(Update.first,
                                                      Update.second);
       }
+
+      auto UDTUpdates = std::move(PendingUndeducedFunctionDecls);
+      PendingUndeducedFunctionDecls.clear();
+      // We hope we can find the deduced type for the functions by iterating
+      // redeclarations in other modules.
+      for (FunctionDecl *UndeducedFD : UDTUpdates)
+        (void)UndeducedFD->getMostRecentDecl();
     }
 
     if (ReadTimer)
@@ -10314,6 +10351,9 @@ OMPClause *OMPClauseReader::readClause() {
     break;
   case llvm::omp::OMPC_relaxed:
     C = new (Context) OMPRelaxedClause();
+    break;
+  case llvm::omp::OMPC_weak:
+    C = new (Context) OMPWeakClause();
     break;
   case llvm::omp::OMPC_threads:
     C = new (Context) OMPThreadsClause();
@@ -10712,6 +10752,8 @@ void OMPClauseReader::VisitOMPAcquireClause(OMPAcquireClause *) {}
 void OMPClauseReader::VisitOMPReleaseClause(OMPReleaseClause *) {}
 
 void OMPClauseReader::VisitOMPRelaxedClause(OMPRelaxedClause *) {}
+
+void OMPClauseReader::VisitOMPWeakClause(OMPWeakClause *) {}
 
 void OMPClauseReader::VisitOMPThreadsClause(OMPThreadsClause *) {}
 

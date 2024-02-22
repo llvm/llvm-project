@@ -11,10 +11,9 @@ import subprocess
 import multiprocessing
 import functools
 import json
+import logging
 
 from typing import Dict, List, Optional
-
-from absl import logging
 
 _UNSPECIFIED_OVERRIDE = ["<UNSPECIFIED>"]
 

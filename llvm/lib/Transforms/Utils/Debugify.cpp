@@ -87,6 +87,10 @@ bool llvm::applyDebugifyMetadata(
     return false;
   }
 
+  bool NewDebugMode = M.IsNewDbgInfoFormat;
+  if (NewDebugMode)
+    M.convertFromNewDbgValues();
+
   DIBuilder DIB(M);
   LLVMContext &Ctx = M.getContext();
   auto *Int32Ty = Type::getInt32Ty(Ctx);
@@ -210,6 +214,9 @@ bool llvm::applyDebugifyMetadata(
   if (!M.getModuleFlag(DIVersionKey))
     M.addModuleFlag(Module::Warning, DIVersionKey, DEBUG_METADATA_VERSION);
 
+  if (NewDebugMode)
+    M.convertToNewDbgValues();
+
   return true;
 }
 
@@ -304,6 +311,10 @@ bool llvm::collectDebugInfoMetadata(Module &M,
     return false;
   }
 
+  bool NewDebugMode = M.IsNewDbgInfoFormat;
+  if (NewDebugMode)
+    M.convertFromNewDbgValues();
+
   uint64_t FunctionsCnt = DebugInfoBeforePass.DIFunctions.size();
   // Visit each instruction.
   for (Function &F : Functions) {
@@ -367,6 +378,9 @@ bool llvm::collectDebugInfoMetadata(Module &M,
       }
     }
   }
+
+  if (NewDebugMode)
+    M.convertToNewDbgValues();
 
   return true;
 }
@@ -547,6 +561,10 @@ bool llvm::checkDebugInfoMetadata(Module &M,
     return false;
   }
 
+  bool NewDebugMode = M.IsNewDbgInfoFormat;
+  if (NewDebugMode)
+    M.convertFromNewDbgValues();
+
   // Map the debug info holding DIs after a pass.
   DebugInfoPerPass DebugInfoAfterPass;
 
@@ -657,6 +675,9 @@ bool llvm::checkDebugInfoMetadata(Module &M,
   // the debugging information from the previous pass.
   DebugInfoBeforePass = DebugInfoAfterPass;
 
+  if (NewDebugMode)
+    M.convertToNewDbgValues();
+
   LLVM_DEBUG(dbgs() << "\n\n");
   return Result;
 }
@@ -713,6 +734,10 @@ bool checkDebugifyMetadata(Module &M,
     dbg() << Banner << ": Skipping module without debugify metadata\n";
     return false;
   }
+
+  bool NewDebugMode = M.IsNewDbgInfoFormat;
+  if (NewDebugMode)
+    M.convertFromNewDbgValues();
 
   auto getDebugifyOperand = [&](unsigned Idx) -> unsigned {
     return mdconst::extract<ConstantInt>(NMD->getOperand(Idx)->getOperand(0))
@@ -791,24 +816,22 @@ bool checkDebugifyMetadata(Module &M,
   dbg() << ": " << (HasErrors ? "FAIL" : "PASS") << '\n';
 
   // Strip debugify metadata if required.
+  bool Ret = false;
   if (Strip)
-    return stripDebugifyMetadata(M);
+    Ret = stripDebugifyMetadata(M);
 
-  return false;
+  if (NewDebugMode)
+    M.convertToNewDbgValues();
+
+  return Ret;
 }
 
 /// ModulePass for attaching synthetic debug info to everything, used with the
 /// legacy module pass manager.
 struct DebugifyModulePass : public ModulePass {
   bool runOnModule(Module &M) override {
-    bool NewDebugMode = M.IsNewDbgInfoFormat;
-    if (NewDebugMode)
-      M.convertFromNewDbgValues();
-
-    bool Result = applyDebugify(M, Mode, DebugInfoBeforePass, NameOfWrappedPass);
-
-    if (NewDebugMode)
-      M.convertToNewDbgValues();
+    bool Result =
+        applyDebugify(M, Mode, DebugInfoBeforePass, NameOfWrappedPass);
     return Result;
   }
 
@@ -834,14 +857,8 @@ private:
 /// single function, used with the legacy module pass manager.
 struct DebugifyFunctionPass : public FunctionPass {
   bool runOnFunction(Function &F) override {
-    bool NewDebugMode = F.IsNewDbgInfoFormat;
-    if (NewDebugMode)
-      F.convertFromNewDbgValues();
-
-    bool Result = applyDebugify(F, Mode, DebugInfoBeforePass, NameOfWrappedPass);
-
-    if (NewDebugMode)
-      F.convertToNewDbgValues();
+    bool Result =
+        applyDebugify(F, Mode, DebugInfoBeforePass, NameOfWrappedPass);
     return Result;
   }
 
@@ -868,10 +885,6 @@ private:
 /// legacy module pass manager.
 struct CheckDebugifyModulePass : public ModulePass {
   bool runOnModule(Module &M) override {
-    bool NewDebugMode = M.IsNewDbgInfoFormat;
-    if (NewDebugMode)
-      M.convertFromNewDbgValues();
-
     bool Result;
     if (Mode == DebugifyMode::SyntheticDebugInfo)
       Result = checkDebugifyMetadata(M, M.functions(), NameOfWrappedPass,
@@ -881,9 +894,6 @@ struct CheckDebugifyModulePass : public ModulePass {
         M, M.functions(), *DebugInfoBeforePass,
         "CheckModuleDebugify (original debuginfo)", NameOfWrappedPass,
         OrigDIVerifyBugsReportFilePath);
-
-    if (NewDebugMode)
-      M.convertToNewDbgValues();
 
     return Result;
   }
@@ -918,10 +928,6 @@ private:
 /// with the legacy module pass manager.
 struct CheckDebugifyFunctionPass : public FunctionPass {
   bool runOnFunction(Function &F) override {
-    bool NewDebugMode = F.IsNewDbgInfoFormat;
-    if (NewDebugMode)
-      F.convertFromNewDbgValues();
-
     Module &M = *F.getParent();
     auto FuncIt = F.getIterator();
     bool Result;
@@ -935,8 +941,6 @@ struct CheckDebugifyFunctionPass : public FunctionPass {
         "CheckFunctionDebugify (original debuginfo)", NameOfWrappedPass,
         OrigDIVerifyBugsReportFilePath);
 
-    if (NewDebugMode)
-      F.convertToNewDbgValues();
     return Result;
   }
 
@@ -1009,10 +1013,6 @@ createDebugifyFunctionPass(enum DebugifyMode Mode,
 }
 
 PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &) {
-  bool NewDebugMode = M.IsNewDbgInfoFormat;
-  if (NewDebugMode)
-    M.convertFromNewDbgValues();
-
   if (Mode == DebugifyMode::SyntheticDebugInfo)
     applyDebugifyMetadata(M, M.functions(),
                           "ModuleDebugify: ", /*ApplyToMF*/ nullptr);
@@ -1020,9 +1020,6 @@ PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &) {
     collectDebugInfoMetadata(M, M.functions(), *DebugInfoBeforePass,
                              "ModuleDebugify (original debuginfo)",
                               NameOfWrappedPass);
-
-  if (NewDebugMode)
-      M.convertToNewDbgValues();
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();

@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
-#include <arm_sme_draft_spec_subject_to_change.h>
+#include <arm_sme.h>
 
 // LDR ZT0
 
@@ -20,7 +20,7 @@
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.ldr.zt(i32 0, ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svldr_zt(const void *base) __arm_streaming_compatible __arm_out("za") {
+void test_svldr_zt(const void *base) __arm_streaming_compatible __arm_out("zt0") {
   svldr_zt(0, base);
 }
 
@@ -36,6 +36,6 @@ void test_svldr_zt(const void *base) __arm_streaming_compatible __arm_out("za") 
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.str.zt(i32 0, ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svstr_zt(void *base) __arm_streaming_compatible __arm_in("za") {
+void test_svstr_zt(void *base) __arm_streaming_compatible __arm_in("zt0") {
   svstr_zt(0, base);
 }

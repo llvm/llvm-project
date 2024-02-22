@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_DISASSEMBLER_AMDGPUDISASSEMBLER_H
 #define LLVM_LIB_TARGET_AMDGPU_DISASSEMBLER_AMDGPUDISASSEMBLER_H
 
+#include "SIDefines.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -100,11 +101,14 @@ private:
   mutable uint64_t Literal64;
   mutable bool HasLiteral;
   mutable std::optional<bool> EnableWavefrontSize32;
+  unsigned CodeObjectVersion;
 
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                      MCInstrInfo const *MCII);
   ~AMDGPUDisassembler() override = default;
+
+  void setABIVersion(unsigned Version) override;
 
   DecodeStatus getInstruction(MCInst &MI, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -200,6 +204,7 @@ public:
   DecodeStatus convertVOP3PDPPInst(MCInst &MI) const;
   DecodeStatus convertVOPCDPPInst(MCInst &MI) const;
   void convertMacDPPInst(MCInst &MI) const;
+  void convertTrue16OpSel(MCInst &MI) const;
 
   enum OpWidthTy {
     OPW32,
@@ -227,25 +232,29 @@ public:
   unsigned getTtmpClassId(const OpWidthTy Width) const;
 
   static MCOperand decodeIntImmed(unsigned Imm);
-  static MCOperand decodeFPImmed(unsigned ImmWidth, unsigned Imm);
+  static MCOperand decodeFPImmed(unsigned ImmWidth, unsigned Imm,
+                                 AMDGPU::OperandSemantics Sema);
 
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
   MCOperand decodeLiteralConstant(bool ExtendFP64) const;
 
-  MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val,
-                        bool MandatoryLiteral = false, unsigned ImmWidth = 0,
-                        bool IsFP = false) const;
+  MCOperand decodeSrcOp(
+      const OpWidthTy Width, unsigned Val, bool MandatoryLiteral = false,
+      unsigned ImmWidth = 0,
+      AMDGPU::OperandSemantics Sema = AMDGPU::OperandSemantics::INT) const;
 
-  MCOperand decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
-                               bool MandatoryLiteral = false,
-                               unsigned ImmWidth = 0, bool IsFP = false) const;
+  MCOperand decodeNonVGPRSrcOp(
+      const OpWidthTy Width, unsigned Val, bool MandatoryLiteral = false,
+      unsigned ImmWidth = 0,
+      AMDGPU::OperandSemantics Sema = AMDGPU::OperandSemantics::INT) const;
 
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
 
   MCOperand decodeSDWASrc(const OpWidthTy Width, unsigned Val,
-                          unsigned ImmWidth = 0) const;
+                          unsigned ImmWidth,
+                          AMDGPU::OperandSemantics Sema) const;
   MCOperand decodeSDWASrc16(unsigned Val) const;
   MCOperand decodeSDWASrc32(unsigned Val) const;
   MCOperand decodeSDWAVopcDst(unsigned Val) const;

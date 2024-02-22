@@ -15,6 +15,8 @@ set(all_gpu_architectures
     "${all_amdgpu_architectures};${all_nvptx_architectures}")
 set(LIBC_GPU_ARCHITECTURES "all" CACHE STRING
     "List of GPU architectures to build the libc for.")
+set(AMDGPU_TARGET_TRIPLE "amdgcn-amd-amdhsa")
+set(NVPTX_TARGET_TRIPLE "nvptx64-nvidia-cuda")
 
 # Ensure the compiler is a valid clang when building the GPU target.
 set(req_ver "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
@@ -96,18 +98,25 @@ elseif(detected_gpu_architectures)
   message(STATUS "Using GPU architecture detected on the system for testing: "
                  "'${gpu_test_architecture}'")
 else()
-  message(STATUS "No GPU architecture set for testing. GPU tests will not be "
-                 "availibe. Set 'LIBC_GPU_TEST_ARCHITECTURE' to override.")
-  return()
+  list(LENGTH LIBC_GPU_ARCHITECTURES n_gpu_archs)
+  if (${n_gpu_archs} EQUAL 1)
+    set(gpu_test_architecture ${LIBC_GPU_ARCHITECTURES})
+    message(STATUS "Using user-specified GPU architecture for testing: "
+                  "'${gpu_test_architecture}'")
+  else()
+    message(STATUS "No GPU architecture set for testing. GPU tests will not be "
+                  "availibe. Set 'LIBC_GPU_TEST_ARCHITECTURE' to override.")
+    return()
+  endif()
 endif()
 
 if("${gpu_test_architecture}" IN_LIST all_amdgpu_architectures)
   set(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU TRUE)
-  set(LIBC_GPU_TARGET_TRIPLE "amdgcn-amd-amdhsa")
+  set(LIBC_GPU_TARGET_TRIPLE ${AMDGPU_TARGET_TRIPLE})
   set(LIBC_GPU_TARGET_ARCHITECTURE "${gpu_test_architecture}")
 elseif("${gpu_test_architecture}" IN_LIST all_nvptx_architectures)
   set(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX TRUE)
-  set(LIBC_GPU_TARGET_TRIPLE "nvptx64-nvidia-cuda")
+  set(LIBC_GPU_TARGET_TRIPLE ${NVPTX_TARGET_TRIPLE})
   set(LIBC_GPU_TARGET_ARCHITECTURE "${gpu_test_architecture}")
 else()
   message(FATAL_ERROR "Unknown GPU architecture '${gpu_test_architecture}'")

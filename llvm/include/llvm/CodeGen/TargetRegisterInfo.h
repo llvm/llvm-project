@@ -81,9 +81,8 @@ public:
   /// Return the number of registers in this class.
   unsigned getNumRegs() const { return MC->getNumRegs(); }
 
-  iterator_range<SmallVectorImpl<MCPhysReg>::const_iterator>
-  getRegisters() const {
-    return make_range(MC->begin(), MC->end());
+  ArrayRef<MCPhysReg> getRegisters() const {
+    return ArrayRef(begin(), getNumRegs());
   }
 
   /// Return the specified register in the class.
@@ -118,6 +117,9 @@ public:
   /// Return true if this register class may be used to create virtual
   /// registers.
   bool isAllocatable() const { return MC->isAllocatable(); }
+
+  /// Return true if this register class has a defined BaseClassOrder.
+  bool isBaseClass() const { return MC->isBaseClass(); }
 
   /// Return true if the specified TargetRegisterClass
   /// is a proper sub-class of this TargetRegisterClass.
@@ -200,7 +202,7 @@ public:
   ///
   /// By default, this method returns all registers in the class.
   ArrayRef<MCPhysReg> getRawAllocationOrder(const MachineFunction &MF) const {
-    return OrderFunc ? OrderFunc(MF) : ArrayRef(begin(), getNumRegs());
+    return OrderFunc ? OrderFunc(MF) : getRegisters();
   }
 
   /// Returns the combination of all lane masks of register in this class.

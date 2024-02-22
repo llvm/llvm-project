@@ -90,6 +90,11 @@ if(LLVM_ENABLE_CURL)
   find_package(CURL)
 endif()
 
+set(LLVM_ENABLE_HTTPLIB @LLVM_ENABLE_HTTPLIB@)
+if(LLVM_ENABLE_HTTPLIB)
+  find_package(httplib)
+endif()
+
 set(LLVM_WITH_Z3 @LLVM_WITH_Z3@)
 
 set(LLVM_ENABLE_DIA_SDK @LLVM_ENABLE_DIA_SDK@)

@@ -52,16 +52,16 @@ class VDSDIRe<bits<2> op, bit is_direct> : Enc32 {
 
 class LDSDIR_getIns<bit direct> {
   dag ret = !if(direct,
-    (ins wait_vdst:$waitvdst),
-    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, wait_vdst:$waitvdst)
+    (ins WaitVDST:$waitvdst),
+    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, WaitVDST:$waitvdst)
   );
 }
 
 class VDSDIR_getIns<bit direct> {
   dag ret = !if(direct,
-    (ins wait_va_vdst:$waitvdst, wait_va_vsrc:$waitvsrc),
-    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, wait_va_vdst:$waitvdst,
-         wait_va_vsrc:$waitvsrc)
+    (ins WaitVAVDst:$waitvdst, WaitVMVSrc:$waitvsrc),
+    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, WaitVAVDst:$waitvdst,
+         WaitVMVSrc:$waitvsrc)
   );
 }
 
@@ -159,8 +159,8 @@ def : GCNPat <
 // GFX11
 //===----------------------------------------------------------------------===//
 
-multiclass DSDIR_Real_gfx11<bits<2> op,
-                            DSDIR_Pseudo lds = !cast<DSDIR_Pseudo>(NAME)> {
+multiclass DSDIR_Real_gfx11<bits<2> op> {
+  defvar lds = !cast<DSDIR_Pseudo>(NAME);
   def _gfx11 : DSDIR_Real<lds, lds.InOperandList,
                           LDSDIR_getAsm<lds.is_direct>.ret,
                           SIEncodingFamily.GFX11>,
@@ -177,8 +177,8 @@ defm LDS_DIRECT_LOAD : DSDIR_Real_gfx11<0x1>;
 // GFX12+
 //===----------------------------------------------------------------------===//
 
-multiclass DSDIR_Real_gfx12<bits<2> op,
-                            DSDIR_Pseudo lds = !cast<DSDIR_Pseudo>(NAME)> {
+multiclass DSDIR_Real_gfx12<bits<2> op> {
+  defvar lds = !cast<DSDIR_Pseudo>(NAME);
   def _gfx12 : DSDIR_Real<lds, lds.InOperandList,
                           VDSDIR_getAsm<lds.is_direct>.ret,
                           SIEncodingFamily.GFX12>,

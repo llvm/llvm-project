@@ -1516,6 +1516,14 @@ LValue CodeGenFunction::EmitLValue(const Expr *E,
   return LV;
 }
 
+static QualType getConstantExprReferredType(const FullExpr *E,
+                                            const ASTContext &Ctx) {
+  const Expr *SE = E->getSubExpr()->IgnoreImplicit();
+  if (isa<OpaqueValueExpr>(SE))
+    return SE->getType();
+  return cast<CallExpr>(SE)->getCallReturnType(Ctx)->getPointeeType();
+}
+
 LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
                                          KnownNonNull_t IsKnownNonNull) {
   ApplyDebugLocation DL(*this, E);
@@ -1554,9 +1562,7 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
   case Expr::ConstantExprClass: {
     const ConstantExpr *CE = cast<ConstantExpr>(E);
     if (llvm::Value *Result = ConstantEmitter(*this).tryEmitConstantExpr(CE)) {
-      QualType RetType = cast<CallExpr>(CE->getSubExpr()->IgnoreImplicit())
-                             ->getCallReturnType(getContext())
-                             ->getPointeeType();
+      QualType RetType = getConstantExprReferredType(CE, getContext());
       return MakeNaturalAlignAddrLValue(Result, RetType);
     }
     return EmitLValue(cast<ConstantExpr>(E)->getSubExpr(), IsKnownNonNull);
@@ -1669,6 +1675,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitCoawaitLValue(cast<CoawaitExpr>(E));
   case Expr::CoyieldExprClass:
     return EmitCoyieldLValue(cast<CoyieldExpr>(E));
+  case Expr::PackIndexingExprClass:
+    return EmitLValue(cast<PackIndexingExpr>(E)->getSelectedExpr());
   }
 }
 
@@ -3799,7 +3807,7 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   // If we're optimizing, collapse all calls to trap down to just one per
   // check-type per function to save on code size.
-  if (TrapBBs.size() <= CheckHandlerID)
+  if ((int)TrapBBs.size() <= CheckHandlerID)
     TrapBBs.resize(CheckHandlerID + 1);
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
@@ -5172,6 +5180,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
     return EmitUnsupportedLValue(E, "unexpected cast lvalue");
 
   case CK_Dependent:
@@ -5840,6 +5849,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
   // destruction order is not necessarily reverse construction order.
   // FIXME: Revisit this based on C++ committee response to unimplementability.
   EvaluationOrder Order = EvaluationOrder::Default;
+  bool StaticOperator = false;
   if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
     if (OCE->isAssignmentOp())
       Order = EvaluationOrder::ForceRightToLeft;
@@ -5857,10 +5867,22 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
         break;
       }
     }
+
+    if (const auto *MD =
+            dyn_cast_if_present<CXXMethodDecl>(OCE->getCalleeDecl());
+        MD && MD->isStatic())
+      StaticOperator = true;
   }
 
-  EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType), E->arguments(),
-               E->getDirectCallee(), /*ParamsToSkip*/ 0, Order);
+  auto Arguments = E->arguments();
+  if (StaticOperator) {
+    // If we're calling a static operator, we need to emit the object argument
+    // and ignore it.
+    EmitIgnoredExpr(E->getArg(0));
+    Arguments = drop_begin(Arguments, 1);
+  }
+  EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType), Arguments,
+               E->getDirectCallee(), /*ParamsToSkip=*/0, Order);
 
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
       Args, FnType, /*ChainCall=*/Chain);

@@ -2467,7 +2467,9 @@ ProgramStateManager &PathSensitiveBugReporter::getStateManager() const {
   return Eng.getStateManager();
 }
 
-BugReporter::BugReporter(BugReporterData &d) : D(d) {}
+BugReporter::BugReporter(BugReporterData &D)
+    : D(D), UserSuppressions(D.getASTContext()) {}
+
 BugReporter::~BugReporter() {
   // Make sure reports are flushed.
   assert(StrBugTypes.empty() &&

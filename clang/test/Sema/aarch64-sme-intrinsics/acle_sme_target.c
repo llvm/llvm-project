@@ -3,7 +3,7 @@
 
 // Test that functions with the correct target attributes can use the correct SME intrinsics.
 
-#include <arm_sme_draft_spec_subject_to_change.h>
+#include <arm_sme.h>
 
 __attribute__((target("sme")))
 void test_sme(svbool_t pg, void *ptr) __arm_streaming __arm_inout("za") {

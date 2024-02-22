@@ -47,6 +47,7 @@ class CharBlock;
 }
 namespace semantics {
 class Symbol;
+class Scope;
 class DerivedTypeSpec;
 } // namespace semantics
 
@@ -59,7 +60,7 @@ struct Variable;
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 using SymbolRef = Fortran::common::Reference<const Fortran::semantics::Symbol>;
 using TypeConstructionStack =
-    llvm::SmallVector<std::pair<const Fortran::lower::SymbolRef, mlir::Type>>;
+    llvm::DenseMap<const Fortran::semantics::Scope *, mlir::Type>;
 class StatementContext;
 
 using ExprToValueMap = llvm::DenseMap<const SomeExpr *, mlir::Value>;
@@ -119,6 +120,9 @@ public:
   virtual void copyHostAssociateVar(
       const Fortran::semantics::Symbol &sym,
       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;
+
+  virtual void copyVar(mlir::Location loc, mlir::Value dst,
+                       mlir::Value src) = 0;
 
   /// For a given symbol, check if it is present in the inner-most
   /// level of the symbol map.

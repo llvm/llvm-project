@@ -1312,30 +1312,30 @@ def : Pat<(X86testpat (loadi64 addr:$src1), i64relocImmSExt32_su:$src2),
 //===----------------------------------------------------------------------===//
 // ANDN Instruction
 //
-multiclass AndN<X86TypeInfo t, string suffix> {
+multiclass AndN<X86TypeInfo t, SDPatternOperator node, string suffix = ""> {
   defvar andn_rr_p =
-    [(set t.RegClass:$dst, EFLAGS, (X86and_flag (not t.RegClass:$src1),
+    [(set t.RegClass:$dst, EFLAGS, (node (not t.RegClass:$src1),
      t.RegClass:$src2))];
   defvar andn_rm_p =
-    [(set t.RegClass:$dst, EFLAGS, (X86and_flag (not t.RegClass:$src1),
+    [(set t.RegClass:$dst, EFLAGS, (node (not t.RegClass:$src1),
      (t.LoadNode addr:$src2)))];
   def rr#suffix : ITy<0xF2, MRMSrcReg, t, (outs t.RegClass:$dst),
                       (ins t.RegClass:$src1, t.RegClass:$src2), "andn",
-                      binop_ndd_args, andn_rr_p>, VVVV, Sched<[WriteALU]>,
-                     T8, DefEFLAGS;
+                      binop_ndd_args, andn_rr_p>, VVVV, Sched<[WriteALU]>, T8;
   def rm#suffix : ITy<0xF2, MRMSrcMem, t, (outs t.RegClass:$dst),
                        (ins t.RegClass:$src1, t.MemOperand:$src2), "andn",
                        binop_ndd_args, andn_rm_p>, VVVV,
-                       Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>,
-                       T8, DefEFLAGS;
+                       Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, T8;
 }
 
 // Complexity is reduced to give and with immediate a chance to match first.
 let AddedComplexity = -6 in {
-defm ANDN32 : AndN<Xi32, "">, VEX, Requires<[HasBMI, NoEGPR]>;
-defm ANDN64 : AndN<Xi64, "">, VEX, REX_W, Requires<[HasBMI, NoEGPR]>;
-defm ANDN32 : AndN<Xi32, "_EVEX">, EVEX, Requires<[HasBMI, HasEGPR, In64BitMode]>;
-defm ANDN64 : AndN<Xi64, "_EVEX">, EVEX, REX_W, Requires<[HasBMI, HasEGPR, In64BitMode]>;
+defm ANDN32 : AndN<Xi32, X86and_flag>, VEX, Requires<[HasBMI, NoEGPR]>, DefEFLAGS;
+defm ANDN64 : AndN<Xi64, X86and_flag>, VEX, Requires<[HasBMI, NoEGPR]>, DefEFLAGS;
+defm ANDN32 : AndN<Xi32, X86and_flag, "_EVEX">, EVEX, Requires<[HasBMI, HasEGPR, In64BitMode]>, DefEFLAGS;
+defm ANDN64 : AndN<Xi64, X86and_flag, "_EVEX">, EVEX, Requires<[HasBMI, HasEGPR, In64BitMode]>, DefEFLAGS;
+defm ANDN32 : AndN<Xi32, null_frag, "_NF">, EVEX, EVEX_NF, Requires<[In64BitMode]>;
+defm ANDN64 : AndN<Xi64, null_frag, "_NF">, EVEX, EVEX_NF, Requires<[In64BitMode]>;
 }
 
 multiclass Andn_Pats<string suffix> {

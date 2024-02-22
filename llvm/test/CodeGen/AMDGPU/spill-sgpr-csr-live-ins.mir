@@ -10,9 +10,9 @@ body:             |
   bb.0:
     liveins: $sgpr50
     ; CHECK-LABEL: name: spill_csr_sgpr_argument
-    ; CHECK: liveins: $sgpr50, $vgpr0
+    ; CHECK: liveins: $sgpr50, $vgpr63
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr50, 0, $vgpr0
+    ; CHECK-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR $sgpr50, 0, $vgpr63
     ; CHECK-NEXT: S_NOP 0, implicit $sgpr50
     ; CHECK-NEXT: $sgpr50 = S_MOV_B32 0
     S_NOP 0, implicit $sgpr50

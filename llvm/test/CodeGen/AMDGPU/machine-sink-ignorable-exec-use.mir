@@ -279,7 +279,6 @@ body:             |
   ; GFX9-NEXT: bb.1:
   ; GFX9-NEXT:   successors: %bb.2(0x80000000)
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.2:
   ; GFX9-NEXT:   successors: %bb.3(0x80000000)
   ; GFX9-NEXT: {{  $}}

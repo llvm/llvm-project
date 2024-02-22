@@ -26,7 +26,7 @@ struct SincosfChecker : public virtual LIBC_NAMESPACE::testing::Test {
     uint64_t failed = 0;
     do {
       FPBits xbits(bits);
-      FloatType x = FloatType(xbits);
+      FloatType x = xbits.get_val();
       FloatType sinx, cosx;
       LIBC_NAMESPACE::sincosf(x, &sinx, &cosx);
 

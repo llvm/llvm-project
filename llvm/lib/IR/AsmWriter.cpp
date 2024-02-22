@@ -293,7 +293,7 @@ static const Module *getModuleFromDPI(const DPMarker *Marker) {
 }
 
 static const Module *getModuleFromDPI(const DPValue *DPV) {
-  return getModuleFromDPI(DPV->getMarker());
+  return DPV->getMarker() ? getModuleFromDPI(DPV->getMarker()) : nullptr;
 }
 
 static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
@@ -304,6 +304,7 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::AnyReg:        Out << "anyregcc"; break;
   case CallingConv::PreserveMost:  Out << "preserve_mostcc"; break;
   case CallingConv::PreserveAll:   Out << "preserve_allcc"; break;
+  case CallingConv::PreserveNone:  Out << "preserve_nonecc"; break;
   case CallingConv::CXX_FAST_TLS:  Out << "cxx_fast_tlscc"; break;
   case CallingConv::GHC:           Out << "ghccc"; break;
   case CallingConv::Tail:          Out << "tailcc"; break;
@@ -861,7 +862,7 @@ private:
   void processInstructionMetadata(const Instruction &I);
 
   /// Add all of the metadata from an instruction.
-  void processDPValueMetadata(const DPValue &DPV);
+  void processDbgRecordMetadata(const DbgRecord &DPV);
 };
 
 } // end namespace llvm
@@ -1130,18 +1131,21 @@ void SlotTracker::processFunctionMetadata(const Function &F) {
   processGlobalObjectMetadata(F);
   for (auto &BB : F) {
     for (auto &I : BB) {
-      for (const DPValue &DPV : I.getDbgValueRange())
-        processDPValueMetadata(DPV);
+      for (const DbgRecord &DR : I.getDbgValueRange())
+        processDbgRecordMetadata(DR);
       processInstructionMetadata(I);
     }
   }
 }
 
-void SlotTracker::processDPValueMetadata(const DPValue &DPV) {
-  CreateMetadataSlot(DPV.getVariable());
-  CreateMetadataSlot(DPV.getDebugLoc());
-  if (DPV.isDbgAssign()) {
-    CreateMetadataSlot(DPV.getAssignID());
+void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
+  if (const DPValue *DPV = dyn_cast<const DPValue>(&DR)) {
+    CreateMetadataSlot(DPV->getVariable());
+    CreateMetadataSlot(DPV->getDebugLoc());
+    if (DPV->isDbgAssign())
+      CreateMetadataSlot(DPV->getAssignID());
+  } else {
+    llvm_unreachable("unsupported DbgRecord kind");
   }
 }
 
@@ -1405,6 +1409,99 @@ static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
   }
 }
 
+static void WriteAPFloatInternal(raw_ostream &Out, const APFloat &APF) {
+  if (&APF.getSemantics() == &APFloat::IEEEsingle() ||
+      &APF.getSemantics() == &APFloat::IEEEdouble()) {
+    // We would like to output the FP constant value in exponential notation,
+    // but we cannot do this if doing so will lose precision.  Check here to
+    // make sure that we only output it in exponential format if we can parse
+    // the value back and get the same value.
+    //
+    bool ignored;
+    bool isDouble = &APF.getSemantics() == &APFloat::IEEEdouble();
+    bool isInf = APF.isInfinity();
+    bool isNaN = APF.isNaN();
+
+    if (!isInf && !isNaN) {
+      double Val = APF.convertToDouble();
+      SmallString<128> StrVal;
+      APF.toString(StrVal, 6, 0, false);
+      // Check to make sure that the stringized number is not some string like
+      // "Inf" or NaN, that atof will accept, but the lexer will not.  Check
+      // that the string matches the "[-+]?[0-9]" regex.
+      //
+      assert((isDigit(StrVal[0]) ||
+              ((StrVal[0] == '-' || StrVal[0] == '+') && isDigit(StrVal[1]))) &&
+             "[-+]?[0-9] regex does not match!");
+      // Reparse stringized version!
+      if (APFloat(APFloat::IEEEdouble(), StrVal).convertToDouble() == Val) {
+        Out << StrVal;
+        return;
+      }
+    }
+
+    // Otherwise we could not reparse it to exactly the same value, so we must
+    // output the string in hexadecimal format!  Note that loading and storing
+    // floating point types changes the bits of NaNs on some hosts, notably
+    // x86, so we must not use these types.
+    static_assert(sizeof(double) == sizeof(uint64_t),
+                  "assuming that double is 64 bits!");
+    APFloat apf = APF;
+
+    // Floats are represented in ASCII IR as double, convert.
+    // FIXME: We should allow 32-bit hex float and remove this.
+    if (!isDouble) {
+      // A signaling NaN is quieted on conversion, so we need to recreate the
+      // expected value after convert (quiet bit of the payload is clear).
+      bool IsSNAN = apf.isSignaling();
+      apf.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                  &ignored);
+      if (IsSNAN) {
+        APInt Payload = apf.bitcastToAPInt();
+        apf =
+            APFloat::getSNaN(APFloat::IEEEdouble(), apf.isNegative(), &Payload);
+      }
+    }
+
+    Out << format_hex(apf.bitcastToAPInt().getZExtValue(), 0, /*Upper=*/true);
+    return;
+  }
+
+  // Either half, bfloat or some form of long double.
+  // These appear as a magic letter identifying the type, then a
+  // fixed number of hex digits.
+  Out << "0x";
+  APInt API = APF.bitcastToAPInt();
+  if (&APF.getSemantics() == &APFloat::x87DoubleExtended()) {
+    Out << 'K';
+    Out << format_hex_no_prefix(API.getHiBits(16).getZExtValue(), 4,
+                                /*Upper=*/true);
+    Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::IEEEquad()) {
+    Out << 'L';
+    Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+    Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::PPCDoubleDouble()) {
+    Out << 'M';
+    Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+    Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::IEEEhalf()) {
+    Out << 'H';
+    Out << format_hex_no_prefix(API.getZExtValue(), 4,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::BFloat()) {
+    Out << 'R';
+    Out << format_hex_no_prefix(API.getZExtValue(), 4,
+                                /*Upper=*/true);
+  } else
+    llvm_unreachable("Unsupported floating point type");
+}
+
 static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
                                   AsmWriterContext &WriterCtx) {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {
@@ -1417,94 +1514,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   }
 
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV)) {
-    const APFloat &APF = CFP->getValueAPF();
-    if (&APF.getSemantics() == &APFloat::IEEEsingle() ||
-        &APF.getSemantics() == &APFloat::IEEEdouble()) {
-      // We would like to output the FP constant value in exponential notation,
-      // but we cannot do this if doing so will lose precision.  Check here to
-      // make sure that we only output it in exponential format if we can parse
-      // the value back and get the same value.
-      //
-      bool ignored;
-      bool isDouble = &APF.getSemantics() == &APFloat::IEEEdouble();
-      bool isInf = APF.isInfinity();
-      bool isNaN = APF.isNaN();
-      if (!isInf && !isNaN) {
-        double Val = APF.convertToDouble();
-        SmallString<128> StrVal;
-        APF.toString(StrVal, 6, 0, false);
-        // Check to make sure that the stringized number is not some string like
-        // "Inf" or NaN, that atof will accept, but the lexer will not.  Check
-        // that the string matches the "[-+]?[0-9]" regex.
-        //
-        assert((isDigit(StrVal[0]) || ((StrVal[0] == '-' || StrVal[0] == '+') &&
-                                       isDigit(StrVal[1]))) &&
-               "[-+]?[0-9] regex does not match!");
-        // Reparse stringized version!
-        if (APFloat(APFloat::IEEEdouble(), StrVal).convertToDouble() == Val) {
-          Out << StrVal;
-          return;
-        }
-      }
-      // Otherwise we could not reparse it to exactly the same value, so we must
-      // output the string in hexadecimal format!  Note that loading and storing
-      // floating point types changes the bits of NaNs on some hosts, notably
-      // x86, so we must not use these types.
-      static_assert(sizeof(double) == sizeof(uint64_t),
-                    "assuming that double is 64 bits!");
-      APFloat apf = APF;
-      // Floats are represented in ASCII IR as double, convert.
-      // FIXME: We should allow 32-bit hex float and remove this.
-      if (!isDouble) {
-        // A signaling NaN is quieted on conversion, so we need to recreate the
-        // expected value after convert (quiet bit of the payload is clear).
-        bool IsSNAN = apf.isSignaling();
-        apf.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
-                    &ignored);
-        if (IsSNAN) {
-          APInt Payload = apf.bitcastToAPInt();
-          apf = APFloat::getSNaN(APFloat::IEEEdouble(), apf.isNegative(),
-                                 &Payload);
-        }
-      }
-      Out << format_hex(apf.bitcastToAPInt().getZExtValue(), 0, /*Upper=*/true);
-      return;
-    }
-
-    // Either half, bfloat or some form of long double.
-    // These appear as a magic letter identifying the type, then a
-    // fixed number of hex digits.
-    Out << "0x";
-    APInt API = APF.bitcastToAPInt();
-    if (&APF.getSemantics() == &APFloat::x87DoubleExtended()) {
-      Out << 'K';
-      Out << format_hex_no_prefix(API.getHiBits(16).getZExtValue(), 4,
-                                  /*Upper=*/true);
-      Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-      return;
-    } else if (&APF.getSemantics() == &APFloat::IEEEquad()) {
-      Out << 'L';
-      Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-      Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-    } else if (&APF.getSemantics() == &APFloat::PPCDoubleDouble()) {
-      Out << 'M';
-      Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-      Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-    } else if (&APF.getSemantics() == &APFloat::IEEEhalf()) {
-      Out << 'H';
-      Out << format_hex_no_prefix(API.getZExtValue(), 4,
-                                  /*Upper=*/true);
-    } else if (&APF.getSemantics() == &APFloat::BFloat()) {
-      Out << 'R';
-      Out << format_hex_no_prefix(API.getZExtValue(), 4,
-                                  /*Upper=*/true);
-    } else
-      llvm_unreachable("Unsupported floating point type");
+    WriteAPFloatInternal(Out, CFP->getValueAPF());
     return;
   }
 
@@ -2666,6 +2676,7 @@ public:
   void printInstruction(const Instruction &I);
   void printDPMarker(const DPMarker &DPI);
   void printDPValue(const DPValue &DPI);
+  void printDbgRecord(const DbgRecord &DPI);
 
   void printUseListOrder(const Value *V, const std::vector<unsigned> &Shuffle);
   void printUseLists(const Function *F);
@@ -4091,12 +4102,6 @@ void AssemblyWriter::printInfoComment(const Value &V) {
 
   if (AnnotationWriter) {
     AnnotationWriter->printInfoComment(V, Out);
-  } else if (const Instruction *I = dyn_cast<Instruction>(&V)) {
-    if (I->DbgMarker) {
-      // In the new, experimental DPValue representation of debug-info, print
-      // out which instructions have DPMarkers and where they are.
-      Out << "; dbgmarker @ " << I->DbgMarker;
-    }
   }
 }
 
@@ -4560,8 +4565,8 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
   // There's no formal representation of a DPMarker -- print purely as a
   // debugging aid.
-  for (const DPValue &DPI2 : Marker.StoredDPValues) {
-    printDPValue(DPI2);
+  for (const DbgRecord &DPR : Marker.StoredDPValues) {
+    printDbgRecord(DPR);
     Out << "\n";
   }
 
@@ -4569,6 +4574,13 @@ void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
   printInstruction(*Marker.MarkedInstr);
   Out << " }";
   return;
+}
+
+void AssemblyWriter::printDbgRecord(const DbgRecord &DR) {
+  if (auto *DPV = dyn_cast<DPValue>(&DR))
+    printDPValue(*DPV);
+  else
+    llvm_unreachable("unsupported dbg record");
 }
 
 void AssemblyWriter::printDPValue(const DPValue &Value) {
@@ -4885,8 +4897,9 @@ void DPValue::print(raw_ostream &ROS, ModuleSlotTracker &MST,
     if (F)
       MST.incorporateFunction(*F);
   };
-  incorporateFunction(Marker->getParent() ? Marker->getParent()->getParent()
-                                          : nullptr);
+  incorporateFunction(Marker && Marker->getParent()
+                          ? Marker->getParent()->getParent()
+                          : nullptr);
   AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
   W.printDPValue(*this);
 }
@@ -5142,7 +5155,7 @@ void DPMarker::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'
 
 // Value::dump - allow easy printing of Values from the debugger.
 LLVM_DUMP_METHOD
-void DPValue::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
+void DbgRecord::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
 
 // Type::dump - allow easy printing of Types from the debugger.
 LLVM_DUMP_METHOD

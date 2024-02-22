@@ -1241,11 +1241,17 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
                              It->Expr, Vals.size() > 1, It->DL, SDNodeOrder);
       }
     }
+    // We must early-exit here to prevent any DPValues from being emitted below,
+    // as we have just emitted the debug values resulting from assignment
+    // tracking analysis, making any existing DPValues redundant (and probably
+    // less correct).
+    return;
   }
 
   // Is there is any debug-info attached to this instruction, in the form of
   // DPValue non-instruction debug-info records.
-  for (DPValue &DPV : I.getDbgValueRange()) {
+  for (DbgRecord &DPR : I.getDbgValueRange()) {
+    DPValue &DPV = cast<DPValue>(DPR);
     DILocalVariable *Variable = DPV.getVariable();
     DIExpression *Expression = DPV.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
@@ -1549,6 +1555,11 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
                                            unsigned Order, bool IsVariadic) {
   if (Values.empty())
     return true;
+
+  // Filter EntryValue locations out early.
+  if (visitEntryValueDbgValue(Values, Var, Expr, DbgLoc))
+    return true;
+
   SmallVector<SDDbgOperand> LocationOps;
   SmallVector<SDNode *> Dependencies;
   for (const Value *V : Values) {
@@ -4321,7 +4332,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   Type *Ty = I.getType();
   SmallVector<EVT, 4> ValueVTs, MemVTs;
   SmallVector<TypeSize, 4> Offsets;
-  ComputeValueVTs(TLI, DAG.getDataLayout(), Ty, ValueVTs, &MemVTs, &Offsets, 0);
+  ComputeValueVTs(TLI, DAG.getDataLayout(), Ty, ValueVTs, &MemVTs, &Offsets);
   unsigned NumValues = ValueVTs.size();
   if (NumValues == 0)
     return;
@@ -4489,7 +4500,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   SmallVector<EVT, 4> ValueVTs, MemVTs;
   SmallVector<TypeSize, 4> Offsets;
   ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
-                  SrcV->getType(), ValueVTs, &MemVTs, &Offsets, 0);
+                  SrcV->getType(), ValueVTs, &MemVTs, &Offsets);
   unsigned NumValues = ValueVTs.size();
   if (NumValues == 0)
     return;
@@ -6023,14 +6034,14 @@ static const CallBase *FindPreallocatedCall(const Value *PreallocatedSetup) {
 /// If DI is a debug value with an EntryValue expression, lower it using the
 /// corresponding physical register of the associated Argument value
 /// (guaranteed to exist by the verifier).
-bool SelectionDAGBuilder::visitEntryValueDbgValue(const DbgValueInst &DI) {
-  DILocalVariable *Variable = DI.getVariable();
-  DIExpression *Expr = DI.getExpression();
-  if (!Expr->isEntryValue() || !hasSingleElement(DI.getValues()))
+bool SelectionDAGBuilder::visitEntryValueDbgValue(
+    ArrayRef<const Value *> Values, DILocalVariable *Variable,
+    DIExpression *Expr, DebugLoc DbgLoc) {
+  if (!Expr->isEntryValue() || !hasSingleElement(Values))
     return false;
 
   // These properties are guaranteed by the verifier.
-  Argument *Arg = cast<Argument>(DI.getValue(0));
+  const Argument *Arg = cast<Argument>(Values[0]);
   assert(Arg->hasAttribute(Attribute::AttrKind::SwiftAsync));
 
   auto ArgIt = FuncInfo.ValueMap.find(Arg);
@@ -6044,9 +6055,8 @@ bool SelectionDAGBuilder::visitEntryValueDbgValue(const DbgValueInst &DI) {
 
   for (auto [PhysReg, VirtReg] : FuncInfo.RegInfo->liveins())
     if (ArgVReg == VirtReg || ArgVReg == PhysReg) {
-      SDDbgValue *SDV =
-          DAG.getVRegDbgValue(Variable, Expr, PhysReg, false /*IsIndidrect*/,
-                              DI.getDebugLoc(), SDNodeOrder);
+      SDDbgValue *SDV = DAG.getVRegDbgValue(
+          Variable, Expr, PhysReg, false /*IsIndidrect*/, DbgLoc, SDNodeOrder);
       DAG.AddDbgValue(SDV, false /*treat as dbg.declare byval parameter*/);
       return true;
     }
@@ -6337,9 +6347,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DILocalVariable *Variable = DI.getVariable();
     DIExpression *Expression = DI.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
-
-    if (visitEntryValueDbgValue(DI))
-      return;
 
     if (DI.isKillLocation()) {
       handleKillDebugValue(Variable, Expression, DI.getDebugLoc(), SDNodeOrder);
@@ -6775,6 +6782,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DAG.setRoot(Res.getValue(1));
     return;
   }
+  case Intrinsic::readsteadycounter: {
+    SDValue Op = getRoot();
+    Res = DAG.getNode(ISD::READSTEADYCOUNTER, sdl,
+                      DAG.getVTList(MVT::i64, MVT::Other), Op);
+    setValue(&I, Res);
+    DAG.setRoot(Res.getValue(1));
+    return;
+  }
   case Intrinsic::bitreverse:
     setValue(&I, DAG.getNode(ISD::BITREVERSE, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
@@ -6942,11 +6957,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::stackguard: {
     MachineFunction &MF = DAG.getMachineFunction();
     const Module &M = *MF.getFunction().getParent();
+    EVT PtrTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
     SDValue Chain = getRoot();
     if (TLI.useLoadStackGuardNode()) {
       Res = getLoadStackGuard(DAG, sdl, Chain);
+      Res = DAG.getPtrExtOrTrunc(Res, sdl, PtrTy);
     } else {
-      EVT PtrTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
       const Value *Global = TLI.getSDagStackGuard(M);
       Align Align = DAG.getDataLayout().getPrefTypeAlign(Global->getType());
       Res = DAG.getLoad(PtrTy, sdl, Chain, getValue(Global),

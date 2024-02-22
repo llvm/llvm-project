@@ -72,4 +72,48 @@ LogicalResult verifyOperationHasValidTileId(Operation *op) {
   return success();
 }
 
+scf::ForOp createLoopOverTileSlices(
+    PatternRewriter &rewriter, Location loc, Value initTile,
+    std::function<Value(OpBuilder &, Location, Value, Value)> makeLoopBody) {
+  OpBuilder::InsertionGuard g(rewriter);
+  auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+  auto minTileSlices = rewriter.create<arith::ConstantIndexOp>(
+      loc, llvm::cast<VectorType>(initTile.getType()).getDimSize(0));
+  auto vscale =
+      rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
+  auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  auto numTileSlices =
+      rewriter.create<arith::MulIOp>(loc, minTileSlices, vscale);
+  auto forOp = rewriter.create<scf::ForOp>(loc, lowerBound, numTileSlices, step,
+                                           ValueRange{initTile});
+  rewriter.setInsertionPointToStart(forOp.getBody());
+  Value nextTile =
+      makeLoopBody(rewriter, loc, /*tileSliceIndex=*/forOp.getInductionVar(),
+                   /*currentTile=*/forOp.getRegionIterArg(0));
+  rewriter.create<scf::YieldOp>(loc, nextTile);
+  return forOp;
+}
+
+bool isMultipleOfSMETileVectorType(VectorType vType) {
+  if (vType.getRank() != 2 || !vType.allDimsScalable())
+    return false;
+
+  auto elementType = vType.getElementType();
+  if (!isValidSMETileElementType(elementType))
+    return false;
+
+  unsigned minNumElts = getSMETileSliceMinNumElts(elementType);
+
+  int64_t vectorRows = vType.getDimSize(0);
+  int64_t vectorCols = vType.getDimSize(1);
+
+  return (vectorRows > minNumElts || vectorCols > minNumElts) &&
+         vectorRows % minNumElts == 0 && vectorCols % minNumElts == 0;
+}
+
+VectorType getSMETileTypeForElement(Type elementType) {
+  unsigned minNumElts = getSMETileSliceMinNumElts(elementType);
+  return VectorType::get({minNumElts, minNumElts}, elementType, {true, true});
+}
+
 } // namespace mlir::arm_sme

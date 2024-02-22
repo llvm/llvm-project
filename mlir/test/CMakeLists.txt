@@ -100,6 +100,7 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-quant-test
   mlir-capi-sparse-tensor-test
   mlir-capi-transform-test
+  mlir-capi-transform-interpreter-test
   mlir-capi-translation-test
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
@@ -151,6 +152,10 @@ endif()
 
 if (MLIR_RUN_ARM_SME_TESTS AND NOT ARM_SME_ABI_ROUTINES_SHLIB)
   list(APPEND MLIR_TEST_DEPENDS mlir_arm_sme_abi_stubs)
+endif()
+
+if (MLIR_RUN_ARM_SVE_TESTS OR MLIR_RUN_ARM_SME_TESTS)
+  list(APPEND MLIR_TEST_DEPENDS mlir_arm_runner_utils)
 endif()
 
 list(APPEND MLIR_TEST_DEPENDS MLIRUnitTests)

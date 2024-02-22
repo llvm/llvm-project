@@ -282,6 +282,12 @@ def : Pat<(loongarch_ftint FPR32:$src), (FTINTRZ_W_S FPR32:$src)>;
 // FP reciprocal operation
 def : Pat<(fdiv fpimm1, FPR32:$src), (FRECIP_S $src)>;
 
+let Predicates = [HasFrecipe] in {
+// FP approximate reciprocal operation
+def : Pat<(int_loongarch_frecipe_s FPR32:$src), (FRECIPE_S FPR32:$src)>;
+def : Pat<(int_loongarch_frsqrte_s FPR32:$src), (FRSQRTE_S FPR32:$src)>;
+}
+
 // fmadd.s: fj * fk + fa
 def : Pat<(fma FPR32:$fj, FPR32:$fk, FPR32:$fa), (FMADD_S $fj, $fk, $fa)>;
 

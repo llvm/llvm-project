@@ -942,8 +942,7 @@ define i32 @zexth_i32(i32 %a) nounwind {
 ;
 ; RV64ZBB-LABEL: zexth_i32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    slli a0, a0, 48
-; RV64ZBB-NEXT:    srli a0, a0, 48
+; RV64ZBB-NEXT:    zext.h a0, a0
 ; RV64ZBB-NEXT:    ret
   %and = and i32 %a, 65535
   ret i32 %and

@@ -33,13 +33,13 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -551,12 +551,9 @@ static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
          "A GlobalVariable with size larger than a TOC entry is not currently "
          "supported by the toc data transformation.");
 
-  if (GV->hasLocalLinkage() || GV->hasPrivateLinkage())
-    report_fatal_error("A GlobalVariable with private or local linkage is not "
+  if (GV->hasPrivateLinkage())
+    report_fatal_error("A GlobalVariable with private linkage is not "
                        "currently supported by the toc data transformation.");
-
-  assert(!GV->hasCommonLinkage() &&
-         "Tentative definitions cannot have the mapping class XMC_TD.");
 
   return true;
 }
@@ -1635,7 +1632,8 @@ class BitPermutationSelector {
     default: break;
     case ISD::ROTL:
       if (isa<ConstantSDNode>(V.getOperand(1))) {
-        unsigned RotAmt = V.getConstantOperandVal(1);
+        assert(isPowerOf2_32(NumBits) && "rotl bits should be power of 2!");
+        unsigned RotAmt = V.getConstantOperandVal(1) & (NumBits - 1);
 
         const auto &LHSBits = *getValueBits(V.getOperand(0), NumBits).second;
 
@@ -1648,15 +1646,20 @@ class BitPermutationSelector {
     case ISD::SHL:
     case PPCISD::SHL:
       if (isa<ConstantSDNode>(V.getOperand(1))) {
-        unsigned ShiftAmt = V.getConstantOperandVal(1);
+        // sld takes 7 bits, slw takes 6.
+        unsigned ShiftAmt = V.getConstantOperandVal(1) & ((NumBits << 1) - 1);
 
         const auto &LHSBits = *getValueBits(V.getOperand(0), NumBits).second;
 
-        for (unsigned i = ShiftAmt; i < NumBits; ++i)
-          Bits[i] = LHSBits[i - ShiftAmt];
-
-        for (unsigned i = 0; i < ShiftAmt; ++i)
-          Bits[i] = ValueBit(ValueBit::ConstZero);
+        if (ShiftAmt >= NumBits) {
+          for (unsigned i = 0; i < NumBits; ++i)
+            Bits[i] = ValueBit(ValueBit::ConstZero);
+        } else {
+          for (unsigned i = ShiftAmt; i < NumBits; ++i)
+            Bits[i] = LHSBits[i - ShiftAmt];
+          for (unsigned i = 0; i < ShiftAmt; ++i)
+            Bits[i] = ValueBit(ValueBit::ConstZero);
+        }
 
         return std::make_pair(Interesting = true, &Bits);
       }
@@ -1664,15 +1667,20 @@ class BitPermutationSelector {
     case ISD::SRL:
     case PPCISD::SRL:
       if (isa<ConstantSDNode>(V.getOperand(1))) {
-        unsigned ShiftAmt = V.getConstantOperandVal(1);
+        // srd takes lowest 7 bits, srw takes 6.
+        unsigned ShiftAmt = V.getConstantOperandVal(1) & ((NumBits << 1) - 1);
 
         const auto &LHSBits = *getValueBits(V.getOperand(0), NumBits).second;
 
-        for (unsigned i = 0; i < NumBits - ShiftAmt; ++i)
-          Bits[i] = LHSBits[i + ShiftAmt];
-
-        for (unsigned i = NumBits - ShiftAmt; i < NumBits; ++i)
-          Bits[i] = ValueBit(ValueBit::ConstZero);
+        if (ShiftAmt >= NumBits) {
+          for (unsigned i = 0; i < NumBits; ++i)
+            Bits[i] = ValueBit(ValueBit::ConstZero);
+        } else {
+          for (unsigned i = 0; i < NumBits - ShiftAmt; ++i)
+            Bits[i] = LHSBits[i + ShiftAmt];
+          for (unsigned i = NumBits - ShiftAmt; i < NumBits; ++i)
+            Bits[i] = ValueBit(ValueBit::ConstZero);
+        }
 
         return std::make_pair(Interesting = true, &Bits);
       }
@@ -7565,8 +7573,98 @@ static void reduceVSXSwap(SDNode *N, SelectionDAG *DAG) {
   DAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), N->getOperand(0));
 }
 
+// Is an ADDI eligible for folding for non-TOC-based local-exec accesses?
+static bool isEligibleToFoldADDIForLocalExecAccesses(SelectionDAG *DAG,
+                                                     SDValue ADDIToFold) {
+  // Check if ADDIToFold (the ADDI that we want to fold into local-exec
+  // accesses), is truly an ADDI.
+  if (!ADDIToFold.isMachineOpcode() ||
+      (ADDIToFold.getMachineOpcode() != PPC::ADDI8))
+    return false;
+
+  // The first operand of the ADDIToFold should be the thread pointer.
+  // This transformation is only performed if the first operand of the
+  // addi is the thread pointer.
+  SDValue TPRegNode = ADDIToFold.getOperand(0);
+  RegisterSDNode *TPReg = dyn_cast<RegisterSDNode>(TPRegNode.getNode());
+  const PPCSubtarget &Subtarget =
+      DAG->getMachineFunction().getSubtarget<PPCSubtarget>();
+  if (!TPReg || (TPReg->getReg() != Subtarget.getThreadPointerRegister()))
+    return false;
+
+  // The second operand of the ADDIToFold should be the global TLS address
+  // (the local-exec TLS variable). We only perform the folding if the TLS
+  // variable is the second operand.
+  SDValue TLSVarNode = ADDIToFold.getOperand(1);
+  GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(TLSVarNode);
+  if (!GA)
+    return false;
+
+  // The local-exec TLS variable should only have the MO_TPREL_FLAG target flag,
+  // so this optimization is not performed otherwise if the flag is not set.
+  unsigned TargetFlags = GA->getTargetFlags();
+  if (TargetFlags != PPCII::MO_TPREL_FLAG)
+    return false;
+
+  // If all conditions are satisfied, the ADDI is valid for folding.
+  return true;
+}
+
+// For non-TOC-based local-exec access where an addi is feeding into another
+// addi, fold this sequence into a single addi if possible.
+// Before this optimization, the sequence appears as:
+//    addi rN, r13, sym@le
+//    addi rM, rN, imm
+// After this optimization, we can fold the two addi into a single one:
+//    addi rM, r13, sym@le + imm
+static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
+  if (N->getMachineOpcode() != PPC::ADDI8)
+    return;
+
+  // InitialADDI is the addi feeding into N (also an addi), and the addi that
+  // we want optimized out.
+  SDValue InitialADDI = N->getOperand(0);
+
+  if (!isEligibleToFoldADDIForLocalExecAccesses(DAG, InitialADDI))
+    return;
+
+  // At this point, InitialADDI can be folded into a non-TOC-based local-exec
+  // access. The first operand of InitialADDI should be the thread pointer,
+  // which has been checked in isEligibleToFoldADDIForLocalExecAccesses().
+  SDValue TPRegNode = InitialADDI.getOperand(0);
+  [[maybe_unused]] RegisterSDNode *TPReg = dyn_cast<RegisterSDNode>(TPRegNode.getNode());
+  [[maybe_unused]] const PPCSubtarget &Subtarget =
+      DAG->getMachineFunction().getSubtarget<PPCSubtarget>();
+  assert((TPReg && (TPReg->getReg() == Subtarget.getThreadPointerRegister())) &&
+         "Expecting the first operand to be a thread pointer for folding addi "
+         "in local-exec accesses!");
+
+  // The second operand of the InitialADDI should be the global TLS address
+  // (the local-exec TLS variable), with the MO_TPREL_FLAG target flag.
+  // This has been checked in isEligibleToFoldADDIForLocalExecAccesses().
+  SDValue TLSVarNode = InitialADDI.getOperand(1);
+  GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(TLSVarNode);
+  assert(GA && "Expecting a valid GlobalAddressSDNode when folding addi into "
+               "local-exec accesses!");
+  unsigned TargetFlags = GA->getTargetFlags();
+
+  // The second operand of the addi that we want to preserve will be an
+  // immediate. We add this immediate, together with the address of the TLS
+  // variable found in InitialADDI, in order to preserve the correct TLS address
+  // information during assembly printing. The offset is likely to be non-zero
+  // when we end up in this case.
+  int Offset = N->getConstantOperandVal(1);
+  TLSVarNode = DAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(GA), MVT::i64,
+                                           Offset, TargetFlags);
+
+  (void)DAG->UpdateNodeOperands(N, TPRegNode, TLSVarNode);
+  if (InitialADDI.getNode()->use_empty())
+    DAG->RemoveDeadNode(InitialADDI.getNode());
+}
+
 void PPCDAGToDAGISel::PeepholePPC64() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
+  bool HasAIXSmallLocalExecTLS = Subtarget->hasAIXSmallLocalExecTLS();
 
   while (Position != CurDAG->allnodes_begin()) {
     SDNode *N = &*--Position;
@@ -7576,6 +7674,10 @@ void PPCDAGToDAGISel::PeepholePPC64() {
 
     if (isVSXSwap(SDValue(N, 0)))
       reduceVSXSwap(N, CurDAG);
+
+    // This optimization is performed for non-TOC-based local-exec accesses.
+    if (HasAIXSmallLocalExecTLS)
+      foldADDIForLocalExecAccesses(N, CurDAG);
 
     unsigned FirstOp;
     unsigned StorageOpcode = N->getMachineOpcode();
@@ -7733,7 +7835,19 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         ImmOpnd = CurDAG->getTargetConstant(Offset, SDLoc(ImmOpnd),
                                             ImmOpnd.getValueType());
       } else if (Offset != 0) {
-        continue;
+        // This optimization is performed for non-TOC-based local-exec accesses.
+        if (HasAIXSmallLocalExecTLS &&
+            isEligibleToFoldADDIForLocalExecAccesses(CurDAG, Base)) {
+          // Add the non-zero offset information into the load or store
+          // instruction to be used for non-TOC-based local-exec accesses.
+          GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd);
+          assert(GA && "Expecting a valid GlobalAddressSDNode when folding "
+                       "addi into local-exec accesses!");
+          ImmOpnd = CurDAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(GA),
+                                                   MVT::i64, Offset,
+                                                   GA->getTargetFlags());
+        } else
+          continue;
       }
     }
 

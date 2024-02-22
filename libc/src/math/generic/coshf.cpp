@@ -32,16 +32,16 @@ LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
     }
 
     if (xbits.is_inf_or_nan())
-      return x + FPBits::inf();
+      return x + FPBits::inf().get_val();
 
     int rounding = fputil::quick_get_round();
     if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
-      return FPBits::max_normal();
+      return FPBits::max_normal().get_val();
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);
 
-    return x + FPBits::inf();
+    return x + FPBits::inf().get_val();
   }
 
   // TODO: We should be able to reduce the latency and reciprocal throughput

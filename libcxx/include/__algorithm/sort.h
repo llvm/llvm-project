@@ -39,6 +39,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // stable, 2-3 compares, 0-2 swaps
@@ -325,7 +328,7 @@ __insertion_sort_unguarded(_RandomAccessIterator const __first, _RandomAccessIte
       do {
         *__j = _Ops::__iter_move(__k);
         __j  = __k;
-        _LIBCPP_ASSERT_UNCATEGORIZED(
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
             __k != __leftmost,
             "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
       } while (__comp(__t, *--__k)); // No need for bounds check due to the assumption stated above.
@@ -544,7 +547,7 @@ __bitset_partition(_RandomAccessIterator __first, _RandomAccessIterator __last, 
     // Not guarded since we know the last element is greater than the pivot.
     do {
       ++__first;
-      _LIBCPP_ASSERT_UNCATEGORIZED(
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __first != __end,
           "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
     } while (!__comp(__pivot, *__first));
@@ -557,7 +560,7 @@ __bitset_partition(_RandomAccessIterator __first, _RandomAccessIterator __last, 
     // It will be always guarded because __introsort will do the median-of-three
     // before calling this.
     do {
-      _LIBCPP_ASSERT_UNCATEGORIZED(
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __last != __begin,
           "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
       --__last;
@@ -635,7 +638,7 @@ __partition_with_equals_on_right(_RandomAccessIterator __first, _RandomAccessIte
   // this.
   do {
     ++__first;
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __first != __end,
         "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
   } while (__comp(*__first, __pivot));
@@ -647,7 +650,7 @@ __partition_with_equals_on_right(_RandomAccessIterator __first, _RandomAccessIte
   } else {
     // Guarded.
     do {
-      _LIBCPP_ASSERT_UNCATEGORIZED(
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __last != __begin,
           "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
       --__last;
@@ -665,12 +668,12 @@ __partition_with_equals_on_right(_RandomAccessIterator __first, _RandomAccessIte
     _Ops::iter_swap(__first, __last);
     do {
       ++__first;
-      _LIBCPP_ASSERT_UNCATEGORIZED(
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __first != __end,
           "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
     } while (__comp(*__first, __pivot));
     do {
-      _LIBCPP_ASSERT_UNCATEGORIZED(
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __last != __begin,
           "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
       --__last;
@@ -702,7 +705,7 @@ __partition_with_equals_on_left(_RandomAccessIterator __first, _RandomAccessIter
     // Guarded.
     do {
       ++__first;
-      _LIBCPP_ASSERT_UNCATEGORIZED(
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __first != __end,
           "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
     } while (!__comp(__pivot, *__first));
@@ -715,7 +718,7 @@ __partition_with_equals_on_left(_RandomAccessIterator __first, _RandomAccessIter
     // It will be always guarded because __introsort will do the
     // median-of-three before calling this.
     do {
-      _LIBCPP_ASSERT_UNCATEGORIZED(
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __last != __begin,
           "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
       --__last;
@@ -725,12 +728,12 @@ __partition_with_equals_on_left(_RandomAccessIterator __first, _RandomAccessIter
     _Ops::iter_swap(__first, __last);
     do {
       ++__first;
-      _LIBCPP_ASSERT_UNCATEGORIZED(
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __first != __end,
           "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
     } while (!__comp(__pivot, *__first));
     do {
-      _LIBCPP_ASSERT_UNCATEGORIZED(
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __last != __begin,
           "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
       --__last;
@@ -1008,5 +1011,7 @@ sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_SORT_H

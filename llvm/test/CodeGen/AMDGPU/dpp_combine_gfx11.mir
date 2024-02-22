@@ -83,7 +83,8 @@ body:             |
 # Regression test for src_modifiers on base u16 opcode
 # GCN-label: name: vop3_u16
 # GCN: %5:vgpr_32 = V_ADD_NC_U16_e64_dpp %3, 0, %1, 0, %3, 0, 0, 1, 15, 15, 1, implicit $exec
-# GCN: %7:vgpr_32 = V_ADD_NC_U16_e64_dpp %3, 4, %5, 8, %5, 0, 0, 1, 15, 15, 1, implicit $exec
+# GCN: %7:vgpr_32 = V_ADD_NC_U16_e64_dpp %3, 1, %5, 2, %5, 0, 0, 1, 15, 15, 1, implicit $exec
+# GCN: %9:vgpr_32 = V_ADD_NC_U16_e64 4, %8, 8, %7, 0, 0, implicit $exec
 name: vop3_u16
 tracksRegLiveness: true
 body:             |
@@ -97,7 +98,9 @@ body:             |
     %4:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
     %5:vgpr_32 = V_ADD_NC_U16_e64 0, %4, 0, %3, 0, 0, implicit $exec
     %6:vgpr_32 = V_MOV_B32_dpp %3, %5, 1, 15, 15, 1, implicit $exec
-    %7:vgpr_32 = V_ADD_NC_U16_e64 4, %6, 8, %5, 0, 0, implicit $exec
+    %7:vgpr_32 = V_ADD_NC_U16_e64 1, %6, 2, %5, 0, 0, implicit $exec
+    %8:vgpr_32 = V_MOV_B32_dpp %3, %7, 1, 15, 15, 1, implicit $exec
+    %9:vgpr_32 = V_ADD_NC_U16_e64 4, %8, 8, %7, 0, 0, implicit $exec
 ...
 
 name: vop3p
@@ -116,7 +119,7 @@ body:             |
     ; GCN: [[V_DOT2_F32_F16_:%[0-9]+]]:vgpr_32 = V_DOT2_F32_F16 0, [[V_MOV_B32_dpp]], 0, [[COPY]], 0, [[COPY2]], 0, 5, 0, 0, 0, implicit $mode, implicit $exec
     ; GCN: [[V_MOV_B32_dpp1:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[DEF]], [[COPY1]], 1, 15, 15, 1, implicit $exec
     ; GCN: [[V_DOT2_F32_F16_1:%[0-9]+]]:vgpr_32 = V_DOT2_F32_F16 0, [[V_MOV_B32_dpp1]], 0, [[COPY]], 0, [[COPY2]], 0, 0, 4, 0, 0, implicit $mode, implicit $exec
-    ; GCN: [[V_DOT2_F32_F16_dpp:%[0-9]+]]:vgpr_32 = V_DOT2_F32_F16_dpp [[DEF]], 10, [[COPY1]], 8, [[COPY]], 13, [[COPY2]], 1, 0, 7, 4, 5, 1, 15, 15, 1, implicit $mode, implicit $exec
+    ; GCN: [[V_DOT2_F32_F16_dpp:%[0-9]+]]:vgpr_32 = V_DOT2_F32_F16_dpp [[DEF]], 10, [[COPY1]], 8, [[COPY]], 9, [[COPY2]], 1, 0, 7, 4, 5, 1, 15, 15, 1, implicit $mode, implicit $exec
     ; GCN: [[V_FMA_MIX_F32_dpp:%[0-9]+]]:vgpr_32 = V_FMA_MIX_F32_dpp [[DEF]], 8, [[COPY1]], 8, [[COPY]], 8, [[COPY2]], 1, 0, 7, 1, 15, 15, 1, implicit $mode, implicit $exec
     ; GCN: [[V_FMA_MIXLO_F16_dpp:%[0-9]+]]:vgpr_32 = V_FMA_MIXLO_F16_dpp [[DEF]], 8, [[COPY1]], 8, [[COPY]], 8, [[COPY2]], 0, [[COPY2]], 0, 7, 1, 15, 15, 1, implicit $mode, implicit $exec
     ; GCN: [[V_FMA_MIXHI_F16_dpp:%[0-9]+]]:vgpr_32 = V_FMA_MIXHI_F16_dpp [[DEF]], 8, [[COPY1]], 8, [[COPY]], 8, [[COPY2]], 1, [[COPY]], 0, 7, 1, 15, 15, 1, implicit $mode, implicit $exec
@@ -134,7 +137,7 @@ body:             |
     %7:vgpr_32 = V_DOT2_F32_F16 0, %6, 0, %0, 0, %2, 0, 0, 4, 0, 0, implicit $mode, implicit $exec
 
     %8:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
-    %9:vgpr_32 = V_DOT2_F32_F16 10, %8, 8, %0, 13, %2, 1, 0, 7, 4, 5, implicit $mode, implicit $exec
+    %9:vgpr_32 = V_DOT2_F32_F16 10, %8, 8, %0, 9, %2, 1, 0, 7, 4, 5, implicit $mode, implicit $exec
 
     %10:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
     %11:vgpr_32 = V_FMA_MIX_F32 8, %10, 8, %0, 8, %2, 1, 0, 7, implicit $mode, implicit $exec
@@ -870,4 +873,77 @@ body: |
     %4:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %3, %subreg.sub1
     %5:vgpr_32 = V_ADD_U32_e32 %4.sub0, %4.sub0, implicit $exec
     %6:vgpr_32 = V_ADDC_U32_e32 %4.sub1, %4.sub1, implicit-def $vcc, implicit $vcc, implicit $exec
+...
+
+# Check op_sel is all 0s when combining
+# GCN-LABEL: name: opsel_vop3
+# GCN: %4:vgpr_32 = V_ADD_I16_e64_dpp %2, 0, %0, 0, %1, 0, 0, 1, 15, 15, 1, implicit $exec
+# GCN: %6:vgpr_32 = V_ADD_I16_e64 4, %5, 0, %1, 0, 0, implicit $exec
+# GCN: %8:vgpr_32 = V_ADD_I16_e64 0, %7, 4, %1, 0, 0, implicit $exec
+# GCN: %10:vgpr_32 = V_ADD_I16_e64 4, %9, 4, %1, 0, 0, implicit $exec
+# GCN: %12:vgpr_32 = V_ADD_I16_e64 8, %11, 0, %1, 0, 0, implicit $exec
+name:            opsel_vop3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:vgpr_32 = IMPLICIT_DEF
+
+    ; Combine for op_sel:[0,0,0]
+    %3:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
+    %4:vgpr_32 = V_ADD_I16_e64 0, %3, 0, %1, 0, 0, implicit $exec
+
+    ; Do not combine for op_sel:[1,0,0]
+    %5:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
+    %6:vgpr_32 = V_ADD_I16_e64 4, %5, 0, %1, 0, 0, implicit $exec
+
+    ; Do not combine for op_sel:[0,1,0]
+    %7:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
+    %8:vgpr_32 = V_ADD_I16_e64 0, %7, 4, %1, 0, 0, implicit $exec
+
+    ; Do not combine for op_sel:[1,1,0]
+    %9:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
+    %10:vgpr_32 = V_ADD_I16_e64 4, %9, 4, %1, 0, 0, implicit $exec
+
+    ; Do not combine for op_sel:[0,0,1] (dst_op_sel only)
+    %11:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
+    %12:vgpr_32 = V_ADD_I16_e64 8, %11, 0, %1, 0, 0, implicit $exec
+...
+
+# Check op_sel is all 0s and op_sel_hi is all 1s when combining
+# GCN-LABEL: name: opsel_vop3p
+# GCN: %5:vgpr_32 = V_FMA_MIX_F32 0, %4, 0, %1, 0, %2, 0, 0, 0, implicit $mode, implicit $exec
+# GCN: %7:vgpr_32 = V_FMA_MIX_F32 4, %6, 4, %1, 4, %2, 0, 0, 0, implicit $mode, implicit $exec
+# GCN: %9:vgpr_32 = V_FMA_MIX_F32_dpp %3, 8, %0, 8, %1, 8, %2, 0, 0, 7, 1, 15, 15, 1, implicit $mode, implicit $exec
+# GCN: %11:vgpr_32 = V_FMA_MIX_F32 12, %10, 12, %1, 12, %2, 0, 0, 0, implicit $mode, implicit $exec
+
+name: opsel_vop3p
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:vgpr_32 = COPY $vgpr2
+    %3:vgpr_32 = IMPLICIT_DEF
+
+    ; Do not combine for op_sel:[0,0,0] op_sel_hi:[0,0,0]
+    %4:vgpr_32 = V_MOV_B32_dpp %3, %0, 1, 15, 15, 1, implicit $exec
+    %5:vgpr_32 = V_FMA_MIX_F32 0, %4, 0, %1, 0, %2, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; Do not combine for op_sel:[1,1,1] op_sel_hi:[0,0,0]
+    %6:vgpr_32 = V_MOV_B32_dpp %3, %0, 1, 15, 15, 1, implicit $exec
+    %7:vgpr_32 = V_FMA_MIX_F32 4, %6, 4, %1, 4, %2, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; Combine for op_sel:[0,0,0] op_sel_hi:[1,1,1]
+    %8:vgpr_32 = V_MOV_B32_dpp %3, %0, 1, 15, 15, 1, implicit $exec
+    %9:vgpr_32 = V_FMA_MIX_F32 8, %8, 8, %1, 8, %2, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; Do not combine for op_sel:[1,1,1] op_sel_hi:[1,1,1]
+    %10:vgpr_32 = V_MOV_B32_dpp %3, %0, 1, 15, 15, 1, implicit $exec
+    %11:vgpr_32 = V_FMA_MIX_F32 12, %10, 12, %1, 12, %2, 0, 0, 0, implicit $mode, implicit $exec
 ...

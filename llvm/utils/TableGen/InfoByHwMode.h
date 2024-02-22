@@ -17,7 +17,7 @@
 #include "CodeGenHwModes.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <limits>
@@ -40,8 +40,7 @@ enum : unsigned {
 };
 
 template <typename InfoT>
-void union_modes(const InfoByHwMode<InfoT> &A,
-                 const InfoByHwMode<InfoT> &B,
+void union_modes(const InfoByHwMode<InfoT> &A, const InfoByHwMode<InfoT> &B,
                  SmallVectorImpl<unsigned> &Modes) {
   auto AI = A.begin();
   auto BI = B.begin();
@@ -85,9 +84,8 @@ void union_modes(const InfoByHwMode<InfoT> &A,
     Modes.push_back(DefaultMode);
 }
 
-template <typename InfoT>
-struct InfoByHwMode {
-  typedef std::map<unsigned,InfoT> MapType;
+template <typename InfoT> struct InfoByHwMode {
+  typedef std::map<unsigned, InfoT> MapType;
   typedef typename MapType::value_type PairType;
   typedef typename MapType::iterator iterator;
   typedef typename MapType::const_iterator const_iterator;
@@ -98,11 +96,11 @@ struct InfoByHwMode {
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   iterator begin() { return Map.begin(); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  iterator end()   { return Map.end(); }
+  iterator end() { return Map.end(); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   const_iterator begin() const { return Map.begin(); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  const_iterator end() const   { return Map.end(); }
+  const_iterator end() const { return Map.end(); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool empty() const { return Map.empty(); }
 
@@ -146,7 +144,7 @@ struct InfoByHwMode {
     assert(hasMode(Mode) || hasDefault());
     InfoT I = get(Mode);
     Map.clear();
-    Map.insert(std::make_pair(DefaultMode, I));
+    Map.insert(std::pair(DefaultMode, I));
   }
 
 protected:
@@ -156,15 +154,13 @@ protected:
 struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
   ValueTypeByHwMode(Record *R, const CodeGenHwModes &CGH);
   ValueTypeByHwMode(Record *R, MVT T);
-  ValueTypeByHwMode(MVT T) { Map.insert({DefaultMode,T}); }
+  ValueTypeByHwMode(MVT T) { Map.insert({DefaultMode, T}); }
   ValueTypeByHwMode() = default;
 
-  bool operator== (const ValueTypeByHwMode &T) const;
-  bool operator< (const ValueTypeByHwMode &T) const;
+  bool operator==(const ValueTypeByHwMode &T) const;
+  bool operator<(const ValueTypeByHwMode &T) const;
 
-  bool isValid() const {
-    return !Map.empty();
-  }
+  bool isValid() const { return !Map.empty(); }
   MVT getType(unsigned Mode) const { return get(Mode); }
   MVT &getOrCreateTypeForMode(unsigned Mode, MVT Type);
 
@@ -178,8 +174,7 @@ struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
   }
 };
 
-ValueTypeByHwMode getValueTypeByHwMode(Record *Rec,
-                                       const CodeGenHwModes &CGH);
+ValueTypeByHwMode getValueTypeByHwMode(Record *Rec, const CodeGenHwModes &CGH);
 
 struct RegSizeInfo {
   unsigned RegSize;
@@ -188,14 +183,12 @@ struct RegSizeInfo {
 
   RegSizeInfo(Record *R, const CodeGenHwModes &CGH);
   RegSizeInfo() = default;
-  bool operator< (const RegSizeInfo &I) const;
-  bool operator== (const RegSizeInfo &I) const {
+  bool operator<(const RegSizeInfo &I) const;
+  bool operator==(const RegSizeInfo &I) const {
     return std::tie(RegSize, SpillSize, SpillAlignment) ==
            std::tie(I.RegSize, I.SpillSize, I.SpillAlignment);
   }
-  bool operator!= (const RegSizeInfo &I) const {
-    return !(*this == I);
-  }
+  bool operator!=(const RegSizeInfo &I) const { return !(*this == I); }
 
   bool isSubClassOf(const RegSizeInfo &I) const;
   void writeToStream(raw_ostream &OS) const;
@@ -204,9 +197,9 @@ struct RegSizeInfo {
 struct RegSizeInfoByHwMode : public InfoByHwMode<RegSizeInfo> {
   RegSizeInfoByHwMode(Record *R, const CodeGenHwModes &CGH);
   RegSizeInfoByHwMode() = default;
-  bool operator< (const RegSizeInfoByHwMode &VI) const;
-  bool operator== (const RegSizeInfoByHwMode &VI) const;
-  bool operator!= (const RegSizeInfoByHwMode &VI) const {
+  bool operator<(const RegSizeInfoByHwMode &VI) const;
+  bool operator==(const RegSizeInfoByHwMode &VI) const;
+  bool operator!=(const RegSizeInfoByHwMode &VI) const {
     return !(*this == VI);
   }
 
@@ -216,7 +209,7 @@ struct RegSizeInfoByHwMode : public InfoByHwMode<RegSizeInfo> {
   void writeToStream(raw_ostream &OS) const;
 
   void insertRegSizeForMode(unsigned Mode, RegSizeInfo Info) {
-    Map.insert(std::make_pair(Mode, Info));
+    Map.insert(std::pair(Mode, Info));
   }
 };
 
@@ -224,7 +217,7 @@ raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T);
 raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T);
 raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T);
 
-struct EncodingInfoByHwMode : public InfoByHwMode<Record*> {
+struct EncodingInfoByHwMode : public InfoByHwMode<Record *> {
   EncodingInfoByHwMode(Record *R, const CodeGenHwModes &CGH);
   EncodingInfoByHwMode() = default;
 };

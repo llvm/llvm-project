@@ -1,4 +1,5 @@
 ; RUN: llvm-link -S %s | FileCheck %s
+; RUN: llvm-link -S %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; Test that when a debug metadata use-before-def is run through llvm-link, the
 ; value reference is preserved. Tests both singular uses and DIArgList uses of
