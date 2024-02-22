@@ -716,10 +716,10 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
             })) {
           ColdBlocks.insert(SubRegion.begin(), SubRegion.end());
 
-          for (auto *Block : SubRegion) {
-            LLVM_DEBUG(dbgs()
-                       << "  contains cold block:" << Block->getName() << "\n");
-          }
+          LLVM_DEBUG({
+            for (auto *Block : SubRegion)
+              dbgs() << "  contains cold block:" << Block->getName() << "\n";
+          });
 
           OutliningWorklist.emplace_back(
               std::make_pair(SubRegion[0], std::move(CE)));
@@ -748,6 +748,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
     Function *Outlined =
         extractColdRegion(*BCE.first, BCE.second, CEAC, BFI, TTI, ORE);
     assert(Outlined && "Should be outlined");
+    (void)Outlined;
   }
 
   return true;
