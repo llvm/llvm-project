@@ -18,18 +18,27 @@ using namespace mlir::dataflow;
 
 namespace {
 
-/// This lattice represents, for a given value, the set of memory resources that
-/// this value, or anything derived from this value, is potentially written to.
-struct WrittenTo : public AbstractSparseLattice {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(WrittenTo)
-  using AbstractSparseLattice::AbstractSparseLattice;
-
-  void print(raw_ostream &os) const override {
-    os << "[";
-    llvm::interleave(
-        writes, os, [&](const StringAttr &a) { os << a.str(); }, " ");
-    os << "]";
+/// Lattice value storing the a set of memory resources that something
+/// is written to.
+struct WrittenToLatticeValue {
+  bool operator==(const WrittenToLatticeValue &other) {
+    return this->writes == other.writes;
   }
+
+  static WrittenToLatticeValue meet(const WrittenToLatticeValue &lhs,
+                                    const WrittenToLatticeValue &rhs) {
+    WrittenToLatticeValue res = lhs;
+    (void)res.addWrites(rhs.writes);
+
+    return res;
+  }
+
+  static WrittenToLatticeValue join(const WrittenToLatticeValue &lhs,
+                                    const WrittenToLatticeValue &rhs) {
+    // Should not be triggered by this test, but required by `Lattice<T>`
+    llvm_unreachable("Join should not be triggered by this test");
+  }
+
   ChangeResult addWrites(const SetVector<StringAttr> &writes) {
     int sizeBefore = this->writes.size();
     this->writes.insert(writes.begin(), writes.end());
@@ -37,12 +46,24 @@ struct WrittenTo : public AbstractSparseLattice {
     return sizeBefore == sizeAfter ? ChangeResult::NoChange
                                    : ChangeResult::Change;
   }
-  ChangeResult meet(const AbstractSparseLattice &other) override {
-    const auto *rhs = reinterpret_cast<const WrittenTo *>(&other);
-    return addWrites(rhs->writes);
+
+  void print(raw_ostream &os) const {
+    os << "[";
+    llvm::interleave(
+        writes, os, [&](const StringAttr &a) { os << a.str(); }, " ");
+    os << "]";
   }
 
+  void clear() { writes.clear(); }
+
   SetVector<StringAttr> writes;
+};
+
+/// This lattice represents, for a given value, the set of memory resources that
+/// this value, or anything derived from this value, is potentially written to.
+struct WrittenTo : public Lattice<WrittenToLatticeValue> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(WrittenTo)
+  using Lattice::Lattice;
 };
 
 /// An analysis that, by going backwards along the dataflow graph, annotates
@@ -65,7 +86,9 @@ public:
   void visitExternalCall(CallOpInterface call, ArrayRef<WrittenTo *> operands,
                          ArrayRef<const WrittenTo *> results) override;
 
-  void setToExitState(WrittenTo *lattice) override { lattice->writes.clear(); }
+  void setToExitState(WrittenTo *lattice) override {
+    lattice->getValue().clear();
+  }
 
 private:
   bool assumeFuncWrites;
@@ -77,7 +100,8 @@ void WrittenToAnalysis::visitOperation(Operation *op,
   if (auto store = dyn_cast<memref::StoreOp>(op)) {
     SetVector<StringAttr> newWrites;
     newWrites.insert(op->getAttrOfType<StringAttr>("tag_name"));
-    propagateIfChanged(operands[0], operands[0]->addWrites(newWrites));
+    propagateIfChanged(operands[0],
+                       operands[0]->getValue().addWrites(newWrites));
     return;
   } // By default, every result of an op depends on every operand.
   for (const WrittenTo *r : results) {
@@ -95,7 +119,7 @@ void WrittenToAnalysis::visitBranchOperand(OpOperand &operand) {
   newWrites.insert(
       StringAttr::get(operand.getOwner()->getContext(),
                       "brancharg" + Twine(operand.getOperandNumber())));
-  propagateIfChanged(lattice, lattice->addWrites(newWrites));
+  propagateIfChanged(lattice, lattice->getValue().addWrites(newWrites));
 }
 
 void WrittenToAnalysis::visitCallOperand(OpOperand &operand) {
@@ -105,7 +129,7 @@ void WrittenToAnalysis::visitCallOperand(OpOperand &operand) {
   newWrites.insert(
       StringAttr::get(operand.getOwner()->getContext(),
                       "callarg" + Twine(operand.getOperandNumber())));
-  propagateIfChanged(lattice, lattice->addWrites(newWrites));
+  propagateIfChanged(lattice, lattice->getValue().addWrites(newWrites));
 }
 
 void WrittenToAnalysis::visitExternalCall(CallOpInterface call,
@@ -124,7 +148,7 @@ void WrittenToAnalysis::visitExternalCall(CallOpInterface call,
                              call.getOperation()->getName().getStringRef());
     }
     newWrites.insert(name);
-    propagateIfChanged(lattice, lattice->addWrites(newWrites));
+    propagateIfChanged(lattice, lattice->getValue().addWrites(newWrites));
   }
 }
 
