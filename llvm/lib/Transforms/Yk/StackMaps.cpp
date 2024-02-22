@@ -60,9 +60,7 @@ public:
             // We don't need to insert stackmaps after intrinsics. But since we
             // can't tell if an indirect call is an intrinsic at compile time,
             // emit a stackmap in those cases too.
-            if (!CI.isIndirectCall() &&
-                (CI.getCalledFunction()->isIntrinsic() ||
-                 CI.getCalledFunction()->isDeclaration()))
+            if (!CI.isIndirectCall() && CI.getCalledFunction()->isIntrinsic())
               continue;
             SMCalls.insert({&I, LA.getLiveVarsBefore(&I)});
           } else if ((isa<BranchInst>(I) &&

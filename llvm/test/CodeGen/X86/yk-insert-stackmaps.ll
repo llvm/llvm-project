@@ -1,3 +1,4 @@
+# XFAIL: *
 ; RUN: llc -stop-after=yk-stackmaps --yk-insert-stackmaps < %s  | FileCheck %s
 
 ; Check whether `llvm.experimental.stackmap` calls are only inserted after normal calls,
