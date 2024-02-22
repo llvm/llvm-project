@@ -47,6 +47,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -59,6 +60,7 @@
 #include <cmath>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -3204,25 +3206,17 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
           Value *srcValue = Constant::getNullValue(PointerType::get(
               EltVT.getTypeForEVT(F->getContext()), ADDRESS_SPACE_PARAM));
 
-          MaybeAlign PartAlign;
-          if (NumElts == 1) {
-            if (aggregateIsPacked) {
-              PartAlign = Align(1);
-            } else if (Offsets[parti] == 0) {
-              if (MaybeAlign ParamAlign = PAL.getParamAlignment(i)) {
-                PartAlign = ParamAlign.value();
-              } else {
-                PartAlign =
-                    DL.getABITypeAlign(EltVT.getTypeForEVT(F->getContext()));
-              }
-            } else {
-              PartAlign =
-                  DL.getABITypeAlign(EltVT.getTypeForEVT(F->getContext()));
-            }
-            PartAlign = commonAlignment(PartAlign.valueOrOne(), Offsets[parti]);
-          } else {
-            PartAlign = MaybeAlign(aggregateIsPacked);
-          }
+          const MaybeAlign PartAlign = [&]() -> MaybeAlign {
+            if (aggregateIsPacked)
+              return Align(1);
+            if (NumElts != 1)
+              return std::nullopt;
+            Align PartAlign =
+                (Offsets[parti] == 0 && PAL.getParamAlignment(i))
+                    ? PAL.getParamAlignment(i).value()
+                    : DL.getABITypeAlign(EltVT.getTypeForEVT(F->getContext()));
+            return commonAlignment(PartAlign, Offsets[parti]);
+          }();
           SDValue P = DAG.getLoad(VecVT, dl, Root, VecAddr,
                                   MachinePointerInfo(srcValue), PartAlign,
                                   MachineMemOperand::MODereferenceable |
