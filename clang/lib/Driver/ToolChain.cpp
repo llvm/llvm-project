@@ -538,7 +538,6 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::PrecompileJobClass:
   case Action::PreprocessJobClass:
   case Action::ExtractAPIJobClass:
-  case Action::InstallAPIJobClass:
   case Action::AnalyzeJobClass:
   case Action::MigrateJobClass:
   case Action::VerifyPCHJobClass:

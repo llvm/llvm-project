@@ -7,7 +7,6 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 // CHECK: @_ods_cext.register_dialect
 // CHECK: class _Dialect(_ods_ir.Dialect):
   // CHECK: DIALECT_NAMESPACE = "test"
-  // CHECK: pass
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "Test";

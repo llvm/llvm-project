@@ -387,10 +387,3 @@ int main()
 // CHECK-NEXT:    store i32 [[ADD]], ptr [[TMP7]], align 4
 // CHECK-NEXT:    ret void
 //
-//
-// CHECK-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK-SAME: () #[[ATTR5:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK-NEXT:    ret void
-//

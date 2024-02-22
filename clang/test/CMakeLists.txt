@@ -70,6 +70,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-rename
   clang-refactor
   clang-diff
+  clang-installapi
   clang-scan-deps
   clang-linker-wrapper
   clang-offload-bundler
