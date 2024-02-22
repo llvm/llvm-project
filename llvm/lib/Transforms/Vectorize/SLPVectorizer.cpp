@@ -7186,7 +7186,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           if (VectorizedLoads.contains(VL[I]))
             continue;
           GatherCost += getBuildVectorCost(
-              VL.slice(I, std::min(VL.size() - I, size_t(VF))), Root);
+              VL.slice(I, std::min<unsigned>(VL.size() - I, VF)), Root);
         }
         // Exclude potentially vectorized loads from list of gathered
         // scalars.
@@ -10790,6 +10790,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
     }
     return true;
   };
+  BVTy ShuffleBuilder(Params...);
   ResTy Res = ResTy();
   SmallVector<int> Mask;
   SmallVector<int> ExtractMask(GatheredScalars.size(), PoisonMaskElem);
