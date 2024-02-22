@@ -117,9 +117,10 @@ public:
     return simplifyCastInst(Op, V, DestTy, SQ);
   }
 
-  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS,
-                             Type *Ty) const override {
-    return simplifyBinaryIntrinsic(ID, Ty, LHS, RHS, SQ, nullptr);
+  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
+                             Instruction *FMFSource = nullptr) const override {
+    return simplifyBinaryIntrinsic(ID, Ty, LHS, RHS, SQ,
+                                   dyn_cast_if_present<CallBase>(FMFSource));
   }
 
   //===--------------------------------------------------------------------===//

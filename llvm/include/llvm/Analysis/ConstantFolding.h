@@ -192,7 +192,8 @@ Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                            const TargetLibraryInfo *TLI = nullptr);
 
 Constant *ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
-                                      Constant *RHS, Type *Ty);
+                                      Constant *RHS, Type *Ty,
+                                      Instruction *FMFSource);
 
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to

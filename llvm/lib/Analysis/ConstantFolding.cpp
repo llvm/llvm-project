@@ -3393,8 +3393,10 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 } // end anonymous namespace
 
 Constant *llvm::ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
-                                            Constant *RHS, Type *Ty) {
-  return ConstantFoldIntrinsicCall2(ID, Ty, {LHS, RHS}, nullptr);
+                                            Constant *RHS, Type *Ty,
+                                            Instruction *FMFSource) {
+  return ConstantFoldIntrinsicCall2(ID, Ty, {LHS, RHS},
+                                    dyn_cast_if_present<CallBase>(FMFSource));
 }
 
 Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
