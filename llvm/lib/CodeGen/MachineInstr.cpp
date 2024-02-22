@@ -1013,6 +1013,8 @@ bool MachineInstr::hasRegisterImplicitUseOperand(Register Reg) const {
 /// the search criteria to a use that kills the register if isKill is true.
 int MachineInstr::findRegisterUseOperandIdx(
     Register Reg, bool isKill, const TargetRegisterInfo *TRI) const {
+  if (!TRI)
+    TRI = getParent() ? getMF()->getSubtarget().getRegisterInfo() : nullptr;
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = getOperand(i);
     if (!MO.isReg() || !MO.isUse())
@@ -1063,6 +1065,8 @@ int
 MachineInstr::findRegisterDefOperandIdx(Register Reg, bool isDead, bool Overlap,
                                         const TargetRegisterInfo *TRI) const {
   bool isPhys = Reg.isPhysical();
+  if (!TRI)
+    TRI = getParent() ? getMF()->getSubtarget().getRegisterInfo() : nullptr;
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = getOperand(i);
     // Accept regmask operands when Overlap is set.
