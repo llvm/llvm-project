@@ -7939,7 +7939,7 @@ ParseStatus AArch64AsmParser::tryParseSVEPattern(OperandVector &Operands) {
 
     auto *MCE = dyn_cast<MCConstantExpr>(ImmVal);
     if (!MCE)
-      return ParseStatus::Failure;
+      return TokError("expected immediate operand");
 
     Pattern = MCE->getValue();
   } else {
