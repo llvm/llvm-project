@@ -113,7 +113,7 @@ public:
   // ObjectStore interfaces.
   Expected<CASID> parseID(StringRef ID) final;
   Expected<ObjectRef> store(ArrayRef<ObjectRef> Refs,
-                            ArrayRef<char> Data) final;
+                               ArrayRef<char> Data) final;
   CASID getID(ObjectRef Ref) const final;
   std::optional<ObjectRef> getReference(const CASID &ID) const final;
   Expected<bool> isMaterialized(ObjectRef Ref) const final;
