@@ -1,5 +1,5 @@
 // DEFINE: %{entry_point} = entry
-// DEFINE: %{compile} = mlir-opt %s -test-lower-to-arm-sme
+// DEFINE: %{compile} = mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:   -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:   -e %{entry_point} -entry-point-result=void \

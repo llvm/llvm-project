@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   -test-lower-to-arm-sme -verify-diagnostics | \
+// RUN:   -test-lower-to-arm-sme -test-lower-to-llvm -verify-diagnostics | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \

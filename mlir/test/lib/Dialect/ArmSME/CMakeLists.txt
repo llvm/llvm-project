@@ -5,23 +5,12 @@ add_mlir_library(MLIRArmSMETestPasses
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
-  MLIRAffineToStandard
   MLIRArithToArmSME
   MLIRArmSMEToLLVM
   MLIRArmSMEToSCF
-  MLIRFuncDialect
-  MLIRFuncToLLVM
   MLIRIR
-  MLIRIndexToLLVM
-  MLIRLLVMDialect
-  MLIRLinalgTransforms
-  MLIRMathToLLVM
-  MLIRMemRefToLLVM
-  MLIRMemRefTransforms
   MLIRPass
-  MLIRReconcileUnrealizedCasts
-  MLIRSCFToControlFlow
   MLIRTransforms
-  MLIRVectorToLLVMPass
+  MLIRVectorToArmSME
   MLIRVectorToSCF
   )

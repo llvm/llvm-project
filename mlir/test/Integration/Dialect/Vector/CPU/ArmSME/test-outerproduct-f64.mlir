@@ -1,5 +1,6 @@
 // DEFINE: %{entry_point} = test_outerproduct_no_accumulator_2x2xf64
-// DEFINE: %{compile} = mlir-opt %s -test-lower-to-arm-sme -o %t
+// DEFINE: %{compile} = mlir-opt %s \
+// DEFINE:   -test-lower-to-arm-sme -test-lower-to-llvm -o %t
 // DEFINE: %{run} = %mcr_aarch64_cmd %t \
 // DEFINE:   -march=aarch64 -mattr=+sve,+sme-f64f64 \
 // DEFINE:   -e %{entry_point} -entry-point-result=void \

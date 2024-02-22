@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-lower-to-arm-sme | \
+// RUN: mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:  -march=aarch64 -mattr=+sve,+sme \
 // RUN:  -e entry -entry-point-result=i32 \

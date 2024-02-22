@@ -1,6 +1,7 @@
 // DEFINE: %{opts} =
 // DEFINE: %{entry} = main
-// DEFINE: %{compile} = mlir-opt %s -test-lower-to-arm-sme=%{opts} -o %t
+// DEFINE: %{compile} = mlir-opt %s \
+// DEFINE:   -test-lower-to-arm-sme=%{opts} -test-lower-to-llvm -o %t
 // DEFINE: %{run} = %mcr_aarch64_cmd %t \
 // DEFINE:   -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:   -e %{entry} -entry-point-result=void \

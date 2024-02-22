@@ -1,6 +1,8 @@
 // RUN: mlir-opt %s \
 // RUN:   -transform-interpreter -test-transform-dialect-erase-schedule \
-// RUN:   -test-lower-to-arm-sme | \
+// RUN:   -lower-vector-mask \
+// RUN:   -one-shot-bufferize="bufferize-function-boundaries" \
+// RUN:   -test-lower-to-arm-sme -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=entry -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
