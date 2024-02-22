@@ -190,6 +190,17 @@ static bool isCapturedByReference(ExplodedNode *N, const DeclRefExpr *DR) {
   return FD->getType()->isReferenceType();
 }
 
+static bool isFoundInStmt(const Stmt *S, const VarDecl *VD) {
+  if (const DeclStmt *DS = dyn_cast<DeclStmt>(S)) {
+    for (const Decl *D : DS->decls()) {
+      // Once we reach the declaration of the VD we can return.
+      if (D->getCanonicalDecl() == VD)
+        return true;
+    }
+  }
+  return false;
+}
+
 // A loop counter is considered escaped if:
 // case 1: It is a global variable.
 // case 2: It is a reference parameter or a reference capture.
@@ -219,24 +230,16 @@ static bool isPossiblyEscaped(ExplodedNode *N, const DeclRefExpr *DR) {
       continue;
     }
 
-    if (const DeclStmt *DS = dyn_cast<DeclStmt>(S)) {
-      for (const Decl *D : DS->decls()) {
-        // Once we reach the declaration of the VD we can return.
-        if (D->getCanonicalDecl() == VD)
-          return false;
-      }
+    if (isFoundInStmt(S, VD)) {
+      return false;
     }
+
 
     if (const SwitchStmt *SS = dyn_cast<SwitchStmt>(S)) {
       if (const CompoundStmt *CST = dyn_cast<CompoundStmt>(SS->getBody())) {
         for (const Stmt *CB : CST->body()) {
-          if (const DeclStmt *DST = dyn_cast<DeclStmt>(CB)) {
-            for (const Decl *D : DST->decls()) {
-              // Once we reach the declaration of the VD we can return.
-              if (D->getCanonicalDecl() == VD)
-                return false;
-            }
-          }
+          if (isFoundInStmt(CB, VD))
+            return false;
         }
       }
     }
