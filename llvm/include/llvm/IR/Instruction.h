@@ -737,12 +737,13 @@ public:
   ///
   ///   Associative operators satisfy:  x op (y op z) === (x op y) op z
   ///
-  /// In LLVM, the Add, Mul, And, Or, and Xor operators are associative.
+  /// In LLVM, the Add, Mul, And, Or, Xor, Min and Max operators are associative.
   ///
   bool isAssociative() const LLVM_READONLY;
   static bool isAssociative(unsigned Opcode) {
     return Opcode == And || Opcode == Or || Opcode == Xor ||
-           Opcode == Add || Opcode == Mul;
+           Opcode == Add || Opcode == Mul || Opcode == Min ||
+           Opcode == Max;
   }
 
   /// Return true if the instruction is commutative:
