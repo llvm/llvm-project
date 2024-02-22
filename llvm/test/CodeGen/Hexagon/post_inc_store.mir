@@ -1,0 +1,168 @@
+#RUN: llc -march=hexagon -run-pass hexagon-postincopt %s -o - | FileCheck  %s
+
+# Test that we convert a post-inc load and store to a regular load and post-inc
+# store.
+# CHECK: J2_loop0r
+# CHECK-NOT: = L2_loadruh_pi
+# CHECK: L2_loadruh_io
+# CHECK: S2_storerh_pi
+# CHECK: ENDLOOP0
+
+--- |
+  ; Function Attrs: nofree norecurse nounwind
+  define dso_local void @blam(i32 %arg, ptr nocapture %arg1, i16 signext %arg2) local_unnamed_addr #0 {
+  bb:
+    %icmp = icmp eq i32 %arg, 0
+    br i1 %icmp, label %bb13, label %bb3
+
+  bb3:                                              ; preds = %bb, %bb10
+    %phi = phi i32 [ %add11, %bb10 ], [ 0, %bb ]
+    %mul = mul i32 %phi, %arg
+    %cgep = getelementptr i16, ptr %arg1, i32 %mul
+    br label %bb4
+
+  bb4:                                              ; preds = %bb4, %bb3
+    %lsr.iv = phi i32 [ %lsr.iv.next, %bb4 ], [ %arg, %bb3 ]
+    %phi5 = phi ptr [ %cgep, %bb3 ], [ %cgep1, %bb4 ]
+    %load = load i16, ptr %phi5, align 2
+    %add = add i16 %load, %arg2
+    store i16 %add, ptr %phi5, align 2
+    %lsr.iv.next = add i32 %lsr.iv, -1
+    %icmp8 = icmp eq i32 %lsr.iv.next, 0
+    %cgep1 = getelementptr i16, ptr %phi5, i32 1
+    br i1 %icmp8, label %bb10, label %bb4
+
+  bb10:                                             ; preds = %bb4
+    %add11 = add nuw i32 %phi, 1
+    %icmp12 = icmp eq i32 %add11, %arg
+    br i1 %icmp12, label %bb13, label %bb3
+
+  bb13:                                             ; preds = %bb10, %bb
+    ret void
+  }
+
+  attributes #0 = { nofree norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv68" "target-features"="+v68,-long-calls" "unsafe-fp-math"="false" "use-soft-float"="false" }
+
+...
+---
+name:            blam
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: intregs, preferred-register: '' }
+  - { id: 1, class: intregs, preferred-register: '' }
+  - { id: 2, class: intregs, preferred-register: '' }
+  - { id: 3, class: intregs, preferred-register: '' }
+  - { id: 4, class: intregs, preferred-register: '' }
+  - { id: 5, class: intregs, preferred-register: '' }
+  - { id: 6, class: intregs, preferred-register: '' }
+  - { id: 7, class: intregs, preferred-register: '' }
+  - { id: 8, class: intregs, preferred-register: '' }
+  - { id: 9, class: intregs, preferred-register: '' }
+  - { id: 10, class: intregs, preferred-register: '' }
+  - { id: 11, class: intregs, preferred-register: '' }
+  - { id: 12, class: predregs, preferred-register: '' }
+  - { id: 13, class: intregs, preferred-register: '' }
+  - { id: 14, class: intregs, preferred-register: '' }
+  - { id: 15, class: intregs, preferred-register: '' }
+  - { id: 16, class: predregs, preferred-register: '' }
+  - { id: 17, class: predregs, preferred-register: '' }
+  - { id: 18, class: predregs, preferred-register: '' }
+  - { id: 19, class: predregs, preferred-register: '' }
+  - { id: 20, class: intregs, preferred-register: '' }
+  - { id: 21, class: intregs, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%7' }
+  - { reg: '$r1', virtual-reg: '%8' }
+  - { reg: '$r2', virtual-reg: '%9' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.bb:
+    successors: %bb.4(0x30000000), %bb.5(0x50000000)
+    liveins: $r0, $r1, $r2
+
+    %9:intregs = COPY $r2
+    %8:intregs = COPY $r1
+    %7:intregs = COPY $r0
+    %21:intregs = COPY %7
+    %20:intregs = COPY %7
+    %12:predregs = C2_cmpeqi %7, 0
+    J2_jumpt %12, %bb.4, implicit-def $pc
+
+  bb.5:
+    successors: %bb.1(0x80000000)
+
+    %11:intregs = A2_tfrsi 0
+    J2_loop1r %bb.1, %21, implicit-def $lc1, implicit-def $sa1
+
+  bb.1.bb3 (machine-block-address-taken):
+    successors: %bb.2(0x80000000)
+
+    %0:intregs = PHI %11, %bb.5, %6, %bb.3
+    %13:intregs = M2_mpyi %0, %7
+    %1:intregs = S2_addasl_rrri %8, %13, 1
+    J2_loop0r %bb.2, %20, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+
+  bb.2.bb4 (machine-block-address-taken):
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+
+    %3:intregs = PHI %1, %bb.1, %5, %bb.2
+    %14:intregs = L2_loadruh_io %3, 0 :: (load (s16) from %ir.phi5)
+    %15:intregs = A2_add %14, %9
+    %5:intregs = S2_storerh_pi %3, 2, %15 :: (store (s16) into %ir.phi5)
+    ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.3, implicit-def dead $pc
+
+  bb.3.bb10:
+    successors: %bb.4(0x04000000), %bb.1(0x7c000000)
+
+    %6:intregs = nuw A2_addi %0, 1
+    ENDLOOP1 %bb.1, implicit-def $pc, implicit-def $lc1, implicit $sa1, implicit $lc1
+    J2_jump %bb.4, implicit-def dead $pc
+
+  bb.4.bb13:
+    PS_jmpret $r31, implicit-def dead $pc
+
+...
