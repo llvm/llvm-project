@@ -519,9 +519,6 @@ namespace llvm {
   // Expands large div/rem instructions.
   FunctionPass *createExpandLargeFpConvertPass();
 
-  // This pass expands memcmp() to load/stores.
-  FunctionPass *createExpandMemCmpLegacyPass();
-
   /// Creates Break False Dependencies pass. \see BreakFalseDeps.cpp
   FunctionPass *createBreakFalseDeps();
 

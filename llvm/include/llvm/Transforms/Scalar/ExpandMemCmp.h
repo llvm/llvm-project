@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_EXPANDMEMCMP_H
-#define LLVM_CODEGEN_EXPANDMEMCMP_H
+#ifndef LLVM_TRANSFORMS_SCALAR_EXPANDMEMCMP_H
+#define LLVM_TRANSFORMS_SCALAR_EXPANDMEMCMP_H
 
 #include "llvm/IR/PassManager.h"
 
@@ -16,14 +16,13 @@ namespace llvm {
 class TargetMachine;
 
 class ExpandMemCmpPass : public PassInfoMixin<ExpandMemCmpPass> {
-  const TargetMachine *TM;
 
 public:
-  explicit ExpandMemCmpPass(const TargetMachine *TM_) : TM(TM_) {}
+  explicit ExpandMemCmpPass() {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm
 
-#endif // LLVM_CODEGEN_EXPANDMEMCMP_H
+#endif // LLVM_TRANSFORMS_SCALAR_EXPANDMEMCMP_H

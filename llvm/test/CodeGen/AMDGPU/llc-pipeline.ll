@@ -203,13 +203,6 @@
 ; GCN-O1-NEXT:        Canonicalize Freeze Instructions in Loops
 ; GCN-O1-NEXT:        Induction Variable Users
 ; GCN-O1-NEXT:        Loop Strength Reduction
-; GCN-O1-NEXT:      Basic Alias Analysis (stateless AA impl)
-; GCN-O1-NEXT:      Function Alias Analysis Results
-; GCN-O1-NEXT:      Merge contiguous icmps into a memcmp
-; GCN-O1-NEXT:      Natural Loop Information
-; GCN-O1-NEXT:      Lazy Branch Probability Analysis
-; GCN-O1-NEXT:      Lazy Block Frequency Analysis
-; GCN-O1-NEXT:      Expand memcmp() to load/stores
 ; GCN-O1-NEXT:      Lower constant intrinsics
 ; GCN-O1-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O1-NEXT:      Natural Loop Information
@@ -485,13 +478,6 @@
 ; GCN-O1-OPTS-NEXT:        Canonicalize Freeze Instructions in Loops
 ; GCN-O1-OPTS-NEXT:        Induction Variable Users
 ; GCN-O1-OPTS-NEXT:        Loop Strength Reduction
-; GCN-O1-OPTS-NEXT:      Basic Alias Analysis (stateless AA impl)
-; GCN-O1-OPTS-NEXT:      Function Alias Analysis Results
-; GCN-O1-OPTS-NEXT:      Merge contiguous icmps into a memcmp
-; GCN-O1-OPTS-NEXT:      Natural Loop Information
-; GCN-O1-OPTS-NEXT:      Lazy Branch Probability Analysis
-; GCN-O1-OPTS-NEXT:      Lazy Block Frequency Analysis
-; GCN-O1-OPTS-NEXT:      Expand memcmp() to load/stores
 ; GCN-O1-OPTS-NEXT:      Lower constant intrinsics
 ; GCN-O1-OPTS-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
@@ -786,13 +772,6 @@
 ; GCN-O2-NEXT:        Canonicalize Freeze Instructions in Loops
 ; GCN-O2-NEXT:        Induction Variable Users
 ; GCN-O2-NEXT:        Loop Strength Reduction
-; GCN-O2-NEXT:      Basic Alias Analysis (stateless AA impl)
-; GCN-O2-NEXT:      Function Alias Analysis Results
-; GCN-O2-NEXT:      Merge contiguous icmps into a memcmp
-; GCN-O2-NEXT:      Natural Loop Information
-; GCN-O2-NEXT:      Lazy Branch Probability Analysis
-; GCN-O2-NEXT:      Lazy Block Frequency Analysis
-; GCN-O2-NEXT:      Expand memcmp() to load/stores
 ; GCN-O2-NEXT:      Lower constant intrinsics
 ; GCN-O2-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O2-NEXT:      Natural Loop Information
@@ -1095,13 +1074,6 @@
 ; GCN-O3-NEXT:        Canonicalize Freeze Instructions in Loops
 ; GCN-O3-NEXT:        Induction Variable Users
 ; GCN-O3-NEXT:        Loop Strength Reduction
-; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
-; GCN-O3-NEXT:      Function Alias Analysis Results
-; GCN-O3-NEXT:      Merge contiguous icmps into a memcmp
-; GCN-O3-NEXT:      Natural Loop Information
-; GCN-O3-NEXT:      Lazy Branch Probability Analysis
-; GCN-O3-NEXT:      Lazy Block Frequency Analysis
-; GCN-O3-NEXT:      Expand memcmp() to load/stores
 ; GCN-O3-NEXT:      Lower constant intrinsics
 ; GCN-O3-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O3-NEXT:      Natural Loop Information
