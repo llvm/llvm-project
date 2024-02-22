@@ -76,168 +76,168 @@
 #include <vector>
 
 namespace llvm {
-  class APSInt;
-  template <typename ValueT, typename ValueInfoT> class DenseSet;
-  class SmallBitVector;
-  struct InlineAsmIdentifierInfo;
-}
+class APSInt;
+template <typename ValueT, typename ValueInfoT> class DenseSet;
+class SmallBitVector;
+struct InlineAsmIdentifierInfo;
+} // namespace llvm
 
 namespace clang {
-  class ADLResult;
-  class ASTConsumer;
-  class ASTContext;
-  class ASTMutationListener;
-  class ASTReader;
-  class ASTWriter;
-  class ArrayType;
-  class ParsedAttr;
-  class BindingDecl;
-  class BlockDecl;
-  class CapturedDecl;
-  class CXXBasePath;
-  class CXXBasePaths;
-  class CXXBindTemporaryExpr;
-  typedef SmallVector<CXXBaseSpecifier*, 4> CXXCastPath;
-  class CXXConstructorDecl;
-  class CXXConversionDecl;
-  class CXXDeleteExpr;
-  class CXXDestructorDecl;
-  class CXXFieldCollector;
-  class CXXMemberCallExpr;
-  class CXXMethodDecl;
-  class CXXScopeSpec;
-  class CXXTemporary;
-  class CXXTryStmt;
-  class CallExpr;
-  class ClassTemplateDecl;
-  class ClassTemplatePartialSpecializationDecl;
-  class ClassTemplateSpecializationDecl;
-  class VarTemplatePartialSpecializationDecl;
-  class CodeCompleteConsumer;
-  class CodeCompletionAllocator;
-  class CodeCompletionTUInfo;
-  class CodeCompletionResult;
-  class CoroutineBodyStmt;
-  class Decl;
-  class DeclAccessPair;
-  class DeclContext;
-  class DeclRefExpr;
-  class DeclaratorDecl;
-  class DeducedTemplateArgument;
-  class DependentDiagnostic;
-  class DesignatedInitExpr;
-  class Designation;
-  class EnableIfAttr;
-  class EnumConstantDecl;
-  class Expr;
-  class ExtVectorType;
-  class FormatAttr;
-  class FriendDecl;
-  class FunctionDecl;
-  class FunctionProtoType;
-  class FunctionTemplateDecl;
-  class ImplicitConversionSequence;
-  typedef MutableArrayRef<ImplicitConversionSequence> ConversionSequenceList;
-  class InitListExpr;
-  class InitializationKind;
-  class InitializationSequence;
-  class InitializedEntity;
-  class IntegerLiteral;
-  class LabelStmt;
-  class LambdaExpr;
-  class LangOptions;
-  class LocalInstantiationScope;
-  class LookupResult;
-  class MacroInfo;
-  typedef ArrayRef<std::pair<IdentifierInfo *, SourceLocation>> ModuleIdPath;
-  class ModuleLoader;
-  class MultiLevelTemplateArgumentList;
-  class NamedDecl;
-  class ObjCCategoryDecl;
-  class ObjCCategoryImplDecl;
-  class ObjCCompatibleAliasDecl;
-  class ObjCContainerDecl;
-  class ObjCImplDecl;
-  class ObjCImplementationDecl;
-  class ObjCInterfaceDecl;
-  class ObjCIvarDecl;
-  template <class T> class ObjCList;
-  class ObjCMessageExpr;
-  class ObjCMethodDecl;
-  class ObjCPropertyDecl;
-  class ObjCProtocolDecl;
-  class OMPThreadPrivateDecl;
-  class OMPRequiresDecl;
-  class OMPDeclareReductionDecl;
-  class OMPDeclareSimdDecl;
-  class OMPClause;
-  struct OMPVarListLocTy;
-  struct OverloadCandidate;
-  enum class OverloadCandidateParamOrder : char;
-  enum OverloadCandidateRewriteKind : unsigned;
-  class OverloadCandidateSet;
-  class OverloadExpr;
-  class ParenListExpr;
-  class ParmVarDecl;
-  class Preprocessor;
-  class PseudoDestructorTypeStorage;
-  class PseudoObjectExpr;
-  class QualType;
-  class StandardConversionSequence;
-  class Stmt;
-  class StringLiteral;
-  class SwitchStmt;
-  class TemplateArgument;
-  class TemplateArgumentList;
-  class TemplateArgumentLoc;
-  class TemplateDecl;
-  class TemplateInstantiationCallback;
-  class TemplateParameterList;
-  class TemplatePartialOrderingContext;
-  class TemplateTemplateParmDecl;
-  class Token;
-  class TypeAliasDecl;
-  class TypedefDecl;
-  class TypedefNameDecl;
-  class TypeLoc;
-  class TypoCorrectionConsumer;
-  class UnqualifiedId;
-  class UnresolvedLookupExpr;
-  class UnresolvedMemberExpr;
-  class UnresolvedSetImpl;
-  class UnresolvedSetIterator;
-  class UsingDecl;
-  class UsingShadowDecl;
-  class ValueDecl;
-  class VarDecl;
-  class VarTemplateSpecializationDecl;
-  class VisibilityAttr;
-  class VisibleDeclConsumer;
-  class IndirectFieldDecl;
-  struct DeductionFailureInfo;
-  class TemplateSpecCandidateSet;
+class ADLResult;
+class ASTConsumer;
+class ASTContext;
+class ASTMutationListener;
+class ASTReader;
+class ASTWriter;
+class ArrayType;
+class ParsedAttr;
+class BindingDecl;
+class BlockDecl;
+class CapturedDecl;
+class CXXBasePath;
+class CXXBasePaths;
+class CXXBindTemporaryExpr;
+typedef SmallVector<CXXBaseSpecifier *, 4> CXXCastPath;
+class CXXConstructorDecl;
+class CXXConversionDecl;
+class CXXDeleteExpr;
+class CXXDestructorDecl;
+class CXXFieldCollector;
+class CXXMemberCallExpr;
+class CXXMethodDecl;
+class CXXScopeSpec;
+class CXXTemporary;
+class CXXTryStmt;
+class CallExpr;
+class ClassTemplateDecl;
+class ClassTemplatePartialSpecializationDecl;
+class ClassTemplateSpecializationDecl;
+class VarTemplatePartialSpecializationDecl;
+class CodeCompleteConsumer;
+class CodeCompletionAllocator;
+class CodeCompletionTUInfo;
+class CodeCompletionResult;
+class CoroutineBodyStmt;
+class Decl;
+class DeclAccessPair;
+class DeclContext;
+class DeclRefExpr;
+class DeclaratorDecl;
+class DeducedTemplateArgument;
+class DependentDiagnostic;
+class DesignatedInitExpr;
+class Designation;
+class EnableIfAttr;
+class EnumConstantDecl;
+class Expr;
+class ExtVectorType;
+class FormatAttr;
+class FriendDecl;
+class FunctionDecl;
+class FunctionProtoType;
+class FunctionTemplateDecl;
+class ImplicitConversionSequence;
+typedef MutableArrayRef<ImplicitConversionSequence> ConversionSequenceList;
+class InitListExpr;
+class InitializationKind;
+class InitializationSequence;
+class InitializedEntity;
+class IntegerLiteral;
+class LabelStmt;
+class LambdaExpr;
+class LangOptions;
+class LocalInstantiationScope;
+class LookupResult;
+class MacroInfo;
+typedef ArrayRef<std::pair<IdentifierInfo *, SourceLocation>> ModuleIdPath;
+class ModuleLoader;
+class MultiLevelTemplateArgumentList;
+class NamedDecl;
+class ObjCCategoryDecl;
+class ObjCCategoryImplDecl;
+class ObjCCompatibleAliasDecl;
+class ObjCContainerDecl;
+class ObjCImplDecl;
+class ObjCImplementationDecl;
+class ObjCInterfaceDecl;
+class ObjCIvarDecl;
+template <class T> class ObjCList;
+class ObjCMessageExpr;
+class ObjCMethodDecl;
+class ObjCPropertyDecl;
+class ObjCProtocolDecl;
+class OMPThreadPrivateDecl;
+class OMPRequiresDecl;
+class OMPDeclareReductionDecl;
+class OMPDeclareSimdDecl;
+class OMPClause;
+struct OMPVarListLocTy;
+struct OverloadCandidate;
+enum class OverloadCandidateParamOrder : char;
+enum OverloadCandidateRewriteKind : unsigned;
+class OverloadCandidateSet;
+class OverloadExpr;
+class ParenListExpr;
+class ParmVarDecl;
+class Preprocessor;
+class PseudoDestructorTypeStorage;
+class PseudoObjectExpr;
+class QualType;
+class StandardConversionSequence;
+class Stmt;
+class StringLiteral;
+class SwitchStmt;
+class TemplateArgument;
+class TemplateArgumentList;
+class TemplateArgumentLoc;
+class TemplateDecl;
+class TemplateInstantiationCallback;
+class TemplateParameterList;
+class TemplatePartialOrderingContext;
+class TemplateTemplateParmDecl;
+class Token;
+class TypeAliasDecl;
+class TypedefDecl;
+class TypedefNameDecl;
+class TypeLoc;
+class TypoCorrectionConsumer;
+class UnqualifiedId;
+class UnresolvedLookupExpr;
+class UnresolvedMemberExpr;
+class UnresolvedSetImpl;
+class UnresolvedSetIterator;
+class UsingDecl;
+class UsingShadowDecl;
+class ValueDecl;
+class VarDecl;
+class VarTemplateSpecializationDecl;
+class VisibilityAttr;
+class VisibleDeclConsumer;
+class IndirectFieldDecl;
+struct DeductionFailureInfo;
+class TemplateSpecCandidateSet;
 
 namespace sema {
-  class AccessedEntity;
-  class BlockScopeInfo;
-  class Capture;
-  class CapturedRegionScopeInfo;
-  class CapturingScopeInfo;
-  class CompoundScopeInfo;
-  class DelayedDiagnostic;
-  class DelayedDiagnosticPool;
-  class FunctionScopeInfo;
-  class LambdaScopeInfo;
-  class PossiblyUnreachableDiag;
-  class RISCVIntrinsicManager;
-  class SemaPPCallbacks;
-  class TemplateDeductionInfo;
-}
+class AccessedEntity;
+class BlockScopeInfo;
+class Capture;
+class CapturedRegionScopeInfo;
+class CapturingScopeInfo;
+class CompoundScopeInfo;
+class DelayedDiagnostic;
+class DelayedDiagnosticPool;
+class FunctionScopeInfo;
+class LambdaScopeInfo;
+class PossiblyUnreachableDiag;
+class RISCVIntrinsicManager;
+class SemaPPCallbacks;
+class TemplateDeductionInfo;
+} // namespace sema
 
 namespace threadSafety {
-  class BeforeSet;
-  void threadSafetyCleanup(BeforeSet* Cache);
-}
+class BeforeSet;
+void threadSafetyCleanup(BeforeSet *Cache);
+} // namespace threadSafety
 
 // FIXME: No way to easily map from TemplateTypeParmTypes to
 // TemplateTypeParmDecls, so we have this horrible PointerUnion.
@@ -1077,8 +1077,7 @@ public:
   void *OpaqueParser;
 
   void SetLateTemplateParser(LateTemplateParserCB *LTP,
-                             LateTemplateParserCleanupCB *LTPCleanup,
-                             void *P) {
+                             LateTemplateParserCleanupCB *LTPCleanup, void *P) {
     LateTemplateParser = LTP;
     LateTemplateParserCleanup = LTPCleanup;
     OpaqueParser = P;
@@ -1122,9 +1121,7 @@ public:
     bool shouldDelayDiagnostics() { return CurPool != nullptr; }
 
     /// Returns the current delayed-diagnostics pool.
-    sema::DelayedDiagnosticPool *getCurrentPool() const {
-      return CurPool;
-    }
+    sema::DelayedDiagnosticPool *getCurrentPool() const { return CurPool; }
 
     /// Enter a new scope.  Access and deprecation diagnostics will be
     /// collected in this pool.
@@ -2798,10 +2795,8 @@ public:
                          IdentifierInfo **CorrectedII = nullptr);
   TypeSpecifierType isTagName(IdentifierInfo &II, Scope *S);
   bool isMicrosoftMissingTypename(const CXXScopeSpec *SS, Scope *S);
-  void DiagnoseUnknownTypeName(IdentifierInfo *&II,
-                               SourceLocation IILoc,
-                               Scope *S,
-                               CXXScopeSpec *SS,
+  void DiagnoseUnknownTypeName(IdentifierInfo *&II, SourceLocation IILoc,
+                               Scope *S, CXXScopeSpec *SS,
                                ParsedType &SuggestedType,
                                bool IsTemplateName = false);
 
@@ -2870,9 +2865,7 @@ public:
 
     NameClassification(const IdentifierInfo *Keyword) : Kind(NC_Keyword) {}
 
-    static NameClassification Error() {
-      return NameClassification(NC_Error);
-    }
+    static NameClassification Error() { return NameClassification(NC_Error); }
 
     static NameClassification Unknown() {
       return NameClassification(NC_Unknown);
@@ -3053,8 +3046,8 @@ public:
 
   NamedDecl *HandleDeclarator(Scope *S, Declarator &D,
                               MultiTemplateParamsArg TemplateParameterLists);
-  bool tryToFixVariablyModifiedVarType(TypeSourceInfo *&TInfo,
-                                       QualType &T, SourceLocation Loc,
+  bool tryToFixVariablyModifiedVarType(TypeSourceInfo *&TInfo, QualType &T,
+                                       SourceLocation Loc,
                                        unsigned FailedFoldDiagID);
   void RegisterLocallyScopedExternCDecl(NamedDecl *ND, Scope *S);
   bool DiagnoseClassNameShadow(DeclContext *DC, DeclarationNameInfo Info);
@@ -3083,10 +3076,10 @@ public:
   void setTagNameForLinkagePurposes(TagDecl *TagFromDeclSpec,
                                     TypedefNameDecl *NewTD);
   void CheckTypedefForVariablyModifiedType(Scope *S, TypedefNameDecl *D);
-  NamedDecl* ActOnTypedefDeclarator(Scope* S, Declarator& D, DeclContext* DC,
+  NamedDecl *ActOnTypedefDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                     TypeSourceInfo *TInfo,
                                     LookupResult &Previous);
-  NamedDecl* ActOnTypedefNameDecl(Scope* S, DeclContext* DC, TypedefNameDecl *D,
+  NamedDecl *ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *D,
                                   LookupResult &Previous, bool &Redeclaration);
   NamedDecl *ActOnVariableDeclarator(
       Scope *S, Declarator &D, DeclContext *DC, TypeSourceInfo *TInfo,
@@ -3098,7 +3091,7 @@ public:
   void CheckVariableDeclarationType(VarDecl *NewVD);
   void CheckCompleteVariableDeclaration(VarDecl *VD);
 
-  NamedDecl* ActOnFunctionDeclarator(Scope* S, Declarator& D, DeclContext* DC,
+  NamedDecl *ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                      TypeSourceInfo *TInfo,
                                      LookupResult &Previous,
                                      MultiTemplateParamsArg TemplateParamLists,
@@ -3106,8 +3099,8 @@ public:
   bool AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD);
 
   // Returns true if the function declaration is a redeclaration
-  bool CheckFunctionDeclaration(Scope *S,
-                                FunctionDecl *NewFD, LookupResult &Previous,
+  bool CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
+                                LookupResult &Previous,
                                 bool IsMemberSpecialization, bool DeclIsDefn);
   bool shouldLinkDependentDeclWithPrevious(Decl *D, Decl *OldDecl);
   bool canFullyTypeCheckRedeclaration(ValueDecl *NewD, ValueDecl *OldD,
@@ -3126,8 +3119,7 @@ public:
   void CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D);
   Decl *ActOnParamDeclarator(Scope *S, Declarator &D,
                              SourceLocation ExplicitThisLoc = {});
-  ParmVarDecl *BuildParmVarDeclForTypedef(DeclContext *DC,
-                                          SourceLocation Loc,
+  ParmVarDecl *BuildParmVarDeclForTypedef(DeclContext *DC, SourceLocation Loc,
                                           QualType T);
   QualType AdjustParameterTypeForObjCAutoRefCount(QualType T,
                                                   SourceLocation NameLoc,
@@ -3265,8 +3257,7 @@ public:
   DiagnoseSizeOfParametersAndReturnValue(ArrayRef<ParmVarDecl *> Parameters,
                                          QualType ReturnTy, NamedDecl *D);
 
-  Decl *ActOnFileScopeAsmDecl(Expr *expr,
-                              SourceLocation AsmLoc,
+  Decl *ActOnFileScopeAsmDecl(Expr *expr, SourceLocation AsmLoc,
                               SourceLocation RParenLoc);
 
   Decl *ActOnTopLevelStmtDecl(Stmt *Statement);
@@ -3313,9 +3304,8 @@ public:
   /// what kind of non-tag type this is.
   NonTagKind getNonTagTypeDeclKind(const Decl *D, TagTypeKind TTK);
 
-  bool isAcceptableTagRedeclaration(const TagDecl *Previous,
-                                    TagTypeKind NewTag, bool isDefinition,
-                                    SourceLocation NewTagLoc,
+  bool isAcceptableTagRedeclaration(const TagDecl *Previous, TagTypeKind NewTag,
+                                    bool isDefinition, SourceLocation NewTagLoc,
                                     const IdentifierInfo *Name);
 
   enum TagUseKind {
@@ -3355,13 +3345,11 @@ public:
                          InClassInitStyle InitStyle, AccessSpecifier AS);
 
   FieldDecl *CheckFieldDecl(DeclarationName Name, QualType T,
-                            TypeSourceInfo *TInfo,
-                            RecordDecl *Record, SourceLocation Loc,
-                            bool Mutable, Expr *BitfieldWidth,
-                            InClassInitStyle InitStyle,
-                            SourceLocation TSSL,
-                            AccessSpecifier AS, NamedDecl *PrevDecl,
-                            Declarator *D = nullptr);
+                            TypeSourceInfo *TInfo, RecordDecl *Record,
+                            SourceLocation Loc, bool Mutable,
+                            Expr *BitfieldWidth, InClassInitStyle InitStyle,
+                            SourceLocation TSSL, AccessSpecifier AS,
+                            NamedDecl *PrevDecl, Declarator *D = nullptr);
 
   bool CheckNontrivialField(FieldDecl *FD);
 
@@ -3423,8 +3411,7 @@ public:
 
   EnumConstantDecl *CheckEnumConstant(EnumDecl *Enum,
                                       EnumConstantDecl *LastEnumConst,
-                                      SourceLocation IdLoc,
-                                      IdentifierInfo *Id,
+                                      SourceLocation IdLoc, IdentifierInfo *Id,
                                       Expr *val);
   bool CheckEnumUnderlyingType(TypeSourceInfo *TI);
   bool CheckEnumRedeclaration(SourceLocation EnumLoc, bool IsScoped,
@@ -3453,13 +3440,13 @@ public:
   void EnterDeclaratorContext(Scope *S, DeclContext *DC);
   void ExitDeclaratorContext(Scope *S);
 
-  /// Enter a template parameter scope, after it's been associated with a particular
-  /// DeclContext. Causes lookup within the scope to chain through enclosing contexts
-  /// in the correct order.
+  /// Enter a template parameter scope, after it's been associated with a
+  /// particular DeclContext. Causes lookup within the scope to chain through
+  /// enclosing contexts in the correct order.
   void EnterTemplatedContext(Scope *S, DeclContext *DC);
 
   /// Push the parameters of D, which must be a function, into scope.
-  void ActOnReenterFunctionContext(Scope* S, Decl* D);
+  void ActOnReenterFunctionContext(Scope *S, Decl *D);
   void ActOnExitFunctionContext();
 
   /// Add this decl to the scope shadowed decl chains.
@@ -12602,8 +12589,7 @@ public:
                                           CheckedConversionKind CCK,
                                           bool Diagnose = true,
                                           bool DiagnoseCFAudited = false,
-                                          BinaryOperatorKind Opc = BO_PtrMemD
-                                          );
+                                          BinaryOperatorKind Opc = BO_PtrMemD);
 
   Expr *stripARCUnbridgedCast(Expr *e);
   void diagnoseARCUnbridgedCast(Expr *e);
@@ -13223,8 +13209,7 @@ public:
   bool inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
                                                CXXSpecialMember CSM,
                                                CXXMethodDecl *MemberDecl,
-                                               bool ConstRHS,
-                                               bool Diagnose);
+                                               bool ConstRHS, bool Diagnose);
 
   /// \return true if \p CD can be considered empty according to CUDA
   /// (E.2.3.1 in CUDA 7.5 Programming guide).
