@@ -28,6 +28,14 @@
  * When clang modules are not enabled, the header guards can function in the
  * normal simple fashion.
  */
+
+#if defined(__musl__)
+
+// On musl systems, use the system header
+#include_next <stddef.h>
+
+#else
+
 #if !defined(__STDDEF_H) || __has_feature(modules) ||                          \
     (defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ >= 1) ||        \
     defined(__need_ptrdiff_t) || defined(__need_size_t) ||                     \
@@ -121,3 +129,5 @@ __WINT_TYPE__ directly; accommodate both by requiring __need_wint_t */
 #endif /* __need_wint_t */
 
 #endif
+
+#endif /* !defined(__musl__) */
