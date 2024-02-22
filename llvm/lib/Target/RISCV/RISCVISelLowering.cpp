@@ -12866,8 +12866,8 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
   //   add at least one bit.  (For profitability on rvv, we use a
   //   power of two for both inner and outer extend.)
   if (VT.isVector() && Subtarget.getTargetLowering()->isTypeLegal(VT) &&
-      N0.getOpcode() == N1.getOpcode() && N0.hasOneUse() && N1.hasOneUse() &&
-      N0.getOpcode() == ISD::ZERO_EXTEND) {
+      N0.getOpcode() == N1.getOpcode() && N0.getOpcode() == ISD::ZERO_EXTEND &&
+      N0.hasOneUse() && N1.hasOneUse()) {
     SDValue Src0 = N0.getOperand(0);
     SDValue Src1 = N1.getOperand(0);
     EVT SrcVT = Src0.getValueType();
