@@ -1,5 +1,5 @@
 # REQUIRES: zlib
-## Test --decompress/-z
+## Test --decompress/-z.
 
 # RUN: yaml2obj %s -o %t
 
@@ -12,17 +12,6 @@
 # HEX:      Hex dump of section '.not_null_terminated':
 # HEX-NEXT: 0x00000000 6e6f006e 756c6c                     no.null
 
-# RUN: llvm-readobj -x .strings -p .not_null_terminated %t | FileCheck %s --check-prefix=COMPRESSED
-
-# COMPRESSED:      String dump of section '.not_null_terminated':
-# COMPRESSED-NEXT: [     0] no
-# COMPRESSED-NEXT: [     3] null
-# COMPRESSED-NEXT: Hex dump of section '.strings':
-# COMPRESSED-NEXT: 0x00000000 01000000 00000000 16000000 00000000 ................
-# COMPRESSED-NEXT: 0x00000010 00000000 00000000 789ccb48 2d4a6548 ........x..H-JeH
-# COMPRESSED-NEXT: 0x00000020 04e2e2fc 5c205152 9499975e cc000058 ....\ QR...^...X
-# COMPRESSED-NEXT: 0x00000030 2e079b                              ...
-
 # STR:      String dump of section '.strings':
 # STR-NEXT: [ 0] here
 # STR-NEXT: [ 5] are
@@ -33,6 +22,17 @@
 # STR-NEXT: [ 0] no
 # STR-NEXT: [ 3] null{{$}}
 # STR-NOT:  {{.}}
+
+# RUN: llvm-readobj -x .strings -p .not_null_terminated %t | FileCheck %s --check-prefix=COMPRESSED
+
+# COMPRESSED:      String dump of section '.not_null_terminated':
+# COMPRESSED-NEXT: [     0] no
+# COMPRESSED-NEXT: [     3] null
+# COMPRESSED-NEXT: Hex dump of section '.strings':
+# COMPRESSED-NEXT: 0x00000000 01000000 00000000 16000000 00000000 ................
+# COMPRESSED-NEXT: 0x00000010 00000000 00000000 789ccb48 2d4a6548 ........x..H-JeH
+# COMPRESSED-NEXT: 0x00000020 04e2e2fc 5c205152 9499975e cc000058 ....\ QR...^...X
+# COMPRESSED-NEXT: 0x00000030 2e079b                              ...
 
 # RUN: llvm-readelf -z -p .invalid1 -x .invalid2 %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=INVALID
 
