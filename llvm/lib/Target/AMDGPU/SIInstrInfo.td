@@ -987,8 +987,8 @@ def SDWAVopcDst : BoolRC {
 }
 
 class NamedIntOperand<ValueType Type, string Prefix, bit Optional = 1,
-                      string ConvertMethod = "nullptr">
-    : CustomOperand<Type, Optional, NAME> {
+                      string name = NAME, string ConvertMethod = "nullptr">
+    : CustomOperand<Type, Optional, name> {
   let ParserMethod =
     "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#
@@ -1090,22 +1090,12 @@ let DefaultValue = "0xf" in {
 def DppRowMask : NamedIntOperand<i32, "row_mask">;
 def DppBankMask : NamedIntOperand<i32, "bank_mask">;
 }
-def DppBoundCtrl : NamedIntOperand<i1, "bound_ctrl", 1,
+def DppBoundCtrl : NamedIntOperand<i1, "bound_ctrl", 1, "DppBoundCtrl",
     "[this] (int64_t &BC) -> bool { return convertDppBoundCtrl(BC); }">;
 
-def DppFI : AsmOperandClass {
-  let Name = "DppFI";
-  let ParserMethod = "[this](OperandVector &Operands) -> ParseStatus { return parseIntWithPrefix(\"fi\", Operands, AMDGPUOperand::ImmTyDppFI, nullptr); }";
-  let RenderMethod = "addImmOperands";
-  let IsOptional = true;
-  let DefaultMethod = "[this]() { return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyDppFI); }";
-}
-let ParserMatchClass = DppFI, PrintMethod = "printDppFI" in {
-  def Dpp8FI : NamedIntOperand<i32, "fi"> {
-    let DecoderMethod = "decodeDpp8FI";
-  }
-  def Dpp16FI : NamedIntOperand<i32, "fi">;
-}
+let DecoderMethod = "decodeDpp8FI" in
+def Dpp8FI : NamedIntOperand<i32, "fi", 1, "DppFI">;
+def Dpp16FI : NamedIntOperand<i32, "fi", 1, "DppFI">;
 
 def blgp : CustomOperand<i32, 1, "BLGP">;
 def CBSZ : NamedIntOperand<i32, "cbsz">;
