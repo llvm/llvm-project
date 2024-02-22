@@ -920,7 +920,7 @@ static Value rewriteI8ToI4Trunc(PatternRewriter &rewriter, Location loc,
       rewriter.create<arith::ShLIOp>(loc, highShuffleOp, shiftValues);
 
   // 4. Merge high and low i4 values.
-  auto mergedHiLowOp = rewriter.create<arith::OrIOp>(loc, shlHigh, zeroOutLow);
+  auto mergedHiLowOp = rewriter.create<arith::OrIOp>(loc, zeroOutLow, shlHigh);
 
   // 5. Generate a bitcast vector<Xxi8> -> vector<2Xxi4>.
   auto i4VecType = srcVecType.cloneWith(std::nullopt, rewriter.getI4Type());
