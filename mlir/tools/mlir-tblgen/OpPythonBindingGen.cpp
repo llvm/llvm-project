@@ -31,7 +31,6 @@ constexpr const char *fileHeader = R"Py(
 
 from ._ods_common import _cext as _ods_cext
 from ._ods_common import (
-    SubClassValueT as _SubClassValueT,
     equally_sized_accessor as _ods_equally_sized_accessor,
     get_default_loc_context as _ods_get_default_loc_context,
     get_op_result_or_op_results as _get_op_result_or_op_results,
@@ -52,8 +51,6 @@ constexpr const char *dialectClassTemplate = R"Py(
 @_ods_cext.register_dialect
 class _Dialect(_ods_ir.Dialect):
   DIALECT_NAMESPACE = "{0}"
-  pass
-
 )Py";
 
 constexpr const char *dialectExtensionTemplate = R"Py(
@@ -534,7 +531,7 @@ constexpr const char *multiResultAppendTemplate = "results.extend({0})";
 /// there is no method registered to make it an Attribute.
 constexpr const char *initAttributeWithBuilderTemplate =
     R"Py(attributes["{1}"] = ({0} if (
-    issubclass(type({0}), _ods_ir.Attribute) or
+    isinstance({0}, _ods_ir.Attribute) or
     not _ods_ir.AttrBuilder.contains('{2}')) else
       _ods_ir.AttrBuilder.get('{2}')({0}, context=_ods_context)))Py";
 
@@ -547,7 +544,7 @@ constexpr const char *initAttributeWithBuilderTemplate =
 /// there is no method registered to make it an Attribute.
 constexpr const char *initOptionalAttributeWithBuilderTemplate =
     R"Py(if {0} is not None: attributes["{1}"] = ({0} if (
-        issubclass(type({0}), _ods_ir.Attribute) or
+        isinstance({0}, _ods_ir.Attribute) or
         not _ods_ir.AttrBuilder.contains('{2}')) else
           _ods_ir.AttrBuilder.get('{2}')({0}, context=_ods_context)))Py";
 
@@ -1007,14 +1004,13 @@ static void emitValueBuilder(const Operator &op,
       });
   std::string nameWithoutDialect =
       op.getOperationName().substr(op.getOperationName().find('.') + 1);
-  os << llvm::formatv(valueBuilderTemplate, sanitizeName(nameWithoutDialect),
-                      op.getCppClassName(),
-                      llvm::join(valueBuilderParams, ", "),
-                      llvm::join(opBuilderArgs, ", "),
-                      (op.getNumResults() > 1
-                           ? "_Sequence[_SubClassValueT]"
-                           : (op.getNumResults() > 0 ? "_SubClassValueT"
-                                                     : "_ods_ir.Operation")));
+  os << llvm::formatv(
+      valueBuilderTemplate, sanitizeName(nameWithoutDialect),
+      op.getCppClassName(), llvm::join(valueBuilderParams, ", "),
+      llvm::join(opBuilderArgs, ", "),
+      (op.getNumResults() > 1
+           ? "_Sequence[_ods_ir.Value]"
+           : (op.getNumResults() > 0 ? "_ods_ir.Value" : "_ods_ir.Operation")));
 }
 
 /// Emits bindings for a specific Op to the given output stream.

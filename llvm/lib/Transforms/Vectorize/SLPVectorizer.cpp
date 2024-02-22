@@ -1072,6 +1072,7 @@ public:
       BS->clear();
     }
     MinBWs.clear();
+    ReductionBitWidth = 0;
     InstrElementSize.clear();
     UserIgnoreList = nullptr;
     PostponedGathers.clear();
@@ -2352,6 +2353,9 @@ private:
   /// \ returns the graph entry for the \p Idx operand of the \p E entry.
   const TreeEntry *getOperandEntry(const TreeEntry *E, unsigned Idx) const;
 
+  /// \returns Cast context for the given graph node.
+  TTI::CastContextHint getCastContextHint(const TreeEntry &TE) const;
+
   /// \returns the cost of the vectorizable entry.
   InstructionCost getEntryCost(const TreeEntry *E,
                                ArrayRef<Value *> VectorizedVals,
@@ -3599,6 +3603,11 @@ private:
   /// value must be signed-extended, rather than zero-extended, back to its
   /// original width.
   DenseMap<const TreeEntry *, std::pair<uint64_t, bool>> MinBWs;
+
+  /// Final size of the reduced vector, if the current graph represents the
+  /// input for the reduction and it was possible to narrow the size of the
+  /// reduction.
+  unsigned ReductionBitWidth = 0;
 };
 
 } // end namespace slpvectorizer
@@ -7875,6 +7884,22 @@ const BoUpSLP::TreeEntry *BoUpSLP::getOperandEntry(const TreeEntry *E,
   return It->get();
 }
 
+TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
+  if (TE.State == TreeEntry::ScatterVectorize ||
+      TE.State == TreeEntry::StridedVectorize)
+    return TTI::CastContextHint::GatherScatter;
+  if (TE.State == TreeEntry::Vectorize && TE.getOpcode() == Instruction::Load &&
+      !TE.isAltShuffle()) {
+    if (TE.ReorderIndices.empty())
+      return TTI::CastContextHint::Normal;
+    SmallVector<int> Mask;
+    inversePermutation(TE.ReorderIndices, Mask);
+    if (ShuffleVectorInst::isReverseMask(Mask, Mask.size()))
+      return TTI::CastContextHint::Reversed;
+  }
+  return TTI::CastContextHint::None;
+}
+
 InstructionCost
 BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
@@ -7897,6 +7922,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   // If we have computed a smaller type for the expression, update VecTy so
   // that the costs will be accurate.
   auto It = MinBWs.find(E);
+  Type *OrigScalarTy = ScalarTy;
   if (It != MinBWs.end()) {
     ScalarTy = IntegerType::get(F->getContext(), It->second.first);
     VecTy = FixedVectorType::get(ScalarTy, VL.size());
@@ -7954,24 +7980,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     UsedScalars.set(I);
   }
   auto GetCastContextHint = [&](Value *V) {
-    if (const TreeEntry *OpTE = getTreeEntry(V)) {
-      if (OpTE->State == TreeEntry::ScatterVectorize ||
-          OpTE->State == TreeEntry::StridedVectorize)
-        return TTI::CastContextHint::GatherScatter;
-      if (OpTE->State == TreeEntry::Vectorize &&
-          OpTE->getOpcode() == Instruction::Load && !OpTE->isAltShuffle()) {
-        if (OpTE->ReorderIndices.empty())
-          return TTI::CastContextHint::Normal;
-        SmallVector<int> Mask;
-        inversePermutation(OpTE->ReorderIndices, Mask);
-        if (ShuffleVectorInst::isReverseMask(Mask, Mask.size()))
-          return TTI::CastContextHint::Reversed;
-      }
-    } else {
-      InstructionsState SrcState = getSameOpcode(E->getOperand(0), *TLI);
-      if (SrcState.getOpcode() == Instruction::Load && !SrcState.isAltShuffle())
-        return TTI::CastContextHint::GatherScatter;
-    }
+    if (const TreeEntry *OpTE = getTreeEntry(V))
+      return getCastContextHint(*OpTE);
+    InstructionsState SrcState = getSameOpcode(E->getOperand(0), *TLI);
+    if (SrcState.getOpcode() == Instruction::Load && !SrcState.isAltShuffle())
+      return TTI::CastContextHint::GatherScatter;
     return TTI::CastContextHint::None;
   };
   auto GetCostDiff =
@@ -8020,8 +8033,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               TTI::CastContextHint CCH = GetCastContextHint(VL0);
               VecCost += TTI->getCastInstrCost(VecOpcode, UserVecTy, VecTy, CCH,
                                                CostKind);
-              ScalarCost += Sz * TTI->getCastInstrCost(VecOpcode, UserScalarTy,
-                                                       ScalarTy, CCH, CostKind);
             }
           }
         }
@@ -8038,7 +8049,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     InstructionCost ScalarCost = 0;
     InstructionCost VecCost = 0;
     std::tie(ScalarCost, VecCost) = getGEPCosts(
-        *TTI, Ptrs, BasePtr, E->getOpcode(), CostKind, ScalarTy, VecTy);
+        *TTI, Ptrs, BasePtr, E->getOpcode(), CostKind, OrigScalarTy, VecTy);
     LLVM_DEBUG(dumpTreeCosts(E, 0, VecCost, ScalarCost,
                              "Calculated GEPs cost for Tree"));
 
@@ -8085,7 +8096,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           NumElts = ATy->getNumElements();
         else
           NumElts = AggregateTy->getStructNumElements();
-        SrcVecTy = FixedVectorType::get(ScalarTy, NumElts);
+        SrcVecTy = FixedVectorType::get(OrigScalarTy, NumElts);
       }
       if (I->hasOneUse()) {
         Instruction *Ext = I->user_back();
@@ -8253,13 +8264,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
     }
     auto GetScalarCost = [&](unsigned Idx) -> InstructionCost {
-      // Do not count cost here if minimum bitwidth is in effect and it is just
-      // a bitcast (here it is just a noop).
-      if (VecOpcode != Opcode && VecOpcode == Instruction::BitCast)
-        return TTI::TCC_Free;
-      auto *VI = VL0->getOpcode() == Opcode
-                     ? cast<Instruction>(UniqueValues[Idx])
-                     : nullptr;
+      auto *VI = cast<Instruction>(UniqueValues[Idx]);
       return TTI->getCastInstrCost(Opcode, VL0->getType(),
                                    VL0->getOperand(0)->getType(),
                                    TTI::getCastContextHint(VI), CostKind, VI);
@@ -8302,7 +8307,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                        ? CmpInst::BAD_FCMP_PREDICATE
                                        : CmpInst::BAD_ICMP_PREDICATE;
 
-      return TTI->getCmpSelInstrCost(E->getOpcode(), ScalarTy,
+      return TTI->getCmpSelInstrCost(E->getOpcode(), OrigScalarTy,
                                      Builder.getInt1Ty(), CurrentPred, CostKind,
                                      VI);
     };
@@ -8357,7 +8362,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       TTI::OperandValueInfo Op2Info =
           TTI::getOperandInfo(VI->getOperand(OpIdx));
       SmallVector<const Value *> Operands(VI->operand_values());
-      return TTI->getArithmeticInstrCost(ShuffleOrOp, ScalarTy, CostKind,
+      return TTI->getArithmeticInstrCost(ShuffleOrOp, OrigScalarTy, CostKind,
                                          Op1Info, Op2Info, Operands, VI);
     };
     auto GetVectorCost = [=](InstructionCost CommonCost) {
@@ -8376,9 +8381,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   case Instruction::Load: {
     auto GetScalarCost = [&](unsigned Idx) {
       auto *VI = cast<LoadInst>(UniqueValues[Idx]);
-      return TTI->getMemoryOpCost(Instruction::Load, ScalarTy, VI->getAlign(),
-                                  VI->getPointerAddressSpace(), CostKind,
-                                  TTI::OperandValueInfo(), VI);
+      return TTI->getMemoryOpCost(Instruction::Load, OrigScalarTy,
+                                  VI->getAlign(), VI->getPointerAddressSpace(),
+                                  CostKind, TTI::OperandValueInfo(), VI);
     };
     auto *LI0 = cast<LoadInst>(VL0);
     auto GetVectorCost = [&](InstructionCost CommonCost) {
@@ -8421,9 +8426,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     auto GetScalarCost = [=](unsigned Idx) {
       auto *VI = cast<StoreInst>(VL[Idx]);
       TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(VI->getValueOperand());
-      return TTI->getMemoryOpCost(Instruction::Store, ScalarTy, VI->getAlign(),
-                                  VI->getPointerAddressSpace(), CostKind,
-                                  OpInfo, VI);
+      return TTI->getMemoryOpCost(Instruction::Store, OrigScalarTy,
+                                  VI->getAlign(), VI->getPointerAddressSpace(),
+                                  CostKind, OpInfo, VI);
     };
     auto *BaseSI =
         cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
@@ -9269,6 +9274,44 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         cast<FixedVectorType>(FirstUsers[I].first->getType()), DemandedElts[I],
         /*Insert*/ true, /*Extract*/ false, TTI::TCK_RecipThroughput);
     Cost -= InsertCost;
+  }
+
+  // Add the cost for reduced value resize (if required).
+  if (ReductionBitWidth != 0) {
+    assert(UserIgnoreList && "Expected reduction tree.");
+    const TreeEntry &E = *VectorizableTree.front().get();
+    auto It = MinBWs.find(&E);
+    if (It != MinBWs.end() && It->second.first != ReductionBitWidth) {
+      unsigned SrcSize = It->second.first;
+      unsigned DstSize = ReductionBitWidth;
+      unsigned Opcode = Instruction::Trunc;
+      if (SrcSize < DstSize)
+        Opcode = It->second.second ? Instruction::SExt : Instruction::ZExt;
+      auto *SrcVecTy =
+          FixedVectorType::get(Builder.getIntNTy(SrcSize), E.getVectorFactor());
+      auto *DstVecTy =
+          FixedVectorType::get(Builder.getIntNTy(DstSize), E.getVectorFactor());
+      TTI::CastContextHint CCH = getCastContextHint(E);
+      InstructionCost CastCost;
+      switch (E.getOpcode()) {
+      case Instruction::SExt:
+      case Instruction::ZExt:
+      case Instruction::Trunc: {
+        const TreeEntry *OpTE = getOperandEntry(&E, 0);
+        CCH = getCastContextHint(*OpTE);
+        break;
+      }
+      default:
+        break;
+      }
+      CastCost += TTI->getCastInstrCost(
+          Opcode, DstVecTy, SrcVecTy, CCH, TTI::TCK_RecipThroughput);
+      Cost += CastCost;
+      LLVM_DEBUG(dbgs() << "SLP: Adding cost " << CastCost
+                        << " for final resize for reduction from " << SrcVecTy
+                        << " to " << DstVecTy << "\n";
+                 dbgs() << "SLP: Current total cost = " << Cost << "\n");
+    }
   }
 
 #ifndef NDEBUG
@@ -12388,7 +12431,21 @@ Value *BoUpSLP::vectorizeTree(
   Builder.ClearInsertionPoint();
   InstrElementSize.clear();
 
-  return VectorizableTree[0]->VectorizedValue;
+  const TreeEntry &RootTE = *VectorizableTree.front().get();
+  Value *Vec = RootTE.VectorizedValue;
+  if (auto It = MinBWs.find(&RootTE); ReductionBitWidth != 0 &&
+                                      It != MinBWs.end() &&
+                                      ReductionBitWidth != It->second.first) {
+    IRBuilder<>::InsertPointGuard Guard(Builder);
+    Builder.SetInsertPoint(ReductionRoot->getParent(),
+                           ReductionRoot->getIterator());
+    Vec = Builder.CreateIntCast(
+        Vec,
+        VectorType::get(Builder.getIntNTy(ReductionBitWidth),
+                        cast<VectorType>(Vec->getType())->getElementCount()),
+        It->second.second);
+  }
+  return Vec;
 }
 
 void BoUpSLP::optimizeGatherSequence() {
@@ -13458,34 +13515,30 @@ void BoUpSLP::computeMinimumValueSizes() {
   // be demoted as a result. That is, those seeded by truncations we will
   // modify.
   // Add reduction ops sizes, if any.
-  unsigned RedMaxBitWidth = 0;
-  bool IsRedSigned = false;
   if (UserIgnoreList &&
       isa<IntegerType>(VectorizableTree.front()->Scalars.front()->getType())) {
     for (Value *V : *UserIgnoreList) {
       auto NumSignBits = ComputeNumSignBits(V, *DL, 0, AC, nullptr, DT);
       auto NumTypeBits = DL->getTypeSizeInBits(V->getType());
       unsigned BitWidth1 = NumTypeBits - NumSignBits;
-      KnownBits Known = computeKnownBits(V, *DL);
-      if (!Known.isNonNegative()) {
-        IsRedSigned = true;
+      if (!isKnownNonNegative(V, SimplifyQuery(*DL)))
         ++BitWidth1;
-      }
       auto Mask = DB->getDemandedBits(cast<Instruction>(V));
       unsigned BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
-      RedMaxBitWidth = std::max(std::min(BitWidth1, BitWidth2), RedMaxBitWidth);
+      ReductionBitWidth =
+          std::max(std::min(BitWidth1, BitWidth2), ReductionBitWidth);
     }
-    if (RedMaxBitWidth < 8 && RedMaxBitWidth > 1)
-      RedMaxBitWidth = 8;
+    if (ReductionBitWidth < 8 && ReductionBitWidth > 1)
+      ReductionBitWidth = 8;
 
-    RedMaxBitWidth = bit_ceil(RedMaxBitWidth);
+    ReductionBitWidth = bit_ceil(ReductionBitWidth);
   }
   bool IsTopRoot = NodeIdx == 0;
   while (NodeIdx < VectorizableTree.size()) {
     ArrayRef<Value *> TreeRoot = VectorizableTree[NodeIdx]->Scalars;
     unsigned Limit = 2;
     if (NodeIdx == 0 &&
-        RedMaxBitWidth == DL->getTypeSizeInBits(TreeRoot.front()->getType()))
+        ReductionBitWidth == DL->getTypeSizeInBits(TreeRoot.front()->getType()))
       Limit = 3;
     unsigned MaxBitWidth = ComputeMaxBitWidth(
         TreeRoot, VectorizableTree[NodeIdx]->getVectorFactor(), IsTopRoot,
@@ -13518,23 +13571,10 @@ void BoUpSLP::computeMinimumValueSizes() {
       assert(TE && "Expected vectorized scalar.");
       if (MinBWs.contains(TE))
         continue;
-      bool IsSigned = false;
-      unsigned BitWidth = MaxBitWidth;
-      if (TE->Idx == 0 && UserIgnoreList) {
-        assert(RedMaxBitWidth != std::numeric_limits<unsigned>::max() &&
-               "Expected reduction instruction bitwidth analysis.");
-        if (RedMaxBitWidth ==
-            DL->getTypeSizeInBits(TE->Scalars.front()->getType()))
-          continue;
-        BitWidth = RedMaxBitWidth;
-        IsSigned = IsRedSigned;
-      } else {
-        IsSigned = any_of(TE->Scalars, [&](Value *R) {
-          KnownBits Known = computeKnownBits(R, *DL);
-          return !Known.isNonNegative();
-        });
-      }
-      MinBWs.try_emplace(TE, BitWidth, IsSigned);
+      bool IsSigned = any_of(TE->Scalars, [&](Value *R) {
+        return !isKnownNonNegative(R, SimplifyQuery(*DL));
+      });
+      MinBWs.try_emplace(TE, MaxBitWidth, IsSigned);
       const auto *I = cast<Instruction>(Scalar);
       auto DCIt = DemotedConsts.find(I);
       if (DCIt != DemotedConsts.end()) {
@@ -13548,7 +13588,7 @@ void BoUpSLP::computeMinimumValueSizes() {
                               is_contained(SIt->getSecond(), Idx);
                      }) ||
               all_of(CTE->Scalars, Constant::classof))
-            MinBWs.try_emplace(CTE, BitWidth, IsSigned);
+            MinBWs.try_emplace(CTE, MaxBitWidth, IsSigned);
         }
       }
     }
@@ -16183,19 +16223,29 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       if (isa<UndefValue>(Opcodes1[I]) || isa<UndefValue>(Opcodes2[I])) {
         if (isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]))
           continue;
-        if (isa<Instruction>(Opcodes1[I]))
+        if (isa<Instruction>(Opcodes1[I])) {
+          assert(isa<UndefValue>(Opcodes2[I]) && "Expected 2nd undef value");
           return true;
-        if (isa<Instruction>(Opcodes2[I]))
+        }
+        if (isa<Instruction>(Opcodes2[I])) {
+          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
           return false;
-        if (isa<Constant>(Opcodes1[I]) && !isa<UndefValue>(Opcodes1[I]))
+        }
+        if (isa<Constant>(Opcodes1[I]) && !isa<UndefValue>(Opcodes1[I])) {
+          assert(isa<UndefValue>(Opcodes2[I]) && "Expected 2nd undef value");
           return true;
-        if (isa<Constant>(Opcodes2[I]) && !isa<UndefValue>(Opcodes2[I]))
+        }
+        if (isa<Constant>(Opcodes2[I]) && !isa<UndefValue>(Opcodes2[I])) {
+          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
           return false;
-        if (isa<UndefValue>(Opcodes1[I]) && !isa<UndefValue>(Opcodes2[I]))
+        }
+        if (!isa<UndefValue>(Opcodes2[I])) {
+          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
           return false;
-        if (!isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]))
-          return true;
-        continue;
+        }
+        assert(!isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]) &&
+               "Expected 1st non-undef and 2nd undef value");
+        return true;
       }
       if (auto *I1 = dyn_cast<Instruction>(Opcodes1[I]))
         if (auto *I2 = dyn_cast<Instruction>(Opcodes2[I])) {

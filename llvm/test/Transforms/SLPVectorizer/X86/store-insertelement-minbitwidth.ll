@@ -8,7 +8,7 @@
 ; YAML-NEXT:  Function:        stores
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:    - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:    - Cost:            '-11'
+; YAML-NEXT:    - Cost:            '-7'
 ; YAML-NEXT:    - String:          ' and with tree size '
 ; YAML-NEXT:    - TreeSize:        '6'
 define void @stores(ptr noalias %in, ptr noalias %inn, ptr noalias %out) {
@@ -64,7 +64,7 @@ define void @stores(ptr noalias %in, ptr noalias %inn, ptr noalias %out) {
 ; YAML-NEXT:  Function:        insertelems
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:    - String:          'SLP vectorized with cost '
-; YAML-NEXT:    - Cost:            '-13'
+; YAML-NEXT:    - Cost:            '-9'
 ; YAML-NEXT:    - String:          ' and with tree size '
 ; YAML-NEXT:    - TreeSize:        '6'
 define <4 x i64> @insertelems(ptr noalias %in, ptr noalias %inn) {
