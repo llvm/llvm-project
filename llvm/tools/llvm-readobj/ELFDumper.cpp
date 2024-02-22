@@ -5031,7 +5031,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
   OS << "GNUStyle::printCGProfile not implemented\n";
 }
 
-template <class ELFT> void GNUELFDumper<ELFT>::printBBAddrMaps(bool) {
+template <class ELFT>
+void GNUELFDumper<ELFT>::printBBAddrMaps(bool /*PrettyPGOAnalysis*/) {
   OS << "GNUStyle::printBBAddrMaps not implemented\n";
 }
 
