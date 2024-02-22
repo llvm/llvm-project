@@ -729,8 +729,8 @@ static LogicalResult commonConversionPrecondition(PatternRewriter &rewriter,
 
   // TODO: consider relaxing this restriction in the future if we find ways
   // to really work with subbyte elements across the MLIR/LLVM boundary.
-  unsigned resultBitwidth = preconditionType.getElementTypeBitWidth();
-  if (resultBitwidth % 8 != 0)
+  unsigned bitwidth = preconditionType.getElementTypeBitWidth();
+  if (bitwidth % 8 != 0)
     return rewriter.notifyMatchFailure(op, "bitwidth is not k * 8");
 
   return success();
@@ -876,6 +876,54 @@ static Value rewriteI4ToI8SignedExt(PatternRewriter &rewriter, Location loc,
   return rewriter.create<vector::InterleaveOp>(loc, low, high);
 }
 
+/// Rewrite the i8 -> i4 signed extension into a sequence of shuffles and
+/// bitwise ops that take advantage of high-level information to avoid leaving
+/// LLVM to scramble with peephole optimizations.
+static Value rewriteI8ToI4Trunc(PatternRewriter &rewriter, Location loc,
+                                Value srcValue) {
+  VectorType srcVecType = cast<VectorType>(srcValue.getType());
+  assert(srcVecType.getElementType().isSignlessInteger(8) &&
+         "Expected i8 type");
+
+  // 1. Zero out the upper side of each i8 element.
+  constexpr int8_t i8BitMask = 0x0F;
+  Value zeroOutMask = rewriter.create<arith::ConstantOp>(
+      loc, DenseElementsAttr::get(srcVecType, i8BitMask));
+  Value zeroOutSrc = rewriter.create<arith::AndIOp>(loc, srcValue, zeroOutMask);
+
+  // 2. De-interleave low and high i8 elements.
+  int64_t vecDimSize = srcVecType.getShape().back();
+  SmallVector<int64_t> deinterleaveLowMaskValues;
+  SmallVector<int64_t> deinterleaveHighMaskValues;
+  deinterleaveLowMaskValues.reserve(vecDimSize / 2);
+  deinterleaveHighMaskValues.reserve(vecDimSize / 2);
+  for (int i = 0, end = vecDimSize; i < end; i += 2) {
+    deinterleaveLowMaskValues.push_back(i);
+    deinterleaveHighMaskValues.push_back(i + 1);
+  }
+
+  auto lowShuffleOp = rewriter.create<vector::ShuffleOp>(
+      loc, zeroOutSrc, zeroOutSrc,
+      rewriter.getI64ArrayAttr(deinterleaveLowMaskValues));
+  auto highShuffleOp = rewriter.create<vector::ShuffleOp>(
+      loc, zeroOutSrc, zeroOutSrc,
+      rewriter.getI64ArrayAttr(deinterleaveHighMaskValues));
+
+  // 3. Move high i4 values to upper side of the byte.
+  constexpr int8_t bitsToShift = 4;
+  VectorType deinterI8VecType = highShuffleOp.getResultVectorType();
+  auto shiftValues = rewriter.create<arith::ConstantOp>(
+      loc, DenseElementsAttr::get(deinterI8VecType, bitsToShift));
+  auto shlHighOp = rewriter.create<arith::ShLIOp>(loc, highShuffleOp, shiftValues);
+
+  // 4. Merge high and low i4 values.
+  auto mergedHiLowOp = rewriter.create<arith::OrIOp>(loc, shlHighOp, lowShuffleOp);
+
+  // 5. Generate a bitcast vector<Xxi8> -> vector<2Xxi4>.
+  auto i4VecType = srcVecType.cloneWith(std::nullopt, rewriter.getI4Type());
+  return rewriter.create<vector::BitCastOp>(loc, i4VecType, mergedHiLowOp);
+}
+
 namespace {
 /// Rewrite bitcast(trunci) to a sequence of shuffles and bitwise ops that take
 /// advantage of high-level information to avoid leaving LLVM to scramble with
@@ -1019,7 +1067,7 @@ struct RewriteAlignedSubByteIntSignedExt : OpRewritePattern<ConversionOpType> {
 
   LogicalResult matchAndRewrite(ConversionOpType conversionOp,
                                 PatternRewriter &rewriter) const override {
-    // Set up the BitCastRewriter and verify the preconditions.
+    // Verify the preconditions.
     Value srcValue = conversionOp.getIn();
     auto srcVecType = dyn_cast<VectorType>(srcValue.getType());
     auto dstVecType = dyn_cast<VectorType>(conversionOp.getType());
@@ -1027,8 +1075,9 @@ struct RewriteAlignedSubByteIntSignedExt : OpRewritePattern<ConversionOpType> {
             commonConversionPrecondition(rewriter, dstVecType, conversionOp)))
       return failure();
 
-    // Check general alignment preconditions.
-    if (failed(alignedConversionPrecondition(rewriter, srcVecType, dstVecType,
+    // Check general alignment preconditions. We invert the src/dst type order
+    // to resue the extension preconditions.
+    if (failed(alignedConversionPrecondition(rewriter, dstVecType, srcVecType,
                                              conversionOp)))
       return failure();
 
@@ -1042,6 +1091,69 @@ struct RewriteAlignedSubByteIntSignedExt : OpRewritePattern<ConversionOpType> {
     return success();
   }
 };
+
+/// Rewrite the i8 -> i4 part of any truncation into a sequence of shuffles and
+/// bitwise ops that take advantage of high-level information to avoid leaving
+/// LLVM to scramble with peephole optimizations.
+///
+/// For example:
+///    arith.extsi %in : vector<8xi4> to vector<8xi32>
+///      is rewriten as
+///        %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
+///        %1 = arith.shli %0, 4 : vector<4xi8>
+///        %2 = arith.shrsi %1, 4 : vector<4xi8>
+///        %3 = arith.shrsi %0, 4 : vector<4xi8>
+///        %4 = vector.interleave %2, %3 : vector<4xi8>
+///        %5 = arith.extsi %4 : vector<8xi8> to vector<8xi32>
+///
+///    arith.sitofp %in : vector<8xi4> to vector<8xf32>
+///      is rewriten as
+///        %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
+///        %1 = arith.shli %0, 4 : vector<4xi8>
+///        %2 = arith.shrsi %1, 4 : vector<4xi8>
+///        %3 = arith.shrsi %0, 4 : vector<4xi8>
+///        %4 = vector.interleave %2, %3 : vector<4xi8>
+///        %5 = arith.sitofp %4 : vector<8xi8> to vector<8xf32>
+///
+struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
+  using OpRewritePattern<arith::TruncIOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(arith::TruncIOp truncOp,
+                                PatternRewriter &rewriter) const override {
+    // Verify the preconditions.
+    Value srcValue = truncOp.getIn();
+    auto srcVecType = dyn_cast<VectorType>(srcValue.getType());
+    auto dstVecType = dyn_cast<VectorType>(truncOp.getType());
+
+    // Only single dim vectors are supported until we have
+    // `vector.deinterleave`.
+    if (srcVecType.getRank() != 1)
+      return failure();
+
+    if (failed(
+            commonConversionPrecondition(rewriter, srcVecType, truncOp)))
+      return failure();
+
+    // Check general alignment preconditions. We invert the src/dst type order
+    // to reuse the existing precondition logic.
+    if (failed(alignedConversionPrecondition(rewriter, dstVecType, srcVecType,
+                                             truncOp)))
+      return failure();
+
+    // Create a new iX -> i8 truncation op.
+    Location loc = truncOp.getLoc();
+    auto i8VecType = srcVecType.cloneWith(std::nullopt, rewriter.getI8Type());
+    Value i8TruncVal = rewriter.create<arith::TruncIOp>(loc, i8VecType, srcValue);
+
+    // Rewrite the i8 -> i4 truncation part.
+    Value subByteTrunc = rewriteI8ToI4Trunc(rewriter, loc, i8TruncVal);
+
+    // Finalize the rewrite.
+    rewriter.replaceOp(truncOp, subByteTrunc);
+    return success();
+  }
+};
+
 
 /// Rewrite a sub-byte vector transpose into a sequence of instructions that
 /// perform the transpose on wider (byte) element types.
@@ -1115,7 +1227,8 @@ void vector::populateVectorNarrowTypeRewritePatterns(
   // Patterns for aligned cases. We set higher priority as they are expected to
   // generate better performance for aligned cases.
   patterns.add<RewriteAlignedSubByteIntSignedExt<arith::ExtSIOp>,
-               RewriteAlignedSubByteIntSignedExt<arith::SIToFPOp>>(
+               RewriteAlignedSubByteIntSignedExt<arith::SIToFPOp>,
+               RewriteAlignedSubByteIntTrunc>(
       patterns.getContext(), benefit.getBenefit() + 1);
 }
 
