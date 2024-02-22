@@ -64,6 +64,9 @@ static cl::opt<std::string> AAPipeline("aa-pipeline",
                                        cl::desc("Alias Analysis Pipeline"),
                                        cl::value_desc("aapipeline"));
 
+static cl::opt<bool> PreLinkPipeline("prelink-pipeline",
+                                     cl::desc("Use the pre-link pipeline"));
+
 static cl::opt<bool> SaveTemps("save-temps", cl::desc("Save temporary files"));
 
 static cl::list<std::string> SelectSaveTemps(
@@ -315,6 +318,7 @@ static int run(int argc, char **argv) {
   // Run a custom pipeline, if asked for.
   Conf.OptPipeline = OptPipeline;
   Conf.AAPipeline = AAPipeline;
+  Conf.UsePreLinkPipeline = PreLinkPipeline;
 
   Conf.OptLevel = OptLevel - '0';
   Conf.Freestanding = EnableFreestanding;

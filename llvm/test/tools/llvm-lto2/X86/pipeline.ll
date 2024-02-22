@@ -40,3 +40,16 @@ define void @patatino() {
 ; RUN:  FileCheck %s --check-prefix=AAERR
 
 ; AAERR: LLVM ERROR: unable to parse AA pipeline description 'patatino': unknown alias analysis name 'patatino'
+
+;; Check that LTO can be configured to use the pre-link pipeline.
+; RUN: opt -module-summary %s -o %tthin.bc
+; RUN: llvm-lto2 run %t1.bc -o %t.o -r %t1.bc,patatino,px \
+; RUN:   -prelink-pipeline -debug-pass-manager 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=PRELINK
+; RUN: llvm-lto2 run %tthin.bc -o %t.o -r %tthin.bc,patatino,px \
+; RUN:   -prelink-pipeline -debug-pass-manager 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=PRELINK
+
+; PRELINK-NOT: EliminateAvailableExternallyPass
+; PRELINK:     Running pass: InlinerPass on (patatino)
+; PRELINK-NOT: EliminateAvailableExternallyPass
