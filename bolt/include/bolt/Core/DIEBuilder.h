@@ -208,8 +208,8 @@ private:
   /// Update references once the layout is finalized.
   void updateReferences();
 
-  /// Update the Offset and Size of DIE.
-  uint32_t computeDIEOffset(DWARFUnit &CU, DIE &Die, uint32_t &CurOffset);
+  /// Update the Offset and Size of DIE, populate DebugNames table.
+  uint32_t finalizeDIEs(DWARFUnit &CU, DIE &Die, uint32_t &CurOffset);
 
   void registerUnit(DWARFUnit &DU, bool NeedSort);
 

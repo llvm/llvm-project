@@ -377,8 +377,8 @@ getUnitForOffset(DIEBuilder &Builder, DWARFContext &DWCtx,
   return nullptr;
 }
 
-uint32_t DIEBuilder::computeDIEOffset(DWARFUnit &CU, DIE &Die,
-                                      uint32_t &CurOffset) {
+uint32_t DIEBuilder::finalizeDIEs(DWARFUnit &CU, DIE &Die,
+                                  uint32_t &CurOffset) {
   getState().DWARFDieAddressesParsed.erase(Die.getOffset());
   uint32_t CurSize = 0;
   Die.setOffset(CurOffset);
@@ -390,7 +390,7 @@ uint32_t DIEBuilder::computeDIEOffset(DWARFUnit &CU, DIE &Die,
   CurOffset += CurSize;
 
   for (DIE &Child : Die.children()) {
-    uint32_t ChildSize = computeDIEOffset(CU, Child, CurOffset);
+    uint32_t ChildSize = finalizeDIEs(CU, Child, CurOffset);
     CurSize += ChildSize;
   }
   // for children end mark.
@@ -405,12 +405,12 @@ uint32_t DIEBuilder::computeDIEOffset(DWARFUnit &CU, DIE &Die,
 }
 
 void DIEBuilder::finish() {
-  auto computeOffset = [&](DWARFUnit &CU, uint64_t &UnitStartOffset) -> void {
+  auto finalizeCU = [&](DWARFUnit &CU, uint64_t &UnitStartOffset) -> void {
     DIE *UnitDIE = getUnitDIEbyUnit(CU);
     uint32_t HeaderSize = CU.getHeaderSize();
     uint32_t CurOffset = HeaderSize;
     DebugNamesTable.setCurrentUnit(CU, UnitStartOffset);
-    computeDIEOffset(CU, *UnitDIE, CurOffset);
+    finalizeDIEs(CU, *UnitDIE, CurOffset);
 
     DWARFUnitInfo &CurUnitInfo = getUnitInfoByDwarfUnit(CU);
     CurUnitInfo.UnitOffset = UnitStartOffset;
@@ -425,14 +425,14 @@ void DIEBuilder::finish() {
     // We process DWARF$ types first.
     if (!(CU->getVersion() < 5 && CU->isTypeUnit()))
       break;
-    computeOffset(*CU, TypeUnitStartOffset);
+    finalizeCU(*CU, TypeUnitStartOffset);
   }
 
   for (DWARFUnit *CU : getState().DUList) {
     // Skipping DWARF4 types.
     if (CU->getVersion() < 5 && CU->isTypeUnit())
       continue;
-    computeOffset(*CU, UnitSize);
+    finalizeCU(*CU, UnitSize);
   }
   if (opts::Verbosity >= 1) {
     if (!getState().DWARFDieAddressesParsed.empty())
