@@ -56,6 +56,11 @@ file formats.
 
  Display the address-significance table.
 
+.. option:: --decompress, -z
+
+  Dump decompressed section content when used with ``-x`` or ``-p``.
+  If the section(s) are not compressed, they are displayed as is.
+
 .. option:: --expand-relocs
 
  When used with :option:`--relocs`, display each relocation in an expanded

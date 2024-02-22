@@ -175,9 +175,9 @@ public:
   void printAsStringList(StringRef StringContent, size_t StringDataOffset = 0);
 
   void printSectionsAsString(const object::ObjectFile &Obj,
-                             ArrayRef<std::string> Sections);
+                             ArrayRef<std::string> Sections, bool Decompress);
   void printSectionsAsHex(const object::ObjectFile &Obj,
-                          ArrayRef<std::string> Sections);
+                          ArrayRef<std::string> Sections, bool Decompress);
 
   std::function<Error(const Twine &Msg)> WarningHandler;
   void reportUniqueWarning(Error Err) const;
