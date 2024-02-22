@@ -2789,8 +2789,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     FPExceptionBehavior = "";
     // If fast-math is set then set the fp-contract mode to fast.
     FPContract = "fast";
-    // ffast-math enables limited range rules for complex multiplication and
+    // ffast-math enables basic range rules for complex multiplication and
     // division.
+    // Warn if user expects to perform full implementation of complex
+    // multiplication or division in the presence of nnan or ninf flags.
+    if (Range == LangOptions::ComplexRangeKind::CX_Full)
+      D.Diag(clang::diag::warn_nnan_ninf_with_full_range_complex_arithmetic)
+          << ComplexArithmeticStr(Range);
     Range = LangOptions::ComplexRangeKind::CX_Basic;
     SeenUnsafeMathModeOption = true;
   };

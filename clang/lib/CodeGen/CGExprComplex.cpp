@@ -832,7 +832,8 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
 
       if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
           Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
-          Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)
+          Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted ||
+          CGF.getLangOpts().NoHonorInfs || CGF.getLangOpts().NoHonorNaNs)
         return ComplexPairTy(ResR, ResI);
 
       // Emit the test for the real part becoming NaN and create a branch to
@@ -1023,7 +1024,13 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     llvm::Value *OrigLHSi = LHSi;
     if (!LHSi)
       LHSi = llvm::Constant::getNullValue(RHSi->getType());
-    if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved)
+    const TargetInfo &TI = CGF.getContext().getTargetInfo();
+    QualType ComplexElementTy =
+        Op.Ty->castAs<ComplexType>()->getElementType();
+    const BuiltinType *BT = ComplexElementTy->getAs<BuiltinType>();
+    if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
+        (TI.getTriple().isOSLinux() &&
+         BT->getKind() == BuiltinType::Kind::LongDouble))
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
     else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
              Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)

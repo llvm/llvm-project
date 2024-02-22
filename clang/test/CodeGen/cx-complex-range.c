@@ -20,7 +20,7 @@
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
 // RUN: -ffast-math -complex-range=full -emit-llvm -o - %s \
-// RUN: | FileCheck %s --check-prefix=FULL
+// RUN: | FileCheck %s --check-prefix=FULL_FAST
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
 // RUN: -ffast-math -complex-range=improved -emit-llvm -o - %s \
@@ -33,6 +33,7 @@
 _Complex float div(_Complex float a, _Complex float b) {
   // LABEL: define {{.*}} @div(
   // FULL: call {{.*}} @__divsc3
+  // FULL_FAST: call {{.*}} @__divsc3
   //
   // BASIC: fmul{{.*}}float
   // BASIC-NEXT: fmul{{.*}}float
@@ -102,6 +103,24 @@ _Complex float mul(_Complex float a, _Complex float b) {
   // LABEL: define {{.*}} @mul(
   // FULL: call {{.*}} @__mulsc3
   //
+  // FULL_FAST: alloca { float, float }
+  // FULL_FAST-NEXT: alloca { float, float }
+  // FULL_FAST-NEXT: alloca { float, float }
+  // FULL_FAST: getelementptr inbounds { float, float }, ptr {{.*}}, i32 0, i32 0
+  // FULL_FAST-NEXT: load float, ptr {{.*}}
+  // FULL_FAST-NEXT: getelementptr inbounds { float, float }, ptr {{.*}}, i32 0, i32 1
+  // FULL_FAST-NEXT: load float, ptr {{.*}}
+  // FULL_FAST-NEXT: getelementptr inbounds { float, float }, ptr {{.*}}, i32 0, i32 0
+  // FULL_FAST-NEXT: load float, ptr {{.*}}
+  // FULL_FAST-NEXT: getelementptr inbounds { float, float }, ptr {{.*}}, i32 0, i32 1
+  // FULL_FAST-NEXT: load float
+  // FULL_FAST-NEXT: fmul{{.*}}float
+  // FULL_FAST-NEXT: fmul{{.*}}float
+  // FULL_FAST-NEXT: fmul{{.*}}float
+  // FULL_FAST-NEXT: fmul{{.*}}float
+  // FULL_FAST-NEXT: fsub{{.*}}float
+  // FULL_FAST-NEXT: fadd{{.*}}float
+
   // BASIC: alloca { float, float }
   // BASIC-NEXT: alloca { float, float }
   // BASIC-NEXT: alloca { float, float }
