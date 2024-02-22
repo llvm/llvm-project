@@ -1845,7 +1845,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
   Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
   Features["avx10.1-256"] = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
-  bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1)
+  bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1);
   Features["egpr"] = HasAPXF;
   Features["push2pop2"] = HasAPXF;
   Features["ppx"] = HasAPXF;
