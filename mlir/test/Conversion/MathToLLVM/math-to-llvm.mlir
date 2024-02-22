@@ -326,8 +326,8 @@ func.func @rsqrt_multidim_vector(%arg0 : vector<4x3xf32>) {
 
 // -----
 
-// CHECK-LABEL: func @rsqrt_multidim_vector(
-func.func @rsqrt_multidim_vector(%arg0 : vector<4x[4]xf32>) -> vector<4x[4]xf32> {
+// CHECK-LABEL: func @rsqrt_multidim_scalable_vector(
+func.func @rsqrt_multidim_scalable_vector(%arg0 : vector<4x[4]xf32>) -> vector<4x[4]xf32> {
   // CHECK: %[[EXTRACT:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.array<4 x vector<[4]xf32>>
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
   // CHECK: %[[SQRT:.*]] = llvm.intr.sqrt(%[[EXTRACT]]) : (vector<[4]xf32>) -> vector<[4]xf32>
