@@ -1507,7 +1507,7 @@ bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
     DILineInfoSpecifier::ApproximateLineKind LineKind, const char *CompDir,
     FileLineInfoKind Kind, DILineInfo &Result) const {
   // Get the index of row we're looking for in the line table.
-  auto &&RowIndexValue = lookupAddress(Address, LineKind);
+  auto RowIndexValue = lookupAddress(Address, LineKind);
   uint32_t RowIndex = RowIndexValue.first;
   if (RowIndex == -1U)
     return false;

@@ -1,7 +1,7 @@
 # REQUIRES: x86-registered-target
 
 # RUN: llvm-mc -g -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: llvm-symbolizer --obj=%t.o 0xa | FileCheck --check-prefixes=APPROX-NONE %s
+# RUN: llvm-symbolizer --obj=%t.o 0xa | FileCheck --check-prefix=APPROX-NONE %s
 # RUN: llvm-symbolizer --obj=%t.o --approximate-line-info=before 0xa | FileCheck --check-prefix=APPROX-BEFORE %s
 # RUN: llvm-symbolizer --obj=%t.o --approximate-line-info=after 0xa | FileCheck --check-prefix=APPROX-AFTER %s
 # RUN: llvm-symbolizer --obj=%t.o --approximate-line-info=before 0xa 0x10 | FileCheck --check-prefixes=APPROX-BEFORE,NO-APPROX %s
