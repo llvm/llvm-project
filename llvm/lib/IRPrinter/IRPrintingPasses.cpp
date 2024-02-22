@@ -38,7 +38,7 @@ PrintModulePass::PrintModulePass(raw_ostream &OS, const std::string &Banner,
 PreservedAnalyses PrintModulePass::run(Module &M, ModuleAnalysisManager &AM) {
   // RemoveDIs: Regardless of the format we've processed this module in, use
   // `WriteNewDbgInfoFormat` to determine which format we use to write it.
-  ScopedDbgInfoFormatSetter(M, WriteNewDbgInfoFormat);
+  ScopedDbgInfoFormatSetter FormatSetter(M, WriteNewDbgInfoFormat);
 
   if (llvm::isFunctionInPrintList("*")) {
     if (!Banner.empty())
@@ -77,7 +77,7 @@ PreservedAnalyses PrintFunctionPass::run(Function &F,
                                          FunctionAnalysisManager &) {
   // RemoveDIs: Regardless of the format we've processed this function in, use
   // `WriteNewDbgInfoFormat` to determine which format we use to write it.
-  ScopedDbgInfoFormatSetter(F, WriteNewDbgInfoFormat);
+  ScopedDbgInfoFormatSetter FormatSetter(F, WriteNewDbgInfoFormat);
 
   if (isFunctionInPrintList(F.getName())) {
     if (forcePrintModuleIR())

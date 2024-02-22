@@ -861,7 +861,7 @@ private:
   /// Add all of the metadata from an instruction.
   void processInstructionMetadata(const Instruction &I);
 
-  /// Add all of the metadata from an DbgRecord.
+  /// Add all of the metadata from a DbgRecord.
   void processDbgRecordMetadata(const DbgRecord &DPV);
 };
 
@@ -4097,8 +4097,8 @@ void AssemblyWriter::printBasicBlock(const BasicBlock *BB) {
 
   // Output all of the instructions in the basic block...
   for (const Instruction &I : *BB) {
-    for (const DPValue &DPV : I.getDbgValueRange())
-      printDPValueLine(DPV);
+    for (const DbgRecord &DR : I.getDbgValueRange())
+      printDbgRecordLine(DR);
     printInstructionLine(I);
   }
 

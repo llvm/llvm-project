@@ -93,6 +93,8 @@ public:
   ~ScopedDbgInfoFormatSetter() { Obj.setIsNewDbgInfoFormat(OldState); }
 };
 
+template<typename T> ScopedDbgInfoFormatSetter(T &Obj, bool NewState) -> ScopedDbgInfoFormatSetter<T>;
+
 } // namespace llvm
 
 #endif // LLVM_IR_PRINTPASSES_H

@@ -43,7 +43,7 @@ public:
   bool runOnModule(Module &M) override {
     // RemoveDIs: Regardless of the format we've processed this module in, use
     // `WriteNewDbgInfoFormat` to determine which format we use to write it.
-    ScopedDbgInfoFormatSetter(M, WriteNewDbgInfoFormat);
+    ScopedDbgInfoFormatSetter FormatSetter(M, WriteNewDbgInfoFormat);
 
     if (llvm::isFunctionInPrintList("*")) {
       if (!Banner.empty())
@@ -86,7 +86,7 @@ public:
   bool runOnFunction(Function &F) override {
     // RemoveDIs: Regardless of the format we've processed this function in, use
     // `WriteNewDbgInfoFormat` to determine which format we use to write it.
-    ScopedDbgInfoFormatSetter(F, WriteNewDbgInfoFormat);
+    ScopedDbgInfoFormatSetter FormatSetter(F, WriteNewDbgInfoFormat);
 
     if (isFunctionInPrintList(F.getName())) {
       if (forcePrintModuleIR())
