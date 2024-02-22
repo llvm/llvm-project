@@ -15093,24 +15093,24 @@ define <32 x i64> @mgather_strided_split(ptr %base) {
 define <4 x i32> @masked_gather_widen_sew_negative_stride(ptr %base) {
 ; RV32V-LABEL: masked_gather_widen_sew_negative_stride:
 ; RV32V:       # %bb.0:
-; RV32V-NEXT:    addi a0, a0, -128
-; RV32V-NEXT:    li a1, -128
+; RV32V-NEXT:    addi a0, a0, -120
+; RV32V-NEXT:    li a1, 120
 ; RV32V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32V-NEXT:    vlse64.v v8, (a0), a1
 ; RV32V-NEXT:    ret
 ;
 ; RV64V-LABEL: masked_gather_widen_sew_negative_stride:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    addi a0, a0, -128
-; RV64V-NEXT:    li a1, -128
+; RV64V-NEXT:    addi a0, a0, -120
+; RV64V-NEXT:    li a1, 120
 ; RV64V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64V-NEXT:    vlse64.v v8, (a0), a1
 ; RV64V-NEXT:    ret
 ;
 ; RV32ZVE32F-LABEL: masked_gather_widen_sew_negative_stride:
 ; RV32ZVE32F:       # %bb.0:
-; RV32ZVE32F-NEXT:    lui a1, 16392
-; RV32ZVE32F-NEXT:    addi a1, a1, 1152
+; RV32ZVE32F-NEXT:    lui a1, 16393
+; RV32ZVE32F-NEXT:    addi a1, a1, -888
 ; RV32ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32ZVE32F-NEXT:    vmv.s.x v9, a1
 ; RV32ZVE32F-NEXT:    vluxei8.v v8, (a0), v9
@@ -15118,8 +15118,8 @@ define <4 x i32> @masked_gather_widen_sew_negative_stride(ptr %base) {
 ;
 ; RV64ZVE32F-LABEL: masked_gather_widen_sew_negative_stride:
 ; RV64ZVE32F:       # %bb.0:
-; RV64ZVE32F-NEXT:    addi a1, a0, 128
-; RV64ZVE32F-NEXT:    lw a2, 132(a0)
+; RV64ZVE32F-NEXT:    addi a1, a0, 136
+; RV64ZVE32F-NEXT:    lw a2, 140(a0)
 ; RV64ZVE32F-NEXT:    lw a3, 0(a0)
 ; RV64ZVE32F-NEXT:    lw a0, 4(a0)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -15128,7 +15128,7 @@ define <4 x i32> @masked_gather_widen_sew_negative_stride(ptr %base) {
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a3
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr i32, ptr %base, <4 x i64> <i64 32, i64 33, i64 0, i64 1>
+  %ptrs = getelementptr i32, ptr %base, <4 x i64> <i64 34, i64 35, i64 0, i64 1>
   %x = call <4 x i32> @llvm.masked.gather.v4i32.v32p0(<4 x ptr> %ptrs, i32 8, <4 x i1> shufflevector(<4 x i1> insertelement(<4 x i1> poison, i1 true, i32 0), <4 x i1> poison, <4 x i32> zeroinitializer), <4 x i32> poison)
   ret <4 x i32> %x
 }
