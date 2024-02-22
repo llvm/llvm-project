@@ -33,6 +33,7 @@ add_llvm_target(HexagonCodeGen
   HexagonFrameLowering.cpp
   HexagonGenExtract.cpp
   HexagonGenInsert.cpp
+  HexagonGenMemAbsolute.cpp
   HexagonGenMux.cpp
   HexagonGenPredicate.cpp
   HexagonHardwareLoops.cpp
