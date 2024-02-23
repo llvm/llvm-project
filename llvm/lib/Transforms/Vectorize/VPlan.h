@@ -385,9 +385,6 @@ struct VPTransformState {
 
   VPValue2ValueTy VPValue2Value;
 
-  /// Hold the canonical scalar IV of the vector loop (start=0, step=VF*UF).
-  Value *CanonicalIV = nullptr;
-
   /// Hold a pointer to InnerLoopVectorizer to reuse its IR generation methods.
   InnerLoopVectorizer *ILV;
 
