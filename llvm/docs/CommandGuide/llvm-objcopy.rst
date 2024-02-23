@@ -450,7 +450,7 @@ them.
  Set the type of section ``<section>`` to the integer ``<type>``. Can be
  specified multiple times to update multiple sections.
 
-.. option:: --set-start-addr <addr>
+.. option:: --set-start <addr>
 
  Set the start address of the output to ``<addr>``. Overrides any previously
  specified :option:`--change-start` or :option:`--adjust-start` options.
