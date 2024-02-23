@@ -235,6 +235,34 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
 /// generating functions the region that (the sum of) precisely this subset is
 /// in, is the intersection of the regions that these are active in,
 /// intersected with the complements of the remaining regions.
+///
+/// If the parameter values lie in the intersection of two chambers with
+/// differing vertex sets, the answer is given by considering either one.
+/// Assume that the chambers differ in that one has k+1 vertices and the other
+/// only k – we can then show that the same vertex is counted twice in the
+/// former, and so the sets are in fact the same. This is proved below.
+/// Consider a parametric polyhedron D in n variables and m parameters. We want
+/// to show that if two vertices' chambers intersect, then the vertices collapse
+/// in this region.
+///
+/// Let D' be the polyhedron in combined data-and-parameter space (R^{n+m}).
+/// Then we have from [1] that:
+///
+/// * a vertex is a 0-dimensional face of D, which is equivalent to an m-face
+/// F_i^m of D'.
+/// * a vertex v_i(p) is obtained from F_i^m(D') by projecting down to n-space
+/// (see Fig. 1).
+/// * the region a vertex exists in is given by projecting F_i^m(D') down to
+/// m-space.
+///
+/// Thus, if two chambers intersect, this means that the corresponding faces
+/// (say F_i^m(D') and F_j^m(D')) also have some intersection. Since the
+/// vertices v_i and v_j correspond to the projections of F_i^m(D') and
+/// F_j^m(D'), they must collapse in the intersection.
+///
+/// [1]: Parameterized Polyhedra and Their Vertices (Loechner & Wilde, 1997)
+/// https://link.springer.com/article/10.1023/A:1025117523902
+
 std::vector<std::pair<PresburgerSet, GeneratingFunction>>
 mlir::presburger::detail::computeChamberDecomposition(
     unsigned numSymbols, ArrayRef<std::pair<PresburgerSet, GeneratingFunction>>
