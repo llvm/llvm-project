@@ -58,12 +58,12 @@ code bases.
 
   To reduce such widespread breakages, as an extension, Clang accepts this code
   with an existing warning ``-Wambiguous-reversed-operator`` warning.
-  Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
+  Fixes `#53954 <https://github.com/llvm/llvm-project/issues/53954>`_.
 
 - The CMake variable ``GCC_INSTALL_PREFIX`` (which sets the default
   ``--gcc-toolchain=``) is deprecated and will be removed. Specify
   ``--gcc-install-dir=`` or ``--gcc-triple=`` in a `configuration file
-  <https://clang.llvm.org/docs/UsersManual.html#configuration-files>` as a
+  <https://clang.llvm.org/docs/UsersManual.html#configuration-files>`_ as a
   replacement.
   (`#77537 <https://github.com/llvm/llvm-project/pull/77537>`_)
 
@@ -95,7 +95,7 @@ C/C++ Language Potentially Breaking Changes
 
 - Fixed a bug in finding matching `operator!=` while adding reversed `operator==` as
   outlined in "The Equality Operator You Are Looking For" (`P2468 <http://wg21.link/p2468r2>`_).
-  Fixes (`#68901: <https://github.com/llvm/llvm-project/issues/68901>`_).
+  Fixes (`#68901 <https://github.com/llvm/llvm-project/issues/68901>`_).
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
@@ -139,10 +139,10 @@ C++ Specific Potentially Breaking Changes
 
 - Remove the hardcoded path to the imported modules for C++20 named modules. Now we
   require all the dependent modules to specified from the command line.
-  See (`#62707: <https://github.com/llvm/llvm-project/issues/62707>`_).
+  See (`#62707 <https://github.com/llvm/llvm-project/issues/62707>`_).
 
 - Forbid `import XXX;` in C++ to find module `XXX` comes from explicit clang modules.
-  See (`#64755: <https://github.com/llvm/llvm-project/issues/64755>`_).
+  See (`#64755 <https://github.com/llvm/llvm-project/issues/64755>`_).
 
 ABI Changes in This Version
 ---------------------------
@@ -199,7 +199,7 @@ C++ Language Changes
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
-- Implemented `P1907R1 <https://wg21.link/P1907R1>` which extends allowed non-type template argument
+- Implemented `P1907R1 <https://wg21.link/P1907R1>`_ which extends allowed non-type template argument
   kinds with e.g. floating point values and pointers and references to subobjects.
   This feature is still experimental. Accordingly, ``__cpp_nontype_template_args`` was not updated.
   However, its support can be tested with ``__has_extension(cxx_generalized_nttp)``.
@@ -259,7 +259,7 @@ Resolutions to C++ Defect Reports
 
 - Implemented `CWG2598 <https://wg21.link/CWG2598>`_ and `CWG2096 <https://wg21.link/CWG2096>`_,
   making unions (that have either no members or at least one literal member) literal types.
-  (`#77924: <https://github.com/llvm/llvm-project/issues/77924>`_).
+  (`#77924 <https://github.com/llvm/llvm-project/issues/77924>`_).
 
 
 C Language Changes
@@ -415,7 +415,7 @@ Attribute Changes in Clang
   types after default argument promotion. As a result, it's no longer an
   automatic diagnostic to use parameters of types that the format style
   supports but that are never the result of default argument promotion, such as
-  ``float``. (`#59824: <https://github.com/llvm/llvm-project/issues/59824>`_)
+  ``float``. (`#59824 <https://github.com/llvm/llvm-project/issues/59824>`_)
 
 - Clang now supports ``[[clang::preferred_type(type-name)]]`` as an attribute
   which can be applied to a bit-field. This attribute helps to map a bit-field
@@ -483,13 +483,13 @@ Improvements to Clang's diagnostics
 - Clang's ``-Wtautological-negation-compare`` flag now diagnoses logical
   tautologies like ``x && !x`` and ``!x || x`` in expressions. This also
   makes ``-Winfinite-recursion`` diagnose more cases.
-  (`#56035: <https://github.com/llvm/llvm-project/issues/56035>`_).
+  (`#56035 <https://github.com/llvm/llvm-project/issues/56035>`_).
 - Clang constexpr evaluator now diagnoses compound assignment operators against
   uninitialized variables as a read of uninitialized object.
   (`#51536 <https://github.com/llvm/llvm-project/issues/51536>`_)
 - Clang's ``-Wformat-truncation`` now diagnoses ``snprintf`` call that is known to
   result in string truncation.
-  (`#64871: <https://github.com/llvm/llvm-project/issues/64871>`_).
+  (`#64871 <https://github.com/llvm/llvm-project/issues/64871>`_).
   Existing warnings that similarly warn about the overflow in ``sprintf``
   now falls under its own warning group ```-Wformat-overflow`` so that it can
   be disabled separately from ``Wfortify-source``.
@@ -505,12 +505,12 @@ Improvements to Clang's diagnostics
 - Clang now emits ``-Wcast-qual`` for functional-style cast expressions.
 - Clang no longer emits irrelevant notes about unsatisfied constraint expressions
   on the left-hand side of ``||`` when the right-hand side constraint is satisfied.
-  (`#54678: <https://github.com/llvm/llvm-project/issues/54678>`_).
+  (`#54678 <https://github.com/llvm/llvm-project/issues/54678>`_).
 - Clang now prints its 'note' diagnostic in cyan instead of black, to be more compatible
   with terminals with dark background colors. This is also more consistent with GCC.
 - Clang now displays an improved diagnostic and a note when a defaulted special
   member is marked ``constexpr`` in a class with a virtual base class
-  (`#64843: <https://github.com/llvm/llvm-project/issues/64843>`_).
+  (`#64843 <https://github.com/llvm/llvm-project/issues/64843>`_).
 - ``-Wfixed-enum-extension`` and ``-Wmicrosoft-fixed-enum`` diagnostics are no longer
   emitted when building as C23, since C23 standardizes support for enums with a
   fixed underlying type.
@@ -550,10 +550,10 @@ Improvements to Clang's diagnostics
     1 | static_assert("A\n"[1] == U'🌍');
       |               ~~~~~~~~~^~~~~~~~
 - Clang now always diagnoses when using non-standard layout types in ``offsetof`` .
-  (`#64619: <https://github.com/llvm/llvm-project/issues/64619>`_)
+  (`#64619 <https://github.com/llvm/llvm-project/issues/64619>`_)
 - Clang now diagnoses redefined defaulted constructor when redefined
   defaulted constructor with different exception specs.
-  (`#69094: <https://github.com/llvm/llvm-project/issues/69094>`_)
+  (`#69094 <https://github.com/llvm/llvm-project/issues/69094>`_)
 - Clang now diagnoses use of variable-length arrays in C++ by default (and
   under ``-Wall`` in GNU++ mode). This is an extension supported by Clang and
   GCC, but is very easy to accidentally use without realizing it's a
@@ -629,7 +629,7 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses definitions of friend function specializations, e.g. ``friend void f<>(int) {}``.
 - Clang now diagnoses narrowing conversions involving const references.
-  (`#63151: <https://github.com/llvm/llvm-project/issues/63151>`_).
+  (`#63151 <https://github.com/llvm/llvm-project/issues/63151>`_).
 - Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
 - The warning `-Wnan-infinity-disabled` is now emitted when ``INFINITY``
   or ``NAN`` are used in arithmetic operations or function arguments in
@@ -639,7 +639,7 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses attempts to bind a bitfield to an NTTP of a reference type as erroneous
   converted constant expression and not as a reference to subobject.
 - Clang now diagnoses ``auto`` and ``decltype(auto)`` in declarations of conversion function template
-  (`CWG1878: <https://cplusplus.github.io/CWG/issues/1878.html>`_)
+  (`CWG1878 <https://cplusplus.github.io/CWG/issues/1878.html>`_)
 - Clang now diagnoses the requirement that non-template friend declarations with requires clauses
   and template friend declarations with a constraint that depends on a template parameter from an
   enclosing template must be a definition.
@@ -670,15 +670,15 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses import before module declarations but not in global
   module fragment.
-  (`#67627: <https://github.com/llvm/llvm-project/issues/67627>`_).
+  (`#67627 <https://github.com/llvm/llvm-project/issues/67627>`_).
 
 - Clang now diagnoses include headers with angle in module purviews, which is
   not usually intended.
-  (`#68615: <https://github.com/llvm/llvm-project/issues/68615>`_)
+  (`#68615 <https://github.com/llvm/llvm-project/issues/68615>`_)
 
 - Clang now won't mention invisible namespace when diagnose invisible declarations
   inside namespace. The original diagnostic message is confusing.
-  (`#73893: <https://github.com/llvm/llvm-project/issues/73893>`_)
+  (`#73893 <https://github.com/llvm/llvm-project/issues/73893>`_)
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -963,7 +963,7 @@ Bug Fixes to C++ Support
 
 - Fix a crash when calling a non-constant immediate function
   in the initializer of a static data member.
-  (`#65985 <https://github.com/llvm/llvm-project/issues/65985>_`).
+  (`#65985 <https://github.com/llvm/llvm-project/issues/65985>`_).
 - Clang now properly converts static lambda call operator to function
   pointers on win32.
   (`#62594 <https://github.com/llvm/llvm-project/issues/62594>`_)
@@ -972,7 +972,7 @@ Bug Fixes to C++ Support
   of a function template or a member function of a class template was assigned
   the location of a non-defining declaration rather than the location of the
   definition the specialization was instantiated from.
-  (`#26057 <https://github.com/llvm/llvm-project/issues/26057>`_`)
+  (`#26057 <https://github.com/llvm/llvm-project/issues/26057>`_)
 
 - Fix a crash when a default member initializer of a base aggregate
   makes an invalid call to an immediate function.
@@ -983,11 +983,11 @@ Bug Fixes to C++ Support
   (`#48527 <https://github.com/llvm/llvm-project/issues/48527>`_)
 
 - Clang now no longer asserts when an UnresolvedLookupExpr is used as an
-  expression requirement. (`#66612 https://github.com/llvm/llvm-project/issues/66612`)
+  expression requirement. (`#66612 <https://github.com/llvm/llvm-project/issues/66612>`_)
 
 - Clang now disambiguates NTTP types when printing diagnostics where the
   NTTP types are compared with the 'diff' method.
-  (`#66744 https://github.com/llvm/llvm-project/issues/66744`)
+  (`#66744 <https://github.com/llvm/llvm-project/issues/66744>`_)
 
 - Fix crash caused by a spaceship operator returning a comparision category by
   reference. Fixes:
