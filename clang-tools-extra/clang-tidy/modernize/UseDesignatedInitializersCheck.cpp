@@ -153,15 +153,21 @@ void UseDesignatedInitializersCheck::check(
       continue;
     if (IgnoreMacros && InitExpr->getBeginLoc().isMacroID())
       continue;
-    DiagnosticBuilder Diag =
-        diag(InitExpr->getBeginLoc(),
-             "use designated init expression to initialize field '%0'");
-    Diag << InitExpr->getSourceRange();
     const auto Designator = Designators[InitExpr->getBeginLoc()];
-    if (!Designator->empty() && Designator->front() == '.') {
-      Diag << Designator->substr(1); // Strip leading dot
-      Diag << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
-                                         (*Designator + "=").str());
+    if (!Designator || Designator->empty()) {
+      // There should always be a designator. If there's unexpectedly none, we
+      // at least report a generic diagnostic.
+      diag(InitExpr->getBeginLoc(), "use designated init expression")
+          << InitExpr->getSourceRange();
+    } else {
+      diag(InitExpr->getBeginLoc(),
+           "use designated init expression to initialize field '%0'")
+          << InitExpr->getSourceRange()
+          << (Designator->front() == '.'
+                  ? Designator->substr(1) // Strip leading dot
+                  : *Designator)
+          << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
+                                        (*Designator + "=").str());
     }
   }
 }
