@@ -12204,5 +12204,5 @@ def err_acc_construct_appertainment
     : Error<"OpenACC construct '%0' cannot be used here; it can only "
             "be used in a statement context">;
 def err_acc_branch_in_out
-    : Error<"invalid branch %select{out of|into}0 OpenACC region">;
+    : Error<"invalid branch %select{out of|into}0 OpenACC Compute Construct">;
 } // end of sema component.
