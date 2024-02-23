@@ -21,7 +21,7 @@
 using namespace llvm;
 using namespace llvm::sys;
 
-PluginManager *PM;
+PluginManager *PM = nullptr;
 
 // List of all plugins that can support offloading.
 static const char *RTLNames[] = {ENABLED_OFFLOAD_PLUGINS};
@@ -56,10 +56,10 @@ PluginAdaptorTy::PluginAdaptorTy(const std::string &Name,
 
 Error PluginAdaptorTy::init() {
 
-#define PLUGIN_API_HANDLE(NAME, MANDATORY)                                     \
+#define PLUGIN_API_HANDLE(NAME)                                                \
   NAME = reinterpret_cast<decltype(NAME)>(                                     \
       LibraryHandler->getAddressOfSymbol(GETNAME(__tgt_rtl_##NAME)));          \
-  if (MANDATORY && !NAME) {                                                    \
+  if (!NAME) {                                                                 \
     return createStringError(inconvertibleErrorCode(),                         \
                              "Invalid plugin as necessary interface function " \
                              "(%s) was not found.\n",                          \

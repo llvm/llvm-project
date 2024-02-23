@@ -405,7 +405,16 @@ int testDivByZero(void) {
 void testTaintedVLASize(void) {
   int x;
   scanf("%d", &x);
-  int vla[x]; // expected-warning{{Declared variable-length array (VLA) has tainted size}}
+  int vla[x]; // expected-warning{{Declared variable-length array (VLA) has tainted (attacker controlled) size that can be 0 or negative}}
+}
+
+// Tainted-sanitized VLAs.
+void testTaintedSanitizedVLASize(void) {
+  int x;
+  scanf("%d", &x);
+  if (x<1)
+    return;
+  int vla[x]; // no-warning
 }
 
 int testTaintedAllocaMem() {
