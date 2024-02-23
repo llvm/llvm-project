@@ -5,8 +5,8 @@ endif()
 
 # Ensure the compiler is a valid clang when building the GPU target.
 set(req_ver "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
-if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
-        ${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "${req_ver}"))
+if(LLVM_VERSION_MAJOR AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
+   ${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "${req_ver}"))
   message(FATAL_ERROR "Cannot build libc for GPU. CMake compiler "
                       "'${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' "
                       " is not 'Clang ${req_ver}'.")

@@ -120,10 +120,10 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
 endif()
 
-# If we are targeting a GPU architecture we want to ignore all the standard
-# flag handling.
-if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn" OR
-   "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx64")
+# If we are targeting a GPU architecture in a runtimes build we want to ignore
+# all the standard flag handling.
+if("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn" OR
+   "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
   return()
 endif()
 
