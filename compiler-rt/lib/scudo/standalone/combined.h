@@ -177,6 +177,18 @@ public:
     mapAndInitializeRingBuffer(getFlags()->allocation_ring_buffer_size);
   }
 
+  void enableRingBuffer() {
+    AllocationRingBuffer *RB = getRingBuffer();
+    if (RB)
+      RB->Depot->enable();
+  }
+
+  void disableRingBuffer() {
+    AllocationRingBuffer *RB = getRingBuffer();
+    if (RB)
+      RB->Depot->disable();
+  }
+
   bool resizeRingBuffer(int Size) { return mapAndInitializeRingBuffer(Size); }
 
   // Initialize the embedded GWP-ASan instance. Requires the main allocator to
@@ -690,16 +702,12 @@ public:
     Quarantine.disable();
     Primary.disable();
     Secondary.disable();
-    AllocationRingBuffer *RB = getRingBuffer();
-    if (RB)
-      RB->disable();
+    disableRingBuffer();
   }
 
   void enable() NO_THREAD_SAFETY_ANALYSIS {
     initThreadMaybe();
-    AllocationRingBuffer *RB = getRingBuffer();
-    if (RB)
-      RB->enable();
+    enableRingBuffer();
     Secondary.enable();
     Primary.enable();
     Quarantine.enable();
@@ -1074,10 +1082,6 @@ private:
     atomic_uptr Pos;
     // An array of Size (at least one) elements of type Entry is immediately
     // following to this struct.
-
-    void enable() { Depot->enable(); }
-
-    void disable() { Depot->disable(); }
   };
   // Pointer to memory mapped area starting with AllocationRingBuffer struct,
   // and immediately followed by Size elements of type Entry.
@@ -1547,7 +1551,12 @@ private:
     constexpr u32 kStacksPerRingBufferEntry = 2;
     constexpr u32 kMaxU32Pow2 = ~(UINT32_MAX >> 1);
     static_assert(isPowerOfTwo(kMaxU32Pow2));
-    constexpr u32 kFramesPerStack = 8;
+    // On Android we always have 3 frames at the bottom: __start_main,
+    // __libc_init, main, and 3 at the top: malloc, scudo_malloc and
+    // Allocator::allocate. This leaves 10 frames for the user app. The next
+    // smallest power of two (8) would only leave 2, which is clearly too
+    // little.
+    constexpr u32 kFramesPerStack = 16;
     static_assert(isPowerOfTwo(kFramesPerStack));
 
     // We need StackDepot to be aligned to 8-bytes so the ring we store after

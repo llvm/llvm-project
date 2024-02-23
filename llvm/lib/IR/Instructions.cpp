@@ -3525,6 +3525,7 @@ CastInst *CastInst::CreateFPCast(Value *C, Type *Ty,
          "Invalid cast");
   unsigned SrcBits = C->getType()->getScalarSizeInBits();
   unsigned DstBits = Ty->getScalarSizeInBits();
+  assert((C->getType() == Ty || SrcBits != DstBits) && "Invalid cast");
   Instruction::CastOps opcode =
     (SrcBits == DstBits ? Instruction::BitCast :
      (SrcBits > DstBits ? Instruction::FPTrunc : Instruction::FPExt));
