@@ -16,7 +16,6 @@ if(NOT LLVM_LIBC_FULL_BUILD)
                       "GPU.")
 endif()
 
-
 # Identify the program used to package multiple images into a single binary.
 get_filename_component(compiler_path ${CMAKE_CXX_COMPILER} DIRECTORY)
 find_program(LIBC_CLANG_OFFLOAD_PACKAGER
