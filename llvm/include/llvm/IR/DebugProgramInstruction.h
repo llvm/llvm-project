@@ -157,6 +157,11 @@ protected:
   ~DbgRecord() = default;
 };
 
+inline raw_ostream &operator<<(raw_ostream &OS, const DbgRecord &R) {
+  R.print(OS);
+  return OS;
+}
+
 /// Records a position in IR for a source label (DILabel). Corresponds to the
 /// llvm.dbg.label intrinsic.
 /// FIXME: Rename DbgLabelRecord when DPValue is renamed to DbgVariableRecord.
@@ -533,11 +538,6 @@ public:
 
 inline raw_ostream &operator<<(raw_ostream &OS, const DPMarker &Marker) {
   Marker.print(OS);
-  return OS;
-}
-
-inline raw_ostream &operator<<(raw_ostream &OS, const DPValue &Value) {
-  Value.print(OS);
   return OS;
 }
 

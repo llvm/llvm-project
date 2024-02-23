@@ -386,7 +386,15 @@ static bool DPValuesRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
   SmallVector<DPValue *, 8> ToBeRemoved;
   SmallDenseSet<DebugVariable> VariableSet;
   for (auto &I : reverse(*BB)) {
-    for (DPValue &DPV : reverse(DPValue::filter(I.getDbgValueRange()))) {
+    for (DbgRecord &DR : reverse(I.getDbgValueRange())) {
+      if (isa<DPLabel>(DR)) {
+        // Emulate existing behaviour (see comment below for dbg.declares).
+        // FIXME: Don't do this.
+        VariableSet.clear();
+        continue;
+      }
+
+      DPValue &DPV = cast<DPValue>(DR);
       // Skip declare-type records, as the debug intrinsic method only works
       // on dbg.value intrinsics.
       if (DPV.getType() == DPValue::LocationType::Declare) {

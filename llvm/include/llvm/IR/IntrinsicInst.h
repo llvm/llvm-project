@@ -531,6 +531,9 @@ public:
 class DbgLabelInst : public DbgInfoIntrinsic {
 public:
   DILabel *getLabel() const { return cast<DILabel>(getRawLabel()); }
+  void setLabel(DILabel *NewLabel) {
+    setArgOperand(0, MetadataAsValue::get(getContext(), NewLabel));
+  }
 
   Metadata *getRawLabel() const {
     return cast<MetadataAsValue>(getArgOperand(0))->getMetadata();

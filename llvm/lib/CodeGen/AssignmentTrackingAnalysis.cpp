@@ -829,11 +829,7 @@ class MemLocFragmentFill {
   void process(BasicBlock &BB, VarFragMap &LiveSet) {
     BBInsertBeforeMap[&BB].clear();
     for (auto &I : BB) {
-      for (DbgRecord &DR : I.getDbgValueRange()) {
-        // FIXME: DPValue::filter usage needs attention in this file; we need
-        // to make sure dbg.labels are handled correctly in RemoveDIs mode.
-        // Cast below to ensure this gets fixed when DPLabels are introduced.
-        DPValue &DPV = cast<DPValue>(DR);
+      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
         if (const auto *Locs = FnVarLocs->getWedge(&DPV)) {
           for (const VarLocInfo &Loc : *Locs) {
             addDef(Loc, &DPV, *I.getParent(), LiveSet);
@@ -1919,6 +1915,9 @@ void AssignmentTrackingLowering::process(BasicBlock &BB, BlockInfo *LiveSet) {
     // attached DPValues, or a non-debug instruction with attached unprocessed
     // DPValues.
     if (II != EI && II->hasDbgValues()) {
+      // Skip over non-variable debug records (i.e., labels). They're going to
+      // be read from IR (possibly re-ordering them within the debug record
+      // range) rather than from the analysis results.
       for (DPValue &DPV : DPValue::filter(II->getDbgValueRange())) {
         resetInsertionPoint(DPV);
         processDPValue(DPV, LiveSet);

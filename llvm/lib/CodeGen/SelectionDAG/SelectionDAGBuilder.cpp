@@ -1241,17 +1241,30 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
                              It->Expr, Vals.size() > 1, It->DL, SDNodeOrder);
       }
     }
-    // We must early-exit here to prevent any DPValues from being emitted below,
-    // as we have just emitted the debug values resulting from assignment
-    // tracking analysis, making any existing DPValues redundant (and probably
-    // less correct).
-    return;
   }
 
+  // We must skip DPValues if they've already been processed above as we
+  // have just emitted the debug values resulting from assignment tracking
+  // analysis, making any existing DPValues redundant (and probably less
+  // correct). We still need to process DPLabels. This does sink DPLabels
+  // to the bottom of the group of debug records. That sholdn't be important
+  // as it does so deterministcally and ordering between DPLabels and DPValues
+  // is immaterial (other than for MIR/IR printing).
+  bool SkipDPValues = DAG.getFunctionVarLocs();
   // Is there is any debug-info attached to this instruction, in the form of
-  // DPValue non-instruction debug-info records.
-  for (DbgRecord &DPR : I.getDbgValueRange()) {
-    DPValue &DPV = cast<DPValue>(DPR);
+  // DbgRecord non-instruction debug-info records.
+  for (DbgRecord &DR : I.getDbgValueRange()) {
+    if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
+      assert(DPL->getLabel() && "Missing label");
+      SDDbgLabel *SDV =
+          DAG.getDbgLabel(DPL->getLabel(), DPL->getDebugLoc(), SDNodeOrder);
+      DAG.AddDbgLabel(SDV);
+      continue;
+    }
+
+    if (SkipDPValues)
+      continue;
+    DPValue &DPV = cast<DPValue>(DR);
     DILocalVariable *Variable = DPV.getVariable();
     DIExpression *Expression = DPV.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
