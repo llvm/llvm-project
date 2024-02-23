@@ -19,7 +19,6 @@
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Debug.h"
-#include <algorithm>
 #include <cassert>
 
 #define DEBUG_TYPE "format-reconstruct"
