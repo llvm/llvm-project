@@ -29,6 +29,6 @@ ptrue p0.s, #32
 // CHECK-NOT: [[@LINE-3]]:{{[0-9]+}}:
 
 ptrue p0.s, #all
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: expected immediate operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: ptrue p0.s, #all
 // CHECK-NOT: [[@LINE-3]]:{{[0-9]+}}:$
