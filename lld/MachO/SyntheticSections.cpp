@@ -1050,10 +1050,13 @@ static std::vector<MachO::data_in_code_entry> collectDataInCodeEntries() {
     if (entries.empty())
       continue;
 
-    assert(is_sorted(entries, [](const data_in_code_entry &lhs,
+    std::vector<MachO::data_in_code_entry> sortedEntries;
+    sortedEntries.assign(entries.begin(), entries.end());
+    llvm::sort(sortedEntries, [](const data_in_code_entry &lhs,
                                  const data_in_code_entry &rhs) {
       return lhs.offset < rhs.offset;
-    }));
+    });
+
     // For each code subsection find 'data in code' entries residing in it.
     // Compute the new offset values as
     // <offset within subsection> + <subsection address> - <__TEXT address>.
@@ -1066,12 +1069,12 @@ static std::vector<MachO::data_in_code_entry> collectDataInCodeEntries() {
           continue;
         const uint64_t beginAddr = section->addr + subsec.offset;
         auto it = llvm::lower_bound(
-            entries, beginAddr,
+            sortedEntries, beginAddr,
             [](const MachO::data_in_code_entry &entry, uint64_t addr) {
               return entry.offset < addr;
             });
         const uint64_t endAddr = beginAddr + isec->getSize();
-        for (const auto end = entries.end();
+        for (const auto end = sortedEntries.end();
              it != end && it->offset + it->length <= endAddr; ++it)
           dataInCodeEntries.push_back(
               {static_cast<uint32_t>(isec->getVA(it->offset - beginAddr) -

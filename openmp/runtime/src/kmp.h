@@ -1181,7 +1181,11 @@ extern void __kmp_init_target_task();
 #define KMP_MIN_STKSIZE ((size_t)(32 * 1024))
 #endif
 
+#if KMP_OS_AIX && KMP_ARCH_PPC
+#define KMP_MAX_STKSIZE 0x10000000 /* 256Mb max size on 32-bit AIX */
+#else
 #define KMP_MAX_STKSIZE (~((size_t)1 << ((sizeof(size_t) * (1 << 3)) - 1)))
+#endif
 
 #if KMP_ARCH_X86
 #define KMP_DEFAULT_STKSIZE ((size_t)(2 * 1024 * 1024))

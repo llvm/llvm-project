@@ -2600,7 +2600,7 @@ void AArch64Operand::print(raw_ostream &OS) const {
 /// @name Auto-generated Match Functions
 /// {
 
-static unsigned MatchRegisterName(StringRef Name);
+static MCRegister MatchRegisterName(StringRef Name);
 
 /// }
 
@@ -4764,6 +4764,15 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
 
   // Nothing custom, so do general case parsing.
   SMLoc S, E;
+  auto parseOptionalShiftExtend = [&](AsmToken SavedTok) {
+    if (parseOptionalToken(AsmToken::Comma)) {
+      ParseStatus Res = tryParseOptionalShiftExtend(Operands);
+      if (!Res.isNoMatch())
+        return Res.isFailure();
+      getLexer().UnLex(SavedTok);
+    }
+    return false;
+  };
   switch (getLexer().getKind()) {
   default: {
     SMLoc S = getLoc();
@@ -4773,7 +4782,7 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
 
     SMLoc E = SMLoc::getFromPointer(getLoc().getPointer() - 1);
     Operands.push_back(AArch64Operand::CreateImm(Expr, S, E, getContext()));
-    return false;
+    return parseOptionalShiftExtend(getTok());
   }
   case AsmToken::LBrac: {
     Operands.push_back(
@@ -4895,14 +4904,7 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     Operands.push_back(AArch64Operand::CreateImm(ImmVal, S, E, getContext()));
 
     // Parse an optional shift/extend modifier.
-    AsmToken SavedTok = Tok;
-    if (parseOptionalToken(AsmToken::Comma)) {
-      ParseStatus Res = tryParseOptionalShiftExtend(Operands);
-      if (!Res.isNoMatch())
-        return Res.isFailure();
-      getLexer().UnLex(SavedTok);
-    }
-    return false;
+    return parseOptionalShiftExtend(Tok);
   }
   case AsmToken::Equal: {
     SMLoc Loc = getLoc();
