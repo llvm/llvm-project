@@ -13918,10 +13918,14 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
                           << "MinVF (" << MinVF << ")\n");
       }
 
-      // FIXME: Is division-by-2 the correct step? Should we assert that the
-      // register size is a power-of-2?
-      unsigned StartIdx = 0;
+      SmallVector<unsigned> CandidateVFs;
       for (unsigned Size = MaxVF; Size >= MinVF; Size /= 2) {
+        // FIXME: Is division-by-2 the correct step? Should we assert that the
+        // register size is a power-of-2?
+        CandidateVFs.push_back(Size);
+      }
+      unsigned StartIdx = 0;
+      for (unsigned Size : CandidateVFs) {
         for (unsigned Cnt = StartIdx, E = Operands.size(); Cnt + Size <= E;) {
           ArrayRef<Value *> Slice = ArrayRef(Operands).slice(Cnt, Size);
           assert(
