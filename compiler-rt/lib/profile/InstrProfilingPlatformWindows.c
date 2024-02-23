@@ -26,10 +26,6 @@
 /* Allocate read-only section bounds. */
 #pragma section(".lprfn$A", read)
 #pragma section(".lprfn$Z", read)
-#pragma section(".lprfvn$A", read)
-#pragma section(".lprfvn$Z", read)
-#pragma section(".lprfvt$A", read)
-#pragma section(".lprfvt$Z", read)
 
 /* Allocate read-write section bounds. */
 #pragma section(".lprfd$A", read, write)
@@ -46,14 +42,8 @@
 __llvm_profile_data COMPILER_RT_SECTION(".lprfd$A") DataStart = {0};
 __llvm_profile_data COMPILER_RT_SECTION(".lprfd$Z") DataEnd = {0};
 
-VTableProfData COMPILER_RT_SECTION(".lprfvt$A") VTableProfDataStart = {0};
-VTableProfData COMPILER_RT_SECTION(".lprfvt$Z") VTableProfDataEnd = {0};
-
 const char COMPILER_RT_SECTION(".lprfn$A") NamesStart = '\0';
 const char COMPILER_RT_SECTION(".lprfn$Z") NamesEnd = '\0';
-
-const char COMPILER_RT_SECTION(".lprfvn$A") VNamesStart = '\0';
-const char COMPILER_RT_SECTION(".lprfvn$Z") VNamesEnd = '\0';
 
 char COMPILER_RT_SECTION(".lprfc$A") CountersStart;
 char COMPILER_RT_SECTION(".lprfc$Z") CountersEnd;
@@ -69,19 +59,20 @@ const __llvm_profile_data *__llvm_profile_begin_data(void) {
 }
 const __llvm_profile_data *__llvm_profile_end_data(void) { return &DataEnd; }
 
+// TODO: Implement the linker magic on Windows.
 const VTableProfData* __llvm_profile_begin_vtables(void) {
-  return &VTableProfDataStart + 1;
+  return NULL;
 }
 
 const VTableProfData* __llvm_profile_end_vtables(void) {
-  return &VTableProfDataEnd;
+  return NULL;
 }
 
 const char *__llvm_profile_begin_names(void) { return &NamesStart + 1; }
 const char *__llvm_profile_end_names(void) { return &NamesEnd; }
 
-const char* __llvm_profile_begin_vtabnames(void) { return &VNamesStart + 1; }
-const char* __llvm_profile_end_vtabnames(void) { return &VNamesEnd; }
+const char* __llvm_profile_begin_vtabnames(void) { return NULL; }
+const char* __llvm_profile_end_vtabnames(void) { return NULL; }
 
 char *__llvm_profile_begin_counters(void) { return &CountersStart + 1; }
 char *__llvm_profile_end_counters(void) { return &CountersEnd; }
