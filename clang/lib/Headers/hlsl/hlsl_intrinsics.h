@@ -182,6 +182,12 @@ double4 cos(double4);
 //===----------------------------------------------------------------------===//
 // dot product builtins
 //===----------------------------------------------------------------------===//
+
+/// \fn K dot(T X, T Y)
+/// \brief Return the dot product (a scalar value) of \a X and \a Y.
+/// \param X The X input value.
+/// \param Y The Y input value.
+
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
 half dot(half, half);

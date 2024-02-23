@@ -17996,8 +17996,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     assert(T0->getScalarType() == T1->getScalarType() &&
            "Dot product of vectors need the same element types.");
 
-    auto *VecTy0 = E->getArg(0)->getType()->getAs<VectorType>();
-    auto *VecTy1 = E->getArg(1)->getType()->getAs<VectorType>();
+    [[maybe_unused]] auto *VecTy0 =
+        E->getArg(0)->getType()->getAs<VectorType>();
+    [[maybe_unused]] auto *VecTy1 =
+        E->getArg(1)->getType()->getAs<VectorType>();
     // A HLSLVectorTruncation should have happend
     assert(VecTy0->getNumElements() == VecTy1->getNumElements() &&
            "Dot product requires vectors to be of the same size.");
