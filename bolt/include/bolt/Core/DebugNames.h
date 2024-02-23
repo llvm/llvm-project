@@ -70,7 +70,6 @@ private:
   bool NeedToCreate = false;
   BumpPtrAllocator Allocator;
   DebugStrWriter &MainBinaryStrWriter;
-  DebugStrOffsetsWriter StrOffsetsWriter;
   StringRef StrSection;
   uint64_t CurrentUnitOffset = 0;
   const DWARFUnit *CurrentUnit = nullptr;

@@ -79,8 +79,6 @@ void DWARF5AcceleratorTable::setCurrentUnit(DWARFUnit &Unit,
 
 void DWARF5AcceleratorTable::addUnit(DWARFUnit &Unit,
                                      const std::optional<uint64_t> &DWOID) {
-  StrOffsetsWriter.clear();
-  StrOffsetsWriter.initialize(Unit);
   StrSection = Unit.getStringSection();
   if (Unit.isTypeUnit()) {
     if (DWOID) {
@@ -144,6 +142,25 @@ static bool shouldIncludeVariable(const DWARFUnit &Unit, const DIE &Die) {
       return true;
   return false;
 }
+
+/// Returns name offset in String Offset section.
+static uint64_t getNameOffset(BinaryContext &BC, DWARFUnit &Unit,
+                              const uint64_t Index) {
+  const DWARFSection &StrOffsetsSection = Unit.getStringOffsetSection();
+  const std::optional<StrOffsetsContributionDescriptor> &Contr =
+      Unit.getStringOffsetsTableContribution();
+  if (!Contr) {
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not get "
+                 "StringOffsetsTableContribution for unit at offset: "
+              << Twine::utohexstr(Unit.getOffset()) << ".\n";
+    return 0;
+  }
+
+  const uint8_t DwarfOffsetByteSize = Contr->getDwarfOffsetByteSize();
+  return support::endian::read32le(StrOffsetsSection.Data.data() + Contr->Base +
+                                   Index * DwarfOffsetByteSize);
+}
+
 void DWARF5AcceleratorTable::addAccelTableEntry(
     DWARFUnit &Unit, const DIE &Die, const std::optional<uint64_t> &DWOID) {
   if (Unit.getVersion() < 5 || !NeedToCreate)
@@ -217,7 +234,7 @@ void DWARF5AcceleratorTable::addAccelTableEntry(
     if (NameToUse.empty()) {
       NameIndexOffset = ValName.getDIEInteger().getValue();
       if (ValName.getForm() != dwarf::DW_FORM_strp)
-        NameIndexOffset = StrOffsetsWriter.getOffset(NameIndexOffset);
+        NameIndexOffset = getNameOffset(BC, Unit, NameIndexOffset);
       // Counts on strings end with '\0'.
       Name = std::string(&StrSection.data()[NameIndexOffset]);
     } else {
