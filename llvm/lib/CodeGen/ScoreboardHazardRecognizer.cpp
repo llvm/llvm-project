@@ -127,9 +127,9 @@ ScoreboardHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   unsigned idx = MCID->getSchedClass();
   for (const InstrStage *IS = ItinData->beginStage(idx),
          *E = ItinData->endStage(idx); IS != E; ++IS) {
-    // We must find one of the stage's units free for every cycle the
-    // stage is occupied. FIXME it would be more accurate to find the
-    // same unit free in all the cycles.
+    // We must find the same unit free in all the cycles
+    // Initialize freeUnits to all units of the stage.
+    InstrStage::FuncUnits freeUnits = IS->getUnits();
     for (unsigned int i = 0; i < IS->getCycles(); ++i) {
       int StageCycle = cycle + (int)i;
       if (StageCycle < 0)
@@ -142,23 +142,26 @@ ScoreboardHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
         break;
       }
 
-      InstrStage::FuncUnits freeUnits = IS->getUnits();
+      // For each cycle, update freeUnits to the intersection of its current
+      // value and the units free in this cycle
+      InstrStage::FuncUnits cycleFreeUnits = IS->getUnits();
       switch (IS->getReservationKind()) {
       case InstrStage::Required:
         // Required FUs conflict with both reserved and required ones
-        freeUnits &= ~ReservedScoreboard[StageCycle];
+        cycleFreeUnits &= ~ReservedScoreboard[StageCycle];
         [[fallthrough]];
       case InstrStage::Reserved:
         // Reserved FUs can conflict only with required ones.
-        freeUnits &= ~RequiredScoreboard[StageCycle];
+        cycleFreeUnits &= ~RequiredScoreboard[StageCycle];
         break;
       }
+      freeUnits &= cycleFreeUnits;
+    }
 
-      if (!freeUnits) {
-        LLVM_DEBUG(dbgs() << "*** Hazard in cycle +" << StageCycle << ", ");
-        LLVM_DEBUG(DAG->dumpNode(*SU));
-        return Hazard;
-      }
+    if (!freeUnits) {
+      LLVM_DEBUG(dbgs() << "*** Hazard in cycle +" << cycle << ", ");
+      LLVM_DEBUG(DAG->dumpNode(*SU));
+      return Hazard;
     }
 
     // Advance the cycle to the next stage.
