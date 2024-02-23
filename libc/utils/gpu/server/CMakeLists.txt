@@ -21,8 +21,8 @@ if(LLVM_RUNTIMES_TARGET OR LIBC_TARGET_TRIPLE)
 endif()
 
 # Install the server and associated header.
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/rpc_server.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gpu-none-llvm/
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/llvmlibc_rpc_server.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         COMPONENT libc-headers)
 install(TARGETS llvmlibc_rpc_server
         ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}"
