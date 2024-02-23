@@ -214,9 +214,9 @@ static cl::opt<bool> EnableLoopFlatten("enable-loop-flatten", cl::init(false),
 // like memcpy. If this ends up being profitable, we should drop this flag and
 // making a code gen option that can be controlled independent of the opt level
 // and exposed through clang.
-static cl::opt<bool> AllowLoopHeaderDuplication(
-    "allow-loop-header-duplication", cl::init(false), cl::Hidden,
-    cl::desc("Allow loop header duplication at any optimization level"));
+static cl::opt<bool> EnableLoopHeaderDuplication(
+    "enable-loop-header-duplication", cl::init(false), cl::Hidden,
+    cl::desc("Enable loop header duplication at any optimization level"));
 
 static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
@@ -639,7 +639,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
                         /*AllowSpeculation=*/false));
 
   // Disable header duplication in loop rotation at -Oz.
-  LPM1.addPass(LoopRotatePass(AllowLoopHeaderDuplication ||
+  LPM1.addPass(LoopRotatePass(EnableLoopHeaderDuplication ||
                                   (Level != OptimizationLevel::Oz),
                               isLTOPreLink(Phase)));
   // TODO: Investigate promotion cap for O1.
@@ -822,7 +822,7 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
     // Disable header duplication in loop rotation at -Oz.
     MPM.addPass(createModuleToFunctionPassAdaptor(
         createFunctionToLoopPassAdaptor(
-            LoopRotatePass(AllowLoopHeaderDuplication ||
+            LoopRotatePass(EnableLoopHeaderDuplication ||
                            Level != OptimizationLevel::Oz),
             /*UseMemorySSA=*/false,
             /*UseBlockFrequencyInfo=*/false),
@@ -1433,7 +1433,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   LoopPassManager LPM;
   // First rotate loops that may have been un-rotated by prior passes.
   // Disable header duplication at -Oz.
-  LPM.addPass(LoopRotatePass(AllowLoopHeaderDuplication ||
+  LPM.addPass(LoopRotatePass(EnableLoopHeaderDuplication ||
                                  Level != OptimizationLevel::Oz,
                              LTOPreLink));
   // Some loops may have become dead by now. Try to delete them.
