@@ -177,3 +177,27 @@ Fraction QuasiPolynomial::getConstantTerm() {
       constTerm += coefficients[i];
   return constTerm;
 }
+
+Fraction QuasiPolynomial::evaluateAt(const SmallVector<Fraction> &parameters) {
+  assert(parameters.size() == getNumInputs() &&
+         "the size of the input vector does not match the dimensionality of "
+         "the polynomial!");
+
+  unsigned numParams = parameters.size();
+  Fraction sum = 0;
+  // The value of the function is given by a sum of terms,
+  for (int i : llvm::seq<int>(0, coefficients.size())) {
+    // each of which is a coefficient, multiplied by the product of
+    Fraction product = coefficients[i];
+    for (int j : llvm::seq<int>(0, affine[i].size())) {
+      ArrayRef<Fraction> affineFunction(affine[i][j]);
+      // the floors of some affine functions.
+      Fraction value =
+          floor(dotProduct(affineFunction.slice(numParams), parameters) +
+                affineFunction.back());
+      product *= value;
+    }
+    sum += coefficients[i] * product;
+  }
+  return sum;
+}

@@ -70,6 +70,8 @@ public:
 
   Fraction getConstantTerm();
 
+  Fraction evaluateAt(const SmallVector<Fraction> &parameters);
+
 private:
   SmallVector<Fraction> coefficients;
   std::vector<std::vector<SmallVector<Fraction>>> affine;
