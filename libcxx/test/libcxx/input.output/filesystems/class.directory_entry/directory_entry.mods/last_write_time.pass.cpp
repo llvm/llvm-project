@@ -18,7 +18,7 @@
 // UNSUPPORTED: windows
 
 // This test assumes that time is stored as a 64 bit value when on MVS it is stored as 32 bit
-// UNSUPPORTED: target={{.+}}-zos{{.*}}
+// XFAIL: target={{.+}}-zos{{.*}}
 
 // <filesystem>
 
