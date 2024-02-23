@@ -1593,17 +1593,13 @@ Currently, only the following parameter attributes are defined:
     This attribute is a list of const ranges in ascending order with no
     overlapping or continuous. It indicates that the function initializes the
     memory through the pointer argument, [%p+LoN, %p+HiN): there are no reads,
-    no special uses (such as volatile access, untrackable capture, arithmetic
-    operation), and no instructions that may throw an exception before the
-    initialization in the function.
+    and no special uses (such as volatile access, untrackable capture,
+    arithmetic operation) before the initialization in the function.
 
     Similarly to ``writeonly`` or ``readonly``, this attribute implies that
     the function initializes and does not read before initialization through
     this pointer argument, even though it may read the memory before
     initialization that the pointer points to, such as through other arguments.
-
-    Note that as there are no instructions that may throw an exception before
-    initialization, this attribute is still validated even if the call unwinds.
    
     The ``writable`` or ``dereferenceable`` attribute does not imply
     ``initialized`` attribute, however the ``initialized`` argument does imply
@@ -1612,6 +1608,8 @@ Currently, only the following parameter attributes are defined:
     The ``initialized`` attribute can combine with ``writeonly`` attribute, but
     cannot be combined with ``readnone``, ``readonly`` or a memory attribute
     that does not contain ``argmem: write``.
+
+    Note that this attribute does not apply to the unwind edge.
 
 ``dead_on_unwind``
     At a high level, this attribute indicates that the pointer argument is dead
