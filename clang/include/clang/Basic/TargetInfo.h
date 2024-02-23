@@ -1369,13 +1369,20 @@ public:
   }
 
   struct BranchProtectionInfo {
-    LangOptions::SignReturnAddressScopeKind SignReturnAddr =
-        LangOptions::SignReturnAddressScopeKind::None;
-    LangOptions::SignReturnAddressKeyKind SignKey =
-        LangOptions::SignReturnAddressKeyKind::AKey;
-    bool BranchTargetEnforcement = false;
-    bool BranchProtectionPAuthLR = false;
-    bool GuardedControlStack = false;
+    LangOptions::SignReturnAddressScopeKind SignReturnAddr;
+    LangOptions::SignReturnAddressKeyKind SignKey;
+    bool BranchTargetEnforcement;
+    bool BranchProtectionPAuthLR;
+    bool GuardedControlStack;
+
+    BranchProtectionInfo() = default;
+
+    const char *getSignReturnAddrStr() const {
+      static const char *SignReturnAddrStr[] = {"none", "non-leaf", "all"};
+      assert(static_cast<unsigned>(SignReturnAddr) <= 2 &&
+             "Unexpected SignReturnAddressScopeKind");
+      return SignReturnAddrStr[static_cast<int>(SignReturnAddr)];
+    }
   };
 
   /// Determine if the Architecture in this TargetInfo supports branch
