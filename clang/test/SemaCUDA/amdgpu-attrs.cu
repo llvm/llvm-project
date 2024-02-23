@@ -63,6 +63,16 @@ __global__ void flat_work_group_size_32_64_waves_per_eu_2_num_sgpr_32_num_vgpr_6
 __attribute__((amdgpu_flat_work_group_size(32, 64), amdgpu_waves_per_eu(2, 4), amdgpu_num_sgpr(32), amdgpu_num_vgpr(64)))
 __global__ void flat_work_group_size_32_64_waves_per_eu_2_4_num_sgpr_32_num_vgpr_64() {}
 
+__attribute__((amdgpu_max_num_work_groups(32, 1, 1)))
+__global__ void max_num_work_groups_32_1_1() {}
+
+__attribute__((amdgpu_max_num_work_groups(32, 1, 1), amdgpu_flat_work_group_size(32, 64)))
+__global__ void max_num_work_groups_32_1_1_flat_work_group_size_32_64() {}
+
+__attribute__((amdgpu_max_num_work_groups(32, 1, 1), amdgpu_flat_work_group_size(32, 64), amdgpu_waves_per_eu(2, 4), amdgpu_num_sgpr(32), amdgpu_num_vgpr(64)))
+__global__ void max_num_work_groups_32_1_1_flat_work_group_size_32_64_waves_per_eu_2_4_num_sgpr_32_num_vgpr_64() {}
+
+
 // expected-error@+2{{attribute 'reqd_work_group_size' can only be applied to an OpenCL kernel function}}
 __attribute__((reqd_work_group_size(32, 64, 64)))
 __global__ void reqd_work_group_size_32_64_64() {}
@@ -194,3 +204,87 @@ __global__ void non_cexpr_waves_per_eu_2() {}
 // expected-error@+1{{'amdgpu_waves_per_eu' attribute requires parameter 1 to be an integer constant}}
 __attribute__((amdgpu_waves_per_eu(2, ipow2(2))))
 __global__ void non_cexpr_waves_per_eu_2_4() {}
+
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires exactly 3 arguments}}
+__attribute__((amdgpu_max_num_work_groups(32)))
+__global__ void max_num_work_groups_32() {}
+
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires exactly 3 arguments}}
+__attribute__((amdgpu_max_num_work_groups(32, 1)))
+__global__ void max_num_work_groups_32_1() {}
+
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires exactly 3 arguments}}
+__attribute__((amdgpu_max_num_work_groups(32, 1, 1, 1)))
+__global__ void max_num_work_groups_32_1_1_1() {}
+
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires parameter 0 to be an integer constant}}
+__attribute__((amdgpu_max_num_work_groups(ipow2(5), 1, 1)))
+__global__ void max_num_work_groups_32_1_1_non_int_arg0() {}
+
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires parameter 1 to be an integer constant}}
+__attribute__((amdgpu_max_num_work_groups(32, "1", 1)))
+__global__ void max_num_work_groups_32_1_1_non_int_arg1() {}
+
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires a non-negative integral compile time constant expression}}
+__attribute__((amdgpu_max_num_work_groups(-32, 1, 1)))
+__global__ void max_num_work_groups_32_1_1_neg_int_arg0() {}
+
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires a non-negative integral compile time constant expression}}
+__attribute__((amdgpu_max_num_work_groups(32, -1, 1)))
+__global__ void max_num_work_groups_32_1_1_neg_int_arg1() {}
+
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires a non-negative integral compile time constant expression}}
+__attribute__((amdgpu_max_num_work_groups(32, 1, -1)))
+__global__ void max_num_work_groups_32_1_1_neg_int_arg2() {}
+
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute must be greater than 0}}
+__attribute__((amdgpu_max_num_work_groups(0, 1, 1)))
+__global__ void max_num_work_groups_0_1_1() {}
+
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute must be greater than 0}}
+__attribute__((amdgpu_max_num_work_groups(32, 0, 1)))
+__global__ void max_num_work_groups_32_0_1() {}
+
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute must be greater than 0}}
+__attribute__((amdgpu_max_num_work_groups(32, 1, 0)))
+__global__ void max_num_work_groups_32_1_0() {}
+
+
+int num_wg_x = 32;
+int num_wg_y = 1;
+int num_wg_z = 1;
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires parameter 0 to be an integer constant}}
+__attribute__((amdgpu_max_num_work_groups(num_wg_x, 1, 1)))
+__global__ void max_num_work_groups_32_1_1_non_const_arg0() {}
+
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires parameter 1 to be an integer constant}}
+__attribute__((amdgpu_max_num_work_groups(32, num_wg_y, 1)))
+__global__ void max_num_work_groups_32_1_1_non_const_arg1() {}
+
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires parameter 2 to be an integer constant}}
+__attribute__((amdgpu_max_num_work_groups(32, 1, num_wg_z)))
+__global__ void max_num_work_groups_32_1_1_non_const_arg2() {}
+
+const int c_num_wg_x = 32;
+__attribute__((amdgpu_max_num_work_groups(c_num_wg_x, 1, 1)))
+__global__ void max_num_work_groups_32_1_1_const_arg0() {}
+
+// expected-error@+2{{'amdgpu_max_num_work_groups' attribute requires parameter 0 to be an integer constant}}
+template<unsigned a>
+__attribute__((amdgpu_max_num_work_groups(a, 1, 1)))
+__global__ void template_1_max_num_work_groups() {}
+template __global__ void template_1_max_num_work_groups<32>();
+
+// expected-error@+2{{'amdgpu_max_num_work_groups' attribute requires parameter 1 to be an integer constant}}
+template<unsigned a>
+__attribute__((amdgpu_max_num_work_groups(32, a, 1)))
+__global__ void template_2_max_num_work_groups() {}
+template __global__ void template_2_max_num_work_groups<1>();
+
+// expected-error@+2{{'amdgpu_max_num_work_groups' attribute requires parameter 2 to be an integer constant}}
+template<unsigned a>
+__attribute__((amdgpu_max_num_work_groups(32, 1, a)))
+__global__ void template_3_max_num_work_groups() {}
+template __global__ void template_3_max_num_work_groups<1>();
+
+

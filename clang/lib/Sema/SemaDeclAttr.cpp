@@ -8080,20 +8080,33 @@ static void handleAMDGPUNumVGPRAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleAMDGPUMaxNumWorkGroupsAttr(Sema &S, Decl *D,
                                              const ParsedAttr &AL) {
+  if (AL.getNumArgs() != 3) {
+    S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 3;
+    return;
+  }
   uint32_t NumWGX = 0;
   uint32_t NumWGY = 0;
   uint32_t NumWGZ = 0;
   Expr *NumWGXExpr = AL.getArgAsExpr(0);
   Expr *NumWGYExpr = AL.getArgAsExpr(1);
   Expr *NumWGZExpr = AL.getArgAsExpr(2);
-  if (!checkUInt32Argument(S, AL, NumWGXExpr, NumWGX))
+  if (!checkUInt32Argument(S, AL, NumWGXExpr, NumWGX, 0, true))
     return;
-  if (!checkUInt32Argument(S, AL, NumWGYExpr, NumWGY))
+  if (!checkUInt32Argument(S, AL, NumWGYExpr, NumWGY, 1, true))
     return;
-  if (!checkUInt32Argument(S, AL, NumWGZExpr, NumWGZ))
+  if (!checkUInt32Argument(S, AL, NumWGZExpr, NumWGZ, 2, true))
     return;
 
-  if (NumWGX != 0 && NumWGY != 0 && NumWGZ != 0)
+  if (NumWGX == 0 || NumWGY == 0 || NumWGZ == 0) {
+    Expr* E = NumWGZExpr;
+    if (NumWGY == 0)
+      E = NumWGYExpr;
+    if (NumWGX == 0)
+      E = NumWGXExpr;
+    S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
+        << AL << E->getSourceRange();
+  }
+  else
     D->addAttr(::new (S.Context) AMDGPUMaxNumWorkGroupsAttr(
         S.Context, AL, NumWGXExpr, NumWGYExpr, NumWGZExpr));
 }
