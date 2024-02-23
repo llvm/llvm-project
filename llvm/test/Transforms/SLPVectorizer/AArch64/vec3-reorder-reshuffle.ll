@@ -201,19 +201,18 @@ define i32 @reorder_indices_1(float %0) {
 ; POW2-ONLY-NEXT:    [[TMP4:%.*]] = fneg float [[TMP3]]
 ; POW2-ONLY-NEXT:    [[NEG11_I:%.*]] = fmul float [[TMP4]], [[TMP0]]
 ; POW2-ONLY-NEXT:    [[TMP5:%.*]] = call float @llvm.fmuladd.f32(float [[TMP1]], float 0.000000e+00, float [[NEG11_I]])
-; POW2-ONLY-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i32 0
-; POW2-ONLY-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> [[TMP2]], <2 x i32> <i32 0, i32 3>
+; POW2-ONLY-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> <i32 1, i32 poison>
+; POW2-ONLY-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[TMP1]], i32 1
 ; POW2-ONLY-NEXT:    [[TMP8:%.*]] = fneg <2 x float> [[TMP7]]
 ; POW2-ONLY-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
 ; POW2-ONLY-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> poison, <2 x i32> zeroinitializer
 ; POW2-ONLY-NEXT:    [[TMP11:%.*]] = fmul <2 x float> [[TMP8]], [[TMP10]]
-; POW2-ONLY-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; POW2-ONLY-NEXT:    [[TMP13:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP2]], <2 x float> zeroinitializer, <2 x float> [[TMP12]])
-; POW2-ONLY-NEXT:    [[TMP14:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP10]], <2 x float> [[TMP13]], <2 x float> zeroinitializer)
-; POW2-ONLY-NEXT:    [[TMP15:%.*]] = call float @llvm.fmuladd.f32(float [[TMP0]], float [[TMP5]], float 0.000000e+00)
-; POW2-ONLY-NEXT:    [[TMP16:%.*]] = fmul <2 x float> [[TMP14]], zeroinitializer
-; POW2-ONLY-NEXT:    [[MUL6_I_I_I:%.*]] = fmul float [[TMP15]], 0.000000e+00
-; POW2-ONLY-NEXT:    store <2 x float> [[TMP16]], ptr [[NOR1]], align 4
+; POW2-ONLY-NEXT:    [[TMP12:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP2]], <2 x float> zeroinitializer, <2 x float> [[TMP11]])
+; POW2-ONLY-NEXT:    [[TMP13:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP10]], <2 x float> [[TMP12]], <2 x float> zeroinitializer)
+; POW2-ONLY-NEXT:    [[TMP14:%.*]] = call float @llvm.fmuladd.f32(float [[TMP0]], float [[TMP5]], float 0.000000e+00)
+; POW2-ONLY-NEXT:    [[TMP15:%.*]] = fmul <2 x float> [[TMP13]], zeroinitializer
+; POW2-ONLY-NEXT:    [[MUL6_I_I_I:%.*]] = fmul float [[TMP14]], 0.000000e+00
+; POW2-ONLY-NEXT:    store <2 x float> [[TMP15]], ptr [[NOR1]], align 4
 ; POW2-ONLY-NEXT:    store float [[MUL6_I_I_I]], ptr [[ARRAYIDX2_I265]], align 4
 ; POW2-ONLY-NEXT:    ret i32 0
 ;
