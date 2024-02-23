@@ -4,8 +4,8 @@
 ; RUN: opt < %s -S -passes='default<Os>' -debug -debug-only=loop-rotate 2>&1 | FileCheck %s -check-prefix=OS
 ; RUN: opt < %s -S -passes='default<Oz>' -debug -debug-only=loop-rotate 2>&1 | FileCheck %s -check-prefix=OZ
 
-;; Make sure -force-loop-header-duplication overrides the default behavior at Oz
-; RUN: opt < %s -S -passes='default<Oz>' -force-loop-header-duplication -debug -debug-only=loop-rotate 2>&1 | FileCheck %s -check-prefix=OS
+;; Make sure -allow-loop-header-duplication overrides the default behavior at Oz
+; RUN: opt < %s -S -passes='default<Oz>' -allow-loop-header-duplication -debug -debug-only=loop-rotate 2>&1 | FileCheck %s -check-prefix=OS
 
 ; Loop should be rotated for -Os but not for -Oz.
 ; OS: rotating Loop at depth 1
