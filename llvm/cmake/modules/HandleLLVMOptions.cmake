@@ -120,6 +120,13 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
 endif()
 
+# If we are targeting a GPU architecture we want to ignore all the standard
+# flag handling.
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn" OR
+   "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx64")
+  return()
+endif()
+
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   add_compile_definitions(EXPENSIVE_CHECKS)
 
