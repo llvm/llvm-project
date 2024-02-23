@@ -1,8 +1,4 @@
-// RUN: mlir-opt %s -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
-// RUN:   -convert-vector-to-arm-sme -convert-arith-to-arm-sme \
-// RUN:   -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
-// RUN:   -convert-arm-sme-to-llvm -cse -canonicalize \
-// RUN:   -test-lower-to-llvm | \
+// RUN: mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:  -march=aarch64 -mattr=+sve,+sme \
 // RUN:  -e entry -entry-point-result=i32 \

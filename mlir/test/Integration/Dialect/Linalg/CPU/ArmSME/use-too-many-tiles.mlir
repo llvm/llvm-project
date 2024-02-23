@@ -1,10 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   -convert-vector-to-arm-sme -convert-arith-to-arm-sme \
-// RUN:   -allocate-arm-sme-tiles -convert-arm-sme-to-scf \
-// RUN:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za only-if-required-by-ops"  \
-// RUN:   -convert-vector-to-scf -cse -arm-sve-legalize-vector-storage \
-// RUN:   -convert-arm-sme-to-llvm -convert-vector-to-llvm=enable-arm-sve -cse \
-// RUN:   -canonicalize -test-lower-to-llvm -verify-diagnostics | \
+// RUN:   -test-lower-to-arm-sme -test-lower-to-llvm -verify-diagnostics | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
