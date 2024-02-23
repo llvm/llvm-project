@@ -104,7 +104,7 @@ Some operations are too divergent to provide generic implementations for, such
 as allocating device accessible memory. For these cases, we provide a callback 
 registration scheme to add a custom handler for any given opcode through the 
 port API. More information can be found in the installed header 
-``<install>/include/gpu-none-llvm/rpc_server.h``.
+``<install>/include/llvmlibc_rpc_server.h``.
 
 Client Example
 --------------
@@ -194,7 +194,7 @@ but the following example shows how it can be used by a standard user.
   #include <cstdlib>
   #include <cuda_runtime.h>
   
-  #include <gpu-none-llvm/rpc_server.h>
+  #include <llvmlibc_rpc_server.h>
   
   [[noreturn]] void handle_error(cudaError_t err) {
     fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(err));
