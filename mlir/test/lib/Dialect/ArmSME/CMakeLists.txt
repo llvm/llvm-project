@@ -8,6 +8,8 @@ add_mlir_library(MLIRArmSMETestPasses
   MLIRArithToArmSME
   MLIRArmSMEToLLVM
   MLIRArmSMEToSCF
+  MLIRArmSMETransforms
+  MLIRArmSVETransforms
   MLIRIR
   MLIRPass
   MLIRTransforms
