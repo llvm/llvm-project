@@ -563,6 +563,9 @@ TARGET_BUILTIN(__builtin_amdgcn_global_store_async_from_lds_b128, "vV4i*1V4i*3Ii
 TARGET_BUILTIN(__builtin_amdgcn_s_setprio_inc_wg, "vIs", "n", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_monitor_sleep,  "vIs", "n", "gfx12-10-insts")
 
+TARGET_BUILTIN(__builtin_amdgcn_s_wait_asynccnt, "vIUs", "n", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_wait_tensorcnt, "vIUs", "n", "gfx12-10-insts")
+
 TARGET_BUILTIN(__builtin_amdgcn_bitop3_b32, "iiiiIUc", "nc", "bitop3-insts")
 TARGET_BUILTIN(__builtin_amdgcn_bitop3_b16, "ssssIUc", "nc", "bitop3-insts")
 
