@@ -217,7 +217,15 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SSUBSAT:
   case ISD::USUBSAT:
   case ISD::SSHLSAT:
-  case ISD::USHLSAT:     Res = PromoteIntRes_ADDSUBSHLSAT(N); break;
+  case ISD::USHLSAT:
+    Res = PromoteIntRes_ADDSUBSHLSAT<EmptyMatchContext>(N);
+    break;
+  case ISD::VP_SADDSAT:
+  case ISD::VP_UADDSAT:
+  case ISD::VP_SSUBSAT:
+  case ISD::VP_USUBSAT:
+    Res = PromoteIntRes_ADDSUBSHLSAT<VPMatchContext>(N);
+    break;
 
   case ISD::SMULFIX:
   case ISD::SMULFIXSAT:
@@ -934,6 +942,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Overflow(SDNode *N) {
   return DAG.getBoolExtOrTrunc(Res.getValue(1), dl, NVT, VT);
 }
 
+template <class MatchContextClass>
 SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   // If the promoted type is legal, we can convert this to:
   //   1. ANY_EXTEND iN to iM
@@ -945,11 +954,13 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   SDLoc dl(N);
   SDValue Op1 = N->getOperand(0);
   SDValue Op2 = N->getOperand(1);
+  MatchContextClass matcher(DAG, TLI, N);
   unsigned OldBits = Op1.getScalarValueSizeInBits();
 
-  unsigned Opcode = N->getOpcode();
+  unsigned Opcode = matcher.getRootBaseOpcode();
   bool IsShift = Opcode == ISD::USHLSAT || Opcode == ISD::SSHLSAT;
 
+  // FIXME: We need vp-aware PromotedInteger functions.
   SDValue Op1Promoted, Op2Promoted;
   if (IsShift) {
     Op1Promoted = GetPromotedInteger(Op1);
@@ -968,18 +979,18 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
     APInt MaxVal = APInt::getAllOnes(OldBits).zext(NewBits);
     SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
     SDValue Add =
-        DAG.getNode(ISD::ADD, dl, PromotedType, Op1Promoted, Op2Promoted);
-    return DAG.getNode(ISD::UMIN, dl, PromotedType, Add, SatMax);
+        matcher.getNode(ISD::ADD, dl, PromotedType, Op1Promoted, Op2Promoted);
+    return matcher.getNode(ISD::UMIN, dl, PromotedType, Add, SatMax);
   }
 
   // USUBSAT can always be promoted as long as we have zero-extended the args.
   if (Opcode == ISD::USUBSAT)
-    return DAG.getNode(ISD::USUBSAT, dl, PromotedType, Op1Promoted,
-                       Op2Promoted);
+    return matcher.getNode(ISD::USUBSAT, dl, PromotedType, Op1Promoted,
+                           Op2Promoted);
 
   // Shift cannot use a min/max expansion, we can't detect overflow if all of
   // the bits have been shifted out.
-  if (IsShift || TLI.isOperationLegal(Opcode, PromotedType)) {
+  if (IsShift || matcher.isOperationLegal(Opcode, PromotedType)) {
     unsigned ShiftOp;
     switch (Opcode) {
     case ISD::SADDSAT:
@@ -1002,11 +1013,11 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
         DAG.getNode(ISD::SHL, dl, PromotedType, Op1Promoted, ShiftAmount);
     if (!IsShift)
       Op2Promoted =
-          DAG.getNode(ISD::SHL, dl, PromotedType, Op2Promoted, ShiftAmount);
+          matcher.getNode(ISD::SHL, dl, PromotedType, Op2Promoted, ShiftAmount);
 
     SDValue Result =
-        DAG.getNode(Opcode, dl, PromotedType, Op1Promoted, Op2Promoted);
-    return DAG.getNode(ShiftOp, dl, PromotedType, Result, ShiftAmount);
+        matcher.getNode(Opcode, dl, PromotedType, Op1Promoted, Op2Promoted);
+    return matcher.getNode(ShiftOp, dl, PromotedType, Result, ShiftAmount);
   }
 
   unsigned AddOp = Opcode == ISD::SADDSAT ? ISD::ADD : ISD::SUB;
@@ -1015,9 +1026,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   SDValue SatMin = DAG.getConstant(MinVal, dl, PromotedType);
   SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
   SDValue Result =
-      DAG.getNode(AddOp, dl, PromotedType, Op1Promoted, Op2Promoted);
-  Result = DAG.getNode(ISD::SMIN, dl, PromotedType, Result, SatMax);
-  Result = DAG.getNode(ISD::SMAX, dl, PromotedType, Result, SatMin);
+      matcher.getNode(AddOp, dl, PromotedType, Op1Promoted, Op2Promoted);
+  Result = matcher.getNode(ISD::SMIN, dl, PromotedType, Result, SatMax);
+  Result = matcher.getNode(ISD::SMAX, dl, PromotedType, Result, SatMin);
   return Result;
 }
 
