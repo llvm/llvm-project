@@ -593,11 +593,11 @@ bool isMatchingSelectorName(const syntax::Token &Cur, const syntax::Token &Next,
 // The search will terminate upon seeing Terminator or a ; at the top level.
 std::optional<SymbolRange>
 findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
-                      const SourceManager &SM, Selector Sel,
+                      const SourceManager &SM, const SymbolName &Name,
                       tok::TokenKind Terminator) {
   assert(!Tokens.empty());
 
-  unsigned NumArgs = Sel.getNumArgs();
+  unsigned NumArgs = Name.getNamePieces().size();
   llvm::SmallVector<tok::TokenKind, 8> Closes;
   std::vector<Range> SelectorPieces;
   for (unsigned Index = 0, Last = Tokens.size(); Index < Last - 1; ++Index) {
@@ -607,12 +607,12 @@ findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
       auto PieceCount = SelectorPieces.size();
       if (PieceCount < NumArgs &&
           isMatchingSelectorName(Tok, Tokens[Index + 1], SM,
-                                 Sel.getNameForSlot(PieceCount))) {
+                                 Name.getNamePieces()[PieceCount])) {
         // If 'foo:' instead of ':' (empty selector), we need to skip the ':'
         // token after the name. We don't currently properly support empty
         // selectors since we may lex them improperly due to ternary statements
         // as well as don't properly support storing their ranges for edits.
-        if (!Sel.getNameForSlot(PieceCount).empty())
+        if (!Name.getNamePieces()[PieceCount].empty())
           ++Index;
         SelectorPieces.push_back(
             halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
@@ -664,16 +664,17 @@ findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
 
 /// Collects all ranges of the given identifier/selector in the source code.
 ///
-/// If a selector is given, this does a full lex of the given source code in
-/// order to identify all selector fragments (e.g. in method exprs/decls) since
-/// they are non-contiguous.
-std::vector<SymbolRange> collectRenameIdentifierRanges(
-    llvm::StringRef Identifier, llvm::StringRef Content,
-    const LangOptions &LangOpts, std::optional<Selector> Selector) {
+/// If `Name` is an Objective-C symbol name, this does a full lex of the given
+/// source code in order to identify all selector fragments (e.g. in method
+/// exprs/decls) since they are non-contiguous.
+std::vector<SymbolRange>
+collectRenameIdentifierRanges(const tooling::SymbolName &Name,
+                              llvm::StringRef Content,
+                              const LangOptions &LangOpts) {
   std::vector<SymbolRange> Ranges;
-  if (!Selector) {
+  if (auto SinglePiece = Name.getSinglePiece()) {
     auto IdentifierRanges =
-        collectIdentifierRanges(Identifier, Content, LangOpts);
+        collectIdentifierRanges(*SinglePiece, Content, LangOpts);
     for (const auto &R : IdentifierRanges)
       Ranges.emplace_back(R);
     return Ranges;
@@ -687,7 +688,7 @@ std::vector<SymbolRange> collectRenameIdentifierRanges(
   // parsing a method declaration or definition which isn't at the top level or
   // similar looking expressions (e.g. an @selector() expression).
   llvm::SmallVector<tok::TokenKind, 8> Closes;
-  llvm::StringRef FirstSelPiece = Selector->getNameForSlot(0);
+  llvm::StringRef FirstSelPiece = Name.getNamePieces()[0];
 
   auto Tokens = syntax::tokenize(SM.getMainFileID(), SM, LangOpts);
   unsigned Last = Tokens.size() - 1;
@@ -719,7 +720,7 @@ std::vector<SymbolRange> collectRenameIdentifierRanges(
       // Check if we can find all the relevant selector peices starting from
       // this token
       auto SelectorRanges =
-          findAllSelectorPieces(ArrayRef(Tokens).slice(Index), SM, *Selector,
+          findAllSelectorPieces(ArrayRef(Tokens).slice(Index), SM, Name,
                                 Closes.empty() ? tok::l_brace : Closes.back());
       if (SelectorRanges)
         Ranges.emplace_back(std::move(*SelectorRanges));
@@ -766,7 +767,6 @@ renameObjCMethodWithinFile(ParsedAST &AST, const ObjCMethodDecl *MD,
                            std::vector<SourceLocation> SelectorOccurences) {
   const SourceManager &SM = AST.getSourceManager();
   auto Code = SM.getBufferData(SM.getMainFileID());
-  auto RenameIdentifier = MD->getSelector().getNameForSlot(0).str();
   llvm::SmallVector<llvm::StringRef, 8> NewNames;
   NewName.split(NewNames, ":");
 
@@ -776,7 +776,7 @@ renameObjCMethodWithinFile(ParsedAST &AST, const ObjCMethodDecl *MD,
     Ranges.push_back(tokenRangeForLoc(AST, Loc, SM, LangOpts));
   auto FilePath = AST.tuPath();
   auto RenameRanges = collectRenameIdentifierRanges(
-      RenameIdentifier, Code, LangOpts, MD->getSelector());
+      SymbolName(MD->getDeclName()), Code, LangOpts);
   auto RenameEdit = buildRenameEdit(FilePath, Code, RenameRanges, NewNames);
   if (!RenameEdit)
     return error("failed to rename in file {0}: {1}", FilePath,
@@ -928,22 +928,14 @@ renameOutsideFile(const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
            ExpBuffer.getError().message());
       continue;
     }
-    std::string RenameIdentifier = RenameDecl.getNameAsString();
-    std::optional<Selector> Selector = std::nullopt;
+    SymbolName RenameName(RenameDecl.getDeclName());
     llvm::SmallVector<llvm::StringRef, 8> NewNames;
-    if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
-      if (MD->getSelector().getNumArgs() > 1) {
-        RenameIdentifier = MD->getSelector().getNameForSlot(0).str();
-        Selector = MD->getSelector();
-      }
-    }
     NewName.split(NewNames, ":");
 
     auto AffectedFileCode = (*ExpBuffer)->getBuffer();
-    auto RenameRanges =
-        adjustRenameRanges(AffectedFileCode, RenameIdentifier,
-                           std::move(FileAndOccurrences.second),
-                           RenameDecl.getASTContext().getLangOpts(), Selector);
+    auto RenameRanges = adjustRenameRanges(
+        AffectedFileCode, RenameName, std::move(FileAndOccurrences.second),
+        RenameDecl.getASTContext().getLangOpts());
     if (!RenameRanges) {
       // Our heuristics fails to adjust rename ranges to the current state of
       // the file, it is most likely the index is stale, so we give up the
@@ -1039,9 +1031,9 @@ editsForLocations(const llvm::StringMap<std::vector<Range>> &Ranges,
     llvm::SmallVector<llvm::StringRef, 8> NewNames(NewName.getNamePieces());
 
     auto AffectedFileCode = (*ExpBuffer)->getBuffer();
-    auto RenameRanges = adjustRenameRanges(AffectedFileCode, RenameIdentifier,
-                                           std::move(FileAndOccurrences.second),
-                                           LangOpts, std::nullopt);
+    auto RenameRanges =
+        adjustRenameRanges(AffectedFileCode, OldName,
+                           std::move(FileAndOccurrences.second), LangOpts);
     if (!RenameRanges) {
       // Our heuristics fails to adjust rename ranges to the current state of
       // the file, it is most likely the index is stale, so we give up the
@@ -1268,14 +1260,13 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
 //          were inserted). If such a "near miss" is found, the rename is still
 //          possible
 std::optional<std::vector<SymbolRange>>
-adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
-                   std::vector<Range> Indexed, const LangOptions &LangOpts,
-                   std::optional<Selector> Selector) {
+adjustRenameRanges(llvm::StringRef DraftCode, const tooling::SymbolName &Name,
+                   std::vector<Range> Indexed, const LangOptions &LangOpts) {
   trace::Span Tracer("AdjustRenameRanges");
   assert(!Indexed.empty());
   assert(llvm::is_sorted(Indexed));
   std::vector<SymbolRange> Lexed =
-      collectRenameIdentifierRanges(Identifier, DraftCode, LangOpts, Selector);
+      collectRenameIdentifierRanges(Name, DraftCode, LangOpts);
   llvm::sort(Lexed);
   return getMappedRanges(Indexed, Lexed);
 }
