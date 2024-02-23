@@ -1606,6 +1606,10 @@ Error IRLinker::run() {
   // Loop over all of the linked values to compute type mappings.
   computeTypeMapping();
 
+  // Update function attributes before copying them to destation module.
+  for (Function &F : SrcM->getFunctionList())
+    UpgradeFunctionAttributes(F, true);
+
   std::reverse(Worklist.begin(), Worklist.end());
   while (!Worklist.empty()) {
     GlobalValue *GV = Worklist.back();

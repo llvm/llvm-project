@@ -67,7 +67,8 @@ namespace llvm {
   void UpgradeSectionAttributes(Module &M);
 
   /// Correct any IR that is relying on old function attribute behavior.
-  void UpgradeFunctionAttributes(Function &F);
+  void UpgradeFunctionAttributes(Function &F,
+                                 bool ModuleMetadataIsMaterialized = false);
 
   /// If the given TBAA tag uses the scalar TBAA format, create a new node
   /// corresponding to the upgrade to the struct-path aware TBAA format.
