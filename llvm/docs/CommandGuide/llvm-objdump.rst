@@ -273,7 +273,7 @@ OPTIONS
 
   When a bb-address-map section is present (i.e., the object file is built with
   ``-fbasic-block-sections=labels``), labels are retrieved from that section
-  instead. If a pgo-analysis-map present along side the bb-address-map, any
+  instead. If a pgo-analysis-map is present alongside the bb-address-map, any
   available analyses are printed after the relevant block label. By default,
   any analysis with a special representation (i.e. BlockFrequency,
   BranchProbability, etc) are printed as raw hex values.
@@ -298,12 +298,12 @@ OPTIONS
 
 .. option:: --pretty-pgo-analysis-map
 
-  When using ``--symbolize-operands`` with bb-address-map and pgo-analysis-map,
-  print analyses using same format as there analysis passes would. An example
-  of pretty format, would be printing block frequencies relative to the entry
-  block, same as BFI.
+  When using :option:`--symbolize-operands` with bb-address-map and
+  pgo-analysis-map, print analyses using same the format as their analysis
+  passes would. An example of pretty format would be printing block frequencies
+  relative to the entry block, the same as BFI.
 
-  Only works when ``--symbolize-operands`` is enabled.
+  Only works when :option:`--symbolize-operands` is enabled.
 
 .. option:: --triple=<string>
 
