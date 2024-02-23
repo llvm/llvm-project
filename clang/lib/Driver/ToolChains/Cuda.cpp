@@ -609,6 +609,10 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // Add paths specified in LIBRARY_PATH environment variable as -L options.
   addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
 
+  // Add standard library search paths passed on the command line.
+  Args.AddAllArgs(CmdArgs, options::OPT_L);
+  getToolChain().AddFilePathLibArgs(Args, CmdArgs);
+
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);

@@ -625,6 +625,7 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_L);
+  getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
   if (C.getDriver().isUsingLTO())
     addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
