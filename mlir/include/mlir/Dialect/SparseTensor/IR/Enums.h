@@ -189,8 +189,9 @@ constexpr const char *toFormatString(LevelFormat lvlFmt) {
 
 /// This enum defines all the nondefault properties for storage formats.
 enum class LevelPropNonDefault : uint64_t {
-  Nonunique = 0x0001,
-  Nonordered = 0x0002,
+  Nonunique = 0x0001,  // 0b001
+  Nonordered = 0x0002, // 0b010
+  SoA = 0x0004,        // 0b100
 };
 
 /// Returns string representation of the given level properties.
@@ -200,6 +201,8 @@ constexpr const char *toPropString(LevelPropNonDefault lvlProp) {
     return "nonunique";
   case LevelPropNonDefault::Nonordered:
     return "nonordered";
+  case LevelPropNonDefault::SoA:
+    return "soa";
   }
   return "";
 }
@@ -280,7 +283,13 @@ public:
   }
   bool operator!=(const LevelType lhs) const { return !(*this == lhs); }
 
-  LevelType stripProperties() const { return LevelType(lvlBits & ~0xffff); }
+  LevelType stripStorageIrrelevantProperties() const {
+    // Properties other than `SoA` do not change the storage scheme of the
+    // sparse tensor.
+    constexpr uint64_t mask =
+        0xffff & ~static_cast<uint64_t>(LevelPropNonDefault::SoA);
+    return LevelType(lvlBits & ~mask);
+  }
 
   /// Get N of NOutOfM level type.
   constexpr uint64_t getN() const {
@@ -300,9 +309,9 @@ public:
   }
 
   /// Check if the `LevelType` is in the `LevelFormat`.
-  template <LevelFormat fmt>
+  template <LevelFormat... fmt>
   constexpr bool isa() const {
-    return getLvlFmt() == fmt;
+    return (... || (getLvlFmt() == fmt)) || false;
   }
 
   /// Check if the `LevelType` has the properties
@@ -333,6 +342,11 @@ public:
       if (!propStr.empty())
         propStr += ", ";
       propStr += toPropString(LevelPropNonDefault::Nonordered);
+    }
+    if (isa<LevelPropNonDefault::SoA>()) {
+      if (!propStr.empty())
+        propStr += ", ";
+      propStr += toPropString(LevelPropNonDefault::SoA);
     }
     if (!propStr.empty())
       lvlStr += ("(" + propStr + ")");

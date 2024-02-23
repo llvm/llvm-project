@@ -28,6 +28,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -49,6 +50,13 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "decoder-emitter"
+
+extern cl::OptionCategory DisassemblerEmitterCat;
+
+cl::opt<bool> DecoderEmitterSuppressDuplicates(
+    "suppress-per-hwmode-duplicates",
+    cl::desc("Suppress duplication of instrs into per-HwMode decoder tables"),
+    cl::init(false), cl::cat(DisassemblerEmitterCat));
 
 namespace {
 
@@ -118,6 +126,8 @@ struct EncodingIDAndOpcode {
       : EncodingID(EncodingID), Opcode(Opcode) {}
 };
 
+using EncodingIDsVec = std::vector<EncodingIDAndOpcode>;
+
 raw_ostream &operator<<(raw_ostream &OS, const EncodingAndInst &Value) {
   if (Value.EncodingDef != Value.Inst->TheDef)
     OS << Value.EncodingDef->getName() << ":";
@@ -135,8 +145,8 @@ public:
 
   // Emit the decoder state machine table.
   void emitTable(formatted_raw_ostream &o, DecoderTable &Table,
-                 unsigned Indentation, unsigned BitWidth,
-                 StringRef Namespace) const;
+                 unsigned Indentation, unsigned BitWidth, StringRef Namespace,
+                 const EncodingIDsVec &EncodingIDs) const;
   void emitInstrLenTable(formatted_raw_ostream &OS,
                          std::vector<unsigned> &InstrLen) const;
   void emitPredicateFunction(formatted_raw_ostream &OS,
@@ -766,7 +776,16 @@ unsigned Filter::usefulness() const {
 // Emit the decoder state machine table.
 void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
                                unsigned Indentation, unsigned BitWidth,
-                               StringRef Namespace) const {
+                               StringRef Namespace,
+                               const EncodingIDsVec &EncodingIDs) const {
+  // We'll need to be able to map from a decoded opcode into the corresponding
+  // EncodingID for this specific combination of BitWidth and Namespace. This
+  // is used below to index into NumberedEncodings.
+  DenseMap<unsigned, unsigned> OpcodeToEncodingID;
+  OpcodeToEncodingID.reserve(EncodingIDs.size());
+  for (auto &EI : EncodingIDs)
+    OpcodeToEncodingID[EI.Opcode] = EI.EncodingID;
+
   OS.indent(Indentation) << "static const uint8_t DecoderTable" << Namespace
                          << BitWidth << "[] = {\n";
 
@@ -888,8 +907,12 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       // Decoder index.
       I += emitULEB128(I, OS);
 
+      auto EncI = OpcodeToEncodingID.find(Opc);
+      assert(EncI != OpcodeToEncodingID.end() && "no encoding entry");
+      auto EncodingID = EncI->second;
+
       if (!IsTry) {
-        OS << "// Opcode: " << NumberedEncodings[Opc] << "\n";
+        OS << "// Opcode: " << NumberedEncodings[EncodingID] << "\n";
         break;
       }
 
@@ -899,7 +922,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       uint32_t NumToSkip = emitNumToSkip(I, OS);
       I += 3;
 
-      OS << "// Opcode: " << NumberedEncodings[Opc]
+      OS << "// Opcode: " << NumberedEncodings[EncodingID]
          << ", skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
     }
@@ -2449,11 +2472,8 @@ void DecoderEmitter::run(raw_ostream &o) {
   std::set<StringRef> HwModeNames;
   const auto &NumberedInstructions = Target.getInstructionsByEnumValue();
   NumberedEncodings.reserve(NumberedInstructions.size());
-  DenseMap<Record *, unsigned> IndexOfInstruction;
   // First, collect all HwModes referenced by the target.
   for (const auto &NumberedInstruction : NumberedInstructions) {
-    IndexOfInstruction[NumberedInstruction->TheDef] = NumberedEncodings.size();
-
     if (const RecordVal *RV =
             NumberedInstruction->TheDef->getValue("EncodingInfos")) {
       if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
@@ -2470,8 +2490,6 @@ void DecoderEmitter::run(raw_ostream &o) {
     HwModeNames.insert("");
 
   for (const auto &NumberedInstruction : NumberedInstructions) {
-    IndexOfInstruction[NumberedInstruction->TheDef] = NumberedEncodings.size();
-
     if (const RecordVal *RV =
             NumberedInstruction->TheDef->getValue("EncodingInfos")) {
       if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
@@ -2486,10 +2504,15 @@ void DecoderEmitter::run(raw_ostream &o) {
       }
     }
     // This instruction is encoded the same on all HwModes. Emit it for all
-    // HwModes.
-    for (StringRef HwModeName : HwModeNames)
+    // HwModes by default, otherwise leave it in a single common table.
+    if (DecoderEmitterSuppressDuplicates) {
       NumberedEncodings.emplace_back(NumberedInstruction->TheDef,
-                                     NumberedInstruction, HwModeName);
+                                     NumberedInstruction, "AllModes");
+    } else {
+      for (StringRef HwModeName : HwModeNames)
+        NumberedEncodings.emplace_back(NumberedInstruction->TheDef,
+                                       NumberedInstruction, HwModeName);
+    }
   }
   for (const auto &NumberedAlias :
        RK.getAllDerivedDefinitions("AdditionalEncoding"))
@@ -2544,7 +2567,7 @@ void DecoderEmitter::run(raw_ostream &o) {
         DecoderNamespace +=
             std::string("_") + NumberedEncodings[i].HwModeName.str();
       OpcMap[std::pair(DecoderNamespace, Size)].emplace_back(
-          i, IndexOfInstruction.find(Def)->second);
+          i, Target.getInstrIntValue(Def));
     } else {
       NumEncodingsOmitted++;
     }
@@ -2577,7 +2600,8 @@ void DecoderEmitter::run(raw_ostream &o) {
     TableInfo.Table.push_back(MCD::OPC_Fail);
 
     // Print the table to the output stream.
-    emitTable(OS, TableInfo.Table, 0, FC.getBitWidth(), Opc.first.first);
+    emitTable(OS, TableInfo.Table, 0, FC.getBitWidth(), Opc.first.first,
+              Opc.second);
   }
 
   // For variable instruction, we emit a instruction length table
