@@ -3,7 +3,26 @@
 bugprone-crtp-constructor-accessibility
 =======================================
 
-Finds CRTP used in an error-prone way.
+Finds Curiously Recurring Template Pattern used in an error-prone way.
+
+The CRTP is an idiom, in which a class derives from a template class, where 
+itself is the template argument. It should be ensured that if a class is
+intended to be a base class in this idiom, it can only be instantiated if
+the derived class is it's template argument.
+
+Example:
+
+.. code-block:: c++
+
+  template <typename T> class CRTP {
+  private:
+    CRTP() = default;
+    friend T;
+  };
+
+  class Derived : CRTP<Derived> {};
+
+Below can be seen some common mistakes that will allow the breaking of the idiom.
 
 If the constructor of a class intended to be used in a CRTP is public, then
 it allows users to construct that class on its own.
