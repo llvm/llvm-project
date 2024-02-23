@@ -13,11 +13,12 @@ entry:
   ret i32 %add
 }
 
-; CHECK: define i32 @main() {
+; CHECK: define i32 @main() [[MAIN_ATTRS:#[0-9]+]]
 ; CHECK: define i32 @foo(i32 %a, i32 %b) [[ARM_ATTRS:#[0-9]+]]
 ; CHECK: define i32 @bar(i32 %a, i32 %b) [[THUMB_ATTRS:#[0-9]+]]
 
-; CHECK: attributes [[ARM_ATTRS]] = { "target-features"="-thumb-mode" }
-; CHECK: attributes [[THUMB_ATTRS]] = { "target-features"="+thumb-mode" }
+; CHECK: attributes [[MAIN_ATTRS]] = { {{.*}} }
+; CHECK: attributes [[ARM_ATTRS]] = { {{.*}} "target-features"="-thumb-mode" }
+; CHECK: attributes [[THUMB_ATTRS]] = { {{.*}} "target-features"="+thumb-mode" }
 
 ; STDERR-NOT: warning: Linking two modules of different target triples:
