@@ -1477,8 +1477,7 @@ define ptr @gep_sdiv(ptr %p, i64 %off) {
 
 define ptr @gep_udiv(ptr %p, i64 %off) {
 ; CHECK-LABEL: @gep_udiv(
-; CHECK-NEXT:    [[INDEX:%.*]] = udiv exact i64 [[OFF:%.*]], 7
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [[STRUCT_C:%.*]], ptr [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %index = udiv exact i64 %off, 7
@@ -1518,8 +1517,7 @@ define ptr @gep_ashr(ptr %p, i64 %off) {
 
 define ptr @gep_lshr(ptr %p, i64 %off) {
 ; CHECK-LABEL: @gep_lshr(
-; CHECK-NEXT:    [[INDEX:%.*]] = lshr exact i64 [[OFF:%.*]], 2
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %index = lshr exact i64 %off, 2

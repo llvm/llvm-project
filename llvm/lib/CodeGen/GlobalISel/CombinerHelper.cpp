@@ -1199,6 +1199,18 @@ bool CombinerHelper::matchCombineExtractedVectorLoad(MachineInstr &MI,
   if (!VecEltTy.isByteSized())
     return false;
 
+  // Check for load fold barriers between the extraction and the load.
+  if (MI.getParent() != LoadMI->getParent())
+    return false;
+  const unsigned MaxIter = 20;
+  unsigned Iter = 0;
+  for (auto II = LoadMI->getIterator(), IE = MI.getIterator(); II != IE; ++II) {
+    if (II->isLoadFoldBarrier())
+      return false;
+    if (Iter++ == MaxIter)
+      return false;
+  }
+
   // Check if the new load that we are going to create is legal
   // if we are in the post-legalization phase.
   MachineMemOperand MMO = LoadMI->getMMO();
@@ -2078,6 +2090,9 @@ bool CombinerHelper::matchCombineUnmergeUndef(
 bool CombinerHelper::matchCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
          "Expected an unmerge");
+  if (MRI.getType(MI.getOperand(0).getReg()).isVector() ||
+      MRI.getType(MI.getOperand(MI.getNumDefs()).getReg()).isVector())
+    return false;
   // Check that all the lanes are dead except the first one.
   for (unsigned Idx = 1, EndIdx = MI.getNumDefs(); Idx != EndIdx; ++Idx) {
     if (!MRI.use_nodbg_empty(MI.getOperand(Idx).getReg()))
@@ -2089,21 +2104,8 @@ bool CombinerHelper::matchCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) {
 void CombinerHelper::applyCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) {
   Builder.setInstrAndDebugLoc(MI);
   Register SrcReg = MI.getOperand(MI.getNumDefs()).getReg();
-  // Truncating a vector is going to truncate every single lane,
-  // whereas we want the full lowbits.
-  // Do the operation on a scalar instead.
-  LLT SrcTy = MRI.getType(SrcReg);
-  if (SrcTy.isVector())
-    SrcReg =
-        Builder.buildCast(LLT::scalar(SrcTy.getSizeInBits()), SrcReg).getReg(0);
-
   Register Dst0Reg = MI.getOperand(0).getReg();
-  LLT Dst0Ty = MRI.getType(Dst0Reg);
-  if (Dst0Ty.isVector()) {
-    auto MIB = Builder.buildTrunc(LLT::scalar(Dst0Ty.getSizeInBits()), SrcReg);
-    Builder.buildCast(Dst0Reg, MIB);
-  } else
-    Builder.buildTrunc(Dst0Reg, SrcReg);
+  Builder.buildTrunc(Dst0Reg, SrcReg);
   MI.eraseFromParent();
 }
 

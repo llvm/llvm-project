@@ -107,8 +107,8 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
     }
 
     for (size_t I = 0; I < ValCounterValues.size(); ++I) {
-      LLVM_DEBUG(dbgs() << validationEventToString(ValidationCounters[I])
-                        << ": " << IterationValCounterValues[I] << "\n");
+      LLVM_DEBUG(dbgs() << getValidationEventName(ValidationCounters[I]) << ": "
+                        << IterationValCounterValues[I] << "\n");
       ValCounterValues[I] += IterationValCounterValues[I];
     }
   }
