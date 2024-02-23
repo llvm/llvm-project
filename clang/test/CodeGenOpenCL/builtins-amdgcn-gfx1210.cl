@@ -9,10 +9,15 @@ typedef unsigned short int ushort;
 typedef unsigned int __attribute__((ext_vector_type(3))) uint3;
 typedef __bf16 __attribute__((ext_vector_type(2))) bfloat2;
 typedef __bf16 __attribute__((ext_vector_type(4))) bfloat4;
+typedef __bf16 __attribute__((ext_vector_type(8))) bfloat8;
 typedef __bf16 __attribute__((ext_vector_type(16))) bfloat16;
 typedef half __attribute__((ext_vector_type(2))) half2;
 typedef half __attribute__((ext_vector_type(4))) half4;
+typedef half __attribute__((ext_vector_type(8))) half8;
 typedef half __attribute__((ext_vector_type(16))) half16;
+typedef float __attribute__((ext_vector_type(4))) float4;
+typedef float __attribute__((ext_vector_type(8))) float8;
+typedef float __attribute__((ext_vector_type(16))) float16;
 
 // CHECK-LABEL: @test_setprio_inc_wg(
 // CHECK-NEXT:  entry:
@@ -573,6 +578,11 @@ void test_cvt_sr_fp8_f16(global int* out, half a, short sr, int old)
 // CHECK-NEXT:    [[OUTH4_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[OUTY4_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUTH8_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OUTY8_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OUTF16_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OUTF4_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OUTF8_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SCALE_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    store ptr addrspace(1) [[OUTH16:%.*]], ptr addrspace(5) [[OUTH16_ADDR]], align 8
 // CHECK-NEXT:    store ptr addrspace(1) [[OUTY16:%.*]], ptr addrspace(5) [[OUTY16_ADDR]], align 8
@@ -581,6 +591,11 @@ void test_cvt_sr_fp8_f16(global int* out, half a, short sr, int old)
 // CHECK-NEXT:    store ptr addrspace(1) [[OUTH4:%.*]], ptr addrspace(5) [[OUTH4_ADDR]], align 8
 // CHECK-NEXT:    store ptr addrspace(1) [[OUTY4:%.*]], ptr addrspace(5) [[OUTY4_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    store ptr addrspace(1) [[OUTH8:%.*]], ptr addrspace(5) [[OUTH8_ADDR]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUTY8:%.*]], ptr addrspace(5) [[OUTY8_ADDR]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUTF16:%.*]], ptr addrspace(5) [[OUTF16_ADDR]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUTF4:%.*]], ptr addrspace(5) [[OUTF4_ADDR]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUTF8:%.*]], ptr addrspace(5) [[OUTF8_ADDR]], align 8
 // CHECK-NEXT:    store float [[SCALE:%.*]], ptr addrspace(5) [[SCALE_ADDR]], align 4
 // CHECK-NEXT:    [[LOADVEC4:%.*]] = load <4 x i32>, ptr addrspace(5) [[SRC3_ADDR]], align 16
 // CHECK-NEXT:    [[EXTRACTVEC1:%.*]] = shufflevector <4 x i32> [[LOADVEC4]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
@@ -626,10 +641,49 @@ void test_cvt_sr_fp8_f16(global int* out, half a, short sr, int old)
 // CHECK-NEXT:    [[TMP26:%.*]] = call <4 x bfloat> @llvm.amdgcn.cvt.scale.pk.bf16.bf8(i32 [[TMP24]], float [[TMP25]])
 // CHECK-NEXT:    [[TMP27:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUTY4_ADDR]], align 8
 // CHECK-NEXT:    store <4 x bfloat> [[TMP26]], ptr addrspace(1) [[TMP27]], align 8
+// CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[TMP29:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP30:%.*]] = call <8 x half> @llvm.amdgcn.cvt.scale.pk.f16.fp4(i32 [[TMP28]], float [[TMP29]])
+// CHECK-NEXT:    [[TMP31:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUTH8_ADDR]], align 8
+// CHECK-NEXT:    store <8 x half> [[TMP30]], ptr addrspace(1) [[TMP31]], align 16
+// CHECK-NEXT:    [[TMP32:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[TMP33:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP34:%.*]] = call <8 x bfloat> @llvm.amdgcn.cvt.scale.pk.bf16.fp4(i32 [[TMP32]], float [[TMP33]])
+// CHECK-NEXT:    [[TMP35:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUTY8_ADDR]], align 8
+// CHECK-NEXT:    store <8 x bfloat> [[TMP34]], ptr addrspace(1) [[TMP35]], align 16
+// CHECK-NEXT:    [[LOADVEC48:%.*]] = load <4 x i32>, ptr addrspace(5) [[SRC3_ADDR]], align 16
+// CHECK-NEXT:    [[EXTRACTVEC9:%.*]] = shufflevector <4 x i32> [[LOADVEC48]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
+// CHECK-NEXT:    [[TMP36:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP37:%.*]] = call <16 x float> @llvm.amdgcn.cvt.scale.pk.f32.fp6(<3 x i32> [[EXTRACTVEC9]], float [[TMP36]])
+// CHECK-NEXT:    [[TMP38:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUTF16_ADDR]], align 8
+// CHECK-NEXT:    store <16 x float> [[TMP37]], ptr addrspace(1) [[TMP38]], align 64
+// CHECK-NEXT:    [[LOADVEC410:%.*]] = load <4 x i32>, ptr addrspace(5) [[SRC3_ADDR]], align 16
+// CHECK-NEXT:    [[EXTRACTVEC11:%.*]] = shufflevector <4 x i32> [[LOADVEC410]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
+// CHECK-NEXT:    [[TMP39:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP40:%.*]] = call <16 x float> @llvm.amdgcn.cvt.scale.pk.f32.bf6(<3 x i32> [[EXTRACTVEC11]], float [[TMP39]])
+// CHECK-NEXT:    [[TMP41:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUTF16_ADDR]], align 8
+// CHECK-NEXT:    store <16 x float> [[TMP40]], ptr addrspace(1) [[TMP41]], align 64
+// CHECK-NEXT:    [[TMP42:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[TMP43:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP44:%.*]] = call <4 x float> @llvm.amdgcn.cvt.scale.pk.f32.fp8(i32 [[TMP42]], float [[TMP43]])
+// CHECK-NEXT:    [[TMP45:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUTF4_ADDR]], align 8
+// CHECK-NEXT:    store <4 x float> [[TMP44]], ptr addrspace(1) [[TMP45]], align 16
+// CHECK-NEXT:    [[TMP46:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[TMP47:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP48:%.*]] = call <4 x float> @llvm.amdgcn.cvt.scale.pk.f32.bf8(i32 [[TMP46]], float [[TMP47]])
+// CHECK-NEXT:    [[TMP49:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUTF4_ADDR]], align 8
+// CHECK-NEXT:    store <4 x float> [[TMP48]], ptr addrspace(1) [[TMP49]], align 16
+// CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[TMP51:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP52:%.*]] = call <8 x float> @llvm.amdgcn.cvt.scale.pk.f32.fp4(i32 [[TMP50]], float [[TMP51]])
+// CHECK-NEXT:    [[TMP53:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUTF8_ADDR]], align 8
+// CHECK-NEXT:    store <8 x float> [[TMP52]], ptr addrspace(1) [[TMP53]], align 32
 // CHECK-NEXT:    ret void
 //
 void test_cvt_scale_pk(global half16 *outh16, global bfloat16 *outy16, uint3 src3,
                        global half4 *outh4, global bfloat4 *outy4, int src1,
+                       global half8 *outh8, global bfloat8 *outy8,
+                       global float16 *outf16, global float4 *outf4, global float8 *outf8,
                        float scale)
 {
   *outh16 = __builtin_amdgcn_cvt_scale_pk_f16_fp6(src3, scale);
@@ -640,4 +694,11 @@ void test_cvt_scale_pk(global half16 *outh16, global bfloat16 *outy16, uint3 src
   *outy4 = __builtin_amdgcn_cvt_scale_pk_bf16_fp8(src1, scale);
   *outh4 = __builtin_amdgcn_cvt_scale_pk_f16_bf8(src1, scale);
   *outy4 = __builtin_amdgcn_cvt_scale_pk_bf16_bf8(src1, scale);
+  *outh8 = __builtin_amdgcn_cvt_scale_pk_f16_fp4(src1, scale);
+  *outy8 = __builtin_amdgcn_cvt_scale_pk_bf16_fp4(src1, scale);
+  *outf16 = __builtin_amdgcn_cvt_scale_pk_f32_fp6(src3, scale);
+  *outf16 = __builtin_amdgcn_cvt_scale_pk_f32_bf6(src3, scale);
+  *outf4 = __builtin_amdgcn_cvt_scale_pk_f32_fp8(src1, scale);
+  *outf4 = __builtin_amdgcn_cvt_scale_pk_f32_bf8(src1, scale);
+  *outf8 = __builtin_amdgcn_cvt_scale_pk_f32_fp4(src1, scale);
 }

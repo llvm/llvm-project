@@ -12,7 +12,7 @@ function(add_unittest_framework_library name)
   endif()
 
   # The Nvidia 'nvlink' linker does not support static libraries.
-  if(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     set(library_type OBJECT)
   else()
     set(library_type STATIC)

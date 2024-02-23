@@ -365,8 +365,14 @@ define amdgpu_ps float @v_test_cvt_v2f32_v2bf16_s(<2 x float> inreg %src) {
 define amdgpu_ps float @v_test_cvt_f32_bf16_v(float %src) {
 ; GCN-LABEL: v_test_cvt_f32_bf16_v:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    v_bfe_u32 v1, v0, 16, 1
+; GCN-NEXT:    v_or_b32_e32 v2, 0x400000, v0
+; GCN-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GCN-NEXT:    v_add3_u32 v1, v1, v0, 0x7fff
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc_lo
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GCN-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_cvt_f32_bf16_e32 v0, v0
 ; GCN-NEXT:    ; return to shader part epilog
   %trunc = fptrunc float %src to bfloat

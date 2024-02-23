@@ -847,6 +847,7 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   let VALU = 1;
   let DPP = 1;
   let Size = 8;
+  let IsPacked = P.IsPacked;
 
   let ReadsModeReg = !or(P.DstVT.isFP, P.Src0VT.isFP);
 
@@ -864,7 +865,7 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
                                         AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
   let DisableEncoding = !if(P.NumSrcArgs, P.TieRegDPP, "");
-  let DecoderNamespace = "DPP";
+  let DecoderNamespace = "GFX8";
 
   VOPProfile Pfl = P;
 }
@@ -936,7 +937,7 @@ class VOP_DPP_Base <string OpName, VOPProfile P,
                                         AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
   let DisableEncoding = !if(P.NumSrcArgs, P.TieRegDPP, "");
-  let DecoderNamespace = "DPP";
+  let DecoderNamespace = "GFX8";
 }
 
 class VOP_DPP <string OpName, VOPProfile P, bit IsDPP16,
@@ -1410,7 +1411,7 @@ class VOP3_DPP16_Gen<bits<10> op, VOP_DPP_Pseudo ps, GFXGen Gen,
   VOP3_DPP16 <op, ps, Gen.Subtarget, opName> {
   let AssemblerPredicate = Gen.AssemblerPredicate;
   let True16Predicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts, NoTrue16Predicate);
-  let DecoderNamespace = "DPP"#Gen.DecoderNamespace#
+  let DecoderNamespace = Gen.DecoderNamespace#
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
 }
 
@@ -1559,7 +1560,7 @@ multiclass VOP3_Real_dpp8_Base<GFXGen Gen, bits<10> op, string opName = NAME> {
   defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
   if !not(ps.Pfl.HasExt64BitDPP) then
     def _e64_dpp8#Gen.Suffix : Base_VOP3_DPP8<op, ps> {
-      let DecoderNamespace = "DPP8"#Gen.DecoderNamespace;
+      let DecoderNamespace = Gen.DecoderNamespace;
       let AssemblerPredicate = Gen.AssemblerPredicate;
     }
 }
@@ -1570,7 +1571,7 @@ multiclass VOP3Dot_Real_dpp8_Base<GFXGen Gen, bits<10> op, string opName = NAME>
     def _e64_dpp8#Gen.Suffix : Base_VOP3_DPP8<op, ps> {
       let Inst{11} = ?;
       let Inst{12} = ?;
-      let DecoderNamespace = "DPP8"#Gen.DecoderNamespace;
+      let DecoderNamespace = Gen.DecoderNamespace;
       let AssemblerPredicate = Gen.AssemblerPredicate;
     }
 }
@@ -1580,7 +1581,7 @@ multiclass VOP3_Real_dpp8_with_name<GFXGen Gen, bits<10> op, string opName,
   defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
   if !not(ps.Pfl.HasExt64BitDPP) then
     let AsmString = asmName # ps.Pfl.AsmVOP3DPP8,
-        DecoderNamespace = "DPP8"#Gen.DecoderNamespace#
+        DecoderNamespace = Gen.DecoderNamespace#
                            !if(ps.Pfl.IsRealTrue16, "", "_FAKE16"),
         True16Predicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
                               NoTrue16Predicate) in {
@@ -1603,7 +1604,7 @@ multiclass VOP3be_Real_dpp<GFXGen Gen, bits<10> op, string opName,
   defvar dpp_ps = !cast<VOP_DPP_Pseudo>(opName #"_e64" #"_dpp");
   def _e64_dpp#Gen.Suffix : Base_VOP3b_DPP16<op, dpp_ps, asmName>,
                             SIMCInstr<dpp_ps.PseudoInstr, Gen.Subtarget> {
-    let DecoderNamespace = "DPP"#Gen.DecoderNamespace;
+    let DecoderNamespace = Gen.DecoderNamespace;
     let AssemblerPredicate = Gen.AssemblerPredicate;
   }
 }
@@ -1613,7 +1614,7 @@ multiclass VOP3be_Real_dpp8<GFXGen Gen, bits<10> op, string opName,
   defvar ps = !cast<VOP3_Pseudo>(opName #"_e64");
   if !not(ps.Pfl.HasExt64BitDPP) then
     def _e64_dpp8#Gen.Suffix : VOP3b_DPP8_Base<op, ps, asmName> {
-      let DecoderNamespace = "DPP8"#Gen.DecoderNamespace;
+      let DecoderNamespace = Gen.DecoderNamespace;
       let AssemblerPredicate = Gen.AssemblerPredicate;
     }
 }
@@ -1666,7 +1667,7 @@ multiclass VOP3_BITOP3_Real_dpp_Base<GFXGen Gen, bits<10> op> {
 multiclass VOP3_BITOP3_Real_dpp8_Base<GFXGen Gen, bits<10> op> {
   defvar ps = !cast<VOP3_Pseudo>(NAME#"_e64");
   def _e64_dpp8#Gen.Suffix : VOP3_BITOP3_DPP8<op, ps> {
-    let DecoderNamespace = "DPP8"#Gen.DecoderNamespace;
+    let DecoderNamespace = Gen.DecoderNamespace;
     let AssemblerPredicate = Gen.AssemblerPredicate;
   }
 }

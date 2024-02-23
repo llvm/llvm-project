@@ -1471,6 +1471,16 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
 
 //----------------------------------------------------------------------------//
 
+void mlir::populatePolynomialApproximateTanhPattern(
+    RewritePatternSet &patterns) {
+  patterns.add<TanhApproximation>(patterns.getContext());
+}
+
+void mlir::populatePolynomialApproximateErfPattern(
+    RewritePatternSet &patterns) {
+  patterns.add<ErfPolynomialApproximation>(patterns.getContext());
+}
+
 void mlir::populateMathPolynomialApproximationPatterns(
     RewritePatternSet &patterns,
     const MathPolynomialApproximationOptions &options) {
