@@ -412,15 +412,15 @@ void DWARF5AcceleratorTable::writeEntry(const BOLTDWARF5AccelTableData &Entry) {
     default:
       llvm_unreachable("Unsupported Index Size!");
       break;
-    case sizeof(uint8_t):
+    case 1:
       support::endian::write(*Entriestream, static_cast<uint8_t>(Index),
                              llvm::endianness::little);
       break;
-    case sizeof(uint16_t):
+    case 2:
       support::endian::write(*Entriestream, static_cast<uint16_t>(Index),
                              llvm::endianness::little);
       break;
-    case sizeof(uint32_t):
+    case 4:
       support::endian::write(*Entriestream, static_cast<uint32_t>(Index),
                              llvm::endianness::little);
       break;
