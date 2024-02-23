@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
 
 set(clangSupport_sources
   RISCVVIntrinsicUtils.cpp
+  ClangBuiltinsUtils.cpp
   )
 
 add_clang_library(clangSupport ${clangSupport_sources})
