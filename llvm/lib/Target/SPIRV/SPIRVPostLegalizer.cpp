@@ -61,17 +61,17 @@ static bool isMetaInstrGET(unsigned Opcode) {
 
 static bool mayBeInserted(unsigned Opcode) {
   switch (Opcode) {
-    case TargetOpcode::G_SMAX:
-    case TargetOpcode::G_UMAX:
-    case TargetOpcode::G_SMIN:
-    case TargetOpcode::G_UMIN:
-    case TargetOpcode::G_FMINNUM:
-    case TargetOpcode::G_FMINIMUM:
-    case TargetOpcode::G_FMAXNUM:
-    case TargetOpcode::G_FMAXIMUM:
-      return true;
-    default:
-      return isTypeFoldingSupported(Opcode);
+  case TargetOpcode::G_SMAX:
+  case TargetOpcode::G_UMAX:
+  case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMINIMUM:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMAXIMUM:
+    return true;
+  default:
+    return isTypeFoldingSupported(Opcode);
   }
 }
 
