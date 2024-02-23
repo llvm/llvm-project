@@ -26,6 +26,14 @@ if(NOT LIBC_CLANG_OFFLOAD_PACKAGER)
                       "build")
 endif()
 
+# Identify llvm-link program so we can merge the output IR into a single blob.
+find_program(LIBC_LLVM_LINK
+             NAMES llvm-link NO_DEFAULT_PATH
+             PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
+if(NOT LIBC_LLVM_LINK)
+  message(FATAL_ERROR "Cannot find 'llvm-link' for the GPU build")
+endif()
+
 # Optionally set up a job pool to limit the number of GPU tests run in parallel.
 # This is sometimes necessary as running too many tests in parallel can cause
 # the GPU or driver to run out of resources.
