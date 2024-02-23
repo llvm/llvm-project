@@ -5235,14 +5235,10 @@ void CheckVectorFloatPromotion(Sema *S, ExprResult &source, QualType targetTy,
   if (!vecElemT->isFloatingType() && targetTy->isFloatingType()) {
     QualType floatVecTy = S->Context.getVectorType(
         S->Context.FloatTy, vecTyTarget->getNumElements(), VectorKind::Generic);
-    int floatByteSize =
-        S->Context.getTypeSizeInChars(S->Context.FloatTy).getQuantity();
-    int vecElemByteSize = S->Context.getTypeSizeInChars(vecElemT).getQuantity();
-    if (vecElemByteSize > floatByteSize)
-      S->Diag(BuiltinLoc, diag::warn_hlsl_impcast_bitwidth_reduction)
-          << source.get()->getType() << floatVecTy
-          << source.get()->getSourceRange() << targetSrcRange;
 
+    S->Diag(BuiltinLoc, diag::warn_impcast_integer_float_precision)
+        << source.get()->getType() << floatVecTy
+        << source.get()->getSourceRange() << targetSrcRange;
     source = S->SemaConvertVectorExpr(
         source.get(), S->Context.CreateTypeSourceInfo(floatVecTy), BuiltinLoc,
         source.get()->getBeginLoc());

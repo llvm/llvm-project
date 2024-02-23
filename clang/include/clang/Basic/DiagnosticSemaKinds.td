@@ -12118,9 +12118,6 @@ def err_hlsl_param_qualifier_mismatch :
 def warn_hlsl_impcast_vector_truncation : Warning<
   "implicit conversion truncates vector: %0 to %1">, InGroup<Conversion>;
 
-def warn_hlsl_impcast_bitwidth_reduction : Warning<
-  "implicit conversion from larger type: %0 to smaller type %1, possible loss of data">, InGroup<Conversion>;
-
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;

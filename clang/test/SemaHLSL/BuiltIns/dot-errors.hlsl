@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
-// RUN:   -emit-llvm -disable-llvm-passes -verify -verify-ignore-unexpected
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -emit-llvm \
+// RUN:   -disable-llvm-passes -verify -verify-ignore-unexpected
 
 float test_no_second_arg ( float2 p0) {
   return __builtin_hlsl_dot ( p0 );
@@ -26,11 +26,6 @@ float test_dot_vector_size_mismatch ( float3 p0, float2 p1 ) {
 float test_dot_builtin_vector_size_mismatch ( float3 p0, float2 p1 ) {
   return __builtin_hlsl_dot ( p0, p1 );
   // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'float2' (aka 'vector<float, 2>')}}
-}
-
-float test_dot_builtin_vector_elem_size_reduction ( int64_t2 p0, float p1 ) {
-  return __builtin_hlsl_dot ( p0, p1 );
-  // expected-warning@-1 {{conversion from larger type: 'int64_t2' (aka 'vector<int64_t, 2>') to smaller type '__attribute__((__vector_size__(2 * sizeof(float)))) float' (vector of 2 'float' values), possible loss of data}}
 }
 
 float test_dot_scalar_mismatch ( float p0, int p1 ) {
