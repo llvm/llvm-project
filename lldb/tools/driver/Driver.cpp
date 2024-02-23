@@ -451,6 +451,8 @@ int Driver::MainLoop() {
       ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
     if (window_size.ws_col > 0)
       m_debugger.SetTerminalWidth(window_size.ws_col);
+    if (window_size.ws_row > 0)
+      m_debugger.SetTerminalHeight(window_size.ws_row);
   }
 
   SBCommandInterpreter sb_interpreter = m_debugger.GetCommandInterpreter();
@@ -627,8 +629,9 @@ int Driver::MainLoop() {
   return sb_interpreter.GetQuitStatus();
 }
 
-void Driver::ResizeWindow(unsigned short col) {
+void Driver::ResizeWindow(unsigned short col, unsigned short row) {
   GetDebugger().SetTerminalWidth(col);
+  GetDebugger().SetTerminalHeight(row);
 }
 
 void sigwinch_handler(int signo) {
@@ -636,7 +639,7 @@ void sigwinch_handler(int signo) {
   if ((isatty(STDIN_FILENO) != 0) &&
       ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
     if ((window_size.ws_col > 0) && g_driver != nullptr) {
-      g_driver->ResizeWindow(window_size.ws_col);
+      g_driver->ResizeWindow(window_size.ws_col, window_size.ws_row);
     }
   }
 }
