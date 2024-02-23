@@ -83,8 +83,6 @@ C++20 Feature Support
 
 - Implemented the `__is_layout_compatible` intrinsic to support
   `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
-  Note: `CWG2759: [[no_unique_address] and common initial sequence <https://cplusplus.github.io/CWG/issues/2759.html>`_
-  is not yet implemented.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -107,6 +105,10 @@ Resolutions to C++ Defect Reports
 - Type qualifications are now ignored when evaluating layout compatibility
   of two types.
   (`CWG1719: Layout compatibility and cv-qualification revisited <https://cplusplus.github.io/CWG/issues/1719.html>`_).
+
+- ``[[no_unique_address]]`` is now respected when evaluating layout
+  compatibility of two types.
+  (`CWG2759: [[no_unique_address] and common initial sequence  <https://cplusplus.github.io/CWG/issues/2759.html>`_).
 
 C Language Changes
 ------------------
@@ -270,7 +272,7 @@ Bug Fixes to C++ Support
   local variable, which is supported as a C11 extension in C++. Previously, it
   was only accepted at namespace scope but not at local function scope.
 - Clang no longer tries to call consteval constructors at runtime when they appear in a member initializer.
-  (`#782154 <https://github.com/llvm/llvm-project/issues/82154>`_`)
+  (`#82154 <https://github.com/llvm/llvm-project/issues/82154>`_`)
 - Fix crash when using an immediate-escalated function at global scope.
   (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
 - Correctly immediate-escalate lambda conversion functions.
@@ -299,6 +301,17 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- ARMv7+ targets now default to allowing unaligned access, except Armv6-M, and
+  Armv8-M without the Main Extension. Baremetal targets should check that the
+  new default will work with their system configurations, since it requires
+  that SCTLR.A is 0, SCTLR.U is 1, and that the memory in question is
+  configured as "normal" memory. This brings Clang in-line with the default
+  settings for GCC and Arm Compiler. Aside from making Clang align with other
+  compilers, changing the default brings major performance and code size
+  improvements for most targets. We have not changed the default behavior for
+  ARMv6, but may revisit that decision in the future. Users can restore the old
+  behavior with -m[no-]unaligned-access.
 
 Android Support
 ^^^^^^^^^^^^^^^

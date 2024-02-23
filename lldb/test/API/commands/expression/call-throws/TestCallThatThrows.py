@@ -46,7 +46,7 @@ class ExprCommandWithThrowTestCase(TestBase):
 
         value = frame.EvaluateExpression("[my_class callMeIThrow]", options)
         self.assertTrue(value.IsValid())
-        self.assertEqual(value.GetError().Success(), False)
+        self.assertFalse(value.GetError().Success())
 
         self.check_after_call()
 

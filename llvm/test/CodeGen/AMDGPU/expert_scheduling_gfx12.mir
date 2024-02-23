@@ -1,6 +1,11 @@
 # RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs -amdgpu-software-hazard-mode -run-pass si-insert-waitcnts %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs -amdgpu-waitcnt-forcezero -run-pass si-insert-waitcnts %s -o - | FileCheck %s
 
 ---
+# Make sure we don't output expert mode waitcnts with amdgpu-waitcnt-forcezero flag if hazard mode isn't enabled,
+# otherwise it will cause an assert.
+# CHECK-LABEL: name: raw_exp
+
 # GCN-LABEL: name: raw_exp
 # GCN:       bb.0
 # GCN:       S_WAITCNT_DEPCTR 4095
