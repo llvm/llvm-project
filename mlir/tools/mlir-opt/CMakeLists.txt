@@ -17,6 +17,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestFuncToLLVM
     MLIRAffineTransformsTestPasses
     MLIRArithTestPasses
+    MLIRArmSMETestPasses
     MLIRBufferizationTestPasses
     MLIRControlFlowTestPasses
     MLIRDLTITestPasses
