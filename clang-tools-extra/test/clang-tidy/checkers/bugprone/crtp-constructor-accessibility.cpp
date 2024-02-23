@@ -260,3 +260,16 @@ class CRTP
 
 class A : CRTP<A> {};
 } // namespace no_warning
+
+namespace no_warning_unsupported {
+template<typename... Types>
+class CRTP
+{};
+
+class A : CRTP<A> {};
+
+void foo() {
+    A A;
+    (void) A;
+}
+} // namespace no_warning_unsupported
