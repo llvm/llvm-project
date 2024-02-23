@@ -4214,7 +4214,7 @@ bool SelectionDAGISel::isOrEquivalentToAdd(const SDNode *N) const {
     // the alignment, then this or is really an add.
     return (Off >= 0) && (((A.value() - 1) & Off) == unsigned(Off));
   }
-  return false;
+  return CurDAG->haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1));
 }
 
 void SelectionDAGISel::CannotYetSelect(SDNode *N) {
