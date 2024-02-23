@@ -23610,7 +23610,7 @@ Predicated signed saturating addition of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operand and the result have the same vector of integer type. The
+The first two operands and the result have the same vector of integer type. The
 third operand is the vector mask and has the same number of elements as the
 result vector type. The fourth operand is the explicit vector length of the
 operation.
@@ -23618,8 +23618,9 @@ operation.
 Semantics:
 """"""""""
 
-The '``llvm.vp.sadd.sat``' intrinsic performs sadd.sat (:ref:`sadd.sat <int_sadd_sat>`) of the first, second,
-vector operand on each enabled lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+The '``llvm.vp.sadd.sat``' intrinsic performs sadd.sat (:ref:`sadd.sat <int_sadd_sat>`)
+of the first and second vector operands on each enabled lane. The result on
+disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 
 Examples:
@@ -23658,7 +23659,7 @@ Predicated unsigned saturating addition of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operand and the result have the same vector of integer type. The
+The first two operands and the result have the same vector of integer type. The
 third operand is the vector mask and has the same number of elements as the
 result vector type. The fourth operand is the explicit vector length of the
 operation.
@@ -23666,8 +23667,9 @@ operation.
 Semantics:
 """"""""""
 
-The '``llvm.vp.uadd.sat``' intrinsic performs uadd.sat (:ref:`uadd.sat <int_uadd_sat>`) of the first, second,
-vector operand on each enabled lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+The '``llvm.vp.uadd.sat``' intrinsic performs uadd.sat (:ref:`uadd.sat <int_uadd_sat>`)
+of the first and second vector operands on each enabled lane. The result on
+disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 
 Examples:
@@ -23706,7 +23708,7 @@ Predicated signed saturating subtraction of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operand and the result have the same vector of integer type. The
+The first two operands and the result have the same vector of integer type. The
 third operand is the vector mask and has the same number of elements as the
 result vector type. The fourth operand is the explicit vector length of the
 operation.
@@ -23714,8 +23716,9 @@ operation.
 Semantics:
 """"""""""
 
-The '``llvm.vp.ssub.sat``' intrinsic performs ssub.sat (:ref:`ssub.sat <int_ssub_sat>`) of the first, second,
-vector operand on each enabled lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+The '``llvm.vp.ssub.sat``' intrinsic performs ssub.sat (:ref:`ssub.sat <int_ssub_sat>`)
+of the first and second vector operands on each enabled lane. The result on
+disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 
 Examples:
@@ -23754,7 +23757,7 @@ Predicated unsigned saturating subtraction of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operand and the result have the same vector of integer type. The
+The first two operands and the result have the same vector of integer type. The
 third operand is the vector mask and has the same number of elements as the
 result vector type. The fourth operand is the explicit vector length of the
 operation.
@@ -23762,8 +23765,9 @@ operation.
 Semantics:
 """"""""""
 
-The '``llvm.vp.usub.sat``' intrinsic performs usub.sat (:ref:`usub.sat <int_usub_sat>`) of the first, second,
-vector operand on each enabled lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+The '``llvm.vp.usub.sat``' intrinsic performs usub.sat (:ref:`usub.sat <int_usub_sat>`)
+of the first and second vector operands on each enabled lane. The result on
+disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 
 Examples:
