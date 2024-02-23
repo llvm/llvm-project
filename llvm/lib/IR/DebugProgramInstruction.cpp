@@ -112,6 +112,17 @@ bool DbgRecord::isEquivalentTo(const DbgRecord &R) const {
   return getDebugLoc() == R.getDebugLoc() && isIdenticalToWhenDefined(R);
 }
 
+DbgInfoIntrinsic *
+DbgRecord::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
+  switch (RecordKind) {
+  case ValueKind:
+    return cast<DPValue>(this)->createDebugIntrinsic(M, InsertBefore);
+  case LabelKind:
+    return cast<DPLabel>(this)->createDebugIntrinsic(M, InsertBefore);
+  };
+  llvm_unreachable("unsupported DbgRecord kind");
+}
+
 DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
                                 DIExpression *Expr, const DILocation *DI) {
   return new DPValue(ValueAsMetadata::get(Location), DV, Expr, DI,
@@ -375,6 +386,20 @@ DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
     DVI->insertBefore(InsertBefore);
 
   return DVI;
+}
+
+DbgLabelInst *DPLabel::createDebugIntrinsic(Module *M,
+                                            Instruction *InsertBefore) const {
+  auto *LabelFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_label);
+  Value *Args[] = {
+      MetadataAsValue::get(getDebugLoc()->getContext(), getLabel())};
+  DbgLabelInst *DbgLabel = cast<DbgLabelInst>(
+      CallInst::Create(LabelFn->getFunctionType(), LabelFn, Args));
+  DbgLabel->setTailCall();
+  DbgLabel->setDebugLoc(getDebugLoc());
+  if (InsertBefore)
+    DbgLabel->insertBefore(InsertBefore);
+  return DbgLabel;
 }
 
 Value *DPValue::getAddress() const {
