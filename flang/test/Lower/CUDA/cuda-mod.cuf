@@ -1,0 +1,5 @@
+! Simple module to test module use in 
+
+module cuf_mod
+  real, device :: md
+end module
