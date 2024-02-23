@@ -763,8 +763,7 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
       return failure();
 
     // Bitcast the source.
-    SmallVector<int64_t> srcDims =
-        llvm::to_vector<4>(insertSrcType.getShape());
+    SmallVector<int64_t> srcDims = llvm::to_vector<4>(insertSrcType.getShape());
     srcDims.back() = isShrink ? srcDims.back() / ratio : srcDims.back() * ratio;
     VectorType newCastSrcType =
         VectorType::get(srcDims, castDstType.getElementType());
