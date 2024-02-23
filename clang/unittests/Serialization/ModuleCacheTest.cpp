@@ -88,9 +88,10 @@ public:
         }
     )cpp");
   }
- 
-  std::unique_ptr<CompilerInvocation> createInvocationAndEnableFree(
-      ArrayRef<const char *> Args, CreateInvocationOptions Opts) {
+
+  std::unique_ptr<CompilerInvocation>
+  createInvocationAndEnableFree(ArrayRef<const char *> Args,
+                                CreateInvocationOptions Opts) {
     std::unique_ptr<CompilerInvocation> Invocation =
         createInvocation(Args, Opts);
     if (Invocation)
