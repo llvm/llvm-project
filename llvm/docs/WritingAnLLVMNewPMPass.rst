@@ -164,7 +164,7 @@ it to run some LLVM IR through the pass.
 
   $ cat /tmp/a.ll
   define i32 @foo() {
-    %a = add i32 2, 3
+    \%a = add i32 2, 3
     ret i32 %a
   }
 
