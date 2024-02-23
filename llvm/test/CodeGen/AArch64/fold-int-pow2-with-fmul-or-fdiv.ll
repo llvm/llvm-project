@@ -525,12 +525,10 @@ define float @fdiv_pow_shl_cnt_fail_neg_int(i64 %cnt) nounwind {
 define float @fdiv_pow_shl_cnt(i64 %cnt_in) nounwind {
 ; CHECK-LABEL: fdiv_pow_shl_cnt:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8 // =0x8
-; CHECK-NEXT:    and x9, x0, #0x1f
-; CHECK-NEXT:    fmov s1, #-0.50000000
-; CHECK-NEXT:    lsl x8, x8, x9
-; CHECK-NEXT:    scvtf s0, x8
-; CHECK-NEXT:    fdiv s0, s1, s0
+; CHECK-NEXT:    mov w8, #-1115684864 // =0xbd800000
+; CHECK-NEXT:    and w9, w0, #0x1f
+; CHECK-NEXT:    sub w8, w8, w9, lsl #23
+; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    ret
   %cnt = and i64 %cnt_in, 31
   %shl = shl i64 8, %cnt
