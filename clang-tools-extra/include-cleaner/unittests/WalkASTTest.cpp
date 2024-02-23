@@ -200,24 +200,24 @@ TEST(WalkAST, VarTemplates) {
   EXPECT_THAT(testWalk(R"cpp(
     template <typename T> T $explicit^Foo = 0;)cpp",
                        "int z = ^Foo<int>;"),
-              ElementsAre(Decl::VarTemplateSpecialization));
+              ElementsAre(Decl::VarTemplate));
   EXPECT_THAT(testWalk(R"cpp(
-    template<typename T> T Foo = 0;
-    template<> int $explicit^Foo<int> = 1;)cpp",
+    template<typename T> T $explicit^Foo = 0;
+    template<> int Foo<int> = 1;)cpp",
                        "int x = ^Foo<int>;"),
-              ElementsAre(Decl::VarTemplateSpecialization));
+              ElementsAre(Decl::VarTemplate));
   // FIXME: This points at implicit specialization, instead we should point to
   // explicit partial specializaiton pattern.
   EXPECT_THAT(testWalk(R"cpp(
-    template<typename T> T Foo = 0;
-    template<typename T> T* $explicit^Foo<T*> = nullptr;)cpp",
+    template<typename T> T $explicit^Foo = 0;
+    template<typename T> T* Foo<T*> = nullptr;)cpp",
                        "int *x = ^Foo<int *>;"),
-              ElementsAre(Decl::VarTemplateSpecialization));
+              ElementsAre(Decl::VarTemplate));
   EXPECT_THAT(testWalk(R"cpp(
     template<typename T> T $explicit^Foo = 0;
     template int Foo<int>;)cpp",
                        "int x = ^Foo<int>;"),
-              ElementsAre(Decl::VarTemplateSpecialization));
+              ElementsAre(Decl::VarTemplate));
 }
 TEST(WalkAST, FunctionTemplates) {
   // Explicit instantiation and (partial) specialization references primary
