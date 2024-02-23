@@ -198,3 +198,8 @@ original conversion.
 The %p conversion will display a null pointer as if it was the string
 "(nullptr)" passed to a "%s" conversion, with all other options remaining the
 same as the original conversion.
+
+The %r, %R, %k, and %K fixed point number format specifiers are accepted as
+defined in ISO/IEC TR 18037 (the fixed point number extension). These are
+available when the compiler is detected as having support for fixed point
+numbers and the LIBC_COPT_PRINTF_DISABLE_FIXED_POINT flag is not set.
