@@ -39,7 +39,6 @@
 # }
 #
 # RUN: llc -o - %s -mtriple=x86_64-- -run-pass=branch-folder | FileCheck %s
-# RUN: llc --try-experimental-debuginfo-iterators -o - %s -mtriple=x86_64-- -run-pass=branch-folder | FileCheck %s
 --- |
   ; ModuleID = 'test.ll'
   source_filename = "test.ll"

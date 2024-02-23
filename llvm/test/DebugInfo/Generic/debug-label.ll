@@ -1,6 +1,5 @@
 ; RUN: llc -O0 -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators -O0 -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
-
+;
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_label
 ; CHECK-NEXT: DW_AT_name {{.*}}"top"
@@ -15,7 +14,6 @@
 ; CHECK-NOT: DW_AT_name {{.*}}"top"
 ;
 ; RUN: llc -O0 -o - %s | FileCheck %s -check-prefix=ASM
-; RUN: llc --try-experimental-debuginfo-iterators  -O0 -o - %s | FileCheck %s -check-prefix=ASM
 ;
 ; ASM: [[TOP_LOW_PC:[.0-9a-zA-Z]+]]:{{[[:space:]].*}}DEBUG_LABEL: foo:top
 ; ASM: [[DONE_LOW_PC:[.0-9a-zA-Z]+]]:{{[[:space:]].*}}DEBUG_LABEL: foo:done

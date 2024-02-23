@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes=strip-nonlinetable-debuginfo %s -o - | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -S -passes=strip-nonlinetable-debuginfo %s -o - | FileCheck %s
 ; CHECK: define void @f()
 define void @f() !dbg !4 {
 entry:

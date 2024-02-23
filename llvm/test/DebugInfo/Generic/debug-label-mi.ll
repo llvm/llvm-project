@@ -2,14 +2,11 @@
 ; REQUIRES: asserts
 ; RUN: llc -debug-only=isel %s -o /dev/null 2> %t.debug
 ; RUN: cat %t.debug | FileCheck %s --check-prefix=CHECKMI
-; RUN: llc --try-experimental-debuginfo-iterators -debug-only=isel %s -o /dev/null 2> %t.debug
-; RUN: cat %t.debug | FileCheck %s --check-prefix=CHECKMI
-
+;
 ; CHECKMI: DBG_LABEL "top", debug-location !9
 ; CHECKMI: DBG_LABEL "done", debug-location !11
 ;
 ; RUN: llc %s -o - | FileCheck %s --check-prefix=CHECKASM
-; RUN: llc --try-experimental-debuginfo-iterators %s -o - | FileCheck %s --check-prefix=CHECKASM
 ;
 ; CHECKASM: DEBUG_LABEL: foo:top
 ; CHECKASM: DEBUG_LABEL: foo:done

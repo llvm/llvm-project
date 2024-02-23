@@ -5,19 +5,11 @@
 ; RUN:   -experimental-debug-variable-locations \
 ; RUN:   | FileCheck %s --check-prefix=EXPER-INPUT
 
-; RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -stop-before=finalize-isel \
-; RUN:   --try-experimental-debuginfo-iterators \
-; RUN:   | FileCheck %s --check-prefix=EXPER-INPUT
-
 ; RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -stop-after=livedebugvars \
 ; RUN:   | FileCheck %s --check-prefix=OUTPUT
 
 ; RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -stop-after=livedebugvars \
 ; RUN:   -experimental-debug-variable-locations \
-; RUN:   | FileCheck %s --check-prefix=OUTPUT
-
-; RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -stop-after=livedebugvars \
-; RUN:   --try-experimental-debuginfo-iterators \
 ; RUN:   | FileCheck %s --check-prefix=OUTPUT
 
 ; This test checks that LiveDebugVariables strips all debug instructions

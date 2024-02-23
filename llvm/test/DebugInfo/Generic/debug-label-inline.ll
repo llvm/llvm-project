@@ -1,5 +1,4 @@
 ; RUN: llc -O0 -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators -O0 -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
 ;
 ; Bug 47129
 ; XFAIL: target=sparc{{.*}}

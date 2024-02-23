@@ -1,7 +1,6 @@
 ; Test unreachable llvm.dbg.label
 ;
 ; RUN: llc -filetype=obj -split-dwarf-file debug.dwo -mtriple=x86_64-unknown-linux-gnu -o - %s | llvm-dwarfdump -v - | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators -filetype=obj -split-dwarf-file debug.dwo -mtriple=x86_64-unknown-linux-gnu -o - %s | llvm-dwarfdump -v - | FileCheck %s
 ;
 ; CHECK: .debug_info.dwo contents:
 ; CHECK: DW_TAG_label

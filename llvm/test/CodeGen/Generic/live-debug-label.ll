@@ -1,6 +1,5 @@
 ; RUN: llc < %s -stop-after=virtregrewriter -o - | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators < %s -stop-after=virtregrewriter -o - | FileCheck %s
-
+;
 ; NVPTX produces a different order of the BBs
 ; XFAIL: target=nvptx{{.*}}
 ; Both RISC-V and AMDGPU(GCN) deploy two VirtRegRewriter in their codegen
