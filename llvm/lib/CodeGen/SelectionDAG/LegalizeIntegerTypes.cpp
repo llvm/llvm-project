@@ -1343,10 +1343,14 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ZExtIntBinOp(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_UMINUMAX(SDNode *N) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
   // It doesn't matter if we sign extend or zero extend in the inputs. So do
-  // whatever is best for the target.
-  SDValue LHS = SExtOrZExtPromotedInteger(N->getOperand(0));
-  SDValue RHS = SExtOrZExtPromotedInteger(N->getOperand(1));
+  // whatever is best for the target and the promoted operands. We can reuse
+  // PromoteSetCCOperands by passing it an unsigned predicate.
+  PromoteSetCCOperands(LHS, RHS, ISD::SETUGT);
+
   return DAG.getNode(N->getOpcode(), SDLoc(N),
                      LHS.getValueType(), LHS, RHS);
 }
