@@ -206,17 +206,10 @@ if result:
 if config.flang_runtime_f128_math_lib:
     config.available_features.add("flang-supports-f128-math")
     config.available_features.add(
-        "flang-f128-math-lib-" + config.flang_runtime_f128_math_lib)
+        "flang-f128-math-lib-" + config.flang_runtime_f128_math_lib
+    )
     config.substitutions.append(
-        (
-            "%f128-lib",
-            config.flang_runtime_f128_math_lib.upper()
-        )
+        ("%f128-lib", config.flang_runtime_f128_math_lib.upper())
     )
 else:
-    config.substitutions.append(
-        (
-            "%f128-lib",
-            "NONE"
-        )
-    )
+    config.substitutions.append(("%f128-lib", "NONE"))
