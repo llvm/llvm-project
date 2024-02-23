@@ -818,6 +818,7 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   let VALU = 1;
   let DPP = 1;
   let Size = 8;
+  let IsPacked = P.IsPacked;
 
   let ReadsModeReg = !or(P.DstVT.isFP, P.Src0VT.isFP);
 
