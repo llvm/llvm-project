@@ -541,11 +541,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DPMarker &Marker) {
   return OS;
 }
 
-inline raw_ostream &operator<<(raw_ostream &OS, const DPValue &Value) {
-  Value.print(OS);
-  return OS;
-}
-
 /// Inline helper to return a range of DPValues attached to a marker. It needs
 /// to be inlined as it's frequently called, but also come after the declaration
 /// of DPMarker. Thus: it's pre-declared by users like Instruction, then an
