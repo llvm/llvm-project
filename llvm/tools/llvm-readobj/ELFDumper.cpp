@@ -1095,7 +1095,8 @@ const EnumEntry<unsigned> AMDGPUElfOSABI[] = {
 };
 
 const EnumEntry<unsigned> ARMElfOSABI[] = {
-  {"ARM", "ARM", ELF::ELFOSABI_ARM}
+    {"ARM", "ARM", ELF::ELFOSABI_ARM},
+    {"ARM FDPIC", "ARM FDPIC", ELF::ELFOSABI_ARM_FDPIC},
 };
 
 const EnumEntry<unsigned> C6000ElfOSABI[] = {
