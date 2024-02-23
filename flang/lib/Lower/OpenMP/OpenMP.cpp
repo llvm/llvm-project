@@ -1413,8 +1413,8 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
           ? nullptr
           : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
                                  dependTypeOperands),
-      dependOperands, nowaitAttr, devicePtrOperands,
-      deviceAddrOperands, mapOperands);
+      dependOperands, nowaitAttr, devicePtrOperands, deviceAddrOperands,
+      mapOperands);
 
   genBodyOfTargetOp(converter, semaCtx, eval, genNested, targetOp, mapSymTypes,
                     mapSymLocs, mapSymbols, currentLocation);
