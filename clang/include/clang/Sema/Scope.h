@@ -525,10 +525,10 @@ public:
     for (const Scope *S = this; S; S = S->getParent()) {
       if (S->getFlags() & Scope::OpenACCComputeConstructScope)
         return true;
-      else if (S->getFlags() & (Scope::FnScope | Scope::ClassScope |
-                                Scope::BlockScope | Scope::TemplateParamScope |
-                                Scope::FunctionPrototypeScope |
-                                Scope::AtCatchScope | Scope::ObjCMethodScope))
+      else if (S->getFlags() &
+               (Scope::FnScope | Scope::ClassScope | Scope::BlockScope |
+                Scope::TemplateParamScope | Scope::FunctionPrototypeScope |
+                Scope::AtCatchScope | Scope::ObjCMethodScope))
         return false;
     }
     return false;
