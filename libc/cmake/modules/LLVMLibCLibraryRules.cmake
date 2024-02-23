@@ -125,7 +125,7 @@ function(add_gpu_entrypoint_library target_name base_target_name)
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin"
       COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/binary
       COMMAND ${LIBC_CLANG_OFFLOAD_PACKAGER}
-              "${prefix},file=$<JOIN:${object},,file=>" -o 
+              "${prefix},file=$<JOIN:${object},,file=>" -o
               ${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin
       DEPENDS ${dep} ${base_target_name}
       COMMENT "Packaging LLVM offloading binary for '${object}'"
@@ -142,7 +142,7 @@ function(add_gpu_entrypoint_library target_name base_target_name)
       COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/stubs/${name}.cpp
       DEPENDS ${dep} ${dep}.__gpubin__ ${base_target_name}
     )
-    add_custom_target(${dep}.__stub__ 
+    add_custom_target(${dep}.__stub__
                       DEPENDS ${dep}.__gpubin__ "${CMAKE_CURRENT_BINARY_DIR}/stubs/${name}.cpp")
 
     add_library(${dep}.__fatbin__
@@ -151,9 +151,9 @@ function(add_gpu_entrypoint_library target_name base_target_name)
     )
 
     # This is always compiled for the LLVM host triple instead of the native GPU
-    # triple that is used by default in the build. 
+    # triple that is used by default in the build.
     target_compile_options(${dep}.__fatbin__ BEFORE PRIVATE -nostdlib)
-    target_compile_options(${dep}.__fatbin__ PRIVATE 
+    target_compile_options(${dep}.__fatbin__ PRIVATE
       --target=${LLVM_HOST_TRIPLE}
       "SHELL:-Xclang -fembed-offload-object=${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin")
     add_dependencies(${dep}.__fatbin__

@@ -284,7 +284,7 @@ function(create_entrypoint_object fq_target_name)
 
   # The NVPTX target cannot use LTO for the internal targets used for testing.
   if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-    target_compile_options(${internal_target_name} PRIVATE 
+    target_compile_options(${internal_target_name} PRIVATE
                            -fno-lto -march=${LIBC_GPU_TARGET_ARCHITECTURE})
   endif()
 

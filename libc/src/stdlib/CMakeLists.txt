@@ -268,7 +268,7 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
   set(SCUDO_DEPS "")
 
   include(${LIBC_SOURCE_DIR}/../compiler-rt/cmake/Modules/AllSupportedArchDefs.cmake)
-  
+
   # scudo distinguishes riscv32 and riscv64, so we need to translate the architecture
   set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
   if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
@@ -278,7 +278,7 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
   endif()
 
   if(NOT (LIBC_TARGET_ARCHITECTURE_FOR_SCUDO IN_LIST ALL_SCUDO_STANDALONE_SUPPORTED_ARCH))
-    message(FATAL_ERROR "Architecture ${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO} is not supported by SCUDO. 
+    message(FATAL_ERROR "Architecture ${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO} is not supported by SCUDO.
       Either disable LLVM_LIBC_INCLUDE_SCUDO or change your target architecture.")
   endif()
 
@@ -290,7 +290,7 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
     RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
     RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
     )
-  
+
   add_entrypoint_external(
     malloc
     DEPENDS

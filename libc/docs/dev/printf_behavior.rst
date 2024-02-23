@@ -2,7 +2,7 @@
 Printf Behavior Under All Conditions
 ====================================
 
-Introduction: 
+Introduction:
 =============
 On the "defining undefined behavior" page, I said you should write down your
 decisions regarding undefined behavior in your functions. This is that document
@@ -102,7 +102,7 @@ behavior.
 LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
 -------------------------------------------------
 When set, the float to string decimal conversion algorithm will use a larger
-table to accelerate long double conversions. This larger table is around 5MB of 
+table to accelerate long double conversions. This larger table is around 5MB of
 size when compiled.
 
 LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT
