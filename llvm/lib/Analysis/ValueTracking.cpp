@@ -7189,11 +7189,28 @@ bool llvm::propagatesPoison(const Use &PoisonOp) {
       case Intrinsic::uadd_with_overflow:
       case Intrinsic::usub_with_overflow:
       case Intrinsic::umul_with_overflow:
+      case Intrinsic::sadd_sat:
+      case Intrinsic::ssub_sat:
+      case Intrinsic::sshl_sat:
+      case Intrinsic::uadd_sat:
+      case Intrinsic::usub_sat:
+      case Intrinsic::ushl_sat:
         // If an input is a vector containing a poison element, the
         // two output vectors (calculated results, overflow bits)'
         // corresponding lanes are poison.
         return true;
       case Intrinsic::ctpop:
+      case Intrinsic::ctlz:
+      case Intrinsic::cttz:
+      case Intrinsic::abs:
+      case Intrinsic::smax:
+      case Intrinsic::smin:
+      case Intrinsic::umax:
+      case Intrinsic::umin:
+      case Intrinsic::bitreverse:
+      case Intrinsic::bswap:
+      case Intrinsic::fshl:
+      case Intrinsic::fshr:
         return true;
       }
     }
