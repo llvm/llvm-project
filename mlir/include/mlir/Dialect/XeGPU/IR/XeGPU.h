@@ -23,16 +23,6 @@
 #include <mlir/Interfaces/ViewLikeInterface.h>
 
 namespace mlir {
-
-/// Return the list of Range (i.e. offset, size, stride). Each Range
-/// entry contains either the dynamic value or a ConstantIndexOp constructed
-/// with `b` at location `loc`.
-SmallVector<Range, 8> getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
-                                        OpBuilder &b, Location loc);
-
-} // namespace mlir
-
-namespace mlir {
 namespace xegpu {
 
 class TensorDescType;
