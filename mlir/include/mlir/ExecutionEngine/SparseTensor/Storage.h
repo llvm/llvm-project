@@ -623,7 +623,8 @@ SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newEmpty(
     const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim) {
   return new SparseTensorStorage<P, C, V>(dimRank, dimSizes, lvlRank, lvlSizes,
-                                          lvlTypes, dim2lvl, lvl2dim, nullptr, true);
+                                          lvlTypes, dim2lvl, lvl2dim, nullptr,
+                                          true);
 }
 
 template <typename P, typename C, typename V>
