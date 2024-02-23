@@ -87,8 +87,7 @@ module m
     call s02(p) ! ok
     !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p=': function results have distinct types: REAL(4) vs INTEGER(4)
     call s02(ip)
-    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a pointer unless INTENT(IN)
-    call s02(procptr())
+    call s02(procptr()) ! ok
     call s02(null()) ! ok
     !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a pointer unless INTENT(IN)
     call s05(null())
@@ -99,8 +98,7 @@ module m
     call s02b(p) ! ok
     !ERROR: Actual argument function associated with procedure dummy argument 'p=' is not compatible: function results have distinct types: REAL(4) vs INTEGER(4)
     call s02b(ip)
-    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a pointer unless INTENT(IN)
-    call s02b(procptr())
+    call s02b(procptr()) ! ok
     call s02b(null())
     !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a pointer unless INTENT(IN)
     call s02b(sin)
