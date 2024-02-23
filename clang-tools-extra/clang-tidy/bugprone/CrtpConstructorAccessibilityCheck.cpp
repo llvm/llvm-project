@@ -109,40 +109,47 @@ void CrtpConstructorAccessibilityCheck::check(
       CRTPDeclaration->getBraceRange().getEnd(),
       "friend " + DerivedTemplateParameter->getNameAsString() + ';' + '\n');
 
-  if (!CRTPDeclaration->hasUserDeclaredConstructor()) {
-    const bool IsStruct = CRTPDeclaration->isStruct();
-
-    // FIXME: Clean this up!
-    {
-      DiagnosticBuilder Diag =
-          diag(CRTPDeclaration->getLocation(),
-               "the implicit default constructor of the CRTP is publicly "
-               "accessible")
-          << CRTPDeclaration
-          << FixItHint::CreateInsertion(
-                 CRTPDeclaration->getBraceRange().getBegin().getLocWithOffset(
-                     1),
-                 (IsStruct ? "\nprivate:\n" : "\n") +
-                     CRTPDeclaration->getNameAsString() + "() = default;\n" +
-                     (IsStruct ? "public:\n" : ""));
-
-      if (NeedsFriend)
-        Diag << HintFriend;
-    }
-
-    diag(CRTPDeclaration->getLocation(),
-         "consider making it private%select{| and declaring the derived class "
-         "as friend}0",
-         DiagnosticIDs::Note)
-        << NeedsFriend;
-  }
-
   if (hasPrivateConstructor(CRTPDeclaration) && NeedsFriend) {
     diag(CRTPDeclaration->getLocation(),
          "the CRTP cannot be constructed from the derived class")
         << CRTPDeclaration << HintFriend;
     diag(CRTPDeclaration->getLocation(),
          "consider declaring the derived class as friend", DiagnosticIDs::Note);
+  }
+
+  auto DiagNoteFriendPrivate = [&](const SourceLocation &Loc, bool Friend) {
+    return diag(Loc,
+                "consider making it private%select{| and declaring the "
+                "derived class "
+                "as friend}0",
+                DiagnosticIDs::Note)
+           << Friend;
+  };
+
+  auto WithFriendHintIfNeeded = [&](DiagnosticBuilder Diag, bool NeedsFriend) {
+    if (NeedsFriend)
+      Diag << HintFriend;
+
+    return Diag;
+  };
+
+  if (!CRTPDeclaration->hasUserDeclaredConstructor()) {
+    const bool IsStruct = CRTPDeclaration->isStruct();
+
+    WithFriendHintIfNeeded(
+        diag(CRTPDeclaration->getLocation(),
+             "the implicit default constructor of the CRTP is publicly "
+             "accessible")
+            << CRTPDeclaration
+            << FixItHint::CreateInsertion(
+                   CRTPDeclaration->getBraceRange().getBegin().getLocWithOffset(
+                       1),
+                   (IsStruct ? "\nprivate:\n" : "\n") +
+                       CRTPDeclaration->getNameAsString() + "() = default;\n" +
+                       (IsStruct ? "public:\n" : "")),
+        NeedsFriend);
+
+    DiagNoteFriendPrivate(CRTPDeclaration->getLocation(), NeedsFriend);
   }
 
   for (auto &&Ctor : CRTPDeclaration->ctors()) {
@@ -152,23 +159,14 @@ void CrtpConstructorAccessibilityCheck::check(
     const bool IsPublic = Ctor->getAccess() == AS_public;
     const std::string Access = IsPublic ? "public" : "protected";
 
-    // FIXME: Clean this up!
-    {
-      DiagnosticBuilder Diag =
-          diag(Ctor->getLocation(),
-               "%0 contructor allows the CRTP to be %select{inherited "
-               "from|constructed}1 as a regular template class")
-          << Access << IsPublic << Ctor << hintMakeCtorPrivate(Ctor, Access);
+    WithFriendHintIfNeeded(
+        diag(Ctor->getLocation(),
+             "%0 contructor allows the CRTP to be %select{inherited "
+             "from|constructed}1 as a regular template class")
+            << Access << IsPublic << Ctor << hintMakeCtorPrivate(Ctor, Access),
+        NeedsFriend);
 
-      if (NeedsFriend)
-        Diag << HintFriend;
-    }
-
-    diag(Ctor->getLocation(),
-         "consider making it private%select{| and declaring the derived class "
-         "as friend}0",
-         DiagnosticIDs::Note)
-        << NeedsFriend;
+    DiagNoteFriendPrivate(Ctor->getLocation(), NeedsFriend);
   }
 }
 
