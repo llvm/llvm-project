@@ -97,6 +97,7 @@ COMPILER_RT_VISIBILITY
 const char *__llvm_profile_end_names(void) { return NamesLast; }
 COMPILER_RT_VISIBILITY
 const char *__llvm_profile_begin_vtabnames(void) { return VNamesFirst; }
+COMPILER_RT_VISIBILITY
 const char *__llvm_profile_end_vtabnames(void) { return VNamesLast; }
 COMPILER_RT_VISIBILITY
 char *__llvm_profile_begin_counters(void) { return CountersFirst; }
