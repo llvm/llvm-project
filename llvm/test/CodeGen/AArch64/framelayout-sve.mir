@@ -772,9 +772,9 @@ body:             |
 
 # CHECK:      $sp  = frame-destroy ADDXri $sp, 32, 0
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22
-# CHECK-NEXT: $z10 = frame-destroy LDR_ZXI $sp, 0
+# CHECK-NEXT: $z10  = frame-destroy LDR_ZXI $sp, 0
 # CHECK-NEXT: $z9  = frame-destroy LDR_ZXI $sp, 1
-# CHECK-NEXT: $z8  = frame-destroy LDR_ZXI $sp, 2
+# CHECK-NEXT: $z8 = frame-destroy LDR_ZXI $sp, 2
 # CHECK-NEXT: $sp  = frame-destroy ADDVL_XXI $sp, 3
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 16
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $z8
@@ -873,14 +873,14 @@ body:             |
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x20, 0x22, 0x11, 0x98, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22
 # CHECK:      $sp = frame-destroy ADDVL_XXI $sp, 1
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x20, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22
-# CHECK:      $p15 = frame-destroy LDR_PXI $sp, 4
-# CHECK:      $p14 = frame-destroy LDR_PXI $sp, 5
-# CHECK:      $p5 = frame-destroy LDR_PXI $sp, 14
-# CHECK:      $p4 = frame-destroy LDR_PXI $sp, 15
 # CHECK:      $z23 = frame-destroy LDR_ZXI $sp, 2
 # CHECK:      $z22 = frame-destroy LDR_ZXI $sp, 3
 # CHECK:      $z9 = frame-destroy LDR_ZXI $sp, 16
 # CHECK:      $z8 = frame-destroy LDR_ZXI $sp, 17
+# CHECK:      $p15 = frame-destroy LDR_PXI $sp, 4
+# CHECK:      $p14 = frame-destroy LDR_PXI $sp, 5
+# CHECK:      $p5 = frame-destroy LDR_PXI $sp, 14
+# CHECK:      $p4 = frame-destroy LDR_PXI $sp, 15
 # CHECK:      $sp = frame-destroy ADDVL_XXI $sp, 18
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 32
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $z8
@@ -1037,14 +1037,14 @@ body:             |
 # CHECK-NEXT: $sp = frame-setup ANDXri killed $[[TMP]]
 
 # CHECK:      $sp = frame-destroy ADDVL_XXI $fp, -18
+# CHECK:      $z23 = frame-destroy LDR_ZXI $sp, 2
+# CHECK-NEXT: $z22 = frame-destroy LDR_ZXI $sp, 3
+# CHECK:      $z9 = frame-destroy LDR_ZXI $sp, 16
+# CHECK-NEXT: $z8 = frame-destroy LDR_ZXI $sp, 17
 # CHECK-NEXT: $p15 = frame-destroy LDR_PXI $sp, 4
 # CHECK-NEXT: $p14 = frame-destroy LDR_PXI $sp, 5
 # CHECK:      $p5 = frame-destroy LDR_PXI $sp, 14
 # CHECK-NEXT: $p4 = frame-destroy LDR_PXI $sp, 15
-# CHECK-NEXT: $z23 = frame-destroy LDR_ZXI $sp, 2
-# CHECK-NEXT: $z22 = frame-destroy LDR_ZXI $sp, 3
-# CHECK:      $z9 = frame-destroy LDR_ZXI $sp, 16
-# CHECK-NEXT: $z8 = frame-destroy LDR_ZXI $sp, 17
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $z8
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $z9
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $z10
@@ -1198,10 +1198,10 @@ body:             |
 
 # CHECK:      $sp = frame-destroy ADDVL_XXI $sp, 7
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22
-# CHECK-NEXT: $p15 = frame-destroy LDR_PXI $sp, 6
-# CHECK-NEXT: $p4 = frame-destroy LDR_PXI $sp, 7
 # CHECK-NEXT: $z23 = frame-destroy LDR_ZXI $sp, 1
 # CHECK-NEXT: $z8 = frame-destroy LDR_ZXI $sp, 2
+# CHECK-NEXT: $p15 = frame-destroy LDR_PXI $sp, 6
+# CHECK-NEXT: $p4 = frame-destroy LDR_PXI $sp, 7
 # CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 3
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 16
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $z8

@@ -46,7 +46,7 @@ static bool isZeroValue(Value val) {
 static bool isSparseTensor(Value v) {
   auto enc = getSparseTensorEncoding(v.getType());
   return enc && !llvm::all_of(enc.getLvlTypes(),
-                              [](auto lt) { return lt == LevelType::Dense; });
+                              [](auto lt) { return lt == LevelFormat::Dense; });
 }
 static bool isSparseTensor(OpOperand *op) { return isSparseTensor(op->get()); }
 
@@ -1180,7 +1180,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     auto stt = getSparseTensorType(op.getResult());
-    if (!stt.hasEncoding() || stt.getCOOStart() == 0)
+    if (!stt.hasEncoding() || stt.getAoSCOOStart() == 0)
       return failure();
 
     // Implement the NewOp as follows:

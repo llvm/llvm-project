@@ -102,7 +102,8 @@ private:
   bool selectMemOperation(Register ResVReg, MachineInstr &I) const;
 
   bool selectAtomicRMW(Register ResVReg, const SPIRVType *ResType,
-                       MachineInstr &I, unsigned NewOpcode) const;
+                       MachineInstr &I, unsigned NewOpcode,
+                       unsigned NegateOpcode = 0) const;
 
   bool selectAtomicCmpXchg(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I) const;
@@ -489,6 +490,17 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_ATOMIC_CMPXCHG:
     return selectAtomicCmpXchg(ResVReg, ResType, I);
 
+  case TargetOpcode::G_ATOMICRMW_FADD:
+    return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicFAddEXT);
+  case TargetOpcode::G_ATOMICRMW_FSUB:
+    // Translate G_ATOMICRMW_FSUB to OpAtomicFAddEXT with negative value operand
+    return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicFAddEXT,
+                           SPIRV::OpFNegate);
+  case TargetOpcode::G_ATOMICRMW_FMIN:
+    return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicFMinEXT);
+  case TargetOpcode::G_ATOMICRMW_FMAX:
+    return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicFMaxEXT);
+
   case TargetOpcode::G_FENCE:
     return selectFence(I);
 
@@ -686,7 +698,8 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
 bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
                                                const SPIRVType *ResType,
                                                MachineInstr &I,
-                                               unsigned NewOpcode) const {
+                                               unsigned NewOpcode,
+                                               unsigned NegateOpcode) const {
   assert(I.hasOneMemOperand());
   const MachineMemOperand *MemOp = *I.memoperands_begin();
   uint32_t Scope = static_cast<uint32_t>(getScope(MemOp->getSyncScopeID()));
@@ -700,14 +713,24 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
   Register MemSemReg = buildI32Constant(MemSem /*| ScSem*/, I);
 
-  return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(NewOpcode))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(Ptr)
-      .addUse(ScopeReg)
-      .addUse(MemSemReg)
-      .addUse(I.getOperand(2).getReg())
-      .constrainAllUses(TII, TRI, RBI);
+  bool Result = false;
+  Register ValueReg = I.getOperand(2).getReg();
+  if (NegateOpcode != 0) {
+    // Translation with negative value operand is requested
+    Register TmpReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+    Result |= selectUnOpWithSrc(TmpReg, ResType, I, ValueReg, NegateOpcode);
+    ValueReg = TmpReg;
+  }
+
+  Result |= BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(NewOpcode))
+                .addDef(ResVReg)
+                .addUse(GR.getSPIRVTypeID(ResType))
+                .addUse(Ptr)
+                .addUse(ScopeReg)
+                .addUse(MemSemReg)
+                .addUse(ValueReg)
+                .constrainAllUses(TII, TRI, RBI);
+  return Result;
 }
 
 bool SPIRVInstructionSelector::selectFence(MachineInstr &I) const {
@@ -805,8 +828,18 @@ static bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
   }
 }
 
+static bool isUSMStorageClass(SPIRV::StorageClass::StorageClass SC) {
+  switch (SC) {
+  case SPIRV::StorageClass::DeviceOnlyINTEL:
+  case SPIRV::StorageClass::HostOnlyINTEL:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // In SPIR-V address space casting can only happen to and from the Generic
-// storage class. We can also only case Workgroup, CrossWorkgroup, or Function
+// storage class. We can also only cast Workgroup, CrossWorkgroup, or Function
 // pointers to and from Generic pointers. As such, we can convert e.g. from
 // Workgroup to Function by going via a Generic pointer as an intermediary. All
 // other combinations can only be done by a bitcast, and are probably not safe.
@@ -839,13 +872,17 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
   SPIRV::StorageClass::StorageClass SrcSC = GR.getPointerStorageClass(SrcPtr);
   SPIRV::StorageClass::StorageClass DstSC = GR.getPointerStorageClass(ResVReg);
 
-  // Casting from an eligable pointer to Generic.
+  // don't generate a cast between identical storage classes
+  if (SrcSC == DstSC)
+    return true;
+
+  // Casting from an eligible pointer to Generic.
   if (DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC))
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpPtrCastToGeneric);
-  // Casting from Generic to an eligable pointer.
+  // Casting from Generic to an eligible pointer.
   if (SrcSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(DstSC))
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpGenericCastToPtr);
-  // Casting between 2 eligable pointers using Generic as an intermediary.
+  // Casting between 2 eligible pointers using Generic as an intermediary.
   if (isGenericCastablePtr(SrcSC) && isGenericCastablePtr(DstSC)) {
     Register Tmp = MRI->createVirtualRegister(&SPIRV::IDRegClass);
     SPIRVType *GenericPtrTy = GR.getOrCreateSPIRVPointerType(
@@ -863,6 +900,16 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
                           .addUse(Tmp)
                           .constrainAllUses(TII, TRI, RBI);
   }
+
+  // Check if instructions from the SPV_INTEL_usm_storage_classes extension may
+  // be applied
+  if (isUSMStorageClass(SrcSC) && DstSC == SPIRV::StorageClass::CrossWorkgroup)
+    return selectUnOp(ResVReg, ResType, I,
+                      SPIRV::OpPtrCastToCrossWorkgroupINTEL);
+  if (SrcSC == SPIRV::StorageClass::CrossWorkgroup && isUSMStorageClass(DstSC))
+    return selectUnOp(ResVReg, ResType, I,
+                      SPIRV::OpCrossWorkgroupCastToPtrINTEL);
+
   // TODO Should this case just be disallowed completely?
   // We're casting 2 other arbitrary address spaces, so have to bitcast.
   return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
@@ -1522,7 +1569,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   }
   SPIRVType *ResType = GR.getOrCreateSPIRVPointerType(
       PointerBaseType, I, TII,
-      addressSpaceToStorageClass(GV->getAddressSpace()));
+      addressSpaceToStorageClass(GV->getAddressSpace(), STI));
 
   std::string GlobalIdent;
   if (!GV->hasName()) {
@@ -1595,13 +1642,16 @@ bool SPIRVInstructionSelector::selectGlobalValue(
 
   unsigned AddrSpace = GV->getAddressSpace();
   SPIRV::StorageClass::StorageClass Storage =
-      addressSpaceToStorageClass(AddrSpace);
+      addressSpaceToStorageClass(AddrSpace, STI);
   bool HasLnkTy = GV->getLinkage() != GlobalValue::InternalLinkage &&
                   Storage != SPIRV::StorageClass::Function;
   SPIRV::LinkageType::LinkageType LnkType =
       (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
           ? SPIRV::LinkageType::Import
-          : SPIRV::LinkageType::Export;
+          : (GV->getLinkage() == GlobalValue::LinkOnceODRLinkage &&
+                     STI.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr)
+                 ? SPIRV::LinkageType::LinkOnceODR
+                 : SPIRV::LinkageType::Export);
 
   Register Reg = GR.buildGlobalVariable(ResVReg, ResType, GlobalIdent, GV,
                                         Storage, Init, GlobalVar->isConstant(),

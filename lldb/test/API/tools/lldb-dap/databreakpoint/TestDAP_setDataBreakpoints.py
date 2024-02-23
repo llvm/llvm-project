@@ -24,31 +24,33 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_next_stop()
         self.dap_server.get_stackFrame()
         # Test setting write watchpoint using expressions: &x, arr+2
-        response_x = self.dap_server.request_dataBreakpointInfo(0, "4@&x")
-        response_arr_2 = self.dap_server.request_dataBreakpointInfo(0, "1@arr+2")
+        response_x = self.dap_server.request_dataBreakpointInfo(0, "&x")
+        response_arr_2 = self.dap_server.request_dataBreakpointInfo(0, "arr+2")
         # Test response from dataBreakpointInfo request.
         self.assertEquals(response_x["body"]["dataId"].split("/")[1], "4")
         self.assertEquals(response_x["body"]["accessTypes"], self.accessTypes)
-        self.assertEquals(response_arr_2["body"]["dataId"].split("/")[1], "1")
+        self.assertEquals(response_arr_2["body"]["dataId"].split("/")[1], "4")
         self.assertEquals(response_arr_2["body"]["accessTypes"], self.accessTypes)
         dataBreakpoints = [
             {"dataId": response_x["body"]["dataId"], "accessType": "write"},
             {"dataId": response_arr_2["body"]["dataId"], "accessType": "write"},
         ]
-        self.dap_server.request_setDataBreakpoint(dataBreakpoints)
+        set_response = self.dap_server.request_setDataBreakpoint(dataBreakpoints)
+        self.assertEquals(
+            set_response["body"]["breakpoints"],
+            [{"verified": True}, {"verified": True}],
+        )
 
-        self.dap_server.request_continue()
-        self.dap_server.wait_for_stopped()
+        self.continue_to_next_stop()
         x_val = self.dap_server.get_local_variable_value("x")
         i_val = self.dap_server.get_local_variable_value("i")
         self.assertEquals(x_val, "2")
         self.assertEquals(i_val, "1")
 
-        self.dap_server.request_continue()
-        self.dap_server.wait_for_stopped()
+        self.continue_to_next_stop()
         arr_2 = self.dap_server.get_local_variable_child("arr", "[2]")
         i_val = self.dap_server.get_local_variable_value("i")
-        self.assertEquals(arr_2["value"], "'z'")
+        self.assertEquals(arr_2["value"], "42")
         self.assertEquals(i_val, "2")
 
     @skipIfWindows
@@ -72,13 +74,17 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         # Test response from dataBreakpointInfo request.
         self.assertEquals(response_x["body"]["dataId"].split("/")[1], "4")
         self.assertEquals(response_x["body"]["accessTypes"], self.accessTypes)
-        self.assertEquals(response_arr_2["body"]["dataId"].split("/")[1], "1")
+        self.assertEquals(response_arr_2["body"]["dataId"].split("/")[1], "4")
         self.assertEquals(response_arr_2["body"]["accessTypes"], self.accessTypes)
         dataBreakpoints = [
             {"dataId": response_x["body"]["dataId"], "accessType": "write"},
             {"dataId": response_arr_2["body"]["dataId"], "accessType": "write"},
         ]
-        self.dap_server.request_setDataBreakpoint(dataBreakpoints)
+        set_response = self.dap_server.request_setDataBreakpoint(dataBreakpoints)
+        self.assertEquals(
+            set_response["body"]["breakpoints"],
+            [{"verified": True}, {"verified": True}],
+        )
 
         self.continue_to_next_stop()
         x_val = self.dap_server.get_local_variable_value("x")
@@ -89,7 +95,7 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_next_stop()
         arr_2 = self.dap_server.get_local_variable_child("arr", "[2]")
         i_val = self.dap_server.get_local_variable_value("i")
-        self.assertEquals(arr_2["value"], "'z'")
+        self.assertEquals(arr_2["value"], "42")
         self.assertEquals(i_val, "2")
         self.dap_server.request_setDataBreakpoint([])
 
@@ -104,7 +110,8 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
                 "hitCondition": "2",
             }
         ]
-        self.dap_server.request_setDataBreakpoint(dataBreakpoints)
+        set_response = self.dap_server.request_setDataBreakpoint(dataBreakpoints)
+        self.assertEquals(set_response["body"]["breakpoints"], [{"verified": True}])
         self.continue_to_next_stop()
         x_val = self.dap_server.get_local_variable_value("x")
         self.assertEquals(x_val, "3")
@@ -117,7 +124,8 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
                 "condition": "x==10",
             }
         ]
-        self.dap_server.request_setDataBreakpoint(dataBreakpoints)
+        set_response = self.dap_server.request_setDataBreakpoint(dataBreakpoints)
+        self.assertEquals(set_response["body"]["breakpoints"], [{"verified": True}])
         self.continue_to_next_stop()
         x_val = self.dap_server.get_local_variable_value("x")
         self.assertEquals(x_val, "10")

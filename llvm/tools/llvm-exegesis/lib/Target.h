@@ -22,6 +22,7 @@
 #include "LlvmState.h"
 #include "PerfHelper.h"
 #include "SnippetGenerator.h"
+#include "ValidationEvent.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/LegacyPassManager.h"

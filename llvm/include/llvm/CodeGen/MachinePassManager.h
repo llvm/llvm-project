@@ -25,10 +25,10 @@
 
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PassManagerInternal.h"
 #include "llvm/Support/Error.h"
-
-#include <map>
 
 namespace llvm {
 class Module;
@@ -36,6 +36,7 @@ class Function;
 class MachineFunction;
 
 extern template class AnalysisManager<MachineFunction>;
+using MachineFunctionAnalysisManager = AnalysisManager<MachineFunction>;
 
 /// A CRTP mix-in that provides informational APIs needed for machine passes.
 ///
@@ -46,216 +47,246 @@ struct MachinePassInfoMixin : public PassInfoMixin<DerivedT> {
   // TODO: Add MachineFunctionProperties support.
 };
 
-/// An AnalysisManager<MachineFunction> that also exposes IR analysis results.
-class MachineFunctionAnalysisManager : public AnalysisManager<MachineFunction> {
-public:
-  using Base = AnalysisManager<MachineFunction>;
-
-  MachineFunctionAnalysisManager() : FAM(nullptr), MAM(nullptr) {}
-  MachineFunctionAnalysisManager(FunctionAnalysisManager &FAM,
-                                 ModuleAnalysisManager &MAM)
-      : FAM(&FAM), MAM(&MAM) {}
-  MachineFunctionAnalysisManager(MachineFunctionAnalysisManager &&) = default;
-  MachineFunctionAnalysisManager &
-  operator=(MachineFunctionAnalysisManager &&) = default;
-
-  /// Get the result of an analysis pass for a Function.
-  ///
-  /// Runs the analysis if a cached result is not available.
-  template <typename PassT> typename PassT::Result &getResult(Function &F) {
-    return FAM->getResult<PassT>(F);
-  }
-
-  /// Get the cached result of an analysis pass for a Function.
-  ///
-  /// This method never runs the analysis.
-  ///
-  /// \returns null if there is no cached result.
-  template <typename PassT>
-  typename PassT::Result *getCachedResult(Function &F) {
-    return FAM->getCachedResult<PassT>(F);
-  }
-
-  /// Get the result of an analysis pass for a Module.
-  ///
-  /// Runs the analysis if a cached result is not available.
-  template <typename PassT> typename PassT::Result &getResult(Module &M) {
-    return MAM->getResult<PassT>(M);
-  }
-
-  /// Get the cached result of an analysis pass for a Module.
-  ///
-  /// This method never runs the analysis.
-  ///
-  /// \returns null if there is no cached result.
-  template <typename PassT> typename PassT::Result *getCachedResult(Module &M) {
-    return MAM->getCachedResult<PassT>(M);
-  }
-
-  /// Get the result of an analysis pass for a MachineFunction.
-  ///
-  /// Runs the analysis if a cached result is not available.
-  using Base::getResult;
-
-  /// Get the cached result of an analysis pass for a MachineFunction.
-  ///
-  /// This method never runs the analysis.
-  ///
-  /// returns null if there is no cached result.
-  using Base::getCachedResult;
-
-  // FIXME: Add LoopAnalysisManager or CGSCCAnalysisManager if needed.
-  FunctionAnalysisManager *FAM;
-  ModuleAnalysisManager *MAM;
+namespace detail {
+struct MachinePassConcept
+    : PassConcept<MachineFunction, MachineFunctionAnalysisManager> {
+  virtual MachineFunctionProperties getRequiredProperties() const = 0;
+  virtual MachineFunctionProperties getSetProperties() const = 0;
+  virtual MachineFunctionProperties getClearedProperties() const = 0;
 };
 
-extern template class PassManager<MachineFunction>;
+template <typename PassT> struct MachinePassModel : MachinePassConcept {
+  explicit MachinePassModel(PassT Pass) : Pass(std::move(Pass)) {}
+  // We have to explicitly define all the special member functions because MSVC
+  // refuses to generate them.
+  MachinePassModel(const MachinePassModel &Arg) : Pass(Arg.Pass) {}
+  MachinePassModel(MachinePassModel &&Arg) : Pass(std::move(Arg.Pass)) {}
 
-/// MachineFunctionPassManager adds/removes below features to/from the base
-/// PassManager template instantiation.
-///
-/// - Support passes that implement doInitialization/doFinalization. This is for
-///   machine function passes to work on module level constructs. One such pass
-///   is AsmPrinter.
-///
-/// - Support machine module pass which runs over the module (for example,
-///   MachineOutliner). A machine module pass needs to define the method:
-///
-///   ```Error run(Module &, MachineFunctionAnalysisManager &)```
-///
-///   FIXME: machine module passes still need to define the usual machine
-///          function pass interface, namely,
-///          `PreservedAnalyses run(MachineFunction &,
-///                                 MachineFunctionAnalysisManager &)`
-///          But this interface wouldn't be executed. It is just a placeholder
-///          to satisfy the pass manager type-erased inteface. This
-///          special-casing of machine module pass is due to its limited use
-///          cases and the unnecessary complexity it may bring to the machine
-///          pass manager.
-///
-/// - The base class `run` method is replaced by an alternative `run` method.
-///   See details below.
-///
-/// - Support codegening in the SCC order. Users include interprocedural
-///   register allocation (IPRA).
-class MachineFunctionPassManager
-    : public PassManager<MachineFunction, MachineFunctionAnalysisManager> {
-  using Base = PassManager<MachineFunction, MachineFunctionAnalysisManager>;
-
-public:
-  MachineFunctionPassManager(bool RequireCodeGenSCCOrder = false,
-                             bool VerifyMachineFunction = false)
-      : RequireCodeGenSCCOrder(RequireCodeGenSCCOrder),
-        VerifyMachineFunction(VerifyMachineFunction) {}
-  MachineFunctionPassManager(MachineFunctionPassManager &&) = default;
-  MachineFunctionPassManager &
-  operator=(MachineFunctionPassManager &&) = default;
-
-  /// Run machine passes for a Module.
-  ///
-  /// The intended use is to start the codegen pipeline for a Module. The base
-  /// class's `run` method is deliberately hidden by this due to the observation
-  /// that we don't yet have the use cases of compositing two instances of
-  /// machine pass managers, or compositing machine pass managers with other
-  /// types of pass managers.
-  Error run(Module &M, MachineFunctionAnalysisManager &MFAM);
-
-  template <typename PassT> void addPass(PassT &&Pass) {
-    Base::addPass(std::forward<PassT>(Pass));
-    PassConceptT *P = Passes.back().get();
-    addDoInitialization<PassT>(P);
-    addDoFinalization<PassT>(P);
-
-    // Add machine module pass.
-    addRunOnModule<PassT>(P);
+  friend void swap(MachinePassModel &LHS, MachinePassModel &RHS) {
+    using std::swap;
+    swap(LHS.Pass, RHS.Pass);
   }
+
+  MachinePassModel &operator=(MachinePassModel RHS) {
+    swap(*this, RHS);
+    return *this;
+  }
+
+  PreservedAnalyses run(MachineFunction &IR,
+                        MachineFunctionAnalysisManager &AM) override {
+    return Pass.run(IR, AM);
+  }
+
+  void printPipeline(
+      raw_ostream &OS,
+      function_ref<StringRef(StringRef)> MapClassName2PassName) override {
+    Pass.printPipeline(OS, MapClassName2PassName);
+  }
+
+  StringRef name() const override { return PassT::name(); }
+
+  template <typename T>
+  using has_required_t = decltype(std::declval<T &>().isRequired());
+  template <typename T>
+  static std::enable_if_t<is_detected<has_required_t, T>::value, bool>
+  passIsRequiredImpl() {
+    return T::isRequired();
+  }
+  template <typename T>
+  static std::enable_if_t<!is_detected<has_required_t, T>::value, bool>
+  passIsRequiredImpl() {
+    return false;
+  }
+  bool isRequired() const override { return passIsRequiredImpl<PassT>(); }
+
+  template <typename T>
+  using has_get_required_properties_t =
+      decltype(std::declval<T &>().getRequiredProperties());
+  template <typename T>
+  static std::enable_if_t<is_detected<has_get_required_properties_t, T>::value,
+                          MachineFunctionProperties>
+  getRequiredPropertiesImpl() {
+    return PassT::getRequiredProperties();
+  }
+  template <typename T>
+  static std::enable_if_t<!is_detected<has_get_required_properties_t, T>::value,
+                          MachineFunctionProperties>
+  getRequiredPropertiesImpl() {
+    return MachineFunctionProperties();
+  }
+  MachineFunctionProperties getRequiredProperties() const override {
+    return getRequiredPropertiesImpl<PassT>();
+  }
+
+  template <typename T>
+  using has_get_set_properties_t =
+      decltype(std::declval<T &>().getSetProperties());
+  template <typename T>
+  static std::enable_if_t<is_detected<has_get_set_properties_t, T>::value,
+                          MachineFunctionProperties>
+  getSetPropertiesImpl() {
+    return PassT::getSetProperties();
+  }
+  template <typename T>
+  static std::enable_if_t<!is_detected<has_get_set_properties_t, T>::value,
+                          MachineFunctionProperties>
+  getSetPropertiesImpl() {
+    return MachineFunctionProperties();
+  }
+  MachineFunctionProperties getSetProperties() const override {
+    return getSetPropertiesImpl<PassT>();
+  }
+
+  template <typename T>
+  using has_get_cleared_properties_t =
+      decltype(std::declval<T &>().getClearedProperties());
+  template <typename T>
+  static std::enable_if_t<is_detected<has_get_cleared_properties_t, T>::value,
+                          MachineFunctionProperties>
+  getClearedPropertiesImpl() {
+    return PassT::getClearedProperties();
+  }
+  template <typename T>
+  static std::enable_if_t<!is_detected<has_get_cleared_properties_t, T>::value,
+                          MachineFunctionProperties>
+  getClearedPropertiesImpl() {
+    return MachineFunctionProperties();
+  }
+  MachineFunctionProperties getClearedProperties() const override {
+    return getClearedPropertiesImpl<PassT>();
+  }
+
+  PassT Pass;
+};
+} // namespace detail
+
+using MachineFunctionAnalysisManagerModuleProxy =
+    InnerAnalysisManagerProxy<MachineFunctionAnalysisManager, Module>;
+
+template <>
+bool MachineFunctionAnalysisManagerModuleProxy::Result::invalidate(
+    Module &M, const PreservedAnalyses &PA,
+    ModuleAnalysisManager::Invalidator &Inv);
+extern template class InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
+                                                Module>;
+
+extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
+                                                MachineFunction>;
+/// Provide the \c ModuleAnalysisManager to \c Function proxy.
+using ModuleAnalysisManagerMachineFunctionProxy =
+    OuterAnalysisManagerProxy<ModuleAnalysisManager, MachineFunction>;
+
+class FunctionAnalysisManagerMachineFunctionProxy
+    : public AnalysisInfoMixin<FunctionAnalysisManagerMachineFunctionProxy> {
+public:
+  class Result {
+  public:
+    explicit Result(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
+
+    Result(Result &&Arg) : FAM(std::move(Arg.FAM)) {
+      // We have to null out the analysis manager in the moved-from state
+      // because we are taking ownership of the responsibilty to clear the
+      // analysis state.
+      Arg.FAM = nullptr;
+    }
+
+    ~Result() {
+      // FAM is cleared in a moved from state where there is nothing to do.
+      if (!FAM)
+        return;
+
+      // Clear out the analysis manager if we're being destroyed -- it means we
+      // didn't even see an invalidate call when we got invalidated.
+      FAM->clear();
+    }
+
+    Result &operator=(Result &&RHS) {
+      FAM = RHS.FAM;
+      // We have to null out the analysis manager in the moved-from state
+      // because we are taking ownership of the responsibilty to clear the
+      // analysis state.
+      RHS.FAM = nullptr;
+      return *this;
+    }
+
+    /// Accessor for the analysis manager.
+    FunctionAnalysisManager &getManager() { return *FAM; }
+
+    /// Handler for invalidation of the outer IR unit, \c IRUnitT.
+    ///
+    /// If the proxy analysis itself is not preserved, we assume that the set of
+    /// inner IR objects contained in IRUnit may have changed.  In this case,
+    /// we have to call \c clear() on the inner analysis manager, as it may now
+    /// have stale pointers to its inner IR objects.
+    ///
+    /// Regardless of whether the proxy analysis is marked as preserved, all of
+    /// the analyses in the inner analysis manager are potentially invalidated
+    /// based on the set of preserved analyses.
+    bool invalidate(MachineFunction &IR, const PreservedAnalyses &PA,
+                    MachineFunctionAnalysisManager::Invalidator &Inv);
+
+  private:
+    FunctionAnalysisManager *FAM;
+  };
+
+  explicit FunctionAnalysisManagerMachineFunctionProxy(
+      FunctionAnalysisManager &FAM)
+      : FAM(&FAM) {}
+
+  /// Run the analysis pass and create our proxy result object.
+  ///
+  /// This doesn't do any interesting work; it is primarily used to insert our
+  /// proxy result object into the outer analysis cache so that we can proxy
+  /// invalidation to the inner analysis manager.
+  Result run(MachineFunction &, MachineFunctionAnalysisManager &) {
+    return Result(*FAM);
+  }
+
+  static AnalysisKey Key;
 
 private:
-  template <typename PassT>
-  using has_init_t = decltype(std::declval<PassT &>().doInitialization(
-      std::declval<Module &>(),
-      std::declval<MachineFunctionAnalysisManager &>()));
-
-  template <typename PassT>
-  std::enable_if_t<!is_detected<has_init_t, PassT>::value>
-  addDoInitialization(PassConceptT *Pass) {}
-
-  template <typename PassT>
-  std::enable_if_t<is_detected<has_init_t, PassT>::value>
-  addDoInitialization(PassConceptT *Pass) {
-    using PassModelT = detail::PassModel<MachineFunction, PassT,
-                                         MachineFunctionAnalysisManager>;
-    auto *P = static_cast<PassModelT *>(Pass);
-    InitializationFuncs.emplace_back(
-        [=](Module &M, MachineFunctionAnalysisManager &MFAM) {
-          return P->Pass.doInitialization(M, MFAM);
-        });
-  }
-
-  template <typename PassT>
-  using has_fini_t = decltype(std::declval<PassT &>().doFinalization(
-      std::declval<Module &>(),
-      std::declval<MachineFunctionAnalysisManager &>()));
-
-  template <typename PassT>
-  std::enable_if_t<!is_detected<has_fini_t, PassT>::value>
-  addDoFinalization(PassConceptT *Pass) {}
-
-  template <typename PassT>
-  std::enable_if_t<is_detected<has_fini_t, PassT>::value>
-  addDoFinalization(PassConceptT *Pass) {
-    using PassModelT = detail::PassModel<MachineFunction, PassT,
-                                         MachineFunctionAnalysisManager>;
-    auto *P = static_cast<PassModelT *>(Pass);
-    FinalizationFuncs.emplace_back(
-        [=](Module &M, MachineFunctionAnalysisManager &MFAM) {
-          return P->Pass.doFinalization(M, MFAM);
-        });
-  }
-
-  template <typename PassT>
-  using is_machine_module_pass_t = decltype(std::declval<PassT &>().run(
-      std::declval<Module &>(),
-      std::declval<MachineFunctionAnalysisManager &>()));
-
-  template <typename PassT>
-  using is_machine_function_pass_t = decltype(std::declval<PassT &>().run(
-      std::declval<MachineFunction &>(),
-      std::declval<MachineFunctionAnalysisManager &>()));
-
-  template <typename PassT>
-  std::enable_if_t<!is_detected<is_machine_module_pass_t, PassT>::value>
-  addRunOnModule(PassConceptT *Pass) {}
-
-  template <typename PassT>
-  std::enable_if_t<is_detected<is_machine_module_pass_t, PassT>::value>
-  addRunOnModule(PassConceptT *Pass) {
-    static_assert(is_detected<is_machine_function_pass_t, PassT>::value,
-                  "machine module pass needs to define machine function pass "
-                  "api. sorry.");
-
-    using PassModelT = detail::PassModel<MachineFunction, PassT,
-                                         MachineFunctionAnalysisManager>;
-    auto *P = static_cast<PassModelT *>(Pass);
-    MachineModulePasses.emplace(
-        Passes.size() - 1,
-        [=](Module &M, MachineFunctionAnalysisManager &MFAM) {
-          return P->Pass.run(M, MFAM);
-        });
-  }
-
-  using FuncTy = Error(Module &, MachineFunctionAnalysisManager &);
-  SmallVector<llvm::unique_function<FuncTy>, 4> InitializationFuncs;
-  SmallVector<llvm::unique_function<FuncTy>, 4> FinalizationFuncs;
-
-  using PassIndex = decltype(Passes)::size_type;
-  std::map<PassIndex, llvm::unique_function<FuncTy>> MachineModulePasses;
-
-  // Run codegen in the SCC order.
-  bool RequireCodeGenSCCOrder;
-
-  bool VerifyMachineFunction;
+  FunctionAnalysisManager *FAM;
 };
+
+class ModuleToMachineFunctionPassAdaptor
+    : public PassInfoMixin<ModuleToMachineFunctionPassAdaptor> {
+  using MachinePassConcept = detail::MachinePassConcept;
+
+public:
+  explicit ModuleToMachineFunctionPassAdaptor(
+      std::unique_ptr<MachinePassConcept> Pass)
+      : Pass(std::move(Pass)) {}
+
+  /// Runs the function pass across every function in the module.
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+
+  static bool isRequired() { return true; }
+
+private:
+  std::unique_ptr<MachinePassConcept> Pass;
+};
+
+template <typename MachineFunctionPassT>
+ModuleToMachineFunctionPassAdaptor
+createModuleToMachineFunctionPassAdaptor(MachineFunctionPassT &&Pass) {
+  using PassModelT = detail::MachinePassModel<MachineFunctionPassT>;
+  // Do not use make_unique, it causes too many template instantiations,
+  // causing terrible compile times.
+  return ModuleToMachineFunctionPassAdaptor(
+      std::unique_ptr<detail::MachinePassConcept>(
+          new PassModelT(std::forward<MachineFunctionPassT>(Pass))));
+}
+
+template <>
+PreservedAnalyses
+PassManager<MachineFunction>::run(MachineFunction &,
+                                  AnalysisManager<MachineFunction> &);
+extern template class PassManager<MachineFunction>;
+
+/// Convenience typedef for a pass manager over functions.
+using MachineFunctionPassManager = PassManager<MachineFunction>;
 
 } // end namespace llvm
 
