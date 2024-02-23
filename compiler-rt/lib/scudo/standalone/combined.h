@@ -177,6 +177,18 @@ public:
     mapAndInitializeRingBuffer();
   }
 
+  void enableRingBuffer() {
+    AllocationRingBuffer *RB = getRingBuffer();
+    if (RB)
+      RB->Depot->enable();
+  }
+
+  void disableRingBuffer() {
+    AllocationRingBuffer *RB = getRingBuffer();
+    if (RB)
+      RB->Depot->disable();
+  }
+
   // Initialize the embedded GWP-ASan instance. Requires the main allocator to
   // be functional, best called from PostInitCallback.
   void initGwpAsan() {
@@ -688,16 +700,12 @@ public:
     Quarantine.disable();
     Primary.disable();
     Secondary.disable();
-    AllocationRingBuffer *RB = getRingBuffer();
-    if (RB)
-      RB->disable();
+    disableRingBuffer();
   }
 
   void enable() NO_THREAD_SAFETY_ANALYSIS {
     initThreadMaybe();
-    AllocationRingBuffer *RB = getRingBuffer();
-    if (RB)
-      RB->enable();
+    enableRingBuffer();
     Secondary.enable();
     Primary.enable();
     Quarantine.enable();
@@ -1072,10 +1080,6 @@ private:
     atomic_uptr Pos;
     // An array of Size (at least one) elements of type Entry is immediately
     // following to this struct.
-
-    void enable() { Depot->enable(); }
-
-    void disable() { Depot->disable(); }
   };
   // Pointer to memory mapped area starting with AllocationRingBuffer struct,
   // and immediately followed by Size elements of type Entry.
