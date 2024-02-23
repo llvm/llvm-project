@@ -296,9 +296,7 @@ TEST_F(FormatTestMacroExpansion, IndentChildrenWithinMacroCall) {
                "            indent();\n"
                "          }\n"
                "        }));\n"
-               "}"
-
-               ,
+               "}",
                Style);
 }
 
