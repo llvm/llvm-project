@@ -1,3 +1,4 @@
+// REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sve -fsyntax-only -verify %s
 
 void test_svzero_args(uint64_t m) {
