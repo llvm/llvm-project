@@ -166,6 +166,10 @@ class VectorLegalizer {
   /// truncated back to the original type.
   void PromoteFP_TO_INT(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
+  // Promotes the floating-point operand at the given index of the node into
+  // an FP_EXTEND/VP_FP_EXTEND node of type NewVT
+  SDValue PromoteFPOperand(SDNode *Node, MVT NewVT, unsigned Index);
+
   /// Implements vector reduce operation promotion.
   ///
   /// All vector operands are promoted to a vector type with larger element
@@ -569,6 +573,18 @@ bool VectorLegalizer::LowerOperationWrapper(SDNode *Node,
   return true;
 }
 
+SDValue VectorLegalizer::PromoteFPOperand(SDNode *Node, MVT NewVT,
+                                          unsigned Index) {
+  SDLoc DL(Node);
+  if (ISD::isVPOpcode(Node->getOpcode())) {
+    auto MaskIdx = *ISD::getVPMaskIdx(Node->getOpcode());
+    auto EVLIdx = *ISD::getVPExplicitVectorLengthIdx(Node->getOpcode());
+    return DAG.getNode(ISD::VP_FP_EXTEND, DL, NewVT, Node->getOperand(Index),
+                       Node->getOperand(MaskIdx), Node->getOperand(EVLIdx));
+  }
+  return DAG.getNode(ISD::FP_EXTEND, DL, NewVT, Node->getOperand(Index));
+}
+
 void VectorLegalizer::PromoteReduction(SDNode *Node,
                                        SmallVectorImpl<SDValue> &Results) {
   MVT VecVT = Node->getOperand(1).getSimpleValueType();
@@ -593,16 +609,7 @@ void VectorLegalizer::PromoteReduction(SDNode *Node,
           ISD::getVPMaskIdx(Node->getOpcode()) == j)) // Skip mask operand.
       // promote the vector operand.
       if (Node->getOperand(j).getValueType().isFloatingPoint())
-        if (!ISD::isVPOpcode(Node->getOpcode()))
-          Operands[j] =
-              DAG.getNode(ISD::FP_EXTEND, DL, NewVecVT, Node->getOperand(j));
-        else {
-          auto MaskIdx = *ISD::getVPMaskIdx(Node->getOpcode());
-          auto EVLIdx = *ISD::getVPExplicitVectorLengthIdx(Node->getOpcode());
-          Operands[j] =
-              DAG.getNode(ISD::VP_FP_EXTEND, DL, NewVecVT, Node->getOperand(j),
-                          Node->getOperand(MaskIdx), Node->getOperand(EVLIdx));
-        }
+        Operands[j] = PromoteFPOperand(Node, NewVecVT, j);
       else
         Operands[j] =
             DAG.getNode(ISD::ANY_EXTEND, DL, NewVecVT, Node->getOperand(j));
@@ -764,16 +771,7 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
               .getVectorElementType()
               .isFloatingPoint() &&
           NVT.isVector() && NVT.getVectorElementType().isFloatingPoint())
-        if (!ISD::isVPOpcode(Node->getOpcode()))
-          Operands[j] =
-              DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(j));
-        else {
-          auto MaskIdx = *ISD::getVPMaskIdx(Node->getOpcode());
-          auto EVLIdx = *ISD::getVPExplicitVectorLengthIdx(Node->getOpcode());
-          Operands[j] =
-              DAG.getNode(ISD::VP_FP_EXTEND, dl, NVT, Node->getOperand(j),
-                          Node->getOperand(MaskIdx), Node->getOperand(EVLIdx));
-        }
+        Operands[j] = PromoteFPOperand(Node, NVT, j);
       else
         Operands[j] = DAG.getNode(ISD::BITCAST, dl, NVT, Node->getOperand(j));
     else
