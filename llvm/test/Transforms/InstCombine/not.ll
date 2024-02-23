@@ -769,3 +769,92 @@ entry:
   %cmp = icmp sle i32 %select, %not.c
   ret i1 %cmp
 }
+
+define i32 @test_sext(i32 %a, i32 %b){
+; CHECK-LABEL: @test_sext(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[TMP1]] to i32
+; CHECK-NEXT:    [[NOT:%.*]] = sub i32 [[TMP2]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[NOT]]
+;
+  %cmp = icmp eq i32 %a, 0
+  %sext = sext i1 %cmp to i32
+  %add = add i32 %b, %sext
+  %not = xor i32 %add, -1
+  ret i32 %not
+}
+
+define <2 x i32> @test_sext_vec(<2 x i32> %a, <2 x i32> %b){
+; CHECK-LABEL: @test_sext_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i32> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i1> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[NOT:%.*]] = sub <2 x i32> [[TMP2]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[NOT]]
+;
+  %cmp = icmp eq <2 x i32> %a, zeroinitializer
+  %sext = sext <2 x i1> %cmp to <2 x i32>
+  %add = add <2 x i32> %b, %sext
+  %not = xor <2 x i32> %add, <i32 -1, i32 -1>
+  ret <2 x i32> %not
+}
+
+define i64 @test_zext_nneg(i32 %c1, i64 %c2, i64 %c3){
+; CHECK-LABEL: @test_zext_nneg(
+; CHECK-NEXT:    [[DOTNEG:%.*]] = add i64 [[C2:%.*]], -4
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[C1:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[C3:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[DOTNEG]], [[TMP2]]
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %not = xor i32 %c1, -1
+  %conv = zext nneg i32 %not to i64
+  %add1 = add i64 %c2, -5
+  %add2 = add i64 %conv, %c3
+  %sub = sub i64 %add1, %add2
+  ret i64 %sub
+}
+
+define i8 @test_trunc(i8 %a){
+; CHECK-LABEL: @test_trunc(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[A:%.*]], 0
+; CHECK-NEXT:    [[NOT:%.*]] = sext i1 [[TMP1]] to i8
+; CHECK-NEXT:    ret i8 [[NOT]]
+;
+  %zext = zext i8 %a to i32
+  %sub = add nsw i32 %zext, -1
+  %shr = ashr i32 %sub, 31
+  %conv = trunc i32 %shr to i8
+  %not = xor i8 %conv, -1
+  ret i8 %not
+}
+
+define <2 x i8> @test_trunc_vec(<2 x i8> %a){
+; CHECK-LABEL: @test_trunc_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i8> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[NOT:%.*]] = sext <2 x i1> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[NOT]]
+;
+  %zext = zext <2 x i8> %a to <2 x i32>
+  %sub = add nsw <2 x i32> %zext, <i32 -1, i32 -1>
+  %shr = ashr <2 x i32> %sub, <i32 31, i32 31>
+  %conv = trunc <2 x i32> %shr to <2 x i8>
+  %not = xor <2 x i8> %conv, <i8 -1, i8 -1>
+  ret <2 x i8> %not
+}
+
+; Negative tests
+
+define i32 @test_zext(i32 %a, i32 %b){
+; CHECK-LABEL: @test_zext(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[SEXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SEXT]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[ADD]], -1
+; CHECK-NEXT:    ret i32 [[NOT]]
+;
+  %cmp = icmp eq i32 %a, 0
+  %sext = zext i1 %cmp to i32
+  %add = add i32 %b, %sext
+  %not = xor i32 %add, -1
+  ret i32 %not
+}

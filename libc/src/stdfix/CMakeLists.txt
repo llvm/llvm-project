@@ -16,3 +16,18 @@ foreach(suffix IN ITEMS hr r lr hk k lk)
       libc.src.__support.fixed_point.fx_bits
   )
 endforeach()
+
+foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
+  add_entrypoint_object(
+    round${suffix}
+    HDRS
+      round${suffix}.h
+    SRCS
+      round${suffix}.cpp
+    COMPILE_OPTIONS
+      -O3
+      -ffixed-point
+    DEPENDS
+      libc.src.__support.fixed_point.fx_bits
+  )
+endforeach()

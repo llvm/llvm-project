@@ -157,11 +157,14 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     By default, each level-type has the property of being unique (no duplicate
     coordinates at that level) and ordered (coordinates appear sorted at that
-    level). The following properties can be added to a level-format to change
-    this default behavior:
+    level). For singleton levels, the coordinates are fused with its parents in AoS
+    (array of structures) scheme. The following properties can be added to a level-format
+    to change this default behavior:
 
     - **nonunique** : duplicate coordinates may appear at the level
     - **nonordered** : coordinates may appear in arbribratry order
+    - **soa** : only applicable to singleton levels, fuses the singleton
+      level in SoA (structure of arrays) scheme.
 
     In addition to the map, the following two fields are optional:
 
@@ -188,10 +191,18 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     }>
     ... tensor<?xf32, #SparseVector> ...
 
-    // Sorted coordinate scheme.
+    // Sorted coordinate scheme (arranged in AoS format by default).
     #SortedCOO = #sparse_tensor.encoding<{
       map = (i, j) -> (i : compressed(nonunique), j : singleton)
     }>
+    // coordinates = {x_crd, y_crd}[nnz]
+    ... tensor<?x?xf64, #SortedCOO> ...
+
+    // Sorted coordinate scheme (arranged in SoA format).
+    #SortedCOO = #sparse_tensor.encoding<{
+      map = (i, j) -> (i : compressed(nonunique), j : singleton(soa))
+    }>
+    // coordinates = {x_crd[nnz], y_crd[nnz]}
     ... tensor<?x?xf64, #SortedCOO> ...
 
     // Batched sorted coordinate scheme, with high encoding.
