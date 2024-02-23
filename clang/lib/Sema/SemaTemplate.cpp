@@ -12,7 +12,6 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
@@ -40,7 +39,6 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Casting.h"
 
 #include <iterator>
 #include <optional>
@@ -2722,9 +2720,12 @@ FindAppearedTemplateParamsInAlias(ArrayRef<TemplateArgument> DeducedArgs,
   return Results;
 }
 
-bool hasDeclaredDeductionGuides(DeclarationName Name, DeclContext* DC) {
+bool hasDeclaredDeductionGuides(DeclarationName Name, DeclContext *DC) {
   // Check whether we've already declared deduction guides for this template.
   // FIXME: Consider storing a flag on the template to indicate this.
+  assert(Name.getNameKind() ==
+             DeclarationName::NameKind::CXXDeductionGuideName &&
+         "name must be a deduction guide name");
   auto Existing = DC->lookup(Name);
   for (auto *D : Existing)
     if (D->isImplicit())
@@ -2743,14 +2744,14 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
           Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate),
           AliasTemplate->getDeclContext()))
     return;
-  // Unrap the sugar ElaboratedType.
+  // Unwrap the sugared ElaboratedType.
   auto RhsType = AliasTemplate->getTemplatedDecl()
                      ->getUnderlyingType()
                      .getSingleStepDesugaredType(Context);
   TemplateDecl *Template = nullptr;
   llvm::ArrayRef<TemplateArgument> AliasRhsTemplateArgs;
   if (const auto *TST = RhsType->getAs<TemplateSpecializationType>()) {
-    // TemplateName in TEST can be a TypeAliasTemplateDecl if
+    // TemplateName in TST can be a TypeAliasTemplateDecl if
     // the right hand side of the alias is also a type alias, e.g.
     //
     // template<typename T>
@@ -2793,7 +2794,7 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
     else if (const auto *ET = RType->getAs<ElaboratedType>())
       // explicit deduction guide.
       FReturnType = ET->getNamedType()->getAs<TemplateSpecializationType>();
-    assert(FReturnType);
+    assert(FReturnType && "expected to see a return type");
     // Deduce template arguments of the deduction guide f from the RHS of
     // the alias.
     //
@@ -2818,9 +2819,12 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
     // Must initialize n elements, this is required by DeduceTemplateArguments.
     SmallVector<DeducedTemplateArgument> DeduceResults(
         F->getTemplateParameters()->size());
+
     // FIXME: DeduceTemplateArguments stops immediately at the first
-    // non-deducible template parameter, extend it to continue performing
-    // deduction for rest of parameters.
+    // non-deducible template argument. However, this doesn't seem to casue
+    // issues for practice cases, we probably need to extend it to continue
+    // performing deduction for rest of arguments to align with the C++
+    // standard.
     SemaRef.DeduceTemplateArguments(
         F->getTemplateParameters(), FReturnType->template_arguments(),
         AliasRhsTemplateArgs, TDeduceInfo, DeduceResults,
@@ -2908,7 +2912,7 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
       FPrimeTemplateParams.push_back(NewParam);
 
       assert(TemplateArgsForBuildingFPrime[FTemplateParamIdx].isNull() &&
-             "InstantiatedArgs must be null before setting");
+             "The argument must be null before setting");
       TemplateArgsForBuildingFPrime[FTemplateParamIdx] =
           Context.getCanonicalTemplateArgument(
               Context.getInjectedTemplateArg(NewParam));
@@ -2942,7 +2946,9 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
       const auto &D = DeduceResults[Index];
       if (D.isNull()) {
         // 2): Non-deduced template parameter has been built already.
-        assert(!TemplateArgsForBuildingFPrime[Index].isNull());
+        assert(!TemplateArgsForBuildingFPrime[Index].isNull() &&
+               "template arguments for non-deduced template parameters should "
+               "be been set!");
         continue;
       }
       TemplateArgumentLoc Input = SemaRef.getTrivialTemplateArgumentLoc(
@@ -2962,7 +2968,7 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
             F, TemplateArgListForBuildingFPrime, AliasTemplate->getLocation(),
             Sema::CodeSynthesisContext::BuildingDeductionGuides)) {
       auto *GG = dyn_cast<CXXDeductionGuideDecl>(FPrime);
-      // FIXME: implement the assoicated constraint per C++
+      // FIXME: implement the associated constraint per C++
       // [over.match.class.deduct]p3.3:
       //    The associated constraints ([temp.constr.decl]) are the
       //    conjunction of the associated constraints of g and a

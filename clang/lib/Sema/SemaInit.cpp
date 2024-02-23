@@ -10743,6 +10743,8 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
         if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(
                 RT->getAsCXXRecordDecl()))
           Template = CTSD->getSpecializedTemplate();
+      } else {
+        assert(false && "unexpected underlying type of alias template");
       }
     }
   }

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-c++11-narrowing -Wno-literal-conversion -std=c++20 -verify %s
-// expected-no-diagnostics
+
 namespace test1 {
 template <typename T>
 struct Foo { T t; };
@@ -172,6 +172,22 @@ auto b = AFoo{};
 } // namespace test13
 
 namespace test14 {
+template<typename T>
+concept IsInt = __is_same(decltype(T()), int);
+
+template<IsInt T, int N>
+struct Foo {
+  Foo(T const (&)[N]);
+};
+
+template <int K>
+using Bar = Foo<double, K>; // expected-note {{constraints not satisfied for class template 'Foo'}}
+// expected-note@-1 {{candidate template ignored: could not match}}
+double abc[3];
+Bar s2 = {abc}; // expected-error {{no viable constructor or deduction guide for deduction }}
+} // namespace test14
+
+namespace test15 {
 template <class T> struct Foo { Foo(T); };
 
 template<class V> using AFoo = Foo<V *>;
@@ -183,4 +199,24 @@ AFoo a1(&i); // OK, deduce Foo<int *>
 // FIXME: we should reject this case as the W is not deduced from the deduced
 // type Foo<int *>.
 BFoo b2(&i); 
-} // namespace test14
+} // namespace test15
+
+namespace test16 {
+struct X { X(int); X(const X&); };
+template<class T>
+struct Foo {
+  T t;
+  Foo(T t) : t(t) {}
+};
+template<class T>
+using AFoo = Foo<T>;
+int i = 0;
+AFoo s{i};
+static_assert(__is_same(decltype(s.t), int));
+
+// explicit deduction guide.
+Foo(int) -> Foo<X>;
+AFoo s2{i};
+// FIXME: the type should be X because of the above explicit deduction guide.
+static_assert(__is_same(decltype(s2.t), int));
+} // namespace test16
