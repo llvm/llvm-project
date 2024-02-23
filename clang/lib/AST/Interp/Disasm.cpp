@@ -101,6 +101,14 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
   for (const Global *G : Globals) {
     const Descriptor *Desc = G->block()->getDescriptor();
     OS << GI << ": " << (void *)G->block() << " ";
+    {
+      Pointer GP = getPtrGlobal(GI);
+      ColorScope SC(OS, true,
+                    GP.isInitialized()
+                        ? TerminalColor{llvm::raw_ostream::GREEN, false}
+                        : TerminalColor{llvm::raw_ostream::RED, false});
+      OS << (GP.isInitialized() ? "initialized " : "uninitialized ");
+    }
     Desc->dump(OS);
     OS << "\n";
     ++GI;
