@@ -91,6 +91,7 @@
 #include <cassert>
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <utility>
 #include <vector>
@@ -2928,37 +2929,71 @@ public:
   private:
     BitType _Type;
     std::pair<Value *, uint64_t> _BitRef;
-    ValueBit *_LHS;
-    ValueBit *_RHS;
+    // Pointers to LHS and RHS of an XOR operation. These pointers are owned by
+    // the ValueBit object.
+    ValueBit *_LHS = nullptr;
+    ValueBit *_RHS = nullptr;
 
+  public:
     ValueBit(BitType Type) : _Type(Type) {}
     ValueBit(BitType Type, std::pair<Value *, uint64_t> BitRef)
         : _Type(Type), _BitRef(BitRef) {}
-    ValueBit(BitType Type, ValueBit *LHS, ValueBit *RHS)
-        : _Type(Type), _LHS(LHS), _RHS(RHS) {}
+    ValueBit(BitType Type, ValueBit &LHS, ValueBit &RHS)
+        : _Type(Type), _LHS(new ValueBit(LHS)), _RHS(new ValueBit(RHS)) {
+      assert(_Type == BitType::XOR);
+    }
+    ValueBit() = delete;
+    // Define Copy and Assignment constructor to create copies of the LHS and
+    // RHS if the bit type is XOR. This is done to ensure the pointers will be
+    // owned by the ValueBit object and avoid double free in the destructor.
+    ValueBit(const ValueBit &VB) {
+      _Type = VB._Type;
+      if (_Type == BitType::REF)
+        _BitRef = VB._BitRef;
+      else if (_Type == BitType::XOR) {
+        _LHS = new ValueBit(*VB._LHS);
+        _RHS = new ValueBit(*VB._RHS);
+      }
+    }
+    ValueBit& operator=(const ValueBit &VB) {
+      _Type = VB._Type;
+      if (_Type == BitType::REF)
+        _BitRef = VB._BitRef;
+      else if (_Type == BitType::XOR) {
+        _LHS = new ValueBit(*VB._LHS);
+        _RHS = new ValueBit(*VB._RHS);
+      }
+      return *this;
+    }
+    ~ValueBit() {
+      if (_LHS)
+        delete _LHS;
+      if (_RHS)
+        delete _RHS;
+    }
 
   public:
-    static ValueBit *CreateOneBit() { return new ValueBit(BitType::ONE); }
-    static ValueBit *CreateZeroBit() { return new ValueBit(BitType::ZERO); }
-    static ValueBit *CreateRefBit(Value *Ref, uint64_t Offset) {
-      return new ValueBit(BitType::REF, std::make_pair(Ref, Offset));
+    static ValueBit CreateOneBit() { return ValueBit(BitType::ONE); }
+    static ValueBit CreateZeroBit() { return ValueBit(BitType::ZERO); }
+    static ValueBit CreateRefBit(Value *Ref, uint64_t Offset) {
+      return ValueBit(BitType::REF, std::make_pair(Ref, Offset));
     }
-    static ValueBit *CreateXORBit(ValueBit *LHS, ValueBit *RHS) {
-      return new ValueBit(BitType::XOR, LHS, RHS);
+    static ValueBit CreateXORBit(ValueBit &LHS, ValueBit &RHS) {
+      return ValueBit(BitType::XOR, LHS, RHS);
     }
     inline BitType getType() { return _Type; }
-    bool equals(ValueBit *RHS) {
-      if (_Type != RHS->getType())
+    bool equals(ValueBit RHS) {
+      if (_Type != RHS.getType())
         return false;
       switch (_Type) {
       case BitType::ONE:
       case BitType::ZERO:
         return true;
       case BitType::REF:
-        return _BitRef == RHS->_BitRef;
+        return _BitRef == RHS._BitRef;
       case BitType::XOR:
-        return (_LHS->equals(RHS->_LHS) && _RHS->equals(RHS->_RHS)) ||
-               (_LHS->equals(RHS->_RHS) && _RHS->equals(RHS->_LHS));
+        return (_LHS->equals(*RHS._LHS) && _RHS->equals(*RHS._RHS)) ||
+               (_LHS->equals(*RHS._RHS) && _RHS->equals(*RHS._LHS));
       }
       return false;
     }
@@ -2983,10 +3018,11 @@ public:
       }
     }
   };
+  using PValueBits = std::shared_ptr<ValueBits>;
 
 private:
   uint64_t Size;
-  std::vector<ValueBit *> Bits;
+  std::vector<ValueBit> Bits;
 
   virtual void _Shl(uint64_t N) {
     for (; N > 0; N--) {
@@ -3000,28 +3036,28 @@ private:
       Bits.erase(Bits.begin());
     }
   }
-  virtual void _Xor(ValueBits *RHS) {
-    assert(Size == RHS->getSize());
+  virtual void _Xor(const ValueBits &RHS) {
+    assert(Size == RHS.getSize());
     for (unsigned I = 0; I < Size; I++) {
       auto It = Bits.begin() + I;
-      ValueBit *RHSBit = RHS->getBit(I);
-      if (RHSBit->getType() == ValueBit::BitType::ONE) {
+      ValueBit RHSBit = RHS.getBit(I);
+      if (RHSBit.getType() == ValueBit::BitType::ONE) {
+        ValueBit ItVB = *It;
         Bits.erase(It);
-        if ((*It)->getType() == ValueBit::BitType::ZERO) {
+        if (ItVB.getType() == ValueBit::BitType::ZERO) {
           Bits.insert(It, ValueBit::CreateOneBit());
-        } else if ((*It)->getType() == ValueBit::BitType::ONE) {
+        } else if (ItVB.getType() == ValueBit::BitType::ONE) {
           Bits.insert(It, ValueBit::CreateZeroBit());
         } else {
-          ValueBit *One = ValueBit::CreateOneBit();
-          Bits.insert(It, ValueBit::CreateXORBit(*It, One));
+          ValueBit One = ValueBit::CreateOneBit();
+          Bits.insert(It, ValueBit::CreateXORBit(ItVB, One));
         }
-      } else if (RHSBit->getType() != ValueBit::BitType::ZERO) {
-        if ((*It)->getType() == ValueBit::BitType::ZERO) {
+      } else if (RHSBit.getType() != ValueBit::BitType::ZERO) {
+        if ((*It).getType() == ValueBit::BitType::ZERO) {
           Bits.erase(It);
-          ValueBit *BitRef = new ValueBit(*RHSBit);
-          Bits.insert(It, BitRef);
+          Bits.insert(It, RHSBit);
         } else {
-          ValueBit *ItVB = *It;
+          ValueBit ItVB = *It;
           Bits.erase(It);
           Bits.insert(It, ValueBit::CreateXORBit(ItVB, RHSBit));
         }
@@ -3067,40 +3103,40 @@ public:
       InitialVal >>= 1;
     }
   }
-  uint64_t getSize() { return Size; }
-  ValueBit *getBit(unsigned i) { return Bits[i]; }
+  uint64_t getSize() const { return Size; }
+  ValueBit getBit(unsigned i) const { return Bits[i]; }
 
-  virtual ValueBits *copyBits() { return new ValueBits(*this); }
+  virtual ValueBits copyBits() { return ValueBits(*this); }
 
-  static ValueBits *Shl(ValueBits *LHS, uint64_t N) {
-    ValueBits *Shifted = LHS->copyBits();
-    Shifted->_Shl(N);
-    return Shifted;
+  static PValueBits Shl(const ValueBits &LHS, uint64_t N) {
+    PValueBits VB = std::make_shared<ValueBits>(LHS);
+    VB->_Shl(N);
+    return VB;
   }
-  static ValueBits *LShr(ValueBits *LHS, uint64_t N) {
-    ValueBits *Shifted = LHS->copyBits();
-    Shifted->_LShr(N);
-    return Shifted;
+  static PValueBits LShr(const ValueBits &LHS, uint64_t N) {
+    PValueBits VB = std::make_shared<ValueBits>(LHS);
+    VB->_LShr(N);
+    return VB;
   }
-  static ValueBits *Xor(ValueBits *LHS, ValueBits *RHS) {
-    ValueBits *Xord = LHS->copyBits();
-    Xord->_Xor(RHS);
-    return Xord;
+  static PValueBits Xor(const ValueBits &LHS, const ValueBits &RHS) {
+    PValueBits VB = std::make_shared<ValueBits>(LHS);
+    VB->_Xor(RHS);
+    return VB;
   }
-  static ValueBits *ZExt(ValueBits *LHS, uint64_t ToSize) {
-    ValueBits *Zexted = LHS->copyBits();
-    Zexted->_ZExt(ToSize);
-    return Zexted;
+  static PValueBits ZExt(const ValueBits &LHS, uint64_t ToSize) {
+    PValueBits VB = std::make_shared<ValueBits>(LHS);
+    VB->_ZExt(ToSize);
+    return VB;
   }
-  static ValueBits *Trunc(ValueBits *LHS, uint64_t N) {
-    ValueBits *Trunced = LHS->copyBits();
-    Trunced->_Trunc(N);
-    return Trunced;
+  static PValueBits Trunc(const ValueBits &LHS, uint64_t N) {
+    PValueBits VB = std::make_shared<ValueBits>(LHS);
+    VB->_Trunc(N);
+    return VB;
   }
-  static ValueBits *And(ValueBits *LHS, uint64_t RHS) {
-    ValueBits *Anded = LHS->copyBits();
-    Anded->_And(RHS);
-    return Anded;
+  static PValueBits And(const ValueBits &LHS, uint64_t RHS) {
+    PValueBits VB = std::make_shared<ValueBits>(LHS);
+    VB->_And(RHS);
+    return VB;
   }
 
   virtual bool isPredicated() { return false; }
@@ -3110,7 +3146,7 @@ public:
       return false;
 
     for (unsigned I = 0; I < Size; I++)
-      if (!getBit(I)->equals(RHS->getBit(I)))
+      if (!getBit(I).equals(RHS->getBit(I)))
         return false;
 
     return true;
@@ -3119,10 +3155,10 @@ public:
   virtual void print(raw_ostream &OS) {
     assert(Size != 0);
     OS << "[";
-    Bits[Size - 1]->print(OS);
+    Bits[Size - 1].print(OS);
     for (int i = Size - 2; i >= 0; i--) {
       OS << " | ";
-      Bits[i]->print(OS);
+      Bits[i].print(OS);
     }
     OS << "]\n";
   }
@@ -3142,43 +3178,43 @@ class PredicatedValueBits : public ValueBits {
   // would depend on an icmp.
 private:
   ICmpInst *_Predicate;
-  ValueBits *_IfTrue;
-  ValueBits *_IfFalse;
+  PValueBits _IfTrue;
+  PValueBits _IfFalse;
 
   void _Shl(uint64_t N) override {
-    _IfTrue = ValueBits::Shl(_IfTrue, N);
-    _IfFalse = ValueBits::Shl(_IfFalse, N);
+    _IfTrue = ValueBits::Shl(*_IfTrue, N);
+    _IfFalse = ValueBits::Shl(*_IfFalse, N);
   }
   void _LShr(uint64_t N) override {
-    _IfTrue = ValueBits::LShr(_IfTrue, N);
-    _IfFalse = ValueBits::LShr(_IfFalse, N);
+    _IfTrue = ValueBits::LShr(*_IfTrue, N);
+    _IfFalse = ValueBits::LShr(*_IfFalse, N);
   }
   void _ZExt(uint64_t N) override {
-    _IfTrue = ValueBits::ZExt(_IfTrue, N);
-    _IfFalse = ValueBits::ZExt(_IfFalse, N);
+    _IfTrue = ValueBits::ZExt(*_IfTrue, N);
+    _IfFalse = ValueBits::ZExt(*_IfFalse, N);
   }
   void _And(uint64_t N) override {
-    _IfTrue = ValueBits::And(_IfTrue, N);
-    _IfFalse = ValueBits::And(_IfFalse, N);
+    _IfTrue = ValueBits::And(*_IfTrue, N);
+    _IfFalse = ValueBits::And(*_IfFalse, N);
   }
-  void _Xor(ValueBits *RHS) override {
-    _IfTrue = ValueBits::Xor(_IfTrue, RHS);
-    _IfFalse = ValueBits::Xor(_IfFalse, RHS);
+  void _Xor(const ValueBits &RHS) override {
+    _IfTrue = ValueBits::Xor(*_IfTrue, RHS);
+    _IfFalse = ValueBits::Xor(*_IfFalse, RHS);
   }
   void _Trunc(uint64_t N) override {
-    _IfTrue = ValueBits::Trunc(_IfTrue, N);
-    _IfFalse = ValueBits::Trunc(_IfFalse, N);
+    _IfTrue = ValueBits::Trunc(*_IfTrue, N);
+    _IfFalse = ValueBits::Trunc(*_IfFalse, N);
   }
 
 public:
-  PredicatedValueBits(ICmpInst *Predicate, ValueBits *IfTrue,
-                      ValueBits *IfFalse)
+  PredicatedValueBits(ICmpInst *Predicate, PValueBits IfTrue,
+                      PValueBits IfFalse)
       : _Predicate(Predicate), _IfTrue(IfTrue), _IfFalse(IfFalse) {}
 
-  ValueBits *copyBits() override { return new PredicatedValueBits(*this); }
+  ValueBits copyBits() override { return PredicatedValueBits(*this); }
   bool isPredicated() override { return true; }
-  ValueBits *getIfTrue() { return _IfTrue; }
-  ValueBits *getIfFalse() { return _IfFalse; }
+  PValueBits getIfTrue() { return _IfTrue; }
+  PValueBits getIfFalse() { return _IfFalse; }
   ICmpInst *getPredicate() { return _Predicate; }
 
   virtual void print(raw_ostream &OS) override {
@@ -3190,8 +3226,9 @@ public:
 
 // Execute the instructions in a basic block whilst mapping out Values to
 // ValueBits
-static bool symbolicallyExecute(BasicBlock *BB,
-                                std::map<Value *, ValueBits *> &ValueMap) {
+static bool
+symbolicallyExecute(BasicBlock *BB,
+                    std::map<Value *, std::shared_ptr<ValueBits>> &ValueMap) {
 
   auto getConstantOperand = [](Instruction *I, uint8_t Operand) {
     ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(Operand));
@@ -3206,18 +3243,15 @@ static bool symbolicallyExecute(BasicBlock *BB,
 
   auto getOrCreateValueBits = [&ValueMap](Value *Val) {
     auto Result = ValueMap.find(Val);
-    ValueBits *LHSBits = nullptr;
-    if (Result == ValueMap.end()) {
-      ConstantInt *CI = dyn_cast<ConstantInt>(Val);
-      if (CI) {
-        LHSBits = new ValueBits(CI->getSExtValue(),
-                                Val->getType()->getScalarSizeInBits());
-      } else {
-        LHSBits = new ValueBits(Val, Val->getType()->getScalarSizeInBits());
-      }
-    } else
-      LHSBits = Result->second;
-    return LHSBits;
+    if (Result != ValueMap.end())
+      return Result->second;
+    ConstantInt *CI = dyn_cast<ConstantInt>(Val);
+    if (CI) {
+      return std::make_shared<ValueBits>(CI->getSExtValue(),
+                                         Val->getType()->getScalarSizeInBits());
+    }
+    return std::make_shared<ValueBits>(Val,
+                                       Val->getType()->getScalarSizeInBits());
   };
 
   for (Instruction &I : *BB) {
@@ -3238,45 +3272,42 @@ static bool symbolicallyExecute(BasicBlock *BB,
         }
       }
       assert(IncomingBlock);
-      ValueMap[&I] =
-          getOrCreateValueBits(PHI->getIncomingValueForBlock(IncomingBlock));
+      ValueMap.insert({&I,
+          getOrCreateValueBits(PHI->getIncomingValueForBlock(IncomingBlock))});
     } break;
     case Instruction::Shl: {
       ConstantInt *CI = getConstantOperand(&I, 1);
       if (!CI)
         return false;
-      Value *LHSVal = I.getOperand(0);
-      ValueBits *LHSBits = getOrCreateValueBits(LHSVal);
-      ValueMap[&I] = ValueBits::Shl(LHSBits, CI->getSExtValue());
+      auto LHSBits = getOrCreateValueBits(I.getOperand(0));
+      ValueMap.insert({&I, ValueBits::Shl(*LHSBits, CI->getSExtValue())});
     } break;
     case Instruction::LShr: {
       ConstantInt *CI = getConstantOperand(&I, 1);
       if (!CI)
         return false;
-      Value *LHSVal = I.getOperand(0);
-      ValueBits *LHSBits = getOrCreateValueBits(LHSVal);
-      ValueMap[&I] = ValueBits::LShr(LHSBits, CI->getSExtValue());
+      auto LHSBits = getOrCreateValueBits(I.getOperand(0));
+      ValueMap.insert({&I, ValueBits::LShr(*LHSBits, CI->getSExtValue())});
     } break;
     case Instruction::And: {
       ConstantInt *CI = getConstantOperand(&I, 1);
       if (!CI)
         return false;
-      Value *LHSVal = I.getOperand(0);
-      ValueBits *LHSBits = getOrCreateValueBits(LHSVal);
-      ValueMap[&I] = ValueBits::And(LHSBits, CI->getSExtValue());
+      auto LHSBits = getOrCreateValueBits(I.getOperand(0));
+      ValueMap.insert({&I, ValueBits::And(*LHSBits, CI->getSExtValue())});
     } break;
     case Instruction::Xor: {
-      ValueBits *LHSBits = getOrCreateValueBits(I.getOperand(0));
-      ValueBits *RHSBits = getOrCreateValueBits(I.getOperand(1));
-      ValueMap[&I] = ValueBits::Xor(LHSBits, RHSBits);
+      auto LHSBits = getOrCreateValueBits(I.getOperand(0));
+      auto RHSBits = getOrCreateValueBits(I.getOperand(1));
+      ValueMap.insert({&I, ValueBits::Xor(*LHSBits, *RHSBits)});
     } break;
     case Instruction::ZExt: {
-      ValueBits *LHSBits = getOrCreateValueBits(I.getOperand(0));
-      ValueMap[&I] = ValueBits::ZExt(LHSBits, BitSize);
+      auto LHSBits = getOrCreateValueBits(I.getOperand(0));
+      ValueMap.insert({&I, ValueBits::ZExt(*LHSBits, BitSize)});
     } break;
     case Instruction::Trunc: {
-      ValueBits *LHSBits = getOrCreateValueBits(I.getOperand(0));
-      ValueMap[&I] = ValueBits::Trunc(LHSBits, BitSize);
+      auto LHSBits = getOrCreateValueBits(I.getOperand(0));
+      ValueMap.insert({&I, ValueBits::Trunc(*LHSBits, BitSize)});
     } break;
     case Instruction::Select: {
       SelectInst *Select = cast<SelectInst>(&I);
@@ -3287,9 +3318,10 @@ static bool symbolicallyExecute(BasicBlock *BB,
                           << "\n");
         return false;
       }
-      ValueBits *IfTrue = getOrCreateValueBits(Select->getTrueValue());
-      ValueBits *IfFalse = getOrCreateValueBits(Select->getFalseValue());
-      ValueMap[&I] = new PredicatedValueBits(Cond, IfTrue, IfFalse);
+      auto IfTrue = getOrCreateValueBits(Select->getTrueValue());
+      auto IfFalse = getOrCreateValueBits(Select->getFalseValue());
+      ValueMap.insert({&I,
+          std::make_shared<PredicatedValueBits>(Cond, IfTrue, IfFalse)});
     } break;
     default:
       // If this instruction is not recognized, then just continue. This is
@@ -3423,7 +3455,7 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   // match pre-computed values, then we can say it's doing crc. If there are
   // any unexpected loop variant operations happening, e.g. additional select
   // logic or shifts, then this will be captured in the ValueBits.
-  std::map<Value *, ValueBits *> ValueMap;
+  std::map<Value *, std::shared_ptr<ValueBits>> ValueMap;
     
   if (!symbolicallyExecute(CurLoop->getHeader(), ValueMap))
     return false;
@@ -3435,7 +3467,8 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
     return false;
   }
 
-  ValueBits *CRCOutBits = Result->second;
+  using PValueBits = std::shared_ptr<ValueBits>;
+  PValueBits CRCOutBits = Result->second;
   LLVM_DEBUG(dbgs() << DEBUG_TYPE
                     << " CRCRecognize: ValueBits for output crc value:\n"
                     << *CRCOutBits);
@@ -3447,7 +3480,8 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
                       << " predicated.\n");
     return false;
   }
-  PredicatedValueBits *CRCOutBitsPred = (PredicatedValueBits *)CRCOutBits;
+  std::shared_ptr<PredicatedValueBits> CRCOutBitsPred =
+      std::static_pointer_cast<PredicatedValueBits>(CRCOutBits);
 
   // Need to check if the predicate is checking the MSB/LSB depending on
   // whether this is bit reversed CRC
@@ -3465,7 +3499,7 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
                       << " CRCRecognize: Cannot determine ICmp operands\n");
     return false;
   }
-  ValueBits *ICmpOp0Bits = Result->second;
+  PValueBits ICmpOp0Bits = Result->second;
 
   // Now match the following cases
   // (LSB): (crc & 1)
@@ -3476,7 +3510,7 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   // (MSB): crc <= -1
   // And decide whether the check is checking for existence of 1 or 0
   bool CheckZero = false;
-  ValueBits::ValueBit *CheckBit = nullptr;
+  std::optional<ValueBits::ValueBit> CheckBit;
   switch (Pred) {
   case CmpInst::ICMP_NE:
   case CmpInst::ICMP_EQ: {
@@ -3492,17 +3526,17 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
     }
     // Now to check if we already know all the other bits of the RHS are zero.
     ValueBits AllZeroValueBits((uint64_t)0, ICmpOp0Bits->getSize());
-    ValueBits *CRCOutBitsMasked = nullptr;
+    PValueBits CRCOutBitsMasked;
     if (CRC.BitReversed) {
       // Masking out the LSB is equivalent to shifting right one if we're just
       // comparing all the other bits are zero.
-      CRCOutBitsMasked = ValueBits::LShr(ICmpOp0Bits, 1);
+      CRCOutBitsMasked = ValueBits::LShr(*ICmpOp0Bits, 1);
       CheckBit = ICmpOp0Bits->getBit(0);
     } else {
       // The CRC type might be larger than the data, so we can't shift left
       // one. Mask instead.
       uint64_t MSBMask = ~(1 << (CRC.Width - 1));
-      CRCOutBitsMasked = ValueBits::And(ICmpOp0Bits, MSBMask);
+      CRCOutBitsMasked = ValueBits::And(*ICmpOp0Bits, MSBMask);
       CheckBit = ICmpOp0Bits->getBit(CRC.Width - 1);
     }
     if (!CRCOutBitsMasked->equals(&AllZeroValueBits)) {
@@ -3540,23 +3574,26 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
     return false;
   }
 
+  if (!CheckBit.has_value())
+    return false;
+
   // If there exists a Data input, ensure the check bit is crc^data.
-  ValueBits::ValueBit *RefCheckBit = nullptr;
+  std::optional<ValueBits::ValueBit> RefCheckBit;
   uint64_t CRCCheckIdx = CRC.BitReversed ? 0 : CRCSize - 1;
-  ValueBits::ValueBit *CRCInputRefBit =
+  ValueBits::ValueBit CRCInputRefBit =
       ValueBits::ValueBit::CreateRefBit(CRC.CRCInput, CRCCheckIdx);
   if (CRC.DataInput) {
     uint64_t DataSize = CRC.DataInput->getType()->getScalarSizeInBits();
     uint64_t DataCheckIdx = CRC.BitReversed ? 0 : DataSize - 1;
-   ValueBits::ValueBit *DataInputRefBit =
-       ValueBits::ValueBit::CreateRefBit(CRC.DataInput, DataCheckIdx);
+    ValueBits::ValueBit DataInputRefBit =
+        ValueBits::ValueBit::CreateRefBit(CRC.DataInput, DataCheckIdx);
     RefCheckBit =
-       ValueBits::ValueBit::CreateXORBit(CRCInputRefBit, DataInputRefBit);
+        ValueBits::ValueBit::CreateXORBit(CRCInputRefBit, DataInputRefBit);
   } else {
     RefCheckBit = CRCInputRefBit;
   }
 
-  if (!RefCheckBit->equals(CheckBit)) {
+  if (!RefCheckBit.value().equals(CheckBit.value())) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
                       << " CRCRecognize: Cannot verify check bit!\n"
                       << *RefCheckBit << "\n"
@@ -3564,37 +3601,40 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
     return false;
   }
 
-  ValueBits *CRCOutBitsIfOne = CRCOutBitsPred->getIfTrue();
-  ValueBits *CRCOutBitsIfZero = CRCOutBitsPred->getIfFalse();
-  if (CheckZero)
-    std::swap(CRCOutBitsIfZero, CRCOutBitsIfOne);
+  PValueBits CRCOutBitsIfOne = CRCOutBitsPred->getIfTrue();
+  PValueBits CRCOutBitsIfZero = CRCOutBitsPred->getIfFalse();
+  if (CheckZero) {
+    PValueBits Tmp = CRCOutBitsIfOne;
+    CRCOutBitsIfOne = CRCOutBitsIfZero;
+    CRCOutBitsIfZero = Tmp;
+  }
 
   // Now construct ValueBits that would be the result of crc for one iteration.
   // That is, a shift and then xor if [M/L]SB is 1.
-  ValueBits *CRCValueBits = nullptr;
+  PValueBits CRCValueBits;
   Result = ValueMap.find(CRC.CRCInput);
   if (Result == ValueMap.end()) {
-    CRCValueBits = new ValueBits(CRC.CRCInput, CRCSize);
+    CRCValueBits = std::make_shared<ValueBits>(CRC.CRCInput, CRCSize);
   } else {
     CRCValueBits = Result->second;
   }
   uint64_t GeneratorPolynomial =
       CRC.BitReversed ? reverseBits(CRC.Polynomial, CRCSize) : CRC.Polynomial;
-  ValueBits Polynomial(GeneratorPolynomial, CRCSize);
+  PValueBits Polynomial = std::make_shared<ValueBits>(GeneratorPolynomial, CRCSize);
 
   // Case where the MSB/LSB of the data is 0
-  ValueBits *IfZero = CRC.BitReversed ? ValueBits::LShr(CRCValueBits, 1)
-                                      : ValueBits::Shl(CRCValueBits, 1);
+  PValueBits IfZero = CRC.BitReversed ? ValueBits::LShr(*CRCValueBits, 1)
+                                      : ValueBits::Shl(*CRCValueBits, 1);
 
   // Case where the MSB/LSB of the data is 1
-  ValueBits *IfOne = ValueBits::Xor(IfZero, &Polynomial);
+  PValueBits IfOne = ValueBits::Xor(*IfZero, *Polynomial);
 
-  if (!IfZero->equals(CRCOutBitsIfZero)) {
+  if (!IfZero->equals(CRCOutBitsIfZero.get())) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRecognize: Not Equal!\n"
                       << *IfZero << *CRCOutBitsPred->getIfFalse());
     return false;
   }
-  if (!IfOne->equals(CRCOutBitsIfOne)) {
+  if (!IfOne->equals(CRCOutBitsIfOne.get())) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRecognize: Not Equal!\n"
                       << *IfOne << *CRCOutBitsPred->getIfTrue());
     return false;
