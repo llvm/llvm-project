@@ -935,7 +935,7 @@ private:
   // Simplify (cmp cc0 x, y) (&& or ||) (cmp cc1 x, y) -> cmp cc2 x, y.
   bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
 
-  bool isZExtOrTruncLegal(LLT ToTy, LLT FromTy) const;
+  bool isZExtOrTruncLegalOrBeforeLegalizer(LLT DstTy, LLT SrcTy) const;
 };
 } // namespace llvm
 

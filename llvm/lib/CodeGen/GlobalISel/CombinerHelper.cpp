@@ -6936,15 +6936,16 @@ bool CombinerHelper::matchOr(MachineInstr &MI, BuildFnTy &MatchInfo) {
   return false;
 }
 
-bool CombinerHelper::isZExtOrTruncLegal(LLT ToTy, LLT FromTy) const {
+bool CombinerHelper::isZExtOrTruncLegalOrBeforeLegalizer(LLT DstTy,
+                                                         LLT SrcTy) const {
   // Copy.
-  if (ToTy == FromTy)
+  if (DstTy == SrcTy)
     return true;
 
-  if (isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {ToTy, FromTy}}))
+  if (isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {DstTy, SrcTy}}))
     return true;
 
-  if (isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {ToTy, FromTy}}))
+  if (isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}}))
     return true;
 
   return false;
@@ -6963,16 +6964,18 @@ bool CombinerHelper::matchAddCarryInOut(MachineInstr &MI,
   bool IsSigned = Add->isSigned();
   LLT DstTy = MRI.getType(Dst);
   LLT CarryTy = MRI.getType(Carry);
-  LLT OperandTy = MRI.getType(LHS);
-  LLT CarryInTy = MRI.getType(CarryIn);
 
   // FIXME: handle undef
 
-  // fold sadde, if the carry is dead -> add(add(LHS, RHS),
-  // zextOrTrunc(CarryIn)), undef.
-  if (MRI.use_nodbg_empty(Carry) && IsSigned && MRI.hasOneNonDBGUse(Dst) &&
+  // We want do fold the [u|s]adde.
+  if (!MRI.hasOneNonDBGUse(Dst))
+    return false;
+
+  // Fold sadde, if the carry is dead ->
+  // add(add(LHS, RHS), zextOrTrunc(CarryIn)), undef.
+  if (MRI.use_nodbg_empty(Carry) && IsSigned &&
       isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, {DstTy}}) &&
-      isZExtOrTruncLegal(DstTy, CarryInTy)) {
+      isZExtOrTruncLegalOrBeforeLegalizer(DstTy, CarryTy)) {
     MatchInfo = [=](MachineIRBuilder &B) {
       auto A = B.buildAdd(DstTy, LHS, RHS);
       Register AReg = A.getReg(0);
@@ -6985,7 +6988,7 @@ bool CombinerHelper::matchAddCarryInOut(MachineInstr &MI,
   }
 
   // We want do fold the [u|s]adde.
-  if (!MRI.hasOneNonDBGUse(Dst) || !MRI.hasOneNonDBGUse(Carry))
+  if (!MRI.hasOneNonDBGUse(Carry))
     return false;
 
   // The parameters of the adde must be integer-like.
@@ -6993,7 +6996,7 @@ bool CombinerHelper::matchAddCarryInOut(MachineInstr &MI,
   std::optional<APInt> MaybeRHS = getConstantOrConstantSplatVector(RHS);
   std::optional<APInt> MaybeCarryIn = getConstantOrConstantSplatVector(CarryIn);
 
-  // fold adde(c, c, c) -> c, carry
+  // Fold adde(c1, c2, c3) -> c4, carry
   if (MaybeLHS && MaybeRHS && MaybeCarryIn &&
       isConstantLegalOrBeforeLegalizer(DstTy) &&
       isConstantLegalOrBeforeLegalizer(CarryTy)) {
@@ -7015,7 +7018,7 @@ bool CombinerHelper::matchAddCarryInOut(MachineInstr &MI,
         B.buildConstant(Carry, FirstOverflowed | SecondOverflowed);
       };
       return true;
-    } else if (!IsSigned) {
+    } else {
       APInt LHS = MaybeLHS->zext(BitWidth);
       APInt RHS = MaybeRHS->zext(BitWidth);
       APInt CarryIn = MaybeCarryIn->zext(BitWidth);
@@ -7031,7 +7034,7 @@ bool CombinerHelper::matchAddCarryInOut(MachineInstr &MI,
     }
   }
 
-  // canonicalize constant to RHS.
+  // Canonicalize constant to RHS.
   if (isConstantOrConstantVectorI(LHS) && !isConstantOrConstantVectorI(RHS)) {
     if (IsSigned) {
       MatchInfo = [=](MachineIRBuilder &B) {
@@ -7046,41 +7049,40 @@ bool CombinerHelper::matchAddCarryInOut(MachineInstr &MI,
     }
   }
 
-  // fold adde(LHS, RHS, 0) -> addo(LHS, RHS)
+  // Fold adde(LHS, RHS, 0) -> addo(LHS, RHS)
   if (MaybeCarryIn && *MaybeCarryIn == 0) {
     if (IsSigned && isLegalOrBeforeLegalizer(
-                        {TargetOpcode::G_SADDO, {DstTy, CarryTy, OperandTy}})) {
+                        {TargetOpcode::G_SADDO, {DstTy, CarryTy, DstTy}})) {
       MatchInfo = [=](MachineIRBuilder &B) {
         B.buildSAddo(Dst, Carry, LHS, RHS);
       };
       return true;
-    } else if (!IsSigned &&
-               isLegalOrBeforeLegalizer(
-                   {TargetOpcode::G_UADDO, {DstTy, CarryTy, OperandTy}}))
+    } else if (!IsSigned && isLegalOrBeforeLegalizer({TargetOpcode::G_UADDO,
+                                                      {DstTy, CarryTy, DstTy}}))
       MatchInfo = [=](MachineIRBuilder &B) {
         B.buildUAddo(Dst, Carry, LHS, RHS);
       };
     return true;
   }
 
-  // fold adde(LHS, 0, Carry) -> addo(LHS, Carry)
+  // Fold adde(LHS, 0, Carry) -> addo(LHS, Carry)
   if (MaybeRHS && *MaybeRHS == 0) {
     if (IsSigned &&
         isLegalOrBeforeLegalizer(
-            {TargetOpcode::G_SADDO, {DstTy, CarryTy, OperandTy}}) &&
-        isZExtOrTruncLegal(OperandTy, CarryInTy)) {
+            {TargetOpcode::G_SADDO, {DstTy, CarryTy, DstTy}}) &&
+        isZExtOrTruncLegalOrBeforeLegalizer(DstTy, CarryTy)) {
       MatchInfo = [=](MachineIRBuilder &B) {
-        auto ZextCarryIn = B.buildZExtOrTrunc(OperandTy, CarryIn);
+        auto ZextCarryIn = B.buildZExtOrTrunc(DstTy, CarryIn);
         Register ZextCarryInReg = ZextCarryIn.getReg(0);
         B.buildSAddo(Dst, Carry, LHS, ZextCarryInReg);
       };
       return true;
     } else if (!IsSigned &&
                isLegalOrBeforeLegalizer(
-                   {TargetOpcode::G_UADDO, {DstTy, CarryTy, OperandTy}}) &&
-               isZExtOrTruncLegal(OperandTy, CarryInTy)) {
+                   {TargetOpcode::G_UADDO, {DstTy, CarryTy, DstTy}}) &&
+               isZExtOrTruncLegalOrBeforeLegalizer(DstTy, CarryTy)) {
       MatchInfo = [=](MachineIRBuilder &B) {
-        auto ZextCarryIn = B.buildZExtOrTrunc(OperandTy, CarryIn);
+        auto ZextCarryIn = B.buildZExtOrTrunc(DstTy, CarryIn);
         Register ZextCarryInReg = ZextCarryIn.getReg(0);
         B.buildUAddo(Dst, Carry, LHS, ZextCarryInReg);
       };
@@ -7091,14 +7093,14 @@ bool CombinerHelper::matchAddCarryInOut(MachineInstr &MI,
   // We lower to 2*addo + 1*or.
   if (IsSigned &&
       isLegalOrBeforeLegalizer(
-          {TargetOpcode::G_SADDO, {DstTy, CarryTy, OperandTy}}) &&
+          {TargetOpcode::G_SADDO, {DstTy, CarryTy, DstTy}}) &&
       isLegalOrBeforeLegalizer({TargetOpcode::G_OR, {DstTy}}) &&
-      isZExtOrTruncLegal(OperandTy, CarryInTy)) {
+      isZExtOrTruncLegalOrBeforeLegalizer(DstTy, CarryTy)) {
     MatchInfo = [=](MachineIRBuilder &B) {
       auto First = B.buildSAddo(DstTy, CarryTy, LHS, RHS);
       Register FirstResult = First.getReg(0);
       Register FirstCarry = First.getReg(1);
-      auto ZextCarryIn = B.buildZExtOrTrunc(OperandTy, CarryIn);
+      auto ZextCarryIn = B.buildZExtOrTrunc(DstTy, CarryIn);
       auto Second = B.buildSAddo(DstTy, CarryTy, FirstResult, ZextCarryIn);
       Register Result = Second.getReg(0);
       Register SecondCarry = Second.getReg(1);
@@ -7108,14 +7110,14 @@ bool CombinerHelper::matchAddCarryInOut(MachineInstr &MI,
     return true;
   } else if (!IsSigned &&
              isLegalOrBeforeLegalizer(
-                 {TargetOpcode::G_UADDO, {DstTy, CarryTy, OperandTy}}) &&
+                 {TargetOpcode::G_UADDO, {DstTy, CarryTy, DstTy}}) &&
              isLegalOrBeforeLegalizer({TargetOpcode::G_OR, {DstTy}}) &&
-             isZExtOrTruncLegal(OperandTy, CarryInTy)) {
+             isZExtOrTruncLegalOrBeforeLegalizer(DstTy, CarryTy)) {
     MatchInfo = [=](MachineIRBuilder &B) {
       auto First = B.buildUAddo(DstTy, CarryTy, LHS, RHS);
       Register FirstResult = First.getReg(0);
       Register FirstCarry = First.getReg(1);
-      auto ZextCarryIn = B.buildZExtOrTrunc(OperandTy, CarryIn);
+      auto ZextCarryIn = B.buildZExtOrTrunc(DstTy, CarryIn);
       auto Second = B.buildUAddo(DstTy, CarryTy, FirstResult, ZextCarryIn);
       Register Result = Second.getReg(0);
       Register SecondCarry = Second.getReg(1);
