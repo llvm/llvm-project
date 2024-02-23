@@ -462,6 +462,10 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     if (S.getLangOpts().CPlusPlus11) {
       const FunctionDecl *DiagDecl = F->getDecl();
 
+      // Invalid decls have been diagnosed before.
+      if (DiagDecl->isInvalidDecl())
+        return false;
+
       // If this function is not constexpr because it is an inherited
       // non-constexpr constructor, diagnose that directly.
       const auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
