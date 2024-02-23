@@ -39,8 +39,20 @@ static cl::opt<bool> PrepareForLTOOption(
     cl::desc("Run loop-rotation in the prepare-for-lto stage. This option "
              "should be used for testing only."));
 
+// Experimentally allow loop header duplication. This should allow for better
+// optimization at Oz, since loop-idiom recognition can then recognize things
+// like memcpy. If this ends up being profitable, we should drop this flag and
+// making a code gen option that can be controled independent of the opt level
+// and exposed through clang. See
+// https://github.com/llvm/llvm-project/issues/50308 for details.
+static cl::opt<bool>
+    ForceHeaderDuplication("force-loop-header-duplication", cl::init(false),
+                           cl::Hidden,
+                           cl::desc("Always enable loop header duplication"));
+
 LoopRotatePass::LoopRotatePass(bool EnableHeaderDuplication, bool PrepareForLTO)
-    : EnableHeaderDuplication(EnableHeaderDuplication),
+    : EnableHeaderDuplication(EnableHeaderDuplication ||
+                              ForceHeaderDuplication),
       PrepareForLTO(PrepareForLTO) {}
 
 void LoopRotatePass::printPipeline(
