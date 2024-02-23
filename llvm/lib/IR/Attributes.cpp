@@ -2045,6 +2045,11 @@ static bool isEqual(const Function &Caller, const Function &Callee) {
          Callee.getFnAttribute(AttrClass::getKind());
 }
 
+static bool isEqual(const Function &Caller, const Function &Callee,
+                    const StringRef &AttrName) {
+  return Caller.getFnAttribute(AttrName) == Callee.getFnAttribute(AttrName);
+}
+
 /// Compute the logical AND of the attributes of the caller and the
 /// callee.
 ///
