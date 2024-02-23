@@ -62,6 +62,8 @@ class BasicBlock;
 class MDNode;
 class Module;
 class DbgVariableIntrinsic;
+class DbgInfoIntrinsic;
+class DbgLabelInst;
 class DIAssignID;
 class DPMarker;
 class DPValue;
@@ -80,6 +82,7 @@ class raw_ostream;
 ///   clone
 ///   isIdenticalToWhenDefined
 ///   both print methods
+///   createDebugIntrinsic
 class DbgRecord : public ilist_node<DbgRecord> {
 public:
   /// Marker that this DbgRecord is linked into.
@@ -103,6 +106,11 @@ public:
   void print(raw_ostream &O, bool IsForDebug = false) const;
   void print(raw_ostream &O, ModuleSlotTracker &MST, bool IsForDebug) const;
   bool isIdenticalToWhenDefined(const DbgRecord &R) const;
+  /// Convert this DbgRecord back into an appropriate llvm.dbg.* intrinsic.
+  /// \p InsertBefore Optional position to insert this intrinsic.
+  /// \returns A new llvm.dbg.* intrinsic representiung this DbgRecord.
+  DbgInfoIntrinsic *createDebugIntrinsic(Module *M,
+                                         Instruction *InsertBefore) const;
   ///@}
 
   /// Same as isIdenticalToWhenDefined but checks DebugLoc too.
@@ -177,6 +185,8 @@ public:
   DPLabel *clone() const;
   void print(raw_ostream &O, bool IsForDebug = false) const;
   void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
+  DbgLabelInst *createDebugIntrinsic(Module *M,
+                                     Instruction *InsertBefore) const;
 
   void setLabel(DILabel *NewLabel) { Label = NewLabel; }
   DILabel *getLabel() const { return Label; }
