@@ -1695,6 +1695,7 @@ class VOP3P_DPP16<bits<7> op, VOP_DPP_Pseudo ps, int subtarget,
   let AssemblerPredicate = HasDPP16;
   let SubtargetPredicate = HasDPP16;
   let OtherPredicates = ps.OtherPredicates;
+  let IsPacked = ps.IsPacked;
 }
 
 class VOP3P_DPP8_Base<bits<7> op, VOP_Pseudo ps, string opName = ps.OpName>
@@ -1704,6 +1705,7 @@ class VOP3P_DPP8_Base<bits<7> op, VOP_Pseudo ps, string opName = ps.OpName>
   let SchedRW = ps.SchedRW;
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
+  let IsPacked = ps.IsPacked;
 }
 
 //===----------------------------------------------------------------------===//

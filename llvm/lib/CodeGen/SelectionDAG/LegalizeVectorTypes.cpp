@@ -1163,10 +1163,10 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SMAX: case ISD::VP_SMAX:
   case ISD::UMIN: case ISD::VP_UMIN:
   case ISD::UMAX: case ISD::VP_UMAX:
-  case ISD::SADDSAT:
-  case ISD::UADDSAT:
-  case ISD::SSUBSAT:
-  case ISD::USUBSAT:
+  case ISD::SADDSAT: case ISD::VP_SADDSAT:
+  case ISD::UADDSAT: case ISD::VP_UADDSAT:
+  case ISD::SSUBSAT: case ISD::VP_SSUBSAT:
+  case ISD::USUBSAT: case ISD::VP_USUBSAT:
   case ISD::SSHLSAT:
   case ISD::USHLSAT:
   case ISD::ROTL:
@@ -4140,10 +4140,10 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SMAX: case ISD::VP_SMAX:
   case ISD::UMIN: case ISD::VP_UMIN:
   case ISD::UMAX: case ISD::VP_UMAX:
-  case ISD::UADDSAT:
-  case ISD::SADDSAT:
-  case ISD::USUBSAT:
-  case ISD::SSUBSAT:
+  case ISD::UADDSAT: case ISD::VP_UADDSAT:
+  case ISD::SADDSAT: case ISD::VP_SADDSAT:
+  case ISD::USUBSAT: case ISD::VP_USUBSAT:
+  case ISD::SSUBSAT: case ISD::VP_SSUBSAT:
   case ISD::SSHLSAT:
   case ISD::USHLSAT:
   case ISD::ROTL:

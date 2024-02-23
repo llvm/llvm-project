@@ -65,6 +65,10 @@ static cl::opt<bool> EnableExpandCondsets("hexagon-expand-condsets",
                                           cl::init(true), cl::Hidden,
                                           cl::desc("Early expansion of MUX"));
 
+static cl::opt<bool> EnableTfrCleanup("hexagon-tfr-cleanup", cl::init(true),
+                                      cl::Hidden,
+                                      cl::desc("Cleanup of TFRs/COPYs"));
+
 static cl::opt<bool> EnableEarlyIf("hexagon-eif", cl::init(true), cl::Hidden,
                                    cl::desc("Enable early if-conversion"));
 
@@ -153,6 +157,7 @@ SchedCustomRegistry("hexagon", "Run Hexagon's custom scheduler",
 
 namespace llvm {
   extern char &HexagonExpandCondsetsID;
+  extern char &HexagonTfrCleanupID;
   void initializeHexagonBitSimplifyPass(PassRegistry&);
   void initializeHexagonConstExtendersPass(PassRegistry&);
   void initializeHexagonConstPropagationPass(PassRegistry&);
@@ -169,6 +174,7 @@ namespace llvm {
   void initializeHexagonPostIncOptPass(PassRegistry &);
   void initializeHexagonRDFOptPass(PassRegistry&);
   void initializeHexagonSplitDoubleRegsPass(PassRegistry&);
+  void initializeHexagonTfrCleanupPass(PassRegistry &);
   void initializeHexagonVExtractPass(PassRegistry &);
   void initializeHexagonVectorCombineLegacyPass(PassRegistry&);
   void initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PassRegistry &);
@@ -204,6 +210,7 @@ namespace llvm {
   FunctionPass *createHexagonSplitConst32AndConst64();
   FunctionPass *createHexagonSplitDoubleRegs();
   FunctionPass *createHexagonStoreWidening();
+  FunctionPass *createHexagonTfrCleanup();
   FunctionPass *createHexagonVectorCombineLegacyPass();
   FunctionPass *createHexagonVectorPrint();
   FunctionPass *createHexagonVExtract();
@@ -258,6 +265,7 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
           (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
       TLOF(std::make_unique<HexagonTargetObjectFile>()) {
   initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
+  initializeHexagonTfrCleanupPass(*PassRegistry::getPassRegistry());
   initializeHexagonPostIncOptPass(*PassRegistry::getPassRegistry());
   initAsmInfo();
 }
@@ -426,6 +434,8 @@ void HexagonPassConfig::addPreRegAlloc() {
       addPass(createHexagonConstExtenders());
     if (EnableExpandCondsets)
       insertPass(&RegisterCoalescerID, &HexagonExpandCondsetsID);
+    if (EnableTfrCleanup)
+      insertPass(&VirtRegRewriterID, &HexagonTfrCleanupID);
     if (!DisableStoreWidening)
       addPass(createHexagonStoreWidening());
     if (EnableGenMemAbs)
