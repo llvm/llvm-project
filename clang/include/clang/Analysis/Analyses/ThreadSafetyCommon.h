@@ -527,9 +527,10 @@ private:
   BlockInfo *CurrentBlockInfo = nullptr;
 };
 
+#ifndef NDEBUG
 // Dump an SCFG to llvm::errs().
-// The implementation is not stable, and used for debugging only.
 void printSCFG(CFGWalker &Walker);
+#endif // NDEBUG
 
 } // namespace threadSafety
 } // namespace clang
