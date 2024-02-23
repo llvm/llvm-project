@@ -1,5 +1,4 @@
 //===- bolt/Core/DebugNames.h - Debug names support ---*- C++
-//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -143,7 +142,7 @@ private:
   void populateAbbrevsMap();
   /// Write Entries.
   void writeEntries();
-  /// Write an Entry;
+  /// Write an Entry.
   void writeEntry(const BOLTDWARF5AccelTableData &Entry);
   /// Write augmentation_string for BOLT.
   void writeAugmentationString();
