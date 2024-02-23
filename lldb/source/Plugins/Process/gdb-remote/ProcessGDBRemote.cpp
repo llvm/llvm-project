@@ -1650,7 +1650,7 @@ void ProcessGDBRemote::ParseExpeditedRegisters(
 
 ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     lldb::tid_t tid, ExpeditedRegisterMap &expedited_register_map,
-    uint8_t signo, const std::string &thread_name, std::string reason,
+    uint8_t signo, const std::string &thread_name, const std::string &reason,
     const std::string &description, uint32_t exc_type,
     const std::vector<addr_t> &exc_data, addr_t thread_dispatch_qaddr,
     bool queue_vars_valid, // Set to true if queue_name, queue_kind and
@@ -1742,9 +1742,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     } else {
       bool handled = false;
       bool did_exec = false;
-      if (reason == "none")
-        reason.clear();
-      if (!reason.empty()) {
+      // debugserver can send reason = "none" which is equivalent
+      // to no reason.
+      if (!reason.empty() && reason != "none") {
         if (reason == "trace") {
           addr_t pc = thread_sp->GetRegisterContext()->GetPC();
           lldb::BreakpointSiteSP bp_site_sp =
