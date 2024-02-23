@@ -1041,7 +1041,7 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
     }
     if (dummyIsPointer && dummy.intent != common::Intent::In) {
       const Symbol *last{GetLastSymbol(*expr)};
-      if (last && IsProcedurePointer(*last)) {
+      if (last && IsProcedurePointer(*expr)) {
         if (dummy.intent != common::Intent::Default &&
             IsIntentIn(last->GetUltimate())) { // 19.6.8
           messages.Say(
