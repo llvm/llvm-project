@@ -33,7 +33,7 @@ endif()
 
 option(FLANG_ENABLE_WERROR "Fail and stop building flang if a warning is triggered." OFF)
 
-# The out of tree builds of the compiler and the Fortran runtime
+# The out of tree builds of the compiler and the Fortran runtime 
 # must use the same setting of FLANG_RUNTIME_F128_MATH_LIB
 # to be composable. Failure to synchronize this setting may result
 # in linking errors or fatal failures in F128 runtime functions.
