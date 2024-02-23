@@ -191,6 +191,8 @@ private:
   bool selectLog10(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
 
+  bool selectUnmergeValues(MachineInstr &I) const;
+
   Register buildI32Constant(uint32_t Val, MachineInstr &I,
                             const SPIRVType *ResType = nullptr) const;
 
@@ -243,7 +245,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
     if (Opcode == SPIRV::ASSIGN_TYPE) { // These pseudos aren't needed any more.
       auto *Def = MRI->getVRegDef(I.getOperand(1).getReg());
       if (isTypeFoldingSupported(Def->getOpcode())) {
-        auto Res = selectImpl(I, *CoverageInfo);
+        bool Res = selectImpl(I, *CoverageInfo);
         assert(Res || Def->getOpcode() == TargetOpcode::G_CONSTANT);
         if (Res)
           return Res;
@@ -271,7 +273,8 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
   assert(!HasDefs || ResType || I.getOpcode() == TargetOpcode::G_GLOBAL_VALUE);
   if (spvSelect(ResVReg, ResType, I)) {
     if (HasDefs) // Make all vregs 32 bits (for SPIR-V IDs).
-      MRI->setType(ResVReg, LLT::scalar(32));
+      for (unsigned i = 0; i < I.getNumDefs(); ++i)
+        MRI->setType(I.getOperand(i).getReg(), LLT::scalar(32));
     I.removeFromParent();
     return true;
   }
@@ -281,9 +284,9 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
 bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
                                          const SPIRVType *ResType,
                                          MachineInstr &I) const {
-  assert(!isTypeFoldingSupported(I.getOpcode()) ||
-         I.getOpcode() == TargetOpcode::G_CONSTANT);
   const unsigned Opcode = I.getOpcode();
+  if (isTypeFoldingSupported(Opcode) && Opcode != TargetOpcode::G_CONSTANT)
+    return selectImpl(I, *CoverageInfo);
   switch (Opcode) {
   case TargetOpcode::G_CONSTANT:
     return selectConst(ResVReg, ResType, I.getOperand(1).getCImm()->getValue(),
@@ -518,6 +521,9 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectStackSave(ResVReg, ResType, I);
   case TargetOpcode::G_STACKRESTORE:
     return selectStackRestore(I);
+
+  case TargetOpcode::G_UNMERGE_VALUES:
+    return selectUnmergeValues(I);
 
   default:
     return false;
@@ -775,6 +781,41 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
                 .addUse(ValueReg)
                 .constrainAllUses(TII, TRI, RBI);
   return Result;
+}
+
+bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
+  unsigned ArgI = I.getNumOperands() - 1;
+  Register SrcReg =
+      I.getOperand(ArgI).isReg() ? I.getOperand(ArgI).getReg() : Register(0);
+  SPIRVType *DefType =
+      SrcReg.isValid() ? GR.getSPIRVTypeForVReg(SrcReg) : nullptr;
+  if (!DefType || DefType->getOpcode() != SPIRV::OpTypeVector)
+    report_fatal_error(
+        "cannot select G_UNMERGE_VALUES with a non-vector argument");
+
+  SPIRVType *ScalarType =
+      GR.getSPIRVTypeForVReg(DefType->getOperand(1).getReg());
+  MachineBasicBlock &BB = *I.getParent();
+  bool Res = false;
+  for (unsigned i = 0; i < I.getNumDefs(); ++i) {
+    Register ResVReg = I.getOperand(i).getReg();
+    SPIRVType *ResType = GR.getSPIRVTypeForVReg(ResVReg);
+    if (!ResType) {
+      // There was no "assign type" actions, let's fix this now
+      ResType = ScalarType;
+      MRI->setRegClass(ResVReg, &SPIRV::IDRegClass);
+      MRI->setType(ResVReg, LLT::scalar(GR.getScalarOrVectorBitWidth(ResType)));
+      GR.assignSPIRVTypeToVReg(ResType, ResVReg, *GR.CurMF);
+    }
+    auto MIB =
+        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
+            .addDef(ResVReg)
+            .addUse(GR.getSPIRVTypeID(ResType))
+            .addUse(SrcReg)
+            .addImm(static_cast<int64_t>(i));
+    Res |= MIB.constrainAllUses(TII, TRI, RBI);
+  }
+  return Res;
 }
 
 bool SPIRVInstructionSelector::selectFence(MachineInstr &I) const {
