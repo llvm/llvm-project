@@ -4509,6 +4509,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     return RValue::get(nullptr);
   }
+  case Builtin::BI__builtin_start_object_lifetime:
   case Builtin::BI__builtin_launder: {
     const Expr *Arg = E->getArg(0);
     QualType ArgTy = Arg->getType()->getPointeeType();
