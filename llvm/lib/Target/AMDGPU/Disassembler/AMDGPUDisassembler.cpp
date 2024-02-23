@@ -535,36 +535,37 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     Bytes = Bytes_.slice(0, MaxInstBytesNum);
 
     // Try decode 32-bit instruction
-    if (Bytes.size() < 4) break;
-    const uint32_t DW = eatBytes<uint32_t>(Bytes);
+    if (Bytes.size() >= 4) {
+      const uint32_t DW = eatBytes<uint32_t>(Bytes);
 
-    if (tryDecodeInst(DecoderTableGFX832, MI, DW, Address, CS))
-      break;
+      if (tryDecodeInst(DecoderTableGFX832, MI, DW, Address, CS))
+        break;
 
-    if (tryDecodeInst(DecoderTableAMDGPU32, MI, DW, Address, CS))
-      break;
+      if (tryDecodeInst(DecoderTableAMDGPU32, MI, DW, Address, CS))
+        break;
 
-    if (tryDecodeInst(DecoderTableGFX932, MI, DW, Address, CS))
-      break;
+      if (tryDecodeInst(DecoderTableGFX932, MI, DW, Address, CS))
+        break;
 
-    if (STI.hasFeature(AMDGPU::FeatureGFX90AInsts) &&
-        tryDecodeInst(DecoderTableGFX90A32, MI, DW, Address, CS))
-      break;
+      if (STI.hasFeature(AMDGPU::FeatureGFX90AInsts) &&
+          tryDecodeInst(DecoderTableGFX90A32, MI, DW, Address, CS))
+        break;
 
-    if (STI.hasFeature(AMDGPU::FeatureGFX10_BEncoding) &&
-        tryDecodeInst(DecoderTableGFX10_B32, MI, DW, Address, CS))
-      break;
+      if (STI.hasFeature(AMDGPU::FeatureGFX10_BEncoding) &&
+          tryDecodeInst(DecoderTableGFX10_B32, MI, DW, Address, CS))
+        break;
 
-    if (tryDecodeInst(DecoderTableGFX1032, MI, DW, Address, CS))
-      break;
+      if (tryDecodeInst(DecoderTableGFX1032, MI, DW, Address, CS))
+        break;
 
-    if (tryDecodeInst(DecoderTableGFX1132, DecoderTableGFX11_FAKE1632, MI, DW,
-                      Address, CS))
-      break;
+      if (tryDecodeInst(DecoderTableGFX1132, DecoderTableGFX11_FAKE1632, MI, DW,
+                        Address, CS))
+        break;
 
-    if (tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632, MI, DW,
-                      Address, CS))
-      break;
+      if (tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632, MI, DW,
+                        Address, CS))
+        break;
+    }
 
     return MCDisassembler::Fail;
   } while (false);
