@@ -8098,15 +8098,14 @@ static void handleAMDGPUMaxNumWorkGroupsAttr(Sema &S, Decl *D,
     return;
 
   if (NumWGX == 0 || NumWGY == 0 || NumWGZ == 0) {
-    Expr* E = NumWGZExpr;
+    Expr *E = NumWGZExpr;
     if (NumWGY == 0)
       E = NumWGYExpr;
     if (NumWGX == 0)
       E = NumWGXExpr;
     S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
         << AL << E->getSourceRange();
-  }
-  else
+  } else
     D->addAttr(::new (S.Context) AMDGPUMaxNumWorkGroupsAttr(
         S.Context, AL, NumWGXExpr, NumWGYExpr, NumWGZExpr));
 }

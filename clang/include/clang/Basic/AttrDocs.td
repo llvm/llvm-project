@@ -2725,10 +2725,9 @@ Clang supports the
 AMDGPU target. This attribute may be attached to HIP or OpenCL kernel function
 definitions and is an optimization hint.
 
-``<x>`` parameter specifies the maximum number of work groups in the x dimension.
+The ``<x>`` parameter specifies the maximum number of work groups in the x dimension.
 Similarly ``<y>`` and ``<z>`` are for the y and z dimensions respectively.
-Each of the three numbers must be >=1. The attribute is ignored if any of the
-three numbers is 0.
+Each of the three values must be greater than 0.
 
 If specified, the AMDGPU target backend might be able to produce better machine
 code.
