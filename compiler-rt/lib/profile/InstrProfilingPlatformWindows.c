@@ -6,6 +6,8 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+#include <stddef.h>
+
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
 
