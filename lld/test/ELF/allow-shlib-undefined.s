@@ -44,7 +44,7 @@
 
 # CHECK-NOT:   error:
 # CHECK:       error: undefined reference: x1{{$}}
-# CHECK-NEXT:  >>> referenced by a.so{{$}} (disallowed by --no-allow-shlib-undefined)
+# CHECK-NEXT:  >>> referenced by a.so (disallowed by --no-allow-shlib-undefined){{$}}
 # CHECK-NOT:   {{.}}
 
 # CHECK2-NOT:  error:
