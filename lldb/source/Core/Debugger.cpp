@@ -365,7 +365,7 @@ bool Debugger::SetREPLLanguage(lldb::LanguageType repl_lang) {
 
 uint64_t Debugger::GetTerminalWidth() const {
   const uint32_t idx = ePropertyTerminalWidth;
-  return GetPropertyAtIndexAs<int64_t>(
+  return GetPropertyAtIndexAs<uint64_t>(
       idx, g_debugger_properties[idx].default_uint_value);
 }
 
@@ -886,8 +886,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   }
   assert(m_dummy_target_sp.get() && "Couldn't construct dummy target?");
 
-  OptionValueSInt64 *term_width =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueSInt64(
+  OptionValueUInt64 *term_width =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(
           ePropertyTerminalWidth);
   term_width->SetMinimumValue(10);
   term_width->SetMaximumValue(1024);

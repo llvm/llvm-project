@@ -476,6 +476,7 @@ func.func @regression_non_contiguous_dim_read(%subview : memref<1x3x3x2xf32, str
 //       CHECK:     %[[APPLY:.*]] = affine.apply #[[$MAP]]()
 
 // CHECK-128B-LABEL: func @regression_non_contiguous_dim_read(
+//       CHECK-128B:   memref.collapse_shape
 
 // -----
 
@@ -491,3 +492,4 @@ func.func @unsupported_non_contiguous_dim_write(%value : vector<2x2xf32>,
 //   CHECK-NOT:    memref.collapse_shape
 
 // CHECK-128B-LABEL: func @unsupported_non_contiguous_dim_write(
+//   CHECK-128B-NOT:   memref.collapse_shape

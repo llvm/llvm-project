@@ -470,6 +470,7 @@ function(add_integration_test test_name)
     # We need to use the internal object versions for NVPTX.
     set(internal_suffix ".__internal__")
     target_link_options(${fq_build_target_name} PRIVATE 
+      "-Wl,--suppress-stack-size-warning"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
@@ -650,6 +651,7 @@ function(add_libc_hermetic_test test_name)
     # We need to use the internal object versions for NVPTX.
     set(internal_suffix ".__internal__")
     target_link_options(${fq_build_target_name} PRIVATE 
+      "-Wl,--suppress-stack-size-warning"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)

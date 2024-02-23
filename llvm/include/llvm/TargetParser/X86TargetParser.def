@@ -265,6 +265,7 @@ X86_MICROARCH_LEVEL(X86_64_BASELINE,"x86-64",               95)
 X86_MICROARCH_LEVEL(X86_64_V2,      "x86-64-v2",            96)
 X86_MICROARCH_LEVEL(X86_64_V3,      "x86-64-v3",            97)
 X86_MICROARCH_LEVEL(X86_64_V4,      "x86-64-v4",            98)
+X86_MICROARCH_LEVEL(APXF,           "apxf",                111)
 #undef X86_FEATURE_COMPAT
 #undef X86_FEATURE
 #undef X86_MICROARCH_LEVEL
