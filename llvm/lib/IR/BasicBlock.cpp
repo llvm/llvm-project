@@ -113,24 +113,9 @@ void BasicBlock::convertFromNewDbgValues() {
       continue;
 
     DPMarker &Marker = *Inst.DbgMarker;
-    for (DbgRecord &DR : Marker.getDbgValueRange()) {
-      if (auto *DPV = dyn_cast<DPValue>(&DR)) {
-        InstList.insert(Inst.getIterator(),
-                        DPV->createDebugIntrinsic(getModule(), nullptr));
-      } else if (auto *DPL = dyn_cast<DPLabel>(&DR)) {
-        auto *LabelFn =
-            Intrinsic::getDeclaration(getModule(), Intrinsic::dbg_label);
-        Value *Args[] = {
-            MetadataAsValue::get(getModule()->getContext(), DPL->getLabel())};
-        DbgLabelInst *DbgLabel = cast<DbgLabelInst>(
-            CallInst::Create(LabelFn->getFunctionType(), LabelFn, Args));
-        DbgLabel->setTailCall();
-        DbgLabel->setDebugLoc(DPL->getDebugLoc());
-        InstList.insert(Inst.getIterator(), DbgLabel);
-      } else {
-        llvm_unreachable("unsupported DbgRecord kind");
-      }
-    }
+    for (DbgRecord &DR : Marker.getDbgValueRange())
+      InstList.insert(Inst.getIterator(),
+                      DR.createDebugIntrinsic(getModule(), nullptr));
 
     Marker.eraseFromParent();
   }
