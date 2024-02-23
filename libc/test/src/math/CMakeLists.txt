@@ -1,10 +1,14 @@
 add_custom_target(libc-math-unittests)
 
-add_library(
-  libc_math_test_utils
-  RandUtils.cpp
-  RandUtils.h
-)
+# FIXME: We shouldn't have regular libraries created because we could be
+#        cross-compiling the tests and running through an emulator.
+if(NOT LIBC_TARGET_OS_IS_GPU)
+  add_library(
+    libc_math_test_utils
+    RandUtils.cpp
+    RandUtils.h
+  )
+endif()
 
 add_fp_unittest(
   cosf_test
@@ -755,7 +759,7 @@ add_fp_unittest(
 )
 
 # FIXME: These tests are currently broken for NVPTX.
-if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_fp_unittest(
     ilogb_test
     SUITE
@@ -767,6 +771,7 @@ if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
     DEPENDS
       libc.include.math
       libc.src.math.ilogb
+      libc.src.__support.CPP.limits
       libc.src.__support.FPUtil.fp_bits
       libc.src.__support.FPUtil.manipulation_functions
   )
@@ -782,6 +787,7 @@ if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
     DEPENDS
       libc.include.math
       libc.src.math.ilogbf
+      libc.src.__support.CPP.limits
       libc.src.__support.FPUtil.fp_bits
       libc.src.__support.FPUtil.manipulation_functions
   )
@@ -798,6 +804,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.ilogbl
+    libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -813,6 +820,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.ldexp
+    libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )
@@ -828,6 +836,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.ldexpf
+    libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )
@@ -843,6 +852,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.ldexpl
+    libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )
@@ -980,7 +990,7 @@ add_fp_unittest(
 )
 
 # FIXME: These tests are currently broken on the GPU.
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(NOT LIBC_TARGET_OS_IS_GPU)
   add_fp_unittest(
     fminf_test
     SUITE
@@ -1225,7 +1235,7 @@ add_fp_unittest(
 )
 
 # FIXME: These tests are currently spurious for NVPTX.
-if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_fp_unittest(
     nextafter_test
     SUITE

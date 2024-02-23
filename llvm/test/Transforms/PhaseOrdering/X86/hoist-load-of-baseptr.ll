@@ -56,7 +56,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O2:       vector.body:
 ; O2-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[FOR_BODY4_PREHEADER]] ]
 ; O2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[INDEX]]
-; O2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 4
+; O2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
 ; O2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4, !tbaa [[TBAA0:![0-9]+]]
 ; O2-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4, !tbaa [[TBAA0]]
 ; O2-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], <i32 1, i32 1, i32 1, i32 1>
@@ -76,7 +76,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O2:       for.cond.cleanup3:
 ; O2-NEXT:    [[INC7]] = add nuw nsw i64 [[I_06]], 1
 ; O2-NEXT:    [[EXITCOND7_NOT:%.*]] = icmp eq i64 [[INC7]], 100
-; O2-NEXT:    br i1 [[EXITCOND7_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER]], !llvm.loop [[LOOP7:![0-9]+]]
+; O2-NEXT:    br i1 [[EXITCOND7_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER]], !llvm.loop [[LOOP8:![0-9]+]]
 ; O2:       for.body4:
 ; O2-NEXT:    [[J_05:%.*]] = phi i64 [ [[INC5:%.*]], [[FOR_BODY4]] ], [ [[J_05_PH]], [[FOR_BODY4_PREHEADER9]] ]
 ; O2-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[J_05]]
@@ -85,7 +85,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O2-NEXT:    store i32 [[INC]], ptr [[ADD_PTR_I]], align 4, !tbaa [[TBAA0]]
 ; O2-NEXT:    [[INC5]] = add nuw i64 [[J_05]], 1
 ; O2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC5]], [[NUMELEMS]]
-; O2-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP3]], label [[FOR_BODY4]], !llvm.loop [[LOOP8:![0-9]+]]
+; O2-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP3]], label [[FOR_BODY4]], !llvm.loop [[LOOP9:![0-9]+]]
 ;
 ; O3-LABEL: define {{[^@]+}}@_Z7computeRSt6vectorIiSaIiEEy
 ; O3-SAME: (ptr nocapture noundef nonnull readonly align 8 dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
@@ -104,7 +104,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O3:       vector.body:
 ; O3-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[FOR_COND1_PREHEADER_US]] ]
 ; O3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[INDEX]]
-; O3-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 4
+; O3-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
 ; O3-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4, !tbaa [[TBAA0:![0-9]+]]
 ; O3-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4, !tbaa [[TBAA0]]
 ; O3-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], <i32 1, i32 1, i32 1, i32 1>
@@ -127,7 +127,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O3-NEXT:    store i32 [[INC_US]], ptr [[ADD_PTR_I_US]], align 4, !tbaa [[TBAA0]]
 ; O3-NEXT:    [[INC5_US]] = add nuw i64 [[J_05_US]], 1
 ; O3-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC5_US]], [[NUMELEMS]]
-; O3-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]], label [[FOR_BODY4_US]], !llvm.loop [[LOOP7:![0-9]+]]
+; O3-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]], label [[FOR_BODY4_US]], !llvm.loop [[LOOP8:![0-9]+]]
 ; O3:       for.cond1.for.cond.cleanup3_crit_edge.us:
 ; O3-NEXT:    [[INC7_US]] = add nuw nsw i64 [[I_06_US]], 1
 ; O3-NEXT:    [[EXITCOND8_NOT:%.*]] = icmp eq i64 [[INC7_US]], 100

@@ -89,7 +89,6 @@ namespace {
       (void) llvm::createLoopSimplifyPass();
       (void) llvm::createLoopStrengthReducePass();
       (void) llvm::createLoopUnrollPass();
-      (void) llvm::createLoopRotatePass();
       (void) llvm::createLowerConstantIntrinsicsPass();
       (void) llvm::createLowerGlobalDtorsLegacyPass();
       (void) llvm::createLowerInvokePass();
@@ -113,7 +112,7 @@ namespace {
       (void) llvm::createTailCallEliminationPass();
       (void)llvm::createTLSVariableHoistPass();
       (void) llvm::createConstantHoistingPass();
-      (void) llvm::createCodeGenPreparePass();
+      (void)llvm::createCodeGenPrepareLegacyPass();
       (void) llvm::createEarlyCSEPass();
       (void) llvm::createGVNPass();
       (void) llvm::createPostDomTree();

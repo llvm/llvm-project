@@ -340,6 +340,13 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setLibcallName(RTLIB::SHL_I128, nullptr);
   setLibcallName(RTLIB::SRA_I128, nullptr);
 
+  // Also expand 256 bit shifts if i128 is a legal type.
+  if (isTypeLegal(MVT::i128)) {
+    setOperationAction(ISD::SRL_PARTS, MVT::i128, Expand);
+    setOperationAction(ISD::SHL_PARTS, MVT::i128, Expand);
+    setOperationAction(ISD::SRA_PARTS, MVT::i128, Expand);
+  }
+
   // Handle bitcast from fp128 to i128.
   if (!isTypeLegal(MVT::i128))
     setOperationAction(ISD::BITCAST, MVT::i128, Custom);
@@ -1060,7 +1067,8 @@ bool SystemZTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (!isInt<20>(AM.BaseOffs))
     return false;
 
-  bool RequireD12 = Subtarget.hasVector() && Ty->isVectorTy();
+  bool RequireD12 =
+      Subtarget.hasVector() && (Ty->isVectorTy() || Ty->isIntegerTy(128));
   AddressingMode SupportedAM(!RequireD12, true);
   if (I != nullptr)
     SupportedAM = supportedAddressingMode(I, Subtarget.hasVector());
@@ -1294,7 +1302,7 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
       break;
     }
   }
-  if (Constraint.size() > 0 && Constraint[0] == '{') {
+  if (Constraint.starts_with("{")) {
 
     // A clobber constraint (e.g. ~{f0}) will have MVT::Other which is illegal
     // to check the size on.
@@ -1915,7 +1923,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
         unsigned N = getNumRegistersForCallingConv(Ctx, CLI.CallConv, OrigArgVT);
         SlotVT = EVT::getIntegerVT(Ctx, PartVT.getSizeInBits() * N);
       } else {
-        SlotVT = Outs[I].ArgVT;
+        SlotVT = Outs[I].VT;
       }
       SDValue SpillSlot = DAG.CreateStackTemporary(SlotVT);
       int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
@@ -2662,10 +2670,8 @@ static void adjustForFNeg(Comparison &C) {
 // with (sext (trunc X)) into a comparison with (shl X, 32).
 static void adjustForLTGFR(Comparison &C) {
   // Check for a comparison between (shl X, 32) and 0.
-  if (C.Op0.getOpcode() == ISD::SHL &&
-      C.Op0.getValueType() == MVT::i64 &&
-      C.Op1.getOpcode() == ISD::Constant &&
-      cast<ConstantSDNode>(C.Op1)->getZExtValue() == 0) {
+  if (C.Op0.getOpcode() == ISD::SHL && C.Op0.getValueType() == MVT::i64 &&
+      C.Op1.getOpcode() == ISD::Constant && C.Op1->getAsZExtVal() == 0) {
     auto *C1 = dyn_cast<ConstantSDNode>(C.Op0.getOperand(1));
     if (C1 && C1->getZExtValue() == 32) {
       SDValue ShlOp0 = C.Op0.getOperand(0);
@@ -2690,7 +2696,7 @@ static void adjustICmpTruncate(SelectionDAG &DAG, const SDLoc &DL,
       C.Op0.getOperand(0).getOpcode() == ISD::LOAD &&
       C.Op1.getOpcode() == ISD::Constant &&
       cast<ConstantSDNode>(C.Op1)->getValueSizeInBits(0) <= 64 &&
-      cast<ConstantSDNode>(C.Op1)->getZExtValue() == 0) {
+      C.Op1->getAsZExtVal() == 0) {
     auto *L = cast<LoadSDNode>(C.Op0.getOperand(0));
     if (L->getMemoryVT().getStoreSizeInBits().getFixedValue() <=
         C.Op0.getValueSizeInBits().getFixedValue()) {
@@ -3035,12 +3041,12 @@ static Comparison getCmp(SelectionDAG &DAG, SDValue CmpOp0, SDValue CmpOp1,
         CmpOp0.getResNo() == 0 && CmpOp0->hasNUsesOfValue(1, 0) &&
         isIntrinsicWithCCAndChain(CmpOp0, Opcode, CCValid))
       return getIntrinsicCmp(DAG, Opcode, CmpOp0, CCValid,
-                             cast<ConstantSDNode>(CmpOp1)->getZExtValue(), Cond);
+                             CmpOp1->getAsZExtVal(), Cond);
     if (CmpOp0.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
         CmpOp0.getResNo() == CmpOp0->getNumValues() - 1 &&
         isIntrinsicWithCC(CmpOp0, Opcode, CCValid))
       return getIntrinsicCmp(DAG, Opcode, CmpOp0, CCValid,
-                             cast<ConstantSDNode>(CmpOp1)->getZExtValue(), Cond);
+                             CmpOp1->getAsZExtVal(), Cond);
   }
   Comparison C(CmpOp0, CmpOp1, Chain);
   C.CCMask = CCMaskForCondCode(Cond);
@@ -3457,12 +3463,11 @@ SDValue SystemZTargetLowering::lowerSELECT_CC(SDValue Op,
   // Check for absolute and negative-absolute selections, including those
   // where the comparison value is sign-extended (for LPGFR and LNGFR).
   // This check supplements the one in DAGCombiner.
-  if (C.Opcode == SystemZISD::ICMP &&
-      C.CCMask != SystemZ::CCMASK_CMP_EQ &&
+  if (C.Opcode == SystemZISD::ICMP && C.CCMask != SystemZ::CCMASK_CMP_EQ &&
       C.CCMask != SystemZ::CCMASK_CMP_NE &&
       C.Op1.getOpcode() == ISD::Constant &&
       cast<ConstantSDNode>(C.Op1)->getValueSizeInBits(0) <= 64 &&
-      cast<ConstantSDNode>(C.Op1)->getZExtValue() == 0) {
+      C.Op1->getAsZExtVal() == 0) {
     if (isAbsolute(C.Op0, TrueOp, FalseOp))
       return getAbsolute(DAG, DL, TrueOp, C.CCMask & SystemZ::CCMASK_CMP_LT);
     if (isAbsolute(C.Op0, FalseOp, TrueOp))
@@ -3947,8 +3952,7 @@ SystemZTargetLowering::lowerDYNAMIC_STACKALLOC_XPLINK(SDValue Op,
 
   // If user has set the no alignment function attribute, ignore
   // alloca alignments.
-  uint64_t AlignVal =
-      (RealignOpt ? cast<ConstantSDNode>(Align)->getZExtValue() : 0);
+  uint64_t AlignVal = (RealignOpt ? Align->getAsZExtVal() : 0);
 
   uint64_t StackAlign = TFI->getStackAlignment();
   uint64_t RequiredAlign = std::max(AlignVal, StackAlign);
@@ -4013,8 +4017,7 @@ SystemZTargetLowering::lowerDYNAMIC_STACKALLOC_ELF(SDValue Op,
 
   // If user has set the no alignment function attribute, ignore
   // alloca alignments.
-  uint64_t AlignVal =
-      (RealignOpt ? cast<ConstantSDNode>(Align)->getZExtValue() : 0);
+  uint64_t AlignVal = (RealignOpt ? Align->getAsZExtVal() : 0);
 
   uint64_t StackAlign = TFI->getStackAlignment();
   uint64_t RequiredAlign = std::max(AlignVal, StackAlign);
@@ -4213,7 +4216,7 @@ SDValue SystemZTargetLowering::lowerOR(SDValue Op, SelectionDAG &DAG) const {
   // If the low part is a constant that is outside the range of LHI,
   // then we're better off using IILF.
   if (LowOp.getOpcode() == ISD::Constant) {
-    int64_t Value = int32_t(cast<ConstantSDNode>(LowOp)->getZExtValue());
+    int64_t Value = int32_t(LowOp->getAsZExtVal());
     if (!isInt<16>(Value))
       return Op;
   }
@@ -5897,7 +5900,7 @@ SDValue SystemZTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
       Op1.getOpcode() != ISD::BITCAST &&
       Op1.getOpcode() != ISD::ConstantFP &&
       Op2.getOpcode() == ISD::Constant) {
-    uint64_t Index = cast<ConstantSDNode>(Op2)->getZExtValue();
+    uint64_t Index = Op2->getAsZExtVal();
     unsigned Mask = VT.getVectorNumElements() - 1;
     if (Index <= Mask)
       return Op;
@@ -6044,8 +6047,7 @@ SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
   SDLoc DL(Op);
   MVT ResultVT = Op.getSimpleValueType();
   SDValue Arg = Op.getOperand(0);
-  auto CNode = cast<ConstantSDNode>(Op.getOperand(1));
-  unsigned Check = CNode->getZExtValue();
+  unsigned Check = Op.getConstantOperandVal(1);
 
   unsigned TDCMask = 0;
   if (Check & fcSNan)
@@ -9436,11 +9438,11 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     return emitTransactionBegin(MI, MBB, SystemZ::TBEGIN, true);
   case SystemZ::TBEGINC:
     return emitTransactionBegin(MI, MBB, SystemZ::TBEGINC, true);
-  case SystemZ::LTEBRCompare_VecPseudo:
+  case SystemZ::LTEBRCompare_Pseudo:
     return emitLoadAndTestCmp0(MI, MBB, SystemZ::LTEBR);
-  case SystemZ::LTDBRCompare_VecPseudo:
+  case SystemZ::LTDBRCompare_Pseudo:
     return emitLoadAndTestCmp0(MI, MBB, SystemZ::LTDBR);
-  case SystemZ::LTXBRCompare_VecPseudo:
+  case SystemZ::LTXBRCompare_Pseudo:
     return emitLoadAndTestCmp0(MI, MBB, SystemZ::LTXBR);
 
   case SystemZ::PROBED_ALLOCA:

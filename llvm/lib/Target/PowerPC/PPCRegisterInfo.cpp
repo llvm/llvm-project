@@ -168,7 +168,7 @@ PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
 const TargetRegisterClass *
 PPCRegisterInfo::getPointerRegClass(const MachineFunction &MF, unsigned Kind)
                                                                        const {
-  // Note that PPCInstrInfo::FoldImmediate also directly uses this Kind value
+  // Note that PPCInstrInfo::foldImmediate also directly uses this Kind value
   // when it checks for ZERO folding.
   if (Kind == 1) {
     if (TM.isPPC64())

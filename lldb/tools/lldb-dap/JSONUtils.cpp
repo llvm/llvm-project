@@ -135,6 +135,12 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
   return strs;
 }
 
+static bool IsClassStructOrUnionType(lldb::SBType t) {
+  return (t.GetTypeClass() & (lldb::eTypeClassUnion | lldb::eTypeClassStruct |
+                              lldb::eTypeClassUnion | lldb::eTypeClassArray)) !=
+         0;
+}
+
 /// Create a short summary for a container that contains the summary of its
 /// first children, so that the user can get a glimpse of its contents at a
 /// glance.
@@ -173,21 +179,23 @@ TryCreateAutoSummaryForContainer(lldb::SBValue &v) {
     lldb::SBValue child = v.GetChildAtIndex(i);
 
     if (llvm::StringRef name = child.GetName(); !name.empty()) {
-      llvm::StringRef value;
+      llvm::StringRef desc;
       if (llvm::StringRef summary = child.GetSummary(); !summary.empty())
-        value = summary;
+        desc = summary;
+      else if (llvm::StringRef value = child.GetValue(); !value.empty())
+        desc = value;
+      else if (IsClassStructOrUnionType(child.GetType()))
+        desc = "{...}";
       else
-        value = child.GetValue();
+        continue;
 
-      if (!value.empty()) {
-        // If the child is an indexed entry, we don't show its index to save
-        // characters.
-        if (name.starts_with("["))
-          os << separator << value;
-        else
-          os << separator << name << ":" << value;
-        separator = ", ";
-      }
+      // If the child is an indexed entry, we don't show its index to save
+      // characters.
+      if (name.starts_with("["))
+        os << separator << desc;
+      else
+        os << separator << name << ":" << desc;
+      separator = ", ";
     }
   }
   os << "}";
@@ -356,54 +364,14 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 //   },
 //   "required": [ "verified" ]
 // }
-llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
+llvm::json::Value CreateBreakpoint(BreakpointBase *bp,
                                    std::optional<llvm::StringRef> request_path,
                                    std::optional<uint32_t> request_line,
                                    std::optional<uint32_t> request_column) {
-  // Each breakpoint location is treated as a separate breakpoint for VS code.
-  // They don't have the notion of a single breakpoint with multiple locations.
   llvm::json::Object object;
-  if (!bp.IsValid())
-    return llvm::json::Value(std::move(object));
-
-  object.try_emplace("verified", bp.GetNumResolvedLocations() > 0);
-  object.try_emplace("id", bp.GetID());
-  // VS Code DAP doesn't currently allow one breakpoint to have multiple
-  // locations so we just report the first one. If we report all locations
-  // then the IDE starts showing the wrong line numbers and locations for
-  // other source file and line breakpoints in the same file.
-
-  // Below we search for the first resolved location in a breakpoint and report
-  // this as the breakpoint location since it will have a complete location
-  // that is at least loaded in the current process.
-  lldb::SBBreakpointLocation bp_loc;
-  const auto num_locs = bp.GetNumLocations();
-  for (size_t i = 0; i < num_locs; ++i) {
-    bp_loc = bp.GetLocationAtIndex(i);
-    if (bp_loc.IsResolved())
-      break;
-  }
-  // If not locations are resolved, use the first location.
-  if (!bp_loc.IsResolved())
-    bp_loc = bp.GetLocationAtIndex(0);
-  auto bp_addr = bp_loc.GetAddress();
-
   if (request_path)
     object.try_emplace("source", CreateSource(*request_path));
-
-  if (bp_addr.IsValid()) {
-    std::string formatted_addr =
-        "0x" + llvm::utohexstr(bp_addr.GetLoadAddress(g_dap.target));
-    object.try_emplace("instructionReference", formatted_addr);
-    auto line_entry = bp_addr.GetLineEntry();
-    const auto line = line_entry.GetLine();
-    if (line != UINT32_MAX)
-      object.try_emplace("line", line);
-    const auto column = line_entry.GetColumn();
-    if (column != 0)
-      object.try_emplace("column", column);
-    object.try_emplace("source", CreateSource(line_entry));
-  }
+  bp->CreateJsonObject(object);
   // We try to add request_line as a fallback
   if (request_line)
     object.try_emplace("line", *request_line);
@@ -498,7 +466,7 @@ llvm::json::Value CreateModule(lldb::SBModule &module) {
   return llvm::json::Value(std::move(object));
 }
 
-void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints,
+void AppendBreakpoint(BreakpointBase *bp, llvm::json::Array &breakpoints,
                       std::optional<llvm::StringRef> request_path,
                       std::optional<uint32_t> request_line) {
   breakpoints.emplace_back(CreateBreakpoint(bp, request_path, request_line));
@@ -1089,6 +1057,23 @@ llvm::json::Object VariableDescription::GetVariableExtensionsJSON() {
       extensions.try_emplace("declaration", std::move(decl_obj));
   }
   return extensions;
+}
+
+std::string VariableDescription::GetResult(llvm::StringRef context) {
+  // In repl and hover context, the results can be displayed as multiple lines
+  // so more detailed descriptions can be returned.
+  if (context != "repl" && context != "hover")
+    return display_value;
+
+  if (!v.IsValid())
+    return display_value;
+
+  // Try the SBValue::GetDescription(), which may call into language runtime
+  // specific formatters (see ValueObjectPrinter).
+  lldb::SBStream stream;
+  v.GetDescription(stream);
+  llvm::StringRef description = stream.GetData();
+  return description.trim().str();
 }
 
 // "Variable": {

@@ -235,7 +235,7 @@ define void @test_runtime_check2(ptr %a, float %b, i64 %offset, i64 %offset2, i6
 ; CHECK-NEXT:    [[AD:%.*]] = fadd fast float [[L1]], [[M]]
 ; CHECK-NEXT:    store float [[AD]], ptr [[ARR_IDX]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[C:%.*]], i64 [[IV]]
-; CHECK-NEXT:    [[C_IDX:%.*]] = getelementptr float, ptr [[TMP2]], i64 -1
+; CHECK-NEXT:    [[C_IDX:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -4
 ; CHECK-NEXT:    [[LC:%.*]] = load float, ptr [[C_IDX]], align 4
 ; CHECK-NEXT:    [[VC:%.*]] = fadd float [[LC]], 1.000000e+00
 ; CHECK-NEXT:    [[C_IDX2:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[IV]]

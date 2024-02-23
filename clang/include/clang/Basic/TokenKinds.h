@@ -44,12 +44,12 @@ enum ObjCKeywordKind {
   NUM_OBJC_KEYWORDS
 };
 
-/// Provides a namespace for interesting identifers such as float_t and
+/// Provides a namespace for notable identifers such as float_t and
 /// double_t.
-enum InterestingIdentifierKind {
-#define INTERESTING_IDENTIFIER(X) X,
+enum NotableIdentifierKind {
+#define NOTABLE_IDENTIFIER(X) X,
 #include "clang/Basic/TokenKinds.def"
-  NUM_INTERESTING_IDENTIFIERS
+  NUM_NOTABLE_IDENTIFIERS
 };
 
 /// Defines the possible values of an on-off-switch (C99 6.10.6p2).
@@ -109,8 +109,8 @@ bool isPragmaAnnotation(TokenKind K);
 
 inline constexpr bool isRegularKeywordAttribute(TokenKind K) {
   return (false
-#define KEYWORD_ATTRIBUTE(X) || (K == tok::kw_##X)
-#include "clang/Basic/AttrTokenKinds.inc"
+#define KEYWORD_ATTRIBUTE(X, ...) || (K == tok::kw_##X)
+#include "clang/Basic/RegularKeywordAttrInfo.inc"
   );
 }
 

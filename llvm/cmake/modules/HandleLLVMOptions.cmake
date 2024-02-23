@@ -120,6 +120,13 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
 endif()
 
+# If we are targeting a GPU architecture we want to ignore all the standard
+# flag handling.
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn" OR
+   "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx64")
+  return()
+endif()
+
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   add_compile_definitions(EXPENSIVE_CHECKS)
 
@@ -138,10 +145,6 @@ if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   else()
     add_compile_definitions(_GLIBCXX_ASSERTIONS)
   endif()
-endif()
-
-if(LLVM_EXPERIMENTAL_DEBUGINFO_ITERATORS)
-  add_compile_definitions(EXPERIMENTAL_DEBUGINFO_ITERATORS)
 endif()
 
 if (LLVM_ENABLE_STRICT_FIXED_SIZE_VECTORS)

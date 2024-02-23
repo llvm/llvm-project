@@ -30,7 +30,7 @@ namespace dr1 { // dr1: no
   namespace X {
     void z(int = 1);
     // expected-error@-1 {{redefinition of default argument}}
-    // expected-note@#dr1-z {{previous definition is here}}
+    //   expected-note@#dr1-z {{previous definition is here}}
   }
 
   void i(int = 1);
@@ -56,7 +56,7 @@ namespace dr3 { // dr3: yes
   template void f(int);
   template<> struct A<int> {};
   // expected-error@-1 {{explicit specialization of 'dr3::A<int>' after instantiation}}
-  // expected-note@#dr3-f-T {{implicit instantiation first required here}}
+  //   expected-note@#dr3-f-T {{implicit instantiation first required here}}
 }
 
 namespace dr4 { // dr4: 2.8
@@ -66,7 +66,7 @@ namespace dr4 { // dr4: 2.8
     void dr4_g(int) {} // #dr4-g-int
     void dr4_g(float) {}
     // expected-error@-1 {{conflicting types for 'dr4_g'}}
-    // expected-note@#dr4-g-int {{previous definition is here}}
+    //   expected-note@#dr4-g-int {{previous definition is here}}
   }
 }
 
@@ -99,7 +99,7 @@ namespace dr7 { // dr7: 3.4
   class X { ~X(); }; // #dr7-X
   class Y : X { ~Y() {} };
   // expected-error@-1 {{base class 'X' has private destructor}}
-  // expected-note@#dr7-X {{implicitly declared private here}}
+  //   expected-note@#dr7-X {{implicitly declared private here}}
 
   namespace PR16370 { // This regressed the first time DR7 was fixed.
     struct S1 { virtual ~S1(); };
@@ -137,8 +137,8 @@ namespace dr9 { // dr9: 2.8
   } n;
   int R1() { return n.m; }
   // expected-error@-1 {{'m' is a protected member of 'dr9::B'}}
-  // expected-note@#dr9-N {{constrained by protected inheritance here}}
-  // expected-note@#dr9-m {{member is declared here}}
+  //   expected-note@#dr9-N {{constrained by protected inheritance here}}
+  //   expected-note@#dr9-m {{member is declared here}}
   int R2() { return n.m; }
 }
 
@@ -211,15 +211,15 @@ namespace dr14 { // dr14: 3.4
   T t; // ok, same type both times
   U u;
   // expected-error@-1 {{reference to 'U' is ambiguous}}
-  // expected-note@#dr14-X-U {{candidate found by name lookup is 'dr14::X::U'}}
-  // expected-note@#dr14-Y-U {{candidate found by name lookup is 'dr14::Y::U'}}
+  //   expected-note@#dr14-X-U {{candidate found by name lookup is 'dr14::X::U'}}
+  //   expected-note@#dr14-Y-U {{candidate found by name lookup is 'dr14::Y::U'}}
 }
 
 namespace dr15 { // dr15: yes
   template<typename T> void f(int); // #dr15-f-decl-first
   template<typename T> void f(int = 0);
   // expected-error@-1 {{default arguments cannot be added to a function template that has already been declared}}
-  // expected-note@#dr15-f-decl-first {{previous template declaration is here}}
+  //   expected-note@#dr15-f-decl-first {{previous template declaration is here}}
 }
 
 namespace dr16 { // dr16: 2.8
@@ -232,8 +232,8 @@ namespace dr16 { // dr16: 2.8
     void g() {
       f();
       // expected-error@-1 {{'f' is a private member of 'dr16::A'}}
-      // expected-note@#dr16-B {{constrained by implicitly private inheritance here}}
-      // expected-note@#dr16-A-f-decl {{member is declared here}}
+      //   expected-note@#dr16-B {{constrained by implicitly private inheritance here}}
+      //   expected-note@#dr16-A-f-decl {{member is declared here}}
       A::f(); // #dr16-A-f-call
       // expected-error@#dr16-A-f-call {{'A' is a private member of 'dr16::A'}}
       //   expected-note@#dr16-B {{constrained by implicitly private inheritance here}}
@@ -269,8 +269,8 @@ namespace dr19 { // dr19: 3.1
   struct D : B {
     int get1() { return c.n; }
     // expected-error@-1 {{'n' is a protected member of 'dr19::A'}}
-    // expected-note@#dr19-B {{constrained by protected inheritance here}}
-    // expected-note@#dr19-n {{member is declared here}}
+    //   expected-note@#dr19-B {{constrained by protected inheritance here}}
+    //   expected-note@#dr19-n {{member is declared here}}
     int get2() { return ((A&)c).n; } // ok, A is an accessible base of B from here
   };
 }
@@ -285,7 +285,7 @@ namespace dr20 { // dr20: 2.8
   X &f();
   X x = f();
   // expected-error@-1 {{calling a private constructor of class 'dr20::X'}}
-  // expected-note@#dr20-X-ctor {{declared private here}}
+  //   expected-note@#dr20-X-ctor {{declared private here}}
 }
 
 namespace dr21 { // dr21: 3.4
@@ -310,8 +310,8 @@ namespace dr23 { // dr23: yes
   template<typename T> void f(T, int); // #dr23-f-T-int
   void g() { f(0, 0); }
   // expected-error@-1 {{call to 'f' is ambiguous}}
-  // expected-note@#dr23-f-T-T {{candidate function [with T = int]}}
-  // expected-note@#dr23-f-T-int {{candidate function [with T = int]}}
+  //   expected-note@#dr23-f-T-T {{candidate function [with T = int]}}
+  //   expected-note@#dr23-f-T-int {{candidate function [with T = int]}}
 }
 
 // dr24: na
@@ -320,25 +320,25 @@ namespace dr25 { // dr25: yes
   struct A {
     void f() throw(int);
     // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
-    // since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
+    //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   };
   void (A::*f)() throw (int);
   // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
-  // since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
+  //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   void (A::*g)() throw () = f;
   // cxx98-14-error@-1 {{target exception specification is not superset of source}}
   // since-cxx17-error@-2 {{different exception specifications}}
   void (A::*g2)() throw () = 0;
   void (A::*h)() throw (int, char) = f;
   // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
-  // since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
+  //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   void (A::*i)() throw () = &A::f;
   // cxx98-14-error@-1 {{target exception specification is not superset of source}}
   // since-cxx17-error@-2 {{different exception specifications}}
   void (A::*i2)() throw () = 0;
   void (A::*j)() throw (int, char) = &A::f;
   // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
-  // since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
+  //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   void x() {
     g2 = f;
     // cxx98-14-error@-1 {{target exception specification is not superset of source}}
@@ -367,7 +367,7 @@ namespace dr26 { // dr26: yes
     static C &f();
     C(const C &, C = f());
     // expected-error@-1 {{recursive evaluation of default argument}}
-    // expected-note@-2 {{default argument used here}}
+    //   expected-note@-2 {{default argument used here}}
   };
 }
 
@@ -384,29 +384,29 @@ namespace dr29 { // dr29: 3.4
   extern "C++" void g0_cxx() { void dr29_f0(); }
   extern "C" void g0_c() { void dr29_f0(); }
   // expected-error@-1 {{declaration of 'dr29_f0' has a different language linkage}}
-  // expected-note@#dr29-f0 {{previous declaration is here}}
+  //   expected-note@#dr29-f0 {{previous declaration is here}}
 
   extern "C" void dr29_f1(); // #dr29-f1
   void g1() { void dr29_f1(); }
   extern "C" void g1_c() { void dr29_f1(); }
   extern "C++" void g1_cxx() { void dr29_f1(); }
   // expected-error@-1 {{declaration of 'dr29_f1' has a different language linkage}}
-  // expected-note@#dr29-f1 {{previous declaration is here}}
+  //   expected-note@#dr29-f1 {{previous declaration is here}}
 
   void g2() { void dr29_f2(); } // #dr29-f2
   extern "C" void dr29_f2();
   // expected-error@-1 {{declaration of 'dr29_f2' has a different language linkage}}
-  // expected-note@#dr29-f2 {{previous declaration is here}}
+  //   expected-note@#dr29-f2 {{previous declaration is here}}
 
   extern "C" void g3() { void dr29_f3(); } // #dr29-f3
   extern "C++" void dr29_f3();
   // expected-error@-1 {{declaration of 'dr29_f3' has a different language linkage}}
-  // expected-note@#dr29-f3 {{previous declaration is here}}
+  //   expected-note@#dr29-f3 {{previous declaration is here}}
 
   extern "C++" void g4() { void dr29_f4(); } // #dr29-f4
   extern "C" void dr29_f4();
   // expected-error@-1 {{declaration of 'dr29_f4' has a different language linkage}}
-  // expected-note@#dr29-f4 {{previous declaration is here}}
+  //   expected-note@#dr29-f4 {{previous declaration is here}}
 
   extern "C" void g5();
   extern "C++" void dr29_f5();
@@ -425,7 +425,7 @@ namespace dr29 { // dr29: 3.4
   extern "C" void g7() {
     void dr29_f7();
     // expected-error@-1 {{declaration of 'dr29_f7' has a different language linkage}}
-    // expected-note@#dr29-f7 {{previous declaration is here}}
+    //   expected-note@#dr29-f7 {{previous declaration is here}}
   }
 
   extern "C++" void g8();
@@ -433,7 +433,7 @@ namespace dr29 { // dr29: 3.4
   extern "C++" void g8() {
     void dr29_f8();
     // expected-error@-1 {{declaration of 'dr29_f8' has a different language linkage}}
-    // expected-note@#dr29-f8 {{previous declaration is here}}
+    //   expected-note@#dr29-f8 {{previous declaration is here}}
   }
 }
 
@@ -459,7 +459,7 @@ namespace dr31 { // dr31: 2.8
   // and even though we allocated the X using ::operator delete).
   X *p = new X;
   // expected-error@-1 {{'operator delete' is a private member of 'dr31::X'}}
-  // expected-note@#dr31-delete {{declared private here}}
+  //   expected-note@#dr31-delete {{declared private here}}
 }
 
 // dr32: na
@@ -471,8 +471,8 @@ namespace dr33 { // dr33: 9
   template<typename Z> Z g(Y::T);
   void h() { f(&g); }
   // expected-error@-1 {{call to 'f' is ambiguous}}
-  // expected-note@#dr33-f-S {{candidate function}}
-  // expected-note@#dr33-f-T {{candidate function}}
+  //   expected-note@#dr33-f-S {{candidate function}}
+  //   expected-note@#dr33-f-T {{candidate function}}
 
   template<typename T> void t(X::S);
   template<typename T, typename U = void> void u(X::S);
@@ -543,22 +543,22 @@ namespace example2 {
     using B::i; // #dr36-ex2-B-i-first
     using B::i;
     // expected-error@-1 {{redeclaration of using declaration}}
-    // expected-note@#dr36-ex2-B-i-first {{previous using declaration}}
+    //   expected-note@#dr36-ex2-B-i-first {{previous using declaration}}
 
     using C::i; // #dr36-ex2-C-i-first
     using C::i;
     // expected-error@-1 {{redeclaration of using declaration}}
-    // expected-note@#dr36-ex2-C-i-first {{previous using declaration}}
+    //   expected-note@#dr36-ex2-C-i-first {{previous using declaration}}
 
     using B::j; // #dr36-ex2-B-j-first
     using B::j;
     // expected-error@-1 {{redeclaration of using declaration}}
-    // expected-note@#dr36-ex2-B-j-first {{previous using declaration}}
+    //   expected-note@#dr36-ex2-B-j-first {{previous using declaration}}
 
     using C::j; // #dr36-ex2-C-j-first
     using C::j;
     // expected-error@-1 {{redeclaration of using declaration}}
-    // expected-note@#dr36-ex2-C-j-first {{previous using declaration}}
+    //   expected-note@#dr36-ex2-C-j-first {{previous using declaration}}
   };
 }
 
@@ -581,22 +581,22 @@ namespace example3 {
     using B<T>::i; // #dr36-ex3-B-i-first
     using B<T>::i;
     // expected-error@-1 {{redeclaration of using declaration}}
-    // expected-note@#dr36-ex3-B-i-first {{previous using declaration}}
+    //   expected-note@#dr36-ex3-B-i-first {{previous using declaration}}
 
     using C<T>::i; // #dr36-ex3-C-i-first
     using C<T>::i;
     // expected-error@-1 {{redeclaration of using declaration}}
-    // expected-note@#dr36-ex3-C-i-first {{previous using declaration}}
+    //   expected-note@#dr36-ex3-C-i-first {{previous using declaration}}
 
     using B<T>::j; // #dr36-ex3-B-j-first
     using B<T>::j;
     // expected-error@-1 {{redeclaration of using declaration}}
-    // expected-note@#dr36-ex3-B-j-first {{previous using declaration}}
+    //   expected-note@#dr36-ex3-B-j-first {{previous using declaration}}
 
     using C<T>::j; // #dr36-ex3-C-j-first
     using C<T>::j;
     // expected-error@-1 {{redeclaration of using declaration}}
-    // expected-note@#dr36-ex3-C-j-first {{previous using declaration}}
+    //   expected-note@#dr36-ex3-C-j-first {{previous using declaration}}
   };
 }
 namespace example4 {
@@ -610,7 +610,7 @@ namespace example4 {
     using E<T>::k; // #dr36-E-k-first
     using E<T>::k;
     // expected-error@-1 {{redeclaration of using declaration}}
-    // expected-note@#dr36-E-k-first {{previous using declaration}}
+    //   expected-note@#dr36-E-k-first {{previous using declaration}}
   };
 }
 }
@@ -656,14 +656,14 @@ namespace dr39 { // dr39: no
     struct dr39::example2::C -> B -> A}} */
     int &x = c.x(0);
     // expected-error@-1 {{member 'x' found in multiple base classes of different types}}
-    // expected-note@#dr39-A-x-decl {{member found by ambiguous name lookup}}
-    // expected-note@#dr39-using-A-x {{member found by ambiguous name lookup}}
+    //   expected-note@#dr39-A-x-decl {{member found by ambiguous name lookup}}
+    //   expected-note@#dr39-using-A-x {{member found by ambiguous name lookup}}
 
     // FIXME: This is valid, because we find the same static data member either way.
     int &y = c.y(0);
     // expected-error@-1 {{member 'y' found in multiple base classes of different types}}
-    // expected-note@#dr39-A-y-decl {{member found by ambiguous name lookup}}
-    // expected-note@#dr39-using-A-y {{member found by ambiguous name lookup}}
+    //   expected-note@#dr39-A-y-decl {{member found by ambiguous name lookup}}
+    //   expected-note@#dr39-using-A-y {{member found by ambiguous name lookup}}
     int &z = c.z(0);
   }
 
@@ -684,7 +684,7 @@ namespace dr39 { // dr39: no
     {{non-static member 'n' found in multiple base-class subobjects of type 'A':
     struct dr39::example4::D -> B -> A
     struct dr39::example4::D -> C -> A}} */
-    // expected-note@#dr39-ex4-A-n {{member found by ambiguous name lookup}}
+    //   expected-note@#dr39-ex4-A-n {{member found by ambiguous name lookup}}
   }
 
   namespace PR5916 {
@@ -698,7 +698,7 @@ namespace dr39 { // dr39: no
     {{non-static member 'n' found in multiple base-class subobjects of type 'A':
     struct dr39::PR5916::D -> B -> A
     struct dr39::PR5916::D -> C -> A}} */
-    // expected-note@#dr39-A-n {{member found by ambiguous name lookup}}
+    //   expected-note@#dr39-A-n {{member found by ambiguous name lookup}}
 
     // expected-error@#dr39-sizeof {{unknown type name}}
 #if __cplusplus >= 201103L
@@ -707,7 +707,7 @@ namespace dr39 { // dr39: no
     {{non-static member 'n' found in multiple base-class subobjects of type 'A':
     struct dr39::PR5916::D -> B -> A
     struct dr39::PR5916::D -> C -> A}} */
-    // expected-note@#dr39-A-n {{member found by ambiguous name lookup}}
+    //   expected-note@#dr39-A-n {{member found by ambiguous name lookup}}
 #endif
   }
 }
@@ -750,8 +750,8 @@ namespace dr47 { // dr47: sup 329
   template<typename T> struct A {
     friend void f() { T t; } // #dr47-f
     // expected-error@-1 {{redefinition of 'f'}}
-    // expected-note@#dr47-b {{in instantiation of template class 'dr47::A<float>' requested here}}
-    // expected-note@#dr47-f {{previous definition is here}}
+    //   expected-note@#dr47-b {{in instantiation of template class 'dr47::A<float>' requested here}}
+    //   expected-note@#dr47-f {{previous definition is here}}
   };
   A<int> a;
   A<float> b; // #dr47-b
@@ -811,7 +811,7 @@ namespace dr50 { // dr50: yes
   X *t = reinterpret_cast<X*>(p);
   X *u = dynamic_cast<X*>(p);
   // expected-error@-1 {{'dr50::X' is an incomplete type}}
-  // expected-note@#dr50-X {{forward declaration of 'dr50::X'}}
+  //   expected-note@#dr50-X {{forward declaration of 'dr50::X'}}
 }
 
 namespace dr51 { // dr51: 2.8
@@ -848,22 +848,22 @@ namespace dr54 { // dr54: 2.8
 
   A &sab = static_cast<A&>(b);
   // expected-error@-1 {{cannot cast 'struct B' to its private base class 'A'}}
-  // expected-note@#dr54-B {{declared private here}}
+  //   expected-note@#dr54-B {{declared private here}}
   A *spab = static_cast<A*>(&b);
   // expected-error@-1 {{cannot cast 'struct B' to its private base class 'A'}}
-  // expected-note@#dr54-B {{declared private here}}
+  //   expected-note@#dr54-B {{declared private here}}
   int A::*smab = static_cast<int A::*>(&B::b);
   // expected-error@-1 {{cannot cast 'dr54::B' to its private base class 'dr54::A'}}
-  // expected-note@#dr54-B {{declared private here}}
+  //   expected-note@#dr54-B {{declared private here}}
   B &sba = static_cast<B&>(a);
   // expected-error@-1 {{cannot cast private base class 'dr54::A' to 'dr54::B'}}
-  // expected-note@#dr54-B {{declared private here}}
+  //   expected-note@#dr54-B {{declared private here}}
   B *spba = static_cast<B*>(&a);
   // expected-error@-1 {{cannot cast private base class 'dr54::A' to 'dr54::B'}}
-  // expected-note@#dr54-B {{declared private here}}
+  //   expected-note@#dr54-B {{declared private here}}
   int B::*smba = static_cast<int B::*>(&A::a);
   // expected-error@-1 {{cannot cast private base class 'dr54::A' to 'dr54::B'}}
-  // expected-note@#dr54-B {{declared private here}}
+  //   expected-note@#dr54-B {{declared private here}}
 
   V &svb = static_cast<V&>(b);
   V *spvb = static_cast<V*>(&b);
@@ -905,14 +905,14 @@ namespace dr56 { // dr56: yes
     typedef int T; // #dr56-typedef-int-T-first
     typedef int T;
     // expected-error@-1 {{redefinition of 'T'}}
-    // expected-note@#dr56-typedef-int-T-first {{previous definition is here}}
+    //   expected-note@#dr56-typedef-int-T-first {{previous definition is here}}
   };
   struct B {
     struct X;
     typedef X X; // #dr56-typedef-X-X-first
     typedef X X;
     // expected-error@-1 {{redefinition of 'X'}}
-    // expected-note@#dr56-typedef-X-X-first {{previous definition is here}}
+    //   expected-note@#dr56-typedef-X-X-first {{previous definition is here}}
   };
 }
 
@@ -939,42 +939,42 @@ namespace dr59 { // dr59: yes
   A a3 = convert_to<const A>();
   A a4 = convert_to<const volatile A>();
   // cxx98-14-error@-1 {{no viable constructor copying variable of type 'const volatile dr59::A'}}
-  // cxx98-14-note@#dr59-A {{candidate constructor (the implicit copy constructor) not viable: 1st argument ('const volatile dr59::A') would lose volatile qualifier}}
-  // cxx11-14-note@#dr59-A {{candidate constructor (the implicit move constructor) not viable: 1st argument ('const volatile dr59::A') would lose const and volatile qualifiers}}
-  // cxx98-14-note@#dr59-A {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
+  //   cxx98-14-note@#dr59-A {{candidate constructor (the implicit copy constructor) not viable: 1st argument ('const volatile dr59::A') would lose volatile qualifier}}
+  //   cxx11-14-note@#dr59-A {{candidate constructor (the implicit move constructor) not viable: 1st argument ('const volatile dr59::A') would lose const and volatile qualifiers}}
+  //   cxx98-14-note@#dr59-A {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
   A a5 = convert_to<const volatile A&>();
   // expected-error@-1 {{no viable constructor copying variable of type 'const volatile dr59::A'}}
-  // expected-note@#dr59-A {{candidate constructor (the implicit copy constructor) not viable: 1st argument ('const volatile dr59::A') would lose volatile qualifier}}
-  // since-cxx11-note@#dr59-A {{candidate constructor (the implicit move constructor) not viable: 1st argument ('const volatile dr59::A') would lose const and volatile qualifiers}}
-  // expected-note@#dr59-A {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
+  //   expected-note@#dr59-A {{candidate constructor (the implicit copy constructor) not viable: 1st argument ('const volatile dr59::A') would lose volatile qualifier}}
+  //   since-cxx11-note@#dr59-A {{candidate constructor (the implicit move constructor) not viable: 1st argument ('const volatile dr59::A') would lose const and volatile qualifiers}}
+  //   expected-note@#dr59-A {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
 
   B b1 = convert_to<B>();
   B b2 = convert_to<B&>();
   B b3 = convert_to<const B>();
   B b4 = convert_to<const volatile B>();
   // cxx98-14-error@-1 {{no viable constructor copying variable of type 'const volatile dr59::B'}}
-  // cxx98-14-note@#dr59-B {{candidate constructor (the implicit copy constructor) not viable: 1st argument ('const volatile dr59::B') would lose volatile qualifier}}
-  // cxx11-14-note@#dr59-B {{candidate constructor (the implicit move constructor) not viable: 1st argument ('const volatile dr59::B') would lose const and volatile qualifiers}}
-  // cxx98-14-note@#dr59-B {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
+  //   cxx98-14-note@#dr59-B {{candidate constructor (the implicit copy constructor) not viable: 1st argument ('const volatile dr59::B') would lose volatile qualifier}}
+  //   cxx11-14-note@#dr59-B {{candidate constructor (the implicit move constructor) not viable: 1st argument ('const volatile dr59::B') would lose const and volatile qualifiers}}
+  //   cxx98-14-note@#dr59-B {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
   B b5 = convert_to<const volatile B&>();
   // expected-error@-1 {{no viable constructor copying variable of type 'const volatile dr59::B'}}
-  // expected-note@#dr59-B {{candidate constructor (the implicit copy constructor) not viable: 1st argument ('const volatile dr59::B') would lose volatile qualifier}}
-  // since-cxx11-note@#dr59-B {{candidate constructor (the implicit move constructor) not viable: 1st argument ('const volatile dr59::B') would lose const and volatile qualifiers}}
-  // expected-note@#dr59-B {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
+  //   expected-note@#dr59-B {{candidate constructor (the implicit copy constructor) not viable: 1st argument ('const volatile dr59::B') would lose volatile qualifier}}
+  //   since-cxx11-note@#dr59-B {{candidate constructor (the implicit move constructor) not viable: 1st argument ('const volatile dr59::B') would lose const and volatile qualifiers}}
+  //   expected-note@#dr59-B {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
 
   A c1 = convert_to<B>();
   A c2 = convert_to<B&>();
   A c3 = convert_to<const B>();
   A c4 = convert_to<const volatile B>();
   // expected-error@-1 {{no viable constructor copying variable of type 'const volatile dr59::B'}}
-  // expected-note@#dr59-A {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'const volatile dr59::B' to 'const A &' for 1st argument}}
-  // since-cxx11-note@#dr59-A {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'const volatile dr59::B' to 'A &&' for 1st argument}}
-  // expected-note@#dr59-A {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
+  //   expected-note@#dr59-A {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'const volatile dr59::B' to 'const A &' for 1st argument}}
+  //   since-cxx11-note@#dr59-A {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'const volatile dr59::B' to 'A &&' for 1st argument}}
+  //   expected-note@#dr59-A {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
   A c5 = convert_to<const volatile B&>();
   // expected-error@-1 {{no viable constructor copying variable of type 'const volatile dr59::B'}}
-  // expected-note@#dr59-A {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'const volatile dr59::B' to 'const A &' for 1st argument}}
-  // since-cxx11-note@#dr59-A {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'const volatile dr59::B' to 'A &&' for 1st argument}}
-  // expected-note@#dr59-A {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
+  //   expected-note@#dr59-A {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'const volatile dr59::B' to 'const A &' for 1st argument}}
+  //   since-cxx11-note@#dr59-A {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'const volatile dr59::B' to 'A &&' for 1st argument}}
+  //   expected-note@#dr59-A {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
 
   int n1 = convert_to<int>();
   int n2 = convert_to<int&>();
@@ -1028,19 +1028,19 @@ namespace dr62 { // dr62: 2.9
 
   X<NoNameForLinkagePtr> x2;
   // cxx98-error@-1 {{template argument uses unnamed type}}
-  // cxx98-note@#dr62-unnamed {{unnamed type used in template argument was declared here}}
+  //   cxx98-note@#dr62-unnamed {{unnamed type used in template argument was declared here}}
   X<const NoNameForLinkagePtr> x3;
   // cxx98-error@-1 {{template argument uses unnamed type}}
-  // cxx98-note@#dr62-unnamed {{unnamed type used in template argument was declared here}}
+  //   cxx98-note@#dr62-unnamed {{unnamed type used in template argument was declared here}}
   NoNameForLinkagePtr p1 = get<NoNameForLinkagePtr>();
   // cxx98-error@-1 {{template argument uses unnamed type}}
-  // cxx98-note@#dr62-unnamed {{unnamed type used in template argument was declared here}}
+  //   cxx98-note@#dr62-unnamed {{unnamed type used in template argument was declared here}}
   NoNameForLinkagePtr p2 = get<const NoNameForLinkagePtr>();
   // cxx98-error@-1 {{template argument uses unnamed type}}
-  // cxx98-note@#dr62-unnamed {{unnamed type used in template argument was declared here}}
+  //   cxx98-note@#dr62-unnamed {{unnamed type used in template argument was declared here}}
   int n1 = take(noNameForLinkagePtr);
   // cxx98-error@-1 {{template argument uses unnamed type}}
-  // cxx98-note@#dr62-unnamed {{unnamed type used in template argument was declared here}}
+  //   cxx98-note@#dr62-unnamed {{unnamed type used in template argument was declared here}}
 
   X<Danger> x4;
 
@@ -1089,11 +1089,11 @@ namespace dr66 { // dr66: no
   // FIXME: The first two calls here should be accepted.
   int a = f();
   // expected-error@-1 {{no matching function for call to 'f'}}
-  // expected-note@#dr66-f-first {{candidate function not viable: requires single argument 'n', but no arguments were provided}}
+  //   expected-note@#dr66-f-first {{candidate function not viable: requires single argument 'n', but no arguments were provided}}
   int b = f(1);
   int c = f(1, 2);
   // expected-error@-1 {{no matching function for call to 'f'}}
-  // expected-note@#dr66-f-first {{candidate function not viable: requires single argument 'n', but 2 arguments were provided}}
+  //   expected-note@#dr66-f-first {{candidate function not viable: requires single argument 'n', but 2 arguments were provided}}
 }
 
 // dr67: na
@@ -1127,7 +1127,7 @@ namespace dr69 { // dr69: 9
   template<void(*)()> struct Q {};
   Q<&f<int> > q;
   // cxx98-error@-1 {{non-type template argument referring to function 'f<int>' with internal linkage is a C++11 extension}}
-  // cxx98-note@#dr69-f {{non-type template argument refers to function here}}
+  //   cxx98-note@#dr69-f {{non-type template argument refers to function here}}
 }
 
 namespace dr70 { // dr70: yes
@@ -1145,7 +1145,7 @@ namespace dr73 { // dr73: sup 1652
   int a, b;
   static_assert(&a + 1 != &b, "");
   // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-  // expected-note@-2 {{comparison against pointer '&a + 1' that points past the end of a complete object has unspecified value}}
+  //   expected-note@-2 {{comparison against pointer '&a + 1' that points past the end of a complete object has unspecified value}}
 }
 #endif
 
@@ -1228,8 +1228,8 @@ namespace dr84 { // dr84: yes
   // here. In C++17, we initialize the B object directly using 'A::operator B()'.
   B b = a;
   // cxx98-14-error@-1 {{no viable constructor copying variable of type 'B'}}
-  // cxx98-14-note@#dr84-copy-ctor {{candidate constructor not viable: expects an lvalue for 1st argument}}
-  // cxx98-14-note@#dr84-ctor-from-C {{candidate constructor not viable: no known conversion from 'B' to 'C' for 1st argument}}
+  //   cxx98-14-note@#dr84-copy-ctor {{candidate constructor not viable: expects an lvalue for 1st argument}}
+  //   cxx98-14-note@#dr84-ctor-from-C {{candidate constructor not viable: no known conversion from 'B' to 'C' for 1st argument}}
 }
 
 namespace dr85 { // dr85: 3.4
@@ -1238,26 +1238,26 @@ namespace dr85 { // dr85: 3.4
     struct B {}; // #dr85-B-def
     struct B;
     // expected-error@-1 {{class member cannot be redeclared}}
-    // expected-note@#dr85-B-def {{previous declaration is here}}
+    //   expected-note@#dr85-B-def {{previous declaration is here}}
 
     union U;
     union U {}; // #dr85-U-def
     union U;
     // expected-error@-1 {{class member cannot be redeclared}}
-    // expected-note@#dr85-U-def {{previous declaration is here}}
+    //   expected-note@#dr85-U-def {{previous declaration is here}}
 
 #if __cplusplus >= 201103L
     enum E1 : int;
     enum E1 : int { e1 }; // #dr85-E1-def
     enum E1 : int;
     // expected-error@-1 {{class member cannot be redeclared}}
-    // expected-note@#dr85-E1-def {{previous declaration is here}}
+    //   expected-note@#dr85-E1-def {{previous declaration is here}}
 
     enum class E2;
     enum class E2 { e2 }; // #dr85-E2-def
     enum class E2;
     // expected-error@-1 {{class member cannot be redeclared}}
-    // expected-note@#dr85-E2-def {{previous declaration is here}}
+    //   expected-note@#dr85-E2-def {{previous declaration is here}}
 #endif
   };
 
@@ -1266,7 +1266,7 @@ namespace dr85 { // dr85: 3.4
     struct B {}; // #dr85-C-B-def
     struct B;
     // expected-error@-1 {{class member cannot be redeclared}}
-    // expected-note@#dr85-C-B-def {{previous declaration is here}}
+    //   expected-note@#dr85-C-B-def {{previous declaration is here}}
   };
 }
 
@@ -1288,7 +1288,7 @@ namespace dr88 { // dr88: 2.8
   };
   template<> const int S<int>::a = 4;
   // expected-error@-1 {{static data member 'a' already has an initializer}}
-  // expected-note@#dr88-a {{previous initialization is here}}
+  //   expected-note@#dr88-a {{previous initialization is here}}
   template<> const int S<int>::b = 4;
 }
 
@@ -1336,7 +1336,7 @@ namespace dr91 { // dr91: yes
 namespace dr92 { // dr92: 4 c++17
   void f() throw(int, float);
   // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
-  // since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
+  //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   void (*p)() throw(int) = &f; // #dr92-p
   // since-cxx17-error@#dr92-p {{ISO C++17 does not allow dynamic exception specifications}}
   //   since-cxx17-note@#dr92-p {{use 'noexcept(false)' instead}}
@@ -1344,7 +1344,7 @@ namespace dr92 { // dr92: 4 c++17
   // since-cxx17-warning@#dr92-p {{target exception specification is not superset of source}}
   void (*q)() throw(int);
   // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
-  // since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
+  //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   void (**pp)() throw() = &q;
   // cxx98-14-error@-1 {{exception specifications are not allowed beyond a single level of indirection}}
   // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (**)() throw()' with an rvalue of type 'void (**)() throw(int)'}}
@@ -1372,7 +1372,7 @@ namespace dr92 { // dr92: 4 c++17
 
   template<void() throw(int)> struct Y {};
   // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
-  // since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
+  //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   Y<&h> yp; // ok
 }
 
@@ -1397,7 +1397,7 @@ namespace dr95 { // dr95: 3.3
   A *q = N::p; // ok, same type
   struct B { void f() { N::C::f(); } };
   // expected-error@-1 {{'f' is a private member of 'dr95::N::C'}}
-  // expected-note@#dr95-C-f {{implicitly declared private here}}
+  //   expected-note@#dr95-C-f {{implicitly declared private here}}
 }
 
 namespace dr96 { // dr96: no
@@ -1433,24 +1433,24 @@ namespace dr98 { // dr98: yes
       try { // #dr98-try
         case 0:
         // expected-error@-1 {{cannot jump from switch statement to this case label}}
-        // expected-note@#dr98-try {{jump bypasses initialization of try block}}
+        //   expected-note@#dr98-try {{jump bypasses initialization of try block}}
         x:
           throw n;
       } catch (...) { // #dr98-catch
         case 1:
         // expected-error@-1 {{cannot jump from switch statement to this case label}}
-        // expected-note@#dr98-catch {{jump bypasses initialization of catch block}}
+        //   expected-note@#dr98-catch {{jump bypasses initialization of catch block}}
         y:
           throw n;
       }
       case 2:
         goto x;
         // expected-error@-1 {{cannot jump from this goto statement to its label}}
-        // expected-note@#dr98-try {{jump bypasses initialization of try block}}
+        //   expected-note@#dr98-try {{jump bypasses initialization of try block}}
       case 3:
         goto y;
         // expected-error@-1 {{cannot jump from this goto statement to its label}}
-        // expected-note@#dr98-catch {{jump bypasses initialization of catch block}}
+        //   expected-note@#dr98-catch {{jump bypasses initialization of catch block}}
     }
   }
 }

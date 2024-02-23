@@ -21,8 +21,6 @@ class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class TargetLibraryInfo;
 
-using VPRecipeOrVPValueTy = PointerUnion<VPRecipeBase *, VPValue *>;
-
 /// Helper class to create VPRecipies from IR instructions.
 class VPRecipeBuilder {
   /// The loop that we evaluate.
@@ -69,14 +67,16 @@ class VPRecipeBuilder {
   /// Check if the load or store instruction \p I should widened for \p
   /// Range.Start and potentially masked. Such instructions are handled by a
   /// recipe that takes an additional VPInstruction for the mask.
-  VPRecipeBase *tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
-                                 VFRange &Range, VPlanPtr &Plan);
+  VPWidenMemoryInstructionRecipe *tryToWidenMemory(Instruction *I,
+                                                   ArrayRef<VPValue *> Operands,
+                                                   VFRange &Range,
+                                                   VPlanPtr &Plan);
 
   /// Check if an induction recipe should be constructed for \p Phi. If so build
   /// and return it. If not, return null.
-  VPRecipeBase *tryToOptimizeInductionPHI(PHINode *Phi,
-                                          ArrayRef<VPValue *> Operands,
-                                          VPlan &Plan, VFRange &Range);
+  VPHeaderPHIRecipe *tryToOptimizeInductionPHI(PHINode *Phi,
+                                               ArrayRef<VPValue *> Operands,
+                                               VPlan &Plan, VFRange &Range);
 
   /// Optimize the special case where the operand of \p I is a constant integer
   /// induction variable.
@@ -84,12 +84,11 @@ class VPRecipeBuilder {
   tryToOptimizeInductionTruncate(TruncInst *I, ArrayRef<VPValue *> Operands,
                                  VFRange &Range, VPlan &Plan);
 
-  /// Handle non-loop phi nodes. Return a VPValue, if all incoming values match
-  /// or a new VPBlendRecipe otherwise. Currently all such phi nodes are turned
-  /// into a sequence of select instructions as the vectorizer currently
-  /// performs full if-conversion.
-  VPRecipeOrVPValueTy tryToBlend(PHINode *Phi, ArrayRef<VPValue *> Operands,
-                                 VPlanPtr &Plan);
+  /// Handle non-loop phi nodes. Return a new VPBlendRecipe otherwise. Currently
+  /// all such phi nodes are turned into a sequence of select instructions as
+  /// the vectorizer currently performs full if-conversion.
+  VPBlendRecipe *tryToBlend(PHINode *Phi, ArrayRef<VPValue *> Operands,
+                            VPlanPtr &Plan);
 
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
   /// return a new VPWidenCallRecipe. Range.End may be decreased to ensure same
@@ -100,11 +99,8 @@ class VPRecipeBuilder {
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
   /// if it can. The function should only be called if the cost-model indicates
   /// that widening should be performed.
-  VPRecipeBase *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
-                           VPBasicBlock *VPBB, VPlanPtr &Plan);
-
-  /// Return a VPRecipeOrValueTy with VPRecipeBase * being set. This can be used to force the use as VPRecipeBase* for recipe sub-types that also inherit from VPValue.
-  VPRecipeOrVPValueTy toVPRecipeResult(VPRecipeBase *R) const { return R; }
+  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
+                            VPBasicBlock *VPBB, VPlanPtr &Plan);
 
 public:
   VPRecipeBuilder(Loop *OrigLoop, const TargetLibraryInfo *TLI,
@@ -114,14 +110,12 @@ public:
       : OrigLoop(OrigLoop), TLI(TLI), Legal(Legal), CM(CM), PSE(PSE),
         Builder(Builder) {}
 
-  /// Check if an existing VPValue can be used for \p Instr or a recipe can be
-  /// create for \p I withing the given VF \p Range. If an existing VPValue can
-  /// be used or if a recipe can be created, return it. Otherwise return a
-  /// VPRecipeOrVPValueTy with nullptr.
-  VPRecipeOrVPValueTy tryToCreateWidenRecipe(Instruction *Instr,
-                                             ArrayRef<VPValue *> Operands,
-                                             VFRange &Range, VPBasicBlock *VPBB,
-                                             VPlanPtr &Plan);
+  /// Create and return a widened recipe for \p I if one can be created within
+  /// the given VF \p Range.
+  VPRecipeBase *tryToCreateWidenRecipe(Instruction *Instr,
+                                       ArrayRef<VPValue *> Operands,
+                                       VFRange &Range, VPBasicBlock *VPBB,
+                                       VPlanPtr &Plan);
 
   /// Set the recipe created for given ingredient. This operation is a no-op for
   /// ingredients that were not marked using a nullptr entry in the map.
@@ -138,12 +132,19 @@ public:
 
   /// A helper function that computes the predicate of the block BB, assuming
   /// that the header block of the loop is set to True or the loop mask when
-  /// tail folding. It returns the *entry* mask for the block BB.
-  VPValue *createBlockInMask(BasicBlock *BB, VPlan &Plan);
+  /// tail folding.
+  void createBlockInMask(BasicBlock *BB, VPlan &Plan);
+
+  /// Returns the *entry* mask for the block \p BB.
+  VPValue *getBlockInMask(BasicBlock *BB) const;
 
   /// A helper function that computes the predicate of the edge between SRC
   /// and DST.
   VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst, VPlan &Plan);
+
+  /// A helper that returns the previously computed predicate of the edge
+  /// between SRC and DST.
+  VPValue *getEdgeMask(BasicBlock *Src, BasicBlock *Dst) const;
 
   /// Mark given ingredient for recording its recipe once one is created for
   /// it.
@@ -165,8 +166,8 @@ public:
   /// Build a VPReplicationRecipe for \p I. If it is predicated, add the mask as
   /// last operand. Range.End may be decreased to ensure same recipe behavior
   /// from \p Range.Start to \p Range.End.
-  VPRecipeOrVPValueTy handleReplication(Instruction *I, VFRange &Range,
-                                        VPlan &Plan);
+  VPReplicateRecipe *handleReplication(Instruction *I, VFRange &Range,
+                                       VPlan &Plan);
 
   /// Add the incoming values from the backedge to reduction & first-order
   /// recurrence cross-iteration phis.

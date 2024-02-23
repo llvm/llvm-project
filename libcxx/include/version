@@ -16,7 +16,7 @@
 Macro name                                              Value   Headers
 __cpp_lib_adaptor_iterator_pair_constructor             202106L <queue> <stack>
 __cpp_lib_addressof_constexpr                           201603L <memory>
-__cpp_lib_allocate_at_least                             202106L <memory>
+__cpp_lib_allocate_at_least                             202302L <memory>
 __cpp_lib_allocator_traits_is_always_equal              201411L <deque> <forward_list> <list>
                                                                 <map> <memory> <scoped_allocator>
                                                                 <set> <string> <unordered_map>
@@ -266,7 +266,9 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 # define __cpp_lib_make_reverse_iterator                201402L
 # define __cpp_lib_make_unique                          201304L
 # define __cpp_lib_null_iterators                       201304L
-# define __cpp_lib_quoted_string_io                     201304L
+# if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#   define __cpp_lib_quoted_string_io                   201304L
+# endif
 # define __cpp_lib_result_of_sfinae                     201210L
 # define __cpp_lib_robust_nonmodifying_seq_ops          201304L
 # if !defined(_LIBCPP_HAS_NO_THREADS)
@@ -294,7 +296,7 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 # define __cpp_lib_clamp                                201603L
 # define __cpp_lib_enable_shared_from_this              201603L
 // # define __cpp_lib_execution                            201603L
-# if _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY
+# if !defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY
 #   define __cpp_lib_filesystem                         201703L
 # endif
 # define __cpp_lib_gcd_lcm                              201606L
@@ -323,7 +325,9 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 // # define __cpp_lib_parallel_algorithm                   201603L
 # define __cpp_lib_raw_memory_algorithms                201606L
 # define __cpp_lib_sample                               201603L
-# define __cpp_lib_scoped_lock                          201703L
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   define __cpp_lib_scoped_lock                        201703L
+# endif
 # if !defined(_LIBCPP_HAS_NO_THREADS)
 #   define __cpp_lib_shared_mutex                       201505L
 # endif
@@ -433,7 +437,7 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 
 #if _LIBCPP_STD_VER >= 23
 # define __cpp_lib_adaptor_iterator_pair_constructor    202106L
-# define __cpp_lib_allocate_at_least                    202106L
+# define __cpp_lib_allocate_at_least                    202302L
 // # define __cpp_lib_associative_heterogeneous_erasure    202110L
 // # define __cpp_lib_bind_back                            202202L
 # define __cpp_lib_byteswap                             202110L
@@ -496,7 +500,9 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 // # define __cpp_lib_freestanding_optional                202311L
 // # define __cpp_lib_freestanding_string_view             202311L
 // # define __cpp_lib_freestanding_variant                 202311L
-# define __cpp_lib_fstream_native_handle                202306L
+# if !defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#   define __cpp_lib_fstream_native_handle              202306L
+# endif
 // # define __cpp_lib_function_ref                         202306L
 // # define __cpp_lib_hazard_pointer                       202306L
 // # define __cpp_lib_linalg                               202311L
@@ -504,10 +510,10 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 // # define __cpp_lib_out_ptr                              202311L
 # define __cpp_lib_ratio                                202306L
 // # define __cpp_lib_rcu                                  202306L
-// # define __cpp_lib_saturation_arithmetic                202311L
+# define __cpp_lib_saturation_arithmetic                202311L
 // # define __cpp_lib_smart_ptr_owner_equality             202306L
 # define __cpp_lib_span_at                              202311L
-// # define __cpp_lib_span_initializer_list                202311L
+# define __cpp_lib_span_initializer_list                202311L
 // # define __cpp_lib_sstream_from_string_view             202306L
 // # define __cpp_lib_submdspan                            202306L
 // # define __cpp_lib_text_encoding                        202306L

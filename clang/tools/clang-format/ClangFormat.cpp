@@ -399,7 +399,8 @@ class ClangFormatDiagConsumer : public DiagnosticConsumer {
 };
 
 // Returns true on error.
-static bool format(StringRef FileName, bool IsSTDIN) {
+static bool format(StringRef FileName) {
+  const bool IsSTDIN = FileName == "-";
   if (!OutputXML && Inplace && IsSTDIN) {
     errs() << "error: cannot use -i when reading from stdin.\n";
     return false;
@@ -545,10 +546,10 @@ static void PrintVersion(raw_ostream &OS) {
 }
 
 // Dump the configuration.
-static int dumpConfig(bool IsSTDIN) {
+static int dumpConfig() {
   std::unique_ptr<llvm::MemoryBuffer> Code;
   // We can't read the code to detect the language if there's no file name.
-  if (!IsSTDIN) {
+  if (!FileNames.empty()) {
     // Read in the code in case the filename alone isn't enough to detect the
     // language.
     ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
@@ -560,7 +561,10 @@ static int dumpConfig(bool IsSTDIN) {
     Code = std::move(CodeOrErr.get());
   }
   llvm::Expected<clang::format::FormatStyle> FormatStyle =
-      clang::format::getStyle(Style, IsSTDIN ? AssumeFileName : FileNames[0],
+      clang::format::getStyle(Style,
+                              FileNames.empty() || FileNames[0] == "-"
+                                  ? AssumeFileName
+                                  : FileNames[0],
                               FallbackStyle, Code ? Code->getBuffer() : "");
   if (!FormatStyle) {
     llvm::errs() << llvm::toString(FormatStyle.takeError()) << "\n";
@@ -570,6 +574,11 @@ static int dumpConfig(bool IsSTDIN) {
   outs() << Config << "\n";
   return 0;
 }
+
+using String = SmallString<128>;
+static String IgnoreDir;             // Directory of .clang-format-ignore file.
+static String PrevDir;               // Directory of previous `FilePath`.
+static SmallVector<String> Patterns; // Patterns in .clang-format-ignore file.
 
 // Check whether `FilePath` is ignored according to the nearest
 // .clang-format-ignore file based on the rules below:
@@ -586,33 +595,50 @@ static bool isIgnored(StringRef FilePath) {
   if (!is_regular_file(FilePath))
     return false;
 
-  using namespace llvm::sys::path;
-  SmallString<128> Path, AbsPath{FilePath};
+  String Path;
+  String AbsPath{FilePath};
 
+  using namespace llvm::sys::path;
   make_absolute(AbsPath);
   remove_dots(AbsPath, /*remove_dot_dot=*/true);
 
-  StringRef IgnoreDir{AbsPath};
-  do {
-    IgnoreDir = parent_path(IgnoreDir);
-    if (IgnoreDir.empty())
+  if (StringRef Dir{parent_path(AbsPath)}; PrevDir != Dir) {
+    PrevDir = Dir;
+
+    for (;;) {
+      Path = Dir;
+      append(Path, ".clang-format-ignore");
+      if (is_regular_file(Path))
+        break;
+      Dir = parent_path(Dir);
+      if (Dir.empty())
+        return false;
+    }
+
+    IgnoreDir = convert_to_slash(Dir);
+
+    std::ifstream IgnoreFile{Path.c_str()};
+    if (!IgnoreFile.good())
       return false;
 
-    Path = IgnoreDir;
-    append(Path, ".clang-format-ignore");
-  } while (!is_regular_file(Path));
+    Patterns.clear();
 
-  std::ifstream IgnoreFile{Path.c_str()};
-  if (!IgnoreFile.good())
+    for (std::string Line; std::getline(IgnoreFile, Line);) {
+      if (const auto Pattern{StringRef{Line}.trim()};
+          // Skip empty and comment lines.
+          !Pattern.empty() && Pattern[0] != '#') {
+        Patterns.push_back(Pattern);
+      }
+    }
+  }
+
+  if (IgnoreDir.empty())
     return false;
 
-  const auto Pathname = convert_to_slash(AbsPath);
-  for (std::string Line; std::getline(IgnoreFile, Line);) {
-    auto Pattern = StringRef(Line).trim();
-    if (Pattern.empty() || Pattern[0] == '#')
-      continue;
-
-    const bool IsNegated = Pattern[0] == '!';
+  const auto Pathname{convert_to_slash(AbsPath)};
+  for (const auto &Pat : Patterns) {
+    const bool IsNegated = Pat[0] == '!';
+    StringRef Pattern{Pat};
     if (IsNegated)
       Pattern = Pattern.drop_front();
 
@@ -620,11 +646,14 @@ static bool isIgnored(StringRef FilePath) {
       continue;
 
     Pattern = Pattern.ltrim();
+
+    // `Pattern` is relative to `IgnoreDir` unless it starts with a slash.
+    // This doesn't support patterns containing drive names (e.g. `C:`).
     if (Pattern[0] != '/') {
-      Path = convert_to_slash(IgnoreDir);
+      Path = IgnoreDir;
       append(Path, Style::posix, Pattern);
       remove_dots(Path, /*remove_dot_dot=*/true, Style::posix);
-      Pattern = Path.str();
+      Pattern = Path;
     }
 
     if (clang::format::matchFilePath(Pattern, Pathname) == !IsNegated)
@@ -655,11 +684,8 @@ int main(int argc, const char **argv) {
     return 0;
   }
 
-  if (FileNames.empty())
-    FileNames.push_back("-");
-
   if (DumpConfig)
-    return dumpConfig(FileNames[0] == "-");
+    return dumpConfig();
 
   if (!Files.empty()) {
     std::ifstream ExternalFileOfFiles{std::string(Files)};
@@ -672,7 +698,10 @@ int main(int argc, const char **argv) {
     errs() << "Clang-formating " << LineNo << " files\n";
   }
 
-  if (FileNames.size() != 1 &&
+  if (FileNames.empty())
+    return clang::format::format("-");
+
+  if (FileNames.size() > 1 &&
       (!Offsets.empty() || !Lengths.empty() || !LineRanges.empty())) {
     errs() << "error: -offset, -length and -lines can only be used for "
               "single file.\n";
@@ -682,14 +711,13 @@ int main(int argc, const char **argv) {
   unsigned FileNo = 1;
   bool Error = false;
   for (const auto &FileName : FileNames) {
-    const bool IsSTDIN = FileName == "-";
-    if (!IsSTDIN && isIgnored(FileName))
+    if (isIgnored(FileName))
       continue;
     if (Verbose) {
       errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "
              << FileName << "\n";
     }
-    Error |= clang::format::format(FileName, IsSTDIN);
+    Error |= clang::format::format(FileName);
   }
   return Error ? 1 : 0;
 }

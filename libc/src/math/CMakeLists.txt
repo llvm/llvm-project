@@ -1,6 +1,9 @@
 add_subdirectory(generic)
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
   add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
+elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  # TODO: We should split this into 'nvptx' and 'amdgpu' for the GPU build.
+  add_subdirectory(${LIBC_TARGET_OS})
 endif()
 
 function(add_math_entrypoint_object name)
@@ -8,6 +11,7 @@ function(add_math_entrypoint_object name)
   # that first and return early if we are able to add an alias target for the
   # machine specific implementation.
   get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.${name}" fq_machine_specific_target_name)
+  get_fq_target_name("${LIBC_TARGET_OS}.${name}" fq_os_specific_target_name)
   if(TARGET ${fq_machine_specific_target_name})
     add_entrypoint_object(
       ${name}
@@ -16,17 +20,25 @@ function(add_math_entrypoint_object name)
         .${LIBC_TARGET_ARCHITECTURE}.${name}
     )
     return()
+  elseif(TARGET ${fq_os_specific_target_name})
+    add_entrypoint_object(
+      ${name}
+      ALIAS
+      DEPENDS
+        .${LIBC_TARGET_OS}.${name}
+    )
+    return()
   endif()
 
   # The GPU optionally depends on vendor libraries. If we emitted one of these
   # entrypoints it means the user requested it and we should use it instead.
-  get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.vendor.${name}" fq_vendor_specific_target_name)
+  get_fq_target_name("${LIBC_TARGET_OS}.vendor.${name}" fq_vendor_specific_target_name)
   if(TARGET ${fq_vendor_specific_target_name})
     add_entrypoint_object(
       ${name}
       ALIAS
       DEPENDS
-        .${LIBC_TARGET_ARCHITECTURE}.vendor.${name}
+        .${LIBC_TARGET_OS}.vendor.${name}
       VENDOR
     )
     return()
@@ -76,6 +88,7 @@ add_math_entrypoint_object(atanhf)
 add_math_entrypoint_object(ceil)
 add_math_entrypoint_object(ceilf)
 add_math_entrypoint_object(ceill)
+add_math_entrypoint_object(ceilf128)
 
 add_math_entrypoint_object(copysign)
 add_math_entrypoint_object(copysignf)
@@ -105,14 +118,17 @@ add_math_entrypoint_object(expm1f)
 add_math_entrypoint_object(fabs)
 add_math_entrypoint_object(fabsf)
 add_math_entrypoint_object(fabsl)
+add_math_entrypoint_object(fabsf128)
 
 add_math_entrypoint_object(fdim)
 add_math_entrypoint_object(fdimf)
 add_math_entrypoint_object(fdiml)
+add_math_entrypoint_object(fdimf128)
 
 add_math_entrypoint_object(floor)
 add_math_entrypoint_object(floorf)
 add_math_entrypoint_object(floorl)
+add_math_entrypoint_object(floorf128)
 
 add_math_entrypoint_object(fma)
 add_math_entrypoint_object(fmaf)
@@ -120,10 +136,12 @@ add_math_entrypoint_object(fmaf)
 add_math_entrypoint_object(fmax)
 add_math_entrypoint_object(fmaxf)
 add_math_entrypoint_object(fmaxl)
+add_math_entrypoint_object(fmaxf128)
 
 add_math_entrypoint_object(fmin)
 add_math_entrypoint_object(fminf)
 add_math_entrypoint_object(fminl)
+add_math_entrypoint_object(fminf128)
 
 add_math_entrypoint_object(fmod)
 add_math_entrypoint_object(fmodf)
@@ -131,6 +149,7 @@ add_math_entrypoint_object(fmodf)
 add_math_entrypoint_object(frexp)
 add_math_entrypoint_object(frexpf)
 add_math_entrypoint_object(frexpl)
+add_math_entrypoint_object(frexpf128)
 
 add_math_entrypoint_object(hypot)
 add_math_entrypoint_object(hypotf)
@@ -142,6 +161,7 @@ add_math_entrypoint_object(ilogbl)
 add_math_entrypoint_object(ldexp)
 add_math_entrypoint_object(ldexpf)
 add_math_entrypoint_object(ldexpl)
+add_math_entrypoint_object(ldexpf128)
 
 add_math_entrypoint_object(log10)
 add_math_entrypoint_object(log10f)
@@ -213,6 +233,7 @@ add_math_entrypoint_object(rintl)
 add_math_entrypoint_object(round)
 add_math_entrypoint_object(roundf)
 add_math_entrypoint_object(roundl)
+add_math_entrypoint_object(roundf128)
 
 add_math_entrypoint_object(scalbn)
 add_math_entrypoint_object(scalbnf)
@@ -230,6 +251,7 @@ add_math_entrypoint_object(sinhf)
 add_math_entrypoint_object(sqrt)
 add_math_entrypoint_object(sqrtf)
 add_math_entrypoint_object(sqrtl)
+add_math_entrypoint_object(sqrtf128)
 
 add_math_entrypoint_object(tan)
 add_math_entrypoint_object(tanf)
@@ -243,3 +265,4 @@ add_math_entrypoint_object(tgammaf)
 add_math_entrypoint_object(trunc)
 add_math_entrypoint_object(truncf)
 add_math_entrypoint_object(truncl)
+add_math_entrypoint_object(truncf128)

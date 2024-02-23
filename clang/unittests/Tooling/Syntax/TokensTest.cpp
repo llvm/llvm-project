@@ -816,6 +816,18 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
   EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("prev good")), std::nullopt);
 }
 
+TEST_F(TokenBufferTest, NoCrashForEofToken) {
+  recordTokens(R"cpp(
+    int main() {
+  )cpp");
+  ASSERT_TRUE(!Buffer.expandedTokens().empty());
+  ASSERT_EQ(Buffer.expandedTokens().back().kind(), tok::eof);
+  // Expanded range including `eof` is handled gracefully (`eof` is ignored).
+  EXPECT_THAT(
+      Buffer.spelledForExpanded(Buffer.expandedTokens()),
+      ValueIs(SameRange(Buffer.spelledTokens(SourceMgr->getMainFileID()))));
+}
+
 TEST_F(TokenBufferTest, ExpandedTokensForRange) {
   recordTokens(R"cpp(
     #define SIGN(X) X##_washere

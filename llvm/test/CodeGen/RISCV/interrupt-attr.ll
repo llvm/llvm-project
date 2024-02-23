@@ -6,12 +6,28 @@
 ; RUN: llc -mtriple riscv32-unknown-elf -mattr=+f,+d -o - %s \
 ; RUN: 2>&1 | FileCheck %s -check-prefix CHECK -check-prefix CHECK-RV32-FD
 ;
+; RUN: llc -mtriple riscv32-unknown-elf -mattr=+i -target-abi ilp32e -o - %s \
+; RUN: 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-RV32I-ILP32E
+; RUN: llc -mtriple riscv32-unknown-elf -mattr=+e -o - %s \
+; RUN: 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-RV32E
+; RUN: llc -mtriple riscv32-unknown-elf -mattr=+e,+f -o - %s \
+; RUN: 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-RV32E-F
+;
 ; RUN: llc -mtriple riscv64-unknown-elf -o - %s \
 ; RUN: 2>&1 | FileCheck %s -check-prefix CHECK -check-prefix CHECK-RV64
 ; RUN: llc -mtriple riscv64-unknown-elf -mattr=+f -o - %s \
 ; RUN: 2>&1 | FileCheck %s -check-prefix CHECK -check-prefix CHECK-RV64-F
 ; RUN: llc -mtriple riscv64-unknown-elf -mattr=+f,+d -o - %s \
 ; RUN: 2>&1 | FileCheck %s -check-prefix CHECK -check-prefix CHECK-RV64-FD
+;
+; RUN: llc -mtriple riscv64-unknown-elf -mattr=+i -target-abi lp64e -o - %s \
+; RUN: 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-RV64I-LP64E
+; RUN: llc -mtriple riscv64-unknown-elf -mattr=+e -o - %s \
+; RUN: 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-RV64E
+; RUN: llc -mtriple riscv64-unknown-elf -mattr=+e,+f -o - %s \
+; RUN: 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-RV64E-F
+; RUN: llc -mtriple riscv64-unknown-elf -mattr=+e,+f,+d -o - %s \
+; RUN: 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-RV64E-FD
 
 ;
 ; Checking for special return instructions (sret, mret).
@@ -289,6 +305,183 @@ define void @foo_with_call() #1 {
 ; CHECK-RV32-FD-NEXT:    addi sp, sp, 320
 ; CHECK-RV32-FD-NEXT:    mret
 ;
+; CHECK-RV32I-ILP32E-LABEL: foo_with_call:
+; CHECK-RV32I-ILP32E:       # %bb.0:
+; CHECK-RV32I-ILP32E-NEXT:    addi sp, sp, -104
+; CHECK-RV32I-ILP32E-NEXT:    sw ra, 100(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw t0, 96(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw t1, 92(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw t2, 88(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a0, 84(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a1, 80(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a2, 76(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a3, 72(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a4, 68(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a5, 64(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a6, 60(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a7, 56(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s2, 52(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s3, 48(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s4, 44(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s5, 40(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s6, 36(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s7, 32(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s8, 28(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s9, 24(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s10, 20(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s11, 16(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw t3, 12(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw t4, 8(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw t5, 4(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw t6, 0(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    call otherfoo
+; CHECK-RV32I-ILP32E-NEXT:    lw ra, 100(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw t0, 96(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw t1, 92(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw t2, 88(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a0, 84(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a1, 80(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a2, 76(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a3, 72(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a4, 68(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a5, 64(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a6, 60(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a7, 56(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s2, 52(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s3, 48(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s4, 44(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s5, 40(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s6, 36(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s7, 32(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s8, 28(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s9, 24(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s10, 20(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s11, 16(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw t3, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw t4, 8(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw t5, 4(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw t6, 0(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    addi sp, sp, 104
+; CHECK-RV32I-ILP32E-NEXT:    mret
+;
+; CHECK-RV32E-LABEL: foo_with_call:
+; CHECK-RV32E:       # %bb.0:
+; CHECK-RV32E-NEXT:    addi sp, sp, -40
+; CHECK-RV32E-NEXT:    sw ra, 36(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw t0, 32(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw t1, 28(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw t2, 24(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw a0, 20(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw a1, 16(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw a3, 8(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw a4, 4(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw a5, 0(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    call otherfoo
+; CHECK-RV32E-NEXT:    lw ra, 36(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw t0, 32(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw t1, 28(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw t2, 24(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw a1, 16(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw a2, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw a3, 8(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw a4, 4(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw a5, 0(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    addi sp, sp, 40
+; CHECK-RV32E-NEXT:    mret
+;
+; CHECK-RV32E-F-LABEL: foo_with_call:
+; CHECK-RV32E-F:       # %bb.0:
+; CHECK-RV32E-F-NEXT:    addi sp, sp, -168
+; CHECK-RV32E-F-NEXT:    sw ra, 164(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw t0, 160(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw t1, 156(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw t2, 152(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw a0, 148(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw a1, 144(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw a2, 140(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw a3, 136(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw a4, 132(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw a5, 128(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft0, 124(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft1, 120(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft2, 116(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft3, 112(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft4, 108(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft5, 104(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft6, 100(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft7, 96(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs0, 92(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs1, 88(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa0, 84(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa1, 80(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa2, 76(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa3, 72(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa4, 68(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa5, 64(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa6, 60(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa7, 56(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs2, 52(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs3, 48(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs4, 44(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs5, 40(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs6, 36(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs7, 32(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs8, 28(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs9, 24(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs10, 20(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs11, 16(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft8, 12(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft9, 8(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft10, 4(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft11, 0(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    call otherfoo
+; CHECK-RV32E-F-NEXT:    lw ra, 164(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw t0, 160(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw t1, 156(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw t2, 152(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw a0, 148(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw a1, 144(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw a2, 140(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw a3, 136(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw a4, 132(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw a5, 128(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft0, 124(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft1, 120(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft2, 116(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft3, 112(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft4, 108(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft5, 104(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft6, 100(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft7, 96(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs0, 92(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs1, 88(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa0, 84(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa1, 80(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa2, 76(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa3, 72(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa4, 68(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa5, 64(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa6, 60(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa7, 56(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs2, 52(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs3, 48(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs4, 44(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs5, 40(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs6, 36(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs7, 32(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs8, 28(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs9, 24(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs10, 20(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs11, 16(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft8, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft9, 8(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft10, 4(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft11, 0(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    addi sp, sp, 168
+; CHECK-RV32E-F-NEXT:    mret
+;
 ; CHECK-RV64-LABEL: foo_with_call:
 ; CHECK-RV64:       # %bb.0:
 ; CHECK-RV64-NEXT:    addi sp, sp, -128
@@ -533,6 +726,306 @@ define void @foo_with_call() #1 {
 ; CHECK-RV64-FD-NEXT:    fld ft11, 0(sp) # 8-byte Folded Reload
 ; CHECK-RV64-FD-NEXT:    addi sp, sp, 384
 ; CHECK-RV64-FD-NEXT:    mret
+;
+; CHECK-RV64I-LP64E-LABEL: foo_with_call:
+; CHECK-RV64I-LP64E:       # %bb.0:
+; CHECK-RV64I-LP64E-NEXT:    addi sp, sp, -208
+; CHECK-RV64I-LP64E-NEXT:    sd ra, 200(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd t0, 192(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd t1, 184(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd t2, 176(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a0, 168(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a1, 160(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a2, 152(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a3, 144(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a4, 136(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a5, 128(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a6, 120(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a7, 112(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s2, 104(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s3, 96(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s4, 88(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s5, 80(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s6, 72(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s7, 64(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s8, 56(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s9, 48(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s10, 40(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s11, 32(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd t3, 24(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd t4, 16(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd t5, 8(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd t6, 0(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    call otherfoo
+; CHECK-RV64I-LP64E-NEXT:    ld ra, 200(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld t0, 192(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld t1, 184(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld t2, 176(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a0, 168(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a1, 160(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a2, 152(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a3, 144(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a4, 136(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a5, 128(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a6, 120(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a7, 112(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s2, 104(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s3, 96(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s4, 88(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s5, 80(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s6, 72(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s7, 64(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s8, 56(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s9, 48(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s10, 40(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s11, 32(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld t3, 24(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld t4, 16(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld t5, 8(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld t6, 0(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    addi sp, sp, 208
+; CHECK-RV64I-LP64E-NEXT:    mret
+;
+; CHECK-RV64E-LABEL: foo_with_call:
+; CHECK-RV64E:       # %bb.0:
+; CHECK-RV64E-NEXT:    addi sp, sp, -80
+; CHECK-RV64E-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd t0, 64(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd t1, 56(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd t2, 48(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd a0, 40(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd a1, 32(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd a2, 24(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd a3, 16(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd a4, 8(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd a5, 0(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    call otherfoo
+; CHECK-RV64E-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld t0, 64(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld t1, 56(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld t2, 48(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld a0, 40(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld a2, 24(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld a3, 16(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld a4, 8(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld a5, 0(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    addi sp, sp, 80
+; CHECK-RV64E-NEXT:    mret
+;
+; CHECK-RV64E-F-LABEL: foo_with_call:
+; CHECK-RV64E-F:       # %bb.0:
+; CHECK-RV64E-F-NEXT:    addi sp, sp, -208
+; CHECK-RV64E-F-NEXT:    sd ra, 200(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd t0, 192(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd t1, 184(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd t2, 176(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd a0, 168(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd a1, 160(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd a2, 152(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd a3, 144(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd a4, 136(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd a5, 128(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft0, 124(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft1, 120(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft2, 116(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft3, 112(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft4, 108(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft5, 104(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft6, 100(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft7, 96(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs0, 92(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs1, 88(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa0, 84(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa1, 80(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa2, 76(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa3, 72(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa4, 68(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa5, 64(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa6, 60(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa7, 56(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs2, 52(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs3, 48(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs4, 44(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs5, 40(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs6, 36(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs7, 32(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs8, 28(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs9, 24(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs10, 20(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs11, 16(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft8, 12(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft9, 8(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft10, 4(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft11, 0(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    call otherfoo
+; CHECK-RV64E-F-NEXT:    ld ra, 200(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld t0, 192(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld t1, 184(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld t2, 176(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld a0, 168(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld a1, 160(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld a2, 152(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld a3, 144(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld a4, 136(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld a5, 128(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft0, 124(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft1, 120(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft2, 116(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft3, 112(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft4, 108(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft5, 104(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft6, 100(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft7, 96(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs0, 92(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs1, 88(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa0, 84(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa1, 80(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa2, 76(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa3, 72(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa4, 68(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa5, 64(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa6, 60(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa7, 56(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs2, 52(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs3, 48(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs4, 44(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs5, 40(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs6, 36(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs7, 32(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs8, 28(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs9, 24(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs10, 20(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs11, 16(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft8, 12(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft9, 8(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft10, 4(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft11, 0(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    addi sp, sp, 208
+; CHECK-RV64E-F-NEXT:    mret
+;
+; CHECK-RV64E-FD-LABEL: foo_with_call:
+; CHECK-RV64E-FD:       # %bb.0:
+; CHECK-RV64E-FD-NEXT:    addi sp, sp, -464
+; CHECK-RV64E-FD-NEXT:    sd ra, 456(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t0, 448(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t1, 440(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t2, 432(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a0, 424(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a1, 416(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a2, 408(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a3, 400(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a4, 392(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a5, 384(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a6, 376(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a7, 368(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s2, 360(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s3, 352(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s4, 344(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s5, 336(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s6, 328(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s7, 320(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s8, 312(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s9, 304(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s10, 296(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s11, 288(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t3, 280(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t4, 272(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t5, 264(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t6, 256(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft0, 248(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft1, 240(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft2, 232(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft3, 224(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft4, 216(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft5, 208(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft6, 200(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft7, 192(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs0, 184(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs1, 176(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa0, 168(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa1, 160(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa2, 152(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa3, 144(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa4, 136(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa5, 128(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa6, 120(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa7, 112(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs2, 104(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs3, 96(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs4, 88(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs5, 80(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs6, 72(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs7, 64(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs8, 56(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs9, 48(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs10, 40(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs11, 32(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft8, 24(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft9, 16(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft10, 8(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft11, 0(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    call otherfoo
+; CHECK-RV64E-FD-NEXT:    ld ra, 456(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t0, 448(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t1, 440(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t2, 432(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a0, 424(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a1, 416(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a2, 408(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a3, 400(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a4, 392(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a5, 384(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a6, 376(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a7, 368(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s2, 360(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s3, 352(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s4, 344(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s5, 336(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s6, 328(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s7, 320(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s8, 312(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s9, 304(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s10, 296(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s11, 288(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t3, 280(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t4, 272(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t5, 264(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t6, 256(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft0, 248(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft1, 240(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft2, 232(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft3, 224(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft4, 216(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft5, 208(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft6, 200(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft7, 192(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs0, 184(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs1, 176(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa0, 168(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa1, 160(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa2, 152(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa3, 144(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa4, 136(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa5, 128(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa6, 120(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa7, 112(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs2, 104(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs3, 96(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs4, 88(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs5, 80(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs6, 72(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs7, 64(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs8, 56(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs9, 48(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs10, 40(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs11, 32(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft8, 24(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft9, 16(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft10, 8(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft11, 0(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    addi sp, sp, 464
+; CHECK-RV64E-FD-NEXT:    mret
   %call = call i32 @otherfoo()
   ret void
 }
@@ -796,6 +1289,192 @@ define void @foo_fp_with_call() #2 {
 ; CHECK-RV32-FD-NEXT:    addi sp, sp, 336
 ; CHECK-RV32-FD-NEXT:    mret
 ;
+; CHECK-RV32I-ILP32E-LABEL: foo_fp_with_call:
+; CHECK-RV32I-ILP32E:       # %bb.0:
+; CHECK-RV32I-ILP32E-NEXT:    addi sp, sp, -108
+; CHECK-RV32I-ILP32E-NEXT:    sw ra, 104(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw t0, 100(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw t1, 96(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw t2, 92(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s0, 88(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a0, 84(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a1, 80(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a2, 76(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a3, 72(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a4, 68(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a5, 64(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a6, 60(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw a7, 56(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s2, 52(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s3, 48(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s4, 44(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s5, 40(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s6, 36(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s7, 32(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s8, 28(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s9, 24(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s10, 20(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw s11, 16(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw t3, 12(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw t4, 8(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw t5, 4(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    sw t6, 0(sp) # 4-byte Folded Spill
+; CHECK-RV32I-ILP32E-NEXT:    addi s0, sp, 108
+; CHECK-RV32I-ILP32E-NEXT:    call otherfoo
+; CHECK-RV32I-ILP32E-NEXT:    lw ra, 104(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw t0, 100(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw t1, 96(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw t2, 92(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s0, 88(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a0, 84(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a1, 80(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a2, 76(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a3, 72(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a4, 68(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a5, 64(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a6, 60(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw a7, 56(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s2, 52(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s3, 48(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s4, 44(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s5, 40(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s6, 36(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s7, 32(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s8, 28(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s9, 24(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s10, 20(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw s11, 16(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw t3, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw t4, 8(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw t5, 4(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    lw t6, 0(sp) # 4-byte Folded Reload
+; CHECK-RV32I-ILP32E-NEXT:    addi sp, sp, 108
+; CHECK-RV32I-ILP32E-NEXT:    mret
+;
+; CHECK-RV32E-LABEL: foo_fp_with_call:
+; CHECK-RV32E:       # %bb.0:
+; CHECK-RV32E-NEXT:    addi sp, sp, -44
+; CHECK-RV32E-NEXT:    sw ra, 40(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw t0, 36(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw t1, 32(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw t2, 28(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw a0, 20(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw a1, 16(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw a3, 8(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw a4, 4(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    sw a5, 0(sp) # 4-byte Folded Spill
+; CHECK-RV32E-NEXT:    addi s0, sp, 44
+; CHECK-RV32E-NEXT:    call otherfoo
+; CHECK-RV32E-NEXT:    lw ra, 40(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw t0, 36(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw t1, 32(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw t2, 28(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw a1, 16(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw a2, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw a3, 8(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw a4, 4(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    lw a5, 0(sp) # 4-byte Folded Reload
+; CHECK-RV32E-NEXT:    addi sp, sp, 44
+; CHECK-RV32E-NEXT:    mret
+;
+; CHECK-RV32E-F-LABEL: foo_fp_with_call:
+; CHECK-RV32E-F:       # %bb.0:
+; CHECK-RV32E-F-NEXT:    addi sp, sp, -172
+; CHECK-RV32E-F-NEXT:    sw ra, 168(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw t0, 164(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw t1, 160(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw t2, 156(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw s0, 152(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw a0, 148(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw a1, 144(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw a2, 140(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw a3, 136(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw a4, 132(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    sw a5, 128(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft0, 124(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft1, 120(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft2, 116(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft3, 112(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft4, 108(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft5, 104(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft6, 100(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft7, 96(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs0, 92(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs1, 88(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa0, 84(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa1, 80(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa2, 76(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa3, 72(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa4, 68(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa5, 64(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa6, 60(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fa7, 56(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs2, 52(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs3, 48(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs4, 44(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs5, 40(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs6, 36(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs7, 32(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs8, 28(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs9, 24(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs10, 20(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw fs11, 16(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft8, 12(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft9, 8(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft10, 4(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    fsw ft11, 0(sp) # 4-byte Folded Spill
+; CHECK-RV32E-F-NEXT:    addi s0, sp, 172
+; CHECK-RV32E-F-NEXT:    call otherfoo
+; CHECK-RV32E-F-NEXT:    lw ra, 168(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw t0, 164(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw t1, 160(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw t2, 156(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw s0, 152(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw a0, 148(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw a1, 144(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw a2, 140(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw a3, 136(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw a4, 132(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    lw a5, 128(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft0, 124(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft1, 120(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft2, 116(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft3, 112(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft4, 108(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft5, 104(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft6, 100(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft7, 96(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs0, 92(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs1, 88(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa0, 84(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa1, 80(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa2, 76(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa3, 72(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa4, 68(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa5, 64(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa6, 60(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fa7, 56(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs2, 52(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs3, 48(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs4, 44(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs5, 40(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs6, 36(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs7, 32(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs8, 28(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs9, 24(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs10, 20(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw fs11, 16(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft8, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft9, 8(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft10, 4(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    flw ft11, 0(sp) # 4-byte Folded Reload
+; CHECK-RV32E-F-NEXT:    addi sp, sp, 172
+; CHECK-RV32E-F-NEXT:    mret
+;
 ; CHECK-RV64-LABEL: foo_fp_with_call:
 ; CHECK-RV64:       # %bb.0:
 ; CHECK-RV64-NEXT:    addi sp, sp, -144
@@ -1049,6 +1728,318 @@ define void @foo_fp_with_call() #2 {
 ; CHECK-RV64-FD-NEXT:    fld ft11, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64-FD-NEXT:    addi sp, sp, 400
 ; CHECK-RV64-FD-NEXT:    mret
+;
+; CHECK-RV64I-LP64E-LABEL: foo_fp_with_call:
+; CHECK-RV64I-LP64E:       # %bb.0:
+; CHECK-RV64I-LP64E-NEXT:    addi sp, sp, -216
+; CHECK-RV64I-LP64E-NEXT:    sd ra, 208(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd t0, 200(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd t1, 192(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd t2, 184(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s0, 176(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a0, 168(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a1, 160(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a2, 152(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a3, 144(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a4, 136(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a5, 128(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a6, 120(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd a7, 112(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s2, 104(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s3, 96(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s4, 88(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s5, 80(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s6, 72(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s7, 64(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s8, 56(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s9, 48(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s10, 40(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd s11, 32(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd t3, 24(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd t4, 16(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd t5, 8(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    sd t6, 0(sp) # 8-byte Folded Spill
+; CHECK-RV64I-LP64E-NEXT:    addi s0, sp, 216
+; CHECK-RV64I-LP64E-NEXT:    call otherfoo
+; CHECK-RV64I-LP64E-NEXT:    ld ra, 208(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld t0, 200(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld t1, 192(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld t2, 184(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s0, 176(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a0, 168(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a1, 160(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a2, 152(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a3, 144(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a4, 136(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a5, 128(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a6, 120(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld a7, 112(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s2, 104(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s3, 96(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s4, 88(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s5, 80(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s6, 72(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s7, 64(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s8, 56(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s9, 48(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s10, 40(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld s11, 32(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld t3, 24(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld t4, 16(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld t5, 8(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    ld t6, 0(sp) # 8-byte Folded Reload
+; CHECK-RV64I-LP64E-NEXT:    addi sp, sp, 216
+; CHECK-RV64I-LP64E-NEXT:    mret
+;
+; CHECK-RV64E-LABEL: foo_fp_with_call:
+; CHECK-RV64E:       # %bb.0:
+; CHECK-RV64E-NEXT:    addi sp, sp, -88
+; CHECK-RV64E-NEXT:    sd ra, 80(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd t0, 72(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd t1, 64(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd t2, 56(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd a0, 40(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd a1, 32(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd a2, 24(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd a3, 16(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd a4, 8(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    sd a5, 0(sp) # 8-byte Folded Spill
+; CHECK-RV64E-NEXT:    addi s0, sp, 88
+; CHECK-RV64E-NEXT:    call otherfoo
+; CHECK-RV64E-NEXT:    ld ra, 80(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld t0, 72(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld t1, 64(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld t2, 56(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld a0, 40(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld a2, 24(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld a3, 16(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld a4, 8(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    ld a5, 0(sp) # 8-byte Folded Reload
+; CHECK-RV64E-NEXT:    addi sp, sp, 88
+; CHECK-RV64E-NEXT:    mret
+;
+; CHECK-RV64E-F-LABEL: foo_fp_with_call:
+; CHECK-RV64E-F:       # %bb.0:
+; CHECK-RV64E-F-NEXT:    addi sp, sp, -216
+; CHECK-RV64E-F-NEXT:    sd ra, 208(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd t0, 200(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd t1, 192(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd t2, 184(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd s0, 176(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd a0, 168(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd a1, 160(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd a2, 152(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd a3, 144(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd a4, 136(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    sd a5, 128(sp) # 8-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft0, 124(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft1, 120(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft2, 116(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft3, 112(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft4, 108(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft5, 104(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft6, 100(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft7, 96(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs0, 92(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs1, 88(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa0, 84(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa1, 80(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa2, 76(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa3, 72(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa4, 68(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa5, 64(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa6, 60(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fa7, 56(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs2, 52(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs3, 48(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs4, 44(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs5, 40(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs6, 36(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs7, 32(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs8, 28(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs9, 24(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs10, 20(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw fs11, 16(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft8, 12(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft9, 8(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft10, 4(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    fsw ft11, 0(sp) # 4-byte Folded Spill
+; CHECK-RV64E-F-NEXT:    addi s0, sp, 216
+; CHECK-RV64E-F-NEXT:    call otherfoo
+; CHECK-RV64E-F-NEXT:    ld ra, 208(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld t0, 200(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld t1, 192(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld t2, 184(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld s0, 176(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld a0, 168(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld a1, 160(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld a2, 152(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld a3, 144(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld a4, 136(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    ld a5, 128(sp) # 8-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft0, 124(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft1, 120(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft2, 116(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft3, 112(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft4, 108(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft5, 104(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft6, 100(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft7, 96(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs0, 92(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs1, 88(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa0, 84(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa1, 80(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa2, 76(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa3, 72(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa4, 68(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa5, 64(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa6, 60(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fa7, 56(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs2, 52(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs3, 48(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs4, 44(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs5, 40(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs6, 36(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs7, 32(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs8, 28(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs9, 24(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs10, 20(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw fs11, 16(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft8, 12(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft9, 8(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft10, 4(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    flw ft11, 0(sp) # 4-byte Folded Reload
+; CHECK-RV64E-F-NEXT:    addi sp, sp, 216
+; CHECK-RV64E-F-NEXT:    mret
+;
+; CHECK-RV64E-FD-LABEL: foo_fp_with_call:
+; CHECK-RV64E-FD:       # %bb.0:
+; CHECK-RV64E-FD-NEXT:    addi sp, sp, -472
+; CHECK-RV64E-FD-NEXT:    sd ra, 464(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t0, 456(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t1, 448(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t2, 440(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s0, 432(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a0, 424(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a1, 416(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a2, 408(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a3, 400(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a4, 392(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a5, 384(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a6, 376(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a7, 368(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s2, 360(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s3, 352(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s4, 344(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s5, 336(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s6, 328(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s7, 320(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s8, 312(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s9, 304(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s10, 296(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s11, 288(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t3, 280(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t4, 272(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t5, 264(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t6, 256(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft0, 248(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft1, 240(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft2, 232(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft3, 224(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft4, 216(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft5, 208(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft6, 200(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft7, 192(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs0, 184(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs1, 176(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa0, 168(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa1, 160(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa2, 152(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa3, 144(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa4, 136(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa5, 128(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa6, 120(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fa7, 112(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs2, 104(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs3, 96(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs4, 88(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs5, 80(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs6, 72(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs7, 64(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs8, 56(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs9, 48(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs10, 40(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd fs11, 32(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft8, 24(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft9, 16(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft10, 8(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    fsd ft11, 0(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    addi s0, sp, 472
+; CHECK-RV64E-FD-NEXT:    call otherfoo
+; CHECK-RV64E-FD-NEXT:    ld ra, 464(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t0, 456(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t1, 448(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t2, 440(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s0, 432(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a0, 424(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a1, 416(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a2, 408(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a3, 400(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a4, 392(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a5, 384(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a6, 376(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a7, 368(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s2, 360(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s3, 352(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s4, 344(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s5, 336(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s6, 328(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s7, 320(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s8, 312(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s9, 304(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s10, 296(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s11, 288(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t3, 280(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t4, 272(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t5, 264(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t6, 256(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft0, 248(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft1, 240(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft2, 232(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft3, 224(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft4, 216(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft5, 208(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft6, 200(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft7, 192(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs0, 184(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs1, 176(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa0, 168(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa1, 160(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa2, 152(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa3, 144(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa4, 136(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa5, 128(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa6, 120(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fa7, 112(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs2, 104(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs3, 96(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs4, 88(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs5, 80(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs6, 72(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs7, 64(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs8, 56(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs9, 48(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs10, 40(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld fs11, 32(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft8, 24(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft9, 16(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft10, 8(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    fld ft11, 0(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    addi sp, sp, 472
+; CHECK-RV64E-FD-NEXT:    mret
   %call = call i32 @otherfoo()
   ret void
 }

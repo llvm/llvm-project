@@ -265,6 +265,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
     }
+    for (MVT VT : {MVT::v4i32, MVT::v2i64}) {
+      setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
+      setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
+    }
     for (MVT VT : {MVT::v4f32, MVT::v2f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
       setOperationAction({ISD::FMUL, ISD::FDIV}, VT, Legal);
@@ -306,6 +310,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setCondCodeAction(
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
+    }
+    for (MVT VT : {MVT::v8i32, MVT::v4i32, MVT::v4i64}) {
+      setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
+      setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
     }
     for (MVT VT : {MVT::v8f32, MVT::v4f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
@@ -525,8 +533,7 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
 
   if (isa<ConstantSDNode>(Idx) &&
       (EltTy == MVT::i32 || EltTy == MVT::i64 || EltTy == MVT::f32 ||
-       EltTy == MVT::f64 ||
-       cast<ConstantSDNode>(Idx)->getZExtValue() < NumElts / 2))
+       EltTy == MVT::f64 || Idx->getAsZExtVal() < NumElts / 2))
     return Op;
 
   return SDValue();
@@ -1395,28 +1402,28 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
     if (IntrinsicEnum == Intrinsic::loongarch_cacop_w && Subtarget.is64Bit())
       return emitIntrinsicErrorMessage(Op, ErrorMsgReqLA32, DAG);
     // call void @llvm.loongarch.cacop.[d/w](uimm5, rj, simm12)
-    unsigned Imm1 = cast<ConstantSDNode>(Op2)->getZExtValue();
+    unsigned Imm1 = Op2->getAsZExtVal();
     int Imm2 = cast<ConstantSDNode>(Op.getOperand(4))->getSExtValue();
     if (!isUInt<5>(Imm1) || !isInt<12>(Imm2))
       return emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG);
     return Op;
   }
   case Intrinsic::loongarch_dbar: {
-    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    unsigned Imm = Op2->getAsZExtVal();
     return !isUInt<15>(Imm)
                ? emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG)
                : DAG.getNode(LoongArchISD::DBAR, DL, MVT::Other, Chain,
                              DAG.getConstant(Imm, DL, GRLenVT));
   }
   case Intrinsic::loongarch_ibar: {
-    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    unsigned Imm = Op2->getAsZExtVal();
     return !isUInt<15>(Imm)
                ? emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG)
                : DAG.getNode(LoongArchISD::IBAR, DL, MVT::Other, Chain,
                              DAG.getConstant(Imm, DL, GRLenVT));
   }
   case Intrinsic::loongarch_break: {
-    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    unsigned Imm = Op2->getAsZExtVal();
     return !isUInt<15>(Imm)
                ? emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG)
                : DAG.getNode(LoongArchISD::BREAK, DL, MVT::Other, Chain,
@@ -1425,7 +1432,7 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::loongarch_movgr2fcsr: {
     if (!Subtarget.hasBasicF())
       return emitIntrinsicErrorMessage(Op, ErrorMsgReqF, DAG);
-    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    unsigned Imm = Op2->getAsZExtVal();
     return !isUInt<2>(Imm)
                ? emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG)
                : DAG.getNode(LoongArchISD::MOVGR2FCSR, DL, MVT::Other, Chain,
@@ -1434,7 +1441,7 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
                                          Op.getOperand(3)));
   }
   case Intrinsic::loongarch_syscall: {
-    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    unsigned Imm = Op2->getAsZExtVal();
     return !isUInt<15>(Imm)
                ? emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG)
                : DAG.getNode(LoongArchISD::SYSCALL, DL, MVT::Other, Chain,
@@ -1937,7 +1944,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
         emitErrorAndReplaceIntrinsicResults(N, Results, DAG, ErrorMsgReqF);
         return;
       }
-      unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+      unsigned Imm = Op2->getAsZExtVal();
       if (!isUInt<2>(Imm)) {
         emitErrorAndReplaceIntrinsicResults(N, Results, DAG, ErrorMsgOOR);
         return;
@@ -1993,7 +2000,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
       CSR_CASE(iocsrrd_d);
 #undef CSR_CASE
     case Intrinsic::loongarch_csrrd_w: {
-      unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+      unsigned Imm = Op2->getAsZExtVal();
       if (!isUInt<14>(Imm)) {
         emitErrorAndReplaceIntrinsicResults(N, Results, DAG, ErrorMsgOOR);
         return;

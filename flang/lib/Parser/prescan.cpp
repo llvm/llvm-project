@@ -438,7 +438,8 @@ void Prescanner::NextChar() {
 // character is reached; handles C-style comments in preprocessing
 // directives, Fortran ! comments, stuff after the right margin in
 // fixed form, and all forms of line continuation.
-void Prescanner::SkipToNextSignificantCharacter() {
+bool Prescanner::SkipToNextSignificantCharacter() {
+  auto anyContinuationLine{false};
   if (inPreprocessorDirective_) {
     SkipCComments();
   } else {
@@ -449,6 +450,7 @@ void Prescanner::SkipToNextSignificantCharacter() {
       mightNeedSpace = *at_ == '\n';
     }
     for (; Continuation(mightNeedSpace); mightNeedSpace = false) {
+      anyContinuationLine = true;
       ++continuationLines_;
       if (MustSkipToEndOfLine()) {
         SkipToEndOfLine();
@@ -458,6 +460,7 @@ void Prescanner::SkipToNextSignificantCharacter() {
       tabInCurrentLine_ = true;
     }
   }
+  return anyContinuationLine;
 }
 
 void Prescanner::SkipCComments() {
@@ -605,13 +608,14 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       do {
         EmitCharAndAdvance(tokens, *at_);
       } while (IsHexadecimalDigit(*at_));
-    } else if (IsLetter(*at_)) {
-      // Handles FORMAT(3I9HHOLLERITH) by skipping over the first I so that
-      // we don't misrecognize I9HOLLERITH as an identifier in the next case.
-      EmitCharAndAdvance(tokens, *at_);
     } else if (at_[0] == '_' && (at_[1] == '\'' || at_[1] == '"')) { // 4_"..."
       EmitCharAndAdvance(tokens, *at_);
       QuotedCharacterLiteral(tokens, start);
+    } else if (IsLetter(*at_) && !preventHollerith_ &&
+        parenthesisNesting_ > 0) {
+      // Handles FORMAT(3I9HHOLLERITH) by skipping over the first I so that
+      // we don't misrecognize I9HOLLERITH as an identifier in the next case.
+      EmitCharAndAdvance(tokens, *at_);
     }
     preventHollerith_ = false;
   } else if (*at_ == '.') {
@@ -625,7 +629,33 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     }
     preventHollerith_ = false;
   } else if (IsLegalInIdentifier(*at_)) {
-    while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_))) {
+    int parts{1};
+    const char *afterLast{nullptr};
+    do {
+      EmitChar(tokens, *at_);
+      ++at_, ++column_;
+      afterLast = at_;
+      if (SkipToNextSignificantCharacter() && IsLegalIdentifierStart(*at_)) {
+        tokens.CloseToken();
+        ++parts;
+      }
+    } while (IsLegalInIdentifier(*at_));
+    if (parts >= 3) {
+      // Subtlety: When an identifier is split across three or more continuation
+      // lines (or two continuation lines, immediately preceded or followed
+      // by '&' free form continuation line markers, its parts are kept as
+      // distinct pp-tokens so that macro operates on them independently.
+      // This trick accommodates the historic practice of using line
+      // continuation for token pasting after replacement.
+    } else if (parts == 2) {
+      if ((start > start_ && start[-1] == '&') ||
+          (afterLast < limit_ && (*afterLast == '&' || *afterLast == '\n'))) {
+        // call &                call foo&        call foo&
+        //   &MACRO&      OR       &MACRO&   OR     &MACRO
+        //   &foo(...)             &(...)
+      } else {
+        tokens.ReopenLastToken();
+      }
     }
     if (InFixedFormSource()) {
       SkipSpaces();

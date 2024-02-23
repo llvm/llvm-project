@@ -45,6 +45,9 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#ifdef HAVE_LIBPFM
+#include <perfmon/perf_event.h>
+#endif // HAVE_LIBPFM
 #endif
 
 #define GET_AVAILABLE_OPCODE_CHECKER
@@ -679,8 +682,9 @@ public:
   ExegesisX86Target()
       : ExegesisTarget(X86CpuPfmCounters, X86_MC::isOpcodeAvailable) {}
 
-  Expected<std::unique_ptr<pfm::Counter>>
+  Expected<std::unique_ptr<pfm::CounterGroup>>
   createCounter(StringRef CounterName, const LLVMState &State,
+                ArrayRef<const char *> ValidationCounters,
                 const pid_t ProcessID) const override {
     // If LbrSamplingPeriod was provided, then ignore the
     // CounterName because we only have one for LBR.
@@ -689,16 +693,24 @@ public:
       // __linux__ (for now)
 #if defined(HAVE_LIBPFM) && defined(LIBPFM_HAS_FIELD_CYCLES) &&                \
     defined(__linux__)
+      // TODO(boomanaiden154): Add in support for using validation counters when
+      // using LBR counters.
+      if (ValidationCounters.size() > 0)
+        return make_error<StringError>(
+            "Using LBR is not currently supported with validation counters",
+            errc::invalid_argument);
+
       return std::make_unique<X86LbrCounter>(
           X86LbrPerfEvent(LbrSamplingPeriod));
 #else
-      return llvm::make_error<llvm::StringError>(
+      return make_error<StringError>(
           "LBR counter requested without HAVE_LIBPFM, LIBPFM_HAS_FIELD_CYCLES, "
           "or running on Linux.",
-          llvm::errc::invalid_argument);
+          errc::invalid_argument);
 #endif
     }
-    return ExegesisTarget::createCounter(CounterName, State, ProcessID);
+    return ExegesisTarget::createCounter(CounterName, State, ValidationCounters,
+                                         ProcessID);
   }
 
   enum ArgumentRegisters { CodeSize = X86::R12, AuxiliaryMemoryFD = X86::R13 };
@@ -813,9 +825,9 @@ private:
     report_fatal_error("Running X86 exegesis on unsupported target");
 #endif
 #endif
-    return llvm::make_error<llvm::StringError>(
+    return make_error<StringError>(
         "LBR not supported on this kernel and/or platform",
-        llvm::errc::not_supported);
+        errc::not_supported);
   }
 
   std::unique_ptr<SavedState> withSavedState() const override {
@@ -1243,7 +1255,7 @@ std::vector<MCInst>
 ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const {
   std::vector<MCInst> ConfigurePerfCounterCode;
   if (SaveRegisters)
-    saveSyscallRegisters(ConfigurePerfCounterCode, 2);
+    saveSyscallRegisters(ConfigurePerfCounterCode, 3);
   ConfigurePerfCounterCode.push_back(
       loadImmediate(X86::RDI, 64, APInt(64, getAuxiliaryMemoryStartAddress())));
   ConfigurePerfCounterCode.push_back(MCInstBuilder(X86::MOV32rm)
@@ -1255,9 +1267,13 @@ ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const 
                                          .addReg(0));
   ConfigurePerfCounterCode.push_back(
       loadImmediate(X86::RSI, 64, APInt(64, Request)));
+#ifdef HAVE_LIBPFM
+  ConfigurePerfCounterCode.push_back(
+      loadImmediate(X86::RDX, 64, APInt(64, PERF_IOC_FLAG_GROUP)));
+#endif // HAVE_LIBPFM
   generateSyscall(SYS_ioctl, ConfigurePerfCounterCode);
   if (SaveRegisters)
-    restoreSyscallRegisters(ConfigurePerfCounterCode, 2);
+    restoreSyscallRegisters(ConfigurePerfCounterCode, 3);
   return ConfigurePerfCounterCode;
 }
 
@@ -1280,7 +1296,7 @@ std::vector<InstructionTemplate> ExegesisX86Target::generateInstructionVariants(
   bool Exploration = false;
   SmallVector<SmallVector<MCOperand, 1>, 4> VariableChoices;
   VariableChoices.resize(Instr.Variables.size());
-  for (auto I : llvm::zip(Instr.Variables, VariableChoices)) {
+  for (auto I : zip(Instr.Variables, VariableChoices)) {
     const Variable &Var = std::get<0>(I);
     SmallVectorImpl<MCOperand> &Choices = std::get<1>(I);
 

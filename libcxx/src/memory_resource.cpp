@@ -189,7 +189,8 @@ void unsynchronized_pool_resource::__adhoc_pool::__do_deallocate(
         return;
       }
     }
-    _LIBCPP_ASSERT_UNCATEGORIZED(false, "deallocating a block that was not allocated with this allocator");
+    // The request to deallocate memory ends up being a no-op, likely resulting in a memory leak.
+    _LIBCPP_ASSERT_VALID_DEALLOCATION(false, "deallocating a block that was not allocated with this allocator");
   }
 }
 

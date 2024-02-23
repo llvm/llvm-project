@@ -31,10 +31,10 @@ struct HypotfChecker : public virtual LIBC_NAMESPACE::testing::Test {
     uint32_t xbits = start;
     uint64_t failed = 0;
     do {
-      float x = float(FPBits(xbits));
+      float x = FPBits(xbits).get_val();
       uint32_t ybits = Y_START;
       do {
-        float y = float(FPBits(ybits));
+        float y = FPBits(ybits).get_val();
         bool correct = TEST_FP_EQ(LIBC_NAMESPACE::fputil::hypot(x, y),
                                   LIBC_NAMESPACE::hypotf(x, y));
         // Using MPFR will be much slower.

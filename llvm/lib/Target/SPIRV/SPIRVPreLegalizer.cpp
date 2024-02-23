@@ -122,6 +122,9 @@ static void foldConstantsIntoIntrinsics(MachineFunction &MF) {
 
 static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                            MachineIRBuilder MIB) {
+  // Get access to information about available extensions
+  const SPIRVSubtarget *ST =
+      static_cast<const SPIRVSubtarget *>(&MIB.getMF().getSubtarget());
   SmallVector<MachineInstr *, 10> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -141,7 +144,7 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           getMDOperandAsType(MI.getOperand(3).getMetadata(), 0), MIB);
       SPIRVType *AssignedPtrType = GR->getOrCreateSPIRVPointerType(
           BaseTy, MI, *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo(),
-          addressSpaceToStorageClass(MI.getOperand(4).getImm()));
+          addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST));
 
       // If the bitcast would be redundant, replace all uses with the source
       // register.
@@ -250,6 +253,10 @@ Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
 
 static void generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                  MachineIRBuilder MIB) {
+  // Get access to information about available extensions
+  const SPIRVSubtarget *ST =
+      static_cast<const SPIRVSubtarget *>(&MIB.getMF().getSubtarget());
+
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<MachineInstr *, 10> ToErase;
 
@@ -269,7 +276,7 @@ static void generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             getMDOperandAsType(MI.getOperand(2).getMetadata(), 0), MIB);
         SPIRVType *AssignedPtrType = GR->getOrCreateSPIRVPointerType(
             BaseTy, MI, *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo(),
-            addressSpaceToStorageClass(MI.getOperand(3).getImm()));
+            addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         insertAssignInstr(Reg, nullptr, AssignedPtrType, GR, MIB,
@@ -607,6 +614,40 @@ static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   }
 }
 
+static bool isImplicitFallthrough(MachineBasicBlock &MBB) {
+  if (MBB.empty())
+    return true;
+
+  // Branching SPIR-V intrinsics are not detected by this generic method.
+  // Thus, we can only trust negative result.
+  if (!MBB.canFallThrough())
+    return false;
+
+  // Otherwise, we must manually check if we have a SPIR-V intrinsic which
+  // prevent an implicit fallthrough.
+  for (MachineBasicBlock::reverse_iterator It = MBB.rbegin(), E = MBB.rend();
+       It != E; ++It) {
+    if (isSpvIntrinsic(*It, Intrinsic::spv_switch))
+      return false;
+  }
+  return true;
+}
+
+static void removeImplicitFallthroughs(MachineFunction &MF,
+                                       MachineIRBuilder MIB) {
+  // It is valid for MachineBasicBlocks to not finish with a branch instruction.
+  // In such cases, they will simply fallthrough their immediate successor.
+  for (MachineBasicBlock &MBB : MF) {
+    if (!isImplicitFallthrough(MBB))
+      continue;
+
+    assert(std::distance(MBB.successors().begin(), MBB.successors().end()) ==
+           1);
+    MIB.setInsertPt(MBB, MBB.end());
+    MIB.buildBr(**MBB.successors().begin());
+  }
+}
+
 bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   // Initialize the type registry.
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
@@ -619,6 +660,7 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   generateAssignInstrs(MF, GR, MIB);
   processSwitches(MF, GR, MIB);
   processInstrsWithTypeFolding(MF, GR, MIB);
+  removeImplicitFallthroughs(MF, MIB);
 
   return true;
 }

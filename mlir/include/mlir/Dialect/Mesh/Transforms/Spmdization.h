@@ -16,16 +16,32 @@
 namespace mlir {
 namespace mesh {
 
-// Return the sharded shape `shape` acording ot sharding `sharding`.
-ShapedType shardShapedType(ShapedType shape, ClusterOp mesh,
-                           MeshShardingAttr sharding);
-
 // Insert resharding spmdization of the value `sourceShardValue`
 // from sharding `source` to sharding `target`.
 // `sourceShardValue` is the already sharded value according to `source`.
-TypedValue<ShapedType> reshard(OpBuilder &builder, ClusterOp mesh,
-                               ShardOp source, ShardOp target,
+//
+// Example
+//
+// ```mlir
+//   mesh.mesh @mesh_1d(shape = 2)
+//   ...
+//   %1 = mesh.shard %0 to <@mesh_1d, [[0]]> : tensor<2xi8>
+//   %2 = mesh.shard %1 to <@mesh_1d, [[]]> annotate_for_users: tensor<2xi8>
+// ```
+//
+// Will result in
+//
+// ```mlir
+//   %1 = mesh.all_gather %0 on @mesh_1d mesh_axes = [0] gather_axis = 0 :
+//     tensor<1xi8> -> tensor<2xi8>
+// ```
+TypedValue<ShapedType> reshard(OpBuilder &builder, MeshOp mesh, ShardOp source,
+                               ShardOp target,
                                TypedValue<ShapedType> sourceShardValue);
+TypedValue<ShapedType> reshard(OpBuilder &builder, ShardOp source,
+                               ShardOp target,
+                               TypedValue<ShapedType> sourceShardValue,
+                               SymbolTableCollection &symbolTableCollection);
 
 void reshardingRegisterDependentDialects(DialectRegistry &registry);
 

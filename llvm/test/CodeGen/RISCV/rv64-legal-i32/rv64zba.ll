@@ -1891,3 +1891,37 @@ define i64 @pack_i64_3(i32 signext %a, i32 signext %b) nounwind {
   %or = or i64 %shl1, %zexta
   ret i64 %or
 }
+
+define i64 @pack_i64_disjoint(i64 %a, i64 %b) nounwind {
+; RV64I-LABEL: pack_i64_disjoint:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: pack_i64_disjoint:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    add.uw a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %shl = and i64 %a, 4294967295
+  %or = or disjoint i64 %b, %shl
+  ret i64 %or
+}
+
+define i64 @pack_i64_disjoint_2(i32 signext %a, i64 %b) nounwind {
+; RV64I-LABEL: pack_i64_disjoint_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: pack_i64_disjoint_2:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    add.uw a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %zexta = zext i32 %a to i64
+  %or = or disjoint i64 %b, %zexta
+  ret i64 %or
+}

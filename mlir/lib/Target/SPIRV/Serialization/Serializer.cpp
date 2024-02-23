@@ -197,10 +197,14 @@ void Serializer::processExtension() {
 }
 
 void Serializer::processMemoryModel() {
+  StringAttr memoryModelName = module.getMemoryModelAttrName();
   auto mm = static_cast<uint32_t>(
-      module->getAttrOfType<spirv::MemoryModelAttr>("memory_model").getValue());
+      module->getAttrOfType<spirv::MemoryModelAttr>(memoryModelName)
+          .getValue());
+
+  StringAttr addressingModelName = module.getAddressingModelAttrName();
   auto am = static_cast<uint32_t>(
-      module->getAttrOfType<spirv::AddressingModelAttr>("addressing_model")
+      module->getAttrOfType<spirv::AddressingModelAttr>(addressingModelName)
           .getValue());
 
   encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
@@ -645,26 +649,6 @@ LogicalResult Serializer::prepareBasicType(
         getConstantOp(cooperativeMatrixType.getRows()),
         getConstantOp(cooperativeMatrixType.getColumns()),
         getConstantOp(static_cast<uint32_t>(cooperativeMatrixType.getUse())));
-    return success();
-  }
-
-  if (auto cooperativeMatrixType =
-          dyn_cast<spirv::CooperativeMatrixNVType>(type)) {
-    uint32_t elementTypeID = 0;
-    if (failed(processTypeImpl(loc, cooperativeMatrixType.getElementType(),
-                               elementTypeID, serializationCtx))) {
-      return failure();
-    }
-    typeEnum = spirv::Opcode::OpTypeCooperativeMatrixNV;
-    auto getConstantOp = [&](uint32_t id) {
-      auto attr = IntegerAttr::get(IntegerType::get(type.getContext(), 32), id);
-      return prepareConstantInt(loc, attr);
-    };
-    llvm::append_values(
-        operands, elementTypeID,
-        getConstantOp(static_cast<uint32_t>(cooperativeMatrixType.getScope())),
-        getConstantOp(cooperativeMatrixType.getRows()),
-        getConstantOp(cooperativeMatrixType.getColumns()));
     return success();
   }
 

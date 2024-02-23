@@ -209,7 +209,7 @@ createSubViewIntersection(RewriterBase &b, VectorTransferOpInterface xferOp,
     AffineExpr i, j, k;
     bindDims(xferOp.getContext(), i, j, k);
     SmallVector<AffineMap, 4> maps =
-        AffineMap::inferFromExprList(MapList{{i - j, k}});
+        AffineMap::inferFromExprList(MapList{{i - j, k}}, b.getContext());
     // affine_min(%dimMemRef - %index, %dimAlloc)
     Value affineMin = b.create<affine::AffineMinOp>(
         loc, index.getType(), maps[0], ValueRange{dimMemRef, index, dimAlloc});
@@ -525,7 +525,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   SmallVector<bool, 4> bools(xferOp.getTransferRank(), true);
   auto inBoundsAttr = b.getBoolArrayAttr(bools);
   if (options.vectorTransferSplit == VectorTransferSplit::ForceInBounds) {
-    b.updateRootInPlace(xferOp, [&]() {
+    b.modifyOpInPlace(xferOp, [&]() {
       xferOp->setAttr(xferOp.getInBoundsAttrName(), inBoundsAttr);
     });
     return success();
@@ -598,7 +598,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
     for (unsigned i = 0, e = returnTypes.size(); i != e; ++i)
       xferReadOp.setOperand(i, fullPartialIfOp.getResult(i));
 
-    b.updateRootInPlace(xferOp, [&]() {
+    b.modifyOpInPlace(xferOp, [&]() {
       xferOp->setAttr(xferOp.getInBoundsAttrName(), inBoundsAttr);
     });
 

@@ -346,6 +346,36 @@ define i8 @shl_add(i8 %x, i8 %y) {
   ret i8 %sh1
 }
 
+define i8 @shl_add_multiuse(i8 %x) {
+; CHECK-LABEL: @shl_add_multiuse(
+; CHECK-NEXT:    [[SH0:%.*]] = shl i8 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use(i8 [[SH0]])
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[X]], 5
+; CHECK-NEXT:    [[SH1:%.*]] = add i8 [[R]], 88
+; CHECK-NEXT:    ret i8 [[SH1]]
+;
+  %sh0 = shl i8 %x, 3
+  %r = add i8 %sh0, -42
+  call void @use(i8 %sh0)
+  %sh1 = shl i8 %r, 2
+  ret i8 %sh1
+}
+
+define i8 @shl_add_multiuse_nonconstant(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl_add_multiuse_nonconstant(
+; CHECK-NEXT:    [[SH0:%.*]] = shl i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[SH0]])
+; CHECK-NEXT:    [[SH1:%.*]] = shl i8 [[R]], 2
+; CHECK-NEXT:    ret i8 [[SH1]]
+;
+  %sh0 = shl i8 %x, 3
+  %r = add i8 %sh0, %y
+  call void @use(i8 %sh0)
+  %sh1 = shl i8 %r, 2
+  ret i8 %sh1
+}
+
 define <2 x i8> @shl_add_nonuniform(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @shl_add_nonuniform(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> [[X:%.*]], <i8 5, i8 4>

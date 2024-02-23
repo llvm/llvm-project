@@ -1036,8 +1036,10 @@ unsigned HexagonMCInstrInfo::SubregisterBit(unsigned Consumer,
                                             unsigned Producer2) {
   // If we're a single vector consumer of a double producer, set subreg bit
   // based on if we're accessing the lower or upper register component
-  if (IsVecRegPair(Producer) && IsVecRegSingle(Consumer))
-    return (Consumer - Hexagon::V0) & 0x1;
+  if (IsVecRegPair(Producer) && IsVecRegSingle(Consumer)) {
+    unsigned Rev = IsReverseVecRegPair(Producer);
+    return ((Consumer - Hexagon::V0) & 0x1) ^ Rev;
+  }
   if (Producer2 != Hexagon::NoRegister)
     return Consumer == Producer;
   return 0;

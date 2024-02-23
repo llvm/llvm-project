@@ -199,7 +199,7 @@ foreach(entry ${runtimes})
     list(APPEND prefixes "LLVM_LIBC")
     list(APPEND prefixes "LIBC_")
     # The `libc` project may require '-DCUDAToolkit_ROOT' in GPU mode.
-    if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+    if(LLVM_LIBC_GPU_BUILD)
       list(APPEND prefixes "CUDA")
     endif()
   endif()
@@ -424,20 +424,29 @@ if(runtimes)
     endforeach()
   endif()
   if("libc" IN_LIST LLVM_ENABLE_PROJECTS AND
-      (LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES))
-    if(TARGET libc-hdrgen)
-      set(libc_tools libc-hdrgen)
-      set(libc_cmake_args "-DLIBC_HDRGEN_EXE=$<TARGET_FILE:libc-hdrgen>"
-                          "-DLLVM_LIBC_FULL_BUILD=ON")
-      list(APPEND extra_deps ${libc_tools})
+      (LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD))
+    if(LIBC_HDRGEN_EXE)
+      set(hdrgen_exe ${LIBC_HDRGEN_EXE})
     else()
-      # We want to build the libc build tools before we can build the libc
-      # itself. So, the libc project should be included in LLVM_ENABLE_PROJECTS.
-      # This should have been done in llvm/CMakeLists.txt automatically when
-      # "libc" is detected in LLVM_ENABLE_RUNTIMES.
-      message(FATAL_ERROR "libc-hdrgen target missing unexpectedly")
+      if(TARGET ${LIBC_TABLEGEN_EXE})
+        set(hdrgen_exe $<TARGET_FILE:${LIBC_TABLEGEN_EXE}>)
+      else()
+        set(hdrgen_exe ${LIBC_TABLEGEN_EXE})
+      endif()
+      set(hdrgen_deps ${LIBC_TABLEGEN_TARGET})
     endif()
-    if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+    if(NOT hdrgen_exe)
+      message(FATAL_ERROR "libc-hdrgen executable missing")
+    endif()
+    set(libc_cmake_args "-DLIBC_HDRGEN_EXE=${hdrgen_exe}"
+                        "-DLLVM_LIBC_FULL_BUILD=ON")
+    list(APPEND extra_deps ${hdrgen_deps})
+    if(LLVM_LIBC_GPU_BUILD)
+      list(APPEND libc_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
+      # The `libc` project may require '-DCUDAToolkit_ROOT' in GPU mode.
+      if(CUDAToolkit_ROOT)
+        list(APPEND libc_cmake_args "-DCUDAToolkit_ROOT=${CUDAToolkit_ROOT}")
+      endif()
       foreach(dep clang-offload-packager nvptx-arch amdgpu-arch)
         if(TARGET ${dep})
           list(APPEND extra_deps ${dep})
@@ -489,7 +498,7 @@ if(runtimes)
       check_apple_target(${name} runtime)
 
       runtime_register_target(${name}
-        DEPENDS ${builtins_dep_name} ${libc_tools}
+        DEPENDS ${builtins_dep_name} ${hdrgen_deps}
         CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${libc_cmake_args}
         EXTRA_ARGS TARGET_TRIPLE ${name})
     endforeach()

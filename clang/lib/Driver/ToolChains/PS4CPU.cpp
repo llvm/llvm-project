@@ -292,7 +292,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
         << Twine(Platform, " system libraries").str() << SDKLibDir << Whence;
     return;
   }
-  getFilePaths().push_back(std::string(SDKLibDir.str()));
+  getFilePaths().push_back(std::string(SDKLibDir));
 }
 
 void toolchains::PS4PS5Base::AddClangSystemIncludeArgs(
@@ -358,6 +358,12 @@ void toolchains::PS4PS5Base::addClangTargetOptions(
   }
 
   CC1Args.push_back("-fno-use-init-array");
+
+  // Default to -fvisibility-global-new-delete=source for PS5.
+  if (getTriple().isPS5() &&
+      !DriverArgs.hasArg(options::OPT_fvisibility_global_new_delete_EQ,
+                         options::OPT_fvisibility_global_new_delete_hidden))
+    CC1Args.push_back("-fvisibility-global-new-delete=source");
 
   const Arg *A =
       DriverArgs.getLastArg(options::OPT_fvisibility_from_dllstorageclass,

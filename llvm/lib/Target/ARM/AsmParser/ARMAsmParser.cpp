@@ -737,6 +737,9 @@ public:
   void ReportNearMisses(SmallVectorImpl<NearMissInfo> &NearMisses, SMLoc IDLoc,
                         OperandVector &Operands);
 
+  MCSymbolRefExpr::VariantKind
+  getVariantKindForName(StringRef Name) const override;
+
   void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override;
 
   void onLabelParsed(MCSymbol *Symbol) override;
@@ -4045,7 +4048,7 @@ void ARMOperand::print(raw_ostream &OS) const {
 /// @name Auto-generated Match Functions
 /// {
 
-static unsigned MatchRegisterName(StringRef Name);
+static MCRegister MatchRegisterName(StringRef Name);
 
 /// }
 
@@ -8308,6 +8311,14 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       return Error (Operands[3]->getStartLoc(), "Q-register indexes must be 2 and 0 or 3 and 1");
     break;
   }
+  case ARM::MVE_SQRSHR:
+  case ARM::MVE_UQRSHL: {
+    if (Operands[2]->getReg() == Operands[3]->getReg()) {
+      return Error(Operands[2]->getStartLoc(),
+                   "Rda register and Rm register can't be identical");
+    }
+    break;
+  }
   case ARM::UMAAL:
   case ARM::UMLAL:
   case ARM::UMULL:
@@ -11350,6 +11361,37 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
   return false;
 }
 
+MCSymbolRefExpr::VariantKind
+ARMAsmParser::getVariantKindForName(StringRef Name) const {
+  return StringSwitch<MCSymbolRefExpr::VariantKind>(Name.lower())
+      .Case("funcdesc", MCSymbolRefExpr::VK_FUNCDESC)
+      .Case("got", MCSymbolRefExpr::VK_GOT)
+      .Case("got_prel", MCSymbolRefExpr::VK_ARM_GOT_PREL)
+      .Case("gotfuncdesc", MCSymbolRefExpr::VK_GOTFUNCDESC)
+      .Case("gotoff", MCSymbolRefExpr::VK_GOTOFF)
+      .Case("gotofffuncdesc", MCSymbolRefExpr::VK_GOTOFFFUNCDESC)
+      .Case("gottpoff", MCSymbolRefExpr::VK_GOTTPOFF)
+      .Case("gottpoff_fdpic", MCSymbolRefExpr::VK_GOTTPOFF_FDPIC)
+      .Case("imgrel", MCSymbolRefExpr::VK_COFF_IMGREL32)
+      .Case("none", MCSymbolRefExpr::VK_ARM_NONE)
+      .Case("plt", MCSymbolRefExpr::VK_PLT)
+      .Case("prel31", MCSymbolRefExpr::VK_ARM_PREL31)
+      .Case("sbrel", MCSymbolRefExpr::VK_ARM_SBREL)
+      .Case("secrel32", MCSymbolRefExpr::VK_SECREL)
+      .Case("target1", MCSymbolRefExpr::VK_ARM_TARGET1)
+      .Case("target2", MCSymbolRefExpr::VK_ARM_TARGET2)
+      .Case("tlscall", MCSymbolRefExpr::VK_TLSCALL)
+      .Case("tlsdesc", MCSymbolRefExpr::VK_TLSDESC)
+      .Case("tlsgd", MCSymbolRefExpr::VK_TLSGD)
+      .Case("tlsgd_fdpic", MCSymbolRefExpr::VK_TLSGD_FDPIC)
+      .Case("tlsld", MCSymbolRefExpr::VK_TLSLD)
+      .Case("tlsldm", MCSymbolRefExpr::VK_TLSLDM)
+      .Case("tlsldm_fdpic", MCSymbolRefExpr::VK_TLSLDM_FDPIC)
+      .Case("tlsldo", MCSymbolRefExpr::VK_ARM_TLSLDO)
+      .Case("tpoff", MCSymbolRefExpr::VK_TPOFF)
+      .Default(MCSymbolRefExpr::VK_Invalid);
+}
+
 void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
   // We need to flush the current implicit IT block on a label, because it is
   // not legal to branch into an IT block.
@@ -12668,11 +12710,7 @@ bool ARMAsmParser::enableArchExtFeature(StringRef Name, SMLoc &ExtLoc) {
       {ARM::AEK_MAVERICK, {}, {}},
       {ARM::AEK_XSCALE, {}, {}},
   };
-  bool EnableFeature = true;
-  if (Name.starts_with_insensitive("no")) {
-    EnableFeature = false;
-    Name = Name.substr(2);
-  }
+  bool EnableFeature = !Name.consume_front_insensitive("no");
   uint64_t FeatureKind = ARM::parseArchExt(Name);
   if (FeatureKind == ARM::AEK_INVALID)
     return Error(ExtLoc, "unknown architectural extension: " + Name);

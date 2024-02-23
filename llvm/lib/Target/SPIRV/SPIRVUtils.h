@@ -27,6 +27,7 @@ class MachineRegisterInfo;
 class Register;
 class StringRef;
 class SPIRVInstrInfo;
+class SPIRVSubtarget;
 
 // Add the given string as a series of integer operand, inserting null
 // terminators and padding to make sure the operands all have 32-bit
@@ -62,7 +63,7 @@ unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC);
 
 // Convert an LLVM IR address space to a SPIR-V storage class.
 SPIRV::StorageClass::StorageClass
-addressSpaceToStorageClass(unsigned AddrSpace);
+addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI);
 
 SPIRV::MemorySemantics::MemorySemantics
 getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC);
@@ -79,7 +80,7 @@ MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
 uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI);
 
 // Check if MI is a SPIR-V specific intrinsic call.
-bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID);
+bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID);
 
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
@@ -97,5 +98,8 @@ bool hasBuiltinTypePrefix(StringRef Name);
 
 // Check if given LLVM type is a special opaque builtin type.
 bool isSpecialOpaqueType(const Type *Ty);
+
+// Check if the function is an SPIR-V entry point
+bool isEntryPoint(const Function &F);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

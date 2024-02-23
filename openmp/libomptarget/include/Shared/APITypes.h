@@ -30,7 +30,7 @@ struct __tgt_offload_entry {
   char *name;       // Name of the function or global
   size_t size;      // Size of the entry info (0 if it is a function)
   int32_t flags;    // Flags associated with the entry, e.g. 'link'.
-  int32_t reserved; // Reserved, to be used by the runtime library.
+  int32_t data;     // Extra data associated with the entry.
 };
 
 /// This struct is a record of the device image information
@@ -60,6 +60,11 @@ struct __tgt_target_table {
   __tgt_offload_entry *EntriesBegin; // Begin of the table with all the entries
   __tgt_offload_entry
       *EntriesEnd; // End of the table with all the entries (non inclusive)
+};
+
+/// This struct contains a handle to a loaded binary in the plugin device.
+struct __tgt_device_binary {
+  uintptr_t handle;
 };
 
 // clang-format on

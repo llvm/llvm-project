@@ -40,7 +40,7 @@
 # RUN: not ld.lld --gc-sections main.o a.so def-hidden.o -o /dev/null 2>&1 | FileCheck %s
 ## The definition def.so is ignored.
 # RUN: ld.lld -shared def.o -o def.so
-# RUN: not ld.lld --gc-sections main.o a.so def.so def-hidden.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld --gc-sections main.o a.so def.so def-hidden.o --fatal-warnings -o /dev/null
 
 # CHECK-NOT:   error:
 # CHECK:       error: undefined reference due to --no-allow-shlib-undefined: x1{{$}}

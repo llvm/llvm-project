@@ -77,10 +77,19 @@ static ToolChain::RTTIMode CalculateRTTIMode(const ArgList &Args,
   return NoRTTI ? ToolChain::RM_Disabled : ToolChain::RM_Enabled;
 }
 
+static ToolChain::ExceptionsMode CalculateExceptionsMode(const ArgList &Args) {
+  if (Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions,
+                   true)) {
+    return ToolChain::EM_Enabled;
+  }
+  return ToolChain::EM_Disabled;
+}
+
 ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
                      const ArgList &Args)
     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
-      CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)) {
+      CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)),
+      CachedExceptionsMode(CalculateExceptionsMode(Args)) {
   auto addIfExists = [this](path_list &List, const std::string &Path) {
     if (getVFS().exists(Path))
       List.push_back(Path);
@@ -263,6 +272,18 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   default:
     break;
   }
+
+  // Include fno-exceptions and fno-rtti
+  // to improve multilib selection
+  if (getRTTIMode() == ToolChain::RTTIMode::RM_Disabled)
+    Result.push_back("-fno-rtti");
+  else
+    Result.push_back("-frtti");
+
+  if (getExceptionsMode() == ToolChain::ExceptionsMode::EM_Disabled)
+    Result.push_back("-fno-exceptions");
+  else
+    Result.push_back("-fexceptions");
 
   // Sort and remove duplicates.
   std::sort(Result.begin(), Result.end());
@@ -606,7 +627,7 @@ std::string ToolChain::getCompilerRTPath() const {
   } else {
     llvm::sys::path::append(Path, "lib", getOSLibName());
   }
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 std::string ToolChain::getCompilerRTBasename(const ArgList &Args,
@@ -659,7 +680,7 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
     SmallString<128> P(LibPath);
     llvm::sys::path::append(P, CRTBasename);
     if (getVFS().exists(P))
-      return std::string(P.str());
+      return std::string(P);
   }
 
   // Fall back to the old expected compiler-rt name if the new one does not
@@ -668,7 +689,7 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
       buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/true);
   SmallString<128> Path(getCompilerRTPath());
   llvm::sys::path::append(Path, CRTBasename);
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
@@ -783,7 +804,7 @@ ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
     llvm::sys::path::append(Path, "lib");
     for (auto &S : SS)
       llvm::sys::path::append(Path, S);
-    Paths.push_back(std::string(Path.str()));
+    Paths.push_back(std::string(Path));
   };
 
   AddPath({getTriple().str()});

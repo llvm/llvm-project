@@ -195,7 +195,7 @@ std::error_code ModularizeUtilities::loadSingleHeaderListsAndDependencies(
     // Get canonical form.
     HeaderFileName = getCanonicalPath(HeaderFileName);
     // Save the resulting header file path and dependencies.
-    HeaderFileNames.push_back(std::string(HeaderFileName.str()));
+    HeaderFileNames.push_back(std::string(HeaderFileName));
     Dependencies[HeaderFileName.str()] = Dependents;
   }
   return std::error_code();
@@ -248,7 +248,7 @@ std::error_code ModularizeUtilities::loadProblemHeaderList(
     // Get canonical form.
     HeaderFileName = getCanonicalPath(HeaderFileName);
     // Save the resulting header file path.
-    ProblemFileNames.push_back(std::string(HeaderFileName.str()));
+    ProblemFileNames.push_back(std::string(HeaderFileName));
   }
   return std::error_code();
 }
@@ -487,7 +487,7 @@ std::string ModularizeUtilities::getDirectoryFromPath(StringRef Path) {
   sys::path::remove_filename(Directory);
   if (Directory.size() == 0)
     return ".";
-  return std::string(Directory.str());
+  return std::string(Directory);
 }
 
 // Add unique problem file.

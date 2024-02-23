@@ -55,6 +55,13 @@ static cl::opt<std::string> targetTriple("target",
                                          cl::desc("specify a target triple"),
                                          cl::init("native"));
 
+static cl::opt<std::string>
+    targetCPU("target-cpu", cl::desc("specify a target CPU"), cl::init(""));
+
+static cl::opt<std::string>
+    targetFeatures("target-features", cl::desc("specify the target features"),
+                   cl::init(""));
+
 static cl::opt<bool> codeGenLLVM(
     "code-gen-llvm",
     cl::desc("Run only CodeGen passes and translate FIR to LLVM IR"),
@@ -83,6 +90,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), SMLoc());
   mlir::DialectRegistry registry;
   fir::support::registerDialects(registry);
+  fir::support::addFIRExtensions(registry);
   mlir::MLIRContext context(registry);
   fir::support::loadDialects(context);
   fir::support::registerLLVMTranslation(context);
@@ -104,6 +112,8 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   fir::KindMapping kindMap{&context};
   fir::setTargetTriple(*owningRef, targetTriple);
   fir::setKindMapping(*owningRef, kindMap);
+  fir::setTargetCPU(*owningRef, targetCPU);
+  fir::setTargetFeatures(*owningRef, targetFeatures);
   // tco is a testing tool, so it will happily use the target independent
   // data layout if none is on the module.
   fir::support::setMLIRDataLayoutFromAttributes(*owningRef,

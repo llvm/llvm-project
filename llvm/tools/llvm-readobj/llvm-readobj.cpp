@@ -42,7 +42,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -98,6 +97,7 @@ static bool ArchSpecificInfo;
 static bool BBAddrMap;
 bool ExpandRelocs;
 static bool CGProfile;
+static bool Decompress;
 bool Demangle;
 static bool DependentLibraries;
 static bool DynRelocs;
@@ -213,6 +213,7 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::ArchSpecificInfo = Args.hasArg(OPT_arch_specific);
   opts::BBAddrMap = Args.hasArg(OPT_bb_addr_map);
   opts::CGProfile = Args.hasArg(OPT_cg_profile);
+  opts::Decompress = Args.hasArg(OPT_decompress);
   opts::Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, false);
   opts::DependentLibraries = Args.hasArg(OPT_dependent_libraries);
   opts::DynRelocs = Args.hasArg(OPT_dyn_relocations);
@@ -440,9 +441,9 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
     Dumper->printSymbols(opts::Symbols, opts::DynamicSymbols,
                          opts::ExtraSymInfo, SymComp);
   if (!opts::StringDump.empty())
-    Dumper->printSectionsAsString(Obj, opts::StringDump);
+    Dumper->printSectionsAsString(Obj, opts::StringDump, opts::Decompress);
   if (!opts::HexDump.empty())
-    Dumper->printSectionsAsHex(Obj, opts::HexDump);
+    Dumper->printSectionsAsHex(Obj, opts::HexDump, opts::Decompress);
   if (opts::HashTable)
     Dumper->printHashTable();
   if (opts::GnuHashTable)
@@ -633,7 +634,6 @@ std::unique_ptr<ScopedPrinter> createWriter() {
 }
 
 int llvm_readobj_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
   ReadobjOptTable Tbl;

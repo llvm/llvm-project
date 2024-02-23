@@ -19,7 +19,7 @@ define void @stores_single_use_gep_constexpr() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store ptr @fn0, ptr getelementptr inbounds (%struct.global.20ptr, ptr @global.20ptr, i64 0, i32 0), align 8
+  store ptr @fn0, ptr @global.20ptr, align 8
   store ptr @fn1, ptr getelementptr inbounds (%struct.global.20ptr, ptr @global.20ptr, i64 0, i32 1), align 8
   store ptr @fn2, ptr getelementptr inbounds (%struct.global.20ptr, ptr @global.20ptr, i64 0, i32 2), align 8
   store ptr @fn3, ptr getelementptr inbounds (%struct.global.20ptr, ptr @global.20ptr, i64 0, i32 3), align 8

@@ -367,6 +367,7 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
   case llvm::Triple::IOS:
   case llvm::Triple::TvOS:
   case llvm::Triple::DriverKit:
+  case llvm::Triple::XROS:
     // Darwin defaults to "softfp" for v6 and v7.
     if (Triple.isWatchABI())
       return FloatABI::Hard;
@@ -836,8 +837,8 @@ fp16_fml_fallthrough:
     if (A->getOption().matches(options::OPT_mlong_calls))
       Features.push_back("+long-calls");
   } else if (KernelOrKext && (!Triple.isiOS() || Triple.isOSVersionLT(6)) &&
-             !Triple.isWatchOS()) {
-      Features.push_back("+long-calls");
+             !Triple.isWatchOS() && !Triple.isXROS()) {
+    Features.push_back("+long-calls");
   }
 
   // Generate execute-only output (no data access to code sections).
@@ -889,25 +890,25 @@ fp16_fml_fallthrough:
     // SCTLR.U bit, which is architecture-specific. We assume ARMv6
     // Darwin and NetBSD targets support unaligned accesses, and others don't.
     //
-    // ARMv7 always has SCTLR.U set to 1, but it has a new SCTLR.A bit
-    // which raises an alignment fault on unaligned accesses. Linux
-    // defaults this bit to 0 and handles it as a system-wide (not
-    // per-process) setting. It is therefore safe to assume that ARMv7+
-    // Linux targets support unaligned accesses. The same goes for NaCl
-    // and Windows.
+    // ARMv7 always has SCTLR.U set to 1, but it has a new SCTLR.A bit which
+    // raises an alignment fault on unaligned accesses. Assume ARMv7+ supports
+    // unaligned accesses, except ARMv6-M, and ARMv8-M without the Main
+    // Extension. This aligns with the default behavior of ARM's downstream
+    // versions of GCC and Clang.
     //
-    // The above behavior is consistent with GCC.
+    // Users can change the default behavior via -m[no-]unaliged-access.
     int VersionNum = getARMSubArchVersionNumber(Triple);
     if (Triple.isOSDarwin() || Triple.isOSNetBSD()) {
       if (VersionNum < 6 ||
           Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m)
         Features.push_back("+strict-align");
-    } else if (Triple.isOSLinux() || Triple.isOSNaCl() ||
-               Triple.isOSWindows()) {
-      if (VersionNum < 7)
-        Features.push_back("+strict-align");
-    } else
+    } else if (VersionNum < 7 ||
+               Triple.getSubArch() ==
+                   llvm::Triple::SubArchType::ARMSubArch_v6m ||
+               Triple.getSubArch() ==
+                   llvm::Triple::SubArchType::ARMSubArch_v8m_baseline) {
       Features.push_back("+strict-align");
+    }
   }
 
   // llvm does not support reserving registers in general. There is support

@@ -27,7 +27,7 @@
 ; RUN:   | FileCheck %s --check-prefix=VERBOSE --check-prefix=CONV "--implicit-check-not={{DW_TAG|NULL}}"
 
 
-; SPLITCONV: Compile Unit:{{.*}} DWO_id = 0x24191746f389535f
+; SPLITCONV: Compile Unit:{{.*}} DWO_id = 0x06580df9fdd5b54b
 ; SPLIT: DW_TAG_skeleton_unit
 
 ; CONV: DW_TAG_compile_unit

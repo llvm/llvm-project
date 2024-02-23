@@ -79,9 +79,9 @@ bool Parser::isCXXDeclarationStatement(
             getCurScope(), *II, Tok.getLocation(), SS, /*Template=*/nullptr);
         if (Actions.isCurrentClassName(*II, getCurScope(), &SS) ||
             isDeductionGuide) {
-          if (isConstructorDeclarator(/*Unqualified=*/SS.isEmpty(),
-                                      isDeductionGuide,
-                                      DeclSpec::FriendSpecified::No))
+          if (isConstructorDeclarator(
+                  /*Unqualified=*/SS.isEmpty(), isDeductionGuide,
+                  /*IsFriend=*/DeclSpec::FriendSpecified::No))
             return true;
         } else if (SS.isNotEmpty()) {
           // If the scope is not empty, it could alternatively be something like
@@ -737,7 +737,8 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
 Parser::CXX11AttributeKind
 Parser::isCXX11AttributeSpecifier(bool Disambiguate,
                                   bool OuterMightBeMessageSend) {
-  if (Tok.is(tok::kw_alignas))
+  // alignas is an attribute specifier in C++ but not in C23.
+  if (Tok.is(tok::kw_alignas) && !getLangOpts().C23)
     return CAK_AttributeSpecifier;
 
   if (Tok.isRegularKeywordAttribute())
@@ -894,7 +895,8 @@ bool Parser::TrySkipAttributes() {
       // Note that explicitly checking for `[[` and `]]` allows to fail as
       // expected in the case of the Objective-C message send syntax.
       ConsumeBracket();
-    } else if (Tok.isRegularKeywordAttribute()) {
+    } else if (Tok.isRegularKeywordAttribute() &&
+               !doesKeywordAttributeTakeArgs(Tok.getKind())) {
       ConsumeToken();
     } else {
       ConsumeToken();
@@ -1362,6 +1364,17 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   };
   switch (Tok.getKind()) {
   case tok::identifier: {
+    if (GetLookAheadToken(1).is(tok::ellipsis) &&
+        GetLookAheadToken(2).is(tok::l_square)) {
+
+      if (TryAnnotateTypeOrScopeToken())
+        return TPResult::Error;
+      if (Tok.is(tok::identifier))
+        return TPResult::False;
+      return isCXXDeclarationSpecifier(ImplicitTypenameContext::No,
+                                       BracedCastResult, InvalidAsDeclSpec);
+    }
+
     // Check for need to substitute AltiVec __vector keyword
     // for "vector" identifier.
     if (TryAltiVecVectorToken())
@@ -1754,6 +1767,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
 
       return TPResult::True;
     }
+
     [[fallthrough]];
 
   case tok::kw_char:
@@ -1781,6 +1795,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw__Accum:
   case tok::kw__Fract:
   case tok::kw__Sat:
+  case tok::annot_pack_indexing_type:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
     if (NextToken().is(tok::l_paren))
@@ -1827,6 +1842,9 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
 #include "clang/Basic/TransformTypeTraits.def"
     return TPResult::True;
 
+  // C11 _Alignas
+  case tok::kw__Alignas:
+    return TPResult::True;
   // C11 _Atomic
   case tok::kw__Atomic:
     return TPResult::True;
@@ -1859,6 +1877,7 @@ bool Parser::isCXXDeclarationSpecifierAType() {
   switch (Tok.getKind()) {
     // typename-specifier
   case tok::annot_decltype:
+  case tok::annot_pack_indexing_type:
   case tok::annot_template_id:
   case tok::annot_typename:
   case tok::kw_typeof:

@@ -211,15 +211,15 @@ entry:
 ; GCN-DAG: s_addc_u32 s5, s5, i32_fastcc_i32_i32@gotpcrel32@hi+12
 
 ; GCN-DAG: v_writelane_b32 [[CSRV]], s30, 0
-; GCN-DAG: buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
-; GCN-DAG: buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
+; GCN-DAG: buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GCN-DAG: buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-DAG: v_writelane_b32 [[CSRV]], s31, 1
 
 
 ; GCN: s_swappc_b64
 
-; GCN-DAG: buffer_load_dword v42, off, s[0:3], s33 ; 4-byte Folded Reload
-; GCN-DAG: buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; GCN-DAG: buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
+; GCN-DAG: buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 
 ; GCN: s_getpc_b64 s[4:5]
 ; GCN-NEXT: s_add_u32 s4, s4, sibling_call_i32_fastcc_i32_i32@rel32@lo+4

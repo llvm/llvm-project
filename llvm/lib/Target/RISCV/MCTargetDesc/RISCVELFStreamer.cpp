@@ -37,6 +37,13 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   auto &MAB = static_cast<RISCVAsmBackend &>(MCA.getBackend());
   setTargetABI(RISCVABI::computeTargetABI(STI.getTargetTriple(), Features,
                                           MAB.getTargetOptions().getABIName()));
+  // `j label` in `.option norelax; j label; .option relax; ...; label:` needs a
+  // relocation to ensure the jump target is correct after linking. This is due
+  // to a limitation that shouldForceRelocation has to make the decision upfront
+  // without knowing a possibly future .option relax. When RISCVAsmParser is used,
+  // its ParseInstruction may call setForceRelocs as well.
+  if (STI.hasFeature(RISCV::FeatureRelax))
+    static_cast<RISCVAsmBackend &>(MAB).setForceRelocs();
 }
 
 RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {
@@ -80,14 +87,14 @@ void RISCVTargetELFStreamer::finishAttributeSection() {
 void RISCVTargetELFStreamer::finish() {
   RISCVTargetStreamer::finish();
   MCAssembler &MCA = getStreamer().getAssembler();
-  const FeatureBitset &Features = STI.getFeatureBits();
   RISCVABI::ABI ABI = getTargetABI();
 
   unsigned EFlags = MCA.getELFHeaderEFlags();
 
-  if (Features[RISCV::FeatureStdExtC])
+  if (STI.hasFeature(RISCV::FeatureStdExtC) ||
+      STI.hasFeature(RISCV::FeatureStdExtZca))
     EFlags |= ELF::EF_RISCV_RVC;
-  if (Features[RISCV::FeatureStdExtZtso])
+  if (STI.hasFeature(RISCV::FeatureStdExtZtso))
     EFlags |= ELF::EF_RISCV_TSO;
 
   switch (ABI) {

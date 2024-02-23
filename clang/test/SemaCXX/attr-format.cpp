@@ -81,7 +81,6 @@ void do_format() {
 
   format("%c %c %hhd %hd %d\n", (char)'a', 'a', 'a', (short)123, (int)123);
   format("%f %f %f\n", (__fp16)123.f, 123.f, 123.);
-  format("%f", (_Float16)123.f);// expected-warning{{format specifies type 'double' but the argument has type '_Float16'}}
   format("%Lf", (__fp16)123.f); // expected-warning{{format specifies type 'long double' but the argument has type '__fp16'}}
   format("%Lf", 123.f); // expected-warning{{format specifies type 'long double' but the argument has type 'float'}}
   format("%hhi %hhu %hi %hu %i %u", b, b, b, b, b, b);

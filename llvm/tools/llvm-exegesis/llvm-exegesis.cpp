@@ -20,10 +20,12 @@
 #include "lib/LlvmState.h"
 #include "lib/PerfHelper.h"
 #include "lib/ProgressMeter.h"
+#include "lib/ResultAggregator.h"
 #include "lib/SnippetFile.h"
 #include "lib/SnippetRepetitor.h"
 #include "lib/Target.h"
 #include "lib/TargetSelect.h"
+#include "lib/ValidationEvent.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -106,10 +108,13 @@ static cl::opt<exegesis::Benchmark::RepetitionModeE> RepetitionMode(
     cl::values(
         clEnumValN(exegesis::Benchmark::Duplicate, "duplicate",
                    "Duplicate the snippet"),
-        clEnumValN(exegesis::Benchmark::Loop, "loop",
-                   "Loop over the snippet"),
+        clEnumValN(exegesis::Benchmark::Loop, "loop", "Loop over the snippet"),
         clEnumValN(exegesis::Benchmark::AggregateMin, "min",
-                   "All of the above and take the minimum of measurements")),
+                   "All of the above and take the minimum of measurements"),
+        clEnumValN(exegesis::Benchmark::MiddleHalfDuplicate,
+                   "middle-half-duplicate", "Middle half duplicate mode"),
+        clEnumValN(exegesis::Benchmark::MiddleHalfLoop, "middle-half-loop",
+                   "Middle half loop mode")),
     cl::init(exegesis::Benchmark::Duplicate));
 
 static cl::opt<bool> BenchmarkMeasurementsPrintProgress(
@@ -148,9 +153,10 @@ static cl::opt<bool>
                          cl::cat(BenchmarkOptions), cl::init(false));
 
 static cl::opt<unsigned>
-    NumRepetitions("num-repetitions",
-                   cl::desc("number of time to repeat the asm snippet"),
-                   cl::cat(BenchmarkOptions), cl::init(10000));
+    MinInstructions("min-instructions",
+                    cl::desc("The minimum number of instructions that should "
+                             "be included in the snippet"),
+                    cl::cat(BenchmarkOptions), cl::init(10000));
 
 static cl::opt<unsigned>
     LoopBodySize("loop-body-size",
@@ -267,6 +273,13 @@ static cl::opt<unsigned> BenchmarkRepeatCount(
     cl::desc("The number of times to repeat measurements on the benchmark k "
              "before aggregating the results"),
     cl::cat(BenchmarkOptions), cl::init(30));
+
+static cl::list<ValidationEvent> ValidationCounters(
+    "validation-counter",
+    cl::desc(
+        "The name of a validation counter to run concurrently with the main "
+        "counter to validate benchmarking assumptions"),
+    cl::CommaSeparated, cl::cat(BenchmarkOptions), ValidationEventOptions());
 
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
@@ -399,30 +412,39 @@ static void runBenchmarkConfigurations(
   std::optional<ProgressMeter<>> Meter;
   if (BenchmarkMeasurementsPrintProgress)
     Meter.emplace(Configurations.size());
+
+  SmallVector<unsigned, 2> MinInstructionCounts = {MinInstructions};
+  if (RepetitionMode == Benchmark::MiddleHalfDuplicate ||
+      RepetitionMode == Benchmark::MiddleHalfLoop)
+    MinInstructionCounts.push_back(MinInstructions * 2);
+
   for (const BenchmarkCode &Conf : Configurations) {
     ProgressMeter<>::ProgressMeterStep MeterStep(Meter ? &*Meter : nullptr);
     SmallVector<Benchmark, 2> AllResults;
 
     for (const std::unique_ptr<const SnippetRepetitor> &Repetitor :
          Repetitors) {
-      auto RC = ExitOnErr(Runner.getRunnableConfiguration(
-          Conf, NumRepetitions, LoopBodySize, *Repetitor));
-      std::optional<StringRef> DumpFile;
-      if (DumpObjectToDisk.getNumOccurrences())
-        DumpFile = DumpObjectToDisk;
-      auto [Err, BenchmarkResult] =
-          Runner.runConfiguration(std::move(RC), DumpFile);
-      if (Err) {
-        // Errors from executing the snippets are fine.
-        // All other errors are a framework issue and should fail.
-        if (!Err.isA<SnippetExecutionFailure>()) {
-          llvm::errs() << "llvm-exegesis error: " << toString(std::move(Err));
-          exit(1);
+      for (unsigned IterationRepetitions : MinInstructionCounts) {
+        auto RC = ExitOnErr(Runner.getRunnableConfiguration(
+            Conf, IterationRepetitions, LoopBodySize, *Repetitor));
+        std::optional<StringRef> DumpFile;
+        if (DumpObjectToDisk.getNumOccurrences())
+          DumpFile = DumpObjectToDisk;
+        auto [Err, BenchmarkResult] =
+            Runner.runConfiguration(std::move(RC), DumpFile);
+        if (Err) {
+          // Errors from executing the snippets are fine.
+          // All other errors are a framework issue and should fail.
+          if (!Err.isA<SnippetExecutionFailure>()) {
+            llvm::errs() << "llvm-exegesis error: " << toString(std::move(Err));
+            exit(1);
+          }
+          BenchmarkResult.Error = toString(std::move(Err));
         }
-        BenchmarkResult.Error = toString(std::move(Err));
+        AllResults.push_back(std::move(BenchmarkResult));
       }
-      AllResults.push_back(std::move(BenchmarkResult));
     }
+
     Benchmark &Result = AllResults.front();
 
     // If any of our measurements failed, pretend they all have failed.
@@ -432,30 +454,10 @@ static void runBenchmarkConfigurations(
         }))
       Result.Measurements.clear();
 
-    if (RepetitionMode == Benchmark::RepetitionModeE::AggregateMin) {
-      for (const Benchmark &OtherResult :
-           ArrayRef<Benchmark>(AllResults).drop_front()) {
-        llvm::append_range(Result.AssembledSnippet,
-                           OtherResult.AssembledSnippet);
-        // Aggregate measurements, but only if all measurements succeeded.
-        if (Result.Measurements.empty())
-          continue;
-        assert(OtherResult.Measurements.size() == Result.Measurements.size() &&
-               "Expected to have identical number of measurements.");
-        for (auto I : zip(Result.Measurements, OtherResult.Measurements)) {
-          BenchmarkMeasure &Measurement = std::get<0>(I);
-          const BenchmarkMeasure &NewMeasurement = std::get<1>(I);
-          assert(Measurement.Key == NewMeasurement.Key &&
-                 "Expected measurements to be symmetric");
-
-          Measurement.PerInstructionValue =
-              std::min(Measurement.PerInstructionValue,
-                       NewMeasurement.PerInstructionValue);
-          Measurement.PerSnippetValue = std::min(
-              Measurement.PerSnippetValue, NewMeasurement.PerSnippetValue);
-        }
-      }
-    }
+    std::unique_ptr<ResultAggregator> ResultAgg =
+        ResultAggregator::CreateAggregator(RepetitionMode);
+    ResultAgg->AggregateResults(Result,
+                                ArrayRef<Benchmark>(AllResults).drop_front());
 
     // With dummy counters, measurements are rather meaningless,
     // so drop them altogether.
@@ -501,7 +503,7 @@ void benchmarkMain() {
   const std::unique_ptr<BenchmarkRunner> Runner =
       ExitOnErr(State.getExegesisTarget().createBenchmarkRunner(
           BenchmarkMode, State, BenchmarkPhaseSelector, ExecutionMode,
-          BenchmarkRepeatCount, ResultAggMode));
+          BenchmarkRepeatCount, ValidationCounters, ResultAggMode));
   if (!Runner) {
     ExitWithError("cannot create benchmark runner");
   }
@@ -557,9 +559,9 @@ void benchmarkMain() {
     }
   }
 
-  if (NumRepetitions == 0) {
+  if (MinInstructions == 0) {
     ExitOnErr.setBanner("llvm-exegesis: ");
-    ExitWithError("--num-repetitions must be greater than zero");
+    ExitWithError("--min-instructions must be greater than zero");
   }
 
   // Write to standard output if file is not set.
@@ -645,14 +647,14 @@ static void analysisMain() {
   }
   auto TripleAndCpu = *TriplesAndCpus.begin();
   if (AnalysisOverrideBenchmarksTripleAndCpu) {
-    llvm::errs() << "overridding file CPU name (" << TripleAndCpu.CpuName
-                 << ") with provided tripled (" << TripleName
-                 << ") and CPU name (" << MCPU << ")\n";
+    errs() << "overridding file CPU name (" << TripleAndCpu.CpuName
+           << ") with provided tripled (" << TripleName << ") and CPU name ("
+           << MCPU << ")\n";
     TripleAndCpu.LLVMTriple = TripleName;
     TripleAndCpu.CpuName = MCPU;
   }
-  llvm::errs() << "using Triple '" << TripleAndCpu.LLVMTriple << "' and CPU '"
-               << TripleAndCpu.CpuName << "'\n";
+  errs() << "using Triple '" << TripleAndCpu.LLVMTriple << "' and CPU '"
+         << TripleAndCpu.CpuName << "'\n";
 
   // Read benchmarks.
   const LLVMState State = ExitOnErr(
@@ -703,9 +705,8 @@ int main(int Argc, char **Argv) {
   // Enable printing of available targets when flag --version is specified.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  cl::HideUnrelatedOptions({&llvm::exegesis::Options,
-                            &llvm::exegesis::BenchmarkOptions,
-                            &llvm::exegesis::AnalysisOptions});
+  cl::HideUnrelatedOptions({&exegesis::Options, &exegesis::BenchmarkOptions,
+                            &exegesis::AnalysisOptions});
 
   cl::ParseCommandLineOptions(Argc, Argv,
                               "llvm host machine instruction characteristics "

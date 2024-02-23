@@ -20,11 +20,13 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFStreamer.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/TargetParser/TargetParser.h"
 
@@ -35,26 +37,11 @@ using namespace llvm::AMDGPU;
 // AMDGPUTargetStreamer
 //===----------------------------------------------------------------------===//
 
-static void convertIsaVersionV2(uint32_t &Major, uint32_t &Minor,
-                                uint32_t &Stepping, bool Sramecc, bool Xnack) {
-  if (Major == 9 && Minor == 0) {
-    switch (Stepping) {
-      case 0:
-      case 2:
-      case 4:
-      case 6:
-        if (Xnack)
-          Stepping++;
-    }
-  }
-}
-
-bool AMDGPUTargetStreamer::EmitHSAMetadataV2(StringRef HSAMetadataString) {
-  HSAMD::Metadata HSAMetadata;
-  if (HSAMD::fromString(HSAMetadataString, HSAMetadata))
-    return false;
-  return EmitHSAMetadata(HSAMetadata);
-}
+static cl::opt<unsigned>
+    ForceGenericVersion("amdgpu-force-generic-version",
+                        cl::desc("Force a specific generic_v<N> flag to be "
+                                 "added. For testing purposes only."),
+                        cl::ReallyHidden, cl::init(0));
 
 bool AMDGPUTargetStreamer::EmitHSAMetadataV3(StringRef HSAMetadataString) {
   msgpack::Document HSAMetadataDoc;
@@ -128,6 +115,10 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151: AK = GK_GFX1151; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200: AK = GK_GFX1200; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201: AK = GK_GFX1201; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:     AK = GK_GFX9_GENERIC; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:  AK = GK_GFX10_1_GENERIC; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:  AK = GK_GFX10_3_GENERIC; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:    AK = GK_GFX11_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_NONE:           AK = GK_NONE;    break;
   default:                                 AK = GK_NONE;    break;
   }
@@ -206,6 +197,10 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1151: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151;
   case GK_GFX1200: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200;
   case GK_GFX1201: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201;
+  case GK_GFX9_GENERIC:     return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC;
+  case GK_GFX10_1_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC;
+  case GK_GFX10_3_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC;
+  case GK_GFX11_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC;
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
   // clang-format on
@@ -238,21 +233,10 @@ void AMDGPUTargetAsmStreamer::EmitDirectiveAMDGCNTarget() {
   OS << "\t.amdgcn_target \"" << getTargetID()->toString() << "\"\n";
 }
 
-void AMDGPUTargetAsmStreamer::EmitDirectiveHSACodeObjectVersion(
-    uint32_t Major, uint32_t Minor) {
-  OS << "\t.hsa_code_object_version " <<
-        Twine(Major) << "," << Twine(Minor) << '\n';
-}
-
-void
-AMDGPUTargetAsmStreamer::EmitDirectiveHSACodeObjectISAV2(uint32_t Major,
-                                                         uint32_t Minor,
-                                                         uint32_t Stepping,
-                                                         StringRef VendorName,
-                                                         StringRef ArchName) {
-  convertIsaVersionV2(Major, Minor, Stepping, TargetID->isSramEccOnOrAny(), TargetID->isXnackOnOrAny());
-  OS << "\t.hsa_code_object_isa " << Twine(Major) << "," << Twine(Minor) << ","
-     << Twine(Stepping) << ",\"" << VendorName << "\",\"" << ArchName << "\"\n";
+void AMDGPUTargetAsmStreamer::EmitDirectiveAMDHSACodeObjectVersion(
+    unsigned COV) {
+  AMDGPUTargetStreamer::EmitDirectiveAMDHSACodeObjectVersion(COV);
+  OS << "\t.amdhsa_code_object_version " << COV << '\n';
 }
 
 void
@@ -280,18 +264,6 @@ void AMDGPUTargetAsmStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
 
 bool AMDGPUTargetAsmStreamer::EmitISAVersion() {
   OS << "\t.amd_amdgpu_isa \"" << getTargetID()->toString() << "\"\n";
-  return true;
-}
-
-bool AMDGPUTargetAsmStreamer::EmitHSAMetadata(
-    const AMDGPU::HSAMD::Metadata &HSAMetadata) {
-  std::string HSAMetadataString;
-  if (HSAMD::toString(HSAMetadata, HSAMetadataString))
-    return false;
-
-  OS << '\t' << HSAMD::AssemblerDirectiveBegin << '\n';
-  OS << HSAMetadataString << '\n';
-  OS << '\t' << HSAMD::AssemblerDirectiveEnd << '\n';
   return true;
 }
 
@@ -336,7 +308,7 @@ bool AMDGPUTargetAsmStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
 void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     const MCSubtargetInfo &STI, StringRef KernelName,
     const amdhsa::kernel_descriptor_t &KD, uint64_t NextVGPR, uint64_t NextSGPR,
-    bool ReserveVCC, bool ReserveFlatScr, unsigned CodeObjectVersion) {
+    bool ReserveVCC, bool ReserveFlatScr) {
   IsaVersion IVersion = getIsaVersion(STI.getCPU());
 
   OS << "\t.amdhsa_kernel " << KernelName << '\n';
@@ -529,6 +501,8 @@ MCELFStreamer &AMDGPUTargetELFStreamer::getStreamer() {
 void AMDGPUTargetELFStreamer::finish() {
   MCAssembler &MCA = getStreamer().getAssembler();
   MCA.setELFHeaderEFlags(getEFlags());
+  MCA.getWriter().setOverrideABIVersion(
+      getELFABIVersion(STI.getTargetTriple(), CodeObjectVersion));
 
   std::string Blob;
   const char *Vendor = getPALMetadata()->getVendor();
@@ -616,17 +590,9 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsUnknownOS() {
 unsigned AMDGPUTargetELFStreamer::getEFlagsAMDHSA() {
   assert(isHsaAbi(STI));
 
-  if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(&STI)) {
-    switch (*HsaAbiVer) {
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
-      return getEFlagsV3();
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
-      return getEFlagsV4();
-    }
-  }
-
-  llvm_unreachable("HSA OS ABI Version identification must be defined");
+  if (CodeObjectVersion >= 6)
+    return getEFlagsV6();
+  return getEFlagsV4();
 }
 
 unsigned AMDGPUTargetELFStreamer::getEFlagsAMDPAL() {
@@ -697,45 +663,42 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV4() {
   return EFlagsV4;
 }
 
+unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
+  unsigned Flags = getEFlagsV4();
+
+  unsigned Version = ForceGenericVersion;
+  if (!Version) {
+    switch (parseArchAMDGCN(STI.getCPU())) {
+    case AMDGPU::GK_GFX9_GENERIC:
+      Version = GenericVersion::GFX9;
+      break;
+    case AMDGPU::GK_GFX10_1_GENERIC:
+      Version = GenericVersion::GFX10_1;
+      break;
+    case AMDGPU::GK_GFX10_3_GENERIC:
+      Version = GenericVersion::GFX10_3;
+      break;
+    case AMDGPU::GK_GFX11_GENERIC:
+      Version = GenericVersion::GFX11;
+      break;
+    default:
+      break;
+    }
+  }
+
+  // Versions start at 1.
+  if (Version) {
+    if (Version > ELF::EF_AMDGPU_GENERIC_VERSION_MAX)
+      report_fatal_error("Cannot encode generic code object version " +
+                         Twine(Version) +
+                         " - no ELF flag can represent this version!");
+    Flags |= (Version << ELF::EF_AMDGPU_GENERIC_VERSION_OFFSET);
+  }
+
+  return Flags;
+}
+
 void AMDGPUTargetELFStreamer::EmitDirectiveAMDGCNTarget() {}
-
-void AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectVersion(
-    uint32_t Major, uint32_t Minor) {
-
-  EmitNote(ElfNote::NoteNameV2, MCConstantExpr::create(8, getContext()),
-           ELF::NT_AMD_HSA_CODE_OBJECT_VERSION, [&](MCELFStreamer &OS) {
-             OS.emitInt32(Major);
-             OS.emitInt32(Minor);
-           });
-}
-
-void
-AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectISAV2(uint32_t Major,
-                                                         uint32_t Minor,
-                                                         uint32_t Stepping,
-                                                         StringRef VendorName,
-                                                         StringRef ArchName) {
-  uint16_t VendorNameSize = VendorName.size() + 1;
-  uint16_t ArchNameSize = ArchName.size() + 1;
-
-  unsigned DescSZ = sizeof(VendorNameSize) + sizeof(ArchNameSize) +
-    sizeof(Major) + sizeof(Minor) + sizeof(Stepping) +
-    VendorNameSize + ArchNameSize;
-
-  convertIsaVersionV2(Major, Minor, Stepping, TargetID->isSramEccOnOrAny(), TargetID->isXnackOnOrAny());
-  EmitNote(ElfNote::NoteNameV2, MCConstantExpr::create(DescSZ, getContext()),
-           ELF::NT_AMD_HSA_ISA_VERSION, [&](MCELFStreamer &OS) {
-             OS.emitInt16(VendorNameSize);
-             OS.emitInt16(ArchNameSize);
-             OS.emitInt32(Major);
-             OS.emitInt32(Minor);
-             OS.emitInt32(Stepping);
-             OS.emitBytes(VendorName);
-             OS.emitInt8(0); // NULL terminate VendorName
-             OS.emitBytes(ArchName);
-             OS.emitInt8(0); // NULL terminate ArchName
-           });
-}
 
 void
 AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(const amd_kernel_code_t &Header) {
@@ -818,43 +781,27 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(msgpack::Document &HSAMetadataDoc,
   return true;
 }
 
-bool AMDGPUTargetELFStreamer::EmitHSAMetadata(
-    const AMDGPU::HSAMD::Metadata &HSAMetadata) {
-  std::string HSAMetadataString;
-  if (HSAMD::toString(HSAMetadata, HSAMetadataString))
-    return false;
-
-  // Create two labels to mark the beginning and end of the desc field
-  // and a MCExpr to calculate the size of the desc field.
-  auto &Context = getContext();
-  auto *DescBegin = Context.createTempSymbol();
-  auto *DescEnd = Context.createTempSymbol();
-  auto *DescSZ = MCBinaryExpr::createSub(
-    MCSymbolRefExpr::create(DescEnd, Context),
-    MCSymbolRefExpr::create(DescBegin, Context), Context);
-
-  EmitNote(ElfNote::NoteNameV2, DescSZ, ELF::NT_AMD_HSA_METADATA,
-           [&](MCELFStreamer &OS) {
-             OS.emitLabel(DescBegin);
-             OS.emitBytes(HSAMetadataString);
-             OS.emitLabel(DescEnd);
-           });
-  return true;
-}
-
 bool AMDGPUTargetAsmStreamer::EmitKernargPreloadHeader(
-    const MCSubtargetInfo &STI) {
-  for (int i = 0; i < 64; ++i) {
+    const MCSubtargetInfo &STI, bool TrapEnabled) {
+  const char *TrapInstr = TrapEnabled ? "\ts_trap 2" : "\ts_endpgm";
+  OS << TrapInstr
+     << " ; Trap with incompatible firmware that doesn't "
+        "support preloading kernel arguments.\n";
+  for (int i = 0; i < 63; ++i) {
     OS << "\ts_nop 0\n";
   }
   return true;
 }
 
 bool AMDGPUTargetELFStreamer::EmitKernargPreloadHeader(
-    const MCSubtargetInfo &STI) {
+    const MCSubtargetInfo &STI, bool TrapEnabled) {
   const uint32_t Encoded_s_nop = 0xbf800000;
+  const uint32_t Encoded_s_trap = 0xbf920002;
+  const uint32_t Encoded_s_endpgm = 0xbf810000;
+  const uint32_t TrapInstr = TrapEnabled ? Encoded_s_trap : Encoded_s_endpgm;
   MCStreamer &OS = getStreamer();
-  for (int i = 0; i < 64; ++i) {
+  OS.emitInt32(TrapInstr);
+  for (int i = 0; i < 63; ++i) {
     OS.emitInt32(Encoded_s_nop);
   }
   return true;
@@ -889,8 +836,7 @@ bool AMDGPUTargetELFStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
 void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
     const MCSubtargetInfo &STI, StringRef KernelName,
     const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
-    uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr,
-    unsigned CodeObjectVersion) {
+    uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr) {
   auto &Streamer = getStreamer();
   auto &Context = Streamer.getContext();
 

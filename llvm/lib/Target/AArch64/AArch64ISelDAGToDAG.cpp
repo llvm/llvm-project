@@ -580,7 +580,7 @@ bool AArch64DAGToDAGISel::SelectArithImmed(SDValue N, SDValue &Val,
   if (!isa<ConstantSDNode>(N.getNode()))
     return false;
 
-  uint64_t Immed = cast<ConstantSDNode>(N.getNode())->getZExtValue();
+  uint64_t Immed = N.getNode()->getAsZExtVal();
   unsigned ShiftAmt;
 
   if (Immed >> 12 == 0) {
@@ -611,7 +611,7 @@ bool AArch64DAGToDAGISel::SelectNegArithImmed(SDValue N, SDValue &Val,
     return false;
 
   // The immediate operand must be a 24-bit zero-extended immediate.
-  uint64_t Immed = cast<ConstantSDNode>(N.getNode())->getZExtValue();
+  uint64_t Immed = N.getNode()->getAsZExtVal();
 
   // This negation is almost always valid, but "cmp wN, #0" and "cmn wN, #0"
   // have the opposite effect on the C flag, so this pattern mustn't match under
@@ -1326,7 +1326,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeXRO(SDValue N, unsigned Size,
   //     MOV  X0, WideImmediate
   //     LDR  X2, [BaseReg, X0]
   if (isa<ConstantSDNode>(RHS)) {
-    int64_t ImmOff = (int64_t)cast<ConstantSDNode>(RHS)->getZExtValue();
+    int64_t ImmOff = (int64_t)RHS->getAsZExtVal();
     // Skip the immediate can be selected by load/store addressing mode.
     // Also skip the immediate can be encoded by a single ADD (SUB is also
     // checked by using -ImmOff).
@@ -4275,6 +4275,58 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+
+  // Essentially: rotr (xor(x, y), imm) -> xar (x, y, imm)
+  // Rotate by a constant is a funnel shift in IR which is exanded to
+  // an OR with shifted operands.
+  // We do the following transform:
+  //   OR N0, N1 -> xar (x, y, imm)
+  // Where:
+  //   N1 = SRL_PRED true, V, splat(imm)  --> rotr amount
+  //   N0 = SHL_PRED true, V, splat(bits-imm)
+  //   V = (xor x, y)
+  if (VT.isScalableVector() && Subtarget->hasSVE2orSME()) {
+    if (N0.getOpcode() != AArch64ISD::SHL_PRED ||
+        N1.getOpcode() != AArch64ISD::SRL_PRED)
+      std::swap(N0, N1);
+    if (N0.getOpcode() != AArch64ISD::SHL_PRED ||
+        N1.getOpcode() != AArch64ISD::SRL_PRED)
+      return false;
+
+    auto *TLI = static_cast<const AArch64TargetLowering *>(getTargetLowering());
+    if (!TLI->isAllActivePredicate(*CurDAG, N0.getOperand(0)) ||
+        !TLI->isAllActivePredicate(*CurDAG, N1.getOperand(0)))
+      return false;
+
+    SDValue XOR = N0.getOperand(1);
+    if (XOR.getOpcode() != ISD::XOR || XOR != N1.getOperand(1))
+      return false;
+
+    APInt ShlAmt, ShrAmt;
+    if (!ISD::isConstantSplatVector(N0.getOperand(2).getNode(), ShlAmt) ||
+        !ISD::isConstantSplatVector(N1.getOperand(2).getNode(), ShrAmt))
+      return false;
+
+    if (ShlAmt + ShrAmt != VT.getScalarSizeInBits())
+      return false;
+
+    SDLoc DL(N);
+    SDValue Imm =
+        CurDAG->getTargetConstant(ShrAmt.getZExtValue(), DL, MVT::i32);
+
+    SDValue Ops[] = {XOR.getOperand(0), XOR.getOperand(1), Imm};
+    if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::Int>(
+            VT, {AArch64::XAR_ZZZI_B, AArch64::XAR_ZZZI_H, AArch64::XAR_ZZZI_S,
+                 AArch64::XAR_ZZZI_D})) {
+      CurDAG->SelectNodeTo(N, Opc, VT, Ops);
+      return true;
+    }
+    return false;
+  }
+
+  if (!Subtarget->hasSHA3())
+    return false;
 
   if (N0->getOpcode() != AArch64ISD::VSHL ||
       N1->getOpcode() != AArch64ISD::VLSHR)
@@ -4367,7 +4419,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
   case ISD::OR:
     if (tryBitfieldInsertOp(Node))
       return;
-    if (Subtarget->hasSHA3() && trySelectXAR(Node))
+    if (trySelectXAR(Node))
       return;
     break;
 
@@ -5575,25 +5627,25 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                AArch64::FMINNM_VG4_4Z4Z_D}))
         SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
       return;
-    case Intrinsic::aarch64_sve_fcvts_x2:
+    case Intrinsic::aarch64_sve_fcvtzs_x2:
       SelectCVTIntrinsic(Node, 2, AArch64::FCVTZS_2Z2Z_StoS);
       return;
     case Intrinsic::aarch64_sve_scvtf_x2:
       SelectCVTIntrinsic(Node, 2, AArch64::SCVTF_2Z2Z_StoS);
       return;
-    case Intrinsic::aarch64_sve_fcvtu_x2:
+    case Intrinsic::aarch64_sve_fcvtzu_x2:
       SelectCVTIntrinsic(Node, 2, AArch64::FCVTZU_2Z2Z_StoS);
       return;
     case Intrinsic::aarch64_sve_ucvtf_x2:
       SelectCVTIntrinsic(Node, 2, AArch64::UCVTF_2Z2Z_StoS);
       return;
-    case Intrinsic::aarch64_sve_fcvts_x4:
+    case Intrinsic::aarch64_sve_fcvtzs_x4:
       SelectCVTIntrinsic(Node, 4, AArch64::FCVTZS_4Z4Z_StoS);
       return;
     case Intrinsic::aarch64_sve_scvtf_x4:
       SelectCVTIntrinsic(Node, 4, AArch64::SCVTF_4Z4Z_StoS);
       return;
-    case Intrinsic::aarch64_sve_fcvtu_x4:
+    case Intrinsic::aarch64_sve_fcvtzu_x4:
       SelectCVTIntrinsic(Node, 4, AArch64::FCVTZU_4Z4Z_StoS);
       return;
     case Intrinsic::aarch64_sve_ucvtf_x4:
@@ -6834,10 +6886,10 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
     return getPackedVectorTypeFromPredicateType(
         Ctx, Root->getOperand(6)->getValueType(0), /*NumVec=*/4);
   case Intrinsic::aarch64_sve_ld1udq:
-  case Intrinsic::aarch64_sve_st1udq:
+  case Intrinsic::aarch64_sve_st1dq:
     return EVT(MVT::nxv1i64);
   case Intrinsic::aarch64_sve_ld1uwq:
-  case Intrinsic::aarch64_sve_st1uwq:
+  case Intrinsic::aarch64_sve_st1wq:
     return EVT(MVT::nxv1i32);
   }
 }

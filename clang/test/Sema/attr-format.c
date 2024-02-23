@@ -16,8 +16,6 @@ typedef const char *xpto;
 void j(xpto c, va_list list) __attribute__((format(printf, 1, 0))); // no-error
 void k(xpto c) __attribute__((format(printf, 1, 0)));               // no-error
 
-void l(char *a, _Float16 b) __attribute__((format(printf, 1, 2))); // expected-warning {{GCC requires a function with the 'format' attribute to be variadic}}
-
 void y(char *str) __attribute__((format(strftime, 1, 0)));             // no-error
 void z(char *str, int c, ...) __attribute__((format(strftime, 1, 2))); // expected-error {{strftime format attribute requires 3rd parameter to be 0}}
 
@@ -93,11 +91,6 @@ void call_nonvariadic(void) {
   d3("%i", 123);
   d3("%d", 123);
   d3("%s", 123); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
-}
-
-void call_no_default_promotion(void) {
-  a("%f", (_Float16)1.0); // expected-warning{{format specifies type 'double' but the argument has type '_Float16'}}
-  l("%f", (_Float16)1.0); // expected-warning{{format specifies type 'double' but the argument has type '_Float16'}}
 }
 
 __attribute__((format(printf, 1, 2)))

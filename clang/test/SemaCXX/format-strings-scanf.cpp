@@ -22,7 +22,6 @@ union bag {
     unsigned long long ull;
     signed long long sll;
     __fp16 f16;
-    _Float16 Float16;
     float ff;
     double fd;
     long double fl;
@@ -52,21 +51,18 @@ void test(void) {
     // expected-warning@+1{{format specifies type 'int *' but the argument has type 'short *'}}
     scan("%hhi %i %li", &b.ss, &b.ss, &b.ss);
 
-    // expected-warning@+4{{format specifies type 'float *' but the argument has type '__fp16 *'}}
-    // expected-warning@+3{{format specifies type 'float *' but the argument has type '_Float16 *'}}
+    // expected-warning@+3{{format specifies type 'float *' but the argument has type '__fp16 *'}}
     // expected-warning@+2{{format specifies type 'float *' but the argument has type 'double *'}}
     // expected-warning@+1{{format specifies type 'float *' but the argument has type 'long double *'}}
-    scan("%f %f %f %f", &b.f16, &b.Float16, &b.fd, &b.fl);
+    scan("%f %f %f", &b.f16, &b.fd, &b.fl);
 
-    // expected-warning@+4{{format specifies type 'double *' but the argument has type '__fp16 *'}}
-    // expected-warning@+3{{format specifies type 'double *' but the argument has type '_Float16 *'}}
+    // expected-warning@+3{{format specifies type 'double *' but the argument has type '__fp16 *'}}
     // expected-warning@+2{{format specifies type 'double *' but the argument has type 'float *'}}
     // expected-warning@+1{{format specifies type 'double *' but the argument has type 'long double *'}}
-    scan("%lf %lf %lf %lf", &b.f16, &b.Float16, &b.ff, &b.fl);
+    scan("%lf %lf %lf", &b.f16, &b.ff, &b.fl);
 
-    // expected-warning@+4{{format specifies type 'long double *' but the argument has type '__fp16 *'}}
-    // expected-warning@+3{{format specifies type 'long double *' but the argument has type '_Float16 *'}}
+    // expected-warning@+3{{format specifies type 'long double *' but the argument has type '__fp16 *'}}
     // expected-warning@+2{{format specifies type 'long double *' but the argument has type 'float *'}}
     // expected-warning@+1{{format specifies type 'long double *' but the argument has type 'double *'}}
-    scan("%Lf %Lf %Lf %Lf", &b.f16, &b.Float16, &b.ff, &b.fd);
+    scan("%Lf %Lf %Lf", &b.f16, &b.ff, &b.fd);
 }
