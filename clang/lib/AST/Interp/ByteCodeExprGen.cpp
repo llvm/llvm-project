@@ -2510,6 +2510,12 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
   assert(!VD->isInvalidDecl() && "Trying to constant evaluate an invalid decl");
 
+  // Global variable we've already seen but that's uninitialized means
+  // evaluating the initializer failed. Just return failure.
+  if (std::optional<unsigned> Index = P.getGlobal(VD);
+      Index && !P.getPtrGlobal(*Index).isInitialized())
+    return false;
+
   // Create and initialize the variable.
   if (!this->visitVarDecl(VD))
     return false;
