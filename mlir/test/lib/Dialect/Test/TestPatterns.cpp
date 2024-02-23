@@ -349,8 +349,8 @@ struct DumpNotifications : public RewriterBase::Listener {
       }
     }
   }
-  void notifyOperationRemoved(Operation *op) override {
-    llvm::outs() << "notifyOperationRemoved: " << op->getName() << "\n";
+  void notifyOperationErased(Operation *op) override {
+    llvm::outs() << "notifyOperationErased: " << op->getName() << "\n";
   }
 };
 
@@ -360,7 +360,8 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestStrictPatternDriver)
 
   TestStrictPatternDriver() = default;
-  TestStrictPatternDriver(const TestStrictPatternDriver &other) {
+  TestStrictPatternDriver(const TestStrictPatternDriver &other)
+      : PassWrapper(other) {
     strictMode = other.strictMode;
   }
 
@@ -806,6 +807,21 @@ struct TestUndoBlockErase : public ConversionPattern {
   }
 };
 
+/// A pattern that modifies a property in-place, but keeps the op illegal.
+struct TestUndoPropertiesModification : public ConversionPattern {
+  TestUndoPropertiesModification(MLIRContext *ctx)
+      : ConversionPattern("test.with_properties", /*benefit=*/1, ctx) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (!op->hasAttr("modify_inplace"))
+      return failure();
+    rewriter.modifyOpInPlace(
+        op, [&]() { cast<TestOpWithProperties>(op).getProperties().setA(42); });
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Type-Conversion Rewrite Testing
 
@@ -1085,7 +1101,8 @@ struct TestLegalizePatternDriver
              TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
              TestNonRootReplacement, TestBoundedRecursiveRewrite,
              TestNestedOpCreationUndoRewrite, TestReplaceEraseOp,
-             TestCreateUnregisteredOp, TestUndoMoveOpBefore>(&getContext());
+             TestCreateUnregisteredOp, TestUndoMoveOpBefore,
+             TestUndoPropertiesModification>(&getContext());
     patterns.add<TestDropOpSignatureConversion>(&getContext(), converter);
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);

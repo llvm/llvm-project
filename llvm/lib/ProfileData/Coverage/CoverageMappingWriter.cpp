@@ -253,12 +253,16 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
       writeCounter(MinExpressions, Count, OS);
       writeCounter(MinExpressions, FalseCount, OS);
       {
+        // They are written as internal values plus 1.
         const auto &BranchParams = I->getBranchParams();
         ParamsShouldBeNull = false;
-        assert(BranchParams.ID > 0);
-        encodeULEB128(static_cast<unsigned>(BranchParams.ID), OS);
-        encodeULEB128(static_cast<unsigned>(BranchParams.Conds[true]), OS);
-        encodeULEB128(static_cast<unsigned>(BranchParams.Conds[false]), OS);
+        assert(BranchParams.ID >= 0);
+        unsigned ID1 = BranchParams.ID + 1;
+        unsigned TID1 = BranchParams.Conds[true] + 1;
+        unsigned FID1 = BranchParams.Conds[false] + 1;
+        encodeULEB128(ID1, OS);
+        encodeULEB128(TID1, OS);
+        encodeULEB128(FID1, OS);
       }
       break;
     case CounterMappingRegion::MCDCDecisionRegion:

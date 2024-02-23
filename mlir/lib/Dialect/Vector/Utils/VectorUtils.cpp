@@ -257,38 +257,13 @@ bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
   ArrayRef<int64_t> vectorShape = vectorType.getShape();
   auto vecRank = vectorType.getRank();
 
+  if (!trailingNDimsContiguous(memrefType, vecRank))
+    return false;
+
   // Extract the trailing dims and strides of the input memref
   auto memrefShape = memrefType.getShape().take_back(vecRank);
-  int64_t offset;
-  SmallVector<int64_t> stridesFull;
-  if (!succeeded(getStridesAndOffset(memrefType, stridesFull, offset)))
-    return false;
-  auto strides = ArrayRef<int64_t>(stridesFull).take_back(vecRank);
-  memrefType.getLayout().isIdentity();
 
-  // TODO: Add support for memref with trailing dynamic shapes. Memrefs
-  // with leading dynamic dimensions are already supported.
-  if (ShapedType::isDynamicShape(memrefShape))
-    return false;
-
-  // Cond 1: Check whether `memrefType` is contiguous.
-  if (!strides.empty()) {
-    // Cond 1.1: A contiguous memref will always have a unit trailing stride.
-    if (strides.back() != 1)
-      return false;
-
-    // Cond 1.2: Strides of a contiguous memref have to match the flattened
-    // dims.
-    strides = strides.drop_back(1);
-    SmallVector<int64_t> flattenedDims;
-    for (size_t i = 1; i < memrefShape.size(); i++)
-      flattenedDims.push_back(mlir::computeProduct(memrefShape.take_back(i)));
-
-    if (!llvm::equal(strides, llvm::reverse(flattenedDims)))
-      return false;
-  }
-
-  // Cond 2: Compare the dims of `vectorType` against `memrefType` (in reverse).
+  // Compare the dims of `vectorType` against `memrefType` (in reverse).
   // In the most basic case, all dims will match.
   auto firstNonMatchingDim =
       std::mismatch(vectorShape.rbegin(), vectorShape.rend(),
@@ -302,4 +277,26 @@ bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
                                    vectorShape.rend());
 
   return llvm::all_of(leadingDims, [](auto x) { return x == 1; });
+}
+
+std::optional<StaticTileOffsetRange>
+vector::createUnrollIterator(VectorType vType, int64_t targetRank) {
+  if (vType.getRank() <= targetRank)
+    return {};
+  // Attempt to unroll until targetRank or the first scalable dimension (which
+  // cannot be unrolled).
+  auto shapeToUnroll = vType.getShape().drop_back(targetRank);
+  auto scalableDimsToUnroll = vType.getScalableDims().drop_back(targetRank);
+  auto it =
+      std::find(scalableDimsToUnroll.begin(), scalableDimsToUnroll.end(), true);
+  auto firstScalableDim = it - scalableDimsToUnroll.begin();
+  if (firstScalableDim == 0)
+    return {};
+  // All scalable dimensions should be removed now.
+  scalableDimsToUnroll = scalableDimsToUnroll.slice(0, firstScalableDim);
+  assert(!llvm::is_contained(scalableDimsToUnroll, true) &&
+         "unexpected leading scalable dimension");
+  // Create an unroll iterator for leading dimensions.
+  shapeToUnroll = shapeToUnroll.slice(0, firstScalableDim);
+  return StaticTileOffsetRange(shapeToUnroll, /*unrollStep=*/1);
 }

@@ -99,6 +99,7 @@ module {
     bufferization.dealloc_tensor %sl: tensor<5x5xf64, #DCSR>
     bufferization.dealloc_tensor %sr: tensor<5x5xf64, #DCSR>
     bufferization.dealloc_tensor %1:  tensor<5x5xf64, #DCSR>
+    bufferization.dealloc_tensor %r : tensor<5x5xf64>
 
     return
   }

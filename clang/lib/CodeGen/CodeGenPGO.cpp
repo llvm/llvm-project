@@ -239,9 +239,12 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     if (MCDCMaxCond == 0)
       return true;
 
-    /// At the top of the logical operator nest, reset the number of conditions.
-    if (LogOpStack.empty())
+    /// At the top of the logical operator nest, reset the number of conditions,
+    /// also forget previously seen split nesting cases.
+    if (LogOpStack.empty()) {
       NumCond = 0;
+      SplitNestedLogicalOp = false;
+    }
 
     if (const Expr *E = dyn_cast<Expr>(S)) {
       const BinaryOperator *BinOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
@@ -292,7 +295,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
                 "contains an operation with a nested boolean expression. "
                 "Expression will not be covered");
             Diag.Report(S->getBeginLoc(), DiagID);
-            return false;
+            return true;
           }
 
           /// Was the maximum number of conditions encountered?
@@ -303,7 +306,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
                 "number of conditions (%0) exceeds max (%1). "
                 "Expression will not be covered");
             Diag.Report(S->getBeginLoc(), DiagID) << NumCond << MCDCMaxCond;
-            return false;
+            return true;
           }
 
           // Otherwise, allocate the number of bytes required for the bitmap
@@ -1031,7 +1034,7 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
 
   std::string CoverageMapping;
   llvm::raw_string_ostream OS(CoverageMapping);
-  RegionMCDCState->CondIDMap.clear();
+  RegionCondIDMap.reset(new llvm::DenseMap<const Stmt *, int16_t>);
   CoverageMappingGen MappingGen(
       *CGM.getCoverageMapping(), CGM.getContext().getSourceManager(),
       CGM.getLangOpts(), RegionCounterMap.get(), RegionMCDCState.get());
@@ -1195,8 +1198,8 @@ void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
     return;
 
   // Extract the ID of the condition we are setting in the bitmap.
-  unsigned CondID = ExprMCDCConditionIDMapIterator->second;
-  assert(CondID > 0 && "Condition has no ID!");
+  auto CondID = ExprMCDCConditionIDMapIterator->second;
+  assert(CondID >= 0 && "Condition has no ID!");
 
   auto *I8PtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
 
@@ -1205,7 +1208,7 @@ void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
   // the resulting value is used to update the boolean expression's bitmap.
   llvm::Value *Args[5] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
                           Builder.getInt64(FunctionHash),
-                          Builder.getInt32(CondID - 1),
+                          Builder.getInt32(CondID),
                           MCDCCondBitmapAddr.getPointer(), Val};
   Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_condbitmap_update),
