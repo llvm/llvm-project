@@ -1,4 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-unknown-shadermodel6.6-library -S -fnative-half-type -finclude-default-header -o - -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
+// RUN:   -emit-llvm -disable-llvm-passes -O3 -o - | FileCheck %s \ 
+// RUN:   --check-prefixes=CHECKIR
 void Fn(double2 D);
 void Fn(half2 H);
 
@@ -27,4 +31,44 @@ void Fn2(int16_t2 S);
 
 void Call2(int2 I) {
   Fn2(I);
+}
+
+void Fn3( int64_t2 p0);
+
+// CHECK: FunctionDecl {{.*}} Call3 'void (half2)'
+// CHECK: CallExpr {{.*}} 'void'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(int64_t2)' <FunctionToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'void (int64_t2)' lvalue Function {{.*}} 'Fn3' 'void (int64_t2)'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int64_t2':'long __attribute__((ext_vector_type(2)))' <FloatingToIntegral>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'half2':'half __attribute__((ext_vector_type(2)))' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'half2':'half __attribute__((ext_vector_type(2)))' lvalue ParmVar {{.*}} 'p0' 'half2':'half __attribute__((ext_vector_type(2)))'
+// CHECKIR: %conv = fptosi <2 x half> %0 to <2 x i64>
+void Call3(half2 p0) {
+  Fn3(p0);
+}
+
+// CHECK: FunctionDecl {{.*}} Call4 'void (float2)'
+// CHECK: CallExpr {{.*}} 'void'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(int64_t2)' <FunctionToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'void (int64_t2)' lvalue Function {{.*}} 'Fn3' 'void (int64_t2)'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int64_t2':'long __attribute__((ext_vector_type(2)))' <FloatingToIntegral>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2':'float __attribute__((ext_vector_type(2)))' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'float2':'float __attribute__((ext_vector_type(2)))' lvalue ParmVar {{.*}} 'p0' 'float2':'float __attribute__((ext_vector_type(2)))'
+// CHECKIR: %conv = fptosi <2 x float> %0 to <2 x i64>
+void Call4(float2 p0) {
+  Fn3(p0);
+}
+
+void Fn4( float2 p0);
+
+// CHECK: FunctionDecl {{.*}} Call5 'void (int64_t2)'
+// CHECK: CallExpr {{.*}} 'void'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(float2)' <FunctionToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'void (float2)' lvalue Function {{.*}} 'Fn4' 'void (float2)'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2':'float __attribute__((ext_vector_type(2)))' <IntegralToFloating>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int64_t2':'long __attribute__((ext_vector_type(2)))' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'int64_t2':'long __attribute__((ext_vector_type(2)))' lvalue ParmVar {{.*}} 'p0' 'int64_t2':'long __attribute__((ext_vector_type(2)))'
+// CHECKIR: %conv = sitofp <2 x i64> %0 to <2 x float>
+void Call5(int64_t2 p0) {
+  Fn4(p0);
 }
