@@ -1435,7 +1435,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
 
   ORE.emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "ProcessLoopStoreOfLoopLoad",
-                              NewCall->getDebugLoc(), Preheader)
+                              TheStore->getDebugLoc(), Preheader)
            << "Formed a call to "
            << ore::NV("NewFunction", NewCall->getCalledFunction())
            << "() intrinsic from " << ore::NV("Inst", InstRemark)

@@ -4,7 +4,7 @@
 define dso_local void @fun(ptr noalias noundef %a, ptr noalias noundef %b) #0 !dbg !10 {
 
 ; CHECK-LABEL: entry:
-; CHECK-NOT: call void @llvm.memcpy.p0.p0.i64{{.*}}dbg {{![0-9]+}}
+; CHECK: call void @llvm.memcpy.p0.p0.i64{{\(.*\)$}}
 entry:
   tail call void @llvm.dbg.value(metadata ptr %a, metadata !17, metadata !DIExpression()), !dbg !18
   tail call void @llvm.dbg.value(metadata ptr %b, metadata !19, metadata !DIExpression()), !dbg !18
@@ -46,14 +46,11 @@ entry:
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
-attributes #0 = { noinline nounwind uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3, !4, !5, !6, !7, !8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang version 18.0.0git (https://github.com/llvm/llvm-project.git 7e604485e18d40be6ce6310e4a3e583ca0b7df47)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-!1 = !DIFile(filename: "1423.c", directory: "/home/linuxbrew/llvm-debug/LoopIdiomRecognize", checksumkind: CSK_MD5, checksum: "50c6f3e45074a3e94d8587b0957b242b")
+!0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang version 18.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+!1 = !DIFile(filename: "1423.c", directory: "/home/linuxbrew/llvm-debug/LoopIdiomRecognize")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}

@@ -10,11 +10,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Check that everything still works when debuginfo is present, and that it is reasonably propagated.
 
-; CHECK: remark: <unknown>:0:0: Formed a call to llvm.memcpy.p0.p0.i64() intrinsic from load and store instruction in test6_dest_align function{{$}}
+; CHECK: remark: <stdin>:6:1: Formed a call to llvm.memcpy.p0.p0.i64() intrinsic from load and store instruction in test6_dest_align function{{$}}
 
 ; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            loop-idiom
 ; YAML-NEXT: Name:            ProcessLoopStoreOfLoopLoad
+; YAML-NEXT: DebugLoc:        { File: '<stdin>', Line: 6, Column: 1 }
 ; YAML-NEXT: Function:        test6_dest_align
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Formed a call to '
@@ -33,7 +34,7 @@ define void @test6_dest_align(ptr noalias align 1 %Base, ptr noalias align 4 %De
 ; CHECK-LABEL: @test6_dest_align(
 ; CHECK-NEXT:  bb.nph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[SIZE:%.*]], 2, !dbg [[DBG18:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DEST:%.*]], ptr align 1 [[BASE:%.*]], i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DEST:%.*]], ptr align 1 [[BASE:%.*]], i64 [[TMP0]], i1 false){{$}}
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]], !dbg [[DBG18]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ], !dbg [[DBG20:![0-9]+]]
