@@ -136,8 +136,7 @@ define i8 @test_cond_and_bothways(i8 %x) {
 ; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -4
 ; CHECK-NEXT:    ret i8 [[OR1]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
-; CHECK-NEXT:    ret i8 [[OR2]]
+; CHECK-NEXT:    ret i8 -4
 ;
   %and = and i8 %x, 91
   %cmp0 = icmp ne i8 %and, 24
@@ -162,8 +161,7 @@ define i8 @test_cond_or_bothways(i8 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP0]], [[CMP1]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -4
-; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK-NEXT:    ret i8 -4
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
 ; CHECK-NEXT:    ret i8 [[OR2]]

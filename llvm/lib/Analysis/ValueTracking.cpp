@@ -711,10 +711,17 @@ static void computeKnownBitsFromCond(const Value *V, Value *Cond,
                                      const SimplifyQuery &SQ, bool Invert) {
   Value *A, *B;
   if (Depth < MaxAnalysisRecursionDepth &&
-      (Invert ? match(Cond, m_LogicalOr(m_Value(A), m_Value(B)))
-              : match(Cond, m_LogicalAnd(m_Value(A), m_Value(B))))) {
-    computeKnownBitsFromCond(V, A, Known, Depth + 1, SQ, Invert);
-    computeKnownBitsFromCond(V, B, Known, Depth + 1, SQ, Invert);
+      match(Cond, m_LogicalOp(m_Value(A), m_Value(B)))) {
+    KnownBits Known2(Known.getBitWidth());
+    KnownBits Known3(Known.getBitWidth());
+    computeKnownBitsFromCond(V, A, Known2, Depth + 1, SQ, Invert);
+    computeKnownBitsFromCond(V, B, Known3, Depth + 1, SQ, Invert);
+    if (Invert ? match(Cond, m_LogicalOr(m_Value(), m_Value()))
+               : match(Cond, m_LogicalAnd(m_Value(), m_Value())))
+      Known2 = Known2.unionWith(Known3);
+    else
+      Known2 = Known2.intersectWith(Known3);
+    Known = Known.unionWith(Known2);
   }
 
   if (auto *Cmp = dyn_cast<ICmpInst>(Cond))
