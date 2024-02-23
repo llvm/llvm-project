@@ -1600,6 +1600,26 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
     // has no stop reason.
     thread->GetRegisterContext()->InvalidateIfNeeded(true);
     if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp)) {
+      // If a thread is stopped at a breakpoint site, set that as the stop
+      // reason even if it hasn't executed the breakpoint instruction yet.
+      // We will silently step over the breakpoint when we resume execution
+      // and miss the fact that this thread hit the breakpoint.
+      const size_t num_thread_ids = m_thread_ids.size();
+      for (size_t i = 0; i < num_thread_ids; i++) {
+        if (m_thread_ids[i] == thread->GetID() && m_thread_pcs.size() > i) {
+          addr_t pc = m_thread_pcs[i];
+          lldb::BreakpointSiteSP bp_site_sp =
+              thread->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
+          if (bp_site_sp) {
+            if (bp_site_sp->ValidForThisThread(*thread)) {
+              thread->SetStopInfo(
+                  StopInfo::CreateStopReasonWithBreakpointSiteID(
+                      *thread, bp_site_sp->GetID()));
+              return true;
+            }
+          }
+        }
+      }
       thread->SetStopInfo(StopInfoSP());
     }
     return true;
@@ -1722,7 +1742,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     } else {
       bool handled = false;
       bool did_exec = false;
-      if (!reason.empty()) {
+      // debugserver can send reason = "none" which is equivalent
+      // to no reason.
+      if (!reason.empty() && reason != "none") {
         if (reason == "trace") {
           addr_t pc = thread_sp->GetRegisterContext()->GetPC();
           lldb::BreakpointSiteSP bp_site_sp =
@@ -1864,11 +1886,10 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
         lldb::BreakpointSiteSP bp_site_sp =
             thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
 
-        // If the current pc is a breakpoint site then the StopInfo should be
-        // set to Breakpoint even though the remote stub did not set it as such.
-        // This can happen when the thread is involuntarily interrupted (e.g.
-        // due to stops on other threads) just as it is about to execute the
-        // breakpoint instruction.
+        // If a thread is stopped at a breakpoint site, set that as the stop
+        // reason even if it hasn't executed the breakpoint instruction yet.
+        // We will silently step over the breakpoint when we resume execution
+        // and miss the fact that this thread hit the breakpoint.
         if (bp_site_sp && bp_site_sp->ValidForThisThread(*thread_sp)) {
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithBreakpointSiteID(
               *thread_sp, bp_site_sp->GetID()));
