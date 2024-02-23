@@ -7212,11 +7212,11 @@ bool llvm::propagatesPoison(const Use &PoisonOp) {
 }
 
 /// Enumerates all operands of \p I that are guaranteed to not be undef or
-/// poison. If the callback \p Handle returns true, stop iterating and return
+/// poison. If the callback \p Handle returns true, stop processing and return
 /// true. Otherwise, return false.
 template <typename CallableT>
-bool foreachGuaranteedWellDefinedOps(const Instruction *I,
-                                     const CallableT &Handle) {
+bool handleGuaranteedWellDefinedOps(const Instruction *I,
+                                    const CallableT &Handle) {
   switch (I->getOpcode()) {
     case Instruction::Store:
       if (Handle(cast<StoreInst>(I)->getPointerOperand()))
@@ -7277,7 +7277,7 @@ bool foreachGuaranteedWellDefinedOps(const Instruction *I,
 
 void llvm::getGuaranteedWellDefinedOps(
     const Instruction *I, SmallVectorImpl<const Value *> &Operands) {
-  foreachGuaranteedWellDefinedOps(I, [&](const Value *V) {
+  handleGuaranteedWellDefinedOps(I, [&](const Value *V) {
     Operands.push_back(V);
     return false;
   });
@@ -7285,9 +7285,9 @@ void llvm::getGuaranteedWellDefinedOps(
 
 /// Enumerates all operands of \p I that are guaranteed to not be poison.
 template <typename CallableT>
-bool foreachGuaranteedNonPoisonOps(const Instruction *I,
-                                   const CallableT &Handle) {
-  if (foreachGuaranteedWellDefinedOps(I, Handle))
+bool handleGuaranteedNonPoisonOps(const Instruction *I,
+                                  const CallableT &Handle) {
+  if (handleGuaranteedWellDefinedOps(I, Handle))
     return true;
   switch (I->getOpcode()) {
   // Divisors of these operations are allowed to be partially undef.
@@ -7303,7 +7303,7 @@ bool foreachGuaranteedNonPoisonOps(const Instruction *I,
 
 void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
                                      SmallVectorImpl<const Value *> &Operands) {
-  foreachGuaranteedNonPoisonOps(I, [&](const Value *V) {
+  handleGuaranteedNonPoisonOps(I, [&](const Value *V) {
     Operands.push_back(V);
     return false;
   });
@@ -7311,7 +7311,7 @@ void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
 
 bool llvm::mustTriggerUB(const Instruction *I,
                          const SmallPtrSetImpl<const Value *> &KnownPoison) {
-  return foreachGuaranteedNonPoisonOps(
+  return handleGuaranteedNonPoisonOps(
       I, [&](const Value *V) { return KnownPoison.count(V); });
 }
 
@@ -7355,7 +7355,7 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
       if (--ScanLimit == 0)
         break;
 
-      if (foreachGuaranteedWellDefinedOps(&I, [V](const Value *WellDefinedOp) {
+      if (handleGuaranteedWellDefinedOps(&I, [V](const Value *WellDefinedOp) {
             return WellDefinedOp == V;
           }))
         return true;
