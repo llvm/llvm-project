@@ -16,7 +16,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/VFABIDemangler.h"
 #include "llvm/Support/CheckedArithmetic.h"
 
@@ -120,6 +119,7 @@ template <typename InstTy> class InterleaveGroup;
 class IRBuilderBase;
 class Loop;
 class ScalarEvolution;
+class TargetTransformInfo;
 class Type;
 class Value;
 
@@ -414,14 +414,6 @@ bool maskContainsAllOneOrUndef(Value *Mask);
 /// Given a mask vector of the form <Y x i1>, return an APInt (of bitwidth Y)
 /// for each lane which may be active.
 APInt possiblyDemandedEltsInMask(Value *Mask);
-
-/// Returns the cost of a call when a target has a vector library function for
-/// the given \p VecTy, otherwise an invalid cost.
-InstructionCost getVecLibCallCost(const Instruction *I,
-                                  const TargetTransformInfo *TTI,
-                                  const TargetLibraryInfo *TLI,
-                                  VectorType *VecTy,
-                                  TargetTransformInfo::TargetCostKind CostKind);
 
 /// The group of interleaved loads/stores sharing the same stride and
 /// close to each other.

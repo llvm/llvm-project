@@ -9,6 +9,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfoImpl.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
@@ -881,6 +882,24 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
                                       Args, CxtI);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
+}
+
+InstructionCost TargetTransformInfo::getFRemInstrCost(
+    const TargetLibraryInfo *TLI, unsigned Opcode, Type *Ty,
+    TTI::TargetCostKind CostKind, OperandValueInfo Op1Info,
+    OperandValueInfo Op2Info, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) const {
+  assert(Opcode == Instruction::FRem && "Instruction must be frem");
+
+  VectorType *VecTy = dyn_cast<VectorType>(Ty);
+  Type *ScalarTy = VecTy ? VecTy->getScalarType() : Ty;
+  LibFunc Func;
+  if (VecTy && TLI->getLibFunc(Opcode, ScalarTy, Func) &&
+      TLI->isFunctionVectorizable(TLI->getName(Func), VecTy->getElementCount()))
+    return getCallInstrCost(nullptr, VecTy, {VecTy, VecTy}, CostKind);
+
+  return getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info, Args,
+                                CxtI);
 }
 
 InstructionCost TargetTransformInfo::getAltInstrCost(

@@ -1255,6 +1255,18 @@ public:
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr) const;
 
+  /// Returns the cost of a vector instruction based on the assumption that frem
+  /// will be later transformed (by ReplaceWithVecLib) into a call to a
+  /// platform specific frem vector math function.
+  /// If unsupported, it will return cost using getArithmeticInstrCost.
+  InstructionCost getFRemInstrCost(
+      const TargetLibraryInfo *TLI, unsigned Opcode, Type *Ty,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
+      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
+      const Instruction *CxtI = nullptr) const;
+
   /// Returns the cost estimation for alternating opcode pattern that can be
   /// lowered to a single instruction on the target. In X86 this is for the
   /// addsub instruction which corrsponds to a Shuffle + Fadd + FSub pattern in
