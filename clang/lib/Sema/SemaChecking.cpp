@@ -5166,6 +5166,9 @@ bool Sema::CheckPPCMMAType(QualType Type, SourceLocation TypeLoc) {
   return false;
 }
 
+// Helper function for CheckHLSLBuiltinFunctionCall
+// Note: UsualArithmeticConversions handles the case where at least
+// one arg isn't a bool
 bool PromoteBoolsToInt(Sema *S, CallExpr *TheCall) {
   unsigned NumArgs = TheCall->getNumArgs();
 
@@ -5181,47 +5184,13 @@ bool PromoteBoolsToInt(Sema *S, CallExpr *TheCall) {
                                                    Sema::AA_Converting);
     if (ResA.isInvalid())
       return true;
-    TheCall->setArg(0, ResA.get());
+    TheCall->setArg(i, ResA.get());
   }
   return false;
 }
 
-int overloadOrder(Sema *S, QualType ArgTyA) {
-  auto kind = ArgTyA->getAs<BuiltinType>()->getKind();
-  switch (kind) {
-  case BuiltinType::Short:
-  case BuiltinType::UShort:
-    return 1;
-  case BuiltinType::Int:
-  case BuiltinType::UInt:
-    return 2;
-  case BuiltinType::Long:
-  case BuiltinType::ULong:
-    return 3;
-  case BuiltinType::LongLong:
-  case BuiltinType::ULongLong:
-    return 4;
-  case BuiltinType::Float16:
-  case BuiltinType::Half:
-    return 5;
-  case BuiltinType::Float:
-    return 6;
-  default:
-    break;
-  }
-  return 0;
-}
-
-QualType getVecLargestBitness(Sema *S, QualType ArgTyA, QualType ArgTyB) {
-  auto *VecTyA = ArgTyA->getAs<VectorType>();
-  auto *VecTyB = ArgTyB->getAs<VectorType>();
-  QualType VecTyAElem = VecTyA->getElementType();
-  QualType VecTyBElem = VecTyB->getElementType();
-  int vecAElemWidth = overloadOrder(S, VecTyAElem);
-  int vecBElemWidth = overloadOrder(S, VecTyBElem);
-  return vecAElemWidth > vecBElemWidth ? ArgTyA : ArgTyB;
-}
-
+// Helper function for CheckHLSLBuiltinFunctionCall
+// Handles the CK_HLSLVectorTruncation case for builtins
 void PromoteVectorArgTruncation(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() > 1);
   ExprResult A = TheCall->getArg(0);
@@ -5246,6 +5215,7 @@ void PromoteVectorArgTruncation(Sema *S, CallExpr *TheCall) {
     SmallerArg = B.get();
     largerIndex = 0;
   }
+
   S->Diag(TheCall->getExprLoc(), diag::warn_hlsl_impcast_vector_truncation)
       << LargerArg->getType() << SmallerArg->getType()
       << LargerArg->getSourceRange() << SmallerArg->getSourceRange();
@@ -5255,61 +5225,79 @@ void PromoteVectorArgTruncation(Sema *S, CallExpr *TheCall) {
   return;
 }
 
-bool PromoteVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
+// Helper function for CheckHLSLBuiltinFunctionCall
+void CheckVectorFloatPromotion(Sema *S, ExprResult &source, QualType targetTy,
+                               SourceRange targetSrcRange,
+                               SourceLocation BuiltinLoc) {
+  auto *vecTyTarget = source.get()->getType()->getAs<VectorType>();
+  assert(vecTyTarget);
+  QualType vecElemT = vecTyTarget->getElementType();
+  if (!vecElemT->isFloatingType() && targetTy->isFloatingType()) {
+    QualType floatVecTy = S->Context.getVectorType(
+        S->Context.FloatTy, vecTyTarget->getNumElements(), VectorKind::Generic);
+    int floatByteSize =
+        S->Context.getTypeSizeInChars(S->Context.FloatTy).getQuantity();
+    int vecElemByteSize = S->Context.getTypeSizeInChars(vecElemT).getQuantity();
+    if (vecElemByteSize > floatByteSize)
+      S->Diag(BuiltinLoc, diag::warn_hlsl_impcast_bitwidth_reduction)
+          << source.get()->getType() << floatVecTy
+          << source.get()->getSourceRange() << targetSrcRange;
+
+    source = S->SemaConvertVectorExpr(
+        source.get(), S->Context.CreateTypeSourceInfo(floatVecTy), BuiltinLoc,
+        source.get()->getBeginLoc());
+  }
+}
+
+// Helper function for CheckHLSLBuiltinFunctionCall
+void PromoteVectorArgSplat(Sema *S, ExprResult &source, QualType targetTy) {
+  QualType sourceTy = source.get()->getType();
+  auto *vecTyTarget = targetTy->getAs<VectorType>();
+  QualType vecElemT = vecTyTarget->getElementType();
+  if (vecElemT->isFloatingType() && sourceTy != vecElemT)
+    // if float vec splat wil do an unnecessary cast to double
+    source = S->ImpCastExprToType(source.get(), vecElemT, CK_FloatingCast);
+  source = S->ImpCastExprToType(source.get(), targetTy, CK_VectorSplat);
+}
+
+// Helper function for CheckHLSLBuiltinFunctionCall
+bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() > 1);
   ExprResult A = TheCall->getArg(0);
   ExprResult B = TheCall->getArg(1);
   QualType ArgTyA = A.get()->getType();
   QualType ArgTyB = B.get()->getType();
-
   auto *VecTyA = ArgTyA->getAs<VectorType>();
   auto *VecTyB = ArgTyB->getAs<VectorType>();
+
   if (VecTyA == nullptr && VecTyB == nullptr)
     return false;
+
   if (VecTyA && VecTyB) {
     if (VecTyA->getElementType() == VecTyB->getElementType()) {
       TheCall->setType(VecTyA->getElementType());
       return false;
     }
-    SourceLocation BuiltinLoc = TheCall->getBeginLoc();
-    QualType CastType = getVecLargestBitness(S, ArgTyA, ArgTyB);
-    if (CastType == ArgTyA) {
-      ExprResult ResB = S->SemaConvertVectorExpr(
-          B.get(), S->Context.CreateTypeSourceInfo(ArgTyA), BuiltinLoc,
-          B.get()->getBeginLoc());
-      TheCall->setArg(1, ResB.get());
-      TheCall->setType(VecTyA->getElementType());
-      return false;
-    }
-
-    if (CastType == ArgTyB) {
-      ExprResult ResA = S->SemaConvertVectorExpr(
-          A.get(), S->Context.CreateTypeSourceInfo(ArgTyB), BuiltinLoc,
-          A.get()->getBeginLoc());
-      TheCall->setArg(0, ResA.get());
-      TheCall->setType(VecTyB->getElementType());
-      return false;
-    }
-    return false;
+    // Note: type promotion is intended to be handeled via the intrinsics
+    //  and not the builtin itself.
+    S->Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_incompatible_vector)
+        << TheCall->getDirectCallee()
+        << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
+    return true;
   }
 
   if (VecTyB) {
-    // Convert  to the vector result type
-    ExprResult ResA = A;
-    if (VecTyB->getElementType() != ArgTyA)
-      ResA = S->ImpCastExprToType(ResA.get(), VecTyB->getElementType(),
-                                  CK_FloatingCast);
-    ResA = S->ImpCastExprToType(ResA.get(), ArgTyB, CK_VectorSplat);
-    TheCall->setArg(0, ResA.get());
+    CheckVectorFloatPromotion(S, B, ArgTyA, A.get()->getSourceRange(),
+                              TheCall->getBeginLoc());
+    PromoteVectorArgSplat(S, A, B.get()->getType());
   }
   if (VecTyA) {
-    ExprResult ResB = B;
-    if (VecTyA->getElementType() != ArgTyB)
-      ResB = S->ImpCastExprToType(ResB.get(), VecTyA->getElementType(),
-                                  CK_FloatingCast);
-    ResB = S->ImpCastExprToType(ResB.get(), ArgTyA, CK_VectorSplat);
-    TheCall->setArg(1, ResB.get());
+    CheckVectorFloatPromotion(S, A, ArgTyB, B.get()->getSourceRange(),
+                              TheCall->getBeginLoc());
+    PromoteVectorArgSplat(S, B, A.get()->getType());
   }
+  TheCall->setArg(0, A.get());
+  TheCall->setArg(1, B.get());
   return false;
 }
 
@@ -5322,7 +5310,7 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     if (PromoteBoolsToInt(this, TheCall))
       return true;
-    if (PromoteVectorElementCallArgs(this, TheCall))
+    if (CheckVectorElementCallArgs(this, TheCall))
       return true;
     PromoteVectorArgTruncation(this, TheCall);
     if (SemaBuiltinVectorToScalarMath(TheCall))

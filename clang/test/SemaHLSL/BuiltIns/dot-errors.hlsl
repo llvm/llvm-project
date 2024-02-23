@@ -28,13 +28,11 @@ float test_dot_builtin_vector_size_mismatch ( float3 p0, float2 p1 ) {
   // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'float2' (aka 'vector<float, 2>')}}
 }
 
+float test_dot_builtin_vector_elem_size_reduction ( int64_t2 p0, float p1 ) {
+  return __builtin_hlsl_dot ( p0, p1 );
+  // expected-warning@-1 {{conversion from larger type: 'int64_t2' (aka 'vector<int64_t, 2>') to smaller type '__attribute__((__vector_size__(2 * sizeof(float)))) float' (vector of 2 'float' values), possible loss of data}}
+}
 
-//NOTE: this case runs into the same problem as the below example
-//int Fn1(int p0, int p1);
-//int Fn1(float p0, float p1);
-//int test_dot_scalar_mismatch ( float p0, int p1 ) {
-//  return Fn1( p0, p1 );
-//}
 float test_dot_scalar_mismatch ( float p0, int p1 ) {
   return dot ( p0, p1 );
   // expected-error@-1 {{call to 'dot' is ambiguous}}
@@ -44,3 +42,41 @@ float test_dot_element_type_mismatch ( int2 p0, float2 p1 ) {
   return dot ( p0, p1 );
   // expected-error@-1 {{call to 'dot' is ambiguous}}
 }
+
+//NOTE: for all the *_promotion we are intentionally not handling type promotion in builtins
+float test_builtin_dot_vec_int_to_float_promotion ( int2 p0, float2 p1 ) {
+  return __builtin_hlsl_dot ( p0, p1 );
+  // expected-error@-1 {{first two arguments to '__builtin_hlsl_dot' must have the same type}}
+}
+
+int64_t test_builtin_dot_vec_int_to_int64_promotion( int64_t2 p0, int2 p1 ) {
+  return __builtin_hlsl_dot( p0, p1 );
+  // expected-error@-1 {{first two arguments to '__builtin_hlsl_dot' must have the same type}}
+}
+
+float test_builtin_dot_vec_half_to_float_promotion( float2 p0, half2 p1 ) {
+  return __builtin_hlsl_dot( p0, p1 );
+  // expected-error@-1 {{first two arguments to '__builtin_hlsl_dot' must have the same type}}
+}
+
+#ifdef __HLSL_ENABLE_16_BIT
+float test_builtin_dot_vec_int16_to_float_promotion( float2 p0, int16_t2 p1 ) {
+  return __builtin_hlsl_dot( p0, p1 );
+  // expected-error@-1 {{first two arguments to '__builtin_hlsl_dot' must have the same type}}
+}
+
+half test_builtin_dot_vec_int16_to_half_promotion( half2 p0, int16_t2 p1 ) {
+  return __builtin_hlsl_dot( p0, p1 );
+  // expected-error@-1 {{first two arguments to '__builtin_hlsl_dot' must have the same type}}
+}
+
+int test_builtin_dot_vec_int16_to_int_promotion( int2 p0, int16_t2 p1 ) {
+  return __builtin_hlsl_dot( p0, p1 );
+  // expected-error@-1 {{first two arguments to '__builtin_hlsl_dot' must have the same type}}
+}
+
+int64_t test_builtin_dot_vec_int16_to_int64_promotion( int64_t2 p0, int16_t2 p1 ) {
+  return __builtin_hlsl_dot( p0, p1 );
+  // expected-error@-1 {{first two arguments to '__builtin_hlsl_dot' must have the same type}}
+}
+#endif

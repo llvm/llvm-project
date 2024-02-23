@@ -17977,11 +17977,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     llvm::Type *T1 = Op1->getType();
     if (!T0->isVectorTy() && !T1->isVectorTy()) {
       if (T0->isFloatingPointTy()) {
-      return Builder.CreateFMul(Op0, Op1, "dx.dot");
+        return Builder.CreateFMul(Op0, Op1, "dx.dot");
       }
 
       if (T0->isIntegerTy()) {
-      return Builder.CreateMul(Op0, Op1, "dx.dot");
+        return Builder.CreateMul(Op0, Op1, "dx.dot");
       }
       // Bools should have been promoted
       assert(

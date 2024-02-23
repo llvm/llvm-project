@@ -10270,8 +10270,6 @@ def err_vec_builtin_non_vector : Error<
  "first two arguments to %0 must be vectors">;
 def err_vec_builtin_incompatible_vector : Error<
   "first two arguments to %0 must have the same type">;
-def err_vec_builtin_incompatible_size : Error<
-  "first two arguments to %0 must have the same size">;
 def err_vsx_builtin_nonconstant_argument : Error<
   "argument %0 to %1 must be a 2-bit unsigned literal (i.e. 0, 1, 2 or 3)">;
 
@@ -12119,6 +12117,9 @@ def err_hlsl_param_qualifier_mismatch :
 
 def warn_hlsl_impcast_vector_truncation : Warning<
   "implicit conversion truncates vector: %0 to %1">, InGroup<Conversion>;
+
+def warn_hlsl_impcast_bitwidth_reduction : Warning<
+  "implicit conversion from larger type: %0 to smaller type %1, possible loss of data">, InGroup<Conversion>;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
