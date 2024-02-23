@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify %s -fexperimental-new-constant-interpreter
 // expected-no-diagnostics
 
 #include <limits.h>

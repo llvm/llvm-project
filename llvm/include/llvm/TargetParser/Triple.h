@@ -212,10 +212,11 @@ public:
     PS4,
     PS5,
     ELFIAMCU,
-    TvOS,       // Apple tvOS
-    WatchOS,    // Apple watchOS
-    DriverKit,  // Apple DriverKit
-    XROS,       // Apple XROS
+    TvOS,      // Apple tvOS
+    WatchOS,   // Apple watchOS
+    BridgeOS,  // Apple bridgeOS
+    DriverKit, // Apple DriverKit
+    XROS,      // Apple XROS
     Mesa3D,
     AMDPAL,     // AMD PAL Runtime
     HermitCore, // HermitCore Unikernel/Multikernel
@@ -225,7 +226,7 @@ public:
     ShaderModel, // DirectX ShaderModel
     LiteOS,
     Serenity,
-    Vulkan,      // Vulkan SPIR-V
+    Vulkan, // Vulkan SPIR-V
     LastOSType = Vulkan
   };
   enum EnvironmentType {
@@ -446,6 +447,14 @@ public:
   /// @}
   /// @name Convenience Predicates
   /// @{
+
+  /// Returns the pointer width of this architecture.
+  static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch);
+
+  /// Returns the pointer width of this architecture.
+  unsigned getArchPointerBitWidth() const {
+    return getArchPointerBitWidth(getArch());
+  }
 
   /// Test whether the architecture is 64-bit
   ///

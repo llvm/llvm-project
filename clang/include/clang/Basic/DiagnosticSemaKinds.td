@@ -5325,7 +5325,7 @@ def err_alias_template_extra_headers : Error<
 def err_template_spec_extra_headers : Error<
   "extraneous template parameter list in template specialization or "
   "out-of-line template definition">;
-def warn_template_spec_extra_headers : Warning<
+def ext_template_spec_extra_headers : ExtWarn<
   "extraneous template parameter list in template specialization">;
 def note_explicit_template_spec_does_not_need_header : Note<
   "'template<>' header not required for explicitly-specialized class %0 "
@@ -8255,6 +8255,9 @@ def err_not_tag_in_scope : Error<
 def ext_template_after_declarative_nns : ExtWarn<
     "'template' cannot be used after a declarative nested name specifier">,
     InGroup<DiagGroup<"template-in-declaration-name">>;
+def ext_alias_template_in_declarative_nns : ExtWarn<
+  "a declarative nested name specifier cannot name an alias template">,
+  InGroup<DiagGroup<"alias-template-in-declaration-name">>;
 
 def err_no_typeid_with_fno_rtti : Error<
   "use of typeid requires -frtti">;
@@ -10361,6 +10364,8 @@ def err_x86_builtin_tile_arg_duplicate : Error<
 
 def err_builtin_target_unsupported : Error<
   "builtin is not supported on this target">;
+def err_builtin_aix_os_unsupported : Error<
+  "this builtin is available only on AIX 7.2 and later operating systems">;
 def err_builtin_longjmp_unsupported : Error<
   "__builtin_longjmp is not supported for the current target">;
 def err_builtin_setjmp_unsupported : Error<
@@ -11314,8 +11319,6 @@ def err_omp_wrong_dependency_iterator_type : Error<
 def err_target_unsupported_type
     : Error<"%0 requires %select{|%2 bit size}1 %3 %select{|return }4type support,"
             " but target '%5' does not support it">;
-def err_target_unsupported_type_for_abi
-    : Error<"%0 requires %1 type support, but ABI '%2' does not support it">;
 def err_omp_lambda_capture_in_declare_target_not_to : Error<
   "variable captured in declare target region must appear in a to clause">;
 def err_omp_device_type_mismatch : Error<
@@ -12112,6 +12115,9 @@ def err_hlsl_operator_unsupported : Error<
 def err_hlsl_param_qualifier_mismatch :
   Error<"conflicting parameter qualifier %0 on parameter %1">;
 
+def warn_hlsl_impcast_vector_truncation : Warning<
+  "implicit conversion truncates vector: %0 to %1">, InGroup<Conversion>;
+
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;
@@ -12197,4 +12203,6 @@ def warn_acc_clause_unimplemented
 def err_acc_construct_appertainment
     : Error<"OpenACC construct '%0' cannot be used here; it can only "
             "be used in a statement context">;
+def err_acc_branch_in_out
+    : Error<"invalid branch %select{out of|into}0 OpenACC Compute Construct">;
 } // end of sema component.
