@@ -914,6 +914,8 @@ cc_library(
         "//mlir:ArithToArmSME",
         "//mlir:ArmSMEToLLVM",
         "//mlir:ArmSMEToSCF",
+        "//mlir:ArmSMETransforms",
+        "//mlir:ArmSVETransforms",
         "//mlir:IR",
         "//mlir:Pass",
         "//mlir:Transforms",
