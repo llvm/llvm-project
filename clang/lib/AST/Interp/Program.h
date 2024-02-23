@@ -190,6 +190,7 @@ private:
     std::byte *data() { return B.data(); }
     /// Return a pointer to the block.
     Block *block() { return &B; }
+    const Block *block() const { return &B; }
 
   private:
     /// Required metadata - does not actually track pointers.
