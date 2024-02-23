@@ -4,7 +4,7 @@
 ; CHECK: GeneratorPolynomial: 29
 ; CHECK: CRC Size: 8
 ; CHECK: Reversed: 0
-; CHECK: loop-idiom CRCRegonize: This looks like crc!
+; CHECK: loop-idiom CRCRecognize: This looks like crc!
 define dso_local zeroext i8 @crc8_loop(ptr noundef %data, i32 noundef %length) {
 entry:
   br label %for.cond
@@ -76,7 +76,7 @@ for.end:                                          ; preds = %for.body
 }
 
 ; CRC16 xor outside loop
-; CHECK: loop-idiom CRCRegonize: This looks like crc!
+; CHECK: loop-idiom CRCRecognize: This looks like crc!
 define dso_local zeroext i16 @crc16_xor_outside(i16 %crc, i8 %data) {
 entry:
   %conv2 = zext i8 %data to i16
@@ -103,7 +103,7 @@ for.end:                                          ; preds = %for.body
 ; CRC size 32 xor inside in a byte loop
 ; CHECK: GeneratorPolynomial: 270598144
 ; CHECK: CRC Size: 32
-; CHECK: loop-idiom CRCRegonize: This looks like crc!
+; CHECK: loop-idiom CRCRecognize: This looks like crc!
 define i16 @crc32_reversed(ptr %data_p, i16 %length) {
 entry:
   %cmp = icmp eq i16 %length, 0
@@ -162,7 +162,7 @@ cleanup:                                          ; preds = %entry, %do.end
 ; CHECK: CRC Size: 16
 ; CHECK: Reversed: 0
 ; CHECK: Data Size: 8
-; CHECK: loop-idiom CRCRegonize: This looks like crc!
+; CHECK: loop-idiom CRCRecognize: This looks like crc!
 define signext i16 @crc16(i16 %crcValue, i8 %newByte) {
 entry:
   br label %for.body

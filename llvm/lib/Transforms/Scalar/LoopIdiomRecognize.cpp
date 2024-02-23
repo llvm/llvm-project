@@ -137,8 +137,11 @@ static cl::opt<bool> UseLIRCodeSizeHeurs(
              "with -Os/-Oz"),
     cl::init(true), cl::Hidden);
 
-static cl::opt<bool> CRCRecognize("recognize-crc", cl::desc("CRC RECOGNIZE"),
-                                  cl::init(false), cl::Hidden);
+static cl::opt<bool>
+    CRCRecognize("recognize-crc",
+                 cl::desc("Recognize loop-based CRC implementations and "
+                          "replaces them with a lookup table."),
+                 cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -3193,7 +3196,7 @@ static bool symbolicallyExecute(BasicBlock *BB,
   auto getConstantOperand = [](Instruction *I, uint8_t Operand) {
     ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(Operand));
     if (!CI) {
-      LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRegonize: Do not know how to"
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRecognize: Do not know how to"
                         << " handle this operation with non-constant operand "
                         << Operand << ":\n"
                         << *I << "\n");
@@ -3227,7 +3230,7 @@ static bool symbolicallyExecute(BasicBlock *BB,
         if (Incoming != BB) {
           if (IncomingBlock) {
             LLVM_DEBUG(dbgs()
-                       << DEBUG_TYPE " CRCRegonize: Do not know how to"
+                       << DEBUG_TYPE " CRCRecognize: Do not know how to"
                        << " handle loop with multiple entries" << I << "\n");
             return false;
           }
@@ -3279,7 +3282,7 @@ static bool symbolicallyExecute(BasicBlock *BB,
       SelectInst *Select = cast<SelectInst>(&I);
       ICmpInst *Cond = dyn_cast<ICmpInst>(Select->getCondition());
       if (!Cond) {
-        LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRegonize: Do not know how to"
+        LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRecognize: Do not know how to"
                           << " handle SelectInst with non-icmp condition: " << I
                           << "\n");
         return false;
@@ -3332,7 +3335,7 @@ void LoopIdiomRecognize::writeTableBasedCRCOneByte(CRCInfo &CRC) {
   // than we need to account for overflow) and copying the 64bit values across
   // aligned correctly
   uint64_t CRCNumBytes = CRCSize / 8;
-  char *CRCTableData = (char *)malloc(CRCNumBytes * 260);
+  char *CRCTableData = new char[CRCNumBytes * 260];
   for (int I = 0; I < 256; I++) {
     *((uint64_t *)(CRCTableData + I * CRCNumBytes)) = CRCTable[I];
   }
@@ -3349,7 +3352,7 @@ void LoopIdiomRecognize::writeTableBasedCRCOneByte(CRCInfo &CRC) {
       TableType, true, GlobalVariable::LinkageTypes::PrivateLinkage,
       ConstantArr, TableNameSS.str());
   ExitBB->getModule()->insertGlobalVariable(CRCTableGlobal);
-  free(CRCTableData);
+  delete CRCTableData;
 
   // Construct the IR to load from this table
   Value *CRCOffset = CRC.CRCInput;
@@ -3369,7 +3372,8 @@ void LoopIdiomRecognize::writeTableBasedCRCOneByte(CRCInfo &CRC) {
     CRCOffset = Builder.CreateXor(CRCOffset, Data);
   }
 
-  CRCOffset = Builder.CreateZExt(CRCOffset, Builder.getInt32Ty());
+  CRCOffset =
+      Builder.CreateZExt(CRCOffset, DL->getIndexType(ExitBB->getContext(), 0));
   Value *Gep = Builder.CreateInBoundsGEP(CRCType, CRCTableGlobal, {CRCOffset});
   Value *CRCRes = Builder.CreateLoad(CRCType, Gep);
   if (CRCSize > 8) {
@@ -3397,7 +3401,7 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   CRCInfo CRC = *MaybeCRC;
 
   uint64_t CRCSize = CRC.CRCInput->getType()->getScalarSizeInBits();
-  LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRegonize: Found potential CRCLoop "
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRecognize: Found potential CRCLoop "
                     << *CurLoop << "\n"
                     << "Input CRC: " << *CRC.CRCInput << "\n"
                     << "Output CRC: " << *CRC.CRCOutput << "\n"
@@ -3420,26 +3424,26 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   // any unexpected loop variant operations happening, e.g. additional select
   // logic or shifts, then this will be captured in the ValueBits.
   std::map<Value *, ValueBits *> ValueMap;
-
+    
   if (!symbolicallyExecute(CurLoop->getHeader(), ValueMap))
     return false;
 
   auto Result = ValueMap.find(CRC.CRCOutput);
   if (Result == ValueMap.end()) {
-    LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRegonize: Did not find CRC output"
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRecognize: Did not find CRC output"
                       << " after symbolic execution\n");
     return false;
   }
 
   ValueBits *CRCOutBits = Result->second;
   LLVM_DEBUG(dbgs() << DEBUG_TYPE
-                    << " CRCRegonize: ValueBits for output crc value:\n"
+                    << " CRCRecognize: ValueBits for output crc value:\n"
                     << *CRCOutBits);
 
   // Check this value is predicated
   if (!CRCOutBits->isPredicated()) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
-                      << " CRCRegonize: Output CRC ValueBits is not"
+                      << " CRCRecognize: Output CRC ValueBits is not"
                       << " predicated.\n");
     return false;
   }
@@ -3449,7 +3453,7 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   // whether this is bit reversed CRC
   ICmpInst *ICmp = CRCOutBitsPred->getPredicate();
   CmpInst::Predicate Pred = ICmp->getPredicate();
-  LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRegonize checking to see if " << *ICmp
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRecognize checking to see if " << *ICmp
                     << " is checking the "
                     << (CRC.BitReversed ? "LSB\n" : "MSB\n"));
 
@@ -3458,7 +3462,7 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   Result = ValueMap.find(ICmp->getOperand(0));
   if (!RHS || (Result == ValueMap.end())) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
-                      << " CRCRegonize: Cannot determine ICmp operands\n");
+                      << " CRCRecognize: Cannot determine ICmp operands\n");
     return false;
   }
   ValueBits *ICmpOp0Bits = Result->second;
@@ -3471,7 +3475,7 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   // (MSB): crc < 0
   // (MSB): crc <= -1
   // And decide whether the check is checking for existence of 1 or 0
-  bool checkZero = false;
+  bool CheckZero = false;
   ValueBits::ValueBit *CheckBit = nullptr;
   switch (Pred) {
   case CmpInst::ICMP_NE:
@@ -3483,7 +3487,7 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
     if (!(CRC.BitReversed && RHSNum == 1) &&
         !(!CRC.BitReversed && RHSNum == MSBNum) && RHSNum != 0) {
       LLVM_DEBUG(dbgs() << DEBUG_TYPE
-                        << " CRCRegonize: ICmp RHS is not checking [M/L]SB\n");
+                        << " CRCRecognize: ICmp RHS is not checking [M/L]SB\n");
       return false;
     }
     // Now to check if we already know all the other bits of the RHS are zero.
@@ -3504,17 +3508,17 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
     if (!CRCOutBitsMasked->equals(&AllZeroValueBits)) {
       LLVM_DEBUG(
           dbgs() << DEBUG_TYPE
-                 << " CRCRegonize: Cannot determine ICmp checks [M/L]SB\n");
+                 << " CRCRecognize: Cannot determine ICmp checks [M/L]SB\n");
       return false;
     }
-    checkZero = RHSNum == 0;
+    CheckZero = RHSNum == 0;
     break;
   }
   case CmpInst::ICMP_SGT:
   case CmpInst::ICMP_SGE:
   case CmpInst::ICMP_ULT:
   case CmpInst::ICMP_ULE:
-    checkZero = true;
+    CheckZero = true;
     [[fallthrough]];
   case CmpInst::ICMP_SLT:
   case CmpInst::ICMP_SLE: {
@@ -3526,7 +3530,7 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
         ((Pred == CmpInst::ICMP_ULT) && RHSNum != (1 << (CRC.Width - 1))) ||
         ((Pred == CmpInst::ICMP_ULE) && RHSNum != (1 << (CRC.Width - 1)) - 1)) {
       LLVM_DEBUG(dbgs() << DEBUG_TYPE
-                        << " CRCRegonize: ICmp RHS is not checking MSB\n");
+                        << " CRCRecognize: ICmp RHS is not checking MSB\n");
       return false;
     }
     CheckBit = ICmpOp0Bits->getBit(CRCSize - 1);
@@ -3544,17 +3548,17 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   if (CRC.DataInput) {
     uint64_t DataSize = CRC.DataInput->getType()->getScalarSizeInBits();
     uint64_t DataCheckIdx = CRC.BitReversed ? 0 : DataSize - 1;
-    ValueBits::ValueBit *DataInputRefBit =
-        ValueBits::ValueBit::CreateRefBit(CRC.DataInput, DataCheckIdx);
+   ValueBits::ValueBit *DataInputRefBit =
+       ValueBits::ValueBit::CreateRefBit(CRC.DataInput, DataCheckIdx);
     RefCheckBit =
-        ValueBits::ValueBit::CreateXORBit(CRCInputRefBit, DataInputRefBit);
+       ValueBits::ValueBit::CreateXORBit(CRCInputRefBit, DataInputRefBit);
   } else {
     RefCheckBit = CRCInputRefBit;
   }
 
   if (!RefCheckBit->equals(CheckBit)) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
-                      << " CRCRegonize: Cannot verify check bit!\n"
+                      << " CRCRecognize: Cannot verify check bit!\n"
                       << *RefCheckBit << "\n"
                       << *CheckBit << "\n");
     return false;
@@ -3562,7 +3566,7 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
 
   ValueBits *CRCOutBitsIfOne = CRCOutBitsPred->getIfTrue();
   ValueBits *CRCOutBitsIfZero = CRCOutBitsPred->getIfFalse();
-  if (checkZero)
+  if (CheckZero)
     std::swap(CRCOutBitsIfZero, CRCOutBitsIfOne);
 
   // Now construct ValueBits that would be the result of crc for one iteration.
@@ -3586,17 +3590,17 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   ValueBits *IfOne = ValueBits::Xor(IfZero, &Polynomial);
 
   if (!IfZero->equals(CRCOutBitsIfZero)) {
-    LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRegonize: Not Equal!\n"
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRecognize: Not Equal!\n"
                       << *IfZero << *CRCOutBitsPred->getIfFalse());
     return false;
   }
   if (!IfOne->equals(CRCOutBitsIfOne)) {
-    LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRegonize: Not Equal!\n"
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRecognize: Not Equal!\n"
                       << *IfOne << *CRCOutBitsPred->getIfTrue());
     return false;
   }
 
-  LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRegonize: This looks like crc!\n");
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRecognize: This looks like crc!\n");
 
   writeTableBasedCRCOneByte(CRC);
 
@@ -3620,7 +3624,7 @@ LoopIdiomRecognize::looksLikeCRC(const SCEV *BECount) {
   // unlikely to be CRC. To reduce complexity, only consider single-block loops
   // for CRC recognition
   if (CurLoop->getBlocks().size() > 1) {
-    LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRegonize: Loops with more than one"
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRecognize: Loops with more than one"
                       << "block are unsupported\n");
     return std::nullopt;
   }
@@ -3737,7 +3741,7 @@ LoopIdiomRecognize::looksLikeCRC(const SCEV *BECount) {
   }
 
   if (!(CRCShift && GeneratorPolynomial && CRCInput)) {
-    LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRegonize: Does not look like CRC");
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRecognize: Does not look like CRC");
     return std::nullopt;
   }
 
