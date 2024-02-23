@@ -463,6 +463,7 @@ function(add_integration_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE 
+      ${LIBC_COMPILE_OPTIONS_DEFAULT}
       -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
       "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
@@ -470,6 +471,7 @@ function(add_integration_test test_name)
     # We need to use the internal object versions for NVPTX.
     set(internal_suffix ".__internal__")
     target_link_options(${fq_build_target_name} PRIVATE 
+      ${LIBC_COMPILE_OPTIONS_DEFAULT}
       "-Wl,--suppress-stack-size-warning"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
@@ -644,6 +646,7 @@ function(add_libc_hermetic_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE 
+      ${LIBC_COMPILE_OPTIONS_DEFAULT}
       -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
       "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
@@ -651,6 +654,7 @@ function(add_libc_hermetic_test test_name)
     # We need to use the internal object versions for NVPTX.
     set(internal_suffix ".__internal__")
     target_link_options(${fq_build_target_name} PRIVATE 
+      ${LIBC_COMPILE_OPTIONS_DEFAULT}
       "-Wl,--suppress-stack-size-warning"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
