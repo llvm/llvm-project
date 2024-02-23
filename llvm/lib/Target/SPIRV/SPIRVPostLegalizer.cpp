@@ -59,6 +59,22 @@ static bool isMetaInstrGET(unsigned Opcode) {
          Opcode == SPIRV::GET_vfID;
 }
 
+static bool mayBeInserted(unsigned Opcode) {
+  switch (Opcode) {
+    case TargetOpcode::G_SMAX:
+    case TargetOpcode::G_UMAX:
+    case TargetOpcode::G_SMIN:
+    case TargetOpcode::G_UMIN:
+    case TargetOpcode::G_FMINNUM:
+    case TargetOpcode::G_FMINIMUM:
+    case TargetOpcode::G_FMAXNUM:
+    case TargetOpcode::G_FMAXIMUM:
+      return true;
+    default:
+      return isTypeFoldingSupported(Opcode);
+  }
+}
+
 static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                              MachineIRBuilder MIB) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -90,8 +106,11 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             GR->assignSPIRVTypeToVReg(ResType, ResVReg, *GR->CurMF);
           }
         }
-      } else if (isTypeFoldingSupported(Opcode) && I.getNumDefs() == 1 &&
+      } else if (mayBeInserted(Opcode) && I.getNumDefs() == 1 &&
                  I.getNumOperands() > 1 && I.getOperand(1).isReg()) {
+        // Legalizer may have added a new instructions and introduced new
+        // registers, we must decorate them as if they were introduced in a
+        // non-automatic way
         Register ResVReg = I.getOperand(0).getReg();
         SPIRVType *ResVType = GR->getSPIRVTypeForVReg(ResVReg);
         // Check if the register defined by the instruction is newly generated
@@ -108,17 +127,22 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                       LLT::scalar(GR->getScalarOrVectorBitWidth(ResVType)));
           GR->assignSPIRVTypeToVReg(ResVType, ResVReg, *GR->CurMF);
         }
-        // Check if the instruction newly generated or already processed
-        MachineInstr *NextMI = I.getNextNode();
-        if (NextMI && isMetaInstrGET(NextMI->getOpcode()))
-          continue;
-        // Restore usual instructions pattern for the newly inserted instruction
-        MRI.setRegClass(ResVReg, MRI.getType(ResVReg).isVector()
-                                     ? &SPIRV::IDRegClass
-                                     : &SPIRV::ANYIDRegClass);
-        MRI.setType(ResVReg, LLT::scalar(32));
-        insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
-        processInstr(I, MIB, MRI, GR);
+        // If this is a simple operation that is to be reduced by TableGen
+        // definition we must apply some of pre-legalizer rules here
+        if (isTypeFoldingSupported(Opcode)) {
+          // Check if the instruction newly generated or already processed
+          MachineInstr *NextMI = I.getNextNode();
+          if (NextMI && isMetaInstrGET(NextMI->getOpcode()))
+            continue;
+          // Restore usual instructions pattern for the newly inserted
+          // instruction
+          MRI.setRegClass(ResVReg, MRI.getType(ResVReg).isVector()
+                                       ? &SPIRV::IDRegClass
+                                       : &SPIRV::ANYIDRegClass);
+          MRI.setType(ResVReg, LLT::scalar(32));
+          insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
+          processInstr(I, MIB, MRI, GR);
+        }
       }
     }
   }
