@@ -122,7 +122,7 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
-                            options::OPT_s, options::OPT_t, options::OPT_r});
+                            options::OPT_s, options::OPT_t});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
