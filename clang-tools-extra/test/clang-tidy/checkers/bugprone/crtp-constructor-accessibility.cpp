@@ -236,6 +236,20 @@ class A : CRTP<A> {};
 class B : CRTP<B> {};
 } // namespace explicit_derived_friend_multiple
 
+namespace no_need_for_friend {
+class A;
+
+template <typename T>
+class CRTP {
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the implicit default constructor of the CRTP is publicly accessible [bugprone-crtp-constructor-accessibility]
+// CHECK-MESSAGES: :[[@LINE-2]]:7: note: consider making it private
+// CHECK-FIXES: CRTP() = default;
+    friend A;
+};
+
+class A : CRTP<A> {};
+} // namespace no_need_for_friend
+
 namespace no_warning {
 template <typename T>
 class CRTP

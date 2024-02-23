@@ -164,7 +164,6 @@ void CrtpConstructorAccessibilityCheck::check(
         Diag << HintFriend;
     }
 
-    // FIXME: Test the NeedsFriend false case!
     diag(Ctor->getLocation(),
          "consider making it private%select{| and declaring the derived class "
          "as friend}0",
