@@ -111,11 +111,6 @@ void Instruction::insertAfter(Instruction *InsertPos) {
   BasicBlock *DestParent = InsertPos->getParent();
 
   DestParent->getInstList().insertAfter(InsertPos->getIterator(), this);
-
-  // No need to manually update DPValues: if we insert after an instruction
-  // position, then we can never have any DPValues on "this".
-  if (DestParent->IsNewDbgInfoFormat)
-    DestParent->createMarker(this);
 }
 
 BasicBlock::iterator Instruction::insertInto(BasicBlock *ParentBB,
@@ -138,17 +133,15 @@ void Instruction::insertBefore(BasicBlock &BB,
   if (!BB.IsNewDbgInfoFormat)
     return;
 
-  BB.createMarker(this);
-
   // We've inserted "this": if InsertAtHead is set then it comes before any
   // DPValues attached to InsertPos. But if it's not set, then any DPValues
   // should now come before "this".
   bool InsertAtHead = InsertPos.getHeadBit();
   if (!InsertAtHead) {
     DPMarker *SrcMarker = BB.getMarker(InsertPos);
-    // If there's no source marker, InsertPos is very likely end().
-    if (SrcMarker)
-      DbgMarker->absorbDebugValues(*SrcMarker, false);
+    if (SrcMarker && !SrcMarker->empty()) {
+      adoptDbgValues(&BB, InsertPos, false);
+    }
   }
 
   // If we're inserting a terminator, check if we need to flush out
@@ -212,24 +205,22 @@ void Instruction::moveBeforeImpl(BasicBlock &BB, InstListType::iterator I,
   BB.getInstList().splice(I, getParent()->getInstList(), getIterator());
 
   if (BB.IsNewDbgInfoFormat && !Preserve) {
-    if (!DbgMarker)
-      BB.createMarker(this);
     DPMarker *NextMarker = getParent()->getNextMarker(this);
 
     // If we're inserting at point I, and not in front of the DPValues attached
     // there, then we should absorb the DPValues attached to I.
-    if (NextMarker && !InsertAtHead)
-      DbgMarker->absorbDebugValues(*NextMarker, false);
+    if (!InsertAtHead && NextMarker && !NextMarker->empty()) {
+      adoptDbgValues(&BB, I, false);
+    }
   }
 
   if (isTerminator())
     getParent()->flushTerminatorDbgValues();
 }
 
-iterator_range<DPValue::self_iterator>
-Instruction::cloneDebugInfoFrom(const Instruction *From,
-                                std::optional<DPValue::self_iterator> FromHere,
-                                bool InsertAtHead) {
+iterator_range<DbgRecord::self_iterator> Instruction::cloneDebugInfoFrom(
+    const Instruction *From, std::optional<DbgRecord::self_iterator> FromHere,
+    bool InsertAtHead) {
   if (!From->DbgMarker)
     return DPMarker::getEmptyDPValueRange();
 
@@ -243,7 +234,8 @@ Instruction::cloneDebugInfoFrom(const Instruction *From,
   return DbgMarker->cloneDebugInfoFrom(From->DbgMarker, FromHere, InsertAtHead);
 }
 
-std::optional<DPValue::self_iterator> Instruction::getDbgReinsertionPosition() {
+std::optional<DbgRecord::self_iterator>
+Instruction::getDbgReinsertionPosition() {
   // Is there a marker on the next instruction?
   DPMarker *NextMarker = getParent()->getNextMarker(this);
   if (!NextMarker)
@@ -258,13 +250,55 @@ std::optional<DPValue::self_iterator> Instruction::getDbgReinsertionPosition() {
 
 bool Instruction::hasDbgValues() const { return !getDbgValueRange().empty(); }
 
-void Instruction::dropDbgValues() {
-  if (DbgMarker)
-    DbgMarker->dropDPValues();
+void Instruction::adoptDbgValues(BasicBlock *BB, BasicBlock::iterator It,
+                                 bool InsertAtHead) {
+  DPMarker *SrcMarker = BB->getMarker(It);
+  auto ReleaseTrailingDPValues = [BB, It, SrcMarker]() {
+    if (BB->end() == It) {
+      SrcMarker->eraseFromParent();
+      BB->deleteTrailingDPValues();
+    }
+  };
+
+  if (!SrcMarker || SrcMarker->StoredDPValues.empty()) {
+    ReleaseTrailingDPValues();
+    return;
+  }
+
+  // If we have DPMarkers attached to this instruction, we have to honour the
+  // ordering of DPValues between this and the other marker. Fall back to just
+  // absorbing from the source.
+  if (DbgMarker || It == BB->end()) {
+    // Ensure we _do_ have a marker.
+    getParent()->createMarker(this);
+    DbgMarker->absorbDebugValues(*SrcMarker, InsertAtHead);
+
+    // Having transferred everything out of SrcMarker, we _could_ clean it up
+    // and free the marker now. However, that's a lot of heap-accounting for a
+    // small amount of memory with a good chance of re-use. Leave it for the
+    // moment. It will be released when the Instruction is freed in the worst
+    // case.
+    // However: if we transferred from a trailing marker off the end of the
+    // block, it's important to not leave the empty marker trailing. It will
+    // give a misleading impression that some debug records have been left
+    // trailing.
+    ReleaseTrailingDPValues();
+  } else {
+    // Optimisation: we're transferring all the DPValues from the source marker
+    // onto this empty location: just adopt the other instructions marker.
+    DbgMarker = SrcMarker;
+    DbgMarker->MarkedInstr = this;
+    It->DbgMarker = nullptr;
+  }
 }
 
-void Instruction::dropOneDbgValue(DPValue *DPV) {
-  DbgMarker->dropOneDPValue(DPV);
+void Instruction::dropDbgValues() {
+  if (DbgMarker)
+    DbgMarker->dropDbgValues();
+}
+
+void Instruction::dropOneDbgValue(DbgRecord *DPV) {
+  DbgMarker->dropOneDbgValue(DPV);
 }
 
 bool Instruction::comesBefore(const Instruction *Other) const {

@@ -12,7 +12,7 @@ declare i32 @__nvvm_reflect_ocl(ptr addrspace(4) noundef)
 ; COMMON-LABEL: @foo
 define i32 @foo(float %a, float %b) {
 ; COMMON-NOT: call i32 @__nvvm_reflect_ocl
-  %reflect = tail call i32 @__nvvm_reflect_ocl(ptr addrspace(4) noundef getelementptr inbounds ([12 x i8], [12 x i8] addrspace(4)* @"$str", i64 0, i64 0))
+  %reflect = tail call i32 @__nvvm_reflect_ocl(ptr addrspace(4) noundef @"$str")
 ; SM20: ret i32 200
 ; SM35: ret i32 350
   ret i32 %reflect

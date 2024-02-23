@@ -338,6 +338,11 @@ public:
                                                   unsigned TypeIdx,
                                                   LLT NarrowTy);
 
+  // Fewer Elements for bitcast, ensuring that the size of the Src and Dst
+  // registers will be the same
+  LegalizeResult fewerElementsBitcast(MachineInstr &MI, unsigned TypeIdx,
+                                      LLT NarrowTy);
+
   LegalizeResult fewerElementsVectorShuffle(MachineInstr &MI, unsigned TypeIdx,
                                             LLT NarrowTy);
 
@@ -365,6 +370,7 @@ public:
   LegalizeResult bitcastInsertVectorElt(MachineInstr &MI, unsigned TypeIdx,
                                         LLT CastTy);
 
+  LegalizeResult lowerConstant(MachineInstr &MI);
   LegalizeResult lowerFConstant(MachineInstr &MI);
   LegalizeResult lowerBitcast(MachineInstr &MI);
   LegalizeResult lowerLoad(GAnyLoad &MI);

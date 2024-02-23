@@ -802,7 +802,7 @@ public:
     return __emplace_unique_key_args(_NodeTypes::__get_key(__x), std::move(__x));
   }
 
-  template <class _Pp, class = __enable_if_t<!__is_same_uncvref<_Pp, __container_value_type>::value> >
+  template <class _Pp, __enable_if_t<!__is_same_uncvref<_Pp, __container_value_type>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __insert_unique(_Pp&& __x) {
     return __emplace_unique(std::forward<_Pp>(__x));
   }

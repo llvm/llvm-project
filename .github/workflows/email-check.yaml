@@ -1,6 +1,9 @@
 name: "Check for private emails used in PRs"
 
-on: pull_request_target
+on:
+  pull_request_target:
+    types:
+      - opened
 
 permissions:
   contents: read
@@ -37,4 +40,5 @@ jobs:
               repo: context.repo.repo,
               body: `⚠️ We detected that you are using a GitHub private e-mail address to contribute to the repo.
               Please turn off [Keep my email addresses private](https://github.com/settings/emails) setting in your account.
+              See [LLVM Discourse](https://discourse.llvm.org/t/hidden-emails-on-github-should-we-do-something-about-it) for more information.
             `})

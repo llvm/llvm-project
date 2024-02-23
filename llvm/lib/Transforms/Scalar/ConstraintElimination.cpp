@@ -499,6 +499,8 @@ static Decomposition decompose(Value *V,
   if (!Ty->isIntegerTy() || Ty->getIntegerBitWidth() > 64)
     return V;
 
+  bool IsKnownNonNegative = false;
+
   // Decompose \p V used with a signed predicate.
   if (IsSigned) {
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
@@ -507,6 +509,14 @@ static Decomposition decompose(Value *V,
     }
     Value *Op0;
     Value *Op1;
+
+    if (match(V, m_SExt(m_Value(Op0))))
+      V = Op0;
+    else if (match(V, m_NNegZExt(m_Value(Op0)))) {
+      V = Op0;
+      IsKnownNonNegative = true;
+    }
+
     if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1))))
       return MergeResults(Op0, Op1, IsSigned);
 
@@ -529,7 +539,7 @@ static Decomposition decompose(Value *V,
       }
     }
 
-    return V;
+    return {V, IsKnownNonNegative};
   }
 
   if (auto *CI = dyn_cast<ConstantInt>(V)) {
@@ -539,7 +549,6 @@ static Decomposition decompose(Value *V,
   }
 
   Value *Op0;
-  bool IsKnownNonNegative = false;
   if (match(V, m_ZExt(m_Value(Op0)))) {
     IsKnownNonNegative = true;
     V = Op0;
@@ -1755,7 +1764,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     if (!CB.isConditionFact()) {
       Value *X;
       if (match(CB.Inst, m_Intrinsic<Intrinsic::abs>(m_Value(X)))) {
-        // TODO: Add CB.Inst >= 0 fact.
+        // If is_int_min_poison is true then we may assume llvm.abs >= 0.
+        if (cast<ConstantInt>(CB.Inst->getOperand(1))->isOne())
+          AddFact(CmpInst::ICMP_SGE, CB.Inst,
+                  ConstantInt::get(CB.Inst->getType(), 0));
         AddFact(CmpInst::ICMP_SGE, CB.Inst, X);
         continue;
       }

@@ -16,9 +16,6 @@
 namespace LIBC_NAMESPACE {
 namespace gpu {
 
-/// The number of threads that execute in lock-step in a warp.
-constexpr const uint64_t LANE_SIZE = 32;
-
 /// Type aliases to the address spaces used by the NVPTX backend.
 template <typename T> using Private = [[clang::opencl_private]] T;
 template <typename T> using Constant = [[clang::opencl_constant]] T;
@@ -95,8 +92,8 @@ LIBC_INLINE uint64_t get_thread_id() {
          get_num_threads_x() * get_num_threads_y() * get_thread_id_z();
 }
 
-/// Returns the size of a CUDA warp.
-LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
+/// Returns the size of a CUDA warp, always 32 on NVIDIA hardware.
+LIBC_INLINE uint32_t get_lane_size() { return 32; }
 
 /// Returns the id of the thread inside of a CUDA warp executing together.
 [[clang::convergent]] LIBC_INLINE uint32_t get_lane_id() {
@@ -113,21 +110,13 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
                                                            uint32_t x) {
   uint32_t mask = static_cast<uint32_t>(lane_mask);
   uint32_t id = __builtin_ffs(mask) - 1;
-#if __CUDA_ARCH__ >= 600
   return __nvvm_shfl_sync_idx_i32(mask, x, id, get_lane_size() - 1);
-#else
-  return __nvvm_shfl_idx_i32(x, id, get_lane_size() - 1);
-#endif
 }
 
 /// Returns a bitmask of threads in the current lane for which \p x is true.
 [[clang::convergent]] LIBC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
   uint32_t mask = static_cast<uint32_t>(lane_mask);
-#if __CUDA_ARCH__ >= 600
   return __nvvm_vote_ballot_sync(mask, x);
-#else
-  return mask & __nvvm_vote_ballot(x);
-#endif
 }
 /// Waits for all the threads in the block to converge and issues a fence.
 [[clang::convergent]] LIBC_INLINE void sync_threads() { __syncthreads(); }
@@ -138,13 +127,11 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 }
 
 /// Returns the current value of the GPU's processor clock.
-LIBC_INLINE uint64_t processor_clock() {
-  return __nvvm_read_ptx_sreg_clock64();
-}
+LIBC_INLINE uint64_t processor_clock() { return __builtin_readcyclecounter(); }
 
 /// Returns a global fixed-frequency timer at nanosecond frequency.
 LIBC_INLINE uint64_t fixed_frequency_clock() {
-  return __nvvm_read_ptx_sreg_globaltimer();
+  return __builtin_readsteadycounter();
 }
 
 /// Terminates execution of the calling thread.

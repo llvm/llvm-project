@@ -1012,16 +1012,23 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
 
 static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
                               bool IsTailCall) {
+  const AArch64FunctionInfo *FuncInfo = CallerF.getInfo<AArch64FunctionInfo>();
+
   if (!IsTailCall)
     return IsIndirect ? getBLRCallOpcode(CallerF) : (unsigned)AArch64::BL;
 
   if (!IsIndirect)
     return AArch64::TCRETURNdi;
 
-  // When BTI is enabled, we need to use TCRETURNriBTI to make sure that we use
-  // x16 or x17.
-  if (CallerF.getInfo<AArch64FunctionInfo>()->branchTargetEnforcement())
-    return AArch64::TCRETURNriBTI;
+  // When BTI or PAuthLR are enabled, there are restrictions on using x16 and
+  // x17 to hold the function pointer.
+  if (FuncInfo->branchTargetEnforcement()) {
+    if (FuncInfo->branchProtectionPAuthLR())
+      return AArch64::TCRETURNrix17;
+    else
+      return AArch64::TCRETURNrix16x17;
+  } else if (FuncInfo->branchProtectionPAuthLR())
+    return AArch64::TCRETURNrinotx16;
 
   return AArch64::TCRETURNri;
 }
