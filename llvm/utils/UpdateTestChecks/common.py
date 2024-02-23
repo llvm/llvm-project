@@ -390,6 +390,7 @@ def itertests(
 def should_add_line_to_output(
     input_line,
     prefix_set,
+    *,
     skip_global_checks=False,
     skip_same_checks=False,
     comment_marker=";",
