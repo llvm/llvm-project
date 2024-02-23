@@ -441,18 +441,28 @@ public:
   }
 
   /// Returns true if the frame setup is split into two separate pushes (first
-  /// r0-r7,lr then r8-r11), principally so that the frame pointer is adjacent
-  /// to lr. This is always required on Thumb1-only targets, as the push and
-  /// pop instructions can't access the high registers.
-  bool splitFramePushPop(const MachineFunction &MF) const {
-    if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress())
+  /// r0-r7,lr then r8-r11), principally so that the frame pointer r7 is
+  /// adjacent to lr. This is always required on Thumb1-only targets, as the
+  /// push and pop instructions can't access the high registers.
+  bool splitFramePushPopR7(const MachineFunction &MF) const {
+    if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
+        !createAAPCSFrameChain())
       return true;
     return (getFramePointerReg() == ARM::R7 &&
             MF.getTarget().Options.DisableFramePointerElim(MF)) ||
            isThumb1Only();
   }
 
-  bool splitFramePointerPush(const MachineFunction &MF) const;
+  bool framePointerRequiredForSEHUnwind(const MachineFunction &MF) const;
+
+  // Returns true if R11 and lr are not adjacent to each other in the list of
+  // callee saved registers in a frame.
+  bool r11AndLRNotAdjacent(const MachineFunction &MF) const;
+
+  // Returns true if the frame setup is split into two separate pushes (first
+  // r0-r10,r12 then r11,lr), principally so that the frame pointer r11 is
+  // adjacent to lr.
+  bool splitFramePushPopR11(const MachineFunction &MF) const;
 
   bool useStride4VFPs() const;
 

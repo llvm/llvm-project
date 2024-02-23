@@ -494,11 +494,47 @@ bool ARMSubtarget::ignoreCSRForAllocationOrder(const MachineFunction &MF,
          ARM::GPRRegClass.contains(PhysReg);
 }
 
-bool ARMSubtarget::splitFramePointerPush(const MachineFunction &MF) const {
+bool ARMSubtarget::r11AndLRNotAdjacent(const MachineFunction &MF) const {
+  const std::vector<CalleeSavedInfo> CSI =
+      MF.getFrameInfo().getCalleeSavedInfo();
+
+  if (CSI.size() > 1 &&
+      MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress()) {
+
+    bool r11InCSI = false;
+    bool lrInCSI = false;
+    unsigned long r11Idx = 0;
+    unsigned long lrIdx = 0;
+
+    for (unsigned long i = 0; i < CSI.size(); i++) {
+      if (CSI[i].getReg() == ARM::LR) {
+        lrIdx = i;
+        lrInCSI = true;
+      } else if (CSI[i].getReg() == ARM::R11) {
+        r11Idx = i;
+        r11InCSI = true;
+      }
+    }
+    if (lrIdx + 1 != r11Idx && r11InCSI && lrInCSI)
+      return true;
+  }
+  return false;
+}
+
+bool ARMSubtarget::framePointerRequiredForSEHUnwind(
+    const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
+  const std::vector<CalleeSavedInfo> CSI =
+      MF.getFrameInfo().getCalleeSavedInfo();
+
   if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI() ||
       !F.needsUnwindTableEntry())
     return false;
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   return MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF);
+}
+
+bool ARMSubtarget::splitFramePushPopR11(const MachineFunction &MF) const {
+  return (r11AndLRNotAdjacent(MF) && getFramePointerReg() == ARM::R11) ||
+         framePointerRequiredForSEHUnwind(MF);
 }
