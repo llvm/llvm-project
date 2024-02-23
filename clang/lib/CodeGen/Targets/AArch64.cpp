@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -53,8 +54,8 @@ private:
   Address EmitDarwinVAArg(Address VAListAddr, QualType Ty,
                           CodeGenFunction &CGF) const;
 
-  Address EmitAAPCSVAArg(Address VAListAddr, QualType Ty, CodeGenFunction &CGF,
-                         AArch64ABIKind Kind) const;
+  Address EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
+                         CodeGenFunction &CGF) const;
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override {
@@ -65,7 +66,7 @@ private:
 
     return Kind == AArch64ABIKind::Win64 ? EmitMSVAArg(CGF, VAListAddr, Ty)
            : isDarwinPCS()               ? EmitDarwinVAArg(VAListAddr, Ty, CGF)
-                           : EmitAAPCSVAArg(VAListAddr, Ty, CGF, Kind);
+                                         : EmitAAPCSVAArg(VAListAddr, Ty, CGF);
   }
 
   Address EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
@@ -155,6 +156,11 @@ public:
     }
     return TargetCodeGenInfo::isScalarizableAsmOperand(CGF, Ty);
   }
+
+  void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
+                            const FunctionDecl *Caller,
+                            const FunctionDecl *Callee,
+                            const CallArgList &Args) const override;
 };
 
 class WindowsAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {
@@ -482,11 +488,6 @@ bool AArch64SwiftABIInfo::isLegalVectorType(CharUnits VectorSize,
 }
 
 bool AArch64ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
-  // For the soft-float ABI variant, no types are considered to be homogeneous
-  // aggregates.
-  if (Kind == AArch64ABIKind::AAPCSSoft)
-    return false;
-
   // Homogeneous aggregates for AAPCS64 must have base types of a floating
   // point type or a short-vector type. This is the same as the 32-bit ABI,
   // but with the difference that any floating-point type is allowed,
@@ -518,8 +519,7 @@ bool AArch64ABIInfo::isZeroLengthBitfieldPermittedInHomogeneousAggregate()
 }
 
 Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
-                                       CodeGenFunction &CGF,
-                                       AArch64ABIKind Kind) const {
+                                       CodeGenFunction &CGF) const {
   ABIArgInfo AI = classifyArgumentType(Ty, /*IsVariadic=*/true,
                                        CGF.CurFnInfo->getCallingConvention());
   // Empty records are ignored for parameter passing purposes.
@@ -544,8 +544,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
     BaseTy = ArrTy->getElementType();
     NumRegs = ArrTy->getNumElements();
   }
-  bool IsFPR = Kind != AArch64ABIKind::AAPCSSoft &&
-               (BaseTy->isFloatingPointTy() || BaseTy->isVectorTy());
+  bool IsFPR = BaseTy->isFloatingPointTy() || BaseTy->isVectorTy();
 
   // The AArch64 va_list type and handling is specified in the Procedure Call
   // Standard, section B.4:
@@ -819,6 +818,43 @@ Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                           CGF.getContext().getTypeInfoInChars(Ty),
                           CharUnits::fromQuantity(8),
                           /*allowHigherAlign*/ false);
+}
+
+static bool isStreaming(const FunctionDecl *F) {
+  if (F->hasAttr<ArmLocallyStreamingAttr>())
+    return true;
+  if (const auto *T = F->getType()->getAs<FunctionProtoType>())
+    return T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask;
+  return false;
+}
+
+static bool isStreamingCompatible(const FunctionDecl *F) {
+  if (const auto *T = F->getType()->getAs<FunctionProtoType>())
+    return T->getAArch64SMEAttributes() &
+           FunctionType::SME_PStateSMCompatibleMask;
+  return false;
+}
+
+void AArch64TargetCodeGenInfo::checkFunctionCallABI(
+    CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
+    const FunctionDecl *Callee, const CallArgList &Args) const {
+  if (!Caller || !Callee || !Callee->hasAttr<AlwaysInlineAttr>())
+    return;
+
+  bool CallerIsStreaming = isStreaming(Caller);
+  bool CalleeIsStreaming = isStreaming(Callee);
+  bool CallerIsStreamingCompatible = isStreamingCompatible(Caller);
+  bool CalleeIsStreamingCompatible = isStreamingCompatible(Callee);
+
+  if (!CalleeIsStreamingCompatible &&
+      (CallerIsStreaming != CalleeIsStreaming || CallerIsStreamingCompatible))
+    CGM.getDiags().Report(CallLoc,
+                          diag::err_function_always_inline_attribute_mismatch)
+        << Caller->getDeclName() << Callee->getDeclName() << "streaming";
+  if (auto *NewAttr = Callee->getAttr<ArmNewAttr>())
+    if (NewAttr->isNewZA())
+      CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
+          << Callee->getDeclName();
 }
 
 std::unique_ptr<TargetCodeGenInfo>

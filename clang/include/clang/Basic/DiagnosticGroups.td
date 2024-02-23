@@ -290,6 +290,9 @@ def : DiagGroup<"c++1z-compat-mangling", [CXX17CompatMangling]>;
 def NoexceptType : DiagGroup<"noexcept-type", [CXX17CompatMangling]>;
 
 // Warnings for C code which is not compatible with previous C standards.
+def CPre11Compat : DiagGroup<"pre-c11-compat">;
+def CPre11CompatPedantic : DiagGroup<"pre-c11-compat-pedantic",
+                                     [CPre11Compat]>;
 def CPre23Compat : DiagGroup<"pre-c23-compat">;
 def CPre23CompatPedantic : DiagGroup<"pre-c23-compat-pedantic",
                                      [CPre23Compat]>;

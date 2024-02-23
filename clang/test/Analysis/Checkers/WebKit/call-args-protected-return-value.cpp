@@ -5,12 +5,14 @@
 
 class RefCounted {
 public:
-  void ref();
-  void deref();
+  void ref() const;
+  void deref() const;
 };
 
 class Object {
 public:
+  void ref() const;
+  void deref() const;
   void someFunction(RefCounted&);
 };
 
