@@ -49,6 +49,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Yk/BasicBlockTracer.h"
 
 #include <set>
 
@@ -103,6 +104,13 @@ bool FixStackmapsSpillReloads::runOnMachineFunction(MachineFunction &MF) {
         // removed during lowering?
         if (MI.getOpcode() != TargetOpcode::STACKMAP &&
             MI.getOpcode() != TargetOpcode::PATCHPOINT) {
+          MachineOperand Op = MI.getOperand(0);
+          if (Op.isGlobal() && Op.getGlobal()->getGlobalIdentifier() == YK_TRACE_FUNCTION) {
+            // `YK_TRACE_FUNCTION` calls don't require stackmaps so we don't
+            // need to adjust anything here. In fact, doing so will skew any
+            // stackmap that follows.
+            continue;
+          }
           // If we see a normal function call we know it will be followed by a
           // STACKMAP instruction. Set `Collect` to `true` to collect all spill
           // reload instructions between this call and the STACKMAP instruction.
