@@ -145,12 +145,9 @@ constexpr bool isComplexPrimaryType(PrimaryType valTy) {
 /// The actions performed by @newSparseTensor.
 enum class Action : uint32_t {
   kEmpty = 0,
-  kEmptyForward = 1,
-  kFromCOO = 2,
-  kFromReader = 4,
-  kToCOO = 5,
-  kPack = 7,
-  kSortCOOInPlace = 8,
+  kFromReader = 1,
+  kPack = 2,
+  kSortCOOInPlace = 3,
 };
 
 /// This enum defines all supported storage format without the level properties.
