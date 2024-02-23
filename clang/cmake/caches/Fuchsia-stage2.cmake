@@ -9,7 +9,7 @@ set(PACKAGE_VENDOR Fuchsia CACHE STRING "")
 set(_FUCHSIA_ENABLE_PROJECTS "bolt;clang;clang-tools-extra;libc;lld;llvm;polly")
 set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 
-set(LLVM_ENABLE_BACKTRACES OFF CACHE BOOL "")
+set(LLVM_ENABLE_BACKTRACES ON CACHE BOOL "")
 set(LLVM_ENABLE_DIA_SDK OFF CACHE BOOL "")
 set(LLVM_ENABLE_HTTPLIB ON CACHE BOOL "")
 set(LLVM_ENABLE_LIBCXX ON CACHE BOOL "")
