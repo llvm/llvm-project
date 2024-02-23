@@ -56,4 +56,11 @@ module m
     !WARNING: Pointer 'dp' may not be associated in a device subprogram
     real, device, pointer :: dp
   end subroutine
+
+  attributes(global) subroutine devsubr2()
+    real, shared :: rs
+
+    rs = 1 ! ok
+  end subroutine
+
 end module
