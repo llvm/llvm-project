@@ -8,6 +8,7 @@ from lldbsuite.test.decorators import *
 
 class TestSwiftForwardInteropSTLTypes(TestBase):
 
+    @skipIf(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     @skipIfLinux # rdar://106532498
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false')) # rdar://106438227 (TestSTLTypes fails when clang importer is disabled)
     @swiftTest

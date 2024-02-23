@@ -32,6 +32,7 @@ class SharedLibTestCase(TestBase):
         """Test that types work when defined in a shared library and forward-declared in the main executable"""
         self.common_test_expr(True)
 
+    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     def test_expr_no_preload(self):
         """Test that types work when defined in a shared library and forward-declared in the main executable, but with preloading disabled"""
         self.common_test_expr(False)

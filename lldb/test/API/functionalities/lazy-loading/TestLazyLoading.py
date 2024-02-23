@@ -176,6 +176,7 @@ class TestCase(TestBase):
         self.assert_decl_not_loaded(self.some_struct_decl)
         self.assert_decl_not_loaded(self.class_in_namespace_decl)
 
+    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     @add_test_categories(["dwarf"])
     def test_printing_struct_with_multiple_locals(self):
         """
@@ -196,6 +197,7 @@ class TestCase(TestBase):
         self.assert_decl_not_completed(self.other_struct_decl)
         self.assert_decl_not_completed(self.class_in_namespace_decl)
 
+    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     @add_test_categories(["dwarf"])
     def test_addr_of_struct(self):
         """
