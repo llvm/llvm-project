@@ -201,9 +201,7 @@ class ScriptedProcesTestCase(TestBase):
 
         py_impl = process_0.GetScriptedImplementation()
         self.assertTrue(py_impl)
-        self.assertTrue(
-            isinstance(py_impl, dummy_scripted_process.DummyScriptedProcess)
-        )
+        self.assertIsInstance(py_impl, dummy_scripted_process.DummyScriptedProcess)
         self.assertFalse(hasattr(py_impl, "my_super_secret_member"))
         py_impl.my_super_secret_member = 42
         self.assertTrue(hasattr(py_impl, "my_super_secret_member"))

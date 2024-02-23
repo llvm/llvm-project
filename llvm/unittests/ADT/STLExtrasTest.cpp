@@ -1004,6 +1004,19 @@ TEST(STLExtras, Unique) {
   EXPECT_EQ(3, V[3]);
 }
 
+TEST(STLExtras, UniqueNoPred) {
+  std::vector<int> V = {1, 5, 5, 4, 3, 3, 3};
+
+  auto I = llvm::unique(V);
+
+  EXPECT_EQ(I, V.begin() + 4);
+
+  EXPECT_EQ(1, V[0]);
+  EXPECT_EQ(5, V[1]);
+  EXPECT_EQ(4, V[2]);
+  EXPECT_EQ(3, V[3]);
+}
+
 TEST(STLExtrasTest, MakeVisitorOneCallable) {
   auto IdentityLambda = [](auto X) { return X; };
   auto IdentityVisitor = makeVisitor(IdentityLambda);
