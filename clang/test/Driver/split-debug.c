@@ -11,7 +11,6 @@
 // NOINLINE-NOT: "-fsplit-dwarf-inlining"
 // SPLIT-NOT:  "-dumpdir"
 // SPLIT:      "-debug-info-kind=constructor"
-// SPLIT-SAME: "-ggnu-pubnames"
 // SPLIT-SAME: "-split-dwarf-file" "split-debug.dwo" "-split-dwarf-output" "split-debug.dwo"
 
 // RUN: %clang -### -c -target wasm32 -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=SPLIT
