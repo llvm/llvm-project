@@ -50,47 +50,12 @@ const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
   return &State->Env;
 }
 
-static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
-                                          Environment &Env) {
-  Value *LHSValue = Env.getValue(LHS);
-  Value *RHSValue = Env.getValue(RHS);
-
-  if (LHSValue == RHSValue)
-    return Env.getBoolLiteralValue(true);
-
-  if (auto *LHSBool = dyn_cast_or_null<BoolValue>(LHSValue))
-    if (auto *RHSBool = dyn_cast_or_null<BoolValue>(RHSValue))
-      return Env.makeIff(*LHSBool, *RHSBool);
-
-  return Env.makeAtomicBoolValue();
-}
-
 static BoolValue &unpackValue(BoolValue &V, Environment &Env) {
   if (auto *Top = llvm::dyn_cast<TopBoolValue>(&V)) {
     auto &A = Env.getDataflowAnalysisContext().arena();
     return A.makeBoolValue(A.makeAtomRef(Top->getAtom()));
   }
   return V;
-}
-
-// Unpacks the value (if any) associated with `E` and updates `E` to the new
-// value, if any unpacking occured. Also, does the lvalue-to-rvalue conversion,
-// by skipping past the reference.
-static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
-  auto *Loc = Env.getStorageLocation(E);
-  if (Loc == nullptr)
-    return nullptr;
-  auto *Val = Env.getValue(*Loc);
-
-  auto *B = dyn_cast_or_null<BoolValue>(Val);
-  if (B == nullptr)
-    return Val;
-
-  auto &UnpackedVal = unpackValue(*B, Env);
-  if (&UnpackedVal == Val)
-    return Val;
-  Env.setValue(*Loc, UnpackedVal);
-  return &UnpackedVal;
 }
 
 static void propagateValue(const Expr &From, const Expr &To, Environment &Env) {
@@ -114,6 +79,99 @@ static void propagateValueOrStorageLocation(const Expr &From, const Expr &To,
     propagateStorageLocation(From, To, Env);
   else
     propagateValue(From, To, Env);
+}
+
+namespace bool_model {
+
+BoolValue &freshBoolValue(Environment &Env) {
+  return Env.makeAtomicBoolValue();
+}
+
+BoolValue &rValueFromLValue(BoolValue &V, Environment &Env) {
+  return unpackValue(V, Env);
+}
+
+BoolValue &logicalOrOp(BoolValue &LHS, BoolValue &RHS, Environment &Env) {
+  return Env.makeOr(LHS, RHS);
+}
+
+BoolValue &logicalAndOp(BoolValue &LHS, BoolValue &RHS, Environment &Env) {
+  return Env.makeAnd(LHS, RHS);
+}
+
+BoolValue &eqOp(BoolValue &LHS, BoolValue &RHS, Environment &Env) {
+  return Env.makeIff(LHS, RHS);
+}
+
+BoolValue &neOp(BoolValue &LHS, BoolValue &RHS, Environment &Env) {
+  return Env.makeNot(Env.makeIff(LHS, RHS));
+}
+
+BoolValue &notOp(BoolValue &Sub, Environment &Env) { return Env.makeNot(Sub); }
+
+void transferBranch(bool BranchVal, BoolValue &CondVal, Environment &Env) {
+  if (BranchVal)
+    Env.assume(CondVal.formula());
+  else
+    // The condition must be inverted for the successor that encompasses the
+    // "else" branch, if such exists.
+    Env.assume(Env.makeNot(CondVal).formula());
+}
+
+} // namespace bool_model
+
+// Unpacks the value (if any) associated with `E` and updates `E` to the new
+// value, if any unpacking occured. Also, does the lvalue-to-rvalue conversion,
+// by skipping past the reference.
+static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
+  auto *Loc = Env.getStorageLocation(E);
+  if (Loc == nullptr)
+    return nullptr;
+  auto *Val = Env.getValue(*Loc);
+
+  auto *B = dyn_cast_or_null<BoolValue>(Val);
+  if (B == nullptr)
+    return Val;
+
+  auto &UnpackedVal = bool_model::rValueFromLValue(*B, Env);
+  if (&UnpackedVal == Val)
+    return Val;
+  Env.setValue(*Loc, UnpackedVal);
+  return &UnpackedVal;
+}
+
+static BoolValue &evaluateEquality(const Expr &LHS, const Expr &RHS,
+                                   Environment &Env) {
+  Value *LHSValue = Env.getValue(LHS);
+  Value *RHSValue = Env.getValue(RHS);
+
+  // Bug!
+  if (LHSValue == RHSValue)
+    return Env.getBoolLiteralValue(true);
+
+  if (auto *LHSBool = dyn_cast_or_null<BoolValue>(LHSValue))
+    if (auto *RHSBool = dyn_cast_or_null<BoolValue>(RHSValue))
+      return bool_model::eqOp(*LHSBool, *RHSBool, Env);
+
+  // TODO Why this eager construcoitn of an atomic?
+  return Env.makeAtomicBoolValue();
+}
+
+static BoolValue &evaluateInequality(const Expr &LHS, const Expr &RHS,
+                                     Environment &Env) {
+  Value *LHSValue = Env.getValue(LHS);
+  Value *RHSValue = Env.getValue(RHS);
+
+  // Bug!
+  if (LHSValue == RHSValue)
+    return Env.getBoolLiteralValue(false);
+
+  if (auto *LHSBool = dyn_cast_or_null<BoolValue>(LHSValue))
+    if (auto *RHSBool = dyn_cast_or_null<BoolValue>(RHSValue))
+      return bool_model::neOp(*LHSBool, *RHSBool, Env);
+
+  // TODO Why this eager construcoitn of an atomic?
+  return Env.makeAtomicBoolValue();
 }
 
 namespace {
@@ -153,22 +211,20 @@ public:
       BoolValue &RHSVal = getLogicOperatorSubExprValue(*RHS);
 
       if (S->getOpcode() == BO_LAnd)
-        Env.setValue(*S, Env.makeAnd(LHSVal, RHSVal));
+        Env.setValue(*S, bool_model::logicalAndOp(LHSVal, RHSVal, Env));
       else
-        Env.setValue(*S, Env.makeOr(LHSVal, RHSVal));
+        Env.setValue(*S, bool_model::logicalOrOp(LHSVal, RHSVal, Env));
       break;
     }
     case BO_NE:
-    case BO_EQ: {
-      auto &LHSEqRHSValue = evaluateBooleanEquality(*LHS, *RHS, Env);
-      Env.setValue(*S, S->getOpcode() == BO_EQ ? LHSEqRHSValue
-                                               : Env.makeNot(LHSEqRHSValue));
+      Env.setValue(*S, evaluateInequality(*LHS, *RHS, Env));
       break;
-    }
-    case BO_Comma: {
+    case BO_EQ:
+      Env.setValue(*S, evaluateEquality(*LHS, *RHS, Env));
+      break;
+    case BO_Comma:
       propagateValueOrStorageLocation(*RHS, *S, Env);
       break;
-    }
     default:
       break;
     }
@@ -273,7 +329,7 @@ public:
       else
         // FIXME: If integer modeling is added, then update this code to create
         // the boolean based on the integer model.
-        Env.setValue(*S, Env.makeAtomicBoolValue());
+        Env.setValue(*S, bool_model::freshBoolValue(Env));
       break;
     }
 
@@ -362,7 +418,7 @@ public:
       if (SubExprVal == nullptr)
         break;
 
-      Env.setValue(*S, Env.makeNot(*SubExprVal));
+      Env.setValue(*S, bool_model::notOp(*SubExprVal, Env));
       break;
     }
     default:

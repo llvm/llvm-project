@@ -48,6 +48,30 @@ private:
   const TypeErasedDataflowAnalysisState &CurState;
 };
 
+namespace bool_model {
+
+BoolValue &freshBoolValue(Environment &Env);
+
+BoolValue &rValueFromLValue(BoolValue &V, Environment &Env);
+
+BoolValue &logicalOrOp(BoolValue &LHS, BoolValue &RHS, Environment &Env);
+
+BoolValue &logicalAndOp(BoolValue &LHS, BoolValue &RHS, Environment &Env);
+
+BoolValue &eqOp(BoolValue &LHS, BoolValue &RHS, Environment &Env);
+
+BoolValue &neOp(BoolValue &LHS, BoolValue &RHS, Environment &Env);
+
+BoolValue &notOp(BoolValue &Sub, Environment &Env);
+
+// Models the transition along a branch edge in the CFG.
+// BranchVal -- the concrete, dynamic branch value -- true for `then` and false
+// for `else`.
+// CondVal -- the abstract value representing the condition.
+void transferBranch(bool BranchVal, BoolValue &CondVal, Environment &Env);
+
+} // namespace bool_model
+
 /// Evaluates `S` and updates `Env` accordingly.
 ///
 /// Requirements:
