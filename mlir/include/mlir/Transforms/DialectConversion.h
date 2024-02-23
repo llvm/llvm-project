@@ -24,6 +24,7 @@ namespace mlir {
 // Forward declarations.
 class Attribute;
 class Block;
+struct ConversionConfig;
 class ConversionPatternRewriter;
 class MLIRContext;
 class Operation;
@@ -770,7 +771,8 @@ private:
   /// Conversion pattern rewriters must not be used outside of dialect
   /// conversions. They apply some IR rewrites in a delayed fashion and could
   /// bring the IR into an inconsistent state when used standalone.
-  explicit ConversionPatternRewriter(MLIRContext *ctx);
+  explicit ConversionPatternRewriter(MLIRContext *ctx,
+                                     const ConversionConfig &config);
 
   // Hide unsupported pattern rewriter API.
   using OpBuilder::setListener;
@@ -1071,6 +1073,30 @@ public:
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
 //===----------------------------------------------------------------------===//
+// ConversionConfig
+//===----------------------------------------------------------------------===//
+
+/// Dialect conversion configuration.
+struct ConversionConfig {
+  /// An optional callback used to notify about match failure diagnostics during
+  /// the conversion. Diagnostics reported to this callback may only be
+  /// available in debug mode.
+  function_ref<void(Diagnostic &)> notifyCallback = nullptr;
+
+  /// Partial conversion only. All operations that are found not to be
+  /// legalizable are placed in this set. (Note that if there is an op
+  /// explicitly marked as illegal, the conversion terminates and the set will
+  /// not necessarily be complete.)
+  DenseSet<Operation *> *unlegalizedOps = nullptr;
+
+  /// Analysis conversion only. All operations that are found to be legalizable
+  /// are placed in this set. Note that no actual rewrites are applied to the
+  /// IR during an analysis conversion and only pre-existing operations are
+  /// added to the set.
+  DenseSet<Operation *> *legalizableOps = nullptr;
+};
+
+//===----------------------------------------------------------------------===//
 // Op Conversion Entry Points
 //===----------------------------------------------------------------------===//
 
@@ -1083,19 +1109,16 @@ public:
 /// Apply a partial conversion on the given operations and all nested
 /// operations. This method converts as many operations to the target as
 /// possible, ignoring operations that failed to legalize. This method only
-/// returns failure if there ops explicitly marked as illegal. If an
-/// `unconvertedOps` set is provided, all operations that are found not to be
-/// legalizable to the given `target` are placed within that set. (Note that if
-/// there is an op explicitly marked as illegal, the conversion terminates and
-/// the `unconvertedOps` set will not necessarily be complete.)
+/// returns failure if there ops explicitly marked as illegal.
 LogicalResult
-applyPartialConversion(ArrayRef<Operation *> ops, const ConversionTarget &target,
+applyPartialConversion(ArrayRef<Operation *> ops,
+                       const ConversionTarget &target,
                        const FrozenRewritePatternSet &patterns,
-                       DenseSet<Operation *> *unconvertedOps = nullptr);
+                       ConversionConfig config = ConversionConfig());
 LogicalResult
 applyPartialConversion(Operation *op, const ConversionTarget &target,
                        const FrozenRewritePatternSet &patterns,
-                       DenseSet<Operation *> *unconvertedOps = nullptr);
+                       ConversionConfig config = ConversionConfig());
 
 /// Apply a complete conversion on the given operations, and all nested
 /// operations. This method returns failure if the conversion of any operation
@@ -1103,31 +1126,27 @@ applyPartialConversion(Operation *op, const ConversionTarget &target,
 /// within 'ops'.
 LogicalResult applyFullConversion(ArrayRef<Operation *> ops,
                                   const ConversionTarget &target,
-                                  const FrozenRewritePatternSet &patterns);
+                                  const FrozenRewritePatternSet &patterns,
+                                  ConversionConfig config = ConversionConfig());
 LogicalResult applyFullConversion(Operation *op, const ConversionTarget &target,
-                                  const FrozenRewritePatternSet &patterns);
+                                  const FrozenRewritePatternSet &patterns,
+                                  ConversionConfig config = ConversionConfig());
 
 /// Apply an analysis conversion on the given operations, and all nested
 /// operations. This method analyzes which operations would be successfully
 /// converted to the target if a conversion was applied. All operations that
 /// were found to be legalizable to the given 'target' are placed within the
-/// provided 'convertedOps' set; note that no actual rewrites are applied to the
-/// operations on success and only pre-existing operations are added to the set.
-/// This method only returns failure if there are unreachable blocks in any of
-/// the regions nested within 'ops'. There's an additional argument
-/// `notifyCallback` which is used for collecting match failure diagnostics
-/// generated during the conversion. Diagnostics are only reported to this
-/// callback may only be available in debug mode.
-LogicalResult applyAnalysisConversion(
-    ArrayRef<Operation *> ops, ConversionTarget &target,
-    const FrozenRewritePatternSet &patterns,
-    DenseSet<Operation *> &convertedOps,
-    function_ref<void(Diagnostic &)> notifyCallback = nullptr);
-LogicalResult applyAnalysisConversion(
-    Operation *op, ConversionTarget &target,
-    const FrozenRewritePatternSet &patterns,
-    DenseSet<Operation *> &convertedOps,
-    function_ref<void(Diagnostic &)> notifyCallback = nullptr);
+/// provided 'config.legalizableOps' set; note that no actual rewrites are
+/// applied to the operations on success. This method only returns failure if
+/// there are unreachable blocks in any of the regions nested within 'ops'.
+LogicalResult
+applyAnalysisConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
+                        const FrozenRewritePatternSet &patterns,
+                        ConversionConfig config = ConversionConfig());
+LogicalResult
+applyAnalysisConversion(Operation *op, ConversionTarget &target,
+                        const FrozenRewritePatternSet &patterns,
+                        ConversionConfig config = ConversionConfig());
 } // namespace mlir
 
 #endif // MLIR_TRANSFORMS_DIALECTCONVERSION_H_
