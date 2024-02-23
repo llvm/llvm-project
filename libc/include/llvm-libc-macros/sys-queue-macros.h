@@ -22,12 +22,12 @@
 
 #define SLIST_HEAD(name, type)                                                 \
   struct name {                                                                \
-    struct type *first;                                                        \
+    struct type *slh_first;                                                    \
   }
 
 #define SLIST_CLASS_HEAD(name, type)                                           \
   struct name {                                                                \
-    class type *first;                                                         \
+    class type *slh_first;                                                     \
   }
 
 #define SLIST_HEAD_INITIALIZER(head)                                           \
@@ -45,8 +45,8 @@
 
 // Singly-linked list access methods.
 
-#define SLIST_EMPTY(head) ((head)->first == NULL)
-#define SLIST_FIRST(head) ((head)->first)
+#define SLIST_EMPTY(head) ((head)->slh_first == NULL)
+#define SLIST_FIRST(head) ((head)->slh_first)
 #define SLIST_NEXT(elem, field) ((elem)->field.next)
 
 #define SLIST_FOREACH(var, head, field)                                        \
@@ -132,18 +132,18 @@
 
 #define STAILQ_HEAD(name, type)                                                \
   struct name {                                                                \
-    struct type *first;                                                        \
-    struct type **last;                                                        \
+    struct type *stqh_first;                                                   \
+    struct type **stqh_last;                                                   \
   }
 
 #define STAILQ_CLASS_HEAD(name, type)                                          \
   struct name {                                                                \
-    class type *first;                                                         \
-    class type **last;                                                         \
+    class type *stqh_first;                                                    \
+    class type **stqh_last;                                                    \
   }
 
 #define STAILQ_HEAD_INITIALIZER(head)                                          \
-  { NULL, &(head).first }
+  { NULL, &(head).stqh_first }
 
 #define STAILQ_ENTRY(type)                                                     \
   struct {                                                                     \
@@ -157,12 +157,12 @@
 
 // Singly-linked tail queue access methods.
 
-#define STAILQ_EMPTY(head) ((head)->first == NULL)
-#define STAILQ_FIRST(head) ((head)->first)
+#define STAILQ_EMPTY(head) ((head)->stqh_first == NULL)
+#define STAILQ_FIRST(head) ((head)->stqh_first)
 #define STAILQ_LAST(head, type, field)                                         \
   (STAILQ_EMPTY(head)                                                          \
        ? NULL                                                                  \
-       : __containerof((head)->last, QUEUE_TYPEOF(type), field.next))
+       : __containerof((head)->stqh_last, QUEUE_TYPEOF(type), field.next))
 #define STAILQ_NEXT(elem, field) ((elem)->field.next)
 
 #define STAILQ_FOREACH(var, head, field)                                       \
@@ -187,8 +187,8 @@
 #define STAILQ_CONCAT(head1, head2, type, field)                               \
   do {                                                                         \
     if (!STAILQ_EMPTY(head2)) {                                                \
-      *(head1)->last = (head2)->first;                                         \
-      (head1)->last = (head2)->last;                                           \
+      *(head1)->stqh_last = (head2)->stqh_first;                               \
+      (head1)->stqh_last = (head2)->stqh_last;                                 \
       STAILQ_INIT(head2);                                                      \
     }                                                                          \
   } while (0)
@@ -196,28 +196,28 @@
 #define STAILQ_INIT(head)                                                      \
   do {                                                                         \
     STAILQ_FIRST(head) = NULL;                                                 \
-    (head)->last = &STAILQ_FIRST(head);                                        \
+    (head)->stqh_last = &STAILQ_FIRST(head);                                   \
   } while (0)
 
 #define STAILQ_INSERT_AFTER(head, listelem, elem, field)                       \
   do {                                                                         \
     if ((STAILQ_NEXT(elem, field) = STAILQ_NEXT(listelem, field)) == NULL)     \
-      (head)->last = &STAILQ_NEXT(elem, field);                                \
+      (head)->stqh_last = &STAILQ_NEXT(elem, field);                           \
     STAILQ_NEXT(listelem, field) = (elem);                                     \
   } while (0)
 
 #define STAILQ_INSERT_HEAD(head, elem, field)                                  \
   do {                                                                         \
     if ((STAILQ_NEXT(elem, field) = STAILQ_FIRST(head)) == NULL)               \
-      (head)->last = &STAILQ_NEXT(elem, field);                                \
+      (head)->stqh_last = &STAILQ_NEXT(elem, field);                           \
     STAILQ_FIRST(head) = (elem);                                               \
   } while (0)
 
 #define STAILQ_INSERT_TAIL(head, elem, field)                                  \
   do {                                                                         \
     STAILQ_NEXT(elem, field) = NULL;                                           \
-    *(head)->last = (elem);                                                    \
-    (head)->last = &STAILQ_NEXT(elem, field);                                  \
+    *(head)->stqh_last = (elem);                                               \
+    (head)->stqh_last = &STAILQ_NEXT(elem, field);                             \
   } while (0)
 
 #define STAILQ_REMOVE(head, elem, type, field)                                 \
@@ -236,27 +236,27 @@
   do {                                                                         \
     if ((STAILQ_NEXT(elem, field) =                                            \
              STAILQ_NEXT(STAILQ_NEXT(elem, field), field)) == NULL)            \
-      (head)->last = &STAILQ_NEXT(elem, field);                                \
+      (head)->stqh_last = &STAILQ_NEXT(elem, field);                           \
   } while (0)
 
 #define STAILQ_REMOVE_HEAD(head, field)                                        \
   do {                                                                         \
     if ((STAILQ_FIRST(head) = STAILQ_NEXT(STAILQ_FIRST(head), field)) == NULL) \
-      (head)->last = &STAILQ_FIRST(head);                                      \
+      (head)->stqh_last = &STAILQ_FIRST(head);                                 \
   } while (0)
 
 #define STAILQ_SWAP(head1, head2, type)                                        \
   do {                                                                         \
     QUEUE_TYPEOF(type) *first = STAILQ_FIRST(head1);                           \
-    QUEUE_TYPEOF(type) **last = (head1)->last;                                 \
+    QUEUE_TYPEOF(type) **last = (head1)->stqh_last;                            \
     STAILQ_FIRST(head1) = STAILQ_FIRST(head2);                                 \
-    (head1)->last = (head2)->last;                                             \
+    (head1)->stqh_last = (head2)->stqh_last;                                   \
     STAILQ_FIRST(head2) = first;                                               \
-    (head2)->last = last;                                                      \
+    (head2)->stqh_last = last;                                                 \
     if (STAILQ_EMPTY(head1))                                                   \
-      (head1)->last = &STAILQ_FIRST(head1);                                    \
+      (head1)->stqh_last = &STAILQ_FIRST(head1);                               \
     if (STAILQ_EMPTY(head2))                                                   \
-      (head2)->last = &STAILQ_FIRST(head2);                                    \
+      (head2)->stqh_last = &STAILQ_FIRST(head2);                               \
   } while (0)
 
 #endif // __LLVM_LIBC_MACROS_SYS_QUEUE_MACROS_H
