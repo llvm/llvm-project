@@ -6706,7 +6706,7 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   }
 
   // Look for functions that rely on old function attribute behavior.
-  UpgradeFunctionAttributes(*F, true);
+  UpgradeFunctionAttributes(*F);
 
   // Bring in any functions that this function forward-referenced via
   // blockaddresses.
