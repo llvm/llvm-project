@@ -28,16 +28,6 @@ def ROCDL_Dialect : Dialect {
   let hasOperationAttrVerify = 1;
 
   let extraClassDeclaration = [{
-    /// Get the name of the attribute used to annotate external kernel
-    /// functions.
-    static StringRef getKernelFuncAttrName() { return "rocdl.kernel"; }
-    static constexpr ::llvm::StringLiteral getFlatWorkGroupSizeAttrName() {
-      return ::llvm::StringLiteral("rocdl.flat_work_group_size");
-    }
-    static constexpr ::llvm::StringLiteral getReqdWorkGroupSizeAttrName() {
-      return ::llvm::StringLiteral("rocdl.reqd_work_group_size");
-    }
-
     /// The address space value that represents global memory.
     static constexpr unsigned kGlobalMemoryAddressSpace = 1;
     /// The address space value that represents shared memory.
@@ -45,6 +35,14 @@ def ROCDL_Dialect : Dialect {
     /// The address space value that represents private memory.
     static constexpr unsigned kPrivateMemoryAddressSpace = 5;
   }];
+
+  let discardableAttrs = (ins
+     "::mlir::UnitAttr":$kernel,
+     "::mlir::DenseI32ArrayAttr":$reqd_work_group_size,
+     "::mlir::StringAttr":$flat_work_group_size,
+     "::mlir::IntegerAttr":$max_flat_work_group_size,
+     "::mlir::IntegerAttr":$waves_per_eu
+  );
 
   let useDefaultAttributePrinterParser = 1;
 }

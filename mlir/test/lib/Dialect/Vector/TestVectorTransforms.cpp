@@ -466,21 +466,35 @@ struct TestFlattenVectorTransferPatterns
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestFlattenVectorTransferPatterns)
 
+  TestFlattenVectorTransferPatterns() = default;
+  TestFlattenVectorTransferPatterns(
+      const TestFlattenVectorTransferPatterns &pass)
+      : PassWrapper(pass) {}
+
   StringRef getArgument() const final {
     return "test-vector-transfer-flatten-patterns";
   }
+
   StringRef getDescription() const final {
     return "Test patterns to rewrite contiguous row-major N-dimensional "
            "vector.transfer_{read,write} ops into 1D transfers";
   }
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
     registry.insert<affine::AffineDialect>();
     registry.insert<vector::VectorDialect>();
   }
+
+  Option<unsigned> targetVectorBitwidth{
+      *this, "target-vector-bitwidth",
+      llvm::cl::desc(
+          "Minimum vector bitwidth to enable the flattening transformation"),
+      llvm::cl::init(std::numeric_limits<unsigned>::max())};
+
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateFlattenVectorTransferPatterns(patterns);
+    populateFlattenVectorTransferPatterns(patterns, targetVectorBitwidth);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };

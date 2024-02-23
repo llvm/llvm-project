@@ -61,10 +61,13 @@ run by the parser after parsing input assembly and by the optimizer
 before it outputs bitcode. The violations pointed out by the verifier
 pass indicate bugs in transformation passes or input to the parser.
 
+Syntax
+======
+
 .. _identifiers:
 
 Identifiers
-===========
+-----------
 
 LLVM identifiers come in two basic types: global and local. Global
 identifiers (functions, global variables) begin with the ``'@'``
@@ -139,6 +142,34 @@ lexical features of LLVM:
 It also shows a convention that we follow in this document. When
 demonstrating instructions, we will follow an instruction with a comment
 that defines the type and name of value produced.
+
+.. _strings:
+
+String constants
+----------------
+
+Strings in LLVM programs are delimited by ``"`` characters. Within a
+string, all bytes are treated literally with the exception of ``\``
+characters, which start escapes, and the first ``"`` character, which
+ends the string.
+
+There are two kinds of escapes.
+
+* ``\\`` represents a single ``\`` character.
+
+* ``\`` followed by two hexadecimal characters (0-9, a-f, or A-F)
+  represents the byte with the given value (e.g. \x00 represents a
+  null byte).
+
+To represent a ``"`` character, use ``\22``. (``\"`` will end the string
+with a trailing ``\``.)
+
+Newlines do not terminate string constants; strings can span multiple
+lines.
+
+The interpretation of string constants (e.g. their character encoding)
+depends on context.
+
 
 High Level Structure
 ====================

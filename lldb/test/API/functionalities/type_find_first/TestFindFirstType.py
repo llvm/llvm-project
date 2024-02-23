@@ -8,18 +8,17 @@ from lldbsuite.test import lldbutil
 
 
 class TypeFindFirstTestCase(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_find_first_type(self):
         """
-            Test SBTarget::FindFirstType() and SBModule::FindFirstType() APIs.
+        Test SBTarget::FindFirstType() and SBModule::FindFirstType() APIs.
 
-            This function had regressed after some past modification of the type
-            lookup internal code where if we had multiple types with the same
-            basename, FindFirstType() could end up failing depending on which
-            type was found first in the debug info indexes. This test will
-            ensure this doesn't regress in the future.
+        This function had regressed after some past modification of the type
+        lookup internal code where if we had multiple types with the same
+        basename, FindFirstType() could end up failing depending on which
+        type was found first in the debug info indexes. This test will
+        ensure this doesn't regress in the future.
         """
         self.build()
         target = self.createTestTarget()

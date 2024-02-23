@@ -968,9 +968,9 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
   // Save the token name used for static assertion.
   const char *TokName = Tok.getName();
 
-  if (Tok.is(tok::kw__Static_assert) && !getLangOpts().C11)
-    Diag(Tok, diag::ext_c11_feature) << Tok.getName();
-  if (Tok.is(tok::kw_static_assert)) {
+  if (Tok.is(tok::kw__Static_assert))
+    diagnoseUseOfC11Keyword(Tok);
+  else if (Tok.is(tok::kw_static_assert)) {
     if (!getLangOpts().CPlusPlus) {
       if (getLangOpts().C23)
         Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();

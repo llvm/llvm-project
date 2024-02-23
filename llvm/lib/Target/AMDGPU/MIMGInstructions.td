@@ -527,16 +527,16 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
     let ssamp = 0 in {
       if op.HAS_GFX10M then {
         def _V1 : MIMG_NoSampler_Helper <op, asm, dst_rc, VGPR_32,
-                                         !if(enableDisasm, "AMDGPU", "")>;
+                                         !if(enableDisasm, "GFX10", "")>;
         if !not(ExtendedImageInst) then
         def _V1_gfx90a : MIMG_NoSampler_Helper_gfx90a <op, asm, dst_rc, VGPR_32,
                                        !if(enableDisasm, "GFX90A", "")>;
         def _V1_gfx10 : MIMG_NoSampler_gfx10<op, asm, dst_rc, VGPR_32,
-                                             !if(enableDisasm, "AMDGPU", "")>;
+                                             !if(enableDisasm, "GFX10", "")>;
       }
       if op.HAS_GFX11 then {
         def _V1_gfx11 : MIMG_NoSampler_gfx11<op, asm, dst_rc, VGPR_32,
-                                             !if(enableDisasm, "AMDGPU", "")>;
+                                             !if(enableDisasm, "GFX11", "")>;
       }
     }
     if op.HAS_GFX12 then {
@@ -606,12 +606,12 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
         def _V4_gfx90a : MIMG_NoSampler_Helper_gfx90a <op, asm, dst_rc, VReg_128>;
         def _V4_gfx10 : MIMG_NoSampler_gfx10<op, asm, dst_rc, VReg_128>;
         def _V4_nsa_gfx10 : MIMG_NoSampler_nsa_gfx10<op, asm, dst_rc, 4,
-                                                     !if(enableDisasm, "AMDGPU", "")>;
+                                                     !if(enableDisasm, "GFX10", "")>;
       }
       if op.HAS_GFX11 then {
         def _V4_gfx11 : MIMG_NoSampler_gfx11<op, asm, dst_rc, VReg_128>;
         def _V4_nsa_gfx11 : MIMG_NoSampler_nsa_gfx11<op, asm, dst_rc, 4,
-                                                     !if(enableDisasm, "AMDGPU", "")>;
+                                                     !if(enableDisasm, "GFX11", "")>;
       }
     }
     if op.HAS_GFX12 then {
@@ -754,16 +754,16 @@ multiclass MIMG_Store_Addr_Helper <mimgopc op, string asm,
       let ssamp = 0 in {
         if op.HAS_GFX10M then {
           def _V1 : MIMG_Store_Helper <op, asm, data_rc, VGPR_32,
-                                      !if(enableDisasm, "AMDGPU", "")>;
+                                      !if(enableDisasm, "GFX10", "")>;
           let hasPostISelHook = 1 in
           def _V1_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VGPR_32,
                                       !if(enableDisasm, "GFX90A", "")>;
           def _V1_gfx10 : MIMG_Store_gfx10 <op, asm, data_rc, VGPR_32,
-                                            !if(enableDisasm, "AMDGPU", "")>;
+                                            !if(enableDisasm, "GFX10", "")>;
         }
         if op.HAS_GFX11 then {
           def _V1_gfx11 : MIMG_Store_gfx11 <op, asm, data_rc, VGPR_32,
-                                            !if(enableDisasm, "AMDGPU", "")>;
+                                            !if(enableDisasm, "GFX11", "")>;
         }
       }
       if op.HAS_GFX12 then {
@@ -812,12 +812,12 @@ multiclass MIMG_Store_Addr_Helper <mimgopc op, string asm,
           def _V4_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VReg_128>;
           def _V4_gfx10 : MIMG_Store_gfx10 <op, asm, data_rc, VReg_128>;
           def _V4_nsa_gfx10 : MIMG_Store_nsa_gfx10 <op, asm, data_rc, 4,
-                                                          !if(enableDisasm, "AMDGPU", "")>;
+                                                          !if(enableDisasm, "GFX10", "")>;
         }
         if op.HAS_GFX11 then {
           def _V4_gfx11 : MIMG_Store_gfx11 <op, asm, data_rc, VReg_128>;
           def _V4_nsa_gfx11 : MIMG_Store_nsa_gfx11 <op, asm, data_rc, 4,
-                                                          !if(enableDisasm, "AMDGPU", "")>;
+                                                          !if(enableDisasm, "GFX11", "")>;
         }
       }
       if op.HAS_GFX12 then {
@@ -897,7 +897,7 @@ class MIMG_Atomic_gfx10<mimgopc op, string opcode,
                         RegisterClass DataRC, RegisterClass AddrRC,
                         bit enableDisasm = 0>
   : MIMG_gfx10<!cast<int>(op.GFX10M), (outs DataRC:$vdst),
-               !if(enableDisasm, "AMDGPU", "")> {
+               !if(enableDisasm, "GFX10", "")> {
   let Constraints = "$vdst = $vdata";
 
   let InOperandList = (ins DataRC:$vdata, AddrRC:$vaddr0, SReg_256:$srsrc,
@@ -910,7 +910,7 @@ class MIMG_Atomic_nsa_gfx10<mimgopc op, string opcode,
                             RegisterClass DataRC, int num_addrs,
                             bit enableDisasm = 0>
   : MIMG_nsa_gfx10<!cast<int>(op.GFX10M), (outs DataRC:$vdst), num_addrs,
-                   !if(enableDisasm, "AMDGPU", "")> {
+                   !if(enableDisasm, "GFX10", "")> {
   let Constraints = "$vdst = $vdata";
 
   let InOperandList = !con((ins DataRC:$vdata),
@@ -925,7 +925,7 @@ class MIMG_Atomic_gfx11<mimgopc op, string opcode,
                         RegisterClass DataRC, RegisterClass AddrRC,
                         bit enableDisasm = 0>
   : MIMG_gfx11<!cast<int>(op.GFX11), (outs DataRC:$vdst),
-               !if(enableDisasm, "AMDGPU", "")> {
+               !if(enableDisasm, "GFX11", "")> {
   let Constraints = "$vdst = $vdata";
 
   let InOperandList = (ins DataRC:$vdata, AddrRC:$vaddr0, SReg_256:$srsrc,
@@ -938,7 +938,7 @@ class MIMG_Atomic_nsa_gfx11<mimgopc op, string opcode,
                             RegisterClass DataRC, int num_addrs,
                             bit enableDisasm = 0>
   : MIMG_nsa_gfx11<!cast<int>(op.GFX11), (outs DataRC:$vdst), num_addrs,
-                   !if(enableDisasm, "AMDGPU", "")> {
+                   !if(enableDisasm, "GFX11", "")> {
   let Constraints = "$vdst = $vdata";
 
   let InOperandList = !con((ins DataRC:$vdata),
@@ -1298,19 +1298,19 @@ multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
       if op.HAS_GFX10M then {
         def _V # addr.NumWords
           : MIMG_Sampler_Helper <op, asm, dst_rc, addr.RegClass,
-                                 !if(!and(enableDisasm, addr.Disassemble), "AMDGPU", "")>;
+                                 !if(!and(enableDisasm, addr.Disassemble), "GFX10", "")>;
         if !not(ExtendedImageInst) then
         def _V # addr.NumWords # _gfx90a
           : MIMG_Sampler_gfx90a <op, asm, dst_rc, addr.RegClass,
                                  !if(!and(enableDisasm, addr.Disassemble), "GFX90A", "")>;
         def _V # addr.NumWords # _gfx10
           : MIMG_Sampler_gfx10 <op, asm, dst_rc, addr.RegClass,
-                                 !if(!and(enableDisasm, addr.Disassemble), "AMDGPU", "")>;
+                                 !if(!and(enableDisasm, addr.Disassemble), "GFX10", "")>;
       }
       if op.HAS_GFX11 then {
         def _V # addr.NumWords # _gfx11
           : MIMG_Sampler_gfx11 <op, asm, dst_rc, addr.RegClass,
-                                 !if(!and(enableDisasm, addr.Disassemble), "AMDGPU", "")>;
+                                 !if(!and(enableDisasm, addr.Disassemble), "GFX11", "")>;
       }
     }
   }
@@ -1320,7 +1320,7 @@ multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
       if op.HAS_GFX10M then {
         def _V # addr.NumWords # _nsa_gfx10
           : MIMG_Sampler_nsa_gfx10<op, asm, dst_rc, addr.NumWords,
-                                   !if(!and(enableDisasm, addr.Disassemble), "AMDGPU", "")>;
+                                   !if(!and(enableDisasm, addr.Disassemble), "GFX10", "")>;
       }
     }
   }
@@ -1330,7 +1330,7 @@ multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
       if op.HAS_GFX11 then {
         def _V # addr.NumWords # _nsa_gfx11
           : MIMG_Sampler_nsa_gfx11<op, asm, dst_rc, addr.NumWords, addr.RegClass,
-                                   !if(!and(enableDisasm, addr.Disassemble), "AMDGPU", "")>;
+                                   !if(!and(enableDisasm, addr.Disassemble), "GFX11", "")>;
       }
     }
   }
@@ -1416,7 +1416,7 @@ class MIMG_IntersectRay_Helper<bit Is64, bit IsA16> {
 }
 
 class MIMG_IntersectRay_gfx10<mimgopc op, string opcode, RegisterClass AddrRC>
-    : MIMG_gfx10<op.GFX10M, (outs VReg_128:$vdata), "AMDGPU"> {
+    : MIMG_gfx10<op.GFX10M, (outs VReg_128:$vdata), "GFX10"> {
   let InOperandList = (ins AddrRC:$vaddr0, SReg_128:$srsrc, A16:$a16);
   let AsmString = opcode#" $vdata, $vaddr0, $srsrc$a16";
 
@@ -1424,13 +1424,13 @@ class MIMG_IntersectRay_gfx10<mimgopc op, string opcode, RegisterClass AddrRC>
 }
 
 class MIMG_IntersectRay_nsa_gfx10<mimgopc op, string opcode, int num_addrs>
-    : MIMG_nsa_gfx10<op.GFX10M, (outs VReg_128:$vdata), num_addrs, "AMDGPU"> {
+    : MIMG_nsa_gfx10<op.GFX10M, (outs VReg_128:$vdata), num_addrs, "GFX10"> {
   let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$srsrc, A16:$a16));
   let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $srsrc$a16";
 }
 
 class MIMG_IntersectRay_gfx11<mimgopc op, string opcode, RegisterClass AddrRC>
-    : MIMG_gfx11<op.GFX11, (outs VReg_128:$vdata), "AMDGPU"> {
+    : MIMG_gfx11<op.GFX11, (outs VReg_128:$vdata), "GFX11"> {
   let InOperandList = (ins AddrRC:$vaddr0, SReg_128:$srsrc, A16:$a16);
   let AsmString = opcode#" $vdata, $vaddr0, $srsrc$a16";
 
@@ -1439,7 +1439,7 @@ class MIMG_IntersectRay_gfx11<mimgopc op, string opcode, RegisterClass AddrRC>
 
 class MIMG_IntersectRay_nsa_gfx11<mimgopc op, string opcode, int num_addrs,
                                   list<RegisterClass> addr_types>
-    : MIMG_nsa_gfx11<op.GFX11, (outs VReg_128:$vdata), num_addrs, "AMDGPU",
+    : MIMG_nsa_gfx11<op.GFX11, (outs VReg_128:$vdata), num_addrs, "GFX11",
                      addr_types> {
   let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$srsrc, A16:$a16));
   let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $srsrc$a16";

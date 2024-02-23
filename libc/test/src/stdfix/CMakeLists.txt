@@ -21,3 +21,21 @@ foreach(suffix IN ITEMS hr r lr hk k lk)
       libc.src.__support.fixed_point.fx_bits
   )
 endforeach()
+
+foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
+  add_libc_test(
+    round${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      RoundTest.h
+    SRCS
+      round${suffix}_test.cpp
+    COMPILE_OPTIONS
+      -O3
+      -ffixed-point
+    DEPENDS
+      libc.src.stdfix.round${suffix}
+      libc.src.__support.fixed_point.fx_bits
+  )
+endforeach()
