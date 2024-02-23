@@ -513,7 +513,11 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
       });
   }];
   let mlirBuilder = [{
-    $_op = $_builder.create<$_qualCppClassName>($_location, $_label_attr($label));
+    DILabelAttr labelAttr = $_label_attr($label);
+    // Drop the intrinsic if the label translation fails due to cylic metadata.
+    if (!labelAttr)
+      return success();
+    $_op = $_builder.create<$_qualCppClassName>($_location, labelAttr);
   }];
   let assemblyFormat = "$label attr-dict";
 }
