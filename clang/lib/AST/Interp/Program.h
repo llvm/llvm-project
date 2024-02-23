@@ -67,7 +67,7 @@ public:
   unsigned createGlobalString(const StringLiteral *S);
 
   /// Returns a pointer to a global.
-  Pointer getPtrGlobal(unsigned Idx);
+  Pointer getPtrGlobal(unsigned Idx) const;
 
   /// Returns the value of a global.
   Block *getGlobal(unsigned Idx) {
