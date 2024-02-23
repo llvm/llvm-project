@@ -633,6 +633,29 @@ Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
 
 void OpenMPIRBuilder::initialize() { initializeTypes(M); }
 
+static void raiseUserConstantDataAllocasToEntryBlock(IRBuilderBase &Builder,
+                                                     Function *Function) {
+  BasicBlock &EntryBlock = Function->getEntryBlock();
+  Instruction *MoveLocInst = EntryBlock.getFirstNonPHI();
+
+  // Loop over blocks looking for constant allocas, skipping the entry block
+  // as any allocas there are already in the desired location.
+  for (auto Block = std::next(Function->begin(), 1); Block != Function->end();
+       Block++) {
+    for (auto Inst = Block->getReverseIterator()->begin();
+         Inst != Block->getReverseIterator()->end();) {
+      if (auto *AllocaInst = dyn_cast_if_present<llvm::AllocaInst>(Inst)) {
+        Inst++;
+        if (!isa<ConstantData>(AllocaInst->getArraySize()))
+          continue;
+        AllocaInst->moveBeforePreserving(MoveLocInst);
+      } else {
+        Inst++;
+      }
+    }
+  }
+}
+
 void OpenMPIRBuilder::finalize(Function *Fn) {
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
@@ -736,6 +759,28 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
 
   // Remove work items that have been completed.
   OutlineInfos = std::move(DeferredOutlines);
+
+  // The createTarget functions embeds user written code into
+  // the target region which may inject allocas which need to
+  // be moved to the entry block of our target or risk malformed
+  // optimisations by later passes, this is only relevant for
+  // the device pass which appears to be a little more delicate
+  // when it comes to optimisations (however, we do not block on
+  // that here, it's up to the inserter to the list to do so).
+  // This notbaly has to occur after the OutlinedInfo candidates
+  // have been extracted so we have an end product that will not
+  // be implicitly adversely affected by any raises unless
+  // intentionally appended to the list.
+  // NOTE: This only does so for ConstantData, it could be extended
+  // to ConstantExpr's with further effort, however, they should
+  // largely be folded when they get here. Extending it to runtime
+  // defined/read+writeable allocation sizes would be non-trivial
+  // (need to factor in movement of any stores to variables the
+  // allocation size depends on, as well as the usual loads,
+  // otherwise it'll yield the wrong result after movement) and
+  // likely be more suitable as an LLVM optimisation pass.
+  for (Function *F : ConstantAllocaRaiseCandidates)
+    raiseUserConstantDataAllocasToEntryBlock(Builder, F);
 
   EmitMetadataErrorReportFunctionTy &&ErrorReportFn =
       [](EmitMetadataErrorKind Kind,
@@ -5042,6 +5087,12 @@ static Function *createOutlinedFunction(
     Builder.restoreIP(OMPBuilder.createTargetInit(Builder, /*IsSPMD*/ false));
 
   BasicBlock *UserCodeEntryBB = Builder.GetInsertBlock();
+
+  // As we embed the user code in the middle of our target region after we
+  // generate entry code, we must move what allocas we can into the entry
+  // block to avoid possible breaking optimisations for device
+  if (OMPBuilder.Config.isTargetDevice())
+    OMPBuilder.ConstantAllocaRaiseCandidates.emplace_back(Func);
 
   // Insert target deinit call in the device compilation pass.
   Builder.restoreIP(CBFunc(Builder.saveIP(), Builder.saveIP()));
