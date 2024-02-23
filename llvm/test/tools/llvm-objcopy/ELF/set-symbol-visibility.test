@@ -113,7 +113,7 @@
 
 ## Check that the visibility of symbols specified by a regex are set correctly,
 ## and that no other symbols are affected.
-# RUN: llvm-objcopy %t.o %t6.o --set-symbol-visibility=.*_local=hidden --regex
+# RUN: llvm-objcopy %t.o %t6.o --set-symbol-visibility='.*'_local=hidden --regex
 # RUN: llvm-readelf -s %t6.o | FileCheck %s --check-prefix=REGEX
 
 # REGEX-DAG: HIDDEN      1 default_local
@@ -132,7 +132,7 @@
 
 ## Check that the visibility of symbols specified by a wildcard are set correctly,
 ## and that no other symbols are affected.
-# RUN: llvm-objcopy %t.o %t7.o --set-symbol-visibility=*_local=hidden --wildcard
+# RUN: llvm-objcopy %t.o %t7.o --set-symbol-visibility='*_local'=hidden --wildcard
 # RUN: llvm-readelf -s %t7.o | FileCheck %s --check-prefix=WILDCARD
 
 # WILDCARD-DAG: HIDDEN      1 default_local
@@ -151,9 +151,9 @@
 
 ## Check that the latest option that matches the same symbols as any of the previous
 ## options overwrites the visibility of these symbols.
-# RUN: echo -e "*_weak\n*_local" > %t.symbols.pattern
-# RUN: llvm-objcopy %t.o %t8.o --set-symbol-visibility=default_*=hidden \
-# RUN:                         --set-symbol-visibility=internal_*=hidden \
+# RUN: echo -e '*_weak\n*_local' > %t.symbols.pattern
+# RUN: llvm-objcopy %t.o %t8.o --set-symbol-visibility='default_*'=hidden \
+# RUN:                         --set-symbol-visibility='internal_*'=hidden \
 # RUN:                         --set-symbols-visibility=%t.symbols.pattern=protected \
 # RUN:                         --wildcard
 # RUN: llvm-readelf -s %t8.o | FileCheck %s --check-prefix=REWRITE
@@ -175,7 +175,7 @@
 ## Check that a symbol name with a special charater is treated as a plain name
 ## when pattern matching options are not enabled.
 # RUN: yaml2obj --docnum=2 %s -o %t9.o
-# RUN: llvm-objcopy %t9.o --set-symbol-visibility=f*o=hidden
+# RUN: llvm-objcopy %t9.o --set-symbol-visibility='f*o'=hidden
 # RUN: llvm-readelf -s %t9.o | FileCheck %s --check-prefix=SPECIAL
 
 # SPECIAL-DAG: HIDDEN      1 f*o
@@ -208,7 +208,7 @@
 # RUN: echo '*.' > %t.symbols.regex
 # RUN: not llvm-objcopy %t10.o --set-symbols-visibility=%t.symbols.regex=hidden --regex 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=SYMBOL
-# RUN: not llvm-objcopy %t10.o --set-symbol-visibility=*.=default --regex 2>&1 | \
+# RUN: not llvm-objcopy %t10.o --set-symbol-visibility='*.'=default --regex 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=SYMBOL
 # SYMBOL: error: cannot compile regular expression '*.': repetition-operator operand invalid
 
@@ -231,47 +231,47 @@ Symbols:
   - Name:    default_local
     Section: .text
     Binding:  STB_LOCAL
-  - Name:    default_global
+  - Name:    protected_local
     Section: .text
-    Binding:  STB_GLOBAL
-  - Name:    default_weak
-    Section: .text
-    Binding:  STB_WEAK
+    Binding:  STB_LOCAL
+    Other:    [ STV_PROTECTED ]
   - Name:    internal_local
     Section: .text
     Binding:  STB_LOCAL
-    Other:    [ STV_INTERNAL ]
-  - Name:    internal_global
-    Section: .text
-    Binding:  STB_GLOBAL
-    Other:    [ STV_INTERNAL ]
-  - Name:    internal_weak
-    Section: .text
-    Binding:  STB_WEAK
     Other:    [ STV_INTERNAL ]
   - Name:    hidden_local
     Section: .text
     Binding:  STB_LOCAL
     Other:    [ STV_HIDDEN ]
-  - Name:    hidden_global
+  - Name:    default_weak
     Section: .text
-    Binding:  STB_GLOBAL
-    Other:    [ STV_HIDDEN ]
+    Binding:  STB_WEAK
+  - Name:    internal_weak
+    Section: .text
+    Binding:  STB_WEAK
+    Other:    [ STV_INTERNAL ]
   - Name:    hidden_weak
     Section: .text
     Binding:  STB_WEAK
     Other:    [ STV_HIDDEN ]
-  - Name:    protected_local
-    Section: .text
-    Binding:  STB_LOCAL
-    Other:    [ STV_PROTECTED ]
-  - Name:    protected_global
-    Section: .text
-    Binding:  STB_GLOBAL
-    Other:    [ STV_PROTECTED ]
   - Name:    protected_weak
     Section: .text
     Binding:  STB_WEAK
+    Other:    [ STV_PROTECTED ]
+  - Name:    default_global
+    Section: .text
+    Binding:  STB_GLOBAL
+  - Name:    internal_global
+    Section: .text
+    Binding:  STB_GLOBAL
+    Other:    [ STV_INTERNAL ]
+  - Name:    hidden_global
+    Section: .text
+    Binding:  STB_GLOBAL
+    Other:    [ STV_HIDDEN ]
+  - Name:    protected_global
+    Section: .text
+    Binding:  STB_GLOBAL
     Other:    [ STV_PROTECTED ]
   - Name:    ignored_name
     Section: .text
