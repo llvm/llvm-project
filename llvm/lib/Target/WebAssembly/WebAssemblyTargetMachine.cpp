@@ -54,6 +54,15 @@ static cl::opt<bool> WasmDisableFixIrreducibleControlFlowPass(
              " irreducible control flow optimization pass"),
     cl::init(false));
 
+// A temporary option to control emission of multivalue until multivalue
+// implementation is stable enough. We currently don't emit multivalue by
+// default even if the feature section allows it.
+// TODO Stabilize multivalue and delete this option
+cl::opt<bool>
+    WasmEmitMultiValue("wasm-emit-multivalue", cl::Hidden,
+                       cl::desc("WebAssembly: Emit multivalue in the backend"),
+                       cl::init(false));
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   // Register the target.
   RegisterTargetMachine<WebAssemblyTargetMachine> X(
