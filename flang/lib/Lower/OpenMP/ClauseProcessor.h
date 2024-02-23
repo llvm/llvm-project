@@ -146,14 +146,14 @@ public:
                      llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
                      llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
                      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-                     &isDeviceSymbols) const;
+                         &isDeviceSymbols) const;
 
   bool
   processHasDeviceAddr(llvm::SmallVectorImpl<mlir::Value> &operands,
                        llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
                        llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
                        llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-                       &isDeviceSymbols) const;
+                           &isDeviceSymbols) const;
 
   template <typename T>
   bool processMotionClauses(Fortran::lower::StatementContext &stmtCtx,
