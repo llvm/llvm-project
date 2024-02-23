@@ -227,7 +227,7 @@ NOFOLD(MMX_MOVQ64rr_REV)
 NOFOLD(INSERTPSrr)
 NOFOLD(VINSERTPSZrr)
 NOFOLD(VINSERTPSrr)
-// CFCMOV instructions have different semantics between rr and rm.
+// Memory faults are suppressed for CFCMOV with memory operand.
 NOFOLD(CFCMOV16rr)
 NOFOLD(CFCMOV32rr)
 NOFOLD(CFCMOV64rr)

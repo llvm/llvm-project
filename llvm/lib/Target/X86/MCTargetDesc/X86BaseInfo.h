@@ -1054,7 +1054,7 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
     // Skip registers encoded in reg, VEX_VVVV, and I8IMM.
     return 3;
   case X86II::MRMSrcMemCC:
-    return 1 + HasVEX_4V;
+    return 1 + hasNewDataDest(TSFlags);
   case X86II::MRMDestMem4VOp3CC:
     // Start from 1, skip any registers encoded in VEX_VVVV or I8IMM, or a
     // mask register.

@@ -2637,12 +2637,9 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI = CloneIfNew(MI);
     WorkingMI->setDesc(get(Opc));
     break;
-  case X86::CMOV16rr:
-  case X86::CMOV32rr:
-  case X86::CMOV64rr:
-  case X86::CMOV16rr_ND:
-  case X86::CMOV32rr_ND:
-  case X86::CMOV64rr_ND: {
+  CASE_ND(CMOV16rr)
+  CASE_ND(CMOV32rr)
+  CASE_ND(CMOV64rr) {
     WorkingMI = CloneIfNew(MI);
     unsigned OpNo = MI.getDesc().getNumOperands() - 1;
     X86::CondCode CC = static_cast<X86::CondCode>(MI.getOperand(OpNo).getImm());
@@ -3151,8 +3148,9 @@ X86::CondCode X86::getCondFromSETCC(const MachineInstr &MI) {
 }
 
 X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
-  return X86::isCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
-                                       : X86::COND_INVALID;
+  return X86::isCMOVCC(MI.getOpcode()) || X86::isCFCMOVCC(MI.getOpcode())
+             ? X86::getCondFromMI(MI)
+             : X86::COND_INVALID;
 }
 
 /// Return the inverse of the specified condition,

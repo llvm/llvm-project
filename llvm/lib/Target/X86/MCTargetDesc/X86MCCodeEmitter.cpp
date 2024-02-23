@@ -1740,7 +1740,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     break;
   }
   case X86II::MRMSrcRegCC: {
-    if (IsND)
+    if (IsND) // Skip new data destination
       ++CurOp;
     unsigned FirstOp = CurOp++;
     unsigned SecondOp = CurOp++;
@@ -1803,7 +1803,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     break;
   }
   case X86II::MRMSrcMemCC: {
-    if (IsND)
+    if (IsND) // Skip new data destination
       ++CurOp;
     unsigned RegOp = CurOp++;
     unsigned FirstMemOp = CurOp;

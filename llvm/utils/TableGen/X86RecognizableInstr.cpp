@@ -888,8 +888,8 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
   case X86Local::PrefixByte:
     filter = std::make_unique<DumbFilter>();
     break;
-  case X86Local::MRMDestRegCC:
   case X86Local::MRMDestReg:
+  case X86Local::MRMDestRegCC:
   case X86Local::MRMSrcReg:
   case X86Local::MRMSrcReg4VOp3:
   case X86Local::MRMSrcRegOp4:
@@ -898,8 +898,8 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
   case X86Local::MRMXr:
     filter = std::make_unique<ModFilter>(true);
     break;
-  case X86Local::MRMDestMemCC:
   case X86Local::MRMDestMem:
+  case X86Local::MRMDestMemCC:
   case X86Local::MRMDestMem4VOp3CC:
   case X86Local::MRMDestMemFSIB:
   case X86Local::MRMSrcMem:
