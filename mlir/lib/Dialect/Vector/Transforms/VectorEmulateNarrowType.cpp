@@ -1121,6 +1121,8 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
     Value srcValue = truncOp.getIn();
     auto srcVecType = dyn_cast<VectorType>(srcValue.getType());
     auto dstVecType = dyn_cast<VectorType>(truncOp.getType());
+    if (!srcVecType || !dstVecType)
+      return failure();
 
     // Only single dim vectors are supported until we have
     // `vector.deinterleave`.
