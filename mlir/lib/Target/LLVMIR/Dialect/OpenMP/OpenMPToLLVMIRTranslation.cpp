@@ -1011,40 +1011,49 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Replace the region arguments of the parallel op (which correspond to private
-/// variables) with the actual private variables they correspond to. This
-/// prepares the parallel op so that it matches what is expected by the
-/// OMPIRBuilder. Instead of editing the original op in-place, this function
-/// does the required changes to a cloned version which should then be erased by
-/// the caller.
-static omp::ParallelOp
-prepareOmpParallelForPrivatization(omp::ParallelOp opInst) {
-  Region &region = opInst.getRegion();
-  auto privateVars = opInst.getPrivateVars();
+/// A RAII class that on construction replaces the region arguments of the
+/// parallel op (which correspond to private variables) with the actual private
+/// variables they correspond to. This prepares the parallel op so that it
+/// matches what is expected by the OMPIRBuilder.
+///
+/// On destruction, it restores the original state of the operation so that on
+/// the MLIR side, the op is not affected by conversion to LLVM IR.
+class OmpParallelOpConversionManager {
+public:
+  OmpParallelOpConversionManager(omp::ParallelOp opInst)
+      : region(opInst.getRegion()), privateVars(opInst.getPrivateVars()),
+        privateArgBeginIdx(opInst.getNumReductionVars()),
+        privateArgEndIdx(privateArgBeginIdx + privateVars.size()) {
+    auto privateVarsIt = privateVars.begin();
 
-  auto privateVarsIt = privateVars.begin();
-  // Reduction precede private arguments, so skip them first.
-  unsigned privateArgBeginIdx = opInst.getNumReductionVars();
-  unsigned privateArgEndIdx = privateArgBeginIdx + privateVars.size();
+    for (size_t argIdx = privateArgBeginIdx; argIdx < privateArgEndIdx;
+         ++argIdx, ++privateVarsIt)
+      mlir::replaceAllUsesInRegionWith(region.getArgument(argIdx),
+                                       *privateVarsIt, region);
+  }
 
-  mlir::IRMapping mapping;
-  for (size_t argIdx = privateArgBeginIdx; argIdx < privateArgEndIdx;
-       ++argIdx, ++privateVarsIt)
-    mapping.map(region.getArgument(argIdx), *privateVarsIt);
+  ~OmpParallelOpConversionManager() {
+    auto privateVarsIt = privateVars.begin();
 
-  mlir::OpBuilder cloneBuilder(opInst);
-  omp::ParallelOp opInstClone =
-      llvm::cast<omp::ParallelOp>(cloneBuilder.clone(*opInst, mapping));
+    for (size_t argIdx = privateArgBeginIdx; argIdx < privateArgEndIdx;
+         ++argIdx, ++privateVarsIt)
+      mlir::replaceAllUsesInRegionWith(*privateVarsIt,
+                                       region.getArgument(argIdx), region);
+  }
 
-  return opInstClone;
-}
+private:
+  Region &region;
+  OperandRange privateVars;
+  unsigned privateArgBeginIdx;
+  unsigned privateArgEndIdx;
+};
 
 /// Converts the OpenMP parallel operation to LLVM IR.
 static LogicalResult
 convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-  omp::ParallelOp opInstClone = prepareOmpParallelForPrivatization(opInst);
+  OmpParallelOpConversionManager raii(opInst);
 
   // TODO: support error propagation in OpenMPIRBuilder and use it instead of
   // relying on captured variables.
@@ -1054,12 +1063,12 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
     // Collect reduction declarations
     SmallVector<omp::ReductionDeclareOp> reductionDecls;
-    collectReductionDecls(opInstClone, reductionDecls);
+    collectReductionDecls(opInst, reductionDecls);
 
     // Allocate reduction vars
     SmallVector<llvm::Value *> privateReductionVariables;
     DenseMap<Value, llvm::Value *> reductionVariableMap;
-    allocReductionVars(opInstClone, builder, moduleTranslation, allocaIP,
+    allocReductionVars(opInst, builder, moduleTranslation, allocaIP,
                        reductionDecls, privateReductionVariables,
                        reductionVariableMap);
 
@@ -1071,7 +1080,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
 
     // Initialize reduction vars
     builder.restoreIP(allocaIP);
-    for (unsigned i = 0; i < opInstClone.getNumReductionVars(); ++i) {
+    for (unsigned i = 0; i < opInst.getNumReductionVars(); ++i) {
       SmallVector<llvm::Value *> phis;
       if (failed(inlineConvertOmpRegions(
               reductionDecls[i].getInitializerRegion(), "omp.reduction.neutral",
@@ -1092,19 +1101,18 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     // ParallelOp has only one region associated with it.
     builder.restoreIP(codeGenIP);
     auto regionBlock =
-        convertOmpOpRegions(opInstClone.getRegion(), "omp.par.region", builder,
+        convertOmpOpRegions(opInst.getRegion(), "omp.par.region", builder,
                             moduleTranslation, bodyGenStatus);
 
     // Process the reductions if required.
-    if (opInstClone.getNumReductionVars() > 0) {
+    if (opInst.getNumReductionVars() > 0) {
       // Collect reduction info
       SmallVector<OwningReductionGen> owningReductionGens;
       SmallVector<OwningAtomicReductionGen> owningAtomicReductionGens;
       SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> reductionInfos;
-      collectReductionInfo(opInstClone, builder, moduleTranslation,
-                           reductionDecls, owningReductionGens,
-                           owningAtomicReductionGens, privateReductionVariables,
-                           reductionInfos);
+      collectReductionInfo(opInst, builder, moduleTranslation, reductionDecls,
+                           owningReductionGens, owningAtomicReductionGens,
+                           privateReductionVariables, reductionInfos);
 
       // Move to region cont block
       builder.SetInsertPoint(regionBlock->getTerminator());
@@ -1117,8 +1125,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
           ompBuilder->createReductions(builder.saveIP(), allocaIP,
                                        reductionInfos, false);
       if (!contInsertPoint.getBlock()) {
-        bodyGenStatus = opInstClone->emitOpError()
-                        << "failed to convert reductions";
+        bodyGenStatus = opInst->emitOpError() << "failed to convert reductions";
         return;
       }
 
@@ -1140,9 +1147,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     // returned.
     auto [privVar, privatizerClone] =
         [&]() -> std::pair<mlir::Value, omp::PrivateClauseOp> {
-      if (!opInstClone.getPrivateVars().empty()) {
-        auto privVars = opInstClone.getPrivateVars();
-        auto privatizers = opInstClone.getPrivatizers();
+      if (!opInst.getPrivateVars().empty()) {
+        auto privVars = opInst.getPrivateVars();
+        auto privatizers = opInst.getPrivatizers();
 
         for (auto [privVar, privatizerAttr] :
              llvm::zip_equal(privVars, *privatizers)) {
@@ -1155,7 +1162,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
           SymbolRefAttr privSym = llvm::cast<SymbolRefAttr>(privatizerAttr);
           omp::PrivateClauseOp privatizer =
               SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
-                  opInstClone, privSym);
+                  opInst, privSym);
 
           // Clone the privatizer in case it is used by more than one parallel
           // region. The privatizer is processed in-place (see below) before it
@@ -1192,9 +1199,8 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       SmallVector<llvm::Value *, 1> yieldedValues;
       if (failed(inlineConvertOmpRegions(allocRegion, "omp.privatizer", builder,
                                          moduleTranslation, &yieldedValues))) {
-        opInstClone.emitError(
-            "failed to inline `alloc` region of an `omp.private` "
-            "op in the parallel region");
+        opInst.emitError("failed to inline `alloc` region of an `omp.private` "
+                         "op in the parallel region");
         bodyGenStatus = failure();
       } else {
         assert(yieldedValues.size() == 1);
@@ -1213,13 +1219,13 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   auto finiCB = [&](InsertPointTy codeGenIP) {};
 
   llvm::Value *ifCond = nullptr;
-  if (auto ifExprVar = opInstClone.getIfExprVar())
+  if (auto ifExprVar = opInst.getIfExprVar())
     ifCond = moduleTranslation.lookupValue(ifExprVar);
   llvm::Value *numThreads = nullptr;
-  if (auto numThreadsVar = opInstClone.getNumThreadsVar())
+  if (auto numThreadsVar = opInst.getNumThreadsVar())
     numThreads = moduleTranslation.lookupValue(numThreadsVar);
   auto pbKind = llvm::omp::OMP_PROC_BIND_default;
-  if (auto bind = opInstClone.getProcBindVal())
+  if (auto bind = opInst.getProcBindVal())
     pbKind = getProcBindKind(*bind);
   // TODO: Is the Parallel construct cancellable?
   bool isCancellable = false;
@@ -1232,7 +1238,6 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       ompBuilder->createParallel(ompLoc, allocaIP, bodyGenCB, privCB, finiCB,
                                  ifCond, numThreads, pbKind, isCancellable));
 
-  opInstClone.erase();
   return bodyGenStatus;
 }
 
