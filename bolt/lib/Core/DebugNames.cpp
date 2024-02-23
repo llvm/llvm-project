@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
+#include <cstdint>
 
 namespace llvm {
 namespace bolt {
@@ -79,6 +80,7 @@ void DWARF5AcceleratorTable::setCurrentUnit(DWARFUnit &Unit,
 
 void DWARF5AcceleratorTable::addUnit(DWARFUnit &Unit,
                                      const std::optional<uint64_t> &DWOID) {
+  constexpr uint32_t BADCUOFFSET = 0xBADBAD;
   StrSection = Unit.getStringSection();
   if (Unit.isTypeUnit()) {
     if (DWOID) {
@@ -86,7 +88,7 @@ void DWARF5AcceleratorTable::addUnit(DWARFUnit &Unit,
       // so need to add it to the list pre-emptively.
       auto Iter = CUOffsetsToPatch.insert({*DWOID, CUList.size()});
       if (Iter.second)
-        CUList.push_back(0xBADBAD);
+        CUList.push_back(BADCUOFFSET);
       ForeignTUList.push_back(cast<DWARFTypeUnit>(&Unit)->getTypeHash());
     } else {
       LocalTUList.push_back(CurrentUnitOffset);
@@ -99,7 +101,7 @@ void DWARF5AcceleratorTable::addUnit(DWARFUnit &Unit,
       // with the correct offset.
       auto Iter = CUOffsetsToPatch.insert({*DWOID, CUList.size()});
       if (Iter.second)
-        CUList.push_back(0xBADBAD);
+        CUList.push_back(BADCUOFFSET);
     } else {
       CUList.push_back(CurrentUnitOffset);
     }
