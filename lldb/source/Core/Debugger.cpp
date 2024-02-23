@@ -886,8 +886,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   }
   assert(m_dummy_target_sp.get() && "Couldn't construct dummy target?");
 
-  OptionValueSInt64 *term_width =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueSInt64(
+  OptionValueUInt64 *term_width =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(
           ePropertyTerminalWidth);
   term_width->SetMinimumValue(10);
   term_width->SetMaximumValue(1024);
