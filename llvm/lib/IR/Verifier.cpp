@@ -173,6 +173,11 @@ private:
     }
   }
 
+  void Write(const DbgRecord *DR) {
+    if (DR)
+      DR->print(*OS, MST, false);
+  }
+
   void Write(const DPValue *V) {
     if (V)
       V->print(*OS, MST, false);
@@ -676,7 +681,7 @@ void Verifier::visitDbgRecords(Instruction &I) {
     return;
   CheckDI(I.DbgMarker->MarkedInstr == &I, "Instruction has invalid DbgMarker", &I);
   CheckDI(!isa<PHINode>(&I) || !I.hasDbgValues(), "PHI Node must not have any attached DbgRecords", &I);
-  for (auto &DPV : I.getDbgValueRange()) {
+  for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
     CheckDI(DPV.getMarker() == I.DbgMarker, "DbgRecord had invalid DbgMarker", &I, &DPV);
     visit(DPV);
   }
@@ -3010,13 +3015,8 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
   }
 
   // Confirm that no issues arise from the debug program.
-  if (BB.IsNewDbgInfoFormat) {
+  if (BB.IsNewDbgInfoFormat)
     CheckDI(!BB.getTrailingDPValues(), "Basic Block has trailing DbgRecords!", &BB);
-    // Configure the validate function to not fire assertions, instead print
-    // errors and return true if there's a problem.
-    bool RetVal = BB.validateDbgValues(false, true, OS);
-    Check(!RetVal, "Invalid configuration of new-debug-info data found");
-  }
 }
 
 void Verifier::visitTerminator(Instruction &I) {
