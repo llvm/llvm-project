@@ -10,7 +10,7 @@ class CRTP {};
 class A : CRTP<A> {};
 } // namespace class_implicit_ctor
 
-namespace class_uncostructible {
+namespace class_unconstructible {
 template <typename T>
 class CRTP {
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the CRTP cannot be constructed from the derived class [bugprone-crtp-constructor-accessibility]
@@ -20,7 +20,7 @@ class CRTP {
 };
 
 class A : CRTP<A> {};
-} // namespace class_uncostructible 
+} // namespace class_unconstructible
 
 namespace class_public_default_ctor {
 template <typename T>

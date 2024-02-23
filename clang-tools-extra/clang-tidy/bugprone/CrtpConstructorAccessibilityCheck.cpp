@@ -16,69 +16,59 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 
 static bool hasPrivateConstructor(const CXXRecordDecl *RD) {
-  for (auto &&Ctor : RD->ctors()) {
-    if (Ctor->getAccess() == AS_private)
-      return true;
-  }
-
-  return false;
+  return llvm::any_of(RD->ctors(), [](const CXXConstructorDecl *Ctor) {
+    return Ctor->getAccess() == AS_private;
+  });
 }
 
 static bool isDerivedParameterBefriended(const CXXRecordDecl *CRTP,
                                          const NamedDecl *Param) {
-  for (auto &&Friend : CRTP->friends()) {
+  return llvm::any_of(CRTP->friends(), [&](const FriendDecl *Friend) {
     const auto *TTPT =
         dyn_cast<TemplateTypeParmType>(Friend->getFriendType()->getType());
 
-    if (TTPT && TTPT->getDecl() == Param)
-      return true;
-  }
-
-  return false;
+    return TTPT && TTPT->getDecl() == Param;
+  });
 }
 
 static bool isDerivedClassBefriended(const CXXRecordDecl *CRTP,
                                      const CXXRecordDecl *Derived) {
-  for (auto &&Friend : CRTP->friends()) {
-    if (Friend->getFriendType()->getType()->getAsCXXRecordDecl() == Derived)
-      return true;
-  }
-
-  return false;
+  return llvm::any_of(CRTP->friends(), [&](const FriendDecl *Friend) {
+    return Friend->getFriendType()->getType()->getAsCXXRecordDecl() == Derived;
+  });
 }
 
-static std::optional<const NamedDecl *>
+static const NamedDecl *
 getDerivedParameter(const ClassTemplateSpecializationDecl *CRTP,
                     const CXXRecordDecl *Derived) {
   size_t Idx = 0;
-  bool Found = false;
-  for (auto &&TemplateArg : CRTP->getTemplateArgs().asArray()) {
-    if (TemplateArg.getKind() == TemplateArgument::Type &&
-        TemplateArg.getAsType()->getAsCXXRecordDecl() == Derived) {
-      Found = true;
-      break;
-    }
-    ++Idx;
-  }
+  bool AnyOf = llvm::any_of(
+      CRTP->getTemplateArgs().asArray(), [&](const TemplateArgument &Arg) {
+        ++Idx;
+        return Arg.getKind() == TemplateArgument::Type &&
+               Arg.getAsType()->getAsCXXRecordDecl() == Derived;
+      });
 
-  if (!Found)
-    return std::nullopt;
-
-  return CRTP->getSpecializedTemplate()->getTemplateParameters()->getParam(Idx);
+  return AnyOf ? CRTP->getSpecializedTemplate()
+                     ->getTemplateParameters()
+                     ->getParam(Idx - 1)
+               : nullptr;
 }
 
 static std::vector<FixItHint>
 hintMakeCtorPrivate(const CXXConstructorDecl *Ctor,
-                    const std::string &OriginalAccess, const SourceManager &SM,
-                    const LangOptions &LangOpts) {
+                    const std::string &OriginalAccess) {
   std::vector<FixItHint> Hints;
 
   Hints.emplace_back(FixItHint::CreateInsertion(
       Ctor->getBeginLoc().getLocWithOffset(-1), "private:\n"));
 
+  const ASTContext &ASTCtx = Ctor->getASTContext();
   const SourceLocation CtorEndLoc =
       Ctor->isExplicitlyDefaulted()
-          ? utils::lexer::findNextTerminator(Ctor->getEndLoc(), SM, LangOpts)
+          ? utils::lexer::findNextTerminator(Ctor->getEndLoc(),
+                                             ASTCtx.getSourceManager(),
+                                             ASTCtx.getLangOpts())
           : Ctor->getEndLoc();
   Hints.emplace_back(FixItHint::CreateInsertion(
       CtorEndLoc.getLocWithOffset(1), '\n' + OriginalAccess + ':' + '\n'));
@@ -121,7 +111,10 @@ void CrtpConstructorAccessibilityCheck::check(
   }
 
   const auto *DerivedTemplateParameter =
-      *getDerivedParameter(CRTPInstantiation, DerivedRecord);
+      getDerivedParameter(CRTPInstantiation, DerivedRecord);
+
+  assert(DerivedTemplateParameter &&
+         "No template parameter corresponds to the derived class of the CRTP.");
 
   if (hasPrivateConstructor(CRTPDeclaration) &&
       !isDerivedParameterBefriended(CRTPDeclaration,
@@ -148,9 +141,7 @@ void CrtpConstructorAccessibilityCheck::check(
     diag(Ctor->getLocation(),
          "%0 contructor allows the CRTP to be %select{inherited "
          "from|constructed}1 as a regular template class")
-        << Access << IsPublic << Ctor
-        << hintMakeCtorPrivate(Ctor, Access, *Result.SourceManager,
-                               getLangOpts());
+        << Access << IsPublic << Ctor << hintMakeCtorPrivate(Ctor, Access);
     diag(Ctor->getLocation(), "consider making it private",
          DiagnosticIDs::Note);
   }
