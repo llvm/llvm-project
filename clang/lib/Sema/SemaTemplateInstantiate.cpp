@@ -1486,8 +1486,9 @@ namespace {
           TemplateArgumentLoc Input = SemaRef.getTrivialTemplateArgumentLoc(
               pack, QualType(), SourceLocation{});
           TemplateArgumentLoc Output;
-          if (!SemaRef.SubstTemplateArgument(Input, TemplateArgs, Output))
-            TArgs.push_back(Output.getArgument());
+          if (SemaRef.SubstTemplateArgument(Input, TemplateArgs, Output))
+            return true; // fails
+          TArgs.push_back(Output.getArgument());
         }
         Output = SemaRef.getTrivialTemplateArgumentLoc(
             TemplateArgument(llvm::ArrayRef(TArgs).copy(SemaRef.Context)),
