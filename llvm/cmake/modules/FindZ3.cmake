@@ -9,7 +9,7 @@ function(check_z3_version z3_include z3_lib)
   # Threads are required elsewhere in LLVM, but not marked as required here because
   # Z3 could have been compiled without threading support.
   find_package(Threads)
-  # CMAKE_THREAD_LIBS_INIT may be empty if the thread functions are provided by the 
+  # CMAKE_THREAD_LIBS_INIT may be empty if the thread functions are provided by the
   # system libraries and no special flags are needed.
   if(CMAKE_THREAD_LIBS_INIT)
     list(APPEND z3_link_libs "${CMAKE_THREAD_LIBS_INIT}")
@@ -18,7 +18,7 @@ function(check_z3_version z3_include z3_lib)
   # The program that will be executed to print Z3's version.
   file(WRITE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testz3.cpp
        "#include <assert.h>
-        #include <stdio.h> 
+        #include <stdio.h>
         #include <z3.h>
         int main(void) {
           unsigned int major, minor, build, rev;

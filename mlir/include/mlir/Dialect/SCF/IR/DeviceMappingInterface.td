@@ -54,7 +54,7 @@ def DeviceMappingAttrInterface : AttrInterface<"DeviceMappingAttrInterface"> {
         This can be used to index into a contiguous array.
       }],
       /*retTy=*/"int64_t",
-      /*methodName=*/"getRelativeIndex", 
+      /*methodName=*/"getRelativeIndex",
       /*args=*/(ins)
     >
   ];

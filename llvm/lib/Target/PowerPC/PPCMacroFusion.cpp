@@ -41,7 +41,7 @@ private:
   // li rx, si
   // load rt, ra, rx
   // The dependent operand index in the second op(load). And the negative means
-  // it could be any one. 
+  // it could be any one.
   int DepOpIdx;
   // The first fusion op set.
   FusionOpSet OpSet1;
@@ -50,7 +50,7 @@ private:
 public:
   FusionFeature(FusionKind Kind, bool HasFeature, int Index,
                 const FusionOpSet &First, const FusionOpSet &Second) :
-    Kd(Kind), Supported(HasFeature), DepOpIdx(Index), OpSet1(First), 
+    Kd(Kind), Supported(HasFeature), DepOpIdx(Index), OpSet1(First),
     OpSet2(Second) {}
 
   bool hasOp1(unsigned Opc) const { return OpSet1.contains(Opc); }

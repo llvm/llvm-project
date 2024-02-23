@@ -44,7 +44,7 @@ class FrameStatCommand(ParsedCommand):
             dest = "inscope",
             default=True,
         )
-        
+
         self.ov_parser.add_option(
             "a",
             "arguments",

@@ -27,22 +27,22 @@ class DiagTool {
 public:
   DiagTool(llvm::StringRef toolCmd, llvm::StringRef toolDesc);
   virtual ~DiagTool();
-  
-  llvm::StringRef getName() const { return cmd; }  
-  llvm::StringRef getDescription() const { return description; }  
+
+  llvm::StringRef getName() const { return cmd; }
+  llvm::StringRef getDescription() const { return description; }
 
   virtual int run(unsigned argc, char *argv[], llvm::raw_ostream &out) = 0;
 };
-  
+
 class DiagTools {
   void *tools;
 public:
   DiagTools();
   ~DiagTools();
-  
+
   DiagTool *getTool(llvm::StringRef toolCmd);
-  void registerTool(DiagTool *tool);  
-  void printCommands(llvm::raw_ostream &out);  
+  void registerTool(DiagTool *tool);
+  void printCommands(llvm::raw_ostream &out);
 };
 
 extern llvm::ManagedStatic<DiagTools> diagTools;

@@ -90,8 +90,8 @@ StrCatCheckResult processCall(const CallExpr *RootCall, bool IsAppend,
 
     int StartArg = CallExpr == RootCall && IsAppend;
     for (const auto *Arg : CallExpr->arguments()) {
-      if (StartArg-- > 0) 
-      	continue;
+      if (StartArg-- > 0)
+        continue;
       if (const clang::CallExpr *Sub =
               processArgument(Arg, Result, &CheckResult)) {
         CallsToProcess.push_back(Sub);
@@ -106,12 +106,12 @@ void RedundantStrcatCallsCheck::check(const MatchFinder::MatchResult& Result) {
   bool IsAppend = false;
 
   const CallExpr *RootCall = nullptr;
-  if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrCat"))) 
-  	IsAppend = false;
-  else if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrAppend"))) 
-  	IsAppend = true;
-  else 
-  	return;
+  if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrCat")))
+    IsAppend = false;
+  else if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrAppend")))
+    IsAppend = true;
+  else
+    return;
 
   if (RootCall->getBeginLoc().isMacroID()) {
     // Ignore calls within macros.
@@ -127,8 +127,8 @@ void RedundantStrcatCallsCheck::check(const MatchFinder::MatchResult& Result) {
     return;
   }
 
-  diag(RootCall->getBeginLoc(), 
-  	   "multiple calls to 'absl::StrCat' can be flattened into a single call")
+  diag(RootCall->getBeginLoc(),
+       "multiple calls to 'absl::StrCat' can be flattened into a single call")
       << CheckResult.Hints;
 }
 

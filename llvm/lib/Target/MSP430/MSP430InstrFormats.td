@@ -424,7 +424,7 @@ class II16p<bits<3> opcode,
 class CJForm<dag outs, dag ins, string asmstr, list<dag> pattern>
   : MSP430Inst<outs, ins, 2, asmstr> {
   let Pattern = pattern;
-  
+
   bits<3> cond;
   bits<10> dst;
 

@@ -57,7 +57,7 @@ public:
   /// declarations.
   bool getOnlyLocalDecls() const { return OnlyLocalDecls; }
   void setOnlyLocalDecls(bool Local = true) { OnlyLocalDecls = Local; }
-  
+
   bool getDisplayDiagnostics() const { return DisplayDiagnostics; }
   void setDisplayDiagnostics(bool Display = true) {
     DisplayDiagnostics = Display;

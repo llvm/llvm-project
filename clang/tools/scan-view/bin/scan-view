@@ -55,7 +55,7 @@ def start_browser(port, options):
             sys.stderr.flush()
         time.sleep(kSleepTimeout)
     else:
-        print('WARNING: Unable to detect that server started.', file=sys.stderr) 
+        print('WARNING: Unable to detect that server started.', file=sys.stderr)
 
     if options.debug:
         print('%s: Starting webbrowser...' % sys.argv[0], file=sys.stderr)

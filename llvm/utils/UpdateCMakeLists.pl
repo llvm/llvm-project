@@ -10,11 +10,11 @@ my %dirCMake;
 
 sub GetFiles {
   my $dir = shift;
-  my $x = $dirFiles{$dir};  
+  my $x = $dirFiles{$dir};
   if (!defined $x) {
     $x = [];
     $dirFiles{$dir} = $x;
-  }  
+  }
   return $x;
 }
 
@@ -45,16 +45,16 @@ sub ProcessFile {
 sub EmitCMakeList {
   my $dir = shift;
   my $files = $dirFiles{$dir};
-  
+
   if (!defined $files) {
     return;
   }
-  
+
   foreach my $file (sort @$files) {
     print OUT "  ";
     print OUT $file;
     print OUT "\n";
-  }  
+  }
 }
 
 sub UpdateCMake {
@@ -64,7 +64,7 @@ sub UpdateCMake {
   open(IN, $cmakeList);
   open(OUT, ">", $cmakeListNew);
   my $foundLibrary = 0;
-  
+
   while(<IN>) {
     if (!$foundLibrary) {
       print OUT $_;
@@ -89,18 +89,18 @@ sub UpdateCMake {
   binmode FILE;
   my $digestA = Digest::MD5->new->addfile(*FILE)->hexdigest;
   close(FILE);
-    
+
   open(FILE, $cmakeListNew) or
     die("Cannot open $cmakeListNew when computing digest\n");
   binmode FILE;
   my $digestB = Digest::MD5->new->addfile(*FILE)->hexdigest;
   close(FILE);
-  
+
   if ($digestA ne $digestB) {
     move($cmakeListNew, $cmakeList);
-    return 1;    
+    return 1;
   }
-  
+
   unlink($cmakeListNew);
   return 0;
 }

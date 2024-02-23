@@ -15,7 +15,7 @@
 include "llvm/Target/Target.td"
 
 //===----------------------------------------------------------------------===//
-// Subtarget Features. 
+// Subtarget Features.
 //===----------------------------------------------------------------------===//
 def FeatureX
  : SubtargetFeature<"ext", "ExtendedInsts", "true",

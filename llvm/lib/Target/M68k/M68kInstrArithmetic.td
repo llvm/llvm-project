@@ -1036,7 +1036,7 @@ multiclass MxFUnaryOp<string mnemonic, bits<7> single, bits<7> double,
 
     def F # !toupper(rounding) # !substr(NAME, 1) # "80fp_fp"
       : MxFUnary_FF<MxOp80AddrMode_fpr, rounding, mnemonic, opmode>;
-  
+
     let isCodeGenOnly = 1 in
     foreach size = [32, 64] in
       def F # !toupper(rounding) # !substr(NAME, 1) # size # "fp_fp"

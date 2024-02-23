@@ -1005,7 +1005,7 @@ def PROBED_STACKALLOC_DYN : Pseudo<(outs),
                                    [(AArch64probedalloca GPR64common:$target)]>,
                                    Sched<[]>;
 
-} // Defs = [SP, NZCV], Uses = [SP] in 
+} // Defs = [SP, NZCV], Uses = [SP] in
 } // hasSideEffects = 1, isCodeGenOnly = 1
 
 let isReMaterializable = 1, isCodeGenOnly = 1 in {
@@ -5192,15 +5192,15 @@ def : Pat<(v8i16 (concat_vectors
           (SQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
 
 // Select BSWAP vector instructions into REV instructions
-def : Pat<(v4i16 (bswap (v4i16 V64:$Rn))), 
+def : Pat<(v4i16 (bswap (v4i16 V64:$Rn))),
           (v4i16 (REV16v8i8 (v4i16 V64:$Rn)))>;
-def : Pat<(v8i16 (bswap (v8i16 V128:$Rn))), 
+def : Pat<(v8i16 (bswap (v8i16 V128:$Rn))),
           (v8i16 (REV16v16i8 (v8i16 V128:$Rn)))>;
-def : Pat<(v2i32 (bswap (v2i32 V64:$Rn))), 
+def : Pat<(v2i32 (bswap (v2i32 V64:$Rn))),
           (v2i32 (REV32v8i8 (v2i32 V64:$Rn)))>;
-def : Pat<(v4i32 (bswap (v4i32 V128:$Rn))), 
+def : Pat<(v4i32 (bswap (v4i32 V128:$Rn))),
           (v4i32 (REV32v16i8 (v4i32 V128:$Rn)))>;
-def : Pat<(v2i64 (bswap (v2i64 V128:$Rn))), 
+def : Pat<(v2i64 (bswap (v2i64 V128:$Rn))),
           (v2i64 (REV64v16i8 (v2i64 V128:$Rn)))>;
 
 //===----------------------------------------------------------------------===//
@@ -6894,19 +6894,19 @@ def : Pat<(i32 (and (i32 (vector_extract (opNode (v8i16 V128:$Rn)), (i64 0))),
 }
 
 // For vecreduce_add, used by GlobalISel not SDAG
-def : Pat<(i8 (vecreduce_add (v8i8 V64:$Rn))), 
+def : Pat<(i8 (vecreduce_add (v8i8 V64:$Rn))),
           (i8 (ADDVv8i8v V64:$Rn))>;
-def : Pat<(i8 (vecreduce_add (v16i8 V128:$Rn))), 
+def : Pat<(i8 (vecreduce_add (v16i8 V128:$Rn))),
           (i8 (ADDVv16i8v V128:$Rn))>;
-def : Pat<(i16 (vecreduce_add (v4i16 V64:$Rn))), 
+def : Pat<(i16 (vecreduce_add (v4i16 V64:$Rn))),
           (i16 (ADDVv4i16v V64:$Rn))>;
-def : Pat<(i16 (vecreduce_add (v8i16 V128:$Rn))), 
+def : Pat<(i16 (vecreduce_add (v8i16 V128:$Rn))),
           (i16 (ADDVv8i16v V128:$Rn))>;
-def : Pat<(i32 (vecreduce_add (v2i32 V64:$Rn))), 
+def : Pat<(i32 (vecreduce_add (v2i32 V64:$Rn))),
           (i32 (EXTRACT_SUBREG (ADDPv2i32 V64:$Rn, V64:$Rn), ssub))>;
-def : Pat<(i32 (vecreduce_add (v4i32 V128:$Rn))), 
+def : Pat<(i32 (vecreduce_add (v4i32 V128:$Rn))),
           (i32 (ADDVv4i32v V128:$Rn))>;
-def : Pat<(i64 (vecreduce_add (v2i64 V128:$Rn))), 
+def : Pat<(i64 (vecreduce_add (v2i64 V128:$Rn))),
           (i64 (ADDPv2i64p V128:$Rn))>;
 
 defm : SIMDAcrossLanesSignedIntrinsic<"ADDV",  AArch64saddv>;
@@ -6951,25 +6951,25 @@ def : Pat<(i16 (opNode (v4i16 FPR64:$Rn))),
 def : Pat<(i16 (opNode (v8i16 FPR128:$Rn))),
           (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) FPR128:$Rn)>;
 
-def : Pat<(i32 (opNode (v4i32 V128:$Rn))), 
+def : Pat<(i32 (opNode (v4i32 V128:$Rn))),
           (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn)>;
 }
 
 // For v2i32 source type, the pairwise instruction can be used instead
 defm : SIMDAcrossLanesVecReductionIntrinsic<"UMINV", vecreduce_umin>;
-def : Pat<(i32 (vecreduce_umin (v2i32 V64:$Rn))), 
+def : Pat<(i32 (vecreduce_umin (v2i32 V64:$Rn))),
           (i32 (EXTRACT_SUBREG (UMINPv2i32 V64:$Rn, V64:$Rn), ssub))>;
 
 defm : SIMDAcrossLanesVecReductionIntrinsic<"UMAXV", vecreduce_umax>;
-def : Pat<(i32 (vecreduce_umax (v2i32 V64:$Rn))), 
+def : Pat<(i32 (vecreduce_umax (v2i32 V64:$Rn))),
           (i32 (EXTRACT_SUBREG (UMAXPv2i32 V64:$Rn, V64:$Rn), ssub))>;
 
 defm : SIMDAcrossLanesVecReductionIntrinsic<"SMINV", vecreduce_smin>;
-def : Pat<(i32 (vecreduce_smin (v2i32 V64:$Rn))), 
+def : Pat<(i32 (vecreduce_smin (v2i32 V64:$Rn))),
           (i32 (EXTRACT_SUBREG (SMINPv2i32 V64:$Rn, V64:$Rn), ssub))>;
 
 defm : SIMDAcrossLanesVecReductionIntrinsic<"SMAXV", vecreduce_smax>;
-def : Pat<(i32 (vecreduce_smax (v2i32 V64:$Rn))), 
+def : Pat<(i32 (vecreduce_smax (v2i32 V64:$Rn))),
           (i32 (EXTRACT_SUBREG (SMAXPv2i32 V64:$Rn, V64:$Rn), ssub))>;
 
 multiclass SIMDAcrossLanesSignedLongIntrinsic<string baseOpc, Intrinsic intOp> {

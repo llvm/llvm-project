@@ -7,7 +7,7 @@ protocol.  Many of the vFile: packets are described to the "Host
 I/O Packets" detailed in the gdb-remote protocol documentation,
 although the lldb platform extensions include packets that are not
 defined there (vFile:size:, vFile:mode:, vFile:symlink, vFile:chmod:).
-Most importantly, the flags that lldb passes to vFile:open: are 
+Most importantly, the flags that lldb passes to vFile:open: are
 incompatible with the flags that gdb specifies.
 
 
@@ -17,7 +17,7 @@ incompatible with the flags that gdb specifies.
 // BRIEF
 //   A request to stop sending ACK packets for each properly formatted packet.
 //
-// EXAMPLE 
+// EXAMPLE
 //   A platform session will typically start like this:
 //
 //   receive: +$QStartNoAckMode#b0
@@ -60,9 +60,9 @@ incompatible with the flags that gdb specifies.
 //   ASCII hex encoding.
 //
 // EXAMPLE
-// 
+//
 //  receive: qGetWorkingDir
-//  send:    2f4170706c65496e7465726e616c2f6c6c64622f73657474696e67732f342f5465737453657474696e67732e746573745f646973617373656d626c65725f73657474696e6773 
+//  send:    2f4170706c65496e7465726e616c2f6c6c64622f73657474696e67732f342f5465737453657474696e67732e746573745f646973617373656d626c65725f73657474696e6773
 
 
 
@@ -74,8 +74,8 @@ incompatible with the flags that gdb specifies.
 //   ASCII hex encoding.
 //
 // EXAMPLE
-// 
-//  receive: QSetWorkingDir:2f4170706c65496e7465726e616c2f6c6c64622f73657474696e67732f342f5465737453657474696e67732e746573745f646973617373656d626c65725f73657474696e6773 
+//
+//  receive: QSetWorkingDir:2f4170706c65496e7465726e616c2f6c6c64622f73657474696e67732f342f5465737453657474696e67732e746573745f646973617373656d626c65725f73657474696e6773
 //  send:    OK
 
 //----------------------------------------------------------------------
@@ -85,7 +85,7 @@ incompatible with the flags that gdb specifies.
 //   Create a directory on the target system.
 //
 // EXAMPLE
-// 
+//
 //  receive: qPlatform_mkdir:000001fd,2f746d702f6131
 //  send:    F0
 //
@@ -103,13 +103,13 @@ incompatible with the flags that gdb specifies.
 //   Run a shell command on the target system, return the output.
 //
 // EXAMPLE
-// 
+//
 //  receive: qPlatform_shell:6c73202f746d702f,0000000a
 //  send:    F,0,0,<OUTPUT>
 //
 //  request packet has the fields:
 //     1. shell command ascii-hex encoded
-//     2. timeout 
+//     2. timeout
 //     3. {optional} working directory ascii-hex encoded
 //
 //  Response is F followed by the return value of the command (base 16),
@@ -124,17 +124,17 @@ incompatible with the flags that gdb specifies.
 //   on the target system.
 //
 // EXAMPLE
-// 
+//
 //  receive: qLaunchGDBServer;host:<HOSTNAME_LLDB_IS_ON>;
 //  send:    pid:1337;port:43001;
 //
-//  request packet hostname field is not ascii-hex encoded. Hostnames 
+//  request packet hostname field is not ascii-hex encoded. Hostnames
 //  don't have $ or # characters in them.
 //
 //  response to the packet is the pid of the newly launched gdbserver,
 //  and the port it is listening for a connection on.
 //
-//  When the testsuite is running, lldb may use the pid to kill off a 
+//  When the testsuite is running, lldb may use the pid to kill off a
 //  debugserver that doesn't seem to be responding, etc.
 
 //----------------------------------------------------------------------
@@ -144,7 +144,7 @@ incompatible with the flags that gdb specifies.
 //   Kill a process running on the target system.
 //
 // EXAMPLE
-// 
+//
 //  receive: qKillSpawnedProcess:1337
 //  send:    OK
 //
@@ -157,7 +157,7 @@ incompatible with the flags that gdb specifies.
 //   Gather information about a process running on the target
 //
 // EXAMPLE
-// 
+//
 //  receive: qProcessInfoPID:71964
 //  send:    pid:71964;name:612e6f7574;
 //
@@ -172,34 +172,34 @@ incompatible with the flags that gdb specifies.
 // qfProcessInfo:
 //
 // BRIEF
-//   Search the process table for processes matching criteria, 
+//   Search the process table for processes matching criteria,
 //   respond with them in multiple packets.
 //
 // EXAMPLE
-// 
+//
 //  receive: qfProcessInfo:name_match:equals;name:6e6f70726f6365737365786973747377697468746869736e616d65;
 //  send:    pid:3500;name:612e6f7574;
 //
 //  The request packet has a criteria to search for, followed by
-//  a specific name.  
+//  a specific name.
 //
 //  KEY           VALUE     DESCRIPTION
 //  ===========   ========  ================================================
-//  "name"        ascii-hex An ASCII hex string that contains the name of 
+//  "name"        ascii-hex An ASCII hex string that contains the name of
 //                          the process that will be matched.
-//  "name_match"  enum      One of: "equals", "starts_with", "ends_with", 
+//  "name_match"  enum      One of: "equals", "starts_with", "ends_with",
 //                          "contains" or "regex"
 //  "pid"         integer   A string value containing the decimal process ID
-//  "parent_pid"  integer   A string value containing the decimal parent 
+//  "parent_pid"  integer   A string value containing the decimal parent
 //                          process ID
 //  "uid"         integer   A string value containing the decimal user ID
 //  "gid"         integer   A string value containing the decimal group ID
 //  "euid"        integer   A string value containing the decimal effective user ID
 //  "egid"        integer   A string value containing the decimal effective group ID
 //  "all_users"   bool      A boolean value that specifies if processes should
-//                          be listed for all users, not just the user that the 
+//                          be listed for all users, not just the user that the
 //                          platform is running as
-//  "triple"      ascii-hex An ASCII hex target triple string ("x86_64", 
+//  "triple"      ascii-hex An ASCII hex target triple string ("x86_64",
 //                          "x86_64-apple-macosx", "armv7-apple-ios")
 //
 //  If no criteria is given, qfProcessInfo will request a list of every process.
@@ -233,7 +233,7 @@ incompatible with the flags that gdb specifies.
 //   packet.
 //
 // EXAMPLE
-// 
+//
 //  Continues to return the results of the qfProcessInfo.  Once all matches
 //  have been sent, Exx is returned to indicate end of matches.
 
@@ -265,7 +265,7 @@ incompatible with the flags that gdb specifies.
 //   Get the size of a file on the target system, filename in ASCII hex.
 //
 // EXAMPLE
-// 
+//
 //  receive: vFile:size:2f746d702f61
 //  send:    Fc008
 //
@@ -280,12 +280,12 @@ incompatible with the flags that gdb specifies.
 //   Get the mode bits of a file on the target system, filename in ASCII hex.
 //
 // EXAMPLE
-// 
+//
 //  receive: vFile:mode:2f746d702f61
 //  send:    F1ed
 //
-//  response is "F" followed by the mode bits in base 16, this 0x1ed would 
-//  correspond to 0755 in octal.  
+//  response is "F" followed by the mode bits in base 16, this 0x1ed would
+//  correspond to 0755 in octal.
 //  "F-1,errno" with the errno if an error occurs, base 16.
 
 //----------------------------------------------------------------------
@@ -295,7 +295,7 @@ incompatible with the flags that gdb specifies.
 //   Remove a file on the target system.
 //
 // EXAMPLE
-// 
+//
 //  receive: vFile:unlink:2f746d702f61
 //  send:    F0
 //
@@ -311,12 +311,12 @@ incompatible with the flags that gdb specifies.
 //   Create a symbolic link (symlink, soft-link) on the target system.
 //
 // EXAMPLE
-// 
+//
 //  receive: vFile:symlink:<SRC-FILE>,<DST-NAME>
 //  send:    F0,0
 //
 //  Argument file paths are in ascii-hex encoding.
-//  Response is "F" plus the return value of symlink(), base 16 encoding, 
+//  Response is "F" plus the return value of symlink(), base 16 encoding,
 //  optionally followed by the value of errno if it failed, also base 16.
 
 //----------------------------------------------------------------------
@@ -327,11 +327,11 @@ incompatible with the flags that gdb specifies.
 //   Change the permission mode bits on a file on the target
 //
 // EXAMPLE
-// 
+//
 //  receive: vFile:chmod:180,2f746d702f61
 //  send:    F0
 //
-//  Arguments are the mode bits to set, base 16, and a file path in 
+//  Arguments are the mode bits to set, base 16, and a file path in
 //  ascii-hex encoding.
 //  Response is "F" plus the return value of chmod(), base 16 encoding.
 //
@@ -345,11 +345,11 @@ incompatible with the flags that gdb specifies.
 //   Change the permission mode bits on a file on the target
 //
 // EXAMPLE
-// 
+//
 //  receive: vFile:chmod:180,2f746d702f61
 //  send:    F0
 //
-//  Arguments are the mode bits to set, base 16, and a file path in 
+//  Arguments are the mode bits to set, base 16, and a file path in
 //  ascii-hex encoding.
 //  Response is "F" plus the return value of chmod(), base 10 encoding.
 
@@ -361,7 +361,7 @@ incompatible with the flags that gdb specifies.
 //   Open a file on the remote system and return the file descriptor of it.
 //
 // EXAMPLE
-// 
+//
 //  receive: vFile:open:2f746d702f61,00000001,00000180
 //  send:    F8
 //
@@ -371,7 +371,7 @@ incompatible with the flags that gdb specifies.
 //        Note that these are not the oflags that open(2) takes, but
 //        are the constant values in enum OpenOptions from lldb's File.h
 //     3. mode bits, base 16
-//  
+//
 //  response is F followed by the opened file descriptor in base 16.
 //  "F-1,errno" with the errno if an error occurs, base 16.
 //
@@ -382,7 +382,7 @@ incompatible with the flags that gdb specifies.
 //   Close a previously opened file descriptor.
 //
 // EXAMPLE
-// 
+//
 //  receive: vFile:close:7
 //  send:    F0
 //
@@ -398,7 +398,7 @@ incompatible with the flags that gdb specifies.
 //   Read data from an opened file descriptor.
 //
 // EXAMPLE
-// 
+//
 //  receive: vFile:pread:7,1024,0
 //  send:    F4;a'b\00
 //
@@ -418,7 +418,7 @@ incompatible with the flags that gdb specifies.
 //   Write data to a previously opened file descriptor.
 //
 // EXAMPLE
-// 
+//
 //  receive: vFile:pwrite:8,0,\cf\fa\ed\fe\0c\00\00
 //  send:    F1024
 //

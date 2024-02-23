@@ -38,7 +38,7 @@ public:
   // instructions on which a breakpoint can be set.
   size_t GetInstructionsCount(const SBAddress &start,
                               const SBAddress &end,
-                              bool canSetBreakpoint = false);                                   
+                              bool canSetBreakpoint = false);
 
   void Clear();
 

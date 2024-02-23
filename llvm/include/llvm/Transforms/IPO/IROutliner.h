@@ -202,7 +202,7 @@ public:
              function_ref<IRSimilarityIdentifier &(Module &)> GIRSI,
              function_ref<OptimizationRemarkEmitter &(Function &)> GORE)
       : getTTI(GTTI), getIRSI(GIRSI), getORE(GORE) {
-    
+
     // Check that the DenseMap implementation has not changed.
     assert(DenseMapInfo<unsigned>::getEmptyKey() == (unsigned)-1 &&
            "DenseMapInfo<unsigned>'s empty key isn't -1!");

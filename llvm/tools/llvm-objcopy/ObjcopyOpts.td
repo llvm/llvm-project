@@ -64,7 +64,7 @@ defm redefine_symbols
          "contains two symbols per line separated with whitespace and may "
          "contain comments beginning with '#'. Leading and trailing "
          "whitespace is stripped from each line. May be repeated to read "
-         "symbols from many files">,         
+         "symbols from many files">,
       MetaVarName<"filename">;
 
 defm only_section : Eq<"only-section", "Remove all but <section>">,
@@ -216,7 +216,7 @@ defm prefix_alloc_sections
 defm set_start : Eq<"set-start", "Set the start address to <addr>. Overrides "
                     "any previous --change-start or --adjust-start values">,
                  MetaVarName<"addr">;
-defm change_start : Eq<"change-start", "Add <incr> to the start address. Can be "                        
+defm change_start : Eq<"change-start", "Add <incr> to the start address. Can be "
                        "specified multiple times, all values will be applied "
                        "cumulatively">,
                     MetaVarName<"incr">;

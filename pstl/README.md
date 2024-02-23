@@ -1,10 +1,10 @@
-# Parallel STL 
+# Parallel STL
 
 Parallel STL is an implementation of the C++ standard library algorithms with support for execution policies,
-as specified in ISO/IEC 14882:2017 standard, commonly called C++17. The implementation also supports the unsequenced 
-execution policy specified in Parallelism TS version 2 and proposed for the next version of the C++ standard in the 
+as specified in ISO/IEC 14882:2017 standard, commonly called C++17. The implementation also supports the unsequenced
+execution policy specified in Parallelism TS version 2 and proposed for the next version of the C++ standard in the
 C++ working group paper [P1001](https://wg21.link/p1001).
-Parallel STL offers efficient support for both parallel and vectorized execution of algorithms. For sequential 
+Parallel STL offers efficient support for both parallel and vectorized execution of algorithms. For sequential
 execution, it relies on an available implementation of the C++ standard library.
 
 ## Prerequisites

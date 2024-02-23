@@ -17,7 +17,7 @@ multiclass REF_I<WebAssemblyRegClass rc, ValueType vt, string ht> {
                         [(set rc:$dst, (!cast<Intrinsic>("int_wasm_ref_null_" # ht)))],
                         "ref.null_" # ht # "$dst",
                         "ref.null_" # ht,
-                        !cond(!eq(ht, "func")   : 0xd070, 
+                        !cond(!eq(ht, "func")   : 0xd070,
                               !eq(ht, "extern") : 0xd06f)>,
                       Requires<[HasReferenceTypes]>;
   defm SELECT_#rc: I<(outs rc:$dst), (ins rc:$lhs, rc:$rhs, I32:$cond),

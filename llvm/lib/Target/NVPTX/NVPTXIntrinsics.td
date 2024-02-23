@@ -265,7 +265,7 @@ multiclass MATCH_ANY_SYNC<NVPTXRegClass regclass, string ptxtype, Intrinsic IntO
 
 // activemask.b32
 def ACTIVEMASK : NVPTXInst<(outs Int32Regs:$dest), (ins),
-                    "activemask.b32 \t$dest;", 
+                    "activemask.b32 \t$dest;",
                     [(set Int32Regs:$dest, (int_nvvm_activemask))]>,
                  Requires<[hasPTX<62>, hasSM<30>]>;
 

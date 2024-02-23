@@ -1011,7 +1011,7 @@ def : InstRW<[Zn2WriteBROADCAST], (instrs VBROADCASTF128rm,
 // r32,x,i.
 def Zn2WriteEXTRACTPSr : SchedWriteRes<[Zn2FPU12, Zn2FPU2]> {
   let Latency = 2;
-  let NumMicroOps = 2; 
+  let NumMicroOps = 2;
   let ReleaseAtCycles = [1, 2];
 }
 def : InstRW<[Zn2WriteEXTRACTPSr], (instregex "(V?)EXTRACTPSrr")>;

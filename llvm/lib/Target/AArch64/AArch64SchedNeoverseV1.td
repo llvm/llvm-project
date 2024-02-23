@@ -442,16 +442,16 @@ def V1Write_7c_5L01_5S_5V : SchedWriteRes<[V1UnitL01, V1UnitL01,
 
 let Latency = 19, NumMicroOps = 18 in
 def V1Write_11c_9L01_9V : SchedWriteRes<[V1UnitL01, V1UnitL01, V1UnitL01,
-                                         V1UnitL01, V1UnitL01, V1UnitL01, 
                                          V1UnitL01, V1UnitL01, V1UnitL01,
-                                         V1UnitV, V1UnitV, V1UnitV, 
+                                         V1UnitL01, V1UnitL01, V1UnitL01,
+                                         V1UnitV, V1UnitV, V1UnitV,
                                          V1UnitV, V1UnitV, V1UnitV,
                                          V1UnitV, V1UnitV, V1UnitV]>;
 let Latency = 19, NumMicroOps = 18 in
 def V1Write_19c_18V0    : SchedWriteRes<[V1UnitV0, V1UnitV0, V1UnitV0,
-                                         V1UnitV0, V1UnitV0, V1UnitV0, 
                                          V1UnitV0, V1UnitV0, V1UnitV0,
-                                         V1UnitV0, V1UnitV0, V1UnitV0, 
+                                         V1UnitV0, V1UnitV0, V1UnitV0,
+                                         V1UnitV0, V1UnitV0, V1UnitV0,
                                          V1UnitV0, V1UnitV0, V1UnitV0,
                                          V1UnitV0, V1UnitV0, V1UnitV0]>;
 
@@ -460,12 +460,12 @@ def V1Write_19c_18V0    : SchedWriteRes<[V1UnitV0, V1UnitV0, V1UnitV0,
 
 let Latency = 11, NumMicroOps = 27 in
 def V1Write_11c_9L01_9S_9V : SchedWriteRes<[V1UnitL01, V1UnitL01, V1UnitL01,
-                                            V1UnitL01, V1UnitL01, V1UnitL01, 
                                             V1UnitL01, V1UnitL01, V1UnitL01,
-                                            V1UnitS, V1UnitS, V1UnitS, 
+                                            V1UnitL01, V1UnitL01, V1UnitL01,
                                             V1UnitS, V1UnitS, V1UnitS,
                                             V1UnitS, V1UnitS, V1UnitS,
-                                            V1UnitV, V1UnitV, V1UnitV, 
+                                            V1UnitS, V1UnitS, V1UnitS,
+                                            V1UnitV, V1UnitV, V1UnitV,
                                             V1UnitV, V1UnitV, V1UnitV,
                                             V1UnitV, V1UnitV, V1UnitV]>;
 
@@ -853,7 +853,7 @@ def : InstRW<[V1Write_3c_1V], (instrs SMMLA, UMMLA, USMMLA)>;
 // ASIMD multiply accumulate long
 // ASIMD multiply accumulate high
 // ASIMD multiply accumulate saturating long
-def : InstRW<[V1Write_4c_1V02], 
+def : InstRW<[V1Write_4c_1V02],
              (instregex "^MUL(v[148]i16|v[124]i32)$",
                         "^SQR?DMULH(v[48]i16|v[24]i32)$",
                         "^ML[AS](v[148]i16|v[124]i32)$",
@@ -874,7 +874,7 @@ def : InstRW<[V1Write_4c_1V13],
              (instregex "^[SU]R?SRAv",
                         "^RSHRNv", "^SQRSHRU?Nv", "^(SQSHLU?|UQSHL)[bhsd]$",
                         "^(SQSHLU?|UQSHL)(v8i8|v16i8|v4i16|v8i16|v2i32|v4i32|v2i64)_shift$",
-                        "^SQSHU?RNv", "^[SU]RSHRv", "^UQR?SHRNv", 
+                        "^SQSHU?RNv", "^[SU]RSHRv", "^UQR?SHRNv",
                         "^[SU]Q?RSHLv", "^[SU]QSHLv")>;
 
 // ASIMD shift by immed, basic
@@ -1116,13 +1116,13 @@ def : InstRW<[V1Write_8c_1L_2V],
              (instregex "^LD2Twov(8b|4h|2s)$")>;
 def : InstRW<[WriteAdr, V1Write_8c_1L_2V],
              (instregex "^LD2Twov(8b|4h|2s)_POST$")>;
-                        
+
 // ASIMD load, 2 element, multiple, Q-form
 def : InstRW<[V1Write_8c_2L_2V],
              (instregex "^LD2Twov(16b|8h|4s|2d)$")>;
 def : InstRW<[WriteAdr, V1Write_8c_2L_2V],
              (instregex "^LD2Twov(16b|8h|4s|2d)_POST$")>;
-                        
+
 // ASIMD load, 2 element, one lane
 // ASIMD load, 2 element, all lanes
 def : InstRW<[V1Write_8c_1L_2V],
@@ -1131,7 +1131,7 @@ def : InstRW<[V1Write_8c_1L_2V],
 def : InstRW<[WriteAdr, V1Write_8c_1L_2V],
              (instregex "^LD2i(8|16|32|64)_POST$",
                         "^LD2Rv(8b|16b|4h|8h|2s|4s|1d|2d)_POST$")>;
-                        
+
 // ASIMD load, 3 element, multiple, D-form
 // ASIMD load, 3 element, one lane
 // ASIMD load, 3 element, all lanes

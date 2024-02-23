@@ -31,10 +31,10 @@ def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
       machine word.
     - `use_generic_functions`: Use generic allocation and deallocation functions
       instead of the classic "malloc", "aligned_alloc" and "free" functions.
-    // TODO: the following two options don't really make sense for 
+    // TODO: the following two options don't really make sense for
     // memref_to_llvm_type_converter specifically.
     // We should have a single to_llvm_type_converter.
-    - `use_bare_ptr_call_conv`: Replace FuncOp's MemRef arguments with bare 
+    - `use_bare_ptr_call_conv`: Replace FuncOp's MemRef arguments with bare
       pointers to the MemRef element types.
     - `data-layout`: String description (LLVM format) of the data layout that is
       expected on the produced module.

@@ -23,23 +23,23 @@ processes surrounding it.
 Reporting and Contact Information
 =================================
 
-* For any incident involving an online platform (e.g., mailing lists, forums, 
-  irc/discord/slack, etc) we ask that you make any reports by emailing 
+* For any incident involving an online platform (e.g., mailing lists, forums,
+  irc/discord/slack, etc) we ask that you make any reports by emailing
   conduct@llvm.org. This is received by all members of the CoC Committee.
 
-* For LLVM Developers' Meetings, please file a report with the on-site Code 
-  of Conduct team. Their names and contact details are listed on the event 
-  webpage. You can also approach any other staff member, who can be 
-  identified by special badges and often found at the registration desk, 
-  to help you locate a member of the Code of Conduct team. All incidents 
-  reported in-person at a LLVM Developers' Meeting will be emailed to the 
-  Code of Conduct Committee. 
+* For LLVM Developers' Meetings, please file a report with the on-site Code
+  of Conduct team. Their names and contact details are listed on the event
+  webpage. You can also approach any other staff member, who can be
+  identified by special badges and often found at the registration desk,
+  to help you locate a member of the Code of Conduct team. All incidents
+  reported in-person at a LLVM Developers' Meeting will be emailed to the
+  Code of Conduct Committee.
 
 * For meetups, please report the incident to the local meetup organizers first
-  and then email conduct@llvm.org with your report. Each meetup will have a 
-  contact listed on the associated meetup page. If you feel the incident was 
+  and then email conduct@llvm.org with your report. Each meetup will have a
+  contact listed on the associated meetup page. If you feel the incident was
   not well handled by the local organizers, please include this information in
-  your email to conduct@llvm.org. All meetup organizers who receive an 
+  your email to conduct@llvm.org. All meetup organizers who receive an
   in-person report are also asked to email conduct@llvm.org with the
   incident information.
 
@@ -89,7 +89,7 @@ you have concerns about retaliation or your personal safety, please note those
 concerns in your report. You are still encouraged to report the incident so
 that we can support you while keeping our community members safe. In some
 cases, we can compile several anonymized reports into a pattern of behavior,
-and take action on that pattern. 
+and take action on that pattern.
 
 Transparency reports will be published but will retain confidentiality. See the
 :doc:`Response Guide <ResponseGuide>`. for details on this.
@@ -99,7 +99,7 @@ Following Up With Reporter(s)
 
 Once a report is filed, the Code of Conduct committee will handle the review
 and follow up according to the procedures in the :doc:`Response Guide
-<ResponseGuide>`. 
+<ResponseGuide>`.
 
 
 Thanks!

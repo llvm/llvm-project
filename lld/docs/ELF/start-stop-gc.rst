@@ -5,7 +5,7 @@ If your ``-Wl,--gc-sections`` build fail with a linker error like this:
 
     error: undefined symbol: __start_meta
     >>> referenced by {{.*}}
-    >>> the encapsulation symbol needs to be retained under --gc-sections properly; consider -z nostart-stop-gc (see https://lld.llvm.org/start-stop-gc) 
+    >>> the encapsulation symbol needs to be retained under --gc-sections properly; consider -z nostart-stop-gc (see https://lld.llvm.org/start-stop-gc)
 
 it is likely your C identifier name sections are not properly annotated to
 suffice under ``--gc-sections``.

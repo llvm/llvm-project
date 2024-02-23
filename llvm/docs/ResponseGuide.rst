@@ -13,7 +13,7 @@ Code of Conduct Committee
 =========================
 
 All responses to Code of Conduct reports will be managed by a Code of Conduct
-Committee. 
+Committee.
 
 Additional Code of Conduct Response Teams
 =========================================
@@ -24,7 +24,7 @@ to an incident. For example:
 * Each LLVM Developers' Meeting has a Code of Conduct response team.
 * For LLVM meetups, the local organizers will be the first point of contact.
 * Any other event funded by the LLVM Foundation or listed on the LLVM website,
-  will have a code of conduct response team or point of contact for CoC 
+  will have a code of conduct response team or point of contact for CoC
   reports.
 
 These teams should determine if an :ref:`immediate response<Immediate Response
@@ -46,7 +46,7 @@ will be taken. Specific guidance is in the checklist below.
 
 For in-person events that have a violation reported, the report should be sent
 to the Code of Conduct committee within 24 hours by the on-site CoC response
-team. 
+team.
 
 
 .. _Immediate Response Checklist:
@@ -68,18 +68,18 @@ this checklist to determine if an immediate response is needed.
   removal, or moderation) may be used to immediately stop it.
 * For events that include talks, organizers should end talks early if the
   violations include harassment or violent threats. There may be talks where
-  other types of code of conduct violations occur and organizers should do 
-  their best to determine if a talk should be ended early or not. 
+  other types of code of conduct violations occur and organizers should do
+  their best to determine if a talk should be ended early or not.
 
 When undertaking an immediate response, document the action and notify the
-committee within 24 hours. 
+committee within 24 hours.
 
 
 Response Procedure
 ==================
 
 The following is a summary of the steps the committee takes when responding to
-a reported incident. 
+a reported incident.
 
 1. Determine if there is a need for an :ref:`immediate response<Immediate
    Response Checklist>`.
@@ -94,7 +94,7 @@ a reported incident.
    feedback may or may not be used to re-evaluate the resolution.
 
 5. Inform the reportee of the resolution. The reportee is provided options to
-   :ref:`appeal<Appeal Process>`. 
+   :ref:`appeal<Appeal Process>`.
 
 6. The :ref:`resolution<Resolutions>` is implemented.
 
@@ -110,7 +110,7 @@ Report Acknowledgement
 ======================
 
 When a report is received, the committee will reply to the reporter to confirm
-receipt within 24 hours of the incident being reported. 
+receipt within 24 hours of the incident being reported.
 
 This acknowledgement will contain:
 
@@ -149,7 +149,7 @@ guidelines for the process:
 The committee will aim to have a resolution agreed upon within two weeks of
 receipt of the incident report. In the event that a resolution cannot be
 determined within that time, the CoC committee will respond to the reporter(s)
-with an updated and projected timeline for resolution. 
+with an updated and projected timeline for resolution.
 
 .. _Following Up With the Reportee:
 
@@ -203,7 +203,7 @@ taken, but below is a list of possible resolutions:
   holds.
 * An imposed suspension (e.g., asking someone to "take a week off" from mailing
   lists, bug tracker, IRC, Discord, repositories, or other communication
-  forms). 
+  forms).
 * A permanent or temporary ban from some or all LLVM Project spaces (online or
   in person).
 
@@ -230,7 +230,7 @@ appeal. The said documentation may include, but does not have to be limited to:
   appeal.
 
 Appeals can be requested up to 30 days after a resolution has been communicated
-to the individual(s). The committee will aim to evaluate appeals within two weeks of receipt. In the event that appeal can not be evaluated within that time, the CoC committee will respond with an updated and projected timeline. 
+to the individual(s). The committee will aim to evaluate appeals within two weeks of receipt. In the event that appeal can not be evaluated within that time, the CoC committee will respond with an updated and projected timeline.
 
 
 Conflicts of Interest
@@ -265,14 +265,14 @@ Conduct committee members. However, the Code of Conduct Committee will always
 comply with law enforcement when directed. In the case that a CoC committee
 member is involved in a report, the member will be asked to recuse themselves
 from ongoing conversations, and they will not have access to reports after the
-enforcement decision has been made. 
+enforcement decision has been made.
 
 In the event of a temporary suspension or ban, the appropriate people must be
 notified of the ban in order to restrict access to infrastructure or events.
 These individuals will only be notified of the person's name and the
 restrictions imposed. They will be under a confidentiality clause and not
 allowed to respond to questions regarding the ban and should direct all
-questions to the CoC committee. 
+questions to the CoC committee.
 
 .. _Transparency Reports:
 
@@ -284,7 +284,7 @@ our community without an understanding of how or if the organizers worked to
 resolve incidents. The CoC committee should aim to publish transparency
 reports, if reports are received, after major events (such as the LLVM
 Developers' meetings) and on the following dates: Jan 15, April 15, July 15,
-Oct 15. 
+Oct 15.
 
 A transparency report consists of 2 parts:
 

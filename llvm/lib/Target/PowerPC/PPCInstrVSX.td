@@ -4143,7 +4143,7 @@ def : Pat<(v2f64 (PPCxxperm v2f64:$XT, v2f64:$XB, v4i32:$C)),
 // One without P10 instructions, the other is BigEndian only with P10 instructions.
 let Predicates = [HasVSX, HasP9Vector, NoP10Vector] in {
 // Little endian Power10 subtargets produce a shorter pattern but require a
-// COPY_TO_REGCLASS. The COPY_TO_REGCLASS makes it appear to need two instructions 
+// COPY_TO_REGCLASS. The COPY_TO_REGCLASS makes it appear to need two instructions
 // to perform the operation, when only one instruction is produced in practice.
 // The NoP10Vector predicate excludes these patterns from Power10 VSX subtargets.
 defm : ScalToVecWPermute<

@@ -417,7 +417,7 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
 
     bool missing_weak = false;
     CFStringCreateWithBytes_addr =
-        m_execution_unit.FindSymbol(g_CFStringCreateWithBytes_str, 
+        m_execution_unit.FindSymbol(g_CFStringCreateWithBytes_str,
                                     missing_weak);
     if (CFStringCreateWithBytes_addr == LLDB_INVALID_ADDRESS || missing_weak) {
       LLDB_LOG(log, "Couldn't find CFStringCreateWithBytes in the target");

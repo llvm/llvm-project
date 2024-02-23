@@ -864,10 +864,10 @@ def SPIRV_CLPrintfOp : SPIRV_CLOp<"printf", 184, []> {
 
     Result Type must be i32.
 
-    Format must be a pointer(constant) to i8. If there are insufficient 
-    arguments for the format, the behavior is undefined. If the format 
+    Format must be a pointer(constant) to i8. If there are insufficient
+    arguments for the format, the behavior is undefined. If the format
     is exhausted while arguments remain, the excess arguments are evaluated
-    (as always) but are otherwise ignored. The printf instruction returns 
+    (as always) but are otherwise ignored. The printf instruction returns
     when the end of the format string is encountered.
 
     <!-- End of AutoGen section -->
@@ -883,7 +883,7 @@ def SPIRV_CLPrintfOp : SPIRV_CLOp<"printf", 184, []> {
     SPIRV_AnyPtr:$format,
     Variadic<SPIRV_Type>:$arguments
   );
-  
+
    let results = (outs
     SPIRV_Integer:$result
   );

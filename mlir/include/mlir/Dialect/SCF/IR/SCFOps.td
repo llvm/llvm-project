@@ -301,7 +301,7 @@ def ForallOp : SCF_Op<"forall", [
        AttrSizedOperandSegments,
        AutomaticAllocationScope,
        DeclareOpInterfaceMethods<LoopLikeOpInterface,
-          ["getInitsMutable", "getRegionIterArgs", "getSingleInductionVar", 
+          ["getInitsMutable", "getRegionIterArgs", "getSingleInductionVar",
            "getSingleLowerBound", "getSingleUpperBound", "getSingleStep",
            "promoteIfSingleIteration", "yieldTiledValuesAndReplace"]>,
        RecursiveMemoryEffects,

@@ -267,14 +267,14 @@ bool lldb_private::formatters::NSIndexSetSummaryProvider(
     if (class_name == "NSIndexSet" || class_name == "NSMutableIndexSet") {
       // Foundation version 2000 added a bitmask if the index set fit in 64 bits
       // and a Tagged Pointer version if the bitmask is small enough to fit in
-      // the tagged pointer payload.  
+      // the tagged pointer payload.
       // It also changed the layout (but not the size) of the set descriptor.
 
       // First check whether this is a tagged pointer.  The bitmask will be in
       // the payload of the tagged pointer.
       uint64_t payload;
-      if (runtime->GetFoundationVersion() >= 2000  
-          && descriptor->GetTaggedPointerInfo(nullptr, nullptr, &payload)) {
+      if (runtime->GetFoundationVersion() >= 2000 &&
+          descriptor->GetTaggedPointerInfo(nullptr, nullptr, &payload)) {
         count = llvm::popcount(payload);
         break;
       }
@@ -309,7 +309,7 @@ bool lldb_private::formatters::NSIndexSetSummaryProvider(
           count = 0;
           break;
         }
-      
+
         if ((mode & 2) == 2)
           mode = 1; // this means the set only has one range
         else

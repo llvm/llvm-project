@@ -37,7 +37,7 @@ def insertMinimumPadding(a, b, dist):
 
     Assumes dist(X, Y) -> int and non-negative.
     """
-    
+
     def cost(a, b):
         return sum(map(dist, a + [None] * (len(b) - len(a)), b))
 
@@ -61,7 +61,7 @@ def insertMinimumPadding(a, b, dist):
 
 class ZipperDiff(object):
     """ZipperDiff - Simple (slow) diff only accommodating inserts."""
-    
+
     def __init__(self, a, b):
         self.a = a
         self.b = b
@@ -85,12 +85,12 @@ class DriverZipperDiff(ZipperDiff):
     def dist(self, a, b):
         if a and b and self.isTempFile(a) and self.isTempFile(b):
             return 0
-        return super(DriverZipperDiff, self).dist(a,b)        
+        return super(DriverZipperDiff, self).dist(a,b)
 
 class CompileInfo:
     def __init__(self, out, err, res):
         self.commands = []
-        
+
         # Standard out isn't used for much.
         self.stdout = out
         self.stderr = ''
@@ -108,7 +108,7 @@ class CompileInfo:
                 self.commands.append(list(splitArgs(ln)))
             else:
                 self.stderr += ln + '\n'
-        
+
         self.stderr = self.stderr.strip()
         self.exitCode = res
 
@@ -200,7 +200,7 @@ def main():
                     print 'mismatch: A: %s' % aElt
                     print '          B: %s' % bElt
             differ = True
-    
+
     # Compare result codes.
     if infoA.exitCode != infoB.exitCode:
         print '-- EXIT CODES DIFFER -'

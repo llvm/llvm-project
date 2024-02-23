@@ -35,7 +35,7 @@ if(TARGET tsan)
   set(ARCHER_TSAN_TEST_DEPENDENCE tsan)
 endif()
 
-add_openmp_testsuite(check-libarcher "Running libarcher tests" ${CMAKE_CURRENT_BINARY_DIR} 
+add_openmp_testsuite(check-libarcher "Running libarcher tests" ${CMAKE_CURRENT_BINARY_DIR}
                      DEPENDS archer omp ${ARCHER_TSAN_TEST_DEPENDENCE})
 
 # Configure the lit.site.cfg.in file

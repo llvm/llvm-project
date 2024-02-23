@@ -63,9 +63,9 @@ The meanings of the symbols are as follows:
 - U: The loop is unrolled. The following number indicates the unroll factor.
 - V: The loop is vectorized. The following numbers indicate the vector length and the interleave factor.
 
-.. note:: 
+.. note::
 
-    If a specific line of code is output twice, it means that the same optimization pass was applied to that 
+    If a specific line of code is output twice, it means that the same optimization pass was applied to that
     line of code twice, and the pass was able to further optimize the code on the second iteration.
 
 

@@ -273,8 +273,8 @@ public:
     RecordAccessor(const uint8_t *P) : P(P) {}
 
     unsigned getNumLiveOutsOffset() const {
-      unsigned LocOffset = 
-          ((LocationListOffset + LocationSize * getNumLocations()) + 7) & ~0x7; 
+      unsigned LocOffset =
+          ((LocationListOffset + LocationSize * getNumLocations()) + 7) & ~0x7;
       return LocOffset + sizeof(uint16_t);
     }
 

@@ -42,7 +42,7 @@ def verbose : Flag<["--"], "wrapper-verbose">,
   Flags<[WrapperOnlyOption]>, HelpText<"Verbose output from tools">;
 def embed_bitcode : Flag<["--"], "embed-bitcode">,
   Flags<[WrapperOnlyOption]>, HelpText<"Embed linked bitcode in the module">;
-def debug : Flag<["--"], "device-debug">, Flags<[WrapperOnlyOption]>, 
+def debug : Flag<["--"], "device-debug">, Flags<[WrapperOnlyOption]>,
   HelpText<"Use debugging">;
 def ptxas_arg : Joined<["--"], "ptxas-arg=">,
   Flags<[WrapperOnlyOption]>,
@@ -127,7 +127,7 @@ def version : Flag<["--", "-"], "version">, Flags<[HelpHidden]>, Alias<v>;
 def whole_archive : Flag<["--", "-"], "whole-archive">, Flags<[HelpHidden]>;
 def no_whole_archive : Flag<["--", "-"], "no-whole-archive">, Flags<[HelpHidden]>;
 
-def relocatable : Flag<["--", "-"], "relocatable">, 
+def relocatable : Flag<["--", "-"], "relocatable">,
     HelpText<"Link device code to create a relocatable offloading application">;
 def r : Flag<["-"], "r">, Alias<relocatable>;
 

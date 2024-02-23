@@ -100,7 +100,7 @@ void llvm::widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond) {
     C->set(B.CreateAnd(NewCond, C->get()));
     Instruction *WCAnd = cast<Instruction>(WidenableBR->getCondition());
     // Condition is only guaranteed to dominate branch
-    WCAnd->moveBefore(WidenableBR);    
+    WCAnd->moveBefore(WidenableBR);
   }
   assert(isWidenableBranch(WidenableBR) && "preserve widenabiliy");
 }

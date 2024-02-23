@@ -87,7 +87,7 @@ For example, try adding:
 Have fun - try doing something crazy and unusual. Building a language
 like everyone else always has, is much less fun than trying something a
 little crazy or off the wall and seeing how it turns out. If you get
-stuck or want to talk about it, please post on the `LLVM forums 
+stuck or want to talk about it, please post on the `LLVM forums
 <https://discourse.llvm.org>`_: it has lots of people who are interested
 in languages and are often willing to help out.
 

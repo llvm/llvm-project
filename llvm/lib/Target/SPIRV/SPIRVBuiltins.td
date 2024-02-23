@@ -1370,7 +1370,7 @@ foreach aq = ["_t", "_ro_t", "_wo_t", "_rw_t"] in {
   defvar p = !cond(!not(!eq(!find(aq, "_rw_t"), -1)) : "2",
                    !not(!eq(!find(aq, "_wo_t"), -1)) : "1",
                                                 true : "0");
-  def : OpenCLType<!strconcat("opencl.pipe", aq), 
+  def : OpenCLType<!strconcat("opencl.pipe", aq),
                    !strconcat("spirv.Pipe._", p)>;
 }
 
@@ -1379,11 +1379,11 @@ foreach aq = ["_t", "_ro_t", "_wo_t", "_rw_t"] in {
                     !not(!eq(!find(aq, "_wo_t"), -1)) : "1",
                                                  true : "0");
 
-  def : OpenCLType<!strconcat("opencl.image1d", aq), 
+  def : OpenCLType<!strconcat("opencl.image1d", aq),
                    !strconcat("spirv.Image._void_0_0_0_0_0_0_", p7)>;
-  def : OpenCLType<!strconcat("opencl.image1d_array", aq), 
+  def : OpenCLType<!strconcat("opencl.image1d_array", aq),
                    !strconcat("spirv.Image._void_0_0_1_0_0_0_", p7)>;
-  def : OpenCLType<!strconcat("opencl.image1d_buffer", aq), 
+  def : OpenCLType<!strconcat("opencl.image1d_buffer", aq),
                    !strconcat("spirv.Image._void_5_0_0_0_0_0_", p7)>;
 
   foreach a1 = ["", "_array"] in {
@@ -1393,13 +1393,13 @@ foreach aq = ["_t", "_ro_t", "_wo_t", "_rw_t"] in {
         defvar p3 = !cond(!not(!eq(!find(a1, "_array"), -1))  : "1", true : "0");
         defvar p4 = !cond(!not(!eq(!find(a2, "msaa"), -1))  : "1", true : "0");
 
-        def : OpenCLType<!strconcat("opencl.image2d", a1, a2, a3, aq), 
+        def : OpenCLType<!strconcat("opencl.image2d", a1, a2, a3, aq),
                          !strconcat("spirv.Image._void_1_", p2 , "_", p3, "_", p4, "_0_0_", p7)>;
       }
     }
   }
-  
-  def : OpenCLType<!strconcat("opencl.image3d", aq), 
+
+  def : OpenCLType<!strconcat("opencl.image3d", aq),
                    !strconcat("spirv.Image._void_2_0_0_0_0_0_", p7)>;
 }
 

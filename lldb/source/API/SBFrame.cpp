@@ -602,8 +602,8 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
                 stop_if_block_is_inlined_function,
                 [frame](Variable *v) { return v->IsInScope(frame); },
                 &variable_list);
-          if (value_type == eValueTypeVariableGlobal 
-              || value_type == eValueTypeVariableStatic) {
+          if (value_type == eValueTypeVariableGlobal ||
+              value_type == eValueTypeVariableStatic) {
             const bool get_file_globals = true;
             VariableList *frame_vars = frame->GetVariableList(get_file_globals,
                                                               nullptr);
@@ -815,7 +815,7 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
           if (num_variables) {
             size_t num_produced = 0;
             for (const VariableSP &variable_sp : *variable_list) {
-              if (INTERRUPT_REQUESTED(dbg, 
+              if (INTERRUPT_REQUESTED(dbg,
                     "Interrupted getting frame variables with {0} of {1} "
                     "produced.", num_produced, num_variables))
                 return {};

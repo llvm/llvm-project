@@ -226,8 +226,8 @@ public:
 
   static bool IsPairType(ArgumentRepetitionType arg_repeat_type);
 
-  static std::optional<ArgumentRepetitionType> 
-    ArgRepetitionFromString(llvm::StringRef string);
+  static std::optional<ArgumentRepetitionType>
+  ArgRepetitionFromString(llvm::StringRef string);
 
   bool ParseOptions(Args &args, CommandReturnObject &result);
 

@@ -11,7 +11,7 @@ are:
   (setq load-path
     (cons (expand-file-name "path-to-llvm/utils/emacs") load-path))
   (require 'llvm-mode)
-  
+
 * llvm-mir-mode.el
 
   Syntax highlighting mode for LLVM Machine IR files. To use, add this code to

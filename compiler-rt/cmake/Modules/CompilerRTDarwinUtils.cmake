@@ -100,7 +100,7 @@ function(darwin_get_toolchain_supported_archs output_var)
     message(WARNING "Detecting supported architectures from 'ld -v' failed. Returning default set.")
     set(ARCHES "i386;x86_64;armv7;armv7s;arm64")
   endif()
-  
+
   set(${output_var} ${ARCHES} PARENT_SCOPE)
 endfunction()
 
@@ -135,7 +135,7 @@ function(darwin_test_archs os valid_archs)
     endif()
   endif()
 
-  # The simple program will build for x86_64h on the simulator because it is 
+  # The simple program will build for x86_64h on the simulator because it is
   # compatible with x86_64 libraries (mostly), but since x86_64h isn't actually
   # a valid or useful architecture for the iOS simulator we should drop it.
   if(${os} MATCHES "^(iossim|tvossim|watchossim)$")
@@ -154,7 +154,7 @@ function(darwin_test_archs os valid_archs)
 
   set(working_archs)
   foreach(arch ${archs})
-   
+
     set(arch_linker_flags "-arch ${arch} ${os_linker_flags}")
     if(TEST_COMPILE_ONLY)
       # `-w` is used to surpress compiler warnings which `try_compile_only()` treats as an error.
@@ -269,7 +269,7 @@ function(darwin_find_excluded_builtins_list output_var)
         ${DARWIN_EXCLUDE_DIR}/${LIB_OS}${smallest_version}-${LIB_ARCH}.txt)
     endif()
   endif()
-  
+
   set(${output_var}
       ${${LIB_ARCH}_${LIB_OS}_BUILTINS}
       ${${LIB_OS}_${LIB_ARCH}_BASE_BUILTINS}
@@ -548,7 +548,7 @@ macro(darwin_add_embedded_builtin_libraries)
       ${COMPILER_RT_OUTPUT_LIBRARY_DIR}/macho_embedded)
     set(DARWIN_macho_embedded_LIBRARY_INSTALL_DIR
       ${COMPILER_RT_INSTALL_LIBRARY_DIR}/macho_embedded)
-      
+
     set(CFLAGS_armv7 -target thumbv7-apple-darwin-eabi)
     set(CFLAGS_i386 -march=pentium)
 

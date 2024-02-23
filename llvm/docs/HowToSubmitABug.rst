@@ -169,7 +169,7 @@ in addition to your existing compilation options:
 These options enable LTO and save temporary files generated during compilation
 for later analysis.
 
-On Windows, you should be using lld-link as the linker. Adjust your compilation 
+On Windows, you should be using lld-link as the linker. Adjust your compilation
 flags as follows:
 * Add ``/lldsavetemps`` to the linker flags.
 * When linking from the compiler driver, add ``/link /lldsavetemps`` in order to forward that flag to the linker.

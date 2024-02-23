@@ -350,7 +350,7 @@ added in the future:
     not be used lightly but only for specific situations such as an
     alternative to the *register pinning* performance technique often
     used when implementing functional programming languages. At the
-    moment only X86, AArch64, and RISCV support this convention. The 
+    moment only X86, AArch64, and RISCV support this convention. The
     following limitations exist:
 
     -  On *X86-32* only up to 4 bit type parameters are supported. No
@@ -681,10 +681,10 @@ implementation defined, the optimizer can't do the latter.  The former is
 challenging as many commonly expected properties, such as
 ``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for non-integral types.
 Similar restrictions apply to intrinsics that might examine the pointer bits,
-such as :ref:`llvm.ptrmask<int_ptrmask>`. 
+such as :ref:`llvm.ptrmask<int_ptrmask>`.
 
 The alignment information provided by the frontend for a non-integral pointer
-(typically using attributes or metadata) must be valid for every possible 
+(typically using attributes or metadata) must be valid for every possible
 representation of the pointer.
 
 .. _globalvars:
@@ -20489,9 +20489,9 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.minimum``' intrinsic performs floating-point minimum (:ref:`minimum <i_minimum>`)
-of the first and second vector operand on each enabled lane, the result being 
+of the first and second vector operand on each enabled lane, the result being
 NaN if either operand is a NaN. -0.0 is considered to be less than +0.0 for this
-intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`. 
+intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 The operation is performed in the default floating-point environment.
 
 Examples:
@@ -20539,9 +20539,9 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.maximum``' intrinsic performs floating-point maximum (:ref:`maximum <i_maximum>`)
-of the first and second vector operand on each enabled lane, the result being 
+of the first and second vector operand on each enabled lane, the result being
 NaN if either operand is a NaN. -0.0 is considered to be less than +0.0 for this
-intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`. 
+intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 The operation is performed in the default floating-point environment.
 
 Examples:

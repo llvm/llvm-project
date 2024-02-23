@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
       if (Buffer[i] == '\n')
         ++NumLines;
   } while (NumRead == sizeof(Buffer));
-    
+
   if (!feof(stdin)) {
     fprintf(stderr, "%s: error reading stdin\n", argv[0]);
     return 3;

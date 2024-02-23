@@ -64,7 +64,7 @@ def main():
             if not res:
                 os.execv(fallback, sys.argv)
                 os._exit(1)
-            os._exit(res)                
+            os._exit(res)
     else:
         os.execv(program, sys.argv)
         os._exit(1)

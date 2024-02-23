@@ -483,7 +483,7 @@ public:
   void setProfiledFunctions(std::unordered_set<const BinaryFunction *> &Funcs) {
     ProfiledFunctions = Funcs;
   }
-  
+
   BinaryFunction *getBinaryFunction(FunctionId FName) {
     if (FName.isStringRef()) {
       auto I = BinaryFunctions.find(FName.str());

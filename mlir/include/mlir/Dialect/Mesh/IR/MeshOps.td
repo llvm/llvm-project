@@ -48,7 +48,7 @@ def Mesh_MeshOp : Mesh_Op<"mesh", [Symbol]> {
     Example:
     ```
     // A device mesh with 3 axes, the total device number is 4 * 8 * 12
-    // The dimension sizes are 4, 8, 12 
+    // The dimension sizes are 4, 8, 12
     mesh.mesh @mesh0(shape = 4x8x12)
 
     // A device mesh with 2 axes, the total device number is unknown
@@ -366,7 +366,7 @@ def Mesh_AllSliceOp : Mesh_CollectiveCommunicationOpBase<"all_slice", [
     This operation can be thought of as the inverse of all-gather.
     Technically, it is not required that all processes have the same input tensor.
     Each process will slice a piece of its local tensor based on its in-group device index.
-    The operation does not communicate data between devices. 
+    The operation does not communicate data between devices.
 
     Example:
     ```mlir
@@ -483,7 +483,7 @@ def Mesh_BroadcastOp : Mesh_CollectiveCommunicationOpBase<"broadcast", [
     The operation broadcasts along mesh axes `mesh_axes`.
     The `root` device specifies the in-group multi-index that is broadcast to
     all other devices in the group.
-    
+
     Example:
     ```
     mesh.mesh @mesh0(shape = 2x2)
@@ -493,13 +493,13 @@ def Mesh_BroadcastOp : Mesh_CollectiveCommunicationOpBase<"broadcast", [
       root = [0]
       : (tensor<2xi8>) -> tensor<2xi8>
     ```
-    
+
     Input:
     ```
                      +-------+-------+                   | broadcast
     device (0, 0) -> |  1  2 |  3  4 | <- device (0, 1)  | along axis 0
                      +-------+-------+                   ↓
-    device (1, 0) -> |       |       | <- device (1, 1) 
+    device (1, 0) -> |       |       | <- device (1, 1)
                      +-------+-------+
     ```
 
@@ -755,7 +755,7 @@ def Mesh_ScatterOp : Mesh_CollectiveCommunicationOpBase<"scatter", [
                               device
                               (1, 1)
     ```
-    
+
     Result:
     ```
                               device
@@ -763,7 +763,7 @@ def Mesh_ScatterOp : Mesh_CollectiveCommunicationOpBase<"scatter", [
                                  ↓
                      +-------+-------+
     device (0, 0) -> |  1  2 |  5  6 |
-                     +-------+-------+ 
+                     +-------+-------+
     device (1, 0) -> |  3  4 |  7  8 |
                      +-------+-------+
                                 ↑

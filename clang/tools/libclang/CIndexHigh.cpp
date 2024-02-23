@@ -30,7 +30,7 @@ static void getTopOverriddenMethods(CXTranslationUnit TU,
 
   SmallVector<CXCursor, 8> Overridden;
   cxcursor::getOverriddenCursors(cxcursor::MakeCXCursor(D, TU), Overridden);
-  
+
   if (Overridden.empty()) {
     Methods.push_back(D->getCanonicalDecl());
     return;
@@ -90,7 +90,7 @@ struct FindFileIdRefVisitData {
                    dyn_cast<CXXConstructorDecl>(D)) {
       return getCanonical(CXXCtorD->getParent());
     }
-    
+
     return D;
   }
 
@@ -137,7 +137,7 @@ static SourceLocation getFileSpellingLoc(SourceManager &SM,
   SourceLocation SpellLoc = SM.getImmediateSpellingLoc(Loc);
   if (SpellLoc.isMacroID())
     return getFileSpellingLoc(SM, SpellLoc, isMacroArg);
-  
+
   isMacroArg = SM.isMacroArgExpansion(Loc);
   return SpellLoc;
 }
@@ -172,7 +172,7 @@ static enum CXChildVisitResult findFileIdRefVisit(CXCursor cursor,
       } else if (cursor.kind == CXCursor_ObjCMessageExpr &&
                  cxcursor::getSelectorIdentifierIndex(cursor) != -1) {
         // continue..
-                
+
       } else
         return CXChildVisit_Recurse;
     }

@@ -39,7 +39,7 @@ def DebugEmitRemarkAtOp : TransformDialectOp<"debug.emit_remark_at",
   let assemblyFormat = "$at `,` $message attr-dict `:` type($at)";
 }
 
-def DebugEmitParamAsRemarkOp 
+def DebugEmitParamAsRemarkOp
   : TransformDialectOp<"debug.emit_param_as_remark",
     [MatchOpInterface,
      DeclareOpInterfaceMethods<TransformOpInterface>,

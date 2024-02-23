@@ -67,11 +67,11 @@ bool ThreadPlanStepOverBreakpoint::DoPlanExplainsStop(Event *event_ptr) {
         // that a breakpoint hit, and trigger the actions, etc.  Otherwise you
         // would see the PC at the breakpoint without having triggered the
         // actions, then you'd continue, the PC wouldn't change, and you'd see
-        // the breakpoint hit, which would be odd. So the lower levels fake 
-        // "step onto breakpoint address" and return that as a breakpoint hit.  
-        // So our trace step COULD appear as a breakpoint hit if the next 
-        // instruction also contained a breakpoint.  We don't want to handle 
-        // that, since we really don't know what to do with breakpoint hits.  
+        // the breakpoint hit, which would be odd. So the lower levels fake
+        // "step onto breakpoint address" and return that as a breakpoint hit.
+        // So our trace step COULD appear as a breakpoint hit if the next
+        // instruction also contained a breakpoint.  We don't want to handle
+        // that, since we really don't know what to do with breakpoint hits.
         // But make sure we don't set ourselves to auto-continue or we'll wrench
         // control away from the plans that can deal with this.
         // Be careful, however, as we may have "seen a breakpoint under the PC

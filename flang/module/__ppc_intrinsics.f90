@@ -416,7 +416,7 @@ module __ppc_intrinsics
     vector(unsigned(UKIND)), intent(in) :: arg3; \
   end function ;
 #define ELEM_FUNC_VUVUVUVU(VKIND) ELEM_FUNC_VUVUVUVU_2(VKIND, VKIND)
-  
+
 ! vector(r) function f(vector(r), vector(r), vector(u))
 #define ELEM_FUNC_VRVRVRVU_2(VKIND, UKIND) \
   elemental vector(real(VKIND)) function elem_func_vr##VKIND##vr##VKIND##vr##VKIND##vu##UKIND(arg1, arg2, arg3); \
@@ -872,7 +872,7 @@ module __ppc_intrinsics
 #undef VR_VR_2
 #undef VU_VU
 #undef VI_VI
-  
+
 !---------------------------------
 ! vector function(vector, vector)
 !---------------------------------

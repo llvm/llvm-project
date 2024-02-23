@@ -66,7 +66,7 @@ OPTIONS
 .. option:: --summary-index <filename>
 
   Specify the path to a file containing the module summary index with the
-  results of an earlier ThinLTO link. This option is required when 
+  results of an earlier ThinLTO link. This option is required when
   `--import` is used.
 
 .. option:: --internalize
@@ -90,7 +90,7 @@ OPTIONS
   Suppress all linker warnings.
 
 .. option:: --preserve-bc-uselistorder
-  
+
   Preserve the use-list order when writing LLVM bitcode.
 
 .. option:: --preserve-ll-uselistorder

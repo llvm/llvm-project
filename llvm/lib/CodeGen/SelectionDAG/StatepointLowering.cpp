@@ -423,7 +423,7 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
                              SmallVectorImpl<SDValue> &Ops,
                              SmallVectorImpl<MachineMemOperand *> &MemRefs,
                              SelectionDAGBuilder &Builder) {
-  
+
   if (willLowerDirectly(Incoming)) {
     if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Incoming)) {
       // This handles allocas as arguments to the statepoint (this is only
@@ -441,7 +441,7 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
     }
 
     assert(Incoming.getValueType().getSizeInBits() <= 64);
-    
+
     if (Incoming.isUndef()) {
       // Put an easily recognized constant that's unlikely to be a valid
       // value so that uses of undef by the consumer of the stackmap is
@@ -483,7 +483,7 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
     // found by the runtime later.  Note: We know all of these spills are
     // independent, but don't bother to exploit that chain wise.  DAGCombine
     // will happily do so as needed, so doing it here would be a small compile
-    // time win at most. 
+    // time win at most.
     SDValue Chain = Builder.getRoot();
     auto Res = spillIncomingStatepointValue(Incoming, Chain, Builder);
     Ops.push_back(std::get<0>(Res));
@@ -934,8 +934,6 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     RelocationMap[Relocate] = Record;
   }
 
-  
-
   SDNode *SinkNode = StatepointMCNode;
 
   // Build the GC_TRANSITION_END node if necessary.
@@ -1108,7 +1106,7 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   if (GCResultLocality.first) {
     // Result value will be used in a same basic block. Don't export it or
     // perform any explicit register copies. The gc_result will simply grab
-    // this value. 
+    // this value.
     setValue(&I, ReturnValue);
   }
 
@@ -1128,7 +1126,7 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
                    DAG.getDataLayout(), Reg, RetTy,
                    I.getCallingConv());
   SDValue Chain = DAG.getEntryNode();
-  
+
   RFV.getCopyToRegs(ReturnValue, DAG, getCurSDLoc(), Chain, nullptr);
   PendingExports.push_back(Chain);
   FuncInfo.ValueMap[&I] = Reg;
@@ -1196,7 +1194,7 @@ void SelectionDAGBuilder::visitGCResult(const GCResultInst &CI) {
   // which is always i32 in our case.
   Type *RetTy = CI.getType();
   SDValue CopyFromReg = getCopyFromRegs(SI, RetTy);
-  
+
   assert(CopyFromReg.getNode());
   setValue(&CI, CopyFromReg);
 }

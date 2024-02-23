@@ -120,7 +120,7 @@ public:
   bool GetDetachOnError() { return m_detach_on_error; }
 
   bool AddIgnoredException(const char *exception_name);
-  
+
   void AddDefaultIgnoredExceptions();
 
   const IgnoredExceptions &GetIgnoredExceptions() {

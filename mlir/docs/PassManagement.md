@@ -108,7 +108,7 @@ struct MyFunctionPass : ... {
   void runOnOperation() {
     // Here we can freely cast to FunctionOpInterface, because our `canScheduleOn` ensures
     // that our pass is only executed on operations implementing that interface.
-    FunctionOpInterface op = cast<FunctionOpInterface>(getOperation()); 
+    FunctionOpInterface op = cast<FunctionOpInterface>(getOperation());
   }
 };
 ```
@@ -854,7 +854,7 @@ namespace foo {
 void registerMyPasses() {
   // Register all of the passes.
   foo::registerExamplePasses();
-  
+
   // Or
 
   // Register `MyPass` specifically.

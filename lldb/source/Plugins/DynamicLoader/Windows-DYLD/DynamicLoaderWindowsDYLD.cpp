@@ -66,7 +66,7 @@ void DynamicLoaderWindowsDYLD::OnLoadModule(lldb::ModuleSP module_sp,
   // Resolve the module unless we already have one.
   if (!module_sp) {
     Status error;
-    module_sp = m_process->GetTarget().GetOrCreateModule(module_spec, 
+    module_sp = m_process->GetTarget().GetOrCreateModule(module_spec,
                                              true /* notify */, &error);
     if (error.Fail())
       return;

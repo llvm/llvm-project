@@ -59,7 +59,7 @@ if (supported_toolchains != []) {
       test_dir = rebase_path(
               get_label_info(":lit_site_cfg($toolchain)", "target_gen_dir"),
               root_build_dir)
-      args += [ 
+      args += [
         test_dir + "/${crt_current_target_arch}AsanConfig",
       ]
     }

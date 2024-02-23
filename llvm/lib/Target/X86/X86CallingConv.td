@@ -130,14 +130,14 @@ def CC_#NAME : CallingConv<[
 
     // __mmask64 (v64i1) --> GPR64 (for x64) or 2 x GPR32 (for IA32)
     CCIfType<[v64i1], CCPromoteToType<i64>>,
-    CCIfSubtarget<"is64Bit()", CCIfType<[i64], 
+    CCIfSubtarget<"is64Bit()", CCIfType<[i64],
       CCAssignToReg<RC.GPR_64>>>,
-    CCIfSubtarget<"is32Bit()", CCIfType<[i64], 
+    CCIfSubtarget<"is32Bit()", CCIfType<[i64],
       CCCustom<"CC_X86_32_RegCall_Assign2Regs">>>,
 
     // float, double, float128 --> XMM
     // In the case of SSE disabled --> save to stack
-    CCIfType<[f32, f64, f128], 
+    CCIfType<[f32, f64, f128],
       CCIfSubtarget<"hasSSE1()", CCAssignToReg<RC.XMM>>>,
 
     // long double --> FP
@@ -145,23 +145,23 @@ def CC_#NAME : CallingConv<[
 
     // __m128, __m128i, __m128d --> XMM
     // In the case of SSE disabled --> save to stack
-    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], 
+    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
       CCIfSubtarget<"hasSSE1()", CCAssignToReg<RC.XMM>>>,
 
     // __m256, __m256i, __m256d --> YMM
     // In the case of SSE disabled --> save to stack
-    CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64], 
+    CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64],
       CCIfSubtarget<"hasAVX()", CCAssignToReg<RC.YMM>>>,
 
     // __m512, __m512i, __m512d --> ZMM
     // In the case of SSE disabled --> save to stack
-    CCIfType<[v64i8, v32i16, v16i32, v8i64, v16f32, v8f64], 
+    CCIfType<[v64i8, v32i16, v16i32, v8i64, v16f32, v8f64],
       CCIfSubtarget<"hasAVX512()",CCAssignToReg<RC.ZMM>>>,
 
     // If no register was found -> assign to stack
 
     // In 64 bit, assign 64/32 bit values to 8 byte stack
-    CCIfSubtarget<"is64Bit()", CCIfType<[i32, i64, f32, f64], 
+    CCIfSubtarget<"is64Bit()", CCIfType<[i32, i64, f32, f64],
       CCAssignToStack<8, 8>>>,
 
     // In 32 bit, assign 64/32 bit values to 8/4 byte stack
@@ -172,16 +172,16 @@ def CC_#NAME : CallingConv<[
     CCIfSubtarget<"is64Bit()", CCIfType<[x86mmx], CCAssignToStack<8, 8>>>,
     CCIfType<[x86mmx], CCAssignToStack<8, 4>>,
 
-    // float 128 get stack slots whose size and alignment depends 
+    // float 128 get stack slots whose size and alignment depends
     // on the subtarget.
     CCIfType<[f80, f128], CCAssignToStack<0, 0>>,
 
     // Vectors get 16-byte stack slots that are 16-byte aligned.
-    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], 
+    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
       CCAssignToStack<16, 16>>,
 
     // 256-bit vectors get 32-byte stack slots that are 32-byte aligned.
-    CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64], 
+    CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64],
       CCAssignToStack<32, 32>>,
 
     // 512-bit vectors get 64-byte stack slots that are 64-byte aligned.
@@ -209,28 +209,28 @@ def RetCC_#NAME : CallingConv<[
 
     // __mmask64 (v64i1) --> GPR64 (for x64) or 2 x GPR32 (for IA32)
     CCIfType<[v64i1], CCPromoteToType<i64>>,
-    CCIfSubtarget<"is64Bit()", CCIfType<[i64], 
+    CCIfSubtarget<"is64Bit()", CCIfType<[i64],
       CCAssignToReg<RC.GPR_64>>>,
-    CCIfSubtarget<"is32Bit()", CCIfType<[i64], 
+    CCIfSubtarget<"is32Bit()", CCIfType<[i64],
       CCCustom<"CC_X86_32_RegCall_Assign2Regs">>>,
 
     // long double --> FP
     CCIfType<[f80], CCAssignToReg<RC.FP_RET>>,
 
     // float, double, float128 --> XMM
-    CCIfType<[f32, f64, f128], 
+    CCIfType<[f32, f64, f128],
       CCIfSubtarget<"hasSSE1()", CCAssignToReg<RC.XMM>>>,
 
     // __m128, __m128i, __m128d --> XMM
-    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], 
+    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
       CCIfSubtarget<"hasSSE1()", CCAssignToReg<RC.XMM>>>,
 
     // __m256, __m256i, __m256d --> YMM
-    CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64], 
+    CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64],
       CCIfSubtarget<"hasAVX()", CCAssignToReg<RC.YMM>>>,
 
     // __m512, __m512i, __m512d --> ZMM
-    CCIfType<[v64i8, v32i16, v16i32, v8i64, v16f32, v8f64], 
+    CCIfType<[v64i8, v32i16, v16i32, v8i64, v16f32, v8f64],
       CCIfSubtarget<"hasAVX512()", CCAssignToReg<RC.ZMM>>>
 ]>;
 }
@@ -403,7 +403,7 @@ def RetCC_X86_Win64_C : CallingConv<[
 // X86-64 vectorcall return-value convention.
 def RetCC_X86_64_Vectorcall : CallingConv<[
   // Vectorcall calling convention always returns FP values in XMMs.
-  CCIfType<[f32, f64, f128], 
+  CCIfType<[f32, f64, f128],
     CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
 
   // Otherwise, everything is the same as Windows X86-64 C CC.
@@ -456,7 +456,7 @@ def RetCC_X86_64_AnyReg : CallingConv<[
 defm X86_32_RegCall :
 	 X86_RegCall_base<RC_X86_32_RegCall>;
 defm X86_32_RegCallv4_Win :
-	 X86_RegCall_base<RC_X86_32_RegCallv4_Win>; 
+	 X86_RegCall_base<RC_X86_32_RegCallv4_Win>;
 defm X86_Win64_RegCall :
      X86_RegCall_base<RC_X86_64_RegCall_Win>;
 defm X86_Win64_RegCallv4 :
@@ -507,7 +507,7 @@ def RetCC_X86_64 : CallingConv<[
           CCIfSubtarget<"isTargetWin64()",
                         CCDelegateTo<RetCC_X86_Win64_RegCall>>>,
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<RetCC_X86_SysV64_RegCall>>,
-          
+
   // Mingw64 and native Win64 use Win64 CC
   CCIfSubtarget<"isTargetWin64()", CCDelegateTo<RetCC_X86_Win64_C>>,
 
@@ -1233,9 +1233,9 @@ def CSR_Win32_CFGuard_Check_NoSSE : CalleeSavedRegs<(add CSR_32_RegCall_NoSSE, E
 def CSR_Win32_CFGuard_Check       : CalleeSavedRegs<(add CSR_32_RegCall, ECX)>;
 def CSR_Win64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP,
                                               (sequence "R%u", 10, 15))>;
-def CSR_Win64_RegCall       : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE,                                  
+def CSR_Win64_RegCall       : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE,
                                               (sequence "XMM%u", 8, 15))>;
 def CSR_SysV64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP,
                                                (sequence "R%u", 12, 15))>;
-def CSR_SysV64_RegCall       : CalleeSavedRegs<(add CSR_SysV64_RegCall_NoSSE,               
+def CSR_SysV64_RegCall       : CalleeSavedRegs<(add CSR_SysV64_RegCall_NoSSE,
                                                (sequence "XMM%u", 8, 15))>;

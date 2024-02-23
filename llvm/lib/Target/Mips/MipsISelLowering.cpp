@@ -3724,7 +3724,7 @@ SDValue MipsTargetLowering::LowerFormalArguments(
 
       assert(!VA.needsCustom() && "unexpected custom memory argument");
 
-      // Only arguments pased on the stack should make it here. 
+      // Only arguments pased on the stack should make it here.
       assert(VA.isMemLoc());
 
       // The stack pointer offset is relative to the caller stack frame.

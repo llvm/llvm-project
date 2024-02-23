@@ -3,14 +3,14 @@
 # Program:  GenLibDeps.pl
 #
 # Synopsis: Generate HTML output that shows the dependencies between a set of
-#           libraries. The output of this script should periodically replace 
+#           libraries. The output of this script should periodically replace
 #           the similar content in the UsingLibraries.html document.
 #
 # Syntax:   GenLibDeps.pl [-flat] <directory_with_libraries_in_it> [path_to_nm_binary]
 #
 use strict;
 use warnings;
-# Parse arguments... 
+# Parse arguments...
 my $FLAT = 0;
 my $WHY = 0;
 my $PEROBJ = 0;
@@ -169,7 +169,7 @@ foreach my $lib (@libs ) {
   open DEFS, "$nmPath -g $Directory/$lib|";
   while (<DEFS>) {
     next if (! / [ABCDGRST] /);
-    s/^[^ ]* [ABCDGRST] //;    
+    s/^[^ ]* [ABCDGRST] //;
     s/\015?\012//; # not sure if <DEFS> is in binmode and uses LF or CRLF.
                    # this strips both LF and CRLF.
     $libdefs{$_} = $lib;
@@ -185,7 +185,7 @@ foreach my $obj (@objs ) {
     next if (! / [ABCDGRST] /);
     s/^[^ ]* [ABCDGRST] //;
     s/\015?\012//; # not sure if <DEFS> is in binmode and uses LF or CRLF.
-                   # this strips both LF and CRLF.    
+                   # this strips both LF and CRLF.
     $objdefs{$_} = $obj;
   }
   close DEFS or die "nm failed";
@@ -204,7 +204,7 @@ sub gen_one_entry {
   } else {
     print "  <dt><b>$lib</b></dt><dd><ul>\n";
   }
-  open UNDEFS, 
+  open UNDEFS,
     "$nmPath -u $Directory/$lib | sed -e 's/^[ 0]* U //' | sort | uniq |";
   my %DepLibs;
   while (<UNDEFS>) {

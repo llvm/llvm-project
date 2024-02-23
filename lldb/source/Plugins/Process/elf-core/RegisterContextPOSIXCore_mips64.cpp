@@ -50,7 +50,7 @@ bool RegisterContextCorePOSIX_mips64::WriteFPR() {
 
 bool RegisterContextCorePOSIX_mips64::ReadRegister(const RegisterInfo *reg_info,
                                                    RegisterValue &value) {
-  
+
   lldb::offset_t offset = reg_info->byte_offset;
   lldb_private::ArchSpec arch = m_register_info_up->GetTargetArchitecture();
   uint64_t v;

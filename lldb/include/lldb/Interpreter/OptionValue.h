@@ -72,7 +72,7 @@ public:
   virtual ~OptionValue() = default;
 
   OptionValue(const OptionValue &other);
-  
+
   OptionValue& operator=(const OptionValue &other);
 
   // Subclasses should override these functions
@@ -387,7 +387,7 @@ private:
 
   const FormatEntity::Entry *GetFormatEntity() const;
   const RegularExpression *GetRegexValue() const;
-  
+
   mutable std::mutex m_mutex;
 };
 

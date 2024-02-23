@@ -18,7 +18,7 @@ class Error;
 namespace lldb_private {
 
 namespace lzma {
-	
+
 bool isAvailable();
 
 llvm::Expected<uint64_t>

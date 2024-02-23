@@ -1423,7 +1423,7 @@ The `CoroSplit` pass, if the funclet bundle is present, will insert
 the `coro.end`_ intrinsic and will remove the rest of the block.
 
 In the unwind path (when the argument is `true`), `coro.end` will mark the coroutine
-as done, making it undefined behavior to resume the coroutine again and causing 
+as done, making it undefined behavior to resume the coroutine again and causing
 `llvm.coro.done` to return `true`.  This is not necessary in the normal path because
 the coroutine will already be marked as done by the final suspend.
 
@@ -1486,7 +1486,7 @@ The number of arguments must match the return type of the continuation function:
   ...
 
   declare i8 @prototype(ptr, i1 zeroext)
-  
+
 
 'llvm.coro.end.async' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

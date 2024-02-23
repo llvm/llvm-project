@@ -118,7 +118,7 @@ multiclass VectorScatter<ValueType DataVT,
   // Unmasked.
   def : Pat<(vvp_scatter
                DataVT:$data, PtrVT:$addr, (MaskVT true_mask), i32:$avl),
-            (!cast<Instruction>(SCPrefix#"vizvl") $addr, 0, 0, $data, $avl)>; 
+            (!cast<Instruction>(SCPrefix#"vizvl") $addr, 0, 0, $data, $avl)>;
   // Masked.
   def : Pat<(vvp_scatter
                DataVT:$data, PtrVT:$addr, MaskVT:$mask, i32:$avl),
@@ -472,7 +472,7 @@ multiclass Ternary_rvv<
               $sx, $vy, $vz, $avl)>;
 
   // Masked, broadcast first.
-  def : Pat<(OpNode 
+  def : Pat<(OpNode
               (any_broadcast ScalarVT:$sx), DataVT:$vy, DataVT:$vz,
               MaskVT:$mask, i32:$avl),
             (!cast<Instruction>(OpBaseName#"rvvml")

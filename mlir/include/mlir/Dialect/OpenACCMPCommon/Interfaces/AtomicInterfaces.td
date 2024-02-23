@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines the operation interface for atomic operations used in OpenACC and 
+// Defines the operation interface for atomic operations used in OpenACC and
 // OpenMP.
 //
 //===----------------------------------------------------------------------===//
@@ -118,7 +118,7 @@ def AtomicUpdateOpInterface : OpInterface<"AtomicUpdateOpInterface"> {
 
     The interface terminology uses `x` to specify the address where a value
     is atomically written/read.
-    
+
     Since atomic update expression comes in many forms, this interface requires
     that the operation uses a region with a single argument to capture the
     expression.
@@ -162,9 +162,9 @@ def AtomicUpdateOpInterface : OpInterface<"AtomicUpdateOpInterface"> {
       /*defaultImplementation=*/[{
         // The atomic update is a no-op if the terminator is the first and only
         // operation in its region.
-        mlir::Operation* terminator = 
+        mlir::Operation* terminator =
           llvm::dyn_cast<mlir::RegionBranchTerminatorOpInterface>($_op.getFirstOp());
-        return terminator && terminator->getOperands().front() == 
+        return terminator && terminator->getOperands().front() ==
           $_op.getRegion().front().getArgument(0);
       }]
     >,
@@ -177,9 +177,9 @@ def AtomicUpdateOpInterface : OpInterface<"AtomicUpdateOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        mlir::Operation* terminator = 
+        mlir::Operation* terminator =
           llvm::dyn_cast<mlir::RegionBranchTerminatorOpInterface>($_op.getFirstOp());
-        if (terminator && terminator->getOperands().front() != 
+        if (terminator && terminator->getOperands().front() !=
           $_op.getRegion().front().getArgument(0)) {
           return terminator->getOperands().front();
         }
@@ -219,7 +219,7 @@ def AtomicUpdateOpInterface : OpInterface<"AtomicUpdateOpInterface"> {
 
         if (terminator->getOperands().size() != 1)
           return $_op.emitError("only updated value must be returned");
-    
+
         if (terminator->getOperands().front().getType() !=
             $_op.getRegion().getArgument(0).getType())
           return $_op.emitError("input and yielded value must have the same type");

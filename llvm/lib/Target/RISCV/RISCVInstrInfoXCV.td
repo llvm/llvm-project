@@ -564,7 +564,7 @@ let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0,
   def CV_LW_rr_inc  : CVLoad_rr_inc<0b0000010, 0b011, "cv.lw">;
 }
 
-let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0, 
+let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0,
                  mayLoad = 1, mayStore = 0 in {
   // Register-Register load
   def CV_LB_rr  : CVLoad_rr<0b0000100, 0b011, "cv.lb">;
@@ -575,7 +575,7 @@ let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0,
 }
 
 class CVStore_ri_inc<bits<3> funct3, string opcodestr>
-    : RVInstS<funct3, OPC_CUSTOM_1, (outs GPR:$rs1_wb), 
+    : RVInstS<funct3, OPC_CUSTOM_1, (outs GPR:$rs1_wb),
               (ins GPR:$rs2, GPR:$rs1, simm12:$imm12),
               opcodestr, "$rs2, (${rs1}), ${imm12}"> {
   let Constraints = "$rs1_wb = $rs1";
@@ -614,7 +614,7 @@ class CVStore_rr<bits<3> funct3, bits<7> funct7, dag outs, dag ins,
   let DecoderNamespace = "XCVmem";
 }
 
-let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0, 
+let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0,
                  mayLoad = 0, mayStore = 1, Constraints = "$rs1_wb = $rs1" in {
   // Register-Immediate store with post-increment
   def CV_SB_ri_inc : CVStore_ri_inc<0b000, "cv.sb">;
@@ -622,19 +622,19 @@ let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0,
   def CV_SW_ri_inc : CVStore_ri_inc<0b010, "cv.sw">;
 
   // Register-Register store with post-increment
-  def CV_SB_rr_inc : CVStore_rr_inc<0b011, 0b0010000, 
+  def CV_SB_rr_inc : CVStore_rr_inc<0b011, 0b0010000,
                      (outs GPR:$rs1_wb), (ins GPR:$rs2, GPR:$rs1, GPR:$rs3),
                       "cv.sb", "$rs2, (${rs1}), ${rs3}">;
-  def CV_SH_rr_inc : CVStore_rr_inc<0b011, 0b0010001, 
+  def CV_SH_rr_inc : CVStore_rr_inc<0b011, 0b0010001,
                      (outs GPR:$rs1_wb), (ins GPR:$rs2, GPR:$rs1, GPR:$rs3),
                       "cv.sh", "$rs2, (${rs1}), ${rs3}">;
-  def CV_SW_rr_inc : CVStore_rr_inc<0b011, 0b0010010, 
+  def CV_SW_rr_inc : CVStore_rr_inc<0b011, 0b0010010,
                      (outs GPR:$rs1_wb), (ins GPR:$rs2, GPR:$rs1, GPR:$rs3),
                       "cv.sw", "$rs2, (${rs1}), ${rs3}">;
 }
 
 
-let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0, 
+let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0,
                   mayLoad = 0, mayStore = 1 in {
   // Register-Register store
   def CV_SB_rr : CVStore_rr<0b011, 0b0010100,
@@ -646,14 +646,14 @@ let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0,
   def CV_SW_rr : CVStore_rr<0b011, 0b0010110,
                  (outs), (ins GPR:$rs2, CVrr:$cvrr),
                  "cv.sw", "$rs2, $cvrr">;
-} 
+}
 
 let DecoderNamespace = "XCVelw" in
 class CVLoad_ri<bits<3> funct3, string opcodestr>
-    : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd), 
+    : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd),
       (ins GPRMem:$rs1, simm12:$imm12), opcodestr, "$rd, ${imm12}(${rs1})">;
 
-let Predicates = [HasVendorXCVelw, IsRV32], hasSideEffects = 0, 
+let Predicates = [HasVendorXCVelw, IsRV32], hasSideEffects = 0,
     mayLoad = 1, mayStore = 0 in {
   // Event load
   def CV_ELW : CVLoad_ri<0b011, "cv.elw">;
@@ -676,7 +676,7 @@ def CV_HI5: SDNodeXForm<imm, [{
 multiclass PatCoreVBitManip<Intrinsic intr> {
   def : PatGprGpr<intr, !cast<RVInst>("CV_" # NAME # "R")>;
   def : Pat<(intr GPR:$rs1, cv_uimm10:$imm),
-            (!cast<RVInst>("CV_" # NAME) 
+            (!cast<RVInst>("CV_" # NAME)
              GPR:$rs1, (CV_HI5 cv_uimm10:$imm), (CV_LO5 cv_uimm10:$imm))>;
 }
 
@@ -689,7 +689,7 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32] in {
   def : Pat<(int_riscv_cv_bitmanip_insert GPR:$rs1, GPR:$rs2, GPR:$rd),
             (CV_INSERTR GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(int_riscv_cv_bitmanip_insert GPR:$rs1, cv_uimm10:$imm, GPR:$rd),
-            (CV_INSERT GPR:$rd, GPR:$rs1, (CV_HI5 cv_uimm10:$imm), 
+            (CV_INSERT GPR:$rd, GPR:$rs1, (CV_HI5 cv_uimm10:$imm),
                                           (CV_LO5 cv_uimm10:$imm))>;
 
   def : PatGpr<cttz, CV_FF1>;
@@ -699,7 +699,7 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32] in {
 
   def : PatGprGpr<rotr, CV_ROR>;
 
-  def : Pat<(int_riscv_cv_bitmanip_bitrev GPR:$rs1, cv_tuimm5:$pts, 
+  def : Pat<(int_riscv_cv_bitmanip_bitrev GPR:$rs1, cv_tuimm5:$pts,
              cv_tuimm2:$radix),
             (CV_BITREV GPR:$rs1, cv_tuimm2:$radix, cv_tuimm5:$pts)>;
   def : Pat<(bitreverse (XLenVT GPR:$rs)), (CV_BITREV GPR:$rs, 0, 0)>;

@@ -164,7 +164,7 @@ non-obvious ways.  Here are some hints and tips:
 
 What to do when bugpoint isn't enough
 =====================================
-	
+
 Sometimes, ``bugpoint`` is not enough. In particular, InstCombine and
 TargetLowering both have visitor structured code with lots of potential
 transformations.  If the process of using bugpoint has left you with still too

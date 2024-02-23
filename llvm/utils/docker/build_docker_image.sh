@@ -63,11 +63,11 @@ version of clang.
 
 To get a 2-stage clang build, you could use this command:
 $ ./build_docker_image.sh -s debian10 -d mydocker/clang-debian10 -t "latest" \
-    -p clang -i stage2-install-clang -i stage2-install-clang-resource-headers \ 
-    -- \ 
-    -DLLVM_TARGETS_TO_BUILD=Native -DCMAKE_BUILD_TYPE=Release \ 
-    -DBOOTSTRAP_CMAKE_BUILD_TYPE=Release \ 
-    -DCLANG_ENABLE_BOOTSTRAP=ON \ 
+    -p clang -i stage2-install-clang -i stage2-install-clang-resource-headers \
+    -- \
+    -DLLVM_TARGETS_TO_BUILD=Native -DCMAKE_BUILD_TYPE=Release \
+    -DBOOTSTRAP_CMAKE_BUILD_TYPE=Release \
+    -DCLANG_ENABLE_BOOTSTRAP=ON \
     -DCLANG_BOOTSTRAP_TARGETS="install-clang;install-clang-resource-headers"
 EOF
 }

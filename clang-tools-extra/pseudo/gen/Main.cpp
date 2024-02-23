@@ -84,7 +84,7 @@ std::string mangleSymbol(SymbolID SID, const Grammar &G) {
 }
 
 // Mangles the RHS of a rule definition into a valid identifier.
-// 
+//
 // These are unique only for a fixed LHS.
 // e.g. for the grammar rule `ptr-declarator := ptr-operator ptr-declarator`,
 // it is `ptr_operator__ptr_declarator`.

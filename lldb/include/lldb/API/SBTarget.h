@@ -336,7 +336,7 @@ public:
   uint32_t GetAddressByteSize();
 
   const char *GetTriple();
-  
+
   const char *GetABIName();
 
   const char *GetLabel() const;

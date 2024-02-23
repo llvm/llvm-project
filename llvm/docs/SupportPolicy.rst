@@ -201,7 +201,7 @@ about it. In that sense, code will never be removed outright without a series
 of steps are taken.
 
 A minimum set of steps should be:
- #. A proposal for removal / deactivation should be made to the Discourse forums 
+ #. A proposal for removal / deactivation should be made to the Discourse forums
     (under the appropriate category), with a clear
     statement of the maintenance costs imposed and the alternatives, if
     applicable.

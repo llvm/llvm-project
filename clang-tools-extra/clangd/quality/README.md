@@ -3,7 +3,7 @@
 ## Decision Forest
 A **decision forest** is a collection of many decision trees. A **decision tree** is a full binary tree that provides a quality prediction for an input (code completion item). Internal nodes represent a **binary decision** based on the input data, and leaf nodes represent a prediction.
 
-In order to predict the relevance of a code completion item, we traverse each of the decision trees beginning with their roots until we reach a leaf. 
+In order to predict the relevance of a code completion item, we traverse each of the decision trees beginning with their roots until we reach a leaf.
 
 An input (code completion candidate) is characterized as a set of **features**, such as the *type of symbol* or the *number of existing references*.
 
@@ -18,7 +18,7 @@ To compute an overall **quality** score, we traverse each tree in this way and a
 The input model is represented in json format.
 
 ### Features
-The file **features.json** defines the features available to the model. 
+The file **features.json** defines the features available to the model.
 It is a json list of features. The features can be of following two kinds.
 
 #### Number
@@ -80,7 +80,7 @@ The file `forest.json` defines the  decision forest. It is a json list of **Deci
 The implementation of inference runtime is split across:
 
 ### Code generator
-The code generator `CompletionModelCodegen.py` takes input the `${model}` dir and generates the inference library: 
+The code generator `CompletionModelCodegen.py` takes input the `${model}` dir and generates the inference library:
 - `${output_dir}/{filename}.h`
 - `${output_dir}/{filename}.cpp`
 
@@ -93,14 +93,14 @@ python3 CompletionModelCodegen.py \
         --cpp_class clang::clangd::YourExampleClass
 ```
 ### Build System
-`CompletionModel.cmake` provides `gen_decision_forest` method . 
+`CompletionModel.cmake` provides `gen_decision_forest` method .
 Client intending to use the CompletionModel for inference can use this to trigger the code generator and generate the inference library.
 It can then use the generated API by including and depending on this library.
 
 ### Generated API for inference
 The code generator defines the Example `class` inside relevant namespaces as specified in option `${cpp_class}`.
 
-Members of this generated class comprises of all the features mentioned in `features.json`. 
+Members of this generated class comprises of all the features mentioned in `features.json`.
 Thus this class can represent a code completion candidate that needs to be scored.
 
 The API also provides `float Evaluate(const MyClass&)` which can be used to score the completion candidate.
@@ -204,11 +204,11 @@ float Evaluate(const Example&);
 ```
 
 ### CMake Invocation
-Inorder to use the inference runtime, one can use `gen_decision_forest` function 
+Inorder to use the inference runtime, one can use `gen_decision_forest` function
 described in `CompletionModel.cmake` which invokes `CodeCompletionCodegen.py` with the appropriate arguments.
 
-For example, the following invocation reads the model present in `path/to/model` and creates 
-`${CMAKE_CURRENT_BINARY_DIR}/myfilename.h` and `${CMAKE_CURRENT_BINARY_DIR}/myfilename.cpp` 
+For example, the following invocation reads the model present in `path/to/model` and creates
+`${CMAKE_CURRENT_BINARY_DIR}/myfilename.h` and `${CMAKE_CURRENT_BINARY_DIR}/myfilename.cpp`
 describing a `class` named `MyClass` in namespace `fully::qualified`.
 
 

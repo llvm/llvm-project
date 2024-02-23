@@ -140,7 +140,7 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     //   %18 = fir.field_index proc, !fir.type<_QM__fortran_type_infoTbinding>
     //   %19 = fir.coordinate_of %17, %18 : (!fir.ref<!fir.type<_QM__fortran_type_infoTbinding>>, !fir.field) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr>>
     //   %20 = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_funptr>
-    //   %21 = fir.coordinate_of %19, %20 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr>>, !fir.field) -> !fir.ref<i64> 
+    //   %21 = fir.coordinate_of %19, %20 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr>>, !fir.field) -> !fir.ref<i64>
     //   %22 = fir.load %21 : !fir.ref<i64>
     //   %23 = fir.convert %22 : (i64) -> (() -> ())
     //   fir.call %23()  : () -> ()

@@ -115,7 +115,7 @@ kern_return_t MachTask::Resume() {
                         "( target_task = 0x%4.4x )", task);
     }
     m_do_double_resume = false;
-      
+
     // task_resume isn't counted like task_suspend calls are, are, so if the
     // task is not suspended, don't try and resume it since it is already
     // running
@@ -433,14 +433,14 @@ std::string MachTask::GetProfileData(DNBProfileDataScanType scanType) {
       if (scanType & eProfileMemoryAnonymous) {
         profile_data_stream << "anonymous:" << anonymous << ';';
       }
-      
+
       profile_data_stream << "phys_footprint:" << phys_footprint << ';';
     }
-    
+
     if (scanType & eProfileMemoryCap) {
       profile_data_stream << "mem_cap:" << memory_cap << ';';
     }
-    
+
 #ifdef LLDB_ENERGY
     if (scanType & eProfileEnergy) {
       struct rusage_info_v2 info;
@@ -605,8 +605,7 @@ bool MachTask::IsValid(task_t task) {
 }
 
 bool MachTask::StartExceptionThread(
-        const RNBContext::IgnoredExceptions &ignored_exceptions, 
-        DNBError &err) {
+    const RNBContext::IgnoredExceptions &ignored_exceptions, DNBError &err) {
   DNBLogThreadedIf(LOG_EXCEPTIONS, "MachTask::%s ( )", __FUNCTION__);
 
   task_t task = TaskPortForProcessID(err);

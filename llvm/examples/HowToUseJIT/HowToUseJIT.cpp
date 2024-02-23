@@ -15,7 +15,7 @@
 //
 // Goal:
 //  The goal of this snippet is to create in the memory
-//  the LLVM module consisting of two functions as follow: 
+//  the LLVM module consisting of two functions as follow:
 //
 // int add1(int x) {
 //   return x+1;
@@ -67,7 +67,7 @@ int main() {
   LLVMInitializeNativeAsmPrinter();
 
   LLVMContext Context;
-  
+
   // Create some module to put our function into it.
   std::unique_ptr<Module> Owner = std::make_unique<Module>("test", Context);
   Module *M = Owner.get();

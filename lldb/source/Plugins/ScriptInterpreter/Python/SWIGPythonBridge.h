@@ -215,7 +215,7 @@ public:
                                   lldb::ExecutionContextRefSP exe_ctx_ref_sp);
   static bool
   LLDBSwigPythonCallParsedCommandObject(PyObject *implementor,
-                                  lldb::DebuggerSP debugger,  
+                                  lldb::DebuggerSP debugger,
                                   StructuredDataImpl &args_impl,
                                   lldb_private::CommandReturnObject &cmd_retobj,
                                   lldb::ExecutionContextRefSP exe_ctx_ref_sp);

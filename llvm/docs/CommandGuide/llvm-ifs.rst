@@ -163,7 +163,7 @@ OPTIONS
  triple in the output IFS file. If the value matches the target information
  from the object file, this value will be used in the 'Target:' filed in the
  generated IFS. If it conflicts with the input object file, an error will be
- reported and the program will stop. 
+ reported and the program will stop.
 
 .. option:: --hint-ifs-target
 

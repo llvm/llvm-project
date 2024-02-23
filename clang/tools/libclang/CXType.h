@@ -18,8 +18,7 @@
 
 namespace clang {
 namespace cxtype {
-  
+
 CXType MakeCXType(QualType T, CXTranslationUnit TU);
-  
 }} // end namespace clang::cxtype
 #endif

@@ -100,7 +100,7 @@ this command will do that:
 	-DLLVM_TARGETS_TO_BUILD=Native -DCMAKE_BUILD_TYPE=Release \
 	-DBOOTSTRAP_CMAKE_BUILD_TYPE=Release \
 	-DCLANG_ENABLE_BOOTSTRAP=ON -DCLANG_BOOTSTRAP_TARGETS="install-clang;install-clang-resource-headers"
-	
+
 This will produce a new image ``clang-debian10:staging`` from the latest
 upstream revision.
 After the image is built you can run bash inside a container based on your image

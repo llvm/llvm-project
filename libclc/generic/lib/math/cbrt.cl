@@ -138,7 +138,7 @@ _CLC_OVERLOAD _CLC_DEF double cbrt(double x) {
     double F_h = tv.s0;
     double F_t = tv.s1;
 
-    double b_h = F_h * Rem_h; 
+    double b_h = F_h * Rem_h;
     double b_t = fma(Rem_t, F_h, fma(F_t, Rem_h, F_t*Rem_t));
 
     double ans = fma(z, b_h, fma(z, b_t, b_t)) + b_h;

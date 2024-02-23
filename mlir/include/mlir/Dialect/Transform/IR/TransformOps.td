@@ -742,7 +742,7 @@ def GetOperandOp : TransformDialectOp<"get_operand",
      - Inverted position list, i.e. `%target[except(0, 1, 2)]`. This will return
        all operands except those at the given positions.
      - All, i.e. `%target[all]`. This will return all operands of the operation.
-    
+
     This transform produces a silenceable failure if any of the operand indices
     exceeds the number of operands in the target. It reads the target handle and
     produces the result handle.
@@ -768,7 +768,7 @@ def GetResultOp : TransformDialectOp<"get_result",
     The handle defined by this Transform op correspond to the OpResults of the
     given `target` operation. Optionally `result_number` can be specified to
     select a specific result.
-    
+
     This transform fails silently if the targeted operation does not have enough
     results. It reads the target handle and produces the result handle.
 
@@ -781,7 +781,7 @@ def GetResultOp : TransformDialectOp<"get_result",
      - Inverted position list, i.e. `%target[except(0, 1, 2)]`. This will return
        all results except those at the given positions.
      - All, i.e. `%target[all]`. This will return all results of the operation.
-    
+
     This transform produces a silenceable failure if any of the result indices
     exceeds the number of results returned by the target. It reads the target
     handle and produces the result handle.

@@ -41,8 +41,8 @@ AST_MATCHER_P(Stmt, IgnoringTemporaries, ast_matchers::internal::Matcher<Stmt>,
 
 void StrCatAppendCheck::registerMatchers(MatchFinder *Finder) {
   const auto StrCat = functionDecl(hasName("::absl::StrCat"));
-  // The arguments of absl::StrCat are implicitly converted to AlphaNum. This 
-  // matches to the arguments because of that behavior. 
+  // The arguments of absl::StrCat are implicitly converted to AlphaNum. This
+  // matches to the arguments because of that behavior.
   const auto AlphaNum = IgnoringTemporaries(cxxConstructExpr(
       argumentCountIs(1), hasType(cxxRecordDecl(hasName("::absl::AlphaNum"))),
       hasArgument(0, ignoringImpCasts(declRefExpr(to(equalsBoundNode("LHS")),

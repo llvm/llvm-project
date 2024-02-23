@@ -478,7 +478,7 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
     /// when building the attribute. The provided `blobName` is used as a hint
     /// for the key of the new handle for the `blob` resource, but may be
     /// changed if necessary to ensure uniqueness during insertion.
-    /// This base class builder does no element type specific size or alignment 
+    /// This base class builder does no element type specific size or alignment
     /// checking. Use the typed subclasses for more safety unless if performing
     /// generic operations.
     AttrBuilderWithInferredContext<(ins

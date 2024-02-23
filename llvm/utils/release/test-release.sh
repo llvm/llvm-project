@@ -482,7 +482,7 @@ function configure_llvmCore() {
       # compiler-rt builtins is needed on AIX to have a functional Phase 1 clang.
       if [ "$System" = "AIX" ]; then
         runtime_list="compiler-rt"
-      fi  
+      fi
     else
       runtime_list="$runtimes"
     fi

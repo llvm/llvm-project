@@ -826,7 +826,7 @@ bool Value::canBeFreed() const {
   // which is why we need the explicit opt in on a per collector basis.
   if (!F->hasGC())
     return true;
-  
+
   const auto &GCName = F->getGC();
   if (GCName == "statepoint-example") {
     auto *PT = cast<PointerType>(this->getType());

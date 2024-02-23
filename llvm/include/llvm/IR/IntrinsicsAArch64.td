@@ -1367,7 +1367,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  llvm_i32_ty,
                  llvm_i32_ty],
                 [IntrNoMem, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
-  
+
   class SVE2_1VectorArg_Pred_Intrinsic
     : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                             [llvm_anyvector_ty],
@@ -1377,7 +1377,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
     : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                             [llvm_anyvector_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
-  
+
   class SVE2_Pred_1VectorArgIndexed_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>,
@@ -3588,7 +3588,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_luti4_lane_zt
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
                             [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
-                            
+
   // Lookup table expand two registers
   //
   def int_aarch64_sme_luti2_lane_zt_x2
@@ -3597,7 +3597,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_luti4_lane_zt_x2
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
                             [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
-                            
+
   //
   // Lookup table expand four registers
   //
@@ -3631,10 +3631,10 @@ def int_aarch64_sve_extq : AdvSIMD_2VectorArgIndexed_Intrinsic;
 //
 // SVE2.1 - Move predicate to/from vector
 //
-def int_aarch64_sve_pmov_to_pred_lane : SVE2_1VectorArgIndexed_Pred_Intrinsic; 
-    
+def int_aarch64_sve_pmov_to_pred_lane : SVE2_1VectorArgIndexed_Pred_Intrinsic;
+
 def int_aarch64_sve_pmov_to_pred_lane_zero : SVE2_1VectorArg_Pred_Intrinsic;
 
 def int_aarch64_sve_pmov_to_vector_lane_merging : SVE2_Pred_1VectorArgIndexed_Intrinsic;
-   
+
 def int_aarch64_sve_pmov_to_vector_lane_zeroing : SVE2_Pred_1VectorArg_Intrinsic;

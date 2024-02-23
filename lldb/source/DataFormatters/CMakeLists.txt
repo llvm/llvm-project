@@ -22,7 +22,7 @@ add_lldb_library(lldbDataFormatters NO_PLUGIN_DEPENDENCIES
     lldbSymbol
     lldbTarget
     lldbUtility
-  
+
   LINK_COMPONENTS
     Support
   )

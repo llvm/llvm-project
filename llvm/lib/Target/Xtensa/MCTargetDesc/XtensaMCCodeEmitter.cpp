@@ -261,7 +261,7 @@ XtensaMCCodeEmitter::getMemRegEncoding(const MCInst &MI, unsigned OpNo,
     Res >>= 2;
     break;
   }
-  
+
   assert((isUInt<8>(Res)) && "Unexpected operand value!");
 
   uint32_t OffBits = Res << 4;

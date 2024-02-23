@@ -37,4 +37,4 @@ Options
 
     #define IS_SIGNED(T) std::is_signed<T>::value
 
-  Defaults to `false`. 
+  Defaults to `false`.

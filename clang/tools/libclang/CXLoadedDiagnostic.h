@@ -61,7 +61,7 @@ public:
   static bool classof(const CXDiagnosticImpl *D) {
     return D->getKind() == LoadedDiagnosticKind;
   }
-  
+
   /// Decode the CXSourceLocation into file, line, column, and offset.
   static void decodeLocation(CXSourceLocation location,
                              CXFile *file,
@@ -74,10 +74,10 @@ public:
     unsigned line = 0;
     unsigned column = 0;
     unsigned offset = 0;
-    
+
     Location() = default;
   };
-  
+
   Location DiagLoc;
 
   std::vector<CXSourceRange> Ranges;

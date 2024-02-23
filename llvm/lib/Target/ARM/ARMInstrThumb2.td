@@ -3202,7 +3202,7 @@ def t2SMLAWT : T2FourRegSMLA<0b011, 0b01, "smlawt",
 
 def : Thumb2DSPMulPat<(add rGPR:$Ra, (mul sext_16_node:$Rn, sext_16_node:$Rm)),
                       (t2SMLABB rGPR:$Rn, rGPR:$Rm, rGPR:$Ra)>;
-def : Thumb2DSPMulPat<(add rGPR:$Ra, (mul sext_16_node:$Rn, 
+def : Thumb2DSPMulPat<(add rGPR:$Ra, (mul sext_16_node:$Rn,
                                           (sext_bottom_16 rGPR:$Rm))),
                       (t2SMLABB rGPR:$Rn, rGPR:$Rm, rGPR:$Ra)>;
 def : Thumb2DSPMulPat<(add rGPR:$Ra, (mul sext_16_node:$Rn,

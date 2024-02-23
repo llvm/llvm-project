@@ -44,7 +44,7 @@ def MonotonicTypePred
 def IntPred : Constraint<CPred<
                        "$0.getType().isa<mlir::IntegerType>() && "
                        "$1.getType().isa<mlir::IntegerType>()">>;
-                       
+
 // If both are int type and the first is smaller than the second.
 //   $0.bits <= $1.bits
 def SmallerWidthPred : Constraint<CPred<

@@ -69,7 +69,7 @@ static inline bool isNotUsableTU(CXTranslationUnit TU) {
 
 class CXTUOwner {
   CXTranslationUnitImpl *TU;
-  
+
 public:
   CXTUOwner(CXTranslationUnitImpl *tu) : TU(tu) { }
   ~CXTUOwner();

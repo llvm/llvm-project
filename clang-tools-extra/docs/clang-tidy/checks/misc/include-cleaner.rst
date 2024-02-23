@@ -10,7 +10,7 @@ Findings correspond to https://clangd.llvm.org/design/include-cleaner.
 Example:
 
 .. code-block:: c++
-   
+
    // foo.h
    class Foo{};
    // bar.h
@@ -31,7 +31,7 @@ Options
 
    A semicolon-separated list of regexes to disable insertion/removal of header
    files that match this regex as a suffix.  E.g., `foo/.*` disables
-   insertion/removal for all headers under the directory `foo`. By default, no 
+   insertion/removal for all headers under the directory `foo`. By default, no
    headers will be ignored.
 
 .. option:: DeduplicateFindings

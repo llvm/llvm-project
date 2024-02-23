@@ -24,7 +24,7 @@ closedir DIR;
 # Gather definitions from the libraries
 foreach $lib (@objects) {
   my $head = 0;
-  open SYMS, 
+  open SYMS,
     "nm $Directory/$lib | grep '$Symbol' | sort --key=3 | uniq |";
   while (<SYMS>) {
     if (!$head) { print "$lib:\n"; $head = 1; }

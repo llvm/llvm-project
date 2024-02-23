@@ -8,7 +8,7 @@
 //
 // Implements HandleLLVM for use by the Clang fuzzers. First runs a loop
 // vectorizer optimization pass over the given IR code. Then mimics lli on both
-// versions to JIT the generated code and execute it. Currently, functions are 
+// versions to JIT the generated code and execute it. Currently, functions are
 // executed on dummy inputs.
 //
 //===----------------------------------------------------------------------===//
@@ -69,7 +69,7 @@ static void ErrorAndExit(std::string message) {
   std::exit(1);
 }
 
-// Helper function to add optimization passes to the TargetMachine at the 
+// Helper function to add optimization passes to the TargetMachine at the
 // specified optimization level, OptLevel
 static void RunOptimizationPasses(raw_ostream &OS, Module &M,
                                   CodeGenOptLevel OptLevel) {

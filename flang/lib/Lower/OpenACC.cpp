@@ -2555,8 +2555,8 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
                                   waitOperandsDeviceTypes, waitOnlyDeviceTypes,
                                   hasWaitDevnums, waitOperandsSegments,
                                   crtDeviceTypes, stmtCtx);
-    } else if(const auto *defaultClause = 
-                  std::get_if<Fortran::parser::AccClause::Default>(&clause.u)) {
+    } else if (const auto *defaultClause =
+                   std::get_if<Fortran::parser::AccClause::Default>(&clause.u)) {
       if ((defaultClause->v).v == llvm::acc::DefaultValue::ACC_Default_none)
         hasDefaultNone = true;
       else if ((defaultClause->v).v == llvm::acc::DefaultValue::ACC_Default_present)

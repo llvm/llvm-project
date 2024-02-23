@@ -9,7 +9,7 @@ CONTAINER_PART(OSG1)
 CONTAINER_PART(PSG1)
 
 #undef CONTAINER_PART
-#endif 
+#endif
 
 #ifdef SHADER_FLAG
 

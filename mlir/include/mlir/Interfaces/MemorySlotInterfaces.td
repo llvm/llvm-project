@@ -73,7 +73,7 @@ def PromotableAllocationOpInterface
       }],
       "void", "handlePromotionComplete",
       (ins
-        "const ::mlir::MemorySlot &":$slot, 
+        "const ::mlir::MemorySlot &":$slot,
         "::mlir::Value":$defaultValue,
         "::mlir::RewriterBase &":$rewriter)
     >,

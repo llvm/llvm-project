@@ -68,7 +68,7 @@ def MPI_SendOp : MPI_Op<"send", []> {
       "Equivalent to `MPI_Send(ptr, size, dtype, dest, tag, MPI_COMM_WORLD)`";
   let description = [{
     MPI_Send performs a blocking send of `size` elements of type `dtype` to rank
-    `dest`. The `tag` value and communicator enables the library to determine 
+    `dest`. The `tag` value and communicator enables the library to determine
     the matching of multiple sends and receives between the same ranks.
 
     Communicators other than `MPI_COMM_WORLD` are not supprted for now.
@@ -94,13 +94,13 @@ def MPI_RecvOp : MPI_Op<"recv", []> {
   let summary = "Equivalent to `MPI_Recv(ptr, size, dtype, dest, tag, "
                 "MPI_COMM_WORLD, MPI_STATUS_IGNORE)`";
   let description = [{
-    MPI_Recv performs a blocking receive of `size` elements of type `dtype` 
-    from rank `dest`. The `tag` value and communicator enables the library to 
-    determine the matching of multiple sends and receives between the same 
+    MPI_Recv performs a blocking receive of `size` elements of type `dtype`
+    from rank `dest`. The `tag` value and communicator enables the library to
+    determine the matching of multiple sends and receives between the same
     ranks.
 
     Communicators other than `MPI_COMM_WORLD` are not supprted for now.
-    The MPI_Status is set to `MPI_STATUS_IGNORE`, as the status object 
+    The MPI_Status is set to `MPI_STATUS_IGNORE`, as the status object
     is not yet ported to MLIR.
 
     This operation can optionally return an `!mpi.retval` value that can be used
@@ -124,7 +124,7 @@ def MPI_RecvOp : MPI_Op<"recv", []> {
 def MPI_FinalizeOp : MPI_Op<"finalize", []> {
   let summary = "Finalize the MPI library, equivalent to `MPI_Finalize()`";
   let description = [{
-    This function cleans up the MPI state. Afterwards, no MPI methods may 
+    This function cleans up the MPI state. Afterwards, no MPI methods may
     be invoked (excpet for MPI_Get_version, MPI_Initialized, and MPI_Finalized).
     Notably, MPI_Init cannot be called again in the same program.
 

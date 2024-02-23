@@ -721,7 +721,7 @@ def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">;
 def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
 
 // AIX assembler may not be modern enough to support some extended mne.
-def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">, 
+def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">,
                  AssemblerPredicate<(any_of (not AIXOS), FeatureModernAIXAs)>;
 def IsAIX : Predicate<"Subtarget->isAIXABI()">;
 def NotAIX : Predicate<"!Subtarget->isAIXABI()">;

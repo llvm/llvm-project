@@ -202,12 +202,12 @@ def CC_PPC32_SVR4_Common : CallingConv<[
   // The ABI requires i64 to be passed in two adjacent registers with the first
   // register having an odd register number.
   CCIfType<[i32],
-  CCIfSplit<CCIfSubtarget<"useSoftFloat()", 
+  CCIfSplit<CCIfSubtarget<"useSoftFloat()",
             CCIfOrigArgWasNotPPCF128<
             CCCustom<"CC_PPC32_SVR4_Custom_AlignArgRegs">>>>>,
-  
+
   CCIfType<[i32],
-  CCIfSplit<CCIfNotSubtarget<"useSoftFloat()", 
+  CCIfSplit<CCIfNotSubtarget<"useSoftFloat()",
                             CCCustom<"CC_PPC32_SVR4_Custom_AlignArgRegs">>>>,
   CCIfType<[f64],
   CCIfSubtarget<"hasSPE()",
@@ -225,7 +225,7 @@ def CC_PPC32_SVR4_Common : CallingConv<[
   // Make sure the i64 words from a long double are either both passed in
   // registers or both passed on the stack.
   CCIfType<[f64], CCIfSplit<CCCustom<"CC_PPC32_SVR4_Custom_AlignFPArgRegs">>>,
-  
+
   // FP values are passed in F1 - F8.
   CCIfType<[f32, f64],
            CCIfNotSubtarget<"hasSPE()",
@@ -239,9 +239,9 @@ def CC_PPC32_SVR4_Common : CallingConv<[
 
   // Split arguments have an alignment of 8 bytes on the stack.
   CCIfType<[i32], CCIfSplit<CCAssignToStack<4, 8>>>,
-  
+
   CCIfType<[i32], CCAssignToStack<4, 4>>,
-  
+
   CCIfType<[f32], CCAssignToStack<4, 4>>,
   CCIfType<[f64], CCAssignToStack<8, 8>>,
 
@@ -271,9 +271,9 @@ def CC_PPC32_SVR4 : CallingConv<[
   CCIfType<[f128],
            CCIfSubtarget<"hasAltivec()", CCAssignToReg<[V2, V3, V4, V5, V6, V7,
                           V8, V9, V10, V11, V12, V13]>>>,
-           
+
   CCDelegateTo<CC_PPC32_SVR4_Common>
-]>;  
+]>;
 
 // Helper "calling convention" to handle aggregate by value arguments.
 // Aggregate by value arguments are always placed in the local variable space
@@ -287,11 +287,11 @@ def CC_PPC32_SVR4 : CallingConv<[
 //
 // The only purpose of CC_PPC32_SVR4_Custom_Dummy is to skip arguments which are
 // not passed by value.
- 
+
 let Entry = 1 in
 def CC_PPC32_SVR4_ByVal : CallingConv<[
   CCIfByVal<CCPassByVal<4, 4>>,
-  
+
   CCCustom<"CC_PPC32_SVR4_Custom_Dummy">
 ]>;
 
@@ -308,7 +308,7 @@ def CSR_SVR432 :  CalleeSavedRegs<(add CSR_SVR432_COMM, F14, F15, F16, F17, F18,
                                         F27, F28, F29, F30, F31
                                    )>;
 def CSR_SPE : CalleeSavedRegs<(add S14, S15, S16, S17, S18, S19, S20, S21, S22,
-                                   S23, S24, S25, S26, S27, S28, S29, S30 
+                                   S23, S24, S25, S26, S27, S28, S29, S30
                               )>;
 
 def CSR_SPE_NO_S30_31 : CalleeSavedRegs<(add S14, S15, S16, S17, S18, S19, S20, S21,

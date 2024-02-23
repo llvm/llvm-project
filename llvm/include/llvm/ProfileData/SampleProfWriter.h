@@ -206,9 +206,9 @@ protected:
   std::error_code writeBody(const FunctionSamples &S);
   inline void stablizeNameTable(MapVector<FunctionId, uint32_t> &NameTable,
                                 std::set<FunctionId> &V);
-  
+
   MapVector<FunctionId, uint32_t> NameTable;
-  
+
   void addName(FunctionId FName);
   virtual void addContext(const SampleContext &Context);
   void addNames(const FunctionSamples &S);

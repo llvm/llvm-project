@@ -20,10 +20,10 @@ def Arith_Dialect : Dialect {
     mathematical operations. This includes unary, binary, and ternary arithmetic
     ops, bitwise and shift ops, cast ops, and compare ops. Operations in this
     dialect also accept vectors and tensors of integers or floats. The dialect
-    assumes integers are represented by bitvectors with a two's complement 
-    representation. Unless otherwise stated, the operations within this dialect 
-    propagate poison values, i.e., if any of its inputs are poison, then the 
-    output is poison. Unless otherwise stated, operations applied to `vector` 
+    assumes integers are represented by bitvectors with a two's complement
+    representation. Unless otherwise stated, the operations within this dialect
+    propagate poison values, i.e., if any of its inputs are poison, then the
+    output is poison. Unless otherwise stated, operations applied to `vector`
     and `tensor` values propagates poison elementwise.
   }];
 

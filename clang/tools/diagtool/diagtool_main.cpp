@@ -21,5 +21,5 @@ int main(int argc, char *argv[]) {
 
   llvm::errs() << "usage: diagtool <command> [<args>]\n\n";
   diagTools->printCommands(llvm::errs());
-  return 1;    
+  return 1;
 }

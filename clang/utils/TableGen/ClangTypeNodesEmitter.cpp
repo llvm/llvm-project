@@ -112,7 +112,7 @@ void TypeNodeEmitter::emit() {
   emitFallbackDefine(AbstractTypeMacroName, TypeMacroName, TypeMacroArgs);
   emitFallbackDefine(NonCanonicalTypeMacroName, TypeMacroName, TypeMacroArgs);
   emitFallbackDefine(DependentTypeMacroName, TypeMacroName, TypeMacroArgs);
-  emitFallbackDefine(NonCanonicalUnlessDependentTypeMacroName, TypeMacroName, 
+  emitFallbackDefine(NonCanonicalUnlessDependentTypeMacroName, TypeMacroName,
                      TypeMacroArgs);
 
   // Invocations.

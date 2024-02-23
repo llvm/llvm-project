@@ -1807,7 +1807,7 @@ def SDTBFE :
 def bfe : SDNode<"NVPTXISD::BFE", SDTBFE>;
 
 def SDTBFI :
-  SDTypeProfile<1, 4, [SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, 
+  SDTypeProfile<1, 4, [SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>,
                        SDTCisVT<3, i32>, SDTCisVT<4, i32>]>;
 def bfi : SDNode<"NVPTXISD::BFI", SDTBFI>;
 

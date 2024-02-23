@@ -38,7 +38,7 @@ def Spmdization : Pass<"mesh-spmdization", "mlir::func::FuncOp"> {
 
     A fully annotated IR required that all ranked tensor operands, results and
     block arguments are annotated with the `mesh.shard` operation.
-  
+
     All direct descendant operations in the function must implement the
     `ShardingInterface` interface or all their ranked tensor operands and
     results must have full replication sharding.
@@ -68,13 +68,13 @@ def Spmdization : Pass<"mesh-spmdization", "mlir::func::FuncOp"> {
       return %4 : tensor<2xi8>
     }
     ```
-    Spmdizing the above would result in 
+    Spmdizing the above would result in
     * Performing the element-wise `abs` operation on each device.
     * Resharding to full replication with an all-gather.
 
     ```mlir
     mesh.mesh @mesh_1d(shape = 2)
-  
+
     func.func @f(%arg0: tensor<1xi8>) -> tensor<2xi8> {
       %0 = tosa.abs %arg0 : (tensor<1xi8>) -> tensor<1xi8>
       %1 = mesh.all_gather %0 on @mesh_1d mesh_axes = [0] gather_axis = 0 : tensor<1xi8> -> tensor<2xi8>

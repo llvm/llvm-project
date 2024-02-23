@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#ifdef DEPRECATION_WARNINGS 
+#ifdef DEPRECATION_WARNINGS
 # ifdef __cplusplus
 # define DEPRECATED_51 [[deprecated("as of 5.1")]]
 # else
@@ -180,11 +180,11 @@
 
 #define FOREACH_OMPT_50_TARGET_EVENT(macro)                                                                              \
     FOREACH_OMPT_DEVICE_EVENT(macro)                                                                                     \
-    FOREACH_OMPT_NOEMI_EVENT(macro) 
+    FOREACH_OMPT_NOEMI_EVENT(macro)
 
 #define FOREACH_OMPT_51_TARGET_EVENT(macro)                                                                              \
     FOREACH_OMPT_DEVICE_EVENT(macro)                                                                                     \
-    FOREACH_OMPT_EMI_EVENT(macro) 
+    FOREACH_OMPT_EMI_EVENT(macro)
 
 #define FOREACH_OMPT_EVENT(macro)                                                                                        \
     FOREACH_OMPT_HOST_EVENT(macro)                                                                                       \

@@ -107,7 +107,7 @@ public:
                                             int64_t *value_bits = nullptr,
                                             uint64_t *payload = nullptr) = 0;
     /// @}
- 
+
     virtual uint64_t GetInstanceSize() = 0;
 
     // use to implement version-specific additional constraints on pointers

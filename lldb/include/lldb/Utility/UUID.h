@@ -26,7 +26,7 @@ class UUID {
   // will return false for IsValid.
 public:
   UUID() = default;
-  
+
   /// Creates a uuid from the data pointed to by the bytes argument.
   UUID(llvm::ArrayRef<uint8_t> bytes) : m_bytes(bytes.begin(), bytes.end()) {
     if (llvm::all_of(m_bytes, [](uint8_t b) { return b == 0; })) {
@@ -50,13 +50,12 @@ public:
   /// Create a UUID from CvRecordPdb70.
   UUID(CvRecordPdb70 debug_info);
 
-  /// Creates a UUID from the data pointed to by the bytes argument. 
+  /// Creates a UUID from the data pointed to by the bytes argument.
   UUID(const void *bytes, uint32_t num_bytes) {
     if (!bytes)
       return;
-    *this 
-        = UUID(llvm::ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(bytes), 
-               num_bytes));
+    *this = UUID(llvm::ArrayRef<uint8_t>(
+        reinterpret_cast<const uint8_t *>(bytes), num_bytes));
   }
 
   void Clear() { m_bytes.clear(); }
@@ -67,7 +66,7 @@ public:
 
   explicit operator bool() const { return IsValid(); }
   bool IsValid() const { return !m_bytes.empty(); }
-  
+
   std::string GetAsString(llvm::StringRef separator = "-") const;
 
   bool SetFromStringRef(llvm::StringRef str);

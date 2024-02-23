@@ -2237,7 +2237,7 @@ let Predicates = [HasSVEorSME] in {
   def : Pat<(nxv2f16 (AArch64fcvtr_mt (nxv2i1 (SVEAllActive):$Pg), (nxv2f32 ZPR:$Zs), (i64 timm0_1), (nxv2f16 ZPR:$Zd))),
             (FCVT_ZPmZ_StoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
-  // Signed integer -> Floating-point 
+  // Signed integer -> Floating-point
   def : Pat<(nxv2f16 (AArch64scvtf_mt (nxv2i1 (SVEAllActive):$Pg),
                       (sext_inreg (nxv2i64 ZPR:$Zs), nxv2i16), (nxv2f16 ZPR:$Zd))),
             (SCVTF_ZPmZ_HtoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;

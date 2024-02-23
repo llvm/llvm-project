@@ -24,7 +24,7 @@ def CallOpInterfaceHandle
       // The type must implement `TransformHandleTypeInterface`.
       [DeclareTypeInterfaceMethods<TransformHandleTypeInterface>]> {
 
-  // The usual components of a type such as description, mnemonic and assembly format 
+  // The usual components of a type such as description, mnemonic and assembly format
   // should be provided.
   let summary = "handle to payload operations implementing CallOpInterface";
   let mnemonic = "my.call_op_interface";

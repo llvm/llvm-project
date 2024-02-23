@@ -557,7 +557,7 @@ struct ClientCapabilities {
 
   /// The client supports versioned document changes for WorkspaceEdit.
   bool DocumentChanges = false;
-  
+
   /// The client supports change annotations on text edits,
   bool ChangeAnnotation = false;
 
@@ -1016,7 +1016,7 @@ struct WorkspaceEdit {
 	/// `workspace.workspaceEdit.resourceOperations` then only plain `TextEdit`s
 	/// using the `changes` property are supported.
   std::optional<std::vector<TextDocumentEdit>> documentChanges;
-  
+
   /// A map of change annotations that can be referenced in
 	/// AnnotatedTextEdit.
   std::map<std::string, ChangeAnnotation> changeAnnotations;

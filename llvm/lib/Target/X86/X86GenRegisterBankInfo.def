@@ -24,7 +24,7 @@ RegisterBankInfo::PartialMapping X86GenRegisterBankInfo::PartMappings[]{
     // VR128/256/512
     {0, 128, X86::VECRRegBank}, // :6
     {0, 256, X86::VECRRegBank}, // :7
-    {0, 512, X86::VECRRegBank}, // :8   
+    {0, 512, X86::VECRRegBank}, // :8
 };
 #endif // GET_TARGET_REGBANK_INFO_IMPL
 
@@ -55,12 +55,12 @@ RegisterBankInfo::ValueMapping X86GenRegisterBankInfo::ValMappings[]{
     INSTR_3OP(BREAKDOWN(PMI_GPR8, 1))  // 0: GPR_8
     INSTR_3OP(BREAKDOWN(PMI_GPR16, 1)) // 3: GPR_16
     INSTR_3OP(BREAKDOWN(PMI_GPR32, 1)) // 6: GPR_32
-    INSTR_3OP(BREAKDOWN(PMI_GPR64, 1)) // 9: GPR_64    
+    INSTR_3OP(BREAKDOWN(PMI_GPR64, 1)) // 9: GPR_64
     INSTR_3OP(BREAKDOWN(PMI_FP32, 1))   // 12: Fp32
     INSTR_3OP(BREAKDOWN(PMI_FP64, 1))   // 15: Fp64
     INSTR_3OP(BREAKDOWN(PMI_VEC128, 1)) // 18: Vec128
     INSTR_3OP(BREAKDOWN(PMI_VEC256, 1)) // 21: Vec256
-    INSTR_3OP(BREAKDOWN(PMI_VEC512, 1)) // 24: Vec512    
+    INSTR_3OP(BREAKDOWN(PMI_VEC512, 1)) // 24: Vec512
 };
 #undef INSTR_3OP
 #undef BREAKDOWN
@@ -72,7 +72,7 @@ enum ValueMappingIdx {
   VMI_3OpsGpr8Idx =  PMI_GPR8  * 3,
   VMI_3OpsGpr16Idx = PMI_GPR16 * 3,
   VMI_3OpsGpr32Idx = PMI_GPR32 * 3,
-  VMI_3OpsGpr64Idx = PMI_GPR64 * 3,  
+  VMI_3OpsGpr64Idx = PMI_GPR64 * 3,
   VMI_3OpsFp32Idx = PMI_FP32 * 3,
   VMI_3OpsFp64Idx = PMI_FP64 * 3,
   VMI_3OpsVec128Idx = PMI_VEC128 * 3,
@@ -87,11 +87,11 @@ enum ValueMappingIdx {
 const RegisterBankInfo::ValueMapping *
 X86GenRegisterBankInfo::getValueMapping(PartialMappingIdx Idx,
                                         unsigned NumOperands) {
-  
+
   // We can use VMI_3Ops Mapping for all the cases.
   if (NumOperands <= 3 && (Idx >= PMI_GPR8 && Idx <= PMI_VEC512))
     return &ValMappings[(unsigned)Idx * 3];
-  
+
   llvm_unreachable("Unsupported PartialMappingIdx.");
 }
 

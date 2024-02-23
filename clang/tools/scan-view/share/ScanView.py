@@ -425,7 +425,7 @@ class ScanViewRequestHandler(SimpleHTTPRequestHandler):
 </head>
 <body>
 <h3>
-<a href="/">Summary</a> > 
+<a href="/">Summary</a> >
 %(reportingFor)s
 %(fileBug)s
 Submit</h3>
@@ -678,7 +678,7 @@ function updateReporterOptions() {
 </script>
 <body onLoad="updateReporterOptions()">
 <h3>
-<a href="/">Summary</a> > 
+<a href="/">Summary</a> >
 %(reportingFor)s
 File Bug</h3>
 <form name="form" action="/report_submit" method="post">

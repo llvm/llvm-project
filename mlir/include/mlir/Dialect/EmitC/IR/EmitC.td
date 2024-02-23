@@ -171,7 +171,7 @@ def EmitC_CastOp : EmitC_Op<"cast", [
 def EmitC_CmpOp : EmitC_BinaryOp<"cmp", []> {
   let summary = "Comparison operation";
   let description = [{
-    With the `cmp` operation the comparison operators ==, !=, <, <=, >, >=, <=> 
+    With the `cmp` operation the comparison operators ==, !=, <, <=, >, >=, <=>
     can be applied.
 
     Its first argument is an attribute that defines the comparison operator:
@@ -188,7 +188,7 @@ def EmitC_CmpOp : EmitC_BinaryOp<"cmp", []> {
     ```mlir
     // Custom form of the cmp operation.
     %0 = emitc.cmp eq, %arg0, %arg1 : (i32, i32) -> i1
-    %1 = emitc.cmp lt, %arg2, %arg3 : 
+    %1 = emitc.cmp lt, %arg2, %arg3 :
         (
           !emitc.opaque<"std::valarray<float>">,
           !emitc.opaque<"std::valarray<float>">
@@ -795,7 +795,7 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
     #endif
 
     ...
-    
+
     #ifdef __cplusplus
     }
     #endif

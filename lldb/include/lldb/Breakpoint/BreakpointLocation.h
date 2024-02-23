@@ -233,7 +233,7 @@ public:
   ///     \b true if the target should stop at this breakpoint and \b
   ///     false not.
   bool InvokeCallback(StoppointCallbackContext *context);
-  
+
   /// Report whether the callback for this location is synchronous or not.
   ///
   /// \return

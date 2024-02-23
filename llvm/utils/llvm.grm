@@ -420,5 +420,5 @@ MemoryInst ::= malloc Types OptCAlign
  | OptVolatile store ResolvedVal ^ "," Types ValueRef OptCAlign
  | getresult Types ValueRef ^ "," EUINT64VAL
  | getelementptr OptInBounds Types ValueRef IndexList
- | extractvalue Types ValueRef ^ ConstantIndexList 
+ | extractvalue Types ValueRef ^ ConstantIndexList
  | insertvalue Types ValueRef ^ "," Types ValueRef ^ ConstantIndexList ;

@@ -23,7 +23,7 @@ quote some arguments in lldb that you wouldn't in gdb.
 Options can be placed anywhere on the command line, but if the arguments
 begin with a "-" then you have to tell lldb that you're done with options
 using the "--" option.  So for instance, the "process launch" command takes
-the "-s" option to mean "stop the process at the first instruction".  It's 
+the "-s" option to mean "stop the process at the first instruction".  It's
 arguments are the arguments you are passing to the program.  So if you wanted
 to pass an argument that contained a "-" you would have to do:
 
@@ -45,7 +45,7 @@ if foo is a function.  As time went on, the parser that tells foo.c:12
 from foo from foo.c::foo (which means the function foo in the file
 foo.c) got more and more complex and bizarre, and especially in C++
 there are times where there's really no way to specify the function
-you want to break on.  The lldb commands are more verbose but also precise.  
+you want to break on.  The lldb commands are more verbose but also precise.
 So you say:
 
 (lldb) breakpoint set -f foo.c -l 12
@@ -85,7 +85,7 @@ lldb also supports command completion for source file names, symbol
 names, file names, etc. Completion is initiated by a hitting a <TAB>.
 Individual options in a command can have different completers, so for
 instance the -f option in "breakpoint" completes to source files, the
--s option to currently loaded shared libraries, etc...  We can even do 
+-s option to currently loaded shared libraries, etc...  We can even do
 things like if you specify -s, and are completing on -f, we will only
 list source files in the shared library specified by -s...
 
@@ -123,7 +123,7 @@ available as classes in the Python interpreter, so the more complex
 commands that in gdb you would introduce with the "define" command can
 be done by writing Python functions using the lldb-Python library,
 then loading the scripts into your running session and accessing them
-with the "script" command.  
+with the "script" command.
 
 
 
@@ -148,7 +148,7 @@ Current executable set to '/Projects/Sketch/build/Debug/Sketch.app' (x86_64).
 b) Setting breakpoints:
 
 
-We've discussed how to set breakpoints above.  You can use "help break set" 
+We've discussed how to set breakpoints above.  You can use "help break set"
 to see all the options for breakpoint setting.  For instance, we might do:
 
 (lldb) b s -S alignLeftEdges:
@@ -159,12 +159,12 @@ You can find out about the breakpoints you've set with:
 (lldb) break list
 Current breakpoints:
 1: name = 'alignLeftEdges:', locations = 1, resolved = 1
-  1.1: where = Sketch`-[SKTGraphicView alignLeftEdges:] + 33 at /Projects/Sketch/SKTGraphicView.m:1405, address = 0x0000000100010d5b, resolved, hit count = 0 
+  1.1: where = Sketch`-[SKTGraphicView alignLeftEdges:] + 33 at /Projects/Sketch/SKTGraphicView.m:1405, address = 0x0000000100010d5b, resolved, hit count = 0
 
 Note that each "logical" breakpoint can have multiple "locations".
 The logical breakpoint has an integer id, and its locations have an
 id within their parent breakpoint (the two are joined by a ".",
-e.g. 1.1 in the example above.)  
+e.g. 1.1 in the example above.)
 
 Also the breakpoints remain "live" so that if another shared library
 were to be loaded that had another implementation of the
@@ -175,8 +175,8 @@ selector).
 The other piece of information in the breakpoint listing is whether the
 breakpoint location was "resolved" or not.  A location gets resolved when
 the file address it corresponds to gets loaded into the program you are
-debugging.  For instance if you set a breakpoint in a shared library that 
-then gets unloaded, that breakpoint location will remain, but it will no 
+debugging.  For instance if you set a breakpoint in a shared library that
+then gets unloaded, that breakpoint location will remain, but it will no
 longer be "resolved".
 
 One other thing to note for gdb users is that lldb acts like gdb with:
@@ -187,7 +187,7 @@ That is, lldb should always make a breakpoint from your specification, even
 if it couldn't find any locations that match the specification.  You can tell
 whether the expression was resolved or not by checking the locations field
 in "breakpoint list", and we report the breakpoint as "pending" when you
-set it so you can tell you've made a typo more easily, if that was indeed 
+set it so you can tell you've made a typo more easily, if that was indeed
 the reason no locations were found:
 
 (lldb) b s -f no_such_file.c -l 10000000
@@ -256,10 +256,10 @@ design will ultimately support saying "step over the function in
 Thread 1, and step into the function in Thread 2, and continue Thread
 3" etc.  When we eventually support keeping some threads running while
 others are stopped this will be particularly important.  For
-convenience, however, all the stepping commands have easy aliases.  
+convenience, however, all the stepping commands have easy aliases.
 So "thread continue" is just "c", etc.
 
-The other program stepping commands are pretty much the same as in gdb.  
+The other program stepping commands are pretty much the same as in gdb.
 You've got:
 
   1. (lldb) thread step-in
@@ -281,7 +281,7 @@ Finally, there's:
 (lldb) thread until 100
 
 Which runs the thread in the current frame till it reaches line 100 in
-this frame or stops if it leaves the current frame.  This is a pretty 
+this frame or stops if it leaves the current frame.  This is a pretty
 close equivalent to gdb's "until" command.
 
 
@@ -353,7 +353,7 @@ Next task is inspecting data:
 
 The most convenient way to inspect a frame's arguments and local variables is:
 
-(lldb) frame variable 
+(lldb) frame variable
 self = (SKTGraphicView *) 0x0000000100208b40
 _cmd = (struct objc_selector *) 0x000000010001bae1
 sender = (id) 0x00000001001264e0
@@ -391,13 +391,13 @@ You can select another frame to view with:
 
 (lldb) frame select 9
 frame #9: 0x0000000100015ae3, where = Sketch`main + 33 at /Projects/Sketch/SKTMain.m:11
-   8      
-   9      
+   8
+   9
   10      int main(int argc, const char *argv[]) {
   11 ->       return NSApplicationMain(argc, argv);
   12          }
-  13          
-  14          
+  13
+  14
 
 Another neat trick that the variable list does is array references, so:
 
@@ -447,7 +447,7 @@ for your lldb session:
 script os.chdir(os.path.expanduser('/tmp'))
 (lldb) pwd
 /private/tmp
-(lldb) 
+(lldb)
 
 Or for a more capable 'cd' command, create ~/utils.py like this:
 
@@ -482,7 +482,7 @@ Current working directory: /Volumes/data/Users/johnny
 Current working directory: /private/tmp
 (lldb) pwd
 /private/tmp
-(lldb) 
+(lldb)
 
 For more examples of customization, look under the ToT/examples/customization
 directory.

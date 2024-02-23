@@ -7,7 +7,7 @@ from __future__ import print_function
 - Collate raw profiles into one indexed profile.
 - Generate html reports for the given binaries.
 
-Caution: The positional arguments to this script must be specified before any 
+Caution: The positional arguments to this script must be specified before any
 optional arguments, such as --restrict.
 """
 

@@ -17,20 +17,20 @@ def MPI_Dialect : Dialect {
   let name = "mpi";
   let cppNamespace = "::mlir::mpi";
   let description = [{
-    This dialect models the Message Passing Interface (MPI), version 
+    This dialect models the Message Passing Interface (MPI), version
     4.0. It is meant to serve as an interfacing dialect that is targeted
-    by higher-level dialects. The MPI dialect itself can be lowered to 
+    by higher-level dialects. The MPI dialect itself can be lowered to
     multiple MPI implementations and hide differences in ABI. The dialect
     models the functions of the MPI specification as close to 1:1 as possible
-    while preserving SSA value semantics where it makes sense, and uses 
+    while preserving SSA value semantics where it makes sense, and uses
     `memref` types instead of bare pointers.
 
     This dialect is under active development, and while stability is an
-    eventual goal, it is not guaranteed at this juncture. Given the early 
+    eventual goal, it is not guaranteed at this juncture. Given the early
     state, it is recommended to inquire further prior to using this dialect.
 
-    For an in-depth documentation of the MPI library interface, please refer 
-    to official documentation such as the 
+    For an in-depth documentation of the MPI library interface, please refer
+    to official documentation such as the
     [OpenMPI online documentation](https://www.open-mpi.org/doc/current/).
   }];
 

@@ -33,7 +33,7 @@ add_flang_library(FortranLower
   Runtime.cpp
   SymbolMap.cpp
   VectorSubscripts.cpp
-  
+
   DEPENDS
   FIRDialect
   FIRTransforms

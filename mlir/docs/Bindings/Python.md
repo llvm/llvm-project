@@ -1035,7 +1035,7 @@ class ConstantOp(_ods_ir.OpView):
     ...
 ```
 
-expects `value` to be a `TypedAttr` (e.g., `IntegerAttr` or `FloatAttr`). 
+expects `value` to be a `TypedAttr` (e.g., `IntegerAttr` or `FloatAttr`).
 Thus, a natural extension is a builder that accepts a MLIR type and a Python value and instantiates the appropriate `TypedAttr`:
 
 ```python

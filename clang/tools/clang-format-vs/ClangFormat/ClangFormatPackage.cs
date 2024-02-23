@@ -361,8 +361,9 @@ namespace LLVM.ClangFormat
         }
 
         /// <summary>
-        /// Runs the given text through clang-format and returns the replacements as XML.
-        /// 
+        /// Runs the given text through clang-format and returns the
+        /// replacements as XML.
+        ///
         /// Formats the text in range start and end.
         /// </summary>
         private static string RunClangFormat(string text, int start, int end, string path, string filePath, OptionPageGrid options)
@@ -410,7 +411,7 @@ namespace LLVM.ClangFormat
             catch (Exception e)
             {
                 throw new Exception(
-                    "Cannot execute " + process.StartInfo.FileName + ".\n\"" + 
+                    "Cannot execute " + process.StartInfo.FileName + ".\n\"" +
                     e.Message + "\".\nPlease make sure it is on the PATH.");
             }
             // 2. We write everything to the standard output - this cannot block, as clang-format

@@ -70,10 +70,10 @@ src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
 <script>
 
 $(document).ready(function() {
-    
+
     var yql =
     "https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20rss%20where%20url%3D%22http%3A%2F%2Fpollylabs.org%2Frss.xml%22%20LIMIT%205&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys";
-    
+
     $.getJSON(yql, function(res) {
 	str = "<div class=\"rss-box\"><ul>";
 	for (var i = 0; i < res.query.count; i++) {
@@ -91,7 +91,7 @@ $(document).ready(function() {
 
     var yql_polyinfo =
     "https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20rss%20where%20url%3D%22http%3A%2F%2Fpolyhedral.info%2Frss.xml%22%20LIMIT%205&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys";
-    
+
     $.getJSON(yql_polyinfo, function(res) {
 	str = "<div class=\"rss-box\"><ul>";
 	for (var i = 0; i < res.query.count; i++) {
@@ -107,7 +107,7 @@ $(document).ready(function() {
 	$( ".inner_polyinfo" ).append(str);
 	console.log(str);
     }, "jsonp");
-    
+
 });
 
 </script>

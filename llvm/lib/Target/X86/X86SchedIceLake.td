@@ -10,7 +10,7 @@
 // instruction scheduling and other instruction cost heuristics.
 //
 // TODO: This is mainly a copy X86SchedSkylakeServer.td, but allows us to
-// iteratively improve scheduling handling toward better modelling the 
+// iteratively improve scheduling handling toward better modelling the
 // Ice Lake (Sunny/Cypress Cove) microarchitecture.
 //
 //===----------------------------------------------------------------------===//

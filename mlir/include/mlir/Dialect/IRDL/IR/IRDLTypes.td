@@ -27,7 +27,7 @@ def IRDL_AttributeType : IRDL_Type<"Attribute", "attribute"> {
     This type represents a handle to an instance of an `mlir::Attribute`,
     so it can be used in an IRDL operation, type, or attribute definition.
     This type can also represent a handle to an instance of an `mlir::Type`,
-    by wrapping it in a `mlir::TypeAttr`. 
+    by wrapping it in a `mlir::TypeAttr`.
 
     Example:
 

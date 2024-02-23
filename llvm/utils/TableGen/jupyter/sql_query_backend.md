@@ -39,7 +39,7 @@ def find_tblgen():
         if path is None:
             raise OSError("llvm-tblgen not found")
         return path
-    
+
 _ = find_tblgen()
 ```
 
@@ -65,12 +65,12 @@ def run_tblgen(src):
             stdout=subprocess.PIPE,
             universal_newlines=True,
         )
-    
+
     if got.stderr:
         raise RuntimeError("llvm-tblgen failed with stderr: " + got.stderr)
-    
+
     return json.loads(got.stdout)
-    
+
 print(json.dumps(run_tblgen("class Foo {}"), indent=4))
 ```
 
@@ -176,7 +176,7 @@ def : Query<"Orders", (fields "ProductName":$name, "Person"),
   `Person` must not be equal to `1`.
 * The results of this query should be ordered by the field
   tagged `$name`, which is `ProductName`.
-  
+
 The condition being of DAG type (Directed Acyclic Graph) allows us to describe nested conditions. You might write this condition in Python as:
 ```
 if (Amount > 8) and (Person != 1):
@@ -560,7 +560,7 @@ def find_all_queries(j):
     return queries
 
 queries = find_all_queries(full_json)
-                
+
 print([q["!name"] for q in queries])
 ```
 
@@ -588,7 +588,7 @@ def emit_operator(operator):
 print(emit_operator('and'))
 ```
 
-     AND 
+     AND
 
 
 The maps our TableGen constants to the equivalent SQL logical operation.
@@ -614,7 +614,7 @@ from collections.abc import Mapping
 def emit_where_clause(where_clause):
     output = ""
     num_args = len(where_clause["args"])
-    
+
     for idx, arg in enumerate(where_clause["args"]):
         arg_name, arg_type = arg
 
@@ -632,11 +632,11 @@ def emit_where_clause(where_clause):
         # If this is not the last arg, emit the condition.
         if idx != (num_args-1):
             output += emit_operator(where_clause["operator"]["def"])
-    
+
     return output
 
 print(emit_where_clause({
-"args": [["Name",None],  
+"args": [["Name",None],
         ["Mary Blackburn", "str"]],
 "kind": "dag",
 "operator": {
@@ -659,10 +659,10 @@ def emit_ordered_by(ordered_by, field_tag_map):
     # No ORDER BY statement to emit.
     if not ordered_by:
         return ""
-    
+
     output = "\n ORDER BY "
     num_ordered_by = len(ordered_by)
-    
+
     for idx, field_name in enumerate(ordered_by):
         # If it is a tag
         if field_name.startswith('$'):
@@ -677,13 +677,13 @@ def emit_ordered_by(ordered_by, field_tag_map):
         if idx != 0:
             output += ", "
         output += field_name
-        
+
     return output
 
 print(emit_ordered_by(["$abc", "$def"], {'abc':"ABC", 'def':"DEF"}))
 ```
 
-    
+
      ORDER BY ABC, DEF
 
 
@@ -711,12 +711,12 @@ def emit_query(q):
     field_op_name = fields_init["operator"]["def"]
     if not field_op_name in ["all", "fields"]:
         raise RuntimeError("Invalid dag operator " + field_op_name)
-    
+
     field_tag_map = build_tag_map(fields_init["args"])
-    
+
     where_clause = q["WhereClause"]
     has_where = where_clause["operator"]["def"] != "none"
-    
+
     ret = "SELECT "
     if field_op_name == "all":
         ret += "*"
@@ -726,7 +726,7 @@ def emit_query(q):
         ret += "\n WHERE " + emit_where_clause(where_clause)
     ret += emit_ordered_by(q["OrderedBy"], field_tag_map)
     ret += ";"
-        
+
     return ret
 ```
 
@@ -741,19 +741,19 @@ for q in queries:
 ```
 
     SELECT * FROM Customer;
-    
+
     SELECT Person, Amount FROM Orders;
-    
+
     SELECT Affiliation FROM Customer
      WHERE Name = "Mary Blackburn";
-    
+
     SELECT ProductName FROM Orders
      WHERE Amount > 8;
-    
+
     SELECT ProductName, Person FROM Orders
      WHERE Amount > 8 AND Person <> 1
      ORDER BY ProductName;
-    
+
 
 
 Now we run `emit_query` and print out the results. There you have it, that's a TableGen backend!

@@ -399,11 +399,11 @@ def : InstRW<[CortexA55WriteAluVq_2], (instregex "(ADD|SUB|NEG)v(2i64|4i32|8i16|
   "[SU]R?HADDv(8i16|4i32|16i8)", "[SU]HSUBv(8i16|4i32|16i8)")>;
 // ASIMD arith #2
 def : InstRW<[CortexA55WriteAluVd_3], (instregex "ABSv(1i64|2i32|4i16|8i8)$",
-  "[SU]ADDLPv(2i32_v1i64|4i16_v2i32|8i8_v4i16)$", 
+  "[SU]ADDLPv(2i32_v1i64|4i16_v2i32|8i8_v4i16)$",
   "([SU]QADD|[SU]QSUB|SQNEG|SUQADD|USQADD)v(1i16|1i32|1i64|1i8|2i32|4i16|8i8)$",
   "ADDPv(2i32|4i16|8i8)$")>;
 def : InstRW<[CortexA55WriteAluVq_3], (instregex "ABSv(2i64|4i32|8i16|16i8)$",
-  "[SU]ADDLPv(16i8_v8i16|4i32_v2i64|8i16_v4i32)$", 
+  "[SU]ADDLPv(16i8_v8i16|4i32_v2i64|8i16_v4i32)$",
   "([SU]QADD|[SU]QSUB|SQNEG|SUQADD|USQADD)v(16i8|2i64|4i32|8i16)$",
   "ADDPv(16i8|2i64|4i32|8i16)$")>;
 // ASIMD arith #3

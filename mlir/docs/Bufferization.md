@@ -110,7 +110,7 @@ is inserting an element inside a vector. Since SSA values are immutable, the
 operation returns a copy of the input vector with the element inserted.
 Another example in MLIR is `linalg.generic`, which always has an extra `outs`
 operand which provides the initial values to update (for example when the
-operation is doing a reduction). 
+operation is doing a reduction).
 
 This input is referred to as "destination" in the following (quotes are
 important as this operand isn't modified in place but copied) and comes into

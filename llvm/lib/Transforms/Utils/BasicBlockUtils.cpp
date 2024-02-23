@@ -2159,7 +2159,7 @@ BasicBlock *llvm::CreateControlFlowHub(
   convertToGuardPredicates(GuardBlocks, DeletionCandidates, Incoming, Outgoing,
                            Prefix, MaxControlFlowBooleans);
   auto FirstGuardBlock = GuardBlocks.front();
-  
+
   // Update the PHINodes in each outgoing block to match the new control flow.
   for (int i = 0, e = GuardBlocks.size(); i != e; ++i)
     reconnectPhis(Outgoing[i], GuardBlocks[i], Incoming, FirstGuardBlock);

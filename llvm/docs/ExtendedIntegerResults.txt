@@ -77,7 +77,7 @@ entry:
 This has some problems: 1) the actual precise semantics are really poorly
 defined (see PR3779).  2) some targets might want the caller to extend, some
 might want the callee to extend 3) the mid-level optimizer doesn't know the
-size of the GPR, so it doesn't know that %0 is sign extended up to 32-bits 
+size of the GPR, so it doesn't know that %0 is sign extended up to 32-bits
 here, and even if it did, it could not eliminate the sext. 4) the code
 generator has historically assumed that the result is extended to i32, which is
 a problem on PIC16 (and is also probably wrong on alpha and other 64-bit
@@ -107,7 +107,7 @@ entry:
 }
 
 In this model, no functions will return an i1/i8/i16 (and on a x86-64 target
-that extends results to i64, no i32).  This solves the ambiguity issue, allows us 
+that extends results to i64, no i32).  This solves the ambiguity issue, allows us
 to fully describe all possible ABIs, and now allows the optimizers to reason
 about and eliminate these extensions.
 
@@ -128,6 +128,6 @@ the sad truth of the matter is that this is a) unlikely to happen anytime in
 the near future, and b) this is no worse than we have now with the existing
 attributes.
 
-C compilers fundamentally have to reason about the target in many ways.  
+C compilers fundamentally have to reason about the target in many ways.
 This is ugly and horrible, but a fact of life.
 

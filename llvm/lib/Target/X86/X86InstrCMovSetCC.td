@@ -86,7 +86,7 @@ let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1 in {
 
 // SALC is an undocumented instruction. Information for this instruction can be found
 // here http://www.rcollins.org/secrets/opcodes/SALC.html
-// Set AL if carry. 
+// Set AL if carry.
 let Uses = [EFLAGS], Defs = [AL], SchedRW = [WriteALU] in {
   def SALC : I<0xD6, RawFrm, (outs), (ins), "salc", []>, Requires<[Not64BitMode]>;
 }

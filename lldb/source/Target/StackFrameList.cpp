@@ -85,7 +85,7 @@ void StackFrameList::ResetCurrentInlinedDepth() {
     return;
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  
+
   GetFramesUpTo(0, DoNotAllowInterruption);
   if (m_frames.empty())
     return;
@@ -510,7 +510,7 @@ bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
     } else {
       // Check for interruption when building the frames.
       // Do the check in idx > 0 so that we'll always create a 0th frame.
-      if (allow_interrupt 
+      if (allow_interrupt
           && INTERRUPT_REQUESTED(dbg, "Interrupted having fetched {0} frames",
                                  m_frames.size())) {
           was_interrupted = true;
@@ -640,7 +640,7 @@ uint32_t StackFrameList::GetNumFrames(bool can_create) {
 
   if (can_create) {
     // Don't allow interrupt or we might not return the correct count
-    GetFramesUpTo(UINT32_MAX, DoNotAllowInterruption); 
+    GetFramesUpTo(UINT32_MAX, DoNotAllowInterruption);
   }
   return GetVisibleStackFrameIndex(m_frames.size());
 }
@@ -966,7 +966,7 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
     // Check for interruption here.  If we're fetching arguments, this loop
     // can go slowly:
     Debugger &dbg = m_thread.GetProcess()->GetTarget().GetDebugger();
-    if (INTERRUPT_REQUESTED(dbg, 
+    if (INTERRUPT_REQUESTED(dbg,
           "Interrupted dumping stack for thread {0:hex} with {1} shown.",
           m_thread.GetID(), num_frames_displayed))
       break;

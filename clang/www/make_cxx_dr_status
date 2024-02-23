@@ -172,7 +172,7 @@ def availability(issue):
         avail_style = ' class="unreleased"'
       else:
         avail_style = ' class="full"'
-    else: 
+    else:
       avail = 'Not Resolved*'
       avail_style = f' title="Clang {status} implements {proposed_resolution} resolution"'
   elif status == 'yes':
@@ -245,7 +245,7 @@ for dr in drs:
       availability_error_occurred = True
       print(e.args[0])
       continue
-      
+
     if avail == 'Unknown':
       avail = 'Not resolved'
       avail_style = ''

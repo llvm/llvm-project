@@ -477,7 +477,7 @@ that has gone through a pre-link LTO pipeline).  The ``.llvmbc`` section
 predates FatLTO support in LLVM, and may not always contain bitcode that is
 suitable for LTO (i.e. from ``-fembed-bitcode``).  The wrapper format is useful
 for accommodating LTO in compilation pipelines where intermediate objects must
-be native object files which contain metadata in other sections. 
+be native object files which contain metadata in other sections.
 
 Not all tools support this format.  For example, lld and the gold plugin will
 ignore the ``.llvmbc`` section when linking object files, but can use

@@ -10,7 +10,7 @@
 #
 #      The script takes two llvm build paths as arguments. These specify the
 #      the two llvm builds to compare. It is generally expected that they
-#      are "close cousins".  That is, they are the same except that the 
+#      are "close cousins".  That is, they are the same except that the
 #      second build contains some experimental optimization features that
 #      are suspected of producing a misoptimization.
 #
@@ -21,12 +21,12 @@
 #      The script operates by iteratively applying the optimizations that gccas
 #      and gccld run until there is a difference in the assembly resulting
 #      from the optimization. The difference is then reported with the set of
-#      optimization passes that produce the difference.  The processing 
+#      optimization passes that produce the difference.  The processing
 #      continues until all optimization passes have been tried. The differences
 #      for each pass, if they do differ, are placed in a diffs.# file.
 #
 #      To work around differences in the assembly language format, the script
-#      can also take two filter arguments that post-process the assembly 
+#      can also take two filter arguments that post-process the assembly
 #      so they can be differenced without making false positives for known
 #      differences in the two builds. These filters are optional.
 #
@@ -46,7 +46,7 @@
 #          is an optional filter for filtering the llvm1 generated assembly
 #      filter2
 #          is an optional filter for filtering the llvm2 generated assembly
-#       
+#
 llvm1=$1
 llvm2=$2
 bc1=$3
@@ -60,7 +60,7 @@ if [ -z "$filt2" ] ; then
   filt2="cat"
 fi
 opt1="${bc1}.opt"
-opt2="${bc2}.opt" 
+opt2="${bc2}.opt"
 ll1="${bc1}.ll"
 ll2="${bc2}.ll"
 opt1ll="${bc1}.opt.ll"

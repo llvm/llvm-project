@@ -1498,7 +1498,7 @@ def int_ppc_vsx_xxgenpcvdm :
                             [llvm_v2i64_ty, llvm_i32_ty], [IntrNoMem]>;
 
 // P10 VSX Vector permute extended.
-def int_ppc_vsx_xxpermx : 
+def int_ppc_vsx_xxpermx :
     ClangBuiltin<"__builtin_vsx_xxpermx">,
     DefaultAttrsIntrinsic<[llvm_v16i8_ty],
                           [llvm_v16i8_ty,llvm_v16i8_ty,llvm_v16i8_ty,
@@ -1697,11 +1697,11 @@ let TargetPrefix = "ppc" in {
                       Intrinsic<[], [llvm_ptr_ty], []>;
   def int_ppc_icbt : ClangBuiltin<"__builtin_ppc_icbt">,
                      Intrinsic<[], [llvm_ptr_ty], []>;
-  
+
   // Population Count in each Byte.
   def int_ppc_popcntb :
       DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem]>;
-  
+
   // sync instruction (i.e. sync 0, a.k.a hwsync)
   def int_ppc_sync : ClangBuiltin<"__builtin_ppc_sync">,
                      Intrinsic<[], [], []>;
@@ -1886,7 +1886,7 @@ let TargetPrefix = "ppc" in {
         DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty],
                               [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<2>>]>;
   def int_ppc_fsel : ClangBuiltin<"__builtin_ppc_fsel">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty, 
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty,
                              llvm_double_ty], [IntrNoMem]>;
   def int_ppc_fsels : ClangBuiltin<"__builtin_ppc_fsels">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty,
@@ -1900,7 +1900,7 @@ let TargetPrefix = "ppc" in {
                             [llvm_double_ty, llvm_double_ty],
                             [IntrNoMem]>;
   def int_ppc_compare_exp_lt : ClangBuiltin<"__builtin_ppc_compare_exp_lt">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], 
+      DefaultAttrsIntrinsic<[llvm_i32_ty],
                             [llvm_double_ty, llvm_double_ty],
                             [IntrNoMem]>;
   def int_ppc_compare_exp_gt : ClangBuiltin<"__builtin_ppc_compare_exp_gt">,
@@ -1908,7 +1908,7 @@ let TargetPrefix = "ppc" in {
                             [llvm_double_ty, llvm_double_ty],
                             [IntrNoMem]>;
   def int_ppc_compare_exp_eq : ClangBuiltin<"__builtin_ppc_compare_exp_eq">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], 
+      DefaultAttrsIntrinsic<[llvm_i32_ty],
                             [llvm_double_ty, llvm_double_ty],
                             [IntrNoMem]>;
   def int_ppc_test_data_class

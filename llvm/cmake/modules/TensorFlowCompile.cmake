@@ -83,7 +83,7 @@ function(tf_find_and_compile model default_url default_path test_model_generator
     configure_file(${override_header} ${hdr_file} COPYONLY)
     configure_file(${override_object} ${obj_file} COPYONLY)
     message(STATUS "Using provided header " ${hdr_file} " and object " ${obj_file} "
-      files for model " ${fname})  
+      files for model " ${fname})
     set(GENERATED_OBJS ${GENERATED_OBJS} ${obj_file})
     set(GENERATED_HEADERS ${GENERATED_HEADERS} ${hdr_file})
   elseif("${model}" STREQUAL "none")

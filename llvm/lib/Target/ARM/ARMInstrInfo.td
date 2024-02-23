@@ -4168,11 +4168,11 @@ def : ARMV6Pat<(int_arm_usat (shl GPRnopc:$a, imm0_31:$shft), imm0_31:$pos),
 def : ARMV6Pat<(int_arm_usat (sra GPRnopc:$a, asr_imm:$shft), imm0_31:$pos),
                (USAT imm0_31:$pos, GPRnopc:$a, asr_imm:$shft)>;
 def : ARMPat<(ARMssat (shl GPRnopc:$Rn, imm0_31:$shft), imm0_31:$pos),
-               (SSAT imm0_31:$pos, GPRnopc:$Rn, imm0_31:$shft)>;                            
+               (SSAT imm0_31:$pos, GPRnopc:$Rn, imm0_31:$shft)>;
 def : ARMPat<(ARMssat (sra GPRnopc:$Rn, asr_imm:$shft), imm0_31:$pos),
                (SSAT imm0_31:$pos, GPRnopc:$Rn, asr_imm:$shft)>;
 def : ARMPat<(ARMusat (shl GPRnopc:$Rn, imm0_31:$shft), imm0_31:$pos),
-               (USAT imm0_31:$pos, GPRnopc:$Rn, imm0_31:$shft)>;  
+               (USAT imm0_31:$pos, GPRnopc:$Rn, imm0_31:$shft)>;
 def : ARMPat<(ARMusat (sra GPRnopc:$Rn, asr_imm:$shft), imm0_31:$pos),
                (USAT imm0_31:$pos, GPRnopc:$Rn, asr_imm:$shft)>;
 

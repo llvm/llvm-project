@@ -6,7 +6,7 @@ html, body {
   font-size:small; font-family:"Lucida Grande", "Lucida Sans Unicode", Arial, Verdana, Helvetica, sans-serif; background-color: #fff; color: #222;
   line-height:1.5;
   background-color: #808080;
-  
+
 }
 
 h1, h2, h3, tt { color: #000 }
@@ -21,7 +21,7 @@ ul { padding-left:1.5em; }
 
 .command { font-weight:bold }
 .code_highlight { font-weight:bold; color:#2d58b7 }
-.code_example { border-width:1px; border-style:solid; border-color:#cccccc; 
+.code_example { border-width:1px; border-style:solid; border-color:#cccccc;
                 background-color:#eeeeee; padding:10px }
 
 /* Slides */
@@ -63,7 +63,7 @@ table.options td { border-bottom: 1px #cccccc dotted }
 table.options td { padding:5px; padding-left:8px; padding-right:8px }
 table.options td { text-align:left; font-size:9pt }
 
-table.checkers { 
+table.checkers {
   border: 1px #cccccc solid;
   border-collapse: collapse;
   margin:0px; margin-top:20px; margin-bottom:20px;

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This Tablegen backend prints a report that includes all the global 
+// This Tablegen backend prints a report that includes all the global
 // variables, classes, and records in complete detail. It includes more
 // detail than the default TableGen printer backend.
 //

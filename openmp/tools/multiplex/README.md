@@ -1,8 +1,8 @@
 # OMPT-Multiplexing
-The OMPT-Multiplexing header file allows a tool to load a second tool to 
-overcome the restriction of the OpenMP to only load one tool at a time. 
-The header file can also be used to load more than two tools using a cascade 
-of tools that include the header file. OMPT-Multiplexing takes care of the 
+The OMPT-Multiplexing header file allows a tool to load a second tool to
+overcome the restriction of the OpenMP to only load one tool at a time.
+The header file can also be used to load more than two tools using a cascade
+of tools that include the header file. OMPT-Multiplexing takes care of the
 multiplexing of OMPT callbacks, data pointers and runtime entry functions.
 
 Examples can be found under ./tests

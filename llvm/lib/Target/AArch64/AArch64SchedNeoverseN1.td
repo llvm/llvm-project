@@ -238,10 +238,10 @@ def N1Write_8c_3L_4V : SchedWriteRes<[N1UnitL, N1UnitL, N1UnitL,
 // Define generic 8 micro-op types
 
 let Latency = 5, NumMicroOps = 8 in
-def N1Write_5c_4L_4V  : SchedWriteRes<[N1UnitL, N1UnitL, N1UnitL, N1UnitL, 
+def N1Write_5c_4L_4V  : SchedWriteRes<[N1UnitL, N1UnitL, N1UnitL, N1UnitL,
                                        N1UnitV, N1UnitV, N1UnitV, N1UnitV]>;
 let Latency = 6, NumMicroOps = 8 in
-def N1Write_6c_4L_4V  : SchedWriteRes<[N1UnitL, N1UnitL, N1UnitL, N1UnitL, 
+def N1Write_6c_4L_4V  : SchedWriteRes<[N1UnitL, N1UnitL, N1UnitL, N1UnitL,
                                        N1UnitV, N1UnitV, N1UnitV, N1UnitV]>;
 let Latency = 8, NumMicroOps = 8 in
 def N1Write_8c_4L_4V  : SchedWriteRes<[N1UnitL, N1UnitL, N1UnitL, N1UnitL,
@@ -255,7 +255,7 @@ def N1Write_10c_4L_4V : SchedWriteRes<[N1UnitL, N1UnitL, N1UnitL, N1UnitL,
 
 let Latency = 9, NumMicroOps = 12 in
 def N1Write_9c_6L_6V : SchedWriteRes<[N1UnitL, N1UnitL, N1UnitL,
-                                      N1UnitL, N1UnitL, N1UnitL, 
+                                      N1UnitL, N1UnitL, N1UnitL,
                                       N1UnitV, N1UnitV, N1UnitV,
                                       N1UnitV, N1UnitV, N1UnitV]>;
 
@@ -654,7 +654,7 @@ def : InstRW<[N1Write_2c_1V1], (instregex "^SHLL?v", "^SHRNv", "^[SU]SHLLv",
 def : InstRW<[N1Write_4c_1V1],
              (instregex "^RSHRNv", "^SQRSHRU?Nv", "^(SQSHLU?|UQSHL)[bhsd]$",
                         "^(SQSHLU?|UQSHL)(v8i8|v16i8|v4i16|v8i16|v2i32|v4i32|v2i64)_shift$",
-                        "^SQSHU?RNv", "^[SU]RSHRv", "^UQR?SHRNv", 
+                        "^SQSHU?RNv", "^[SU]RSHRv", "^UQR?SHRNv",
                         "^[SU]Q?RSHLv", "^[SU]QSHLv")>;
 
 
@@ -925,7 +925,7 @@ def : InstRW<[WriteAdr, N1Write_3c_2L_2V],
              (instregex "ST1Twov(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 1 element, multiple, 3 reg, D-form
-def : InstRW<[N1Write_3c_2L_3V],           
+def : InstRW<[N1Write_3c_2L_3V],
              (instregex "ST1Threev(8b|4h|2s|1d)$")>;
 def : InstRW<[WriteAdr, N1Write_3c_2L_3V],
              (instregex "ST1Threev(8b|4h|2s|1d)_POST$")>;

@@ -44,7 +44,7 @@ static constexpr OptionDefinition g_option_table[] = {
      nullptr, OptionEnumValues(g_watch_type), 0, eArgTypeWatchType,
      "Specify the type of watching to perform."},
     {LLDB_OPT_SET_1, false, "size", 's', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeByteSize, 
+     nullptr, {}, 0, eArgTypeByteSize,
      "Number of bytes to use to watch a region."},
     {LLDB_OPT_SET_2,
      false,

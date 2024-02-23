@@ -106,7 +106,7 @@ void ExecutionEngine::dumpToObjectFile(StringRef filename) {
   }
   // Compilation is lazy and it doesn't populate object cache unless requested.
   // In case object dump is requested before cache is populated, we need to
-  // force compilation manually. 
+  // force compilation manually.
   if (cache->isEmpty()) {
     for (std::string &functionName : functionNames) {
       auto result = lookupPacked(functionName);

@@ -10,17 +10,17 @@ Usage: %prog [options] <path>
 
 Utility for dumping Clang-style logged diagnostics.\
 """)
-    parser.add_option("-a", "--all", action="store_true", dest="all", 
+    parser.add_option("-a", "--all", action="store_true", dest="all",
                       default=False, help="dump all messages.")
-    parser.add_option("-e", "--error", action="store_true", dest="error", 
+    parser.add_option("-e", "--error", action="store_true", dest="error",
                       default=False, help="dump 'error' messages.")
-    parser.add_option("-f", "--fatal", action="store_true", dest="fatal", 
+    parser.add_option("-f", "--fatal", action="store_true", dest="fatal",
                       default=False, help="dump 'fatal error' messages.")
-    parser.add_option("-i", "--ignored", action="store_true", dest="ignored", 
+    parser.add_option("-i", "--ignored", action="store_true", dest="ignored",
                       default=False, help="dump 'ignored' messages.")
-    parser.add_option("-n", "--note", action="store_true", dest="note", 
+    parser.add_option("-n", "--note", action="store_true", dest="note",
                       default=False, help="dump 'note' messages.")
-    parser.add_option("-w", "--warning", action="store_true", dest="warning", 
+    parser.add_option("-w", "--warning", action="store_true", dest="warning",
                       default=False, help="dump 'warning' messages.")
     (opts, args) = parser.parse_args()
 

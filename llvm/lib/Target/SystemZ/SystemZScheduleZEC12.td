@@ -16,7 +16,7 @@
 def ZEC12Model : SchedMachineModel {
 
     let UnsupportedFeatures = Arch10UnsupportedFeatures.List;
-    
+
     let IssueWidth = 3;
     let MicroOpBufferSize = 40;     // Issue queues
     let LoadLatency = 1;            // Optimistic load latency.

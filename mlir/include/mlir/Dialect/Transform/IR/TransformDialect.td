@@ -23,7 +23,7 @@ def Transform_Dialect : Dialect {
     /// Symbol name for the default entry point "named sequence".
     constexpr const static ::llvm::StringLiteral
         kTransformEntryPointSymbolName = "__transform_main";
-    
+
     /// Name of the attribute attachable to the symbol table operation
     /// containing named sequences. This is used to trigger verification.
     constexpr const static ::llvm::StringLiteral

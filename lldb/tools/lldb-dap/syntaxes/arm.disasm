@@ -1,4 +1,4 @@
-(lldb) 
+(lldb)
 libIGL.so`igl::RenderPipelineDesc::TargetDesc::ColorAttachment::operator==:
 libIGL.so[0x7694] <+0>:  ldr    r2, [r1]
 libIGL.so[0x7696] <+2>:  ldr    r3, [r0]
@@ -42,4 +42,4 @@ libIGL.so[0x787c] <+0>:  ldr    r1, [pc, #0x8]            ; <+12> at VertexInput
 libIGL.so[0x787e] <+2>:  add    r1, pc
 libIGL.so[0x7880] <+4>:  ldr.w  r0, [r1, r0, lsl #2]
 libIGL.so[0x7884] <+8>:  bx     lr
-libIGL.so[0x7886] <+10>: nop  
+libIGL.so[0x7886] <+10>: nop

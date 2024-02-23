@@ -22,7 +22,7 @@
 # MSVC_VER/WINSDK_VER:
 #   (Optional) if not specified, highest version number is used if any.
 #
-# LLVM_WINSYSROOT and MSVC_VER work together to define a folder layout that 
+# LLVM_WINSYSROOT and MSVC_VER work together to define a folder layout that
 # containing MSVC headers and system libraries. The layout of the folder
 # matches that which is intalled by MSVC 2017 on Windows, and should look like
 # this:

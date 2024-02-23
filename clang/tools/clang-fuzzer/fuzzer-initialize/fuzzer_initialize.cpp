@@ -39,7 +39,7 @@ extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
   InitializeAllTargetMCs();
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
-  
+
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeCore(Registry);
   initializeScalarOpts(Registry);

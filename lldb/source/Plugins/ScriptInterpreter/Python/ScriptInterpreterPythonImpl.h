@@ -188,7 +188,6 @@ public:
       lldb_private::CommandReturnObject &cmd_retobj, Status &error,
       const lldb_private::ExecutionContext &exe_ctx) override;
 
-  
   Status GenerateFunction(const char *signature, const StringList &input,
                           bool is_callback) override;
 
@@ -219,7 +218,7 @@ public:
 
   bool GetLongHelpForCommandObject(StructuredData::GenericSP cmd_obj_sp,
                                    std::string &dest) override;
-                                   
+
   StructuredData::ObjectSP
   GetOptionsForCommandObject(StructuredData::GenericSP cmd_obj_sp) override;
 
@@ -228,7 +227,7 @@ public:
 
   bool SetOptionValueForCommandObject(StructuredData::GenericSP cmd_obj_sp,
                                       ExecutionContext *exe_ctx,
-                                      llvm::StringRef long_option, 
+                                      llvm::StringRef long_option,
                                       llvm::StringRef value) override;
 
   void OptionParsingStartedForCommandObject(

@@ -181,7 +181,7 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
                    reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc)
 #else
                    m_state.context.gpr.__fp,
-                   m_state.context.gpr.__lr, 
+                   m_state.context.gpr.__lr,
                    m_state.context.gpr.__sp,
                    m_state.context.gpr.__pc
 #endif

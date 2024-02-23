@@ -62,11 +62,11 @@ CXSourceRange clang_getRange(CXSourceLocation begin, CXSourceLocation end) {
     CXSourceRange Result = { { begin.ptr_data[0], end.ptr_data[0] }, 0, 0 };
     return Result;
   }
-  
+
   if (begin.ptr_data[0] != end.ptr_data[0] ||
       begin.ptr_data[1] != end.ptr_data[1])
     return clang_getNullRange();
-  
+
   CXSourceRange Result = { { begin.ptr_data[0], begin.ptr_data[1] },
                            begin.int_data, end.int_data };
 
@@ -83,15 +83,14 @@ unsigned clang_equalRanges(CXSourceRange range1, CXSourceRange range2) {
 int clang_Range_isNull(CXSourceRange range) {
   return clang_equalRanges(range, clang_getNullRange());
 }
-  
-  
+
 CXSourceLocation clang_getRangeStart(CXSourceRange range) {
   // Special decoding for CXSourceLocations for CXLoadedDiagnostics.
   if ((uintptr_t)range.ptr_data[0] & 0x1) {
     CXSourceLocation Result = { { range.ptr_data[0], nullptr }, 0 };
-    return Result;    
+    return Result;
   }
-  
+
   CXSourceLocation Result = { { range.ptr_data[0], range.ptr_data[1] },
     range.begin_int_data };
   return Result;
@@ -101,7 +100,7 @@ CXSourceLocation clang_getRangeEnd(CXSourceRange range) {
   // Special decoding for CXSourceLocations for CXLoadedDiagnostics.
   if ((uintptr_t)range.ptr_data[0] & 0x1) {
     CXSourceLocation Result = { { range.ptr_data[1], nullptr }, 0 };
-    return Result;    
+    return Result;
   }
 
   CXSourceLocation Result = { { range.ptr_data[0], range.ptr_data[1] },
@@ -125,7 +124,7 @@ CXSourceLocation clang_getLocation(CXTranslationUnit TU,
     return clang_getNullLocation();
   if (line == 0 || column == 0)
     return clang_getNullLocation();
-  
+
   LogRef Log = Logger::make(__func__);
   ASTUnit *CXXUnit = cxtu::getASTUnit(TU);
   ASTUnit::ConcurrencyCheck Check(*CXXUnit);
@@ -137,7 +136,7 @@ CXSourceLocation clang_getLocation(CXTranslationUnit TU,
                            File.getName().str().c_str(), line, column);
     return clang_getNullLocation();
   }
-  
+
   CXSourceLocation CXLoc =
       cxloc::translateSourceLocation(CXXUnit->getASTContext(), SLoc);
   if (Log)
@@ -147,7 +146,7 @@ CXSourceLocation clang_getLocation(CXTranslationUnit TU,
 
   return CXLoc;
 }
-  
+
 CXSourceLocation clang_getLocationForOffset(CXTranslationUnit TU,
                                             CXFile file,
                                             unsigned offset) {
@@ -160,12 +159,12 @@ CXSourceLocation clang_getLocationForOffset(CXTranslationUnit TU,
 
   ASTUnit *CXXUnit = cxtu::getASTUnit(TU);
 
-  SourceLocation SLoc 
-    = CXXUnit->getLocation(*cxfile::getFileEntryRef(file), offset);
+  SourceLocation SLoc =
+      CXXUnit->getLocation(*cxfile::getFileEntryRef(file), offset);
 
   if (SLoc.isInvalid())
     return clang_getNullLocation();
-  
+
   return cxloc::translateSourceLocation(CXXUnit->getASTContext(), SLoc);
 }
 
@@ -240,7 +239,7 @@ void clang_getExpansionLocation(CXSourceLocation location,
   const SourceManager &SM =
   *static_cast<const SourceManager*>(location.ptr_data[0]);
   SourceLocation ExpansionLoc = SM.getExpansionLoc(Loc);
-  
+
   // Check that the FileID is invalid on the expansion location.
   // This can manifest in invalid code.
   FileID fileID = SM.getFileID(ExpansionLoc);
@@ -250,7 +249,7 @@ void clang_getExpansionLocation(CXSourceLocation location,
     createNullLocation(file, line, column, offset);
     return;
   }
-  
+
   if (file)
     *file = cxfile::makeCXFile(SM.getFileEntryRefForID(fileID));
   if (line)
@@ -311,12 +310,12 @@ void clang_getSpellingLocation(CXSourceLocation location,
                                            column, offset);
     return;
   }
-  
+
   SourceLocation Loc = SourceLocation::getFromRawEncoding(location.int_data);
-  
+
   if (!location.ptr_data[0] || Loc.isInvalid())
     return createNullLocation(file, line, column, offset);
-  
+
   const SourceManager &SM =
   *static_cast<const SourceManager*>(location.ptr_data[0]);
   // FIXME: This should call SourceManager::getSpellingLoc().
@@ -324,10 +323,10 @@ void clang_getSpellingLocation(CXSourceLocation location,
   std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(SpellLoc);
   FileID FID = LocInfo.first;
   unsigned FileOffset = LocInfo.second;
-  
+
   if (FID.isInvalid())
     return createNullLocation(file, line, column, offset);
-  
+
   if (file)
     *file = cxfile::makeCXFile(SM.getFileEntryRefForID(FID));
   if (line)

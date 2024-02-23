@@ -964,7 +964,7 @@ TypedInit *TGParser::ParseSliceElements(Record *CurRec, bool Single) {
 ///   RangePiece ::= INTVAL
 ///   RangePiece ::= INTVAL '...' INTVAL
 ///   RangePiece ::= INTVAL '-' INTVAL
-///   RangePiece ::= INTVAL INTVAL 
+///   RangePiece ::= INTVAL INTVAL
 // The last two forms are deprecated.
 bool TGParser::ParseRangePiece(SmallVectorImpl<unsigned> &Ranges,
                                TypedInit *FirstItem) {
@@ -1632,7 +1632,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
               !ArgType->typeIsConvertibleTo(StringRecTy::get(Records)) &&
               !ArgType->typeIsConvertibleTo(RecordRecTy::get(Records, {}))) {
             Error(InitLoc, Twine("expected bit, bits, int, string, or record; "
-                                 "got value of type '") + ArgType->getAsString() + 
+                                 "got value of type '") + ArgType->getAsString() +
                                  "'");
             return nullptr;
           }
@@ -1646,7 +1646,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
           if (!ArgType->typeIsConvertibleTo(IntRecTy::get(Records)) &&
               !ArgType->typeIsConvertibleTo(StringRecTy::get(Records))) {
             Error(InitLoc, Twine("expected bit, bits, int, or string; "
-                                 "got value of type '") + ArgType->getAsString() + 
+                                 "got value of type '") + ArgType->getAsString() +
                                  "'");
             return nullptr;
           }
@@ -2386,7 +2386,7 @@ Init *TGParser::ParseOperationFind(Record *CurRec, RecTy *ItemType) {
 ///
 /// ForEach ::= !foreach(ID, list-or-dag, expr) => list<expr type>
 /// Filter  ::= !foreach(ID, list, predicate) ==> list<list type>
-Init *TGParser::ParseOperationForEachFilter(Record *CurRec, RecTy *ItemType) { 
+Init *TGParser::ParseOperationForEachFilter(Record *CurRec, RecTy *ItemType) {
   SMLoc OpLoc = Lex.getLoc();
   tgtok::TokKind Operation = Lex.getCode();
   Lex.Lex(); // eat the operation
@@ -2502,7 +2502,7 @@ Init *TGParser::ParseOperationForEachFilter(Record *CurRec, RecTy *ItemType) {
     OutType = RHSt->getType()->getListTy();
   } else if (Operation == tgtok::XFilter) {
     OutType = InEltType->getListTy();
-  }    
+  }
 
   return (TernOpInit::get((Operation == tgtok::XForEach) ? TernOpInit::FOREACH
                                                          : TernOpInit::FILTER,
@@ -3515,7 +3515,7 @@ bool TGParser::ParseBody(Record *CurRec) {
   SMLoc SemiLoc = Lex.getLoc();
   if (consume(tgtok::semi)) {
     PrintError(SemiLoc, "A class or def body should not end with a semicolon");
-    PrintNote("Semicolon ignored; remove to eliminate this error");    
+    PrintNote("Semicolon ignored; remove to eliminate this error");
   }
 
   return false;
@@ -4185,7 +4185,7 @@ bool TGParser::ParseMultiClass() {
     SMLoc SemiLoc = Lex.getLoc();
     if (consume(tgtok::semi)) {
       PrintError(SemiLoc, "A multiclass body should not end with a semicolon");
-      PrintNote("Semicolon ignored; remove to eliminate this error");    
+      PrintNote("Semicolon ignored; remove to eliminate this error");
     }
   }
 

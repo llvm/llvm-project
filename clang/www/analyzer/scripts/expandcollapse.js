@@ -1,4 +1,4 @@
-// expand/collapse button (expander) is added if height of a cell content 
+// expand/collapse button (expander) is added if height of a cell content
 // exceeds CLIP_HEIGHT px.
 var CLIP_HEIGHT = 135;
 
@@ -22,9 +22,9 @@ function getCellIdx(id) {
 }
 
 // Returns { 'height', 'expanded' } info for a cell with a given id.
-function getCellInfo(id) { 
-  var idx = getCellIdx(id); 
-  return CellsInfo[idx.group][idx.cell]; 
+function getCellInfo(id) {
+  var idx = getCellIdx(id);
+  return CellsInfo[idx.group][idx.cell];
 }
 
 // Initialization, add nodes, collect info.
@@ -52,7 +52,7 @@ function initExpandCollapse() {
       if (expandableDiv.offsetHeight <= CLIP_HEIGHT)
         continue;
 
-      // We found a div wrapping a cell content whose height exceeds 
+      // We found a div wrapping a cell content whose height exceeds
       // CLIP_HEIGHT.
       var originalHeight = expandableDiv.offsetHeight;
       // Unique postfix for ids for generated nodes for a given cell.
@@ -61,7 +61,7 @@ function initExpandCollapse() {
       //
       //                                --- expandableDiv ----
       //  --- expandableDiv ---         | ------ data ------ |
-      //  |    cell content   |   ->    | |  cell content  | | 
+      //  |    cell content   |   ->    | |  cell content  | |
       //  ---------------------         | ------------------ |
       //                                | ---- expander ---- |
       //                                ----------------------
@@ -80,19 +80,19 @@ function initExpandCollapse() {
       // Add mouse calbacks to expander.
       expander.onclick = function() {
         expandCollapse(this.id);
-        // Hack for Opera - onmouseout callback is not invoked when page 
+        // Hack for Opera - onmouseout callback is not invoked when page
         // content changes dynamically and mouse pointer goes out of an element.
-        this.src = imgPath + 
+        this.src = imgPath +
                    (getCellInfo(this.id).expanded ? "arrows_light.gif"
                                                   : "ellipses_light.gif");
       }
-      expander.onmouseover = function() { 
-        this.src = imgPath + 
+      expander.onmouseover = function() {
+        this.src = imgPath +
                    (getCellInfo(this.id).expanded ? "arrows_dark.gif"
                                                   : "ellipses_dark.gif");
       }
-      expander.onmouseout = function() { 
-        this.src = imgPath + 
+      expander.onmouseout = function() {
+        this.src = imgPath +
                    (getCellInfo(this.id).expanded ? "arrows_light.gif"
                                                   : "ellipses_light.gif");
       }
@@ -127,7 +127,6 @@ function isElemTopVisible(elem) {
       scrollTop = html.scrollTop || body && body.scrollTop || 0;
   scrollTop -= html.clientTop; // IE<8
 
-  
   if (elemOffset < scrollTop)
     return false;
 
@@ -155,7 +154,7 @@ function expandCollapse(id) {
     mayNeedScroll = false;
   }
 
-  // Update all cells (height and expanded/collapsed state) in a row according 
+  // Update all cells (height and expanded/collapsed state) in a row according
   // to the new height of the row.
   for (var i = 0; i < CellsInfo[idx.group].length; i++) {
     var idxStr = "_" + idx.group + "_" + i;
@@ -181,8 +180,8 @@ function expandCollapse(id) {
   if (mayNeedScroll) {
     var idxStr = "_" + idx.group + "_" + idx.cell;
     var clickedExpandableDiv = document.getElementById("cell" + idxStr);
-    // Scroll page up if a row is collapsed and the rows top is above the 
-    // viewport. The amount of scroll is the difference between a new and old 
+    // Scroll page up if a row is collapsed and the rows top is above the
+    // viewport. The amount of scroll is the difference between a new and old
     // row height.
     if (!isElemTopVisible(clickedExpandableDiv)) {
       window.scrollBy(0, newHeight - cellInfo.height);

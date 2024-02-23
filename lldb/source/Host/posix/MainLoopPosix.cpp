@@ -250,7 +250,7 @@ MainLoopPosix::~MainLoopPosix() {
 #endif
   m_read_fds.erase(m_trigger_pipe.GetReadFileDescriptor());
   m_trigger_pipe.Close();
-  assert(m_read_fds.size() == 0); 
+  assert(m_read_fds.size() == 0);
   assert(m_signals.size() == 0);
 }
 

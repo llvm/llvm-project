@@ -1,9 +1,9 @@
-<!--===- docs/Intrinsics.md 
-  
+<!--===- docs/Intrinsics.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # A categorization of standard (2018) and extended Fortran intrinsic procedures
@@ -695,7 +695,7 @@ CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, LOC
 MALLOC
 ```
 
-### Library subroutine 
+### Library subroutine
 ```
 CALL FDATE(TIME)
 CALL GETLOG(USRNAME)

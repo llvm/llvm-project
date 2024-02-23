@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// This rewrite returns the converted value of `value`, whose type is defined 
+/// This rewrite returns the converted value of `value`, whose type is defined
 /// by the type converted specified in the `PDLConversionConfig` of the current
 /// pattern.
 Rewrite convertValue(value: Value) -> Value;
 
-/// This rewrite returns the converted values of `values`, whose type is defined 
+/// This rewrite returns the converted values of `values`, whose type is defined
 /// by the type converted specified in the `PDLConversionConfig` of the current
 /// pattern.
 Rewrite convertValues(values: ValueRange) -> ValueRange;

@@ -75,9 +75,9 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
       AST.getIncludeStructure().getRealPath(HID));
   assert(FE);
   if (FE->getDir() == AST.getPreprocessor()
-                  .getHeaderSearchInfo()
-                  .getModuleMap()
-                  .getBuiltinDir()) 
+                         .getHeaderSearchInfo()
+                         .getModuleMap()
+                         .getBuiltinDir())
     return false;
   if (PI && PI->shouldKeep(*FE))
     return false;

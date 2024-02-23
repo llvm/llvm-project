@@ -195,7 +195,7 @@ OPTIONS
 .. option:: --debug-info=<path>
 
  Specify the executable or ``.dSYM`` that contains debug info for the raw profile.
- When ``--debug-info-correlate`` or ``--profile-correlate=debug-info`` was used 
+ When ``--debug-info-correlate`` or ``--profile-correlate=debug-info`` was used
  for instrumentation, use this option to correlate the raw profile.
 
 .. option:: --binary-file=<path>

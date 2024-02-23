@@ -6,7 +6,7 @@
 #           It always returns the another program exit code or exit with
 #           code 255 which indicates that the program could not be executed.
 #
-# Syntax: 
+# Syntax:
 #
 #   RemoteRunSafely.sh <hostname> [-l <login_name>] [-p <port>]
 #                <program> <args...>

@@ -1138,8 +1138,8 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
     break;
 
   // v. https://en.wikipedia.org/wiki/ARM_Cortex-M#Silicon_customization
-  // Cortex-M0 - ARMv6-M - armv6m 
-  // Cortex-M3 - ARMv7-M - armv7m 
+  // Cortex-M0 - ARMv6-M - armv6m
+  // Cortex-M3 - ARMv7-M - armv7m
   // Cortex-M4 - ARMv7E-M - armv7em
   case ArchSpec::eCore_arm_armv7em:
     if (!enforce_exact_match) {
@@ -1156,8 +1156,8 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
     break;
 
   // v. https://en.wikipedia.org/wiki/ARM_Cortex-M#Silicon_customization
-  // Cortex-M0 - ARMv6-M - armv6m 
-  // Cortex-M3 - ARMv7-M - armv7m 
+  // Cortex-M0 - ARMv6-M - armv6m
+  // Cortex-M3 - ARMv7-M - armv7m
   // Cortex-M4 - ARMv7E-M - armv7em
   case ArchSpec::eCore_arm_armv7m:
     if (!enforce_exact_match) {
@@ -1174,8 +1174,8 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
     break;
 
   // v. https://en.wikipedia.org/wiki/ARM_Cortex-M#Silicon_customization
-  // Cortex-M0 - ARMv6-M - armv6m 
-  // Cortex-M3 - ARMv7-M - armv7m 
+  // Cortex-M0 - ARMv6-M - armv6m
+  // Cortex-M3 - ARMv7-M - armv7m
   // Cortex-M4 - ARMv7E-M - armv7em
   case ArchSpec::eCore_arm_armv6m:
     if (!enforce_exact_match) {

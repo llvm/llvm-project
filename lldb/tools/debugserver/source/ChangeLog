@@ -18,7 +18,7 @@
 
 	* DNB.cpp (GetAllInfosMatchingName): Correctly truncate process name string
 	to MAXCOMLEN when searching kinfo_proc structs for process matches by name.
-	* MachProcess.cpp (MachProcess::PrepareForAttach): Added logging when 
+	* MachProcess.cpp (MachProcess::PrepareForAttach): Added logging when
 	attaching to a program by name.
 
 2009-06-25  Greg Clayton  <gclayton@apple.com>
@@ -44,13 +44,13 @@
 	(GetAllInfos): New function.
 	(GetAlInfosMatchingName): New function.
 	(DNBProcessAttachWait): New function.
-	DNB.h: Declare DNBProcessAttachByName, DNBProcessAttachWait, change 
+	DNB.h: Declare DNBProcessAttachByName, DNBProcessAttachWait, change
 	signature of DNBProcessAttach.
 	* MachProcess.cpp (MachProcess::PrepareForAttach): New function.
 	(MachProcess::CheckForProcess): New function.
 	(MachProcess::CleanupAfterAttach): New function.
 	(CopyBundleIDForPath): New function.
-	(MachProcess::SBForkChildForPTraceDebugging): Convert to using 
+	(MachProcess::SBForkChildForPTraceDebugging): Convert to using
 	CopyBundleIDForPath.
 	* MachProcess.h: Declare PrepareForAttach, CleanupAfterAttach and
 	CheckForProcess.
@@ -59,7 +59,7 @@
 	RNBRunLoopGetArgsFromRemote, and handle vattachwait.
 	(RNBRunLoopLaunchAttaching): Code was moved from here into DNBProcessAttach.
 	(StartListening): New function.
-	(GetAllProcessInfos, GetAllProcessInfosMatchingName): Moved to 
+	(GetAllProcessInfos, GetAllProcessInfosMatchingName): Moved to
 	DNBProcess.cpp.
 	(main): Handle attach waitfor, and make debugserver with only a host and
 	port wait on commands from gdb.
@@ -67,7 +67,7 @@
 2009-04-03  Greg Clayton  <gclayton@apple.com>
 
 	* RNBRemote.h (PacketEnum): Added enum for qShlibInfoAddr.
-	* RNBRemote.cpp (RNBRemote::CreatePacketTable) Added the qShlibInfoAddr 
+	* RNBRemote.cpp (RNBRemote::CreatePacketTable) Added the qShlibInfoAddr
 	packet definition to m_packets.
 	(RNBRemote::GetPacket): Log when we run into an unimplemented packet.
 	(RNBRemote::HandleReceivedPacket): Only log the packet when logging
@@ -77,7 +77,7 @@
 	* DNB.cpp (DNBProcessGetSharedLibraryInfoAddress): New function.
 	* MachTask.h (MachProcess::GetDYLDAllImageInfosAddress): New prototype.
 	* MachTask.cpp (MachProcess::GetDYLDAllImageInfosAddress): New function.
-	
+
 2009-04-01  Greg Clayton  <gclayton@apple.com>
 
 	* test-remotenub.cpp (main): Display the detailed error message if any when
@@ -112,7 +112,7 @@
 	(RNBRemote::HandleAsyncPacket): Ditto.
 	(RNBRemote::HandleReceivedPacket): Ditto.
 	(RNBRemote::CommDataReceived): Ditto.
-	* DNB.cpp (DNBProcessLaunch): Changed to take a eror string pointer with 
+	* DNB.cpp (DNBProcessLaunch): Changed to take a eror string pointer with
 	size for more descriptive error reporting (instead of a uint32_t pointer).
 	* DNB.h (DNBProcessLaunch): Ditto.
 	* DNBError.cpp (DNBError::AsString): Now returns NULL if there is no error.
@@ -129,7 +129,7 @@
 	* test-remotenub.cpp (GetAllProcessInfosMatchingName): New function that
 	returns matching kinfo_proc structs given a process name.
 	(main): Enhanced the --attach option to be able to take a PROCNAME or
-	a PID. Changed the --waitfor=PROCNAME option to ignore any existing 
+	a PID. Changed the --waitfor=PROCNAME option to ignore any existing
 	processes with PROCNAME so we only catch new process invocations.
 
 2009-03-07  Greg Clayton  <gclayton@apple.com>
@@ -146,15 +146,15 @@
 	(RNBLogSTDERR): New macro that logs to STDERR if g_isatty is non-zero, else
 	it logs to asl.
 	(RNBRunLoopGetArgsFromRemote): Use new RNBLogSTDOUT/RNBLogSTDERR macros.
-	(GetAllProcessInfos): Get all process info structs for everything on the 
+	(GetAllProcessInfos): Get all process info structs for everything on the
 	system.
 	(main): Implemented new --waitfor=NAME option to allow waiting for a process
 	to run by polling the system processes. The new --waitfor-interval=N option
 	allows fine control over the polling interval where N is the number of mirco
-	seconds (usec) to wait between polls (defaults to 1000). The new 
-	--waitfor-duration=N allows	a timeout in seconds to be specified when 
+	seconds (usec) to wait between polls (defaults to 1000). The new
+	--waitfor-duration=N allows	a timeout in seconds to be specified when
 	waiting for a process (defaults	to infinite).
-	
+
 2009-03-02  Greg Clayton  <gclayton@apple.com>
 
 	* DNBArchImpl.cpp (DNBArchMachARM::EvaluateNextInstructionForSoftwareBreakpointSetup):
@@ -181,7 +181,7 @@
 2009-02-10  Greg Clayton  <gclayton@apple.com>
 
 	* RNBRemote.h (PacketEnum): Added query_step_packet_supported.
-	* RNBRemot.cpp (RNBRemote::CreatePacketTable): Added new 
+	* RNBRemot.cpp (RNBRemote::CreatePacketTable): Added new
 	qStepPacketSupported packet.
 	(RNBRemote::HandlePacket_q): Added support for the new
 	"qStepPacketSupported" packet.
@@ -190,26 +190,26 @@
 
 2009-01-30  Greg Clayton  <gclayton@apple.com>
 
-	* debugserver-entitlements.plist: Changed the entitlement 
+	* debugserver-entitlements.plist: Changed the entitlement
 	"run-invalid-allow" to "run-unsigned-code".
 
 2009-01-23  Greg Clayton  <gclayton@apple.com>
 
-	* DNBArchImpl.cpp (DNBArchMachARM::EvaluateNextInstructionForSoftwareBreakpointSetup): 
+	* DNBArchImpl.cpp (DNBArchMachARM::EvaluateNextInstructionForSoftwareBreakpointSetup):
 	Merged Yusuf's changes to make software single stepping work.
-	* test-remotenub.cpp (RNBRunLoopLaunchInferior): Call new 
+	* test-remotenub.cpp (RNBRunLoopLaunchInferior): Call new
 	DNBResolveExecutablePath function to resolve executable paths.
 	* DNB.h (DNBResolveExecutablePath): New function prototype.
 	* DNB.cpp (DNBResolveExecutablePath): New function that will resolve
 	relative paths and also executable paths for executables that aren't relative
 	but yet are in the shell PATH environment variable.
-	
+
 2009-01-22  Greg Clayton  <gclayton@apple.com>
 
-	* DNBArchImpl.h (class DBNArchMachARM): Renamed member variable 
+	* DNBArchImpl.h (class DBNArchMachARM): Renamed member variable
 	m_chained_hw_single_step_addr to m_hw_single_chained_step_addr. Added
 	new member variables: m_sw_single_step_itblock_break_id, m_last_decode_pc,
-	and m_sw_single_step_itblock_break_count. Renamed m_thumbStaticData to 
+	and m_sw_single_step_itblock_break_count. Renamed m_thumbStaticData to
 	m_last_decode_thumb, and renamed m_decodedInstruction to m_last_decode_arm.
 	(DBNArchMachARM::DecodeITBlockInstructions): New prototype.
 	(DBNArchMachARM::DecodeInstructionUsingDisassembler): New prototype.
@@ -217,7 +217,7 @@
 	* DNBArchImpl.cpp (DNBArchMachARM::ThreadDidStop): Disable any of the
 	many software single step breakpoints if any are set.
 	(DNBArchMachARM::StepNotComplete): Changed renamed member accesses.
-	(DNBArchMachARM::DecodeITBlockInstructions): New function for software 
+	(DNBArchMachARM::DecodeITBlockInstructions): New function for software
 	single stepping through Thumb IT blocks.
 	(DNBArchMachARM::EnableHardwareSingleStep): Cleaned up logging.
 	(DNBArchMachARM::ComputeNextPC): Ditto.
@@ -226,20 +226,20 @@
 	(DNBArchMachARM::SetSingleStepSoftwareBreakpoints): Ditto.
 	(DNBArchMachARM::DecodeInstructionUsingDisassembler): New function.
 	(DNBArchMachARM::BreakpointHit): New breakpoint callback function.
-	
+
 2009-01-21  Greg Clayton  <gclayton@apple.com>
-	
+
 	* MachProcess.cpp (MachProcess::PrivateResume): Set the process state before
 	we actually resume so we are sure to get the events in the correct order.
 
 2009-01-16  Greg Clayton  <gclayton@apple.com>
 
-	* RNBRemote.cpp (RNBRemote::HandlePacket_last_signal): Include only 
+	* RNBRemote.cpp (RNBRemote::HandlePacket_last_signal): Include only
 	registers which are to be expedited in the T packets.
 	(RNBRemote::HandlePacket_p): Enable for all targets.
 	(struct register_map_entry): Added an expedite member so we know which
 	registers need to be sent up to the host with each stop reply packet.
-	(register_map): Updated each array members' expedite member with an 
+	(register_map): Updated each array members' expedite member with an
 	appropriate value.
 
 2009-01-16  Greg Clayton  <gclayton@apple.com>
@@ -249,7 +249,7 @@
 	single stepping.
 
 2009-01-13  Greg Clayton  <gclayton@apple.com>
-	
+
 	*DNBArchImpl.cpp (bit): New function.
 	(bits): New function.
 	(DNBArchMachARM::ConditionPassed): Use new "bit" function.
@@ -262,31 +262,31 @@
 2009-01-12  Greg Clayton  <gclayton@apple.com>
 
 	* DNBArch.h (DNBArchProtocol::NumSupportedHardwareBreakpoints()): Removed
-	the "const" qualifier to allow arches to auto detect how many hardware 
+	the "const" qualifier to allow arches to auto detect how many hardware
 	breakpoints they have.
-	(DNBArchProtocol::NumSupportedHardwareWatchpoints()): Removed the "const" 
-	qualifier to allow arches to auto detect how many hardware watchpoints they 
+	(DNBArchProtocol::NumSupportedHardwareWatchpoints()): Removed the "const"
+	qualifier to allow arches to auto detect how many hardware watchpoints they
 	have.
 	* DNBArchImpl.h (DNBArchMachARM::NumSupportedHardwareBreakpoints()): Auto
 	detect how many BRP pairs are available and disable for armv7 for the time
 	being (rdar://problem/6372672).
-	(DNBArchMachARM::NumSupportedHardwareWatchpoints()): Auto detect how many 
+	(DNBArchMachARM::NumSupportedHardwareWatchpoints()): Auto detect how many
 	WRP pairs are available and disable for armv7 for the time being
 	(rdar://problem/6372672).
 
 2009-01-09  Greg Clayton  <gclayton@apple.com>
 
-	* test-remotenub.cpp (main): Filled in short argument versions for 
+	* test-remotenub.cpp (main): Filled in short argument versions for
 	--applist (-t) and --lockdown (-k) options.
 	* DNBArchImpl.h (DNBArchMachARM::ConditionPassed): New protected
 	member function.
 	(DNBArchMachARM::ComputeNextPC): New protected member function.
-	(DNBArchMachARM::EvaluateNextInstructionForSoftwareBreakpointSetup): New 
+	(DNBArchMachARM::EvaluateNextInstructionForSoftwareBreakpointSetup): New
 	protected member function.
 	(DNBArchMachARM::m_thumbStaticData): New protected member variable.
 	(DNBArchMachARM::m_decodedInstruction): New protected member variable.
 	* DNBArchImpl.cpp (DNBArchMachARM::ThreadDidStop): Added extra code that
-	will log and exit when we are verifying software single stepping (a 
+	will log and exit when we are verifying software single stepping (a
 	compile time option).
 	(DNBArchMachARM::ConditionPassed): New function.
 	(DNBArchMachARM::ComputeNextPC): New function.
@@ -310,7 +310,7 @@
 	(DNBProcessSetEvents): Removed (deprecated).
 	(DNBProcessGetWaitForResetMask): Removed (unused).
 	(DNBProcessSetWaitForResetMask): Removed (unused).
-	(DNBProcessInterruptEvents): New function that can be used to 
+	(DNBProcessInterruptEvents): New function that can be used to
 	asynchronously interrupt infinite wait for events calls.
 	RNBRemote.cpp (RNBRemote::HandlePacket_v): Call DNBProcessWaitForEvents.
 	RNBContext.cpp (RNBContext::ThreadFunctionProcessStatus): Ditto.
@@ -331,20 +331,20 @@
 	debugging of deadlocks.
 	(_DNBLogThreadedIf): Ditto.
 	* DNBBreakpoint.h (DNBBreakpoint::IntersectsRange): New function.
-	* DNBBreakpoint.cpp	(DNBBreakpointList::FindIDByAddress): Improved 
+	* DNBBreakpoint.cpp	(DNBBreakpointList::FindIDByAddress): Improved
 	logging.
 	* MacOSX/MachThread.cpp (MachThread::MachThread): Improved logging.
 	(MachThread::~MachThread): Ditto.
 	(MachThread::Suspend): Ditto.
 	(MachThread::Resume): Ditto.
 	(MachThread::RestoreSuspendCount): Ditto.
-	(MachThread::GetState): Use new PTHREAD_MUTEX_LOCKER macro to ease 
+	(MachThread::GetState): Use new PTHREAD_MUTEX_LOCKER macro to ease
 	debugging of deadlocks.
 	(MachThread::SetState): Ditto.
 	* MacOSX/MachVMMemory.cpp (MachVMMemory::Read): Improved logging.
 	(MachVMMemory::Write): Ditto.
 	(MachVMMemory::WriteRegion): Ditto.
-	* MacOSX/MachProcess.cpp (MachProcess::GetState): Use new 
+	* MacOSX/MachProcess.cpp (MachProcess::GetState): Use new
 	PTHREAD_MUTEX_LOCKER macro to ease debugging of deadlocks.
 	(MachProcess::SetState): Ditto.
 	(MachProcess::Clear): Ditto.
@@ -353,7 +353,7 @@
 	(MachProcess::ExceptionMessageReceived): Ditto.
 	(MachProcess::AppendSTDOUT): Ditto.
 	(MachProcess::GetAvailableSTDOUT): Ditto.
-	(MachProcess::ThreadFunctionSTDIO): Renamed from to 
+	(MachProcess::ThreadFunctionSTDIO): Renamed from to
 	MachProcess::STDIOThread.
 	(MachProcess::StartSTDIOThread): Improved logging.
 	(MachProcess::CreateBreakpoint): Ditto.
@@ -367,17 +367,17 @@
 	(MachProcess::PosixSpawnChildForPTraceDebugging): Ditto.
 	(MachProcess::Detach): Reset the running event bit after resuming prior
 	to issuing the SIGSTOP to avoid a pause.
-	(MachProcess::RemoveTrapsFromBuffer): New function that removes 
+	(MachProcess::RemoveTrapsFromBuffer): New function that removes
 	breakpoint traps from a memory buffer.
 	(MachProcess::ReadMemory): Read memory from the task, then removes any
 	breakpoint traps prior to returning the buffer.
-	(MachProcess::WriteMemory): Write memory and any needed data to the 
+	(MachProcess::WriteMemory): Write memory and any needed data to the
 	breakpoint saved opcodes for any software breakpoint traps that are
 	enabled.
 	* MacOSX/MachProcess.h (MachProcess::ThreadFunctionException): Removed.
 	(MachProcess::ThreadFunctionSTDIO): Renamed to MachProcess::STDIOThread().
 	(MachProcess::RemoveTrapsFromBuffer): New function.
-	* MacOSX/MachVMRegion.cpp (MachVMRegion::SetProtections): Improved 
+	* MacOSX/MachVMRegion.cpp (MachVMRegion::SetProtections): Improved
 	logging.
 	(MachVMRegion::RestoreProtections): Ditto.
 	(MachVMRegion::GetRegionForAddress): Ditto.
@@ -405,22 +405,22 @@
 	as pthread_cancel will break us out of infinite mach_msg receive calls.
 	* MacOSX/MachThreadList.cpp	(MachThreadList::UpdateThreadList): Improved
 	logging.
-	(MachThreadList::CurrentThread): Use new PTHREAD_MUTEX_LOCKER macro to 
+	(MachThreadList::CurrentThread): Use new PTHREAD_MUTEX_LOCKER macro to
 	ease debugging of deadlocks.
 	* DNBTimer.h (DNBTimer::DNBTimer): Initialize the mutex with a recursive
 	pthread.
-	(DNBTimer::Reset): Use new PTHREAD_MUTEX_LOCKER macro to ease debugging 
+	(DNBTimer::Reset): Use new PTHREAD_MUTEX_LOCKER macro to ease debugging
 	of deadlocks.
 	(DNBTimer::TotalMicroSeconds): Ditto.
 	(DNBTimer::GetTime): Ditto.
 	(DNBTimer::ElapsedMicroSeconds): Ditto.
 	(DNBTimer::GetTimeOfDay): New class function.
 	* DNBError.cpp (DNBError::LogThreaded): Improved logging.
-	* test-dbgnub.cpp	
+	* test-dbgnub.cpp
 	* PThreadMutex.h: Added the ability to debug deadlocks by defining
 	DEBUG_PTHREAD_MUTEX_DEADLOCKS.
-	* FunctionProfiler.cpp	
-	* PThreadEvent.cpp (PThreadEvent::NewEventBit): Use new 
+	* FunctionProfiler.cpp
+	* PThreadEvent.cpp (PThreadEvent::NewEventBit): Use new
 	PTHREAD_MUTEX_LOCKER macro to ease debugging of deadlocks.
 	(PThreadEvent::FreeEventBits): Ditto.
 	(PThreadEvent::GetEventBits): Ditto.
@@ -446,7 +446,7 @@
 	(MachException::PortInfo::Restore): Cleaned up logging and now return an
 	error instead of the number of restored port infos.
 	* MachProcess.cpp (class MachProcess): Abstracted out all of the task_t
-	related stuff (suspend, resume, exception ports, exception thread, and 
+	related stuff (suspend, resume, exception ports, exception thread, and
 	more) into a new class MachTask.
 	(MachProcess::Task): Now returns a reference to a MachTask class.
 	(MachProcess::Clear): Uses new abstracted MachTask class.
@@ -470,7 +470,7 @@
 	(MachProcess::ReadMemory): Ditto.
 	(MachProcess::WriteMemory): Ditto.
 	(MachProcess::ThreadFunctionException): Ditto.
-	
+
 2008-12-04  Greg Clayton  <gclayton@apple.com>
 
 	* DNB.h (DNBProcessSetEvents): New API function prototype.
@@ -482,9 +482,9 @@
 	interrupting of infinite DNBProcessWaitForEvent() function calls.
 	* MachException.cpp (MachException::Message::Receive): Improved logging.
 	(MachException::Message::Reply): Improved logging.
-	* MachProcess.h (MachProcess::TaskBasicInfo): New member and static 
+	* MachProcess.h (MachProcess::TaskBasicInfo): New member and static
 	functions.
-	* MachProcess.cpp (MachProcess::TaskIsValid): Use new TaskBasicInfo() 
+	* MachProcess.cpp (MachProcess::TaskIsValid): Use new TaskBasicInfo()
 	member function.
 	(MachProcess::Resume): Removed the detach parameter from the PrivateResume()
 	function call.
@@ -493,12 +493,12 @@
 	(MachProcess::TaskBasicInfo): New member and static function.
 	(MachProcess::TaskResume): New function that resumes the task by making sure
 	the suspend count is correctly ref counted.
-	(MachProcess::Detach): When detaching from a process make sure it is 
+	(MachProcess::Detach): When detaching from a process make sure it is
 	stopped (SIGSTOP) first, then we can successfully detach. The exception
 	thread now also properly exits.
 	(MachProcess::PrivateResume): Call new TaskResume function, and removed the
 	detach functionality.
-	(MachProcess::DisableBreakpoint): Only notify the thread list that a 
+	(MachProcess::DisableBreakpoint): Only notify the thread list that a
 	breakpoint has changed if the breakpoint is going to be removed.
 	(MachProcess::ThreadFunctionException): Added a permanent 1 second timeout
 	for each call to mach_msg() so we can exit the thread in the event that
@@ -528,11 +528,11 @@
 	(MachProcess::DisableBreakpoint): Removed unused variable opcode_restored
 	and make sure the breakpoint is enabled before we start warning that
 	our opcode wasn't there.
-	* ppc/DBNArchImpl.cpp (DNBArchMachPPC::EnableHardwareSingleStep): Log 
+	* ppc/DBNArchImpl.cpp (DNBArchMachPPC::EnableHardwareSingleStep): Log
 	using LOG_STEP instead of LOAD_BREAKPOINTS.
 	* RNBServices.cpp (IsSBProcess): Check for NULL CFArrayRef returned from
 	SBSCopyApplicationDisplayIdentifiers for SkankPhone.
-	
+
 2008-11-26  Greg Clayton  <gclayton@apple.com>
 
 	* MachProcess.h (MachProcess::Suspend): Now takes an optional absolute
@@ -553,7 +553,7 @@
 	* test-remotenub.cpp (RNBRunLoopLaunchInferior): #ifdef-ed around
 	ARM parts so it compiles for i386.
 	(main): Ditto.
-	
+
 2008-11-24  Greg Clayton  <gclayton@apple.com>
 
 	* DNBArchProtocol.h (DNBArchProtocol::ThreadWillResume): Now returns void.
@@ -569,13 +569,13 @@
 	(DNBArchMachARM::m_sw_single_step_break_id): New member variable.
 	* MachThread.cpp (MachThread::ThreadWillResume): Now returns void.
 	* MachThread.h (MachThread::ThreadWillResume): Now returns void.
-	
+
 2008-11-19  Greg Clayton  <gclayton@apple.com>
 
 	* DNBError.h (FlavorType): Added SpringBoard error type for arm builds.
 	* DNBError.cpp (DNBError::AsString): Now returns SpringBoard error strings
 	if the error type is SpringBoard.
-	* test-remotenub.cpp (RNBRunLoopLaunchInferior): Set the error into 
+	* test-remotenub.cpp (RNBRunLoopLaunchInferior): Set the error into
 	RNBContext as either a POSIX error or a SpringBoard error.
 	* RNBContext.h (m_launch_status): Changed this member to be a DNBError
 	instead of a uint32_t.
@@ -583,7 +583,7 @@
 	in m_launch_status.
 	* RNBContext.cpp (RNBContext::LaunchStatusAsString): Let DNBError handle
 	any error string descriptions, including SpringBoard errors.
-	* RNBRemote.cpp (RNBRemote::HandlePacket_q): Use new error class in 
+	* RNBRemote.cpp (RNBRemote::HandlePacket_q): Use new error class in
 	RNBContext.
 	(RNBRemote::HandlePacket_C): Return without an erroneous error when resuming
 	a process with a signal.
@@ -599,11 +599,11 @@
 	if stepping is not complete.
 	* MachThreadList.cpp (MachThreadList::ShouldStop): Pass step_more parameter
 	to each MachThread::ShouldStop call.
-	
+
 2008-11-13  Greg Clayton  <gclayton@apple.com>
 
-	* MachProcess.cpp (MachProcess::PosixSpawnChildForPTraceDebugging): Don't 
-	call posix_spawnattr_setbinpref_np when launching with posix_spawn on ARM 
+	* MachProcess.cpp (MachProcess::PosixSpawnChildForPTraceDebugging): Don't
+	call posix_spawnattr_setbinpref_np when launching with posix_spawn on ARM
 	targets as it currently selects the incorrect slice due to multiple slices
 	that contain the same cputype, yet they all have differing cpusubtypes.
 
@@ -648,35 +648,35 @@
 	(MachThread::Resume): Improved logging.
 	(MachThread::Dump): Improved logging.
 	* MachThreadList.cpp (MachThreadList::Dump): Improved logging.
-	
+
 2008-10-22  Greg Clayton  <gclayton@apple.com>
 
 	* test-remotenub.cpp (RNBRunLoopMode): Added a new enum value
 	eRNBRunLoopModeInferiorAttaching.
 	(g_long_options): Added "--attach=PID" for attaching to existing processes
 	and "--launch=(auto|posix|fork|springboard)" options.
-	(RNBRunLoopLaunchInferior): Now launches process with new 
+	(RNBRunLoopLaunchInferior): Now launches process with new
 	nub_launch_flavor_t enum that can be overridden with the --launch option.
-	(RNBRunLoopLaunchAttaching): New function for attaching to existing 
+	(RNBRunLoopLaunchAttaching): New function for attaching to existing
 	processes.
-	(main): Added command line option support for the "--attach" and "--launch" 
+	(main): Added command line option support for the "--attach" and "--launch"
 	options and added attach to pid support and better logging.
-	* DNB.cpp/h: (DNBProcessLaunch): Added nub_launch_flavor_t and error 
+	* DNB.cpp/h: (DNBProcessLaunch): Added nub_launch_flavor_t and error
 	parameter for more precise control when launching processes.
-	(DNBProcessSBLaunch): Removed function as launching with SpringBoard can 
+	(DNBProcessSBLaunch): Removed function as launching with SpringBoard can
 	now be done using DNBProcessLaunch with launch_flavor being set to
 	eLaunchTypeSpringBoard (arm only).
 	(DNBProcessSBAttach): Removed function (SpringBoard processes are now auto
 	detected in the MachProcess::AttachForDebug function on ARM).
 	* DNBDefs.h (NUB_GENERIC_ERROR): New generic error definition.
-	(nub_launch_flavor_t): New enumeration used for control over process 
+	(nub_launch_flavor_t): New enumeration used for control over process
 	launching.
 	* MachProcess.cpp (IsSBProcess): New function.
 	(MachProcess::AttachForDebug): Removed flags parameter that was being used
 	for SpringBoard flags and we now detect if a process belongs to SpringBoard
 	by calling IsSBProcess.
 	(MachProcess::LaunchForDebug): Now has launch parameter that tells it how
-	to launch the inferior process and there is also an error code that gets 
+	to launch the inferior process and there is also an error code that gets
 	returned. This function can now launch using fork + exec, posix_spawn,
 	or SpringBoard on ARM targets.
 	(MachProcess::SBLaunchForDebug): Now uses DNBError reference instead of
@@ -686,7 +686,7 @@
 2008-10-22  Greg Clayton  <gclayton@apple.com>
 
 	* MacOSX/arm/DNBArchImpl.cpp (DNBArchMachARM::GetRegisterValue): Set
-	register value to a uint32 value instead of a float64 value for s0 - 
+	register value to a uint32 value instead of a float64 value for s0 -
 	s31.
 
 2008-10-17  Greg Clayton  <gclayton@apple.com>
@@ -734,16 +734,16 @@
 	(DNBBreakpoint::FindBreakIDForAddress()): Renamed to FindIDByAddress().
 	(DNBBreakpoint::ShouldStopAtBreakpoint()): Renamed to ShouldStop().
 	(DNBBreakpoint::SetBreakpointCallback()): Renamed to SetCallback().
-	(DNBBreakpoint::FindBreakpointWithAddress()): Renamed to 
+	(DNBBreakpoint::FindBreakpointWithAddress()): Renamed to
 	FindByAddress().
 	(DNBBreakpoint::FindBreakpointWithBreakID()): Renamed to FindByID().
 	(DNBBreakpoint::GetBreakpointAtIndex()): Renamed to GetByIndex().
 	* FunctionProfiler.h: New header for subclass of DNBRuntimeAction.
-	* RNBRemote.cpp (RNBRemote::HandlePacket_v): Use new process state 
+	* RNBRemote.cpp (RNBRemote::HandlePacket_v): Use new process state
 	changed events.
 	(RNBRemote::HandlePacket_z): Implement the hardware breakpoint and
 	watchpoint commands z1, Z1, z2, Z2, z3 and Z3
-	* PThreadEvent.h (PThreadEvent::GetEventBits): Made member function 
+	* PThreadEvent.h (PThreadEvent::GetEventBits): Made member function
 	const.
 	(PThreadEvent::WaitForSetEvents): Ditto.
 	(PThreadEvent::WaitForEventsToReset): Ditto.
@@ -754,7 +754,7 @@
 	* ProfileObjectiveC.cpp
 	* DNBArch.h (DNBArch::NotifyException): Now has default implementation
 	that returns false.
-	(DNBArch::NumSupportedHardwareBreakpoints): New virtual member 
+	(DNBArch::NumSupportedHardwareBreakpoints): New virtual member
 	function with a default implementation.
 	(DNBArch::NumSupportedHardwareWatchpoints): Ditto.
 	(DNBArch::EnableHardwareBreakpoint): Ditto.
@@ -796,21 +796,21 @@
 	(MachThread::EnableHardwareWatchpoint): New prototype.
 	(MachThread::DisableHardwareWatchpoint): New prototype.
 	(class MachThread): Remove m_err member variable.
-	* MacOSX/ppc/DNBArchImpl.cpp (DNBArchMachPPC::GetCPUType) New 
+	* MacOSX/ppc/DNBArchImpl.cpp (DNBArchMachPPC::GetCPUType) New
 	function.
 	(DNBArchMachPPC::NotifyException): Removed.
 	* MacOSX/ppc/DNBArchImpl.h (DNBArchMachPPC::NotifyException): Removed.
-	* MacOSX/MachThread.h (MachThread::EnableHardwareBreakpoint): New 
+	* MacOSX/MachThread.h (MachThread::EnableHardwareBreakpoint): New
 	prototype.
 	(MachThread::EnableHardwareWatchpoint): New prototype.
 	(MachThread::DisableHardwareBreakpoint): New prototype.
 	(MachThread::DisableHardwareWatchpoint): New prototype.
-	(class MachThread): Renambed class member m_exception to 
+	(class MachThread): Renambed class member m_exception to
 	m_stop_exception.
 	* MacOSX/MachProcess.cpp (MachProcess::SetState): Updated to use new
 	process event enumerations.
 	(MachProcess::PrivateResume): Added better logging.
-	(MachProcess::CreateBreakpoint): Added bool HARDWARE parameter for 
+	(MachProcess::CreateBreakpoint): Added bool HARDWARE parameter for
 	requesting hardware breakpoints.
 	(MachProcess::CreateWatchpoint): New function.
 	(MachProcess::DisableAllWatchpoints): New function.
@@ -821,8 +821,8 @@
 	(MachProcess::DisableBreakpoint): Disable hardware breakpoints if that
 	is how they were set.
 	(MachProcess::EnableWatchpoint): New function.
-	(MachProcess::ExceptionMessageBundleComplete): Wait for the 
-	eEventProcessRunningStateChanged event to be reset before changing 
+	(MachProcess::ExceptionMessageBundleComplete): Wait for the
+	eEventProcessRunningStateChanged event to be reset before changing
 	state to stopped to avoid race condition with very fast start/stops.
 	(MachProcess::LaunchForDebug): Added posix_spawn support.
 	(MachProcess::PosixSpawnChildForPTraceDebugging): New function.
@@ -832,7 +832,7 @@
 	prototype.
 	* MacOSX/MachProcess.h (PosixSpawnChildForPTraceDebugging): New
 	prototype.
-	* MacOSX/MachException.cpp (class MachException::ThreadMessage): 
+	* MacOSX/MachException.cpp (class MachException::ThreadMessage):
 	Renamed	class to MachException::Data.
 	* MacOSX/MachThreadList.cpp (class MachThreadList): Removed m_err
 	class member.
@@ -840,7 +840,7 @@
 	(MachThreadList::DisableHardwareBreakpoint): New function.
 	(MachThreadList::EnableHardwareWatchpoint): New function.
 	(MachThreadList::DisableHardwareWatchpoint): New function.
-	* MacOSX/MachException.h (class MachException::ThreadMessage): 
+	* MacOSX/MachException.h (class MachException::ThreadMessage):
 	Renamed	class to MachException::Data.
 	* DNBDefs.h (nub_watch_t): New typedef.
 	(INVALID_NUB_HW_INDEX): New macro definition.
@@ -861,18 +861,18 @@
 
         * RNBRemote.h (GetContinueThread): If the continue thread is zero or
         -1 then return GetCurrentThread().
-        * RNBRemote.cpp (m_packets): Made the vCont functions call 
+        * RNBRemote.cpp (m_packets): Made the vCont functions call
         RNBRemote::HandlePacket_v().
         (RNBRemote::HandlePacket_H): Cleaned up whitespace.
         (RNBRemote::HandlePacket_last_signal): Return actual signal values for
         EXE_SOFTWARE/EXC_SOFT_SIGNAL mach exceptions.
-        (RNBRemote::HandlePacket_v): Implemented the 'vCont?' and 'vCont;' 
+        (RNBRemote::HandlePacket_v): Implemented the 'vCont?' and 'vCont;'
         packets.
-        (RNBRemote::HandlePacket_c): Handle the case where an address is 
+        (RNBRemote::HandlePacket_c): Handle the case where an address is
         provided.
-        (RNBRemote::HandlePacket_C): Implemented the continue with signal 
+        (RNBRemote::HandlePacket_C): Implemented the continue with signal
         including when an address is provided.
-        (RNBRemote::HandlePacket_S): Implemented the step with signal 
+        (RNBRemote::HandlePacket_S): Implemented the step with signal
         including when an address is provided.
         * DNB.cpp (DNBProcessResume): Pass 0 as the signal when resuming
         a process without specifying a thread.
@@ -888,7 +888,7 @@
         * MachProcess.h (MachProcess::PrivateResume): Added a signal parameter.
         * MachProcess.cpp (MachProcess::Resume): Pass new SIGNAL parameter to
         MachProcess::PrivateResume.
-        * MachProcess.cpp (MachProcess::PrivateResume): Pass new SIGNAL 
+        * MachProcess.cpp (MachProcess::PrivateResume): Pass new SIGNAL
         parameter to the mach exception reply.
 
 2008-08-08  Greg Clayton  <gclayton@apple.com>
@@ -906,7 +906,7 @@
 
 2008-04-18  Greg Clayton  <gclayton@apple.com>
 
-        * MachProcess.cpp (MachProcess::Task): Added getuid(), geteuid(), 
+        * MachProcess.cpp (MachProcess::Task): Added getuid(), geteuid(),
         getgid(), getegid() to the log message if task for pid fails.
 
 2008-04-07  Greg Clayton  <gclayton@apple.com>
@@ -921,25 +921,25 @@
 
 2008-04-04  Greg Clayton  <gclayton@apple.com>
 
-        * test-remotenub.cpp (main): Make sure we exit after we send the 
+        * test-remotenub.cpp (main): Make sure we exit after we send the
         application list.
 
 2008-04-04  Greg Clayton  <gclayton@apple.com>
-        
+
         * RNBServices.h (IsSBProcess): New prototype;
         * RNBServices.cpp (IsSBProcess): New function that returns true it
         SpringBoard owns or knows about the process.
         * RNBRemote.cpp (RNBRemote::HandlePacket_v): Made attach work correctly.
         * DNB.cpp (DNBProcessSBAttach): New function for use when attaching to
         a process owned by SpringBoard.
-        (DNBProcessAttach): Fixed an issue where a local was shadowing a 
+        (DNBProcessAttach): Fixed an issue where a local was shadowing a
         parameter.
         * DNB.h (DNBProcessSBAttach): New prototype.
         * MachProcess.cpp (MachProcess::AttachForDebug): AttachForDebug now
         takes some flags so it knows to enable SpringBoard functionality.
         * MachProcess.h (MachProcess::AttachForDebug): Added flags parameter
         to prototype.
-        
+
 2008-04-04  Greg Clayton  <gclayton@apple.com>
 
         * test-remotenub.cpp (RNBRunLoopGetArgsFromRemote): Handle the new
@@ -976,7 +976,7 @@
 	ForkChildForPTraceDebugging to accept launch_retval.
 	* test-remotenub.cpp (RNBRunLoopLaunchInferior): Get the launch status and
 	put it in the context, then wait for the qLaunchStatus packet.
-	
+
 2008-04-03  Greg Clayton  <gclayton@apple.com>
 
         * com.apple.debugserver.plist: Changed plist so debugserver
@@ -985,7 +985,7 @@
 
 2008-04-03  Greg Clayton  <gclayton@apple.com>
 
-        * MachProcess.cpp: (MachProcess::SBForkChildForPTraceDebugging): 
+        * MachProcess.cpp: (MachProcess::SBForkChildForPTraceDebugging):
         Increased SBS application launch timeout to 30 seconds.
 
 2008-03-27 Christopher Friesen <friesen@apple.com>
@@ -999,7 +999,7 @@
 
         * DNB.h: Pass envp to DNBProcessLaunch & DNBProcessSBLaunch.
         * DNB.cpp: Ditto.
-        * MachProcess.h: Ditto for *LaunchForDebug and 
+        * MachProcess.h: Ditto for *LaunchForDebug and
         *ForkChildForPtraceDebugging.
         * MachProcess.cpp (MachProcess::LaunchForDebug): Pass on envp.
         (MachProcess::SBLaunchForDebug): Ditto.
@@ -1036,7 +1036,7 @@
         (RNBRemote::SendSTDOUTPacket): Use SendHexEncodedBytePacket function
         to send bytes.
         (RNBRemote::SendSTDERRPacket): Ditto.
-        (RNBRemote::HandlePacket_q): Return a valid thread info string for 
+        (RNBRemote::HandlePacket_q): Return a valid thread info string for
         qThreadExtraInfo queries.
         * DNB.cpp (DNBThreadPrintStopReason): Commented out unused function.
         (DNBThreadGetInfo): New function.
@@ -1050,7 +1050,7 @@
         (MachThread::InferiorThreadID): New function.
         * MachThread.cpp (MachThread::GetBasicInfoAsString): New prototype.
         (MachThread::InferiorThreadID): New prototype.
-        
+
 2008-02-27  Greg Clayton  <gclayton@apple.com>
 
         * RNBRemote.cpp (RNBRemote::HandlePacket_last_signal): Set the
@@ -1085,14 +1085,14 @@
 	* RNBRemote.h: Record the max payload size, not the max packet
         size for less ambiguous meaning.
 	* RNBRemote.cpp: Add support for QSetMaxPayloadSize: packet which
-	should have a clearer meaning than QSetMaxPacketSize.  
+	should have a clearer meaning than QSetMaxPacketSize.
 	QSetMaxPacketSize will be removed once we get have a chance to get
 	a new debugserver and gdb submitted.
 
 2008-02-18  Jason Molenda  (jmolenda@apple.com)
 
 	* RNBRemote.h: Make default size 1024.
-	* RNBRemote.cpp: Questionmark packet should stay under 
+	* RNBRemote.cpp: Questionmark packet should stay under
 	max_packet_size - 5 to allow for start, end, checksum and nul
 	char bytes.
 
@@ -1107,7 +1107,7 @@
 	* RNBRemote.cpp: Add QSetMaxPacketSize packet handling.
 
 2008-02-18  Greg Clayton <gclayton@apple.com>
-    
+
         * test-remotenub.cpp (HandleProcessStateChange): Call new
         RNBRemote::FlushSTDIO function.
         (RNBRunLoopInferiorExecuting): Ditto.
@@ -1128,25 +1128,25 @@
 	* CFString.h (CFString::GetLength() const): New prototype.
 	* MachProcess.h (MachProcess class): Removed m_attached and
 	added m_flags.
-	* MachProcess.cpp (MachProcess::AttachForDebug): Set m_flags 
+	* MachProcess.cpp (MachProcess::AttachForDebug): Set m_flags
 	to indicate we attached.
-	(MachProcess::SBLaunchForDebug): Set m_flags to indicate we 
+	(MachProcess::SBLaunchForDebug): Set m_flags to indicate we
 	attached using SpringBoard and that we attached.
 	(MachProcess::SBForkChildForPTraceDebugging): Changed to new
 	SpringBoardServices API.
 	(MachProcess::ThreadFunctionException): Added code that will
-	renew a watchdog assertion when we launch apps through 
+	renew a watchdog assertion when we launch apps through
 	SpringBoardServices.
 	* PThreadEvent.cpp (PThreadEvent::WaitForSetEvents): Simplified
 	PThreadEvent API to have only one version of WaitForSetEvents
 	that has an optional timeout pointer argument.
 	* RNBContext.cpp (RNBContext::StopProcessStatusThread): Adapt
 	to new PThreadEvent API changes.
-	(RNBContext::ThreadFunctionProcessStatus): Adapt to new 
+	(RNBContext::ThreadFunctionProcessStatus): Adapt to new
 	DNBProcessWaitForEvent API changes.
 	* RNBRemote.cpp (RNBRemote::StopReadRemoteDataThread): Adapt
 	to new PThreadEvent API changes.
-	* test-remotenub.cpp (RNBRunLoopLaunchInferior): Adapt to new 
+	* test-remotenub.cpp (RNBRunLoopLaunchInferior): Adapt to new
 	DNBProcessWaitForEvent API changes.
 	(RNBRunLoopInferiorExecuting): Process STDIO first, then
 	incoming packets.
@@ -1159,7 +1159,7 @@
 2008-02-12  Greg Clayton  <gclayton@apple.com>
 
         * DNB.cpp (DNBEnableLogging): Removed function.
-        (DNBThreadPrintStopReason): Removed the file handle from this 
+        (DNBThreadPrintStopReason): Removed the file handle from this
         function and use DNBLog calls.
         * DNB.h (DNBEnableLogging): Removed function prototype.
         (DNBThreadPrintStopReason): Removed the file handle
@@ -1169,8 +1169,8 @@
         is ready for output after caching it in a local buffer.
         * DNBDataRef.cpp (DNBDataRef::Dump): Removed file handle from
         prototype.
-        * DNBDefs.h (DNBCallbackLog): New callback prototype for all 
-        logging. 
+        * DNBDefs.h (DNBCallbackLog): New callback prototype for all
+        logging.
         DNBLog.cpp(g_debug_opt): Renamed to d_debug and made it a file
         static.
         (DNBLogGetDebug): New accessor function for g_debug.
@@ -1207,7 +1207,7 @@
         handle and now use DNBLog calls.
         * DNBRegisterInfo.h (DNBRegisterValueClass::Dump): Removed file
         handle from prototype.
-        * MachException.cpp (catch_mach_exception_raise_state_identity): 
+        * MachException.cpp (catch_mach_exception_raise_state_identity):
         Removed newlines from logging call.
         (catch_mach_exception_raise): Ditto.
         (MachException::Message::Dump): Removed file handle from params
@@ -1229,17 +1229,17 @@
         test-remotenub.cpp (ASLLogCallback): New function to handle all ASL
         logging. This function gets registered with libdebugnub.dylib when we
         want to log using ASL.
-        (FileLogCallback): New function to handle all file logging. This 
+        (FileLogCallback): New function to handle all file logging. This
         function gets registered with libdebugnub.dylib when we want to log
         to a 'FILE *'.
         (main): Register the logging callback functions when we want to log
         to file or using ASL.
 
 2008-02-12  Greg Clayton  <gclayton@apple.com>
-    
+
         * test-remotenub.cpp (main): Default to ASL logging with no log
         bits set to allow for warning and error logging.
-        * RNBRemote.h (struct Breakpoint): New structure for ref counting 
+        * RNBRemote.h (struct Breakpoint): New structure for ref counting
         breakpoints in Z and z packets.
         * RNBRemote.cpp (RNBRemote::SendPacket): Use new LOG_RNB_PACKETS
         defined when logging actual packet content.
@@ -1258,7 +1258,7 @@
         logging completely to allow option parsing code that uses it to
         still compile.
         (g_verbose): Ditto.
-        * DNBLog.h (DNBLogToASL): Added prototype for when logging is 
+        * DNBLog.h (DNBLogToASL): Added prototype for when logging is
         disabled via preprocessor macro.
         (DNBLogToFile): Ditto.
         * DNBRegisterInfo.cpp (DNBRegisterValueClass::Dump): Check for NULL
@@ -1266,10 +1266,10 @@
         * MachException.cpp (MachException::ThreadMessage::DumpStopReason): Ditto.
         (MachException::ThreadMessage::Dump): Ditto.
         * MachProcess.cpp (MachProcess::CreateBreakpoint): Improved logging.
-        (MachProcess::DisableBreakpoint): Verify the original opcode gets 
+        (MachProcess::DisableBreakpoint): Verify the original opcode gets
         restored, improved logging and added unconditional logging for when
         things go wrong.
-        (MachProcess::EnableBreakpoint): Verify the breakpoint opcode gets 
+        (MachProcess::EnableBreakpoint): Verify the breakpoint opcode gets
         written, improved logging and added unconditional logging for when
         things go wrong.
         * MachThread.cpp (MachThread::Dump): Check for NULL file handle.
@@ -1280,14 +1280,14 @@
         MachDYLD.cpp (MachDYLD::Dump): Check for NULL file handle.
         (MachDYLD::DYLIBInfo::Dump): Ditto.
         ProfileObjectiveC.cpp (ProfileObjectiveC::DumpStats): Ditto.
-        
+
 2008-02-09  Jason Molenda  (jmolenda@apple.com)
 
 	* RNBRemote.cpp (set_logging): Log to ASL unconditionally when
 	processing a QSetLogging packet.
 
 2008-02-06  Greg Clayton  <gclayton@apple.com>
-        
+
         * test-remotenub.cpp (main): Dup stdout and stderr to /dev/NULL
         when we use lockdown.
 
@@ -1297,7 +1297,7 @@
 	* RNBRemote.cpp(RNBRemote::HandlePacket_Q): Removed unused var PID.
 	* DNBError.cpp (DNBError::LogThreadedIfError): Removed unused var
 	ERR_MSG.
-	* test-remotenub.cpp (RNBRunLoopLaunchInferior): Removed unused 
+	* test-remotenub.cpp (RNBRunLoopLaunchInferior): Removed unused
 	variable EXECUTABLE_LENGTH.
 	(main): Removed unused variable ARG_IDX.
 
@@ -1317,7 +1317,7 @@
 
         * Added libXcodeDebugerSupport.dylib target
         * XCDebuggerIntrospection.[hc]: Support for Xcode's debugger introspection.
-        
+
 2008-02-01  Jason Molenda  (jmolenda@apple.com)
 
 	* DNBLog.cpp (DNBLogCloseLogFile): New function to close a logfile
@@ -1343,9 +1343,9 @@
 
 2008-01-31  Greg Clayton  (gclayton@apple.com)
 
-	* DNB.cpp (sigchld_handler): Better logging when we get a 
+	* DNB.cpp (sigchld_handler): Better logging when we get a
 	SIGCHILD and we are watching for process related logging events.
-	* test-remotenub.cpp (RNBRunLoopInferiorExecuting): Only reset 
+	* test-remotenub.cpp (RNBRunLoopInferiorExecuting): Only reset
 	events when we still have event bits set.
 
 2008-01-29  Jason Molenda  (jmolenda@apple.com)
@@ -1374,7 +1374,7 @@
 	SetProcessState() and GetProcessState().
 	* RNBContext.cpp (RNBContext::ProcessStateRunning): Always return the
 	current state of the process instead of a cached value.
-	* test-remotenub.cpp (RNBRunLoopLaunchInferior): Remove call to 
+	* test-remotenub.cpp (RNBRunLoopLaunchInferior): Remove call to
         deprecated RNBContext::SetProcessState().
 	(HandleProcessStateChange): Ditto.
 
@@ -1417,7 +1417,7 @@
 
 	* RNBRemote.cpp (RNBRemote::HandlePacket_q): Reply "" to qSymbols
 	and qOffsets.
-	
+
 2008-01-23  Jason Molenda  (jmolenda@apple.com)
 
 	* RNBRemote.h: m_noack_mode to RNBRemote class.
@@ -1429,14 +1429,14 @@
 
 2008-01-22  Jason Molenda  (jmolenda@apple.com)
 
-	* RNBRemote.cpp (RNBRemote::CreatePacketTable): Recognize 
+	* RNBRemote.cpp (RNBRemote::CreatePacketTable): Recognize
 	QStartNoAckMode as an unsupported remote protocol request.
 	* RNBRemote.h: Add start_noack_mode enum entry.
 
 2008-01-22  Greg Clayton  (gclayton@apple.com)
 
 	* DNBLog.h: Removed C++ namespace for DNBLog (changed all DNBLog::
-	to DNBLog) so C99 var arg macros can be used to completely disable 
+	to DNBLog) so C99 var arg macros can be used to completely disable
 	all logging and any functions that may be called when making the
 	variable arguments.
 	* DNBLog.cpp: Ditto.
@@ -1471,7 +1471,7 @@
 	* RNBRemote.h: Prototype update.
 	* test-remotenub.cpp: Include lockdown.h.  Take --lockdown command
 	line arg, get the socket from liblockdown.dylib instead of opening
-	our own socket if it is specified.  --lockdown indicates that 
+	our own socket if it is specified.  --lockdown indicates that
 	the program name/args will be provided via remote protocol instead
 	of on the command line.
 

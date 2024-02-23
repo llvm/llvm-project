@@ -228,9 +228,9 @@ protected:
           thread->GetIndexID());
       return false;
     }
-    if (m_options.m_extended_backtrace) { 
-      if (!INTERRUPT_REQUESTED(GetDebugger(), 
-                              "Interrupt skipped extended backtrace")) {
+    if (m_options.m_extended_backtrace) {
+      if (!INTERRUPT_REQUESTED(GetDebugger(),
+                               "Interrupt skipped extended backtrace")) {
         DoExtendedBacktrace(thread, result);
       }
     }

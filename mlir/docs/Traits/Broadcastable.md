@@ -63,7 +63,7 @@ ExpandRank(shape, rank):
 	while len(shape) < rank:
 		shape.prepend(1)
 ```
-		
+
 Given the shapes of two ranked input operands, the result's shape is inferred by equalizing input ranks and inferring individual dimensions, as shown here:
 
 ```python
@@ -73,7 +73,7 @@ InferShape(shape0, shape1):
   rank = max(GetRank(shape0), GetRank(shape1))
   ExpandRank(shape0, rank)
   ExpandRank(shape1, rank)
-	
+
   # Infer shape
   inferredShape = []
   for (dim0, dim1) in zip(shape0, shape1):
@@ -81,7 +81,7 @@ InferShape(shape0, shape1):
     inferredShape.append(inferredDim)
   return inferredShape
 ```
-	
+
 The result shape for an operation with an arbitrary number of input operands is then inferred by discarding unranked operands, applying shape inference on the first ranked operand pair, and updating the inferred shape with each additional ranked operand. If the operation has no ranked operands, the result shape cannot be inferred. If the operation has exactly one ranked operand, its shape is directly provided as the inferred result shape. Formally:
 
 ```python
@@ -91,7 +91,7 @@ InferResultShape(op):
 	rankedOperands = filter(op.operands, IsRanked)
 	if len(rankedOperands) == 0:
 		return None
-	
+
 	# Infer result shape
 	inferredShape = GetShape(rankedOperands[0])
 	for operand in rankedOperands[1:]:
@@ -127,16 +127,16 @@ Verify(op):
 	# Done if result is unranked or all operands are unranked
 	if not IsRanked(op.result) or inferredShape is None:
 		return
-	
+
 	# Rank must match
 	actualShape = GetShape(op.result):
 	ERROR_IF(len(inferredShape) != len(actualShape))
-	
+
 	# Verify
 	for (inferredDim, actualDim) in zip(inferredShape, actualShape):
 		ERROR_IF(IsStatic(actualDim) and inferredDim != actualDim)
 ```
-		
+
 ## Examples
 
 The following are correct uses of broadcastable ops:

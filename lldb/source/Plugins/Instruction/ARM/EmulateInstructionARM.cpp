@@ -894,25 +894,25 @@ bool EmulateInstructionARM::EmulatePUSH(const uint32_t opcode,
     // ARM pseudo code...
     if (ConditionPassed())
     {
-        EncodingSpecificOperations(); 
-        NullCheckIfThumbEE(13); 
+        EncodingSpecificOperations();
+        NullCheckIfThumbEE(13);
         address = SP - 4*BitCount(registers);
 
         for (i = 0 to 14)
         {
             if (registers<i> == '1')
             {
-                if i == 13 && i != LowestSetBit(registers) // Only possible for encoding A1 
+                if i == 13 && i != LowestSetBit(registers) // Only possible for encoding A1
                     MemA[address,4] = bits(32) UNKNOWN;
-                else 
+                else
                     MemA[address,4] = R[i];
                 address = address + 4;
             }
         }
 
-        if (registers<15> == '1') // Only possible for encoding A1 or A2 
+        if (registers<15> == '1') // Only possible for encoding A1 or A2
             MemA[address,4] = PCStoreValue();
-        
+
         SP = SP - 4*BitCount(registers);
     }
 #endif
@@ -1025,7 +1025,7 @@ bool EmulateInstructionARM::EmulatePOP(const uint32_t opcode,
         if registers<15> == '1' then
             if UnalignedAllowed then
                 LoadWritePC(MemU[address,4]);
-            else 
+            else
                 LoadWritePC(MemA[address,4]);
         if registers<13> == '0' then SP = SP + 4*BitCount(registers);
         if registers<13> == '1' then SP = bits(32) UNKNOWN;
@@ -1469,18 +1469,18 @@ bool EmulateInstructionARM::EmulateMOVRdImm(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateMUL(const uint32_t opcode,
                                        const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); 
-        operand1 = SInt(R[n]); // operand1 = UInt(R[n]) produces the same final results 
-        operand2 = SInt(R[m]); // operand2 = UInt(R[m]) produces the same final results 
-        result = operand1 * operand2; 
-        R[d] = result<31:0>; 
+    if ConditionPassed() then
+        EncodingSpecificOperations();
+        operand1 = SInt(R[n]); // operand1 = UInt(R[n]) produces the same final results
+        operand2 = SInt(R[m]); // operand2 = UInt(R[m]) produces the same final results
+        result = operand1 * operand2;
+        R[d] = result<31:0>;
         if setflags then
-            APSR.N = result<31>; 
-            APSR.Z = IsZeroBit(result); 
+            APSR.N = result<31>;
+            APSR.Z = IsZeroBit(result);
             if ArchVersion() == 4 then
-                APSR.C = bit UNKNOWN; 
-            // else APSR.C unchanged 
+                APSR.C = bit UNKNOWN;
+            // else APSR.C unchanged
             // APSR.V always unchanged
 #endif
 
@@ -3010,10 +3010,10 @@ bool EmulateInstructionARM::EmulateTB(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateADDImmThumb(const uint32_t opcode,
                                                const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); 
-        (result, carry, overflow) = AddWithCarry(R[n], imm32, '0'); 
-        R[d] = result; 
+    if ConditionPassed() then
+        EncodingSpecificOperations();
+        (result, carry, overflow) = AddWithCarry(R[n], imm32, '0');
+        R[d] = result;
         if setflags then
             APSR.N = result<31>;
             APSR.Z = IsZeroBit(result);
@@ -3905,13 +3905,13 @@ bool EmulateInstructionARM::EmulateLDM(const uint32_t opcode,
     if ConditionPassed()
         EncodingSpecificOperations(); NullCheckIfThumbEE (n);
         address = R[n];
-                  
+
         for i = 0 to 14
             if registers<i> == '1' then
                 R[i] = MemA[address, 4]; address = address + 4;
         if registers<15> == '1' then
             LoadWritePC (MemA[address, 4]);
-                  
+
         if wback && registers<n> == '0' then R[n] = R[n] + 4 * BitCount (registers);
         if wback && registers<n> == '1' then R[n] = bits(32) UNKNOWN; // Only possible for encoding A1
 
@@ -4045,18 +4045,18 @@ bool EmulateInstructionARM::EmulateLDMDA(const uint32_t opcode,
                                          const ARMEncoding encoding) {
 #if 0
     // ARM pseudo code...
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); 
+    if ConditionPassed() then
+        EncodingSpecificOperations();
         address = R[n] - 4*BitCount(registers) + 4;
-                  
-        for i = 0 to 14 
+
+        for i = 0 to 14
             if registers<i> == '1' then
-                  R[i] = MemA[address,4]; address = address + 4; 
-                  
+                  R[i] = MemA[address,4]; address = address + 4;
+
         if registers<15> == '1' then
             LoadWritePC(MemA[address,4]);
-                  
-        if wback && registers<n> == '0' then R[n] = R[n] - 4*BitCount(registers); 
+
+        if wback && registers<n> == '0' then R[n] = R[n] - 4*BitCount(registers);
         if wback && registers<n> == '1' then R[n] = bits(32) UNKNOWN;
 #endif
 
@@ -4160,17 +4160,17 @@ bool EmulateInstructionARM::EmulateLDMDB(const uint32_t opcode,
                                          const ARMEncoding encoding) {
 #if 0
     // ARM pseudo code...
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
         address = R[n] - 4*BitCount(registers);
-                  
-        for i = 0 to 14 
+
+        for i = 0 to 14
             if registers<i> == '1' then
-                  R[i] = MemA[address,4]; address = address + 4; 
+                  R[i] = MemA[address,4]; address = address + 4;
         if registers<15> == '1' then
                   LoadWritePC(MemA[address,4]);
-                  
-        if wback && registers<n> == '0' then R[n] = R[n] - 4*BitCount(registers); 
+
+        if wback && registers<n> == '0' then R[n] = R[n] - 4*BitCount(registers);
         if wback && registers<n> == '1' then R[n] = bits(32) UNKNOWN; // Only possible for encoding A1
 #endif
 
@@ -4297,16 +4297,16 @@ bool EmulateInstructionARM::EmulateLDMIB(const uint32_t opcode,
                                          const ARMEncoding encoding) {
 #if 0
     if ConditionPassed() then
-        EncodingSpecificOperations(); 
+        EncodingSpecificOperations();
         address = R[n] + 4;
-                  
-        for i = 0 to 14 
+
+        for i = 0 to 14
             if registers<i> == '1' then
-                  R[i] = MemA[address,4]; address = address + 4; 
+                  R[i] = MemA[address,4]; address = address + 4;
         if registers<15> == '1' then
             LoadWritePC(MemA[address,4]);
-                  
-        if wback && registers<n> == '0' then R[n] = R[n] + 4*BitCount(registers); 
+
+        if wback && registers<n> == '0' then R[n] = R[n] + 4*BitCount(registers);
         if wback && registers<n> == '1' then R[n] = bits(32) UNKNOWN;
 #endif
 
@@ -4569,19 +4569,19 @@ bool EmulateInstructionARM::EmulateLDRRtRnImm(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateSTM(const uint32_t opcode,
                                        const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
         address = R[n];
-                  
-        for i = 0 to 14 
+
+        for i = 0 to 14
             if registers<i> == '1' then
-                if i == n && wback && i != LowestSetBit(registers) then 
+                if i == n && wback && i != LowestSetBit(registers) then
                     MemA[address,4] = bits(32) UNKNOWN; // Only possible for encodings T1 and A1
-                else 
+                else
                     MemA[address,4] = R[i];
                 address = address + 4;
-                  
-        if registers<15> == '1' then // Only possible for encoding A1 
+
+        if registers<15> == '1' then // Only possible for encoding A1
             MemA[address,4] = PCStoreValue();
         if wback then R[n] = R[n] + 4*BitCount(registers);
 #endif
@@ -4721,21 +4721,21 @@ bool EmulateInstructionARM::EmulateSTM(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateSTMDA(const uint32_t opcode,
                                          const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations();                   
+    if ConditionPassed() then
+        EncodingSpecificOperations();
         address = R[n] - 4*BitCount(registers) + 4;
-                  
-        for i = 0 to 14 
+
+        for i = 0 to 14
             if registers<i> == '1' then
-                if i == n && wback && i != LowestSetBit(registers) then 
+                if i == n && wback && i != LowestSetBit(registers) then
                     MemA[address,4] = bits(32) UNKNOWN;
-                else 
+                else
                     MemA[address,4] = R[i];
                 address = address + 4;
-                  
-        if registers<15> == '1' then 
+
+        if registers<15> == '1' then
             MemA[address,4] = PCStoreValue();
-                  
+
         if wback then R[n] = R[n] - 4*BitCount(registers);
 #endif
 
@@ -4843,21 +4843,21 @@ bool EmulateInstructionARM::EmulateSTMDA(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateSTMDB(const uint32_t opcode,
                                          const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
         address = R[n] - 4*BitCount(registers);
-                  
-        for i = 0 to 14 
+
+        for i = 0 to 14
             if registers<i> == '1' then
-                if i == n && wback && i != LowestSetBit(registers) then 
+                if i == n && wback && i != LowestSetBit(registers) then
                     MemA[address,4] = bits(32) UNKNOWN; // Only possible for encoding A1
-                else 
+                else
                     MemA[address,4] = R[i];
                 address = address + 4;
-                  
-        if registers<15> == '1' then // Only possible for encoding A1 
+
+        if registers<15> == '1' then // Only possible for encoding A1
             MemA[address,4] = PCStoreValue();
-                  
+
         if wback then R[n] = R[n] - 4*BitCount(registers);
 #endif
 
@@ -4992,21 +4992,21 @@ bool EmulateInstructionARM::EmulateSTMDB(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateSTMIB(const uint32_t opcode,
                                          const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); 
+    if ConditionPassed() then
+        EncodingSpecificOperations();
         address = R[n] + 4;
-                  
-        for i = 0 to 14 
+
+        for i = 0 to 14
             if registers<i> == '1' then
                 if i == n && wback && i != LowestSetBit(registers) then
                     MemA[address,4] = bits(32) UNKNOWN;
-                else 
+                else
                     MemA[address,4] = R[i];
                 address = address + 4;
-                  
-        if registers<15> == '1' then 
+
+        if registers<15> == '1' then
             MemA[address,4] = PCStoreValue();
-                  
+
         if wback then R[n] = R[n] + 4*BitCount(registers);
 #endif
 
@@ -5114,14 +5114,14 @@ bool EmulateInstructionARM::EmulateSTMIB(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateSTRThumb(const uint32_t opcode,
                                             const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
-        offset_addr = if add then (R[n] + imm32) else (R[n] - imm32); 
-        address = if index then offset_addr else R[n]; 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
+        offset_addr = if add then (R[n] + imm32) else (R[n] - imm32);
+        address = if index then offset_addr else R[n];
         if UnalignedSupport() || address<1:0> == '00' then
-            MemU[address,4] = R[t]; 
+            MemU[address,4] = R[t];
         else // Can only occur before ARMv7
-            MemU[address,4] = bits(32) UNKNOWN; 
+            MemU[address,4] = bits(32) UNKNOWN;
         if wback then R[n] = offset_addr;
 #endif
 
@@ -5281,19 +5281,19 @@ bool EmulateInstructionARM::EmulateSTRThumb(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateSTRRegister(const uint32_t opcode,
                                                const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
-        offset = Shift(R[m], shift_t, shift_n, APSR.C); 
-        offset_addr = if add then (R[n] + offset) else (R[n] - offset); 
-        address = if index then offset_addr else R[n]; 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
+        offset = Shift(R[m], shift_t, shift_n, APSR.C);
+        offset_addr = if add then (R[n] + offset) else (R[n] - offset);
+        address = if index then offset_addr else R[n];
         if t == 15 then // Only possible for encoding A1
-            data = PCStoreValue(); 
+            data = PCStoreValue();
         else
-            data = R[t]; 
+            data = R[t];
         if UnalignedSupport() || address<1:0> == '00' || CurrentInstrSet() == InstrSet_ARM then
-            MemU[address,4] = data; 
+            MemU[address,4] = data;
         else // Can only occur before ARMv7
-            MemU[address,4] = bits(32) UNKNOWN; 
+            MemU[address,4] = bits(32) UNKNOWN;
         if wback then R[n] = offset_addr;
 #endif
 
@@ -5470,11 +5470,11 @@ bool EmulateInstructionARM::EmulateSTRRegister(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateSTRBThumb(const uint32_t opcode,
                                              const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
-        offset_addr = if add then (R[n] + imm32) else (R[n] - imm32); 
-        address = if index then offset_addr else R[n]; 
-        MemU[address,1] = R[t]<7:0>; 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
+        offset_addr = if add then (R[n] + imm32) else (R[n] - imm32);
+        address = if index then offset_addr else R[n];
+        MemU[address,1] = R[t]<7:0>;
         if wback then R[n] = offset_addr;
 #endif
 
@@ -5606,15 +5606,15 @@ bool EmulateInstructionARM::EmulateSTRBThumb(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateSTRHRegister(const uint32_t opcode,
                                                 const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
+    if ConditionPassed() then
         EncodingSpecificOperations(); NullCheckIfThumbEE(n);
-        offset = Shift(R[m], shift_t, shift_n, APSR.C); 
-        offset_addr = if add then (R[n] + offset) else (R[n] - offset); 
-        address = if index then offset_addr else R[n]; 
+        offset = Shift(R[m], shift_t, shift_n, APSR.C);
+        offset_addr = if add then (R[n] + offset) else (R[n] - offset);
+        address = if index then offset_addr else R[n];
         if UnalignedSupport() || address<0> == '0' then
-            MemU[address,2] = R[t]<15:0>; 
+            MemU[address,2] = R[t]<15:0>;
         else // Can only occur before ARMv7
-            MemU[address,2] = bits(16) UNKNOWN; 
+            MemU[address,2] = bits(16) UNKNOWN;
         if wback then R[n] = offset_addr;
 #endif
 
@@ -6326,16 +6326,16 @@ bool EmulateInstructionARM::EmulateBICReg(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateLDRImmediateARM(const uint32_t opcode,
                                                    const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); 
-        offset_addr = if add then (R[n] + imm32) else (R[n] - imm32); 
-        address = if index then offset_addr else R[n]; 
-        data = MemU[address,4]; 
-        if wback then R[n] = offset_addr; 
+    if ConditionPassed() then
+        EncodingSpecificOperations();
+        offset_addr = if add then (R[n] + imm32) else (R[n] - imm32);
+        address = if index then offset_addr else R[n];
+        data = MemU[address,4];
+        if wback then R[n] = offset_addr;
         if t == 15 then
-            if address<1:0> == '00' then LoadWritePC(data); else UNPREDICTABLE; 
+            if address<1:0> == '00' then LoadWritePC(data); else UNPREDICTABLE;
         elsif UnalignedSupport() || address<1:0> = '00' then
-            R[t] = data; 
+            R[t] = data;
         else // Can only apply before ARMv7
             R[t] = ROR(data, 8*UInt(address<1:0>));
 #endif
@@ -6462,21 +6462,21 @@ bool EmulateInstructionARM::EmulateLDRImmediateARM(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateLDRRegister(const uint32_t opcode,
                                                const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
-        offset = Shift(R[m], shift_t, shift_n, APSR.C); 
-        offset_addr = if add then (R[n] + offset) else (R[n] - offset); 
-        address = if index then offset_addr else R[n]; 
-        data = MemU[address,4]; 
-        if wback then R[n] = offset_addr; 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
+        offset = Shift(R[m], shift_t, shift_n, APSR.C);
+        offset_addr = if add then (R[n] + offset) else (R[n] - offset);
+        address = if index then offset_addr else R[n];
+        data = MemU[address,4];
+        if wback then R[n] = offset_addr;
         if t == 15 then
-            if address<1:0> == '00' then LoadWritePC(data); else UNPREDICTABLE; 
+            if address<1:0> == '00' then LoadWritePC(data); else UNPREDICTABLE;
         elsif UnalignedSupport() || address<1:0> = '00' then
-            R[t] = data; 
+            R[t] = data;
         else // Can only apply before ARMv7
-            if CurrentInstrSet() == InstrSet_ARM then 
+            if CurrentInstrSet() == InstrSet_ARM then
                 R[t] = ROR(data, 8*UInt(address<1:0>));
-            else 
+            else
                 R[t] = bits(32) UNKNOWN;
 #endif
 
@@ -6668,11 +6668,11 @@ bool EmulateInstructionARM::EmulateLDRRegister(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateLDRBImmediate(const uint32_t opcode,
                                                  const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
-        offset_addr = if add then (R[n] + imm32) else (R[n] - imm32); 
-        address = if index then offset_addr else R[n]; 
-        R[t] = ZeroExtend(MemU[address,1], 32); 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
+        offset_addr = if add then (R[n] + imm32) else (R[n] - imm32);
+        address = if index then offset_addr else R[n];
+        R[t] = ZeroExtend(MemU[address,1], 32);
         if wback then R[n] = offset_addr;
 #endif
 
@@ -6815,10 +6815,10 @@ bool EmulateInstructionARM::EmulateLDRBImmediate(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateLDRBLiteral(const uint32_t opcode,
                                                const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(15); 
-        base = Align(PC,4); 
-        address = if add then (base + imm32) else (base - imm32); 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(15);
+        base = Align(PC,4);
+        address = if add then (base + imm32) else (base - imm32);
         R[t] = ZeroExtend(MemU[address,1], 32);
 #endif
 
@@ -6896,12 +6896,12 @@ bool EmulateInstructionARM::EmulateLDRBLiteral(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateLDRBRegister(const uint32_t opcode,
                                                 const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
-        offset = Shift(R[m], shift_t, shift_n, APSR.C); 
-        offset_addr = if add then (R[n] + offset) else (R[n] - offset); 
-        address = if index then offset_addr else R[n]; 
-        R[t] = ZeroExtend(MemU[address,1],32); 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
+        offset = Shift(R[m], shift_t, shift_n, APSR.C);
+        offset_addr = if add then (R[n] + offset) else (R[n] - offset);
+        address = if index then offset_addr else R[n];
+        R[t] = ZeroExtend(MemU[address,1],32);
         if wback then R[n] = offset_addr;
 #endif
 
@@ -7058,14 +7058,14 @@ bool EmulateInstructionARM::EmulateLDRBRegister(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateLDRHImmediate(const uint32_t opcode,
                                                  const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
-        offset_addr = if add then (R[n] + imm32) else (R[n] - imm32); 
-        address = if index then offset_addr else R[n]; 
-        data = MemU[address,2]; 
-        if wback then R[n] = offset_addr; 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
+        offset_addr = if add then (R[n] + imm32) else (R[n] - imm32);
+        address = if index then offset_addr else R[n];
+        data = MemU[address,2];
+        if wback then R[n] = offset_addr;
         if UnalignedSupport() || address<0> = '0' then
-            R[t] = ZeroExtend(data, 32); 
+            R[t] = ZeroExtend(data, 32);
         else // Can only apply before ARMv7
             R[t] = bits(32) UNKNOWN;
 #endif
@@ -7205,13 +7205,13 @@ bool EmulateInstructionARM::EmulateLDRHImmediate(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateLDRHLiteral(const uint32_t opcode,
                                                const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(15); 
-        base = Align(PC,4); 
-        address = if add then (base + imm32) else (base - imm32); 
-        data = MemU[address,2]; 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(15);
+        base = Align(PC,4);
+        address = if add then (base + imm32) else (base - imm32);
+        data = MemU[address,2];
         if UnalignedSupport() || address<0> = '0' then
-            R[t] = ZeroExtend(data, 32); 
+            R[t] = ZeroExtend(data, 32);
         else // Can only apply before ARMv7
             R[t] = bits(32) UNKNOWN;
 #endif
@@ -7309,15 +7309,15 @@ bool EmulateInstructionARM::EmulateLDRHLiteral(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateLDRHRegister(const uint32_t opcode,
                                                 const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
-        offset = Shift(R[m], shift_t, shift_n, APSR.C); 
-        offset_addr = if add then (R[n] + offset) else (R[n] - offset); 
-        address = if index then offset_addr else R[n]; 
-        data = MemU[address,2]; 
-        if wback then R[n] = offset_addr; 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
+        offset = Shift(R[m], shift_t, shift_n, APSR.C);
+        offset_addr = if add then (R[n] + offset) else (R[n] - offset);
+        address = if index then offset_addr else R[n];
+        data = MemU[address,2];
+        if wback then R[n] = offset_addr;
         if UnalignedSupport() || address<0> = '0' then
-            R[t] = ZeroExtend(data, 32); 
+            R[t] = ZeroExtend(data, 32);
         else // Can only apply before ARMv7
             R[t] = bits(32) UNKNOWN;
 #endif
@@ -7485,11 +7485,11 @@ bool EmulateInstructionARM::EmulateLDRHRegister(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateLDRSBImmediate(const uint32_t opcode,
                                                   const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
-        offset_addr = if add then (R[n] + imm32) else (R[n] - imm32); 
-        address = if index then offset_addr else R[n]; 
-        R[t] = SignExtend(MemU[address,1], 32); 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
+        offset_addr = if add then (R[n] + imm32) else (R[n] - imm32);
+        address = if index then offset_addr else R[n];
+        R[t] = SignExtend(MemU[address,1], 32);
         if wback then R[n] = offset_addr;
 #endif
 
@@ -7634,10 +7634,10 @@ bool EmulateInstructionARM::EmulateLDRSBImmediate(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateLDRSBLiteral(const uint32_t opcode,
                                                 const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(15); 
-        base = Align(PC,4); 
-        address = if add then (base + imm32) else (base - imm32); 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(15);
+        base = Align(PC,4);
+        address = if add then (base + imm32) else (base - imm32);
         R[t] = SignExtend(MemU[address,1], 32);
 #endif
 
@@ -7722,12 +7722,12 @@ bool EmulateInstructionARM::EmulateLDRSBLiteral(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateLDRSBRegister(const uint32_t opcode,
                                                  const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
-        offset = Shift(R[m], shift_t, shift_n, APSR.C); 
-        offset_addr = if add then (R[n] + offset) else (R[n] - offset); 
-        address = if index then offset_addr else R[n]; 
-        R[t] = SignExtend(MemU[address,1], 32); 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
+        offset = Shift(R[m], shift_t, shift_n, APSR.C);
+        offset_addr = if add then (R[n] + offset) else (R[n] - offset);
+        address = if index then offset_addr else R[n];
+        R[t] = SignExtend(MemU[address,1], 32);
         if wback then R[n] = offset_addr;
 #endif
 
@@ -7882,14 +7882,14 @@ bool EmulateInstructionARM::EmulateLDRSBRegister(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateLDRSHImmediate(const uint32_t opcode,
                                                   const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
-        offset_addr = if add then (R[n] + imm32) else (R[n] - imm32); 
-        address = if index then offset_addr else R[n]; 
-        data = MemU[address,2]; 
-        if wback then R[n] = offset_addr; 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
+        offset_addr = if add then (R[n] + imm32) else (R[n] - imm32);
+        address = if index then offset_addr else R[n];
+        data = MemU[address,2];
+        if wback then R[n] = offset_addr;
         if UnalignedSupport() || address<0> = '0' then
-            R[t] = SignExtend(data, 32); 
+            R[t] = SignExtend(data, 32);
         else // Can only apply before ARMv7
             R[t] = bits(32) UNKNOWN;
 #endif
@@ -8041,11 +8041,11 @@ bool EmulateInstructionARM::EmulateLDRSHImmediate(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateLDRSHLiteral(const uint32_t opcode,
                                                 const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(15); 
-        base = Align(PC,4); 
-        address = if add then (base + imm32) else (base - imm32); 
-        data = MemU[address,2]; 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(15);
+        base = Align(PC,4);
+        address = if add then (base + imm32) else (base - imm32);
+        data = MemU[address,2];
         if UnalignedSupport() || address<0> = '0' then
             R[t] = SignExtend(data, 32);
         else // Can only apply before ARMv7
@@ -8142,15 +8142,15 @@ bool EmulateInstructionARM::EmulateLDRSHLiteral(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateLDRSHRegister(const uint32_t opcode,
                                                  const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); NullCheckIfThumbEE(n); 
-        offset = Shift(R[m], shift_t, shift_n, APSR.C); 
-        offset_addr = if add then (R[n] + offset) else (R[n] - offset); 
-        address = if index then offset_addr else R[n]; 
-        data = MemU[address,2]; 
-        if wback then R[n] = offset_addr; 
+    if ConditionPassed() then
+        EncodingSpecificOperations(); NullCheckIfThumbEE(n);
+        offset = Shift(R[m], shift_t, shift_n, APSR.C);
+        offset_addr = if add then (R[n] + offset) else (R[n] - offset);
+        address = if index then offset_addr else R[n];
+        data = MemU[address,2];
+        if wback then R[n] = offset_addr;
         if UnalignedSupport() || address<0> = '0' then
-            R[t] = SignExtend(data, 32); 
+            R[t] = SignExtend(data, 32);
         else // Can only apply before ARMv7
             R[t] = bits(32) UNKNOWN;
 #endif
@@ -8321,9 +8321,9 @@ bool EmulateInstructionARM::EmulateLDRSHRegister(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateSXTB(const uint32_t opcode,
                                         const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
+    if ConditionPassed() then
         EncodingSpecificOperations();
-        rotated = ROR(R[m], rotation); 
+        rotated = ROR(R[m], rotation);
         R[d] = SignExtend(rotated<7:0>, 32);
 #endif
 
@@ -8406,9 +8406,9 @@ bool EmulateInstructionARM::EmulateSXTB(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateSXTH(const uint32_t opcode,
                                         const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); 
-        rotated = ROR(R[m], rotation); 
+    if ConditionPassed() then
+        EncodingSpecificOperations();
+        rotated = ROR(R[m], rotation);
         R[d] = SignExtend(rotated<15:0>, 32);
 #endif
 
@@ -8491,9 +8491,9 @@ bool EmulateInstructionARM::EmulateSXTH(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateUXTB(const uint32_t opcode,
                                         const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); 
-        rotated = ROR(R[m], rotation); 
+    if ConditionPassed() then
+        EncodingSpecificOperations();
+        rotated = ROR(R[m], rotation);
         R[d] = ZeroExtend(rotated<7:0>, 32);
 #endif
 
@@ -8574,9 +8574,9 @@ bool EmulateInstructionARM::EmulateUXTB(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateUXTH(const uint32_t opcode,
                                         const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); 
-        rotated = ROR(R[m], rotation); 
+    if ConditionPassed() then
+        EncodingSpecificOperations();
+        rotated = ROR(R[m], rotation);
         R[d] = ZeroExtend(rotated<15:0>, 32);
 #endif
 
@@ -8655,14 +8655,14 @@ bool EmulateInstructionARM::EmulateUXTH(const uint32_t opcode,
 bool EmulateInstructionARM::EmulateRFE(const uint32_t opcode,
                                        const ARMEncoding encoding) {
 #if 0
-    if ConditionPassed() then 
-        EncodingSpecificOperations(); 
+    if ConditionPassed() then
+        EncodingSpecificOperations();
         if !CurrentModeIsPrivileged() || CurrentInstrSet() == InstrSet_ThumbEE then
-            UNPREDICTABLE; 
+            UNPREDICTABLE;
         else
-            address = if increment then R[n] else R[n]-8; 
-            if wordhigher then address = address+4; 
-            CPSRWriteByInstr(MemA[address+4,4], '1111', TRUE); 
+            address = if increment then R[n] else R[n]-8;
+            if wordhigher then address = address+4;
+            CPSRWriteByInstr(MemA[address+4,4], '1111', TRUE);
             BranchWritePC(MemA[address,4]);
             if wback then R[n] = if increment then R[n]+8 else R[n]-8;
 #endif

@@ -557,7 +557,7 @@ val set_module_identifer : llmodule -> string -> unit
 val get_module_flag : llmodule -> string -> llmetadata option
 
 (** [add_module_flag m b k v] Add a module-level flag b, with key [k] and
-    value [v] to the flags metadata of module [m]. It will create the 
+    value [v] to the flags metadata of module [m]. It will create the
     module-level flags named metadata if it doesn't already exist. *)
 val add_module_flag : llmodule -> ModuleFlagBehavior.t ->
                         string -> llmetadata -> unit

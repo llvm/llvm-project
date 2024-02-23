@@ -193,11 +193,11 @@ void clang::EmitClangSACheckers(RecordKeeper &Records, raw_ostream &OS) {
     SortedRecords sortedPackages;
     for (unsigned i = 0, e = packages.size(); i != e; ++i)
       sortedPackages[getPackageFullName(packages[i])] = packages[i];
-  
+
     for (SortedRecords::iterator
            I = sortedPackages.begin(), E = sortedPackages.end(); I != E; ++I) {
       const Record &R = *I->second;
-  
+
       OS << "PACKAGE(" << "\"";
       OS.write_escaped(getPackageFullName(&R)) << '\"';
       OS << ")\n";

@@ -555,9 +555,9 @@ void SBBreakpointName::SetScriptCallbackFunction(
   SetScriptCallbackFunction(callback_function_name, empty_args);
 }
 
-SBError SBBreakpointName::SetScriptCallbackFunction(
-    const char *callback_function_name, 
-    SBStructuredData &extra_args) {
+SBError
+SBBreakpointName::SetScriptCallbackFunction(const char *callback_function_name,
+                                            SBStructuredData &extra_args) {
   LLDB_INSTRUMENT_VA(this, callback_function_name, extra_args);
   SBError sb_error;
   BreakpointName *bp_name = GetBreakpointName();

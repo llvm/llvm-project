@@ -1936,7 +1936,7 @@ multiclass VPseudoILoad<bit Ordered> {
           defvar Vreg = dataEMUL.vrclass;
           defvar IdxVreg = idxEMUL.vrclass;
           defvar HasConstraint = !ne(dataEEW, idxEEW);
-          defvar TypeConstraints = 
+          defvar TypeConstraints =
             !if(!eq(dataEEW, idxEEW), 1, !if(!gt(dataEEW, idxEEW), !if(!ge(idxEMULOctuple, 8), 3, 1), 2));
           let VLMul = dataEMUL.value in {
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
@@ -2990,7 +2990,7 @@ multiclass VPseudoVWALU_VV_VX {
     defm "" : VPseudoBinaryW_VV<m>,
               SchedBinary<"WriteVIWALUV", "ReadVIWALUV", "ReadVIWALUV", mx,
                           forceMergeOpRead=true>;
-    defm "" : VPseudoBinaryW_VX<m>, 
+    defm "" : VPseudoBinaryW_VX<m>,
               SchedBinary<"WriteVIWALUX", "ReadVIWALUV", "ReadVIWALUX", mx,
                           forceMergeOpRead=true>;
   }
@@ -7298,7 +7298,7 @@ defvar F16WidenableFloatVectors = !filter(fvtiToFWti, AllWidenableFloatVectors,
 let Predicates = [HasVInstructionsF16Minimal] in
 defm : VPatConversionVF_WF_RM<"int_riscv_vfncvt_f_f_w", "PseudoVFNCVT_F_F",
                            F16WidenableFloatVectors>;
-defm : VPatConversionVF_WF_BF_RM<"int_riscv_vfncvtbf16_f_f_w", 
+defm : VPatConversionVF_WF_BF_RM<"int_riscv_vfncvtbf16_f_f_w",
                                  "PseudoVFNCVTBF16_F_F">;
 defm : VPatConversionVF_WF<"int_riscv_vfncvt_rod_f_f_w", "PseudoVFNCVT_ROD_F_F">;
 

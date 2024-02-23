@@ -35,7 +35,7 @@ def Znver4Model : SchedMachineModel {
   //        with large values here the compilation of certain loops
   //        ends up taking way too long.
   // Ideally for znver4, we should have 6.75K. However we don't add that
-  // considerting the impact compile time and prefer using default values 
+  // considerting the impact compile time and prefer using default values
   // instead.
   // Retaining minimal value to influence unrolling as we did for znver3.
   let LoopMicroOpBufferSize = 512;
@@ -1539,7 +1539,7 @@ def Zn4WriteVFIXUPIMMPDZrr_VRANGESDrr : SchedWriteRes<[Zn4FPFMisc01]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WriteVFIXUPIMMPDZrr_VRANGESDrr], (instregex
-	"VFIXUPIMM(S|P)(S|D)(Z|Z128|Z256?)rrik", "VFIXUPIMM(S|P)(S|D)(Z?|Z128?|Z256?)rrikz", 
+	"VFIXUPIMM(S|P)(S|D)(Z|Z128|Z256?)rrik", "VFIXUPIMM(S|P)(S|D)(Z?|Z128?|Z256?)rrikz",
         "VFIXUPIMM(S|P)(S|D)(Z128|Z256?)rri",  "VRANGE(S|P)(S|D)(Z?|Z128?|Z256?)rri(b?)",
 	"VRANGE(S|P)(S|D)(Z|Z128|Z256?)rri(b?)k","VRANGE(S|P)(S|D)(Z?|Z128?|Z256?)rri(b?)kz"
 	)>;
@@ -1791,20 +1791,20 @@ def Zn4VecALUZSlow: SchedWriteRes<[Zn4FPFMisc01]> {
   let ReleaseAtCycles = [2];
   let NumMicroOps = 1;
 }
-def : InstRW<[Zn4VecALUZSlow], (instrs 
-	VPABSBZ128rr,      VPABSBZ128rrk,  VPABSBZ128rrkz,   VPABSDZ128rr, 
-	VPABSDZ128rrk,     VPABSDZ128rrkz, VPABSQZ128rr,     VPABSQZ128rrk, 
-	VPABSQZ128rrkz,    VPABSWZ128rr,   VPABSWZ128rrk,    VPABSWZ128rrkz, 
-	VPADDSBZ128rr,     VPADDSBZ128rrk, VPADDSBZ128rrkz,  VPADDSWZ128rr, 
-	VPADDSWZ128rrk,    VPADDSWZ128rrkz,VPADDUSBZ128rr,   VPADDUSBZ128rrk, 
-	VPADDUSBZ128rrkz,  VPADDUSWZ128rr, VPADDUSWZ128rrk,  VPADDUSWZ128rrkz, 
-	VPAVGBZ128rr,      VPAVGBZ128rrk,  VPAVGBZ128rrkz,   VPAVGWZ128rr, 
-	VPAVGWZ128rrk,     VPAVGWZ128rrkz, VPOPCNTBZ128rr,   VPOPCNTBZ128rrk, 
-	VPOPCNTBZ128rrkz,  VPOPCNTDZ128rr, VPOPCNTDZ128rrk,  VPOPCNTDZ128rrkz, 
-	VPOPCNTQZ128rr,    VPOPCNTQZ128rrk,VPOPCNTQZ128rrkz, VPOPCNTWZ128rr, 
-	VPOPCNTWZ128rrk,   VPOPCNTWZ128rrkz,VPSUBSBZ128rr,   VPSUBSBZ128rrk, 
-	VPSUBSBZ128rrkz,   VPSUBSWZ128rr,   VPSUBSWZ128rrk,  VPSUBSWZ128rrkz, 
-	VPSUBUSBZ128rr,    VPSUBUSBZ128rrk, VPSUBUSBZ128rrkz,VPSUBUSWZ128rr, 
+def : InstRW<[Zn4VecALUZSlow], (instrs
+	VPABSBZ128rr,      VPABSBZ128rrk,  VPABSBZ128rrkz,   VPABSDZ128rr,
+	VPABSDZ128rrk,     VPABSDZ128rrkz, VPABSQZ128rr,     VPABSQZ128rrk,
+	VPABSQZ128rrkz,    VPABSWZ128rr,   VPABSWZ128rrk,    VPABSWZ128rrkz,
+	VPADDSBZ128rr,     VPADDSBZ128rrk, VPADDSBZ128rrkz,  VPADDSWZ128rr,
+	VPADDSWZ128rrk,    VPADDSWZ128rrkz,VPADDUSBZ128rr,   VPADDUSBZ128rrk,
+	VPADDUSBZ128rrkz,  VPADDUSWZ128rr, VPADDUSWZ128rrk,  VPADDUSWZ128rrkz,
+	VPAVGBZ128rr,      VPAVGBZ128rrk,  VPAVGBZ128rrkz,   VPAVGWZ128rr,
+	VPAVGWZ128rrk,     VPAVGWZ128rrkz, VPOPCNTBZ128rr,   VPOPCNTBZ128rrk,
+	VPOPCNTBZ128rrkz,  VPOPCNTDZ128rr, VPOPCNTDZ128rrk,  VPOPCNTDZ128rrkz,
+	VPOPCNTQZ128rr,    VPOPCNTQZ128rrk,VPOPCNTQZ128rrkz, VPOPCNTWZ128rr,
+	VPOPCNTWZ128rrk,   VPOPCNTWZ128rrkz,VPSUBSBZ128rr,   VPSUBSBZ128rrk,
+	VPSUBSBZ128rrkz,   VPSUBSWZ128rr,   VPSUBSWZ128rrk,  VPSUBSWZ128rrkz,
+	VPSUBUSBZ128rr,    VPSUBUSBZ128rrk, VPSUBUSBZ128rrkz,VPSUBUSWZ128rr,
 	VPSUBUSWZ128rrk,   VPSUBUSWZ128rrkz
 	)>;
 

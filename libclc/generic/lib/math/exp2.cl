@@ -76,7 +76,7 @@ _CLC_OVERLOAD _CLC_DEF double exp2(double x) {
     const double R_1_BY_64 = 1.0 / 64.0;
 
     int n = convert_int(x * 64.0);
-    double r = R_LN2 * fma(-R_1_BY_64, (double)n, x); 
+    double r = R_LN2 * fma(-R_1_BY_64, (double)n, x);
     return __clc_exp_helper(x, -1074.0, 1024.0, r, n);
 }
 

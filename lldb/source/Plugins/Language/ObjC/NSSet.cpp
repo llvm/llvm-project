@@ -140,7 +140,7 @@ private:
   D64 *m_data_64;
   std::vector<SetItemDescriptor> m_children;
 };
-  
+
 namespace Foundation1300 {
   struct DataDescriptor_32 {
     uint32_t _used : 26;
@@ -148,18 +148,18 @@ namespace Foundation1300 {
     uint32_t _mutations;
     uint32_t _objs_addr;
   };
-  
+
   struct DataDescriptor_64 {
     uint64_t _used : 58;
     uint64_t _size;
     uint64_t _mutations;
     uint64_t _objs_addr;
   };
-  
+
   using NSSetMSyntheticFrontEnd =
       GenericNSSetMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
 }
-  
+
 namespace Foundation1428 {
   struct DataDescriptor_32 {
     uint32_t _used : 26;
@@ -167,18 +167,18 @@ namespace Foundation1428 {
     uint32_t _objs_addr;
     uint32_t _mutations;
   };
-  
+
   struct DataDescriptor_64 {
     uint64_t _used : 58;
     uint64_t _size;
     uint64_t _objs_addr;
     uint64_t _mutations;
   };
-  
+
   using NSSetMSyntheticFrontEnd =
       GenericNSSetMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
 }
-  
+
 namespace Foundation1437 {
   struct DataDescriptor_32 {
     uint32_t _cow;
@@ -188,7 +188,7 @@ namespace Foundation1437 {
     uint32_t _used : 26;
     uint32_t _szidx : 6;
   };
-  
+
   struct DataDescriptor_64 {
     uint64_t _cow;
     // __Table storage
@@ -197,10 +197,10 @@ namespace Foundation1437 {
     uint32_t _used : 26;
     uint32_t _szidx : 6;
   };
-  
+
   using NSSetMSyntheticFrontEnd =
       GenericNSSetMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
-  
+
   template <typename DD>
   uint64_t
   __NSSetMSize_Impl(lldb_private::Process &process, lldb::addr_t valobj_addr,
@@ -215,7 +215,7 @@ namespace Foundation1437 {
     }
     return descriptor._used;
   }
-  
+
   uint64_t
   __NSSetMSize(lldb_private::Process &process, lldb::addr_t valobj_addr,
                Status &error) {
@@ -226,7 +226,7 @@ namespace Foundation1437 {
     }
   }
 }
-  
+
 class NSSetCodeRunningSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   NSSetCodeRunningSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);

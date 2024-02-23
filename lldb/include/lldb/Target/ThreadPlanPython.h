@@ -51,7 +51,7 @@ public:
   void DidPush() override;
 
   bool IsPlanStale() override;
-  
+
   bool DoWillResume(lldb::StateType resume_state, bool current_plan) override;
 
 
@@ -59,7 +59,7 @@ protected:
   bool DoPlanExplainsStop(Event *event_ptr) override;
 
   lldb::StateType GetPlanRunState() override;
-  
+
   ScriptInterpreter *GetScriptInterpreter();
 
 private:

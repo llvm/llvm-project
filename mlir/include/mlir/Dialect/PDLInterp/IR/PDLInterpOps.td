@@ -101,7 +101,7 @@ def PDLInterp_ApplyConstraintOp : PDLInterp_PredicateOp<"apply_constraint"> {
     ```
   }];
 
-  let arguments = (ins StrAttr:$name, 
+  let arguments = (ins StrAttr:$name,
                        Variadic<PDL_AnyType>:$args,
                        DefaultValuedAttr<BoolAttr, "false">:$isNegated);
   let assemblyFormat = [{

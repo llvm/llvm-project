@@ -1183,7 +1183,7 @@ def int_arm_mve_vmull_poly: DefaultAttrsIntrinsic<
    [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty], [IntrNoMem]>;
 
 // The first two parameters are compile-time constants:
-// * Halving: 0 means  halving (vhcaddq), 1 means non-halving (vcaddq) 
+// * Halving: 0 means  halving (vhcaddq), 1 means non-halving (vcaddq)
 //            instruction. Note: the flag is inverted to match the corresponding
 //            bit in the instruction encoding
 // * Rotation angle: 0 mean 90 deg, 1 means 180 deg

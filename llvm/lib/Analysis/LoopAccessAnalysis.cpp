@@ -2558,7 +2558,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
                                SymbolicStrides, UncomputablePtr, false);
   if (!CanDoRTIfNeeded) {
     auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
-    recordAnalysis("CantIdentifyArrayBounds", I) 
+    recordAnalysis("CantIdentifyArrayBounds", I)
         << "cannot identify array bounds";
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because we can't find "
                       << "the array bounds.\n");

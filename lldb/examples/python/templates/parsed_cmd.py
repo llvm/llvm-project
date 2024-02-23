@@ -26,11 +26,11 @@ Then implement the execute function for your command as:
 
     def __call__(self, debugger, args_list, exe_ctx, result):
 
-The arguments will be a list of strings.  
+The arguments will be a list of strings.
 
 You can access the option values using the 'dest' string you passed in when defining the option.
 And if you need to know whether a given option was set by the user or not, you can
-use the was_set API.  
+use the was_set API.
 
 So for instance, if you have an option whose "dest" is "my_option", then:
 
@@ -68,7 +68,7 @@ def to_bool(in_value):
     if low_in in ["y", "yes", "t", "true", "1"]:
         value = True
         error = False
-        
+
     if not value and low_in in ["n", "no", "f", "false", "0"]:
         value = False
         error = False
@@ -203,7 +203,7 @@ class LLDBOptionValueParser:
             return (candidates[0], False)
         else:
             return (input, True)
-        
+
     def set_option_value(self, exe_ctx, opt_name, opt_value):
         """ This sets a single option value.  This will handle most option
         value types, but if you have an option that has some complex behavior,
@@ -212,7 +212,7 @@ class LLDBOptionValueParser:
         elem = self.get_option_element(opt_name)
         if not elem:
             return False
-        
+
         if "enum_values" in elem:
             (value, error) = self.set_enum_value(elem["enum_values"], opt_value)
         else:
@@ -220,7 +220,7 @@ class LLDBOptionValueParser:
 
         if error:
             return False
-        
+
         object.__setattr__(self, elem["dest"], value)
         elem["_value_set"] = True
         return True
@@ -257,15 +257,15 @@ class LLDBOptionValueParser:
         completion_type: currently these are values form the lldb.CompletionType enum, I
                          haven't done custom completions yet.
         enum_values: An array of duples: ["element_name", "element_help"].  If provided,
-                     only one of the enum elements is allowed.  The value will be the 
-                     element_name for the chosen enum element as a string. 
+                     only one of the enum elements is allowed.  The value will be the
+                     element_name for the chosen enum element as a string.
         """
         if not dest:
             dest = long_option
 
         if not completion_type:
             completion_type = self.determine_completion(value_type)
-            
+
         dict = {"short_option" : short_option,
                 "required" : required,
                 "help" : help,
@@ -292,7 +292,7 @@ class ParsedCommand:
         self.debugger = debugger
         self.ov_parser = LLDBOptionValueParser()
         self.setup_command_definition()
-        
+
     def get_options_definition(self):
         return self.get_parser().options_dict
 
@@ -304,7 +304,7 @@ class ParsedCommand:
 
     # The base class will handle calling these methods
     # when appropriate.
-    
+
     def option_parsing_started(self):
         self.get_parser().option_parsing_started()
 
@@ -326,7 +326,7 @@ class ParsedCommand:
     def __call__(self, debugger, args_array, exe_ctx, result):
         """This is the command callback.  The option values are
         provided by the 'dest' properties on the parser.
-    
+
         args_array: This is the list of arguments provided.
         exe_ctx: Gives the SBExecutionContext on which the
                  command should operate.

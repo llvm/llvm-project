@@ -70,7 +70,7 @@ bool FunctionCaller::WriteFunctionWrapper(
     diagnostic_manager.Printf(eDiagnosticSeverityError, "no process.");
     return false;
   }
-  
+
   lldb::ProcessSP jit_process_sp(m_jit_process_wp.lock());
 
   if (process != jit_process_sp.get()) {
@@ -78,19 +78,19 @@ bool FunctionCaller::WriteFunctionWrapper(
                              "process does not match the stored process.");
     return false;
   }
-    
+
   if (process->GetState() != lldb::eStateStopped) {
-    diagnostic_manager.Printf(eDiagnosticSeverityError, 
+    diagnostic_manager.Printf(eDiagnosticSeverityError,
                               "process is not stopped");
     return false;
   }
 
   if (!m_compiled) {
-    diagnostic_manager.Printf(eDiagnosticSeverityError, 
+    diagnostic_manager.Printf(eDiagnosticSeverityError,
                               "function not compiled");
     return false;
   }
-  
+
   if (m_JITted)
     return true;
 

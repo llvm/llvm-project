@@ -246,7 +246,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{60} = TiedSourceNotRead;
 
   let TSFlags{61} = IsNeverUniform;
-  
+
   let TSFlags{62} = GWS;
 
   let TSFlags{63} = IsSWMMAC;

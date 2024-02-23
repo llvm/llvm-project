@@ -1993,7 +1993,7 @@ multiclass sme2_int_mla_long_array_vg2_single<string mnemonic, bits<2> op, SDPat
 multiclass sme2_fp_mla_long_array_vg4_single<string mnemonic, bits<3> op, MatrixOperand matrix_ty,
                                              RegisterOperand multi_vector_ty, ZPRRegOp vector_ty,
                                              ValueType zpr_ty, SDPatternOperator intrinsic> {
-  def NAME : sme2_mla_long_array_vg24_single<0b00, 0b1, op{2-1}, op{0}, matrix_ty, multi_vector_ty, 
+  def NAME : sme2_mla_long_array_vg24_single<0b00, 0b1, op{2-1}, op{0}, matrix_ty, multi_vector_ty,
                                              vector_ty, mnemonic, "vgx4">,
                                              SMEPseudo2Instr<NAME, 1>;
 

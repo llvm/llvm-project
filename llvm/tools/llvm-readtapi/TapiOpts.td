@@ -8,7 +8,7 @@ multiclass JS<string name, string help, string var = ""> {
 }
 
 //
-// Top level operations 
+// Top level operations
 //
 def action_group : OptionGroup<"action group">, HelpText<"COMMANDS">;
 def compare : FF<"compare", "compare tapi files for library differences">, Group<action_group>;
@@ -18,7 +18,7 @@ def remove: FF<"remove", "remove <architecture> from input file">, Group<action_
 def stubify: FF<"stubify", "create a tapi file from a dynamic library or framework">, Group<action_group>;
 
 //
-// General Driver options 
+// General Driver options
 //
 def help : FF<"help", "display this help">;
 def version: FF<"version", "print the llvm-readtapi version">;

@@ -633,7 +633,7 @@ def findClosestLineReference(clangRoot, doxyName, target):
         f = open(os.path.join(clangRoot, 'docs', 'doxygen', 'html', doxyName))
     except:
         return None
-    
+
     best = None
     for m in doxyLineRefRE.finditer(f.read()):
         line = int(m.group(1), 10)
@@ -706,7 +706,7 @@ class SpecIndex:
         s =  '.'.join(map(str,self.indices))
         if self.paragraph is not None:
             s += '.p%d'%(self.paragraph,)
-        return s                            
+        return s
 
     def __repr__(self):
         return 'SpecIndex(%s, %s)'%(self.indices, self.paragraph)
@@ -732,7 +732,7 @@ class RefItem:
         self.filename = filename
         self.path = path
         self.line = line
-    
+
     def __str__(self):
         if self.name is not None:
             return '%s %s'%(self.name, self.section)
@@ -740,7 +740,7 @@ class RefItem:
             return '--- %s'%(self.section,)
 
     def __repr__(self):
-        return 'RefItem(%s, %r, "%s", "%s", %d)'%(self.name, 
+        return 'RefItem(%s, %r, "%s", "%s", %d)'%(self.name,
                                               self.section,
                                               self.filename,
                                               self.path,
@@ -763,7 +763,7 @@ def sorted(l):
 def getRevision(path):
     import subprocess
     p = subprocess.Popen(['svn', 'info', path],
-                         stdin=open('/dev/null','r'), 
+                         stdin=open('/dev/null','r'),
                          stdout=subprocess.PIPE)
     for ln in p.stdout.read(1024).split('\n'):
         if ln.startswith('Revision:'):
@@ -781,7 +781,7 @@ def buildRefTree(references):
         if node is None:
             parent[1][key] = node = (key, {}, [])
         return node
-            
+
     for ref in references:
         n = getNode((ref.name,) + ref.section.indices)
         n[2].append(ref)
@@ -807,7 +807,7 @@ def main():
     parser.add_option("", "--debug", dest="debug",
                       help="Print extra debugging output",
                       action="store_true",
-                      default=False)    
+                      default=False)
     (opts, args) = parser.parse_args()
 
     if len(args) != 2:
@@ -820,7 +820,7 @@ def main():
             for filename in filenames:
                 name,ext = os.path.splitext(filename)
                 if ext in ('.c', '.cpp', '.h', '.def'):
-                    fullpath = os.path.join(dirpath, filename)                
+                    fullpath = os.path.join(dirpath, filename)
                     references.extend(list(scanFile(fullpath, filename)))
     else:
         references.extend(list(scanFile(root, root)))
@@ -840,7 +840,7 @@ def main():
 
     referencesPath = os.path.join(outputDir,'references.html')
     print 'Writing: %s'%(referencesPath,)
-    f = open(referencesPath,'w')   
+    f = open(referencesPath,'w')
     print >>f, '<html><head><title>clang: Specification References</title></head>'
     print >>f, '<body>'
     print >>f, '\t<h2>Specification References</h2>'
@@ -860,7 +860,7 @@ def main():
                 continue
             components = '.'.join([str(p[0]) for p in path[1:]])
             print >>f, '\t<tr>'
-            tocEntry = None            
+            tocEntry = None
             if docData is not None:
                 tocEntry = findClosestTOCEntry(docData, [p[0] for p in path[1:]])
             if tocEntry is not None:
@@ -905,6 +905,6 @@ def main():
     print >>f, 'SVN Revision: %s'%(getRevision(root),)
     print >>f, '</body>'
     f.close()
-    
+
 if __name__=='__main__':
    main()

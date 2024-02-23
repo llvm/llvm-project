@@ -6,7 +6,7 @@ Darwin Sanitizers Stable ABI
 
 Some OSes like Darwin want to include the AddressSanitizer runtime by establishing a stable ASan ABI. lib/asan_abi contains a secondary stable ABI for Darwin use and potentially others. The Stable ABI has minimal impact on the community, prioritizing stability over performance.
 
-The Stable ABI is isolated by a “shim” layer which maps the unstable ABI to the stable ABI. It consists of a static library (libclang_rt.asan_abi_osx.a) that contains simple mappings of the existing ASan ABI to the smaller Stable ABI. After linking with the static shim library, only calls to the Stable ABI remain. 
+The Stable ABI is isolated by a “shim” layer which maps the unstable ABI to the stable ABI. It consists of a static library (libclang_rt.asan_abi_osx.a) that contains simple mappings of the existing ASan ABI to the smaller Stable ABI. After linking with the static shim library, only calls to the Stable ABI remain.
 
   Sample content of the shim:
 

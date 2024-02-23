@@ -92,7 +92,7 @@ def _thread_context(*args):
     return -1
 
 
-""" Test info threads / list threads / how to split output to get thread id 
+""" Test info threads / list threads / how to split output to get thread id
 and its size.
 """
 

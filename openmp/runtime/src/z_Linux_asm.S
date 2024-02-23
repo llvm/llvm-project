@@ -2358,7 +2358,7 @@ __kmp_invoke_microtask:
 
 	stg     %r3,160(%r12)
 	la	%r2,164(%r12)		// gid
-	stg	%r4,168(%r12)		
+	stg	%r4,168(%r12)
 	la	%r3,172(%r12)		// tid
 	lgr	%r8,%r6			// argv
 
@@ -2435,7 +2435,7 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
     .size KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),8
 #endif
 #endif /* KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 ||
-          KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE || 
+          KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE ||
           KMP_ARCH_S390X */
 
 #if KMP_OS_LINUX

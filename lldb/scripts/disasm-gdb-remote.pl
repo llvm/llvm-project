@@ -33,7 +33,7 @@ our $base_time = 0.0;
 our $packet_start_time = 0.0;
 our $reg_cmd_reg;
 our %reg_map = (
-	'i386-gdb' => [ 
+	'i386-gdb' => [
 	    { name => 'eax',    info => $reg32_href     },
         { name => 'ecx',    info => $reg32_href     },
         { name => 'edx',    info => $reg32_href     },
@@ -84,7 +84,7 @@ our %reg_map = (
         { name => 'mm6',    info => $reg64_href     },
         { name => 'mm7',    info => $reg64_href     },
     ],
-    
+
     'i386-lldb' => [
         { name => 'eax',          info => $reg32_href   },
         { name => 'ebx',          info => $reg32_href   },
@@ -132,7 +132,7 @@ our %reg_map = (
     	{ name => 'err',          info => $reg32_href   },
     	{ name => 'faultvaddr',   info => $reg32_href   },
     ],
-    
+
     'arm-gdb' => [
         { name => 'r0'      , info => $reg32_href   },
         { name => 'r1'      , info => $reg32_href   },
@@ -183,7 +183,7 @@ our %reg_map = (
         { name => 's20'     , info => $float32_href },
         { name => 's21'     , info => $float32_href },
         { name => 's22'     , info => $float32_href },
-        { name => 's23'     , info => $float32_href }, 
+        { name => 's23'     , info => $float32_href },
         { name => 's24'     , info => $float32_href },
         { name => 's25'     , info => $float32_href },
         { name => 's26'     , info => $float32_href },
@@ -200,7 +200,7 @@ our %reg_map = (
         { name => 'd20'     , info => $float64_href },
         { name => 'd21'     , info => $float64_href },
         { name => 'd22'     , info => $float64_href },
-        { name => 'd23'     , info => $float64_href }, 
+        { name => 'd23'     , info => $float64_href },
         { name => 'd24'     , info => $float64_href },
         { name => 'd25'     , info => $float64_href },
         { name => 'd26'     , info => $float64_href },
@@ -210,8 +210,8 @@ our %reg_map = (
         { name => 'd30'     , info => $float64_href },
         { name => 'd31'     , info => $float64_href },
     ],
-    
-    
+
+
     'arm-lldb' => [
         { name => 'r0'      , info => $reg32_href   },
         { name => 'r1'      , info => $reg32_href   },
@@ -253,7 +253,7 @@ our %reg_map = (
         { name => 's20'     , info => $float32_href },
         { name => 's21'     , info => $float32_href },
         { name => 's22'     , info => $float32_href },
-        { name => 's23'     , info => $float32_href }, 
+        { name => 's23'     , info => $float32_href },
         { name => 's24'     , info => $float32_href },
         { name => 's25'     , info => $float32_href },
         { name => 's26'     , info => $float32_href },
@@ -285,7 +285,7 @@ our %reg_map = (
         { name => 'd20'     , info => $float64_href },
         { name => 'd21'     , info => $float64_href },
         { name => 'd22'     , info => $float64_href },
-        { name => 'd23'     , info => $float64_href }, 
+        { name => 'd23'     , info => $float64_href },
         { name => 'd24'     , info => $float64_href },
         { name => 'd25'     , info => $float64_href },
         { name => 'd26'     , info => $float64_href },
@@ -298,8 +298,8 @@ our %reg_map = (
         { name => 'exc'     , info => $reg32_href   },
         { name => 'fsr'     , info => $reg32_href   },
         { name => 'far'     , info => $reg32_href   },
-    ],    
-    
+    ],
+
     'x86_64-gdb' => [
     	{ name => 'rax'		, info => $reg64_href   },
     	{ name => 'rbx'     , info => $reg64_href   },
@@ -339,7 +339,7 @@ our %reg_map = (
     	{ name => 'fiseg'   , info => $reg32_href   },
     	{ name => 'fioff'   , info => $reg32_href   },
     	{ name => 'foseg'   , info => $reg32_href   },
-    	{ name => 'fooff'   , info => $reg32_href   },      
+    	{ name => 'fooff'   , info => $reg32_href   },
     	{ name => 'fop'     , info => $reg32_href   },
     	{ name => 'xmm0'	, info => $reg128_href  },
     	{ name => 'xmm1'    , info => $reg128_href  },
@@ -430,7 +430,7 @@ our $opt_g = 0;	# debug
 our $opt_q = 0;	# quiet
 our $opt_r = undef;
 use Getopt::Std;
-getopts('gvqr:'); 
+getopts('gvqr:');
 
 our $registers_aref = undef;
 
@@ -438,7 +438,7 @@ if (length($opt_r))
 {
 	if (exists $reg_map{$opt_r})
 	{
-	    $registers_aref = $reg_map{$opt_r};		
+	    $registers_aref = $reg_map{$opt_r};
 	}
 	else
 	{
@@ -446,7 +446,7 @@ if (length($opt_r))
 	}
 }
 
-sub extract_key_value_pairs 
+sub extract_key_value_pairs
 {
     my $kv_href = {};
     my $arrayref = shift;
@@ -484,7 +484,7 @@ sub calculate_max_register_name_length
 		my $name_len = length($reg_href->{name});
 		if ($max_register_name_len < $name_len)
 		{
-			$max_register_name_len = $name_len;			
+			$max_register_name_len = $name_len;
 		}
 	}
 }
@@ -493,7 +493,7 @@ sub calculate_max_register_name_length
 # the command character as the key and the value being a reference to
 # the dump function for dumping the command itself.
 #----------------------------------------------------------------------
-our %cmd_callbacks = 
+our %cmd_callbacks =
 (
 	'?' => \&dump_last_signal_cmd,
 	'H' => \&dump_set_thread_cmd,
@@ -503,7 +503,7 @@ our %cmd_callbacks =
 	'g' => \&dump_read_regs_cmd,
 	'G' => \&dump_write_regs_cmd,
 	'p' => \&dump_read_single_register_cmd,
-	'P' => \&dump_write_single_register_cmd,	
+	'P' => \&dump_write_single_register_cmd,
 	'm' => \&dump_read_mem_cmd,
 	'M' => \&dump_write_mem_cmd,
 	'X' => \&dump_write_mem_binary_cmd,
@@ -526,7 +526,7 @@ our %cmd_callbacks =
 # the command character as the key and the value being a reference to
 # the dump function for the response to the command.
 #----------------------------------------------------------------------
-our %rsp_callbacks = 
+our %rsp_callbacks =
 (
 	'c' => \&dump_stop_reply_packet,
 	's' => \&dump_stop_reply_packet,
@@ -556,22 +556,22 @@ sub dump_register_value
         printf("\tinvalid register index %d\n", $reg_num);
         return;
     }
-    
+
     my $reg_href = $$registers_aref[$reg_num];
     my $reg_name = $reg_href->{name};
 	if ($$arrayref[0] eq '#')
 	{
         printf("\t%*s: error: EOS reached when trying to read register %d\n", $max_register_name_len, $reg_name, $reg_num);
 	}
-	
+
     my $reg_info = $reg_href->{info};
     my $reg_extract = $reg_info->{extract};
     my $reg_format = $reg_info->{format};
     my $reg_val = &$reg_extract($arrayref);
     if ($indent) {
-    	printf("\t%*s = $reg_format", $max_register_name_len, $reg_name, $reg_val);        
+    	printf("\t%*s = $reg_format", $max_register_name_len, $reg_name, $reg_val);
     } else {
-    	printf("%s = $reg_format", $reg_name, $reg_val);        
+    	printf("%s = $reg_format", $reg_name, $reg_val);
     }
 }
 
@@ -586,7 +586,7 @@ sub extract_command
 	if ($cmd_chars[0] ne '$')
 	{
 		# only set the current command if it isn't a reply
-		$curr_cmd = $cmd_chars[0]; 
+		$curr_cmd = $cmd_chars[0];
 	}
 	return @cmd_chars;
 }
@@ -601,7 +601,7 @@ sub strip_checksum
 }
 
 #----------------------------------------------------------------------
-# Dump all strings in array by joining them together with no space 
+# Dump all strings in array by joining them together with no space
 # between them
 #----------------------------------------------------------------------
 sub dump_chars
@@ -647,7 +647,7 @@ sub dump_thread_is_alive_cmd
 sub dump_thread_is_alive_rsp
 {
 	my $rsp = join('',@_);
-	
+
 	printf("thread_is_alive ( $tid_format ) =>", $T_cmd_tid);
 	if ($rsp eq 'OK')
 	{
@@ -731,7 +731,7 @@ sub dump_general_query_cmd
 	{
 		@_ = splice(@_, length('qRegisterInfo'));
 		$qRegisterInfo_reg_num = get_hex(\@_);
-		
+
 		printf "get_dynamic_register_info ($qRegisterInfo_reg_num)";
 	}
 	else
@@ -759,7 +759,7 @@ sub dump_general_query_rsp
 	{
 		if ($gen_query_rsp_len == 0)
 		{
-			print "$unimplemented_str\n";			
+			print "$unimplemented_str\n";
 		}
 		else
 		{
@@ -768,13 +768,13 @@ sub dump_general_query_rsp
 				$qRegisterInfo_reg_num == 0 and $registers_aref = [];
 
 				my @name_and_values = split (/;/, $gen_query_rsp);
-			
+
 				my $reg_name = undef;
 				my $byte_size = 0;
 				my $pseudo = 0;
 				foreach (@name_and_values)
 				{
-					my ($name, $value) = split /:/;				
+					my ($name, $value) = split /:/;
 					if    ($name eq "name") { $reg_name = $value; }
 					elsif ($name eq "bitsize") { $byte_size = $value / 8; }
 					elsif ($name eq "container-regs") { $pseudo = 1; }
@@ -892,9 +892,9 @@ sub dump_write_regs_cmd
             my $reg_extract = $reg_info_href->{extract};
             my $reg_format = $reg_info_href->{format};
             my $reg_val = &$reg_extract(\@_);
-    		printf("\t%*s = $reg_format\n", $max_register_name_len, $reg_name, $reg_val);		    
+    		printf("\t%*s = $reg_format\n", $max_register_name_len, $reg_name, $reg_val);
 		}
-	}			
+	}
 }
 
 sub dump_read_regs_rsp
@@ -915,7 +915,7 @@ sub dump_read_regs_rsp
                 my $reg_val = &$reg_extract(\@_);
     			printf("\t%*s = $reg_format\n", $max_register_name_len, $reg_name, $reg_val);
 			}
-		}			
+		}
 	}
 }
 
@@ -954,11 +954,11 @@ sub dump_allocate_memory_rsp
 {
     if (@_ == 3 and $_[0] == 'E')
     {
-	    printf("allocated memory addr = ERROR (%s))\n", join('',@_));        
+	    printf("allocated memory addr = ERROR (%s))\n", join('',@_));
     }
     else
     {
-	    printf("allocated memory addr = 0x%s\n", join('',@_));        
+	    printf("allocated memory addr = 0x%s\n", join('',@_));
     }
 }
 
@@ -989,7 +989,7 @@ sub dump_read_single_register_cmd
 	$reg_cmd_reg = get_hex(\@_);
 	my $thread = get_thread_from_thread_suffix (\@_);
 	my $reg_href = $$registers_aref[$reg_cmd_reg];
-  
+
 	if (defined $thread)
 	{
     	print "read_register ( reg = \"$reg_href->{name}\", thread = $thread )\n";
@@ -1009,7 +1009,7 @@ sub dump_write_single_register_cmd
 	my $cmd = shift;
 	my $reg_num = get_hex(\@_);
 	shift (@_);	# Discard the '='
-	
+
 	print "write_register ( ";
 	dump_register_value(0, \@_, $reg_num);
 	my $thread = get_thread_from_thread_suffix (\@_);
@@ -1069,7 +1069,7 @@ sub dump_read_mem_rsp
 				($nibble_offset > 0) and print "\n    ";
 				printf("$addr_format: ", $curr_address + $nibble_offset/2);
 			}
-			(($nibble_offset % 2) == 0) and print ' ';			
+			(($nibble_offset % 2) == 0) and print ' ';
 			print $nibble;
 			$nibble_offset++;
 		}
@@ -1081,7 +1081,7 @@ sub dump_read_mem_rsp
 # 'c' or 's' command
 #----------------------------------------------------------------------
 sub dump_continue_cmd
-{	
+{
 	my $cmd = shift;
 	my $cmd_str;
 	$cmd eq 'c' and $cmd_str = 'continue';
@@ -1103,7 +1103,7 @@ sub dump_continue_cmd
 # 'Sss' step (S) with signal (ss where 'ss' is two hex digits)
 #----------------------------------------------------------------------
 sub dump_continue_with_signal_cmd
-{	
+{
 	my $cmd = shift;
 	my $address = -1;
 	my $cmd_str;
@@ -1134,7 +1134,7 @@ sub dump_continue_with_signal_cmd
 # 'A' command
 #----------------------------------------------------------------------
 sub dump_A_command
-{	
+{
 	my $cmd = get_expected_char(\@_, 'A') or print "error: incorrect command letter for argument packet, expected 'A'\n";
 	printf("set_program_arguments (\n");
 	do
@@ -1143,7 +1143,7 @@ sub dump_A_command
 		get_expected_char(\@_, ',') or die "error: missing comma after argument length...?\n";
 		my $arg_idx = get_uint(\@_);
 		get_expected_char(\@_, ',') or die "error: missing comma after argument number...?\n";
-	
+
 		my $arg = '';
 		my $num_hex8_bytes = $arg_len/2;
 		for (1 .. $num_hex8_bytes)
@@ -1154,8 +1154,8 @@ sub dump_A_command
 		if (@_ > 0)
 		{
 			get_expected_char(\@_, ',') or die "error: missing comma after argument argument ASCII hex bytes...?\n";
-		}		
-	} while (@_ > 0);	
+		}
+	} while (@_ > 0);
 	printf("    )\n");
 }
 
@@ -1164,7 +1164,7 @@ sub dump_A_command
 # 'z' and 'Z' command
 #----------------------------------------------------------------------
 sub dump_bp_wp_command
-{	
+{
 	my $cmd = shift;
 	my $type = shift;
 	shift;	# Skip ','
@@ -1177,7 +1177,7 @@ sub dump_bp_wp_command
 	}
 	else
 	{
-		printf("insert $point_types[$type]($addr_format, %d)\n", $address, $length);		
+		printf("insert $point_types[$type]($addr_format, %d)\n", $address, $length);
 	}
 }
 
@@ -1186,11 +1186,11 @@ sub dump_bp_wp_command
 # 'X' command
 #----------------------------------------------------------------------
 sub dump_write_mem_binary_cmd
-{	
+{
 	my $cmd = shift;
 	my $address = get_addr(\@_);
 	shift;	# Skip ','
-	
+
 	my ($length, $binary) = split(/:/, join('',@_));
 	printf("write_mem_binary ( $addr_format, %d, %s)\n", $address, $length, $binary);
 
@@ -1200,7 +1200,7 @@ sub dump_write_mem_binary_cmd
 # 'M' command
 #----------------------------------------------------------------------
 sub dump_write_mem_cmd
-{	
+{
 	my $cmd = shift;
 	my $address = get_addr(\@_);
 	shift;	# Skip ','
@@ -1278,7 +1278,7 @@ sub dump_attach_wait_command
 		printf("%c", get8(\@_))
 	}
 	printf " )\n";
-	
+
 }
 
 #----------------------------------------------------------------------
@@ -1315,20 +1315,20 @@ sub dump_extended_continue_cmd
 			my $continue_cmd = shift;
 			my $tmp;
 			if ($continue_cmd eq 'c')
-			{ 
+			{
 				print "continue";
 			}
-			elsif ($continue_cmd eq 'C')			
+			elsif ($continue_cmd eq 'C')
 			{
 				print "continue with signal ";
 				print shift;
 				print shift;
 			}
-			elsif ($continue_cmd eq 's')			
-			{ 
+			elsif ($continue_cmd eq 's')
+			{
 				print "step";
 			}
-			elsif ($continue_cmd eq 'S')			
+			elsif ($continue_cmd eq 'S')
 			{
 				print "step with signal ";
 				print shift;
@@ -1343,15 +1343,15 @@ sub dump_extended_continue_cmd
 				{
 					$tmp = shift;
 					if (length($tmp) > 0 && $tmp ne ';') {
-						print $tmp; 
-					} else { 
+						print $tmp;
+					} else {
 						last;
 					}
 				}
 			}
 			$i++;
 		}
-		
+
 		printf " )\n";
 	}
 }
@@ -1405,10 +1405,10 @@ sub dump_other_rsp
 
 #----------------------------------------------------------------------
 # Get a byte from the ascii string assuming that the 2 nibble ascii
-# characters are in hex. 
+# characters are in hex.
 #
-# The argument for this function needs to be a reference to an array 
-# that contains single character strings and the array will get 
+# The argument for this function needs to be a reference to an array
+# that contains single character strings and the array will get
 # updated by shifting characters off the front of it (no leading # "0x")
 #----------------------------------------------------------------------
 sub get8
@@ -1419,11 +1419,11 @@ sub get8
 }
 
 #----------------------------------------------------------------------
-# Get a 16 bit integer and swap if $swap global is set to a non-zero 
+# Get a 16 bit integer and swap if $swap global is set to a non-zero
 # value.
 #
-# The argument for this function needs to be a reference to an array 
-# that contains single character strings and the array will get 
+# The argument for this function needs to be a reference to an array
+# that contains single character strings and the array will get
 # updated by shifting characters off the front of it (no leading # "0x")
 #----------------------------------------------------------------------
 sub get16
@@ -1444,11 +1444,11 @@ sub get16
 }
 
 #----------------------------------------------------------------------
-# Get a 32 bit integer and swap if $swap global is set to a non-zero 
+# Get a 32 bit integer and swap if $swap global is set to a non-zero
 # value.
 #
-# The argument for this function needs to be a reference to an array 
-# that contains single character strings and the array will get 
+# The argument for this function needs to be a reference to an array
+# that contains single character strings and the array will get
 # updated by shifting characters off the front of it (no leading # "0x")
 #----------------------------------------------------------------------
 sub get32
@@ -1475,8 +1475,8 @@ sub get32
 #----------------------------------------------------------------------
 # Get a 64 bit hex value as a string
 #
-# The argument for this function needs to be a reference to an array 
-# that contains single character strings and the array will get 
+# The argument for this function needs to be a reference to an array
+# that contains single character strings and the array will get
 # updated by shifting characters off the front of it (no leading # "0x")
 #----------------------------------------------------------------------
 sub get64
@@ -1499,15 +1499,15 @@ sub get64
 	{
 	    (@nibbles) = splice(@$arrayref, 0, ((64/8) * 2));
 	}
-    $val = join('', @nibbles);        
+    $val = join('', @nibbles);
 	return $val;
 }
 
 #----------------------------------------------------------------------
 # Get a 80 bit hex value as a string
 #
-# The argument for this function needs to be a reference to an array 
-# that contains single character strings and the array will get 
+# The argument for this function needs to be a reference to an array
+# that contains single character strings and the array will get
 # updated by shifting characters off the front of it (no leading # "0x")
 #----------------------------------------------------------------------
 sub get80
@@ -1532,15 +1532,15 @@ sub get80
 	{
 	    (@nibbles) = splice(@$arrayref, 0, ((80/8) * 2));
 	}
-    $val = join('', @nibbles);        
+    $val = join('', @nibbles);
 	return $val;
 }
 
 #----------------------------------------------------------------------
 # Get a 96 bit hex value as a string
 #
-# The argument for this function needs to be a reference to an array 
-# that contains single character strings and the array will get 
+# The argument for this function needs to be a reference to an array
+# that contains single character strings and the array will get
 # updated by shifting characters off the front of it (no leading # "0x")
 #----------------------------------------------------------------------
 sub get96
@@ -1567,15 +1567,15 @@ sub get96
 	{
 	    (@nibbles) = splice(@$arrayref, 0, ((96/8) * 2));
 	}
-    $val = join('', @nibbles);        
+    $val = join('', @nibbles);
 	return $val;
 }
 
 #----------------------------------------------------------------------
 # Get a 128 bit hex value as a string
 #
-# The argument for this function needs to be a reference to an array 
-# that contains single character strings and the array will get 
+# The argument for this function needs to be a reference to an array
+# that contains single character strings and the array will get
 # updated by shifting characters off the front of it (no leading # "0x")
 #----------------------------------------------------------------------
 sub get128
@@ -1606,15 +1606,15 @@ sub get128
 	{
 	    (@nibbles) = splice(@$arrayref, 0, ((128/8) * 2));
 	}
-    $val = join('', @nibbles);        
+    $val = join('', @nibbles);
 	return $val;
 }
 
 #----------------------------------------------------------------------
 # Get a 256 bit hex value as a string
 #
-# The argument for this function needs to be a reference to an array 
-# that contains single character strings and the array will get 
+# The argument for this function needs to be a reference to an array
+# that contains single character strings and the array will get
 # updated by shifting characters off the front of it (no leading # "0x")
 #----------------------------------------------------------------------
 sub get256
@@ -1661,16 +1661,16 @@ sub get256
 	{
 	    (@nibbles) = splice(@$arrayref, 0, ((256/8) * 2));
 	}
-    $val = join('', @nibbles);        
+    $val = join('', @nibbles);
 	return $val;
 }
 
 #----------------------------------------------------------------------
-# Get an unsigned integer value by grabbing items off the front of 
+# Get an unsigned integer value by grabbing items off the front of
 # the array stopping when a non-digit char string is encountered.
 #
-# The argument for this function needs to be a reference to an array 
-# that contains single character strings and the array will get 
+# The argument for this function needs to be a reference to an array
+# that contains single character strings and the array will get
 # updated by shifting characters off the front of it
 #----------------------------------------------------------------------
 sub get_uint
@@ -1689,8 +1689,8 @@ sub get_uint
 # Check the first character in the array and if it matches the expected
 # character, return that character, else return undef;
 #
-# The argument for this function needs to be a reference to an array 
-# that contains single character strings and the array will get 
+# The argument for this function needs to be a reference to an array
+# that contains single character strings and the array will get
 # updated by shifting characters off the front of it. If the expected
 # character doesn't match, it won't touch the array. If the first
 # character does match, it will shift it off and return it.
@@ -1706,11 +1706,11 @@ sub get_expected_char
 	return undef;
 }
 #----------------------------------------------------------------------
-# Get a hex value by grabbing items off the front of the array and 
+# Get a hex value by grabbing items off the front of the array and
 # stopping when a non-hex char string is encountered.
 #
-# The argument for this function needs to be a reference to an array 
-# that contains single character strings and the array will get 
+# The argument for this function needs to be a reference to an array
+# that contains single character strings and the array will get
 # updated by shifting characters off the front of it (no leading # "0x")
 #----------------------------------------------------------------------
 sub get_hex
@@ -1739,8 +1739,8 @@ sub get_hex
 #----------------------------------------------------------------------
 # Get an address value by grabbing items off the front of the array.
 #
-# The argument for this function needs to be a reference to an array 
-# that contains single character strings and the array will get 
+# The argument for this function needs to be a reference to an array
+# that contains single character strings and the array will get
 # updated by shifting characters off the front of it (no leading # "0x")
 #----------------------------------------------------------------------
 sub get_addr
@@ -1767,8 +1767,8 @@ sub dump_stop_reply_data
     while ($#_ >= 0)
 	{
 		last unless ($_[0] ne '#');
-		
-	
+
+
 		my $key = '';
 		my $value = '';
 		my $comment = '';
@@ -1786,7 +1786,7 @@ sub dump_stop_reply_data
     		$key = sprintf("reg %u", $reg_num);
     	}
     	my $char;
-    	
+
     	if (length($key) == 0)
     	{
     		while (1)
@@ -1796,7 +1796,7 @@ sub dump_stop_reply_data
     			$key .= $char;
     		}
     	}
-    	
+
 		while (1)
 		{
 			$char = shift(@_);
@@ -1827,7 +1827,7 @@ sub dump_stop_reply_data
 }
 
 #----------------------------------------------------------------------
-# Dumps a Stop Reply Packet which happens in response to a step, 
+# Dumps a Stop Reply Packet which happens in response to a step,
 # continue, last signal, and probably a few other commands.
 #----------------------------------------------------------------------
 sub dump_stop_reply_packet
@@ -1836,7 +1836,7 @@ sub dump_stop_reply_packet
 	if ($what eq 'S' or $what eq 'T')
 	{
 	    my $signo = get8(\@_);
-	    
+
 	    our %signo_to_name = (
                 '1'  => ' SIGHUP',
                 '2'  => ' SIGINT',
@@ -1901,7 +1901,7 @@ sub dump_stop_reply_packet
 		{
 			$console_output .= sprintf("%c", get8(\@_))
 		}
-		
+
 		print "program_console_output('$console_output')\n";
 	}
 }
@@ -1934,8 +1934,8 @@ sub dump_raw_command
     {
         $curr_full_cmd = $curr_cmd;
     }
-	
-	$curr_cmd eq '_' and $curr_cmd .= $$cmd_aref[1];	
+
+	$curr_cmd eq '_' and $curr_cmd .= $$cmd_aref[1];
 	$callback_ref = $cmd_callbacks{$curr_cmd};
 	if ($callback_ref)
 	{
@@ -1944,20 +1944,20 @@ sub dump_raw_command
 	else
 	{
 		# Strip the command byte for responses since we injected that above
-		dump_other_cmd(@$cmd_aref); 
-	} 		
+		dump_other_cmd(@$cmd_aref);
+	}
 }
 
 sub dump_standard_response
 {
 	my $cmd_aref = shift;
-	
+
 	my $cmd_len = scalar(@$cmd_aref);
 	if ($cmd_len == 0)
 	{
 		print "$unimplemented_str\n";
 		return 1;
-	}	
+	}
 
 	my $response = join('', @$cmd_aref);
 	if ($response eq 'OK')
@@ -1965,20 +1965,20 @@ sub dump_standard_response
 		print "$success_str\n";
 		return 1;
 	}
-	
+
 	if ($cmd_len == 3 and index($response, 'E') == 0)
 	{
 		print "ERROR: " . substr($response, 1) . "\n";
-		return 1;		
+		return 1;
 	}
-	
+
 	return 0;
 }
 sub dump_raw_response
 {
 	my $cmd_aref = shift;
 	my $callback_ref;
-	
+
 	if ($packet_start_time != 0.0)
 	{
 	    if (length($curr_full_cmd) > 0)
@@ -1991,7 +1991,7 @@ sub dump_raw_response
 	    }
         $packet_start_time = 0.0;
 	}
-	
+
 	$callback_ref = $rsp_callbacks{$curr_cmd};
 
 	if ($callback_ref)
@@ -2001,8 +2001,8 @@ sub dump_raw_response
 	else
 	{
 		dump_standard_response($cmd_aref) or dump_other_rsp(@$cmd_aref);
-	} 	
-	
+	}
+
 }
 #----------------------------------------------------------------------
 # Dumps any command and handles simple error checking on the responses
@@ -2020,7 +2020,7 @@ sub dump_command
 
 	my @cmd_chars = extract_command($cmd_str);
 	my $is_cmd = 1;
-	
+
 	my $cmd = $cmd_chars[0];
 	if ($cmd eq '$')
 	{
@@ -2028,7 +2028,7 @@ sub dump_command
 		$cmd = $curr_cmd;	# set the command byte appropriately
 		shift @cmd_chars;	# remove the '$' from the cmd bytes
 	}
-	
+
 	# Check for common responses across all commands and handle them
 	# if we can
 	if ( $is_cmd == 0 )
@@ -2062,12 +2062,12 @@ sub dump_command
 	{
 		# Strip the command byte for responses since we injected that above
 		if ($is_cmd) {
-			dump_other_cmd(@cmd_chars); 
+			dump_other_cmd(@cmd_chars);
 		} else {
 			dump_other_rsp(@cmd_chars);
 		}
-		
-	} 	
+
+	}
 }
 
 
@@ -2129,7 +2129,7 @@ sub process_log_line
 		$opt_g and print "maintenance dump-packets reply: $1\n";
 		my @raw_rsp_bytes = split(/ */, $1);
 		print "<-- ";
-		dump_raw_response(\@raw_rsp_bytes);		
+		dump_raw_response(\@raw_rsp_bytes);
 		print "\n";
 	}
 	elsif ($line =~ /getpkt: (.*)/)
@@ -2140,7 +2140,7 @@ sub process_log_line
 			my @raw_cmd_bytes = split(/ */, $1);
 			print "--> ";
     		$packet_start_time = $curr_time;
-			dump_raw_command(\@raw_cmd_bytes);			
+			dump_raw_command(\@raw_cmd_bytes);
 		}
 		elsif ($1 =~ /\+/)
 		{
@@ -2158,7 +2158,7 @@ sub process_log_line
 			$opt_g and print "response: $1\n";
 			my @raw_rsp_bytes = split(/ */, $1);
 			print "<-- ";
-			dump_raw_response(\@raw_rsp_bytes);		
+			dump_raw_response(\@raw_rsp_bytes);
 			print "\n";
 		}
 		elsif ($1 =~ /\+/)
@@ -2178,7 +2178,7 @@ sub process_log_line
 			my @raw_cmd_bytes = split(/ */, $1);
 			print "--> ";
     		$packet_start_time = $curr_time;
-			dump_raw_command(\@raw_cmd_bytes);			
+			dump_raw_command(\@raw_cmd_bytes);
 		}
 		elsif ($1 =~ /\+/)
 		{
@@ -2196,7 +2196,7 @@ sub process_log_line
 			$opt_g and print "response: $1\n";
 			my @raw_rsp_bytes = split(/ */, $1);
 			print "<-- ";
-			dump_raw_response(\@raw_rsp_bytes);		
+			dump_raw_response(\@raw_rsp_bytes);
 			print "\n";
 		}
 		elsif ($1 =~ /\+/)
@@ -2222,10 +2222,10 @@ sub process_log_line
 		$opt_g and print "response: $1\n";
 		my @raw_rsp_bytes = split(/ */, $1);
 		print "<-- ";
-		dump_raw_response(\@raw_rsp_bytes);		
+		dump_raw_response(\@raw_rsp_bytes);
 		print "\n";
 	}
-	
+
 	if ($extract_cmd)
 	{
 		my $beg = index($line, '("') + 2;
@@ -2264,13 +2264,13 @@ if (%packet_times)
         if ($percent < 10.0)
         {
             printf("%22s %1.6f   %2.2f\n", $value, $packet_times{$value}, $percent);
-            
+
         }
         else
         {
-            printf("%22s %1.6f  %2.2f\n", $value, $packet_times{$value}, $percent);            
+            printf("%22s %1.6f  %2.2f\n", $value, $packet_times{$value}, $percent);
         }
-    }   
+    }
     print "---------------------- -------- ------\n";
     printf ("                 Total %1.6f 100.00\n", $total_packet_times);
 }

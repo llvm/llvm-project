@@ -165,7 +165,7 @@ Status ScriptedProcess::DoLoadCore() {
 Status ScriptedProcess::DoLaunch(Module *exe_module,
                                  ProcessLaunchInfo &launch_info) {
   LLDB_LOGF(GetLog(LLDBLog::Process), "ScriptedProcess::%s launching process", __FUNCTION__);
-  
+
   /* MARK: This doesn't reflect how lldb actually launches a process.
            In reality, it attaches to debugserver, then resume the process.
            That's not true in all cases.  If debugserver is remote, lldb

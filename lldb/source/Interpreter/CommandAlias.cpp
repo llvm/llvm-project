@@ -61,8 +61,8 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
 
   if (!options_string.empty()) {
     if (cmd_obj_sp->WantsRawCommandString())
-      option_arg_vector->emplace_back(CommandInterpreter::g_argument, 
-                                      -1, options_string);
+      option_arg_vector->emplace_back(CommandInterpreter::g_argument, -1,
+                                      options_string);
     else {
       for (auto &entry : args.entries()) {
         if (!entry.ref().empty())
@@ -159,8 +159,8 @@ void CommandAlias::GetAliasExpansion(StreamString &help_string) const {
       help_string.Printf(" %s", value.c_str());
     } else {
       help_string.Printf(" %s", opt.c_str());
-      if ((value != CommandInterpreter::g_no_argument) 
-           && (value != CommandInterpreter::g_need_argument)) {
+      if ((value != CommandInterpreter::g_no_argument) &&
+          (value != CommandInterpreter::g_need_argument)) {
         help_string.Printf(" %s", value.c_str());
       }
     }

@@ -488,7 +488,7 @@ bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
                  config::DiagnosticCallback Diag) const override {
       config::Fragment F;
       // If we're timing clang-tidy checks, implicitly disabling the slow ones
-      // is counterproductive! 
+      // is counterproductive!
       if (CheckTidyTime.getNumOccurrences())
         F.Diagnostics.ClangTidy.FastCheckFilter.emplace("None");
       return {std::move(F).compile(Diag)};

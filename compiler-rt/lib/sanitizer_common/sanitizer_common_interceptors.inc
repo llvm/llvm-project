@@ -9966,7 +9966,7 @@ INTERCEPTOR(SSIZE_T, getrandom, void *buf, SIZE_T buflen, unsigned int flags) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, getrandom, buf, buflen, flags);
   // If GRND_NONBLOCK is set in the flags, it is non blocking.
-  static const int grnd_nonblock = 1; 
+  static const int grnd_nonblock = 1;
   SSIZE_T n;
   if ((flags & grnd_nonblock))
     n = REAL(getrandom)(buf, buflen, flags);

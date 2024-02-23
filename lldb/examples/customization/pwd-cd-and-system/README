@@ -38,4 +38,4 @@ drwxr-xr-x  7 johnny  admin  238 Oct 11 17:24 multiple_threads
 drwxr-xr-x  7 johnny  admin  238 Oct 11 17:24 watchpoint_commands
 
 retcode: 0
-(lldb) 
+(lldb)

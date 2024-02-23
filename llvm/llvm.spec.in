@@ -32,7 +32,7 @@ functionality.
 --includedir=%{_includedir} \
 --libdir=%{_libdir} \
 --enable-optimized \
---enable-assertions 
+--enable-assertions
 make tools-only
 
 %install

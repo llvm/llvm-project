@@ -120,7 +120,6 @@ CXRemapping clang_getRemappingsFromFileList(const char **filePaths,
 
 unsigned clang_remap_getNumFiles(CXRemapping map) {
   return static_cast<Remap *>(map)->Vec.size();
-  
 }
 
 void clang_remap_getFilenames(CXRemapping map, unsigned index,

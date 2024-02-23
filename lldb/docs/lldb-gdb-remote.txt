@@ -63,7 +63,7 @@ In the example above, three lldb extensions are shown:
   PacketSize=20000
     The base 16 maximum packet size that the stub can handle.
   SupportedCompressions=<item,item,...>
-    A list of compression types that the stub can use to compress packets 
+    A list of compression types that the stub can use to compress packets
     when the QEnableCompression packet is used to request one of them.
   SupportedWatchpointTypes=<item,item,...>
     A list of watchpoint types that this stub can manage.
@@ -74,8 +74,8 @@ In the example above, three lldb extensions are shown:
                      (any number of contiguous bytes within a doubleword)
         aarch64-mask AArch64 MASK watchpoints
                      (any power-of-2 region of memory from 8 to 2GB, aligned)
-    If nothing is specified, lldb will default to sending power-of-2 
-    watchpoints, up to a pointer size, `sizeof(void*)`, a reasonable 
+    If nothing is specified, lldb will default to sending power-of-2
+    watchpoints, up to a pointer size, `sizeof(void*)`, a reasonable
     baseline assumption.
 
 //----------------------------------------------------------------------
@@ -620,7 +620,7 @@ read packet: <binary data>/E<error code>;AAAAAAAAA
 //  depending on the actual CPU type that is used.
 //
 //  NB: qRegisterInfo is deprecated in favor of the standard gdb remote
-//  serial protocol register description method, 
+//  serial protocol register description method,
 //  "qXfer:features:read:target.xml".
 //  If qXfer:features:read:target.xml is supported, qRegisterInfo does
 //  not need to be implemented.  The target.xml format is used by most
@@ -1020,12 +1020,12 @@ addressing_bits: optional, specifies how many bits in addresses are
 		 v8.3 ABIs that use pointer authentication, so lldb
 		 knows which bits to clear/set to get the actual
 		 addresses.
-low_mem_addressing_bits: optional, specifies how many bits in 
-     addresses in low memory are significant for addressing, base 10.  
+low_mem_addressing_bits: optional, specifies how many bits in
+     addresses in low memory are significant for addressing, base 10.
      AArch64 can have different page table setups for low and high
      memory, and therefore a different number of bits used for addressing.
-high_mem_addressing_bits: optional, specifies how many bits in 
-     addresses in high memory are significant for addressing, base 10.  
+high_mem_addressing_bits: optional, specifies how many bits in
+     addresses in high memory are significant for addressing, base 10.
      AArch64 can have different page table setups for low and high
      memory, and therefore a different number of bits used for addressing.
 
@@ -1123,10 +1123,10 @@ main-binary-uuid: is the UUID of a firmware type binary that the gdb stub knows 
 main-binary-address: is the load address of the firmware type binary
 main-binary-slide: is the slide of the firmware type binary, if address isn't known
 
-binary-addresses: A comma-separated list of binary load addresses base 16.  
+binary-addresses: A comma-separated list of binary load addresses base 16.
                   lldb will parse the binaries in memory to get UUIDs, then
                   try to find the binaries & debug info by UUID.  Intended for
-                  use with a small number of firmware type binaries where the 
+                  use with a small number of firmware type binaries where the
                   search for binary/debug info may be expensive.
 
 //----------------------------------------------------------------------
@@ -1609,9 +1609,9 @@ for this region.
 //                          "signal" stopped due to an actual unix signal, not
 //                              just the debugger using a unix signal to keep
 //                              the GDB remote client happy.
-//                          "watchpoint". Can be used with of the 
+//                          "watchpoint". Can be used with of the
 //                              "watch"/"rwatch"/"awatch" key value pairs.
-//                              Or can be used *instead* of those keys, 
+//                              Or can be used *instead* of those keys,
 //                              with the specially formatted "description" field.
 //                          "exception" an exception stop reason. Use with
 //                              the "description" key/value pair to describe the
@@ -1626,7 +1626,7 @@ for this region.
 //           encoded string with between one and three base 10 numbers,
 //           space separated.  The three numbers are
 //             1. watchpoint address.  This address should always be within
-//                a memory region lldb has a watchpoint on.  
+//                a memory region lldb has a watchpoint on.
 //                On architectures where the actual reported hit address may
 //                be outside the watchpoint that was triggered, the remote
 //                stub should determine which watchpoint was triggered and
@@ -1634,32 +1634,32 @@ for this region.
 //             2. watchpoint hardware register index number.
 //             3. actual watchpoint trap address, which may be outside
 //                the range of any watched region of memory. On MIPS, an addr
-//                outside a watched range means lldb should disable the wp, 
+//                outside a watched range means lldb should disable the wp,
 //                step, re-enable the wp and continue silently.
 //
-//           On MIPS, the low 3 bits are masked so if a watchpoint is on 
-//           0x1004, a 2-byte write to 0x1000 will trigger the watchpoint 
-//           (a false positive hit), and lldb needs to disable the 
+//           On MIPS, the low 3 bits are masked so if a watchpoint is on
+//           0x1004, a 2-byte write to 0x1000 will trigger the watchpoint
+//           (a false positive hit), and lldb needs to disable the
 //           watchpoint at 0x1004, inst-step, then re-enable the watchpoint
-//           and not make this a user visible event. The description here 
+//           and not make this a user visible event. The description here
 //           would be "0x1004 0 0x1000". lldb needs a known watchpoint address
 //           in the first field, so it can disable it & step.
 //
-//           On AArch64 we have a related issue, where you watch 4 bytes at 
-//           0x1004, an instruction does an 8-byte write starting at 
-//           0x1000 (a true watchpoint hit) and the hardware may report the 
-//           trap address as 0x1000 - before the watched memory region - 
-//           with the write extending into the watched region.  This can 
-//           be reported as "0x1004 0 0x1000".  lldb will use 0x1004 to 
-//           identify which Watchpoint was triggered, and can report 0x1000 
-//           to the user.  The behavior of silently stepping over the 
-//           watchpoint, with an 3rd field addr outside the range, is 
+//           On AArch64 we have a related issue, where you watch 4 bytes at
+//           0x1004, an instruction does an 8-byte write starting at
+//           0x1000 (a true watchpoint hit) and the hardware may report the
+//           trap address as 0x1000 - before the watched memory region -
+//           with the write extending into the watched region.  This can
+//           be reported as "0x1004 0 0x1000".  lldb will use 0x1004 to
+//           identify which Watchpoint was triggered, and can report 0x1000
+//           to the user.  The behavior of silently stepping over the
+//           watchpoint, with an 3rd field addr outside the range, is
 //           restricted to MIPS.
 //           There may be false-positive watchpoint hits on AArch64 as well,
-//           in the SVE Streaming Mode, but that is less common (see ESR 
+//           in the SVE Streaming Mode, but that is less common (see ESR
 //           register flag "WPF", "Watchpoint might be False-Positive") and
 //           not currently handled by lldb.
-//           
+//
 //  "threads"     comma-sep-base16  A list of thread ids for all threads (including
 //                                  the thread that we're reporting as stopped) that
 //                                  are live in the process right now.  lldb may
@@ -1686,34 +1686,34 @@ for this region.
 //                                  Example:
 //                                  thread-pcs:dec14,2cf872b0,2cf8681c,2d02d68c,2cf716a8;
 //
-//  "addressing_bits" unsigned optional  Specifies how many bits in addresses 
-//                                       are significant for addressing, base 
-//                                       10.  If bits 38..0 in a 64-bit 
-//                                       pointer are significant for 
-//                                       addressing, then the value is 39.  
+//  "addressing_bits" unsigned optional  Specifies how many bits in addresses
+//                                       are significant for addressing, base
+//                                       10.  If bits 38..0 in a 64-bit
+//                                       pointer are significant for
+//                                       addressing, then the value is 39.
 //                                       This is needed on e.g. AArch64
-//                                       v8.3 ABIs that use pointer 
+//                                       v8.3 ABIs that use pointer
 //                                       authentication in the high bits.
 //                                       This value is normally sent in the
 //                                       qHostInfo packet response, and if the
 //                                       value cannot change during the process
-//                                       lifetime, it does not need to be 
+//                                       lifetime, it does not need to be
 //                                       duplicated here in the stop packet.
 //                                       For a firmware environment with early
 //                                       start code that may be changing the
 //                                       page table setup, a dynamically set
 //                                       value may be needed.
-//  "low_mem_addressing_bits" unsigned optional, specifies how many bits in 
-//                                       addresses in low memory are significant 
-//                                       for addressing, base 10.  AArch64 can 
-//                                       have different page table setups for low 
-//                                       and high memory, and therefore a different 
+//  "low_mem_addressing_bits" unsigned optional, specifies how many bits in
+//                                       addresses in low memory are significant
+//                                       for addressing, base 10.  AArch64 can
+//                                       have different page table setups for low
+//                                       and high memory, and therefore a different
 //                                       number of bits used for addressing.
-//  "high_mem_addressing_bits" unsigned optional, specifies how many bits in 
-//                                       addresses in high memory are significant 
-//                                       for addressing, base 10.  AArch64 can have 
-//                                       different page table setups for low and 
-//                                       high memory, and therefore a different 
+//  "high_mem_addressing_bits" unsigned optional, specifies how many bits in
+//                                       addresses in high memory are significant
+//                                       for addressing, base 10.  AArch64 can have
+//                                       different page table setups for low and
+//                                       high memory, and therefore a different
 //                                       number of bits used for addressing.
 //
 // BEST PRACTICES:
@@ -2001,7 +2001,7 @@ for this region.
 //   STUB REPLIES:  qXfer:features:read+;SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;
 //
 //  If lldb knows how to use any of these compression algorithms, it can ask that this
-//  compression mode be enabled.  
+//  compression mode be enabled.
 //
 //  QEnableCompression:type:zlib-deflate;
 //
@@ -2066,7 +2066,7 @@ for this region.
 //       jGetLoadedDynamicLibrariesInfos:{"fetch_all_solibs":true}
 //  with an optional `"report_load_commands":false` which can be added, asking
 //  that only the dyld SPI information (load addresses, filenames) be returned.
-//  The default behavior is that debugserver scans the mach-o header and load 
+//  The default behavior is that debugserver scans the mach-o header and load
 //  commands of each binary, and returns it in the JSON reply.
 //
 //  And the second requests information about a list of shared libraries, given their load addresses:
@@ -2272,7 +2272,7 @@ breakpoints and detach from the inferior.
 //
 // BRIEF
 //  This packet fetches the process launch state, as reported by libdyld on
-//  Darwin systems, most importantly to indicate when the system libraries 
+//  Darwin systems, most importantly to indicate when the system libraries
 //  have initialized sufficiently to safely call utility functions.
 //
 //
@@ -2281,6 +2281,6 @@ breakpoints and detach from the inferior.
 //
 // PRIORITY TO IMPLEMENT
 //  Low. This packet is needed to prevent lldb's utility functions for
-//  scanning the Objective-C class list from running very early in 
+//  scanning the Objective-C class list from running very early in
 //  process startup.
 //----------------------------------------------------------------------

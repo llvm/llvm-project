@@ -26,7 +26,7 @@
 ;; llvm.org coding style.
 (add-hook 'c-mode-common-hook
 	  (function
-	   (lambda nil 
+	   (lambda nil
 	     (if (string-match "llvm" buffer-file-name)
 		 (progn
 		   (c-set-style "llvm.org"))))))

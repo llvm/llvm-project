@@ -11,7 +11,7 @@ then
 	echo "Building $program with llvm-native-gcc"
 	rm -f $program
 	gmake -e $program CC=llvm-native-gcc CXX=llvm-native-gxx
-	echo "Erasing $program and re-linking it" 
+	echo "Erasing $program and re-linking it"
 	rm -f $program
 	echo "rm -f $program" > $linker
 	gmake -n $program >> $linker
@@ -19,7 +19,7 @@ then
 	echo "Linker script created in $linker; testing it out"
 	output=`./$linker 2>&1`
 	case "$output" in
-		*undefined*reference*__main*) 
+		*undefined*reference*__main*)
 			echo "$program appears to need a dummy __main function; adding one"
 			echo "void __main () { }" > __main.c
 			gcc -c __main.c
@@ -57,7 +57,7 @@ usage () {
 	echo "PROGRAM is the name of the executable under test"
 	echo "(there must also exist a Makefile in the current directory which"
 	echo "has PROGRAM as a target)"
-	echo "LINKER is the script that builds PROGRAM; try --make-linker-script" 
+	echo "LINKER is the script that builds PROGRAM; try --make-linker-script"
 	echo "to automatically generate it"
 	echo "CHECKER is the script that exits 0 if PROGRAM is ok, 1 if it is not OK"
 	echo "(LINKER and CHECKER must be in your PATH, or you should specify ./)"

@@ -1424,7 +1424,7 @@ let Predicates = [IsISA3_1] in {
                                 IIC_VecGeneral,
                                 [(set v16i8:$VRT,
                                       (int_ppc_altivec_vsrdbi v16i8:$VRA,
-                                                              v16i8:$VRB, 
+                                                              v16i8:$VRB,
                                                               timm:$SD))]>;
   defm VSTRIBR : VXForm_VTB5_RCr<13, 1, (outs vrrc:$VT), (ins vrrc:$VB),
                                  "vstribr", "$VT, $VB", IIC_VecGeneral,

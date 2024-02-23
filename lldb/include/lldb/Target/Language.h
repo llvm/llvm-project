@@ -236,7 +236,7 @@ public:
   // a match.  But we wouldn't want this to match AnotherA::my_function.  The
   // user is specifying a truncated path, not a truncated set of characters.
   // This function does a language-aware comparison for those purposes.
-  virtual bool DemangledNameContainsPath(llvm::StringRef path, 
+  virtual bool DemangledNameContainsPath(llvm::StringRef path,
                                          ConstString demangled) const;
 
   // if a language has a custom format for printing variable declarations that

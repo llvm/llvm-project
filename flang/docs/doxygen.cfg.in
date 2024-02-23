@@ -1013,7 +1013,7 @@ GENERATE_HTML          = YES
 # The default directory is: html.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_OUTPUT            = html 
+HTML_OUTPUT            = html
 
 # The HTML_FILE_EXTENSION tag can be used to specify the file extension for each
 # generated HTML page (for example: .htm, .php, .asp).
@@ -1287,7 +1287,7 @@ QHP_VIRTUAL_FOLDER     = doc
 # filters).
 # This tag requires that the tag GENERATE_QHP is set to YES.
 
-QHP_CUST_FILTER_NAME   = @llvm_doxygen_qhp_cust_filter_name@ 
+QHP_CUST_FILTER_NAME   = @llvm_doxygen_qhp_cust_filter_name@
 
 # The QHP_CUST_FILTER_ATTRS tag specifies the list of the attributes of the
 # custom filter to add. For more information please see Qt Help Project / Custom
@@ -1295,7 +1295,7 @@ QHP_CUST_FILTER_NAME   = @llvm_doxygen_qhp_cust_filter_name@
 # filters).
 # This tag requires that the tag GENERATE_QHP is set to YES.
 
-QHP_CUST_FILTER_ATTRS  = @llvm_doxygen_qhp_cust_filter_attrs@ 
+QHP_CUST_FILTER_ATTRS  = @llvm_doxygen_qhp_cust_filter_attrs@
 
 # The QHP_SECT_FILTER_ATTRS tag specifies the list of the attributes this
 # project's filter section matches. Qt Help Project / Filter Attributes (see:
@@ -1471,7 +1471,7 @@ MATHJAX_CODEFILE       =
 # The default value is: YES.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-SEARCHENGINE           = @enable_searchengine@ 
+SEARCHENGINE           = @enable_searchengine@
 
 # When the SERVER_BASED_SEARCH tag is enabled the search engine will be
 # implemented using a web server instead of a web client using Javascript. There

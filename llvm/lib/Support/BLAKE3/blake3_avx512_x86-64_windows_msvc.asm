@@ -2613,9 +2613,9 @@ INDEX1:
 ADD0:
         dd    0,  1,  2,  3,  4,  5,  6,  7
         dd    8,  9, 10, 11, 12, 13, 14, 15
-ADD1:   
+ADD1:
         dd    1
-ADD16:  
+ADD16:
         dd   16
 BLAKE3_BLOCK_LEN:
         dd   64

@@ -404,7 +404,7 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
     if (!F.isIntrinsic() && F.hasAddressTaken()) {
       MCSymbolWasm *FunctionTable =
           WebAssembly::getOrCreateFunctionTableSymbol(OutContext, Subtarget);
-      OutStreamer->emitSymbolAttribute(FunctionTable, MCSA_NoDeadStrip);    
+      OutStreamer->emitSymbolAttribute(FunctionTable, MCSA_NoDeadStrip);
       break;
     }
   }

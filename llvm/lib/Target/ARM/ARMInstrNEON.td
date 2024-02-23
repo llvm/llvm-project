@@ -1492,9 +1492,9 @@ def VLD2DUPd32x2 : VLD2DUP<{1,0,1,?}, "32", VecListDPairSpacedAllLanes,
                            addrmode6dupalign64>;
 
 // Duplicate of VLDQQPseudo but with a constraint variable
-// to ensure the odd and even lanes use the same register range 
+// to ensure the odd and even lanes use the same register range
 class VLDQQPseudoInputDST<InstrItinClass itin>
-  : PseudoNLdSt<(outs QQPR:$dst), (ins addrmode6:$addr, QQPR: $src), itin, 
+  : PseudoNLdSt<(outs QQPR:$dst), (ins addrmode6:$addr, QQPR: $src), itin,
                 "$src = $dst">;
 class VLDQQWBPseudoInputDST<InstrItinClass itin>
   : PseudoNLdSt<(outs QQPR:$dst, GPR:$wb),

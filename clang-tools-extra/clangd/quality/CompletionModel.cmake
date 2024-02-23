@@ -1,6 +1,6 @@
-# Run the Completion Model Codegenerator on the model present in the 
+# Run the Completion Model Codegenerator on the model present in the
 # ${model} directory.
-# Produces a pair of files called ${filename}.h and  ${filename}.cpp in the 
+# Produces a pair of files called ${filename}.h and  ${filename}.cpp in the
 # ${CMAKE_CURRENT_BINARY_DIR}. The generated header
 # will define a C++ class called ${cpp_class} - which may be a
 # namespace-qualified class name.

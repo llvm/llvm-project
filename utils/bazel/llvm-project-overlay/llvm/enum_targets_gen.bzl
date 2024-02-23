@@ -26,7 +26,7 @@ enum_targets_gen(
 
 This rule provides a slightly more semantic API than template_rule, but the main
 reason it exists is to permit a list with selects to be passed for `targets` as
-a select is not allowed to be passed to a rule within another data structure. 
+a select is not allowed to be passed to a rule within another data structure.
 """
 
 def enum_targets_gen_impl(ctx):

@@ -126,7 +126,7 @@ It might be better to generate
 	movl %eax, 4(%edx)
 	movl %eax, (%edx)
 	movw al, 8(%edx)
-	
+
 when we can spare a register. It reduces code size.
 
 //===---------------------------------------------------------------------===//
@@ -477,12 +477,12 @@ and an epilog like this:
         ret
 
 It would be smaller, and potentially faster, to push eax on entry and to
-pop into a dummy register instead of using addl/subl of esp.  Just don't pop 
+pop into a dummy register instead of using addl/subl of esp.  Just don't pop
 into any return registers :)
 
 //===---------------------------------------------------------------------===//
 
-The X86 backend should fold (branch (or (setcc, setcc))) into multiple 
+The X86 backend should fold (branch (or (setcc, setcc))) into multiple
 branches.  We generate really poor code for:
 
 double testf(double a) {
@@ -587,7 +587,7 @@ LBB3_5:	# bb114.preheader
 	movl	%eax, -96(%ebp)
 	movw	$0, -98(%ebp)
 
-This appears to be bad because the RA is not folding the store to the stack 
+This appears to be bad because the RA is not folding the store to the stack
 slot into the movl.  The above instructions could be:
 	movl    $32, -80(%ebp)
 ...
@@ -675,12 +675,12 @@ callers arguments).
 This is done to prevent overwriting of parameters (see example
 below) that might be used later.
 
-example:  
+example:
 
-int callee(int32, int64); 
-int caller(int32 arg1, int32 arg2) { 
-  int64 local = arg2 * 2; 
-  return callee(arg2, (int64)local); 
+int callee(int32, int64);
+int caller(int32 arg1, int32 arg2) {
+  int64 local = arg2 * 2;
+  return callee(arg2, (int64)local);
 }
 
 [arg1]          [!arg2 no longer valid since we moved local onto it]
@@ -847,10 +847,10 @@ the argument area.  ICC apparently produces:
         movl      8(%esp), %ecx
         imull     12(%esp), %ecx
         movl      16(%esp), %eax
-        imull     4(%esp), %eax 
-        addl      %eax, %ecx  
+        imull     4(%esp), %eax
+        addl      %eax, %ecx
         movl      4(%esp), %eax
-        mull      12(%esp) 
+        mull      12(%esp)
         addl      %ecx, %edx
         ret
 
@@ -937,7 +937,7 @@ abs:
 
 //===---------------------------------------------------------------------===//
 
-Take the following code (from 
+Take the following code (from
 http://gcc.gnu.org/bugzilla/show_bug.cgi?id=16541):
 
 extern unsigned char first_one[65536];
@@ -1016,14 +1016,14 @@ entry:
 	%tmp.b.i = load i1* @in_exit.4870.b		; <i1> [#uses=1]
 	br i1 %tmp.b.i, label %bb.i, label %bb4.i
 bb.i:		; preds = %entry
-	tail call void @exit( i32 1 ) noreturn nounwind 
+	tail call void @exit( i32 1 ) noreturn nounwind
 	unreachable
 bb4.i:		; preds = %entry
 	store i1 true, i1* @in_exit.4870.b
-	tail call void @exit( i32 1 ) noreturn nounwind 
+	tail call void @exit( i32 1 ) noreturn nounwind
 	unreachable
 }
-declare void @exit(i32) noreturn nounwind 
+declare void @exit(i32) noreturn nounwind
 
 This compiles into:
 _abort_gzip:                            ## @abort_gzip
@@ -1291,7 +1291,7 @@ processors.  GCC does two optimizations:
    preceded by a conditional branch or is the target of a jump.
 2. ix86_avoid_jump_misspredicts inserts noops in cases where a 16-byte block of
    code contains more than 3 branches.
-   
+
 The first one is done for all AMDs, Core2, and "Generic"
 The second one is done for: Atom, Pentium Pro, all AMDs, Pentium 4, Nocona,
   Core 2, and "Generic"
@@ -1681,7 +1681,7 @@ This function (from PR9803):
 int clamp2(int a) {
         if (a > 5)
                 a = 5;
-        if (a < 0) 
+        if (a < 0)
                 return 0;
         return a;
 }

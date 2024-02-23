@@ -93,7 +93,7 @@ def PipelineSharedMemoryCopiesOp :
     Applies software pipelining to a given scf.for loop. The pipelining
     strategy will look for a load into shared memory and pipeline it to overlap
     it with the rest of the loop.
-    
+
     NOTE: It is user responsibility to ensure that there are no dependency
     between `depth` iterations of the loop by using multi-buffering. It is
     also user responsibility to ensure a sufficient amount of shared memory
@@ -130,10 +130,10 @@ def PipelineSharedMemoryCopiesOp :
                      :$failure_propagation_mode);
   let results = (outs TransformHandleTypeInterface:$result);
 
-  let assemblyFormat = [{ 
+  let assemblyFormat = [{
     `failures` `(` $failure_propagation_mode `)`
     $for_op
-    attr-dict 
+    attr-dict
     `:` functional-type(operands, results)
   }];
 
@@ -152,9 +152,9 @@ def PipelineSharedMemoryCopiesOp :
 
 def RewriteMatmulAsMmaSyncOp :
   Op<Transform_Dialect, "nvgpu.rewrite_matmul_as_mma_sync",
-    [FunctionalStyleTransformOpTrait, 
+    [FunctionalStyleTransformOpTrait,
      MemoryEffectsOpInterface,
-     TransformEachOpTrait, 
+     TransformEachOpTrait,
      TransformOpInterface,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{

@@ -530,7 +530,7 @@ class C {
 C<0, 1> X;
 ```
 
-If templates aren't your thing, another way to think of them is as parameters to the constructor of a class. 
+If templates aren't your thing, another way to think of them is as parameters to the constructor of a class.
 
 For instance Python code might look like this:
 ```

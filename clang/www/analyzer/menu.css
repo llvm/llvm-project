@@ -12,7 +12,7 @@
 }
 #nav a {
   text-decoration: none;
-}  
+}
 #nav a:hover {
   text-decoration: underline;
 }
@@ -21,7 +21,7 @@
 }
 .menubar li {
   margin: 0;
-  padding: 5px;  
+  padding: 5px;
   text-align: left;
   text-indent: 0px;
   list-style-position: inside;
@@ -34,7 +34,7 @@
 }
 .menubar li ul /* second level lists */ {
   display: none;
-  position: absolute; 
+  position: absolute;
   left: 0;
 }
 .menubar li>ul {

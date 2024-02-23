@@ -341,7 +341,7 @@ public:
 
   /// Return the absolute path tot the file.
   std::string getAbsolutePath() const;
-  
+
   const Function &getFunction() const { return Fn; }
   DiagnosticLocation getLocation() const { return Loc; }
 

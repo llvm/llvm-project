@@ -10,7 +10,7 @@ add_mlir_dialect_library(MLIRGPUTransformOps
   MLIRGPUTransformOpsIncGen
   MLIRDeviceMappingInterfacesIncGen
   MLIRGPUDeviceMapperEnumsGen
-  
+
   LINK_LIBS PUBLIC
   MLIRGPUDialect
   MLIRGPUTransforms
@@ -24,4 +24,4 @@ add_mlir_dialect_library(MLIRGPUTransformOps
   # ConversionPatterns
   MLIRNVGPUToNVVM
   MLIRGPUToNVVMTransforms
-  )  
+  )

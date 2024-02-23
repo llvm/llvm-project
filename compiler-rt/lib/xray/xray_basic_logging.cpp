@@ -236,8 +236,8 @@ void InMemoryRawLog(int32_t FuncId, XRayEntryType Type,
   R.RecordType = RecordTypes::NORMAL;
   R.CPU = CPU;
   R.TSC = TSC;
-  R.TId = GetTid(); 
-  R.PId = internal_getpid(); 
+  R.TId = GetTid();
+  R.PId = internal_getpid();
   R.Type = Type;
   R.FuncId = FuncId;
   auto FirstEntry = reinterpret_cast<XRayRecord *>(TLD.InMemoryBuffer);
@@ -284,8 +284,8 @@ void InMemoryRawLogWithArg(int32_t FuncId, XRayEntryType Type, uint64_t Arg1,
   XRayArgPayload R;
   R.RecordType = RecordTypes::ARG_PAYLOAD;
   R.FuncId = FuncId;
-  R.TId = GetTid(); 
-  R.PId = internal_getpid(); 
+  R.TId = GetTid();
+  R.PId = internal_getpid();
   R.Arg = Arg1;
   internal_memcpy(FirstEntry + TLD.BufferOffset, &R, sizeof(R));
   if (++TLD.BufferOffset == BuffLen) {

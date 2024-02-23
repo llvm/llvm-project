@@ -742,7 +742,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
 
   Function *F = I.getFunction();
   LLVMContext &C = F->getContext();
-  
+
   // For atomic sub, perform scan with add operation and allow one lane to
   // subtract the reduced value later.
   AtomicRMWInst::BinOp ScanOp = Op;

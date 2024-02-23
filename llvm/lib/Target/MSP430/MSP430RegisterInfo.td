@@ -19,7 +19,7 @@ class MSP430Reg<bits<4> num, string n, list<string> alt = []> : Register<n> {
 }
 
 class MSP430RegWithSubregs<bits<4> num, string n, list<Register> subregs,
-                           list<string> alt = []> 
+                           list<string> alt = []>
   : RegisterWithSubRegs<n, subregs> {
   field bits<4> Num = num;
   let Namespace = "MSP430";

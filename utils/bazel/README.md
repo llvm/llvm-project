@@ -96,7 +96,7 @@ on status change or routed based on blamelist are TODO (contributions welcome).
 
 # Pre-merge Testing
 
-A Buildkite pipeline runs the full Bazel build as a pre-merge test using the 
+A Buildkite pipeline runs the full Bazel build as a pre-merge test using the
 [LLVM pre-merge testing](https://github.com/google/llvm-premerge-checks/). It
 is triggered on all changes to the utils/bazel directory and when the patch
 author is a member of the

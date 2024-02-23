@@ -377,7 +377,7 @@ json::Value UnixSignals::GetHitCountStatistics() const {
   return std::move(json_signals);
 }
 
-void UnixSignals::Signal::Reset(bool reset_stop, bool reset_notify, 
+void UnixSignals::Signal::Reset(bool reset_stop, bool reset_notify,
                                 bool reset_suppress) {
   if (reset_stop)
     m_stop = m_default_stop;
@@ -387,12 +387,11 @@ void UnixSignals::Signal::Reset(bool reset_stop, bool reset_notify,
     m_suppress = m_default_suppress;
 }
 
-bool UnixSignals::ResetSignal(int32_t signo, bool reset_stop, 
-                                 bool reset_notify, bool reset_suppress) {
-    auto elem = m_signals.find(signo);
-    if (elem == m_signals.end())
-      return false;
-    (*elem).second.Reset(reset_stop, reset_notify, reset_suppress);
-    return true;
+bool UnixSignals::ResetSignal(int32_t signo, bool reset_stop, bool reset_notify,
+                              bool reset_suppress) {
+  auto elem = m_signals.find(signo);
+  if (elem == m_signals.end())
+    return false;
+  (*elem).second.Reset(reset_stop, reset_notify, reset_suppress);
+  return true;
 }
-

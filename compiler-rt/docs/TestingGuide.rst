@@ -39,7 +39,7 @@ pitfalls to avoid.
 The first pitfall is that these regular expressions may inadvertently match
 more triples than expected. For example, ``XFAIL: target=mips{{.*}}`` matches
 ``mips-linux-gnu``, ``mipsel-linux-gnu``, ``mips64-linux-gnu``, and
-``mips64el-linux-gnu``. Including a trailing ``-`` such as in 
+``mips64el-linux-gnu``. Including a trailing ``-`` such as in
 ``XFAIL: target=mips-{{.*}}`` can help to mitigate this quirk but even that has
 issues as described below.
 
@@ -47,7 +47,7 @@ The second pitfall is that the default target triple is often inappropriate for
 compiler-rt tests since compiler-rt tests may be compiled for multiple targets.
 For example, a typical build on an ``x86_64-linux-gnu`` host will often run the
 tests for both x86_64 and i386. In this situation ``XFAIL: target=x86_64{{{.*}}``
-will mark both the x86_64 and i386 tests as an expected failure while 
+will mark both the x86_64 and i386 tests as an expected failure while
 ``XFAIL: target=i386{{.*}}`` will have no effect at all.
 
 To remedy both pitfalls, compiler-rt tests provide a feature string which can

@@ -255,24 +255,24 @@ private:
   CompilerType m_pair_type;
   std::vector<DictionaryItemDescriptor> m_children;
 };
-  
+
 namespace Foundation1100 {
   class NSDictionaryMSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
   public:
     NSDictionaryMSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
-    
+
     ~NSDictionaryMSyntheticFrontEnd() override;
-    
+
     size_t CalculateNumChildren() override;
-    
+
     lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
     lldb::ChildCacheState Update() override;
 
     bool MightHaveChildren() override;
-    
+
     size_t GetIndexOfChildWithName(ConstString name) override;
-    
+
   private:
     struct DataDescriptor_32 {
       uint32_t _used : 26;
@@ -282,7 +282,7 @@ namespace Foundation1100 {
       uint32_t _objs_addr;
       uint32_t _keys_addr;
     };
-    
+
     struct DataDescriptor_64 {
       uint64_t _used : 58;
       uint32_t _kvo : 1;
@@ -291,13 +291,13 @@ namespace Foundation1100 {
       uint64_t _objs_addr;
       uint64_t _keys_addr;
     };
-    
+
     struct DictionaryItemDescriptor {
       lldb::addr_t key_ptr;
       lldb::addr_t val_ptr;
       lldb::ValueObjectSP valobj_sp;
     };
-    
+
     ExecutionContextRef m_exe_ctx_ref;
     uint8_t m_ptr_size = 8;
     lldb::ByteOrder m_order = lldb::eByteOrderInvalid;
@@ -307,7 +307,7 @@ namespace Foundation1100 {
     std::vector<DictionaryItemDescriptor> m_children;
   };
 }
-  
+
 namespace Foundation1428 {
   namespace {
     struct DataDescriptor_32 {
@@ -317,7 +317,7 @@ namespace Foundation1428 {
       uint32_t _buffer;
       uint64_t GetSize() { return _size; }
     };
-    
+
     struct DataDescriptor_64 {
       uint64_t _used : 58;
       uint32_t _kvo : 1;
@@ -330,7 +330,7 @@ namespace Foundation1428 {
   using NSDictionaryMSyntheticFrontEnd =
     GenericNSDictionaryMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
 }
-  
+
 namespace Foundation1437 {
     static const uint64_t NSDictionaryCapacities[] = {
         0, 3, 7, 13, 23, 41, 71, 127, 191, 251, 383, 631, 1087, 1723,
@@ -339,7 +339,7 @@ namespace Foundation1437 {
         6221311, 10066421, 16287743, 26354171, 42641881, 68996069,
         111638519, 180634607, 292272623, 472907251
     };
-    
+
     static const size_t NSDictionaryNumSizeBuckets =
         sizeof(NSDictionaryCapacities) / sizeof(uint64_t);
 
@@ -356,7 +356,7 @@ namespace Foundation1437 {
             0 : NSDictionaryCapacities[_szidx];
       }
     };
-    
+
     struct DataDescriptor_64 {
       uint64_t _buffer;
       uint32_t _muts;
@@ -373,7 +373,7 @@ namespace Foundation1437 {
 
   using NSDictionaryMSyntheticFrontEnd =
     GenericNSDictionaryMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
-  
+
   template <typename DD>
   uint64_t
   __NSDictionaryMSize_Impl(lldb_private::Process &process,
@@ -388,7 +388,7 @@ namespace Foundation1437 {
     }
     return descriptor._used;
   }
-  
+
   uint64_t
   __NSDictionaryMSize(lldb_private::Process &process, lldb::addr_t valobj_addr,
                Status &error) {

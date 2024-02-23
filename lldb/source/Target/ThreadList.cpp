@@ -40,7 +40,7 @@ const ThreadList &ThreadList::operator=(const ThreadList &rhs) {
     // the assignment occurs
     std::lock(GetMutex(), rhs.GetMutex());
     std::lock_guard<std::recursive_mutex> guard(GetMutex(), std::adopt_lock);
-    std::lock_guard<std::recursive_mutex> rhs_guard(rhs.GetMutex(), 
+    std::lock_guard<std::recursive_mutex> rhs_guard(rhs.GetMutex(),
                                                     std::adopt_lock);
 
     m_process = rhs.m_process;
@@ -342,7 +342,7 @@ bool ThreadList::ShouldStop(Event *event_ptr) {
     else {
       bool this_thread_forces_run = thread_sp->ShouldRunBeforePublicStop();
       a_thread_needs_to_run |= this_thread_forces_run;
-      if (this_thread_forces_run) 
+      if (this_thread_forces_run)
         LLDB_LOG(log,
                  "ThreadList::{0} thread: {1:x}, "
                  "says it needs to run before public stop.",
@@ -599,7 +599,7 @@ bool ThreadList::WillResume() {
 
       if (thread_sp == GetSelectedThread())
         stop_others_thread_sp = thread_sp;
-        
+
       if (thread_sp->ShouldRunBeforePublicStop()) {
         // This takes precedence, so if we find one of these, service it:
         stop_others_thread_sp = thread_sp;

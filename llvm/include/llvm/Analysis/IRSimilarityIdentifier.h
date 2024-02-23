@@ -188,7 +188,7 @@ struct IRInstructionData
   /// in a greater than form. Otherwise, the predicate is unchanged.
   ///
   /// \param CI - The comparison operation to find a consistent preidcate for.
-  /// \return the consistent comparison predicate. 
+  /// \return the consistent comparison predicate.
   static CmpInst::Predicate predicateForConsistency(CmpInst *CI);
 
   /// For an IRInstructionData containing a branch, finds the
@@ -528,7 +528,7 @@ struct IRInstructionMapper {
         return Legal;
       return Illegal;
     }
-    InstrType visitPHINode(PHINode &PN) { 
+    InstrType visitPHINode(PHINode &PN) {
       if (EnableBranches)
         return Legal;
       return Illegal;
@@ -599,7 +599,7 @@ struct IRInstructionMapper {
     // Flag that lets the classifier know whether we should allow intrinsics to
     // be checked for similarity.
     bool EnableIntrinsics = false;
-  
+
     // Flag that lets the classifier know whether we should allow tail calls to
     // be checked for similarity.
     bool EnableMustTailCalls = false;
@@ -776,9 +776,9 @@ public:
   /// \param InstValA - The assignment GVN from the first IRSimilarityCandidate.
   /// \param InstValB - The assignment GVN from the second
   /// IRSimilarityCandidate.
-  /// \param [in,out] ValueNumberMappingA - A mapping of value numbers from 
+  /// \param [in,out] ValueNumberMappingA - A mapping of value numbers from
   /// candidate \p A to candidate \B.
-  /// \param [in,out] ValueNumberMappingB - A mapping of value numbers from 
+  /// \param [in,out] ValueNumberMappingB - A mapping of value numbers from
   /// candidate \p B to candidate \A.
   /// \returns true if the IRSimilarityCandidates assignments are compatible.
   static bool compareAssignmentMapping(
@@ -850,7 +850,7 @@ public:
       IRSimilarityCandidate &SourceCand,
       DenseMap<unsigned, DenseSet<unsigned>> &ToSourceMapping,
       DenseMap<unsigned, DenseSet<unsigned>> &FromSourceMapping);
-  
+
   /// Create a mapping for the value numbering of the calling
   /// IRSimilarityCandidate, to a different separate set of numbers, based on
   /// the canonical ordering in \p SourceCand. These are defined based on the
@@ -874,7 +874,7 @@ public:
       DenseMap<unsigned, unsigned> &OneToOne,
       DenseMap<unsigned, DenseSet<unsigned>> &ToSourceMapping,
       DenseMap<unsigned, DenseSet<unsigned>> &FromSourceMapping);
-  
+
   /// Create a mapping for the value numbering of the calling
   /// IRSimilarityCandidate, to a different separate set of numbers, based on
   /// the canonical ordering in \p SourceCand. These are defined based on the

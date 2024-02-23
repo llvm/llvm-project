@@ -73,7 +73,7 @@ or bounded shapes at a later point). This allows for decoupling of these:
     with the others);
 *   It allows reusing the constraints between, say, Tensor and Memref
     representation of an operation;
-    
+
 An argument could be made that these are metadata function instead of shape
 functions, with some considering shape and elemental types different and some considering them both as
 part of shape. But `shape function` is IMHO descriptive and metadata can span
@@ -170,7 +170,7 @@ impose a particular shape inference approach here.
         setting an equality constraint) and higher-order interpretation for
         constraint solving.
 
-        It is therefore beneficial (but not required) to reuse operations, 
+        It is therefore beneficial (but not required) to reuse operations,
         especially as for statically known shapes, arbitrary arithmetic
         computations could still be performed. This means that the computations
         performed statically may or may not be supported by an arbitrary solver,

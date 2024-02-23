@@ -128,7 +128,7 @@ similar way to LLVM:
   pm.addNestedPass<mlir::toy::FuncOp>(mlir::createCanonicalizerPass());
 ```
 
-Finally, we can run `toyc-ch3 test/Examples/Toy/Ch3/transpose_transpose.toy 
+Finally, we can run `toyc-ch3 test/Examples/Toy/Ch3/transpose_transpose.toy
 -emit=mlir -opt` and observe our pattern in action:
 
 ```mlir
@@ -239,7 +239,7 @@ module {
 }
 ```
 
-We can try to run `toyc-ch3 test/Examples/Toy/Ch3/trivial_reshape.toy -emit=mlir 
+We can try to run `toyc-ch3 test/Examples/Toy/Ch3/trivial_reshape.toy -emit=mlir
 -opt` and observe our pattern in action:
 
 ```mlir

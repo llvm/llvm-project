@@ -3317,14 +3317,14 @@ let unpred_int = int_arm_mve_vqshl_imm,
   def MVE_VQSHLimmu8 : MVE_VQSHL_imm<MVE_v16u8, imm0_7> {
     let Inst{21-19} = 0b001;
   }
-  
+
   def MVE_VQSHLimms16 : MVE_VQSHL_imm<MVE_v8s16, imm0_15> {
     let Inst{21-20} = 0b01;
   }
   def MVE_VQSHLimmu16 : MVE_VQSHL_imm<MVE_v8u16, imm0_15> {
     let Inst{21-20} = 0b01;
   }
-  
+
   def MVE_VQSHLimms32 : MVE_VQSHL_imm<MVE_v4s32, imm0_31> {
     let Inst{21} = 0b1;
   }

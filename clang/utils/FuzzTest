@@ -97,7 +97,7 @@ class TestApplication:
 
 def quote(str):
     return '"' + str + '"'
-        
+
 def run_one_test(test_application, index, input_files, args):
     test = test_application.test
 
@@ -122,7 +122,7 @@ def run_one_test(test_application, index, input_files, args):
                 column += 1
         options['picked_input_line'] = line
         options['picked_input_col'] = column
-        
+
     test_args = [a % options for a in args]
     if opts.verbose:
         print '%s: note: executing %r' % (sys.argv[0], test_args)

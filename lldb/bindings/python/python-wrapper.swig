@@ -333,7 +333,7 @@ bool lldb_private::python::SWIGBridge::LLDBSWIGPythonCallThreadPlan(
   PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementer));
   auto pfunc = self.ResolveName<PythonCallable>(method_name);
 
-  if (!pfunc.IsAllocated()) 
+  if (!pfunc.IsAllocated())
     return false;
 
   auto *sb_stream = new lldb::SBStream();
@@ -844,7 +844,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
   auto pfunc = self.ResolveName<PythonCallable>("__call__");
 
   if (!pfunc.IsAllocated()) {
-    cmd_retobj.AppendError("Could not find '__call__' method in implementation class"); 
+    cmd_retobj.AppendError("Could not find '__call__' method in implementation class");
     return false;
   }
 

@@ -786,8 +786,8 @@ SpecifiedScope getQueryScopes(CodeCompletionContext &CCContext,
   llvm::StringRef SpelledSpecifier = Lexer::getSourceText(
       CharSourceRange::getCharRange(SemaSpecifier->getRange()),
       CCSema.SourceMgr, clang::LangOptions());
-  if (SpelledSpecifier.consume_front("::")) 
-      Scopes.QueryScopes = {""};
+  if (SpelledSpecifier.consume_front("::"))
+    Scopes.QueryScopes = {""};
   Scopes.UnresolvedQualifier = std::string(SpelledSpecifier);
   // Sema excludes the trailing "::".
   if (!Scopes.UnresolvedQualifier->empty())

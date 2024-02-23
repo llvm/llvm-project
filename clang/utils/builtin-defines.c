@@ -1,4 +1,4 @@
-/* 
+/*
 This is a clang style test case for checking that preprocessor
 defines match gcc.
 */

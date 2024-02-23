@@ -127,7 +127,7 @@ _CLC_OVERLOAD _CLC_DEF double cosh(double x) {
 
     double y = fabs(x);
 
-    // In this range we find the integer part y0 of y 
+    // In this range we find the integer part y0 of y
     // and the increment dy = y - y0. We then compute
     // z = cosh(y) = cosh(y0)cosh(dy) + sinh(y0)sinh(dy)
     // where sinh(y0) and cosh(y0) are tabulated above.

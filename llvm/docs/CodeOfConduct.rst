@@ -29,17 +29,17 @@ events such as the developer meetings and socials, and any other forums created
 by the project that the community uses for communication. It applies to all of
 your communication and conduct in these spaces, including emails, chats, things
 you say, slides, videos, posters, signs, or even t-shirts you display in these
-spaces. 
+spaces.
 
-In rare cases, violations of this code outside of these spaces may affect a 
-person’s ability to participate within these spaces. Important examples 
-include `sexual and gender-based violence`_, `hate crimes`_, and `hate speech`_. 
-We do not conduct proactive research, but we have an obligation to respond 
-to any reported concerns. We are not interested in evaluating severity, 
-responding punitively, or holding people accountable. Both the relevance 
-and our response is instead focused on how a person’s continued participation 
-impacts the community’s safety, wellbeing, and inclusivity. We specifically 
-prioritize remaining a welcoming community to victims as well as groups 
+In rare cases, violations of this code outside of these spaces may affect a
+person’s ability to participate within these spaces. Important examples
+include `sexual and gender-based violence`_, `hate crimes`_, and `hate speech`_.
+We do not conduct proactive research, but we have an obligation to respond
+to any reported concerns. We are not interested in evaluating severity,
+responding punitively, or holding people accountable. Both the relevance
+and our response is instead focused on how a person’s continued participation
+impacts the community’s safety, wellbeing, and inclusivity. We specifically
+prioritize remaining a welcoming community to victims as well as groups
 subjected to systemic marginalization or underrepresentation.
 
 In addition, violations of this code outside these spaces may, in rare
@@ -47,7 +47,7 @@ cases, affect a person's ability to participate within them, when the conduct
 amounts to an egregious violation of this code.
 
 If you believe someone is violating the code of conduct, we ask that you report
-it by emailing conduct@llvm.org. For more details please see the 
+it by emailing conduct@llvm.org. For more details please see the
 :doc:`Reporting Guide <ReportingGuide>`.
 
 .. _be friendly and patient:
@@ -143,7 +143,7 @@ serve at least a 1 year term. New committee members will be selected by the
 current committee and the LLVM Foundation Board of Directors.
 
 When responding to a Code of Conduct report, the committee follows the
-following 
+following
 :doc:`Response Guide<ResponseGuide>`.
 
 The current committee members are:

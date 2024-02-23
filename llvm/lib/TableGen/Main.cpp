@@ -172,7 +172,7 @@ int llvm::TableGenMain(const char *argv0,
     if (ErrorsPrinted == 0)
       OutFile.keep();
   }
-  
+
   Records.stopTimer();
   Records.stopPhaseTiming();
 

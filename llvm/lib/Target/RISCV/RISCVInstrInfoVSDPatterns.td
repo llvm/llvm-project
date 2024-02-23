@@ -903,17 +903,17 @@ foreach vti = !listconcat(FractionalGroupIntegerVectors,
                           FractionalGroupFloatVectors,
                           FractionalGroupBFloatVectors) in
   let Predicates = !if(!eq(vti.Scalar, f16), [HasVInstructionsF16Minimal],
-                       GetVTypePredicates<vti>.Predicates) in 
+                       GetVTypePredicates<vti>.Predicates) in
   defm : VPatUSLoadStoreSDNode<vti.Vector, vti.Log2SEW, vti.LMul,
                                vti.AVL, vti.RegClass>;
 foreach vti = [VI8M1, VI16M1, VI32M1, VI64M1, VBF16M1, VF16M1, VF32M1, VF64M1] in
   let Predicates = !if(!eq(vti.Scalar, f16), [HasVInstructionsF16Minimal],
-                       GetVTypePredicates<vti>.Predicates) in 
+                       GetVTypePredicates<vti>.Predicates) in
   defm : VPatUSLoadStoreWholeVRSDNode<vti.Vector, vti.Log2SEW, vti.LMul,
                                       vti.RegClass>;
 foreach vti = !listconcat(GroupIntegerVectors, GroupFloatVectors, GroupBFloatVectors) in
   let Predicates = !if(!eq(vti.Scalar, f16), [HasVInstructionsF16Minimal],
-                       GetVTypePredicates<vti>.Predicates) in 
+                       GetVTypePredicates<vti>.Predicates) in
   defm : VPatUSLoadStoreWholeVRSDNode<vti.Vector, vti.Log2SEW, vti.LMul,
                                       vti.RegClass>;
 foreach mti = AllMasks in
@@ -1406,7 +1406,7 @@ foreach fvti = AllFloatVectors in {
                    fvti.RegClass:$rs2, 0, (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
 
   }
-  let Predicates = GetVTypePredicates<fvti>.Predicates in 
+  let Predicates = GetVTypePredicates<fvti>.Predicates in
     def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
                                     (SplatFPOp fvti.ScalarRegClass:$rs1),
                                     fvti.RegClass:$rs2)),

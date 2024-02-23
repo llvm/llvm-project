@@ -17,7 +17,7 @@ sub boldprint {
 # process command-line options.
 # most of these are passed on to llvm-gxx.
 $GCCOptions = "";
-for ($i = 0; $i <= $#ARGV; ++$i) {	
+for ($i = 0; $i <= $#ARGV; ++$i) {
 	if ($ARGV[$i] =~ /-mllvm-backend=([a-z0-9]*)/) {
 		$Backend = $1;
 		if ($ProgramName =~ /llvm-native-gxx/) {
@@ -192,7 +192,7 @@ native-build [OPTIONS...] FILE
 =head1 DESCRIPTION
 
 llvm-native-g++ is a wrapper around the LLVM command-line tools which generates
-a native object (.o) file by compiling FILE with llvm-g++, and then running 
+a native object (.o) file by compiling FILE with llvm-g++, and then running
 an LLVM back-end (CBE by default) over the resulting bitcode, and then
 compiling the resulting code to a native object file.
 
@@ -208,7 +208,7 @@ except -mllvm-backend=... are passed on to llvm-g++.
 
 =item -mllvm-backend=BACKEND
 
-Use BACKEND for native code generation. 
+Use BACKEND for native code generation.
 
 =item -v
 

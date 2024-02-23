@@ -126,14 +126,14 @@ typedef struct VPDataReaderType {
                            uint8_t *SiteCountArray[]);
   /* Function pointer to getValueProfRecordHeader method. */
   uint32_t (*GetValueProfRecordHeaderSize)(uint32_t NumSites);
-  /* Function pointer to getFristValueProfRecord method. */  
+  /* Function pointer to getFristValueProfRecord method. */
   struct ValueProfRecord *(*GetFirstValueProfRecord)(struct ValueProfData *);
   /* Return the number of value data for site \p Site.  */
   uint32_t (*GetNumValueDataForSite)(uint32_t VK, uint32_t Site);
-  /* Return the total size of the value profile data of the 
+  /* Return the total size of the value profile data of the
    * current function.  */
   uint32_t (*GetValueProfDataSize)(void);
-  /*! 
+  /*!
    * Read the next \p N value data for site \p Site and store the data
    * in \p Dst. \p StartNode is the first value node to start with if
    * it is not null. The function returns the pointer to the value
@@ -165,7 +165,7 @@ void lprofMergeValueProfData(struct ValueProfData *SrcValueProfData,
 
 VPDataReaderType *lprofGetVPDataReader();
 
-/* Internal interface used by test to reset the max number of 
+/* Internal interface used by test to reset the max number of
  * tracked values per value site to be \p MaxVals.
  */
 void lprofSetMaxValsPerSite(uint32_t MaxVals);
@@ -178,7 +178,7 @@ void lprofSetupValueProfiler();
  * to dump merged profile data into its own profile file. */
 uint64_t lprofGetLoadModuleSignature();
 
-/* 
+/*
  * Return non zero value if the profile data has already been
  * dumped to the file.
  */

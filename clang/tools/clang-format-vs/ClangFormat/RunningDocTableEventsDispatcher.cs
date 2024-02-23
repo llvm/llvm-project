@@ -3,7 +3,7 @@ using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using System.Linq;
-    
+
 namespace LLVM.ClangFormat
 {
     // Exposes event sources for IVsRunningDocTableEvents3 events.

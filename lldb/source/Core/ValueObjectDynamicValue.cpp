@@ -200,7 +200,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
 
   // If we don't have a dynamic type, set ourselves to be invalid and return
   // false.  We used to try to produce a dynamic ValueObject that behaved "like"
-  // its parent, but that failed for ValueObjectConstResult, which is too 
+  // its parent, but that failed for ValueObjectConstResult, which is too
   // complex a beast to try to emulate.  If we return an invalid ValueObject,
   // clients will end up getting the static value instead, which behaves
   // correctly.

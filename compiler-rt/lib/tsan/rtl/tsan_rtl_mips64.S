@@ -37,7 +37,7 @@ setjmp:
   move $gp,$s0
 
   // load pointer of libc setjmp to t9
-  dla $t9,(_ZN14__interception11real_setjmpE) 
+  dla $t9,(_ZN14__interception11real_setjmpE)
 
   // restore env parameters
   ld $gp,8($sp)
@@ -143,7 +143,7 @@ sigsetjmp:
   move $gp,$s0
 
   // load pointer of libc sigsetjmp to t9
-  dla $t9,(_ZN14__interception14real_sigsetjmpE) 
+  dla $t9,(_ZN14__interception14real_sigsetjmpE)
 
   // restore env parameters
   ld $gp,16($sp)

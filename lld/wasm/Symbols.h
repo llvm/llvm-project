@@ -605,7 +605,7 @@ struct WasmSym {
   static DefinedData *definedTableBase;
   // 32-bit copy in wasm64 to work around init expr limitations.
   // These can potentially be removed again once we have
-  // https://github.com/WebAssembly/extended-const 
+  // https://github.com/WebAssembly/extended-const
   static UndefinedGlobal *tableBase32;
   static DefinedData *definedTableBase32;
 

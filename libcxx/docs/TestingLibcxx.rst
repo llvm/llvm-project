@@ -351,7 +351,7 @@ Test Filenames`_ when determining the names for new test files.
      - Same as ``FOO.pass.cpp``, but for Objective-C++.
 
    * - ``FOO.compile.pass.cpp``
-     - Checks whether the C++ code in the file compiles successfully. In general, prefer ``compile`` tests over ``verify`` tests, 
+     - Checks whether the C++ code in the file compiles successfully. In general, prefer ``compile`` tests over ``verify`` tests,
        subject to the specific recommendations, below, for when to write ``verify`` tests.
    * - ``FOO.compile.pass.mm``
      - Same as ``FOO.compile.pass.cpp``, but for Objective-C++.

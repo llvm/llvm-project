@@ -1596,11 +1596,11 @@ To allow more convenient syntax, helper classes exist for TableGen classes
 which are commonly used as anonymous definitions. These currently include:
 
 * `DeprecatedOpBuilder`: Can be used in place of `OpBuilder` with the same
-  arguments except taking the reason as first argument, e.g. 
+  arguments except taking the reason as first argument, e.g.
   `DeprecatedOpBuilder<"use 'build' with foo instead", (ins "int":$bar)>`
 
-Note: Support for the `CppDeprecated` mechanism has to be implemented by 
-every code generator separately. 
+Note: Support for the `CppDeprecated` mechanism has to be implemented by
+every code generator separately.
 
 ### Requirements and existing mechanisms analysis
 

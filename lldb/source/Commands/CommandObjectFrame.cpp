@@ -317,10 +317,10 @@ protected:
       } else if (*m_options.relative_frame_offset > 0) {
         // I don't want "up 20" where "20" takes you past the top of the stack
         // to produce an error, but rather to just go to the top.  OTOH, start
-        // by seeing if the requested frame exists, in which case we can avoid 
+        // by seeing if the requested frame exists, in which case we can avoid
         // counting the stack here...
-        const uint32_t frame_requested = frame_idx 
-            + *m_options.relative_frame_offset;
+        const uint32_t frame_requested =
+            frame_idx + *m_options.relative_frame_offset;
         StackFrameSP frame_sp = thread->GetStackFrameAtIndex(frame_requested);
         if (frame_sp)
           frame_idx = frame_requested;

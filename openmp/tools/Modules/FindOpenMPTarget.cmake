@@ -62,7 +62,7 @@ be used to override the standard flag searching for a given compiler.
 
 ``OpenMPTarget_<device>_ARCH``
   Sets the architecture of ``<device>`` to compile for. Such as `sm_70` for NVPTX
-  or `gfx908` for AMDGPU. 
+  or `gfx908` for AMDGPU.
 
 ``OpenMPTarget_<device>_DEVICE``
   Sets the name of the device to offload to.
@@ -293,26 +293,26 @@ foreach(LANG IN ITEMS C CXX)
         # Get compiler flags for offloading to the device and architecture and
         # set the target features. Include the normal OpenMP flags as well.
         set_property(TARGET OpenMPTarget::OpenMPTarget_${DEVICE} PROPERTY
-          INTERFACE_COMPILE_OPTIONS 
+          INTERFACE_COMPILE_OPTIONS
           "$<$<COMPILE_LANGUAGE:${LANG}>:${OpenMPTarget_${DEVICE}_FLAGS}>"
           "$<$<COMPILE_LANGUAGE:${LANG}>:${OpenMPTarget_${DEVICE}_ARCH}>"
           "$<$<COMPILE_LANGUAGE:${LANG}>:${OpenMP_${LANG}_FLAGS}>")
         set_property(TARGET OpenMPTarget::OpenMPTarget_${DEVICE} PROPERTY
           INTERFACE_INCLUDE_DIRECTORIES "$<BUILD_INTERFACE:${OpenMP_${LANG}_INCLUDE_DIRS}>")
         set_property(TARGET OpenMPTarget::OpenMPTarget_${DEVICE} PROPERTY
-          INTERFACE_LINK_LIBRARIES 
+          INTERFACE_LINK_LIBRARIES
           "${OpenMPTarget_${DEVICE}_LIBRARIES}"
           "${OpenMP_${LANG}_LIBRARIES}")
         # The offloading flags must also be passed during the linking phase so
         # the compiler can pass the binary to the correct toolchain.
         set_property(TARGET OpenMPTarget::OpenMPTarget_${DEVICE} PROPERTY
-          INTERFACE_LINK_OPTIONS 
+          INTERFACE_LINK_OPTIONS
           "$<$<COMPILE_LANGUAGE:${LANG}>:${OpenMPTarget_${DEVICE}_FLAGS}>"
           "$<$<COMPILE_LANGUAGE:${LANG}>:${OpenMPTarget_${DEVICE}_ARCH}>"
           "$<$<COMPILE_LANGUAGE:${LANG}>:${OpenMP_${LANG}_FLAGS}>")
         # Combine all the flags if not using the target for convenience.
         set(OpenMPTarget_${DEVICE}_FLAGS ${OpenMP_${LANG}_FLAGS}
-          ${OpenMPTarget_${DEVICE}_FLAGS} 
+          ${OpenMPTarget_${DEVICE}_FLAGS}
           ${OpenMPTarget_${DEVICE}_ARCH}
           CACHE STRING "${DEVICE} target compile flags for OpenMP target offloading" FORCE)
       endif()

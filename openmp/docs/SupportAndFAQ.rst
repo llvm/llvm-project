@@ -55,11 +55,11 @@ To build an *effective* OpenMP offload capable compiler, only one extra CMake
 option, ``LLVM_ENABLE_RUNTIMES="openmp"``, is needed when building LLVM (Generic
 information about building LLVM is available `here
 <https://llvm.org/docs/GettingStarted.html>`__.). Make sure all backends that
-are targeted by OpenMP are enabled. That can be done by adjusting the CMake 
-option ``LLVM_TARGETS_TO_BUILD``. The corresponding targets for offloading to AMD 
-and Nvidia GPUs are ``"AMDGPU"`` and ``"NVPTX"``, respectively. By default, 
-Clang will be built with all backends enabled. When building with 
-``LLVM_ENABLE_RUNTIMES="openmp"`` OpenMP should not be enabled in 
+are targeted by OpenMP are enabled. That can be done by adjusting the CMake
+option ``LLVM_TARGETS_TO_BUILD``. The corresponding targets for offloading to AMD
+and Nvidia GPUs are ``"AMDGPU"`` and ``"NVPTX"``, respectively. By default,
+Clang will be built with all backends enabled. When building with
+``LLVM_ENABLE_RUNTIMES="openmp"`` OpenMP should not be enabled in
 ``LLVM_ENABLE_PROJECTS`` because it is enabled by default.
 
 For Nvidia offload, please see :ref:`build_nvidia_offload_capable_compiler`.
@@ -81,10 +81,10 @@ The Cuda SDK is required on the machine that will execute the openmp application
 If your build machine is not the target machine or automatic detection of the
 available GPUs failed, you should also set:
 
-- ``LIBOMPTARGET_DEVICE_ARCHITECTURES=sm_<xy>,...`` where ``<xy>`` is the numeric 
-  compute capability of your GPU. For instance, set 
-  ``LIBOMPTARGET_DEVICE_ARCHITECTURES=sm_70,sm_80`` to target the Nvidia Volta 
-  and Ampere architectures. 
+- ``LIBOMPTARGET_DEVICE_ARCHITECTURES=sm_<xy>,...`` where ``<xy>`` is the numeric
+  compute capability of your GPU. For instance, set
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES=sm_70,sm_80`` to target the Nvidia Volta
+  and Ampere architectures.
 
 
 .. _build_amdgpu_offload_capable_compiler:
@@ -141,10 +141,10 @@ With those libraries installed, then LLVM build and installed, try:
 If your build machine is not the target machine or automatic detection of the
 available GPUs failed, you should also set:
 
-- ``LIBOMPTARGET_DEVICE_ARCHITECTURES=gfx<xyz>,...`` where ``<xyz>`` is the 
-  shader core instruction set architecture. For instance, set 
-  ``LIBOMPTARGET_DEVICE_ARCHITECTURES=gfx906,gfx90a`` to target AMD GCN5 
-  and CDNA2 devices. 
+- ``LIBOMPTARGET_DEVICE_ARCHITECTURES=gfx<xyz>,...`` where ``<xyz>`` is the
+  shader core instruction set architecture. For instance, set
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES=gfx906,gfx90a`` to target AMD GCN5
+  and CDNA2 devices.
 
 Q: What are the known limitations of OpenMP AMDGPU offload?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -181,11 +181,11 @@ The compiled executable is dynamically linked against a host runtime, e.g.
 are found like any other dynamic library, by setting rpath or runpath on the
 executable, by setting ``LD_LIBRARY_PATH``, or by adding them to the system search.
 
-``libomptarget.so`` is only supported to work with the associated ``clang`` 
-compiler. On systems with globally installed ``libomptarget.so`` this can be 
-problematic. For this reason it is recommended to use a `Clang configuration 
-file <https://clang.llvm.org/docs/UsersManual.html#configuration-files>`__ to 
-automatically configure the environment. For example, store the following file 
+``libomptarget.so`` is only supported to work with the associated ``clang``
+compiler. On systems with globally installed ``libomptarget.so`` this can be
+problematic. For this reason it is recommended to use a `Clang configuration
+file <https://clang.llvm.org/docs/UsersManual.html#configuration-files>`__ to
+automatically configure the environment. For example, store the following file
 as ``openmp.cfg`` next to your ``clang`` executable.
 
 .. code-block:: text
@@ -433,39 +433,39 @@ modifications to them.
 Q: Can I use libc functions on the GPU?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-LLVM provides basic ``libc`` functionality through the LLVM C Library. For 
-building instructions, refer to the associated `LLVM libc documentation 
-<https://libc.llvm.org/gpu/using.html#building-the-gpu-library>`_. Once built, 
-this provides a static library called ``libcgpu.a``. See the documentation for a 
-list of `supported functions <https://libc.llvm.org/gpu/support.html>`_ as well. 
-To utilize these functions, simply link this library as any other when building 
+LLVM provides basic ``libc`` functionality through the LLVM C Library. For
+building instructions, refer to the associated `LLVM libc documentation
+<https://libc.llvm.org/gpu/using.html#building-the-gpu-library>`_. Once built,
+this provides a static library called ``libcgpu.a``. See the documentation for a
+list of `supported functions <https://libc.llvm.org/gpu/support.html>`_ as well.
+To utilize these functions, simply link this library as any other when building
 with OpenMP.
 
 .. code-block:: shell
 
    clang++ openmp.cpp -fopenmp --offload-arch=gfx90a -lcgpu
 
-For more information on how this is implemented in LLVM/OpenMP's offloading 
+For more information on how this is implemented in LLVM/OpenMP's offloading
 runtime, refer to the `runtime documentation <libomptarget_libc>`_.
 
 Q: What command line options can I use for OpenMP?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-We recommend taking a look at the OpenMP 
+We recommend taking a look at the OpenMP
 :doc:`command line argument reference <CommandLineArgumentReference>` page.
 
 Q: Why is my build taking a long time?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-When installing OpenMP and other LLVM components, the build time on multicore 
-systems can be significantly reduced with parallel build jobs. As suggested in 
+When installing OpenMP and other LLVM components, the build time on multicore
+systems can be significantly reduced with parallel build jobs. As suggested in
 *LLVM Techniques, Tips, and Best Practices*, one could consider using ``ninja`` as the
-generator. This can be done with the CMake option ``cmake -G Ninja``. Afterward, 
+generator. This can be done with the CMake option ``cmake -G Ninja``. Afterward,
 use ``ninja install`` and specify the number of parallel jobs with ``-j``. The build
-time can also be reduced by setting the build type to ``Release`` with the 
+time can also be reduced by setting the build type to ``Release`` with the
 ``CMAKE_BUILD_TYPE`` option. Recompilation can also be sped up by caching previous
-compilations. Consider enabling ``Ccache`` with 
+compilations. Consider enabling ``Ccache`` with
 ``CMAKE_CXX_COMPILER_LAUNCHER=ccache``.
 
 Q: Did this FAQ not answer your question?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Feel free to post questions or browse old threads at 
+Feel free to post questions or browse old threads at
 `LLVM Discourse <https://discourse.llvm.org/c/runtimes/openmp/>`__.

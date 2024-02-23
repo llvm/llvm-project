@@ -189,7 +189,7 @@ each of the operands, returning the corresponding constant attribute. These
 operands are those that implement the `ConstantLike` trait. If any of the
 operands are non-constant, a null `Attribute` value is provided instead. For
 example, if MyOp provides three operands [`a`, `b`, `c`], but only `b` is
-constant then `adaptor` will return Attribute() for `getA()` and `getC()`, 
+constant then `adaptor` will return Attribute() for `getA()` and `getC()`,
 and b-value for `getB()`.
 
 Also above, is the use of `OpFoldResult`. This class represents the possible

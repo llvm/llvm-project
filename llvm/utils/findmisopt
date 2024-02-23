@@ -7,20 +7,20 @@
 #      it from finding a problem unless the set of failing optimizations are
 #      known and given to it on the command line.
 #
-#      Given a bitcode file that produces correct output (or return code), 
+#      Given a bitcode file that produces correct output (or return code),
 #      this script will run through all the optimizations passes that gccas
 #      uses (in the same order) and will narrow down which optimizations
-#      cause the program either generate different output or return a 
-#      different result code. When the passes have been narrowed down, 
+#      cause the program either generate different output or return a
+#      different result code. When the passes have been narrowed down,
 #      bugpoint is invoked to further refine the problem to its origin. If a
-#      release version of bugpoint is available it will be used, otherwise 
+#      release version of bugpoint is available it will be used, otherwise
 #      debug.
 #
 #   Usage:
 #      findmisopt bcfile outdir progargs [match]
 #
 #   Where:
-#      bcfile 
+#      bcfile
 #          is the bitcode file input (the unoptimized working case)
 #      outdir
 #          is a directory into which intermediate results are placed
@@ -33,7 +33,7 @@
 #          be used to determine success/fail. If not specified success/fail is
 #          determined by diffing the program's output with the non-optimized
 #          output.
-#       
+#
 if [ "$#" -lt 3 ] ; then
   echo "usage: findmisopt bcfile outdir progargs [match]"
   exit 1
@@ -73,7 +73,7 @@ echo "Test Name: $name"
 echo "Unoptimized program: $prog"
 echo "  Optimized program: $optprog"
 
-# Define the list of optimizations to run. This comprises the same set of 
+# Define the list of optimizations to run. This comprises the same set of
 # optimizations that opt -O3 runs, in the same order.
 opt_switches=`llvm-as < /dev/null -o - | opt -O3 -disable-output -debug-pass=Arguments 2>&1 | sed 's/Pass Arguments: //'`
 all_switches="$opt_switches"

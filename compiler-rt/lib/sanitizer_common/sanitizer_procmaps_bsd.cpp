@@ -35,7 +35,7 @@ void GetMemoryProfile(fill_profile_f cb, uptr *stats) {
     KERN_PROC,
     KERN_PROC_PID,
     getpid()
-  }; 
+  };
 
   struct kinfo_proc InfoProc;
   uptr Len = sizeof(InfoProc);

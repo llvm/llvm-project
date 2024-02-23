@@ -171,7 +171,7 @@ public:
   bool DumpPlansForTID(Stream &strm, lldb::tid_t tid,
                        lldb::DescriptionLevel desc_level, bool internal,
                        bool ignore_boring, bool skip_unreported);
-                       
+
   bool PrunePlansForTID(lldb::tid_t tid);
 
 private:
@@ -179,7 +179,6 @@ private:
   mutable std::recursive_mutex m_stack_map_mutex;
   using PlansList = std::unordered_map<lldb::tid_t, ThreadPlanStack>;
   PlansList m_plans_list;
-  
 };
 
 } // namespace lldb_private

@@ -532,7 +532,7 @@ try_again:
     D = cast<InjectedClassNameType>(TP)->getDecl();
     break;
 
-  // FIXME: Template type parameters!      
+  // FIXME: Template type parameters!
 
   case Type::Elaborated:
     TP = cast<ElaboratedType>(TP)->getNamedType().getTypePtrOrNull();
@@ -648,7 +648,7 @@ unsigned clang_isFunctionTypeVariadic(CXType X) {
 
   if (T->getAs<FunctionNoProtoType>())
     return 1;
-  
+
   return 0;
 }
 
@@ -656,7 +656,7 @@ CXCallingConv clang_getFunctionTypeCallingConv(CXType X) {
   QualType T = GetQualType(X);
   if (T.isNull())
     return CXCallingConv_Invalid;
-  
+
   if (const FunctionType *FD = T->getAs<FunctionType>()) {
 #define TCALLINGCONV(X) case CC_##X: return CXCallingConv_##X
     switch (FD->getCallConv()) {
@@ -687,7 +687,7 @@ CXCallingConv clang_getFunctionTypeCallingConv(CXType X) {
     }
 #undef TCALLINGCONV
   }
-  
+
   return CXCallingConv_Invalid;
 }
 
@@ -695,15 +695,15 @@ int clang_getNumArgTypes(CXType X) {
   QualType T = GetQualType(X);
   if (T.isNull())
     return -1;
-  
+
   if (const FunctionProtoType *FD = T->getAs<FunctionProtoType>()) {
     return FD->getNumParams();
   }
-  
+
   if (T->getAs<FunctionNoProtoType>()) {
     return 0;
   }
-  
+
   return -1;
 }
 
@@ -719,7 +719,7 @@ CXType clang_getArgType(CXType X, unsigned i) {
 
     return MakeCXType(FD->getParamType(i), GetTU(X));
   }
-  
+
   return MakeCXType(QualType(), GetTU(X));
 }
 
@@ -727,7 +727,7 @@ CXType clang_getResultType(CXType X) {
   QualType T = GetQualType(X);
   if (T.isNull())
     return MakeCXType(QualType(), GetTU(X));
-  
+
   if (const FunctionType *FD = T->getAs<FunctionType>())
     return MakeCXType(FD->getReturnType(), GetTU(X));
 
@@ -798,7 +798,7 @@ unsigned clang_isPODType(CXType X) {
   QualType T = GetQualType(X);
   if (T.isNull())
     return 0;
-  
+
   CXTranslationUnit TU = GetTU(X);
 
   return T.isPODType(cxtu::getASTUnit(TU)->getASTContext()) ? 1 : 0;

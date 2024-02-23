@@ -2308,7 +2308,7 @@ blake3_compress_xof_sse2:
 BLAKE3_IV:
         .long  0x6A09E667, 0xBB67AE85
         .long  0x3C6EF372, 0xA54FF53A
-ADD0:   
+ADD0:
         .long  0, 1, 2, 3
 ADD1:
         .long  4, 4, 4, 4

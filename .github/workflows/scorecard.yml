@@ -27,7 +27,7 @@ jobs:
       # Needed to upload the results to code-scanning dashboard.
       security-events: write
       # Needed to publish results and get a badge (see publish_results below).
-      id-token: write      
+      id-token: write
 
     steps:
       - name: "Checkout code"
@@ -43,7 +43,7 @@ jobs:
 
           #   - Publish results to OpenSSF REST API for easy access by consumers
           #   - Allows the repository to include the Scorecard badge.
-          #   - See https://github.com/ossf/scorecard-action#publishing-results.      
+          #   - See https://github.com/ossf/scorecard-action#publishing-results.
           publish_results: true
 
       # Upload the results as artifacts (optional). Commenting out will disable uploads of run results in SARIF

@@ -181,7 +181,7 @@ def OpenACC_DeviceType : I32EnumAttr<"DeviceType",
 // Loop construct: collapse, gang, worker, vector, seq, independent, auto,
 //                 and tile
 // Compute construct: async, wait, num_gangs, num_workers, and vector_length
-// Data construct: async and wait 
+// Data construct: async and wait
 // Routine: gang, worker, vector, seq and bind
 //
 // The `none` means that the value appears before any device_type clause.
@@ -320,7 +320,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
     - `bounds`: Used when copying just slice of array or array's bounds are not
     encoded in type. They are in rank order where rank 0 is inner-most dimension.
     - `dataClause`: Keeps track of the data clause the user used. This is because
-    the acc operations are decomposed. So a 'copy' clause is decomposed to both 
+    the acc operations are decomposed. So a 'copy' clause is decomposed to both
     `acc.copyin` and `acc.copyout` operations, but both have dataClause that
     specifies `acc_copy` in this field.
     - `structured`: Flag to note whether this is associated with structured region
@@ -568,7 +568,7 @@ class OpenACC_DataExitOp<string mnemonic, string clause, string extraDescription
     - `bounds`: Used when copying just slice of array or array's bounds are not
     encoded in type. They are in rank order where rank 0 is inner-most dimension.
     - `dataClause`: Keeps track of the data clause the user used. This is because
-    the acc operations are decomposed. So a 'copy' clause is decomposed to both 
+    the acc operations are decomposed. So a 'copy' clause is decomposed to both
     `acc.copyin` and `acc.copyout` operations, but both have dataClause that
     specifies `acc_copy` in this field.
     - `structured`: Flag to note whether this is associated with structured region
@@ -963,7 +963,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
 
     /// Return the value of the vector_length clause if present.
     mlir::Value getVectorLengthValue();
-    /// Return the value of the vector_length clause for the given device_type 
+    /// Return the value of the vector_length clause for the given device_type
     /// if present.
     mlir::Value getVectorLengthValue(mlir::acc::DeviceType deviceType);
 
@@ -1212,7 +1212,7 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
 
     /// Return the value of the vector_length clause if present.
     mlir::Value getVectorLengthValue();
-    /// Return the value of the vector_length clause for the given device_type 
+    /// Return the value of the vector_length clause for the given device_type
     /// if present.
     mlir::Value getVectorLengthValue(mlir::acc::DeviceType deviceType);
 
@@ -1530,9 +1530,9 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     Example:
 
     ```mlir
-    acc.loop gang() vector() (%arg3 : index, %arg4 : index, %arg5 : index) = 
-        (%c0, %c0, %c0 : index, index, index) to 
-        (%c10, %c10, %c10 : index, index, index) step 
+    acc.loop gang() vector() (%arg3 : index, %arg4 : index, %arg5 : index) =
+        (%c0, %c0, %c0 : index, index, index) to
+        (%c10, %c10, %c10 : index, index, index) step
         (%c1, %c1, %c1 : index, index, index) {
       // Loop body
       acc.yield
@@ -1614,7 +1614,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
     /// Return the value of the vector clause if present.
     mlir::Value getVectorValue();
-    /// Return the value of the vector clause for the given device_type 
+    /// Return the value of the vector clause for the given device_type
     /// if present.
     mlir::Value getVectorValue(mlir::acc::DeviceType deviceType);
     /// Return true if the op has the vector attribute for the
@@ -1626,7 +1626,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
     /// Return the value of the worker clause if present.
     mlir::Value getWorkerValue();
-    /// Return the value of the worker clause for the given device_type 
+    /// Return the value of the worker clause for the given device_type
     /// if present.
     mlir::Value getWorkerValue(mlir::acc::DeviceType deviceType);
     /// Return true if the op has the worker attribute for the
@@ -1645,7 +1645,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
     /// Return the value of the collapse clause if present.
     std::optional<int64_t> getCollapseValue();
-    /// Return the value of the collapse clause for the given device_type 
+    /// Return the value of the collapse clause for the given device_type
     /// if present.
     std::optional<int64_t> getCollapseValue(mlir::acc::DeviceType deviceType);
 
@@ -1658,7 +1658,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
     /// Return the value of the worker clause if present.
     mlir::Value getGangValue(mlir::acc::GangArgType gangArgType);
-    /// Return the value of the worker clause for the given device_type 
+    /// Return the value of the worker clause for the given device_type
     /// if present.
     mlir::Value getGangValue(mlir::acc::GangArgType gangArgType, mlir::acc::DeviceType deviceType);
   }];
@@ -2042,7 +2042,7 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
     Example:
 
     ```mlir
-    func.func @acc_func(%a : i64) -> () attributes 
+    func.func @acc_func(%a : i64) -> () attributes
         {acc.routine_info = #acc.routine_info<[@acc_func_rout1]>} {
       return
     }

@@ -525,7 +525,7 @@ public:
     dest.clear();
     return false;
   }
-  
+
   virtual StructuredData::ObjectSP
   GetOptionsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
     return {};
@@ -535,9 +535,9 @@ public:
   GetArgumentsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
     return {};
   }
-  
+
   virtual bool SetOptionValueForCommandObject(
-      StructuredData::GenericSP cmd_obj_sp, ExecutionContext *exe_ctx, 
+      StructuredData::GenericSP cmd_obj_sp, ExecutionContext *exe_ctx,
       llvm::StringRef long_option, llvm::StringRef value) {
     return false;
   }

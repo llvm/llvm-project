@@ -19,7 +19,7 @@
 	       (c-basic-offset . 2)
 	       (indent-tabs-mode . nil)
 	       (c-offsets-alist .
-                   ((arglist-intro . ++) 
+                   ((arglist-intro . ++)
                     (innamespace . 0)
                     (member-init-intro . ++)
                     ))
@@ -27,7 +27,7 @@
 
 
 ;;
-;; Use the following to make it the default.  
+;; Use the following to make it the default.
 ;;
 
 (defun flang-c-mode-hook ()

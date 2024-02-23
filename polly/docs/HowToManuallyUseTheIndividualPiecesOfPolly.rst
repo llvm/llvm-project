@@ -260,16 +260,16 @@ performance improvement can be expected by an optimal automatic optimizer.
 
 		[...]
 		:: isl ast :: main :: %for.cond1.preheader---%for.end30
-		
+
 		if (1)
-		
+
 		    for (int c0 = 0; c0 <= 1535; c0 += 1)
 		      for (int c1 = 0; c1 <= 1535; c1 += 1) {
 		        Stmt_for_body3(c0, c1);
 		        for (int c3 = 0; c3 <= 1535; c3 += 1)
 		          Stmt_for_body8(c0, c1, c3);
 		      }
-		
+
 		else
 		    {  /* original code */ }
 		[...]
@@ -384,7 +384,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 	.. code-block:: console
 
 		$ opt -S matmul.preopt.ll | opt -S -O3 -o matmul.normalopt.ll
-		
+
 	.. code-block:: console
 
 		$ opt -S matmul.preopt.ll -basic-aa -polly-use-llvm-names -polly-import-jscop -polly-import-jscop-postfix=interchanged -polly-codegen -polly-process-unprofitable | opt -S -O3 -o matmul.polly.interchanged.ll
@@ -398,7 +398,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 	.. code-block:: console
 
 		$ opt -S matmul.preopt.ll -basic-aa -polly-use-llvm-names -polly-import-jscop -polly-import-jscop-postfix=interchanged+tiled -polly-codegen -polly-process-unprofitable | opt -S -O3 -o matmul.polly.interchanged+tiled.ll
-		
+
 	.. code-block:: text
 
 		Reading JScop '%for.cond1.preheader---%for.end19' in function 'init_array' from './init_array___%for.cond1.preheader---%for.end19.jscop.interchanged+tiled'.

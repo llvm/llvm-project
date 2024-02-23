@@ -230,7 +230,7 @@ def IRDL_OperandsOp : IRDL_Op<"operands", [HasParent<"OperationOp">]> {
     ```mlir
     irdl.operands(%0, single %1, optional %2, variadic %3)
     ```
-    
+
     Here, %0 and %1 are required single operands, %2 is an optional operand,
     and %3 is a variadic operand.
 
@@ -239,7 +239,7 @@ def IRDL_OperandsOp : IRDL_Op<"operands", [HasParent<"OperationOp">]> {
     operands in each segment.
   }];
 
-  let arguments = (ins Variadic<IRDL_AttributeType>:$args, 
+  let arguments = (ins Variadic<IRDL_AttributeType>:$args,
                         VariadicityArrayAttr:$variadicity);
   let assemblyFormat =
     "`` custom<ValuesWithVariadicity>($args, $variadicity) attr-dict";
@@ -276,7 +276,7 @@ def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
     ```mlir
     irdl.results(%0, single %1, optional %2, variadic %3)
     ```
-    
+
     Here, %0 and %1 are required single results, %2 is an optional result,
     and %3 is a variadic result.
 
@@ -285,7 +285,7 @@ def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
     results in each segment.
   }];
 
-  let arguments = (ins Variadic<IRDL_AttributeType>:$args, 
+  let arguments = (ins Variadic<IRDL_AttributeType>:$args,
                         VariadicityArrayAttr:$variadicity);
   let assemblyFormat =
     " `` custom<ValuesWithVariadicity>($args, $variadicity) attr-dict";
@@ -296,7 +296,7 @@ def IRDL_AttributesOp : IRDL_Op<"attributes", [HasParent<"OperationOp">]> {
   let summary = "Define the attributes of an operation";
 
   let description = [{
-    `irdl.attributes` defines the attributes of the `irdl.operation` parent 
+    `irdl.attributes` defines the attributes of the `irdl.operation` parent
     operation definition.
 
     In the following example, `irdl.attributes` defines the attributes of the
@@ -320,10 +320,10 @@ def IRDL_AttributesOp : IRDL_Op<"attributes", [HasParent<"OperationOp">]> {
     attribute "attr2" with value `i64`.
   }];
 
-  let arguments = (ins Variadic<IRDL_AttributeType>:$attributeValues, 
+  let arguments = (ins Variadic<IRDL_AttributeType>:$attributeValues,
                         StrArrayAttr:$attributeValueNames);
   let assemblyFormat = [{
-    custom<AttributesOp>($attributeValues, $attributeValueNames) attr-dict 
+    custom<AttributesOp>($attributeValues, $attributeValueNames) attr-dict
   }];
 
   let hasVerifier = true;
@@ -489,7 +489,7 @@ def IRDL_BaseOp : IRDL_ConstraintOp<"base",
                        OptionalAttr<StrAttr>:$base_name);
   let results = (outs IRDL_AttributeType:$output);
   let assemblyFormat = " ($base_ref^)? ($base_name^)? ` ` attr-dict";
-  
+
   let builders = [
     OpBuilder<(ins "SymbolRefAttr":$base_ref), [{
       build($_builder, $_state, base_ref, {});

@@ -619,7 +619,7 @@ std::string RNBRemote::CompressString(const std::string &orig) {
       size_t compressed_size = 0;
 
       // Allocate a scratch buffer for libcompression the first
-      // time we see a different compression type; reuse it in 
+      // time we see a different compression type; reuse it in
       // all compression_encode_buffer calls so it doesn't need
       // to allocate / free its own scratch buffer each time.
       // This buffer will only be freed when compression type
@@ -636,16 +636,16 @@ std::string RNBRemote::CompressString(const std::string &orig) {
         }
         size_t scratchbuf_size = 0;
         switch (compression_type) {
-          case compression_types::lz4: 
+          case compression_types::lz4:
             scratchbuf_size = compression_encode_scratch_buffer_size (COMPRESSION_LZ4_RAW);
             break;
-          case compression_types::zlib_deflate: 
+          case compression_types::zlib_deflate:
             scratchbuf_size = compression_encode_scratch_buffer_size (COMPRESSION_ZLIB);
             break;
-          case compression_types::lzma: 
+          case compression_types::lzma:
             scratchbuf_size = compression_encode_scratch_buffer_size (COMPRESSION_LZMA);
             break;
-          case compression_types::lzfse: 
+          case compression_types::lzfse:
             scratchbuf_size = compression_encode_scratch_buffer_size (COMPRESSION_LZFSE);
             break;
           default:
@@ -660,28 +660,28 @@ std::string RNBRemote::CompressString(const std::string &orig) {
       if (compression_type == compression_types::lz4) {
         compressed_size = compression_encode_buffer(
             encoded_data.data(), encoded_data_buf_size,
-            (const uint8_t *)orig.c_str(), orig.size(), 
+            (const uint8_t *)orig.c_str(), orig.size(),
             g_libcompress_scratchbuf,
             COMPRESSION_LZ4_RAW);
       }
       if (compression_type == compression_types::zlib_deflate) {
         compressed_size = compression_encode_buffer(
             encoded_data.data(), encoded_data_buf_size,
-            (const uint8_t *)orig.c_str(), orig.size(), 
+            (const uint8_t *)orig.c_str(), orig.size(),
             g_libcompress_scratchbuf,
             COMPRESSION_ZLIB);
       }
       if (compression_type == compression_types::lzma) {
         compressed_size = compression_encode_buffer(
             encoded_data.data(), encoded_data_buf_size,
-            (const uint8_t *)orig.c_str(), orig.size(), 
+            (const uint8_t *)orig.c_str(), orig.size(),
             g_libcompress_scratchbuf,
             COMPRESSION_LZMA);
       }
       if (compression_type == compression_types::lzfse) {
         compressed_size = compression_encode_buffer(
             encoded_data.data(), encoded_data_buf_size,
-            (const uint8_t *)orig.c_str(), orig.size(), 
+            (const uint8_t *)orig.c_str(), orig.size(),
             g_libcompress_scratchbuf,
             COMPRESSION_LZFSE);
       }
@@ -3601,7 +3601,7 @@ static bool process_does_not_exist (nub_process_t pid) {
 // my_uid and process_uid are only initialized if this function
 // returns true -- that there was a uid mismatch -- and those
 // id's may want to be used in the error message.
-// 
+//
 // NOTE: this should only be called after process_does_not_exist().
 // This sysctl will return uninitialized data if we ask for a pid
 // that doesn't exist.  The alternative would be to fetch all
@@ -3659,7 +3659,7 @@ static bool login_session_has_gui_access () {
 #endif
 }
 
-// Checking for 
+// Checking for
 //
 //  {
 //    'class' : 'rule',
@@ -3883,7 +3883,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
              "'%s'",
              getpid(), attach_name.c_str());
       attach_pid = DNBProcessAttachByName(attach_name.c_str(), NULL,
-                                          Context().GetIgnoredExceptions(), 
+                                          Context().GetIgnoredExceptions(),
                                           err_str, sizeof(err_str));
 
     } else if (strstr(p, "vAttach;") == p) {
@@ -3898,7 +3898,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
         DNBLog("[LaunchAttach] START %d vAttach to pid %d", getpid(),
                pid_attaching_to);
         attach_pid = DNBProcessAttach(pid_attaching_to, &attach_timeout_abstime,
-                                      m_ctx.GetIgnoredExceptions(), 
+                                      m_ctx.GetIgnoredExceptions(),
                                       err_str, sizeof(err_str));
       }
     } else {
@@ -3941,7 +3941,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
       // string to lldb.
 
       if (pid_attaching_to != INVALID_NUB_PROCESS) {
-        // The order of these checks is important.  
+        // The order of these checks is important.
         if (process_does_not_exist (pid_attaching_to)) {
           DNBLogError("Tried to attach to pid that doesn't exist");
           std::string return_message = "E96;";
@@ -3956,7 +3956,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
           return SendPacket(return_message);
         }
         uid_t my_uid, process_uid;
-        if (attach_failed_due_to_uid_mismatch (pid_attaching_to, 
+        if (attach_failed_due_to_uid_mismatch (pid_attaching_to,
                                                my_uid, process_uid)) {
           std::string my_username = "uid " + std::to_string (my_uid);
           std::string process_username = "uid " + std::to_string (process_uid);
@@ -3970,7 +3970,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
           }
           DNBLogError("Tried to attach to process with uid mismatch");
           std::string return_message = "E96;";
-          std::string msg = "tried to attach to process as user '" 
+          std::string msg = "tried to attach to process as user '"
                             + my_username + "' and process is running "
                             "as user '" + process_username + "'";
           return_message += cstring_to_asciihex_string(msg.c_str());
@@ -4014,7 +4014,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
         error_explainer += ")";
       }
       std::string default_return_msg = "E96;";
-      default_return_msg += cstring_to_asciihex_string 
+      default_return_msg += cstring_to_asciihex_string
                               (error_explainer.c_str());
       SendPacket (default_return_msg);
       DNBLogError("Attach failed: \"%s\".", err_str);
@@ -4804,7 +4804,7 @@ static bool GetHostCPUType(uint32_t &cputype, uint32_t &cpusubtype,
     // CPU_TYPE_ARM64 and subtype is 2 indicating arm64e.
     // But we change the cputype to CPU_TYPE_ARM64_32 because
     // the user processes are all ILP32 processes today.
-    // We also need to rewrite the cpusubtype so we vend 
+    // We also need to rewrite the cpusubtype so we vend
     // a valid cputype + cpusubtype combination.
     if (g_host_cputype == CPU_TYPE_ARM64_32)
       g_host_cpusubtype = CPU_SUBTYPE_ARM64_32_V8;
@@ -6283,7 +6283,7 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
     // CPU_TYPE_ARM64 and subtype is 2 indicating arm64e.
     // But we change the cputype to CPU_TYPE_ARM64_32 because
     // the user processes are all ILP32 processes today.
-    // We also need to rewrite the cpusubtype so we vend 
+    // We also need to rewrite the cpusubtype so we vend
     // a valid cputype + cpusubtype combination.
     if (cputype == CPU_TYPE_ARM64_32 && cpusubtype == 2)
       cpusubtype = CPU_SUBTYPE_ARM64_32_V8;

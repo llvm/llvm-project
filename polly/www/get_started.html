@@ -37,16 +37,16 @@ cmake '-DLLVM_ENABLE_PROJECTS=clang;polly' ../llvm
 cmake --build .
 </pre>
 
-You can also pass arguments to cmake to specify a particular generator (e.g. <code>-G Ninja</code>) or the build type (<code>-DCMAKE_BUILD_TYPE=Release</code>). 
+You can also pass arguments to cmake to specify a particular generator (e.g. <code>-G Ninja</code>) or the build type (<code>-DCMAKE_BUILD_TYPE=Release</code>).
 
-If you just want to play around with Polly, it is recommended to do a Release+Assert build by passing 
+If you just want to play around with Polly, it is recommended to do a Release+Assert build by passing
 <code>-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON</code>.
 
 <h3>Test Polly</h3>
 
 To test Polly, you can run
 
-<pre>cmake --build . --target check-polly</pre> 
+<pre>cmake --build . --target check-polly</pre>
 
 <h3>Using Polly</h3>
 

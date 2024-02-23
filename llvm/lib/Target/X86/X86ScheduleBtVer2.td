@@ -206,7 +206,7 @@ defm : JWriteResIntPair<WriteIMul16Reg, [JALU1, JMul], 3, [1, 1], 1>;
 defm : JWriteResIntPair<WriteIMul32,    [JALU1, JMul], 3, [1, 2], 2>;
 defm : JWriteResIntPair<WriteIMul32Imm, [JALU1, JMul], 3, [1, 1], 1>;
 defm : JWriteResIntPair<WriteIMul32Reg, [JALU1, JMul], 3, [1, 1], 1>;
-defm : JWriteResIntPair<WriteIMul64,    [JALU1, JMul], 6, [1, 4], 2>;  
+defm : JWriteResIntPair<WriteIMul64,    [JALU1, JMul], 6, [1, 4], 2>;
 defm : JWriteResIntPair<WriteIMul64Imm, [JALU1, JMul], 6, [1, 4], 1>;
 defm : JWriteResIntPair<WriteIMul64Reg, [JALU1, JMul], 6, [1, 4], 1>;
 defm : X86WriteResUnsupported<WriteIMulH>;
@@ -448,7 +448,7 @@ def JWriteXADDrm_XCHG_Part : SchedWriteRes<[JALU01]> {
 //                               ## ECX write Latency: 11cy
 //
 // The value of ECX becomes available only after 11cy from the start of
-// execution. This write is used to specifically set that operand latency. 
+// execution. This write is used to specifically set that operand latency.
 def JWriteLOCK_XADDrm_XCHG_Part : SchedWriteRes<[JALU01]> {
   let Latency = 11;
   let ReleaseAtCycles = [3];
@@ -1022,7 +1022,7 @@ def : IsDepBreakingFunction<[
   ], ZeroIdiomPredicate>,
 
   // SSE
-  DepBreakingClass<[ 
+  DepBreakingClass<[
     PCMPEQBrr, PCMPEQWrr, PCMPEQDrr, PCMPEQQrr
   ], ZeroIdiomPredicate>,
 

@@ -1007,7 +1007,7 @@ bool EmulateInstructionMIPS::SetInstruction(const Opcode &insn_opcode,
 
       const size_t bytes_read =
           target->ReadMemory(next_addr, /* Address of next instruction */
-                             buf, sizeof(uint32_t), error, 
+                             buf, sizeof(uint32_t), error,
                              false,  /* force_live_memory */
                              &load_addr);
 

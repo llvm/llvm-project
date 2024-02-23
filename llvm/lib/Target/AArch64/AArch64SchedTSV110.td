@@ -17,9 +17,9 @@
 
 // Huawei TSV110 scheduling machine model.
 def TSV110Model : SchedMachineModel {
-  let IssueWidth            =   4; // 4 micro-ops dispatched  per cycle. 
+  let IssueWidth            =   4; // 4 micro-ops dispatched  per cycle.
   let MicroOpBufferSize     = 128; // 128 micro-op re-order buffer
-  let LoopMicroOpBufferSize =  16; 
+  let LoopMicroOpBufferSize =  16;
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  14; // Fetch + Decode/Rename/Dispatch + Branch
   let CompleteModel         =   1;
@@ -59,14 +59,14 @@ let SchedModel = TSV110Model in {
 // 2cyc_1BRU: ADDSshfr, SUBSshfr, ANDSshfr, ADDSextr, SUBSextr
 def : WriteRes<WriteImm,   [TSV110UnitALUAB]> { let Latency = 1; }
 def : WriteRes<WriteI,     [TSV110UnitALUAB]> { let Latency = 1; }
-def : WriteRes<WriteISReg, [TSV110UnitMDU]>   { let Latency = 2; } 
-def : WriteRes<WriteIEReg, [TSV110UnitMDU]>   { let Latency = 2; } 
+def : WriteRes<WriteISReg, [TSV110UnitMDU]>   { let Latency = 2; }
+def : WriteRes<WriteIEReg, [TSV110UnitMDU]>   { let Latency = 2; }
 def : WriteRes<WriteExtr,  [TSV110UnitALUAB]> { let Latency = 1; }
 def : WriteRes<WriteIS,    [TSV110UnitALUAB]> { let Latency = 1; }
 
 // Integer Mul/MAC/Div
 def : WriteRes<WriteID32,  [TSV110UnitMDU]> { let Latency = 12;
-                                              let ReleaseAtCycles = [12]; } 
+                                              let ReleaseAtCycles = [12]; }
 def : WriteRes<WriteID64,  [TSV110UnitMDU]> { let Latency = 20;
                                               let ReleaseAtCycles = [20]; }
 def : WriteRes<WriteIM32,  [TSV110UnitMDU]> { let Latency = 3; }
@@ -78,7 +78,7 @@ def : WriteRes<WriteLDIdx, [TSV110UnitLd]>  { let Latency = 4; }
 def : WriteRes<WriteLDHi,  []> { let Latency = 4; }
 
 // Pre/Post Indexing
-def : WriteRes<WriteAdr,   [TSV110UnitALUAB]> { let Latency = 1; } 
+def : WriteRes<WriteAdr,   [TSV110UnitALUAB]> { let Latency = 1; }
 
 // Store
 def : WriteRes<WriteST,    [TSV110UnitLd0St]> { let Latency = 1; }
@@ -88,9 +88,9 @@ def : WriteRes<WriteSTIdx, [TSV110UnitLd0St]> { let Latency = 1; }
 // FP
 def : WriteRes<WriteF,     [TSV110UnitF]> { let Latency = 2; }
 def : WriteRes<WriteFCmp,  [TSV110UnitF]> { let Latency = 3; }
-def : WriteRes<WriteFCvt,  [TSV110UnitF]> { let Latency = 3; } 
+def : WriteRes<WriteFCvt,  [TSV110UnitF]> { let Latency = 3; }
 def : WriteRes<WriteFCopy, [TSV110UnitF]> { let Latency = 2; }
-def : WriteRes<WriteFImm,  [TSV110UnitF]> { let Latency = 2; } 
+def : WriteRes<WriteFImm,  [TSV110UnitF]> { let Latency = 2; }
 def : WriteRes<WriteFMul,  [TSV110UnitF]> { let Latency = 5; }
 
 // FP Div, Sqrt
@@ -107,7 +107,7 @@ def : WriteRes<WriteSys,     []> { let Latency = 1; }
 def : WriteRes<WriteBarrier, []> { let Latency = 1; }
 def : WriteRes<WriteHint,    []> { let Latency = 1; }
 
-def : WriteRes<WriteAtomic, []> { let Unsupported = 1; } 
+def : WriteRes<WriteAtomic, []> { let Unsupported = 1; }
 
 // Forwarding logic is modeled only for multiply and accumulate.
 def : ReadAdvance<ReadI,       0>;

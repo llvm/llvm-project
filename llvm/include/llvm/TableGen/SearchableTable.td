@@ -75,7 +75,7 @@ class GenericTable {
   //
   // TableGen needs to know the type of the fields so that it can format
   // the initializers correctly. It can infer the type of bit, bits, string,
-  // Intrinsic, and Instruction values. 
+  // Intrinsic, and Instruction values.
   //
   // For each field of the table named xxx, TableGen will look for a field
   // named TypeOf_xxx and use that as a more detailed description of the

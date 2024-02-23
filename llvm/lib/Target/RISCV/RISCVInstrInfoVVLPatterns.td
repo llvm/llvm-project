@@ -2541,7 +2541,7 @@ foreach vti = AllFloatVectors in {
     def : Pat<(riscv_fclass_vl (vti.Vector vti.RegClass:$rs2),
                                (vti.Mask V0), VLOpFrag),
               (!cast<Instruction>("PseudoVFCLASS_V_"# vti.LMul.MX #"_MASK")
-                 (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2, 
+                 (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TA_MA)>;
   }
 }

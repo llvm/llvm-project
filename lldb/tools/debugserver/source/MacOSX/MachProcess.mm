@@ -185,8 +185,8 @@ static bool CallBoardSystemServiceOpenApplication(NSString *bundleIDNSStr,
                      "[LaunchAttach] END (%d) In app launch attempt, got error "
                      "localizedDescription '%s'.",
                      getpid(), error_str);
-                 const char *obj_desc = 
-                      [NSString stringWithFormat:@"%@", bks_error].UTF8String;
+                 const char *obj_desc =
+                     [NSString stringWithFormat:@"%@", bks_error].UTF8String;
                  DNBLogError(
                      "[LaunchAttach] END (%d) In app launch attempt, got error "
                      "NSError object description: '%s'.",
@@ -282,8 +282,8 @@ static bool IsBKSProcess(nub_process_t pid) {
   return app_state != BKSApplicationStateUnknown;
 }
 
-static void SetBKSError(NSInteger error_code, 
-                        std::string error_description, 
+static void SetBKSError(NSInteger error_code,
+                        std::string error_description,
                         DNBError &error) {
   error.SetError(error_code, DNBError::BackBoard);
   NSString *err_nsstr = ::BKSOpenApplicationErrorCodeToString(
@@ -392,8 +392,8 @@ static bool IsFBSProcess(nub_process_t pid) {
 }
 #endif
 
-static void SetFBSError(NSInteger error_code, 
-                        std::string error_description, 
+static void SetFBSError(NSInteger error_code,
+                        std::string error_description,
                         DNBError &error) {
   error.SetError((DNBError::ValueType)error_code, DNBError::FrontBoard);
   NSString *err_nsstr = ::FBSOpenApplicationErrorCodeToString(
@@ -977,8 +977,8 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
         (uint32_t)image_infos[i].macho_info.mach_header.cpusubtype);
     mach_header_dict_sp->AddIntegerItem(
         "filetype", image_infos[i].macho_info.mach_header.filetype);
-    mach_header_dict_sp->AddIntegerItem ("flags", 
-                         image_infos[i].macho_info.mach_header.flags);
+    mach_header_dict_sp->AddIntegerItem(
+        "flags", image_infos[i].macho_info.mach_header.flags);
 
     //          DynamicLoaderMacOSX doesn't currently need these fields, so
     //          don't send them.
@@ -2762,10 +2762,10 @@ void *MachProcess::ProfileThread(void *arg) {
       std::chrono::microseconds dur(proc->ProfileInterval());
       const auto dur_secs = duration_cast<seconds>(dur);
       const auto dur_usecs = dur % std::chrono::seconds(1);
-      DNBTimer::OffsetTimeOfDay(&ts, dur_secs.count(), 
+      DNBTimer::OffsetTimeOfDay(&ts, dur_secs.count(),
                                 dur_usecs.count());
     }
-    uint32_t bits_set = 
+    uint32_t bits_set =
         proc->m_profile_events.WaitForSetEvents(eMachProcessProfileCancel, &ts);
     // If we got bits back, we were told to exit.  Do so.
     if (bits_set & eMachProcessProfileCancel)
@@ -2775,8 +2775,8 @@ void *MachProcess::ProfileThread(void *arg) {
 }
 
 pid_t MachProcess::AttachForDebug(
-    pid_t pid, 
-    const RNBContext::IgnoredExceptions &ignored_exceptions, 
+    pid_t pid,
+    const RNBContext::IgnoredExceptions &ignored_exceptions,
     char *err_str,
     size_t err_len) {
   // Clear out and clean up from any current state
@@ -3324,8 +3324,8 @@ pid_t MachProcess::LaunchForDebug(
                                    // working directory for inferior to this
     const char *stdin_path, const char *stdout_path, const char *stderr_path,
     bool no_stdio, nub_launch_flavor_t launch_flavor, int disable_aslr,
-    const char *event_data, 
-    const RNBContext::IgnoredExceptions &ignored_exceptions, 
+    const char *event_data,
+    const RNBContext::IgnoredExceptions &ignored_exceptions,
     DNBError &launch_err) {
   // Clear out and clean up from any current state
   Clear();
@@ -3786,8 +3786,8 @@ static CFStringRef CopyBundleIDForPath(const char *app_bundle_path,
 
 pid_t MachProcess::SBLaunchForDebug(const char *path, char const *argv[],
                                     char const *envp[], bool no_stdio,
-                                    bool disable_aslr, 
-                                    const RNBContext::IgnoredExceptions 
+                                    bool disable_aslr,
+                                    const RNBContext::IgnoredExceptions
                                         &ignored_exceptions,
                                     DNBError &launch_err) {
   // Clear out and clean up from any current state
@@ -4010,7 +4010,7 @@ pid_t MachProcess::SBForkChildForPTraceDebugging(
 #if defined(WITH_BKS) || defined(WITH_FBS)
 pid_t MachProcess::BoardServiceLaunchForDebug(
     const char *path, char const *argv[], char const *envp[], bool no_stdio,
-    bool disable_aslr, const char *event_data, 
+    bool disable_aslr, const char *event_data,
     const RNBContext::IgnoredExceptions &ignored_exceptions,
     DNBError &launch_err) {
   DNBLogThreadedIf(LOG_PROCESS, "%s( '%s', argv)", __FUNCTION__, path);

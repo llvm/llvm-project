@@ -425,7 +425,7 @@ private:
       m_profile_data_mutex; // Multithreaded protection for profile info data
   std::vector<std::string>
       m_profile_data; // Profile data, must be protected by m_profile_data_mutex
-  PThreadEvent m_profile_events; // Used for the profile thread cancellable wait  
+  PThreadEvent m_profile_events; // Used for the profile thread cancellable wait
   DNBThreadResumeActions m_thread_actions; // The thread actions for the current
                                            // MachProcess::Resume() call
   MachException::Message::collection m_exception_messages; // A collection of

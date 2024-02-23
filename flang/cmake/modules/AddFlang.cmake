@@ -48,7 +48,7 @@ function(add_flang_library name)
       ADDITIONAL_HEADERS
       ${srcs}
       ${ARG_ADDITIONAL_HEADERS}) # It may contain unparsed unknown args.
-      
+
   endif()
 
   if (ARG_SHARED)

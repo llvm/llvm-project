@@ -1338,7 +1338,7 @@ def : InstRW<[P9_BROpAndALUOp_7C, IP_EXEC_1C, DISP_BR_1C, DISP_1C],
 // Atomic Load
 def : InstRW<[P9_LS_1C, P9_LS_1C, P9_LS_4C, P9_LS_4C, P9_LS_4C,
               IP_EXEC_1C, IP_EXEC_1C, IP_AGEN_1C, IP_AGEN_1C, IP_AGEN_1C,
-              IP_AGEN_1C, IP_AGEN_1C, DISP_1C, DISP_3SLOTS_1C, 
+              IP_AGEN_1C, IP_AGEN_1C, DISP_1C, DISP_3SLOTS_1C,
               DISP_3SLOTS_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
     (instregex "L(D|W)AT$")

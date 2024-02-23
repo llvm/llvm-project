@@ -555,7 +555,7 @@ previous case, if the *right-hand-side* operand is an undefined name or a
 global name, it is treated as a verbatim string of characters. The
 left-hand-side operand is treated normally.
 
-Values can have a trailing paste operator, in which case the left-hand-side 
+Values can have a trailing paste operator, in which case the left-hand-side
 operand is concatenated to an empty string.
 
 `Appendix B: Paste Operator Examples`_ presents examples of the behavior of

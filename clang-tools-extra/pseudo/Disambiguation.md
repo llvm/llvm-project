@@ -25,7 +25,7 @@ human reader might.
 In some cases, the shape of a particular interpretation is unlikely but not
 impossible. For example, the statement `x(a);` might:
 
-- call a function `x` (likely) 
+- call a function `x` (likely)
 - construct a temporary of class type `x` (less likely)
 - define a variable `a` of type `x`, which is an alias for e.g. `int`
   (unlikely!)
@@ -79,7 +79,7 @@ but this time those bonuses change as we disambiguate. Specifically:
 
 ### Templates
 
-Another aspect of a name is whether it names a template (type or value). This 
+Another aspect of a name is whether it names a template (type or value). This
 is ambiguous in many more cases since CTAD allowed template arguments to be
 omitted.
 
@@ -137,7 +137,7 @@ flowchart TB
           construct --- typeA
           construct --- open
           construct --- exprB
-          construct --- close 
+          construct --- close
     stmtAmbig -.- stmtDecl["stmt := decl"]
       stmtDecl --- decl["decl := type declarator ;"]
         decl --- typeA

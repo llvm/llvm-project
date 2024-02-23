@@ -64,7 +64,7 @@ void ThreadPlanPython::DidPush() {
     ScriptInterpreter *script_interp = GetScriptInterpreter();
     if (script_interp) {
       m_implementation_sp = script_interp->CreateScriptedThreadPlan(
-          m_class_name.c_str(), m_args_data, m_error_str, 
+          m_class_name.c_str(), m_args_data, m_error_str,
           this->shared_from_this());
     }
   }
@@ -193,8 +193,8 @@ bool ThreadPlanPython::WillStop() {
   return true;
 }
 
-bool ThreadPlanPython::DoWillResume(lldb::StateType resume_state, 
-                                  bool current_plan) {
+bool ThreadPlanPython::DoWillResume(lldb::StateType resume_state,
+                                    bool current_plan) {
   m_stop_description.Clear();
-  return true;                                  
+  return true;
 }

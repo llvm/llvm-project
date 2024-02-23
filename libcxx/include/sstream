@@ -182,7 +182,7 @@ public:
     template <class SAlloc>
     explicit basic_ostringstream(const basic_string<char_type, traits_type, SAlloc>& s,
                                  ios_base::openmode which = ios_base::out);            // C++20
-    basic_ostringstream(const basic_ostringstream&) = delete;                             
+    basic_ostringstream(const basic_ostringstream&) = delete;
     basic_ostringstream(basic_ostringstream&& rhs);
 
     // [ostringstream.assign] Assign and swap:

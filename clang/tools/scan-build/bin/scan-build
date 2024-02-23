@@ -1207,7 +1207,7 @@ OPTIONS:
 
   By default the output of scan-build is a set of HTML files. This option
   outputs the results in SARIF format.
- 
+
  -plist
 
    By default the output of scan-build is a set of HTML files. This option

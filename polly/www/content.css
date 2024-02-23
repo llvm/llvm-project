@@ -79,7 +79,7 @@ tr { vertical-align:top }
   border-radius: 5px;
   background: white;
   box-shadow: 1px 2px 5px 1px rgba(0, 0, 0, 0.7),
-              -1px 2px 20px rgba(255, 255, 255, 0.6) inset; 
+              -1px 2px 20px rgba(255, 255, 255, 0.6) inset;
 }
 
 #head h1 span a {
@@ -109,7 +109,7 @@ tr { vertical-align:top }
   border-radius: 5px;
   background: white;
   box-shadow: 1px 2px 5px 1px rgba(0, 0, 0, 0.7),
-              -1px 2px 20px rgba(255, 255, 255, 0.6) inset; 
+              -1px 2px 20px rgba(255, 255, 255, 0.6) inset;
   padding-top: 0.2em;
   padding-bottom: 0.2em;
 }

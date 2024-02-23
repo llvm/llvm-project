@@ -54,7 +54,7 @@ if(CLANG_ENABLE_PROTO_FUZZER)
 
   # Build the protobuf->LLVM IR translation library and driver.
   add_clang_subdirectory(proto-to-llvm)
-  
+
   # Build the fuzzer initialization library.
   add_clang_subdirectory(fuzzer-initialize)
 

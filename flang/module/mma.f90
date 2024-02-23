@@ -62,8 +62,8 @@ module mma
 
 #undef FUNC_VPI0VP
 #undef FUNC_VPI0VR
-#undef FUNC_VPI0VU 
-#undef FUNC_VPI0VI 
+#undef FUNC_VPI0VU
+#undef FUNC_VPI0VI
 
 !! ========== 3 arguments subroutine interface ===============================!!
 !! __vector_pair subroutine s(vp, integer, vector(i))
