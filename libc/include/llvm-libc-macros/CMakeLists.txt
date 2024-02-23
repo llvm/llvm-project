@@ -227,3 +227,9 @@ add_macro_header(
   HDR
     inttypes-macros.h
 )
+
+add_macro_header(
+  stdfix_macros
+  HDR
+    stdfix-macros.h
+)

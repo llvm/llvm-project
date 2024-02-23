@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_AMDGPU_TRANSFORMS_TRANSFORMS_H_
 #define MLIR_DIALECT_AMDGPU_TRANSFORMS_TRANSFORMS_H_
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LogicalResult.h"
 
@@ -47,6 +48,8 @@ namespace amdgpu {
 /// dimension of the memref have minimal conflicts.
 mlir::LogicalResult optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
                                                        Value memrefValue);
+
+void optimizeSharedMemoryReadsAndWritesOp(mlir::func::FuncOp funcOp);
 
 } // namespace amdgpu
 } // namespace mlir

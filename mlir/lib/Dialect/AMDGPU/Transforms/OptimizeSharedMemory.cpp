@@ -24,8 +24,6 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/MathExtras.h"
 
 namespace mlir {
 namespace amdgpu {
@@ -52,12 +50,12 @@ constexpr int64_t kDefaultVectorSizeBits = 64;
 static Value permuteVectorOffset(OpBuilder &b, Location loc,
                                  ArrayRef<Value> indices, MemRefType memrefTy,
                                  int64_t srcDim, int64_t tgtDim) {
-  // Adjust the src index to change how often the permutation changes
-  // if necessary.
+  /// Adjust the src index to change how often the permutation changes
+  /// if necessary.
   Value src = indices[srcDim];
 
-  // We only want to permute every N iterations of the target dim where N is
-  // ceil(sharedMemoryLineSizeBytes / dimSizeBytes(tgtDim)).
+  /// We only want to permute every N iterations of the target dim where N is
+  /// ceil(sharedMemoryLineSizeBytes / dimSizeBytes(tgtDim)).
   const int64_t permuteEveryN = std::max<int64_t>(
       1, kSharedMemoryLineSizeBytes / ((memrefTy.getDimSize(tgtDim) *
                                         memrefTy.getElementTypeBitWidth()) /
@@ -83,8 +81,8 @@ static Value permuteVectorOffset(OpBuilder &b, Location loc,
   Value srcBits = b.create<arith::ConstantIndexOp>(loc, mask);
   srcBits = b.create<arith::AndIOp>(loc, src, srcBits);
 
-  // Use the src bits to permute the target bits b[N:M] containing the
-  // vector offset.
+  /// Use the src bits to permute the target bits b[N:M] containing the
+  /// vector offset.
   if (permuteEveryN > 1) {
     int64_t shlBits = n - llvm::Log2_64(permuteEveryN);
     if (shlBits > 0) {
@@ -133,8 +131,8 @@ getShmReadAndWriteOps(Operation *parentOp, Value shmMemRef,
       writeOps.push_back(op);
   });
 
-  // Restrict to a supported set of ops. We also require at least 2D access,
-  // although this could be relaxed.
+  /// Restrict to a supported set of ops. We also require at least 2D access,
+  /// although this could be relaxed.
   if (llvm::any_of(readOps, [](Operation *op) {
         return !isa<memref::LoadOp, vector::LoadOp, vector::TransferReadOp>(
                    op) ||
@@ -159,15 +157,15 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
       !amdgpu::AMDGPUDialect::hasSharedMemoryAddressSpace(memRefType))
     return failure();
 
-  // Abort if the given value has any sub-views; we do not do any alias
-  // analysis.
+  /// Abort if the given value has any sub-views; we do not do any alias
+  /// analysis.
   bool hasSubView = false;
   parentOp->walk([&](memref::SubViewOp subView) { hasSubView = true; });
   if (hasSubView)
     return failure();
 
-  // Check if this is necessary given the assumption of 128b accesses:
-  // If dim[rank-1] is small enough to fit 8 rows in a 128B line.
+  /// Check if this is necessary given the assumption of 128b accesses:
+  /// If dim[rank-1] is small enough to fit 8 rows in a 128B line.
   const int64_t rowSize = memRefType.getDimSize(memRefType.getRank() - 1);
   const int64_t rowsPerLine =
       (8 * kSharedMemoryLineSizeBytes / memRefType.getElementTypeBitWidth()) /
@@ -177,8 +175,8 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
   if (rowsPerLine >= threadGroupSize)
     return failure();
 
-  // Get sets of operations within the function that read/write to shared
-  // memory.
+  /// Get sets of operations within the function that read/write to shared
+  /// memory.
   SmallVector<Operation *, 16> shmReadOps;
   SmallVector<Operation *, 16> shmWriteOps;
   if (failed(getShmReadAndWriteOps(parentOp, memrefValue, shmReadOps,
@@ -193,7 +191,7 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
   int64_t tgtDim = memRefType.getRank() - 1;
   int64_t srcDim = memRefType.getRank() - 2;
 
-  // Transform indices for the ops writing to shared memory.
+  /// Transform indices for the ops writing to shared memory.
   while (!shmWriteOps.empty()) {
     Operation *shmWriteOp = shmWriteOps.pop_back_val();
     builder.setInsertionPoint(shmWriteOp);
@@ -205,7 +203,7 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
     amdgpu::setIndices(shmWriteOp, transformedIndices);
   }
 
-  // Transform indices for the ops reading from shared memory.
+  /// Transform indices for the ops reading from shared memory.
   while (!shmReadOps.empty()) {
     Operation *shmReadOp = shmReadOps.pop_back_val();
     builder.setInsertionPoint(shmReadOp);
@@ -218,6 +216,20 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
   }
 
   return success();
+}
+
+void amdgpu::optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp) {
+  SmallVector<memref::AllocOp> shmAllocOps;
+  funcOp.walk([&](memref::AllocOp allocOp) {
+    if (!amdgpu::AMDGPUDialect::hasSharedMemoryAddressSpace(allocOp.getType()))
+      return;
+    shmAllocOps.push_back(allocOp);
+  });
+  for (auto allocOp : shmAllocOps) {
+    if (failed(amdgpu::optimizeSharedMemoryReadsAndWrites(funcOp,
+                                                          allocOp.getMemref())))
+      return;
+  }
 }
 
 struct OptimizeSharedMemoryPass

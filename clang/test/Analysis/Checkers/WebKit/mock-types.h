@@ -2,13 +2,14 @@
 #define mock_types_1103988513531
 
 template <typename T> struct Ref {
-  T t;
+  T *t;
 
   Ref() : t{} {};
   Ref(T *) {}
-  T *get() { return nullptr; }
-  operator const T &() const { return t; }
-  operator T &() { return t; }
+  T *get() { return t; }
+  T *ptr() { return t; }
+  operator const T &() const { return *t; }
+  operator T &() { return *t; }
 };
 
 template <typename T> struct RefPtr {
@@ -20,6 +21,7 @@ template <typename T> struct RefPtr {
   T *operator->() { return t; }
   T &operator*() { return *t; }
   RefPtr &operator=(T *) { return *this; }
+  operator bool() { return t; }
 };
 
 template <typename T> bool operator==(const RefPtr<T> &, const RefPtr<T> &) {
@@ -39,6 +41,7 @@ template <typename T> bool operator!=(const RefPtr<T> &, T *) { return false; }
 template <typename T> bool operator!=(const RefPtr<T> &, T &) { return false; }
 
 struct RefCountable {
+  static Ref<RefCountable> create();
   void ref() {}
   void deref() {}
 };

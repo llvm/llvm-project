@@ -187,6 +187,7 @@ group("test") {
     "//llvm/tools/llvm-profdata",
     "//llvm/tools/llvm-rc:symlinks",
     "//llvm/tools/llvm-readobj:symlinks",
+    "//llvm/tools/llvm-readtapi:symlinks",
     "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/opt",
     "//llvm/tools/yaml2obj",

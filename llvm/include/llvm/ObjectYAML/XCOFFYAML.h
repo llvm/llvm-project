@@ -121,6 +121,9 @@ struct CsectAuxEnt : AuxSymbolEnt {
   // Common fields for both XCOFF32 and XCOFF64.
   std::optional<uint32_t> ParameterHashIndex;
   std::optional<uint16_t> TypeChkSectNum;
+  std::optional<XCOFF::SymbolType> SymbolType;
+  std::optional<uint8_t> SymbolAlignment;
+  // The two previous values can be encoded as a single value.
   std::optional<uint8_t> SymbolAlignmentAndType;
   std::optional<XCOFF::StorageMappingClass> StorageMappingClass;
 
@@ -235,6 +238,10 @@ template <> struct ScalarEnumerationTraits<XCOFF::StorageClass> {
 
 template <> struct ScalarEnumerationTraits<XCOFF::StorageMappingClass> {
   static void enumeration(IO &IO, XCOFF::StorageMappingClass &Value);
+};
+
+template <> struct ScalarEnumerationTraits<XCOFF::SymbolType> {
+  static void enumeration(IO &IO, XCOFF::SymbolType &Value);
 };
 
 template <> struct ScalarEnumerationTraits<XCOFF::CFileStringType> {

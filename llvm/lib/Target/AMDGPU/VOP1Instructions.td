@@ -217,9 +217,7 @@ def VOP_I16_F16_SPECIAL_OMOD_t16 : VOPProfile_Fake16<VOP_I16_F16> {
 // VOP1 Instructions
 //===----------------------------------------------------------------------===//
 
-let VOPAsmPrefer32Bit = 1 in {
 defm V_NOP : VOP1Inst <"v_nop", VOP_NOP_PROFILE>;
-}
 
 def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
   let InsVOPDX = (ins Src0RC32:$src0X);
@@ -368,9 +366,7 @@ defm V_FREXP_EXP_I32_F32 : VOP1Inst <"v_frexp_exp_i32_f32", VOP_I32_F32, int_amd
 defm V_FREXP_MANT_F32 : VOP1Inst <"v_frexp_mant_f32", VOP_F32_F32, int_amdgcn_frexp_mant>;
 } // End isReMaterializable = 1
 
-let VOPAsmPrefer32Bit = 1 in {
 defm V_CLREXCP : VOP1Inst <"v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
-}
 
 // Restrict src0 to be VGPR
 def VOP_MOVRELS : VOPProfile<[i32, i32, untyped, untyped]> {

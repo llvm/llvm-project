@@ -83,7 +83,8 @@ void X86CompressEVEXTablesEmitter::printTable(const std::vector<Entry> &Table,
 void X86CompressEVEXTablesEmitter::printCheckPredicate(
     const PredicateInstMap &PredicateInsts, raw_ostream &OS) {
 
-  OS << "static bool checkPredicate(unsigned Opc, const X86Subtarget *Subtarget) {\n"
+  OS << "static bool checkPredicate(unsigned Opc, const X86Subtarget "
+        "*Subtarget) {\n"
      << "  switch (Opc) {\n"
      << "  default: return true;\n";
   for (const auto &[Key, Val] : PredicateInsts) {
@@ -119,12 +120,11 @@ public:
     RecognizableInstrBase OldRI(*OldInst);
 
     // Return false if any of the following fields of does not match.
-    if (std::make_tuple(OldRI.IsCodeGenOnly, OldRI.OpMap, NewRI.OpPrefix,
-                        OldRI.HasVEX_4V, OldRI.HasVEX_L, OldRI.HasREX_W,
-                        OldRI.Form) !=
-        std::make_tuple(NewRI.IsCodeGenOnly, NewRI.OpMap, OldRI.OpPrefix,
-                        NewRI.HasVEX_4V, NewRI.HasVEX_L, NewRI.HasREX_W,
-                        NewRI.Form))
+    if (std::tuple(OldRI.IsCodeGenOnly, OldRI.OpMap, NewRI.OpPrefix,
+                   OldRI.HasVEX_4V, OldRI.HasVEX_L, OldRI.HasREX_W,
+                   OldRI.Form) !=
+        std::tuple(NewRI.IsCodeGenOnly, NewRI.OpMap, OldRI.OpPrefix,
+                   NewRI.HasVEX_4V, NewRI.HasVEX_L, NewRI.HasREX_W, NewRI.Form))
       return false;
 
     for (unsigned I = 0, E = OldInst->Operands.size(); I < E; ++I) {
@@ -207,9 +207,9 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
           NewInst = &TempInst;
       }
     } else {
-      // For each pre-compression instruction look for a match in the appropriate
-      // vector (instructions with the same opcode) using function object
-      // IsMatch.
+      // For each pre-compression instruction look for a match in the
+      // appropriate vector (instructions with the same opcode) using function
+      // object IsMatch.
       auto Match = llvm::find_if(CompressedInsts[Opcode], IsMatch(Inst));
       if (Match != CompressedInsts[Opcode].end())
         NewInst = *Match;
@@ -218,14 +218,14 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
     if (!NewInst)
       continue;
 
-    Table.push_back(std::make_pair(Inst, NewInst));
+    Table.push_back(std::pair(Inst, NewInst));
     auto Predicates = NewInst->TheDef->getValueAsListOfDefs("Predicates");
     auto It = llvm::find_if(Predicates, [](const Record *R) {
       StringRef Name = R->getName();
       return Name == "HasAVXNECONVERT" || Name == "HasAVXVNNI" ||
              Name == "HasAVXIFMA";
     });
-    if(It!= Predicates.end())
+    if (It != Predicates.end())
       PredicateInsts[*It].push_back(NewInst);
   }
 

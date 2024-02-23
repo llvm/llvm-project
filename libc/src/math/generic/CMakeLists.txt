@@ -43,6 +43,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.macros.properties.float
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
@@ -215,6 +216,7 @@ add_entrypoint_object(
   HDRS
     ../fabsf128.h
   DEPENDS
+    libc.src.__support.macros.properties.float
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
@@ -265,6 +267,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.macros.properties.float
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
@@ -313,6 +316,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.macros.properties.float
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
@@ -361,6 +365,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.macros.properties.float
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
@@ -899,6 +904,7 @@ add_entrypoint_object(
   HDRS
     ../copysignf128.h
   DEPENDS
+    libc.src.__support.macros.properties.float
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
@@ -910,10 +916,10 @@ add_entrypoint_object(
     frexp.cpp
   HDRS
     ../frexp.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -922,10 +928,10 @@ add_entrypoint_object(
     frexpf.cpp
   HDRS
     ../frexpf.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -934,10 +940,23 @@ add_entrypoint_object(
     frexpl.cpp
   HDRS
     ../frexpl.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
+  frexpf128
+  SRCS
+    frexpf128.cpp
+  HDRS
+    ../frexpf128.h
   COMPILE_OPTIONS
-    -O2
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.float
+    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_entrypoint_object(
@@ -982,10 +1001,10 @@ add_entrypoint_object(
     ldexp.cpp
   HDRS
     ../ldexp.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -994,10 +1013,10 @@ add_entrypoint_object(
     ldexpf.cpp
   HDRS
     ../ldexpf.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -1006,10 +1025,23 @@ add_entrypoint_object(
     ldexpl.cpp
   HDRS
     ../ldexpl.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
+  ldexpf128
+  SRCS
+    ldexpf128.cpp
+  HDRS
+    ../ldexpf128.h
   COMPILE_OPTIONS
-    -O2
+    -O3
+  DEPENDS
+  libc.src.__support.macros.properties.float
+  libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_object_library(
@@ -1298,6 +1330,7 @@ add_entrypoint_object(
   HDRS
     ../fminf128.h
   DEPENDS
+    libc.src.__support.macros.properties.float
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
@@ -1346,6 +1379,7 @@ add_entrypoint_object(
   HDRS
     ../fmaxf128.h
   DEPENDS
+    libc.src.__support.macros.properties.float
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
@@ -1394,6 +1428,7 @@ add_entrypoint_object(
   HDRS
     ../sqrtf128.h
   DEPENDS
+    libc.src.__support.macros.properties.float
     libc.src.__support.FPUtil.sqrt 
   COMPILE_OPTIONS
     -O3
@@ -1491,10 +1526,10 @@ add_entrypoint_object(
     fdim.cpp
   HDRS
     ../fdim.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -1503,10 +1538,10 @@ add_entrypoint_object(
     fdimf.cpp
   HDRS
     ../fdimf.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -1515,10 +1550,23 @@ add_entrypoint_object(
     fdiml.cpp
   HDRS
     ../fdiml.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
+  fdimf128
+  SRCS
+    fdimf128.cpp
+  HDRS
+    ../fdimf128.h
   COMPILE_OPTIONS
-    -O2
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.float
+    libc.src.__support.FPUtil.basic_operations
 )
 
 add_entrypoint_object(

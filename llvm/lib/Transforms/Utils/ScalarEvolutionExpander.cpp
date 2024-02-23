@@ -795,7 +795,8 @@ Value *SCEVExpander::expandIVInc(PHINode *PN, Value *StepV, const Loop *L,
   Value *IncV;
   // If the PHI is a pointer, use a GEP, otherwise use an add or sub.
   if (PN->getType()->isPointerTy()) {
-    IncV = expandAddToGEP(SE.getSCEV(StepV), PN);
+    // TODO: Change name to IVName.iv.next.
+    IncV = Builder.CreatePtrAdd(PN, StepV, "scevgep");
   } else {
     IncV = useSubtract ?
       Builder.CreateSub(PN, StepV, Twine(IVName) + ".iv.next") :

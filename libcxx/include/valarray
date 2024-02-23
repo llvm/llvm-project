@@ -2435,7 +2435,7 @@ template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> >
 inline valarray<_Tp>& valarray<_Tp>::operator*=(const _Expr& __v) {
   size_t __i = 0;
   for (value_type* __t = __begin_; __t != __end_; ++__t, ++__i)
-    *__t *= std::__get(__v,__i);
+    *__t *= std::__get(__v, __i);
   return *this;
 }
 
@@ -2444,7 +2444,7 @@ template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> >
 inline valarray<_Tp>& valarray<_Tp>::operator/=(const _Expr& __v) {
   size_t __i = 0;
   for (value_type* __t = __begin_; __t != __end_; ++__t, ++__i)
-    *__t /= std::__get(__v,__i);
+    *__t /= std::__get(__v, __i);
   return *this;
 }
 

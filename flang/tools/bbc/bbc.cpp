@@ -256,6 +256,22 @@ createTargetMachine(llvm::StringRef targetTriple, std::string &error) {
                                      /*Reloc::Model=*/std::nullopt)};
 }
 
+/// Build and execute the OpenMPFIRPassPipeline with its own instance
+/// of the pass manager, allowing it to be invoked as soon as it's
+/// required without impacting the main pass pipeline that may be invoked
+/// more than once for verification.
+static mlir::LogicalResult runOpenMPPasses(mlir::ModuleOp mlirModule) {
+  mlir::PassManager pm(mlirModule->getName(),
+                       mlir::OpPassManager::Nesting::Implicit);
+  fir::createOpenMPFIRPassPipeline(pm, enableOpenMPDevice);
+  (void)mlir::applyPassManagerCLOptions(pm);
+  if (mlir::failed(pm.run(mlirModule))) {
+    llvm::errs() << "FATAL: failed to correctly apply OpenMP pass pipeline";
+    return mlir::failure();
+  }
+  return mlir::success();
+}
+
 //===----------------------------------------------------------------------===//
 // Translate Fortran input to FIR, a dialect of MLIR.
 //===----------------------------------------------------------------------===//
@@ -326,6 +342,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   // translate to FIR dialect of MLIR
   mlir::DialectRegistry registry;
   fir::support::registerNonCodegenDialects(registry);
+  fir::support::addFIRExtensions(registry);
   mlir::MLIRContext ctx(registry);
   fir::support::loadNonCodegenDialects(ctx);
   auto &defKinds = semanticsContext.defaultKinds();
@@ -368,14 +385,16 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
                            "could not open output file ")
            << outputName;
 
+  // WARNING: This pipeline must be run immediately after the lowering to
+  // ensure that the FIR is correct with respect to OpenMP operations/
+  // attributes.
+  if (enableOpenMP)
+    if (mlir::failed(runOpenMPPasses(mlirModule)))
+      return mlir::failure();
+
   // Otherwise run the default passes.
   mlir::PassManager pm(mlirModule->getName(),
                        mlir::OpPassManager::Nesting::Implicit);
-  if (enableOpenMP)
-    // WARNING: This pipeline must be run immediately after the lowering to
-    // ensure that the FIR is correct with respect to OpenMP operations/
-    // attributes.
-    fir::createOpenMPFIRPassPipeline(pm, enableOpenMPDevice);
   pm.enableVerifier(/*verifyPasses=*/true);
   (void)mlir::applyPassManagerCLOptions(pm);
   if (passPipeline.hasAnyOccurrences()) {

@@ -42,6 +42,17 @@ namespace AMDGPU {
 
 struct IsaVersion;
 
+/// Generic target versions emitted by this version of LLVM.
+///
+/// These numbers are incremented every time a codegen breaking change occurs
+/// within a generic family.
+namespace GenericVersion {
+static constexpr unsigned GFX9 = 1;
+static constexpr unsigned GFX10_1 = 1;
+static constexpr unsigned GFX10_3 = 1;
+static constexpr unsigned GFX11 = 1;
+} // namespace GenericVersion
+
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
 
 /// \returns True if \p STI is AMDHSA.
@@ -488,6 +499,9 @@ bool getVOP3IsSingle(unsigned Opc);
 
 LLVM_READONLY
 bool isVOPC64DPP(unsigned Opc);
+
+LLVM_READONLY
+bool isVOPCAsmOnly(unsigned Opc);
 
 /// Returns true if MAI operation is a double precision GEMM.
 LLVM_READONLY
@@ -1438,11 +1452,6 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
-
-/// \returns lds block size in terms of dwords. \p
-/// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
-/// must be defined in terms of bytes.
-unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
 
 } // end namespace AMDGPU
 

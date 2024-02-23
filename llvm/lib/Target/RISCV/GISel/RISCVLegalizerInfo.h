@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVMACHINELEGALIZER_H
 
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/Register.h"
 
 namespace llvm {
 
@@ -36,6 +37,9 @@ public:
                          MachineInstr &MI) const override;
 
 private:
+  bool shouldBeInConstantPool(APInt APImm, bool ShouldOptForSize) const;
+  bool emitLoadFromConstantPool(Register DstReg, const Constant *CPVal,
+                                MachineIRBuilder &MIRBuilder) const;
   bool legalizeShlAshrLshr(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer) const;
 

@@ -94,6 +94,64 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   llvm_unreachable("Unhandled architecture");
 }
 
+unsigned ARM::parseArchMinorVersion(StringRef Arch) {
+  Arch = getCanonicalArchName(Arch);
+  switch (parseArch(Arch)) {
+  case ArchKind::ARMV4:
+  case ArchKind::ARMV4T:
+  case ArchKind::ARMV5T:
+  case ArchKind::ARMV5TE:
+  case ArchKind::IWMMXT:
+  case ArchKind::IWMMXT2:
+  case ArchKind::XSCALE:
+  case ArchKind::ARMV5TEJ:
+  case ArchKind::ARMV6:
+  case ArchKind::ARMV6K:
+  case ArchKind::ARMV6T2:
+  case ArchKind::ARMV6KZ:
+  case ArchKind::ARMV6M:
+  case ArchKind::ARMV7A:
+  case ArchKind::ARMV7VE:
+  case ArchKind::ARMV7R:
+  case ArchKind::ARMV7M:
+  case ArchKind::ARMV7S:
+  case ArchKind::ARMV7EM:
+  case ArchKind::ARMV7K:
+  case ArchKind::ARMV8A:
+  case ArchKind::ARMV8R:
+  case ArchKind::ARMV8MBaseline:
+  case ArchKind::ARMV8MMainline:
+  case ArchKind::ARMV9A:
+  case ArchKind::INVALID:
+    return 0;
+  case ArchKind::ARMV8_1A:
+  case ArchKind::ARMV8_1MMainline:
+  case ArchKind::ARMV9_1A:
+    return 1;
+  case ArchKind::ARMV8_2A:
+  case ArchKind::ARMV9_2A:
+    return 2;
+  case ArchKind::ARMV8_3A:
+  case ArchKind::ARMV9_3A:
+    return 3;
+  case ArchKind::ARMV8_4A:
+  case ArchKind::ARMV9_4A:
+    return 4;
+  case ArchKind::ARMV8_5A:
+  case ArchKind::ARMV9_5A:
+    return 5;
+  case ArchKind::ARMV8_6A:
+    return 6;
+  case ArchKind::ARMV8_7A:
+    return 7;
+  case ArchKind::ARMV8_8A:
+    return 8;
+  case ArchKind::ARMV8_9A:
+    return 9;
+  }
+  llvm_unreachable("Unhandled architecture");
+}
+
 static ARM::ProfileKind getProfileKind(ARM::ArchKind AK) {
   switch (AK) {
   case ARM::ArchKind::ARMV6M:

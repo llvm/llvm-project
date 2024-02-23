@@ -141,6 +141,7 @@ static_library("AST") {
     "StmtCXX.cpp",
     "StmtIterator.cpp",
     "StmtObjC.cpp",
+    "StmtOpenACC.cpp",
     "StmtOpenMP.cpp",
     "StmtPrinter.cpp",
     "StmtProfile.cpp",

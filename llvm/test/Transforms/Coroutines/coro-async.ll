@@ -37,28 +37,28 @@ declare void @my_other_async_function(ptr %async.ctxt)
 }>
 
 ; Function that implements the dispatch to the callee function.
-define swiftcc void @my_async_function.my_other_async_function_fp.apply(ptr %fnPtr, ptr %async.ctxt, ptr %task, ptr %actor) {
-  tail call swiftcc void %fnPtr(ptr %async.ctxt, ptr %task, ptr %actor)
+define swifttailcc void @my_async_function.my_other_async_function_fp.apply(ptr %fnPtr, ptr %async.ctxt, ptr %task, ptr %actor) alwaysinline {
+  musttail call swifttailcc void %fnPtr(ptr %async.ctxt, ptr %task, ptr %actor)
   ret void
 }
 
 declare void @some_user(i64)
 declare void @some_may_write(ptr)
 
-define ptr @__swift_async_resume_project_context(ptr %ctxt) {
+define ptr @__swift_async_resume_project_context(ptr %ctxt) alwaysinline {
 entry:
   %resume_ctxt = load ptr, ptr %ctxt, align 8
   ret ptr %resume_ctxt
 }
 
-define ptr @resume_context_projection(ptr %ctxt) {
+define ptr @resume_context_projection(ptr %ctxt) alwaysinline {
 entry:
   %resume_ctxt = load ptr, ptr %ctxt, align 8
   ret ptr %resume_ctxt
 }
 
 
-define swiftcc void @my_async_function(ptr swiftasync %async.ctxt, ptr %task, ptr %actor) presplitcoroutine !dbg !1 {
+define swifttailcc void @my_async_function(ptr swiftasync %async.ctxt, ptr %task, ptr %actor) presplitcoroutine !dbg !1 {
 entry:
   %tmp = alloca { i64, i64 }, align 8
   %vector = alloca <4 x double>, align 16
@@ -100,7 +100,7 @@ entry:
   %val.2 = load i64, ptr %proj.2
   call void @some_user(i64 %val.2)
   store <4 x double> %vector_spill, ptr %vector, align 16
-  tail call swiftcc void @asyncReturn(ptr %async.ctxt, ptr %continuation_task_arg, ptr %actor)
+  tail call swifttailcc void @asyncReturn(ptr %async.ctxt, ptr %continuation_task_arg, ptr %actor)
   call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
   unreachable
 }
@@ -116,8 +116,8 @@ define void @my_async_function_pa(ptr %ctxt, ptr %task, ptr %actor) {
 ; CHECK: @my_async_function_pa_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 176 }
 ; CHECK: @my_async_function2_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 176 }
 
-; CHECK-LABEL: define swiftcc void @my_async_function(ptr swiftasync %async.ctxt, ptr %task, ptr %actor)
-; CHECK-O0-LABEL: define swiftcc void @my_async_function(ptr swiftasync %async.ctxt, ptr %task, ptr %actor)
+; CHECK-LABEL: define swifttailcc void @my_async_function(ptr swiftasync %async.ctxt, ptr %task, ptr %actor)
+; CHECK-O0-LABEL: define swifttailcc void @my_async_function(ptr swiftasync %async.ctxt, ptr %task, ptr %actor)
 ; CHECK-SAME: !dbg ![[SP1:[0-9]+]] {
 ; CHECK: coro.return:
 ; CHECK:   [[FRAMEPTR:%.*]] = getelementptr inbounds i8, ptr %async.ctxt, i64 128
@@ -139,12 +139,12 @@ define void @my_async_function_pa(ptr %ctxt, ptr %task, ptr %actor) {
 ; CHECK-O0:   [[VECTOR_SPILL:%.*]] = load <4 x double>, ptr {{.*}}
 ; CHECK-O0:   [[VECTOR_SPILL_ADDR:%.*]] = getelementptr inbounds %my_async_function.Frame, ptr {{.*}}, i32 0, i32 1
 ; CHECK-O0:   store <4 x double> [[VECTOR_SPILL]], ptr [[VECTOR_SPILL_ADDR]], align 16
-; CHECK:   tail call swiftcc void @asyncSuspend(ptr nonnull [[CALLEE_CTXT]], ptr %task, ptr %actor)
+; CHECK:   tail call swifttailcc void @asyncSuspend(ptr nonnull [[CALLEE_CTXT]], ptr %task, ptr %actor)
 ; CHECK:   ret void
 ; CHECK: }
 
-; CHECK-LABEL: define internal swiftcc void @my_async_functionTQ0_(ptr nocapture readonly swiftasync %0, ptr %1, ptr nocapture readnone %2)
-; CHECK-O0-LABEL: define internal swiftcc void @my_async_functionTQ0_(ptr swiftasync %0, ptr %1, ptr %2)
+; CHECK-LABEL: define internal swifttailcc void @my_async_functionTQ0_(ptr nocapture readonly swiftasync %0, ptr %1, ptr nocapture readnone %2)
+; CHECK-O0-LABEL: define internal swifttailcc void @my_async_functionTQ0_(ptr swiftasync %0, ptr %1, ptr %2)
 ; CHECK-SAME: !dbg ![[SP2:[0-9]+]] {
 ; CHECK: entryresume.0:
 ; CHECK:   [[CALLER_CONTEXT:%.*]] = load ptr, ptr %0
@@ -163,7 +163,7 @@ define void @my_async_function_pa(ptr %ctxt, ptr %task, ptr %actor) {
 ; CHECK:   tail call void @some_user(i64 [[VAL1]])
 ; CHECK:   [[VAL2:%.*]] = load i64, ptr [[ALLOCA_PRJ2]]
 ; CHECK:   tail call void @some_user(i64 [[VAL2]])
-; CHECK:   tail call swiftcc void @asyncReturn(ptr [[ASYNC_CTXT_RELOAD]], ptr %1, ptr [[ACTOR_RELOAD]])
+; CHECK:   tail call swifttailcc void @asyncReturn(ptr [[ASYNC_CTXT_RELOAD]], ptr %1, ptr [[ACTOR_RELOAD]])
 ; CHECK:   ret void
 ; CHECK: }
 
@@ -177,7 +177,7 @@ define void @my_async_function_pa(ptr %ctxt, ptr %task, ptr %actor) {
      i32 128    ; Initial async context size without space for frame
   }>
 
-define swiftcc void @my_async_function2(ptr %task, ptr %actor, ptr %async.ctxt) presplitcoroutine "frame-pointer"="all" !dbg !6 {
+define swifttailcc void @my_async_function2(ptr %task, ptr %actor, ptr %async.ctxt) presplitcoroutine "frame-pointer"="all" !dbg !6 {
 entry:
 
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 2, ptr @my_async_function2_fp)
@@ -210,12 +210,12 @@ entry:
   call void @llvm.coro.async.context.dealloc(ptr %callee_context)
   %continuation_actor_arg = extractvalue {ptr, ptr, ptr} %res.2, 1
 
-  tail call swiftcc void @asyncReturn(ptr %async.ctxt, ptr %continuation_task_arg, ptr %continuation_actor_arg)
+  tail call swifttailcc void @asyncReturn(ptr %async.ctxt, ptr %continuation_task_arg, ptr %continuation_actor_arg)
   call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
-; CHECK-LABEL: define swiftcc void @my_async_function2(ptr %task, ptr %actor, ptr %async.ctxt)
+; CHECK-LABEL: define swifttailcc void @my_async_function2(ptr %task, ptr %actor, ptr %async.ctxt)
 ; CHECK-SAME: #[[FRAMEPOINTER:[0-9]+]]
 ; CHECK-SAME: !dbg ![[SP3:[0-9]+]]
 ; CHECK: store ptr %async.ctxt,
@@ -225,22 +225,22 @@ entry:
 ; CHECK: store ptr [[CALLEE_CTXT]],
 ; CHECK: store ptr @my_async_function2.resume.0,
 ; CHECK: store ptr %async.ctxt,
-; CHECK: tail call swiftcc void @asyncSuspend(ptr nonnull [[CALLEE_CTXT]], ptr %task, ptr %actor)
+; CHECK: tail call swifttailcc void @asyncSuspend(ptr nonnull [[CALLEE_CTXT]], ptr %task, ptr %actor)
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.0(ptr %0, ptr nocapture readnone %1, ptr nocapture readonly %2)
+; CHECK-LABEL: define internal swifttailcc void @my_async_function2.resume.0(ptr %0, ptr nocapture readnone %1, ptr nocapture readonly %2)
 ; CHECK-SAME: #[[FRAMEPOINTER]]
 ; CHECK-SAME: !dbg ![[SP4:[0-9]+]]
 ; CHECK: [[CALLEE_CTXT:%.*]] = load ptr, ptr %2
 ; CHECK: [[CALLEE_CTXT_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[CALLEE_CTXT]], i64 152
 ; CHECK: store ptr @my_async_function2.resume.1,
 ; CHECK: [[CALLLE_CTXT_RELOAD:%.*]] = load ptr, ptr [[CALLEE_CTXT_SPILL_ADDR]]
-; CHECK: tail call swiftcc void @asyncSuspend(ptr [[CALLEE_CTXT_RELOAD]]
+; CHECK: tail call swifttailcc void @asyncSuspend(ptr [[CALLEE_CTXT_RELOAD]]
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.1(ptr nocapture readonly %0, ptr %1, ptr nocapture readnone %2)
+; CHECK-LABEL: define internal swifttailcc void @my_async_function2.resume.1(ptr nocapture readonly %0, ptr %1, ptr nocapture readnone %2)
 ; CHECK-SAME: #[[FRAMEPOINTER]]
-; CHECK: tail call swiftcc void @asyncReturn({{.*}}%1)
+; CHECK: tail call swifttailcc void @asyncReturn({{.*}}%1)
 ; CHECK: ret void
 
 define swiftcc void @top_level_caller(ptr %ctxt, ptr %task, ptr %actor) {
@@ -252,7 +252,7 @@ define swiftcc void @top_level_caller(ptr %ctxt, ptr %task, ptr %actor) {
 ; CHECK-LABEL: define swiftcc void @top_level_caller(ptr %ctxt, ptr %task, ptr %actor)
 ; CHECK: store ptr @my_async_functionTQ0_
 ; CHECK: store ptr %ctxt
-; CHECK: tail call swiftcc void @asyncSuspend
+; CHECK: tail call swifttailcc void @asyncSuspend
 ; CHECK: ret void
 
 @dont_crash_on_cf_fp = constant <{ i32, i32 }>
@@ -266,7 +266,7 @@ define swiftcc void @top_level_caller(ptr %ctxt, ptr %task, ptr %actor) {
 }>
 
 
-define swiftcc void @dont_crash_on_cf_dispatch(ptr %fnPtr, ptr %async.ctxt, ptr %task, ptr %actor) {
+define swifttailcc void @dont_crash_on_cf_dispatch(ptr %fnPtr, ptr %async.ctxt, ptr %task, ptr %actor) alwaysinline {
   %isNull = icmp eq ptr %task, null
   br i1 %isNull, label %is_null, label %is_not_null
 
@@ -274,11 +274,11 @@ is_null:
   ret void
 
 is_not_null:
-  tail call swiftcc void %fnPtr(ptr %async.ctxt, ptr %task, ptr %actor)
+  musttail call swifttailcc void %fnPtr(ptr %async.ctxt, ptr %task, ptr %actor)
   ret void
 }
 
-define swiftcc void @dont_crash_on_cf(ptr %async.ctxt, ptr %task, ptr %actor) presplitcoroutine  {
+define swifttailcc void @dont_crash_on_cf(ptr %async.ctxt, ptr %task, ptr %actor) presplitcoroutine  {
 entry:
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 0,
           ptr @dont_crash_on_cf_fp)
@@ -296,7 +296,7 @@ entry:
 
   call void @llvm.coro.async.context.dealloc(ptr %callee_context)
   %continuation_task_arg = extractvalue {ptr, ptr, ptr} %res, 1
-  tail call swiftcc void @asyncReturn(ptr %async.ctxt, ptr %continuation_task_arg, ptr %actor)
+  tail call swifttailcc void @asyncReturn(ptr %async.ctxt, ptr %continuation_task_arg, ptr %actor)
   call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
   unreachable
 }
@@ -311,12 +311,12 @@ entry:
      i32 128    ; Initial async context size without space for frame
 }>
 
-define swiftcc void @must_tail_call_return(ptr %async.ctxt, ptr %task, ptr %actor) {
-  musttail call swiftcc void @asyncReturn(ptr %async.ctxt, ptr %task, ptr %actor)
+define swifttailcc void @must_tail_call_return(ptr %async.ctxt, ptr %task, ptr %actor) alwaysinline {
+  musttail call swifttailcc void @asyncReturn(ptr %async.ctxt, ptr %task, ptr %actor)
   ret void
 }
 
-define swiftcc void @multiple_coro_end_async(ptr %async.ctxt, ptr %task, ptr %actor) presplitcoroutine {
+define swifttailcc void @multiple_coro_end_async(ptr %async.ctxt, ptr %task, ptr %actor) presplitcoroutine {
 entry:
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 0,
           ptr @dont_crash_on_cf_fp)
@@ -350,8 +350,8 @@ is_not_equal:
   unreachable
 }
 
-; CHECK-LABEL: define internal swiftcc void @multiple_coro_end_async.resume.0(
-; CHECK: musttail call swiftcc void @asyncReturn(
+; CHECK-LABEL: define internal swifttailcc void @multiple_coro_end_async.resume.0(
+; CHECK: musttail call swifttailcc void @asyncReturn(
 ; CHECK: ret void
 
 @polymorphic_suspend_return_fp = constant <{ i32, i32 }>
@@ -364,7 +364,7 @@ is_not_equal:
      i32 64    ; Initial async context size without space for frame
 }>
 
-define swiftcc void @polymorphic_suspend_return(ptr swiftasync %async.ctxt, ptr %task, ptr %actor) presplitcoroutine {
+define swifttailcc void @polymorphic_suspend_return(ptr swiftasync %async.ctxt, ptr %task, ptr %actor) presplitcoroutine {
 entry:
   %tmp = alloca { i64, i64 }, align 8
   %proj.1 = getelementptr inbounds { i64, i64 }, ptr %tmp, i64 0, i32 0
@@ -405,13 +405,13 @@ entry:
   %val.2 = load i64, ptr %proj.2
   call void @some_user(i64 %val.2)
 
-  tail call swiftcc void @asyncReturn(ptr %async.ctxt, ptr %continuation_task_arg, ptr %actor)
+  tail call swifttailcc void @asyncReturn(ptr %async.ctxt, ptr %continuation_task_arg, ptr %actor)
   call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
   unreachable
 }
 
-; CHECK-LABEL: define swiftcc void @polymorphic_suspend_return(ptr swiftasync %async.ctxt, ptr %task, ptr %actor)
-; CHECK-LABEL: define internal swiftcc void @polymorphic_suspend_return.resume.0(ptr {{.*}}swiftasync{{.*}} %0, ptr {{.*}}swiftself{{.*}} %1, ptr {{.*}}%2, ptr {{.*}}%3)
+; CHECK-LABEL: define swifttailcc void @polymorphic_suspend_return(ptr swiftasync %async.ctxt, ptr %task, ptr %actor)
+; CHECK-LABEL: define internal swifttailcc void @polymorphic_suspend_return.resume.0(ptr {{.*}}swiftasync{{.*}} %0, ptr {{.*}}swiftself{{.*}} %1, ptr {{.*}}%2, ptr {{.*}}%3)
 ; CHECK: }
 
 @no_coro_suspend_fp = constant <{ i32, i32 }>
@@ -481,7 +481,7 @@ entry:
 declare void @crash()
 declare void @use(ptr)
 
-define swiftcc void @undefined_coro_async_resume(ptr %async.ctx) presplitcoroutine {
+define swifttailcc void @undefined_coro_async_resume(ptr %async.ctx) presplitcoroutine {
 entry:
   %id = call token @llvm.coro.id.async(i32 24, i32 16, i32 0, ptr @undefined_coro_async_resume_fp)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
@@ -491,7 +491,7 @@ entry:
   %unused = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 false)
   unreachable
 }
-; CHECK-LABEL: define swiftcc void @undefined_coro_async_resume
+; CHECK-LABEL: define swifttailcc void @undefined_coro_async_resume
 ; CHECK-NOT: @llvm.coro.async.resume
 ; CHECK: call void @use(ptr null)
 ; CHECK: ret
@@ -505,8 +505,8 @@ declare i1 @llvm.coro.end(ptr, i1, token)
 declare {ptr, ptr, ptr} @llvm.coro.suspend.async(i32, ptr, ptr, ...)
 declare ptr @llvm.coro.async.context.alloc(ptr, ptr)
 declare void @llvm.coro.async.context.dealloc(ptr)
-declare swiftcc void @asyncReturn(ptr, ptr, ptr)
-declare swiftcc void @asyncSuspend(ptr, ptr, ptr)
+declare swifttailcc void @asyncReturn(ptr, ptr, ptr)
+declare swifttailcc void @asyncSuspend(ptr, ptr, ptr)
 declare ptr @llvm.coro.async.resume()
 declare void @llvm.coro.async.size.replace(ptr, ptr)
 declare ptr @hide(ptr)

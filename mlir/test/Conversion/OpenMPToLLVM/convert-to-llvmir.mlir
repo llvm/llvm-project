@@ -320,8 +320,11 @@ llvm.func @_QPsb() {
 // CHECK-LABEL:  @_QPsimple_reduction
 // CHECK:    %[[RED_ACCUMULATOR:.*]] = llvm.alloca %{{.*}} x i32 {bindc_name = "x", uniq_name = "_QFsimple_reductionEx"} : (i64) -> !llvm.ptr
 // CHECK:    omp.parallel
-// CHECK:      omp.wsloop reduction(@eqv_reduction -> %[[RED_ACCUMULATOR]] : !llvm.ptr) for
-// CHECK:        omp.reduction %{{.*}}, %[[RED_ACCUMULATOR]] : i32, !llvm.ptr
+// CHECK:      omp.wsloop reduction(@eqv_reduction %{{.+}} -> %[[PRV:.+]] : !llvm.ptr) for
+// CHECK:        %[[LPRV:.+]] = llvm.load %[[PRV]] : !llvm.ptr -> i32
+// CHECK:        %[[CMP:.+]] = llvm.icmp "eq" %{{.*}}, %[[LPRV]] : i32
+// CHECK:        %[[ZEXT:.+]] = llvm.zext %[[CMP]] : i1 to i32
+// CHECK:        llvm.store %[[ZEXT]], %[[PRV]] : i32, !llvm.ptr
 // CHECK:        omp.yield
 // CHECK:      omp.terminator
 // CHECK:    llvm.return
@@ -350,14 +353,17 @@ llvm.func @_QPsimple_reduction(%arg0: !llvm.ptr {fir.bindc_name = "y"}) {
   llvm.store %5, %4 : i32, !llvm.ptr
   omp.parallel   {
     %6 = llvm.alloca %3 x i32 {adapt.valuebyref, in_type = i32, operandSegmentSizes = array<i32: 0, 0>, pinned} : (i64) -> !llvm.ptr
-    omp.wsloop   reduction(@eqv_reduction -> %4 : !llvm.ptr) for  (%arg1) : i32 = (%1) to (%0) inclusive step (%1) {
+    omp.wsloop   reduction(@eqv_reduction %4 -> %prv : !llvm.ptr) for  (%arg1) : i32 = (%1) to (%0) inclusive step (%1) {
       llvm.store %arg1, %6 : i32, !llvm.ptr
       %7 = llvm.load %6 : !llvm.ptr -> i32
       %8 = llvm.sext %7 : i32 to i64
       %9 = llvm.sub %8, %3  : i64
       %10 = llvm.getelementptr %arg0[0, %9] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<100 x i32>
       %11 = llvm.load %10 : !llvm.ptr -> i32
-      omp.reduction %11, %4 : i32, !llvm.ptr
+      %12 = llvm.load %prv : !llvm.ptr -> i32
+      %13 = llvm.icmp "eq" %11, %12 : i32
+      %14 = llvm.zext %13 : i1 to i32
+      llvm.store %14, %prv : i32, !llvm.ptr
       omp.yield
     }
     omp.terminator

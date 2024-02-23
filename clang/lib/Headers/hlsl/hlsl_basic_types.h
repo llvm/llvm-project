@@ -12,6 +12,13 @@
 namespace hlsl {
 // built-in scalar data types:
 
+/// \typedef template<typename Ty, int Size> using vector = Ty
+/// __attribute__((ext_vector_type(Size)))
+///
+/// \tparam Ty The base type of the vector may be any builtin integral or
+/// floating point type.
+/// \tparam Size The size of the vector may be any value between 1 and 4.
+
 #ifdef __HLSL_ENABLE_16_BIT
 // 16-bit integer.
 typedef unsigned short uint16_t;

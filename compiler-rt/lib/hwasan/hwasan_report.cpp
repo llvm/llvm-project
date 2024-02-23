@@ -40,7 +40,7 @@ class ScopedReport {
  public:
   explicit ScopedReport(bool fatal) : fatal(fatal) {
     Lock lock(&error_message_lock_);
-    error_message_ptr_ = fatal ? &error_message_ : nullptr;
+    error_message_ptr_ = &error_message_;
     ++hwasan_report_count;
   }
 

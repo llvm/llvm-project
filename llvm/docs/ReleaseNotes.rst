@@ -122,6 +122,9 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
+* Added ``LLVMGetBlockAddressFunction`` and ``LLVMGetBlockAddressBasicBlock``
+  functions for accessing the values in a blockaddress constant.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 

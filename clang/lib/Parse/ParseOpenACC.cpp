@@ -54,7 +54,7 @@ OpenACCDirectiveKindEx getOpenACCDirectiveKind(Token Tok) {
           .Case("declare", OpenACCDirectiveKind::Declare)
           .Case("init", OpenACCDirectiveKind::Init)
           .Case("shutdown", OpenACCDirectiveKind::Shutdown)
-          .Case("set", OpenACCDirectiveKind::Shutdown)
+          .Case("set", OpenACCDirectiveKind::Set)
           .Case("update", OpenACCDirectiveKind::Update)
           .Case("wait", OpenACCDirectiveKind::Wait)
           .Default(OpenACCDirectiveKind::Invalid);
