@@ -14,6 +14,7 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
 #include "SPIRVInstrInfo.h"
+#include "SPIRVSubtarget.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -82,6 +83,9 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     return; // Already handled
   else if (Bitwidth <= 32) {
     MIB.addImm(Imm.getZExtValue());
+    // Asm Printer needs this info to print floating-type correctly
+    if (Bitwidth == 16)
+      MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH16);
     return;
   } else if (Bitwidth <= 64) {
     uint64_t FullImm = Imm.getZExtValue();
@@ -143,15 +147,19 @@ unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
     return 3;
   case SPIRV::StorageClass::Generic:
     return 4;
+  case SPIRV::StorageClass::DeviceOnlyINTEL:
+    return 5;
+  case SPIRV::StorageClass::HostOnlyINTEL:
+    return 6;
   case SPIRV::StorageClass::Input:
     return 7;
   default:
-    llvm_unreachable("Unable to get address space id");
+    report_fatal_error("Unable to get address space id");
   }
 }
 
 SPIRV::StorageClass::StorageClass
-addressSpaceToStorageClass(unsigned AddrSpace) {
+addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {
   case 0:
     return SPIRV::StorageClass::Function;
@@ -163,10 +171,18 @@ addressSpaceToStorageClass(unsigned AddrSpace) {
     return SPIRV::StorageClass::Workgroup;
   case 4:
     return SPIRV::StorageClass::Generic;
+  case 5:
+    return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
+               ? SPIRV::StorageClass::DeviceOnlyINTEL
+               : SPIRV::StorageClass::CrossWorkgroup;
+  case 6:
+    return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
+               ? SPIRV::StorageClass::HostOnlyINTEL
+               : SPIRV::StorageClass::CrossWorkgroup;
   case 7:
     return SPIRV::StorageClass::Input;
   default:
-    llvm_unreachable("Unknown address space");
+    report_fatal_error("Unknown address space");
   }
 }
 
@@ -345,6 +361,20 @@ bool isSpecialOpaqueType(const Type *Ty) {
   if (const TargetExtType *EType =
           dyn_cast<TargetExtType>(getTypedPtrEltType(Ty)))
     return hasBuiltinTypePrefix(EType->getName());
+
+  return false;
+}
+
+bool isEntryPoint(const Function &F) {
+  // OpenCL handling: any function with the SPIR_KERNEL
+  // calling convention will be a potential entry point.
+  if (F.getCallingConv() == CallingConv::SPIR_KERNEL)
+    return true;
+
+  // HLSL handling: special attribute are emitted from the
+  // front-end.
+  if (F.getFnAttribute("hlsl.shader").isValid())
+    return true;
 
   return false;
 }

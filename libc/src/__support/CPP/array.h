@@ -28,10 +28,10 @@ template <class T, size_t N> struct array {
   LIBC_INLINE constexpr const T *data() const { return Data; }
 
   LIBC_INLINE constexpr T &front() { return Data[0]; }
-  LIBC_INLINE constexpr T &front() const { return Data[0]; }
+  LIBC_INLINE constexpr const T &front() const { return Data[0]; }
 
   LIBC_INLINE constexpr T &back() { return Data[N - 1]; }
-  LIBC_INLINE constexpr T &back() const { return Data[N - 1]; }
+  LIBC_INLINE constexpr const T &back() const { return Data[N - 1]; }
 
   LIBC_INLINE constexpr T &operator[](size_t Index) { return Data[Index]; }
 

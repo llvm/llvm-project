@@ -316,7 +316,7 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
     DEPENDS
       ${SCUDO_DEPS}
   )
-elseif(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+elseif(LIBC_TARGET_OS_IS_GPU)
   add_entrypoint_external(
     calloc
   )
@@ -397,7 +397,7 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.abort
 )
 
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LIBC_TARGET_OS_IS_GPU)
   add_entrypoint_object(
     malloc
     ALIAS
