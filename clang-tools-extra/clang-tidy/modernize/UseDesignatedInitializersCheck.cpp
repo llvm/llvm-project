@@ -47,7 +47,10 @@ struct Designators {
     const auto Result = Designators.find(Location);
     if (Result == Designators.end())
       return {};
-    return Result->getSecond();
+    const llvm::StringRef Designator = Result->getSecond();
+    return (Designator.front() == '.' ? Designator.substr(1) : Designator)
+        .trim("\0"); // Trim NULL characters appearing on Windows in the
+                     // name.
   }
 
 private:
@@ -136,9 +139,10 @@ void UseDesignatedInitializersCheck::check(
                "use designated initializer list to initialize %0");
       Diag << Type << InitList->getSourceRange();
       for (const Stmt *InitExpr : *SyntacticInitList) {
-        if (const auto Designator = Designators[InitExpr->getBeginLoc()])
+        const auto Designator = Designators[InitExpr->getBeginLoc()];
+        if (Designator && !Designator->empty())
           Diag << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
-                                             (*Designator + "=").str());
+                                             ("." + *Designator + "=").str());
       }
     }
     diag(Type->getBeginLoc(), "aggregate type is defined here",
@@ -162,12 +166,9 @@ void UseDesignatedInitializersCheck::check(
     } else {
       diag(InitExpr->getBeginLoc(),
            "use designated init expression to initialize field '%0'")
-          << InitExpr->getSourceRange()
-          << (Designator->front() == '.'
-                  ? Designator->substr(1) // Strip leading dot
-                  : *Designator)
+          << InitExpr->getSourceRange() << *Designator
           << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
-                                        (*Designator + "=").str());
+                                        ("." + *Designator + "=").str());
     }
   }
 }
