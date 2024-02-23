@@ -813,8 +813,9 @@ renameWithinFile(ParsedAST &AST, const NamedDecl &RenameDecl,
   }
   if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
     // The custom ObjC selector logic doesn't handle the zero arg selector
-    // case. We could use it for the one arg selector case but it's simpler to
-    // use the standard one-token rename logic.
+    // case, as it relies on parsing selectors via the trailing `:`.
+    // We also choose to use regular rename logic for the single-arg selectors
+    // as the AST/Index has the right locations in that case.
     if (MD->getSelector().getNumArgs() > 1)
       return renameObjCMethodWithinFile(AST, MD, NewName, std::move(Locs));
 
