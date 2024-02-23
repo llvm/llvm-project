@@ -71,7 +71,7 @@
 //
 // Test passing arguments directly to nvlink.
 //
-// RUN: %clang -target nvptx64-nvidia-cuda -Wl,-v -Wl,a,b -### %s 2>&1 \
+// RUN: %clang -target nvptx64-nvidia-cuda -Wl,-v -Wl,a,b -march=sm_52 -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=LINKER-ARGS %s
 
 // LINKER-ARGS: nvlink{{.*}}"-v"{{.*}}"a" "b"

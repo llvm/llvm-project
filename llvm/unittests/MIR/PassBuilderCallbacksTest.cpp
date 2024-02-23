@@ -330,7 +330,7 @@ protected:
     Mod->setModuleIdentifier("module");
     Mod->setDataLayout(TM.createDataLayout());
 
-    bool Ret = MIR->parseMachineFunctions(*Mod, MMI);
+    [[maybe_unused]] bool Ret = MIR->parseMachineFunctions(*Mod, MMI);
     assert(!Ret);
 
     return Mod;

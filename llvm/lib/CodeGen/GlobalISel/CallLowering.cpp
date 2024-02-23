@@ -187,7 +187,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   if (!lowerCall(MIRBuilder, Info))
     return false;
 
-  if (ReturnHintAlignReg && !Info.IsTailCall) {
+  if (ReturnHintAlignReg && !Info.LoweredTailCall) {
     MIRBuilder.buildAssertAlign(ResRegs[0], ReturnHintAlignReg,
                                 ReturnHintAlign);
   }

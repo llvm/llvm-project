@@ -213,6 +213,8 @@ TEST(WalkAST, VarTemplates) {
     template<typename T> T* $explicit^Foo<T*> = nullptr;)cpp",
                        "int *x = ^Foo<int *>;"),
               ElementsAre(Decl::VarTemplateSpecialization));
+  // Implicit specializations through explicit instantiations has source
+  // locations pointing at the primary template.
   EXPECT_THAT(testWalk(R"cpp(
     template<typename T> T $explicit^Foo = 0;
     template int Foo<int>;)cpp",
@@ -239,18 +241,19 @@ TEST(WalkAST, FunctionTemplates) {
   EXPECT_THAT(testWalk(R"cpp(
     template <typename T> void $explicit^foo() {})cpp",
                        "auto x = []{ ^foo<int>(); };"),
-              ElementsAre(Decl::FunctionTemplate));
-  // FIXME: DeclRefExpr points at primary template, not the specialization.
+              ElementsAre(Decl::Function));
   EXPECT_THAT(testWalk(R"cpp(
-    template<typename T> void $explicit^foo() {}
-    template<> void foo<int>(){})cpp",
+    template<typename T> void foo() {}
+    template<> void $explicit^foo<int>(){})cpp",
                        "auto x = []{ ^foo<int>(); };"),
-              ElementsAre(Decl::FunctionTemplate));
+              ElementsAre(Decl::Function));
+  // The decl is actually the specialization, but explicit instantations point
+  // at the primary template.
   EXPECT_THAT(testWalk(R"cpp(
     template<typename T> void $explicit^foo() {};
     template void foo<int>();)cpp",
                        "auto x = [] { ^foo<int>(); };"),
-              ElementsAre(Decl::FunctionTemplate));
+              ElementsAre(Decl::Function));
 }
 TEST(WalkAST, TemplateSpecializationsFromUsingDecl) {
   // Class templates
@@ -548,7 +551,8 @@ TEST(WalkAST, Concepts) {
   testWalk(Concept, "template<typename T> void func() requires ^Foo<T> {}");
   testWalk(Concept, "void func(^Foo auto x) {}");
   // FIXME: Foo should be explicitly referenced.
-  testWalk("template<typename T> concept Foo = true;", "void func() { ^Foo auto x = 1; }");
+  testWalk("template<typename T> concept Foo = true;",
+           "void func() { ^Foo auto x = 1; }");
 }
 
 TEST(WalkAST, FriendDecl) {
