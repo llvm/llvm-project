@@ -128,6 +128,11 @@ public:
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
     auto *FD = DRE->getFoundDecl();
+    // Prefer the underlying decl if FoundDecl isn't a shadow decl, e.g:
+    // - For templates, found-decl is always primary template, but we want the
+    // specializaiton itself.
+    if (!llvm::isa<UsingShadowDecl>(FD))
+      FD = DRE->getDecl();
     // For refs to non-meber-like decls, use the found decl.
     // For member-like decls, we should have a reference from the qualifier to
     // the container decl instead, which is preferred as it'll handle
