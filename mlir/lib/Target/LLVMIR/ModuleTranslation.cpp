@@ -1066,15 +1066,15 @@ LogicalResult ModuleTranslation::convertGlobals() {
         // to count the number of uses of each constant array and remove it only
         // when the count becomes zero.
         if (auto *agg = dyn_cast<llvm::ConstantAggregate>(cst)) {
-           numConstantsHit++;
-           Value result = op.getResult(0);
-           int numUsers = std::distance(result.use_begin(), result.use_end());
-           auto [iterator, inserted] =
-               constantAggregateUseMap.try_emplace(agg, numUsers);
-           if (!inserted) {
-             // Key already exists, update the value
-             iterator->second += numUsers;
-           }
+          numConstantsHit++;
+          Value result = op.getResult(0);
+          int numUsers = std::distance(result.use_begin(), result.use_end());
+          auto [iterator, inserted] =
+              constantAggregateUseMap.try_emplace(agg, numUsers);
+          if (!inserted) {
+            // Key already exists, update the value
+            iterator->second += numUsers;
+          }
         }
         for (Value v : op.getOperands()) {
           auto cst = dyn_cast<llvm::ConstantAggregate>(lookupValue(v));
