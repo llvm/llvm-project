@@ -1908,6 +1908,14 @@ Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
       *CI, B.CreateCall(FSqrt, B.CreateFAdd(RealReal, ImagImag), "cabs"));
 }
 
+static Value *optimizeOdd(CallInst *Call, IRBuilderBase &B) {
+  Value *X;
+  if (match(Call->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X)))))
+    return B.CreateFNeg(
+        copyFlags(*Call, B.CreateCall(Call->getCalledFunction(), X)));
+  return nullptr;
+}
+
 static Value *optimizeTrigReflections(CallInst *Call, LibFunc Func,
                                       IRBuilderBase &B) {
   if (!isa<FPMathOperator>(Call))
@@ -3736,6 +3744,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_atanhf:
   case LibFunc_atanhl:
     return optimizeTrigInversionPairs(CI, Builder);
+  case LibFunc_erf:
+  case LibFunc_erff:
+  case LibFunc_erfl:
+    return optimizeOdd(CI, Builder); // erf(-X) --> -erf(X)
   case LibFunc_ceil:
     return replaceUnaryCall(CI, Builder, Intrinsic::ceil);
   case LibFunc_floor:
