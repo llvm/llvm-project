@@ -127,6 +127,11 @@ public:
   /// the variable.
   void setId(VarKind kind, unsigned i, Identifier id);
 
+  /// Search for an identifier by skipping offset identifiers. Returns true and
+  /// sets idx to the index of the indentifier if the identifier exists, returns
+  /// false and leaves idx unchanged otherwise.
+  bool findVar(Identifier id, unsigned &idx, unsigned offset) const;
+
   /// Returns a copy of the space without locals.
   PresburgerSpace getSpaceWithoutLocals() const {
     return PresburgerSpace::getRelationSpace(space.getNumDomainVars(),
@@ -673,6 +678,11 @@ public:
   /// Formally, R1.applyRange(R2) is the same as R1.compose(R2) but we provide
   /// this for uniformity with `applyDomain`.
   void applyRange(const IntegerRelation &rel);
+
+  /// Given a relation `other: (A -> B)`, this operation takes the composition
+  /// of `other` on `this: (B -> C)`. The resulting relation represents tuples
+  /// of the form: `A -> C`.
+  void composeOther(const IntegerRelation &other);
 
   /// Compute an equivalent representation of the same set, such that all local
   /// vars in all disjuncts have division representations. This representation

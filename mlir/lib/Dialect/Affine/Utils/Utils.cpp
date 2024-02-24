@@ -13,6 +13,8 @@
 
 #include "mlir/Dialect/Affine/Utils.h"
 
+#include "mlir/Analysis/Presburger/PresburgerRelation.h"
+#include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"

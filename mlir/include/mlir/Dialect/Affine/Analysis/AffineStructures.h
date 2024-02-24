@@ -251,9 +251,9 @@ protected:
 /// For AffineValueMap, the domain and symbols have Value set corresponding to
 /// the Value in `map`. Returns failure if the AffineMap could not be flattened
 /// (i.e., semi-affine is not yet handled).
-LogicalResult getRelationFromMap(AffineMap &map, FlatAffineRelation &rel);
+LogicalResult getRelationFromMap(AffineMap &map, presburger::IntegerRelation &rel);
 LogicalResult getRelationFromMap(const AffineValueMap &map,
-                                 FlatAffineRelation &rel);
+                                 presburger::IntegerRelation &rel);
 
 } // namespace affine
 } // namespace mlir
