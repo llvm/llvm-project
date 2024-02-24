@@ -53,6 +53,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 !13 = !DIDerivedType(tag: DW_TAG_restrict_type, baseType: !14)
 !14 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !15, size: 64)
 !15 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!16 = !{}
 !17 = !DILocalVariable(name: "a", arg: 1, scope: !10, file: !1, line: 1, type: !13)
 !18 = !DILocation(line: 0, scope: !10)
 !19 = !DILocalVariable(name: "b", arg: 2, scope: !10, file: !1, line: 1, type: !13)
