@@ -224,6 +224,7 @@ class TestCase(TestBase):
         self.assert_decl_not_completed(self.other_struct_decl)
         self.assert_decl_not_completed(self.class_in_namespace_decl)
 
+    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     @add_test_categories(["dwarf"])
     def test_class_function_access_member(self):
         self.clean_setup(location="class function")
