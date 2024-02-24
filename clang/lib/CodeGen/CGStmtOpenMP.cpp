@@ -7026,7 +7026,7 @@ void CodeGenFunction::EmitOMPInteropDirective(const OMPInteropDirective &S) {
   auto It = S.getClausesOfKind<OMPInitClause>();
   if (!It.empty()) {
     // Look at the multiple init clauses
-    for (auto C : It) {
+    for (const class OMPInitClause *C : It) {
       llvm::Value *InteropvarPtr =
           EmitLValue(C->getInteropVar()).getPointer(*this);
       llvm::omp::OMPInteropType InteropType =
