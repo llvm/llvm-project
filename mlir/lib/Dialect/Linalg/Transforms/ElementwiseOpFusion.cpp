@@ -27,8 +27,7 @@
 #include <utility>
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGFOLDUNITEXTENTDIMS
-#define GEN_PASS_DEF_LINALGELEMENTWISEOPFUSION
+#define GEN_PASS_DEF_LINALGELEMENTWISEOPFUSIONPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -1927,8 +1926,10 @@ namespace {
 // favor of test passes that check the functionality of each of the patterns
 // added here individually.
 struct LinalgElementwiseOpFusionPass
-    : public impl::LinalgElementwiseOpFusionBase<
+    : public impl::LinalgElementwiseOpFusionPassBase<
           LinalgElementwiseOpFusionPass> {
+  using impl::LinalgElementwiseOpFusionPassBase<
+      LinalgElementwiseOpFusionPass>::LinalgElementwiseOpFusionPassBase;
   void runOnOperation() override {
     Operation *op = getOperation();
     MLIRContext *context = op->getContext();
@@ -1963,7 +1964,3 @@ struct LinalgElementwiseOpFusionPass
 };
 
 } // namespace
-
-std::unique_ptr<Pass> mlir::createLinalgElementwiseOpFusionPass() {
-  return std::make_unique<LinalgElementwiseOpFusionPass>();
-}
