@@ -28,6 +28,7 @@
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
@@ -80,7 +81,7 @@ static bool checkHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
   if (LangOpts.Modules) {
     if (HSOpts.VFSOverlayFiles != ExistingHSOpts.VFSOverlayFiles) {
       if (Diags) {
-        Diags->Report(diag::err_pch_vfsoverlay_mismatch);
+        Diags->Report(diag::warn_pch_vfsoverlay_mismatch);
         auto VFSNote = [&](int Type, ArrayRef<std::string> VFSOverlays) {
           if (VFSOverlays.empty()) {
             Diags->Report(diag::note_pch_vfsoverlay_empty) << Type;
@@ -92,7 +93,6 @@ static bool checkHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
         VFSNote(0, HSOpts.VFSOverlayFiles);
         VFSNote(1, ExistingHSOpts.VFSOverlayFiles);
       }
-      return true;
     }
   }
   return false;
@@ -107,9 +107,11 @@ public:
   PrebuiltModuleListener(CompilerInstance &CI,
                          PrebuiltModuleFilesT &PrebuiltModuleFiles,
                          llvm::SmallVector<std::string> &NewModuleFiles,
+                         PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap,
                          DiagnosticsEngine &Diags)
       : CI(CI), PrebuiltModuleFiles(PrebuiltModuleFiles),
-        NewModuleFiles(NewModuleFiles), Diags(Diags) {}
+        NewModuleFiles(NewModuleFiles),
+        PrebuiltModuleVFSMap(PrebuiltModuleVFSMap), Diags(Diags) {}
 
   bool needsImportVisitation() const override { return true; }
 
@@ -118,8 +120,16 @@ public:
       NewModuleFiles.push_back(Filename.str());
   }
 
+  void visitModuleFile(StringRef Filename,
+                       serialization::ModuleKind Kind) override {
+    CurrentFile = Filename;
+  }
+
   bool ReadHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
                              bool Complain) override {
+    std::vector<std::string> VFSOverlayFiles = HSOpts.VFSOverlayFiles;
+    PrebuiltModuleVFSMap.insert(
+        {CurrentFile, llvm::StringSet<>(VFSOverlayFiles)});
     return checkHeaderSearchPaths(
         HSOpts, CI.getHeaderSearchOpts(), Complain ? &Diags : nullptr, CI.getLangOpts());
   }
@@ -136,7 +146,9 @@ private:
   CompilerInstance &CI;
   PrebuiltModuleFilesT &PrebuiltModuleFiles;
   llvm::SmallVector<std::string> &NewModuleFiles;
+  PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap;
   DiagnosticsEngine &Diags;
+  std::string CurrentFile;
 };
 
 /// Visit the given prebuilt module and collect all of the modules it
@@ -144,11 +156,15 @@ private:
 static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                                 CompilerInstance &CI,
                                 PrebuiltModuleFilesT &ModuleFiles,
+                                PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap,
                                 DiagnosticsEngine &Diags) {
   // List of module files to be processed.
   llvm::SmallVector<std::string> Worklist;
-  PrebuiltModuleListener Listener(CI, ModuleFiles, Worklist, Diags);
+  PrebuiltModuleListener Listener(CI, ModuleFiles, Worklist,
+                                  PrebuiltModuleVFSMap, Diags);
 
+  Listener.visitModuleFile(PrebuiltModuleFilename,
+                           serialization::MK_ExplicitModule);
   if (ASTReader::readASTFileControlBlock(
           PrebuiltModuleFilename, CI.getFileManager(), CI.getModuleCache(),
           CI.getPCHContainerReader(),
@@ -157,6 +173,7 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
     return true;
 
   while (!Worklist.empty()) {
+    Listener.visitModuleFile(Worklist.back(), serialization::MK_ExplicitModule);
     if (ASTReader::readASTFileControlBlock(
             Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
             CI.getPCHContainerReader(),
@@ -193,8 +210,19 @@ static void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
   DiagOpts.ShowCarets = false;
   // Don't write out diagnostic file.
   DiagOpts.DiagnosticSerializationFile.clear();
-  // Don't emit warnings as errors (and all other warnings too).
-  DiagOpts.IgnoreWarnings = true;
+  // Don't emit warnings except for scanning specific warnings.
+  // TODO: It would be useful to add a more principled way to ignore all
+  //       warnings that come from source code. The issue is that we need to
+  //       ignore warnings that could be surpressed by
+  //       `#pragma clang diagnostic`, while still allowing some scanning
+  //       warnings for things we're not ready to turn into errors yet.
+  //       See `test/ClangScanDeps/diagnostic-pragmas.c` for an example.
+  llvm::erase_if(DiagOpts.Warnings, [](StringRef Warning) {
+    return llvm::StringSwitch<bool>(Warning)
+        .Cases("pch-vfs-diff", "error=pch-vfs-diff", false)
+        .StartsWith("no-error=", false)
+        .Default(true);
+  });
 }
 
 // Clang implements -D and -U by splatting text into a predefines buffer. This
@@ -428,6 +456,10 @@ public:
     if (VerboseOS)
       ScanInstance.setVerboseOutputStream(*VerboseOS);
 
+    // Some DiagnosticConsumers require that finish() is called.
+    auto DiagConsumerFinisher =
+        llvm::make_scope_exit([DiagConsumer]() { DiagConsumer->finish(); });
+
     ScanInstance.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath =
         true;
 
@@ -435,7 +467,8 @@ public:
     ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().ModulesShareFileManager = false;
     ScanInstance.getHeaderSearchOpts().ModuleFormat = "raw";
-    ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage = true;
+    ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage =
+        any(OptimizeArgs & ScanningOptimizations::VFS);
 
     ScanInstance.setFileManager(FileMgr);
     // Support for virtual file system overlays.
@@ -448,12 +481,13 @@ public:
     // Store the list of prebuilt module files into header search options. This
     // will prevent the implicit build to create duplicate modules and will
     // force reuse of the existing prebuilt module files instead.
+    PrebuiltModuleVFSMapT PrebuiltModuleVFSMap;
     if (!ScanInstance.getPreprocessorOpts().ImplicitPCHInclude.empty())
       if (visitPrebuiltModule(
               ScanInstance.getPreprocessorOpts().ImplicitPCHInclude,
               ScanInstance,
               ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles,
-              ScanInstance.getDiagnostics()))
+              PrebuiltModuleVFSMap, ScanInstance.getDiagnostics()))
         return false;
 
     // Use the dependency scanning optimized file system if requested to do so.
@@ -537,8 +571,8 @@ public:
 
       MDC = std::make_shared<ModuleDepCollector>(
           std::move(Opts), ScanInstance, Consumer, Controller,
-          OriginalInvocation, OptimizeArgs, EagerLoadModules,
-          Format == ScanningOutputFormat::P1689);
+          OriginalInvocation, std::move(PrebuiltModuleVFSMap), OptimizeArgs,
+          EagerLoadModules, Format == ScanningOutputFormat::P1689);
       ScanInstance.addDependencyCollector(MDC);
       ScanInstance.setGenModuleActionWrapper(
           [&Controller = Controller](const FrontendOptions &Opts,
@@ -580,6 +614,8 @@ public:
     if (ScanInstance.getDiagnostics().hasErrorOccurred())
       return false;
 
+    // Each action is responsible for calling finish.
+    DiagConsumerFinisher.release();
     if (!ScanInstance.ExecuteAction(*Action))
       return false;
 
