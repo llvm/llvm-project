@@ -82,6 +82,7 @@ static void printArHelp(StringRef ToolName) {
     =darwin             -   darwin
     =bsd                -   bsd
     =bigarchive         -   big archive (AIX OS)
+    =coff               -   coff
   --plugin=<string>     - ignored for compatibility
   -h --help             - display this help and exit
   --output              - the directory to extract archive members to
@@ -193,7 +194,7 @@ static SmallVector<const char *, 256> PositionalArgs;
 static bool MRI;
 
 namespace {
-enum Format { Default, GNU, BSD, DARWIN, BIGARCHIVE, Unknown };
+enum Format { Default, GNU, COFF, BSD, DARWIN, BIGARCHIVE, Unknown };
 }
 
 static Format FormatType = Default;
@@ -1044,6 +1045,9 @@ static void performWriteOperation(ArchiveOperation Operation,
   case GNU:
     Kind = object::Archive::K_GNU;
     break;
+  case COFF:
+    Kind = object::Archive::K_COFF;
+    break;
   case BSD:
     if (Thin)
       fail("only the gnu format has a thin mode");
@@ -1376,6 +1380,7 @@ static int ar_main(int argc, char **argv) {
                        .Case("darwin", DARWIN)
                        .Case("bsd", BSD)
                        .Case("bigarchive", BIGARCHIVE)
+                       .Case("coff", COFF)
                        .Default(Unknown);
       if (FormatType == Unknown)
         fail(std::string("Invalid format ") + Match);

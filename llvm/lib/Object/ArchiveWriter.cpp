@@ -62,12 +62,16 @@ object::Archive::Kind NewArchiveMember::detectKindFromObject() const {
   Expected<std::unique_ptr<object::ObjectFile>> OptionalObject =
       object::ObjectFile::createObjectFile(MemBufferRef);
 
-  if (OptionalObject)
-    return isa<object::MachOObjectFile>(**OptionalObject)
-               ? object::Archive::K_DARWIN
-               : (isa<object::XCOFFObjectFile>(**OptionalObject)
-                      ? object::Archive::K_AIXBIG
-                      : object::Archive::K_GNU);
+  if (OptionalObject) {
+    if (isa<object::MachOObjectFile>(**OptionalObject))
+      return object::Archive::K_DARWIN;
+    if (isa<object::XCOFFObjectFile>(**OptionalObject))
+      return object::Archive::K_AIXBIG;
+    if (isa<object::COFFObjectFile>(**OptionalObject) ||
+        isa<object::COFFImportFile>(**OptionalObject))
+      return object::Archive::K_COFF;
+    return object::Archive::K_GNU;
+  }
 
   // Squelch the error in case we had a non-object file.
   consumeError(OptionalObject.takeError());
@@ -80,10 +84,7 @@ object::Archive::Kind NewArchiveMember::detectKindFromObject() const {
             MemBufferRef, file_magic::bitcode, &Context)) {
       auto &IRObject = cast<object::IRObjectFile>(**ObjOrErr);
       auto TargetTriple = Triple(IRObject.getTargetTriple());
-      return TargetTriple.isOSDarwin()
-                 ? object::Archive::K_DARWIN
-                 : (TargetTriple.isOSAIX() ? object::Archive::K_AIXBIG
-                                           : object::Archive::K_GNU);
+      return object::Archive::getDefaultKindForTriple(TargetTriple);
     } else {
       // Squelch the error in case this was not a SymbolicFile.
       consumeError(ObjOrErr.takeError());
