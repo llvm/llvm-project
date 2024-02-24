@@ -1976,7 +1976,7 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
   }
 }
 
-TEST(CrossFileRenameTests, DISABLED_ObjC) { // rdar://123113498
+TEST(CrossFileRenameTests, ObjC) {
   MockCompilationDatabase CDB;
   CDB.ExtraClangFlags = {"-xobjective-c"};
   // rename is runnning on all "^" points in FooH.
@@ -1987,93 +1987,92 @@ TEST(CrossFileRenameTests, DISABLED_ObjC) { // rdar://123113498
     llvm::StringRef ExpectedFooH;
     llvm::StringRef ExpectedFooM;
   };
-  Case Cases[] = {
-    // --- Zero arg selector
-    {
-      // Input
-      R"cpp(
+  Case Cases[] = {// --- Zero arg selector
+                  {
+                      // Input
+                      R"cpp(
         @interface Foo
         - (int)performA^ction;
         @end
       )cpp",
-      R"cpp(
+                      R"cpp(
         @implementation Foo
         - (int)performAction {
           [self performAction];
         }
         @end
       )cpp",
-      // New name
-      "performNewAction",
-      // Expected
-      R"cpp(
+                      // New name
+                      "performNewAction",
+                      // Expected
+                      R"cpp(
         @interface Foo
         - (int)performNewAction;
         @end
       )cpp",
-      R"cpp(
+                      R"cpp(
         @implementation Foo
         - (int)performNewAction {
           [self performNewAction];
         }
         @end
       )cpp",
-    },
-    // --- Single arg selector
-    {
-      // Input
-      R"cpp(
+                  },
+                  // --- Single arg selector
+                  {
+                      // Input
+                      R"cpp(
         @interface Foo
         - (int)performA^ction:(int)action;
         @end
       )cpp",
-      R"cpp(
+                      R"cpp(
         @implementation Foo
         - (int)performAction:(int)action {
           [self performAction:action];
         }
         @end
       )cpp",
-      // New name
-      "performNewAction:",
-      // Expected
-      R"cpp(
+                      // New name
+                      "performNewAction:",
+                      // Expected
+                      R"cpp(
         @interface Foo
         - (int)performNewAction:(int)action;
         @end
       )cpp",
-      R"cpp(
+                      R"cpp(
         @implementation Foo
         - (int)performNewAction:(int)action {
           [self performNewAction:action];
         }
         @end
       )cpp",
-    },
-    // --- Multi arg selector
-    {
-      // Input
-      R"cpp(
+                  },
+                  // --- Multi arg selector
+                  {
+                      // Input
+                      R"cpp(
         @interface Foo
         - (int)performA^ction:(int)action with:(int)value;
         @end
       )cpp",
-      R"cpp(
+                      R"cpp(
         @implementation Foo
         - (int)performAction:(int)action with:(int)value {
           [self performAction:action with:value];
         }
         @end
       )cpp",
-      // New name
-      "performNewAction:by:",
-      // Expected
-      R"cpp(
+                      // New name
+                      "performNewAction:by:",
+                      // Expected
+                      R"cpp(
         @interface Foo
         - (int)performNewAction:(int)action by:(int)value;
         @end
       )cpp",
-      R"cpp(
+                      R"cpp(
         @implementation Foo
         - (int)performNewAction:(int)action by:(int)value {
           [self performNewAction:action by:value];
@@ -2082,7 +2081,7 @@ TEST(CrossFileRenameTests, DISABLED_ObjC) { // rdar://123113498
       )cpp",
     }
   };
-
+  
   trace::TestTracer Tracer;
   for (const auto &T : Cases) {
     SCOPED_TRACE(T.FooH);
