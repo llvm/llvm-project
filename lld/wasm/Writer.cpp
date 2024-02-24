@@ -473,25 +473,12 @@ void Writer::layoutMemory() {
     WasmSym::heapEnd->setVA(memoryPtr);
   }
 
-  if (config->maxMemory != 0 && config->maxMemoryGrowth != -1) {
+  if (config->maxMemory != 0 && config->noGrowableMemory) {
     // Erroring out here is simpler than defining precedence rules.
-    error("--max-memory-growth and --max-memory are mutually exclusive");
+    error("--max-memory and --no-growable-memory are mutually exclusive");
   }
 
   uint64_t maxMemory = 0;
-  if (config->maxMemoryGrowth != -1) {
-    if (config->maxMemoryGrowth !=
-        alignTo(config->maxMemoryGrowth, WasmPageSize))
-      error("maximum memory growth must be " + Twine(WasmPageSize) +
-            "-byte aligned");
-    uint64_t maxMaxMemoryGrowth = maxMemorySetting - memoryPtr;
-    if (config->maxMemoryGrowth > maxMaxMemoryGrowth)
-      error("maximum memory growth too large, cannot be greater than " +
-            Twine(maxMaxMemoryGrowth));
-
-    maxMemory = memoryPtr + config->maxMemoryGrowth;
-  }
-
   if (config->maxMemory != 0) {
     if (config->maxMemory != alignTo(config->maxMemory, WasmPageSize))
       error("maximum memory must be " + Twine(WasmPageSize) + "-byte aligned");
@@ -502,6 +489,8 @@ void Writer::layoutMemory() {
             Twine(maxMemorySetting));
 
     maxMemory = config->maxMemory;
+  } else if (config->noGrowableMemory) {
+    maxMemory = memoryPtr;
   }
 
   // If no maxMemory config was supplied but we are building with

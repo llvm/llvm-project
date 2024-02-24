@@ -131,13 +131,13 @@ WebAssembly-specific options:
 
   Initial size of the linear memory. Default: the sum of stack, static data and heap sizes.
 
-.. option:: --max-memory-growth=<value>
-
-  Maximum size of memory that can be allocated dynamically. Default: unlimited.
-
 .. option:: --max-memory=<value>
 
   Maximum size of the linear memory. Default: unlimited.
+
+.. option:: --no-growable-memory
+
+  Set maximum size of the linear memory to its initial size, disallowing memory growth.
 
 By default the function table is neither imported nor exported, but defined
 for internal use only.
