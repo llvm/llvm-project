@@ -436,7 +436,6 @@ public:
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
 
-  bool hasAtomicFaddRtnForTy(SDValue &Op) const;
   bool enableAggressiveFMAFusion(EVT VT) const override;
   bool enableAggressiveFMAFusion(LLT Ty) const override;
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,

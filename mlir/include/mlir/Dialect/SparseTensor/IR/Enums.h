@@ -145,12 +145,9 @@ constexpr bool isComplexPrimaryType(PrimaryType valTy) {
 /// The actions performed by @newSparseTensor.
 enum class Action : uint32_t {
   kEmpty = 0,
-  kEmptyForward = 1,
-  kFromCOO = 2,
-  kFromReader = 4,
-  kToCOO = 5,
-  kPack = 7,
-  kSortCOOInPlace = 8,
+  kFromReader = 1,
+  kPack = 2,
+  kSortCOOInPlace = 3,
 };
 
 /// This enum defines all supported storage format without the level properties.
@@ -283,7 +280,13 @@ public:
   }
   bool operator!=(const LevelType lhs) const { return !(*this == lhs); }
 
-  LevelType stripProperties() const { return LevelType(lvlBits & ~0xffff); }
+  LevelType stripStorageIrrelevantProperties() const {
+    // Properties other than `SoA` do not change the storage scheme of the
+    // sparse tensor.
+    constexpr uint64_t mask =
+        0xffff & ~static_cast<uint64_t>(LevelPropNonDefault::SoA);
+    return LevelType(lvlBits & ~mask);
+  }
 
   /// Get N of NOutOfM level type.
   constexpr uint64_t getN() const {

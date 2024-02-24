@@ -362,13 +362,13 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (Ptr.isInitialized())
     return true;
 
+  if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
+      VD && VD->hasGlobalStorage()) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+    S.Note(VD->getLocation(), diag::note_declared_at);
+  }
   if (!S.checkingPotentialConstantExpression()) {
-    if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
-        VD && VD->hasGlobalStorage()) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
-      S.Note(VD->getLocation(), diag::note_declared_at);
-    }
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
         << AK << /*uninitialized=*/true << S.Current->getRange(OpPC);
   }
@@ -461,6 +461,10 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     const SourceLocation &Loc = S.Current->getLocation(OpPC);
     if (S.getLangOpts().CPlusPlus11) {
       const FunctionDecl *DiagDecl = F->getDecl();
+
+      // Invalid decls have been diagnosed before.
+      if (DiagDecl->isInvalidDecl())
+        return false;
 
       // If this function is not constexpr because it is an inherited
       // non-constexpr constructor, diagnose that directly.

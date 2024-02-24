@@ -62,21 +62,6 @@ Clang Frontend Potentially Breaking Changes
   of ``-Wno-gnu-binary-literal`` will no longer silence this pedantic warning,
   which may break existing uses with ``-Werror``.
 
-Target OS macros extension
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-A new Clang extension (see :ref:`here <target_os_detail>`) is enabled for
-Darwin (Apple platform) targets. Clang now defines ``TARGET_OS_*`` macros for
-these targets, which could break existing code bases with improper checks for
-the ``TARGET_OS_`` macros. For example, existing checks might fail to include
-the ``TargetConditionals.h`` header from Apple SDKs and therefore leaving the
-macros undefined and guarded code unexercised.
-
-Affected code should be checked to see if it's still intended for the specific
-target and fixed accordingly.
-
-The extension can be turned off by the option ``-fno-define-target-os-macros``
-as a workaround.
-
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -98,9 +83,6 @@ C++20 Feature Support
 
 - Implemented the `__is_layout_compatible` intrinsic to support
   `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
-  Note: `CWG1719: Layout compatibility and cv-qualification revisited  <https://cplusplus.github.io/CWG/issues/1719.html>`_
-  and `CWG2759: [[no_unique_address] and common initial sequence <https://cplusplus.github.io/CWG/issues/2759.html>`_
-  are not yet implemented.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -119,6 +101,14 @@ Resolutions to C++ Defect Reports
 - Substitute template parameter pack, when it is not explicitly specified
   in the template parameters, but is deduced from a previous argument.
   (`#78449: <https://github.com/llvm/llvm-project/issues/78449>`_).
+
+- Type qualifications are now ignored when evaluating layout compatibility
+  of two types.
+  (`CWG1719: Layout compatibility and cv-qualification revisited <https://cplusplus.github.io/CWG/issues/1719.html>`_).
+
+- ``[[no_unique_address]]`` is now respected when evaluating layout
+  compatibility of two types.
+  (`CWG2759: [[no_unique_address] and common initial sequence  <https://cplusplus.github.io/CWG/issues/2759.html>`_).
 
 C Language Changes
 ------------------
@@ -157,17 +147,6 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
-
-.. _target_os_detail:
-
-Target OS macros extension
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-A pair of new flags ``-fdefine-target-os-macros`` and
-``-fno-define-target-os-macros`` has been added to Clang to enable/disable the
-extension to provide built-in definitions of a list of ``TARGET_OS_*`` macros
-based on the target triple.
-
-The extension is enabled by default for Darwin (Apple platform) targets.
 
 Deprecated Compiler Flags
 -------------------------
@@ -279,6 +258,8 @@ Bug Fixes to C++ Support
   Fixes (`#68490 <https://github.com/llvm/llvm-project/issues/68490>`_)
 - Fix a crash when trying to call a varargs function that also has an explicit object parameter.
   Fixes (`#80971 ICE when explicit object parameter be a function parameter pack`)
+- Reject explicit object parameters on `new` and `delete` operators.
+  Fixes (`#82249 <https://github.com/llvm/llvm-project/issues/82249>` _)
 - Fixed a bug where abbreviated function templates would append their invented template parameters to
   an empty template parameter lists.
 - Clang now classifies aggregate initialization in C++17 and newer as constant
@@ -291,7 +272,15 @@ Bug Fixes to C++ Support
   local variable, which is supported as a C11 extension in C++. Previously, it
   was only accepted at namespace scope but not at local function scope.
 - Clang no longer tries to call consteval constructors at runtime when they appear in a member initializer.
-  (`#782154 <https://github.com/llvm/llvm-project/issues/82154>`_`)
+  (`#82154 <https://github.com/llvm/llvm-project/issues/82154>`_`)
+- Fix crash when using an immediate-escalated function at global scope.
+  (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
+- Correctly immediate-escalate lambda conversion functions.
+  (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
+- Fixed an issue where template parameters of a nested abbreviated generic lambda within
+  a requires-clause lie at the same depth as those of the surrounding lambda. This,
+  in turn, results in the wrong template argument substitution during constraint checking.
+  (`#78524 <https://github.com/llvm/llvm-project/issues/78524>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -316,6 +305,17 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- ARMv7+ targets now default to allowing unaligned access, except Armv6-M, and
+  Armv8-M without the Main Extension. Baremetal targets should check that the
+  new default will work with their system configurations, since it requires
+  that SCTLR.A is 0, SCTLR.U is 1, and that the memory in question is
+  configured as "normal" memory. This brings Clang in-line with the default
+  settings for GCC and Arm Compiler. Aside from making Clang align with other
+  compilers, changing the default brings major performance and code size
+  improvements for most targets. We have not changed the default behavior for
+  ARMv6, but may revisit that decision in the future. Users can restore the old
+  behavior with -m[no-]unaligned-access.
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -398,6 +398,14 @@ Moved checkers
 
 Sanitizers
 ----------
+
+- ``-fsanitize=signed-integer-overflow`` now instruments signed arithmetic even
+  when ``-fwrapv`` is enabled. Previously, only division checks were enabled.
+
+  Users with ``-fwrapv`` as well as a sanitizer group like
+  ``-fsanitize=undefined`` or ``-fsanitize=integer`` enabled may want to
+  manually disable potentially noisy signed integer overflow checks with
+  ``-fno-sanitize=signed-integer-overflow``
 
 Python Binding Changes
 ----------------------

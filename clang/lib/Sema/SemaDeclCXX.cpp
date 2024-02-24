@@ -11395,7 +11395,9 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
         << ExplicitObjectParam->getSourceRange();
   }
 
-  if (D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static) {
+  if (D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||
+      (D.getContext() == clang::DeclaratorContext::Member &&
+       D.isStaticMember())) {
     Diag(ExplicitObjectParam->getBeginLoc(),
          diag::err_explicit_object_parameter_nonmember)
         << D.getSourceRange() << /*static=*/0 << IsLambda;

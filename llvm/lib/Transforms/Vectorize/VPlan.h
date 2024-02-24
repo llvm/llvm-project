@@ -236,9 +236,7 @@ struct VPIteration {
 struct VPTransformState {
   VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
                    DominatorTree *DT, IRBuilderBase &Builder,
-                   InnerLoopVectorizer *ILV, VPlan *Plan, LLVMContext &Ctx)
-      : VF(VF), UF(UF), LI(LI), DT(DT), Builder(Builder), ILV(ILV), Plan(Plan),
-        LVer(nullptr), TypeAnalysis(Ctx) {}
+                   InnerLoopVectorizer *ILV, VPlan *Plan, LLVMContext &Ctx);
 
   /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
   ElementCount VF;
@@ -386,9 +384,6 @@ struct VPTransformState {
   IRBuilderBase &Builder;
 
   VPValue2ValueTy VPValue2Value;
-
-  /// Hold the canonical scalar IV of the vector loop (start=0, step=VF*UF).
-  Value *CanonicalIV = nullptr;
 
   /// Hold a pointer to InnerLoopVectorizer to reuse its IR generation methods.
   InnerLoopVectorizer *ILV;
