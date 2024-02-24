@@ -1084,7 +1084,6 @@ LogicalResult ModuleTranslation::convertGlobals() {
           assert(iter != constantAggregateUseMap.end() && "constant not found");
           iter->second--;
           if (iter->second == 0) {
-            cst->removeDeadConstantUsers();
             if (cst->user_empty()) {
               cst->destroyConstant();
               numConstantsErased++;
@@ -1105,7 +1104,6 @@ LogicalResult ModuleTranslation::convertGlobals() {
       // converted.
       for (auto it : constantAggregateUseMap) {
         auto cst = it.first;
-        cst->removeDeadConstantUsers();
         if (cst->user_empty()) {
           cst->destroyConstant();
           numConstantsErased++;
