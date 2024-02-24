@@ -17976,17 +17976,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     llvm::Type *T0 = Op0->getType();
     llvm::Type *T1 = Op1->getType();
     if (!T0->isVectorTy() && !T1->isVectorTy()) {
-      if (T0->isFloatingPointTy()) {
+      if (T0->isFloatingPointTy())
         return Builder.CreateFMul(Op0, Op1, "dx.dot");
-      }
 
-      if (T0->isIntegerTy()) {
+      if (T0->isIntegerTy())
         return Builder.CreateMul(Op0, Op1, "dx.dot");
-      }
+
       // Bools should have been promoted
-      assert(
-          false &&
-          "Dot product on a scalar is only supported on integers and floats.");
+      llvm_unreachable(
+          "Scalar dot product is only supported on ints and floats.");
     }
     // A VectorSplat should have happened
     assert(T0->isVectorTy() && T1->isVectorTy() &&

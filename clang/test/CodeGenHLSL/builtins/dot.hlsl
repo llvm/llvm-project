@@ -6,7 +6,6 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
-// -fnative-half-type sets __HLSL_ENABLE_16_BIT
 #ifdef __HLSL_ENABLE_16_BIT
 // NATIVE_HALF: %dx.dot = mul i16 %0, %1
 // NATIVE_HALF: ret i16 %dx.dot
@@ -113,19 +112,19 @@ int64_t test_dot_long ( int64_t p0, int64_t p1 ) {
 
 // CHECK: %dx.dot = call i64 @llvm.dx.dot.v2i64(<2 x i64> %0, <2 x i64> %1)
 // CHECK: ret i64 %dx.dot
-int64_t test_dot_uint2 ( int64_t2 p0, int64_t2 p1 ) {
+int64_t test_dot_long2 ( int64_t2 p0, int64_t2 p1 ) {
   return dot ( p0, p1 );
 }
 
 // CHECK: %dx.dot = call i64 @llvm.dx.dot.v3i64(<3 x i64> %0, <3 x i64> %1)
 // CHECK: ret i64 %dx.dot
-int64_t test_dot_uint3 ( int64_t3 p0, int64_t3 p1 ) {
+int64_t test_dot_long3 ( int64_t3 p0, int64_t3 p1 ) {
   return dot ( p0, p1 );
 }
 
 // CHECK: %dx.dot = call i64 @llvm.dx.dot.v4i64(<4 x i64> %0, <4 x i64> %1)
 // CHECK: ret i64 %dx.dot
-int64_t test_dot_uint4 ( int64_t4 p0, int64_t4 p1 ) {
+int64_t test_dot_long4 ( int64_t4 p0, int64_t4 p1 ) {
   return dot ( p0, p1 );
 }
 
@@ -137,19 +136,19 @@ uint64_t test_dot_ulong ( uint64_t p0, uint64_t p1 ) {
 
 // CHECK: %dx.dot = call i64 @llvm.dx.dot.v2i64(<2 x i64> %0, <2 x i64> %1)
 // CHECK: ret i64 %dx.dot
-uint64_t test_dot_uint2 ( uint64_t2 p0, uint64_t2 p1 ) {
+uint64_t test_dot_ulong2 ( uint64_t2 p0, uint64_t2 p1 ) {
   return dot ( p0, p1 );
 }
 
 // CHECK: %dx.dot = call i64 @llvm.dx.dot.v3i64(<3 x i64> %0, <3 x i64> %1)
 // CHECK: ret i64 %dx.dot
-uint64_t test_dot_uint3 ( uint64_t3 p0, uint64_t3 p1 ) {
+uint64_t test_dot_ulong3 ( uint64_t3 p0, uint64_t3 p1 ) {
   return dot ( p0, p1 );
 }
 
 // CHECK: %dx.dot = call i64 @llvm.dx.dot.v4i64(<4 x i64> %0, <4 x i64> %1)
 // CHECK: ret i64 %dx.dot
-uint64_t test_dot_uint4 ( uint64_t4 p0, uint64_t4 p1 ) {
+uint64_t test_dot_ulong4 ( uint64_t4 p0, uint64_t4 p1 ) {
   return dot ( p0, p1 );
 }
 

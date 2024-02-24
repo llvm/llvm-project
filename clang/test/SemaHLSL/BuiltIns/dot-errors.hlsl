@@ -10,7 +10,6 @@ float test_too_many_arg ( float2 p0) {
   // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
 }
 
-//NOTE: eventually behavior should match builtin
 float test_dot_no_second_arg ( float2 p0) {
   return dot ( p0 );
   // expected-error@-1 {{no matching function for call to 'dot'}}
