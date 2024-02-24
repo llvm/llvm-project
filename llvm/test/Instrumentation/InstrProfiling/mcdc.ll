@@ -32,9 +32,7 @@ entry:
   call void @llvm.instrprof.mcdc.tvbitmap.update(ptr @__profn_test, i64 99278, i32 1, i32 0, ptr %mcdc.addr)
   ; CHECK:      %[[TEMP:mcdc.*]] = load i32, ptr %mcdc.addr, align 4
   ; CHECK-NEXT: %[[LAB4:[0-9]+]] = lshr i32 %[[TEMP]], 3
-  ; CHECK-NEXT: %[[LAB5:[0-9]+]] = zext i32 %[[LAB4]] to i64
-  ; CHECK-NEXT: %[[LAB6:[0-9]+]] = add i64 ptrtoint (ptr @__profbm_test to i64), %[[LAB5]]
-  ; CHECK-NEXT: %[[LAB7:[0-9]+]] = inttoptr i64 %[[LAB6]] to ptr
+  ; CHECK-NEXT: %[[LAB7:[0-9]+]] = getelementptr inbounds i8, ptr @__profbm_test, i32 %[[LAB4]]
   ; CHECK-NEXT: %[[LAB8:[0-9]+]] = and i32 %[[TEMP]], 7
   ; CHECK-NEXT: %[[LAB9:[0-9]+]] = trunc i32 %[[LAB8]] to i8
   ; CHECK-NEXT: %[[LAB10:[0-9]+]] = shl i8 1, %[[LAB9]]
