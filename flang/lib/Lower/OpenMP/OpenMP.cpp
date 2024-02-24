@@ -735,7 +735,8 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
       deviceAddrOperands;
   llvm::SmallVector<mlir::Type> useDeviceTypes;
   llvm::SmallVector<mlir::Location> useDeviceLocs;
-  llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols,
+      mapSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetData,
@@ -746,7 +747,7 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
   cp.processUseDeviceAddr(deviceAddrOperands, useDeviceTypes, useDeviceLocs,
                           useDeviceSymbols);
   cp.processMap(currentLocation, llvm::omp::Directive::OMPD_target_data,
-                stmtCtx, mapOperands);
+                stmtCtx, mapOperands, &mapSymbols);
 
   auto dataOp = converter.getFirOpBuilder().create<mlir::omp::DataOp>(
       currentLocation, ifClauseOperand, deviceOperand, devicePtrOperands,
@@ -769,6 +770,7 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
   mlir::UnitAttr nowaitAttr;
   llvm::SmallVector<mlir::Value> mapOperands, dependOperands;
   llvm::SmallVector<mlir::Attribute> dependTypeOperands;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> mapSymbols;
 
   Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName;
   llvm::omp::Directive directive;
@@ -801,7 +803,8 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
                                                               mapOperands);
 
   } else {
-    cp.processMap(currentLocation, directive, stmtCtx, mapOperands);
+    cp.processMap(currentLocation, directive, stmtCtx, mapOperands,
+                  &mapSymbols);
   }
 
   return firOpBuilder.create<OpTy>(
@@ -922,7 +925,7 @@ static void genBodyOfTargetOp(
         firOpBuilder.setInsertionPoint(targetOp);
         mlir::Value mapOp = createMapInfoOp(
             firOpBuilder, copyVal.getLoc(), copyVal, mlir::Value{}, name.str(),
-            bounds, llvm::SmallVector<mlir::Value>{},
+            bounds, llvm::SmallVector<mlir::Value>{}, mlir::ArrayAttr{},
             static_cast<
                 std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                 llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT),
@@ -990,9 +993,8 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   cp.processThreadLimit(stmtCtx, threadLimitOperand);
   cp.processDepend(dependTypeOperands, dependOperands);
   cp.processNowait(nowaitAttr);
-  cp.processMap(currentLocation, directive, stmtCtx, mapOperands, &mapSymTypes,
-                &mapSymLocs, &mapSymbols);
-
+  cp.processMap(currentLocation, directive, stmtCtx, mapOperands, &mapSymbols,
+                &mapSymTypes, &mapSymLocs);
   cp.processTODO<Fortran::parser::OmpClause::Private,
                  Fortran::parser::OmpClause::Firstprivate,
                  Fortran::parser::OmpClause::IsDevicePtr,
@@ -1057,9 +1059,11 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
           mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
         }
 
+        checkAndApplyDeclTargetMapFlags(converter, mapFlag, sym);
+
         mlir::Value mapOp = createMapInfoOp(
             converter.getFirOpBuilder(), baseOp.getLoc(), baseOp, mlir::Value{},
-            name.str(), bounds, {},
+            name.str(), bounds, {}, mlir::ArrayAttr{},
             static_cast<
                 std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                 mapFlag),

@@ -114,14 +114,13 @@ public:
   // store the original type, location and Fortran symbol for the map operands.
   // They may be used later on to create the block_arguments for some of the
   // target directives that require it.
-  bool processMap(mlir::Location currentLocation,
-                  const llvm::omp::Directive &directive,
-                  Fortran::lower::StatementContext &stmtCtx,
-                  llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-                  llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr,
-                  llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
-                  llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-                      *mapSymbols = nullptr) const;
+  bool processMap(
+      mlir::Location currentLocation, const llvm::omp::Directive &directive,
+      Fortran::lower::StatementContext &stmtCtx,
+      llvm::SmallVectorImpl<mlir::Value> &mapOperands,
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols,
+      llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr,
+      llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr) const;
   bool
   processReduction(mlir::Location currentLocation,
                    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
@@ -188,7 +187,12 @@ template <typename T>
 bool ClauseProcessor::processMotionClauses(
     Fortran::lower::StatementContext &stmtCtx,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands) {
-  return findRepeatableClause<T>(
+  llvm::SmallVector<mlir::omp::MapInfoOp> memberMaps;
+  llvm::SmallVector<mlir::Attribute> memberPlacementIndices;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> memberParentSyms,
+      mapSymbols;
+
+  bool clauseFound = findRepeatableClause<T>(
       [&](const T *motionClause, const Fortran::parser::CharBlock &source) {
         mlir::Location clauseLocation = converter.genLocation(source);
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -203,8 +207,28 @@ bool ClauseProcessor::processMotionClauses(
                 : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
 
         for (const Fortran::parser::OmpObject &ompObject : motionClause->v.v) {
+          llvm::omp::OpenMPOffloadMappingFlags objectsMapTypeBits = mapTypeBits;
+          checkAndApplyDeclTargetMapFlags(converter, objectsMapTypeBits,
+                                          *getOmpObjectSymbol(ompObject));
+
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
+          const Fortran::semantics::Symbol *parentSym = nullptr;
+
+          if (getOmpObjectSymbol(ompObject)->owner().IsDerivedType()) {
+            const auto *designator =
+                Fortran::parser::Unwrap<Fortran::parser::Designator>(
+                    ompObject.u);
+            assert(designator && "Expected a designator from derived type "
+                                 "component during motion clause processing");
+            parentSym = GetFirstName(*designator).symbol;
+            memberParentSyms.push_back(parentSym);
+            memberPlacementIndices.push_back(
+                firOpBuilder.getI64IntegerAttr(findComponentMemberPlacement(
+                    &parentSym->GetType()->derivedTypeSpec().typeSymbol(),
+                    getOmpObjectSymbol(ompObject))));
+          }
+
           Fortran::lower::AddrAndBoundsInfo info =
               Fortran::lower::gatherDataOperandAddrAndBounds<
                   Fortran::parser::OmpObject, mlir::omp::DataBoundsOp,
@@ -221,17 +245,27 @@ bool ClauseProcessor::processMotionClauses(
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
-          mlir::Value mapOp = createMapInfoOp(
+          mlir::omp::MapInfoOp mapOp = createMapInfoOp(
               firOpBuilder, clauseLocation, symAddr, mlir::Value{},
-              asFortran.str(), bounds, {},
+              asFortran.str(), bounds, {}, mlir::ArrayAttr{},
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-                  mapTypeBits),
+                  objectsMapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
-          mapOperands.push_back(mapOp);
+          if (parentSym) {
+            memberMaps.push_back(mapOp);
+          } else {
+            mapOperands.push_back(mapOp);
+            mapSymbols.push_back(getOmpObjectSymbol(ompObject));
+          }
         }
       });
+
+  insertChildMapInfoIntoParent(converter, memberParentSyms, memberMaps,
+                               memberPlacementIndices, mapOperands, nullptr,
+                               nullptr, &mapSymbols);
+  return clauseFound;
 }
 
 template <typename... Ts>

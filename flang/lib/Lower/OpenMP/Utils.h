@@ -20,6 +20,10 @@ namespace fir {
 class FirOpBuilder;
 } // namespace fir
 
+namespace llvm::omp {
+enum class OpenMPOffloadMappingFlags : uint64_t;
+} // namespace llvm::omp
+
 namespace Fortran {
 
 namespace semantics {
@@ -45,10 +49,30 @@ mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
                 mlir::SmallVector<mlir::Value> bounds,
-                mlir::SmallVector<mlir::Value> members, uint64_t mapType,
+                mlir::SmallVector<mlir::Value> members,
+                mlir::ArrayAttr membersIndex, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool isVal = false);
+                bool partialMap = false);
 
+void checkAndApplyDeclTargetMapFlags(
+    Fortran::lower::AbstractConverter &converter,
+    llvm::omp::OpenMPOffloadMappingFlags &mapFlags,
+    const Fortran::semantics::Symbol &symbol);
+
+int findComponentMemberPlacement(
+    const Fortran::semantics::Symbol *dTypeSym,
+    const Fortran::semantics::Symbol *componentSym);
+
+void insertChildMapInfoIntoParent(
+    Fortran::lower::AbstractConverter &converter,
+    llvm::SmallVector<const Fortran::semantics::Symbol *> &memberParentSyms,
+    llvm::SmallVector<mlir::omp::MapInfoOp> &memberMaps,
+    llvm::SmallVector<mlir::Attribute> &memberPlacementIndices,
+    llvm::SmallVectorImpl<mlir::Value> &mapOperands,
+    llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
+    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols);
+    
 void gatherFuncAndVarSyms(
     const Fortran::parser::OmpObjectList &objList,
     mlir::omp::DeclareTargetCaptureClause clause,

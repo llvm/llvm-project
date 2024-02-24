@@ -843,9 +843,10 @@ mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
                 mlir::SmallVector<mlir::Value> bounds,
-                mlir::SmallVector<mlir::Value> members, uint64_t mapType,
+                mlir::SmallVector<mlir::Value> members,
+                mlir::ArrayAttr membersIndex, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool isVal) {
+                bool partialMap) {
   if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
     baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
     retTy = baseAddr.getType();
@@ -855,10 +856,10 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
       llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
 
   mlir::omp::MapInfoOp op = builder.create<mlir::omp::MapInfoOp>(
-      loc, retTy, baseAddr, varType, varPtrPtr, members, bounds,
+      loc, retTy, baseAddr, varType, varPtrPtr, members, membersIndex, bounds,
       builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
       builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
-      builder.getStringAttr(name));
+      builder.getStringAttr(name), builder.getBoolAttr(partialMap));
 
   return op;
 }
@@ -867,12 +868,16 @@ bool ClauseProcessor::processMap(
     mlir::Location currentLocation, const llvm::omp::Directive &directive,
     Fortran::lower::StatementContext &stmtCtx,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols,
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
-    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols)
-    const {
+    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  return findRepeatableClause<ClauseTy::Map>(
+
+  llvm::SmallVector<mlir::omp::MapInfoOp> memberMaps;
+  llvm::SmallVector<mlir::Attribute> memberPlacementIndices;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> memberParentSyms;
+
+  bool clauseFound = findRepeatableClause<ClauseTy::Map>(
       [&](const ClauseTy::Map *mapClause,
           const Fortran::parser::CharBlock &source) {
         mlir::Location clauseLocation = converter.genLocation(source);
@@ -919,8 +924,27 @@ bool ClauseProcessor::processMap(
 
         for (const Fortran::parser::OmpObject &ompObject :
              std::get<Fortran::parser::OmpObjectList>(mapClause->v.t).v) {
+          llvm::omp::OpenMPOffloadMappingFlags objectsMapTypeBits = mapTypeBits;
+          checkAndApplyDeclTargetMapFlags(converter, objectsMapTypeBits,
+                                          *getOmpObjectSymbol(ompObject));
+
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
+          const Fortran::semantics::Symbol *parentSym = nullptr;
+
+          if (getOmpObjectSymbol(ompObject)->owner().IsDerivedType()) {
+            const auto *designator =
+                Fortran::parser::Unwrap<Fortran::parser::Designator>(
+                    ompObject.u);
+            assert(designator && "Expected a designator from derived type "
+                                 "component during map clause processing");
+            parentSym = GetFirstName(*designator).symbol;
+            memberParentSyms.push_back(parentSym);
+            memberPlacementIndices.push_back(
+                firOpBuilder.getI64IntegerAttr(findComponentMemberPlacement(
+                    &parentSym->GetType()->derivedTypeSpec().typeSymbol(),
+                    getOmpObjectSymbol(ompObject))));
+          }
 
           Fortran::lower::AddrAndBoundsInfo info =
               Fortran::lower::gatherDataOperandAddrAndBounds<
@@ -938,24 +962,32 @@ bool ClauseProcessor::processMap(
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
-          mlir::Value mapOp = createMapInfoOp(
+          mlir::omp::MapInfoOp mapOp = createMapInfoOp(
               firOpBuilder, clauseLocation, symAddr, mlir::Value{},
-              asFortran.str(), bounds, {},
+              asFortran.str(), bounds, {}, mlir::ArrayAttr{},
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-                  mapTypeBits),
+                  objectsMapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
-          mapOperands.push_back(mapOp);
-          if (mapSymTypes)
-            mapSymTypes->push_back(symAddr.getType());
-          if (mapSymLocs)
-            mapSymLocs->push_back(symAddr.getLoc());
-
-          if (mapSymbols)
+          if (parentSym) {
+            memberMaps.push_back(mapOp);
+          } else {
+            mapOperands.push_back(mapOp);
             mapSymbols->push_back(getOmpObjectSymbol(ompObject));
+            if (mapSymTypes)
+              mapSymTypes->push_back(symAddr.getType());
+            if (mapSymLocs)
+              mapSymLocs->push_back(symAddr.getLoc());
+          }
         }
       });
+
+  insertChildMapInfoIntoParent(converter, memberParentSyms, memberMaps,
+                               memberPlacementIndices, mapOperands, mapSymTypes,
+                               mapSymLocs, mapSymbols);
+
+  return clauseFound;
 }
 
 bool ClauseProcessor::processReduction(
