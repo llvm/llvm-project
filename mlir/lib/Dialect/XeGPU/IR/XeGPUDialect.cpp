@@ -39,7 +39,8 @@ void XeGPUDialect::initialize() {
       >();
 }
 
-// this file is left for position occupation, we will add functions in following PRs.
+// this file is for position occupation,
+// we will add functions in following PRs.
 
 } // namespace xegpu
 } // namespace mlir
