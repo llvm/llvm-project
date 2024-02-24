@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -fsyntax-only -Wignored-qualifiers -Wno-error=return-type -Wno-error=implicit-int -verify -fblocks -Wno-unreachable-code -Wno-unused-value -Wno-strict-prototypes
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -fsyntax-only -Wignored-qualifiers -Wno-error=return-type -Wno-error=return-mismatch -Wno-error=implicit-int -verify -fblocks -Wno-unreachable-code -Wno-unused-value -Wno-strict-prototypes
 
 // clang emits the following warning by default.
 // With GCC, -pedantic, -Wreturn-type or -Wall are required to produce the
