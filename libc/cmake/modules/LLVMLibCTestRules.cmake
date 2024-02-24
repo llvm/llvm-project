@@ -318,8 +318,8 @@ function(add_libc_fuzzer target_name)
   target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
 
-  target_link_libraries(${fq_target_name} PRIVATE 
-    ${link_object_files} 
+  target_link_libraries(${fq_target_name} PRIVATE
+    ${link_object_files}
     ${LIBC_FUZZER_LINK_LIBRARIES}
   )
 
@@ -352,7 +352,7 @@ endif()
 # system libc are linked in to the final executable. The final exe is fully
 # statically linked. The libc that the final exe links to consists of only
 # the object files of the DEPENDS targets.
-# 
+#
 # Usage:
 #   add_integration_test(
 #     <target name>
@@ -462,7 +462,7 @@ function(add_integration_test test_name)
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-    target_link_options(${fq_build_target_name} PRIVATE 
+    target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT}
       -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
       "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
@@ -470,7 +470,7 @@ function(add_integration_test test_name)
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     # We need to use the internal object versions for NVPTX.
     set(internal_suffix ".__internal__")
-    target_link_options(${fq_build_target_name} PRIVATE 
+    target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT}
       "-Wl,--suppress-stack-size-warning"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
@@ -645,7 +645,7 @@ function(add_libc_hermetic_test test_name)
   endforeach()
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-    target_link_options(${fq_build_target_name} PRIVATE 
+    target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT}
       -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
       "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
@@ -653,7 +653,7 @@ function(add_libc_hermetic_test test_name)
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     # We need to use the internal object versions for NVPTX.
     set(internal_suffix ".__internal__")
-    target_link_options(${fq_build_target_name} PRIVATE 
+    target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT}
       "-Wl,--suppress-stack-size-warning"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
