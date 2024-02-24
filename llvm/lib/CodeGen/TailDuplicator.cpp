@@ -577,6 +577,10 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   if (TailBB.isSuccessor(&TailBB))
     return false;
 
+  // Duplicating a BB which has both multiple predecessors and successors will
+  // result in a complex CFG and also may cause huge amount of PHI nodes. If we
+  // want to remove this limitation, we have to address
+  // https://github.com/llvm/llvm-project/issues/78578.
   if (TailBB.pred_size() > TailDupPredSize &&
       TailBB.succ_size() > TailDupSuccSize)
     return false;
