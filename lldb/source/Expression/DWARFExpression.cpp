@@ -40,9 +40,9 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 
+#include "Plugins/Process/wasm/wasmRegisterContext.h"
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "Plugins/SymbolFile/DWARF/DWARFWasm.h"
-#include "Plugins/Process/wasm/wasmRegisterContext.h"
 
 using namespace lldb;
 using namespace lldb_private;
