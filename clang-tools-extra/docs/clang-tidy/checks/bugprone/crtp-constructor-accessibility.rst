@@ -3,7 +3,8 @@
 bugprone-crtp-constructor-accessibility
 =======================================
 
-Finds Curiously Recurring Template Pattern used in an error-prone way.
+Detects error-prone Curiously Recurring Template Pattern usage, when the CRTP
+can be constructed outside itself and the derived class.
 
 The CRTP is an idiom, in which a class derives from a template class, where 
 itself is the template argument. It should be ensured that if a class is
@@ -22,7 +23,8 @@ Example:
 
   class Derived : CRTP<Derived> {};
 
-Below can be seen some common mistakes that will allow the breaking of the idiom.
+Below can be seen some common mistakes that will allow the breaking of the 
+idiom.
 
 If the constructor of a class intended to be used in a CRTP is public, then
 it allows users to construct that class on its own.
@@ -60,9 +62,10 @@ Example:
   class Bad : CRTP<Good> {};
   Bad BadInstance;
 
-To ensure that no accidental instantiation happens, the best practice is to make
-the constructor private and declare the derived class as friend. Note that as a tradeoff, 
-this also gives the derived class access to every other private members of the CRTP.
+To ensure that no accidental instantiation happens, the best practice is to 
+make the constructor private and declare the derived class as friend. Note
+that as a tradeoff, this also gives the derived class access to every other
+private members of the CRTP.
 
 Example:
 
