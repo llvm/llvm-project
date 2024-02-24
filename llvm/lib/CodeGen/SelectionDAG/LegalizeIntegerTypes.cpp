@@ -1347,9 +1347,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_UMINUMAX(SDNode *N) {
   SDValue RHS = N->getOperand(1);
 
   // It doesn't matter if we sign extend or zero extend in the inputs. So do
-  // whatever is best for the target and the promoted operands. We can reuse
-  // PromoteSetCCOperands by passing it an unsigned predicate.
-  PromoteSetCCOperands(LHS, RHS, ISD::SETUGT);
+  // whatever is best for the target and the promoted operands.
+  SExtOrZExtPromotedOperands(LHS, RHS);
 
   return DAG.getNode(N->getOpcode(), SDLoc(N),
                      LHS.getValueType(), LHS, RHS);
@@ -1915,25 +1914,10 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   return false;
 }
 
-/// PromoteSetCCOperands - Promote the operands of a comparison.  This code is
-/// shared among BR_CC, SELECT_CC, and SETCC handlers.
-void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &LHS, SDValue &RHS,
-                                            ISD::CondCode CCCode) {
-  // We have to insert explicit sign or zero extends. Note that we could
-  // insert sign extends for ALL conditions. For those operations where either
-  // zero or sign extension would be valid, we ask the target which extension
-  // it would prefer.
-
-  // Signed comparisons always require sign extension.
-  if (ISD::isSignedIntSetCC(CCCode)) {
-    LHS = SExtPromotedInteger(LHS);
-    RHS = SExtPromotedInteger(RHS);
-    return;
-  }
-
-  assert((ISD::isUnsignedIntSetCC(CCCode) || ISD::isIntEqualitySetCC(CCCode)) &&
-         "Unknown integer comparison!");
-
+// These operands can be either sign extended or zero extended as long as we
+// treat them the same. If an extension is free, choose that. Otherwise, follow
+// target preference.
+void DAGTypeLegalizer::SExtOrZExtPromotedOperands(SDValue &LHS, SDValue &RHS) {
   SDValue OpL = GetPromotedInteger(LHS);
   SDValue OpR = GetPromotedInteger(RHS);
 
@@ -1975,6 +1959,28 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &LHS, SDValue &RHS,
   // Otherwise, use zext_inreg.
   LHS = ZExtPromotedInteger(LHS);
   RHS = ZExtPromotedInteger(RHS);
+}
+
+/// PromoteSetCCOperands - Promote the operands of a comparison.  This code is
+/// shared among BR_CC, SELECT_CC, and SETCC handlers.
+void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &LHS, SDValue &RHS,
+                                            ISD::CondCode CCCode) {
+  // We have to insert explicit sign or zero extends. Note that we could
+  // insert sign extends for ALL conditions. For those operations where either
+  // zero or sign extension would be valid, we ask the target which extension
+  // it would prefer.
+
+  // Signed comparisons always require sign extension.
+  if (ISD::isSignedIntSetCC(CCCode)) {
+    LHS = SExtPromotedInteger(LHS);
+    RHS = SExtPromotedInteger(RHS);
+    return;
+  }
+
+  assert((ISD::isUnsignedIntSetCC(CCCode) || ISD::isIntEqualitySetCC(CCCode)) &&
+         "Unknown integer comparison!");
+
+  SExtOrZExtPromotedOperands(LHS, RHS);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_ANY_EXTEND(SDNode *N) {

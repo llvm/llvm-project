@@ -399,6 +399,7 @@ private:
   SDValue PromoteIntOp_VP_STRIDED(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_VP_SPLICE(SDNode *N, unsigned OpNo);
 
+  void SExtOrZExtPromotedOperands(SDValue &LHS,SDValue &RHS);
   void PromoteSetCCOperands(SDValue &LHS,SDValue &RHS, ISD::CondCode Code);
 
   //===--------------------------------------------------------------------===//
