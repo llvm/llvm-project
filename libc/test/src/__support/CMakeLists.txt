@@ -182,7 +182,7 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
                      POST_BUILD
                      COMMAND $<TARGET_FILE:libc_str_to_float_comparison_test> ${float_test_file}
                      DEPENDS ${float_test_file}
-                     COMMENT "Test the strtof and strtod implementations against precomputed results." 
+                     COMMENT "Test the strtof and strtod implementations against precomputed results."
                      VERBATIM)
 endif()
 
