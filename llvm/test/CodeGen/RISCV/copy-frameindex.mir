@@ -5,11 +5,11 @@
   define void @sink_addi_fi(i32 %0) !dbg !5 {
   bb.0:
     %1 = alloca i32, align 4
-    call void @llvm.dbg.value(metadata i32* %1, metadata !1, metadata !DIExpression()), !dbg !3
+    call void @llvm.dbg.value(metadata ptr %1, metadata !1, metadata !DIExpression()), !dbg !3
     %2 = icmp eq i32 %0, 0
     br i1 %2, label %bb.2, label %bb.1
   bb.1:
-    store volatile i32 0, i32* %1, align 4
+    store volatile i32 0, ptr %1, align 4
     br label %bb.2
   bb.2:
     ret void

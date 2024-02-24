@@ -107,7 +107,9 @@ public:
     return Global;
   }
 
-  const Symbol *findSymbol(EncodeKind Kind, StringRef Name) const;
+  const Symbol *
+  findSymbol(EncodeKind Kind, StringRef Name,
+             ObjCIFSymbolKind ObjCIF = ObjCIFSymbolKind::None) const;
 
   struct const_symbol_iterator
       : public iterator_adaptor_base<

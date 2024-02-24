@@ -1585,8 +1585,30 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     return cast<DILocalVariable>(NewVar);
   };
 
-  auto UpdateDPValuesOnInst = [&](Instruction &I) -> void {
-    for (auto &DPV : I.getDbgValueRange()) {
+  auto UpdateDbgLabel = [&](auto *LabelRecord) {
+    // Point the label record to a fresh label within the new function if
+    // the record was not inlined from some other function.
+    if (LabelRecord->getDebugLoc().getInlinedAt())
+      return;
+    DILabel *OldLabel = LabelRecord->getLabel();
+    DINode *&NewLabel = RemappedMetadata[OldLabel];
+    if (!NewLabel) {
+      DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
+          *OldLabel->getScope(), *NewSP, Ctx, Cache);
+      NewLabel = DILabel::get(Ctx, NewScope, OldLabel->getName(),
+                              OldLabel->getFile(), OldLabel->getLine());
+    }
+    LabelRecord->setLabel(cast<DILabel>(NewLabel));
+  };
+
+  auto UpdateDbgRecordsOnInst = [&](Instruction &I) -> void {
+    for (DbgRecord &DR : I.getDbgValueRange()) {
+      if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
+        UpdateDbgLabel(DPL);
+        continue;
+      }
+
+      DPValue &DPV = cast<DPValue>(DR);
       // Apply the two updates that dbg.values get: invalid operands, and
       // variable metadata fixup.
       if (any_of(DPV.location_ops(), IsInvalidLocation)) {
@@ -1599,13 +1621,11 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       }
       if (!DPV.getDebugLoc().getInlinedAt())
         DPV.setVariable(GetUpdatedDIVariable(DPV.getVariable()));
-      DPV.setDebugLoc(DebugLoc::replaceInlinedAtSubprogram(DPV.getDebugLoc(),
-                                                           *NewSP, Ctx, Cache));
     }
   };
 
   for (Instruction &I : instructions(NewFunc)) {
-    UpdateDPValuesOnInst(I);
+    UpdateDbgRecordsOnInst(I);
 
     auto *DII = dyn_cast<DbgInfoIntrinsic>(&I);
     if (!DII)
@@ -1614,17 +1634,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     // Point the intrinsic to a fresh label within the new function if the
     // intrinsic was not inlined from some other function.
     if (auto *DLI = dyn_cast<DbgLabelInst>(&I)) {
-      if (DLI->getDebugLoc().getInlinedAt())
-        continue;
-      DILabel *OldLabel = DLI->getLabel();
-      DINode *&NewLabel = RemappedMetadata[OldLabel];
-      if (!NewLabel) {
-        DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
-            *OldLabel->getScope(), *NewSP, Ctx, Cache);
-        NewLabel = DILabel::get(Ctx, NewScope, OldLabel->getName(),
-                                OldLabel->getFile(), OldLabel->getLine());
-      }
-      DLI->setArgOperand(0, MetadataAsValue::get(Ctx, NewLabel));
+      UpdateDbgLabel(DLI);
       continue;
     }
 
@@ -1658,6 +1668,9 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     if (const DebugLoc &DL = I.getDebugLoc())
       I.setDebugLoc(
           DebugLoc::replaceInlinedAtSubprogram(DL, *NewSP, Ctx, Cache));
+    for (DbgRecord &DR : I.getDbgValueRange())
+      DR.setDebugLoc(DebugLoc::replaceInlinedAtSubprogram(DR.getDebugLoc(),
+                                                          *NewSP, Ctx, Cache));
 
     // Loop info metadata may contain line locations. Fix them up.
     auto updateLoopInfoLoc = [&Ctx, &Cache, NewSP](Metadata *MD) -> Metadata * {
@@ -1768,6 +1781,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     any_of(Blocks, [&BranchI](const BasicBlock *BB) {
       return any_of(*BB, [&BranchI](const Instruction &I) {
         if (!I.getDebugLoc())
+          return false;
+        // Don't use source locations attached to debug-intrinsics: they could
+        // be from completely unrelated scopes.
+        if (isa<DbgInfoIntrinsic>(I))
           return false;
         BranchI->setDebugLoc(I.getDebugLoc());
         return true;

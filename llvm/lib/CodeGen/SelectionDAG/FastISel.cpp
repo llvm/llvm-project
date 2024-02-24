@@ -1188,16 +1188,32 @@ void FastISel::handleDbgInfo(const Instruction *II) {
   MIMD = MIMetadata();
 
   // Reverse order of debug records, because fast-isel walks through backwards.
-  for (DPValue &DPV : llvm::reverse(II->getDbgValueRange())) {
+  for (DbgRecord &DR : llvm::reverse(II->getDbgValueRange())) {
     flushLocalValueMap();
     recomputeInsertPt();
+
+    if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
+      assert(DPL->getLabel() && "Missing label");
+      if (!FuncInfo.MF->getMMI().hasDebugInfo()) {
+        LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DPL << "\n");
+        continue;
+      }
+
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DPL->getDebugLoc(),
+              TII.get(TargetOpcode::DBG_LABEL))
+          .addMetadata(DPL->getLabel());
+      continue;
+    }
+
+    DPValue &DPV = cast<DPValue>(DR);
 
     Value *V = nullptr;
     if (!DPV.hasArgList())
       V = DPV.getVariableLocationOp(0);
 
     bool Res = false;
-    if (DPV.getType() == DPValue::LocationType::Value) {
+    if (DPV.getType() == DPValue::LocationType::Value ||
+        DPV.getType() == DPValue::LocationType::Assign) {
       Res = lowerDbgValue(V, DPV.getExpression(), DPV.getVariable(),
                           DPV.getDebugLoc());
     } else {
@@ -1393,6 +1409,13 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
 
     return true;
   }
+  case Intrinsic::dbg_assign:
+    // A dbg.assign is a dbg.value with more information, typically produced
+    // during optimisation. If one reaches fastisel then something odd has
+    // happened (such as an optimised function being always-inlined into an
+    // optnone function). We will not be using the extra information in the
+    // dbg.assign in that case, just use its dbg.value fields.
+    LLVM_FALLTHROUGH;
   case Intrinsic::dbg_value: {
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst *DI = cast<DbgValueInst>(II);

@@ -366,14 +366,14 @@ Expected<ExecutableFunction> ExecutableFunction::create(
   auto SymbolSizes = object::computeSymbolSizes(*ObjectFileHolder.getBinary());
   // Get the size of the function that we want to call into (with the name of
   // FunctionID).
-  auto SymbolIt = llvm::find_if(SymbolSizes, [&](const auto &Pair) {
+  auto SymbolIt = find_if(SymbolSizes, [&](const auto &Pair) {
     auto SymbolName = Pair.first.getName();
     if (SymbolName)
       return *SymbolName == FunctionID;
     // We should always succeed in finding the FunctionID, hence we suppress
     // the error here and assert later on the search result, rather than
     // propagating the Expected<> error back to the caller.
-    llvm::consumeError(SymbolName.takeError());
+    consumeError(SymbolName.takeError());
     return false;
   });
   assert(SymbolIt != SymbolSizes.end() &&

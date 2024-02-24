@@ -876,23 +876,38 @@ if (CLANG_ENABLE_BOOTSTRAP)
   endforeach()
 endif()
 
-if (CLANG_BOLT_INSTRUMENT AND NOT LLVM_BUILD_INSTRUMENTED)
+set(CLANG_BOLT OFF CACHE STRING "Apply BOLT optimization to Clang. \
+  May be specified as Instrument or Perf or LBR to use a particular profiling \
+  mechanism.")
+string(TOUPPER "${CLANG_BOLT}" CLANG_BOLT)
+
+if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
   set(CLANG_PATH ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
-  set(CLANG_INSTRUMENTED ${CLANG_PATH}-bolt.inst)
+  set(CLANG_INSTRUMENTED ${LLVM_RUNTIME_OUTPUT_INTDIR}/${CLANG_BOLT_INSTRUMENTED})
   set(BOLT_FDATA ${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/prof.fdata)
 
-  # Instrument clang with BOLT
-  add_custom_target(clang-instrumented
-    DEPENDS ${CLANG_INSTRUMENTED}
-  )
-  add_custom_command(OUTPUT ${CLANG_INSTRUMENTED}
-    DEPENDS clang llvm-bolt
-    COMMAND llvm-bolt ${CLANG_PATH} -o ${CLANG_INSTRUMENTED}
-      -instrument --instrumentation-file-append-pid
-      --instrumentation-file=${BOLT_FDATA}
-    COMMENT "Instrumenting clang binary with BOLT"
-    VERBATIM
-  )
+  # Pass extra flag in no-LBR mode
+  if (CLANG_BOLT STREQUAL "PERF")
+    set(BOLT_NO_LBR "-nl")
+  endif()
+
+  if (CLANG_BOLT STREQUAL "INSTRUMENT")
+    # Instrument clang with BOLT
+    add_custom_target(clang-instrumented
+      DEPENDS ${CLANG_INSTRUMENTED}
+    )
+    add_custom_command(OUTPUT ${CLANG_INSTRUMENTED}
+      DEPENDS clang llvm-bolt
+      COMMAND llvm-bolt ${CLANG_PATH} -o ${CLANG_INSTRUMENTED}
+        -instrument --instrumentation-file-append-pid
+        --instrumentation-file=${BOLT_FDATA}
+      COMMENT "Instrumenting clang binary with BOLT"
+      VERBATIM
+    )
+    add_custom_target(clang-bolt-training-deps DEPENDS clang-instrumented)
+  else() # perf or LBR
+    add_custom_target(clang-bolt-training-deps DEPENDS clang)
+  endif()
 
   # Optimize original (pre-bolt) Clang using the collected profile
   set(CLANG_OPTIMIZED ${CMAKE_CURRENT_BINARY_DIR}/clang.bolt)
@@ -906,6 +921,7 @@ if (CLANG_BOLT_INSTRUMENT AND NOT LLVM_BUILD_INSTRUMENTED)
       -data ${BOLT_FDATA}
       -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions
       -split-all-cold -split-eh -dyno-stats -icf=1 -use-gnu-stack
+      ${BOLT_NO_LBR}
     COMMAND ${CMAKE_COMMAND} -E rename ${CLANG_OPTIMIZED} $<TARGET_FILE:clang>
     COMMENT "Optimizing Clang with BOLT"
     VERBATIM

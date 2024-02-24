@@ -181,14 +181,21 @@ static void DefineTypeSize(const Twine &MacroName, TargetInfo::IntType Ty,
                  TI.isTypeSigned(Ty), Builder);
 }
 
-static void DefineFmt(const Twine &Prefix, TargetInfo::IntType Ty,
-                      const TargetInfo &TI, MacroBuilder &Builder) {
-  bool IsSigned = TI.isTypeSigned(Ty);
+static void DefineFmt(const LangOptions &LangOpts, const Twine &Prefix,
+                      TargetInfo::IntType Ty, const TargetInfo &TI,
+                      MacroBuilder &Builder) {
   StringRef FmtModifier = TI.getTypeFormatModifier(Ty);
-  for (const char *Fmt = IsSigned ? "di" : "ouxX"; *Fmt; ++Fmt) {
-    Builder.defineMacro(Prefix + "_FMT" + Twine(*Fmt) + "__",
-                        Twine("\"") + FmtModifier + Twine(*Fmt) + "\"");
-  }
+  auto Emitter = [&](char Fmt) {
+    Builder.defineMacro(Prefix + "_FMT" + Twine(Fmt) + "__",
+                        Twine("\"") + FmtModifier + Twine(Fmt) + "\"");
+  };
+  bool IsSigned = TI.isTypeSigned(Ty);
+  llvm::for_each(StringRef(IsSigned ? "di" : "ouxX"), Emitter);
+
+  // C23 added the b and B modifiers for printing binary output of unsigned
+  // integers. Conditionally define those if compiling in C23 mode.
+  if (LangOpts.C23 && !IsSigned)
+    llvm::for_each(StringRef("bB"), Emitter);
 }
 
 static void DefineType(const Twine &MacroName, TargetInfo::IntType Ty,
@@ -217,7 +224,8 @@ static void DefineTypeSizeAndWidth(const Twine &Prefix, TargetInfo::IntType Ty,
   DefineTypeWidth(Prefix + "_WIDTH__", Ty, TI, Builder);
 }
 
-static void DefineExactWidthIntType(TargetInfo::IntType Ty,
+static void DefineExactWidthIntType(const LangOptions &LangOpts,
+                                    TargetInfo::IntType Ty,
                                     const TargetInfo &TI,
                                     MacroBuilder &Builder) {
   int TypeWidth = TI.getTypeWidth(Ty);
@@ -236,7 +244,7 @@ static void DefineExactWidthIntType(TargetInfo::IntType Ty,
   const char *Prefix = IsSigned ? "__INT" : "__UINT";
 
   DefineType(Prefix + Twine(TypeWidth) + "_TYPE__", Ty, Builder);
-  DefineFmt(Prefix + Twine(TypeWidth), Ty, TI, Builder);
+  DefineFmt(LangOpts, Prefix + Twine(TypeWidth), Ty, TI, Builder);
 
   StringRef ConstSuffix(TI.getTypeConstantSuffix(Ty));
   Builder.defineMacro(Prefix + Twine(TypeWidth) + "_C_SUFFIX__", ConstSuffix);
@@ -259,7 +267,8 @@ static void DefineExactWidthIntTypeSize(TargetInfo::IntType Ty,
   DefineTypeSize(Prefix + Twine(TypeWidth) + "_MAX__", Ty, TI, Builder);
 }
 
-static void DefineLeastWidthIntType(unsigned TypeWidth, bool IsSigned,
+static void DefineLeastWidthIntType(const LangOptions &LangOpts,
+                                    unsigned TypeWidth, bool IsSigned,
                                     const TargetInfo &TI,
                                     MacroBuilder &Builder) {
   TargetInfo::IntType Ty = TI.getLeastIntTypeByWidth(TypeWidth, IsSigned);
@@ -274,11 +283,12 @@ static void DefineLeastWidthIntType(unsigned TypeWidth, bool IsSigned,
     DefineTypeSizeAndWidth(Prefix + Twine(TypeWidth), Ty, TI, Builder);
   else
     DefineTypeSize(Prefix + Twine(TypeWidth) + "_MAX__", Ty, TI, Builder);
-  DefineFmt(Prefix + Twine(TypeWidth), Ty, TI, Builder);
+  DefineFmt(LangOpts, Prefix + Twine(TypeWidth), Ty, TI, Builder);
 }
 
-static void DefineFastIntType(unsigned TypeWidth, bool IsSigned,
-                              const TargetInfo &TI, MacroBuilder &Builder) {
+static void DefineFastIntType(const LangOptions &LangOpts, unsigned TypeWidth,
+                              bool IsSigned, const TargetInfo &TI,
+                              MacroBuilder &Builder) {
   // stdint.h currently defines the fast int types as equivalent to the least
   // types.
   TargetInfo::IntType Ty = TI.getLeastIntTypeByWidth(TypeWidth, IsSigned);
@@ -293,7 +303,7 @@ static void DefineFastIntType(unsigned TypeWidth, bool IsSigned,
     DefineTypeSizeAndWidth(Prefix + Twine(TypeWidth), Ty, TI, Builder);
   else
     DefineTypeSize(Prefix + Twine(TypeWidth) + "_MAX__", Ty, TI, Builder);
-  DefineFmt(Prefix + Twine(TypeWidth), Ty, TI, Builder);
+  DefineFmt(LangOpts, Prefix + Twine(TypeWidth), Ty, TI, Builder);
 }
 
 
@@ -643,7 +653,9 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
                                                                   : "200704");
     Builder.defineMacro("__cpp_constexpr_in_decltype", "201711L");
     Builder.defineMacro("__cpp_range_based_for",
-                        LangOpts.CPlusPlus17 ? "201603L" : "200907");
+                        LangOpts.CPlusPlus23   ? "202211L"
+                        : LangOpts.CPlusPlus17 ? "201603L"
+                                               : "200907");
     Builder.defineMacro("__cpp_static_assert", LangOpts.CPlusPlus26 ? "202306L"
                                                : LangOpts.CPlusPlus17
                                                    ? "201411L"
@@ -764,6 +776,60 @@ void InitializeOpenCLFeatureTestMacros(const TargetInfo &TI,
 
   // Assume compiling for FULL profile
   Builder.defineMacro("__opencl_c_int64");
+}
+
+llvm::SmallString<32> ConstructFixedPointLiteral(llvm::APFixedPoint Val,
+                                                 llvm::StringRef Suffix) {
+  if (Val.isSigned() && Val == llvm::APFixedPoint::getMin(Val.getSemantics())) {
+    // When representing the min value of a signed fixed point type in source
+    // code, we cannot simply write `-<lowest value>`. For example, the min
+    // value of a `short _Fract` cannot be written as `-1.0hr`. This is because
+    // the parser will read this (and really any negative numerical literal) as
+    // a UnaryOperator that owns a FixedPointLiteral with a positive value
+    // rather than just a FixedPointLiteral with a negative value. Compiling
+    // `-1.0hr` results in an overflow to the maximal value of that fixed point
+    // type. The correct way to represent a signed min value is to instead split
+    // it into two halves, like `(-0.5hr-0.5hr)` which is what the standard
+    // defines SFRACT_MIN as.
+    llvm::SmallString<32> Literal;
+    Literal.push_back('(');
+    llvm::SmallString<32> HalfStr =
+        ConstructFixedPointLiteral(Val.shr(1), Suffix);
+    Literal += HalfStr;
+    Literal += HalfStr;
+    Literal.push_back(')');
+    return Literal;
+  }
+
+  llvm::SmallString<32> Str(Val.toString());
+  Str += Suffix;
+  return Str;
+}
+
+void DefineFixedPointMacros(const TargetInfo &TI, MacroBuilder &Builder,
+                            llvm::StringRef TypeName, llvm::StringRef Suffix,
+                            unsigned Width, unsigned Scale, bool Signed) {
+  // Saturation doesn't affect the size or scale of a fixed point type, so we
+  // don't need it here.
+  llvm::FixedPointSemantics FXSema(
+      Width, Scale, Signed, /*IsSaturated=*/false,
+      !Signed && TI.doUnsignedFixedPointTypesHavePadding());
+  llvm::SmallString<32> MacroPrefix("__");
+  MacroPrefix += TypeName;
+  Builder.defineMacro(MacroPrefix + "_EPSILON__",
+                      ConstructFixedPointLiteral(
+                          llvm::APFixedPoint::getEpsilon(FXSema), Suffix));
+  Builder.defineMacro(MacroPrefix + "_FBIT__", Twine(Scale));
+  Builder.defineMacro(
+      MacroPrefix + "_MAX__",
+      ConstructFixedPointLiteral(llvm::APFixedPoint::getMax(FXSema), Suffix));
+
+  // ISO/IEC TR 18037:2008 doesn't specify MIN macros for unsigned types since
+  // they're all just zero.
+  if (Signed)
+    Builder.defineMacro(
+        MacroPrefix + "_MIN__",
+        ConstructFixedPointLiteral(llvm::APFixedPoint::getMin(FXSema), Suffix));
 }
 
 static void InitializePredefinedMacros(const TargetInfo &TI,
@@ -1064,19 +1130,20 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     DefineTypeSizeof("__SIZEOF_INT128__", 128, TI, Builder);
 
   DefineType("__INTMAX_TYPE__", TI.getIntMaxType(), Builder);
-  DefineFmt("__INTMAX", TI.getIntMaxType(), TI, Builder);
+  DefineFmt(LangOpts, "__INTMAX", TI.getIntMaxType(), TI, Builder);
   Builder.defineMacro("__INTMAX_C_SUFFIX__",
                       TI.getTypeConstantSuffix(TI.getIntMaxType()));
   DefineType("__UINTMAX_TYPE__", TI.getUIntMaxType(), Builder);
-  DefineFmt("__UINTMAX", TI.getUIntMaxType(), TI, Builder);
+  DefineFmt(LangOpts, "__UINTMAX", TI.getUIntMaxType(), TI, Builder);
   Builder.defineMacro("__UINTMAX_C_SUFFIX__",
                       TI.getTypeConstantSuffix(TI.getUIntMaxType()));
   DefineType("__PTRDIFF_TYPE__", TI.getPtrDiffType(LangAS::Default), Builder);
-  DefineFmt("__PTRDIFF", TI.getPtrDiffType(LangAS::Default), TI, Builder);
+  DefineFmt(LangOpts, "__PTRDIFF", TI.getPtrDiffType(LangAS::Default), TI,
+            Builder);
   DefineType("__INTPTR_TYPE__", TI.getIntPtrType(), Builder);
-  DefineFmt("__INTPTR", TI.getIntPtrType(), TI, Builder);
+  DefineFmt(LangOpts, "__INTPTR", TI.getIntPtrType(), TI, Builder);
   DefineType("__SIZE_TYPE__", TI.getSizeType(), Builder);
-  DefineFmt("__SIZE", TI.getSizeType(), TI, Builder);
+  DefineFmt(LangOpts, "__SIZE", TI.getSizeType(), TI, Builder);
   DefineType("__WCHAR_TYPE__", TI.getWCharType(), Builder);
   DefineType("__WINT_TYPE__", TI.getWIntType(), Builder);
   DefineTypeSizeAndWidth("__SIG_ATOMIC", TI.getSigAtomicType(), TI, Builder);
@@ -1084,7 +1151,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineType("__CHAR32_TYPE__", TI.getChar32Type(), Builder);
 
   DefineType("__UINTPTR_TYPE__", TI.getUIntPtrType(), Builder);
-  DefineFmt("__UINTPTR", TI.getUIntPtrType(), TI, Builder);
+  DefineFmt(LangOpts, "__UINTPTR", TI.getUIntPtrType(), TI, Builder);
 
   // The C standard requires the width of uintptr_t and intptr_t to be the same,
   // per 7.20.2.4p1. Same for intmax_t and uintmax_t, per 7.20.2.5p1.
@@ -1094,6 +1161,47 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   assert(TI.getTypeWidth(TI.getUIntMaxType()) ==
              TI.getTypeWidth(TI.getIntMaxType()) &&
          "uintmax_t and intmax_t have different widths?");
+
+  if (LangOpts.FixedPoint) {
+    // Each unsigned type has the same width as their signed type.
+    DefineFixedPointMacros(TI, Builder, "SFRACT", "HR", TI.getShortFractWidth(),
+                           TI.getShortFractScale(), /*Signed=*/true);
+    DefineFixedPointMacros(TI, Builder, "USFRACT", "UHR",
+                           TI.getShortFractWidth(),
+                           TI.getUnsignedShortFractScale(), /*Signed=*/false);
+    DefineFixedPointMacros(TI, Builder, "FRACT", "R", TI.getFractWidth(),
+                           TI.getFractScale(), /*Signed=*/true);
+    DefineFixedPointMacros(TI, Builder, "UFRACT", "UR", TI.getFractWidth(),
+                           TI.getUnsignedFractScale(), /*Signed=*/false);
+    DefineFixedPointMacros(TI, Builder, "LFRACT", "LR", TI.getLongFractWidth(),
+                           TI.getLongFractScale(), /*Signed=*/true);
+    DefineFixedPointMacros(TI, Builder, "ULFRACT", "ULR",
+                           TI.getLongFractWidth(),
+                           TI.getUnsignedLongFractScale(), /*Signed=*/false);
+    DefineFixedPointMacros(TI, Builder, "SACCUM", "HK", TI.getShortAccumWidth(),
+                           TI.getShortAccumScale(), /*Signed=*/true);
+    DefineFixedPointMacros(TI, Builder, "USACCUM", "UHK",
+                           TI.getShortAccumWidth(),
+                           TI.getUnsignedShortAccumScale(), /*Signed=*/false);
+    DefineFixedPointMacros(TI, Builder, "ACCUM", "K", TI.getAccumWidth(),
+                           TI.getAccumScale(), /*Signed=*/true);
+    DefineFixedPointMacros(TI, Builder, "UACCUM", "UK", TI.getAccumWidth(),
+                           TI.getUnsignedAccumScale(), /*Signed=*/false);
+    DefineFixedPointMacros(TI, Builder, "LACCUM", "LK", TI.getLongAccumWidth(),
+                           TI.getLongAccumScale(), /*Signed=*/true);
+    DefineFixedPointMacros(TI, Builder, "ULACCUM", "ULK",
+                           TI.getLongAccumWidth(),
+                           TI.getUnsignedLongAccumScale(), /*Signed=*/false);
+
+    Builder.defineMacro("__SACCUM_IBIT__", Twine(TI.getShortAccumIBits()));
+    Builder.defineMacro("__USACCUM_IBIT__",
+                        Twine(TI.getUnsignedShortAccumIBits()));
+    Builder.defineMacro("__ACCUM_IBIT__", Twine(TI.getAccumIBits()));
+    Builder.defineMacro("__UACCUM_IBIT__", Twine(TI.getUnsignedAccumIBits()));
+    Builder.defineMacro("__LACCUM_IBIT__", Twine(TI.getLongAccumIBits()));
+    Builder.defineMacro("__ULACCUM_IBIT__",
+                        Twine(TI.getUnsignedLongAccumIBits()));
+  }
 
   if (TI.hasFloat16Type())
     DefineFloatMacros(Builder, "FLT16", &TI.getHalfFormat(), "F16");
@@ -1119,65 +1227,66 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__WINT_UNSIGNED__");
 
   // Define exact-width integer types for stdint.h
-  DefineExactWidthIntType(TargetInfo::SignedChar, TI, Builder);
+  DefineExactWidthIntType(LangOpts, TargetInfo::SignedChar, TI, Builder);
 
   if (TI.getShortWidth() > TI.getCharWidth())
-    DefineExactWidthIntType(TargetInfo::SignedShort, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::SignedShort, TI, Builder);
 
   if (TI.getIntWidth() > TI.getShortWidth())
-    DefineExactWidthIntType(TargetInfo::SignedInt, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::SignedInt, TI, Builder);
 
   if (TI.getLongWidth() > TI.getIntWidth())
-    DefineExactWidthIntType(TargetInfo::SignedLong, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::SignedLong, TI, Builder);
 
   if (TI.getLongLongWidth() > TI.getLongWidth())
-    DefineExactWidthIntType(TargetInfo::SignedLongLong, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::SignedLongLong, TI, Builder);
 
-  DefineExactWidthIntType(TargetInfo::UnsignedChar, TI, Builder);
+  DefineExactWidthIntType(LangOpts, TargetInfo::UnsignedChar, TI, Builder);
   DefineExactWidthIntTypeSize(TargetInfo::UnsignedChar, TI, Builder);
   DefineExactWidthIntTypeSize(TargetInfo::SignedChar, TI, Builder);
 
   if (TI.getShortWidth() > TI.getCharWidth()) {
-    DefineExactWidthIntType(TargetInfo::UnsignedShort, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::UnsignedShort, TI, Builder);
     DefineExactWidthIntTypeSize(TargetInfo::UnsignedShort, TI, Builder);
     DefineExactWidthIntTypeSize(TargetInfo::SignedShort, TI, Builder);
   }
 
   if (TI.getIntWidth() > TI.getShortWidth()) {
-    DefineExactWidthIntType(TargetInfo::UnsignedInt, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::UnsignedInt, TI, Builder);
     DefineExactWidthIntTypeSize(TargetInfo::UnsignedInt, TI, Builder);
     DefineExactWidthIntTypeSize(TargetInfo::SignedInt, TI, Builder);
   }
 
   if (TI.getLongWidth() > TI.getIntWidth()) {
-    DefineExactWidthIntType(TargetInfo::UnsignedLong, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::UnsignedLong, TI, Builder);
     DefineExactWidthIntTypeSize(TargetInfo::UnsignedLong, TI, Builder);
     DefineExactWidthIntTypeSize(TargetInfo::SignedLong, TI, Builder);
   }
 
   if (TI.getLongLongWidth() > TI.getLongWidth()) {
-    DefineExactWidthIntType(TargetInfo::UnsignedLongLong, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::UnsignedLongLong, TI,
+                            Builder);
     DefineExactWidthIntTypeSize(TargetInfo::UnsignedLongLong, TI, Builder);
     DefineExactWidthIntTypeSize(TargetInfo::SignedLongLong, TI, Builder);
   }
 
-  DefineLeastWidthIntType(8, true, TI, Builder);
-  DefineLeastWidthIntType(8, false, TI, Builder);
-  DefineLeastWidthIntType(16, true, TI, Builder);
-  DefineLeastWidthIntType(16, false, TI, Builder);
-  DefineLeastWidthIntType(32, true, TI, Builder);
-  DefineLeastWidthIntType(32, false, TI, Builder);
-  DefineLeastWidthIntType(64, true, TI, Builder);
-  DefineLeastWidthIntType(64, false, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 8, true, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 8, false, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 16, true, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 16, false, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 32, true, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 32, false, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 64, true, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 64, false, TI, Builder);
 
-  DefineFastIntType(8, true, TI, Builder);
-  DefineFastIntType(8, false, TI, Builder);
-  DefineFastIntType(16, true, TI, Builder);
-  DefineFastIntType(16, false, TI, Builder);
-  DefineFastIntType(32, true, TI, Builder);
-  DefineFastIntType(32, false, TI, Builder);
-  DefineFastIntType(64, true, TI, Builder);
-  DefineFastIntType(64, false, TI, Builder);
+  DefineFastIntType(LangOpts, 8, true, TI, Builder);
+  DefineFastIntType(LangOpts, 8, false, TI, Builder);
+  DefineFastIntType(LangOpts, 16, true, TI, Builder);
+  DefineFastIntType(LangOpts, 16, false, TI, Builder);
+  DefineFastIntType(LangOpts, 32, true, TI, Builder);
+  DefineFastIntType(LangOpts, 32, false, TI, Builder);
+  DefineFastIntType(LangOpts, 64, true, TI, Builder);
+  DefineFastIntType(LangOpts, 64, false, TI, Builder);
 
   Builder.defineMacro("__USER_LABEL_PREFIX__", TI.getUserLabelPrefix());
 

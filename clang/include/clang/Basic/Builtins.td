@@ -1065,7 +1065,7 @@ def FPrintfChk : Builtin {
 def PrintfChk : Builtin {
   let Spellings = ["__builtin___printf_chk"];
   let Attributes = [FunctionWithBuiltinPrefix, PrintfFormat<1>];
-  let Prototype = "int(int, int, char const* restrict, ...)";
+  let Prototype = "int(int, char const* restrict, ...)";
 }
 
 def VFPrintfChk : Builtin {
@@ -1106,6 +1106,12 @@ def Prefetch : Builtin {
 
 def ReadCycleCounter : Builtin {
   let Spellings = ["__builtin_readcyclecounter"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned long long int()";
+}
+
+def ReadSteadyCounter : Builtin {
+  let Spellings = ["__builtin_readsteadycounter"];
   let Attributes = [NoThrow];
   let Prototype = "unsigned long long int()";
 }
@@ -4061,14 +4067,14 @@ class MPATemplate : Template<
 
 def Addc : Builtin, MPATemplate {
   let Spellings = ["__builtin_addc"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   // FIXME: Why are these argumentes marked const?
   let Prototype = "T(T const, T const, T const, T*)";
 }
 
 def Subc : Builtin, MPATemplate {
   let Spellings = ["__builtin_subc"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   // FIXME: Why are these argumentes marked const?
   let Prototype = "T(T const, T const, T const, T*)";
 }

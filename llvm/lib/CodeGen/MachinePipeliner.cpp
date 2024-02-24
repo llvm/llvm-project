@@ -324,8 +324,8 @@ void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
   assert(LoopID->getNumOperands() > 0 && "requires atleast one operand");
   assert(LoopID->getOperand(0) == LoopID && "invalid loop");
 
-  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
-    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+  for (const MDOperand &MDO : llvm::drop_begin(LoopID->operands())) {
+    MDNode *MD = dyn_cast<MDNode>(MDO);
 
     if (MD == nullptr)
       continue;
@@ -768,7 +768,6 @@ static void getUnderlyingObjects(const MachineInstr *MI,
       Objs.clear();
       return;
     }
-    Objs.push_back(V);
   }
 }
 

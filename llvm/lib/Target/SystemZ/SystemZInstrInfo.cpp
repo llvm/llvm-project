@@ -322,12 +322,12 @@ static int isSimpleMove(const MachineInstr &MI, int &FrameIndex,
   return 0;
 }
 
-unsigned SystemZInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register SystemZInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                                int &FrameIndex) const {
   return isSimpleMove(MI, FrameIndex, SystemZII::SimpleBDXLoad);
 }
 
-unsigned SystemZInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register SystemZInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                               int &FrameIndex) const {
   return isSimpleMove(MI, FrameIndex, SystemZII::SimpleBDXStore);
 }

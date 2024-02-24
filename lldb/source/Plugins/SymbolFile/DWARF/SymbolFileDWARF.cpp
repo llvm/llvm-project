@@ -722,8 +722,8 @@ DWARFCompileUnit *SymbolFileDWARF::GetDWARFCompileUnit(CompileUnit *comp_unit) {
 
   // The compile unit ID is the index of the DWARF unit.
   DWARFUnit *dwarf_cu = DebugInfo().GetUnitAtIndex(comp_unit->GetID());
-  if (dwarf_cu && dwarf_cu->GetUserData() == nullptr)
-    dwarf_cu->SetUserData(comp_unit);
+  if (dwarf_cu && dwarf_cu->GetLLDBCompUnit() == nullptr)
+    dwarf_cu->SetLLDBCompUnit(comp_unit);
 
   // It must be DWARFCompileUnit when it created a CompileUnit.
   return llvm::cast_or_null<DWARFCompileUnit>(dwarf_cu);
@@ -771,7 +771,7 @@ static const char *GetDWOName(DWARFCompileUnit &dwarf_cu,
 
 lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
   CompUnitSP cu_sp;
-  CompileUnit *comp_unit = (CompileUnit *)dwarf_cu.GetUserData();
+  CompileUnit *comp_unit = dwarf_cu.GetLLDBCompUnit();
   if (comp_unit) {
     // We already parsed this compile unit, had out a shared pointer to it
     cu_sp = comp_unit->shared_from_this();
@@ -779,7 +779,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
     if (GetDebugMapSymfile()) {
       // Let the debug map create the compile unit
       cu_sp = m_debug_map_symfile->GetCompileUnit(this, dwarf_cu);
-      dwarf_cu.SetUserData(cu_sp.get());
+      dwarf_cu.SetLLDBCompUnit(cu_sp.get());
     } else {
       ModuleSP module_sp(m_objfile_sp->GetModule());
       if (module_sp) {
@@ -792,7 +792,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
               *GetDWARFUnitIndex(dwarf_cu.GetID()), cu_language,
               eLazyBoolCalculate, std::move(support_files));
 
-          dwarf_cu.SetUserData(cu_sp.get());
+          dwarf_cu.SetLLDBCompUnit(cu_sp.get());
 
           SetCompileUnitAtIndex(dwarf_cu.GetID(), cu_sp);
         };
@@ -1675,20 +1675,20 @@ Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
 
 CompileUnit *
 SymbolFileDWARF::GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu) {
+
   if (dwarf_cu.IsDWOUnit()) {
-    DWARFCompileUnit *non_dwo_cu =
-        static_cast<DWARFCompileUnit *>(dwarf_cu.GetUserData());
+    DWARFCompileUnit *non_dwo_cu = dwarf_cu.GetSkeletonUnit();
     assert(non_dwo_cu);
     return non_dwo_cu->GetSymbolFileDWARF().GetCompUnitForDWARFCompUnit(
         *non_dwo_cu);
   }
   // Check if the symbol vendor already knows about this compile unit?
-  if (dwarf_cu.GetUserData() == nullptr) {
-    // The symbol vendor doesn't know about this compile unit, we need to parse
-    // and add it to the symbol vendor object.
-    return ParseCompileUnit(dwarf_cu).get();
-  }
-  return static_cast<CompileUnit *>(dwarf_cu.GetUserData());
+  CompileUnit *lldb_cu = dwarf_cu.GetLLDBCompUnit();
+  if (lldb_cu)
+    return lldb_cu;
+  // The symbol vendor doesn't know about this compile unit, we need to parse
+  // and add it to the symbol vendor object.
+  return ParseCompileUnit(dwarf_cu).get();
 }
 
 void SymbolFileDWARF::GetObjCMethods(
@@ -1750,7 +1750,7 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
     }
 
     if (*file_index == DIERef::k_file_index_mask)
-      symbol_file = m_dwp_symfile.get(); // DWP case
+      symbol_file = GetDwpSymbolFile().get(); // DWP case
     else
       symbol_file = this->DebugInfo()
                         .GetUnitAtIndex(*die_ref.file_index())
@@ -1783,6 +1783,10 @@ std::optional<uint64_t> SymbolFileDWARF::GetDWOId() {
           return ::GetDWOId(*cu, *cu_die);
   }
   return {};
+}
+
+DWARFUnit *SymbolFileDWARF::GetSkeletonUnit(DWARFUnit *dwo_unit) {
+  return DebugInfo().GetSkeletonUnit(dwo_unit);
 }
 
 std::shared_ptr<SymbolFileDWARFDwo>
@@ -2667,6 +2671,29 @@ static bool UpdateCompilerContextForSimpleTemplateNames(TypeQuery &match) {
   }
   return any_context_updated;
 }
+
+uint64_t SymbolFileDWARF::GetDebugInfoSize(bool load_all_debug_info) {
+  DWARFDebugInfo &info = DebugInfo();
+  uint32_t num_comp_units = info.GetNumUnits();
+
+  uint64_t debug_info_size = SymbolFileCommon::GetDebugInfoSize();
+  // In dwp scenario, debug info == skeleton debug info + dwp debug info.
+  if (std::shared_ptr<SymbolFileDWARFDwo> dwp_sp = GetDwpSymbolFile())
+    return debug_info_size + dwp_sp->GetDebugInfoSize();
+
+  // In dwo scenario, debug info == skeleton debug info + all dwo debug info.
+  for (uint32_t i = 0; i < num_comp_units; i++) {
+    DWARFUnit *cu = info.GetUnitAtIndex(i);
+    if (cu == nullptr)
+      continue;
+
+    SymbolFileDWARFDwo *dwo = cu->GetDwoSymbolFile(load_all_debug_info);
+    if (dwo)
+      debug_info_size += dwo->GetDebugInfoSize();
+  }
+  return debug_info_size;
+}
+
 void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
 
   // Make sure we haven't already searched this SymbolFile before.
@@ -4322,26 +4349,60 @@ SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
 
 const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
   llvm::call_once(m_dwp_symfile_once_flag, [this]() {
+    // Create a list of files to try and append .dwp to.
+    FileSpecList symfiles;
+    // Append the module's object file path.
+    const FileSpec module_fspec = m_objfile_sp->GetModule()->GetFileSpec();
+    symfiles.Append(module_fspec);
+    // Append the object file for this SymbolFile only if it is different from
+    // the module's file path. Our main module could be "a.out", our symbol file
+    // could be "a.debug" and our ".dwp" file might be "a.debug.dwp" instead of
+    // "a.out.dwp".
+    const FileSpec symfile_fspec(m_objfile_sp->GetFileSpec());
+    if (symfile_fspec != module_fspec) {
+      symfiles.Append(symfile_fspec);
+    } else {
+      // If we don't have a separate debug info file, then try stripping the
+      // extension. The main module could be "a.debug" and the .dwp file could
+      // be "a.dwp" instead of "a.debug.dwp".
+      ConstString filename_no_ext =
+          module_fspec.GetFileNameStrippingExtension();
+      if (filename_no_ext != module_fspec.GetFilename()) {
+        FileSpec module_spec_no_ext(module_fspec);
+        module_spec_no_ext.SetFilename(filename_no_ext);
+        symfiles.Append(module_spec_no_ext);
+      }
+    }
+    Log *log = GetLog(DWARFLog::SplitDwarf);
+    FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
     ModuleSpec module_spec;
     module_spec.GetFileSpec() = m_objfile_sp->GetFileSpec();
-    module_spec.GetSymbolFileSpec() =
-        FileSpec(m_objfile_sp->GetModule()->GetFileSpec().GetPath() + ".dwp");
-
     module_spec.GetUUID() = m_objfile_sp->GetUUID();
-    FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
-    FileSpec dwp_filespec =
-        PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
-    if (FileSystem::Instance().Exists(dwp_filespec)) {
-      DataBufferSP dwp_file_data_sp;
-      lldb::offset_t dwp_file_data_offset = 0;
-      ObjectFileSP dwp_obj_file = ObjectFile::FindPlugin(
-          GetObjectFile()->GetModule(), &dwp_filespec, 0,
-          FileSystem::Instance().GetByteSize(dwp_filespec), dwp_file_data_sp,
-          dwp_file_data_offset);
-      if (!dwp_obj_file)
-        return;
-      m_dwp_symfile = std::make_shared<SymbolFileDWARFDwo>(
-          *this, dwp_obj_file, DIERef::k_file_index_mask);
+    for (const auto &symfile : symfiles.files()) {
+      module_spec.GetSymbolFileSpec() =
+          FileSpec(symfile.GetPath() + ".dwp", symfile.GetPathStyle());
+      LLDB_LOG(log, "Searching for DWP using: \"{0}\"",
+               module_spec.GetSymbolFileSpec());
+      FileSpec dwp_filespec =
+          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+      if (FileSystem::Instance().Exists(dwp_filespec)) {
+        LLDB_LOG(log, "Found DWP file: \"{0}\"", dwp_filespec);
+        DataBufferSP dwp_file_data_sp;
+        lldb::offset_t dwp_file_data_offset = 0;
+        ObjectFileSP dwp_obj_file = ObjectFile::FindPlugin(
+            GetObjectFile()->GetModule(), &dwp_filespec, 0,
+            FileSystem::Instance().GetByteSize(dwp_filespec), dwp_file_data_sp,
+            dwp_file_data_offset);
+        if (dwp_obj_file) {
+          m_dwp_symfile = std::make_shared<SymbolFileDWARFDwo>(
+              *this, dwp_obj_file, DIERef::k_file_index_mask);
+          break;
+        }
+      }
+    }
+    if (!m_dwp_symfile) {
+      LLDB_LOG(log, "Unable to locate for DWP file for: \"{0}\"",
+               m_objfile_sp->GetModule()->GetFileSpec());
     }
   });
   return m_dwp_symfile;

@@ -6712,7 +6712,7 @@ static void DbgGatherSalvagableDVI(
         SalvageableDVISCEVs.push_back(std::move(NewRec));
         return true;
       };
-      for (auto &DPV : I.getDbgValueRange()) {
+      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
         if (DPV.isDbgValue() || DPV.isDbgAssign())
           ProcessDbgValue(&DPV);
       }
@@ -6762,7 +6762,7 @@ static llvm::PHINode *GetInductionVariable(const Loop &L, ScalarEvolution &SE,
 
 static std::optional<std::tuple<PHINode *, PHINode *, const SCEV *, bool>>
 canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
-                      const LoopInfo &LI) {
+                      const LoopInfo &LI, const TargetTransformInfo &TTI) {
   if (!L->isInnermost()) {
     LLVM_DEBUG(dbgs() << "Cannot fold on non-innermost loop\n");
     return std::nullopt;
@@ -6813,6 +6813,18 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   if (!isAlmostDeadIV(ToFold, LoopLatch, TermCond))
     return std::nullopt;
 
+  // Inserting instructions in the preheader has a runtime cost, scale
+  // the allowed cost with the loops trip count as best we can.
+  const unsigned ExpansionBudget = [&]() {
+    unsigned Budget = 2 * SCEVCheapExpansionBudget;
+    if (unsigned SmallTC = SE.getSmallConstantMaxTripCount(L))
+      return std::min(Budget, SmallTC);
+    if (std::optional<unsigned> SmallTC = getLoopEstimatedTripCount(L))
+      return std::min(Budget, *SmallTC);
+    // Unknown trip count, assume long running by default.
+    return Budget;
+  }();
+
   const SCEV *BECount = SE.getBackedgeTakenCount(L);
   const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
   SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
@@ -6820,6 +6832,7 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   PHINode *ToHelpFold = nullptr;
   const SCEV *TermValueS = nullptr;
   bool MustDropPoison = false;
+  auto InsertPt = L->getLoopPreheader()->getTerminator();
   for (PHINode &PN : L->getHeader()->phis()) {
     if (ToFold == &PN)
       continue;
@@ -6858,6 +6871,14 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
       LLVM_DEBUG(
           dbgs() << "Is not safe to expand terminating value for phi node" << PN
                  << "\n");
+      continue;
+    }
+
+    if (Expander.isHighCostExpansion(TermValueSLocal, L, ExpansionBudget,
+                                     &TTI, InsertPt)) {
+      LLVM_DEBUG(
+          dbgs() << "Is too expensive to expand terminating value for phi node"
+                 << PN << "\n");
       continue;
     }
 
@@ -6986,7 +7007,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   }();
 
   if (EnableFormTerm) {
-    if (auto Opt = canFoldTermCondOfLoop(L, SE, DT, LI)) {
+    if (auto Opt = canFoldTermCondOfLoop(L, SE, DT, LI, TTI)) {
       auto [ToFold, ToHelpFold, TermValueS, MustDrop] = *Opt;
 
       Changed = true;
@@ -7012,7 +7033,6 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       // SCEVExpander for both use in preheader and latch
       const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
       SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
-      SCEVExpanderCleaner ExpCleaner(Expander);
 
       assert(Expander.isSafeToExpand(TermValueS) &&
              "Terminating value was checked safe in canFoldTerminatingCondition");
@@ -7043,10 +7063,9 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
 
       BI->setCondition(NewTermCond);
 
+      Expander.clear();
       OldTermCond->eraseFromParent();
       DeleteDeadPHIs(L->getHeader(), &TLI, MSSAU.get());
-
-      ExpCleaner.markResultUsed();
     }
   }
 

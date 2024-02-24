@@ -79,13 +79,13 @@ MCInst RISCVInstrInfo::getNop() const {
       .addImm(0);
 }
 
-unsigned RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                              int &FrameIndex) const {
   unsigned Dummy;
   return isLoadFromStackSlot(MI, FrameIndex, Dummy);
 }
 
-unsigned RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                              int &FrameIndex,
                                              unsigned &MemBytes) const {
   switch (MI.getOpcode()) {
@@ -120,13 +120,13 @@ unsigned RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                             int &FrameIndex) const {
   unsigned Dummy;
   return isStoreToStackSlot(MI, FrameIndex, Dummy);
 }
 
-unsigned RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                             int &FrameIndex,
                                             unsigned &MemBytes) const {
   switch (MI.getOpcode()) {
@@ -1115,7 +1115,7 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   // FIXME: A virtual register must be used initially, as the register
   // scavenger won't work with empty blocks (SIInstrInfo::insertIndirectBranch
   // uses the same workaround).
-  Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRJALRRegClass);
   auto II = MBB.end();
   // We may also update the jump target to RestoreBB later.
   MachineInstr &MI = *BuildMI(MBB, II, DL, get(RISCV::PseudoJump))
@@ -1172,7 +1172,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   SmallVector<MachineOperand, 3> Cond;
   if (analyzeBranch(*MBB, TBB, FBB, Cond, /*AllowModify=*/false))
     return false;
-  (void)FBB;
 
   RISCVCC::CondCode CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
   assert(CC != RISCVCC::COND_INVALID);
@@ -1212,13 +1211,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     if (!Op.isReg())
       return false;
     Register Reg = Op.getReg();
-    if (Reg == RISCV::X0) {
-      Imm = 0;
-      return true;
-    }
-    if (!Reg.isVirtual())
-      return false;
-    return isLoadImm(MRI.getVRegDef(Op.getReg()), Imm);
+    return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
   };
 
   MachineOperand &LHS = MI.getOperand(0);
@@ -1229,7 +1222,8 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     MachineBasicBlock::reverse_iterator II(&MI), E = MBB->rend();
     auto DefC1 = std::find_if(++II, E, [&](const MachineInstr &I) -> bool {
       int64_t Imm;
-      return isLoadImm(&I, Imm) && Imm == C1;
+      return isLoadImm(&I, Imm) && Imm == C1 &&
+             I.getOperand(0).getReg().isVirtual();
     });
     if (DefC1 != E)
       return DefC1->getOperand(0).getReg();

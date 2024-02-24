@@ -14,14 +14,15 @@
 #ifndef LLVM_TEXTAPI_INTERFACEFILE_H
 #define LLVM_TEXTAPI_INTERFACEFILE_H
 
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/TextAPI/ArchitectureSet.h"
+#include "llvm/TextAPI/FileTypes.h"
 #include "llvm/TextAPI/PackedVersion.h"
 #include "llvm/TextAPI/Platform.h"
+#include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/TextAPI/Symbol.h"
 #include "llvm/TextAPI/SymbolSet.h"
 #include "llvm/TextAPI/Target.h"
@@ -46,44 +47,6 @@ enum class ObjCConstraintType : unsigned {
   /// Garbage Collection.
   GC = 4,
 };
-
-// clang-format off
-
-/// Defines the file type this file represents.
-enum FileType : unsigned {
-  /// Invalid file type.
-  Invalid = 0U,
-
-  /// \brief MachO Dynamic Library file.
-  MachO_DynamicLibrary      = 1U <<  0,
-
-  /// \brief MachO Dynamic Library Stub file.
-  MachO_DynamicLibrary_Stub = 1U <<  1,
-
-  /// \brief MachO Bundle file.
-  MachO_Bundle              = 1U <<  2,
-
-  /// Text-based stub file (.tbd) version 1.0
-  TBD_V1                    = 1U <<  3,
-
-  /// Text-based stub file (.tbd) version 2.0
-  TBD_V2                    = 1U <<  4,
-
-  /// Text-based stub file (.tbd) version 3.0
-  TBD_V3                    = 1U <<  5,
-
-  /// Text-based stub file (.tbd) version 4.0
-  TBD_V4                    = 1U <<  6,
-
-  /// Text-based stub file (.tbd) version 5.0
-  TBD_V5                    = 1U <<  7,
-
-  All                       = ~0U,
-
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/All),
-};
-
-// clang-format on
 
 /// Reference to an interface file.
 class InterfaceFileRef {
@@ -351,9 +314,11 @@ public:
   ///
   /// \param Kind The kind of global symbol to record.
   /// \param Name The name of the symbol.
-  std::optional<const Symbol *> getSymbol(EncodeKind Kind,
-                                          StringRef Name) const {
-    if (auto *Sym = SymbolsSet->findSymbol(Kind, Name))
+  /// \param ObjCIF The ObjCInterface symbol type, if applicable.
+  std::optional<const Symbol *>
+  getSymbol(EncodeKind Kind, StringRef Name,
+            ObjCIFSymbolKind ObjCIF = ObjCIFSymbolKind::None) const {
+    if (auto *Sym = SymbolsSet->findSymbol(Kind, Name, ObjCIF))
       return Sym;
     return std::nullopt;
   }
@@ -434,6 +399,14 @@ public:
   /// \param Overwrite Whether to overwrite preexisting inlined library.
   void inlineLibrary(std::shared_ptr<InterfaceFile> Library,
                      bool Overwrite = false);
+
+  /// Set InterfaceFile properties from pre-gathered binary attributes,
+  /// if they are not set already.
+  ///
+  /// \param BA Attributes typically represented in load commands.
+  /// \param Targ MachO Target slice to add attributes to.
+  void setFromBinaryAttrs(const RecordsSlice::BinaryAttrs &BA,
+                          const Target &Targ);
 
   /// The equality is determined by attributes that impact linking
   /// compatibilities. Path, & FileKind are irrelevant since these by

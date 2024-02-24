@@ -694,7 +694,9 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
   // fallthrough.
   if ((!MBB.succ_empty() && !SimplifyMIR) || !canPredictProbs ||
       !canPredictSuccessors(MBB)) {
-    OS.indent(2) << "successors: ";
+    OS.indent(2) << "successors:";
+    if (!MBB.succ_empty())
+      OS << " ";
     for (auto I = MBB.succ_begin(), E = MBB.succ_end(); I != E; ++I) {
       if (I != MBB.succ_begin())
         OS << ", ";
@@ -726,7 +728,7 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
     HasLineAttributes = true;
   }
 
-  if (HasLineAttributes)
+  if (HasLineAttributes && !MBB.empty())
     OS << "\n";
   bool IsInBundle = false;
   for (const MachineInstr &MI : MBB.instrs()) {

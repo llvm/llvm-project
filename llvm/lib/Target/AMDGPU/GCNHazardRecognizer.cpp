@@ -177,7 +177,7 @@ static bool isLdsDma(const MachineInstr &MI) {
 static unsigned getHWReg(const SIInstrInfo *TII, const MachineInstr &RegInstr) {
   const MachineOperand *RegOp = TII->getNamedOperand(RegInstr,
                                                      AMDGPU::OpName::simm16);
-  return RegOp->getImm() & AMDGPU::Hwreg::ID_MASK_;
+  return std::get<0>(AMDGPU::Hwreg::HwregEncoding::decode(RegOp->getImm()));
 }
 
 ScheduleHazardRecognizer::HazardType
@@ -1584,7 +1584,7 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
       if (DefVALUs != std::numeric_limits<int>::max()) {
         if (DefVALUs >= State.ExecPos)
           PreExecPos = std::min(PreExecPos, DefVALUs);
-        else if (DefVALUs < State.ExecPos)
+        else
           PostExecPos = std::min(PostExecPos, DefVALUs);
       }
     }

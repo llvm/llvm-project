@@ -2644,7 +2644,7 @@ const Symbol &ExpressionAnalyzer::AccessSpecific(
 void ExpressionAnalyzer::EmitGenericResolutionError(
     const Symbol &symbol, bool dueToAmbiguity, bool isSubroutine) {
   Say(dueToAmbiguity
-          ? "One or more actual arguments to the generic procedure '%s' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface"_err_en_US
+          ? "The actual arguments to the generic procedure '%s' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface"_err_en_US
           : semantics::IsGenericDefinedOp(symbol)
           ? "No specific procedure of generic operator '%s' matches the actual arguments"_err_en_US
           : isSubroutine

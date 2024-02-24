@@ -21,7 +21,7 @@
 using namespace llvm;
 using namespace llvm::sys;
 
-PluginManager *PM;
+PluginManager *PM = nullptr;
 
 // List of all plugins that can support offloading.
 static const char *RTLNames[] = {ENABLED_OFFLOAD_PLUGINS};
@@ -56,10 +56,10 @@ PluginAdaptorTy::PluginAdaptorTy(const std::string &Name,
 
 Error PluginAdaptorTy::init() {
 
-#define PLUGIN_API_HANDLE(NAME, MANDATORY)                                     \
+#define PLUGIN_API_HANDLE(NAME)                                                \
   NAME = reinterpret_cast<decltype(NAME)>(                                     \
       LibraryHandler->getAddressOfSymbol(GETNAME(__tgt_rtl_##NAME)));          \
-  if (MANDATORY && !NAME) {                                                    \
+  if (!NAME) {                                                                 \
     return createStringError(inconvertibleErrorCode(),                         \
                              "Invalid plugin as necessary interface function " \
                              "(%s) was not found.\n",                          \
@@ -87,19 +87,6 @@ Error PluginAdaptorTy::init() {
   DP("Registered '%s' with %d plugin visible devices!\n", Name.c_str(),
      NumberOfPluginDevices);
   return Error::success();
-}
-
-void PluginAdaptorTy::addOffloadEntries(DeviceImageTy &DI) {
-  for (int32_t I = 0, E = getNumberOfUserDevices(); I < E; ++I) {
-    auto DeviceOrErr = PM->getDevice(DeviceOffset + I);
-    if (!DeviceOrErr)
-      FATAL_MESSAGE(DeviceOffset + I, "%s",
-                    toString(DeviceOrErr.takeError()).c_str());
-
-    DeviceTy &Device = *DeviceOrErr;
-    for (__tgt_offload_entry &Entry : DI.entries())
-      Device.addOffloadEntry(OffloadEntryTy(DI, Entry));
-  }
 }
 
 void PluginManager::init() {
@@ -212,6 +199,12 @@ static void registerImageIntoTranslationTable(TranslationTable &TT,
 void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   PM->RTLsMtx.lock();
 
+  // Add in all the OpenMP requirements associated with this binary.
+  for (__tgt_offload_entry &Entry :
+       llvm::make_range(Desc->HostEntriesBegin, Desc->HostEntriesEnd))
+    if (Entry.flags == OMP_REGISTER_REQUIRES)
+      PM->addRequirements(Entry.data);
+
   // Extract the exectuable image and extra information if availible.
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
     PM->addDeviceImage(*Desc, Desc->DeviceImages[i]);
@@ -259,9 +252,6 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
       PM->TrlTblMtx.unlock();
       FoundRTL = &R;
 
-      // Register all offload entries with the devices handled by the plugin.
-      R.addOffloadEntries(DI);
-
       // if an RTL was found we are done - proceed to register the next image
       break;
     }
@@ -301,34 +291,6 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
         continue;
 
       FoundRTL = &R;
-
-      // Execute dtors for static objects if the device has been used, i.e.
-      // if its PendingCtors list has been emptied.
-      for (int32_t I = 0; I < FoundRTL->getNumberOfUserDevices(); ++I) {
-        auto DeviceOrErr = PM->getDevice(FoundRTL->DeviceOffset + I);
-        if (!DeviceOrErr)
-          FATAL_MESSAGE(FoundRTL->DeviceOffset + I, "%s",
-                        toString(DeviceOrErr.takeError()).c_str());
-
-        DeviceTy &Device = *DeviceOrErr;
-        Device.PendingGlobalsMtx.lock();
-        if (Device.PendingCtorsDtors[Desc].PendingCtors.empty()) {
-          AsyncInfoTy AsyncInfo(Device);
-          for (auto &Dtor : Device.PendingCtorsDtors[Desc].PendingDtors) {
-            int Rc =
-                target(nullptr, Device, Dtor, CTorDTorKernelArgs, AsyncInfo);
-            if (Rc != OFFLOAD_SUCCESS) {
-              DP("Running destructor " DPxMOD " failed.\n", DPxPTR(Dtor));
-            }
-          }
-          // Remove this library's entry from PendingCtorsDtors
-          Device.PendingCtorsDtors.erase(Desc);
-          // All constructors have been issued, wait for them now.
-          if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
-            DP("Failed synchronizing destructors kernels.\n");
-        }
-        Device.PendingGlobalsMtx.unlock();
-      }
 
       DP("Unregistered image " DPxMOD " from RTL " DPxMOD "!\n",
          DPxPTR(Img->ImageStart), DPxPTR(R.LibraryHandler.get()));

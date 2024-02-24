@@ -63,7 +63,7 @@ inline void atomic_store(volatile T *a, typename T::Type v, memory_order mo) {
   DCHECK(!((uptr)a % sizeof(*a)));
 
   if (sizeof(*a) < 8 || sizeof(void*) == 8) {
-    // Assume that aligned loads are atomic.
+    // Assume that aligned stores are atomic.
     if (mo == memory_order_relaxed) {
       a->val_dont_use = v;
     } else if (mo == memory_order_release) {

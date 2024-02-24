@@ -111,6 +111,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"abort", &I::genAbort},
     {"abs", &I::genAbs},
     {"achar", &I::genChar},
+    {"acosd", &I::genAcosd},
     {"adjustl",
      &I::genAdjustRtCall<fir::runtime::genAdjustL>,
      {{{"string", asAddr}}},
@@ -134,11 +135,15 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAny,
      {{{"mask", asAddr}, {"dim", asValue}}},
      /*isElemental=*/false},
+    {"asind", &I::genAsind},
     {"associated",
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
+    {"atan2d", &I::genAtand},
+    {"atan2pi", &I::genAtanpi},
     {"atand", &I::genAtand},
+    {"atanpi", &I::genAtanpi},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -179,6 +184,7 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"x", asValue}, {"y", asValue, handleDynamicOptional}}}},
     {"command_argument_count", &I::genCommandArgumentCount},
     {"conjg", &I::genConjg},
+    {"cosd", &I::genCosd},
     {"count",
      &I::genCount,
      {{{"mask", asAddr}, {"dim", asValue}, {"kind", asValue}}},
@@ -554,6 +560,7 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genSignalSubroutine,
      {{{"number", asValue}, {"handler", asAddr}, {"status", asAddr}}},
      /*isElemental=*/false},
+    {"sind", &I::genSind},
     {"size",
      &I::genSize,
      {{{"array", asBox},
@@ -575,6 +582,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"array", asBox},
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"system",
+     &I::genSystem,
+     {{{"command", asBox}, {"exitstat", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"system_clock",
      &I::genSystemClock,
@@ -646,10 +657,61 @@ static llvm::cl::opt<bool>
                                     "instead of libm complex operations"),
                      llvm::cl::init(false));
 
+/// Return a string containing the given Fortran intrinsic name
+/// with the type of its arguments specified in funcType
+/// surrounded by the given prefix/suffix.
+static std::string
+prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
+                         llvm::StringRef prefix, llvm::StringRef name,
+                         llvm::StringRef suffix, mlir::FunctionType funcType) {
+  std::string output = prefix.str();
+  llvm::raw_string_ostream sstream(output);
+  if (name == "pow") {
+    assert(funcType.getNumInputs() == 2 && "power operator has two arguments");
+    std::string displayName{" ** "};
+    sstream << numericMlirTypeToFortran(builder, funcType.getInput(0), loc,
+                                        displayName)
+            << displayName
+            << numericMlirTypeToFortran(builder, funcType.getInput(1), loc,
+                                        displayName);
+  } else {
+    sstream << name.upper() << "(";
+    if (funcType.getNumInputs() > 0)
+      sstream << numericMlirTypeToFortran(builder, funcType.getInput(0), loc,
+                                          name);
+    for (mlir::Type argType : funcType.getInputs().drop_front()) {
+      sstream << ", " << numericMlirTypeToFortran(builder, argType, loc, name);
+    }
+    sstream << ")";
+  }
+  sstream << suffix;
+  return output;
+}
+
+// Generate a call to the Fortran runtime library providing
+// support for 128-bit float math via a third-party library.
+// If the compiler is built without FLANG_RUNTIME_F128_MATH_LIB,
+// this function will report an error.
+static mlir::Value genLibF128Call(fir::FirOpBuilder &builder,
+                                  mlir::Location loc,
+                                  const MathOperation &mathOp,
+                                  mlir::FunctionType libFuncType,
+                                  llvm::ArrayRef<mlir::Value> args) {
+#ifndef FLANG_RUNTIME_F128_MATH_LIB
+  std::string message = prettyPrintIntrinsicName(
+      builder, loc, "compiler is built without support for '", mathOp.key, "'",
+      libFuncType);
+  fir::emitFatalError(loc, message, /*genCrashDiag=*/false);
+#else  // FLANG_RUNTIME_F128_MATH_LIB
+  return genLibCall(builder, loc, mathOp, libFuncType, args);
+#endif // FLANG_RUNTIME_F128_MATH_LIB
+}
+
 mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
-                       llvm::StringRef libFuncName,
+                       const MathOperation &mathOp,
                        mlir::FunctionType libFuncType,
                        llvm::ArrayRef<mlir::Value> args) {
+  llvm::StringRef libFuncName = mathOp.runtimeFunc;
   LLVM_DEBUG(llvm::dbgs() << "Generating '" << libFuncName
                           << "' call with type ";
              libFuncType.dump(); llvm::dbgs() << "\n");
@@ -707,7 +769,7 @@ mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
 
 mlir::Value genLibSplitComplexArgsCall(fir::FirOpBuilder &builder,
                                        mlir::Location loc,
-                                       llvm::StringRef libFuncName,
+                                       const MathOperation &mathOp,
                                        mlir::FunctionType libFuncType,
                                        llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2 && "Incorrect #args to genLibSplitComplexArgsCall");
@@ -751,13 +813,12 @@ mlir::Value genLibSplitComplexArgsCall(fir::FirOpBuilder &builder,
       cplx2, /*isImagPart=*/true);
   splitArgs.push_back(imag2);
 
-  return genLibCall(builder, loc, libFuncName, getSplitComplexArgsType(),
-                    splitArgs);
+  return genLibCall(builder, loc, mathOp, getSplitComplexArgsType(), splitArgs);
 }
 
 template <typename T>
 mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                      llvm::StringRef mathLibFuncName,
+                      const MathOperation &mathOp,
                       mlir::FunctionType mathLibFuncType,
                       llvm::ArrayRef<mlir::Value> args) {
   // TODO: we have to annotate the math operations with flags
@@ -780,13 +841,14 @@ mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   //           can be also lowered to libm calls for "fast" and "relaxed"
   //           modes.
   mlir::Value result;
+  llvm::StringRef mathLibFuncName = mathOp.runtimeFunc;
   if (mathRuntimeVersion == preciseVersion &&
       // Some operations do not have to be lowered as conservative
       // calls, since they do not affect strict FP behavior.
       // For example, purely integer operations like exponentiation
       // with integer operands fall into this class.
       !mathLibFuncName.empty()) {
-    result = genLibCall(builder, loc, mathLibFuncName, mathLibFuncType, args);
+    result = genLibCall(builder, loc, mathOp, mathLibFuncType, args);
   } else {
     LLVM_DEBUG(llvm::dbgs() << "Generating '" << mathLibFuncName
                             << "' operation with type ";
@@ -799,7 +861,7 @@ mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
 
 template <typename T>
 mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                             llvm::StringRef mathLibFuncName,
+                             const MathOperation &mathOp,
                              mlir::FunctionType mathLibFuncType,
                              llvm::ArrayRef<mlir::Value> args) {
   mlir::Value result;
@@ -808,11 +870,12 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
 
   // If we have libm functions, we can attempt to generate the more precise
   // version of the complex math operation.
+  llvm::StringRef mathLibFuncName = mathOp.runtimeFunc;
   if (!mathLibFuncName.empty()) {
     // If we enabled MLIR complex or can use approximate operations, we should
     // NOT use libm.
     if (!forceMlirComplex && !canUseApprox) {
-      result = genLibCall(builder, loc, mathLibFuncName, mathLibFuncType, args);
+      result = genLibCall(builder, loc, mathOp, mathLibFuncType, args);
       LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
       return result;
     }
@@ -852,6 +915,10 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
 /// TODO: support remaining Fortran math intrinsics.
 ///       See https://gcc.gnu.org/onlinedocs/gcc-12.1.0/gfortran/\
 ///       Intrinsic-Procedures.html for a reference.
+constexpr auto FuncTypeReal16Real16 = genFuncType<Ty::Real<16>, Ty::Real<16>>;
+constexpr auto FuncTypeReal16Complex16 =
+    genFuncType<Ty::Real<16>, Ty::Complex<16>>;
+
 static constexpr MathOperation mathOperations[] = {
     {"abs", "fabsf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::AbsFOp>},
@@ -863,6 +930,7 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::AbsOp>},
     {"abs", "cabs", genFuncType<Ty::Real<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::AbsOp>},
+    {"abs", RTNAME_STRING(CAbsF128), FuncTypeReal16Complex16, genLibF128Call},
     {"acos", "acosf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
     {"acos", "acos", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
     {"acos", "cacosf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
@@ -1099,6 +1167,7 @@ static constexpr MathOperation mathOperations[] = {
      genMathOp<mlir::math::SinOp>},
     {"sin", "sin", genFuncType<Ty::Real<8>, Ty::Real<8>>,
      genMathOp<mlir::math::SinOp>},
+    {"sin", RTNAME_STRING(SinF128), FuncTypeReal16Real16, genLibF128Call},
     {"sin", "csinf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genComplexMathOp<mlir::complex::SinOp>},
     {"sin", "csin", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
@@ -1111,6 +1180,7 @@ static constexpr MathOperation mathOperations[] = {
      genMathOp<mlir::math::SqrtOp>},
     {"sqrt", "sqrt", genFuncType<Ty::Real<8>, Ty::Real<8>>,
      genMathOp<mlir::math::SqrtOp>},
+    {"sqrt", RTNAME_STRING(SqrtF128), FuncTypeReal16Real16, genLibF128Call},
     {"sqrt", "csqrtf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genComplexMathOp<mlir::complex::SqrtOp>},
     {"sqrt", "csqrt", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
@@ -1334,27 +1404,9 @@ static void checkPrecisionLoss(llvm::StringRef name,
   // lowering and could be used here. Emit an error and continue
   // generating the code with the narrowing cast so that the user
   // can get a complete list of the problematic intrinsic calls.
-  std::string message("not yet implemented: no math runtime available for '");
-  llvm::raw_string_ostream sstream(message);
-  if (name == "pow") {
-    assert(funcType.getNumInputs() == 2 && "power operator has two arguments");
-    std::string displayName{" ** "};
-    sstream << numericMlirTypeToFortran(builder, funcType.getInput(0), loc,
-                                        displayName)
-            << displayName
-            << numericMlirTypeToFortran(builder, funcType.getInput(1), loc,
-                                        displayName);
-  } else {
-    sstream << name.upper() << "(";
-    if (funcType.getNumInputs() > 0)
-      sstream << numericMlirTypeToFortran(builder, funcType.getInput(0), loc,
-                                          name);
-    for (mlir::Type argType : funcType.getInputs().drop_front()) {
-      sstream << ", " << numericMlirTypeToFortran(builder, argType, loc, name);
-    }
-    sstream << ")";
-  }
-  sstream << "'";
+  std::string message = prettyPrintIntrinsicName(
+      builder, loc, "not yet implemented: no math runtime available for '",
+      name, "'", funcType);
   mlir::emitError(loc, message);
 }
 
@@ -1876,7 +1928,7 @@ IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
     for (auto [fst, snd] : llvm::zip(actualFuncType.getInputs(), args))
       convertedArguments.push_back(builder.createConvert(loc, fst, snd));
     mlir::Value result = mathOp->funcGenerator(
-        builder, loc, mathOp->runtimeFunc, actualFuncType, convertedArguments);
+        builder, loc, *mathOp, actualFuncType, convertedArguments);
     mlir::Type soughtType = soughtFuncType.getResult(0);
     return builder.createConvert(loc, soughtType, result);
   };
@@ -1995,6 +2047,21 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
     return builder.create<mlir::arith::SubIOp>(loc, xored, mask);
   }
   llvm_unreachable("unexpected type in ABS argument");
+}
+
+// ACOSD
+mlir::Value IntrinsicLibrary::genAcosd(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  mlir::Value dfactor = builder.createRealConstant(
+      loc, mlir::FloatType::getF64(context), pi / llvm::APFloat(180.0));
+  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
+  return getRuntimeCallGenerator("acos", ftype)(builder, loc, {arg});
 }
 
 // ADJUSTL & ADJUSTR
@@ -2133,16 +2200,67 @@ IntrinsicLibrary::genAny(mlir::Type resultType,
   return readAndAddCleanUp(resultMutableBox, resultType, "ANY");
 }
 
-mlir::Value IntrinsicLibrary::genAtand(mlir::Type resultType,
+// ASIND
+mlir::Value IntrinsicLibrary::genAsind(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 1);
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  mlir::Value atan = getRuntimeCallGenerator("atan", ftype)(builder, loc, args);
+  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  mlir::Value dfactor = builder.createRealConstant(
+      loc, mlir::FloatType::getF64(context), pi / llvm::APFloat(180.0));
+  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
+  return getRuntimeCallGenerator("asin", ftype)(builder, loc, {arg});
+}
+
+// ATAND, ATAN2D
+mlir::Value IntrinsicLibrary::genAtand(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  // assert for: atand(X), atand(Y,X), atan2d(Y,X)
+  assert(args.size() >= 1 && args.size() <= 2);
+
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::Value atan;
+
+  // atand = atan * 180/pi
+  if (args.size() == 2) {
+    atan = builder.create<mlir::math::Atan2Op>(loc, fir::getBase(args[0]),
+                                               fir::getBase(args[1]));
+  } else {
+    mlir::FunctionType ftype =
+        mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+    atan = getRuntimeCallGenerator("atan", ftype)(builder, loc, args);
+  }
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
       loc, mlir::FloatType::getF64(context), llvm::APFloat(180.0) / pi);
+  mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
+  return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
+}
+
+// ATANPI, ATAN2PI
+mlir::Value IntrinsicLibrary::genAtanpi(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  // assert for: atanpi(X), atanpi(Y,X), atan2pi(Y,X)
+  assert(args.size() >= 1 && args.size() <= 2);
+
+  mlir::Value atan;
+  mlir::MLIRContext *context = builder.getContext();
+
+  // atanpi = atan / pi
+  if (args.size() == 2) {
+    atan = builder.create<mlir::math::Atan2Op>(loc, fir::getBase(args[0]),
+                                               fir::getBase(args[1]));
+  } else {
+    mlir::FunctionType ftype =
+        mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+    atan = getRuntimeCallGenerator("atan", ftype)(builder, loc, args);
+  }
+  llvm::APFloat inv_pi = llvm::APFloat(llvm::numbers::inv_pi);
+  mlir::Value dfactor =
+      builder.createRealConstant(loc, mlir::FloatType::getF64(context), inv_pi);
   mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
   return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
 }
@@ -2152,9 +2270,13 @@ fir::ExtendedValue
 IntrinsicLibrary::genAssociated(mlir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
-  if (fir::isBoxProcAddressType(fir::getBase(args[0]).getType())) {
+  mlir::Type ptrTy = fir::getBase(args[0]).getType();
+  if (ptrTy &&
+      (fir::isBoxProcAddressType(ptrTy) || ptrTy.isa<fir::BoxProcType>())) {
     mlir::Value pointerBoxProc =
-        builder.create<fir::LoadOp>(loc, fir::getBase(args[0]));
+        fir::isBoxProcAddressType(ptrTy)
+            ? builder.create<fir::LoadOp>(loc, fir::getBase(args[0]))
+            : fir::getBase(args[0]);
     mlir::Value pointerTarget =
         builder.create<fir::BoxAddrOp>(loc, pointerBoxProc);
     if (isStaticallyAbsent(args[1]))
@@ -2642,6 +2764,21 @@ mlir::Value IntrinsicLibrary::genConjg(mlir::Type resultType,
   auto negImag = builder.create<mlir::arith::NegFOp>(loc, imag);
   return fir::factory::Complex{builder, loc}.insertComplexPart(
       cplx, negImag, /*isImagPart=*/true);
+}
+
+// COSD
+mlir::Value IntrinsicLibrary::genCosd(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  mlir::Value dfactor = builder.createRealConstant(
+      loc, mlir::FloatType::getF64(context), pi / llvm::APFloat(180.0));
+  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
+  return getRuntimeCallGenerator("cos", ftype)(builder, loc, {arg});
 }
 
 // COUNT
@@ -5148,6 +5285,15 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
   // (see table 16.5 of Fortran 2018 standard).
   assert(args.size() == 1 && isStaticallyPresent(args[0]) &&
          "MOLD argument required to lower NULL outside of any context");
+  mlir::Type ptrTy = fir::getBase(args[0]).getType();
+  if (ptrTy && fir::isBoxProcAddressType(ptrTy)) {
+    auto boxProcType = mlir::cast<fir::BoxProcType>(fir::unwrapRefType(ptrTy));
+    mlir::Value boxStorage = builder.createTemporary(loc, boxProcType);
+    mlir::Value nullBoxProc =
+        fir::factory::createNullBoxProc(builder, loc, boxProcType);
+    builder.createStoreWithConvert(loc, nullBoxProc, boxStorage);
+    return boxStorage;
+  }
   const auto *mold = args[0].getBoxOf<fir::MutableBoxValue>();
   assert(mold && "MOLD must be a pointer or allocatable");
   fir::BaseBoxType boxType = mold->getBoxTy();
@@ -5610,6 +5756,21 @@ mlir::Value IntrinsicLibrary::genSign(mlir::Type resultType,
   return genRuntimeCall("sign", resultType, args);
 }
 
+// SIND
+mlir::Value IntrinsicLibrary::genSind(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  mlir::Value dfactor = builder.createRealConstant(
+      loc, mlir::FloatType::getF64(context), pi / llvm::APFloat(180.0));
+  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
+  return getRuntimeCallGenerator("sin", ftype)(builder, loc, {arg});
+}
+
 // SIZE
 fir::ExtendedValue
 IntrinsicLibrary::genSize(mlir::Type resultType,
@@ -5932,6 +6093,38 @@ IntrinsicLibrary::genSum(mlir::Type resultType,
                          llvm::ArrayRef<fir::ExtendedValue> args) {
   return genReduction(fir::runtime::genSum, fir::runtime::genSumDim, "SUM",
                       resultType, args);
+}
+
+// SYSTEM
+void IntrinsicLibrary::genSystem(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value command = fir::getBase(args[0]);
+  const fir::ExtendedValue &exitstat = args[1];
+  assert(command && "expected COMMAND parameter");
+
+  mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+
+  mlir::Value waitBool = builder.createBool(loc, true);
+  mlir::Value exitstatBox =
+      isStaticallyPresent(exitstat)
+          ? fir::getBase(exitstat)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+
+  // Create a dummmy cmdstat to prevent EXECUTE_COMMAND_LINE terminate itself
+  // when cmdstat is assigned with a non-zero value but not present
+  mlir::Value tempValue =
+      builder.createIntegerConstant(loc, builder.getI2Type(), 0);
+  mlir::Value temp = builder.createTemporary(loc, builder.getI16Type());
+  mlir::Value castVal =
+      builder.createConvert(loc, builder.getI16Type(), tempValue);
+  builder.create<fir::StoreOp>(loc, castVal, temp);
+  mlir::Value cmdstatBox = builder.createBox(loc, temp);
+
+  mlir::Value cmdmsgBox =
+      builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+
+  fir::runtime::genExecuteCommandLine(builder, loc, command, waitBool,
+                                      exitstatBox, cmdstatBox, cmdmsgBox);
 }
 
 // SYSTEM_CLOCK

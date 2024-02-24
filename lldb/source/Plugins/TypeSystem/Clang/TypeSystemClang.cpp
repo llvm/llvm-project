@@ -1,4 +1,4 @@
-//===-- TypeSystemClang.cpp -----------------------------------------------==='//
+//===-- TypeSystemClang.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9265,8 +9265,14 @@ ConstString TypeSystemClang::DeclContextGetName(void *opaque_decl_ctx) {
   if (opaque_decl_ctx) {
     clang::NamedDecl *named_decl =
         llvm::dyn_cast<clang::NamedDecl>((clang::DeclContext *)opaque_decl_ctx);
-    if (named_decl)
-      return ConstString(named_decl->getName());
+    if (named_decl) {
+      std::string name;
+      llvm::raw_string_ostream stream{name};
+      auto policy = GetTypePrintingPolicy();
+      policy.AlwaysIncludeTypeForTemplateArgument = true;
+      named_decl->getNameForDiagnostic(stream, policy, /*qualified=*/false);
+      return ConstString(name);
+    }
   }
   return ConstString();
 }

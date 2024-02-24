@@ -405,6 +405,9 @@ enum UnhashedControlBlockRecordTypes {
 
   /// Record code for the indices of used header search entries.
   HEADER_SEARCH_ENTRY_USAGE,
+
+  /// Record code for the indices of used VFSs.
+  VFS_USAGE,
 };
 
 /// Record code for extension blocks.
@@ -2015,6 +2018,9 @@ enum StmtCode {
 
   // SYCLUniqueStableNameExpr
   EXPR_SYCL_UNIQUE_STABLE_NAME,
+
+  // OpenACC Constructs
+  STMT_OPENACC_COMPUTE_CONSTRUCT,
 };
 
 /// The kinds of designators that can occur in a

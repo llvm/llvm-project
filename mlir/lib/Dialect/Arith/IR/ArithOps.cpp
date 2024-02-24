@@ -21,9 +21,12 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Support/LogicalResult.h"
 
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -59,11 +62,6 @@ static IntegerAttr subIntegerAttrs(PatternRewriter &builder, Value res,
 static IntegerAttr mulIntegerAttrs(PatternRewriter &builder, Value res,
                                    Attribute lhs, Attribute rhs) {
   return applyToIntegerAttrs(builder, res, lhs, rhs, std::multiplies<APInt>());
-}
-
-static IntegerOverflowFlagsAttr getDefOverflowFlags(OpBuilder &builder) {
-  return IntegerOverflowFlagsAttr::get(builder.getContext(),
-                                       IntegerOverflowFlags::none);
 }
 
 /// Invert an integer comparison predicate.
@@ -1261,6 +1259,20 @@ static bool checkWidthChangeCast(TypeRange inputs, TypeRange outputs) {
                                      srcType.getIntOrFloatBitWidth());
 }
 
+/// Attempts to convert `sourceValue` to an APFloat value with
+/// `targetSemantics`, without any information loss or rounding.
+static FailureOr<APFloat>
+convertFloatValue(APFloat sourceValue,
+                  const llvm::fltSemantics &targetSemantics) {
+  bool losesInfo = false;
+  auto status = sourceValue.convert(
+      targetSemantics, llvm::RoundingMode::NearestTiesToEven, &losesInfo);
+  if (losesInfo || status != APFloat::opOK)
+    return failure();
+
+  return sourceValue;
+}
+
 //===----------------------------------------------------------------------===//
 // ExtUIOp
 //===----------------------------------------------------------------------===//
@@ -1324,14 +1336,21 @@ LogicalResult arith::ExtSIOp::verify() {
 // ExtFOp
 //===----------------------------------------------------------------------===//
 
-/// Always fold extension of FP constants.
+/// Fold extension of float constants when there is no information loss due the
+/// difference in fp semantics.
 OpFoldResult arith::ExtFOp::fold(FoldAdaptor adaptor) {
-  auto constOperand = llvm::dyn_cast_if_present<FloatAttr>(adaptor.getIn());
-  if (!constOperand)
-    return {};
-
-  // Convert to target type via 'double'.
-  return FloatAttr::get(getType(), constOperand.getValue().convertToDouble());
+  auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
+  const llvm::fltSemantics &targetSemantics = resElemType.getFloatSemantics();
+  return constFoldCastOp<FloatAttr, FloatAttr>(
+      adaptor.getOperands(), getType(),
+      [&targetSemantics](const APFloat &a, bool &castStatus) {
+        FailureOr<APFloat> result = convertFloatValue(a, targetSemantics);
+        if (failed(result)) {
+          castStatus = false;
+          return a;
+        }
+        return *result;
+      });
 }
 
 bool arith::ExtFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
@@ -1398,23 +1417,22 @@ LogicalResult arith::TruncIOp::verify() {
 // TruncFOp
 //===----------------------------------------------------------------------===//
 
-/// Perform safe const propagation for truncf, i.e. only propagate if FP value
-/// can be represented without precision loss or rounding.
+/// Perform safe const propagation for truncf, i.e., only propagate if FP value
+/// can be represented without precision loss or rounding. This is because the
+/// semantics of `arith.truncf` do not assume a specific rounding mode.
 OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
-  auto constOperand = adaptor.getIn();
-  if (!constOperand || !llvm::isa<FloatAttr>(constOperand))
-    return {};
-
-  // Convert to target type via 'double'.
-  double sourceValue =
-      llvm::dyn_cast<FloatAttr>(constOperand).getValue().convertToDouble();
-  auto targetAttr = FloatAttr::get(getType(), sourceValue);
-
-  // Propagate if constant's value does not change after truncation.
-  if (sourceValue == targetAttr.getValue().convertToDouble())
-    return targetAttr;
-
-  return {};
+  auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
+  const llvm::fltSemantics &targetSemantics = resElemType.getFloatSemantics();
+  return constFoldCastOp<FloatAttr, FloatAttr>(
+      adaptor.getOperands(), getType(),
+      [&targetSemantics](const APFloat &a, bool &castStatus) {
+        FailureOr<APFloat> result = convertFloatValue(a, targetSemantics);
+        if (failed(result)) {
+          castStatus = false;
+          return a;
+        }
+        return *result;
+      });
 }
 
 bool arith::TruncFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
@@ -1501,6 +1519,7 @@ OpFoldResult arith::SIToFPOp::fold(FoldAdaptor adaptor) {
         return apf;
       });
 }
+
 //===----------------------------------------------------------------------===//
 // FPToUIOp
 //===----------------------------------------------------------------------===//
@@ -2360,11 +2379,11 @@ OpFoldResult arith::ShLIOp::fold(FoldAdaptor adaptor) {
   // shli(x, 0) -> x
   if (matchPattern(adaptor.getRhs(), m_Zero()))
     return getLhs();
-  // Don't fold if shifting more than the bit width.
+  // Don't fold if shifting more or equal than the bit width.
   bool bounded = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(), [&](const APInt &a, const APInt &b) {
-        bounded = b.ule(b.getBitWidth());
+        bounded = b.ult(b.getBitWidth());
         return a.shl(b);
       });
   return bounded ? result : Attribute();
@@ -2378,11 +2397,11 @@ OpFoldResult arith::ShRUIOp::fold(FoldAdaptor adaptor) {
   // shrui(x, 0) -> x
   if (matchPattern(adaptor.getRhs(), m_Zero()))
     return getLhs();
-  // Don't fold if shifting more than the bit width.
+  // Don't fold if shifting more or equal than the bit width.
   bool bounded = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(), [&](const APInt &a, const APInt &b) {
-        bounded = b.ule(b.getBitWidth());
+        bounded = b.ult(b.getBitWidth());
         return a.lshr(b);
       });
   return bounded ? result : Attribute();
@@ -2396,11 +2415,11 @@ OpFoldResult arith::ShRSIOp::fold(FoldAdaptor adaptor) {
   // shrsi(x, 0) -> x
   if (matchPattern(adaptor.getRhs(), m_Zero()))
     return getLhs();
-  // Don't fold if shifting more than the bit width.
+  // Don't fold if shifting more or equal than the bit width.
   bool bounded = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(), [&](const APInt &a, const APInt &b) {
-        bounded = b.ule(b.getBitWidth());
+        bounded = b.ult(b.getBitWidth());
         return a.ashr(b);
       });
   return bounded ? result : Attribute();

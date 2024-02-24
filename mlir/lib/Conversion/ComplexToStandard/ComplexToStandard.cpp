@@ -59,7 +59,8 @@ struct AbsOpConversion : public OpConversionPattern<complex::AbsOp> {
         b.create<arith::MulFOp>(imagDivReal, imagDivReal, fmf.getValue());
     Value imagSqPlusOne = b.create<arith::AddFOp>(imagSq, one, fmf.getValue());
     Value imagSqrt = b.create<math::SqrtOp>(imagSqPlusOne, fmf.getValue());
-    Value absImag = b.create<arith::MulFOp>(imagSqrt, real, fmf.getValue());
+    Value realAbs = b.create<math::AbsFOp>(real, fmf.getValue());
+    Value absImag = b.create<arith::MulFOp>(imagSqrt, realAbs, fmf.getValue());
 
     // Real <= Imag
     Value realDivImag = b.create<arith::DivFOp>(real, imag, fmf.getValue());
@@ -67,12 +68,13 @@ struct AbsOpConversion : public OpConversionPattern<complex::AbsOp> {
         b.create<arith::MulFOp>(realDivImag, realDivImag, fmf.getValue());
     Value realSqPlusOne = b.create<arith::AddFOp>(realSq, one, fmf.getValue());
     Value realSqrt = b.create<math::SqrtOp>(realSqPlusOne, fmf.getValue());
-    Value absReal = b.create<arith::MulFOp>(realSqrt, imag, fmf.getValue());
+    Value imagAbs = b.create<math::AbsFOp>(imag, fmf.getValue());
+    Value absReal = b.create<arith::MulFOp>(realSqrt, imagAbs, fmf.getValue());
 
     rewriter.replaceOpWithNewOp<arith::SelectOp>(
-        op, realIsZero, imag,
+        op, realIsZero, imagAbs,
         b.create<arith::SelectOp>(
-            imagIsZero, real,
+            imagIsZero, realAbs,
             b.create<arith::SelectOp>(
                 b.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, real, imag),
                 absImag, absReal)));

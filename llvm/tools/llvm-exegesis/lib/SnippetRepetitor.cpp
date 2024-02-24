@@ -141,8 +141,10 @@ SnippetRepetitor::Create(Benchmark::RepetitionModeE Mode,
                          const LLVMState &State) {
   switch (Mode) {
   case Benchmark::Duplicate:
+  case Benchmark::MiddleHalfDuplicate:
     return std::make_unique<DuplicateSnippetRepetitor>(State);
   case Benchmark::Loop:
+  case Benchmark::MiddleHalfLoop:
     return std::make_unique<LoopSnippetRepetitor>(State);
   case Benchmark::AggregateMin:
     break;

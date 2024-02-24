@@ -86,12 +86,12 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
   while (true) {
     E = E->IgnoreParens();
 
-    if (const CastExpr *CE = dyn_cast<CastExpr>(E)) {
+    if (const auto *CE = dyn_cast<CastExpr>(E)) {
       if ((CE->getCastKind() == CK_DerivedToBase ||
            CE->getCastKind() == CK_UncheckedDerivedToBase) &&
           E->getType()->isRecordType()) {
         E = CE->getSubExpr();
-        auto *Derived =
+        const auto *Derived =
             cast<CXXRecordDecl>(E->getType()->castAs<RecordType>()->getDecl());
         Adjustments.push_back(SubobjectAdjustment(CE, Derived));
         continue;
@@ -101,10 +101,10 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
         E = CE->getSubExpr();
         continue;
       }
-    } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
+    } else if (const auto *ME = dyn_cast<MemberExpr>(E)) {
       if (!ME->isArrow()) {
         assert(ME->getBase()->getType()->isRecordType());
-        if (FieldDecl *Field = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+        if (const auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
           if (!Field->isBitField() && !Field->getType()->isReferenceType()) {
             E = ME->getBase();
             Adjustments.push_back(SubobjectAdjustment(Field));
@@ -112,12 +112,11 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
           }
         }
       }
-    } else if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
+    } else if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
       if (BO->getOpcode() == BO_PtrMemD) {
         assert(BO->getRHS()->isPRValue());
         E = BO->getLHS();
-        const MemberPointerType *MPT =
-          BO->getRHS()->getType()->getAs<MemberPointerType>();
+        const auto *MPT = BO->getRHS()->getType()->getAs<MemberPointerType>();
         Adjustments.push_back(SubobjectAdjustment(MPT, BO->getRHS()));
         continue;
       }
@@ -1898,6 +1897,7 @@ bool CastExpr::CastConsistency() const {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
     assert(!getType()->isBooleanType() && "unheralded conversion to bool");
     goto CheckNoBasePath;
 
@@ -3329,6 +3329,12 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
            DIUE->getUpdater()->isConstantInitializer(Ctx, false, Culprit);
   }
   case InitListExprClass: {
+    // C++ [dcl.init.aggr]p2:
+    //   The elements of an aggregate are:
+    //   - for an array, the array elements in increasing subscript order, or
+    //   - for a class, the direct base classes in declaration order, followed
+    //     by the direct non-static data members (11.4) that are not members of
+    //     an anonymous union, in declaration order.
     const InitListExpr *ILE = cast<InitListExpr>(this);
     assert(ILE->isSemanticForm() && "InitListExpr must be in semantic form");
     if (ILE->getType()->isArrayType()) {
@@ -3343,6 +3349,19 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
     if (ILE->getType()->isRecordType()) {
       unsigned ElementNo = 0;
       RecordDecl *RD = ILE->getType()->castAs<RecordType>()->getDecl();
+
+      // In C++17, bases were added to the list of members used by aggregate
+      // initialization.
+      if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        for (unsigned i = 0, e = CXXRD->getNumBases(); i < e; i++) {
+          if (ElementNo < ILE->getNumInits()) {
+            const Expr *Elt = ILE->getInit(ElementNo++);
+            if (!Elt->isConstantInitializer(Ctx, false, Culprit))
+              return false;
+          }
+        }
+      }
+
       for (const auto *Field : RD->fields()) {
         // If this is a union, skip all the fields that aren't being initialized.
         if (RD->isUnion() && ILE->getInitializedFieldInUnion() != Field)

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
+#include "SPIRVMetadata.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/IR/IRBuilder.h"
@@ -148,6 +149,13 @@ static bool requireAssignType(Instruction *I) {
   return true;
 }
 
+static inline void reportFatalOnTokenType(const Instruction *I) {
+  if (I->getType()->isTokenTy())
+    report_fatal_error("A token is encountered but SPIR-V without extensions "
+                       "does not support token type",
+                       false);
+}
+
 void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
                                               Instruction *New) {
   while (!Old->user_empty()) {
@@ -282,7 +290,15 @@ void SPIRVEmitIntrinsics::insertPtrCastInstr(Instruction *I) {
   Value *Pointer;
   Type *ExpectedElementType;
   unsigned OperandToReplace;
-  if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
+
+  StoreInst *SI = dyn_cast<StoreInst>(I);
+  if (SI && F->getCallingConv() == CallingConv::SPIR_KERNEL &&
+      SI->getValueOperand()->getType()->isPointerTy() &&
+      isa<Argument>(SI->getValueOperand())) {
+    Pointer = SI->getValueOperand();
+    ExpectedElementType = IntegerType::getInt8Ty(F->getContext());
+    OperandToReplace = 0;
+  } else if (SI) {
     Pointer = SI->getPointerOperand();
     ExpectedElementType = SI->getValueOperand()->getType();
     OperandToReplace = 1;
@@ -363,14 +379,26 @@ void SPIRVEmitIntrinsics::insertPtrCastInstr(Instruction *I) {
   }
 
   // Do not emit spv_ptrcast if it would cast to the default pointer element
-  // type (i8) of the same address space.
-  if (ExpectedElementType->isIntegerTy(8))
+  // type (i8) of the same address space. In case of OpenCL kernels, make sure
+  // i8 is the pointer element type defined for the given kernel argument.
+  if (ExpectedElementType->isIntegerTy(8) &&
+      F->getCallingConv() != CallingConv::SPIR_KERNEL)
     return;
 
-  // If this would be the first spv_ptrcast and there is no spv_assign_ptr_type
-  // for this pointer before, do not emit spv_ptrcast but emit
-  // spv_assign_ptr_type instead.
-  if (FirstPtrCastOrAssignPtrType && isa<Instruction>(Pointer)) {
+  Argument *Arg = dyn_cast<Argument>(Pointer);
+  if (ExpectedElementType->isIntegerTy(8) &&
+      F->getCallingConv() == CallingConv::SPIR_KERNEL && Arg) {
+    MDString *ArgType = getOCLKernelArgType(*Arg->getParent(), Arg->getArgNo());
+    if (ArgType && ArgType->getString().starts_with("uchar*"))
+      return;
+  }
+
+  // If this would be the first spv_ptrcast, the pointer's defining instruction
+  // requires spv_assign_ptr_type and does not already have one, do not emit
+  // spv_ptrcast and emit spv_assign_ptr_type instead.
+  Instruction *PointerDefInst = dyn_cast<Instruction>(Pointer);
+  if (FirstPtrCastOrAssignPtrType && PointerDefInst &&
+      requireAssignPtrType(PointerDefInst)) {
     buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {Pointer->getType()},
                     ExpectedElementTypeConst, Pointer,
                     {IRB->getInt32(AddressSpace)});
@@ -522,6 +550,7 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV) {
 }
 
 void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I) {
+  reportFatalOnTokenType(I);
   if (I->getType()->isVoidTy() || !requireAssignPtrType(I))
     return;
 
@@ -544,6 +573,7 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I) {
 }
 
 void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I) {
+  reportFatalOnTokenType(I);
   Type *Ty = I->getType();
   if (!Ty->isVoidTy() && requireAssignType(I) && !requireAssignPtrType(I)) {
     setInsertPointSkippingPhis(*IRB, I->getNextNode());
@@ -603,6 +633,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I) {
     }
   }
   if (I->hasName()) {
+    reportFatalOnTokenType(I);
     setInsertPointSkippingPhis(*IRB, I->getNextNode());
     std::vector<Value *> Args = {I};
     addStringImm(I->getName(), *IRB, Args);

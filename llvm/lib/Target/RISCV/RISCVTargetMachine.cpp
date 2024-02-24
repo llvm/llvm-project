@@ -84,7 +84,7 @@ static cl::opt<bool> EnableRISCVDeadRegisterElimination(
 static cl::opt<bool>
     EnableSinkFold("riscv-enable-sink-fold",
                    cl::desc("Enable sinking and folding of instruction copies"),
-                   cl::init(false), cl::Hidden);
+                   cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableLoopDataPrefetch("riscv-enable-loop-data-prefetch", cl::Hidden,
@@ -355,35 +355,18 @@ public:
 
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override {
-    const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
     ScheduleDAGMILive *DAG = nullptr;
     if (EnableMISchedLoadClustering) {
       DAG = createGenericSchedLive(C);
       DAG->addMutation(createLoadClusterDAGMutation(
           DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
     }
-    const auto &MacroFusions = ST.getMacroFusions();
-    if (!MacroFusions.empty()) {
-      DAG = DAG ? DAG : createGenericSchedLive(C);
-      DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
-    }
     return DAG;
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
-    const auto &MacroFusions = ST.getMacroFusions();
-    if (!MacroFusions.empty()) {
-      ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
-      DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
-      return DAG;
-    }
-    return nullptr;
   }
 
   void addIRPasses() override;
   bool addPreISel() override;
+  void addCodeGenPrepare() override;
   bool addInstSelector() override;
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
@@ -468,6 +451,12 @@ bool RISCVPassConfig::addPreISel() {
   }
 
   return false;
+}
+
+void RISCVPassConfig::addCodeGenPrepare() {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createTypePromotionLegacyPass());
+  TargetPassConfig::addCodeGenPrepare();
 }
 
 bool RISCVPassConfig::addInstSelector() {

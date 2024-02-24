@@ -83,6 +83,64 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
 
 extern "C" {
 
+[[clang::always_inline]] void __kmpc_parallel_spmd(IdentTy *ident,
+                                                   int32_t num_threads,
+                                                   void *fn, void **args,
+                                                   const int64_t nargs) {
+  uint32_t TId = mapping::getThreadIdInBlock();
+  uint32_t NumThreads = determineNumberOfThreads(num_threads);
+  uint32_t PTeamSize =
+      NumThreads == mapping::getMaxTeamThreads() ? 0 : NumThreads;
+  // Avoid the race between the read of the `icv::Level` above and the write
+  // below by synchronizing all threads here.
+  synchronize::threadsAligned(atomic::seq_cst);
+  {
+    // Note that the order here is important. `icv::Level` has to be updated
+    // last or the other updates will cause a thread specific state to be
+    // created.
+    state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, PTeamSize,
+                                          1u, TId == 0, ident,
+                                          /*ForceTeamState=*/true);
+    state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, TId == 0, ident,
+                                     /*ForceTeamState=*/true);
+    state::ValueRAII LevelRAII(icv::Level, 1u, 0u, TId == 0, ident,
+                               /*ForceTeamState=*/true);
+
+    // Synchronize all threads after the main thread (TId == 0) set up the
+    // team state properly.
+    synchronize::threadsAligned(atomic::acq_rel);
+
+    state::ParallelTeamSize.assert_eq(PTeamSize, ident,
+                                      /*ForceTeamState=*/true);
+    icv::ActiveLevel.assert_eq(1u, ident, /*ForceTeamState=*/true);
+    icv::Level.assert_eq(1u, ident, /*ForceTeamState=*/true);
+
+    // Ensure we synchronize before we run user code to avoid invalidating the
+    // assumptions above.
+    synchronize::threadsAligned(atomic::relaxed);
+
+    if (!PTeamSize || TId < PTeamSize)
+      invokeMicrotask(TId, 0, fn, args, nargs);
+
+    // Synchronize all threads at the end of a parallel region.
+    synchronize::threadsAligned(atomic::seq_cst);
+  }
+
+  // Synchronize all threads to make sure every thread exits the scope above;
+  // otherwise the following assertions and the assumption in
+  // __kmpc_target_deinit may not hold.
+  synchronize::threadsAligned(atomic::acq_rel);
+
+  state::ParallelTeamSize.assert_eq(1u, ident, /*ForceTeamState=*/true);
+  icv::ActiveLevel.assert_eq(0u, ident, /*ForceTeamState=*/true);
+  icv::Level.assert_eq(0u, ident, /*ForceTeamState=*/true);
+
+  // Ensure we synchronize to create an aligned region around the assumptions.
+  synchronize::threadsAligned(atomic::relaxed);
+
+  return;
+}
+
 [[clang::always_inline]] void
 __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
                    int32_t num_threads, int proc_bind, void *fn,
@@ -112,52 +170,10 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   uint32_t MaxTeamThreads = mapping::getMaxTeamThreads();
   uint32_t PTeamSize = NumThreads == MaxTeamThreads ? 0 : NumThreads;
   if (mapping::isSPMDMode()) {
-    // Avoid the race between the read of the `icv::Level` above and the write
-    // below by synchronizing all threads here.
-    synchronize::threadsAligned(atomic::seq_cst);
-    {
-      // Note that the order here is important. `icv::Level` has to be updated
-      // last or the other updates will cause a thread specific state to be
-      // created.
-      state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, PTeamSize,
-                                            1u, TId == 0, ident,
-                                            /*ForceTeamState=*/true);
-      state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, TId == 0,
-                                       ident, /*ForceTeamState=*/true);
-      state::ValueRAII LevelRAII(icv::Level, 1u, 0u, TId == 0, ident,
-                                 /*ForceTeamState=*/true);
-
-      // Synchronize all threads after the main thread (TId == 0) set up the
-      // team state properly.
-      synchronize::threadsAligned(atomic::acq_rel);
-
-      state::ParallelTeamSize.assert_eq(PTeamSize, ident,
-                                        /*ForceTeamState=*/true);
-      icv::ActiveLevel.assert_eq(1u, ident, /*ForceTeamState=*/true);
-      icv::Level.assert_eq(1u, ident, /*ForceTeamState=*/true);
-
-      // Ensure we synchronize before we run user code to avoid invalidating the
-      // assumptions above.
-      synchronize::threadsAligned(atomic::relaxed);
-
-      if (!PTeamSize || TId < PTeamSize)
-        invokeMicrotask(TId, 0, fn, args, nargs);
-
-      // Synchronize all threads at the end of a parallel region.
-      synchronize::threadsAligned(atomic::seq_cst);
-    }
-
-    // Synchronize all threads to make sure every thread exits the scope above;
-    // otherwise the following assertions and the assumption in
-    // __kmpc_target_deinit may not hold.
-    synchronize::threadsAligned(atomic::acq_rel);
-
-    state::ParallelTeamSize.assert_eq(1u, ident, /*ForceTeamState=*/true);
-    icv::ActiveLevel.assert_eq(0u, ident, /*ForceTeamState=*/true);
-    icv::Level.assert_eq(0u, ident, /*ForceTeamState=*/true);
-
-    // Ensure we synchronize to create an aligned region around the assumptions.
-    synchronize::threadsAligned(atomic::relaxed);
+    // This was moved to its own routine so it could be called directly
+    // in certain situations to avoid resource consumption of unused
+    // logic in parallel_51.
+    __kmpc_parallel_spmd(ident, num_threads, fn, args, nargs);
 
     return;
   }

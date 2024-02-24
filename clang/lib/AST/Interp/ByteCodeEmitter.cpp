@@ -10,9 +10,11 @@
 #include "ByteCodeGenError.h"
 #include "Context.h"
 #include "Floating.h"
+#include "IntegralAP.h"
 #include "Opcode.h"
 #include "Program.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/Builtins.h"
 #include <type_traits>
@@ -20,7 +22,44 @@
 using namespace clang;
 using namespace clang::interp;
 
+/// Unevaluated builtins don't get their arguments put on the stack
+/// automatically. They instead operate on the AST of their Call
+/// Expression.
+/// Similar information is available via ASTContext::BuiltinInfo,
+/// but that is not correct for our use cases.
+static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
+  return BuiltinID == Builtin::BI__builtin_classify_type;
+}
+
 Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
+  bool IsLambdaStaticInvoker = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
+      MD && MD->isLambdaStaticInvoker()) {
+    // For a lambda static invoker, we might have to pick a specialized
+    // version if the lambda is generic. In that case, the picked function
+    // will *NOT* be a static invoker anymore. However, it will still
+    // be a non-static member function, this (usually) requiring an
+    // instance pointer. We suppress that later in this function.
+    IsLambdaStaticInvoker = true;
+
+    const CXXRecordDecl *ClosureClass = MD->getParent();
+    assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
+    if (ClosureClass->isGenericLambda()) {
+      const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
+      assert(MD->isFunctionTemplateSpecialization() &&
+             "A generic lambda's static-invoker function must be a "
+             "template specialization");
+      const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
+      FunctionTemplateDecl *CallOpTemplate =
+          LambdaCallOp->getDescribedFunctionTemplate();
+      void *InsertPos = nullptr;
+      const FunctionDecl *CorrespondingCallOpSpecialization =
+          CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
+      assert(CorrespondingCallOpSpecialization);
+      FuncDecl = cast<CXXMethodDecl>(CorrespondingCallOpSpecialization);
+    }
+  }
+
   // Set up argument indices.
   unsigned ParamOffset = 0;
   SmallVector<PrimType, 8> ParamTypes;
@@ -44,7 +83,7 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // InterpStack when calling the function.
   bool HasThisPointer = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
-    if (MD->isImplicitObjectMemberFunction()) {
+    if (MD->isImplicitObjectMemberFunction() && !IsLambdaStaticInvoker) {
       HasThisPointer = true;
       ParamTypes.push_back(PT_Ptr);
       ParamOffsets.push_back(ParamOffset);
@@ -92,7 +131,7 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   if (!Func) {
     bool IsUnevaluatedBuiltin = false;
     if (unsigned BI = FuncDecl->getBuiltinID())
-      IsUnevaluatedBuiltin = Ctx.getASTContext().BuiltinInfo.isUnevaluated(BI);
+      IsUnevaluatedBuiltin = isUnevaluatedBuiltin(BI);
 
     Func =
         P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
@@ -115,7 +154,8 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl))
     IsEligibleForCompilation = MD->isLambdaStaticInvoker();
   if (!IsEligibleForCompilation)
-    IsEligibleForCompilation = FuncDecl->isConstexpr();
+    IsEligibleForCompilation =
+        FuncDecl->isConstexpr() || FuncDecl->hasAttr<MSConstexprAttr>();
 
   // Compile the function body.
   if (!IsEligibleForCompilation || !visitFunc(FuncDecl)) {
@@ -209,9 +249,11 @@ static void emit(Program &P, std::vector<std::byte> &Code, const T &Val,
   }
 }
 
-template <>
-void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
-          bool &Success) {
+/// Emits a serializable value. These usually (potentially) contain
+/// heap-allocated memory and aren't trivially copyable.
+template <typename T>
+static void emitSerialized(std::vector<std::byte> &Code, const T &Val,
+                           bool &Success) {
   size_t Size = Val.bytesToSerialize();
 
   if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
@@ -226,6 +268,24 @@ void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
   Code.resize(ValPos + Size);
 
   Val.serialize(Code.data() + ValPos);
+}
+
+template <>
+void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
+          bool &Success) {
+  emitSerialized(Code, Val, Success);
+}
+
+template <>
+void emit(Program &P, std::vector<std::byte> &Code,
+          const IntegralAP<false> &Val, bool &Success) {
+  emitSerialized(Code, Val, Success);
+}
+
+template <>
+void emit(Program &P, std::vector<std::byte> &Code, const IntegralAP<true> &Val,
+          bool &Success) {
+  emitSerialized(Code, Val, Success);
 }
 
 template <typename... Tys>

@@ -968,9 +968,9 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
   // Save the token name used for static assertion.
   const char *TokName = Tok.getName();
 
-  if (Tok.is(tok::kw__Static_assert) && !getLangOpts().C11)
-    Diag(Tok, diag::ext_c11_feature) << Tok.getName();
-  if (Tok.is(tok::kw_static_assert)) {
+  if (Tok.is(tok::kw__Static_assert))
+    diagnoseUseOfC11Keyword(Tok);
+  else if (Tok.is(tok::kw_static_assert)) {
     if (!getLangOpts().CPlusPlus) {
       if (getLangOpts().C23)
         Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
@@ -1725,6 +1725,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           tok::kw___is_member_pointer,
           tok::kw___is_nothrow_assignable,
           tok::kw___is_nothrow_constructible,
+          tok::kw___is_nothrow_convertible,
           tok::kw___is_nothrow_destructible,
           tok::kw___is_nullptr,
           tok::kw___is_object,
@@ -2855,7 +2856,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   }
 
   // static_assert-declaration. A templated static_assert declaration is
-  // diagnosed in Parser::ParseSingleDeclarationAfterTemplate.
+  // diagnosed in Parser::ParseDeclarationAfterTemplate.
   if (!TemplateInfo.Kind &&
       Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert)) {
     SourceLocation DeclEnd;
@@ -2868,9 +2869,8 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
            "Nested template improperly parsed?");
     ObjCDeclContextSwitch ObjCDC(*this);
     SourceLocation DeclEnd;
-    return DeclGroupPtrTy::make(
-        DeclGroupRef(ParseTemplateDeclarationOrSpecialization(
-            DeclaratorContext::Member, DeclEnd, AccessAttrs, AS)));
+    return ParseTemplateDeclarationOrSpecialization(DeclaratorContext::Member,
+                                                    DeclEnd, AccessAttrs, AS);
   }
 
   // Handle:  member-declaration ::= '__extension__' member-declaration
@@ -3277,6 +3277,16 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
           << FixItHint::CreateReplacement(CommaLoc, ";");
       ExpectSemi = false;
       break;
+    }
+
+    // C++23 [temp.pre]p5:
+    //   In a template-declaration, explicit specialization, or explicit
+    //   instantiation the init-declarator-list in the declaration shall
+    //   contain at most one declarator.
+    if (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
+        DeclaratorInfo.isFirstDeclarator()) {
+      Diag(CommaLoc, diag::err_multiple_template_declarators)
+          << TemplateInfo.Kind;
     }
 
     // Parse the next declarator.
@@ -4228,6 +4238,24 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
 
   SourceLocation RequiresKWLoc = ConsumeToken();
 
+  // C++23 [basic.scope.namespace]p1:
+  //   For each non-friend redeclaration or specialization whose target scope
+  //   is or is contained by the scope, the portion after the declarator-id,
+  //   class-head-name, or enum-head-name is also included in the scope.
+  // C++23 [basic.scope.class]p1:
+  //   For each non-friend redeclaration or specialization whose target scope
+  //   is or is contained by the scope, the portion after the declarator-id,
+  //   class-head-name, or enum-head-name is also included in the scope.
+  //
+  // FIXME: We should really be calling ParseTrailingRequiresClause in
+  // ParseDirectDeclarator, when we are already in the declarator scope.
+  // This would also correctly suppress access checks for specializations
+  // and explicit instantiations, which we currently do not do.
+  CXXScopeSpec &SS = D.getCXXScopeSpec();
+  DeclaratorScopeObj DeclScopeObj(*this, SS);
+  if (SS.isValid() && Actions.ShouldEnterDeclaratorScope(getCurScope(), SS))
+    DeclScopeObj.EnterDeclaratorScope();
+
   ExprResult TrailingRequiresClause;
   ParseScope ParamScope(this, Scope::DeclScope |
                                   Scope::FunctionDeclarationScope |
@@ -4633,10 +4661,12 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                                                   CachedTokens &OpenMPTokens,
                                                   SourceLocation *EndLoc) {
   if (Tok.is(tok::kw_alignas)) {
-    if (getLangOpts().C23)
-      Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
-    else
-      Diag(Tok.getLocation(), diag::warn_cxx98_compat_alignas);
+    // alignas is a valid token in C23 but it is not an attribute, it's a type-
+    // specifier-qualifier, which means it has different parsing behavior. We
+    // handle this in ParseDeclarationSpecifiers() instead of here in C. We
+    // should not get here for C any longer.
+    assert(getLangOpts().CPlusPlus && "'alignas' is not an attribute in C");
+    Diag(Tok.getLocation(), diag::warn_cxx98_compat_alignas);
     ParseAlignmentSpecifier(Attrs, EndLoc);
     return;
   }

@@ -327,7 +327,7 @@ bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N) const {
     return TII->isInlineConstant(C->getAPIntValue());
 
   if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N))
-    return TII->isInlineConstant(C->getValueAPF().bitcastToAPInt());
+    return TII->isInlineConstant(C->getValueAPF());
 
   return false;
 }
@@ -1474,7 +1474,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
     // (add n0, c1)
 
     SDValue N0 = Addr.getOperand(0);
-    SDValue N1 = Addr.getOperand(1);
+    uint64_t C1 = Addr.getConstantOperandVal(1);
 
     // Offsets in vaddr must be positive if range checking is enabled.
     //
@@ -1492,12 +1492,11 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
     // MUBUF vaddr, but not on older subtargets which can only do this if the
     // sign bit is known 0.
     const SIInstrInfo *TII = Subtarget->getInstrInfo();
-    ConstantSDNode *C1 = cast<ConstantSDNode>(N1);
-    if (TII->isLegalMUBUFImmOffset(C1->getZExtValue()) &&
+    if (TII->isLegalMUBUFImmOffset(C1) &&
         (!Subtarget->privateMemoryResourceIsRangeChecked() ||
          CurDAG->SignBitIsZero(N0))) {
       std::tie(VAddr, SOffset) = foldFrameIndex(N0);
-      ImmOffset = CurDAG->getTargetConstant(C1->getZExtValue(), DL, MVT::i32);
+      ImmOffset = CurDAG->getTargetConstant(C1, DL, MVT::i32);
       return true;
     }
   }
@@ -2392,7 +2391,7 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
     auto CC = cast<CondCodeSDNode>(Cond->getOperand(2))->get();
     if ((CC == ISD::SETEQ || CC == ISD::SETNE) &&
         isNullConstant(Cond->getOperand(1)) &&
-        // TODO: make condition below an assert after fixing ballot bitwidth.
+        // We may encounter ballot.i64 in wave32 mode on -O0.
         VCMP.getValueType().getSizeInBits() == ST->getWavefrontSize()) {
       // %VCMP = i(WaveSize) AMDGPUISD::SETCC ...
       // %C = i1 ISD::SETCC %VCMP, 0, setne/seteq

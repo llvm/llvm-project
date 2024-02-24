@@ -126,9 +126,11 @@ enum NodeType : unsigned {
   // Floating point fmax and fmin matching the RISC-V instruction semantics.
   FMAX, FMIN,
 
-  // READ_CYCLE_WIDE - A read of the 64-bit cycle CSR on a 32-bit target
-  // (returns (Lo, Hi)). It takes a chain operand.
-  READ_CYCLE_WIDE,
+  // A read of the 64-bit counter CSR on a 32-bit target (returns (Lo, Hi)).
+  // It takes a chain operand and another two target constant operands (the
+  // CSR numbers of the low and high parts of the counter).
+  READ_COUNTER_WIDE,
+
   // brev8, orc.b, zip, and unzip from Zbb and Zbkb. All operands are i32 or
   // XLenVT.
   BREV8,
@@ -141,6 +143,9 @@ enum NodeType : unsigned {
   SHA256SIG0, SHA256SIG1, SHA256SUM0, SHA256SUM1,
   SM4KS, SM4ED,
   SM3P0, SM3P1,
+
+  // May-Be-Operations
+  MOPR, MOPRR,
 
   // Vector Extension
   FIRST_VL_VECTOR_OP,
@@ -415,50 +420,6 @@ enum NodeType : unsigned {
   STRICT_VFROUND_NOEXCEPT_VL,
   LAST_RISCV_STRICTFP_OPCODE = STRICT_VFROUND_NOEXCEPT_VL,
 
-  SF_VC_X_SE_E8MF8,
-  SF_VC_X_SE_E8MF4,
-  SF_VC_X_SE_E8MF2,
-  SF_VC_X_SE_E8M1,
-  SF_VC_X_SE_E8M2,
-  SF_VC_X_SE_E8M4,
-  SF_VC_X_SE_E8M8,
-  SF_VC_X_SE_E16MF4,
-  SF_VC_X_SE_E16MF2,
-  SF_VC_X_SE_E16M1,
-  SF_VC_X_SE_E16M2,
-  SF_VC_X_SE_E16M4,
-  SF_VC_X_SE_E16M8,
-  SF_VC_X_SE_E32MF2,
-  SF_VC_X_SE_E32M1,
-  SF_VC_X_SE_E32M2,
-  SF_VC_X_SE_E32M4,
-  SF_VC_X_SE_E32M8,
-  SF_VC_X_SE_E64M1,
-  SF_VC_X_SE_E64M2,
-  SF_VC_X_SE_E64M4,
-  SF_VC_X_SE_E64M8,
-  SF_VC_I_SE_E8MF8,
-  SF_VC_I_SE_E8MF4,
-  SF_VC_I_SE_E8MF2,
-  SF_VC_I_SE_E8M1,
-  SF_VC_I_SE_E8M2,
-  SF_VC_I_SE_E8M4,
-  SF_VC_I_SE_E8M8,
-  SF_VC_I_SE_E16MF4,
-  SF_VC_I_SE_E16MF2,
-  SF_VC_I_SE_E16M1,
-  SF_VC_I_SE_E16M2,
-  SF_VC_I_SE_E16M4,
-  SF_VC_I_SE_E16M8,
-  SF_VC_I_SE_E32MF2,
-  SF_VC_I_SE_E32M1,
-  SF_VC_I_SE_E32M2,
-  SF_VC_I_SE_E32M4,
-  SF_VC_I_SE_E32M8,
-  SF_VC_I_SE_E64M1,
-  SF_VC_I_SE_E64M2,
-  SF_VC_I_SE_E64M4,
-  SF_VC_I_SE_E64M8,
   SF_VC_XV_SE,
   SF_VC_IV_SE,
   SF_VC_VV_SE,

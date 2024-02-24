@@ -992,7 +992,7 @@ protected:
   /// Notify the listener that the pattern failed to match the given operation,
   /// and provide a callback to populate a diagnostic with the reason why the
   /// failure occurred.
-  LogicalResult
+  void
   notifyMatchFailure(Location loc,
                      function_ref<void(Diagnostic &)> reasonCallback) override;
 
@@ -1012,7 +1012,7 @@ protected:
 private:
   friend class TransformRewriter;
 
-  void notifyOperationRemoved(Operation *op) override;
+  void notifyOperationErased(Operation *op) override;
 
   void notifyOperationReplaced(Operation *op, ValueRange newValues) override;
   using Listener::notifyOperationReplaced;
