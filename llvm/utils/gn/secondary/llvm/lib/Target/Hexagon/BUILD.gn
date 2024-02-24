@@ -86,6 +86,7 @@ static_library("LLVMHexagonCodeGen") {
     "HexagonTargetMachine.cpp",
     "HexagonTargetObjectFile.cpp",
     "HexagonTargetTransformInfo.cpp",
+    "HexagonTfrCleanup.cpp",
     "HexagonVExtract.cpp",
     "HexagonVLIWPacketizer.cpp",
     "HexagonVectorCombine.cpp",
