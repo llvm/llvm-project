@@ -23,7 +23,7 @@ def O : JoinedOrSeparate<["-"], "O">,
         HelpText<"Alias for --output-target">;
 
 defm new_symbol_visibility
-    : Eq<"new-symbol-visibility", "Specirty the visibility of symbols automatically "
+    : Eq<"new-symbol-visibility", "Specify the visibility of symbols automatically "
          "created when using binary input or --add-symbol. The default is 'default'">;
 
 def compress_debug_sections
@@ -109,7 +109,7 @@ defm strip_unneeded_symbols
 
 defm subsystem
     : Eq<"subsystem",
-         "Set the PE subsystem, optionally subsystem version">,
+         "Set the PE subsystem, and optionally subsystem version">,
       MetaVarName<"name[:version]">, Group<grp_coff>;
 
 def extract_dwo
@@ -168,7 +168,7 @@ defm keep_global_symbols
          "be repeated to read symbols from many files">,
       MetaVarName<"filename">;
 
-defm weaken_symbol : Eq<"weaken-symbol", "Mark any global symbol named <symbol> as weak">,
+defm weaken_symbol : Eq<"weaken-symbol", "Mark global symbols named <symbol> as weak">,
                      MetaVarName<"symbol">;
 defm weaken_symbols
     : Eq<"weaken-symbols",

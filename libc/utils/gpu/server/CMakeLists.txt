@@ -14,7 +14,7 @@ target_compile_definitions(llvmlibc_rpc_server PUBLIC
 
 # This utility needs to be compiled for the host system when cross compiling.
 if(LLVM_RUNTIMES_TARGET OR LIBC_TARGET_TRIPLE)
-  target_compile_options(llvmlibc_rpc_server PUBLIC 
+  target_compile_options(llvmlibc_rpc_server PUBLIC
                          --target=${LLVM_HOST_TRIPLE})
   target_link_libraries(llvmlibc_rpc_server PUBLIC
                         "--target=${LLVM_HOST_TRIPLE}")

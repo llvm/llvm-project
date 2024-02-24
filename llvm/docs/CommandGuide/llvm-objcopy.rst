@@ -484,7 +484,7 @@ them.
 
 .. option:: --weaken-symbol <symbol>, -W
 
- Mark any global symbol named ``<symbol>`` as a weak symbol in the output. Can
+ Mark global symbols named ``<symbol>`` as a weak symbol in the output. Can
  be specified multiple times to mark multiple symbols as weak.
 
 .. option:: --weaken-symbols <filename>
