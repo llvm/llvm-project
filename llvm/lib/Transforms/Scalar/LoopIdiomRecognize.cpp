@@ -1419,6 +1419,10 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
         AATags.TBAA, AATags.TBAAStruct, AATags.Scope, AATags.NoAlias);
   }
   
+  // As the `NewCall` is created in the preheader, it is out of the loop.
+  // The `TheStore` is in the loop body, so set the debug location of the
+  // `TheStore` to the `NewCall` will make debugging confusing.
+  // As a result, we need to drop the debug location of the `NewCall`.
   NewCall->dropLocation();
 
   if (MSSAU) {

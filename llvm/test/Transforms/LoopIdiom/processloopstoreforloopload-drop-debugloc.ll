@@ -3,6 +3,8 @@
 ; Function Attrs: noinline nounwind uwtable
 define dso_local void @fun(ptr noalias noundef %a, ptr noalias noundef %b) #0 !dbg !10 {
 
+; The newly created memcpy should not have the debugloc
+; so make sure that the CallInst line ends without "!dbg"
 ; CHECK-LABEL: entry:
 ; CHECK: call void @llvm.memcpy.p0.p0.i64{{\(.*\)$}}
 entry:
@@ -29,19 +31,6 @@ for.end:                                          ; preds = %for.body
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-
-; Function Attrs: noinline nounwind uwtable
-define dso_local i32 @main() #0 !dbg !36 {
-entry:
-  %a = alloca [2048 x i32], align 16
-  %b = alloca [2048 x i32], align 16
-  tail call void @llvm.dbg.declare(metadata ptr %a, metadata !39, metadata !DIExpression()), !dbg !43
-  tail call void @llvm.dbg.declare(metadata ptr %b, metadata !44, metadata !DIExpression()), !dbg !45
-  %arraydecay = getelementptr inbounds [2048 x i32], ptr %a, i64 0, i64 0, !dbg !46
-  %arraydecay1 = getelementptr inbounds [2048 x i32], ptr %b, i64 0, i64 0, !dbg !47
-  call void @fun(ptr noundef %arraydecay, ptr noundef %arraydecay1), !dbg !48
-  ret i32 0, !dbg !49
-}
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
@@ -84,17 +73,3 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 !33 = !DILocation(line: 4, column: 5, scope: !21)
 !34 = !{!"llvm.loop.mustprogress"}
 !35 = !DILocation(line: 5, column: 1, scope: !10)
-!36 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 7, type: !37, scopeLine: 7, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !16)
-!37 = !DISubroutineType(types: !38)
-!38 = !{!15}
-!39 = !DILocalVariable(name: "a", scope: !36, file: !1, line: 8, type: !40)
-!40 = !DICompositeType(tag: DW_TAG_array_type, baseType: !15, size: 65536, elements: !41)
-!41 = !{!42}
-!42 = !DISubrange(count: 2048)
-!43 = !DILocation(line: 8, column: 9, scope: !36)
-!44 = !DILocalVariable(name: "b", scope: !36, file: !1, line: 8, type: !40)
-!45 = !DILocation(line: 8, column: 18, scope: !36)
-!46 = !DILocation(line: 9, column: 9, scope: !36)
-!47 = !DILocation(line: 9, column: 12, scope: !36)
-!48 = !DILocation(line: 9, column: 5, scope: !36)
-!49 = !DILocation(line: 10, column: 5, scope: !36)
