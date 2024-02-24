@@ -5310,18 +5310,6 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
 }
 
-bool SITargetLowering::hasAtomicFaddRtnForTy(SDValue &Op) const {
-  switch (Op.getValue(0).getSimpleValueType().SimpleTy) {
-  case MVT::f32:
-    return Subtarget->hasAtomicFaddRtnInsts();
-  case MVT::v2f16:
-  case MVT::f64:
-    return Subtarget->hasGFX90AInsts();
-  default:
-    return false;
-  }
-}
-
 bool SITargetLowering::enableAggressiveFMAFusion(EVT VT) const {
   // This currently forces unfolding various combinations of fsub into fma with
   // free fneg'd operands. As long as we have fast FMA (controlled by
