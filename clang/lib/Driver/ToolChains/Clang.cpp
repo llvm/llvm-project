@@ -4479,7 +4479,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                       options::OPT_gpubnames, options::OPT_gno_pubnames);
   if (DwarfFission != DwarfFissionKind::None ||
       (PubnamesArg && checkDebugInfoOption(PubnamesArg, Args, D, TC)))
-    if (EffectiveDWARFVersion < 5 &&
+    if (DebuggerTuning != llvm::DebuggerKind::LLDB &&
         (!PubnamesArg ||
          (!PubnamesArg->getOption().matches(options::OPT_gno_gnu_pubnames) &&
           !PubnamesArg->getOption().matches(options::OPT_gno_pubnames))))

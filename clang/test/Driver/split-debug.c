@@ -11,6 +11,7 @@
 // NOINLINE-NOT: "-fsplit-dwarf-inlining"
 // SPLIT-NOT:  "-dumpdir"
 // SPLIT:      "-debug-info-kind=constructor"
+// SPLIT-SAME: "-ggnu-pubnames"
 // SPLIT-SAME: "-split-dwarf-file" "split-debug.dwo" "-split-dwarf-output" "split-debug.dwo"
 
 // RUN: %clang -### -c -target wasm32 -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=SPLIT
@@ -123,3 +124,8 @@
 // G1_NOSPLIT: "-debug-info-kind=line-tables-only"
 // G1_NOSPLIT-NOT: "-split-dwarf-file"
 // G1_NOSPLIT-NOT: "-split-dwarf-output"
+
+/// Do not generate -ggnu-pubnames for -glldb
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g -glldb %s 2>&1 | FileCheck %s --check-prefixes=GLLDBSPLIT
+
+// GLLDBSPLIT-NOT: "-ggnu-pubnames"
