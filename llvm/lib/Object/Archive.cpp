@@ -969,19 +969,12 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
   Err = Error::success();
 }
 
-object::Archive::Kind Archive::getDefaultKindForTriple(Triple &T) {
-  if (T.isOSDarwin())
-    return object::Archive::K_DARWIN;
-  if (T.isOSAIX())
-    return object::Archive::K_AIXBIG;
-  if (T.isOSWindows())
-    return object::Archive::K_COFF;
-  return object::Archive::K_GNU;
-}
-
 object::Archive::Kind Archive::getDefaultKindForHost() {
   Triple HostTriple(sys::getProcessTriple());
-  return getDefaultKindForTriple(HostTriple);
+  return HostTriple.isOSDarwin()
+             ? object::Archive::K_DARWIN
+             : (HostTriple.isOSAIX() ? object::Archive::K_AIXBIG
+                                     : object::Archive::K_GNU);
 }
 
 Archive::child_iterator Archive::child_begin(Error &Err,
