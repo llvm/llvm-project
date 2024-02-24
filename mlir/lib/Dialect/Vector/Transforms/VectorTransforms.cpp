@@ -728,15 +728,17 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
     VectorType castSrcType = bitcastOp.getSourceVectorType();
     VectorType castDstType = bitcastOp.getResultVectorType();
     assert(castSrcType.getRank() == castDstType.getRank());
-    // Skip 0-D vector which will not from InsertStridedSliceOp.
-    if (castSrcType.getRank() == 0)
+
+    // 0-D and scalable vectors are not supported yet.
+    if (castSrcType.getRank() == 0 || castSrcType.isScalable() ||
+        castDstType.isScalable())
       return failure();
 
     int64_t castSrcLastDim = castSrcType.getShape().back();
     int64_t castDstLastDim = castDstType.getShape().back();
-    bool isShrink = castSrcLastDim >= castDstLastDim;
+    bool isNumElemsShrink = castSrcLastDim >= castDstLastDim;
     int64_t ratio;
-    if (isShrink) {
+    if (isNumElemsShrink) {
       assert(castSrcLastDim % castDstLastDim == 0);
       ratio = castSrcLastDim / castDstLastDim;
     } else {
@@ -753,26 +755,20 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
     if (!insertSrcType)
       return failure();
 
-    // Requires that shape of insert op src is castable to dstType.
-    unsigned sourceWidth = castSrcType.getElementType().getIntOrFloatBitWidth();
-    unsigned destinationWidth =
-        castDstType.getElementType().getIntOrFloatBitWidth();
-    unsigned numElements = isShrink ? destinationWidth / sourceWidth
-                                    : sourceWidth / destinationWidth;
-    if (insertSrcType.getNumElements() % numElements != 0)
-      return failure();
-
     // Bitcast the source.
-    SmallVector<int64_t> srcDims = llvm::to_vector<4>(insertSrcType.getShape());
-    srcDims.back() = isShrink ? srcDims.back() / ratio : srcDims.back() * ratio;
+    auto insertSrcShape = insertSrcType.getShape();
+    SmallVector<int64_t> srcDims(insertSrcShape.begin(), insertSrcShape.end());
+    srcDims.back() =
+        isNumElemsShrink ? srcDims.back() / ratio : srcDims.back() * ratio;
     VectorType newCastSrcType =
         VectorType::get(srcDims, castDstType.getElementType());
     auto newCastSrcOp = rewriter.create<vector::BitCastOp>(
         bitcastOp.getLoc(), newCastSrcType, insertOp.getSource());
 
-    SmallVector<int64_t> dstDims =
-        llvm::to_vector<4>(insertOp.getDestVectorType().getShape());
-    dstDims.back() = isShrink ? dstDims.back() / ratio : dstDims.back() * ratio;
+    auto dstShape = insertOp.getDestVectorType().getShape();
+    SmallVector<int64_t> dstDims(dstShape.begin(), dstShape.end());
+    dstDims.back() =
+        isNumElemsShrink ? dstDims.back() / ratio : dstDims.back() * ratio;
     VectorType newCastDstType =
         VectorType::get(dstDims, castDstType.getElementType());
 
