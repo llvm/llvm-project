@@ -365,12 +365,11 @@ Block *LoopOp::getMergeBlock() {
   return &getBody().back();
 }
 
-void LoopOp::addEntryAndMergeBlock() {
+void LoopOp::addEntryAndMergeBlock(OpBuilder &builder) {
   assert(getBody().empty() && "entry and merge block already exist");
-  getBody().push_back(new Block());
-  auto *mergeBlock = new Block();
-  getBody().push_back(mergeBlock);
-  OpBuilder builder = OpBuilder::atBlockEnd(mergeBlock);
+  OpBuilder::InsertionGuard g(builder);
+  builder.createBlock(&getBody());
+  builder.createBlock(&getBody());
 
   // Add a spirv.mlir.merge op into the merge block.
   builder.create<spirv::MergeOp>(getLoc());
@@ -525,11 +524,10 @@ Block *SelectionOp::getMergeBlock() {
   return &getBody().back();
 }
 
-void SelectionOp::addMergeBlock() {
+void SelectionOp::addMergeBlock(OpBuilder &builder) {
   assert(getBody().empty() && "entry and merge block already exist");
-  auto *mergeBlock = new Block();
-  getBody().push_back(mergeBlock);
-  OpBuilder builder = OpBuilder::atBlockEnd(mergeBlock);
+  OpBuilder::InsertionGuard guard(builder);
+  builder.createBlock(&getBody());
 
   // Add a spirv.mlir.merge op into the merge block.
   builder.create<spirv::MergeOp>(getLoc());
@@ -542,7 +540,7 @@ SelectionOp::createIfThen(Location loc, Value condition,
   auto selectionOp =
       builder.create<spirv::SelectionOp>(loc, spirv::SelectionControl::None);
 
-  selectionOp.addMergeBlock();
+  selectionOp.addMergeBlock(builder);
   Block *mergeBlock = selectionOp.getMergeBlock();
   Block *thenBlock = nullptr;
 
