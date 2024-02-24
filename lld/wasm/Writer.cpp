@@ -473,6 +473,25 @@ void Writer::layoutMemory() {
     WasmSym::heapEnd->setVA(memoryPtr);
   }
 
+  if (config->maxMemory != 0 && config->maxMemoryGrowth != -1) {
+    // Erroring out here is simpler than defining precedence rules.
+    error("--max-memory-growth and --max-memory are mutually exclusive");
+  }
+
+  uint64_t maxMemory = 0;
+  if (config->maxMemoryGrowth != -1) {
+    if (config->maxMemoryGrowth !=
+        alignTo(config->maxMemoryGrowth, WasmPageSize))
+      error("maximum memory growth must be " + Twine(WasmPageSize) +
+            "-byte aligned");
+    uint64_t maxMaxMemoryGrowth = maxMemorySetting - memoryPtr;
+    if (config->maxMemoryGrowth > maxMaxMemoryGrowth)
+      error("maximum memory growth too large, cannot be greater than " +
+            Twine(maxMaxMemoryGrowth));
+
+    maxMemory = memoryPtr + config->maxMemoryGrowth;
+  }
+
   if (config->maxMemory != 0) {
     if (config->maxMemory != alignTo(config->maxMemory, WasmPageSize))
       error("maximum memory must be " + Twine(WasmPageSize) + "-byte aligned");
@@ -481,20 +500,21 @@ void Writer::layoutMemory() {
     if (config->maxMemory > maxMemorySetting)
       error("maximum memory too large, cannot be greater than " +
             Twine(maxMemorySetting));
+
+    maxMemory = config->maxMemory;
   }
 
-  // Check max if explicitly supplied or required by shared memory
-  if (config->maxMemory != 0 || config->sharedMemory) {
-    uint64_t max = config->maxMemory;
-    if (max == 0) {
-      // If no maxMemory config was supplied but we are building with
-      // shared memory, we need to pick a sensible upper limit.
-      if (ctx.isPic)
-        max = maxMemorySetting;
-      else
-        max = memoryPtr;
-    }
-    out.memorySec->maxMemoryPages = max / WasmPageSize;
+  // If no maxMemory config was supplied but we are building with
+  // shared memory, we need to pick a sensible upper limit.
+  if (config->sharedMemory && maxMemory == 0) {
+    if (ctx.isPic)
+      maxMemory = maxMemorySetting;
+    else
+      maxMemory = memoryPtr;
+  }
+
+  if (maxMemory != 0) {
+    out.memorySec->maxMemoryPages = maxMemory / WasmPageSize;
     log("mem: max pages   = " + Twine(out.memorySec->maxMemoryPages));
   }
 }

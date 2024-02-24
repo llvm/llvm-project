@@ -541,6 +541,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->globalBase = args::getInteger(args, OPT_global_base, 0);
   config->initialHeap = args::getInteger(args, OPT_initial_heap, 0);
   config->initialMemory = args::getInteger(args, OPT_initial_memory, 0);
+  config->maxMemoryGrowth = args::getInteger(args, OPT_max_memory_growth, -1);
   config->maxMemory = args::getInteger(args, OPT_max_memory, 0);
   config->zStackSize =
       args::getZOptionValue(args, OPT_z, "stack-size", WasmPageSize);

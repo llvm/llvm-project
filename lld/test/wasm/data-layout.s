@@ -103,6 +103,38 @@ local_struct_internal_ptr:
 # CHECK-MAX-NEXT:         Minimum:         0x2
 # CHECK-MAX-NEXT:         Maximum:         0x2
 
+# RUN: wasm-ld --no-entry --initial-memory=327680 --max-memory-growth=0 \
+# RUN:     -o %t_max.wasm %t.hello32.o
+# RUN: obj2yaml %t_max.wasm | FileCheck %s -check-prefix=CHECK-MAX-GROWTH-ZERO
+
+# CHECK-MAX-GROWTH-ZERO:        - Type:            MEMORY
+# CHECK-MAX-GROWTH-ZERO-NEXT:     Memories:
+# CHECK-MAX-GROWTH-ZERO:           - Flags:           [ HAS_MAX ]
+# CHECK-MAX-GROWTH-ZERO:             Minimum:         0x5
+# CHECK-MAX-GROWTH-ZERO:             Maximum:         0x5
+
+# RUN: wasm-ld --initial-memory=196608 --max-memory-growth=262144 \
+# RUN:     --no-entry -o %t_max.wasm %t.hello32.o
+# RUN: obj2yaml %t_max.wasm | FileCheck %s -check-prefix=CHECK-MAX-GROWTH-SOME
+
+# CHECK-MAX-GROWTH-SOME:        - Type:            MEMORY
+# CHECK-MAX-GROWTH-SOME-NEXT:     Memories:
+# CHECK-MAX-GROWTH-SOME:           - Flags:           [ HAS_MAX ]
+# CHECK-MAX-GROWTH-SOME:             Minimum:         0x3
+# CHECK-MAX-GROWTH-SOME:             Maximum:         0x7
+
+# RUN: not wasm-ld --max-memory-growth=131073 \
+# RUN:     --no-entry -o %t_max.wasm %t.hello32.o 2>&1 \
+# RUN: | FileCheck %s --check-prefix CHECK-MAX-GROWTH-ALIGN-ERROR
+
+# CHECK-MAX-GROWTH-ALIGN-ERROR: maximum memory growth must be 65536-byte aligned
+
+# RUN: not wasm-ld --initial-memory=131072 --max-memory=262144 --max-memory-growth=131072 \
+# RUN:     --no-entry -o %t_max.wasm %t.hello32.o 2>&1 \
+# RUN: | FileCheck %s --check-prefix CHECK-MAX-GROWTH-COMPAT-ERROR
+
+# CHECK-MAX-GROWTH-COMPAT-ERROR: --max-memory-growth and --max-memory are mutually exclusive
+
 # RUN: wasm-ld -no-gc-sections --allow-undefined --no-entry --shared-memory \
 # RUN:     --features=atomics,bulk-memory --initial-memory=131072 \
 # RUN:     --max-memory=131072 -o %t_max.wasm %t32.o %t.hello32.o

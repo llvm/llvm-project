@@ -227,6 +227,9 @@ def initial_heap: JJ<"initial-heap=">,
 def initial_memory: JJ<"initial-memory=">,
   HelpText<"Initial size of the linear memory">;
 
+def max_memory_growth: JJ<"max-memory-growth=">,
+  HelpText<"Maximum size of dynamically allocatable linear memory">;
+
 def max_memory: JJ<"max-memory=">,
   HelpText<"Maximum size of the linear memory">;
 

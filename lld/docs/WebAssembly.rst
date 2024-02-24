@@ -131,6 +131,10 @@ WebAssembly-specific options:
 
   Initial size of the linear memory. Default: the sum of stack, static data and heap sizes.
 
+.. option:: --max-memory-growth=<value>
+
+  Maximum size of memory that can be allocated dynamically. Default: unlimited.
+
 .. option:: --max-memory=<value>
 
   Maximum size of the linear memory. Default: unlimited.
