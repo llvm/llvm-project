@@ -119,9 +119,8 @@ void CrtpConstructorAccessibilityCheck::check(
 
   auto DiagNoteFriendPrivate = [&](const SourceLocation &Loc, bool Friend) {
     return diag(Loc,
-                "consider making it private%select{| and declaring the "
-                "derived class "
-                "as friend}0",
+                "consider making it private%select{| and declaring the derived "
+                "class as friend}0",
                 DiagnosticIDs::Note)
            << Friend;
   };
