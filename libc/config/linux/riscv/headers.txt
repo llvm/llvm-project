@@ -15,6 +15,8 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.signal
     libc.include.spawn
     libc.include.setjmp
+    libc.include.stdckdint
+    libc.include.stdbit
     libc.include.stdio
     libc.include.stdlib
     libc.include.string
@@ -29,6 +31,8 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.arpa_inet
 
     libc.include.sys_auxv
+    # Disabled due to epoll_wait syscalls not being available on this platform.
+    # libc.include.sys_epoll
     libc.include.sys_ioctl
     libc.include.sys_mman
     libc.include.sys_prctl

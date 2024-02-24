@@ -133,7 +133,7 @@ define <8 x i32> @test6(<8 x i32> %a) {
 ;
 ; SSE41-LABEL: test6:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2,2,4,8]
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm2 = [2,2,4,8]
 ; SSE41-NEXT:    pmulld %xmm2, %xmm0
 ; SSE41-NEXT:    pmulld %xmm2, %xmm1
 ; SSE41-NEXT:    retq
@@ -218,7 +218,7 @@ define <16 x i32> @test8(<16 x i32> %a) {
 ;
 ; SSE41-LABEL: test8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [2,2,4,8]
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm4 = [2,2,4,8]
 ; SSE41-NEXT:    pmulld %xmm4, %xmm0
 ; SSE41-NEXT:    pmulld %xmm4, %xmm1
 ; SSE41-NEXT:    pmulld %xmm4, %xmm2
@@ -274,7 +274,7 @@ define <8 x i64> @test9(<8 x i64> %a) {
 ;
 ; AVX2-LABEL: test9:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,1,2,3]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [1,1,2,3]
 ; AVX2-NEXT:    vpsllvq %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsllvq %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    retq

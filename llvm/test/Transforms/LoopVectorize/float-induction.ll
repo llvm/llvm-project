@@ -148,15 +148,15 @@ define void @fp_iv_loop1_fast_FMF(float %init, ptr noalias nocapture %A, i32 %N)
 ; VEC1_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC1_INTERL2:       vector.body:
 ; VEC1_INTERL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; VEC1_INTERL2-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[INDEX]], 1
 ; VEC1_INTERL2-NEXT:    [[DOTCAST2:%.*]] = sitofp i64 [[INDEX]] to float
-; VEC1_INTERL2-NEXT:    [[TMP2:%.*]] = fmul fast float [[FPINC]], [[DOTCAST2]]
-; VEC1_INTERL2-NEXT:    [[OFFSET_IDX:%.*]] = fsub fast float [[INIT]], [[TMP2]]
-; VEC1_INTERL2-NEXT:    [[TMP3:%.*]] = fsub fast float [[OFFSET_IDX]], [[FPINC]]
-; VEC1_INTERL2-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[INDEX]], 1
+; VEC1_INTERL2-NEXT:    [[TMP3:%.*]] = fmul fast float [[FPINC]], [[DOTCAST2]]
+; VEC1_INTERL2-NEXT:    [[OFFSET_IDX:%.*]] = fsub fast float [[INIT]], [[TMP3]]
+; VEC1_INTERL2-NEXT:    [[TMP4:%.*]] = fsub fast float [[OFFSET_IDX]], [[FPINC]]
 ; VEC1_INTERL2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; VEC1_INTERL2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP4]]
+; VEC1_INTERL2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP2]]
 ; VEC1_INTERL2-NEXT:    store float [[OFFSET_IDX]], ptr [[TMP5]], align 4
-; VEC1_INTERL2-NEXT:    store float [[TMP3]], ptr [[TMP6]], align 4
+; VEC1_INTERL2-NEXT:    store float [[TMP4]], ptr [[TMP6]], align 4
 ; VEC1_INTERL2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC1_INTERL2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC1_INTERL2-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -395,17 +395,17 @@ define void @fp_iv_loop1_reassoc_FMF(float %init, ptr noalias nocapture %A, i32 
 ; VEC1_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC1_INTERL2:       vector.body:
 ; VEC1_INTERL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; VEC1_INTERL2-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[INDEX]], 1
 ; VEC1_INTERL2-NEXT:    [[DOTCAST2:%.*]] = sitofp i64 [[INDEX]] to float
-; VEC1_INTERL2-NEXT:    [[TMP2:%.*]] = fmul reassoc float [[FPINC]], [[DOTCAST2]]
-; VEC1_INTERL2-NEXT:    [[OFFSET_IDX:%.*]] = fsub reassoc float [[INIT]], [[TMP2]]
-; VEC1_INTERL2-NEXT:    [[TMP3:%.*]] = fmul reassoc float [[FPINC]], 0.000000e+00
-; VEC1_INTERL2-NEXT:    [[TMP4:%.*]] = fsub reassoc float [[OFFSET_IDX]], [[TMP3]]
-; VEC1_INTERL2-NEXT:    [[TMP5:%.*]] = fsub reassoc float [[OFFSET_IDX]], [[FPINC]]
-; VEC1_INTERL2-NEXT:    [[TMP6:%.*]] = or disjoint i64 [[INDEX]], 1
+; VEC1_INTERL2-NEXT:    [[TMP3:%.*]] = fmul reassoc float [[FPINC]], [[DOTCAST2]]
+; VEC1_INTERL2-NEXT:    [[OFFSET_IDX:%.*]] = fsub reassoc float [[INIT]], [[TMP3]]
+; VEC1_INTERL2-NEXT:    [[TMP4:%.*]] = fmul reassoc float [[FPINC]], 0.000000e+00
+; VEC1_INTERL2-NEXT:    [[TMP5:%.*]] = fsub reassoc float [[OFFSET_IDX]], [[TMP4]]
+; VEC1_INTERL2-NEXT:    [[TMP6:%.*]] = fsub reassoc float [[OFFSET_IDX]], [[FPINC]]
 ; VEC1_INTERL2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; VEC1_INTERL2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP6]]
-; VEC1_INTERL2-NEXT:    store float [[TMP4]], ptr [[TMP7]], align 4
-; VEC1_INTERL2-NEXT:    store float [[TMP5]], ptr [[TMP8]], align 4
+; VEC1_INTERL2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP2]]
+; VEC1_INTERL2-NEXT:    store float [[TMP5]], ptr [[TMP7]], align 4
+; VEC1_INTERL2-NEXT:    store float [[TMP6]], ptr [[TMP8]], align 4
 ; VEC1_INTERL2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC1_INTERL2-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC1_INTERL2-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -631,15 +631,15 @@ define void @fp_iv_loop2(float %init, ptr noalias nocapture %A, i32 %N) #0 {
 ; VEC1_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC1_INTERL2:       vector.body:
 ; VEC1_INTERL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; VEC1_INTERL2-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[INDEX]], 1
 ; VEC1_INTERL2-NEXT:    [[DOTCAST2:%.*]] = sitofp i64 [[INDEX]] to float
-; VEC1_INTERL2-NEXT:    [[TMP2:%.*]] = fmul fast float [[DOTCAST2]], 5.000000e-01
-; VEC1_INTERL2-NEXT:    [[OFFSET_IDX:%.*]] = fadd fast float [[TMP2]], [[INIT]]
-; VEC1_INTERL2-NEXT:    [[TMP3:%.*]] = fadd fast float [[OFFSET_IDX]], 5.000000e-01
-; VEC1_INTERL2-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[INDEX]], 1
+; VEC1_INTERL2-NEXT:    [[TMP3:%.*]] = fmul fast float [[DOTCAST2]], 5.000000e-01
+; VEC1_INTERL2-NEXT:    [[OFFSET_IDX:%.*]] = fadd fast float [[TMP3]], [[INIT]]
+; VEC1_INTERL2-NEXT:    [[TMP4:%.*]] = fadd fast float [[OFFSET_IDX]], 5.000000e-01
 ; VEC1_INTERL2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; VEC1_INTERL2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP4]]
+; VEC1_INTERL2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP2]]
 ; VEC1_INTERL2-NEXT:    store float [[OFFSET_IDX]], ptr [[TMP5]], align 4
-; VEC1_INTERL2-NEXT:    store float [[TMP3]], ptr [[TMP6]], align 4
+; VEC1_INTERL2-NEXT:    store float [[TMP4]], ptr [[TMP6]], align 4
 ; VEC1_INTERL2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC1_INTERL2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC1_INTERL2-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -931,29 +931,29 @@ define void @fp_iv_loop3(float %init, ptr noalias nocapture %A, ptr noalias noca
 ; VEC1_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC1_INTERL2:       vector.body:
 ; VEC1_INTERL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; VEC1_INTERL2-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[INDEX]], 1
 ; VEC1_INTERL2-NEXT:    [[DOTCAST5:%.*]] = sitofp i64 [[INDEX]] to float
-; VEC1_INTERL2-NEXT:    [[TMP4:%.*]] = fmul fast float [[TMP0]], [[DOTCAST5]]
-; VEC1_INTERL2-NEXT:    [[OFFSET_IDX:%.*]] = fadd fast float [[TMP4]], [[INIT]]
-; VEC1_INTERL2-NEXT:    [[TMP5:%.*]] = fadd fast float [[OFFSET_IDX]], [[TMP0]]
+; VEC1_INTERL2-NEXT:    [[TMP5:%.*]] = fmul fast float [[DOTCAST5]], -5.000000e-01
 ; VEC1_INTERL2-NEXT:    [[DOTCAST6:%.*]] = sitofp i64 [[INDEX]] to float
-; VEC1_INTERL2-NEXT:    [[TMP6:%.*]] = fmul fast float [[DOTCAST6]], -5.000000e-01
-; VEC1_INTERL2-NEXT:    [[TMP7:%.*]] = or disjoint i64 [[INDEX]], 1
+; VEC1_INTERL2-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP0]], [[DOTCAST6]]
+; VEC1_INTERL2-NEXT:    [[OFFSET_IDX7:%.*]] = fadd fast float [[TMP6]], [[INIT]]
+; VEC1_INTERL2-NEXT:    [[TMP7:%.*]] = fadd fast float [[OFFSET_IDX7]], [[TMP0]]
 ; VEC1_INTERL2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; VEC1_INTERL2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP7]]
-; VEC1_INTERL2-NEXT:    store float [[OFFSET_IDX]], ptr [[TMP8]], align 4
-; VEC1_INTERL2-NEXT:    store float [[TMP5]], ptr [[TMP9]], align 4
-; VEC1_INTERL2-NEXT:    [[TMP10:%.*]] = fadd fast float [[OFFSET_IDX]], [[TMP0]]
-; VEC1_INTERL2-NEXT:    [[TMP11:%.*]] = fadd fast float [[TMP5]], [[TMP0]]
-; VEC1_INTERL2-NEXT:    [[TMP12:%.*]] = fadd fast float [[TMP6]], 0xBFD99999A0000000
-; VEC1_INTERL2-NEXT:    [[TMP13:%.*]] = fadd fast float [[TMP6]], 0xBFECCCCCC0000000
+; VEC1_INTERL2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP4]]
+; VEC1_INTERL2-NEXT:    store float [[OFFSET_IDX7]], ptr [[TMP8]], align 4
+; VEC1_INTERL2-NEXT:    store float [[TMP7]], ptr [[TMP9]], align 4
+; VEC1_INTERL2-NEXT:    [[TMP10:%.*]] = fadd fast float [[OFFSET_IDX7]], [[TMP0]]
+; VEC1_INTERL2-NEXT:    [[TMP11:%.*]] = fadd fast float [[TMP7]], [[TMP0]]
+; VEC1_INTERL2-NEXT:    [[TMP12:%.*]] = fadd fast float [[TMP5]], 0xBFD99999A0000000
+; VEC1_INTERL2-NEXT:    [[TMP13:%.*]] = fadd fast float [[TMP5]], 0xBFECCCCCC0000000
 ; VEC1_INTERL2-NEXT:    [[TMP14:%.*]] = fadd fast float [[TMP12]], [[TMP10]]
 ; VEC1_INTERL2-NEXT:    [[TMP15:%.*]] = fadd fast float [[TMP13]], [[TMP11]]
 ; VEC1_INTERL2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[INDEX]]
-; VEC1_INTERL2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP7]]
+; VEC1_INTERL2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP4]]
 ; VEC1_INTERL2-NEXT:    store float [[TMP14]], ptr [[TMP16]], align 4
 ; VEC1_INTERL2-NEXT:    store float [[TMP15]], ptr [[TMP17]], align 4
 ; VEC1_INTERL2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[C:%.*]], i64 [[INDEX]]
-; VEC1_INTERL2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[TMP7]]
+; VEC1_INTERL2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[TMP4]]
 ; VEC1_INTERL2-NEXT:    store float [[TMP12]], ptr [[TMP18]], align 4
 ; VEC1_INTERL2-NEXT:    store float [[TMP13]], ptr [[TMP19]], align 4
 ; VEC1_INTERL2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -1212,15 +1212,15 @@ define void @fp_iv_loop4(ptr noalias nocapture %A, i32 %N) {
 ; VEC1_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC1_INTERL2:       vector.body:
 ; VEC1_INTERL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; VEC1_INTERL2-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[INDEX]], 1
 ; VEC1_INTERL2-NEXT:    [[DOTCAST2:%.*]] = sitofp i64 [[INDEX]] to float
-; VEC1_INTERL2-NEXT:    [[TMP2:%.*]] = fmul fast float [[DOTCAST2]], 5.000000e-01
-; VEC1_INTERL2-NEXT:    [[OFFSET_IDX:%.*]] = fadd fast float [[TMP2]], 1.000000e+00
-; VEC1_INTERL2-NEXT:    [[TMP3:%.*]] = fadd fast float [[TMP2]], 1.500000e+00
-; VEC1_INTERL2-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[INDEX]], 1
+; VEC1_INTERL2-NEXT:    [[TMP3:%.*]] = fmul fast float [[DOTCAST2]], 5.000000e-01
+; VEC1_INTERL2-NEXT:    [[OFFSET_IDX:%.*]] = fadd fast float [[TMP3]], 1.000000e+00
+; VEC1_INTERL2-NEXT:    [[TMP4:%.*]] = fadd fast float [[TMP3]], 1.500000e+00
 ; VEC1_INTERL2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; VEC1_INTERL2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP4]]
+; VEC1_INTERL2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP2]]
 ; VEC1_INTERL2-NEXT:    store float [[OFFSET_IDX]], ptr [[TMP5]], align 4
-; VEC1_INTERL2-NEXT:    store float [[TMP3]], ptr [[TMP6]], align 4
+; VEC1_INTERL2-NEXT:    store float [[TMP4]], ptr [[TMP6]], align 4
 ; VEC1_INTERL2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC1_INTERL2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC1_INTERL2-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -1400,8 +1400,8 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC4_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC4_INTERL2:       vector.body:
 ; VEC4_INTERL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE17:%.*]] ]
-; VEC4_INTERL2-NEXT:    [[DOTCAST2:%.*]] = sitofp i64 [[INDEX]] to float
 ; VEC4_INTERL2-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[INDEX]], 4
+; VEC4_INTERL2-NEXT:    [[DOTCAST2:%.*]] = sitofp i64 [[INDEX]] to float
 ; VEC4_INTERL2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
 ; VEC4_INTERL2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
 ; VEC4_INTERL2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
@@ -1516,8 +1516,8 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC1_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC1_INTERL2:       vector.body:
 ; VEC1_INTERL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE4:%.*]] ]
-; VEC1_INTERL2-NEXT:    [[DOTCAST2:%.*]] = sitofp i64 [[INDEX]] to float
 ; VEC1_INTERL2-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[INDEX]], 1
+; VEC1_INTERL2-NEXT:    [[DOTCAST2:%.*]] = sitofp i64 [[INDEX]] to float
 ; VEC1_INTERL2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
 ; VEC1_INTERL2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
 ; VEC1_INTERL2-NEXT:    [[TMP3:%.*]] = load float, ptr [[TMP1]], align 4

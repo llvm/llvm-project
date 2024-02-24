@@ -90,6 +90,22 @@ llvm.func @rocdl.barrier() {
   llvm.return
 }
 
+llvm.func @rocdl.setprio() {
+  // CHECK: call void @llvm.amdgcn.s.setprio(i16 0)
+  rocdl.s.setprio 0
+  // CHECK-NEXT: call void @llvm.amdgcn.s.setprio(i16 1)
+  rocdl.s.setprio 1
+  llvm.return
+}
+
+llvm.func @rocdl.schedbarrier() {
+  // CHECK: call void @llvm.amdgcn.sched.barrier(i32 0)
+  rocdl.sched.barrier 0
+  // CHECK-NEXT: call void @llvm.amdgcn.sched.barrier(i32 1)
+  rocdl.sched.barrier 1
+  llvm.return
+}
+
 llvm.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
                    %arg2 : vector<32 x f32>, %arg3: i32,
                    %arg4 : vector<16 x f32>, %arg5 : vector<4xf32>,

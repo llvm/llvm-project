@@ -27,6 +27,7 @@ if (COMPILER_RT_BUILD_MEMPROF)
     )
   if (NOT COMPILER_RT_BUILD_SANITIZERS)
     set(MEMPROF_HEADERS
+      ${MEMPROF_HEADERS}
       sanitizer/allocator_interface.h
       sanitizer/common_interface_defs.h
       )

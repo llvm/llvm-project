@@ -1138,6 +1138,15 @@ void StmtPrinter::VisitOMPTargetParallelGenericLoopDirective(
 }
 
 //===----------------------------------------------------------------------===//
+//  OpenACC construct printing methods
+//===----------------------------------------------------------------------===//
+void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
+  Indent() << "#pragma acc " << S->getDirectiveKind();
+  // TODO OpenACC: Print Clauses.
+  PrintStmt(S->getStructuredBlock());
+}
+
+//===----------------------------------------------------------------------===//
 //  Expr printing methods.
 //===----------------------------------------------------------------------===//
 
@@ -2447,6 +2456,10 @@ void StmtPrinter::VisitPackExpansionExpr(PackExpansionExpr *E) {
 
 void StmtPrinter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
   OS << "sizeof...(" << *E->getPack() << ")";
+}
+
+void StmtPrinter::VisitPackIndexingExpr(PackIndexingExpr *E) {
+  OS << E->getPackIdExpression() << "...[" << E->getIndexExpr() << "]";
 }
 
 void StmtPrinter::VisitSubstNonTypeTemplateParmPackExpr(

@@ -101,7 +101,6 @@ void PredicateExpander::expandCheckRegOperand(raw_ostream &OS, int OpIndex,
   OS << Reg->getName();
 }
 
-
 void PredicateExpander::expandCheckRegOperandSimple(raw_ostream &OS,
                                                     int OpIndex,
                                                     StringRef FunctionMapper) {
@@ -487,7 +486,8 @@ void STIPredicateExpander::expandPrologue(raw_ostream &OS,
   OS << "unsigned ProcessorID = getSchedModel().getProcessorID();\n";
 }
 
-void STIPredicateExpander::expandOpcodeGroup(raw_ostream &OS, const OpcodeGroup &Group,
+void STIPredicateExpander::expandOpcodeGroup(raw_ostream &OS,
+                                             const OpcodeGroup &Group,
                                              bool ShouldUpdateOpcodeMask) {
   const OpcodeInfo &OI = Group.getOpcodeInfo();
   for (const PredicateInfo &PI : OI.getPredicates()) {

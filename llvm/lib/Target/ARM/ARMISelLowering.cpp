@@ -4068,9 +4068,7 @@ SDValue ARMTargetLowering::LowerEH_SJLJ_SETUP_DISPATCH(SDValue Op,
 SDValue ARMTargetLowering::LowerINTRINSIC_VOID(
     SDValue Op, SelectionDAG &DAG, const ARMSubtarget *Subtarget) const {
   unsigned IntNo =
-      cast<ConstantSDNode>(
-          Op.getOperand(Op.getOperand(0).getValueType() == MVT::Other))
-          ->getZExtValue();
+      Op.getConstantOperandVal(Op.getOperand(0).getValueType() == MVT::Other);
   switch (IntNo) {
     default:
       return SDValue();  // Don't custom lower most intrinsics.
@@ -6704,8 +6702,8 @@ static SDValue Expand64BitShift(SDNode *N, SelectionDAG &DAG,
 
     // If the shift amount is greater than 32 or has a greater bitwidth than 64
     // then do the default optimisation
-    if (ShAmt->getValueType(0).getSizeInBits() > 64 ||
-        (Con && (Con->getZExtValue() == 0 || Con->getZExtValue() >= 32)))
+    if ((!Con && ShAmt->getValueType(0).getSizeInBits() > 64) ||
+        (Con && (Con->getAPIntValue() == 0 || Con->getAPIntValue().uge(32))))
       return SDValue();
 
     // Extract the lower 32 bits of the shift amount if it's not an i32
@@ -9057,7 +9055,7 @@ SDValue ARMTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
     return LowerINSERT_VECTOR_ELT_i1(Op, DAG, Subtarget);
 
   if (getTypeAction(*DAG.getContext(), EltVT) ==
-      TargetLowering::TypePromoteFloat) {
+      TargetLowering::TypeSoftPromoteHalf) {
     // INSERT_VECTOR_ELT doesn't want f16 operands promoting to f32,
     // but the type system will try to do that if we don't intervene.
     // Reinterpret any such vector-element insertion as one with the
@@ -9067,7 +9065,7 @@ SDValue ARMTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
 
     EVT IEltVT = MVT::getIntegerVT(EltVT.getScalarSizeInBits());
     assert(getTypeAction(*DAG.getContext(), IEltVT) !=
-           TargetLowering::TypePromoteFloat);
+           TargetLowering::TypeSoftPromoteHalf);
 
     SDValue VecIn = Op.getOperand(0);
     EVT VecVT = VecIn.getValueType();

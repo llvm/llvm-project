@@ -31,8 +31,7 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
     : StoppointSite(0, addr, size, hardware), m_target(target),
       m_enabled(false), m_is_hardware(hardware), m_is_watch_variable(false),
       m_is_ephemeral(false), m_disabled_count(0), m_watch_read(0),
-      m_watch_write(0), m_watch_modify(0), m_ignore_count(0),
-      m_being_created(true) {
+      m_watch_write(0), m_watch_modify(0), m_ignore_count(0) {
 
   if (type && type->IsValid())
     m_type = *type;
@@ -45,10 +44,16 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
       LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
                      "Failed to set type: {0}");
     } else {
-      if (auto ts = *type_system_or_err)
-        m_type =
-            ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8 * size);
-      else
+      if (auto ts = *type_system_or_err) {
+        if (size <= target.GetArchitecture().GetAddressByteSize()) {
+          m_type =
+              ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8 * size);
+        } else {
+          CompilerType clang_uint8_type =
+              ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8);
+          m_type = clang_uint8_type.GetArrayType(size);
+        }
+      } else
         LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
                        "Failed to set type: Typesystem is no longer live: {0}");
     }
@@ -60,7 +65,6 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
     m_target.GetProcessSP()->CalculateExecutionContext(exe_ctx);
     CaptureWatchedValue(exe_ctx);
   }
-  m_being_created = false;
 }
 
 Watchpoint::~Watchpoint() = default;
@@ -352,6 +356,20 @@ void Watchpoint::DumpWithLevel(Stream *s,
       s->Printf("\n    declare @ '%s'", m_decl_str.c_str());
     if (!m_watch_spec_str.empty())
       s->Printf("\n    watchpoint spec = '%s'", m_watch_spec_str.c_str());
+    if (IsEnabled()) {
+      if (ProcessSP process_sp = m_target.GetProcessSP()) {
+        auto &resourcelist = process_sp->GetWatchpointResourceList();
+        size_t idx = 0;
+        s->Printf("\n    watchpoint resources:");
+        for (WatchpointResourceSP &wpres : resourcelist.Sites()) {
+          if (wpres->ConstituentsContains(this)) {
+            s->Printf("\n       #%zu: ", idx);
+            wpres->Dump(s);
+          }
+          idx++;
+        }
+      }
+    }
 
     // Dump the snapshots we have taken.
     DumpSnapshots(s, "    ");
@@ -462,8 +480,8 @@ const char *Watchpoint::GetConditionText() const {
 
 void Watchpoint::SendWatchpointChangedEvent(
     lldb::WatchpointEventType eventKind) {
-  if (!m_being_created && GetTarget().EventTypeHasListeners(
-                              Target::eBroadcastBitWatchpointChanged)) {
+  if (GetTarget().EventTypeHasListeners(
+          Target::eBroadcastBitWatchpointChanged)) {
     auto data_sp =
         std::make_shared<WatchpointEventData>(eventKind, shared_from_this());
     GetTarget().BroadcastEvent(Target::eBroadcastBitWatchpointChanged, data_sp);

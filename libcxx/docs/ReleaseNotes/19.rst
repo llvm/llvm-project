@@ -35,18 +35,18 @@ see the `releases page <https://llvm.org/releases/>`_.
 What's New in Libc++ 19.0.0?
 ==============================
 
-TODO
-
-
 Implemented Papers
 ------------------
-TODO
+
+- P2637R3 - Member ``visit``
+- P2652R2 - Disallow User Specialization of ``allocator_traits``
+- P2819R2 - Add ``tuple`` protocol to ``complex``
 
 
 Improvements and New Features
 -----------------------------
-TODO
 
+- The performance of growing ``std::vector`` has been improved for trivially relocatable types.
 
 Deprecations and Removals
 -------------------------
@@ -59,7 +59,7 @@ Deprecations and Removals
   the LLVM 19 release while also issuing a deprecation warning). See :ref:`the hardening documentation
   <using-hardening-modes>` for more details.
 
-- TODO: The base template for ``std::char_traits`` has been removed in LLVM 19. If you are using ``std::char_traits`` with
+- The base template for ``std::char_traits`` has been removed in LLVM 19. If you are using ``std::char_traits`` with
   types other than ``char``, ``wchar_t``, ``char8_t``, ``char16_t``, ``char32_t`` or a custom character type for which you
   specialized ``std::char_traits``, your code will stop working. The Standard does not mandate that a base template is
   provided, and such a base template is bound to be incorrect for some types, which could currently cause unexpected behavior
@@ -73,9 +73,7 @@ Deprecations and Removals
 - TODO: The ``_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES`` and ``_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES`` macros have
   been removed in LLVM 19. C++17 and C++20 removed features can still be re-enabled individually.
 
-- TODO: The macro ``_LIBCPP_INLINE_VISIBILITY`` has been removed in LLVM 19.
-
-- TODO: The macro ``_VSTD`` has been removed in LLVM 19.
+- The ``_LIBCPP_INLINE_VISIBILITY`` and ``_VSTD`` macros have been removed in LLVM 19.
 
 
 Upcoming Deprecations and Removals

@@ -3443,6 +3443,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::readcyclecounter);
     return RValue::get(Builder.CreateCall(F));
   }
+  case Builtin::BI__builtin_readsteadycounter: {
+    Function *F = CGM.getIntrinsic(Intrinsic::readsteadycounter);
+    return RValue::get(Builder.CreateCall(F));
+  }
   case Builtin::BI__builtin___clear_cache: {
     Value *Begin = EmitScalarExpr(E->getArg(0));
     Value *End = EmitScalarExpr(E->getArg(1));
@@ -5710,6 +5714,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *HalfVal = Builder.CreateLoad(Address);
     return RValue::get(Builder.CreateFPExt(HalfVal, Builder.getFloatTy()));
   }
+  case Builtin::BI__builtin_printf:
   case Builtin::BIprintf:
     if (getTarget().getTriple().isNVPTX() ||
         getTarget().getTriple().isAMDGCN()) {
@@ -5907,8 +5912,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           }
         }
 
-        assert(PTy->canLosslesslyBitCastTo(FTy->getParamType(i)) &&
-               "Must be able to losslessly bit cast to param");
         // Cast vector type (e.g., v256i32) to x86_amx, this only happen
         // in amx intrinsics.
         if (PTy->isX86_AMXTy())
@@ -5938,8 +5941,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         }
       }
 
-      assert(V->getType()->canLosslesslyBitCastTo(RetTy) &&
-             "Must be able to losslessly bit cast result type");
       // Cast x86_amx to vector type (e.g., v256i32), this only happen
       // in amx intrinsics.
       if (V->getType()->isX86_AMXTy())
@@ -10637,6 +10638,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID <= clang::AArch64::LastSMEBuiltin)
     return EmitAArch64SMEBuiltinExpr(BuiltinID, E);
 
+  if (BuiltinID == Builtin::BI__builtin_cpu_supports)
+    return EmitAArch64CpuSupports(E);
+
   unsigned HintID = static_cast<unsigned>(-1);
   switch (BuiltinID) {
   default: break;
@@ -10676,10 +10680,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         llvm::FunctionType::get(StructType::get(CGM.Int64Ty, CGM.Int64Ty), {},
                                 false),
         "__arm_sme_state"));
-    auto Attrs =
-        AttributeList()
-            .addFnAttribute(getLLVMContext(), "aarch64_pstate_sm_compatible")
-            .addFnAttribute(getLLVMContext(), "aarch64_pstate_za_preserved");
+    auto Attrs = AttributeList().addFnAttribute(getLLVMContext(),
+                                                "aarch64_pstate_sm_compatible");
     CI->setAttributes(Attrs);
     CI->setCallingConv(
         llvm::CallingConv::
@@ -12044,7 +12046,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                                         "vgetq_lane");
   }
 
-  case clang::AArch64::BI_InterlockedAdd: {
+  case clang::AArch64::BI_InterlockedAdd:
+  case clang::AArch64::BI_InterlockedAdd64: {
     Address DestAddr = CheckAtomicAlignment(*this, E);
     Value *Val = EmitScalarExpr(E->getArg(1));
     AtomicRMWInst *RMWI =
@@ -14025,6 +14028,19 @@ Value *CodeGenFunction::EmitX86CpuInit() {
   return Builder.CreateCall(Func);
 }
 
+Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
+  const Expr *ArgExpr = E->getArg(0)->IgnoreParenCasts();
+  StringRef ArgStr = cast<StringLiteral>(ArgExpr)->getString();
+  llvm::SmallVector<StringRef, 8> Features;
+  ArgStr.split(Features, "+");
+  for (auto &Feature : Features) {
+    Feature = Feature.trim();
+    if (Feature != "default")
+      Features.push_back(Feature);
+  }
+  return EmitAArch64CpuSupports(Features);
+}
+
 llvm::Value *
 CodeGenFunction::EmitAArch64CpuSupports(ArrayRef<StringRef> FeaturesStrs) {
   uint64_t FeaturesMask = llvm::AArch64::getCpuSupportsMask(FeaturesStrs);
@@ -14053,11 +14069,11 @@ CodeGenFunction::EmitAArch64CpuSupports(ArrayRef<StringRef> FeaturesStrs) {
 
 Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                            const CallExpr *E) {
-  if (BuiltinID == X86::BI__builtin_cpu_is)
+  if (BuiltinID == Builtin::BI__builtin_cpu_is)
     return EmitX86CpuIs(E);
-  if (BuiltinID == X86::BI__builtin_cpu_supports)
+  if (BuiltinID == Builtin::BI__builtin_cpu_supports)
     return EmitX86CpuSupports(E);
-  if (BuiltinID == X86::BI__builtin_cpu_init)
+  if (BuiltinID == Builtin::BI__builtin_cpu_init)
     return EmitX86CpuInit();
 
   // Handle MSVC intrinsics before argument evaluation to prevent double
@@ -16542,8 +16558,92 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
 
+#include "llvm/TargetParser/PPCTargetParser.def"
+  auto GenAIXPPCBuiltinCpuExpr = [&](unsigned SupportMethod, unsigned FieldIdx,
+                                     unsigned CompOp,
+                                     unsigned OpValue) -> Value * {
+    if (SupportMethod == AIX_BUILTIN_PPC_FALSE)
+      return llvm::ConstantInt::getFalse(ConvertType(E->getType()));
+
+    if (SupportMethod == AIX_BUILTIN_PPC_TRUE)
+      return llvm::ConstantInt::getTrue(ConvertType(E->getType()));
+
+    assert(SupportMethod <= USE_SYS_CONF && "Invalid value for SupportMethod.");
+    assert((CompOp == COMP_EQ) && "Only equal comparisons are supported.");
+
+    llvm::Type *STy = llvm::StructType::get(PPC_SYSTEMCONFIG_TYPE);
+    llvm::Constant *SysConf =
+        CGM.CreateRuntimeVariable(STy, "_system_configuration");
+
+    // Grab the appropriate field from _system_configuration.
+    llvm::Value *Idxs[] = {ConstantInt::get(Int32Ty, 0),
+                           ConstantInt::get(Int32Ty, FieldIdx)};
+
+    llvm::Value *FieldValue = Builder.CreateGEP(STy, SysConf, Idxs);
+    FieldValue = Builder.CreateAlignedLoad(Int32Ty, FieldValue,
+                                           CharUnits::fromQuantity(4));
+    assert(FieldValue->getType()->isIntegerTy(32) &&
+           "Only 32-bit integers are supported in GenAIXPPCBuiltinCpuExpr().");
+    return Builder.CreateICmp(ICmpInst::ICMP_EQ, FieldValue,
+                              ConstantInt::get(Int32Ty, OpValue));
+  };
+
   switch (BuiltinID) {
   default: return nullptr;
+
+  case Builtin::BI__builtin_cpu_is: {
+    const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
+    StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+    llvm::Triple Triple = getTarget().getTriple();
+
+    if (Triple.isOSAIX()) {
+      unsigned IsCpuSupport, FieldIdx, CompareOp, CpuIdValue;
+      typedef std::tuple<unsigned, unsigned, unsigned, unsigned> CPUType;
+      std::tie(IsCpuSupport, FieldIdx, CompareOp, CpuIdValue) =
+          static_cast<CPUType>(StringSwitch<CPUType>(CPUStr)
+#define PPC_AIX_CPU(NAME, SUPPORT_MAGIC, INDEX, COMPARE_OP, VALUE)             \
+  .Case(NAME, {SUPPORT_MAGIC, INDEX, COMPARE_OP, VALUE})
+#include "llvm/TargetParser/PPCTargetParser.def"
+          );
+      return GenAIXPPCBuiltinCpuExpr(IsCpuSupport, FieldIdx, CompareOp,
+                                     CpuIdValue);
+    }
+
+    assert(Triple.isOSLinux() &&
+           "__builtin_cpu_is() is only supported for AIX and Linux.");
+    unsigned NumCPUID = StringSwitch<unsigned>(CPUStr)
+#define PPC_LNX_CPU(Name, NumericID) .Case(Name, NumericID)
+#include "llvm/TargetParser/PPCTargetParser.def"
+                            .Default(-1U);
+    assert(NumCPUID < -1U && "Invalid CPU name. Missed by SemaChecking?");
+    Value *Op0 = llvm::ConstantInt::get(Int32Ty, PPC_FAWORD_CPUID);
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_fixed_addr_ld);
+    Value *TheCall = Builder.CreateCall(F, {Op0}, "cpu_is");
+    return Builder.CreateICmpEQ(TheCall,
+                                llvm::ConstantInt::get(Int32Ty, NumCPUID));
+  }
+  case Builtin::BI__builtin_cpu_supports: {
+    unsigned FeatureWord;
+    unsigned BitMask;
+    const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
+    StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+    std::tie(FeatureWord, BitMask) =
+        StringSwitch<std::pair<unsigned, unsigned>>(CPUStr)
+#define PPC_LNX_FEATURE(Name, Description, EnumName, Bitmask, FA_WORD)         \
+  .Case(Name, {FA_WORD, Bitmask})
+#include "llvm/TargetParser/PPCTargetParser.def"
+            .Default({0, 0});
+    assert(BitMask && "Invalid target feature string. Missed by SemaChecking?");
+    Value *Op0 = llvm::ConstantInt::get(Int32Ty, FeatureWord);
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_fixed_addr_ld);
+    Value *TheCall = Builder.CreateCall(F, {Op0}, "cpu_supports");
+    Value *Mask =
+        Builder.CreateAnd(TheCall, llvm::ConstantInt::get(Int32Ty, BitMask));
+    return Builder.CreateICmpNE(Mask, llvm::Constant::getNullValue(Int32Ty));
+#undef PPC_FAWORD_HWCAP
+#undef PPC_FAWORD_HWCAP2
+#undef PPC_FAWORD_CPUID
+  }
 
   // __builtin_ppc_get_timebase is GCC 4.8+'s PowerPC-specific name for what we
   // call __builtin_readcyclecounter.
@@ -17721,9 +17821,9 @@ Value *EmitAMDGPUImplicitArgPtr(CodeGenFunction &CGF) {
 // \p Index is 0, 1, and 2 for x, y, and z dimension, respectively.
 /// Emit code based on Code Object ABI version.
 /// COV_4    : Emit code to use dispatch ptr
-/// COV_5    : Emit code to use implicitarg ptr
+/// COV_5+   : Emit code to use implicitarg ptr
 /// COV_NONE : Emit code to load a global variable "__oclc_ABI_version"
-///            and use its value for COV_4 or COV_5 approach. It is used for
+///            and use its value for COV_4 or COV_5+ approach. It is used for
 ///            compiling device libraries in an ABI-agnostic way.
 ///
 /// Note: "__oclc_ABI_version" is supposed to be emitted and intialized by
@@ -17766,7 +17866,7 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
         Address(Result, CGF.Int16Ty, CharUnits::fromQuantity(2)));
   } else {
     Value *GEP = nullptr;
-    if (Cov == CodeObjectVersionKind::COV_5) {
+    if (Cov >= CodeObjectVersionKind::COV_5) {
       // Indexing the implicit kernarg segment.
       GEP = CGF.Builder.CreateConstGEP1_32(
           CGF.Int8Ty, EmitAMDGPUImplicitArgPtr(CGF), 12 + Index * 2);

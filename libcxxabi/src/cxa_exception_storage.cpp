@@ -12,7 +12,7 @@
 
 #include "cxa_exception.h"
 
-#include <__threading_support>
+#include <__thread/support.h>
 
 #if defined(_LIBCXXABI_HAS_NO_THREADS)
 

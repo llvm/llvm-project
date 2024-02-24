@@ -325,6 +325,12 @@
 // clang-format on
 
 #  ifndef _LIBCPP_HARDENING_MODE
+
+#    ifndef _LIBCPP_HARDENING_MODE_DEFAULT
+#      error _LIBCPP_HARDENING_MODE_DEFAULT is not defined. This definition should be set at configuration time in the \
+`__config_site` header, please make sure your installation of libc++ is not broken.
+#    endif
+
 #    define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_DEFAULT
 #  endif
 
@@ -618,7 +624,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _ALIGNAS(x) alignas(x)
 #    define _LIBCPP_NORETURN [[noreturn]]
 #    define _NOEXCEPT noexcept
-#    define _NOEXCEPT_(x) noexcept(x)
+#    define _NOEXCEPT_(...) noexcept(__VA_ARGS__)
 #    define _LIBCPP_CONSTEXPR constexpr
 
 #  else
@@ -630,7 +636,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_HAS_NO_NOEXCEPT
 #    define nullptr __nullptr
 #    define _NOEXCEPT throw()
-#    define _NOEXCEPT_(x)
+#    define _NOEXCEPT_(...)
 #    define static_assert(...) _Static_assert(__VA_ARGS__)
 #    define decltype(...) __decltype(__VA_ARGS__)
 #    define _LIBCPP_CONSTEXPR
@@ -874,11 +880,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
 #  endif
 
-// TODO(LLVM-19): Remove _LIBCPP_INLINE_VISIBILITY and _VSTD, which we're keeping around
-//                only to ease the renaming for downstreams.
-#  define _LIBCPP_INLINE_VISIBILITY _LIBCPP_HIDE_FROM_ABI
-#  define _VSTD std
-
 // Inline namespaces are available in Clang/GCC/MSVC regardless of C++ dialect.
 // clang-format off
 #  define _LIBCPP_BEGIN_NAMESPACE_STD namespace _LIBCPP_TYPE_VISIBILITY_DEFAULT std {                                  \
@@ -1013,6 +1014,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_DEPRECATED
 #  else
 #    define _LIBCPP_DEPRECATED_IN_CXX23
+#  endif
+
+#  if _LIBCPP_STD_VER >= 26
+#    define _LIBCPP_DEPRECATED_IN_CXX26 _LIBCPP_DEPRECATED
+#  else
+#    define _LIBCPP_DEPRECATED_IN_CXX26
 #  endif
 
 #  if !defined(_LIBCPP_HAS_NO_CHAR8_T)

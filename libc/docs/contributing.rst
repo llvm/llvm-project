@@ -29,7 +29,7 @@ a list of open projects that one can start with:
    #. One is about adding CMake facilities to optionally link the libc's overlay
       static archive (see :ref:`overlay_mode`) with other LLVM tools/executables.
    #. The other is about putting plumbing in place to release the overlay static
-      archive (see :ref:`overlay_mode`) as part of the LLVM binary releases. 
+      archive (see :ref:`overlay_mode`) as part of the LLVM binary releases.
 
 #. **Implement Linux syscall wrappers** - A large portion of the POSIX API can
    be implemented as syscall wrappers on Linux. A good number have already been

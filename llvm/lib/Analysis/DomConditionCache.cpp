@@ -34,23 +34,49 @@ static void findAffectedValues(Value *Cond,
     }
   };
 
-  ICmpInst::Predicate Pred;
-  Value *A;
-  if (match(Cond, m_ICmp(Pred, m_Value(A), m_Constant()))) {
-    AddAffected(A);
+  bool TopLevelIsAnd = match(Cond, m_LogicalAnd());
+  SmallVector<Value *, 8> Worklist;
+  SmallPtrSet<Value *, 8> Visited;
+  Worklist.push_back(Cond);
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
 
-    if (ICmpInst::isEquality(Pred)) {
-      Value *X;
-      // (X & C) or (X | C) or (X ^ C).
-      // (X << C) or (X >>_s C) or (X >>_u C).
-      if (match(A, m_BitwiseLogic(m_Value(X), m_ConstantInt())) ||
-          match(A, m_Shift(m_Value(X), m_ConstantInt())))
-        AddAffected(X);
-    } else {
-      Value *X;
-      // Handle (A + C1) u< C2, which is the canonical form of A > C3 && A < C4.
-      if (match(A, m_Add(m_Value(X), m_ConstantInt())))
-        AddAffected(X);
+    CmpInst::Predicate Pred;
+    Value *A, *B;
+    // Only recurse into and/or if it matches the top-level and/or type.
+    if (TopLevelIsAnd ? match(V, m_LogicalAnd(m_Value(A), m_Value(B)))
+                      : match(V, m_LogicalOr(m_Value(A), m_Value(B)))) {
+      Worklist.push_back(A);
+      Worklist.push_back(B);
+    } else if (match(V, m_ICmp(Pred, m_Value(A), m_Constant()))) {
+      AddAffected(A);
+
+      if (ICmpInst::isEquality(Pred)) {
+        Value *X;
+        // (X & C) or (X | C) or (X ^ C).
+        // (X << C) or (X >>_s C) or (X >>_u C).
+        if (match(A, m_BitwiseLogic(m_Value(X), m_ConstantInt())) ||
+            match(A, m_Shift(m_Value(X), m_ConstantInt())))
+          AddAffected(X);
+      } else {
+        Value *X;
+        // Handle (A + C1) u< C2, which is the canonical form of
+        // A > C3 && A < C4.
+        if (match(A, m_Add(m_Value(X), m_ConstantInt())))
+          AddAffected(X);
+        // Handle icmp slt/sgt (bitcast X to int), 0/-1, which is supported by
+        // computeKnownFPClass().
+        if ((Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGT) &&
+            match(A, m_ElementWiseBitCast(m_Value(X))))
+          Affected.push_back(X);
+      }
+    } else if (match(Cond, m_CombineOr(m_FCmp(Pred, m_Value(A), m_Constant()),
+                                       m_Intrinsic<Intrinsic::is_fpclass>(
+                                           m_Value(A), m_Constant())))) {
+      // Handle patterns that computeKnownFPClass() support.
+      AddAffected(A);
     }
   }
 }

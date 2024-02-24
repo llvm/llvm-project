@@ -21,10 +21,10 @@ include "mlir/IR/RegionKindInterface.td"
 
 // This is roughly similar to OpFoldResult assuming the handle produces a single
 // value in the payload IR.
-def TransformParamTypeOrAnyHandle : Type<
+def TransformAnyParamTypeOrAnyHandle : Type<
     Or<[TransformHandleTypeInterface.predicate,
-        Transform_ParamType.predicate]>,
-    "transform 'param' type or any handle type">;
+        TransformParamTypeInterface.predicate]>,
+    "transform any param type or any handle type">;
 
 //===----------------------------------------------------------------------===//
 // Apply...PatternsOp
@@ -691,9 +691,9 @@ def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
                        I64Attr:$dimension,
                        I64Attr:$target_size,
                        DefaultValuedAttr<I64Attr, "1">:$divisor);
-  let results = (outs TransformParamTypeOrAnyHandle:$low_size,
-                      TransformParamTypeOrAnyHandle:$high_size,
-                      TransformParamTypeOrAnyHandle:$split_point);
+  let results = (outs TransformAnyParamTypeOrAnyHandle:$low_size,
+                      TransformAnyParamTypeOrAnyHandle:$high_size,
+                      TransformAnyParamTypeOrAnyHandle:$split_point);
   let hasVerifier = 1;
   let assemblyFormat =
     "$target attr-dict `:` custom<MultitileSizesTypes>("
@@ -1408,7 +1408,7 @@ def SplitOp : Op<Transform_Dialect, "structured.split",
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                        I64Attr:$dimension,
-                       Optional<TransformParamTypeOrAnyHandle>:$dynamic_split_point,
+                       Optional<TransformAnyParamTypeOrAnyHandle>:$dynamic_split_point,
                        I64Attr:$static_split_point);
   let results = (outs TransformHandleTypeInterface:$first,
                       TransformHandleTypeInterface:$second);
@@ -1857,7 +1857,7 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
-                   Variadic<TransformParamTypeOrAnyHandle>:$dynamic_sizes,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$dynamic_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$interchange,
                    DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes);
@@ -1968,10 +1968,10 @@ def TileUsingForallOp :
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
-                   Variadic<TransformHandleTypeInterface>:$num_threads,
-                   Variadic<TransformHandleTypeInterface>:$tile_sizes,
-                   Optional<TransformHandleTypeInterface>:$packed_num_threads,
-                   Optional<TransformHandleTypeInterface>:$packed_tile_sizes,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$num_threads,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$tile_sizes,
+                   Optional<TransformAnyParamTypeOrAnyHandle>:$packed_num_threads,
+                   Optional<TransformAnyParamTypeOrAnyHandle>:$packed_tile_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_num_threads,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_sizes,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);

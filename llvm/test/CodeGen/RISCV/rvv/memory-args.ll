@@ -67,9 +67,9 @@ define <vscale x 64 x i8> @caller() {
   %local0 = alloca <vscale x 64 x i8>
   %local1 = alloca <vscale x 64 x i8>
   %local2 = alloca <vscale x 64 x i8>
-  %arg0 = load volatile <vscale x 64 x i8>, <vscale x 64 x i8>* %local0
-  %arg1 = load volatile <vscale x 64 x i8>, <vscale x 64 x i8>* %local1
-  %arg2 = load volatile <vscale x 64 x i8>, <vscale x 64 x i8>* %local2
+  %arg0 = load volatile <vscale x 64 x i8>, ptr %local0
+  %arg1 = load volatile <vscale x 64 x i8>, ptr %local1
+  %arg2 = load volatile <vscale x 64 x i8>, ptr %local2
   %ret = call <vscale x 64 x i8> @callee(<vscale x 64 x i8> %arg0,
                                          <vscale x 64 x i8> %arg1,
                                          <vscale x 64 x i8> %arg2)

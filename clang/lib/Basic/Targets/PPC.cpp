@@ -671,14 +671,6 @@ bool PPCTargetInfo::initFeatureMap(
     return false;
   }
 
-  if (llvm::is_contained(FeaturesVec, "+aix-small-local-exec-tls")) {
-    if (!getTriple().isOSAIX() || !getTriple().isArch64Bit()) {
-      Diags.Report(diag::err_opt_not_valid_on_target)
-         << "-maix-small-local-exec-tls";
-      return false;
-    }
-  }
-
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
 }
 
@@ -902,4 +894,28 @@ void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
 ArrayRef<Builtin::Info> PPCTargetInfo::getTargetBuiltins() const {
   return llvm::ArrayRef(BuiltinInfo,
                         clang::PPC::LastTSBuiltin - Builtin::FirstTSBuiltin);
+}
+
+bool PPCTargetInfo::validateCpuSupports(StringRef FeatureStr) const {
+#define PPC_LNX_FEATURE(NAME, DESC, ENUMNAME, ENUMVAL, HWCAPN) .Case(NAME, true)
+  return llvm::StringSwitch<bool>(FeatureStr)
+#include "llvm/TargetParser/PPCTargetParser.def"
+      .Default(false);
+}
+
+bool PPCTargetInfo::validateCpuIs(StringRef CPUName) const {
+  llvm::Triple Triple = getTriple();
+  if (Triple.isOSAIX()) {
+#define PPC_AIX_CPU(NAME, SUPPORT, INDEX, OP, VALUE) .Case(NAME, true)
+    return llvm::StringSwitch<bool>(CPUName)
+#include "llvm/TargetParser/PPCTargetParser.def"
+        .Default(false);
+  }
+
+  assert(Triple.isOSLinux() &&
+         "__builtin_cpu_is() is only supported for AIX and Linux.");
+#define PPC_LNX_CPU(NAME, NUM) .Case(NAME, true)
+  return llvm::StringSwitch<bool>(CPUName)
+#include "llvm/TargetParser/PPCTargetParser.def"
+      .Default(false);
 }

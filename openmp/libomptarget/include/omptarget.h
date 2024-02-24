@@ -91,12 +91,10 @@ enum tgt_map_type {
 enum OpenMPOffloadingDeclareTargetFlags {
   /// Mark the entry global as having a 'link' attribute.
   OMP_DECLARE_TARGET_LINK = 0x01,
-  /// Mark the entry kernel as being a global constructor.
-  OMP_DECLARE_TARGET_CTOR = 0x02,
-  /// Mark the entry kernel as being a global destructor.
-  OMP_DECLARE_TARGET_DTOR = 0x04,
   /// Mark the entry global as being an indirectly callable function.
-  OMP_DECLARE_TARGET_INDIRECT = 0x08
+  OMP_DECLARE_TARGET_INDIRECT = 0x08,
+  /// This is an entry corresponding to a requirement to be registered.
+  OMP_REGISTER_REQUIRES = 0x10,
 };
 
 enum TargetAllocTy : int32_t {
@@ -313,6 +311,12 @@ void *llvm_omp_target_dynamic_shared_alloc();
 
 /// add the clauses of the requires directives in a given file
 void __tgt_register_requires(int64_t Flags);
+
+/// Initializes the runtime library.
+void __tgt_rtl_init();
+
+/// Deinitializes the runtime library.
+void __tgt_rtl_deinit();
 
 /// adds a target shared library to the target execution image
 void __tgt_register_lib(__tgt_bin_desc *Desc);

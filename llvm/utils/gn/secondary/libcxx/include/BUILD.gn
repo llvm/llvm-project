@@ -66,9 +66,13 @@ if (current_toolchain == default_toolchain) {
     values = []
   }
 
-  copy("write_assertion_handler") {
-    sources = [ "//libcxx/vendor/llvm/default_assertion_handler.in" ]
-    outputs = [ "$libcxx_generated_include_dir/__assertion_handler" ]
+  # This uses write_cmake_config() instead of a normal copy() rule because
+  # copy() uses `sources`, and if there's more than one `sources` in a file,
+  # sync_source_lists_from_cmake.py can't auto-sync changes.
+  write_cmake_config("write_assertion_handler") {
+    input = "//libcxx/vendor/llvm/default_assertion_handler.in"
+    output = "$libcxx_generated_include_dir/__assertion_handler"
+    values = []
   }
 
   copy("copy_headers") {
@@ -184,6 +188,7 @@ if (current_toolchain == default_toolchain) {
       "__algorithm/ranges_binary_search.h",
       "__algorithm/ranges_clamp.h",
       "__algorithm/ranges_contains.h",
+      "__algorithm/ranges_contains_subrange.h",
       "__algorithm/ranges_copy.h",
       "__algorithm/ranges_copy_backward.h",
       "__algorithm/ranges_copy_if.h",
@@ -364,6 +369,8 @@ if (current_toolchain == default_toolchain) {
       "__chrono/steady_clock.h",
       "__chrono/system_clock.h",
       "__chrono/time_point.h",
+      "__chrono/time_zone.h",
+      "__chrono/time_zone_link.h",
       "__chrono/tzdb.h",
       "__chrono/tzdb_list.h",
       "__chrono/weekday.h",
@@ -500,8 +507,8 @@ if (current_toolchain == default_toolchain) {
       "__functional/weak_result_type.h",
       "__fwd/array.h",
       "__fwd/bit_reference.h",
+      "__fwd/complex.h",
       "__fwd/fstream.h",
-      "__fwd/get.h",
       "__fwd/hash.h",
       "__fwd/ios.h",
       "__fwd/istream.h",
@@ -561,9 +568,17 @@ if (current_toolchain == default_toolchain) {
       "__iterator/unreachable_sentinel.h",
       "__iterator/wrap_iter.h",
       "__locale",
+      "__locale_dir/locale_base_api.h",
+      "__locale_dir/locale_base_api/android.h",
       "__locale_dir/locale_base_api/bsd_locale_defaults.h",
       "__locale_dir/locale_base_api/bsd_locale_fallbacks.h",
+      "__locale_dir/locale_base_api/fuchsia.h",
+      "__locale_dir/locale_base_api/ibm.h",
       "__locale_dir/locale_base_api/locale_guard.h",
+      "__locale_dir/locale_base_api/musl.h",
+      "__locale_dir/locale_base_api/newlib.h",
+      "__locale_dir/locale_base_api/openbsd.h",
+      "__locale_dir/locale_base_api/win32.h",
       "__math/abs.h",
       "__math/copysign.h",
       "__math/error_functions.h",
@@ -739,16 +754,9 @@ if (current_toolchain == default_toolchain) {
       "__string/char_traits.h",
       "__string/constexpr_c_functions.h",
       "__string/extern_template_lists.h",
-      "__support/android/locale_bionic.h",
-      "__support/fuchsia/xlocale.h",
       "__support/ibm/gettod_zos.h",
       "__support/ibm/locale_mgmt_zos.h",
       "__support/ibm/nanosleep.h",
-      "__support/ibm/xlocale.h",
-      "__support/musl/xlocale.h",
-      "__support/newlib/xlocale.h",
-      "__support/openbsd/xlocale.h",
-      "__support/win32/locale_win32.h",
       "__support/xlocale/__nop_locale_mgmt.h",
       "__support/xlocale/__posix_l_fallback.h",
       "__support/xlocale/__strtonum_fallback.h",
@@ -761,10 +769,14 @@ if (current_toolchain == default_toolchain) {
       "__thread/id.h",
       "__thread/jthread.h",
       "__thread/poll_with_backoff.h",
+      "__thread/support.h",
+      "__thread/support/c11.h",
+      "__thread/support/external.h",
+      "__thread/support/pthread.h",
+      "__thread/support/windows.h",
       "__thread/this_thread.h",
       "__thread/thread.h",
       "__thread/timed_backoff_policy.h",
-      "__threading_support",
       "__tree",
       "__tuple/make_tuple_types.h",
       "__tuple/pair_like.h",
@@ -877,6 +889,7 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/is_trivially_lexicographically_comparable.h",
       "__type_traits/is_trivially_move_assignable.h",
       "__type_traits/is_trivially_move_constructible.h",
+      "__type_traits/is_trivially_relocatable.h",
       "__type_traits/is_unbounded_array.h",
       "__type_traits/is_union.h",
       "__type_traits/is_unsigned.h",
@@ -985,7 +998,6 @@ if (current_toolchain == default_toolchain) {
       "exception",
       "execution",
       "experimental/__config",
-      "experimental/__memory",
       "experimental/__simd/aligned_tag.h",
       "experimental/__simd/declaration.h",
       "experimental/__simd/reference.h",
@@ -1083,9 +1095,9 @@ if (current_toolchain == default_toolchain) {
       "wctype.h",
     ]
     deps = [
+      ":write_assertion_handler",
       ":write_config_site",
       ":write_modulemap",
-      ":write_assertion_handler",
     ]
     if (target_os != "mac" && target_os != "win") {
       # libcxx/cmake/Modules/HandleLibCXXABI.cmake sets

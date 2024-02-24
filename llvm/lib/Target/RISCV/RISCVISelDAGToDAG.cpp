@@ -577,9 +577,8 @@ void RISCVDAGToDAGISel::selectVSETVLI(SDNode *Node) {
   SDValue VLOperand;
   unsigned Opcode = RISCV::PseudoVSETVLI;
   if (auto *C = dyn_cast<ConstantSDNode>(Node->getOperand(1))) {
-    const unsigned VLEN = Subtarget->getRealMinVLen();
-    if (VLEN == Subtarget->getRealMaxVLen())
-      if (VLEN / RISCVVType::getSEWLMULRatio(SEW, VLMul) == C->getZExtValue())
+    if (auto VLEN = Subtarget->getRealVLen())
+      if (*VLEN / RISCVVType::getSEWLMULRatio(SEW, VLMul) == C->getZExtValue())
         VLMax = true;
   }
   if (VLMax || isAllOnesConstant(Node->getOperand(1))) {
@@ -815,6 +814,65 @@ bool RISCVDAGToDAGISel::tryIndexedLoad(SDNode *Node) {
   ReplaceNode(Node, New);
 
   return true;
+}
+
+void RISCVDAGToDAGISel::selectSF_VC_X_SE(SDNode *Node) {
+  if (!Subtarget->hasVInstructions())
+    return;
+
+  assert(Node->getOpcode() == ISD::INTRINSIC_VOID && "Unexpected opcode");
+
+  SDLoc DL(Node);
+  unsigned IntNo = Node->getConstantOperandVal(1);
+
+  assert((IntNo == Intrinsic::riscv_sf_vc_x_se ||
+          IntNo == Intrinsic::riscv_sf_vc_i_se) &&
+         "Unexpected vsetvli intrinsic");
+
+  // imm, imm, imm, simm5/scalar, sew, log2lmul, vl
+  unsigned Log2SEW = Log2_32(Node->getConstantOperandVal(6));
+  SDValue SEWOp =
+      CurDAG->getTargetConstant(Log2SEW, DL, Subtarget->getXLenVT());
+  SmallVector<SDValue, 8> Operands = {Node->getOperand(2), Node->getOperand(3),
+                                      Node->getOperand(4), Node->getOperand(5),
+                                      Node->getOperand(8), SEWOp,
+                                      Node->getOperand(0)};
+
+  unsigned Opcode;
+  auto *LMulSDNode = cast<ConstantSDNode>(Node->getOperand(7));
+  switch (LMulSDNode->getSExtValue()) {
+  case 5:
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_MF8
+                                                  : RISCV::PseudoVC_I_SE_MF8;
+    break;
+  case 6:
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_MF4
+                                                  : RISCV::PseudoVC_I_SE_MF4;
+    break;
+  case 7:
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_MF2
+                                                  : RISCV::PseudoVC_I_SE_MF2;
+    break;
+  case 0:
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_M1
+                                                  : RISCV::PseudoVC_I_SE_M1;
+    break;
+  case 1:
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_M2
+                                                  : RISCV::PseudoVC_I_SE_M2;
+    break;
+  case 2:
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_M4
+                                                  : RISCV::PseudoVC_I_SE_M4;
+    break;
+  case 3:
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_M8
+                                                  : RISCV::PseudoVC_I_SE_M8;
+    break;
+  }
+
+  ReplaceNode(Node, CurDAG->getMachineNode(
+                        Opcode, DL, Node->getSimpleValueType(0), Operands));
 }
 
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
@@ -1975,6 +2033,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, Store);
       return;
     }
+    case Intrinsic::riscv_sf_vc_x_se:
+    case Intrinsic::riscv_sf_vc_i_se:
+      selectSF_VC_X_SE(Node);
+      return;
     }
     break;
   }
@@ -2000,8 +2062,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     const RISCVTargetLowering &TLI = *Subtarget->getTargetLowering();
     MVT SubVecContainerVT = SubVecVT;
     // Establish the correct scalable-vector types for any fixed-length type.
-    if (SubVecVT.isFixedLengthVector())
+    if (SubVecVT.isFixedLengthVector()) {
+      assert(Idx == 0 && V.isUndef());
       SubVecContainerVT = TLI.getContainerForFixedLengthVector(SubVecVT);
+    }
     if (VT.isFixedLengthVector())
       VT = TLI.getContainerForFixedLengthVector(VT);
 
@@ -2018,10 +2082,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       break;
 
     RISCVII::VLMUL SubVecLMUL = RISCVTargetLowering::getLMUL(SubVecContainerVT);
-    bool IsSubVecPartReg = SubVecLMUL == RISCVII::VLMUL::LMUL_F2 ||
-                           SubVecLMUL == RISCVII::VLMUL::LMUL_F4 ||
-                           SubVecLMUL == RISCVII::VLMUL::LMUL_F8;
-    (void)IsSubVecPartReg; // Silence unused variable warning without asserts.
+    [[maybe_unused]] bool IsSubVecPartReg =
+        SubVecLMUL == RISCVII::VLMUL::LMUL_F2 ||
+        SubVecLMUL == RISCVII::VLMUL::LMUL_F4 ||
+        SubVecLMUL == RISCVII::VLMUL::LMUL_F8;
     assert((!IsSubVecPartReg || V.isUndef()) &&
            "Expecting lowering to have created legal INSERT_SUBVECTORs when "
            "the subvector is smaller than a full-sized register");
@@ -2053,8 +2117,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     const RISCVTargetLowering &TLI = *Subtarget->getTargetLowering();
     MVT SubVecContainerVT = VT;
     // Establish the correct scalable-vector types for any fixed-length type.
-    if (VT.isFixedLengthVector())
+    if (VT.isFixedLengthVector()) {
+      assert(Idx == 0);
       SubVecContainerVT = TLI.getContainerForFixedLengthVector(VT);
+    }
     if (InVT.isFixedLengthVector())
       InVT = TLI.getContainerForFixedLengthVector(InVT);
 
@@ -2200,9 +2266,8 @@ bool RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand(
   case InlineAsm::ConstraintCode::o:
   case InlineAsm::ConstraintCode::m: {
     SDValue Op0, Op1;
-    bool Found = SelectAddrRegImm(Op, Op0, Op1);
+    [[maybe_unused]] bool Found = SelectAddrRegImm(Op, Op0, Op1);
     assert(Found && "SelectAddrRegImm should always succeed");
-    (void)Found;
     OutOps.push_back(Op0);
     OutOps.push_back(Op1);
     return false;

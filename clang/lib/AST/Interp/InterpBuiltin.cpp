@@ -55,8 +55,8 @@ static APSInt peekToAPSInt(InterpStack &Stk, PrimType T, size_t Offset = 0) {
   APSInt R;
   INT_TYPE_SWITCH(T, {
     T Val = Stk.peek<T>(Offset);
-    R = APSInt(
-        APInt(Val.bitWidth(), static_cast<uint64_t>(Val), T::isSigned()));
+    R = APSInt(APInt(Val.bitWidth(), static_cast<uint64_t>(Val), T::isSigned()),
+               !T::isSigned());
   });
 
   return R;
@@ -153,6 +153,11 @@ static void pushSizeT(InterpState &S, uint64_t Val) {
   default:
     llvm_unreachable("We don't handle this size_t size.");
   }
+}
+
+static void assignInteger(Pointer &Dest, PrimType ValueT, const APSInt &Value) {
+  INT_TYPE_SWITCH_NO_BOOL(
+      ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
 }
 
 static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
@@ -634,12 +639,260 @@ static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_move(InterpState &S, CodePtr OpPC,
+                                 const InterpFrame *Frame, const Function *Func,
+                                 const CallExpr *Call) {
+
+  PrimType ArgT = S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
+
+  TYPE_SWITCH(ArgT, const T &Arg = S.Stk.peek<T>(); S.Stk.push<T>(Arg););
+
+  return Func->getDecl()->isConstexpr();
+}
+
+static bool interp__builtin_eh_return_data_regno(InterpState &S, CodePtr OpPC,
+                                                 const InterpFrame *Frame,
+                                                 const Function *Func,
+                                                 const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Arg = peekToAPSInt(S.Stk, ArgT);
+
+  int Result =
+      S.getCtx().getTargetInfo().getEHDataRegisterNumber(Arg.getZExtValue());
+  pushInt(S, Result);
+  return true;
+}
+
+static bool interp__builtin_launder(InterpState &S, CodePtr OpPC,
+                                    const InterpFrame *Frame,
+                                    const Function *Func,
+                                    const CallExpr *Call) {
+  const Pointer &Arg = S.Stk.peek<Pointer>();
+  S.Stk.push<Pointer>(Arg);
+  return true;
+}
+
+// Two integral values followed by a pointer (lhs, rhs, resultOut)
+static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  Pointer &ResultPtr = S.Stk.peek<Pointer>();
+  if (ResultPtr.isDummy())
+    return false;
+
+  unsigned BuiltinOp = Func->getBuiltinID();
+  PrimType RHST = *S.getContext().classify(Call->getArg(1)->getType());
+  PrimType LHST = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt RHS = peekToAPSInt(S.Stk, RHST,
+                            align(primSize(PT_Ptr)) + align(primSize(RHST)));
+  APSInt LHS = peekToAPSInt(S.Stk, LHST,
+                            align(primSize(PT_Ptr)) + align(primSize(RHST)) +
+                                align(primSize(LHST)));
+  QualType ResultType = Call->getArg(2)->getType()->getPointeeType();
+  PrimType ResultT = *S.getContext().classify(ResultType);
+  bool Overflow;
+
+  APSInt Result;
+  if (BuiltinOp == Builtin::BI__builtin_add_overflow ||
+      BuiltinOp == Builtin::BI__builtin_sub_overflow ||
+      BuiltinOp == Builtin::BI__builtin_mul_overflow) {
+    bool IsSigned = LHS.isSigned() || RHS.isSigned() ||
+                    ResultType->isSignedIntegerOrEnumerationType();
+    bool AllSigned = LHS.isSigned() && RHS.isSigned() &&
+                     ResultType->isSignedIntegerOrEnumerationType();
+    uint64_t LHSSize = LHS.getBitWidth();
+    uint64_t RHSSize = RHS.getBitWidth();
+    uint64_t ResultSize = S.getCtx().getTypeSize(ResultType);
+    uint64_t MaxBits = std::max(std::max(LHSSize, RHSSize), ResultSize);
+
+    // Add an additional bit if the signedness isn't uniformly agreed to. We
+    // could do this ONLY if there is a signed and an unsigned that both have
+    // MaxBits, but the code to check that is pretty nasty.  The issue will be
+    // caught in the shrink-to-result later anyway.
+    if (IsSigned && !AllSigned)
+      ++MaxBits;
+
+    LHS = APSInt(LHS.extOrTrunc(MaxBits), !IsSigned);
+    RHS = APSInt(RHS.extOrTrunc(MaxBits), !IsSigned);
+    Result = APSInt(MaxBits, !IsSigned);
+  }
+
+  // Find largest int.
+  switch (BuiltinOp) {
+  default:
+    llvm_unreachable("Invalid value for BuiltinOp");
+  case Builtin::BI__builtin_add_overflow:
+  case Builtin::BI__builtin_sadd_overflow:
+  case Builtin::BI__builtin_saddl_overflow:
+  case Builtin::BI__builtin_saddll_overflow:
+  case Builtin::BI__builtin_uadd_overflow:
+  case Builtin::BI__builtin_uaddl_overflow:
+  case Builtin::BI__builtin_uaddll_overflow:
+    Result = LHS.isSigned() ? LHS.sadd_ov(RHS, Overflow)
+                            : LHS.uadd_ov(RHS, Overflow);
+    break;
+  case Builtin::BI__builtin_sub_overflow:
+  case Builtin::BI__builtin_ssub_overflow:
+  case Builtin::BI__builtin_ssubl_overflow:
+  case Builtin::BI__builtin_ssubll_overflow:
+  case Builtin::BI__builtin_usub_overflow:
+  case Builtin::BI__builtin_usubl_overflow:
+  case Builtin::BI__builtin_usubll_overflow:
+    Result = LHS.isSigned() ? LHS.ssub_ov(RHS, Overflow)
+                            : LHS.usub_ov(RHS, Overflow);
+    break;
+  case Builtin::BI__builtin_mul_overflow:
+  case Builtin::BI__builtin_smul_overflow:
+  case Builtin::BI__builtin_smull_overflow:
+  case Builtin::BI__builtin_smulll_overflow:
+  case Builtin::BI__builtin_umul_overflow:
+  case Builtin::BI__builtin_umull_overflow:
+  case Builtin::BI__builtin_umulll_overflow:
+    Result = LHS.isSigned() ? LHS.smul_ov(RHS, Overflow)
+                            : LHS.umul_ov(RHS, Overflow);
+    break;
+  }
+
+  // In the case where multiple sizes are allowed, truncate and see if
+  // the values are the same.
+  if (BuiltinOp == Builtin::BI__builtin_add_overflow ||
+      BuiltinOp == Builtin::BI__builtin_sub_overflow ||
+      BuiltinOp == Builtin::BI__builtin_mul_overflow) {
+    // APSInt doesn't have a TruncOrSelf, so we use extOrTrunc instead,
+    // since it will give us the behavior of a TruncOrSelf in the case where
+    // its parameter <= its size.  We previously set Result to be at least the
+    // type-size of the result, so getTypeSize(ResultType) <= Resu
+    APSInt Temp = Result.extOrTrunc(S.getCtx().getTypeSize(ResultType));
+    Temp.setIsSigned(ResultType->isSignedIntegerOrEnumerationType());
+
+    if (!APSInt::isSameValue(Temp, Result))
+      Overflow = true;
+    Result = Temp;
+  }
+
+  // Write Result to ResultPtr and put Overflow on the stacl.
+  assignInteger(ResultPtr, ResultT, Result);
+  ResultPtr.initialize();
+  assert(Func->getDecl()->getReturnType()->isBooleanType());
+  S.Stk.push<Boolean>(Overflow);
+  return true;
+}
+
+/// Three integral values followed by a pointer (lhs, rhs, carry, carryOut).
+static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
+                                    const InterpFrame *Frame,
+                                    const Function *Func,
+                                    const CallExpr *Call) {
+  unsigned BuiltinOp = Func->getBuiltinID();
+  PrimType LHST = *S.getContext().classify(Call->getArg(0)->getType());
+  PrimType RHST = *S.getContext().classify(Call->getArg(1)->getType());
+  PrimType CarryT = *S.getContext().classify(Call->getArg(2)->getType());
+  APSInt RHS = peekToAPSInt(S.Stk, RHST,
+                            align(primSize(PT_Ptr)) + align(primSize(CarryT)) +
+                                align(primSize(RHST)));
+  APSInt LHS =
+      peekToAPSInt(S.Stk, LHST,
+                   align(primSize(PT_Ptr)) + align(primSize(RHST)) +
+                       align(primSize(CarryT)) + align(primSize(LHST)));
+  APSInt CarryIn = peekToAPSInt(
+      S.Stk, LHST, align(primSize(PT_Ptr)) + align(primSize(CarryT)));
+  APSInt CarryOut;
+
+  APSInt Result;
+  // Copy the number of bits and sign.
+  Result = LHS;
+  CarryOut = LHS;
+
+  bool FirstOverflowed = false;
+  bool SecondOverflowed = false;
+  switch (BuiltinOp) {
+  default:
+    llvm_unreachable("Invalid value for BuiltinOp");
+  case Builtin::BI__builtin_addcb:
+  case Builtin::BI__builtin_addcs:
+  case Builtin::BI__builtin_addc:
+  case Builtin::BI__builtin_addcl:
+  case Builtin::BI__builtin_addcll:
+    Result =
+        LHS.uadd_ov(RHS, FirstOverflowed).uadd_ov(CarryIn, SecondOverflowed);
+    break;
+  case Builtin::BI__builtin_subcb:
+  case Builtin::BI__builtin_subcs:
+  case Builtin::BI__builtin_subc:
+  case Builtin::BI__builtin_subcl:
+  case Builtin::BI__builtin_subcll:
+    Result =
+        LHS.usub_ov(RHS, FirstOverflowed).usub_ov(CarryIn, SecondOverflowed);
+    break;
+  }
+  // It is possible for both overflows to happen but CGBuiltin uses an OR so
+  // this is consistent.
+  CarryOut = (uint64_t)(FirstOverflowed | SecondOverflowed);
+
+  Pointer &CarryOutPtr = S.Stk.peek<Pointer>();
+  QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
+  PrimType CarryOutT = *S.getContext().classify(CarryOutType);
+  assignInteger(CarryOutPtr, CarryOutT, CarryOut);
+  CarryOutPtr.initialize();
+
+  assert(Call->getType() == Call->getArg(0)->getType());
+  pushAPSInt(S, Result);
+  return true;
+}
+
+static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame, const Function *Func,
+                                const CallExpr *Call) {
+  unsigned BuiltinOp = Func->getBuiltinID();
+  PrimType ValT = *S.getContext().classify(Call->getArg(0));
+  const APSInt &Val = peekToAPSInt(S.Stk, ValT);
+
+  // When the argument is 0, the result of GCC builtins is undefined, whereas
+  // for Microsoft intrinsics, the result is the bit-width of the argument.
+  bool ZeroIsUndefined = BuiltinOp != Builtin::BI__lzcnt16 &&
+                         BuiltinOp != Builtin::BI__lzcnt &&
+                         BuiltinOp != Builtin::BI__lzcnt64;
+
+  if (ZeroIsUndefined && Val == 0)
+    return false;
+
+  pushInt(S, Val.countl_zero());
+  return true;
+}
+
+static bool interp__builtin_ctz(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame, const Function *Func,
+                                const CallExpr *Call) {
+  PrimType ValT = *S.getContext().classify(Call->getArg(0));
+  const APSInt &Val = peekToAPSInt(S.Stk, ValT);
+
+  if (Val == 0)
+    return false;
+
+  pushInt(S, Val.countr_zero());
+  return true;
+}
+
+static bool interp__builtin_bswap(InterpState &S, CodePtr OpPC,
+                                  const InterpFrame *Frame,
+                                  const Function *Func, const CallExpr *Call) {
+  PrimType ReturnT = *S.getContext().classify(Call->getType());
+  PrimType ValT = *S.getContext().classify(Call->getArg(0));
+  const APSInt &Val = peekToAPSInt(S.Stk, ValT);
+  assert(Val.getActiveBits() <= 64);
+
+  INT_TYPE_SWITCH(ReturnT,
+                  { S.Stk.push<T>(T::from(Val.byteSwap().getZExtValue())); });
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
 
-  std::optional<PrimType> ReturnT = S.getContext().classify(Call->getType());
+  std::optional<PrimType> ReturnT = S.getContext().classify(Call);
 
   // If classify failed, we assume void.
   assert(ReturnT || Call->getType()->isVoidType());
@@ -649,6 +902,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
     break;
   case Builtin::BI__builtin_assume:
+  case Builtin::BI__assume:
     break;
   case Builtin::BI__builtin_strcmp:
     if (!interp__builtin_strcmp(S, OpPC, Frame))
@@ -845,6 +1099,90 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__addressof:
   case Builtin::BI__builtin_addressof:
     if (!interp__builtin_addressof(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BIas_const:
+  case Builtin::BIforward:
+  case Builtin::BIforward_like:
+  case Builtin::BImove:
+  case Builtin::BImove_if_noexcept:
+    if (!interp__builtin_move(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_eh_return_data_regno:
+    if (!interp__builtin_eh_return_data_regno(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_launder:
+    if (!interp__builtin_launder(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_add_overflow:
+  case Builtin::BI__builtin_sub_overflow:
+  case Builtin::BI__builtin_mul_overflow:
+  case Builtin::BI__builtin_sadd_overflow:
+  case Builtin::BI__builtin_uadd_overflow:
+  case Builtin::BI__builtin_uaddl_overflow:
+  case Builtin::BI__builtin_uaddll_overflow:
+  case Builtin::BI__builtin_usub_overflow:
+  case Builtin::BI__builtin_usubl_overflow:
+  case Builtin::BI__builtin_usubll_overflow:
+  case Builtin::BI__builtin_umul_overflow:
+  case Builtin::BI__builtin_umull_overflow:
+  case Builtin::BI__builtin_umulll_overflow:
+  case Builtin::BI__builtin_saddl_overflow:
+  case Builtin::BI__builtin_saddll_overflow:
+  case Builtin::BI__builtin_ssub_overflow:
+  case Builtin::BI__builtin_ssubl_overflow:
+  case Builtin::BI__builtin_ssubll_overflow:
+  case Builtin::BI__builtin_smul_overflow:
+  case Builtin::BI__builtin_smull_overflow:
+  case Builtin::BI__builtin_smulll_overflow:
+    if (!interp__builtin_overflowop(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_addcb:
+  case Builtin::BI__builtin_addcs:
+  case Builtin::BI__builtin_addc:
+  case Builtin::BI__builtin_addcl:
+  case Builtin::BI__builtin_addcll:
+  case Builtin::BI__builtin_subcb:
+  case Builtin::BI__builtin_subcs:
+  case Builtin::BI__builtin_subc:
+  case Builtin::BI__builtin_subcl:
+  case Builtin::BI__builtin_subcll:
+    if (!interp__builtin_carryop(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_clz:
+  case Builtin::BI__builtin_clzl:
+  case Builtin::BI__builtin_clzll:
+  case Builtin::BI__builtin_clzs:
+  case Builtin::BI__lzcnt16: // Microsoft variants of count leading-zeroes
+  case Builtin::BI__lzcnt:
+  case Builtin::BI__lzcnt64:
+    if (!interp__builtin_clz(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_ctz:
+  case Builtin::BI__builtin_ctzl:
+  case Builtin::BI__builtin_ctzll:
+  case Builtin::BI__builtin_ctzs:
+    if (!interp__builtin_ctz(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_bswap16:
+  case Builtin::BI__builtin_bswap32:
+  case Builtin::BI__builtin_bswap64:
+    if (!interp__builtin_bswap(S, OpPC, Frame, F, Call))
       return false;
     break;
 

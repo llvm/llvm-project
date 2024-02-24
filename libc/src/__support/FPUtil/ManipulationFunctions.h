@@ -12,6 +12,8 @@
 #include "FPBits.h"
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
+#include "dyadic_float.h"
+#include "rounding_mode.h"
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
@@ -117,10 +119,8 @@ LIBC_INLINE T logb(T x) {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T ldexp(T x, int exp) {
-  if (LIBC_UNLIKELY(exp == 0))
-    return x;
   FPBits<T> bits(x);
-  if (LIBC_UNLIKELY(bits.is_zero() || bits.is_inf_or_nan()))
+  if (LIBC_UNLIKELY((exp == 0) || bits.is_zero() || bits.is_inf_or_nan()))
     return x;
 
   // NormalFloat uses int32_t to store the true exponent value. We should ensure
@@ -129,18 +129,40 @@ LIBC_INLINE T ldexp(T x, int exp) {
   // early. Because the result of the ldexp operation can be a subnormal number,
   // we need to accommodate the (mantissaWidth + 1) worth of shift in
   // calculating the limit.
-  int exp_limit = FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
-  if (exp > exp_limit)
-    return FPBits<T>::inf(bits.sign()).get_val();
+  constexpr int EXP_LIMIT =
+      FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
+  if (LIBC_UNLIKELY(exp > EXP_LIMIT)) {
+    int rounding_mode = quick_get_round();
+    Sign sign = bits.sign();
+
+    if ((sign == Sign::POS && rounding_mode == FE_DOWNWARD) ||
+        (sign == Sign::NEG && rounding_mode == FE_UPWARD) ||
+        (rounding_mode == FE_TOWARDZERO))
+      return FPBits<T>::max_normal(sign).get_val();
+
+    set_errno_if_required(ERANGE);
+    raise_except_if_required(FE_OVERFLOW);
+    return FPBits<T>::inf(sign).get_val();
+  }
 
   // Similarly on the negative side we return zero early if |exp| is too small.
-  if (exp < -exp_limit)
-    return FPBits<T>::zero(bits.sign()).get_val();
+  if (LIBC_UNLIKELY(exp < -EXP_LIMIT)) {
+    int rounding_mode = quick_get_round();
+    Sign sign = bits.sign();
+
+    if ((sign == Sign::POS && rounding_mode == FE_UPWARD) ||
+        (sign == Sign::NEG && rounding_mode == FE_DOWNWARD))
+      return FPBits<T>::min_subnormal(sign).get_val();
+
+    set_errno_if_required(ERANGE);
+    raise_except_if_required(FE_UNDERFLOW);
+    return FPBits<T>::zero(sign).get_val();
+  }
 
   // For all other values, NormalFloat to T conversion handles it the right way.
-  NormalFloat<T> normal(bits);
+  DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
   normal.exponent += exp;
-  return normal;
+  return static_cast<T>(normal);
 }
 
 template <typename T, typename U,

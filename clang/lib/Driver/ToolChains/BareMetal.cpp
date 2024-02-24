@@ -368,11 +368,7 @@ void BareMetal::AddLinkRuntimeLib(const ArgList &Args,
   ToolChain::RuntimeLibType RLT = GetRuntimeLibType(Args);
   switch (RLT) {
   case ToolChain::RLT_CompilerRT: {
-    const std::string FileName = getCompilerRT(Args, "builtins");
-    llvm::StringRef BaseName = llvm::sys::path::filename(FileName);
-    BaseName.consume_front("lib");
-    BaseName.consume_back(".a");
-    CmdArgs.push_back(Args.MakeArgString("-l" + BaseName));
+    CmdArgs.push_back(getCompilerRTArgString(Args, "builtins"));
     return;
   }
   case ToolChain::RLT_Libgcc:
@@ -442,6 +438,9 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   CmdArgs.push_back("-Bstatic");
 
+  if (TC.getTriple().isRISCV() && Args.hasArg(options::OPT_mno_relax))
+    CmdArgs.push_back("--no-relax");
+
   if (Triple.isARM() || Triple.isThumb()) {
     bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
     if (IsBigEndian)
@@ -458,11 +457,6 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
-
-  const std::string FileName = TC.getCompilerRT(Args, "builtins");
-  llvm::SmallString<128> PathBuf{FileName};
-  llvm::sys::path::remove_filename(PathBuf);
-  CmdArgs.push_back(Args.MakeArgString("-L" + PathBuf));
 
   if (TC.ShouldLinkCXXStdlib(Args))
     TC.AddCXXStdlibLibArgs(Args, CmdArgs);

@@ -90,6 +90,7 @@ CGOPT_EXP(bool, DataSections)
 CGOPT_EXP(bool, FunctionSections)
 CGOPT(bool, IgnoreXCOFFVisibility)
 CGOPT(bool, XCOFFTracebackTable)
+CGOPT(bool, EnableBBAddrMap)
 CGOPT(std::string, BBSections)
 CGOPT(unsigned, TLSSize)
 CGOPT_EXP(bool, EmulatedTLS)
@@ -390,6 +391,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(true));
   CGBINDOPT(XCOFFTracebackTable);
 
+  static cl::opt<bool> EnableBBAddrMap(
+      "basic-block-address-map",
+      cl::desc("Emit the basic block address map section"), cl::init(false));
+  CGBINDOPT(EnableBBAddrMap);
+
   static cl::opt<std::string> BBSections(
       "basic-block-sections",
       cl::desc("Emit basic blocks into separate sections"),
@@ -568,6 +574,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.FunctionSections = getFunctionSections();
   Options.IgnoreXCOFFVisibility = getIgnoreXCOFFVisibility();
   Options.XCOFFTracebackTable = getXCOFFTracebackTable();
+  Options.BBAddrMap = getEnableBBAddrMap();
   Options.BBSections = getBBSectionsMode(Options);
   Options.UniqueSectionNames = getUniqueSectionNames();
   Options.UniqueBasicBlockSectionNames = getUniqueBasicBlockSectionNames();

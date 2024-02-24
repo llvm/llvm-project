@@ -675,9 +675,10 @@ void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
                                   ArrayRef<IteratorType> iteratorTypes) {
   result.addOperands({lhs, rhs, acc});
   result.addTypes(acc.getType());
-  result.addAttribute(getIndexingMapsAttrName(result.name),
-                      builder.getAffineMapArrayAttr(
-                          AffineMap::inferFromExprList(indexingExprs)));
+  result.addAttribute(
+      getIndexingMapsAttrName(result.name),
+      builder.getAffineMapArrayAttr(
+          AffineMap::inferFromExprList(indexingExprs, builder.getContext())));
   result.addAttribute(
       getIteratorTypesAttrName(result.name),
       builder.getArrayAttr(llvm::to_vector(llvm::map_range(

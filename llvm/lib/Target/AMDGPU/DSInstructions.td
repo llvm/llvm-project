@@ -486,10 +486,10 @@ def DS_WRITE_ADDTID_B32 : DS_0A1D_NORET<"ds_write_addtid_b32">;
 
 } // End mayLoad = 0
 
-let SubtargetPredicate = isGFX90APlus in {
+let SubtargetPredicate = HasLdsAtomicAddF64 in {
   defm DS_ADD_F64     : DS_1A1D_NORET_mc_gfx9<"ds_add_f64", VReg_64>;
   defm DS_ADD_RTN_F64 : DS_1A1D_RET_mc_gfx9<"ds_add_rtn_f64", VReg_64, "ds_add_f64">;
-} // End SubtargetPredicate = isGFX90APlus
+} // End SubtargetPredicate = HasLdsAtomicAddF64
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
   defm DS_PK_ADD_F16      : DS_1A1D_NORET_mc<"ds_pk_add_f16">;
@@ -1128,7 +1128,7 @@ let SubtargetPredicate = isGFX11Plus in {
 defm : DSAtomicCmpXChg_mc<DS_CMPSTORE_RTN_B64, DS_CMPSTORE_B64, i64, "atomic_cmp_swap">;
 } // End SubtargetPredicate = isGFX11Plus
 
-let SubtargetPredicate = isGFX90APlus in {
+let SubtargetPredicate = HasLdsAtomicAddF64 in {
 def : DSAtomicRetPat<DS_ADD_RTN_F64, f64, atomic_load_fadd_local_64>;
 let AddedComplexity = 1 in
 def : DSAtomicRetPat<DS_ADD_F64, f64, atomic_load_fadd_local_noret_64>;
