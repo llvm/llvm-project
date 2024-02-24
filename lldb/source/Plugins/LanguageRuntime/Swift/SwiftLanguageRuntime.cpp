@@ -2168,7 +2168,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_swift_demangle_options);
+      return llvm::ArrayRef(g_swift_demangle_options);
     }
 
     // Options table: Required for subclasses of Options.
