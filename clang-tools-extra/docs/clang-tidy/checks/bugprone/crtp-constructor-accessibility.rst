@@ -83,3 +83,16 @@ Example:
   Bad CompileTimeError;
 
   CRTP<int> AlsoCompileTimeError;
+
+Limitations:
+
+* The check is not supported below C++11
+
+* The check does not handle when the derived class is passed as a variadic
+  template argument
+
+* Accessible functions that can construct the CRTP, like factory functions
+  are not checked
+
+The check also suggests a fix-its in some cases.
+
