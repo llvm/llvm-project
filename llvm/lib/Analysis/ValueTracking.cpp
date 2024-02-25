@@ -7226,84 +7226,108 @@ bool llvm::propagatesPoison(const Use &PoisonOp) {
   }
 }
 
-void llvm::getGuaranteedWellDefinedOps(
-    const Instruction *I, SmallVectorImpl<const Value *> &Operands) {
+/// Enumerates all operands of \p I that are guaranteed to not be undef or
+/// poison. If the callback \p Handle returns true, stop processing and return
+/// true. Otherwise, return false.
+template <typename CallableT>
+static bool handleGuaranteedWellDefinedOps(const Instruction *I,
+                                           const CallableT &Handle) {
   switch (I->getOpcode()) {
     case Instruction::Store:
-      Operands.push_back(cast<StoreInst>(I)->getPointerOperand());
+      if (Handle(cast<StoreInst>(I)->getPointerOperand()))
+        return true;
       break;
 
     case Instruction::Load:
-      Operands.push_back(cast<LoadInst>(I)->getPointerOperand());
+      if (Handle(cast<LoadInst>(I)->getPointerOperand()))
+        return true;
       break;
 
     // Since dereferenceable attribute imply noundef, atomic operations
     // also implicitly have noundef pointers too
     case Instruction::AtomicCmpXchg:
-      Operands.push_back(cast<AtomicCmpXchgInst>(I)->getPointerOperand());
+      if (Handle(cast<AtomicCmpXchgInst>(I)->getPointerOperand()))
+        return true;
       break;
 
     case Instruction::AtomicRMW:
-      Operands.push_back(cast<AtomicRMWInst>(I)->getPointerOperand());
+      if (Handle(cast<AtomicRMWInst>(I)->getPointerOperand()))
+        return true;
       break;
 
     case Instruction::Call:
     case Instruction::Invoke: {
       const CallBase *CB = cast<CallBase>(I);
-      if (CB->isIndirectCall())
-        Operands.push_back(CB->getCalledOperand());
-      for (unsigned i = 0; i < CB->arg_size(); ++i) {
-        if (CB->paramHasAttr(i, Attribute::NoUndef) ||
-            CB->paramHasAttr(i, Attribute::Dereferenceable) ||
-            CB->paramHasAttr(i, Attribute::DereferenceableOrNull))
-          Operands.push_back(CB->getArgOperand(i));
-      }
+      if (CB->isIndirectCall() && Handle(CB->getCalledOperand()))
+        return true;
+      for (unsigned i = 0; i < CB->arg_size(); ++i)
+        if ((CB->paramHasAttr(i, Attribute::NoUndef) ||
+             CB->paramHasAttr(i, Attribute::Dereferenceable) ||
+             CB->paramHasAttr(i, Attribute::DereferenceableOrNull)) &&
+            Handle(CB->getArgOperand(i)))
+          return true;
       break;
     }
     case Instruction::Ret:
-      if (I->getFunction()->hasRetAttribute(Attribute::NoUndef))
-        Operands.push_back(I->getOperand(0));
+      if (I->getFunction()->hasRetAttribute(Attribute::NoUndef) &&
+          Handle(I->getOperand(0)))
+        return true;
       break;
     case Instruction::Switch:
-      Operands.push_back(cast<SwitchInst>(I)->getCondition());
+      if (Handle(cast<SwitchInst>(I)->getCondition()))
+        return true;
       break;
     case Instruction::Br: {
       auto *BR = cast<BranchInst>(I);
-      if (BR->isConditional())
-        Operands.push_back(BR->getCondition());
+      if (BR->isConditional() && Handle(BR->getCondition()))
+        return true;
       break;
     }
     default:
       break;
   }
+
+  return false;
 }
 
-void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
-                                     SmallVectorImpl<const Value *> &Operands) {
-  getGuaranteedWellDefinedOps(I, Operands);
+void llvm::getGuaranteedWellDefinedOps(
+    const Instruction *I, SmallVectorImpl<const Value *> &Operands) {
+  handleGuaranteedWellDefinedOps(I, [&](const Value *V) {
+    Operands.push_back(V);
+    return false;
+  });
+}
+
+/// Enumerates all operands of \p I that are guaranteed to not be poison.
+template <typename CallableT>
+static bool handleGuaranteedNonPoisonOps(const Instruction *I,
+                                         const CallableT &Handle) {
+  if (handleGuaranteedWellDefinedOps(I, Handle))
+    return true;
   switch (I->getOpcode()) {
   // Divisors of these operations are allowed to be partially undef.
   case Instruction::UDiv:
   case Instruction::SDiv:
   case Instruction::URem:
   case Instruction::SRem:
-    Operands.push_back(I->getOperand(1));
-    break;
+    return Handle(I->getOperand(1));
   default:
-    break;
+    return false;
   }
+}
+
+void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
+                                     SmallVectorImpl<const Value *> &Operands) {
+  handleGuaranteedNonPoisonOps(I, [&](const Value *V) {
+    Operands.push_back(V);
+    return false;
+  });
 }
 
 bool llvm::mustTriggerUB(const Instruction *I,
                          const SmallPtrSetImpl<const Value *> &KnownPoison) {
-  SmallVector<const Value *, 4> NonPoisonOps;
-  getGuaranteedNonPoisonOps(I, NonPoisonOps);
-
-  for (const auto *V : NonPoisonOps)
-    if (KnownPoison.count(V))
-      return true;
-
-  return false;
+  return handleGuaranteedNonPoisonOps(
+      I, [&](const Value *V) { return KnownPoison.count(V); });
 }
 
 static bool programUndefinedIfUndefOrPoison(const Value *V,
@@ -7346,9 +7370,9 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
       if (--ScanLimit == 0)
         break;
 
-      SmallVector<const Value *, 4> WellDefinedOps;
-      getGuaranteedWellDefinedOps(&I, WellDefinedOps);
-      if (is_contained(WellDefinedOps, V))
+      if (handleGuaranteedWellDefinedOps(&I, [V](const Value *WellDefinedOp) {
+            return WellDefinedOp == V;
+          }))
         return true;
 
       if (!isGuaranteedToTransferExecutionToSuccessor(&I))
