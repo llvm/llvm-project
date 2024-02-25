@@ -119,7 +119,7 @@ INSTR_PROF_VALUE_NODE(uint64_t, llvm::Type::getInt64Ty(Ctx), Value, \
 INSTR_PROF_VALUE_NODE(uint64_t, llvm::Type::getInt64Ty(Ctx), Count, \
                       ConstantInt::get(llvm::Type::GetInt64Ty(Ctx), 0))
 INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::PointerType::getUnqual(Ctx), Next, \
-                      ConstantInt::get(llvm::Type::GetInt8PtrTy(Ctx), 0))
+                      ConstantInt::get(llvm::PointerType::getUnqual(Ctx), 0))
 #undef INSTR_PROF_VALUE_NODE
 /* INSTR_PROF_VALUE_NODE end. */
 
