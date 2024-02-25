@@ -117,7 +117,7 @@ local_struct_internal_ptr:
 # RUN:     --no-entry -o %t_max.wasm %t.hello32.o 2>&1 \
 # RUN: | FileCheck %s --check-prefix CHECK-NO-GROWTH-COMPAT-ERROR
 
-# CHECK-NO-GROWTH-COMPAT-ERROR: --max-memory and --no-growable-memory are mutually exclusive
+# CHECK-NO-GROWTH-COMPAT-ERROR: --max-memory is incompatible with --no-growable-memory
 
 # RUN: wasm-ld -no-gc-sections --allow-undefined --no-entry --shared-memory \
 # RUN:     --features=atomics,bulk-memory --initial-memory=131072 \

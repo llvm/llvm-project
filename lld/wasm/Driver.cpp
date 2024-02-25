@@ -546,6 +546,11 @@ static void readConfigs(opt::InputArgList &args) {
   config->zStackSize =
       args::getZOptionValue(args, OPT_z, "stack-size", WasmPageSize);
 
+  if (config->maxMemory != 0 && config->noGrowableMemory) {
+    // Erroring out here is simpler than defining precedence rules.
+    error("--max-memory is incompatible with --no-growable-memory");
+  }
+
   // Default value of exportDynamic depends on `-shared`
   config->exportDynamic =
       args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, config->shared);
