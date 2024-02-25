@@ -31,6 +31,7 @@
 # Instructions for regenerating the test object:
 
 cd %S/Inputs # or copy %S/Inputs/mcdc-maxbs.c into the working directory
+
 clang -Os -fcoverage-mcdc -fprofile-instr-generate \
     -fcoverage-mapping -fcoverage-compilation-dir=. \
     -mllvm -enable-name-compression=false \
