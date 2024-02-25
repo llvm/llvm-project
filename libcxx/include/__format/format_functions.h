@@ -64,14 +64,14 @@ using wformat_args = basic_format_args<wformat_context>;
 
 template <class _Context = format_context, class... _Args>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI __format_arg_store<_Context, _Args...>
-make_format_args(_Args&... __args _LIBCPP_LIFETIMEBOUND) {
+make_format_args(_LIBCPP_LIFETIMEBOUND _Args&... __args) {
   return _VSTD::__format_arg_store<_Context, _Args...>(__args...);
 }
 
 #  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <class... _Args>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI __format_arg_store<wformat_context, _Args...>
-make_wformat_args(_Args&... __args _LIBCPP_LIFETIMEBOUND) {
+make_wformat_args(_LIBCPP_LIFETIMEBOUND _Args&... __args) {
   return _VSTD::__format_arg_store<wformat_context, _Args...>(__args...);
 }
 #  endif
