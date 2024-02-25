@@ -7215,8 +7215,8 @@ bool llvm::propagatesPoison(const Use &PoisonOp) {
 /// poison. If the callback \p Handle returns true, stop processing and return
 /// true. Otherwise, return false.
 template <typename CallableT>
-bool handleGuaranteedWellDefinedOps(const Instruction *I,
-                                    const CallableT &Handle) {
+static bool handleGuaranteedWellDefinedOps(const Instruction *I,
+                                           const CallableT &Handle) {
   switch (I->getOpcode()) {
     case Instruction::Store:
       if (Handle(cast<StoreInst>(I)->getPointerOperand()))
@@ -7285,8 +7285,8 @@ void llvm::getGuaranteedWellDefinedOps(
 
 /// Enumerates all operands of \p I that are guaranteed to not be poison.
 template <typename CallableT>
-bool handleGuaranteedNonPoisonOps(const Instruction *I,
-                                  const CallableT &Handle) {
+static bool handleGuaranteedNonPoisonOps(const Instruction *I,
+                                         const CallableT &Handle) {
   if (handleGuaranteedWellDefinedOps(I, Handle))
     return true;
   switch (I->getOpcode()) {
