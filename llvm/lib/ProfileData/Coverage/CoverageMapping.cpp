@@ -243,8 +243,6 @@ class MCDCRecordProcessor {
   /// Total number of conditions in the boolean expression.
   unsigned NumConditions;
 
-  unsigned BitmapIdx;
-
   /// Mapping of a condition ID to its corresponding branch params.
   llvm::DenseMap<unsigned, mcdc::ConditionIDs> CondsMap;
 
@@ -265,7 +263,6 @@ public:
       : Bitmap(Bitmap), Region(Region),
         DecisionParams(Region.getDecisionParams()), Branches(Branches),
         NumConditions(DecisionParams.NumConditions),
-        BitmapIdx(DecisionParams.BitmapIdx * CHAR_BIT),
         Folded(NumConditions, false), IndependencePairs(NumConditions) {}
 
 private:
@@ -287,7 +284,7 @@ private:
         continue;
       }
 
-      if (!Bitmap[BitmapIdx + Index])
+      if (!Bitmap[DecisionParams.BitmapIdx * CHAR_BIT + Index])
         continue;
 
       // Copy the completed test vector to the vector of testvectors.
