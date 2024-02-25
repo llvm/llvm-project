@@ -569,7 +569,7 @@ std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
 void AArch64PassConfig::addIRPasses() {
   // Always expand atomic operations, we don't deal with atomicrmw or cmpxchg
   // ourselves.
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   // Expand any SVE vector library calls that we can't code generate directly.
   if (EnableSVEIntrinsicOpts &&
