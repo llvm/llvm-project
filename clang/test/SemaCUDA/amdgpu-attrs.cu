@@ -269,22 +269,40 @@ const int c_num_wg_x = 32;
 __attribute__((amdgpu_max_num_work_groups(c_num_wg_x, 1, 1)))
 __global__ void max_num_work_groups_32_1_1_const_arg0() {}
 
-// expected-error@+2{{'amdgpu_max_num_work_groups' attribute requires parameter 0 to be an integer constant}}
 template<unsigned a>
 __attribute__((amdgpu_max_num_work_groups(a, 1, 1)))
-__global__ void template_1_max_num_work_groups() {}
-template __global__ void template_1_max_num_work_groups<32>();
+__global__ void template_a_1_1_max_num_work_groups() {}
+template __global__ void template_a_1_1_max_num_work_groups<32>();
 
-// expected-error@+2{{'amdgpu_max_num_work_groups' attribute requires parameter 1 to be an integer constant}}
 template<unsigned a>
 __attribute__((amdgpu_max_num_work_groups(32, a, 1)))
-__global__ void template_2_max_num_work_groups() {}
-template __global__ void template_2_max_num_work_groups<1>();
+__global__ void template_32_a_1_max_num_work_groups() {}
+template __global__ void template_32_a_1_max_num_work_groups<1>();
 
-// expected-error@+2{{'amdgpu_max_num_work_groups' attribute requires parameter 2 to be an integer constant}}
 template<unsigned a>
 __attribute__((amdgpu_max_num_work_groups(32, 1, a)))
-__global__ void template_3_max_num_work_groups() {}
-template __global__ void template_3_max_num_work_groups<1>();
+__global__ void template_32_1_a_max_num_work_groups() {}
+template __global__ void template_32_1_a_max_num_work_groups<1>();
+
+// expected-error@+3{{'amdgpu_max_num_work_groups' attribute must be greater than 0}}
+// expected-note@+4{{in instantiation of}}
+template<unsigned b>
+__attribute__((amdgpu_max_num_work_groups(b, 1, 1)))
+__global__ void template_b_1_1_max_num_work_groups() {}
+template __global__ void template_b_1_1_max_num_work_groups<0>();
+
+// expected-error@+3{{'amdgpu_max_num_work_groups' attribute must be greater than 0}}
+// expected-note@+4{{in instantiation of}}
+template<unsigned b>
+__attribute__((amdgpu_max_num_work_groups(32, b, 1)))
+__global__ void template_32_b_1_max_num_work_groups() {}
+template __global__ void template_32_b_1_max_num_work_groups<0>();
+
+// expected-error@+3{{'amdgpu_max_num_work_groups' attribute must be greater than 0}}
+// expected-note@+4{{in instantiation of}}
+template<unsigned b>
+__attribute__((amdgpu_max_num_work_groups(32, 1, b)))
+__global__ void template_32_1_b_max_num_work_groups() {}
+template __global__ void template_32_1_b_max_num_work_groups<0>();
 
 

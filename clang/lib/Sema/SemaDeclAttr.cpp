@@ -8078,36 +8078,65 @@ static void handleAMDGPUNumVGPRAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) AMDGPUNumVGPRAttr(S.Context, AL, NumVGPR));
 }
 
+// Returns true if error
+static bool
+checkAMDGPUMaxNumWorkGroupsArguments(Sema &S, Expr *XExpr, Expr *YExpr,
+                                     Expr *ZExpr,
+                                     const AMDGPUMaxNumWorkGroupsAttr &Attr) {
+  if (S.DiagnoseUnexpandedParameterPack(XExpr) ||
+      S.DiagnoseUnexpandedParameterPack(YExpr) ||
+      S.DiagnoseUnexpandedParameterPack(ZExpr))
+    return true;
+
+  // Accept template arguments for now as they depend on something else.
+  // We'll get to check them when they eventually get instantiated.
+  if (XExpr->isValueDependent() || YExpr->isValueDependent() ||
+      ZExpr->isValueDependent())
+    return false;
+
+  uint32_t NumWG[3];
+  Expr *Exprs[3] = {XExpr, YExpr, ZExpr};
+  for (int i = 0; i < 3; i++) {
+    if (!checkUInt32Argument(S, Attr, Exprs[i], NumWG[i], i,
+                             /*StrictlyUnsigned=*/true))
+      return true;
+    if (NumWG[i] == 0) {
+      S.Diag(Attr.getLoc(), diag::err_attribute_argument_is_zero)
+          << &Attr << Exprs[i]->getSourceRange();
+      return true;
+    }
+  }
+
+  return false;
+}
+
+AMDGPUMaxNumWorkGroupsAttr *
+Sema::CreateAMDGPUMaxNumWorkGroupsAttr(const AttributeCommonInfo &CI,
+                                       Expr *XExpr, Expr *YExpr, Expr *ZExpr) {
+  AMDGPUMaxNumWorkGroupsAttr TmpAttr(Context, CI, XExpr, YExpr, ZExpr);
+
+  if (checkAMDGPUMaxNumWorkGroupsArguments(*this, XExpr, YExpr, ZExpr, TmpAttr))
+    return nullptr;
+
+  return ::new (Context)
+      AMDGPUMaxNumWorkGroupsAttr(Context, CI, XExpr, YExpr, ZExpr);
+}
+
+void Sema::addAMDGPUMaxNumWorkGroupsAttr(Decl *D, const AttributeCommonInfo &CI,
+                                         Expr *XExpr, Expr *YExpr,
+                                         Expr *ZExpr) {
+  if (auto *Attr = CreateAMDGPUMaxNumWorkGroupsAttr(CI, XExpr, YExpr, ZExpr))
+    D->addAttr(Attr);
+}
+
 static void handleAMDGPUMaxNumWorkGroupsAttr(Sema &S, Decl *D,
                                              const ParsedAttr &AL) {
   if (AL.getNumArgs() != 3) {
     S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 3;
     return;
   }
-  uint32_t NumWGX = 0;
-  uint32_t NumWGY = 0;
-  uint32_t NumWGZ = 0;
-  Expr *NumWGXExpr = AL.getArgAsExpr(0);
-  Expr *NumWGYExpr = AL.getArgAsExpr(1);
-  Expr *NumWGZExpr = AL.getArgAsExpr(2);
-  if (!checkUInt32Argument(S, AL, NumWGXExpr, NumWGX, 0, true))
-    return;
-  if (!checkUInt32Argument(S, AL, NumWGYExpr, NumWGY, 1, true))
-    return;
-  if (!checkUInt32Argument(S, AL, NumWGZExpr, NumWGZ, 2, true))
-    return;
-
-  if (NumWGX == 0 || NumWGY == 0 || NumWGZ == 0) {
-    Expr *E = NumWGZExpr;
-    if (NumWGY == 0)
-      E = NumWGYExpr;
-    if (NumWGX == 0)
-      E = NumWGXExpr;
-    S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
-        << AL << E->getSourceRange();
-  } else
-    D->addAttr(::new (S.Context) AMDGPUMaxNumWorkGroupsAttr(
-        S.Context, AL, NumWGXExpr, NumWGYExpr, NumWGZExpr));
+  S.addAMDGPUMaxNumWorkGroupsAttr(D, AL, AL.getArgAsExpr(0), AL.getArgAsExpr(1),
+                                  AL.getArgAsExpr(2));
 }
 
 static void handleX86ForceAlignArgPointerAttr(Sema &S, Decl *D,
