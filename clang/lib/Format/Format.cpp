@@ -3914,13 +3914,14 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
   return FormatStyle::LK_Cpp;
 }
 
-FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
+FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code,
+                                        bool GuessObjC) {
   const auto GuessedLanguage = getLanguageByFileName(FileName);
   if (GuessedLanguage == FormatStyle::LK_Cpp) {
     auto Extension = llvm::sys::path::extension(FileName);
     // If there's no file extension (or it's .h), we need to check the contents
     // of the code to see if it contains Objective-C.
-    if (Extension.empty() || Extension == ".h") {
+    if (GuessObjC && (Extension.empty() || Extension == ".h")) {
       auto NonEmptyFileName = FileName.empty() ? "guess.h" : FileName;
       Environment Env(Code, NonEmptyFileName, /*Ranges=*/{});
       ObjCHeaderStyleGuesser Guesser(Env, getLLVMStyle());
@@ -3952,8 +3953,8 @@ loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
 llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
                                      StringRef FallbackStyleName,
                                      StringRef Code, llvm::vfs::FileSystem *FS,
-                                     bool AllowUnknownOptions) {
-  FormatStyle Style = getLLVMStyle(guessLanguage(FileName, Code));
+                                     bool AllowUnknownOptions, bool GuessObjC) {
+  FormatStyle Style = getLLVMStyle(guessLanguage(FileName, Code, GuessObjC));
   FormatStyle FallbackStyle = getNoStyle();
   if (!getPredefinedStyle(FallbackStyleName, Style.Language, &FallbackStyle))
     return make_string_error("Invalid fallback style: " + FallbackStyleName);

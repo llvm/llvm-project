@@ -5228,19 +5228,20 @@ extern const char *DefaultFallbackStyle;
 /// \param[in] AllowUnknownOptions If true, unknown format options only
 ///             emit a warning. If false, errors are emitted on unknown format
 ///             options.
+/// \param[in] GuessObjC If true, guess and see if the language is Objective-C.
 ///
 /// \returns FormatStyle as specified by ``StyleName``. If ``StyleName`` is
 /// "file" and no file is found, returns ``FallbackStyle``. If no style could be
 /// determined, returns an Error.
-llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
-                                     StringRef FallbackStyle,
-                                     StringRef Code = "",
-                                     llvm::vfs::FileSystem *FS = nullptr,
-                                     bool AllowUnknownOptions = false);
+llvm::Expected<FormatStyle>
+getStyle(StringRef StyleName, StringRef FileName, StringRef FallbackStyle,
+         StringRef Code = "", llvm::vfs::FileSystem *FS = nullptr,
+         bool AllowUnknownOptions = false, bool GuessObjC = true);
 
 // Guesses the language from the ``FileName`` and ``Code`` to be formatted.
 // Defaults to FormatStyle::LK_Cpp.
-FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code);
+FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code,
+                                        bool GuessObjC = true);
 
 // Returns a string representation of ``Language``.
 inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
