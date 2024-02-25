@@ -7054,9 +7054,13 @@ bool CombinerHelper::matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) {
     }
   };
 
+  // We try to combine addo to non-overflowing add.
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, {DstTy}}) ||
+      !isConstantLegalOrBeforeLegalizer(CarryTy))
+    return false;
+
   // We try to combine uaddo to non-overflowing add.
-  if (!IsSigned && isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, {DstTy}}) &&
-      isConstantLegalOrBeforeLegalizer(DstTy)) {
+  if (!IsSigned) {
     ConstantRange CRLHS =
         ConstantRange::fromKnownBits(KB->getKnownBits(LHS), false /*IsSigned*/);
     ConstantRange CRRHS =
@@ -7080,14 +7084,11 @@ bool CombinerHelper::matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) {
       };
       return true;
     }
-    };
+    }
     return false;
-  };
+  }
 
   // We try to combine saddo to non-overflowing add.
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, {DstTy}}) ||
-      !isConstantLegalOrBeforeLegalizer(CarryTy))
-    return false;
 
   // If LHS and RHS each have at least two sign bits, then there is no signed
   // overflow.
@@ -7122,7 +7123,7 @@ bool CombinerHelper::matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) {
     };
     return true;
   }
-  };
+  }
 
   return false;
 }
