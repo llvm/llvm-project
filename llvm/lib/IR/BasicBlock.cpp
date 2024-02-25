@@ -81,12 +81,6 @@ void BasicBlock::convertToNewDbgValues() {
       continue;
     }
 
-    if (DbgLabelInst *DLI = dyn_cast<DbgLabelInst>(&I)) {
-      DPVals.push_back(new DPLabel(DLI->getLabel(), DLI->getDebugLoc()));
-      DLI->eraseFromParent();
-      continue;
-    }
-
     if (DPVals.empty())
       continue;
 
@@ -113,12 +107,16 @@ void BasicBlock::convertFromNewDbgValues() {
       continue;
 
     DPMarker &Marker = *Inst.DbgMarker;
-    for (DbgRecord &DR : Marker.getDbgValueRange())
-      InstList.insert(Inst.getIterator(),
-                      DR.createDebugIntrinsic(getModule(), nullptr));
+    for (DbgRecord &DR : Marker.getDbgValueRange()) {
+      if (auto *DPV = dyn_cast<DPValue>(&DR))
+        InstList.insert(Inst.getIterator(),
+                        DPV->createDebugIntrinsic(getModule(), nullptr));
+      else
+        llvm_unreachable("unsupported DbgRecord kind");
+    }
 
     Marker.eraseFromParent();
-  }
+  };
 
   // Assume no trailing DPValues: we could technically create them at the end
   // of the block, after a terminator, but this would be non-cannonical and

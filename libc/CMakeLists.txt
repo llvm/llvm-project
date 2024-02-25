@@ -162,7 +162,7 @@ elseif(LIBC_CMAKE_VERBOSE_LOGGING)
   message(STATUS "Path for config files is: ${LIBC_CONFIG_PATH}")
 endif()
 
-# option(LIBC_ENABLE_WIDE_CHARACTERS 
+# option(LIBC_ENABLE_WIDE_CHARACTERS
 # "Whether to enable wide character functions on supported platforms. This may
 # also set flags to enable or disable wide character support within other
 # functions (e.g. printf)." ON)

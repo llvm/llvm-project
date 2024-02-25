@@ -14,4 +14,4 @@
 
 %%public_api()
 
-#endif // LLVM_LIBC_FCNTL_H 
+#endif // LLVM_LIBC_FCNTL_H
