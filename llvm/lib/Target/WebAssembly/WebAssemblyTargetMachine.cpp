@@ -493,7 +493,7 @@ void WebAssemblyPassConfig::addISelPrepare() {
   addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
 
   // This is a no-op if atomics are not used in the module
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addISelPrepare();
 }

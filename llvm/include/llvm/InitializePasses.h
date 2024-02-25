@@ -52,7 +52,7 @@ void initializeAAResultsWrapperPassPass(PassRegistry&);
 void initializeAlwaysInlinerLegacyPassPass(PassRegistry&);
 void initializeAssignmentTrackingAnalysisPass(PassRegistry &);
 void initializeAssumptionCacheTrackerPass(PassRegistry&);
-void initializeAtomicExpandPass(PassRegistry&);
+void initializeAtomicExpandLegacyPass(PassRegistry &);
 void initializeBasicBlockPathCloningPass(PassRegistry &);
 void initializeBasicBlockSectionsProfileReaderWrapperPassPass(PassRegistry &);
 void initializeBasicBlockSectionsPass(PassRegistry &);
