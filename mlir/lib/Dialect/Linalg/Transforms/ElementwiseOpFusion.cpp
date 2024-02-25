@@ -1479,17 +1479,7 @@ LinalgOp createCollapsedOp(LinalgOp op, const CollapsingInfo &collapsingInfo,
       rewriter, op, resultTypes,
       llvm::to_vector(llvm::concat<Value>(inputOperands, outputOperands)));
 
-  // TODO: Find a more general way to determine if op requires explicit
-  // indexing_maps and iterator_types
-  if (isa<linalg::GenericOp>(op)) {
-    // Get the iterator types for the operand.
-    SmallVector<Attribute> iteratorTypes = llvm::map_to_vector(
-        getCollapsedOpIteratorTypes(op.getIteratorTypesArray(), collapsingInfo),
-        [&](utils::IteratorType itTy) {
-          return cast<Attribute>(
-              IteratorTypeAttr::get(rewriter.getContext(), itTy));
-        });
-
+  if (op->hasAttr("indexing_maps")) {
     // Get the indexing maps.
     auto indexingMaps =
         llvm::map_to_vector(op.getIndexingMapsArray(), [&](AffineMap map) {
@@ -1498,6 +1488,16 @@ LinalgOp createCollapsedOp(LinalgOp op, const CollapsingInfo &collapsingInfo,
 
     collapsedOp->setAttr("indexing_maps",
                          rewriter.getAffineMapArrayAttr(indexingMaps));
+  }
+
+  if (op->hasAttr("iterator_types")) {
+    // Get the iterator types for the operand.
+    SmallVector<Attribute> iteratorTypes = llvm::map_to_vector(
+        getCollapsedOpIteratorTypes(op.getIteratorTypesArray(), collapsingInfo),
+        [&](utils::IteratorType itTy) {
+          return cast<Attribute>(
+              IteratorTypeAttr::get(rewriter.getContext(), itTy));
+        });
     collapsedOp->setAttr("iterator_types",
                          rewriter.getArrayAttr(iteratorTypes));
   }

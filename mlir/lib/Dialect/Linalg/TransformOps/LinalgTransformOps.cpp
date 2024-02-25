@@ -3264,6 +3264,7 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
   if (failed(maybeFlattened))
     return emitDefaultSilenceableFailure(target);
   results.push_back((*maybeFlattened).collapsedOp);
+  rewriter.replaceOp(target, (*maybeFlattened).results);
   return DiagnosedSilenceableFailure::success();
 }
 
