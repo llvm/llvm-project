@@ -1345,7 +1345,7 @@ public:
     }
   };
 
-private:
+protected:
   /// A CallbackVH to arrange for ScalarEvolution to be notified whenever a
   /// Value is deleted.
   class SCEVCallbackVH final : public CallbackVH {
