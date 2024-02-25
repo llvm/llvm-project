@@ -13,8 +13,10 @@
 #include "Context.h"
 #include "Floating.h"
 #include "Function.h"
+#include "InterpShared.h"
 #include "PrimType.h"
 #include "Program.h"
+#include "clang/AST/Attr.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -2656,6 +2658,7 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   std::optional<PrimType> T = classify(ReturnType);
   bool HasRVO = !ReturnType->isVoidType() && !T;
+  const FunctionDecl *FuncDecl = E->getDirectCallee();
 
   if (HasRVO) {
     if (DiscardResult) {
@@ -2673,17 +2676,16 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
   }
 
-  auto Args = E->arguments();
+  auto Args = llvm::ArrayRef(E->getArgs(), E->getNumArgs());
   // Calling a static operator will still
   // pass the instance, but we don't need it.
   // Discard it here.
   if (isa<CXXOperatorCallExpr>(E)) {
-    if (const auto *MD =
-            dyn_cast_if_present<CXXMethodDecl>(E->getDirectCallee());
+    if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(FuncDecl);
         MD && MD->isStatic()) {
       if (!this->discard(E->getArg(0)))
         return false;
-      Args = drop_begin(Args, 1);
+      Args = Args.drop_front();
     }
   }
 
@@ -2693,13 +2695,25 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
       return false;
   }
 
+  llvm::BitVector NonNullArgs = collectNonNullArgs(FuncDecl, Args);
   // Put arguments on the stack.
+  unsigned ArgIndex = 0;
   for (const auto *Arg : Args) {
     if (!this->visit(Arg))
       return false;
+
+    // If we know the callee already, check the known parametrs for nullability.
+    if (FuncDecl && NonNullArgs[ArgIndex]) {
+      PrimType ArgT = classify(Arg).value_or(PT_Ptr);
+      if (ArgT == PT_Ptr || ArgT == PT_FnPtr) {
+        if (!this->emitCheckNonNullArg(ArgT, Arg))
+          return false;
+      }
+    }
+    ++ArgIndex;
   }
 
-  if (const FunctionDecl *FuncDecl = E->getDirectCallee()) {
+  if (FuncDecl) {
     const Function *Func = getFunction(FuncDecl);
     if (!Func)
       return false;
@@ -2748,7 +2762,7 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     if (!this->visit(E->getCallee()))
       return false;
 
-    if (!this->emitCallPtr(ArgSize, E))
+    if (!this->emitCallPtr(ArgSize, E, E))
       return false;
   }
 

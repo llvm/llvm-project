@@ -206,7 +206,7 @@ def CallBI : Opcode {
 }
 
 def CallPtr : Opcode {
-  let Args = [ArgUint32];
+  let Args = [ArgUint32, ArgCallExpr];
   let Types = [];
 }
 
@@ -706,3 +706,8 @@ def InvalidDeclRef : Opcode {
 }
 
 def ArrayDecay : Opcode;
+
+def CheckNonNullArg : Opcode {
+  let Types = [PtrTypeClass];
+  let HasGroup = 1;
+}
