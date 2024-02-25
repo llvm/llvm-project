@@ -47,6 +47,9 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
 EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
+  this->ConvertResultToRValue =
+      VD->getAnyInitializer() &&
+      (VD->getAnyInitializer()->getType()->isAnyComplexType());
   EvalResult.setSource(VD);
 
   if (!this->visitDecl(VD) && EvalResult.empty())
@@ -152,7 +155,6 @@ template <> bool EvalEmitter::emitRet<PT_FnPtr>(const SourceInfo &Info) {
   if (!isActive())
     return true;
   // Function pointers cannot be converted to rvalues.
-  assert(!ConvertResultToRValue);
   EvalResult.setFunctionPointer(S.Stk.pop<FunctionPointer>());
   return true;
 }

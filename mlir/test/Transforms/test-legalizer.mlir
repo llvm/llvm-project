@@ -334,3 +334,15 @@ func.func @test_move_op_before_rollback() {
   }) : () -> ()
   "test.return"() : () -> ()
 }
+
+// -----
+
+// CHECK-LABEL: func @test_properties_rollback()
+func.func @test_properties_rollback() {
+  // CHECK: test.with_properties <{a = 32 : i64,
+  // expected-remark @below{{op 'test.with_properties' is not legalizable}}
+  test.with_properties
+      <{a = 32 : i64, array = array<i64: 1, 2, 3, 4>, b = "foo"}>
+      {modify_inplace}
+  "test.return"() : () -> ()
+}

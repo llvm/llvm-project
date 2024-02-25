@@ -104,9 +104,12 @@ public:
   /// not to waste the thread.
   void wait(ThreadPoolTaskGroup &Group);
 
-  // TODO: misleading legacy name warning!
   // Returns the maximum number of worker threads in the pool, not the current
   // number of threads!
+  unsigned getMaxConcurrency() const { return MaxThreadCount; }
+
+  // TODO: misleading legacy name warning!
+  LLVM_DEPRECATED("Use getMaxConcurrency instead", "getMaxConcurrency")
   unsigned getThreadCount() const { return MaxThreadCount; }
 
   /// Returns true if the current thread is a worker thread of this thread pool.
