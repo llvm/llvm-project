@@ -36,8 +36,9 @@ template <typename Op>
 struct IndependentParallelIteratorDomainShardingInterface
     : public ShardingInterface::ExternalModel<
           IndependentParallelIteratorDomainShardingInterface<Op>, Op> {
-  SmallVector<IteratorType> getLoopIteratorTypes(Operation *operation) const {
-    SmallVector<IteratorType> iterTypes;
+  SmallVector<utils::IteratorType>
+  getLoopIteratorTypes(Operation *operation) const {
+    SmallVector<utils::IteratorType> iterTypes;
     for (Type t : operation->getOperandTypes()) {
       populateIteratorTypes(t, iterTypes);
     }
@@ -65,8 +66,9 @@ struct IndependentParallelIteratorDomainShardingInterface
   }
 
 private:
-  void populateIteratorTypes(Type t,
-                             SmallVector<IteratorType> &iterTypes) const {
+  void
+  populateIteratorTypes(Type t,
+                        SmallVector<utils::IteratorType> &iterTypes) const {
     RankedTensorType rankedTensorType = t.dyn_cast<RankedTensorType>();
     if (!rankedTensorType) {
       return;
@@ -74,7 +76,7 @@ private:
 
     iterTypes.reserve(iterTypes.size() + rankedTensorType.getRank());
     for (int64_t i = 0; i < rankedTensorType.getRank(); ++i) {
-      iterTypes.push_back(IteratorType::Parallel);
+      iterTypes.push_back(utils::IteratorType::parallel);
     }
   }
 };
@@ -84,12 +86,13 @@ template <typename ElemwiseOp>
 struct ElementwiseShardingInterface
     : public ShardingInterface::ExternalModel<
           ElementwiseShardingInterface<ElemwiseOp>, ElemwiseOp> {
-  SmallVector<IteratorType> getLoopIteratorTypes(Operation *op) const {
+  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     Value val = op->getOperand(0);
     auto type = val.getType().dyn_cast<RankedTensorType>();
     if (!type)
       return {};
-    SmallVector<IteratorType> types(type.getRank(), IteratorType::Parallel);
+    SmallVector<utils::IteratorType> types(type.getRank(),
+                                           utils::IteratorType::parallel);
     return types;
   }
 

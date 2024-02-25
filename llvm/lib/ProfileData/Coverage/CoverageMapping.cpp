@@ -364,8 +364,6 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// Total number of conditions in the boolean expression.
   unsigned NumConditions;
 
-  unsigned BitmapIdx;
-
   /// Vector used to track whether a condition is constant folded.
   MCDCRecord::BoolVector Folded;
 
@@ -387,7 +385,6 @@ public:
       : NextIDsBuilder(Branches), TVIdxBuilder(this->NextIDs), Bitmap(Bitmap),
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
-        BitmapIdx(DecisionParams.BitmapIdx * CHAR_BIT),
         Folded(NumConditions, false), IndependencePairs(NumConditions) {}
 
 private:
@@ -414,7 +411,7 @@ private:
       assert(TVIdx < SavedNodes[ID].Width);
       assert(TVIdxs.insert(NextTVIdx).second && "Duplicate TVIdx");
 
-      if (!Bitmap[BitmapIdx + Index])
+      if (!Bitmap[DecisionParams.BitmapIdx * CHAR_BIT + Index])
         continue;
 
       // Copy the completed test vector to the vector of testvectors.

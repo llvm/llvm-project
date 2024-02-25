@@ -362,7 +362,7 @@ specific operation, and executed on any viable operation type). Operation types 
 anchor pass managers must adhere to the following requirement:
 
 *   Must be registered and marked
-    [`IsolatedFromAbove`](Traits.md/#isolatedfromabove).
+    [`IsolatedFromAbove`](Traits/#isolatedfromabove).
 
     *   Passes are expected not to modify operations at or above the current
         operation being processed. If the operation is not isolated, it may

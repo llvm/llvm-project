@@ -107,10 +107,11 @@ struct _LIBCPP_TEMPLATE_VIS pair
   // Extension: This is provided in C++03 because it allows properly handling the
   //            assignment to a pair containing references, which would be a hard
   //            error otherwise.
-  template <class _U1,
-            class _U2,
-            class = __enable_if_t< is_assignable<first_type&, _U1 const&>::value &&
-                                   is_assignable<second_type&, _U2 const&>::value > >
+  template <
+      class _U1,
+      class _U2,
+      __enable_if_t<is_assignable<first_type&, _U1 const&>::value && is_assignable<second_type&, _U2 const&>::value,
+                    int> = 0>
   _LIBCPP_HIDE_FROM_ABI pair& operator=(pair<_U1, _U2> const& __p) {
     first  = __p.first;
     second = __p.second;
@@ -205,9 +206,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
   }
 
 #  if _LIBCPP_STD_VER >= 23
-  template <class _U1,
-            class _U2,
-            __enable_if_t< _CheckArgs::template __is_pair_constructible<_U1&, _U2&>() >* = nullptr>
+  template <class _U1, class _U2, __enable_if_t<_CheckArgs::template __is_pair_constructible<_U1&, _U2&>(), int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!_CheckArgs::template __is_implicit<_U1&, _U2&>())
       pair(pair<_U1, _U2>& __p) noexcept((is_nothrow_constructible<first_type, _U1&>::value &&
                                           is_nothrow_constructible<second_type, _U2&>::value))
@@ -243,7 +242,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
 #  if _LIBCPP_STD_VER >= 23
   template <class _U1,
             class _U2,
-            __enable_if_t< _CheckArgs::template __is_pair_constructible<const _U1&&, const _U2&&>() >* = nullptr>
+            __enable_if_t<_CheckArgs::template __is_pair_constructible<const _U1&&, const _U2&&>(), int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!_CheckArgs::template __is_implicit<const _U1&&, const _U2&&>())
       pair(const pair<_U1, _U2>&& __p) noexcept(is_nothrow_constructible<first_type, const _U1&&>::value &&
                                                 is_nothrow_constructible<second_type, const _U2&&>::value)
@@ -298,20 +297,20 @@ struct _LIBCPP_TEMPLATE_VIS pair
     return *this;
   }
 
-  template <class _U1,
-            class _U2,
-            __enable_if_t< is_assignable<first_type&, _U1 const&>::value &&
-                           is_assignable<second_type&, _U2 const&>::value >* = nullptr>
+  template <
+      class _U1,
+      class _U2,
+      __enable_if_t<is_assignable<first_type&, _U1 const&>::value && is_assignable<second_type&, _U2 const&>::value,
+                    int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair& operator=(pair<_U1, _U2> const& __p) {
     first  = __p.first;
     second = __p.second;
     return *this;
   }
 
-  template <
-      class _U1,
-      class _U2,
-      __enable_if_t< is_assignable<first_type&, _U1>::value && is_assignable<second_type&, _U2>::value >* = nullptr>
+  template <class _U1,
+            class _U2,
+            __enable_if_t<is_assignable<first_type&, _U1>::value && is_assignable<second_type&, _U2>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair& operator=(pair<_U1, _U2>&& __p) {
     first  = std::forward<_U1>(__p.first);
     second = std::forward<_U2>(__p.second);
@@ -381,38 +380,36 @@ struct _LIBCPP_TEMPLATE_VIS pair
   // pair-like types. This was historically provided as an extension.
 #  if _LIBCPP_STD_VER < 23
   // from std::tuple
-  template <
-      class _U1,
-      class _U2,
-      __enable_if_t< is_convertible<_U1 const&, _T1>::value && is_convertible<_U2 const&, _T2>::value >* = nullptr>
+  template <class _U1,
+            class _U2,
+            __enable_if_t<is_convertible<_U1 const&, _T1>::value && is_convertible<_U2 const&, _T2>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair(tuple<_U1, _U2> const& __p)
       : first(std::get<0>(__p)), second(std::get<1>(__p)) {}
 
-  template <
-      class _U1,
-      class _U2,
-      __enable_if_t< is_constructible<_T1, _U1 const&>::value && is_constructible<_T2, _U2 const&>::value &&
-                     !(is_convertible<_U1 const&, _T1>::value && is_convertible<_U2 const&, _T2>::value) >* = nullptr>
+  template < class _U1,
+             class _U2,
+             __enable_if_t<is_constructible<_T1, _U1 const&>::value && is_constructible<_T2, _U2 const&>::value &&
+                               !(is_convertible<_U1 const&, _T1>::value && is_convertible<_U2 const&, _T2>::value),
+                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit pair(tuple<_U1, _U2> const& __p)
       : first(std::get<0>(__p)), second(std::get<1>(__p)) {}
 
   template <class _U1,
             class _U2,
-            __enable_if_t< is_convertible<_U1, _T1>::value && is_convertible<_U2, _T2>::value >* = nullptr>
+            __enable_if_t<is_convertible<_U1, _T1>::value && is_convertible<_U2, _T2>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair(tuple<_U1, _U2>&& __p)
       : first(std::get<0>(std::move(__p))), second(std::get<1>(std::move(__p))) {}
 
   template <class _U1,
             class _U2,
-            __enable_if_t< is_constructible<_T1, _U1>::value && is_constructible<_T2, _U2>::value &&
-                           !(is_convertible<_U1, _T1>::value && is_convertible<_U2, _T2>::value) >* = nullptr>
+            __enable_if_t<is_constructible<_T1, _U1>::value && is_constructible<_T2, _U2>::value &&
+                          !(is_convertible<_U1, _T1>::value && is_convertible<_U2, _T2>::value) > = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit pair(tuple<_U1, _U2>&& __p)
       : first(std::get<0>(std::move(__p))), second(std::get<1>(std::move(__p))) {}
 
-  template <
-      class _U1,
-      class _U2,
-      __enable_if_t< is_assignable<_T1&, _U1 const&>::value && is_assignable<_T2&, _U2 const&>::value >* = nullptr>
+  template <class _U1,
+            class _U2,
+            __enable_if_t<is_assignable<_T1&, _U1 const&>::value && is_assignable<_T2&, _U2 const&>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair& operator=(tuple<_U1, _U2> const& __p) {
     first  = std::get<0>(__p);
     second = std::get<1>(__p);
@@ -421,7 +418,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
 
   template <class _U1,
             class _U2,
-            __enable_if_t< is_assignable<_T1&, _U1&&>::value && is_assignable<_T2&, _U2&&>::value >* = nullptr>
+            __enable_if_t<is_assignable<_T1&, _U1&&>::value && is_assignable<_T2&, _U2&&>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair& operator=(tuple<_U1, _U2>&& __p) {
     first  = std::get<0>(std::move(__p));
     second = std::get<1>(std::move(__p));
@@ -429,38 +426,37 @@ struct _LIBCPP_TEMPLATE_VIS pair
   }
 
   // from std::array
-  template <
-      class _Up,
-      __enable_if_t< is_convertible<_Up const&, _T1>::value && is_convertible<_Up const&, _T2>::value >* = nullptr>
+  template <class _Up,
+            __enable_if_t<is_convertible<_Up const&, _T1>::value && is_convertible<_Up const&, _T2>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair(array<_Up, 2> const& __p) : first(__p[0]), second(__p[1]) {}
 
-  template <
-      class _Up,
-      __enable_if_t< is_constructible<_T1, _Up const&>::value && is_constructible<_T2, _Up const&>::value &&
-                     !(is_convertible<_Up const&, _T1>::value && is_convertible<_Up const&, _T2>::value) >* = nullptr>
+  template <class _Up,
+            __enable_if_t<is_constructible<_T1, _Up const&>::value && is_constructible<_T2, _Up const&>::value &&
+                              !(is_convertible<_Up const&, _T1>::value && is_convertible<_Up const&, _T2>::value),
+                          int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit pair(array<_Up, 2> const& __p)
       : first(__p[0]), second(__p[1]) {}
 
-  template <class _Up, __enable_if_t< is_convertible<_Up, _T1>::value && is_convertible<_Up, _T2>::value >* = nullptr>
+  template <class _Up, __enable_if_t< is_convertible<_Up, _T1>::value && is_convertible<_Up, _T2>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair(array<_Up, 2>&& __p)
       : first(std::move(__p)[0]), second(std::move(__p)[1]) {}
 
   template <class _Up,
-            __enable_if_t< is_constructible<_T1, _Up>::value && is_constructible<_T2, _Up>::value &&
-                           !(is_convertible<_Up, _T1>::value && is_convertible<_Up, _T2>::value) >* = nullptr>
+            __enable_if_t<is_constructible<_T1, _Up>::value && is_constructible<_T2, _Up>::value &&
+                              !(is_convertible<_Up, _T1>::value && is_convertible<_Up, _T2>::value),
+                          int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit pair(array<_Up, 2>&& __p)
       : first(std::move(__p)[0]), second(std::move(__p)[1]) {}
 
-  template <
-      class _Up,
-      __enable_if_t< is_assignable<_T1&, _Up const&>::value && is_assignable<_T2&, _Up const&>::value >* = nullptr>
+  template <class _Up,
+            __enable_if_t<is_assignable<_T1&, _Up const&>::value && is_assignable<_T2&, _Up const&>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair& operator=(array<_Up, 2> const& __p) {
     first  = std::get<0>(__p);
     second = std::get<1>(__p);
     return *this;
   }
 
-  template <class _Up, __enable_if_t< is_assignable<_T1&, _Up>::value && is_assignable<_T2&, _Up>::value >* = nullptr>
+  template <class _Up, __enable_if_t<is_assignable<_T1&, _Up>::value && is_assignable<_T2&, _Up>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair& operator=(array<_Up, 2>&& __p) {
     first  = std::get<0>(std::move(__p));
     second = std::get<1>(std::move(__p));

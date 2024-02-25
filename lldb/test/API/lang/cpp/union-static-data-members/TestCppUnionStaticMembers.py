@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
+
 class CppUnionStaticMembersTestCase(TestBase):
     def test_print_union(self):
         """Tests that frame variable and expr work
@@ -20,12 +21,16 @@ class CppUnionStaticMembersTestCase(TestBase):
         self.expect("frame variable foo", substrs=["val = 42"])
         self.expect("frame variable bar", substrs=["val = 137"])
 
-        self.expect_expr("foo", result_type="Foo", result_children=[ValueCheck(
-                name="val", value="42"
-            )])
-        self.expect_expr("bar", result_type="Bar", result_children=[ValueCheck(
-                name="val", value="137"
-            )])
+        self.expect_expr(
+            "foo",
+            result_type="Foo",
+            result_children=[ValueCheck(name="val", value="42")],
+        )
+        self.expect_expr(
+            "bar",
+            result_type="Bar",
+            result_children=[ValueCheck(name="val", value="137")],
+        )
 
     @expectedFailureWindows
     def test_expr_union_static_members(self):
@@ -38,15 +43,17 @@ class CppUnionStaticMembersTestCase(TestBase):
         )
 
         self.expect_expr("Foo::sVal1", result_type="const int", result_value="-42")
-        self.expect_expr("Foo::sVal2", result_type="Foo", result_children=[ValueCheck(
-                name="val", value="42"
-            )])
+        self.expect_expr(
+            "Foo::sVal2",
+            result_type="Foo",
+            result_children=[ValueCheck(name="val", value="42")],
+        )
 
     @expectedFailureWindows
     def test_union_in_anon_namespace(self):
         """Tests that frame variable and expr work
-           for union static data members in anonymous
-           namespaces"""
+        for union static data members in anonymous
+        namespaces"""
         self.build()
 
         (target, process, main_thread, _) = lldbutil.run_to_source_breakpoint(
@@ -54,6 +61,8 @@ class CppUnionStaticMembersTestCase(TestBase):
         )
 
         self.expect_expr("Bar::sVal1", result_type="const int", result_value="-137")
-        self.expect_expr("Bar::sVal2", result_type="Bar", result_children=[ValueCheck(
-                name="val", value="137"
-            )])
+        self.expect_expr(
+            "Bar::sVal2",
+            result_type="Bar",
+            result_children=[ValueCheck(name="val", value="137")],
+        )
