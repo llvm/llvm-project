@@ -298,7 +298,7 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
     unsigned idx = 0;
     for (RecordDecl::field_iterator i = RD->field_begin(),
          e = RD->field_end(); i != e; ++i, ++idx) {
-      if ((*i)->isZeroSize(Context) || (*i)->isUnnamedBitfield())
+      if ((*i)->isZeroSize(Context) || (*i)->isBitField())
         continue;
       uint64_t Offset = BaseOffset +
                         Layout.getFieldOffset(idx) / Context.getCharWidth();

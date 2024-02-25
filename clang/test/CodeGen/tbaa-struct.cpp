@@ -130,7 +130,7 @@ void copy8(NamedBitfields *a1, NamedBitfields *a2) {
 // CHECK-OLD: [[TS3]] = !{i64 0, i64 8, !{{.*}}, i64 0, i64 2, !{{.*}}, i64 4, i64 8, !{{.*}}}
 // CHECK-OLD: [[TS4]] = !{i64 0, i64 1, [[TAG_CHAR]], i64 1, i64 1, [[TAG_CHAR]], i64 2, i64 1, [[TAG_CHAR]]}
 // CHECK-OLD: [[TS5]] = !{i64 0, i64 1, [[TAG_CHAR]], i64 4, i64 1, [[TAG_CHAR]], i64 5, i64 1, [[TAG_CHAR]]}
-// CHECK-OLD: [[TS6]] = !{i64 0, i64 4, [[TAG_INT]], i64 1, i64 4, [[TAG_INT]], i64 2, i64 1, [[TAG_CHAR]], i64 8, i64 8, [[TAG_DOUBLE:!.+]]}
+// CHECK-OLD: [[TS6]] = !{i64 2, i64 1, [[TAG_CHAR]], i64 8, i64 8, [[TAG_DOUBLE:!.+]]}
 // CHECK-OLD: [[TAG_DOUBLE]] = !{[[DOUBLE:!.+]], [[DOUBLE]], i64 0}
 // CHECK-OLD  [[DOUBLE]] = !{!"double", [[CHAR]], i64 0}
 
