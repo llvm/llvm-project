@@ -316,8 +316,7 @@ define i32 @test73(i32 %x) {
 ; SMAX(SMAX(X, 36), 75) -> SMAX(X, 75)
 define i32 @test74(i32 %x) {
 ; CHECK-LABEL: @test74(
-; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 36)
-; CHECK-NEXT:    [[RETVAL:%.*]] = call i32 @llvm.umax.i32(i32 [[COND]], i32 75)
+; CHECK-NEXT:    [[RETVAL:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 75)
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
   %cmp = icmp slt i32 %x, 36
@@ -1422,8 +1421,7 @@ entry:
 
 define i32 @test_umax_smax1(i32 %x) {
 ; CHECK-LABEL: @test_umax_smax1(
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 0)
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[SMAX]], i32 1)
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 1)
 ; CHECK-NEXT:    ret i32 [[UMAX]]
 ;
   %smax = call i32 @llvm.smax.i32(i32 %x, i32 0)
@@ -1443,8 +1441,7 @@ define i32 @test_umax_smax2(i32 %x) {
 
 define <2 x i32> @test_umax_smax_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test_umax_smax_vec(
-; CHECK-NEXT:    [[SMAX:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[X:%.*]], <2 x i32> <i32 0, i32 20>)
-; CHECK-NEXT:    [[UMAX:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[SMAX]], <2 x i32> <i32 1, i32 10>)
+; CHECK-NEXT:    [[UMAX:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[X:%.*]], <2 x i32> <i32 1, i32 20>)
 ; CHECK-NEXT:    ret <2 x i32> [[UMAX]]
 ;
   %smax = call <2 x i32> @llvm.smax.v2i32(<2 x i32> %x, <2 x i32> <i32 0, i32 20>)
@@ -1464,8 +1461,7 @@ define i32 @test_smin_umin1(i32 %x) {
 
 define i32 @test_smin_umin2(i32 %x) {
 ; CHECK-LABEL: @test_smin_umin2(
-; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 20)
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[SMIN]], i32 10)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 10)
 ; CHECK-NEXT:    ret i32 [[UMIN]]
 ;
   %smin = call i32 @llvm.umin.i32(i32 %x, i32 20)
@@ -1475,8 +1471,7 @@ define i32 @test_smin_umin2(i32 %x) {
 
 define <2 x i32> @test_smin_umin_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test_smin_umin_vec(
-; CHECK-NEXT:    [[SMIN:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> <i32 10, i32 20>)
-; CHECK-NEXT:    [[UMIN:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[SMIN]], <2 x i32> <i32 20, i32 10>)
+; CHECK-NEXT:    [[UMIN:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> <i32 10, i32 10>)
 ; CHECK-NEXT:    ret <2 x i32> [[UMIN]]
 ;
   %smin = call <2 x i32> @llvm.umin.v2i32(<2 x i32> %x, <2 x i32> <i32 10, i32 20>)
