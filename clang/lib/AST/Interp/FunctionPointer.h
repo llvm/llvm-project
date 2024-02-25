@@ -26,6 +26,7 @@ public:
   FunctionPointer(const Function *Func) : Func(Func) { assert(Func); }
 
   const Function *getFunction() const { return Func; }
+  bool isZero() const { return !Func; }
 
   APValue toAPValue() const {
     if (!Func)
