@@ -1076,6 +1076,8 @@ LogicalResult ModuleTranslation::convertGlobals() {
             iterator->second += numUsers;
           }
         }
+        // Scan the operands of the operation to decrement the use count of
+        // constants. Erase the constant if the use count becomes zero.
         for (Value v : op.getOperands()) {
           auto cst = dyn_cast<llvm::ConstantAggregate>(lookupValue(v));
           if (!cst)
@@ -1084,6 +1086,8 @@ LogicalResult ModuleTranslation::convertGlobals() {
           assert(iter != constantAggregateUseMap.end() && "constant not found");
           iter->second--;
           if (iter->second == 0) {
+            // NOTE: cannot call removeDeadConstantUsers() here because it
+            // may remove the constant which has uses not be converted yet.
             if (cst->user_empty()) {
               cst->destroyConstant();
               numConstantsErased++;
@@ -1104,6 +1108,7 @@ LogicalResult ModuleTranslation::convertGlobals() {
       // converted.
       for (auto it : constantAggregateUseMap) {
         auto cst = it.first;
+        cst->removeDeadConstantUsers();
         if (cst->user_empty()) {
           cst->destroyConstant();
           numConstantsErased++;
