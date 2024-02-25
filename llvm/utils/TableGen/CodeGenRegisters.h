@@ -546,7 +546,7 @@ struct RegUnitSet {
   unsigned Weight = 0; // Cache the sum of all unit weights.
   unsigned Order = 0;  // Cache the sort key.
 
-  RegUnitSet() = default;
+  RegUnitSet(std::string Name) : Name(Name) {}
 };
 
 // Base vector for identifying TopoSigs. The contents uniquely identify a

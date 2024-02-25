@@ -230,15 +230,13 @@ namespace ConstThis {
                       // ref-note {{declared const here}}
     int a;
   public:
-    constexpr Foo() { // expected-note {{declared here}}
+    constexpr Foo() {
       this->a = 10;
       T = 13; // expected-error {{cannot assign to non-static data member 'T' with const-qualified type}} \
               // ref-error {{cannot assign to non-static data member 'T' with const-qualified type}}
     }
   };
   constexpr Foo F; // expected-error {{must be initialized by a constant expression}} \
-                   // FIXME: The following note is wrong. \
-                   // expected-note {{undefined constructor 'Foo' cannot be used in a constant expression}} \
                    // ref-error {{must be initialized by a constant expression}}
 
 
@@ -764,4 +762,17 @@ namespace IgnoredConstantExpr {
     void* m = nullptr;
     ReferenceToNestedMembers j{0};
   } test_reference_to_nested_members;
+}
+
+namespace RewrittenBinaryOperators {
+  template <class T, T Val>
+  struct Conv {
+    constexpr operator T() const { return Val; }
+    operator T() { return Val; }
+  };
+
+  struct X {
+    constexpr const Conv<int, -1> operator<=>(X) { return {}; }
+  };
+  static_assert(X() < X(), "");
 }

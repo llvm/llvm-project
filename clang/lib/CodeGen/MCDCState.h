@@ -30,17 +30,19 @@ struct State {
 
   struct Decision {
     unsigned BitmapIdx;
+    unsigned BitmapTailPos;
     llvm::SmallVector<std::array<int, 2>> Indices;
+    bool Active; /// Set false to cancel
   };
 
-  llvm::DenseMap<const Stmt *, Decision> BitmapMap;
+  llvm::DenseMap<const Stmt *, Decision> DecisionByStmt;
 
   struct Branch {
     ConditionID ID;
     const Stmt *DecisionStmt;
   };
 
-  llvm::DenseMap<const Stmt *, Branch> CondIDMap;
+  llvm::DenseMap<const Stmt *, Branch> BranchByStmt;
 };
 
 } // namespace clang::CodeGen::MCDC

@@ -39,6 +39,7 @@ clang -Os -fcoverage-mcdc -fprofile-instr-generate \
 # Instructions for regenerating the test vector:
 
 clang -fprofile-instr-generate mcdc-maxbs.o
+rm -f default.prof*
 
 # Doesn't crash if argc > 1
 ./a.out

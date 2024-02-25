@@ -238,9 +238,12 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     if (MCDCMaxCond == 0)
       return true;
 
-    /// At the top of the logical operator nest, reset the number of conditions.
-    if (LogOpStack.empty())
+    /// At the top of the logical operator nest, reset the number of conditions,
+    /// also forget previously seen split nesting cases.
+    if (LogOpStack.empty()) {
       NumCond = 0;
+      SplitNestedLogicalOp = false;
+    }
 
     if (const Expr *E = dyn_cast<Expr>(S)) {
       const BinaryOperator *BinOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
@@ -291,7 +294,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
                 "contains an operation with a nested boolean expression. "
                 "Expression will not be covered");
             Diag.Report(S->getBeginLoc(), DiagID);
-            return false;
+            return true;
           }
 
           /// Was the maximum number of conditions encountered?
@@ -302,11 +305,11 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
                 "number of conditions (%0) exceeds max (%1). "
                 "Expression will not be covered");
             Diag.Report(S->getBeginLoc(), DiagID) << NumCond << MCDCMaxCond;
-            return false;
+            return true;
           }
 
-          // Otherwise, allocate the Decision.
-          MCDCState.BitmapMap[BinOp].BitmapIdx = 0;
+          // Otherwise, allocate the Decision. (Not activated yet)
+          MCDCState.DecisionByStmt[BinOp].Active = false;
         }
         return true;
       }
@@ -1026,7 +1029,7 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
 
   std::string CoverageMapping;
   llvm::raw_string_ostream OS(CoverageMapping);
-  RegionCondIDMap.reset(new llvm::DenseMap<const Stmt *, int16_t>);
+  RegionMCDCState->BranchByStmt.clear();
   CoverageMappingGen MappingGen(
       *CGM.getCoverageMapping(), CGM.getContext().getSourceManager(),
       CGM.getLangOpts(), RegionCounterMap.get(), RegionMCDCState.get());
@@ -1136,9 +1139,12 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
 
   S = S->IgnoreParens();
 
-  if (!RegionMCDCState->BitmapMap.contains(S))
+  auto DecisionStateIter = RegionMCDCState->DecisionByStmt.find(S);
+  if (DecisionStateIter == RegionMCDCState->DecisionByStmt.end())
     return;
 
+  // Extract the offset of the global bitmap associated with this expression.
+  unsigned MCDCTestVectorBitmapOffset = DecisionStateIter->second.BitmapIdx;
   auto *I8PtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
 
   // Emit intrinsic responsible for updating the global bitmap corresponding to
@@ -1149,7 +1155,8 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
   llvm::Value *Args[5] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
                           Builder.getInt64(FunctionHash),
                           Builder.getInt32(RegionMCDCState->BitmapBits),
-                          Builder.getInt32(0), MCDCCondBitmapAddr.getPointer()};
+                          Builder.getInt32(MCDCTestVectorBitmapOffset),
+                          MCDCCondBitmapAddr.getPointer()};
   Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_tvbitmap_update), Args);
 }
@@ -1161,7 +1168,7 @@ void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
 
   S = S->IgnoreParens();
 
-  if (!RegionMCDCState->BitmapMap.contains(S))
+  if (!RegionMCDCState->DecisionByStmt.contains(S))
     return;
 
   // Emit intrinsic that resets a dedicated temporary value on the stack to 0.
@@ -1183,18 +1190,19 @@ void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
   // also make debugging a bit easier.
   S = CodeGenFunction::stripCond(S);
 
-  auto ExprMCDCConditionIDMapIterator = RegionMCDCState->CondIDMap.find(S);
-  if (ExprMCDCConditionIDMapIterator == RegionMCDCState->CondIDMap.end())
+  auto BranchStateIter = RegionMCDCState->BranchByStmt.find(S);
+  if (BranchStateIter == RegionMCDCState->BranchByStmt.end())
     return;
 
   // Extract the ID of the condition we are setting in the bitmap.
-  const auto &Branch = ExprMCDCConditionIDMapIterator->second;
+  const auto &Branch = BranchStateIter->second;
   assert(Branch.ID >= 0 && "Condition has no ID!");
+  assert(Branch.DecisionStmt);
 
   // Cancel the emission if the Decision is erased after the allocation.
   const auto DecisionIter =
-      RegionMCDCState->BitmapMap.find(Branch.DecisionStmt);
-  if (DecisionIter == RegionMCDCState->BitmapMap.end())
+      RegionMCDCState->DecisionByStmt.find(Branch.DecisionStmt);
+  if (DecisionIter == RegionMCDCState->DecisionByStmt.end())
     return;
 
   const auto &TVIdxs = DecisionIter->second.Indices[Branch.ID];

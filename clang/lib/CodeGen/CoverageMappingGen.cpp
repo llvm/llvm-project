@@ -696,7 +696,6 @@ private:
 
   llvm::SmallVector<mcdc::ConditionIDs> DecisionStack;
   MCDC::State &MCDCState;
-  llvm::DenseMap<const Stmt *, MCDC::State::Branch> &CondIDs;
   const Stmt *DecisionStmt = nullptr;
   llvm::DenseMap<mcdc::ConditionID, mcdc::ConditionIDs> cache;
   mcdc::ConditionID NextID = 0;
@@ -713,8 +712,8 @@ private:
 
 public:
   MCDCCoverageBuilder(CodeGenModule &CGM, MCDC::State &MCDCState)
-      : CGM(CGM), DecisionStack(1, DecisionStackSentinel), MCDCState(MCDCState),
-        CondIDs(MCDCState.CondIDMap) {}
+      : CGM(CGM), DecisionStack(1, DecisionStackSentinel),
+        MCDCState(MCDCState) {}
 
   /// Return whether the build of the control flow map is at the top-level
   /// (root) of a logical operator nest in a boolean expression prior to the
@@ -728,13 +727,14 @@ public:
 
   /// Set the given condition's ID.
   void setCondID(const Expr *Cond, mcdc::ConditionID ID) {
-    CondIDs[CodeGenFunction::stripCond(Cond)] = {ID, DecisionStmt};
+    MCDCState.BranchByStmt[CodeGenFunction::stripCond(Cond)] = {ID,
+                                                                DecisionStmt};
   }
 
   /// Return the ID of a given condition.
   mcdc::ConditionID getCondID(const Expr *Cond) const {
-    auto I = CondIDs.find(CodeGenFunction::stripCond(Cond));
-    if (I == CondIDs.end())
+    auto I = MCDCState.BranchByStmt.find(CodeGenFunction::stripCond(Cond));
+    if (I == MCDCState.BranchByStmt.end())
       return -1;
     else
       return I->second.ID;
@@ -760,7 +760,7 @@ public:
 
     // If binary expression is disqualified, don't do mapping.
     if (!isBuilding() &&
-        !MCDCState.BitmapMap.contains(CodeGenFunction::stripCond(E)))
+        !MCDCState.DecisionByStmt.contains(CodeGenFunction::stripCond(E)))
       NotMapped = true;
 
     // Don't go any further if we don't need to map condition IDs.
@@ -770,7 +770,7 @@ public:
     if (NextID == 0) {
       cache.clear();
       DecisionStmt = E;
-      assert(MCDCState.BitmapMap.contains(E));
+      assert(MCDCState.DecisionByStmt.contains(E));
     }
 
     const mcdc::ConditionIDs &ParentDecision = DecisionStack.back();
@@ -778,7 +778,7 @@ public:
     // If the operator itself has an assigned ID, this means it represents a
     // larger subtree.  In this case, assign that ID to its LHS node.  Its RHS
     // will receive a new ID below. Otherwise, assign ID+1 to LHS.
-    if (CondIDs.contains(CodeGenFunction::stripCond(E)))
+    if (MCDCState.BranchByStmt.contains(CodeGenFunction::stripCond(E)))
       setCondID(E->getLHS(), getCondID(E));
     else
       setCondID(E->getLHS(), NextID++);
@@ -825,9 +825,9 @@ public:
     llvm::SmallVector<mcdc::ConditionIDs> R(cache.size());
     for (auto [ID, Conds] : cache)
       R[ID] = Conds;
-    mcdc::TVIdxBuilder xxx(R, MCDCState.BitmapBits);
+    mcdc::TVIdxBuilder xxx(R);
     auto NumTVs = xxx.NumTestVectors;
-    assert(MCDCState.BitmapMap.contains(E));
+    assert(MCDCState.DecisionByStmt.contains(E));
     auto MaxTVs = mcdc::TVIdxBuilder::HardMaxTVs;
     if (NumTVs == MaxTVs) {
       auto &Diag = CGM.getDiags();
@@ -838,11 +838,15 @@ public:
                                "Expression will not be covered");
       Diag.Report(E->getBeginLoc(), DiagID) << NumTVs << MaxTVs;
 
-      MCDCState.BitmapMap[E].BitmapIdx = 0; // Mark to be erased
+      MCDCState.DecisionByStmt[E].Active = false; // Mark to be erased
     } else {
       // Last pos
-      MCDCState.BitmapMap[E] = {MCDCState.BitmapBits += NumTVs,
-                                std::move(xxx.Indices)};
+      MCDCState.DecisionByStmt[E] = {
+          MCDCState.BitmapBits,           // Idx
+          MCDCState.BitmapBits += NumTVs, // Tail
+          std::move(xxx.Indices),         // Indices
+          true,                           // Active
+      };
     }
 
     // Reset ID back to beginning.
@@ -905,8 +909,8 @@ struct CounterCoverageMappingBuilder
     return Counter::getCounter(CounterMap[S]);
   }
 
-  auto getRegionBitmap(const Stmt *S) {
-    return MCDCState.BitmapMap[S].BitmapIdx;
+  auto getBitmapIdx(const Stmt *S) {
+    return MCDCState.DecisionByStmt[S].BitmapTailPos;
   }
 
   /// Push a region onto the stack.
@@ -1996,6 +2000,8 @@ struct CounterCoverageMappingBuilder
 
       extendRegion(E->getTrueExpr());
       OutCount = propagateCounts(TrueCount, E->getTrueExpr());
+    } else {
+      OutCount = TrueCount;
     }
 
     extendRegion(E->getFalseExpr());
@@ -2075,7 +2081,7 @@ struct CounterCoverageMappingBuilder
     // Create MCDC Decision Region if at top-level (root).
     unsigned NumConds = 0;
     if (IsRootNode && (NumConds = MCDCBuilder.getTotalConditionsAndReset(E)))
-      createDecisionRegion(E, getRegionBitmap(E), NumConds);
+      createDecisionRegion(E, getBitmapIdx(E), NumConds);
 
     // Extract the RHS's Execution Counter.
     Counter RHSExecCnt = getRegionCounter(E);
@@ -2094,9 +2100,9 @@ struct CounterCoverageMappingBuilder
     createBranchRegion(E->getRHS(), RHSTrueCnt,
                        subtractCounters(RHSExecCnt, RHSTrueCnt), DecisionRHS);
 
-    if (IsRootNode && NumConds > 0 && getRegionBitmap(E) == 0) {
+    if (IsRootNode && NumConds > 0 && !MCDCState.DecisionByStmt[E].Active) {
       RewindDecision(SourceRegionsSince);
-      MCDCState.BitmapMap.erase(E);
+      MCDCState.DecisionByStmt.erase(E);
     }
   }
 
@@ -2138,7 +2144,7 @@ struct CounterCoverageMappingBuilder
     // Create MCDC Decision Region if at top-level (root).
     unsigned NumConds = 0;
     if (IsRootNode && (NumConds = MCDCBuilder.getTotalConditionsAndReset(E)))
-      createDecisionRegion(E, getRegionBitmap(E), NumConds);
+      createDecisionRegion(E, getBitmapIdx(E), NumConds);
 
     // Extract the RHS's Execution Counter.
     Counter RHSExecCnt = getRegionCounter(E);
@@ -2161,9 +2167,9 @@ struct CounterCoverageMappingBuilder
     createBranchRegion(E->getRHS(), subtractCounters(RHSExecCnt, RHSFalseCnt),
                        RHSFalseCnt, DecisionRHS);
 
-    if (IsRootNode && NumConds > 0 && getRegionBitmap(E) == 0) {
+    if (IsRootNode && NumConds > 0 && !MCDCState.DecisionByStmt[E].Active) {
       RewindDecision(SourceRegionsSince);
-      MCDCState.BitmapMap.erase(E);
+      MCDCState.DecisionByStmt.erase(E);
     }
   }
 

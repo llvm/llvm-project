@@ -216,10 +216,11 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "OpMemoryModel must have two operands");
 
   (*module)->setAttr(
-      "addressing_model",
+      module->getAddressingModelAttrName(),
       opBuilder.getAttr<spirv::AddressingModelAttr>(
           static_cast<spirv::AddressingModel>(operands.front())));
-  (*module)->setAttr("memory_model",
+
+  (*module)->setAttr(module->getMemoryModelAttrName(),
                      opBuilder.getAttr<spirv::MemoryModelAttr>(
                          static_cast<spirv::MemoryModel>(operands.back())));
 
@@ -1828,7 +1829,7 @@ ControlFlowStructurizer::createSelectionOp(uint32_t selectionControl) {
 
   auto control = static_cast<spirv::SelectionControl>(selectionControl);
   auto selectionOp = builder.create<spirv::SelectionOp>(location, control);
-  selectionOp.addMergeBlock();
+  selectionOp.addMergeBlock(builder);
 
   return selectionOp;
 }
@@ -1840,7 +1841,7 @@ spirv::LoopOp ControlFlowStructurizer::createLoopOp(uint32_t loopControl) {
 
   auto control = static_cast<spirv::LoopControl>(loopControl);
   auto loopOp = builder.create<spirv::LoopOp>(location, control);
-  loopOp.addEntryAndMergeBlock();
+  loopOp.addEntryAndMergeBlock(builder);
 
   return loopOp;
 }

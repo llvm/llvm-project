@@ -1,2 +1,4 @@
 add_subdirectory(server)
-add_subdirectory(loader)
+if(LIBC_TARGET_OS_IS_GPU)
+  add_subdirectory(loader)
+endif()

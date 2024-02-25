@@ -891,9 +891,6 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   auto *Bitmaps = getOrCreateRegionBitmaps(I);
   IRBuilder<> Builder(I);
 
-  auto *Addr = Builder.CreateConstInBoundsGEP2_32(
-      Bitmaps->getValueType(), Bitmaps, 0, I->getBitmapIndex()->getZExtValue());
-
   if (isRuntimeCounterRelocationEnabled()) {
     LLVMContext &Ctx = M.getContext();
     Ctx.diagnose(DiagnosticInfoPGOProfile(
@@ -903,7 +900,7 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
         DS_Warning));
   }
 
-  return Addr;
+  return Bitmaps;
 }
 
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
@@ -969,30 +966,24 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
     InstrProfMCDCTVBitmapUpdate *Update) {
   IRBuilder<> Builder(Update);
   auto *Int8Ty = Type::getInt8Ty(M.getContext());
-  auto *Int8PtrTy = PointerType::getUnqual(M.getContext());
   auto *Int32Ty = Type::getInt32Ty(M.getContext());
-  auto *Int64Ty = Type::getInt64Ty(M.getContext());
   auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
   auto *BitmapAddr = getBitmapAddress(Update);
 
-  // Load Temp Val.
+  // Load Temp Val + BitmapIdx.
   //  %mcdc.temp = load i32, ptr %mcdc.addr, align 4
-  auto *Temp = Builder.CreateLoad(Int32Ty, MCDCCondBitmapAddr, "mcdc.temp");
+  auto *Temp = Builder.CreateAdd(
+      Builder.CreateLoad(Int32Ty, MCDCCondBitmapAddr, "mcdc.temp"),
+      Update->getBitmapIndex());
 
   // Calculate byte offset using div8.
   //  %1 = lshr i32 %mcdc.temp, 3
   auto *BitmapByteOffset = Builder.CreateLShr(Temp, 0x3);
 
   // Add byte offset to section base byte address.
-  //  %2 = zext i32 %1 to i64
-  //  %3 = add i64 ptrtoint (ptr @__profbm_test to i64), %2
+  // %4 = getelementptr inbounds i8, ptr @__profbm_test, i32 %1
   auto *BitmapByteAddr =
-      Builder.CreateAdd(Builder.CreatePtrToInt(BitmapAddr, Int64Ty),
-                        Builder.CreateZExtOrBitCast(BitmapByteOffset, Int64Ty));
-
-  // Convert to a pointer.
-  //  %4 = inttoptr i32 %3 to ptr
-  BitmapByteAddr = Builder.CreateIntToPtr(BitmapByteAddr, Int8PtrTy);
+      Builder.CreateInBoundsPtrAdd(BitmapAddr, BitmapByteOffset);
 
   // Calculate bit offset into bitmap byte by using div8 remainder (AND ~8)
   //  %5 = and i32 %mcdc.temp, 7
