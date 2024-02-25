@@ -6,7 +6,7 @@
 define i32 @pr82884(i32 %x) {
 ; CHECK-LABEL: define i32 @pr82884(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[X]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X]], [[X]]
 ; CHECK-NEXT:    call void @use(i32 [[MUL]])
 ; CHECK-NEXT:    [[MUL2:%.*]] = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[X]], i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[MUL]]
