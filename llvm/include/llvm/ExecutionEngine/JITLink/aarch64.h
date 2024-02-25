@@ -173,6 +173,13 @@ enum EdgeKind_aarch64 : Edge::Kind {
   ///
   ///   Fixup <- (Target - Fixup + Addend) >> 2 : int19
   ///
+  /// Notes:
+  ///   The '19' in the name refers to the number operand bits and follows the
+  /// naming convention used by the corresponding ELF relocation.
+  /// Since the low two bits must be zero (because of the 32-bit alignment of
+  /// the target) the operand is effectively a signed 21-bit number.
+  ///
+  ///
   /// Errors:
   ///   - The result of the unshifted part of the fixup expression must be
   ///     32-bit aligned otherwise an alignment error will be returned.
