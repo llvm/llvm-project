@@ -13,10 +13,12 @@ class TestArm64eAttach(TestBase):
         # Skip this test if not running on AArch64 target that supports PAC
         if not self.isAArch64PAuth():
             self.skipTest("Target must support pointer authentication.")
+
         self.build()
         popen = self.spawnSubprocess(self.getBuildArtifact(), [])
-        error = lldb.SBError()
+
         # This simulates how Xcode attaches to a process by pid/name.
+        error = lldb.SBError()
         target = self.dbg.CreateTarget("", "arm64", "", True, error)
         listener = lldb.SBListener("my.attach.listener")
         process = target.AttachToProcessWithID(listener, popen.pid, error)
@@ -24,5 +26,10 @@ class TestArm64eAttach(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(target.GetTriple().split('-')[0], "arm64e",
                          "target triple is updated correctly")
+
+        self.expect('process plugin packet send qProcessInfo',
+                    "debugserver returns correct triple",
+                    substrs=['cputype:100000c', 'cpusubtype:2', 'ptrsize:8'])
+
         error = process.Kill()
         self.assertSuccess(error)
