@@ -2087,6 +2087,12 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize) {
   const FunctionPointer &FuncPtr = S.Stk.pop<FunctionPointer>();
 
   const Function *F = FuncPtr.getFunction();
+  if (!F) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    S.FFDiag(E, diag::note_constexpr_null_callee)
+        << const_cast<Expr *>(E) << E->getSourceRange();
+    return false;
+  }
   assert(F);
 
   assert(ArgSize >= F->getWrittenArgSize());
