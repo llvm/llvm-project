@@ -26,6 +26,7 @@ StringRef til::getUnaryOpcodeString(TIL_UnaryOpcode Op) {
 }
 
 StringRef til::getBinaryOpcodeString(TIL_BinaryOpcode Op) {
+  // clang-format off
   switch (Op) {
     case BOP_Mul:      return "*";
     case BOP_Div:      return "/";
@@ -45,6 +46,7 @@ StringRef til::getBinaryOpcodeString(TIL_BinaryOpcode Op) {
     case BOP_LogicAnd: return "&&";
     case BOP_LogicOr:  return "||";
   }
+  // clang-format on
   return {};
 }
 

@@ -387,6 +387,7 @@ static std::optional<uint64_t> GetCFNumberSize(ASTContext &Ctx, uint64_t i) {
 
   QualType T;
 
+  // clang-format off
   switch (i) {
     case kCFNumberCharType:     T = Ctx.CharTy;     break;
     case kCFNumberShortType:    T = Ctx.ShortTy;    break;
@@ -402,6 +403,7 @@ static std::optional<uint64_t> GetCFNumberSize(ASTContext &Ctx, uint64_t i) {
     default:
       return std::nullopt;
   }
+  // clang-format on
 
   return Ctx.getTypeSize(T);
 }
@@ -535,7 +537,8 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
 }
 
 //===----------------------------------------------------------------------===//
-// CFRetain/CFRelease/CFMakeCollectable/CFAutorelease checking for null arguments.
+// checking for null arguments:
+//   CFRetain/CFRelease/CFMakeCollectable/CFAutorelease
 //===----------------------------------------------------------------------===//
 
 namespace {

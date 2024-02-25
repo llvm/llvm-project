@@ -560,6 +560,7 @@ til::SExpr *SExprBuilder::translateBinAssign(til::TIL_BinaryOpcode Op,
 
 til::SExpr *SExprBuilder::translateBinaryOperator(const BinaryOperator *BO,
                                                   CallingContext *Ctx) {
+  // clang-format off
   switch (BO->getOpcode()) {
   case BO_PtrMemD:
   case BO_PtrMemI:
@@ -601,6 +602,7 @@ til::SExpr *SExprBuilder::translateBinaryOperator(const BinaryOperator *BO,
     // The clang CFG should have already processed both sides.
     return translate(BO->getRHS(), Ctx);
   }
+  // clang-format on
   return new (Arena) til::Undefined(BO);
 }
 

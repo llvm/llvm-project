@@ -526,7 +526,7 @@ public:
   }
 };
 
-/// TypedValueRegion - An abstract class representing regions having a typed value.
+/// An abstract class representing regions having a typed value.
 class TypedValueRegion : public TypedRegion {
   void anchor() override;
 

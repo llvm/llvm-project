@@ -112,6 +112,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
 
     assert (B->isCompoundAssignmentOp());
 
+    // clang-format off
     switch (Op) {
       default:
         llvm_unreachable("Invalid opcode for compound assignment.");
@@ -126,6 +127,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       case BO_XorAssign: Op = BO_Xor; break;
       case BO_OrAssign:  Op = BO_Or;  break;
     }
+    // clang-format on
 
     // Perform a load (the LHS).  This performs the checks for
     // null dereferences, and so on.

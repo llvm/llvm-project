@@ -11,18 +11,19 @@
 //    of bytes to copy.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TypeTraits.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -228,11 +229,11 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
       llvm::raw_svector_ostream os(S);
       os << "Potential buffer overflow. ";
       if (!DstName.empty()) {
-        os << "Replace with 'sizeof(" << DstName << ") "
-              "- strlen(" << DstName <<") - 1'";
+        os << formatv("Replace with 'sizeof({0}) - strlen({0}) - 1'", DstName);
         os << " or u";
-      } else
+      } else {
         os << "U";
+      }
       os << "se a safer 'strlcat' API";
 
       BR.EmitBasicReport(FD, Checker, "Anti-pattern in the argument",
@@ -251,13 +252,10 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
 
       SmallString<256> S;
       llvm::raw_svector_ostream os(S);
-      os << "The third argument allows to potentially copy more bytes than it should. ";
-      os << "Replace with the value ";
-      if (!DstName.empty())
-          os << "sizeof(" << DstName << ")";
-      else
-          os << "sizeof(<destination buffer>)";
-      os << " or lower";
+      os << "The third argument allows to potentially copy more bytes ";
+      os << "than it should. Replace with the value ";
+      os << formatv("sizeof({0}) or lower",
+                    !DstName.empty() ? DstName : "<destination buffer>");
 
       BR.EmitBasicReport(FD, Checker, "Anti-pattern in the argument",
               "C String API", os.str(), Loc,
