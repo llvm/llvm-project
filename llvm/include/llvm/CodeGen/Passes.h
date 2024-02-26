@@ -44,7 +44,7 @@ namespace llvm {
   /// AtomicExpandPass - At IR level this pass replace atomic instructions with
   /// __atomic_* library calls, or target specific instruction which implement the
   /// same semantics in a way which better fits the target backend.
-  FunctionPass *createAtomicExpandPass();
+  FunctionPass *createAtomicExpandLegacyPass();
 
   /// createUnreachableBlockEliminationPass - The LLVM code generator does not
   /// work well with unreachable basic blocks (what live ranges make sense for a

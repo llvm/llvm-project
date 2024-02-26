@@ -33,7 +33,7 @@
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGFOLDUNITEXTENTDIMS
+#define GEN_PASS_DEF_LINALGFOLDUNITEXTENTDIMSPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -132,12 +132,10 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
         newIndexingMaps, genericOp.getIteratorTypesArray(),
         /*bodyBuild=*/nullptr, linalg::getPrunedAttributeList(genericOp));
 
-    Region &region = newOp.getRegion();
-    Block *block = new Block();
-    region.push_back(block);
-    IRMapping mapper;
     OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(block);
+    Region &region = newOp.getRegion();
+    Block *block = rewriter.createBlock(&region);
+    IRMapping mapper;
     for (auto bbarg : genericOp.getRegionInputArgs())
       mapper.map(bbarg, block->addArgument(bbarg.getType(), loc));
 
@@ -691,7 +689,10 @@ void mlir::linalg::populateMoveInitOperandsToInputPattern(
 namespace {
 /// Pass that removes unit-extent dims within generic ops.
 struct LinalgFoldUnitExtentDimsPass
-    : public impl::LinalgFoldUnitExtentDimsBase<LinalgFoldUnitExtentDimsPass> {
+    : public impl::LinalgFoldUnitExtentDimsPassBase<
+          LinalgFoldUnitExtentDimsPass> {
+  using impl::LinalgFoldUnitExtentDimsPassBase<
+      LinalgFoldUnitExtentDimsPass>::LinalgFoldUnitExtentDimsPassBase;
   void runOnOperation() override {
     Operation *op = getOperation();
     MLIRContext *context = op->getContext();
@@ -707,7 +708,3 @@ struct LinalgFoldUnitExtentDimsPass
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createLinalgFoldUnitExtentDimsPass() {
-  return std::make_unique<LinalgFoldUnitExtentDimsPass>();
-}

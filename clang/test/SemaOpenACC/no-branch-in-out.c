@@ -14,7 +14,7 @@ void BreakContinue() {
     if (i == 2)
       continue;
 
-    break;  // expected-error{{invalid branch out of OpenACC region}}
+    break;  // expected-error{{invalid branch out of OpenACC Compute Construct}}
   }
 
   int j;
@@ -22,7 +22,7 @@ void BreakContinue() {
     case 0:
 #pragma acc parallel
     {
-      break; // expected-error{{invalid branch out of OpenACC region}}
+      break; // expected-error{{invalid branch out of OpenACC Compute Construct}}
     }
     case 1:
 #pragma acc parallel
@@ -34,7 +34,7 @@ void BreakContinue() {
 #pragma acc parallel
   for(int i = 0; i < 5; ++i) {
     if (i > 1)
-      break; // expected-error{{invalid branch out of OpenACC region}}
+      break; // expected-error{{invalid branch out of OpenACC Compute Construct}}
   }
 
 #pragma acc parallel
@@ -54,7 +54,7 @@ void BreakContinue() {
   for (int i =0; i < 5; ++i) {
 #pragma acc parallel
     {
-      continue; // expected-error{{invalid branch out of OpenACC region}}
+      continue; // expected-error{{invalid branch out of OpenACC Compute Construct}}
     }
   }
 
@@ -73,7 +73,7 @@ void BreakContinue() {
   for (int i =0; i < 5; ++i) {
 #pragma acc parallel
     {
-      break; // expected-error{{invalid branch out of OpenACC region}}
+      break; // expected-error{{invalid branch out of OpenACC Compute Construct}}
     }
   }
 
@@ -81,14 +81,14 @@ void BreakContinue() {
   while (j) {
     --j;
     if (j > 4)
-      break; // expected-error{{invalid branch out of OpenACC region}}
+      break; // expected-error{{invalid branch out of OpenACC Compute Construct}}
   }
 
 #pragma acc parallel
   do {
     --j;
     if (j > 4)
-      break; // expected-error{{invalid branch out of OpenACC region}}
+      break; // expected-error{{invalid branch out of OpenACC Compute Construct}}
   } while (j );
 
 }
