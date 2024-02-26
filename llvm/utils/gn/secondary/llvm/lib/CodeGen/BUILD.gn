@@ -74,6 +74,7 @@ static_library("CodeGen") {
     "IfConversion.cpp",
     "ImplicitNullChecks.cpp",
     "IndirectBrExpandPass.cpp",
+    "InitUndef.cpp",
     "InlineSpiller.cpp",
     "InterferenceCache.cpp",
     "InterleavedAccessPass.cpp",
