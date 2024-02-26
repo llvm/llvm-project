@@ -184,8 +184,8 @@ public:
 
   bool isMCDCBranch() const {
     const auto *BranchParams = std::get_if<mcdc::BranchParameters>(&MCDCParams);
-    assert(!BranchParams || BranchParams->ID >= 0);
-    return BranchParams;
+    assert(BranchParams == nullptr || BranchParams->ID >= 0);
+    return (BranchParams != nullptr);
   }
 
   const auto &getMCDCBranchParams() const {
@@ -195,8 +195,8 @@ public:
   bool isMCDCDecision() const {
     const auto *DecisionParams =
         std::get_if<mcdc::DecisionParameters>(&MCDCParams);
-    assert(!DecisionParams || DecisionParams->NumConditions > 0);
-    return DecisionParams;
+    assert(DecisionParams == nullptr || DecisionParams->NumConditions > 0);
+    return (DecisionParams != nullptr);
   }
 
   const auto &getMCDCDecisionParams() const {
