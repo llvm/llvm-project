@@ -4019,16 +4019,17 @@ InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectWMMAModsF32NegAbs(MachineOperand &Root) const {
   Register Src = Root.getReg();
   unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned ModOpcode;
   SmallVector<Register, 8> EltsF32;
 
   if (GBuildVector *BV = dyn_cast<GBuildVector>(MRI->getVRegDef(Src))) {
+    assert(BV->getNumSources() > 0);
+    // Based on first element decide which mod we match, neg or abs
+    MachineInstr *ElF32 = MRI->getVRegDef(BV->getSourceReg(0));
+    unsigned ModOpcode = (ElF32->getOpcode() == AMDGPU::G_FNEG)
+                             ? AMDGPU::G_FNEG
+                             : AMDGPU::G_FABS;
     for (unsigned i = 0; i < BV->getNumSources(); ++i) {
-      MachineInstr *ElF32 = MRI->getVRegDef(BV->getSourceReg(i));
-      // Based on first element decide which mod we match, neg or abs
-      if (EltsF32.empty())
-        ModOpcode = (ElF32->getOpcode() == AMDGPU::G_FNEG) ? AMDGPU::G_FNEG
-                                                           : AMDGPU::G_FABS;
+      ElF32 = MRI->getVRegDef(BV->getSourceReg(i));
       if (ElF32->getOpcode() != ModOpcode)
         break;
       EltsF32.push_back(ElF32->getOperand(1).getReg());
@@ -4075,16 +4076,18 @@ InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectWMMAModsF16NegAbs(MachineOperand &Root) const {
   Register Src = Root.getReg();
   unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned ModOpcode;
   SmallVector<Register, 8> EltsV2F16;
 
   if (GConcatVectors *CV = dyn_cast<GConcatVectors>(MRI->getVRegDef(Src))) {
+    assert(CV->getNumSources() > 0);
+    MachineInstr *ElV2F16 = MRI->getVRegDef(CV->getSourceReg(0));
+    // Based on first element decide which mod we match, neg or abs
+    unsigned ModOpcode = (ElV2F16->getOpcode() == AMDGPU::G_FNEG)
+                             ? AMDGPU::G_FNEG
+                             : AMDGPU::G_FABS;
+
     for (unsigned i = 0; i < CV->getNumSources(); ++i) {
-      MachineInstr *ElV2F16 = MRI->getVRegDef(CV->getSourceReg(i));
-      // Based on first element decide which mod we match, neg or abs
-      if (EltsV2F16.empty())
-        ModOpcode = (ElV2F16->getOpcode() == AMDGPU::G_FNEG) ? AMDGPU::G_FNEG
-                                                             : AMDGPU::G_FABS;
+      ElV2F16 = MRI->getVRegDef(CV->getSourceReg(i));
       if (ElV2F16->getOpcode() != ModOpcode)
         break;
       EltsV2F16.push_back(ElV2F16->getOperand(1).getReg());

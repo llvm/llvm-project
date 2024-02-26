@@ -354,12 +354,12 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setPolymorphicTypeImpl(enablePolymorphic);
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
+  std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
       semanticsContext.targetCharacteristics(), parsing.allCooked(),
-      targetTriple, kindMap, loweringOptions, {},
+      targetTriple, kindMap, loweringOptions, envDefaults,
       semanticsContext.languageFeatures(), targetMachine);
-  burnside.lower(parseTree, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP) {
     if (enableOpenMPGPU && !enableOpenMPDevice) {
@@ -375,6 +375,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     setOffloadModuleInterfaceAttributes(mlirModule, offloadModuleOpts);
     setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
   }
+  burnside.lower(parseTree, semanticsContext);
   std::error_code ec;
   std::string outputName = outputFilename;
   if (!outputName.size())
