@@ -10760,6 +10760,13 @@ def warn_imp_cast_drops_unaligned : Warning<
 
 } // end of sema category
 
+let CategoryName = "API Notes Issue" in {
+
+def err_incompatible_replacement_type : Error<
+  "API notes replacement type %0 has a different size from original type %1">;
+
+} // end of API Notes category
+
 let CategoryName = "OpenMP Issue" in {
 // OpenMP support.
 def err_omp_expected_var_arg : Error<
@@ -12203,4 +12210,7 @@ def warn_acc_clause_unimplemented
 def err_acc_construct_appertainment
     : Error<"OpenACC construct '%0' cannot be used here; it can only "
             "be used in a statement context">;
+def err_acc_branch_in_out_compute_construct
+    : Error<"invalid %select{branch|return}0 %select{out of|into}1 OpenACC "
+            "Compute Construct">;
 } // end of sema component.
