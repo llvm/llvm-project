@@ -184,10 +184,10 @@
 
 # RUN: yaml2obj --docnum=3 %s -o %t10.o
 
-## Check that symbols with SHN_UNDEF index are ignored when setting visibility.
+## Check that the visibility of undefined symbols can be changed as well.
 # RUN: llvm-objcopy %t10.o --set-symbol-visibility=foo=hidden
 # RUN: llvm-readelf -s %t10.o | FileCheck %s --check-prefix=UNDEF
-# UNDEF: DEFAULT   UND foo
+# UNDEF: HIDDEN    UND foo
 
 ## Check that passing an invalid visibility type generates an error message.
 # RUN: echo 'foo' > %t.symbols
