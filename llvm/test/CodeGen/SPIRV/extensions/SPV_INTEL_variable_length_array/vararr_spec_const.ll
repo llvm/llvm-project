@@ -32,11 +32,11 @@ $_ZNK2cl4sycl12experimental13spec_constantIm13MyUInt64ConstE3getEv = comdat any
 ; Function Attrs: norecurse
 define weak_odr dso_local spir_kernel void @_ZTS17SpecializedKernel() #0 comdat !kernel_arg_addr_space !4 !kernel_arg_access_qual !4 !kernel_arg_type !4 !kernel_arg_base_type !4 !kernel_arg_type_qual !4 {
 entry:
-  %0 = alloca %"class._ZTSZZ4mainENK3$_0clERN2cl4sycl7handlerEEUlvE_.anon", align 1
-  call void @llvm.lifetime.start.p0(i64 1, ptr %0) #4
-  %1 = addrspacecast ptr %0 to ptr addrspace(4)
-  call spir_func void @"_ZZZ4mainENK3$_0clERN2cl4sycl7handlerEENKUlvE_clEv"(ptr addrspace(4) %1)
-  call void @llvm.lifetime.end.p0(i64 1, ptr %0) #4
+  %p = alloca %"class._ZTSZZ4mainENK3$_0clERN2cl4sycl7handlerEEUlvE_.anon", align 1
+  call void @llvm.lifetime.start.p0(i64 1, ptr %p) #4
+  %p4 = addrspacecast ptr %p to ptr addrspace(4)
+  call spir_func void @"_ZZZ4mainENK3$_0clERN2cl4sycl7handlerEENKUlvE_clEv"(ptr addrspace(4) %p4)
+  call void @llvm.lifetime.end.p0(i64 1, ptr %p) #4
   ret void
 }
 
@@ -52,13 +52,13 @@ entry:
   store ptr addrspace(4) %this, ptr %this.addr, align 8, !tbaa !5
   %this1 = load ptr addrspace(4), ptr %this.addr, align 8
   %call = call spir_func i64 @_ZNK2cl4sycl12experimental13spec_constantIm13MyUInt64ConstE3getEv(ptr addrspace(4) %this1)
-  %0 = call ptr @llvm.stacksave.p0()
-  store ptr %0, ptr %saved_stack, align 8
+  %p = call ptr @llvm.stacksave.p0()
+  store ptr %p, ptr %saved_stack, align 8
   %vla = alloca i32, i64 %call, align 4
   store i64 %call, ptr %__vla_expr0, align 8
   store i32 42, ptr %vla, align 4, !tbaa !9
-  %1 = load ptr, ptr %saved_stack, align 8
-  call void @llvm.stackrestore.p0(ptr %1)
+  %torestore = load ptr, ptr %saved_stack, align 8
+  call void @llvm.stackrestore.p0(ptr %torestore)
   ret void
 }
 
@@ -72,9 +72,9 @@ entry:
   %TName = alloca ptr addrspace(4), align 8
   store ptr addrspace(4) %this, ptr %this.addr, align 8, !tbaa !5
   call void @llvm.lifetime.start.p0(i64 8, ptr %TName) #4
-  %0 = call i64 @_Z20__spirv_SpecConstantix(i32 0, i64 0), !SYCL_SPEC_CONST_SYM_ID !11
+  %p = call i64 @_Z20__spirv_SpecConstantix(i32 0, i64 0), !SYCL_SPEC_CONST_SYM_ID !11
   call void @llvm.lifetime.end.p0(i64 8, ptr %TName) #4
-  ret i64 %0
+  ret i64 %p
 }
 
 ; Function Attrs: nounwind
