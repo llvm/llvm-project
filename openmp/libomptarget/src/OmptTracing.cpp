@@ -325,21 +325,22 @@ ompt_record_ompt_t *Interface::stopTargetDataDeleteTrace(int64_t DeviceId,
   return DataPtr;
 }
 
-void Interface::startTargetDataSubmitTrace(int64_t DeviceId, void *TgtPtrBegin,
-                                           void *HstPtrBegin, size_t Size,
+void Interface::startTargetDataSubmitTrace(int64_t SrcDeviceId,
+                                           void *SrcPtrBegin,
+                                           int64_t DstDeviceId,
+                                           void *DstPtrBegin, size_t Size,
                                            void *Code) {}
 
-ompt_record_ompt_t *Interface::stopTargetDataSubmitTrace(int64_t DeviceId,
-                                                         void *TgtPtrBegin,
-                                                         void *HstPtrBegin,
-                                                         size_t Size,
-                                                         void *Code) {
+ompt_record_ompt_t *
+Interface::stopTargetDataSubmitTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
+                                     int64_t DstDeviceId, void *DstPtrBegin,
+                                     size_t Size, void *Code) {
   if (isTracingTypeDisabled(ompt_callback_target_data_op))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target_data_op, DeviceId);
+          ompt_callback_target_data_op, DstDeviceId);
 
   // This event will not be traced
   if (DataPtr == nullptr)
@@ -347,9 +348,8 @@ ompt_record_ompt_t *Interface::stopTargetDataSubmitTrace(int64_t DeviceId,
 
   setTraceRecordCommon(DataPtr, ompt_callback_target_data_op);
   setTraceRecordTargetDataOp(&DataPtr->record.target_data_op,
-                             ompt_target_data_transfer_to_device, HstPtrBegin,
-                             /*SrcDeviceNum=*/omp_get_initial_device(),
-                             TgtPtrBegin, DeviceId, Size, Code);
+                             ompt_target_data_transfer_to_device, SrcPtrBegin,
+                             SrcDeviceId, DstPtrBegin, DstDeviceId, Size, Code);
 
   // The trace record has been created, mark it ready for delivery to the tool
   TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
@@ -357,32 +357,31 @@ ompt_record_ompt_t *Interface::stopTargetDataSubmitTrace(int64_t DeviceId,
   return DataPtr;
 }
 
-void Interface::startTargetDataRetrieveTrace(int64_t DeviceId,
-                                             void *TgtPtrBegin,
-                                             void *HstPtrBegin, size_t Size,
+void Interface::startTargetDataRetrieveTrace(int64_t SrcDeviceId,
+                                             void *SrcPtrBegin,
+                                             int64_t DstDeviceId,
+                                             void *DstPtrBegin, size_t Size,
                                              void *Code) {}
 
-ompt_record_ompt_t *Interface::stopTargetDataRetrieveTrace(int64_t DeviceId,
-                                                           void *TgtPtrBegin,
-                                                           void *HstPtrBegin,
-                                                           size_t Size,
-                                                           void *Code) {
+ompt_record_ompt_t *
+Interface::stopTargetDataRetrieveTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
+                                       int64_t DstDeviceId, void *DstPtrBegin,
+                                       size_t Size, void *Code) {
   if (isTracingTypeDisabled(ompt_callback_target_data_op))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target_data_op, DeviceId);
+          ompt_callback_target_data_op, SrcDeviceId);
 
   // This event will not be traced
   if (DataPtr == nullptr)
     return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target_data_op);
-  setTraceRecordTargetDataOp(
-      &DataPtr->record.target_data_op, ompt_target_data_transfer_from_device,
-      TgtPtrBegin, /*SrcDeviceNum=*/DeviceId, HstPtrBegin,
-      /*DstDeviceNum=*/omp_get_initial_device(), Size, Code);
+  setTraceRecordTargetDataOp(&DataPtr->record.target_data_op,
+                             ompt_target_data_transfer_from_device, SrcPtrBegin,
+                             SrcDeviceId, DstPtrBegin, DstDeviceId, Size, Code);
 
   // The trace record has been created, mark it ready for delivery to the tool
   TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);

@@ -130,7 +130,7 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
           HstPtr, &TargetPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
       // ToDo: mhalk Do we need a check for TracingActive here?
-      InterfaceRAII TargetDataSubmitTraceRAII(
+      InterfaceRAII TargetDataAllocTraceRAII(
           RegionInterface.getTraceGenerators<ompt_target_data_alloc>(),
           RTLDeviceID, HstPtr, &TargetPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
@@ -147,7 +147,7 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
           TgtAllocBegin,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
       // ToDo: mhalk Do we need a check for TracingActive here?
-      InterfaceRAII TargetDataSubmitTraceRAII(
+      InterfaceRAII TargetDataDeleteTraceRAII(
           RegionInterface.getTraceGenerators<ompt_target_data_delete>(),
           DeviceID, TgtAllocBegin,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
@@ -172,7 +172,7 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
       InterfaceRAII TargetDataSubmitTraceRAII(
           RegionInterface
               .getTraceGenerators<ompt_target_data_transfer_to_device>(),
-          DeviceID, TgtPtrBegin, HstPtrBegin, Size,
+          omp_get_initial_device(), HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   if (ForceSynchronousTargetRegions || !AsyncInfo ||
@@ -201,10 +201,10 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
           DeviceID, TgtPtrBegin, omp_get_initial_device(), HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
       // ToDo: mhalk Do we need a check for TracingActive here?
-      InterfaceRAII TargetDataSubmitTraceRAII(
+      InterfaceRAII TargetDataRetrieveTraceRAII(
           RegionInterface
               .getTraceGenerators<ompt_target_data_transfer_from_device>(),
-          DeviceID, TgtPtrBegin, HstPtrBegin, Size,
+          DeviceID, TgtPtrBegin, omp_get_initial_device(), HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   if (ForceSynchronousTargetRegions || !RTL->data_retrieve_async ||
@@ -229,6 +229,12 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataExchangeRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
+          RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      // ToDo: mhalk Do we need a check for TracingActive here?
+      InterfaceRAII TargetDataExchangeTraceRAII(
+          RegionInterface
+              .getTraceGenerators<ompt_target_data_transfer_from_device>(),
           RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
   if (ForceSynchronousTargetRegions || !AsyncInfo ||

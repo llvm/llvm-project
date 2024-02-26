@@ -139,13 +139,15 @@ public:
                                                void *Code);
 
   /// Top-level function for starting trace before data submit
-  void startTargetDataSubmitTrace(int64_t DeviceId, void *HstPtrBegin,
-                                  void *TgtPtrBegin, size_t Size, void *Code);
+  void startTargetDataSubmitTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
+                                  int64_t DstDeviceId, void *DstPtrBegin,
+                                  size_t Size, void *Code);
 
   /// Top-level function for stopping trace after data submit
-  ompt_record_ompt_t *stopTargetDataSubmitTrace(int64_t DeviceId,
-                                                void *HstPtrBegin,
-                                                void *TgtPtrBegin, size_t Size,
+  ompt_record_ompt_t *stopTargetDataSubmitTrace(int64_t SrcDeviceId,
+                                                void *SrcPtrBegin,
+                                                int64_t DstDeviceId,
+                                                void *DstPtrBegin, size_t Size,
                                                 void *Code);
 
   /// Top-level function for starting trace before device data deallocation
@@ -157,13 +159,15 @@ public:
                                                 void *TgtPtrBegin, void *Code);
 
   /// Top-level function for starting trace before data retrieve
-  void startTargetDataRetrieveTrace(int64_t DeviceId, void *HstPtrBegin,
-                                    void *TgtPtrBegin, size_t Size, void *Code);
+  void startTargetDataRetrieveTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
+                                    int64_t DstDeviceId, void *DstPtrBegin,
+                                    size_t Size, void *Code);
 
   /// Top-level function for stopping trace after data retrieve
-  ompt_record_ompt_t *stopTargetDataRetrieveTrace(int64_t DeviceId,
-                                                  void *HstPtrBegin,
-                                                  void *TgtPtrBegin,
+  ompt_record_ompt_t *stopTargetDataRetrieveTrace(int64_t SrcDeviceId,
+                                                  void *SrcPtrBegin,
+                                                  int64_t DstDeviceId,
+                                                  void *DstPtrBegin,
                                                   size_t Size, void *Code);
 
   /// Top-level function for starting trace before kernel dispatch
