@@ -97,6 +97,10 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`run-clang-tidy.py` script. Added argument `-source-filter`
+  to filter source files from the compilation database, via a RegEx. In a
+  similar fashion to what `-header-filter` does for header files.
+
 New checks
 ^^^^^^^^^^
 
