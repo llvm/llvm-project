@@ -539,17 +539,8 @@ static void resolvePrevailingInIndex(
 // Initialize the TargetMachine builder for a given Triple
 static void initTMBuilder(TargetMachineBuilder &TMBuilder,
                           const Triple &TheTriple) {
-  // Set a default CPU for Darwin triples (copied from LTOCodeGenerator).
-  // FIXME this looks pretty terrible...
-  if (TMBuilder.MCpu.empty() && TheTriple.isOSDarwin()) {
-    if (TheTriple.getArch() == llvm::Triple::x86_64)
-      TMBuilder.MCpu = "core2";
-    else if (TheTriple.getArch() == llvm::Triple::x86)
-      TMBuilder.MCpu = "yonah";
-    else if (TheTriple.getArch() == llvm::Triple::aarch64 ||
-             TheTriple.getArch() == llvm::Triple::aarch64_32)
-      TMBuilder.MCpu = "cyclone";
-  }
+  if (TMBuilder.MCpu.empty())
+    TMBuilder.MCpu = lto::getThinLTODefaultCPU(TheTriple);
   TMBuilder.TheTriple = std::move(TheTriple);
 }
 
