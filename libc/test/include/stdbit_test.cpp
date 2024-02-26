@@ -76,6 +76,11 @@ unsigned stdc_count_zeros_us(unsigned short) noexcept { return 0x2BU; }
 unsigned stdc_count_zeros_ui(unsigned) noexcept { return 0x2CU; }
 unsigned stdc_count_zeros_ul(unsigned long) noexcept { return 0x2DU; }
 unsigned stdc_count_zeros_ull(unsigned long long) noexcept { return 0x2FU; }
+unsigned stdc_count_ones_uc(unsigned char) noexcept { return 0x3AU; }
+unsigned stdc_count_ones_us(unsigned short) noexcept { return 0x3BU; }
+unsigned stdc_count_ones_ui(unsigned) noexcept { return 0x3CU; }
+unsigned stdc_count_ones_ul(unsigned long) noexcept { return 0x3DU; }
+unsigned stdc_count_ones_ull(unsigned long long) noexcept { return 0x3FU; }
 }
 
 #include "include/llvm-libc-macros/stdbit-macros.h"
@@ -150,4 +155,12 @@ TEST(LlvmLibcStdbitTest, TypeGenericMacroCountZeros) {
   EXPECT_EQ(stdc_count_zeros(0U), 0x2CU);
   EXPECT_EQ(stdc_count_zeros(0UL), 0x2DU);
   EXPECT_EQ(stdc_count_zeros(0ULL), 0x2FU);
+}
+
+TEST(LlvmLibcStdbitTest, TypeGenericMacroCountOnes) {
+  EXPECT_EQ(stdc_count_ones(static_cast<unsigned char>(0U)), 0x3AU);
+  EXPECT_EQ(stdc_count_ones(static_cast<unsigned short>(0U)), 0x3BU);
+  EXPECT_EQ(stdc_count_ones(0U), 0x3CU);
+  EXPECT_EQ(stdc_count_ones(0UL), 0x3DU);
+  EXPECT_EQ(stdc_count_ones(0ULL), 0x3FU);
 }

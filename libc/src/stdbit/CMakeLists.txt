@@ -8,6 +8,7 @@ set(prefixes
   first_trailing_zero
   first_trailing_one
   count_zeros
+  count_ones
 )
 set(suffixes c s i l ll)
 foreach(prefix IN LISTS prefixes)

@@ -76,11 +76,11 @@ stdc_count_zeros_us          |check|
 stdc_count_zeros_ui          |check|
 stdc_count_zeros_ul          |check|
 stdc_count_zeros_ull         |check|
-stdc_count_ones_uc
-stdc_count_ones_us
-stdc_count_ones_ui
-stdc_count_ones_ul
-stdc_count_ones_ull
+stdc_count_ones_uc           |check|
+stdc_count_ones_us           |check|
+stdc_count_ones_ui           |check|
+stdc_count_ones_ul           |check|
+stdc_count_ones_ull          |check|
 stdc_has_single_bit_uc
 stdc_has_single_bit_us
 stdc_has_single_bit_ui
@@ -123,7 +123,7 @@ stdc_first_leading_one     |check|
 stdc_first_trailing_zero   |check|
 stdc_first_trailing_one    |check|
 stdc_count_zeros           |check|
-stdc_count_ones
+stdc_count_ones            |check|
 stdc_has_single_bit
 stdc_bit_width
 stdc_bit_floor
