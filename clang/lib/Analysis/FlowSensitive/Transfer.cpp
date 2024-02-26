@@ -671,8 +671,8 @@ public:
     }
 
     if (!Type->isStructureOrClassType()) {
-      // Until array initialization is implemented, we skip arrays and don't need
-      // to care about cases where `getNumInits() > 1`.
+      // Until array initialization is implemented, we skip arrays and don't
+      // need to care about cases where `getNumInits() > 1`.
       if (!Type->isArrayType() && S->getNumInits() == 1)
         propagateValueOrStorageLocation(*S->getInit(0), *S, Env);
       return;
