@@ -2158,6 +2158,7 @@ DeclResult Sema::CheckClassTemplate(
     NewClass->startDefinition();
 
   ProcessDeclAttributeList(S, NewClass, Attr);
+  ProcessAPINotes(NewClass);
 
   if (PrevClassTemplate)
     mergeDeclAttributes(NewClass, PrevClassTemplate->getTemplatedDecl());
@@ -9112,6 +9113,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   }
 
   ProcessDeclAttributeList(S, Specialization, Attr);
+  ProcessAPINotes(Specialization);
 
   // Add alignment attributes if necessary; these attributes are checked when
   // the ASTContext lays out the structure.
@@ -10346,6 +10348,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
 
   bool PreviouslyDLLExported = Specialization->hasAttr<DLLExportAttr>();
   ProcessDeclAttributeList(S, Specialization, Attr);
+  ProcessAPINotes(Specialization);
 
   // Add the explicit instantiation into its lexical context. However,
   // since explicit instantiations are never found by name lookup, we
@@ -10756,6 +10759,9 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       Prev->setTemplateSpecializationKind(TSK, D.getIdentifierLoc());
       // Merge attributes.
       ProcessDeclAttributeList(S, Prev, D.getDeclSpec().getAttributes());
+      if (PrevTemplate)
+        ProcessAPINotes(Prev);
+
       if (TSK == TSK_ExplicitInstantiationDefinition)
         InstantiateVariableDefinition(D.getIdentifierLoc(), Prev);
     }
@@ -10931,6 +10937,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
   }
 
   ProcessDeclAttributeList(S, Specialization, D.getDeclSpec().getAttributes());
+  ProcessAPINotes(Specialization);
 
   // In MSVC mode, dllimported explicit instantiation definitions are treated as
   // instantiation declarations.
