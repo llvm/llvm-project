@@ -9124,7 +9124,6 @@ void llvm::findValuesAffectedByCondition(
     addValueAffectedByCondition(V, InsertAffected);
   };
 
-  assert(!IsAssume);
   SmallVector<Value *, 8> Worklist;
   SmallPtrSet<Value *, 8> Visited;
   Worklist.push_back(Cond);
@@ -9134,35 +9133,67 @@ void llvm::findValuesAffectedByCondition(
       continue;
 
     CmpInst::Predicate Pred;
-    Value *A, *B;
-    if (match(V, m_LogicalOp(m_Value(A), m_Value(B)))) {
+    Value *A, *B, *X;
+
+    if (IsAssume)
+      AddAffected(V);
+
+    if (IsAssume && match(V, m_Not(m_Value(X))))
+      AddAffected(X);
+    if (!IsAssume && match(V, m_LogicalOp(m_Value(A), m_Value(B)))) {
       Worklist.push_back(A);
       Worklist.push_back(B);
-    } else if (match(V, m_ICmp(Pred, m_Value(A), m_Constant()))) {
-      AddAffected(A);
+    } else if (match(V, m_Cmp(Pred, m_Value(A), m_Value(B))) &&
+               (IsAssume || isa<ICmpInst>(V))) {
+      if (IsAssume || match(B, m_Constant())) {
+        AddAffected(A);
+        if (IsAssume)
+          AddAffected(B);
 
-      if (ICmpInst::isEquality(Pred)) {
-        Value *X;
-        // (X & C) or (X | C) or (X ^ C).
-        // (X << C) or (X >>_s C) or (X >>_u C).
-        if (match(A, m_BitwiseLogic(m_Value(X), m_ConstantInt())) ||
-            match(A, m_Shift(m_Value(X), m_ConstantInt())))
-          AddAffected(X);
-      } else {
-        Value *X;
-        // Handle (A + C1) u< C2, which is the canonical form of
-        // A > C3 && A < C4.
-        if (match(A, m_Add(m_Value(X), m_ConstantInt())))
-          AddAffected(X);
-        // Handle icmp slt/sgt (bitcast X to int), 0/-1, which is supported by
-        // computeKnownFPClass().
-        if ((Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGT) &&
-            match(A, m_ElementWiseBitCast(m_Value(X))))
-          InsertAffected(X);
+        if (IsAssume ? (Pred == ICmpInst::ICMP_EQ)
+                     : ICmpInst::isEquality(Pred)) {
+          if (match(B, m_ConstantInt())) {
+            // (X & C) or (X | C) or (X ^ C).
+            // (X << C) or (X >>_s C) or (X >>_u C).
+            if (match(A, m_BitwiseLogic(m_Value(X), m_ConstantInt())) ||
+                match(A, m_Shift(m_Value(X), m_ConstantInt())))
+              AddAffected(X);
+          }
+        } else {
+          if (Pred == ICmpInst::ICMP_NE)
+            if (match(A, m_And(m_Value(X), m_Power2())) && match(B, m_Zero()))
+              AddAffected(X);
+
+          if (!IsAssume || Pred == ICmpInst::ICMP_ULT) {
+            // Handle (A + C1) u< C2, which is the canonical form of
+            // A > C3 && A < C4.
+            if (match(A, m_Add(m_Value(X), m_ConstantInt())) &&
+                match(B, m_ConstantInt()))
+              AddAffected(X);
+          }
+          if (!IsAssume) {
+            // Handle icmp slt/sgt (bitcast X to int), 0/-1, which is supported
+            // by computeKnownFPClass().
+            if ((Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGT) &&
+                match(A, m_ElementWiseBitCast(m_Value(X))))
+              InsertAffected(X);
+          }
+
+          if (IsAssume && CmpInst::isFPPredicate(Pred)) {
+            // fcmp fneg(x), y
+            // fcmp fabs(x), y
+            // fcmp fneg(fabs(x)), y
+            if (match(A, m_FNeg(m_Value(A))))
+              AddAffected(A);
+            if (match(A, m_FAbs(m_Value(A))))
+              AddAffected(A);
+          }
+        }
       }
-    } else if (match(Cond, m_CombineOr(m_FCmp(Pred, m_Value(A), m_Constant()),
-                                       m_Intrinsic<Intrinsic::is_fpclass>(
-                                           m_Value(A), m_Constant())))) {
+    } else if ((!IsAssume &&
+                match(Cond, m_FCmp(Pred, m_Value(A), m_Constant()))) ||
+               match(Cond, m_Intrinsic<Intrinsic::is_fpclass>(m_Value(A),
+                                                              m_Value(B)))) {
       // Handle patterns that computeKnownFPClass() support.
       AddAffected(A);
     }
