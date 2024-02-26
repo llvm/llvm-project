@@ -2103,13 +2103,6 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   BasicBlock *OrigBB = CB.getParent();
   Function *Caller = OrigBB->getParent();
 
-  // Do not inline strictfp function into non-strictfp one. It would require
-  // conversion of all FP operations in host function to constrained intrinsics.
-  if (CalledFunc->getAttributes().hasFnAttr(Attribute::StrictFP) &&
-      !Caller->getAttributes().hasFnAttr(Attribute::StrictFP)) {
-    return InlineResult::failure("incompatible strictfp attributes");
-  }
-
   // GC poses two hazards to inlining, which only occur when the callee has GC:
   //  1. If the caller has no GC, then the callee's GC must be propagated to the
   //     caller.

@@ -101,12 +101,6 @@
 #  define _LIBCPP_AVAILABILITY_HAS_BAD_ANY_CAST 1
 #  define _LIBCPP_AVAILABILITY_BAD_ANY_CAST
 
-// These macros controls the availability of __cxa_init_primary_exception
-// in the built library, which std::make_exception_ptr might use
-// (see libcxx/include/__exception/exception_ptr.h).
-#  define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION 1
-#  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
-
 // These macros control the availability of all parts of <filesystem> that
 // depend on something in the dylib.
 #  define _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY 1
@@ -114,39 +108,12 @@
 #  define _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 #  define _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
-// This controls the availability of floating-point std::to_chars functions.
-// These overloads were added later than the integer overloads.
-#  define _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT 1
-#  define _LIBCPP_AVAILABILITY_TO_CHARS_FLOATING_POINT
-
 // This controls the availability of the C++20 synchronization library,
 // which requires shared library support for various operations
 // (see libcxx/src/atomic.cpp). This includes <barier>, <latch>,
 // <semaphore>, and notification functions on std::atomic.
 #  define _LIBCPP_AVAILABILITY_HAS_SYNC 1
 #  define _LIBCPP_AVAILABILITY_SYNC
-
-// This controls whether the library claims to provide a default verbose
-// termination function, and consequently whether the headers will try
-// to use it when the mechanism isn't overriden at compile-time.
-#  define _LIBCPP_AVAILABILITY_HAS_VERBOSE_ABORT 1
-#  define _LIBCPP_AVAILABILITY_VERBOSE_ABORT
-
-// This controls the availability of the C++17 std::pmr library,
-// which is implemented in large part in the built library.
-#  define _LIBCPP_AVAILABILITY_HAS_PMR 1
-#  define _LIBCPP_AVAILABILITY_PMR
-
-// This controls the availability of the C++20 time zone database.
-// The parser code is built in the library.
-#  define _LIBCPP_AVAILABILITY_HAS_TZDB 1
-#  define _LIBCPP_AVAILABILITY_TZDB
-
-// This controls the availability of C++23 <print>, which
-// has a dependency on the built library (it needs access to
-// the underlying buffer types of std::cout, std::cerr, and std::clog.
-#  define _LIBCPP_AVAILABILITY_HAS_PRINT 1
-#  define _LIBCPP_AVAILABILITY_PRINT
 
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
@@ -160,6 +127,39 @@
 #  else
 #    define _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1 0
 #  endif
+
+// This controls the availability of floating-point std::to_chars functions.
+// These overloads were added later than the integer overloads.
+#  define _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT 1
+#  define _LIBCPP_AVAILABILITY_TO_CHARS_FLOATING_POINT
+
+// This controls whether the library claims to provide a default verbose
+// termination function, and consequently whether the headers will try
+// to use it when the mechanism isn't overriden at compile-time.
+#  define _LIBCPP_AVAILABILITY_HAS_VERBOSE_ABORT 1
+#  define _LIBCPP_AVAILABILITY_VERBOSE_ABORT
+
+// This controls the availability of the C++17 std::pmr library,
+// which is implemented in large part in the built library.
+#  define _LIBCPP_AVAILABILITY_HAS_PMR 1
+#  define _LIBCPP_AVAILABILITY_PMR
+
+// These macros controls the availability of __cxa_init_primary_exception
+// in the built library, which std::make_exception_ptr might use
+// (see libcxx/include/__exception/exception_ptr.h).
+#  define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION 1
+#  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
+
+// This controls the availability of C++23 <print>, which
+// has a dependency on the built library (it needs access to
+// the underlying buffer types of std::cout, std::cerr, and std::clog.
+#  define _LIBCPP_AVAILABILITY_HAS_PRINT 1
+#  define _LIBCPP_AVAILABILITY_PRINT
+
+// This controls the availability of the C++20 time zone database.
+// The parser code is built in the library.
+#  define _LIBCPP_AVAILABILITY_HAS_TZDB 1
+#  define _LIBCPP_AVAILABILITY_TZDB
 
 #elif defined(__APPLE__)
 

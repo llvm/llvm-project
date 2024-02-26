@@ -1797,13 +1797,9 @@ void AMDGPUInstPrinter::printSDelayALU(const MCInst *MI, unsigned OpNo,
 
 void AMDGPUInstPrinter::printHwreg(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
-  unsigned Id;
-  unsigned Offset;
-  unsigned Width;
-
   using namespace llvm::AMDGPU::Hwreg;
   unsigned Val = MI->getOperand(OpNo).getImm();
-  decodeHwreg(Val, Id, Offset, Width);
+  auto [Id, Offset, Width] = HwregEncoding::decode(Val);
   StringRef HwRegName = getHwreg(Id, STI);
 
   O << "hwreg(";
@@ -1812,9 +1808,8 @@ void AMDGPUInstPrinter::printHwreg(const MCInst *MI, unsigned OpNo,
   } else {
     O << Id;
   }
-  if (Width != WIDTH_DEFAULT_ || Offset != OFFSET_DEFAULT_) {
+  if (Width != HwregSize::Default || Offset != HwregOffset::Default)
     O << ", " << Offset << ", " << Width;
-  }
   O << ')';
 }
 
