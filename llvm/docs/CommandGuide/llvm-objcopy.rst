@@ -538,6 +538,10 @@ options. For GNU :program:`objcopy` compatibility, the values are all bfdnames.
 - `elf64-tradlittlemips`
 - `elf32-sparc`
 - `elf32-sparcel`
+- `elf32-hexagon`
+- `elf32-loongarch`
+- `elf64-loongarch`
+- `elf64-s390`
 
 Additionally, all targets except `binary` and `ihex` can have `-freebsd` as a
 suffix.
