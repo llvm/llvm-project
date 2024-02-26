@@ -119,41 +119,38 @@ void Interface::endTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
   endTargetDataOperation();
 }
 
-void Interface::beginTargetDataSubmit(int64_t DeviceId, void *TgtPtrBegin,
-                                      void *HstPtrBegin, size_t Size,
-                                      void *Code) {
+void Interface::beginTargetDataSubmit(int64_t SrcDeviceId, void *SrcPtrBegin,
+                                      int64_t DstDeviceId, void *DstPtrBegin,
+                                      size_t Size, void *Code) {
   beginTargetDataOperation();
   if (ompt_callback_target_data_op_emi_fn) {
     // HostOpId will be set by the tool. Invoke the tool supplied data op EMI
     // callback
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_begin, TargetTaskData, &TargetData, &HostOpId,
-        ompt_target_data_transfer_to_device, HstPtrBegin,
-        /*SrcDeviceNum=*/omp_get_initial_device(), TgtPtrBegin, DeviceId, Size,
-        Code);
+        ompt_target_data_transfer_to_device, SrcPtrBegin, SrcDeviceId,
+        DstPtrBegin, DstDeviceId, Size, Code);
   } else if (ompt_callback_target_data_op_fn) {
     // HostOpId is set by the runtime
     HostOpId = createOpId();
     // Invoke the tool supplied data op callback
     ompt_callback_target_data_op_fn(
         TargetData.value, HostOpId, ompt_target_data_transfer_to_device,
-        HstPtrBegin, /*SrcDeviceNum=*/omp_get_initial_device(), TgtPtrBegin,
-        DeviceId, Size, Code);
+        SrcPtrBegin, SrcDeviceId, DstPtrBegin, DstDeviceId, Size, Code);
   }
 }
 
-void Interface::endTargetDataSubmit(int64_t DeviceId, void *TgtPtrBegin,
-                                    void *HstPtrBegin, size_t Size,
-                                    void *Code) {
+void Interface::endTargetDataSubmit(int64_t SrcDeviceId, void *SrcPtrBegin,
+                                    int64_t DstDeviceId, void *DstPtrBegin,
+                                    size_t Size, void *Code) {
   // Only EMI callback handles end scope
   if (ompt_callback_target_data_op_emi_fn) {
     // HostOpId will be set by the tool. Invoke the tool supplied data op EMI
     // callback
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_end, TargetTaskData, &TargetData, &HostOpId,
-        ompt_target_data_transfer_to_device, HstPtrBegin,
-        /*SrcDeviceNum=*/omp_get_initial_device(), TgtPtrBegin, DeviceId, Size,
-        Code);
+        ompt_target_data_transfer_to_device, SrcPtrBegin, SrcDeviceId,
+        DstPtrBegin, DstDeviceId, Size, Code);
   }
   endTargetDataOperation();
 }
@@ -193,41 +190,38 @@ void Interface::endTargetDataDelete(int64_t DeviceId, void *TgtPtrBegin,
   endTargetDataOperation();
 }
 
-void Interface::beginTargetDataRetrieve(int64_t DeviceId, void *HstPtrBegin,
-                                        void *TgtPtrBegin, size_t Size,
-                                        void *Code) {
+void Interface::beginTargetDataRetrieve(int64_t SrcDeviceId, void *SrcPtrBegin,
+                                        int64_t DstDeviceId, void *DstPtrBegin,
+                                        size_t Size, void *Code) {
   beginTargetDataOperation();
   if (ompt_callback_target_data_op_emi_fn) {
     // HostOpId will be set by the tool. Invoke the tool supplied data op EMI
     // callback
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_begin, TargetTaskData, &TargetData, &HostOpId,
-        ompt_target_data_transfer_from_device, TgtPtrBegin, DeviceId,
-        HstPtrBegin,
-        /*TgtDeviceNum=*/omp_get_initial_device(), Size, Code);
+        ompt_target_data_transfer_from_device, SrcPtrBegin, SrcDeviceId,
+        DstPtrBegin, DstDeviceId, Size, Code);
   } else if (ompt_callback_target_data_op_fn) {
     // HostOpId is set by the runtime
     HostOpId = createOpId();
     // Invoke the tool supplied data op callback
     ompt_callback_target_data_op_fn(
         TargetData.value, HostOpId, ompt_target_data_transfer_from_device,
-        TgtPtrBegin, DeviceId, HstPtrBegin,
-        /*TgtDeviceNum=*/omp_get_initial_device(), Size, Code);
+        SrcPtrBegin, SrcDeviceId, DstPtrBegin, DstDeviceId, Size, Code);
   }
 }
 
-void Interface::endTargetDataRetrieve(int64_t DeviceId, void *HstPtrBegin,
-                                      void *TgtPtrBegin, size_t Size,
-                                      void *Code) {
+void Interface::endTargetDataRetrieve(int64_t SrcDeviceId, void *SrcPtrBegin,
+                                      int64_t DstDeviceId, void *DstPtrBegin,
+                                      size_t Size, void *Code) {
   // Only EMI callback handles end scope
   if (ompt_callback_target_data_op_emi_fn) {
     // HostOpId will be set by the tool. Invoke the tool supplied data op EMI
     // callback
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_end, TargetTaskData, &TargetData, &HostOpId,
-        ompt_target_data_transfer_from_device, TgtPtrBegin, DeviceId,
-        HstPtrBegin,
-        /*TgtDeviceNum=*/omp_get_initial_device(), Size, Code);
+        ompt_target_data_transfer_from_device, SrcPtrBegin, SrcDeviceId,
+        DstPtrBegin, DstDeviceId, Size, Code);
   }
   endTargetDataOperation();
 }

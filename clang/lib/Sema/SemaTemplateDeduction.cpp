@@ -4632,11 +4632,9 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
                                                Info.getLocation()))
     return TemplateDeductionResult::MiscellaneousDeductionFailure;
 
-  // If the function has a dependent exception specification, resolve it now,
-  // so we can check that the exception specification matches.
   auto *SpecializationFPT =
       Specialization->getType()->castAs<FunctionProtoType>();
-  if (getLangOpts().CPlusPlus17 &&
+  if (IsAddressOfFunction && getLangOpts().CPlusPlus17 &&
       isUnresolvedExceptionSpec(SpecializationFPT->getExceptionSpecType()) &&
       !ResolveExceptionSpec(Info.getLocation(), SpecializationFPT))
     return TemplateDeductionResult::MiscellaneousDeductionFailure;
@@ -4662,11 +4660,11 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
   // specialization with respect to arguments of compatible pointer to function
   // types, template argument deduction fails.
   if (!ArgFunctionType.isNull()) {
-    if (IsAddressOfFunction
-            ? !isSameOrCompatibleFunctionType(
-                  Context.getCanonicalType(SpecializationType),
-                  Context.getCanonicalType(ArgFunctionType))
-            : !Context.hasSameType(SpecializationType, ArgFunctionType)) {
+    if (IsAddressOfFunction ? !isSameOrCompatibleFunctionType(
+                                  Context.getCanonicalType(SpecializationType),
+                                  Context.getCanonicalType(ArgFunctionType))
+                            : !Context.hasSameFunctionTypeIgnoringExceptionSpec(
+                                  SpecializationType, ArgFunctionType)) {
       Info.FirstArg = TemplateArgument(SpecializationType);
       Info.SecondArg = TemplateArgument(ArgFunctionType);
       return TemplateDeductionResult::NonDeducedMismatch;
