@@ -49,7 +49,9 @@ LogicalResult optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
                                                  Value memrefValue);
 
 std::optional<LogicalResult>
-optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp);
+optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp,
+                                     int64_t kSharedMemoryLineSizeBytes,
+                                     int64_t kDefaultVectorSizeBits);
 
 } // namespace amdgpu
 } // namespace mlir

@@ -226,7 +226,11 @@ LogicalResult amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
 }
 
 std::optional<LogicalResult>
-amdgpu::optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp) {
+amdgpu::optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp,
+                                             int64_t kSharedMemoryLineSizeBytes,
+                                             int64_t kDefaultVectorSizeBits) {
+  setMemoryLineSize(kSharedMemoryLineSizeBytes);
+  setDefaultVectorSize(kDefaultVectorSizeBits);
   SmallVector<memref::AllocOp> shmAllocOps;
   funcOp.walk([&](memref::AllocOp allocOp) {
     if (!amdgpu::AMDGPUDialect::hasSharedMemoryAddressSpace(allocOp.getType()))
