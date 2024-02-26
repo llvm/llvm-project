@@ -363,20 +363,22 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
 )
 
-add_entrypoint_object(
-  atexit
-  SRCS
-    atexit.cpp
-  HDRS
-    atexit.h
-  CXX_STANDARD
-    20 # For constinit of the atexit callback list.
-  DEPENDS
-    libc.src.__support.fixedvector
-    libc.src.__support.blockstore
-    libc.src.__support.threads.mutex
-    libc.src.__support.CPP.new
-)
+if(NOT LIBC_TARGET_OS_IS_GPU)
+  add_entrypoint_object(
+    atexit
+    SRCS
+      atexit.cpp
+    HDRS
+      atexit.h
+    CXX_STANDARD
+      20 # For constinit of the atexit callback list.
+    DEPENDS
+      libc.src.__support.fixedvector
+      libc.src.__support.blockstore
+      libc.src.__support.threads.mutex
+      libc.src.__support.CPP.new
+  )
+endif()
 
 add_entrypoint_object(
   exit
@@ -398,6 +400,13 @@ add_entrypoint_object(
 )
 
 if(LIBC_TARGET_OS_IS_GPU)
+  add_entrypoint_object(
+    atexit
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.atexit
+  )
+
   add_entrypoint_object(
     malloc
     ALIAS
