@@ -660,18 +660,15 @@ bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
       return false;
   }
 
+  // Both LHS and RHS might _not_ be of complex type, but one of them
+  // needs to be.
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
-  PrimType LHSElemT = this->classifyComplexElementType(LHS->getType());
-  PrimType RHSElemT = this->classifyComplexElementType(RHS->getType());
 
-  unsigned LHSOffset = this->allocateLocalPrimitive(LHS, PT_Ptr, true, false);
-  unsigned RHSOffset = this->allocateLocalPrimitive(RHS, PT_Ptr, true, false);
+  PrimType ResultElemT = this->classifyComplexElementType(E->getType());
   unsigned ResultOffset = ~0u;
-  if (!this->DiscardResult)
+  if (!DiscardResult)
     ResultOffset = this->allocateLocalPrimitive(E, PT_Ptr, true, false);
-
-  assert(LHSElemT == RHSElemT);
 
   // Save result pointer in ResultOffset
   if (!this->DiscardResult) {
@@ -682,16 +679,64 @@ bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
   }
 
   // Evaluate LHS and save value to LHSOffset.
-  if (!this->visit(LHS))
-    return false;
-  if (!this->emitSetLocal(PT_Ptr, LHSOffset, E))
-    return false;
+  bool LHSIsComplex;
+  unsigned LHSOffset;
+  if (LHS->getType()->isAnyComplexType()) {
+    LHSIsComplex = true;
+    LHSOffset = this->allocateLocalPrimitive(LHS, PT_Ptr, true, false);
+    if (!this->visit(LHS))
+      return false;
+    if (!this->emitSetLocal(PT_Ptr, LHSOffset, E))
+      return false;
+  } else {
+    LHSIsComplex = false;
+    PrimType LHST = classifyPrim(LHS->getType());
+    LHSOffset = this->allocateLocalPrimitive(LHS, LHST, true, false);
+    if (!this->visit(LHS))
+      return false;
+    if (!this->emitSetLocal(LHST, LHSOffset, E))
+      return false;
+  }
 
   // Same with RHS.
-  if (!this->visit(RHS))
-    return false;
-  if (!this->emitSetLocal(PT_Ptr, RHSOffset, E))
-    return false;
+  bool RHSIsComplex;
+  unsigned RHSOffset;
+  if (RHS->getType()->isAnyComplexType()) {
+    RHSIsComplex = true;
+    RHSOffset = this->allocateLocalPrimitive(RHS, PT_Ptr, true, false);
+    if (!this->visit(RHS))
+      return false;
+    if (!this->emitSetLocal(PT_Ptr, RHSOffset, E))
+      return false;
+  } else {
+    RHSIsComplex = false;
+    PrimType RHST = classifyPrim(RHS->getType());
+    RHSOffset = this->allocateLocalPrimitive(RHS, RHST, true, false);
+    if (!this->visit(RHS))
+      return false;
+    if (!this->emitSetLocal(RHST, RHSOffset, E))
+      return false;
+  }
+
+  // For both LHS and RHS, either load the value from the complex pointer, or
+  // directly from the local variable. For index 1 (i.e. the imaginary part),
+  // just load 0 and do the operation anyway.
+  auto loadComplexValue = [this](bool IsComplex, unsigned ElemIndex,
+                                 unsigned Offset, const Expr *E) -> bool {
+    if (IsComplex) {
+      if (!this->emitGetLocal(PT_Ptr, Offset, E))
+        return false;
+      if (!this->emitConstUint8(ElemIndex, E))
+        return false;
+      if (!this->emitArrayElemPtrPopUint8(E))
+        return false;
+      return this->emitLoadPop(classifyComplexElementType(E->getType()), E);
+    }
+    if (ElemIndex == 0)
+      return this->emitGetLocal(classifyPrim(E->getType()), Offset, E);
+    return this->visitZeroInitializer(classifyPrim(E->getType()), E->getType(),
+                                      E);
+  };
 
   // Now we can get pointers to the LHS and RHS from the offsets above.
   BinaryOperatorKind Op = E->getOpcode();
@@ -702,41 +747,29 @@ bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
         return false;
     }
 
-    if (!this->emitGetLocal(PT_Ptr, LHSOffset, E))
-      return false;
-    if (!this->emitConstUint8(ElemIndex, E))
-      return false;
-    if (!this->emitArrayElemPtrPopUint8(E))
-      return false;
-    if (!this->emitLoadPop(LHSElemT, E))
+    if (!loadComplexValue(LHSIsComplex, ElemIndex, LHSOffset, LHS))
       return false;
 
-    if (!this->emitGetLocal(PT_Ptr, RHSOffset, E))
-      return false;
-    if (!this->emitConstUint8(ElemIndex, E))
-      return false;
-    if (!this->emitArrayElemPtrPopUint8(E))
-      return false;
-    if (!this->emitLoadPop(RHSElemT, E))
+    if (!loadComplexValue(RHSIsComplex, ElemIndex, RHSOffset, RHS))
       return false;
 
     // The actual operation.
     switch (Op) {
     case BO_Add:
-      if (LHSElemT == PT_Float) {
+      if (ResultElemT == PT_Float) {
         if (!this->emitAddf(getRoundingMode(E), E))
           return false;
       } else {
-        if (!this->emitAdd(LHSElemT, E))
+        if (!this->emitAdd(ResultElemT, E))
           return false;
       }
       break;
     case BO_Sub:
-      if (LHSElemT == PT_Float) {
+      if (ResultElemT == PT_Float) {
         if (!this->emitSubf(getRoundingMode(E), E))
           return false;
       } else {
-        if (!this->emitSub(LHSElemT, E))
+        if (!this->emitSub(ResultElemT, E))
           return false;
       }
       break;
@@ -747,10 +780,10 @@ bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
     if (!this->DiscardResult) {
       // Initialize array element with the value we just computed.
-      if (!this->emitInitElemPop(LHSElemT, ElemIndex, E))
+      if (!this->emitInitElemPop(ResultElemT, ElemIndex, E))
         return false;
     } else {
-      if (!this->emitPop(LHSElemT, E))
+      if (!this->emitPop(ResultElemT, E))
         return false;
     }
   }
