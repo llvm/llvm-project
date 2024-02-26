@@ -207,6 +207,7 @@ bool SIAnnotateControlFlow::openIf(BranchInst *Term) {
     return false;
 
   IRBuilder<> IRB(Term);
+  IRB.SetCurrentDebugLocation(DebugLoc());
   Value *IfCall = IRB.CreateCall(If, {Term->getCondition()});
   Value *Cond = IRB.CreateExtractValue(IfCall, {0});
   Value *Mask = IRB.CreateExtractValue(IfCall, {1});
@@ -222,6 +223,7 @@ bool SIAnnotateControlFlow::insertElse(BranchInst *Term) {
   }
 
   IRBuilder<> IRB(Term);
+  IRB.SetCurrentDebugLocation(DebugLoc());
   Value *ElseCall = IRB.CreateCall(Else, {popSaved()});
   Value *Cond = IRB.CreateExtractValue(ElseCall, {0});
   Value *Mask = IRB.CreateExtractValue(ElseCall, {1});
@@ -235,7 +237,9 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
     Value *Cond, PHINode *Broken, llvm::Loop *L, BranchInst *Term) {
 
   auto CreateBreak = [this, Cond, Broken](Instruction *I) -> CallInst * {
-    return IRBuilder<>(I).CreateCall(IfBreak, {Cond, Broken});
+    IRBuilder<> IRB(I);
+    IRB.SetCurrentDebugLocation(DebugLoc());
+    return IRB.CreateCall(IfBreak, {Cond, Broken});
   };
 
   if (Instruction *Inst = dyn_cast<Instruction>(Cond)) {
@@ -296,7 +300,9 @@ bool SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
     Broken->addIncoming(PHIValue, Pred);
   }
 
-  CallInst *LoopCall = IRBuilder<>(Term).CreateCall(Loop, {Arg});
+  IRBuilder<> IRB(Term);
+  IRB.SetCurrentDebugLocation(DebugLoc());
+  CallInst *LoopCall = IRB.CreateCall(Loop, {Arg});
   Term->setCondition(LoopCall);
 
   push(Term->getSuccessor(0), Arg);
@@ -336,8 +342,9 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
       // Split edge to make Def dominate Use
       FirstInsertionPt = SplitEdge(DefBB, BB, DT, LI)->getFirstInsertionPt();
     }
-    IRBuilder<>(FirstInsertionPt->getParent(), FirstInsertionPt)
-        .CreateCall(EndCf, {Exec});
+    IRBuilder<> IRB(FirstInsertionPt->getParent(), FirstInsertionPt);
+    IRB.SetCurrentDebugLocation(DebugLoc());
+    IRB.CreateCall(EndCf, {Exec});
   }
 
   return true;
