@@ -158,6 +158,9 @@ getCUDADataAttribute(mlir::MLIRContext *mlirContext,
     case Fortran::common::CUDADataAttr::Texture:
       // Obsolete attribute
       return {};
+    case Fortran::common::CUDADataAttr::Unified:
+      attr = fir::CUDADataAttribute::Unified;
+      break;
     }
     return fir::CUDADataAttributeAttr::get(mlirContext, attr);
   }
