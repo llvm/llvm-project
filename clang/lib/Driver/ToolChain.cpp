@@ -681,19 +681,29 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
   // Check for runtime files in the new layout without the architecture first.
   std::string CRTBasename =
       buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/false);
+  SmallString<128> Path;
   for (const auto &LibPath : getLibraryPaths()) {
     SmallString<128> P(LibPath);
     llvm::sys::path::append(P, CRTBasename);
     if (getVFS().exists(P))
       return std::string(P);
+    if (Path.empty())
+      Path = P;
   }
+  if (getTriple().isOSAIX())
+    Path.clear();
 
-  // Fall back to the old expected compiler-rt name if the new one does not
-  // exist.
+  // Check the filename for the old layout if the new one does not exist.
   CRTBasename =
       buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/true);
-  SmallString<128> Path(getCompilerRTPath());
-  llvm::sys::path::append(Path, CRTBasename);
+  SmallString<128> OldPath(getCompilerRTPath());
+  llvm::sys::path::append(OldPath, CRTBasename);
+  if (Path.empty() || getVFS().exists(OldPath))
+    return std::string(OldPath);
+
+  // If none is found, use a file name from the new layout, which may get
+  // printed in an error message, aiding users in knowing what Clang is
+  // looking for.
   return std::string(Path);
 }
 
