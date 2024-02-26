@@ -368,7 +368,9 @@ public:
 
   const std::optional<DXILData> &getDXIL() const { return DXIL; }
 
-  std::optional<uint64_t> getShaderFeatureFlags() const { return ShaderFeatureFlags; }
+  std::optional<uint64_t> getShaderFeatureFlags() const {
+    return ShaderFeatureFlags;
+  }
 
   std::optional<dxbc::ShaderHash> getShaderHash() const { return Hash; }
 
