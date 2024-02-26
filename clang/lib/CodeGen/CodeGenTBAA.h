@@ -29,6 +29,7 @@ namespace clang {
   class Type;
 
 namespace CodeGen {
+  class CodeGenTypes;
 
 // TBAAAccessKind - A kind of TBAA memory access descriptor.
 enum class TBAAAccessKind : unsigned {
@@ -115,6 +116,7 @@ struct TBAAAccessInfo {
 /// while lowering AST types to LLVM types.
 class CodeGenTBAA {
   ASTContext &Context;
+  CodeGenTypes &CGTypes;
   llvm::Module &Module;
   const CodeGenOptions &CodeGenOpts;
   const LangOptions &Features;
@@ -167,7 +169,7 @@ class CodeGenTBAA {
   llvm::MDNode *getBaseTypeInfoHelper(const Type *Ty);
 
 public:
-  CodeGenTBAA(ASTContext &Ctx, llvm::Module &M, const CodeGenOptions &CGO,
+  CodeGenTBAA(ASTContext &Ctx, CodeGenTypes &CGTypes, llvm::Module &M, const CodeGenOptions &CGO,
               const LangOptions &Features, MangleContext &MContext);
   ~CodeGenTBAA();
 

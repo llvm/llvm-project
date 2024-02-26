@@ -14,6 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CGRecordLayout.h"
+#include "CodeGenTypes.h"
 #include "CodeGenTBAA.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -29,10 +31,10 @@
 using namespace clang;
 using namespace CodeGen;
 
-CodeGenTBAA::CodeGenTBAA(ASTContext &Ctx, llvm::Module &M,
+CodeGenTBAA::CodeGenTBAA(ASTContext &Ctx, CodeGenTypes &CGTypes, llvm::Module &M,
                          const CodeGenOptions &CGO,
                          const LangOptions &Features, MangleContext &MContext)
-  : Context(Ctx), Module(M), CodeGenOpts(CGO),
+  : Context(Ctx), CGTypes(CGTypes), Module(M), CodeGenOpts(CGO),
     Features(Features), MContext(MContext), MDHelper(M.getContext()),
     Root(nullptr), Char(nullptr)
 {}
@@ -294,18 +296,37 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
         return false;
 
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
+    const CGRecordLayout &CGRL = CGTypes.getCGRecordLayout(RD);
 
     unsigned idx = 0;
     for (RecordDecl::field_iterator i = RD->field_begin(),
          e = RD->field_end(); i != e; ++i, ++idx) {
-      if ((*i)->isZeroSize(Context) || (*i)->isBitField())
+      if ((*i)->isZeroSize(Context))
         continue;
+
       uint64_t Offset = BaseOffset +
                         Layout.getFieldOffset(idx) / Context.getCharWidth();
       QualType FieldQTy = i->getType();
-      if (!CollectFields(Offset, FieldQTy, Fields,
-                         MayAlias || TypeHasMayAlias(FieldQTy)))
-        return false;
+      if ((*i)->isBitField()) {
+        RecordDecl::field_iterator j = i;
+        unsigned CurrentBitFieldSize = 0;
+        while (j != e && (*j)->isBitField()) {
+          const CGBitFieldInfo &Info = CGRL.getBitFieldInfo(*j);
+          CurrentBitFieldSize += Info.Size;
+          j++;
+        }
+        uint64_t Offset = BaseOffset;
+        uint64_t Size = llvm::divideCeil(CurrentBitFieldSize , 8);
+        llvm::MDNode *TBAAType = getChar();
+        llvm::MDNode *TBAATag = getAccessTagInfo(TBAAAccessInfo(TBAAType, Size));
+        Fields.push_back(llvm::MDBuilder::TBAAStructField(Offset, Size, TBAATag));
+        i = std::prev(j);
+      } else {
+        if (!CollectFields(Offset, FieldQTy, Fields,
+                           MayAlias || TypeHasMayAlias(FieldQTy)))
+          return false;
+
+        }
     }
     return true;
   }
