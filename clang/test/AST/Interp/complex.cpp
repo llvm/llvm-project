@@ -124,6 +124,12 @@ void func(void) {
   result = arr * ii;
 }
 
+constexpr _Complex float getComplexFloat() {
+  return {1,2};
+}
+static_assert(__real(getComplexFloat()) == 1, "");
+static_assert(__imag(getComplexFloat()) == 2, "");
+
 namespace CastToBool {
   constexpr _Complex int F = {0, 1};
   static_assert(F, "");
