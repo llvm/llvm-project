@@ -3369,11 +3369,17 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
 
   // Patch the replacement so that it is not more restrictive than the value
   // being replaced.
+  WithOverflowInst *UnusedWO;
+  // When replacing the result of a llvm.*.with.overflow intrinsic with a
+  // overflowing binary operator, nuw/nsw flags may no longer hold.
+  if (isa<OverflowingBinaryOperator>(ReplInst) &&
+      match(I, m_ExtractValue<0>(m_WithOverflowInst(UnusedWO))))
+    ReplInst->dropPoisonGeneratingFlags();
   // Note that if 'I' is a load being replaced by some operation,
   // for example, by an arithmetic operation, then andIRFlags()
   // would just erase all math flags from the original arithmetic
   // operation, which is clearly not wanted and not needed.
-  if (!isa<LoadInst>(I))
+  else if (!isa<LoadInst>(I))
     ReplInst->andIRFlags(I);
 
   // FIXME: If both the original and replacement value are part of the
