@@ -436,12 +436,29 @@ func.func @cast_to_static_zero_elems(%arg: memref<?xf32, #spirv.storage_class<Cr
 
 // Check nontemporal attribute
 
-module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>} {
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [
+    Shader,
+    PhysicalStorageBufferAddresses
+  ], [
+    SPV_KHR_storage_buffer_storage_class,
+    SPV_KHR_physical_storage_buffer
+  ]>, #spirv.resource_limits<>>
+} {
   func.func @load_nontemporal(%arg0: memref<f32, #spirv.storage_class<StorageBuffer>>) {
     %0 = memref.load %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<StorageBuffer>>
 //       CHECK:  spirv.Load "StorageBuffer" %{{.+}} ["Nontemporal"] : f32
     memref.store %0, %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<StorageBuffer>>
 //       CHECK:  spirv.Store "StorageBuffer" %{{.+}}, %{{.+}} ["Nontemporal"] : f32
+    return
+  }
+
+  // Nontemporal attribute is ignored in case of alignment
+  func.func @load_nontemporal_ignored(%arg0: memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>) {
+    %0 = memref.load %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
+//       CHECK:  spirv.Load "PhysicalStorageBuffer" %{{.+}} ["Aligned", 4] : f32
+    memref.store %0, %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
+//       CHECK:  spirv.Store "PhysicalStorageBuffer" %{{.+}}, %{{.+}} ["Aligned", 4] : f32
     return
   }
 }

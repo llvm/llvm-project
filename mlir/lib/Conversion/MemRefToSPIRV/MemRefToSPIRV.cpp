@@ -445,15 +445,23 @@ DeallocOpPattern::matchAndRewrite(memref::DeallocOp operation,
 // LoadOp
 //===----------------------------------------------------------------------===//
 
-using AlignmentRequirements =
+using MemoryRequirements =
     FailureOr<std::pair<spirv::MemoryAccessAttr, IntegerAttr>>;
 
 /// Given an accessed SPIR-V pointer, calculates its alignment requirements, if
 /// any.
-static AlignmentRequirements calculateRequiredAlignment(Value accessedPtr) {
+static MemoryRequirements calculateMemoryRequirements(Value accessedPtr,
+                                                      bool isNontemporal) {
+  MLIRContext *ctx = accessedPtr.getContext();
   auto ptrType = cast<spirv::PointerType>(accessedPtr.getType());
-  if (ptrType.getStorageClass() != spirv::StorageClass::PhysicalStorageBuffer)
+  if (ptrType.getStorageClass() != spirv::StorageClass::PhysicalStorageBuffer) {
+    if (isNontemporal) {
+      return std::pair{
+          spirv::MemoryAccessAttr::get(ctx, spirv::MemoryAccess::Nontemporal),
+          IntegerAttr{}};
+    }
     return std::pair{spirv::MemoryAccessAttr{}, IntegerAttr{}};
+  }
 
   // PhysicalStorageBuffers require the `Aligned` attribute.
   auto pointeeType = dyn_cast<spirv::ScalarType>(ptrType.getPointeeType());
@@ -465,7 +473,6 @@ static AlignmentRequirements calculateRequiredAlignment(Value accessedPtr) {
   if (!sizeInBytes.has_value())
     return failure();
 
-  MLIRContext *ctx = accessedPtr.getContext();
   auto memAccessAttr =
       spirv::MemoryAccessAttr::get(ctx, spirv::MemoryAccess::Aligned);
   auto alignment = IntegerAttr::get(IntegerType::get(ctx, 32), *sizeInBytes);
@@ -475,28 +482,22 @@ static AlignmentRequirements calculateRequiredAlignment(Value accessedPtr) {
 /// Given an accessed SPIR-V pointer and the original memref load/store
 /// `memAccess` op, calculates the alignment requirements, if any. Takes into
 /// account the alignment attributes applied to the load/store op.
-static AlignmentRequirements
-calculateRequiredAlignment(Value accessedPtr, Operation *memrefAccessOp) {
-  assert(memrefAccessOp);
-  assert((isa<memref::LoadOp, memref::StoreOp>(memrefAccessOp)) &&
-         "Bad op type");
+template <class LoadOrStoreOp>
+static MemoryRequirements
+calculateMemoryRequirements(Value accessedPtr, LoadOrStoreOp loadOrStoreOp) {
+  static_assert(
+      llvm::is_one_of<LoadOrStoreOp, memref::LoadOp, memref::StoreOp>::value,
+      "Must be called on either memref::LoadOp or memref::StoreOp");
 
-  auto nontemporalAttr = memrefAccessOp->getAttrOfType<BoolAttr>("nontemporal");
-  if (nontemporalAttr && nontemporalAttr.getValue()) {
-    return std::pair{
-        spirv::MemoryAccessAttr::get(accessedPtr.getContext(),
-                                     spirv::MemoryAccess::Nontemporal),
-        IntegerAttr{}};
-  }
-
-  auto memrefMemAccess = memrefAccessOp->getAttrOfType<spirv::MemoryAccessAttr>(
+  Operation *op = loadOrStoreOp.getOperation();
+  auto memrefMemAccess = op->getAttrOfType<spirv::MemoryAccessAttr>(
       spirv::attributeName<spirv::MemoryAccess>());
-  auto memrefAlignment =
-      memrefAccessOp->getAttrOfType<IntegerAttr>("alignment");
+  auto memrefAlignment = op->getAttrOfType<IntegerAttr>("alignment");
   if (memrefMemAccess && memrefAlignment)
     return std::pair{memrefMemAccess, memrefAlignment};
 
-  return calculateRequiredAlignment(accessedPtr);
+  return calculateMemoryRequirements(accessedPtr,
+                                     loadOrStoreOp.getNontemporal());
 }
 
 LogicalResult
@@ -546,13 +547,13 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   // If the rewritten load op has the same bit width, use the loading value
   // directly.
   if (srcBits == dstBits) {
-    AlignmentRequirements alignmentRequirements =
-        calculateRequiredAlignment(accessChain, loadOp);
-    if (failed(alignmentRequirements))
+    MemoryRequirements memoryRequirements =
+        calculateMemoryRequirements(accessChain, loadOp);
+    if (failed(memoryRequirements))
       return rewriter.notifyMatchFailure(
-          loadOp, "failed to determine alignment requirements");
+          loadOp, "failed to determine memory requirements");
 
-    auto [memoryAccess, alignment] = *alignmentRequirements;
+    auto [memoryAccess, alignment] = *memoryRequirements;
     Value loadVal = rewriter.create<spirv::LoadOp>(loc, accessChain,
                                                    memoryAccess, alignment);
     if (isBool)
@@ -576,13 +577,13 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   assert(accessChainOp.getIndices().size() == 2);
   Value adjustedPtr = adjustAccessChainForBitwidth(typeConverter, accessChainOp,
                                                    srcBits, dstBits, rewriter);
-  AlignmentRequirements alignmentRequirements =
-      calculateRequiredAlignment(adjustedPtr, loadOp);
-  if (failed(alignmentRequirements))
+  MemoryRequirements memoryRequirements =
+      calculateMemoryRequirements(adjustedPtr, loadOp);
+  if (failed(memoryRequirements))
     return rewriter.notifyMatchFailure(
-        loadOp, "failed to determine alignment requirements");
+        loadOp, "failed to determine memory requirements");
 
-  auto [memoryAccess, alignment] = *alignmentRequirements;
+  auto [memoryAccess, alignment] = *memoryRequirements;
   Value spvLoadOp = rewriter.create<spirv::LoadOp>(loc, dstType, adjustedPtr,
                                                    memoryAccess, alignment);
 
@@ -631,8 +632,8 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   if (!loadPtr)
     return failure();
 
-  AlignmentRequirements requiredAlignment =
-      calculateRequiredAlignment(loadPtr, loadOp);
+  MemoryRequirements requiredAlignment =
+      calculateMemoryRequirements(loadPtr, loadOp);
   if (failed(requiredAlignment))
     return rewriter.notifyMatchFailure(
         loadOp, "failed to determine alignment requirements");
@@ -698,8 +699,8 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   assert(dstBits % srcBits == 0);
 
   if (srcBits == dstBits) {
-    AlignmentRequirements requiredAlignment =
-        calculateRequiredAlignment(accessChain);
+    MemoryRequirements requiredAlignment =
+        calculateMemoryRequirements(accessChain, storeOp);
     if (failed(requiredAlignment))
       return rewriter.notifyMatchFailure(
           storeOp, "failed to determine alignment requirements");
@@ -856,8 +857,8 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   if (!storePtr)
     return rewriter.notifyMatchFailure(storeOp, "type conversion failed");
 
-  AlignmentRequirements requiredAlignment =
-      calculateRequiredAlignment(storePtr, storeOp);
+  MemoryRequirements requiredAlignment =
+      calculateMemoryRequirements(storePtr, storeOp);
   if (failed(requiredAlignment))
     return rewriter.notifyMatchFailure(
         storeOp, "failed to determine alignment requirements");
