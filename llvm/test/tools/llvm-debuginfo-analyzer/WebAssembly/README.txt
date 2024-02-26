@@ -49,6 +49,6 @@ For target=wasm32
 
 Notes:
 ------
-* The tests run the .wasm file (target=wasm64).
+* The tests run the .wasm file (target=wasm32).
 * The .wat files were generated using WABT wasm2wat tool and are included
   only for extra information.

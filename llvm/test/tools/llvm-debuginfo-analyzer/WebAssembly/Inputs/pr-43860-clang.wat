@@ -1,16 +1,16 @@
 (module
   (type (;0;) (func (param i32 i32) (result i32)))
-  (import "env" "__linear_memory" (memory (;0;) i64 0))
-  (import "env" "__stack_pointer" (global (;0;) (mut i64)))
+  (import "env" "__linear_memory" (memory (;0;) 0))
+  (import "env" "__stack_pointer" (global (;0;) (mut i32)))
   (func $_Z4testii (type 0) (param i32 i32) (result i32)
-    (local i64 i64 i64 i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 i32)
+    (local i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 i32)
     global.get 0
     local.set 2
-    i64.const 32
+    i32.const 32
     local.set 3
     local.get 2
     local.get 3
-    i64.sub
+    i32.sub
     local.set 4
     local.get 4
     local.get 0

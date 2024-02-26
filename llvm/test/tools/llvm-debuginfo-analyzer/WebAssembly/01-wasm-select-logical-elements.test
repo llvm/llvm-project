@@ -32,13 +32,12 @@
 ; ONE-NEXT: [001]           {CompileUnit} 'test.cpp'
 ; ONE-NEXT: [003]           {Code} 'block'
 ; ONE-NEXT: [003]           {Code} 'block'
-; ONE-NEXT: [003]           {Code} 'block   	unknown_type'
-; ONE-NEXT: [003]           {Code} 'i32.store	12'
+; ONE-NEXT: [004]           {Code} 'i32.store	12'
+; ONE-NEXT: [003]           {Code} 'i32.store	20'
+; ONE-NEXT: [003]           {Code} 'i32.store	24'
 ; ONE-NEXT: [004]           {Code} 'i32.store	28'
 ; ONE-NEXT: [003]           {Code} 'i32.store	28'
-; ONE-NEXT: [004]           {Code} 'i32.store	4'
-; ONE-NEXT: [003]           {Code} 'i32.store8	11'
-; ONE-NEXT: [003]           {Code} 'i64.store	16'
+; ONE-NEXT: [003]           {Code} 'i32.store8	19'
 ; ONE-EMPTY:
 ; ONE-NEXT: -----------------------------
 ; ONE-NEXT: Element      Total    Printed
@@ -46,9 +45,9 @@
 ; ONE-NEXT: Scopes           3          0
 ; ONE-NEXT: Symbols          4          0
 ; ONE-NEXT: Types            2          0
-; ONE-NEXT: Lines           62          9
+; ONE-NEXT: Lines           62          8
 ; ONE-NEXT: -----------------------------
-; ONE-NEXT: Total           71          9
+; ONE-NEXT: Total           71          8
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level \
 ; RUN:                         --select-regex --select-nocase \

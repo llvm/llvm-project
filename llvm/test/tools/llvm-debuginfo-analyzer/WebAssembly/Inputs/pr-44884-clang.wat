@@ -1,17 +1,17 @@
 (module
   (type (;0;) (func (param f32) (result i32)))
   (type (;1;) (func (param i32) (result i32)))
-  (import "env" "__linear_memory" (memory (;0;) i64 0))
-  (import "env" "__stack_pointer" (global (;0;) (mut i64)))
+  (import "env" "__linear_memory" (memory (;0;) 0))
+  (import "env" "__stack_pointer" (global (;0;) (mut i32)))
   (func $_Z3barf (type 0) (param f32) (result i32)
-    (local i64 i64 i64 f32 f32 f32 i32 i32 i32 i32 i32 i32)
+    (local i32 i32 i32 f32 f32 f32 i32 i32 i32 i32 i32 i32)
     global.get 0
     local.set 1
-    i64.const 16
+    i32.const 16
     local.set 2
     local.get 1
     local.get 2
-    i64.sub
+    i32.sub
     local.set 3
     local.get 3
     local.get 0
@@ -52,14 +52,14 @@
     local.get 12
     return)
   (func $_Z3fooc (type 1) (param i32) (result i32)
-    (local i64 i64 i64 i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 f32 f32 i32 i32 i32 i32 i32 i32 i32 i64 i64)
+    (local i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 f32 f32 i32 i32 i32 i32 i32 i32 i32 i32 i32)
     global.get 0
     local.set 1
-    i64.const 16
+    i32.const 16
     local.set 2
     local.get 1
     local.get 2
-    i64.sub
+    i32.sub
     local.set 3
     local.get 3
     global.set 0
@@ -137,11 +137,11 @@
     local.get 21
     i32.add
     local.set 22
-    i64.const 16
+    i32.const 16
     local.set 23
     local.get 3
     local.get 23
-    i64.add
+    i32.add
     local.set 24
     local.get 24
     global.set 0
