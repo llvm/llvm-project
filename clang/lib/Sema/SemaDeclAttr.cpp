@@ -1689,6 +1689,26 @@ static void handleAllocAlignAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   S.AddAllocAlignAttr(D, AL, AL.getArgAsExpr(0));
 }
 
+static void handleLLVMFuncAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!isFunctionOrMethod(D)) {
+    S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
+        << AL << AL.isRegularKeywordAttribute() << ExpectedFunctionOrMethod;
+    return;
+  }
+
+  StringRef Name;
+  SourceLocation NameStrLoc;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Name, &NameStrLoc))
+    return;
+
+  StringRef Value;
+  SourceLocation ValueStrLoc;
+  if (!S.checkStringLiteralArgumentAttr(AL, 1, Value, &ValueStrLoc))
+    return;
+
+  D->addAttr(::new (S.Context) LLVMFuncAttrAttr(S.Context, AL, Name, Value));
+}
+
 void Sema::AddAssumeAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
                                 Expr *OE) {
   QualType ResultType = getFunctionOrMethodResultType(D);
@@ -9358,6 +9378,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_AllocAlign:
     handleAllocAlignAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_LLVMFuncAttr:
+    handleLLVMFuncAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Ownership:
     handleOwnershipAttr(S, D, AL);

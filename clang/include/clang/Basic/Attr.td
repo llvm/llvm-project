@@ -2211,7 +2211,7 @@ def AllocAlign : InheritableAttr {
   let Documentation = [AllocAlignDocs];
 }
 
-def LLVMFuncAttr : InheritableAttr {
+def LLVMFuncAttr : DeclOrStmtAttr {
   let Spellings = [Clang<"llvm_fn_attr">];
   let Args = [StringArgument<"LLVMAttrName">, StringArgument<"LLVMAttrValue">];
   let Documentation = [LLVMFuncAttrDocs];

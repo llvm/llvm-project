@@ -832,21 +832,20 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       SanOpts.Mask &= ~SanitizerKind::Null;
 
   if (D) {
-    for (auto Attr :
-         template TargetDecl->specific_attrs<attr::LLVMFuncAttr>()) {
+    for (auto Attr : D->template specific_attrs<LLVMFuncAttrAttr>()) {
       auto name = Attr->getLLVMAttrName();
       auto value = Attr->getLLVMAttrValue();
 
-      Attribute Attr;
+      llvm::Attribute LLAttr;
       auto EnumAttr = llvm::Attribute::getAttrKindFromName(name);
       if (EnumAttr == llvm::Attribute::None)
-        Attr = llvm::Attribute::get(getLLVMContext(), name, value);
+        LLAttr = llvm::Attribute::get(getLLVMContext(), name, value);
       else {
         assert(value.size() == 0 &&
                "enum attribute does not support value yet");
-        Attr = llvm::Attribute::get(getLLVMContext(), EnumAttr);
+        LLAttr = llvm::Attribute::get(getLLVMContext(), EnumAttr);
       }
-      Fn->addFnAttr(Attr);
+      Fn->addFnAttr(LLAttr);
     }
   }
 
