@@ -370,12 +370,13 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// Mapping of calculated MC/DC Independence Pairs for each condition.
   MCDCRecord::TVPairMap IndependencePairs;
 
+  /// Storage for ExecVectors
+  /// ExecVectors is the alias of its 0th element.
+  std::array<MCDCRecord::TestVectors, 2> ExecVectorsByCond;
+
   /// Actual executed Test Vectors for the boolean expression, based on
   /// ExecutedTestVectorBitmap.
-  MCDCRecord::TestVectors ExecVectors;
-
-  /// Temporary use
-  std::array<MCDCRecord::TestVectors, 2> ExecVectorsByCond;
+  MCDCRecord::TestVectors &ExecVectors;
 
   /// Number of False items in ExecVectors
   unsigned NumExecVectorsF;
@@ -391,7 +392,8 @@ public:
       : NextIDsBuilder(Branches), TVIdxBuilder(this->NextIDs), Bitmap(Bitmap),
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
-        Folded(NumConditions, false), IndependencePairs(NumConditions) {}
+        Folded(NumConditions, false), IndependencePairs(NumConditions),
+        ExecVectors(ExecVectorsByCond[false]) {}
 
 private:
   // Walk the binary decision diagram and try assigning both false and true to
@@ -443,9 +445,10 @@ private:
            "TVIdxs wasn't fulfilled");
 
     // Fill ExecVectors order by False items and True items.
-    auto &[ExecVectorsF, ExecVectorsT] = ExecVectorsByCond;
-    NumExecVectorsF = ExecVectorsF.size();
-    ExecVectors = std::move(ExecVectorsF);
+    // ExecVectors is the alias of ExecVectorsByCond[false], so
+    // Append ExecVectorsByCond[true] on it.
+    NumExecVectorsF = ExecVectors.size();
+    auto &ExecVectorsT = ExecVectorsByCond[true];
     ExecVectors.append(std::make_move_iterator(ExecVectorsT.begin()),
                        std::make_move_iterator(ExecVectorsT.end()));
   }
