@@ -1,3 +1,4 @@
+# NFC
 FROM docker.io/library/ubuntu:22.04 as base
 ENV LLVM_SYSROOT=/opt/llvm
 
