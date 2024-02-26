@@ -273,10 +273,6 @@ public:
   /// Reset the nodes of this SCC with those provided.
   void reset(const std::vector<CallGraphNode *> &newNodes) { nodes = newNodes; }
 
-  bool has(CallGraphNode *node) {
-    return std::count(nodes.begin(), nodes.end(), node) > 0;
-  }
-
   /// Remove the given node from this SCC.
   void remove(CallGraphNode *node) {
     auto it = llvm::find(nodes, node);
