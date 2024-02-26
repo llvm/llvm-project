@@ -221,13 +221,8 @@ VPTransformState::VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
       TypeAnalysis(Plan->getCanonicalIV()->getScalarType(), Ctx) {}
 
 Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
-  if (Def->isLiveIn()) {
-    if (Value *V = Def->getLiveInIRValue())
-      return V;
-    if (hasScalarValue(Def, VPIteration(0, 0))) {
-      return Data.PerPartScalars[Def][0][0];
-    }
-  }
+  if (Def->isLiveIn())
+    return Def->getLiveInIRValue();
 
   if (hasScalarValue(Def, Instance)) {
     return Data

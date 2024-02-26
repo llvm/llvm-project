@@ -552,6 +552,8 @@ static VPValue *createScalarIVSteps(VPlan &Plan,
 /// provide them by building scalar steps off of the canonical scalar IV and
 /// update the original IV's users. This is an optional optimization to reduce
 /// the needs of vector extracts.
+/// If all users of VPWidenPointerInductionRecipe only use its scalar values,
+/// replace it with a PtrAdd (IndStart, ScalarIVSteps (0, Step)).
 static void optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
   SmallVector<VPRecipeBase *> ToRemove;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
