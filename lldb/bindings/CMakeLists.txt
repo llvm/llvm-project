@@ -57,3 +57,13 @@ endif()
 if (LLDB_ENABLE_LUA)
   add_subdirectory(lua)
 endif()
+
+if(NOT ${LLDB_USE_STATIC_BINDINGS})
+  set(copy_static_bindings_script "${LLDB_SOURCE_DIR}/scripts/copy-static-bindings.py")
+  add_custom_target(update-static-bindings
+    COMMAND ${copy_static_bindings_script} ${CMAKE_BINARY_DIR}
+    COMMENT "Copying the generated bindings to the static bindings directory in source."
+    VERBATIM
+  )
+  add_dependencies(update-static-bindings swig_wrapper_python)
+endif()
