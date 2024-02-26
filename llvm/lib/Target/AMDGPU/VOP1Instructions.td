@@ -791,8 +791,8 @@ let SubtargetPredicate = isGFX12_10Plus in {
                                V_CVT_F16_BF8_e32, V_CVT_F16_BF8_e64>;
   }
 
-  defm V_SAT_PK_I4_I8 : VOP1Inst_t16<"v_sat_pk_i4_i8", VOP1_I16_I32>;
-  defm V_SAT_PK_U4_U8 : VOP1Inst_t16<"v_sat_pk_u4_u8", VOP1_I16_I32>;
+  defm V_SAT_PK_I4_I8 : VOP1Inst_t16<"v_sat_pk_i4_i8", VOP1_I16_I32, int_amdgcn_cvt_sat_pk_i4_i8>;
+  defm V_SAT_PK_U4_U8 : VOP1Inst_t16<"v_sat_pk_u4_u8", VOP1_I16_I32, int_amdgcn_cvt_sat_pk_u4_u8>;
 } // End SubtargetPredicate = isGFX12_10Plus
 
 let SubtargetPredicate = isGFX10Plus in {
