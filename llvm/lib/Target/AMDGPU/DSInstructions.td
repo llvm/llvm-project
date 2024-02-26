@@ -1203,7 +1203,7 @@ def : GCNPat <
 
 class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
                                                string opName = ps.Mnemonic,
-                                               bit hasGFX12Enc = 0>
+                                               bit hasGDS = true>
     : DS_Real<ps, opName>, SIMCInstr <ps.Mnemonic, ef> {
 
   let Inst{7-0}   = !if(ps.has_offset0, offset0, 0);
@@ -1216,7 +1216,7 @@ class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
   let Inst{55-48} = !if(ps.has_data1, data1{7-0}, 0);
   let Inst{63-56} = !if(ps.has_vdst, vdst{7-0}, 0);
 
-  let gds = !if(hasGFX12Enc, 0, ?);
+  let gds = !if(hasGDS, ?, 0);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1228,7 +1228,7 @@ let AssemblerPredicate = isGFX12Plus, DecoderNamespace = "GFX12" in {
     defvar ps = !cast<DS_Pseudo>(NAME);
     def _gfx12 :
       Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, ps, SIEncodingFamily.GFX12,
-                                               ps.Mnemonic, 1>;
+                                               ps.Mnemonic, /*hasGDS=*/false>;
   }
 
   multiclass DS_Real_Renamed_gfx12<bits<8> op, DS_Pseudo backing_pseudo,
@@ -1236,7 +1236,7 @@ let AssemblerPredicate = isGFX12Plus, DecoderNamespace = "GFX12" in {
     def _gfx12 :
       Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, backing_pseudo,
                                                SIEncodingFamily.GFX12,
-                                               real_name, 1>,
+                                               real_name, /*hasGDS=*/false>,
       MnemonicAlias<backing_pseudo.Mnemonic, real_name>,
       Requires<[isGFX12Plus]>;
   }
