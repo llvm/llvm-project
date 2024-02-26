@@ -14,9 +14,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenTBAA.h"
 #include "CGRecordLayout.h"
 #include "CodeGenTypes.h"
-#include "CodeGenTBAA.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Mangle.h"
@@ -300,19 +300,22 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
     const CGRecordLayout &CGRL = CGTypes.getCGRecordLayout(RD);
 
     unsigned idx = 0;
-    for (RecordDecl::field_iterator i = RD->field_begin(),
-         e = RD->field_end(); i != e;) {
+    for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
+         i != e;) {
       if ((*i)->isZeroSize(Context)) {
-        ++i; ++idx;
+        ++i;
+        ++idx;
         continue;
       }
 
-      uint64_t Offset = BaseOffset +
-                        Layout.getFieldOffset(idx) / Context.getCharWidth();
+      uint64_t Offset =
+          BaseOffset + Layout.getFieldOffset(idx) / Context.getCharWidth();
       QualType FieldQTy = i->getType();
+      // Create a single field for consecutive named bitfields using char as
+      // base type.
       if ((*i)->isBitField() && !(*i)->isUnnamedBitfield()) {
         unsigned CurrentBitFieldSize = 0;
-        unsigned CurrentBitFieldOffset = 0;
+        unsigned CurrentBitFieldOffset = CGRL.getBitFieldInfo(*i).Offset;
         while (i != e && (*i)->isBitField() && !(*i)->isUnnamedBitfield()) {
           const CGBitFieldInfo &Info = CGRL.getBitFieldInfo(*i);
           if (CurrentBitFieldSize + CurrentBitFieldOffset != Info.Offset)
@@ -322,17 +325,21 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
           ++i;
           ++idx;
         }
-        uint64_t Size = llvm::divideCeil(CurrentBitFieldSize , 8);
+        uint64_t Size =
+            llvm::divideCeil(CurrentBitFieldSize, Context.getCharWidth());
         llvm::MDNode *TBAAType = getChar();
-        llvm::MDNode *TBAATag = getAccessTagInfo(TBAAAccessInfo(TBAAType, Size));
-        Fields.push_back(llvm::MDBuilder::TBAAStructField(Offset, Size, TBAATag));
-      } else {
-        if (!CollectFields(Offset, FieldQTy, Fields,
-                           MayAlias || TypeHasMayAlias(FieldQTy)))
-          return false;
-
- ++i; ++idx;
+        llvm::MDNode *TBAATag =
+            getAccessTagInfo(TBAAAccessInfo(TBAAType, Size));
+        Fields.push_back(
+            llvm::MDBuilder::TBAAStructField(Offset, Size, TBAATag));
+        continue;
       }
+      if (!CollectFields(Offset, FieldQTy, Fields,
+                         MayAlias || TypeHasMayAlias(FieldQTy)))
+        return false;
+
+      ++i;
+      ++idx;
     }
     return true;
   }
