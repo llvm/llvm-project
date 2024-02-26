@@ -43,27 +43,27 @@ struct not_found_count_in_other_unnamed_substruct {
 
   struct {
     int dummy;
-    int array[] __counted_by(count); // expected-error {{'counted_by' field 'count' isn't within the same struct as the flexible array}}
+    int array[] __counted_by(count); // expected-error {{use of undeclared identifier 'count'}}
   };
 };
 
 struct not_found_count_in_other_substruct {
   struct _a1 {
-    unsigned char count; // expected-note {{'count' declared here}}
+    unsigned char count;
   } a1;
 
   struct {
     int dummy;
-    int array[] __counted_by(count); // expected-error {{'counted_by' field 'count' isn't within the same struct as the flexible array}}
+    int array[] __counted_by(count); // expected-error {{use of undeclared identifier 'count'}}
   };
 };
 
 struct not_found_count_in_other_substruct_2 {
-  struct _a1 {
-    unsigned char count; // expected-note {{'count' declared here}}
-  } a1;
+  struct _a2 {
+    unsigned char count;
+  } a2;
 
-  int array[] __counted_by(count); // expected-error {{'counted_by' field 'count' isn't within the same struct as the flexible array}}
+  int array[] __counted_by(count); // expected-error {{use of undeclared identifier 'count'}}
 };
 
 struct not_found_suggest {
