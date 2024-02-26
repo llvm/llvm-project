@@ -276,6 +276,7 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
   if (!irdlFile.empty() && failed(loadIRDLDialects(irdlFile, roundtripContext)))
     return failure();
 
+  std::string testType = (useBytecode) ? "bytecode" : "textual";
   // Print a first time with custom format (or bytecode) and parse it back to
   // the roundtripModule.
   {
@@ -289,7 +290,7 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
       }
     } else {
       op->print(ostream,
-                OpPrintingFlags().printGenericOpForm(false).enableDebugInfo());
+                OpPrintingFlags().printGenericOpForm().enableDebugInfo());
     }
     FallbackAsmResourceMap fallbackResourceMap;
     ParserConfig parseConfig(&roundtripContext, /*verifyAfterParse=*/true,
@@ -297,8 +298,8 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
     roundtripModule =
         parseSourceString<Operation *>(ostream.str(), parseConfig);
     if (!roundtripModule) {
-      op->emitOpError()
-          << "failed to parse bytecode back, cannot verify round-trip.\n";
+      op->emitOpError() << "failed to parse " << testType
+                        << " content back, cannot verify round-trip.\n";
       return failure();
     }
   }
@@ -317,10 +318,12 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
   }
   if (reference != roundtrip) {
     // TODO implement a diff.
-    return op->emitOpError() << "roundTrip testing roundtripped module differs "
-                                "from reference:\n<<<<<<Reference\n"
-                             << reference << "\n=====\n"
-                             << roundtrip << "\n>>>>>roundtripped\n";
+    return op->emitOpError()
+           << testType
+           << " roundTrip testing roundtripped module differs "
+              "from reference:\n<<<<<<Reference\n"
+           << reference << "\n=====\n"
+           << roundtrip << "\n>>>>>roundtripped\n";
   }
 
   return success();
@@ -328,10 +331,9 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
 
 static LogicalResult doVerifyRoundTrip(Operation *op,
                                        const MlirOptMainConfig &config) {
-  // Textual round-trip isn't fully robust at the moment (for example implicit
-  // terminator are losing location informations).
-
-  return doVerifyRoundTrip(op, config, /*useBytecode=*/true);
+  auto txtStatus = doVerifyRoundTrip(op, config, /*useBytecode=*/false);
+  auto bcStatus = doVerifyRoundTrip(op, config, /*useBytecode=*/true);
+  return success(succeeded(txtStatus) && succeeded(bcStatus));
 }
 
 /// Perform the actions on the input file indicated by the command line flags
