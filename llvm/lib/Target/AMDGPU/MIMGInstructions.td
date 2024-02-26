@@ -527,7 +527,7 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
     let ssamp = 0 in {
       if op.HAS_GFX10M then {
         def _V1 : MIMG_NoSampler_Helper <op, asm, dst_rc, VGPR_32,
-                                         !if(enableDisasm, "GFX10", "")>;
+                                         !if(enableDisasm, "GFX8", "")>;
         if !not(ExtendedImageInst) then
         def _V1_gfx90a : MIMG_NoSampler_Helper_gfx90a <op, asm, dst_rc, VGPR_32,
                                        !if(enableDisasm, "GFX90A", "")>;
@@ -754,7 +754,7 @@ multiclass MIMG_Store_Addr_Helper <mimgopc op, string asm,
       let ssamp = 0 in {
         if op.HAS_GFX10M then {
           def _V1 : MIMG_Store_Helper <op, asm, data_rc, VGPR_32,
-                                      !if(enableDisasm, "GFX10", "")>;
+                                      !if(enableDisasm, "GFX8", "")>;
           let hasPostISelHook = 1 in
           def _V1_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VGPR_32,
                                       !if(enableDisasm, "GFX90A", "")>;
@@ -1298,7 +1298,7 @@ multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
       if op.HAS_GFX10M then {
         def _V # addr.NumWords
           : MIMG_Sampler_Helper <op, asm, dst_rc, addr.RegClass,
-                                 !if(!and(enableDisasm, addr.Disassemble), "GFX10", "")>;
+                                 !if(!and(enableDisasm, addr.Disassemble), "GFX8", "")>;
         if !not(ExtendedImageInst) then
         def _V # addr.NumWords # _gfx90a
           : MIMG_Sampler_gfx90a <op, asm, dst_rc, addr.RegClass,
