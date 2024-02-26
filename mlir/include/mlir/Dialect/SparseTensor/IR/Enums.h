@@ -163,7 +163,6 @@ enum class LevelFormat : uint64_t {
 
 constexpr bool encPowOfTwo(LevelFormat fmt) {
   auto enc = static_cast<std::underlying_type_t<LevelFormat>>(fmt);
-  // http://www.graphics.stanford.edu/~seander/bithacks.html#DetermineIfPowerOf2
   return (enc & (enc - 1)) == 0;
 }
 
