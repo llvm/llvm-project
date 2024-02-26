@@ -1114,8 +1114,6 @@ static bool handleIntegerToComplexFloatConversion(Sema &S, ExprResult &IntExpr,
   if (IntTy->isIntegerType()) {
     QualType fpTy = ComplexTy->castAs<ComplexType>()->getElementType();
     IntExpr = S.ImpCastExprToType(IntExpr.get(), fpTy, CK_IntegralToFloating);
-    IntExpr = S.ImpCastExprToType(IntExpr.get(), ComplexTy,
-                                  CK_FloatingRealToComplex);
   } else {
     assert(IntTy->isComplexIntegerType());
     IntExpr = S.ImpCastExprToType(IntExpr.get(), ComplexTy,
