@@ -2367,6 +2367,21 @@ TEST(TransferTest, InitListExprAsXValue) {
       });
 }
 
+TEST(TransferTest, ArrayInitListExprOneRecordElement) {
+  // This is a crash repro.
+  std::string Code = R"cc(
+    struct S {};
+
+    void target() { S foo[] = {S()}; }
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // Just verify that it doesn't crash.
+      });
+}
+
 TEST(TransferTest, InitListExprAsUnion) {
   // This is a crash repro.
   std::string Code = R"cc(
@@ -3414,7 +3429,7 @@ TEST(TransferTest, AggregateInitializationFunctionPointer) {
     struct S {
       void (*const Field)();
     };
-    
+
     void target() {
       S s{nullptr};
     }
