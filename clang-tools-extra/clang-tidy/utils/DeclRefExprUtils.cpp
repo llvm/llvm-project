@@ -77,7 +77,7 @@ AST_MATCHER_P(DeclRefExpr, doesNotMutateObject, int, Indirections) {
 
   llvm::SmallVector<StackEntry, 4> Stack;
   Stack.emplace_back(&Node, Indirections);
-  auto &Ctx = Finder->getASTContext();
+  ASTContext &Ctx = Finder->getASTContext();
 
   while (!Stack.empty()) {
     const StackEntry Entry = Stack.back();
@@ -96,7 +96,7 @@ AST_MATCHER_P(DeclRefExpr, doesNotMutateObject, int, Indirections) {
 
     // Otherwise we have to look at the parents to see how the expression is
     // used.
-    const auto Parents = Ctx.getParents(*Entry.E);
+    const DynTypedNodeList Parents = Ctx.getParents(*Entry.E);
     // Note: most nodes have a single parents, but there exist nodes that have
     // several parents, such as `InitListExpr` that have semantic and syntactic
     // forms.
