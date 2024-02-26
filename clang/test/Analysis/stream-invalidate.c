@@ -179,9 +179,11 @@ int test_vfscanf_inner(const char *fmt, ...) {
 
 void test_vfscanf() {
   int i = 42;
+  int j = 43;
   int r = test_vfscanf_inner("%d", &i);
   if (r != EOF) {
+    // i gets invalidated by the call to test_vfscanf_inner, not by vfscanf.
     clang_analyzer_dump(i); // expected-warning {{conj_$}}
-    // FIXME va_list "hides" the pointer to i
+    clang_analyzer_dump(j); // expected-warning {{43 S32b}}
   }
 }
