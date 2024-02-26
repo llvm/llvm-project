@@ -920,8 +920,6 @@ constexpr auto FuncTypeReal16Real16Real16 =
     genFuncType<Ty::Real<16>, Ty::Real<16>, Ty::Real<16>>;
 constexpr auto FuncTypeReal16Integer4Real16 =
     genFuncType<Ty::Real<16>, Ty::Integer<4>, Ty::Real<16>>;
-constexpr auto FuncTypeReal16Integer8Real16 =
-    genFuncType<Ty::Real<16>, Ty::Integer<8>, Ty::Real<16>>;
 constexpr auto FuncTypeInteger4Real16 =
     genFuncType<Ty::Integer<4>, Ty::Real<16>>;
 constexpr auto FuncTypeInteger8Real16 =
