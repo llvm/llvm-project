@@ -154,11 +154,26 @@ enum class Action : uint32_t {
 enum class LevelFormat : uint64_t {
   Undef = 0x00000000,
   Dense = 0x00010000,
-  Compressed = 0x00020000,
-  Singleton = 0x00040000,
-  LooseCompressed = 0x00080000,
-  NOutOfM = 0x00100000,
+  Batch = 0x00020000,
+  Compressed = 0x00040000,
+  Singleton = 0x00080000,
+  LooseCompressed = 0x00100000,
+  NOutOfM = 0x00200000,
 };
+
+constexpr bool encPowOfTwo(LevelFormat fmt) {
+  auto enc = static_cast<std::underlying_type_t<LevelFormat>>(fmt);
+  // http://www.graphics.stanford.edu/~seander/bithacks.html#DetermineIfPowerOf2
+  return (enc & (enc - 1)) == 0;
+}
+
+// All LevelFormat must have only one bit set (power of two).
+static_assert(encPowOfTwo(LevelFormat::Dense) &&
+              encPowOfTwo(LevelFormat::Batch) &&
+              encPowOfTwo(LevelFormat::Compressed) &&
+              encPowOfTwo(LevelFormat::Singleton) &&
+              encPowOfTwo(LevelFormat::LooseCompressed) &&
+              encPowOfTwo(LevelFormat::NOutOfM));
 
 template <LevelFormat... targets>
 constexpr bool isAnyOfFmt(LevelFormat fmt) {
@@ -172,6 +187,8 @@ constexpr const char *toFormatString(LevelFormat lvlFmt) {
     return "undef";
   case LevelFormat::Dense:
     return "dense";
+  case LevelFormat::Batch:
+    return "batch";
   case LevelFormat::Compressed:
     return "compressed";
   case LevelFormat::Singleton:
@@ -228,7 +245,7 @@ public:
     // If undefined/dense/NOutOfM, then must be unique and ordered.
     // Otherwise, the format must be one of the known ones.
     return (isAnyOfFmt<LevelFormat::Undef, LevelFormat::Dense,
-                       LevelFormat::NOutOfM>(fmt))
+                       LevelFormat::Batch, LevelFormat::NOutOfM>(fmt))
                ? (propertyBits == 0)
                : (isAnyOfFmt<LevelFormat::Compressed, LevelFormat::Singleton,
                              LevelFormat::LooseCompressed>(fmt));
@@ -375,6 +392,7 @@ inline std::optional<LevelType> buildLevelType(LevelFormat lf, bool ordered,
 }
 inline bool isUndefLT(LevelType lt) { return lt.isa<LevelFormat::Undef>(); }
 inline bool isDenseLT(LevelType lt) { return lt.isa<LevelFormat::Dense>(); }
+inline bool isBatchLT(LevelType lt) { return lt.isa<LevelFormat::Batch>(); }
 inline bool isCompressedLT(LevelType lt) {
   return lt.isa<LevelFormat::Compressed>();
 }
