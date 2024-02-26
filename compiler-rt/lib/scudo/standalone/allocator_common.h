@@ -52,7 +52,7 @@ template <class SizeClassAllocator> struct TransferBatch {
 
   void moveNToArray(CompactPtrT *Array, u16 N) {
     DCHECK_LE(N, Count);
-    memcpy(Array, Batch + Count - N, sizeof(Batch[0]) * Count);
+    memcpy(Array, Batch + Count - N, sizeof(Batch[0]) * N);
     Count -= N;
   }
   u16 getCount() const { return Count; }
