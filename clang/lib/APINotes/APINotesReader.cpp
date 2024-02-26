@@ -148,7 +148,7 @@ public:
   external_key_type GetExternalKey(internal_key_type Key) { return Key; }
 
   hash_value_type ComputeHash(internal_key_type Key) {
-    return llvm::hash_value(Key);
+    return llvm::djbHash(Key);
   }
 
   static bool EqualKey(internal_key_type LHS, internal_key_type RHS) {
