@@ -75,6 +75,10 @@ struct LinkOptions {
   dwarf_linker::DWARFLinkerBase::OutputFileType FileType =
       dwarf_linker::DWARFLinkerBase::OutputFileType::Object;
 
+  // Deterministic mode.
+  dwarf_linker::DeterministicLevel DesiredDeterministicLevel =
+      dwarf_linker::DeterministicLevel::Full;
+
   /// The accelerator table kind
   DsymutilAccelTableKind TheAccelTableKind;
 

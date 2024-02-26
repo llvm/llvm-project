@@ -212,3 +212,9 @@ def dsym_search_path: Separate<["-", "--"], "D">,
   MetaVarName<"<path>">,
   HelpText<"Specify a directory that contain dSYM files to search for.">,
   Group<grp_general>;
+
+def deterministic: Separate<["--", "-"], "deterministic">,
+  MetaVarName<"<level name>">,
+  HelpText<"Specify the desired level of output determinism.\nValid names are 'full', 'trusted' and 'none'. Defaults to 'full'">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "deterministic=">, Alias<deterministic>;

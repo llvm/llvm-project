@@ -80,10 +80,8 @@ public:
   }
 
   /// Allow generating valid, but non-deterministic output.
-  void
-  setAllowNonDeterministicOutput(bool AllowNonDeterministicOutput) override {
-    GlobalData.Options.AllowNonDeterministicOutput =
-        AllowNonDeterministicOutput;
+  void setDeterministicLevel(DeterministicLevel Level) override {
+    GlobalData.Options.DesiredDeterministicLevel = Level;
   }
 
   /// Set to keep the enclosing function for a static variable.

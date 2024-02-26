@@ -105,8 +105,9 @@ protected:
     Use_DW_FORM_strp =
         (InUnit.getVersion() < 5) ||
         (OutUnit.isTypeUnit() &&
-         ((InUnit.getGlobalData().getOptions().Threads != 1) &&
-          !InUnit.getGlobalData().getOptions().AllowNonDeterministicOutput));
+         InUnit.getGlobalData().getOptions().Threads != 1 &&
+         InUnit.getGlobalData().getOptions().DesiredDeterministicLevel !=
+             DeterministicLevel::None);
   }
 
   /// Clone string attribute.

@@ -70,6 +70,15 @@ getSectionName(DebugSectionKind SectionKind) {
 /// Recognise the table name and match it with the DebugSectionKind.
 std::optional<DebugSectionKind> parseDebugTableName(StringRef Name);
 
+/// Specify level of determinism for generated output.
+enum class DeterministicLevel : uint8_t {
+  Full,    // Generated output should always be deterministic(despite any
+           // assumptions).
+  Trusted, // Generated output should be deterministic assuming input DWARF is
+           // consistent.
+  None     // Generated output may not be deterministic.
+};
+
 /// The base interface for DWARFLinker implementations.
 class DWARFLinkerBase {
 public:
@@ -121,7 +130,7 @@ public:
   virtual void setUpdateIndexTablesOnly(bool Update) = 0;
   /// Allows generating non-deterministic output in exchange for more
   /// parallelism.
-  virtual void setAllowNonDeterministicOutput(bool) = 0;
+  virtual void setDeterministicLevel(DeterministicLevel) = 0;
   /// Set whether to keep the enclosing function for a static variable.
   virtual void setKeepFunctionForStatic(bool KeepFunctionForStatic) = 0;
   /// Use specified number of threads for parallel files linking.

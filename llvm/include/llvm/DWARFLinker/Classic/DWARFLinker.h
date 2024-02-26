@@ -264,7 +264,8 @@ public:
   }
 
   /// Allow generating valid, but non-deterministic output.
-  void setAllowNonDeterministicOutput(bool) override { /* Nothing to do. */
+  void setDeterministicLevel(DeterministicLevel Level) override {
+    /* Nothing to do. Output of classic dwarflinker is always deterministic. */
   }
 
   /// Set whether to keep the enclosing function for a static variable.

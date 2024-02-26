@@ -7,6 +7,7 @@
 # CHECK: OVERVIEW: llvm-dwarfutil is a tool to copy and manipulate debug info
 # CHECK: USAGE: {{.*}}llvm-dwarfutil{{.*}} [options] <input file> <output file>
 # CHECK: OPTIONS:
+# CHECK:   --deterministic
 # CHECK:   --garbage-collection
 # CHECK:   --help
 # CHECK:   -h

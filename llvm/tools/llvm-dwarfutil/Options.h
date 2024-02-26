@@ -9,6 +9,7 @@
 #ifndef LLVM_TOOLS_LLVM_DWARFUTIL_OPTIONS_H
 #define LLVM_TOOLS_LLVM_DWARFUTIL_OPTIONS_H
 
+#include "llvm/DWARFLinker/DWARFLinkerBase.h"
 #include <cstdint>
 #include <string>
 
@@ -41,6 +42,9 @@ struct Options {
   int NumThreads = 0;
   bool Verify = false;
   bool UseDWARFLinkerParallel = false;
+  // Deterministic mode.
+  dwarf_linker::DeterministicLevel DesiredDeterministicLevel =
+      dwarf_linker::DeterministicLevel::Full;
   DwarfUtilAccelKind AccelTableKind = DwarfUtilAccelKind::None;
 
   std::string getSeparateDebugFileName() const {

@@ -128,6 +128,27 @@ static Error validateAndSetOptions(opt::InputArgList &Args, Options &Options) {
           formatv("unknown linker kind value: '{0}'", S).str().c_str());
   }
 
+  if (opt::Arg *DeterministicLevelVal = Args.getLastArg(OPT_deterministic)) {
+    StringRef L = DeterministicLevelVal->getValue();
+    if (L == "full")
+      Options.DesiredDeterministicLevel =
+          dwarf_linker::DeterministicLevel::Full;
+    else if (L == "trusted")
+      Options.DesiredDeterministicLevel =
+          dwarf_linker::DeterministicLevel::Trusted;
+    else if (L == "none")
+      Options.DesiredDeterministicLevel =
+          dwarf_linker::DeterministicLevel::None;
+    else
+      return createStringError(
+          std::errc::invalid_argument,
+          formatv("invalid deterministic level specified: '{0}'. Supported "
+                  "values are 'full', 'trusted', 'none'.",
+                  L)
+              .str()
+              .c_str());
+  }
+
   if (opt::Arg *BuildAccelerator = Args.getLastArg(OPT_build_accelerator)) {
     StringRef S = BuildAccelerator->getValue();
 

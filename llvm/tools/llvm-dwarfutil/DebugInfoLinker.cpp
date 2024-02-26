@@ -362,6 +362,7 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
   DebugInfoLinker->setNoODR(!Options.DoODRDeduplication);
   DebugInfoLinker->setVerbosity(Options.Verbose);
   DebugInfoLinker->setUpdateIndexTablesOnly(!Options.DoGarbageCollection);
+  DebugInfoLinker->setDeterministicLevel(Options.DesiredDeterministicLevel);
 
   std::vector<std::unique_ptr<DWARFFile>> ObjectsForLinking(1);
 

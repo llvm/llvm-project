@@ -50,7 +50,7 @@ struct DWARFLinkerOptions {
   bool KeepFunctionForStatic = false;
 
   /// Allow to generate valid, but non deterministic output.
-  bool AllowNonDeterministicOutput = false;
+  DeterministicLevel DesiredDeterministicLevel = DeterministicLevel::Full;
 
   /// Number of threads.
   unsigned Threads = 1;

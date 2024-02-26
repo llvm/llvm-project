@@ -246,6 +246,26 @@ getDWARFLinkerType(opt::InputArgList &Args) {
   return DsymutilDWARFLinkerType::Classic;
 }
 
+static Expected<DeterministicLevel>
+getDeterministicLevel(opt::InputArgList &Args) {
+  if (opt::Arg *LinkerType = Args.getLastArg(OPT_deterministic)) {
+    StringRef S = LinkerType->getValue();
+    if (S == "full")
+      return DeterministicLevel::Full;
+    if (S == "trusted")
+      return DeterministicLevel::Trusted;
+    if (S == "none")
+      return DeterministicLevel::None;
+    return make_error<StringError>("invalid deterministic level specified: '" +
+                                       S +
+                                       "'. Supported values are 'full', "
+                                       "'trusted', 'none'.",
+                                   inconvertibleErrorCode());
+  }
+
+  return DeterministicLevel::Full;
+}
+
 static Expected<ReproducerMode> getReproducerMode(opt::InputArgList &Args) {
   if (Args.hasArg(OPT_gen_reproducer))
     return ReproducerMode::GenerateOnExit;
@@ -340,6 +360,12 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   } else {
     return DWARFLinkerType.takeError();
   }
+
+  if (Expected<DeterministicLevel> DeterministicLevelVal =
+          getDeterministicLevel(Args))
+    Options.LinkOpts.DesiredDeterministicLevel = *DeterministicLevelVal;
+  else
+    return DeterministicLevelVal.takeError();
 
   if (opt::Arg *SymbolMap = Args.getLastArg(OPT_symbolmap))
     Options.SymbolMap = SymbolMap->getValue();

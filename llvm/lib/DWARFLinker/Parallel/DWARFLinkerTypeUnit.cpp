@@ -137,7 +137,8 @@ void TypeUnit::prepareDataForTreeCreation() {
 
   llvm::parallel::TaskGroup TG;
 
-  if (!GlobalData.getOptions().AllowNonDeterministicOutput) {
+  if (GlobalData.getOptions().DesiredDeterministicLevel !=
+      DeterministicLevel::None) {
     TG.spawn([&]() {
       // Sort types to have a deterministic output.
       Types.sortTypes();
@@ -145,7 +146,8 @@ void TypeUnit::prepareDataForTreeCreation() {
   }
 
   TG.spawn([&]() {
-    if (!GlobalData.getOptions().AllowNonDeterministicOutput) {
+    if (GlobalData.getOptions().DesiredDeterministicLevel !=
+        DeterministicLevel::None) {
       // Sort decl type patches to have a deterministic output.
       std::function<bool(const DebugTypeDeclFilePatch &LHS,
                          const DebugTypeDeclFilePatch &RHS)>
@@ -190,7 +192,8 @@ void TypeUnit::prepareDataForTreeCreation() {
         });
   });
 
-  if (!GlobalData.getOptions().AllowNonDeterministicOutput) {
+  if (GlobalData.getOptions().DesiredDeterministicLevel !=
+      DeterministicLevel::None) {
     // Sort patches to have a deterministic output.
     TG.spawn([&]() {
       forEach([&](SectionDescriptor &OutSection) {
@@ -212,7 +215,8 @@ void TypeUnit::prepareDataForTreeCreation() {
     });
   }
 
-  if (!GlobalData.getOptions().AllowNonDeterministicOutput) {
+  if (GlobalData.getOptions().DesiredDeterministicLevel !=
+      DeterministicLevel::None) {
     // Sort patches to have a deterministic output.
     TG.spawn([&]() {
       forEach([&](SectionDescriptor &OutSection) {

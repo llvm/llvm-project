@@ -76,3 +76,8 @@ def version : Flag<["--"], "version">,
 def V : Flag<["-"], "V">,
   Alias<version>,
   HelpText<"Alias for --version">;
+
+def deterministic: Separate<["--", "-"], "deterministic">,
+  MetaVarName<"<level name>">,
+  HelpText<"Specify the desired level of output determinism.\nValid names are 'full', 'trusted' and 'none'. Defaults to 'full'">;
+def: Joined<["--", "-"], "deterministic=">, Alias<deterministic>;
