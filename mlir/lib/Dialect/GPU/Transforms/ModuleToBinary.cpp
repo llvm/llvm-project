@@ -48,10 +48,10 @@ void GpuModuleToBinaryPass::getDependentDialects(
   // Register all GPU related translations.
   registry.insert<gpu::GPUDialect>();
   registry.insert<LLVM::LLVMDialect>();
-#if MLIR_CUDA_CONVERSIONS_ENABLED == 1
+#ifdef MLIR_CUDA_CONVERSIONS_ENABLED
   registry.insert<NVVM::NVVMDialect>();
 #endif
-#if MLIR_ROCM_CONVERSIONS_ENABLED == 1
+#ifdef MLIR_ROCM_CONVERSIONS_ENABLED
   registry.insert<ROCDL::ROCDLDialect>();
 #endif
   registry.insert<spirv::SPIRVDialect>();

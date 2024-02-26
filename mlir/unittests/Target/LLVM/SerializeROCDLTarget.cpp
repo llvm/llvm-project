@@ -31,7 +31,7 @@
 using namespace mlir;
 
 // Skip the test if the AMDGPU target was not built.
-#if MLIR_ROCM_CONVERSIONS_ENABLED == 0
+#ifndef MLIR_ROCM_CONVERSIONS_ENABLED
 #define SKIP_WITHOUT_AMDGPU(x) DISABLED_##x
 #else
 #define SKIP_WITHOUT_AMDGPU(x) x

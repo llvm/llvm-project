@@ -29,7 +29,7 @@
 using namespace mlir;
 
 // Skip the test if the NVPTX target was not built.
-#if MLIR_CUDA_CONVERSIONS_ENABLED == 0
+#ifndef MLIR_CUDA_CONVERSIONS_ENABLED
 #define SKIP_WITHOUT_NVPTX(x) DISABLED_##x
 #else
 #define SKIP_WITHOUT_NVPTX(x) x

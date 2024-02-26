@@ -38,7 +38,7 @@
 
 using namespace mlir;
 
-#if MLIR_CUDA_CONVERSIONS_ENABLED
+#ifdef MLIR_CUDA_CONVERSIONS_ENABLED
 namespace {
 
 //===----------------------------------------------------------------------===//

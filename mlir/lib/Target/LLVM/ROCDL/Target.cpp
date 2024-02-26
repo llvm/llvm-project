@@ -120,7 +120,7 @@ void SerializeGPUModuleBase::init() {
   static llvm::once_flag initializeBackendOnce;
   llvm::call_once(initializeBackendOnce, []() {
   // If the `AMDGPU` LLVM target was built, initialize it.
-#if MLIR_ROCM_CONVERSIONS_ENABLED == 1
+#ifdef MLIR_ROCM_CONVERSIONS_ENABLED
     LLVMInitializeAMDGPUTarget();
     LLVMInitializeAMDGPUTargetInfo();
     LLVMInitializeAMDGPUTargetMC();
@@ -318,7 +318,7 @@ SerializeGPUModuleBase::assembleIsa(StringRef isa) {
   return result;
 }
 
-#if MLIR_ROCM_CONVERSIONS_ENABLED == 1
+#ifdef MLIR_ROCM_CONVERSIONS_ENABLED
 namespace {
 class AMDGPUSerializer : public SerializeGPUModuleBase {
 public:
@@ -462,7 +462,7 @@ std::optional<SmallVector<char, 0>> ROCDLTargetAttrImpl::serializeToObject(
     module->emitError("Module must be a GPU module.");
     return std::nullopt;
   }
-#if MLIR_ROCM_CONVERSIONS_ENABLED == 1
+#ifdef MLIR_ROCM_CONVERSIONS_ENABLED
   AMDGPUSerializer serializer(*module, cast<ROCDLTargetAttr>(attribute),
                               options);
   serializer.init();
@@ -471,7 +471,7 @@ std::optional<SmallVector<char, 0>> ROCDLTargetAttrImpl::serializeToObject(
   module->emitError("The `AMDGPU` target was not built. Please enable it when "
                     "building LLVM.");
   return std::nullopt;
-#endif // MLIR_ROCM_CONVERSIONS_ENABLED == 1
+#endif // MLIR_ROCM_CONVERSIONS_ENABLED
 }
 
 Attribute

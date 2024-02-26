@@ -96,7 +96,7 @@ inline void registerAllPasses() {
   bufferization::registerBufferizationPipelines();
   sparse_tensor::registerSparseTensorPipelines();
   tosa::registerTosaToLinalgPipelines();
-#if MLIR_CUDA_CONVERSIONS_ENABLED
+#ifdef MLIR_CUDA_CONVERSIONS_ENABLED
   gpu::registerGPUToNVVMPipeline();
 #endif
 }
