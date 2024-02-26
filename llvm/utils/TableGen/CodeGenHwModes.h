@@ -52,7 +52,7 @@ struct CodeGenHwModes {
     assert(Id != 0 && "Mode id of 0 is reserved for the default mode");
     return Modes[Id - 1];
   }
-  const StringRef getModeName(unsigned Id, bool IncludeDefault = false) const {
+  StringRef getModeName(unsigned Id, bool IncludeDefault = false) const {
     if (IncludeDefault && Id == CodeGenHwModes::DefaultMode)
       return DefaultModeName;
     return getMode(Id).Name;
