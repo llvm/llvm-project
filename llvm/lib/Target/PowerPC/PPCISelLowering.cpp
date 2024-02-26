@@ -641,6 +641,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+  // setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::f64, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::ppcf128, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v4f32, Custom);
@@ -10722,6 +10723,20 @@ static bool getVectorCompareInfo(SDValue Intrin, int &CompareOpc,
   return true;
 }
 
+bool isContiguousMask(const APInt &Val, unsigned &MB, unsigned &ME,
+                      unsigned BitWidth) {
+  unsigned MaskLen = 0;
+  if (Val.isShiftedMask(MB, MaskLen)) {
+    MB = (BitWidth - MB - MaskLen) % BitWidth;
+  } else if ((~Val).isShiftedMask(MB, MaskLen)) {
+    MB = (BitWidth - MB) % BitWidth;
+  } else {
+    return false;
+  }
+  ME = (MB + MaskLen - 1) % BitWidth;
+  return true;
+}
+
 /// LowerINTRINSIC_WO_CHAIN - If this is an intrinsic that we want to custom
 /// lower, do it, otherwise return null.
 SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
@@ -10736,6 +10751,43 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     if (Subtarget.isPPC64())
       return DAG.getRegister(PPC::X13, MVT::i64);
     return DAG.getRegister(PPC::R2, MVT::i32);
+
+  case Intrinsic::ppc_rldimi: {
+    uint64_t SH = Op.getConstantOperandVal(3);
+    unsigned MB = 0, ME = 0;
+    if (!isContiguousMask(Op.getConstantOperandAPInt(4), MB, ME, 64) ||
+        ME != 63 - SH)
+      llvm_unreachable("invalid rldimi mask!");
+    return SDValue(DAG.getMachineNode(
+                       PPC::RLDIMI, dl, MVT::i64,
+                       {Op.getOperand(1), Op.getOperand(2), Op.getOperand(3),
+                        DAG.getTargetConstant(MB, dl, MVT::i32)}),
+                   0);
+  }
+
+  case Intrinsic::ppc_rlwimi: {
+    unsigned MB = 0, ME = 0;
+    if (!isContiguousMask(Op.getConstantOperandAPInt(4), MB, ME, 32))
+      llvm_unreachable("invalid rlwimi mask!");
+    return SDValue(DAG.getMachineNode(
+                       PPC::RLWIMI, dl, MVT::i32,
+                       {Op.getOperand(1), Op.getOperand(2), Op.getOperand(3),
+                        DAG.getTargetConstant(MB, dl, MVT::i32),
+                        DAG.getTargetConstant(ME, dl, MVT::i32)}),
+                   0);
+  }
+
+  case Intrinsic::ppc_rlwnm: {
+    unsigned MB = 0, ME = 0;
+    if (!isContiguousMask(Op.getConstantOperandAPInt(3), MB, ME, 32))
+      llvm_unreachable("invalid rlwnm mask!");
+    return SDValue(
+        DAG.getMachineNode(PPC::RLWNM, dl, MVT::i32,
+                           {Op.getOperand(1), Op.getOperand(2),
+                            DAG.getTargetConstant(MB, dl, MVT::i32),
+                            DAG.getTargetConstant(ME, dl, MVT::i32)}),
+        0);
+  }
 
   case Intrinsic::ppc_mma_disassemble_acc: {
     if (Subtarget.isISAFuture()) {

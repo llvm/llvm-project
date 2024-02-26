@@ -182,6 +182,18 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_fctuwz
       : ClangBuiltin<"__builtin_ppc_fctuwz">,
         DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+  def int_ppc_rldimi
+      : ClangBuiltin<"__builtin_ppc_rldimi">,
+        DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
+                              [IntrNoMem, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+  def int_ppc_rlwimi
+      : ClangBuiltin<"__builtin_ppc_rlwimi">,
+        DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                              [IntrNoMem, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+  def int_ppc_rlwnm
+      : ClangBuiltin<"__builtin_ppc_rlwnm">,
+        DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                              [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
   // XL compatible select functions
   // TODO: Add llvm_f128_ty support.
