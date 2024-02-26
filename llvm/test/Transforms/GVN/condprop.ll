@@ -214,11 +214,11 @@ define void @test4(i1 %b, i32 %x) {
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[SW:%.*]], label [[CASE3:%.*]]
 ; CHECK:       sw:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[CASE0:%.*]]
-; CHECK-NEXT:    i32 1, label [[CASE1:%.*]]
-; CHECK-NEXT:    i32 2, label [[CASE0]]
-; CHECK-NEXT:    i32 3, label [[CASE3]]
-; CHECK-NEXT:    i32 4, label [[DEFAULT]]
+; CHECK-NEXT:      i32 0, label [[CASE0:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE0]]
+; CHECK-NEXT:      i32 3, label [[CASE3]]
+; CHECK-NEXT:      i32 4, label [[DEFAULT]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default:
 ; CHECK-NEXT:    call void @bar(i32 [[X]])
@@ -553,14 +553,14 @@ end:
   ret i32 %ret
 }
 
-define void @test14(ptr %ptr1, ptr noalias %ptr2) {
+define void @test14(ptr %ptr1, ptr noalias %ptr2, i1 %b1, i1 %b2) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[PTR1:%.*]], i32 1
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[PTR1]], i32 2
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 undef, label [[LOOP_IF1_CRIT_EDGE:%.*]], label [[THEN:%.*]]
+; CHECK-NEXT:    br i1 [[B1:%.*]], label [[LOOP_IF1_CRIT_EDGE:%.*]], label [[THEN:%.*]]
 ; CHECK:       loop.if1_crit_edge:
 ; CHECK-NEXT:    [[VAL2_PRE:%.*]] = load i32, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    br label [[IF1:%.*]]
@@ -578,7 +578,7 @@ define void @test14(ptr %ptr1, ptr noalias %ptr2) {
 ; CHECK-NEXT:    [[PHI3:%.*]] = phi ptr [ [[GEP2]], [[THEN]] ], [ [[PTR1]], [[IF2]] ]
 ; CHECK-NEXT:    [[VAL3]] = load i32, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    store i32 [[VAL3]], ptr [[PHI3]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LOOP]], label [[IF1]]
+; CHECK-NEXT:    br i1 [[B2:%.*]], label [[LOOP]], label [[IF1]]
 ;
 entry:
   %gep1 = getelementptr inbounds i32, ptr %ptr1, i32 1
@@ -587,7 +587,7 @@ entry:
 
 loop:
   %phi1 = phi ptr [ %gep3, %loop.end ], [ %gep1, %entry ]
-  br i1 undef, label %if1, label %then
+  br i1 %b1, label %if1, label %then
 
 
 if1:
@@ -608,20 +608,20 @@ loop.end:
   %val3 = load i32, ptr %gep2, align 4
   store i32 %val3, ptr %phi3, align 4
   %gep3 = getelementptr inbounds i32, ptr %ptr1, i32 1
-  br i1 undef, label %loop, label %if1
+  br i1 %b2, label %loop, label %if1
 }
 
 ; Make sure that the call to use_ptr does not have %p1
-define void @single_phi1(ptr %p1) {
+define void @single_phi1(ptr %p0, ptr %p1, i8 %s) {
 ; CHECK-LABEL: @single_phi1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr poison, align 8
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P0:%.*]], align 8
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[P2]], [[P1:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[BB4:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    switch i8 poison, label [[BB2:%.*]] [
-; CHECK-NEXT:    i8 0, label [[BB1]]
-; CHECK-NEXT:    i8 1, label [[BB3:%.*]]
+; CHECK-NEXT:    switch i8 [[S:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i8 0, label [[BB1]]
+; CHECK-NEXT:      i8 1, label [[BB3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    unreachable
@@ -633,12 +633,12 @@ define void @single_phi1(ptr %p1) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %p2 = load ptr, ptr poison, align 8
+  %p2 = load ptr, ptr %p0, align 8
   %cmp1 = icmp eq ptr %p2, %p1
   br i1 %cmp1, label %bb4, label %bb1
 
 bb1:
-  switch i8 poison, label %bb2 [
+  switch i8 %s, label %bb2 [
   i8 0, label %bb1
   i8 1, label %bb3
   ]
@@ -650,23 +650,23 @@ bb3:
   br label %bb4
 
 bb4:
-  %phi1 = phi ptr [ %p2, %entry ], [ poison, %bb3 ]
+  %phi1 = phi ptr [ %p2, %entry ], [ %p2, %bb3 ]
   %cmp2 = icmp eq ptr %phi1, %p1
   call void @use_bool(i1 %cmp2)
   call void @use_ptr(ptr %phi1)
   ret void
 }
 
-define void @single_phi2(ptr %p1) {
+define void @single_phi2(ptr %p0, ptr %p1, i8 %s) {
 ; CHECK-LABEL: @single_phi2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr poison, align 8
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P0:%.*]], align 8
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[P2]], [[P1:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[BB4:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    switch i8 poison, label [[BB2:%.*]] [
-; CHECK-NEXT:    i8 0, label [[BB1]]
-; CHECK-NEXT:    i8 1, label [[BB3:%.*]]
+; CHECK-NEXT:    switch i8 [[S:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i8 0, label [[BB1]]
+; CHECK-NEXT:      i8 1, label [[BB3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB4]]
@@ -678,12 +678,12 @@ define void @single_phi2(ptr %p1) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %p2 = load ptr, ptr poison, align 8
+  %p2 = load ptr, ptr %p0, align 8
   %cmp1 = icmp eq ptr %p2, %p1
   br i1 %cmp1, label %bb4, label %bb1
 
 bb1:
-  switch i8 poison, label %bb2 [
+  switch i8 %s, label %bb2 [
   i8 0, label %bb1
   i8 1, label %bb3
   ]
@@ -695,23 +695,23 @@ bb3:
   br label %bb4
 
 bb4:
-  %phi1 = phi ptr [ %p2, %entry ], [ %p2, %bb2 ], [ poison, %bb3 ]
+  %phi1 = phi ptr [ %p2, %entry ], [ %p2, %bb2 ], [ %p2, %bb3 ]
   %cmp2 = icmp eq ptr %phi1, %p1
   call void @use_bool(i1 %cmp2)
   call void @use_ptr(ptr %phi1)
   ret void
 }
 
-define void @multiple_phi1(ptr %p1) {
+define void @multiple_phi1(ptr %p0, ptr %p1, i8 %s) {
 ; CHECK-LABEL: @multiple_phi1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr poison, align 8
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P0:%.*]], align 8
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[P2]], [[P1:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[BB4:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    switch i8 poison, label [[BB2:%.*]] [
-; CHECK-NEXT:    i8 0, label [[BB1]]
-; CHECK-NEXT:    i8 1, label [[BB3:%.*]]
+; CHECK-NEXT:    switch i8 [[S:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i8 0, label [[BB1]]
+; CHECK-NEXT:      i8 1, label [[BB3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    unreachable
@@ -725,12 +725,12 @@ define void @multiple_phi1(ptr %p1) {
 ; CHECK-NEXT:    br label [[BB5]]
 ;
 entry:
-  %p2 = load ptr, ptr poison, align 8
+  %p2 = load ptr, ptr %p0, align 8
   %cmp1 = icmp eq ptr %p2, %p1
   br i1 %cmp1, label %bb4, label %bb1
 
 bb1:
-  switch i8 poison, label %bb2 [
+  switch i8 %s, label %bb2 [
   i8 0, label %bb1
   i8 1, label %bb3
   ]
@@ -753,16 +753,16 @@ bb5:
   br label %bb5
 }
 
-define void @multiple_phi2(ptr %p1) {
+define void @multiple_phi2(ptr %p0, ptr %p1, i8 %s) {
 ; CHECK-LABEL: @multiple_phi2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr poison, align 8
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P0:%.*]], align 8
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[P2]], [[P1:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[BB4:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    switch i8 poison, label [[BB2:%.*]] [
-; CHECK-NEXT:    i8 0, label [[BB1]]
-; CHECK-NEXT:    i8 1, label [[BB3:%.*]]
+; CHECK-NEXT:    switch i8 [[S:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i8 0, label [[BB1]]
+; CHECK-NEXT:      i8 1, label [[BB3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB4]]
@@ -776,12 +776,12 @@ define void @multiple_phi2(ptr %p1) {
 ; CHECK-NEXT:    br label [[BB5]]
 ;
 entry:
-  %p2 = load ptr, ptr poison, align 8
+  %p2 = load ptr, ptr %p0, align 8
   %cmp1 = icmp eq ptr %p2, %p1
   br i1 %cmp1, label %bb4, label %bb1
 
 bb1:
-  switch i8 poison, label %bb2 [
+  switch i8 %s, label %bb2 [
   i8 0, label %bb1
   i8 1, label %bb3
   ]

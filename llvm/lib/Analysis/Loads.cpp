@@ -740,7 +740,7 @@ static const DataLayout &getDLFromVal(const Value *V) {
 
 // Returns true if `To` is a null pointer, constant dereferenceable pointer or
 // both pointers have the same underlying objects.
-static bool isPointerAlwaysReplacable(const Value *From, const Value *To) {
+static bool isPointerAlwaysReplaceable(const Value *From, const Value *To) {
   if (isa<ConstantPointerNull>(To))
     return true;
   if (isa<Constant>(To) &&
@@ -758,7 +758,7 @@ bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To) {
   if (!To->getType()->isPointerTy())
     return true;
 
-  if (isPointerAlwaysReplacable(&*U, To))
+  if (isPointerAlwaysReplaceable(&*U, To))
     return true;
   return isPointerUseReplacable(U);
 }
@@ -769,5 +769,5 @@ bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To) {
   if (!From->getType()->isPointerTy())
     return true;
 
-  return isPointerAlwaysReplacable(From, To);
+  return isPointerAlwaysReplaceable(From, To);
 }
