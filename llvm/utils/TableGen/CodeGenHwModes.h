@@ -53,6 +53,9 @@ struct CodeGenHwModes {
     return Modes[Id - 1];
   }
   const HwModeSelect &getHwModeSelect(Record *R) const;
+  const std::map<Record *, HwModeSelect> &getHwModeSelects() const {
+    return ModeSelects;
+  }
   unsigned getNumModeIds() const { return Modes.size() + 1; }
   void dump() const;
 
