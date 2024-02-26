@@ -9,8 +9,8 @@
 // shared runtime that lives in the sanitizer DLL.
 //===----------------------------------------------------------------------===//
 
-#ifndef SANITIZER_WIN_STATIC_RUNTIME_THUNK_H
-#define SANITIZER_WIN_STATIC_RUNTIME_THUNK_H
+#ifndef SANITIZER_WIN_THUNK_INTERCEPTION_H
+#define SANITIZER_WIN_THUNK_INTERCEPTION_H
 #include <stdint.h>
 
 #include "sanitizer_internal_defs.h"
