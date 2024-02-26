@@ -277,8 +277,10 @@ public:
   bool isGFX10Plus() const;
   bool isGFX11() const;
   bool isGFX11Plus() const;
+  bool isGFX12() const;
   bool isGFX12Plus() const;
   bool isGFX12_10() const;
+  bool isGFX13() const;
 
   bool hasArchitectedFlatScratch() const;
   bool hasKernargPreload() const;

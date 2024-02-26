@@ -1731,6 +1731,9 @@ bool ByteCodeExprGen<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
     const Expr *Init = *CaptureInitIt;
     ++CaptureInitIt;
 
+    if (!Init)
+      continue;
+
     if (std::optional<PrimType> T = classify(Init)) {
       if (!this->visit(Init))
         return false;
@@ -2703,7 +2706,14 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
           return false;
       }
     } else {
-      assert(Initializing);
+      // We need the result. Prepare a pointer to return or
+      // dup the current one.
+      if (!Initializing) {
+        if (std::optional<unsigned> LocalIndex = allocateLocal(E)) {
+          if (!this->emitGetPtrLocal(*LocalIndex, E))
+            return false;
+        }
+      }
       if (!this->emitDupPtr(E))
         return false;
     }

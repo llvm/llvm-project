@@ -474,26 +474,31 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (isGFX11Plus() && Bytes.size() >= 12 ) {
       DecoderUInt128 DecW = eat12Bytes(Bytes);
 
-      if (tryDecodeInst(DecoderTableGFX1196, DecoderTableGFX11_FAKE1696, MI,
+      if (isGFX11() &&
+          tryDecodeInst(DecoderTableGFX1196, DecoderTableGFX11_FAKE1696, MI,
                         DecW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX12_1096, DecoderTableGFX12_10_FAKE1696,
-                          MI, DecW, Address, CS))
+      if (isGFX12_10() &&
+          tryDecodeInst(DecoderTableGFX12_1096, DecoderTableGFX12_10_FAKE1696,
+                        MI, DecW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX1296, DecoderTableGFX12_FAKE1696, MI,
+      if (isGFX12() &&
+          tryDecodeInst(DecoderTableGFX1296, DecoderTableGFX12_FAKE1696, MI,
                         DecW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX12W6496, MI, DecW, Address, CS))
+      if (isGFX12() &&
+          tryDecodeInst(DecoderTableGFX12W6496, MI, DecW, Address, CS))
         break;
 
       if (STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
         // Return 8 bytes for a potential literal.
         Bytes = Bytes_.slice(4, MaxInstBytesNum - 4);
 
-        if (tryDecodeInst(DecoderTableGFX12_1096, MI, DecW, Address, CS))
+        if (isGFX12_10() &&
+            tryDecodeInst(DecoderTableGFX12_1096, MI, DecW, Address, CS))
           break;
       }
     }
@@ -527,34 +532,41 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           tryDecodeInst(DecoderTableGFX90A64, MI, QW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX864, MI, QW, Address, CS))
+      if ((isVI() || isGFX9()) &&
+          tryDecodeInst(DecoderTableGFX864, MI, QW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX964, MI, QW, Address, CS))
+      if (isGFX9() && tryDecodeInst(DecoderTableGFX964, MI, QW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX1064, MI, QW, Address, CS))
+      if (isGFX10() && tryDecodeInst(DecoderTableGFX1064, MI, QW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX12_1064, DecoderTableGFX12_10_FAKE1664,
-                          MI, QW, Address, CS))
+      if (isGFX12_10() &&
+          tryDecodeInst(DecoderTableGFX12_1064, DecoderTableGFX12_10_FAKE1664,
+                        MI, QW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX1264, DecoderTableGFX12_FAKE1664, MI, QW,
+      if (isGFX12() &&
+          tryDecodeInst(DecoderTableGFX1264, DecoderTableGFX12_FAKE1664, MI, QW,
                         Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX1164, DecoderTableGFX11_FAKE1664, MI, QW,
+      if (isGFX11() &&
+          tryDecodeInst(DecoderTableGFX1164, DecoderTableGFX11_FAKE1664, MI, QW,
                         Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX11W6464, MI, QW, Address, CS))
+      if (isGFX11() &&
+          tryDecodeInst(DecoderTableGFX11W6464, MI, QW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX12W6464, MI, QW, Address, CS))
+      if (isGFX12() &&
+          tryDecodeInst(DecoderTableGFX12W6464, MI, QW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX1364, MI, QW, Address, CS))
+      if (isGFX13() &&
+          tryDecodeInst(DecoderTableGFX1364, MI, QW, Address, CS))
         break;
     }
 
@@ -565,13 +577,14 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Bytes.size() >= 4) {
       const uint32_t DW = eatBytes<uint32_t>(Bytes);
 
-      if (tryDecodeInst(DecoderTableGFX832, MI, DW, Address, CS))
+      if ((isVI() || isGFX9()) &&
+          tryDecodeInst(DecoderTableGFX832, MI, DW, Address, CS))
         break;
 
       if (tryDecodeInst(DecoderTableAMDGPU32, MI, DW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX932, MI, DW, Address, CS))
+      if (isGFX9() && tryDecodeInst(DecoderTableGFX932, MI, DW, Address, CS))
         break;
 
       if (STI.hasFeature(AMDGPU::FeatureGFX90AInsts) &&
@@ -582,21 +595,25 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           tryDecodeInst(DecoderTableGFX10_B32, MI, DW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX1032, MI, DW, Address, CS))
+      if (isGFX10() && tryDecodeInst(DecoderTableGFX1032, MI, DW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX12_1032, DecoderTableGFX12_10_FAKE1632,
+      if (isGFX12_10() &&
+          tryDecodeInst(DecoderTableGFX12_1032, DecoderTableGFX12_10_FAKE1632,
                         MI, DW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX1332, MI, DW, Address, CS))
+      if (isGFX13() &&
+          tryDecodeInst(DecoderTableGFX1332, MI, DW, Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX1132, DecoderTableGFX11_FAKE1632, MI, DW,
+      if (isGFX11() &&
+          tryDecodeInst(DecoderTableGFX1132, DecoderTableGFX11_FAKE1632, MI, DW,
                         Address, CS))
         break;
 
-      if (tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632, MI, DW,
+      if (isGFX12() &&
+          tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632, MI, DW,
                         Address, CS))
         break;
     }
@@ -1858,12 +1875,20 @@ bool AMDGPUDisassembler::isGFX11Plus() const {
   return AMDGPU::isGFX11Plus(STI);
 }
 
+bool AMDGPUDisassembler::isGFX12() const {
+  return STI.hasFeature(AMDGPU::FeatureGFX12);
+}
+
 bool AMDGPUDisassembler::isGFX12Plus() const {
   return AMDGPU::isGFX12Plus(STI);
 }
 
 bool AMDGPUDisassembler::isGFX12_10() const {
   return AMDGPU::isGFX12_10(STI);
+}
+
+bool AMDGPUDisassembler::isGFX13() const {
+  return STI.hasFeature(AMDGPU::FeatureGFX13);
 }
 
 bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
