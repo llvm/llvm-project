@@ -289,7 +289,7 @@ struct VPTransformState {
     if (IsScalar) {
       set(Def, V, VPIteration(Part, 0));
       return;
-    } 
+    }
     assert((VF.isScalar() || V->getType()->isVectorTy()) &&
            "scalar values must be stored as (Part, 0)");
     if (!Data.PerPartOutput.count(Def)) {
