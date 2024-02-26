@@ -201,13 +201,11 @@ LogicalResult FunctionCallOp::verify() {
 }
 
 CallInterfaceCallable FunctionCallOp::getCallableForCallee() {
-  return (*this)->getAttrOfType<SymbolRefAttr>(
-      FunctionCallOp::getCalleeAttrName((*this)->getName()));
+  return (*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName());
 }
 
 void FunctionCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  (*this)->setAttr(FunctionCallOp::getCalleeAttrName((*this)->getName()),
-                   callee.get<SymbolRefAttr>());
+  (*this)->setAttr(getCalleeAttrName(), callee.get<SymbolRefAttr>());
 }
 
 Operation::operand_range FunctionCallOp::getArgOperands() {

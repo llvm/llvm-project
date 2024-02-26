@@ -12,8 +12,6 @@
 
 #include "SPIRVParsingUtils.h"
 
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
-
 #include "llvm/ADT/StringExtras.h"
 
 using namespace mlir::spirv::AttrNames;

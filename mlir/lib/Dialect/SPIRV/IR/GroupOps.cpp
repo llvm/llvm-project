@@ -20,7 +20,7 @@ using namespace mlir::spirv::AttrNames;
 
 namespace mlir::spirv {
 
-template <typename GroupNonUniformArithmenticOpTy>
+template <typename OpTy>
 static ParseResult parseGroupNonUniformArithmeticOp(OpAsmParser &parser,
                                                     OperationState &state) {
   spirv::Scope executionScope;
@@ -28,12 +28,10 @@ static ParseResult parseGroupNonUniformArithmeticOp(OpAsmParser &parser,
   OpAsmParser::UnresolvedOperand valueInfo;
   if (spirv::parseEnumStrAttr<spirv::ScopeAttr>(
           executionScope, parser, state,
-          GroupNonUniformArithmenticOpTy::getExecutionScopeAttrName(
-              state.name)) ||
+          OpTy::getExecutionScopeAttrName(state.name)) ||
       spirv::parseEnumStrAttr<GroupOperationAttr>(
           groupOperation, parser, state,
-          GroupNonUniformArithmenticOpTy::getGroupOperationAttrName(
-              state.name)) ||
+          OpTy::getGroupOperationAttrName(state.name)) ||
       parser.parseOperand(valueInfo))
     return failure();
 
@@ -86,13 +84,12 @@ static void printGroupNonUniformArithmeticOp(Operation *groupOp,
   printer << " : " << groupOp->getResult(0).getType();
 }
 
-template <typename GroupNonUniformArithmenticOpTy>
+template <typename OpTy>
 static LogicalResult verifyGroupNonUniformArithmeticOp(Operation *groupOp) {
   spirv::Scope scope =
       groupOp
           ->getAttrOfType<spirv::ScopeAttr>(
-              GroupNonUniformArithmenticOpTy::getExecutionScopeAttrName(
-                  groupOp->getName()))
+              OpTy::getExecutionScopeAttrName(groupOp->getName()))
           .getValue();
   if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
     return groupOp->emitOpError(
@@ -101,8 +98,7 @@ static LogicalResult verifyGroupNonUniformArithmeticOp(Operation *groupOp) {
   GroupOperation operation =
       groupOp
           ->getAttrOfType<GroupOperationAttr>(
-              GroupNonUniformArithmenticOpTy::getGroupOperationAttrName(
-                  groupOp->getName()))
+              OpTy::getGroupOperationAttrName(groupOp->getName()))
           .getValue();
   if (operation == GroupOperation::ClusteredReduce &&
       groupOp->getNumOperands() == 1)
