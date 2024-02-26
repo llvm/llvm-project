@@ -308,8 +308,8 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
             return true;
           }
 
-          // Otherwise, allocate the Decision. (Not activated yet)
-          MCDCState.DecisionByStmt[BinOp].Active = false;
+          // Otherwise, allocate the Decision.
+          MCDCState.DecisionByStmt[BinOp].BitmapIdx = 0;
         }
         return true;
       }

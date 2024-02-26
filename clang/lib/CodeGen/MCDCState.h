@@ -30,9 +30,7 @@ struct State {
 
   struct Decision {
     unsigned BitmapIdx;
-    unsigned BitmapTailPos;
     llvm::SmallVector<std::array<int, 2>> Indices;
-    bool Active; /// Set false to cancel
   };
 
   llvm::DenseMap<const Stmt *, Decision> DecisionByStmt;
