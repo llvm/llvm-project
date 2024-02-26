@@ -242,7 +242,16 @@ Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
   return Extract;
 }
 
-Value *VPTransformState::get(VPValue *Def, unsigned Part) {
+Value *VPTransformState::get(VPValue *Def, unsigned Part, bool NeedsScalar) {
+  if (NeedsScalar) {
+    assert((VF.isScalar() || Def->isLiveIn() ||
+            (hasScalarValue(Def, VPIteration(Part, 0)) &&
+             Data.PerPartScalars[Def][Part].size() == 1)) &&
+           "Trying to access a single scalar per part but has multiple scalars "
+           "per part.");
+    return get(Def, VPIteration(Part, 0));
+  }
+
   // If Values have been set for this Def return the one relevant for \p Part.
   if (hasVectorValue(Def, Part))
     return Data.PerPartOutput[Def][Part];
@@ -789,21 +798,15 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
     auto *TCMO = Builder.CreateSub(TripCountV,
                                    ConstantInt::get(TripCountV->getType(), 1),
                                    "trip.count.minus.1");
-    auto VF = State.VF;
-    Value *VTCMO =
-        VF.isScalar() ? TCMO : Builder.CreateVectorSplat(VF, TCMO, "broadcast");
-    for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
-      State.set(BackedgeTakenCount, VTCMO, Part);
+    BackedgeTakenCount->setUnderlyingValue(TCMO);
   }
 
-  for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
-    State.set(&VectorTripCount, VectorTripCountV, Part);
+  VectorTripCount.setUnderlyingValue(VectorTripCountV);
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
-  State.set(&VFxUF,
-            createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF),
-            0);
+  VFxUF.setUnderlyingValue(
+      createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF));
 
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
@@ -884,12 +887,16 @@ void VPlan::execute(VPTransformState *State) {
                             isa<VPFirstOrderRecurrencePHIRecipe>(PhiR) ||
                             (isa<VPReductionPHIRecipe>(PhiR) &&
                              cast<VPReductionPHIRecipe>(PhiR)->isOrdered());
+    bool NeedsScalar = isa<VPCanonicalIVPHIRecipe>(PhiR) ||
+                       (isa<VPReductionPHIRecipe>(PhiR) &&
+                        cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
     unsigned LastPartForNewPhi = SinglePartNeeded ? 1 : State->UF;
 
     for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
-      Value *Phi = State->get(PhiR, Part);
-      Value *Val = State->get(PhiR->getBackedgeValue(),
-                              SinglePartNeeded ? State->UF - 1 : Part);
+      Value *Phi = State->get(PhiR, Part, NeedsScalar);
+      Value *Val =
+          State->get(PhiR->getBackedgeValue(),
+                     SinglePartNeeded ? State->UF - 1 : Part, NeedsScalar);
       cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
     }
   }
