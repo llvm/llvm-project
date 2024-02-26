@@ -987,7 +987,7 @@ void WhitespaceManager::alignConsecutiveTableGenCondOperatorColons() {
 }
 
 void WhitespaceManager::alignConsecutiveTableGenDefinitions() {
-  alignConsecutiveColons(Style.AlignConsecutiveTableGenDefinitionsColons,
+  alignConsecutiveColons(Style.AlignConsecutiveTableGenDefinitionColons,
                          TT_InheritanceColon);
 }
 

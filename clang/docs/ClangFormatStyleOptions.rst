@@ -1095,9 +1095,9 @@ the configuration (without a prefix: ``Auto``).
       bbb >>= 2;
 
 
-.. _AlignConsecutiveTableGenDefinitionsColons:
+.. _AlignConsecutiveTableGenDefinitionColons:
 
-**AlignConsecutiveTableGenDefinitionsColons** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 19` :ref:`¶ <AlignConsecutiveTableGenDefinitionsColons>`
+**AlignConsecutiveTableGenDefinitionColons** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 19` :ref:`¶ <AlignConsecutiveTableGenDefinitionColons>`
   Style of aligning consecutive TableGen definition colons.
   This aligns the inheritance colons of consecutive definitions.
 

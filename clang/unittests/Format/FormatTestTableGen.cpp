@@ -353,7 +353,7 @@ TEST_F(FormatTestTableGen, DefAlignment) {
                "def DefDef : Parent {}\n"
                "def DefDefDef : Parent {}\n",
                Style);
-  Style.AlignConsecutiveTableGenDefinitionsColons.Enabled = true;
+  Style.AlignConsecutiveTableGenDefinitionColons.Enabled = true;
   verifyFormat("def Def       : Parent {}\n"
                "def DefDef    : Parent {}\n"
                "def DefDefDef : Parent {}\n",

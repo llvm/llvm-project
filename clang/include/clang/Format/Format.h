@@ -432,7 +432,7 @@ struct FormatStyle {
   ///   def DefDefDef : Parent {}
   /// \endcode
   /// \version 19
-  AlignConsecutiveStyle AlignConsecutiveTableGenDefinitionsColons;
+  AlignConsecutiveStyle AlignConsecutiveTableGenDefinitionColons;
 
   /// Different styles for aligning escaped newlines.
   enum EscapedNewlineAlignmentStyle : int8_t {
@@ -4827,8 +4827,8 @@ struct FormatStyle {
                R.AlignConsecutiveShortCaseStatements &&
            AlignConsecutiveTableGenCondOperatorColons ==
                R.AlignConsecutiveTableGenCondOperatorColons &&
-           AlignConsecutiveTableGenDefinitionsColons ==
-               R.AlignConsecutiveTableGenDefinitionsColons &&
+           AlignConsecutiveTableGenDefinitionColons ==
+               R.AlignConsecutiveTableGenDefinitionColons &&
            AlignEscapedNewlines == R.AlignEscapedNewlines &&
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&
