@@ -1731,6 +1731,9 @@ bool ByteCodeExprGen<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
     const Expr *Init = *CaptureInitIt;
     ++CaptureInitIt;
 
+    if (!Init)
+      continue;
+
     if (std::optional<PrimType> T = classify(Init)) {
       if (!this->visit(Init))
         return false;
