@@ -93,7 +93,7 @@ static const std::pair<StringRef, StringRef>
   W64FS = {"+wavefrontsize64", "w64"};
 
 using TestFuncTy =
-    std::function<bool(std::stringstream &, unsigned, const GCNSubtarget &)>;
+    function_ref<bool(std::stringstream &, unsigned, const GCNSubtarget &)>;
 
 static bool testAndRecord(std::stringstream &Table, const GCNSubtarget &ST,
                           TestFuncTy test) {
