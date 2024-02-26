@@ -1274,7 +1274,8 @@ struct DSEState {
       if (CB->onlyAccessesInaccessibleMemory())
         return false;
 
-    return isRefSet(BatchAA.getModRefInfo(UseInst, DefLoc));
+    AAQueryInfo TmpAAQI(AA, &EI);
+    return isRefSet(AA.getModRefInfo(UseInst, DefLoc, TmpAAQI));
   }
 
   /// Returns true if a dependency between \p Current and \p KillingDef is
