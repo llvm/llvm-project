@@ -1164,7 +1164,7 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
       libc.src.math.fmaxl
       libc.src.__support.FPUtil.fp_bits
   )
-  
+
   add_fp_unittest(
     fmaxf128_test
     SUITE
