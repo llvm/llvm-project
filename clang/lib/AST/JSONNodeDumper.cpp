@@ -115,6 +115,10 @@ void JSONNodeDumper::Visit(const Decl *D) {
   else if (D->isThisDeclarationReferenced())
     JOS.attribute("isReferenced", true);
 
+  if (const VarDecl *ND = dyn_cast<VarDecl>(D))
+  if (ND->isEllipsisVariable())
+  JOS.attribute("catch_all", true);
+
   if (const auto *ND = dyn_cast<NamedDecl>(D))
     attributeOnlyIfTrue("isHidden", !ND->isUnconditionallyVisible());
 

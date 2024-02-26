@@ -2700,14 +2700,13 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
     ExceptionDecl = Actions.ActOnExceptionDeclarator(getCurScope(), ExDecl);
   }
   else {
-  ConsumeToken();
+  CatchLoc = ConsumeToken();
   // explicitly creating a var of type no-type for '...' and marking it as catch_all
   ParsedAttributes Attributes(AttrFactory);
   DeclSpec DS(AttrFactory);
   Declarator ExDecl(DS, Attributes, DeclaratorContext::BlockLiteral);
   ParseDeclarator(ExDecl);
   ExceptionDecl = Actions.ActOnExceptionDeclarator(getCurScope(), ExDecl, true);
-  ExceptionDecl->setCatchEllipsisTok();
   }
   T.consumeClose();
   if (T.getCloseLocation().isInvalid())

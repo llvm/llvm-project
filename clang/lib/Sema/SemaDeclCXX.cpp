@@ -17024,8 +17024,11 @@ Decl *Sema::ActOnExceptionDeclarator(Scope *S, Declarator &D, bool isCatchAll) {
 
   VarDecl *ExDecl = BuildExceptionDeclaration(
       S, TInfo, D.getBeginLoc(), D.getIdentifierLoc(), D.getIdentifier());
-  if (Invalid && !isCatchAll)
+  if (Invalid)
     ExDecl->setInvalidDecl();
+
+  if (isCatchAll)
+    ExDecl->setEllipsisVariable(true);
 
   // Add the exception declaration into this scope.
   if (II)

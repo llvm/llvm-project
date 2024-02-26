@@ -1053,6 +1053,10 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned ExceptionVar : 1;
 
+    /// To Check the ellipsis
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned EllipsisVar : 1;
+
     /// Whether this local variable could be allocated in the return
     /// slot of its function, enabling the named return value optimization
     /// (NRVO).
@@ -1473,6 +1477,16 @@ public:
     assert(!isa<ParmVarDecl>(this));
     NonParmVarDeclBits.ExceptionVar = EV;
   }
+
+  /// Determine the Ellipsis (...) or not
+  bool isEllipsisVariable() const {
+    return isa<ParmVarDecl>(this) ? false : NonParmVarDeclBits.EllipsisVar;
+  }
+  void setEllipsisVariable(bool EV) {
+    assert(!isa<ParmVarDecl>(this));
+    NonParmVarDeclBits.EllipsisVar = EV;
+  }
+
 
   /// Determine whether this local variable can be used with the named
   /// return value optimization (NRVO).

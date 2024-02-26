@@ -755,10 +755,10 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "CXXCatchStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "offset": 352,
+// CHECK-NEXT:          "offset": 359,
 // CHECK-NEXT:          "line": 24,
-// CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "tokLen": 5
+// CHECK-NEXT:          "col": 10,
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "offset": 368,
@@ -769,7 +769,26 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
-// CHECK-NEXT:          "id": "0x0"
+// CHECK-NEXT:                      "id": "0x{{.*}}",
+// CHECK-NEXT:                      "kind": "VarDecl",
+// CHECK-NEXT:                      "loc": {
+// CHECK-NEXT:                        "offset": 362,
+// CHECK-NEXT:                        "line": 24,
+// CHECK-NEXT:                        "col": 13,
+// CHECK-NEXT:                        "tokLen": 1
+// CHECK-NEXT:                      },
+// CHECK-NEXT:                      "range": {
+// CHECK-NEXT:                        "begin": {},
+// CHECK-NEXT:                        "end": {
+// CHECK-NEXT:                          "offset": 362,
+// CHECK-NEXT:                          "col": 13,
+// CHECK-NEXT:                          "tokLen": 1
+// CHECK-NEXT:                        }
+// CHECK-NEXT:                      },
+// CHECK-NEXT:                      "catch_all": true,
+// CHECK-NEXT:                      "type": {
+// CHECK-NEXT:                        "qualType": "<unknown type>"
+// CHECK-NEXT:                      }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -777,7 +796,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "offset": 364,
-// CHECK-NEXT:            "line": 24,
 // CHECK-NEXT:            "col": 15,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },

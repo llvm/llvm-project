@@ -271,9 +271,9 @@ void TextNodeDumper::Visit(const Decl *D) {
       OS << " hidden";
   if (D->isImplicit())
     OS << " implicit";
-
-  if (D->isCatchEllipsisTok())
-    OS << " catch_all ";
+  if (const VarDecl *ND = dyn_cast<VarDecl>(D))
+  if (ND->isEllipsisVariable())
+  OS << " catch_all";
 
   if (D->isUsed())
     OS << " used";
