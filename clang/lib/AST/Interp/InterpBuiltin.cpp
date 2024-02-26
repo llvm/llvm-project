@@ -493,7 +493,6 @@ static bool interp__builtin_bitreverse(InterpState &S, CodePtr OpPC,
                                        const CallExpr *Call) {
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt Val = peekToAPSInt(S.Stk, ArgT);
-  // pushAPSInt(S, APSInt(Val.reverseBits(), /*IsUnsigned=*/true));
   pushInteger(S, Val.reverseBits(), Call->getType());
   return true;
 }
@@ -552,7 +551,6 @@ static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
     Result = APSInt(Value.rotl(Amount.urem(Value.getBitWidth())),
                     /*IsUnsigned=*/true);
 
-  // pushAPSInt(S, Result);
   pushInteger(S, Result, Call->getType());
   return true;
 }
@@ -785,7 +783,6 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   CarryOutPtr.initialize();
 
   assert(Call->getType() == Call->getArg(0)->getType());
-  // pushAPSInt(S, Result);
   pushInteger(S, Result, Call->getType());
   return true;
 }
