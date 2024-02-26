@@ -77,8 +77,7 @@ attributes #2 = { argmemonly nounwind willreturn }
 !26 = !DILocation(line: 10, column: 3, scope: !8)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { noinline ssp uwtable }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 12.0.0 (git@github.com:llvm/llvm-project 5110fd0343c2d06c8ae538741fbef13ece5e68de)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None, sysroot: "/")
 ; CHECK: [[META1:![0-9]+]] = !DIFile(filename: "/tmp/inlinesplit.cpp", directory: "/Volumes/Data/llvm-project")

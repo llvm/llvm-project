@@ -51,7 +51,7 @@ entry:
   ret void
 }
 
-; CHECK: define internal void @outlined_ir_func_0(ptr [[ARG0:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) #1 {
+; CHECK: define internal void @outlined_ir_func_0(ptr [[ARG0:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) #0 {
 ; CHECK: entry_to_outline:
 ; CHECK-NEXT:    store i32 2, ptr [[ARG0]], align 4
 ; CHECK-NEXT:    store i32 3, ptr [[ARG1]], align 4
