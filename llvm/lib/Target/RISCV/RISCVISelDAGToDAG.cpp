@@ -2099,8 +2099,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     MVT SubVecContainerVT = SubVecVT;
     // Establish the correct scalable-vector types for any fixed-length type.
     if (SubVecVT.isFixedLengthVector()) {
-      assert(Idx == 0 && V.isUndef());
       SubVecContainerVT = TLI.getContainerForFixedLengthVector(SubVecVT);
+      bool AlignedToVecReg = false;
+      if (auto VLen = Subtarget->getRealVLen();
+          VLen && SubVecVT.getSizeInBits() ==
+                      SubVecContainerVT.getSizeInBits().getKnownMinValue() *
+                          (*VLen / RISCV::RVVBitsPerBlock))
+        AlignedToVecReg = true;
+      assert(Idx == 0 && (AlignedToVecReg || V.isUndef()));
     }
     MVT ContainerVT = VT;
     if (VT.isFixedLengthVector())
