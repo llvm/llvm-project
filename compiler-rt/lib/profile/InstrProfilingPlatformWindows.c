@@ -6,6 +6,8 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+#include <stddef.h>
+
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
 
@@ -59,8 +61,16 @@ const __llvm_profile_data *__llvm_profile_begin_data(void) {
 }
 const __llvm_profile_data *__llvm_profile_end_data(void) { return &DataEnd; }
 
+// TODO: Implement the linker magic on Windows.
+const VTableProfData *__llvm_profile_begin_vtables(void) { return NULL; }
+
+const VTableProfData *__llvm_profile_end_vtables(void) { return NULL; }
+
 const char *__llvm_profile_begin_names(void) { return &NamesStart + 1; }
 const char *__llvm_profile_end_names(void) { return &NamesEnd; }
+
+const char *__llvm_profile_begin_vtabnames(void) { return NULL; }
+const char *__llvm_profile_end_vtabnames(void) { return NULL; }
 
 char *__llvm_profile_begin_counters(void) { return &CountersStart + 1; }
 char *__llvm_profile_end_counters(void) { return &CountersEnd; }

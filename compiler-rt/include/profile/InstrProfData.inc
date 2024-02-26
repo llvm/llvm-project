@@ -748,7 +748,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
    than WIN32 */
 #define INSTR_PROF_DATA_COMMON __llvm_prf_data
 #define INSTR_PROF_NAME_COMMON __llvm_prf_names
-#define INSTR_PROF_VNAME_COMMON __llvm_prf_vtabnames
+#define INSTR_PROF_VNAME_COMMON __llvm_prf_vns
 #define INSTR_PROF_CNTS_COMMON __llvm_prf_cnts
 #define INSTR_PROF_BITS_COMMON __llvm_prf_bits
 #define INSTR_PROF_VALS_COMMON __llvm_prf_vals
@@ -785,6 +785,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_NAME_SECT_NAME INSTR_PROF_NAME_COFF
 #define INSTR_PROF_CNTS_SECT_NAME INSTR_PROF_CNTS_COFF
 #define INSTR_PROF_BITS_SECT_NAME INSTR_PROF_BITS_COFF
+#define INSTR_PROF_VTAB_SECT_NAME INSTR_PROF_VTAB_COFF
+#define INSTR_PROF_VNAME_SECT_NAME INSTR_PROF_VNAME_COFF
 /* Array of pointers. Each pointer points to a list
  * of value nodes associated with one value site.
  */
@@ -802,6 +804,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_NAME_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_NAME_COMMON)
 #define INSTR_PROF_CNTS_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON)
 #define INSTR_PROF_BITS_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_BITS_COMMON)
+#define INSTR_PROF_VTAB_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_VTAB_COMMON)
+#define INSTR_PROF_VNAME_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_VNAME_COMMON)
 /* Array of pointers. Each pointer points to a list
  * of value nodes associated with one value site.
  */
