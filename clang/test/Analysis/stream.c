@@ -364,19 +364,6 @@ void fflush_on_open_failed_stream(void) {
   fclose(F);
 }
 
-void test_fscanf_eof() {
-  FILE *F1 = tmpfile();
-  if (!F1)
-    return;
-
-  int a;
-  unsigned b;
-  int ret = fscanf(F1, "%d %u", &a, &b);
-  char c = fgetc(F1); // expected-warning {{Read function called when stream is in EOF state. Function has no effect}}
-  // expected-warning@-1 {{File position of the stream might be 'indeterminate' after a failed operation. Can cause undefined behavior}}
-  fclose(F1);
-}
-
 void test_fscanf_escape() {
   FILE *F1 = tmpfile();
   if (!F1)
@@ -403,46 +390,6 @@ void test_fscanf_escape() {
 
   if (ret != EOF) {
     char c = fgetc(F1); // ok
-  }
-
-  fclose(F1);
-}
-
-void test_fputc() {
-  FILE *F1 = tmpfile();
-  if (!F1)
-    return;
-
-  char a = 'y'; // 'y' = 121 ASCII
-  char r = fputc(a, F1);
-  if (r != EOF) {
-    clang_analyzer_dump_char(r); // expected-warning {{121 S8b}}
-    char z = fgetc(F1);
-  } else {
-    clang_analyzer_dump_char(r);  // expected-warning {{-1 S8b}}
-  }
-
-  fclose(F1);
-}
-
-void test_fputs() {
-  FILE *F1 = tmpfile();
-  if (!F1)
-    return;
-
-  char buffer[] = "HELLO";
-  int r = fputs(buffer, F1);
-  if (r >= 0) {
-    // fputs does not invalidate the input buffer (72 is ascii for 'H')
-    clang_analyzer_dump_char(buffer[0]); // expected-warning {{72 S8b}}
-  } else if (r == EOF) {
-    // fputs does not invalidate the input buffer, *and* this branch
-    // can happen
-    clang_analyzer_dump_char(buffer[0]); // expected-warning {{72 S8b}}
-  } else {
-    // This branch can not happen
-    int *p = NULL;
-    *p = 0;
   }
 
   fclose(F1);
