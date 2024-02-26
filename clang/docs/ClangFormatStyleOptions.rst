@@ -4844,7 +4844,8 @@ the configuration (without a prefix: ``Auto``).
 .. _RemoveSemicolon:
 
 **RemoveSemicolon** (``Boolean``) :versionbadge:`clang-format 16` :ref:`¶ <RemoveSemicolon>`
-  Remove semicolons after the closing brace of a non-empty function.
+  Remove semicolons after the closing braces of functions and
+  constructors/destructors.
 
   .. warning::
 

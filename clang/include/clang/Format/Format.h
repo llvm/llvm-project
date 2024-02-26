@@ -3771,7 +3771,8 @@ struct FormatStyle {
   /// \version 17
   RemoveParenthesesStyle RemoveParentheses;
 
-  /// Remove semicolons after the closing brace of a non-empty function.
+  /// Remove semicolons after the closing braces of functions and
+  /// constructors/destructors.
   /// \warning
   ///  Setting this option to ``true`` could lead to incorrect code formatting
   ///  due to clang-format's lack of complete semantic information. As such,
