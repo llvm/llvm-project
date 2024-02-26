@@ -3,6 +3,9 @@
 # RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+xtheadvector %s \
+# RUN:        | llvm-objdump -d --mattr=+xtheadvector --no-print-imm-hex - \
+# RUN:        | FileCheck %s --check-prefix=CHECK-INST
+# RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+xtheadvector %s \
 # RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 th.vmslt.vv v0, v4, v20, v0.t

@@ -1385,10 +1385,9 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                              bool MatchingInlineAsm) {
   MCInst Inst;
   FeatureBitset MissingFeatures;
-  bool IsRVV0p71 = getSTI().hasFeature(RISCV::FeatureVendorXTHeadV);
 
   auto Result = MatchInstructionImpl(Operands, Inst, ErrorInfo, MissingFeatures,
-                                     MatchingInlineAsm, IsRVV0p71 ? 1 : 0);
+                                     MatchingInlineAsm);
   switch (Result) {
   default:
     break;
@@ -1620,7 +1619,7 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(
         ErrorLoc,
         "operand must be "
-        "e[8|16|32|64|128|256|512|1024],m[1|2|4|8],d[1|2|4|8] for RVV0.71");
+        "e[8|16|32|64|128|256|512|1024],m[1|2|4|8],d[1|2|4|8] for XTHeadVector");
   }
   case Match_InvalidVMaskRegister: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();

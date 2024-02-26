@@ -69,16 +69,9 @@ def RISCVAsmWriter : AsmWriter {
   int PassSubtarget = 1;
 }
 
-def RVV0p71AsmParserVariant : AsmParserVariant {
-  int Variant = 1;
-  string Name = "RVV0p71";
-}
-
 def RISCV : Target {
   let InstructionSet = RISCVInstrInfo;
   let AssemblyParsers = [RISCVAsmParser];
-  let AssemblyParserVariants = [DefaultAsmParserVariant,
-                                RVV0p71AsmParserVariant];
   let AssemblyWriters = [RISCVAsmWriter];
   let AllowRegisterRenaming = 1;
 }
