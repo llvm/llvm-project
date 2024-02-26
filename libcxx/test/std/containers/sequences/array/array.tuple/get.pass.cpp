@@ -61,7 +61,7 @@ TEST_CONSTEXPR_CXX14 bool tests()
         assert(std::get<2>(tempArray(1, 2, 3)) == 3);
     }
 
-#if TEST_STD_VER >= 20
+#if TEST_STD_VER >= 23
     // `get()` allows using `array` with ranges
     {
       std::array<int, 2> arr[]{{27, 28}, {82, 94}};

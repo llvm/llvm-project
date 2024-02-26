@@ -53,7 +53,7 @@ int main(int, char**)
     }
 #endif
 
-#if TEST_STD_VER >= 20
+#if TEST_STD_VER >= 23
     // `get()` allows using `pair` with ranges
     {
       std::pair<int, std::string> arr[]{{27, "hkt"}, {28, "zmt"}};

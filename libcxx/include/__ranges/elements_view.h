@@ -16,7 +16,6 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/equality_comparable.h>
 #include <__config>
-#include <__fwd/complex.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
