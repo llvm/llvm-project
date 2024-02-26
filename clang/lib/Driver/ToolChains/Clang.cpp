@@ -2712,25 +2712,7 @@ static std::string ComplexArithmeticStr(LangOptions::ComplexRangeKind Range) {
              : "-fcomplex-arithmetic=" + ComplexRangeKindToStr(Range);
 }
 
-static void EmitComplexRangeDiag(const Driver &D,
-                                 LangOptions::ComplexRangeKind Range1,
-                                 LangOptions::ComplexRangeKind Range2,
-                                 std::string GccRangeComplexOption) {
-  if (Range1 != Range2 && Range1 != LangOptions::ComplexRangeKind::CX_None) {
-    if (!GccRangeComplexOption.empty())
-      if (Range1 == LangOptions::ComplexRangeKind::CX_Basic)
-        D.Diag(clang::diag::warn_drv_overriding_option)
-            << GccRangeComplexOption << ComplexArithmeticStr(Range2);
-      else if (Range2 == LangOptions::ComplexRangeKind::CX_Basic)
-        D.Diag(clang::diag::warn_drv_overriding_option)
-            << ComplexArithmeticStr(Range1) << GccRangeComplexOption;
-    else
-      D.Diag(clang::diag::warn_drv_overriding_option)
-          << ComplexArithmeticStr(Range1) << ComplexArithmeticStr(Range2);
-  }
-}
-
-static void EmitComplexRangeDiagZA(const Driver &D, std::string str1,
+static void EmitComplexRangeDiag(const Driver &D, std::string str1,
                                    std::string str2) {
   if ((str1.compare(str2) != 0) && !str2.empty() && !str1.empty()) {
     D.Diag(clang::diag::warn_drv_overriding_option) << str1 << str2;
@@ -2814,14 +2796,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     // Warn if user expects to perform full implementation of complex
     // multiplication or division in the presence of nnan or ninf flags.
     if (Range == LangOptions::ComplexRangeKind::CX_Full)
-      EmitComplexRangeDiagZA(
+      EmitComplexRangeDiag(
           D, ComplexArithmeticStr(Range),
           !GccRangeComplexOption.empty()
               ? GccRangeComplexOption
               : ComplexArithmeticStr(LangOptions::ComplexRangeKind::CX_Basic));
-      //D.Diag(clang::diag::warn_drv_overriding_option)
-      //    << ComplexArithmeticStr(Range)
-       //   << ComplexArithmeticStr(LangOptions::ComplexRangeKind::CX_Basic);
     Range = LangOptions::ComplexRangeKind::CX_Basic;
     SeenUnsafeMathModeOption = true;
   };
@@ -2839,44 +2818,33 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       break;
     case options::OPT_fcx_limited_range:
       if (!GccRangeComplexOption.empty()) {
-        EmitComplexRangeDiagZA(D, GccRangeComplexOption, "-fcx-limited-range");
+        EmitComplexRangeDiag(D, GccRangeComplexOption, "-fcx-limited-range");
       } else {
         if (Range != LangOptions::ComplexRangeKind::CX_Basic)
-          EmitComplexRangeDiagZA(D, RenderComplexRangeOption(Range),
-                                 "-fcx-limited-range");
+          EmitComplexRangeDiag(D, RenderComplexRangeOption(Range),
+                               "-fcx-limited-range");
       }
       GccRangeComplexOption = "-fcx-limited-range";
-      //EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Basic,
-      // GccRangeComplexOption);
-      //EmitComplexRangeDiagZA(D, ComplexRangeKindToStr(Range),
-      //                       GccRangeComplexOption);
       Range = LangOptions::ComplexRangeKind::CX_Basic;
       break;
     case options::OPT_fno_cx_limited_range:
-      //EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Full,
-      //                     GccRangeComplexOption);
-      //EmitComplexRangeDiagZA(D, ComplexRangeKindToStr(Range),
-      //                       GccRangeComplexOption);
       if (!GccRangeComplexOption.empty() &&
           (GccRangeComplexOption.compare("-fcx-limited-range") != 0 &&
            GccRangeComplexOption.compare("-fno-cx-fortran-rules") != 0))
-        EmitComplexRangeDiagZA(D, GccRangeComplexOption, "-fno-cx-limited-range");
+        EmitComplexRangeDiag(D, GccRangeComplexOption, "-fno-cx-limited-range");
       if (GccRangeComplexOption.empty())
-        EmitComplexRangeDiagZA(D, RenderComplexRangeOption(Range),
-                               "-fno-cx-limited-range");
+        EmitComplexRangeDiag(D, RenderComplexRangeOption(Range),
+                             "-fno-cx-limited-range");
       GccRangeComplexOption = "-fno-cx-limited-range";
       Range = LangOptions::ComplexRangeKind::CX_Full;
       break;
     case options::OPT_fcx_fortran_rules:
       if (!GccRangeComplexOption.empty())
-        EmitComplexRangeDiagZA(D, GccRangeComplexOption, "-fcx-fortran-rules");
+        EmitComplexRangeDiag(D, GccRangeComplexOption, "-fcx-fortran-rules");
       else
-        EmitComplexRangeDiagZA(D, RenderComplexRangeOption(Range),
-                               "-fcx-fortran-rules");
+        EmitComplexRangeDiag(D, RenderComplexRangeOption(Range),
+                             "-fcx-fortran-rules");
       GccRangeComplexOption = "-fcx-fortran-rules";
-
-      //EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Improved,
-      //                     GccRangeComplexOption);
       Range = LangOptions::ComplexRangeKind::CX_Improved;
       break;
     case options::OPT_fno_cx_fortran_rules:
@@ -2884,15 +2852,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
           GccRangeComplexOption.compare("-fno-cx-limited-range") == 0)
         GccRangeComplexOption = "-fno-cx-fortran-rules";
       if (!GccRangeComplexOption.empty())
-        EmitComplexRangeDiagZA(D, GccRangeComplexOption, "-fno-cx-fortran-rules");
+        EmitComplexRangeDiag(D, GccRangeComplexOption, "-fno-cx-fortran-rules");
       else
-        EmitComplexRangeDiagZA(D, RenderComplexRangeOption(Range),
-                               "-fno-cx-fortran-rules");
+        EmitComplexRangeDiag(D, RenderComplexRangeOption(Range),
+                             "-fno-cx-fortran-rules");
       GccRangeComplexOption = "-fno-cx-fortran-rules";
-      //EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Full,
-      //                     GccRangeComplexOption);
-      //EmitComplexRangeDiagZA(D, ComplexRangeKindToStr(Range),
-      //                       GccRangeComplexOption);
       Range = LangOptions::ComplexRangeKind::CX_Full;
       break;
     case options::OPT_fcomplex_arithmetic_EQ: {
@@ -2909,28 +2873,26 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       else
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << LangOptions::ComplexRangeKind::CX_None;
-      //EmitComplexRangeDiag(D, Range, RangeVal, GccRangeComplexOption);
-      bool p1 = GccRangeComplexOption.compare("-fcx-limited-range");
       if (GccRangeComplexOption.empty() && !SeenUnsafeMathModeOption) {
-        EmitComplexRangeDiagZA(D, ComplexArithmeticStr(Range),
-                               ComplexArithmeticStr(RangeVal));
+        EmitComplexRangeDiag(D, ComplexArithmeticStr(Range),
+                             ComplexArithmeticStr(RangeVal));
       }
       if (!GccRangeComplexOption.empty()) {
         if (GccRangeComplexOption.compare("-fcx-limited-range") != 0) {
           if (GccRangeComplexOption.compare("-fcx-fortran-rules") != 0) {
             if (RangeVal != LangOptions::ComplexRangeKind::CX_Improved)
-              EmitComplexRangeDiagZA(D, GccRangeComplexOption,
-                                     ComplexArithmeticStr(RangeVal));
-          } else {
-            EmitComplexRangeDiagZA(D, GccRangeComplexOption,
+              EmitComplexRangeDiag(D, GccRangeComplexOption,
                                    ComplexArithmeticStr(RangeVal));
+          } else {
+            EmitComplexRangeDiag(D, GccRangeComplexOption,
+                                 ComplexArithmeticStr(RangeVal));
           }
         } else {
           if (RangeVal != LangOptions::ComplexRangeKind::CX_Basic)
-            EmitComplexRangeDiagZA(D, GccRangeComplexOption,
-                                   ComplexArithmeticStr(RangeVal));
+            EmitComplexRangeDiag(D, GccRangeComplexOption,
+                                 ComplexArithmeticStr(RangeVal));
         }
-      } 
+      }
       Range = RangeVal;
       break;
     }
