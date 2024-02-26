@@ -111,6 +111,12 @@ public:
   bool VisitGenericSelectionExpr(const GenericSelectionExpr *E);
   bool VisitChooseExpr(const ChooseExpr *E);
   bool VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E);
+  bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
+  bool VisitExpressionTraitExpr(const ExpressionTraitExpr *E);
+  bool VisitCXXUuidofExpr(const CXXUuidofExpr *E);
+  bool VisitRequiresExpr(const RequiresExpr *E);
+  bool VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
+  bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -230,29 +236,6 @@ private:
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
   bool visitZeroRecordInitializer(const Record *R, const Expr *E);
 
-  enum class DerefKind {
-    /// Value is read and pushed to stack.
-    Read,
-    /// Direct method generates a value which is written. Returns pointer.
-    Write,
-    /// Direct method receives the value, pushes mutated value. Returns pointer.
-    ReadWrite,
-  };
-
-  /// Method to directly load a value. If the value can be fetched directly,
-  /// the direct handler is called. Otherwise, a pointer is left on the stack
-  /// and the indirect handler is expected to operate on that.
-  bool dereference(const Expr *LV, DerefKind AK,
-                   llvm::function_ref<bool(PrimType)> Direct,
-                   llvm::function_ref<bool(PrimType)> Indirect);
-  bool dereferenceParam(const Expr *LV, PrimType T, const ParmVarDecl *PD,
-                        DerefKind AK,
-                        llvm::function_ref<bool(PrimType)> Direct,
-                        llvm::function_ref<bool(PrimType)> Indirect);
-  bool dereferenceVar(const Expr *LV, PrimType T, const VarDecl *PD,
-                      DerefKind AK, llvm::function_ref<bool(PrimType)> Direct,
-                      llvm::function_ref<bool(PrimType)> Indirect);
-
   /// Emits an APSInt constant.
   bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
   bool emitConst(const llvm::APSInt &Value, const Expr *E);
@@ -283,8 +266,10 @@ private:
   }
 
   bool emitComplexReal(const Expr *SubExpr);
+  bool emitComplexBoolCast(const Expr *E);
 
-  bool emitRecordDestruction(const Descriptor *Desc);
+  bool emitRecordDestruction(const Record *R);
+  bool emitDestruction(const Descriptor *Desc);
   unsigned collectBaseOffset(const RecordType *BaseType,
                              const RecordType *DerivedType);
 
@@ -396,7 +381,8 @@ public:
     for (Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
         this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{});
-        this->Ctx->emitRecordDestruction(Local.Desc);
+        this->Ctx->emitDestruction(Local.Desc);
+        this->Ctx->emitPopPtr(SourceInfo{});
         removeIfStoredOpaqueValue(Local);
       }
     }

@@ -46,6 +46,23 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif ()
   include_directories(BEFORE
     ${FLANG_SOURCE_DIR}/include)
+
+  # The out of tree builds of the compiler and the Fortran runtime
+  # must use the same setting of FLANG_RUNTIME_F128_MATH_LIB
+  # to be composable. Failure to synchronize this setting may result
+  # in linking errors or fatal failures in F128 runtime functions.
+  set(FLANG_RUNTIME_F128_MATH_LIB "" CACHE STRING
+    "Specifies the target library used for implementing IEEE-754 128-bit float \
+    math in F18 runtime, e.g. it might be libquadmath for targets where \
+    REAL(16) is mapped to __float128, or libm for targets where REAL(16) \
+    is mapped to long double, etc."
+    )
+
+  if (NOT FLANG_RUNTIME_F128_MATH_LIB STREQUAL "")
+    add_compile_definitions(
+      -DFLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}"
+      )
+  endif()
 endif()
 
 include(CheckCXXSymbolExists)
@@ -83,6 +100,9 @@ add_definitions(-U_GLIBCXX_ASSERTIONS)
 add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
 
 add_subdirectory(FortranMain)
+if (NOT ${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "")
+  add_subdirectory(Float128Math)
+endif()
 
 set(sources
   ISO_Fortran_binding.cpp

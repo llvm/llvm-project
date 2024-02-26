@@ -1108,7 +1108,7 @@ bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
 
   const std::time_t seconds = ptr_sp->GetValueAsSigned(0);
   if (seconds < chrono_timestamp_min || seconds > chrono_timestamp_max)
-    stream.Printf("timestamp=%" PRIu64 " s", static_cast<uint64_t>(seconds));
+    stream.Printf("timestamp=%" PRId64 " s", static_cast<int64_t>(seconds));
   else {
     std::array<char, 128> str;
     std::size_t size =
@@ -1116,8 +1116,8 @@ bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
     if (size == 0)
       return false;
 
-    stream.Printf("date/time=%s timestamp=%" PRIu64 " s", str.data(),
-                  static_cast<uint64_t>(seconds));
+    stream.Printf("date/time=%s timestamp=%" PRId64 " s", str.data(),
+                  static_cast<int64_t>(seconds));
   }
 
   return true;

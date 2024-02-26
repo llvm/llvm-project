@@ -1110,6 +1110,12 @@ def ReadCycleCounter : Builtin {
   let Prototype = "unsigned long long int()";
 }
 
+def ReadSteadyCounter : Builtin {
+  let Spellings = ["__builtin_readsteadycounter"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned long long int()";
+}
+
 def Trap : Builtin {
   let Spellings = ["__builtin_trap"];
   let Attributes = [NoThrow, NoReturn];
@@ -4061,14 +4067,14 @@ class MPATemplate : Template<
 
 def Addc : Builtin, MPATemplate {
   let Spellings = ["__builtin_addc"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   // FIXME: Why are these argumentes marked const?
   let Prototype = "T(T const, T const, T const, T*)";
 }
 
 def Subc : Builtin, MPATemplate {
   let Spellings = ["__builtin_subc"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   // FIXME: Why are these argumentes marked const?
   let Prototype = "T(T const, T const, T const, T*)";
 }
@@ -4516,6 +4522,12 @@ def HLSLCreateHandle : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_create_handle"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void*(unsigned char)";
+}
+
+def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_dot"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
 }
 
 // Builtins for XRay.

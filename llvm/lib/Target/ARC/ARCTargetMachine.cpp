@@ -70,7 +70,7 @@ TargetPassConfig *ARCTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void ARCPassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
 }

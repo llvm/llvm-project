@@ -667,7 +667,13 @@ StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
-  return llvm::AArch64::parseArchExtension(FeatureStr).has_value();
+  // CPU features might be separated by '+', extract them and check
+  llvm::SmallVector<StringRef, 8> Features;
+  FeatureStr.split(Features, "+");
+  for (auto &Feature : Features)
+    if (!llvm::AArch64::parseArchExtension(Feature.trim()).has_value())
+      return false;
+  return true;
 }
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {

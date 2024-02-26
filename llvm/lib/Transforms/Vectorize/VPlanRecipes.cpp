@@ -275,12 +275,8 @@ VPInstruction::VPInstruction(unsigned Opcode,
 }
 
 bool VPInstruction::generatesScalars() const {
-  if (Opcode == VPInstruction::FirstOrderRecurrenceSplice ||
-      Opcode == VPInstruction::ActiveLaneMask)
-    return false;
-
-  return Opcode == VPInstruction::ComputeReductionResult ||
-         Opcode == VPInstruction::PtrAdd || vputils::onlyFirstLaneUsed(this);
+  return
+         Opcode == VPInstruction::PtrAdd;
 }
 
 Value *VPInstruction::generatePerLane(VPTransformState &State,
@@ -288,175 +284,7 @@ Value *VPInstruction::generatePerLane(VPTransformState &State,
   IRBuilderBase &Builder = State.Builder;
   Builder.SetCurrentDebugLocation(getDebugLoc());
 
-  if (Lane.Part > 0 && vputils::onlyFirstPartUsed(this))
-    return State.get(this, VPIteration(0, Lane.Lane.getKnownLane()));
-
-  if (Instruction::isBinaryOp(getOpcode())) {
-    Value *A = State.get(getOperand(0), Lane);
-    Value *B = State.get(getOperand(1), Lane);
-    auto *Res =
-        Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), A, B, Name);
-    if (auto *I = dyn_cast<Instruction>(Res))
-      setFlags(I);
-    return Res;
-  }
-
   switch (getOpcode()) {
-  case VPInstruction::Not: {
-    Value *A = State.get(getOperand(0), Lane);
-    return Builder.CreateNot(A, Name);
-  }
-  case Instruction::Select: {
-    Value *Cond = State.get(getOperand(0), Lane);
-    Value *Op1 = State.get(getOperand(1), Lane);
-    Value *Op2 = State.get(getOperand(2), Lane);
-    return Builder.CreateSelect(Cond, Op1, Op2, Name);
-  }
-  case VPInstruction::CalculateTripCountMinusVF: {
-    Value *ScalarTC = State.get(getOperand(0), {0, 0});
-    Value *Step =
-        createStepForVF(Builder, ScalarTC->getType(), State.VF, State.UF);
-    Value *Sub = Builder.CreateSub(ScalarTC, Step);
-    Value *Cmp =
-        Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, Step);
-    Value *Zero = ConstantInt::get(ScalarTC->getType(), 0);
-    return Builder.CreateSelect(Cmp, Sub, Zero);
-  }
-  case VPInstruction::CanonicalIVIncrementForPart: {
-    auto *IV = State.get(getOperand(0), VPIteration(0, 0));
-    if (Lane.Part == 0)
-      return IV;
-
-    // The canonical IV is incremented by the vectorization factor (num of SIMD
-    // elements) times the unroll part.
-    Value *Step = createStepForVF(Builder, IV->getType(), State.VF, Lane.Part);
-    return Builder.CreateAdd(IV, Step, Name, hasNoUnsignedWrap(),
-                             hasNoSignedWrap());
-  }
-
-  case VPInstruction::BranchOnCond: {
-    if (Lane.Part != 0)
-      return nullptr;
-
-    Value *Cond = State.get(getOperand(0), Lane);
-    VPRegionBlock *ParentRegion = getParent()->getParent();
-    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
-
-    // Replace the temporary unreachable terminator with a new conditional
-    // branch, hooking it up to backward destination for exiting blocks now and
-    // to forward destination(s) later when they are created.
-    BranchInst *CondBr =
-        Builder.CreateCondBr(Cond, Builder.GetInsertBlock(), nullptr);
-
-    if (getParent()->isExiting())
-      CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
-
-    CondBr->setSuccessor(0, nullptr);
-    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
-    return CondBr;
-  }
-  case VPInstruction::BranchOnCount: {
-    if (Lane.Part != 0)
-      return nullptr;
-    // First create the compare.
-    Value *IV = State.get(getOperand(0), Lane);
-    Value *TC = State.get(getOperand(1), Lane);
-    Value *Cond = Builder.CreateICmpEQ(IV, TC);
-
-    // Now create the branch.
-    auto *Plan = getParent()->getPlan();
-    VPRegionBlock *TopRegion = Plan->getVectorLoopRegion();
-    VPBasicBlock *Header = TopRegion->getEntry()->getEntryBasicBlock();
-
-    // Replace the temporary unreachable terminator with a new conditional
-    // branch, hooking it up to backward destination (the header) now and to the
-    // forward destination (the exit/middle block) later when it is created.
-    // Note that CreateCondBr expects a valid BB as first argument, so we need
-    // to set it to nullptr later.
-    BranchInst *CondBr = Builder.CreateCondBr(Cond, Builder.GetInsertBlock(),
-                                              State.CFG.VPBB2IRBB[Header]);
-    CondBr->setSuccessor(0, nullptr);
-    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
-    return CondBr;
-  }
-  case VPInstruction::ComputeReductionResult: {
-    if (Lane.Part != 0)
-      return State.get(this, VPIteration(0, 0));
-
-    // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
-    // and will be removed by breaking up the recipe further.
-    auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
-    auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
-    // Get its reduction variable descriptor.
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-
-    RecurKind RK = RdxDesc.getRecurrenceKind();
-
-    State.setDebugLocFrom(getDebugLoc());
-
-    VPValue *LoopExitingDef = getOperand(1);
-    Type *PhiTy = OrigPhi->getType();
-    VectorParts RdxParts(State.UF);
-    for (unsigned Part = 0; Part < State.UF; ++Part)
-      RdxParts[Part] = State.get(LoopExitingDef, Part);
-
-    // If the vector reduction can be performed in a smaller type, we truncate
-    // then extend the loop exit value to enable InstCombine to evaluate the
-    // entire expression in the smaller type.
-    // TODO: Handle this in truncateToMinBW.
-    if (State.VF.isVector() && PhiTy != RdxDesc.getRecurrenceType()) {
-      Type *RdxVecTy = VectorType::get(RdxDesc.getRecurrenceType(), State.VF);
-      for (unsigned Part = 0; Part < State.UF; ++Part)
-        RdxParts[Part] = Builder.CreateTrunc(RdxParts[Part], RdxVecTy);
-    }
-    // Reduce all of the unrolled parts into a single vector.
-    Value *ReducedPartRdx = RdxParts[0];
-    unsigned Op = RecurrenceDescriptor::getOpcode(RK);
-
-    if (PhiR->isOrdered()) {
-      ReducedPartRdx = RdxParts[State.UF - 1];
-    } else {
-      // Floating-point operations should have some FMF to enable the reduction.
-      IRBuilderBase::FastMathFlagGuard FMFG(Builder);
-      Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
-      for (unsigned Part = 1; Part < State.UF; ++Part) {
-        Value *RdxPart = RdxParts[Part];
-        if (Op != Instruction::ICmp && Op != Instruction::FCmp)
-          ReducedPartRdx = Builder.CreateBinOp(
-              (Instruction::BinaryOps)Op, RdxPart, ReducedPartRdx, "bin.rdx");
-        else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
-          TrackingVH<Value> ReductionStartValue =
-              RdxDesc.getRecurrenceStartValue();
-          ReducedPartRdx = createAnyOfOp(Builder, ReductionStartValue, RK,
-                                         ReducedPartRdx, RdxPart);
-        } else
-          ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
-      }
-    }
-
-    // Create the reduction after the loop. Note that inloop reductions create
-    // the target reduction in the loop using a Reduction recipe.
-    if (State.VF.isVector() && !PhiR->isInLoop()) {
-      ReducedPartRdx =
-          createTargetReduction(Builder, RdxDesc, ReducedPartRdx, OrigPhi);
-      // If the reduction can be performed in a smaller type, we need to extend
-      // the reduction to the wider type before we branch to the original loop.
-      if (PhiTy != RdxDesc.getRecurrenceType())
-        ReducedPartRdx = RdxDesc.isSigned()
-                             ? Builder.CreateSExt(ReducedPartRdx, PhiTy)
-                             : Builder.CreateZExt(ReducedPartRdx, PhiTy);
-    }
-
-    // If there were stores of the reduction value to a uniform memory address
-    // inside the loop, create the final store here.
-    if (StoreInst *SI = RdxDesc.IntermediateStore) {
-      auto *NewSI = Builder.CreateAlignedStore(
-          ReducedPartRdx, SI->getPointerOperand(), SI->getAlign());
-      propagateMetadata(NewSI, SI);
-    }
-
-    return ReducedPartRdx;
-  }
   case VPInstruction::PtrAdd: {
     auto *P = Builder.CreatePtrAdd(State.get(getOperand(0), Lane),
                                    State.get(getOperand(1), Lane), Name);
@@ -579,12 +407,16 @@ void VPInstruction::execute(VPTransformState &State) {
     Value *GeneratedValue = generatePerPart(State, Part);
     if (!hasResult())
       continue;
-    assert(GeneratedValue &&
-           (State.VF.isScalar() || GeneratedValue->getType()->isVectorTy()) &&
-           "generateInstruction must produce a vector value");
-    State.set(this, GeneratedValue, Part);
+    assert(GeneratedValue && "generateInstruction must produce a value");
+
+    bool IsVector = GeneratedValue->getType()->isVectorTy();
+    State.set(this, GeneratedValue, Part, !IsVector);
+    assert((IsVector || getOpcode() == VPInstruction::ComputeReductionResult ||
+            State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
+           "scalar value but not only first lane used");
   }
 }
+
 bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   if (Instruction::isBinaryOp(getOpcode()))
@@ -728,7 +560,8 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     if (isa<FPMathOperator>(V))
       V->copyFastMathFlags(&CI);
 
-    State.set(this, V, Part);
+    if (!V->getType()->isVoidTy())
+      State.set(this, V, Part);
     State.addMetadata(V, &CI);
   }
 }
@@ -1416,7 +1249,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
       PartPtr = Builder.CreateGEP(IndexedTy, Ptr, Increment, "", InBounds);
     }
 
-    State.set(this, PartPtr, Part);
+    State.set(this, PartPtr, Part, /*IsScalar*/ true);
   }
 }
 
@@ -1712,7 +1545,7 @@ void VPCanonicalIVPHIRecipe::execute(VPTransformState &State) {
   EntryPart->addIncoming(Start, VectorPH);
   EntryPart->setDebugLoc(getDebugLoc());
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
-    State.set(this, EntryPart, Part);
+    State.set(this, EntryPart, Part, /*IsScalar*/ true);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1783,7 +1616,7 @@ void VPExpandSCEVRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
-  Value *CanonicalIV = State.get(getOperand(0), 0);
+  Value *CanonicalIV = State.get(getOperand(0), 0, /*IsScalar*/ true);
   Type *STy = CanonicalIV->getType();
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   ElementCount VF = State.VF;
@@ -1873,7 +1706,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
     Instruction *EntryPart = PHINode::Create(VecTy, 2, "vec.phi");
     EntryPart->insertBefore(HeaderBB->getFirstInsertionPt());
-    State.set(this, EntryPart, Part);
+    State.set(this, EntryPart, Part, IsInLoop);
   }
 
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
@@ -1905,7 +1738,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   }
 
   for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
-    Value *EntryPart = State.get(this, Part);
+    Value *EntryPart = State.get(this, Part, IsInLoop);
     // Make sure to add the reduction start value only to the
     // first unroll part.
     Value *StartVal = (Part == 0) ? StartV : Iden;

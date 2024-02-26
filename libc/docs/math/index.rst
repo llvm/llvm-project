@@ -16,6 +16,7 @@ Math Functions
   :hidden:
 
   log.rst
+  stdfix.rst
 
 
 .. contents:: Table of Contents
@@ -80,7 +81,7 @@ Implementation Status
 
 * To check math functions enabled for Windows:
 
-  - `windows-x86_64 <https://github.com/llvm/llvm-project/tree/main/libc/config/windows/entrypoints.txt>`_ 
+  - `windows-x86_64 <https://github.com/llvm/llvm-project/tree/main/libc/config/windows/entrypoints.txt>`_
 
   - windows-aarch64 - to be added
 
@@ -92,11 +93,11 @@ Implementation Status
 
 * To check math functions enabled for GPU:
 
-  - `gpu-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/entrypoints.txt>`_ 
+  - `gpu-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/entrypoints.txt>`_
 
 * To check math functions enabled for embedded system:
 
-  - `baremetal-aarch32 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/arm/entrypoints.txt>`_ 
+  - `baremetal-aarch32 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/arm/entrypoints.txt>`_
 
   - baremetal-riscv32 - to be added
 
@@ -138,6 +139,8 @@ Basic Operations
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | fdiml        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
+| fdimf128     | |check| | |check| |         | |check| |         |         |         |         |         |         |         |         |
++--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | floor        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | floorf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
@@ -174,6 +177,8 @@ Basic Operations
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | frexpl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
+| frexpf128    | |check| | |check| |         | |check| |         |         |         |         |         |         |         |         |
++--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | ilogb        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | ilogbf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
@@ -185,6 +190,8 @@ Basic Operations
 | ldexpf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | ldexpl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
++--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
+| ldexpf128    | |check| | |check| |         | |check| |         |         |         |         |         |         |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | llrint       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
@@ -606,6 +613,11 @@ Algorithms + Implementation Details
 ===================================
 
 * :doc:`log`
+
+Fixed-point Arithmetics
+=======================
+
+* :doc:`stdfix`
 
 References
 ==========

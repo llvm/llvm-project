@@ -1407,11 +1407,8 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
     if (!InstTy)
       return nullptr;
 
-    FriendDecl *FD = SemaRef.CheckFriendTypeDecl(D->getBeginLoc(),
-                                                 D->getFriendLoc(), InstTy);
-    if (!FD)
-      return nullptr;
-
+    FriendDecl *FD = FriendDecl::Create(
+        SemaRef.Context, Owner, D->getLocation(), InstTy, D->getFriendLoc());
     FD->setAccess(AS_public);
     FD->setUnsupportedFriend(D->isUnsupportedFriend());
     Owner->addDecl(FD);

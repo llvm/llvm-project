@@ -804,8 +804,6 @@ cc_library(
     ],
 )
 
-
-
 cc_library(
     name = "TestMemRef",
     srcs = glob(["lib/Dialect/MemRef/*.cpp"]),
@@ -904,6 +902,25 @@ cc_library(
         "//mlir:Pass",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
+    ],
+)
+
+cc_library(
+    name = "TestArmSME",
+    srcs = glob(["lib/Dialect/ArmSME/*.cpp"]),
+    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//mlir:ArithToArmSME",
+        "//mlir:ArmSMEToLLVM",
+        "//mlir:ArmSMEToSCF",
+        "//mlir:ArmSMETransforms",
+        "//mlir:ArmSVETransforms",
+        "//mlir:IR",
+        "//mlir:Pass",
+        "//mlir:Transforms",
+        "//mlir:VectorToArmSME",
+        "//mlir:VectorToSCF",
     ],
 )
 

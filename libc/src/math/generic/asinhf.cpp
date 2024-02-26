@@ -59,10 +59,8 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
   };
 
   if (LIBC_UNLIKELY(x_abs >= 0x4bdd'65a5U)) {
-    if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
-      // x is +-inf or nan
+    if (LIBC_UNLIKELY(xbits.is_inf_or_nan()))
       return x;
-    }
 
     // Exceptional cases when x > 2^24.
     switch (x_abs) {

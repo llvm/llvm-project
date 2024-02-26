@@ -968,9 +968,9 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
   // Save the token name used for static assertion.
   const char *TokName = Tok.getName();
 
-  if (Tok.is(tok::kw__Static_assert) && !getLangOpts().C11)
-    Diag(Tok, diag::ext_c11_feature) << Tok.getName();
-  if (Tok.is(tok::kw_static_assert)) {
+  if (Tok.is(tok::kw__Static_assert))
+    diagnoseUseOfC11Keyword(Tok);
+  else if (Tok.is(tok::kw_static_assert)) {
     if (!getLangOpts().CPlusPlus) {
       if (getLangOpts().C23)
         Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
@@ -4661,10 +4661,12 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                                                   CachedTokens &OpenMPTokens,
                                                   SourceLocation *EndLoc) {
   if (Tok.is(tok::kw_alignas)) {
-    if (getLangOpts().C23)
-      Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
-    else
-      Diag(Tok.getLocation(), diag::warn_cxx98_compat_alignas);
+    // alignas is a valid token in C23 but it is not an attribute, it's a type-
+    // specifier-qualifier, which means it has different parsing behavior. We
+    // handle this in ParseDeclarationSpecifiers() instead of here in C. We
+    // should not get here for C any longer.
+    assert(getLangOpts().CPlusPlus && "'alignas' is not an attribute in C");
+    Diag(Tok.getLocation(), diag::warn_cxx98_compat_alignas);
     ParseAlignmentSpecifier(Attrs, EndLoc);
     return;
   }
