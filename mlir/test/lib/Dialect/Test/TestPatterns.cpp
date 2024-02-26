@@ -17,6 +17,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/OneToNTypeConversion.h"
 #include "llvm/ADT/ScopeExit.h"
 
 using namespace mlir;
@@ -1464,6 +1465,34 @@ struct TestSignatureConversionUndo
   }
 };
 
+
+struct TestTestOneToNSignatureConversionNoConverter
+    : public OpConversionPattern<TestOneToNSignatureConversionNoConverterOp> {
+  TestTestOneToNSignatureConversionNoConverter(const TypeConverter &converter,
+                                               MLIRContext *context)
+      : OpConversionPattern<TestOneToNSignatureConversionNoConverterOp>(context),
+        converter(converter) {}
+
+  LogicalResult
+  matchAndRewrite(TestOneToNSignatureConversionNoConverterOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    Region &region = op->getRegion(0);
+    Block *entry = &region.front();
+
+    // Convert the original entry arguments.
+    auto argTys = entry->getArgumentTypes();
+    mlir::OneToNTypeMapping argMap(argTys);
+    if (failed(converter.convertSignatureArgs(argTys, argMap)))
+      return failure();
+
+    rewriter.modifyOpInPlace(op, 
+            [&]{ rewriter.applySignatureConversion(&region, argMap); });
+    return success();
+  }
+
+  const TypeConverter &converter;
+};
+
 /// Call signature conversion without providing a type converter to handle
 /// materializations.
 struct TestTestSignatureConversionNoConverter
@@ -1586,6 +1615,12 @@ struct TestTypeConversionDriver
           results.push_back(result);
           return success();
         });
+    converter.addConversion(
+        [&](VectorType type, 
+            SmallVectorImpl<Type> &results) -> std::optional<LogicalResult> {
+          results = SmallVector<Type>(type.getNumElements(), type.getElementType());
+          return success();
+        });
 
     /// Add the legal set of type materializations.
     converter.addSourceMaterialization([](OpBuilder &builder, Type resultType,
@@ -1627,11 +1662,16 @@ struct TestTypeConversionDriver
         [&](TestSignatureConversionNoConverterOp op) {
           return converter.isLegal(op.getRegion().front().getArgumentTypes());
         });
+    target.addDynamicallyLegalOp<TestOneToNSignatureConversionNoConverterOp>(
+        [&](TestOneToNSignatureConversionNoConverterOp op) {
+          return converter.isLegal(op.getRegion().front().getArgumentTypes());
+        });
 
     // Initialize the set of rewrite patterns.
     RewritePatternSet patterns(&getContext());
     patterns.add<TestTypeConsumerForward, TestTypeConversionProducer,
                  TestSignatureConversionUndo,
+                 TestTestOneToNSignatureConversionNoConverter,
                  TestTestSignatureConversionNoConverter>(converter,
                                                          &getContext());
     patterns.add<TestTypeConversionAnotherProducer>(&getContext());

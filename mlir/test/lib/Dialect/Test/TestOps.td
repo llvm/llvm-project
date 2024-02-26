@@ -1967,6 +1967,11 @@ def TestSignatureConversionNoConverterOp
   let regions = (region AnyRegion);
 }
 
+def TestOneToNSignatureConversionNoConverterOp
+  : TEST_Op<"one_to_n_signature_conversion_no_converter"> {
+  let regions = (region AnyRegion);
+}
+
 //===----------------------------------------------------------------------===//
 // Test parser.
 //===----------------------------------------------------------------------===//

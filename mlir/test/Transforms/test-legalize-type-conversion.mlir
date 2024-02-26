@@ -30,16 +30,6 @@ func.func @test_invalid_result_materialization() {
 
 // -----
 
-func.func @test_invalid_result_materialization() {
-  // expected-error@below {{failed to materialize conversion for result #0 of operation 'test.type_producer' that remained live after conversion}}
-  %result = "test.type_producer"() : () -> f16
-
-  // expected-note@below {{see existing live user here}}
-  "foo.return"(%result) : (f16) -> ()
-}
-
-// -----
-
 // CHECK-LABEL: @test_transitive_use_materialization
 func.func @test_transitive_use_materialization() {
   // CHECK: %[[V:.*]] = "test.type_producer"() : () -> f64
@@ -95,6 +85,18 @@ func.func @test_block_argument_not_converted() {
     // CHECK: ^bb0({{.*}}: index):
     ^bb0(%0 : index):
       "test.return"(%0) : (index) -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// Make sure OneToN path of ArgConverter::applySignatureConversion can execute without converter
+func.func @test_one_to_n_signature_conversion_no_converter() {
+  "test.one_to_n_signature_conversion_no_converter"() ({
+  // CHECK: ^{{.*}}(%{{.*}}: f64, %{{.*}}: f64):
+  ^bb0(%arg0: vector<2xf64>):
+    "test.return"() : () -> ()
   }) : () -> ()
   return
 }
