@@ -55,6 +55,10 @@ BB3:                                              ; preds = %BB2
 
 BB4:                                              ; preds = %BB3
   %8 = icmp slt i32 %0, 0, !dbg !5
+  ;; Manually insreted intrinsics; these should get deletd when this block is
+  ;; folded into BB2.
+  call void @llvm.dbg.value(metadata ptr null, metadata !7, metadata !DIExpression()), !dbg !12
+  call void @llvm.dbg.label(metadata !18), !dbg !12
   ret i1 %8, !dbg !14
 
 BB5:                                              ; preds = %BB3, %BB2, %BB1, %Entry
@@ -84,3 +88,4 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 !15 = !DIFile(filename: "a.c", directory: "/private/tmp")
 !16 = !{i32 1, !"Debug Info Version", i32 3}
 !17 = !{i32 2, !"Dwarf Version", i32 4}
+!18 = !DILabel(scope: !0, name: "label", file: !1, line: 1)
