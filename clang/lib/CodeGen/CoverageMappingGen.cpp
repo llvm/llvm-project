@@ -2030,11 +2030,10 @@ struct CounterCoverageMappingBuilder
     Diag.Report(E->getBeginLoc(), DiagID) << NumTVs << MaxTVs;
 
     // Restore MCDCBranch to Branch.
-    for (auto I = SourceRegions.begin() + Since, E = SourceRegions.end();
-         I != E; ++I) {
-      assert(!I->isMCDCDecision() && "Decision shouldn't be seen here");
-      if (I->isMCDCBranch())
-        I->resetMCDCParams();
+    for (auto &SR : MutableArrayRef(SourceRegions).slice(Since)) {
+      assert(!SR.isMCDCDecision() && "Decision shouldn't be seen here");
+      if (SR.isMCDCBranch())
+        SR.resetMCDCParams();
     }
 
     // Tell CodeGenPGO not to instrument.
