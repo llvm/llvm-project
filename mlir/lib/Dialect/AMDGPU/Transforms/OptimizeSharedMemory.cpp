@@ -38,7 +38,7 @@ using namespace mlir::amdgpu;
 /// The size of a shared memory line according to AMD documentation.
 /// https://www.amd.com/content/dam/amd/en/documents/instinct-tech-docs/instruction-set-architectures/instinct-mi200-cdna2-instruction-set-architecture.pdf
 int64_t kSharedMemoryLineSizeBytes;
-/// We optimize for 64bit accesses, but this can be made an argument in the
+/// We optimize for 128 bit accesses, but this can be made an argument in the
 /// future.
 int64_t kDefaultVectorSizeBits;
 
