@@ -1876,6 +1876,23 @@ floating point semantic models: precise (the default), strict, and fast.
      still occur in some cases. NaN and infinite and  values are not handled.
      This is the default value.
 
+.. option:: -fcx-limited-range:
+
+   This option is aliased to ``-fcomplex-arithmetic=basic``. It enables the
+   naive mathematical formulas for complex division and multiplication with no
+   NaN checking of results. The default is ``-fno-cx-limited-range`` aliased to
+   ``-fcomplex-arithmetic=full``. This option is enabled by the ``-ffast-math``
+   option.
+
+.. option:: -fcx-fortran-rules:
+
+   This option is aliased to ``-fcomplex-arithmetic=improved``. It enables the
+   naive mathematical formulas for complex multiplication and enables application
+   of Smith's algorithm for complex division. See SMITH, R. L. Algorithm 116:
+   Complex division. Commun. ACM 5, 8 (1962).
+   The default is ``-fno-cx-fortran-rules`` aliased to
+   ``-fcomplex-arithmetic=full``.
+
 .. _floating-point-environment:
 
 Accessing the floating point environment

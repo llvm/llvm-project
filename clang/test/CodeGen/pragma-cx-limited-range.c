@@ -5,6 +5,9 @@
 // RUN: -complex-range=basic -o - | FileCheck --check-prefix=BASIC %s
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
+// RUN: -fno-cx-limited-range -o - | FileCheck %s --check-prefix=FULL
+
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
 // RUN: -complex-range=improved -o - | FileCheck --check-prefix=IMPRVD %s
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \

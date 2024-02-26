@@ -5,6 +5,12 @@
 // RUN: -complex-range=basic -o - | FileCheck %s --check-prefix=BASIC
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
+// RUN: -fno-cx-limited-range -o - | FileCheck %s --check-prefix=FULL
+
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
+// RUN: -complex-range=improved -o - | FileCheck %s --check-prefix=IMPRVD
+
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
 // RUN: -complex-range=improved -o - | FileCheck %s --check-prefix=IMPRVD
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
@@ -21,6 +27,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
 // RUN: -ffast-math -complex-range=full -emit-llvm -o - %s \
 // RUN: | FileCheck %s --check-prefix=FULL_FAST
+
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
+// RUN: -fno-cx-fortran-rules -o - | FileCheck %s --check-prefix=FULL
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
 // RUN: -ffast-math -complex-range=improved -emit-llvm -o - %s \

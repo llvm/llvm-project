@@ -1037,7 +1037,7 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
       return EmitAlgebraicDiv(LHSr, LHSi, RHSr, RHSi);
     else if (!CGF.getLangOpts().FastMath ||
              // '-ffast-math' is used in the command line but followed by an
-             // '-fno-cx-limited-range'.
+             // '-fno-cx-limited-range' or '-fcomplex-arithmetic=full'.
              Op.FPFeatures.getComplexRange() == LangOptions::CX_Full) {
       LHSi = OrigLHSi;
       // If we have a complex operand on the RHS and FastMath is not allowed, we
