@@ -790,6 +790,9 @@ let SubtargetPredicate = isGFX12_10Plus in {
     def : Cvt_F16_F8_Pat_OpSel<int_amdgcn_cvt_f16_bf8, Index,
                                V_CVT_F16_BF8_e32, V_CVT_F16_BF8_e64>;
   }
+
+  defm V_SAT_PK_I4_I8 : VOP1Inst_t16<"v_sat_pk_i4_i8", VOP1_I16_I32>;
+  defm V_SAT_PK_U4_U8 : VOP1Inst_t16<"v_sat_pk_u4_u8", VOP1_I16_I32>;
 } // End SubtargetPredicate = isGFX12_10Plus
 
 let SubtargetPredicate = isGFX10Plus in {
@@ -1098,6 +1101,8 @@ defm V_TANH_F16_t16          : VOP1_Real_FULL_t16_gfx1210<0x01f>;
 defm V_TANH_BF16_t16         : VOP1_Real_FULL_t16_gfx1210<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL<GFX12_10Gen, 0x04b>;
 defm V_CVT_F32_BF16_t16      : VOP1_Real_FULL_t16_gfx1210<0x072>;
+defm V_SAT_PK_I4_I8_t16      : VOP1_Real_FULL_t16_gfx1210<0x073>;
+defm V_SAT_PK_U4_U8_t16      : VOP1_Real_FULL_t16_gfx1210<0x074>;
 defm V_CVT_PK_F16_FP8        : VOP1_Real_NO_DPP_OP_SEL<GFX12_10Gen, 0x075>;
 defm V_CVT_PK_F16_BF8        : VOP1_Real_NO_DPP_OP_SEL<GFX12_10Gen, 0x076>;
 defm V_CVT_F16_FP8           : VOP1_Real_FULL<GFX12_10Gen, 0x077>;
