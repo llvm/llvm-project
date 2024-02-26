@@ -2078,4 +2078,13 @@ entry:
   ret void
 }
 
+; test that i1 argument for amdgpu_cs is working
+define amdgpu_cs void @amdgpu_cs_i1_arg(i1 %arg0) {
+; GCN-LABEL: amdgpu_cs_i1_arg:
+; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    s_endpgm
+bb:
+  ret void
+}
+
 attributes #0 = { nounwind noinline }
