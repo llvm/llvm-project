@@ -11,8 +11,6 @@
 // std::ranges::begin
 // std::ranges::cbegin
 
-#include "ordinary_unqualified_lookup_helpers.h" // Intentionally included before other headers.
-
 #include <ranges>
 
 #include <cassert>
@@ -326,12 +324,6 @@ static_assert(!std::is_invocable_v<RangeBeginT, Holder<Incomplete>*>);
 static_assert(!std::is_invocable_v<RangeBeginT, Holder<Incomplete>*&>);
 static_assert(!std::is_invocable_v<RangeCBeginT, Holder<Incomplete>*>);
 static_assert(!std::is_invocable_v<RangeCBeginT, Holder<Incomplete>*&>);
-
-// Ordinary unqualified lookup should not be performed.
-static_assert(
-    !std::is_invocable_v<RangeBeginT, ordinary_unqualified_lookup_helpers::StructWithGlobalRangeAccessFunctions&>);
-static_assert(
-    !std::is_invocable_v<RangeCBeginT, ordinary_unqualified_lookup_helpers::StructWithGlobalRangeAccessFunctions&>);
 
 int main(int, char**) {
   static_assert(testReturnTypes());

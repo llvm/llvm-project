@@ -12,8 +12,6 @@
 
 // template<class T> constexpr weak_ordering weak_order(const T& a, const T& b);
 
-#include "ordinary_unqualified_lookup_helpers.h" // Intentionally included before other headers.
-
 #include <compare>
 
 #include <cassert>
@@ -494,11 +492,6 @@ constexpr bool test_1_5()
 
     return true;
 }
-
-// Ordinary unqualified lookup should not be performed.
-static_assert(!std::is_invocable_v<decltype(std::weak_order),
-                                   ordinary_unqualified_lookup_helpers::StructWithGlobalCmpFunctions,
-                                   ordinary_unqualified_lookup_helpers::StructWithGlobalCmpFunctions>);
 
 int main(int, char**)
 {

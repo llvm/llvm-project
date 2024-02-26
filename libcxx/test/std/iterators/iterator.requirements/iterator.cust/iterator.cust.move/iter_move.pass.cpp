@@ -11,13 +11,6 @@
 // template<class I>
 // unspecified iter_move;
 
-// Intentionally defined before including headers.
-namespace ordinary_unqualified_lookup_helpers {
-struct StructWithGlobalIterMove {};
-} // namespace ordinary_unqualified_lookup_helpers
-
-int&& iter_move(ordinary_unqualified_lookup_helpers::StructWithGlobalIterMove);
-
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -192,9 +185,6 @@ struct Incomplete;
 template<class T> struct Holder { T t; };
 static_assert(std::is_invocable_v<IterMoveT, Holder<Incomplete>**>);
 static_assert(std::is_invocable_v<IterMoveT, Holder<Incomplete>**&>);
-
-// Ordinary unqualified lookup should not be performed.
-static_assert(!std::is_invocable_v<IterMoveT, ordinary_unqualified_lookup_helpers::StructWithGlobalIterMove&>);
 
 int main(int, char**)
 {

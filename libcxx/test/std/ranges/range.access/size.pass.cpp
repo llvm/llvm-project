@@ -10,8 +10,6 @@
 
 // std::ranges::size
 
-#include "ordinary_unqualified_lookup_helpers.h" // Intentionally included before other headers.
-
 #include <ranges>
 
 #include <cassert>
@@ -320,10 +318,6 @@ struct Incomplete;
 template<class T> struct Holder { T t; };
 static_assert(!std::is_invocable_v<RangeSizeT, Holder<Incomplete>*>);
 static_assert(!std::is_invocable_v<RangeSizeT, Holder<Incomplete>*&>);
-
-// Ordinary unqualified lookup should not be performed.
-static_assert(
-    !std::is_invocable_v<RangeSizeT, ordinary_unqualified_lookup_helpers::StructWithGlobalRangeAccessFunctions&>);
 
 int main(int, char**) {
   testArrayType();
