@@ -290,6 +290,8 @@ public:
   /// host double and as the target format.
   static Constant *get(Type *Ty, double V);
 
+  static Constant *get128(Type *Ty, long double V);
+
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantFP for the given value.
   static Constant *get(Type *Ty, const APFloat &V);

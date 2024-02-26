@@ -1673,9 +1673,9 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "floor" || Name == "floorf" ||
            Name == "fmod" || Name == "fmodf";
   case 'l':
-    return Name == "log" || Name == "logf" ||
-           Name == "log2" || Name == "log2f" ||
-           Name == "log10" || Name == "log10f";
+    return Name == "log" || Name == "logf" || Name == "log2" ||
+           Name == "log2f" || Name == "log10" || Name == "log10f" ||
+           Name == "logl";
   case 'n':
     return Name == "nearbyint" || Name == "nearbyintf";
   case 'p':
@@ -1756,6 +1756,15 @@ inline bool llvm_fenv_testexcept() {
     return true;
 #endif
   return false;
+}
+
+Constant *ConstantFoldLogf128(const APFloat &V, Type *Ty) {
+#ifdef HAS_LOGF128
+  long double l = logf128(V.convertToQuad());
+  return ConstantFP::get128(Ty, l);
+#else
+  return nullptr;
+#endif
 }
 
 Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
@@ -2089,7 +2098,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (IntrinsicID == Intrinsic::canonicalize)
       return constantFoldCanonicalize(Ty, Call, U);
 
-    if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
+    if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy() &&
+        !Ty->isFP128Ty())
       return nullptr;
 
     // Use internal versions of these intrinsics.
@@ -2204,6 +2214,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     switch (IntrinsicID) {
       default: break;
       case Intrinsic::log:
+        if (Ty->isFP128Ty())
+          return ConstantFoldLogf128(APF, Ty);
         return ConstantFoldFP(log, APF, Ty);
       case Intrinsic::log2:
         // TODO: What about hosts that lack a C99 library?
@@ -2332,6 +2344,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_logf_finite:
       if (!APF.isNegative() && !APF.isZero() && TLI->has(Func))
         return ConstantFoldFP(log, APF, Ty);
+      break;
+    case LibFunc_logl:
+      if (!APF.isNegative() && !APF.isZero() && TLI->has(Func) &&
+          Ty->isFP128Ty())
+        return ConstantFoldLogf128(APF, Ty);
       break;
     case LibFunc_log2:
     case LibFunc_log2f:

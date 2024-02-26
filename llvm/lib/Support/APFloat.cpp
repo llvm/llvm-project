@@ -3670,6 +3670,13 @@ double IEEEFloat::convertToDouble() const {
   return api.bitsToDouble();
 }
 
+long double IEEEFloat::convertToQuad() const {
+  assert(semantics == (const llvm::fltSemantics *)&semIEEEquad &&
+         "Float semantics are not IEEEquads");
+  APInt api = bitcastToAPInt();
+  return api.bitsToQuad();
+}
+
 /// Integer bit is explicit in this format.  Intel hardware (387 and later)
 /// does not support these bit patterns:
 ///  exponent = all 1's, integer bit 0, significand 0 ("pseudoinfinity")
@@ -3956,6 +3963,10 @@ IEEEFloat::IEEEFloat(float f) {
 
 IEEEFloat::IEEEFloat(double d) {
   initFromAPInt(&semIEEEdouble, APInt::doubleToBits(d));
+}
+
+IEEEFloat::IEEEFloat(long double ld) {
+  initFromAPInt(&semIEEEquad, APInt::longDoubleToBits(ld));
 }
 
 namespace {
@@ -5263,6 +5274,19 @@ double APFloat::convertToDouble() const {
   assert(!(St & opInexact) && !LosesInfo && "Unexpected imprecision");
   (void)St;
   return Temp.getIEEE().convertToDouble();
+}
+
+long double APFloat::convertToQuad() const {
+  if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEquad)
+    return getIEEE().convertToQuad();
+  assert(getSemantics().isRepresentableBy(semIEEEquad) &&
+         "Float semantics is not representable by IEEEquad");
+  APFloat Temp = *this;
+  bool LosesInfo;
+  opStatus St = Temp.convert(semIEEEquad, rmNearestTiesToEven, &LosesInfo);
+  assert(!(St & opInexact) && !LosesInfo && "Unexpected imprecision");
+  (void)St;
+  return Temp.getIEEE().convertToQuad();
 }
 
 float APFloat::convertToFloat() const {

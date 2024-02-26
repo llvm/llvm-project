@@ -1670,6 +1670,11 @@ public:
   /// any bit width. Exactly 64 bits will be translated.
   double bitsToDouble() const { return llvm::bit_cast<double>(getWord(0)); }
 
+  long double bitsToQuad() const {
+    __uint128_t ul = ((__uint128_t)U.pVal[1] << 64) + U.pVal[0];
+    return llvm::bit_cast<long double>(ul);
+  }
+
   /// Converts APInt bits to a float
   ///
   /// The conversion does not do a translation from integer to float, it just
@@ -1693,6 +1698,16 @@ public:
   /// re-interprets the bits of the float.
   static APInt floatToBits(float V) {
     return APInt(sizeof(float) * CHAR_BIT, llvm::bit_cast<uint32_t>(V));
+  }
+
+  static APInt longDoubleToBits(long double V) {
+    assert(sizeof(long double) == 16 && "Expected 16 byte long double");
+
+    const uint64_t Words[2] = {
+        static_cast<uint64_t>(V),
+        static_cast<uint64_t>(llvm::bit_cast<__uint128_t>(V) >> 64),
+    };
+    return APInt(sizeof(long double) * CHAR_BIT, 2, Words);
   }
 
   /// @}
