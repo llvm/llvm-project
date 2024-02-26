@@ -887,6 +887,73 @@ static bool interp__builtin_bswap(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// bool __atomic_always_lock_free(size_t, void const volatile*)
+/// bool __atomic_is_lock_free(size_t, void const volatile*)
+/// bool __c11_atomic_is_lock_free(size_t)
+static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
+                                             const InterpFrame *Frame,
+                                             const Function *Func,
+                                             const CallExpr *Call) {
+  unsigned BuiltinOp = Func->getBuiltinID();
+
+  PrimType ValT = *S.getContext().classify(Call->getArg(0));
+  unsigned SizeValOffset = 0;
+  if (BuiltinOp != Builtin::BI__c11_atomic_is_lock_free)
+    SizeValOffset = align(primSize(ValT)) + align(primSize(PT_Ptr));
+  const APSInt &SizeVal = peekToAPSInt(S.Stk, ValT, SizeValOffset);
+
+  auto returnBool = [&S](bool Value) -> bool {
+    S.Stk.push<Boolean>(Value);
+    return true;
+  };
+
+  // For __atomic_is_lock_free(sizeof(_Atomic(T))), if the size is a power
+  // of two less than or equal to the maximum inline atomic width, we know it
+  // is lock-free.  If the size isn't a power of two, or greater than the
+  // maximum alignment where we promote atomics, we know it is not lock-free
+  // (at least not in the sense of atomic_is_lock_free).  Otherwise,
+  // the answer can only be determined at runtime; for example, 16-byte
+  // atomics have lock-free implementations on some, but not all,
+  // x86-64 processors.
+
+  // Check power-of-two.
+  CharUnits Size = CharUnits::fromQuantity(SizeVal.getZExtValue());
+  if (Size.isPowerOfTwo()) {
+    // Check against inlining width.
+    unsigned InlineWidthBits =
+        S.getCtx().getTargetInfo().getMaxAtomicInlineWidth();
+    if (Size <= S.getCtx().toCharUnitsFromBits(InlineWidthBits)) {
+
+      // OK, we will inline appropriately-aligned operations of this size,
+      // and _Atomic(T) is appropriately-aligned.
+      if (BuiltinOp == Builtin::BI__c11_atomic_is_lock_free ||
+          Size == CharUnits::One())
+        return returnBool(true);
+
+      // Same for null pointers.
+      assert(BuiltinOp != Builtin::BI__c11_atomic_is_lock_free);
+      const Pointer &Ptr = S.Stk.peek<Pointer>();
+      if (Ptr.isZero())
+        return returnBool(true);
+
+      QualType PointeeType = Call->getArg(1)
+                                 ->IgnoreImpCasts()
+                                 ->getType()
+                                 ->castAs<PointerType>()
+                                 ->getPointeeType();
+      // OK, we will inline operations on this object.
+      if (!PointeeType->isIncompleteType() &&
+          S.getCtx().getTypeAlignInChars(PointeeType) >= Size)
+        return returnBool(true);
+    }
+  }
+
+  if (BuiltinOp == Builtin::BI__atomic_always_lock_free)
+    return returnBool(false);
+
+  return false;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
@@ -1183,6 +1250,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64:
     if (!interp__builtin_bswap(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__atomic_always_lock_free:
+  case Builtin::BI__atomic_is_lock_free:
+  case Builtin::BI__c11_atomic_is_lock_free:
+    if (!interp__builtin_atomic_lock_free(S, OpPC, Frame, F, Call))
       return false;
     break;
 
