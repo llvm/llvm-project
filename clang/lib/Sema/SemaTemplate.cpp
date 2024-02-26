@@ -2751,15 +2751,9 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
   TemplateDecl *Template = nullptr;
   llvm::ArrayRef<TemplateArgument> AliasRhsTemplateArgs;
   if (const auto *TST = RhsType->getAs<TemplateSpecializationType>()) {
-    // TemplateName in TST can be a TypeAliasTemplateDecl if
-    // the right hand side of the alias is also a type alias, e.g.
-    //
-    // template<typename T>
-    // using AliasFoo1 = Foo<T>;  // Foo<T> is a class template
-    // specialization
-    //
-    // template<typename T>
-    // using AliasFoo2 = AliasFoo1<T>; // AliasFoo1<T> is a type alias
+    // Cases where the RHS of the alias is dependent. e.g.
+    //   template<typename T>
+    //   using AliasFoo1 = Foo<T>; // a class/type alias template specialization
     Template = TST->getTemplateName().getAsTemplateDecl();
     AliasRhsTemplateArgs = TST->template_arguments();
   } else if (const auto *RT = RhsType->getAs<RecordType>()) {
@@ -2771,6 +2765,8 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
       Template = CTSD->getSpecializedTemplate();
       AliasRhsTemplateArgs = CTSD->getTemplateArgs().asArray();
     }
+  } else {
+    assert(false && "unhandled RHS type of the alias");
   }
   if (!Template)
     return;
