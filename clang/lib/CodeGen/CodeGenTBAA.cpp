@@ -28,6 +28,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Debug.h"
 using namespace clang;
 using namespace CodeGen;
 
@@ -300,33 +301,38 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
 
     unsigned idx = 0;
     for (RecordDecl::field_iterator i = RD->field_begin(),
-         e = RD->field_end(); i != e; ++i, ++idx) {
-      if ((*i)->isZeroSize(Context))
+         e = RD->field_end(); i != e;) {
+      if ((*i)->isZeroSize(Context)) {
+        ++i; ++idx;
         continue;
+      }
 
       uint64_t Offset = BaseOffset +
                         Layout.getFieldOffset(idx) / Context.getCharWidth();
       QualType FieldQTy = i->getType();
-      if ((*i)->isBitField()) {
-        RecordDecl::field_iterator j = i;
+      if ((*i)->isBitField() && !(*i)->isUnnamedBitfield()) {
         unsigned CurrentBitFieldSize = 0;
-        while (j != e && (*j)->isBitField()) {
-          const CGBitFieldInfo &Info = CGRL.getBitFieldInfo(*j);
+        unsigned CurrentBitFieldOffset = 0;
+        while (i != e && (*i)->isBitField() && !(*i)->isUnnamedBitfield()) {
+          const CGBitFieldInfo &Info = CGRL.getBitFieldInfo(*i);
+          if (CurrentBitFieldSize + CurrentBitFieldOffset != Info.Offset)
+            break;
           CurrentBitFieldSize += Info.Size;
-          j++;
+          CurrentBitFieldOffset = Info.Offset;
+          ++i;
+          ++idx;
         }
-        uint64_t Offset = BaseOffset;
         uint64_t Size = llvm::divideCeil(CurrentBitFieldSize , 8);
         llvm::MDNode *TBAAType = getChar();
         llvm::MDNode *TBAATag = getAccessTagInfo(TBAAAccessInfo(TBAAType, Size));
         Fields.push_back(llvm::MDBuilder::TBAAStructField(Offset, Size, TBAATag));
-        i = std::prev(j);
       } else {
         if (!CollectFields(Offset, FieldQTy, Fields,
                            MayAlias || TypeHasMayAlias(FieldQTy)))
           return false;
 
-        }
+ ++i; ++idx;
+      }
     }
     return true;
   }
