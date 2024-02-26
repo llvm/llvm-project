@@ -12141,11 +12141,8 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     assert(OtherOp.getValueSizeInBits() == 32);
   }
 
-  bool IsGFX9Plus =
-      DAG.getMachineFunction().getSubtarget<GCNSubtarget>().getGeneration() >=
-      AMDGPUSubtarget::GFX9;
-  if (!IsGFX9Plus || (hasNon16BitAccesses(PermMask, Op, OtherOp) &&
-                      (!bothAre8Bit(Op, OtherOp, DCI.isBeforeLegalize())))) {
+  if (hasNon16BitAccesses(PermMask, Op, OtherOp) &&
+      !bothAre8Bit(Op, OtherOp, DCI.isBeforeLegalize())) {
     assert(Op.getValueType().isByteSized() &&
            OtherOp.getValueType().isByteSized());
 
