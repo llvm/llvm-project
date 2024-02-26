@@ -276,6 +276,7 @@ static bool isZeroingInactiveLanes(SDValue Op) {
     if (ISD::isConstantSplatVectorAllOnes(Op.getNode()))
       return true;
     return false;
+  case ISD::SPLAT_VECTOR:
   case AArch64ISD::PTRUE:
   case AArch64ISD::SETCC_MERGE_ZERO:
     return true;
