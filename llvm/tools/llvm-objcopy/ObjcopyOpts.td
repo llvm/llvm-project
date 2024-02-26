@@ -99,7 +99,7 @@ defm set_symbol_visibility
       MetaVarName<"symbol=visibility">;
 defm set_symbols_visibility
     : Eq<"set-symbols-visibility",
-         "Reads a list of symbols from <filename> and changes their "
+         "Read a list of symbols from <filename> and change their "
          "visibility to the specified value. Visibility values: default, "
          "internal, hidden, protected">,
       MetaVarName<"filename=visibility">;

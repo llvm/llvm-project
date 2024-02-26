@@ -456,7 +456,7 @@ them.
 
 .. option:: --set-symbols-visibility <filename>=<visibility>
 
- Reads a list of symbols from <filename> and changes their visibility to the
+ Read a list of symbols from <filename> and change their visibility to the
  specified value. Visibility values: default, internal, hidden, protected.
 
 .. option:: --split-dwo <dwo-file>
