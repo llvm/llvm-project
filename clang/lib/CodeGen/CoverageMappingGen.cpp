@@ -1982,6 +1982,7 @@ struct CounterCoverageMappingBuilder
     if (NumConds == 0)
       return;
 
+    // Extract [ID, Conds] to construct the graph.
     llvm::SmallVector<mcdc::ConditionIDs> CondIDs(NumConds);
     for (const auto &SR : ArrayRef(SourceRegions).slice(Since)) {
       if (SR.isMCDCBranch()) {
@@ -1990,9 +1991,9 @@ struct CounterCoverageMappingBuilder
       }
     }
 
+    // Construct the graph and calculate `Indices`.
     mcdc::TVIdxBuilder Builder(CondIDs);
     auto NumTVs = Builder.NumTestVectors;
-    assert(MCDCState.DecisionByStmt.contains(E));
     auto MaxTVs = mcdc::TVIdxBuilder::HardMaxTVs;
 
     if (NumTVs >= MaxTVs) {
@@ -2001,7 +2002,8 @@ struct CounterCoverageMappingBuilder
       return;
     }
 
-    // The state for CodeGenPGO
+    // Update the state for CodeGenPGO
+    assert(MCDCState.DecisionByStmt.contains(E));
     MCDCState.DecisionByStmt[E] = {
         MCDCState.BitmapBits, // Top
         std::move(Builder.Indices),
