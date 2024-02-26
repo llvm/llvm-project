@@ -1610,8 +1610,12 @@ private:
     // is very important.
     RB->RawStackDepotMap.unmap(RB->RawStackDepotMap.getBase(),
                                RB->RawStackDepotMap.getCapacity());
-    RB->RawRingBufferMap.unmap(RB->RawRingBufferMap.getBase(),
-                               RB->RawRingBufferMap.getCapacity());
+    // Note that the `RB->RawRingBufferMap` is stored on the pages managed by
+    // itself. Take over the ownership before calling unmap() so that any
+    // operation along with unmap() won't touch inaccessible pages.
+    MemMapT RawRingBufferMap = RB->RawRingBufferMap;
+    RawRingBufferMap.unmap(RawRingBufferMap.getBase(),
+                           RawRingBufferMap.getCapacity());
     atomic_store(&RingBufferAddress, 0, memory_order_release);
   }
 
