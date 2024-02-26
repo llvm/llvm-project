@@ -710,6 +710,7 @@ if(NOT LLVM_ENABLE_IDE)
     COMPONENT mlir-python-sources
   )
 endif()
+
 ################################################################################
 # The fully assembled package of modules.
 # This must come last.
