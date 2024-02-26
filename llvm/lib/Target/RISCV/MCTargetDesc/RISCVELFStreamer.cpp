@@ -45,15 +45,8 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   if (STI.hasFeature(RISCV::FeatureRelax))
     static_cast<RISCVAsmBackend &>(MAB).setForceRelocs();
 
-  // Using RISCVISAInfo, construct ISAString from given features.
-  SmallVector<StringRef, 8> FeatureSmallVec;
-  STI.getFeatureString().split(FeatureSmallVec, ',', /*MaxSplit*/ -1,
-                               /*KeepEmpty*/ false);
-  std::vector<std::string> FeatureVec(FeatureSmallVec.begin(),
-                                      FeatureSmallVec.end());
-
-  auto ParseResult = RISCVISAInfo::parseFeatures(
-      STI.getTargetTriple().isRISCV64() ? 64 : 32, FeatureVec);
+  auto ParseResult = RISCVFeatures::parseFeatureBits(
+      STI.getTargetTriple().isRISCV64(), Features);
   if (ParseResult) {
     auto &ISAInfo = *ParseResult;
     ISAString = ISAInfo->toString();
@@ -90,7 +83,7 @@ void RISCVTargetELFStreamer::emitTextAttribute(unsigned Attribute,
 }
 
 void RISCVTargetELFStreamer::emitDirectiveOptionArch(
-    const ArrayRef<RISCVOptionArchArg> &Args) {
+    ArrayRef<RISCVOptionArchArg> Args) {
   if (Args.size() == 1) {
     RISCVOptionArchArg Arg = Args[0];
     if (Arg.Type == RISCVOptionArchArgType::Full) {

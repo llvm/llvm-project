@@ -73,8 +73,7 @@ public:
   void emitDirectiveOptionRelax() override;
   void emitDirectiveOptionNoRelax() override;
   void emitDirectiveVariantCC(MCSymbol &Symbol) override;
-  void
-  emitDirectiveOptionArch(const ArrayRef<RISCVOptionArchArg> &Args) override;
+  void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args) override;
 
   void setArchString(StringRef Arch);
 
