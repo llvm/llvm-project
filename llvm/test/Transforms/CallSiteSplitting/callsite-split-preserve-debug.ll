@@ -3,6 +3,8 @@
 
 ;; Test that DebugLocs are preserved, and that dbg.values are duplicated.
 
+; CHECK: declare void @llvm.dbg.value(metadata,
+
 ; CHECK-LABEL: @test1
 ; CHECK:         call void @llvm.dbg.value(metadata i32 0,
 ; CHECK-NEXT:    [[R1:%.+]] = call i32 @callee(i32 0, i32 %dd), !dbg [[DBG1:!.*]]
@@ -40,8 +42,6 @@ CallSite:                                         ; preds = %land.rhs, %entry
 ; CHECK-NEXT:    phi i32 [ [[LV1]], %Header.split ], [ [[LV2]], %TBB.split ], !dbg [[DBG_LV]]
 ; CHECK-NEXT:    phi i32 [ [[R1]], %Header.split ], [ [[R2]], %TBB.split ], !dbg [[DBG_CALL]]
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 1,
-
-; CHECK: declare void @llvm.dbg.value(metadata,
 
 define void @test2(ptr %ptr, i32 %i) !dbg !19 {
 Header:
