@@ -72,6 +72,10 @@ protected:
            "i32)";
     Str << " declare <8 x float> @llvm.vp.ceil.v8f32(<8 x float>, <8 x i1>, "
            "i32)";
+    Str << " declare <8 x i32> @llvm.vp.lrint.v8i32.v8f32(<8 x float>, "
+           "<8 x i1>, i32)";
+    Str << " declare <8 x i64> @llvm.vp.llrint.v8i64.v8f32(<8 x float>, "
+           "<8 x i1>, i32)";
     Str << " declare <8 x float> @llvm.vp.fneg.v8f32(<8 x float>, <8 x i1>, "
            "i32)";
     Str << " declare <8 x float> @llvm.vp.fabs.v8f32(<8 x float>, <8 x i1>, "
