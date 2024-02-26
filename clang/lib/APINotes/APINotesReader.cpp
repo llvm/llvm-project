@@ -1797,8 +1797,8 @@ APINotesReader::Create(std::unique_ptr<llvm::MemoryBuffer> InputBuffer,
 template <typename T>
 APINotesReader::VersionedInfo<T>::VersionedInfo(
     llvm::VersionTuple Version,
-    llvm::SmallVector<std::pair<llvm::VersionTuple, T>, 1> Results)
-    : Results(std::move(Results)) {
+    llvm::SmallVector<std::pair<llvm::VersionTuple, T>, 1> R)
+    : Results(std::move(R)) {
 
   assert(!Results.empty());
   assert(std::is_sorted(
