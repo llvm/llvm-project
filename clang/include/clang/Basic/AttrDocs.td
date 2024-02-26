@@ -781,6 +781,19 @@ pointer is not sufficiently aligned.
   }];
 }
 
+def LLVMFuncAttrDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Use ``__attribute__((llvm_fn_attr(attr_name, attr_value)))`` on a function to specify an LLVM function attribute that will be added to this function. 
+
+Note that uses of this attribute are highly compiler specific as the meaning and availability of LLVM attributes may change between compiler versions.
+
+This attribute is only intended for advanced users who need to specify specific information only available in LLVM attributes. Use of attributes which are not tied to a specific version of Clang (e.g. pure) should be preferred when available.
+
+The first arugment is a string representing the name of the LLVM attribute to be applied and the second arugment is a string representing its value.
+  }];
+}
+
 def EnableIfDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

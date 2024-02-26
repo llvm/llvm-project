@@ -831,6 +831,25 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         FD->getBody()->getStmtClass() == Stmt::CoroutineBodyStmtClass)
       SanOpts.Mask &= ~SanitizerKind::Null;
 
+  if (D) {
+    for (auto Attr :
+         template TargetDecl->specific_attrs<attr::LLVMFuncAttr>()) {
+      auto name = Attr->getLLVMAttrName();
+      auto value = Attr->getLLVMAttrValue();
+
+      Attribute Attr;
+      auto EnumAttr = llvm::Attribute::getAttrKindFromName(name);
+      if (EnumAttr == llvm::Attribute::None)
+        Attr = llvm::Attribute::get(getLLVMContext(), name, value);
+      else {
+        assert(value.size() == 0 &&
+               "enum attribute does not support value yet");
+        Attr = llvm::Attribute::get(getLLVMContext(), EnumAttr);
+      }
+      Fn->addFnAttr(Attr);
+    }
+  }
+
   // Apply xray attributes to the function (as a string, for now)
   bool AlwaysXRayAttr = false;
   if (const auto *XRayAttr = D ? D->getAttr<XRayInstrumentAttr>() : nullptr) {
