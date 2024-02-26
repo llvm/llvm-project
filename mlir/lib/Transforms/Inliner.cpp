@@ -273,6 +273,10 @@ public:
   /// Reset the nodes of this SCC with those provided.
   void reset(const std::vector<CallGraphNode *> &newNodes) { nodes = newNodes; }
 
+  bool has(CallGraphNode *node) {
+    return std::count(nodes.begin(), nodes.end(), node) > 0;
+  }
+
   /// Remove the given node from this SCC.
   void remove(CallGraphNode *node) {
     auto it = llvm::find(nodes, node);
@@ -453,6 +457,14 @@ static bool shouldInline(ResolvedCall &resolvedCall) {
   // prevents inlining recursively.
   Region *callableRegion = resolvedCall.targetNode->getCallableRegion();
   if (callableRegion->isAncestor(resolvedCall.call->getParentRegion()))
+    return false;
+
+  // Don't allow inlining if the target is a self-recursive function.
+  if (std::count_if(resolvedCall.targetNode->begin(),
+                    resolvedCall.targetNode->end(),
+                    [&](CallGraphNode::Edge const &edge) -> bool {
+                      return edge.getTarget() == resolvedCall.targetNode;
+                    }) > 0)
     return false;
 
   // Don't allow inlining if the callee has multiple blocks (unstructured
