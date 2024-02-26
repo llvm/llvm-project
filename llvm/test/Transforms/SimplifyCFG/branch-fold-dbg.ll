@@ -26,10 +26,11 @@ define i1 @foo(i32) nounwind ssp !dbg !0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[OR_COND2]], i1 false, i1 [[TMP8]], !dbg [[DBG7]]
 ; CHECK-NEXT:    br label [[COMMON_RET]], !dbg [[DBG7]]
+; CHECK-NOT: BB4
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[BB2]] ]
 ; CHECK-NEXT:    ret i1 [[COMMON_RET_OP]], !dbg [[DBG14:![0-9]+]]
-;
+
 Entry:
   %1 = icmp slt i32 %0, 0, !dbg !5
   br i1 %1, label %BB5, label %BB1, !dbg !5
