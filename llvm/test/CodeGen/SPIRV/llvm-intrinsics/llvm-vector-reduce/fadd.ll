@@ -83,93 +83,93 @@ target triple = "spir64-unknown-unknown"
 
 define spir_func half @test_vector_reduce_fadd_v2half(half %sp, <2 x half> %v) {
 entry:
-  %0 = call half @llvm.vector.reduce.fadd.v2half(half %sp, <2 x half> %v)
-  ret half %0
+  %res = call half @llvm.vector.reduce.fadd.v2half(half %sp, <2 x half> %v)
+  ret half %res
 }
 
 define spir_func half @test_vector_reduce_fadd_v3half(half %sp, <3 x half> %v) {
 entry:
-  %0 = call half @llvm.vector.reduce.fadd.v3half(half %sp, <3 x half> %v)
-  ret half %0
+  %res = call half @llvm.vector.reduce.fadd.v3half(half %sp, <3 x half> %v)
+  ret half %res
 }
 
 define spir_func half @test_vector_reduce_fadd_v4half(half %sp, <4 x half> %v) {
 entry:
-  %0 = call half @llvm.vector.reduce.fadd.v4half(half %sp, <4 x half> %v)
-  ret half %0
+  %res = call half @llvm.vector.reduce.fadd.v4half(half %sp, <4 x half> %v)
+  ret half %res
 }
 
 define spir_func half @test_vector_reduce_fadd_v8half(half %sp, <8 x half> %v) {
 entry:
-  %0 = call half @llvm.vector.reduce.fadd.v8half(half %sp, <8 x half> %v)
-  ret half %0
+  %res = call half @llvm.vector.reduce.fadd.v8half(half %sp, <8 x half> %v)
+  ret half %res
 }
 
 define spir_func half @test_vector_reduce_fadd_v16half(half %sp, <16 x half> %v) {
 entry:
-  %0 = call half @llvm.vector.reduce.fadd.v16half(half %sp, <16 x half> %v)
-  ret half %0
+  %res = call half @llvm.vector.reduce.fadd.v16half(half %sp, <16 x half> %v)
+  ret half %res
 }
 
 define spir_func float @test_vector_reduce_fadd_v2float(float %sp, <2 x float> %v) {
 entry:
-  %0 = call float @llvm.vector.reduce.fadd.v2float(float %sp, <2 x float> %v)
-  ret float %0
+  %res = call float @llvm.vector.reduce.fadd.v2float(float %sp, <2 x float> %v)
+  ret float %res
 }
 
 define spir_func float @test_vector_reduce_fadd_v3float(float %sp, <3 x float> %v) {
 entry:
-  %0 = call float @llvm.vector.reduce.fadd.v3float(float %sp, <3 x float> %v)
-  ret float %0
+  %res = call float @llvm.vector.reduce.fadd.v3float(float %sp, <3 x float> %v)
+  ret float %res
 }
 
 define spir_func float @test_vector_reduce_fadd_v4float(float %sp, <4 x float> %v) {
 entry:
-  %0 = call float @llvm.vector.reduce.fadd.v4float(float %sp, <4 x float> %v)
-  ret float %0
+  %res = call float @llvm.vector.reduce.fadd.v4float(float %sp, <4 x float> %v)
+  ret float %res
 }
 
 define spir_func float @test_vector_reduce_fadd_v8float(float %sp, <8 x float> %v) {
 entry:
-  %0 = call float @llvm.vector.reduce.fadd.v8float(float %sp, <8 x float> %v)
-  ret float %0
+  %res = call float @llvm.vector.reduce.fadd.v8float(float %sp, <8 x float> %v)
+  ret float %res
 }
 
 define spir_func float @test_vector_reduce_fadd_v16float(float %sp, <16 x float> %v) {
 entry:
-  %0 = call float @llvm.vector.reduce.fadd.v16float(float %sp, <16 x float> %v)
-  ret float %0
+  %res = call float @llvm.vector.reduce.fadd.v16float(float %sp, <16 x float> %v)
+  ret float %res
 }
 
 
 define spir_func double @test_vector_reduce_fadd_v2double(double %sp, <2 x double> %v) {
 entry:
-  %0 = call double @llvm.vector.reduce.fadd.v2double(double %sp, <2 x double> %v)
-  ret double %0
+  %res = call double @llvm.vector.reduce.fadd.v2double(double %sp, <2 x double> %v)
+  ret double %res
 }
 
 define spir_func double @test_vector_reduce_fadd_v3double(double %sp, <3 x double> %v) {
 entry:
-  %0 = call double @llvm.vector.reduce.fadd.v3double(double %sp, <3 x double> %v)
-  ret double %0
+  %res = call double @llvm.vector.reduce.fadd.v3double(double %sp, <3 x double> %v)
+  ret double %res
 }
 
 define spir_func double @test_vector_reduce_fadd_v4double(double %sp, <4 x double> %v) {
 entry:
-  %0 = call double @llvm.vector.reduce.fadd.v4double(double %sp, <4 x double> %v)
-  ret double %0
+  %res = call double @llvm.vector.reduce.fadd.v4double(double %sp, <4 x double> %v)
+  ret double %res
 }
 
 define spir_func double @test_vector_reduce_fadd_v8double(double %sp, <8 x double> %v) {
 entry:
-  %0 = call double @llvm.vector.reduce.fadd.v8double(double %sp, <8 x double> %v)
-  ret double %0
+  %res = call double @llvm.vector.reduce.fadd.v8double(double %sp, <8 x double> %v)
+  ret double %res
 }
 
 define spir_func double @test_vector_reduce_fadd_v16double(double %sp, <16 x double> %v) {
 entry:
-  %0 = call double @llvm.vector.reduce.fadd.v16double(double %sp, <16 x double> %v)
-  ret double %0
+  %res = call double @llvm.vector.reduce.fadd.v16double(double %sp, <16 x double> %v)
+  ret double %res
 }
 
 declare half @llvm.vector.reduce.fadd.v2half(half, <2 x half>)

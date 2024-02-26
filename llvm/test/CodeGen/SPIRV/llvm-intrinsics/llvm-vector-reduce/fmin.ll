@@ -71,92 +71,92 @@ target triple = "spir64-unknown-unknown"
 
 define spir_func half @test_vector_reduce_fmin_v2half(<2 x half> %v) {
 entry:
-  %0 = call half @llvm.vector.reduce.fmin.v2half(<2 x half> %v)
-  ret half %0
+  %res = call half @llvm.vector.reduce.fmin.v2half(<2 x half> %v)
+  ret half %res
 }
 
 define spir_func half @test_vector_reduce_fmin_v3half(<3 x half> %v) {
 entry:
-  %0 = call half @llvm.vector.reduce.fmin.v3half(<3 x half> %v)
-  ret half %0
+  %res = call half @llvm.vector.reduce.fmin.v3half(<3 x half> %v)
+  ret half %res
 }
 
 define spir_func half @test_vector_reduce_fmin_v4half(<4 x half> %v) {
 entry:
-  %0 = call half @llvm.vector.reduce.fmin.v4half(<4 x half> %v)
-  ret half %0
+  %res = call half @llvm.vector.reduce.fmin.v4half(<4 x half> %v)
+  ret half %res
 }
 
 define spir_func half @test_vector_reduce_fmin_v8half(<8 x half> %v) {
 entry:
-  %0 = call half @llvm.vector.reduce.fmin.v8half(<8 x half> %v)
-  ret half %0
+  %res = call half @llvm.vector.reduce.fmin.v8half(<8 x half> %v)
+  ret half %res
 }
 
 define spir_func half @test_vector_reduce_fmin_v16half(<16 x half> %v) {
 entry:
-  %0 = call half @llvm.vector.reduce.fmin.v16half(<16 x half> %v)
-  ret half %0
+  %res = call half @llvm.vector.reduce.fmin.v16half(<16 x half> %v)
+  ret half %res
 }
 
 define spir_func float @test_vector_reduce_fmin_v2float(<2 x float> %v) {
 entry:
-  %0 = call float @llvm.vector.reduce.fmin.v2float(<2 x float> %v)
-  ret float %0
+  %res = call float @llvm.vector.reduce.fmin.v2float(<2 x float> %v)
+  ret float %res
 }
 
 define spir_func float @test_vector_reduce_fmin_v3float(<3 x float> %v) {
 entry:
-  %0 = call float @llvm.vector.reduce.fmin.v3float(<3 x float> %v)
-  ret float %0
+  %res = call float @llvm.vector.reduce.fmin.v3float(<3 x float> %v)
+  ret float %res
 }
 
 define spir_func float @test_vector_reduce_fmin_v4float(<4 x float> %v) {
 entry:
-  %0 = call float @llvm.vector.reduce.fmin.v4float(<4 x float> %v)
-  ret float %0
+  %res = call float @llvm.vector.reduce.fmin.v4float(<4 x float> %v)
+  ret float %res
 }
 
 define spir_func float @test_vector_reduce_fmin_v8float(<8 x float> %v) {
 entry:
-  %0 = call float @llvm.vector.reduce.fmin.v8float(<8 x float> %v)
-  ret float %0
+  %res = call float @llvm.vector.reduce.fmin.v8float(<8 x float> %v)
+  ret float %res
 }
 
 define spir_func float @test_vector_reduce_fmin_v16float(<16 x float> %v) {
 entry:
-  %0 = call float @llvm.vector.reduce.fmin.v16float(<16 x float> %v)
-  ret float %0
+  %res = call float @llvm.vector.reduce.fmin.v16float(<16 x float> %v)
+  ret float %res
 }
 
 define spir_func double @test_vector_reduce_fmin_v2double(<2 x double> %v) {
 entry:
-  %0 = call double @llvm.vector.reduce.fmin.v2double(<2 x double> %v)
-  ret double %0
+  %res = call double @llvm.vector.reduce.fmin.v2double(<2 x double> %v)
+  ret double %res
 }
 
 define spir_func double @test_vector_reduce_fmin_v3double(<3 x double> %v) {
 entry:
-  %0 = call double @llvm.vector.reduce.fmin.v3double(<3 x double> %v)
-  ret double %0
+  %res = call double @llvm.vector.reduce.fmin.v3double(<3 x double> %v)
+  ret double %res
 }
 
 define spir_func double @test_vector_reduce_fmin_v4double(<4 x double> %v) {
 entry:
-  %0 = call double @llvm.vector.reduce.fmin.v4double(<4 x double> %v)
-  ret double %0
+  %res = call double @llvm.vector.reduce.fmin.v4double(<4 x double> %v)
+  ret double %res
 }
 
 define spir_func double @test_vector_reduce_fmin_v8double(<8 x double> %v) {
 entry:
-  %0 = call double @llvm.vector.reduce.fmin.v8double(<8 x double> %v)
-  ret double %0
+  %res = call double @llvm.vector.reduce.fmin.v8double(<8 x double> %v)
+  ret double %res
 }
 
 define spir_func double @test_vector_reduce_fmin_v16double(<16 x double> %v) {
 entry:
-  %0 = call double @llvm.vector.reduce.fmin.v16double(<16 x double> %v)
-  ret double %0
+  %res = call double @llvm.vector.reduce.fmin.v16double(<16 x double> %v)
+  ret double %res
 }
 
 declare half @llvm.vector.reduce.fmin.v2half(<2 x half>)

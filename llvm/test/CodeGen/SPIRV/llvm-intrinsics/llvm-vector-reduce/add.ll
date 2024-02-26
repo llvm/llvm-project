@@ -89,123 +89,123 @@ target triple = "spir64-unknown-unknown"
 
 define spir_func i8 @test_vector_reduce_add_v2i8(<2 x i8> %v) {
 entry:
-  %0 = call i8 @llvm.vector.reduce.add.v2i8(<2 x i8> %v)
-  ret i8 %0
+  %res = call i8 @llvm.vector.reduce.add.v2i8(<2 x i8> %v)
+  ret i8 %res
 }
 
 define spir_func i8 @test_vector_reduce_add_v3i8(<3 x i8> %v) {
 entry:
-  %0 = call i8 @llvm.vector.reduce.add.v3i8(<3 x i8> %v)
-  ret i8 %0
+  %res = call i8 @llvm.vector.reduce.add.v3i8(<3 x i8> %v)
+  ret i8 %res
 }
 
 define spir_func i8 @test_vector_reduce_add_v4i8(<4 x i8> %v) {
 entry:
-  %0 = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> %v)
-  ret i8 %0
+  %res = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> %v)
+  ret i8 %res
 }
 
 define spir_func i8 @test_vector_reduce_add_v8i8(<8 x i8> %v) {
 entry:
-  %0 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %v)
-  ret i8 %0
+  %res = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %v)
+  ret i8 %res
 }
 
 define spir_func i8 @test_vector_reduce_add_v16i8(<16 x i8> %v) {
 entry:
-  %0 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %v)
-  ret i8 %0
+  %res = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %v)
+  ret i8 %res
 }
 
 define spir_func i16 @test_vector_reduce_add_v2i16(<2 x i16> %v) {
 entry:
-  %0 = call i16 @llvm.vector.reduce.add.v2i16(<2 x i16> %v)
-  ret i16 %0
+  %res = call i16 @llvm.vector.reduce.add.v2i16(<2 x i16> %v)
+  ret i16 %res
 }
 
 define spir_func i16 @test_vector_reduce_add_v3i16(<3 x i16> %v) {
 entry:
-  %0 = call i16 @llvm.vector.reduce.add.v3i16(<3 x i16> %v)
-  ret i16 %0
+  %res = call i16 @llvm.vector.reduce.add.v3i16(<3 x i16> %v)
+  ret i16 %res
 }
 
 define spir_func i16 @test_vector_reduce_add_v4i16(<4 x i16> %v) {
 entry:
-  %0 = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %v)
-  ret i16 %0
+  %res = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %v)
+  ret i16 %res
 }
 
 define spir_func i16 @test_vector_reduce_add_v8i16(<8 x i16> %v) {
 entry:
-  %0 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %v)
-  ret i16 %0
+  %res = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %v)
+  ret i16 %res
 }
 
 define spir_func i16 @test_vector_reduce_add_v16i16(<16 x i16> %v) {
 entry:
-  %0 = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %v)
-  ret i16 %0
+  %res = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %v)
+  ret i16 %res
 }
 
 
 define spir_func i32 @test_vector_reduce_add_v2i32(<2 x i32> %v) {
 entry:
-  %0 = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %v)
-  ret i32 %0
+  %res = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %v)
+  ret i32 %res
 }
 
 define spir_func i32 @test_vector_reduce_add_v3i32(<3 x i32> %v) {
 entry:
-  %0 = call i32 @llvm.vector.reduce.add.v3i32(<3 x i32> %v)
-  ret i32 %0
+  %res = call i32 @llvm.vector.reduce.add.v3i32(<3 x i32> %v)
+  ret i32 %res
 }
 
 define spir_func i32 @test_vector_reduce_add_v4i32(<4 x i32> %v) {
 entry:
-  %0 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %v)
-  ret i32 %0
+  %res = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %v)
+  ret i32 %res
 }
 
 define spir_func i32 @test_vector_reduce_add_v8i32(<8 x i32> %v) {
 entry:
-  %0 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %v)
-  ret i32 %0
+  %res = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %v)
+  ret i32 %res
 }
 
 define spir_func i32 @test_vector_reduce_add_v16i32(<16 x i32> %v) {
 entry:
-  %0 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %v)
-  ret i32 %0
+  %res = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %v)
+  ret i32 %res
 }
 
 define spir_func i64 @test_vector_reduce_add_v2i64(<2 x i64> %v) {
 entry:
-  %0 = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %v)
-  ret i64 %0
+  %res = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %v)
+  ret i64 %res
 }
 
 define spir_func i64 @test_vector_reduce_add_v3i64(<3 x i64> %v) {
 entry:
-  %0 = call i64 @llvm.vector.reduce.add.v3i64(<3 x i64> %v)
-  ret i64 %0
+  %res = call i64 @llvm.vector.reduce.add.v3i64(<3 x i64> %v)
+  ret i64 %res
 }
 
 define spir_func i64 @test_vector_reduce_add_v4i64(<4 x i64> %v) {
 entry:
-  %0 = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %v)
-  ret i64 %0
+  %res = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %v)
+  ret i64 %res
 }
 
 define spir_func i64 @test_vector_reduce_add_v8i64(<8 x i64> %v) {
 entry:
-  %0 = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %v)
-  ret i64 %0
+  %res = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %v)
+  ret i64 %res
 }
 
 define spir_func i64 @test_vector_reduce_add_v16i64(<16 x i64> %v) {
 entry:
-  %0 = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %v)
-  ret i64 %0
+  %res = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %v)
+  ret i64 %res
 }
 
 declare i8 @llvm.vector.reduce.add.v2i8(<2 x i8>)
