@@ -27,8 +27,7 @@
 #include <utility>
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGFOLDUNITEXTENTDIMS
-#define GEN_PASS_DEF_LINALGELEMENTWISEOPFUSION
+#define GEN_PASS_DEF_LINALGELEMENTWISEOPFUSIONPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -178,11 +177,9 @@ static void generateFusedElementwiseOpRegion(
   // Build the region of the fused op.
   Block &producerBlock = producer->getRegion(0).front();
   Block &consumerBlock = consumer->getRegion(0).front();
-  Block *fusedBlock = new Block();
-  fusedOp.getRegion().push_back(fusedBlock);
-  IRMapping mapper;
   OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPointToStart(fusedBlock);
+  Block *fusedBlock = rewriter.createBlock(&fusedOp.getRegion());
+  IRMapping mapper;
 
   // 2. Add an index operation for every fused loop dimension and use the
   // `consumerToProducerLoopsMap` to map the producer indices.
@@ -1929,8 +1926,10 @@ namespace {
 // favor of test passes that check the functionality of each of the patterns
 // added here individually.
 struct LinalgElementwiseOpFusionPass
-    : public impl::LinalgElementwiseOpFusionBase<
+    : public impl::LinalgElementwiseOpFusionPassBase<
           LinalgElementwiseOpFusionPass> {
+  using impl::LinalgElementwiseOpFusionPassBase<
+      LinalgElementwiseOpFusionPass>::LinalgElementwiseOpFusionPassBase;
   void runOnOperation() override {
     Operation *op = getOperation();
     MLIRContext *context = op->getContext();
@@ -1965,7 +1964,3 @@ struct LinalgElementwiseOpFusionPass
 };
 
 } // namespace
-
-std::unique_ptr<Pass> mlir::createLinalgElementwiseOpFusionPass() {
-  return std::make_unique<LinalgElementwiseOpFusionPass>();
-}

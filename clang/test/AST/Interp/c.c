@@ -21,6 +21,9 @@ _Static_assert(!!1.0, ""); // pedantic-ref-warning {{not an integer constant exp
                            // pedantic-expected-warning {{not an integer constant expression}}
 _Static_assert(!!1, "");
 
+_Static_assert(!(_Bool){(void*)0}, ""); // pedantic-ref-warning {{not an integer constant expression}} \
+                                        // pedantic-expected-warning {{not an integer constant expression}}
+
 int a = (1 == 1 ? 5 : 3);
 _Static_assert(a == 5, ""); // all-error {{not an integral constant expression}}
 
@@ -170,4 +173,10 @@ const _Bool CTB3 = (_Complex double){0.0, 1.0}; // pedantic-ref-warning {{extens
                                                 // pedantic-expected-warning {{extension}}
 _Static_assert(CTB3, ""); // pedantic-ref-warning {{GNU extension}} \
                           // pedantic-expected-warning {{GNU extension}}
+
+
+int t1 = sizeof(int);
+void test4(void) {
+  t1 = sizeof(int);
+}
 

@@ -134,7 +134,7 @@ define <1 x i32> @bswap_v1i32(<1 x i32> %a){
 ;
 ; CHECK-GI-LABEL: bswap_v1i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    rev w8, w8
 ; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    mov v0.s[1], w8

@@ -1407,10 +1407,6 @@ public:
   /// \param GD Global to scan.
   virtual bool emitTargetGlobal(GlobalDecl GD);
 
-  /// Creates and returns a registration function for when at least one
-  /// requires directives was used in the current module.
-  llvm::Function *emitRequiresDirectiveRegFun();
-
   /// Creates all the offload entries in the current compilation unit
   /// along with the associated metadata.
   void createOffloadEntriesAndInfoMetadata();
