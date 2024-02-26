@@ -148,6 +148,14 @@ def testNonSplat():
 
 ### explicitly provided types
 
+@run
+def testGetDenseElementsI1():
+    with Context():
+        array = np.array([[True, False, True], [False, False, True]], dtype=np._bool)
+        attr = DenseElementsAttr.get(array, type=IntegerType.get_signless(1))
+        # CHECK: dense<{{\[}}[true, false, true], [false, false, true]]> : tensor<2x3xi1>
+        print(attr)
+
 
 @run
 def testGetDenseElementsBF16():

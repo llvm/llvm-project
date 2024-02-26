@@ -694,8 +694,8 @@ public:
         // f16
         assert(view.itemsize == 2 && "mismatched array itemsize");
         bulkLoadElementType = mlirF16TypeGet(context);
-      // } else if (format == "?") {
-      //     bulkLoadElementType = mlirIntegerTypeGet(context, 1);
+      } else if (format == "?") {
+          bulkLoadElementType = mlirIntegerTypeGet(context, 1);
       } else if (isSignedIntegerFormat(format)) {
         if (view.itemsize == 4) {
           // i32
