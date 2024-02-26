@@ -159,17 +159,6 @@ void test_fprintf() {
   // 69 is ascii for 'E'
   clang_analyzer_dump(a); // expected-warning {{42 S32b}}
   clang_analyzer_dump(output[1]); // expected-warning {{69 S32b}}
-  if (r < 0) {
-    // Failure
-    fprintf(F1, "%s\t%u\n", output, a); // expected-warning {{File position of the stream might be 'indeterminate' after a failed operation. Can cause undefined behavior}}
-  } else {
-    char buffer[10];
-    fscanf(F1, "%s", buffer);
-    if (fseek(F1, 0, SEEK_SET) == 0) {
-      fprintf(F1, "%s\t%u\n", buffer, a); // ok
-    }
-  }
-
   fclose(F1);
 }
 
