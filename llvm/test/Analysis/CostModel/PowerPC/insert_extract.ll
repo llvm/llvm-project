@@ -172,11 +172,11 @@ define void @vexti64(<2 x i64> %p1) {
 ;
 ; CHECK-P9BE-LABEL: 'vexti64'
 ; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i1 = extractelement <2 x i64> %p1, i32 0
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i2 = extractelement <2 x i64> %p1, i32 1
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = extractelement <2 x i64> %p1, i32 1
 ; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-P9LE-LABEL: 'vexti64'
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i1 = extractelement <2 x i64> %p1, i32 0
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i1 = extractelement <2 x i64> %p1, i32 0
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = extractelement <2 x i64> %p1, i32 1
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
