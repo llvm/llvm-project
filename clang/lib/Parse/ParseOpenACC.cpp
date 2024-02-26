@@ -560,6 +560,21 @@ bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
   llvm_unreachable("Unhandled directive->assoc stmt");
 }
 
+unsigned getOpenACCScopeFlags(OpenACCDirectiveKind DirKind) {
+  switch (DirKind) {
+  case OpenACCDirectiveKind::Parallel:
+    // Mark this as a BreakScope/ContinueScope as well as a compute construct
+    // so that we can diagnose trying to 'break'/'continue' inside of one.
+    return Scope::BreakScope | Scope::ContinueScope |
+           Scope::OpenACCComputeConstructScope;
+  case OpenACCDirectiveKind::Invalid:
+    llvm_unreachable("Shouldn't be creating a scope for an invalid construct");
+  default:
+    break;
+  }
+  return 0;
+}
+
 } // namespace
 
 // OpenACC 3.3, section 1.7:
@@ -1228,6 +1243,8 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
 
   if (doesDirectiveHaveAssociatedStmt(DirInfo.DirKind)) {
     ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
+    ParseScope ACCScope(this, getOpenACCScopeFlags(DirInfo.DirKind));
+
     AssocStmt = getActions().ActOnOpenACCAssociatedStmt(DirInfo.DirKind,
                                                         ParseStatement());
   }

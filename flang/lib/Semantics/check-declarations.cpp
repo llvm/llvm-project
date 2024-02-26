@@ -920,7 +920,12 @@ void CheckHelper::CheckObjectEntity(
     auto attr{*details.cudaDataAttr()};
     switch (attr) {
     case common::CUDADataAttr::Constant:
-      if (IsAllocatableOrPointer(symbol) || symbol.attrs().test(Attr::TARGET)) {
+      if (subpDetails && !inDeviceSubprogram) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram"_err_en_US,
+            symbol.name());
+      } else if (IsAllocatableOrPointer(symbol) ||
+          symbol.attrs().test(Attr::TARGET)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target"_err_en_US,
             symbol.name());
