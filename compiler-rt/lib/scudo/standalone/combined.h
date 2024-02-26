@@ -1610,8 +1610,9 @@ private:
     // is very important.
     RB->RawStackDepotMap.unmap(RB->RawStackDepotMap.getBase(),
                                RB->RawStackDepotMap.getCapacity());
-    RB->RawRingBufferMap.unmap(RB->RawRingBufferMap.getBase(),
-                               RB->RawRingBufferMap.getCapacity());
+    MemMapT RawRingBufferMap = RB->RawRingBufferMap;
+    RawRingBufferMap.unmap(RawRingBufferMap.getBase(),
+                           RawRingBufferMap.getCapacity());
     atomic_store(&RingBufferAddress, 0, memory_order_release);
   }
 
