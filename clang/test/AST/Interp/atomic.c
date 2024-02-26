@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fgnuc-version=4.2.1 -fexperimental-new-constant-interpreter -verify=both,expected %s
-// RUN: %clang_cc1 -fgnuc-version=4.2.1 -verify=both,ref %s
+// RUN: %clang_cc1 -fgnuc-version=4.2.1 -triple=i686-linux-gnu -ffreestanding -fexperimental-new-constant-interpreter -verify=both,expected %s
+// RUN: %clang_cc1 -fgnuc-version=4.2.1 -triple=i686-linux-gnu -ffreestanding -verify=both,ref %s
 
 /// FIXME: Copied from test/Sema/atomic-expr.c.
 /// this expression seems to be rejected for weird reasons,
