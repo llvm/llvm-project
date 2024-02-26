@@ -8,6 +8,8 @@
 #include <iostream>
 #include <unistd.h>
 
+#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
 
 class FunctionAccumulator : public RecursiveASTVisitor<FunctionAccumulator> {
@@ -386,6 +388,8 @@ int main(int argc, const char **argv) {
         llvm::errs() << "Usage: " << argv[0] << " IR.json\n";
         return 1;
     }
+
+    llvm::InitLLVM X(argc, argv);
 
     fs::path jsonPath = fs::absolute(argv[1]);
     llvm::errs() << "Reading from json: " << jsonPath << "\n";
