@@ -57,21 +57,25 @@ struct SqrtConfig<unsigned accum> : SqrtConfig<unsigned long fract> {};
 //                   fixed, absolute);
 //     print("{", coeff(P, 1), "uhr,", coeff(P, 0), "uhr},");
 //   };
-static constexpr unsigned short fract SQRT_FIRST_APPROX[12][2] = {
-    {0x1.e8p-1uhr, 0x1.0cp-2uhr}, {0x1.bap-1uhr, 0x1.28p-2uhr},
-    {0x1.94p-1uhr, 0x1.44p-2uhr}, {0x1.74p-1uhr, 0x1.6p-2uhr},
-    {0x1.6p-1uhr, 0x1.74p-2uhr},  {0x1.4ep-1uhr, 0x1.88p-2uhr},
-    {0x1.3ep-1uhr, 0x1.9cp-2uhr}, {0x1.32p-1uhr, 0x1.acp-2uhr},
-    {0x1.22p-1uhr, 0x1.c4p-2uhr}, {0x1.18p-1uhr, 0x1.d4p-2uhr},
-    {0x1.08p-1uhr, 0x1.fp-2uhr},  {0x1.04p-1uhr, 0x1.f8p-2uhr},
+// Clang is having issues with this array:
+// static constexpr unsigned short fract SQRT_FIRST_APPROX[12][2] = {
+//     {0x1.e8p-1uhr, 0x1.0cp-2uhr}, {0x1.bap-1uhr, 0x1.28p-2uhr},
+//     {0x1.94p-1uhr, 0x1.44p-2uhr}, {0x1.74p-1uhr, 0x1.6p-2uhr},
+//     {0x1.6p-1uhr, 0x1.74p-2uhr},  {0x1.4ep-1uhr, 0x1.88p-2uhr},
+//     {0x1.3ep-1uhr, 0x1.9cp-2uhr}, {0x1.32p-1uhr, 0x1.acp-2uhr},
+//     {0x1.22p-1uhr, 0x1.c4p-2uhr}, {0x1.18p-1uhr, 0x1.d4p-2uhr},
+//     {0x1.08p-1uhr, 0x1.fp-2uhr},  {0x1.04p-1uhr, 0x1.f8p-2uhr},
+// };
+// We are using their storage type instead.
+static constexpr uint8_t SQRT_FIRST_APPROX[12][2] = {
+    {244, 67},  {221, 74},  {202, 81},  {186, 88},  {176, 93},  {167, 98},
+    {159, 103}, {153, 107}, {145, 113}, {140, 117}, {132, 124}, {130, 126},
 };
 
 } // namespace internal
 
 template <typename T>
-LIBC_INLINE constexpr cpp::enable_if_t<
-    cpp::is_fixed_point_v<T> && cpp::is_unsigned_v<T>, T>
-sqrt(T x) {
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, T> sqrt(T x) {
   using BitType = typename FXRep<T>::StorageType;
   BitType x_bit = cpp::bit_cast<BitType>(x);
 
@@ -95,8 +99,10 @@ sqrt(T x) {
 
   // Use the leading 4 bits to do look up for sqrt(x).
   int index = (x_bit >> (STORAGE_LENGTH - 4)) - 4;
-  FracType a = static_cast<FracType>(internal::SQRT_FIRST_APPROX[index][0]);
-  FracType b = static_cast<FracType>(internal::SQRT_FIRST_APPROX[index][1]);
+  FracType a = static_cast<FracType>(cpp::bit_cast<unsigned short fract>(
+      internal::SQRT_FIRST_APPROX[index][0]));
+  FracType b = static_cast<FracType>(cpp::bit_cast<unsigned short fract>(
+      internal::SQRT_FIRST_APPROX[index][1]));
 
   // Initial approximation step.
   // Estimated error bounds: | r - sqrt(x_frac) | < max(1.5 * 2^-11, eps).
