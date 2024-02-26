@@ -313,7 +313,7 @@ TEST_F(ProgramEnvTest, TestExecuteNoWaitDetached) {
     Env.emplace_back("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED_TRUE=1");
     ProcessInfo PI1 =
         ExecuteNoWait(Executable, argv, Env, {}, 0, &Error, &ExecutionFailed,
-                      nullptr, /*DetachedProcess=*/true);
+                      nullptr, /*DetachProcess=*/true);
     ASSERT_FALSE(ExecutionFailed) << Error;
     ASSERT_NE(PI1.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
     ProcessInfo WaitResult = Wait(PI1, std::nullopt, &Error);
@@ -324,8 +324,9 @@ TEST_F(ProgramEnvTest, TestExecuteNoWaitDetached) {
   {
     std::string Error;
     bool ExecutionFailed;
-    ProcessInfo PI2 = ExecuteNoWait(Executable, argv, getEnviron(), {}, 0,
-                                    &Error, &ExecutionFailed, nullptr);
+    ProcessInfo PI2 =
+        ExecuteNoWait(Executable, argv, getEnviron(), {}, 0, &Error,
+                      &ExecutionFailed, nullptr, /*DetachProcess=*/false);
     ASSERT_FALSE(ExecutionFailed) << Error;
     ASSERT_NE(PI2.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
     ProcessInfo WaitResult = Wait(PI2, std::nullopt, &Error);
