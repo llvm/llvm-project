@@ -47,6 +47,24 @@ enum OpCode {
   Ret,
   InsertValue,
   PtrAdd,
+  Add,
+  Sub,
+  Mul,
+  Or,
+  And,
+  Xor,
+  Shl,
+  AShr,
+  FAdd,
+  FDiv,
+  FMul,
+  FRem,
+  FSub,
+  LShr,
+  SDiv,
+  SRem,
+  UDiv,
+  URem,
   UnimplementedInstruction = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -278,6 +296,80 @@ private:
     InstIdx++;
   }
 
+  void serialiseBinaryOperation(llvm::BinaryOperator *I,
+                                ValueLoweringMap &VLMap, unsigned BBIdx,
+                                unsigned &InstIdx) {
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
+    serialiseBinOpcode(I->getOpcode());
+    OutStreamer.emitInt32(I->getNumOperands());
+    for (Value *O : I->operands()) {
+      serialiseOperand(I, VLMap, O);
+    }
+    VLMap[I] = {BBIdx, InstIdx};
+    InstIdx++;
+  }
+
+  void serialiseBinOpcode(Instruction::BinaryOps BO) {
+    switch (BO) {
+    case Instruction::BinaryOps::Add:
+      OutStreamer.emitInt8(OpCode::Add);
+      break;
+    case Instruction::BinaryOps::Sub:
+      OutStreamer.emitInt8(OpCode::Sub);
+      break;
+    case Instruction::BinaryOps::Mul:
+      OutStreamer.emitInt8(OpCode::Mul);
+      break;
+    case Instruction::BinaryOps::Or:
+      OutStreamer.emitInt8(OpCode::Or);
+      break;
+    case Instruction::BinaryOps::And:
+      OutStreamer.emitInt8(OpCode::And);
+      break;
+    case Instruction::BinaryOps::Xor:
+      OutStreamer.emitInt8(OpCode::Xor);
+      break;
+    case Instruction::BinaryOps::Shl:
+      OutStreamer.emitInt8(OpCode::Shl);
+      break;
+    case Instruction::BinaryOps::AShr:
+      OutStreamer.emitInt8(OpCode::AShr);
+      break;
+    case Instruction::BinaryOps::FAdd:
+      OutStreamer.emitInt8(OpCode::FAdd);
+      break;
+    case Instruction::BinaryOps::FDiv:
+      OutStreamer.emitInt8(OpCode::FDiv);
+      break;
+    case Instruction::BinaryOps::FMul:
+      OutStreamer.emitInt8(OpCode::FMul);
+      break;
+    case Instruction::BinaryOps::FRem:
+      OutStreamer.emitInt8(OpCode::FRem);
+      break;
+    case Instruction::BinaryOps::FSub:
+      OutStreamer.emitInt8(OpCode::FSub);
+      break;
+    case Instruction::BinaryOps::LShr:
+      OutStreamer.emitInt8(OpCode::LShr);
+      break;
+    case Instruction::BinaryOps::SDiv:
+      OutStreamer.emitInt8(OpCode::SDiv);
+      break;
+    case Instruction::BinaryOps::SRem:
+      OutStreamer.emitInt8(OpCode::SRem);
+      break;
+    case Instruction::BinaryOps::UDiv:
+      OutStreamer.emitInt8(OpCode::UDiv);
+      break;
+    case Instruction::BinaryOps::URem:
+      OutStreamer.emitInt8(OpCode::URem);
+      break;
+    case Instruction::BinaryOps::BinaryOpsEnd:
+      break;
+    }
+  }
+
   void serialiseAllocaInst(AllocaInst *I, ValueLoweringMap &VLMap,
                            unsigned BBIdx, unsigned &InstIdx) {
     // type_index:
@@ -393,7 +485,6 @@ private:
     GENERIC_INST_SERIALISE(I, LoadInst, Load)
     GENERIC_INST_SERIALISE(I, StoreInst, Store)
     GENERIC_INST_SERIALISE(I, ICmpInst, ICmp)
-    GENERIC_INST_SERIALISE(I, llvm::BinaryOperator, BinaryOperator)
     GENERIC_INST_SERIALISE(I, ReturnInst, Ret)
     GENERIC_INST_SERIALISE(I, llvm::InsertValueInst, InsertValue)
     GENERIC_INST_SERIALISE(I, StoreInst, Store)
@@ -402,6 +493,7 @@ private:
     CUSTOM_INST_SERIALISE(I, CallInst, serialiseCallInst)
     CUSTOM_INST_SERIALISE(I, BranchInst, serialiseBranchInst)
     CUSTOM_INST_SERIALISE(I, GetElementPtrInst, serialiseGetElementPtr)
+    CUSTOM_INST_SERIALISE(I, llvm::BinaryOperator, serialiseBinaryOperation)
 
     // GENERIC_INST_SERIALISE and CUSTOM_INST_SERIALISE do an early return upon
     // a match, so if we get here then the instruction wasn't handled.
