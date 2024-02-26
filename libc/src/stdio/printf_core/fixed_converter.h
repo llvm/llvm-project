@@ -29,7 +29,7 @@ namespace printf_core {
 LIBC_INLINE constexpr uint32_t const_ten_exp(uint32_t exponent) {
   uint32_t result = 1;
   LIBC_ASSERT(exponent < 11);
-  for (size_t i = 0; i < exponent; ++i)
+  for (uint32_t i = 0; i < exponent; ++i)
     result *= 10;
 
   return result;
@@ -176,23 +176,6 @@ LIBC_INLINE int convert_fixed(Writer *writer, const FormatSection &to_conv) {
               "StorageType must be large enough to hold the fractional "
               "component multiplied by a 32 bit number.");
 
-  char sign_char = 0;
-
-  // Check if the conv name is uppercase
-  if (a == 'A') {
-    // These flags are only for signed conversions, so this removes them if the
-    // conversion is unsigned.
-    flags = FormatFlags(flags &
-                        ~(FormatFlags::FORCE_SIGN | FormatFlags::SPACE_PREFIX));
-  }
-
-  if (is_negative)
-    sign_char = '-';
-  else if ((flags & FormatFlags::FORCE_SIGN) == FormatFlags::FORCE_SIGN)
-    sign_char = '+'; // FORCE_SIGN has precedence over SPACE_PREFIX
-  else if ((flags & FormatFlags::SPACE_PREFIX) == FormatFlags::SPACE_PREFIX)
-    sign_char = ' ';
-
   // If to_conv doesn't specify a precision, the precision defaults to 6.
   const size_t precision = to_conv.precision < 0 ? 6 : to_conv.precision;
   bool has_decimal_point =
@@ -335,6 +318,23 @@ LIBC_INLINE int convert_fixed(Writer *writer, const FormatSection &to_conv) {
     trailing_zeroes = precision - (valid_fraction_digits);
 
   constexpr cpp::string_view DECIMAL_POINT(".");
+
+  char sign_char = 0;
+
+  // Check if the conv name is uppercase
+  if (a == 'A') {
+    // These flags are only for signed conversions, so this removes them if the
+    // conversion is unsigned.
+    flags = FormatFlags(flags &
+                        ~(FormatFlags::FORCE_SIGN | FormatFlags::SPACE_PREFIX));
+  }
+
+  if (is_negative)
+    sign_char = '-';
+  else if ((flags & FormatFlags::FORCE_SIGN) == FormatFlags::FORCE_SIGN)
+    sign_char = '+'; // FORCE_SIGN has precedence over SPACE_PREFIX
+  else if ((flags & FormatFlags::SPACE_PREFIX) == FormatFlags::SPACE_PREFIX)
+    sign_char = ' ';
 
   padding = static_cast<int>(to_conv.min_width - (sign_char > 0 ? 1 : 0) -
                              integral_str.size() -

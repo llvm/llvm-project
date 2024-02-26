@@ -23,12 +23,19 @@
 constexpr int MAX_SIZE = 10000;
 
 inline bool simple_streq(char *first, char *second, int length) {
-  for (int i = 0; i < length; ++i) {
-    if (first[i] != second[i]) {
+  for (int i = 0; i < length; ++i)
+    if (first[i] != second[i])
       return false;
-    }
-  }
+
   return true;
+}
+
+inline int clamp(int num, int max) {
+  if (num > max)
+    return max;
+  if (num < -max)
+    return -max;
+  return num;
 }
 
 enum class TestResult {
@@ -43,9 +50,6 @@ inline TestResult test_vals(const char *fmt, uint64_t num, int prec,
                             int width) {
   typename LIBC_NAMESPACE::fixed_point::FXRep<F>::StorageType raw_num = num;
 
-  long double ld_num = 0.0L;
-  long double ld_fract = 0.0L;
-
   auto raw_num_bits = LIBC_NAMESPACE::fixed_point::FXBits<F>(raw_num);
 
   // This needs to be a float with enough bits of precision to hold the fixed
@@ -53,22 +57,19 @@ inline TestResult test_vals(const char *fmt, uint64_t num, int prec,
   static_assert(sizeof(long double) > sizeof(long accum));
 
   // build a long double that is equivalent to the fixed point number.
-  ld_num = static_cast<long double>(raw_num_bits.get_integral());
-  ld_fract = static_cast<long double>(raw_num_bits.get_fraction()) /
-             static_cast<long double>(1ll << raw_num_bits.get_exponent());
+  long double ld_num =
+      static_cast<long double>(raw_num_bits.get_integral()) +
+      (static_cast<long double>(raw_num_bits.get_fraction()) /
+       static_cast<long double>(1ll << raw_num_bits.get_exponent()));
 
-  ld_num = ld_num + ld_fract;
-
-  if (raw_num_bits.get_sign()) {
+  if (raw_num_bits.get_sign())
     ld_num = -ld_num;
-  }
 
   // Call snprintf on a nullptr to get the buffer size.
   int buffer_size = LIBC_NAMESPACE::snprintf(nullptr, 0, fmt, width, prec, num);
 
-  if (buffer_size < 0) {
+  if (buffer_size < 0)
     return TestResult::BufferSizeFailed;
-  }
 
   char *test_buff = new char[buffer_size + 1];
   char *reference_buff = new char[buffer_size + 1];
@@ -84,13 +85,11 @@ inline TestResult test_vals(const char *fmt, uint64_t num, int prec,
                                    width, prec, ld_num);
 
   // All of these calls should return that they wrote the same amount.
-  if (test_result != reference_result || test_result != buffer_size) {
+  if (test_result != reference_result || test_result != buffer_size)
     return TestResult::LengthsDiffer;
-  }
 
-  if (!simple_streq(test_buff, reference_buff, buffer_size)) {
+  if (!simple_streq(test_buff, reference_buff, buffer_size))
     return TestResult::StringsNotEqual;
-  }
 
   delete[] test_buff;
   delete[] reference_buff;
@@ -118,27 +117,17 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     }
   }
 
-  if (width > MAX_SIZE) {
-    width = MAX_SIZE;
-  } else if (width < -MAX_SIZE) {
-    width = -MAX_SIZE;
-  }
-
-  if (prec > MAX_SIZE) {
-    prec = MAX_SIZE;
-  } else if (prec < -MAX_SIZE) {
-    prec = -MAX_SIZE;
-  }
+  width = clamp(width, MAX_SIZE);
+  prec = clamp(prec, MAX_SIZE);
 
   TestResult result;
   result = test_vals<long accum>("%*.*lk", raw_num, prec, width);
-  if (result != TestResult::Success) {
+  if (result != TestResult::Success)
     __builtin_trap();
-  }
+
   result = test_vals<unsigned long accum>("%*.*lK", raw_num, prec, width);
-  if (result != TestResult::Success) {
+  if (result != TestResult::Success)
     __builtin_trap();
-  }
 
   return 0;
 }
