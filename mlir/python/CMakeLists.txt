@@ -710,10 +710,10 @@ if(NOT LLVM_ENABLE_IDE)
     COMPONENT mlir-python-sources
   )
 endif()
-# ###############################################################################
+################################################################################
 # The fully assembled package of modules.
 # This must come last.
-# ###############################################################################
+################################################################################
 
 add_mlir_python_modules(MLIRPythonModules
   ROOT_PREFIX "${MLIR_BINARY_DIR}/python_packages/mlir_core/mlir"
