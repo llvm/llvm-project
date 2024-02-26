@@ -67,6 +67,8 @@ struct SqrtConfig<unsigned accum> : SqrtConfig<unsigned long fract> {};
 //     {0x1.08p-1uhr, 0x1.fp-2uhr},  {0x1.04p-1uhr, 0x1.f8p-2uhr},
 // };
 // We are using their storage type instead.
+// TODO(https://github.com/llvm/llvm-project/issues/83050): Use fixed point
+// array when the bug is fixed.
 static constexpr uint8_t SQRT_FIRST_APPROX[12][2] = {
     {244, 67},  {221, 74},  {202, 81},  {186, 88},  {176, 93},  {167, 98},
     {159, 103}, {153, 107}, {145, 113}, {140, 117}, {132, 124}, {130, 126},
