@@ -1112,8 +1112,8 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12Not12_10 in {
 }
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus in {
-  defm GLOBAL_LOAD_B128_TR_B6 : FLAT_Global_Load_Pseudo <"global_load_b128_tr_b6", VReg_128>;
-  defm GLOBAL_LOAD_B64_TR_B4  : FLAT_Global_Load_Pseudo <"global_load_b64_tr_b4",  VReg_64>;
+  defm GLOBAL_LOAD_TR6_B96 : FLAT_Global_Load_Pseudo <"global_load_tr6_b96", VReg_96>;
+  defm GLOBAL_LOAD_TR4_B64 : FLAT_Global_Load_Pseudo <"global_load_tr4_b64", VReg_64>;
 }
 
 let SubtargetPredicate = isGFX10Plus, is_flat_global = 1 in {
@@ -1847,8 +1847,8 @@ let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12Not12_10] in {
 }
 
 let WaveSizePredicate = isWave32,  OtherPredicates = [isGFX12_10Plus] in {
-  defm : GlobalFLATLoadPats <GLOBAL_LOAD_B64_TR_B4,  int_amdgcn_global_load_tr_b4, v2i32>;
-  defm : GlobalFLATLoadPats <GLOBAL_LOAD_B128_TR_B6, int_amdgcn_global_load_tr_b6, v4i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR4_B64, int_amdgcn_global_load_tr4, v2i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_B96, int_amdgcn_global_load_tr6, v3i32>;
 }
 
 let OtherPredicates = [isGFX12_10Plus] in {
@@ -3228,11 +3228,11 @@ defm GLOBAL_STORE_ASYNC_FROM_LDS_B64  : VGLOBAL_Real_AllAddr_gfx1210<0x65>;
 defm GLOBAL_STORE_ASYNC_FROM_LDS_B128 : VGLOBAL_Real_AllAddr_gfx1210<0x66>;
 
 let WaveSizePredicate = isWave32 in {
-  defm GLOBAL_LOAD_B128_TR_B16 : VGLOBAL_Real_AllAddr_gfx1210<0x057, "GLOBAL_LOAD_TR_B128_w32", "global_load_b128_tr_b16", true>;
-  defm GLOBAL_LOAD_B64_TR_B8   : VGLOBAL_Real_AllAddr_gfx1210<0x058, "GLOBAL_LOAD_TR_B64_w32", "global_load_b64_tr_b8", true>;
+  defm GLOBAL_LOAD_TR16_B128 : VGLOBAL_Real_AllAddr_gfx1210<0x057, "GLOBAL_LOAD_TR_B128_w32", "global_load_tr16_b128", true>;
+  defm GLOBAL_LOAD_TR8_B64   : VGLOBAL_Real_AllAddr_gfx1210<0x058, "GLOBAL_LOAD_TR_B64_w32", "global_load_tr8_b64", true>;
 
-  defm GLOBAL_LOAD_B128_TR_B6  : VGLOBAL_Real_AllAddr_gfx1210<0x075>;
-  defm GLOBAL_LOAD_B64_TR_B4   : VGLOBAL_Real_AllAddr_gfx1210<0x074>;
+  defm GLOBAL_LOAD_TR6_B96   : VGLOBAL_Real_AllAddr_gfx1210<0x075>;
+  defm GLOBAL_LOAD_TR4_B64   : VGLOBAL_Real_AllAddr_gfx1210<0x074>;
 }
 
 defm FLAT_ATOMIC_ADD_F64     : VFLAT_Real_Atomics_gfx1210<0x055>;

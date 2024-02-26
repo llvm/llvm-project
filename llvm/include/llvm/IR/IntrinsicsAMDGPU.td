@@ -2936,12 +2936,12 @@ class AMDGPULoadIntrinsic<LLVMType ptr_ty>:
 // <4 x half>   @llvm.amdgcn.global.load.tr.v4f16(ptr addrspace(1))  -> global_load_tr_b128
 // <4 x bfloat> @llvm.amdgcn.global.load.tr.v4bf16(ptr addrspace(1)) -> global_load_tr_b128
 
-def int_amdgcn_global_load_tr    : AMDGPULoadIntrinsic<global_ptr_ty>;
-def int_amdgcn_global_load_tr_b4 : AMDGPULoadIntrinsic<global_ptr_ty>;
-def int_amdgcn_global_load_tr_b6 : AMDGPULoadIntrinsic<global_ptr_ty>;
-def int_amdgcn_ds_load_tr        : AMDGPULoadIntrinsic<local_ptr_ty>;
-def int_amdgcn_ds_load_tr_b4     : AMDGPULoadIntrinsic<local_ptr_ty>;
-def int_amdgcn_ds_load_tr_b6     : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_global_load_tr  : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_global_load_tr4 : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_global_load_tr6 : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_ds_load_tr      : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_load_tr4     : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_load_tr6     : AMDGPULoadIntrinsic<local_ptr_ty>;
 
 // i32 @llvm.amdgcn.wave.id()
 def int_amdgcn_wave_id :
