@@ -321,8 +321,12 @@ void saveAsJson(const std::set<std::vector<int>> &results,
 
 static void findPathBetween(const VarLocResult &from, const VarLocResult &to,
                             const std::string &type, ordered_json &jResults) {
-    if (!from.isValid() || !to.isValid()) {
-        llvm::errs() << "Invalid variable location!\n";
+    if (!from.isValid()) {
+        llvm::errs() << "Invalid FROM location!\n";
+        return;
+    }
+    if (!to.isValid()) {
+        llvm::errs() << "Invalid TO location!\n";
         return;
     }
 
