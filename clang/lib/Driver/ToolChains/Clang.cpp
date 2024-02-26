@@ -2713,7 +2713,7 @@ static std::string ComplexArithmeticStr(LangOptions::ComplexRangeKind Range) {
 }
 
 static void EmitComplexRangeDiag(const Driver &D, std::string str1,
-                                   std::string str2) {
+                                 std::string str2) {
   if ((str1.compare(str2) != 0) && !str2.empty() && !str1.empty()) {
     D.Diag(clang::diag::warn_drv_overriding_option) << str1 << str2;
   }
