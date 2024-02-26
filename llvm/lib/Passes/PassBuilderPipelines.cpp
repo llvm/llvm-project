@@ -222,8 +222,8 @@ static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
                            cl::init(false), cl::Hidden);
-extern cl::opt<bool>
-    OptSizeDFAJumpThreading("dfa-jump-thread-optsize",
+static cl::opt<bool>
+    DFAJumpThreadingOptSize("dfa-jump-thread-optsize",
                            cl::desc("Enable DFA jump threading when optimizing for size"),
                            cl::init(false), cl::Hidden);
 
@@ -723,7 +723,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // Re-consider control flow based optimizations after redundancy elimination,
   // redo DCE, etc.
   if (EnableDFAJumpThreading &&
-      ((Level.getSizeLevel() == 0) || OptSizeDFAJumpThreading))
+      ((Level.getSizeLevel() == 0) || DFAJumpThreadingOptSize))
     FPM.addPass(DFAJumpThreadingPass());
 
   FPM.addPass(JumpThreadingPass());
