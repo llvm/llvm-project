@@ -513,16 +513,12 @@ void VPInstruction::execute(VPTransformState &State) {
     if (!hasResult())
       continue;
     assert(GeneratedValue && "generateInstruction must produce a value");
-    if (GeneratedValue->getType()->isVectorTy()) {
-      State.set(this, GeneratedValue, Part);
-    } else {
-      // Note that ComputeReductionResult creates a scalar, but has its last
-      // lane accessed, via the generic  VPLiveOut.
-      assert((getOpcode() == VPInstruction::ComputeReductionResult ||
-              State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
+
+    bool IsVector = GeneratedValue->getType()->isVectorTy();
+    State.set(this, GeneratedValue, Part, !IsVector);
+    assert((IsVector || getOpcode() == VPInstruction::ComputeReductionResult ||
+                  State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
              "scalar value but not only first lane used");
-      State.set(this, GeneratedValue, Part, /*IsScalar*/ true);
-    }
   }
 }
 

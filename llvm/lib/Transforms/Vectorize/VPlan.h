@@ -288,15 +288,15 @@ struct VPTransformState {
   void set(VPValue *Def, Value *V, unsigned Part, bool IsScalar = false) {
     if (IsScalar) {
       set(Def, V, VPIteration(Part, 0));
-    } else {
-      assert((VF.isScalar() || V->getType()->isVectorTy()) &&
-             "scalar values must be stored as (Part, 0)");
-      if (!Data.PerPartOutput.count(Def)) {
-        DataState::PerPartValuesTy Entry(UF);
-        Data.PerPartOutput[Def] = Entry;
-      }
-      Data.PerPartOutput[Def][Part] = V;
+      return;
+    } 
+    assert((VF.isScalar() || V->getType()->isVectorTy()) &&
+           "scalar values must be stored as (Part, 0)");
+    if (!Data.PerPartOutput.count(Def)) {
+      DataState::PerPartValuesTy Entry(UF);
+      Data.PerPartOutput[Def] = Entry;
     }
+    Data.PerPartOutput[Def][Part] = V;
   }
 
   /// Reset an existing vector value for \p Def and a given \p Part.
