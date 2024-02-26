@@ -330,6 +330,7 @@
 ; GCN-O1-NEXT:        SI Insert waterfalls
 ; GCN-O1-NEXT:        Detect Dead Lanes
 ; GCN-O1-NEXT:        Remove dead machine instructions
+; GCN-O1-NEXT:        Init Undef Pass
 ; GCN-O1-NEXT:        Process Implicit Definitions
 ; GCN-O1-NEXT:        Remove unreachable machine basic blocks
 ; GCN-O1-NEXT:        Live Variable Analysis
@@ -633,6 +634,7 @@
 ; GCN-O1-OPTS-NEXT:        SI Insert waterfalls
 ; GCN-O1-OPTS-NEXT:        Detect Dead Lanes
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
+; GCN-O1-OPTS-NEXT:        Init Undef Pass
 ; GCN-O1-OPTS-NEXT:        Process Implicit Definitions
 ; GCN-O1-OPTS-NEXT:        Remove unreachable machine basic blocks
 ; GCN-O1-OPTS-NEXT:        Live Variable Analysis
@@ -942,6 +944,7 @@
 ; GCN-O2-NEXT:        SI Insert waterfalls
 ; GCN-O2-NEXT:        Detect Dead Lanes
 ; GCN-O2-NEXT:        Remove dead machine instructions
+; GCN-O2-NEXT:        Init Undef Pass
 ; GCN-O2-NEXT:        Process Implicit Definitions
 ; GCN-O2-NEXT:        Remove unreachable machine basic blocks
 ; GCN-O2-NEXT:        Live Variable Analysis
@@ -1264,6 +1267,7 @@
 ; GCN-O3-NEXT:        SI Insert waterfalls
 ; GCN-O3-NEXT:        Detect Dead Lanes
 ; GCN-O3-NEXT:        Remove dead machine instructions
+; GCN-O3-NEXT:        Init Undef Pass
 ; GCN-O3-NEXT:        Process Implicit Definitions
 ; GCN-O3-NEXT:        Remove unreachable machine basic blocks
 ; GCN-O3-NEXT:        Live Variable Analysis

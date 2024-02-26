@@ -6183,9 +6183,11 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
       break;
     case Intrinsic::vp_fptoui:
     case Intrinsic::vp_fptosi:
+    case Intrinsic::vp_lrint:
+    case Intrinsic::vp_llrint:
       Check(
           RetTy->isIntOrIntVectorTy() && ValTy->isFPOrFPVectorTy(),
-          "llvm.vp.fptoui or llvm.vp.fptosi intrinsic first argument element "
+          "llvm.vp.fptoui, llvm.vp.fptosi, llvm.vp.lrint or llvm.vp.llrint" "intrinsic first argument element "
           "type must be floating-point and result element type must be integer",
           *VPCast);
       break;
