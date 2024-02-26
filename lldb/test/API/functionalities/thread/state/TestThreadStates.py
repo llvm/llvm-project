@@ -39,6 +39,9 @@ class ThreadStateTestCase(TestBase):
     @skipIfDarwin  # 'llvm.org/pr23669', cause Python crash randomly
     @expectedFailureDarwin("llvm.org/pr23669")
     @expectedFailureNetBSD
+    # This actually passes on Windows on Arm but it's hard to describe that
+    # and xfail it everywhere else.
+    @skipIfWindows
     # thread states not properly maintained
     @unittest.expectedFailure  # llvm.org/pr16712
     def test_state_after_expression(self):
