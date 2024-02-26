@@ -1,11 +1,8 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection -verify %s
 
 #include "Inputs/system-header-simulator.h"
-#include "Inputs/system-header-simulator-for-valist.h"
 
 void clang_analyzer_eval(int);
-void clang_analyzer_dump_char(char);
-void clang_analyzer_dump_int(int);
 
 void check_fread(void) {
   FILE *fp = tmpfile();
@@ -362,86 +359,4 @@ void fflush_on_open_failed_stream(void) {
     return;
   }
   fclose(F);
-}
-
-void test_fscanf_escape() {
-  FILE *F1 = tmpfile();
-  if (!F1)
-    return;
-
-  int a = 48;
-  unsigned b = 127;
-  char buffer[] = "FSCANF"; // 70 83 67 65 78 70
-
-  clang_analyzer_dump_int(a); // expected-warning {{48 S32b}}
-  clang_analyzer_dump_int(b); // expected-warning {{127 S32b}}
-  clang_analyzer_dump_char(buffer[2]); // expected-warning {{67 S8b}}
-
-  int ret = fscanf(F1, "%d %u %s", &a, &b, buffer);
-  if (ret != EOF) {
-    clang_analyzer_dump_int(a); // expected-warning {{conj_$}}
-    clang_analyzer_dump_int(b); // expected-warning {{conj_$}}
-    clang_analyzer_dump_char(buffer[2]); // expected-warning {{derived_$}}
-  } else {
-    clang_analyzer_dump_int(a); // expected-warning {{48 S32b}}
-    clang_analyzer_dump_int(b); // expected-warning {{127 S32b}}
-    clang_analyzer_dump_char(buffer[2]); // expected-warning {{67 S8b}}
-  }
-
-  if (ret != EOF) {
-    char c = fgetc(F1); // ok
-  }
-
-  fclose(F1);
-}
-
-void test_fprintf() {
-  FILE *F1 = tmpfile();
-  if (!F1)
-    return;
-
-  unsigned a = 42;
-  char *output = "HELLO";
-  int r = fprintf(F1, "%s\t%u\n", output, a);
-  // fprintf does not invalidate any of its input
-  // 69 is ascii for 'E'
-  clang_analyzer_dump_int(a); // expected-warning {{42 S32b}}
-  clang_analyzer_dump_char(output[1]); // expected-warning {{69 S8b}}
-  if (r < 0) {
-    // Failure
-    fprintf(F1, "%s\t%u\n", output, a); // expected-warning {{File position of the stream might be 'indeterminate' after a failed operation. Can cause undefined behavior}}
-  } else {
-    char buffer[10];
-    fscanf(F1, "%s", buffer);
-    if (fseek(F1, 0, SEEK_SET) == 0) {
-      fprintf(F1, "%s\t%u\n", buffer, a); // ok
-    }
-  }
-
-  fclose(F1);
-}
-
-
-int test_vfscanf_inner(const char *fmt, ...) {
-  FILE *F1 = tmpfile();
-  if (!F1)
-    return EOF;
-
-  va_list ap;
-  va_start(ap, fmt);
-
-  int r = vfscanf(F1, fmt, ap);
-
-  fclose(F1);
-  va_end(ap);
-  return r;
-}
-
-void test_vfscanf() {
-  int i = 42;
-  int r = test_vfscanf_inner("%d", &i);
-  if (r != EOF) {
-    clang_analyzer_dump_int(i); // expected-warning {{conj_$}}
-    // FIXME va_list "hides" the pointer to i
-  }
 }
