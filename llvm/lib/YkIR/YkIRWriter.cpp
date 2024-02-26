@@ -494,7 +494,9 @@ private:
   void serialiseType(llvm::Type *Ty) {
     if (Ty->isVoidTy()) {
       OutStreamer.emitInt8(TypeKind::Void);
-    } else if (Ty->isPointerTy()) {
+    } else if (PointerType *PT = dyn_cast<PointerType>(Ty)) {
+      // FIXME: The Yk runtime assumes all pointers are void-ptr-sized.
+      assert(DL.getPointerSize(PT->getAddressSpace()) == sizeof(void *));
       OutStreamer.emitInt8(TypeKind::Ptr);
     } else if (IntegerType *ITy = dyn_cast<IntegerType>(Ty)) {
       OutStreamer.emitInt8(TypeKind::Integer);
