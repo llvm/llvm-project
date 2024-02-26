@@ -144,6 +144,19 @@ inline unsigned stdc_count_zeros(unsigned long x) {
 inline unsigned stdc_count_zeros(unsigned long long x) {
   return stdc_count_zeros_ull(x);
 }
+inline unsigned stdc_count_ones(unsigned char x) {
+  return stdc_count_ones_uc(x);
+}
+inline unsigned stdc_count_ones(unsigned short x) {
+  return stdc_count_ones_us(x);
+}
+inline unsigned stdc_count_ones(unsigned x) { return stdc_count_ones_ui(x); }
+inline unsigned stdc_count_ones(unsigned long x) {
+  return stdc_count_ones_ul(x);
+}
+inline unsigned stdc_count_ones(unsigned long long x) {
+  return stdc_count_ones_ull(x);
+}
 #else
 #define stdc_leading_zeros(x)                                                  \
   _Generic((x),                                                                \
@@ -208,6 +221,13 @@ inline unsigned stdc_count_zeros(unsigned long long x) {
       unsigned: stdc_count_zeros_ui,                                           \
       unsigned long: stdc_count_zeros_ul,                                      \
       unsigned long long: stdc_count_zeros_ull)(x)
+#define stdc_count_ones(x)                                                     \
+  _Generic((x),                                                                \
+      unsigned char: stdc_count_ones_uc,                                       \
+      unsigned short: stdc_count_ones_us,                                      \
+      unsigned: stdc_count_ones_ui,                                            \
+      unsigned long: stdc_count_ones_ul,                                       \
+      unsigned long long: stdc_count_ones_ull)(x)
 #endif // __cplusplus
 
 #endif // __LLVM_LIBC_MACROS_STDBIT_MACROS_H
