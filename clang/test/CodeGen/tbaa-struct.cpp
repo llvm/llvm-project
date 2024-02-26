@@ -134,6 +134,23 @@ void copy9(NamedBitfields2 *a1, NamedBitfields2 *a2) {
   *a1 = *a2;
 }
 
+// Test with unnamed bitfield at the start and in between named ones..
+struct NamedBitfields3 {
+  unsigned : 11;
+  signed f0 : 9;
+  char : 2;
+  int f1 : 2;
+  double f2;
+};
+
+void copy10(NamedBitfields3 *a1, NamedBitfields3 *a2) {
+// CHECK-LABEL: _Z6copy10P15NamedBitfields3S0_
+// CHECK:   tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) %a1, ptr noundef nonnull align 8 dereferenceable(16) %a2, i64 16, i1 false),
+// CHECK-OLD-SAME: !tbaa.struct [[TS8:!.*]]
+// CHECK-NEW-SAME: !tbaa [[TAG_NamedBitfields3:!.+]], !tbaa.struct
+  *a1 = *a2;
+}
+
 // CHECK-OLD: [[TS]] = !{i64 0, i64 2, !{{.*}}, i64 4, i64 4, !{{.*}}, i64 8, i64 1, !{{.*}}, i64 12, i64 4, !{{.*}}}
 // CHECK-OLD: [[CHAR:!.*]] = !{!"omnipotent char", !{{.*}}}
 // CHECK-OLD: [[TAG_INT:!.*]] = !{[[INT:!.*]], [[INT]], i64 0}
@@ -149,6 +166,7 @@ void copy9(NamedBitfields2 *a1, NamedBitfields2 *a2) {
 // CHECK-OLD: [[TAG_DOUBLE]] = !{[[DOUBLE:!.+]], [[DOUBLE]], i64 0}
 // CHECK-OLD  [[DOUBLE]] = !{!"double", [[CHAR]], i64 0}
 // CHECK-OLD: [[TS7]] = !{i64 0, i64 1, [[TAG_CHAR]], i64 1, i64 1, [[TAG_CHAR]], i64 2, i64 1, [[TAG_CHAR]], i64 3, i64 4, [[TAG_INT]], i64 3, i64 4, [[TAG_INT]], i64 4, i64 1, [[TAG_CHAR]], i64 8, i64 8, [[TAG_DOUBLE]], i64 16, i64 4, [[TAG_INT]]}
+// CHECK-OLD: [[TS8]] = !{i64 1, i64 4, [[TAG_INT]], i64 2, i64 4, [[TAG_INT]], i64 8, i64 8, [[TAG_DOUBLE]]}
 
 // CHECK-NEW-DAG: [[TYPE_char:!.*]] = !{{{.*}}, i64 1, !"omnipotent char"}
 // CHECK-NEW-DAG: [[TAG_char]] = !{[[TYPE_char]], [[TYPE_char]], i64 0, i64 0}
@@ -168,3 +186,5 @@ void copy9(NamedBitfields2 *a1, NamedBitfields2 *a2) {
 // CHECK-NEW-DAG: [[TYPE_double]] = !{[[TYPE_char]], i64 8, !"double"}
 // CHECK-NEW-DAG: [[TAG_NamedBitfields2]] = !{[[TYPE_NamedBitfields2:!.+]], [[TYPE_NamedBitfields2]], i64 0, i64 24}
 // CHECK-NEW-DAG: [[TYPE_NamedBitfields2]] = !{[[TYPE_char]], i64 24, !"_ZTS15NamedBitfields2", [[TYPE_char]], i64 0, i64 1, [[TYPE_char]], i64 1, i64 1, [[TYPE_char]], i64 2, i64 1, [[TYPE_int]], i64 3, i64 4, [[TYPE_int]], i64 3, i64 4, [[TYPE_char]], i64 4, i64 1, [[TYPE_double]], i64 8, i64 8, [[TYPE_int]], i64 16, i64 4}
+// CHECK-NEW-DAG: [[TAG_NamedBitfields3]] = !{[[TYPE_NamedBitfields3:!.+]], [[TYPE_NamedBitfields3]], i64 0, i64 16}
+// CHECK-NEW-DAG: [[TYPE_NamedBitfields3]] = !{[[TYPE_char]], i64 16, !"_ZTS15NamedBitfields3", [[TYPE_int]], i64 1, i64 4, [[TYPE_int]], i64 2, i64 4, [[TYPE_double]], i64 8, i64 8}
