@@ -1,6 +1,7 @@
 ; RUN: opt -passes=dfa-jump-threading -dfa-cost-threshold=25 -pass-remarks-missed='dfa-jump-threading' -pass-remarks-output=%t -disable-output %s
 ; RUN: FileCheck --input-file %t --check-prefix=REMARK %s
 ; RUN: opt -S -passes=dfa-jump-threading %s | FileCheck %s
+; RUN: opt -S -passes=dfa-jump-threading -dfa-jump-ignore-optsize %s | FileCheck %s --check-prefix=IGNORESIZE
 
 ; This negative test case checks that the optimization doesn't trigger
 ; when the code size cost is too high.
@@ -186,6 +187,53 @@ define i32 @negative5(i32 %num) minsize {
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 0
 ;
+; IGNORESIZE-LABEL: define i32 @negative5(
+; IGNORESIZE-NEXT:  entry:
+; IGNORESIZE-NEXT:    br label [[FOR_BODY:%.*]]
+; IGNORESIZE:       for.body:
+; IGNORESIZE-NEXT:    [[COUNT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; IGNORESIZE-NEXT:    [[STATE:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ poison, [[FOR_INC]] ]
+; IGNORESIZE-NEXT:    switch i32 [[STATE]], label [[FOR_INC_JT1:%.*]] [
+; IGNORESIZE-NEXT:    i32 1, label [[CASE1:%.*]]
+; IGNORESIZE-NEXT:    i32 2, label [[CASE2:%.*]]
+; IGNORESIZE-NEXT:    ]
+; IGNORESIZE:       for.body.jt2:
+; IGNORESIZE-NEXT:    [[COUNT_JT2:%.*]] = phi i32 [ [[INC_JT2:%.*]], [[FOR_INC_JT2:%.*]] ]
+; IGNORESIZE-NEXT:    [[STATE_JT2:%.*]] = phi i32 [ [[STATE_NEXT_JT2:%.*]], [[FOR_INC_JT2]] ]
+; IGNORESIZE-NEXT:    br label [[CASE2]]
+; IGNORESIZE:       for.body.jt1:
+; IGNORESIZE-NEXT:    [[COUNT_JT1:%.*]] = phi i32 [ [[INC_JT1:%.*]], [[FOR_INC_JT1]] ]
+; IGNORESIZE-NEXT:    [[STATE_JT1:%.*]] = phi i32 [ [[STATE_NEXT_JT1:%.*]], [[FOR_INC_JT1]] ]
+; IGNORESIZE-NEXT:    br label [[CASE1]]
+; IGNORESIZE:       case1:
+; IGNORESIZE-NEXT:    [[COUNT2:%.*]] = phi i32 [ [[COUNT_JT1]], [[FOR_BODY_JT1:%.*]] ], [ [[COUNT]], [[FOR_BODY]] ]
+; IGNORESIZE-NEXT:    br label [[FOR_INC_JT2]]
+; IGNORESIZE:       case2:
+; IGNORESIZE-NEXT:    [[COUNT1:%.*]] = phi i32 [ [[COUNT_JT2]], [[FOR_BODY_JT2:%.*]] ], [ [[COUNT]], [[FOR_BODY]] ]
+; IGNORESIZE-NEXT:    [[CMP:%.*]] = icmp eq i32 [[COUNT1]], 50
+; IGNORESIZE-NEXT:    br i1 [[CMP]], label [[FOR_INC_JT1]], label [[SI_UNFOLD_FALSE:%.*]]
+; IGNORESIZE:       si.unfold.false:
+; IGNORESIZE-NEXT:    br label [[FOR_INC_JT2]]
+; IGNORESIZE:       for.inc:
+; IGNORESIZE-NEXT:    [[INC]] = add nsw i32 undef, 1
+; IGNORESIZE-NEXT:    [[CMP_EXIT:%.*]] = icmp slt i32 [[INC]], [[NUM]]
+; IGNORESIZE-NEXT:    br i1 [[CMP_EXIT]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; IGNORESIZE:       for.inc.jt2:
+; IGNORESIZE-NEXT:    [[COUNT4:%.*]] = phi i32 [ [[COUNT1]], [[SI_UNFOLD_FALSE]] ], [ [[COUNT2]], [[CASE1]] ]
+; IGNORESIZE-NEXT:    [[STATE_NEXT_JT2]] = phi i32 [ 2, [[CASE1]] ], [ 2, [[SI_UNFOLD_FALSE]] ]
+; IGNORESIZE-NEXT:    [[INC_JT2]] = add nsw i32 [[COUNT4]], 1
+; IGNORESIZE-NEXT:    [[CMP_EXIT_JT2:%.*]] = icmp slt i32 [[INC_JT2]], [[NUM]]
+; IGNORESIZE-NEXT:    br i1 [[CMP_EXIT_JT2]], label [[FOR_BODY_JT2]], label [[FOR_END]]
+; IGNORESIZE:       for.inc.jt1:
+; IGNORESIZE-NEXT:    [[COUNT3:%.*]] = phi i32 [ [[COUNT1]], [[CASE2]] ], [ [[COUNT]], [[FOR_BODY]] ]
+; IGNORESIZE-NEXT:    [[STATE_NEXT_JT1]] = phi i32 [ 1, [[CASE2]] ], [ 1, [[FOR_BODY]] ]
+; IGNORESIZE-NEXT:    [[INC_JT1]] = add nsw i32 [[COUNT3]], 1
+; IGNORESIZE-NEXT:    [[CMP_EXIT_JT1:%.*]] = icmp slt i32 [[INC_JT1]], [[NUM]]
+; IGNORESIZE-NEXT:    br i1 [[CMP_EXIT_JT1]], label [[FOR_BODY_JT1]], label [[FOR_END]]
+; IGNORESIZE:       for.end:
+; IGNORESIZE-NEXT:    ret i32 0
+;
+
 entry:
   br label %for.body
 

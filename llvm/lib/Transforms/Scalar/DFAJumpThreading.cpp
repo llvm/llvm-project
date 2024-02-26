@@ -110,6 +110,12 @@ static cl::opt<unsigned>
                   cl::desc("Maximum cost accepted for the transformation"),
                   cl::Hidden, cl::init(50));
 
+static cl::opt<bool>
+    IgnoreOptSize("dfa-jump-ignore-optsize",
+                    cl::desc("Enable dfa jump threading, even when optimizing for size"),
+                    cl::Hidden, cl::init(false));
+
+
 namespace {
 
 class SelectInstToUnfold {
@@ -1244,7 +1250,7 @@ private:
 bool DFAJumpThreading::run(Function &F) {
   LLVM_DEBUG(dbgs() << "\nDFA Jump threading: " << F.getName() << "\n");
 
-  if (F.hasOptSize()) {
+  if (!IgnoreOptSize && F.hasOptSize()) {
     LLVM_DEBUG(dbgs() << "Skipping due to the 'minsize' attribute\n");
     return false;
   }
