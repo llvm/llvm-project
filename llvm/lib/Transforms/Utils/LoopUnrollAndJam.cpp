@@ -473,9 +473,9 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   };
   // Move all the phis from Src into Dest
   auto movePHIs = [](BasicBlock *Src, BasicBlock *Dest) {
-    Instruction *insertPoint = Dest->getFirstNonPHI();
+    BasicBlock::iterator insertPoint = Dest->getFirstNonPHIIt();
     while (PHINode *Phi = dyn_cast<PHINode>(Src->begin()))
-      Phi->moveBefore(insertPoint);
+      Phi->moveBefore(*Dest, insertPoint);
   };
 
   // Update the PHI values outside the loop to point to the last block
