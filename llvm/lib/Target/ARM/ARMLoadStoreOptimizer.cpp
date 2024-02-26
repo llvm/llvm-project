@@ -2124,7 +2124,7 @@ bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   // the instruction(s) we changed, because there may be other BX returns which
   // still need LR to be restored.
   if (ModifiedLDMReturn)
-    Fn.getSubtarget<ARMSubtarget>().getFrameLowering()->updateLRRestored(Fn);
+    ARMFrameLowering::updateLRRestored(Fn);
 
   Allocator.DestroyAll();
   return Modified;

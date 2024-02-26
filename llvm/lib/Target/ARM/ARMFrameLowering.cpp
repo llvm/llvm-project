@@ -2781,7 +2781,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   AFI->setLRIsSpilled(SavedRegs.test(ARM::LR));
 }
 
-void ARMFrameLowering::updateLRRestored(MachineFunction &MF) const {
+void ARMFrameLowering::updateLRRestored(MachineFunction &MF) {
   MachineFrameInfo &MFI = MF.getFrameInfo();
   if (!MFI.isCalleeSavedInfoValid())
     return;

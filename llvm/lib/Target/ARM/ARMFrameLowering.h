@@ -61,7 +61,7 @@ public:
 
   /// Update the IsRestored flag on LR if it is spilled, based on the return
   /// instructions.
-  void updateLRRestored(MachineFunction &MF) const;
+  static void updateLRRestored(MachineFunction &MF);
 
   void processFunctionBeforeFrameFinalized(
       MachineFunction &MF, RegScavenger *RS = nullptr) const override;
