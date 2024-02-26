@@ -294,7 +294,8 @@ COMPILER_RT_VISIBILITY extern int INSTR_PROF_PROFILE_RUNTIME_VAR;
  * variable is defined as weak so that compiler can emit an overriding
  * definition depending on user option.
  */
-extern uint64_t INSTR_PROF_RAW_VERSION_VAR; /* __llvm_profile_raw_version */
+COMPILER_RT_VISIBILITY extern uint64_t
+    INSTR_PROF_RAW_VERSION_VAR; /* __llvm_profile_raw_version */
 
 /*!
  * This variable is a weak symbol defined in InstrProfiling.c. It allows
