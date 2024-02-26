@@ -179,8 +179,8 @@ void DIEBuilder::constructFromUnit(DWARFUnit &DU) {
 }
 
 DIEBuilder::DIEBuilder(BinaryContext &BC, DWARFContext *DwarfContext,
-                       bool IsDWO)
-    : BC(BC), DwarfContext(DwarfContext), IsDWO(IsDWO) {}
+                       DWARFUnit *SkeletonCU)
+    : BC(BC), DwarfContext(DwarfContext), SkeletonCU(SkeletonCU) {}
 
 static unsigned int getCUNum(DWARFContext *DwarfContext, bool IsDWO) {
   unsigned int CUNum = IsDWO ? DwarfContext->getNumDWOCompileUnits()
@@ -204,11 +204,11 @@ void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
                                        true);
     }
   }
-  const unsigned int CUNum = getCUNum(DwarfContext, IsDWO);
+  const unsigned int CUNum = getCUNum(DwarfContext, isDWO());
   getState().CloneUnitCtxMap.resize(CUNum);
   DWARFContext::unit_iterator_range CU4TURanges =
-      IsDWO ? DwarfContext->dwo_types_section_units()
-            : DwarfContext->types_section_units();
+      isDWO() ? DwarfContext->dwo_types_section_units()
+              : DwarfContext->types_section_units();
 
   getState().Type = ProcessingType::DWARF4TUs;
   for (std::unique_ptr<DWARFUnit> &DU : CU4TURanges)
@@ -218,8 +218,8 @@ void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
     constructFromUnit(*DU.get());
 
   DWARFContext::unit_iterator_range CURanges =
-      IsDWO ? DwarfContext->dwo_info_section_units()
-            : DwarfContext->info_section_units();
+      isDWO() ? DwarfContext->dwo_info_section_units()
+              : DwarfContext->info_section_units();
 
   // This handles DWARF4 CUs and DWARF5 CU/TUs.
   // Creating a vector so that for reference handling only DWARF5 CU/TUs are
@@ -242,11 +242,11 @@ void DIEBuilder::buildCompileUnits(const bool Init) {
   if (Init)
     BuilderState.reset(new State());
 
-  unsigned int CUNum = getCUNum(DwarfContext, IsDWO);
+  unsigned int CUNum = getCUNum(DwarfContext, isDWO());
   getState().CloneUnitCtxMap.resize(CUNum);
   DWARFContext::unit_iterator_range CURanges =
-      IsDWO ? DwarfContext->dwo_info_section_units()
-            : DwarfContext->info_section_units();
+      isDWO() ? DwarfContext->dwo_info_section_units()
+              : DwarfContext->info_section_units();
 
   // This handles DWARF4 CUs and DWARF5 CU/TUs.
   // Creating a vector so that for reference handling only DWARF5 CU/TUs are

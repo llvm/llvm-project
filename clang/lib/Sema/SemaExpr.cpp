@@ -2653,7 +2653,7 @@ recoverFromMSUnqualifiedLookup(Sema &S, ASTContext &Context,
     RD = ThisType->getPointeeType()->getAsCXXRecordDecl();
   else if (auto *MD = dyn_cast<CXXMethodDecl>(S.CurContext))
     RD = MD->getParent();
-  if (!RD || !RD->hasAnyDependentBases())
+  if (!RD || !RD->hasDefinition() || !RD->hasAnyDependentBases())
     return nullptr;
 
   // Diagnose this as unqualified lookup into a dependent base class.  If 'this'
@@ -6197,6 +6197,12 @@ struct ImmediateCallVisitor : public RecursiveASTVisitor<ImmediateCallVisitor> {
 
   bool VisitCallExpr(CallExpr *E) {
     if (const FunctionDecl *FD = E->getDirectCallee())
+      HasImmediateCalls |= FD->isImmediateFunction();
+    return RecursiveASTVisitor<ImmediateCallVisitor>::VisitStmt(E);
+  }
+
+  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    if (const FunctionDecl *FD = E->getConstructor())
       HasImmediateCalls |= FD->isImmediateFunction();
     return RecursiveASTVisitor<ImmediateCallVisitor>::VisitStmt(E);
   }
@@ -18305,7 +18311,6 @@ void Sema::CheckUnusedVolatileAssignment(Expr *E) {
 }
 
 void Sema::MarkExpressionAsImmediateEscalating(Expr *E) {
-  assert(!FunctionScopes.empty() && "Expected a function scope");
   assert(getLangOpts().CPlusPlus20 &&
          ExprEvalContexts.back().InImmediateEscalatingFunctionContext &&
          "Cannot mark an immediate escalating expression outside of an "
@@ -18322,7 +18327,8 @@ void Sema::MarkExpressionAsImmediateEscalating(Expr *E) {
   } else {
     assert(false && "expected an immediately escalating expression");
   }
-  getCurFunction()->FoundImmediateEscalatingExpression = true;
+  if (FunctionScopeInfo *FI = getCurFunction())
+    FI->FoundImmediateEscalatingExpression = true;
 }
 
 ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {

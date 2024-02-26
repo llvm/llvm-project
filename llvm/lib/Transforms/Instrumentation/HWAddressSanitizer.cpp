@@ -348,7 +348,7 @@ private:
   void instrumentGlobals();
 
   Value *getPC(IRBuilder<> &IRB);
-  Value *getSP(IRBuilder<> &IRB);
+  Value *getFP(IRBuilder<> &IRB);
   Value *getFrameRecordInfo(IRBuilder<> &IRB);
 
   void instrumentPersonalityFunctions();
@@ -1148,7 +1148,7 @@ Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
   // Extract some entropy from the stack pointer for the tags.
   // Take bits 20..28 (ASLR entropy) and xor with bits 0..8 (these differ
   // between functions).
-  Value *StackPointerLong = getSP(IRB);
+  Value *StackPointerLong = getFP(IRB);
   Value *StackTag =
       applyTagMask(IRB, IRB.CreateXor(StackPointerLong,
                                       IRB.CreateLShr(StackPointerLong, 20)));
@@ -1165,7 +1165,7 @@ Value *HWAddressSanitizer::getAllocaTag(IRBuilder<> &IRB, Value *StackTag,
 }
 
 Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB) {
-  Value *StackPointerLong = getSP(IRB);
+  Value *StackPointerLong = getFP(IRB);
   Value *UARTag =
       applyTagMask(IRB, IRB.CreateLShr(StackPointerLong, PointerTagShift));
 
@@ -1232,7 +1232,7 @@ Value *HWAddressSanitizer::getPC(IRBuilder<> &IRB) {
   return IRB.CreatePtrToInt(IRB.GetInsertBlock()->getParent(), IntptrTy);
 }
 
-Value *HWAddressSanitizer::getSP(IRBuilder<> &IRB) {
+Value *HWAddressSanitizer::getFP(IRBuilder<> &IRB) {
   if (!CachedSP) {
     // FIXME: use addressofreturnaddress (but implement it in aarch64 backend
     // first).
@@ -1251,7 +1251,7 @@ Value *HWAddressSanitizer::getSP(IRBuilder<> &IRB) {
 Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
   // Prepare ring buffer data.
   Value *PC = getPC(IRB);
-  Value *SP = getSP(IRB);
+  Value *SP = getFP(IRB);
 
   // Mix SP and PC.
   // Assumptions:

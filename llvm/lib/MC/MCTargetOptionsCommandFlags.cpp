@@ -36,6 +36,7 @@ using namespace llvm;
 
 MCOPT_EXP(bool, RelaxAll)
 MCOPT(bool, IncrementalLinkerCompatible)
+MCOPT(bool, FDPIC)
 MCOPT(int, DwarfVersion)
 MCOPT(bool, Dwarf64)
 MCOPT(EmitDwarfUnwindType, EmitDwarfUnwind)
@@ -65,6 +66,9 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
           "When used with filetype=obj, "
           "emit an object file which can be used with an incremental linker"));
   MCBINDOPT(IncrementalLinkerCompatible);
+
+  static cl::opt<bool> FDPIC("fdpic", cl::desc("Use the FDPIC ABI"));
+  MCBINDOPT(FDPIC);
 
   static cl::opt<int> DwarfVersion("dwarf-version", cl::desc("Dwarf version"),
                                    cl::init(0));
@@ -135,6 +139,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   MCTargetOptions Options;
   Options.MCRelaxAll = getRelaxAll();
   Options.MCIncrementalLinkerCompatible = getIncrementalLinkerCompatible();
+  Options.FDPIC = getFDPIC();
   Options.Dwarf64 = getDwarf64();
   Options.DwarfVersion = getDwarfVersion();
   Options.ShowMCInst = getShowMCInst();

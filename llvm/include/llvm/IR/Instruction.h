@@ -35,12 +35,13 @@ class MDNode;
 class Module;
 struct AAMDNodes;
 class DPMarker;
+class DbgRecord;
 
 template <> struct ilist_alloc_traits<Instruction> {
   static inline void deleteNode(Instruction *V);
 };
 
-iterator_range<simple_ilist<DPValue>::iterator> getDbgValueRange(DPMarker *);
+iterator_range<simple_ilist<DbgRecord>::iterator> getDbgValueRange(DPMarker *);
 
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock,
@@ -72,20 +73,20 @@ public:
   /// \p InsertAtHead Whether the cloned DPValues should be placed at the end
   ///    or the beginning of existing DPValues attached to this.
   /// \returns A range over the newly cloned DPValues.
-  iterator_range<simple_ilist<DPValue>::iterator> cloneDebugInfoFrom(
+  iterator_range<simple_ilist<DbgRecord>::iterator> cloneDebugInfoFrom(
       const Instruction *From,
-      std::optional<simple_ilist<DPValue>::iterator> FromHere = std::nullopt,
+      std::optional<simple_ilist<DbgRecord>::iterator> FromHere = std::nullopt,
       bool InsertAtHead = false);
 
   /// Return a range over the DPValues attached to this instruction.
-  iterator_range<simple_ilist<DPValue>::iterator> getDbgValueRange() const {
+  iterator_range<simple_ilist<DbgRecord>::iterator> getDbgValueRange() const {
     return llvm::getDbgValueRange(DbgMarker);
   }
 
   /// Return an iterator to the position of the "Next" DPValue after this
   /// instruction, or std::nullopt. This is the position to pass to
   /// BasicBlock::reinsertInstInDPValues when re-inserting an instruction.
-  std::optional<simple_ilist<DPValue>::iterator> getDbgReinsertionPosition();
+  std::optional<simple_ilist<DbgRecord>::iterator> getDbgReinsertionPosition();
 
   /// Returns true if any DPValues are attached to this instruction.
   bool hasDbgValues() const;
@@ -100,7 +101,7 @@ public:
   void dropDbgValues();
 
   /// Erase a single DPValue \p I that is attached to this instruction.
-  void dropOneDbgValue(DPValue *I);
+  void dropOneDbgValue(DbgRecord *I);
 
   /// Handle the debug-info implications of this instruction being removed. Any
   /// attached DPValues need to "fall" down onto the next instruction.
@@ -1006,6 +1007,8 @@ protected:
     setValueSubclassData(Storage);
   }
 
+  Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
+              InstListType::iterator InsertBefore);
   Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
               Instruction *InsertBefore = nullptr);
   Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,

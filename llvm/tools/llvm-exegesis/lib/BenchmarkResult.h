@@ -17,6 +17,7 @@
 
 #include "LlvmState.h"
 #include "RegisterValue.h"
+#include "ValidationEvent.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -31,16 +32,6 @@ namespace llvm {
 class Error;
 
 namespace exegesis {
-
-enum ValidationEvent {
-  InstructionRetired,
-  L1DCacheLoadMiss,
-  L1DCacheStoreMiss,
-  L1ICacheLoadMiss,
-  DataTLBLoadMiss,
-  DataTLBStoreMiss,
-  InstructionTLBLoadMiss
-};
 
 enum class BenchmarkPhaseSelectorE {
   PrepareSnippet,

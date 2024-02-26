@@ -2120,10 +2120,11 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
 // not a valid type, emit an error message and return true. Otherwise return
 // false.
 static bool checkMathBuiltinElementType(Sema &S, SourceLocation Loc,
-                                        QualType Ty) {
-  if (!Ty->getAs<VectorType>() && !ConstantMatrixType::isValidElementType(Ty)) {
+                                        QualType ArgTy, int ArgIndex) {
+  if (!ArgTy->getAs<VectorType>() &&
+      !ConstantMatrixType::isValidElementType(ArgTy)) {
     return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << 1 << /* vector, integer or float ty*/ 0 << Ty;
+           << ArgIndex << /* vector, integer or float ty*/ 0 << ArgTy;
   }
 
   return false;
@@ -2165,7 +2166,10 @@ static bool SemaBuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
     return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
            << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
   if (!IsCPUSupports && !TheTI->supportsCpuIs())
-    return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
+    return S.Diag(TheCall->getBeginLoc(),
+                  TI.getTriple().isOSAIX()
+                      ? diag::err_builtin_aix_os_unsupported
+                      : diag::err_builtin_target_unsupported)
            << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
 
   Expr *Arg = TheCall->getArg(0)->IgnoreParenImpCasts();
@@ -2957,6 +2961,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
   }
   }
+
+  if (getLangOpts().HLSL && CheckHLSLBuiltinFunctionCall(BuiltinID, TheCall))
+    return ExprError();
 
   // Since the target specific builtins for each arch overlap, only check those
   // of the arch we are compiling for.
@@ -5154,6 +5161,70 @@ bool Sema::CheckPPCMMAType(QualType Type, SourceLocation TypeLoc) {
      ) {
     Diag(TypeLoc, diag::err_ppc_invalid_use_mma_type);
     return true;
+  }
+  return false;
+}
+
+// Helper function for CheckHLSLBuiltinFunctionCall
+bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
+  assert(TheCall->getNumArgs() > 1);
+  ExprResult A = TheCall->getArg(0);
+  ExprResult B = TheCall->getArg(1);
+  QualType ArgTyA = A.get()->getType();
+  QualType ArgTyB = B.get()->getType();
+  auto *VecTyA = ArgTyA->getAs<VectorType>();
+  auto *VecTyB = ArgTyB->getAs<VectorType>();
+  SourceLocation BuiltinLoc = TheCall->getBeginLoc();
+  if (VecTyA == nullptr && VecTyB == nullptr)
+    return false;
+
+  if (VecTyA && VecTyB) {
+    bool retValue = false;
+    if (VecTyA->getElementType() != VecTyB->getElementType()) {
+      // Note: type promotion is intended to be handeled via the intrinsics
+      //  and not the builtin itself.
+      S->Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_incompatible_vector)
+          << TheCall->getDirectCallee()
+          << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
+      retValue = true;
+    }
+    if (VecTyA->getNumElements() != VecTyB->getNumElements()) {
+      // if we get here a HLSLVectorTruncation is needed.
+      S->Diag(BuiltinLoc, diag::err_vec_builtin_incompatible_vector)
+          << TheCall->getDirectCallee()
+          << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                         TheCall->getArg(1)->getEndLoc());
+      retValue = true;
+    }
+
+    if (retValue)
+      TheCall->setType(VecTyA->getElementType());
+
+    return retValue;
+  }
+
+  // Note: if we get here one of the args is a scalar which
+  // requires a VectorSplat on Arg0 or Arg1
+  S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
+      << TheCall->getDirectCallee()
+      << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                     TheCall->getArg(1)->getEndLoc());
+  return true;
+}
+
+// Note: returning true in this case results in CheckBuiltinFunctionCall
+// returning an ExprError
+bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_dot: {
+    if (checkArgCount(*this, TheCall, 2))
+      return true;
+    if (CheckVectorElementCallArgs(this, TheCall))
+      return true;
+    if (SemaBuiltinVectorToScalarMath(TheCall))
+      return true;
+    break;
+  }
   }
   return false;
 }
@@ -19033,6 +19104,9 @@ static bool isLayoutCompatible(ASTContext &C, FieldDecl *Field1,
       return false;
   }
 
+  if (Field1->hasAttr<clang::NoUniqueAddressAttr>() ||
+      Field2->hasAttr<clang::NoUniqueAddressAttr>())
+    return false;
   return true;
 }
 
@@ -19124,14 +19198,15 @@ static bool isLayoutCompatible(ASTContext &C, QualType T1, QualType T2) {
   if (T1.isNull() || T2.isNull())
     return false;
 
-  // C++11 [basic.types] p11:
-  // If two types T1 and T2 are the same type, then T1 and T2 are
-  // layout-compatible types.
-  if (C.hasSameType(T1, T2))
-    return true;
-
+  // C++20 [basic.types] p11:
+  // Two types cv1 T1 and cv2 T2 are layout-compatible types
+  // if T1 and T2 are the same type, layout-compatible enumerations (9.7.1),
+  // or layout-compatible standard-layout class types (11.4).
   T1 = T1.getCanonicalType().getUnqualifiedType();
   T2 = T2.getCanonicalType().getUnqualifiedType();
+
+  if (C.hasSameType(T1, T2))
+    return true;
 
   const Type::TypeClass TC1 = T1->getTypeClass();
   const Type::TypeClass TC2 = T2->getTypeClass();
@@ -19153,6 +19228,10 @@ static bool isLayoutCompatible(ASTContext &C, QualType T1, QualType T2) {
   }
 
   return false;
+}
+
+bool Sema::IsLayoutCompatible(QualType T1, QualType T2) const {
+  return isLayoutCompatible(getASTContext(), T1, T2);
 }
 
 //===--- CHECK: pointer_with_type_tag attribute: datatypes should match ----//
@@ -19583,7 +19662,7 @@ bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
   TheCall->setArg(0, A.get());
   QualType TyA = A.get()->getType();
 
-  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA))
+  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
     return true;
 
   TheCall->setType(TyA);
@@ -19591,6 +19670,27 @@ bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
 }
 
 bool Sema::SemaBuiltinElementwiseMath(CallExpr *TheCall) {
+  QualType Res;
+  if (SemaBuiltinVectorMath(TheCall, Res))
+    return true;
+  TheCall->setType(Res);
+  return false;
+}
+
+bool Sema::SemaBuiltinVectorToScalarMath(CallExpr *TheCall) {
+  QualType Res;
+  if (SemaBuiltinVectorMath(TheCall, Res))
+    return true;
+
+  if (auto *VecTy0 = Res->getAs<VectorType>())
+    TheCall->setType(VecTy0->getElementType());
+  else
+    TheCall->setType(Res);
+
+  return false;
+}
+
+bool Sema::SemaBuiltinVectorMath(CallExpr *TheCall, QualType &Res) {
   if (checkArgCount(*this, TheCall, 2))
     return true;
 
@@ -19598,8 +19698,7 @@ bool Sema::SemaBuiltinElementwiseMath(CallExpr *TheCall) {
   ExprResult B = TheCall->getArg(1);
   // Do standard promotions between the two arguments, returning their common
   // type.
-  QualType Res =
-      UsualArithmeticConversions(A, B, TheCall->getExprLoc(), ACK_Comparison);
+  Res = UsualArithmeticConversions(A, B, TheCall->getExprLoc(), ACK_Comparison);
   if (A.isInvalid() || B.isInvalid())
     return true;
 
@@ -19611,12 +19710,11 @@ bool Sema::SemaBuiltinElementwiseMath(CallExpr *TheCall) {
                 diag::err_typecheck_call_different_arg_types)
            << TyA << TyB;
 
-  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA))
+  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
     return true;
 
   TheCall->setArg(0, A.get());
   TheCall->setArg(1, B.get());
-  TheCall->setType(Res);
   return false;
 }
 
