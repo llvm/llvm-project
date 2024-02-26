@@ -45,6 +45,24 @@ __global__ void max_num_work_groups_32_4_2() {
 // CHECK: define{{.*}} amdgpu_kernel void @_Z26max_num_work_groups_32_4_2v() [[MAX_NUM_WORK_GROUPS_32_4_2:#[0-9]+]]
 }
 
+template<unsigned a>
+__attribute__((amdgpu_max_num_work_groups(a, 4, 2)))
+__global__ void template_a_4_2_max_num_work_groups() {}
+template __global__ void template_a_4_2_max_num_work_groups<32>();
+// CHECK: define{{.*}} amdgpu_kernel void @_Z34template_a_4_2_max_num_work_groupsILj32EEvv() [[MAX_NUM_WORK_GROUPS_32_4_2:#[0-9]+]]
+
+template<unsigned a>
+__attribute__((amdgpu_max_num_work_groups(32, a, 2)))
+__global__ void template_32_a_2_max_num_work_groups() {}
+template __global__ void template_32_a_2_max_num_work_groups<4>();
+// CHECK: define{{.*}} amdgpu_kernel void @_Z35template_32_a_2_max_num_work_groupsILj4EEvv() [[MAX_NUM_WORK_GROUPS_32_4_2:#[0-9]+]]
+
+template<unsigned a>
+__attribute__((amdgpu_max_num_work_groups(32, 4, a)))
+__global__ void template_32_4_a_max_num_work_groups() {}
+template __global__ void template_32_4_a_max_num_work_groups<2>();
+// CHECK: define{{.*}} amdgpu_kernel void @_Z35template_32_4_a_max_num_work_groupsILj2EEvv() [[MAX_NUM_WORK_GROUPS_32_4_2:#[0-9]+]]
+
 // Make sure this is silently accepted on other targets.
 // NAMD-NOT: "amdgpu-flat-work-group-size"
 // NAMD-NOT: "amdgpu-waves-per-eu"

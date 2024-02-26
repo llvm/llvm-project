@@ -614,13 +614,13 @@ static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
   ExprResult ResultX = S.SubstExpr(Attr.getMaxNumWorkGroupsX(), TemplateArgs);
-  if (ResultX.isInvalid())
+  if (!ResultX.isUsable())
     return;
   ExprResult ResultY = S.SubstExpr(Attr.getMaxNumWorkGroupsY(), TemplateArgs);
-  if (ResultY.isInvalid())
+  if (!ResultY.isUsable())
     return;
   ExprResult ResultZ = S.SubstExpr(Attr.getMaxNumWorkGroupsZ(), TemplateArgs);
-  if (ResultZ.isInvalid())
+  if (!ResultZ.isUsable())
     return;
 
   Expr *XExpr = ResultX.getAs<Expr>();

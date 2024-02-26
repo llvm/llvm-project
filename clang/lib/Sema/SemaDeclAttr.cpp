@@ -8078,7 +8078,6 @@ static void handleAMDGPUNumVGPRAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) AMDGPUNumVGPRAttr(S.Context, AL, NumVGPR));
 }
 
-// Returns true if error
 static bool
 checkAMDGPUMaxNumWorkGroupsArguments(Sema &S, Expr *XExpr, Expr *YExpr,
                                      Expr *ZExpr,
@@ -8131,10 +8130,6 @@ void Sema::addAMDGPUMaxNumWorkGroupsAttr(Decl *D, const AttributeCommonInfo &CI,
 
 static void handleAMDGPUMaxNumWorkGroupsAttr(Sema &S, Decl *D,
                                              const ParsedAttr &AL) {
-  if (AL.getNumArgs() != 3) {
-    S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 3;
-    return;
-  }
   S.addAMDGPUMaxNumWorkGroupsAttr(D, AL, AL.getArgAsExpr(0), AL.getArgAsExpr(1),
                                   AL.getArgAsExpr(2));
 }
