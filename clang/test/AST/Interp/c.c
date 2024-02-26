@@ -21,6 +21,9 @@ _Static_assert(!!1.0, ""); // pedantic-ref-warning {{not an integer constant exp
                            // pedantic-expected-warning {{not an integer constant expression}}
 _Static_assert(!!1, "");
 
+_Static_assert(!(_Bool){(void*)0}, ""); // pedantic-ref-warning {{not an integer constant expression}} \
+                                        // pedantic-expected-warning {{not an integer constant expression}}
+
 int a = (1 == 1 ? 5 : 3);
 _Static_assert(a == 5, ""); // all-error {{not an integral constant expression}}
 
