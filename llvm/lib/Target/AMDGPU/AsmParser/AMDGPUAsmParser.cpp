@@ -8287,29 +8287,6 @@ void AMDGPUAsmParser::onBeginOfFile() {
 bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   using AGVK = AMDGPUVariadicMCExpr::AMDGPUVariadicKind;
 
-  auto ParseVariadicExpr = [&](AGVK Kind, const MCExpr *&Result,
-                               SMLoc &EndLoc) {
-    SmallVector<const MCExpr *, 4> Exprs;
-    while (true) {
-      if (trySkipToken(AsmToken::RParen)) {
-        if (Exprs.empty()) {
-          Error(getToken().getLoc(), "empty max/or expression");
-          return true;
-        }
-        Result = AMDGPUVariadicMCExpr::create(Kind, Exprs, getContext());
-        return false;
-      }
-      const MCExpr *Expr;
-      if (getParser().parseExpression(Expr, EndLoc))
-        return true;
-      Exprs.push_back(Expr);
-      if (!trySkipToken(AsmToken::Comma) && !isToken(AsmToken::RParen)) {
-        Error(getToken().getLoc(), "unexpected token in max/or expression");
-        return true;
-      }
-    }
-  };
-
   if (isToken(AsmToken::Identifier)) {
     StringRef TokenId = getTokenStr();
     AGVK VK = StringSwitch<AGVK>(TokenId)
@@ -8318,9 +8295,29 @@ bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
                   .Default(AGVK::AGVK_None);
 
     if (VK != AGVK::AGVK_None && peekToken().is(AsmToken::LParen)) {
+      SmallVector<const MCExpr *, 4> Exprs;
       lex(); // Eat 'max'/'or'
       lex(); // Eat '('
-      return ParseVariadicExpr(VK, Res, EndLoc);
+      while (true) {
+        if (trySkipToken(AsmToken::RParen)) {
+          if (Exprs.empty()) {
+            Error(getToken().getLoc(),
+                  "empty " + Twine(TokenId) + " expression");
+            return true;
+          }
+          Res = AMDGPUVariadicMCExpr::create(VK, Exprs, getContext());
+          return false;
+        }
+        const MCExpr *Expr;
+        if (getParser().parseExpression(Expr, EndLoc))
+          return true;
+        Exprs.push_back(Expr);
+        if (!trySkipToken(AsmToken::Comma) && !isToken(AsmToken::RParen)) {
+          Error(getToken().getLoc(),
+                "unexpected token in " + Twine(TokenId) + " expression");
+          return true;
+        }
+      }
     }
   }
   return getParser().parsePrimaryExpr(Res, EndLoc, nullptr);

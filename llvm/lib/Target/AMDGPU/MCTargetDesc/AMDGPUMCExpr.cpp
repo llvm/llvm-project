@@ -13,6 +13,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -22,7 +23,7 @@ AMDGPUVariadicMCExpr::create(AMDGPUVariadicKind Kind,
   return new (Ctx) AMDGPUVariadicMCExpr(Kind, Args);
 }
 
-const MCExpr *AMDGPUVariadicMCExpr::getSubExpr(size_t index) const {
+const MCExpr *AMDGPUVariadicMCExpr::GetSubExpr(size_t index) const {
   assert(index < Args.size() &&
          "Indexing out of bounds AMDGPUVariadicMCExpr sub-expr");
   return Args[index];
@@ -50,7 +51,7 @@ void AMDGPUVariadicMCExpr::printImpl(raw_ostream &OS,
 
 bool AMDGPUVariadicMCExpr::evaluateAsRelocatableImpl(
     MCValue &Res, const MCAsmLayout *Layout, const MCFixup *Fixup) const {
-  int64_t Total = INT64_MIN;
+  std::optional<int64_t> Total = {};
 
   auto Op = [this](int64_t Arg1, int64_t Arg2) -> int64_t {
     switch (Kind) {
@@ -69,12 +70,12 @@ bool AMDGPUVariadicMCExpr::evaluateAsRelocatableImpl(
         !ArgRes.isAbsolute())
       return false;
 
-    if (Total == INT64_MIN)
+    if (!Total.has_value())
       Total = ArgRes.getConstant();
-    Total = Op(Total, ArgRes.getConstant());
+    Total = Op(*Total, ArgRes.getConstant());
   }
 
-  Res = MCValue::get(Total);
+  Res = MCValue::get(*Total);
   return true;
 }
 

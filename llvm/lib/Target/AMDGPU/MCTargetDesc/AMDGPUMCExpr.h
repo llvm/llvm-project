@@ -22,6 +22,9 @@ namespace llvm {
 ///   - (logic) or
 ///   - max
 ///
+/// \note If the 'or'/'max' operations are provided only a single argument, the
+/// operation will act as a no-op and simply resolve as the provided argument.
+///
 class AMDGPUVariadicMCExpr : public MCTargetExpr {
 public:
   enum AMDGPUVariadicKind { AGVK_None, AGVK_Or, AGVK_Max };
@@ -51,17 +54,18 @@ public:
   }
 
   AMDGPUVariadicKind getKind() const { return Kind; }
-  const MCExpr *getSubExpr(size_t index) const;
+  const MCExpr *GetSubExpr(size_t index) const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
                                  const MCFixup *Fixup) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;
+  void fixELFSymbolsInTLSFixups(MCAssembler &) const override{};
+
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
-  void fixELFSymbolsInTLSFixups(MCAssembler &) const override{};
 };
 
 } // end namespace llvm

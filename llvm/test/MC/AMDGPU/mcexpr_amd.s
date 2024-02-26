@@ -7,6 +7,8 @@
 // OBJDUMP-NEXT: 0000000000000001 l       *ABS*  0000000000000000 one
 // OBJDUMP-NEXT: 0000000000000002 l       *ABS*  0000000000000000 two
 // OBJDUMP-NEXT: 0000000000000003 l       *ABS*  0000000000000000 three
+// OBJDUMP-NEXT: 7fffffffffffffff l       *ABS*  0000000000000000 i64_max
+// OBJDUMP-NEXT: 8000000000000000 l       *ABS*  0000000000000000 i64_min
 // OBJDUMP-NEXT: 0000000000000005 l       *ABS*  0000000000000000 max_expression_all
 // OBJDUMP-NEXT: 0000000000000005 l       *ABS*  0000000000000000 five
 // OBJDUMP-NEXT: 0000000000000004 l       *ABS*  0000000000000000 four
@@ -21,6 +23,12 @@
 // OBJDUMP-NEXT: 0000000000000003 l       *ABS*  0000000000000000 max_with_subexpr
 // OBJDUMP-NEXT: 0000000000000006 l       *ABS*  0000000000000000 max_as_subexpr
 // OBJDUMP-NEXT: 0000000000000005 l       *ABS*  0000000000000000 max_recursive_subexpr
+// OBJDUMP-NEXT: 7fffffffffffffff l       *ABS*  0000000000000000 max_expr_one_max
+// OBJDUMP-NEXT: 7fffffffffffffff l       *ABS*  0000000000000000 max_expr_two_max
+// OBJDUMP-NEXT: 7fffffffffffffff l       *ABS*  0000000000000000 max_expr_three_max
+// OBJDUMP-NEXT: 8000000000000000 l       *ABS*  0000000000000000 max_expr_one_min
+// OBJDUMP-NEXT: 0000000000000003 l       *ABS*  0000000000000000 max_expr_two_min
+// OBJDUMP-NEXT: 0000000000989680 l       *ABS*  0000000000000000 max_expr_three_min
 // OBJDUMP-NEXT: 0000000000000001 l       *ABS*  0000000000000000 or_expression_all
 // OBJDUMP-NEXT: 0000000000000001 l       *ABS*  0000000000000000 or_expression_two
 // OBJDUMP-NEXT: 0000000000000001 l       *ABS*  0000000000000000 or_expression_one
@@ -36,11 +44,15 @@
 // ASM: .set one, 1
 // ASM: .set two, 2
 // ASM: .set three, 3
+// ASM: .set i64_max, 9223372036854775807
+// ASM: .set i64_min, -9223372036854775808
 
 .set zero, 0
 .set one, 1
 .set two, 2
 .set three, 3
+.set i64_max, 0x7FFFFFFFFFFFFFFF
+.set i64_min, 0x8000000000000000
 
 // ASM: .set max_expression_all, max(1, 2, five, 3, four)
 // ASM: .set max_expression_two, 2
@@ -68,6 +80,22 @@
 .set max_with_subexpr, max(((one | 3) << 3) / 8)
 .set max_as_subexpr, 1 + max(4, 3, five)
 .set max_recursive_subexpr, max(max(one, four), three, max_expression_all)
+
+// ASM: .set max_expr_one_max, 9223372036854775807
+// ASM: .set max_expr_two_max, max(9223372036854775807, five)
+// ASM: .set max_expr_three_max, max(9223372036854775807, five, 10000000)
+
+.set max_expr_one_max, max(i64_max)
+.set max_expr_two_max, max(i64_max, five)
+.set max_expr_three_max, max(i64_max, five, 10000000)
+
+// ASM: .set max_expr_one_min, -9223372036854775808
+// ASM: .set max_expr_two_min, 3
+// ASM: .set max_expr_three_min, 10000000
+
+.set max_expr_one_min, max(i64_min)
+.set max_expr_two_min, max(i64_min, three)
+.set max_expr_three_min, max(i64_min, three, 10000000)
 
 // ASM: .set or_expression_all, or(1, 2, five, 3, four)
 // ASM: .set or_expression_two, 1
