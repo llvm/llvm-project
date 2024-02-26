@@ -81,9 +81,9 @@ public:
       auto version = ReadVersionTuple(Data);
       const auto *DataBefore = Data;
       (void)DataBefore;
+      auto UnversionedData = Derived::readUnversioned(Key, Data);
       assert(Data != DataBefore &&
              "Unversioned data reader didn't move pointer");
-      auto UnversionedData = Derived::readUnversioned(Key, Data);
       Result.push_back({version, UnversionedData});
     }
     return Result;
