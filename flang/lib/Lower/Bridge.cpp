@@ -5092,7 +5092,7 @@ private:
   /// processed at the time of lowering the declare target construct, such
   /// as certain cases where interfaces are declared but not defined within
   /// a module.
-  llvm::SmallVector<Fortran::lower::OMPDeferredDeclareTargetInfo, 2>
+  llvm::SmallVector<Fortran::lower::OMPDeferredDeclareTargetInfo>
       ompDeferredDeclareTarget;
 
   const Fortran::lower::ExprToValueMap *exprValueOverrides{nullptr};

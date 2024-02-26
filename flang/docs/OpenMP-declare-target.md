@@ -58,11 +58,11 @@ as it's been utilised within a target region.
 # Declare Target as represented in the OpenMP Dialect
 
 In the OpenMP Dialect `declare target` is not represented by a specific 
-`operation`. Instead it's a OpenMP dialect specific `attribute` that can be 
-applied to any operation in any dialect. This helps to simplify the 
-utilisation of it, instead of replacing or modifying existing global or 
-function `operations` in a dialect it applies to it as extra metadata that 
-the lowering can use in different ways as is necesary. 
+`operation`. Instead, it's an OpenMP dialect specific `attribute` that can be 
+applied to any operation in any dialect, which helps to simplify the 
+utilisation of it. Rather than replacing or modifying existing global or 
+function `operations` in a dialect, it applies to it as extra metadata that
+the lowering can use in different ways as is necessary. 
 
 The `attribute` is composed of multiple fields representing the clauses you 
 would find on the `declare target` directive i.e. device type (`nohost`, 
@@ -92,9 +92,9 @@ declareTargetGlobal.isDeclareTarget();
 # Declare Target Fortran OpenMP Lowering
 
 The initial lowering of `declare target` to MLIR for both use-cases is done
-inside of the usual OpenMP lowering in flang/lib/Lower/OpenMP.cpp. However some
-direct calls to `declare target` related functions from Flang's lowering bridge 
-in flang/lib/Lower/Bridge.cpp are made.
+inside of the usual OpenMP lowering in flang/lib/Lower/OpenMP.cpp. However, 
+some direct calls to `declare target` related functions from Flang's 
+lowering bridge in flang/lib/Lower/Bridge.cpp are made.
 
 The marking of operations with the declare target attribute happens in two 
 phases, the second one optional and contingent on the first failing. The 
@@ -108,7 +108,7 @@ types (e.g. `host`, `nohost`), then it will swap the device type to `any`.
 
 Whenever we invoke `genFIR` on an `OpenMPDeclarativeConstruct` from the 
 lowering bridge, we are also invoking another function called 
-`gatherOpenMPDeferredDeclareTargets` which gathers information relevant to the
+`gatherOpenMPDeferredDeclareTargets`, which gathers information relevant to the
 application of the `declare target` attribute. This information 
 includes the symbol that it should be applied to, device type clause, 
 and capture clause, and it is stored in a vector that is part of the lowering
@@ -125,7 +125,7 @@ operations that have delayed generation and cannot be proccessed in the
 first phase. The main notable case this occurs currently is when a 
 Fortran function interface has been marked. This is 
 done via the function 
-`markOpenMPDeferredDeclareTargetFunctions` which is called from the lowering
+`markOpenMPDeferredDeclareTargetFunctions`, which is called from the lowering
 bridge at the end of the lowering process allowing us to mark those where 
 possible. It iterates over the data previously gathered by 
 `gatherOpenMPDeferredDeclareTargets` 
@@ -140,7 +140,7 @@ by the initial semantic analysis.
 
 NOTE: `declare target` can be applied to implicit `SAVE` attributed variables.
 However, by default Flang does not represent these as `GlobalOp`'s, which means
-we cannot tag and lower them as `declare target` normally. Instead similarly
+we cannot tag and lower them as `declare target` normally. Instead, similarly
 to the way `threadprivate` handles these cases, we raise and initialize the 
 variable as an internal `GlobalOp` and apply the attribute. This occurs in the
 flang/lib/Lower/OpenMP.cpp function `genDeclareTargetIntGlobal`.
@@ -154,7 +154,7 @@ of `declare target`:
 `declare target`. It does so recursively, i.e. nested calls will also be 
 implicitly marked. It currently will try to mark things as conservatively as 
 possible, e.g. if captured in a `target` region it will apply `nohost`, unless
-it encounters a `host` `declare target` in which case it will apply the any 
+it encounters a `host` `declare target` in which case it will apply the `any` 
 device type. Functions are handled similarly, except we utilise the parent's 
 device type where possible.
 * `OMPFunctionFiltering` - This is executed after the `OMPMarkDeclareTarget`
@@ -169,40 +169,38 @@ Host functions with `target` regions are marked with a `declare target host`
 attribute so they will be removed after outlining the target regions contained
 inside.
 
-While this infrastructure is generally applicable to more than just Flang, we
-currently only utilise them in the Flang frontend and they are part of the 
-Flang codebase, rather than the OpenMP dialect codebase. 
+While this infrastructure could be generally applicable to more than just Flang, 
+it is only utilised in the Flang frontend, so it resides there rather than in 
+the OpenMP dialect codebase. 
 
 # Declare Target OpenMP Dialect To LLVM-IR Lowering
 
-The OpenMP dialect lowering of `declare target` is a little unique currently, 
-as it's not an `operation` and is an `attribute` we process it utilising the
-LLVM Target lowerings `amendOperation`, which occurs immediately after an
-operation has been lowered to LLVM-IR. As it can be applicable to multiple
-different operations, we must specialise this function for each operation
-type that we may encounter. Currently this is `GlobalOp`'s and `FuncOp`'s.
+The OpenMP dialect lowering of `declare target` is done through the 
+`amendOperation` flow, as it's not an `operation` but rather an 
+`attribute`. This is triggered immediately after the corresponding
+operation has been lowered to LLVM-IR. As it is applicable to
+different types of operations, we must specialise this function for 
+each operation type that we may encounter. Currently, this is 
+`GlobalOp`'s and `FuncOp`'s.
 
-In the case where we encounter a `FuncOp` our processing is fairly simple, 
-if we're processing the device code, we will finish up our removal of `host` 
-marked functions, anything we could not remove previously we now remove, e.g. 
-if it had a `target` directive in it (which we need to keep a hold of to 
-this point, to actually outline the `target` kernel for device). This hopefully
-leaves us with only `any`, `device` or undeterminable functions left in the
-module to lower further, reducing the possibiltiy of device incompatible 
-code being in the module.
+`FuncOp` processing is fairly simple. When compiling for the device, 
+`host` marked functions are removed, including those that could not 
+be removed earlier due to having `target` directives within. This 
+leaves `any`, `device` or indeterminable functions left in the 
+module to lower further. When compiling for the host, no filtering is 
+done because `nohost` functions must be available as a fallback 
+implementation.
 
-For `GlobalOp`'s, the processing is a little more complex, we currently 
-leverage two OMPIRBuilder functions which we have inherited from Clang and
-moved to the `OMPIRBuilder` to share across the two compiler
-frontends`registerTargetGlobalVariable` and `getAddrOfDeclareTargetVar`. 
-These two functions are actually recursive and invoke each other depending
-on the clauses and options provided to the `OMPIRBuilder` (in particular
-unified shared memory), but the main functionality they provide is the 
-generation of a new global pointer for device with a "ref_" prefix, and 
-enqueuing metadata generation by the `OMPIRBuilder` at the end of the 
-module, for both host and device that links the newly generated device
-global pointer and the host pointer together across the two modules 
-(and resulting binaries). 
+For `GlobalOp`'s, the processing is a little more complex. We 
+currently leverage the `registerTargetGlobalVariable` and 
+`getAddrOfDeclareTargetVar` `OMPIRBuilder` functions shared with Clang. 
+These two functions invoke each other depending on the clauses and options 
+provided to the `OMPIRBuilder` (in particular, unified shared memory). Their
+main purposes are the generation of a new global device pointer with a 
+"ref_" prefix on the device and enqueuing metadata generation by the 
+`OMPIRBuilder` to be produced at module finalization time. This is done 
+for both host and device and it links the newly generated device global 
+pointer and the host pointer together across the two modules.
 
 Similarly to other metadata (e.g. for `TargetOp`) that is shared across
 both host and device modules, processing of `GlobalOp`'s in the device 
@@ -224,7 +222,7 @@ global symbol, with our new global ref pointer's symbol. Currently we do not
 remove or delete the old symbol, this is due to the fact that the same symbol
 can be utilised across multiple target regions, if we remove it, we risk 
 breaking lowerings of target regions that will be processed at a later time. 
-To appropriately delete these no longer necesary symbols we would need a 
+To appropriately delete these no longer necessary symbols we would need a 
 deferred removal process at the end of the module, which is currently not in 
 place. It may be possible to store this information in the OMPIRBuilder and 
 then perform this cleanup process on finalization, but this is open for 

@@ -1175,7 +1175,7 @@ static void collectDeferredDeclareTargets(
     const Fortran::parser::OpenMPDeclareTargetConstruct &declareTargetConstruct,
     llvm::SmallVectorImpl<Fortran::lower::OMPDeferredDeclareTargetInfo>
         &deferredDeclareTarget) {
-  llvm::SmallVector<DeclareTargetCapturePair, 0> symbolAndClause;
+  llvm::SmallVector<DeclareTargetCapturePair> symbolAndClause;
   mlir::omp::DeclareTargetDeviceType devType = getDeclareTargetInfo(
       converter, semaCtx, eval, declareTargetConstruct, symbolAndClause);
   // Return the device type only if at least one of the targets for the
@@ -1200,7 +1200,7 @@ getDeclareTargetFunctionDevice(
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenMPDeclareTargetConstruct
         &declareTargetConstruct) {
-  llvm::SmallVector<DeclareTargetCapturePair, 0> symbolAndClause;
+  llvm::SmallVector<DeclareTargetCapturePair> symbolAndClause;
   mlir::omp::DeclareTargetDeviceType deviceType = getDeclareTargetInfo(
       converter, semaCtx, eval, declareTargetConstruct, symbolAndClause);
 
@@ -1989,7 +1989,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                    Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenMPDeclareTargetConstruct
                        &declareTargetConstruct) {
-  llvm::SmallVector<DeclareTargetCapturePair, 0> symbolAndClause;
+  llvm::SmallVector<DeclareTargetCapturePair> symbolAndClause;
   mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
   mlir::omp::DeclareTargetDeviceType deviceType = getDeclareTargetInfo(
       converter, semaCtx, eval, declareTargetConstruct, symbolAndClause);
@@ -2514,7 +2514,7 @@ bool Fortran::lower::markOpenMPDeferredDeclareTargetFunctions(
     llvm::SmallVectorImpl<OMPDeferredDeclareTargetInfo> &deferredDeclareTargets,
     AbstractConverter &converter) {
   bool deviceCodeFound = false;
-  auto modOp = llvm::dyn_cast<mlir::ModuleOp>(mod);
+  auto modOp = llvm::cast<mlir::ModuleOp>(mod);
   for (auto declTar : deferredDeclareTargets) {
     mlir::Operation *op = modOp.lookupSymbol(converter.mangleName(declTar.sym));
 
