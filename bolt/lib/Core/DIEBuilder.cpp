@@ -913,5 +913,6 @@ std::optional<uint32_t> DIEBuilder::getUnitId(const DWARFUnit &DU) {
     return Iter->second;
   return std::nullopt;
 }
+
 } // namespace bolt
 } // namespace llvm
