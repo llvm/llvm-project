@@ -131,6 +131,19 @@ inline unsigned stdc_first_trailing_one(unsigned long x) {
 inline unsigned stdc_first_trailing_one(unsigned long long x) {
   return stdc_first_trailing_one_ull(x);
 }
+inline unsigned stdc_count_zeros(unsigned char x) {
+  return stdc_count_zeros_uc(x);
+}
+inline unsigned stdc_count_zeros(unsigned short x) {
+  return stdc_count_zeros_us(x);
+}
+inline unsigned stdc_count_zeros(unsigned x) { return stdc_count_zeros_ui(x); }
+inline unsigned stdc_count_zeros(unsigned long x) {
+  return stdc_count_zeros_ul(x);
+}
+inline unsigned stdc_count_zeros(unsigned long long x) {
+  return stdc_count_zeros_ull(x);
+}
 #else
 #define stdc_leading_zeros(x)                                                  \
   _Generic((x),                                                                \
@@ -188,6 +201,13 @@ inline unsigned stdc_first_trailing_one(unsigned long long x) {
       unsigned: stdc_first_trailing_one_ui,                                    \
       unsigned long: stdc_first_trailing_one_ul,                               \
       unsigned long long: stdc_first_trailing_one_ull)(x)
+#define stdc_count_zeros(x)                                                    \
+  _Generic((x),                                                                \
+      unsigned char: stdc_count_zeros_uc,                                      \
+      unsigned short: stdc_count_zeros_us,                                     \
+      unsigned: stdc_count_zeros_ui,                                           \
+      unsigned long: stdc_count_zeros_ul,                                      \
+      unsigned long long: stdc_count_zeros_ull)(x)
 #endif // __cplusplus
 
 #endif // __LLVM_LIBC_MACROS_STDBIT_MACROS_H
