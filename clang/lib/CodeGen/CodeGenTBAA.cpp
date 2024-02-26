@@ -301,30 +301,22 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
 
     unsigned idx = 0;
     for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
-         i != e;) {
-      if ((*i)->isZeroSize(Context)) {
-        ++i;
-        ++idx;
-        continue;
-      }
+         i != e;     ++i,
+        ++idx
+) {
+      if ((*i)->isZeroSize(Context))
+            continue;
 
       uint64_t Offset =
           BaseOffset + Layout.getFieldOffset(idx) / Context.getCharWidth();
-      QualType FieldQTy = i->getType();
+
       // Create a single field for consecutive named bitfields using char as
       // base type.
-      if ((*i)->isBitField() && !(*i)->isUnnamedBitfield()) {
-        unsigned CurrentBitFieldSize = 0;
-        unsigned CurrentBitFieldOffset = CGRL.getBitFieldInfo(*i).Offset;
-        while (i != e && (*i)->isBitField() && !(*i)->isUnnamedBitfield()) {
-          const CGBitFieldInfo &Info = CGRL.getBitFieldInfo(*i);
-          if (CurrentBitFieldSize + CurrentBitFieldOffset != Info.Offset)
-            break;
-          CurrentBitFieldSize += Info.Size;
-          CurrentBitFieldOffset = Info.Offset;
-          ++i;
-          ++idx;
-        }
+      if ((*i)->isBitField()) {
+        const CGBitFieldInfo &Info = CGRL.getBitFieldInfo(*i);
+        if (Info.Offset != 0)
+          continue;
+        unsigned CurrentBitFieldSize = Info.StorageSize;
         uint64_t Size =
             llvm::divideCeil(CurrentBitFieldSize, Context.getCharWidth());
         llvm::MDNode *TBAAType = getChar();
@@ -334,12 +326,12 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
             llvm::MDBuilder::TBAAStructField(Offset, Size, TBAATag));
         continue;
       }
+
+      QualType FieldQTy = i->getType();
       if (!CollectFields(Offset, FieldQTy, Fields,
                          MayAlias || TypeHasMayAlias(FieldQTy)))
         return false;
 
-      ++i;
-      ++idx;
     }
     return true;
   }
