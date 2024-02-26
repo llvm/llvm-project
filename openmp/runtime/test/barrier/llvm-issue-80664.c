@@ -1,8 +1,12 @@
 // RUN: %libomp-compile
-// RUN: env OMP_WAIT_POLICY=passive KMP_FORKJOIN_BARRIER_PATTERN='linear,linear' %libomp-run
-// RUN: env OMP_WAIT_POLICY=passive KMP_FORKJOIN_BARRIER_PATTERN='tree,tree' %libomp-run
-// RUN: env OMP_WAIT_POLICY=passive KMP_FORKJOIN_BARRIER_PATTERN='hyper,hyper' %libomp-run
-// RUN: env OMP_WAIT_POLICY=passive KMP_FORKJOIN_BARRIER_PATTERN='dist,dist' %libomp-run
+// RUN: env OMP_WAIT_POLICY=passive \
+// RUN:     KMP_FORKJOIN_BARRIER_PATTERN='linear,linear' %libomp-run
+// RUN: env OMP_WAIT_POLICY=passive \
+// RUN:     KMP_FORKJOIN_BARRIER_PATTERN='tree,tree' %libomp-run
+// RUN: env OMP_WAIT_POLICY=passive \
+// RUN:     KMP_FORKJOIN_BARRIER_PATTERN='hyper,hyper' %libomp-run
+// RUN: env OMP_WAIT_POLICY=passive \
+// RUN:     KMP_FORKJOIN_BARRIER_PATTERN='dist,dist' %libomp-run
 //
 // LLVM ISSUE 80664: https://github.com/llvm/llvm-project/issues/80664
 //
@@ -15,13 +19,12 @@
 
 int a = 0;
 
-void test_omp_barrier()
-{
-  #pragma omp parallel
+void test_omp_barrier() {
+#pragma omp parallel
   {
-    #pragma omp task
+#pragma omp task
     {
-      #pragma omp atomic
+#pragma omp atomic
       a++;
     }
   }
