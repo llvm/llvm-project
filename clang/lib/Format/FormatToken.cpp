@@ -137,7 +137,7 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
   // bin-packed. Add a severe penalty to this so that column layouts are
   // preferred if possible.
   if (!Format)
-    return 10000;
+    return 10'000;
 
   // Format the entire list.
   unsigned Penalty = 0;

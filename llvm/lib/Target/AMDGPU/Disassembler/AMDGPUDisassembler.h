@@ -194,15 +194,15 @@ public:
   DecodeStatus decodeCOMPUTE_PGM_RSRC3(uint32_t FourByteBuffer,
                                        raw_string_ostream &KdStream) const;
 
-  DecodeStatus convertEXPInst(MCInst &MI) const;
-  DecodeStatus convertVINTERPInst(MCInst &MI) const;
-  DecodeStatus convertFMAanyK(MCInst &MI, int ImmLitIdx) const;
-  DecodeStatus convertSDWAInst(MCInst &MI) const;
-  DecodeStatus convertDPP8Inst(MCInst &MI) const;
-  DecodeStatus convertMIMGInst(MCInst &MI) const;
-  DecodeStatus convertVOP3DPPInst(MCInst &MI) const;
-  DecodeStatus convertVOP3PDPPInst(MCInst &MI) const;
-  DecodeStatus convertVOPCDPPInst(MCInst &MI) const;
+  void convertEXPInst(MCInst &MI) const;
+  void convertVINTERPInst(MCInst &MI) const;
+  void convertFMAanyK(MCInst &MI, int ImmLitIdx) const;
+  void convertSDWAInst(MCInst &MI) const;
+  void convertDPP8Inst(MCInst &MI) const;
+  void convertMIMGInst(MCInst &MI) const;
+  void convertVOP3DPPInst(MCInst &MI) const;
+  void convertVOP3PDPPInst(MCInst &MI) const;
+  void convertVOPCDPPInst(MCInst &MI) const;
   void convertMacDPPInst(MCInst &MI) const;
   void convertTrue16OpSel(MCInst &MI) const;
 
@@ -261,6 +261,7 @@ public:
 
   MCOperand decodeBoolReg(unsigned Val) const;
   MCOperand decodeSplitBarrier(unsigned Val) const;
+  MCOperand decodeDpp8FI(unsigned Val) const;
 
   int getTTmpIdx(unsigned Val) const;
 
@@ -274,6 +275,7 @@ public:
   bool isGFX10Plus() const;
   bool isGFX11() const;
   bool isGFX11Plus() const;
+  bool isGFX12() const;
   bool isGFX12Plus() const;
 
   bool hasArchitectedFlatScratch() const;

@@ -115,10 +115,12 @@ public:
     SparseTensorReader *reader = new SparseTensorReader(filename);
     reader->openFile();
     reader->readHeader();
-    if (!reader->canReadAs(valTp))
-      MLIR_SPARSETENSOR_FATAL(
-          "Tensor element type %d not compatible with values in file %s\n",
-          static_cast<int>(valTp), filename);
+    if (!reader->canReadAs(valTp)) {
+      fprintf(stderr,
+              "Tensor element type %d not compatible with values in file %s\n",
+              static_cast<int>(valTp), filename);
+      exit(1);
+    }
     reader->assertMatchesShape(dimRank, dimShape);
     return reader;
   }
