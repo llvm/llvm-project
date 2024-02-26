@@ -212,6 +212,14 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
   return It;
 }
 
+VPTransformState::VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
+                                   DominatorTree *DT, IRBuilderBase &Builder,
+                                   InnerLoopVectorizer *ILV, VPlan *Plan,
+                                   LLVMContext &Ctx)
+    : VF(VF), UF(UF), LI(LI), DT(DT), Builder(Builder), ILV(ILV), Plan(Plan),
+      LVer(nullptr),
+      TypeAnalysis(Plan->getCanonicalIV()->getScalarType(), Ctx) {}
+
 Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
   if (Def->isLiveIn())
     return Def->getLiveInIRValue();
@@ -559,7 +567,8 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
                VPI->getOpcode() == VPInstruction::BranchOnCount));
   (void)IsCondBranch;
 
-  if (VPBB->getNumSuccessors() >= 2 || VPBB->isExiting()) {
+  if (VPBB->getNumSuccessors() >= 2 ||
+      (VPBB->isExiting() && !VPBB->getParent()->isReplicator())) {
     assert(IsCondBranch && "block with multiple successors not terminated by "
                            "conditional branch recipe");
 
@@ -585,7 +594,7 @@ const VPRecipeBase *VPBasicBlock::getTerminator() const {
 }
 
 bool VPBasicBlock::isExiting() const {
-  return getParent()->getExitingBasicBlock() == this;
+  return getParent() && getParent()->getExitingBasicBlock() == this;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -820,10 +829,6 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 /// Assumes a single pre-header basic-block was created for this. Introduce
 /// additional basic-blocks as needed, and fill them all.
 void VPlan::execute(VPTransformState *State) {
-  // Set the reverse mapping from VPValues to Values for code generation.
-  for (auto &Entry : Value2VPValue)
-    State->VPValue2Value[Entry.second] = Entry.first;
-
   // Initialize CFG state.
   State->CFG.PrevVPBB = nullptr;
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
@@ -1333,7 +1338,7 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
                                          InterleavedAccessInfo &IAI) {
   if (VPBasicBlock *VPBB = dyn_cast<VPBasicBlock>(Block)) {
     for (VPRecipeBase &VPI : *VPBB) {
-      if (isa<VPHeaderPHIRecipe>(&VPI))
+      if (isa<VPWidenPHIRecipe>(&VPI))
         continue;
       assert(isa<VPInstruction>(&VPI) && "Can only handle VPInstructions");
       auto *VPInst = cast<VPInstruction>(&VPI);

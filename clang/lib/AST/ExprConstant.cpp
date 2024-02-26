@@ -12696,6 +12696,59 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return BuiltinOp == Builtin::BI__atomic_always_lock_free ?
         Success(0, E) : Error(E);
   }
+  case Builtin::BI__builtin_addcb:
+  case Builtin::BI__builtin_addcs:
+  case Builtin::BI__builtin_addc:
+  case Builtin::BI__builtin_addcl:
+  case Builtin::BI__builtin_addcll:
+  case Builtin::BI__builtin_subcb:
+  case Builtin::BI__builtin_subcs:
+  case Builtin::BI__builtin_subc:
+  case Builtin::BI__builtin_subcl:
+  case Builtin::BI__builtin_subcll: {
+    LValue CarryOutLValue;
+    APSInt LHS, RHS, CarryIn, CarryOut, Result;
+    QualType ResultType = E->getArg(0)->getType();
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info) ||
+        !EvaluateInteger(E->getArg(2), CarryIn, Info) ||
+        !EvaluatePointer(E->getArg(3), CarryOutLValue, Info))
+      return false;
+    // Copy the number of bits and sign.
+    Result = LHS;
+    CarryOut = LHS;
+
+    bool FirstOverflowed = false;
+    bool SecondOverflowed = false;
+    switch (BuiltinOp) {
+    default:
+      llvm_unreachable("Invalid value for BuiltinOp");
+    case Builtin::BI__builtin_addcb:
+    case Builtin::BI__builtin_addcs:
+    case Builtin::BI__builtin_addc:
+    case Builtin::BI__builtin_addcl:
+    case Builtin::BI__builtin_addcll:
+      Result =
+          LHS.uadd_ov(RHS, FirstOverflowed).uadd_ov(CarryIn, SecondOverflowed);
+      break;
+    case Builtin::BI__builtin_subcb:
+    case Builtin::BI__builtin_subcs:
+    case Builtin::BI__builtin_subc:
+    case Builtin::BI__builtin_subcl:
+    case Builtin::BI__builtin_subcll:
+      Result =
+          LHS.usub_ov(RHS, FirstOverflowed).usub_ov(CarryIn, SecondOverflowed);
+      break;
+    }
+
+    // It is possible for both overflows to happen but CGBuiltin uses an OR so
+    // this is consistent.
+    CarryOut = (uint64_t)(FirstOverflowed | SecondOverflowed);
+    APValue APV{CarryOut};
+    if (!handleAssignment(Info, E, CarryOutLValue, ResultType, APV))
+      return false;
+    return Success(Result, E);
+  }
   case Builtin::BI__builtin_add_overflow:
   case Builtin::BI__builtin_sub_overflow:
   case Builtin::BI__builtin_mul_overflow:
@@ -13927,6 +13980,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointCast:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
     llvm_unreachable("invalid cast kind for integral value");
 
   case CK_BitCast:
@@ -14765,6 +14819,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_LValueToRValue:

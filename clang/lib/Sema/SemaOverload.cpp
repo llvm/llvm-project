@@ -123,43 +123,43 @@ CompareDerivedToBaseConversions(Sema &S, SourceLocation Loc,
 /// GetConversionRank - Retrieve the implicit conversion rank
 /// corresponding to the given implicit conversion kind.
 ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
-  static const ImplicitConversionRank
-    Rank[] = {
-    ICR_Exact_Match,
-    ICR_Exact_Match,
-    ICR_Exact_Match,
-    ICR_Exact_Match,
-    ICR_Exact_Match,
-    ICR_Exact_Match,
-    ICR_Promotion,
-    ICR_Promotion,
-    ICR_Promotion,
-    ICR_Conversion,
-    ICR_Conversion,
-    ICR_Conversion,
-    ICR_Conversion,
-    ICR_Conversion,
-    ICR_Conversion,
-    ICR_Conversion,
-    ICR_Conversion,
-    ICR_Conversion,
-    ICR_Conversion,
-    ICR_Conversion,
-    ICR_Conversion,
-    ICR_OCL_Scalar_Widening,
-    ICR_Complex_Real_Conversion,
-    ICR_Conversion,
-    ICR_Conversion,
-    ICR_Writeback_Conversion,
-    ICR_Exact_Match, // NOTE(gbiv): This may not be completely right --
-                     // it was omitted by the patch that added
-                     // ICK_Zero_Event_Conversion
-    ICR_Exact_Match, // NOTE(ctopper): This may not be completely right --
-                     // it was omitted by the patch that added
-                     // ICK_Zero_Queue_Conversion
-    ICR_C_Conversion,
-    ICR_C_Conversion_Extension,
-    ICR_Conversion,
+  static const ImplicitConversionRank Rank[] = {
+      ICR_Exact_Match,
+      ICR_Exact_Match,
+      ICR_Exact_Match,
+      ICR_Exact_Match,
+      ICR_Exact_Match,
+      ICR_Exact_Match,
+      ICR_Promotion,
+      ICR_Promotion,
+      ICR_Promotion,
+      ICR_Conversion,
+      ICR_Conversion,
+      ICR_Conversion,
+      ICR_Conversion,
+      ICR_Conversion,
+      ICR_Conversion,
+      ICR_Conversion,
+      ICR_Conversion,
+      ICR_Conversion,
+      ICR_Conversion,
+      ICR_Conversion,
+      ICR_Conversion,
+      ICR_OCL_Scalar_Widening,
+      ICR_Complex_Real_Conversion,
+      ICR_Conversion,
+      ICR_Conversion,
+      ICR_Writeback_Conversion,
+      ICR_Exact_Match, // NOTE(gbiv): This may not be completely right --
+                       // it was omitted by the patch that added
+                       // ICK_Zero_Event_Conversion
+      ICR_Exact_Match, // NOTE(ctopper): This may not be completely right --
+                       // it was omitted by the patch that added
+                       // ICK_Zero_Queue_Conversion
+      ICR_C_Conversion,
+      ICR_C_Conversion_Extension,
+      ICR_Conversion,
+      ICR_Conversion,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
@@ -167,39 +167,40 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
 
 /// GetImplicitConversionName - Return the name of this kind of
 /// implicit conversion.
-static const char* GetImplicitConversionName(ImplicitConversionKind Kind) {
-  static const char* const Name[] = {
-    "No conversion",
-    "Lvalue-to-rvalue",
-    "Array-to-pointer",
-    "Function-to-pointer",
-    "Function pointer conversion",
-    "Qualification",
-    "Integral promotion",
-    "Floating point promotion",
-    "Complex promotion",
-    "Integral conversion",
-    "Floating conversion",
-    "Complex conversion",
-    "Floating-integral conversion",
-    "Pointer conversion",
-    "Pointer-to-member conversion",
-    "Boolean conversion",
-    "Compatible-types conversion",
-    "Derived-to-base conversion",
-    "Vector conversion",
-    "SVE Vector conversion",
-    "RVV Vector conversion",
-    "Vector splat",
-    "Complex-real conversion",
-    "Block Pointer conversion",
-    "Transparent Union Conversion",
-    "Writeback conversion",
-    "OpenCL Zero Event Conversion",
-    "OpenCL Zero Queue Conversion",
-    "C specific type conversion",
-    "Incompatible pointer conversion",
-    "Fixed point conversion",
+static const char *GetImplicitConversionName(ImplicitConversionKind Kind) {
+  static const char *const Name[] = {
+      "No conversion",
+      "Lvalue-to-rvalue",
+      "Array-to-pointer",
+      "Function-to-pointer",
+      "Function pointer conversion",
+      "Qualification",
+      "Integral promotion",
+      "Floating point promotion",
+      "Complex promotion",
+      "Integral conversion",
+      "Floating conversion",
+      "Complex conversion",
+      "Floating-integral conversion",
+      "Pointer conversion",
+      "Pointer-to-member conversion",
+      "Boolean conversion",
+      "Compatible-types conversion",
+      "Derived-to-base conversion",
+      "Vector conversion",
+      "SVE Vector conversion",
+      "RVV Vector conversion",
+      "Vector splat",
+      "Complex-real conversion",
+      "Block Pointer conversion",
+      "Transparent Union Conversion",
+      "Writeback conversion",
+      "OpenCL Zero Event Conversion",
+      "OpenCL Zero Queue Conversion",
+      "C specific type conversion",
+      "Incompatible pointer conversion",
+      "Fixed point conversion",
+      "HLSL vector truncation",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -210,6 +211,7 @@ static const char* GetImplicitConversionName(ImplicitConversionKind Kind) {
 void StandardConversionSequence::setAsIdentityConversion() {
   First = ICK_Identity;
   Second = ICK_Identity;
+  Element = ICK_Identity;
   Third = ICK_Identity;
   DeprecatedStringLiteralToCharPtr = false;
   QualificationIncludesObjCLifetime = false;
@@ -228,11 +230,13 @@ void StandardConversionSequence::setAsIdentityConversion() {
 /// implicit conversions.
 ImplicitConversionRank StandardConversionSequence::getRank() const {
   ImplicitConversionRank Rank = ICR_Exact_Match;
-  if  (GetConversionRank(First) > Rank)
+  if (GetConversionRank(First) > Rank)
     Rank = GetConversionRank(First);
-  if  (GetConversionRank(Second) > Rank)
+  if (GetConversionRank(Second) > Rank)
     Rank = GetConversionRank(Second);
-  if  (GetConversionRank(Third) > Rank)
+  if (GetConversionRank(Element) > Rank)
+    Rank = GetConversionRank(Element);
+  if (GetConversionRank(Third) > Rank)
     Rank = GetConversionRank(Third);
   return Rank;
 }
@@ -1830,12 +1834,85 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
 }
 
 /// Determine whether the conversion from FromType to ToType is a valid
+/// floating point conversion.
+///
+static bool IsFloatingPointConversion(Sema &S, QualType FromType,
+                                      QualType ToType) {
+  if (!FromType->isRealFloatingType() || !ToType->isRealFloatingType())
+    return false;
+  // FIXME: disable conversions between long double, __ibm128 and __float128
+  // if their representation is different until there is back end support
+  // We of course allow this conversion if long double is really double.
+
+  // Conversions between bfloat16 and float16 are currently not supported.
+  if ((FromType->isBFloat16Type() &&
+       (ToType->isFloat16Type() || ToType->isHalfType())) ||
+      (ToType->isBFloat16Type() &&
+       (FromType->isFloat16Type() || FromType->isHalfType())))
+    return false;
+
+  // Conversions between IEEE-quad and IBM-extended semantics are not
+  // permitted.
+  const llvm::fltSemantics &FromSem = S.Context.getFloatTypeSemantics(FromType);
+  const llvm::fltSemantics &ToSem = S.Context.getFloatTypeSemantics(ToType);
+  if ((&FromSem == &llvm::APFloat::PPCDoubleDouble() &&
+       &ToSem == &llvm::APFloat::IEEEquad()) ||
+      (&FromSem == &llvm::APFloat::IEEEquad() &&
+       &ToSem == &llvm::APFloat::PPCDoubleDouble()))
+    return false;
+  return true;
+}
+
+static bool IsVectorElementConversion(Sema &S, QualType FromType,
+                                      QualType ToType,
+                                      ImplicitConversionKind &ICK, Expr *From) {
+  if (S.Context.hasSameUnqualifiedType(FromType, ToType))
+    return true;
+
+  if (S.IsFloatingPointPromotion(FromType, ToType)) {
+    ICK = ICK_Floating_Promotion;
+    return true;
+  }
+
+  if (IsFloatingPointConversion(S, FromType, ToType)) {
+    ICK = ICK_Floating_Conversion;
+    return true;
+  }
+
+  if (ToType->isBooleanType() && FromType->isArithmeticType()) {
+    ICK = ICK_Boolean_Conversion;
+    return true;
+  }
+
+  if (S.IsIntegralPromotion(From, FromType, ToType)) {
+    ICK = ICK_Integral_Promotion;
+    return true;
+  }
+
+  if (FromType->isIntegralOrUnscopedEnumerationType() &&
+      ToType->isIntegralType(S.Context)) {
+    ICK = ICK_Integral_Conversion;
+    return true;
+  }
+
+  if ((FromType->isRealFloatingType() && ToType->isIntegralType(S.Context)) ||
+      (FromType->isIntegralOrUnscopedEnumerationType() &&
+       ToType->isRealFloatingType())) {
+    ICK = ICK_Floating_Integral;
+    return true;
+  }
+
+  return false;
+}
+
+/// Determine whether the conversion from FromType to ToType is a valid
 /// vector conversion.
 ///
 /// \param ICK Will be set to the vector conversion kind, if this is a vector
 /// conversion.
 static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
-                               ImplicitConversionKind &ICK, Expr *From,
+                               ImplicitConversionKind &ICK,
+                               ImplicitConversionKind &ElConv, Expr *From,
                                bool InOverloadResolution, bool CStyle) {
   // We need at least one of these types to be a vector type to have a vector
   // conversion.
@@ -1848,10 +1925,28 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
 
   // There are no conversions between extended vector types, only identity.
   if (ToType->isExtVectorType()) {
-    // There are no conversions between extended vector types other than the
-    // identity conversion.
-    if (FromType->isExtVectorType())
+    if (FromType->isExtVectorType()) {
+      // HLSL allows implicit truncation of vector types.
+      if (S.getLangOpts().HLSL) {
+        unsigned FromElts = FromType->getAs<VectorType>()->getNumElements();
+        unsigned ToElts = ToType->getAs<VectorType>()->getNumElements();
+        if (FromElts < ToElts)
+          return false;
+        if (FromElts == ToElts)
+          ICK = ICK_Identity;
+        else
+          ICK = ICK_HLSL_Vector_Truncation;
+
+        QualType FromElTy = FromType->getAs<VectorType>()->getElementType();
+        QualType ToElTy = ToType->getAs<VectorType>()->getElementType();
+        if (S.Context.hasSameUnqualifiedType(FromElTy, ToElTy))
+          return true;
+        return IsVectorElementConversion(S, FromElTy, ToElTy, ElConv, From);
+      }
+      // There are no conversions between extended vector types other than the
+      // identity conversion.
       return false;
+    }
 
     // Vector splat from any arithmetic type to a vector.
     if (FromType->isArithmeticType()) {
@@ -2057,6 +2152,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   // conversion.
   bool IncompatibleObjC = false;
   ImplicitConversionKind SecondICK = ICK_Identity;
+  ImplicitConversionKind ElementICK = ICK_Identity;
   if (S.Context.hasSameUnqualifiedType(FromType, ToType)) {
     // The unqualified versions of the types are the same: there's no
     // conversion to do.
@@ -2095,29 +2191,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // Complex-real conversions (C99 6.3.1.7)
     SCS.Second = ICK_Complex_Real;
     FromType = ToType.getUnqualifiedType();
-  } else if (FromType->isRealFloatingType() && ToType->isRealFloatingType()) {
-    // FIXME: disable conversions between long double, __ibm128 and __float128
-    // if their representation is different until there is back end support
-    // We of course allow this conversion if long double is really double.
-
-    // Conversions between bfloat16 and float16 are currently not supported.
-    if ((FromType->isBFloat16Type() &&
-         (ToType->isFloat16Type() || ToType->isHalfType())) ||
-        (ToType->isBFloat16Type() &&
-         (FromType->isFloat16Type() || FromType->isHalfType())))
-      return false;
-
-    // Conversions between IEEE-quad and IBM-extended semantics are not
-    // permitted.
-    const llvm::fltSemantics &FromSem =
-        S.Context.getFloatTypeSemantics(FromType);
-    const llvm::fltSemantics &ToSem = S.Context.getFloatTypeSemantics(ToType);
-    if ((&FromSem == &llvm::APFloat::PPCDoubleDouble() &&
-         &ToSem == &llvm::APFloat::IEEEquad()) ||
-        (&FromSem == &llvm::APFloat::IEEEquad() &&
-         &ToSem == &llvm::APFloat::PPCDoubleDouble()))
-      return false;
-
+  } else if (IsFloatingPointConversion(S, FromType, ToType)) {
     // Floating point conversions (C++ 4.8).
     SCS.Second = ICK_Floating_Conversion;
     FromType = ToType.getUnqualifiedType();
@@ -2144,18 +2218,18 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
                                          InOverloadResolution, FromType)) {
     // Pointer to member conversions (4.11).
     SCS.Second = ICK_Pointer_Member;
-  } else if (IsVectorConversion(S, FromType, ToType, SecondICK, From,
-                                InOverloadResolution, CStyle)) {
+  } else if (IsVectorConversion(S, FromType, ToType, SecondICK, ElementICK,
+                                From, InOverloadResolution, CStyle)) {
     SCS.Second = SecondICK;
+    SCS.Element = ElementICK;
     FromType = ToType.getUnqualifiedType();
   } else if (!S.getLangOpts().CPlusPlus &&
              S.Context.typesAreCompatible(ToType, FromType)) {
     // Compatible conversions (Clang extension for C function overloading)
     SCS.Second = ICK_Compatible_Conversion;
     FromType = ToType.getUnqualifiedType();
-  } else if (IsTransparentUnionStandardConversion(S, From, ToType,
-                                             InOverloadResolution,
-                                             SCS, CStyle)) {
+  } else if (IsTransparentUnionStandardConversion(
+                 S, From, ToType, InOverloadResolution, SCS, CStyle)) {
     SCS.Second = ICK_TransparentUnionConversion;
     FromType = ToType;
   } else if (tryAtomicConversion(S, From, ToType, InOverloadResolution, SCS,
@@ -2449,6 +2523,11 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
   if (FromType->isBooleanType() && To->getKind() == BuiltinType::Int) {
     return true;
   }
+
+  // In HLSL an rvalue of integral type can be promoted to an rvalue of a larger
+  // integral type.
+  if (Context.getLangOpts().HLSL)
+    return Context.getTypeSize(FromType) < Context.getTypeSize(ToType);
 
   return false;
 }
@@ -5043,6 +5122,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
                               : (RefConv & Sema::ReferenceConversions::ObjC)
                                     ? ICK_Compatible_Conversion
                                     : ICK_Identity;
+    ICS.Standard.Element = ICK_Identity;
     // FIXME: As a speculative fix to a defect introduced by CWG2352, we rank
     // a reference binding that performs a non-top-level qualification
     // conversion as a qualification conversion, not as an identity conversion.
@@ -5969,6 +6049,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_C_Only_Conversion:
   case ICK_Incompatible_Pointer_Conversion:
   case ICK_Fixed_Point_Conversion:
+  case ICK_HLSL_Vector_Truncation:
     return false;
 
   case ICK_Lvalue_To_Rvalue:
@@ -6246,6 +6327,7 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
 static void dropPointerConversion(StandardConversionSequence &SCS) {
   if (SCS.Second == ICK_Pointer_Conversion) {
     SCS.Second = ICK_Identity;
+    SCS.Element = ICK_Identity;
     SCS.Third = ICK_Identity;
     SCS.ToTypePtrs[2] = SCS.ToTypePtrs[1] = SCS.ToTypePtrs[0];
   }

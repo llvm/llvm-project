@@ -82,6 +82,6 @@ class CommandInterpreterAPICase(TestBase):
         ci.HandleCommand("settings set use-color false", res)
         self.assertTrue(res.Succeeded())
         self.assertIsNotNone(res.GetOutput())
-        self.assertEquals(res.GetOutput(), "")
+        self.assertEqual(res.GetOutput(), "")
         self.assertIsNotNone(res.GetError())
-        self.assertEquals(res.GetError(), "")
+        self.assertEqual(res.GetError(), "")

@@ -6,18 +6,6 @@
 # platform.
 # ------------------------------------------------------------------------------
 
-if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
-  # We set the generic target and OS to "gpu" here. More specific defintions
-  # for the exact target GPU are set up in prepare_libc_gpu_build.cmake.
-  set(LIBC_TARGET_OS "gpu")
-  set(LIBC_TARGET_ARCHITECTURE_IS_GPU TRUE)
-  set(LIBC_TARGET_ARCHITECTURE "gpu")
-  if(LIBC_TARGET_TRIPLE)
-    message(WARNING "LIBC_TARGET_TRIPLE is ignored as LIBC_GPU_BUILD is on. ")
-  endif()
-  return()
-endif()
-
 if(MSVC)
   # If the compiler is visual c++ or equivalent, we will assume a host build.
   set(LIBC_TARGET_OS ${CMAKE_HOST_SYSTEM_NAME})
@@ -59,6 +47,10 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
     set(target_arch "riscv32")
   elseif(target_arch MATCHES "^riscv64")
     set(target_arch "riscv64")
+  elseif(target_arch MATCHES "^amdgcn")
+    set(target_arch "amdgpu")
+  elseif(target_arch MATCHES "^nvptx64")
+    set(target_arch "nvptx")
   else()
     return()
   endif()
@@ -73,6 +65,12 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
   # Strip version from `darwin###`
   if(target_sys MATCHES "^darwin")
     set(target_sys "darwin")
+  endif()
+
+  # Setting OS name for GPU architectures.
+  list(GET triple_comps -1 gpu_target_sys)
+  if(gpu_target_sys MATCHES "^amdhsa" OR gpu_target_sys MATCHES "^cuda")
+    set(target_sys "gpu")
   endif()
 
   set(${sys_var} ${target_sys} PARENT_SCOPE)
@@ -156,6 +154,10 @@ elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "riscv64")
 elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "riscv32")
   set(LIBC_TARGET_ARCHITECTURE_IS_RISCV32 TRUE)
   set(LIBC_TARGET_ARCHITECTURE "riscv")
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "amdgpu")
+  set(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU TRUE)
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "nvptx")
+  set(LIBC_TARGET_ARCHITECTURE_IS_NVPTX TRUE)
 else()
   message(FATAL_ERROR
           "Unsupported libc target architecture ${LIBC_TARGET_ARCHITECTURE}")
@@ -178,6 +180,8 @@ elseif(LIBC_TARGET_OS STREQUAL "darwin")
   set(LIBC_TARGET_OS_IS_DARWIN TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "windows")
   set(LIBC_TARGET_OS_IS_WINDOWS TRUE)
+elseif(LIBC_TARGET_OS STREQUAL "gpu")
+  set(LIBC_TARGET_OS_IS_GPU TRUE)
 else()
   message(FATAL_ERROR
           "Unsupported libc target operating system ${LIBC_TARGET_OS}")

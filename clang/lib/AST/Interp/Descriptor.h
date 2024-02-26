@@ -165,6 +165,10 @@ public:
     return dyn_cast_if_present<ValueDecl>(asDecl());
   }
 
+  const VarDecl *asVarDecl() const {
+    return dyn_cast_if_present<VarDecl>(asDecl());
+  }
+
   const FieldDecl *asFieldDecl() const {
     return dyn_cast_if_present<FieldDecl>(asDecl());
   }
@@ -209,6 +213,9 @@ public:
   bool isRecord() const { return !IsArray && ElemRecord; }
   /// Checks if this is a dummy descriptor.
   bool isDummy() const { return IsDummy; }
+
+  void dump() const;
+  void dump(llvm::raw_ostream &OS) const;
 };
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.

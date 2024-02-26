@@ -108,7 +108,7 @@ function(add_llvm_symbol_exports target_name export_file)
       COMMAND "${Python3_EXECUTABLE}" "-c"
       "import sys; \
        lines = ['    ' + l.rstrip() for l in sys.stdin] + ['  local: *;']; \
-       print('LLVM_${LLVM_VERSION_MAJOR} {'); \
+       print('LLVM_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR} {'); \
        print('  global:') if len(lines) > 1 else None; \
        print(';\\n'.join(lines) + '\\n};')"
       < ${export_file} > ${native_export_file}
@@ -646,9 +646,9 @@ function(llvm_add_library name)
     if(UNIX AND NOT APPLE AND NOT ARG_SONAME)
       set_target_properties(${name}
         PROPERTIES
-        # Since 4.0.0, the ABI version is indicated by the major version
-        SOVERSION ${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX}
-        VERSION ${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX})
+        # Since 18.1.0, the ABI version is indicated by the major and minor version.
+        SOVERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}
+        VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX})
     endif()
   endif()
 
@@ -2074,7 +2074,7 @@ function(add_lit_testsuites project directory)
 endfunction()
 
 function(llvm_install_library_symlink name dest type)
-  cmake_parse_arguments(ARG "" "COMPONENT" "" ${ARGN})
+  cmake_parse_arguments(ARG "" "COMPONENT;SOVERSION" "" ${ARGN})
   foreach(path ${CMAKE_MODULE_PATH})
     if(EXISTS ${path}/LLVMInstallSymlink.cmake)
       set(INSTALL_SYMLINK ${path}/LLVMInstallSymlink.cmake)
@@ -2088,7 +2088,11 @@ function(llvm_install_library_symlink name dest type)
   endif()
 
   set(full_name ${CMAKE_${type}_LIBRARY_PREFIX}${name}${CMAKE_${type}_LIBRARY_SUFFIX})
-  set(full_dest ${CMAKE_${type}_LIBRARY_PREFIX}${dest}${CMAKE_${type}_LIBRARY_SUFFIX})
+  if (ARG_SOVERSION)
+    set(full_dest ${CMAKE_${type}_LIBRARY_PREFIX}${dest}${CMAKE_${type}_LIBRARY_SUFFIX}.${ARG_SOVERSION})
+  else()
+    set(full_dest ${CMAKE_${type}_LIBRARY_PREFIX}${dest}${CMAKE_${type}_LIBRARY_SUFFIX})
+  endif()
 
   if(LLVM_USE_SYMLINKS)
     set(LLVM_LINK_OR_COPY create_symlink)

@@ -386,7 +386,15 @@ static bool DPValuesRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
   SmallVector<DPValue *, 8> ToBeRemoved;
   SmallDenseSet<DebugVariable> VariableSet;
   for (auto &I : reverse(*BB)) {
-    for (DPValue &DPV : reverse(I.getDbgValueRange())) {
+    for (DbgRecord &DR : reverse(I.getDbgValueRange())) {
+      if (isa<DPLabel>(DR)) {
+        // Emulate existing behaviour (see comment below for dbg.declares).
+        // FIXME: Don't do this.
+        VariableSet.clear();
+        continue;
+      }
+
+      DPValue &DPV = cast<DPValue>(DR);
       // Skip declare-type records, as the debug intrinsic method only works
       // on dbg.value intrinsics.
       if (DPV.getType() == DPValue::LocationType::Declare) {
@@ -496,7 +504,7 @@ static bool DPValuesRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
   DenseMap<DebugVariable, std::pair<SmallVector<Value *, 4>, DIExpression *>>
       VariableMap;
   for (auto &I : *BB) {
-    for (DPValue &DPV : I.getDbgValueRange()) {
+    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
       if (DPV.getType() == DPValue::LocationType::Declare)
         continue;
       DebugVariable Key(DPV.getVariable(), std::nullopt,
@@ -545,7 +553,7 @@ static bool DPValuesRemoveUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
   // Remove undef dbg.assign intrinsics that are encountered before
   // any non-undef intrinsics from the entry block.
   for (auto &I : *BB) {
-    for (DPValue &DPV : I.getDbgValueRange()) {
+    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
       if (!DPV.isDbgValue() && !DPV.isDbgAssign())
         continue;
       bool IsDbgValueKind =
