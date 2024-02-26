@@ -4,8 +4,6 @@
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
-; CHECK: declare void @llvm.dbg.value(metadata,
-
 ; This function rotates the exit conditon into the entry block, moving the
 ; dbg.values with it. Check that they resolve through the PHIs to the arguments
 ; only in the entry block. In the loop block, the dbg.values shift down below
@@ -264,6 +262,8 @@ L1.latch:
 L0.latch:
   br label %L0, !dbg !77
 }
+
+; CHECK: declare void @llvm.dbg.value(metadata,
 
 !llvm.module.flags = !{!20}
 !llvm.dbg.cu = !{!2}
