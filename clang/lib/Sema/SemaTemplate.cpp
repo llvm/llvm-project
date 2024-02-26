@@ -9709,6 +9709,40 @@ bool Sema::CheckFunctionTemplateSpecialization(
   // Ignore access information;  it doesn't figure into redeclaration checking.
   FunctionDecl *Specialization = cast<FunctionDecl>(*Result);
 
+  // C++23 [except.spec]p13:
+  //   An exception specification is considered to be needed when:
+  //   - [...]
+  //   - the exception specification is compared to that of another declaration
+  //     (e.g., an explicit specialization or an overriding virtual function);
+  //   - [...]
+  //
+  //  The exception specification of a defaulted function is evaluated as
+  //  described above only when needed; similarly, the noexcept-specifier of a
+  //  specialization of a function template or member function of a class
+  //  template is instantiated only when needed.
+  //
+  // The standard doesn't specify what the "comparison with another declaration"
+  // entails, nor the exact circumstances in which it occurs. Moreover, it does
+  // not state which properties of an explicit specialization must match the
+  // primary template.
+  //
+  // We assume that an explicit specialization must correspond with (per
+  // [basic.scope.scope]p4) and declare the same entity as (per [basic.link]p8)
+  // the declaration produced by substitution into the function template.
+  //
+  // Since the determination whether two function declarations correspond does
+  // not consider exception specification, we only need to instantiate it once
+  // we determine the primary template when comparing types per
+  // [basic.link]p11.1.
+  auto *SpecializationFPT =
+      Specialization->getType()->castAs<FunctionProtoType>();
+  // If the function has a dependent exception specification, resolve it after
+  // we have selected the primary template so we can check whether it matches.
+  if (getLangOpts().CPlusPlus17 &&
+      isUnresolvedExceptionSpec(SpecializationFPT->getExceptionSpecType()) &&
+      !ResolveExceptionSpec(FD->getLocation(), SpecializationFPT))
+    return true;
+
   FunctionTemplateSpecializationInfo *SpecInfo
     = Specialization->getTemplateSpecializationInfo();
   assert(SpecInfo && "Function template specialization info missing?");
