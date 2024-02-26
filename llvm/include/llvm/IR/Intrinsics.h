@@ -136,6 +136,8 @@ namespace Intrinsic {
       AMX,
       PPCQuad,
       AArch64Svcount,
+      WasmExternref,
+      WasmFuncref,
     } Kind;
 
     union {
