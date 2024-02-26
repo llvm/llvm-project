@@ -1072,6 +1072,7 @@ ObjCInterfaceDecl *Sema::ActOnStartClassInterface(
 
   ProcessDeclAttributeList(TUScope, IDecl, AttrList);
   AddPragmaAttributes(TUScope, IDecl);
+  ProcessAPINotes(IDecl);
 
   // Merge attributes from previous declarations.
   if (PrevIDecl)
@@ -1273,6 +1274,7 @@ ObjCProtocolDecl *Sema::ActOnStartProtocolInterface(
 
   ProcessDeclAttributeList(TUScope, PDecl, AttrList);
   AddPragmaAttributes(TUScope, PDecl);
+  ProcessAPINotes(PDecl);
 
   // Merge attributes from previous declarations.
   if (PrevDecl)
@@ -4807,6 +4809,7 @@ Decl *Sema::ActOnMethodDeclaration(
     // Apply the attributes to the parameter.
     ProcessDeclAttributeList(TUScope, Param, ArgInfo[i].ArgAttrs);
     AddPragmaAttributes(TUScope, Param);
+    ProcessAPINotes(Param);
 
     if (Param->hasAttr<BlocksAttr>()) {
       Diag(Param->getLocation(), diag::err_block_on_nonlocal);
@@ -4837,6 +4840,7 @@ Decl *Sema::ActOnMethodDeclaration(
 
   ProcessDeclAttributeList(TUScope, ObjCMethod, AttrList);
   AddPragmaAttributes(TUScope, ObjCMethod);
+  ProcessAPINotes(ObjCMethod);
 
   // Add the method now.
   const ObjCMethodDecl *PrevMethod = nullptr;
