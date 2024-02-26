@@ -453,7 +453,7 @@ define <32 x i64> @vp_abs_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    li a2, 16
-; CHECK-NEXT:    vslidedown.vi v1, v0, 2
+; CHECK-NEXT:    vslidedown.vi v7, v0, 2
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB34_2
 ; CHECK-NEXT:  # %bb.1:
@@ -467,7 +467,7 @@ define <32 x i64> @vp_abs_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v1
+; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    vrsub.vi v24, v16, 0, v0.t
 ; CHECK-NEXT:    vmax.vv v16, v16, v24, v0.t
 ; CHECK-NEXT:    ret

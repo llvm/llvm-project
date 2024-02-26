@@ -230,7 +230,7 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    slli a2, a2, 6
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0xc0, 0x00, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 64 * vlenb
-; CHECK-NEXT:    vmv1r.v v4, v0
+; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 5
 ; CHECK-NEXT:    add a2, sp, a2
@@ -243,7 +243,7 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    addi a2, a2, 16
 ; CHECK-NEXT:    vs8r.v v8, (a2) # Unknown-size Folded Spill
 ; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v1, v0, 8
+; CHECK-NEXT:    vslidedown.vi v5, v0, 8
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v26, v0, 4
 ; CHECK-NEXT:    addi a2, a1, 512
@@ -256,7 +256,7 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    addi a2, a2, 16
 ; CHECK-NEXT:    vs8r.v v8, (a2) # Unknown-size Folded Spill
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v27, v1, 4
+; CHECK-NEXT:    vslidedown.vi v27, v5, 4
 ; CHECK-NEXT:    addi a2, a1, 640
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v16, (a2)
@@ -346,7 +346,7 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    li a6, 16
 ; CHECK-NEXT:  .LBB16_6:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v20, v1, 2
+; CHECK-NEXT:    vslidedown.vi v20, v5, 2
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a5)
 ; CHECK-NEXT:    addi a1, a1, 256
@@ -382,9 +382,9 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    li a4, 16
 ; CHECK-NEXT:  .LBB16_10:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v5, v4, 2
+; CHECK-NEXT:    vslidedown.vi v6, v7, 2
 ; CHECK-NEXT:    vsetvli zero, a4, e32, m4, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v1
+; CHECK-NEXT:    vmv1r.v v0, v5
 ; CHECK-NEXT:    vnsrl.wi v8, v24, 0, v0.t
 ; CHECK-NEXT:    vmv.v.v v0, v8
 ; CHECK-NEXT:    bltu a7, a3, .LBB16_12
@@ -444,7 +444,7 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    and a1, a4, a1
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v5
+; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 5
 ; CHECK-NEXT:    add a1, sp, a1
@@ -456,7 +456,7 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    li a7, 16
 ; CHECK-NEXT:  .LBB16_14:
 ; CHECK-NEXT:    vsetvli zero, a7, e32, m4, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v4
+; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    li a2, 40
 ; CHECK-NEXT:    mul a1, a1, a2
