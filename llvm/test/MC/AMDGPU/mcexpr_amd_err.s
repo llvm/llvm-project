@@ -1,17 +1,17 @@
 // RUN: not llvm-mc -triple amdgcn-amd-amdhsa %s 2>&1 | FileCheck --check-prefix=ASM %s
 
-// ASM: error: empty max expression
-// ASM: error: missing expression
-// ASM: error: empty or expression
-// ASM: error: missing expression
-// ASM: error: unknown token in expression
-// ASM: error: missing expression
-// ASM: error: unexpected token in max expression
-// ASM: error: missing expression
-// ASM: error: unknown token in expression
-// ASM: error: missing expression
-// ASM: error: unexpected token in or expression
-// ASM: error: missing expression
+// ASM: 20:22: error: empty max expression
+// ASM: 20:22: error: missing expression
+// ASM: 21:20: error: empty or expression
+// ASM: 21:20: error: missing expression
+// ASM: 23:29: error: unknown token in expression
+// ASM: 23:29: error: missing expression
+// ASM: 24:32: error: unexpected token in max expression
+// ASM: 24:32: error: missing expression
+// ASM: 25:42: error: unknown token in expression
+// ASM: 25:42: error: missing expression
+// ASM: 26:38: error: unexpected token in or expression
+// ASM: 26:38: error: missing expression
 
 .set one, 1
 .set two, 2

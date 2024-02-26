@@ -46,7 +46,7 @@ void AMDGPUVariadicMCExpr::printImpl(raw_ostream &OS,
     if ((It + 1) != Args.end())
       OS << ", ";
   }
-  OS << ")";
+  OS << ')';
 }
 
 bool AMDGPUVariadicMCExpr::evaluateAsRelocatableImpl(
