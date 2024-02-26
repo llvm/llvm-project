@@ -62,6 +62,13 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
 
     CallGraphNode *N = CG.getNode(D->getCanonicalDecl());
     if (N == nullptr) {
+        /**
+         * 不知道为什么，CG还是有可能只有一个root节点。
+         *
+         * 样例 linux，版本 6.7.5.arch1-1
+         * linux/src/linux-6.7.5/include/linux/bsearch.h 的函数
+         * __inline_bsearch()
+         */
         requireTrue(CG.size() == 1, "Empty call graph! (only root node)");
     } else {
         for (CallGraphNode::const_iterator CI = N->begin(), CE = N->end();
