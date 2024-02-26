@@ -88,21 +88,21 @@ Module::~Module() {
 void Module::removeDebugIntrinsicDeclarations() {
   auto *DeclareIntrinsicFn =
       Intrinsic::getDeclaration(this, Intrinsic::dbg_declare);
-  assert(DeclareIntrinsicFn->hasZeroLiveUses() &&
+  assert((!isMaterialized() || DeclareIntrinsicFn->hasZeroLiveUses()) &&
          "Debug declare intrinsic should have had uses removed.");
   DeclareIntrinsicFn->eraseFromParent();
   auto *ValueIntrinsicFn =
       Intrinsic::getDeclaration(this, Intrinsic::dbg_value);
-  assert(ValueIntrinsicFn->hasZeroLiveUses() &&
+  assert((!isMaterialized() || ValueIntrinsicFn->hasZeroLiveUses()) &&
          "Debug value intrinsic should have had uses removed.");
   ValueIntrinsicFn->eraseFromParent();
   auto *AssignIntrinsicFn =
       Intrinsic::getDeclaration(this, Intrinsic::dbg_assign);
-  assert(AssignIntrinsicFn->hasZeroLiveUses() &&
+  assert((!isMaterialized() || AssignIntrinsicFn->hasZeroLiveUses()) &&
          "Debug assign intrinsic should have had uses removed.");
   AssignIntrinsicFn->eraseFromParent();
   auto *LabelntrinsicFn = Intrinsic::getDeclaration(this, Intrinsic::dbg_label);
-  assert(LabelntrinsicFn->hasZeroLiveUses() &&
+  assert((!isMaterialized() || LabelntrinsicFn->hasZeroLiveUses()) &&
          "Debug label intrinsic should have had uses removed.");
   LabelntrinsicFn->eraseFromParent();
 }
