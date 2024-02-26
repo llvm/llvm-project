@@ -23,6 +23,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
@@ -793,13 +794,21 @@ Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   for (auto Kind : {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
                     LLVMContext::MD_noalias, LLVMContext::MD_fpmath,
                     LLVMContext::MD_nontemporal, LLVMContext::MD_invariant_load,
-                    LLVMContext::MD_access_group}) {
+                    LLVMContext::MD_access_group, LLVMContext::MD_MMRA}) {
     MDNode *MD = I0->getMetadata(Kind);
+    if (Kind == LLVMContext::MD_MMRA && !MD)
+      continue;
 
     for (int J = 1, E = VL.size(); MD && J != E; ++J) {
       const Instruction *IJ = cast<Instruction>(VL[J]);
       MDNode *IMD = IJ->getMetadata(Kind);
       switch (Kind) {
+      case LLVMContext::MD_MMRA: {
+        auto Tags = MMRAMetadata(dyn_cast_or_null<MDTuple>(MD));
+        auto ITags = MMRAMetadata(dyn_cast_or_null<MDTuple>(IMD));
+        MD = Tags.combine(ITags).getAsMD(Inst->getContext());
+        break;
+      }
       case LLVMContext::MD_tbaa:
         MD = MDNode::getMostGenericTBAA(MD, IMD);
         break;

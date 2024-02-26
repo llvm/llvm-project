@@ -5177,6 +5177,10 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     OrderIndex = 0;
     ScopeIndex = 1;
     break;
+  case AMDGPU::BI__builtin_amdgcn_fence_opencl:
+    OrderIndex = 1;
+    ScopeIndex = 2;
+    break;
   default:
     return false;
   }
@@ -5199,7 +5203,8 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   switch (static_cast<llvm::AtomicOrderingCABI>(Ord)) {
   case llvm::AtomicOrderingCABI::relaxed:
   case llvm::AtomicOrderingCABI::consume:
-    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_fence)
+    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_fence ||
+        BuiltinID == AMDGPU::BI__builtin_amdgcn_fence_opencl)
       return Diag(ArgExpr->getBeginLoc(),
                   diag::warn_atomic_op_has_invalid_memory_order)
              << 0 << ArgExpr->getSourceRange();

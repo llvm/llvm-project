@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -897,6 +898,14 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
 
     if (MDNode *MD = DAG->getPCSections(Node))
       MI->setPCSections(MF, MD);
+
+    // Set MMRAs on _all_ added instructions.
+    if (MDNode *MMRA = DAG->getMMRAMetadata(Node)) {
+      for (MachineBasicBlock::iterator It = MI->getIterator(),
+                                       End = std::next(After);
+           It != End; ++It)
+        It->setMMRAMetadata(MF, MMRA);
+    }
 
     return MI;
   };

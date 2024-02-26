@@ -31,6 +31,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
@@ -640,6 +641,10 @@ int FunctionComparator::cmpOperations(const Instruction *L,
             cmpTypes(L->getOperand(i)->getType(), R->getOperand(i)->getType()))
       return Res;
   }
+
+  // TODO: Does this even make sense? Why do we need to return +-1?
+  if (MMRAMetadata LMD(*L), RMD(*R); LMD != RMD)
+    return LMD.size() >= RMD.size() ? 1 : -1;
 
   // Check special state that is a part of some instructions.
   if (const AllocaInst *AI = dyn_cast<AllocaInst>(L)) {
