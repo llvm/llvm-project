@@ -51,8 +51,6 @@ Improvements and New Features
 Deprecations and Removals
 -------------------------
 
-- TODO: The ``LIBCXX_EXECUTOR`` CMake variables have been removed.
-
 - TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode has been deprecated and setting
   it triggers an error; use the ``LIBCXX_HARDENING_MODE`` CMake variable with the value ``extensive`` instead. Similarly,
   the ``_LIBCPP_ENABLE_ASSERTIONS`` macro has been deprecated (setting it to ``1`` still enables the extensive mode in
@@ -98,4 +96,5 @@ TODO
 Build System Changes
 --------------------
 
-TODO
+- The ``LIBCXX_EXECUTOR`` and ``LIBCXXABI_EXECUTOR`` CMake variables have been removed. Please
+  set ``LIBCXX_TEST_PARAMS`` to ``executor=<...>`` instead.
