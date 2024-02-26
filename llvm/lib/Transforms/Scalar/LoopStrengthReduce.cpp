@@ -6808,6 +6808,12 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   if (!matchSimpleRecurrence(LHS, ToFold, ToFoldStart, ToFoldStep))
     return std::nullopt;
 
+  // If ToFold does not have an incoming value from LoopLatch then the simple
+  // recurrence is from a prior loop unreachable from the loop we're currently
+  // considering.
+  if (ToFold->getBasicBlockIndex(LoopLatch) == -1)
+    return std::nullopt;
+
   // If that IV isn't dead after we rewrite the exit condition in terms of
   // another IV, there's no point in doing the transform.
   if (!isAlmostDeadIV(ToFold, LoopLatch, TermCond))
