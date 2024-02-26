@@ -424,6 +424,16 @@ struct FormatStyle {
   /// \version 19
   AlignConsecutiveStyle AlignConsecutiveTableGenCondOperatorColons;
 
+  /// Style of aligning consecutive TableGen definition colons.
+  /// This aligns the inheritance colons of consecutive definitions.
+  /// \code
+  ///   def Def       : Parent {}
+  ///   def DefDef    : Parent {}
+  ///   def DefDefDef : Parent {}
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenDefinitionsColons;
+
   /// Different styles for aligning escaped newlines.
   enum EscapedNewlineAlignmentStyle : int8_t {
     /// Don't align escaped newlines.
@@ -4817,6 +4827,8 @@ struct FormatStyle {
                R.AlignConsecutiveShortCaseStatements &&
            AlignConsecutiveTableGenCondOperatorColons ==
                R.AlignConsecutiveTableGenCondOperatorColons &&
+           AlignConsecutiveTableGenDefinitionsColons ==
+               R.AlignConsecutiveTableGenDefinitionsColons &&
            AlignEscapedNewlines == R.AlignEscapedNewlines &&
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&
