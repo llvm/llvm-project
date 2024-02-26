@@ -86,6 +86,9 @@ namespace CallingConv {
     /// their stack.
     SwiftTail = 20,
 
+    /// Used for runtime calls that preserves none general registers.
+    PreserveNone = 21,
+
     /// This is the start of the target-specific calling conventions, e.g.
     /// fastcall and thiscall on X86.
     FirstTargetCC = 64,

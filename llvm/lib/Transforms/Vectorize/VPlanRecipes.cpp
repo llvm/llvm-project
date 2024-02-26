@@ -655,7 +655,8 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     if (isa<FPMathOperator>(V))
       V->copyFastMathFlags(&CI);
 
-    State.set(this, V, Part);
+    if (!V->getType()->isVoidTy())
+      State.set(this, V, Part);
     State.addMetadata(V, &CI);
   }
 }

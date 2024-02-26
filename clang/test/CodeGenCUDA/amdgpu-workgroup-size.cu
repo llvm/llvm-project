@@ -8,6 +8,10 @@
 // RUN:     | FileCheck -check-prefix=COV5 %s
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN:     -fcuda-is-device -mcode-object-version=6 -emit-llvm -o - -x hip %s \
+// RUN:     | FileCheck -check-prefix=COV5 %s
+
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
 // RUN:     -fcuda-is-device -mcode-object-version=none -emit-llvm -o - -x hip %s \
 // RUN:     | FileCheck -check-prefix=COVNONE %s
 

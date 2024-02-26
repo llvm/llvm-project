@@ -2613,6 +2613,9 @@ public:
   /// Return true if this is a fixed point or integer type.
   bool isFixedPointOrIntegerType() const;
 
+  /// Return true if this can be converted to (or from) a fixed point type.
+  bool isConvertibleToFixedPointType() const;
+
   /// Return true if this is a saturated fixed point type according to
   /// ISO/IEC JTC1 SC22 WG14 N1169. This type can be signed or unsigned.
   bool isSaturatedFixedPointType() const;
@@ -7491,6 +7494,10 @@ inline bool Type::isFixedPointType() const {
 
 inline bool Type::isFixedPointOrIntegerType() const {
   return isFixedPointType() || isIntegerType();
+}
+
+inline bool Type::isConvertibleToFixedPointType() const {
+  return isRealFloatingType() || isFixedPointOrIntegerType();
 }
 
 inline bool Type::isSaturatedFixedPointType() const {

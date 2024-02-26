@@ -240,8 +240,8 @@ void DebugInfoFinder::processInstruction(const Module &M,
   if (auto DbgLoc = I.getDebugLoc())
     processLocation(M, DbgLoc.get());
 
-  for (const DPValue &DPV : I.getDbgValueRange())
-    processDPValue(M, DPV);
+  for (const DbgRecord &DPR : I.getDbgValueRange())
+    processDbgRecord(M, DPR);
 }
 
 void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
@@ -254,6 +254,10 @@ void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
 void DebugInfoFinder::processDPValue(const Module &M, const DPValue &DPV) {
   processVariable(M, DPV.getVariable());
   processLocation(M, DPV.getDebugLoc().get());
+}
+
+void DebugInfoFinder::processDbgRecord(const Module &M, const DbgRecord &DPR) {
+  processDPValue(M, cast<DPValue>(DPR));
 }
 
 void DebugInfoFinder::processType(DIType *DT) {
@@ -400,8 +404,8 @@ static MDNode *updateLoopMetadataDebugLocationsImpl(
   // Save space for the self-referential LoopID.
   SmallVector<Metadata *, 4> MDs = {nullptr};
 
-  for (const MDOperand &MDO : llvm::drop_begin(OrigLoopID->operands())) {
-    Metadata *MD = MDO;
+  for (unsigned i = 1; i < OrigLoopID->getNumOperands(); ++i) {
+    Metadata *MD = OrigLoopID->getOperand(i);
     if (!MD)
       MDs.push_back(nullptr);
     else if (Metadata *NewMD = Updater(MD))
@@ -1822,7 +1826,7 @@ void at::deleteAll(Function *F) {
   SmallVector<DPValue *, 12> DPToDelete;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
-      for (auto &DPV : I.getDbgValueRange())
+      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
         if (DPV.isDbgAssign())
           DPToDelete.push_back(&DPV);
       if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
@@ -2214,10 +2218,6 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   if (F.hasFnAttribute(Attribute::OptimizeNone))
     return /*Changed*/ false;
 
-  // FIXME: https://github.com/llvm/llvm-project/issues/76545
-  if (F.hasFnAttribute(Attribute::SanitizeHWAddress))
-    return /*Changed*/ false;
-
   bool Changed = false;
   auto *DL = &F.getParent()->getDataLayout();
   // Collect a map of {backing storage : dbg.declares} (currently "backing
@@ -2250,7 +2250,7 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   };
   for (auto &BB : F) {
     for (auto &I : BB) {
-      for (auto &DPV : I.getDbgValueRange()) {
+      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
         if (DPV.isDbgDeclare())
           ProcessDeclare(&DPV, DPVDeclares);
       }

@@ -1119,8 +1119,8 @@ LogicalResult OpTrait::impl::verifySameOperandsAndResultRank(Operation *op) {
   // delegate function that returns true if type is a shaped type with known
   // rank
   auto hasRank = [](const Type type) {
-    if (auto shaped_type = dyn_cast<ShapedType>(type))
-      return shaped_type.hasRank();
+    if (auto shapedType = dyn_cast<ShapedType>(type))
+      return shapedType.hasRank();
 
     return false;
   };

@@ -18,7 +18,7 @@ define amdgpu_kernel void @test2(ptr %ptr, i32 %cmp, i32 %new) {
 ; CHECK: DIVERGENT: %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %ptr, i32 %val)
 define amdgpu_kernel void @test_atomic_csub_i32(ptr addrspace(1) %ptr, i32 %val) #0 {
   %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %ptr, i32 %val)
-  store i32 %ret, i32 addrspace(1)* %ptr, align 4
+  store i32 %ret, ptr addrspace(1) %ptr, align 4
   ret void
 }
 

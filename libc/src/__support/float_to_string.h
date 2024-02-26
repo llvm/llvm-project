@@ -208,7 +208,7 @@ LIBC_INLINE constexpr cpp::UInt<MID_INT_SIZE> get_table_positive(int exponent,
 
   num = num + 1;
   if (num > MOD_SIZE) {
-    auto rem = num.div_uint32_times_pow_2(
+    auto rem = num.div_uint_half_times_pow_2(
                       EXP10_9, CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0))
                    .value();
     num = rem;
@@ -255,8 +255,8 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_positive_df(int exponent,
   if (int_num > MOD_SIZE) {
     auto rem =
         int_num
-            .div_uint32_times_pow_2(EXP10_9, CALC_SHIFT_CONST +
-                                                 (IDX_SIZE > 1 ? IDX_SIZE : 0))
+            .div_uint_half_times_pow_2(
+                EXP10_9, CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0))
             .value();
     int_num = rem;
   }
@@ -318,7 +318,7 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i) {
     num = num >> (-shift_amount);
   }
   if (num > MOD_SIZE) {
-    auto rem = num.div_uint32_times_pow_2(
+    auto rem = num.div_uint_half_times_pow_2(
                       EXP10_9, CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0))
                    .value();
     num = rem;
@@ -360,8 +360,8 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_negative_df(int exponent,
   if (int_num > MOD_SIZE) {
     auto rem =
         int_num
-            .div_uint32_times_pow_2(EXP10_9, CALC_SHIFT_CONST +
-                                                 (IDX_SIZE > 1 ? IDX_SIZE : 0))
+            .div_uint_half_times_pow_2(
+                EXP10_9, CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0))
             .value();
     int_num = rem;
   }
@@ -389,7 +389,8 @@ LIBC_INLINE uint32_t mul_shift_mod_1e9(const FPBits::StorageType mantissa,
                                        const int32_t shift_amount) {
   cpp::UInt<MID_INT_SIZE + FPBits::STORAGE_LEN> val(large);
   val = (val * mantissa) >> shift_amount;
-  return static_cast<uint32_t>(val.div_uint32_times_pow_2(EXP10_9, 0).value());
+  return static_cast<uint32_t>(
+      val.div_uint_half_times_pow_2(static_cast<uint32_t>(EXP10_9), 0).value());
 }
 
 } // namespace internal
@@ -651,13 +652,14 @@ template <> class FloatToString<long double> {
   int int_block_index = 0;
 
   static constexpr size_t BLOCK_BUFFER_LEN =
-      internal::div_ceil(internal::log10_pow2(FLOAT_AS_INT_WIDTH), BLOCK_SIZE);
+      internal::div_ceil(internal::log10_pow2(FLOAT_AS_INT_WIDTH), BLOCK_SIZE) +
+      1;
   BlockInt block_buffer[BLOCK_BUFFER_LEN] = {0};
   size_t block_buffer_valid = 0;
 
   template <size_t Bits>
   LIBC_INLINE static constexpr BlockInt grab_digits(cpp::UInt<Bits> &int_num) {
-    auto wide_result = int_num.div_uint32_times_pow_2(EXP5_9, 9);
+    auto wide_result = int_num.div_uint_half_times_pow_2(EXP5_9, 9);
     // the optional only comes into effect when dividing by 0, which will
     // never happen here. Thus, we just assert that it has value.
     LIBC_ASSERT(wide_result.has_value());
@@ -693,7 +695,9 @@ template <> class FloatToString<long double> {
       int_block_index = 0;
 
       while (float_as_int > 0) {
-        block_buffer[int_block_index] = grab_digits(float_as_int);
+        LIBC_ASSERT(int_block_index < static_cast<int>(BLOCK_BUFFER_LEN));
+        block_buffer[int_block_index] =
+            grab_digits<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH>(float_as_int);
         ++int_block_index;
       }
       block_buffer_valid = int_block_index;
@@ -716,7 +720,7 @@ template <> class FloatToString<long double> {
         size_t positive_int_block_index = 0;
         while (above_decimal_point > 0) {
           block_buffer[positive_int_block_index] =
-              grab_digits(above_decimal_point);
+              grab_digits<EXTRA_INT_WIDTH>(above_decimal_point);
           ++positive_int_block_index;
         }
         block_buffer_valid = positive_int_block_index;
@@ -784,6 +788,8 @@ public:
       return 0;
     if (block_index > static_cast<int>(block_buffer_valid) || block_index < 0)
       return 0;
+
+    LIBC_ASSERT(block_index < static_cast<int>(BLOCK_BUFFER_LEN));
 
     return block_buffer[block_index];
   }

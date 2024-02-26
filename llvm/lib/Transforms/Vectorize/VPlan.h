@@ -236,9 +236,7 @@ struct VPIteration {
 struct VPTransformState {
   VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
                    DominatorTree *DT, IRBuilderBase &Builder,
-                   InnerLoopVectorizer *ILV, VPlan *Plan, LLVMContext &Ctx)
-      : VF(VF), UF(UF), LI(LI), DT(DT), Builder(Builder), ILV(ILV), Plan(Plan),
-        LVer(nullptr), TypeAnalysis(Ctx) {}
+                   InnerLoopVectorizer *ILV, VPlan *Plan, LLVMContext &Ctx);
 
   /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
   ElementCount VF;
@@ -261,10 +259,7 @@ struct VPTransformState {
     DenseMap<VPValue *, ScalarsPerPartValuesTy> PerPartScalars;
   } Data;
 
-  /// Get the generated Value for a given VPValue and a given Part. Note that
-  /// as some Defs are still created by ILV and managed in its ValueMap, this
-  /// method will delegate the call to ILV in such cases in order to provide
-  /// callers a consistent API.
+  /// Get the generated Value for the given VPValue \p Def and the given \p Part.
   /// \see set.
   Value *get(VPValue *Def, unsigned Part);
 
@@ -387,11 +382,6 @@ struct VPTransformState {
 
   /// Hold a reference to the IRBuilder used to generate output IR code.
   IRBuilderBase &Builder;
-
-  VPValue2ValueTy VPValue2Value;
-
-  /// Hold the canonical scalar IV of the vector loop (start=0, step=VF*UF).
-  Value *CanonicalIV = nullptr;
 
   /// Hold a pointer to InnerLoopVectorizer to reuse its IR generation methods.
   InnerLoopVectorizer *ILV;
@@ -1177,9 +1167,6 @@ private:
   bool isFPMathOp() const;
 #endif
 
-protected:
-  void setUnderlyingInstr(Instruction *I) { setUnderlyingValue(I); }
-
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
                 const Twine &Name = "")
@@ -1742,17 +1729,17 @@ public:
 #endif
 };
 
-/// A recipe for handling header phis that are widened in the vector loop.
+/// A recipe for handling phis that are widened in the vector loop.
 /// In the VPlan native path, all incoming VPValues & VPBasicBlock pairs are
 /// managed in the recipe directly.
-class VPWidenPHIRecipe : public VPHeaderPHIRecipe {
+class VPWidenPHIRecipe : public VPSingleDefRecipe {
   /// List of incoming blocks. Only used in the VPlan native path.
   SmallVector<VPBasicBlock *, 2> IncomingBlocks;
 
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start.
   VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr)
-      : VPHeaderPHIRecipe(VPDef::VPWidenPHISC, Phi) {
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi) {
     if (Start)
       addOperand(Start);
   }
@@ -2085,8 +2072,11 @@ public:
   ~VPReplicateRecipe() override = default;
 
   VPRecipeBase *clone() override {
-    return new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
-                                 isPredicated() ? getMask() : nullptr);
+    auto *Copy =
+        new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
+                              isPredicated() ? getMask() : nullptr);
+    Copy->transferFlags(*this);
+    return Copy;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReplicateSC)

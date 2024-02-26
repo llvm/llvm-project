@@ -11,7 +11,7 @@ define i32 @function(i32 %arg1) {
 ; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    retl
 entry:
-  %0 = xor i32 %arg1, xor (i32 ptrtoint (i32* @value1 to i32), i32 -1)
+  %0 = xor i32 %arg1, xor (i32 ptrtoint (ptr @value1 to i32), i32 -1)
   %.neg = add i32 %0, 1
   ret i32 %.neg
 }

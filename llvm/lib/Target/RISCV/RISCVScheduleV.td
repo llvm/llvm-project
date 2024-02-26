@@ -88,20 +88,25 @@ multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
     let ReleaseAtCycles = noPredReleaseCycles;
   }
 
+  // Define SchedVars
+  def nameMX # PredSchedVar
+      : SchedVar<Pred, [!cast<SchedWriteRes>(NAME # nameMX # "_Pred")]>;
+  def nameMX # NoPredSchedVar
+      : SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # nameMX #"_NoPred")]>;
+  // Allow multiclass to refer to SchedVars -- need to have NAME prefix.
+  defvar PredSchedVar = !cast<SchedVar>(NAME # nameMX # PredSchedVar);
+  defvar NoPredSchedVar = !cast<SchedVar>(NAME # nameMX # NoPredSchedVar);
+
   // Tie behavior to predicate
-  def NAME # nameMX # "_Variant" : SchedWriteVariant<[
-    SchedVar<Pred, [!cast<SchedWriteRes>(NAME # nameMX # "_Pred")]>,
-    SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # nameMX # "_NoPred")]>
-  ]>;
+  def NAME # nameMX # "_Variant"
+      : SchedWriteVariant<[PredSchedVar, NoPredSchedVar]>;
   def : SchedAlias<
     !cast<SchedReadWrite>(nameMX),
     !cast<SchedReadWrite>(NAME # nameMX # "_Variant")>;
 
   if IsWorstCase then {
-    def NAME # name # "_WorstCase_Variant" : SchedWriteVariant<[
-      SchedVar<Pred, [!cast<SchedWriteRes>(NAME # nameMX # "_Pred")]>,
-      SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # nameMX # "_NoPred")]>
-    ]>;
+    def NAME # name # "_WorstCase_Variant"
+      : SchedWriteVariant<[PredSchedVar, NoPredSchedVar]>;
     def : SchedAlias<
       !cast<SchedReadWrite>(name # "_WorstCase"),
       !cast<SchedReadWrite>(NAME # name # "_WorstCase_Variant")>;
@@ -473,9 +478,9 @@ defm "" : LMULSchedWrites<"WriteVMFFSV">;
 // 15.6. Vector Set-only-First Mask Bit
 defm "" : LMULSchedWrites<"WriteVMSFSV">;
 // 15.8. Vector Iota Instruction
-defm "" : LMULSchedWrites<"WriteVMIotV">;
+defm "" : LMULSchedWrites<"WriteVIotaV">;
 // 15.9. Vector Element Index Instruction
-defm "" : LMULSchedWrites<"WriteVMIdxV">;
+defm "" : LMULSchedWrites<"WriteVIdxV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
@@ -700,7 +705,7 @@ defm "" : LMULSchedReads<"ReadVMFFSV">;
 // 15.6. Vector Set-only-First Mask Bit
 defm "" : LMULSchedReads<"ReadVMSFSV">;
 // 15.8. Vector Iota Instruction
-defm "" : LMULSchedReads<"ReadVMIotV">;
+defm "" : LMULSchedReads<"ReadVIotaV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
@@ -912,8 +917,8 @@ defm "" : LMULWriteRes<"WriteVMALUV", []>;
 defm "" : LMULWriteRes<"WriteVMPopV", []>;
 defm "" : LMULWriteRes<"WriteVMFFSV", []>;
 defm "" : LMULWriteRes<"WriteVMSFSV", []>;
-defm "" : LMULWriteRes<"WriteVMIotV", []>;
-defm "" : LMULWriteRes<"WriteVMIdxV", []>;
+defm "" : LMULWriteRes<"WriteVIotaV", []>;
+defm "" : LMULWriteRes<"WriteVIdxV", []>;
 
 // 16. Vector Permutation Instructions
 def : WriteRes<WriteVIMovVX, []>;
@@ -1074,7 +1079,7 @@ defm "" : LMULReadAdvance<"ReadVMALUV", 0>;
 defm "" : LMULReadAdvance<"ReadVMPopV", 0>;
 defm "" : LMULReadAdvance<"ReadVMFFSV", 0>;
 defm "" : LMULReadAdvance<"ReadVMSFSV", 0>;
-defm "" : LMULReadAdvance<"ReadVMIotV", 0>;
+defm "" : LMULReadAdvance<"ReadVIotaV", 0>;
 
 // 16. Vector Permutation Instructions
 def : ReadAdvance<ReadVIMovVX, 0>;

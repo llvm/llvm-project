@@ -130,7 +130,7 @@ static void allocSchemeForRank(OpBuilder &builder, Location loc,
       createPushback(builder, loc, desc, SparseTensorFieldKind::PosMemRef, lvl,
                      /*value=*/posZero, /*repeat=*/linear);
       return;
-    } else if (isSingletonLT(lt) || is2OutOf4LT(lt)) {
+    } else if (isSingletonLT(lt) || isNOutOfMLT(lt)) {
       return; // nothing to do
     }
     // Keep compounding the size, but nothing needs to be initialized
@@ -194,7 +194,7 @@ static void createAllocFields(OpBuilder &builder, Location loc,
       valHeuristic =
           builder.create<arith::MulIOp>(loc, valHeuristic, lvlSizesValues[lvl]);
   } else if (sizeHint) {
-    if (stt.getCOOStart() == 0) {
+    if (stt.getAoSCOOStart() == 0) {
       posHeuristic = constantIndex(builder, loc, 2);
       crdHeuristic = builder.create<arith::MulIOp>(
           loc, constantIndex(builder, loc, lvlRank), sizeHint); // AOS
@@ -409,7 +409,7 @@ static void genEndInsert(OpBuilder &builder, Location loc,
       }
     } else {
       assert(isDenseLT(lt) || isLooseCompressedLT(lt) || isSingletonLT(lt) ||
-             is2OutOf4LT(lt));
+             isNOutOfMLT(lt));
     }
   }
 }
@@ -488,7 +488,7 @@ public:
         }
         parentPos =
             genCompressed(builder, loc, desc, coords, value, parentPos, lvl);
-      } else if (isSingletonLT(lt) || is2OutOf4LT(lt)) {
+      } else if (isSingletonLT(lt) || isNOutOfMLT(lt)) {
         // Create:
         //   coordinates[lvl].push_back(coords[lvl])
         //   positions[lvl] = positions[lvl-1]
@@ -1316,7 +1316,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
     Value posBack = c0; // index to the last value in the position array
     Value memSize = c1; // memory size for current array
 
-    Level trailCOOStart = stt.getCOOStart();
+    Level trailCOOStart = stt.getAoSCOOStart();
     Level trailCOORank = stt.getLvlRank() - trailCOOStart;
     // Sets up SparseTensorSpecifier.
     for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
@@ -1453,7 +1453,7 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
     const auto dstTp = getSparseTensorType(op.getResult());
     // Creating COO with NewOp is handled by direct IR codegen. All other cases
     // are handled by rewriting.
-    if (!dstTp.hasEncoding() || dstTp.getCOOStart() != 0)
+    if (!dstTp.hasEncoding() || dstTp.getAoSCOOStart() != 0)
       return failure();
 
     // Implement as follows:

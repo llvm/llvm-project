@@ -363,7 +363,7 @@ define <4 x i32> @combine_vec_lshr_lzcnt_bit1(<4 x i32> %x) {
 ; SSE-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    paddb %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE-NEXT:    pmovzxbw {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    pand %xmm0, %xmm1
 ; SSE-NEXT:    psrlw $8, %xmm0
 ; SSE-NEXT:    paddw %xmm1, %xmm0

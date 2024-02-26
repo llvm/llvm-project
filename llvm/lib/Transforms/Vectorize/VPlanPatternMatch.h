@@ -10,6 +10,9 @@
 // tree-based pattern matches on the VPlan values and recipes, based on
 // LLVM's IR pattern matchers.
 //
+// Currently it provides generic matchers for unary and binary VPInstructions, and specialized matchers like m_Not, m_ActiveLaneMask, m_BranchOnCond, m_BranchOnCount to match specific VPInstructions.
+// TODO: Add missing matchers for additional opcodes and recipes as needed.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORM_VECTORIZE_VPLANPATTERNMATCH_H
@@ -28,6 +31,7 @@ template <typename Class> struct class_match {
   template <typename ITy> bool match(ITy *V) { return isa<Class>(V); }
 };
 
+/// Match an arbitrary VPValue and ignore it.
 inline class_match<VPValue> m_VPValue() { return class_match<VPValue>(); }
 
 template <typename Class> struct bind_ty {
@@ -44,6 +48,7 @@ template <typename Class> struct bind_ty {
   }
 };
 
+/// Match a VPValue, capturing it if we match.
 inline bind_ty<VPValue> m_VPValue(VPValue *&V) { return V; }
 
 template <typename Op0_t, unsigned Opcode> struct UnaryVPInstruction_match {
@@ -61,7 +66,7 @@ template <typename Op0_t, unsigned Opcode> struct UnaryVPInstruction_match {
     if (!DefR)
       return false;
     assert((DefR->getOpcode() != Opcode || DefR->getNumOperands() == 1) &&
-           "matched recipe does not have 1 operands");
+           "recipe with matched opcode does not have 1 operands");
     return DefR->getOpcode() == Opcode && Op0.match(DefR->getOperand(0));
   }
 };
@@ -83,7 +88,7 @@ struct BinaryVPInstruction_match {
     if (!DefR)
       return false;
     assert((DefR->getOpcode() != Opcode || DefR->getNumOperands() == 2) &&
-           "matched recipe does not have 2 operands");
+           "recipe with matched opcode does not have 2 operands");
     return DefR->getOpcode() == Opcode && Op0.match(DefR->getOperand(0)) &&
            Op1.match(DefR->getOperand(1));
   }

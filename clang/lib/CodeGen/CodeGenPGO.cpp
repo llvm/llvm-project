@@ -165,8 +165,8 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   llvm::DenseMap<const Stmt *, unsigned> &CounterMap;
   /// The next bitmap byte index to assign.
   unsigned NextMCDCBitmapIdx;
-  /// The map of statements to MC/DC bitmap coverage objects.
-  llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap;
+  /// The state of MC/DC Coverage in this function.
+  MCDC::State &MCDCState;
   /// Maximum number of supported MC/DC conditions in a boolean expression.
   unsigned MCDCMaxCond;
   /// The profile version.
@@ -176,11 +176,11 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
 
   MapRegionCounters(PGOHashVersion HashVersion, uint64_t ProfileVersion,
                     llvm::DenseMap<const Stmt *, unsigned> &CounterMap,
-                    llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap,
-                    unsigned MCDCMaxCond, DiagnosticsEngine &Diag)
+                    MCDC::State &MCDCState, unsigned MCDCMaxCond,
+                    DiagnosticsEngine &Diag)
       : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap),
-        NextMCDCBitmapIdx(0), MCDCBitmapMap(MCDCBitmapMap),
-        MCDCMaxCond(MCDCMaxCond), ProfileVersion(ProfileVersion), Diag(Diag) {}
+        NextMCDCBitmapIdx(0), MCDCState(MCDCState), MCDCMaxCond(MCDCMaxCond),
+        ProfileVersion(ProfileVersion), Diag(Diag) {}
 
   // Blocks and lambdas are handled as separate functions, so we need not
   // traverse them in the parent context.
@@ -240,9 +240,12 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     if (MCDCMaxCond == 0)
       return true;
 
-    /// At the top of the logical operator nest, reset the number of conditions.
-    if (LogOpStack.empty())
+    /// At the top of the logical operator nest, reset the number of conditions,
+    /// also forget previously seen split nesting cases.
+    if (LogOpStack.empty()) {
       NumCond = 0;
+      SplitNestedLogicalOp = false;
+    }
 
     if (const Expr *E = dyn_cast<Expr>(S)) {
       const BinaryOperator *BinOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
@@ -293,7 +296,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
                 "contains an operation with a nested boolean expression. "
                 "Expression will not be covered");
             Diag.Report(S->getBeginLoc(), DiagID);
-            return false;
+            return true;
           }
 
           /// Was the maximum number of conditions encountered?
@@ -304,12 +307,12 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
                 "number of conditions (%0) exceeds max (%1). "
                 "Expression will not be covered");
             Diag.Report(S->getBeginLoc(), DiagID) << NumCond << MCDCMaxCond;
-            return false;
+            return true;
           }
 
           // Otherwise, allocate the number of bytes required for the bitmap
           // based on the number of conditions. Must be at least 1-byte long.
-          MCDCBitmapMap[BinOp] = NextMCDCBitmapIdx;
+          MCDCState.DecisionByStmt[BinOp].BitmapIdx = NextMCDCBitmapIdx;
           unsigned SizeInBits = std::max<unsigned>(1L << NumCond, CHAR_BIT);
           NextMCDCBitmapIdx += SizeInBits / CHAR_BIT;
         }
@@ -987,10 +990,9 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
   unsigned MCDCMaxConditions = (CGM.getCodeGenOpts().MCDCCoverage) ? 6 : 0;
 
   RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
-  RegionMCDCBitmapMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
+  RegionMCDCState.reset(new MCDC::State);
   MapRegionCounters Walker(HashVersion, ProfileVersion, *RegionCounterMap,
-                           *RegionMCDCBitmapMap, MCDCMaxConditions,
-                           CGM.getDiags());
+                           *RegionMCDCState, MCDCMaxConditions, CGM.getDiags());
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))
     Walker.TraverseDecl(const_cast<FunctionDecl *>(FD));
   else if (const ObjCMethodDecl *MD = dyn_cast_or_null<ObjCMethodDecl>(D))
@@ -1001,7 +1003,7 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
     Walker.TraverseDecl(const_cast<CapturedDecl *>(CD));
   assert(Walker.NextCounter > 0 && "no entry counter mapped for decl");
   NumRegionCounters = Walker.NextCounter;
-  MCDCBitmapBytes = Walker.NextMCDCBitmapIdx;
+  RegionMCDCState->BitmapBytes = Walker.NextMCDCBitmapIdx;
   FunctionHash = Walker.Hash.finalize();
 }
 
@@ -1033,11 +1035,10 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
 
   std::string CoverageMapping;
   llvm::raw_string_ostream OS(CoverageMapping);
-  RegionCondIDMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
+  RegionMCDCState->BranchByStmt.clear();
   CoverageMappingGen MappingGen(
       *CGM.getCoverageMapping(), CGM.getContext().getSourceManager(),
-      CGM.getLangOpts(), RegionCounterMap.get(), RegionMCDCBitmapMap.get(),
-      RegionCondIDMap.get());
+      CGM.getLangOpts(), RegionCounterMap.get(), RegionMCDCState.get());
   MappingGen.emitCounterMapping(D, OS);
   OS.flush();
 
@@ -1119,7 +1120,7 @@ bool CodeGenPGO::canEmitMCDCCoverage(const CGBuilderTy &Builder) {
 }
 
 void CodeGenPGO::emitMCDCParameters(CGBuilderTy &Builder) {
-  if (!canEmitMCDCCoverage(Builder) || !RegionMCDCBitmapMap)
+  if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
     return;
 
   auto *I8PtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
@@ -1129,7 +1130,7 @@ void CodeGenPGO::emitMCDCParameters(CGBuilderTy &Builder) {
   // anything.
   llvm::Value *Args[3] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
                           Builder.getInt64(FunctionHash),
-                          Builder.getInt32(MCDCBitmapBytes)};
+                          Builder.getInt32(RegionMCDCState->BitmapBytes)};
   Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_parameters), Args);
 }
@@ -1137,17 +1138,17 @@ void CodeGenPGO::emitMCDCParameters(CGBuilderTy &Builder) {
 void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
                                                 const Expr *S,
                                                 Address MCDCCondBitmapAddr) {
-  if (!canEmitMCDCCoverage(Builder) || !RegionMCDCBitmapMap)
+  if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
     return;
 
   S = S->IgnoreParens();
 
-  auto ExprMCDCBitmapMapIterator = RegionMCDCBitmapMap->find(S);
-  if (ExprMCDCBitmapMapIterator == RegionMCDCBitmapMap->end())
+  auto DecisionStateIter = RegionMCDCState->DecisionByStmt.find(S);
+  if (DecisionStateIter == RegionMCDCState->DecisionByStmt.end())
     return;
 
-  // Extract the ID of the global bitmap associated with this expression.
-  unsigned MCDCTestVectorBitmapID = ExprMCDCBitmapMapIterator->second;
+  // Extract the offset of the global bitmap associated with this expression.
+  unsigned MCDCTestVectorBitmapOffset = DecisionStateIter->second.BitmapIdx;
   auto *I8PtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
 
   // Emit intrinsic responsible for updating the global bitmap corresponding to
@@ -1157,8 +1158,8 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
   // index represents an executed test vector.
   llvm::Value *Args[5] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
                           Builder.getInt64(FunctionHash),
-                          Builder.getInt32(MCDCBitmapBytes),
-                          Builder.getInt32(MCDCTestVectorBitmapID),
+                          Builder.getInt32(RegionMCDCState->BitmapBytes),
+                          Builder.getInt32(MCDCTestVectorBitmapOffset),
                           MCDCCondBitmapAddr.getPointer()};
   Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_tvbitmap_update), Args);
@@ -1166,12 +1167,12 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
 
 void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
                                          Address MCDCCondBitmapAddr) {
-  if (!canEmitMCDCCoverage(Builder) || !RegionMCDCBitmapMap)
+  if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
     return;
 
   S = S->IgnoreParens();
 
-  if (RegionMCDCBitmapMap->find(S) == RegionMCDCBitmapMap->end())
+  if (!RegionMCDCState->DecisionByStmt.contains(S))
     return;
 
   // Emit intrinsic that resets a dedicated temporary value on the stack to 0.
@@ -1181,7 +1182,7 @@ void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
 void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
                                           Address MCDCCondBitmapAddr,
                                           llvm::Value *Val) {
-  if (!canEmitMCDCCoverage(Builder) || !RegionCondIDMap)
+  if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
     return;
 
   // Even though, for simplicity, parentheses and unary logical-NOT operators
@@ -1193,13 +1194,13 @@ void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
   // also make debugging a bit easier.
   S = CodeGenFunction::stripCond(S);
 
-  auto ExprMCDCConditionIDMapIterator = RegionCondIDMap->find(S);
-  if (ExprMCDCConditionIDMapIterator == RegionCondIDMap->end())
+  auto BranchStateIter = RegionMCDCState->BranchByStmt.find(S);
+  if (BranchStateIter == RegionMCDCState->BranchByStmt.end())
     return;
 
   // Extract the ID of the condition we are setting in the bitmap.
-  unsigned CondID = ExprMCDCConditionIDMapIterator->second;
-  assert(CondID > 0 && "Condition has no ID!");
+  const auto &Branch = BranchStateIter->second;
+  assert(Branch.ID >= 0 && "Condition has no ID!");
 
   auto *I8PtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
 
@@ -1208,7 +1209,7 @@ void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
   // the resulting value is used to update the boolean expression's bitmap.
   llvm::Value *Args[5] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
                           Builder.getInt64(FunctionHash),
-                          Builder.getInt32(CondID - 1),
+                          Builder.getInt32(Branch.ID),
                           MCDCCondBitmapAddr.getPointer(), Val};
   Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_condbitmap_update),

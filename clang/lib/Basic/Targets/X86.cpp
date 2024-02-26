@@ -139,7 +139,7 @@ bool X86TargetInfo::initFeatureMap(
     if (Feature.substr(1, 6) == "avx10.") {
       if (Feature[0] == '+') {
         HasAVX10 = true;
-        if (Feature.substr(Feature.size() - 3, 3) == "512")
+        if (StringRef(Feature).ends_with("512"))
           HasAVX10_512 = true;
         LastAVX10 = Feature;
       } else if (HasAVX10 && Feature == "-avx10.1-256") {

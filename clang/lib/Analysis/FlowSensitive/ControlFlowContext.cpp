@@ -39,8 +39,35 @@ buildStmtToBasicBlockMap(const CFG &Cfg) {
 
       StmtToBlock[Stmt->getStmt()] = Block;
     }
-    if (const Stmt *TerminatorStmt = Block->getTerminatorStmt())
-      StmtToBlock[TerminatorStmt] = Block;
+  }
+  // Some terminator conditions don't appear as a `CFGElement` anywhere else -
+  // for example, this is true if the terminator condition is a `&&` or `||`
+  // operator.
+  // We associate these conditions with the block the terminator appears in,
+  // but only if the condition has not already appeared as a regular
+  // `CFGElement`. (The `insert()` below does nothing if the key already exists
+  // in the map.)
+  for (const CFGBlock *Block : Cfg) {
+    if (Block != nullptr)
+      if (const Stmt *TerminatorCond = Block->getTerminatorCondition())
+        StmtToBlock.insert({TerminatorCond, Block});
+  }
+  // Terminator statements typically don't appear as a `CFGElement` anywhere
+  // else, so we want to associate them with the block that they terminate.
+  // However, there are some important special cases:
+  // -  The conditional operator is a type of terminator, but it also appears
+  //    as a regular `CFGElement`, and we want to associate it with the block
+  //    in which it appears as a `CFGElement`.
+  // -  The `&&` and `||` operators are types of terminators, but like the
+  //    conditional operator, they can appear as a regular `CFGElement` or
+  //    as a terminator condition (see above).
+  // We process terminators last to make sure that we only associate them with
+  // the block they terminate if they haven't previously occurred as a regular
+  // `CFGElement` or as a terminator condition.
+  for (const CFGBlock *Block : Cfg) {
+    if (Block != nullptr)
+      if (const Stmt *TerminatorStmt = Block->getTerminatorStmt())
+        StmtToBlock.insert({TerminatorStmt, Block});
   }
   return StmtToBlock;
 }
