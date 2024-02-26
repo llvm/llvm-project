@@ -18,7 +18,7 @@ if(${LIBOMP_OMPT_SUPPORT})
   configure_file(${LIBOMP_INC_DIR}/omp-tools.h.var omp-tools.h @ONLY)
 endif()
 
-# Generate message catalog fioles: kmp_i18n_id.inc and kmp_i18n_default.inc
+# Generate message catalog files: kmp_i18n_id.inc and kmp_i18n_default.inc
 add_custom_command(
   OUTPUT  kmp_i18n_id.inc
   COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/message-converter.pl --os=${LIBOMP_PERL_SCRIPT_OS}
