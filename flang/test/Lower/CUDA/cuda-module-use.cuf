@@ -1,0 +1,15 @@
+! RUN: bbc -emit-hlfir -fcuda %S/cuda-mod.cuf
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test importing module with variable with CUDA attributes.
+
+subroutine sub1()
+  use cuf_mod
+  md = 1.0
+end
+
+! CHECK-LABEL: func.func @_QPsub1()
+! CHECK: %[[ADDR:.*]] = fir.address_of(@_QMcuf_modEmd) : !fir.ref<f32>
+! CHECK: %{{.*}}:2 = hlfir.declare %[[ADDR]] {cuda_attr = #fir.cuda<device>, uniq_name = "_QMcuf_modEmd"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+
+! CHECK: fir.global @_QMcuf_modEmd {cuda_attr = #fir.cuda<device>} : f32
