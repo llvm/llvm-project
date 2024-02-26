@@ -124,6 +124,65 @@ exit:
   ret i8 %or2
 }
 
+
+define i8 @test_cond_and_bothways(i8 %x) {
+; CHECK-LABEL: @test_cond_and_bothways(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 91
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp ne i8 [[AND]], 24
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i8 -4
+;
+  %and = and i8 %x, 91
+  %cmp0 = icmp ne i8 %and, 24
+  %cmp1 = icmp ne i8 %x, 0
+  %cond = and i1 %cmp0, %cmp1
+  br i1 %cond, label %if, label %exit
+
+if:
+  %or1 = or i8 %x, -4
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -4
+  ret i8 %or2
+}
+
+define i8 @test_cond_or_bothways(i8 %x) {
+; CHECK-LABEL: @test_cond_or_bothways(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 91
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i8 [[AND]], 24
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    ret i8 -4
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR2]]
+;
+  %and = and i8 %x, 91
+  %cmp0 = icmp eq i8 %and, 24
+  %cmp1 = icmp eq i8 %x, 0
+  %cond = or i1 %cmp0, %cmp1
+  br i1 %cond, label %if, label %exit
+
+if:
+  %or1 = or i8 %x, -4
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -4
+  ret i8 %or2
+}
+
+
+
 define i8 @test_cond_and_commuted(i8 %x, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: @test_cond_and_commuted(
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 3
