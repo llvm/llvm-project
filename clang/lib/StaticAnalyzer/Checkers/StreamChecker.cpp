@@ -1050,10 +1050,13 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
     if (!StateNotFailed)
       return;
 
-    SmallVector<unsigned int> EscArgs;
-    for (auto EscArg : llvm::seq(2u, Call.getNumArgs()))
-      EscArgs.push_back(EscArg);
-    StateNotFailed = escapeArgs(StateNotFailed, C, Call, EscArgs);
+    if (auto const *Callee = Call.getCalleeIdentifier();
+        !Callee || !Callee->getName().equals("vfscanf")) {
+      SmallVector<unsigned int> EscArgs;
+      for (auto EscArg : llvm::seq(2u, Call.getNumArgs()))
+        EscArgs.push_back(EscArg);
+      StateNotFailed = escapeArgs(StateNotFailed, C, Call, EscArgs);
+    }
 
     if (StateNotFailed)
       C.addTransition(StateNotFailed);

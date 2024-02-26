@@ -473,3 +473,28 @@ void test_fprintf() {
 
   fclose(F1);
 }
+
+
+int test_vscanf_inner(const char *fmt, ...) {
+  FILE *F1 = tmpfile();
+  if (!F1)
+    return EOF;
+
+  va_list ap;
+  va_start(ap, fmt);
+
+  int r = vfscanf(F1, fmt, ap);
+
+  fclose(F1);
+  va_end(ap);
+  return r;
+}
+
+void test_vscanf() {
+  int i = 42;
+  int r = test_vscanf_inner("%d", &i);
+  if (r != EOF) {
+    clang_analyzer_dump_int(i); // expected-warning {{conj_$}}
+    // FIXME va_list "hides" the pointer to i
+  }
+}
