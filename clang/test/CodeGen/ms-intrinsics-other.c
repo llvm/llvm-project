@@ -1,38 +1,38 @@
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
-// RUN:         -fexperimental-new-constant-interpreter -triple x86_64--darwin -Oz -emit-llvm %s -o - \
+// RUN:         -triple x86_64--darwin -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
-// RUN:         -fexperimental-new-constant-interpreter -triple x86_64--linux -Oz -emit-llvm %s -o - \
+// RUN:         -triple x86_64--linux -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
-// RUN:         -fexperimental-new-constant-interpreter -triple aarch64--darwin -Oz -emit-llvm %s -o - \
+// RUN:         -triple aarch64--darwin -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK-ARM-ARM64
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
-// RUN:         -fexperimental-new-constant-interpreter -triple aarch64--darwin -Oz -emit-llvm %s -o - \
+// RUN:         -triple aarch64--darwin -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK-ARM
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
-// RUN:         -fexperimental-new-constant-interpreter -triple armv7--darwin -Oz -emit-llvm %s -o - \
+// RUN:         -triple armv7--darwin -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK-ARM
 
 // RUN: %clang_cc1 -x c++ -std=c++11 \
 // RUN:         -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
-// RUN:         -fexperimental-new-constant-interpreter -triple x86_64--darwin -Oz -emit-llvm %s -o - \
+// RUN:         -triple x86_64--darwin -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s
 // RUN: %clang_cc1 -x c++ -std=c++11 \
 // RUN:         -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
-// RUN:         -fexperimental-new-constant-interpreter -triple x86_64--linux -Oz -emit-llvm %s -o - \
+// RUN:         -triple x86_64--linux -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s
 // RUN: %clang_cc1 -x c++ -std=c++11 \
 // RUN:         -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
-// RUN:         -fexperimental-new-constant-interpreter -triple aarch64--darwin -Oz -emit-llvm %s -o - \
+// RUN:         -triple aarch64--darwin -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK-ARM-ARM64
 // RUN: %clang_cc1 -x c++ -std=c++11 \
 // RUN:         -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
-// RUN:         -fexperimental-new-constant-interpreter -triple aarch64--darwin -Oz -emit-llvm %s -o - \
+// RUN:         -triple aarch64--darwin -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK-ARM
 // RUN: %clang_cc1 -x c++ -std=c++11 \
 // RUN:         -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
-// RUN:         -fexperimental-new-constant-interpreter -triple armv7--darwin -Oz -emit-llvm %s -o - \
+// RUN:         -triple armv7--darwin -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK-ARM
 
 // LP64 targets use 'long' as 'int' for MS intrinsics (-fms-extensions)
