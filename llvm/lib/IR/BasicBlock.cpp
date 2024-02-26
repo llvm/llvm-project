@@ -61,6 +61,10 @@ DPMarker *BasicBlock::createMarker(InstListType::iterator It) {
 }
 
 void BasicBlock::convertToNewDbgValues() {
+  // Is the command line option set?
+  if (!UseNewDbgInfoFormat)
+    return;
+
   IsNewDbgInfoFormat = true;
 
   // Iterate over all instructions in the instruction list, collecting dbg.value
