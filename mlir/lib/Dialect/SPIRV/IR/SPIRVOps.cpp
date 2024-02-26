@@ -563,8 +563,7 @@ void spirv::CompositeInsertOp::print(OpAsmPrinter &printer) {
 ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
                                      OperationState &result) {
   Attribute value;
-  StringRef valueAttrName =
-      spirv::ConstantOp::getValueAttrName(result.name);
+  StringRef valueAttrName = spirv::ConstantOp::getValueAttrName(result.name);
   if (parser.parseAttribute(value, valueAttrName, result.attributes))
     return failure();
 
@@ -828,9 +827,8 @@ ParseResult spirv::EntryPointOp::parse(OpAsmParser &parser,
         }))
       return failure();
   }
-  result.addAttribute(
-      spirv::EntryPointOp::getInterfaceAttrName(result.name),
-      parser.getBuilder().getArrayAttr(interfaceVars));
+  result.addAttribute(spirv::EntryPointOp::getInterfaceAttrName(result.name),
+                      parser.getBuilder().getArrayAttr(interfaceVars));
   return success();
 }
 

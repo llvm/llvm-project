@@ -222,8 +222,7 @@ static LogicalResult verifySourceMemoryAccessAttribute(MemoryOpTy memoryOp) {
   // memory-access attribute is Aligned, then the alignment attribute must be
   // present.
   auto *op = memoryOp.getOperation();
-  auto memAccessAttr =
-      op->getAttr(memoryOp.getSourceMemoryAccessAttrName());
+  auto memAccessAttr = op->getAttr(memoryOp.getSourceMemoryAccessAttrName());
   if (!memAccessAttr) {
     // Alignment attribute shouldn't be present if memory access attribute is
     // not present.

@@ -133,7 +133,7 @@ getIntegerDotProductCapabilities(Operation *op) {
     return getIntegerDotProductExtensions();                                   \
   }                                                                            \
   SmallVector<ArrayRef<spirv::Capability>, 1> OpName::getCapabilities() {      \
-    return getIntegerDotProductCapabilities<OpName>(*this);                            \
+    return getIntegerDotProductCapabilities<OpName>(*this);                    \
   }                                                                            \
   std::optional<spirv::Version> OpName::getMinVersion() {                      \
     return getIntegerDotProductMinVersion();                                   \
