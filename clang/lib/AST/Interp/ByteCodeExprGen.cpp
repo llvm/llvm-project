@@ -1679,13 +1679,24 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
 
   std::optional<PrimType> T = classify(E->getType());
   if (E->isFileScope()) {
+    // Avoid creating a variable if this is a primitive RValue anyway.
+    if (T && !E->isLValue())
+      return this->delegate(Init);
+
     if (std::optional<unsigned> GlobalIndex = P.createGlobal(E)) {
-      if (classify(E->getType()))
-        return this->visit(Init);
       if (!this->emitGetPtrGlobal(*GlobalIndex, E))
         return false;
+
+      if (T) {
+        if (!this->visit(Init))
+          return false;
+        return this->emitInitGlobal(*T, *GlobalIndex, E);
+      }
+
       return this->visitInitializer(Init);
     }
+
+    return false;
   }
 
   // Otherwise, use a local variable.
