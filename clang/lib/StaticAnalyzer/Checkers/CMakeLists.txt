@@ -31,6 +31,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   ContainerModeling.cpp
   ConversionChecker.cpp
   CXXDeleteChecker.cpp
+  PolymorphicPtrArithmetic.cpp
   CXXSelfAssignmentChecker.cpp
   DeadStoresChecker.cpp
   DebugCheckers.cpp

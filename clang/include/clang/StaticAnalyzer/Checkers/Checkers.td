@@ -706,6 +706,11 @@ def PureVirtualCallChecker : Checker<"PureVirtualCall">,
 
 let ParentPackage = CplusplusOptIn in {
 
+def PolymorphicPtrArithmeticChecker : Checker<"PolymorphicPtrArithmetic">,
+  HelpText<"Reports doing pointer arithmetic on arrays of polymorphic objects "
+           "with the type of their base class">,
+  Documentation<HasDocumentation>;
+
 def UninitializedObjectChecker: Checker<"UninitializedObject">,
   HelpText<"Reports uninitialized fields after object construction">,
   CheckerOptions<[

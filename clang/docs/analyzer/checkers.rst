@@ -581,6 +581,39 @@ store combinations of flag values:
 
 Projects that use this pattern should not enable this optin checker.
 
+.. _optin-cplusplus-PolymorphicPtrArithmetic:
+
+optin.cplusplus.PolymorphicPtrArithmetic (C++)
+""""""""""""""""""""""""""""""""""""""""""""""
+
+This checker reports pointer arithmetic operations on arrays of polymorphic
+objects, where the array has the type of its base class.
+Deleting an array where the array's static type is different from its dynamic
+type is undefined.
+
+This checker corresponds to the CERT rule `CTR56-CPP: Do not use pointer arithmetic on polymorphic objects <https://wiki.sei.cmu.edu/confluence/display/cplusplus/CTR56-CPP.+Do+not+use+pointer+arithmetic+on+polymorphic+objects>`_.
+
+.. code-block:: cpp
+
+ class Base {
+ public:
+   int member = 0;
+   virtual ~Base() {}
+ };
+ class Derived : public Base {}
+
+ Base *create() {
+   Base *x = new Derived[10]; // note: Casting from 'Derived' to 'Base' here
+   return x;
+ }
+
+ void foo() {
+   Base *x = create();
+   (x + 3)->member += 1; // warn: Doing pointer arithmetic with 'Derived' objects as their base class 'Base' is undefined
+   x[3].member += 1;  // warn: Doing pointer arithmetic with 'Derived' objects as their base class 'Base' is undefined
+   delete[] static_cast<Derived*>(x);
+ }
+
 .. _optin-cplusplus-UninitializedObject:
 
 optin.cplusplus.UninitializedObject (C++)
