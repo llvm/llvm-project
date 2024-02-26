@@ -7062,9 +7062,9 @@ bool CombinerHelper::matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) {
   // We try to combine uaddo to non-overflowing add.
   if (!IsSigned) {
     ConstantRange CRLHS =
-        ConstantRange::fromKnownBits(KB->getKnownBits(LHS), false /*IsSigned*/);
+        ConstantRange::fromKnownBits(KB->getKnownBits(LHS), /*IsSigned=*/false);
     ConstantRange CRRHS =
-        ConstantRange::fromKnownBits(KB->getKnownBits(RHS), false /*IsSigned*/);
+        ConstantRange::fromKnownBits(KB->getKnownBits(RHS), /*IsSigned=*/false);
 
     switch (CRLHS.unsignedAddMayOverflow(CRRHS)) {
     case ConstantRange::OverflowResult::MayOverflow:
@@ -7092,7 +7092,7 @@ bool CombinerHelper::matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) {
 
   // If LHS and RHS each have at least two sign bits, then there is no signed
   // overflow.
-  if (KB->computeNumSignBits(LHS) > 1 && KB->computeNumSignBits(RHS) > 1) {
+  if (KB->computeNumSignBits(RHS) > 1 && KB->computeNumSignBits(LHS) > 1) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.buildAdd(Dst, LHS, RHS, MachineInstr::MIFlag::NoSWrap);
       B.buildConstant(Carry, 0);
@@ -7101,9 +7101,9 @@ bool CombinerHelper::matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) {
   }
 
   ConstantRange CRLHS =
-      ConstantRange::fromKnownBits(KB->getKnownBits(LHS), true /*IsSigned*/);
+      ConstantRange::fromKnownBits(KB->getKnownBits(LHS), /*IsSigned=*/true);
   ConstantRange CRRHS =
-      ConstantRange::fromKnownBits(KB->getKnownBits(RHS), true /*IsSigned*/);
+      ConstantRange::fromKnownBits(KB->getKnownBits(RHS), /*IsSigned=*/true);
 
   switch (CRLHS.signedAddMayOverflow(CRRHS)) {
   case ConstantRange::OverflowResult::MayOverflow:
