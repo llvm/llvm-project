@@ -685,8 +685,21 @@ public:
 
     // `S->inits()` contains all the initializer expressions, including the
     // ones for direct base classes.
-    auto Inits = S->inits();
+    ArrayRef<Expr *> Inits = S->inits();
     size_t InitIdx = 0;
+
+    // Unions initialized with an empty initializer list need special treatment.
+    // For structs/classes initialized with an empty initializer list, Clang
+    // puts `ImplicitValueInitExpr`s in `InitListExpr::inits()`, but for unions,
+    // it doesn't do this -- so we create an `ImplicitValueInitExpr` ourselves.
+    std::optional<ImplicitValueInitExpr> ImplicitValueInitForUnion;
+    SmallVector<Expr *> InitsForUnion;
+    if (S->getType()->isUnionType() && Inits.empty()) {
+      assert(FieldsForInit.size() == 1);
+      ImplicitValueInitForUnion.emplace(FieldsForInit.front()->getType());
+      InitsForUnion.push_back(&*ImplicitValueInitForUnion);
+      Inits = InitsForUnion;
+    }
 
     // Initialize base classes.
     if (auto* R = S->getType()->getAsCXXRecordDecl()) {
