@@ -205,12 +205,12 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
 
   std::vector<COFFShortExport> Exports, NativeExports;
 
-  if (Args.hasArg(OPT_n)) {
+  if (Args.hasArg(OPT_N)) {
     if (!isArm64EC(Machine)) {
       llvm::errs() << "native .def file is supported only on arm64ec target\n";
       return 1;
     }
-    if (!parseModuleDefinition(Args.getLastArg(OPT_n)->getValue(),
+    if (!parseModuleDefinition(Args.getLastArg(OPT_N)->getValue(),
                                IMAGE_FILE_MACHINE_ARM64, AddUnderscores,
                                NativeExports, OutputFile))
       return 1;

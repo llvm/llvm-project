@@ -633,6 +633,29 @@ Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
 
 void OpenMPIRBuilder::initialize() { initializeTypes(M); }
 
+static void raiseUserConstantDataAllocasToEntryBlock(IRBuilderBase &Builder,
+                                                     Function *Function) {
+  BasicBlock &EntryBlock = Function->getEntryBlock();
+  Instruction *MoveLocInst = EntryBlock.getFirstNonPHI();
+
+  // Loop over blocks looking for constant allocas, skipping the entry block
+  // as any allocas there are already in the desired location.
+  for (auto Block = std::next(Function->begin(), 1); Block != Function->end();
+       Block++) {
+    for (auto Inst = Block->getReverseIterator()->begin();
+         Inst != Block->getReverseIterator()->end();) {
+      if (auto *AllocaInst = dyn_cast_if_present<llvm::AllocaInst>(Inst)) {
+        Inst++;
+        if (!isa<ConstantData>(AllocaInst->getArraySize()))
+          continue;
+        AllocaInst->moveBeforePreserving(MoveLocInst);
+      } else {
+        Inst++;
+      }
+    }
+  }
+}
+
 void OpenMPIRBuilder::finalize(Function *Fn) {
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
@@ -736,6 +759,28 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
 
   // Remove work items that have been completed.
   OutlineInfos = std::move(DeferredOutlines);
+
+  // The createTarget functions embeds user written code into
+  // the target region which may inject allocas which need to
+  // be moved to the entry block of our target or risk malformed
+  // optimisations by later passes, this is only relevant for
+  // the device pass which appears to be a little more delicate
+  // when it comes to optimisations (however, we do not block on
+  // that here, it's up to the inserter to the list to do so).
+  // This notbaly has to occur after the OutlinedInfo candidates
+  // have been extracted so we have an end product that will not
+  // be implicitly adversely affected by any raises unless
+  // intentionally appended to the list.
+  // NOTE: This only does so for ConstantData, it could be extended
+  // to ConstantExpr's with further effort, however, they should
+  // largely be folded when they get here. Extending it to runtime
+  // defined/read+writeable allocation sizes would be non-trivial
+  // (need to factor in movement of any stores to variables the
+  // allocation size depends on, as well as the usual loads,
+  // otherwise it'll yield the wrong result after movement) and
+  // likely be more suitable as an LLVM optimisation pass.
+  for (Function *F : ConstantAllocaRaiseCandidates)
+    raiseUserConstantDataAllocasToEntryBlock(Builder, F);
 
   EmitMetadataErrorReportFunctionTy &&ErrorReportFn =
       [](EmitMetadataErrorKind Kind,
@@ -5043,6 +5088,12 @@ static Function *createOutlinedFunction(
 
   BasicBlock *UserCodeEntryBB = Builder.GetInsertBlock();
 
+  // As we embed the user code in the middle of our target region after we
+  // generate entry code, we must move what allocas we can into the entry
+  // block to avoid possible breaking optimisations for device
+  if (OMPBuilder.Config.isTargetDevice())
+    OMPBuilder.ConstantAllocaRaiseCandidates.emplace_back(Func);
+
   // Insert target deinit call in the device compilation pass.
   Builder.restoreIP(CBFunc(Builder.saveIP(), Builder.saveIP()));
   if (OMPBuilder.Config.isTargetDevice())
@@ -6602,6 +6653,17 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
       llvm_unreachable("Unsupported entry kind.");
     }
   }
+
+  // Emit requires directive globals to a special entry so the runtime can
+  // register them when the device image is loaded.
+  // TODO: This reduces the offloading entries to a 32-bit integer. Offloading
+  //       entries should be redesigned to better suit this use-case.
+  if (Config.hasRequiresFlags() && !Config.isTargetDevice())
+    offloading::emitOffloadingEntry(
+        M, Constant::getNullValue(PointerType::getUnqual(M.getContext())),
+        /*Name=*/"",
+        /*Size=*/0, OffloadEntriesInfoManager::OMPTargetGlobalRegisterRequires,
+        Config.getRequiresFlags(), "omp_offloading_entries");
 }
 
 void TargetRegionEntryInfo::getTargetRegionEntryFnName(
@@ -6879,35 +6941,6 @@ void OpenMPIRBuilder::loadOffloadInfoMetadata(StringRef HostFilePath) {
   }
 
   loadOffloadInfoMetadata(*M.get());
-}
-
-Function *OpenMPIRBuilder::createRegisterRequires(StringRef Name) {
-  // Skip the creation of the registration function if this is device codegen
-  if (Config.isTargetDevice())
-    return nullptr;
-
-  Builder.ClearInsertionPoint();
-
-  // Create registration function prototype
-  auto *RegFnTy = FunctionType::get(Builder.getVoidTy(), {});
-  auto *RegFn = Function::Create(
-      RegFnTy, GlobalVariable::LinkageTypes::InternalLinkage, Name, M);
-  RegFn->setSection(".text.startup");
-  RegFn->addFnAttr(Attribute::NoInline);
-  RegFn->addFnAttr(Attribute::NoUnwind);
-
-  // Create registration function body
-  auto *BB = BasicBlock::Create(M.getContext(), "entry", RegFn);
-  ConstantInt *FlagsVal =
-      ConstantInt::getSigned(Builder.getInt64Ty(), Config.getRequiresFlags());
-  Function *RTLRegFn = getOrCreateRuntimeFunctionPtr(
-      omp::RuntimeFunction::OMPRTL___tgt_register_requires);
-
-  Builder.SetInsertPoint(BB);
-  Builder.CreateCall(RTLRegFn, {FlagsVal});
-  Builder.CreateRetVoid();
-
-  return RegFn;
 }
 
 //===----------------------------------------------------------------------===//

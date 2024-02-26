@@ -259,7 +259,7 @@ class SourceManagerTestCase(TestBase):
         m = re.search("^\[(\d+)\].*// Set break point at this line.", output)
         if not m:
             self.fail("Fail to display source level breakpoints")
-        self.assertTrue(int(m.group(1)) > 0)
+        self.assertGreater(int(m.group(1)), 0)
 
         # Modify content
         self.modify_content()

@@ -123,9 +123,12 @@ namespace FunctionPointers {
   }
 
   constexpr int applyBinOp(int a, int b, int (*op)(int, int)) {
-    return op(a, b);
+    return op(a, b); // both-note {{evaluates to a null function pointer}}
   }
   static_assert(applyBinOp(1, 2, add) == 3, "");
+  static_assert(applyBinOp(1, 2, nullptr) == 3, ""); // both-error {{not an integral constant expression}} \
+                                                     // both-note {{in call to}}
+
 
   constexpr int ignoreReturnValue() {
     int (*foo)(int, int) = add;
@@ -522,4 +525,33 @@ namespace Move {
 #endif
   constexpr int A = std::move(5);
   static_assert(A == 5, "");
+}
+
+namespace StaticLocals {
+  void test() {
+    static int j; // both-note {{declared here}}
+    static_assert(&j != nullptr, ""); // both-warning {{always true}}
+
+    static_assert(j == 0, ""); // both-error {{not an integral constant expression}} \
+                               // both-note {{read of non-const variable 'j'}}
+
+    static int k = 0; // both-note {{declared here}}
+    static_assert(k == 0, ""); // both-error {{not an integral constant expression}} \
+                               // both-note {{read of non-const variable 'k'}}
+
+    static const int l = 12;
+    static_assert(l == 12, "");
+
+    static const int m; // both-error {{default initialization}}
+    static_assert(m == 0, "");
+  }
+}
+
+namespace Local {
+  /// We used to run into infinite recursin here because we were
+  /// trying to evaluate t's initializer while evaluating t's initializer.
+  int a() {
+    const int t=t;
+    return t;
+  }
 }

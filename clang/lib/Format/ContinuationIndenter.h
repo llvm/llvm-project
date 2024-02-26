@@ -104,7 +104,7 @@ private:
   /// Update 'State' according to the next token being one of ")>}]".
   void moveStatePastScopeCloser(LineState &State);
   /// Update 'State' with the next token opening a nested block.
-  void moveStateToNewBlock(LineState &State);
+  void moveStateToNewBlock(LineState &State, bool NewLine);
 
   /// Reformats a raw string literal.
   ///

@@ -684,7 +684,6 @@ private:
 
   llvm::SmallVector<mcdc::ConditionIDs> DecisionStack;
   MCDC::State &MCDCState;
-  llvm::DenseMap<const Stmt *, mcdc::ConditionID> &CondIDs;
   mcdc::ConditionID NextID = 0;
   bool NotMapped = false;
 
@@ -699,8 +698,8 @@ private:
 
 public:
   MCDCCoverageBuilder(CodeGenModule &CGM, MCDC::State &MCDCState)
-      : CGM(CGM), DecisionStack(1, DecisionStackSentinel), MCDCState(MCDCState),
-        CondIDs(MCDCState.CondIDMap) {}
+      : CGM(CGM), DecisionStack(1, DecisionStackSentinel),
+        MCDCState(MCDCState) {}
 
   /// Return whether the build of the control flow map is at the top-level
   /// (root) of a logical operator nest in a boolean expression prior to the
@@ -714,16 +713,16 @@ public:
 
   /// Set the given condition's ID.
   void setCondID(const Expr *Cond, mcdc::ConditionID ID) {
-    CondIDs[CodeGenFunction::stripCond(Cond)] = ID;
+    MCDCState.BranchByStmt[CodeGenFunction::stripCond(Cond)].ID = ID;
   }
 
   /// Return the ID of a given condition.
   mcdc::ConditionID getCondID(const Expr *Cond) const {
-    auto I = CondIDs.find(CodeGenFunction::stripCond(Cond));
-    if (I == CondIDs.end())
+    auto I = MCDCState.BranchByStmt.find(CodeGenFunction::stripCond(Cond));
+    if (I == MCDCState.BranchByStmt.end())
       return -1;
     else
-      return I->second;
+      return I->second.ID;
   }
 
   /// Return the LHS Decision ([0,0] if not set).
@@ -738,7 +737,7 @@ public:
 
     // If binary expression is disqualified, don't do mapping.
     if (!isBuilding() &&
-        !MCDCState.BitmapMap.contains(CodeGenFunction::stripCond(E)))
+        !MCDCState.DecisionByStmt.contains(CodeGenFunction::stripCond(E)))
       NotMapped = true;
 
     // Don't go any further if we don't need to map condition IDs.
@@ -750,7 +749,7 @@ public:
     // If the operator itself has an assigned ID, this means it represents a
     // larger subtree.  In this case, assign that ID to its LHS node.  Its RHS
     // will receive a new ID below. Otherwise, assign ID+1 to LHS.
-    if (CondIDs.contains(CodeGenFunction::stripCond(E)))
+    if (MCDCState.BranchByStmt.contains(CodeGenFunction::stripCond(E)))
       setCondID(E->getLHS(), getCondID(E));
     else
       setCondID(E->getLHS(), NextID++);
@@ -853,8 +852,6 @@ struct CounterCoverageMappingBuilder
     return Counter::getCounter(CounterMap[S]);
   }
 
-  unsigned getRegionBitmap(const Stmt *S) { return MCDCState.BitmapMap[S]; }
-
   /// Push a region onto the stack.
   ///
   /// Returns the index on the stack where the region was pushed. This can be
@@ -887,12 +884,11 @@ struct CounterCoverageMappingBuilder
     return RegionStack.size() - 1;
   }
 
-  size_t pushRegion(unsigned BitmapIdx, uint16_t Conditions,
+  size_t pushRegion(const mcdc::DecisionParameters &DecisionParams,
                     std::optional<SourceLocation> StartLoc = std::nullopt,
                     std::optional<SourceLocation> EndLoc = std::nullopt) {
 
-    RegionStack.emplace_back(mcdc::DecisionParameters{BitmapIdx, Conditions},
-                             StartLoc, EndLoc);
+    RegionStack.emplace_back(DecisionParams, StartLoc, EndLoc);
 
     return RegionStack.size() - 1;
   }
@@ -1058,8 +1054,9 @@ struct CounterCoverageMappingBuilder
   /// Create a Decision Region with a BitmapIdx and number of Conditions. This
   /// type of region "contains" branch regions, one for each of the conditions.
   /// The visualization tool will group everything together.
-  void createDecisionRegion(const Expr *C, unsigned BitmapIdx, unsigned Conds) {
-    popRegions(pushRegion(BitmapIdx, Conds, getStart(C), getEnd(C)));
+  void createDecisionRegion(const Expr *C,
+                            const mcdc::DecisionParameters &DecisionParams) {
+    popRegions(pushRegion(DecisionParams, getStart(C), getEnd(C)));
   }
 
   /// Create a Branch Region around a SwitchCase for code coverage
@@ -1311,7 +1308,7 @@ struct CounterCoverageMappingBuilder
       return;
     assert(SpellingRegion(SM, NewStartLoc, EndLoc).isInSourceOrder());
     handleFileExit(NewStartLoc);
-    size_t Index = pushRegion({}, NewStartLoc, EndLoc);
+    size_t Index = pushRegion(Counter{}, NewStartLoc, EndLoc);
     getRegion().setSkipped(true);
     handleFileExit(EndLoc);
     popRegions(Index);
@@ -1942,6 +1939,8 @@ struct CounterCoverageMappingBuilder
 
       extendRegion(E->getTrueExpr());
       OutCount = propagateCounts(TrueCount, E->getTrueExpr());
+    } else {
+      OutCount = TrueCount;
     }
 
     extendRegion(E->getFalseExpr());
@@ -1957,6 +1956,20 @@ struct CounterCoverageMappingBuilder
     // Create Branch Region around condition.
     createBranchRegion(E->getCond(), TrueCount,
                        subtractCounters(ParentCount, TrueCount));
+  }
+
+  void createDecision(const BinaryOperator *E) {
+    unsigned NumConds = MCDCBuilder.getTotalConditionsAndReset(E);
+    if (NumConds == 0)
+      return;
+
+    auto DecisionParams = mcdc::DecisionParameters{
+        MCDCState.DecisionByStmt[E].BitmapIdx,
+        NumConds,
+    };
+
+    // Create MCDC Decision Region.
+    createDecisionRegion(E, DecisionParams);
   }
 
   void VisitBinLAnd(const BinaryOperator *E) {
@@ -1979,11 +1992,6 @@ struct CounterCoverageMappingBuilder
     // Track RHS True/False Decision.
     const auto DecisionRHS = MCDCBuilder.back();
 
-    // Create MCDC Decision Region if at top-level (root).
-    unsigned NumConds = 0;
-    if (IsRootNode && (NumConds = MCDCBuilder.getTotalConditionsAndReset(E)))
-      createDecisionRegion(E, getRegionBitmap(E), NumConds);
-
     // Extract the RHS's Execution Counter.
     Counter RHSExecCnt = getRegionCounter(E);
 
@@ -2000,6 +2008,10 @@ struct CounterCoverageMappingBuilder
     // Create Branch Region around RHS condition.
     createBranchRegion(E->getRHS(), RHSTrueCnt,
                        subtractCounters(RHSExecCnt, RHSTrueCnt), DecisionRHS);
+
+    // Create MCDC Decision Region if at top-level (root).
+    if (IsRootNode)
+      createDecision(E);
   }
 
   // Determine whether the right side of OR operation need to be visited.
@@ -2032,11 +2044,6 @@ struct CounterCoverageMappingBuilder
     // Track RHS True/False Decision.
     const auto DecisionRHS = MCDCBuilder.back();
 
-    // Create MCDC Decision Region if at top-level (root).
-    unsigned NumConds = 0;
-    if (IsRootNode && (NumConds = MCDCBuilder.getTotalConditionsAndReset(E)))
-      createDecisionRegion(E, getRegionBitmap(E), NumConds);
-
     // Extract the RHS's Execution Counter.
     Counter RHSExecCnt = getRegionCounter(E);
 
@@ -2057,6 +2064,10 @@ struct CounterCoverageMappingBuilder
     // Create Branch Region around RHS condition.
     createBranchRegion(E->getRHS(), subtractCounters(RHSExecCnt, RHSFalseCnt),
                        RHSFalseCnt, DecisionRHS);
+
+    // Create MCDC Decision Region if at top-level (root).
+    if (IsRootNode)
+      createDecision(E);
   }
 
   void VisitLambdaExpr(const LambdaExpr *LE) {
