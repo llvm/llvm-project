@@ -166,7 +166,7 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataSubmitRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>(),
-          DeviceID, TgtPtrBegin, HstPtrBegin, Size,
+          omp_get_initial_device(), HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
       // ToDo: mhalk Do we need a check for TracingActive here?
       InterfaceRAII TargetDataSubmitTraceRAII(
@@ -198,13 +198,13 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataRetrieveRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
-          DeviceID, HstPtrBegin, TgtPtrBegin, Size,
+          DeviceID, TgtPtrBegin, omp_get_initial_device(), HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
       // ToDo: mhalk Do we need a check for TracingActive here?
       InterfaceRAII TargetDataSubmitTraceRAII(
           RegionInterface
               .getTraceGenerators<ompt_target_data_transfer_from_device>(),
-          DeviceID, HstPtrBegin, TgtPtrBegin, Size,
+          DeviceID, TgtPtrBegin, HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   if (ForceSynchronousTargetRegions || !RTL->data_retrieve_async ||
@@ -220,6 +220,17 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
 // Copy data from current device to destination device directly
 int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                                int64_t Size, AsyncInfoTy &AsyncInfo) {
+  /// RAII to establish tool anchors before and after data exchange
+  /// Note: Despite the fact that this is a data exchange, we use 'from_device'
+  ///       operation enum (w.r.t. ompt_target_data_op_t) as there is currently
+  ///       no better alternative. It is still possible to distinguish this
+  ///       scenario from a real data retrieve by checking if both involved
+  ///       device numbers are less than omp_get_num_devices().
+  OMPT_IF_BUILT(
+      InterfaceRAII TargetDataExchangeRAII(
+          RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
+          RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
   if (ForceSynchronousTargetRegions || !AsyncInfo ||
 #ifdef OMPT_SUPPORT
       ompt::CallbacksInitialized ||

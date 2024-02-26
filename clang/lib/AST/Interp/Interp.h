@@ -113,6 +113,10 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This);
 /// Checks if a method is pure virtual.
 bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
 
+/// Checks if all the arguments annotated as 'nonnull' are in fact not null.
+bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
+                      const CallExpr *CE, unsigned ArgSize);
+
 /// Sets the given integral value to the pointer, which is of
 /// a std::{weak,partial,strong}_ordering type.
 bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
@@ -804,7 +808,8 @@ bool CMP3(InterpState &S, CodePtr OpPC, const ComparisonCategoryInfo *CmpInfo) {
   }
 
   assert(CmpInfo);
-  const auto *CmpValueInfo = CmpInfo->getValueInfo(CmpResult);
+  const auto *CmpValueInfo =
+      CmpInfo->getValueInfo(CmpInfo->makeWeakResult(CmpResult));
   assert(CmpValueInfo);
   assert(CmpValueInfo->hasValidIntValue());
   const APSInt &IntValue = CmpValueInfo->getIntValue();
@@ -1980,6 +1985,7 @@ inline bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
 
   return false;
 }
+
 inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
                  uint32_t VarArgSize) {
   if (Func->hasThisPointer()) {
@@ -2083,7 +2089,8 @@ inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,
   return false;
 }
 
-inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize) {
+inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
+                    const CallExpr *CE) {
   const FunctionPointer &FuncPtr = S.Stk.pop<FunctionPointer>();
 
   const Function *F = FuncPtr.getFunction();
@@ -2094,6 +2101,12 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize) {
     return false;
   }
   assert(F);
+
+  // Check argument nullability state.
+  if (F->hasNonNullAttr()) {
+    if (!CheckNonNullArgs(S, OpPC, F, CE, ArgSize))
+      return false;
+  }
 
   assert(ArgSize >= F->getWrittenArgSize());
   uint32_t VarArgSize = ArgSize - F->getWrittenArgSize();
@@ -2149,6 +2162,18 @@ inline bool OffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E) {
   S.Stk.push<T>(T::from(Result));
 
   return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool CheckNonNullArg(InterpState &S, CodePtr OpPC) {
+  const T &Arg = S.Stk.peek<T>();
+  if (!Arg.isZero())
+    return true;
+
+  const SourceLocation &Loc = S.Current->getLocation(OpPC);
+  S.CCEDiag(Loc, diag::note_non_null_attribute_failed);
+
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

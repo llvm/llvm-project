@@ -38,7 +38,6 @@ class ThreadStateTestCase(TestBase):
 
     @skipIfDarwin  # 'llvm.org/pr23669', cause Python crash randomly
     @expectedFailureDarwin("llvm.org/pr23669")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24660")
     @expectedFailureNetBSD
     # thread states not properly maintained
     @unittest.expectedFailure  # llvm.org/pr16712
