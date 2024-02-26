@@ -93,3 +93,23 @@ void BreakContinue() {
 
 }
 
+void Return() {
+#pragma acc parallel
+  {
+    return;// expected-error{{invalid return out of OpenACC Compute Construct}}
+  }
+
+#pragma acc parallel
+  {
+    {
+      return;// expected-error{{invalid return out of OpenACC Compute Construct}}
+    }
+  }
+
+#pragma acc parallel
+  {
+    for (int i = 0; i < 5; ++i) {
+      return;// expected-error{{invalid return out of OpenACC Compute Construct}}
+    }
+  }
+}
