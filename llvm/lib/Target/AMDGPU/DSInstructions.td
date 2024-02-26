@@ -63,6 +63,7 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   // copy relevant pseudo op flags
   let GWS                = ps.GWS;
   let SubtargetPredicate = ps.SubtargetPredicate;
+  let WaveSizePredicate  = ps.WaveSizePredicate;
   let OtherPredicates    = ps.OtherPredicates;
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;
@@ -1300,12 +1301,10 @@ defm DS_PK_ADD_RTN_F16    : DS_Real_gfx12<0x0aa>;
 defm DS_PK_ADD_BF16       : DS_Real_gfx12<0x09b>;
 defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
 
-let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus in {
-  defm DS_LOAD_B64_TR_B4       : DS_Real_gfx12<0x0fa>;
-  defm DS_LOAD_B128_TR_B6      : DS_Real_gfx12<0x0fb>;
-  defm DS_LOAD_B64_TR_B8       : DS_Real_gfx12<0x0fc>;
-  defm DS_LOAD_B128_TR_B16     : DS_Real_gfx12<0x0fd>;
-}
+defm DS_LOAD_B64_TR_B4    : DS_Real_gfx12<0x0fa>;
+defm DS_LOAD_B128_TR_B6   : DS_Real_gfx12<0x0fb>;
+defm DS_LOAD_B64_TR_B8    : DS_Real_gfx12<0x0fc>;
+defm DS_LOAD_B128_TR_B16  : DS_Real_gfx12<0x0fd>;
 
 defm DS_BVH_STACK_PUSH4_POP1_RTN_B32     : DS_Real_Renamed_gfx12<0x0e0,
   DS_BVH_STACK_RTN_B32, "ds_bvh_stack_push4_pop1_rtn_b32">;
