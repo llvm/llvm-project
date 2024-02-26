@@ -22,6 +22,21 @@
 // RUN: %clang -target armv7-windows -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-UNALIGNED-ARM < %t %s
 
+// RUN: %clang --target=armv6 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-ALIGNED-ARM < %t %s
+
+// RUN: %clang --target=armv7 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-UNALIGNED-ARM < %t %s
+
+// RUN: %clang -target thumbv6m-none-gnueabi -mcpu=cortex-m0 -### %s 2> %t
+// RUN: FileCheck --check-prefix CHECK-ALIGNED-ARM <%t %s
+
+// RUN: %clang -target thumb-none-gnueabi -mcpu=cortex-m0 -### %s 2> %t
+// RUN: FileCheck --check-prefix CHECK-ALIGNED-ARM <%t %s
+
+// RUN: %clang -target thumbv8m.base-none-gnueabi -### %s 2> %t
+// RUN: FileCheck --check-prefix CHECK-ALIGNED-ARM <%t %s
+
 // RUN: %clang --target=aarch64 -munaligned-access -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-UNALIGNED-AARCH64 < %t %s
 

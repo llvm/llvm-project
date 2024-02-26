@@ -1437,7 +1437,7 @@ add_entrypoint_object(
     ../sqrtf128.h
   DEPENDS
     libc.src.__support.macros.properties.float
-    libc.src.__support.FPUtil.sqrt 
+    libc.src.__support.FPUtil.sqrt
   COMPILE_OPTIONS
     -O3
   )
