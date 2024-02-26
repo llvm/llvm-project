@@ -27,14 +27,10 @@ unsigned int size(ns::StructWithGlobalRangeAccessFunctions);
 
 static_assert(!std::is_invocable_v<decltype(std::ranges::begin), ns::StructWithGlobalRangeAccessFunctions&>);
 static_assert(!std::is_invocable_v<decltype(std::ranges::cbegin), ns::StructWithGlobalRangeAccessFunctions&>);
-
 static_assert(!std::is_invocable_v<decltype(std::ranges::end), ns::StructWithGlobalRangeAccessFunctions&>);
 static_assert(!std::is_invocable_v<decltype(std::ranges::cend), ns::StructWithGlobalRangeAccessFunctions&>);
-
 static_assert(!std::is_invocable_v<decltype(std::ranges::rbegin), ns::StructWithGlobalRangeAccessFunctions&>);
 static_assert(!std::is_invocable_v<decltype(std::ranges::crbegin), ns::StructWithGlobalRangeAccessFunctions&>);
-
 static_assert(!std::is_invocable_v<decltype(std::ranges::rend), ns::StructWithGlobalRangeAccessFunctions&>);
 static_assert(!std::is_invocable_v<decltype(std::ranges::crend), ns::StructWithGlobalRangeAccessFunctions&>);
-
 static_assert(!std::is_invocable_v<decltype(std::ranges::size), ns::StructWithGlobalRangeAccessFunctions&>);

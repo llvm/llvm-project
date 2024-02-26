@@ -23,7 +23,6 @@ void iter_swap(ns::StructWithGlobalIterCustFunctions, ns::StructWithGlobalIterCu
 #include <type_traits>
 
 static_assert(!std::is_invocable_v<decltype(std::ranges::iter_move), ns::StructWithGlobalIterCustFunctions&>);
-
 static_assert(!std::is_invocable_v<decltype(std::ranges::iter_swap),
                                    ns::StructWithGlobalIterCustFunctions&,
                                    ns::StructWithGlobalIterCustFunctions&>);

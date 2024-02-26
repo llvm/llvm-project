@@ -34,11 +34,9 @@ struct ConvertibleToCmpType {
 static_assert(!std::is_invocable_v<decltype(std::strong_order),
                                    ns::StructWithGlobalCmpFunctions,
                                    ns::StructWithGlobalCmpFunctions>);
-
 static_assert(!std::is_invocable_v<decltype(std::weak_order),
                                    ns::StructWithGlobalCmpFunctions,
                                    ns::StructWithGlobalCmpFunctions>);
-
 static_assert(!std::is_invocable_v<decltype(std::partial_order),
                                    ns::StructWithGlobalCmpFunctions,
                                    ns::StructWithGlobalCmpFunctions>);
