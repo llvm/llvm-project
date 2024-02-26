@@ -155,6 +155,7 @@
 ; CHECK-NEXT:       AArch64 MI Peephole Optimization pass
 ; CHECK-NEXT:       AArch64 Dead register definitions
 ; CHECK-NEXT:       Detect Dead Lanes
+; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Process Implicit Definitions
 ; CHECK-NEXT:       Remove unreachable machine basic blocks
 ; CHECK-NEXT:       Live Variable Analysis
