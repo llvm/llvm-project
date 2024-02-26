@@ -753,12 +753,9 @@ RecordStorageLocation *getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
 RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
                                              const Environment &Env);
 
-/// Returns the fields of a `RecordDecl` that are initialized by an
-/// `InitListExpr`, in the order in which they appear in
-/// `InitListExpr::inits()`.
-/// `Init->getType()` must be a record type.
-std::vector<const FieldDecl *>
-getFieldsForInitListExpr(const InitListExpr *InitList);
+/// Returns the fields of `RD` that are initialized by an `InitListExpr`, in the
+/// order in which they appear in `InitListExpr::inits()`.
+std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD);
 
 /// Associates a new `RecordValue` with `Loc` and returns the new value.
 RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env);

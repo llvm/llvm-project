@@ -259,9 +259,10 @@ struct VPTransformState {
     DenseMap<VPValue *, ScalarsPerPartValuesTy> PerPartScalars;
   } Data;
 
-  /// Get the generated Value for the given VPValue \p Def and the given \p Part.
-  /// \see set.
-  Value *get(VPValue *Def, unsigned Part);
+  /// Get the generated vector Value for a given VPValue \p Def and a given \p
+  /// Part if \p IsScalar is false, otherwise return the generated scalar
+  /// for \p Part. \See set.
+  Value *get(VPValue *Def, unsigned Part, bool IsScalar = false);
 
   /// Get the generated Value for a given VPValue and given Part and Lane.
   Value *get(VPValue *Def, const VPIteration &Instance);
@@ -282,14 +283,22 @@ struct VPTransformState {
            I->second[Instance.Part][CacheIdx];
   }
 
-  /// Set the generated Value for a given VPValue and a given Part.
-  void set(VPValue *Def, Value *V, unsigned Part) {
+  /// Set the generated vector Value for a given VPValue and a given Part, if \p
+  /// IsScalar is false. If \p IsScalar is true, set the scalar in (Part, 0).
+  void set(VPValue *Def, Value *V, unsigned Part, bool IsScalar = false) {
+    if (IsScalar) {
+      set(Def, V, VPIteration(Part, 0));
+      return;
+    }
+    assert((VF.isScalar() || V->getType()->isVectorTy()) &&
+           "scalar values must be stored as (Part, 0)");
     if (!Data.PerPartOutput.count(Def)) {
       DataState::PerPartValuesTy Entry(UF);
       Data.PerPartOutput[Def] = Entry;
     }
     Data.PerPartOutput[Def][Part] = V;
   }
+
   /// Reset an existing vector value for \p Def and a given \p Part.
   void reset(VPValue *Def, Value *V, unsigned Part) {
     auto Iter = Data.PerPartOutput.find(Def);
@@ -1376,6 +1385,13 @@ public:
 
   /// Returns the result type of the cast.
   Type *getResultType() const { return ResultTy; }
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    // At the moment, only uniform codegen is implemented.
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
 };
 
 /// A recipe for widening Call instructions.
