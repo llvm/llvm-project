@@ -90,9 +90,8 @@ AST_MATCHER_P(DeclRefExpr, doesNotMutateObject, int, Indirections) {
       assert(Ty->isPointerType());
       Ty = Ty->getPointeeType().getCanonicalType();
     }
-    if (Ty.isConstQualified()) {
+    if (Ty.isConstQualified())
       continue;
-    }
 
     // Otherwise we have to look at the parents to see how the expression is
     // used.
@@ -143,9 +142,8 @@ AST_MATCHER_P(DeclRefExpr, doesNotMutateObject, int, Indirections) {
           continue;
         case CK_LValueToRValue: {
           // An rvalue is immutable.
-          if (Entry.Indirections == 0) {
+          if (Entry.Indirections == 0)
             continue;
-          }
           Stack.emplace_back(Cast, Entry.Indirections);
           continue;
         }
