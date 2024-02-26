@@ -69,8 +69,15 @@ inline static bool isValidLMUL(unsigned LMUL, bool Fractional) {
   return isPowerOf2_32(LMUL) && LMUL <= 8 && (!Fractional || LMUL != 1);
 }
 
+// Is this a EDIV value that can be encoded into the VTYPE format.
+inline static bool isValidEDIV(unsigned EDIV) {
+  return isPowerOf2_32(EDIV) && EDIV <= 8;
+}
+
 unsigned encodeVTYPE(RISCVII::VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
                      bool MaskAgnostic);
+
+unsigned encodeXTHeadVTYPE(unsigned SEW, unsigned LMUL, unsigned EDIV);
 
 inline static RISCVII::VLMUL getVLMUL(unsigned VType) {
   unsigned VLMUL = VType & 0x7;
@@ -101,11 +108,18 @@ inline static unsigned getSEW(unsigned VType) {
   return decodeVSEW(VSEW);
 }
 
+inline static unsigned encodeEDIV(unsigned EDIV) {
+  assert(isValidEDIV(EDIV) && "Unexpected EDIV value");
+  return Log2_32(EDIV);
+}
+
 inline static bool isTailAgnostic(unsigned VType) { return VType & 0x40; }
 
 inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
 
 void printVType(unsigned VType, raw_ostream &OS);
+
+void printXTHeadVType(unsigned VType, raw_ostream &OS);
 
 unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul);
 

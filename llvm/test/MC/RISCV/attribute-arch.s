@@ -428,3 +428,15 @@
 
 .attribute arch, "rv64i_supm0p8"
 # CHECK: attribute      5, "rv64i2p1_supm0p8"
+
+.attribute arch, "rv32i_xtheadvector"
+# CHECK: attribute      5, "rv32i2p1_xtheadvector1p0"
+
+.attribute arch, "rv32i_xtheadvector_xtheadzvamo"
+# CHECK: attribute      5, "rv32i2p1_a2p1_xtheadvector1p0_xtheadzvamo1p0"
+
+.attribute arch, "rv32i_xtheadvector"
+# CHECK: attribute      5, "rv32i2p1_xtheadvector1p0"
+
+.attribute arch, "rv64i_xtheadvector_xtheadzvamo"
+# CHECK: attribute      5, "rv64i2p1_a2p1_xtheadvector1p0_xtheadzvamo1p0"

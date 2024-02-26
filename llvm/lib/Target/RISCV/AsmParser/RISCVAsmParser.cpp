@@ -201,6 +201,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parsePseudoJumpSymbol(OperandVector &Operands);
   ParseStatus parseJALOffset(OperandVector &Operands);
   ParseStatus parseVTypeI(OperandVector &Operands);
+  ParseStatus parseXTHeadVTypeI(OperandVector &Operands);
   ParseStatus parseMaskReg(OperandVector &Operands);
   ParseStatus parseInsnDirectiveOpcode(OperandVector &Operands);
   ParseStatus parseInsnCDirectiveOpcode(OperandVector &Operands);
@@ -329,6 +330,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     FPImmediate,
     SystemRegister,
     VType,
+    XTHeadVType,
     FRM,
     Fence,
     Rlist,
@@ -422,6 +424,7 @@ public:
       SysReg = o.SysReg;
       break;
     case KindTy::VType:
+    case KindTy::XTHeadVType:
       VType = o.VType;
       break;
     case KindTy::FRM:
@@ -587,6 +590,11 @@ public:
     if (Kind == KindTy::Immediate)
       return isVTypeImm(11);
     return Kind == KindTy::VType;
+  }
+  bool isXTHeadVTypeI() const {
+    if (Kind == KindTy::Immediate)
+      return isVTypeImm(11);
+    return Kind == KindTy::XTHeadVType;
   }
 
   /// Return true if the operand is a valid for the fence instruction e.g.
@@ -1002,7 +1010,8 @@ public:
   }
 
   unsigned getVType() const {
-    assert(Kind == KindTy::VType && "Invalid type access!");
+    assert((Kind == KindTy::VType || Kind == KindTy::XTHeadVType) &&
+           "Invalid type access!");
     return VType.Val;
   }
 
@@ -1042,6 +1051,11 @@ public:
     case KindTy::VType:
       OS << "<vtype: ";
       RISCVVType::printVType(getVType(), OS);
+      OS << '>';
+      break;
+    case KindTy::XTHeadVType:
+      OS << "<vtype: ";
+      RISCVVType::printXTHeadVType(getVType(), OS);
       OS << '>';
       break;
     case KindTy::FRM:
@@ -1165,6 +1179,14 @@ public:
     auto Op = std::make_unique<RISCVOperand>(KindTy::Spimm);
     Op->Spimm.Val = Spimm;
     Op->StartLoc = S;
+    return Op;
+  }
+
+  static std::unique_ptr<RISCVOperand> createXTHeadVType(unsigned VTypeI, SMLoc S) {
+    auto Op = std::make_unique<RISCVOperand>(KindTy::XTHeadVType);
+    Op->VType.Val = VTypeI;
+    Op->StartLoc = S;
+    Op->EndLoc = S;
     return Op;
   }
 
@@ -1363,9 +1385,10 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                              bool MatchingInlineAsm) {
   MCInst Inst;
   FeatureBitset MissingFeatures;
+  bool IsRVV0p71 = getSTI().hasFeature(RISCV::FeatureVendorXTHeadV);
 
   auto Result = MatchInstructionImpl(Operands, Inst, ErrorInfo, MissingFeatures,
-                                     MatchingInlineAsm);
+                                     MatchingInlineAsm, IsRVV0p71 ? 1 : 0);
   switch (Result) {
   default:
     break;
@@ -1591,6 +1614,13 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidVTypeI: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return generateVTypeError(ErrorLoc);
+  }
+  case Match_InvalidXTHeadVTypeI: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(
+        ErrorLoc,
+        "operand must be "
+        "e[8|16|32|64|128|256|512|1024],m[1|2|4|8],d[1|2|4|8] for RVV0.71");
   }
   case Match_InvalidVMaskRegister: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
@@ -2223,6 +2253,57 @@ bool RISCVAsmParser::generateVTypeError(SMLoc ErrorLoc) {
       ErrorLoc,
       "operand must be "
       "e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
+}
+
+ParseStatus RISCVAsmParser::parseXTHeadVTypeI(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  if (getLexer().isNot(AsmToken::Identifier))
+    return ParseStatus::NoMatch;
+
+  SmallVector<AsmToken, 7> VTypeIElements;
+  auto MatchFail = [&]() {
+    while (!VTypeIElements.empty())
+      getLexer().UnLex(VTypeIElements.pop_back_val());
+    return ParseStatus::NoMatch;
+  };
+
+  // Put all the tokens for vtypei operand into VTypeIElements vector.
+  while (getLexer().isNot(AsmToken::EndOfStatement)) {
+    VTypeIElements.push_back(getLexer().getTok());
+    getLexer().Lex();
+    if (getLexer().is(AsmToken::EndOfStatement))
+      break;
+    if (getLexer().isNot(AsmToken::Comma))
+      return MatchFail();
+    AsmToken Comma = getLexer().getTok();
+    VTypeIElements.push_back(Comma);
+    getLexer().Lex();
+  }
+
+  if (VTypeIElements.size() == 5) {
+    // The VTypeIElements layout is:
+    // SEW comma LMUL comma EDIV
+    //  0    1    2     3    4
+    StringRef Prefix[] = {"e", "m", "d"};
+    unsigned VTypeEle[3];
+    for (size_t i = 0; i < 3; ++i) {
+      StringRef Name = VTypeIElements[2 * i].getIdentifier();
+      if (!Name.consume_front(Prefix[i]) || Name.getAsInteger(10, VTypeEle[i]))
+        return MatchFail();
+    }
+
+    if (!RISCVVType::isValidSEW(VTypeEle[0]) ||
+        !RISCVVType::isValidLMUL(VTypeEle[1], false) ||
+        !RISCVVType::isValidEDIV(VTypeEle[2]))
+      return MatchFail();
+
+    unsigned VTypeI =
+        RISCVVType::encodeXTHeadVTYPE(VTypeEle[0], VTypeEle[1], VTypeEle[2]);
+    Operands.push_back(RISCVOperand::createXTHeadVType(VTypeI, S));
+    return ParseStatus::Success;
+  }
+
+  return MatchFail();
 }
 
 ParseStatus RISCVAsmParser::parseMaskReg(OperandVector &Operands) {

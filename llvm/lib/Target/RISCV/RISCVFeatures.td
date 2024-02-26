@@ -1232,6 +1232,39 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
 
+//===----------------------------------------------------------------------===//
+// T-Head in RuyiSDK specific features and extensions (mostly rvv 0.7.1)
+//===----------------------------------------------------------------------===//
+
+def FeatureVendorXTHeadV
+    : SubtargetFeature<"xtheadv", "HasVendorXTHeadV", "true",
+                       "'xtheadv' (T-Head Base Vector Instructions)">;
+def HasVendorXTHeadV : Predicate<"Subtarget->hasVendorXTHeadV()">,
+                                  AssemblerPredicate<(all_of FeatureVendorXTHeadV),
+                                  "'xtheadv' (T-Head Base Vector Instructions)">;
+
+def FeatureVendorXTHeadVlsseg
+    : SubtargetFeature<"xtheadvlsseg", "HasVendorXTHeadVlsseg", "true",
+                       "'xtheadvlsseg' (T-Head Vector Load/Store Segment Instructions)">;
+def HasVendorXTHeadVlsseg : Predicate<"Subtarget->hasVendorXTHeadVlsseg()">,
+                                      AssemblerPredicate<(all_of FeatureVendorXTHeadVlsseg),
+                                      "'xtheadvlsseg' (T-Head Vector Load/Store Segment Instructions)">;
+
+def FeatureVendorXTHeadVamo
+    : SubtargetFeature<"xtheadvamo", "HasVendorXTHeadVamo", "true",
+                       "'xtheadvamo' (T-Head Vector AMO Operations)",
+                       [FeatureStdExtA]>;
+def HasVendorXTHeadVamo : Predicate<"Subtarget->hasVendorXTHeadVamo()">,
+                                    AssemblerPredicate<(all_of FeatureVendorXTHeadVamo),
+                                    "'xtheadvamo' (T-Head Vector AMO Operations)">;
+
+def FeatureVendorXTHeadVediv
+    : SubtargetFeature<"xtheadvediv", "HasVendorXTHeadVediv", "true",
+                       "'xtheadvediv' (T-Head Divided Element Extension)">;
+def HasVendorXTHeadVediv : Predicate<"Subtarget->hasVendorXTHeadVediv()">,
+                                     AssemblerPredicate<(all_of FeatureVendorXTHeadVediv),
+                                     "'xtheadvediv' (T-Head Divided Element Extension)">;
+
 def FeatureForcedSWShadowStack : SubtargetFeature<
     "forced-sw-shadow-stack", "HasForcedSWShadowStack", "true",
     "Implement shadow stack with software.">;
