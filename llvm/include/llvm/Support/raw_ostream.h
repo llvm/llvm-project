@@ -133,6 +133,9 @@ public:
   static constexpr Colors SAVEDCOLOR = Colors::SAVEDCOLOR;
   static constexpr Colors RESET = Colors::RESET;
 
+  static std::optional<Colors>
+  parse_color(const std::string_view &name) noexcept;
+
   explicit raw_ostream(bool unbuffered = false,
                        OStreamKind K = OStreamKind::OK_OStream)
       : Kind(K), BufferMode(unbuffered ? BufferKind::Unbuffered

@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cerrno>
 #include <cstdio>
+#include <string_view>
 #include <sys/stat.h>
 
 // <fcntl.h> may provide O_BINARY.
@@ -62,6 +63,7 @@
 #endif
 
 using namespace llvm;
+using namespace std::literals;
 
 constexpr raw_ostream::Colors raw_ostream::BLACK;
 constexpr raw_ostream::Colors raw_ostream::RED;
@@ -73,6 +75,44 @@ constexpr raw_ostream::Colors raw_ostream::CYAN;
 constexpr raw_ostream::Colors raw_ostream::WHITE;
 constexpr raw_ostream::Colors raw_ostream::SAVEDCOLOR;
 constexpr raw_ostream::Colors raw_ostream::RESET;
+
+std::optional<raw_ostream::Colors>
+raw_ostream::parse_color(const std::string_view &name) noexcept {
+  if (name == "black"sv)
+    return Colors::BLACK;
+  else if (name == "red"sv)
+    return Colors::RED;
+  else if (name == "green"sv)
+    return Colors::GREEN;
+  else if (name == "yellow"sv)
+    return Colors::YELLOW;
+  else if (name == "blue"sv)
+    return Colors::BLUE;
+  else if (name == "magenta"sv)
+    return Colors::MAGENTA;
+  else if (name == "cyan"sv)
+    return Colors::CYAN;
+  else if (name == "white"sv)
+    return Colors::WHITE;
+  else if (name == "bright-black"sv)
+    return Colors::BRIGHT_BLACK;
+  else if (name == "bright-red"sv)
+    return Colors::BRIGHT_RED;
+  else if (name == "bright-green"sv)
+    return Colors::BRIGHT_GREEN;
+  else if (name == "bright-yellow"sv)
+    return Colors::BRIGHT_YELLOW;
+  else if (name == "bright-blue"sv)
+    return Colors::BRIGHT_BLUE;
+  else if (name == "bright-magenta"sv)
+    return Colors::BRIGHT_MAGENTA;
+  else if (name == "bright-cyan"sv)
+    return Colors::BRIGHT_CYAN;
+  else if (name == "bright-white"sv)
+    return Colors::BRIGHT_WHITE;
+  else
+    return std::nullopt;
+}
 
 raw_ostream::~raw_ostream() {
   // raw_ostream's subclasses should take care to flush the buffer

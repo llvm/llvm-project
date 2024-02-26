@@ -256,6 +256,17 @@ output format of the diagnostics that it generates.
    defined and ``-fcolor-diagnostics`` is passed on the command line, Clang
    will honor the command line argument.
 
+   Additionally, if enabled, Clang will semantically highlight the code
+   the diagnostics pertain to. The ``CLANG_HIGHLIGHT_COLORS`` environment
+   variable controls this behaviour:
+   if unset or set to "on", code is highlighted normally.
+   If set to "off" or "no", highlighting is disabled.
+   Otherwise, a comma-separated, `token=color` list may be given,
+   where `token`s may be ``comment``, ``literal``, or ``keyword``,
+   and `color`s may be ``{bright-,}black,red,green,yellow,blue,magenta,cyan,white``.
+   If an unknown `color` is given, it's disabled. For example, a valid spec may be
+   ``CLANG_HIGHLIGHT_COLORS=comment=blue,literal=bright-magenta,keyword=no``.
+
 .. option:: -fansi-escape-codes
 
    Controls whether ANSI escape codes are used instead of the Windows Console

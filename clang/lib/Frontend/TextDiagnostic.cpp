@@ -24,6 +24,7 @@
 #include <optional>
 
 using namespace clang;
+using namespace std::literals;
 
 static const enum raw_ostream::Colors noteColor = raw_ostream::CYAN;
 static const enum raw_ostream::Colors remarkColor =
@@ -46,9 +47,31 @@ static const enum raw_ostream::Colors savedColor =
 // is already taken for 'note'. Green is already used to underline
 // source ranges. White and black are bad because of the usual
 // terminal backgrounds. Which leaves us only with TWO options.
-static constexpr raw_ostream::Colors CommentColor = raw_ostream::YELLOW;
-static constexpr raw_ostream::Colors LiteralColor = raw_ostream::GREEN;
-static constexpr raw_ostream::Colors KeywordColor = raw_ostream::BLUE;
+static std::optional<raw_ostream::Colors> CommentColor = raw_ostream::YELLOW;
+static std::optional<raw_ostream::Colors> LiteralColor = raw_ostream::GREEN;
+static std::optional<raw_ostream::Colors> KeywordColor = raw_ostream::BLUE;
+
+static __attribute__((constructor)) void loadHighlightColors() {
+  auto cfg = std::getenv("CLANG_HIGHLIGHT_COLORS");
+  if (!cfg || cfg == "on"sv)
+    return;
+
+  if (!std::strchr(cfg, '=')) {
+    CommentColor = LiteralColor = KeywordColor = {};
+    return;
+  }
+
+  const char *const tokens[]{"comment", "literal", "keyword", nullptr};
+  std::optional<raw_ostream::Colors> *const colors[]{
+      &CommentColor, &LiteralColor, &KeywordColor};
+  for (char *value; *cfg;) {
+    auto idx = getsubopt(&cfg, const_cast<char *const *>(tokens), &value);
+    if (idx == -1 || !value)
+      continue;
+
+    *colors[idx] = raw_ostream::parse_color(value);
+  }
+}
 
 /// Add highlights to differences in template strings.
 static void applyTemplateHighlighting(raw_ostream &OS, StringRef Str,
@@ -1138,7 +1161,7 @@ highlightLines(StringRef FileData, unsigned StartLineNumber,
       std::make_unique<SmallVector<TextDiagnostic::StyleRange>[]>(
           EndLineNumber - StartLineNumber + 1);
 
-  if (!PP || !ShowColors)
+  if (!PP || !ShowColors || (!CommentColor && !LiteralColor && !KeywordColor))
     return SnippetRanges;
 
   // Might cause emission of another diagnostic.
@@ -1164,6 +1187,10 @@ highlightLines(StringRef FileData, unsigned StartLineNumber,
   auto appendStyle =
       [PP, &LangOpts](SmallVector<TextDiagnostic::StyleRange> &Vec,
                       const Token &T, unsigned Start, unsigned Length) -> void {
+    auto setColor = [&](auto &&color) {
+      if (color)
+        Vec.emplace_back(Start, Start + Length, *color);
+    };
     if (T.is(tok::raw_identifier)) {
       StringRef RawIdent = T.getRawIdentifier();
       // Special case true/false/nullptr/... literals, since they will otherwise
@@ -1183,18 +1210,18 @@ highlightLines(StringRef FileData, unsigned StartLineNumber,
               .Case("__FUNCTION__", true)
               .Case("__FUNCSIG__", true)
               .Default(false)) {
-        Vec.emplace_back(Start, Start + Length, LiteralColor);
+        setColor(LiteralColor);
       } else {
         const IdentifierInfo *II = PP->getIdentifierInfo(RawIdent);
         assert(II);
         if (II->isKeyword(LangOpts))
-          Vec.emplace_back(Start, Start + Length, KeywordColor);
+          setColor(KeywordColor);
       }
     } else if (tok::isLiteral(T.getKind())) {
-      Vec.emplace_back(Start, Start + Length, LiteralColor);
+      setColor(LiteralColor);
     } else {
       assert(T.is(tok::comment));
-      Vec.emplace_back(Start, Start + Length, CommentColor);
+      setColor(CommentColor);
     }
   };
 
