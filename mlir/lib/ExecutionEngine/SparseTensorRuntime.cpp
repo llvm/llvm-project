@@ -52,7 +52,6 @@
 
 #include "mlir/ExecutionEngine/SparseTensor/ArithmeticUtils.h"
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
-#include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
 #include "mlir/ExecutionEngine/SparseTensor/File.h"
 #include "mlir/ExecutionEngine/SparseTensor/Storage.h"
 
@@ -139,8 +138,8 @@ extern "C" {
       return ptr;                                                              \
     }                                                                          \
     }                                                                          \
-    MLIR_SPARSETENSOR_FATAL("unknown action: %d\n",                            \
-                            static_cast<uint32_t>(action));                    \
+    fprintf(stderr, "unknown action %d\n", static_cast<uint32_t>(action));     \
+    exit(1);                                                                   \
   }
 
 #define CASE_SECSAME(p, v, P, V) CASE(p, p, v, P, P, V)
@@ -283,10 +282,10 @@ void *_mlir_ciface_newSparseTensor( // NOLINT
   CASE_SECSAME(OverheadType::kU64, PrimaryType::kC32, uint64_t, complex32);
 
   // Unsupported case (add above if needed).
-  MLIR_SPARSETENSOR_FATAL(
-      "unsupported combination of types: <P=%d, C=%d, V=%d>\n",
-      static_cast<int>(posTp), static_cast<int>(crdTp),
-      static_cast<int>(valTp));
+  fprintf(stderr, "unsupported combination of types: <P=%d, C=%d, V=%d>\n",
+          static_cast<int>(posTp), static_cast<int>(crdTp),
+          static_cast<int>(valTp));
+  exit(1);
 }
 #undef CASE
 #undef CASE_SECSAME
@@ -468,8 +467,10 @@ char *getTensorFilename(index_type id) {
   char var[bufSize];
   snprintf(var, bufSize, "TENSOR%" PRIu64, id);
   char *env = getenv(var);
-  if (!env)
-    MLIR_SPARSETENSOR_FATAL("Environment variable %s is not set\n", var);
+  if (!env) {
+    fprintf(stderr, "Environment variable %s is not set\n", var);
+    exit(1);
+  }
   return env;
 }
 

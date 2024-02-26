@@ -211,9 +211,9 @@ static cl::opt<bool> EnableLoopFlatten("enable-loop-flatten", cl::init(false),
 
 // Experimentally allow loop header duplication. This should allow for better
 // optimization at Oz, since loop-idiom recognition can then recognize things
-// like memcpy. If this ends up being profitable, we should drop this flag and
-// making a code gen option that can be controlled independent of the opt level
-// and exposed through clang.
+// like memcpy. If this ends up being useful for many targets, we should drop
+// this flag and make a code generation option that can be controlled
+// independent of the opt level and exposed through the frontend.
 static cl::opt<bool> EnableLoopHeaderDuplication(
     "enable-loop-header-duplication", cl::init(false), cl::Hidden,
     cl::desc("Enable loop header duplication at any optimization level"));
@@ -256,7 +256,7 @@ static cl::opt<bool>
 
 static cl::opt<bool> EnableJumpTableToSwitch(
     "enable-jump-table-to-switch",
-    cl::desc("Enable JumpTableToSwitch pass (default = on)"), cl::init(true));
+    cl::desc("Enable JumpTableToSwitch pass (default = off)"));
 
 // This option is used in simplifying testing SampleFDO optimizations for
 // profile loading.
@@ -640,7 +640,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Disable header duplication in loop rotation at -Oz.
   LPM1.addPass(LoopRotatePass(EnableLoopHeaderDuplication ||
-                                  (Level != OptimizationLevel::Oz),
+                                  Level != OptimizationLevel::Oz,
                               isLTOPreLink(Phase)));
   // TODO: Investigate promotion cap for O1.
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
