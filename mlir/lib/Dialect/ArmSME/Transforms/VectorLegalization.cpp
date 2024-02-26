@@ -459,7 +459,7 @@ struct LiftIllegalVectorTransposeToMemory
   }
 
   static Value getExtensionSource(Operation *op) {
-    if (isa<arith::ExtSIOp, arith::ExtUIOp, arith::ExtFOp>(op))
+    if (isa_and_present<arith::ExtSIOp, arith::ExtUIOp, arith::ExtFOp>(op))
       return op->getOperand(0);
     return {};
   }
