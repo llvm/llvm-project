@@ -42,7 +42,7 @@ def p : Flag<["-"], "p">,
         HelpText<"Alias for --preserve-dates">;
 
 def strip_all : Flag<["--"], "strip-all">,
-    HelpText<"For ELF, remove all symbols and non-alloc sections not "
+    HelpText<"For ELF, remove all symbols and non-alloc sections not within "
              "segments, except for .gnu.warning*, .ARM.attribute, and the section name table. "
              "For COFF and Mach-O, remove all symbols, debug sections, and relocations">;
 
