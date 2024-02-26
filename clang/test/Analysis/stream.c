@@ -391,9 +391,15 @@ void test_fscanf_escape() {
   clang_analyzer_dump_char(buffer[2]); // expected-warning {{67 S8b}}
 
   int ret = fscanf(F1, "%d %u %s", &a, &b, buffer);
-  clang_analyzer_dump_int(a); // expected-warning {{conj_$}}
-  clang_analyzer_dump_int(b); // expected-warning {{conj_$}}
-  clang_analyzer_dump_char(buffer[2]); // expected-warning {{derived_$}}
+  if (ret != EOF) {
+    clang_analyzer_dump_int(a); // expected-warning {{conj_$}}
+    clang_analyzer_dump_int(b); // expected-warning {{conj_$}}
+    clang_analyzer_dump_char(buffer[2]); // expected-warning {{derived_$}}
+  } else {
+    clang_analyzer_dump_int(a); // expected-warning {{48 S32b}}
+    clang_analyzer_dump_int(b); // expected-warning {{127 S32b}}
+    clang_analyzer_dump_char(buffer[2]); // expected-warning {{67 S8b}}
+  }
 
   if (ret != EOF) {
     char c = fgetc(F1); // ok

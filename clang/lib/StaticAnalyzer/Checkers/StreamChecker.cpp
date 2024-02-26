@@ -180,27 +180,6 @@ struct FnDescription {
   ArgNoTy StreamArgNo;
 };
 
-[[nodiscard]] ProgramStateRef
-escapeArgsStartingFromIndex(ProgramStateRef State, CheckerContext &C,
-                            const CallEvent &Call,
-                            unsigned FirstEscapingArgIndex) {
-  const auto *CE = Call.getOriginExpr();
-  assert(CE);
-
-  if (Call.getNumArgs() <= FirstEscapingArgIndex)
-    return State;
-
-  SmallVector<SVal> EscapingArgs;
-  EscapingArgs.reserve(Call.getNumArgs() - FirstEscapingArgIndex);
-  for (auto EscArgIdx :
-       llvm::seq<int>(FirstEscapingArgIndex, Call.getNumArgs()))
-    EscapingArgs.push_back(Call.getArgSVal(EscArgIdx));
-  State = State->invalidateRegions(EscapingArgs, CE, C.blockCount(),
-                                   C.getLocationContext(),
-                                   /*CausesPointerEscape=*/false);
-  return State;
-}
-
 /// Get the value of the stream argument out of the passed call event.
 /// The call should contain a function that is described by Desc.
 SVal getStreamArg(const FnDescription *Desc, const CallEvent &Call) {
@@ -1053,10 +1032,6 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
   StreamOperationEvaluator E(C);
   if (!E.Init(Desc, Call, C, State))
     return;
-
-  // The pointers passed to fscanf escape and get invalidated.
-  State =
-      escapeArgsStartingFromIndex(State, C, Call, /*FirstEscapingArgIndex=*/2);
 
   // Add the success state.
   // In this context "success" means there is not an EOF or other read error
