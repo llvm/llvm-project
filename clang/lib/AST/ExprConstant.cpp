@@ -2252,16 +2252,6 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
     return false;
   }
 
-  // C23 6.7.1p6: If an object or subobject declared with storage-class
-  // specifier constexpr has pointer, integer, or arithmetic type, any explicit
-  // initializer value for it shall be null, an integer constant expression, or
-  // an arithmetic constant expression, respectively.
-  if (Info.getLangOpts().C23) {
-    if (const auto *VarD = dyn_cast_if_present<VarDecl>(BaseVD);
-        VarD && VarD->isConstexpr() && !LVal.isNullPointer())
-      Info.report(Loc, diag::err_c23_constexpr_pointer_not_null);
-  }
-
   // Check that the object is a global. Note that the fake 'this' object we
   // manufacture when checking potential constant expressions is conservatively
   // assumed to be global here.

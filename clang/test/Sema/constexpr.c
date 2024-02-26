@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c2x -verify -triple x86_64 -pedantic -Wno-conversion -Wno-constant-conversion -Wno-div-by-zero %s
+// RUN: %clang_cc1 -std=c23 -verify -triple x86_64 -pedantic -Wno-conversion -Wno-constant-conversion -Wno-div-by-zero %s
 
 // Check that constexpr only applies to variables.
 constexpr void f0() {} // expected-error {{'constexpr' can only be used in variable declarations}}
@@ -37,12 +37,15 @@ constexpr static int V8 = 1;
 constexpr auto Ulong = 1L;
 constexpr auto CompoundLiteral = (int){13};
 constexpr auto DoubleCast = (double)(1 / 3);
-constexpr auto String = "this is a string";
+constexpr auto String = "this is a string"; // expected-error {{constexpr pointer initializer is not null}}
 constexpr signed auto Long = 1L; // expected-error {{'auto' cannot be signed or unsigned}}
 _Static_assert(_Generic(Ulong, long : 1));
 _Static_assert(_Generic(CompoundLiteral, int : 1));
 _Static_assert(_Generic(DoubleCast, double : 1));
 _Static_assert(_Generic(String, char* : 1));
+
+typedef constexpr int Foo; // expected-error {{typedef cannot be constexpr}}
+constexpr typedef int Bar; // expected-error {{typedef cannot be constexpr}}
 
 void f3(constexpr register int P1) { // expected-error {{function parameter cannot be constexpr}}
   constexpr register int V9 = 0;
@@ -64,16 +67,21 @@ constexpr volatile int V17 = 0; // expected-error {{constexpr variable cannot ha
 
 constexpr int * restrict V18 = 0; // expected-error {{constexpr variable cannot have type 'int *const restrict'}}
 
+constexpr extern char Oops = 1; // expected-error {{cannot combine with previous 'extern' declaration specifier}} \
+                                // expected-warning {{'extern' variable has an initializer}}
+
+constexpr int * restrict * Oops1 = 0;
+
 typedef _Atomic(int) TheA;
 typedef volatile short TheV;
 typedef float * restrict TheR;
 
 constexpr TheA V19[3] = {};
-// expected-error@-1 {{constexpr variable cannot have type 'const TheA' (aka 'const _Atomic(int)')}}
+// expected-error@-1 {{constexpr variable cannot have type 'const TheA[3]' (aka 'const _Atomic(int)[3]')}}
 constexpr TheV V20[3] = {};
-// expected-error@-1 {{constexpr variable cannot have type 'const TheV' (aka 'const volatile short')}}
+// expected-error@-1 {{constexpr variable cannot have type 'const TheV[3]' (aka 'const volatile short[3]')}}
 constexpr TheR V21[3] = {};
-// expected-error@-1 {{constexpr variable cannot have type 'const TheR' (aka 'float *const restrict')}}
+// expected-error@-1 {{constexpr variable cannot have type 'const TheR[3]' (aka 'float *restrict const[3]')}}
 
 struct HasA {
   TheA f;
@@ -118,6 +126,15 @@ struct S4 {
 constexpr struct S4 V27 = {};
 // expected-error@-1 {{constexpr variable cannot have type 'TheA' (aka '_Atomic(int)')}}
 constexpr const int V28 = 28;
+
+struct S {
+  union {
+    volatile int i;
+  };
+  int j;
+};
+
+constexpr struct S s = {}; // expected-error {{constexpr variable cannot have type 'volatile int'}}
 
 // Check that constexpr variable must have a valid initializer which is a
 // constant expression.
@@ -176,7 +193,6 @@ void f4(const int P1) {
   constexpr int V1 = 12;
   constexpr const int *V2 = &V1;
 // expected-error@-1 {{constexpr variable 'V2' must be initialized by a constant expression}}
-// expected-error@-2 {{constexpr pointer initializer is not null}}
 }
 
 // Check that initializer for constexpr variable should match the type of the
@@ -193,16 +209,24 @@ struct S7 {
   unsigned int b;
 };
 
+struct S8 {
+  unsigned char a[3];
+  unsigned int b[3];
+};
+
+constexpr struct S8 DesigInit = {.b = {299, 7, 8}, .a = {-1, 7, 8}};
+// expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'unsigned char'}}
+
 void f5() {
   constexpr char V50 = 300;
-  // expected-error@-1 {{constexpr initializer evaluates to 300 which is not exactly representable in type 'char'}}
+  // expected-error@-1 {{constexpr initializer evaluates to 300 which is not exactly representable in type 'const char'}}
   constexpr float V51 = 1.0 / 3.0;
-  // expected-error@-1 {{constexpr initializer evaluates to 3.333333e-01 which is not exactly representable in type 'float'}}
+  // expected-error@-1 {{constexpr initializer evaluates to 3.333333e-01 which is not exactly representable in type 'const float'}}
   constexpr float V52 = 0.7;
-  // expected-error@-1 {{constexpr initializer evaluates to 7.000000e-01 which is not exactly representable in type 'float'}}
+  // expected-error@-1 {{constexpr initializer evaluates to 7.000000e-01 which is not exactly representable in type 'const float'}}
   constexpr float V53 = 1.0f / 3.0f;
   constexpr float V54 = 432000000000;
-  // expected-error@-1 {{constexpr initializer evaluates to 432000000000 which is not exactly representable in type 'float'}}
+  // expected-error@-1 {{constexpr initializer evaluates to 432000000000 which is not exactly representable in type 'const float'}}
   constexpr unsigned char V55[] = {
       "\xAF",
   // expected-error@-1 {{constexpr initializer evaluates to -81 which is not exactly representable in type 'const unsigned char'}}
@@ -220,41 +244,42 @@ void f5() {
   constexpr float V61 = V59 / V60;
   constexpr double V62 = 1.7;
   constexpr float V63 = V59 / V62;
-  // expected-error@-1 {{constexpr initializer evaluates to 2.941176e-01 which is not exactly representable in type 'float'}}
+  // expected-error@-1 {{constexpr initializer evaluates to 2.941176e-01 which is not exactly representable in type 'const float'}}
 
   constexpr unsigned char V64 = '\xAF';
-  // expected-error@-1 {{constexpr initializer evaluates to -81 which is not exactly representable in type 'unsigned char'}}
+  // expected-error@-1 {{constexpr initializer evaluates to -81 which is not exactly representable in type 'const unsigned char'}}
   constexpr unsigned char V65 = u8'\xAF';
 
   constexpr char V66[3] = {300};
-  // expected-error@-1 {{constexpr initializer evaluates to 300 which is not exactly representable in type 'char'}}
+  // expected-error@-1 {{constexpr initializer evaluates to 300 which is not exactly representable in type 'const char'}}
   constexpr struct S6 V67[3] = {300};
   // expected-error@-1 {{constexpr initializer evaluates to 300 which is not exactly representable in type 'unsigned char'}}
 
   constexpr struct S7 V68 = {0.3, -1 };
   // expected-error@-1 {{constexpr initializer evaluates to 3.000000e-01 which is not exactly representable in type 'float'}}
+  // expected-error@-2 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'unsigned int'}}
   constexpr struct S7 V69 = {0.5, -1 };
   // expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'unsigned int'}}
   constexpr struct S7 V70[3] = {{123456789}};
   // expected-error@-1 {{constexpr initializer evaluates to 123456789 which is not exactly representable in type 'float'}}
 
   constexpr int V71 = 0.3;
-  // expected-error@-1 {{constexpr initializer for type 'int' is of type 'double'}}
+  // expected-error@-1 {{constexpr initializer for type 'const int' is of type 'double'}}
   constexpr int V72 = V59;
-  // expected-error@-1 {{constexpr initializer for type 'int' is of type 'const double'}}
+  // expected-error@-1 {{constexpr initializer for type 'const int' is of type 'const double'}}
   constexpr struct S6 V73 = {V59};
   // expected-error@-1 {{constexpr initializer for type 'unsigned char' is of type 'const double'}}
 
   constexpr float V74 = 1;
   constexpr float V75 = V59;
   constexpr unsigned int V76[3] = {0.5};
-  // expected-error@-1 {{constexpr initializer for type 'unsigned int' is of type 'double'}}
+  // expected-error@-1 {{constexpr initializer for type 'const unsigned int' is of type 'double'}}
 
   constexpr _Complex float V77 = 0;
   constexpr float V78 = V77;
-  // expected-error@-1 {{constexpr initializer for type 'float' is of type 'const _Complex float'}}
+  // expected-error@-1 {{constexpr initializer for type 'const float' is of type 'const _Complex float'}}
   constexpr int V79 = V77;
-  // expected-error@-1 {{constexpr initializer for type 'int' is of type 'const _Complex float'}}
+  // expected-error@-1 {{constexpr initializer for type 'const int' is of type 'const _Complex float'}}
 
 }
 
@@ -266,11 +291,15 @@ constexpr char u8string[] = u8"test"u8"ing this out\xFF";
 constexpr unsigned char u8ustring[] = u8"test"u8"ing this out\xFF";
 constexpr unsigned short uustring[] = u"test"u"ing this out\xFF";
 constexpr unsigned int Ustring[] = U"test"U"ing this out\xFF";
+constexpr unsigned char Arr2[6][6] = {
+  {"ek\xFF"}, {"ek\xFF"}
+// expected-error@-1 2{{constexpr initializer evaluates to -1 which is not exactly representable in type 'const unsigned char'}}
+};
 
 constexpr int i = (12);
 constexpr int j = (i);
 constexpr unsigned jneg = (-i);
-// expected-error@-1 {{constexpr initializer evaluates to -12 which is not exactly representable in type 'unsigned int'}}
+// expected-error@-1 {{constexpr initializer evaluates to -12 which is not exactly representable in type 'const unsigned int'}}
 
 // Check that initializer for pointer constexpr variable should be null.
 constexpr int V80 = 3;
@@ -281,6 +310,7 @@ constexpr int *V83 = V82;
 constexpr int *V84 = 42;
 // expected-error@-1 {{constexpr variable 'V84' must be initialized by a constant expression}}
 // expected-note@-2 {{this conversion is not allowed in a constant expression}}
+// expected-error@-3 {{constexpr pointer initializer is not null}}
 constexpr int *V85 = nullptr;
 
 // Check that constexpr variables should not be VLAs.
@@ -293,4 +323,10 @@ void f6(const int P1) {
   int V89 = 7;
   constexpr int V90[V89] = {};
 // expected-error@-1 {{constexpr variable cannot have type 'const int[V89]'}}
+}
+
+void f7(int n, int array[n]) {
+  constexpr typeof(array) foo = 0; // Accepted because array is a pointer type, not a VLA type
+  int (*(*fp)(int n))[n];
+  constexpr typeof(fp) bar = 0; // expected-error {{constexpr variable cannot have type 'const typeof (fp)' (aka 'int (*(*const)(int))[n]')}}
 }

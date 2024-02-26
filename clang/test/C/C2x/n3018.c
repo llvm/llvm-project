@@ -9,7 +9,7 @@
 
 void Example0() {
   constexpr unsigned int minusOne    = -1;
-  // expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'unsigned int'}}
+  // expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'const unsigned int'}}
   constexpr unsigned int uint_max    = -1U;
   constexpr double onethird          = 1.0/3.0;
   constexpr double onethirdtrunc     = (double)(1.0/3.0);
@@ -19,7 +19,7 @@ void Example0() {
   // expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'const unsigned char'}}
   constexpr char string1[] = { -1, 0, };
   constexpr unsigned char ucstring1[] = { -1, 0, };
-  // expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'unsigned char'}}
+  // expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'const unsigned char'}}
 
   // TODO: Make sure these work correctly once char8_t and _Decimal are supported
   // constexpr char8_t u8string[] = { 255, 0, }; // ok
@@ -44,12 +44,12 @@ static const int b = K + 1;
 void Example2() {
   constexpr int A          = 42LL;
   constexpr signed short B = ULLONG_MAX;
-  // expected-error@-1 {{constexpr initializer evaluates to 18446744073709551615 which is not exactly representable in type 'short'}}
+  // expected-error@-1 {{constexpr initializer evaluates to 18446744073709551615 which is not exactly representable in type 'const short'}}
   constexpr float C        = 47u;
 
   constexpr float D = 432000000;
   constexpr float E = 1.0 / 3.0;
-  // expected-error@-1 {{constexpr initializer evaluates to 3.333333e-01 which is not exactly representable in type 'float'}}
+  // expected-error@-1 {{constexpr initializer evaluates to 3.333333e-01 which is not exactly representable in type 'const float'}}
   constexpr float F = 1.0f / 3.0f;
 }
 
@@ -58,15 +58,16 @@ void Example3() {
   constexpr static unsigned short array[] = {
       3000,
       300000,
-      // expected-error@-1 {{constexpr initializer evaluates to 300000 which is not exactly representable in type 'unsigned short'}}
-      -1       // constraint violation, target type is unsigned
+      // expected-error@-1 {{constexpr initializer evaluates to 300000 which is not exactly representable in type 'const unsigned short'}}
+      -1
+      // expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'const unsigned short'}}
   };
 
   constexpr static unsigned short array1[] = {
       3000,
       3000,
       -1
-       // expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'unsigned short'}}
+       // expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'const unsigned short'}}
   };
 
   struct S {
