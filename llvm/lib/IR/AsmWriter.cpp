@@ -4657,13 +4657,10 @@ void AssemblyWriter::printDbgRecordLine(const DbgRecord &DR) {
 }
 
 void AssemblyWriter::printDPLabel(const DPLabel &Label) {
-  // There's no formal representation of a DPLabel -- print purely as
-  // a debugging aid.
-  Out << "  DPLabel { ";
   auto WriterCtx = getContext();
+  Out << "#dbg_label(";
   WriteAsOperandInternal(Out, Label.getLabel(), WriterCtx, true);
-  Out << " marker @" << Label.getMarker();
-  Out << " }";
+  Out << ")";
 }
 
 void AssemblyWriter::printMetadataAttachments(
@@ -4906,8 +4903,6 @@ void DPValue::print(raw_ostream &ROS, bool IsForDebug) const {
 
 void DPMarker::print(raw_ostream &ROS, ModuleSlotTracker &MST,
                      bool IsForDebug) const {
-  // There's no formal representation of a DPMarker -- print purely as a
-  // debugging aid.
   formatted_raw_ostream OS(ROS);
   SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
   SlotTracker &SlotTable =
@@ -4946,8 +4941,6 @@ void DPValue::print(raw_ostream &ROS, ModuleSlotTracker &MST,
 
 void DPLabel::print(raw_ostream &ROS, ModuleSlotTracker &MST,
                     bool IsForDebug) const {
-  // There's no formal representation of a DbgLabelRecord -- print purely as
-  // a debugging aid.
   formatted_raw_ostream OS(ROS);
   SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
   SlotTracker &SlotTable =

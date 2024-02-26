@@ -101,6 +101,10 @@ void Module::removeDebugIntrinsicDeclarations() {
   assert(AssignIntrinsicFn->hasZeroLiveUses() &&
          "Debug assign intrinsic should have had uses removed.");
   AssignIntrinsicFn->eraseFromParent();
+  auto *LabelntrinsicFn = Intrinsic::getDeclaration(this, Intrinsic::dbg_label);
+  assert(LabelntrinsicFn->hasZeroLiveUses() &&
+         "Debug label intrinsic should have had uses removed.");
+  LabelntrinsicFn->eraseFromParent();
 }
 
 std::unique_ptr<RandomNumberGenerator>

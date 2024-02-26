@@ -21,6 +21,8 @@
 ; CHECK-NEXT: {{^}}  %[[VAL_ADD:[0-9a-zA-Z]+]] = add i32 %[[VAL_A]], 5
 ; OLDDBG-NEXT: call void @llvm.dbg.value(metadata !DIArgList(i32 %[[VAL_A]], i32 %[[VAL_ADD]]), metadata ![[VAR_A]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus)), !dbg ![[LOC_3:[0-9]+]]
 ; NEWDBG-NEXT: {{^}}    #dbg_value(!DIArgList(i32 %[[VAL_A]], i32 %[[VAL_ADD]]), ![[VAR_A]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), ![[LOC_3:[0-9]+]])
+; OLDDBG-NEXT: call void @llvm.dbg.label(metadata ![[LABEL_ID:[0-9]+]])
+; NEWDBG-NEXT: {{^}}    #dbg_label(![[LABEL_ID:[0-9]+]])
 ; CHECK-NEXT: {{^}}  store i32 %[[VAL_ADD]]{{.+}}, !DIAssignID ![[ASSIGNID:[0-9]+]]
 ; OLDDBG-NEXT: call void @llvm.dbg.assign(metadata i32 %[[VAL_ADD]], metadata ![[VAR_B]], metadata !DIExpression(), metadata ![[ASSIGNID]], metadata ptr %[[VAL_B]], metadata !DIExpression()), !dbg ![[LOC_4:[0-9]+]]
 ; NEWDBG-NEXT: {{^}}    #dbg_assign(i32 %[[VAL_ADD]], ![[VAR_B]], !DIExpression(), ![[ASSIGNID]], ptr %[[VAL_B]], !DIExpression(), ![[LOC_4:[0-9]+]])
@@ -37,6 +39,7 @@
 ; CHECK-DAG: ![[LOC_2]] = !DILocation(line: 3, column: 20
 ; CHECK-DAG: ![[LOC_3]] = !DILocation(line: 3, column: 25
 ; CHECK-DAG: ![[LOC_4]] = !DILocation(line: 3, column: 30
+; CHECK-DAG: ![[LABEL_ID]] = !DILabel(
 
 define dso_local i32 @f(i32 %a) !dbg !7 {
 entry:
@@ -45,6 +48,7 @@ entry:
   call void @llvm.dbg.declare(metadata ptr %b, metadata !21, metadata !DIExpression()), !dbg !31
   %add = add i32 %a, 5, !dbg !31
   call void @llvm.dbg.value(metadata !DIArgList(i32 %a, i32 %add), metadata !20, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus)), !dbg !32
+  call void @llvm.dbg.label(metadata !50), !dbg !32
   store i32 %add, ptr %b, !dbg !32, !DIAssignID !40
   call void @llvm.dbg.assign(metadata i32 %add, metadata !21, metadata !DIExpression(), metadata !40, metadata ptr %b, metadata !DIExpression()), !dbg !33
   ret i32 %add, !dbg !33
@@ -54,6 +58,7 @@ entry:
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
+declare void @llvm.dbg.label(metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}
@@ -78,3 +83,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !32 = !DILocation(line: 3, column: 25, scope: !7)
 !33 = !DILocation(line: 3, column: 30, scope: !7)
 !40 = distinct !DIAssignID()
+!50 = !DILabel(scope: !7, name: "label", file: !1, line: 3)
