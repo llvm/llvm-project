@@ -56,7 +56,7 @@ BB3:                                              ; preds = %BB2
 
 BB4:                                              ; preds = %BB3
   %8 = icmp slt i32 %0, 0, !dbg !5
-  ;; Manually insreted intrinsics; these should get deletd when this block is
+  ;; Manually inserted intrinsics; these should get deleted when this block is
   ;; folded into BB2.
   call void @llvm.dbg.value(metadata ptr null, metadata !7, metadata !DIExpression()), !dbg !12
   call void @llvm.dbg.label(metadata !18), !dbg !12
