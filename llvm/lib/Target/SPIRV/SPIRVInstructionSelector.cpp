@@ -195,8 +195,8 @@ private:
   bool selectLog10(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
 
-  bool selectDXThreadId(Register ResVReg, const SPIRVType *ResType,
-                        MachineInstr &I) const;
+  bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
+                         MachineInstr &I) const;
 
   bool selectUnmergeValues(MachineInstr &I) const;
 
@@ -1619,8 +1619,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
           .addUse(I.getOperand(2).getReg())
           .addUse(I.getOperand(3).getReg());
     break;
-  case Intrinsic::dx_thread_id:
-    return selectDXThreadId(ResVReg, ResType, I);
+  case Intrinsic::spv_thread_id:
+    return selectSpvThreadId(ResVReg, ResType, I);
   default:
     llvm_unreachable("Intrinsic selection not implemented");
   }
@@ -1871,9 +1871,9 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
   return Result;
 }
 
-bool SPIRVInstructionSelector::selectDXThreadId(Register ResVReg,
-                                                const SPIRVType *ResType,
-                                                MachineInstr &I) const {
+bool SPIRVInstructionSelector::selectSpvThreadId(Register ResVReg,
+                                                 const SPIRVType *ResType,
+                                                 MachineInstr &I) const {
   // DX intrinsic: @llvm.dx.thread.id(i32)
   // ID  Name      Description
   // 93  ThreadId  reads the thread ID
