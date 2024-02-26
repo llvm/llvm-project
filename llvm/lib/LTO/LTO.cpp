@@ -1557,6 +1557,21 @@ ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
       };
 }
 
+StringLiteral lto::getThinLTODefaultCPU(const Triple &TheTriple) {
+  if (!TheTriple.isOSDarwin())
+    return "";
+  if (TheTriple.getArch() == Triple::x86_64)
+    return "core2";
+  if (TheTriple.getArch() == Triple::x86)
+    return "yonah";
+  if (TheTriple.isArm64e())
+    return "apple-a12";
+  if (TheTriple.getArch() == Triple::aarch64 ||
+      TheTriple.getArch() == Triple::aarch64_32)
+    return "cyclone";
+  return "";
+}
+
 // Given the original \p Path to an output file, replace any path
 // prefix matching \p OldPrefix with \p NewPrefix. Also, create the
 // resulting directory if it does not yet exist.
