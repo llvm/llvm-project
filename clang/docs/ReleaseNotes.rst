@@ -283,6 +283,7 @@ Bug Fixes to C++ Support
   (`#78524 <https://github.com/llvm/llvm-project/issues/78524>`_)
 - Clang no longer instantiates the exception specification of discarded candidate function
   templates when determining the primary template of an explicit specialization.
+- Fixed a crash when MS unqualified dependent base class lookup occurs in an incomplete class.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
