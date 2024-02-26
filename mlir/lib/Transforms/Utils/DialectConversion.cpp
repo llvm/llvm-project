@@ -1229,9 +1229,8 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
 }
 
 bool ConversionPatternRewriterImpl::isOpIgnored(Operation *op) const {
-  // Check to see if this operation was replaced or its parent ignored.
-  return ignoredOps.count(op->getParentOp()) ||
-         hasRewrite<ReplaceOperationRewrite>(rewrites, op);
+  // Check to see if this operation or the parent operation is ignored.
+  return ignoredOps.count(op->getParentOp()) || ignoredOps.count(op);
 }
 
 void ConversionPatternRewriterImpl::markNestedOpsIgnored(Operation *op) {
@@ -1480,12 +1479,7 @@ void ConversionPatternRewriterImpl::notifyOperationInserted(
 void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
                                                      ValueRange newValues) {
   assert(newValues.size() == op->getNumResults());
-#ifndef NDEBUG
-  for (auto &rewrite : rewrites)
-    if (auto *opReplacement = dyn_cast<ReplaceOperationRewrite>(rewrite.get()))
-      assert(opReplacement->getOperation() != op &&
-             "operation was already replaced");
-#endif // NDEBUG
+  assert(!ignoredOps.contains(op) && "operation was already replaced");
 
   // Track if any of the results changed, e.g. erased and replaced with null.
   bool resultChanged = false;
@@ -1506,6 +1500,7 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
 
   // Mark this operation as recursively ignored so that we don't need to
   // convert any nested operations.
+  ignoredOps.insert(op);
   markNestedOpsIgnored(op);
 }
 
