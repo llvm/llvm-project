@@ -222,8 +222,8 @@ static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
                            cl::init(false), cl::Hidden);
-static cl::opt<bool>
-    OptSizeDFAJumpThreading("optsize-dfa-jump-thread",
+extern cl::opt<bool>
+    OptSizeDFAJumpThreading("dfa-jump-thread-optsize",
                            cl::desc("Enable DFA jump threading when optimizing for size"),
                            cl::init(false), cl::Hidden);
 
