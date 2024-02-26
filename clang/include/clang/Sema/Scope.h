@@ -521,6 +521,19 @@ public:
     return getFlags() & Scope::OpenACCComputeConstructScope;
   }
 
+  bool isInOpenACCComputeConstructScope() const {
+    for (const Scope *S = this; S; S = S->getParent()) {
+      if (S->getFlags() & Scope::OpenACCComputeConstructScope)
+        return true;
+      else if (S->getFlags() &
+               (Scope::FnScope | Scope::ClassScope | Scope::BlockScope |
+                Scope::TemplateParamScope | Scope::FunctionPrototypeScope |
+                Scope::AtCatchScope | Scope::ObjCMethodScope))
+        return false;
+    }
+    return false;
+  }
+
   /// Determine whether this scope is a while/do/for statement, which can have
   /// continue statements embedded into it.
   bool isContinueScope() const {
