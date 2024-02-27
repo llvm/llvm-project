@@ -184,7 +184,7 @@ applyTransforms(mlir::Operation *payloadRoot,
 }
 
 /// Applies transforms indicated in the transform dialect script to the input
-/// buffer. The transforms script may be embedded in the input buffer or as a
+/// buffer. The transform script may be embedded in the input buffer or as a
 /// separate buffer. The transform script may have external symbols, the
 /// definitions of which must be provided in transform library buffers. If the
 /// application is successful, prints the transformed input buffer into the

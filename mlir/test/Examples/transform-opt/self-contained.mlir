@@ -8,7 +8,7 @@
 // CHECK: IR printer: in self-contained
 // EXTERNAL: IR printer: external_def
 
-// The first occurrences comes from the print operaiton and the second is the
+// The first occurrence comes from the print operation and the second is the
 // roundtrip output. However, we shouldn't have the symbol duplicated because
 // of library merging.
 // CHECK-COUNT-2: @__transform_main
