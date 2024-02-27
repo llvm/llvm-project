@@ -323,6 +323,11 @@ public:
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
 
+  // Compute the register pressure limit for a given \p TargetOccupancy.
+  unsigned getRegPressureLimit(const TargetRegisterClass *RC,
+                               MachineFunction &MF,
+                               unsigned TargetOccupancy) const;
+
   unsigned getRegPressureSetLimit(const MachineFunction &MF,
                                   unsigned Idx) const override;
 

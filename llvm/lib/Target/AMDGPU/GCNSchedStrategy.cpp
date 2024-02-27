@@ -88,8 +88,11 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
       std::min(ST.getMaxNumSGPRs(TargetOccupancy, true), SGPRExcessLimit);
 
   if (!KnownExcessRP) {
+    const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(TRI);
     VGPRCriticalLimit =
-        std::min(ST.getMaxNumVGPRs(TargetOccupancy), VGPRExcessLimit);
+        std::min(SRI->getRegPressureLimit(&AMDGPU::VGPR_32RegClass, *MF,
+                                          TargetOccupancy),
+                 VGPRExcessLimit);
   } else {
     // This is similar to ST.getMaxNumVGPRs(TargetOccupancy) result except
     // returns a reasonably small number for targets with lots of VGPRs, such
