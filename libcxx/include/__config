@@ -1200,9 +1200,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    ifndef _LIBCPP_ATOMIC_FLAG_TYPE
 #      define _LIBCPP_ATOMIC_FLAG_TYPE bool
 #    endif
-#    ifdef _LIBCPP_FREESTANDING
-#      define _LIBCPP_ATOMIC_ONLY_USE_BUILTINS
-#    endif
 #  endif
 
 #  if defined(__FreeBSD__) && defined(__clang__) && __has_attribute(__no_thread_safety_analysis__)
