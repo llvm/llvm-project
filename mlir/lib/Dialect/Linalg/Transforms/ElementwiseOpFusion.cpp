@@ -1527,8 +1527,7 @@ GenericOp cloneToCollapsedOp<GenericOp>(RewriterBase &rewriter,
 LinalgOp createCollapsedOp(LinalgOp op, const CollapsingInfo &collapsingInfo,
                            RewriterBase &rewriter) {
   if (GenericOp genericOp = dyn_cast<GenericOp>(op.getOperation())) {
-    return cast<LinalgOp>(
-        cloneToCollapsedOp(rewriter, genericOp, collapsingInfo).getOperation());
+    return cloneToCollapsedOp(rewriter, genericOp, collapsingInfo);
   } else {
     return cloneToCollapsedOp(rewriter, op, collapsingInfo);
   }
