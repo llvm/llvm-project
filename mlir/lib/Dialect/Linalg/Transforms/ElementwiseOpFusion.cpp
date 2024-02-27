@@ -1449,20 +1449,20 @@ void generateCollapsedIndexingRegion(Location loc, Block *block,
   }
 }
 
-LinalgOp createCollapsedOp(LinalgOp op, const CollapsingInfo &collapsingInfo,
-                           RewriterBase &rewriter) {
+void collapseOperandsAndResults(LinalgOp op,
+                                const CollapsingInfo &collapsingInfo,
+                                RewriterBase &rewriter,
+                                SmallVectorImpl<Value> &inputOperands,
+                                SmallVectorImpl<Value> &outputOperands,
+                                SmallVectorImpl<Type> &resultTypes) {
   Location loc = op->getLoc();
-
-  // Get the input operands.
-  SmallVector<Value> inputOperands =
+  inputOperands =
       llvm::map_to_vector(op.getDpsInputOperands(), [&](OpOperand *opOperand) {
         return getCollapsedOpOperand(loc, op, opOperand, collapsingInfo,
                                      rewriter);
       });
 
   // Get the output operands and result types.
-  SmallVector<Type> resultTypes;
-  SmallVector<Value> outputOperands;
   resultTypes.reserve(op.getNumDpsInits());
   outputOperands.reserve(op.getNumDpsInits());
   for (OpOperand &output : op.getDpsInitsMutable()) {
@@ -1474,35 +1474,64 @@ LinalgOp createCollapsedOp(LinalgOp op, const CollapsingInfo &collapsingInfo,
     if (!op.hasPureBufferSemantics())
       resultTypes.push_back(newOutput.getType());
   }
+}
 
-  Operation *collapsedOp = clone(
-      rewriter, op, resultTypes,
-      llvm::to_vector(llvm::concat<Value>(inputOperands, outputOperands)));
+/// Clone a `LinalgOp` to a collapsed version of same name
+template <typename OpTy>
+OpTy cloneToCollapsedOp(RewriterBase &rewriter, OpTy origOp,
+                        const CollapsingInfo &collapsingInfo) {
+  return nullptr;
+}
 
-  if (op->hasAttr("indexing_maps")) {
-    // Get the indexing maps.
-    auto indexingMaps =
-        llvm::map_to_vector(op.getIndexingMapsArray(), [&](AffineMap map) {
-          return getCollapsedOpIndexingMap(map, collapsingInfo);
-        });
+/// Collapse any `LinalgOp` that does not require any specialization such as
+/// indexing_maps, iterator_types, etc.
+template <>
+LinalgOp cloneToCollapsedOp<LinalgOp>(RewriterBase &rewriter, LinalgOp origOp,
+                                      const CollapsingInfo &collapsingInfo) {
+  SmallVector<Value> inputOperands, outputOperands;
+  SmallVector<Type> resultTypes;
+  collapseOperandsAndResults(origOp, collapsingInfo, rewriter, inputOperands,
+                             outputOperands, resultTypes);
+  return cast<LinalgOp>(clone(
+      rewriter, origOp, resultTypes,
+      llvm::to_vector(llvm::concat<Value>(inputOperands, outputOperands))));
+}
 
-    collapsedOp->setAttr("indexing_maps",
-                         rewriter.getAffineMapArrayAttr(indexingMaps));
+/// Collapse a `GenericOp`
+template <>
+GenericOp cloneToCollapsedOp<GenericOp>(RewriterBase &rewriter,
+                                        GenericOp origOp,
+                                        const CollapsingInfo &collapsingInfo) {
+  SmallVector<Value> inputOperands, outputOperands;
+  SmallVector<Type> resultTypes;
+  collapseOperandsAndResults(origOp, collapsingInfo, rewriter, inputOperands,
+                             outputOperands, resultTypes);
+  SmallVector<AffineMap> indexingMaps(
+      llvm::map_range(origOp.getIndexingMapsArray(), [&](AffineMap map) {
+        return getCollapsedOpIndexingMap(map, collapsingInfo);
+      }));
+
+  SmallVector<utils::IteratorType> iteratorTypes(getCollapsedOpIteratorTypes(
+      origOp.getIteratorTypesArray(), collapsingInfo));
+
+  GenericOp collapsedOp = rewriter.create<linalg::GenericOp>(
+      origOp.getLoc(), resultTypes, inputOperands, outputOperands, indexingMaps,
+      iteratorTypes, [](OpBuilder &builder, Location loc, ValueRange args) {});
+  Block *origOpBlock = &origOp->getRegion(0).front();
+  Block *collapsedOpBlock = &collapsedOp->getRegion(0).front();
+  rewriter.mergeBlocks(origOpBlock, collapsedOpBlock,
+                       collapsedOpBlock->getArguments());
+  return collapsedOp;
+}
+
+LinalgOp createCollapsedOp(LinalgOp op, const CollapsingInfo &collapsingInfo,
+                           RewriterBase &rewriter) {
+  if (GenericOp genericOp = dyn_cast<GenericOp>(op.getOperation())) {
+    return cast<LinalgOp>(
+        cloneToCollapsedOp(rewriter, genericOp, collapsingInfo).getOperation());
+  } else {
+    return cloneToCollapsedOp(rewriter, op, collapsingInfo);
   }
-
-  if (op->hasAttr("iterator_types")) {
-    // Get the iterator types for the operand.
-    SmallVector<Attribute> iteratorTypes = llvm::map_to_vector(
-        getCollapsedOpIteratorTypes(op.getIteratorTypesArray(), collapsingInfo),
-        [&](utils::IteratorType itTy) {
-          return cast<Attribute>(
-              IteratorTypeAttr::get(rewriter.getContext(), itTy));
-        });
-    collapsedOp->setAttr("iterator_types",
-                         rewriter.getArrayAttr(iteratorTypes));
-  }
-
-  return cast<LinalgOp>(collapsedOp);
 }
 
 /// Implementation of fusion with reshape operation by collapsing dimensions.
