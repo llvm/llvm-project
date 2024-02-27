@@ -142,6 +142,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdbit.stdc_count_ones_ui
     libc.src.stdbit.stdc_count_ones_ul
     libc.src.stdbit.stdc_count_ones_ull
+    libc.src.stdbit.stdc_has_single_bit_uc
+    libc.src.stdbit.stdc_has_single_bit_us
+    libc.src.stdbit.stdc_has_single_bit_ui
+    libc.src.stdbit.stdc_has_single_bit_ul
+    libc.src.stdbit.stdc_has_single_bit_ull
 
     # stdlib.h entrypoints
     libc.src.stdlib.abs

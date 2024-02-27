@@ -157,6 +157,21 @@ inline unsigned stdc_count_ones(unsigned long x) {
 inline unsigned stdc_count_ones(unsigned long long x) {
   return stdc_count_ones_ull(x);
 }
+inline bool stdc_has_single_bit(unsigned char x) {
+  return stdc_has_single_bit_uc(x);
+}
+inline bool stdc_has_single_bit(unsigned short x) {
+  return stdc_has_single_bit_us(x);
+}
+inline bool stdc_has_single_bit(unsigned x) {
+  return stdc_has_single_bit_ui(x);
+}
+inline bool stdc_has_single_bit(unsigned long x) {
+  return stdc_has_single_bit_ul(x);
+}
+inline bool stdc_has_single_bit(unsigned long long x) {
+  return stdc_has_single_bit_ull(x);
+}
 #else
 #define stdc_leading_zeros(x)                                                  \
   _Generic((x),                                                                \
@@ -228,6 +243,13 @@ inline unsigned stdc_count_ones(unsigned long long x) {
       unsigned: stdc_count_ones_ui,                                            \
       unsigned long: stdc_count_ones_ul,                                       \
       unsigned long long: stdc_count_ones_ull)(x)
+#define stdc_has_single_bit(x)                                                 \
+  _Generic((x),                                                                \
+      unsigned char: stdc_has_single_bit_uc,                                   \
+      unsigned short: stdc_has_single_bit_us,                                  \
+      unsigned: stdc_has_single_bit_ui,                                        \
+      unsigned long: stdc_has_single_bit_ul,                                   \
+      unsigned long long: stdc_has_single_bit_ull)(x)
 #endif // __cplusplus
 
 #endif // __LLVM_LIBC_MACROS_STDBIT_MACROS_H

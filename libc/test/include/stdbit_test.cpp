@@ -81,6 +81,11 @@ unsigned stdc_count_ones_us(unsigned short) noexcept { return 0x3BU; }
 unsigned stdc_count_ones_ui(unsigned) noexcept { return 0x3CU; }
 unsigned stdc_count_ones_ul(unsigned long) noexcept { return 0x3DU; }
 unsigned stdc_count_ones_ull(unsigned long long) noexcept { return 0x3FU; }
+bool stdc_has_single_bit_uc(unsigned char) noexcept { return false; }
+bool stdc_has_single_bit_us(unsigned short) noexcept { return false; }
+bool stdc_has_single_bit_ui(unsigned) noexcept { return false; }
+bool stdc_has_single_bit_ul(unsigned long) noexcept { return false; }
+bool stdc_has_single_bit_ull(unsigned long long) noexcept { return false; }
 }
 
 #include "include/llvm-libc-macros/stdbit-macros.h"
@@ -163,4 +168,12 @@ TEST(LlvmLibcStdbitTest, TypeGenericMacroCountOnes) {
   EXPECT_EQ(stdc_count_ones(0U), 0x3CU);
   EXPECT_EQ(stdc_count_ones(0UL), 0x3DU);
   EXPECT_EQ(stdc_count_ones(0ULL), 0x3FU);
+}
+
+TEST(LlvmLibcStdbitTest, TypeGenericMacroHasSingleBit) {
+  EXPECT_EQ(stdc_has_single_bit(static_cast<unsigned char>(1U)), false);
+  EXPECT_EQ(stdc_has_single_bit(static_cast<unsigned short>(1U)), false);
+  EXPECT_EQ(stdc_has_single_bit(1U), false);
+  EXPECT_EQ(stdc_has_single_bit(1UL), false);
+  EXPECT_EQ(stdc_has_single_bit(1ULL), false);
 }
