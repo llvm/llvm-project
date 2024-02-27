@@ -44,7 +44,7 @@ size_t ret;
 // CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[TMP0]], i1 false, i1 true, i1 true, i1 false, i64 216, i64 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[TMP0]], i1 false, i1 true, i1 true, i1 false, i64 0, i64 0)
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
 size_t test1(struct test_struct *p, int idx) {
