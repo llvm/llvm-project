@@ -37,7 +37,7 @@ using namespace mlir;
 
 class MLIRTargetLLVMNVVM : public ::testing::Test {
 protected:
-  virtual void SetUp() {
+  void SetUp() override {
     registerBuiltinDialectTranslation(registry);
     registerLLVMDialectTranslation(registry);
     registerGPUDialectTranslation(registry);
@@ -85,7 +85,7 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMMToLLVM)) {
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(object->size() > 0);
+    ASSERT_TRUE(!object->empty());
 
     // Read the serialized module.
     llvm::MemoryBufferRef buffer(StringRef(object->data(), object->size()),
@@ -121,7 +121,7 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMToPTX)) {
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(object->size() > 0);
+    ASSERT_TRUE(!object->empty());
 
     ASSERT_TRUE(
         StringRef(object->data(), object->size()).contains("nvvm_kernel"));
@@ -151,6 +151,6 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMToBinary)) {
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(object->size() > 0);
+    ASSERT_TRUE(!object->empty());
   }
 }

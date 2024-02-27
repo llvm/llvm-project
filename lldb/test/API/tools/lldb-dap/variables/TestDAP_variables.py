@@ -58,14 +58,14 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             for key in verify:
                 contains_array = verify[key]
                 actual_value = actual[key]
-                self.assertTrue(isinstance(contains_array, list))
+                self.assertIsInstance(contains_array, list)
                 for verify_value in contains_array:
                     self.assertIn(verify_value, actual_value)
         if "missing" in verify_dict:
             missing = verify_dict["missing"]
             for key in missing:
-                self.assertTrue(
-                    key not in actual, 'key "%s" is not expected in %s' % (key, actual)
+                self.assertNotIn(
+                    key, actual, 'key "%s" is not expected in %s' % (key, actual)
                 )
         hasVariablesReference = "variablesReference" in actual
         varRef = None
@@ -727,8 +727,8 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                     if reg["name"] == pc_name:
                         value = reg["value"]
                         self.assertTrue(value.startswith("0x"))
-                        self.assertTrue("a.out`main + " in value)
-                        self.assertTrue("at main.cpp:" in value)
+                        self.assertIn("a.out`main + ", value)
+                        self.assertIn("at main.cpp:", value)
 
     @no_debug_info_test
     @skipUnlessDarwin

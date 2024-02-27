@@ -740,12 +740,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // Casts for 32 and 64-bit width type are just copies.
   // Same for 128-bit width type, except they are on the FPR bank.
   getActionDefinitionsBuilder(G_BITCAST)
-      // FIXME: This is wrong since G_BITCAST is not allowed to change the
-      // number of bits but it's what the previous code described and fixing
-      // it breaks tests.
-      .legalForCartesianProduct({s8, s16, s32, s64, s128, v16s8, v8s8, v4s8,
-                                 v8s16, v4s16, v2s16, v4s32, v2s32, v2s64,
-                                 v2p0});
+      // Keeping 32-bit instructions legal to prevent regression in some tests
+      .legalForCartesianProduct({s32, v2s16, v4s8})
+      .legalForCartesianProduct({s64, v8s8, v4s16, v2s32})
+      .legalForCartesianProduct({s128, v16s8, v8s16, v4s32, v2s64, v2p0})
+      .moreElementsToNextPow2(0)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .lower();
 
   getActionDefinitionsBuilder(G_VASTART).legalFor({p0});
 
@@ -1071,6 +1074,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {s16, v8s16},
                  {s32, v2s32},
                  {s32, v4s32}})
+      .moreElementsIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[1].isVector() &&
+                   Query.Types[1].getElementType() != s8 &&
+                   Query.Types[1].getNumElements() & 1;
+          },
+          LegalizeMutations::moreElementsToNextPow2(1))
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
