@@ -4843,7 +4843,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                  .get();
       break;
     case ICK_Floating_Integral:
-      if (ToType->isRealFloatingType())
+      if (ToType->hasFloatingRepresentation())
         From =
             ImpCastExprToType(From, ToType, CK_IntegralToFloating, VK_PRValue,
                               /*BasePath=*/nullptr, CCK)
@@ -6010,6 +6010,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
 
     llvm_unreachable("unhandled type trait");
     return false;
+  }
+  case BTT_IsLayoutCompatible: {
+    return Self.IsLayoutCompatible(LhsT, RhsT);
   }
     default: llvm_unreachable("not a BTT");
   }

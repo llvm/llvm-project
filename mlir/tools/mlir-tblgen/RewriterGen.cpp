@@ -1785,7 +1785,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
                     range);
       sizes.push_back(formatv("static_cast<int32_t>({0}.size())", range));
     } else {
-      sizes.push_back("1");
+      sizes.emplace_back("1");
       os << formatv("tblgen_values.push_back(");
       if (node.isNestedDagArg(argIndex)) {
         os << symbolInfoMap.getValueAndRangeUse(

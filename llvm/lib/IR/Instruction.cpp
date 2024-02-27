@@ -23,6 +23,16 @@
 using namespace llvm;
 
 Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
+                         InstListType::iterator InsertBefore)
+    : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
+
+  // When called with an iterator, there must be a block to insert into.
+  BasicBlock *BB = InsertBefore->getParent();
+  assert(BB && "Instruction to insert before is not in a basic block!");
+  insertInto(BB, InsertBefore);
+}
+
+Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
                          Instruction *InsertBefore)
   : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
 
@@ -218,10 +228,9 @@ void Instruction::moveBeforeImpl(BasicBlock &BB, InstListType::iterator I,
     getParent()->flushTerminatorDbgValues();
 }
 
-iterator_range<DPValue::self_iterator>
-Instruction::cloneDebugInfoFrom(const Instruction *From,
-                                std::optional<DPValue::self_iterator> FromHere,
-                                bool InsertAtHead) {
+iterator_range<DbgRecord::self_iterator> Instruction::cloneDebugInfoFrom(
+    const Instruction *From, std::optional<DbgRecord::self_iterator> FromHere,
+    bool InsertAtHead) {
   if (!From->DbgMarker)
     return DPMarker::getEmptyDPValueRange();
 
@@ -235,7 +244,8 @@ Instruction::cloneDebugInfoFrom(const Instruction *From,
   return DbgMarker->cloneDebugInfoFrom(From->DbgMarker, FromHere, InsertAtHead);
 }
 
-std::optional<DPValue::self_iterator> Instruction::getDbgReinsertionPosition() {
+std::optional<DbgRecord::self_iterator>
+Instruction::getDbgReinsertionPosition() {
   // Is there a marker on the next instruction?
   DPMarker *NextMarker = getParent()->getNextMarker(this);
   if (!NextMarker)
@@ -294,11 +304,11 @@ void Instruction::adoptDbgValues(BasicBlock *BB, BasicBlock::iterator It,
 
 void Instruction::dropDbgValues() {
   if (DbgMarker)
-    DbgMarker->dropDPValues();
+    DbgMarker->dropDbgValues();
 }
 
-void Instruction::dropOneDbgValue(DPValue *DPV) {
-  DbgMarker->dropOneDPValue(DPV);
+void Instruction::dropOneDbgValue(DbgRecord *DPV) {
+  DbgMarker->dropOneDbgValue(DPV);
 }
 
 bool Instruction::comesBefore(const Instruction *Other) const {
