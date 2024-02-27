@@ -133,6 +133,10 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
+* llvm-objcopy now supports ``--set-symbol-visibility`` and
+  ``--set-symbols-visibility`` options for ELF input to change the
+  visibility of symbols.
+
 Changes to LLDB
 ---------------------------------
 
