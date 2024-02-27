@@ -115,7 +115,8 @@ intlogb(U x) {
                     exponent < IntLogbConstants<T>::T_MIN)) {
     set_errno_if_required(ERANGE);
     raise_except_if_required(FE_INVALID);
-    return exponent ? IntLogbConstants<T>::T_MAX : IntLogbConstants<T>::T_MIN;
+    return exponent > 0 ? IntLogbConstants<T>::T_MAX
+                        : IntLogbConstants<T>::T_MIN;
   }
 
   return static_cast<T>(exponent);
