@@ -299,7 +299,7 @@ OPTIONS
 .. option:: --pretty-pgo-analysis-map
 
   When using :option:`--symbolize-operands` with bb-address-map and
-  pgo-analysis-map, print analyses using same the format as their analysis
+  pgo-analysis-map, print analyses using the same format as their analysis
   passes would. An example of pretty format would be printing block frequencies
   relative to the entry block, the same as BFI.
 
