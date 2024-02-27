@@ -768,6 +768,10 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
       (dstElemBitwidth % srcElemBitwidth) != 0)
     return rewriter.notifyMatchFailure(op, "Not a supported aligned case");
 
+  if ((srcType.getShape().back() % 2) != 0)
+    return rewriter.notifyMatchFailure(
+        op, "Not an even number of i4 elements in trailing dim");
+
   return success();
 }
 
@@ -876,9 +880,9 @@ static Value rewriteI4ToI8SignedExt(PatternRewriter &rewriter, Location loc,
   return rewriter.create<vector::InterleaveOp>(loc, low, high);
 }
 
-/// Rewrite the i8 -> i4 signed extension into a sequence of shuffles and
-/// bitwise ops that take advantage of high-level information to avoid leaving
-/// LLVM to scramble with peephole optimizations.
+/// Rewrite the i8 -> i4 truncation into a sequence of shuffles and bitwise ops
+/// that take advantage of high-level information to avoid leaving LLVM to
+/// scramble with peephole optimizations.
 static Value rewriteI8ToI4Trunc(PatternRewriter &rewriter, Location loc,
                                 Value srcValue) {
   VectorType srcVecType = cast<VectorType>(srcValue.getType());
@@ -889,6 +893,7 @@ static Value rewriteI8ToI4Trunc(PatternRewriter &rewriter, Location loc,
   int64_t vecDimSize = srcVecType.getShape().back();
   SmallVector<int64_t> deinterleaveLowMaskValues;
   SmallVector<int64_t> deinterleaveHighMaskValues;
+  assert((vecDimSize % 2) == 0 && "Odd number of i4 elements");
   deinterleaveLowMaskValues.reserve(vecDimSize / 2);
   deinterleaveHighMaskValues.reserve(vecDimSize / 2);
   for (int i = 0, end = vecDimSize; i < end; i += 2) {
