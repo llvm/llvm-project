@@ -87,6 +87,7 @@ function(_get_common_compile_options output_var flags)
     list(APPEND compile_options "-fvisibility=hidden")
     list(APPEND compile_options "-fconvergent-functions")
     list(APPEND compile_options "-flto")
+    list(APPEND compile_options "-Wno-multi-gpu")
 
     if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
       list(APPEND compile_options "-Wno-unknown-cuda-version")
