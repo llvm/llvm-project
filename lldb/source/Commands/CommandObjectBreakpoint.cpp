@@ -813,12 +813,7 @@ public:
                             "With the exception of -e, -d and -i, passing an "
                             "empty argument clears the modification.",
                             nullptr) {
-    CommandArgumentEntry arg;
-    CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
-                                      eArgTypeBreakpointIDRange);
-    // Add the entry for the first argument for this command to the object's
-    // arguments vector.
-    m_arguments.push_back(arg);
+    CommandObject::AddIDsArgumentData(eBreakpointArgs);
 
     m_options.Append(&m_bp_opts,
                      LLDB_OPT_SET_1 | LLDB_OPT_SET_2 | LLDB_OPT_SET_3,
@@ -890,12 +885,7 @@ public:
                             "Enable the specified disabled breakpoint(s). If "
                             "no breakpoints are specified, enable all of them.",
                             nullptr) {
-    CommandArgumentEntry arg;
-    CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
-                                      eArgTypeBreakpointIDRange);
-    // Add the entry for the first argument for this command to the object's
-    // arguments vector.
-    m_arguments.push_back(arg);
+    CommandObject::AddIDsArgumentData(eBreakpointArgs);
   }
 
   ~CommandObjectBreakpointEnable() override = default;
@@ -1002,12 +992,7 @@ execution will NOT stop at location 1.1.  To achieve that, type:
         "The first command disables all locations for breakpoint 1, \
 the second re-enables the first location.");
 
-    CommandArgumentEntry arg;
-    CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
-                                      eArgTypeBreakpointIDRange);
-    // Add the entry for the first argument for this command to the object's
-    // arguments vector.
-    m_arguments.push_back(arg);
+    CommandObject::AddIDsArgumentData(eBreakpointArgs);
   }
 
   ~CommandObjectBreakpointDisable() override = default;
@@ -1098,15 +1083,7 @@ public:
     CommandArgumentData bp_id_arg;
 
     // Define the first (and only) variant of this arg.
-    bp_id_arg.arg_type = eArgTypeBreakpointID;
-    bp_id_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(bp_id_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeBreakpointID, eArgRepeatOptional);
   }
 
   ~CommandObjectBreakpointList() override = default;
@@ -1372,12 +1349,7 @@ public:
                             "Delete the specified breakpoint(s).  If no "
                             "breakpoints are specified, delete them all.",
                             nullptr) {
-    CommandArgumentEntry arg;
-    CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
-                                      eArgTypeBreakpointIDRange);
-    // Add the entry for the first argument for this command to the object's
-    // arguments vector.
-    m_arguments.push_back(arg);
+    CommandObject::AddIDsArgumentData(eBreakpointArgs);
   }
 
   ~CommandObjectBreakpointDelete() override = default;
@@ -1677,14 +1649,7 @@ public:
             "on the name.",
             "breakpoint name configure <command-options> "
             "<breakpoint-name-list>") {
-    // Create the first variant for the first (and only) argument for this
-    // command.
-    CommandArgumentEntry arg1;
-    CommandArgumentData id_arg;
-    id_arg.arg_type = eArgTypeBreakpointName;
-    id_arg.arg_repetition = eArgRepeatOptional;
-    arg1.push_back(id_arg);
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeBreakpointName, eArgRepeatOptional);
 
     m_option_group.Append(&m_bp_opts, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Append(&m_access_options, LLDB_OPT_SET_ALL,
@@ -1770,14 +1735,7 @@ public:
       : CommandObjectParsed(
             interpreter, "add", "Add a name to the breakpoints provided.",
             "breakpoint name add <command-options> <breakpoint-id-list>") {
-    // Create the first variant for the first (and only) argument for this
-    // command.
-    CommandArgumentEntry arg1;
-    CommandArgumentData id_arg;
-    id_arg.arg_type = eArgTypeBreakpointID;
-    id_arg.arg_repetition = eArgRepeatOptional;
-    arg1.push_back(id_arg);
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeBreakpointID, eArgRepeatOptional);
 
     m_option_group.Append(&m_name_options, LLDB_OPT_SET_1, LLDB_OPT_SET_ALL);
     m_option_group.Finalize();
@@ -1851,14 +1809,7 @@ public:
             interpreter, "delete",
             "Delete a name from the breakpoints provided.",
             "breakpoint name delete <command-options> <breakpoint-id-list>") {
-    // Create the first variant for the first (and only) argument for this
-    // command.
-    CommandArgumentEntry arg1;
-    CommandArgumentData id_arg;
-    id_arg.arg_type = eArgTypeBreakpointID;
-    id_arg.arg_repetition = eArgRepeatOptional;
-    arg1.push_back(id_arg);
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeBreakpointID, eArgRepeatOptional);
 
     m_option_group.Append(&m_name_options, LLDB_OPT_SET_1, LLDB_OPT_SET_ALL);
     m_option_group.Finalize();
@@ -2308,12 +2259,7 @@ public:
                             "be read in with \"breakpoint read\".  "
                             "If given no arguments, writes all breakpoints.",
                             nullptr) {
-    CommandArgumentEntry arg;
-    CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
-                                      eArgTypeBreakpointIDRange);
-    // Add the entry for the first argument for this command to the object's
-    // arguments vector.
-    m_arguments.push_back(arg);
+    CommandObject::AddIDsArgumentData(eBreakpointArgs);
   }
 
   ~CommandObjectBreakpointWrite() override = default;

@@ -229,19 +229,8 @@ public:
         m_remote_file(
             LLDB_OPT_SET_1, false, "remote-file", 'r', 0, eArgTypeFilename,
             "Fullpath to the file on the remote host if debugging remotely.") {
-    CommandArgumentEntry arg;
-    CommandArgumentData file_arg;
 
-    // Define the first (and only) variant of this arg.
-    file_arg.arg_type = eArgTypeFilename;
-    file_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(file_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeFilename);
 
     m_option_group.Append(&m_arch_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Append(&m_platform_options, LLDB_OPT_SET_ALL, 1);
@@ -503,8 +492,7 @@ public:
       : CommandObjectParsed(
             interpreter, "target select",
             "Select a target as the current target by target index.", nullptr) {
-    CommandArgumentData target_arg{eArgTypeTargetID, eArgRepeatPlain};
-    m_arguments.push_back({target_arg});
+    AddSimpleArgumentList(eArgTypeTargetID);
   }
 
   ~CommandObjectTargetSelect() override = default;
@@ -586,8 +574,7 @@ public:
     m_option_group.Append(&m_all_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Append(&m_cleanup_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Finalize();
-    CommandArgumentData target_arg{eArgTypeTargetID, eArgRepeatStar};
-    m_arguments.push_back({target_arg});
+    AddSimpleArgumentList(eArgTypeTargetID, eArgRepeatStar);
   }
 
   ~CommandObjectTargetDelete() override = default;
@@ -729,19 +716,7 @@ public:
             "A basename or fullpath to a shared library to use in the search "
             "for global "
             "variables. This option can be specified multiple times.") {
-    CommandArgumentEntry arg;
-    CommandArgumentData var_name_arg;
-
-    // Define the first (and only) variant of this arg.
-    var_name_arg.arg_type = eArgTypeVarName;
-    var_name_arg.arg_repetition = eArgRepeatPlus;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(var_name_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeVarName, eArgRepeatPlus);
 
     m_option_group.Append(&m_varobj_options, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Append(&m_option_variable, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
@@ -1243,19 +1218,7 @@ public:
             interpreter, "target modules search-paths query",
             "Transform a path using the first applicable image search path.",
             nullptr, eCommandRequiresTarget) {
-    CommandArgumentEntry arg;
-    CommandArgumentData path_arg;
-
-    // Define the first (and only) variant of this arg.
-    path_arg.arg_type = eArgTypeDirectoryName;
-    path_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(path_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeDirectoryName);
   }
 
   ~CommandObjectTargetModulesSearchPathsQuery() override = default;
@@ -1881,19 +1844,7 @@ public:
                                                const char *syntax,
                                                uint32_t flags = 0)
       : CommandObjectParsed(interpreter, name, help, syntax, flags) {
-    CommandArgumentEntry arg;
-    CommandArgumentData file_arg;
-
-    // Define the first (and only) variant of this arg.
-    file_arg.arg_type = eArgTypeFilename;
-    file_arg.arg_repetition = eArgRepeatStar;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(file_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeFilename, eArgRepeatStar);
   }
 
   ~CommandObjectTargetModulesModuleAutoComplete() override = default;
@@ -1918,19 +1869,7 @@ public:
       CommandInterpreter &interpreter, const char *name, const char *help,
       const char *syntax, uint32_t flags)
       : CommandObjectParsed(interpreter, name, help, syntax, flags) {
-    CommandArgumentEntry arg;
-    CommandArgumentData source_file_arg;
-
-    // Define the first (and only) variant of this arg.
-    source_file_arg.arg_type = eArgTypeSourceFile;
-    source_file_arg.arg_repetition = eArgRepeatPlus;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(source_file_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeSourceFile, eArgRepeatPlus);
   }
 
   ~CommandObjectTargetModulesSourceFileAutoComplete() override = default;
@@ -2234,8 +2173,7 @@ public:
             interpreter, "target modules dump pcm-info",
             "Dump information about the given clang module (pcm).") {
     // Take a single file argument.
-    CommandArgumentData arg{eArgTypeFilename, eArgRepeatPlain};
-    m_arguments.push_back({arg});
+    AddSimpleArgumentList(eArgTypeFilename);
   }
 
   ~CommandObjectTargetModulesDumpClangPCMInfo() override = default;
@@ -2774,8 +2712,7 @@ public:
                           LLDB_OPT_SET_1);
     m_option_group.Append(&m_symbol_file, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Finalize();
-    CommandArgumentData module_arg{eArgTypePath, eArgRepeatStar};
-    m_arguments.push_back({module_arg});
+    AddSimpleArgumentList(eArgTypePath, eArgRepeatStar);
   }
 
   ~CommandObjectTargetModulesAdd() override = default;
@@ -3219,8 +3156,7 @@ public:
       : CommandObjectParsed(
             interpreter, "target modules list",
             "List current executable and dependent shared library images.") {
-    CommandArgumentData module_arg{eArgTypeModule, eArgRepeatStar};
-    m_arguments.push_back({module_arg});
+    AddSimpleArgumentList(eArgTypeModule, eArgRepeatStar);
   }
 
   ~CommandObjectTargetModulesList() override = default;
@@ -3992,19 +3928,7 @@ public:
                             "Look up information within executable and "
                             "dependent shared library images.",
                             nullptr, eCommandRequiresTarget) {
-    CommandArgumentEntry arg;
-    CommandArgumentData file_arg;
-
-    // Define the first (and only) variant of this arg.
-    file_arg.arg_type = eArgTypeFilename;
-    file_arg.arg_repetition = eArgRepeatStar;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(file_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeFilename, eArgRepeatStar);
   }
 
   ~CommandObjectTargetModulesLookup() override = default;
@@ -4323,8 +4247,7 @@ public:
     m_option_group.Append(&m_current_stack_option, LLDB_OPT_SET_2,
                           LLDB_OPT_SET_2);
     m_option_group.Finalize();
-    CommandArgumentData module_arg{eArgTypeShlibName, eArgRepeatPlain};
-    m_arguments.push_back({module_arg});
+    AddSimpleArgumentList(eArgTypeShlibName);
   }
 
   ~CommandObjectTargetSymbolsAdd() override = default;
@@ -5163,8 +5086,7 @@ public:
       : CommandObjectParsed(interpreter, "target stop-hook delete",
                             "Delete a stop-hook.",
                             "target stop-hook delete [<idx>]") {
-    CommandArgumentData hook_arg{eArgTypeStopHookID, eArgRepeatStar};
-    m_arguments.push_back({hook_arg});
+    AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatStar);
   }
 
   ~CommandObjectTargetStopHookDelete() override = default;
@@ -5218,8 +5140,7 @@ public:
                                            bool enable, const char *name,
                                            const char *help, const char *syntax)
       : CommandObjectParsed(interpreter, name, help, syntax), m_enable(enable) {
-    CommandArgumentData hook_arg{eArgTypeStopHookID, eArgRepeatStar};
-    m_arguments.push_back({hook_arg});
+    AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatStar);
   }
 
   ~CommandObjectTargetStopHookEnableDisable() override = default;
