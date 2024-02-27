@@ -2189,6 +2189,31 @@ bool ByteCodeExprGen<Emitter>::VisitCXXRewrittenBinaryOperator(
   return this->delegate(E->getSemanticForm());
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitPseudoObjectExpr(
+    const PseudoObjectExpr *E) {
+
+  for (const Expr *SemE : E->semantics()) {
+    if (auto *OVE = dyn_cast<OpaqueValueExpr>(SemE)) {
+      if (SemE == E->getResultExpr())
+        return false;
+
+      if (OVE->isUnique())
+        continue;
+
+      if (!this->discard(OVE))
+        return false;
+    } else if (SemE == E->getResultExpr()) {
+      if (!this->delegate(SemE))
+        return false;
+    } else {
+      if (!this->discard(SemE))
+        return false;
+    }
+  }
+  return true;
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
