@@ -392,9 +392,9 @@ bool CommandObject::ParseOptionsAndNotify(Args &args,
   return true;
 }
 
-void CommandObject::AddSimpleArgumentList(CommandArgumentType arg_type, 
-                                     ArgumentRepetitionType repetition_type) {
-                        
+void CommandObject::AddSimpleArgumentList(
+    CommandArgumentType arg_type, ArgumentRepetitionType repetition_type) {
+
   CommandArgumentEntry arg_entry;
   CommandArgumentData simple_arg;
 
@@ -720,14 +720,14 @@ void CommandObject::AddIDsArgumentData(CommandObject::IDType type) {
   // Create the first variant for the first (and only) argument for this
   // command.
   switch (type) {
-    case eBreakpointArgs:
-      id_arg.arg_type = eArgTypeBreakpointID;
-      id_range_arg.arg_type = eArgTypeBreakpointIDRange;
-      break;
-    case eWatchpointArgs:
-      id_arg.arg_type = eArgTypeWatchpointID;
-      id_range_arg.arg_type = eArgTypeWatchpointIDRange;
-      break;
+  case eBreakpointArgs:
+    id_arg.arg_type = eArgTypeBreakpointID;
+    id_range_arg.arg_type = eArgTypeBreakpointIDRange;
+    break;
+  case eWatchpointArgs:
+    id_arg.arg_type = eArgTypeWatchpointID;
+    id_range_arg.arg_type = eArgTypeWatchpointIDRange;
+    break;
   }
   id_arg.arg_repetition = eArgRepeatOptional;
   id_range_arg.arg_repetition = eArgRepeatOptional;
