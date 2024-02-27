@@ -683,43 +683,38 @@ template <typename Ty> class StaticLoopChunker {
                                         Ty NumIters,
                                         bool OneIterationPerThread) {
     Ty KernelIteration = NumBlocks * BlockChunk;
+    Ty BlockIV = BId * BlockChunk;
 
-    // Start index in the chunked space.
-    Ty IV = BId * BlockChunk + TId * ThreadChunk;
-    ASSERT(IV >= 0, "Bad index");
-
-    // Make sure the starting index is within the kernel iteration boundaries.
-    if (IV >= KernelIteration)
-      return;
-
+    ASSERT((BlockIV + TId * ThreadChunk) >= 0, "Bad index");
     // Cover the entire iteration space, assumptions in the caller might allow
     // to simplify this loop to a conditional.
     do {
+      Ty ThreadIV = TId * ThreadChunk;
+      // Cover the block space
+      while (ThreadIV < BlockChunk) {
+        Ty ThreadCnt = 0;
+        // Cover the thread space
+        while ((ThreadCnt < ThreadChunk) &&
+               ((ThreadIV + ThreadCnt) < BlockChunk)) {
+          // Index in the chunked space.
+          Ty IV = BlockIV + ThreadIV + ThreadCnt;
 
-      Ty BlockChunkLeft =
-          BlockChunk >= TId * ThreadChunk ? BlockChunk - TId * ThreadChunk : 0;
-      Ty EffectiveThreadChunk =
-          ThreadChunk <= BlockChunkLeft ? ThreadChunk : BlockChunkLeft;
-      Ty ThreadChunkLeft = EffectiveThreadChunk;
+          // Given the blocking it's hard to keep track of what to execute.
+          if (IV >= NumIters)
+            return;
 
-      while (ThreadChunkLeft--) {
+          // Execute the loop body.
+          LoopBody(IV, Arg);
 
-        // Given the blocking it's hard to keep track of what to execute.
-        if (IV >= NumIters)
-          return;
-
-        // Execute the loop body.
-        LoopBody(IV, Arg);
-
-        if (OneIterationPerThread)
-          return;
-
-        ++IV;
+          if (OneIterationPerThread)
+            return;
+          ++ThreadCnt;
+        };
+        ThreadIV += (NumThreads * ThreadChunk);
       }
-      // Start the new kernel iteration before the first thread chunk
-      IV += (KernelIteration - EffectiveThreadChunk);
 
-    } while (IV < NumIters);
+      BlockIV += KernelIteration;
+    } while (BlockIV < NumIters);
   }
 
 public:
