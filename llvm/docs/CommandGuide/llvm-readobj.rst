@@ -66,11 +66,6 @@ file formats.
  Display demangled symbol names in the output; the option only is for ELF and
  XCOFF file format.
 
-.. option:: --no-demangle (default)
-
- Not demangle symbol names in the output; the option only is for ELF and
- XCOFF file format.
-
 .. option:: --expand-relocs
 
  When used with :option:`--relocs`, display each relocation in an expanded
@@ -103,6 +98,11 @@ file formats.
 .. option:: --needed-libs
 
  Display the needed libraries.
+
+.. option:: --no-demangle
+
+ Not demangle symbol names in the output; the option only is for ELF and
+ XCOFF file format. The option is enabled by default.
 
 .. option:: --relocations, --relocs, -r
 
