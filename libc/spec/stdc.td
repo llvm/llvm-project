@@ -790,7 +790,8 @@ def StdC : StandardSpec<"stdc"> {
         Macro<"stdc_first_leading_zero">,
         Macro<"stdc_first_leading_one">,
         Macro<"stdc_first_trailing_zero">,
-        Macro<"stdc_first_trailing_one">
+        Macro<"stdc_first_trailing_one">,
+        Macro<"stdc_count_zeros">
       ], // Macros
       [], // Types
       [], // Enumerations
@@ -829,7 +830,12 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"stdc_first_trailing_one_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
           FunctionSpec<"stdc_first_trailing_one_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
           FunctionSpec<"stdc_first_trailing_one_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
-          FunctionSpec<"stdc_first_trailing_one_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>
+          FunctionSpec<"stdc_first_trailing_one_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>,
+          FunctionSpec<"stdc_count_zeros_uc", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_count_zeros_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_count_zeros_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_count_zeros_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_count_zeros_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>
       ] // Functions
   >;
 
