@@ -6158,6 +6158,48 @@ the configuration (without a prefix: ``Auto``).
 **TabWidth** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <TabWidth>`
   The number of columns used for tab stops.
 
+.. _TableGenBreakInsideDAGArgList:
+
+**TableGenBreakInsideDAGArgList** (``Boolean``) :versionbadge:`clang-format 19` :ref:`¶ <TableGenBreakInsideDAGArgList>`
+  Insert the line break for each element of DAGArg list in TableGen.
+
+
+  .. code-block:: c++
+
+    let DAGArgIns = (ins
+        i32:$src1,
+        i32:$src2
+    );
+
+.. _TableGenBreakingDAGArgOperators:
+
+**TableGenBreakingDAGArgOperators** (``List of Strings``) :versionbadge:`clang-format 19` :ref:`¶ <TableGenBreakingDAGArgOperators>`
+  Works only when TableGenBreakInsideDAGArgList is true.
+  The string list needs to consist of identifiers in TableGen.
+  If any identifier is specified, this limits the line breaks by
+  TableGenBreakInsideDAGArgList option only on DAGArg values beginning with
+  the specified identifiers.
+
+  For example the configuration,
+
+  .. code-block:: c++
+
+    TableGenBreakInsideDAGArgList: true
+    TableGenBreakingDAGArgOperators: ['ins', 'outs']
+
+  makes the line break only occurs inside DAGArgs beginning with the
+  specified identifiers 'ins' and 'outs'.
+
+
+  .. code-block:: c++
+
+    let DAGArgIns = (ins
+        i32:$src1,
+        i32:$src2
+    );
+    let DAGArgOtherID = (other i32:$other1, i32:$other2);
+    let DAGArgBang = (!cast<SomeType>("Some") i32:$src1, i32:$src2)
+
 .. _TypeNames:
 
 **TypeNames** (``List of Strings``) :versionbadge:`clang-format 17` :ref:`¶ <TypeNames>`

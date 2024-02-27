@@ -990,16 +990,47 @@ private:
     return false;
   }
 
+  // Judge if the token is a operator ID to insert line break in DAGArg.
+  // That is, TableGenBreakingDAGArgOperators is empty (by the definition of the
+  // option) or the token is in the list.
+  bool isTableGenDAGArgBreakingOperator(const FormatToken &Tok) {
+    auto &Opes = Style.TableGenBreakingDAGArgOperators;
+    // If the list is empty, all operators are breaking operators.
+    if (Opes.empty())
+      return true;
+    // Otherwise, the operator is limited to normal identifiers.
+    if (Tok.isNot(tok::identifier) ||
+        Tok.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator)) {
+      return false;
+    }
+    // The case next is colon, it is not a operator of identifier.
+    if (!Tok.Next || Tok.Next->is(tok::colon))
+      return false;
+    return std::find(Opes.begin(), Opes.end(), Tok.TokenText.str()) !=
+           Opes.end();
+  }
+
   // SimpleValue6 ::=  "(" DagArg [DagArgList] ")"
   // This parses SimpleValue 6's inside part of "(" ")"
   bool parseTableGenDAGArgAndList(FormatToken *Opener) {
+    FormatToken *FirstTok = CurrentToken;
     if (!parseTableGenDAGArg())
       return false;
+    bool BreakInside = false;
+    // Specialized detection for DAGArgOperatorID, a single identifier DAGArg
+    // operator that leads the line break for this DAGArg elements.
+    if (Style.TableGenBreakInsideDAGArgList &&
+        isTableGenDAGArgBreakingOperator(*FirstTok)) {
+      // Special case for identifier DAGArg operator.
+      BreakInside = true;
+      FirstTok->setType(TT_TableGenDAGArgOperatorIDToBreak);
+    }
     // Parse the [DagArgList] part
     bool FirstDAGArgListElm = true;
     while (CurrentToken) {
       if (!FirstDAGArgListElm && CurrentToken->is(tok::comma)) {
-        CurrentToken->setType(TT_TableGenDAGArgListComma);
+        CurrentToken->setType(BreakInside ? TT_TableGenDAGArgListCommaToBreak
+                                          : TT_TableGenDAGArgListComma);
         skipToNextNonComment();
       }
       if (CurrentToken && CurrentToken->is(tok::r_paren)) {
@@ -5085,6 +5116,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     }
     if (Right.is(TT_TableGenCondOperatorColon))
       return false;
+    if (Left.is(TT_TableGenDAGArgOperatorIDToBreak) &&
+        Right.isNot(TT_TableGenDAGArgCloser)) {
+      return true;
+    }
     // Do not insert bang operators and consequent openers.
     if (Right.isOneOf(tok::l_paren, tok::less) &&
         Left.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator)) {
@@ -5461,6 +5496,18 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     //       case2:0);
     if (Left.is(TT_TableGenCondOperatorComma))
       return true;
+    if (Left.is(TT_TableGenDAGArgOperatorIDToBreak) &&
+        Right.isNot(TT_TableGenDAGArgCloser)) {
+      return true;
+    }
+    if (Left.is(TT_TableGenDAGArgListCommaToBreak))
+      return true;
+    if (Right.is(TT_TableGenDAGArgCloser) && Right.MatchingParen &&
+        Right.MatchingParen->Next->is(TT_TableGenDAGArgOperatorIDToBreak) &&
+        &Left != Right.MatchingParen->Next) {
+      // Check to avoid empty DAGArg such as (ins).
+      return Style.TableGenBreakInsideDAGArgList;
+    }
   }
 
   if (Line.startsWith(tok::kw_asm) && Right.is(TT_InlineASMColon) &&

@@ -4728,6 +4728,43 @@ struct FormatStyle {
   /// \version 8
   std::vector<std::string> StatementMacros;
 
+  /// Works only when TableGenBreakInsideDAGArgList is true.
+  /// The string list needs to consist of identifiers in TableGen.
+  /// If any identifier is specified, this limits the line breaks by
+  /// TableGenBreakInsideDAGArgList option only on DAGArg values beginning with
+  /// the specified identifiers.
+  ///
+  /// For example the configuration,
+  /// \code
+  ///   TableGenBreakInsideDAGArgList: true
+  ///   TableGenBreakingDAGArgOperators: ['ins', 'outs']
+  /// \endcode
+  ///
+  /// makes the line break only occurs inside DAGArgs beginning with the
+  /// specified identifiers 'ins' and 'outs'.
+  ///
+  /// \code
+  ///   let DAGArgIns = (ins
+  ///       i32:$src1,
+  ///       i32:$src2
+  ///   );
+  ///   let DAGArgOtherID = (other i32:$other1, i32:$other2);
+  ///   let DAGArgBang = (!cast<SomeType>("Some") i32:$src1, i32:$src2)
+  /// \endcode
+  /// \version 19
+  std::vector<std::string> TableGenBreakingDAGArgOperators;
+
+  /// Insert the line break for each element of DAGArg list in TableGen.
+  ///
+  /// \code
+  ///   let DAGArgIns = (ins
+  ///       i32:$src1,
+  ///       i32:$src2
+  ///   );
+  /// \endcode
+  /// \version 19
+  bool TableGenBreakInsideDAGArgList;
+
   /// The number of columns used for tab stops.
   /// \version 3.7
   unsigned TabWidth;
@@ -4980,9 +5017,12 @@ struct FormatStyle {
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
            Standard == R.Standard &&
            StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
-           StatementMacros == R.StatementMacros && TabWidth == R.TabWidth &&
-           TypeNames == R.TypeNames && TypenameMacros == R.TypenameMacros &&
-           UseTab == R.UseTab &&
+           StatementMacros == R.StatementMacros &&
+           TableGenBreakingDAGArgOperators ==
+               R.TableGenBreakingDAGArgOperators &&
+           TableGenBreakInsideDAGArgList == R.TableGenBreakInsideDAGArgList &&
+           TabWidth == R.TabWidth && TypeNames == R.TypeNames &&
+           TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;

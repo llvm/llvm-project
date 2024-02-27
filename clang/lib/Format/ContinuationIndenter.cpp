@@ -1705,7 +1705,8 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign ||
          PrecedenceLevel != prec::Comma || Current.NestingLevel == 0) &&
         (!Style.isTableGen() ||
-         (Previous && Previous->is(TT_TableGenDAGArgListComma)))) {
+         (Previous && Previous->isOneOf(TT_TableGenDAGArgListComma,
+                                        TT_TableGenDAGArgListCommaToBreak)))) {
       NewParenState.Indent = std::max(
           std::max(State.Column, NewParenState.Indent), CurrentState.LastSpace);
     }
