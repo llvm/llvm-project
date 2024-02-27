@@ -2103,6 +2103,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::CoroDestroyOnlyWhenComplete;
   case bitc::ATTR_KIND_DEAD_ON_UNWIND:
     return Attribute::DeadOnUnwind;
+  case bitc::ATTR_KIND_RANGE:
+    return Attribute::Range;
   }
 }
 
@@ -2272,6 +2274,34 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             return error("Not a type attribute");
 
           B.addTypeAttr(Kind, HasType ? getTypeByID(Record[++i]) : nullptr);
+        } else if (Record[i] == 7 || Record[i] == 8) {
+          bool WideAPInt = Record[i++] == 8;
+          Attribute::AttrKind Kind;
+          if (Error Err = parseAttrKind(Record[i++], &Kind))
+            return Err;
+          if (!Attribute::isConstantRangeAttrKind(Kind))
+            return error("Not a ConstantRange attribute");
+
+          unsigned ValueBitWidth = Record[i++];
+          unsigned ActiveWords = 1;
+          if (WideAPInt)
+            ActiveWords = Record[i++];
+          APInt Lower =
+              readWideAPInt(ArrayRef(&Record[i], ActiveWords), ValueBitWidth);
+          i += ActiveWords;
+          ActiveWords = 1;
+          if (WideAPInt)
+            ActiveWords = Record[i++];
+          APInt Upper =
+              readWideAPInt(ArrayRef(&Record[i], ActiveWords), ValueBitWidth);
+          i += ActiveWords - 1;
+
+          if (Lower == Upper)
+            return error(
+                "The range should not represent the full or empty set!");
+
+          ConstantRange Range(Lower, Upper);
+          B.addConstantRangeAttr(Kind, Range);
         } else {
           return error("Invalid attribute group entry");
         }
