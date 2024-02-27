@@ -14576,9 +14576,9 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
   if (Opc == BO_PtrMemD) {
     auto CheckPlaceholder = [&](Expr *&Arg) {
       ExprResult Res = CheckPlaceholderExpr(Arg);
-      if (!Res.isInvalid())
+      if (Res.isUsable())
         Arg = Res.get();
-      return Res.isInvalid();
+      return !Res.isUsable();
     };
 
     // CreateBuiltinBinOp() doesn't like it if we tell it to create a '.*'
