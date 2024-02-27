@@ -17,7 +17,7 @@ namespace llvm {
 class RISCVELFTargetObjectFile : public TargetLoweringObjectFileELF {
   MCSection *SmallDataSection;
   MCSection *SmallBSSSection;
-  unsigned SSThreshold = 8;
+  unsigned SSThreshold = 0;
 
 public:
   unsigned getTextSectionAlignment() const override;
