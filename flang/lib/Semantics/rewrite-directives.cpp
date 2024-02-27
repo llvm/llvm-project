@@ -44,6 +44,7 @@ public:
 
   bool Pre(parser::OpenMPAtomicConstruct &);
   bool Pre(parser::OpenMPRequiresConstruct &);
+  void Post(parser::UseStmt &);
 
 private:
   bool atomicDirectiveDefaultOrderFound_{false};
@@ -163,6 +164,29 @@ bool OmpRewriteMutator::Pre(parser::OpenMPRequiresConstruct &x) {
     }
   }
   return false;
+}
+
+// Check that a module containing a REQUIRES statement with the
+// `atomic_default_mem_order` clause is not USEd after an atomic operation
+// without memory order defined.
+void OmpRewriteMutator::Post(parser::UseStmt &x) {
+  semantics::Symbol *symbol{x.moduleName.symbol};
+  if (!symbol) {
+    // Cannot check used module if it wasn't resolved.
+    return;
+  }
+
+  auto *details = symbol->detailsIf<ModuleDetails>();
+  if (atomicDirectiveDefaultOrderFound_ && details &&
+      details->has_ompAtomicDefaultMemOrder()) {
+    context_.Say(x.moduleName.source,
+        "'%s' module containing '%s' REQUIRES clause imported lexically after "
+        "atomic operation without a memory order clause"_err_en_US,
+        x.moduleName.ToString(),
+        parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(
+            llvm::omp::OMPC_atomic_default_mem_order)
+                                       .str()));
+  }
 }
 
 bool RewriteOmpParts(SemanticsContext &context, parser::Program &program) {

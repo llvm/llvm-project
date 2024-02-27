@@ -2055,6 +2055,22 @@ void OmpStructureChecker::Leave(const parser::OpenMPAtomicConstruct &) {
   dirContext_.pop_back();
 }
 
+void OmpStructureChecker::Enter(const parser::UseStmt &x) {
+  semantics::Symbol *symbol{x.moduleName.symbol};
+  if (!symbol) {
+    // Cannot check used module if it wasn't resolved.
+    return;
+  }
+
+  auto &details = std::get<ModuleDetails>(symbol->details());
+  if (details.has_ompRequires() && deviceConstructFound_) {
+    context_.Say(x.moduleName.source,
+        "'%s' module containing device-related REQUIRES directive imported "
+        "lexically after device construct"_err_en_US,
+        x.moduleName.ToString());
+  }
+}
+
 // Clauses
 // Mainly categorized as
 // 1. Checks on 'OmpClauseList' from 'parse-tree.h'.
