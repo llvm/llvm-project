@@ -198,7 +198,8 @@ MDNode *MachineLoop::getLoopID() const {
   return LoopID;
 }
 
-bool MachineLoop::isLoopInvariant(MachineInstr &I) const {
+bool MachineLoop::isLoopInvariant(MachineInstr &I,
+                                  const Register ExcludeReg) const {
   MachineFunction *MF = I.getParent()->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   const TargetSubtargetInfo &ST = MF->getSubtarget();
@@ -212,6 +213,9 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I) const {
 
     Register Reg = MO.getReg();
     if (Reg == 0) continue;
+
+    if (ExcludeReg == Reg)
+      continue;
 
     // An instruction that uses or defines a physical register can't e.g. be
     // hoisted, so mark this as not invariant.
