@@ -727,7 +727,6 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
                                 PatternRewriter &rewriter) const override {
     VectorType castSrcType = bitcastOp.getSourceVectorType();
     VectorType castDstType = bitcastOp.getResultVectorType();
-    assert(castSrcType.getRank() == castDstType.getRank());
 
     // 0-D and scalable vectors are not supported yet.
     if (castSrcType.getRank() == 0 || castSrcType.isScalable() ||
@@ -756,8 +755,7 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
       return failure();
 
     // Bitcast the source.
-    auto insertSrcShape = insertSrcType.getShape();
-    SmallVector<int64_t> srcDims(insertSrcShape.begin(), insertSrcShape.end());
+    SmallVector<int64_t> srcDims(insertSrcType.getShape());
     srcDims.back() =
         isNumElemsShrink ? srcDims.back() / ratio : srcDims.back() * ratio;
     VectorType newCastSrcType =
@@ -765,8 +763,7 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
     auto newCastSrcOp = rewriter.create<vector::BitCastOp>(
         bitcastOp.getLoc(), newCastSrcType, insertOp.getSource());
 
-    auto dstShape = insertOp.getDestVectorType().getShape();
-    SmallVector<int64_t> dstDims(dstShape.begin(), dstShape.end());
+    SmallVector<int64_t> dstDims(insertOp.getDestVectorType().getShape());
     dstDims.back() =
         isNumElemsShrink ? dstDims.back() / ratio : dstDims.back() * ratio;
     VectorType newCastDstType =

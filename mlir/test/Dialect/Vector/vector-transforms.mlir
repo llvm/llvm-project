@@ -363,6 +363,18 @@ func.func @bubble_up_bitcast_in_insert_i8_i4(%val: vector<16xi8>, %src: vector<8
   return %1 : vector<8x32xi4>
 }
 
+// CHECK-LABEL:   func.func @bubble_up_bitcast_in_insert_i32_f32(
+// CHECK-SAME:                                                 %[[VAL:.*]]: vector<16xi32>,
+// CHECK-SAME:                                                 %[[DST:.*]]: vector<8x16xi32>) -> vector<8x16xf32> {
+func.func @bubble_up_bitcast_in_insert_i32_f32(%val: vector<16xi32>, %src: vector<8x16xi32>) -> vector<8x16xf32> {
+// CHECK:           %[[BC_VAL:.*]] = vector.bitcast %[[VAL]] : vector<16xi32> to vector<16xf32>
+// CHECK:           %[[BC_DST:.*]] = vector.bitcast %[[DST]] : vector<8x16xi32> to vector<8x16xf32>
+// CHECK:           vector.insert %[[BC_VAL]], %[[BC_DST]] [4] : vector<16xf32> into vector<8x16xf32>
+  %0 = vector.insert %val, %src[4] : vector<16xi32> into vector<8x16xi32>
+  %1 = vector.bitcast %0 : vector<8x16xi32> to vector<8x16xf32>
+  return %1 : vector<8x16xf32>
+}
+
 // CHECK-LABEL:   func.func @bubble_up_bitcast_in_insert_scalar(
 func.func @bubble_up_bitcast_in_insert_scalar(%val: i8, %src: vector<8x16xi8>) -> vector<8x32xi4> {
 // CHECK:           vector.insert
