@@ -99,6 +99,10 @@ private:
                   MachineInstr &I) const;
   bool selectStore(MachineInstr &I) const;
 
+  bool selectStackSave(Register ResVReg, const SPIRVType *ResType,
+                       MachineInstr &I) const;
+  bool selectStackRestore(MachineInstr &I) const;
+
   bool selectMemOperation(Register ResVReg, MachineInstr &I) const;
 
   bool selectAtomicRMW(Register ResVReg, const SPIRVType *ResType,
@@ -167,6 +171,8 @@ private:
 
   bool selectFrameIndex(Register ResVReg, const SPIRVType *ResType,
                         MachineInstr &I) const;
+  bool selectAllocaArray(Register ResVReg, const SPIRVType *ResType,
+                         MachineInstr &I) const;
 
   bool selectBranch(MachineInstr &I) const;
   bool selectBranchCond(MachineInstr &I) const;
@@ -508,6 +514,11 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_FENCE:
     return selectFence(I);
 
+  case TargetOpcode::G_STACKSAVE:
+    return selectStackSave(ResVReg, ResType, I);
+  case TargetOpcode::G_STACKRESTORE:
+    return selectStackRestore(I);
+
   default:
     return false;
   }
@@ -651,6 +662,35 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
     addMemoryOperands(*I.memoperands_begin(), MIB);
   }
   return MIB.constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectStackSave(Register ResVReg,
+                                               const SPIRVType *ResType,
+                                               MachineInstr &I) const {
+  if (!STI.canUseExtension(SPIRV::Extension::SPV_INTEL_variable_length_array))
+    report_fatal_error(
+        "llvm.stacksave intrinsic: this instruction requires the following "
+        "SPIR-V extension: SPV_INTEL_variable_length_array",
+        false);
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSaveMemoryINTEL))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectStackRestore(MachineInstr &I) const {
+  if (!STI.canUseExtension(SPIRV::Extension::SPV_INTEL_variable_length_array))
+    report_fatal_error(
+        "llvm.stackrestore intrinsic: this instruction requires the following "
+        "SPIR-V extension: SPV_INTEL_variable_length_array",
+        false);
+  if (!I.getOperand(0).isReg())
+    return false;
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpRestoreMemoryINTEL))
+      .addUse(I.getOperand(0).getReg())
+      .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
@@ -1505,6 +1545,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     break;
   case Intrinsic::spv_alloca:
     return selectFrameIndex(ResVReg, ResType, I);
+  case Intrinsic::spv_alloca_array:
+    return selectAllocaArray(ResVReg, ResType, I);
   case Intrinsic::spv_assume:
     if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
       BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAssumeTrueKHR))
@@ -1522,6 +1564,20 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     llvm_unreachable("Intrinsic selection not implemented");
   }
   return true;
+}
+
+bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
+                                                 const SPIRVType *ResType,
+                                                 MachineInstr &I) const {
+  // there was an allocation size parameter to the allocation instruction
+  // that is not 1
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(),
+                 TII.get(SPIRV::OpVariableLengthArrayINTEL))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,

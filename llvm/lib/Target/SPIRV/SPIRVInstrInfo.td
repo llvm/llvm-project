@@ -287,6 +287,15 @@ def OpPtrNotEqual: Op<402, (outs ID:$res), (ins TYPE:$resType, ID:$a, ID:$b),
 def OpPtrDiff: Op<403, (outs ID:$res), (ins TYPE:$resType, ID:$a, ID:$b),
                   "$res = OpPtrDiff $resType $a $b">;
 
+// - SPV_INTEL_variable_length_array
+
+def OpVariableLengthArrayINTEL: Op<5818, (outs ID:$res), (ins TYPE:$type, ID:$length),
+                  "$res = OpVariableLengthArrayINTEL $type $length">;
+def OpSaveMemoryINTEL: Op<5819, (outs ID:$res), (ins TYPE:$type),
+                  "$res = OpSaveMemoryINTEL $type">;
+def OpRestoreMemoryINTEL: Op<5820, (outs), (ins ID:$ptr),
+                  "OpRestoreMemoryINTEL $ptr">;
+
 // 3.42.9 Function Instructions
 
 def OpFunction: Op<54, (outs ID:$func),

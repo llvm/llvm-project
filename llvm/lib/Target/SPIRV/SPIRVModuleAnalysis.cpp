@@ -1110,6 +1110,14 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpAtomicFMaxEXT:
     AddAtomicFloatRequirements(MI, Reqs, ST);
     break;
+  case SPIRV::OpVariableLengthArrayINTEL:
+  case SPIRV::OpSaveMemoryINTEL:
+  case SPIRV::OpRestoreMemoryINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_variable_length_array)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_variable_length_array);
+      Reqs.addCapability(SPIRV::Capability::VariableLengthArrayINTEL);
+    }
+    break;
   default:
     break;
   }
