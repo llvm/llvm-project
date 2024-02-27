@@ -271,6 +271,8 @@ void X86AsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
   case X86II::MO_TLSGD:     O << "@TLSGD";     break;
   case X86II::MO_TLSLD:     O << "@TLSLD";     break;
   case X86II::MO_TLSLDM:    O << "@TLSLDM";    break;
+  case X86II::MO_TLSDESC:   O << "@TLSDESC";   break;
+  case X86II::MO_TLSCALL:   O << "@TLSCALL";   break;
   case X86II::MO_GOTTPOFF:  O << "@GOTTPOFF";  break;
   case X86II::MO_INDNTPOFF: O << "@INDNTPOFF"; break;
   case X86II::MO_TPOFF:     O << "@TPOFF";     break;

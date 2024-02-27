@@ -257,6 +257,12 @@ MCOperand X86MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   case X86II::MO_TLSLDM:
     RefKind = MCSymbolRefExpr::VK_TLSLDM;
     break;
+  case X86II::MO_TLSDESC:
+    RefKind = MCSymbolRefExpr::VK_TLSDESC;
+    break;
+  case X86II::MO_TLSCALL:
+    RefKind = MCSymbolRefExpr::VK_TLSCALL;
+    break;
   case X86II::MO_GOTTPOFF:
     RefKind = MCSymbolRefExpr::VK_GOTTPOFF;
     break;
@@ -524,13 +530,14 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   bool Is64BitsLP64 = MI.getOpcode() == X86::TLS_addr64 ||
                       MI.getOpcode() == X86::TLS_base_addr64;
   MCContext &Ctx = OutStreamer->getContext();
+  bool isTLSDESC = MI.getOperand(3).getTargetFlags() == X86II::MO_TLSDESC;
 
   MCSymbolRefExpr::VariantKind SRVK;
   switch (MI.getOpcode()) {
   case X86::TLS_addr32:
   case X86::TLS_addr64:
   case X86::TLS_addrX32:
-    SRVK = MCSymbolRefExpr::VK_TLSGD;
+    SRVK = isTLSDESC ? MCSymbolRefExpr::VK_TLSDESC : MCSymbolRefExpr::VK_TLSGD;
     break;
   case X86::TLS_base_addr32:
     SRVK = MCSymbolRefExpr::VK_TLSLDM;
@@ -554,7 +561,26 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   bool UseGot = MMI->getModule()->getRtLibUseGOT() &&
                 Ctx.getAsmInfo()->canRelaxRelocations();
 
-  if (Is64Bits) {
+  if (isTLSDESC) {
+    const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(
+        MCInstLowering.GetSymbolFromOperand(MI.getOperand(3)),
+        MCSymbolRefExpr::VK_TLSCALL, Ctx);
+    EmitAndCountInstruction(
+        MCInstBuilder(Is64BitsLP64 ? X86::LEA64r : X86::LEA32r)
+            .addReg(Is64BitsLP64 ? X86::RAX : X86::EAX)
+            .addReg(Is64Bits ? X86::RIP : X86::EBX)
+            .addImm(1)
+            .addReg(0)
+            .addExpr(Sym)
+            .addReg(0));
+    EmitAndCountInstruction(
+        MCInstBuilder(Is64Bits ? X86::CALL64m : X86::CALL32m)
+            .addReg(Is64BitsLP64 ? X86::RAX : X86::EAX)
+            .addImm(1)
+            .addReg(0)
+            .addExpr(Expr)
+            .addReg(0));
+  } else if (Is64Bits) {
     bool NeedsPadding = SRVK == MCSymbolRefExpr::VK_TLSGD;
     if (NeedsPadding && Is64BitsLP64)
       EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
