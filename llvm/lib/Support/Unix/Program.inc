@@ -173,11 +173,10 @@ toNullTerminatedCStringArray(ArrayRef<StringRef> Strings, StringSaver &Saver) {
 }
 
 static bool Execute(ProcessInfo &PI, StringRef Program,
-                    ArrayRef<StringRef> Args,
-                    std::optional<ArrayRef<StringRef>> Env,
+                    ArrayRef<StringRef> Args, std::optional<ArrayRef<StringRef>> Env,
                     ArrayRef<std::optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg,
-                    BitVector *AffinityMask, bool DetachProcess) {
+                    BitVector *AffinityMask) {
   if (!llvm::sys::fs::exists(Program)) {
     if (ErrMsg)
       *ErrMsg = std::string("Executable \"") + Program.str() +
@@ -203,8 +202,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   // If this OS has posix_spawn and there is no memory limit being implied, use
   // posix_spawn.  It is more efficient than fork/exec.
 #ifdef HAVE_POSIX_SPAWN
-  // Cannot use posix_spawn if you would like to detach the process
-  if (MemoryLimit == 0 && !DetachProcess) {
+  if (MemoryLimit == 0) {
     posix_spawn_file_actions_t FileActionsStore;
     posix_spawn_file_actions_t *FileActions = nullptr;
 
@@ -272,7 +270,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
 
     return true;
   }
-#endif // HAVE_POSIX_SPAWN
+#endif
 
   // Create a child process.
   int child = fork();
@@ -306,14 +304,6 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
         if (RedirectIO(Redirects[2], 2, ErrMsg)) {
           return false;
         }
-      }
-    }
-
-    if (DetachProcess) {
-      // Detach from controlling terminal
-      if (::setsid() == -1) {
-        MakeErrMsg(ErrMsg, "Could not detach process, ::setsid failed");
-        return false;
       }
     }
 

@@ -172,11 +172,10 @@ static HANDLE RedirectIO(std::optional<StringRef> Path, int fd,
 } // namespace llvm
 
 static bool Execute(ProcessInfo &PI, StringRef Program,
-                    ArrayRef<StringRef> Args,
-                    std::optional<ArrayRef<StringRef>> Env,
+                    ArrayRef<StringRef> Args, std::optional<ArrayRef<StringRef>> Env,
                     ArrayRef<std::optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg,
-                    BitVector *AffinityMask, bool DetachProcess) {
+                    BitVector *AffinityMask) {
   if (!sys::fs::can_execute(Program)) {
     if (ErrMsg)
       *ErrMsg = "program not executable";
@@ -285,8 +284,6 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   unsigned CreateFlags = CREATE_UNICODE_ENVIRONMENT;
   if (AffinityMask)
     CreateFlags |= CREATE_SUSPENDED;
-  if (DetachProcess)
-    CreateFlags |= DETACHED_PROCESS;
 
   std::vector<wchar_t> CommandUtf16(Command.size() + 1, 0);
   std::copy(Command.begin(), Command.end(), CommandUtf16.begin());
