@@ -834,15 +834,49 @@ SPIRVGlobalRegistry::getScalarOrVectorBitWidth(const SPIRVType *Type) const {
   llvm_unreachable("Attempting to get bit width of non-integer/float type.");
 }
 
-bool SPIRVGlobalRegistry::isScalarOrVectorSigned(const SPIRVType *Type) const {
+unsigned SPIRVGlobalRegistry::getNumScalarOrVectorTotalBitWidth(
+    const SPIRVType *Type) const {
   assert(Type && "Invalid Type pointer");
+  unsigned NumElements = 1;
   if (Type->getOpcode() == SPIRV::OpTypeVector) {
-    auto EleTypeReg = Type->getOperand(1).getReg();
-    Type = getSPIRVTypeForVReg(EleTypeReg);
+    NumElements = static_cast<unsigned>(Type->getOperand(2).getImm());
+    Type = getSPIRVTypeForVReg(Type->getOperand(1).getReg());
   }
-  if (Type->getOpcode() == SPIRV::OpTypeInt)
-    return Type->getOperand(2).getImm() != 0;
-  llvm_unreachable("Attempting to get sign of non-integer type.");
+  return Type->getOpcode() == SPIRV::OpTypeInt ||
+                 Type->getOpcode() == SPIRV::OpTypeFloat
+             ? NumElements * Type->getOperand(1).getImm()
+             : 0;
+}
+
+const SPIRVType *SPIRVGlobalRegistry::retrieveScalarOrVectorIntType(
+    const SPIRVType *Type) const {
+  if (Type && Type->getOpcode() == SPIRV::OpTypeVector)
+    Type = getSPIRVTypeForVReg(Type->getOperand(1).getReg());
+  return Type && Type->getOpcode() == SPIRV::OpTypeInt ? Type : nullptr;
+}
+
+bool SPIRVGlobalRegistry::isScalarOrVectorSigned(const SPIRVType *Type) const {
+  const SPIRVType *IntType = retrieveScalarOrVectorIntType(Type);
+  return IntType && IntType->getOperand(2).getImm() != 0;
+}
+
+bool SPIRVGlobalRegistry::isBitcastCompatible(const SPIRVType *Type1,
+                                              const SPIRVType *Type2) const {
+  if (!Type1 || !Type2)
+    return false;
+  auto Op1 = Type1->getOpcode(), Op2 = Type2->getOpcode();
+  // Ignore difference between <1.5 and >=1.5 protocol versions:
+  // it's valid if either Result Type or Operand is a pointer, and the other
+  // is a pointer, an integer scalar, or an integer vector.
+  if (Op1 == SPIRV::OpTypePointer &&
+      (Op2 == SPIRV::OpTypePointer || retrieveScalarOrVectorIntType(Type2)))
+    return true;
+  if (Op2 == SPIRV::OpTypePointer &&
+      (Op1 == SPIRV::OpTypePointer || retrieveScalarOrVectorIntType(Type1)))
+    return true;
+  unsigned Bits1 = getNumScalarOrVectorTotalBitWidth(Type1),
+           Bits2 = getNumScalarOrVectorTotalBitWidth(Type2);
+  return Bits1 > 0 && Bits1 == Bits2;
 }
 
 SPIRV::StorageClass::StorageClass
