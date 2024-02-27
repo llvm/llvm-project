@@ -92,6 +92,56 @@ static llvm::ManagedStatic<MlirTransformOptCLOptions> clOptions;
 static void registerCLOptions() { *clOptions; }
 
 namespace {
+/// A wrapper class for source managers diagnostic. This provides both unique
+/// ownership and virtual function-like overload for a pair of
+/// inheritance-related classes that do not use virtual functions.
+class DiagnosticHandlerWrapper {
+public:
+  /// Kind of the diagnostic handler to use.
+  enum class Kind { EmitDiagnostics, VerifyDiagnostics };
+
+  /// Constructs the diagnostic handler of the specified kind of the given
+  /// source manager and context.
+  DiagnosticHandlerWrapper(Kind kind, llvm::SourceMgr &mgr,
+                           mlir::MLIRContext *context) {
+    if (kind == Kind::EmitDiagnostics)
+      handler = new mlir::SourceMgrDiagnosticHandler(mgr, context);
+    else
+      handler = new mlir::SourceMgrDiagnosticVerifierHandler(mgr, context);
+  }
+
+  /// This object is non-copyable but movable.
+  DiagnosticHandlerWrapper(const DiagnosticHandlerWrapper &) = delete;
+  DiagnosticHandlerWrapper(DiagnosticHandlerWrapper &&other) = default;
+  DiagnosticHandlerWrapper &
+  operator=(const DiagnosticHandlerWrapper &) = delete;
+  DiagnosticHandlerWrapper &operator=(DiagnosticHandlerWrapper &&) = default;
+
+  /// Verifies the captured "expected-*" diagnostics if required.
+  mlir::LogicalResult verify() const {
+    if (auto *ptr =
+            handler.dyn_cast<mlir::SourceMgrDiagnosticVerifierHandler *>()) {
+      return ptr->verify();
+    }
+    return mlir::success();
+  }
+
+  /// Destructs the object of the same type as allocated.
+  ~DiagnosticHandlerWrapper() {
+    if (auto *ptr = handler.dyn_cast<mlir::SourceMgrDiagnosticHandler *>()) {
+      delete ptr;
+    } else {
+      delete handler.get<mlir::SourceMgrDiagnosticVerifierHandler *>();
+    }
+  }
+
+private:
+  /// Internal storage is a type-safe union.
+  llvm::PointerUnion<mlir::SourceMgrDiagnosticHandler *,
+                     mlir::SourceMgrDiagnosticVerifierHandler *>
+      handler;
+};
+
 /// MLIR has deeply rooted expectations that the LLVM source manager contains
 /// exactly one buffer, until at least the lexer level. This class wraps
 /// multiple LLVM source managers each managing a buffer to match MLIR's
@@ -128,12 +178,11 @@ public:
     // Choose the type of diagnostic handler depending on whether diagnostic
     // verification needs to happen and store it.
     if (verifyDiagnostics) {
-      diagHandlers.push_back(
-          std::make_unique<mlir::SourceMgrDiagnosticVerifierHandler>(mgr,
-                                                                     &context));
+      diagHandlers.emplace_back(
+          DiagnosticHandlerWrapper::Kind::VerifyDiagnostics, mgr, &context);
     } else {
-      diagHandlers.push_back(
-          std::make_unique<mlir::SourceMgrDiagnosticHandler>(mgr, &context));
+      diagHandlers.emplace_back(DiagnosticHandlerWrapper::Kind::EmitDiagnostics,
+                                mgr, &context);
     }
 
     // Defer to MLIR's parser.
@@ -149,9 +198,7 @@ public:
       return result;
 
     return mlir::failure(llvm::any_of(diagHandlers, [](const auto &handler) {
-      return mlir::failed(
-          static_cast<mlir::SourceMgrDiagnosticVerifierHandler *>(handler.get())
-              ->verify());
+      return mlir::failed(handler.verify());
     }));
   }
 
@@ -169,7 +216,7 @@ private:
   /// pointer objects are moved by the pointer addresses won't change. Also, for
   /// handlers, this allows to store the pointer to the base class.
   SmallVector<std::unique_ptr<llvm::SourceMgr>> sourceMgrs;
-  SmallVector<std::unique_ptr<mlir::SourceMgrDiagnosticHandler>> diagHandlers;
+  SmallVector<DiagnosticHandlerWrapper> diagHandlers;
 };
 } // namespace
 
