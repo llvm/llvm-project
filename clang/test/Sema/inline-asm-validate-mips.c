@@ -1,8 +1,9 @@
-// RUN: %clang_cc1 -triple mips -target-feature +soft-float -DSOFT_FLOAT_NO_CONSTRAINT_F -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple mips64 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple mips64 -target-feature +soft-float -fsyntax-only -verify=softfloat %s
 
-#ifdef SOFT_FLOAT_NO_CONSTRAINT_F
-void read_float(float p) {
-    float result = p;
-    __asm__("" ::"f"(result)); // expected-error{{invalid input constraint 'f' in asm}}
+// expected-no-diagnostics
+
+void test_f(float p) {
+  float result = p;
+  __asm__("" :: "f"(result)); // softfloat-error{{invalid input constraint 'f' in asm}}
 }
-#endif // SOFT_FLOAT_NO_CONSTRAINT_F
