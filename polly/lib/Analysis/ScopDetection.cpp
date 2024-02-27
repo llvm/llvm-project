@@ -407,8 +407,8 @@ inline bool ScopDetection::invalid(DetectionContext &Context, bool Assert,
     // canUseISLTripCount().
     Log.report(RejectReason);
 
-    LLVM_DEBUG(dbgs() << RejectReason->getMessage());
-    LLVM_DEBUG(dbgs() << "\n");
+    POLLY_DEBUG(dbgs() << RejectReason->getMessage());
+    POLLY_DEBUG(dbgs() << "\n");
   } else {
     assert(!Assert && "Verification of detected scop failed");
   }
@@ -705,7 +705,7 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
     return false;
 
   if (isDebugCall(&CI)) {
-    LLVM_DEBUG(dbgs() << "Allow call to debug function: "
+    POLLY_DEBUG(dbgs() << "Allow call to debug function: "
                       << CalledFunction->getName() << '\n');
     return true;
   }
@@ -1487,7 +1487,7 @@ Region *ScopDetection::expandRegion(Region &R) {
   std::unique_ptr<Region> LastValidRegion;
   auto ExpandedRegion = std::unique_ptr<Region>(R.getExpandedRegion());
 
-  LLVM_DEBUG(dbgs() << "\tExpanding " << R.getNameStr() << "\n");
+  POLLY_DEBUG(dbgs() << "\tExpanding " << R.getNameStr() << "\n");
 
   while (ExpandedRegion) {
     BBPair P = getBBPairForRegion(ExpandedRegion.get());
@@ -1496,7 +1496,7 @@ Region *ScopDetection::expandRegion(Region &R) {
                                                /*Verifying=*/false);
     DetectionContext &Context = *Entry.get();
 
-    LLVM_DEBUG(dbgs() << "\t\tTrying " << ExpandedRegion->getNameStr() << "\n");
+    POLLY_DEBUG(dbgs() << "\t\tTrying " << ExpandedRegion->getNameStr() << "\n");
     // Only expand when we did not collect errors.
 
     if (!Context.Log.hasErrors()) {
@@ -1530,7 +1530,7 @@ Region *ScopDetection::expandRegion(Region &R) {
     }
   }
 
-  LLVM_DEBUG({
+  POLLY_DEBUG({
     if (LastValidRegion)
       dbgs() << "\tto " << LastValidRegion->getNameStr() << "\n";
     else
@@ -1751,10 +1751,10 @@ bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
 bool ScopDetection::isValidRegion(DetectionContext &Context) {
   Region &CurRegion = Context.CurRegion;
 
-  LLVM_DEBUG(dbgs() << "Checking region: " << CurRegion.getNameStr() << "\n\t");
+  POLLY_DEBUG(dbgs() << "Checking region: " << CurRegion.getNameStr() << "\n\t");
 
   if (!PollyAllowFullFunction && CurRegion.isTopLevelRegion()) {
-    LLVM_DEBUG(dbgs() << "Top level region is invalid\n");
+    POLLY_DEBUG(dbgs() << "Top level region is invalid\n");
     Context.IsInvalid = true;
     return false;
   }
@@ -1762,14 +1762,14 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) {
   DebugLoc DbgLoc;
   if (CurRegion.getExit() &&
       isa<UnreachableInst>(CurRegion.getExit()->getTerminator())) {
-    LLVM_DEBUG(dbgs() << "Unreachable in exit\n");
+    POLLY_DEBUG(dbgs() << "Unreachable in exit\n");
     return invalid<ReportUnreachableInExit>(Context, /*Assert=*/true,
                                             CurRegion.getExit(), DbgLoc);
   }
 
   if (!OnlyRegion.empty() &&
       !CurRegion.getEntry()->getName().count(OnlyRegion)) {
-    LLVM_DEBUG({
+    POLLY_DEBUG({
       dbgs() << "Region entry does not match -polly-only-region";
       dbgs() << "\n";
     });
@@ -1803,7 +1803,7 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) {
     return invalid<ReportIrreducibleRegion>(Context, /*Assert=*/true,
                                             &CurRegion, DbgLoc);
 
-  LLVM_DEBUG(dbgs() << "OK\n");
+  POLLY_DEBUG(dbgs() << "OK\n");
   return true;
 }
 

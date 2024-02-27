@@ -35,7 +35,7 @@ static void runDumpFunction(llvm::Function &F, StringRef Suffix) {
   StringRef ModuleName = M->getName();
   StringRef Stem = sys::path::stem(ModuleName);
   std::string Dumpfile = (Twine(Stem) + "-" + FName + Suffix + ".ll").str();
-  LLVM_DEBUG(dbgs() << "Dumping function '" << FName << "' to '" << Dumpfile
+  POLLY_DEBUG(dbgs() << "Dumping function '" << FName << "' to '" << Dumpfile
                     << "'...\n");
 
   ValueToValueMapTy VMap;
@@ -46,7 +46,7 @@ static void runDumpFunction(llvm::Function &F, StringRef Suffix) {
   Function *NewF = cast<Function>(VMap.lookup(&F));
   assert(NewF && "Expected selected function to be cloned");
 
-  LLVM_DEBUG(dbgs() << "Global DCE...\n");
+  POLLY_DEBUG(dbgs() << "Global DCE...\n");
 
   // Stop F itself from being pruned
   GlobalValue::LinkageTypes OrigLinkage = NewF->getLinkage();
@@ -67,7 +67,7 @@ static void runDumpFunction(llvm::Function &F, StringRef Suffix) {
   // Restore old linkage
   NewF->setLinkage(OrigLinkage);
 
-  LLVM_DEBUG(dbgs() << "Write to file '" << Dumpfile << "'...\n");
+  POLLY_DEBUG(dbgs() << "Write to file '" << Dumpfile << "'...\n");
 
   std::unique_ptr<ToolOutputFile> Out;
   std::error_code EC;
@@ -79,7 +79,7 @@ static void runDumpFunction(llvm::Function &F, StringRef Suffix) {
 
   CM->print(Out->os(), nullptr);
   Out->keep();
-  LLVM_DEBUG(dbgs() << "Dump file " << Dumpfile << " written successfully\n");
+  POLLY_DEBUG(dbgs() << "Dump file " << Dumpfile << " written successfully\n");
 }
 
 class DumpFunctionWrapperPass final : public FunctionPass {

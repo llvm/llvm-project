@@ -160,12 +160,12 @@ private:
       return Result;
 
     LLVMContext &Ctx = LoopMD->getContext();
-    LLVM_DEBUG(dbgs() << "Dependency violation detected\n");
+    POLLY_DEBUG(dbgs() << "Dependency violation detected\n");
 
     DebugLoc TransformLoc = findTransformationDebugLoc(LoopMD, DebugLocAttr);
 
     if (IgnoreDepcheck) {
-      LLVM_DEBUG(dbgs() << "Still accepting transformation due to "
+      POLLY_DEBUG(dbgs() << "Still accepting transformation due to "
                            "-polly-pragma-ignore-depcheck\n");
       if (ORE) {
         ORE->emit(
@@ -178,7 +178,7 @@ private:
       return Result;
     }
 
-    LLVM_DEBUG(dbgs() << "Rolling back transformation\n");
+    POLLY_DEBUG(dbgs() << "Rolling back transformation\n");
 
     if (ORE) {
       ORE->emit(DiagnosticInfoOptimizationFailure(DEBUG_TYPE, RemarkName,
