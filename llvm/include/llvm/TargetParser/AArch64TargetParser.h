@@ -116,7 +116,7 @@ enum ArchExtKind : unsigned {
   AEK_PROFILE =       7,  // FEAT_SPE
   AEK_RAS =           8,  // FEAT_RAS, FEAT_RASv1p1
   AEK_LSE =           9,  // FEAT_LSE
-  AEK_SVE =           10,  // FEAT_SVE
+  AEK_SVE =           10, // FEAT_SVE
   AEK_DOTPROD =       11, // FEAT_DotProd
   AEK_RCPC =          12, // FEAT_LRCPC
   AEK_RDM =           13, // FEAT_RDM
