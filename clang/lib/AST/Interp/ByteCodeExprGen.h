@@ -182,7 +182,7 @@ protected:
     if (!visitInitializer(Init))
       return false;
 
-    if (!this->emitInitPtr(Init))
+    if (!this->emitFinishInit(Init))
       return false;
 
     return this->emitPopPtr(Init);
@@ -196,7 +196,7 @@ protected:
     if (!visitInitializer(Init))
       return false;
 
-    if (!this->emitInitPtr(Init))
+    if (!this->emitFinishInit(Init))
       return false;
 
     return this->emitPopPtr(Init);
@@ -210,7 +210,7 @@ protected:
     if (!visitInitializer(I))
       return false;
 
-    return this->emitInitPtrPop(I);
+    return this->emitFinishInitPop(I);
   }
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *E);
