@@ -243,6 +243,9 @@ private:
   /// Align consecutive TableGen cond operator colon over all \c Changes.
   void alignConsecutiveTableGenCondOperatorColons();
 
+  /// Align consecutive TableGen definitions over all \c Changes.
+  void alignConsecutiveTableGenDefinitions();
+
   /// Align trailing comments over all \c Changes.
   void alignTrailingComments();
 
