@@ -45,8 +45,10 @@ namespace amdgpu {
 /// function that depends on the row Index. The permutation function is chosen
 /// to ensure that sequential distributed+vectorized reads/writes down a single
 /// dimension of the memref have minimal conflicts.
-LogicalResult optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
-                                                 Value memrefValue);
+LogicalResult
+optimizeSharedMemoryReadsAndWrites(Operation *parentOp, Value memrefValue,
+                                   int64_t kSharedMemoryLineSizeBytes,
+                                   int64_t kDefaultVectorSizeBits);
 
 std::optional<LogicalResult>
 optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp,

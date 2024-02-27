@@ -35,20 +35,6 @@ namespace amdgpu {
 using namespace mlir;
 using namespace mlir::amdgpu;
 
-/// The size of a shared memory line according to AMD documentation.
-/// https://www.amd.com/content/dam/amd/en/documents/instinct-tech-docs/instruction-set-architectures/instinct-mi200-cdna2-instruction-set-architecture.pdf
-int64_t kSharedMemoryLineSizeBytes;
-/// We optimize for 128 bit accesses, but this can be made an argument in the
-/// future.
-int64_t kDefaultVectorSizeBits;
-
-void setMemoryLineSize(int64_t _kSharedMemoryLineSizeBytes) {
-  kSharedMemoryLineSizeBytes = _kSharedMemoryLineSizeBytes;
-}
-
-void setDefaultVectorSize(int64_t _kDefaultVectorSizeBits) {
-  kDefaultVectorSizeBits = _kDefaultVectorSizeBits;
-}
 /// Uses `srcIndexValue` to permute `tgtIndexValue` via
 /// `result = xor(floordiv(srcIdxVal,permuteEveryN),
 ///               floordiv(tgtIdxVal,vectorSize)))
@@ -56,7 +42,9 @@ void setDefaultVectorSize(int64_t _kDefaultVectorSizeBits) {
 /// This is done using an optimized sequence of `arith` operations.
 static Value permuteVectorOffset(OpBuilder &b, Location loc,
                                  ArrayRef<Value> indices, MemRefType memrefTy,
-                                 int64_t srcDim, int64_t tgtDim) {
+                                 int64_t srcDim, int64_t tgtDim,
+                                 int64_t kSharedMemoryLineSizeBytes,
+                                 int64_t kDefaultVectorSizeBits) {
   // Adjust the src index to change how often the permutation changes
   // if necessary.
   Value src = indices[srcDim];
@@ -112,9 +100,11 @@ static Value permuteVectorOffset(OpBuilder &b, Location loc,
 static void transformIndices(OpBuilder &builder, Location loc,
                              SmallVector<Value, 4> &indices,
                              MemRefType memrefTy, int64_t srcDim,
-                             int64_t tgtDim) {
+                             int64_t tgtDim, int64_t kSharedMemoryLineSizeBytes,
+                             int64_t kDefaultVectorSizeBits) {
   indices[tgtDim] =
-      permuteVectorOffset(builder, loc, indices, memrefTy, srcDim, tgtDim);
+      permuteVectorOffset(builder, loc, indices, memrefTy, srcDim, tgtDim,
+                          kSharedMemoryLineSizeBytes, kDefaultVectorSizeBits);
 }
 
 // Return all operations within `parentOp` that read from or write to
@@ -156,8 +146,9 @@ getShmReadAndWriteOps(Operation *parentOp, Value shmMemRef,
   return success();
 }
 
-LogicalResult amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
-                                                         Value memrefValue) {
+LogicalResult amdgpu::optimizeSharedMemoryReadsAndWrites(
+    Operation *parentOp, Value memrefValue, int64_t kSharedMemoryLineSizeBytes,
+    int64_t kDefaultVectorSizeBits) {
 
   auto memRefType = dyn_cast<MemRefType>(memrefValue.getType());
   if (!memRefType ||
@@ -206,7 +197,8 @@ LogicalResult amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
     auto indices = amdgpu::getIndices(shmWriteOp);
     SmallVector<Value, 4> transformedIndices(indices->begin(), indices->end());
     transformIndices(builder, shmWriteOp->getLoc(), transformedIndices,
-                     memRefType, srcDim, tgtDim);
+                     memRefType, srcDim, tgtDim, kSharedMemoryLineSizeBytes,
+                     kDefaultVectorSizeBits);
     amdgpu::setIndices(shmWriteOp, transformedIndices);
   }
 
@@ -218,7 +210,8 @@ LogicalResult amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
     auto indices = amdgpu::getIndices(shmReadOp);
     SmallVector<Value, 4> transformedIndices(indices->begin(), indices->end());
     transformIndices(builder, shmReadOp->getLoc(), transformedIndices,
-                     memRefType, srcDim, tgtDim);
+                     memRefType, srcDim, tgtDim, kSharedMemoryLineSizeBytes,
+                     kDefaultVectorSizeBits);
     amdgpu::setIndices(shmReadOp, transformedIndices);
   }
 
@@ -229,8 +222,6 @@ std::optional<LogicalResult>
 amdgpu::optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp,
                                              int64_t kSharedMemoryLineSizeBytes,
                                              int64_t kDefaultVectorSizeBits) {
-  setMemoryLineSize(kSharedMemoryLineSizeBytes);
-  setDefaultVectorSize(kDefaultVectorSizeBits);
   SmallVector<memref::AllocOp> shmAllocOps;
   funcOp.walk([&](memref::AllocOp allocOp) {
     if (!amdgpu::AMDGPUDialect::hasSharedMemoryAddressSpace(allocOp.getType()))
@@ -238,8 +229,9 @@ amdgpu::optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp,
     shmAllocOps.push_back(allocOp);
   });
   for (auto allocOp : shmAllocOps) {
-    if (failed(amdgpu::optimizeSharedMemoryReadsAndWrites(funcOp,
-                                                          allocOp.getMemref())))
+    if (failed(amdgpu::optimizeSharedMemoryReadsAndWrites(
+            funcOp, allocOp.getMemref(), kSharedMemoryLineSizeBytes,
+            kDefaultVectorSizeBits)))
       return failure();
   }
   return success();
@@ -251,19 +243,16 @@ struct OptimizeSharedMemoryPass
 public:
   OptimizeSharedMemoryPass()
       : OptimizeSharedMemoryBase(),
-        _kSharedMemoryLineSizeBytes(kSharedMemoryLineSizeBytes = 128),
-        _kDefaultVectorSizeBits(kDefaultVectorSizeBits = 128){};
+        kSharedMemoryLineSizeBytes(kSharedMemoryLineSizeBytes = 128),
+        kDefaultVectorSizeBits(kDefaultVectorSizeBits = 128){};
 
   OptimizeSharedMemoryPass(int64_t kSharedMemoryLineSizeBytes,
                            int64_t kDefaultVectorSizeBits)
       : OptimizeSharedMemoryBase(),
-        _kSharedMemoryLineSizeBytes(kSharedMemoryLineSizeBytes),
-        _kDefaultVectorSizeBits(kDefaultVectorSizeBits){};
+        kSharedMemoryLineSizeBytes(kSharedMemoryLineSizeBytes),
+        kDefaultVectorSizeBits(kDefaultVectorSizeBits){};
 
   void runOnOperation() override {
-    setMemoryLineSize(_kSharedMemoryLineSizeBytes);
-    setDefaultVectorSize(_kDefaultVectorSizeBits);
-
     Operation *op = getOperation();
     SmallVector<memref::AllocOp> shmAllocOps;
     op->walk([&](memref::AllocOp allocOp) {
@@ -273,13 +262,14 @@ public:
       shmAllocOps.push_back(allocOp);
     });
     for (auto allocOp : shmAllocOps) {
-      if (failed(optimizeSharedMemoryReadsAndWrites(getOperation(),
-                                                    allocOp.getMemref())))
+      if (failed(optimizeSharedMemoryReadsAndWrites(op, allocOp.getMemref(),
+                                                    kSharedMemoryLineSizeBytes,
+                                                    kDefaultVectorSizeBits)))
         return;
     }
   }
 
 private:
-  int64_t _kSharedMemoryLineSizeBytes;
-  int64_t _kDefaultVectorSizeBits;
+  int64_t kSharedMemoryLineSizeBytes;
+  int64_t kDefaultVectorSizeBits;
 };
