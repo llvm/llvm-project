@@ -25,11 +25,24 @@
 # RS-SYMS-DAG: foo3
 
 ## Check --skip-symbol functionality when changing symbol names.
-# RUN: llvm-objcopy %t.o %t4.o --redefine-sym=foo1=bar1 --skip-symbol=fo* --wildcard
+# RUN: llvm-objcopy %t.o %t4.o --redefine-sym=foo1=bar1 --skip-symbol='fo*' --wildcard
 # RUN: llvm-readelf -s %t4.o | FileCheck %s --check-prefix=RS-SYM
 # RS-SYM-DAG: foo1
 # RS-SYM-DAG: foo2
 # RS-SYM-DAG: foo3
+
+## Check that using an invalid symbol pattern generates an error.
+# RUN: echo '*.' > %t.symbols.regex
+# RUN: not llvm-objcopy %t.o --skip-symbols=%t.symbols.regex --regex 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SYMBOL
+# RUN: not llvm-objcopy %t.o --skip-symbol='*.' --regex 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SYMBOL
+# SYMBOL: error: cannot compile regular expression '*.': repetition-operator operand invalid
+
+## Check passing an invalid filename generates an error.
+# RUN: not llvm-objcopy %t.o --skip-symbols=no_file 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=FILE -DMSG=%errc_ENOENT
+# FILE: error: 'no_file': [[MSG]]
 
 !ELF
 FileHeader:
