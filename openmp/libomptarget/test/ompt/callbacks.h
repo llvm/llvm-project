@@ -81,11 +81,14 @@ static void on_ompt_callback_target_data_op_emi(
   assert(codeptr_ra != 0 && "Unexpected null codeptr");
   if (endpoint == ompt_scope_begin)
     *host_op_id = next_op_id++;
+  // target_task_data may be null, avoid dereferencing it
+  uint64_t target_task_data_value =
+      (target_task_data) ? target_task_data->value : 0;
   printf("  Callback DataOp EMI: endpoint=%d optype=%d target_task_data=%p "
          "(0x%lx) target_data=%p (0x%lx) host_op_id=%p (0x%lx) src=%p "
          "src_device_num=%d "
          "dest=%p dest_device_num=%d bytes=%lu code=%p\n",
-         endpoint, optype, target_task_data, target_task_data->value,
+         endpoint, optype, target_task_data, target_task_data_value,
          target_data, target_data->value, host_op_id, *host_op_id, src_addr,
          src_device_num, dest_addr, dest_device_num, bytes, codeptr_ra);
 }

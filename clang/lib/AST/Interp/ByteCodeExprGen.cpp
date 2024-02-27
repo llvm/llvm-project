@@ -1679,13 +1679,24 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
 
   std::optional<PrimType> T = classify(E->getType());
   if (E->isFileScope()) {
+    // Avoid creating a variable if this is a primitive RValue anyway.
+    if (T && !E->isLValue())
+      return this->delegate(Init);
+
     if (std::optional<unsigned> GlobalIndex = P.createGlobal(E)) {
-      if (classify(E->getType()))
-        return this->visit(Init);
       if (!this->emitGetPtrGlobal(*GlobalIndex, E))
         return false;
+
+      if (T) {
+        if (!this->visit(Init))
+          return false;
+        return this->emitInitGlobal(*T, *GlobalIndex, E);
+      }
+
       return this->visitInitializer(Init);
     }
+
+    return false;
   }
 
   // Otherwise, use a local variable.
@@ -1730,6 +1741,9 @@ bool ByteCodeExprGen<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
   for (const Record::Field &F : R->fields()) {
     const Expr *Init = *CaptureInitIt;
     ++CaptureInitIt;
+
+    if (!Init)
+      continue;
 
     if (std::optional<PrimType> T = classify(Init)) {
       if (!this->visit(Init))
@@ -2703,7 +2717,14 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
           return false;
       }
     } else {
-      assert(Initializing);
+      // We need the result. Prepare a pointer to return or
+      // dup the current one.
+      if (!Initializing) {
+        if (std::optional<unsigned> LocalIndex = allocateLocal(E)) {
+          if (!this->emitGetPtrLocal(*LocalIndex, E))
+            return false;
+        }
+      }
       if (!this->emitDupPtr(E))
         return false;
     }

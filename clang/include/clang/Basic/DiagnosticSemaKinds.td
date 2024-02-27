@@ -10760,6 +10760,13 @@ def warn_imp_cast_drops_unaligned : Warning<
 
 } // end of sema category
 
+let CategoryName = "API Notes Issue" in {
+
+def err_incompatible_replacement_type : Error<
+  "API notes replacement type %0 has a different size from original type %1">;
+
+} // end of API Notes category
+
 let CategoryName = "OpenMP Issue" in {
 // OpenMP support.
 def err_omp_expected_var_arg : Error<
@@ -11976,7 +11983,8 @@ def err_builtin_invalid_arg_type: Error <
   "pointer to a valid matrix element type|"
   "signed integer or floating point type|vector type|"
   "floating point type|"
-  "vector of integers}1 (was %2)">;
+  "vector of integers|"
+  "type of integer}1 (was %2)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
@@ -12203,6 +12211,7 @@ def warn_acc_clause_unimplemented
 def err_acc_construct_appertainment
     : Error<"OpenACC construct '%0' cannot be used here; it can only "
             "be used in a statement context">;
-def err_acc_branch_in_out
-    : Error<"invalid branch %select{out of|into}0 OpenACC Compute Construct">;
+def err_acc_branch_in_out_compute_construct
+    : Error<"invalid %select{branch|return}0 %select{out of|into}1 OpenACC "
+            "Compute Construct">;
 } // end of sema component.
