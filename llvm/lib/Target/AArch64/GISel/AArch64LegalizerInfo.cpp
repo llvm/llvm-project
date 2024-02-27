@@ -1074,6 +1074,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {s16, v8s16},
                  {s32, v2s32},
                  {s32, v4s32}})
+      .moreElementsIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[1].isVector() &&
+                   Query.Types[1].getElementType() != s8 &&
+                   Query.Types[1].getNumElements() & 1;
+          },
+          LegalizeMutations::moreElementsToNextPow2(1))
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)

@@ -1280,14 +1280,14 @@ inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   return true;
 }
 
-inline bool InitPtrPop(InterpState &S, CodePtr OpPC) {
+inline bool FinishInitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.canBeInitialized())
     Ptr.initialize();
   return true;
 }
 
-inline bool InitPtr(InterpState &S, CodePtr OpPC) {
+inline bool FinishInit(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
   if (Ptr.canBeInitialized())
@@ -1396,6 +1396,19 @@ bool StoreBitFieldPop(InterpState &S, CodePtr OpPC) {
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue(S.getCtx()));
   else
     Ptr.deref<T>() = Value;
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool Init(InterpState &S, CodePtr OpPC) {
+  const T &Value = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckInit(S, OpPC, Ptr)) {
+    assert(false);
+    return false;
+  }
+  Ptr.initialize();
+  new (&Ptr.deref<T>()) T(Value);
   return true;
 }
 
