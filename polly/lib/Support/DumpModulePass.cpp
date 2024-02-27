@@ -34,7 +34,7 @@ static void runDumpModule(llvm::Module &M, StringRef Filename, bool IsSuffix) {
   } else {
     Dumpfile = Filename.str();
   }
-  LLVM_DEBUG(dbgs() << "Dumping module to " << Dumpfile << '\n');
+  POLLY_DEBUG(dbgs() << "Dumping module to " << Dumpfile << '\n');
 
   std::unique_ptr<ToolOutputFile> Out;
   std::error_code EC;

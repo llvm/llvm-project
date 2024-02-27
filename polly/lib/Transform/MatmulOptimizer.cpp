@@ -1826,10 +1826,10 @@ polly::tryOptimizeMatMulPattern(isl::schedule_node Node,
                                 const Dependences *D) {
   TCInfoTy TCI;
   if (PMBasedTCOpts && isTCPattern(Node, D, TCI))
-    LLVM_DEBUG(dbgs() << "The tensor contraction pattern was detected\n");
+    POLLY_DEBUG(dbgs() << "The tensor contraction pattern was detected\n");
   MatMulInfoTy MMI;
   if (PMBasedMMMOpts && isMatrMultPattern(Node, D, MMI)) {
-    LLVM_DEBUG(dbgs() << "The matrix multiplication pattern was detected\n");
+    POLLY_DEBUG(dbgs() << "The matrix multiplication pattern was detected\n");
     return optimizeMatMulPattern(Node, TTI, MMI);
   }
   return {};
