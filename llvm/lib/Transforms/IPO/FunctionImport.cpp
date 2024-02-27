@@ -125,7 +125,8 @@ static cl::opt<bool> ComputeDead("compute-dead", cl::init(true), cl::Hidden,
 
 static cl::opt<bool> EnableImportMetadata(
     "enable-import-metadata", cl::init(false), cl::Hidden,
-    cl::desc("Enable import metadata like 'thinlto_src_module'"));
+    cl::desc("Enable import metadata like 'thinlto_src_module' and "
+             "'thinlto_src_file'"));
 
 /// Summary file to use for function importing when using -function-import from
 /// the command line.
@@ -1643,9 +1644,15 @@ Expected<bool> FunctionImporter::importFunctions(
         if (Error Err = F.materialize())
           return std::move(Err);
         if (EnableImportMetadata) {
-          // Add 'thinlto_src_module' metadata for statistics and debugging.
+          // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
+          // statistics and debugging.
           F.setMetadata(
               "thinlto_src_module",
+              MDNode::get(DestModule.getContext(),
+                          {MDString::get(DestModule.getContext(),
+                                         SrcModule->getModuleIdentifier())}));
+          F.setMetadata(
+              "thinlto_src_file",
               MDNode::get(DestModule.getContext(),
                           {MDString::get(DestModule.getContext(),
                                          SrcModule->getSourceFileName())}));
@@ -1687,9 +1694,15 @@ Expected<bool> FunctionImporter::importFunctions(
                           << GO->getName() << " from "
                           << SrcModule->getSourceFileName() << "\n");
         if (EnableImportMetadata) {
-          // Add 'thinlto_src_module' metadata for statistics and debugging.
+          // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
+          // statistics and debugging.
           Fn->setMetadata(
               "thinlto_src_module",
+              MDNode::get(DestModule.getContext(),
+                          {MDString::get(DestModule.getContext(),
+                                         SrcModule->getModuleIdentifier())}));
+          Fn->setMetadata(
+              "thinlto_src_file",
               MDNode::get(DestModule.getContext(),
                           {MDString::get(DestModule.getContext(),
                                          SrcModule->getSourceFileName())}));
