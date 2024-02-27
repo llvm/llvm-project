@@ -1400,6 +1400,19 @@ bool StoreBitFieldPop(InterpState &S, CodePtr OpPC) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool Init(InterpState &S, CodePtr OpPC) {
+  const T &Value = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckInit(S, OpPC, Ptr)) {
+    assert(false);
+    return false;
+  }
+  Ptr.initialize();
+  new (&Ptr.deref<T>()) T(Value);
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitPop(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();

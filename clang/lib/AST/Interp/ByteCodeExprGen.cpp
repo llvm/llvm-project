@@ -1700,19 +1700,35 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
   }
 
   // Otherwise, use a local variable.
-  if (T) {
+  if (T && !E->isLValue()) {
     // For primitive types, we just visit the initializer.
     return this->delegate(Init);
   } else {
-    if (std::optional<unsigned> LocalIndex = allocateLocal(Init)) {
-      if (!this->emitGetPtrLocal(*LocalIndex, E))
+    unsigned LocalIndex;
+
+    if (T)
+      LocalIndex = this->allocateLocalPrimitive(Init, *T, false, false);
+    else if (std::optional<unsigned> MaybeIndex = this->allocateLocal(Init))
+      LocalIndex = *MaybeIndex;
+    else
+      return false;
+
+    if (!this->emitGetPtrLocal(LocalIndex, E))
+      return false;
+
+    if (T) {
+      if (!this->visit(Init)) {
         return false;
+      }
+      return this->emitInit(*T, E);
+    } else {
       if (!this->visitInitializer(Init))
         return false;
-      if (DiscardResult)
-        return this->emitPopPtr(E);
-      return true;
     }
+
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
   }
 
   return false;
