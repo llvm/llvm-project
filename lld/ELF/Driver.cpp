@@ -2554,14 +2554,17 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
     symtab.wrap(w.sym, w.real, w.wrap);
 }
 
+static void reportMissingFeature(StringRef config, const Twine &report) {
+  if (config == "error")
+    error(report);
+  else if (config == "warning")
+    warn(report);
+}
+
 static void checkAndReportMissingFeature(StringRef config, uint32_t features,
                                          uint32_t mask, const Twine &report) {
-  if (!(features & mask)) {
-    if (config == "error")
-      error(report);
-    else if (config == "warning")
-      warn(report);
-  }
+  if (!(features & mask))
+    reportMissingFeature(config, report);
 }
 
 // To enable CET (x86's hardware-assisted control flow enforcement), each
@@ -2572,12 +2575,28 @@ static void checkAndReportMissingFeature(StringRef config, uint32_t features,
 //
 // This is also the case with AARCH64's BTI and PAC which use the similar
 // GNU_PROPERTY_AARCH64_FEATURE_1_AND mechanism.
-static uint32_t getAndFeatures() {
+//
+// For AArch64 PAuth-enabled object files, the compatibility info of all of them
+// must match. Missing info for some object files with matching info for
+// remaining ones can be allowed (see -z pauth-report).
+static void readSecurityNotes() {
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
       config->emachine != EM_AARCH64)
-    return 0;
+    return;
 
-  uint32_t ret = -1;
+  config->andFeatures = -1;
+
+  StringRef referenceFileName;
+  if (config->emachine == EM_AARCH64) {
+    auto it = std::find_if(
+        ctx.objectFiles.begin(), ctx.objectFiles.end(),
+        [](const ELFFileBase *f) { return !f->aarch64PauthAbiTag.empty(); });
+    if (it != ctx.objectFiles.end()) {
+      ctx.aarch64PauthAbiTag = (*it)->aarch64PauthAbiTag;
+      referenceFileName = (*it)->getName();
+    }
+  }
+
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
 
@@ -2613,50 +2632,31 @@ static uint32_t getAndFeatures() {
                          "GNU_PROPERTY_AARCH64_FEATURE_1_PAC property");
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
     }
-    ret &= features;
+    config->andFeatures &= features;
+
+    if (ctx.aarch64PauthAbiTag.empty())
+      continue;
+
+    if (f->aarch64PauthAbiTag.empty()) {
+      reportMissingFeature(config->zPauthReport,
+                           toString(f) +
+                               ": -z pauth-report: file does not have AArch64 "
+                               "PAuth compatibility info while " +
+                               referenceFileName + " has one");
+      continue;
+    }
+
+    if (ctx.aarch64PauthAbiTag != f->aarch64PauthAbiTag)
+      errorOrWarn(
+          "incompatible values of AArch64 PAuth compatibility info found"
+          "\n>>> " +
+          referenceFileName + ": 0x" + toHex(ctx.aarch64PauthAbiTag) +
+          "\n>>> " + toString(f) + ": 0x" + toHex(f->aarch64PauthAbiTag));
   }
 
   // Force enable Shadow Stack.
   if (config->zShstk)
-    ret |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
-
-  return ret;
-}
-
-static void getAArch64PauthInfo() {
-  auto it = std::find_if(
-      ctx.objectFiles.begin(), ctx.objectFiles.end(),
-      [](const ELFFileBase *f) { return !f->aarch64PauthAbiTag.empty(); });
-  if (it == ctx.objectFiles.end())
-    return;
-
-  ctx.aarch64PauthAbiTag = (*it)->aarch64PauthAbiTag;
-  StringRef f1 = (*it)->getName();
-  for (ELFFileBase *f : ctx.objectFiles) {
-    StringRef f2 = f->getName();
-    ArrayRef<uint8_t> d1 = ctx.aarch64PauthAbiTag;
-    ArrayRef<uint8_t> d2 = f->aarch64PauthAbiTag;
-    if (d2.empty()) {
-      auto helper = [](StringRef report, const Twine &msg) {
-        if (report == "warning")
-          warn(msg);
-        else if (report == "error")
-          error(msg);
-      };
-
-      helper(config->zPauthReport,
-             f2.str() + " has no AArch64 PAuth compatibility info while " +
-                 f1.str() +
-                 " has one; either all or no input files must have it");
-      continue;
-    }
-    if (!std::equal(d1.begin(), d1.end(), d2.begin(), d2.end()))
-      errorOrWarn(
-          "incompatible values of AArch64 PAuth compatibility info found"
-          "\n" +
-          f1 + ": 0x" + toHex(ArrayRef(d1.data(), d1.size())) + "\n" + f2 +
-          ": 0x" + toHex(ArrayRef(d2.data(), d2.size())));
-  }
+    config->andFeatures |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
@@ -2994,12 +2994,12 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // partition.
   mainPart = &partitions[0];
 
-  // Read .note.gnu.property sections from input object files which
-  // contain a hint to tweak linker's and loader's behaviors.
-  config->andFeatures = getAndFeatures();
-
-  if (config->emachine == EM_AARCH64)
-    getAArch64PauthInfo();
+  // Read:
+  // - .note.gnu.property sections from input object files which
+  //   contain a hint to tweak linker's and loader's behaviors;
+  // - .note.AARCH64-PAUTH-ABI-tag sections contents from input object files
+  //   which contain AArch64 PAuth compatibility info.
+  readSecurityNotes();
 
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent
