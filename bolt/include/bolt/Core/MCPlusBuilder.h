@@ -620,7 +620,17 @@ public:
     return Info->get(Inst.getOpcode()).mayStore();
   }
 
-  virtual bool isAArch64Exclusive(const MCInst &Inst) const {
+  virtual bool isAArch64ExclusiveLoad(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isAArch64ExclusiveStore(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isAArch64ExclusiveClear(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
