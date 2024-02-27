@@ -6913,10 +6913,9 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     SmallVector<const Value *, 4> Operands(I->operand_values());
     TTI::OperandValueInfo Op1Info{TargetTransformInfo::OK_AnyValue,
                                   TargetTransformInfo::OP_None};
-    // Some targets replace frem with vector library calls.
     if (I->getOpcode() == Instruction::FRem)
-      return TTI.getFRemInstrCost(TLI, I->getOpcode(), VectorTy, CostKind,
-                                  Op1Info, Op2Info, Operands, I);
+      return TTI.getFRemInstrCost(TLI, VectorTy, CostKind, Op1Info, Op2Info,
+                                  Operands, I);
 
     return TTI.getArithmeticInstrCost(I->getOpcode(), VectorTy, CostKind,
                                       Op1Info, Op2Info, Operands, I);

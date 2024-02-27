@@ -885,21 +885,17 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
 }
 
 InstructionCost TargetTransformInfo::getFRemInstrCost(
-    const TargetLibraryInfo *TLI, unsigned Opcode, Type *Ty,
-    TTI::TargetCostKind CostKind, OperandValueInfo Op1Info,
-    OperandValueInfo Op2Info, ArrayRef<const Value *> Args,
-    const Instruction *CxtI) const {
-  assert(Opcode == Instruction::FRem && "Instruction must be frem");
-
+    const TargetLibraryInfo *TLI, Type *Ty, TTI::TargetCostKind CostKind,
+    OperandValueInfo Op1Info, OperandValueInfo Op2Info,
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
   VectorType *VecTy = dyn_cast<VectorType>(Ty);
-  Type *ScalarTy = VecTy ? VecTy->getScalarType() : Ty;
   LibFunc Func;
-  if (VecTy && TLI->getLibFunc(Opcode, ScalarTy, Func) &&
+  if (VecTy && TLI->getLibFunc(Instruction::FRem, Ty->getScalarType(), Func) &&
       TLI->isFunctionVectorizable(TLI->getName(Func), VecTy->getElementCount()))
     return getCallInstrCost(nullptr, VecTy, {VecTy, VecTy}, CostKind);
 
-  return getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info, Args,
-                                CxtI);
+  return getArithmeticInstrCost(Instruction::FRem, Ty, CostKind, Op1Info,
+                                Op2Info, Args, CxtI);
 }
 
 InstructionCost TargetTransformInfo::getAltInstrCost(

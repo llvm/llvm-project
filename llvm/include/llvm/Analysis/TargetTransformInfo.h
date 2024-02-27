@@ -1258,9 +1258,10 @@ public:
   /// Returns the cost of a vector instruction based on the assumption that frem
   /// will be later transformed (by ReplaceWithVecLib) into a call to a
   /// platform specific frem vector math function.
-  /// If unsupported, it will return cost using getArithmeticInstrCost.
+  /// Returns the same cost as getArithmeticInstrCost when no math function is
+  /// available.
   InstructionCost getFRemInstrCost(
-      const TargetLibraryInfo *TLI, unsigned Opcode, Type *Ty,
+      const TargetLibraryInfo *TLI, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
