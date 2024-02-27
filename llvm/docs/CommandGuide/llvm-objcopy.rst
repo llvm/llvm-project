@@ -346,18 +346,6 @@ them.
  symbol, with leading and trailing whitespace ignored, as is anything following
  a '#'. Can be specified multiple times to read names from multiple files.
 
-.. option:: --ignore-symbol <symbol>
-
- Do not change parameters of symbol <symbol> when executing other options that
- can change the symbol's name, binding or visibility
-
-.. option:: --ignore-symbols <filename>
-
- Reads a list of symbols from <filename> and runs as if --ignore-symbol=<symbol>
- is set for each one. <filename> contains one symbol per line and may contain
- comments beginning with '#'. Leading and trailing whitespace is stripped from
- each line. May be repeated to read symbols from many files.
-
 .. option:: --input-target <format>, -I
 
  Read the input as the specified format. See `SUPPORTED FORMATS`_ for a list of
@@ -475,6 +463,18 @@ them.
 
  Read a list of symbols from <filename> and change their visibility to the
  specified value. Visibility values: default, internal, hidden, protected.
+
+.. option:: --skip-symbol <symbol>
+
+ Do not change parameters of symbol <symbol> when executing other options that
+ can change the symbol's name, binding or visibility
+
+.. option:: --skip-symbols <filename>
+
+ Read a list of symbols from <filename> and run as if --skip-symbol=<symbol>
+ is set for each one. <filename> contains one symbol per line and may contain
+ comments beginning with '#'. Leading and trailing whitespace is stripped from
+ each line. May be repeated to read symbols from many files.
 
 .. option:: --split-dwo <dwo-file>
 

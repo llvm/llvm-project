@@ -206,15 +206,15 @@ defm keep_symbols
          "be repeated to read symbols from many files">,
       MetaVarName<"filename">;
 
-defm ignore_symbol : Eq<"ignore-symbol", "Do not change parameters of symbol <symbol> "
+defm skip_symbol : Eq<"skip-symbol", "Do not change parameters of symbol <symbol> "
                         "when executing other options that can change the symbol's "
                         "name, binding or visibility">,
                      MetaVarName<"symbol">;
 
-defm ignore_symbols
-    : Eq<"ignore-symbols",
-         "Reads a list of symbols from <filename> and runs as if "
-         "--ignore-symbol=<symbol> is set for each one. <filename> "
+defm skip_symbols
+    : Eq<"skip-symbols",
+         "Read a list of symbols from <filename> and run as if "
+         "--skip-symbol=<symbol> is set for each one. <filename> "
          "contains one symbol per line and may contain comments beginning with "
          "'#'. Leading and trailing whitespace is stripped from each line. May "
          "be repeated to read symbols from many files">,

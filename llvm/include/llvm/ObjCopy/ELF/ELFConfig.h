@@ -19,7 +19,7 @@ namespace objcopy {
 struct ELFConfig {
   uint8_t NewSymbolVisibility = (uint8_t)ELF::STV_DEFAULT;
 
-  NameMatcher SymbolsToIgnore;
+  NameMatcher SymbolsToSkip;
   std::vector<std::pair<NameMatcher, uint8_t>> SymbolsToSetVisibility;
 
   // ELF entry point address expression. The input parameter is an entry point

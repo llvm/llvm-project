@@ -1,31 +1,31 @@
 # RUN: yaml2obj %s -o %t.o
-# RUN: echo 'foo[2-3]' > %t.ignore.regex
+# RUN: echo 'foo[2-3]' > %t.skip.regex
 
-## Check --ignore-symbols functionality when changing symbol bindings.
-# RUN: llvm-objcopy %t.o %t1.o --localize-hidden --ignore-symbols=%t.ignore.regex --regex
+## Check --skip-symbols functionality when changing symbol bindings.
+# RUN: llvm-objcopy %t.o %t1.o --localize-hidden --skip-symbols=%t.skip.regex --regex
 # RUN: llvm-readelf -s %t1.o | FileCheck %s --check-prefix=LH-SYMS
 # LH-SYMS-DAG: LOCAL  HIDDEN      1 foo1
 # LH-SYMS-DAG: GLOBAL HIDDEN      1 foo2
 # LH-SYMS-DAG: GLOBAL HIDDEN      1 foo3
 
-## Check --ignore-symbol functionality when changing symbol bindings.
-# RUN: llvm-objcopy %t.o %t2.o --localize-hidden --ignore-symbol=foo3
+## Check --skip-symbol functionality when changing symbol bindings.
+# RUN: llvm-objcopy %t.o %t2.o --localize-hidden --skip-symbol=foo3
 # RUN: llvm-readelf -s %t2.o | FileCheck %s --check-prefix=LH-SYM
 # LH-SYM-DAG: LOCAL  HIDDEN      1 foo1
 # LH-SYM-DAG: LOCAL  HIDDEN      1 foo2
 # LH-SYM-DAG: GLOBAL HIDDEN      1 foo3
 
-## Check --ignore-symbols functionality when changing symbol names.
+## Check --skip-symbols functionality when changing symbol names.
 # RUN: echo -e "foo1 bar1\nfoo2 bar2" > %t.renames.list
 # RUN: llvm-objcopy %t.o %t3.o --redefine-syms=%t.renames.list \
-# RUN:   --ignore-symbols=%t.ignore.regex --regex
+# RUN:   --skip-symbols=%t.skip.regex --regex
 # RUN: llvm-readelf -s %t3.o | FileCheck %s --check-prefix=RS-SYMS
 # RS-SYMS-DAG: bar1
 # RS-SYMS-DAG: foo2
 # RS-SYMS-DAG: foo3
 
-## Check --ignore-symbol functionality when changing symbol names.
-# RUN: llvm-objcopy %t.o %t4.o --redefine-sym=foo1=bar1 --ignore-symbol=fo* --wildcard
+## Check --skip-symbol functionality when changing symbol names.
+# RUN: llvm-objcopy %t.o %t4.o --redefine-sym=foo1=bar1 --skip-symbol=fo* --wildcard
 # RUN: llvm-readelf -s %t4.o | FileCheck %s --check-prefix=RS-SYM
 # RS-SYM-DAG: foo1
 # RS-SYM-DAG: foo2
