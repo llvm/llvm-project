@@ -65,6 +65,7 @@ Implemented Papers
 - P2591R5 - Concatenation of strings and string views
 - P2968R2 - Make ``std::ignore`` a first-class object
 - P2997R1 - Removing the common reference requirement from the indirectly invocable concepts (as DR against C++20)
+- P0448R4 - A ``strstream`` replacement using ``span<charT>`` as buffer
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
 - P3029R1 - Better ``mdspan``'s CTAD
