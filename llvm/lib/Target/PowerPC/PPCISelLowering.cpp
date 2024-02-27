@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCISelLowering.h"
+#include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
 #include "PPCCCState.h"
@@ -641,7 +642,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
-  // setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::f64, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::ppcf128, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v4f32, Custom);
@@ -10723,20 +10723,6 @@ static bool getVectorCompareInfo(SDValue Intrin, int &CompareOpc,
   return true;
 }
 
-bool isContiguousMask(const APInt &Val, unsigned &MB, unsigned &ME,
-                      unsigned BitWidth) {
-  unsigned MaskLen = 0;
-  if (Val.isShiftedMask(MB, MaskLen)) {
-    MB = (BitWidth - MB - MaskLen) % BitWidth;
-  } else if ((~Val).isShiftedMask(MB, MaskLen)) {
-    MB = (BitWidth - MB) % BitWidth;
-  } else {
-    return false;
-  }
-  ME = (MB + MaskLen - 1) % BitWidth;
-  return true;
-}
-
 /// LowerINTRINSIC_WO_CHAIN - If this is an intrinsic that we want to custom
 /// lower, do it, otherwise return null.
 SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
@@ -10755,9 +10741,9 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::ppc_rldimi: {
     uint64_t SH = Op.getConstantOperandVal(3);
     unsigned MB = 0, ME = 0;
-    if (!isContiguousMask(Op.getConstantOperandAPInt(4), MB, ME, 64) ||
+    if (!isRunOfOnes64(Op.getConstantOperandVal(4), MB, ME) ||
         ME != 63 - SH)
-      llvm_unreachable("invalid rldimi mask!");
+      report_fatal_error("invalid rldimi mask!");
     return SDValue(DAG.getMachineNode(
                        PPC::RLDIMI, dl, MVT::i64,
                        {Op.getOperand(1), Op.getOperand(2), Op.getOperand(3),
@@ -10767,8 +10753,8 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   case Intrinsic::ppc_rlwimi: {
     unsigned MB = 0, ME = 0;
-    if (!isContiguousMask(Op.getConstantOperandAPInt(4), MB, ME, 32))
-      llvm_unreachable("invalid rlwimi mask!");
+    if (!isRunOfOnes(Op.getConstantOperandVal(4), MB, ME))
+      report_fatal_error("invalid rlwimi mask!");
     return SDValue(DAG.getMachineNode(
                        PPC::RLWIMI, dl, MVT::i32,
                        {Op.getOperand(1), Op.getOperand(2), Op.getOperand(3),
@@ -10779,8 +10765,8 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   case Intrinsic::ppc_rlwnm: {
     unsigned MB = 0, ME = 0;
-    if (!isContiguousMask(Op.getConstantOperandAPInt(3), MB, ME, 32))
-      llvm_unreachable("invalid rlwnm mask!");
+    if (!isRunOfOnes(Op.getConstantOperandVal(3), MB, ME))
+      report_fatal_error("invalid rlwnm mask!");
     return SDValue(
         DAG.getMachineNode(PPC::RLWNM, dl, MVT::i32,
                            {Op.getOperand(1), Op.getOperand(2),
