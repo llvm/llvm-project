@@ -1132,4 +1132,26 @@ TEST(Error, moveInto) {
   }
 }
 
+TEST(Error, FatalBadAllocErrorHandlersInteraction) {
+  auto ErrorHandler = [](void *Data, const char *, bool) {};
+  install_fatal_error_handler(ErrorHandler, nullptr);
+  // The following call should not crash
+  install_bad_alloc_error_handler(ErrorHandler, nullptr);
+
+  // Don't interfere with other tests:
+  remove_fatal_error_handler();
+  remove_bad_alloc_error_handler();
+}
+
+TEST(Error, BadAllocFatalErrorHandlersInteraction) {
+  auto ErrorHandler = [](void *Data, const char *, bool) {};
+  install_bad_alloc_error_handler(ErrorHandler, nullptr);
+  // The following call should not crash
+  install_fatal_error_handler(ErrorHandler, nullptr);
+
+  // Don't interfere with other tests:
+  remove_fatal_error_handler();
+  remove_bad_alloc_error_handler();
+}
+
 } // namespace
