@@ -473,6 +473,12 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.roundur
     libc.src.stdfix.roundulk
     libc.src.stdfix.roundulr
+    libc.src.stdfix.sqrtuhk
+    libc.src.stdfix.sqrtuhr
+    libc.src.stdfix.sqrtuk
+    libc.src.stdfix.sqrtur
+    # libc.src.stdfix.sqrtulk
+    libc.src.stdfix.sqrtulr
   )
 endif()
 
