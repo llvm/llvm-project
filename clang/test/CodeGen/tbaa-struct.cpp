@@ -162,11 +162,11 @@ void copy10(NamedBitfields3 *a1, NamedBitfields3 *a2) {
 // CHECK-OLD: [[TS3]] = !{i64 0, i64 8, !{{.*}}, i64 0, i64 2, !{{.*}}, i64 4, i64 8, !{{.*}}}
 // CHECK-OLD: [[TS4]] = !{i64 0, i64 1, [[TAG_CHAR]], i64 1, i64 1, [[TAG_CHAR]], i64 2, i64 1, [[TAG_CHAR]]}
 // CHECK-OLD: [[TS5]] = !{i64 0, i64 1, [[TAG_CHAR]], i64 4, i64 1, [[TAG_CHAR]], i64 5, i64 1, [[TAG_CHAR]]}
-// CHECK-OLD: [[TS6]] = !{i64 0, i64 4, [[TAG_INT]], i64 1, i64 4, [[TAG_INT]], i64 2, i64 1, [[TAG_CHAR]], i64 8, i64 8, [[TAG_DOUBLE:!.+]]}
+// CHECK-OLD: [[TS6]] = !{i64 0, i64 2, [[TAG_CHAR]], i64 2, i64 1, [[TAG_CHAR]], i64 8, i64 8, [[TAG_DOUBLE:!.+]]}
 // CHECK-OLD: [[TAG_DOUBLE]] = !{[[DOUBLE:!.+]], [[DOUBLE]], i64 0}
 // CHECK-OLD  [[DOUBLE]] = !{!"double", [[CHAR]], i64 0}
-// CHECK-OLD: [[TS7]] = !{i64 0, i64 1, [[TAG_CHAR]], i64 1, i64 1, [[TAG_CHAR]], i64 2, i64 1, [[TAG_CHAR]], i64 3, i64 4, [[TAG_INT]], i64 3, i64 4, [[TAG_INT]], i64 4, i64 1, [[TAG_CHAR]], i64 8, i64 8, [[TAG_DOUBLE]], i64 16, i64 4, [[TAG_INT]]}
-// CHECK-OLD: [[TS8]] = !{i64 1, i64 4, [[TAG_INT]], i64 2, i64 4, [[TAG_INT]], i64 8, i64 8, [[TAG_DOUBLE]]}
+// CHECK-OLD: [[TS7]] = !{i64 0, i64 1, [[TAG_CHAR]], i64 1, i64 1, [[TAG_CHAR]], i64 2, i64 1, [[TAG_CHAR]], i64 3, i64 1, [[TAG_CHAR]], i64 4, i64 1, [[TAG_CHAR]], i64 8, i64 8, [[TAG_DOUBLE]], i64 16, i64 1, [[TAG_CHAR]]}
+// CHECK-OLD: [[TS8]] = !{i64 0, i64 4, [[TAG_CHAR]], i64 8, i64 8, [[TAG_DOUBLE]]}
 
 // CHECK-NEW-DAG: [[TYPE_char:!.*]] = !{{{.*}}, i64 1, !"omnipotent char"}
 // CHECK-NEW-DAG: [[TAG_char]] = !{[[TYPE_char]], [[TYPE_char]], i64 0, i64 0}
