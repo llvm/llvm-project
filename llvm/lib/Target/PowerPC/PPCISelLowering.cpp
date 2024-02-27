@@ -10741,8 +10741,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::ppc_rldimi: {
     uint64_t SH = Op.getConstantOperandVal(3);
     unsigned MB = 0, ME = 0;
-    if (!isRunOfOnes64(Op.getConstantOperandVal(4), MB, ME) ||
-        ME != 63 - SH)
+    if (!isRunOfOnes64(Op.getConstantOperandVal(4), MB, ME) || ME != 63 - SH)
       report_fatal_error("invalid rldimi mask!");
     return SDValue(DAG.getMachineNode(
                        PPC::RLDIMI, dl, MVT::i64,
