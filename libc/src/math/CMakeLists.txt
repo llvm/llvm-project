@@ -1,9 +1,6 @@
 add_subdirectory(generic)
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
   add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
-elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  # TODO: We should split this into 'nvptx' and 'amdgpu' for the GPU build.
-  add_subdirectory(${LIBC_TARGET_OS})
 endif()
 
 function(add_math_entrypoint_object name)
@@ -11,35 +8,12 @@ function(add_math_entrypoint_object name)
   # that first and return early if we are able to add an alias target for the
   # machine specific implementation.
   get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.${name}" fq_machine_specific_target_name)
-  get_fq_target_name("${LIBC_TARGET_OS}.${name}" fq_os_specific_target_name)
   if(TARGET ${fq_machine_specific_target_name})
     add_entrypoint_object(
       ${name}
       ALIAS
       DEPENDS
         .${LIBC_TARGET_ARCHITECTURE}.${name}
-    )
-    return()
-  elseif(TARGET ${fq_os_specific_target_name})
-    add_entrypoint_object(
-      ${name}
-      ALIAS
-      DEPENDS
-        .${LIBC_TARGET_OS}.${name}
-    )
-    return()
-  endif()
-
-  # The GPU optionally depends on vendor libraries. If we emitted one of these
-  # entrypoints it means the user requested it and we should use it instead.
-  get_fq_target_name("${LIBC_TARGET_OS}.vendor.${name}" fq_vendor_specific_target_name)
-  if(TARGET ${fq_vendor_specific_target_name})
-    add_entrypoint_object(
-      ${name}
-      ALIAS
-      DEPENDS
-        .${LIBC_TARGET_OS}.vendor.${name}
-      VENDOR
     )
     return()
   endif()
