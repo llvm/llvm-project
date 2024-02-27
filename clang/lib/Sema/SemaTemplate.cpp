@@ -2324,7 +2324,7 @@ transformTemplateTypeParam(Sema &SemaRef, DeclContext *DC,
           : std::nullopt);
   if (const auto *TC = TTP->getTypeConstraint())
     SemaRef.SubstTypeConstraint(NewTTP, TC, Args,
-                                /*EvaluateConstraint*/ true);
+                                /*EvaluateConstraint=*/true);
   if (TTP->hasDefaultArgument()) {
     TypeSourceInfo *InstantiatedDefaultArg =
         SemaRef.SubstType(TTP->getDefaultArgumentInfo(), Args,

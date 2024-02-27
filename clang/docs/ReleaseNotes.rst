@@ -91,6 +91,10 @@ C++20 Feature Support
   current module units.
   Fixes `#84002 <https://github.com/llvm/llvm-project/issues/84002>`_.
 
+- Initial support for class template argument deduciton (CTAD) for type alias
+  templates.
+  (`#54051 https://github.com/llvm/llvm-project/issues/54051`_).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

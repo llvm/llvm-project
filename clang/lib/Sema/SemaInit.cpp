@@ -10726,8 +10726,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   TemplateDecl* LookupTemplateDecl = Template;
   if (!Template && getLangOpts().CPlusPlus20) { // type alias template
     if (auto *AliasTemplate = dyn_cast_or_null<TypeAliasTemplateDecl>(
-            TemplateName.getAsTemplateDecl());
-        AliasTemplate) {
+            TemplateName.getAsTemplateDecl())) {
       LookupTemplateDecl = AliasTemplate;
       auto UnderlyingType = AliasTemplate->getTemplatedDecl()
                                 ->getUnderlyingType()
