@@ -6,6 +6,8 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+#include <stddef.h>
+
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
 
@@ -59,8 +61,25 @@ const __llvm_profile_data *__llvm_profile_begin_data(void) {
 }
 const __llvm_profile_data *__llvm_profile_end_data(void) { return &DataEnd; }
 
+// Type profiling isn't implemented under MSVC ABI, so return NULL (rather than
+// implementing linker magic on Windows) to make it more explicit. To elaborate,
+// the current type profiling implementation maps a profiled vtable address to a
+// vtable variable through vtables mangled name. Under MSVC ABI, the variable
+// name for vtables might not be the mangled name (see
+// MicrosoftCXXABI::getAddrOfVTable in MicrosoftCXXABI.cpp for more details on
+// how a vtable name is computed). Note the mangled name is still in the vtable
+// IR (just not variable name) for mapping purpose, but more implementation work
+// is required.
+const VTableProfData *__llvm_profile_begin_vtables(void) { return NULL; }
+const VTableProfData *__llvm_profile_end_vtables(void) { return NULL; }
+
 const char *__llvm_profile_begin_names(void) { return &NamesStart + 1; }
 const char *__llvm_profile_end_names(void) { return &NamesEnd; }
+
+// Type profiling isn't supported on Windows, so return NULl to make it more
+// explicit.
+const char *__llvm_profile_begin_vtabnames(void) { return NULL; }
+const char *__llvm_profile_end_vtabnames(void) { return NULL; }
 
 char *__llvm_profile_begin_counters(void) { return &CountersStart + 1; }
 char *__llvm_profile_end_counters(void) { return &CountersEnd; }
