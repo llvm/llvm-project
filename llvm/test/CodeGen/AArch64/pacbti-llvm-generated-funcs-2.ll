@@ -58,8 +58,8 @@ entry:
 ;; CHECK-NEXT: .cfi_negate_ra_state
 
 attributes #0 = { norecurse nounwind readnone "sign-return-address"="all" "sign-return-address-key"="b_key" }
-attributes #1 = { noinline }
-attributes #2 = { nofree noinline norecurse nounwind writeonly }
+attributes #1 = { noinline "sign-return-address"="all" "sign-return-address-key"="b_key" }
+attributes #2 = { nofree noinline norecurse nounwind writeonly "sign-return-address"="all" "sign-return-address-key"="b_key" }
 
 !llvm.module.flags = !{!0, !1, !2, !3, !4, !5}
 

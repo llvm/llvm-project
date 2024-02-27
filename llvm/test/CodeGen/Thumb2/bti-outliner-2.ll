@@ -10,7 +10,7 @@
 @e = hidden global i32 0, align 4
 @f = hidden global i32 0, align 4
 
-define hidden i32 @x(i32 %p) local_unnamed_addr #0 {
+define hidden i32 @x(i32 %p) local_unnamed_addr #2 {
 entry:
   %0 = load volatile i32, ptr @a, align 4
   %1 = load volatile i32, ptr @b, align 4
@@ -73,10 +73,6 @@ entry:
 ; CHECK-LABEL: OUTLINED_FUNCTION_0:
 ; CHECK:       bti
 
-attributes #0 = { minsize nofree norecurse nounwind optsize  }
 attributes #1 = { minsize nofree norecurse nounwind optsize "branch-target-enforcement"="false" }
 attributes #2 = { minsize nofree norecurse nounwind optsize "branch-target-enforcement"="true"  }
 
-!llvm.module.flags = !{!0}
-
-!0 = !{i32 8, !"branch-target-enforcement", i32 1}

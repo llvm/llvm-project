@@ -66,7 +66,7 @@ attributes #1 = { nounwind "branch-target-enforcement"="true"  "sign-return-addr
 attributes #2 = { nounwind "branch-target-enforcement"="false" "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" }
 attributes #3 = { nounwind "branch-target-enforcement"="false" "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" }
 attributes #4 = { nounwind "branch-target-enforcement"="false" "sign-return-address"="all" "sign-return-address-key"="a_key" }
-attributes #5 = { nounwind }
+attributes #5 = { nounwind "branch-target-enforcement"="true"  "sign-return-address"="all" "sign-return-address-key"="a_key" }
 
 !llvm.module.flags = !{!0, !1, !2, !3, !4}
 
