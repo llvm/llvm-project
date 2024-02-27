@@ -365,6 +365,7 @@ class sve_int_ptrue<bits<2> sz8_64, bits<3> opc, string asm, PPRRegOp pprty,
   let ElementSize = pprty.ElementSize;
   let hasSideEffects = 0;
   let isReMaterializable = 1;
+  let Uses = [VG];
 }
 
 multiclass sve_int_ptrue<bits<3> opc, string asm, SDPatternOperator op> {
@@ -755,6 +756,7 @@ class sve_int_pfalse<bits<6> opc, string asm>
 
   let hasSideEffects = 0;
   let isReMaterializable = 1;
+  let Uses = [VG];
 }
 
 multiclass sve_int_pfalse<bits<6> opc, string asm> {
@@ -1090,6 +1092,7 @@ class sve_int_count<bits<3> opc, string asm>
 
   let hasSideEffects = 0;
   let isReMaterializable = 1;
+  let Uses = [VG];
 }
 
 multiclass sve_int_count<bits<3> opc, string asm, SDPatternOperator op> {
@@ -1982,6 +1985,7 @@ class sve_int_dup_mask_imm<string asm>
   let DecoderMethod = "DecodeSVELogicalImmInstruction";
   let hasSideEffects = 0;
   let isReMaterializable = 1;
+  let Uses = [VG];
 }
 
 multiclass sve_int_dup_mask_imm<string asm> {
@@ -2862,6 +2866,7 @@ class sve_int_arith_vl<bit opc, string asm, bit streaming_sve = 0b0>
   let Inst{4-0}   = Rd;
 
   let hasSideEffects = 0;
+  let Uses = [VG];
 }
 
 class sve_int_read_vl_a<bit op, bits<5> opc2, string asm, bit streaming_sve = 0b0>
@@ -2882,6 +2887,7 @@ class sve_int_read_vl_a<bit op, bits<5> opc2, string asm, bit streaming_sve = 0b
 
   let hasSideEffects = 0;
   let isReMaterializable = 1;
+  let Uses = [VG];
 }
 
 //===----------------------------------------------------------------------===//
@@ -4699,6 +4705,7 @@ class sve_int_dup_imm<bits<2> sz8_64, string asm,
 
   let hasSideEffects = 0;
   let isReMaterializable = 1;
+  let Uses = [VG];
 }
 
 multiclass sve_int_dup_imm<string asm> {
@@ -4741,6 +4748,7 @@ class sve_int_dup_fpimm<bits<2> sz8_64, Operand fpimmtype,
 
   let hasSideEffects = 0;
   let isReMaterializable = 1;
+  let Uses = [VG];
 }
 
 multiclass sve_int_dup_fpimm<string asm> {
@@ -5657,6 +5665,7 @@ class sve_int_index_ii<bits<2> sz8_64, string asm, ZPRRegOp zprty,
 
   let hasSideEffects = 0;
   let isReMaterializable = 1;
+  let Uses = [VG];
 }
 
 multiclass sve_int_index_ii<string asm> {
@@ -9308,6 +9317,7 @@ class sve2p1_ptrue_pn<string mnemonic, bits<2> sz, PNRP8to15RegOp pnrty, SDPatte
 
   let hasSideEffects = 0;
   let isReMaterializable = 1;
+  let Uses = [VG];
 }
 
 
