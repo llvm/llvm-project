@@ -7,14 +7,6 @@
 
 // RUN: %{compile} | %{run} | FileCheck %s
 
-/// Note: The SME ST1Q/LD1Q instructions are currently broken in QEMU
-/// see: https://gitlab.com/qemu-project/qemu/-/issues/1833
-/// This test is expected to fail until a fixed version of QEMU can be used.
-
-/// FIXME: Remove the 'XFAIL' below once a fixed QEMU version is available
-/// (and installed on CI buildbot).
-// XFAIL: {{.*}}
-
 func.func @print_i8s(%bytes: memref<?xi8>, %len: index) {
   %c0 = arith.constant 0 : index
   %c16 = arith.constant 16 : index
