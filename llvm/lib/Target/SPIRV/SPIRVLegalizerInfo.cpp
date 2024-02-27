@@ -184,7 +184,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
         return Query.Types[0].getSizeInBits() == Query.Types[1].getSizeInBits();
       }))));
 
-  getActionDefinitionsBuilder(G_IMPLICIT_DEF).alwaysLegal();
+  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE}).alwaysLegal();
 
   getActionDefinitionsBuilder(G_INTTOPTR)
       .legalForCartesianProduct(allPtrs, allIntScalars);
