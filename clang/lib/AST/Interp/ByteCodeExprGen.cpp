@@ -897,7 +897,7 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
         if (!this->visitInitializer(Init))
           return false;
 
-        if (!this->emitInitPtrPop(E))
+        if (!this->emitFinishInitPop(E))
           return false;
         // Base initializers don't increase InitIndex, since they don't count
         // into the Record's fields.
@@ -940,7 +940,7 @@ bool ByteCodeExprGen<Emitter>::visitArrayElemInit(unsigned ElemIndex,
     return false;
   if (!this->visitInitializer(Init))
     return false;
-  return this->emitInitPtrPop(Init);
+  return this->emitFinishInitPop(Init);
 }
 
 template <class Emitter>
@@ -2151,7 +2151,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
     }
   }
 
-  return this->emitInitPtr(E);
+  return this->emitFinishInit(E);
 }
 
 template <class Emitter>
@@ -2364,7 +2364,7 @@ bool ByteCodeExprGen<Emitter>::visitZeroRecordInitializer(const Record *R,
       return false;
     if (!this->visitZeroRecordInitializer(B.R, E))
       return false;
-    if (!this->emitInitPtrPop(E))
+    if (!this->emitFinishInitPop(E))
       return false;
   }
 
@@ -2544,7 +2544,7 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *E) {
     if (!visitInitializer(E))
       return false;
 
-    if (!this->emitInitPtr(E))
+    if (!this->emitFinishInit(E))
       return false;
     return this->emitRetValue(E);
   }
