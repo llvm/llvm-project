@@ -887,34 +887,10 @@ Value *Environment::createValueUnlessSelfReferential(
 
   if (Type->isRecordType()) {
     CreatedValuesCount++;
-    llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
-    for (const FieldDecl *Field : DACtx->getModeledFields(Type)) {
-      assert(Field != nullptr);
+    auto &Loc = cast<RecordStorageLocation>(createStorageLocation(Type));
+    initializeFieldsWithValues(Loc, Visited, Depth, CreatedValuesCount);
 
-      QualType FieldType = Field->getType();
-
-      FieldLocs.insert(
-          {Field, &createLocAndMaybeValue(FieldType, Visited, Depth + 1,
-                                          CreatedValuesCount)});
-    }
-
-    RecordStorageLocation::SyntheticFieldMap SyntheticFieldLocs;
-    for (const auto &Entry : DACtx->getSyntheticFields(Type)) {
-      SyntheticFieldLocs.insert(
-          {Entry.getKey(),
-           &createLocAndMaybeValue(Entry.getValue(), Visited, Depth + 1,
-                                   CreatedValuesCount)});
-    }
-
-    RecordStorageLocation &Loc = DACtx->createRecordStorageLocation(
-        Type, std::move(FieldLocs), std::move(SyntheticFieldLocs));
-    RecordValue &RecordVal = create<RecordValue>(Loc);
-
-    // As we already have a storage location for the `RecordValue`, we can and
-    // should associate them in the environment.
-    setValue(Loc, RecordVal);
-
-    return &RecordVal;
+    return &refreshRecordValue(Loc, *this);
   }
 
   return nullptr;
@@ -941,6 +917,50 @@ Environment::createLocAndMaybeValue(QualType Ty,
   StorageLocation &Loc = createStorageLocation(Ty);
   setValue(Loc, *Val);
   return Loc;
+}
+
+void Environment::initializeFieldsWithValues(RecordStorageLocation &Loc,
+                                             llvm::DenseSet<QualType> &Visited,
+                                             int Depth,
+                                             int &CreatedValuesCount) {
+  auto initField = [&](QualType FieldType, StorageLocation &FieldLoc) {
+    if (FieldType->isRecordType()) {
+      auto &FieldRecordLoc = cast<RecordStorageLocation>(FieldLoc);
+      setValue(FieldRecordLoc, create<RecordValue>(FieldRecordLoc));
+      initializeFieldsWithValues(FieldRecordLoc, Visited, Depth + 1,
+                                 CreatedValuesCount);
+    } else {
+      if (!Visited.insert(FieldType.getCanonicalType()).second)
+        return;
+      if (Value *Val = createValueUnlessSelfReferential(
+              FieldType, Visited, Depth + 1, CreatedValuesCount))
+        setValue(FieldLoc, *Val);
+      Visited.erase(FieldType.getCanonicalType());
+    }
+  };
+
+  for (const auto &[Field, FieldLoc] : Loc.children()) {
+    assert(Field != nullptr);
+    QualType FieldType = Field->getType();
+
+    if (FieldType->isReferenceType()) {
+      Loc.setChild(*Field,
+                   &createLocAndMaybeValue(FieldType, Visited, Depth + 1,
+                                           CreatedValuesCount));
+    } else {
+      assert(FieldLoc != nullptr);
+      initField(FieldType, *FieldLoc);
+    }
+  }
+  for (const auto &[FieldName, FieldLoc] : Loc.synthetic_fields()) {
+    assert(FieldLoc != nullptr);
+    QualType FieldType = FieldLoc->getType();
+
+    // Synthetic fields cannot have reference type, so we don't need to deal
+    // with this case.
+    assert(!FieldType->isReferenceType());
+    initField(FieldType, Loc.getSyntheticField(FieldName));
+  }
 }
 
 StorageLocation &Environment::createObjectInternal(const ValueDecl *D,

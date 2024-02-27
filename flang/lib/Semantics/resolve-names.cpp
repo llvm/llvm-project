@@ -5648,7 +5648,9 @@ void DeclarationVisitor::Post(const parser::ProcDecl &x) {
   const auto &name{std::get<parser::Name>(x.t)};
   const Symbol *procInterface{nullptr};
   if (interfaceName_) {
-    procInterface = interfaceName_->symbol;
+    procInterface = interfaceName_->symbol->has<GenericDetails>()
+        ? interfaceName_->symbol->get<GenericDetails>().specific()
+        : interfaceName_->symbol;
   }
   auto attrs{HandleSaveName(name.source, GetAttrs())};
   DerivedTypeDetails *dtDetails{nullptr};
@@ -6059,7 +6061,7 @@ void DeclarationVisitor::FinishNamelists() {
             if (!symbol) {
               symbol = &MakeSymbol(name, ObjectEntityDetails{});
               ApplyImplicitRules(*symbol);
-            } else if (!ConvertToObjectEntity(*symbol)) {
+            } else if (!ConvertToObjectEntity(symbol->GetUltimate())) {
               SayWithDecl(name, *symbol, "'%s' is not a variable"_err_en_US);
               context().SetError(*groupSymbol);
             }

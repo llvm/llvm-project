@@ -275,7 +275,7 @@ AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
     return ConstantFoldLoadFromConst(Initializer, &Ty, Offset, DL);
   }
 
-  return ConstantFoldLoadFromUniformValue(Initializer, &Ty);
+  return ConstantFoldLoadFromUniformValue(Initializer, &Ty, DL);
 }
 
 bool AA::isValidInScope(const Value &V, const Function *Scope) {

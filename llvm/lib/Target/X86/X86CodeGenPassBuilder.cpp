@@ -22,7 +22,7 @@ namespace {
 class X86CodeGenPassBuilder : public CodeGenPassBuilder<X86CodeGenPassBuilder> {
 public:
   explicit X86CodeGenPassBuilder(LLVMTargetMachine &TM,
-                                 CGPassBuilderOption Opts,
+                                 const CGPassBuilderOption &Opts,
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
   void addPreISel(AddIRPass &addPass) const;
@@ -47,10 +47,9 @@ Error X86CodeGenPassBuilder::addInstSelector(AddMachinePass &) const {
 } // namespace
 
 Error X86TargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, MachineFunctionPassManager &MFPM,
-    MachineFunctionAnalysisManager &, raw_pwrite_stream &Out,
-    raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
-    CGPassBuilderOption Opt, PassInstrumentationCallbacks *PIC) {
+    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+    CodeGenFileType FileType, CGPassBuilderOption Opt,
+    PassInstrumentationCallbacks *PIC) {
   auto CGPB = X86CodeGenPassBuilder(*this, Opt, PIC);
-  return CGPB.buildPipeline(MPM, MFPM, Out, DwoOut, FileType);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }

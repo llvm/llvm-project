@@ -1102,18 +1102,13 @@ bool DeclSpec::setFunctionSpecNoreturn(SourceLocation Loc,
 
 bool DeclSpec::SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
                              unsigned &DiagID) {
-  if (Friend_specified) {
+  if (isFriendSpecified()) {
     PrevSpec = "friend";
-    // Keep the later location, so that we can later diagnose ill-formed
-    // declarations like 'friend class X friend;'. Per [class.friend]p3,
-    // 'friend' must be the first token in a friend declaration that is
-    // not a function declaration.
-    FriendLoc = Loc;
     DiagID = diag::warn_duplicate_declspec;
     return true;
   }
 
-  Friend_specified = true;
+  FriendSpecifiedFirst = isEmpty();
   FriendLoc = Loc;
   return false;
 }

@@ -1495,7 +1495,8 @@ static void checkEnumArithmeticConversions(Sema &S, Expr *LHS, Expr *RHS,
   //
   // Warn on this in all language modes. Produce a deprecation warning in C++20.
   // Eventually we will presumably reject these cases (in C++23 onwards?).
-  QualType L = LHS->getType(), R = RHS->getType();
+  QualType L = LHS->getEnumCoercedType(S.Context),
+           R = RHS->getEnumCoercedType(S.Context);
   bool LEnum = L->isUnscopedEnumerationType(),
        REnum = R->isUnscopedEnumerationType();
   bool IsCompAssign = ACK == Sema::ACK_CompAssign;
@@ -2651,7 +2652,7 @@ recoverFromMSUnqualifiedLookup(Sema &S, ASTContext &Context,
     RD = ThisType->getPointeeType()->getAsCXXRecordDecl();
   else if (auto *MD = dyn_cast<CXXMethodDecl>(S.CurContext))
     RD = MD->getParent();
-  if (!RD || !RD->hasAnyDependentBases())
+  if (!RD || !RD->hasDefinition() || !RD->hasAnyDependentBases())
     return nullptr;
 
   // Diagnose this as unqualified lookup into a dependent base class.  If 'this'
@@ -6195,6 +6196,12 @@ struct ImmediateCallVisitor : public RecursiveASTVisitor<ImmediateCallVisitor> {
 
   bool VisitCallExpr(CallExpr *E) {
     if (const FunctionDecl *FD = E->getDirectCallee())
+      HasImmediateCalls |= FD->isImmediateFunction();
+    return RecursiveASTVisitor<ImmediateCallVisitor>::VisitStmt(E);
+  }
+
+  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    if (const FunctionDecl *FD = E->getConstructor())
       HasImmediateCalls |= FD->isImmediateFunction();
     return RecursiveASTVisitor<ImmediateCallVisitor>::VisitStmt(E);
   }
@@ -18303,7 +18310,6 @@ void Sema::CheckUnusedVolatileAssignment(Expr *E) {
 }
 
 void Sema::MarkExpressionAsImmediateEscalating(Expr *E) {
-  assert(!FunctionScopes.empty() && "Expected a function scope");
   assert(getLangOpts().CPlusPlus20 &&
          ExprEvalContexts.back().InImmediateEscalatingFunctionContext &&
          "Cannot mark an immediate escalating expression outside of an "
@@ -18320,7 +18326,8 @@ void Sema::MarkExpressionAsImmediateEscalating(Expr *E) {
   } else {
     assert(false && "expected an immediately escalating expression");
   }
-  getCurFunction()->FoundImmediateEscalatingExpression = true;
+  if (FunctionScopeInfo *FI = getCurFunction())
+    FI->FoundImmediateEscalatingExpression = true;
 }
 
 ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {

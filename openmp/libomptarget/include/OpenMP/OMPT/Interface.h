@@ -24,7 +24,6 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #define OMPT_IF_BUILT(stmt) stmt
-#define OMPT_GET_RETURN_ADDRESS(level) __builtin_return_address(level)
 
 /// Callbacks for target regions require task_data representing the
 /// encountering task.
@@ -55,12 +54,14 @@ public:
                           void **TgtPtrBegin, size_t Size, void *Code);
 
   /// Top-level function for invoking callback before data submit
-  void beginTargetDataSubmit(int64_t DeviceId, void *HstPtrBegin,
-                             void *TgtPtrBegin, size_t Size, void *Code);
+  void beginTargetDataSubmit(int64_t SrcDeviceId, void *SrcPtrBegin,
+                             int64_t DstDeviceId, void *DstPtrBegin,
+                             size_t Size, void *Code);
 
   /// Top-level function for invoking callback after data submit
-  void endTargetDataSubmit(int64_t DeviceId, void *HstPtrBegin,
-                           void *TgtPtrBegin, size_t Size, void *Code);
+  void endTargetDataSubmit(int64_t SrcDeviceId, void *SrcPtrBegin,
+                           int64_t DstDeviceId, void *DstPtrBegin, size_t Size,
+                           void *Code);
 
   /// Top-level function for invoking callback before device data deallocation
   void beginTargetDataDelete(int64_t DeviceId, void *TgtPtrBegin, void *Code);
@@ -69,12 +70,14 @@ public:
   void endTargetDataDelete(int64_t DeviceId, void *TgtPtrBegin, void *Code);
 
   /// Top-level function for invoking callback before data retrieve
-  void beginTargetDataRetrieve(int64_t DeviceId, void *HstPtrBegin,
-                               void *TgtPtrBegin, size_t Size, void *Code);
+  void beginTargetDataRetrieve(int64_t SrcDeviceId, void *SrcPtrBegin,
+                               int64_t DstDeviceId, void *DstPtrBegin,
+                               size_t Size, void *Code);
 
   /// Top-level function for invoking callback after data retrieve
-  void endTargetDataRetrieve(int64_t DeviceId, void *HstPtrBegin,
-                             void *TgtPtrBegin, size_t Size, void *Code);
+  void endTargetDataRetrieve(int64_t SrcDeviceId, void *SrcPtrBegin,
+                             int64_t DstDeviceId, void *DstPtrBegin,
+                             size_t Size, void *Code);
 
   /// Top-level function for invoking callback before kernel dispatch
   void beginTargetSubmit(unsigned int NumTeams = 1);
@@ -211,6 +214,11 @@ private:
 /// Thread local state for target region and associated metadata
 extern thread_local Interface RegionInterface;
 
+/// Thread local variable holding the return address.
+/// When using __builtin_return_address to set the return address,
+/// allow 0 as the only argument to avoid unpredictable effects.
+extern thread_local void *ReturnAddress;
+
 template <typename FuncTy, typename ArgsTy, size_t... IndexSeq>
 void InvokeInterfaceFunction(FuncTy Func, ArgsTy Args,
                              std::index_sequence<IndexSeq...>) {
@@ -249,10 +257,42 @@ template <typename CallbackPairTy, typename... ArgsTy>
 InterfaceRAII(CallbackPairTy Callbacks, ArgsTy... Args)
     -> InterfaceRAII<CallbackPairTy, ArgsTy...>;
 
+/// Used to set and reset the thread-local return address. The RAII is expected
+/// to be created at a runtime entry point when the return address should be
+/// null. If so, the return address is set and \p IsSetter is set in the ctor.
+/// The dtor resets the return address only if the corresponding object set it.
+/// So if the RAII is called from a nested runtime function, the ctor/dtor will
+/// do nothing since the thread local return address is already set.
+class ReturnAddressSetterRAII {
+public:
+  ReturnAddressSetterRAII(void *RA) : IsSetter(false) {
+    // Handle nested calls. If already set, do not set again since it
+    // must be in a nested call.
+    if (ReturnAddress == nullptr) {
+      // Store the return address to a thread local variable.
+      ReturnAddress = RA;
+      IsSetter = true;
+    }
+  }
+  ~ReturnAddressSetterRAII() {
+    // Reset the return address if this object set it.
+    if (IsSetter)
+      ReturnAddress = nullptr;
+  }
+
+private:
+  // Did this object set the thread-local return address?
+  bool IsSetter;
+};
+
 } // namespace ompt
 } // namespace target
 } // namespace omp
 } // namespace llvm
+
+// The getter returns the address stored in the thread local variable.
+#define OMPT_GET_RETURN_ADDRESS llvm::omp::target::ompt::ReturnAddress
+
 #else
 #define OMPT_IF_BUILT(stmt)
 #endif

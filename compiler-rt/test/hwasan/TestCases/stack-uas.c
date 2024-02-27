@@ -1,6 +1,8 @@
 // Tests use-after-scope detection and reporting.
 // RUN: %clang_hwasan -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clang_hwasan -O2 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O2 -g %s -DBUFFER_SIZE=1000000 -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O2 -g %s -DBUFFER_SIZE=2000000 -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clang_hwasan -g %s -o %t && not %env_hwasan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM
 
 // RUN: %clang_hwasan -mllvm -hwasan-use-after-scope=false -g %s -o %t && %run %t 2>&1
@@ -17,6 +19,10 @@
 #include <assert.h>
 #include <sanitizer/hwasan_interface.h>
 #include <stdio.h>
+
+#ifndef BUFFER_SIZE
+#  define BUFFER_SIZE 0x800
+#endif
 
 void USE(void *x) { // pretend_to_do_something(void *x)
   __asm__ __volatile__(""
@@ -41,8 +47,8 @@ __attribute__((noinline)) void Unrelated3() {
 __attribute__((noinline)) char buggy() {
   char *volatile p;
   {
-    char zzz[0x800] = {};
-    char yyy[0x800] = {};
+    char zzz[BUFFER_SIZE] = {};
+    char yyy[BUFFER_SIZE] = {};
     // With -hwasan-generate-tags-with-calls=false, stack tags can occasionally
     // be zero, leading to a false negative
     // (https://github.com/llvm/llvm-project/issues/69221). Work around it by
@@ -71,7 +77,7 @@ int main() {
   // CHECK: is located in stack of thread
   // CHECK: Potentially referenced stack objects:
   // CHECK: Cause: use-after-scope
-  // CHECK-NEXT: 0x{{.*}} is located 0 bytes inside a 2048-byte local variable {{zzz|yyy}} [0x{{.*}}) in buggy {{.*}}stack-uas.c:
+  // CHECK-NEXT: 0x{{.*}} is located 0 bytes inside a {{.*}}-byte local variable {{zzz|yyy}} [0x{{.*}}) in buggy {{.*}}stack-uas.c:
   // CHECK: Memory tags around the buggy address
 
   // NOSYM: Previously allocated frames:

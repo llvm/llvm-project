@@ -60,7 +60,7 @@ class BreakpointSerialization(TestBase):
             exe_module.IsValid(), "Failed to find the executable module in target"
         )
         sym_ctx_list = exe_module.FindFunctions("main")
-        self.assertTrue(sym_ctx_list.GetSize() == 1, "Unable to find function 'main'")
+        self.assertEqual(sym_ctx_list.GetSize(), 1, "Unable to find function 'main'")
         sym_ctx = sym_ctx_list.GetContextAtIndex(0)
         self.assertTrue(
             sym_ctx.IsValid(), "SBSymbolContext representing function 'main' is invalid"

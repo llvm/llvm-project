@@ -18,12 +18,12 @@
 #ifndef LLVM_CLANG_EXTRACTAPI_API_H
 #define LLVM_CLANG_EXTRACTAPI_API_H
 
+#include "clang/AST/Availability.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/ExtractAPI/AvailabilityInfo.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"

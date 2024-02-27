@@ -786,17 +786,17 @@ allocReductionVars(T loop, llvm::IRBuilderBase &builder,
                    SmallVector<omp::ReductionDeclareOp> &reductionDecls,
                    SmallVector<llvm::Value *> &privateReductionVariables,
                    DenseMap<Value, llvm::Value *> &reductionVariableMap) {
-  unsigned numReductions = loop.getNumReductionVars();
-  privateReductionVariables.reserve(numReductions);
-  if (numReductions != 0) {
-    llvm::IRBuilderBase::InsertPointGuard guard(builder);
-    builder.restoreIP(allocaIP);
-    for (unsigned i = 0; i < numReductions; ++i) {
-      llvm::Value *var = builder.CreateAlloca(
-          moduleTranslation.convertType(reductionDecls[i].getType()));
-      privateReductionVariables.push_back(var);
-      reductionVariableMap.try_emplace(loop.getReductionVars()[i], var);
-    }
+  llvm::IRBuilderBase::InsertPointGuard guard(builder);
+  builder.restoreIP(allocaIP);
+  auto args =
+      loop.getRegion().getArguments().take_back(loop.getNumReductionVars());
+
+  for (std::size_t i = 0; i < loop.getNumReductionVars(); ++i) {
+    llvm::Value *var = builder.CreateAlloca(
+        moduleTranslation.convertType(reductionDecls[i].getType()));
+    moduleTranslation.mapValue(args[i], var);
+    privateReductionVariables.push_back(var);
+    reductionVariableMap.try_emplace(loop.getReductionVars()[i], var);
   }
 }
 
@@ -2768,27 +2768,6 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
   return success();
 }
 
-/// Converts the module-level set of OpenMP requires clauses into LLVM IR using
-/// OpenMPIRBuilder.
-static LogicalResult
-convertRequiresAttr(Operation &op, omp::ClauseRequiresAttr requiresAttr,
-                    LLVM::ModuleTranslation &moduleTranslation) {
-  auto *ompBuilder = moduleTranslation.getOpenMPBuilder();
-
-  // No need to read requiresAttr here, because it has already been done in
-  // translateModuleToLLVMIR(). There, flags are stored in the
-  // OpenMPIRBuilderConfig object, available to the OpenMPIRBuilder.
-  auto *regFn =
-      ompBuilder->createRegisterRequires(ompBuilder->createPlatformSpecificName(
-          {"omp_offloading", "requires_reg"}));
-
-  // Add registration function as global constructor
-  if (regFn)
-    llvm::appendToGlobalCtors(ompBuilder->M, regFn, /* Priority = */ 0);
-
-  return success();
-}
-
 namespace {
 
 /// Implementation of the dialect interface that converts operations belonging
@@ -2891,7 +2870,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
                   bitEnumContainsAll(flags, Requires::unified_shared_memory));
               config.setHasRequiresDynamicAllocators(
                   bitEnumContainsAll(flags, Requires::dynamic_allocators));
-              return convertRequiresAttr(*op, requiresAttr, moduleTranslation);
+              return success();
             }
             return failure();
           })
