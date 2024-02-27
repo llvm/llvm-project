@@ -24,8 +24,13 @@ static bool hasPrivateConstructor(const CXXRecordDecl *RD) {
 static bool isDerivedParameterBefriended(const CXXRecordDecl *CRTP,
                                          const NamedDecl *Param) {
   return llvm::any_of(CRTP->friends(), [&](const FriendDecl *Friend) {
-    const auto *TTPT =
-        dyn_cast<TemplateTypeParmType>(Friend->getFriendType()->getType());
+    const TypeSourceInfo *const FriendType = Friend->getFriendType();
+    if (!FriendType) {
+      return false;
+    }
+
+    const auto *const TTPT =
+        dyn_cast<TemplateTypeParmType>(FriendType->getType());
 
     return TTPT && TTPT->getDecl() == Param;
   });
@@ -34,7 +39,12 @@ static bool isDerivedParameterBefriended(const CXXRecordDecl *CRTP,
 static bool isDerivedClassBefriended(const CXXRecordDecl *CRTP,
                                      const CXXRecordDecl *Derived) {
   return llvm::any_of(CRTP->friends(), [&](const FriendDecl *Friend) {
-    return Friend->getFriendType()->getType()->getAsCXXRecordDecl() == Derived;
+    const TypeSourceInfo *const FriendType = Friend->getFriendType();
+    if (!FriendType) {
+      return false;
+    }
+
+    return FriendType->getType()->getAsCXXRecordDecl() == Derived;
   });
 }
 
@@ -94,6 +104,10 @@ void CrtpConstructorAccessibilityCheck::check(
   const auto *DerivedRecord = Result.Nodes.getNodeAs<CXXRecordDecl>("derived");
   const CXXRecordDecl *CRTPDeclaration =
       CRTPInstantiation->getSpecializedTemplate()->getTemplatedDecl();
+
+  if (!CRTPDeclaration->hasDefinition()) {
+    return;
+  }
 
   const auto *DerivedTemplateParameter =
       getDerivedParameter(CRTPInstantiation, DerivedRecord);
