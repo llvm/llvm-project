@@ -769,7 +769,6 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     HDRS
       ILogbTest.h
     DEPENDS
-      libc.include.math
       libc.src.math.ilogb
       libc.src.__support.CPP.limits
       libc.src.__support.FPUtil.fp_bits
@@ -785,7 +784,6 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     HDRS
       ILogbTest.h
     DEPENDS
-      libc.include.math
       libc.src.math.ilogbf
       libc.src.__support.CPP.limits
       libc.src.__support.FPUtil.fp_bits
@@ -802,8 +800,82 @@ add_fp_unittest(
   HDRS
     ILogbTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.ilogbl
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  ilogbf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ilogbf128_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.ilogbf128
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  llogb_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llogb_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.llogb
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  llogbf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llogbf_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.llogbf
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  llogbl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llogbl_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.llogbl
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  llogbf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llogbf128_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.llogbf128
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
@@ -876,7 +948,6 @@ add_fp_unittest(
   SRCS
     logb_test.cpp
   DEPENDS
-    libc.include.math
     libc.src.math.logb
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -888,7 +959,6 @@ add_fp_unittest(
   SRCS
     logbf_test.cpp
   DEPENDS
-    libc.include.math
     libc.src.math.logbf
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -902,8 +972,18 @@ add_fp_unittest(
   HDRS
     LogbTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.logbl
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  logbf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    logbf128_test.cpp
+  DEPENDS
+    libc.src.math.logbf128
     libc.src.__support.FPUtil.manipulation_functions
 )
 

@@ -1,4 +1,4 @@
-//===-- Unittests for ilogb -----------------------------------------------===//
+//===-- Unittests for logbf128 --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ILogbTest.h"
+#include "LogbTest.h"
 
-#include "src/math/ilogb.h"
+#include "src/math/logbf128.h"
 
-LIST_INTLOGB_TESTS(int, double, LIBC_NAMESPACE::ilogb);
+LIST_LOGB_TESTS(float128, LIBC_NAMESPACE::logbf128)
