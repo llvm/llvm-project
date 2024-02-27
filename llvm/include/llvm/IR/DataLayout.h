@@ -21,6 +21,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -164,6 +165,8 @@ private:
   /// well-defined bitwise representation.
   SmallVector<unsigned, 8> NonIntegralAddressSpaces;
 
+  DenseMap<unsigned, int64_t> AddrSpaceToNonZeroValueMap;
+
   /// Attempts to set the alignment of the given type. Returns an error
   /// description on failure.
   Error setAlignment(AlignTypeEnum AlignType, Align ABIAlign, Align PrefAlign,
@@ -297,6 +300,17 @@ public:
 
   bool hasMicrosoftFastStdCallMangling() const {
     return ManglingMode == MM_WinCOFFX86;
+  }
+
+  int64_t getNullPointerValue(unsigned AddrSpace) {
+    auto It = AddrSpaceToNonZeroValueMap.find(AddrSpace);
+    if (It == AddrSpaceToNonZeroValueMap.end())
+      return 0;
+    return It->second;
+  }
+
+  void setNullPointerValue(unsigned AddrSpace, int64_t Value) {
+    AddrSpaceToNonZeroValueMap[AddrSpace] = Value;
   }
 
   /// Returns true if symbols with leading question marks should not receive IR

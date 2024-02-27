@@ -216,6 +216,8 @@ void DataLayout::reset(StringRef Desc) {
   if (Error Err = setPointerAlignmentInBits(0, Align(8), Align(8), 64, 64))
     return report_fatal_error(std::move(Err));
 
+  setNullPointerValue(INT_MAX, 0);
+
   if (Error Err = parseSpecifier(Desc))
     return report_fatal_error(std::move(Err));
 }
@@ -249,6 +251,22 @@ template <typename IntTy> static Error getInt(StringRef R, IntTy &Result) {
   if (error)
     return reportError("not a number, or does not fit in an unsigned int");
   return Error::success();
+}
+
+template <typename IntTy>
+static Error getIntForAddrSpace(StringRef R, IntTy &Result) {
+  if (R.starts_with("neg")) {
+    StringRef AfterNeg = R.slice(3, R.size());
+    bool error = AfterNeg.getAsInteger(10, Result);
+    (void)error;
+    if (error || Result <= 0)
+      return reportError("not a number, or does not fit in an unsigned int");
+    Result *= -1;
+    return Error::success();
+  } else if (R.contains("neg"))
+    return reportError("not a valid value for address space");
+  else
+    return getInt<IntTy>(R, Result);
 }
 
 /// Get an unsigned integer representing the number of bits and convert it into
@@ -500,6 +518,32 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
     case 'A': { // Default stack/alloca address space.
       if (Error Err = getAddrSpace(Tok, AllocaAddrSpace))
         return Err;
+      break;
+    }
+    case 'z': {
+      unsigned AddrSpace = 0;
+      int64_t Value;
+      // for unlisted address spaces e.g., z:0
+      if (Tok.empty()) {
+        if (Error Err = getIntForAddrSpace(Rest, Value))
+          return Err;
+        setNullPointerValue(INT_MAX, Value);
+        break;
+      } else {
+        if (Error Err = getInt(Tok, AddrSpace))
+          return Err;
+        if (!isUInt<24>(AddrSpace))
+          return reportError("Invalid address space, must be a 24-bit integer");
+      }
+      if (Rest.empty())
+        return reportError(
+            "Missing address space value specification for pointer in "
+            "datalayout string");
+      if (Error Err = ::split(Rest, ':', Split))
+        return Err;
+      if (Error Err = getIntForAddrSpace(Tok, Value))
+        return Err;
+      setNullPointerValue(AddrSpace, Value);
       break;
     }
     case 'G': { // Default address space for global variables.
