@@ -168,24 +168,43 @@ if config.enable_per_target_runtime_dir:
             r"/i386(?=-[^/]+$)", "/x86_64", config.compiler_rt_libdir
         )
 
+
+# Check if the test compiler resource dir matches the local build directory
+# (which happens with -DLLVM_ENABLE_PROJECTS=clang;compiler-rt) or if we are
+# using an installed clang to test compiler-rt standalone. In the latter case
+# we may need to override the resource dir to match the path of the just-built
+# compiler-rt libraries.
+test_cc_resource_dir, _ = get_path_from_clang(
+    shlex.split(config.target_cflags) + ["-print-resource-dir"], allow_failure=True
+)
+# Normalize the path for comparison
+if test_cc_resource_dir is not None:
+    test_cc_resource_dir = os.path.realpath(test_cc_resource_dir)
+if lit_config.debug:
+    lit_config.note(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
+local_build_resource_dir = os.path.realpath(config.compiler_rt_output_dir)
+if test_cc_resource_dir != local_build_resource_dir:
+    if config.test_standalone_build_libs and config.compiler_id == "Clang":
+        if lit_config.debug:
+            lit_config.note(f'Overriding test compiler resource dir to use '
+                            f'libraries in "{config.compiler_rt_libdir}"')
+        # Ensure that we use the just-built static libraries when linking by
+        # overriding the Clang resource directory. Additionally, we want to use
+        # the builtin headers shipped with clang (e.g. stdint.h), so we
+        # explicitly add this as an include path (since the headers are not
+        # going to be in the current compiler-rt build directory).
+        # We also tell the linker to add an RPATH entry for the local library
+        # directory so that the just-built shared libraries are used.
+        config.target_cflags += f" -nobuiltininc"
+        config.target_cflags += f" -I{config.compiler_rt_src_root}/include"
+        config.target_cflags += f" -idirafter {test_cc_resource_dir}/include"
+        config.target_cflags += f" -resource-dir={config.compiler_rt_output_dir}"
+        config.target_cflags += f" -Wl,-rpath,{config.compiler_rt_libdir}"
+
 # Ask the compiler for the path to libraries it is going to use. If this
 # doesn't match config.compiler_rt_libdir then it means we might be testing the
 # compiler's own runtime libraries rather than the ones we just built.
-# Warn about about this and handle appropriately.
-if config.test_standalone_build_libs:
-    if config.compiler_id == "Clang":
-        # Ensure that we use the just-built libraries when linking by overriding
-        # the Clang resource directory. However, this also means that we can no
-        # longer find the builtin headers from that path, so we explicitly add
-        # the builtin headers as an include path.
-        resource_dir, _ = get_path_from_clang(
-            shlex.split(config.target_cflags) + ["-print-resource-dir"], allow_failure=False
-        )
-        config.target_cflags += f" -nobuiltininc"
-        config.target_cflags += f" -I{config.compiler_rt_src_root}/include"
-        config.target_cflags += f" -idirafter {resource_dir}/include"
-        config.target_cflags += f" -resource-dir={config.compiler_rt_obj_root}"
-        config.target_cflags += f" -Wl,--rpath={config.compiler_rt_libdir}"
+# Warn about this and handle appropriately.
 compiler_libdir = find_compiler_libdir()
 if compiler_libdir:
     compiler_rt_libdir_real = os.path.realpath(config.compiler_rt_libdir)
