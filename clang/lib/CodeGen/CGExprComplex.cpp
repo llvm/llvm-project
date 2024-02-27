@@ -286,30 +286,29 @@ public:
   QualType HigherPrecisionTypeForComplexArithmetic(QualType ElementType,
                                                    bool IsDivOpCode) {
     const TargetInfo &TI = CGF.getContext().getTargetInfo();
+    const LangOptions Opts = CGF.getLangOpts();
     if (const auto *BT = dyn_cast<BuiltinType>(ElementType)) {
       switch (BT->getKind()) {
-      case BuiltinType::Kind::Float16:
+      case BuiltinType::Kind::Float16: {
+        if (TI.hasFloat16Type() && !TI.hasLegalHalfType())
+          return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
+        break;
+      }
       case BuiltinType::Kind::BFloat16: {
-        return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
+        if (TI.hasBFloat16Type() && !TI.hasFullBFloat16Type())
+          return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
+        break;
       }
       case BuiltinType::Kind::Float:
         return CGF.getContext().getComplexType(CGF.getContext().DoubleTy);
-      case BuiltinType::Kind::Double:
-        if (TI.hasLongDoubleType()) {
+        break;
+      case BuiltinType::Kind::Double: {
+        if (TI.hasLongDoubleType())
           return CGF.getContext().getComplexType(CGF.getContext().LongDoubleTy);
-        } else {
-          return QualType();
-        }
-      case BuiltinType::Kind::LongDouble:
-        if (TI.getTriple().isOSLinux()) {
-          if (TI.hasFloat128Type() && !TI.hasLongDoubleType())
-            return CGF.getContext().getComplexType(CGF.getContext().Float128Ty);
-          else
-            return CGF.getContext().getComplexType(
-                CGF.getContext().LongDoubleTy);
-        }
-        if (TI.getTriple().isOSWindows())
-          return CGF.getContext().getComplexType(CGF.getContext().LongDoubleTy);
+       else
+          return CGF.getContext().getComplexType(CGF.getContext().DoubleTy);
+        break;
+      }
       default:
         return QualType();
       }
@@ -1024,12 +1023,11 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     llvm::Value *OrigLHSi = LHSi;
     if (!LHSi)
       LHSi = llvm::Constant::getNullValue(RHSi->getType());
-    const TargetInfo &TI = CGF.getContext().getTargetInfo();
     QualType ComplexElementTy = Op.Ty->castAs<ComplexType>()->getElementType();
     const BuiltinType *BT = ComplexElementTy->getAs<BuiltinType>();
     if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
-        (TI.getTriple().isOSLinux() &&
-         BT->getKind() == BuiltinType::Kind::LongDouble))
+        (Op.FPFeatures.getComplexRange() ==
+            LangOptions::CX_Promoted && BT->getKind() == BuiltinType::Kind::LongDouble))
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
     else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
              Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)
