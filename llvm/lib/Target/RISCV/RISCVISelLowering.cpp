@@ -15307,18 +15307,19 @@ performCONCAT_VECTORSSplitCombine(SDNode *N, SelectionDAG &DAG,
   MVT VT = N->getSimpleValueType(0);
 
   MVT HalfVT = VT.getHalfNumVectorElementsVT();
-  size_t HalfNumOps = (N->getNumOperands() + 1) / 2;
-  SDValue BotSubConcat = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
-                                     N->ops().take_front(HalfNumOps));
-  SDValue TopSubConcat = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
-                                     N->ops().drop_front(HalfNumOps));
+  assert(isPowerOf2_32(N->getNumOperands()));
+  size_t HalfNumOps = N->getNumOperands() / 2;
+  SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
+                           N->ops().take_front(HalfNumOps));
+  SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
+                           N->ops().drop_front(HalfNumOps));
 
   // Lower to an insert_subvector directly so the concat_vectors don't get
   // recombined.
-  SDValue Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
-                            BotSubConcat, DAG.getVectorIdxConstant(0, DL));
+  SDValue Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), Lo,
+                            DAG.getVectorIdxConstant(0, DL));
   Vec = DAG.getNode(
-      ISD::INSERT_SUBVECTOR, DL, VT, Vec, TopSubConcat,
+      ISD::INSERT_SUBVECTOR, DL, VT, Vec, Hi,
       DAG.getVectorIdxConstant(HalfVT.getVectorMinNumElements(), DL));
   return Vec;
 }
