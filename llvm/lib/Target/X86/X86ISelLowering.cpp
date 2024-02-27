@@ -1842,6 +1842,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UMULO, MVT::v64i8, Custom);
 
     setOperationAction(ISD::BITREVERSE, MVT::v64i8,  Custom);
+    if (Subtarget.hasGFNI())
+      for (auto VT : {MVT::i32, MVT::v4i32, MVT::v8i32, MVT::v16i32, MVT::i64,
+                      MVT::v2i64, MVT::v4i64, MVT::v8i64})
+        setOperationAction(ISD::BITREVERSE, VT, Custom);
 
     for (auto VT : { MVT::v64i8, MVT::v32i16, MVT::v16i32, MVT::v8i64 }) {
       setOperationAction(ISD::SRL,              VT, Custom);
@@ -31168,17 +31172,52 @@ static SDValue LowerBITREVERSE_XOP(SDValue Op, SelectionDAG &DAG) {
   return DAG.getBitcast(VT, Res);
 }
 
+static void createBSWAPShuffleMask(EVT VT, SmallVector<int, 16>& ShuffleMask) {
+  int ScalarSizeInBytes = VT.getScalarSizeInBits() / 8;
+  for (int I = 0, E = VT.getVectorNumElements(); I != E; ++I)
+    for (int J = ScalarSizeInBytes - 1; J >= 0; --J)
+      ShuffleMask.push_back((I * ScalarSizeInBytes) + J);
+}
+
 static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
                                SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
+  SDValue In = Op.getOperand(0);
+  SDLoc DL(Op);
+
+  auto HasGFNI = Subtarget.hasGFNI();
+  auto ScalarType = VT.getScalarType();
+
+  if (HasGFNI && ((ScalarType == MVT::i32) || (ScalarType == MVT::i64))) {
+    if (VT.isVector()) {
+      SmallVector<int, 16> BSWAPMask = createBSWAPShuffleMask(VT);
+      MVT ByteVT =
+          EVT::getVectorVT(*DAG.getContext(), MVT::i8, BSWAPMask.size());
+      SDValue VecShuffle = DAG.getVectorShuffle(
+          ByteVT, DL, DAG.getNode(ISD::BITCAST, DL, ByteVT, In),
+          DAG.getUNDEF(ByteVT), BSWAPMask);
+      SDValue BitReverse = DAG.getNode(ISD::BITREVERSE, DL, ByteVT, VecShuffle);
+      return DAG.getBitcast(VT, BitReverse);
+    } else {
+      auto CastTo = ScalarType == MVT::i32 ? MVT::v4i32 : MVT::v2i64;
+      SDValue ScalarToVector =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, CastTo, In);
+      SDValue BitReverse =
+          DAG.getNode(ISD::BITREVERSE, DL, MVT::v16i8,
+                      DAG.getBitcast(MVT::v16i8, ScalarToVector));
+      SDValue ExtractElementZero = DAG.getNode(
+          ISD::EXTRACT_VECTOR_ELT, DL, ScalarType,
+          DAG.getBitcast(CastTo, BitReverse), DAG.getIntPtrConstant(0, DL));
+      return DAG.getNode(ISD::BSWAP, DL, ScalarType, ExtractElementZero);
+    }
+  }
+
+  // Split v64i8 without BWI so that we can still use the PSHUFB lowering.
 
   if (Subtarget.hasXOP() && !VT.is512BitVector())
     return LowerBITREVERSE_XOP(Op, DAG);
 
   assert(Subtarget.hasSSSE3() && "SSSE3 required for BITREVERSE");
-
-  SDValue In = Op.getOperand(0);
-  SDLoc DL(Op);
 
   assert(VT.getScalarType() == MVT::i8 &&
          "Only byte vector BITREVERSE supported");
@@ -31194,7 +31233,7 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   unsigned NumElts = VT.getVectorNumElements();
 
   // If we have GFNI, we can use GF2P8AFFINEQB to reverse the bits.
-  if (Subtarget.hasGFNI()) {
+  if (HasGFNI) {
     MVT MatrixVT = MVT::getVectorVT(MVT::i64, NumElts / 8);
     SDValue Matrix = DAG.getConstant(0x8040201008040201ULL, DL, MatrixVT);
     Matrix = DAG.getBitcast(VT, Matrix);

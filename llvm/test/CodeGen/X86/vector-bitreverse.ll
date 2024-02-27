@@ -274,27 +274,57 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; GFNISSE-NEXT:    leal (%rax,%rcx,2), %eax
 ; GFNISSE-NEXT:    retq
 ;
-; GFNIAVX-LABEL: test_bitreverse_i32:
-; GFNIAVX:       # %bb.0:
-; GFNIAVX-NEXT:    # kill: def $edi killed $edi def $rdi
-; GFNIAVX-NEXT:    bswapl %edi
-; GFNIAVX-NEXT:    movl %edi, %eax
-; GFNIAVX-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; GFNIAVX-NEXT:    shll $4, %eax
-; GFNIAVX-NEXT:    shrl $4, %edi
-; GFNIAVX-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
-; GFNIAVX-NEXT:    orl %eax, %edi
-; GFNIAVX-NEXT:    movl %edi, %eax
-; GFNIAVX-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; GFNIAVX-NEXT:    shrl $2, %edi
-; GFNIAVX-NEXT:    andl $858993459, %edi # imm = 0x33333333
-; GFNIAVX-NEXT:    leal (%rdi,%rax,4), %eax
-; GFNIAVX-NEXT:    movl %eax, %ecx
-; GFNIAVX-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; GFNIAVX-NEXT:    shrl %eax
-; GFNIAVX-NEXT:    andl $1431655765, %eax # imm = 0x55555555
-; GFNIAVX-NEXT:    leal (%rax,%rcx,2), %eax
-; GFNIAVX-NEXT:    retq
+; GFNIAVX1-LABEL: test_bitreverse_i32:
+; GFNIAVX1:       # %bb.0:
+; GFNIAVX1-NEXT:    # kill: def $edi killed $edi def $rdi
+; GFNIAVX1-NEXT:    bswapl %edi
+; GFNIAVX1-NEXT:    movl %edi, %eax
+; GFNIAVX1-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; GFNIAVX1-NEXT:    shll $4, %eax
+; GFNIAVX1-NEXT:    shrl $4, %edi
+; GFNIAVX1-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
+; GFNIAVX1-NEXT:    orl %eax, %edi
+; GFNIAVX1-NEXT:    movl %edi, %eax
+; GFNIAVX1-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; GFNIAVX1-NEXT:    shrl $2, %edi
+; GFNIAVX1-NEXT:    andl $858993459, %edi # imm = 0x33333333
+; GFNIAVX1-NEXT:    leal (%rdi,%rax,4), %eax
+; GFNIAVX1-NEXT:    movl %eax, %ecx
+; GFNIAVX1-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
+; GFNIAVX1-NEXT:    shrl %eax
+; GFNIAVX1-NEXT:    andl $1431655765, %eax # imm = 0x55555555
+; GFNIAVX1-NEXT:    leal (%rax,%rcx,2), %eax
+; GFNIAVX1-NEXT:    retq
+;
+; GFNIAVX2-LABEL: test_bitreverse_i32:
+; GFNIAVX2:       # %bb.0:
+; GFNIAVX2-NEXT:    # kill: def $edi killed $edi def $rdi
+; GFNIAVX2-NEXT:    bswapl %edi
+; GFNIAVX2-NEXT:    movl %edi, %eax
+; GFNIAVX2-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; GFNIAVX2-NEXT:    shll $4, %eax
+; GFNIAVX2-NEXT:    shrl $4, %edi
+; GFNIAVX2-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
+; GFNIAVX2-NEXT:    orl %eax, %edi
+; GFNIAVX2-NEXT:    movl %edi, %eax
+; GFNIAVX2-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; GFNIAVX2-NEXT:    shrl $2, %edi
+; GFNIAVX2-NEXT:    andl $858993459, %edi # imm = 0x33333333
+; GFNIAVX2-NEXT:    leal (%rdi,%rax,4), %eax
+; GFNIAVX2-NEXT:    movl %eax, %ecx
+; GFNIAVX2-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
+; GFNIAVX2-NEXT:    shrl %eax
+; GFNIAVX2-NEXT:    andl $1431655765, %eax # imm = 0x55555555
+; GFNIAVX2-NEXT:    leal (%rax,%rcx,2), %eax
+; GFNIAVX2-NEXT:    retq
+;
+; GFNIAVX512-LABEL: test_bitreverse_i32:
+; GFNIAVX512:       # %bb.0:
+; GFNIAVX512-NEXT:    vmovd %edi, %xmm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX512-NEXT:    vmovd %xmm0, %eax
+; GFNIAVX512-NEXT:    bswapl %eax
+; GFNIAVX512-NEXT:    retq
   %b = call i32 @llvm.bitreverse.i32(i32 %a)
   ret i32 %b
 }
@@ -379,29 +409,61 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; GFNISSE-NEXT:    leaq (%rax,%rdx,2), %rax
 ; GFNISSE-NEXT:    retq
 ;
-; GFNIAVX-LABEL: test_bitreverse_i64:
-; GFNIAVX:       # %bb.0:
-; GFNIAVX-NEXT:    bswapq %rdi
-; GFNIAVX-NEXT:    movq %rdi, %rax
-; GFNIAVX-NEXT:    shrq $4, %rax
-; GFNIAVX-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
-; GFNIAVX-NEXT:    andq %rcx, %rax
-; GFNIAVX-NEXT:    andq %rcx, %rdi
-; GFNIAVX-NEXT:    shlq $4, %rdi
-; GFNIAVX-NEXT:    orq %rax, %rdi
-; GFNIAVX-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
-; GFNIAVX-NEXT:    movq %rdi, %rcx
-; GFNIAVX-NEXT:    andq %rax, %rcx
-; GFNIAVX-NEXT:    shrq $2, %rdi
-; GFNIAVX-NEXT:    andq %rax, %rdi
-; GFNIAVX-NEXT:    leaq (%rdi,%rcx,4), %rax
-; GFNIAVX-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
-; GFNIAVX-NEXT:    movq %rax, %rdx
-; GFNIAVX-NEXT:    andq %rcx, %rdx
-; GFNIAVX-NEXT:    shrq %rax
-; GFNIAVX-NEXT:    andq %rcx, %rax
-; GFNIAVX-NEXT:    leaq (%rax,%rdx,2), %rax
-; GFNIAVX-NEXT:    retq
+; GFNIAVX1-LABEL: test_bitreverse_i64:
+; GFNIAVX1:       # %bb.0:
+; GFNIAVX1-NEXT:    bswapq %rdi
+; GFNIAVX1-NEXT:    movq %rdi, %rax
+; GFNIAVX1-NEXT:    shrq $4, %rax
+; GFNIAVX1-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
+; GFNIAVX1-NEXT:    andq %rcx, %rax
+; GFNIAVX1-NEXT:    andq %rcx, %rdi
+; GFNIAVX1-NEXT:    shlq $4, %rdi
+; GFNIAVX1-NEXT:    orq %rax, %rdi
+; GFNIAVX1-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; GFNIAVX1-NEXT:    movq %rdi, %rcx
+; GFNIAVX1-NEXT:    andq %rax, %rcx
+; GFNIAVX1-NEXT:    shrq $2, %rdi
+; GFNIAVX1-NEXT:    andq %rax, %rdi
+; GFNIAVX1-NEXT:    leaq (%rdi,%rcx,4), %rax
+; GFNIAVX1-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; GFNIAVX1-NEXT:    movq %rax, %rdx
+; GFNIAVX1-NEXT:    andq %rcx, %rdx
+; GFNIAVX1-NEXT:    shrq %rax
+; GFNIAVX1-NEXT:    andq %rcx, %rax
+; GFNIAVX1-NEXT:    leaq (%rax,%rdx,2), %rax
+; GFNIAVX1-NEXT:    retq
+;
+; GFNIAVX2-LABEL: test_bitreverse_i64:
+; GFNIAVX2:       # %bb.0:
+; GFNIAVX2-NEXT:    bswapq %rdi
+; GFNIAVX2-NEXT:    movq %rdi, %rax
+; GFNIAVX2-NEXT:    shrq $4, %rax
+; GFNIAVX2-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
+; GFNIAVX2-NEXT:    andq %rcx, %rax
+; GFNIAVX2-NEXT:    andq %rcx, %rdi
+; GFNIAVX2-NEXT:    shlq $4, %rdi
+; GFNIAVX2-NEXT:    orq %rax, %rdi
+; GFNIAVX2-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; GFNIAVX2-NEXT:    movq %rdi, %rcx
+; GFNIAVX2-NEXT:    andq %rax, %rcx
+; GFNIAVX2-NEXT:    shrq $2, %rdi
+; GFNIAVX2-NEXT:    andq %rax, %rdi
+; GFNIAVX2-NEXT:    leaq (%rdi,%rcx,4), %rax
+; GFNIAVX2-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; GFNIAVX2-NEXT:    movq %rax, %rdx
+; GFNIAVX2-NEXT:    andq %rcx, %rdx
+; GFNIAVX2-NEXT:    shrq %rax
+; GFNIAVX2-NEXT:    andq %rcx, %rax
+; GFNIAVX2-NEXT:    leaq (%rax,%rdx,2), %rax
+; GFNIAVX2-NEXT:    retq
+;
+; GFNIAVX512-LABEL: test_bitreverse_i64:
+; GFNIAVX512:       # %bb.0:
+; GFNIAVX512-NEXT:    vmovq %rdi, %xmm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX512-NEXT:    vmovq %xmm0, %rax
+; GFNIAVX512-NEXT:    bswapq %rax
+; GFNIAVX512-NEXT:    retq
   %b = call i64 @llvm.bitreverse.i64(i64 %a)
   ret i64 %b
 }
