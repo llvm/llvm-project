@@ -146,7 +146,7 @@ define void @fp_iv_loop2(ptr noalias nocapture %A, i32 %N) {
 ; AUTO_VEC-NEXT:    store float [[CONV1_6]], ptr [[ARRAYIDX_7]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_7]] = fadd float [[CONV1_6]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_7]] = add nuw nsw i64 [[INDVARS_IV]], 8
-; AUTO_VEC-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
+; AUTO_VEC-NEXT:    [[NITER_NEXT_7]] = add nuw i64 [[NITER]], 8
 ; AUTO_VEC-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; AUTO_VEC-NEXT:    br i1 [[NITER_NCMP_7]], label [[FOR_END_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY]]
 ; AUTO_VEC:       for.end.loopexit.unr-lcssa:
@@ -305,7 +305,7 @@ define double @external_use_without_fast_math(ptr %a, i64 %n) {
 ; AUTO_VEC-NEXT:    store double [[J_NEXT_6]], ptr [[T0_7]], align 8
 ; AUTO_VEC-NEXT:    [[I_NEXT_7]] = add nuw nsw i64 [[I]], 8
 ; AUTO_VEC-NEXT:    [[J_NEXT_7]] = fadd double [[J_NEXT_6]], 3.000000e+00
-; AUTO_VEC-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
+; AUTO_VEC-NEXT:    [[NITER_NEXT_7]] = add nuw i64 [[NITER]], 8
 ; AUTO_VEC-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; AUTO_VEC-NEXT:    br i1 [[NITER_NCMP_7]], label [[FOR_END_UNR_LCSSA]], label [[FOR_BODY]]
 ; AUTO_VEC:       for.end.unr-lcssa:

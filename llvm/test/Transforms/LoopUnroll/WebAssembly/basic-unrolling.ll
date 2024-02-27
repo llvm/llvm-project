@@ -162,7 +162,7 @@ define hidden void @runtime(ptr nocapture %a, ptr nocapture readonly %b, ptr noc
 ; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INC]]
 ; CHECK-NEXT:    store i32 [[MUL_1]], ptr [[ARRAYIDX2_1]], align 4
 ; CHECK-NEXT:    [[INC_1]] = add nuw i32 [[I_09]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i32 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i32 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i32 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY]]
 ;
@@ -203,7 +203,7 @@ define hidden void @dont_unroll_call(ptr nocapture %a, ptr nocapture readonly %b
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I1]], [[I]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[I_013]]
 ; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str, i32 [[I_013]], i32 [[MUL]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str, i32 [[I_013]], i32 [[MUL]])
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_013]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]

@@ -60,7 +60,7 @@ define void @pr56282() {
 ; CHECK-NEXT:    [[C_1_7:%.*]] = icmp ugt i32 [[V_7]], 0
 ; CHECK-NEXT:    br i1 [[C_1_7]], label [[INNER_1_LATCH_7]], label [[EXIT_DEOPT_LOOPEXIT]]
 ; CHECK:       inner.1.latch.7:
-; CHECK-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
+; CHECK-NEXT:    [[NITER_NEXT_7]] = add nuw i64 [[NITER]], 8
 ; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp ne i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[INNER_1_HEADER]], label [[OUTER_MIDDLE_UNR_LCSSA_LOOPEXIT:%.*]]
 ; CHECK:       outer.middle.unr-lcssa.loopexit:
