@@ -16,7 +16,7 @@
 // RUN: -c %s 2>&1 | FileCheck --check-prefix=FULL %s
 
 // RUN: %clang -### -target x86_64 -fno-cx-limited-range -fcx-limited-range \
-// RUN: -c %s 2>&1 | FileCheck --check-prefix=WARN3 %s
+// RUN: -c %s 2>&1 | FileCheck --check-prefix=BASIC %s
 
 // RUN: %clang -### -target x86_64 -fno-cx-limited-range -fno-cx-fortran-rules \
 // RUN: -c %s 2>&1 | FileCheck --check-prefix=FULL %s
@@ -151,7 +151,6 @@
 
 // WARN1: warning: overriding '-fcx-limited-range' option with '-fcx-fortran-rules' [-Woverriding-option]
 // WARN2: warning: overriding '-fno-cx-limited-range' option with '-fcx-fortran-rules' [-Woverriding-option]
-// WARN3: overriding '-fno-cx-limited-range' option with '-fcx-limited-range' [-Woverriding-option]
 // WARN4: warning: overriding '-fcx-limited-range' option with '-fno-cx-fortran-rules' [-Woverriding-option]
 // WARN5: warning: overriding '-fcomplex-arithmetic=basic' option with '-fcomplex-arithmetic=improved' [-Woverriding-option]
 // WARN6: warning: overriding '-fcx-limited-range' option with '-fcomplex-arithmetic=improved' [-Woverriding-option]

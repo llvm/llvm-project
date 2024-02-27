@@ -402,13 +402,13 @@ public:
     /// Implementation of complex division and multiplication using a call to
     ///  runtime library functions(generally the case, but the BE might
     /// sometimes replace the library call if it knows enough about the
-    /// potential range of the inputs). Overflow and non -finite values are
+    /// potential range of the inputs). Overflow and non-finite values are
     /// handled by the library implementation.
     CX_Full,
 
     /// Implementation of complex division offering an improved handling
     /// for overflow in intermediate calculations with no special handling for
-    /// NaN and infinite and values.
+    /// NaN and infinite values.
     CX_Improved,
 
     /// Implementation of complex division using algebraic formulas at
@@ -417,12 +417,12 @@ public:
     /// higher precision data type, an implementation for the complex operation
     /// will be used to provide improved guards against intermediate overflow,
     /// but overflow and underflow may still occur in some cases. NaN and
-    /// infinite and  values are not handled. This is the default value.
+    /// infinite values are not handled. This is the default value.
     CX_Promoted,
 
     /// Implementation of complex division and multiplication using
     /// algebraic formulas at source precision. No special handling to avoid
-    /// overflow.NaN and infinite and values are not handled.
+    /// overflow. NaN and infinite values are not handled.
     CX_Basic,
 
     /// No range rule is enabled.

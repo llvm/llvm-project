@@ -2817,45 +2817,48 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     default:
       break;
     case options::OPT_fcx_limited_range:
-      if (!GccRangeComplexOption.empty()) {
-        EmitComplexRangeDiag(D, GccRangeComplexOption, "-fcx-limited-range");
-      } else {
+      if (GccRangeComplexOption.empty()) {
         if (Range != LangOptions::ComplexRangeKind::CX_Basic)
           EmitComplexRangeDiag(D, RenderComplexRangeOption(Range),
                                "-fcx-limited-range");
+      } else {
+        if (GccRangeComplexOption != "-fno-cx-limited-range")
+          EmitComplexRangeDiag(D, GccRangeComplexOption, "-fcx-limited-range");
       }
       GccRangeComplexOption = "-fcx-limited-range";
       Range = LangOptions::ComplexRangeKind::CX_Basic;
       break;
     case options::OPT_fno_cx_limited_range:
-      if (!GccRangeComplexOption.empty() &&
-          (GccRangeComplexOption.compare("-fcx-limited-range") != 0 &&
-           GccRangeComplexOption.compare("-fno-cx-fortran-rules") != 0))
-        EmitComplexRangeDiag(D, GccRangeComplexOption, "-fno-cx-limited-range");
-      if (GccRangeComplexOption.empty())
+      if (GccRangeComplexOption.empty()) {
         EmitComplexRangeDiag(D, RenderComplexRangeOption(Range),
                              "-fno-cx-limited-range");
+      } else {
+        if (GccRangeComplexOption.compare("-fcx-limited-range") != 0 &&
+            GccRangeComplexOption.compare("-fno-cx-fortran-rules") != 0)
+          EmitComplexRangeDiag(D, GccRangeComplexOption,
+                               "-fno-cx-limited-range");
+      }
       GccRangeComplexOption = "-fno-cx-limited-range";
       Range = LangOptions::ComplexRangeKind::CX_Full;
       break;
     case options::OPT_fcx_fortran_rules:
-      if (!GccRangeComplexOption.empty())
-        EmitComplexRangeDiag(D, GccRangeComplexOption, "-fcx-fortran-rules");
-      else
+      if (GccRangeComplexOption.empty())
         EmitComplexRangeDiag(D, RenderComplexRangeOption(Range),
                              "-fcx-fortran-rules");
+      else
+        EmitComplexRangeDiag(D, GccRangeComplexOption, "-fcx-fortran-rules");
       GccRangeComplexOption = "-fcx-fortran-rules";
       Range = LangOptions::ComplexRangeKind::CX_Improved;
       break;
     case options::OPT_fno_cx_fortran_rules:
-      if (!GccRangeComplexOption.empty() &&
-          GccRangeComplexOption.compare("-fno-cx-limited-range") == 0)
-        GccRangeComplexOption = "-fno-cx-fortran-rules";
-      if (!GccRangeComplexOption.empty())
-        EmitComplexRangeDiag(D, GccRangeComplexOption, "-fno-cx-fortran-rules");
-      else
+      if (GccRangeComplexOption.empty()) {
         EmitComplexRangeDiag(D, RenderComplexRangeOption(Range),
                              "-fno-cx-fortran-rules");
+      } else {
+        if (GccRangeComplexOption != "-fno-cx-limited-range")
+          EmitComplexRangeDiag(D, GccRangeComplexOption,
+                               "-fno-cx-fortran-rules");
+      }
       GccRangeComplexOption = "-fno-cx-fortran-rules";
       Range = LangOptions::ComplexRangeKind::CX_Full;
       break;

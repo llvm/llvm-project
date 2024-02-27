@@ -1855,12 +1855,12 @@ floating point semantic models: precise (the default), strict, and fast.
 
    * ``basic`` Implementation of complex division and multiplication using
      algebraic formulas at source precision. No special handling to avoid
-     overflow. NaN and infinite and  values are not handled.
+     overflow. NaN and infinite values are not handled.
    * ``improved`` Implementation of complex division using the Smith algorithm
      at source precision. Smith's algorithm for complex division.
      See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8 (1962).
      This value offers improved handling for overflow in intermediate
-     calculations, but overflow may occur. NaN and infinite and  values are not
+     calculations, but overflow may occur. NaN and infinite values are not
      handled in some cases.
    * ``full`` Implementation of complex division and multiplication using a
      call to runtime library functions (generally the case, but the BE might
@@ -1873,7 +1873,7 @@ floating point semantic models: precise (the default), strict, and fast.
      cases. If the target does not have native support for a higher precision
      data type, an implementation for the complex operation will be used to provide
      improved guards against intermediate overflow, but overflow and underflow may
-     still occur in some cases. NaN and infinite and  values are not handled.
+     still occur in some cases. NaN and infinite values are not handled.
      This is the default value.
 
 .. option:: -fcx-limited-range:

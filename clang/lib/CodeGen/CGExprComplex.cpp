@@ -305,8 +305,7 @@ public:
       case BuiltinType::Kind::Double: {
         if (TI.hasLongDoubleType())
           return CGF.getContext().getComplexType(CGF.getContext().LongDoubleTy);
-       else
-          return CGF.getContext().getComplexType(CGF.getContext().DoubleTy);
+        return CGF.getContext().getComplexType(CGF.getContext().DoubleTy);
         break;
       }
       default:
@@ -1026,8 +1025,8 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     QualType ComplexElementTy = Op.Ty->castAs<ComplexType>()->getElementType();
     const BuiltinType *BT = ComplexElementTy->getAs<BuiltinType>();
     if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
-        (Op.FPFeatures.getComplexRange() ==
-            LangOptions::CX_Promoted && BT->getKind() == BuiltinType::Kind::LongDouble))
+        (Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted &&
+         BT->getKind() == BuiltinType::Kind::LongDouble))
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
     else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
              Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)
