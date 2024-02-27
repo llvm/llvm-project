@@ -1,9 +1,5 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
 
-//===----------------------------------------------------------------------===//
-// ENC_SMEM.
-//===----------------------------------------------------------------------===//
-
 s_load_dword s5, s[2:3], s0
 // GFX11: s_load_b32 s5, s[2:3], s0               ; encoding: [0x41,0x01,0x00,0xf4,0x00,0x00,0x00,0x00]
 
