@@ -64,6 +64,9 @@ void DbgRecord::deleteRecord() {
   case ValueKind:
     delete cast<DPValue>(this);
     return;
+  case LabelKind:
+    delete cast<DPLabel>(this);
+    return;
   }
   llvm_unreachable("unsupported DbgRecord kind");
 }
@@ -72,6 +75,9 @@ void DbgRecord::print(raw_ostream &O, bool IsForDebug) const {
   switch (RecordKind) {
   case ValueKind:
     cast<DPValue>(this)->print(O, IsForDebug);
+    return;
+  case LabelKind:
+    cast<DPLabel>(this)->print(O, IsForDebug);
     return;
   };
   llvm_unreachable("unsupported DbgRecord kind");
@@ -83,6 +89,9 @@ void DbgRecord::print(raw_ostream &O, ModuleSlotTracker &MST,
   case ValueKind:
     cast<DPValue>(this)->print(O, MST, IsForDebug);
     return;
+  case LabelKind:
+    cast<DPLabel>(this)->print(O, MST, IsForDebug);
+    return;
   };
   llvm_unreachable("unsupported DbgRecord kind");
 }
@@ -93,16 +102,23 @@ bool DbgRecord::isIdenticalToWhenDefined(const DbgRecord &R) const {
   switch (RecordKind) {
   case ValueKind:
     return cast<DPValue>(this)->isIdenticalToWhenDefined(*cast<DPValue>(&R));
+  case LabelKind:
+    return cast<DPLabel>(this)->getLabel() == cast<DPLabel>(R).getLabel();
   };
   llvm_unreachable("unsupported DbgRecord kind");
 }
 
 bool DbgRecord::isEquivalentTo(const DbgRecord &R) const {
-  if (RecordKind != R.RecordKind)
-    return false;
+  return getDebugLoc() == R.getDebugLoc() && isIdenticalToWhenDefined(R);
+}
+
+DbgInfoIntrinsic *
+DbgRecord::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
   switch (RecordKind) {
   case ValueKind:
-    return cast<DPValue>(this)->isEquivalentTo(*cast<DPValue>(&R));
+    return cast<DPValue>(this)->createDebugIntrinsic(M, InsertBefore);
+  case LabelKind:
+    return cast<DPLabel>(this)->createDebugIntrinsic(M, InsertBefore);
   };
   llvm_unreachable("unsupported DbgRecord kind");
 }
@@ -158,6 +174,8 @@ DPValue *DPValue::createLinkedDPVAssign(Instruction *LinkedInstr, Value *Val,
   LinkedInstr->getParent()->insertDPValueAfter(NewDPVAssign, LinkedInstr);
   return NewDPVAssign;
 }
+
+void DPValue::setVariable(DILocalVariable *NewVar) { Variable.reset(NewVar); }
 
 iterator_range<DPValue::location_op_iterator> DPValue::location_ops() const {
   auto *MD = getRawLocation();
@@ -297,6 +315,10 @@ bool DPValue::isKillLocation() const {
          any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
 }
 
+DILocalVariable *DPValue::getVariable() const {
+  return cast<DILocalVariable>(Variable.get());
+}
+
 std::optional<uint64_t> DPValue::getFragmentSizeInBits() const {
   if (auto Fragment = getExpression()->getFragmentInfo())
     return Fragment->SizeInBits;
@@ -307,11 +329,15 @@ DbgRecord *DbgRecord::clone() const {
   switch (RecordKind) {
   case ValueKind:
     return cast<DPValue>(this)->clone();
+  case LabelKind:
+    return cast<DPLabel>(this)->clone();
   };
   llvm_unreachable("unsupported DbgRecord kind");
 }
 
 DPValue *DPValue::clone() const { return new DPValue(*this); }
+
+DPLabel *DPLabel::clone() const { return new DPLabel(Label, getDebugLoc()); }
 
 DbgVariableIntrinsic *
 DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
@@ -366,6 +392,20 @@ DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
     DVI->insertBefore(InsertBefore);
 
   return DVI;
+}
+
+DbgLabelInst *DPLabel::createDebugIntrinsic(Module *M,
+                                            Instruction *InsertBefore) const {
+  auto *LabelFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_label);
+  Value *Args[] = {
+      MetadataAsValue::get(getDebugLoc()->getContext(), getLabel())};
+  DbgLabelInst *DbgLabel = cast<DbgLabelInst>(
+      CallInst::Create(LabelFn->getFunctionType(), LabelFn, Args));
+  DbgLabel->setTailCall();
+  DbgLabel->setDebugLoc(getDebugLoc());
+  if (InsertBefore)
+    DbgLabel->insertBefore(InsertBefore);
+  return DbgLabel;
 }
 
 Value *DPValue::getAddress() const {

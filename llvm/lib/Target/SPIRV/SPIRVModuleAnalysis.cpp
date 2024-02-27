@@ -1063,11 +1063,27 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::ExpectAssumeKHR);
     }
     break;
+  case SPIRV::OpPtrCastToCrossWorkgroupINTEL:
+  case SPIRV::OpCrossWorkgroupCastToPtrINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes);
+      Reqs.addCapability(SPIRV::Capability::USMStorageClassesINTEL);
+    }
+    break;
   case SPIRV::OpConstantFunctionPointerINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
     }
+    break;
+  case SPIRV::OpGroupNonUniformRotateKHR:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_subgroup_rotate))
+      report_fatal_error("OpGroupNonUniformRotateKHR instruction requires the "
+                         "following SPIR-V extension: SPV_KHR_subgroup_rotate",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_subgroup_rotate);
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniformRotateKHR);
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniform);
     break;
   case SPIRV::OpGroupIMulKHR:
   case SPIRV::OpGroupFMulKHR:
@@ -1093,6 +1109,14 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpAtomicFMinEXT:
   case SPIRV::OpAtomicFMaxEXT:
     AddAtomicFloatRequirements(MI, Reqs, ST);
+    break;
+  case SPIRV::OpVariableLengthArrayINTEL:
+  case SPIRV::OpSaveMemoryINTEL:
+  case SPIRV::OpRestoreMemoryINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_variable_length_array)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_variable_length_array);
+      Reqs.addCapability(SPIRV::Capability::VariableLengthArrayINTEL);
+    }
     break;
   default:
     break;

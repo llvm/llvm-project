@@ -1471,7 +1471,6 @@ private:
         OMPRTL_omp_get_num_threads,
         OMPRTL_omp_in_parallel,
         OMPRTL_omp_get_cancellation,
-        OMPRTL_omp_get_thread_limit,
         OMPRTL_omp_get_supported_active_levels,
         OMPRTL_omp_get_level,
         OMPRTL_omp_get_ancestor_thread_num,

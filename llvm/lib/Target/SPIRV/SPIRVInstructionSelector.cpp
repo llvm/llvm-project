@@ -99,6 +99,10 @@ private:
                   MachineInstr &I) const;
   bool selectStore(MachineInstr &I) const;
 
+  bool selectStackSave(Register ResVReg, const SPIRVType *ResType,
+                       MachineInstr &I) const;
+  bool selectStackRestore(MachineInstr &I) const;
+
   bool selectMemOperation(Register ResVReg, MachineInstr &I) const;
 
   bool selectAtomicRMW(Register ResVReg, const SPIRVType *ResType,
@@ -150,6 +154,8 @@ private:
 
   bool selectOpUndef(Register ResVReg, const SPIRVType *ResType,
                      MachineInstr &I) const;
+  bool selectFreeze(Register ResVReg, const SPIRVType *ResType,
+                    MachineInstr &I) const;
   bool selectIntrinsic(Register ResVReg, const SPIRVType *ResType,
                        MachineInstr &I) const;
   bool selectExtractVal(Register ResVReg, const SPIRVType *ResType,
@@ -165,6 +171,8 @@ private:
 
   bool selectFrameIndex(Register ResVReg, const SPIRVType *ResType,
                         MachineInstr &I) const;
+  bool selectAllocaArray(Register ResVReg, const SPIRVType *ResType,
+                         MachineInstr &I) const;
 
   bool selectBranch(MachineInstr &I) const;
   bool selectBranchCond(MachineInstr &I) const;
@@ -284,6 +292,8 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectGlobalValue(ResVReg, I);
   case TargetOpcode::G_IMPLICIT_DEF:
     return selectOpUndef(ResVReg, ResType, I);
+  case TargetOpcode::G_FREEZE:
+    return selectFreeze(ResVReg, ResType, I);
 
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
   case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
@@ -504,6 +514,11 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_FENCE:
     return selectFence(I);
 
+  case TargetOpcode::G_STACKSAVE:
+    return selectStackSave(ResVReg, ResType, I);
+  case TargetOpcode::G_STACKRESTORE:
+    return selectStackRestore(I);
+
   default:
     return false;
   }
@@ -647,6 +662,35 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
     addMemoryOperands(*I.memoperands_begin(), MIB);
   }
   return MIB.constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectStackSave(Register ResVReg,
+                                               const SPIRVType *ResType,
+                                               MachineInstr &I) const {
+  if (!STI.canUseExtension(SPIRV::Extension::SPV_INTEL_variable_length_array))
+    report_fatal_error(
+        "llvm.stacksave intrinsic: this instruction requires the following "
+        "SPIR-V extension: SPV_INTEL_variable_length_array",
+        false);
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSaveMemoryINTEL))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectStackRestore(MachineInstr &I) const {
+  if (!STI.canUseExtension(SPIRV::Extension::SPV_INTEL_variable_length_array))
+    report_fatal_error(
+        "llvm.stackrestore intrinsic: this instruction requires the following "
+        "SPIR-V extension: SPV_INTEL_variable_length_array",
+        false);
+  if (!I.getOperand(0).isReg())
+    return false;
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpRestoreMemoryINTEL))
+      .addUse(I.getOperand(0).getReg())
+      .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
@@ -828,8 +872,18 @@ static bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
   }
 }
 
+static bool isUSMStorageClass(SPIRV::StorageClass::StorageClass SC) {
+  switch (SC) {
+  case SPIRV::StorageClass::DeviceOnlyINTEL:
+  case SPIRV::StorageClass::HostOnlyINTEL:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // In SPIR-V address space casting can only happen to and from the Generic
-// storage class. We can also only case Workgroup, CrossWorkgroup, or Function
+// storage class. We can also only cast Workgroup, CrossWorkgroup, or Function
 // pointers to and from Generic pointers. As such, we can convert e.g. from
 // Workgroup to Function by going via a Generic pointer as an intermediary. All
 // other combinations can only be done by a bitcast, and are probably not safe.
@@ -862,13 +916,17 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
   SPIRV::StorageClass::StorageClass SrcSC = GR.getPointerStorageClass(SrcPtr);
   SPIRV::StorageClass::StorageClass DstSC = GR.getPointerStorageClass(ResVReg);
 
-  // Casting from an eligable pointer to Generic.
+  // don't generate a cast between identical storage classes
+  if (SrcSC == DstSC)
+    return true;
+
+  // Casting from an eligible pointer to Generic.
   if (DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC))
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpPtrCastToGeneric);
-  // Casting from Generic to an eligable pointer.
+  // Casting from Generic to an eligible pointer.
   if (SrcSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(DstSC))
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpGenericCastToPtr);
-  // Casting between 2 eligable pointers using Generic as an intermediary.
+  // Casting between 2 eligible pointers using Generic as an intermediary.
   if (isGenericCastablePtr(SrcSC) && isGenericCastablePtr(DstSC)) {
     Register Tmp = MRI->createVirtualRegister(&SPIRV::IDRegClass);
     SPIRVType *GenericPtrTy = GR.getOrCreateSPIRVPointerType(
@@ -886,6 +944,16 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
                           .addUse(Tmp)
                           .constrainAllUses(TII, TRI, RBI);
   }
+
+  // Check if instructions from the SPV_INTEL_usm_storage_classes extension may
+  // be applied
+  if (isUSMStorageClass(SrcSC) && DstSC == SPIRV::StorageClass::CrossWorkgroup)
+    return selectUnOp(ResVReg, ResType, I,
+                      SPIRV::OpPtrCastToCrossWorkgroupINTEL);
+  if (SrcSC == SPIRV::StorageClass::CrossWorkgroup && isUSMStorageClass(DstSC))
+    return selectUnOp(ResVReg, ResType, I,
+                      SPIRV::OpCrossWorkgroupCastToPtrINTEL);
+
   // TODO Should this case just be disallowed completely?
   // We're casting 2 other arbitrary address spaces, so have to bitcast.
   return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
@@ -988,6 +1056,46 @@ bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(I.getOperand(1).getReg())
       .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectFreeze(Register ResVReg,
+                                            const SPIRVType *ResType,
+                                            MachineInstr &I) const {
+  // There is no way to implement `freeze` correctly without support on SPIR-V
+  // standard side, but we may at least address a simple (static) case when
+  // undef/poison value presence is obvious. The main benefit of even
+  // incomplete `freeze` support is preventing of translation from crashing due
+  // to lack of support on legalization and instruction selection steps.
+  if (!I.getOperand(0).isReg() || !I.getOperand(1).isReg())
+    return false;
+  Register OpReg = I.getOperand(1).getReg();
+  if (MachineInstr *Def = MRI->getVRegDef(OpReg)) {
+    Register Reg;
+    switch (Def->getOpcode()) {
+    case SPIRV::ASSIGN_TYPE:
+      if (MachineInstr *AssignToDef =
+              MRI->getVRegDef(Def->getOperand(1).getReg())) {
+        if (AssignToDef->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+          Reg = Def->getOperand(2).getReg();
+      }
+      break;
+    case SPIRV::OpUndef:
+      Reg = Def->getOperand(1).getReg();
+      break;
+    }
+    unsigned DestOpCode;
+    if (Reg.isValid()) {
+      DestOpCode = SPIRV::OpConstantNull;
+    } else {
+      DestOpCode = TargetOpcode::COPY;
+      Reg = OpReg;
+    }
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(DestOpCode))
+        .addDef(I.getOperand(0).getReg())
+        .addUse(Reg)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+  return false;
 }
 
 bool SPIRVInstructionSelector::selectConstVector(Register ResVReg,
@@ -1437,6 +1545,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     break;
   case Intrinsic::spv_alloca:
     return selectFrameIndex(ResVReg, ResType, I);
+  case Intrinsic::spv_alloca_array:
+    return selectAllocaArray(ResVReg, ResType, I);
   case Intrinsic::spv_assume:
     if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
       BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAssumeTrueKHR))
@@ -1454,6 +1564,20 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     llvm_unreachable("Intrinsic selection not implemented");
   }
   return true;
+}
+
+bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
+                                                 const SPIRVType *ResType,
+                                                 MachineInstr &I) const {
+  // there was an allocation size parameter to the allocation instruction
+  // that is not 1
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(),
+                 TII.get(SPIRV::OpVariableLengthArrayINTEL))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
@@ -1545,7 +1669,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   }
   SPIRVType *ResType = GR.getOrCreateSPIRVPointerType(
       PointerBaseType, I, TII,
-      addressSpaceToStorageClass(GV->getAddressSpace()));
+      addressSpaceToStorageClass(GV->getAddressSpace(), STI));
 
   std::string GlobalIdent;
   if (!GV->hasName()) {
@@ -1618,7 +1742,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
 
   unsigned AddrSpace = GV->getAddressSpace();
   SPIRV::StorageClass::StorageClass Storage =
-      addressSpaceToStorageClass(AddrSpace);
+      addressSpaceToStorageClass(AddrSpace, STI);
   bool HasLnkTy = GV->getLinkage() != GlobalValue::InternalLinkage &&
                   Storage != SPIRV::StorageClass::Function;
   SPIRV::LinkageType::LinkageType LnkType =

@@ -125,7 +125,7 @@ namespace cfi_internal {
 // The below structure emulates a flexible array. This structure does not take
 // care of getting the memory storage. Note that it already contains one element
 // because a struct cannot be empty.
-template <typename T> struct FlexibleArray : T {
+extern "C++" template <typename T> struct FlexibleArray : T {
   RT_API_ATTRS T &operator[](int index) { return *(this + index); }
   const RT_API_ATTRS T &operator[](int index) const { return *(this + index); }
   RT_API_ATTRS operator T *() { return this; }
@@ -163,12 +163,12 @@ typedef struct CFI_cdesc_t {
 // needed, for C++'s CFI_cdesc_t's emulated flexible
 // dim[] array.
 namespace cfi_internal {
-template <int r> struct CdescStorage : public CFI_cdesc_t {
+extern "C++" template <int r> struct CdescStorage : public CFI_cdesc_t {
   static_assert((r > 1 && r <= CFI_MAX_RANK), "CFI_INVALID_RANK");
   CFI_dim_t dim[r - 1];
 };
-template <> struct CdescStorage<1> : public CFI_cdesc_t {};
-template <> struct CdescStorage<0> : public CFI_cdesc_t {};
+extern "C++" template <> struct CdescStorage<1> : public CFI_cdesc_t {};
+extern "C++" template <> struct CdescStorage<0> : public CFI_cdesc_t {};
 } // namespace cfi_internal
 #define CFI_CDESC_T(rank) \
   FORTRAN_ISO_NAMESPACE_::cfi_internal::CdescStorage<rank>
