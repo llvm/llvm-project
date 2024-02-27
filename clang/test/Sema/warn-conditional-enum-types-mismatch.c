@@ -21,7 +21,7 @@ int get_flag(int cond) {
   #ifdef __cplusplus
   // expected-warning@-2 {{conditional expression between different enumeration types ('ro' and 'rw')}}
   #else 
-  // expected-no-diagnostics
+  // expected-warning@-4 {{conditional expression between different enumeration types ('enum ro' and 'enum rw')}}
   #endif
 }
 

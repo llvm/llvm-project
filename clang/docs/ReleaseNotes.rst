@@ -197,6 +197,9 @@ Improvements to Clang's time-trace
 
 Bug Fixes in This Version
 -------------------------
+- Fixed missing warnings when comparing mismatched enumeration constants
+  in C (`#29217 <https://github.com/llvm/llvm-project/issues/29217>`).
+
 - Clang now accepts elaborated-type-specifiers that explicitly specialize
   a member class template for an implicit instantiation of a class template.
 

@@ -16148,15 +16148,8 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
   // Diagnose conversions between different enumeration types.
   // In C, we pretend that the type of an EnumConstantDecl is its enumeration
   // type, to give us better diagnostics.
-  QualType SourceType = E->getType();
-  if (!S.getLangOpts().CPlusPlus) {
-    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E))
-      if (EnumConstantDecl *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
-        EnumDecl *Enum = cast<EnumDecl>(ECD->getDeclContext());
-        SourceType = S.Context.getTypeDeclType(Enum);
-        Source = S.Context.getCanonicalType(SourceType).getTypePtr();
-      }
-  }
+  QualType SourceType = E->getEnumCoercedType(S.Context);
+  Source = S.Context.getCanonicalType(SourceType).getTypePtr();
 
   if (const EnumType *SourceEnum = Source->getAs<EnumType>())
     if (const EnumType *TargetEnum = Target->getAs<EnumType>())
