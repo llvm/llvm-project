@@ -141,7 +141,8 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     The supported level-formats are the following:
 
-    - **dense** : all entries along this level are stored
+    - **dense** : all entries along this level are stored and linearized.
+    - **batch** : all entries along this level are stored but not linearized.
     - **compressed** : only nonzeros along this level are stored
     - **loose_compressed** : as compressed, but allows for free space between regions
     - **singleton** : a variant of the compressed format, where coordinates have no siblings

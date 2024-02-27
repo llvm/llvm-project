@@ -690,6 +690,10 @@ LogicalResult SparseTensorEncodingAttr::verify(
     }
   }
 
+  auto lastBatch = std::find_if(lvlTypes.rbegin(), lvlTypes.rend(), isBatchLT);
+  if (!std::all_of(lastBatch, lvlTypes.rend(), isBatchLT))
+    return emitError() << "Batch lvlType can only be leading levels.";
+
   // SoA property can only be applied on singleton level.
   auto soaLvls = llvm::make_filter_range(lvlTypes, [](LevelType lt) {
     return lt.isa<LevelPropNonDefault::SoA>();
