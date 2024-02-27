@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUWAITCOUNTUTILS_H
 
 #include "GCNSubtarget.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 namespace llvm {
 

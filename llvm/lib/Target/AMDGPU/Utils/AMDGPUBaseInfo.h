@@ -14,7 +14,6 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include <array>
 #include <functional>
 #include <utility>
@@ -40,6 +39,8 @@ struct kernel_descriptor_t;
 }
 
 namespace AMDGPU {
+
+struct IsaVersion;
 
 /// Generic target versions emitted by this version of LLVM.
 ///
