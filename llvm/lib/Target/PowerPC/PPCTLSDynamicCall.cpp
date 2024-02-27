@@ -165,14 +165,14 @@ protected:
 
         if (IsAIX) {
           if (IsTLSLDAIXMI) {
-            // The relative order between the LoadOffset@toc node (for the
-            // variable offset), and the .__tls_get_mod node is being tuned
-            // here. It is better to put the LoadOffset@toc node after the call,
-            // since the LoadOffset@toc node can use clobbers r4/r5. Search for
-            // the pattern of two Load@toc nodes (either for the variable offset
-            // or for the module handle), and then move the LoadOffset@toc node
-            // right before the node that uses the OutReg of the .__tls_get_mod
-            // node.
+            // The relative order between the node that loads the variable
+            // offset from the TOC, and the .__tls_get_mod node is being tuned
+            // here. It is better to put the variable offset TOC load after the
+            // call, since this node can use clobbers r4/r5.
+            // Search for the pattern of the two nodes that load from the TOC
+            // (either for the variable offset or for the module handle), and
+            // then move the variable offset TOC load right before the node that
+            // uses the OutReg of the .__tls_get_mod node.
             unsigned LDTocOp =
                 Is64Bit ? (IsLargeModel ? PPC::LDtocL : PPC::LDtoc)
                         : (IsLargeModel ? PPC::LWZtocL : PPC::LWZtoc);
@@ -190,11 +190,11 @@ protected:
                   break;
 
               // Additional handling is required when UserIter (the first user
-              // of OutReg) is pointing to a valid node. Check the pattern and
-              // do the movement if the pattern matches.
+              // of OutReg) is pointing to a valid node that loads from the TOC.
+              // Check the pattern and do the movement if the pattern matches.
               if (UseIter != MBB.end()) {
-                // Collect associated Load@toc nodes. Use hasOneDef() to guard
-                // against unexpected scenarios.
+                // Collect all associated nodes that load from the TOC. Use
+                // hasOneDef() to guard against unexpected scenarios.
                 std::set<MachineInstr *> LoadFromTocs;
                 for (MachineOperand &MO : UseIter->operands())
                   if (MO.isReg() && MO.isUse()) {
@@ -202,9 +202,10 @@ protected:
                     if (RegInfo.hasOneDef(MOReg)) {
                       MachineInstr *Temp =
                           RegInfo.getOneDef(MOReg)->getParent();
-                      // For the current TLSLDAIX node, get the Load@toc node
-                      // for the InReg. Otherwise, Temp probably pointed to the
-                      // LoadOffset@toc node that we would like to move.
+                      // For the current TLSLDAIX node, get the corresponding
+                      // node that loads from the TOC for the InReg. Otherwise,
+                      // Temp probably pointed to the variable offset TOC load
+                      // we would like to move.
                       if (Temp == &MI && RegInfo.hasOneDef(InReg))
                         Temp = RegInfo.getOneDef(InReg)->getParent();
                       if (Temp->getOpcode() == LDTocOp)
@@ -216,15 +217,15 @@ protected:
                     }
                   }
 
-                // Check the two Load@toc nodes: one should be _$TLSML, and the
-                // other will be moved before the node that uses the OutReg of
-                // the .__tls_get_mod node.
+                // Check the two nodes that load from the TOC: one should be
+                // _$TLSML, and the other will be moved before the node that
+                // uses the OutReg of the .__tls_get_mod node.
                 if (LoadFromTocs.size() == 2) {
                   MachineBasicBlock::iterator TLSMLIter = MBB.end();
                   MachineBasicBlock::iterator OffsetIter = MBB.end();
-                  // Make sure the two LoadFromToc nodes are within the current
-                  // BB, and that one of them is from the "_$TLSML" pseudo
-                  // symbol, while the other is from the variable.
+                  // Make sure the two nodes that loaded from the TOC are within
+                  // the current BB, and that one of them is from the "_$TLSML"
+                  // pseudo symbol, while the other is from the variable.
                   for (MachineBasicBlock::iterator I = MBB.begin(),
                                                    IE = MBB.end();
                        I != IE; ++I)

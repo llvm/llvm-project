@@ -380,10 +380,10 @@ namespace llvm {
     GET_TLS_MOD_AIX,
 
     /// [GP|G8]RC = TLSLD_AIX, TOC_ENTRY(module handle)
-    /// Op that with single input of module handle TOC entry in R3, and
-    /// generates a GET_TLS_MOD_AIX node which will be expanded into a call to
-    /// .__tls_get_mod. This node is used in both 32-bit and 64-bit modes. The
-    /// only difference is the register class.
+    /// Op that requires a single input of the module handle TOC entry in R3,
+    /// and generates a GET_TLS_MOD_AIX node which will be expanded into a call
+    /// to .__tls_get_mod. This node is used in both 32-bit and 64-bit modes.
+    /// The only difference is the register class.
     TLSLD_AIX,
 
     /// G8RC = ADDIS_TLSLD_HA %x2, Symbol - For the local-dynamic TLS
