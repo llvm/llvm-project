@@ -1047,8 +1047,8 @@ LogicalResult ModuleTranslation::convertGlobals() {
     if (Block *initializer = op.getInitializerBlock()) {
       llvm::IRBuilder<> builder(llvmModule->getContext());
 
-      int numConstantsHit = 0;
-      int numConstantsErased = 0;
+      [[maybe_unused]] int numConstantsHit = 0;
+      [[maybe_unused]] int numConstantsErased = 0;
       DenseMap<llvm::ConstantAggregate *, int> constantAggregateUseMap;
 
       for (auto &op : initializer->without_terminator()) {
