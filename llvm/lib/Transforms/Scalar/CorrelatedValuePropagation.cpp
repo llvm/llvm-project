@@ -47,11 +47,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "correlated-value-propagation"
 
-static cl::opt<bool> CanonicalizeICmpPredicatesToUnsigned(
-    "canonicalize-icmp-predicates-to-unsigned", cl::init(true), cl::Hidden,
-    cl::desc("Enables canonicalization of signed relational predicates to "
-             "unsigned (e.g. sgt => ugt)"));
-
 STATISTIC(NumPhis,      "Number of phis propagated");
 STATISTIC(NumPhiCommon, "Number of phis deleted via common incoming value");
 STATISTIC(NumSelects,   "Number of selects propagated");
@@ -90,6 +85,8 @@ STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
 STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
+STATISTIC(NumSMinMax,
+          "Number of llvm.s{min,max} intrinsics simplified to unsigned");
 STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
 STATISTIC(NumZExt, "Number of non-negative deductions");
@@ -289,9 +286,6 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI, DominatorTree *DT,
 }
 
 static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
-  if (!CanonicalizeICmpPredicatesToUnsigned)
-    return false;
-
   // Only for signed relational comparisons of scalar integers.
   if (Cmp->getType()->isVectorTy() ||
       !Cmp->getOperand(0)->getType()->isIntegerTy())
@@ -371,7 +365,6 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
   { // Scope for SwitchInstProfUpdateWrapper. It must not live during
     // ConstantFoldTerminator() as the underlying SwitchInst can be changed.
     SwitchInstProfUpdateWrapper SI(*I);
-    unsigned ReachableCaseCount = 0;
 
     for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
       ConstantInt *Case = CI->getCaseValue();
@@ -408,33 +401,6 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
       // Increment the case iterator since we didn't delete it.
       ++CI;
-      ++ReachableCaseCount;
-    }
-
-    BasicBlock *DefaultDest = SI->getDefaultDest();
-    if (ReachableCaseCount > 1 &&
-        !isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg())) {
-      ConstantRange CR = LVI->getConstantRangeAtUse(I->getOperandUse(0),
-                                                    /*UndefAllowed*/ false);
-      // The default dest is unreachable if all cases are covered.
-      if (!CR.isSizeLargerThan(ReachableCaseCount)) {
-        BasicBlock *NewUnreachableBB =
-            BasicBlock::Create(BB->getContext(), "default.unreachable",
-                               BB->getParent(), DefaultDest);
-        new UnreachableInst(BB->getContext(), NewUnreachableBB);
-
-        DefaultDest->removePredecessor(BB);
-        SI->setDefaultDest(NewUnreachableBB);
-
-        if (SuccessorsCount[DefaultDest] == 1)
-          DTU.applyUpdatesPermissive(
-              {{DominatorTree::Delete, BB, DefaultDest}});
-        DTU.applyUpdatesPermissive(
-            {{DominatorTree::Insert, BB, NewUnreachableBB}});
-
-        ++NumDeadCases;
-        Changed = true;
-      }
     }
   }
 
@@ -556,17 +522,40 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
 }
 
 // See if this min/max intrinsic always picks it's one specific operand.
+// If not, check whether we can canonicalize signed minmax into unsigned version
 static bool processMinMaxIntrinsic(MinMaxIntrinsic *MM, LazyValueInfo *LVI) {
   CmpInst::Predicate Pred = CmpInst::getNonStrictPredicate(MM->getPredicate());
-  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
-      Pred, MM->getLHS(), MM->getRHS(), MM, /*UseBlockValue=*/true);
-  if (Result == LazyValueInfo::Unknown)
-    return false;
+  ConstantRange LHS_CR = LVI->getConstantRangeAtUse(MM->getOperandUse(0),
+                                                    /*UndefAllowed*/ false);
+  ConstantRange RHS_CR = LVI->getConstantRangeAtUse(MM->getOperandUse(1),
+                                                    /*UndefAllowed*/ false);
+  if (LHS_CR.icmp(Pred, RHS_CR)) {
+    ++NumMinMax;
+    MM->replaceAllUsesWith(MM->getLHS());
+    MM->eraseFromParent();
+    return true;
+  }
+  if (RHS_CR.icmp(Pred, LHS_CR)) {
+    ++NumMinMax;
+    MM->replaceAllUsesWith(MM->getRHS());
+    MM->eraseFromParent();
+    return true;
+  }
 
-  ++NumMinMax;
-  MM->replaceAllUsesWith(MM->getOperand(!Result));
-  MM->eraseFromParent();
-  return true;
+  if (MM->isSigned() &&
+      ConstantRange::areInsensitiveToSignednessOfICmpPredicate(LHS_CR,
+                                                               RHS_CR)) {
+    ++NumSMinMax;
+    IRBuilder<> B(MM);
+    MM->replaceAllUsesWith(B.CreateBinaryIntrinsic(
+        MM->getIntrinsicID() == Intrinsic::smin ? Intrinsic::umin
+                                                : Intrinsic::umax,
+        MM->getLHS(), MM->getRHS()));
+    MM->eraseFromParent();
+    return true;
+  }
+
+  return false;
 }
 
 // Rewrite this with.overflow intrinsic as non-overflowing.
@@ -1255,12 +1244,6 @@ CorrelatedValuePropagationPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!Changed) {
     PA = PreservedAnalyses::all();
   } else {
-#if defined(EXPENSIVE_CHECKS)
-    assert(DT->verify(DominatorTree::VerificationLevel::Full));
-#else
-    assert(DT->verify(DominatorTree::VerificationLevel::Fast));
-#endif // EXPENSIVE_CHECKS
-
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LazyValueAnalysis>();
   }

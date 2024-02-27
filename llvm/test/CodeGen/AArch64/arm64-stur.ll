@@ -65,9 +65,8 @@ declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 
 ; CHECK-LABEL: unaligned:
 ; CHECK-NOT: str q0
-; CHECK: str     d[[REG:[0-9]+]], [x0]
-; CHECK: ext.16b v[[REG2:[0-9]+]], v[[REG]], v[[REG]], #8
-; CHECK: str     d[[REG2]], [x0, #8]
+; CHECK: ext.16b v[[REG2:[0-9]+]], v[[REG:[0-9]+]], v[[REG]], #8
+; CHECK: stp     d[[REG]], d[[REG2]], [x0]
 define void @unaligned(ptr %p, <4 x i32> %v) nounwind {
   store <4 x i32> %v, ptr %p, align 4
   ret void

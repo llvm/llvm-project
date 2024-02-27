@@ -177,7 +177,10 @@ protected:
 
     DumpValueObjectOptions options;
     options.SetDeclPrintingHelper(helper);
-    ValueObjectPrinter printer(valobj_sp.get(), &result.GetOutputStream(),
+    // We've already handled the case where the value object sp is null, so
+    // this is just to make sure future changes don't skip that:
+    assert(valobj_sp.get() && "Must have a valid ValueObject to print");
+    ValueObjectPrinter printer(*valobj_sp, &result.GetOutputStream(),
                                options);
     printer.PrintValueObject();
   }
@@ -282,16 +285,6 @@ public:
   }
 
   ~CommandObjectFrameSelect() override = default;
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    if (request.GetCursorIndex() != 0)
-      return;
-
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eFrameIndexCompletion, request, nullptr);
-  }
 
   Options *GetOptions() override { return &m_options; }
 
@@ -442,15 +435,6 @@ may even involve JITing and running code in the target program.)");
   ~CommandObjectFrameVariable() override = default;
 
   Options *GetOptions() override { return &m_option_group; }
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    // Arguments are the standard source file completer.
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eVariablePathCompletion, request,
-        nullptr);
-  }
 
 protected:
   llvm::StringRef GetScopeString(VariableSP var_sp) {

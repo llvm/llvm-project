@@ -22,7 +22,7 @@ class JobControlTest(PExpectTest):
         status = int(self.child.match[1])
 
         self.assertTrue(os.WIFSTOPPED(status))
-        self.assertEquals(os.WSTOPSIG(status), signal.SIGTSTP)
+        self.assertEqual(os.WSTOPSIG(status), signal.SIGTSTP)
 
         os.kill(self.lldb_pid, signal.SIGCONT)
 

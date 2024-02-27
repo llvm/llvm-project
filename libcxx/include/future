@@ -1605,9 +1605,11 @@ private:
 public:
   // construction and destruction
   _LIBCPP_HIDE_FROM_ABI packaged_task() _NOEXCEPT : __p_(nullptr) {}
-  template <class _Fp, class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
+
+  template <class _Fp, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit packaged_task(_Fp&& __f) : __f_(std::forward<_Fp>(__f)) {}
-  template <class _Fp, class _Allocator, class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
+
+  template <class _Fp, class _Allocator, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI packaged_task(allocator_arg_t, const _Allocator& __a, _Fp&& __f)
       : __f_(allocator_arg_t(), __a, std::forward<_Fp>(__f)), __p_(allocator_arg_t(), __a) {}
   // ~packaged_task() = default;
@@ -1695,9 +1697,9 @@ private:
 public:
   // construction and destruction
   _LIBCPP_HIDE_FROM_ABI packaged_task() _NOEXCEPT : __p_(nullptr) {}
-  template <class _Fp, class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
+  template <class _Fp, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit packaged_task(_Fp&& __f) : __f_(std::forward<_Fp>(__f)) {}
-  template <class _Fp, class _Allocator, class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
+  template <class _Fp, class _Allocator, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI packaged_task(allocator_arg_t, const _Allocator& __a, _Fp&& __f)
       : __f_(allocator_arg_t(), __a, std::forward<_Fp>(__f)), __p_(allocator_arg_t(), __a) {}
   // ~packaged_task() = default;

@@ -37,7 +37,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -193,41 +193,41 @@ lldb::ValueObjectSP lldb_private::formatters::
                                    m_element_type);
 }
 
-bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
-    Update() {
+lldb::ChildCacheState
+lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::Update() {
   m_num_elements = 0;
   m_next_element = nullptr;
   m_elements_cache.clear();
   ValueObjectSP table_sp = m_backend.GetChildMemberWithName("__table_");
   if (!table_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   ValueObjectSP p2_sp = table_sp->GetChildMemberWithName("__p2_");
   if (!p2_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   ValueObjectSP num_elements_sp = GetFirstValueOfLibCXXCompressedPair(*p2_sp);
   if (!num_elements_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   ValueObjectSP p1_sp = table_sp->GetChildMemberWithName("__p1_");
   if (!p1_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   ValueObjectSP value_sp = GetFirstValueOfLibCXXCompressedPair(*p1_sp);
   if (!value_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   m_tree = value_sp->GetChildMemberWithName("__next_").get();
   if (m_tree == nullptr)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   m_num_elements = num_elements_sp->GetValueAsUnsigned(0);
 
   if (m_num_elements > 0)
     m_next_element = m_tree;
 
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::

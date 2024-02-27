@@ -300,7 +300,7 @@ public:
     WatchOS,
     DriverKit,
     XROS,
-    LastDarwinPlatform = DriverKit
+    LastDarwinPlatform = XROS
   };
   enum DarwinEnvironmentKind {
     NativeEnvironment,

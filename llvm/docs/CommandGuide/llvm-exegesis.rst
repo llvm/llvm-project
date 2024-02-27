@@ -443,6 +443,17 @@ OPTIONS
   when performing latency measurements. By default, llvm-exegesis will repeat
   a latency measurement enough times to balance run-time and noise reduction.
 
+.. option:: --validation-counter=[instructions-retired,l1d-cache-load-misses,
+   l1d-cache-store-misses,l1i-cache-load-misses,data-tlb-load-misses,
+   data-tld-store-misses,instruction-tlb-load-misses]
+
+   This option enables the use of validation counters, which measure additional
+   microarchitectural events like cache misses to validate snippet execution
+   conditions. These events are measured using the perf subsystem in a group
+   with the performance counter used to measure the value of interest. This
+   flag can be specified multiple times to measure multiple events. The maximum
+   number of validation counters is platform dependent.
+
 EXIT STATUS
 -----------
 

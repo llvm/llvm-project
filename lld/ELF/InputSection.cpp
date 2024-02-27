@@ -655,6 +655,7 @@ static int64_t getTlsTpOffset(const Symbol &s) {
 
     // Variant 2.
   case EM_HEXAGON:
+  case EM_S390:
   case EM_SPARCV9:
   case EM_386:
   case EM_X86_64:
@@ -717,6 +718,10 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_GOT_PC:
   case R_RELAX_TLS_GD_TO_IE:
     return sym.getGotVA() + a - p;
+  case R_GOTPLT_GOTREL:
+    return sym.getGotPltVA() + a - in.got->getVA();
+  case R_GOTPLT_PC:
+    return sym.getGotPltVA() + a - p;
   case R_LOONGARCH_GOT_PAGE_PC:
     if (sym.hasFlag(NEEDS_TLSGD))
       return getLoongArchPageDelta(in.got->getGlobalDynAddr(sym) + a, p, type);
@@ -808,6 +813,8 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
     return getLoongArchPageDelta(sym.getPltVA() + a, p, type);
   case R_PLT_GOTPLT:
     return sym.getPltVA() + a - in.gotPlt->getVA();
+  case R_PLT_GOTREL:
+    return sym.getPltVA() + a - in.got->getVA();
   case R_PPC32_PLTREL:
     // R_PPC_PLTREL24 uses the addend (usually 0 or 0x8000) to indicate r30
     // stores _GLOBAL_OFFSET_TABLE_ or .got2+0x8000. The addend is ignored for

@@ -77,6 +77,8 @@ constexpr int ignored() {
   (int)D1;
   (double)D1;
   (_Complex float)I2;
+  (bool)D1;
+  (bool)I2;
   return 0;
 }
 static_assert(ignored() == 0, "");
@@ -98,8 +100,9 @@ constexpr _Complex int I3 = {15};
 static_assert(__real(I3) == 15, "");
 static_assert(__imag(I3) == 0, "");
 
-/// FIXME: This should work in the new interpreter as well.
-// constexpr _Complex _BitInt(8) A = 0;// = {4};
+constexpr _Complex _BitInt(8) A = {4};
+static_assert(__real(A) == 4, "");
+static_assert(__imag(A) == 0, "");
 
 
 constexpr _Complex double Doubles[4] = {{1.0, 2.0}};
@@ -120,6 +123,12 @@ void func(void) {
   /// The following line will call into the constant interpreter.
   result = arr * ii;
 }
+
+constexpr _Complex float getComplexFloat() {
+  return {1,2};
+}
+static_assert(__real(getComplexFloat()) == 1, "");
+static_assert(__imag(getComplexFloat()) == 2, "");
 
 namespace CastToBool {
   constexpr _Complex int F = {0, 1};
@@ -161,6 +170,20 @@ namespace Add {
   constexpr _Complex unsigned int I3 = I1 + I2;
   static_assert(__real(I3) == 45, "");
   static_assert(__imag(I3) == 12, "");
+
+  static_assert(__real(A + 2.0) == 15, "");
+  static_assert(__imag(A + 2.0) == 2, "");
+  static_assert(__real(2.0 + A) == 15, "");
+  static_assert(__imag(2.0 + A) == 2, "");
+
+  static_assert(__real(D + 1) == 16, "");
+  static_assert(__real(D + 1.0) == 16, "");
+  constexpr _Complex double D2 = D + 3.0;
+  static_assert(__real(D2) == 18.0, "");
+  static_assert(__imag(D2) == 3.0, "");
+  constexpr _Complex double D3 = 3.0 + D;
+  static_assert(__real(D3) == 18.0, "");
+  static_assert(__imag(D3) == 3.0, "");
 }
 
 namespace Sub {
@@ -169,6 +192,8 @@ namespace Sub {
   constexpr _Complex float C = A - B;
   static_assert(__real(C) == 11.0, "");
   static_assert(__imag(C) == 1.0, "");
+  static_assert(__real(A - 2.0) == 11, "");
+  static_assert(__real(2.0 - A) == -11, "");
 
   constexpr _Complex float D = B - A;
   static_assert(__real(D) == -11.0, "");
@@ -186,6 +211,15 @@ namespace Sub {
   constexpr _Complex float D_ = A_ - B_;
   static_assert(__real(D_) == 11.0, "");
   static_assert(__imag(D_) == 1.0, "");
+
+  static_assert(__real(D - 1) == -12, "");
+  static_assert(__real(D - 1.0) == -12, "");
+  constexpr _Complex double D2 = D - 3.0;
+  static_assert(__real(D2) == -14.0, "");
+  static_assert(__imag(D2) == -1.0, "");
+  constexpr _Complex double D3 = 3.0 - D;
+  static_assert(__real(D3) == 14.0, "");
+  static_assert(__imag(D3) == 1.0, "");
 }
 
 }
