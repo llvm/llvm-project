@@ -2486,6 +2486,19 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
       nextToken();
       break;
     case tok::comma:
+      // TALLY: Force enum members on new line each
+      if (IsEnum && FormatTok->Previous) {
+        if (!FormatTok->Previous->is(tok::numeric_constant)) {
+          // Simple case
+          FormatTok->Previous->MustBreakBefore = true;
+        }
+        else {
+          // Relatively complex case: Numeric constant before comma
+          if (FormatTok->Previous->Previous && FormatTok->Previous->Previous->is(tok::equal) && FormatTok->Previous->Previous->Previous) {
+            FormatTok->Previous->Previous->Previous->MustBreakBefore = true;
+          }
+        }
+      }
       nextToken();
       if (IsEnum && !Style.AllowShortEnumsOnASingleLine)
         addUnwrappedLine();
@@ -2834,6 +2847,10 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
     if (Style.RemoveBracesLLVM) {
       NestedTooDeep.back() = false;
       Kind = IfStmtKind::IfElse;
+    }
+	if (FormatTok->NewlinesBefore >= 1) {
+      FormatTok->NewlinesBefore = 0;
+      FormatTok->HasUnescapedNewline = false;
     }
     nextToken();
     handleAttributes();

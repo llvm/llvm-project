@@ -627,6 +627,30 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   if (State.NoContinuation)
     return true;
 
+  // TALLY : By default the newlines are honored. For few cases
+  //          like start of function definition and conditional
+  //          and loop expressions should have a rigid frame.
+  FormatToken *tokenlast;
+  FormatToken *tokenfirst;
+
+  if (State.Line)
+    tokenlast = State.Line->Last;
+    tokenfirst = State.Line->First;
+
+    if (tokenfirst && tokenfirst->isOneOf(tok::kw_else, tok::kw_while, tok::kw_do, tok::kw_if, tok::kw_for))
+      return !(State.NextToken->LparenCount == State.NextToken->RparenCount);
+
+    if (tokenlast && tokenlast->isTrailingComment())
+      tokenlast = tokenlast->getPreviousNonComment();
+
+    if (tokenfirst && tokenfirst->is(tok::r_brace) &&
+        tokenlast && tokenlast->isOneOf(tok::l_brace, tok::semi)) {
+
+      if (tokenfirst->getNextNonComment () &&
+          tokenfirst->getNextNonComment ()->isOneOf (tok::kw_else, tok::kw_while))
+        return !(State.NextToken->LparenCount == State.NextToken->RparenCount);
+    }
+
   return false;
 }
 
@@ -1392,6 +1416,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       return CurrentState.ColonPos - NextNonComment->ColumnWidth;
     return CurrentState.Indent;
   }
+  //if (NextNonComment->isOneOf(tok::colon, TT_CtorInitializerColon) && Current.is(tok::r_paren)) // TALLY
+  //    return CurrentState.Indent;
   if (NextNonComment->is(tok::colon) && NextNonComment->is(TT_ObjCMethodExpr))
     return CurrentState.ColonPos;
   if (NextNonComment->is(TT_ArraySubscriptLSquare)) {
@@ -1453,7 +1479,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
            NextNonComment->SpacesRequiredBefore;
   }
   if (CurrentState.Indent == State.FirstIndent && PreviousNonComment &&
-      !PreviousNonComment->isOneOf(tok::r_brace, TT_CtorInitializerComma)) {
+      !PreviousNonComment->isOneOf(tok::r_brace, TT_CtorInitializerComma, tok::kw_constexpr)) {  // TALLY: , tok::kw_constexpr
     // Ensure that we fall back to the continuation indent width instead of
     // just flushing continuations left.
     return CurrentState.Indent + Style.ContinuationIndentWidth;

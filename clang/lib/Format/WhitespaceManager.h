@@ -212,6 +212,9 @@ private:
     }
   };
 
+  /// TALLY: Is code in condition block.
+  bool IsConditionBlock(const FormatToken *tkn);
+
   /// Calculate \c IsTrailingComment, \c TokenLength for the last tokens
   /// or token parts in a line and \c PreviousEndOfTokenColumn and
   /// \c EscapedNewlineColumn for the first tokens or token parts in a line.
@@ -220,11 +223,59 @@ private:
   /// \brief Align consecutive C/C++ preprocessor macros over all \c Changes.
   void alignConsecutiveMacros();
 
+    /// TALLY: Align consecutive assignments over all \c Changes.
+  void alignConsecutiveAssignmentsOnScopedVarName();
+
+  /// TALLY : Align 'using' based assignments; 
+  void alignConsecutiveAssignementsOnUsing ();
+
+  /// TALLY: Align consecutive assignments over all \c Changes.
+  void alignConsecutiveAssignmentsOnVarNameAcrossSections();
+
+  /// TALLY: Align consecutive assignments over all \c Changes.
+  void alignConsecutiveAssignmentsOnVarNameWithinSection();
+
+  /// TALLY: Align consecutive assignments over all \c Changes.
+  void alignConsecutiveVarBitFields();
+
+  // TALLY: Mutually exclusive with alignConsecutiveAssignmentsOnEqualsWithinSection()
+  void alignConsecutiveAssignmentsOnEqualsAcrossSections();
+
+  // TALLY: Mutually exclusive with alignConsecutiveAssignmentsOnEqualsAcrossSections()
+  void alignConsecutiveAssignmentsOnEqualsWithinSection();
+
   /// Align consecutive assignments over all \c Changes.
   void alignConsecutiveAssignments();
 
   /// Align consecutive bitfields over all \c Changes.
   void alignConsecutiveBitFields();
+
+  // TALLY : Align consecutive constexprs.
+  void alignConsecutiveLBraceOfVarDeclOrDef();
+
+  /// TALLY: Columnarize specific tokens over all \c Changes.
+  void columnarizePPKeywords();
+
+  /// TALLY: Columnarize specific tokens over all \c Changes.
+  void columnarizePPDefineKeyword();
+  
+  /// TALLY: Columnarize keywords all \c Changes.
+  void columnarizeKeywords();
+
+  /// TALLY: Columnarize specific tokens over all \c Changes.
+  void columnarizeDeclarationSpecifierTokens();
+
+  /// TALLY: Columnarize specific tokens over all \c Changes.
+  void columnarizeDatatypeTokens();
+
+  /// TALLY: Columnarize NoDiscard NoReturn, and template.
+  void columnarizeNoDiscardOrNoReturnOrTemplate();
+
+  /// TALLY: Columnarize specific tokens over all \c Changes.
+  void columnarizeIdentifierTokens();
+
+  /// TALLY: Columnarize specific tokens over all \c Changes.
+  void columnarizeLParenTokensAndSplitArgs();
 
   /// Align consecutive declarations over all \c Changes.
   void alignConsecutiveDeclarations();
@@ -355,6 +406,17 @@ private:
   tooling::Replacements Replaces;
   const FormatStyle &Style;
   bool UseCRLF;
+
+  // TALLY
+  size_t adjectIdentifierLocation (unsigned pad, unsigned idx, const FormatToken * tkn, bool isConstructor = false);
+
+  // TALLY
+  size_t MaxPPKeywordLen = 0;
+  size_t MaxPPDefineLHSLen = 0;
+  size_t MaxSpecifierTabs = 0;
+  size_t MaxDatatypeLen = 0;
+  size_t MaxMemberNameLen = 0;
+  size_t MaxGlobalVarNameLen = 0;
 };
 
 } // namespace format

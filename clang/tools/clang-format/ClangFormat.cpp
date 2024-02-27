@@ -26,6 +26,9 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Process.h"
 #include <fstream>
+/// TALLY
+#include <stack>
+#include <string>
 
 using namespace llvm;
 using clang::tooling::Replacements;
@@ -398,6 +401,175 @@ class ClangFormatDiagConsumer : public DiagnosticConsumer {
   }
 };
 
+enum class TemplateCheckError {
+
+    NotTemplate,
+    BracesMismatch,
+};
+
+/// TALLY, Scan to see if following test is a template declaration.
+static bool IsTemplateReference(const char * Data, int & idx, TemplateCheckError & ErrVal)
+{
+    using namespace std;
+    stack<char> tmplt_braces;
+    int pIdx = idx - 1;
+
+    tmplt_braces.push('<');
+    while (Data[idx] != '\0') {
+
+        if (Data[idx] == ';' || Data[idx] == '{' || Data[idx] == '[' || Data[idx] == '('
+            || Data[idx] == '}' || Data[idx] == ']' || Data[idx] == ')') {
+
+            if (tmplt_braces.size() == 1 && Data[idx] == ';') {
+
+                ++idx;
+                ErrVal = TemplateCheckError::NotTemplate;
+                return false;
+            }
+            else {
+
+                ++idx;
+                ErrVal = TemplateCheckError::BracesMismatch;
+                return false;
+            }
+        }
+        if (Data[idx] == '>') {
+
+            tmplt_braces.pop();
+
+            if (tmplt_braces.size() == 0) {
+
+                ++idx;
+                return true;
+            }
+        }
+        else if (Data[idx] == '<') {
+
+            if (pIdx == idx - 1) {
+                // it is "<<"
+                ++idx;
+                ErrVal = TemplateCheckError::NotTemplate;
+                return false;
+            }
+            tmplt_braces.push(Data[idx]);
+        }
+
+        ++idx;
+    }
+
+    ErrVal = TemplateCheckError::BracesMismatch;
+    return false;
+}
+
+/// TALLY, A lightweight scan to see if file has correct number of braces '{}, () []'.
+///        Need to add support for template related braces '<>'
+static bool MissingNotBraces(StringRef BufStr) {
+  using namespace std;
+
+  stack<char> braces;
+  const char * data = BufStr.data();
+
+  const char doustr   {'"'};
+  const char single   {'\''};
+  const char l_curly  {'{'};
+  const char l_square {'['};
+  const char l_curve  {'('};
+  const char r_curly  {'}'};
+  const char r_square {']'};
+  const char r_curve  {')'};
+  bool instr          {false};    // in string
+  int dblstrcnt       {};   //
+  int sglstrcnt       {};   //
+  int idx             {};
+
+  while (data[idx] != '\0') {
+
+    char ch = data[idx];
+
+    // ignore comment line
+    if (!instr && ch == '/') {
+      ch = data[++idx];
+      if (ch == '/') { // skip till we reach at "\n" or end of string '\0'
+        while (data[++idx] != '\n' && data[idx] != '\0')
+              ;
+
+          continue;
+      }
+      else if (ch == '*') {  // the comment start with /* and so will end with */
+        ++idx;
+        while (data[idx] != '\0') { // this is a comment
+          if (data[idx] == '*' && data[idx + 1] == '/') {
+              ++idx;
+              break;
+          }
+          ++idx;
+        }
+        if (data[idx] == '\0')
+            break;
+
+        ++idx;
+        continue;
+      }
+    }    // comment check section end
+
+    // ignore anything in single or double quotes
+    // if single-quote, double quote and braces are inside single or double quote then move forward
+    if ((ch == single && (data[idx + 2] == single))
+        || (ch == doustr && (data[idx + 2] == doustr))) {
+        idx += 3;
+        if (data[idx] == single || data[idx] == doustr)
+            ++idx;
+        continue;
+    } else if (ch == single && data[idx + 1] == '\\' && data[idx + 2] == doustr && data[idx + 3] == single) {
+        idx += 4;
+        continue;
+    }
+
+    // Ignore whatever is part of string
+    if (ch == doustr) {
+            char pch;
+
+      ++idx;
+      while (data[idx] != doustr) {
+        pch = data[idx];
+        ++idx;
+        if (pch == '\\' && data[idx] == doustr)
+            ++idx;
+
+        continue;
+      }
+      ++idx;
+      continue;
+    }
+
+    // template support to be added
+    if ((ch == l_curly || ch == l_square || ch == l_curve)) { //  TODO: || ch == l_angle
+        braces.push(ch);
+    }
+    else if (ch == r_curly || ch == r_square || ch == r_curve) {    // tempalte bracket to be handled.
+        if (braces.empty())
+            return false;
+
+        char val = braces.top();
+
+        if ((ch == r_curly) && (val == l_curly))
+            braces.pop();
+        else if ((ch == r_square) && (val == l_square))
+            braces.pop();
+        else if ((ch == r_curve) && (val == l_curve))
+            braces.pop();
+        else
+            return false;
+    }
+    ++idx;
+  }
+
+  if (!braces.empty())
+      return false;
+
+  return true;
+}
+
 // Returns true on error.
 static bool format(StringRef FileName) {
   const bool IsSTDIN = FileName == "-";
@@ -429,6 +601,13 @@ static bool format(StringRef FileName) {
       errs() << " in file '" << FileName << "'";
     errs() << ".\n";
     return true;
+  }
+
+  /// TALLY scan current file for mismatch braces, and return if found.
+  if (!MissingNotBraces(BufStr)) {
+
+      llvm::errs() << "error: file has mismatch braces\n";
+      return false;
   }
 
   std::vector<tooling::Range> Ranges;

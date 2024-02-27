@@ -11,7 +11,7 @@
 /// \c AnnotatedTokens out of \c FormatTokens with required extra information.
 ///
 //===----------------------------------------------------------------------===//
-
+// clang-format off
 #include "TokenAnnotator.h"
 #include "FormatToken.h"
 #include "clang/Basic/SourceManager.h"
@@ -1348,7 +1348,9 @@ private:
         Tok->setType(TT_RangeBasedForLoopColon);
       } else if (Contexts.back().ContextType == Context::C11GenericSelection) {
         Tok->setType(TT_GenericSelectionColon);
-      } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
+      } else if (CurrentToken && (CurrentToken->is(tok::numeric_constant)
+          /// TALLY : The BitFied can be an identifier aswell.
+          || CurrentToken->is(tok::identifier))) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
                  !Line.First->isOneOf(tok::kw_enum, tok::kw_case,
@@ -1364,8 +1366,10 @@ private:
           FormatToken *PrevPrev = Prev->getPreviousNonComment();
           if (!PrevPrev)
             break;
-          if (PrevPrev && PrevPrev->isOneOf(tok::r_paren, tok::kw_noexcept))
+          if (PrevPrev && PrevPrev->isOneOf(tok::r_paren, tok::kw_noexcept)) {
             Tok->setType(TT_CtorInitializerColon);
+            Tok->SpacesRequiredBefore = 1;
+          }
         } else {
           Tok->setType(TT_InheritanceColon);
         }
@@ -3750,9 +3754,590 @@ bool TokenAnnotator::mustBreakForReturnType(const AnnotatedLine &Line) const {
   return false;
 }
 
+// TALLY: Walk the line
+void TokenAnnotator::walkLine1(AnnotatedLine& Line) {
+    OriginalLineBreakWeight = 0;
+
+    // TALLY: Walk the line in backward direction looking for semi-colon
+    bool hasSemiColon = false;
+    FormatToken* MyToken0 = Line.Last;
+    if (MyToken0) {
+        for (MyToken0 = Line.Last; MyToken0 != nullptr && !hasSemiColon; MyToken0 = MyToken0->Previous) {
+            if (MyToken0->is(tok::semi)) {
+                hasSemiColon = true;
+            }
+        }
+    }
+
+    // TALLY: Walk the line in forward direction
+    FormatToken* MyToken = Line.First;
+    if (MyToken) {
+        for (; MyToken != nullptr; MyToken = MyToken->Next) {
+            // Compute state
+
+            // Populate Set if the line define a MACRO
+            if (MyToken->is(tok::hash) && MyToken->Next) {
+                StringRef defstr(STRDEFINETEXT);
+
+                if (MyToken->Next->TokenText.equals(defstr) && MyToken->Next->Next) {
+                    string val(MyToken->Next->Next->TokenText.data(), MyToken->Next->Next->TokenText.size());
+
+                    DefinedMacros.insert(val);
+                }
+            }
+
+            if (MyToken->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union, tok::kw_enum)) {
+                if (MyToken->is(tok::kw_class)) {
+                    if (MyToken->Previous && MyToken->Previous->is(tok::kw_friend) == true || 
+                        (Line.endsWith(tok::semi) && !(Line.endsWith(tok::semi, tok::r_brace))) ||
+                        LArrowCount > 0)
+                        continue;
+                    
+                    IsClassScope = true;
+
+                    const FormatToken * Next = MyToken->getNextNonComment();
+                    if (Next) {
+
+                        if (Next->is(tok::kw_alignas) && Next->Next && Next->Next->is(tok::l_paren)
+                            && Next->Next->Next && Next->Next->Next->Next && Next->Next->Next->Next->is(tok::r_paren)
+                            && Next->Next->Next->Next->Next) {
+
+                            Next = Next->Next->Next->Next->Next;
+                            if (Next->Next && (Next->Next->isOneOf(tok::l_brace, tok::colon) ||
+                                    (Next->Next->is(tok::kw___is_final) && Next->Next->Next && Next->Next->Next->isOneOf(tok::l_brace, tok::colon))))
+                                Next = Next;
+                        }
+
+                        ClassScopeName = Next->TokenText;
+                    }
+                }
+                if (MyToken->is(tok::kw_struct)) {
+                    IsStructScope = true;
+                    const FormatToken* Next = MyToken->getNextNonComment();
+                    if (Next) {
+                        StructScopeName = Next->TokenText;
+                    }
+                }
+                if (MyToken->is(tok::kw_union)) {
+                    IsUnionScope = true;
+                }
+                if (MyToken->is(tok::kw_enum)) {
+                    MyToken->IsEnumScope = true;
+                    if (MyToken->Next->is(tok::kw_class))
+                        MyToken = MyToken->Next;
+
+                    IsEnumScope = true;
+                }
+            }
+            else if (MyToken->is(TT_TemplateOpener)) {
+                if (MyToken->Previous && MyToken->Previous->is(tok::kw_template) && IsInTemplateLine == false) {
+                    LArrowCount = 1;
+                    MyToken->Previous->IsInTemplateLine = true;
+                    IsInTemplateLine = true;
+                }
+                else if (IsInTemplateLine)
+                    ++LArrowCount;
+            }
+            else if (MyToken->is(TT_TemplateCloser) && LArrowCount > 0) {
+                ++RArrowCount;
+
+                if (LArrowCount == RArrowCount) {
+                    LArrowCount = RArrowCount = 0;
+                    MyToken->IsInTemplateLine = true;
+                    IsInTemplateLine = false;
+                    if (MyToken->getNextNonComment() && IsFunctionDefinitionLine && LparenCount == 0)
+                        MyToken->getNextNonCommentNonConst()->NewlinesBefore = 1;
+                }
+            }
+            else if (MyToken->is(tok::l_brace)) {
+                LbraceCount++;
+                if (LparenCount == RparenCount && IsFunctionDefinitionLine)
+                    IsFunctionDefinitionLine = false;
+            }
+            else if (MyToken->is(tok::r_brace)) {
+                RbraceCount++;
+
+                if (RbraceCount == LbraceCount) {
+                    LbraceCount = 0;
+                    RbraceCount = 0;
+
+                    if (IsClassScope) {
+                        IsClassScope = false;
+                    }
+
+                    if (IsStructScope) {
+                        IsStructScope = false;
+                    }
+
+                    if (IsUnionScope) {
+                        IsUnionScope = false;
+                    }
+
+                    if (IsEnumScope) {
+                        MyToken->IsEnumScope = IsEnumScope;
+                        if(MyToken->Next && MyToken->Next->is(tok::semi))
+                            MyToken->Next->IsEnumScope = true;
+                        IsEnumScope = false;
+                    }
+
+                    if (IsInFunctionDefinition) {
+                        IsInFunctionDefinition = false;
+                    }
+                }
+            }
+            else if (MyToken->is(tok::l_paren)) {
+                LparenCount++;
+
+                // Dont add weight for if/while statements.
+                if (MyToken->getPreviousNonComment() && MyToken->getPreviousNonComment()->isOneOf(tok::kw_if, tok::kw_while) == false)
+                    OriginalLineBreakWeight += 2;
+
+                // Add additional weight for a function declaration
+                if (hasSemiColon) {
+                    const FormatToken* MyPrev = MyToken->getPreviousNonComment();
+                    if (MyPrev && MyPrev->isFunctionOrCtorOrPrevIsDtor()) {
+                        OriginalLineBreakWeight += 5;
+                    }
+                }
+
+                if (IsFunctionDefinitionLine) {
+                    FormatToken* MyPrev = MyToken->Previous;
+
+                    if (MyPrev) {
+                        if (MyPrev->Previous && MyPrev->Previous->is(tok::coloncolon)) {
+                            MyPrev = MyPrev->Previous->Previous;
+
+                            if (MyPrev && MyPrev->is(tok::greater)) {
+
+                                int arrowcount = 0;
+                                do {
+                                   if (MyPrev->is(tok::greater))
+                                       ++arrowcount;
+                                   else if (MyPrev->is(tok::less))
+                                       --arrowcount;
+
+                                   MyPrev = MyPrev->Previous;
+                                } while (arrowcount && MyPrev);
+                            }
+                            else if (MyPrev && MyPrev->is(tok::r_paren)) {
+
+                                int bracketcount = 0;
+                                do {
+                                   if (MyPrev->is(tok::r_paren))
+                                       ++bracketcount;
+
+                                   if (MyPrev->is(tok::l_paren))
+                                       --bracketcount;
+
+                                   MyPrev = MyPrev->Previous;
+                                } while (bracketcount && MyPrev);
+                            }
+                        }
+
+                        if (MyPrev) {
+                            bool isconstructor = MyPrev->isCtorOrDtor();
+
+                            if (!isconstructor) {
+                                MyPrev->NewlinesBefore = 1;
+                            }
+                            else if (isconstructor && !IsClassScope && MyPrev->Previous && MyPrev->Previous->is(tok::kw_constexpr)) {
+                                ++MyPrev->MustBreakBefore;
+                                //++MyPrev->Newlines;
+                            }
+                        }
+                    }
+                }
+            }
+            else if (MyToken->is(tok::r_paren)) {
+                RparenCount++;
+
+                if (RparenCount == LparenCount) {
+                    LparenCount = 0;
+                    RparenCount = 0;
+                }
+            }
+            else if (MyToken->isPPConditionalInclusionStart()) {
+                IsPPConditionalInclusionScope = true;
+            }
+            else if (MyToken->isPPConditionalInclusionEnd()) {
+                IsPPConditionalInclusionScope = false;
+            }
+            else if (MyToken->isOneOf(tok::kw_if, tok::kw_for, tok::kw_while)) {
+                OriginalLineBreakWeight += 5;
+            }
+            else if (MyToken->is(tok::arrow)) {
+                OriginalLineBreakWeight += 2;
+            } 
+            else if (!Line.endsWith(tok::semi) && Line.MightBeFunctionDecl && MyToken->isDatatype() &&
+                IsClassScope == false && IsStructScope == false && IsEnumScope == false &&
+                RbraceCount == LbraceCount && LbraceCount == 0) {
+                IsInFunctionDefinition = true;
+                IsFunctionDefinitionLine = true;
+            }
+
+            // Copy state
+            MyToken->MyLine = &Line;
+            MyToken->HasSemiColonInLine = hasSemiColon;
+            MyToken->IsPPConditionalInclusionScope = IsPPConditionalInclusionScope;
+            MyToken->IsClassScope = IsClassScope;
+            MyToken->IsStructScope = IsStructScope;
+            MyToken->IsUnionScope = IsUnionScope;
+            MyToken->IsEnumScope = MyToken->IsEnumScope ? true : IsEnumScope;
+            MyToken->StructScopeName = StructScopeName;
+            MyToken->ClassScopeName = ClassScopeName;
+            MyToken->LbraceCount = LbraceCount;
+            MyToken->RbraceCount = RbraceCount;
+            MyToken->LparenCount = LparenCount;
+            MyToken->RparenCount = RparenCount;
+            MyToken->IsFunctionDefinitionLine = IsFunctionDefinitionLine;
+            MyToken->IsInFunctionDefinitionScope = IsInFunctionDefinition;
+            MyToken->IsInTemplateLine = MyToken->IsInTemplateLine ? true : IsInTemplateLine;
+            MyToken->LArrowCount = LArrowCount;
+            MyToken->RArrowCount = RArrowCount;
+
+            // Check if this token is a MACRO
+            if ((MyToken->Previous == nullptr && MyToken->is(tok::identifier) && MyToken->Next && MyToken->Next->is(tok::semi))
+                || (MyToken->Previous == nullptr && MyToken->is(tok::identifier) && MyToken->Next && MyToken->Next->is(tok::comment))
+                || (MyToken->Previous == nullptr && MyToken->is(tok::identifier) && MyToken->Next == nullptr)) {
+
+                string val(MyToken->TokenText.data(), MyToken->TokenText.size());
+
+                if (DefinedMacros.find(val) != DefinedMacros.end()) {
+                    MyToken->Finalized = true;
+                }
+                if (MyToken->Next)
+                    MyToken->HasSemiColonInLine = MyToken->Next->is(tok::semi);
+                else
+                    MyToken->HasSemiColonInLine = false;
+            }
+
+            if (MyToken->Previous != nullptr && MyToken->Previous->Finalized && MyToken->is(tok::comment)) {
+                string val(MyToken->Previous->TokenText.data(), MyToken->Previous->TokenText.size());
+
+                if (DefinedMacros.find(val) != DefinedMacros.end()) {
+                    MyToken->Finalized = true;
+                }
+            }
+        }
+    }
+
+    // TALLY: Walk the line in forward direction
+    FormatToken* MyToken2 = Line.First;
+    if (MyToken2) {
+        for (MyToken2 = Line.First; MyToken2 != nullptr; MyToken2 = MyToken2->Next) {
+            // Copy state (accumulated weight for all tokens in the line) to all tokens in the line
+            MyToken2->OriginalLineBreakWeight = OriginalLineBreakWeight;
+        }
+    }
+}
+
+// TALLY: Walk the line in forward direction
+void TokenAnnotator::walkLine2(AnnotatedLine& Line) {
+
+    int templatebracecount = 0;
+
+    // First loop for 'IsRhsToken'
+    FormatToken* MyToken = Line.First;
+    if (MyToken) {
+        for (MyToken = Line.First; MyToken != nullptr; MyToken = MyToken->Next) {
+            if (MyToken->isNotScoped() || MyToken->IsInTemplateLine)
+                continue;
+
+            bool nonAlignasLParen = MyToken->is(tok::l_paren) && MyToken->Previous && !MyToken->Previous->is(tok::kw_alignas);
+
+            if (MyToken->isOneOf(tok::equal, TT_BinaryOperator, TT_UnaryOperator) || MyToken->isMemberAccess() || nonAlignasLParen)
+                break;
+        }
+
+        // TALLY to distinguish '(' from 'operator=('
+        if (MyToken && (MyToken->isOneOf(tok::equal, TT_BinaryOperator, TT_UnaryOperator) || MyToken->isMemberAccess())
+                && (MyToken->Previous && !(MyToken->Previous->is(tok::kw_operator)))) {
+            FormatToken* Next = MyToken->getNextNonCommentNonConst();
+            while (Next) {
+                Next->IsRhsToken = true;
+                Next = Next->getNextNonCommentNonConst();
+            }
+        }
+    }
+
+    // Second loop for 'IsVariableNameWithDatatype', 'IsFunctionName', and 'IsDatatype'
+    FormatToken* DtToken = nullptr;
+    MyToken = Line.First;
+    if (MyToken) {
+        for (MyToken = Line.First; MyToken != nullptr; MyToken = MyToken->Next) {
+            if (MyToken->IsInterimBeforeName || MyToken->IsRhsToken || MyToken->isNotScoped() || MyToken->isParenScoped() || MyToken->IsInTemplateLine)
+                // Basically a template type, then move to next token.
+                continue;
+
+            // In Function Definition Block
+            if (MyToken->IsInFunctionDefinitionScope) {
+                //const FormatToken * Prev = MyToken->getPreviousNonComment();
+                const FormatToken * Next = MyToken;
+                bool isDT = true;
+
+                while (Next != nullptr && Next->isNot (tok::semi)) {
+                    if (Next->isOneOf(tok::l_paren, tok::r_paren, tok::less, tok::lessless, tok::lesslessequal,
+                                      tok::greater, tok::greatergreater, tok::greatergreaterequal,
+                                      tok::period, tok::periodstar, tok::arrow, tok::arrowstar, tok::kw_goto,
+                                      tok::pipe, tok::pipeequal,tok::pipepipe, tok::caret, tok::caretequal,
+                                      tok::ampamp, tok::ampequal, tok::starequal, tok::plusequal, tok::plusplus,
+                                      tok::minusequal, tok::minusminus, tok::percentequal, tok::slashequal)) {
+                        isDT = false;
+                        Next = nullptr;
+                        break;
+                    }
+
+                    if (Next->is(tok::equal)) {
+                        // Check if this statement is a const variable declaration
+                        const FormatToken * tmp = MyToken;
+                        while (tmp && tmp->isNot(tok::equal)) {
+                            if (tmp->isOneOf(tok::kw_const, tok::kw_constexpr)) {
+                                // it is a declaration
+                                isDT = true;
+                                break;
+                            }
+                            isDT = false;
+                            tmp = tmp->Next;
+                        }
+                        Next = nullptr; // we need no more iteration on token in this statement
+                        break;
+                    }
+                    Next = Next->Next;
+                }
+
+                if (isDT) {
+                    Next = MyToken->isNot(tok::l_brace) ? MyToken : MyToken->getNextNonComment();
+                    while (Next != nullptr && Next->isNot (tok::semi)) {
+                        MyToken->IsVariableNameWithDatatype = true;
+                        MyToken->IsDatatype = true;
+                        Next = Next->Next;
+                    }
+                }
+                if (Next == nullptr)
+                    break;
+
+                MyToken = (FormatToken *)Next;
+                continue;
+            }
+
+            // Datatype
+            if (MyToken->isDatatypeInner() &&  (MyToken->Previous == nullptr || MyToken->Previous->is(tok::kw_return) == false) && MyToken->IsEnumScope == false) {
+                if (DtToken == nullptr)
+                    DtToken = MyToken;
+
+                // Interim
+                FormatToken* Next = MyToken;
+                do {
+                    Next = Next->getNextNonCommentNonConst();
+
+                    if (!Next) {
+                        break;
+                    }
+
+                    if (Next->is(tok::less)) 
+                        ++templatebracecount;
+
+                    if(templatebracecount)
+                        Next->IsInterimBeforeName = true;
+                    
+                    if (Next->is(tok::greater))
+                        --templatebracecount;
+
+                } while (templatebracecount);
+                
+                templatebracecount = 0;
+
+                if (Next && Next->is(tok::coloncolon)) {
+                    FormatToken* NextNext = Next->getNextNonCommentNonConst();
+
+                    if (NextNext && NextNext->TokenText.equals("Enum")) {
+                        Next->IsInterimBeforeName = true;
+                        Next = NextNext;
+                        Next->IsInterimBeforeName = true;
+                    }
+                }
+
+                // Interim
+                while (Next && 
+                       (Next->isOneOf(tok::star, tok::amp) || 
+                        Next->isPointerOrRef())) {
+                    Next->IsInterimBeforeName = true;
+                    Next = Next->getNextNonCommentNonConst();
+                }
+            }
+
+            if (DtToken != nullptr && MyToken != DtToken) {
+                const FormatToken* Prev = MyToken->getPreviousNonComment();
+                const FormatToken* Next = MyToken->getNextNonComment();
+
+                // Function name
+                if ((MyToken->isFunctionName() && Next && Next->is(tok::l_paren) && MyToken->Previous && MyToken->Previous->isDatatype() == false) || 
+                    (MyToken->isFunctionName() && Next && Next->is(tok::l_paren) && (MyToken->IsClassScope || MyToken->IsStructScope)) ||
+                    MyToken->isFunctionName() && MyToken->is(tok::kw_operator) && (MyToken->IsClassScope || MyToken->IsStructScope)) {
+                    MyToken->IsFunctionName = true;
+
+                    if (MyToken->is(tok::kw_operator))
+                        MyToken = MyToken->MarkOperatorOverloadAsFunction();
+
+                    DtToken->IsDatatype = true;
+                }
+                // Variable name
+                else if (MyToken->is(tok::identifier) && Prev && !Prev->isMemberAccess()) {
+                    bool nextOk = false;
+                    if (Next) {
+                        // && !isValueAssignment(Prev)
+                        if (Next->isOneOf(tok::semi, tok::comma, tok::equal)) {
+                            nextOk = true;
+                        }
+                        else if (Next->is(tok::l_brace) && Next->MatchingParen) {
+                            nextOk = true;
+                        } 
+                        else if (Next->is(tok::l_paren) &&
+                            Prev->isOneOf(tok::coloncolon, tok::l_square) == false /*&& Next->IsClassScope == false*/)
+                            /*
+                             *  && isFunctionLocalVariableDeclaration (Prev, Next)
+                             */
+                          nextOk = true;
+                        else if (Next->is(tok::colon)) {
+                            const FormatToken* MyNext2 = Next->getNextNonComment();
+                            if (MyNext2 && (MyNext2->is(tok::numeric_constant) || MyNext2->is(tok::identifier) )) {
+                                nextOk = true;
+                            }
+                        }
+                        else if (Next->is(tok::l_square)) {
+                            const FormatToken* Next2 = Next->getNextNonComment();
+                            // Array size may be tok::numeric_constant or tok::identifier or expression
+                            // containing tok::plus, tok::minus, tok::star etc. so we conservatively look
+                            // for matching tok::r_square only.
+                            while (Next2 && !Next2->is(tok::r_square)) {
+                                Next2 = Next2->getNextNonComment();
+                            }
+                            if (Next2 && Next2->is(tok::r_square)) {
+                                const FormatToken* nextnext = Next2->getNextNonComment();
+                                if (nextnext == nullptr || nextnext->is(tok::l_paren) ==  false)
+                                    nextOk = true;
+                            }
+                        }
+                        // TODO: Add support for scoped variable name eg. Something::SomethingElse
+                    }
+
+                    if (nextOk) {
+                        MyToken->IsVariableNameWithDatatype = true;
+                        DtToken->IsDatatype = true;
+                    }
+                }
+            }
+        }
+    }
+
+    // Third loop for 'IsVariableNameWithoutDatatype'
+    MyToken = Line.First;
+    if (MyToken) {
+        for (MyToken = Line.First; MyToken != nullptr; MyToken = MyToken->Next) {
+            if (MyToken->IsInterimBeforeName || MyToken->IsRhsToken || MyToken->isNotScoped() || MyToken->isParenScoped())
+                continue;
+
+            // Identifier
+            if (!MyToken->IsDatatype && MyToken->is(tok::identifier)) {
+
+                // Interim
+                FormatToken* Prev = MyToken->getPreviousNonComment();
+                while (Prev && (Prev->isOneOf(tok::star, tok::amp) || Prev->isPointerOrRef())) {
+                    Prev->IsInterimBeforeName = true;
+                    Prev = Prev->getPreviousNonComment();
+                }
+
+                if (Prev == nullptr) {
+                    MyToken->IsVariableNameWithoutDatatype = true;
+                }
+            }
+        }
+    }
+}
+
+/// TALLY: Calculate Tally-specific information for all tokens in all annotated lines 
+// before calculateFormattingInformation()
+void TokenAnnotator::calculateTallyInformation(AnnotatedLine& Line) {
+    for (SmallVectorImpl<AnnotatedLine*>::iterator I = Line.Children.begin(),
+        E = Line.Children.end();
+        I != E; ++I) {
+        calculateTallyInformation(**I);
+    }
+
+    walkLine1(Line);
+    walkLine2(Line);
+}
+
+// TALLY: Check if this line is part of variable declaration in a function definition
+// TODO: this may need more conditions
+bool TokenAnnotator::isFunctionLocalVariableDeclaration(const FormatToken * pTkn, const FormatToken * pNxt)
+{
+    while (pTkn != nullptr && pTkn->IsInFunctionDefinitionScope) {
+
+        if (pTkn->is(tok::equal) && !isValueAssignment (pTkn))
+            return true;
+
+        pTkn = pTkn->Previous;
+    }
+
+    while (pNxt != nullptr && pNxt->IsInFunctionDefinitionScope && pNxt->isNot(tok::semi)) {
+
+        if (pNxt->is(tok::equal))
+            return true;
+
+        pNxt = pNxt->Next;
+    }
+
+    return false;
+}
+
+// TALLY: Distinguish that it is not a variable declaration
+bool TokenAnnotator::isValueAssignment(const FormatToken * pTkn)
+{
+    while (pTkn != nullptr && pTkn->IsInFunctionDefinitionScope) {
+
+        if (pTkn->isOneOf(tok::arrow, tok::period, tok::r_paren))
+            return true;
+
+        pTkn = pTkn->Previous;
+    }
+
+    return false;
+}
+
 void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   for (AnnotatedLine *ChildLine : Line.Children)
     calculateFormattingInformation(*ChildLine);
+
+  // TALLY: Walk the line in forward direction
+  FormatToken* MyToken = Line.First;
+  bool IsDoubleIndentNeeded = false;
+  bool IsReturnLine = MyToken->is(tok::kw_return);
+  
+  if (MyToken && !IsReturnLine) {
+      for (MyToken = Line.First; MyToken != nullptr && IsDoubleIndentNeeded == false; MyToken = MyToken->Next) {
+          if (MyToken->IsVariableNameWithDatatype || MyToken->isTallyTrace()) {
+              IsDoubleIndentNeeded = true;
+              break;
+          }
+      }
+  }
+  
+  /// TALLY: We have a variable name in declaration. Filter out cases in control statements and scoped in struct or union.
+  if (IsDoubleIndentNeeded) {
+      // Walk back to last non-comment token
+      FormatToken* SemiToken = Line.Last;
+      while (SemiToken && SemiToken->is(tok::comment)) {
+          SemiToken = SemiToken->Previous;
+      }
+      bool IsLastSemi = SemiToken && SemiToken->is(tok::semi);
+  
+      bool IsStructOrUnion = (MyToken->IsStructScope || MyToken->IsUnionScope);// && (!MyToken->IsClassScope || !MyToken->IsStructScope));
+      if (IsLastSemi && !(IsStructOrUnion || MyToken->isParenScoped() || MyToken->isNotScoped())) {
+          Line.IsDoubleIndented = true;
+          ++Line.Level;
+      }
+  }
 
   Line.First->TotalLength =
       Line.First->IsMultiline ? Style.ColumnLimit
@@ -4488,7 +5073,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     //   operator C<T>::D<U>*()
     // dependent on PointerAlignment style.
     if (Previous) {
-      if (Previous->endsSequence(tok::kw_operator))
+      if (Previous->endsSequence(tok::kw_operator) ||
+         Previous->endsSequence(tok::kw_const, tok::kw_operator) ||
+         Previous->endsSequence(tok::kw_volatile, tok::kw_operator))
         return Style.PointerAlignment != FormatStyle::PAS_Left;
       if (Previous->is(tok::kw_const) || Previous->is(tok::kw_volatile)) {
         return (Style.PointerAlignment != FormatStyle::PAS_Left) ||
@@ -5499,6 +6086,9 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       break;
     }
   }
+  // TALLY: Always have a break after tok::r_brace and before tok::kw_break
+  if (Left.is(tok::r_brace) && Right.is(tok::kw_break))
+    return true;
   if (Style.PackConstructorInitializers == FormatStyle::PCIS_Never) {
     if (Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeColon &&
         (Left.is(TT_CtorInitializerComma) ||

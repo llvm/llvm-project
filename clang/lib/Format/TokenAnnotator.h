@@ -11,12 +11,16 @@
 /// \c AnnotatedTokens out of \c FormatTokens with required extra information.
 ///
 //===----------------------------------------------------------------------===//
-
+// clang-format off
 #ifndef LLVM_CLANG_LIB_FORMAT_TOKENANNOTATOR_H
 #define LLVM_CLANG_LIB_FORMAT_TOKENANNOTATOR_H
 
 #include "UnwrappedLineParser.h"
 #include "clang/Format/Format.h"
+#include <string>
+#include <set>
+
+using namespace std;
 
 namespace clang {
 namespace format {
@@ -57,7 +61,7 @@ public:
         IsMultiVariableDeclStmt(false), Affected(false),
         LeadingEmptyLinesAffected(false), ChildrenAffected(false),
         ReturnTypeWrapped(false), IsContinuation(Line.IsContinuation),
-        FirstStartColumn(Line.FirstStartColumn) {
+        FirstStartColumn(Line.FirstStartColumn), /* TALLY */ IsDoubleIndented(false) {
     assert(!Line.Tokens.empty());
 
     // Calculate Next and Previous for all tokens. Note that we must overwrite
@@ -151,6 +155,16 @@ public:
            startsWith(tok::kw_export, tok::kw_namespace);
   }
 
+  /// TALLY : To state if there is a string literal in the line expression.
+  bool hasStringLiteral() const {
+      for (const FormatToken* curr = First; curr; curr = curr->getNextNonComment()) {
+        if (curr->isStringLiteral())
+          return true;
+      }
+
+      return false;
+  }
+
   FormatToken *getFirstNonComment() const {
     assert(First);
     return First->is(tok::comment) ? First->getNextNonComment() : First;
@@ -200,6 +214,12 @@ public:
   bool IsContinuation;
 
   unsigned FirstStartColumn;
+  /// TALLY: \c True if this line is additional/double indented
+  bool IsDoubleIndented;
+
+  /// TALLY: Line state for columnarization
+  unsigned LastSpecifierPadding = 0;
+  unsigned LastSpecifierTabs = 0;
 
 private:
   // Disallow copying.
@@ -214,6 +234,13 @@ public:
   TokenAnnotator(const FormatStyle &Style, const AdditionalKeywords &Keywords)
       : Style(Style), Keywords(Keywords) {}
 
+  /// TALLY: clean the set that is created.
+  ~TokenAnnotator() {
+
+      if (DefinedMacros.size() > 0)
+          DefinedMacros.clear();
+  }
+
   /// Adapts the indent levels of comment lines to the indent of the
   /// subsequent line.
   // FIXME: Can/should this be done in the UnwrappedLineParser?
@@ -221,6 +248,61 @@ public:
 
   void annotate(AnnotatedLine &Line);
   void calculateFormattingInformation(AnnotatedLine &Line) const;
+
+  /// TALLY: Add Tally-specific information to all annotated lines
+  void calculateTallyInformation(AnnotatedLine &Line);
+
+  /// TALLY: If a given token is part of a PP conditional inclusion
+  bool IsPPConditionalInclusionScope = false;
+
+  /// TALLY: If a given token is part of a struct scope
+  bool IsStructScope = false;
+
+  /// TALLY: If a given token is part of a union scope
+  bool IsUnionScope = false;
+
+  /// TALLY: If a given token is part of a class scope
+  bool IsClassScope = false;
+
+  /// TALLY: If a given token is part of a enum scope
+  bool IsEnumScope = false;
+
+  /// TALLY: If in function definition.
+  bool IsInFunctionDefinition = false;
+
+  /// TALLY : If in function definition Line. and not body.
+  bool IsFunctionDefinitionLine = false;
+
+  /// TALLY : If in template Line Basically in arrow braces inside expression of type. template <>.
+  bool IsInTemplateLine = false;
+
+  /// TALLY: Name of the struct (if any) a given token is scoped under
+  StringRef StructScopeName = "<StructScopeName_None>";
+
+  /// TALLY: Name of the class (if any) a given token is scoped under
+  StringRef ClassScopeName = "<ClassScopeName_None>";
+
+  /// TALLY: L-Brace count
+  unsigned LbraceCount = 0;
+
+  /// TALLY: R-Brace count
+  unsigned RbraceCount = 0;
+
+  /// TALLY: L-Paren count
+  unsigned LparenCount = 0;
+
+  /// TALLY: R-Paren count
+  unsigned RparenCount = 0;
+  
+  /// TALLY: template opener count.
+  unsigned LArrowCount = 0;
+
+  /// TALLY: template closer count.
+  unsigned RArrowCount = 0;
+
+  /// TALLY: A weight to determine whether line break in the original must be enforced
+  unsigned OriginalLineBreakWeight = 0;
+
 
 private:
   /// Calculate the penalty for splitting before \c Tok.
@@ -258,11 +340,27 @@ private:
   FormatStyle::PointerAlignmentStyle getTokenPointerOrReferenceAlignment(
       const FormatToken &PointerOrReference) const;
 
+  // TALLY
+  void walkLine1(AnnotatedLine &Line);
+
+  // TALLY
+  void walkLine2(AnnotatedLine &Line);
+
+  // TALLY
+  bool isFunctionLocalVariableDeclaration(const FormatToken * pTkn, const FormatToken * pNxt);
+
+  // TALLY
+  bool isValueAssignment(const FormatToken * pTkn);
+
   const FormatStyle &Style;
 
   const AdditionalKeywords &Keywords;
 
   SmallVector<ScopeType> Scopes;
+  // TALLY: mark MACRO, is populated only when it is defined in same file it is used.
+  static constexpr char STRDEFINETEXT[] {'d','e','f','i','n','e','\0'};
+
+  set<string> DefinedMacros;
 };
 
 } // end namespace format

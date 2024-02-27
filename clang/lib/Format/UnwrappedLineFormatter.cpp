@@ -264,8 +264,10 @@ private:
     if (Style.ColumnLimit > 0 && Indent > Style.ColumnLimit)
       return 0;
 
+	// TALLY: ColumnLimitInEffect
+    unsigned ColumnLimitInEffect = TheLine->InPPDirective ? Style.ColumnLimitExtended : Style.ColumnLimit;
     unsigned Limit =
-        Style.ColumnLimit == 0 ? UINT_MAX : Style.ColumnLimit - Indent;
+        Style.ColumnLimit == 0 ? UINT_MAX : ColumnLimitInEffect - Indent;
     // If we already exceed the column limit, we set 'Limit' to 0. The different
     // tryMerge..() functions can then decide whether to still do merging.
     Limit = TheLine->Last->TotalLength > Limit
@@ -275,8 +277,29 @@ private:
     if (TheLine->Last->is(TT_FunctionLBrace) &&
         TheLine->First == TheLine->Last &&
         !Style.BraceWrapping.SplitEmptyFunction &&
-        NextLine.First->is(tok::r_brace)) {
+        NextLine.First->is(tok::r_brace))
       return tryMergeSimpleBlock(I, E, Limit);
+
+    // TALLY: Try merge Tally Memory Manager macro with left-brace
+    const AnnotatedLine *tNextLine = I[1];
+    if (TheLine && TheLine->Last && TheLine->Last->is(tok::l_brace) &&
+      tNextLine && tNextLine->First && tNextLine->First->isTallyMemMgrMacro())
+      return tryMergeSimpleBlock(I, E, UINT_MAX);
+
+    // TALLY: Try merge empty constructor / destructor block
+    // Actual merge happens in tryMergeSimpleBlock() in the lines
+    // after this comment '// We merge empty blocks even if the line exceeds the column limit.'
+    if (TheLine && TheLine->Last && TheLine->Last->is(tok::r_paren) &&
+      tNextLine && tNextLine->First && tNextLine->First->is(tok::l_brace)) {
+      // Get the l_paren from r_paren
+      FormatToken* MatchingParenToken = TheLine->Last->MatchingParen;
+      if (MatchingParenToken != nullptr) {
+        const FormatToken* MyPrev = MatchingParenToken->getPreviousNonComment();
+        const FormatToken* MyPrev2 = MyPrev ? MyPrev->getPreviousNonComment() : nullptr;
+        if ((MyPrev && MyPrev->isConstructor()) || (MyPrev2 && MyPrev2->isDestructor())) {
+          return tryMergeSimpleBlock(I, E, UINT_MAX);
+        }
+      }
     }
 
     const auto *PreviousLine = I != AnnotatedLines.begin() ? I[-1] : nullptr;
@@ -814,7 +837,7 @@ private:
       if (ShouldMerge()) {
         // We merge empty blocks even if the line exceeds the column limit.
         Tok->SpacesRequiredBefore =
-            (Style.SpaceInEmptyBlock || Line.Last->is(tok::comment)) ? 1 : 0;
+            (Tok->isTallyMemMgrMacro() || Style.SpaceInEmptyBlock || Line.Last->is(tok::comment)) ? 1 : 0;
         Tok->CanBreakBefore = true;
         return 1;
       } else if (Limit != 0 && !Line.startsWithNamespace() &&
@@ -1349,6 +1372,14 @@ unsigned UnwrappedLineFormatter::format(
            Joiner.getNextMergedLine(DryRun, IndentTracker);
        Line; PrevPrevLine = PreviousLine, PreviousLine = Line, Line = NextLine,
                            FirstLine = false) {
+    /// TALLY : Ignore the lines that we dont want to format. Currently  template based friend class.
+    ///          Line containing string literal. Hence for these, we do not need to employ clang-format off
+    if (Line && Line->First &&
+           ((Line->startsWith(tok::hash) || Line->InPPDirective) ||
+               Line->First->TokenText.equals("TW_CHECK_UDT_SIZE"))) {
+        markFinalized(Line->First);
+    }
+
     assert(Line->First);
     const AnnotatedLine &TheLine = *Line;
     unsigned Indent = IndentTracker.getIndent();
@@ -1383,6 +1414,9 @@ unsigned UnwrappedLineFormatter::format(
       }
 
       NextLine = Joiner.getNextMergedLine(DryRun, IndentTracker);
+      // TALLY: Always apply NoColumnLimitLineFormatter. Don't apply
+      // NoLineBreakFormatter and OptimizingLineFormatter.
+      bool IsFunctionDefinitionLine = TheLine.MightBeFunctionDecl && !TheLine.Last->isOneOf(tok::semi, tok::comment);
       unsigned ColumnLimit = getColumnLimit(TheLine.InPPDirective, NextLine);
       bool FitsIntoOneLine =
           !TheLine.ContainsMacroCall &&
@@ -1391,6 +1425,11 @@ unsigned UnwrappedLineFormatter::format(
             (!Style.isJavaScript() || !Style.JavaScriptWrapImports)) ||
            (Style.isCSharp() &&
             TheLine.InPPDirective)); // don't split #regions in C#
+
+      //if (IsFunctionDefinitionLine) {
+      //    Penalty += NoColumnLimitLineFormatter(Indenter, Whitespaces, Style, this)
+      //            .formatLine(TheLine, NextStartColumn + Indent, FirstLine ? FirstStartColumn : 0, DryRun);
+      //} else
       if (Style.ColumnLimit == 0) {
         NoColumnLimitLineFormatter(Indenter, Whitespaces, Style, this)
             .formatLine(TheLine, NextStartColumn + Indent,
@@ -1467,7 +1506,7 @@ static auto computeNewlines(const AnnotatedLine &Line,
   // Remove empty lines at the start of nested blocks (lambdas/arrow functions)
   if (!PreviousLine && Line.Level > 0)
     Newlines = std::min(Newlines, 1u);
-  if (Newlines == 0 && !RootToken.IsFirst)
+  if (Newlines == 0 && !RootToken.IsFirst && !RootToken.LparenCount) // TALLY: && !RootToken.LparenCount
     Newlines = 1;
   if (RootToken.IsFirst && !RootToken.HasUnescapedNewline)
     Newlines = 0;
@@ -1486,8 +1525,8 @@ static auto computeNewlines(const AnnotatedLine &Line,
   if (PreviousLine && RootToken.isAccessSpecifier()) {
     switch (Style.EmptyLineBeforeAccessModifier) {
     case FormatStyle::ELBAMS_Never:
-      if (Newlines > 1)
-        Newlines = 1;
+      if (Newlines > 2) // TALLY previous Newlines > 1
+        Newlines = 2; // TALLY previous Newlines = 1
       break;
     case FormatStyle::ELBAMS_Leave:
       Newlines = std::max(RootToken.NewlinesBefore, 1u);
@@ -1496,12 +1535,44 @@ static auto computeNewlines(const AnnotatedLine &Line,
       if (PreviousLine->Last->isOneOf(tok::semi, tok::r_brace) && Newlines <= 1)
         Newlines = 2;
       if (PreviousLine->First->isAccessSpecifier())
-        Newlines = 1; // Previous is an access modifier remove all new lines.
+        Newlines = 2; // Previous is an access modifier remove all new lines.
       break;
     case FormatStyle::ELBAMS_Always: {
       const FormatToken *previousToken;
-      if (PreviousLine->Last->is(tok::comment))
+      if (PreviousLine->Last->is(tok::comment)) {
         previousToken = PreviousLine->Last->getPreviousNonComment();
+
+        // TALLY: Ensure an empty line before and after a comment section
+        // (excluding trailing line comments)
+        bool commentThenNoncomment =
+            PreviousLine && PreviousLine->First->is(tok::comment) &&
+            !PreviousLine->InPPDirective && !RootToken.is(tok::comment);
+        bool noncommentThenComment =
+            PreviousLine && !PreviousLine->First->is(tok::comment) &&
+            !PreviousLine->InPPDirective && RootToken.is(tok::comment);
+        if (commentThenNoncomment || noncommentThenComment)
+          Newlines = 2;
+
+        // TALLY: Remove empty lines before "};" in class, struct, union or enum declarations
+        // This block needs to be after 'Ensure an empty line before and after a comment section'
+        FormatToken *LastToken = Line.Last;
+        if (LastToken && LastToken->is(tok::comment))
+          LastToken = LastToken->getPreviousNonComment();
+        if (PreviousLine && PreviousLine->First && RootToken.is(tok::r_brace) &&
+            LastToken && LastToken->is(tok::semi)) {
+          bool applies = false;
+          if (PreviousLine->First->IsClassScope && !RootToken.IsClassScope)
+            applies = true;
+          if (PreviousLine->First->IsStructScope && !RootToken.IsStructScope)
+            applies = true;
+          if (PreviousLine->First->IsUnionScope && !RootToken.IsUnionScope)
+            applies = true;
+          if (PreviousLine->First->IsEnumScope && !RootToken.IsEnumScope)
+            applies = true;
+          if (applies)
+            Newlines = 1;
+        }
+      }
       else
         previousToken = PreviousLine->Last;
       if ((!previousToken || previousToken->isNot(tok::l_brace)) &&
@@ -1512,8 +1583,14 @@ static auto computeNewlines(const AnnotatedLine &Line,
     }
   }
 
+  // TALLY: Insert or remove empty line after access specifiers.
+  if (PreviousLine && PreviousLine->First->isAccessSpecifier()) {
+      Newlines = 2;
+  }
+
+  //TALLY: we may not want these block
   // Insert or remove empty line after access specifiers.
-  if (PreviousLine && PreviousLine->First->isAccessSpecifier() &&
+  /*if (PreviousLine && PreviousLine->First->isAccessSpecifier() &&
       (!PreviousLine->InPPDirective || !RootToken.HasUnescapedNewline)) {
     // EmptyLineBeforeAccessModifier is handling the case when two access
     // modifiers follow each other.
@@ -1532,6 +1609,45 @@ static auto computeNewlines(const AnnotatedLine &Line,
           Newlines = std::max(Newlines, 2u);
         break;
       }
+    }
+  }*/
+
+  if (PreviousLine && PreviousLine->First->isTallyTrace())
+    Newlines = 2;
+  // TALLY: Add extra new line at the beginning of an if-, do-, for-,
+  // while-blocks
+  if (PreviousLine &&
+      PreviousLine->First->isOneOf(tok::kw_if, tok::kw_do, tok::kw_for,
+                                   tok::kw_while) &&
+      PreviousLine->Last->is(tok::l_brace) && RootToken.NewlinesBefore == 1) {
+    ++Newlines;
+  }
+
+  // TALLY: Add extra new line at the beginning of an else-block or else-if block
+  bool isElseBlock = false;
+  if (PreviousLine && PreviousLine->Last->is(tok::l_brace)) {
+    if (PreviousLine->First->is(tok::kw_else) && PreviousLine->First->Next->is(tok::l_brace)) {
+      isElseBlock = true;
+    } else if (PreviousLine->First->is(tok::r_brace)) {
+      const FormatToken *MyNext = PreviousLine->First->getNextNonComment();
+      if (MyNext->is(tok::kw_else))
+        isElseBlock = true;
+    }
+  }
+
+  if (isElseBlock && RootToken.NewlinesBefore == 1)
+    ++Newlines;
+
+  // TALLY: Add extra new line at the end of a double-indented block
+  if (PreviousLine && PreviousLine->IsDoubleIndented &&
+      !Line.IsDoubleIndented && RootToken.isNot(tok::comment) &&
+      RootToken.NewlinesBefore == 1) {
+
+    if (!((PreviousLine->First->IsClassScope ||
+           PreviousLine->First->IsStructScope) &&
+          (Line.First->IsClassScope == false ||
+           Line.First->IsStructScope == false))) {
+      ++Newlines;
     }
   }
 

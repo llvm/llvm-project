@@ -1178,6 +1178,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
         break;
       case '\f':
       case '\v':
+	  // TALLY: Null character
+      case '\0':
         Column = 0;
         break;
       case ' ':

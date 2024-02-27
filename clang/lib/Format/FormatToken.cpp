@@ -11,8 +11,10 @@
 /// roles.
 ///
 //===----------------------------------------------------------------------===//
-
+// clang-format off
 #include "FormatToken.h"
+///TALLY : Need for one function.
+#include "TokenAnnotator.h"
 #include "ContinuationIndenter.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
@@ -69,6 +71,97 @@ bool FormatToken::isSimpleTypeSpecifier() const {
   default:
     return false;
   }
+}
+
+/// TALLY: To check if the preceding set of tokens are Template type. If need to optimize, then 
+///         can dumb this function with compromise of inserting a new line.
+bool FormatToken::isAfterNoDiscardOrNoReturnOrTemplate(unsigned & newlinescount) const {
+
+  const FormatToken * logicalfirst = nullptr;
+
+  /// If the line is of type [[...]] template <...> ...
+
+  if (this->is(tok::greater)) {
+
+    /// Basically skip the attribute part.
+    if (this->MyLine->First->is(tok::l_square)) {
+      logicalfirst = this->MyLine->First;
+     
+      while (logicalfirst) {
+          if (logicalfirst->is(tok::kw_template))
+              break;
+          logicalfirst = logicalfirst->getNextNonComment();
+      }
+    }
+    /// Else if the line is of type template <...> ...
+    else if (this->MyLine->First->is(tok::kw_template))
+      logicalfirst = this->MyLine->First;
+
+    if (logicalfirst) {
+      if (this->Next == logicalfirst->walkTemplateBlockInClassDecl () && this->Next->is(tok::kw_friend) == false)
+        newlinescount = 1;
+
+      return logicalfirst->is(tok::kw_template);
+    }
+  }
+
+  /// Cant start from first since the line can be of type template <...> [[...]] ...
+  if ( this->is(tok::r_square) && 
+      (this->Previous && this->Previous->is (tok::r_square)) && 
+      ((this->Previous->Previous && this->Previous->Previous->TokenText.startswith ("nodiscard")) ||
+       (this->Previous->Previous && this->Previous->Previous->TokenText.startswith ("noreturn"))) && 
+      (this->Previous->Previous->Previous && this->Previous->Previous->Previous->is (tok::l_square)) && 
+      (this->Previous->Previous->Previous->Previous && this->Previous->Previous->Previous->Previous->is (tok::l_square)) 
+     ) {
+
+    newlinescount = 1;
+    return true;
+  }
+
+  return false;
+}
+
+//TALLY: Helper function to check if the lbrace is part of a constexpr
+bool FormatToken::isLBraceOfConstexprOrVarDelcOrDef() const  {
+
+
+    if (is(tok::l_brace)) {
+        FormatToken * prev = getPreviousNonComment();
+        FormatToken * scopevar = nullptr;
+
+        while (prev) {
+            if (prev->is(tok::kw_constexpr))
+                return true;
+
+            if (prev->isOneOf (tok::kw_class, tok::kw_struct, tok::kw_if, tok::kw_while, tok::kw_do, tok::kw_else, tok::kw_union))
+                return false;
+
+            if (prev->MyLine && prev->MyLine->First && prev->MyLine->First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_else, tok::kw_for))
+                return false;
+
+            if (prev->is(tok::coloncolon))
+                scopevar = prev;
+
+            prev = prev->getPreviousNonComment();
+        }
+
+        if (scopevar) {
+            FormatToken * prevtoscope =  scopevar->getPreviousNonComment();
+            if (prevtoscope)
+                if (prevtoscope->isDatatype())
+                    return true;
+        }
+
+        prev = getPreviousNonComment();
+
+        if (prev) {
+            prev = prev->getPreviousNonComment();
+            if(prev && prev->isDatatype())
+                return true;
+        }
+
+    }
+    return false;
 }
 
 bool FormatToken::isTypeOrIdentifier() const {

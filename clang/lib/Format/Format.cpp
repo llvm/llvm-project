@@ -2402,6 +2402,10 @@ public:
     tooling::Replacements Result;
     deriveLocalStyle(AnnotatedLines);
     AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
+    // TALLY: Add Tally-specific information to all annotated lines
+    for (AnnotatedLine *Line : AnnotatedLines)
+      Annotator.calculateTallyInformation(*Line);
+
     for (AnnotatedLine *Line : AnnotatedLines)
       Annotator.calculateFormattingInformation(*Line);
     Annotator.setCommentLineLevels(AnnotatedLines);
