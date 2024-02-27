@@ -79,6 +79,11 @@ template <size_t Bits> struct DyadicFloat {
     return *this;
   }
 
+  // Assume that it is already normalized.  Output the unbiased exponent.
+  LIBC_INLINE constexpr int get_unbiased_exponent() const {
+    return exponent + (Bits - 1);
+  }
+
   // Assume that it is already normalized.
   // Output is rounded correctly with respect to the current rounding mode.
   template <typename T,
