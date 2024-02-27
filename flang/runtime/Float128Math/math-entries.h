@@ -91,15 +91,6 @@ DEFINE_FALLBACK(Y0)
 DEFINE_FALLBACK(Y1)
 DEFINE_FALLBACK(Yn)
 
-// Define ComplexF128 type that is compatible with
-// the type of results/arguments of libquadmath.
-// TODO: this may need more work for other libraries/compilers.
-#if !defined(_ARCH_PPC) || defined(__LONG_DOUBLE_IEEE128__)
-typedef _Complex float __attribute__((mode(TC))) ComplexF128;
-#else
-typedef _Complex float __attribute__((mode(KC))) ComplexF128;
-#endif
-
 #if HAS_LIBM
 // Define wrapper callers for libm.
 #include <ccomplex>

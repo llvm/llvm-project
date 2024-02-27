@@ -175,7 +175,8 @@ void RTDEF(CppSumComplex10)(CppTypeFor<TypeCategory::Complex, 10> &result,
   result = GetTotalReduction<TypeCategory::Complex, 10>(
       x, source, line, dim, mask, ComplexSumAccumulator<long double>{x}, "SUM");
 }
-#elif LDBL_MANT_DIG == 113
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 void RTDEF(CppSumComplex16)(CppTypeFor<TypeCategory::Complex, 16> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
