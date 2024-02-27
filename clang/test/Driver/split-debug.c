@@ -124,3 +124,8 @@
 // G1_NOSPLIT: "-debug-info-kind=line-tables-only"
 // G1_NOSPLIT-NOT: "-split-dwarf-file"
 // G1_NOSPLIT-NOT: "-split-dwarf-output"
+
+/// Do not generate -ggnu-pubnames for -glldb
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g -glldb %s 2>&1 | FileCheck %s --check-prefixes=GLLDBSPLIT
+
+// GLLDBSPLIT-NOT: "-ggnu-pubnames"
