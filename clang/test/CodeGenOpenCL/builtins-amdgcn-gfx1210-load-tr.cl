@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1210 -target-feature +wavefrontsize32 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX1210
 
 typedef int    v2i   __attribute__((ext_vector_type(2)));
+typedef int    v3i   __attribute__((ext_vector_type(3)));
 typedef int    v4i   __attribute__((ext_vector_type(4)));
 typedef half   v8h   __attribute__((ext_vector_type(8)));
 typedef short  v8s   __attribute__((ext_vector_type(8)));
@@ -17,24 +18,24 @@ v2i test_amdgcn_global_load_tr_v2i32(global v2i* inptr)
   return __builtin_amdgcn_global_load_tr_v2i32(inptr);
 }
 
-// CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr_b4_v2i32(
+// CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr4_v2i32(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.global.load.tr.b4.v2i32(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.global.load.tr4.v2i32(ptr addrspace(1) [[INPTR:%.*]])
 // CHECK-GFX1210-NEXT:    ret <2 x i32> [[TMP0]]
 //
-v2i test_amdgcn_global_load_tr_b4_v2i32(global v2i* inptr)
+v2i test_amdgcn_global_load_tr4_v2i32(global v2i* inptr)
 {
-  return __builtin_amdgcn_global_load_tr_b4_v2i32(inptr);
+  return __builtin_amdgcn_global_load_tr4_v2i32(inptr);
 }
 
-// CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr_b6_v4i32(
+// CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr6_v3i32(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.load.tr.b6.v4i32(ptr addrspace(1) [[INPTR:%.*]])
-// CHECK-GFX1210-NEXT:    ret <4 x i32> [[TMP0]]
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <3 x i32> @llvm.amdgcn.global.load.tr6.v3i32(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    ret <3 x i32> [[TMP0]]
 //
-v4i test_amdgcn_global_load_tr_b6_v4i32(global v4i* inptr)
+v3i test_amdgcn_global_load_tr6_v3i32(global v3i* inptr)
 {
-  return __builtin_amdgcn_global_load_tr_b6_v4i32(inptr);
+  return __builtin_amdgcn_global_load_tr6_v3i32(inptr);
 }
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr_v8i16(
@@ -67,24 +68,24 @@ v2i test_amdgcn_ds_load_tr_v2i32(local v2i* inptr)
   return __builtin_amdgcn_ds_load_tr_v2i32(inptr);
 }
 
-// CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr_b4_v2i32(
+// CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr4_v2i32(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.load.tr.b4.v2i32(ptr addrspace(3) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.load.tr4.v2i32(ptr addrspace(3) [[INPTR:%.*]])
 // CHECK-GFX1210-NEXT:    ret <2 x i32> [[TMP0]]
 //
-v2i test_amdgcn_ds_load_tr_b4_v2i32(local v2i* inptr)
+v2i test_amdgcn_ds_load_tr4_v2i32(local v2i* inptr)
 {
-  return __builtin_amdgcn_ds_load_tr_b4_v2i32(inptr);
+  return __builtin_amdgcn_ds_load_tr4_v2i32(inptr);
 }
 
-// CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr_b6_v4i32(
+// CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr6_v3i32(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.ds.load.tr.b6.v4i32(ptr addrspace(3) [[INPTR:%.*]])
-// CHECK-GFX1210-NEXT:    ret <4 x i32> [[TMP0]]
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <3 x i32> @llvm.amdgcn.ds.load.tr6.v3i32(ptr addrspace(3) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    ret <3 x i32> [[TMP0]]
 //
-v4i test_amdgcn_ds_load_tr_b6_v4i32(local v4i* inptr)
+v3i test_amdgcn_ds_load_tr6_v3i32(local v3i* inptr)
 {
-  return __builtin_amdgcn_ds_load_tr_b6_v4i32(inptr);
+  return __builtin_amdgcn_ds_load_tr6_v3i32(inptr);
 }
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr_v8i16(

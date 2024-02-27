@@ -775,10 +775,10 @@ defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32
 let SubtargetPredicate = isGFX12_10Plus in {
 
 let WaveSizePredicate = isWave32, mayStore = 0 in {
-defm DS_LOAD_B64_TR_B4   : DS_1A_RET_NoM0<"ds_load_b64_tr_b4",   VReg_64>;
-defm DS_LOAD_B128_TR_B6  : DS_1A_RET_NoM0<"ds_load_b128_tr_b6",  VReg_128>;
-defm DS_LOAD_B64_TR_B8   : DS_1A_RET_NoM0<"ds_load_b64_tr_b8",   VReg_64>;
-defm DS_LOAD_B128_TR_B16 : DS_1A_RET_NoM0<"ds_load_b128_tr_b16", VReg_128>;
+defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VReg_64>;
+defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VReg_96>;
+defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VReg_64>;
+defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VReg_128>;
 } // let WaveSizePredicate = isWave32, mayStore = 0
 
 } //let SubtargetPredicate = isGFX12_10Plus
@@ -1226,12 +1226,12 @@ class DSLoadTrPat <DS_Pseudo inst, ValueType vt, SDPatternOperator node> : GCNPa
 >;
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus in {
-def : DSLoadTrPat <DS_LOAD_B64_TR_B8,  v2i32, int_amdgcn_ds_load_tr>;
-def : DSLoadTrPat <DS_LOAD_B64_TR_B4,  v2i32, int_amdgcn_ds_load_tr_b4>;
-def : DSLoadTrPat <DS_LOAD_B128_TR_B6, v4i32, int_amdgcn_ds_load_tr_b6>;
+def : DSLoadTrPat <DS_LOAD_TR8_B64,  v2i32, int_amdgcn_ds_load_tr>;
+def : DSLoadTrPat <DS_LOAD_TR4_B64,  v2i32, int_amdgcn_ds_load_tr4>;
+def : DSLoadTrPat <DS_LOAD_TR6_B96,  v3i32, int_amdgcn_ds_load_tr6>;
 
 foreach vt16 = [v8i16, v8f16, v8bf16] in {
-def : DSLoadTrPat <DS_LOAD_B128_TR_B16,  vt16, int_amdgcn_ds_load_tr>;
+def : DSLoadTrPat <DS_LOAD_TR16_B128,  vt16, int_amdgcn_ds_load_tr>;
 }
 } //let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus
 
@@ -1301,10 +1301,10 @@ defm DS_PK_ADD_RTN_F16    : DS_Real_gfx12<0x0aa>;
 defm DS_PK_ADD_BF16       : DS_Real_gfx12<0x09b>;
 defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
 
-defm DS_LOAD_B64_TR_B4    : DS_Real_gfx12<0x0fa>;
-defm DS_LOAD_B128_TR_B6   : DS_Real_gfx12<0x0fb>;
-defm DS_LOAD_B64_TR_B8    : DS_Real_gfx12<0x0fc>;
-defm DS_LOAD_B128_TR_B16  : DS_Real_gfx12<0x0fd>;
+defm DS_LOAD_TR4_B64      : DS_Real_gfx12<0x0fa>;
+defm DS_LOAD_TR6_B96      : DS_Real_gfx12<0x0fb>;
+defm DS_LOAD_TR8_B64      : DS_Real_gfx12<0x0fc>;
+defm DS_LOAD_TR16_B128    : DS_Real_gfx12<0x0fd>;
 
 defm DS_BVH_STACK_RTN_B32             : DS_Real_Renamed_gfx12<0x0e0,
   "ds_bvh_stack_push4_pop1_rtn_b32">;

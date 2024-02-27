@@ -37,6 +37,24 @@ void test_s_monitor_sleep() {
   __builtin_amdgcn_s_monitor_sleep(10);
 }
 
+// CHECK-LABEL: @test_s_wait_asynccnt(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.amdgcn.s.wait.asynccnt(i16 0)
+// CHECK-NEXT:    ret void
+//
+void test_s_wait_asynccnt() {
+  __builtin_amdgcn_s_wait_asynccnt(0);
+}
+
+// CHECK-LABEL: @test_s_wait_tensorcnt(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.amdgcn.s.wait.tensorcnt(i16 0)
+// CHECK-NEXT:    ret void
+//
+void test_s_wait_tensorcnt() {
+  __builtin_amdgcn_s_wait_tensorcnt(0);
+}
+
 // CHECK-LABEL: @test_bitop3_b32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
@@ -701,4 +719,26 @@ void test_cvt_scale_pk(global half16 *outh16, global bfloat16 *outy16, uint3 src
   *outf4 = __builtin_amdgcn_cvt_scale_pk_f32_fp8(src1, scale);
   *outf4 = __builtin_amdgcn_cvt_scale_pk_f32_bf8(src1, scale);
   *outf8 = __builtin_amdgcn_cvt_scale_pk_f32_fp4(src1, scale);
+}
+
+// CHECK-LABEL: @test_cvt_sat_pk_i4_i8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[SRC:%.*]], ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.amdgcn.cvt.sat.pk.i4.i8(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i16 [[TMP1]], ptr [[TMP2]], align 2
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.amdgcn.cvt.sat.pk.u4.u8(i32 [[TMP3]])
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i16 [[TMP4]], ptr [[TMP5]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_cvt_sat_pk_i4_i8(ushort *out, uint src)
+{
+  *out = __builtin_amdgcn_cvt_sat_pk_i4_i8(src);
+  *out = __builtin_amdgcn_cvt_sat_pk_u4_u8(src);
 }

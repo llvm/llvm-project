@@ -2936,12 +2936,12 @@ class AMDGPULoadIntrinsic<LLVMType ptr_ty>:
 // <4 x half>   @llvm.amdgcn.global.load.tr.v4f16(ptr addrspace(1))  -> global_load_tr_b128
 // <4 x bfloat> @llvm.amdgcn.global.load.tr.v4bf16(ptr addrspace(1)) -> global_load_tr_b128
 
-def int_amdgcn_global_load_tr    : AMDGPULoadIntrinsic<global_ptr_ty>;
-def int_amdgcn_global_load_tr_b4 : AMDGPULoadIntrinsic<global_ptr_ty>;
-def int_amdgcn_global_load_tr_b6 : AMDGPULoadIntrinsic<global_ptr_ty>;
-def int_amdgcn_ds_load_tr        : AMDGPULoadIntrinsic<local_ptr_ty>;
-def int_amdgcn_ds_load_tr_b4     : AMDGPULoadIntrinsic<local_ptr_ty>;
-def int_amdgcn_ds_load_tr_b6     : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_global_load_tr  : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_global_load_tr4 : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_global_load_tr6 : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_ds_load_tr      : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_load_tr4     : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_load_tr6     : AMDGPULoadIntrinsic<local_ptr_ty>;
 
 // i32 @llvm.amdgcn.wave.id()
 def int_amdgcn_wave_id :
@@ -3382,6 +3382,11 @@ def int_amdgcn_smfmac_f32_32x32x64_fp8_fp8 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_
 // gfx1210 intrinsics
 // ===----------------------------------------------------------------------===//
 
+def int_amdgcn_s_wait_asynccnt :
+    ClangBuiltin<"__builtin_amdgcn_s_wait_asynccnt">, AMDGPUWaitIntrinsic;
+def int_amdgcn_s_wait_tensorcnt :
+    ClangBuiltin<"__builtin_amdgcn_s_wait_tensorcnt">, AMDGPUWaitIntrinsic;
+
 def int_amdgcn_bitop3 :
   DefaultAttrsIntrinsic<[llvm_anyint_ty],
                         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
@@ -3403,6 +3408,12 @@ def int_amdgcn_cvt_f16_bf8 : ClangBuiltin<"__builtin_amdgcn_cvt_f16_bf8">,
   DefaultAttrsIntrinsic<[llvm_half_ty],
             [llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+def int_amdgcn_cvt_sat_pk_i4_i8 : ClangBuiltin<"__builtin_amdgcn_cvt_sat_pk_i4_i8">,
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_cvt_sat_pk_u4_u8 : ClangBuiltin<"__builtin_amdgcn_cvt_sat_pk_u4_u8">,
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend

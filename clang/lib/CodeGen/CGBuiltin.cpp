@@ -3230,7 +3230,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__popcnt64:
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
-  case Builtin::BI__builtin_popcountll: {
+  case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
 
     llvm::Type *ArgType = ArgValue->getType();
@@ -18359,11 +18360,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_v4i16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_v8f16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_v8i16:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr_b4_v2i32:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr_b6_v4i32:
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr4_v2i32:
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr6_v3i32:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr_v2i32:
-  case AMDGPU::BI__builtin_amdgcn_ds_load_tr_b4_v2i32:
-  case AMDGPU::BI__builtin_amdgcn_ds_load_tr_b6_v4i32:
+  case AMDGPU::BI__builtin_amdgcn_ds_load_tr4_v2i32:
+  case AMDGPU::BI__builtin_amdgcn_ds_load_tr6_v3i32:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr_v8i16:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr_v8f16: {
 
@@ -18399,25 +18400,25 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
           llvm::Type::getInt16Ty(getLLVMContext()), 8);
       IID = Intrinsic::amdgcn_global_load_tr;
       break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b4_v2i32:
+    case AMDGPU::BI__builtin_amdgcn_global_load_tr4_v2i32:
       ArgTy = llvm::FixedVectorType::get(
           llvm::Type::getInt32Ty(getLLVMContext()), 2);
-      IID = Intrinsic::amdgcn_global_load_tr_b4;
+      IID = Intrinsic::amdgcn_global_load_tr4;
       break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b6_v4i32:
+    case AMDGPU::BI__builtin_amdgcn_global_load_tr6_v3i32:
       ArgTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 4);
-      IID = Intrinsic::amdgcn_global_load_tr_b6;
+          llvm::Type::getInt32Ty(getLLVMContext()), 3);
+      IID = Intrinsic::amdgcn_global_load_tr6;
       break;
-    case AMDGPU::BI__builtin_amdgcn_ds_load_tr_b4_v2i32:
+    case AMDGPU::BI__builtin_amdgcn_ds_load_tr4_v2i32:
       ArgTy = llvm::FixedVectorType::get(
           llvm::Type::getInt32Ty(getLLVMContext()), 2);
-      IID = Intrinsic::amdgcn_ds_load_tr_b4;
+      IID = Intrinsic::amdgcn_ds_load_tr4;
       break;
-    case AMDGPU::BI__builtin_amdgcn_ds_load_tr_b6_v4i32:
+    case AMDGPU::BI__builtin_amdgcn_ds_load_tr6_v3i32:
       ArgTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 4);
-      IID = Intrinsic::amdgcn_ds_load_tr_b6;
+          llvm::Type::getInt32Ty(getLLVMContext()), 3);
+      IID = Intrinsic::amdgcn_ds_load_tr6;
       break;
     case AMDGPU::BI__builtin_amdgcn_ds_load_tr_v2i32:
       ArgTy = llvm::FixedVectorType::get(

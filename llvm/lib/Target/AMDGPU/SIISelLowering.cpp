@@ -1414,11 +1414,11 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_cluster_load_b32:
   case Intrinsic::amdgcn_cluster_load_b64:
   case Intrinsic::amdgcn_cluster_load_b128:
-  case Intrinsic::amdgcn_ds_load_tr_b6:
-  case Intrinsic::amdgcn_ds_load_tr_b4:
+  case Intrinsic::amdgcn_ds_load_tr6:
+  case Intrinsic::amdgcn_ds_load_tr4:
   case Intrinsic::amdgcn_ds_load_tr:
-  case Intrinsic::amdgcn_global_load_tr_b6:
-  case Intrinsic::amdgcn_global_load_tr_b4:
+  case Intrinsic::amdgcn_global_load_tr6:
+  case Intrinsic::amdgcn_global_load_tr4:
   case Intrinsic::amdgcn_global_load_tr: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
@@ -1552,8 +1552,8 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_ds_fmax:
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_load_tr:
-  case Intrinsic::amdgcn_ds_load_tr_b4:
-  case Intrinsic::amdgcn_ds_load_tr_b6:
+  case Intrinsic::amdgcn_ds_load_tr4:
+  case Intrinsic::amdgcn_ds_load_tr6:
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
   case Intrinsic::amdgcn_flat_atomic_fadd:
@@ -1577,8 +1577,8 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_global_load_monitor_b32:
   case Intrinsic::amdgcn_global_load_monitor_b64:
   case Intrinsic::amdgcn_global_load_tr:
-  case Intrinsic::amdgcn_global_load_tr_b4:
-  case Intrinsic::amdgcn_global_load_tr_b6:
+  case Intrinsic::amdgcn_global_load_tr4:
+  case Intrinsic::amdgcn_global_load_tr6:
   case Intrinsic::amdgcn_global_store_async_from_lds_b8:
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
@@ -16229,12 +16229,14 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
 
   switch (RMW->getOperation()) {
   case AtomicRMWInst::FAdd: {
+    bool GFX90AInstsOrGFX12_10Insts = Subtarget->hasGFX90AInsts() ||
+        Subtarget->hasGFX12_10Insts();
     Type *Ty = RMW->getType();
 
     if (Ty->isHalfTy())
       return AtomicExpansionKind::CmpXChg;
 
-    if (!Ty->isFloatTy() && (!Subtarget->hasGFX90AInsts() || !Ty->isDoubleTy()))
+    if (!Ty->isFloatTy() && (!GFX90AInstsOrGFX12_10Insts || !Ty->isDoubleTy()))
       return AtomicExpansionKind::CmpXChg;
 
     if (AMDGPU::isFlatGlobalAddrSpace(AS) &&
@@ -16264,7 +16266,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
       // global and flat atomic fadd f64: gfx90a, gfx940.
-      if (Ty->isDoubleTy() && Subtarget->hasGFX90AInsts())
+      if (Ty->isDoubleTy() && Subtarget->hasBufferFlatGlobalAtomicsF64())
         return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
       // If it is in flat address space, and the type is float, we will try to
