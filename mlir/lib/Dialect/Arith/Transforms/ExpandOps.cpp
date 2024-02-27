@@ -261,68 +261,62 @@ struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
       return rewriter.notifyMatchFailure(op, "not a trunc of f32 to bf16.");
     }
 
-    Type i1Ty = b.getI1Type();
     Type i16Ty = b.getI16Type();
     Type i32Ty = b.getI32Type();
     Type f32Ty = b.getF32Type();
     if (auto shapedTy = dyn_cast<ShapedType>(operandTy)) {
-      i1Ty = shapedTy.clone(i1Ty);
       i16Ty = shapedTy.clone(i16Ty);
       i32Ty = shapedTy.clone(i32Ty);
       f32Ty = shapedTy.clone(f32Ty);
     }
 
-    Value bitcast = b.create<arith::BitcastOp>(i32Ty, operand);
-
-    Value c23 = createConst(op.getLoc(), i32Ty, 23, rewriter);
-    Value c31 = createConst(op.getLoc(), i32Ty, 31, rewriter);
-    Value c23Mask = createConst(op.getLoc(), i32Ty, (1 << 23) - 1, rewriter);
-    Value expMask =
-        createConst(op.getLoc(), i32Ty, ((1 << 8) - 1) << 23, rewriter);
-    Value expMax =
-        createConst(op.getLoc(), i32Ty, ((1 << 8) - 2) << 23, rewriter);
-
-    // Grab the sign bit.
-    Value sign = b.create<arith::ShRUIOp>(bitcast, c31);
-
-    // Our mantissa rounding value depends on the sign bit and the last
-    // truncated bit.
-    Value cManRound = createConst(op.getLoc(), i32Ty, (1 << 15), rewriter);
-    cManRound = b.create<arith::SubIOp>(cManRound, sign);
-
-    // Grab out the mantissa and directly apply rounding.
-    Value man = b.create<arith::AndIOp>(bitcast, c23Mask);
-    Value manRound = b.create<arith::AddIOp>(man, cManRound);
-
-    // Grab the overflow bit and shift right if we overflow.
-    Value roundBit = b.create<arith::ShRUIOp>(manRound, c23);
-    Value manNew = b.create<arith::ShRUIOp>(manRound, roundBit);
-
-    // Grab the exponent and round using the mantissa's carry bit.
-    Value exp = b.create<arith::AndIOp>(bitcast, expMask);
-    Value expCarry = b.create<arith::AddIOp>(exp, manRound);
-    expCarry = b.create<arith::AndIOp>(expCarry, expMask);
-
-    // If the exponent is saturated, we keep the max value.
-    Value expCmp =
-        b.create<arith::CmpIOp>(arith::CmpIPredicate::uge, exp, expMax);
-    exp = b.create<arith::SelectOp>(expCmp, exp, expCarry);
-
-    // If the exponent is max and we rolled over, keep the old mantissa.
-    Value roundBitBool = b.create<arith::TruncIOp>(i1Ty, roundBit);
-    Value keepOldMan = b.create<arith::AndIOp>(expCmp, roundBitBool);
-    man = b.create<arith::SelectOp>(keepOldMan, man, manNew);
-
-    // Assemble the now rounded f32 value (as an i32).
-    Value rounded = b.create<arith::ShLIOp>(sign, c31);
-    rounded = b.create<arith::OrIOp>(rounded, exp);
-    rounded = b.create<arith::OrIOp>(rounded, man);
-
+    // Algorithm borrowed from this excellent code:
+    // https://github.com/pytorch/pytorch/blob/e1502c0cdbfd17548c612f25d5a65b1e4b86224d/c10/util/BFloat16.h#L60-L79
+    // There is a magic idea there, to let the addition of the rounding_bias to
+    // the mantissa simply overflow into the exponent bits. It's a bit of an
+    // aggressive, obfuscating optimization, but it is well-tested code, and it
+    // results in more concise and efficient IR.
+    // The case of NaN is handled separately (see isNaN and the final select).
+    // The case of infinities is NOT handled separately, which deserves an
+    // explanation. As the encoding of infinities has zero mantissa, the
+    // rounding-bias addition never carries into the exponent so that just gets
+    // truncated away, and as bfloat16 and float32 have the same number of
+    // exponent bits, that simple truncation is the desired outcome for
+    // infinities.
+    Value isNan =
+        b.create<arith::CmpFOp>(arith::CmpFPredicate::UNE, operand, operand);
+    // Constant used to make the rounding bias.
+    Value c7FFF = createConst(op.getLoc(), i32Ty, 0x7fff, rewriter);
+    // Constant used to generate a quiet NaN.
+    Value c7FC0_i16 = createConst(op.getLoc(), i16Ty, 0x7fc0, rewriter);
+    // Small constants used to address bits.
     Value c16 = createConst(op.getLoc(), i32Ty, 16, rewriter);
-    Value shr = b.create<arith::ShRUIOp>(rounded, c16);
-    Value trunc = b.create<arith::TruncIOp>(i16Ty, shr);
-    Value result = b.create<arith::BitcastOp>(resultTy, trunc);
-
+    Value c1 = createConst(op.getLoc(), i32Ty, 1, rewriter);
+    // Reinterpret the input f32 value as bits.
+    Value bitcast = b.create<arith::BitcastOp>(i32Ty, operand);
+    // Read bit 16 as a value in {0,1}.
+    Value bit16 =
+        b.create<arith::AndIOp>(b.create<arith::ShRUIOp>(bitcast, c16), c1);
+    // Determine the rounding bias to add as either 0x7fff or 0x8000 depending
+    // on bit 16, implementing the tie-breaking "to nearest even".
+    Value roundingBias = b.create<arith::AddIOp>(bit16, c7FFF);
+    // Add the rounding bias. Generally we want this to be added to the
+    // mantissa, but nothing prevents this to from carrying into the exponent
+    // bits, which would feel like a bug, but this is the magic trick here:
+    // when that happens, the mantissa gets reset to zero and the exponent
+    // gets incremented by the carry... which is actually exactly what we
+    // want.
+    Value biased = b.create<arith::AddIOp>(bitcast, roundingBias);
+    // Now that the rounding-bias has been added, truncating the low bits
+    // yields the correctly rounded result.
+    Value biasedAndShifted = b.create<arith::ShRUIOp>(biased, c16);
+    Value normalCaseResult_i16 =
+        b.create<arith::TruncIOp>(i16Ty, biasedAndShifted);
+    // Select either the above-computed result, or a quiet NaN constant
+    // if the input was NaN.
+    Value select =
+        b.create<arith::SelectOp>(isNan, c7FC0_i16, normalCaseResult_i16);
+    Value result = b.create<arith::BitcastOp>(resultTy, select);
     rewriter.replaceOp(op, result);
     return success();
   }
