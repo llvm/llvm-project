@@ -32,7 +32,7 @@ void my_dfsan_reaches_function_callback(dfsan_label label, dfsan_origin origin,
 __attribute__((noinline)) uint64_t add(uint64_t *a, uint64_t *b) {
 
   return *a + *b;
-  // CHECK: test/dfsan/reaches_function.c:[[# @LINE - 1]] add.dfsan
+  // CHECK: {{.*}}compiler-rt/test/dfsan/reaches_function.c:[[# @LINE - 1]] add.dfsan
   // CHECK-ORIGIN-TRACKING: Origin value: 0x10000002, Taint value was stored to memory at
   // CHECK-ORIGIN-TRACKING: #0 {{.*}} in add.dfsan {{.*}}compiler-rt/test/dfsan/reaches_function.c:[[# @LINE - 3]]:{{.*}}
   // CHECK-ORIGIN-TRACKING: Origin value: 0x1, Taint value was created at
@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 
   dfsan_set_label(8, &a, sizeof(a));
   uint64_t c = add(&a, &b);
-  // CHECK: test/dfsan/reaches_function.c:[[# @LINE - 1]] main
+  // CHECK: {{.*}}compiler-rt/test/dfsan/reaches_function.c:[[# @LINE - 1]] main
   // CHECK-ORIGIN-TRACKING: Origin value: 0x10000002, Taint value was stored to memory at
   // CHECK-ORIGIN-TRACKING: #0 {{.*}} in add.dfsan {{.*}}compiler-rt/test/dfsan/reaches_function.c:{{.*}}
   // CHECK-ORIGIN-TRACKING: Origin value: 0x1, Taint value was created at

@@ -70,14 +70,9 @@ function(clang_compile object_file source)
   if (TARGET CompilerRTUnitTestCheckCxx)
     list(APPEND SOURCE_DEPS CompilerRTUnitTestCheckCxx)
   endif()
-  string(REGEX MATCH "[.](cc|cpp)$" is_cxx ${source_rpath})
-  if (is_cxx)
-    set(compiler ${COMPILER_RT_TEST_COMPILER})
-  else()
-    set(compiler ${COMPILER_RT_TEST_CXX_COMPILER})
-  endif()
   if(COMPILER_RT_STANDALONE_BUILD)
     # Only add global flags in standalone build.
+    string(REGEX MATCH "[.](cc|cpp)$" is_cxx ${source_rpath})
     if(is_cxx)
       string(REPLACE " " ";" global_flags "${CMAKE_CXX_FLAGS}")
     else()
@@ -107,7 +102,7 @@ function(clang_compile object_file source)
 
   add_custom_command(
     OUTPUT ${object_file}
-    COMMAND ${compiler} ${compile_flags} -c
+    COMMAND ${COMPILER_RT_TEST_COMPILER} ${compile_flags} -c
             -o "${object_file}"
             ${source_rpath}
     MAIN_DEPENDENCY ${source}
