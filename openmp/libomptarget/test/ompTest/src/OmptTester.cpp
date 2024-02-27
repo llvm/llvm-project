@@ -56,8 +56,6 @@ static void on_ompt_callback_buffer_request(int device_num,
                                             size_t *bytes) {
   *bytes = OMPT_BUFFER_REQUEST_SIZE;
   *buffer = malloc(*bytes);
-  printf("Allocated %lu bytes at %p in buffer request callback\n", *bytes,
-         *buffer);
   OmptCallbackHandler::get().handleBufferRequest(device_num, buffer, bytes);
 }
 

@@ -139,7 +139,7 @@ std::string internal::TargetSubmit::toString() const {
 std::string internal::TargetSubmitEmi::toString() const {
   std::string S{"  Callback Submit EMI: endpoint="};
   S.append(std::to_string(Endpoint));
-  S.append("  req_num_teams=").append(std::to_string(RequestedNumTeams));
+  S.append(" req_num_teams=").append(std::to_string(RequestedNumTeams));
   S.append(" target_data=").append(makeHexString((uint64_t)TargetData));
   S.append(" (")
       .append(makeHexString((uint64_t)(TargetData) ? TargetData->value : 0,
@@ -200,29 +200,24 @@ std::string internal::BufferComplete::toString() const {
 
 std::string internal::BufferRecord::toString() const {
   std::string S{""};
-  // First line
+  std::string T{""};
   S.append("rec=").append(makeHexString((uint64_t)RecordPtr));
   S.append(" type=").append(std::to_string(Record.type));
-  S.append(" time=").append(std::to_string(Record.time));
-  S.append(" thread_id=").append(std::to_string(Record.thread_id));
-  S.append(" target_id=").append(std::to_string(Record.target_id));
-  S.append(1, '\n');
 
-  // Second line
+  T.append("time=").append(std::to_string(Record.time));
+  T.append(" thread_id=").append(std::to_string(Record.thread_id));
+  T.append(" target_id=").append(std::to_string(Record.target_id));
+
   switch (Record.type) {
   case ompt_callback_target:
   case ompt_callback_target_emi: {
     // Handle Target Record
     ompt_record_target_t TR = Record.record.target;
-    printf("\tRecord Target: kind=%d endpoint=%d device=%d task_id=%lu "
-           "target_id=%lu codeptr=%p\n",
-           TR.kind, TR.endpoint, TR.device_num, TR.task_id, TR.target_id,
-           TR.codeptr_ra);
-    S.append("\tRecord Target: kind=").append(std::to_string(TR.kind));
+    S.append(" (Target task) ").append(T);
+    S.append(" kind=").append(std::to_string(TR.kind));
     S.append(" endpoint=").append(std::to_string(TR.endpoint));
     S.append(" device=").append(std::to_string(TR.device_num));
     S.append(" task_id=").append(std::to_string(TR.task_id));
-    S.append(" target_id=").append(std::to_string(TR.target_id));
     S.append(" codeptr=").append(makeHexString((uint64_t)TR.codeptr_ra));
     break;
   }
@@ -230,8 +225,8 @@ std::string internal::BufferRecord::toString() const {
   case ompt_callback_target_data_op_emi: {
     // Handle Target DataOp Record
     ompt_record_target_data_op_t TDR = Record.record.target_data_op;
-    S.append("\t  Record DataOp: host_op_id=")
-        .append(std::to_string(TDR.host_op_id));
+    S.append(" (Target data op) ").append(T);
+    S.append(" host_op_id=").append(std::to_string(TDR.host_op_id));
     S.append(" optype=").append(std::to_string(TDR.optype));
     S.append(" src_addr=").append(makeHexString((uint64_t)TDR.src_addr));
     S.append(" src_device=").append(std::to_string(TDR.src_device_num));
@@ -247,8 +242,8 @@ std::string internal::BufferRecord::toString() const {
   case ompt_callback_target_submit_emi: {
     // Handle Target Kernel Record
     ompt_record_target_kernel_t TKR = Record.record.target_kernel;
-    S.append("\t  Record Submit: host_op_id=")
-        .append(std::to_string(TKR.host_op_id));
+    S.append(" (Target kernel) ").append(T);
+    S.append(" host_op_id=").append(std::to_string(TKR.host_op_id));
     S.append(" requested_num_teams=")
         .append(std::to_string(TKR.requested_num_teams));
     S.append(" granted_num_teams=")
