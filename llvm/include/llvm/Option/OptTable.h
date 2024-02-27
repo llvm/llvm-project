@@ -58,6 +58,8 @@ public:
     ArrayRef<StringLiteral> Prefixes;
     StringLiteral PrefixedName;
     const char *HelpText;
+    // Help text for specific visibilities. If there is no entry here for
+    // the visibility of the program, HelpText is used instead.
     // This cannot be std::vector because OptTable is used in constexpr
     // contexts. Increase the size of this array if you need more help text
     // variants.
