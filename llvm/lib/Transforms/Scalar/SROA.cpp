@@ -2257,6 +2257,38 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
   return nullptr;
 }
 
+static VectorType *createAndCheckVectorTypesForPromotion(
+    SetVector<Type *> &OtherTys,
+    SmallVectorImpl<VectorType *> &CandidateTysCopy,
+    function_ref<void(Type *)> CheckCandidateType, Partition &P,
+    const DataLayout &DL, SmallVector<VectorType *, 4> &CandidateTys,
+    bool &HaveCommonEltTy, Type *&CommonEltTy, bool &HaveVecPtrTy,
+    bool &HaveCommonVecPtrTy, VectorType *&CommonVecPtrTy) {
+  // Consider additional vector types where the element type size is a
+  // multiple of load/store element size.
+  for (Type *Ty : OtherTys) {
+    if (!VectorType::isValidElementType(Ty))
+      continue;
+    unsigned TypeSize = DL.getTypeSizeInBits(Ty).getFixedValue();
+    // Make a copy of CandidateTys and iterate through it, because we
+    // might append to CandidateTys in the loop.
+    for (VectorType *&VTy : CandidateTysCopy) {
+      unsigned VectorSize = DL.getTypeSizeInBits(VTy).getFixedValue();
+      unsigned ElementSize =
+          DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
+      if (TypeSize != VectorSize && TypeSize != ElementSize &&
+          VectorSize % TypeSize == 0) {
+        VectorType *NewVTy = VectorType::get(Ty, VectorSize / TypeSize, false);
+        CheckCandidateType(NewVTy);
+      }
+    }
+  }
+
+  return checkVectorTypesForPromotion(P, DL, CandidateTys, HaveCommonEltTy,
+                                      CommonEltTy, HaveVecPtrTy,
+                                      HaveCommonVecPtrTy, CommonVecPtrTy);
+}
+
 /// Test whether the given alloca partitioning and range of slices can be
 /// promoted to a vector.
 ///
@@ -2305,34 +2337,6 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
       }
     }
   };
-  auto createAndCheckVectorTypesForPromotion =
-      [&](SetVector<Type *> OtherTys,
-          SmallVector<VectorType *, 4> CandidateTysCopy) {
-        // Consider additional vector types where the element type size is a
-        // multiple of load/store element size.
-        for (Type *Ty : OtherTys) {
-          if (!VectorType::isValidElementType(Ty))
-            continue;
-          unsigned TypeSize = DL.getTypeSizeInBits(Ty).getFixedValue();
-          // Make a copy of CandidateTys and iterate through it, because we
-          // might append to CandidateTys in the loop.
-          for (VectorType *&VTy : CandidateTysCopy) {
-            unsigned VectorSize = DL.getTypeSizeInBits(VTy).getFixedValue();
-            unsigned ElementSize =
-                DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
-            if (TypeSize != VectorSize && TypeSize != ElementSize &&
-                VectorSize % TypeSize == 0) {
-              VectorType *NewVTy =
-                  VectorType::get(Ty, VectorSize / TypeSize, false);
-              CheckCandidateType(NewVTy);
-            }
-          }
-        }
-
-        return checkVectorTypesForPromotion(
-            P, DL, CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
-            HaveCommonVecPtrTy, CommonVecPtrTy);
-      };
 
   // Put load and store types into a set for de-duplication.
   for (const Slice &S : P) {
@@ -2359,12 +2363,17 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
   }
 
   SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
-  if (auto *VTy =
-          createAndCheckVectorTypesForPromotion(LoadStoreTys, CandidateTysCopy))
+  if (auto *VTy = createAndCheckVectorTypesForPromotion(
+          LoadStoreTys, CandidateTysCopy, CheckCandidateType, P, DL,
+          CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
+          HaveCommonVecPtrTy, CommonVecPtrTy))
     return VTy;
 
   CandidateTys.clear();
-  return createAndCheckVectorTypesForPromotion(DeferredTys, CandidateTysCopy);
+  return createAndCheckVectorTypesForPromotion(
+      DeferredTys, CandidateTysCopy, CheckCandidateType, P, DL, CandidateTys,
+      HaveCommonEltTy, CommonEltTy, HaveVecPtrTy, HaveCommonVecPtrTy,
+      CommonVecPtrTy);
 }
 
 /// Test whether a slice of an alloca is valid for integer widening.
