@@ -33,9 +33,42 @@ else()
 endif()
 
 set(sources
+  acos.cpp
+  acosh.cpp
+  asin.cpp
+  asinh.cpp
+  atan.cpp
+  atan2.cpp
+  atanh.cpp
   cabs.cpp
+  ceil.cpp
+  cos.cpp
+  cosh.cpp
+  erf.cpp
+  erfc.cpp
+  exp.cpp
+  floor.cpp
+  hypot.cpp
+  j0.cpp
+  j1.cpp
+  jn.cpp
+  lgamma.cpp
+  llround.cpp
+  log.cpp
+  log10.cpp
+  lround.cpp
+  pow.cpp
+  round.cpp
   sin.cpp
+  sinh.cpp
   sqrt.cpp
+  tan.cpp
+  tanh.cpp
+  tgamma.cpp
+  trunc.cpp
+  y0.cpp
+  y1.cpp
+  yn.cpp
   )
 
 include_directories(AFTER "${CMAKE_CURRENT_SOURCE_DIR}/..")
