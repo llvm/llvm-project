@@ -374,6 +374,8 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// is non-null (since no fixed result is valid for every dense-tensor).
     ::mlir::sparse_tensor::Level getLvlRank() const;
 
+    uint64_t getBatchLvlRank() const;
+
     //
     // lvlTypes methods.
     //

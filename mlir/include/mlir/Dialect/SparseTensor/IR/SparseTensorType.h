@@ -253,6 +253,14 @@ public:
                                        CrdTransDirectionKind::dim2lvl);
   }
 
+  /// Returns the Level-shape.
+  SmallVector<Size> getBatchLvlShape() const {
+    auto lvlShape = getEncoding().tranlateShape(getDimShape(),
+                                                CrdTransDirectionKind::dim2lvl);
+    lvlShape.truncate(getEncoding().getBatchLvlRank());
+    return lvlShape;
+  }
+
   /// Returns the type with an identity mapping.
   RankedTensorType getDemappedType() const {
     return RankedTensorType::get(getLvlShape(), getElementType(),
