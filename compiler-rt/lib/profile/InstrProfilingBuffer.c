@@ -61,19 +61,12 @@ uint64_t __llvm_profile_get_size_for_buffer(void) {
       NamesBegin, NamesEnd, VTableBegin, VTableEnd, VNamesBegin, VNamesEnd);
 }
 
+// NOTE: Caller should guarantee that `Begin` and `End` specifies a half-open
+// interval [Begin, End). Namely, `End` is one-byte past the end of the array.
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_num_data(const __llvm_profile_data *Begin,
                                      const __llvm_profile_data *End) {
   intptr_t BeginI = (intptr_t)Begin, EndI = (intptr_t)End;
-  // `sizeof(__llvm_profile_data) - 1` is required in the numerator when
-  // [Begin, End] represents an inclusive range.
-  // For ELF, [Begin, End) represents the address of linker-inserted
-  // symbols  `__start__<elf-section>` and `__stop_<elf-section>`.
-  // Thereby, `End` is one byte past the inclusive range, and
-  // `sizeof(__llvm_profile_data) - 1` is not necessary in the numerator to get
-  // the correct number of profile data.
-  // FIXME: Consider removing `sizeof(__llvm_profile_data) - 1` if this is true
-  // across platforms.
   return ((EndI + sizeof(__llvm_profile_data) - 1) - BeginI) /
          sizeof(__llvm_profile_data);
 }
