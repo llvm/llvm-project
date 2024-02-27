@@ -808,7 +808,8 @@ bool CMP3(InterpState &S, CodePtr OpPC, const ComparisonCategoryInfo *CmpInfo) {
   }
 
   assert(CmpInfo);
-  const auto *CmpValueInfo = CmpInfo->getValueInfo(CmpResult);
+  const auto *CmpValueInfo =
+      CmpInfo->getValueInfo(CmpInfo->makeWeakResult(CmpResult));
   assert(CmpValueInfo);
   assert(CmpValueInfo->hasValidIntValue());
   const APSInt &IntValue = CmpValueInfo->getIntValue();
@@ -1047,7 +1048,7 @@ bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 /// 1) Converts the value on top of the stack to an APValue
 /// 2) Sets that APValue on \Temp
-/// 3) Initialized global with index \I with that
+/// 3) Initializes global with index \I with that
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
                     const LifetimeExtendedTemporaryDecl *Temp) {
