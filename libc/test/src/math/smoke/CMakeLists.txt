@@ -1092,112 +1092,109 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
-# FIXME: These tests are currently broken on the GPU.
-if(NOT LIBC_TARGET_OS_IS_GPU)
-  add_fp_unittest(
-    fminf_test
-    SUITE
-      libc-math-smoke-tests
-    SRCS
-      fminf_test.cpp
-    HDRS
-      FMinTest.h
-    DEPENDS
-      libc.src.math.fminf
-      libc.src.__support.FPUtil.fp_bits
-  )
+add_fp_unittest(
+  fminf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminf_test.cpp
+  HDRS
+    FMinTest.h
+  DEPENDS
+    libc.src.math.fminf
+    libc.src.__support.FPUtil.fp_bits
+)
 
-  add_fp_unittest(
-    fmin_test
-    SUITE
-      libc-math-smoke-tests
-    SRCS
-      fmin_test.cpp
-    HDRS
-      FMinTest.h
-    DEPENDS
-      libc.src.math.fmin
-      libc.src.__support.FPUtil.fp_bits
-  )
+add_fp_unittest(
+  fmin_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmin_test.cpp
+  HDRS
+    FMinTest.h
+  DEPENDS
+    libc.src.math.fmin
+    libc.src.__support.FPUtil.fp_bits
+)
 
-  add_fp_unittest(
-    fminl_test
-    SUITE
-      libc-math-smoke-tests
-    SRCS
-      fminl_test.cpp
-    HDRS
-      FMinTest.h
-    DEPENDS
-      libc.src.math.fminl
-      libc.src.__support.FPUtil.fp_bits
-  )
+add_fp_unittest(
+  fminl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminl_test.cpp
+  HDRS
+    FMinTest.h
+  DEPENDS
+    libc.src.math.fminl
+    libc.src.__support.FPUtil.fp_bits
+)
 
-  add_fp_unittest(
-    fminf128_test
-    SUITE
-      libc-math-smoke-tests
-    SRCS
-      fminf128_test.cpp
-    HDRS
-      FMinTest.h
-    DEPENDS
-      libc.src.math.fminf128
-      libc.src.__support.FPUtil.fp_bits
-  )
+add_fp_unittest(
+  fminf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminf128_test.cpp
+  HDRS
+    FMinTest.h
+  DEPENDS
+    libc.src.math.fminf128
+    libc.src.__support.FPUtil.fp_bits
+)
 
-  add_fp_unittest(
-    fmaxf_test
-    SUITE
-      libc-math-smoke-tests
-    SRCS
-      fmaxf_test.cpp
-    HDRS
-      FMaxTest.h
-    DEPENDS
-      libc.src.math.fmaxf
-      libc.src.__support.FPUtil.fp_bits
-  )
+add_fp_unittest(
+  fmaxf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaxf_test.cpp
+  HDRS
+    FMaxTest.h
+  DEPENDS
+    libc.src.math.fmaxf
+    libc.src.__support.FPUtil.fp_bits
+)
 
-  add_fp_unittest(
-    fmax_test
-    SUITE
-      libc-math-smoke-tests
-    SRCS
-      fmax_test.cpp
-    HDRS
-      FMaxTest.h
-    DEPENDS
-      libc.src.math.fmax
-      libc.src.__support.FPUtil.fp_bits
-  )
+add_fp_unittest(
+  fmax_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmax_test.cpp
+  HDRS
+    FMaxTest.h
+  DEPENDS
+    libc.src.math.fmax
+    libc.src.__support.FPUtil.fp_bits
+)
 
-  add_fp_unittest(
-    fmaxl_test
-    SUITE
-      libc-math-smoke-tests
-    SRCS
-      fmaxl_test.cpp
-    HDRS
-      FMaxTest.h
-    DEPENDS
-      libc.src.math.fmaxl
-      libc.src.__support.FPUtil.fp_bits
-  )
+add_fp_unittest(
+  fmaxl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaxl_test.cpp
+  HDRS
+    FMaxTest.h
+  DEPENDS
+    libc.src.math.fmaxl
+    libc.src.__support.FPUtil.fp_bits
+)
 
-  add_fp_unittest(
-    fmaxf128_test
-    SUITE
-      libc-math-smoke-tests
-    SRCS
-      fmaxf128_test.cpp
-    HDRS
-      FMaxTest.h
-    DEPENDS
-      libc.src.math.fmaxf128
-      libc.src.__support.FPUtil.fp_bits
-  )
-endif()
+add_fp_unittest(
+  fmaxf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaxf128_test.cpp
+  HDRS
+    FMaxTest.h
+  DEPENDS
+    libc.src.math.fmaxf128
+    libc.src.__support.FPUtil.fp_bits
+)
 
 add_fp_unittest(
   sqrtf_test
