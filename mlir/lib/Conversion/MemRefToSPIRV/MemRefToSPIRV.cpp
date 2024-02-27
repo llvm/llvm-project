@@ -641,7 +641,7 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   auto memoryRequirements = calculateMemoryRequirements(loadPtr, loadOp);
   if (failed(memoryRequirements))
     return rewriter.notifyMatchFailure(
-        loadOp, "failed to determine alignment requirements");
+        loadOp, "failed to determine memory requirements");
 
   auto [memoryAccess, alignment] = *memoryRequirements;
   rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, loadPtr, memoryAccess,
@@ -707,7 +707,7 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
     auto memoryRequirements = calculateMemoryRequirements(accessChain, storeOp);
     if (failed(memoryRequirements))
       return rewriter.notifyMatchFailure(
-          storeOp, "failed to determine alignment requirements");
+          storeOp, "failed to determine memory requirements");
 
     auto [memoryAccess, alignment] = *memoryRequirements;
     Value storeVal = adaptor.getValue();
@@ -864,7 +864,7 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   auto memoryRequirements = calculateMemoryRequirements(storePtr, storeOp);
   if (failed(memoryRequirements))
     return rewriter.notifyMatchFailure(
-        storeOp, "failed to determine alignment requirements");
+        storeOp, "failed to determine memory requirements");
 
   auto [memoryAccess, alignment] = *memoryRequirements;
   rewriter.replaceOpWithNewOp<spirv::StoreOp>(
