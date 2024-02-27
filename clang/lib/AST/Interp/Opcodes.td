@@ -206,7 +206,7 @@ def CallBI : Opcode {
 }
 
 def CallPtr : Opcode {
-  let Args = [ArgUint32];
+  let Args = [ArgUint32, ArgCallExpr];
   let Types = [];
 }
 
@@ -326,8 +326,8 @@ def GetPtrBasePop : Opcode {
   let Args = [ArgUint32];
 }
 
-def InitPtrPop : Opcode;
-def InitPtr : Opcode;
+def FinishInitPop : Opcode;
+def FinishInit    : Opcode;
 
 def GetPtrDerivedPop : Opcode {
   let Args = [ArgUint32];
@@ -476,6 +476,7 @@ def StoreBitField : StoreBitFieldOpcode {}
 def StoreBitFieldPop : StoreBitFieldOpcode {}
 
 // [Pointer, Value] -> []
+def Init : StoreOpcode {}
 def InitPop : StoreOpcode {}
 // [Pointer, Value] -> [Pointer]
 def InitElem : Opcode {
@@ -706,3 +707,8 @@ def InvalidDeclRef : Opcode {
 }
 
 def ArrayDecay : Opcode;
+
+def CheckNonNullArg : Opcode {
+  let Types = [PtrTypeClass];
+  let HasGroup = 1;
+}

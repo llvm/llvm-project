@@ -281,7 +281,7 @@ define <vscale x 4 x i32> @andnot_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 4 x i32> %z, zeroinitializer
-  %y1 = xor <vscale x 4 x i32> %y, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %y1 = xor <vscale x 4 x i32> %y, splat (i32 -1)
   %a = and <vscale x 4 x i32> %x, %y1
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %a, <vscale x 4 x i32> %z
   ret <vscale x 4 x i32> %b
@@ -297,7 +297,7 @@ define <vscale x 8 x i16> @andnot_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 8 x i16> %z, zeroinitializer
-  %y1 = xor <vscale x 8 x i16> %y, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %y1 = xor <vscale x 8 x i16> %y, splat (i16 -1)
   %a = and <vscale x 8 x i16> %x, %y1
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %a, <vscale x 8 x i16> %z
   ret <vscale x 8 x i16> %b
@@ -313,7 +313,7 @@ define <vscale x 16 x i8> @andnot_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 16 x i8> %z, zeroinitializer
-  %y1 = xor <vscale x 16 x i8> %y, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %y1 = xor <vscale x 16 x i8> %y, splat (i8 -1)
   %a = and <vscale x 16 x i8> %x, %y1
   %b = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %a, <vscale x 16 x i8> %z
   ret <vscale x 16 x i8> %b
@@ -331,7 +331,7 @@ define <vscale x 4 x i32> @ornot_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32>
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 4 x i32> %z, zeroinitializer
-  %y1 = xor <vscale x 4 x i32> %y, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %y1 = xor <vscale x 4 x i32> %y, splat (i32 -1)
   %a = or <vscale x 4 x i32> %x, %y1
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %a, <vscale x 4 x i32> %z
   ret <vscale x 4 x i32> %b
@@ -349,7 +349,7 @@ define <vscale x 8 x i16> @ornot_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16>
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 8 x i16> %z, zeroinitializer
-  %y1 = xor <vscale x 8 x i16> %y, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %y1 = xor <vscale x 8 x i16> %y, splat (i16 -1)
   %a = or <vscale x 8 x i16> %x, %y1
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %a, <vscale x 8 x i16> %z
   ret <vscale x 8 x i16> %b
@@ -367,7 +367,7 @@ define <vscale x 16 x i8> @ornot_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8>
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 16 x i8> %z, zeroinitializer
-  %y1 = xor <vscale x 16 x i8> %y, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %y1 = xor <vscale x 16 x i8> %y, splat (i8 -1)
   %a = or <vscale x 16 x i8> %x, %y1
   %b = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %a, <vscale x 16 x i8> %z
   ret <vscale x 16 x i8> %b

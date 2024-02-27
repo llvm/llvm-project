@@ -440,7 +440,7 @@ MachineFunctionInfo *X86TargetMachine::createMachineFunctionInfo(
 }
 
 void X86PassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   // We add both pass anyway and when these two passes run, we skip the pass
   // based on the option level and option attribute.
