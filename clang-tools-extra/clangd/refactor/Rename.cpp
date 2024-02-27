@@ -959,7 +959,7 @@ llvm::Expected<tooling::Replacements> renameWithinFile(
         continue;
       Locs.push_back(RenameLoc);
     }
-    if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
+    if (const auto *MD = dyn_cast<ObjCMethodDecl>(Entry.first)) {
       // The custom ObjC selector logic doesn't handle the zero arg selector
       // case, as it relies on parsing selectors via the trailing `:`.
       // We also choose to use regular rename logic for the single-arg selectors
@@ -972,13 +972,14 @@ llvm::Expected<tooling::Replacements> renameWithinFile(
         FilteredChanges = FilteredChanges.merge(Res.get());
         continue;
       }
-
-      // Eat trailing : for single argument methods since they're actually
-      // considered a separate token during rename.
-      NewName.consume_back(":");
     }
     for (const auto &Loc : Locs) {
       llvm::StringRef NewName = Entry.second;
+      if (isa<ObjCMethodDecl>(Entry.first))
+        // Eat trailing : for single argument methods since they're actually
+        // considered a separate token during rename.
+        NewName.consume_back(":");
+
       if (!ImplicitPropName.empty() && !NewImplicitPropName.empty()) {
         const auto T = AST.getTokens().spelledTokenAt(Loc);
         if (T && T->text(SM) == ImplicitPropName) {
