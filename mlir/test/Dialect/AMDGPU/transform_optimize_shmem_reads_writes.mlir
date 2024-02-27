@@ -48,7 +48,7 @@
 module attributes { transform.with_named_sequence } {
   transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.any_op
-    transform.amdgpu.optimize_shared_memory_reads_and_writes %0 {kSharedMemoryLineSizeBytes = 128, kDefaultVectorSizeBits = 128}: (!transform.any_op) -> ()
+    transform.amdgpu.optimize_shared_memory_reads_and_writes %0 {sharedMemoryLineSizeBytes = 128, defaultVectorSizeBits = 128}: (!transform.any_op) -> ()
     transform.yield
   } // @__transform_main
 } // module

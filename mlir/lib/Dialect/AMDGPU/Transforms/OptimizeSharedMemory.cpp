@@ -53,8 +53,8 @@ static Value permuteVectorOffset(OpBuilder &b, Location loc,
   // ceil(sharedMemoryLineSizeBytes / dimSizeBytes(tgtDim)).
   const int64_t permuteEveryN = std::max<int64_t>(
       1, sharedMemoryLineSizeBytes / ((memrefTy.getDimSize(tgtDim) *
-                                        memrefTy.getElementTypeBitWidth()) /
-                                       8));
+                                       memrefTy.getElementTypeBitWidth()) /
+                                      8));
 
   // clang-format off
   // Index bit representation (b0 = least significant bit) for dim(1)

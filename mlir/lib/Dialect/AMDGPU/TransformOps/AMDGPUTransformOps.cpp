@@ -27,8 +27,8 @@ DiagnosedSilenceableFailure
 ApplyOptimizeSharedMemoryReadsAndWritesOp::applyToOne(
     TransformRewriter &rewriter, FuncOp funcOp, ApplyToEachResultList &results,
     TransformState &state) {
-  optimizeSharedMemoryReadsAndWritesOp(funcOp, getKSharedMemoryLineSizeBytes(),
-                                       getKDefaultVectorSizeBits());
+  optimizeSharedMemoryReadsAndWritesOp(funcOp, getSharedMemoryLineSizeBytes(),
+                                       getDefaultVectorSizeBits());
   return DiagnosedSilenceableFailure::success();
 }
 

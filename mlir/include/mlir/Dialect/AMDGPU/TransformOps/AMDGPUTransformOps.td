@@ -29,8 +29,8 @@ def ApplyOptimizeSharedMemoryReadsAndWritesOp :
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
-                    DefaultValuedOptionalAttr<I64Attr, "128">:$kSharedMemoryLineSizeBytes,
-                    DefaultValuedOptionalAttr<I64Attr, "128">:$kDefaultVectorSizeBits);
+                    DefaultValuedOptionalAttr<I64Attr, "128">:$sharedMemoryLineSizeBytes,
+                    DefaultValuedOptionalAttr<I64Attr, "128">:$defaultVectorSizeBits);
   let results = (outs);
 
   let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
