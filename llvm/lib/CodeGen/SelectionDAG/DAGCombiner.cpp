@@ -27843,11 +27843,10 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
     if (const auto *LSN = dyn_cast<LSBaseSDNode>(N)) {
       int64_t Offset = 0;
       if (auto *C = dyn_cast<ConstantSDNode>(LSN->getOffset()))
-        Offset = (LSN->getAddressingMode() == ISD::PRE_INC)
-                     ? C->getSExtValue()
-                     : (LSN->getAddressingMode() == ISD::PRE_DEC)
-                           ? -1 * C->getSExtValue()
-                           : 0;
+        Offset = (LSN->getAddressingMode() == ISD::PRE_INC) ? C->getSExtValue()
+                 : (LSN->getAddressingMode() == ISD::PRE_DEC)
+                     ? -1 * C->getSExtValue()
+                     : 0;
       uint64_t Size =
           MemoryLocation::getSizeOrUnknown(LSN->getMemoryVT().getStoreSize());
       return {LSN->isVolatile(),

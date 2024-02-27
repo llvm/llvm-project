@@ -85,7 +85,8 @@ static void pushInteger(InterpState &S, T Val, QualType QT) {
     pushInteger(S, APSInt(Val, !std::is_signed_v<T>), QT);
   else
     pushInteger(S,
-                APSInt(APInt(sizeof(T) * 8, Val, std::is_signed_v<T>),
+                APSInt(APInt(sizeof(T) * 8, static_cast<uint64_t>(Val),
+                             std::is_signed_v<T>),
                        !std::is_signed_v<T>),
                 QT);
 }
@@ -464,7 +465,7 @@ static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
 
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt Val = peekToAPSInt(S.Stk, ArgT);
-  pushInteger(S, APSInt(APInt(32, Val.popcount())), Call->getType());
+  pushInteger(S, Val.popcount(), Call->getType());
   return true;
 }
 
@@ -805,7 +806,7 @@ static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
   if (ZeroIsUndefined && Val == 0)
     return false;
 
-  pushInteger(S, APSInt(APInt(32, Val.countl_zero())), Call->getType());
+  pushInteger(S, Val.countl_zero(), Call->getType());
   return true;
 }
 
