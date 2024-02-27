@@ -615,7 +615,7 @@ enum AcceleratorTable {
 
 // Uniquify the string hashes and calculate the bucket count for the
 // DWARF v5 Accelerator Table. NOTE: This function effectively consumes the
-// 'hashes' input parameter.
+// 'Hashes' input parameter.
 inline std::pair<uint32_t, uint32_t>
 getDebugNamesBucketAndHashCount(MutableArrayRef<uint32_t> Hashes) {
   uint32_t BucketCount = 0;
