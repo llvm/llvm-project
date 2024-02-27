@@ -130,6 +130,9 @@ int main(int argc, const char **argv) {
                                   llvm::sys::getDefaultTargetTriple(), diags,
                                   "flang LLVM compiler");
   theDriver.setTargetAndMode(targetandMode);
+#ifdef FLANG_RUNTIME_F128_MATH_LIB
+  theDriver.setFlangF128MathLibrary(FLANG_RUNTIME_F128_MATH_LIB);
+#endif
   std::unique_ptr<clang::driver::Compilation> c(
       theDriver.BuildCompilation(args));
   llvm::SmallVector<std::pair<int, const clang::driver::Command *>, 4>

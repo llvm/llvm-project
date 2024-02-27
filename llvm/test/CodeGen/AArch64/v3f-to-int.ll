@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64--linux-eabi %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s
 
 ; CHECK-LABEL: convert_v3f32
 ; CHECK: strb

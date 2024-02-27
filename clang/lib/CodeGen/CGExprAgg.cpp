@@ -33,6 +33,10 @@ using namespace CodeGen;
 //                        Aggregate Expression Emitter
 //===----------------------------------------------------------------------===//
 
+namespace llvm {
+extern cl::opt<bool> EnableSingleByteCoverage;
+} // namespace llvm
+
 namespace  {
 class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   CodeGenFunction &CGF;
@@ -933,6 +937,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_BuiltinFnToFnPtr:
   case CK_ZeroToOCLOpaqueType:
   case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
 
   case CK_IntToOCLSampler:
   case CK_FloatingToFixedPoint:
@@ -1278,7 +1283,10 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
   eval.begin(CGF);
   CGF.EmitBlock(LHSBlock);
-  CGF.incrementProfileCounter(E);
+  if (llvm::EnableSingleByteCoverage)
+    CGF.incrementProfileCounter(E->getTrueExpr());
+  else
+    CGF.incrementProfileCounter(E);
   Visit(E->getTrueExpr());
   eval.end(CGF);
 
@@ -1293,6 +1301,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
   eval.begin(CGF);
   CGF.EmitBlock(RHSBlock);
+  if (llvm::EnableSingleByteCoverage)
+    CGF.incrementProfileCounter(E->getFalseExpr());
   Visit(E->getFalseExpr());
   eval.end(CGF);
 
@@ -1301,6 +1311,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
                     E->getType());
 
   CGF.EmitBlock(ContBlock);
+  if (llvm::EnableSingleByteCoverage)
+    CGF.incrementProfileCounter(E);
 }
 
 void AggExprEmitter::VisitChooseExpr(const ChooseExpr *CE) {
@@ -1457,6 +1469,7 @@ static bool castPreservesZero(const CastExpr *CE) {
   case CK_MatrixCast:
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
+  case CK_HLSLVectorTruncation:
     return true;
 
   case CK_BaseToDerivedMemberPointer:

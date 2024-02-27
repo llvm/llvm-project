@@ -410,6 +410,119 @@ TEST(LlvmLibcSPrintfTest, HexConv) {
   ASSERT_STREQ(buff, "007F 0x1000000000 002   ");
 }
 
+TEST(LlvmLibcSPrintfTest, BinConv) {
+  char buff[64];
+  int written;
+
+  // Basic Tests.
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%b", 42);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "101010");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%B", 12081991);
+  EXPECT_EQ(written, 24);
+  ASSERT_STREQ(buff, "101110000101101101000111");
+
+  // Min Width Tests.
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%10b", 0b101010);
+  EXPECT_EQ(written, 10);
+  ASSERT_STREQ(buff, "    101010");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%2B", 0b101010);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "101010");
+
+  // Precision Tests.
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%b", 0);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "0");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%.0b", 0);
+  EXPECT_EQ(written, 0);
+  ASSERT_STREQ(buff, "");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%.5b", 0b111);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "00111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%.2b", 0b111);
+  EXPECT_EQ(written, 3);
+  ASSERT_STREQ(buff, "111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%3b", 0b111);
+  EXPECT_EQ(written, 3);
+  ASSERT_STREQ(buff, "111");
+
+  // Flag Tests.
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%-5b", 0b111);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "111  ");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%#b", 0b111);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "0b111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%#b", 0);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "0");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%#B", 0b111);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "0B111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%05b", 0b111);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "00111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%0#6b", 0b111);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "0b0111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%-#6b", 0b111);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "0b111 ");
+
+  // Combined Tests.
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%#-07b", 0b111);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "0b111  ");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%7.5b", 0b111);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "  00111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%#9.5B", 0b111);
+  EXPECT_EQ(written, 9);
+  ASSERT_STREQ(buff, "  0B00111");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%#.b", 0);
+  EXPECT_EQ(written, 0);
+  ASSERT_STREQ(buff, "");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%-7.5b", 0b111);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "00111  ");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%5.4b", 0b1111);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, " 1111");
+
+  // Multiple Conversion Tests.
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%10B %-#10b", 0b101, 0b110);
+  EXPECT_EQ(written, 21);
+  ASSERT_STREQ(buff, "       101 0b110     ");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%-5.4b%#.4b", 0b101, 0b110);
+  EXPECT_EQ(written, 11);
+  ASSERT_STREQ(buff, "0101 0b0110");
+}
+
 TEST(LlvmLibcSPrintfTest, PointerConv) {
   char buff[64];
   int written;

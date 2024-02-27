@@ -31,16 +31,43 @@ cl::list<SPIRV::Extension::Extension> Extensions(
     "spirv-extensions", cl::desc("SPIR-V extensions"), cl::ZeroOrMore,
     cl::Hidden,
     cl::values(
+        clEnumValN(SPIRV::Extension::SPV_EXT_shader_atomic_float_add,
+                   "SPV_EXT_shader_atomic_float_add",
+                   "Adds atomic add instruction on floating-point numbers."),
+        clEnumValN(
+            SPIRV::Extension::SPV_EXT_shader_atomic_float16_add,
+            "SPV_EXT_shader_atomic_float16_add",
+            "Extends the SPV_EXT_shader_atomic_float_add extension to support "
+            "atomically adding to 16-bit floating-point numbers in memory."),
+        clEnumValN(
+            SPIRV::Extension::SPV_EXT_shader_atomic_float_min_max,
+            "SPV_EXT_shader_atomic_float_min_max",
+            "Adds atomic min and max instruction on floating-point numbers."),
         clEnumValN(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers,
                    "SPV_INTEL_arbitrary_precision_integers",
-                   "Allows generating arbitrary width integer types"),
+                   "Allows generating arbitrary width integer types."),
         clEnumValN(SPIRV::Extension::SPV_INTEL_optnone, "SPV_INTEL_optnone",
                    "Adds OptNoneINTEL value for Function Control mask that "
-                   "indicates a request to not optimize the function"),
+                   "indicates a request to not optimize the function."),
+        clEnumValN(SPIRV::Extension::SPV_INTEL_usm_storage_classes,
+                   "SPV_INTEL_usm_storage_classes",
+                   "Introduces two new storage classes that are sub classes of "
+                   "the CrossWorkgroup storage class "
+                   "that provides additional information that can enable "
+                   "optimization."),
+        clEnumValN(SPIRV::Extension::SPV_INTEL_subgroups, "SPV_INTEL_subgroups",
+                   "Allows work items in a subgroup to share data without the "
+                   "use of local memory and work group barriers, and to "
+                   "utilize specialized hardware to load and store blocks of "
+                   "data from images or buffers."),
+        clEnumValN(SPIRV::Extension::SPV_KHR_uniform_group_instructions,
+                   "SPV_KHR_uniform_group_instructions",
+                   "Allows support for additional group operations within "
+                   "uniform control flow."),
         clEnumValN(SPIRV::Extension::SPV_KHR_no_integer_wrap_decoration,
                    "SPV_KHR_no_integer_wrap_decoration",
                    "Adds decorations to indicate that a given instruction does "
-                   "not cause integer wrapping"),
+                   "not cause integer wrapping."),
         clEnumValN(SPIRV::Extension::SPV_KHR_expect_assume,
                    "SPV_KHR_expect_assume",
                    "Provides additional information to a compiler, similar to "
@@ -48,7 +75,23 @@ cl::list<SPIRV::Extension::Extension> Extensions(
         clEnumValN(SPIRV::Extension::SPV_KHR_bit_instructions,
                    "SPV_KHR_bit_instructions",
                    "This enables bit instructions to be used by SPIR-V modules "
-                   "without requiring the Shader capability")));
+                   "without requiring the Shader capability."),
+        clEnumValN(
+            SPIRV::Extension::SPV_KHR_linkonce_odr, "SPV_KHR_linkonce_odr",
+            "Allows to use the LinkOnceODR linkage type that is to let "
+            "a function or global variable to be merged with other functions "
+            "or global variables of the same name when linkage occurs."),
+        clEnumValN(SPIRV::Extension::SPV_KHR_subgroup_rotate,
+                   "SPV_KHR_subgroup_rotate",
+                   "Adds a new instruction that enables rotating values across "
+                   "invocations within a subgroup."),
+        clEnumValN(SPIRV::Extension::SPV_INTEL_variable_length_array,
+                   "SPV_INTEL_variable_length_array",
+                   "Allows to allocate local arrays whose number of elements "
+                   "is unknown at compile time."),
+        clEnumValN(SPIRV::Extension::SPV_INTEL_function_pointers,
+                   "SPV_INTEL_function_pointers",
+                   "Allows translation of function pointers.")));
 
 // Compare version numbers, but allow 0 to mean unspecified.
 static bool isAtLeastVer(uint32_t Target, uint32_t VerToCompareTo) {

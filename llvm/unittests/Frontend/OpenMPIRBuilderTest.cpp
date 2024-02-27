@@ -5989,6 +5989,156 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   EXPECT_TRUE(isa<ReturnInst>(ExitBlock->getFirstNonPHI()));
 }
 
+TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.setConfig(
+      OpenMPIRBuilderConfig(true, false, false, false, false, false, false));
+  OMPBuilder.initialize();
+
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  LoadInst *Value = nullptr;
+  StoreInst *TargetStore = nullptr;
+  llvm::SmallVector<llvm::Value *, 1> CapturedArgs = {
+      Constant::getNullValue(PointerType::get(Ctx, 0))};
+
+  auto SimpleArgAccessorCB =
+      [&](llvm::Argument &Arg, llvm::Value *Input, llvm::Value *&RetVal,
+          llvm::OpenMPIRBuilder::InsertPointTy AllocaIP,
+          llvm::OpenMPIRBuilder::InsertPointTy CodeGenIP) {
+        if (!OMPBuilder.Config.isTargetDevice()) {
+          RetVal = cast<llvm::Value>(&Arg);
+          return CodeGenIP;
+        }
+
+        Builder.restoreIP(AllocaIP);
+
+        llvm::Value *Addr = Builder.CreateAlloca(
+            Arg.getType()->isPointerTy()
+                ? Arg.getType()
+                : Type::getInt64Ty(Builder.getContext()),
+            OMPBuilder.M.getDataLayout().getAllocaAddrSpace());
+        llvm::Value *AddrAscast =
+            Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, Input->getType());
+        Builder.CreateStore(&Arg, AddrAscast);
+
+        Builder.restoreIP(CodeGenIP);
+
+        RetVal = Builder.CreateLoad(Arg.getType(), AddrAscast);
+
+        return Builder.saveIP();
+      };
+
+  llvm::OpenMPIRBuilder::MapInfosTy CombinedInfos;
+  auto GenMapInfoCB = [&](llvm::OpenMPIRBuilder::InsertPointTy codeGenIP)
+      -> llvm::OpenMPIRBuilder::MapInfosTy & {
+    CreateDefaultMapInfos(OMPBuilder, CapturedArgs, CombinedInfos);
+    return CombinedInfos;
+  };
+
+  llvm::Value *RaiseAlloca = nullptr;
+
+  auto BodyGenCB = [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
+                       OpenMPIRBuilder::InsertPointTy CodeGenIP)
+      -> OpenMPIRBuilder::InsertPointTy {
+    Builder.restoreIP(CodeGenIP);
+    RaiseAlloca = Builder.CreateAlloca(Builder.getInt32Ty());
+    Value = Builder.CreateLoad(Type::getInt32Ty(Ctx), CapturedArgs[0]);
+    TargetStore = Builder.CreateStore(Value, RaiseAlloca);
+    return Builder.saveIP();
+  };
+
+  IRBuilder<>::InsertPoint EntryIP(&F->getEntryBlock(),
+                                   F->getEntryBlock().getFirstInsertionPt());
+  TargetRegionEntryInfo EntryInfo("parent", /*DeviceID=*/1, /*FileID=*/2,
+                                  /*Line=*/3, /*Count=*/0);
+
+  Builder.restoreIP(
+      OMPBuilder.createTarget(Loc, EntryIP, EntryIP, EntryInfo, /*NumTeams=*/-1,
+                              /*NumThreads=*/0, CapturedArgs, GenMapInfoCB,
+                              BodyGenCB, SimpleArgAccessorCB));
+
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+
+  // Check outlined function
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+  EXPECT_NE(TargetStore, nullptr);
+  Function *OutlinedFn = TargetStore->getFunction();
+  EXPECT_NE(F, OutlinedFn);
+
+  EXPECT_TRUE(OutlinedFn->hasWeakODRLinkage());
+  // Account for the "implicit" first argument.
+  EXPECT_EQ(OutlinedFn->getName(), "__omp_offloading_1_2_parent_l3");
+  EXPECT_EQ(OutlinedFn->arg_size(), 2U);
+  EXPECT_TRUE(OutlinedFn->getArg(1)->getType()->isPointerTy());
+
+  // Check entry block, to see if we have raised our alloca
+  // from the body to the entry block.
+  auto &EntryBlock = OutlinedFn->getEntryBlock();
+
+  // Check that we have moved our alloca created in the
+  // BodyGenCB function, to the top of the function.
+  Instruction *Alloca1 = EntryBlock.getFirstNonPHI();
+  EXPECT_NE(Alloca1, nullptr);
+  EXPECT_TRUE(isa<AllocaInst>(Alloca1));
+  EXPECT_EQ(Alloca1, RaiseAlloca);
+
+  // Verify we have not altered the rest of the function
+  // inappropriately with our alloca movement.
+  auto *Alloca2 = Alloca1->getNextNode();
+  EXPECT_TRUE(isa<AllocaInst>(Alloca2));
+  auto *Store2 = Alloca2->getNextNode();
+  EXPECT_TRUE(isa<StoreInst>(Store2));
+
+  auto *InitCall = dyn_cast<CallInst>(Store2->getNextNode());
+  EXPECT_NE(InitCall, nullptr);
+  EXPECT_EQ(InitCall->getCalledFunction()->getName(), "__kmpc_target_init");
+  EXPECT_EQ(InitCall->arg_size(), 2U);
+  EXPECT_TRUE(isa<GlobalVariable>(InitCall->getArgOperand(0)));
+  auto *KernelEnvGV = cast<GlobalVariable>(InitCall->getArgOperand(0));
+  EXPECT_TRUE(isa<ConstantStruct>(KernelEnvGV->getInitializer()));
+  auto *KernelEnvC = cast<ConstantStruct>(KernelEnvGV->getInitializer());
+  EXPECT_TRUE(isa<ConstantStruct>(KernelEnvC->getAggregateElement(0U)));
+  auto *ConfigC = cast<ConstantStruct>(KernelEnvC->getAggregateElement(0U));
+  EXPECT_EQ(ConfigC->getAggregateElement(0U),
+            ConstantInt::get(Type::getInt8Ty(Ctx), true));
+  EXPECT_EQ(ConfigC->getAggregateElement(1U),
+            ConstantInt::get(Type::getInt8Ty(Ctx), true));
+  EXPECT_EQ(ConfigC->getAggregateElement(2U),
+            ConstantInt::get(Type::getInt8Ty(Ctx), OMP_TGT_EXEC_MODE_GENERIC));
+
+  auto *EntryBlockBranch = EntryBlock.getTerminator();
+  EXPECT_NE(EntryBlockBranch, nullptr);
+  EXPECT_EQ(EntryBlockBranch->getNumSuccessors(), 2U);
+
+  // Check user code block
+  auto *UserCodeBlock = EntryBlockBranch->getSuccessor(0);
+  EXPECT_EQ(UserCodeBlock->getName(), "user_code.entry");
+  auto *Load1 = UserCodeBlock->getFirstNonPHI();
+  EXPECT_TRUE(isa<LoadInst>(Load1));
+  auto *Load2 = Load1->getNextNode();
+  EXPECT_TRUE(isa<LoadInst>(Load2));
+  EXPECT_EQ(Load2, Value);
+  EXPECT_EQ(Load2->getNextNode(), TargetStore);
+  auto *Deinit = TargetStore->getNextNode();
+  EXPECT_NE(Deinit, nullptr);
+
+  auto *DeinitCall = dyn_cast<CallInst>(Deinit);
+  EXPECT_NE(DeinitCall, nullptr);
+  EXPECT_EQ(DeinitCall->getCalledFunction()->getName(), "__kmpc_target_deinit");
+  EXPECT_EQ(DeinitCall->arg_size(), 0U);
+
+  EXPECT_TRUE(isa<ReturnInst>(DeinitCall->getNextNode()));
+
+  // Check exit block
+  auto *ExitBlock = EntryBlockBranch->getSuccessor(1);
+  EXPECT_EQ(ExitBlock->getName(), "worker.exit");
+  EXPECT_TRUE(isa<ReturnInst>(ExitBlock->getFirstNonPHI()));
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateTask) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
@@ -6733,46 +6883,6 @@ TEST_F(OpenMPIRBuilderTest, createGPUOffloadEntry) {
   // Check kernel attributes
   EXPECT_TRUE(Fn->hasFnAttribute("kernel"));
   EXPECT_TRUE(Fn->hasFnAttribute(Attribute::MustProgress));
-}
-
-TEST_F(OpenMPIRBuilderTest, CreateRegisterRequires) {
-  OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.initialize();
-
-  OpenMPIRBuilderConfig Config(/* IsTargetDevice = */ false,
-                               /* IsGPU = */ false,
-                               /* OpenMPOffloadMandatory = */ false,
-                               /* HasRequiresReverseOffload = */ true,
-                               /* HasRequiresUnifiedAddress = */ false,
-                               /* HasRequiresUnifiedSharedMemory = */ true,
-                               /* HasRequiresDynamicAllocators = */ false);
-  OMPBuilder.setConfig(Config);
-
-  auto FName =
-      OMPBuilder.createPlatformSpecificName({"omp_offloading", "requires_reg"});
-  EXPECT_EQ(FName, ".omp_offloading.requires_reg");
-
-  Function *Fn = OMPBuilder.createRegisterRequires(FName);
-  EXPECT_NE(Fn, nullptr);
-  EXPECT_EQ(FName, Fn->getName());
-
-  EXPECT_EQ(Fn->getSection(), ".text.startup");
-  EXPECT_TRUE(Fn->hasInternalLinkage());
-  EXPECT_TRUE(Fn->hasFnAttribute(Attribute::NoInline));
-  EXPECT_TRUE(Fn->hasFnAttribute(Attribute::NoUnwind));
-  EXPECT_EQ(Fn->size(), 1u);
-
-  BasicBlock *Entry = &Fn->getEntryBlock();
-  EXPECT_FALSE(Entry->empty());
-  EXPECT_EQ(Fn->getReturnType()->getTypeID(), Type::VoidTyID);
-
-  CallInst *Call = &cast<CallInst>(*Entry->begin());
-  EXPECT_EQ(Call->getCalledFunction()->getName(), "__tgt_register_requires");
-  EXPECT_EQ(Call->getNumOperands(), 2u);
-
-  Value *Flags = Call->getArgOperand(0);
-  EXPECT_EQ(cast<ConstantInt>(Flags)->getSExtValue(),
-            OMPBuilder.Config.getRequiresFlags());
 }
 
 } // namespace

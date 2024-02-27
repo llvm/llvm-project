@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace fir;
@@ -67,7 +68,30 @@ fir::FIROpsDialect::FIROpsDialect(mlir::MLIRContext *ctx)
 #include "flang/Optimizer/Dialect/FIROps.cpp.inc"
       >();
   registerOpExternalInterfaces();
-  addInterfaces<FIRInlinerInterface>();
+}
+
+// Register the FIRInlinerInterface to FIROpsDialect
+void fir::addFIRInlinerExtension(mlir::DialectRegistry &registry) {
+  registry.addExtension(
+      +[](mlir::MLIRContext *ctx, fir::FIROpsDialect *dialect) {
+        dialect->addInterface<FIRInlinerInterface>();
+      });
+}
+
+// We do not provide LLVMTranslationDialectInterface implementation
+// for FIR dialect, since at the point of translation to LLVM IR
+// there should not be any FIR operations (the CodeGen converts
+// them to LLVMIR dialect operations).
+// Here we register the default implementation of
+// LLVMTranslationDialectInterface that will drop all FIR dialect
+// attributes - this helps to avoid warnings about unhandled attributes.
+// We can provide our own implementation of the interface,
+// when more sophisticated translation is required.
+void fir::addFIRToLLVMIRExtension(mlir::DialectRegistry &registry) {
+  registry.addExtension(
+      +[](mlir::MLIRContext *ctx, fir::FIROpsDialect *dialect) {
+        dialect->addInterface<mlir::LLVMTranslationDialectInterface>();
+      });
 }
 
 // anchor the class vtable to this compilation unit

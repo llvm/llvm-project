@@ -1,6 +1,9 @@
 add_subdirectory(generic)
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
   add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
+elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  # TODO: We should split this into 'nvptx' and 'amdgpu' for the GPU build.
+  add_subdirectory(${LIBC_TARGET_OS})
 endif()
 
 function(add_math_entrypoint_object name)
@@ -8,6 +11,7 @@ function(add_math_entrypoint_object name)
   # that first and return early if we are able to add an alias target for the
   # machine specific implementation.
   get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.${name}" fq_machine_specific_target_name)
+  get_fq_target_name("${LIBC_TARGET_OS}.${name}" fq_os_specific_target_name)
   if(TARGET ${fq_machine_specific_target_name})
     add_entrypoint_object(
       ${name}
@@ -16,17 +20,25 @@ function(add_math_entrypoint_object name)
         .${LIBC_TARGET_ARCHITECTURE}.${name}
     )
     return()
+  elseif(TARGET ${fq_os_specific_target_name})
+    add_entrypoint_object(
+      ${name}
+      ALIAS
+      DEPENDS
+        .${LIBC_TARGET_OS}.${name}
+    )
+    return()
   endif()
 
   # The GPU optionally depends on vendor libraries. If we emitted one of these
   # entrypoints it means the user requested it and we should use it instead.
-  get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.vendor.${name}" fq_vendor_specific_target_name)
+  get_fq_target_name("${LIBC_TARGET_OS}.vendor.${name}" fq_vendor_specific_target_name)
   if(TARGET ${fq_vendor_specific_target_name})
     add_entrypoint_object(
       ${name}
       ALIAS
       DEPENDS
-        .${LIBC_TARGET_ARCHITECTURE}.vendor.${name}
+        .${LIBC_TARGET_OS}.vendor.${name}
       VENDOR
     )
     return()
@@ -111,6 +123,7 @@ add_math_entrypoint_object(fabsf128)
 add_math_entrypoint_object(fdim)
 add_math_entrypoint_object(fdimf)
 add_math_entrypoint_object(fdiml)
+add_math_entrypoint_object(fdimf128)
 
 add_math_entrypoint_object(floor)
 add_math_entrypoint_object(floorf)
@@ -136,6 +149,7 @@ add_math_entrypoint_object(fmodf)
 add_math_entrypoint_object(frexp)
 add_math_entrypoint_object(frexpf)
 add_math_entrypoint_object(frexpl)
+add_math_entrypoint_object(frexpf128)
 
 add_math_entrypoint_object(hypot)
 add_math_entrypoint_object(hypotf)
@@ -147,6 +161,7 @@ add_math_entrypoint_object(ilogbl)
 add_math_entrypoint_object(ldexp)
 add_math_entrypoint_object(ldexpf)
 add_math_entrypoint_object(ldexpl)
+add_math_entrypoint_object(ldexpf128)
 
 add_math_entrypoint_object(log10)
 add_math_entrypoint_object(log10f)

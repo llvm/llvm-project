@@ -1206,6 +1206,12 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     return BinaryOperator::CreateAnd(Mask, X);
   }
 
+  // Transform  (-1 >> y) << y  to -1 << y
+  if (match(Op0, m_LShr(m_AllOnes(), m_Specific(Op1)))) {
+    Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
+    return BinaryOperator::CreateShl(AllOnes, Op1);
+  }
+
   Constant *C1;
   if (match(Op1, m_Constant(C1))) {
     Constant *C2;
@@ -1491,6 +1497,12 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
     Value *Mask = Builder.CreateLShr(AllOnes, Op1);
     return BinaryOperator::CreateAnd(Mask, X);
+  }
+
+  // Transform  (-1 << y) >> y  to -1 >> y
+  if (match(Op0, m_Shl(m_AllOnes(), m_Specific(Op1)))) {
+    Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
+    return BinaryOperator::CreateLShr(AllOnes, Op1);
   }
 
   if (Instruction *Overflow = foldLShrOverflowBit(I))
