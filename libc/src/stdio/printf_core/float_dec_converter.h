@@ -45,9 +45,6 @@ constexpr uint32_t MAX_BLOCK = 999999999;
 // constexpr uint32_t MAX_BLOCK = 999999999999999999;
 constexpr char DECIMAL_POINT = '.';
 
-// This is used to represent which direction the number should be rounded.
-enum class RoundDirection { Up, Down, Even };
-
 LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
                                                fputil::Sign sign) {
   switch (fputil::quick_get_round()) {
