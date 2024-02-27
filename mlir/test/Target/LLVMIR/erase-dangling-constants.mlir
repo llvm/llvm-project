@@ -1,3 +1,4 @@
+// REQUIRES: asserts
 // RUN: mlir-translate -mlir-to-llvmir %s -debug-only=llvm-dialect-to-llvm-ir 2>&1 | FileCheck %s
 
 // CHECK: Convert initializer for dup_const
