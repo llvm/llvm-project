@@ -1632,7 +1632,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureCuMode,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
-   FeatureLDSBankCount32, // TODO-GFX1210: redefine
+   FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureFmacF64Inst,
    FeatureDPALU_DPP,
