@@ -722,8 +722,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Re-consider control flow based optimizations after redundancy elimination,
   // redo DCE, etc.
-  if (EnableDFAJumpThreading &&
-      ((Level.getSizeLevel() == 0) || DFAJumpThreadingOptSize))
+  if (EnableDFAJumpThreading)
     FPM.addPass(DFAJumpThreadingPass());
 
   FPM.addPass(JumpThreadingPass());
