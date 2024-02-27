@@ -175,22 +175,24 @@
 ! RUN:      --offload-arch=sm_52 \
 ! RUN:      -gpulibc %s 2>&1 \
 ! RUN:   | FileCheck --check-prefix=LIBC-GPU-NVPTX %s
-! LIBC-GPU-NVPTX: "-lcgpu-nvptx"{{.*}}"-lmgpu-nvptx"
+! LIBC-GPU-NVPTX-DAG: "-lcgpu-nvptx"
+! LIBC-GPU-NVPTX-DAG: "-lmgpu-nvptx"
 
 ! RUN:   %flang -### --target=x86_64-unknown-linux-gnu -fopenmp  \
 ! RUN:      --offload-arch=sm_52 \
 ! RUN:      -nogpulibc %s 2>&1 \
 ! RUN:   | FileCheck --check-prefix=NO-LIBC-GPU-NVPTX %s
-! NO-LIBC-GPU-NVPTX-NOT: "-lcgpu-nvptx"{{.*}}"-lmgpu-nvptx"
+! NO-LIBC-GPU-NVPTX-NOT: "-lcgpu-nvptx"
 
 ! RUN:   %flang -### --target=x86_64-unknown-linux-gnu -fopenmp  \
 ! RUN:      --offload-arch=gfx90a \
 ! RUN:      -gpulibc %s 2>&1 \
 ! RUN:   | FileCheck --check-prefix=LIBC-GPU-AMDGPU %s
-! LIBC-GPU-AMDGPU: "-lcgpu-amdgpu"{{.*}}"-lmgpu-amdgpu"
+! LIBC-GPU-AMDGPU-DAG: "-lcgpu-amdgpu"
+! LIBC-GPU-AMDGPU-DAG: "-lmgpu-amdgpu"
 
 ! RUN:   %flang -### --target=x86_64-unknown-linux-gnu -fopenmp  \
 ! RUN:      --offload-arch=gfx90a \
 ! RUN:      -nogpulibc %s 2>&1 \
 ! RUN:   | FileCheck --check-prefix=NO-LIBC-GPU-AMDGPU %s
-! NO-LIBC-GPU-AMDGPU-NOT: "-lcgpu-amdgpu"{{.*}}"-lmgpu-amdgpu"
+! NO-LIBC-GPU-AMDGPU-NOT: "-lcgpu-amdgpu"

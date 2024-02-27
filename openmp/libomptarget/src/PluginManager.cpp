@@ -56,10 +56,10 @@ PluginAdaptorTy::PluginAdaptorTy(const std::string &Name,
 
 Error PluginAdaptorTy::init() {
 
-#define PLUGIN_API_HANDLE(NAME, MANDATORY)                                     \
+#define PLUGIN_API_HANDLE(NAME)                                                \
   NAME = reinterpret_cast<decltype(NAME)>(                                     \
       LibraryHandler->getAddressOfSymbol(GETNAME(__tgt_rtl_##NAME)));          \
-  if (MANDATORY && !NAME) {                                                    \
+  if (!NAME) {                                                                 \
     return createStringError(inconvertibleErrorCode(),                         \
                              "Invalid plugin as necessary interface function " \
                              "(%s) was not found.\n",                          \

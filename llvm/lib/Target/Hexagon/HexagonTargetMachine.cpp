@@ -65,6 +65,10 @@ static cl::opt<bool> EnableExpandCondsets("hexagon-expand-condsets",
                                           cl::init(true), cl::Hidden,
                                           cl::desc("Early expansion of MUX"));
 
+static cl::opt<bool> EnableTfrCleanup("hexagon-tfr-cleanup", cl::init(true),
+                                      cl::Hidden,
+                                      cl::desc("Cleanup of TFRs/COPYs"));
+
 static cl::opt<bool> EnableEarlyIf("hexagon-eif", cl::init(true), cl::Hidden,
                                    cl::desc("Enable early if-conversion"));
 
@@ -125,10 +129,6 @@ static cl::opt<bool> EnableInstSimplify("hexagon-instsimplify", cl::Hidden,
                                         cl::init(true),
                                         cl::desc("Enable instsimplify"));
 
-static cl::opt<bool> DisableHexagonPostIncOpt(
-    "hexagon-postinc-opt", cl::Hidden,
-    cl::desc("Disable Hexagon post-increment optimization"));
-
 /// HexagonTargetMachineModule - Note that this is used on hosts that
 /// cannot link in a library unless there are references into the
 /// library.  In particular, it seems that it is not possible to get
@@ -153,6 +153,7 @@ SchedCustomRegistry("hexagon", "Run Hexagon's custom scheduler",
 
 namespace llvm {
   extern char &HexagonExpandCondsetsID;
+  extern char &HexagonTfrCleanupID;
   void initializeHexagonBitSimplifyPass(PassRegistry&);
   void initializeHexagonConstExtendersPass(PassRegistry&);
   void initializeHexagonConstPropagationPass(PassRegistry&);
@@ -166,9 +167,9 @@ namespace llvm {
   void initializeHexagonNewValueJumpPass(PassRegistry&);
   void initializeHexagonOptAddrModePass(PassRegistry&);
   void initializeHexagonPacketizerPass(PassRegistry&);
-  void initializeHexagonPostIncOptPass(PassRegistry &);
   void initializeHexagonRDFOptPass(PassRegistry&);
   void initializeHexagonSplitDoubleRegsPass(PassRegistry&);
+  void initializeHexagonTfrCleanupPass(PassRegistry &);
   void initializeHexagonVExtractPass(PassRegistry &);
   void initializeHexagonVectorCombineLegacyPass(PassRegistry&);
   void initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PassRegistry &);
@@ -199,11 +200,11 @@ namespace llvm {
   FunctionPass *createHexagonOptimizeSZextends();
   FunctionPass *createHexagonPacketizer(bool Minimal);
   FunctionPass *createHexagonPeephole();
-  FunctionPass *createHexagonPostIncOpt();
   FunctionPass *createHexagonRDFOpt();
   FunctionPass *createHexagonSplitConst32AndConst64();
   FunctionPass *createHexagonSplitDoubleRegs();
   FunctionPass *createHexagonStoreWidening();
+  FunctionPass *createHexagonTfrCleanup();
   FunctionPass *createHexagonVectorCombineLegacyPass();
   FunctionPass *createHexagonVectorPrint();
   FunctionPass *createHexagonVExtract();
@@ -230,7 +231,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
-  initializeHexagonPostIncOptPass(PR);
   initializeHexagonRDFOptPass(PR);
   initializeHexagonSplitDoubleRegsPass(PR);
   initializeHexagonVectorCombineLegacyPass(PR);
@@ -258,7 +258,7 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
           (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
       TLOF(std::make_unique<HexagonTargetObjectFile>()) {
   initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
-  initializeHexagonPostIncOptPass(*PassRegistry::getPassRegistry());
+  initializeHexagonTfrCleanupPass(*PassRegistry::getPassRegistry());
   initAsmInfo();
 }
 
@@ -358,7 +358,7 @@ void HexagonPassConfig::addIRPasses() {
     addPass(createDeadCodeEliminationPass());
   }
 
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   if (!NoOpt) {
     if (EnableInitialCFGCleanup)
@@ -426,6 +426,8 @@ void HexagonPassConfig::addPreRegAlloc() {
       addPass(createHexagonConstExtenders());
     if (EnableExpandCondsets)
       insertPass(&RegisterCoalescerID, &HexagonExpandCondsetsID);
+    if (EnableTfrCleanup)
+      insertPass(&VirtRegRewriterID, &HexagonTfrCleanupID);
     if (!DisableStoreWidening)
       addPass(createHexagonStoreWidening());
     if (EnableGenMemAbs)
@@ -433,11 +435,6 @@ void HexagonPassConfig::addPreRegAlloc() {
     if (!DisableHardwareLoops)
       addPass(createHexagonHardwareLoops());
   }
-
-  if (TM->getOptLevel() >= CodeGenOptLevel::Aggressive)
-    if (!DisableHexagonPostIncOpt)
-      addPass(createHexagonPostIncOpt());
-
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
     addPass(&MachinePipelinerID);
 }

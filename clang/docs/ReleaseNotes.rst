@@ -197,6 +197,9 @@ Improvements to Clang's time-trace
 
 Bug Fixes in This Version
 -------------------------
+- Fixed missing warnings when comparing mismatched enumeration constants
+  in C (`#29217 <https://github.com/llvm/llvm-project/issues/29217>`).
+
 - Clang now accepts elaborated-type-specifiers that explicitly specialize
   a member class template for an implicit instantiation of a class template.
 
@@ -277,6 +280,16 @@ Bug Fixes to C++ Support
   (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
 - Correctly immediate-escalate lambda conversion functions.
   (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
+- Fixed an issue where template parameters of a nested abbreviated generic lambda within
+  a requires-clause lie at the same depth as those of the surrounding lambda. This,
+  in turn, results in the wrong template argument substitution during constraint checking.
+  (`#78524 <https://github.com/llvm/llvm-project/issues/78524>`_)
+- Clang no longer instantiates the exception specification of discarded candidate function
+  templates when determining the primary template of an explicit specialization.
+- Fixed a crash in Microsoft compatibility mode where unqualified dependent base class
+  lookup searches the bases of an incomplete class.
+- Fix a crash when an unresolved overload set is encountered on the RHS of a ``.*`` operator.
+  (`#53815 <https://github.com/llvm/llvm-project/issues/53815>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -301,6 +314,17 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- ARMv7+ targets now default to allowing unaligned access, except Armv6-M, and
+  Armv8-M without the Main Extension. Baremetal targets should check that the
+  new default will work with their system configurations, since it requires
+  that SCTLR.A is 0, SCTLR.U is 1, and that the memory in question is
+  configured as "normal" memory. This brings Clang in-line with the default
+  settings for GCC and Arm Compiler. Aside from making Clang align with other
+  compilers, changing the default brings major performance and code size
+  improvements for most targets. We have not changed the default behavior for
+  ARMv6, but may revisit that decision in the future. Users can restore the old
+  behavior with -m[no-]unaligned-access.
 
 Android Support
 ^^^^^^^^^^^^^^^

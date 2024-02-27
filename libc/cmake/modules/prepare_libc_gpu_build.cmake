@@ -5,8 +5,8 @@ endif()
 
 # Ensure the compiler is a valid clang when building the GPU target.
 set(req_ver "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
-if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
-        ${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "${req_ver}"))
+if(LLVM_VERSION_MAJOR AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
+   ${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "${req_ver}"))
   message(FATAL_ERROR "Cannot build libc for GPU. CMake compiler "
                       "'${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' "
                       " is not 'Clang ${req_ver}'.")
@@ -17,12 +17,21 @@ if(NOT LLVM_LIBC_FULL_BUILD)
 endif()
 
 # Identify the program used to package multiple images into a single binary.
+get_filename_component(compiler_path ${CMAKE_CXX_COMPILER} DIRECTORY)
 find_program(LIBC_CLANG_OFFLOAD_PACKAGER
              NAMES clang-offload-packager NO_DEFAULT_PATH
-             PATHS ${LLVM_BINARY_DIR}/bin)
+             PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
 if(NOT LIBC_CLANG_OFFLOAD_PACKAGER)
   message(FATAL_ERROR "Cannot find the 'clang-offload-packager' for the GPU "
                       "build")
+endif()
+
+# Identify llvm-link program so we can merge the output IR into a single blob.
+find_program(LIBC_LLVM_LINK
+             NAMES llvm-link NO_DEFAULT_PATH
+             PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
+if(NOT LIBC_LLVM_LINK)
+  message(FATAL_ERROR "Cannot find 'llvm-link' for the GPU build")
 endif()
 
 # Optionally set up a job pool to limit the number of GPU tests run in parallel.
@@ -45,7 +54,7 @@ elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   # Using 'check_cxx_compiler_flag' does not work currently due to the link job.
   find_program(LIBC_NVPTX_ARCH
                NAMES nvptx-arch NO_DEFAULT_PATH
-               PATHS ${LLVM_BINARY_DIR}/bin)
+               PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
   if(LIBC_NVPTX_ARCH)
     execute_process(COMMAND ${LIBC_NVPTX_ARCH}
                     OUTPUT_VARIABLE arch_tool_output

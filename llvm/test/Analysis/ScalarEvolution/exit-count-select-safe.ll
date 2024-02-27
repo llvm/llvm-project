@@ -177,9 +177,9 @@ define i32 @logical_or_3ops_redundant_uminseq_operand(i32 %n, i32 %m, i32 %k) {
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 %m)
 ; CHECK-NEXT:    --> (%n umin %m) U: full-set S: full-set Exits: (%n umin %m) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %cond_p3 = select i1 %cond_p0, i1 true, i1 %cond_p1
-; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin (true + %cond_p1))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond = select i1 %cond_p3, i1 true, i1 %cond_p2
-; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1) umin_seq (true + %cond_p2))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (true + (((true + %cond_p0) umin (true + %cond_p1)) umin_seq (true + %cond_p2))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_3ops_redundant_uminseq_operand
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n umin %m) umin_seq %k)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
