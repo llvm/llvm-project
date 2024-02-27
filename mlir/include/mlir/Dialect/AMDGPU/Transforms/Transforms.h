@@ -47,13 +47,13 @@ namespace amdgpu {
 /// dimension of the memref have minimal conflicts.
 LogicalResult
 optimizeSharedMemoryReadsAndWrites(Operation *parentOp, Value memrefValue,
-                                   int64_t kSharedMemoryLineSizeBytes,
-                                   int64_t kDefaultVectorSizeBits);
+                                   int64_t sharedMemoryLineSizeBytes,
+                                   int64_t defaultVectorSizeBits);
 
 std::optional<LogicalResult>
 optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp,
-                                     int64_t kSharedMemoryLineSizeBytes,
-                                     int64_t kDefaultVectorSizeBits);
+                                     int64_t sharedMemoryLineSizeBytes,
+                                     int64_t defaultVectorSizeBits);
 
 } // namespace amdgpu
 } // namespace mlir
