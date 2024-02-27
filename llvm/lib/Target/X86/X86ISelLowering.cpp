@@ -31312,14 +31312,11 @@ static SDValue LowerBITREVERSE_XOP(SDValue Op, SelectionDAG &DAG) {
   return DAG.getBitcast(VT, Res);
 }
 
-static auto createBSWAPShuffleMask(EVT VT) {
-  SmallVector<int, 16> ShuffleMask;
+static void createBSWAPShuffleMask(EVT VT, SmallVector<int, 16>& ShuffleMask) {
   int ScalarSizeInBytes = VT.getScalarSizeInBits() / 8;
   for (int I = 0, E = VT.getVectorNumElements(); I != E; ++I)
     for (int J = ScalarSizeInBytes - 1; J >= 0; --J)
       ShuffleMask.push_back((I * ScalarSizeInBytes) + J);
-
-  return ShuffleMask;
 }
 
 static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
@@ -31334,7 +31331,7 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   if (HasGFNI && ((ScalarType == MVT::i32) || (ScalarType == MVT::i64))) {
     if (VT.isVector()) {
       SmallVector<int, 16> BSWAPMask = createBSWAPShuffleMask(VT);
-      EVT ByteVT =
+      MVT ByteVT =
           EVT::getVectorVT(*DAG.getContext(), MVT::i8, BSWAPMask.size());
       SDValue VecShuffle = DAG.getVectorShuffle(
           ByteVT, DL, DAG.getNode(ISD::BITCAST, DL, ByteVT, In),
@@ -31354,14 +31351,6 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getNode(ISD::BSWAP, DL, ScalarType, ExtractElementZero);
     }
   }
-
-  if (Subtarget.hasXOP() && !VT.is512BitVector())
-    return LowerBITREVERSE_XOP(Op, DAG);
-
-  assert(Subtarget.hasSSSE3() && "SSSE3 required for BITREVERSE");
-
-  assert(VT.getScalarType() == MVT::i8 &&
-         "Only byte vector BITREVERSE supported");
 
   // Split v64i8 without BWI so that we can still use the PSHUFB lowering.
 
