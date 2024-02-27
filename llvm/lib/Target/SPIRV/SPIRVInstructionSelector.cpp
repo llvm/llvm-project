@@ -150,6 +150,8 @@ private:
 
   bool selectOpUndef(Register ResVReg, const SPIRVType *ResType,
                      MachineInstr &I) const;
+  bool selectFreeze(Register ResVReg, const SPIRVType *ResType,
+                    MachineInstr &I) const;
   bool selectIntrinsic(Register ResVReg, const SPIRVType *ResType,
                        MachineInstr &I) const;
   bool selectExtractVal(Register ResVReg, const SPIRVType *ResType,
@@ -284,6 +286,8 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectGlobalValue(ResVReg, I);
   case TargetOpcode::G_IMPLICIT_DEF:
     return selectOpUndef(ResVReg, ResType, I);
+  case TargetOpcode::G_FREEZE:
+    return selectFreeze(ResVReg, ResType, I);
 
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
   case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
@@ -1012,6 +1016,46 @@ bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(I.getOperand(1).getReg())
       .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectFreeze(Register ResVReg,
+                                            const SPIRVType *ResType,
+                                            MachineInstr &I) const {
+  // There is no way to implement `freeze` correctly without support on SPIR-V
+  // standard side, but we may at least address a simple (static) case when
+  // undef/poison value presence is obvious. The main benefit of even
+  // incomplete `freeze` support is preventing of translation from crashing due
+  // to lack of support on legalization and instruction selection steps.
+  if (!I.getOperand(0).isReg() || !I.getOperand(1).isReg())
+    return false;
+  Register OpReg = I.getOperand(1).getReg();
+  if (MachineInstr *Def = MRI->getVRegDef(OpReg)) {
+    Register Reg;
+    switch (Def->getOpcode()) {
+    case SPIRV::ASSIGN_TYPE:
+      if (MachineInstr *AssignToDef =
+              MRI->getVRegDef(Def->getOperand(1).getReg())) {
+        if (AssignToDef->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+          Reg = Def->getOperand(2).getReg();
+      }
+      break;
+    case SPIRV::OpUndef:
+      Reg = Def->getOperand(1).getReg();
+      break;
+    }
+    unsigned DestOpCode;
+    if (Reg.isValid()) {
+      DestOpCode = SPIRV::OpConstantNull;
+    } else {
+      DestOpCode = TargetOpcode::COPY;
+      Reg = OpReg;
+    }
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(DestOpCode))
+        .addDef(I.getOperand(0).getReg())
+        .addUse(Reg)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+  return false;
 }
 
 bool SPIRVInstructionSelector::selectConstVector(Register ResVReg,
