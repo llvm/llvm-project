@@ -32,13 +32,12 @@
 using namespace clang;
 using namespace CodeGen;
 
-CodeGenTBAA::CodeGenTBAA(ASTContext &Ctx, CodeGenTypes &CGTypes, llvm::Module &M,
-                         const CodeGenOptions &CGO,
+CodeGenTBAA::CodeGenTBAA(ASTContext &Ctx, CodeGenTypes &CGTypes,
+                         llvm::Module &M, const CodeGenOptions &CGO,
                          const LangOptions &Features, MangleContext &MContext)
-  : Context(Ctx), CGTypes(CGTypes), Module(M), CodeGenOpts(CGO),
-    Features(Features), MContext(MContext), MDHelper(M.getContext()),
-    Root(nullptr), Char(nullptr)
-{}
+    : Context(Ctx), CGTypes(CGTypes), Module(M), CodeGenOpts(CGO),
+      Features(Features), MContext(MContext), MDHelper(M.getContext()),
+      Root(nullptr), Char(nullptr) {}
 
 CodeGenTBAA::~CodeGenTBAA() {
 }
@@ -301,11 +300,9 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
 
     unsigned idx = 0;
     for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
-         i != e;     ++i,
-        ++idx
-) {
+         i != e; ++i, ++idx) {
       if ((*i)->isZeroSize(Context))
-            continue;
+        continue;
 
       uint64_t Offset =
           BaseOffset + Layout.getFieldOffset(idx) / Context.getCharWidth();
@@ -331,7 +328,6 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
       if (!CollectFields(Offset, FieldQTy, Fields,
                          MayAlias || TypeHasMayAlias(FieldQTy)))
         return false;
-
     }
     return true;
   }

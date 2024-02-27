@@ -29,7 +29,7 @@ namespace clang {
   class Type;
 
 namespace CodeGen {
-  class CodeGenTypes;
+class CodeGenTypes;
 
 // TBAAAccessKind - A kind of TBAA memory access descriptor.
 enum class TBAAAccessKind : unsigned {
@@ -169,8 +169,9 @@ class CodeGenTBAA {
   llvm::MDNode *getBaseTypeInfoHelper(const Type *Ty);
 
 public:
-  CodeGenTBAA(ASTContext &Ctx, CodeGenTypes &CGTypes, llvm::Module &M, const CodeGenOptions &CGO,
-              const LangOptions &Features, MangleContext &MContext);
+  CodeGenTBAA(ASTContext &Ctx, CodeGenTypes &CGTypes, llvm::Module &M,
+              const CodeGenOptions &CGO, const LangOptions &Features,
+              MangleContext &MContext);
   ~CodeGenTBAA();
 
   /// getTypeInfo - Get metadata used to describe accesses to objects of the
