@@ -3948,8 +3948,8 @@ void printCUFKernelLoopControl(
     llvm::interleaveComma(
         regionArgs, p, [&p](mlir::Value v) { p << v << " : " << v.getType(); });
     p << ") = (" << lowerbound << " : " << lowerboundType << ") to ("
-      << upperbound << " : " << upperboundType << ") " << " step (" << steps
-      << " : " << stepType << ") ";
+      << upperbound << " : " << upperboundType << ") "
+      << " step (" << steps << " : " << stepType << ") ";
   }
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
