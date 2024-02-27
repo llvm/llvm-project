@@ -107,7 +107,7 @@ function(clang_compile object_file source)
 
   add_custom_command(
     OUTPUT ${object_file}
-    COMMAND ${COMPILER_RT_TEST_COMPILER} ${compile_flags} -c
+    COMMAND ${compiler} ${compile_flags} -c
             -o "${object_file}"
             ${source_rpath}
     MAIN_DEPENDENCY ${source}
