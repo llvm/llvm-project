@@ -679,10 +679,13 @@ private:
 void Verifier::visitDbgRecords(Instruction &I) {
   if (!I.DbgMarker)
     return;
-  CheckDI(I.DbgMarker->MarkedInstr == &I, "Instruction has invalid DbgMarker", &I);
-  CheckDI(!isa<PHINode>(&I) || !I.hasDbgValues(), "PHI Node must not have any attached DbgRecords", &I);
+  CheckDI(I.DbgMarker->MarkedInstr == &I, "Instruction has invalid DbgMarker",
+          &I);
+  CheckDI(!isa<PHINode>(&I) || !I.hasDbgValues(),
+          "PHI Node must not have any attached DbgRecords", &I);
   for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
-    CheckDI(DPV.getMarker() == I.DbgMarker, "DbgRecord had invalid DbgMarker", &I, &DPV);
+    CheckDI(DPV.getMarker() == I.DbgMarker, "DbgRecord had invalid DbgMarker",
+            &I, &DPV);
     visit(DPV);
   }
 }
@@ -3016,7 +3019,8 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
 
   // Confirm that no issues arise from the debug program.
   if (BB.IsNewDbgInfoFormat)
-    CheckDI(!BB.getTrailingDPValues(), "Basic Block has trailing DbgRecords!", &BB);
+    CheckDI(!BB.getTrailingDPValues(), "Basic Block has trailing DbgRecords!",
+            &BB);
 }
 
 void Verifier::visitTerminator(Instruction &I) {
