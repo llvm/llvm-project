@@ -4821,9 +4821,9 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     } else if (AArch64::PNRRegClass.hasSubClassEq(RC)) {
       assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
              "Unexpected register store without SVE2p1 or SME2");
-      if (SrcReg.isVirtual()) {
+      if (SrcReg.isVirtual())
         MF.getRegInfo().constrainRegClass(SrcReg, &AArch64::PPRRegClass);
-      } else
+      else
         SrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
       Opc = AArch64::STR_PXI;
       StackID = TargetStackID::ScalableVector;
