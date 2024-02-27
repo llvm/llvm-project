@@ -243,12 +243,12 @@ inline bool stdc_has_single_bit(unsigned long long x) {
       unsigned: stdc_count_ones_ui,                                            \
       unsigned long: stdc_count_ones_ul,                                       \
       unsigned long long: stdc_count_ones_ull)(x)
-#define stdc_has_single_bit(x)                                                     \
+#define stdc_has_single_bit(x)                                                 \
   _Generic((x),                                                                \
-      unsigned char: stdc_has_single_bit_uc,                                       \
-      unsigned short: stdc_has_single_bit_us,                                      \
-      unsigned: stdc_has_single_bit_ui,                                            \
-      unsigned long: stdc_has_single_bit_ul,                                       \
+      unsigned char: stdc_has_single_bit_uc,                                   \
+      unsigned short: stdc_has_single_bit_us,                                  \
+      unsigned: stdc_has_single_bit_ui,                                        \
+      unsigned long: stdc_has_single_bit_ul,                                   \
       unsigned long long: stdc_has_single_bit_ull)(x)
 #endif // __cplusplus
 
