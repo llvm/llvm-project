@@ -476,6 +476,7 @@ def StoreBitField : StoreBitFieldOpcode {}
 def StoreBitFieldPop : StoreBitFieldOpcode {}
 
 // [Pointer, Value] -> []
+def Init : StoreOpcode {}
 def InitPop : StoreOpcode {}
 // [Pointer, Value] -> [Pointer]
 def InitElem : Opcode {
