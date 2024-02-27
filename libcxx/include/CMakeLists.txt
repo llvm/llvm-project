@@ -1045,6 +1045,7 @@ set(files
   shared_mutex
   source_location
   span
+  spanstream
   sstream
   stack
   stdatomic.h
