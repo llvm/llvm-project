@@ -46,7 +46,7 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
     static_cast<RISCVAsmBackend &>(MAB).setForceRelocs();
 
   auto ParseResult = RISCVFeatures::parseFeatureBits(
-      STI.getTargetTriple().isRISCV64(), Features);
+      STI.hasFeature(RISCV::Feature64Bit), Features);
   if (ParseResult) {
     auto &ISAInfo = *ParseResult;
     ISAString = ISAInfo->toString();
