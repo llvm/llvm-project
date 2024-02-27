@@ -456,9 +456,9 @@ module attributes {
   // Nontemporal attribute is ignored in case of alignment
   func.func @load_nontemporal_ignored(%arg0: memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>) {
     %0 = memref.load %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
-//       CHECK:  spirv.Load "PhysicalStorageBuffer" %{{.+}} ["Aligned", 4] : f32
+//       CHECK:  spirv.Load "PhysicalStorageBuffer" %{{.+}} ["Aligned|Nontemporal", 4] : f32
     memref.store %0, %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
-//       CHECK:  spirv.Store "PhysicalStorageBuffer" %{{.+}}, %{{.+}} ["Aligned", 4] : f32
+//       CHECK:  spirv.Store "PhysicalStorageBuffer" %{{.+}}, %{{.+}} ["Aligned|Nontemporal", 4] : f32
     return
   }
 }
