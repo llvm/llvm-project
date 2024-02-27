@@ -775,20 +775,23 @@ void SIFoldOperands::foldOperand(
     Register RegSeqDstReg = UseMI->getOperand(0).getReg();
     unsigned RegSeqDstSubReg = UseMI->getOperand(UseOpIdx + 1).getImm();
 
-    for (auto &RSUse : make_early_inc_range(MRI->use_nodbg_operands(RegSeqDstReg))) {
-      MachineInstr *RSUseMI = RSUse.getParent();
+    // Grab the use operands first
+    SmallVector<MachineOperand *, 4> UsesToProcess;
+    for (auto &Use : MRI->use_nodbg_operands(RegSeqDstReg))
+      UsesToProcess.push_back(&Use);
+    for (auto *RSUse : UsesToProcess) {
+      MachineInstr *RSUseMI = RSUse->getParent();
 
       if (tryToFoldACImm(UseMI->getOperand(0), RSUseMI,
-                         RSUseMI->getOperandNo(&RSUse), FoldList))
+                         RSUseMI->getOperandNo(RSUse), FoldList))
         continue;
 
-      if (RSUse.getSubReg() != RegSeqDstSubReg)
+      if (RSUse->getSubReg() != RegSeqDstSubReg)
         continue;
 
-      foldOperand(OpToFold, RSUseMI, RSUseMI->getOperandNo(&RSUse), FoldList,
+      foldOperand(OpToFold, RSUseMI, RSUseMI->getOperandNo(RSUse), FoldList,
                   CopiesToReplace);
     }
-
     return;
   }
 
