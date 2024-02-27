@@ -1156,14 +1156,12 @@ static std::pair<uint64_t, uint64_t> getSubobjectInfo(CodeGenFunction &CGF,
 
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Subobject)) {
     // We're pointing to the beginning of the struct.
-    QualType Ty = DRE->getDecl()->getType();
+    VD = DRE->getDecl();
+    QualType Ty = VD->getType();
     if (Ty->isPointerType())
       Ty = Ty->getPointeeType();
-    ASTContext &Ctx = CGF.getContext();
-    return std::make_pair(Ctx.toCharUnitsFromBits(Ctx.getTypeSize(Ty)).getQuantity(), 0);
-  }
-
-  if (const auto *ME = dyn_cast<MemberExpr>(Subobject)) {
+    OuterRD = Ty->getAsRecordDecl();
+  } else if (const auto *ME = dyn_cast<MemberExpr>(Subobject)) {
     VD = ME->getMemberDecl();
     OuterRD = VD->getDeclContext()->getOuterLexicalRecordContext();
   } else {
