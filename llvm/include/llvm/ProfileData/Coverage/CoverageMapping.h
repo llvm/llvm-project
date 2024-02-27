@@ -385,7 +385,7 @@ struct MCDCRecord {
   enum CondState { MCDC_DontCare = -1, MCDC_False = 0, MCDC_True = 1 };
 
   using TestVector = llvm::SmallVector<CondState>;
-  using TestVectors = llvm::SmallVector<TestVector>;
+  using TestVectors = llvm::SmallVector<std::pair<TestVector, CondState>>;
   using BoolVector = llvm::SmallVector<bool>;
   using TVRowPair = std::pair<unsigned, unsigned>;
   using TVPairMap = llvm::DenseMap<unsigned, TVRowPair>;
@@ -426,13 +426,13 @@ public:
   /// accessing conditions in the TestVectors requires a translation from a
   /// ordinal position to actual condition ID. This is done via PosToID[].
   CondState getTVCondition(unsigned TestVectorIndex, unsigned Condition) {
-    return TV[TestVectorIndex][PosToID[Condition]];
+    return TV[TestVectorIndex].first[PosToID[Condition]];
   }
 
   /// Return the Result evaluation for an executed test vector.
   /// See MCDCRecordProcessor::RecordTestVector().
   CondState getTVResult(unsigned TestVectorIndex) {
-    return TV[TestVectorIndex][getNumConditions()];
+    return TV[TestVectorIndex].second;
   }
 
   /// Determine whether a given condition (indicated by Condition) is covered
