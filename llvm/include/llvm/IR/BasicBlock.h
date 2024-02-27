@@ -93,15 +93,6 @@ public:
   /// if necessary.
   void setIsNewDbgInfoFormat(bool NewFlag);
 
-  /// Validate any DPMarkers / DPValues attached to instructions in this block,
-  /// and block-level stored data too (TrailingDPValues).
-  /// \p Assert Should this method fire an assertion if a problem is found?
-  /// \p Msg Should this method print a message to errs() if a problem is found?
-  /// \p OS Output stream to write errors to.
-  /// \returns True if a problem is found.
-  bool validateDbgValues(bool Assert = true, bool Msg = false,
-                         raw_ostream *OS = nullptr);
-
   /// Record that the collection of DPValues in \p M "trails" after the last
   /// instruction of this block. These are equivalent to dbg.value intrinsics
   /// that exist at the end of a basic block with no terminator (a transient

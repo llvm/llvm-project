@@ -175,6 +175,8 @@ DPValue *DPValue::createLinkedDPVAssign(Instruction *LinkedInstr, Value *Val,
   return NewDPVAssign;
 }
 
+void DPValue::setVariable(DILocalVariable *NewVar) { Variable.reset(NewVar); }
+
 iterator_range<DPValue::location_op_iterator> DPValue::location_ops() const {
   auto *MD = getRawLocation();
   // If a Value has been deleted, the "location" for this DPValue will be
@@ -311,6 +313,10 @@ bool DPValue::isKillLocation() const {
   return (getNumVariableLocationOps() == 0 &&
           !getExpression()->isComplex()) ||
          any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
+}
+
+DILocalVariable *DPValue::getVariable() const {
+  return cast<DILocalVariable>(Variable.get());
 }
 
 std::optional<uint64_t> DPValue::getFragmentSizeInBits() const {

@@ -1143,15 +1143,15 @@ void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
     // Process metadata used by DbgRecords; we only specifically care about the
     // DILocalVariable, DILocation, and DIAssignID fields, as the Value and
     // Expression fields should only be printed inline and so do not use a slot.
-    CreateMetadataSlot(DPV->getVariable());
+    CreateMetadataSlot(DPV->getRawVariable());
     if (DPV->isDbgAssign())
-      CreateMetadataSlot(DPV->getAssignID());
+      CreateMetadataSlot(cast<MDNode>(DPV->getRawAssignID()));
   } else if (const DPLabel *DPL = dyn_cast<const DPLabel>(&DR)) {
     CreateMetadataSlot(DPL->getLabel());
   } else {
     llvm_unreachable("unsupported DbgRecord kind");
   }
-  CreateMetadataSlot(DR.getDebugLoc());
+  CreateMetadataSlot(DR.getDebugLoc().getAsMDNode());
 }
 
 void SlotTracker::processInstructionMetadata(const Instruction &I) {
