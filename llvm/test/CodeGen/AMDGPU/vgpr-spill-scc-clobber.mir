@@ -38,6 +38,7 @@ body:             |
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT: bb.2:
   ; MUBUF-NEXT:   S_ENDPGM 0
+  ;
   ; GFX9-FLATSCR-LABEL: name: vgpr32_save_clobber_scc
   ; GFX9-FLATSCR: bb.0:
   ; GFX9-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -56,6 +57,7 @@ body:             |
   ; GFX9-FLATSCR-NEXT: {{  $}}
   ; GFX9-FLATSCR-NEXT: bb.2:
   ; GFX9-FLATSCR-NEXT:   S_ENDPGM 0
+  ;
   ; GFX10-FLATSCR-LABEL: name: vgpr32_save_clobber_scc
   ; GFX10-FLATSCR: bb.0:
   ; GFX10-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -73,6 +75,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT: bb.2:
   ; GFX10-FLATSCR-NEXT:   S_ENDPGM 0
+  ;
   ; VMEM-GFX8-LABEL: name: vgpr32_save_clobber_scc
   ; VMEM-GFX8: bb.0:
   ; VMEM-GFX8-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -135,6 +138,7 @@ body:             |
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT: bb.2:
   ; MUBUF-NEXT:   S_ENDPGM 0
+  ;
   ; GFX9-FLATSCR-LABEL: name: vgpr64_save_clobber_scc
   ; GFX9-FLATSCR: bb.0:
   ; GFX9-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -153,6 +157,7 @@ body:             |
   ; GFX9-FLATSCR-NEXT: {{  $}}
   ; GFX9-FLATSCR-NEXT: bb.2:
   ; GFX9-FLATSCR-NEXT:   S_ENDPGM 0
+  ;
   ; GFX10-FLATSCR-LABEL: name: vgpr64_save_clobber_scc
   ; GFX10-FLATSCR: bb.0:
   ; GFX10-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -170,6 +175,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT: bb.2:
   ; GFX10-FLATSCR-NEXT:   S_ENDPGM 0
+  ;
   ; VMEM-GFX8-LABEL: name: vgpr64_save_clobber_scc
   ; VMEM-GFX8: bb.0:
   ; VMEM-GFX8-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -230,6 +236,7 @@ body:             |
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT: bb.2:
   ; MUBUF-NEXT:   S_ENDPGM 0
+  ;
   ; GFX9-FLATSCR-LABEL: name: vgpr32_restore_clobber_scc
   ; GFX9-FLATSCR: bb.0:
   ; GFX9-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -247,6 +254,7 @@ body:             |
   ; GFX9-FLATSCR-NEXT: {{  $}}
   ; GFX9-FLATSCR-NEXT: bb.2:
   ; GFX9-FLATSCR-NEXT:   S_ENDPGM 0
+  ;
   ; GFX10-FLATSCR-LABEL: name: vgpr32_restore_clobber_scc
   ; GFX10-FLATSCR: bb.0:
   ; GFX10-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -263,6 +271,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT: bb.2:
   ; GFX10-FLATSCR-NEXT:   S_ENDPGM 0
+  ;
   ; VMEM-GFX8-LABEL: name: vgpr32_restore_clobber_scc
   ; VMEM-GFX8: bb.0:
   ; VMEM-GFX8-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -322,6 +331,7 @@ body:             |
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT: bb.2:
   ; MUBUF-NEXT:   S_ENDPGM 0
+  ;
   ; GFX9-FLATSCR-LABEL: name: vgpr64_restore_clobber_scc
   ; GFX9-FLATSCR: bb.0:
   ; GFX9-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -339,6 +349,7 @@ body:             |
   ; GFX9-FLATSCR-NEXT: {{  $}}
   ; GFX9-FLATSCR-NEXT: bb.2:
   ; GFX9-FLATSCR-NEXT:   S_ENDPGM 0
+  ;
   ; GFX10-FLATSCR-LABEL: name: vgpr64_restore_clobber_scc
   ; GFX10-FLATSCR: bb.0:
   ; GFX10-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -355,6 +366,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT: bb.2:
   ; GFX10-FLATSCR-NEXT:   S_ENDPGM 0
+  ;
   ; VMEM-GFX8-LABEL: name: vgpr64_restore_clobber_scc
   ; VMEM-GFX8: bb.0:
   ; VMEM-GFX8-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -418,6 +430,7 @@ body:             |
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT: bb.2:
   ; MUBUF-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX9-FLATSCR-LABEL: name: vgpr32_restore_clobber_scc_emergency_stack_slot
   ; GFX9-FLATSCR: bb.0:
   ; GFX9-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -439,6 +452,7 @@ body:             |
   ; GFX9-FLATSCR-NEXT: {{  $}}
   ; GFX9-FLATSCR-NEXT: bb.2:
   ; GFX9-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX10-FLATSCR-LABEL: name: vgpr32_restore_clobber_scc_emergency_stack_slot
   ; GFX10-FLATSCR: bb.0:
   ; GFX10-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -459,6 +473,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT: bb.2:
   ; GFX10-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; VMEM-GFX8-LABEL: name: vgpr32_restore_clobber_scc_emergency_stack_slot
   ; VMEM-GFX8: bb.0:
   ; VMEM-GFX8-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -528,6 +543,7 @@ body:             |
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT: bb.2:
   ; MUBUF-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX9-FLATSCR-LABEL: name: vgpr64_restore_clobber_scc_emergency_stack_slot
   ; GFX9-FLATSCR: bb.0:
   ; GFX9-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -549,6 +565,7 @@ body:             |
   ; GFX9-FLATSCR-NEXT: {{  $}}
   ; GFX9-FLATSCR-NEXT: bb.2:
   ; GFX9-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX10-FLATSCR-LABEL: name: vgpr64_restore_clobber_scc_emergency_stack_slot
   ; GFX10-FLATSCR: bb.0:
   ; GFX10-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -569,6 +586,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT: bb.2:
   ; GFX10-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; VMEM-GFX8-LABEL: name: vgpr64_restore_clobber_scc_emergency_stack_slot
   ; VMEM-GFX8: bb.0:
   ; VMEM-GFX8-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -640,6 +658,7 @@ body:             |
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT: bb.2:
   ; MUBUF-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX9-FLATSCR-LABEL: name: vgpr96_restore_clobber_scc_emergency_stack_slot
   ; GFX9-FLATSCR: bb.0:
   ; GFX9-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -661,6 +680,7 @@ body:             |
   ; GFX9-FLATSCR-NEXT: {{  $}}
   ; GFX9-FLATSCR-NEXT: bb.2:
   ; GFX9-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX10-FLATSCR-LABEL: name: vgpr96_restore_clobber_scc_emergency_stack_slot
   ; GFX10-FLATSCR: bb.0:
   ; GFX10-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -681,6 +701,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT: bb.2:
   ; GFX10-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; VMEM-GFX8-LABEL: name: vgpr96_restore_clobber_scc_emergency_stack_slot
   ; VMEM-GFX8: bb.0:
   ; VMEM-GFX8-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -751,6 +772,7 @@ body:             |
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT: bb.2:
   ; MUBUF-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX9-FLATSCR-LABEL: name: vgpr32_save_clobber_scc_emergency_stack_slot
   ; GFX9-FLATSCR: bb.0:
   ; GFX9-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -772,6 +794,7 @@ body:             |
   ; GFX9-FLATSCR-NEXT: {{  $}}
   ; GFX9-FLATSCR-NEXT: bb.2:
   ; GFX9-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX10-FLATSCR-LABEL: name: vgpr32_save_clobber_scc_emergency_stack_slot
   ; GFX10-FLATSCR: bb.0:
   ; GFX10-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -792,6 +815,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT: bb.2:
   ; GFX10-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; VMEM-GFX8-LABEL: name: vgpr32_save_clobber_scc_emergency_stack_slot
   ; VMEM-GFX8: bb.0:
   ; VMEM-GFX8-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -861,6 +885,7 @@ body:             |
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT: bb.2:
   ; MUBUF-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX9-FLATSCR-LABEL: name: vgpr64_save_clobber_scc_emergency_stack_slot
   ; GFX9-FLATSCR: bb.0:
   ; GFX9-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -882,6 +907,7 @@ body:             |
   ; GFX9-FLATSCR-NEXT: {{  $}}
   ; GFX9-FLATSCR-NEXT: bb.2:
   ; GFX9-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX10-FLATSCR-LABEL: name: vgpr64_save_clobber_scc_emergency_stack_slot
   ; GFX10-FLATSCR: bb.0:
   ; GFX10-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -902,6 +928,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT: bb.2:
   ; GFX10-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; VMEM-GFX8-LABEL: name: vgpr64_save_clobber_scc_emergency_stack_slot
   ; VMEM-GFX8: bb.0:
   ; VMEM-GFX8-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -973,6 +1000,7 @@ body:             |
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT: bb.2:
   ; MUBUF-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX9-FLATSCR-LABEL: name: vgpr96_save_clobber_scc_emergency_stack_slot
   ; GFX9-FLATSCR: bb.0:
   ; GFX9-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -994,6 +1022,7 @@ body:             |
   ; GFX9-FLATSCR-NEXT: {{  $}}
   ; GFX9-FLATSCR-NEXT: bb.2:
   ; GFX9-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX10-FLATSCR-LABEL: name: vgpr96_save_clobber_scc_emergency_stack_slot
   ; GFX10-FLATSCR: bb.0:
   ; GFX10-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -1014,6 +1043,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT: bb.2:
   ; GFX10-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; VMEM-GFX8-LABEL: name: vgpr96_save_clobber_scc_emergency_stack_slot
   ; VMEM-GFX8: bb.0:
   ; VMEM-GFX8-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -1080,6 +1110,7 @@ body:             |
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT: bb.2:
   ; MUBUF-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX9-FLATSCR-LABEL: name: mubuf_load_restore_clobber_scc
   ; GFX9-FLATSCR: bb.0:
   ; GFX9-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -1099,6 +1130,7 @@ body:             |
   ; GFX9-FLATSCR-NEXT: {{  $}}
   ; GFX9-FLATSCR-NEXT: bb.2:
   ; GFX9-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX10-FLATSCR-LABEL: name: mubuf_load_restore_clobber_scc
   ; GFX10-FLATSCR: bb.0:
   ; GFX10-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -1118,6 +1150,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT: bb.2:
   ; GFX10-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; VMEM-GFX8-LABEL: name: mubuf_load_restore_clobber_scc
   ; VMEM-GFX8: bb.0:
   ; VMEM-GFX8-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -1184,6 +1217,7 @@ body:             |
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT: bb.2:
   ; MUBUF-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX9-FLATSCR-LABEL: name: mubuf_load_restore_clobber_scc_no_vgprs_emergency_stack_slot
   ; GFX9-FLATSCR: bb.0:
   ; GFX9-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -1207,6 +1241,7 @@ body:             |
   ; GFX9-FLATSCR-NEXT: {{  $}}
   ; GFX9-FLATSCR-NEXT: bb.2:
   ; GFX9-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; GFX10-FLATSCR-LABEL: name: mubuf_load_restore_clobber_scc_no_vgprs_emergency_stack_slot
   ; GFX10-FLATSCR: bb.0:
   ; GFX10-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -1230,6 +1265,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT: bb.2:
   ; GFX10-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
+  ;
   ; VMEM-GFX8-LABEL: name: mubuf_load_restore_clobber_scc_no_vgprs_emergency_stack_slot
   ; VMEM-GFX8: bb.0:
   ; VMEM-GFX8-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -1298,6 +1334,7 @@ body:             |
   ; MUBUF-NEXT:   liveins: $vgpr0
   ; MUBUF-NEXT: {{  $}}
   ; MUBUF-NEXT:   S_ENDPGM 0, implicit $vgpr0
+  ;
   ; GFX9-FLATSCR-LABEL: name: v_mov_clobber_scc
   ; GFX9-FLATSCR: bb.0:
   ; GFX9-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -1318,6 +1355,7 @@ body:             |
   ; GFX9-FLATSCR-NEXT:   liveins: $vgpr0
   ; GFX9-FLATSCR-NEXT: {{  $}}
   ; GFX9-FLATSCR-NEXT:   S_ENDPGM 0, implicit $vgpr0
+  ;
   ; GFX10-FLATSCR-LABEL: name: v_mov_clobber_scc
   ; GFX10-FLATSCR: bb.0:
   ; GFX10-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -1338,6 +1376,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT:   liveins: $vgpr0
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT:   S_ENDPGM 0, implicit $vgpr0
+  ;
   ; VMEM-GFX8-LABEL: name: v_mov_clobber_scc
   ; VMEM-GFX8: bb.0:
   ; VMEM-GFX8-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
