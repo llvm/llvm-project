@@ -35,14 +35,33 @@ LIBC_INLINE constexpr uint32_t const_ten_exp(uint32_t exponent) {
   return result;
 }
 
-LIBC_INLINE int convert_fixed(Writer *writer, const FormatSection &to_conv) {
-  using SAStorageType = fixed_point::FXRep<short accum>::StorageType;
-  using AStorageType = fixed_point::FXRep<accum>::StorageType;
-  using LAStorageType = fixed_point::FXRep<long accum>::StorageType;
-  using SFStorageType = fixed_point::FXRep<short fract>::StorageType;
-  using FStorageType = fixed_point::FXRep<fract>::StorageType;
-  using LFStorageType = fixed_point::FXRep<long fract>::StorageType;
+#define READ_FX_BITS(TYPE)                                                     \
+  do {                                                                         \
+    auto fixed_bits = fixed_point::FXBits<TYPE>(                               \
+        fixed_point::FXRep<TYPE>::StorageType(to_conv.conv_val_raw));          \
+    integral = fixed_bits.get_integral();                                      \
+    fractional = fixed_bits.get_fraction();                                    \
+    exponent = fixed_bits.get_exponent();                                      \
+    is_negative = fixed_bits.get_sign();                                       \
+  } while (false)
 
+#define APPLY_FX_LENGTH_MODIFIER(LENGTH_MODIFIER)                              \
+  do {                                                                         \
+    if (to_conv.conv_name == 'r') {                                            \
+      READ_FX_BITS(LENGTH_MODIFIER fract);                                     \
+    } else if (to_conv.conv_name == 'R') {                                     \
+      READ_FX_BITS(unsigned LENGTH_MODIFIER fract);                            \
+    } else if (to_conv.conv_name == 'k') {                                     \
+      READ_FX_BITS(LENGTH_MODIFIER accum);                                     \
+    } else if (to_conv.conv_name == 'K') {                                     \
+      READ_FX_BITS(unsigned LENGTH_MODIFIER accum);                            \
+    } else {                                                                   \
+      LIBC_ASSERT(false && "Invalid conversion name passed to convert_fixed"); \
+      return FIXED_POINT_CONVERSION_ERROR;                                     \
+    }                                                                          \
+  } while (false)
+
+LIBC_INLINE int convert_fixed(Writer *writer, const FormatSection &to_conv) {
   // Long accum should be the largest type, so we can store all the smaller
   // numbers in things sized for it.
   using LARep = fixed_point::FXRep<unsigned long accum>;
@@ -59,7 +78,6 @@ LIBC_INLINE int convert_fixed(Writer *writer, const FormatSection &to_conv) {
   StorageType integral;
   StorageType fractional;
 
-  // TODO: See about simplifying this mess of a 3D matrix if statement.
   // r = fract
   // k = accum
   // lowercase = signed
@@ -67,108 +85,13 @@ LIBC_INLINE int convert_fixed(Writer *writer, const FormatSection &to_conv) {
   // h = short
   // l = long
   // any other length modifier has no effect
+
   if (to_conv.length_modifier == LengthModifier::h) {
-    // short types
-    if (to_conv.conv_name == 'r') {
-      auto fixed_bits = fixed_point::FXBits<short fract>(
-          static_cast<SFStorageType>(to_conv.conv_val_raw));
-      integral = fixed_bits.get_integral();
-      fractional = fixed_bits.get_fraction();
-      exponent = fixed_bits.get_exponent();
-      is_negative = fixed_bits.get_sign();
-    }
-    if (to_conv.conv_name == 'R') {
-      auto fixed_bits = fixed_point::FXBits<unsigned short fract>(
-          static_cast<SFStorageType>(to_conv.conv_val_raw));
-      integral = fixed_bits.get_integral();
-      fractional = fixed_bits.get_fraction();
-      exponent = fixed_bits.get_exponent();
-      is_negative = fixed_bits.get_sign();
-    }
-    if (to_conv.conv_name == 'k') {
-      auto fixed_bits = fixed_point::FXBits<short accum>(
-          static_cast<SAStorageType>(to_conv.conv_val_raw));
-      integral = fixed_bits.get_integral();
-      fractional = fixed_bits.get_fraction();
-      exponent = fixed_bits.get_exponent();
-      is_negative = fixed_bits.get_sign();
-    }
-    if (to_conv.conv_name == 'K') {
-      auto fixed_bits = fixed_point::FXBits<unsigned short accum>(
-          static_cast<SAStorageType>(to_conv.conv_val_raw));
-      integral = fixed_bits.get_integral();
-      fractional = fixed_bits.get_fraction();
-      exponent = fixed_bits.get_exponent();
-      is_negative = fixed_bits.get_sign();
-    }
+    APPLY_FX_LENGTH_MODIFIER(short);
   } else if (to_conv.length_modifier == LengthModifier::l) {
-    // long types
-    if (to_conv.conv_name == 'r') {
-      auto fixed_bits = fixed_point::FXBits<long fract>(
-          static_cast<LFStorageType>(to_conv.conv_val_raw));
-      integral = fixed_bits.get_integral();
-      fractional = fixed_bits.get_fraction();
-      exponent = fixed_bits.get_exponent();
-      is_negative = fixed_bits.get_sign();
-    }
-    if (to_conv.conv_name == 'R') {
-      auto fixed_bits = fixed_point::FXBits<unsigned long fract>(
-          static_cast<LFStorageType>(to_conv.conv_val_raw));
-      integral = fixed_bits.get_integral();
-      fractional = fixed_bits.get_fraction();
-      exponent = fixed_bits.get_exponent();
-      is_negative = fixed_bits.get_sign();
-    }
-    if (to_conv.conv_name == 'k') {
-      auto fixed_bits = fixed_point::FXBits<long accum>(
-          static_cast<LAStorageType>(to_conv.conv_val_raw));
-      integral = fixed_bits.get_integral();
-      fractional = fixed_bits.get_fraction();
-      exponent = fixed_bits.get_exponent();
-      is_negative = fixed_bits.get_sign();
-    }
-    if (to_conv.conv_name == 'K') {
-      auto fixed_bits = fixed_point::FXBits<unsigned long accum>(
-          static_cast<LAStorageType>(to_conv.conv_val_raw));
-      integral = fixed_bits.get_integral();
-      fractional = fixed_bits.get_fraction();
-      exponent = fixed_bits.get_exponent();
-      is_negative = fixed_bits.get_sign();
-    }
+    APPLY_FX_LENGTH_MODIFIER(long);
   } else {
-    // unspecified types
-    if (to_conv.conv_name == 'r') {
-      auto fixed_bits = fixed_point::FXBits<fract>(
-          static_cast<FStorageType>(to_conv.conv_val_raw));
-      integral = fixed_bits.get_integral();
-      fractional = fixed_bits.get_fraction();
-      exponent = fixed_bits.get_exponent();
-      is_negative = fixed_bits.get_sign();
-    }
-    if (to_conv.conv_name == 'R') {
-      auto fixed_bits = fixed_point::FXBits<unsigned fract>(
-          static_cast<FStorageType>(to_conv.conv_val_raw));
-      integral = fixed_bits.get_integral();
-      fractional = fixed_bits.get_fraction();
-      exponent = fixed_bits.get_exponent();
-      is_negative = fixed_bits.get_sign();
-    }
-    if (to_conv.conv_name == 'k') {
-      auto fixed_bits = fixed_point::FXBits<accum>(
-          static_cast<AStorageType>(to_conv.conv_val_raw));
-      integral = fixed_bits.get_integral();
-      fractional = fixed_bits.get_fraction();
-      exponent = fixed_bits.get_exponent();
-      is_negative = fixed_bits.get_sign();
-    }
-    if (to_conv.conv_name == 'K') {
-      auto fixed_bits = fixed_point::FXBits<unsigned accum>(
-          static_cast<AStorageType>(to_conv.conv_val_raw));
-      integral = fixed_bits.get_integral();
-      fractional = fixed_bits.get_fraction();
-      exponent = fixed_bits.get_exponent();
-      is_negative = fixed_bits.get_sign();
-    }
+    APPLY_FX_LENGTH_MODIFIER();
   }
 
   LIBC_ASSERT(static_cast<size_t>(exponent) <=

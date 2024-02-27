@@ -3243,12 +3243,54 @@ TEST_F(LlvmLibcSPrintfTest, FixedConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%hk", 0xffff); // -short accum max
   ASSERT_STREQ_LEN(written, buff, "-255.992188");
 
+  written = LIBC_NAMESPACE::sprintf(buff, "%hr", 0x0); // 0.0
+  ASSERT_STREQ_LEN(written, buff, "0.000000");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%hr", 0xff); // -short fract max
+  ASSERT_STREQ_LEN(written, buff, "-0.992188");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%hK", 0x0); // 0.0
+  ASSERT_STREQ_LEN(written, buff, "0.000000");
+
+  written =
+      LIBC_NAMESPACE::sprintf(buff, "%hK", 0xffff); // unsigned short accum max
+  ASSERT_STREQ_LEN(written, buff, "255.996094");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%hR", 0x0); // 0.0
+  ASSERT_STREQ_LEN(written, buff, "0.000000");
+
+  written =
+      LIBC_NAMESPACE::sprintf(buff, "%hR", 0xff); // unsigned short fract max
+  ASSERT_STREQ_LEN(written, buff, "0.996094");
+
   written = LIBC_NAMESPACE::sprintf(buff, "%lk", 0x0); // 0.0
   ASSERT_STREQ_LEN(written, buff, "0.000000");
 
   written = LIBC_NAMESPACE::sprintf(buff, "%lk",
                                     0xffffffffffffffff); //-long accum max
   ASSERT_STREQ_LEN(written, buff, "-4294967296.000000");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%lr", 0x0); // 0.0
+  ASSERT_STREQ_LEN(written, buff, "0.000000");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%lr",
+                                    0xffffffff); //-long fract max
+  ASSERT_STREQ_LEN(written, buff, "-1.000000");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%lK", 0x0); // 0.0
+  ASSERT_STREQ_LEN(written, buff, "0.000000");
+
+  written =
+      LIBC_NAMESPACE::sprintf(buff, "%lK",
+                              0xffffffffffffffff); // unsigned long accum max
+  ASSERT_STREQ_LEN(written, buff, "4294967296.000000");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%lR", 0x0); // 0.0
+  ASSERT_STREQ_LEN(written, buff, "0.000000");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%lR",
+                                    0xffffffff); // unsigned long fract max
+  ASSERT_STREQ_LEN(written, buff, "1.000000");
 
   // Min Width Tests.
 

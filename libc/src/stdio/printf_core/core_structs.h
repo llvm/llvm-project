@@ -124,6 +124,7 @@ constexpr int FILE_WRITE_ERROR = -1;
 constexpr int FILE_STATUS_ERROR = -2;
 constexpr int NULLPTR_WRITE_ERROR = -3;
 constexpr int INT_CONVERSION_ERROR = -4;
+constexpr int FIXED_POINT_CONVERSION_ERROR = -5;
 
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE
