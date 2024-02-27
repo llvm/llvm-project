@@ -1103,6 +1103,8 @@ Bug Fixes to C++ Support
   (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
 - Correctly immediate-escalate lambda conversion functions.
   (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
+- Fix a crash when an unresolved overload set is encountered on the RHS of a ``.*`` operator.
+  (`#53815 <https://github.com/llvm/llvm-project/issues/53815>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -14470,6 +14470,23 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
                                        CurFPFeatureOverrides());
   }
 
+  // If this is the .* operator, which is not overloadable, just
+  // create a built-in binary operator.
+  if (Opc == BO_PtrMemD) {
+    auto CheckPlaceholder = [&](Expr *&Arg) {
+      ExprResult Res = CheckPlaceholderExpr(Arg);
+      if (Res.isUsable())
+        Arg = Res.get();
+      return !Res.isUsable();
+    };
+
+    // CreateBuiltinBinOp() doesn't like it if we tell it to create a '.*'
+    // expression that contains placeholders (in either the LHS or RHS).
+    if (CheckPlaceholder(Args[0]) || CheckPlaceholder(Args[1]))
+      return ExprError();
+    return CreateBuiltinBinOp(OpLoc, Opc, Args[0], Args[1]);
+  }
+
   // Always do placeholder-like conversions on the RHS.
   if (checkPlaceholderForOverload(*this, Args[1]))
     return ExprError();
@@ -14487,11 +14504,6 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
   // problems. So we do it this way, which pretty much follows what GCC does.
   // Note that we go the traditional code path for compound assignment forms.
   if (Opc == BO_Assign && !Args[0]->getType()->isOverloadableType())
-    return CreateBuiltinBinOp(OpLoc, Opc, Args[0], Args[1]);
-
-  // If this is the .* operator, which is not overloadable, just
-  // create a built-in binary operator.
-  if (Opc == BO_PtrMemD)
     return CreateBuiltinBinOp(OpLoc, Opc, Args[0], Args[1]);
 
   // Build the overload set.
