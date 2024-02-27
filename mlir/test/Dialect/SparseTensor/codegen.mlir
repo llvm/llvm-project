@@ -34,6 +34,10 @@
   map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
+#BCSR = #sparse_tensor.encoding<{
+  map = (d0, d1, d2, d3) -> (d0: batch, d1: batch, d2 : dense, d3 : compressed)
+}>
+
 #DCSR = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : compressed, d1 : compressed),
   crdWidth = 64,
@@ -179,6 +183,16 @@ func.func @sparse_row(%arg0: tensor<?x?xf64, #Row>) {
 //  CHECK-SAME: %[[A3:.*]]: !sparse_tensor.storage_specifier
 //       CHECK: return
 func.func @sparse_csr(%arg0: tensor<?x?xf64, #CSR>) {
+  return
+}
+
+// CHECK-LABEL: func @sparse_bcsr(
+//  CHECK-SAME: %[[A1:.*0]]: memref<?x2x?xindex>,
+//  CHECK-SAME: %[[A2:.*1]]: memref<?x2x?xindex>,
+//  CHECK-SAME: %[[A3:.*]]: memref<?x2x?xf64>,
+//  CHECK-SAME: %[[A4:.*]]: !sparse_tensor.storage_specifier
+//       CHECK: return
+func.func @sparse_bcsr(%arg0: tensor<?x2x?x?xf64, #BCSR>) {
   return
 }
 
