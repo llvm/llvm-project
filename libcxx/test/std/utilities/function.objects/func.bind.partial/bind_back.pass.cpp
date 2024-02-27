@@ -16,15 +16,12 @@
 #include <functional>
 
 #include <cassert>
+#include <concepts>
 #include <tuple>
 #include <utility>
 
 #include "callable_types.h"
 #include "types.h"
-
-template <class Fn, class... Args>
-concept back_bindable =
-    requires(Fn&& fn, Args&&... args) { std::bind_back(std::forward<Fn>(fn), std::forward<Args>(args)...); };
 
 constexpr void test_basic_bindings() {
   { // Bind arguments, call without arguments
