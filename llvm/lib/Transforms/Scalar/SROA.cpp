@@ -4038,13 +4038,12 @@ private:
     // will become constant after the transform.
     PHINode *Phi = dyn_cast<PHINode>(GEPI.getPointerOperand());
     // To prevent infinitely expanding recursive phis, bail if the GEP pointer
-    // operand is the phi and any of its incoming values is not an alloca or a
-    // constant.
+    // operand is the phi and any of its incoming values is an instruction
+    // besides an alloca.
     if (Phi && any_of(Phi->operands(), [](Value *V) {
           return isa<Instruction>(V) && !isa<AllocaInst>(V);
-        })) {
+        }))
       return false;
-    }
     for (Value *Op : GEPI.indices()) {
       if (auto *SI = dyn_cast<PHINode>(Op)) {
         if (Phi)
@@ -4084,8 +4083,8 @@ private:
 
     bool IsInBounds = GEPI.isInBounds();
     Type *SourceTy = GEPI.getSourceElementType();
-    // We only handle constants and static allocas here, so we can insert GEPs
-    // at the beginning of the function after static allocas.
+    // We only handle arguments, constants, and static allocas here, so we can
+    // insert GEPs at the beginning of the function after static allocas.
     IRB.SetInsertPointPastAllocas(GEPI.getFunction());
     for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
       Value *Op = Phi->getIncomingValue(I);
