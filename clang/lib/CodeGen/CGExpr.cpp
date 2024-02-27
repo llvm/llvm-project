@@ -3826,11 +3826,9 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     Builder.CreateCondBr(Checked, Cont, TrapBB);
     EmitBlock(TrapBB);
 
-    llvm::CallInst *TrapCall = Builder.CreateCall(
-        CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
-        llvm::ConstantInt::get(CGM.Int8Ty, ClSanitizeDebugDeoptimization
-                                               ? TrapBB->getParent()->size()
-                                               : CheckHandlerID));
+    llvm::CallInst *TrapCall =
+        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
+                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
 
     if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
       auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
