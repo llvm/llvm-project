@@ -23,6 +23,8 @@ int vprintf (const char *restrict format, va_list arg);
 
 int vsprintf (char *restrict s, const char *restrict format, va_list arg);
 
+int vfprintf(FILE *stream, const char *format, va_list ap);
+
 int vfscanf(FILE *stream, const char *format, va_list ap);
 
 int some_library_function(int n, va_list arg);

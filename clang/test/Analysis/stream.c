@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection -verify %s
 
 #include "Inputs/system-header-simulator.h"
+#include "Inputs/system-header-simulator-for-valist.h"
 
 void clang_analyzer_eval(int);
 
@@ -138,6 +139,18 @@ void f_dopen(int fd) {
   FILE *F = fdopen(fd, "r");
   char buf[1024];
   fread(buf, 1, 1, F); // expected-warning {{Stream pointer might be NULL}}
+  fclose(F);
+}
+
+void f_vfprintf(int fd, va_list args) {
+  FILE *F = fdopen(fd, "r");
+  vfprintf(F, "%d", args); // expected-warning {{Stream pointer might be NULL}}
+  fclose(F);
+}
+
+void f_vfscanf(int fd, va_list args) {
+  FILE *F = fdopen(fd, "r");
+  vfscanf(F, "%u", args); // expected-warning {{Stream pointer might be NULL}}
   fclose(F);
 }
 
