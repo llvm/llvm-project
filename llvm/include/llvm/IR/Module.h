@@ -218,6 +218,11 @@ public:
   /// \ref BasicBlock.
   bool IsNewDbgInfoFormat;
 
+  /// Used when printing this module in the new debug info format; removes all
+  /// declarations of debug intrinsics that are replaced by non-intrinsic
+  /// records in the new format.
+  void removeDebugIntrinsicDeclarations();
+
   /// \see BasicBlock::convertToNewDbgValues.
   void convertToNewDbgValues() {
     for (auto &F : *this) {
@@ -232,6 +237,13 @@ public:
       F.convertFromNewDbgValues();
     }
     IsNewDbgInfoFormat = false;
+  }
+
+  void setIsNewDbgInfoFormat(bool UseNewFormat) {
+    if (UseNewFormat && !IsNewDbgInfoFormat)
+      convertToNewDbgValues();
+    else if (!UseNewFormat && IsNewDbgInfoFormat)
+      convertFromNewDbgValues();
   }
 
   /// The Module constructor. Note that there is no default constructor. You
