@@ -129,3 +129,8 @@
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g -glldb %s 2>&1 | FileCheck %s --check-prefixes=GLLDBSPLIT
 
 // GLLDBSPLIT-NOT: "-ggnu-pubnames"
+
+/// Generate -ggnu-pubnames for -glldb when it is explicitly enabled
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g -glldb -ggnu-pubnames %s 2>&1 | FileCheck %s --check-prefixes=GLLDBSPLIT2
+
+// GLLDBSPLIT2: "-ggnu-pubnames"

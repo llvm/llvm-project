@@ -4478,8 +4478,12 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
       Args.getLastArg(options::OPT_ggnu_pubnames, options::OPT_gno_gnu_pubnames,
                       options::OPT_gpubnames, options::OPT_gno_pubnames);
   if (DwarfFission != DwarfFissionKind::None ||
-      (PubnamesArg && checkDebugInfoOption(PubnamesArg, Args, D, TC)))
-    if (DebuggerTuning != llvm::DebuggerKind::LLDB &&
+      (PubnamesArg && checkDebugInfoOption(PubnamesArg, Args, D, TC))) {
+    const bool OptionSet =
+        (PubnamesArg &&
+         (PubnamesArg->getOption().matches(options::OPT_gpubnames) ||
+          PubnamesArg->getOption().matches(options::OPT_ggnu_pubnames)));
+    if ((DebuggerTuning != llvm::DebuggerKind::LLDB || OptionSet) &&
         (!PubnamesArg ||
          (!PubnamesArg->getOption().matches(options::OPT_gno_gnu_pubnames) &&
           !PubnamesArg->getOption().matches(options::OPT_gno_pubnames))))
@@ -4487,6 +4491,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                                            options::OPT_gpubnames)
                             ? "-gpubnames"
                             : "-ggnu-pubnames");
+  }
   const auto *SimpleTemplateNamesArg =
       Args.getLastArg(options::OPT_gsimple_template_names,
                       options::OPT_gno_simple_template_names);
