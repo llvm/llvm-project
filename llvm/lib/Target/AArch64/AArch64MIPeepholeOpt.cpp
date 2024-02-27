@@ -127,6 +127,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   bool visitINSERT(MachineInstr &MI);
   bool visitINSviGPR(MachineInstr &MI, unsigned Opc);
   bool visitINSvi64lane(MachineInstr &MI);
+  bool visitFMOVDr(MachineInstr &MI);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -670,6 +671,23 @@ bool AArch64MIPeepholeOpt::visitINSvi64lane(MachineInstr &MI) {
   return true;
 }
 
+bool AArch64MIPeepholeOpt::visitFMOVDr(MachineInstr &MI) {
+  // An FMOVDr sets the high 64-bits to zero implicitly, similar to ORR for GPR.
+  MachineInstr *Low64MI = MRI->getUniqueVRegDef(MI.getOperand(1).getReg());
+  if (!Low64MI || !is64bitDefwithZeroHigh64bit(Low64MI, MRI))
+    return false;
+
+  // Let's remove MIs for high 64-bits.
+  Register OldDef = MI.getOperand(0).getReg();
+  Register NewDef = MI.getOperand(1).getReg();
+  MRI->constrainRegClass(NewDef, MRI->getRegClass(OldDef));
+  MRI->replaceRegWith(OldDef, NewDef);
+  LLVM_DEBUG(dbgs() << "Removed: " << MI << "\n");
+  MI.eraseFromParent();
+
+  return true;
+}
+
 bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -747,6 +765,9 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::INSvi64lane:
         Changed |= visitINSvi64lane(MI);
+        break;
+      case AArch64::FMOVDr:
+        Changed |= visitFMOVDr(MI);
         break;
       }
     }
