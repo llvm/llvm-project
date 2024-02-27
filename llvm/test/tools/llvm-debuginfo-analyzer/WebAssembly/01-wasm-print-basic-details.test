@@ -18,16 +18,18 @@
 ; sorted by the debug information internal offset; it includes its lexical
 ; level and debug info format.
 
+; RUN: yaml2obj %p/Inputs/test-clang.yaml -o test-clang.wasm
+
 ; RUN: llvm-debuginfo-analyzer --attribute=level,format \
 ; RUN:                         --output-sort=offset \
 ; RUN:                         --print=scopes,symbols,types,lines,instructions \
-; RUN:                         %p/Inputs/test-clang.wasm 2>&1 | \
+; RUN:                         test-clang.wasm 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level,format \
 ; RUN:                         --output-sort=offset \
 ; RUN:                         --print=elements \
-; RUN:                         %p/Inputs/test-clang.wasm 2>&1 | \
+; RUN:                         test-clang.wasm 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
 ; ONE:      Logical View:

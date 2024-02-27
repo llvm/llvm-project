@@ -17,11 +17,13 @@
 ; The output shows in view form the 'missing (-), added (+)' elements,
 ; giving more context by swapping the reference and target object files.
 
+; RUN: yaml2obj %p/Inputs/test-clang.yaml -o test-clang.wasm
+
 ; RUN: llvm-debuginfo-analyzer --attribute=level \
 ; RUN:                         --compare=types \
 ; RUN:                         --report=view \
 ; RUN:                         --print=symbols,types \
-; RUN:                         %p/Inputs/test-clang.wasm \
+; RUN:                         test-clang.wasm \
 ; RUN:                         %p/../DWARF/Inputs/test-dwarf-gcc.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
@@ -50,7 +52,7 @@
 ; RUN:                         --compare=types \
 ; RUN:                         --report=list \
 ; RUN:                         --print=symbols,types,summary \
-; RUN:                         %p/Inputs/test-clang.wasm \
+; RUN:                         test-clang.wasm \
 ; RUN:                         %p/../DWARF/Inputs/test-dwarf-gcc.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
 
@@ -80,7 +82,7 @@
 ; RUN:                         --report=list \
 ; RUN:                         --print=symbols,types,summary \
 ; RUN:                         %p/../DWARF/Inputs/test-dwarf-gcc.o \
-; RUN:                         %p/Inputs/test-clang.wasm 2>&1 | \
+; RUN:                         test-clang.wasm 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=THR %s
 
 ; THR:      Reference: 'test-dwarf-gcc.o'

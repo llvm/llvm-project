@@ -1,0 +1,168 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:
+          - I32
+          - I32
+          - I32
+        ReturnTypes:
+          - I32
+  - Type:            IMPORT
+    Imports:
+      - Module:          env
+        Field:           __linear_memory
+        Kind:            MEMORY
+        Memory:
+          Minimum:         0x0
+      - Module:          env
+        Field:           __stack_pointer
+        Kind:            GLOBAL
+        GlobalType:      I32
+        GlobalMutable:   true
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            CODE
+    Relocations:
+      - Type:            R_WASM_GLOBAL_INDEX_LEB
+        Index:           1
+        Offset:          0x6
+    Functions:
+      - Index:           0
+        Locals:
+          - Type:            I32
+            Count:           11
+        Body:            238080808000210341202104200320046B2105200520003602182005200136021420022106200520063A001320052D001321074101210820072008712109024002402009450D004107210A2005200A36020C4107210B2005200B36021C0C010B2005280214210C2005200C36021C0B200528021C210D200D0F0B
+  - Type:            CUSTOM
+    Name:            .debug_abbrev
+    Payload:         011101250E1305030E10171B0E110112060000022E011101120640186E0E030E3A0B3B0B49133F1900000305000218030E3A0B3B0B49130000040B011101120600000534000218030E3A0B3B0B491300000616004913030E3A0B3B0B0000072400030E3E0B0B0B0000080F00491300000926004913000000
+  - Type:            CUSTOM
+    Relocations:
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           2
+        Offset:          0x6
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           3
+        Offset:          0xC
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           3
+        Offset:          0x12
+        Addend:          111
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           4
+        Offset:          0x16
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           3
+        Offset:          0x1A
+        Addend:          120
+      - Type:            R_WASM_FUNCTION_OFFSET_I32
+        Index:           0
+        Offset:          0x1E
+      - Type:            R_WASM_FUNCTION_OFFSET_I32
+        Index:           0
+        Offset:          0x27
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           3
+        Offset:          0x34
+        Addend:          174
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           3
+        Offset:          0x38
+        Addend:          186
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           3
+        Offset:          0x46
+        Addend:          194
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           3
+        Offset:          0x54
+        Addend:          210
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           3
+        Offset:          0x62
+        Addend:          237
+      - Type:            R_WASM_FUNCTION_OFFSET_I32
+        Index:           0
+        Offset:          0x6D
+        Addend:          74
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           3
+        Offset:          0x79
+        Addend:          252
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           3
+        Offset:          0x89
+        Addend:          261
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           3
+        Offset:          0x91
+        Addend:          190
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           3
+        Offset:          0x9C
+        Addend:          203
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           3
+        Offset:          0xAD
+        Addend:          224
+      - Type:            R_WASM_SECTION_OFFSET_I32
+        Index:           3
+        Offset:          0xB4
+        Addend:          247
+    Name:            .debug_info
+    Payload:         BC00000004000000000004010000000021006F0000000000000078000000020000007D00000002020000007D00000004ED00059FAE000000BA00000001029000000003029118C200000001029700000003029114D20000000102AC00000003029113ED0000000102B3000000044C000000180000000502910CFC0000000105BA0000000006900000000501000001040007BE000000050406A2000000CB000000010108A7000000099000000007E0000000070407F70000000201098400000000
+  - Type:            CUSTOM
+    Name:            .debug_str
+    Payload:         636C616E672076657273696F6E2031392E302E3067697420282F646174612F70726F6A656374732F6C6C766D2D726F6F742F6C6C766D2D70726F6A6563742F636C616E6720326462363730336630633235376432393364663435356532646666386331666236393563343130302900746573742E637070002F646174612F70726F6A656374732F736372697074732F72656772657373696F6E2D73756974652F696E7075742F67656E6572616C005F5A33666F6F504B696A6200666F6F00696E7400506172616D50747200494E5450545200506172616D556E7369676E656400756E7369676E656420696E7400506172616D426F6F6C00626F6F6C00434F4E5354414E5400494E544547455200
+  - Type:            CUSTOM
+    Relocations:
+      - Type:            R_WASM_FUNCTION_OFFSET_I32
+        Index:           0
+        Offset:          0x2D
+    Name:            .debug_line
+    Payload:         58000000040020000000010101FB0E0D00010101010000000100000100746573742E6370700000000000000502020000001305070A022F130674051306083E0505AD06037AC8050A062805030674037874050106030920020B000101
+  - Type:            CUSTOM
+    Name:            linking
+    Version:         2
+    SymbolTable:
+      - Index:           0
+        Kind:            FUNCTION
+        Name:            _Z3fooPKijb
+        Flags:           [ VISIBILITY_HIDDEN ]
+        Function:        0
+      - Index:           1
+        Kind:            GLOBAL
+        Name:            __stack_pointer
+        Flags:           [ UNDEFINED ]
+        Global:          0
+      - Index:           2
+        Kind:            SECTION
+        Flags:           [ BINDING_LOCAL ]
+        Section:         4
+      - Index:           3
+        Kind:            SECTION
+        Flags:           [ BINDING_LOCAL ]
+        Section:         6
+      - Index:           4
+        Kind:            SECTION
+        Flags:           [ BINDING_LOCAL ]
+        Section:         7
+  - Type:            CUSTOM
+    Name:            producers
+    Languages:
+      - Name:            C_plus_plus_14
+        Version:         ''
+    Tools:
+      - Name:            clang
+        Version:         '19.0.0git (/data/projects/llvm-root/llvm-project/clang 2db6703f0c257d293df455e2dff8c1fb695c4100)'
+  - Type:            CUSTOM
+    Name:            target_features
+    Features:
+      - Prefix:          USED
+        Name:            mutable-globals
+      - Prefix:          USED
+        Name:            sign-ext
+...

@@ -18,9 +18,11 @@
 ; offsets within the debug information section, debug location
 ; operands, linkage names, etc.
 
+; RUN: yaml2obj %p/Inputs/test-clang.yaml -o test-clang.wasm
+
 ; RUN: llvm-debuginfo-analyzer --attribute=all \
 ; RUN:                         --print=all \
-; RUN:                         %p/Inputs/test-clang.wasm 2>&1 | \
+; RUN:                         test-clang.wasm 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
 ; ONE:      Logical View:

@@ -30,10 +30,12 @@
 ; emits both typedefs at the same lexical scope (3), which is wrong.
 ; GCC emit correct lexical scope for both typedefs.
 
+; RUN: yaml2obj %p/Inputs/pr-44884-clang.yaml -o pr-44884-clang.wasm
+
 ; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \
 ; RUN:                         --output-sort=kind \
 ; RUN:                         --print=symbols,types,lines \
-; RUN:                         %p/Inputs/pr-44884-clang.wasm \
+; RUN:                         pr-44884-clang.wasm \
 ; RUN:                         %p/../DWARF/Inputs/pr-44884-dwarf-gcc.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
@@ -113,7 +115,7 @@
 ; RUN:                         --select-types=Typedef \
 ; RUN:                         --report=list \
 ; RUN:                         --print=types \
-; RUN:                         %p/Inputs/pr-44884-clang.wasm \
+; RUN:                         pr-44884-clang.wasm \
 ; RUN:                         %p/../DWARF/Inputs/pr-44884-dwarf-gcc.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
 

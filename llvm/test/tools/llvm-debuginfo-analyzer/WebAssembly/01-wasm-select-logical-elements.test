@@ -18,12 +18,14 @@
 ; contain 'BLOCK' or '.store' in their names or types, using a tab layout
 ; and given the number of matches.
 
+# RUN: yaml2obj %p/Inputs/test-clang.yaml -o test-clang.wasm
+
 ; RUN: llvm-debuginfo-analyzer --attribute=level \
 ; RUN:                         --select-nocase --select-regex \
 ; RUN:                         --select=BLOCK --select=.store \
 ; RUN:                         --report=list \
 ; RUN:                         --print=symbols,types,instructions,summary \
-; RUN:                         %p/Inputs/test-clang.wasm 2>&1 | \
+; RUN:                         test-clang.wasm 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
 ; ONE:      Logical View:
@@ -54,7 +56,7 @@
 ; RUN:                         --select=INTe \
 ; RUN:                         --report=list \
 ; RUN:                         --print=symbols,types \
-; RUN:                         %p/Inputs/test-clang.wasm \
+; RUN:                         test-clang.wasm \
 ; RUN:                         %p/../DWARF/Inputs/test-dwarf-gcc.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
 
