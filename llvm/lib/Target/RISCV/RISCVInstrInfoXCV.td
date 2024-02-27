@@ -675,6 +675,7 @@ def CV_HI5: SDNodeXForm<imm, [{
                                    N->getValueType(0));
 }]>;
 
+def positiveGPR : ImmLeaf<XLenVT, [{return (uint32_t)Imm >> 31 == 0;}]>;
 def between : PatFrags<(ops node:$lowerBound, node:$upperBound, node:$value),
                        [(smin (smax node:$value, node:$lowerBound), node:$upperBound),
                         (smax (smin node:$value, node:$upperBound), node:$lowerBound)]>;
@@ -788,7 +789,7 @@ let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
 
   def : Pat<(clip powerOf2Minus1:$upperBound, (XLenVT GPR:$rs1)),
             (CV_CLIP GPR:$rs1, (trailing1sPlus1 imm:$upperBound))>;
-  def : Pat<(between (not GPR:$rs2), GPR:$rs2, (XLenVT GPR:$rs1)),
+  def : Pat<(between (not positiveGPR:$rs2), positiveGPR:$rs2, (XLenVT GPR:$rs1)),
             (CV_CLIPR GPR:$rs1, GPR:$rs2)>;
   def : Pat<(betweenu powerOf2Minus1:$upperBound, (XLenVT GPR:$rs1)),
             (CV_CLIPU GPR:$rs1, (trailing1sPlus1 imm:$upperBound))>;

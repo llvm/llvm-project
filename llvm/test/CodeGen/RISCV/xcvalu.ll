@@ -124,12 +124,16 @@ define i32 @clip(i32 %a) {
 define i32 @clipr(i32 %a, i32 %b) {
 ; CHECK-LABEL: clipr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cv.clipr a0, a0, a1
+; CHECK-NEXT:    cv.abs a1, a1
+; CHECK-NEXT:    not a0, a1
+; CHECK-NEXT:    cv.max a0, a1, a0
+; CHECK-NEXT:    cv.min a0, a0, a1
 ; CHECK-NEXT:    ret
-  %1 = xor i32 %b, -1
-  %2 = call i32 @llvm.smax.i32(i32 %a, i32 %1)
-  %3 = call i32 @llvm.smin.i32(i32 %2, i32 %b)
-  ret i32 %3
+  %1 = call i32 @llvm.abs.i32(i32 %b, i1 false)
+  %2 = xor i32 %1, -1
+  %3 = call i32 @llvm.smax.i32(i32 %1, i32 %2)
+  %4 = call i32 @llvm.smin.i32(i32 %3, i32 %1)
+  ret i32 %4
 }
 
 define i32 @clipu(i32 %a) {
