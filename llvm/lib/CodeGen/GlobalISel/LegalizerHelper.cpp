@@ -5222,7 +5222,8 @@ MachineInstrBuilder LegalizerHelper::getNeutralElementForVecReduce(
 
   switch (Opcode) {
   default:
-    return MIRBuilder.buildUndef(Ty);
+    llvm_unreachable(
+        "getNeutralElementForVecReduce called with invalid opcode!");
   case TargetOpcode::G_VECREDUCE_ADD:
   case TargetOpcode::G_VECREDUCE_OR:
   case TargetOpcode::G_VECREDUCE_XOR:
@@ -5472,9 +5473,11 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     auto NewVec = MIRBuilder.buildPadVectorWithUndefElements(MoreTy, MO);
     auto NeutralElement = getNeutralElementForVecReduce(
         MI.getOpcode(), MIRBuilder, MoreTy.getElementType());
+
+    LLT IdxTy(TLI.getVectorIdxTy(MIRBuilder.getDataLayout()));
     for (size_t i = OrigTy.getNumElements(), e = MoreTy.getNumElements();
          i != e; i++) {
-      auto Idx = MIRBuilder.buildConstant(LLT::scalar(32), i);
+      auto Idx = MIRBuilder.buildConstant(IdxTy, i);
       NewVec = MIRBuilder.buildInsertVectorElement(MoreTy, NewVec,
                                                    NeutralElement, Idx);
     }
