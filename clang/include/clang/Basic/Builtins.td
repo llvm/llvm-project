@@ -688,6 +688,12 @@ def Popcount : Builtin, BitInt_Long_LongLongTemplate {
   let Prototype = "int(unsigned T)";
 }
 
+def Popcountg : Builtin {
+  let Spellings = ["__builtin_popcountg"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "int(...)";
+}
+
 def Clrsb : Builtin, BitInt_Long_LongLongTemplate {
   let Spellings = ["__builtin_clrsb"];
   let Attributes = [NoThrow, Const, Constexpr];
