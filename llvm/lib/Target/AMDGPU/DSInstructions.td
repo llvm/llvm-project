@@ -1273,6 +1273,10 @@ defm DS_BVH_STACK_RTN_B32             : DS_Real_Renamed_gfx12<0x0e0,
 defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
 defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
 
+// New aliases added in GFX12 without renaming the instructions.
+def : MnemonicAlias<"ds_subrev_u32", "ds_rsub_u32">, Requires<[isGFX12Plus]>;
+def : MnemonicAlias<"ds_subrev_u64", "ds_rsub_u64">, Requires<[isGFX12Plus]>;
+
 //===----------------------------------------------------------------------===//
 // GFX11.
 //===----------------------------------------------------------------------===//

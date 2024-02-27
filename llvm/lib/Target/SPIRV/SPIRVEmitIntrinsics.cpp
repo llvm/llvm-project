@@ -500,9 +500,25 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
 }
 
 Instruction *SPIRVEmitIntrinsics::visitAllocaInst(AllocaInst &I) {
+  Value *ArraySize = nullptr;
+  if (I.isArrayAllocation()) {
+    const SPIRVSubtarget *STI = TM->getSubtargetImpl(*I.getFunction());
+    if (!STI->canUseExtension(
+            SPIRV::Extension::SPV_INTEL_variable_length_array))
+      report_fatal_error(
+          "array allocation: this instruction requires the following "
+          "SPIR-V extension: SPV_INTEL_variable_length_array",
+          false);
+    ArraySize = I.getArraySize();
+  }
+
   TrackConstants = false;
   Type *PtrTy = I.getType();
-  auto *NewI = IRB->CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy}, {});
+  auto *NewI =
+      ArraySize
+          ? IRB->CreateIntrinsic(Intrinsic::spv_alloca_array,
+                                 {PtrTy, ArraySize->getType()}, {ArraySize})
+          : IRB->CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy}, {});
   std::string InstName = I.hasName() ? I.getName().str() : "";
   I.replaceAllUsesWith(NewI);
   I.eraseFromParent();

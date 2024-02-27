@@ -32341,20 +32341,22 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       }
     }
 
-    if (128 % InBits == 0) {
+    if ((128 % InBits) == 0 && WidenVT.is128BitVector()) {
       // 128 bit and smaller inputs should avoid truncate all together and
-      // just use a build_vector that will become a shuffle.
-      // TODO: Widen and use a shuffle directly?
-      SmallVector<SDValue, 16> Ops(WidenNumElts, DAG.getUNDEF(EltVT));
-      // Use the original element count so we don't do more scalar opts than
-      // necessary.
-      for (unsigned i=0; i < MinElts; ++i) {
-        SDValue Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, InEltVT, In,
-                                  DAG.getIntPtrConstant(i, dl));
-        Ops[i] = DAG.getNode(ISD::TRUNCATE, dl, EltVT, Val);
+      // use a shuffle.
+      if ((InEltVT.getSizeInBits() % EltVT.getSizeInBits()) == 0) {
+        int Scale = InEltVT.getSizeInBits() / EltVT.getSizeInBits();
+        SmallVector<int, 16> TruncMask(WidenNumElts, -1);
+        for (unsigned I = 0; I < MinElts; ++I)
+          TruncMask[I] = Scale * I;
+        SDValue WidenIn = widenSubVector(In, false, Subtarget, DAG, dl, 128);
+        assert(isTypeLegal(WidenVT) && isTypeLegal(WidenIn.getValueType()) &&
+               "Illegal vector type in truncation");
+        WidenIn = DAG.getBitcast(WidenVT, WidenIn);
+        Results.push_back(
+            DAG.getVectorShuffle(WidenVT, dl, WidenIn, WidenIn, TruncMask));
+        return;
       }
-      Results.push_back(DAG.getBuildVector(WidenVT, dl, Ops));
-      return;
     }
 
     // With AVX512 there are some cases that can use a target specific
