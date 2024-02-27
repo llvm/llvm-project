@@ -665,9 +665,10 @@ Value *llvm::lowerObjectSizeCall(
 
       if (!EvalOptions.WholeObjectSize && EvalOptions.SubobjectSize) {
         Size = ConstantInt::get(Size->getType(), EvalOptions.SubobjectSize);
-        Offset = Builder.CreateSub(
-            Offset,
-            ConstantInt::get(Offset->getType(), EvalOptions.SubobjectOffset));
+        if (EvalOptions.SubobjectOffset)
+          Offset = Builder.CreateSub(
+              Offset,
+              ConstantInt::get(Offset->getType(), EvalOptions.SubobjectOffset));
       }
 
       // If we've outside the end of the object, then we can always access
