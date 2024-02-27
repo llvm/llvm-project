@@ -102,7 +102,7 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
   return I;
 }
 
-Pointer Program::getPtrGlobal(unsigned Idx) {
+Pointer Program::getPtrGlobal(unsigned Idx) const {
   assert(Idx < Globals.size());
   return Pointer(Globals[Idx]->block());
 }
@@ -230,6 +230,9 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   // Use the actual definition as a key.
   RD = RD->getDefinition();
   if (!RD)
+    return nullptr;
+
+  if (!RD->isCompleteDefinition())
     return nullptr;
 
   // Deduplicate records.

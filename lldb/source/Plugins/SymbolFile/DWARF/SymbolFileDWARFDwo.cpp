@@ -85,7 +85,7 @@ lldb::offset_t SymbolFileDWARFDwo::GetVendorDWARFOpcodeSize(
   return GetBaseSymbolFile().GetVendorDWARFOpcodeSize(data, data_offset, op);
 }
 
-uint64_t SymbolFileDWARFDwo::GetDebugInfoSize() {
+uint64_t SymbolFileDWARFDwo::GetDebugInfoSize(bool load_all_debug_info) {
   // Directly get debug info from current dwo object file's section list
   // instead of asking SymbolFileCommon::GetDebugInfo() which parses from
   // owning module which is wrong.

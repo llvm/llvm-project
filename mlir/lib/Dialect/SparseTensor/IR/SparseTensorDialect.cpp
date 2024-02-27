@@ -74,11 +74,12 @@ void StorageLayout::foreachField(
         callback) const {
   const auto lvlTypes = enc.getLvlTypes();
   const Level lvlRank = enc.getLvlRank();
-  const Level cooStart = SparseTensorType(enc).getCOOStart();
-  const Level end = cooStart == lvlRank ? cooStart : cooStart + 1;
+  SmallVector<COOSegment> cooSegs = SparseTensorType(enc).getCOOSegments();
   FieldIndex fieldIdx = kDataFieldStartingIdx;
+
+  ArrayRef cooSegsRef = cooSegs;
   // Per-level storage.
-  for (Level l = 0; l < end; l++) {
+  for (Level l = 0; l < lvlRank; /*l += 1 or l += AoSCooLen*/) {
     const auto lt = lvlTypes[l];
     if (isWithPosLT(lt)) {
       if (!(callback(fieldIdx++, SparseTensorFieldKind::PosMemRef, l, lt)))
@@ -87,6 +88,21 @@ void StorageLayout::foreachField(
     if (isWithCrdLT(lt)) {
       if (!(callback(fieldIdx++, SparseTensorFieldKind::CrdMemRef, l, lt)))
         return;
+    }
+    if (!cooSegsRef.empty() && cooSegsRef.front().isSegmentStart(l)) {
+      if (!cooSegsRef.front().isSoA) {
+        // AoS COO, all singletons are fused into one memrefs. Skips the entire
+        // COO segement.
+        l = cooSegsRef.front().lvlRange.second;
+      } else {
+        // SoA COO, each singleton level has one memref.
+        l++;
+      }
+      // Expire handled COO segment.
+      cooSegsRef = cooSegsRef.drop_front();
+    } else {
+      // Non COO levels.
+      l++;
     }
   }
   // The values array.
@@ -166,7 +182,7 @@ StorageLayout::getFieldIndexAndStride(SparseTensorFieldKind kind,
   unsigned stride = 1;
   if (kind == SparseTensorFieldKind::CrdMemRef) {
     assert(lvl.has_value());
-    const Level cooStart = SparseTensorType(enc).getCOOStart();
+    const Level cooStart = SparseTensorType(enc).getAoSCOOStart();
     const Level lvlRank = enc.getLvlRank();
     if (lvl.value() >= cooStart && lvl.value() < lvlRank) {
       lvl = cooStart;
@@ -674,6 +690,10 @@ LogicalResult SparseTensorEncodingAttr::verify(
     }
   }
 
+  auto lastBatch = std::find_if(lvlTypes.rbegin(), lvlTypes.rend(), isBatchLT);
+  if (!std::all_of(lastBatch, lvlTypes.rend(), isBatchLT))
+    return emitError() << "Batch lvlType can only be leading levels.";
+
   // SoA property can only be applied on singleton level.
   auto soaLvls = llvm::make_filter_range(lvlTypes, [](LevelType lt) {
     return lt.isa<LevelPropNonDefault::SoA>();
@@ -795,12 +815,45 @@ bool mlir::sparse_tensor::SparseTensorType::isCOOType(Level startLvl,
   return !isUnique || isUniqueLvl(lvlRank - 1);
 }
 
-Level mlir::sparse_tensor::SparseTensorType::getCOOStart() const {
-  if (hasEncoding() && lvlRank > 1)
-    for (Level l = 0; l < lvlRank - 1; l++)
-      if (isCOOType(l, /*isUnique=*/false))
-        return l;
+Level mlir::sparse_tensor::SparseTensorType::getAoSCOOStart() const {
+  SmallVector<COOSegment> coo = getCOOSegments();
+  assert(coo.size() == 1 || coo.empty());
+  if (!coo.empty() && coo.front().isAoS()) {
+    return coo.front().lvlRange.first;
+  }
   return lvlRank;
+}
+
+SmallVector<COOSegment>
+mlir::sparse_tensor::SparseTensorType::getCOOSegments() const {
+  SmallVector<COOSegment> ret;
+  if (!hasEncoding() || lvlRank <= 1)
+    return ret;
+
+  ArrayRef<LevelType> lts = getLvlTypes();
+  Level l = 0;
+  while (l < lvlRank) {
+    auto lt = lts[l];
+    if (lt.isa<LevelFormat::Compressed, LevelFormat::LooseCompressed>()) {
+      auto cur = lts.begin() + l;
+      auto end = std::find_if(cur + 1, lts.end(), [](LevelType lt) {
+        return !lt.isa<LevelFormat::Singleton>();
+      });
+      unsigned cooLen = std::distance(cur, end);
+      if (cooLen > 1) {
+        // To support mixed SoA/AoS COO, we should break the segment when the
+        // storage scheme changes, for now we faithfully assume that all
+        // consecutive singleton levels have the same storage format as verified
+        // STEA.
+        ret.push_back(COOSegment{std::make_pair(l, l + cooLen),
+                                 lts[l + 1].isa<LevelPropNonDefault::SoA>()});
+      }
+      l += cooLen;
+    } else {
+      l++;
+    }
+  }
+  return ret;
 }
 
 RankedTensorType
@@ -1002,7 +1055,7 @@ static SparseTensorEncodingAttr
 getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
   SmallVector<LevelType> lts;
   for (auto lt : enc.getLvlTypes())
-    lts.push_back(lt.stripProperties());
+    lts.push_back(lt.stripStorageIrrelevantProperties());
 
   return SparseTensorEncodingAttr::get(
       enc.getContext(), lts,
@@ -1088,7 +1141,7 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
     return op->emitError("the sparse-tensor must have an encoding attribute");
 
   // Verifies the trailing COO.
-  Level cooStartLvl = stt.getCOOStart();
+  Level cooStartLvl = stt.getAoSCOOStart();
   if (cooStartLvl < stt.getLvlRank()) {
     // We only supports trailing COO for now, must be the last input.
     auto cooTp = llvm::cast<ShapedType>(lvlTps.back());
@@ -1403,7 +1456,7 @@ LogicalResult ToCoordinatesOp::verify() {
 
 LogicalResult ToCoordinatesBufferOp::verify() {
   auto stt = getSparseTensorType(getTensor());
-  if (stt.getCOOStart() >= stt.getLvlRank())
+  if (stt.getAoSCOOStart() >= stt.getLvlRank())
     return emitError("expected sparse tensor with a COO region");
   return success();
 }

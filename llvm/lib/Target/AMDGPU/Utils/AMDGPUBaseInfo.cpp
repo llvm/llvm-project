@@ -1107,10 +1107,12 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   return IsWave32 ? 1024 : 512;
 }
 
+unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
+
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
-  return 256;
+  return getAddressableNumArchVGPRs(STI);
 }
 
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
@@ -1698,33 +1700,19 @@ int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI) {
   return (Idx < 0) ? Idx : Opr[Idx].Encoding;
 }
 
-bool isValidHwreg(int64_t Id) {
-  return 0 <= Id && isUInt<ID_WIDTH_>(Id);
-}
+bool isValidHwreg(int64_t Id) { return 0 <= Id && isUInt<HwregId::Width>(Id); }
 
 bool isValidHwregOffset(int64_t Offset) {
-  return 0 <= Offset && isUInt<OFFSET_WIDTH_>(Offset);
+  return 0 <= Offset && isUInt<HwregOffset::Width>(Offset);
 }
 
 bool isValidHwregWidth(int64_t Width) {
-  return 0 <= (Width - 1) && isUInt<WIDTH_M1_WIDTH_>(Width - 1);
-}
-
-uint64_t encodeHwreg(uint64_t Id, uint64_t Offset, uint64_t Width) {
-  return (Id << ID_SHIFT_) |
-         (Offset << OFFSET_SHIFT_) |
-         ((Width - 1) << WIDTH_M1_SHIFT_);
+  return 0 <= (Width - 1) && isUInt<HwregSize::Width>(Width - 1);
 }
 
 StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI) {
   int Idx = getOprIdx<const MCSubtargetInfo &>(Id, Opr, OPR_SIZE, STI);
   return (Idx < 0) ? "" : Opr[Idx].Name;
-}
-
-void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width) {
-  Id = (Val & ID_MASK_) >> ID_SHIFT_;
-  Offset = (Val & OFFSET_MASK_) >> OFFSET_SHIFT_;
-  Width = ((Val & WIDTH_M1_MASK_) >> WIDTH_M1_SHIFT_) + 1;
 }
 
 } // namespace Hwreg

@@ -97,6 +97,10 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`run-clang-tidy.py` script. Added argument `-source-filter`
+  to filter source files from the compilation database, via a RegEx. In a
+  similar fashion to what `-header-filter` does for header files.
+
 New checks
 ^^^^^^^^^^
 
@@ -179,6 +183,12 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-override>` check to also remove any trailing
   whitespace when deleting the ``virtual`` keyword.
 
+- Improved :doc:`performance-unnecessary-copy-initialization
+  <clang-tidy/checks/performance/unnecessary-copy-initialization>` check by
+  detecting more cases of constant access. In particular, pointers can be
+  analyzed, se the check now handles the common patterns
+  `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
+
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
   valid fix suggestions for ``static_cast`` without a preceding space and
@@ -187,6 +197,10 @@ Changes in existing checks
 - Improved :doc:`readability-redundant-inline-specifier
   <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly
   emit warnings for static data member with an in-class initializer.
+
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
+  mode by resolving symbolic links to header files.
 
 Removed checks
 ^^^^^^^^^^^^^^
