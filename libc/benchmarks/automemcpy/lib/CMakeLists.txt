@@ -18,7 +18,8 @@ add_custom_command(
 
 add_library(automemcpy_implementations "${Implementations}")
 target_link_libraries(automemcpy_implementations PUBLIC LLVMSupport libc-memory-benchmark)
-target_include_directories(automemcpy_implementations PRIVATE ${LIBC_SOURCE_DIR} ${LIBC_AUTOMEMCPY_INCLUDE_DIR})
+target_include_directories(automemcpy_implementations PRIVATE 
+                           ${LIBC_SOURCE_DIR} ${LIBC_SOURCE_DIR}/include ${LIBC_AUTOMEMCPY_INCLUDE_DIR})
 target_compile_options(automemcpy_implementations PRIVATE ${LIBC_COMPILE_OPTIONS_NATIVE} "SHELL:-mllvm -combiner-global-alias-analysis" -fno-builtin)
 llvm_update_compile_flags(automemcpy_implementations)
 

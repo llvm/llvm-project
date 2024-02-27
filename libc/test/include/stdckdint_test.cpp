@@ -8,7 +8,7 @@
 
 #include "test/UnitTest/Test.h"
 
-#include "include/llvm-libc-macros/stdckdint-macros.h"
+#include "llvm-libc-macros/stdckdint-macros.h"
 
 TEST(LlvmLibcStdCkdIntTest, Add) {
   int result;

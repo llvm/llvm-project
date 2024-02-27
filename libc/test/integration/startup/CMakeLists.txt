@@ -31,6 +31,7 @@ function(add_startup_test target_name)
     ${fq_target_name}
     PRIVATE
       ${LIBC_SOURCE_DIR}
+      ${LIBC_SOURCE_DIR}/include
       ${LIBC_BUILD_DIR}
       ${LIBC_BUILD_DIR}/include
   )

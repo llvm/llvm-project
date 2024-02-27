@@ -8,7 +8,7 @@
 
 #include "LibcTest.h"
 
-#include "include/llvm-libc-macros/stdfix-macros.h"
+#include "llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/UInt128.h"

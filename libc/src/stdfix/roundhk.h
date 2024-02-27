@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDFIX_ROUNDHK_H
 #define LLVM_LIBC_SRC_STDFIX_ROUNDHK_H
 
-#include "include/llvm-libc-macros/stdfix-macros.h"
+#include "llvm-libc-macros/stdfix-macros.h"
 
 namespace LIBC_NAMESPACE {
 

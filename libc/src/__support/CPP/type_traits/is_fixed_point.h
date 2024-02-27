@@ -12,7 +12,7 @@
 #include "src/__support/CPP/type_traits/remove_cv.h"
 #include "src/__support/macros/attributes.h"
 
-#include "include/llvm-libc-macros/stdfix-macros.h"
+#include "llvm-libc-macros/stdfix-macros.h"
 
 namespace LIBC_NAMESPACE::cpp {
 
