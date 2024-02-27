@@ -128,6 +128,7 @@ class APINotesWriter::Implementation {
   SelectorID getSelector(ObjCSelectorRef SelectorRef) {
     // Translate the selector reference into a stored selector.
     StoredObjCSelector Selector;
+    Selector.NumArgs = SelectorRef.NumArgs;
     Selector.Identifiers.reserve(SelectorRef.Identifiers.size());
     for (auto piece : SelectorRef.Identifiers)
       Selector.Identifiers.push_back(getIdentifier(piece));
