@@ -85,6 +85,10 @@ cl::list<SPIRV::Extension::Extension> Extensions(
                    "SPV_KHR_subgroup_rotate",
                    "Adds a new instruction that enables rotating values across "
                    "invocations within a subgroup."),
+        clEnumValN(SPIRV::Extension::SPV_INTEL_variable_length_array,
+                   "SPV_INTEL_variable_length_array",
+                   "Allows to allocate local arrays whose number of elements "
+                   "is unknown at compile time."),
         clEnumValN(SPIRV::Extension::SPV_INTEL_function_pointers,
                    "SPV_INTEL_function_pointers",
                    "Allows translation of function pointers.")));
