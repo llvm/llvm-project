@@ -1550,7 +1550,7 @@ public:
     if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
         !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
         !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile))
-      PGO.emitCounterIncrement(Builder, S, StepV);
+      PGO.emitCounterSetOrIncrement(Builder, S, StepV);
     PGO.setCurrentStmt(S);
   }
 

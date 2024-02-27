@@ -3217,7 +3217,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__popcnt64:
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
-  case Builtin::BI__builtin_popcountll: {
+  case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
 
     llvm::Type *ArgType = ArgValue->getType();
