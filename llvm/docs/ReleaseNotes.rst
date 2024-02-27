@@ -143,6 +143,10 @@ Changes to the LLVM tools
   files using reference types and GC are also supported (but also only for
   functions, globals, and data, and only for listing symbols and names).
 
+* llvm-ar now utilizes LLVM_DEFAULT_TARGET_TRIPLE to determine the archive format
+  if it's not specified with the ``--format`` argument and cannot be inferred from
+  input files.
+
 Changes to LLDB
 ---------------------------------
 
