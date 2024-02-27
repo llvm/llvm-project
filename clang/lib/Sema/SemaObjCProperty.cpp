@@ -2582,6 +2582,7 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
             Context, SA->getName(), Loc, SectionAttr::GNU_section));
 
       ProcessAPINotes(SetterMethod);
+
       // It's possible for the user to have set a very odd custom
       // setter selector that causes it to have a method family.
       if (getLangOpts().ObjCAutoRefCount)

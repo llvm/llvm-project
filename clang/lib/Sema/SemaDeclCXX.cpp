@@ -12309,9 +12309,10 @@ Decl *Sema::ActOnUsingDirective(Scope *S, SourceLocation UsingLoc,
     Diag(IdentLoc, diag::err_expected_namespace_name) << SS.getRange();
   }
 
-  if (UDir)
+  if (UDir) {
     ProcessDeclAttributeList(S, UDir, AttrList);
-  ProcessAPINotes(UDir);
+    ProcessAPINotes(UDir);
+  }
 
   return UDir;
 }
