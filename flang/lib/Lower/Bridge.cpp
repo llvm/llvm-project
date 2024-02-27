@@ -2474,6 +2474,135 @@ private:
     // Handled by genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &)
   }
 
+  void genFIR(const Fortran::parser::CUFKernelDoConstruct &kernel) {
+    localSymbols.pushScope();
+    const Fortran::parser::CUFKernelDoConstruct::Directive &dir =
+        std::get<Fortran::parser::CUFKernelDoConstruct::Directive>(kernel.t);
+
+    mlir::Location loc = genLocation(dir.source);
+
+    Fortran::lower::StatementContext stmtCtx;
+
+    unsigned nestedLoops = 1;
+
+    const auto &nLoops =
+        std::get<std::optional<Fortran::parser::ScalarIntConstantExpr>>(dir.t);
+    if (nLoops)
+      nestedLoops = *Fortran::semantics::GetIntValue(*nLoops);
+
+    mlir::IntegerAttr n;
+    if (nestedLoops > 1)
+      n = builder->getIntegerAttr(builder->getI64Type(), nestedLoops);
+
+    const std::list<Fortran::parser::ScalarIntExpr> &grid = std::get<1>(dir.t);
+    const std::list<Fortran::parser::ScalarIntExpr> &block = std::get<2>(dir.t);
+    const std::optional<Fortran::parser::ScalarIntExpr> &stream =
+        std::get<3>(dir.t);
+
+    llvm::SmallVector<mlir::Value> gridValues;
+    for (const Fortran::parser::ScalarIntExpr &expr : grid)
+      gridValues.push_back(fir::getBase(
+          genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx)));
+    llvm::SmallVector<mlir::Value> blockValues;
+    for (const Fortran::parser::ScalarIntExpr &expr : block)
+      blockValues.push_back(fir::getBase(
+          genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx)));
+    mlir::Value streamValue;
+    if (stream)
+      streamValue = fir::getBase(
+          genExprValue(*Fortran::semantics::GetExpr(*stream), stmtCtx));
+
+    const auto &outerDoConstruct =
+        std::get<std::optional<Fortran::parser::DoConstruct>>(kernel.t);
+
+    llvm::SmallVector<mlir::Location> locs;
+    locs.push_back(loc);
+    llvm::SmallVector<mlir::Value> lbs, ubs, steps;
+
+    mlir::Type idxTy = builder->getIndexType();
+
+    llvm::SmallVector<mlir::Type> ivTypes;
+    llvm::SmallVector<mlir::Location> ivLocs;
+    llvm::SmallVector<mlir::Value> ivValues;
+    for (unsigned i = 0; i < nestedLoops; ++i) {
+      const Fortran::parser::LoopControl *loopControl;
+      Fortran::lower::pft::Evaluation *loopEval =
+          &getEval().getFirstNestedEvaluation();
+
+      mlir::Location crtLoc = loc;
+      if (i == 0) {
+        loopControl = &*outerDoConstruct->GetLoopControl();
+        crtLoc =
+            genLocation(Fortran::parser::FindSourceLocation(outerDoConstruct));
+      } else {
+        auto *doCons = loopEval->getIf<Fortran::parser::DoConstruct>();
+        assert(doCons && "expect do construct");
+        loopControl = &*doCons->GetLoopControl();
+        crtLoc = genLocation(Fortran::parser::FindSourceLocation(*doCons));
+      }
+
+      locs.push_back(crtLoc);
+
+      const Fortran::parser::LoopControl::Bounds *bounds =
+          std::get_if<Fortran::parser::LoopControl::Bounds>(&loopControl->u);
+      assert(bounds && "Expected bounds on the loop construct");
+
+      Fortran::semantics::Symbol &ivSym =
+          bounds->name.thing.symbol->GetUltimate();
+      ivValues.push_back(getSymbolAddress(ivSym));
+
+      lbs.push_back(builder->createConvert(
+          crtLoc, idxTy,
+          fir::getBase(genExprValue(*Fortran::semantics::GetExpr(bounds->lower),
+                                    stmtCtx))));
+      ubs.push_back(builder->createConvert(
+          crtLoc, idxTy,
+          fir::getBase(genExprValue(*Fortran::semantics::GetExpr(bounds->upper),
+                                    stmtCtx))));
+      if (bounds->step)
+        steps.push_back(fir::getBase(
+            genExprValue(*Fortran::semantics::GetExpr(bounds->step), stmtCtx)));
+      else // If `step` is not present, assume it is `1`.
+        steps.push_back(builder->createIntegerConstant(loc, idxTy, 1));
+
+      ivTypes.push_back(idxTy);
+      ivLocs.push_back(crtLoc);
+      if (i < nestedLoops - 1)
+        loopEval = &*std::next(loopEval->getNestedEvaluations().begin());
+    }
+
+    auto op = builder->create<fir::CUDAKernelOp>(
+        loc, gridValues, blockValues, streamValue, lbs, ubs, steps, n);
+    builder->createBlock(&op.getRegion(), op.getRegion().end(), ivTypes,
+                         ivLocs);
+    mlir::Block &b = op.getRegion().back();
+    builder->setInsertionPointToStart(&b);
+
+    for (auto [arg, value] : llvm::zip(
+             op.getLoopRegions().front()->front().getArguments(), ivValues)) {
+      mlir::Value convArg =
+          builder->createConvert(loc, fir::unwrapRefType(value.getType()), arg);
+      builder->create<fir::StoreOp>(loc, convArg, value);
+    }
+
+    builder->create<fir::FirEndOp>(loc);
+    builder->setInsertionPointToStart(&b);
+
+    Fortran::lower::pft::Evaluation *crtEval = &getEval();
+    if (crtEval->lowerAsStructured()) {
+      crtEval = &crtEval->getFirstNestedEvaluation();
+      for (int64_t i = 1; i < nestedLoops; i++)
+        crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
+    }
+
+    // Generate loop body
+    for (Fortran::lower::pft::Evaluation &e : crtEval->getNestedEvaluations())
+      genFIR(e);
+
+    builder->setInsertionPointAfter(op);
+    localSymbols.popScope();
+  }
+
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     genOpenMPConstruct(*this, localSymbols, bridge.getSemanticsContext(),
