@@ -191,7 +191,19 @@ namespace llvm {
     /// applicable).
     using SUList = std::list<SUnit *>;
 
+    /// The direction that should be used to dump the scheduled Sequence.
+    enum DumpDirection {
+      TopDown,
+      BottomUp,
+      Bidirectional,
+      NotSet,
+    };
+
+    void setDumpDirection(DumpDirection D) { DumpDir = D; }
+
   protected:
+    DumpDirection DumpDir = NotSet;
+
     /// A map from ValueType to SUList, used during DAG construction, as
     /// a means of remembering which SUs depend on which memory locations.
     class Value2SUsMap;
