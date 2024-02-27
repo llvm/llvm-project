@@ -266,6 +266,8 @@ public:
       Status error;
       const int short_option =
           g_breakpoint_set_options[option_idx].short_option;
+      const char *long_option =
+          g_breakpoint_set_options[option_idx].long_option;
 
       switch (short_option) {
       case 'a': {
@@ -284,13 +286,15 @@ public:
 
       case 'u':
         if (option_arg.getAsInteger(0, m_column))
-          error.SetErrorStringWithFormat("invalid column number: %s",
-                                         option_arg.str().c_str());
+          error =
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       g_int_parsing_error_message);
         break;
 
       case 'E': {
         LanguageType language = Language::GetLanguageTypeFromString(option_arg);
 
+        llvm::StringRef error_context;
         switch (language) {
         case eLanguageTypeC89:
         case eLanguageTypeC:
@@ -308,19 +312,18 @@ public:
           m_exception_language = eLanguageTypeObjC;
           break;
         case eLanguageTypeObjC_plus_plus:
-          error.SetErrorStringWithFormat(
-              "Set exception breakpoints separately for c++ and objective-c");
+          error_context =
+              "Set exception breakpoints separately for c++ and objective-c";
           break;
         case eLanguageTypeUnknown:
-          error.SetErrorStringWithFormat(
-              "Unknown language type: '%s' for exception breakpoint",
-              option_arg.str().c_str());
+          error_context = "Unknown language type for exception breakpoint";
           break;
         default:
-          error.SetErrorStringWithFormat(
-              "Unsupported language type: '%s' for exception breakpoint",
-              option_arg.str().c_str());
+          error_context = "Unsupported language type for exception breakpoint";
         }
+        if (!error_context.empty())
+          error = CreateOptionParsingError(option_arg, short_option,
+                                           long_option, error_context);
       } break;
 
       case 'f':
@@ -336,9 +339,9 @@ public:
         bool success;
         m_catch_bp = OptionArgParser::ToBoolean(option_arg, true, &success);
         if (!success)
-          error.SetErrorStringWithFormat(
-              "Invalid boolean value for on-catch option: '%s'",
-              option_arg.str().c_str());
+          error =
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       g_bool_parsing_error_message);
       } break;
 
       case 'H':
@@ -355,23 +358,24 @@ public:
           m_skip_prologue = eLazyBoolNo;
 
         if (!success)
-          error.SetErrorStringWithFormat(
-              "Invalid boolean value for skip prologue option: '%s'",
-              option_arg.str().c_str());
+          error =
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       g_bool_parsing_error_message);
       } break;
 
       case 'l':
         if (option_arg.getAsInteger(0, m_line_num))
-          error.SetErrorStringWithFormat("invalid line number: %s.",
-                                         option_arg.str().c_str());
+          error =
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       g_int_parsing_error_message);
         break;
 
       case 'L':
         m_language = Language::GetLanguageTypeFromString(option_arg);
         if (m_language == eLanguageTypeUnknown)
-          error.SetErrorStringWithFormat(
-              "Unknown language type: '%s' for breakpoint",
-              option_arg.str().c_str());
+          error =
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       g_language_parsing_error_message);
         break;
 
       case 'm': {
@@ -384,9 +388,9 @@ public:
           m_move_to_nearest_code = eLazyBoolNo;
 
         if (!success)
-          error.SetErrorStringWithFormat(
-              "Invalid boolean value for move-to-nearest-code option: '%s'",
-              option_arg.str().c_str());
+          error =
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       g_bool_parsing_error_message);
         break;
       }
 
@@ -404,8 +408,8 @@ public:
         if (BreakpointID::StringIsBreakpointName(option_arg, error))
           m_breakpoint_names.push_back(std::string(option_arg));
         else
-          error.SetErrorStringWithFormat("Invalid breakpoint name: %s",
-                                         option_arg.str().c_str());
+          error = CreateOptionParsingError(
+              option_arg, short_option, long_option, "Invalid breakpoint name");
         break;
       }
 
@@ -443,9 +447,9 @@ public:
         bool success;
         m_throw_bp = OptionArgParser::ToBoolean(option_arg, true, &success);
         if (!success)
-          error.SetErrorStringWithFormat(
-              "Invalid boolean value for on-throw option: '%s'",
-              option_arg.str().c_str());
+          error =
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       g_bool_parsing_error_message);
       } break;
 
       case 'X':
@@ -457,9 +461,8 @@ public:
         OptionValueFileColonLine value;
         Status fcl_err = value.SetValueFromString(option_arg);
         if (!fcl_err.Success()) {
-          error.SetErrorStringWithFormat(
-              "Invalid value for file:line specifier: %s",
-              fcl_err.AsCString());
+          error = CreateOptionParsingError(option_arg, short_option,
+                                           long_option, fcl_err.AsCString());
         } else {
           m_filenames.AppendIfUnique(value.GetFileSpec());
           m_line_num = value.GetLineNumber();
@@ -1557,6 +1560,7 @@ public:
                         ExecutionContext *execution_context) override {
     Status error;
     const int short_option = g_breakpoint_name_options[option_idx].short_option;
+    const char *long_option = g_breakpoint_name_options[option_idx].long_option;
 
     switch (short_option) {
     case 'N':
@@ -1566,15 +1570,13 @@ public:
       break;
     case 'B':
       if (m_breakpoint.SetValueFromString(option_arg).Fail())
-        error.SetErrorStringWithFormat(
-            "unrecognized value \"%s\" for breakpoint",
-            option_arg.str().c_str());
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_int_parsing_error_message);
       break;
     case 'D':
       if (m_use_dummy.SetValueFromString(option_arg).Fail())
-        error.SetErrorStringWithFormat(
-            "unrecognized value \"%s\" for use-dummy",
-            option_arg.str().c_str());
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_bool_parsing_error_message);
       break;
     case 'H':
       m_help_string.SetValueFromString(option_arg);
@@ -1617,6 +1619,8 @@ public:
     Status error;
     const int short_option =
         g_breakpoint_access_options[option_idx].short_option;
+    const char *long_option =
+        g_breakpoint_access_options[option_idx].long_option;
 
     switch (short_option) {
     case 'L': {
@@ -1625,9 +1629,8 @@ public:
       if (success) {
         m_permissions.SetAllowList(value);
       } else
-        error.SetErrorStringWithFormat(
-            "invalid boolean value '%s' passed for -L option",
-            option_arg.str().c_str());
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_bool_parsing_error_message);
     } break;
     case 'A': {
       bool value, success;
@@ -1635,9 +1638,8 @@ public:
       if (success) {
         m_permissions.SetAllowDisable(value);
       } else
-        error.SetErrorStringWithFormat(
-            "invalid boolean value '%s' passed for -L option",
-            option_arg.str().c_str());
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_bool_parsing_error_message);
     } break;
     case 'D': {
       bool value, success;
@@ -1645,9 +1647,8 @@ public:
       if (success) {
         m_permissions.SetAllowDelete(value);
       } else
-        error.SetErrorStringWithFormat(
-            "invalid boolean value '%s' passed for -L option",
-            option_arg.str().c_str());
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_bool_parsing_error_message);
     } break;
     default:
       llvm_unreachable("Unimplemented option");
@@ -2141,6 +2142,8 @@ public:
                           ExecutionContext *execution_context) override {
       Status error;
       const int short_option = m_getopt_table[option_idx].val;
+      const char *long_option =
+          m_getopt_table[option_idx].definition->long_option;
 
       switch (short_option) {
       case 'f':
@@ -2150,8 +2153,8 @@ public:
         Status name_error;
         if (!BreakpointID::StringIsBreakpointName(llvm::StringRef(option_arg),
                                                   name_error)) {
-          error.SetErrorStringWithFormat("Invalid breakpoint name: %s",
-                                         name_error.AsCString());
+          error = CreateOptionParsingError(option_arg, short_option,
+                                           long_option, name_error.AsCString());
         }
         m_names.push_back(std::string(option_arg));
         break;
