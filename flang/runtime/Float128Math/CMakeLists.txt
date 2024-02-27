@@ -14,8 +14,9 @@
 # will have a dependency on the third-party library that is being
 # used for building this FortranFloat128Math library.
 
-if (${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "libquadmath" OR
-    ${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "quadmath")
+include(CheckLibraryExists)
+
+if (${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "libquadmath")
   check_include_file(quadmath.h FOUND_QUADMATH_HEADER)
   if(FOUND_QUADMATH_HEADER)
     add_compile_definitions(HAS_QUADMATHLIB)
@@ -25,7 +26,18 @@ if (${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "libquadmath" OR
       "to be available: ${FLANG_RUNTIME_F128_MATH_LIB}"
       )
   endif()
-else()
+elseif (${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "libm")
+  check_library_exists(m sinl "" FOUND_LIBM)
+  check_library_exists(m sinf128 "" FOUND_LIBMF128)
+  if (FOUND_LIBM)
+    add_compile_definitions(HAS_LIBM)
+  endif()
+  if (FOUND_LIBMF128)
+    add_compile_definitions(HAS_LIBMF128)
+  endif()
+endif()
+
+if (NOT FOUND_QUADMATH_HEADER AND NOT FOUND_LIBM)
   message(FATAL_ERROR
     "Unsupported third-party library for Fortran F128 math runtime: "
     "${FLANG_RUNTIME_F128_MATH_LIB}"
