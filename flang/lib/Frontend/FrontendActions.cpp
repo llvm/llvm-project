@@ -63,9 +63,11 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
 #include <system_error>
@@ -175,7 +177,7 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
     return;
   }
 
-  mlir::ConversionPatternRewriter builder(mlirModule.getContext());
+  mlir::IRRewriter builder(mlirModule.getContext());
   unsigned oclcABIVERsion = codeGenOpts.CodeObjectVersion;
   auto int32Type = builder.getI32Type();
 
@@ -283,8 +285,6 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getSemanticsContext().defaultKinds();
   fir::KindMapping kindMap(mlirCtx.get(), llvm::ArrayRef<fir::KindTy>{
                                               fir::fromDefaultKinds(defKinds)});
-  const llvm::DataLayout &dl = targetMachine.createDataLayout();
-
   lower::LoweringBridge lb = Fortran::lower::LoweringBridge::create(
       *mlirCtx, ci.getSemanticsContext(), defKinds,
       ci.getSemanticsContext().intrinsics(),
@@ -292,7 +292,7 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
       kindMap, ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
-      ci.getInvocation().getFrontendOpts().features, &dl);
+      ci.getInvocation().getFrontendOpts().features, targetMachine);
 
   // Fetch module from lb, so we can set
   mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());
@@ -301,9 +301,6 @@ bool CodeGenAction::beginSourceFileAction() {
           Fortran::common::LanguageFeature::OpenMP)) {
     setOffloadModuleInterfaceAttributes(*mlirModule,
                                         ci.getInvocation().getLangOpts());
-    setOffloadModuleInterfaceTargetAttribute(
-        *mlirModule, targetMachine.getTargetCPU(),
-        targetMachine.getTargetFeatureString());
     setOpenMPVersionAttribute(*mlirModule,
                               ci.getInvocation().getLangOpts().OpenMPVersion);
   }
@@ -707,11 +704,10 @@ void CodeGenAction::lowerHLFIRToFIR() {
   }
 }
 
-// TODO: We should get this from TargetInfo. However, that depends on
-// too much of clang, so for now, replicate the functionality.
 static std::optional<std::pair<unsigned, unsigned>>
-getVScaleRange(CompilerInstance &ci) {
+getAArch64VScaleRange(CompilerInstance &ci) {
   const auto &langOpts = ci.getInvocation().getLangOpts();
+
   if (langOpts.VScaleMin || langOpts.VScaleMax)
     return std::pair<unsigned, unsigned>(
         langOpts.VScaleMin ? langOpts.VScaleMin : 1, langOpts.VScaleMax);
@@ -723,15 +719,77 @@ getVScaleRange(CompilerInstance &ci) {
   return std::nullopt;
 }
 
+static std::optional<std::pair<unsigned, unsigned>>
+getRISCVVScaleRange(CompilerInstance &ci) {
+  const auto &langOpts = ci.getInvocation().getLangOpts();
+  const auto targetOpts = ci.getInvocation().getTargetOpts();
+  const llvm::Triple triple(targetOpts.triple);
+
+  auto parseResult = llvm::RISCVISAInfo::parseFeatures(
+      triple.isRISCV64() ? 64 : 32, targetOpts.featuresAsWritten);
+  if (!parseResult) {
+    std::string buffer;
+    llvm::raw_string_ostream outputErrMsg(buffer);
+    handleAllErrors(parseResult.takeError(), [&](llvm::StringError &errMsg) {
+      outputErrMsg << errMsg.getMessage();
+    });
+    ci.getDiagnostics().Report(clang::diag::err_invalid_feature_combination)
+        << outputErrMsg.str();
+    return std::nullopt;
+  }
+
+  llvm::RISCVISAInfo *const isaInfo = parseResult->get();
+
+  // RISCV::RVVBitsPerBlock is 64.
+  unsigned vscaleMin = isaInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
+
+  if (langOpts.VScaleMin || langOpts.VScaleMax) {
+    // Treat Zvl*b as a lower bound on vscale.
+    vscaleMin = std::max(vscaleMin, langOpts.VScaleMin);
+    unsigned vscaleMax = langOpts.VScaleMax;
+    if (vscaleMax != 0 && vscaleMax < vscaleMin)
+      vscaleMax = vscaleMin;
+    return std::pair<unsigned, unsigned>(vscaleMin ? vscaleMin : 1, vscaleMax);
+  }
+
+  if (vscaleMin > 0) {
+    unsigned vscaleMax = isaInfo->getMaxVLen() / llvm::RISCV::RVVBitsPerBlock;
+    return std::make_pair(vscaleMin, vscaleMax);
+  }
+
+  return std::nullopt;
+}
+
+// TODO: We should get this from TargetInfo. However, that depends on
+// too much of clang, so for now, replicate the functionality.
+static std::optional<std::pair<unsigned, unsigned>>
+getVScaleRange(CompilerInstance &ci) {
+  const llvm::Triple triple(ci.getInvocation().getTargetOpts().triple);
+
+  if (triple.isAArch64())
+    return getAArch64VScaleRange(ci);
+  if (triple.isRISCV())
+    return getRISCVVScaleRange(ci);
+
+  // All other architectures that don't support scalable vectors (i.e. don't
+  // need vscale)
+  return std::nullopt;
+}
+
 // Lower the previously generated MLIR module into an LLVM IR module
 void CodeGenAction::generateLLVMIR() {
   assert(mlirModule && "The MLIR module has not been generated yet.");
 
   CompilerInstance &ci = this->getInstance();
   auto opts = ci.getInvocation().getCodeGenOpts();
+  auto mathOpts = ci.getInvocation().getLoweringOpts().getMathOptions();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
   fir::support::loadDialects(*mlirCtx);
+  mlir::DialectRegistry registry;
+  fir::support::registerNonCodegenDialects(registry);
+  fir::support::addFIRExtensions(registry);
+  mlirCtx->appendDialectRegistry(registry);
   fir::support::registerLLVMTranslation(*mlirCtx);
 
   // Set-up the MLIR pass manager
@@ -741,10 +799,7 @@ void CodeGenAction::generateLLVMIR() {
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
   pm.enableVerifier(/*verifyPasses=*/true);
 
-  MLIRToLLVMPassPipelineConfig config(level, opts);
-
-  const auto targetOpts = ci.getInvocation().getTargetOpts();
-  const llvm::Triple triple(targetOpts.triple);
+  MLIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
 
   if (auto vsr = getVScaleRange(ci)) {
     config.VScaleMin = vsr->first;
@@ -1146,6 +1201,11 @@ void CodeGenAction::executeAction() {
   // present if the input file is an LLVM IR/BC file).
   if (!llvmModule)
     generateLLVMIR();
+
+  // If generating the LLVM module failed, abort! No need for further error
+  // reporting since generateLLVMIR() does this already.
+  if (!llvmModule)
+    return;
 
   // Set the triple based on the targetmachine (this comes compiler invocation
   // and the command-line target option if specified, or the default if not

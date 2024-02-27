@@ -122,7 +122,7 @@ void getDebugLocations(const BBPair &P, DebugLoc &Begin, DebugLoc &End) {
       continue;
     Todo.append(succ_begin(BB), succ_end(BB));
     for (const Instruction &Inst : *BB) {
-      DebugLoc DL = Inst.getDebugLoc();
+      DebugLoc DL = Inst.getStableDebugLoc();
       if (!DL)
         continue;
 
@@ -638,8 +638,7 @@ bool ReportNonSimpleMemoryAccess::classof(const RejectReason *RR) {
 
 ReportAlias::ReportAlias(Instruction *Inst, AliasSet &AS)
     : RejectReason(RejectReasonKind::Alias), Inst(Inst) {
-  for (const auto &I : AS)
-    Pointers.push_back(I.getValue());
+  append_range(Pointers, AS.getPointers());
 }
 
 std::string ReportAlias::formatInvalidAlias(std::string Prefix,
@@ -822,7 +821,7 @@ std::string ReportUnprofitable::getEndUserMessage() const {
 const DebugLoc &ReportUnprofitable::getDebugLoc() const {
   for (const BasicBlock *BB : R->blocks())
     for (const Instruction &Inst : *BB)
-      if (const DebugLoc &DL = Inst.getDebugLoc())
+      if (const DebugLoc &DL = Inst.getStableDebugLoc())
         return DL;
 
   return R->getEntry()->getTerminator()->getDebugLoc();

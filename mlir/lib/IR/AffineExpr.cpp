@@ -26,22 +26,37 @@ MLIRContext *AffineExpr::getContext() const { return expr->context; }
 
 AffineExprKind AffineExpr::getKind() const { return expr->kind; }
 
-/// Walk all of the AffineExprs in this subgraph in postorder.
-void AffineExpr::walk(std::function<void(AffineExpr)> callback) const {
-  struct AffineExprWalker : public AffineExprVisitor<AffineExprWalker> {
-    std::function<void(AffineExpr)> callback;
+/// Walk all of the AffineExprs in `e` in postorder. This is a private factory
+/// method to help handle lambda walk functions. Users should use the regular
+/// (non-static) `walk` method.
+template <typename WalkRetTy>
+WalkRetTy mlir::AffineExpr::walk(AffineExpr e,
+                                 function_ref<WalkRetTy(AffineExpr)> callback) {
+  struct AffineExprWalker
+      : public AffineExprVisitor<AffineExprWalker, WalkRetTy> {
+    function_ref<WalkRetTy(AffineExpr)> callback;
 
-    AffineExprWalker(std::function<void(AffineExpr)> callback)
-        : callback(std::move(callback)) {}
+    AffineExprWalker(function_ref<WalkRetTy(AffineExpr)> callback)
+        : callback(callback) {}
 
-    void visitAffineBinaryOpExpr(AffineBinaryOpExpr expr) { callback(expr); }
-    void visitConstantExpr(AffineConstantExpr expr) { callback(expr); }
-    void visitDimExpr(AffineDimExpr expr) { callback(expr); }
-    void visitSymbolExpr(AffineSymbolExpr expr) { callback(expr); }
+    WalkRetTy visitAffineBinaryOpExpr(AffineBinaryOpExpr expr) {
+      return callback(expr);
+    }
+    WalkRetTy visitConstantExpr(AffineConstantExpr expr) {
+      return callback(expr);
+    }
+    WalkRetTy visitDimExpr(AffineDimExpr expr) { return callback(expr); }
+    WalkRetTy visitSymbolExpr(AffineSymbolExpr expr) { return callback(expr); }
   };
 
-  AffineExprWalker(std::move(callback)).walkPostOrder(*this);
+  return AffineExprWalker(callback).walkPostOrder(e);
 }
+// Explicitly instantiate for the two supported return types.
+template void mlir::AffineExpr::walk(AffineExpr e,
+                                     function_ref<void(AffineExpr)> callback);
+template WalkResult
+mlir::AffineExpr::walk(AffineExpr e,
+                       function_ref<WalkResult(AffineExpr)> callback);
 
 // Dispatch affine expression construction based on kind.
 AffineExpr mlir::getAffineBinaryOpExpr(AffineExprKind kind, AffineExpr lhs,
@@ -1236,10 +1251,10 @@ LogicalResult SimpleAffineExprFlattener::visitMulExpr(AffineBinaryOpExpr expr) {
   }
 
   // Get the RHS constant.
-  auto rhsConst = rhs[getConstantIndex()];
-  for (unsigned i = 0, e = lhs.size(); i < e; i++) {
-    lhs[i] *= rhsConst;
-  }
+  int64_t rhsConst = rhs[getConstantIndex()];
+  for (int64_t &lhsElt : lhs)
+    lhsElt *= rhsConst;
+
   return success();
 }
 
@@ -1308,12 +1323,12 @@ LogicalResult SimpleAffineExprFlattener::visitModExpr(AffineBinaryOpExpr expr) {
   // the GCD of expr and c.
   SmallVector<int64_t, 8> floorDividend(lhs);
   uint64_t gcd = rhsConst;
-  for (unsigned i = 0, e = lhs.size(); i < e; i++)
-    gcd = std::gcd(gcd, (uint64_t)std::abs(lhs[i]));
+  for (int64_t lhsElt : lhs)
+    gcd = std::gcd(gcd, (uint64_t)std::abs(lhsElt));
   // Simplify the numerator and the denominator.
   if (gcd != 1) {
-    for (unsigned i = 0, e = floorDividend.size(); i < e; i++)
-      floorDividend[i] = floorDividend[i] / static_cast<int64_t>(gcd);
+    for (int64_t &floorDividendElt : floorDividend)
+      floorDividendElt = floorDividendElt / static_cast<int64_t>(gcd);
   }
   int64_t floorDivisor = rhsConst / static_cast<int64_t>(gcd);
 
@@ -1427,12 +1442,12 @@ LogicalResult SimpleAffineExprFlattener::visitDivExpr(AffineBinaryOpExpr expr,
   // Simplify the floordiv, ceildiv if possible by canceling out the greatest
   // common divisors of the numerator and denominator.
   uint64_t gcd = std::abs(rhsConst);
-  for (unsigned i = 0, e = lhs.size(); i < e; i++)
-    gcd = std::gcd(gcd, (uint64_t)std::abs(lhs[i]));
+  for (int64_t lhsElt : lhs)
+    gcd = std::gcd(gcd, (uint64_t)std::abs(lhsElt));
   // Simplify the numerator and the denominator.
   if (gcd != 1) {
-    for (unsigned i = 0, e = lhs.size(); i < e; i++)
-      lhs[i] = lhs[i] / static_cast<int64_t>(gcd);
+    for (int64_t &lhsElt : lhs)
+      lhsElt = lhsElt / static_cast<int64_t>(gcd);
   }
   int64_t divisor = rhsConst / static_cast<int64_t>(gcd);
   // If the divisor becomes 1, the updated LHS is the result. (The

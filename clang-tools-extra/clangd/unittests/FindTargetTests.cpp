@@ -709,6 +709,33 @@ TEST_F(TargetDeclTest, TypeAliasTemplate) {
                 Rel::Alias | Rel::TemplatePattern});
 }
 
+TEST_F(TargetDeclTest, BuiltinTemplates) {
+  Code = R"cpp(
+    template <class T, T... Index> struct integer_sequence {};
+    [[__make_integer_seq]]<integer_sequence, int, 3> X;
+  )cpp";
+  EXPECT_DECLS(
+      "TemplateSpecializationTypeLoc",
+      {"struct integer_sequence", Rel::TemplatePattern | Rel::Underlying},
+      {"template<> struct integer_sequence<int, <0, 1, 2>>",
+       Rel::TemplateInstantiation | Rel::Underlying});
+
+  // Dependent context.
+  Code = R"cpp(
+    template <class T, T... Index> struct integer_sequence;
+
+    template <class T, int N>
+    using make_integer_sequence = [[__make_integer_seq]]<integer_sequence, T, N>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc");
+
+  Code = R"cpp(
+    template <int N, class... Pack>
+    using type_pack_element = [[__type_pack_element]]<N, Pack...>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc");
+}
+
 TEST_F(TargetDeclTest, MemberOfTemplate) {
   Code = R"cpp(
     template <typename T> struct Foo {

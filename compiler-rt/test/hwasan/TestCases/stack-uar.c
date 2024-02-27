@@ -1,5 +1,6 @@
 // Tests use-after-return detection and reporting.
-// RUN: %clang_hwasan -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O3 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clang_hwasan -g %s -o %t && not %env_hwasan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM
 
 // Run the same test as above, but using the __hwasan_add_frame_record libcall.

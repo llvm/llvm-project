@@ -4,16 +4,16 @@ def BsdExtensions : StandardSpec<"BSDExtensions"> {
       [], // Macros
       [], // Types
       [], // Enumerations
-      [ 
+      [
         FunctionSpec<
             "strlcat",
             RetValSpec<SizeTType>,
-            [ArgSpec<CharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
+            [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<ConstCharRestrictedPtr>, ArgSpec<SizeTType>]
         >,
         FunctionSpec<
             "strlcpy",
             RetValSpec<SizeTType>,
-            [ArgSpec<CharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
+            [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<ConstCharRestrictedPtr>, ArgSpec<SizeTType>]
         >,
         FunctionSpec<
             "strsep",

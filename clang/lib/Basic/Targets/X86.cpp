@@ -139,7 +139,7 @@ bool X86TargetInfo::initFeatureMap(
     if (Feature.substr(1, 6) == "avx10.") {
       if (Feature[0] == '+') {
         HasAVX10 = true;
-        if (Feature.substr(Feature.size() - 3, 3) == "512")
+        if (StringRef(Feature).ends_with("512"))
           HasAVX10_512 = true;
         LastAVX10 = Feature;
       } else if (HasAVX10 && Feature == "-avx10.1-256") {
@@ -151,7 +151,7 @@ bool X86TargetInfo::initFeatureMap(
       // Postpone AVX10 features handling after AVX512 settled.
       UpdatedAVX10FeaturesVec.push_back(Feature);
       continue;
-    } else if (!HasAVX512F && Feature.substr(0, 7) == "+avx512") {
+    } else if (!HasAVX512F && StringRef(Feature).starts_with("+avx512")) {
       HasAVX512F = true;
       LastAVX512 = Feature;
     } else if (HasAVX512F && Feature == "-avx512f") {
@@ -295,11 +295,13 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512BF16 = true;
     } else if (Feature == "+avx512er") {
       HasAVX512ER = true;
+      Diags.Report(diag::warn_knl_knm_isa_support_removed);
     } else if (Feature == "+avx512fp16") {
       HasAVX512FP16 = true;
       HasLegalHalfType = true;
     } else if (Feature == "+avx512pf") {
       HasAVX512PF = true;
+      Diags.Report(diag::warn_knl_knm_isa_support_removed);
     } else if (Feature == "+avx512dq") {
       HasAVX512DQ = true;
     } else if (Feature == "+avx512bitalg") {
@@ -358,6 +360,7 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasPREFETCHI = true;
     } else if (Feature == "+prefetchwt1") {
       HasPREFETCHWT1 = true;
+      Diags.Report(diag::warn_knl_knm_isa_support_removed);
     } else if (Feature == "+clzero") {
       HasCLZERO = true;
     } else if (Feature == "+cldemote") {
@@ -1415,6 +1418,14 @@ bool X86TargetInfo::validateAsmConstraint(
   case 'O':
     Info.setRequiresImmediate(0, 127);
     return true;
+  case 'W':
+    switch (*++Name) {
+    default:
+      return false;
+    case 's':
+      Info.setAllowsRegister();
+      return true;
+    }
   // Register constraints.
   case 'Y': // 'Y' is the first character for several 2-character constraints.
     // Shift the pointer to the second character of the constraint.
@@ -1712,6 +1723,9 @@ std::string X86TargetInfo::convertConstraint(const char *&Constraint) const {
     return std::string("{st}");
   case 'u':                        // second from top of floating point stack.
     return std::string("{st(1)}"); // second from top of floating point stack.
+  case 'W':
+    assert(Constraint[1] == 's');
+    return '^' + std::string(Constraint++, 2);
   case 'Y':
     switch (Constraint[1]) {
     default:

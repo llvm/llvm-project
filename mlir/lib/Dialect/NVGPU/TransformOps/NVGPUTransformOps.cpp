@@ -40,7 +40,7 @@ using namespace mlir::transform;
 #define DEBUG_TYPE "nvgpu-transforms"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 #define DBGSNL() (llvm::dbgs() << "\n")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
+#define LDBG(X) LLVM_DEBUG(DBGS() << (X) << "\n")
 
 //===----------------------------------------------------------------------===//
 // Apply...ConversionPatternsOp
@@ -606,7 +606,7 @@ private:
   /// IndexCalculator callback.
   SmallVector<Value> buildMemRefLoads(OpBuilder &b, Location loc,
                                       OpFoldResult laneId, Value memref,
-                                      IndexCalculator indexFn);
+                                      const IndexCalculator &indexFn);
 
   /// Perform a distributed load of a vector operand of `vectorShape` for a
   /// particular MMA instruction whose `(row, col)` indices are specified via
@@ -625,7 +625,7 @@ private:
   SmallVector<Operation *> buildMemRefStores(OpBuilder &b, Location loc,
                                              ValueRange toStore,
                                              OpFoldResult laneId, Value memref,
-                                             IndexCalculator indexFn);
+                                             const IndexCalculator &indexFn);
 
   /// Perform a distributed store of a vector operand of `vectorShape` for a
   /// particular MMA instruction whose `(row, col)` indices are specified via
@@ -660,10 +660,10 @@ static void foreachIndividualVectorElement(Value vector, ApplyFn applyFn,
   }
 }
 
-SmallVector<Value> MmaSyncBuilder::buildMemRefLoads(OpBuilder &b, Location loc,
-                                                    OpFoldResult laneId,
-                                                    Value memref,
-                                                    IndexCalculator indexFn) {
+SmallVector<Value>
+MmaSyncBuilder::buildMemRefLoads(OpBuilder &b, Location loc,
+                                 OpFoldResult laneId, Value memref,
+                                 const IndexCalculator &indexFn) {
   auto aff = [&](AffineExpr e) {
     return affine::makeComposedFoldedAffineApply(b, loc, e, laneId);
   };
@@ -681,7 +681,7 @@ SmallVector<Value> MmaSyncBuilder::buildMemRefLoads(OpBuilder &b, Location loc,
 Value MmaSyncBuilder::buildMmaSyncMemRefLoadOperand(
     OpBuilder &b, Location loc, OpFoldResult laneId, Value memref,
     IndexCalculator indexFn, ArrayRef<int64_t> vectorShape) {
-  auto loads = buildMemRefLoads(b, loc, laneId, memref, indexFn);
+  auto loads = buildMemRefLoads(b, loc, laneId, memref, std::move(indexFn));
 
   Type elementType = getElementTypeOrSelf(memref.getType());
   auto vt = VectorType::get(vectorShape, elementType);
@@ -700,10 +700,9 @@ Value MmaSyncBuilder::buildMmaSyncMemRefLoadOperand(
   return res;
 }
 
-SmallVector<Operation *>
-MmaSyncBuilder::buildMemRefStores(OpBuilder &b, Location loc,
-                                  ValueRange toStore, OpFoldResult laneId,
-                                  Value memref, IndexCalculator indexFn) {
+SmallVector<Operation *> MmaSyncBuilder::buildMemRefStores(
+    OpBuilder &b, Location loc, ValueRange toStore, OpFoldResult laneId,
+    Value memref, const IndexCalculator &indexFn) {
   auto aff = [&](AffineExpr e) {
     return affine::makeComposedFoldedAffineApply(b, loc, e, laneId);
   };
@@ -734,7 +733,7 @@ SmallVector<Operation *> MmaSyncBuilder::buildMmaSyncMemRefStoreOperand(
       [&](Value v, int64_t linearIdx, ArrayRef<int64_t> indices) {
         toStore.push_back(v);
       });
-  return buildMemRefStores(b, loc, toStore, laneId, memref, indexFn);
+  return buildMemRefStores(b, loc, toStore, laneId, memref, std::move(indexFn));
 }
 
 static std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
@@ -980,7 +979,7 @@ OpFoldResult HopperBuilder::buildTmaAsyncLoad(
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   Operation *loadOp = rewriter.create<nvgpu::TmaAsyncLoadOp>(
       loc, sharedMemref, barrier, globalDesc, ValueRange{zero, zero}, zero,
-      Value());
+      Value(), Value());
   loadOps.push_back(loadOp);
   auto mixedSizes = memref::getMixedSizes(rewriter, loc, sharedMemref);
   SmallVector<AffineExpr> symbols(mixedSizes.size());
@@ -1011,7 +1010,8 @@ void HopperBuilder::buildBarrierArriveTx(
 
 void HopperBuilder::buildTryWaitParity(
     TypedValue<nvgpu::MBarrierGroupType> barrier) {
-  Value parity = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  Type i1 = rewriter.getI1Type();
+  Value parity = rewriter.create<LLVM::ConstantOp>(loc, i1, 0);
   // 10M is an arbitrary, not too small or too big number to specify the number
   // of ticks before retry.
   // TODO: hoist this in a default dialect constant.

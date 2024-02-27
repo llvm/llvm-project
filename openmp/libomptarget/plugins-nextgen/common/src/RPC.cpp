@@ -12,13 +12,8 @@
 
 #include "PluginInterface.h"
 
-// This header file may be present in-tree or from an LLVM installation. The
-// installed version lives alongside the GPU headers so we do not want to
-// include it directly.
-#if __has_include(<gpu-none-llvm/rpc_server.h>)
-#include <gpu-none-llvm/rpc_server.h>
-#elif defined(LIBOMPTARGET_RPC_SUPPORT)
-#include <rpc_server.h>
+#if defined(LIBOMPTARGET_RPC_SUPPORT)
+#include "llvmlibc_rpc_server.h"
 #endif
 
 using namespace llvm;
@@ -62,15 +57,14 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
         "Failed to initialize RPC server for device %d: %d", DeviceId, Err);
 
   // Register a custom opcode handler to perform plugin specific allocation.
-  // FIXME: We need to make sure this uses asynchronous allocations on CUDA.
   auto MallocHandler = [](rpc_port_t Port, void *Data) {
     rpc_recv_and_send(
         Port,
         [](rpc_buffer_t *Buffer, void *Data) {
           plugin::GenericDeviceTy &Device =
               *reinterpret_cast<plugin::GenericDeviceTy *>(Data);
-          Buffer->data[0] = reinterpret_cast<uintptr_t>(
-              Device.allocate(Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE));
+          Buffer->data[0] = reinterpret_cast<uintptr_t>(Device.allocate(
+              Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE_NON_BLOCKING));
         },
         Data);
   };
@@ -88,7 +82,7 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
           plugin::GenericDeviceTy &Device =
               *reinterpret_cast<plugin::GenericDeviceTy *>(Data);
           Device.free(reinterpret_cast<void *>(Buffer->data[0]),
-                      TARGET_ALLOC_DEVICE);
+                      TARGET_ALLOC_DEVICE_NON_BLOCKING);
         },
         Data);
   };

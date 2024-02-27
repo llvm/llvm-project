@@ -16,6 +16,10 @@ This document describes the available MLIR passes and their contracts.
 
 [include "ConversionPasses.md"]
 
+## 'acc' Dialect Passes
+
+[include "OpenACCPasses.md"]
+
 ## 'affine' Dialect Passes
 
 [include "AffinePasses.md"]
@@ -39,6 +43,10 @@ This document describes the available MLIR passes and their contracts.
 ## 'async' Dialect Passes
 
 [include "AsyncPasses.md"]
+
+## 'emitc' Dialect Passes
+
+[include "EmitCPasses.md"]
 
 ## 'func' Dialect Passes
 

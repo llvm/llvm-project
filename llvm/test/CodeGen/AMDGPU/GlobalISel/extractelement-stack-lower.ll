@@ -20,7 +20,11 @@ define i32 @v_extract_v64i32_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ;
 ; GFX12-LABEL: v_extract_v64i32_varidx:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_and_b32_e32 v2, 63, v2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
@@ -29,88 +33,8 @@ define i32 @v_extract_v64i32_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-; GCN-GFX12-LABEL: v_extract_v64i32_varidx:
-; GCN-GFX12:       ; %bb.0:
-; GCN-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-GFX12-NEXT:    s_wait_expcnt 0x0
-; GCN-GFX12-NEXT:    s_wait_storecnt 0x0
-; GCN-GFX12-NEXT:    s_wait_samplecnt 0x0
-; GCN-GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GCN-GFX12-NEXT:    s_wait_kmcnt 0x0
-; GCN-GFX12-NEXT:    s_clause 0xf
-; GCN-GFX12-NEXT:    global_load_b128 v[3:6], v[0:1], off
-; GCN-GFX12-NEXT:    global_load_b128 v[7:10], v[0:1], off offset:16
-; GCN-GFX12-NEXT:    global_load_b128 v[11:14], v[0:1], off offset:32
-; GCN-GFX12-NEXT:    global_load_b128 v[15:18], v[0:1], off offset:48
-; GCN-GFX12-NEXT:    global_load_b128 v[19:22], v[0:1], off offset:64
-; GCN-GFX12-NEXT:    global_load_b128 v[23:26], v[0:1], off offset:80
-; GCN-GFX12-NEXT:    global_load_b128 v[27:30], v[0:1], off offset:96
-; GCN-GFX12-NEXT:    global_load_b128 v[31:34], v[0:1], off offset:112
-; GCN-GFX12-NEXT:    global_load_b128 v[35:38], v[0:1], off offset:128
-; GCN-GFX12-NEXT:    global_load_b128 v[48:51], v[0:1], off offset:144
-; GCN-GFX12-NEXT:    global_load_b128 v[52:55], v[0:1], off offset:160
-; GCN-GFX12-NEXT:    global_load_b128 v[64:67], v[0:1], off offset:176
-; GCN-GFX12-NEXT:    global_load_b128 v[68:71], v[0:1], off offset:192
-; GCN-GFX12-NEXT:    global_load_b128 v[80:83], v[0:1], off offset:208
-; GCN-GFX12-NEXT:    global_load_b128 v[84:87], v[0:1], off offset:224
-; GCN-GFX12-NEXT:    global_load_b128 v[96:99], v[0:1], off offset:240
-; GCN-GFX12-NEXT:    v_and_b32_e32 v0, 63, v2
-; GCN-GFX12-NEXT:    s_mov_b32 s0, s33
-; GCN-GFX12-NEXT:    s_add_co_i32 s33, s32, 0xff
-; GCN-GFX12-NEXT:    s_addk_co_i32 s32, 0x300
-; GCN-GFX12-NEXT:    s_and_b32 s33, s33, 0xffffff00
-; GCN-GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GCN-GFX12-NEXT:    s_addk_co_i32 s32, 0xfd00
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xf
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[3:6], s33
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xe
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[7:10], s33 offset:16
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xd
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[11:14], s33 offset:32
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xc
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[15:18], s33 offset:48
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xb
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[19:22], s33 offset:64
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xa
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[23:26], s33 offset:80
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x9
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[27:30], s33 offset:96
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x8
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[31:34], s33 offset:112
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x7
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[35:38], s33 offset:128
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x6
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[48:51], s33 offset:144
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x5
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[52:55], s33 offset:160
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x4
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[64:67], s33 offset:176
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x3
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[68:71], s33 offset:192
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x2
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[80:83], s33 offset:208
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x1
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[84:87], s33 offset:224
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x0
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[96:99], s33 offset:240
-; GCN-GFX12-NEXT:    scratch_load_b32 v0, v0, s33
-; GCN-GFX12-NEXT:    s_mov_b32 s33, s0
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x0
-; GCN-GFX12-NEXT:    s_wait_storecnt 0x0
-; GCN-GFX12-NEXT:    s_setpc_b64 s[30:31]
-; GCN-LABEL: v_extract_v64i32_varidx:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v2, 63, v2
-; GCN-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; GCN-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GCN-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GCN-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
-; GCN-NEXT:    global_load_dword v0, v[0:1], off
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    s_setpc_b64 s[30:31]
   %vec = load <64 x i32>, ptr addrspace(1) %ptr
   %elt = extractelement <64 x i32> %vec, i32 %idx
   ret i32 %elt
@@ -131,7 +55,11 @@ define i16 @v_extract_v128i16_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ;
 ; GFX12-LABEL: v_extract_v128i16_varidx:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_and_b32_e32 v2, 0x7f, v2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 1, v2
@@ -140,126 +68,8 @@ define i16 @v_extract_v128i16_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
 ; GFX12-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-; GCN-GFX12-LABEL: v_extract_v128i16_varidx:
-; GCN-GFX12:       ; %bb.0:
-; GCN-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-GFX12-NEXT:    s_wait_expcnt 0x0
-; GCN-GFX12-NEXT:    s_wait_storecnt 0x0
-; GCN-GFX12-NEXT:    s_wait_samplecnt 0x0
-; GCN-GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GCN-GFX12-NEXT:    s_wait_kmcnt 0x0
-; GCN-GFX12-NEXT:    s_mov_b32 s0, s33
-; GCN-GFX12-NEXT:    s_add_co_i32 s33, s32, 0xff
-; GCN-GFX12-NEXT:    s_addk_co_i32 s32, 0x400
-; GCN-GFX12-NEXT:    s_and_b32 s33, s33, 0xffffff00
-; GCN-GFX12-NEXT:    s_clause 0xf
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v40, s33 offset:60
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v41, s33 offset:56
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v42, s33 offset:52
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v43, s33 offset:48
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v44, s33 offset:44
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v45, s33 offset:40
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v46, s33 offset:36
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v47, s33 offset:32
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v56, s33 offset:28
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v57, s33 offset:24
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v58, s33 offset:20
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v59, s33 offset:16
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v60, s33 offset:12
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v61, s33 offset:8
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v62, s33 offset:4
-; GCN-GFX12-NEXT:    scratch_store_b32 off, v63, s33
-; GCN-GFX12-NEXT:    s_clause 0xf
-; GCN-GFX12-NEXT:    global_load_b128 v[16:19], v[0:1], off
-; GCN-GFX12-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
-; GCN-GFX12-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:32
-; GCN-GFX12-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:48
-; GCN-GFX12-NEXT:    global_load_b128 v[32:35], v[0:1], off offset:64
-; GCN-GFX12-NEXT:    global_load_b128 v[28:31], v[0:1], off offset:80
-; GCN-GFX12-NEXT:    global_load_b128 v[24:27], v[0:1], off offset:96
-; GCN-GFX12-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:112
-; GCN-GFX12-NEXT:    global_load_b128 v[60:63], v[0:1], off offset:128
-; GCN-GFX12-NEXT:    global_load_b128 v[56:59], v[0:1], off offset:144
-; GCN-GFX12-NEXT:    global_load_b128 v[52:55], v[0:1], off offset:160
-; GCN-GFX12-NEXT:    global_load_b128 v[44:47], v[0:1], off offset:176
-; GCN-GFX12-NEXT:    global_load_b128 v[36:39], v[0:1], off offset:192
-; GCN-GFX12-NEXT:    global_load_b128 v[40:43], v[0:1], off offset:208
-; GCN-GFX12-NEXT:    global_load_b128 v[48:51], v[0:1], off offset:224
-; GCN-GFX12-NEXT:    global_load_b128 v[64:67], v[0:1], off offset:240
-; GCN-GFX12-NEXT:    v_bfe_u32 v0, v2, 1, 6
-; GCN-GFX12-NEXT:    v_and_b32_e32 v1, 1, v2
-; GCN-GFX12-NEXT:    s_addk_co_i32 s32, 0xfc00
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xf
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[16:19], s33 offset:256
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xe
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[4:7], s33 offset:272
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xd
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[8:11], s33 offset:288
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xc
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[12:15], s33 offset:304
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xb
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[32:35], s33 offset:320
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xa
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[28:31], s33 offset:336
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x9
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[24:27], s33 offset:352
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x8
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[20:23], s33 offset:368
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x7
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[60:63], s33 offset:384
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x6
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[56:59], s33 offset:400
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x5
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[52:55], s33 offset:416
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x4
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[44:47], s33 offset:432
-; GCN-GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GCN-GFX12-NEXT:    v_lshlrev_b32_e32 v1, 4, v1
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x3
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[36:39], s33 offset:448
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x2
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[40:43], s33 offset:464
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x1
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[48:51], s33 offset:480
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x0
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[64:67], s33 offset:496
-; GCN-GFX12-NEXT:    scratch_load_b32 v0, v0, s33 offset:256
-; GCN-GFX12-NEXT:    s_clause 0xf
-; GCN-GFX12-NEXT:    scratch_load_b32 v63, off, s33
-; GCN-GFX12-NEXT:    scratch_load_b32 v62, off, s33 offset:4
-; GCN-GFX12-NEXT:    scratch_load_b32 v61, off, s33 offset:8
-; GCN-GFX12-NEXT:    scratch_load_b32 v60, off, s33 offset:12
-; GCN-GFX12-NEXT:    scratch_load_b32 v59, off, s33 offset:16
-; GCN-GFX12-NEXT:    scratch_load_b32 v58, off, s33 offset:20
-; GCN-GFX12-NEXT:    scratch_load_b32 v57, off, s33 offset:24
-; GCN-GFX12-NEXT:    scratch_load_b32 v56, off, s33 offset:28
-; GCN-GFX12-NEXT:    scratch_load_b32 v47, off, s33 offset:32
-; GCN-GFX12-NEXT:    scratch_load_b32 v46, off, s33 offset:36
-; GCN-GFX12-NEXT:    scratch_load_b32 v45, off, s33 offset:40
-; GCN-GFX12-NEXT:    scratch_load_b32 v44, off, s33 offset:44
-; GCN-GFX12-NEXT:    scratch_load_b32 v43, off, s33 offset:48
-; GCN-GFX12-NEXT:    scratch_load_b32 v42, off, s33 offset:52
-; GCN-GFX12-NEXT:    scratch_load_b32 v41, off, s33 offset:56
-; GCN-GFX12-NEXT:    scratch_load_b32 v40, off, s33 offset:60
-; GCN-GFX12-NEXT:    s_mov_b32 s33, s0
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x10
-; GCN-GFX12-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x0
-; GCN-GFX12-NEXT:    s_wait_storecnt 0x0
-; GCN-GFX12-NEXT:    s_setpc_b64 s[30:31]
-; GCN-LABEL: v_extract_v128i16_varidx:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v2, 0x7f, v2
-; GCN-NEXT:    v_lshlrev_b32_e32 v2, 1, v2
-; GCN-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GCN-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GCN-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
-; GCN-NEXT:    global_load_ushort v0, v[0:1], off
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    s_setpc_b64 s[30:31]
   %vec = load <128 x i16>, ptr addrspace(1) %ptr
   %elt = extractelement <128 x i16> %vec, i32 %idx
   ret i16 %elt
@@ -280,7 +90,11 @@ define i64 @v_extract_v32i64_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ;
 ; GFX12-LABEL: v_extract_v32i64_varidx:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_and_b32_e32 v2, 31, v2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 3, v2
@@ -289,88 +103,8 @@ define i64 @v_extract_v32i64_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
 ; GFX12-NEXT:    global_load_b64 v[0:1], v[0:1], off
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-; GCN-GFX12-LABEL: v_extract_v32i64_varidx:
-; GCN-GFX12:       ; %bb.0:
-; GCN-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-GFX12-NEXT:    s_wait_expcnt 0x0
-; GCN-GFX12-NEXT:    s_wait_storecnt 0x0
-; GCN-GFX12-NEXT:    s_wait_samplecnt 0x0
-; GCN-GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GCN-GFX12-NEXT:    s_wait_kmcnt 0x0
-; GCN-GFX12-NEXT:    s_clause 0xf
-; GCN-GFX12-NEXT:    global_load_b128 v[3:6], v[0:1], off
-; GCN-GFX12-NEXT:    global_load_b128 v[7:10], v[0:1], off offset:16
-; GCN-GFX12-NEXT:    global_load_b128 v[11:14], v[0:1], off offset:32
-; GCN-GFX12-NEXT:    global_load_b128 v[15:18], v[0:1], off offset:48
-; GCN-GFX12-NEXT:    global_load_b128 v[19:22], v[0:1], off offset:64
-; GCN-GFX12-NEXT:    global_load_b128 v[23:26], v[0:1], off offset:80
-; GCN-GFX12-NEXT:    global_load_b128 v[27:30], v[0:1], off offset:96
-; GCN-GFX12-NEXT:    global_load_b128 v[31:34], v[0:1], off offset:112
-; GCN-GFX12-NEXT:    global_load_b128 v[35:38], v[0:1], off offset:128
-; GCN-GFX12-NEXT:    global_load_b128 v[48:51], v[0:1], off offset:144
-; GCN-GFX12-NEXT:    global_load_b128 v[52:55], v[0:1], off offset:160
-; GCN-GFX12-NEXT:    global_load_b128 v[64:67], v[0:1], off offset:176
-; GCN-GFX12-NEXT:    global_load_b128 v[68:71], v[0:1], off offset:192
-; GCN-GFX12-NEXT:    global_load_b128 v[80:83], v[0:1], off offset:208
-; GCN-GFX12-NEXT:    global_load_b128 v[84:87], v[0:1], off offset:224
-; GCN-GFX12-NEXT:    global_load_b128 v[96:99], v[0:1], off offset:240
-; GCN-GFX12-NEXT:    v_and_b32_e32 v0, 31, v2
-; GCN-GFX12-NEXT:    s_mov_b32 s0, s33
-; GCN-GFX12-NEXT:    s_add_co_i32 s33, s32, 0xff
-; GCN-GFX12-NEXT:    s_addk_co_i32 s32, 0x300
-; GCN-GFX12-NEXT:    s_and_b32 s33, s33, 0xffffff00
-; GCN-GFX12-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; GCN-GFX12-NEXT:    s_addk_co_i32 s32, 0xfd00
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xf
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[3:6], s33
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xe
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[7:10], s33 offset:16
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xd
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[11:14], s33 offset:32
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xc
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[15:18], s33 offset:48
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xb
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[19:22], s33 offset:64
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0xa
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[23:26], s33 offset:80
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x9
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[27:30], s33 offset:96
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x8
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[31:34], s33 offset:112
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x7
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[35:38], s33 offset:128
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x6
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[48:51], s33 offset:144
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x5
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[52:55], s33 offset:160
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x4
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[64:67], s33 offset:176
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x3
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[68:71], s33 offset:192
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x2
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[80:83], s33 offset:208
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x1
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[84:87], s33 offset:224
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x0
-; GCN-GFX12-NEXT:    scratch_store_b128 off, v[96:99], s33 offset:240
-; GCN-GFX12-NEXT:    scratch_load_b64 v[0:1], v0, s33
-; GCN-GFX12-NEXT:    s_mov_b32 s33, s0
-; GCN-GFX12-NEXT:    s_wait_loadcnt 0x0
-; GCN-GFX12-NEXT:    s_wait_storecnt 0x0
-; GCN-GFX12-NEXT:    s_setpc_b64 s[30:31]
-; GCN-LABEL: v_extract_v32i64_varidx:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v2, 31, v2
-; GCN-NEXT:    v_lshlrev_b32_e32 v2, 3, v2
-; GCN-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GCN-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GCN-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
-; GCN-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    s_setpc_b64 s[30:31]
   %vec = load <32 x i64>, ptr addrspace(1) %ptr
   %elt = extractelement <32 x i64> %vec, i32 %idx
   ret i64 %elt

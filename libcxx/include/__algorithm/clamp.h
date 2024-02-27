@@ -26,7 +26,7 @@ clamp(_LIBCPP_LIFETIMEBOUND const _Tp& __v,
       _LIBCPP_LIFETIMEBOUND const _Tp& __lo,
       _LIBCPP_LIFETIMEBOUND const _Tp& __hi,
       _Compare __comp) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(!__comp(__hi, __lo), "Bad bounds passed to std::clamp");
+  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(!__comp(__hi, __lo), "Bad bounds passed to std::clamp");
   return __comp(__v, __lo) ? __lo : __comp(__hi, __v) ? __hi : __v;
 }
 

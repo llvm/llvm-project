@@ -27,17 +27,17 @@ static inline char *call_asctime_r(struct tm *tm_data, int year, int month,
 TEST(LlvmLibcAsctimeR, Nullptr) {
   char *result;
   result = LIBC_NAMESPACE::asctime_r(nullptr, nullptr);
-  ASSERT_EQ(EINVAL, libc_errno);
+  ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 
   char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
   result = LIBC_NAMESPACE::asctime_r(nullptr, buffer);
-  ASSERT_EQ(EINVAL, libc_errno);
+  ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 
   struct tm tm_data;
   result = LIBC_NAMESPACE::asctime_r(&tm_data, nullptr);
-  ASSERT_EQ(EINVAL, libc_errno);
+  ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 }
 

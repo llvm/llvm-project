@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=SI,GCN,SI-NOHSA,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=VI,VI-NOHSA,GCN,FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck --check-prefixes=EG,FUNC %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=SI,GCN,SI-NOHSA,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=VI,VI-NOHSA,GCN,FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck --check-prefixes=EG,FUNC %s
 
 
 ; FUNC-LABEL: {{^}}local_size_x:

@@ -306,17 +306,18 @@ void ConditionOp::getSuccessorRegions(
 void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
                   Value ub, Value step, ValueRange iterArgs,
                   BodyBuilderFn bodyBuilder) {
+  OpBuilder::InsertionGuard guard(builder);
+
   result.addOperands({lb, ub, step});
   result.addOperands(iterArgs);
   for (Value v : iterArgs)
     result.addTypes(v.getType());
   Type t = lb.getType();
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block);
-  Block &bodyBlock = bodyRegion->front();
-  bodyBlock.addArgument(t, result.location);
+  Block *bodyBlock = builder.createBlock(bodyRegion);
+  bodyBlock->addArgument(t, result.location);
   for (Value v : iterArgs)
-    bodyBlock.addArgument(v.getType(), v.getLoc());
+    bodyBlock->addArgument(v.getType(), v.getLoc());
 
   // Create the default terminator if the builder is not provided and if the
   // iteration arguments are not provided. Otherwise, leave this to the caller
@@ -325,17 +326,13 @@ void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
     ForOp::ensureTerminator(*bodyRegion, builder, result.location);
   } else if (bodyBuilder) {
     OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(&bodyBlock);
-    bodyBuilder(builder, result.location, bodyBlock.getArgument(0),
-                bodyBlock.getArguments().drop_front());
+    builder.setInsertionPointToStart(bodyBlock);
+    bodyBuilder(builder, result.location, bodyBlock->getArgument(0),
+                bodyBlock->getArguments().drop_front());
   }
 }
 
 LogicalResult ForOp::verify() {
-  IntegerAttr step;
-  if (matchPattern(getStep(), m_Constant(&step)) && step.getInt() <= 0)
-    return emitOpError("constant step operand must be positive");
-
   // Check that the number of init args and op results is the same.
   if (getInitArgs().size() != getNumResults())
     return emitOpError(
@@ -527,6 +524,10 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
 
 SmallVector<Region *> ForOp::getLoopRegions() { return {&getRegion()}; }
 
+Block::BlockArgListType ForOp::getRegionIterArgs() {
+  return getBody()->getArguments().drop_front(getNumInductionVars());
+}
+
 MutableArrayRef<OpOperand> ForOp::getInitsMutable() {
   return getInitArgsMutable();
 }
@@ -556,7 +557,7 @@ ForOp::replaceWithAdditionalYields(RewriterBase &rewriter,
         newYieldValuesFn(rewriter, getLoc(), newIterArgs);
     assert(newInitOperands.size() == newYieldedValues.size() &&
            "expected as many new yield values as new iter operands");
-    rewriter.updateRootInPlace(yieldOp, [&]() {
+    rewriter.modifyOpInPlace(yieldOp, [&]() {
       yieldOp.getResultsMutable().append(newYieldedValues);
     });
   }
@@ -620,6 +621,14 @@ LogicalResult scf::ForallOp::promoteIfSingleIteration(RewriterBase &rewriter) {
 
   promote(rewriter, *this);
   return success();
+}
+
+Block::BlockArgListType ForallOp::getRegionIterArgs() {
+  return getBody()->getArguments().drop_front(getRank());
+}
+
+MutableArrayRef<OpOperand> ForallOp::getInitsMutable() {
+  return getOutputsMutable();
 }
 
 /// Promotes the loop body of a scf::ForallOp to its containing block.
@@ -1096,7 +1105,7 @@ std::optional<APInt> ForOp::getConstantStep() {
   return {};
 }
 
-MutableArrayRef<OpOperand> ForOp::getYieldedValuesMutable() {
+std::optional<MutableArrayRef<OpOperand>> ForOp::getYieldedValuesMutable() {
   return cast<scf::YieldOp>(getBody()->getTerminator()).getResultsMutable();
 }
 
@@ -1182,7 +1191,7 @@ void ForallOp::print(OpAsmPrinter &p) {
                           OpAsmParser::Delimiter::Paren);
     p << " step ";
     printDynamicIndexList(p, op, getDynamicStep(), getStaticStep(),
-                          /*valueTypes=*/{}, /*scalable=*/{},
+                          /*valueTypes=*/{}, /*scalables=*/{},
                           OpAsmParser::Delimiter::Paren);
   }
   printInitializationList(p, getRegionOutArgs(), getOutputs(), " shared_outs");
@@ -1355,11 +1364,6 @@ void ForallOp::build(
     return;
   }
   bodyBuilderFn(b, result.location, bodyBlock.getArguments());
-#ifndef NDEBUG
-  auto terminator = llvm::dyn_cast<InParallelOp>(bodyBlock.getTerminator());
-  assert(terminator &&
-         "expected bodyBuilderFn to create InParallelOp terminator");
-#endif // NDEBUG
 }
 
 // Builder that takes loop bounds.
@@ -1448,7 +1452,7 @@ struct DimOfForallOp : public OpRewritePattern<tensor::DimOp> {
     Value sharedOut =
         forallOp.getTiedOpOperand(llvm::cast<OpResult>(dimOp.getSource()))
             ->get();
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         dimOp, [&]() { dimOp.getSourceMutable().assign(sharedOut); });
     return success();
   }
@@ -1468,7 +1472,7 @@ public:
         failed(foldDynamicIndexList(mixedStep)))
       return failure();
 
-    rewriter.updateRootInPlace(op, [&]() {
+    rewriter.modifyOpInPlace(op, [&]() {
       SmallVector<Value> dynamicLowerBound, dynamicUpperBound, dynamicStep;
       SmallVector<int64_t> staticLowerBound, staticUpperBound, staticStep;
       dispatchIndexOpFoldResults(mixedLowerBound, dynamicLowerBound,
@@ -1560,7 +1564,7 @@ struct ForallOpSingleOrZeroIterationDimsFolder
     for (const auto &namedAttr : op->getAttrs()) {
       if (llvm::is_contained(elidedAttrs, namedAttr.getName()))
         continue;
-      rewriter.updateRootInPlace(newOp, [&]() {
+      rewriter.modifyOpInPlace(newOp, [&]() {
         newOp->setAttr(namedAttr.getName(), namedAttr.getValue());
       });
     }
@@ -1630,9 +1634,8 @@ struct FoldTensorCastOfOutputIntoForallOp
     // mapped to the tensor.cast old-typed results of the output bbArgs. The
     // destination have to be updated to point to the output bbArgs directly.
     auto terminator = newForallOp.getTerminator();
-    for (auto [yieldingOp, outputBlockArg] :
-         llvm::zip(terminator.getYieldingOps(),
-                   newForallOp.getOutputBlockArguments())) {
+    for (auto [yieldingOp, outputBlockArg] : llvm::zip(
+             terminator.getYieldingOps(), newForallOp.getRegionIterArgs())) {
       auto insertSliceOp = cast<tensor::ParallelInsertSliceOp>(yieldingOp);
       insertSliceOp.getDestMutable().assign(outputBlockArg);
     }
@@ -2027,8 +2030,8 @@ struct RemoveUnusedResults : public OpRewritePattern<IfOp> {
                     [&](OpResult result) {
                       return yieldOp.getOperand(result.getResultNumber());
                     });
-    rewriter.updateRootInPlace(yieldOp,
-                               [&]() { yieldOp->setOperands(usedOperands); });
+    rewriter.modifyOpInPlace(yieldOp,
+                             [&]() { yieldOp->setOperands(usedOperands); });
   }
 
   LogicalResult matchAndRewrite(IfOp op,
@@ -2193,8 +2196,8 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
           constantTrue = rewriter.create<arith::ConstantOp>(
               op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1));
 
-        rewriter.updateRootInPlace(use.getOwner(),
-                                   [&]() { use.set(constantTrue); });
+        rewriter.modifyOpInPlace(use.getOwner(),
+                                 [&]() { use.set(constantTrue); });
       } else if (op.getElseRegion().isAncestor(
                      use.getOwner()->getParentRegion())) {
         changed = true;
@@ -2203,8 +2206,8 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
           constantFalse = rewriter.create<arith::ConstantOp>(
               op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0));
 
-        rewriter.updateRootInPlace(use.getOwner(),
-                                   [&]() { use.set(constantFalse); });
+        rewriter.modifyOpInPlace(use.getOwner(),
+                                 [&]() { use.set(constantFalse); });
       }
     }
 
@@ -2387,14 +2390,14 @@ struct CombineIfs : public OpRewritePattern<IfOp> {
            llvm::make_early_inc_range(std::get<0>(it).getUses())) {
         if (nextThen && nextThen->getParent()->isAncestor(
                             use.getOwner()->getParentRegion())) {
-          rewriter.startRootUpdate(use.getOwner());
+          rewriter.startOpModification(use.getOwner());
           use.set(std::get<1>(it));
-          rewriter.finalizeRootUpdate(use.getOwner());
+          rewriter.finalizeOpModification(use.getOwner());
         } else if (nextElse && nextElse->getParent()->isAncestor(
                                    use.getOwner()->getParentRegion())) {
-          rewriter.startRootUpdate(use.getOwner());
+          rewriter.startOpModification(use.getOwner());
           use.set(std::get<2>(it));
-          rewriter.finalizeRootUpdate(use.getOwner());
+          rewriter.finalizeOpModification(use.getOwner());
         }
       }
 
@@ -3112,7 +3115,7 @@ YieldOp WhileOp::getYieldOp() {
   return cast<YieldOp>(getAfterBody()->getTerminator());
 }
 
-MutableArrayRef<OpOperand> WhileOp::getYieldedValuesMutable() {
+std::optional<MutableArrayRef<OpOperand>> WhileOp::getYieldedValuesMutable() {
   return getYieldOp().getResultsMutable();
 }
 

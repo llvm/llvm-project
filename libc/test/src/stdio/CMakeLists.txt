@@ -121,6 +121,9 @@ endif()
 if(LIBC_CONF_PRINTF_DISABLE_WRITE_INT)
   list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_WRITE_INT")
 endif()
+if(LIBC_CONF_PRINTF_DISABLE_FIXED_POINT)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_FIXED_POINT")
+endif()
 
 add_fp_unittest(
   sprintf_test
@@ -132,6 +135,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.stdio.sprintf
     libc.src.__support.FPUtil.fp_bits
+    libc.include.inttypes
   COMPILE_OPTIONS
     ${sprintf_test_copts}
 )
@@ -429,7 +433,7 @@ add_libc_test(
 # Create an output directory for any temporary test files.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testdata)
 
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LIBC_TARGET_OS_IS_GPU)
   return()
 endif()
 

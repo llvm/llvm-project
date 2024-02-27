@@ -393,14 +393,28 @@
 //
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:      --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc \
+// RUN:      --libomptarget-amdgpu-bc-path=%S/Inputs/hip_dev_lib/libomptarget-amdgpu-gfx803.bc \
 // RUN:      --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
-// RUN:      --offload-arch=sm_52 -gpulibc -nogpuinc %s 2>&1 \
+// RUN:      --rocm-path=%S/Inputs/rocm \
+// RUN:      --offload-arch=sm_52,gfx803 -gpulibc -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=LIBC-GPU %s
-// LIBC-GPU: "-lcgpu"{{.*}}"-lmgpu"
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:      --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc \
+// RUN:      --libomptarget-amdgpu-bc-path=%S/Inputs/hip_dev_lib/libomptarget-amdgpu-gfx803.bc \
+// RUN:      --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
+// RUN:      --rocm-path=%S/Inputs/rocm \
+// RUN:      -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 \
+// RUN:      -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 \
+// RUN:      -fopenmp-targets=nvptx64-nvidia-cuda,amdgcn-amd-amdhsa -gpulibc -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=LIBC-GPU %s
+// LIBC-GPU-DAG: "-lcgpu-amdgpu"
+// LIBC-GPU-DAG: "-lmgpu-amdgpu"
+// LIBC-GPU-DAG: "-lcgpu-nvptx"
+// LIBC-GPU-DAG: "-lmgpu-nvptx"
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:      --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc \
 // RUN:      --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:      --offload-arch=sm_52 -nogpulibc -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NO-LIBC-GPU %s
-// NO-LIBC-GPU-NOT: "-lcgpu"{{.*}}"-lmgpu"
+// NO-LIBC-GPU-NOT: -lmgpu{{.*}}-lcgpu

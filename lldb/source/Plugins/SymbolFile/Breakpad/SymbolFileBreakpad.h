@@ -73,7 +73,7 @@ public:
   bool ParseDebugMacros(CompileUnit &comp_unit) override { return false; }
 
   bool ParseSupportFiles(CompileUnit &comp_unit,
-                         FileSpecList &support_files) override;
+                         SupportFileList &support_files) override;
   size_t ParseTypes(CompileUnit &cu) override { return 0; }
 
   bool ParseImportedModules(
@@ -141,7 +141,7 @@ public:
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  uint64_t GetDebugInfoSize() override;
+  uint64_t GetDebugInfoSize(bool load_all_debug_info = false) override;
 
 private:
   // A class representing a position in the breakpad file. Useful for
@@ -195,7 +195,6 @@ private:
     Bookmark bookmark;
     std::optional<FileSpecList> support_files;
     std::unique_ptr<LineTable> line_table_up;
-
   };
 
   uint32_t CalculateNumCompileUnits() override;

@@ -41,6 +41,9 @@ uint64_t lprofGetLoadModuleSignature(void) {
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
 #endif
 
 /* Returns 1 if profile is not structurally compatible.  */
@@ -104,14 +107,13 @@ static uintptr_t signextIfWin64(void *V) {
 #endif
 }
 
+// Skip names section, vtable profile data section and vtable names section
+// for runtime profile merge. To merge runtime addresses from multiple
+// profiles collected from the same instrumented binary, the binary should be
+// loaded at fixed base address (e.g., build with -no-pie, or run with ASLR
+// disabled). In this set-up these three sections remain unchanged.
 static uint64_t
 getDistanceFromCounterToValueProf(const __llvm_profile_header *const Header) {
-  // Skip names section, vtable profile data section and vtable names section
-  // for runtime profile merge. To merge runtime addresses from multiple
-  // profiles collected from the same instrumented binary, the binary should be
-  // loaded at fixed base address (e.g., build with -no-pie, or run with ASLR
-  // disabled).
-  // In this set-up these three sections remain unchanged.
   const uint64_t VTableSectionSize =
       Header->NumVTables * sizeof(VTableProfData);
   const uint64_t PaddingBytesAfterVTableSection =
@@ -154,7 +156,6 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
                    Header->NumCounters * __llvm_profile_counter_entry_size();
   SrcBitmapStart = SrcCountersEnd;
   SrcNameStart = SrcBitmapStart + Header->NumBitmapBytes;
-
   SrcValueProfDataStart =
       SrcNameStart + getDistanceFromCounterToValueProf(Header);
   if (SrcNameStart < SrcCountersStart || SrcNameStart < SrcBitmapStart)
@@ -255,4 +256,6 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
 #endif

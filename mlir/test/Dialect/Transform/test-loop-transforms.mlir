@@ -37,13 +37,16 @@ module attributes {transform.with_named_sequence} {
     // Make sure that the handles are still valid (and were updated in case of
     // the loop).
 
+    %p = transform.num_associations %0 : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %0 : !transform.any_op
-    transform.test_print_remark_at_operand %0, "new loop op" : !transform.any_op
+    transform.debug.emit_param_as_remark %p : !transform.param<i64>
+    transform.debug.emit_remark_at %0, "new loop op" : !transform.any_op
+    %p2 = transform.num_associations %1 : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %1 : !transform.any_op
+    transform.debug.emit_param_as_remark %p2 : !transform.param<i64>
+    %p3 = transform.num_associations %2 : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %2 : !transform.any_op
+    transform.debug.emit_param_as_remark %p3 : !transform.param<i64>
 
     transform.yield
   }

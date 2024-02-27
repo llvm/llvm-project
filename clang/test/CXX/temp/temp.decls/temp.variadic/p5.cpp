@@ -376,6 +376,11 @@ namespace Specializations {
   template<typename... Ts>
   struct PrimaryClass<Ts>; // expected-error{{partial specialization contains unexpanded parameter pack 'Ts'}}
 
+  template<typename T, typename... Ts>
+  void PrimaryFunction();
+  template<typename T, typename... Ts>
+  void PrimaryFunction<Ts>(); // expected-error{{function template partial specialization is not allowed}}
+
 #if __cplusplus >= 201402L
   template<typename T, typename... Ts>
   constexpr int PrimaryVar = 0;
@@ -391,6 +396,13 @@ namespace Specializations {
     struct InnerClass<Ts>; // expected-error{{explicit specialization contains unexpanded parameter pack 'Ts'}}
     template<typename U>
     struct InnerClass<U, Ts>; // expected-error{{partial specialization contains unexpanded parameter pack 'Ts'}}
+
+    template<typename... Us>
+    void InnerFunction();
+    template<>
+    void InnerFunction<Ts>(); // expected-error{{explicit specialization contains unexpanded parameter pack 'Ts'}}
+
+    friend void PrimaryFunction<Ts>(); // expected-error{{friend declaration contains unexpanded parameter pack 'Ts'}}
 
 #if __cplusplus >= 201402L
     template<typename... Us>

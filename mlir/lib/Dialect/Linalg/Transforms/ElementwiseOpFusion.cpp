@@ -27,8 +27,7 @@
 #include <utility>
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGFOLDUNITEXTENTDIMS
-#define GEN_PASS_DEF_LINALGELEMENTWISEOPFUSION
+#define GEN_PASS_DEF_LINALGELEMENTWISEOPFUSIONPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -105,7 +104,7 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
   // Consumer can have mixed semantics, just check operand itself has tensor
   // type. Producer must have full tensor semantics to avoid potential
   // aliasing between producer and consumer memrefs.
-  if (!producer.hasTensorSemantics() ||
+  if (!producer.hasPureTensorSemantics() ||
       !isa<RankedTensorType>(fusedOperand->get().getType()))
     return false;
 
@@ -178,11 +177,9 @@ static void generateFusedElementwiseOpRegion(
   // Build the region of the fused op.
   Block &producerBlock = producer->getRegion(0).front();
   Block &consumerBlock = consumer->getRegion(0).front();
-  Block *fusedBlock = new Block();
-  fusedOp.getRegion().push_back(fusedBlock);
-  IRMapping mapper;
   OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPointToStart(fusedBlock);
+  Block *fusedBlock = rewriter.createBlock(&fusedOp.getRegion());
+  IRMapping mapper;
 
   // 2. Add an index operation for every fused loop dimension and use the
   // `consumerToProducerLoopsMap` to map the producer indices.
@@ -530,7 +527,7 @@ static bool isFusableWithReshapeByDimExpansion(GenericOp genericOp,
   //   permutations.
   // - The fused tensor is not a scalar.
   // - All the loops are parallel loops.
-  return genericOp.hasTensorSemantics() &&
+  return genericOp.hasPureTensorSemantics() &&
          llvm::all_of(genericOp.getIndexingMaps().getValue(),
                       [](Attribute attr) {
                         return cast<AffineMapAttr>(attr)
@@ -1124,7 +1121,7 @@ static SmallVector<ReassociationIndices>
 getCollapsableIterationSpaceDims(GenericOp genericOp, OpOperand *fusableOperand,
                                  ArrayRef<ReassociationIndices> reassociation) {
   // Some basic checks for this fusion to be valid.
-  if (!genericOp.hasTensorSemantics() || genericOp.getNumDpsInits() != 1)
+  if (!genericOp.hasPureTensorSemantics() || genericOp.getNumDpsInits() != 1)
     return {};
 
   if (!llvm::all_of(genericOp.getIndexingMapsArray(), [](AffineMap map) {
@@ -1403,11 +1400,10 @@ static Value getCollapsedOpOperand(Location loc, LinalgOp op,
     return builder
         .create<memref::CollapseShapeOp>(loc, operand, operandReassociation)
         .getResult();
-  } else {
-    return builder
-        .create<tensor::CollapseShapeOp>(loc, operand, operandReassociation)
-        .getResult();
   }
+  return builder
+      .create<tensor::CollapseShapeOp>(loc, operand, operandReassociation)
+      .getResult();
 }
 
 /// Modify the `linalg.index` operations in the original generic op, to its
@@ -1476,7 +1472,7 @@ Operation *createCollapsedOp(LinalgType op,
     outputOperands.push_back(newOutput);
     // If the op has "buffer semantics", then the init operands are ranked
     // memrefs and the op has no results.
-    if (!op.hasBufferSemantics())
+    if (!op.hasPureBufferSemantics())
       resultTypes.push_back(newOutput.getType());
   }
 
@@ -1521,8 +1517,8 @@ FailureOr<SmallVector<Value>> mlir::linalg::collapseOpIterationDims(
       }))
     return failure();
 
-  bool hasBufferSemantics = op.hasBufferSemantics();
-  if (hasBufferSemantics &&
+  bool hasPureBufferSemantics = op.hasPureBufferSemantics();
+  if (hasPureBufferSemantics &&
       !llvm::all_of(op->getOperands(), [&](Value operand) -> bool {
         MemRefType memRefToCollapse = dyn_cast<MemRefType>(operand.getType());
         if (!memRefToCollapse)
@@ -1705,7 +1701,7 @@ public:
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!genericOp.hasTensorSemantics())
+    if (!genericOp.hasPureTensorSemantics())
       return failure();
     for (OpOperand *opOperand : genericOp.getDpsInputOperands()) {
       Operation *def = opOperand->get().getDefiningOp();
@@ -1816,7 +1812,7 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
 
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
-    rewriter.startRootUpdate(op);
+    rewriter.startOpModification(op);
     bool modifiedOutput = false;
     Location loc = op.getLoc();
     for (OpOperand &opOperand : op.getDpsInitsMutable()) {
@@ -1843,10 +1839,10 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
       }
     }
     if (!modifiedOutput) {
-      rewriter.cancelRootUpdate(op);
+      rewriter.cancelOpModification(op);
       return failure();
     }
-    rewriter.finalizeRootUpdate(op);
+    rewriter.finalizeOpModification(op);
     return success();
   }
 };
@@ -1857,7 +1853,7 @@ struct FoldFillWithGenericOp : public OpRewritePattern<GenericOp> {
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!genericOp.hasTensorSemantics())
+    if (!genericOp.hasPureTensorSemantics())
       return failure();
     bool fillFound = false;
     Block &payload = genericOp.getRegion().front();
@@ -1930,8 +1926,10 @@ namespace {
 // favor of test passes that check the functionality of each of the patterns
 // added here individually.
 struct LinalgElementwiseOpFusionPass
-    : public impl::LinalgElementwiseOpFusionBase<
+    : public impl::LinalgElementwiseOpFusionPassBase<
           LinalgElementwiseOpFusionPass> {
+  using impl::LinalgElementwiseOpFusionPassBase<
+      LinalgElementwiseOpFusionPass>::LinalgElementwiseOpFusionPassBase;
   void runOnOperation() override {
     Operation *op = getOperation();
     MLIRContext *context = op->getContext();
@@ -1966,7 +1964,3 @@ struct LinalgElementwiseOpFusionPass
 };
 
 } // namespace
-
-std::unique_ptr<Pass> mlir::createLinalgElementwiseOpFusionPass() {
-  return std::make_unique<LinalgElementwiseOpFusionPass>();
-}

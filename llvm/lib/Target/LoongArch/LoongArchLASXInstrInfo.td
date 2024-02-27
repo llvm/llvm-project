@@ -771,6 +771,10 @@ def XVFRECIP_S : LASX2R_XX<0x769cf400>;
 def XVFRECIP_D : LASX2R_XX<0x769cf800>;
 def XVFRSQRT_S : LASX2R_XX<0x769d0400>;
 def XVFRSQRT_D : LASX2R_XX<0x769d0800>;
+def XVFRECIPE_S : LASX2R_XX<0x769d1400>;
+def XVFRECIPE_D : LASX2R_XX<0x769d1800>;
+def XVFRSQRTE_S : LASX2R_XX<0x769d2400>;
+def XVFRSQRTE_D : LASX2R_XX<0x769d2800>;
 
 def XVFCVTL_S_H : LASX2R_XX<0x769de800>;
 def XVFCVTH_S_H : LASX2R_XX<0x769dec00>;
@@ -1571,11 +1575,11 @@ def : Pat<(loongarch_vreplve v8i32:$xj, GRLenVT:$rk),
 def : Pat<(loongarch_vreplve v4i64:$xj, GRLenVT:$rk),
           (XVREPLVE_D v4i64:$xj, GRLenVT:$rk)>;
 
-// XVREPL128VEI_{W/D}
+// XVREPLVE0_{W/D}
 def : Pat<(lasxsplatf32 FPR32:$fj),
-          (XVREPL128VEI_W (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)>;
+          (XVREPLVE0_W (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32))>;
 def : Pat<(lasxsplatf64 FPR64:$fj),
-          (XVREPL128VEI_D (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)>;
+          (XVREPLVE0_D (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64))>;
 
 // Loads/Stores
 foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in {
@@ -1600,8 +1604,8 @@ def : Pat<(f64 (vector_extract v4f64:$xj, uimm2:$imm)),
           (MOVGR2FR_D (XVPICKVE2GR_D v4f64:$xj, uimm2:$imm))>;
 
 // vselect
-def : Pat<(v32i8 (vselect LASX256:$xj, LASX256:$xd,
-                          (v32i8 (SplatPat_uimm8 uimm8:$imm)))),
+def : Pat<(v32i8 (vselect LASX256:$xd, (v32i8 (SplatPat_uimm8 uimm8:$imm)),
+                          LASX256:$xj)),
           (XVBITSELI_B LASX256:$xd, LASX256:$xj, uimm8:$imm)>;
 foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
   def  : Pat<(vt (vselect LASX256:$xa, LASX256:$xk, LASX256:$xj)),
@@ -1610,6 +1614,50 @@ foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
 // fneg
 def : Pat<(fneg (v8f32 LASX256:$xj)), (XVBITREVI_W LASX256:$xj, 31)>;
 def : Pat<(fneg (v4f64 LASX256:$xj)), (XVBITREVI_D LASX256:$xj, 63)>;
+
+// XVFFINT_{S_W/D_L}
+def : Pat<(v8f32 (sint_to_fp v8i32:$vj)), (XVFFINT_S_W v8i32:$vj)>;
+def : Pat<(v4f64 (sint_to_fp v4i64:$vj)), (XVFFINT_D_L v4i64:$vj)>;
+def : Pat<(v4f64 (sint_to_fp v4i32:$vj)),
+          (XVFFINT_D_L (VEXT2XV_D_W (SUBREG_TO_REG (i64 0), v4i32:$vj,
+                                                   sub_128)))>;
+def : Pat<(v4f32 (sint_to_fp v4i64:$vj)),
+          (EXTRACT_SUBREG (XVFCVT_S_D (XVPERMI_D (XVFFINT_D_L v4i64:$vj), 238),
+                                      (XVFFINT_D_L v4i64:$vj)),
+                          sub_128)>;
+
+// XVFFINT_{S_WU/D_LU}
+def : Pat<(v8f32 (uint_to_fp v8i32:$vj)), (XVFFINT_S_WU v8i32:$vj)>;
+def : Pat<(v4f64 (uint_to_fp v4i64:$vj)), (XVFFINT_D_LU v4i64:$vj)>;
+def : Pat<(v4f64 (uint_to_fp v4i32:$vj)),
+          (XVFFINT_D_LU (VEXT2XV_DU_WU (SUBREG_TO_REG (i64 0), v4i32:$vj,
+                                                      sub_128)))>;
+def : Pat<(v4f32 (uint_to_fp v4i64:$vj)),
+          (EXTRACT_SUBREG (XVFCVT_S_D (XVPERMI_D (XVFFINT_D_LU v4i64:$vj), 238),
+                                       (XVFFINT_D_LU v4i64:$vj)),
+                          sub_128)>;
+
+// XVFTINTRZ_{W_S/L_D}
+def : Pat<(v8i32 (fp_to_sint v8f32:$vj)), (XVFTINTRZ_W_S v8f32:$vj)>;
+def : Pat<(v4i64 (fp_to_sint v4f64:$vj)), (XVFTINTRZ_L_D v4f64:$vj)>;
+def : Pat<(v4i64 (fp_to_sint v4f32:$vj)),
+          (VEXT2XV_D_W (SUBREG_TO_REG (i64 0), (VFTINTRZ_W_S v4f32:$vj),
+                                      sub_128))>;
+def : Pat<(v4i32 (fp_to_sint (v4f64 LASX256:$vj))),
+          (EXTRACT_SUBREG (XVFTINTRZ_W_S (XVFCVT_S_D (XVPERMI_D v4f64:$vj, 238),
+                                                     v4f64:$vj)),
+                          sub_128)>;
+
+// XVFTINTRZ_{W_SU/L_DU}
+def : Pat<(v8i32 (fp_to_uint v8f32:$vj)), (XVFTINTRZ_WU_S v8f32:$vj)>;
+def : Pat<(v4i64 (fp_to_uint v4f64:$vj)), (XVFTINTRZ_LU_D v4f64:$vj)>;
+def : Pat<(v4i64 (fp_to_uint v4f32:$vj)),
+          (VEXT2XV_DU_WU (SUBREG_TO_REG (i64 0), (VFTINTRZ_WU_S v4f32:$vj),
+                                        sub_128))>;
+def : Pat<(v4i32 (fp_to_uint (v4f64 LASX256:$vj))),
+          (EXTRACT_SUBREG (XVFTINTRZ_W_S (XVFCVT_S_D (XVPERMI_D v4f64:$vj, 238),
+                                                     v4f64:$vj)),
+                          sub_128)>;
 
 } // Predicates = [HasExtLASX]
 
@@ -1901,6 +1949,16 @@ foreach Inst = ["XVFLOGB_D", "XVFCLASS_D", "XVFSQRT_D", "XVFRECIP_D", "XVFRSQRT_
                 "XVFTINT_L_D", "XVFTINTRZ_LU_D", "XVFTINT_LU_D"] in
   def : Pat<(deriveLASXIntrinsic<Inst>.ret (v4f64 LASX256:$xj)),
             (!cast<LAInst>(Inst) LASX256:$xj)>;
+
+// 256-Bit vector FP approximate reciprocal operation
+let Predicates = [HasFrecipe] in {
+foreach Inst = ["XVFRECIPE_S", "XVFRSQRTE_S"] in
+  def : Pat<(deriveLASXIntrinsic<Inst>.ret (v8f32 LASX256:$xj)),
+            (!cast<LAInst>(Inst) LASX256:$xj)>;
+foreach Inst = ["XVFRECIPE_D", "XVFRSQRTE_D"] in
+  def : Pat<(deriveLASXIntrinsic<Inst>.ret (v4f64 LASX256:$xj)),
+            (!cast<LAInst>(Inst) LASX256:$xj)>;
+}
 
 def : Pat<(int_loongarch_lasx_xvpickve_w_f v8f32:$xj, timm:$imm),
           (XVPICKVE_W v8f32:$xj, (to_valid_timm timm:$imm))>;

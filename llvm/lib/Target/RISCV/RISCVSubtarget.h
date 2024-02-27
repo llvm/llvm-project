@@ -27,6 +27,9 @@
 #include "llvm/Target/TargetMachine.h"
 #include <bitset>
 
+#define GET_RISCV_MACRO_FUSION_PRED_DECL
+#include "RISCVGenMacroFusion.inc"
+
 #define GET_SUBTARGETINFO_HEADER
 #include "RISCVGenSubtargetInfo.inc"
 
@@ -140,6 +143,10 @@ public:
 #include "RISCVGenSubtargetInfo.inc"
 
   bool hasStdExtCOrZca() const { return HasStdExtC || HasStdExtZca; }
+  bool hasStdExtCOrZcd() const { return HasStdExtC || HasStdExtZcd; }
+  bool hasStdExtCOrZcfOrZce() const {
+    return HasStdExtC || HasStdExtZcf || HasStdExtZce;
+  }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
@@ -150,6 +157,13 @@ public:
   bool hasHalfFPLoadStoreMove() const {
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
+
+  bool hasConditionalMoveFusion() const {
+    // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
+    return (hasConditionalCompressedMoveFusion() && hasStdExtCOrZca()) ||
+           hasShortForwardBranchOpt();
+  }
+
   bool is64Bit() const { return IsRV64; }
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;
@@ -178,6 +192,14 @@ public:
     unsigned VLen = getMaxRVVVectorSizeInBits();
     return VLen == 0 ? 65536 : VLen;
   }
+  // If we know the exact VLEN, return it.  Otherwise, return std::nullopt.
+  std::optional<unsigned> getRealVLen() const {
+    unsigned Min = getRealMinVLen();
+    if (Min != getRealMaxVLen())
+      return std::nullopt;
+    return Min;
+  }
+
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
   bool isSoftFPABI() const {
     return TargetABI == RISCVABI::ABI_LP64 ||
@@ -187,11 +209,6 @@ public:
   bool isRegisterReservedByUser(Register i) const {
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i];
-  }
-
-  bool hasMacroFusion() const {
-    return hasLUIADDIFusion() || hasAUIPCADDIFusion() || hasZExtHFusion() ||
-           hasZExtWFusion() || hasShiftedZExtWFusion() || hasLDADDFusion();
   }
 
   // Vector codegen related methods.
@@ -272,6 +289,8 @@ public:
   };
 
   unsigned getMinimumJumpTableEntries() const;
+
+  bool supportsInitUndef() const override { return hasVInstructions(); }
 };
 } // End llvm namespace
 

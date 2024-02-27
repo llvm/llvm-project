@@ -548,7 +548,7 @@ Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
     const IntPtrT FPtr = swap(I->FunctionPointer);
     if (!FPtr)
       continue;
-    Symtab.mapAddress(FPtr, I->NameRef);
+    Symtab.mapAddress(FPtr, swap(I->NameRef));
   }
 
   if (VTableBegin != nullptr && VTableEnd != nullptr) {
@@ -1312,7 +1312,11 @@ Error IndexedInstrProfReader::readHeader() {
         support::endian::readNext<uint64_t, llvm::endianness::little,
                                   unaligned>(Ptr);
 
+    // Writer first writes the length of compressed string, and then the actual
+    // content.
     VTableNamePtr = (const char *)Ptr;
+    if (VTableNamePtr > (const char *)DataBuffer->getBufferEnd())
+      return make_error<InstrProfError>(instrprof_error::truncated);
   }
 
   if (GET_VERSION(Header->formatVersion()) >= 10 &&
@@ -1499,13 +1503,30 @@ Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
   return success();
 }
 
-Error IndexedInstrProfReader::getFunctionBitmapBytes(
-    StringRef FuncName, uint64_t FuncHash, std::vector<uint8_t> &BitmapBytes) {
+Error IndexedInstrProfReader::getFunctionBitmap(StringRef FuncName,
+                                                uint64_t FuncHash,
+                                                BitVector &Bitmap) {
   Expected<InstrProfRecord> Record = getInstrProfRecord(FuncName, FuncHash);
   if (Error E = Record.takeError())
     return error(std::move(E));
 
-  BitmapBytes = Record.get().BitmapBytes;
+  const auto &BitmapBytes = Record.get().BitmapBytes;
+  size_t I = 0, E = BitmapBytes.size();
+  Bitmap.resize(E * CHAR_BIT);
+  BitVector::apply(
+      [&](auto X) {
+        using XTy = decltype(X);
+        alignas(XTy) uint8_t W[sizeof(X)];
+        size_t N = std::min(E - I, sizeof(W));
+        std::memset(W, 0, sizeof(W));
+        std::memcpy(W, &BitmapBytes[I], N);
+        I += N;
+        return support::endian::read<XTy, llvm::endianness::little,
+                                     support::aligned>(W);
+      },
+      Bitmap, Bitmap);
+  assert(I == E);
+
   return success();
 }
 

@@ -99,7 +99,7 @@ class DescriptorAddendum {
 public:
   explicit RT_API_ATTRS DescriptorAddendum(
       const typeInfo::DerivedType *dt = nullptr)
-      : derivedType_{dt} {}
+      : derivedType_{dt}, len_{0} {}
   RT_API_ATTRS DescriptorAddendum &operator=(const DescriptorAddendum &);
 
   const RT_API_ATTRS typeInfo::DerivedType *derivedType() const {
@@ -375,6 +375,7 @@ public:
   // allocation.  Does not allocate automatic components or
   // perform default component initialization.
   RT_API_ATTRS int Allocate();
+  RT_API_ATTRS void SetByteStrides();
 
   // Deallocates storage; does not call FINAL subroutines or
   // deallocate allocatable/automatic components.

@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fms-extensions %s -DMS_EXTENSIONS
 // RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing -fms-extensions %s -DMS_EXTENSIONS -DDELAYED_TEMPLATE_PARSING
 
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -emit-llvm-only %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -DDELAYED_TEMPLATE_PARSING -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fms-extensions %s -DMS_EXTENSIONS -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing -fms-extensions %s -DMS_EXTENSIONS -DDELAYED_TEMPLATE_PARSING -fexperimental-new-constant-interpreter
+
 template <class, class>
 constexpr bool is_same = false;
 template <class T>
@@ -46,7 +51,7 @@ public:
   template <class T = int>
   void foo() {
     (void)[this] { return x; };
-    (void)[*this] { return x; }; //expected-error2{{call to deleted}} expected-note {{while substituting into a lambda}}
+    (void)[*this] { return x; }; //expected-error2{{call to deleted}}
   }
 
   B() = default;
@@ -63,7 +68,7 @@ class B {
 public:
   template <class T = int>
   auto foo() {
-    const auto &L = [*this](auto a) mutable { //expected-error{{call to deleted}} expected-note {{while substituting into a lambda}}
+    const auto &L = [*this](auto a) mutable { //expected-error{{call to deleted}}
       d += a;
       return [this](auto b) { return d += b; };
     };

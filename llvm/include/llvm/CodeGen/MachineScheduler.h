@@ -1293,19 +1293,19 @@ class PostGenericScheduler : public GenericSchedulerBase {
 protected:
   ScheduleDAGMI *DAG = nullptr;
   SchedBoundary Top;
-  SmallVector<SUnit*, 8> BotRoots;
+  SchedBoundary Bot;
+  MachineSchedPolicy RegionPolicy;
 
 public:
-  PostGenericScheduler(const MachineSchedContext *C):
-    GenericSchedulerBase(C), Top(SchedBoundary::TopQID, "TopQ") {}
+  PostGenericScheduler(const MachineSchedContext *C)
+      : GenericSchedulerBase(C), Top(SchedBoundary::TopQID, "TopQ"),
+        Bot(SchedBoundary::BotQID, "BotQ") {}
 
   ~PostGenericScheduler() override = default;
 
   void initPolicy(MachineBasicBlock::iterator Begin,
                   MachineBasicBlock::iterator End,
-                  unsigned NumRegionInstrs) override {
-    /* no configurable policy */
-  }
+                  unsigned NumRegionInstrs) override;
 
   /// PostRA scheduling does not track pressure.
   bool shouldTrackPressure() const override { return false; }
@@ -1328,15 +1328,16 @@ public:
     Top.releaseNode(SU, SU->TopReadyCycle, false);
   }
 
-  // Only called for roots.
   void releaseBottomNode(SUnit *SU) override {
-    BotRoots.push_back(SU);
+    if (SU->isScheduled)
+      return;
+    Bot.releaseNode(SU, SU->BotReadyCycle, false);
   }
 
 protected:
   virtual bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand);
 
-  void pickNodeFromQueue(SchedCandidate &Cand);
+  void pickNodeFromQueue(SchedBoundary &Zone, SchedCandidate &Cand);
 };
 
 /// Create the standard converging machine scheduler. This will be used as the
@@ -1347,13 +1348,19 @@ ScheduleDAGMILive *createGenericSchedLive(MachineSchedContext *C);
 /// Create a generic scheduler with no vreg liveness or DAG mutation passes.
 ScheduleDAGMI *createGenericSchedPostRA(MachineSchedContext *C);
 
+/// If ReorderWhileClustering is set to true, no attempt will be made to
+/// reduce reordering due to store clustering.
 std::unique_ptr<ScheduleDAGMutation>
 createLoadClusterDAGMutation(const TargetInstrInfo *TII,
-                             const TargetRegisterInfo *TRI);
+                             const TargetRegisterInfo *TRI,
+                             bool ReorderWhileClustering = false);
 
+/// If ReorderWhileClustering is set to true, no attempt will be made to
+/// reduce reordering due to store clustering.
 std::unique_ptr<ScheduleDAGMutation>
 createStoreClusterDAGMutation(const TargetInstrInfo *TII,
-                              const TargetRegisterInfo *TRI);
+                              const TargetRegisterInfo *TRI,
+                              bool ReorderWhileClustering = false);
 
 std::unique_ptr<ScheduleDAGMutation>
 createCopyConstrainDAGMutation(const TargetInstrInfo *TII,

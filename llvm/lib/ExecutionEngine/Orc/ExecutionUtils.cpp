@@ -218,19 +218,23 @@ void ItaniumCXAAtExitSupport::runAtExits(void *DSOHandle) {
 }
 
 DynamicLibrarySearchGenerator::DynamicLibrarySearchGenerator(
-    sys::DynamicLibrary Dylib, char GlobalPrefix, SymbolPredicate Allow)
+    sys::DynamicLibrary Dylib, char GlobalPrefix, SymbolPredicate Allow,
+    AddAbsoluteSymbolsFn AddAbsoluteSymbols)
     : Dylib(std::move(Dylib)), Allow(std::move(Allow)),
+      AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)),
       GlobalPrefix(GlobalPrefix) {}
 
 Expected<std::unique_ptr<DynamicLibrarySearchGenerator>>
 DynamicLibrarySearchGenerator::Load(const char *FileName, char GlobalPrefix,
-                                    SymbolPredicate Allow) {
+                                    SymbolPredicate Allow,
+                                    AddAbsoluteSymbolsFn AddAbsoluteSymbols) {
   std::string ErrMsg;
   auto Lib = sys::DynamicLibrary::getPermanentLibrary(FileName, &ErrMsg);
   if (!Lib.isValid())
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
   return std::make_unique<DynamicLibrarySearchGenerator>(
-      std::move(Lib), GlobalPrefix, std::move(Allow));
+      std::move(Lib), GlobalPrefix, std::move(Allow),
+      std::move(AddAbsoluteSymbols));
 }
 
 Error DynamicLibrarySearchGenerator::tryToGenerate(
@@ -261,6 +265,8 @@ Error DynamicLibrarySearchGenerator::tryToGenerate(
   if (NewSymbols.empty())
     return Error::success();
 
+  if (AddAbsoluteSymbols)
+    return AddAbsoluteSymbols(JD, std::move(NewSymbols));
   return JD.define(absoluteSymbols(std::move(NewSymbols)));
 }
 

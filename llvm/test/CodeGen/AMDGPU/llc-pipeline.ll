@@ -321,6 +321,7 @@
 ; GCN-O1-NEXT:        Register Usage Information Propagation
 ; GCN-O1-NEXT:        Detect Dead Lanes
 ; GCN-O1-NEXT:        Remove dead machine instructions
+; GCN-O1-NEXT:        Init Undef Pass
 ; GCN-O1-NEXT:        Process Implicit Definitions
 ; GCN-O1-NEXT:        Remove unreachable machine basic blocks
 ; GCN-O1-NEXT:        Live Variable Analysis
@@ -359,6 +360,7 @@
 ; GCN-O1-NEXT:        SI Lower WWM Copies
 ; GCN-O1-NEXT:        GCN NSA Reassign
 ; GCN-O1-NEXT:        Virtual Register Rewriter
+; GCN-O1-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O1-NEXT:        Stack Slot Coloring
 ; GCN-O1-NEXT:        Machine Copy Propagation Pass
 ; GCN-O1-NEXT:        Machine Loop Invariant Code Motion
@@ -617,6 +619,7 @@
 ; GCN-O1-OPTS-NEXT:        Register Usage Information Propagation
 ; GCN-O1-OPTS-NEXT:        Detect Dead Lanes
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
+; GCN-O1-OPTS-NEXT:        Init Undef Pass
 ; GCN-O1-OPTS-NEXT:        Process Implicit Definitions
 ; GCN-O1-OPTS-NEXT:        Remove unreachable machine basic blocks
 ; GCN-O1-OPTS-NEXT:        Live Variable Analysis
@@ -655,6 +658,7 @@
 ; GCN-O1-OPTS-NEXT:        SI Lower WWM Copies
 ; GCN-O1-OPTS-NEXT:        GCN NSA Reassign
 ; GCN-O1-OPTS-NEXT:        Virtual Register Rewriter
+; GCN-O1-OPTS-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O1-OPTS-NEXT:        Stack Slot Coloring
 ; GCN-O1-OPTS-NEXT:        Machine Copy Propagation Pass
 ; GCN-O1-OPTS-NEXT:        Machine Loop Invariant Code Motion
@@ -918,6 +922,7 @@
 ; GCN-O2-NEXT:        Register Usage Information Propagation
 ; GCN-O2-NEXT:        Detect Dead Lanes
 ; GCN-O2-NEXT:        Remove dead machine instructions
+; GCN-O2-NEXT:        Init Undef Pass
 ; GCN-O2-NEXT:        Process Implicit Definitions
 ; GCN-O2-NEXT:        Remove unreachable machine basic blocks
 ; GCN-O2-NEXT:        Live Variable Analysis
@@ -957,6 +962,7 @@
 ; GCN-O2-NEXT:        SI Lower WWM Copies
 ; GCN-O2-NEXT:        GCN NSA Reassign
 ; GCN-O2-NEXT:        Virtual Register Rewriter
+; GCN-O2-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O2-NEXT:        Stack Slot Coloring
 ; GCN-O2-NEXT:        Machine Copy Propagation Pass
 ; GCN-O2-NEXT:        Machine Loop Invariant Code Motion
@@ -1232,6 +1238,7 @@
 ; GCN-O3-NEXT:        Register Usage Information Propagation
 ; GCN-O3-NEXT:        Detect Dead Lanes
 ; GCN-O3-NEXT:        Remove dead machine instructions
+; GCN-O3-NEXT:        Init Undef Pass
 ; GCN-O3-NEXT:        Process Implicit Definitions
 ; GCN-O3-NEXT:        Remove unreachable machine basic blocks
 ; GCN-O3-NEXT:        Live Variable Analysis
@@ -1271,6 +1278,7 @@
 ; GCN-O3-NEXT:        SI Lower WWM Copies
 ; GCN-O3-NEXT:        GCN NSA Reassign
 ; GCN-O3-NEXT:        Virtual Register Rewriter
+; GCN-O3-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O3-NEXT:        Stack Slot Coloring
 ; GCN-O3-NEXT:        Machine Copy Propagation Pass
 ; GCN-O3-NEXT:        Machine Loop Invariant Code Motion

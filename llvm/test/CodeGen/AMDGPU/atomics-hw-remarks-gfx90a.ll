@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs --pass-remarks=si-lower \
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs --pass-remarks=si-lower \
 ; RUN:      %s -o - 2>&1 | FileCheck %s --check-prefix=GFX90A-HW
 
 ; GFX90A-HW: Hardware instruction generated for atomic fadd operation at memory scope system due to an unsafe request.

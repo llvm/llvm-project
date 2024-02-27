@@ -46,6 +46,12 @@
   define void @test_64bitext() #0 {
     ret void
   }
+  ; Note that this function need to be compiled with -global-isel
+  ; to obtain testable MIR
+  define void @test_unused(i64 %0) #0 {
+    %unused = lshr i64 %0, 7
+    ret void
+  }
 ...
 ---
 name:            test_fcmp_storefloat
@@ -857,6 +863,67 @@ body:             |
     %3 = COPY %7
     %4 = VMOVDQU8Zrrk %2, killed %3, %1
     VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, killed %4
+    RET 0
+
+...
+---
+name:            test_unused
+alignment:       16
+exposesReturnsTwice: false
+legalized:       true
+regBankSelected: true
+selected:        true
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+# Note that this test is supposed to have registers without classes
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+liveins:
+  - { reg: '$rdi', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.1 (%ir-block.1):
+    liveins: $rdi
+
     RET 0
 
 ...

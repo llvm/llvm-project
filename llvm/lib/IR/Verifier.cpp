@@ -96,6 +96,7 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsARM.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -106,6 +107,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
+#include "llvm/IR/VFABIDemangler.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -169,6 +171,36 @@ private:
       V.printAsOperand(*OS, true, MST);
       *OS << '\n';
     }
+  }
+
+  void Write(const DbgRecord *DR) {
+    if (DR)
+      DR->print(*OS, MST, false);
+  }
+
+  void Write(const DPValue *V) {
+    if (V)
+      V->print(*OS, MST, false);
+  }
+
+  void Write(DPValue::LocationType Type) {
+    switch (Type) {
+    case DPValue::LocationType::Value:
+      *OS << "value";
+      break;
+    case DPValue::LocationType::Declare:
+      *OS << "declare";
+      break;
+    case DPValue::LocationType::Assign:
+      *OS << "assign";
+      break;
+    case DPValue::LocationType::End:
+      *OS << "end";
+      break;
+    case DPValue::LocationType::Any:
+      *OS << "any";
+      break;
+    };
   }
 
   void Write(const Metadata *MD) {
@@ -515,8 +547,10 @@ private:
 
   void visitTemplateParams(const MDNode &N, const Metadata &RawParams);
 
+  void visit(DPValue &DPV);
   // InstVisitor overrides...
   using InstVisitor<Verifier>::visit;
+  void visitDbgRecords(Instruction &I);
   void visit(Instruction &I);
 
   void visitTruncInst(TruncInst &I);
@@ -642,7 +676,22 @@ private:
     }                                                                          \
   } while (false)
 
+void Verifier::visitDbgRecords(Instruction &I) {
+  if (!I.DbgMarker)
+    return;
+  CheckDI(I.DbgMarker->MarkedInstr == &I, "Instruction has invalid DbgMarker",
+          &I);
+  CheckDI(!isa<PHINode>(&I) || !I.hasDbgValues(),
+          "PHI Node must not have any attached DbgRecords", &I);
+  for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+    CheckDI(DPV.getMarker() == I.DbgMarker, "DbgRecord had invalid DbgMarker",
+            &I, &DPV);
+    visit(DPV);
+  }
+}
+
 void Verifier::visit(Instruction &I) {
+  visitDbgRecords(I);
   for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i)
     Check(I.getOperand(i) != nullptr, "Operand is null", &I);
   InstVisitor<Verifier>::visit(I);
@@ -2148,17 +2197,22 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
            V);
   }
 
-  if (Attrs.hasFnAttr("aarch64_pstate_za_new")) {
-    Check(!Attrs.hasFnAttr("aarch64_pstate_za_preserved"),
-           "Attributes 'aarch64_pstate_za_new and aarch64_pstate_za_preserved' "
-           "are incompatible!",
-           V);
+  Check((Attrs.hasFnAttr("aarch64_new_za") + Attrs.hasFnAttr("aarch64_in_za") +
+         Attrs.hasFnAttr("aarch64_inout_za") +
+         Attrs.hasFnAttr("aarch64_out_za") +
+         Attrs.hasFnAttr("aarch64_preserves_za")) <= 1,
+        "Attributes 'aarch64_new_za', 'aarch64_in_za', 'aarch64_out_za', "
+        "'aarch64_inout_za' and 'aarch64_preserves_za' are mutually exclusive",
+        V);
 
-    Check(!Attrs.hasFnAttr("aarch64_pstate_za_shared"),
-           "Attributes 'aarch64_pstate_za_new and aarch64_pstate_za_shared' "
-           "are incompatible!",
-           V);
-  }
+  Check(
+      (Attrs.hasFnAttr("aarch64_new_zt0") + Attrs.hasFnAttr("aarch64_in_zt0") +
+       Attrs.hasFnAttr("aarch64_inout_zt0") +
+       Attrs.hasFnAttr("aarch64_out_zt0") +
+       Attrs.hasFnAttr("aarch64_preserves_zt0")) <= 1,
+      "Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', "
+      "'aarch64_inout_zt0' and 'aarch64_preserves_zt0' are mutually exclusive",
+      V);
 
   if (Attrs.hasFnAttr(Attribute::JumpTable)) {
     const GlobalValue *GV = cast<GlobalValue>(V);
@@ -2258,6 +2312,13 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (S != "true" && S != "false")
       CheckFailed(
           "invalid value for 'branch-target-enforcement' attribute: " + S, V);
+  }
+
+  if (auto A = Attrs.getFnAttr("vector-function-abi-variant"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    const std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(S, FT);
+    if (!Info)
+      CheckFailed("invalid name for a VFABI variant: " + S, V);
   }
 }
 
@@ -2957,12 +3018,9 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
   }
 
   // Confirm that no issues arise from the debug program.
-  if (BB.IsNewDbgInfoFormat) {
-    // Configure the validate function to not fire assertions, instead print
-    // errors and return true if there's a problem.
-    bool RetVal = BB.validateDbgValues(false, true, OS);
-    Check(!RetVal, "Invalid configuration of new-debug-info data found");
-  }
+  if (BB.IsNewDbgInfoFormat)
+    CheckDI(!BB.getTrailingDPValues(), "Basic Block has trailing DbgRecords!",
+            &BB);
 }
 
 void Verifier::visitTerminator(Instruction &I) {
@@ -4722,6 +4780,12 @@ void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
                 "dbg.assign not in same function as inst", DAI, &I);
     }
   }
+  for (DPValue *DPV : cast<DIAssignID>(MD)->getAllDPValueUsers()) {
+    CheckDI(DPV->isDbgAssign(),
+            "!DIAssignID should only be used by Assign DPVs.", MD, DPV);
+    CheckDI(DPV->getFunction() == I.getFunction(),
+            "DPVAssign not in same function as inst", DPV, &I);
+  }
 }
 
 void Verifier::visitCallStackMetadata(MDNode *MD) {
@@ -6031,6 +6095,16 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "Value for inactive lanes must be a VGPR function argument", &Call);
     break;
   }
+  case Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32:
+  case Intrinsic::nvvm_setmaxnreg_dec_sync_aligned_u32: {
+    Value *V = Call.getArgOperand(0);
+    unsigned RegCount = cast<ConstantInt>(V)->getZExtValue();
+    Check(RegCount % 8 == 0,
+          "reg_count argument to nvvm.setmaxnreg must be in multiples of 8");
+    Check((RegCount >= 24 && RegCount <= 256),
+          "reg_count argument to nvvm.setmaxnreg must be within [24, 256]");
+    break;
+  }
   case Intrinsic::experimental_convergence_entry:
     LLVM_FALLTHROUGH;
   case Intrinsic::experimental_convergence_anchor:
@@ -6113,6 +6187,70 @@ static DISubprogram *getSubprogram(Metadata *LocalScope) {
   return nullptr;
 }
 
+void Verifier::visit(DPValue &DPV) {
+  CheckDI(DPV.getType() == DPValue::LocationType::Value ||
+              DPV.getType() == DPValue::LocationType::Declare ||
+              DPV.getType() == DPValue::LocationType::Assign,
+          "invalid #dbg record type", &DPV, DPV.getType());
+  // The location for a DPValue must be either a ValueAsMetadata, DIArgList, or
+  // an empty MDNode (which is a legacy representation for an "undef" location).
+  auto *MD = DPV.getRawLocation();
+  CheckDI(isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
+              (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands()),
+          "invalid #dbg record address/value", &DPV, MD);
+  CheckDI(isa<DILocalVariable>(DPV.getRawVariable()),
+          "invalid #dbg record variable", &DPV, DPV.getRawVariable());
+  CheckDI(DPV.getExpression(), "missing #dbg record expression", &DPV,
+          DPV.getExpression());
+
+  if (DPV.isDbgAssign()) {
+    CheckDI(isa<DIAssignID>(DPV.getRawAssignID()),
+            "invalid #dbg_assign DIAssignID", &DPV, DPV.getRawAssignID());
+    const auto *RawAddr = DPV.getRawAddress();
+    // Similarly to the location above, the address for an assign DPValue must
+    // be a ValueAsMetadata or an empty MDNode, which represents an undef
+    // address.
+    CheckDI(
+        isa<ValueAsMetadata>(RawAddr) ||
+            (isa<MDNode>(RawAddr) && !cast<MDNode>(RawAddr)->getNumOperands()),
+        "invalid #dbg_assign address", &DPV, DPV.getRawAddress());
+    CheckDI(DPV.getAddressExpression(),
+            "missing #dbg_assign address expression", &DPV,
+            DPV.getAddressExpression());
+    // All of the linked instructions should be in the same function as DPV.
+    for (Instruction *I : at::getAssignmentInsts(&DPV))
+      CheckDI(DPV.getFunction() == I->getFunction(),
+              "inst not in same function as #dbg_assign", I, &DPV);
+  }
+
+  if (MDNode *N = DPV.getDebugLoc().getAsMDNode()) {
+    CheckDI(isa<DILocation>(N), "invalid #dbg record location", &DPV, N);
+    visitDILocation(*cast<DILocation>(N));
+  }
+
+  BasicBlock *BB = DPV.getParent();
+  Function *F = BB ? BB->getParent() : nullptr;
+
+  // The scopes for variables and !dbg attachments must agree.
+  DILocalVariable *Var = DPV.getVariable();
+  DILocation *Loc = DPV.getDebugLoc();
+  CheckDI(Loc, "missing #dbg record DILocation", &DPV, BB, F);
+
+  DISubprogram *VarSP = getSubprogram(Var->getRawScope());
+  DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
+  if (!VarSP || !LocSP)
+    return; // Broken scope chains are checked elsewhere.
+
+  CheckDI(VarSP == LocSP,
+          "mismatched subprogram between #dbg record variable and DILocation",
+          &DPV, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
+          Loc->getScope()->getSubprogram());
+
+  // This check is redundant with one in visitLocalVariable().
+  CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
+          Var->getRawType());
+}
+
 void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
   if (auto *VPCast = dyn_cast<VPCastIntrinsic>(&VPI)) {
     auto *RetTy = cast<VectorType>(VPCast->getType());
@@ -6148,9 +6286,11 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
       break;
     case Intrinsic::vp_fptoui:
     case Intrinsic::vp_fptosi:
+    case Intrinsic::vp_lrint:
+    case Intrinsic::vp_llrint:
       Check(
           RetTy->isIntOrIntVectorTy() && ValTy->isFPOrFPVectorTy(),
-          "llvm.vp.fptoui or llvm.vp.fptosi intrinsic first argument element "
+          "llvm.vp.fptoui, llvm.vp.fptosi, llvm.vp.lrint or llvm.vp.llrint" "intrinsic first argument element "
           "type must be floating-point and result element type must be integer",
           *VPCast);
       break;

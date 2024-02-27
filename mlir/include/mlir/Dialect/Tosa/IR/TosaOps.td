@@ -990,6 +990,26 @@ def Tosa_ClzOp : Tosa_ElementwiseOp<"clz", [SameOperandsAndResultElementType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: cos
+//===----------------------------------------------------------------------===//
+def Tosa_CosOp : Tosa_ElementwiseOp<"cos",
+    [SameOperandsAndResultElementType]> {
+  let summary = "Elementwise cos op";
+
+  let description = [{
+    Elementwise cosine operation for values given in radians.
+  }];
+
+  let arguments = (ins
+    Tosa_FloatTensor:$input
+  );
+
+  let results = (outs
+    Tosa_FloatTensor:$output
+  );
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: exp
 //===----------------------------------------------------------------------===//
 def Tosa_ExpOp : Tosa_ElementwiseOp<"exp", [SameOperandsAndResultElementType]> {
@@ -1114,6 +1134,17 @@ def Tosa_ReciprocalOp : Tosa_ElementwiseOp<"reciprocal",
   let results = (outs
     Tosa_Tensor:$output
   );
+
+  let extraClassDeclaration = [{
+    /// Return the reciprocal result on the operand.
+    static inline APFloat calcOneElement(const APFloat &operand) {
+      APFloat recip = APFloat(operand.getSemantics(), 1);
+      recip.divide(operand, APFloat::rmNearestTiesToEven);
+      return recip;
+    }
+  }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1134,6 +1165,26 @@ def Tosa_RsqrtOp : Tosa_ElementwiseOp<"rsqrt",
 
   let results = (outs
     Tosa_Tensor:$output
+  );
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: sin
+//===----------------------------------------------------------------------===//
+def Tosa_SinOp : Tosa_ElementwiseOp<"sin",
+    [SameOperandsAndResultElementType]> {
+  let summary = "Elementwise sin op";
+
+  let description = [{
+    Elementwise sine operation for values given in radians.
+  }];
+
+  let arguments = (ins
+    Tosa_FloatTensor:$input
+  );
+
+  let results = (outs
+    Tosa_FloatTensor:$output
   );
 }
 
@@ -1848,7 +1899,7 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
     I32Attr:$input_zp,
     I32Attr:$output_zp,
     DenseI32ArrayAttr:$multiplier,
-    DenseI32ArrayAttr:$shift,
+    DenseI8ArrayAttr:$shift,
     BoolAttr:$scale32,
     BoolAttr:$double_round,
     BoolAttr:$per_channel

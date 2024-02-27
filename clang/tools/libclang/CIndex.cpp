@@ -1582,6 +1582,11 @@ bool CursorVisitor::VisitTemplateArgumentLoc(const TemplateArgumentLoc &TAL) {
       return Visit(MakeCXCursor(E, StmtParent, TU, RegionOfInterest));
     return false;
 
+  case TemplateArgument::StructuralValue:
+    if (Expr *E = TAL.getSourceStructuralValueExpression())
+      return Visit(MakeCXCursor(E, StmtParent, TU, RegionOfInterest));
+    return false;
+
   case TemplateArgument::NullPtr:
     if (Expr *E = TAL.getSourceNullPtrExpression())
       return Visit(MakeCXCursor(E, StmtParent, TU, RegionOfInterest));
@@ -1884,6 +1889,12 @@ bool CursorVisitor::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
     return Visit(MakeCXCursor(E, StmtParent, TU));
 
   return false;
+}
+
+bool CursorVisitor::VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
+  if (Visit(TL.getPatternLoc()))
+    return true;
+  return Visit(MakeCXCursor(TL.getIndexExpr(), StmtParent, TU));
 }
 
 bool CursorVisitor::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
@@ -2413,6 +2424,8 @@ void OMPClauseEnqueue::VisitOMPAcquireClause(const OMPAcquireClause *) {}
 void OMPClauseEnqueue::VisitOMPReleaseClause(const OMPReleaseClause *) {}
 
 void OMPClauseEnqueue::VisitOMPRelaxedClause(const OMPRelaxedClause *) {}
+
+void OMPClauseEnqueue::VisitOMPWeakClause(const OMPWeakClause *) {}
 
 void OMPClauseEnqueue::VisitOMPThreadsClause(const OMPThreadsClause *) {}
 
@@ -3877,7 +3890,7 @@ enum CXErrorCode clang_createTranslationUnit2(CXIndex CIdx,
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
       ast_filename, CXXIdx->getPCHContainerOperations()->getRawReader(),
       ASTUnit::LoadEverything, Diags, FileSystemOpts, HSOpts,
-      CXXIdx->getOnlyLocalDecls(), CaptureDiagsKind::All,
+      /*LangOpts=*/nullptr, CXXIdx->getOnlyLocalDecls(), CaptureDiagsKind::All,
       /*AllowASTWithCompilerErrors=*/true,
       /*UserFilesAreVolatile=*/true);
   *out_TU = MakeCXTranslationUnit(CXXIdx, std::move(AU));
@@ -5713,6 +5726,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("PackExpansionExpr");
   case CXCursor_SizeOfPackExpr:
     return cxstring::createRef("SizeOfPackExpr");
+  case CXCursor_PackIndexingExpr:
+    return cxstring::createRef("PackIndexingExpr");
   case CXCursor_LambdaExpr:
     return cxstring::createRef("LambdaExpr");
   case CXCursor_UnexposedExpr:
@@ -6099,6 +6114,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("attribute(aligned)");
   case CXCursor_ConceptDecl:
     return cxstring::createRef("ConceptDecl");
+  case CXCursor_OpenACCComputeConstruct:
+    return cxstring::createRef("OpenACCComputeConstruct");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");
@@ -9007,7 +9024,7 @@ unsigned clang_CXXMethod_isPureVirtual(CXCursor C) {
   const Decl *D = cxcursor::getCursorDecl(C);
   const CXXMethodDecl *Method =
       D ? dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()) : nullptr;
-  return (Method && Method->isVirtual() && Method->isPure()) ? 1 : 0;
+  return (Method && Method->isPureVirtual()) ? 1 : 0;
 }
 
 unsigned clang_CXXMethod_isConst(CXCursor C) {

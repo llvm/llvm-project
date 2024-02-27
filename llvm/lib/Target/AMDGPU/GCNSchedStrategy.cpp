@@ -713,7 +713,8 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
     return false;
 
   SavedMutations.swap(DAG.Mutations);
-  DAG.addMutation(createIGroupLPDAGMutation(/*IsPostRA=*/false));
+  DAG.addMutation(createIGroupLPDAGMutation(
+      AMDGPU::SchedulingPhase::PreRAReentry, nullptr));
 
   InitialOccupancy = DAG.MinOccupancy;
   // Aggressivly try to reduce register pressure in the unclustered high RP
@@ -855,7 +856,10 @@ bool GCNSchedStage::initGCNRegion() {
     SavedMutations.swap(DAG.Mutations);
     bool IsInitialStage = StageID == GCNSchedStageID::OccInitialSchedule ||
                           StageID == GCNSchedStageID::ILPInitialSchedule;
-    DAG.addMutation(createIGroupLPDAGMutation(/*IsReentry=*/!IsInitialStage));
+    DAG.addMutation(createIGroupLPDAGMutation(
+        IsInitialStage ? AMDGPU::SchedulingPhase::Initial
+                       : AMDGPU::SchedulingPhase::PreRAReentry,
+        &SavedMutations));
   }
 
   return true;
@@ -934,7 +938,7 @@ void GCNSchedStage::checkScheduling() {
     DAG.RegionsWithMinOcc[RegionIdx] =
         PressureAfter.getOccupancy(ST) == DAG.MinOccupancy;
 
-    // Early out if we have achieve the occupancy target.
+    // Early out if we have achieved the occupancy target.
     LLVM_DEBUG(dbgs() << "Pressure in desired limits, done.\n");
     return;
   }
@@ -973,6 +977,7 @@ void GCNSchedStage::checkScheduling() {
 
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
+
   if (PressureAfter.getVGPRNum(false) > MaxVGPRs ||
       PressureAfter.getAGPRNum() > MaxVGPRs ||
       PressureAfter.getSGPRNum() > MaxSGPRs) {
@@ -1195,9 +1200,8 @@ bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
-  if (WavesAfter <= MFI.getMinWavesPerEU() &&
-      !PressureAfter.less(ST, PressureBefore) &&
-      isRegionWithExcessRP()) {
+  if (WavesAfter <= MFI.getMinWavesPerEU() && isRegionWithExcessRP() &&
+      !PressureAfter.less(MF, PressureBefore)) {
     LLVM_DEBUG(dbgs() << "New pressure will result in more spilling.\n");
     return true;
   }
@@ -1569,7 +1573,8 @@ void GCNPostScheduleDAGMILive::schedule() {
   if (HasIGLPInstrs) {
     SavedMutations.clear();
     SavedMutations.swap(Mutations);
-    addMutation(createIGroupLPDAGMutation(/*IsReentry=*/true));
+    addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA,
+                                          &SavedMutations));
   }
 
   ScheduleDAGMI::schedule();

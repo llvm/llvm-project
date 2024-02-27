@@ -84,6 +84,7 @@ endif()
 
 if (LIBCXX_ENABLE_LOCALIZATION)
   list(APPEND LIBCXX_SOURCES
+    fstream.cpp
     include/sso_allocator.h
     ios.cpp
     ios.instantiations.cpp
@@ -229,20 +230,15 @@ if (LIBCXX_ENABLE_SHARED)
   # Maybe re-export symbols from libc++abi
   # In particular, we don't re-export the symbols if libc++abi is merged statically
   # into libc++ because in that case there's no dylib to re-export from.
-  if (APPLE AND LIBCXX_CXX_ABI STREQUAL "libcxxabi"
-            AND NOT DEFINED LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS
+  if (APPLE AND LIBCXX_CXX_ABI MATCHES "libcxxabi$"
             AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
-    set(LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS ON)
-  endif()
+    target_link_libraries(cxx_shared PRIVATE cxxabi-reexports)
 
-  if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
+    # TODO: These exports controls should not be tied to whether we re-export libc++abi symbols
     target_link_libraries(cxx_shared PRIVATE
       "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++unexp.exp"
-      "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.exp"
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
       "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
-
-    target_link_libraries(cxx_shared PRIVATE $<TARGET_NAME_IF_EXISTS:cxxabi-reexports>)
   endif()
 
   # Generate a linker script in place of a libc++.so symlink.
@@ -335,7 +331,13 @@ endif()
 
 if (LIBCXX_ENABLE_LOCALIZATION AND LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_ENABLE_TIME_ZONE_DATABASE)
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
-    tz.cpp
+    include/tzdb/time_zone_link_private.h
+    include/tzdb/time_zone_private.h
+    include/tzdb/types_private.h
+    include/tzdb/tzdb_list_private.h
+    include/tzdb/tzdb_private.h
+    time_zone.cpp
+    tzdb.cpp
     tzdb_list.cpp
     )
 endif()
@@ -398,10 +400,14 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
     if(LIBCXX_INSTALL_HEADERS)
       set(header_install_target install-cxx-headers)
     endif()
+    if(LIBCXX_INSTALL_MODULES)
+      set(module_install_target install-cxx-modules)
+    endif()
     add_custom_target(install-cxx
                       DEPENDS ${lib_install_target}
                               cxx_experimental
                               ${header_install_target}
+                              ${module_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
@@ -409,6 +415,7 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
                       DEPENDS ${lib_install_target}
                               cxx_experimental
                               ${header_install_target}
+                              ${module_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
                       -DCMAKE_INSTALL_DO_STRIP=1

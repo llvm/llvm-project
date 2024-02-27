@@ -146,9 +146,11 @@ module {
 
     bufferization.dealloc_tensor %lhs_sp : tensor<4x4xf64, #DCSR>
     bufferization.dealloc_tensor %rhs_sp : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %all_dn_out : tensor<4x4xi8>
     bufferization.dealloc_tensor %lhs_sp_out : tensor<4x4xi8, #DCSR>
     bufferization.dealloc_tensor %all_sp_out : tensor<4x4xi8, #DCSR>
-
+    bufferization.dealloc_tensor %lhs_sp_ret : tensor<4x4xi8>
+    bufferization.dealloc_tensor %rhs_sp_ret : tensor<4x4xi8>
     return
   }
 }

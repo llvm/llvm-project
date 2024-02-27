@@ -160,6 +160,7 @@ enum Kind {
   kw_swifttailcc,
   kw_preserve_mostcc,
   kw_preserve_allcc,
+  kw_preserve_nonecc,
   kw_ghccc,
   kw_x86_intrcc,
   kw_hhvmcc,

@@ -49,6 +49,13 @@ TEST(LlvmLibcMemSizeTest, Addition) {
   ASSERT_FALSE((max + SafeMemSize{static_cast<size_t>(1)}).valid());
   ASSERT_FALSE((third + third + third + third).valid());
   ASSERT_FALSE((half + half + half).valid());
+
+  ASSERT_FALSE((SafeMemSize{static_cast<size_t>(-1)} +
+                SafeMemSize{static_cast<size_t>(2)})
+                   .valid());
+  ASSERT_FALSE((SafeMemSize{static_cast<size_t>(2)} +
+                SafeMemSize{static_cast<size_t>(-1)})
+                   .valid());
 }
 
 TEST(LlvmLibcMemSizeTest, Multiplication) {

@@ -12,7 +12,6 @@
 #ifndef LLVM_ANALYSIS_INDIRECTCALLVISITOR_H
 #define LLVM_ANALYSIS_INDIRECTCALLVISITOR_H
 
-#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/InstVisitor.h"
 #include <vector>
 

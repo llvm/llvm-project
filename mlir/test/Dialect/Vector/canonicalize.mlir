@@ -1302,6 +1302,24 @@ func.func @store_to_load_tensor_broadcast(%arg0 : tensor<4x4xf32>,
 
 // -----
 
+// CHECK-LABEL: func @store_to_load_tensor_broadcast_scalable
+//  CHECK-SAME: (%[[ARG:.*]]: tensor<?xf32>, %[[V0:.*]]: vector<[4]xf32>)
+//       CHECK:   %[[B:.*]] = vector.broadcast %[[V0]] : vector<[4]xf32> to vector<6x[4]xf32>
+//       CHECK:   return %[[B]] : vector<6x[4]xf32>
+func.func @store_to_load_tensor_broadcast_scalable(%arg0 : tensor<?xf32>,
+  %v0 : vector<[4]xf32>) -> vector<6x[4]xf32> {
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg0[%c0] {in_bounds = [true]} :
+    vector<[4]xf32>, tensor<?xf32>
+  %0 = vector.transfer_read %w0[%c0], %cf0 {in_bounds = [true, true],
+  permutation_map = affine_map<(d0) -> (0, d0)>} :
+    tensor<?xf32>, vector<6x[4]xf32>
+  return %0 : vector<6x[4]xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @store_to_load_tensor_perm_broadcast
 //  CHECK-SAME: (%[[ARG:.*]]: tensor<4x4x4xf32>, %[[V0:.*]]: vector<4x1xf32>)
 //       CHECK:   %[[B:.*]] = vector.broadcast %[[V0]] : vector<4x1xf32> to vector<100x5x4x1xf32>
@@ -2548,4 +2566,77 @@ func.func @load_store_forwarding_rank_mismatch(%v0: vector<4x1x1xf32>, %arg0: te
       permutation_map = affine_map<(d0, d1, d2) -> (d1, 0, d2, 0)>} :
       tensor<4x4x4xf32>, vector<1x100x4x5xf32>
   return %r : vector<1x100x4x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_true_from_constant_mask() -> i1 {
+func.func @extract_true_from_constant_mask() -> i1 {
+// CHECK:      %[[TRUE:.*]] = arith.constant true
+// CHECK-NEXT: return %[[TRUE]] : i1
+  %mask = vector.constant_mask [2, 2, 3] : vector<4x4x4xi1>
+  %extract = vector.extract %mask[1, 1, 2] : i1 from vector<4x4x4xi1>
+  return %extract : i1
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_false_from_constant_mask() -> i1 {
+func.func @extract_false_from_constant_mask() -> i1 {
+// CHECK:      %[[FALSE:.*]] = arith.constant false
+// CHECK-NEXT: return %[[FALSE]] : i1
+  %mask = vector.constant_mask [2, 2, 3] : vector<4x4x4xi1>
+  %extract = vector.extract %mask[1, 2, 2] : i1 from vector<4x4x4xi1>
+  return %extract : i1
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_from_create_mask() -> i1 {
+func.func @extract_from_create_mask() -> i1 {
+// CHECK:      %[[TRUE:.*]] = arith.constant true
+// CHECK-NEXT: return %[[TRUE]] : i1
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %mask = vector.create_mask %c2, %c2, %c3 : vector<4x4x4xi1>
+  %extract = vector.extract %mask[1, 1, 2] : i1 from vector<4x4x4xi1>
+  return %extract : i1
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_subvector_from_constant_mask() ->
+// CHECK-SAME:  vector<6xi1> {
+func.func @extract_subvector_from_constant_mask() -> vector<6xi1> {
+// CHECK:      %[[S0:.*]] = vector.constant_mask [4] : vector<6xi1>
+// CHECK-NEXT: return %[[S0]] : vector<6xi1>
+  %mask = vector.constant_mask [2, 3, 4] : vector<4x5x6xi1>
+  %extract = vector.extract %mask[1, 2] : vector<6xi1> from vector<4x5x6xi1>
+  return %extract : vector<6xi1>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_scalar_with_dynamic_positions(
+// CHECK-SAME:    %[[INDEX:.*]]: index) -> i1 {
+func.func @extract_scalar_with_dynamic_positions(%index: index) -> i1 {
+// CHECK:       %[[S0:.*]] = vector.constant_mask [2, 2, 3] : vector<4x4x4xi1>
+// CHECK-NEXT:  %[[S1:.*]] = vector.extract %[[S0]][1, 1, %[[INDEX]]] : i1 from vector<4x4x4xi1>
+// CHECK-NEXT:  return %[[S1]] : i1
+  %mask = vector.constant_mask [2, 2, 3] : vector<4x4x4xi1>
+  %extract = vector.extract %mask[1, 1, %index] : i1 from vector<4x4x4xi1>
+  return %extract : i1
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_subvector_with_dynamic_positions
+// CHECK-SAME:    %[[INDEX:.*]]: index) -> vector<6xi1> {
+func.func @extract_subvector_with_dynamic_positions(%index: index) -> vector<6xi1> {
+// CHECK:      %[[S0:.*]] = vector.constant_mask [2, 3, 4] : vector<4x5x6xi1>
+// CHECK-NEXT: %[[S1:.*]] = vector.extract %[[S0]][1, %[[INDEX]]] : vector<6xi1> from vector<4x5x6xi1>
+// CHECK-NEXT: return %[[S1]] : vector<6xi1>
+  %mask = vector.constant_mask [2, 3, 4] : vector<4x5x6xi1>
+  %extract = vector.extract %mask[1, %index] : vector<6xi1> from vector<4x5x6xi1>
+  return %extract : vector<6xi1>
 }

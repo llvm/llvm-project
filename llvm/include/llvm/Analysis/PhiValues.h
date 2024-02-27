@@ -132,6 +132,7 @@ class PhiValuesPrinterPass : public PassInfoMixin<PhiValuesPrinterPass> {
 public:
   explicit PhiValuesPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 /// Wrapper pass for the legacy pass manager

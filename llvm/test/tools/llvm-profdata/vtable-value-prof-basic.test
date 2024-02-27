@@ -16,7 +16,7 @@ RUN: llvm-profdata show --function=main --ic-targets --show-vtables indexed.prof
 
 Generate text profile from raw profile and show the data.
 RUN: llvm-profdata merge --text %p/Inputs/vtable-value-prof-basic.profraw -o vtable-value-prof-basic.proftext
-RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text vtable-value-prof-basic.proftext | FileCheck %s --check-prefix=ICTEXT 
+RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text vtable-value-prof-basic.proftext | FileCheck %s --check-prefix=ICTEXT
 
 RAW: Counters:
 RAW-NEXT:  main:
