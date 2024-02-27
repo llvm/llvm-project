@@ -662,7 +662,6 @@ variant cstring
 variant initializer_list
 variant limits
 variant new
-variant tuple
 variant version
 vector array
 vector cctype
