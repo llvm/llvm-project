@@ -166,7 +166,7 @@ constexpr bool encPowOfTwo(LevelFormat fmt) {
   return (enc & (enc - 1)) == 0;
 }
 
-// All LevelFormat must have only one bit set (power of two).
+// All LevelFormats must have only one bit set (power of two).
 static_assert(encPowOfTwo(LevelFormat::Dense) &&
               encPowOfTwo(LevelFormat::Batch) &&
               encPowOfTwo(LevelFormat::Compressed) &&
@@ -241,7 +241,7 @@ public:
   static constexpr bool isValidLvlBits(uint64_t lvlBits) {
     auto fmt = static_cast<LevelFormat>(lvlBits & 0xffff0000);
     const uint64_t propertyBits = lvlBits & 0xffff;
-    // If undefined/dense/NOutOfM, then must be unique and ordered.
+    // If undefined/dense/batch/NOutOfM, then must be unique and ordered.
     // Otherwise, the format must be one of the known ones.
     return (isAnyOfFmt<LevelFormat::Undef, LevelFormat::Dense,
                        LevelFormat::Batch, LevelFormat::NOutOfM>(fmt))
