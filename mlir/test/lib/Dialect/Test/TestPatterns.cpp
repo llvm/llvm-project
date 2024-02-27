@@ -1465,16 +1465,17 @@ struct TestSignatureConversionUndo
   }
 };
 
-
 struct TestTestOneToNSignatureConversionNoConverter
     : public OpConversionPattern<TestOneToNSignatureConversionNoConverterOp> {
   TestTestOneToNSignatureConversionNoConverter(const TypeConverter &converter,
                                                MLIRContext *context)
-      : OpConversionPattern<TestOneToNSignatureConversionNoConverterOp>(context),
+      : OpConversionPattern<TestOneToNSignatureConversionNoConverterOp>(
+            context),
         converter(converter) {}
 
   LogicalResult
-  matchAndRewrite(TestOneToNSignatureConversionNoConverterOp op, OpAdaptor adaptor,
+  matchAndRewrite(TestOneToNSignatureConversionNoConverterOp op,
+                  OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     Region &region = op->getRegion(0);
     Block *entry = &region.front();
@@ -1485,8 +1486,8 @@ struct TestTestOneToNSignatureConversionNoConverter
     if (failed(converter.convertSignatureArgs(argTys, argMap)))
       return failure();
 
-    rewriter.modifyOpInPlace(op, 
-            [&]{ rewriter.applySignatureConversion(&region, argMap); });
+    rewriter.modifyOpInPlace(
+        op, [&] { rewriter.applySignatureConversion(&region, argMap); });
     return success();
   }
 
@@ -1615,12 +1616,11 @@ struct TestTypeConversionDriver
           results.push_back(result);
           return success();
         });
-    converter.addConversion(
-        [&](VectorType type, 
-            SmallVectorImpl<Type> &results) -> std::optional<LogicalResult> {
-          results = SmallVector<Type>(type.getNumElements(), type.getElementType());
-          return success();
-        });
+    converter.addConversion([&](VectorType type, SmallVectorImpl<Type> &results)
+                                -> std::optional<LogicalResult> {
+      results = SmallVector<Type>(type.getNumElements(), type.getElementType());
+      return success();
+    });
 
     /// Add the legal set of type materializations.
     converter.addSourceMaterialization([](OpBuilder &builder, Type resultType,
