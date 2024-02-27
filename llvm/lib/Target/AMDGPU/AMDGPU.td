@@ -1658,7 +1658,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureCuMode,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
-   FeatureLDSBankCount32, // TODO-GFX1210: redefine
+   FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureFmacF64Inst,
    FeatureDPALU_DPP,
@@ -1666,7 +1666,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureDot7Insts,
    FeatureDot8Insts,
    FeatureWavefrontSize32,
-   FeatureShaderCyclesRegister,
+   FeatureShaderCyclesHiLoRegisters,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,
    FeatureAtomicFaddRtnInsts,
