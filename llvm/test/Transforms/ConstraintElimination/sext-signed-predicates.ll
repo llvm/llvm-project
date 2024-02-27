@@ -127,36 +127,6 @@ else:
 
 ; Negative tests
 
-define i1 @cmp_sext_unsigned(i32 %a, i32 %b){
-; CHECK-LABEL: define i1 @cmp_sext_unsigned(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
-; CHECK:       then:
-; CHECK-NEXT:    [[SA:%.*]] = sext i32 [[A]] to i64
-; CHECK-NEXT:    [[SB:%.*]] = sext i32 [[B]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i64 [[SB]], [[ADD]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
-; CHECK:       else:
-; CHECK-NEXT:    ret i1 false
-;
-entry:
-  %cmp = icmp slt i32 %a, %b
-  br i1 %cmp, label %then, label %else
-
-then:
-  %sa = sext i32 %a to i64
-  %sb = sext i32 %b to i64
-  %add = add nsw i64 %sa, 1
-  %cmp2 = icmp uge i64 %sb, %add
-  ret i1 %cmp2
-
-else:
-  ret i1 false
-}
-
 define i1 @cmp_zext(i32 %a, i32 %b){
 ; CHECK-LABEL: define i1 @cmp_zext(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
@@ -245,4 +215,56 @@ then:
 
 else:
   ret i1 false
+}
+
+declare void @use(i1)
+
+define void @sge_sext(i16 %x, i32 %y) {
+; CHECK-LABEL: define void @sge_sext(
+; CHECK-SAME: i16 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_EXT:%.*]] = sext i16 [[X]] to i32
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[X_EXT]], [[Y]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i32 [[Y]], -10
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[T_3:%.*]] = icmp sge i32 [[X_EXT]], -9
+; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp sge i32 [[X_EXT]], -9
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    [[C_4:%.*]] = icmp sge i32 [[Y]], [[X_EXT]]
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[C_5:%.*]] = icmp sge i16 [[X]], -9
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    ret void
+; CHECK:       bb2:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x.ext = sext i16 %x to i32
+  %c.1 = icmp sge i32 %x.ext, %y
+  %c.2 = icmp sge i32 %y, -10
+  %and = and i1 %c.1, %c.2
+  br i1 %and, label %bb1, label %bb2
+
+bb1:
+  %t.1 = icmp sge i32 %x.ext, %y
+  call void @use(i1 %t.1)
+  %t.2 = icmp sge i16 %x, -10
+  call void @use(i1 %t.2)
+  %t.3 = icmp sge i32 %x.ext, -9
+  call void @use(i1 %t.3)
+  %c.3 = icmp sge i32 %x.ext, -9
+  call void @use(i1 %c.3)
+  %c.4 = icmp sge i32 %y, %x.ext
+  call void @use(i1 %c.4)
+  %c.5 = icmp sge i16 %x, -9
+  call void @use(i1 %c.5)
+  ret void
+
+bb2:
+  ret void
 }
