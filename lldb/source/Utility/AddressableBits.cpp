@@ -33,18 +33,26 @@ void AddressableBits::SetHighmemAddressableBits(
   m_high_memory_addr_bits = highmem_addressing_bits;
 }
 
+addr_t AddressableBits::AddressableBitToMask(uint32_t addressable_bits) {
+  assert(addressable_bits <= sizeof(addr_t) * 8);
+  if (addressable_bits == 64)
+    return 0; // all bits used for addressing
+  else
+    return ~((1ULL << addressable_bits) - 1);
+}
+
 void AddressableBits::SetProcessMasks(Process &process) {
   if (m_low_memory_addr_bits == 0 && m_high_memory_addr_bits == 0)
     return;
 
   if (m_low_memory_addr_bits != 0) {
-    addr_t low_addr_mask = ~((1ULL << m_low_memory_addr_bits) - 1);
+    addr_t low_addr_mask = AddressableBitToMask(m_low_memory_addr_bits);
     process.SetCodeAddressMask(low_addr_mask);
     process.SetDataAddressMask(low_addr_mask);
   }
 
   if (m_high_memory_addr_bits != 0) {
-    addr_t hi_addr_mask = ~((1ULL << m_high_memory_addr_bits) - 1);
+    addr_t hi_addr_mask = AddressableBitToMask(m_high_memory_addr_bits);
     process.SetHighmemCodeAddressMask(hi_addr_mask);
     process.SetHighmemDataAddressMask(hi_addr_mask);
   }

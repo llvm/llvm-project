@@ -407,6 +407,129 @@ public:
   ///     the process isn't loaded from a core file.
   lldb::SBFileSpec GetCoreFile();
 
+  /// Get the current address mask that can be applied to addresses
+  /// before reading from memory.
+  ///
+  /// \param[in] type
+  ///     lldb may have different address masks for code and data
+  ///     addresses.  Either can be requested, or most commonly,
+  ///     eAddressMaskTypeAny can be requested and the least specific
+  ///     mask will be fetched.  e.g. on a target where instructions
+  ///     are word aligned, the Code mask might clear the low 2 bits.
+  ///
+  /// \param[in] addr_range
+  ///     Specify whether the address mask for high or low address spaces
+  ///     is requested.
+  ///     It is highly unusual to have different address masks in high
+  ///     or low memory, and by default the eAddressMaskRangeLow is the
+  ///     only one used for both types of addresses, the default value for
+  ///     this argument is the correct one.
+  ///
+  ///     On some architectures like AArch64, it is possible to have
+  ///     different page table setups for low and high memory, so different
+  ///     numbers of bits relevant to addressing, and it is possible to have
+  ///     a program running in one half of memory and accessing the other
+  ///     as heap, etc.  In that case the eAddressMaskRangeLow and
+  ///     eAddressMaskRangeHigh will have different masks that must be handled.
+  ///
+  /// \return
+  ///     The address mask currently in use.  Bits which are not used
+  ///     for addressing will be set to 1 in the mask.
+  lldb::addr_t GetAddressMask(
+      lldb::AddressMaskType type,
+      lldb::AddressMaskRange addr_range = lldb::eAddressMaskRangeLow);
+
+  /// Set the current address mask that can be applied to addresses
+  /// before reading from memory.
+  ///
+  /// \param[in] type
+  ///     lldb may have different address masks for code and data
+  ///     addresses.  Either can be set, or most commonly,
+  ///     eAddressMaskTypeAll can be set for both types of addresses.
+  ///     An example where they could be different is a target where
+  ///     instructions are word aligned, so the low 2 bits are always
+  ///     zero.
+  ///
+  /// \param[in] mask
+  ///     The address mask to set.  Bits which are not used for addressing
+  ///     should be set to 1 in the mask.
+  ///
+  /// \param[in] addr_range
+  ///     Specify whether the address mask for high or low address spaces
+  ///     is being set.
+  ///     It is highly unusual to have different address masks in high
+  ///     or low memory, and by default the eAddressMaskRangeLow is the
+  ///     only one used for both types of addresses, the default value for
+  ///     this argument is the correct one.
+  ///
+  ///     On some architectures like AArch64, it is possible to have
+  ///     different page table setups for low and high memory, so different
+  ///     numbers of bits relevant to addressing, and it is possible to have
+  ///     a program running in one half of memory and accessing the other
+  ///     as heap, etc.  In that case the eAddressMaskRangeLow and
+  ///     eAddressMaskRangeHigh will have different masks that must be
+  ///     specified.
+  void SetAddressMask(
+      lldb::AddressMaskType type, lldb::addr_t mask,
+      lldb::AddressMaskRange addr_range = lldb::eAddressMaskRangeLow);
+
+  /// Set the number of bits used for addressing in this Process.
+  ///
+  /// In some environments, the number of bits that are used for addressing
+  /// is the natural representation insted of a mask; this method calculates
+  /// the addressing mask that lldb uses internally from that number.
+  ///
+  /// \param[in] type
+  ///     lldb may have different address masks for code and data
+  ///     addresses.  Either can be set, or most commonly,
+  ///     eAddressMaskTypeAll can be set for both types of addresses.
+  ///     An example where they could be different is a target where
+  ///     instructions are word aligned, so the low 2 bits are always
+  ///     zero.
+  ///
+  /// \param[in] num_bits
+  ///     Number of bits that are used for addressing.  e.g. the low 42
+  ///     bits may be the only ones used for addressing, and high bits may
+  ///     store metadata and should be ignored by lldb.
+  ///
+  /// \param[in] addr_range
+  ///     Specify whether the address mask for high or low address spaces
+  ///     is being set.
+  ///     It is highly unusual to have different address masks in high
+  ///     or low memory, and by default the eAddressMaskRangeLow is the
+  ///     only one used for both types of addresses, the default value for
+  ///     this argument is the correct one.
+  ///
+  ///     On some architectures like AArch64, it is possible to have
+  ///     different page table setups for low and high memory, so different
+  ///     numbers of bits relevant to addressing, and it is possible to have
+  ///     a program running in one half of memory and accessing the other
+  ///     as heap, etc.  In that case the eAddressMaskRangeLow and
+  ///     eAddressMaskRangeHigh will have different masks that must be
+  ///     specified.
+  void
+  SetAddressableBits(AddressMaskType type, uint32_t num_bits,
+                     AddressMaskRange addr_range = lldb::eAddressMaskRangeLow);
+
+  /// Clear the non-addressable bits of an \a addr value and return a
+  /// virtual address in memory.
+  ///
+  /// Bits that are not used in addressing may be used for other purposes;
+  /// pointer authentication, or metadata in the top byte, or the 0th bit
+  /// of armv7 code addresses to indicate arm/thumb are common examples.
+  ///
+  /// \param[in] addr
+  ///     The address that should be cleared of non-addressable bits.
+  ///
+  /// \param[in] type
+  ///     If the address is known to be a code address (address of a function,
+  ///     for example), eAddressMaskTypeCode may be passed, which may have
+  ///     stricter address clearing than data addresses e.g. the low 2 bits
+  ///     being unused for code addresses on AArch64.
+  lldb::addr_t
+  FixAddress(lldb::addr_t addr,
+             lldb::AddressMaskType type = lldb::eAddressMaskTypeAny);
+
   /// Allocate memory within the process.
   ///
   /// This function will allocate memory in the process's address space.
