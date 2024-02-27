@@ -51,12 +51,6 @@ static cl::opt<bool> Widen16BitOps(
   cl::ReallyHidden,
   cl::init(true));
 
-static cl::opt<bool> LowerAddrSpaceCast(
-    "amdgpu-codegenprepare-addrspacecast",
-    cl::desc("Detect non-null addrspacecast source and lower them early to "
-             "avoid the null pointer check"),
-    cl::ReallyHidden, cl::init(true));
-
 static cl::opt<bool>
     BreakLargePHIs("amdgpu-codegenprepare-break-large-phis",
                    cl::desc("Break large PHI nodes for DAGISel"),
@@ -2021,10 +2015,39 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   return true;
 }
 
-bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
-  if (!LowerAddrSpaceCast)
-    return false;
+/// \param V  Value to check
+/// \param DL DataLayout
+/// \param TM TargetMachine (TODO: remove once DL contains nullptr values)
+/// \param AS Target Address Space
+/// \return true if \p V cannot be the null value of \p AS, false otherwise.
+static bool isPtrKnownNeverNull(Value *V, const DataLayout &DL,
+                                const AMDGPUTargetMachine &TM, unsigned AS) {
+  // Pointer cannot be null if it's a block address, GV or alloca.
+  // NOTE: We don't support extern_weak, but if we did, we'd need to check for
+  // it as the symbol could be null in such cases.
+  if (isa<BlockAddress>(V) || isa<GlobalValue>(V) || isa<AllocaInst>(V))
+    return true;
 
+  // Check nonnull arguments.
+  if (const auto *Arg = dyn_cast<Argument>(V); Arg && Arg->hasNonNullAttr())
+    return true;
+
+  // TODO: Calls that return nonnull?
+
+  // For all other things, use KnownBits.
+  // We either use 0 or all bits set to indicate null, so check whether the
+  // value can be zero or all ones.
+  //
+  // TODO: Use ValueTracking's isKnownNeverNull if it becomes aware that some
+  // address spaces have non-zero null values.
+  auto SrcPtrKB = computeKnownBits(V, DL).trunc(DL.getPointerSizeInBits(AS));
+  const auto NullVal = TM.getNullPointerValue(AS);
+  assert((NullVal == 0 || NullVal == -1) &&
+         "don't know how to check for this null value!");
+  return NullVal ? !SrcPtrKB.getMaxValue().isAllOnes() : SrcPtrKB.isNonZero();
+}
+
+bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
   // Check if this can be lowered to a amdgcn.addrspacecast.nonnull.
   // This is only worthwhile for casts from/to priv/local to flat.
   const unsigned SrcAS = I.getSrcAddressSpace();
@@ -2040,24 +2063,12 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
   if (!CanLower)
     return false;
 
-  // Check the Src operand, and look through Phis.
+  // Check the Src operand, looking through any PHIs.
   SmallVector<Value *, 4> WorkList;
   DenseSet<const PHINode *> SeenPHIs;
   WorkList.push_back(I.getOperand(0));
   while (!WorkList.empty()) {
     Value *Cur = getUnderlyingObject(WorkList.pop_back_val());
-
-    // Pointer cannot be null if it's a block address, GV or alloca.
-    // NOTE: We don't support extern_weak, but if we did, we'd need to check for
-    // it as the symbol could be null in such cases.
-    if (isa<BlockAddress>(Cur) || isa<GlobalValue>(Cur) || isa<AllocaInst>(Cur))
-      continue;
-
-    // Check nonnull arguments.
-    if (const auto *Arg = dyn_cast<Argument>(Cur); Arg && Arg->hasNonNullAttr())
-      continue;
-
-    // TODO: Calls that return nonnull?
 
     // Look through PHIs - add all incoming values to the queue.
     if (const auto *Phi = dyn_cast<PHINode>(Cur)) {
@@ -2070,18 +2081,8 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
       continue;
     }
 
-    // For all other things, use KnownBits.
-    // We either use 0 or all bits set to indicate null, so check whether the
-    // value can be zero or all ones.
-    auto SrcPtrKB =
-        computeKnownBits(Cur, *DL).trunc(DL->getPointerSizeInBits(SrcAS));
-    const auto NullVal = TM->getNullPointerValue(SrcAS);
-    assert((NullVal == 0 || NullVal == -1) &&
-           "don't know how to check for this null value!");
-    if (NullVal ? !SrcPtrKB.getMaxValue().isAllOnes() : SrcPtrKB.isNonZero())
+    if (isPtrKnownNeverNull(Cur, *DL, *TM, SrcAS))
       continue;
-
-    // Value is unknown so we can't lower.
     return false;
   }
 
