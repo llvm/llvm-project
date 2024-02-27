@@ -204,12 +204,7 @@ public:
                           bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override {
     // File includes are handled by LexedFileChanged.
-    if (!SuggestedModule)
-      return;
-
-    // Modules that will not be imported and were not loaded from an AST file
-    // (e.g. the module being implemented) are also handled by LexedFileChanged.
-    if (!ModuleImported && !SuggestedModule->getASTFile())
+    if (!ModuleImported)
       return;
 
     // Calculate EndLoc for the directive
@@ -462,20 +457,31 @@ void IncludeTreeBuilder::exitedInclude(Preprocessor &PP, FileID IncludedBy,
   SourceManager &SM = PP.getSourceManager();
   std::pair<FileID, unsigned> LocInfo = SM.getDecomposedExpansionLoc(ExitLoc);
 
-  // If the file includes already has a node for the current source location, it
-  // must be an import that turned out to be spurious.
-  auto &CurIncludes = IncludeStack.back().Includes;
-  if (!CurIncludes.empty() && CurIncludes.back().Offset == LocInfo.second) {
-    assert(!IncludeTree->isSubmodule());
-    auto Import = CurIncludes.pop_back_val();
-    assert(Import.Kind == cas::IncludeTree::NodeKind::ModuleImport);
-    auto SpuriousImport = cas::IncludeTree::SpuriousImport::create(
-        DB, Import.Ref, IncludeTree->getRef());
-    if (!SpuriousImport)
+  // If the exited header belongs to a sub-module that's marked as missing from
+  // the umbrella, we must've first loaded its PCM file to find that out.
+  // We need to match this behavior with include-tree. Let's mark this as
+  // spurious import. For this node, Clang will load the top-level module, emit
+  // the appropriate diagnostics and then fall back to textual inclusion of the
+  // header itself.
+  if (auto FE = PP.getSourceManager().getFileEntryRefForID(Include)) {
+    ModuleMap &ModMap = PP.getHeaderSearchInfo().getModuleMap();
+    Module *M = ModMap.findModuleForHeader(*FE).getModule();
+    if (M && M->IsInferredMissingFromUmbrellaHeader) {
+      assert(!IncludeTree->isSubmodule() &&
+             "Include of header missing from umbrella header is modular");
+
+      moduleImport(PP, M, ExitLoc);
+      auto Import = IncludeStack.back().Includes.pop_back_val();
+
+      auto SpuriousImport = check(cas::IncludeTree::SpuriousImport::create(
+          DB, Import.Ref, IncludeTree->getRef()));
+      if (!SpuriousImport)
+        return;
+      IncludeStack.back().Includes.push_back(
+          {SpuriousImport->getRef(), LocInfo.second,
+           cas::IncludeTree::NodeKind::SpuriousImport});
       return;
-    CurIncludes.push_back({SpuriousImport->getRef(), LocInfo.second,
-                           cas::IncludeTree::NodeKind::SpuriousImport});
-    return;
+    }
   }
 
   IncludeStack.back().Includes.push_back({IncludeTree->getRef(), LocInfo.second,

@@ -2227,6 +2227,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
         << Module->getFullModuleName()
         << SourceRange(Path.front().second, Path.back().second);
 
+      Module->IsInferredMissingFromUmbrellaHeader = true;
+
       return ModuleLoadResult(Module, ModuleLoadResult::MissingExpected);
     }
 
