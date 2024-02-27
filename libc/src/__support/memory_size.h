@@ -52,9 +52,11 @@ public:
 
   LIBC_INLINE SafeMemSize operator+(const SafeMemSize &other) {
     type result;
-    if (LIBC_UNLIKELY((value | other.value) < 0))
+    if (LIBC_UNLIKELY((value | other.value) < 0)) {
       result = -1;
-    result = value + other.value;
+    } else {
+      result = value + other.value;
+    }
     return SafeMemSize{result};
   }
 
