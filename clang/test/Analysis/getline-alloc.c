@@ -69,3 +69,27 @@ void test_getline_leak() {
 
   fclose(F1); // expected-warning {{Potential memory leak}}
 }
+
+void test_getline_stack() {
+  size_t n = 10;
+  char buffer[10];
+  char *ptr = buffer;
+
+  FILE *F1 = tmpfile();
+  if (!F1)
+    return;
+
+  getline(&ptr, &n, F1); // expected-warning {{Argument to getline() is the address of the local variable 'buffer', which is not memory allocated by malloc()}}
+}
+
+void test_getline_static() {
+  static size_t n = 10;
+  static char buffer[10];
+  char *ptr = buffer;
+
+  FILE *F1 = tmpfile();
+  if (!F1)
+    return;
+
+  getline(&ptr, &n, F1); // expected-warning {{Argument to getline() is the address of the static variable 'buffer', which is not memory allocated by malloc()}}
+}
