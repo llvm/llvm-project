@@ -22,7 +22,7 @@ define void @vector_interleave_store_nxv32i1_nxv16i1(<vscale x 16 x i1> %a, <vsc
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 2
 ; CHECK-NEXT:    add a2, a1, a1
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vx v9, v8, a1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vsm.v v9, (a0)
