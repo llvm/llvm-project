@@ -458,7 +458,7 @@ calculateMemoryRequirements(Value accessedPtr, bool isNontemporal) {
 
   auto memoryAccess = spirv::MemoryAccess::None;
   if (isNontemporal) {
-    memoryAccess = memoryAccess | spirv::MemoryAccess::Nontemporal;
+    memoryAccess = spirv::MemoryAccess::Nontemporal;
   }
 
   auto ptrType = cast<spirv::PointerType>(accessedPtr.getType());
