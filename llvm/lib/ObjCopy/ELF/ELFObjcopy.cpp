@@ -300,6 +300,10 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
          Config.SymbolsToLocalize.matches(Sym.Name)))
       Sym.Binding = STB_LOCAL;
 
+    for (auto &[Matcher, Visibility] : ELFConfig.SymbolsToSetVisibility)
+      if (Matcher.matches(Sym.Name))
+        Sym.Visibility = Visibility;
+
     // Note: these two globalize flags have very similar names but different
     // meanings:
     //

@@ -455,6 +455,15 @@ them.
  Set the start address of the output to ``<addr>``. Overrides any previously
  specified :option:`--change-start` or :option:`--adjust-start` options.
 
+.. option:: --set-symbol-visibility <symbol>=<visibility>
+
+ Change the visibility of a symbol to the specified value.
+
+.. option:: --set-symbols-visibility <filename>=<visibility>
+
+ Read a list of symbols from <filename> and change their visibility to the
+ specified value. Visibility values: default, internal, hidden, protected.
+
 .. option:: --split-dwo <dwo-file>
 
  Equivalent to running :program:`llvm-objcopy` with :option:`--extract-dwo` and
