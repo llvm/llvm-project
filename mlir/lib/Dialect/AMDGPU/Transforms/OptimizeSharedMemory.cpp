@@ -243,7 +243,6 @@ public:
   OptimizeSharedMemoryPass(const OptimizeSharedMemoryOptions &options)
       : OptimizeSharedMemoryBase(options) {}
   void runOnOperation() override {
-
     Operation *op = getOperation();
     SmallVector<memref::AllocOp> shmAllocOps;
     op->walk([&](memref::AllocOp allocOp) {
