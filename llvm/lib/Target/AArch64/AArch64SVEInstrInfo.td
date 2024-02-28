@@ -4017,16 +4017,6 @@ let Predicates = [HasSVEorSME] in {
 
 // Aliases for existing SVE instructions for which predicate-as-counter are
 // accepted as an operand to the instruction
-def : InstAlias<"ldr $Pt, [$Rn, $imm9, mul vl]",
-               (LDR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, simm9:$imm9), 0>;
-def : InstAlias<"ldr $Pt, [$Rn]",
-               (LDR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, 0), 0>;
-
-def : InstAlias<"str $Pt, [$Rn, $imm9, mul vl]",
-               (STR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, simm9:$imm9), 0>;
-def : InstAlias<"str $Pt, [$Rn]",
-               (STR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, 0), 0>;
-
 def : InstAlias<"mov $Pd, $Pn",
                (ORR_PPzPP PNRasPPR8:$Pd, PNRasPPR8:$Pn, PNRasPPR8:$Pn, PNRasPPR8:$Pn), 0>;
 
