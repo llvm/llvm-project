@@ -15,6 +15,7 @@
 #include "llvm/Support/CommandLine.h"
 
 extern llvm::cl::opt<bool> treatIndexAsSection;
+extern llvm::cl::opt<bool> enableDelayedPrivatization;
 
 namespace fir {
 class FirOpBuilder;

@@ -66,9 +66,10 @@ void DataSharingProcessor::cloneSymbol(const Fortran::semantics::Symbol *sym) {
 }
 
 void DataSharingProcessor::copyFirstPrivateSymbol(
-    const Fortran::semantics::Symbol *sym) {
+    const Fortran::semantics::Symbol *sym,
+    mlir::OpBuilder::InsertPoint *copyAssignIP) {
   if (sym->test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate))
-    converter.copyHostAssociateVar(*sym);
+    converter.copyHostAssociateVar(*sym, copyAssignIP);
 }
 
 void DataSharingProcessor::copyLastPrivateSymbol(
@@ -307,14 +308,10 @@ void DataSharingProcessor::privatize() {
   for (const Fortran::semantics::Symbol *sym : privatizedSymbols) {
     if (const auto *commonDet =
             sym->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
-      for (const auto &mem : commonDet->objects()) {
-        cloneSymbol(&*mem);
-        copyFirstPrivateSymbol(&*mem);
-      }
-    } else {
-      cloneSymbol(sym);
-      copyFirstPrivateSymbol(sym);
-    }
+      for (const auto &mem : commonDet->objects())
+        doPrivatize(&*mem);
+    } else
+      doPrivatize(sym);
   }
 }
 
@@ -338,11 +335,95 @@ void DataSharingProcessor::defaultPrivatize() {
         !sym->GetUltimate().has<Fortran::semantics::NamelistDetails>() &&
         !symbolsInNestedRegions.contains(sym) &&
         !symbolsInParentRegions.contains(sym) &&
-        !privatizedSymbols.contains(sym)) {
-      cloneSymbol(sym);
-      copyFirstPrivateSymbol(sym);
-    }
+        !privatizedSymbols.contains(sym))
+      doPrivatize(sym);
   }
+}
+
+void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
+  if (!useDelayedPrivatization) {
+    cloneSymbol(sym);
+    copyFirstPrivateSymbol(sym);
+    return;
+  }
+
+  Fortran::lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
+  assert(hsb && "Host symbol box not found");
+
+  mlir::Type symType = hsb.getAddr().getType();
+  mlir::Location symLoc = hsb.getAddr().getLoc();
+  std::string privatizerName = sym->name().ToString() + ".privatizer";
+  bool isFirstPrivate =
+      sym->test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate);
+
+  mlir::omp::PrivateClauseOp privatizerOp = [&]() {
+    auto moduleOp = firOpBuilder.getModule();
+    auto uniquePrivatizerName = fir::getTypeAsString(
+        symType, converter.getKindMap(),
+        converter.mangleName(*sym) +
+            (isFirstPrivate ? "_firstprivate" : "_private"));
+
+    if (auto existingPrivatizer =
+            moduleOp.lookupSymbol<mlir::omp::PrivateClauseOp>(
+                uniquePrivatizerName))
+      return existingPrivatizer;
+
+    auto ip = firOpBuilder.saveInsertionPoint();
+    firOpBuilder.setInsertionPoint(&moduleOp.getBodyRegion().front(),
+                                   moduleOp.getBodyRegion().front().begin());
+    auto result = firOpBuilder.create<mlir::omp::PrivateClauseOp>(
+        symLoc, uniquePrivatizerName, symType,
+        isFirstPrivate ? mlir::omp::DataSharingClauseType::FirstPrivate
+                       : mlir::omp::DataSharingClauseType::Private);
+
+    symTable->pushScope();
+
+    // Populate the `alloc` region.
+    {
+      mlir::Region &allocRegion = result.getAllocRegion();
+      mlir::Block *allocEntryBlock = firOpBuilder.createBlock(
+          &allocRegion, /*insertPt=*/{}, symType, symLoc);
+
+      firOpBuilder.setInsertionPointToEnd(allocEntryBlock);
+      symTable->addSymbol(*sym, allocRegion.getArgument(0));
+      symTable->pushScope();
+      cloneSymbol(sym);
+      firOpBuilder.create<mlir::omp::YieldOp>(
+          hsb.getAddr().getLoc(),
+          symTable->shallowLookupSymbol(*sym).getAddr());
+      symTable->popScope();
+    }
+
+    // Populate the `copy` region if this is a `firstprivate`.
+    if (isFirstPrivate) {
+      mlir::Region &copyRegion = result.getCopyRegion();
+      // First block argument corresponding to the original/host value while
+      // second block argument corresponding to the privatized value.
+      mlir::Block *copyEntryBlock = firOpBuilder.createBlock(
+          &copyRegion, /*insertPt=*/{}, {symType, symType}, {symLoc, symLoc});
+      firOpBuilder.setInsertionPointToEnd(copyEntryBlock);
+      symTable->addSymbol(*sym, copyRegion.getArgument(0),
+                          /*force=*/true);
+      symTable->pushScope();
+      symTable->addSymbol(*sym, copyRegion.getArgument(1));
+      auto ip = firOpBuilder.saveInsertionPoint();
+      copyFirstPrivateSymbol(sym, &ip);
+
+      firOpBuilder.create<mlir::omp::YieldOp>(
+          hsb.getAddr().getLoc(),
+          symTable->shallowLookupSymbol(*sym).getAddr());
+      symTable->popScope();
+    }
+
+    symTable->popScope();
+    firOpBuilder.restoreInsertionPoint(ip);
+    return result;
+  }();
+
+  delayedPrivatizationInfo.privatizers.push_back(
+      mlir::SymbolRefAttr::get(privatizerOp));
+  delayedPrivatizationInfo.originalAddresses.push_back(hsb.getAddr());
+  delayedPrivatizationInfo.symbols.push_back(sym);
 }
 
 } // namespace omp
