@@ -12214,4 +12214,8 @@ def err_acc_construct_appertainment
 def err_acc_branch_in_out_compute_construct
     : Error<"invalid %select{branch|return}0 %select{out of|into}1 OpenACC "
             "Compute Construct">;
+def note_acc_branch_into_compute_construct
+    : Note<"invalid branch into OpenACC Compute Construct">;
+def note_acc_branch_out_of_compute_construct
+    : Note<"invalid branch out of OpenACC Compute Construct">;
 } // end of sema component.
