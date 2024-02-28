@@ -245,21 +245,12 @@ class TrivialFunctionAnalysisVisitor
 
   // Returns false if at least one child is non-trivial.
   bool VisitChildren(const Stmt *S) {
-    return withCachedResult(S, [&]() {
-      for (const Stmt *Child : S->children()) {
-        if (Child && !Visit(Child))
-          return false;
-      }
-      return true;
-    });
-  }
-
-  bool VisitSubExpr(const Expr *Parent, const Expr *E) {
-    return withCachedResult(Parent, [&]() {
-      if (!Visit(E))
+    for (const Stmt *Child : S->children()) {
+      if (Child && !Visit(Child))
         return false;
-      return true;
-    });
+    }
+
+    return true;
   }
 
   template <typename StmtType, typename CheckFunction>
@@ -290,53 +281,54 @@ public:
   bool VisitCompoundStmt(const CompoundStmt *CS) {
     // A compound statement is allowed as long each individual sub-statement
     // is trivial.
-    return VisitChildren(CS);
+    return withCachedResult(CS, [&]() { return VisitChildren(CS); });
   }
 
   bool VisitReturnStmt(const ReturnStmt *RS) {
     // A return statement is allowed as long as the return value is trivial.
-    return withCachedResult(RS, [&]() {
-      if (auto *RV = RS->getRetValue())
-        return Visit(RV);
-      return true;
-    });
-  }
-
-  bool VisitCXXForRangeStmt(const CXXForRangeStmt *FS) {
-    return VisitChildren(FS);
+    if (auto *RV = RS->getRetValue())
+      return Visit(RV);
+    return true;
   }
 
   bool VisitDeclStmt(const DeclStmt *DS) { return VisitChildren(DS); }
   bool VisitDoStmt(const DoStmt *DS) { return VisitChildren(DS); }
-  bool VisitForStmt(const ForStmt *FS) { return VisitChildren(FS); }
-  bool VisitWhileStmt(const WhileStmt *WS) { return VisitChildren(WS); }
-  bool VisitIfStmt(const IfStmt *IS) { return VisitChildren(IS); }
+  bool VisitIfStmt(const IfStmt *IS) {
+    return withCachedResult(IS, [&]() { return VisitChildren(IS); });
+  }
+  bool VisitForStmt(const ForStmt *FS) {
+    return withCachedResult(FS, [&]() { return VisitChildren(FS); });
+  }
+  bool VisitCXXForRangeStmt(const CXXForRangeStmt *FS) {
+    return withCachedResult(FS, [&]() { return VisitChildren(FS); });
+  }
+  bool VisitWhileStmt(const WhileStmt *WS) {
+    return withCachedResult(WS, [&]() { return VisitChildren(WS); });
+  }
   bool VisitSwitchStmt(const SwitchStmt *SS) { return VisitChildren(SS); }
   bool VisitCaseStmt(const CaseStmt *CS) { return VisitChildren(CS); }
   bool VisitDefaultStmt(const DefaultStmt *DS) { return VisitChildren(DS); }
 
   bool VisitUnaryOperator(const UnaryOperator *UO) {
     // Operator '*' and '!' are allowed as long as the operand is trivial.
-    return withCachedResult(UO, [&]() {
-      auto op = UO->getOpcode();
-      if (op == UO_Deref || op == UO_AddrOf || op == UO_LNot)
-        return Visit(UO->getSubExpr());
-      if (UO->isIncrementOp() || UO->isDecrementOp()) {
-        if (auto *RefExpr = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
-          if (auto *Decl = dyn_cast<VarDecl>(RefExpr->getDecl()))
-            return Decl->isLocalVarDeclOrParm() &&
-                   Decl->getType().isPODType(Decl->getASTContext());
-        }
+    auto op = UO->getOpcode();
+    if (op == UO_Deref || op == UO_AddrOf || op == UO_LNot)
+      return Visit(UO->getSubExpr());
+    if (UO->isIncrementOp() || UO->isDecrementOp()) {
+      // Allow increment or decrement of a POD type.
+      if (auto *RefExpr = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
+        if (auto *Decl = dyn_cast<VarDecl>(RefExpr->getDecl()))
+          return Decl->isLocalVarDeclOrParm() &&
+                 Decl->getType().isPODType(Decl->getASTContext());
       }
-      // Other operators are non-trivial.
-      return false;
-    });
+    }
+    // Other operators are non-trivial.
+    return false;
   }
 
   bool VisitBinaryOperator(const BinaryOperator *BO) {
     // Binary operators are trivial if their operands are trivial.
-    return withCachedResult(
-        BO, [&]() { return Visit(BO->getLHS()) && Visit(BO->getRHS()); });
+    return Visit(BO->getLHS()) && Visit(BO->getRHS());
   }
 
   bool VisitConditionalOperator(const ConditionalOperator *CO) {
@@ -345,21 +337,19 @@ public:
   }
 
   bool VisitDeclRefExpr(const DeclRefExpr *DRE) {
-    return withCachedResult(DRE, [&]() {
-      if (auto *decl = DRE->getDecl()) {
-        if (isa<ParmVarDecl>(decl))
+    if (auto *decl = DRE->getDecl()) {
+      if (isa<ParmVarDecl>(decl))
+        return true;
+      if (isa<EnumConstantDecl>(decl))
+        return true;
+      if (auto *VD = dyn_cast<VarDecl>(decl)) {
+        if (VD->hasConstantInitialization() && VD->getEvaluatedValue())
           return true;
-        if (isa<EnumConstantDecl>(decl))
-          return true;
-        if (auto *VD = dyn_cast<VarDecl>(decl)) {
-          if (VD->hasConstantInitialization() && VD->getEvaluatedValue())
-            return true;
-          auto *Init = VD->getInit();
-          return !Init || Visit(Init);
-        }
+        auto *Init = VD->getInit();
+        return !Init || Visit(Init);
       }
-      return false;
-    });
+    }
+    return false;
   }
 
   bool VisitAtomicExpr(const AtomicExpr *E) { return VisitChildren(E); }
@@ -370,23 +360,21 @@ public:
   }
 
   bool VisitCallExpr(const CallExpr *CE) {
-    return withCachedResult(CE, [&]() {
-      if (!checkArguments(CE))
-        return false;
+    if (!checkArguments(CE))
+      return false;
 
-      auto *Callee = CE->getDirectCallee();
-      if (!Callee)
-        return false;
-      const auto &Name = safeGetName(Callee);
+    auto *Callee = CE->getDirectCallee();
+    if (!Callee)
+      return false;
+    const auto &Name = safeGetName(Callee);
 
-      if (Name == "WTFCrashWithInfo" || Name == "WTFBreakpointTrap" ||
-          Name == "WTFReportAssertionFailure" ||
-          Name == "compilerFenceForCrash" || Name == "__builtin_unreachable")
-        return true;
+    if (Name == "WTFCrashWithInfo" || Name == "WTFBreakpointTrap" ||
+        Name == "WTFReportAssertionFailure" ||
+        Name == "compilerFenceForCrash" || Name == "__builtin_unreachable")
+      return true;
 
-      return TrivialFunctionAnalysis::isTrivialImpl(Callee, FunctionCache,
-                                                    StatementCache);
-    });
+    return TrivialFunctionAnalysis::isTrivialImpl(Callee, FunctionCache,
+                                                  StatementCache);
   }
 
   bool VisitPredefinedExpr(const PredefinedExpr *E) {
@@ -395,26 +383,24 @@ public:
   }
 
   bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
-    return withCachedResult(MCE, [&]() {
-      if (!checkArguments(MCE))
-        return false;
+    if (!checkArguments(MCE))
+      return false;
 
-      bool TrivialThis = Visit(MCE->getImplicitObjectArgument());
-      if (!TrivialThis)
-        return false;
+    bool TrivialThis = Visit(MCE->getImplicitObjectArgument());
+    if (!TrivialThis)
+      return false;
 
-      auto *Callee = MCE->getMethodDecl();
-      if (!Callee)
-        return false;
+    auto *Callee = MCE->getMethodDecl();
+    if (!Callee)
+      return false;
 
-      std::optional<bool> IsGetterOfRefCounted = isGetterOfRefCounted(Callee);
-      if (IsGetterOfRefCounted && *IsGetterOfRefCounted)
-        return true;
+    std::optional<bool> IsGetterOfRefCounted = isGetterOfRefCounted(Callee);
+    if (IsGetterOfRefCounted && *IsGetterOfRefCounted)
+      return true;
 
-      // Recursively descend into the callee to confirm it's trivial as well.
-      return TrivialFunctionAnalysis::isTrivialImpl(Callee, FunctionCache,
-                                                    StatementCache);
-    });
+    // Recursively descend into the callee to confirm it's trivial as well.
+    return TrivialFunctionAnalysis::isTrivialImpl(Callee, FunctionCache,
+                                                  StatementCache);
   }
 
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
@@ -434,51 +420,45 @@ public:
   }
 
   bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
-    return withCachedResult(CE, [&]() {
-      for (const Expr *Arg : CE->arguments()) {
-        if (Arg && !Visit(Arg))
-          return false;
-      }
+    for (const Expr *Arg : CE->arguments()) {
+      if (Arg && !Visit(Arg))
+        return false;
+    }
 
-      // Recursively descend into the callee to confirm that it's trivial.
-      return TrivialFunctionAnalysis::isTrivialImpl(
-          CE->getConstructor(), FunctionCache, StatementCache);
-    });
+    // Recursively descend into the callee to confirm that it's trivial.
+    return TrivialFunctionAnalysis::isTrivialImpl(
+        CE->getConstructor(), FunctionCache, StatementCache);
   }
 
   bool VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
-    return VisitSubExpr(ICE, ICE->getSubExpr());
+    return Visit(ICE->getSubExpr());
   }
 
   bool VisitExplicitCastExpr(const ExplicitCastExpr *ECE) {
-    return VisitSubExpr(ECE, ECE->getSubExpr());
+    return Visit(ECE->getSubExpr());
   }
 
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *VMT) {
-    return VisitSubExpr(VMT, VMT->getSubExpr());
+    return Visit(VMT->getSubExpr());
   }
 
   bool VisitExprWithCleanups(const ExprWithCleanups *EWC) {
-    return VisitSubExpr(EWC, EWC->getSubExpr());
+    return Visit(EWC->getSubExpr());
   }
 
-  bool VisitParenExpr(const ParenExpr *PE) {
-    return VisitSubExpr(PE, PE->getSubExpr());
-  }
+  bool VisitParenExpr(const ParenExpr *PE) { return Visit(PE->getSubExpr()); }
 
   bool VisitInitListExpr(const InitListExpr *ILE) {
-    return withCachedResult(ILE, [&]() {
-      for (const Expr *Child : ILE->inits()) {
-        if (Child && !Visit(Child))
-          return false;
-      }
-      return true;
-    });
+    for (const Expr *Child : ILE->inits()) {
+      if (Child && !Visit(Child))
+        return false;
+    }
+    return true;
   }
 
   bool VisitMemberExpr(const MemberExpr *ME) {
     // Field access is allowed but the base pointer may itself be non-trivial.
-    return VisitSubExpr(ME, ME->getBase());
+    return Visit(ME->getBase());
   }
 
   bool VisitCXXThisExpr(const CXXThisExpr *CTE) {

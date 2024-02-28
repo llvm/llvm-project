@@ -176,7 +176,6 @@ public:
       const clang::Expr *const InitArgOrigin =
           tryToFindPtrOrigin(InitExpr, /*StopAtFirstRefCountedObj=*/false)
               .first;
-
       if (!InitArgOrigin)
         return;
 
@@ -199,6 +198,7 @@ public:
                 return;
             }
           }
+
           // Parameters are guaranteed to be safe for the duration of the call
           // by another checker.
           if (isa<ParmVarDecl>(MaybeGuardian))
