@@ -370,7 +370,6 @@ define i32 @test4(i32 %inp) {
   ; AIX64-NEXT: bb.3.entry:
   ; AIX64-NEXT:   successors: %bb.4(0x80000000)
   ; AIX64-NEXT: {{  $}}
-  ; AIX64-NEXT: {{  $}}
   ; AIX64-NEXT: bb.4.entry:
   ; AIX64-NEXT:   successors: %bb.1(0x80000000)
   ; AIX64-NEXT: {{  $}}
@@ -412,7 +411,6 @@ define i32 @test4(i32 %inp) {
   ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT: bb.3.entry:
   ; AIX32-NEXT:   successors: %bb.4(0x80000000)
-  ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT: bb.4.entry:
   ; AIX32-NEXT:   successors: %bb.1(0x80000000)
