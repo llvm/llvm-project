@@ -14,11 +14,11 @@ Building the GPU library
 
 LLVM's libc GPU support *must* be built with an up-to-date ``clang`` compiler
 due to heavy reliance on ``clang``'s GPU support. This can be done automatically
-using the LLVM runtimes support. The GPU build is done using cross-compilation 
-to the GPU architecture. This project currently supports AMD and NVIDIA GPUs 
-which can be targeted using the appropriate target name. The following 
-invocation will enable a cross-compiling build for the GPU architecture and 
-enable the ``libc`` project only for them. 
+using the LLVM runtimes support. The GPU build is done using cross-compilation
+to the GPU architecture. This project currently supports AMD and NVIDIA GPUs
+which can be targeted using the appropriate target name. The following
+invocation will enable a cross-compiling build for the GPU architecture and
+enable the ``libc`` project only for them.
 
 .. code-block:: sh
 
@@ -29,8 +29,8 @@ enable the ``libc`` project only for them.
      -DLLVM_ENABLE_PROJECTS="clang;lld;compiler-rt"                       \
      -DLLVM_ENABLE_RUNTIMES="openmp"                                      \
      -DCMAKE_BUILD_TYPE=<Debug|Release>   \ # Select build type
-     -DCMAKE_INSTALL_PREFIX=<PATH>        \ # Where 'libcgpu.a' will live 
-     -DRUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES=libc             \      
+     -DCMAKE_INSTALL_PREFIX=<PATH>        \ # Where 'libcgpu.a' will live
+     -DRUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES=libc             \
      -DRUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES=libc               \
      -DLLVM_RUNTIME_TARGETS=default;amdgcn-amd-amdhsa;nvptx64-nvidia-cuda
   $> ninja install
@@ -40,8 +40,8 @@ toolchain, we list them in ``LLVM_ENABLE_PROJECTS``. To ensure ``libc`` is built
 using a compatible compiler and to support ``openmp`` offloading, we list them
 in ``LLVM_ENABLE_RUNTIMES`` to build them after the enabled projects using the
 newly built compiler. ``CMAKE_INSTALL_PREFIX`` specifies the installation
-directory in which to install the ``libcgpu-nvptx.a`` and ``libcgpu-amdgpu.a`` 
-libraries and headers along with LLVM. The generated headers will be placed in 
+directory in which to install the ``libcgpu-nvptx.a`` and ``libcgpu-amdgpu.a``
+libraries and headers along with LLVM. The generated headers will be placed in
 ``include/<gpu-triple>``.
 
 Usage

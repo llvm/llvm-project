@@ -6511,7 +6511,8 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
       B.setInstrAndDebugLoc(*Select);
       Register Ext = MRI.createGenericVirtualRegister(TrueTy);
       B.buildZExtOrTrunc(Ext, Cond);
-      B.buildOr(DstReg, Ext, False, Flags);
+      auto FreezeFalse = B.buildFreeze(TrueTy, False);
+      B.buildOr(DstReg, Ext, FreezeFalse, Flags);
     };
     return true;
   }
@@ -6523,7 +6524,8 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
       B.setInstrAndDebugLoc(*Select);
       Register Ext = MRI.createGenericVirtualRegister(TrueTy);
       B.buildZExtOrTrunc(Ext, Cond);
-      B.buildAnd(DstReg, Ext, True);
+      auto FreezeTrue = B.buildFreeze(TrueTy, True);
+      B.buildAnd(DstReg, Ext, FreezeTrue);
     };
     return true;
   }
@@ -6538,7 +6540,8 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
       // Then an ext to match the destination register.
       Register Ext = MRI.createGenericVirtualRegister(TrueTy);
       B.buildZExtOrTrunc(Ext, Inner);
-      B.buildOr(DstReg, Ext, True, Flags);
+      auto FreezeTrue = B.buildFreeze(TrueTy, True);
+      B.buildOr(DstReg, Ext, FreezeTrue, Flags);
     };
     return true;
   }
@@ -6553,7 +6556,8 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
       // Then an ext to match the destination register.
       Register Ext = MRI.createGenericVirtualRegister(TrueTy);
       B.buildZExtOrTrunc(Ext, Inner);
-      B.buildAnd(DstReg, Ext, False);
+      auto FreezeFalse = B.buildFreeze(TrueTy, False);
+      B.buildAnd(DstReg, Ext, FreezeFalse);
     };
     return true;
   }

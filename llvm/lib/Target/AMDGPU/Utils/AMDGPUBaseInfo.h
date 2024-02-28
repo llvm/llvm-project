@@ -295,6 +295,10 @@ unsigned getVGPREncodingGranule(
 /// \returns Total number of VGPRs for given subtarget \p STI.
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
 
+/// \returns Addressable number of architectural VGPRs for a given subtarget \p
+/// STI.
+unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI);
+
 /// \returns Addressable number of VGPRs for given subtarget \p STI.
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI);
 
