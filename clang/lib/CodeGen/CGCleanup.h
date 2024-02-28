@@ -16,8 +16,10 @@
 #include "EHScopeStack.h"
 
 #include "Address.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Instruction.h"
 
 namespace llvm {
 class BasicBlock;
@@ -80,6 +82,8 @@ protected:
 
     /// Whether the EH cleanup should test the activation flag.
     unsigned TestFlagInEHCleanup : 1;
+
+    unsigned SkipBranchInExpr : 1;
 
     /// The amount of extra storage needed by the Cleanup.
     /// Always a multiple of the scope-stack alignment.
@@ -256,6 +260,30 @@ class alignas(8) EHCleanupScope : public EHScope {
       BranchAfters;
   };
   mutable struct ExtInfo *ExtInfo;
+  // Erases unused auxillary instructions for the cleanup.
+  // Cleanups should mark these instructions 'used' if the cleanup is
+  // emitted, otherwise these instructions would be erased.
+  struct AuxillaryInsts {
+    SmallVector<llvm::Instruction *, 1> AuxInsts;
+    bool used = false;
+
+    // Records a potentially unused instruction to be erased later.
+    void Add(llvm::Instruction *Inst) { AuxInsts.push_back(Inst); }
+
+    // Mark all recorded instructions as used. These will not be erased later.
+    void MarkUsed() {
+      used = true;
+      AuxInsts.clear();
+    }
+    ~AuxillaryInsts() {
+      if (used)
+        return;
+      for (auto *Inst : llvm::reverse(AuxInsts))
+        Inst->eraseFromParent();
+    }
+  };
+  mutable struct AuxillaryInsts *AuxInsts;
+  bool AuxInstsIsOwned = true;
 
   /// The number of fixups required by enclosing scopes (not including
   /// this one).  If this is the top cleanup scope, all the fixups
@@ -279,6 +307,19 @@ public:
     return sizeof(EHCleanupScope) + Size;
   }
 
+  AuxillaryInsts &getAuxillaryInstructions() {
+    if (!AuxInsts) {
+      assert(AuxInstsIsOwned);
+      AuxInsts = new struct AuxillaryInsts();
+    }
+    return *AuxInsts;
+  }
+
+  void SetExternalAuxInsts(AuxillaryInsts *NewAuxInsts) {
+    AuxInsts = NewAuxInsts;
+    AuxInstsIsOwned = false;
+  }
+
   size_t getAllocatedSize() const {
     return sizeof(EHCleanupScope) + CleanupBits.CleanupSize;
   }
@@ -289,7 +330,7 @@ public:
                  EHScopeStack::stable_iterator enclosingEH)
       : EHScope(EHScope::Cleanup, enclosingEH),
         EnclosingNormal(enclosingNormal), NormalBlock(nullptr),
-        ActiveFlag(Address::invalid()), ExtInfo(nullptr),
+        ActiveFlag(Address::invalid()), ExtInfo(nullptr), AuxInsts(nullptr),
         FixupDepth(fixupDepth) {
     CleanupBits.IsNormalCleanup = isNormal;
     CleanupBits.IsEHCleanup = isEH;
@@ -297,12 +338,16 @@ public:
     CleanupBits.IsLifetimeMarker = false;
     CleanupBits.TestFlagInNormalCleanup = false;
     CleanupBits.TestFlagInEHCleanup = false;
+    CleanupBits.SkipBranchInExpr = false;
     CleanupBits.CleanupSize = cleanupSize;
+    AuxInstsIsOwned = true;
 
     assert(CleanupBits.CleanupSize == cleanupSize && "cleanup size overflow");
   }
 
   void Destroy() {
+    if (AuxInstsIsOwned)
+      delete AuxInsts;
     delete ExtInfo;
   }
   // Objects of EHCleanupScope are not destructed. Use Destroy().
@@ -319,6 +364,9 @@ public:
 
   bool isLifetimeMarker() const { return CleanupBits.IsLifetimeMarker; }
   void setLifetimeMarker() { CleanupBits.IsLifetimeMarker = true; }
+
+  void setShouldSkipBranchInExpr() { CleanupBits.SkipBranchInExpr = true; }
+  bool shouldSkipBranchInExpr() const { return CleanupBits.SkipBranchInExpr; }
 
   bool hasActiveFlag() const { return ActiveFlag.isValid(); }
   Address getActiveFlag() const {
@@ -347,6 +395,12 @@ public:
   EHScopeStack::stable_iterator getEnclosingNormalCleanup() const {
     return EnclosingNormal;
   }
+
+  void AddAuxInst(llvm::Instruction *Inst) {
+    getAuxillaryInstructions().Add(Inst);
+  }
+
+  void MarkEmitted() { getAuxillaryInstructions().MarkUsed(); }
 
   size_t getCleanupSize() const { return CleanupBits.CleanupSize; }
   void *getCleanupBuffer() { return this + 1; }

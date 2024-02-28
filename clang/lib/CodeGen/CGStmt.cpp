@@ -627,11 +627,11 @@ CodeGenFunction::getJumpDestForLabel(const LabelDecl *D) {
   if (Dest.isValid()) return Dest;
 
   // Create, but don't insert, the new block.
-  // FIXME: We do not know `BranchInExprDepth` for the destination and currently
-  // emit *all* the BranchInExpr cleanups.
-  Dest = JumpDest(createBasicBlock(D->getName()),
-                  EHScopeStack::stable_iterator::invalid(),
-                  /*BranchInExprDepth=*/0, NextCleanupDestIndex++);
+  // FIXME: We do not know `EHDepth` for the destination and currently
+  // emit *all* the EHCleanups when a branch in expr is encountered.
+  Dest = JumpDest(
+      createBasicBlock(D->getName()), EHScopeStack::stable_iterator::invalid(),
+      EHScopeStack::stable_iterator::invalid(), NextCleanupDestIndex++);
   return Dest;
 }
 

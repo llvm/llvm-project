@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENFUNCTION_H
 
 #include "CGBuilder.h"
+#include "CGCleanup.h"
 #include "CGDebugInfo.h"
 #include "CGLoopInfo.h"
 #include "CGValue.h"
@@ -238,17 +239,16 @@ public:
   /// A jump destination is an abstract label, branching to which may
   /// require a jump out through normal cleanups.
   struct JumpDest {
-    JumpDest() : Block(nullptr), BranchInExprDepth(0), Index(0) {}
+    JumpDest() : Block(nullptr), Index(0) {}
     JumpDest(llvm::BasicBlock *Block, EHScopeStack::stable_iterator Depth,
-             unsigned BranchInExprDepth, unsigned Index)
-        : Block(Block), ScopeDepth(Depth), BranchInExprDepth(BranchInExprDepth),
-          Index(Index) {}
+             EHScopeStack::stable_iterator EHDepth, unsigned Index)
+        : Block(Block), ScopeDepth(Depth), EHDepth(EHDepth), Index(Index) {}
 
     bool isValid() const { return Block != nullptr; }
     llvm::BasicBlock *getBlock() const { return Block; }
     EHScopeStack::stable_iterator getScopeDepth() const { return ScopeDepth; }
+    EHScopeStack::stable_iterator getEHDepth() const { return EHDepth; }
     unsigned getDestIndex() const { return Index; }
-    unsigned getBranchInExprDepth() const { return BranchInExprDepth; }
 
     // This should be used cautiously.
     void setScopeDepth(EHScopeStack::stable_iterator depth) {
@@ -258,11 +258,8 @@ public:
   private:
     llvm::BasicBlock *Block;
     EHScopeStack::stable_iterator ScopeDepth;
+    EHScopeStack::stable_iterator EHDepth;
 
-    // Size of the branch-in-expr cleanup stack in destination scope.
-    // All cleanups beyond this depth would be emitted on encountering a branch
-    // to this destination inside an expression.
-    unsigned BranchInExprDepth;
     unsigned Index;
   };
 
@@ -641,28 +638,31 @@ public:
   // to the EHStack.
   DeferredCleanupStack LifetimeExtendedCleanupStack;
 
-  // Branch-in-expression cleanups include the cleanups which are not yet added
-  // to the EHStack while building an expression.
-  // Cleanups from this stack are only emitted when encountering a branch while
-  // building an expression (eg: branches in stmt-expr or coroutine
-  // suspensions).
-  // Otherwise, these should be cleared the end of the expression and added
-  // separately to the EHStack.
-  DeferredCleanupStack BranchInExprCleanupStack;
+  // // Branch-in-expression cleanups include the cleanups which are not yet
+  // added
+  // // to the EHStack while building an expression.
+  // // Cleanups from this stack are only emitted when encountering a branch
+  // while
+  // // building an expression (eg: branches in stmt-expr or coroutine
+  // // suspensions).
+  // // Otherwise, these should be cleared the end of the expression and added
+  // // separately to the EHStack.
+  // DeferredCleanupStack BranchInExprCleanupStack;
 
   // RAII for restoring BranchInExprCleanupStack.
   // All cleanups added to this stack during its scope are simply deleted. These
   // cleanups should be added to the EHStack only on emitting a branch.
-  class RestoreBranchInExprRAII {
-  public:
-    RestoreBranchInExprRAII(CodeGenFunction &CGF)
-        : CGF(CGF), OldSize(CGF.BranchInExprCleanupStack.size()) {}
-    ~RestoreBranchInExprRAII() { CGF.BranchInExprCleanupStack.resize(OldSize); }
+  // class RestoreBranchInExprRAII {
+  // public:
+  //   RestoreBranchInExprRAII(CodeGenFunction &CGF)
+  //       : CGF(CGF), OldSize(CGF.BranchInExprCleanupStack.size()) {}
+  //   ~RestoreBranchInExprRAII() {
+  //   CGF.BranchInExprCleanupStack.resize(OldSize); }
 
-  private:
-    CodeGenFunction &CGF;
-    size_t OldSize;
-  };
+  // private:
+  //   CodeGenFunction &CGF;
+  //   size_t OldSize;
+  // };
 
   llvm::SmallVector<const JumpDest *, 2> SEHTryEpilogueStack;
 
@@ -818,8 +818,6 @@ public:
       // Defer BranchInExprCleanup as a NormalCleanup (emitted only if we see
       // a branch). Do not add these to the EHStack as they should be added
       // separately with a different CleanupKind.
-      pushDeferredCleanup<T>(BranchInExprCleanupStack, NormalCleanup,
-                             Address::invalid(), A...);
       return;
     }
     // If we're not in a conditional branch, or if none of the
@@ -833,7 +831,10 @@ public:
 
     typedef EHScopeStack::ConditionalCleanup<T, As...> CleanupType;
     EHStack.pushCleanupTuple<CleanupType>(kind, Saved);
-    initFullExprCleanup();
+    EHCleanupScope *TopCleanup = nullptr;
+    if (EHStack.begin()->getKind() == EHScope::Kind::Cleanup)
+      TopCleanup = &cast<EHCleanupScope>(*EHStack.begin());
+    initFullExprCleanupWithFlag(createCleanupActiveFlag(TopCleanup));
   }
 
   /// Queue a cleanup to be pushed after finishing the current full-expression,
@@ -881,7 +882,9 @@ public:
   }
 
   void initFullExprCleanupWithFlag(Address ActiveFlag);
-  Address createCleanupActiveFlag();
+  // Also attaches the produced instructions to the cleanup auxillary
+  // instructions.
+  Address createCleanupActiveFlag(EHCleanupScope *TopCleanup = nullptr);
 
   /// PushDestructorCleanup - Push a cleanup to call the
   /// complete-object destructor of an object of the given type at the
@@ -925,7 +928,6 @@ public:
   class RunCleanupsScope {
     EHScopeStack::stable_iterator CleanupStackDepth, OldCleanupScopeDepth;
     size_t LifetimeExtendedCleanupStackSize;
-    RestoreBranchInExprRAII RestoreBranchInExpr;
     bool OldDidCallStackSave;
   protected:
     bool PerformCleanup;
@@ -940,7 +942,7 @@ public:
   public:
     /// Enter a new cleanup scope.
     explicit RunCleanupsScope(CodeGenFunction &CGF)
-        : RestoreBranchInExpr(CGF), PerformCleanup(true), CGF(CGF) {
+        : PerformCleanup(true), CGF(CGF) {
       CleanupStackDepth = CGF.EHStack.stable_begin();
       LifetimeExtendedCleanupStackSize =
           CGF.LifetimeExtendedCleanupStack.size();
@@ -1208,7 +1210,7 @@ public:
   /// to which we can perform this jump later.
   JumpDest getJumpDestInCurrentScope(llvm::BasicBlock *Target) {
     return JumpDest(Target, EHStack.getInnermostNormalCleanup(),
-                    BranchInExprCleanupStack.size(), NextCleanupDestIndex++);
+                    EHStack.getInnermostEHScope(), NextCleanupDestIndex++);
   }
 
   /// The given basic block lies in the current EH scope, but may be a
@@ -1222,7 +1224,7 @@ public:
   /// block through the normal cleanup handling code (if any) and then
   /// on to \arg Dest.
   void EmitBranchThroughCleanup(JumpDest Dest);
-
+  void EmitEHCleanupsForBranch(JumpDest Dest);
   /// isObviouslyBranchWithoutCleanups - Return true if a branch to the
   /// specified destination obviously has no cleanups to run.  'false' is always
   /// a conservatively correct answer for this method.
@@ -1269,11 +1271,13 @@ public:
   /// one branch or the other of a conditional expression.
   bool isInConditionalBranch() const { return OutermostConditional != nullptr; }
 
-  void setBeforeOutermostConditional(llvm::Value *value, Address addr) {
+  llvm::StoreInst *setBeforeOutermostConditional(llvm::Value *value,
+                                                 Address addr) {
     assert(isInConditionalBranch());
     llvm::BasicBlock *block = OutermostConditional->getStartingBlock();
-    auto store = new llvm::StoreInst(value, addr.getPointer(), &block->back());
+    auto *store = new llvm::StoreInst(value, addr.getPointer(), &block->back());
     store->setAlignment(addr.getAlignment().getAsAlign());
+    return store;
   }
 
   /// An RAII object to record that we're evaluating a statement
@@ -2197,19 +2201,6 @@ public:
     case QualType::DK_objc_strong_lifetime:
       return getLangOpts().Exceptions &&
              CGM.getCodeGenOpts().ObjCAutoRefCountExceptions;
-    }
-    llvm_unreachable("bad destruction kind");
-  }
-
-  bool needsBranchCleanup(QualType::DestructionKind kind) {
-    switch (kind) {
-    case QualType::DK_none:
-      return false;
-    case QualType::DK_cxx_destructor:
-    case QualType::DK_objc_weak_lifetime:
-    case QualType::DK_nontrivial_c_struct:
-    case QualType::DK_objc_strong_lifetime:
-      return true;
     }
     llvm_unreachable("bad destruction kind");
   }

@@ -671,7 +671,7 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
       // Ensure that we destroy the objects if an exception is thrown later in
       // the constructor.
       QualType::DestructionKind dtorKind = FieldType.isDestructedType();
-      if (CGF.needsEHCleanup(dtorKind))
+      if (dtorKind)
         CGF.pushEHDestroy(dtorKind, LHS.getAddress(CGF), FieldType);
       return;
     }
@@ -710,7 +710,7 @@ void CodeGenFunction::EmitInitializerForField(FieldDecl *Field, LValue LHS,
   // Ensure that we destroy this object if an exception is thrown
   // later in the constructor.
   QualType::DestructionKind dtorKind = FieldType.isDestructedType();
-  if (needsEHCleanup(dtorKind))
+  if (dtorKind)
     pushEHDestroy(dtorKind, LHS.getAddress(*this), FieldType);
 }
 

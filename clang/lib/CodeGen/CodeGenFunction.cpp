@@ -333,7 +333,6 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
          "mismatched push/pop in break/continue stack!");
   assert(LifetimeExtendedCleanupStack.empty() &&
          "mismatched push/pop in stack!");
-  assert(BranchInExprCleanupStack.empty() && "mismatched push/pop in stack!");
 
   bool OnlySimpleReturnStmts = NumSimpleReturnExprs > 0
     && NumSimpleReturnExprs == NumReturnExprs

@@ -124,7 +124,6 @@ int HasConditionalDeactivatedCleanups(bool cond) {
 // WIN32-O0:   store i1 false
 // WIN32-O0:   store i1 false
 // WIN32-O0:   store i1 false
-// WIN32-O0:   store i1 false
 // WIN32-O0:   br i1
 //        True condition.
 // WIN32-O0:   call x86_thiscallcc noundef ptr @"??0A@@QAE@XZ"
@@ -136,7 +135,6 @@ int HasConditionalDeactivatedCleanups(bool cond) {
 // WIN32-O0:   store i1 true
 // WIN32-O0:   invoke void @"?TakeRef@@YAXABUA@@@Z"
 // WIN32-O0:   invoke x86_thiscallcc noundef ptr @"??0A@@QAE@XZ"
-// WIN32-O0:   store i1 true
 // WIN32-O0:   store i1 false, ptr %[[arg1_cond]]
 // WIN32-O0:   invoke noundef i32 @"?TakesTwo@@YAHUA@@0@Z"
 //        False condition.
@@ -162,7 +160,6 @@ int HasConditionalDeactivatedCleanups(bool cond) {
 // WIN32-O3:   store i1 false
 // WIN32-O3:   store i1 false
 // WIN32-O3:   store i1 false
-// WIN32-O3:   store i1 false
 // WIN32-O3:   br i1
 //        True condition.
 // WIN32-O3:   call x86_thiscallcc noundef ptr @"??0A@@QAE@XZ"
@@ -174,7 +171,6 @@ int HasConditionalDeactivatedCleanups(bool cond) {
 // WIN32-O3:   store i1 true
 // WIN32-O3:   invoke void @"?TakeRef@@YAXABUA@@@Z"
 // WIN32-O3:   invoke x86_thiscallcc noundef ptr @"??0A@@QAE@XZ"
-// WIN32-O3:   store i1 true
 // WIN32-O3:   store i1 false, ptr %[[arg1_cond]]
 // WIN32-O3:   invoke noundef i32 @"?TakesTwo@@YAHUA@@0@Z"
 //        False condition.

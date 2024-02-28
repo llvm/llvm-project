@@ -34,9 +34,12 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include <optional>
@@ -2164,7 +2167,6 @@ CodeGenFunction::getDestroyer(QualType::DestructionKind kind) {
 void CodeGenFunction::pushEHDestroy(QualType::DestructionKind dtorKind,
                                     Address addr, QualType type) {
   assert(dtorKind && "cannot push destructor for trivial type");
-  assert(needsEHCleanup(dtorKind));
 
   pushDestroy(EHCleanup, addr, type, getDestroyer(dtorKind), true);
 }
