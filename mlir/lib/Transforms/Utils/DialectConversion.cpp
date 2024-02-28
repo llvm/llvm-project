@@ -190,7 +190,6 @@ public:
     // Block rewrites
     CreateBlock,
     EraseBlock,
-    InlineBlock,
     MoveBlock,
     BlockTypeConversion,
     ReplaceBlockArg,
@@ -328,47 +327,6 @@ private:
   // The original successor of this block before it was unlinked. "nullptr" if
   // this block was the only block in the region.
   Block *insertBeforeBlock;
-};
-
-/// Inlining of a block. This rewrite is immediately reflected in the IR.
-/// Note: This rewrite represents only the inlining of the operations. The
-/// erasure of the inlined block is a separate rewrite.
-class InlineBlockRewrite : public BlockRewrite {
-public:
-  InlineBlockRewrite(ConversionPatternRewriterImpl &rewriterImpl, Block *block,
-                     Block *sourceBlock, Block::iterator before)
-      : BlockRewrite(Kind::InlineBlock, rewriterImpl, block),
-        sourceBlock(sourceBlock),
-        firstInlinedInst(sourceBlock->empty() ? nullptr
-                                              : &sourceBlock->front()),
-        lastInlinedInst(sourceBlock->empty() ? nullptr : &sourceBlock->back()) {
-  }
-
-  static bool classof(const IRRewrite *rewrite) {
-    return rewrite->getKind() == Kind::InlineBlock;
-  }
-
-  void rollback() override {
-    // Put the operations from the destination block (owned by the rewrite)
-    // back into the source block.
-    if (firstInlinedInst) {
-      assert(lastInlinedInst && "expected operation");
-      sourceBlock->getOperations().splice(sourceBlock->begin(),
-                                          block->getOperations(),
-                                          Block::iterator(firstInlinedInst),
-                                          ++Block::iterator(lastInlinedInst));
-    }
-  }
-
-private:
-  // The block that originally contained the operations.
-  Block *sourceBlock;
-
-  // The first inlined operation.
-  Operation *firstInlinedInst;
-
-  // The last inlined operation.
-  Operation *lastInlinedInst;
 };
 
 /// Moving of a block. This rewrite is immediately reflected in the IR.
@@ -857,10 +815,6 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// Notifies that a block was inserted.
   void notifyBlockInserted(Block *block, Region *previous,
                            Region::iterator previousIt) override;
-
-  /// Notifies that a block is being inlined into another block.
-  void notifyBlockBeingInlined(Block *block, Block *srcBlock,
-                               Block::iterator before);
 
   /// Notifies that a pattern match failed for the given reason.
   void
@@ -1494,11 +1448,6 @@ void ConversionPatternRewriterImpl::notifyBlockInserted(
   appendRewrite<MoveBlockRewrite>(block, previous, prevBlock);
 }
 
-void ConversionPatternRewriterImpl::notifyBlockBeingInlined(
-    Block *block, Block *srcBlock, Block::iterator before) {
-  appendRewrite<InlineBlockRewrite>(block, srcBlock, before);
-}
-
 void ConversionPatternRewriterImpl::notifyMatchFailure(
     Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
   LLVM_DEBUG({
@@ -1649,10 +1598,18 @@ void ConversionPatternRewriter::inlineBlockBefore(Block *source, Block *dest,
          "expected 'source' to have no predecessors");
 #endif // NDEBUG
 
-  impl->notifyBlockBeingInlined(dest, source, before);
+  // Replace all uses of block arguments.
+  // TODO: Support `replaceAllUsesWith` in the dialect conversion. Then this
+  // function no longer has to be overridden and can be turned into a
+  // non-virtual function.
   for (auto it : llvm::zip(source->getArguments(), argValues))
     replaceUsesOfBlockArgument(std::get<0>(it), std::get<1>(it));
-  dest->getOperations().splice(before, source->getOperations());
+
+  // Move op by op.
+  while (!source->empty())
+    moveOpBefore(&source->front(), dest, before);
+
+  // Erase the source block.
   eraseBlock(source);
 }
 
