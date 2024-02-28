@@ -31,6 +31,16 @@
 # RS-SYM-DAG: foo2
 # RS-SYM-DAG: foo3
 
+## Check the functionality when using skip options multiple times.
+# RUN: echo "foo3" > %t.symbol.list
+# RUN: llvm-objcopy %t.o %t5.o --set-symbol-visibility='foo*'=internal --wildcard \
+# RUN:   --skip-symbol=foo1 --skip-symbol=foo2 --skip-symbols=%t.symbol.list
+# RUN: llvm-readelf -s %t5.o | FileCheck %s --check-prefix=BOTH
+## All the symbols are skipped
+# BOTH-DAG: GLOBAL HIDDEN      1 foo1
+# BOTH-DAG: GLOBAL HIDDEN      1 foo2
+# BOTH-DAG: GLOBAL HIDDEN      1 foo3
+
 ## Check that using an invalid symbol pattern generates an error.
 # RUN: echo '*.' > %t.symbols.regex
 # RUN: not llvm-objcopy %t.o --skip-symbols=%t.symbols.regex --regex 2>&1 | \
