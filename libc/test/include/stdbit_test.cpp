@@ -88,7 +88,7 @@ bool stdc_has_single_bit_ul(unsigned long) noexcept { return false; }
 bool stdc_has_single_bit_ull(unsigned long long) noexcept { return false; }
 }
 
-#include "include/llvm-libc-macros/stdbit-macros.h"
+#include "llvm-libc-macros/stdbit-macros.h"
 
 TEST(LlvmLibcStdbitTest, TypeGenericMacroLeadingZeros) {
   EXPECT_EQ(stdc_leading_zeros(static_cast<unsigned char>(0U)), 0xAAU);
