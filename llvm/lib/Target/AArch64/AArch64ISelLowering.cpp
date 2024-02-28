@@ -269,10 +269,6 @@ static bool isMergePassthruOpcode(unsigned Opc) {
 
 // Returns true if inactive lanes are known to be zeroed by construction.
 static bool isZeroingInactiveLanes(SDValue Op) {
-  // Skip bitcasts nodes
-  while (Op->getOpcode() == ISD::BITCAST)
-    Op = Op->getOperand(0);
-
   switch (Op.getOpcode()) {
   default:
     return false;
