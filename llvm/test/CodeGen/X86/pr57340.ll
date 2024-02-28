@@ -294,7 +294,7 @@ define void @main.41() local_unnamed_addr #1 {
 ; CHECK-NEXT:    kmovd %eax, %k1
 ; CHECK-NEXT:    kshiftlw $15, %k1, %k1
 ; CHECK-NEXT:    korw %k1, %k0, %k1
-; CHECK-NEXT:    vmovdqu8 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1} {z}
+; CHECK-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; CHECK-NEXT:    vmovdqa %xmm0, (%rax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
