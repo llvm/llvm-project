@@ -11326,6 +11326,9 @@ def err_omp_device_type_mismatch : Error<
 def err_omp_wrong_device_function_call : Error<
   "function with 'device_type(%0)' is not available on %select{device|host}1">;
 def note_omp_marked_device_type_here : Note<"marked as 'device_type(%0)' here">;
+def warn_omp_declare_target_has_local_vars : Warning<
+  "local variable '%0' ignored in 'declare target' directive; ">,
+  InGroup<OpenMPTarget>;
 def warn_omp_declare_target_after_first_use : Warning<
   "declaration marked as declare target after first use, it may lead to incorrect results">,
   InGroup<OpenMPTarget>;
