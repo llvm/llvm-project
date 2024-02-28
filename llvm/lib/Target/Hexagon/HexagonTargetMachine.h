@@ -23,6 +23,7 @@ namespace llvm {
 
 class HexagonTargetMachine : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
+  HexagonSubtarget Subtarget;
   mutable StringMap<std::unique_ptr<HexagonSubtarget>> SubtargetMap;
 
 public:
@@ -32,6 +33,7 @@ public:
                        std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                        bool JIT);
   ~HexagonTargetMachine() override;
+  const HexagonSubtarget *getSubtargetImpl() const { return &Subtarget; }
   const HexagonSubtarget *getSubtargetImpl(const Function &F) const override;
 
   void registerPassBuilderCallbacks(PassBuilder &PB,
