@@ -936,8 +936,8 @@ private:
       return 1U;
     }
 
-    // So far, instead of always fill blocks to `MaxBlockCount`, we only exmaine
-    // single `TransferBatch` to minimize the time spent in the primary
+    // So far, instead of always filling blocks to `MaxBlockCount`, we only
+    // examine single `TransferBatch` to minimize the time spent in the primary
     // allocator. Besides, the sizes of `TransferBatch` and
     // `CacheT::getMaxCached()` may also impact the time spent on accessing the
     // primary allocator.
