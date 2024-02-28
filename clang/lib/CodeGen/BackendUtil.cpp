@@ -186,6 +186,9 @@ class EmitAssemblyHelper {
            TargetTriple.getVendor() != llvm::Triple::Apple;
   }
 
+  /// Check whether we should emit a flag for UnifiedLTO.
+  /// The UnifiedLTO module flag should be set when UnifiedLTO is enabled for
+  /// ThinLTO or Full LTO with module summaries.
   bool shouldEmitUnifiedLTOModueFlag() const {
     return CodeGenOpts.UnifiedLTO &&
            (CodeGenOpts.PrepareForThinLTO || shouldEmitRegularLTOSummary());

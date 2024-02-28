@@ -36,14 +36,14 @@
 // RUN: | FileCheck %s --check-prefixes=ASM
 
 /// Make sure that FatLTO generates .llvm.lto sections that are the same as the output from normal LTO compilations
-// RUN: %clang -O2 --target=x86_64-unknown-linux-gnu -flto=full -fsplit-lto-unit -ffat-lto-objects -c %s -o %t.fatlto.full.o
+// RUN: %clang -O2 --target=x86_64-unknown-linux-gnu -fPIE -flto=full -fsplit-lto-unit -ffat-lto-objects -c %s -o %t.fatlto.full.o
 // RUN: llvm-objcopy --dump-section=.llvm.lto=%t.fatlto.full.bc %t.fatlto.full.o
 // RUN: llvm-dis < %t.fatlto.full.bc -o %t.fatlto.full.ll
 // RUN: %clang -O2 -Xclang -triple -Xclang x86_64-unknown-linux-gnu -flto=full -c %s -o %t.nofat.full.bc
 // RUN: llvm-dis < %t.nofat.full.bc -o %t.nofat.full.ll
 // RUN: diff %t.fatlto.full.ll %t.nofat.full.ll
 
-// RUN: %clang -O2 --target=x86_64-unknown-linux-gnu -flto=thin -ffat-lto-objects -c %s -o %t.fatlto.thin.o
+// RUN: %clang -O2 --target=x86_64-unknown-linux-gnu -fPIE -flto=thin -ffat-lto-objects -c %s -o %t.fatlto.thin.o
 // RUN: llvm-objcopy --dump-section=.llvm.lto=%t.fatlto.thin.bc %t.fatlto.thin.o
 // RUN: llvm-dis < %t.fatlto.thin.bc -o %t.fatlto.thin.ll
 // RUN: %clang -O2 -Xclang -triple -Xclang x86_64-unknown-linux-gnu -flto=thin -c %s -o %t.nofat.thin.bc
