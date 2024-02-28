@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_COOKIE_IO_FUNCTIONS_T_H
-#define __LLVM_LIBC_TYPES_COOKIE_IO_FUNCTIONS_T_H
+#ifndef LLVM_LIBC_TYPES_COOKIE_IO_FUNCTIONS_T_H
+#define LLVM_LIBC_TYPES_COOKIE_IO_FUNCTIONS_T_H
 
 #include <llvm-libc-types/off64_t.h>
 #include <llvm-libc-types/size_t.h>
@@ -25,4 +25,4 @@ typedef struct {
   cookie_close_function_t *close;
 } cookie_io_functions_t;
 
-#endif // __LLVM_LIBC_TYPES_COOKIE_IO_FUNCTIONS_T_H
+#endif // LLVM_LIBC_TYPES_COOKIE_IO_FUNCTIONS_T_H

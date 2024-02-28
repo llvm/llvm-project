@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_FIXEDPOINT_SQRT_H
-#define LLVM_LIBC_SRC___SUPPORT_FIXEDPOINT_SQRT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_SQRT_H
+#define LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_SQRT_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/bit.h"
@@ -126,4 +126,4 @@ LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, T> sqrt(T x) {
 
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 
-#endif // LLVM_LIBC_SRC___SUPPORT_FIXEDPOINT_SQRT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_SQRT_H
