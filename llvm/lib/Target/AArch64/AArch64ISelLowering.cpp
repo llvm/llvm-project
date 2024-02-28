@@ -269,13 +269,14 @@ static bool isMergePassthruOpcode(unsigned Opc) {
 
 // Returns true if inactive lanes are known to be zeroed by construction.
 static bool isZeroingInactiveLanes(SDValue Op) {
+  // Skip bitcasts nodes
+  while (Op->getOpcode() == ISD::BITCAST)
+    Op = Op->getOperand(0);
+    
   switch (Op.getOpcode()) {
   default:
-    // We guarantee i1 splat_vectors to zero the other lanes by
-    // implementing it with ptrue and possibly a punpklo for nxv1i1.
-    if (ISD::isConstantSplatVectorAllOnes(Op.getNode()))
-      return true;
     return false;
+  // We guarantee i1 splat_vectors to zero the other lanes
   case ISD::SPLAT_VECTOR:
   case AArch64ISD::PTRUE:
   case AArch64ISD::SETCC_MERGE_ZERO:
