@@ -1,8 +1,17 @@
 #include <iostream>
 
+class Baz
+{
+public:
+    int x;
+};
+
 class Foo
 {
 public:
+    Baz t;
+    int temp;
+
     int Bar(int x, int y)
     {
         return x + y;
