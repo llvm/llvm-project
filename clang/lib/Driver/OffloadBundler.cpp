@@ -943,7 +943,9 @@ CompressedOffloadBundle::compress(const llvm::MemoryBuffer &Input,
 
   llvm::compression::Format CompressionFormat;
 
-  if (llvm::compression::zstd::isAvailable())
+  if (llvm::compression::lzma::isAvailable())
+    CompressionFormat = llvm::compression::Format::Lzma;
+  else if (llvm::compression::zstd::isAvailable())
     CompressionFormat = llvm::compression::Format::Zstd;
   else if (llvm::compression::zlib::isAvailable())
     CompressionFormat = llvm::compression::Format::Zlib;
@@ -977,7 +979,10 @@ CompressedOffloadBundle::compress(const llvm::MemoryBuffer &Input,
 
   if (Verbose) {
     auto MethodUsed =
-        CompressionFormat == llvm::compression::Format::Zstd ? "zstd" : "zlib";
+        CompressionFormat == llvm::compression::Format::Lzma
+            ? "lzma"
+            : (CompressionFormat == llvm::compression::Format::Zstd ? "zstd"
+                                                                    : "zlib");
     llvm::errs() << "Compressed bundle format version: " << Version << "\n"
                  << "Compression method used: " << MethodUsed << "\n"
                  << "Binary size before compression: " << UncompressedSize
@@ -1026,7 +1031,10 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
 
   llvm::compression::Format CompressionFormat;
   if (CompressionMethod ==
-      static_cast<uint16_t>(llvm::compression::Format::Zlib))
+      static_cast<uint16_t>(llvm::compression::Format::Lzma))
+    CompressionFormat = llvm::compression::Format::Lzma;
+  else if (CompressionMethod ==
+           static_cast<uint16_t>(llvm::compression::Format::Zlib))
     CompressionFormat = llvm::compression::Format::Zlib;
   else if (CompressionMethod ==
            static_cast<uint16_t>(llvm::compression::Format::Zstd))
@@ -1070,7 +1078,9 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
                  << "Decompression method: "
                  << (CompressionFormat == llvm::compression::Format::Zlib
                          ? "zlib"
-                         : "zstd")
+                         : (CompressionFormat == llvm::compression::Format::Lzma
+                                ? "lzma"
+                                : "zstd"))
                  << "\n"
                  << "Size before decompression: " << CompressedData.size()
                  << " bytes\n"
