@@ -130,6 +130,8 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr,
     isDistinct = true;
   }
 
+  llvm::TempMDTuple placeholderElements =
+      llvm::MDNode::getTemporary(llvmCtx, std::nullopt);
   llvm::DICompositeType *placeholder =
       getDistinctOrUnique<llvm::DICompositeType>(
           isDistinct, llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
@@ -138,7 +140,8 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr,
           attr.getAlignInBits(),
           /*OffsetInBits=*/0,
           /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
-          /*Elements=*/nullptr, /*RuntimeLang=*/0, /*VTableHolder=*/nullptr);
+          /*Elements=*/placeholderElements.get(), /*RuntimeLang=*/0,
+          /*VTableHolder=*/nullptr);
 
   if (setRec)
     setRec(placeholder);

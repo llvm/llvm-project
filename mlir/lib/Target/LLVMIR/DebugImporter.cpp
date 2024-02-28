@@ -326,7 +326,6 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
         attr = DIRecursiveTypeAttr::get(context, id, typeAttr);
 
         // Remove the unbound recursive attr.
-        AttrTypeReplacer replacer;
         unboundRecursiveSelfRefs.back().erase(id);
       }
     }
