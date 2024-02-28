@@ -487,7 +487,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[DEF]]
-    ; CHECK-NEXT: INLINEASM &"ldr ${0:s}, $1", 8 /* mayload attdialect */, 2359306 /* regdef:WSeqPairsClass_with_sube32_in_MatrixIndexGPR32_12_15 */, def %1, 262158 /* mem:m */, killed [[COPY1]]
+    ; CHECK-NEXT: INLINEASM &"ldr ${0:s}, $1", 8 /* mayload attdialect */, {{[0-9]+}} /* regdef:WSeqPairsClass_with_sube32_in_MatrixIndexGPR32_12_15 */, def %1, 262158 /* mem:m */, killed [[COPY1]]
     ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[MOVIv2d_ns]].dsub
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
