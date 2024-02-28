@@ -53,7 +53,7 @@ class DerivedTypeSpec;
 
 namespace lower {
 class SymMap;
-class SymbolBox;
+struct SymbolBox;
 namespace pft {
 struct Variable;
 }
