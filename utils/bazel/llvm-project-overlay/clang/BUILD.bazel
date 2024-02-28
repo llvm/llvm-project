@@ -1843,7 +1843,6 @@ cc_library(
         ":driver",
         ":driver_options_inc_gen",
         ":edit",
-        ":install_api",
         ":lex",
         ":parse",
         ":sema",
@@ -2066,7 +2065,9 @@ cc_library(
     deps = [
         ":ast",
         ":basic",
+        ":frontend",
         ":support",
+        "//llvm:Core",
         "//llvm:Support",
         "//llvm:TextAPI",
     ],

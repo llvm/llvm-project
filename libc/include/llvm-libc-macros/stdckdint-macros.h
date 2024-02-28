@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_STDCKDINT_MACROS_H
-#define __LLVM_LIBC_MACROS_STDCKDINT_MACROS_H
+#ifndef LLVM_LIBC_MACROS_STDCKDINT_MACROS_H
+#define LLVM_LIBC_MACROS_STDCKDINT_MACROS_H
 
 // We need to use __builtin_*_overflow from GCC/Clang to implement the overflow
 // macros. Check __GNUC__ for availability of such builtins.
@@ -22,4 +22,4 @@
 #define ckd_mul(R, A, B) __builtin_mul_overflow((A), (B), (R))
 #endif // __STDC_VERSION_STDCKDINT_H__
 #endif // __GNUC__
-#endif // __LLVM_LIBC_MACROS_STDCKDINT_MACROS_H
+#endif // LLVM_LIBC_MACROS_STDCKDINT_MACROS_H
