@@ -12,9 +12,11 @@
 
 #include "Xtensa.h"
 #include "XtensaTargetMachine.h"
+#include "XtensaUtils.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -37,9 +39,57 @@ public:
 
   void Select(SDNode *Node) override;
 
+  // For load/store instructions generate (base+offset) pair from
+  // memory address. The offset must be a multiple of scale argument.
   bool selectMemRegAddr(SDValue Addr, SDValue &Base, SDValue &Offset,
                         int Scale) {
-    report_fatal_error("MemReg address is not implemented yet");
+    EVT ValTy = Addr.getValueType();
+
+    // if Address is FI, get the TargetFrameIndex.
+    if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
+      Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+      Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), ValTy);
+
+      return true;
+    }
+
+    if (TM.isPositionIndependent()) {
+      DiagnosticInfoUnsupported Diag(CurDAG->getMachineFunction().getFunction(),
+                                     "PIC relocations are not supported ",
+                                     Addr.getDebugLoc());
+      CurDAG->getContext()->diagnose(Diag);
+    }
+
+    if ((Addr.getOpcode() == ISD::TargetExternalSymbol ||
+         Addr.getOpcode() == ISD::TargetGlobalAddress))
+      return false;
+
+    // Addresses of the form FI+const
+    bool Valid = false;
+    if (CurDAG->isBaseWithConstantOffset(Addr)) {
+      ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
+      int64_t OffsetVal = CN->getSExtValue();
+
+      Valid = isValidAddrOffset(Scale, OffsetVal);
+
+      if (Valid) {
+        // If the first operand is a FI, get the TargetFI Node
+        if (FrameIndexSDNode *FIN =
+                dyn_cast<FrameIndexSDNode>(Addr.getOperand(0)))
+          Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+        else
+          Base = Addr.getOperand(0);
+
+        Offset =
+            CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(Addr), ValTy);
+        return true;
+      }
+    }
+
+    // Last case
+    Base = Addr;
+    Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), Addr.getValueType());
+    return true;
   }
 
   bool selectMemRegAddrISH1(SDValue Addr, SDValue &Base, SDValue &Offset) {

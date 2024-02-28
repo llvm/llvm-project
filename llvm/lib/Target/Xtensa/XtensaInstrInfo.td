@@ -14,6 +14,7 @@
 
 include "XtensaInstrFormats.td"
 include "XtensaOperands.td"
+include "XtensaOperators.td"
 
 //===----------------------------------------------------------------------===//
 // Arithmetic & Logical instructions
@@ -238,6 +239,11 @@ def L32R : RI16_Inst<0x01, (outs AR:$t), (ins L32Rtarget:$label),
   let imm16 = label;
 }
 
+//extending loads
+def : Pat<(i32 (extloadi1  addr_ish1:$addr)), (L8UI addr_ish1:$addr)>;
+def : Pat<(i32 (extloadi8  addr_ish1:$addr)), (L8UI addr_ish1:$addr)>;
+def : Pat<(i32 (extloadi16 addr_ish2:$addr)), (L16UI addr_ish2:$addr)>;
+
 //===----------------------------------------------------------------------===//
 // Conditional branch instructions
 //===----------------------------------------------------------------------===//
@@ -426,7 +432,7 @@ let isReturn = 1, isTerminator = 1,
     isBarrier = 1, Uses = [A0] in {
 
   def RET : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins),
-                      "ret", []> {
+                      "ret", [(Xtensa_ret)]> {
     let m = 0x2;
     let n = 0x0;
     let s = 0;

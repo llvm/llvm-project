@@ -38,6 +38,27 @@ public:
   // Return the XtensaRegisterInfo, which this class owns.
   const XtensaRegisterInfo &getRegisterInfo() const { return RI; }
 
+  void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
+                   bool KillSrc) const override;
+
+  void storeRegToStackSlot(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MBBI, Register SrcReg,
+                           bool isKill, int FrameIndex,
+                           const TargetRegisterClass *RC,
+                           const TargetRegisterInfo *TRI,
+                           Register VReg) const override;
+
+  void loadRegFromStackSlot(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MBBI, Register DestReg,
+                            int FrameIdx, const TargetRegisterClass *RC,
+                            const TargetRegisterInfo *TRI,
+                            Register VReg) const override;
+
+  // Get the load and store opcodes for a given register class and offset.
+  void getLoadStoreOpcodes(const TargetRegisterClass *RC, unsigned &LoadOpcode,
+                           unsigned &StoreOpcode, int64_t offset) const;
+
   const XtensaSubtarget &getSubtarget() const { return STI; }
 };
 } // end namespace llvm
