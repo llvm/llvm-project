@@ -95,6 +95,118 @@ def EmitC_ApplyOp : EmitC_Op<"apply", []> {
   let hasVerifier = 1;
 }
 
+def EmitC_BitwiseAndOp : EmitC_BinaryOp<"bitwise_and", []> {
+  let summary = "Bitwise and operation";
+  let description = [{
+    With the `bitwise_and` operation the bitwise operator & (and) can
+    be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.bitwise_and %arg0, %arg1 : (i32, i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v3 = v1 & v2;
+    ```
+  }];
+}
+
+def EmitC_BitwiseLeftShiftOp : EmitC_BinaryOp<"bitwise_left_shift", []> {
+  let summary = "Bitwise left shift operation";
+  let description = [{
+    With the `bitwise_left_shift` operation the bitwise operator <<
+    (left shift) can be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.bitwise_left_shift %arg0, %arg1 : (i32, i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v3 = v1 << v2;
+    ```
+  }];
+}
+
+def EmitC_BitwiseNotOp : EmitC_Op<"bitwise_not", []> {
+  let summary = "Bitwise not operation";
+  let description = [{
+    With the `bitwise_not` operation the bitwise operator ~ (not) can
+    be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.bitwise_not %arg0 : (i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v2 = ~v1;
+    ```
+  }];
+
+  let arguments = (ins AnyType);
+  let results = (outs AnyType);
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+}
+
+def EmitC_BitwiseOrOp : EmitC_BinaryOp<"bitwise_or", []> {
+  let summary = "Bitwise or operation";
+  let description = [{
+    With the `bitwise_or` operation the bitwise operator | (or)
+    can be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.bitwise_or %arg0, %arg1 : (i32, i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v3 = v1 | v2;
+    ```
+  }];
+}
+
+def EmitC_BitwiseRightShiftOp : EmitC_BinaryOp<"bitwise_right_shift", []> {
+  let summary = "Bitwise right shift operation";
+  let description = [{
+    With the `bitwise_right_shift` operation the bitwise operator >>
+    (right shift) can be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.bitwise_right_shift %arg0, %arg1 : (i32, i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v3 = v1 >> v2;
+    ```
+  }];
+}
+
+def EmitC_BitwiseXorOp : EmitC_BinaryOp<"bitwise_xor", []> {
+  let summary = "Bitwise xor operation";
+  let description = [{
+    With the `bitwise_xor` operation the bitwise operator ^ (xor)
+    can be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.bitwise_xor %arg0, %arg1 : (i32, i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v3 = v1 ^ v2;
+    ```
+  }];
+}
+
 def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", []> {
   let summary = "Opaque call operation";
   let description = [{
