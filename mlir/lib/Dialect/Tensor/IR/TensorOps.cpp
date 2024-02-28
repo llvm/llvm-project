@@ -4012,15 +4012,17 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
   llvm::SmallSetVector<int64_t, 4> innerDims;
   innerDims.insert(packOp.getInnerDimsPos().begin(),
                    packOp.getInnerDimsPos().end());
-  auto outerDimsPerm = packOp.getOuterDimsPerm();
+  SmallVector<int64_t> inverseOuterDimsPerm;
+  if (!packOp.getOuterDimsPerm().empty())
+    inverseOuterDimsPerm = invertPermutationVector(packOp.getOuterDimsPerm());
   int srcRank = packOp.getSourceRank();
   for (auto i : llvm::seq<int64_t>(0, srcRank)) {
     if (innerDims.contains(i))
       continue;
     int64_t srcPos = i;
     int64_t destPos = i;
-    if (!outerDimsPerm.empty())
-      destPos = outerDimsPerm[srcPos];
+    if (!inverseOuterDimsPerm.empty())
+      destPos = inverseOuterDimsPerm[srcPos];
     if (ShapedType::isDynamic(srcShape[srcPos]) ==
         ShapedType::isDynamic(destShape[destPos])) {
       continue;
@@ -4240,15 +4242,17 @@ static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
                    op.getDestType().getShape().end());
   llvm::SmallSetVector<int64_t, 4> innerDims;
   innerDims.insert(op.getInnerDimsPos().begin(), op.getInnerDimsPos().end());
-  auto outerDimsPerm = op.getOuterDimsPerm();
+  SmallVector<int64_t> inverseOuterDimsPerm;
+  if (!op.getOuterDimsPerm().empty())
+    inverseOuterDimsPerm = invertPermutationVector(op.getOuterDimsPerm());
   int destRank = op.getDestRank();
   for (auto i : llvm::seq<int64_t>(0, destRank)) {
     if (innerDims.contains(i))
       continue;
     int64_t srcPos = i;
     int64_t destPos = i;
-    if (!outerDimsPerm.empty())
-      srcPos = outerDimsPerm[destPos];
+    if (!inverseOuterDimsPerm.empty())
+      srcPos = inverseOuterDimsPerm[destPos];
     if (ShapedType::isDynamic(srcShape[srcPos]) ==
         ShapedType::isDynamic(destShape[destPos])) {
       continue;
