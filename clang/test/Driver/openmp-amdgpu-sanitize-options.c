@@ -38,7 +38,7 @@
 // GPUSAN: clang{{.*}}"-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-fopenmp"{{.*}}"-fsanitize=address"{{.*}}"-fopenmp-targets=amdgcn-amd-amdhsa"{{.*}}"-x" "c"{{.*}}
 // GPUSAN: clang{{.*}}"-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-fopenmp"{{.*}}"-fsanitize=address"{{.*}}"-fopenmp-targets=amdgcn-amd-amdhsa"{{.*}}"-x" "ir"{{.*}}
 // GPUSAN: clang{{.*}}"-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"{{.*}}"-target-cpu" "gfx908"{{.*}}"-fcuda-is-device"{{.*}}"-fopenmp"{{.*}}"-fsanitize=address"{{.*}}
-// GPUSAN: llvm-link{{.*}}"--internalize" "--only-needed"{{.*}}"{{.*}}asanrtl.bc"{{.*}}"{{.*}}libomptarget-amdgcn-gfx908.bc"{{.*}}"-o" "{{.*}}.bc"
+// GPUSAN: llvm-link{{.*}}"--internalize" "--only-needed"{{.*}}"{{.*}}asanrtl.bc"{{.*}}"{{.*}}ockl.bc"{{.*}}"{{.*}}libomptarget-amdgcn-gfx908.bc"{{.*}}"-o" "{{.*}}.bc"
 
 // NOGPUSAN: clang{{.*}}"-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-fopenmp"{{.*}}"-fsanitize=address"{{.*}}"-fopenmp-targets=amdgcn-amd-amdhsa"{{.*}}"-x" "c"{{.*}}
 // NOGPUSAN: clang{{.*}}"-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-fopenmp"{{.*}}"-fsanitize=address"{{.*}}"-fopenmp-targets=amdgcn-amd-amdhsa"{{.*}}"-x" "ir"{{.*}}

@@ -266,11 +266,15 @@ const char *amdgpu::dlr::getLinkCommandArgs(
                    true) &&
       TC.getSanitizerArgs(Args).needsAsanRt()) {
     std::string AsanRTL(RocmInstallation.getAsanRTLPath());
-    if (AsanRTL.empty()) {
+    // asanrtl is dependent on ockl so for every asanrtl bitcode linking
+    // requires ockl but viceversa is not true.
+    std::string OcklRTL(RocmInstallation.getOCKLPath());
+    if (AsanRTL.empty() && OcklRTL.empty()) {
       if (!Args.hasArg(options::OPT_nogpulib))
         TC.getDriver().Diag(diag::err_drv_no_asan_rt_lib);
     } else {
       BCLibs.push_back(AsanRTL);
+      BCLibs.push_back(OcklRTL);
     }
   }
   StringRef GPUArch = getProcessorFromTargetID(Triple, TargetID);
