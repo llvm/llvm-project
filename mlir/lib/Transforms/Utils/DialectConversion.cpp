@@ -192,7 +192,6 @@ public:
     EraseBlock,
     InlineBlock,
     MoveBlock,
-    SplitBlock,
     BlockTypeConversion,
     ReplaceBlockArg,
     // Operation rewrites
@@ -398,30 +397,6 @@ private:
   // The original successor of this block before it was moved. "nullptr" if
   // this block was the only block in the region.
   Block *insertBeforeBlock;
-};
-
-/// Splitting of a block. This rewrite is immediately reflected in the IR.
-class SplitBlockRewrite : public BlockRewrite {
-public:
-  SplitBlockRewrite(ConversionPatternRewriterImpl &rewriterImpl, Block *block,
-                    Block *originalBlock)
-      : BlockRewrite(Kind::SplitBlock, rewriterImpl, block),
-        originalBlock(originalBlock) {}
-
-  static bool classof(const IRRewrite *rewrite) {
-    return rewrite->getKind() == Kind::SplitBlock;
-  }
-
-  void rollback() override {
-    // Merge back the block that was split out.
-    originalBlock->getOperations().splice(originalBlock->end(),
-                                          block->getOperations());
-    eraseBlock(block);
-  }
-
-private:
-  // The original block from which this block was split.
-  Block *originalBlock;
 };
 
 /// This structure contains the information pertaining to an argument that has
@@ -882,9 +857,6 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// Notifies that a block was inserted.
   void notifyBlockInserted(Block *block, Region *previous,
                            Region::iterator previousIt) override;
-
-  /// Notifies that a block was split.
-  void notifySplitBlock(Block *block, Block *continuation);
 
   /// Notifies that a block is being inlined into another block.
   void notifyBlockBeingInlined(Block *block, Block *srcBlock,
@@ -1522,11 +1494,6 @@ void ConversionPatternRewriterImpl::notifyBlockInserted(
   appendRewrite<MoveBlockRewrite>(block, previous, prevBlock);
 }
 
-void ConversionPatternRewriterImpl::notifySplitBlock(Block *block,
-                                                     Block *continuation) {
-  appendRewrite<SplitBlockRewrite>(continuation, block);
-}
-
 void ConversionPatternRewriterImpl::notifyBlockBeingInlined(
     Block *block, Block *srcBlock, Block::iterator before) {
   appendRewrite<InlineBlockRewrite>(block, srcBlock, before);
@@ -1663,15 +1630,6 @@ ConversionPatternRewriter::getRemappedValues(ValueRange keys,
     return success();
   return impl->remapValues("value", /*inputLoc=*/std::nullopt, *this, keys,
                            results);
-}
-
-Block *ConversionPatternRewriter::splitBlock(Block *block,
-                                             Block::iterator before) {
-  assert(!impl->wasOpReplaced(block->getParentOp()) &&
-         "attempting to split a block within a replaced/erased op");
-  auto *continuation = block->splitBlock(before);
-  impl->notifySplitBlock(block, continuation);
-  return continuation;
 }
 
 void ConversionPatternRewriter::inlineBlockBefore(Block *source, Block *dest,
