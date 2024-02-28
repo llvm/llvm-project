@@ -38,6 +38,7 @@ config.libcxx_include_target_dir = "@LIBCXX_GENERATED_INCLUDE_TARGET_DIR@"
 # The API tests use their own module caches.
 config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-api")
 config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-api")
+config.use_vendor_packages = @LLDB_TEST_USE_VENDOR_PACKAGES@
 
 # Plugins
 lldb_build_intel_pt = '@LLDB_BUILD_INTEL_PT@'
