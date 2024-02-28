@@ -6563,7 +6563,6 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
     return true;
 
   // Parse Expression field.
-  LocTy ExprLoc = Lex.getLoc();
   MDNode *Expression;
   if (parseMDNode(Expression))
     return true;
@@ -6588,7 +6587,6 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
       return true;
 
     // Parse address DIExpression.
-    LocTy AddressExprLoc = Lex.getLoc();
     if (parseMDNode(AddressExpression))
       return true;
     if (parseToken(lltok::comma, "Expected ',' here"))
