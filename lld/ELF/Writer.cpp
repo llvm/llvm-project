@@ -1742,6 +1742,29 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       in.mipsGot->updateAllocSize();
 
     for (Partition &part : partitions) {
+      // We've put relocations in relrAuthDyn during
+      // RelocationScanner::processAux, but the target VA for some of them might
+      // be wider than 32 bits which does not fit the place for implicit value
+      // of relr AUTH reloc. We can only know the final VA at this point, so
+      // move relocations with large values from relr to rela.
+      if (part.relrAuthDyn) {
+        for (auto it = part.relrAuthDyn->relocs.begin();
+             it != part.relrAuthDyn->relocs.end();) {
+          if (isInt<32>(it->reloc->sym->getVA(it->reloc->addend))) {
+            ++it;
+            continue;
+          }
+          part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, it->inputSec,
+                                  it->reloc->offset,
+                                  DynamicReloc::AddendOnlyWithTargetVA,
+                                  *it->reloc->sym, it->reloc->addend, R_ABS});
+          part.relrAuthDyn->relocs.erase(it);
+          // We keep the relocation in the it->inputSec->relocations so pointers
+          // to them in part.relrAuthDyn->relocs items remain valid. See
+          // corresponding comment AArch64::relocate for details.
+          changed = true;
+        }
+      }
       changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
@@ -1881,7 +1904,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
 // To deal with the above problem, this function is called after
 // scanRelocations is called to remove synthetic sections that turn
 // out to be empty.
-static void removeUnusedSyntheticSections() {
+template <class ELFT> static void removeUnusedSyntheticSections() {
   // All input synthetic sections that can be empty are placed after
   // all regular ones. Reverse iterate to find the first synthetic section
   // after a non-synthetic one which will be our starting point.
@@ -1897,6 +1920,18 @@ static void removeUnusedSyntheticSections() {
         auto *sec = cast<SyntheticSection>(s);
         if (sec->getParent() && sec->isNeeded())
           return false;
+        // Packed AArch64 AUTH relocs might be moved from .relr.auth.dyn to
+        // .rela.dyn further in finalizeAddressDependentContent(). It is called
+        // later since removing unused synthetic sections changes the final
+        // layout. So, .rela.dyn should be kept now in such a case even if it's
+        // currently empty. A possible side effect is having empty
+        // .relr.auth.dyn (if all the packed AUTH relocs were moved to
+        // .rela.dyn) or empty .rela.dyn (if no rela relocs were there and no
+        // packed AUTH relocs were moved to it) in the output binary.
+        if (config->emachine == EM_AARCH64 && config->relrPackDynRelocs)
+          if (auto *relSec = dyn_cast<RelocationSection<ELFT>>(sec))
+            if (relSec->name == ".rela.dyn")
+              return false;
         unused.insert(sec);
         return true;
       });
@@ -2102,7 +2137,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (in.mipsGot)
     in.mipsGot->build();
 
-  removeUnusedSyntheticSections();
+  removeUnusedSyntheticSections<ELFT>();
   script->diagnoseOrphanHandling();
   script->diagnoseMissingSGSectionAddress();
 
