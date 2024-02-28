@@ -376,9 +376,9 @@ public:
                             const Fortran::semantics::Symbol &sym) {
     mlir::Type type = converter.genType(sym);
     bool isPolymorphic = Fortran::semantics::IsPolymorphic(sym);
-    assert(type.isa<fir::SequenceType>() ||
-           (isPolymorphic && type.isa<fir::ClassType>()) &&
-               "must be a sequence type");
+    assert((type.isa<fir::SequenceType>() ||
+            (isPolymorphic && type.isa<fir::ClassType>())) &&
+           "must be a sequence type");
     if (isPolymorphic)
       return type;
     return fir::BoxType::get(type);
