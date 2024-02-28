@@ -1522,7 +1522,6 @@ public:
     if (!Legal->prepareToFoldTailByMasking())
       return;
 
-<<<<<<< HEAD
     if (ForceTailFoldingStyle.getNumOccurrences()) {
       ChosenTailFoldingStyle.first = ChosenTailFoldingStyle.second =
           ForceTailFoldingStyle;
@@ -1558,16 +1557,6 @@ public:
       }
       return;
     }
-||||||| parent of 73e3b4948fb4 (Address comments)
-    if (ForceTailFoldingStyle.getNumOccurrences())
-      return ForceTailFoldingStyle;
-=======
-    if (ChosenTailFoldingStyle)
-      return *ChosenTailFoldingStyle;
-
-    if (ForceTailFoldingStyle.getNumOccurrences())
-      return ForceTailFoldingStyle;
->>>>>>> 73e3b4948fb4 (Address comments)
 
     ChosenTailFoldingStyle.first =
         TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true);
@@ -1741,9 +1730,6 @@ private:
   /// the IV update may overflow, the second element - if it does not.
   std::pair<TailFoldingStyle, TailFoldingStyle> ChosenTailFoldingStyle =
       std::make_pair(TailFoldingStyle::None, TailFoldingStyle::None);
-
-  /// Control finally chosen tail folding style.
-  std::optional<TailFoldingStyle> ChosenTailFoldingStyle;
 
   /// A map holding scalar costs for different vectorization factors. The
   /// presence of a cost for an instruction in the mapping indicates that the
@@ -9479,8 +9465,8 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
         // FIXME: Support reverse store after vp_reverse is added.
         Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
         NewSI = lowerStoreUsingVectorIntrinsics(
-            Builder, State.get(getAddr(), Part), StoredVal, CreateGatherScatter,
-            MaskPart, EVL, Alignment);
+            Builder, State.get(getAddr(), Part, !CreateGatherScatter),
+            StoredVal, CreateGatherScatter, MaskPart, EVL, Alignment);
       } else if (CreateGatherScatter) {
         Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
         Value *VectorGep = State.get(getAddr(), Part);
@@ -9523,8 +9509,8 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
       // FIXME: Support reverse loading after vp_reverse is added.
       Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
       NewLI = lowerLoadUsingVectorIntrinsics(
-          Builder, DataTy, State.get(getAddr(), Part), CreateGatherScatter,
-          MaskPart, EVL, Alignment);
+          Builder, DataTy, State.get(getAddr(), Part, !CreateGatherScatter),
+          CreateGatherScatter, MaskPart, EVL, Alignment);
     } else if (CreateGatherScatter) {
       Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
       Value *VectorGep = State.get(getAddr(), Part);

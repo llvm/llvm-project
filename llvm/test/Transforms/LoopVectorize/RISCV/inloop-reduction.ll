@@ -133,21 +133,21 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], [[TMP1]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[N]], 1
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vscale.i32()
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP5]], 4
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = add i32 [[INDEX]], 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[INDEX]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[INDEX]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP8]]
-; IF-EVL-NEXT:    [[VEC_IV:%.*]] = add <vscale x 4 x i32> [[BROADCAST_SPLAT2]], [[TMP9]]
-; IF-EVL-NEXT:    [[TMP10:%.*]] = icmp ule <vscale x 4 x i32> [[VEC_IV]], [[BROADCAST_SPLAT]]
+; IF-EVL-NEXT:    [[VEC_IV:%.*]] = add <vscale x 4 x i32> [[BROADCAST_SPLAT]], [[TMP9]]
+; IF-EVL-NEXT:    [[TMP10:%.*]] = icmp ule <vscale x 4 x i32> [[VEC_IV]], [[BROADCAST_SPLAT2]]
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i16, ptr [[X:%.*]], i32 [[TMP7]]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[TMP11]], i32 0
 ; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16.p0(ptr [[TMP12]], i32 2, <vscale x 4 x i1> [[TMP10]], <vscale x 4 x i16> poison)

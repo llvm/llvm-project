@@ -2029,7 +2029,7 @@ void VPEVLBasedIVPHIRecipe::execute(VPTransformState &State) {
       State.Builder.CreatePHI(Start->getType(), 2, "evl.based.iv");
   EntryPart->addIncoming(Start, VectorPH);
   EntryPart->setDebugLoc(getDebugLoc());
-  State.set(this, EntryPart, 0);
+  State.set(this, EntryPart, 0, /*IsScalar=*/true);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -6,7 +6,7 @@
 
 ; RUN: opt -passes=loop-vectorize \
 ; RUN: -force-tail-folding-style=none \
-; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck --check-prefix=NO-VP %s
 
 define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
