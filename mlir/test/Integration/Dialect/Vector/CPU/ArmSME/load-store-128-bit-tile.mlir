@@ -1,23 +1,11 @@
 // DEFINE: %{entry_point} = test_load_store_zaq0
-// DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
-// DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
-// DEFINE:   -allocate-arm-sme-tiles -test-lower-to-llvm
+// DEFINE: %{compile} = mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:  -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=void \
 // DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib
 
 // RUN: %{compile} | %{run} | FileCheck %s
-
-/// Note: The SME ST1Q/LD1Q instructions are currently broken in QEMU
-/// see: https://gitlab.com/qemu-project/qemu/-/issues/1833
-/// This test is expected to fail until a fixed version of QEMU can be used.
-
-/// FIXME: Remove the 'XFAIL' below once a fixed QEMU version is available
-/// (and installed on CI buildbot).
-// XFAIL: {{.*}}
 
 func.func @print_i8s(%bytes: memref<?xi8>, %len: index) {
   %c0 = arith.constant 0 : index

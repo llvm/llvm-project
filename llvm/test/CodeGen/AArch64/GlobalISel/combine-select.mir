@@ -118,7 +118,8 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x2
     ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: %f:_(s1) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-NEXT: %sel:_(s1) = G_OR %c, %f
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s1) = G_FREEZE %f
+    ; CHECK-NEXT: %sel:_(s1) = G_OR %c, [[FREEZE]]
     ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s1)
     ; CHECK-NEXT: $w0 = COPY %ext(s32)
     %0:_(s64) = COPY $x0
@@ -144,7 +145,8 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x2
     ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: %f:_(s1) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-NEXT: %sel:_(s1) = G_OR %c, %f
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s1) = G_FREEZE %f
+    ; CHECK-NEXT: %sel:_(s1) = G_OR %c, [[FREEZE]]
     ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s1)
     ; CHECK-NEXT: $w0 = COPY %ext(s32)
     %0:_(s64) = COPY $x0
@@ -171,7 +173,8 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d2
     ; CHECK-NEXT: %c:_(<2 x s1>) = G_TRUNC [[COPY]](<2 x s32>)
     ; CHECK-NEXT: %f:_(<2 x s1>) = G_TRUNC [[COPY1]](<2 x s32>)
-    ; CHECK-NEXT: %sel:_(<2 x s1>) = G_OR %c, %f
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<2 x s1>) = G_FREEZE %f
+    ; CHECK-NEXT: %sel:_(<2 x s1>) = G_OR %c, [[FREEZE]]
     ; CHECK-NEXT: %ext:_(<2 x s32>) = G_ANYEXT %sel(<2 x s1>)
     ; CHECK-NEXT: $d0 = COPY %ext(<2 x s32>)
     %0:_(<2 x s32>) = COPY $d0
@@ -199,7 +202,8 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: %t:_(s1) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-NEXT: %sel:_(s1) = G_AND %c, %t
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s1) = G_FREEZE %t
+    ; CHECK-NEXT: %sel:_(s1) = G_AND %c, [[FREEZE]]
     ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s1)
     ; CHECK-NEXT: $w0 = COPY %ext(s32)
     %0:_(s64) = COPY $x0
@@ -226,7 +230,8 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: %t:_(s1) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-NEXT: %sel:_(s1) = G_AND %c, %t
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s1) = G_FREEZE %t
+    ; CHECK-NEXT: %sel:_(s1) = G_AND %c, [[FREEZE]]
     ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s1)
     ; CHECK-NEXT: $w0 = COPY %ext(s32)
     %0:_(s64) = COPY $x0
@@ -255,7 +260,8 @@ body:             |
     ; CHECK-NEXT: %t:_(s1) = G_TRUNC [[COPY1]](s64)
     ; CHECK-NEXT: %one:_(s1) = G_CONSTANT i1 true
     ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s1) = G_XOR %c, %one
-    ; CHECK-NEXT: %sel:_(s1) = G_OR [[XOR]], %t
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s1) = G_FREEZE %t
+    ; CHECK-NEXT: %sel:_(s1) = G_OR [[XOR]], [[FREEZE]]
     ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s1)
     ; CHECK-NEXT: $w0 = COPY %ext(s32)
     %0:_(s64) = COPY $x0
@@ -284,7 +290,8 @@ body:             |
     ; CHECK-NEXT: %f:_(s1) = G_TRUNC [[COPY1]](s64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
     ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s1) = G_XOR %c, [[C]]
-    ; CHECK-NEXT: %sel:_(s1) = G_AND [[XOR]], %f
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s1) = G_FREEZE %f
+    ; CHECK-NEXT: %sel:_(s1) = G_AND [[XOR]], [[FREEZE]]
     ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s1)
     ; CHECK-NEXT: $w0 = COPY %ext(s32)
     %0:_(s64) = COPY $x0

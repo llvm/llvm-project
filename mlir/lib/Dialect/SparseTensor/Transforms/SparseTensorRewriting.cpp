@@ -299,8 +299,7 @@ public:
     Block &prodBlock = prod.getRegion().front();
     Block &consBlock = op.getRegion().front();
     IRMapping mapper;
-    Block *fusedBlock = new Block();
-    fusedOp.getRegion().push_back(fusedBlock);
+    Block *fusedBlock = rewriter.createBlock(&fusedOp.getRegion());
     unsigned num = prodBlock.getNumArguments();
     for (unsigned i = 0; i < num - 1; i++)
       addArg(mapper, fusedBlock, prodBlock.getArgument(i));
@@ -309,7 +308,6 @@ public:
     // Clone bodies of the producer and consumer in new evaluation order.
     auto *acc = prodBlock.getTerminator()->getOperand(0).getDefiningOp();
     auto *sampler = consBlock.getTerminator()->getOperand(0).getDefiningOp();
-    rewriter.setInsertionPointToStart(fusedBlock);
     Value last;
     for (auto &op : prodBlock.without_terminator())
       if (&op != acc) {
@@ -1180,7 +1178,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     auto stt = getSparseTensorType(op.getResult());
-    if (!stt.hasEncoding() || stt.getCOOStart() == 0)
+    if (!stt.hasEncoding() || stt.getAoSCOOStart() == 0)
       return failure();
 
     // Implement the NewOp as follows:

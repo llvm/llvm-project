@@ -1111,8 +1111,8 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
         C.getActiveOffloadKinds() == Action::OFK_None) {
       SmallString<128> P(llvm::sys::path::parent_path(D.InstalledDir));
       llvm::sys::path::append(P, "include");
-      llvm::sys::path::append(P, "gpu-none-llvm");
-      CmdArgs.push_back("-c-isystem");
+      llvm::sys::path::append(P, getToolChain().getTripleString());
+      CmdArgs.push_back("-internal-isystem");
       CmdArgs.push_back(Args.MakeArgString(P));
     } else if (C.getActiveOffloadKinds() == Action::OFK_OpenMP) {
       // TODO: CUDA / HIP include their own headers for some common functions
@@ -4939,17 +4939,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (Arg *ExtractAPIIgnoresFileArg =
             Args.getLastArg(options::OPT_extract_api_ignores_EQ))
       ExtractAPIIgnoresFileArg->render(Args, CmdArgs);
-  } else if (isa<InstallAPIJobAction>(JA)) {
-    if (!Triple.isOSDarwin())
-      D.Diag(diag::err_drv_installapi_unsupported) << Triple.str();
-
-    CmdArgs.push_back("-installapi");
-    // Add necessary library arguments for InstallAPI.
-    if (const Arg *A = Args.getLastArg(options::OPT_install__name))
-      A->render(Args, CmdArgs);
-    if (const Arg *A = Args.getLastArg(options::OPT_current__version))
-      A->render(Args, CmdArgs);
-
   } else {
     assert((isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) &&
            "Invalid action for clang tool.");
@@ -5969,7 +5958,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *A = Args.getLastArg(options::OPT_fbasic_block_address_map,
                                options::OPT_fno_basic_block_address_map)) {
-    if (Triple.isX86() && Triple.isOSBinFormatELF()) {
+    if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF()) {
       if (A->getOption().matches(options::OPT_fbasic_block_address_map))
         A->render(Args, CmdArgs);
     } else {
