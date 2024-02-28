@@ -388,8 +388,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, s32, 4)
       .clampMaxNumElements(0, s64, 2)
       .clampMaxNumElements(0, p0, 2)
+      // TODO: Use BITCAST for v2i8, v2i16 after G_TRUNC gets sorted out
+      .bitcastIf(typeInSet(0, {v4s8}),
+                 [=](const LegalityQuery &Query) {
+                   const LLT VecTy = Query.Types[0];
+                   return std::pair(0, LLT::scalar(VecTy.getSizeInBits()));
+                 })
       .customIf(IsPtrVecPred)
-      .scalarizeIf(typeIs(0, v2s16), 0);
+      .scalarizeIf(typeInSet(0, {v2s16, v2s8}), 0);
 
   getActionDefinitionsBuilder(G_STORE)
       .customIf([=](const LegalityQuery &Query) {
