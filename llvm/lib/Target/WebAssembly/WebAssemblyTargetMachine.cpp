@@ -77,6 +77,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeLowerGlobalDtorsLegacyPassPass(PR);
   initializeFixFunctionBitcastsPass(PR);
   initializeOptimizeReturnedPass(PR);
+  initializeWebAssemblyRefTypeMem2LocalPass(PR);
   initializeWebAssemblyArgumentMovePass(PR);
   initializeWebAssemblySetP2AlignOperandsPass(PR);
   initializeWebAssemblyReplacePhysRegsPass(PR);

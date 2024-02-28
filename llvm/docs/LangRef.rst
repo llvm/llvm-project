@@ -4364,7 +4364,7 @@ constants and smaller complex constants.
 
     When creating a vector whose elements have the same constant value, the
     preferred syntax is ``splat (<Ty> Val)``. For example: "``splat (i32 11)``".
-    These vector constants must have ::ref:`vector type <t_vector>` with an
+    These vector constants must have :ref:`vector type <t_vector>` with an
     element type that matches the ``splat`` operand.
 **Zero initialization**
     The string '``zeroinitializer``' can be used to zero initialize a
