@@ -616,8 +616,7 @@ private:
   }
 
   void initVaListType(CheckerContext &C) const {
-    VaListType =
-        C.getASTContext().getBuiltinVaListType().getCanonicalType();
+    VaListType = C.getASTContext().getBuiltinVaListType().getCanonicalType();
   }
 
   /// Searches for the ExplodedNode where the file descriptor was acquired for
