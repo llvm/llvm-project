@@ -19,7 +19,7 @@ using namespace llvm::MachO;
 
 namespace clang::installapi {
 
-// Exported NamedDecl needs to have externally visibiliy linkage and
+// Exported NamedDecl needs to have external linkage and
 // default visibility from LinkageComputer.
 static bool isExported(const NamedDecl *D) {
   auto LV = D->getLinkageAndVisibility();

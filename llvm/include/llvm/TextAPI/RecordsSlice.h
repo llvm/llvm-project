@@ -50,9 +50,9 @@ public:
   /// Add non-ObjC global record.
   ///
   /// \param Name The name of symbol.
-  /// \param Flags The flags that describe attributes of the symbol.
-  /// \param GV The kind of global.
   /// \param Linkage The linkage of symbol.
+  /// \param GV The kind of global.
+  /// \param Flags The flags that describe attributes of the symbol.
   /// \return The non-owning pointer to added record in slice.
   GlobalRecord *addGlobal(StringRef Name, RecordLinkage Linkage,
                           GlobalRecord::Kind GV,
@@ -69,6 +69,7 @@ public:
 
   /// Add ObjC IVar record.
   ///
+  /// \param Container Owning pointer for instance variable.
   /// \param Name The name of ivar, not symbol.
   /// \param Linkage The linkage of symbol.
   /// \return The non-owning pointer to added record in slice.
@@ -93,7 +94,7 @@ public:
   /// Find ObjC Category.
   ///
   /// \param ClassToExtend The name of class, not full symbol name.
-  /// \param Categories The name of category.
+  /// \param Category The name of category.
   /// \return The non-owning pointer to record in slice.
   ObjCCategoryRecord *findObjCCategory(StringRef ClassToExtend,
                                        StringRef Category) const;
