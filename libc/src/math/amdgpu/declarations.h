@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_GPU_AMDGPU_DECLARATIONS_H
-#define LLVM_LIBC_SRC_MATH_GPU_AMDGPU_DECLARATIONS_H
+#ifndef LLVM_LIBC_SRC_MATH_AMDGPU_DECLARATIONS_H
+#define LLVM_LIBC_SRC_MATH_AMDGPU_DECLARATIONS_H
 
 #include "platform.h"
 
@@ -83,4 +83,4 @@ float __ocml_tgamma_f32(float);
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_MATH_GPU_AMDGPU_DECLARATIONS_H
+#endif // LLVM_LIBC_SRC_MATH_AMDGPU_DECLARATIONS_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_FLOAT128_H__
-#define __LLVM_LIBC_TYPES_FLOAT128_H__
+#ifndef LLVM_LIBC_TYPES_FLOAT128_H
+#define LLVM_LIBC_TYPES_FLOAT128_H
 
 #include "llvm-libc-macros/float-macros.h" // LDBL_MANT_DIG
 
@@ -34,4 +34,4 @@ typedef __float128 float128;
 typedef long double float128;
 #endif
 
-#endif // __LLVM_LIBC_TYPES_FLOAT128_H__
+#endif // LLVM_LIBC_TYPES_FLOAT128_H

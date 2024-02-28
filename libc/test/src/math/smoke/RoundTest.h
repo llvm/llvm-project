@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTEST_H
+
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -66,3 +69,5 @@ public:
   TEST_F(LlvmLibcRoundTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
   TEST_F(LlvmLibcRoundTest, RoundedNubmers) { testRoundedNumbers(&func); }     \
   TEST_F(LlvmLibcRoundTest, Fractions) { testFractions(&func); }
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTEST_H
