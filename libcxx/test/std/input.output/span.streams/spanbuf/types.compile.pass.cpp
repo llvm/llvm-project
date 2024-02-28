@@ -27,53 +27,52 @@
 #include <string>
 #include <type_traits>
 
+#include "constexpr_char_traits.h"
 #include "test_macros.h"
 
-// Types
+template <typename CharT, typename Traits = std::char_traits<CharT>>
+void test() {
+  using SpBuf = std::basic_spanbuf<CharT, Traits>;
+
+  // Types
+
+  static_assert(std::is_base_of_v<std::basic_streambuf<CharT, Traits>, SpBuf>);
+  static_assert(std::is_same_v<typename SpBuf::char_type, CharT>);
+  static_assert(std::is_same_v<typename SpBuf::int_type, typename Traits::int_type>);
+  static_assert(std::is_same_v<typename SpBuf::pos_type, typename Traits::pos_type>);
+  static_assert(std::is_same_v<typename SpBuf::off_type, typename Traits::off_type>);
+  static_assert(std::is_same_v<typename SpBuf::traits_type, Traits>);
+
+  // Copy properties
+
+  static_assert(!std::is_copy_constructible_v<SpBuf>);
+  static_assert(!std::is_copy_assignable_v<SpBuf>);
+
+  // Move properties
+
+  static_assert(!std::is_copy_constructible_v<SpBuf>);
+  static_assert(!std::is_copy_assignable_v<SpBuf>);
+
+  // Move properties
+
+  static_assert(std::is_move_constructible_v<SpBuf>);
+  static_assert(std::is_move_assignable_v<SpBuf>);
+}
+
+void test() {
+  test<char>();
+  test<char, constexpr_char_traits<char>>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  test<wchar_t>();
+  test<wchar_t, constexpr_char_traits<wchar_t>>();
+#endif
+}
+
+// Aliases
 
 static_assert(std::is_base_of_v<std::basic_streambuf<char>, std::spanbuf>);
-static_assert(std::is_same_v<std::spanbuf::char_type, char>);
-static_assert(std::is_same_v<std::spanbuf::int_type, std::char_traits<char>::int_type>);
-static_assert(std::is_same_v<std::spanbuf::pos_type, std::char_traits<char>::pos_type>);
-static_assert(std::is_same_v<std::spanbuf::off_type, std::char_traits<char>::off_type>);
-static_assert(std::is_same_v<std::spanbuf::traits_type, std::char_traits<char>>);
-
+static_assert(std::is_same_v<std::basic_spanbuf<char>, std::spanbuf>);
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
 static_assert(std::is_base_of_v<std::basic_streambuf<wchar_t>, std::wspanbuf>);
-static_assert(std::is_same_v<std::wspanbuf::char_type, wchar_t>);
-static_assert(std::is_same_v<std::wspanbuf::int_type, std::char_traits<wchar_t>::int_type>);
-static_assert(std::is_same_v<std::wspanbuf::pos_type, std::char_traits<wchar_t>::pos_type>);
-static_assert(std::is_same_v<std::wspanbuf::off_type, std::char_traits<wchar_t>::off_type>);
-static_assert(std::is_same_v<std::wspanbuf::traits_type, std::char_traits<wchar_t>>);
+static_assert(std::is_same_v<std::basic_spanbuf<wchar_t>, std::wspanbuf>);
 #endif
-
-// Copy properties
-
-static_assert(!std::is_copy_constructible_v<std::spanbuf>);
-static_assert(!std::is_copy_assignable_v<std::spanbuf>);
-
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(!std::is_copy_constructible_v<std::wspanbuf>);
-static_assert(!std::is_copy_assignable_v<std::wspanbuf>);
-#endif
-
-// Move properties
-
-static_assert(!std::is_copy_constructible_v<std::spanbuf>);
-static_assert(!std::is_copy_assignable_v<std::spanbuf>);
-
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(!std::is_copy_constructible_v<std::wspanbuf>);
-static_assert(!std::is_copy_assignable_v<std::wspanbuf>);
-#endif
-
-// Move properties
-
-static_assert(std::is_move_constructible_v<std::spanbuf>);
-static_assert(std::is_move_assignable_v<std::spanbuf>);
-
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(std::is_move_constructible_v<std::wspanbuf>);
-static_assert(std::is_move_assignable_v<std::wspanbuf>);
-#endif
-
