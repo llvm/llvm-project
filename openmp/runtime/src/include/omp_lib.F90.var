@@ -61,6 +61,34 @@
         ! to be exported by this MODULE.
         private
 
+        ! Re-export definitions in omp_lib_kinds
+        public :: omp_integer_kind
+        public :: omp_logical_kind
+        public :: omp_real_kind
+        public :: kmp_double_kind
+        public :: omp_lock_kind
+        public :: omp_nest_lock_kind
+        public :: omp_sched_kind
+        public :: omp_proc_bind_kind
+        public :: kmp_pointer_kind
+        public :: kmp_size_t_kind
+        public :: kmp_affinity_mask_kind
+        public :: kmp_cancel_kind
+        public :: omp_sync_hint_kind
+        public :: omp_lock_hint_kind
+        public :: omp_control_tool_kind
+        public :: omp_control_tool_result_kind
+        public :: omp_allocator_handle_kind
+        public :: omp_memspace_handle_kind
+        public :: omp_alloctrait_key_kind
+        public :: omp_alloctrait_val_kind
+        public :: omp_interop_kind
+        public :: omp_interop_fr_kind
+        public :: omp_alloctrait
+        public :: omp_pause_resource_kind
+        public :: omp_depend_kind
+        public :: omp_event_handle_kind
+
         integer (kind=omp_integer_kind), parameter, public :: openmp_version    = @LIBOMP_OMP_YEAR_MONTH@
         integer (kind=omp_integer_kind), parameter, public :: kmp_version_major = @LIBOMP_VERSION_MAJOR@
         integer (kind=omp_integer_kind), parameter, public :: kmp_version_minor = @LIBOMP_VERSION_MINOR@
