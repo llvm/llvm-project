@@ -2061,8 +2061,8 @@ fixUPCAddressofArraySubscriptWithSpan(const UnaryOperator *Node) {
     if (!IndexString)
       return std::nullopt;
 
-    SS << "&" << (*DreString).str() << ".data()" << "[" << (*IndexString).str()
-       << "]";
+    SS << "&" << (*DreString).str() << ".data()"
+       << "[" << (*IndexString).str() << "]";
   }
   return FixItList{
       FixItHint::CreateReplacement(Node->getSourceRange(), SS.str())};
