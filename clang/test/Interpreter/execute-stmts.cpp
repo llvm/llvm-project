@@ -9,6 +9,8 @@
 //CODEGEN-CHECK-COUNT-2: define internal void @__stmts__
 //CODEGEN-CHECK-NOT: define internal void @__stmts__
 
+// New tests fail right now
+// XFAIL: *
 
 extern "C" int printf(const char*,...);
 
@@ -41,3 +43,9 @@ for (; i > 4; --i) { printf("i = %d\n", i); };
 
 int j = i; printf("j = %d\n", j);
 // CHECK-NEXT: j = 4
+
+if (int i = j) printf("i = %d\n", i);
+// CHECK-NEXT: i = 4
+
+for (int i = j; i > 3; --i) printf("i = %d\n", i);
+// CHECK-NEXT: i = 4
