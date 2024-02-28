@@ -280,7 +280,7 @@ MCSymbol *MCPlusBuilder::getOrCreateInstLabel(MCInst &Inst, const Twine &Name,
   if (Label)
     return Label;
 
-  Label = Ctx->createTempSymbol(Name);
+  Label = Ctx->createNamedTempSymbol(Name);
   setAnnotationOpValue(Inst, MCAnnotation::kLabel,
                        reinterpret_cast<int64_t>(Label));
   return Label;
