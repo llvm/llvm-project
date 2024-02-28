@@ -40,6 +40,8 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         return ["utility"]
     elif header == "__fwd/subrange.h":
         return ["ranges"]
+    elif re.match("__fwd/(fstream|ios|istream|ostream|sstream|streambuf)[.]h", header):
+        return ["iosfwd"]
     # Handle remaining forward declaration headers
     elif re.match("__fwd/(.+)[.]h", header):
         return [re.match("__fwd/(.+)[.]h", header).group(1)]
