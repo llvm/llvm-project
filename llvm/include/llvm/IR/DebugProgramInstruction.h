@@ -62,6 +62,8 @@ class BasicBlock;
 class MDNode;
 class Module;
 class DbgVariableIntrinsic;
+class DbgInfoIntrinsic;
+class DbgLabelInst;
 class DIAssignID;
 class DPMarker;
 class DPValue;
@@ -79,14 +81,14 @@ class raw_ostream;
 ///   deleteRecord
 ///   clone
 ///   isIdenticalToWhenDefined
-///   isEquivalentTo
 ///   both print methods
+///   createDebugIntrinsic
 class DbgRecord : public ilist_node<DbgRecord> {
 public:
   /// Marker that this DbgRecord is linked into.
   DPMarker *Marker = nullptr;
   /// Subclass discriminator.
-  enum Kind : uint8_t { ValueKind };
+  enum Kind : uint8_t { ValueKind, LabelKind };
 
 protected:
   DebugLoc DbgLoc;
@@ -104,8 +106,15 @@ public:
   void print(raw_ostream &O, bool IsForDebug = false) const;
   void print(raw_ostream &O, ModuleSlotTracker &MST, bool IsForDebug) const;
   bool isIdenticalToWhenDefined(const DbgRecord &R) const;
-  bool isEquivalentTo(const DbgRecord &R) const;
+  /// Convert this DbgRecord back into an appropriate llvm.dbg.* intrinsic.
+  /// \p InsertBefore Optional position to insert this intrinsic.
+  /// \returns A new llvm.dbg.* intrinsic representiung this DbgRecord.
+  DbgInfoIntrinsic *createDebugIntrinsic(Module *M,
+                                         Instruction *InsertBefore) const;
   ///@}
+
+  /// Same as isIdenticalToWhenDefined but checks DebugLoc too.
+  bool isEquivalentTo(const DbgRecord &R) const;
 
   Kind getRecordKind() const { return RecordKind; }
 
@@ -156,6 +165,38 @@ protected:
   ~DbgRecord() = default;
 };
 
+inline raw_ostream &operator<<(raw_ostream &OS, const DbgRecord &R) {
+  R.print(OS);
+  return OS;
+}
+
+/// Records a position in IR for a source label (DILabel). Corresponds to the
+/// llvm.dbg.label intrinsic.
+/// FIXME: Rename DbgLabelRecord when DPValue is renamed to DbgVariableRecord.
+class DPLabel : public DbgRecord {
+  DILabel *Label;
+
+public:
+  DPLabel(DILabel *Label, DebugLoc DL)
+      : DbgRecord(LabelKind, DL), Label(Label) {
+    assert(Label && "Unexpected nullptr");
+  }
+
+  DPLabel *clone() const;
+  void print(raw_ostream &O, bool IsForDebug = false) const;
+  void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
+  DbgLabelInst *createDebugIntrinsic(Module *M,
+                                     Instruction *InsertBefore) const;
+
+  void setLabel(DILabel *NewLabel) { Label = NewLabel; }
+  DILabel *getLabel() const { return Label; }
+
+  /// Support type inquiry through isa, cast, and dyn_cast.
+  static bool classof(const DbgRecord *E) {
+    return E->getRecordKind() == LabelKind;
+  }
+};
+
 /// Record of a variable value-assignment, aka a non instruction representation
 /// of the dbg.value intrinsic.
 ///
@@ -183,7 +224,7 @@ public:
   // DebugValueUser superclass instead. The referred to Value can either be a
   // ValueAsMetadata or a DIArgList.
 
-  DILocalVariable *Variable;
+  TrackingMDNodeRef Variable;
   DIExpression *Expression;
   DIExpression *AddressExpression;
 
@@ -290,7 +331,7 @@ public:
   void addVariableLocationOps(ArrayRef<Value *> NewValues,
                               DIExpression *NewExpr);
 
-  void setVariable(DILocalVariable *NewVar) { Variable = NewVar; }
+  void setVariable(DILocalVariable *NewVar);
 
   void setExpression(DIExpression *NewExpr) { Expression = NewExpr; }
 
@@ -308,7 +349,8 @@ public:
   void setKillLocation();
   bool isKillLocation() const;
 
-  DILocalVariable *getVariable() const { return Variable; }
+  DILocalVariable *getVariable() const;
+  MDNode *getRawVariable() const { return Variable; }
 
   DIExpression *getExpression() const { return Expression; }
 
@@ -507,11 +549,6 @@ public:
 
 inline raw_ostream &operator<<(raw_ostream &OS, const DPMarker &Marker) {
   Marker.print(OS);
-  return OS;
-}
-
-inline raw_ostream &operator<<(raw_ostream &OS, const DPValue &Value) {
-  Value.print(OS);
   return OS;
 }
 

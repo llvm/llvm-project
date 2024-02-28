@@ -613,14 +613,15 @@ libc_support_library(
 libc_support_library(
     name = "__support_fixed_point",
     hdrs = [
-        "src/__support/fixed_point/fx_rep.h",
         "src/__support/fixed_point/fx_bits.h",
+        "src/__support/fixed_point/fx_rep.h",
     ],
     deps = [
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_optimization",
+        ":__support_math_extras",
         ":llvm_libc_macros_stdfix_macros",
     ],
 )
@@ -2981,20 +2982,21 @@ libc_function(
 ################################ stdio targets #################################
 
 libc_support_library(
+    name = "printf_config",
+    hdrs = ["src/stdio/printf_core/printf_config.h"],
+    defines = PRINTF_COPTS,
+    deps = [
+    ],
+)
+
+libc_support_library(
     name = "printf_core_structs",
     hdrs = ["src/stdio/printf_core/core_structs.h"],
     defines = PRINTF_COPTS,
     deps = [
         ":__support_cpp_string_view",
         ":__support_fputil_fp_bits",
-    ],
-)
-
-libc_support_library(
-    name = "printf_config",
-    hdrs = ["src/stdio/printf_core/printf_config.h"],
-    defines = PRINTF_COPTS,
-    deps = [
+        ":printf_config",
     ],
 )
 
@@ -3080,6 +3082,7 @@ libc_support_library(
         ":__support_libc_assert",
         ":__support_uint",
         ":__support_uint128",
+        ":printf_config",
         ":printf_core_structs",
         ":printf_writer",
     ],

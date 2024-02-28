@@ -1203,7 +1203,7 @@ def : GCNPat <
 
 class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
                                                string opName = ps.Mnemonic,
-                                               bit hasGFX12Enc = 0>
+                                               bit hasGDS = true>
     : DS_Real<ps, opName>, SIMCInstr <ps.Mnemonic, ef> {
 
   let Inst{7-0}   = !if(ps.has_offset0, offset0, 0);
@@ -1216,7 +1216,7 @@ class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
   let Inst{55-48} = !if(ps.has_data1, data1{7-0}, 0);
   let Inst{63-56} = !if(ps.has_vdst, vdst{7-0}, 0);
 
-  let gds = !if(hasGFX12Enc, 0, ?);
+  let gds = !if(hasGDS, ?, 0);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1228,28 +1228,28 @@ let AssemblerPredicate = isGFX12Plus, DecoderNamespace = "GFX12" in {
     defvar ps = !cast<DS_Pseudo>(NAME);
     def _gfx12 :
       Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, ps, SIEncodingFamily.GFX12,
-                                               ps.Mnemonic, 1>;
+                                               ps.Mnemonic, /*hasGDS=*/false>;
   }
 
-  multiclass DS_Real_Renamed_gfx12<bits<8> op, DS_Pseudo backing_pseudo,
-                                   string real_name> {
+  multiclass DS_Real_Renamed_gfx12<bits<8> op, string name> {
+    defvar ps = !cast<DS_Pseudo>(NAME);
     def _gfx12 :
-      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, backing_pseudo,
+      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, ps,
                                                SIEncodingFamily.GFX12,
-                                               real_name, 1>,
-      MnemonicAlias<backing_pseudo.Mnemonic, real_name>,
+                                               name, /*hasGDS=*/false>,
+      MnemonicAlias<ps.Mnemonic, name>,
       Requires<[isGFX12Plus]>;
   }
 } // End AssemblerPredicate = isGFX12Plus, DecoderNamespace = "GFX12"
 
-defm DS_MIN_NUM_F32       : DS_Real_Renamed_gfx12<0x012, DS_MIN_F32, "ds_min_num_f32">;
-defm DS_MAX_NUM_F32       : DS_Real_Renamed_gfx12<0x013, DS_MAX_F32, "ds_max_num_f32">;
-defm DS_MIN_NUM_RTN_F32   : DS_Real_Renamed_gfx12<0x032, DS_MIN_RTN_F32, "ds_min_num_rtn_f32">;
-defm DS_MAX_NUM_RTN_F32   : DS_Real_Renamed_gfx12<0x033, DS_MAX_RTN_F32, "ds_max_num_rtn_f32">;
-defm DS_MIN_NUM_F64       : DS_Real_Renamed_gfx12<0x052, DS_MIN_F64, "ds_min_num_f64">;
-defm DS_MAX_NUM_F64       : DS_Real_Renamed_gfx12<0x053, DS_MAX_F64, "ds_max_num_f64">;
-defm DS_MIN_NUM_RTN_F64   : DS_Real_Renamed_gfx12<0x072, DS_MIN_RTN_F64, "ds_min_num_rtn_f64">;
-defm DS_MAX_NUM_RTN_F64   : DS_Real_Renamed_gfx12<0x073, DS_MAX_RTN_F64, "ds_max_num_rtn_f64">;
+defm DS_MIN_F32           : DS_Real_Renamed_gfx12<0x012, "ds_min_num_f32">;
+defm DS_MAX_F32           : DS_Real_Renamed_gfx12<0x013, "ds_max_num_f32">;
+defm DS_MIN_RTN_F32       : DS_Real_Renamed_gfx12<0x032, "ds_min_num_rtn_f32">;
+defm DS_MAX_RTN_F32       : DS_Real_Renamed_gfx12<0x033, "ds_max_num_rtn_f32">;
+defm DS_MIN_F64           : DS_Real_Renamed_gfx12<0x052, "ds_min_num_f64">;
+defm DS_MAX_F64           : DS_Real_Renamed_gfx12<0x053, "ds_max_num_f64">;
+defm DS_MIN_RTN_F64       : DS_Real_Renamed_gfx12<0x072, "ds_min_num_rtn_f64">;
+defm DS_MAX_RTN_F64       : DS_Real_Renamed_gfx12<0x073, "ds_max_num_rtn_f64">;
 defm DS_COND_SUB_U32      : DS_Real_gfx12<0x098>;
 defm DS_SUB_CLAMP_U32     : DS_Real_gfx12<0x099>;
 defm DS_COND_SUB_RTN_U32  : DS_Real_gfx12<0x0a8>;
@@ -1258,6 +1258,10 @@ defm DS_PK_ADD_F16        : DS_Real_gfx12<0x09a>;
 defm DS_PK_ADD_RTN_F16    : DS_Real_gfx12<0x0aa>;
 defm DS_PK_ADD_BF16       : DS_Real_gfx12<0x09b>;
 defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
+
+// New aliases added in GFX12 without renaming the instructions.
+def : MnemonicAlias<"ds_subrev_u32", "ds_rsub_u32">, Requires<[isGFX12Plus]>;
+def : MnemonicAlias<"ds_subrev_u64", "ds_rsub_u64">, Requires<[isGFX12Plus]>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.
@@ -1270,58 +1274,58 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
                                                SIEncodingFamily.GFX11>;
   }
 
-  multiclass DS_Real_Renamed_gfx11<bits<8> op, DS_Pseudo backing_pseudo, string real_name> {
-     def _gfx11 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, backing_pseudo, SIEncodingFamily.GFX11, real_name>,
-               MnemonicAlias<backing_pseudo.Mnemonic, real_name>, Requires<[isGFX11Only]>;
+  multiclass DS_Real_Renamed_gfx11<bits<8> op, string name> {
+    defvar ps = !cast<DS_Pseudo>(NAME);
+    def _gfx11 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, ps, SIEncodingFamily.GFX11, name>,
+                 MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX11Only]>;
   }
 } // End AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11"
 
 multiclass DS_Real_gfx11_gfx12<bits<8> op>
   : DS_Real_gfx11<op>, DS_Real_gfx12<op>;
 
-multiclass DS_Real_Renamed_gfx11_gfx12<bits<8> op, DS_Pseudo backing_pseudo,
-                                       string real_name>
-  : DS_Real_Renamed_gfx11<op, backing_pseudo, real_name>,
-    DS_Real_Renamed_gfx12<op, backing_pseudo, real_name>;
+multiclass DS_Real_Renamed_gfx11_gfx12<bits<8> op, string name>
+  : DS_Real_Renamed_gfx11<op, name>,
+    DS_Real_Renamed_gfx12<op, name>;
 
-defm DS_STORE_B32                        : DS_Real_Renamed_gfx11_gfx12<0x00d, DS_WRITE_B32, "ds_store_b32">;
-defm DS_STORE_2ADDR_B32                  : DS_Real_Renamed_gfx11_gfx12<0x00e, DS_WRITE2_B32, "ds_store_2addr_b32">;
-defm DS_STORE_2ADDR_STRIDE64_B32         : DS_Real_Renamed_gfx11_gfx12<0x00f, DS_WRITE2ST64_B32, "ds_store_2addr_stride64_b32">;
-defm DS_STORE_B8                         : DS_Real_Renamed_gfx11_gfx12<0x01e, DS_WRITE_B8, "ds_store_b8">;
-defm DS_STORE_B16                        : DS_Real_Renamed_gfx11_gfx12<0x01f, DS_WRITE_B16, "ds_store_b16">;
-defm DS_STOREXCHG_RTN_B32                : DS_Real_Renamed_gfx11_gfx12<0x02d, DS_WRXCHG_RTN_B32, "ds_storexchg_rtn_b32">;
-defm DS_STOREXCHG_2ADDR_RTN_B32          : DS_Real_Renamed_gfx11_gfx12<0x02e, DS_WRXCHG2_RTN_B32, "ds_storexchg_2addr_rtn_b32">;
-defm DS_STOREXCHG_2ADDR_STRIDE64_RTN_B32 : DS_Real_Renamed_gfx11_gfx12<0x02f, DS_WRXCHG2ST64_RTN_B32, "ds_storexchg_2addr_stride64_rtn_b32">;
-defm DS_LOAD_B32                         : DS_Real_Renamed_gfx11_gfx12<0x036, DS_READ_B32, "ds_load_b32">;
-defm DS_LOAD_2ADDR_B32                   : DS_Real_Renamed_gfx11_gfx12<0x037, DS_READ2_B32, "ds_load_2addr_b32">;
-defm DS_LOAD_2ADDR_STRIDE64_B32          : DS_Real_Renamed_gfx11_gfx12<0x038, DS_READ2ST64_B32, "ds_load_2addr_stride64_b32">;
-defm DS_LOAD_I8                          : DS_Real_Renamed_gfx11_gfx12<0x039, DS_READ_I8, "ds_load_i8">;
-defm DS_LOAD_U8                          : DS_Real_Renamed_gfx11_gfx12<0x03a, DS_READ_U8, "ds_load_u8">;
-defm DS_LOAD_I16                         : DS_Real_Renamed_gfx11_gfx12<0x03b, DS_READ_I16, "ds_load_i16">;
-defm DS_LOAD_U16                         : DS_Real_Renamed_gfx11_gfx12<0x03c, DS_READ_U16, "ds_load_u16">;
-defm DS_STORE_B64                        : DS_Real_Renamed_gfx11_gfx12<0x04d, DS_WRITE_B64, "ds_store_b64">;
-defm DS_STORE_2ADDR_B64                  : DS_Real_Renamed_gfx11_gfx12<0x04e, DS_WRITE2_B64, "ds_store_2addr_b64">;
-defm DS_STORE_2ADDR_STRIDE64_B64         : DS_Real_Renamed_gfx11_gfx12<0x04f, DS_WRITE2ST64_B64, "ds_store_2addr_stride64_b64">;
-defm DS_STOREXCHG_RTN_B64                : DS_Real_Renamed_gfx11_gfx12<0x06d, DS_WRXCHG_RTN_B64, "ds_storexchg_rtn_b64">;
-defm DS_STOREXCHG_2ADDR_RTN_B64          : DS_Real_Renamed_gfx11_gfx12<0x06e, DS_WRXCHG2_RTN_B64, "ds_storexchg_2addr_rtn_b64">;
-defm DS_STOREXCHG_2ADDR_STRIDE64_RTN_B64 : DS_Real_Renamed_gfx11_gfx12<0x06f, DS_WRXCHG2ST64_RTN_B64, "ds_storexchg_2addr_stride64_rtn_b64">;
-defm DS_LOAD_B64                         : DS_Real_Renamed_gfx11_gfx12<0x076, DS_READ_B64, "ds_load_b64">;
-defm DS_LOAD_2ADDR_B64                   : DS_Real_Renamed_gfx11_gfx12<0x077, DS_READ2_B64, "ds_load_2addr_b64">;
-defm DS_LOAD_2ADDR_STRIDE64_B64          : DS_Real_Renamed_gfx11_gfx12<0x078, DS_READ2ST64_B64, "ds_load_2addr_stride64_b64">;
-defm DS_STORE_B8_D16_HI                  : DS_Real_Renamed_gfx11_gfx12<0x0a0, DS_WRITE_B8_D16_HI, "ds_store_b8_d16_hi">;
-defm DS_STORE_B16_D16_HI                 : DS_Real_Renamed_gfx11_gfx12<0x0a1, DS_WRITE_B16_D16_HI, "ds_store_b16_d16_hi">;
-defm DS_LOAD_U8_D16                      : DS_Real_Renamed_gfx11_gfx12<0x0a2, DS_READ_U8_D16, "ds_load_u8_d16">;
-defm DS_LOAD_U8_D16_HI                   : DS_Real_Renamed_gfx11_gfx12<0x0a3, DS_READ_U8_D16_HI, "ds_load_u8_d16_hi">;
-defm DS_LOAD_I8_D16                      : DS_Real_Renamed_gfx11_gfx12<0x0a4, DS_READ_I8_D16, "ds_load_i8_d16">;
-defm DS_LOAD_I8_D16_HI                   : DS_Real_Renamed_gfx11_gfx12<0x0a5, DS_READ_I8_D16_HI, "ds_load_i8_d16_hi">;
-defm DS_LOAD_U16_D16                     : DS_Real_Renamed_gfx11_gfx12<0x0a6, DS_READ_U16_D16, "ds_load_u16_d16">;
-defm DS_LOAD_U16_D16_HI                  : DS_Real_Renamed_gfx11_gfx12<0x0a7, DS_READ_U16_D16_HI, "ds_load_u16_d16_hi">;
-defm DS_STORE_ADDTID_B32                 : DS_Real_Renamed_gfx11_gfx12<0x0b0, DS_WRITE_ADDTID_B32, "ds_store_addtid_b32">;
-defm DS_LOAD_ADDTID_B32                  : DS_Real_Renamed_gfx11_gfx12<0x0b1, DS_READ_ADDTID_B32, "ds_load_addtid_b32">;
-defm DS_STORE_B96                        : DS_Real_Renamed_gfx11_gfx12<0x0de, DS_WRITE_B96, "ds_store_b96">;
-defm DS_STORE_B128                       : DS_Real_Renamed_gfx11_gfx12<0x0df, DS_WRITE_B128, "ds_store_b128">;
-defm DS_LOAD_B96                         : DS_Real_Renamed_gfx11_gfx12<0x0fe, DS_READ_B96, "ds_load_b96">;
-defm DS_LOAD_B128                        : DS_Real_Renamed_gfx11_gfx12<0x0ff, DS_READ_B128, "ds_load_b128">;
+defm DS_WRITE_B32           : DS_Real_Renamed_gfx11_gfx12<0x00d, "ds_store_b32">;
+defm DS_WRITE2_B32          : DS_Real_Renamed_gfx11_gfx12<0x00e, "ds_store_2addr_b32">;
+defm DS_WRITE2ST64_B32      : DS_Real_Renamed_gfx11_gfx12<0x00f, "ds_store_2addr_stride64_b32">;
+defm DS_WRITE_B8            : DS_Real_Renamed_gfx11_gfx12<0x01e, "ds_store_b8">;
+defm DS_WRITE_B16           : DS_Real_Renamed_gfx11_gfx12<0x01f, "ds_store_b16">;
+defm DS_WRXCHG_RTN_B32      : DS_Real_Renamed_gfx11_gfx12<0x02d, "ds_storexchg_rtn_b32">;
+defm DS_WRXCHG2_RTN_B32     : DS_Real_Renamed_gfx11_gfx12<0x02e, "ds_storexchg_2addr_rtn_b32">;
+defm DS_WRXCHG2ST64_RTN_B32 : DS_Real_Renamed_gfx11_gfx12<0x02f, "ds_storexchg_2addr_stride64_rtn_b32">;
+defm DS_READ_B32            : DS_Real_Renamed_gfx11_gfx12<0x036, "ds_load_b32">;
+defm DS_READ2_B32           : DS_Real_Renamed_gfx11_gfx12<0x037, "ds_load_2addr_b32">;
+defm DS_READ2ST64_B32       : DS_Real_Renamed_gfx11_gfx12<0x038, "ds_load_2addr_stride64_b32">;
+defm DS_READ_I8             : DS_Real_Renamed_gfx11_gfx12<0x039, "ds_load_i8">;
+defm DS_READ_U8             : DS_Real_Renamed_gfx11_gfx12<0x03a, "ds_load_u8">;
+defm DS_READ_I16            : DS_Real_Renamed_gfx11_gfx12<0x03b, "ds_load_i16">;
+defm DS_READ_U16            : DS_Real_Renamed_gfx11_gfx12<0x03c, "ds_load_u16">;
+defm DS_WRITE_B64           : DS_Real_Renamed_gfx11_gfx12<0x04d, "ds_store_b64">;
+defm DS_WRITE2_B64          : DS_Real_Renamed_gfx11_gfx12<0x04e, "ds_store_2addr_b64">;
+defm DS_WRITE2ST64_B64      : DS_Real_Renamed_gfx11_gfx12<0x04f, "ds_store_2addr_stride64_b64">;
+defm DS_WRXCHG_RTN_B64      : DS_Real_Renamed_gfx11_gfx12<0x06d, "ds_storexchg_rtn_b64">;
+defm DS_WRXCHG2_RTN_B64     : DS_Real_Renamed_gfx11_gfx12<0x06e, "ds_storexchg_2addr_rtn_b64">;
+defm DS_WRXCHG2ST64_RTN_B64 : DS_Real_Renamed_gfx11_gfx12<0x06f, "ds_storexchg_2addr_stride64_rtn_b64">;
+defm DS_READ_B64            : DS_Real_Renamed_gfx11_gfx12<0x076, "ds_load_b64">;
+defm DS_READ2_B64           : DS_Real_Renamed_gfx11_gfx12<0x077, "ds_load_2addr_b64">;
+defm DS_READ2ST64_B64       : DS_Real_Renamed_gfx11_gfx12<0x078, "ds_load_2addr_stride64_b64">;
+defm DS_WRITE_B8_D16_HI     : DS_Real_Renamed_gfx11_gfx12<0x0a0, "ds_store_b8_d16_hi">;
+defm DS_WRITE_B16_D16_HI    : DS_Real_Renamed_gfx11_gfx12<0x0a1, "ds_store_b16_d16_hi">;
+defm DS_READ_U8_D16         : DS_Real_Renamed_gfx11_gfx12<0x0a2, "ds_load_u8_d16">;
+defm DS_READ_U8_D16_HI      : DS_Real_Renamed_gfx11_gfx12<0x0a3, "ds_load_u8_d16_hi">;
+defm DS_READ_I8_D16         : DS_Real_Renamed_gfx11_gfx12<0x0a4, "ds_load_i8_d16">;
+defm DS_READ_I8_D16_HI      : DS_Real_Renamed_gfx11_gfx12<0x0a5, "ds_load_i8_d16_hi">;
+defm DS_READ_U16_D16        : DS_Real_Renamed_gfx11_gfx12<0x0a6, "ds_load_u16_d16">;
+defm DS_READ_U16_D16_HI     : DS_Real_Renamed_gfx11_gfx12<0x0a7, "ds_load_u16_d16_hi">;
+defm DS_WRITE_ADDTID_B32    : DS_Real_Renamed_gfx11_gfx12<0x0b0, "ds_store_addtid_b32">;
+defm DS_READ_ADDTID_B32     : DS_Real_Renamed_gfx11_gfx12<0x0b1, "ds_load_addtid_b32">;
+defm DS_WRITE_B96           : DS_Real_Renamed_gfx11_gfx12<0x0de, "ds_store_b96">;
+defm DS_WRITE_B128          : DS_Real_Renamed_gfx11_gfx12<0x0df, "ds_store_b128">;
+defm DS_READ_B96            : DS_Real_Renamed_gfx11_gfx12<0x0fe, "ds_load_b96">;
+defm DS_READ_B128           : DS_Real_Renamed_gfx11_gfx12<0x0ff, "ds_load_b128">;
 
 // DS_CMPST_* are renamed to DS_CMPSTORE_* in GFX11, but also the data operands (src and cmp) are swapped
 // comparing to pre-GFX11.

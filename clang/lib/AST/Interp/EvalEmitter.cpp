@@ -38,8 +38,11 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
   this->ConvertResultToRValue = ConvertResultToRValue;
   EvalResult.setSource(E);
 
-  if (!this->visitExpr(E) && EvalResult.empty())
+  if (!this->visitExpr(E)) {
+    // EvalResult may already have a result set, but something failed
+    // after that (e.g. evaluating destructors).
     EvalResult.setInvalid();
+  }
 
   return std::move(this->EvalResult);
 }
@@ -47,6 +50,9 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
 EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
+  this->ConvertResultToRValue =
+      VD->getAnyInitializer() &&
+      (VD->getAnyInitializer()->getType()->isAnyComplexType());
   EvalResult.setSource(VD);
 
   if (!this->visitDecl(VD) && EvalResult.empty())

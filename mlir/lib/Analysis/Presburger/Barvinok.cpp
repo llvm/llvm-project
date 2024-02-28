@@ -425,7 +425,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // cones.
     GeneratingFunction vertexGf(numSymbols, {}, {}, {});
     SmallVector<std::pair<int, ConeH>, 4> unimodCones = {{1, tangentCone}};
-    for (std::pair<int, ConeH> signedCone : unimodCones) {
+    for (const std::pair<int, ConeH> &signedCone : unimodCones) {
       auto [sign, cone] = signedCone;
       vertexGf = vertexGf +
                  computeUnimodularConeGeneratingFunction(*vertex, sign, cone);

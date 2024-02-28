@@ -1,17 +1,14 @@
 add_custom_target(libc-support-tests)
 
-# FIXME: These tests are currently broken on the GPU.
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
-  add_libc_test(
-    blockstore_test
-    SUITE
-      libc-support-tests
-    SRCS
-      blockstore_test.cpp
-    DEPENDS
-      libc.src.__support.blockstore
-  )
-endif()
+add_libc_test(
+  blockstore_test
+  SUITE
+    libc-support-tests
+  SRCS
+    blockstore_test.cpp
+  DEPENDS
+    libc.src.__support.blockstore
+)
 
 add_libc_test(
   endian_test
@@ -42,8 +39,6 @@ add_libc_test(
   DEPENDS
     libc.src.__support.high_precision_decimal
     libc.src.__support.uint128
-  # FIXME Test segfaults on gfx90a GPU
-  UNIT_TEST_ONLY
 )
 
 add_libc_test(
@@ -76,7 +71,7 @@ add_libc_test(
 )
 
 # The GPU does not support varargs currently.
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(NOT LIBC_TARGET_OS_IS_GPU)
   add_libc_test(
     arg_list_test
     SUITE
@@ -88,8 +83,7 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   )
 endif()
 
-# FIXME: Crash in NVPTX target lowering for calls
-if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
     uint_test
     SUITE
@@ -159,33 +153,38 @@ add_libc_test(
     libc.src.__support.memory_size
 )
 
-add_executable(
-  libc_str_to_float_comparison_test
-  str_to_float_comparison_test.cpp
-)
+# FIXME: We shouldn't have regular executables created because we could be
+#        cross-compiling the tests and running through an emulator.
+if(NOT LIBC_TARGET_OS_IS_GPU)
+  add_executable(
+    libc_str_to_float_comparison_test
+    str_to_float_comparison_test.cpp
+  )
 
-target_link_libraries(libc_str_to_float_comparison_test
-  PRIVATE
-    "${LIBC_TARGET}"
-)
+  target_link_libraries(libc_str_to_float_comparison_test
+    PRIVATE
+      "${LIBC_TARGET}"
+  )
 
-add_executable(
-  libc_system_str_to_float_comparison_test
-  str_to_float_comparison_test.cpp
-)
+  add_executable(
+    libc_system_str_to_float_comparison_test
+    str_to_float_comparison_test.cpp
+  )
 
-set(float_test_file ${CMAKE_CURRENT_SOURCE_DIR}/str_to_float_comparison_data.txt)
+  set(float_test_file ${CMAKE_CURRENT_SOURCE_DIR}/str_to_float_comparison_data.txt)
 
-add_custom_command(TARGET libc_str_to_float_comparison_test
-                   POST_BUILD
-                   COMMAND $<TARGET_FILE:libc_str_to_float_comparison_test> ${float_test_file}
-                   DEPENDS ${float_test_file}
-                   COMMENT "Test the strtof and strtod implementations against precomputed results." 
-                   VERBATIM)
+  add_custom_command(TARGET libc_str_to_float_comparison_test
+                     POST_BUILD
+                     COMMAND $<TARGET_FILE:libc_str_to_float_comparison_test> ${float_test_file}
+                     DEPENDS ${float_test_file}
+                     COMMENT "Test the strtof and strtod implementations against precomputed results."
+                     VERBATIM)
+endif()
 
 add_subdirectory(CPP)
 add_subdirectory(File)
 add_subdirectory(RPC)
 add_subdirectory(OSUtil)
 add_subdirectory(FPUtil)
+add_subdirectory(fixed_point)
 add_subdirectory(HashTable)

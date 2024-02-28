@@ -173,9 +173,34 @@ private:
     }
   }
 
+  void Write(const DbgRecord *DR) {
+    if (DR)
+      DR->print(*OS, MST, false);
+  }
+
   void Write(const DPValue *V) {
     if (V)
       V->print(*OS, MST, false);
+  }
+
+  void Write(DPValue::LocationType Type) {
+    switch (Type) {
+    case DPValue::LocationType::Value:
+      *OS << "value";
+      break;
+    case DPValue::LocationType::Declare:
+      *OS << "declare";
+      break;
+    case DPValue::LocationType::Assign:
+      *OS << "assign";
+      break;
+    case DPValue::LocationType::End:
+      *OS << "end";
+      break;
+    case DPValue::LocationType::Any:
+      *OS << "any";
+      break;
+    };
   }
 
   void Write(const Metadata *MD) {
@@ -522,8 +547,10 @@ private:
 
   void visitTemplateParams(const MDNode &N, const Metadata &RawParams);
 
+  void visit(DPValue &DPV);
   // InstVisitor overrides...
   using InstVisitor<Verifier>::visit;
+  void visitDbgRecords(Instruction &I);
   void visit(Instruction &I);
 
   void visitTruncInst(TruncInst &I);
@@ -649,7 +676,22 @@ private:
     }                                                                          \
   } while (false)
 
+void Verifier::visitDbgRecords(Instruction &I) {
+  if (!I.DbgMarker)
+    return;
+  CheckDI(I.DbgMarker->MarkedInstr == &I, "Instruction has invalid DbgMarker",
+          &I);
+  CheckDI(!isa<PHINode>(&I) || !I.hasDbgValues(),
+          "PHI Node must not have any attached DbgRecords", &I);
+  for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+    CheckDI(DPV.getMarker() == I.DbgMarker, "DbgRecord had invalid DbgMarker",
+            &I, &DPV);
+    visit(DPV);
+  }
+}
+
 void Verifier::visit(Instruction &I) {
+  visitDbgRecords(I);
   for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i)
     Check(I.getOperand(i) != nullptr, "Operand is null", &I);
   InstVisitor<Verifier>::visit(I);
@@ -2976,12 +3018,9 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
   }
 
   // Confirm that no issues arise from the debug program.
-  if (BB.IsNewDbgInfoFormat) {
-    // Configure the validate function to not fire assertions, instead print
-    // errors and return true if there's a problem.
-    bool RetVal = BB.validateDbgValues(false, true, OS);
-    Check(!RetVal, "Invalid configuration of new-debug-info data found");
-  }
+  if (BB.IsNewDbgInfoFormat)
+    CheckDI(!BB.getTrailingDPValues(), "Basic Block has trailing DbgRecords!",
+            &BB);
 }
 
 void Verifier::visitTerminator(Instruction &I) {
@@ -6148,6 +6187,70 @@ static DISubprogram *getSubprogram(Metadata *LocalScope) {
   return nullptr;
 }
 
+void Verifier::visit(DPValue &DPV) {
+  CheckDI(DPV.getType() == DPValue::LocationType::Value ||
+              DPV.getType() == DPValue::LocationType::Declare ||
+              DPV.getType() == DPValue::LocationType::Assign,
+          "invalid #dbg record type", &DPV, DPV.getType());
+  // The location for a DPValue must be either a ValueAsMetadata, DIArgList, or
+  // an empty MDNode (which is a legacy representation for an "undef" location).
+  auto *MD = DPV.getRawLocation();
+  CheckDI(isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
+              (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands()),
+          "invalid #dbg record address/value", &DPV, MD);
+  CheckDI(isa<DILocalVariable>(DPV.getRawVariable()),
+          "invalid #dbg record variable", &DPV, DPV.getRawVariable());
+  CheckDI(DPV.getExpression(), "missing #dbg record expression", &DPV,
+          DPV.getExpression());
+
+  if (DPV.isDbgAssign()) {
+    CheckDI(isa<DIAssignID>(DPV.getRawAssignID()),
+            "invalid #dbg_assign DIAssignID", &DPV, DPV.getRawAssignID());
+    const auto *RawAddr = DPV.getRawAddress();
+    // Similarly to the location above, the address for an assign DPValue must
+    // be a ValueAsMetadata or an empty MDNode, which represents an undef
+    // address.
+    CheckDI(
+        isa<ValueAsMetadata>(RawAddr) ||
+            (isa<MDNode>(RawAddr) && !cast<MDNode>(RawAddr)->getNumOperands()),
+        "invalid #dbg_assign address", &DPV, DPV.getRawAddress());
+    CheckDI(DPV.getAddressExpression(),
+            "missing #dbg_assign address expression", &DPV,
+            DPV.getAddressExpression());
+    // All of the linked instructions should be in the same function as DPV.
+    for (Instruction *I : at::getAssignmentInsts(&DPV))
+      CheckDI(DPV.getFunction() == I->getFunction(),
+              "inst not in same function as #dbg_assign", I, &DPV);
+  }
+
+  if (MDNode *N = DPV.getDebugLoc().getAsMDNode()) {
+    CheckDI(isa<DILocation>(N), "invalid #dbg record location", &DPV, N);
+    visitDILocation(*cast<DILocation>(N));
+  }
+
+  BasicBlock *BB = DPV.getParent();
+  Function *F = BB ? BB->getParent() : nullptr;
+
+  // The scopes for variables and !dbg attachments must agree.
+  DILocalVariable *Var = DPV.getVariable();
+  DILocation *Loc = DPV.getDebugLoc();
+  CheckDI(Loc, "missing #dbg record DILocation", &DPV, BB, F);
+
+  DISubprogram *VarSP = getSubprogram(Var->getRawScope());
+  DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
+  if (!VarSP || !LocSP)
+    return; // Broken scope chains are checked elsewhere.
+
+  CheckDI(VarSP == LocSP,
+          "mismatched subprogram between #dbg record variable and DILocation",
+          &DPV, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
+          Loc->getScope()->getSubprogram());
+
+  // This check is redundant with one in visitLocalVariable().
+  CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
+          Var->getRawType());
+}
+
 void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
   if (auto *VPCast = dyn_cast<VPCastIntrinsic>(&VPI)) {
     auto *RetTy = cast<VectorType>(VPCast->getType());
@@ -6183,9 +6286,11 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
       break;
     case Intrinsic::vp_fptoui:
     case Intrinsic::vp_fptosi:
+    case Intrinsic::vp_lrint:
+    case Intrinsic::vp_llrint:
       Check(
           RetTy->isIntOrIntVectorTy() && ValTy->isFPOrFPVectorTy(),
-          "llvm.vp.fptoui or llvm.vp.fptosi intrinsic first argument element "
+          "llvm.vp.fptoui, llvm.vp.fptosi, llvm.vp.lrint or llvm.vp.llrint" "intrinsic first argument element "
           "type must be floating-point and result element type must be integer",
           *VPCast);
       break;

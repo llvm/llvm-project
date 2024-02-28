@@ -4677,9 +4677,42 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return fewerElementsVectorShuffle(MI, TypeIdx, NarrowTy);
   case G_FPOWI:
     return fewerElementsVectorMultiEltType(GMI, NumElts, {2 /*pow*/});
+  case G_BITCAST:
+    return fewerElementsBitcast(MI, TypeIdx, NarrowTy);
   default:
     return UnableToLegalize;
   }
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::fewerElementsBitcast(MachineInstr &MI, unsigned int TypeIdx,
+                                      LLT NarrowTy) {
+  assert(MI.getOpcode() == TargetOpcode::G_BITCAST &&
+         "Not a bitcast operation");
+
+  if (TypeIdx != 0)
+    return UnableToLegalize;
+
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+
+  unsigned SrcScalSize = SrcTy.getScalarSizeInBits();
+  LLT SrcNarrowTy =
+      LLT::fixed_vector(NarrowTy.getSizeInBits() / SrcScalSize, SrcScalSize);
+
+  // Split the Src and Dst Reg into smaller registers
+  SmallVector<Register> SrcVRegs, BitcastVRegs;
+  if (extractGCDType(SrcVRegs, DstTy, SrcNarrowTy, SrcReg) != SrcNarrowTy)
+    return UnableToLegalize;
+
+  // Build new smaller bitcast instructions
+  // Not supporting Leftover types for now but will have to
+  for (unsigned i = 0; i < SrcVRegs.size(); i++)
+    BitcastVRegs.push_back(
+        MIRBuilder.buildBitcast(NarrowTy, SrcVRegs[i]).getReg(0));
+
+  MIRBuilder.buildMergeLikeInstr(DstReg, BitcastVRegs);
+  MI.eraseFromParent();
+  return Legalized;
 }
 
 LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
@@ -5183,6 +5216,43 @@ LegalizerHelper::moreElementsVectorPhi(MachineInstr &MI, unsigned TypeIdx,
   return Legalized;
 }
 
+MachineInstrBuilder LegalizerHelper::getNeutralElementForVecReduce(
+    unsigned Opcode, MachineIRBuilder &MIRBuilder, LLT Ty) {
+  assert(Ty.isScalar() && "Expected scalar type to make neutral element for");
+
+  switch (Opcode) {
+  default:
+    llvm_unreachable(
+        "getNeutralElementForVecReduce called with invalid opcode!");
+  case TargetOpcode::G_VECREDUCE_ADD:
+  case TargetOpcode::G_VECREDUCE_OR:
+  case TargetOpcode::G_VECREDUCE_XOR:
+  case TargetOpcode::G_VECREDUCE_UMAX:
+    return MIRBuilder.buildConstant(Ty, 0);
+  case TargetOpcode::G_VECREDUCE_MUL:
+    return MIRBuilder.buildConstant(Ty, 1);
+  case TargetOpcode::G_VECREDUCE_AND:
+  case TargetOpcode::G_VECREDUCE_UMIN:
+    return MIRBuilder.buildConstant(
+        Ty, APInt::getAllOnes(Ty.getScalarSizeInBits()));
+  case TargetOpcode::G_VECREDUCE_SMAX:
+    return MIRBuilder.buildConstant(
+        Ty, APInt::getSignedMinValue(Ty.getSizeInBits()));
+  case TargetOpcode::G_VECREDUCE_SMIN:
+    return MIRBuilder.buildConstant(
+        Ty, APInt::getSignedMaxValue(Ty.getSizeInBits()));
+  case TargetOpcode::G_VECREDUCE_FADD:
+    return MIRBuilder.buildFConstant(Ty, -0.0);
+  case TargetOpcode::G_VECREDUCE_FMUL:
+    return MIRBuilder.buildFConstant(Ty, 1.0);
+  case TargetOpcode::G_VECREDUCE_FMINIMUM:
+  case TargetOpcode::G_VECREDUCE_FMAXIMUM:
+    assert(false && "getNeutralElementForVecReduce unimplemented for "
+                    "G_VECREDUCE_FMINIMUM and G_VECREDUCE_FMAXIMUM!");
+  }
+  llvm_unreachable("switch expected to return!");
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
                                     LLT MoreTy) {
@@ -5366,6 +5436,58 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_BITCAST: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+    unsigned coefficient = SrcTy.getNumElements() * MoreTy.getNumElements();
+    if (coefficient % DstTy.getNumElements() != 0)
+      return UnableToLegalize;
+
+    coefficient = coefficient / DstTy.getNumElements();
+
+    LLT NewTy = SrcTy.changeElementCount(
+        ElementCount::get(coefficient, MoreTy.isScalable()));
+    Observer.changingInstr(MI);
+    moreElementsVectorSrc(MI, NewTy, 1);
+    moreElementsVectorDst(MI, MoreTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  case TargetOpcode::G_VECREDUCE_FADD:
+  case TargetOpcode::G_VECREDUCE_FMUL:
+  case TargetOpcode::G_VECREDUCE_ADD:
+  case TargetOpcode::G_VECREDUCE_MUL:
+  case TargetOpcode::G_VECREDUCE_AND:
+  case TargetOpcode::G_VECREDUCE_OR:
+  case TargetOpcode::G_VECREDUCE_XOR:
+  case TargetOpcode::G_VECREDUCE_SMAX:
+  case TargetOpcode::G_VECREDUCE_SMIN:
+  case TargetOpcode::G_VECREDUCE_UMAX:
+  case TargetOpcode::G_VECREDUCE_UMIN: {
+    LLT OrigTy = MRI.getType(MI.getOperand(1).getReg());
+    MachineOperand &MO = MI.getOperand(1);
+    auto NewVec = MIRBuilder.buildPadVectorWithUndefElements(MoreTy, MO);
+    auto NeutralElement = getNeutralElementForVecReduce(
+        MI.getOpcode(), MIRBuilder, MoreTy.getElementType());
+
+    LLT IdxTy(TLI.getVectorIdxTy(MIRBuilder.getDataLayout()));
+    for (size_t i = OrigTy.getNumElements(), e = MoreTy.getNumElements();
+         i != e; i++) {
+      auto Idx = MIRBuilder.buildConstant(IdxTy, i);
+      NewVec = MIRBuilder.buildInsertVectorElement(MoreTy, NewVec,
+                                                   NeutralElement, Idx);
+    }
+
+    Observer.changingInstr(MI);
+    MO.setReg(NewVec.getReg(0));
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+
   default:
     return UnableToLegalize;
   }

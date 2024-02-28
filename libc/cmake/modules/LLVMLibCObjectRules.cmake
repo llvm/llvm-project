@@ -1,175 +1,5 @@
 set(OBJECT_LIBRARY_TARGET_TYPE "OBJECT_LIBRARY")
 
-# Build the object target for a single GPU arch.
-# Usage:
-#     _build_gpu_object_for_single_arch(
-#       <target_name>
-#       <gpu_arch>
-#       SRCS <list of .cpp files>
-#       HDRS <list of .h files>
-#       DEPENDS <list of dependencies>
-#       COMPILE_OPTIONS <optional list of special compile options for this target>
-#       FLAGS <optional list of flags>
-#     )
-function(_build_gpu_object_for_single_arch fq_target_name gpu_arch)
-  cmake_parse_arguments(
-    "ADD_GPU_OBJ"
-    "" # No optional arguments
-    "NAME;CXX_STANDARD" # Single value arguments
-    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;FLAGS"  # Multi value arguments
-    ${ARGN}
-  )
-
-  if(NOT ADD_GPU_OBJ_CXX_STANDARD)
-    set(ADD_GPU_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
-  endif()
-
-  set(compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
-  # Derive the triple from the specified architecture.
-  if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
-    set(gpu_target_triple ${AMDGPU_TARGET_TRIPLE})
-    list(APPEND compile_options "-mcpu=${gpu_arch}")
-    list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
-    list(APPEND compile_options "-emit-llvm")
-  elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
-    set(gpu_target_triple ${NVPTX_TARGET_TRIPLE})
-    get_nvptx_compile_options(nvptx_options ${gpu_arch})
-    list(APPEND compile_options "${nvptx_options}")
-  else()
-    message(FATAL_ERROR "Unknown GPU architecture '${gpu_arch}'")
-  endif()
-  list(APPEND compile_options "--target=${gpu_target_triple}")
-
-  # Build the library for this target architecture. We always emit LLVM-IR for
-  # packaged GPU binaries.
-  add_library(${fq_target_name}
-    EXCLUDE_FROM_ALL
-    OBJECT
-    ${ADD_GPU_OBJ_SRCS}
-    ${ADD_GPU_OBJ_HDRS}
-  )
-
-  target_compile_options(${fq_target_name} PRIVATE ${compile_options})
-  target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
-  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  set_target_properties(${fq_target_name} PROPERTIES CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD})
-  if(ADD_GPU_OBJ_DEPENDS)
-    add_dependencies(${fq_target_name} ${ADD_GPU_OBJ_DEPENDS})
-    set_target_properties(${fq_target_name} PROPERTIES DEPS "${ADD_GPU_OBJ_DEPENDS}")
-  endif()
-endfunction(_build_gpu_object_for_single_arch)
-
-# Build the object target for the GPU.
-# This compiles the target for all supported architectures and embeds it into
-# host binary for installing.
-# Usage:
-#     _build_gpu_object_bundle(
-#       <target_name>
-#       SRCS <list of .cpp files>
-#       HDRS <list of .h files>
-#       DEPENDS <list of dependencies>
-#       COMPILE_OPTIONS <optional list of special compile options for this target>
-#       FLAGS <optional list of flags>
-#     )
-function(_build_gpu_object_bundle fq_target_name)
-  cmake_parse_arguments(
-    "ADD_GPU_OBJ"
-    "" # No optional arguments
-    "NAME;CXX_STANDARD" # Single value arguments
-    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;FLAGS"  # Multi value arguments
-    ${ARGN}
-  )
-
-  if(NOT ADD_GPU_OBJ_CXX_STANDARD)
-    set(ADD_GPU_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
-  endif()
-
-  foreach(add_gpu_obj_src ${ADD_GPU_OBJ_SRCS})
-    # The packaged version will be built for every target GPU architecture. We do
-    # this so we can support multiple accelerators on the same machine.
-    foreach(gpu_arch ${LIBC_GPU_ARCHITECTURES})
-      get_filename_component(src_name ${add_gpu_obj_src} NAME)
-      set(gpu_target_name ${fq_target_name}.${src_name}.${gpu_arch})
-
-      _build_gpu_object_for_single_arch(
-        ${gpu_target_name}
-        ${gpu_arch}
-        CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD}
-        HDRS ${ADD_GPU_OBJ_HDRS}
-        SRCS ${add_gpu_obj_src}
-        COMPILE_OPTIONS
-          ${ADD_GPU_OBJ_COMPILE_OPTIONS}
-          "-emit-llvm"
-        DEPENDS ${ADD_GPU_OBJ_DEPENDS}
-      )
-      # Append this target to a list of images to package into a single binary.
-      set(input_file $<TARGET_OBJECTS:${gpu_target_name}>)
-      if("${gpu_arch}" IN_LIST all_nvptx_architectures)
-        get_nvptx_compile_options(nvptx_options ${gpu_arch})
-        string(REGEX MATCH "\\+ptx[0-9]+" nvptx_ptx_feature ${nvptx_options})
-        list(APPEND packager_images
-             --image=file=${input_file},arch=${gpu_arch},triple=${NVPTX_TARGET_TRIPLE},feature=${nvptx_ptx_feature})
-      else()
-        list(APPEND packager_images
-             --image=file=${input_file},arch=${gpu_arch},triple=${AMDGPU_TARGET_TRIPLE})
-       endif()
-      list(APPEND gpu_target_objects ${input_file})
-    endforeach()
-
-    # After building the target for the desired GPUs we must package the output
-    # into a fatbinary, see https://clang.llvm.org/docs/OffloadingDesign.html for
-    # more information.
-    set(packaged_target_name ${fq_target_name}.${src_name}.__gpu__)
-    set(packaged_output_name ${CMAKE_CURRENT_BINARY_DIR}/${fq_target_name}.${src_name}.gpubin)
-
-    add_custom_command(OUTPUT ${packaged_output_name}
-                       COMMAND ${LIBC_CLANG_OFFLOAD_PACKAGER}
-                               ${packager_images} -o ${packaged_output_name}
-                       DEPENDS ${gpu_target_objects} ${add_gpu_obj_src} ${ADD_GPU_OBJ_HDRS}
-                       COMMENT "Packaging LLVM offloading binary")
-    add_custom_target(${packaged_target_name} DEPENDS ${packaged_output_name})
-    list(APPEND packaged_gpu_names ${packaged_target_name})
-    list(APPEND packaged_gpu_binaries ${packaged_output_name})
-  endforeach()
-
-  # We create an empty 'stub' file for the host to contain the embedded device
-  # code. This will be packaged into 'libcgpu.a'.
-  # TODO: In the future we will want to combine every architecture for a target
-  #       into a single bitcode file and use that. For now we simply build for
-  #       every single one and let the offloading linker handle it.
-  string(FIND ${fq_target_name} "." last_dot_loc REVERSE)
-  math(EXPR name_loc "${last_dot_loc} + 1")
-  string(SUBSTRING ${fq_target_name} ${name_loc} -1 target_name)
-  set(stub_filename "${target_name}.cpp")
-  add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}"
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stubs/
-    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}
-    DEPENDS ${gpu_target_objects} ${ADD_GPU_OBJ_SRCS} ${ADD_GPU_OBJ_HDRS}
-  )
-  set(stub_target_name ${fq_target_name}.__stub__)
-  add_custom_target(${stub_target_name} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename})
-
-  add_library(
-    ${fq_target_name}
-    # We want an object library as the objects will eventually get packaged into
-    # an archive (like libcgpu.a).
-    EXCLUDE_FROM_ALL
-    OBJECT
-    ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}
-  )
-  target_compile_options(${fq_target_name} BEFORE PRIVATE
-                         ${ADD_GPU_OBJ_COMPILE_OPTIONS} -nostdlib)
-  foreach(packaged_gpu_binary ${packaged_gpu_binaries})
-    target_compile_options(${fq_target_name} PRIVATE
-                           "SHELL:-Xclang -fembed-offload-object=${packaged_gpu_binary}")
-  endforeach()
-  target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
-  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  add_dependencies(${fq_target_name}
-                   ${full_deps_list} ${packaged_gpu_names} ${stub_target_name})
-endfunction()
-
 # Rule which is essentially a wrapper over add_library to compile a set of
 # sources to object files.
 # Usage:
@@ -214,53 +44,39 @@ function(create_object_library fq_target_name)
     message(FATAL_ERROR "'add_object_library' rule requires SRCS to be specified.")
   endif()
 
-  # The GPU build uses a separate internal file.
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND NOT ${ADD_OBJECT_NO_GPU_BUNDLE})
-    set(internal_target_name ${fq_target_name}.__internal__)
-    set(public_packaging_for_internal "")
-  else()
-    set(internal_target_name ${fq_target_name})
-    set(public_packaging_for_internal "-DLIBC_COPT_PUBLIC_PACKAGING")
-  endif()
+  set(internal_target_name ${fq_target_name}.__internal__)
+  set(public_packaging_for_internal "-DLIBC_COPT_PUBLIC_PACKAGING")
 
   _get_common_compile_options(compile_options "${ADD_OBJECT_FLAGS}")
   list(APPEND compile_options ${ADD_OBJECT_COMPILE_OPTIONS})
 
-  # GPU builds require special handling for the objects because we want to
-  # export several different targets at once, e.g. for both Nvidia and AMD.
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-    if(NOT ${ADD_OBJECT_NO_GPU_BUNDLE})
-      _build_gpu_object_bundle(
-        ${fq_target_name}
-        SRCS ${ADD_OBJECT_SRCS}
-        HDRS ${ADD_OBJECT_HDRS}
-        CXX_STANDARD ${ADD_OBJECT_CXX_STANDARD}
-        COMPILE_OPTIONS ${compile_options} "-DLIBC_COPT_PUBLIC_PACKAGING"
-        DEPENDS ${fq_deps_list}
-      )
-    endif()
-    # When the target for GPU is not bundled, internal_target_name is the same
-    # as fq_targetname
-    _build_gpu_object_for_single_arch(
-      ${internal_target_name}
-      ${LIBC_GPU_TARGET_ARCHITECTURE}
-      SRCS ${ADD_OBJECT_SRCS}
-      HDRS ${ADD_OBJECT_HDRS}
-      CXX_STANDARD ${ADD_OBJECT_CXX_STANDARD}
-      COMPILE_OPTIONS ${compile_options} ${public_packaging_for_internal}
-      DEPENDS ${fq_deps_list}
-    )
-  else()
+  add_library(
+    ${fq_target_name}
+    EXCLUDE_FROM_ALL
+    OBJECT
+    ${ADD_OBJECT_SRCS}
+    ${ADD_OBJECT_HDRS}
+  )
+  target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR}/include)
+  target_compile_options(${fq_target_name} PRIVATE ${compile_options})
+
+  # The NVPTX target is installed as LLVM-IR but the internal testing toolchain
+  # cannot handle it natively. Make a separate internal target for testing.
+  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND NOT LIBC_GPU_TESTS_DISABLED)
     add_library(
-      ${fq_target_name}
+      ${internal_target_name}
       EXCLUDE_FROM_ALL
       OBJECT
       ${ADD_OBJECT_SRCS}
       ${ADD_OBJECT_HDRS}
     )
-    target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
-    target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-    target_compile_options(${fq_target_name} PRIVATE ${compile_options})
+    target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
+    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR}/include)
+    target_compile_options(${internal_target_name} PRIVATE ${compile_options}
+                           -fno-lto -march=${LIBC_GPU_TARGET_ARCHITECTURE})
   endif()
 
   if(SHOW_INTERMEDIATE_OBJECTS)
@@ -290,13 +106,18 @@ function(create_object_library fq_target_name)
       FLAGS "${ADD_OBJECT_FLAGS}"
   )
 
+  # If we built a separate internal target we want to use those target objects
+  # for testing instead of the exported target.
+  set(target_objects ${fq_target_name})
   if(TARGET ${internal_target_name})
-    set_target_properties(
-      ${fq_target_name}
-      PROPERTIES
-        OBJECT_FILES "$<TARGET_OBJECTS:${internal_target_name}>"
-    )
+    set(target_objects ${internal_target_name})
   endif()
+
+  set_target_properties(
+    ${fq_target_name}
+    PROPERTIES
+      OBJECT_FILES "$<TARGET_OBJECTS:${target_objects}>"
+  )
 endfunction(create_object_library)
 
 function(add_object_library target_name)
@@ -389,12 +210,19 @@ function(create_entrypoint_object fq_target_name)
 
     get_target_property(object_file ${fq_dep_name} "OBJECT_FILE")
     get_target_property(object_file_raw ${fq_dep_name} "OBJECT_FILE_RAW")
-    add_library(
-      ${internal_target_name}
-      EXCLUDE_FROM_ALL
-      OBJECT
-      ${object_file_raw}
-    )
+
+    # If the system cannot build the GPU tests we simply make a dummy target.
+    if(LIBC_TARGET_OS_IS_GPU AND LIBC_GPU_TESTS_DISABLED)
+      add_custom_target(${internal_target_name})
+    else()
+      add_library(
+        ${internal_target_name}
+        EXCLUDE_FROM_ALL
+        OBJECT
+        ${object_file_raw}
+      )
+    endif()
+
     add_dependencies(${internal_target_name} ${fq_dep_name})
     add_library(
       ${fq_target_name}
@@ -441,65 +269,49 @@ function(create_entrypoint_object fq_target_name)
     endif()
   endif()
 
-  # GPU builds require special handling for the objects because we want to
-  # export several different targets at once, e.g. for both Nvidia and AMD.
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-    _build_gpu_object_bundle(
-      ${fq_target_name}
-      SRCS ${ADD_ENTRYPOINT_OBJ_SRCS}
-      HDRS ${ADD_ENTRYPOINT_OBJ_HDRS}
-      COMPILE_OPTIONS ${common_compile_options} "-DLIBC_COPT_PUBLIC_PACKAGING"
-      CXX_STANDARD ${ADD_ENTRYPOINT_OBJ_CXX_STANDARD}
-      DEPENDS ${full_deps_list}
-      FLAGS "${ADD_ENTRYPOINT_OBJ_FLAGS}"
-    )
-    _build_gpu_object_for_single_arch(
-      ${internal_target_name}
-      ${LIBC_GPU_TARGET_ARCHITECTURE}
-      SRCS ${ADD_ENTRYPOINT_OBJ_SRCS}
-      HDRS ${ADD_ENTRYPOINT_OBJ_HDRS}
-      COMPILE_OPTIONS ${common_compile_options}
-      CXX_STANDARD ${ADD_ENTRYPOINT_OBJ_CXX_STANDARD}
-      DEPENDS ${full_deps_list}
-      FLAGS "${ADD_ENTRYPOINT_OBJ_FLAGS}"
-    )
-  else()
-    add_library(
-      ${internal_target_name}
-      # TODO: We don't need an object library for internal consumption.
-      # A future change should switch this to a normal static library.
-      EXCLUDE_FROM_ALL
-      OBJECT
-      ${ADD_ENTRYPOINT_OBJ_SRCS}
-      ${ADD_ENTRYPOINT_OBJ_HDRS}
-    )
-    target_compile_options(${internal_target_name} BEFORE PRIVATE ${common_compile_options})
-    target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
-    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-    add_dependencies(${internal_target_name} ${full_deps_list})
-    target_link_libraries(${internal_target_name} ${full_deps_list})
+  add_library(
+    ${internal_target_name}
+    # TODO: We don't need an object library for internal consumption.
+    # A future change should switch this to a normal static library.
+    EXCLUDE_FROM_ALL
+    OBJECT
+    ${ADD_ENTRYPOINT_OBJ_SRCS}
+    ${ADD_ENTRYPOINT_OBJ_HDRS}
+  )
+  target_compile_options(${internal_target_name} BEFORE PRIVATE ${common_compile_options})
+  target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
+  target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR}/include)
+  add_dependencies(${internal_target_name} ${full_deps_list})
+  target_link_libraries(${internal_target_name} ${full_deps_list})
 
-    add_library(
-      ${fq_target_name}
-      # We want an object library as the objects will eventually get packaged into
-      # an archive (like libc.a).
-      EXCLUDE_FROM_ALL
-      OBJECT
-      ${ADD_ENTRYPOINT_OBJ_SRCS}
-      ${ADD_ENTRYPOINT_OBJ_HDRS}
-    )
-    target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLIBC_COPT_PUBLIC_PACKAGING)
-    target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
-    target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-    add_dependencies(${fq_target_name} ${full_deps_list})
-    target_link_libraries(${fq_target_name} ${full_deps_list})
+  # The NVPTX target cannot use LTO for the internal targets used for testing.
+  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+    target_compile_options(${internal_target_name} PRIVATE
+                           -fno-lto -march=${LIBC_GPU_TARGET_ARCHITECTURE})
   endif()
+
+  add_library(
+    ${fq_target_name}
+    # We want an object library as the objects will eventually get packaged into
+    # an archive (like libc.a).
+    EXCLUDE_FROM_ALL
+    OBJECT
+    ${ADD_ENTRYPOINT_OBJ_SRCS}
+    ${ADD_ENTRYPOINT_OBJ_HDRS}
+  )
+  target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLIBC_COPT_PUBLIC_PACKAGING)
+  target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR}/include)
+  add_dependencies(${fq_target_name} ${full_deps_list})
+  target_link_libraries(${fq_target_name} ${full_deps_list})
 
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
       ENTRYPOINT_NAME ${ADD_ENTRYPOINT_OBJ_NAME}
-      TARGET_TYPE ${ENTRYPOINT_OBJ_TARGET_TYPE}
+      TARGET_TYPE ${entrypoint_target_type}
       OBJECT_FILE "$<TARGET_OBJECTS:${fq_target_name}>"
       CXX_STANDARD ${ADD_ENTRYPOINT_OBJ_CXX_STANDARD}
       DEPS "${fq_deps_list}"

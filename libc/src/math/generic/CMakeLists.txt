@@ -969,10 +969,10 @@ add_entrypoint_object(
     ilogb.cpp
   HDRS
     ../ilogb.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -981,10 +981,10 @@ add_entrypoint_object(
     ilogbf.cpp
   HDRS
     ../ilogbf.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -993,10 +993,72 @@ add_entrypoint_object(
     ilogbl.cpp
   HDRS
     ../ilogbl.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
+  ilogbf128
+  SRCS
+    ilogbf128.cpp
+  HDRS
+    ../ilogbf128.h
   COMPILE_OPTIONS
-    -O2
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.float
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
+  llogb
+  SRCS
+    llogb.cpp
+  HDRS
+    ../llogb.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
+  llogbf
+  SRCS
+    llogbf.cpp
+  HDRS
+    ../llogbf.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
+  llogbl
+  SRCS
+    llogbl.cpp
+  HDRS
+    ../llogbl.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
+  llogbf128
+  SRCS
+    llogbf128.cpp
+  HDRS
+    ../llogbf128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.float
+    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_entrypoint_object(
@@ -1044,8 +1106,8 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-  libc.src.__support.macros.properties.float
-  libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.properties.float
+    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_object_library(
@@ -1229,10 +1291,10 @@ add_entrypoint_object(
     logb.cpp
   HDRS
     ../logb.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -1241,10 +1303,10 @@ add_entrypoint_object(
     logbf.cpp
   HDRS
     ../logbf.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -1253,10 +1315,22 @@ add_entrypoint_object(
     logbl.cpp
   HDRS
     ../logbl.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
+  logbf128
+  SRCS
+    logbf128.cpp
+  HDRS
+    ../logbf128.h
   COMPILE_OPTIONS
-    -O2
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_entrypoint_object(
@@ -1437,7 +1511,7 @@ add_entrypoint_object(
     ../sqrtf128.h
   DEPENDS
     libc.src.__support.macros.properties.float
-    libc.src.__support.FPUtil.sqrt 
+    libc.src.__support.FPUtil.sqrt
   COMPILE_OPTIONS
     -O3
   )
