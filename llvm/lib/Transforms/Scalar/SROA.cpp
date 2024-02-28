@@ -293,7 +293,7 @@ calculateFragment(DILocalVariable *Variable,
   if (!CurrentFragment) {
     if (auto Size = Variable->getSizeInBits()) {
       // Treat the current fragment as covering the whole variable.
-      CurrentFragment =  DIExpression::FragmentInfo(*Size, 0);
+      CurrentFragment = DIExpression::FragmentInfo(*Size, 0);
       if (Target == CurrentFragment)
         return UseNoFrag;
     }
@@ -1213,8 +1213,9 @@ private:
     if (!IsOffsetKnown)
       return PI.setAborted(&II);
 
-    insertUse(II, Offset, Length ? Length->getLimitedValue()
-                                 : AllocSize - Offset.getLimitedValue(),
+    insertUse(II, Offset,
+              Length ? Length->getLimitedValue()
+                     : AllocSize - Offset.getLimitedValue(),
               (bool)Length);
   }
 
@@ -1669,7 +1670,7 @@ static void speculatePHINodeLoads(IRBuilderTy &IRB, PHINode &PN) {
   }
 
   // Inject loads into all of the pred blocks.
-  DenseMap<BasicBlock*, Value*> InjectedLoads;
+  DenseMap<BasicBlock *, Value *> InjectedLoads;
   for (unsigned Idx = 0, Num = PN.getNumIncomingValues(); Idx != Num; ++Idx) {
     BasicBlock *Pred = PN.getIncomingBlock(Idx);
     Value *InVal = PN.getIncomingValue(Idx);
@@ -1678,7 +1679,7 @@ static void speculatePHINodeLoads(IRBuilderTy &IRB, PHINode &PN) {
     // basic block, as long as the value is the same. So if we already injected
     // a load in the predecessor, then we should reuse the same load for all
     // duplicated entries.
-    if (Value* V = InjectedLoads.lookup(Pred)) {
+    if (Value *V = InjectedLoads.lookup(Pred)) {
       NewPN->addIncoming(V, Pred);
       continue;
     }
@@ -2077,8 +2078,7 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
   if (BeginIndex * ElementSize != BeginOffset ||
       BeginIndex >= cast<FixedVectorType>(Ty)->getNumElements())
     return false;
-  uint64_t EndOffset =
-      std::min(S.endOffset(), P.endOffset()) - P.beginOffset();
+  uint64_t EndOffset = std::min(S.endOffset(), P.endOffset()) - P.beginOffset();
   uint64_t EndIndex = EndOffset / ElementSize;
   if (EndIndex * ElementSize != EndOffset ||
       EndIndex > cast<FixedVectorType>(Ty)->getNumElements())
@@ -2754,8 +2754,8 @@ public:
     Instruction *OldUserI = cast<Instruction>(OldUse->getUser());
     IRB.SetInsertPoint(OldUserI);
     IRB.SetCurrentDebugLocation(OldUserI->getDebugLoc());
-    IRB.getInserter().SetNamePrefix(
-        Twine(NewAI.getName()) + "." + Twine(BeginOffset) + ".");
+    IRB.getInserter().SetNamePrefix(Twine(NewAI.getName()) + "." +
+                                    Twine(BeginOffset) + ".");
 
     CanSROA &= visit(cast<Instruction>(OldUse->getUser()));
     if (VecTy || IntTy)
@@ -2808,7 +2808,7 @@ private:
 #else
                           Twine()
 #endif
-                          );
+    );
   }
 
   /// Compute suitable alignment to access this slice of the *new*
@@ -3189,8 +3189,7 @@ private:
     const bool CanContinue = [&]() {
       if (VecTy || IntTy)
         return true;
-      if (BeginOffset > NewAllocaBeginOffset ||
-          EndOffset < NewAllocaEndOffset)
+      if (BeginOffset > NewAllocaBeginOffset || EndOffset < NewAllocaEndOffset)
         return false;
       // Length must be in range for FixedVectorType.
       auto *C = cast<ConstantInt>(II.getLength());
@@ -3957,11 +3956,11 @@ private:
     return false;
   }
 
-  // Fold gep (select cond, ptr1, ptr2), idx
+  // Unfold gep (select cond, ptr1, ptr2), idx
   //   => select cond, gep(ptr1, idx), gep(ptr2, idx)
   // and  gep ptr, (select cond, idx1, idx2)
   //   => select cond, gep(ptr, idx1), gep(ptr, idx2)
-  bool foldGEPSelect(GetElementPtrInst &GEPI) {
+  bool unfoldGEPSelect(GetElementPtrInst &GEPI) {
     // Check whether the GEP has exactly one select operand and all indices
     // will become constant after the transform.
     SelectInst *Sel = dyn_cast<SelectInst>(GEPI.getPointerOperand());
@@ -3984,9 +3983,9 @@ private:
     if (!Sel)
       return false;
 
-    LLVM_DEBUG(dbgs() << "  Rewriting gep(select) -> select(gep):"
-                      << "\n    original: " << *Sel
-                      << "\n              " << GEPI);
+    LLVM_DEBUG(dbgs() << "  Rewriting gep(select) -> select(gep):\n";
+               dbgs() << "    original: " << *Sel << "\n";
+               dbgs() << "              " << GEPI << "\n";);
 
     auto GetNewOps = [&](Value *SelOp) {
       SmallVector<Value *> NewOps;
@@ -4023,74 +4022,107 @@ private:
     Visited.insert(NSelI);
     enqueueUsers(*NSelI);
 
-    LLVM_DEBUG(dbgs() << "\n          to: " << *NTrue
-                      << "\n              " << *NFalse
-                      << "\n              " << *NSel << '\n');
+    LLVM_DEBUG(dbgs() << "          to: " << *NTrue << "\n";
+               dbgs() << "              " << *NFalse << "\n";
+               dbgs() << "              " << *NSel << "\n";);
 
     return true;
   }
 
-  // Fold gep (phi ptr1, ptr2) => phi gep(ptr1), gep(ptr2)
-  bool foldGEPPhi(GetElementPtrInst &GEPI) {
-    if (!GEPI.hasAllConstantIndices())
-      return false;
+  // Unfold gep (phi ptr1, ptr2), idx
+  //   => phi ((gep ptr1, idx), (gep ptr2, idx))
+  // and  gep ptr, (phi idx1, idx2)
+  //   => phi ((gep ptr, idx1), (gep ptr, idx2))
+  bool unfoldGEPPhi(GetElementPtrInst &GEPI) {
+    // To prevent infinitely expanding recursive phis, bail if the GEP pointer
+    // operand (looking through the phi if it is the phi we want to unfold) is
+    // an instruction besides an alloca.
+    PHINode *Phi = dyn_cast<PHINode>(GEPI.getPointerOperand());
+    auto IsInvalidPointerOperand = [](Value *V) {
+      return isa<Instruction>(V) && !isa<AllocaInst>(V);
+    };
+    if (Phi) {
+      if (any_of(Phi->operands(), IsInvalidPointerOperand))
+        return false;
+    } else {
+      if (IsInvalidPointerOperand(GEPI.getPointerOperand()))
+        return false;
+    }
+    // Check whether the GEP has exactly one phi operand (including the pointer
+    // operand) and all indices will become constant after the transform.
+    for (Value *Op : GEPI.indices()) {
+      if (auto *SI = dyn_cast<PHINode>(Op)) {
+        if (Phi)
+          return false;
 
-    PHINode *PHI = cast<PHINode>(GEPI.getPointerOperand());
-    if (GEPI.getParent() != PHI->getParent() ||
-        llvm::any_of(PHI->incoming_values(), [](Value *In)
-          { Instruction *I = dyn_cast<Instruction>(In);
-            return !I || isa<GetElementPtrInst>(I) || isa<PHINode>(I) ||
-                   succ_empty(I->getParent()) ||
-                   !I->getParent()->isLegalToHoistInto();
-          }))
-      return false;
-
-    LLVM_DEBUG(dbgs() << "  Rewriting gep(phi) -> phi(gep):"
-                      << "\n    original: " << *PHI
-                      << "\n              " << GEPI
-                      << "\n          to: ");
-
-    SmallVector<Value *, 4> Index(GEPI.indices());
-    bool IsInBounds = GEPI.isInBounds();
-    IRB.SetInsertPoint(GEPI.getParent(), GEPI.getParent()->getFirstNonPHIIt());
-    PHINode *NewPN = IRB.CreatePHI(GEPI.getType(), PHI->getNumIncomingValues(),
-                                   PHI->getName() + ".sroa.phi");
-    for (unsigned I = 0, E = PHI->getNumIncomingValues(); I != E; ++I) {
-      BasicBlock *B = PHI->getIncomingBlock(I);
-      Value *NewVal = nullptr;
-      int Idx = NewPN->getBasicBlockIndex(B);
-      if (Idx >= 0) {
-        NewVal = NewPN->getIncomingValue(Idx);
-      } else {
-        Instruction *In = cast<Instruction>(PHI->getIncomingValue(I));
-
-        IRB.SetInsertPoint(In->getParent(), std::next(In->getIterator()));
-        Type *Ty = GEPI.getSourceElementType();
-        NewVal = IRB.CreateGEP(Ty, In, Index, In->getName() + ".sroa.gep",
-                               IsInBounds);
+        Phi = SI;
+        if (!all_of(Phi->incoming_values(),
+                    [](Value *V) { return isa<ConstantInt>(V); }))
+          return false;
+        continue;
       }
-      NewPN->addIncoming(NewVal, B);
+
+      if (!isa<ConstantInt>(Op))
+        return false;
+    }
+
+    if (!Phi)
+      return false;
+
+    LLVM_DEBUG(dbgs() << "  Rewriting gep(phi) -> phi(gep):\n";
+               dbgs() << "    original: " << *Phi << "\n";
+               dbgs() << "              " << GEPI << "\n";);
+
+    auto GetNewOps = [&](Value *PhiOp) {
+      SmallVector<Value *> NewOps;
+      for (Value *Op : GEPI.operands())
+        if (Op == Phi)
+          NewOps.push_back(PhiOp);
+        else
+          NewOps.push_back(Op);
+      return NewOps;
+    };
+
+    IRB.SetInsertPoint(Phi);
+    PHINode *NewPhi = IRB.CreatePHI(GEPI.getType(), Phi->getNumIncomingValues(),
+                                    Phi->getName() + ".sroa.phi");
+
+    bool IsInBounds = GEPI.isInBounds();
+    Type *SourceTy = GEPI.getSourceElementType();
+    // We only handle arguments, constants, and static allocas here, so we can
+    // insert GEPs at the beginning of the function after static allocas.
+    IRB.SetInsertPointPastAllocas(GEPI.getFunction());
+    for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
+      Value *Op = Phi->getIncomingValue(I);
+      BasicBlock *BB = Phi->getIncomingBlock(I);
+      SmallVector<Value *> NewOps = GetNewOps(Op);
+
+      Value *NewGEP =
+          IRB.CreateGEP(SourceTy, NewOps[0], ArrayRef(NewOps).drop_front(),
+                        Phi->getName() + ".sroa.gep", IsInBounds);
+      NewPhi->addIncoming(NewGEP, BB);
     }
 
     Visited.erase(&GEPI);
-    GEPI.replaceAllUsesWith(NewPN);
+    GEPI.replaceAllUsesWith(NewPhi);
     GEPI.eraseFromParent();
-    Visited.insert(NewPN);
-    enqueueUsers(*NewPN);
+    Visited.insert(NewPhi);
+    enqueueUsers(*NewPhi);
 
-    LLVM_DEBUG(for (Value *In : NewPN->incoming_values())
-                 dbgs() << "\n              " << *In;
-               dbgs() << "\n              " << *NewPN << '\n');
+    LLVM_DEBUG(dbgs() << "          to: ";
+               for (Value *In
+                    : NewPhi->incoming_values()) dbgs()
+               << "\n              " << *In;
+               dbgs() << "\n              " << *NewPhi << '\n');
 
     return true;
   }
 
   bool visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-    if (foldGEPSelect(GEPI))
+    if (unfoldGEPSelect(GEPI))
       return true;
 
-    if (isa<PHINode>(GEPI.getPointerOperand()) &&
-        foldGEPPhi(GEPI))
+    if (unfoldGEPPhi(GEPI))
       return true;
 
     enqueueUsers(GEPI);
@@ -4162,17 +4194,17 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
     return nullptr;
 
   if (isa<ArrayType>(Ty) || isa<VectorType>(Ty)) {
-     Type *ElementTy;
-     uint64_t TyNumElements;
-     if (auto *AT = dyn_cast<ArrayType>(Ty)) {
-       ElementTy = AT->getElementType();
-       TyNumElements = AT->getNumElements();
-     } else {
-       // FIXME: This isn't right for vectors with non-byte-sized or
-       // non-power-of-two sized elements.
-       auto *VT = cast<FixedVectorType>(Ty);
-       ElementTy = VT->getElementType();
-       TyNumElements = VT->getNumElements();
+    Type *ElementTy;
+    uint64_t TyNumElements;
+    if (auto *AT = dyn_cast<ArrayType>(Ty)) {
+      ElementTy = AT->getElementType();
+      TyNumElements = AT->getNumElements();
+    } else {
+      // FIXME: This isn't right for vectors with non-byte-sized or
+      // non-power-of-two sized elements.
+      auto *VT = cast<FixedVectorType>(Ty);
+      ElementTy = VT->getElementType();
+      TyNumElements = VT->getNumElements();
     }
     uint64_t ElementSize = DL.getTypeAllocSize(ElementTy).getFixedValue();
     uint64_t NumSkippedElements = Offset / ElementSize;
@@ -4853,9 +4885,8 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     ++NumNewAllocas;
   }
 
-  LLVM_DEBUG(dbgs() << "Rewriting alloca partition "
-                    << "[" << P.beginOffset() << "," << P.endOffset()
-                    << ") to: " << *NewAI << "\n");
+  LLVM_DEBUG(dbgs() << "Rewriting alloca partition " << "[" << P.beginOffset()
+                    << "," << P.endOffset() << ") to: " << *NewAI << "\n");
 
   // Track the high watermark on the worklist as it is only relevant for
   // promoted allocas. We will reset it to this point if the alloca is not in
@@ -5040,8 +5071,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
         IsSorted = false;
       }
     }
-  }
-  else {
+  } else {
     // We only allow whole-alloca splittable loads and stores
     // for a large alloca to avoid creating too large BitVector.
     for (Slice &S : AS) {
@@ -5069,7 +5099,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
     uint64_t Offset;
     uint64_t Size;
     Fragment(AllocaInst *AI, uint64_t O, uint64_t S)
-      : Alloca(AI), Offset(O), Size(S) {}
+        : Alloca(AI), Offset(O), Size(S) {}
   };
   SmallVector<Fragment, 4> Fragments;
 
@@ -5083,7 +5113,8 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
             DL.getTypeSizeInBits(NewAI->getAllocatedType()).getFixedValue();
         // Don't include any padding.
         uint64_t Size = std::min(AllocaSize, P.size() * SizeOfByte);
-        Fragments.push_back(Fragment(NewAI, P.beginOffset() * SizeOfByte, Size));
+        Fragments.push_back(
+            Fragment(NewAI, P.beginOffset() * SizeOfByte, Size));
       }
     }
     ++NumPartitions;

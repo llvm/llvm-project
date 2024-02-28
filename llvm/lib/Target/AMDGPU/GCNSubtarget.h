@@ -1382,6 +1382,12 @@ public:
     return AMDGPU::IsaInfo::getTotalNumVGPRs(this);
   }
 
+  /// \returns Addressable number of architectural VGPRs supported by the
+  /// subtarget.
+  unsigned getAddressableNumArchVGPRs() const {
+    return AMDGPU::IsaInfo::getAddressableNumArchVGPRs(this);
+  }
+
   /// \returns Addressable number of VGPRs supported by the subtarget.
   unsigned getAddressableNumVGPRs() const {
     return AMDGPU::IsaInfo::getAddressableNumVGPRs(this);
