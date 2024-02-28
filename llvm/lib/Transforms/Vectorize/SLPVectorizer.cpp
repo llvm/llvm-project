@@ -9364,7 +9364,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
                 VectorCasts
                     .insert(std::make_pair(ScalarTE, FTy->getElementType()))
                     .second) {
-              unsigned BWSz = It->second.second;
+              unsigned BWSz = It->second.first;
               unsigned DstBWSz = DL->getTypeSizeInBits(FTy->getElementType());
               unsigned VecOpcode;
               if (DstBWSz < BWSz)
@@ -9376,7 +9376,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
               InstructionCost C = TTI->getCastInstrCost(
                   VecOpcode, FTy,
                   FixedVectorType::get(
-                      IntegerType::get(FTy->getContext(), It->second.first),
+                      IntegerType::get(FTy->getContext(), BWSz),
                       FTy->getNumElements()),
                   TTI::CastContextHint::None, CostKind);
               LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
