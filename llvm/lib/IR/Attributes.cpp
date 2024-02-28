@@ -608,7 +608,7 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     raw_string_ostream OS(Result);
     ConstantRange CR = getValueAsConstantRange();
     OS << "range(";
-    OS << "i" << CR.getBitWidth() << ",";
+    OS << "i" << CR.getBitWidth() << " ";
     OS << CR.getLower() << "," << CR.getUpper();
     OS << ")";
     OS.flush();

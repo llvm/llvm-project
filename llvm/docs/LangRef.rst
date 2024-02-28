@@ -1634,11 +1634,10 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
-``range(<ty>,<a>,<b>)``
-    This attribute expresses the possible range the parameter is in. If the 
-    value of the parameter is not in the specified range, a poison value is 
-    returned instead.
-    The argument passed to ``range`` has the following properties:
+``range(<ty> <a>, <b>)``
+    This attribute expresses the possible range the parameter is in. The value of 
+    the parameter is in the specified range or is poison.
+    The arguments passed to ``range`` has the following properties:
 
 -  The type must match the scalar type of the parameter.
 -  The pair ``a,b`` represents the range ``[a,b)``.

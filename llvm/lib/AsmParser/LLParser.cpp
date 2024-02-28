@@ -3001,7 +3001,7 @@ bool LLParser::parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
 }
 
 /// parseRangeAttr
-///   ::= range(<ty>,<n>,<n>)
+///   ::= range(<ty> <n>,<n>)
 bool LLParser::parseRangeAttr(AttrBuilder &B) {
   Lex.Lex();
 
@@ -3025,12 +3025,10 @@ bool LLParser::parseRangeAttr(AttrBuilder &B) {
   if (parseType(Ty, TyLoc))
     return true;
   if (!Ty->isIntegerTy())
-    return error(TyLoc, "must have integer type");
+    return error(TyLoc, "The range must have integer type!");
 
   auto BitWidth = Ty->getPrimitiveSizeInBits();
 
-  if (!EatIfPresent(lltok::comma))
-    return tokError("expected ','");
   if (ParseAPSInt(BitWidth, Lower))
     return true;
   if (!EatIfPresent(lltok::comma))
