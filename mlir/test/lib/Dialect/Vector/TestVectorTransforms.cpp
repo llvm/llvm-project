@@ -638,7 +638,7 @@ struct TestVectorDistribution
       OpBuilder builder(val.getContext());
       if (vecRank == 0)
         return AffineMap::get(val.getContext());
-      return AffineMap::get(vecRank, 0, builder.getAffineDimExpr(vecRank - 1));
+      return AffineMap::getMultiDimIdentityMap(vecRank, val.getContext());
     };
     auto shuffleFn = [](Location loc, OpBuilder &builder, Value val,
                         Value srcIdx, int64_t warpSz) {
