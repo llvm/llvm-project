@@ -357,7 +357,7 @@ export namespace std {
   using std::shift_left;
 
   namespace ranges {
-    // using std::ranges::shift_left;
+    using std::ranges::shift_left;
   }
 
   using std::shift_right;
