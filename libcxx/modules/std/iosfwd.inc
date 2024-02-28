@@ -30,10 +30,10 @@ export namespace std {
   using std::osyncstream;
   using std::syncbuf;
 
-# ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
   using std::wosyncstream;
   using std::wsyncbuf;
-# endif
+#  endif
 #endif
 
   using std::fpos;
