@@ -10,7 +10,7 @@ contains
     i1 = j1
   end subroutine inner
 end subroutine test1
-! FIR-LABEL:   func.func @_QFtest1Pinner() attributes {fir.internal_proc} {
+! FIR-LABEL:   func.func private @_QFtest1Pinner() attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! FIR:           %[[VAL_0:.*]] = fir.address_of(@_QFtest1Ei1) : !fir.ref<!fir.array<1xi32>>
 ! FIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<1xi32>>) -> !fir.ref<!fir.array<4xi8>>
 ! FIR:           %[[VAL_2:.*]] = arith.constant 0 : index
@@ -24,7 +24,7 @@ end subroutine test1
 ! FIR:           return
 ! FIR:         }
 
-! HLFIR-LABEL:   func.func @_QFtest1Pinner() attributes {fir.internal_proc} {
+! HLFIR-LABEL:   func.func private @_QFtest1Pinner() attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! HLFIR:           %[[VAL_0:.*]] = fir.address_of(@_QFtest1Ei1) : !fir.ref<!fir.array<1xi32>>
 ! HLFIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<1xi32>>) -> !fir.ref<!fir.array<4xi8>>
 ! HLFIR:           %[[VAL_2:.*]] = arith.constant 0 : index
@@ -54,7 +54,7 @@ contains
     end subroutine inner
   end subroutine host
 end module test2
-! FIR-LABEL:   func.func @_QMtest2FhostPinner() attributes {fir.internal_proc} {
+! FIR-LABEL:   func.func private @_QMtest2FhostPinner() attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! FIR:           %[[VAL_0:.*]] = fir.address_of(@_QMtest2FhostEf1) : !fir.ref<!fir.array<1xi32>>
 ! FIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<1xi32>>) -> !fir.ref<!fir.array<4xi8>>
 ! FIR:           %[[VAL_2:.*]] = arith.constant 0 : index
@@ -68,7 +68,7 @@ end module test2
 ! FIR:           return
 ! FIR:         }
 
-! HLFIR-LABEL:   func.func @_QMtest2FhostPinner() attributes {fir.internal_proc} {
+! HLFIR-LABEL:   func.func private @_QMtest2FhostPinner() attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! HLFIR:           %[[VAL_0:.*]] = fir.address_of(@_QMtest2FhostEf1) : !fir.ref<!fir.array<1xi32>>
 ! HLFIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<1xi32>>) -> !fir.ref<!fir.array<4xi8>>
 ! HLFIR:           %[[VAL_2:.*]] = arith.constant 0 : index
@@ -94,7 +94,7 @@ contains
     i1 = j1 + k1
   end subroutine inner
 end subroutine test3
-! FIR-LABEL:   func.func @_QFtest3Pinner() attributes {fir.internal_proc} {
+! FIR-LABEL:   func.func private @_QFtest3Pinner() attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! FIR:           %[[VAL_0:.*]] = fir.address_of(@blk_) : !fir.ref<tuple<i32>>
 ! FIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<?xi8>>
 ! FIR:           %[[VAL_2:.*]] = arith.constant 0 : index
@@ -115,7 +115,7 @@ end subroutine test3
 ! FIR:           return
 ! FIR:         }
 
-! HLFIR-LABEL:   func.func @_QFtest3Pinner() attributes {fir.internal_proc} {
+! HLFIR-LABEL:   func.func private @_QFtest3Pinner() attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! HLFIR:           %[[VAL_0:.*]] = fir.address_of(@blk_) : !fir.ref<tuple<i32>>
 ! HLFIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<?xi8>>
 ! HLFIR:           %[[VAL_2:.*]] = arith.constant 0 : index
@@ -149,7 +149,7 @@ contains
     i1 = j1 + k1
   end subroutine inner
 end subroutine test4
-! FIR-LABEL:   func.func @_QFtest4Pinner() attributes {fir.internal_proc} {
+! FIR-LABEL:   func.func private @_QFtest4Pinner() attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! FIR:           %[[VAL_0:.*]] = fir.address_of(@blk_) : !fir.ref<tuple<i32>>
 ! FIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<?xi8>>
 ! FIR:           %[[VAL_2:.*]] = arith.constant 0 : index
@@ -170,7 +170,7 @@ end subroutine test4
 ! FIR:           return
 ! FIR:         }
 
-! HLFIR-LABEL:   func.func @_QFtest4Pinner() attributes {fir.internal_proc} {
+! HLFIR-LABEL:   func.func private @_QFtest4Pinner() attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! HLFIR:           %[[VAL_0:.*]] = fir.address_of(@blk_) : !fir.ref<tuple<i32>>
 ! HLFIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<?xi8>>
 ! HLFIR:           %[[VAL_2:.*]] = arith.constant 0 : index
