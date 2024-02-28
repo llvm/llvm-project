@@ -5,7 +5,7 @@
 // suppressed.
 #pragma clang system_header
 
-typedef struct _FILE {
+typedef struct __sFILE {
   unsigned char *_p;
 } FILE;
 FILE *fopen(const char *restrict, const char *restrict) __asm("_" "fopen" );
