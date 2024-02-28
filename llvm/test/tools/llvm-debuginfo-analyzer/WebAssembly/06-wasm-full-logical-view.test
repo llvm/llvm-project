@@ -18,7 +18,8 @@
 ; offsets within the debug information section, debug location
 ; operands, linkage names, etc.
 
-; RUN: yaml2obj %p/Inputs/test-clang.yaml -o test-clang.wasm
+; RUN: llvm-mc -arch=wasm32 -filetype=obj \
+; RUN:         %p/Inputs/test-clang.s -o test-clang.wasm
 
 ; RUN: llvm-debuginfo-analyzer --attribute=all \
 ; RUN:                         --print=all \

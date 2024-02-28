@@ -30,7 +30,8 @@
 ; emits both typedefs at the same lexical scope (3), which is wrong.
 ; GCC emit correct lexical scope for both typedefs.
 
-; RUN: yaml2obj %p/Inputs/pr-44884-clang.yaml -o pr-44884-clang.wasm
+; RUN: llvm-mc -arch=wasm32 -filetype=obj \
+; RUN:         %p/Inputs/pr-44884-clang.s -o pr-44884-clang.wasm
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \
 ; RUN:                         --output-sort=kind \

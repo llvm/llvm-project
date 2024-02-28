@@ -18,7 +18,8 @@
 ; contain 'BLOCK' or '.store' in their names or types, using a tab layout
 ; and given the number of matches.
 
-# RUN: yaml2obj %p/Inputs/test-clang.yaml -o test-clang.wasm
+; RUN: llvm-mc -arch=wasm32 -filetype=obj \
+; RUN:         %p/Inputs/test-clang.s -o test-clang.wasm
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level \
 ; RUN:                         --select-nocase --select-regex \

@@ -17,7 +17,8 @@
 ; The output shows in view form the 'missing (-), added (+)' elements,
 ; giving more context by swapping the reference and target object files.
 
-; RUN: yaml2obj %p/Inputs/test-clang.yaml -o test-clang.wasm
+; RUN: llvm-mc -arch=wasm32 -filetype=obj \
+; RUN:         %p/Inputs/test-clang.s -o test-clang.wasm
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level \
 ; RUN:                         --compare=types \

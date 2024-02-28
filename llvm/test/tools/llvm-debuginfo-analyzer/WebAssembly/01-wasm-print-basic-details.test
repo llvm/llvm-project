@@ -18,7 +18,8 @@
 ; sorted by the debug information internal offset; it includes its lexical
 ; level and debug info format.
 
-; RUN: yaml2obj %p/Inputs/test-clang.yaml -o test-clang.wasm
+; RUN: llvm-mc -arch=wasm32 -filetype=obj \
+; RUN:         %p/Inputs/test-clang.s -o test-clang.wasm
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level,format \
 ; RUN:                         --output-sort=offset \

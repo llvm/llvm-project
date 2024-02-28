@@ -25,7 +25,8 @@
 ; references to the enumerators 'RED' and 'BLUE'. The DWARF generated
 ; by GCC, does include such references.
 
-; RUN: yaml2obj %p/Inputs/pr-46466-clang.yaml -o pr-46466-clang.wasm
+; RUN: llvm-mc -arch=wasm32 -filetype=obj \
+; RUN:         %p/Inputs/pr-46466-clang.s -o pr-46466-clang.wasm
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \
 ; RUN:                         --output-sort=name \
