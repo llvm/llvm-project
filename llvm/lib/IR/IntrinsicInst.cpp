@@ -288,7 +288,24 @@ Value *InstrProfIncrementInst::getStep() const {
   }
   const Module *M = getModule();
   LLVMContext &Context = M->getContext();
+  const auto &DL = M->getDataLayout();
+  Type *LargestLegalIntTy = DL.getLargestLegalIntType(Context);
+
+  if (LargestLegalIntTy) {
+    return ConstantInt::get(LargestLegalIntTy, 1);
+  }
+
   return ConstantInt::get(Type::getInt64Ty(Context), 1);
+}
+
+Value *InstrProfIncrementInst::getAtomicStep() const {
+  if (InstrProfIncrementInstStep::classof(this)) {
+    return const_cast<Value *>(getArgOperand(4));
+  }
+  const Module *M = getModule();
+  LLVMContext &Context = M->getContext();
+  const auto &DL = M->getDataLayout();
+  return ConstantInt::get(DL.getIntPtrType(Context), 1);
 }
 
 std::optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {

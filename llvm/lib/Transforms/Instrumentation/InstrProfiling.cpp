@@ -958,7 +958,7 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   IRBuilder<> Builder(Inc);
   if (Options.Atomic || AtomicCounterUpdateAll ||
       (Inc->getIndex()->isZeroValue() && AtomicFirstCounter)) {
-    Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
+    Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getAtomicStep(),
                             MaybeAlign(), AtomicOrdering::Monotonic);
   } else {
     Value *IncStep = Inc->getStep();

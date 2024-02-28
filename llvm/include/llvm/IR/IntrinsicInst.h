@@ -1506,6 +1506,7 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
   Value *getStep() const;
+  Value *getAtomicStep() const;
 };
 
 /// This represents the llvm.instrprof.increment.step intrinsic.
