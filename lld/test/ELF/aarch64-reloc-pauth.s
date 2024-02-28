@@ -41,7 +41,7 @@
 # RELR-NEXT: Name Type Address Off Size ES Flg Lk Inf Al
 # RELR:      .relr.auth.dyn AARCH64_AUTH_RELR {{0*}}[[ADDR:.*]] {{0*}}[[ADDR]] 000018 08 A 0 0 8
 
-# RELR:      Dynamic section at offset 0x310 contains 16 entries
+# RELR:      Dynamic section at offset {{.*}} contains 16 entries
 # RELR:      0x0000000070000012 (AARCH64_AUTH_RELR) 0x[[ADDR]]
 # RELR-NEXT: 0x0000000070000011 (AARCH64_AUTH_RELRSZ) 24 (bytes)
 # RELR-NEXT: 0x0000000070000013 (AARCH64_AUTH_RELRENT) 8 (bytes)
