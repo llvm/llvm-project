@@ -22,6 +22,11 @@ template <typename T> struct removeConst<const T> {
   using type = T;
 };
 
+// This is only used for SFINAE when detecting if a type is defined.
+template <typename T> struct voidAdaptor {
+  using type = void;
+};
+
 } // namespace
 
 namespace scudo {
@@ -38,12 +43,13 @@ namespace scudo {
   };
 
 #define OPTIONAL_TYPE_TEMPLATE(NAME, DEFAULT, MEMBER)                          \
-  template <typename Config, typename Void = Config> struct NAME##Type {       \
+  template <typename Config, typename Void = void> struct NAME##Type {         \
     static constexpr bool enabled() { return false; }                          \
     using NAME = DEFAULT;                                                      \
   };                                                                           \
   template <typename Config>                                                   \
-  struct NAME##Type<Config, typename Config::MEMBER> {                         \
+  struct NAME##Type<Config,                                                    \
+                    typename voidAdaptor<typename Config::MEMBER>::type> {     \
     static constexpr bool enabled() { return true; }                           \
     using NAME = typename Config::MEMBER;                                      \
   };

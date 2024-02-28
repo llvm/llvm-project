@@ -49,10 +49,6 @@ template <typename Config> class SizeClassAllocator64 {
 public:
   typedef typename Config::CompactPtrT CompactPtrT;
   typedef typename Config::SizeClassMap SizeClassMap;
-#if 0
-  typedef typename ConditionVariableState<
-      typename Config::Primary>::ConditionVariableT ConditionVariableT;
-#endif
   typedef typename Config::ConditionVariableT ConditionVariableT;
   static const uptr CompactPtrScale = Config::getCompactPtrScale();
   static const uptr RegionSizeLog = Config::getRegionSizeLog();
