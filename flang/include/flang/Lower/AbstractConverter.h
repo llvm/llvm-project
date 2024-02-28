@@ -53,6 +53,7 @@ class DerivedTypeSpec;
 
 namespace lower {
 class SymMap;
+struct SymbolBox;
 namespace pft {
 struct Variable;
 }
@@ -298,6 +299,11 @@ public:
   const Fortran::lower::LoweringOptions &getLoweringOptions() const {
     return loweringOptions;
   }
+
+  /// Find the symbol in one level up of symbol map such as for host-association
+  /// in OpenMP code or return null.
+  virtual Fortran::lower::SymbolBox
+  lookupOneLevelUpSymbol(const Fortran::semantics::Symbol &sym) = 0;
 
 private:
   /// Options controlling lowering behavior.

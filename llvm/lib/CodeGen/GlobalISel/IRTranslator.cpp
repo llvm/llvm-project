@@ -596,8 +596,6 @@ bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
   const Value *CondVal = BrInst.getCondition();
   MachineBasicBlock *Succ1MBB = &getMBB(*BrInst.getSuccessor(1));
 
-  const auto &TLI = *MF->getSubtarget().getTargetLowering();
-
   // If this is a series of conditions that are or'd or and'd together, emit
   // this as a sequence of branches instead of setcc's with and/or operations.
   // As long as jumps are not expensive (exceptions for multi-use logic ops,
@@ -617,7 +615,7 @@ bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
   //     jle foo
   using namespace PatternMatch;
   const Instruction *CondI = dyn_cast<Instruction>(CondVal);
-  if (!TLI.isJumpExpensive() && CondI && CondI->hasOneUse() &&
+  if (!TLI->isJumpExpensive() && CondI && CondI->hasOneUse() &&
       !BrInst.hasMetadata(LLVMContext::MD_unpredictable)) {
     Instruction::BinaryOps Opcode = (Instruction::BinaryOps)0;
     Value *Vec;
@@ -1385,9 +1383,8 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     return true;
   }
 
-  auto &TLI = *MF->getSubtarget().getTargetLowering();
   MachineMemOperand::Flags Flags =
-      TLI.getLoadMemOperandFlags(LI, *DL, AC, LibInfo);
+      TLI->getLoadMemOperandFlags(LI, *DL, AC, LibInfo);
   if (AA && !(Flags & MachineMemOperand::MOInvariant)) {
     if (AA->pointsToConstantMemory(
             MemoryLocation(Ptr, LocationSize::precise(StoreSize), AAInfo))) {
@@ -1434,8 +1431,7 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
     return true;
   }
 
-  auto &TLI = *MF->getSubtarget().getTargetLowering();
-  MachineMemOperand::Flags Flags = TLI.getStoreMemOperandFlags(SI, *DL);
+  MachineMemOperand::Flags Flags = TLI->getStoreMemOperandFlags(SI, *DL);
 
   for (unsigned i = 0; i < Vals.size(); ++i) {
     Register Addr;
@@ -1779,8 +1775,7 @@ void IRTranslator::getStackGuard(Register DstReg,
   auto MIB =
       MIRBuilder.buildInstr(TargetOpcode::LOAD_STACK_GUARD, {DstReg}, {});
 
-  auto &TLI = *MF->getSubtarget().getTargetLowering();
-  Value *Global = TLI.getSDagStackGuard(*MF->getFunction().getParent());
+  Value *Global = TLI->getSDagStackGuard(*MF->getFunction().getParent());
   if (!Global)
     return;
 
@@ -2111,9 +2106,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     // does. Simplest intrinsic ever!
     return true;
   case Intrinsic::vastart: {
-    auto &TLI = *MF->getSubtarget().getTargetLowering();
     Value *Ptr = CI.getArgOperand(0);
-    unsigned ListSize = TLI.getVaListSizeInBits(*DL) / 8;
+    unsigned ListSize = TLI->getVaListSizeInBits(*DL) / 8;
     Align Alignment = getKnownAlignment(Ptr, *DL);
 
     MIRBuilder.buildInstr(TargetOpcode::G_VASTART, {}, {getOrCreateVReg(*Ptr)})
@@ -2189,14 +2183,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateFixedPointIntrinsic(TargetOpcode::G_UDIVFIXSAT, CI, MIRBuilder);
   case Intrinsic::fmuladd: {
     const TargetMachine &TM = MF->getTarget();
-    const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
     Register Dst = getOrCreateVReg(CI);
     Register Op0 = getOrCreateVReg(*CI.getArgOperand(0));
     Register Op1 = getOrCreateVReg(*CI.getArgOperand(1));
     Register Op2 = getOrCreateVReg(*CI.getArgOperand(2));
     if (TM.Options.AllowFPOpFusion != FPOpFusion::Strict &&
-        TLI.isFMAFasterThanFMulAndFAdd(*MF,
-                                       TLI.getValueType(*DL, CI.getType()))) {
+        TLI->isFMAFasterThanFMulAndFAdd(*MF,
+                                        TLI->getValueType(*DL, CI.getType()))) {
       // TODO: Revisit this to see if we should move this part of the
       // lowering to the combiner.
       MIRBuilder.buildFMA(Dst, Op0, Op1, Op2,
@@ -2254,10 +2247,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     getStackGuard(getOrCreateVReg(CI), MIRBuilder);
     return true;
   case Intrinsic::stackprotector: {
-    const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
     LLT PtrTy = getLLTForType(*CI.getArgOperand(0)->getType(), *DL);
     Register GuardVal;
-    if (TLI.useLoadStackGuardNode()) {
+    if (TLI->useLoadStackGuardNode()) {
       GuardVal = MRI->createGenericVirtualRegister(PtrTy);
       getStackGuard(GuardVal, MIRBuilder);
     } else
@@ -2635,10 +2627,9 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   }
 
   // Add a MachineMemOperand if it is a target mem intrinsic.
-  const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
   TargetLowering::IntrinsicInfo Info;
   // TODO: Add a GlobalISel version of getTgtMemIntrinsic.
-  if (TLI.getTgtMemIntrinsic(Info, CI, *MF, ID)) {
+  if (TLI->getTgtMemIntrinsic(Info, CI, *MF, ID)) {
     Align Alignment = Info.align.value_or(
         DL->getABITypeAlign(Info.memVT.getTypeForEVT(F->getContext())));
     LLT MemTy = Info.memVT.isSimple()
@@ -2818,10 +2809,9 @@ bool IRTranslator::translateLandingPad(const User &U,
 
   // If there aren't registers to copy the values into (e.g., during SjLj
   // exceptions), then don't bother.
-  auto &TLI = *MF->getSubtarget().getTargetLowering();
   const Constant *PersonalityFn = MF->getFunction().getPersonalityFn();
-  if (TLI.getExceptionPointerRegister(PersonalityFn) == 0 &&
-      TLI.getExceptionSelectorRegister(PersonalityFn) == 0)
+  if (TLI->getExceptionPointerRegister(PersonalityFn) == 0 &&
+      TLI->getExceptionSelectorRegister(PersonalityFn) == 0)
     return true;
 
   // If landingpad's return type is token type, we don't create DAG nodes
@@ -2852,7 +2842,7 @@ bool IRTranslator::translateLandingPad(const User &U,
   assert(Tys.size() == 2 && "Only two-valued landingpads are supported");
 
   // Mark exception register as live in.
-  Register ExceptionReg = TLI.getExceptionPointerRegister(PersonalityFn);
+  Register ExceptionReg = TLI->getExceptionPointerRegister(PersonalityFn);
   if (!ExceptionReg)
     return false;
 
@@ -2860,7 +2850,7 @@ bool IRTranslator::translateLandingPad(const User &U,
   ArrayRef<Register> ResRegs = getOrCreateVRegs(LP);
   MIRBuilder.buildCopy(ResRegs[0], ExceptionReg);
 
-  Register SelectorReg = TLI.getExceptionSelectorRegister(PersonalityFn);
+  Register SelectorReg = TLI->getExceptionSelectorRegister(PersonalityFn);
   if (!SelectorReg)
     return false;
 
@@ -2986,8 +2976,7 @@ bool IRTranslator::translateExtractElement(const User &U,
 
   Register Res = getOrCreateVReg(U);
   Register Val = getOrCreateVReg(*U.getOperand(0));
-  const auto &TLI = *MF->getSubtarget().getTargetLowering();
-  unsigned PreferredVecIdxWidth = TLI.getVectorIdxTy(*DL).getSizeInBits();
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
   Register Idx;
   if (auto *CI = dyn_cast<ConstantInt>(U.getOperand(1))) {
     if (CI->getBitWidth() != PreferredVecIdxWidth) {
@@ -3039,8 +3028,7 @@ bool IRTranslator::translateAtomicCmpXchg(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
   const AtomicCmpXchgInst &I = cast<AtomicCmpXchgInst>(U);
 
-  auto &TLI = *MF->getSubtarget().getTargetLowering();
-  auto Flags = TLI.getAtomicMemOperandFlags(I, *DL);
+  auto Flags = TLI->getAtomicMemOperandFlags(I, *DL);
 
   auto Res = getOrCreateVRegs(I);
   Register OldValRes = Res[0];
@@ -3061,8 +3049,7 @@ bool IRTranslator::translateAtomicCmpXchg(const User &U,
 bool IRTranslator::translateAtomicRMW(const User &U,
                                       MachineIRBuilder &MIRBuilder) {
   const AtomicRMWInst &I = cast<AtomicRMWInst>(U);
-  auto &TLI = *MF->getSubtarget().getTargetLowering();
-  auto Flags = TLI.getAtomicMemOperandFlags(I, *DL);
+  auto Flags = TLI->getAtomicMemOperandFlags(I, *DL);
 
   Register Res = getOrCreateVReg(I);
   Register Addr = getOrCreateVReg(*I.getPointerOperand());
@@ -3275,7 +3262,17 @@ void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
 
 void IRTranslator::translateDbgInfo(const Instruction &Inst,
                                       MachineIRBuilder &MIRBuilder) {
-  for (DPValue &DPV : DPValue::filter(Inst.getDbgValueRange())) {
+  for (DbgRecord &DR : Inst.getDbgValueRange()) {
+    if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
+      MIRBuilder.setDebugLoc(DPL->getDebugLoc());
+      assert(DPL->getLabel() && "Missing label");
+      assert(DPL->getLabel()->isValidLocationForIntrinsic(
+                 MIRBuilder.getDebugLoc()) &&
+             "Expected inlined-at fields to agree");
+      MIRBuilder.buildDbgLabel(DPL->getLabel());
+      continue;
+    }
+    DPValue &DPV = cast<DPValue>(DR);
     const DILocalVariable *Variable = DPV.getVariable();
     const DIExpression *Expression = DPV.getExpression();
     Value *V = DPV.getVariableLocationOp(0);
@@ -3292,8 +3289,7 @@ bool IRTranslator::translate(const Instruction &Inst) {
   CurBuilder->setDebugLoc(Inst.getDebugLoc());
   CurBuilder->setPCSections(Inst.getMetadata(LLVMContext::MD_pcsections));
 
-  auto &TLI = *MF->getSubtarget().getTargetLowering();
-  if (TLI.fallBackToDAGISel(Inst))
+  if (TLI->fallBackToDAGISel(Inst))
     return false;
 
   switch (Inst.getOpcode()) {
@@ -3444,9 +3440,8 @@ bool IRTranslator::finalizeBasicBlock(const BasicBlock &BB,
   // Check if we need to generate stack-protector guard checks.
   StackProtector &SP = getAnalysis<StackProtector>();
   if (SP.shouldEmitSDCheck(BB)) {
-    const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
     bool FunctionBasedInstrumentation =
-        TLI.getSSPStackGuardCheck(*MF->getFunction().getParent());
+        TLI->getSSPStackGuardCheck(*MF->getFunction().getParent());
     SPDescriptor.initialize(&BB, &MBB, FunctionBasedInstrumentation);
   }
   // Handle stack protector.
@@ -3491,10 +3486,9 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
                                           MachineBasicBlock *ParentBB) {
   CurBuilder->setInsertPt(*ParentBB, ParentBB->end());
   // First create the loads to the guard/stack slot for the comparison.
-  const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
   Type *PtrIRTy = PointerType::getUnqual(MF->getFunction().getContext());
   const LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
-  LLT PtrMemTy = getLLTForMVT(TLI.getPointerMemTy(*DL));
+  LLT PtrMemTy = getLLTForMVT(TLI->getPointerMemTy(*DL));
 
   MachineFrameInfo &MFI = ParentBB->getParent()->getFrameInfo();
   int FI = MFI.getStackProtectorIndex();
@@ -3512,13 +3506,13 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
                       MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile)
           .getReg(0);
 
-  if (TLI.useStackGuardXorFP()) {
+  if (TLI->useStackGuardXorFP()) {
     LLVM_DEBUG(dbgs() << "Stack protector xor'ing with FP not yet implemented");
     return false;
   }
 
   // Retrieve guard check function, nullptr if instrumentation is inlined.
-  if (const Function *GuardCheckFn = TLI.getSSPStackGuardCheck(M)) {
+  if (const Function *GuardCheckFn = TLI->getSSPStackGuardCheck(M)) {
     // This path is currently untestable on GlobalISel, since the only platform
     // that needs this seems to be Windows, and we fall back on that currently.
     // The code still lives here in case that changes.
@@ -3553,13 +3547,13 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
 
   // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
   // Otherwise, emit a volatile load to retrieve the stack guard value.
-  if (TLI.useLoadStackGuardNode()) {
+  if (TLI->useLoadStackGuardNode()) {
     Guard =
         MRI->createGenericVirtualRegister(LLT::scalar(PtrTy.getSizeInBits()));
     getStackGuard(Guard, *CurBuilder);
   } else {
     // TODO: test using android subtarget when we support @llvm.thread.pointer.
-    const Value *IRGuard = TLI.getSDagStackGuard(M);
+    const Value *IRGuard = TLI->getSDagStackGuard(M);
     Register GuardPtr = getOrCreateVReg(*IRGuard);
 
     Guard = CurBuilder
@@ -3583,13 +3577,12 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
 bool IRTranslator::emitSPDescriptorFailure(StackProtectorDescriptor &SPD,
                                            MachineBasicBlock *FailureBB) {
   CurBuilder->setInsertPt(*FailureBB, FailureBB->end());
-  const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
 
   const RTLIB::Libcall Libcall = RTLIB::STACKPROTECTOR_CHECK_FAIL;
-  const char *Name = TLI.getLibcallName(Libcall);
+  const char *Name = TLI->getLibcallName(Libcall);
 
   CallLowering::CallLoweringInfo Info;
-  Info.CallConv = TLI.getLibcallCallingConv(Libcall);
+  Info.CallConv = TLI->getLibcallCallingConv(Libcall);
   Info.Callee = MachineOperand::CreateES(Name);
   Info.OrigRet = {Register(), Type::getVoidTy(MF->getFunction().getContext()),
                   0};
@@ -3652,6 +3645,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   bool EnableCSE = EnableCSEInIRTranslator.getNumOccurrences()
                        ? EnableCSEInIRTranslator
                        : TPC->isGISelCSEEnabled();
+  TLI = MF->getSubtarget().getTargetLowering();
 
   if (EnableCSE) {
     EntryBuilder = std::make_unique<CSEMIRBuilder>(CurMF);
@@ -3686,12 +3680,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   LibInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   FuncInfo.CanLowerReturn = CLI->checkReturnTypeForCallConv(*MF);
 
-  const auto &TLI = *MF->getSubtarget().getTargetLowering();
-
   SL = std::make_unique<GISelSwitchLowering>(this, FuncInfo);
-  SL->init(TLI, TM, *DL);
-
-
+  SL->init(*TLI, TM, *DL);
 
   assert(PendingPHIs.empty() && "stale PHIs");
 

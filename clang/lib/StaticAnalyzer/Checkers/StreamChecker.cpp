@@ -21,6 +21,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
+#include "llvm/ADT/Sequence.h"
 #include <functional>
 #include <optional>
 
@@ -629,6 +630,21 @@ const ExplodedNode *StreamChecker::getAcquisitionSite(const ExplodedNode *N,
   return nullptr;
 }
 
+static ProgramStateRef escapeArgs(ProgramStateRef State, CheckerContext &C,
+                                  const CallEvent &Call,
+                                  ArrayRef<unsigned int> EscapingArgs) {
+  const auto *CE = Call.getOriginExpr();
+
+  SmallVector<SVal> EscapingVals;
+  EscapingVals.reserve(EscapingArgs.size());
+  for (auto EscArgIdx : EscapingArgs)
+    EscapingVals.push_back(Call.getArgSVal(EscArgIdx));
+  State = State->invalidateRegions(EscapingVals, CE, C.blockCount(),
+                                   C.getLocationContext(),
+                                   /*CausesPointerEscape=*/false);
+  return State;
+}
+
 //===----------------------------------------------------------------------===//
 // Methods of StreamChecker.
 //===----------------------------------------------------------------------===//
@@ -819,6 +835,11 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
     return;
   }
 
+  // At read, invalidate the buffer in any case of error or success,
+  // except if EOF was already present.
+  if (IsFread && !E.isStreamEof())
+    State = escapeArgs(State, C, Call, {0});
+
   // Generate a transition for the success state.
   // If we know the state to be FEOF at fread, do not add a success state.
   if (!IsFread || !E.isStreamEof()) {
@@ -863,6 +884,9 @@ void StreamChecker::evalFgetx(const FnDescription *Desc, const CallEvent &Call,
     return;
 
   if (!E.isStreamEof()) {
+    // If there was already EOF, assume that read buffer is not changed.
+    // Otherwise it may change at success or failure.
+    State = escapeArgs(State, C, Call, {0});
     if (SingleChar) {
       // Generate a transition for the success state of `fgetc`.
       NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
@@ -1011,6 +1035,14 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
         State->BindExpr(E.CE, C.getLocationContext(), RetVal);
     StateNotFailed =
         E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
+    if (!StateNotFailed)
+      return;
+
+    SmallVector<unsigned int> EscArgs;
+    for (auto EscArg : llvm::seq(2u, Call.getNumArgs()))
+      EscArgs.push_back(EscArg);
+    StateNotFailed = escapeArgs(StateNotFailed, C, Call, EscArgs);
+
     if (StateNotFailed)
       C.addTransition(StateNotFailed);
   }
@@ -1073,8 +1105,12 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
   // return -1.
   // If an error occurs, the function shall return -1 and set 'errno'.
 
-  // Add transition for the successful state.
   if (!E.isStreamEof()) {
+    // Escape buffer and size (may change by the call).
+    // May happen even at error (partial read?).
+    State = escapeArgs(State, C, Call, {0, 1});
+
+    // Add transition for the successful state.
     NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
     ProgramStateRef StateNotFailed =
         State->BindExpr(E.CE, C.getLocationContext(), RetVal);
@@ -1161,6 +1197,7 @@ void StreamChecker::evalFgetpos(const FnDescription *Desc,
 
   ProgramStateRef StateNotFailed, StateFailed;
   std::tie(StateFailed, StateNotFailed) = E.makeRetValAndAssumeDual(State, C);
+  StateNotFailed = escapeArgs(StateNotFailed, C, Call, {1});
 
   // This function does not affect the stream state.
   // Still we add success and failure state with the appropriate return value.

@@ -44,6 +44,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsBPF.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
@@ -3216,7 +3217,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__popcnt64:
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
-  case Builtin::BI__builtin_popcountll: {
+  case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
 
     llvm::Type *ArgType = ArgValue->getType();
@@ -5981,6 +5983,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     }
     llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
   }
+
+  // EmitHLSLBuiltinExpr will check getLangOpts().HLSL
+  if (Value *V = EmitHLSLBuiltinExpr(BuiltinID, E))
+    return RValue::get(V);
 
   if (getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice)
     return EmitHipStdParUnsupportedBuiltin(this, FD);
@@ -10638,6 +10644,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID <= clang::AArch64::LastSMEBuiltin)
     return EmitAArch64SMEBuiltinExpr(BuiltinID, E);
 
+  if (BuiltinID == Builtin::BI__builtin_cpu_supports)
+    return EmitAArch64CpuSupports(E);
+
   unsigned HintID = static_cast<unsigned>(-1);
   switch (BuiltinID) {
   default: break;
@@ -14023,6 +14032,19 @@ Value *CodeGenFunction::EmitX86CpuInit() {
   cast<llvm::GlobalValue>(Func.getCallee())
       ->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
   return Builder.CreateCall(Func);
+}
+
+Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
+  const Expr *ArgExpr = E->getArg(0)->IgnoreParenCasts();
+  StringRef ArgStr = cast<StringLiteral>(ArgExpr)->getString();
+  llvm::SmallVector<StringRef, 8> Features;
+  ArgStr.split(Features, "+");
+  for (auto &Feature : Features) {
+    Feature = Feature.trim();
+    if (Feature != "default")
+      Features.push_back(Feature);
+  }
+  return EmitAArch64CpuSupports(Features);
 }
 
 llvm::Value *
@@ -17941,6 +17963,52 @@ llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
     Arg = llvm::ConstantInt::get(getLLVMContext(), *Result);
   }
   return Arg;
+}
+
+Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
+                                            const CallExpr *E) {
+  if (!getLangOpts().HLSL)
+    return nullptr;
+
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_dot: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    llvm::Type *T0 = Op0->getType();
+    llvm::Type *T1 = Op1->getType();
+    if (!T0->isVectorTy() && !T1->isVectorTy()) {
+      if (T0->isFloatingPointTy())
+        return Builder.CreateFMul(Op0, Op1, "dx.dot");
+
+      if (T0->isIntegerTy())
+        return Builder.CreateMul(Op0, Op1, "dx.dot");
+
+      // Bools should have been promoted
+      llvm_unreachable(
+          "Scalar dot product is only supported on ints and floats.");
+    }
+    // A VectorSplat should have happened
+    assert(T0->isVectorTy() && T1->isVectorTy() &&
+           "Dot product of vector and scalar is not supported.");
+
+    // A vector sext or sitofp should have happened
+    assert(T0->getScalarType() == T1->getScalarType() &&
+           "Dot product of vectors need the same element types.");
+
+    [[maybe_unused]] auto *VecTy0 =
+        E->getArg(0)->getType()->getAs<VectorType>();
+    [[maybe_unused]] auto *VecTy1 =
+        E->getArg(1)->getType()->getAs<VectorType>();
+    // A HLSLVectorTruncation should have happend
+    assert(VecTy0->getNumElements() == VecTy1->getNumElements() &&
+           "Dot product requires vectors to be of the same size.");
+
+    return Builder.CreateIntrinsic(
+        /*ReturnType*/ T0->getScalarType(), Intrinsic::dx_dot,
+        ArrayRef<Value *>{Op0, Op1}, nullptr, "dx.dot");
+  } break;
+  }
+  return nullptr;
 }
 
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,

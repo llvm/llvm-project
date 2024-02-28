@@ -112,6 +112,17 @@ bool DbgRecord::isEquivalentTo(const DbgRecord &R) const {
   return getDebugLoc() == R.getDebugLoc() && isIdenticalToWhenDefined(R);
 }
 
+DbgInfoIntrinsic *
+DbgRecord::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
+  switch (RecordKind) {
+  case ValueKind:
+    return cast<DPValue>(this)->createDebugIntrinsic(M, InsertBefore);
+  case LabelKind:
+    return cast<DPLabel>(this)->createDebugIntrinsic(M, InsertBefore);
+  };
+  llvm_unreachable("unsupported DbgRecord kind");
+}
+
 DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
                                 DIExpression *Expr, const DILocation *DI) {
   return new DPValue(ValueAsMetadata::get(Location), DV, Expr, DI,
@@ -163,6 +174,8 @@ DPValue *DPValue::createLinkedDPVAssign(Instruction *LinkedInstr, Value *Val,
   LinkedInstr->getParent()->insertDPValueAfter(NewDPVAssign, LinkedInstr);
   return NewDPVAssign;
 }
+
+void DPValue::setVariable(DILocalVariable *NewVar) { Variable.reset(NewVar); }
 
 iterator_range<DPValue::location_op_iterator> DPValue::location_ops() const {
   auto *MD = getRawLocation();
@@ -302,6 +315,10 @@ bool DPValue::isKillLocation() const {
          any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
 }
 
+DILocalVariable *DPValue::getVariable() const {
+  return cast<DILocalVariable>(Variable.get());
+}
+
 std::optional<uint64_t> DPValue::getFragmentSizeInBits() const {
   if (auto Fragment = getExpression()->getFragmentInfo())
     return Fragment->SizeInBits;
@@ -375,6 +392,20 @@ DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
     DVI->insertBefore(InsertBefore);
 
   return DVI;
+}
+
+DbgLabelInst *DPLabel::createDebugIntrinsic(Module *M,
+                                            Instruction *InsertBefore) const {
+  auto *LabelFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_label);
+  Value *Args[] = {
+      MetadataAsValue::get(getDebugLoc()->getContext(), getLabel())};
+  DbgLabelInst *DbgLabel = cast<DbgLabelInst>(
+      CallInst::Create(LabelFn->getFunctionType(), LabelFn, Args));
+  DbgLabel->setTailCall();
+  DbgLabel->setDebugLoc(getDebugLoc());
+  if (InsertBefore)
+    DbgLabel->insertBefore(InsertBefore);
+  return DbgLabel;
 }
 
 Value *DPValue::getAddress() const {

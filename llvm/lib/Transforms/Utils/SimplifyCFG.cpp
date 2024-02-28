@@ -3208,8 +3208,9 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
   // end of this block.
   for (auto &It : make_range(ThenBB->begin(), ThenBB->end()))
     for (DbgRecord &DR : make_early_inc_range(It.getDbgValueRange()))
-      if (DPValue *DPV = dyn_cast<DPValue>(&DR); DPV && !DPV->isDbgAssign())
-        It.dropOneDbgValue(DPV);
+      // Drop all records except assign-kind DPValues (dbg.assign equivalent).
+      if (DPValue *DPV = dyn_cast<DPValue>(&DR); !DPV || !DPV->isDbgAssign())
+        It.dropOneDbgValue(&DR);
   BB->splice(BI->getIterator(), ThenBB, ThenBB->begin(),
              std::prev(ThenBB->end()));
 
