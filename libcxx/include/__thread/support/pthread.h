@@ -30,7 +30,10 @@
 // so libc++'s <math.h> usually absorbs atomic_wide_counter.h into the
 // module with <math.h> and makes atomic_wide_counter.h invisible.
 // Include <math.h> here to work around that.
-#include <math.h>
+// This checks wheter a Clang module is built
+#if __building_module(std)
+#  include <math.h>
+#endif
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
