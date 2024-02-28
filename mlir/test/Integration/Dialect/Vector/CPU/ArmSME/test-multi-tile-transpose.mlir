@@ -46,12 +46,12 @@ func.func @testTransposedReadWithMask(%maskRows: index, %maskCols: index) {
   vector.transfer_write %readTransposed, %outDyn[%c0, %c0] {in_bounds = [true, true]} : vector<[16]x[4]xf32>, memref<?x?xf32>
 
   /// Print the input memref.
-  vector.print str "Input memref:"
+  vector.print str "Input memref:\n"
   %inUnranked = memref.cast %inDyn : memref<?x?xf32> to memref<*xf32>
   call @printMemrefF32(%inUnranked) : (memref<*xf32>) -> ()
 
   /// Print the result memref.
-  vector.print str "Masked transposed result:"
+  vector.print str "Masked transposed result:\n"
   %outUnranked = memref.cast %outDyn : memref<?x?xf32> to memref<*xf32>
   call @printMemrefF32(%outUnranked) : (memref<*xf32>) -> ()
 
@@ -84,12 +84,12 @@ func.func @testTransposedWriteWithMask(%maskRows: index, %maskCols: index) {
     : vector<[16]x[4]xf32>, memref<?x?xf32>
 
   /// Print the input memref.
-  vector.print str "Input memref:"
+  vector.print str "Input memref:\n"
   %inUnranked = memref.cast %inDyn : memref<?x?xf32> to memref<*xf32>
   call @printMemrefF32(%inUnranked) : (memref<*xf32>) -> ()
 
   /// Print the result memref.
-  vector.print str "Masked transposed result:"
+  vector.print str "Masked transposed result:\n"
   %outUnranked = memref.cast %outDyn : memref<?x?xf32> to memref<*xf32>
   call @printMemrefF32(%outUnranked) : (memref<*xf32>) -> ()
 
