@@ -150,6 +150,13 @@ Header
   Records the in-memory address of name section. Not used except for raw profile
   reader error checking.
 
+``NumVTables``
+  Records the number of instrumented vtable entries in the binary. Used for
+  `type profiling`_.
+
+``VNamesSize``
+  Records the byte size in the virtual table names section. Used for `type profiling`_.
+
 ``ValueKindLast``
   Records the number of value kinds. Macro `VALUE_PROF_KIND`_ defines the value
   kinds with a description of the kind.
@@ -323,6 +330,8 @@ for the design.
 .. _`Modified Condition/Decision Coverage`: https://en.wikipedia.org/wiki/Modified_condition/decision_coverage
 .. _`Bitmap RFC`: https://discourse.llvm.org/t/rfc-source-based-mc-dc-code-coverage/59244
 
+.. _`function names`:
+
 Names
 ^^^^^^
 
@@ -332,6 +341,37 @@ names. If compressed, zlib library is used.
 Function names serve as keys in the PGO data hash table when raw profiles are
 converted into indexed profiles. They are also crucial for ``llvm-profdata`` to
 show the profiles in a human-readable way.
+
+Virtual Table Profile Data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section is used for `type profiling`_. Each entry corresponds to one virtual
+table and could be illustrated with the following C++ struct
+
+.. code-block:: c++
+
+  struct VTableProfileInfo {
+    // The start address of the vtable, collected at runtime.
+    uint64_t StartAddress;
+    // The byte size of the vtable. `StartAddress` and `ByteSize` specifies an address range to look up.
+    uint32_t ByteSize;
+    // The hash of vtable's (PGO) name
+    uint64_t MD5HashOfName;
+  };
+
+At profile use time, compiler looks up a profiled address in the sorted vtable
+address ranges and maps the address to a specific vtable through hashed name.
+
+Virtual Table Names
+^^^^^^^^^^^^^^^^^^^^
+
+This section is similar to `function names`_ section above, except it contains the PGO
+names of profiled virtual tables. It's a standalone section such that raw profile
+readers could directly find each name set by accessing the corresponding profile
+data seciton (i.e., no join across sections to tell vtable from functions).
+
+This section is stored in raw profiles such that `llvm-profdata` could show the
+profiles in a human-readable way.
 
 Value Profile Data
 ^^^^^^^^^^^^^^^^^^^^
@@ -428,6 +468,8 @@ This section is right after profile header. It stores the serialized profile
 summary. For context-sensitive IR-based instrumentation PGO, this section stores
 an additional profile summary corresponding to the context-sensitive profiles.
 
+.. _`function data`:
+
 Function data
 ^^^^^^^^^^^^^^^^^^
 This section stores functions and their profiling data as an on-disk hash table.
@@ -455,6 +497,16 @@ Temporal Profile Traces
 The section is used to carry on temporal profile information from raw profiles.
 See `temporal profiling`_ for the design.
 
+Virtual Table Names
+^^^^^^^^^^^^^^^^^^^^
+This section is used to carry on the names of vtables from raw profiles into
+indexed profiles.
+
+Unlike function names which are stored as keys of `function data`_ hash table,
+vtable names needs to be stored in a standalone section in indexed profiles.
+This way, `llvm-profdata` could show the profiled vtable information in a
+human-readable way.
+
 Profile Data Usage
 =======================================
 
@@ -478,3 +530,4 @@ based profile data. For supported usages, check out `llvm-profdata documentation
 .. _`single-byte counters`: https://discourse.llvm.org/t/rfc-single-byte-counters-for-source-based-code-coverage/75685
 .. _`binary profile correlation`: https://discourse.llvm.org/t/rfc-add-binary-profile-correlation-to-not-load-profile-metadata-sections-into-memory-at-runtime/74565
 .. _`binary id`: https://lists.llvm.org/pipermail/llvm-dev/2021-June/151154.html
+.. _`type profiling`: https://discourse.llvm.org/t/rfc-dynamic-type-profiling-and-optimizations-in-llvm/74600
