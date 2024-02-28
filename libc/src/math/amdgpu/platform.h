@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_GPU_AMDGPU_PLATFORM_H
-#define LLVM_LIBC_SRC_MATH_GPU_AMDGPU_PLATFORM_H
+#ifndef LLVM_LIBC_SRC_MATH_AMDGPU_PLATFORM_H
+#define LLVM_LIBC_SRC_MATH_AMDGPU_PLATFORM_H
 
 #include "src/__support/macros/attributes.h"
 
@@ -51,4 +51,4 @@ extern const LIBC_INLINE_VAR uint32_t __oclc_ISA_version = 9000;
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_MATH_GPU_AMDGPU_PLATFORM_H
+#endif // LLVM_LIBC_SRC_MATH_AMDGPU_PLATFORM_H

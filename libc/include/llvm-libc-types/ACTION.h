@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_ACTION_H__
-#define __LLVM_LIBC_TYPES_ACTION_H__
+#ifndef LLVM_LIBC_TYPES_ACTION_H
+#define LLVM_LIBC_TYPES_ACTION_H
 
 typedef enum { FIND, ENTER } ACTION;
 
-#endif // __LLVM_LIBC_TYPES_ACTION_H__
+#endif // LLVM_LIBC_TYPES_ACTION_H
