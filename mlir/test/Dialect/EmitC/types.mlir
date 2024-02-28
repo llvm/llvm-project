@@ -39,3 +39,17 @@ func.func @pointer_types() {
 
   return
 }
+
+// CHECK-LABEL: func @array_types(
+func.func @array_types(
+  // CHECK-SAME: !emitc.array<1xf32>,
+  %arg0: !emitc.array<1xf32>,
+  // CHECK-SAME: !emitc.array<10x20x30xi32>,
+  %arg1: !emitc.array<10x20x30xi32>,
+  // CHECK-SAME: !emitc.array<30x!emitc.ptr<i32>>,
+  %arg2: !emitc.array<30x!emitc.ptr<i32>>,
+  // CHECK-SAME: !emitc.array<30x!emitc.opaque<"int">>
+  %arg3: !emitc.array<30x!emitc.opaque<"int">>
+) {
+  return
+}
