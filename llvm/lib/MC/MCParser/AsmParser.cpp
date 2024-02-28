@@ -44,6 +44,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
@@ -1950,7 +1951,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       Lex();
     }
 
-    if (MAI.hasSubsectionsViaSymbols() && CFIStartProcLoc && Sym->isExternal())
+    if (MAI.hasSubsectionsViaSymbols() && CFIStartProcLoc &&
+        Sym->isExternal() && !cast<MCSymbolMachO>(Sym)->isAltEntry())
       return Error(StartTokLoc, "non-private labels cannot appear between "
                                 ".cfi_startproc / .cfi_endproc pairs") &&
              Error(*CFIStartProcLoc, "previous .cfi_startproc was here");
