@@ -266,16 +266,20 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       // memory as coarse-grained. The usage of coarse-grained memory can be
       // overriden by setting the env-var OMPX_DISABLE_USM_MAPS=1.
       // This is not done for APUs.
-      if (!(Device.RTL->has_apu_device(Device.DeviceID) ||
-            Device.RTL->has_USM_capable_dGPU(Device.DeviceID)) &&
-          Device.RTL->is_fine_grained_memory_enabled(Device.DeviceID) &&
-          HstPtrBegin && Device.RTL->set_coarse_grain_mem_region) {
+      if (Device.RTL->has_USM_capable_dGPU(Device.DeviceID) && HstPtrBegin &&
+          (!Device.RTL->is_fine_grained_memory_enabled(Device.DeviceID)) &&
+          Device.RTL->set_coarse_grain_mem_region) {
         Device.RTL->set_coarse_grain_mem_region(Device.DeviceID, HstPtrBegin,
                                                 Size);
+        INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
+             "Memory pages for HstPtrBegin " DPxMOD " Size=%" PRId64
+             " switched to coarse grain\n",
+             DPxPTR((uintptr_t)HstPtrBegin), Size);
       }
 
       // If we are here, it means that we are either in auto zero-copy or USM.
-      // Enable GPU page table prefaulting if selected by the user.
+      // Enable GPU page table prefaulting if selected by the user. This feature
+      // is only enabled for APUs.
       if (Device.EagerZeroCopyMaps) {
         Device.RTL->prepopulate_page_table(Device.DeviceID, HstPtrBegin, Size);
         INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,

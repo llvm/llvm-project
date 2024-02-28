@@ -47,6 +47,11 @@ public:
     tab = (uint64_t *)calloc(tab_size, sizeof(uint64_t));
   }
 
+  ~AMDGPUMemTypeBitFieldTable() {
+    if (tab)
+      free(tab);
+  }
+
   // Set all pages touched by address in the range [base, base+size-1]
   // \arg base : pointer to first byte of the memory area whose
   // type should become of the tracked type
@@ -102,7 +107,7 @@ private:
   // memory type. For any bit:
   // 0 = page is *not* of tracked type
   // 1 = page is of tracked type
-  uint64_t *tab;
+  uint64_t *tab = nullptr;
 };
 
 #endif //__MEMTYPE_H__

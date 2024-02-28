@@ -654,10 +654,17 @@ EXTERN int omp_target_disassociate_ptr(const void *HostPtr, int DeviceNum) {
 }
 
 EXTERN int omp_is_coarse_grain_mem_region(void *ptr, size_t size) {
-  DeviceTy &Device = *PM->getDevice(omp_get_default_device());
-  if (!Device.RTL->query_coarse_grain_mem_region)
+  if (!(PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY))
     return 0;
-  return Device.RTL->query_coarse_grain_mem_region(Device.DeviceID, ptr, size);
+  auto DeviceOrErr = PM->getDevice(omp_get_default_device());
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(omp_get_default_device(), "%s",
+                  toString(DeviceOrErr.takeError()).c_str());
+
+  if (!DeviceOrErr->RTL->query_coarse_grain_mem_region)
+    return 0;
+  return DeviceOrErr->RTL->query_coarse_grain_mem_region(
+      omp_get_default_device(), ptr, size);
 }
 
 EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {

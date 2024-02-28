@@ -2704,17 +2704,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = AMDGPUSignalManager.init(OMPX_InitialNumSignals))
       return Err;
 
-    // Initialize memspace table to keep track of coarse grain memory regions
-    // in USM mode
-    if (Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY) {
-      // TODO: add framework for multiple systems supporting
-      // unified_shared_memory
-      coarse_grain_mem_tab = new AMDGPUMemTypeBitFieldTable(
-          AMDGPU_X86_64_SystemConfiguration::max_addressable_byte +
-              1, // memory size
-          AMDGPU_X86_64_SystemConfiguration::page_size);
-    }
-
     // Take the second timepoints and compute the required metadata.
     OMPT_IF_ENABLED(completeH2DTimeRate(HostRef1, DeviceRef1););
 
@@ -2781,6 +2770,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // Invalidate agent reference.
     Agent = {0};
+
+    delete CoarseGrainMemoryTable;
 
     return Plugin::success();
   }
@@ -3226,11 +3217,21 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   Error setCoarseGrainMemoryImpl(void *ptr, int64_t size) override final {
-    // track coarse grain memory pages in local table
-    coarse_grain_mem_tab->insert((const uintptr_t)ptr, size);
+    // If the table has not yet been created, check if the gpu arch is
+    // MI200 and create it.
+    if (!IsEquippedWithGFX90A)
+      return Plugin::success();
+    if (!CoarseGrainMemoryTable)
+      CoarseGrainMemoryTable = new AMDGPUMemTypeBitFieldTable(
+          AMDGPU_X86_64_SystemConfiguration::max_addressable_byte +
+              1, // memory size
+          AMDGPU_X86_64_SystemConfiguration::page_size);
 
-    // Instruct ROCr that the [ptr, ptr+size-1] pages are
-    // coarse grain
+    // track coarse grain memory pages in local table for user queries.
+    CoarseGrainMemoryTable->insert((const uintptr_t)ptr, size);
+
+    // Ask ROCr to turn [ptr, ptr+size-1] pages to
+    // coarse grain.
     hsa_amd_svm_attribute_pair_t tt;
     tt.attribute = HSA_AMD_SVM_ATTRIB_GLOBAL_FLAG;
     tt.value = HSA_AMD_SVM_GLOBAL_FLAG_COARSE_GRAINED;
@@ -3244,13 +3245,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   uint32_t queryCoarseGrainMemoryImpl(const void *ptr,
                                       int64_t size) override final {
-
-    // if the table is not yet allocated, it means we have not yet gone through
-    // an OpenMP pragma or API that would provoke intialization of the RTL
-    if (!coarse_grain_mem_tab)
+    // If the table has not yet been created it means that
+    // no memory has yet been set to coarse grain.
+    if (!CoarseGrainMemoryTable)
       return 0;
 
-    return coarse_grain_mem_tab->contains((const uintptr_t)ptr, size);
+    return CoarseGrainMemoryTable->contains((const uintptr_t)ptr, size);
   }
 
   Error prepopulatePageTableImpl(void *ptr, int64_t size) override final {
@@ -3936,7 +3936,8 @@ private:
   AMDHostDeviceTy &HostDevice;
 
   // Data structure used to keep track of coarse grain memory regions
-  AMDGPUMemTypeBitFieldTable *coarse_grain_mem_tab = nullptr;
+  // on MI200 in unified_shared_memory programs only.
+  AMDGPUMemTypeBitFieldTable *CoarseGrainMemoryTable = nullptr;
 
   /// Pointer to the preallocated device memory pool
   void *PreAllocatedDeviceMemoryPool;
