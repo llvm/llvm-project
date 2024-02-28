@@ -253,7 +253,10 @@ public:
                                         CrdTransDirectionKind::dim2lvl);
   }
 
-  /// Returns the Level-shape.
+  /// Returns the batched level rank.
+  unsigned getBatchLvlRank() const { return getEncoding().getBatchLvlRank(); }
+
+  /// Returns the batched Level-shape.
   SmallVector<Size> getBatchLvlShape() const {
     auto lvlShape = getEncoding().translateShape(
         getDimShape(), CrdTransDirectionKind::dim2lvl);
