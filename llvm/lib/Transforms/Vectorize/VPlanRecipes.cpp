@@ -302,7 +302,9 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     return Builder.CreateCmp(getPredicate(), A, B, Name);
   }
   case Instruction::Select: {
-    Value *Cond = State.get(getOperand(0), Part);
+    Value *Cond = State.VF.isVector()
+                      ? State.get(getOperand(0), Part)
+                      : State.get(getOperand(0), VPIteration(Part, 0));
     Value *Op1 = State.get(getOperand(1), Part);
     Value *Op2 = State.get(getOperand(2), Part);
     return Builder.CreateSelect(Cond, Op1, Op2, Name);
