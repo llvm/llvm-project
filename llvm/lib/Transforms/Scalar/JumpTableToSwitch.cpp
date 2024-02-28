@@ -18,11 +18,19 @@
 
 using namespace llvm;
 
+// The choice of this threshold is motivated by the following data points:
+// 1. Chromium successfully builds with JumpTableSizeThreshold=10, and this
+// build includes many third-party C++ projects.
+// 2. Flang experiences several compilation slow-down issues with
+// JumpTableSizeThreshold=9, builds successfully with JumpTableSizeThreshold=8.
+// On several investigated pathological examples the expansion of jump tables
+// introduced more than 100K new callsites where inlining happened.
+// 3. TODO: Consider increasing this value.
 static cl::opt<unsigned>
     JumpTableSizeThreshold("jump-table-to-switch-size-threshold", cl::Hidden,
                            cl::desc("Only split jump tables with size less or "
                                     "equal than JumpTableSizeThreshold."),
-                           cl::init(10));
+                           cl::init(5));
 
 // TODO: Consider adding a cost model for profitability analysis of this
 // transformation. Currently we replace a jump table with a switch if all the
