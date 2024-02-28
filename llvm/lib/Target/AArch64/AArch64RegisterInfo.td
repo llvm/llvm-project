@@ -1006,7 +1006,7 @@ let Namespace = "AArch64" in {
 
 class PPRorPNRClass : RegisterClass<
                                   "AArch64",
-                                  [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1 ], 16,
+                                  [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1, aarch64svcount ], 16,
                                   (add PPR, PNR)> {
   let Size = 16;
 }
