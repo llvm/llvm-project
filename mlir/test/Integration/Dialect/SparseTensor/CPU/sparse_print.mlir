@@ -102,6 +102,24 @@
   )
 }>
 
+#BSR0 = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i floordiv 2 : dense,
+    j floordiv 4 : compressed,
+    i mod 2 : dense,
+    j mod 4 : dense
+  )
+}>
+
+#BSC0 = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    j floordiv 4 : dense,
+    i floordiv 2 : compressed,
+    i mod 2 : dense,
+    j mod 4 : dense
+  )
+}>
+
 module {
 
   //
@@ -114,6 +132,21 @@ module {
          [ 0, 0, 0, 0, 0, 0, 0, 0 ],
          [ 0, 0, 3, 4, 0, 5, 0, 0 ] ]> : tensor<4x8xi32>
 
+    %XO = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #AllDense>
+    %XT = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #AllDenseT>
+
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 32
+    // CHECK-NEXT: values : ( 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 5, 0, 0,
+    // CHECK-NEXT: ----
+    sparse_tensor.print %XO : tensor<4x8xi32, #AllDense>
+
+    // CHECK-NEXT: ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 32
+    // CHECK-NEXT: values : ( 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0,
+    // CHECK-NEXT: ----
+    sparse_tensor.print %XT : tensor<4x8xi32, #AllDenseT>
+
     %a = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #CSR>
     %b = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #DCSR>
     %c = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #CSC>
@@ -122,9 +155,10 @@ module {
     %f = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #BSRC>
     %g = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #BSC>
     %h = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #BSCC>
+    %i = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #BSR0>
+    %j = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #BSC0>
 
-    //
-    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 5
     // CHECK-NEXT: pos[1] : ( 0, 2, 2, 2, 5,
     // CHECK-NEXT: crd[1] : ( 0, 2, 2, 3, 5,
@@ -200,7 +234,25 @@ module {
     // CHECK-NEXT: ----
     sparse_tensor.print %h : tensor<4x8xi32, #BSCC>
 
+    // CHECK-NEXT: ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 24
+    // CHECK-NEXT: pos[1] : ( 0, 1, 3,
+    // CHECK-NEXT: crd[1] : ( 0, 0, 1,
+    // CHECK-NEXT: values : ( 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 0, 0, 0, 0, 5, 0, 0,
+    // CHECK-NEXT: ----
+    sparse_tensor.print %i : tensor<4x8xi32, #BSR0>
+
+    // CHECK-NEXT: ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 24
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3,
+    // CHECK-NEXT: crd[1] : ( 0, 1, 1,
+    // CHECK-NEXT: values : ( 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 0, 0, 0, 0, 5, 0, 0,
+    // CHECK-NEXT: ----
+    sparse_tensor.print %j : tensor<4x8xi32, #BSC0>
+
     // Release the resources.
+    bufferization.dealloc_tensor %XO : tensor<4x8xi32, #AllDense>
+    bufferization.dealloc_tensor %XT : tensor<4x8xi32, #AllDenseT>
     bufferization.dealloc_tensor %a : tensor<4x8xi32, #CSR>
     bufferization.dealloc_tensor %b : tensor<4x8xi32, #DCSR>
     bufferization.dealloc_tensor %c : tensor<4x8xi32, #CSC>
@@ -209,6 +261,8 @@ module {
     bufferization.dealloc_tensor %f : tensor<4x8xi32, #BSRC>
     bufferization.dealloc_tensor %g : tensor<4x8xi32, #BSC>
     bufferization.dealloc_tensor %h : tensor<4x8xi32, #BSCC>
+    bufferization.dealloc_tensor %i : tensor<4x8xi32, #BSR0>
+    bufferization.dealloc_tensor %j : tensor<4x8xi32, #BSC0>
 
     return
   }
