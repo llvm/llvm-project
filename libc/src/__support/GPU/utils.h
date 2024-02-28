@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_GPU_UTIL_H
-#define LLVM_LIBC_SRC___SUPPORT_GPU_UTIL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_GPU_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_GPU_UTILS_H
 
 #include "src/__support/macros/properties/architectures.h"
 
@@ -34,4 +34,4 @@ LIBC_INLINE bool is_first_lane(uint64_t lane_mask) {
 } // namespace gpu
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_IO_H
+#endif // LLVM_LIBC_SRC___SUPPORT_GPU_UTILS_H
