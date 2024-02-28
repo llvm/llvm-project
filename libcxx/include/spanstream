@@ -57,6 +57,7 @@
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
+#include <__fwd/spanstream.h>
 #include <__memory/addressof.h>
 #include <__ranges/concepts.h>
 #include <__utility/cmp.h>
@@ -81,7 +82,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // Class template basic_spanbuf [spanbuf]
 
-template <class _CharT, class _Traits = char_traits<_CharT>>
+template <class _CharT, class _Traits>
 class _LIBCPP_TEMPLATE_VIS basic_spanbuf : public basic_streambuf<_CharT, _Traits> {
 public:
   using char_type   = _CharT;
@@ -223,8 +224,8 @@ using wspanbuf = basic_spanbuf<wchar_t>;
 
 // Class template basic_ispanstream [ispanstream]
 
-template <class _CharT, class _Traits = char_traits<_CharT>>
-class basic_ispanstream : public basic_istream<_CharT, _Traits> {
+template <class _CharT, class _Traits>
+class _LIBCPP_TEMPLATE_VIS basic_ispanstream : public basic_istream<_CharT, _Traits> {
 public:
   using char_type   = _CharT;
   using int_type    = typename _Traits::int_type;
@@ -300,8 +301,8 @@ using wispanstream = basic_ispanstream<wchar_t>;
 
 // Class template basic_ospanstream [ospanstream]
 
-template <class _CharT, class _Traits = char_traits<_CharT>>
-class basic_ospanstream : public basic_ostream<_CharT, _Traits> {
+template <class _CharT, class _Traits>
+class _LIBCPP_TEMPLATE_VIS basic_ospanstream : public basic_ostream<_CharT, _Traits> {
 public:
   using char_type   = _CharT;
   using int_type    = typename _Traits::int_type;
@@ -358,8 +359,8 @@ using ospanstream = basic_ospanstream<char>;
 using wospanstream = basic_ospanstream<wchar_t>;
 #  endif
 
-template <class _CharT, class _Traits = char_traits<_CharT>>
-class basic_spanstream : public basic_iostream<_CharT, _Traits> {
+template <class _CharT, class _Traits>
+class _LIBCPP_TEMPLATE_VIS basic_spanstream : public basic_iostream<_CharT, _Traits> {
 public:
   using char_type   = _CharT;
   using int_type    = typename _Traits::int_type;
