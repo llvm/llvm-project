@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_GPU_NVPTX_H
-#define LLVM_LIBC_SRC_MATH_GPU_NVPTX_H
+#ifndef LLVM_LIBC_SRC_MATH_NVPTX_NVPTX_H
+#define LLVM_LIBC_SRC_MATH_NVPTX_NVPTX_H
 
 #include "declarations.h"
 
@@ -99,4 +99,4 @@ LIBC_INLINE float tgammaf(float x) { return __nv_tgammaf(x); }
 } // namespace internal
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_MATH_GPU_NVPTX_H
+#endif // LLVM_LIBC_SRC_MATH_NVPTX_NVPTX_H

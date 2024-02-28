@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H
-#define LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H
+#ifndef LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
+#define LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -210,4 +210,4 @@ template <typename T> struct FPTest : public Test {
     }                                                                          \
   } while (0)
 
-#endif // LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H
+#endif // LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H

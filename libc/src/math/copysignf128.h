@@ -17,4 +17,4 @@ float128 copysignf128(float128 x, float128 y);
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_MATH_COPYSIGN_H
+#endif // LLVM_LIBC_SRC_MATH_COPYSIGNF128_H

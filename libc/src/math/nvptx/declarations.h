@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_GPU_NVPTX_DECLARATIONS_H
-#define LLVM_LIBC_SRC_MATH_GPU_NVPTX_DECLARATIONS_H
+#ifndef LLVM_LIBC_SRC_MATH_NVPTX_DECLARATIONS_H
+#define LLVM_LIBC_SRC_MATH_NVPTX_DECLARATIONS_H
 
 namespace LIBC_NAMESPACE {
 
@@ -86,4 +86,4 @@ float __nv_tgammaf(float);
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_MATH_GPU_NVPTX_DECLARATIONS_H
+#endif // LLVM_LIBC_SRC_MATH_NVPTX_DECLARATIONS_H
