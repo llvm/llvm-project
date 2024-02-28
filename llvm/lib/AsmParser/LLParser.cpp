@@ -6564,18 +6564,16 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
 
   // Parse Expression field.
   LocTy ExprLoc = Lex.getLoc();
-  Metadata *Expression;
-  if (parseMetadata(Expression, &PFS))
+  MDNode *Expression;
+  if (parseMDNode(Expression))
     return true;
-  if (!isa<DIExpression>(Expression))
-    return error(ExprLoc, "expected valid inline DIExpression here");
   if (parseToken(lltok::comma, "Expected ',' here"))
     return true;
 
   // Parse additional fields for #dbg_assign.
   MDNode *AssignID = nullptr;
   Metadata *AddressLocation = nullptr;
-  Metadata *AddressExpression = nullptr;
+  MDNode *AddressExpression = nullptr;
   if (ValueType == LocType::Assign) {
     // Parse DIAssignID.
     if (parseMDNode(AssignID))
@@ -6591,10 +6589,8 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
 
     // Parse address DIExpression.
     LocTy AddressExprLoc = Lex.getLoc();
-    if (parseMetadata(AddressExpression, &PFS))
+    if (parseMDNode(AddressExpression))
       return true;
-    if (!isa<DIExpression>(AddressExpression))
-      return error(AddressExprLoc, "expected valid inline DIExpression here");
     if (parseToken(lltok::comma, "Expected ',' here"))
       return true;
   }
@@ -6607,8 +6603,8 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
   if (parseToken(lltok::rparen, "Expected ')' here"))
     return true;
   DR = DPValue::createUnresolvedDPValue(
-      ValueType, ValLocMD, Variable, cast<DIExpression>(Expression), AssignID,
-      AddressLocation, cast_or_null<DIExpression>(AddressExpression), DebugLoc);
+      ValueType, ValLocMD, Variable, Expression, AssignID,
+      AddressLocation, AddressExpression, DebugLoc);
   return false;
 }
 //===----------------------------------------------------------------------===//
