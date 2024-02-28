@@ -1453,4 +1453,26 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Debugging Operations.
+//===----------------------------------------------------------------------===//
+
+def SparseTensor_PrintOp : SparseTensor_Op<"print">,
+    Arguments<(ins AnySparseTensor:$tensor)> {
+  string summary = "Prints a sparse tensor (for testing and debugging)";
+  string description = [{
+    Prints the individual components of a sparse tensors (the positions,
+    coordinates, and values components) to stdout for testing and debugging
+    purposes. This operation lowers to just a few primitives in a light-weight
+    runtime support to simplify supporting this operation on new platforms.
+
+    Example:
+
+    ```mlir
+    sparse_tensor.print %tensor : tensor<1024x1024xf64, #CSR>
+    ```
+  }];
+  let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
+}
+
 #endif // SPARSETENSOR_OPS
