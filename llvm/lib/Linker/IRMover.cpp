@@ -1609,7 +1609,7 @@ Error IRLinker::run() {
   // Convert module level attributes to function level attributes because
   // after merging modules the attributes might change and would have different
   // effect on the functions as the original module would have.
-  CopyModuleAttributesToFunction(*SrcM);
+  CopyModuleAttrToFunctions(*SrcM);
 
   std::reverse(Worklist.begin(), Worklist.end());
   while (!Worklist.empty()) {
