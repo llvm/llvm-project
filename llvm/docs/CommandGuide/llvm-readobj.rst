@@ -101,7 +101,7 @@ file formats.
 
 .. option:: --no-demangle
 
- Not demangle symbol names in the output; the option only is for ELF and
+ Not demangle symbol names in the output; the option is only for ELF and
  XCOFF file format. The option is enabled by default.
 
 .. option:: --relocations, --relocs, -r
