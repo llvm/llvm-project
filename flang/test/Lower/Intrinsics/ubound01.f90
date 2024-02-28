@@ -16,7 +16,7 @@ contains
   End Subroutine
 end
 
-! CHECK-LABEL: func.func @_QFPs2
+! CHECK-LABEL: func.func private @_QFPs2
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?x?xf32>>
 ! CHECK: %[[BOX:.*]] = fir.rebox %[[ARG0]](%{{.*}}) : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
