@@ -3245,6 +3245,31 @@ DiagnosedSilenceableFailure transform::ConvertConv2DToImg2ColOp::applyToOne(
 }
 
 //===----------------------------------------------------------------------===//
+// FlattenElementwiseLinalgOp.
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::LinalgOp target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  if (target.getNumLoops() <= 1)
+    return DiagnosedSilenceableFailure::success();
+  ReassociationIndices reassociation(target.getNumLoops());
+  std::iota(reassociation.begin(), reassociation.end(), 0);
+  auto maybeFlattened =
+      (isElementwise(target))
+          ? collapseOpIterationDims(target, reassociation, rewriter)
+          : FailureOr<CollapseResult>(rewriter.notifyMatchFailure(
+                target, "only elementwise flattening is supported"));
+  if (failed(maybeFlattened))
+    return emitDefaultSilenceableFailure(target);
+  results.push_back(maybeFlattened->collapsedOp);
+  rewriter.replaceOp(target, maybeFlattened->results);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // TransposeConv2DOp
 //===----------------------------------------------------------------------===//
 
