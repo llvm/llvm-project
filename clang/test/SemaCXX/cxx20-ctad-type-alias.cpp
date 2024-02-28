@@ -133,8 +133,6 @@ A a(2);  // Foo<int*>
 namespace test11 {
 struct A {};
 template<class T> struct Foo { T c; };
-// FIXME: we have an out-bound crash on instantating the synthesized deduction guide `auto (B<C2>) -> B<C2>`
-// where C2 should be at the index 0, however, it is still refers the original one where index is 1
 template<class X, class Y=A> using AFoo = Foo<Y>;
 
 AFoo s = {1};
@@ -220,3 +218,15 @@ AFoo s2{i};
 // FIXME: the type should be X because of the above explicit deduction guide.
 static_assert(__is_same(decltype(s2.t), int));
 } // namespace test16
+
+namespace test17 {
+template <typename T>
+struct Foo { T t; };
+
+// CTAD for alias templates only works for the RHS of the alias of form of
+//  [typename] [nested-name-specifier] [template] simple-template-id
+template <typename U>
+using AFoo = Foo<U>*; // expected-note {{template is declared here}}
+
+AFoo s = {1}; // expected-error {{alias template 'AFoo' requires template arguments; argument deduction only allowed for}}
+} // namespace test17

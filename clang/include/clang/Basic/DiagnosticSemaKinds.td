@@ -8199,6 +8199,11 @@ let CategoryName = "Lambda Issue" in {
   def warn_cxx17_compat_lambda_def_ctor_assign : Warning<
     "%select{default construction|assignment}0 of lambda is incompatible with "
     "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
+
+  // C++20 class template argument deduction for alias templates.
+  def warn_cxx17_compat_ctad_for_alias_templates : Warning<
+  "class template argument deduction for alias templates is incompatible with "
+  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 }
 
 def err_return_in_captured_stmt : Error<
