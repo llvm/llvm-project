@@ -30,6 +30,8 @@
 
 using namespace llvm;
 
+static cl::opt<bool> DisableCostPerUse("riscv-disable-cost-per-use",
+                                       cl::init(false), cl::Hidden);
 static cl::opt<bool>
     DisableRegAllocHints("riscv-disable-regalloc-hints", cl::Hidden,
                          cl::init(false),
@@ -712,7 +714,10 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
-  return MF.getSubtarget<RISCVSubtarget>().hasStdExtCOrZca() ? 1 : 0;
+  return MF.getSubtarget<RISCVSubtarget>().hasStdExtCOrZca() &&
+                 !DisableCostPerUse
+             ? 1
+             : 0;
 }
 
 // Add two address hints to improve chances of being able to use a compressed
