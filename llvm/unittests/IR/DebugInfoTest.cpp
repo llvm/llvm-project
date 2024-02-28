@@ -1082,7 +1082,10 @@ TEST(MetadataTest, DPValueConversionRoutines) {
   EXPECT_FALSE(BB1->IsNewDbgInfoFormat);
   // Validating the block for DPValues / DPMarkers shouldn't fail -- there's
   // no data stored right now.
-  EXPECT_FALSE(BB1->validateDbgValues(false, false));
+  bool BrokenDebugInfo = false;
+  bool Error = verifyModule(*M, &errs(), &BrokenDebugInfo);
+  EXPECT_FALSE(Error);
+  EXPECT_FALSE(BrokenDebugInfo);
 
   // Function and module should be marked as not having the new format too.
   EXPECT_FALSE(F->IsNewDbgInfoFormat);
@@ -1135,13 +1138,17 @@ TEST(MetadataTest, DPValueConversionRoutines) {
     EXPECT_TRUE(!Inst.DbgMarker || Inst.DbgMarker->StoredDPValues.empty());
 
   // Validating the first block should continue to not be a problem,
-  EXPECT_FALSE(BB1->validateDbgValues(false, false));
+  Error = verifyModule(*M, &errs(), &BrokenDebugInfo);
+  EXPECT_FALSE(Error);
+  EXPECT_FALSE(BrokenDebugInfo);
   // But if we were to break something, it should be able to fire. Don't attempt
   // to comprehensively test the validator, it's a smoke-test rather than a
   // "proper" verification pass.
   DPV1->setMarker(nullptr);
   // A marker pointing the wrong way should be an error.
-  EXPECT_TRUE(BB1->validateDbgValues(false, false));
+  Error = verifyModule(*M, &errs(), &BrokenDebugInfo);
+  EXPECT_FALSE(Error);
+  EXPECT_TRUE(BrokenDebugInfo);
   DPV1->setMarker(FirstInst->DbgMarker);
 
   DILocalVariable *DLV1 = DPV1->getVariable();

@@ -6,7 +6,7 @@ function(_get_compile_options_from_flags output_var)
   endif()
   check_flag(ADD_SSE4_2_FLAG ${ROUND_OPT_FLAG} ${flags})
   check_flag(ADD_EXPLICIT_SIMD_OPT_FLAG ${EXPLICIT_SIMD_OPT_FLAG} ${flags})
-  
+
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     if(ADD_FMA_FLAG)
       if(LIBC_TARGET_ARCHITECTURE_IS_X86)
@@ -87,6 +87,7 @@ function(_get_common_compile_options output_var flags)
     list(APPEND compile_options "-fvisibility=hidden")
     list(APPEND compile_options "-fconvergent-functions")
     list(APPEND compile_options "-flto")
+    list(APPEND compile_options "-Wno-multi-gpu")
 
     if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
       list(APPEND compile_options "-Wno-unknown-cuda-version")
