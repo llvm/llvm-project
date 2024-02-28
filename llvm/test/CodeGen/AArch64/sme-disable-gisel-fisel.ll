@@ -486,8 +486,8 @@ entry:
   ret double %add;
 }
 
-define double  @zt0_new_caller_to_normal_callee(double %x) nounwind noinline optnone "aarch64_inout_zt0" {
-; CHECK-COMMON-LABEL: zt0_new_caller_to_normal_callee:
+define double  @zt0_shared_caller_to_normal_callee(double %x) nounwind noinline optnone "aarch64_inout_zt0" {
+; CHECK-COMMON-LABEL: zt0_shared_caller_to_normal_callee:
 ; CHECK-COMMON:       // %bb.0: // %entry
 ; CHECK-COMMON-NEXT:    sub sp, sp, #80
 ; CHECK-COMMON-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
