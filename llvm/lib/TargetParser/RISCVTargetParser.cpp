@@ -14,6 +14,7 @@
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
@@ -95,5 +96,31 @@ void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 }
 
+void getFeaturesForCPU(StringRef CPU,
+                       SmallVectorImpl<std::string> &EnabledFeatures,
+                       bool NeedPlus) {
+  StringRef MarchFromCPU = llvm::RISCV::getMArchFromMcpu(CPU);
+  if (MarchFromCPU == "")
+    return;
+
+  EnabledFeatures.clear();
+  auto RII = RISCVISAInfo::parseArchString(
+      MarchFromCPU, /* EnableExperimentalExtension */ true);
+
+  if (llvm::errorToBool(RII.takeError()))
+    return;
+
+  std::vector<std::string> FeatStrings =
+      (*RII)->toFeatures(/* AddAllExtensions */ true);
+  for (const auto &F : FeatStrings) {
+    if (F[0] == '-')
+      continue;
+
+    if (NeedPlus)
+      EnabledFeatures.push_back(F);
+    else
+      EnabledFeatures.push_back(F.substr(1, F.size() - 1));
+  }
+}
 } // namespace RISCV
 } // namespace llvm
