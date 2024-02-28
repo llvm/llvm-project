@@ -27,53 +27,52 @@
 #include <string>
 #include <type_traits>
 
+#include "constexpr_char_traits.h"
 #include "test_macros.h"
 
-// Types
+template <typename CharT, typename Traits = std::char_traits<CharT>>
+void test() {
+  using SpStream = std::basic_ospanstream<CharT, Traits>;
+
+  // Types
+
+  static_assert(std::is_base_of_v<std::basic_ostream<CharT, Traits>, SpStream>);
+  static_assert(std::is_same_v<typename SpStream::char_type, CharT>);
+  static_assert(std::is_same_v<typename SpStream::int_type, typename Traits::int_type>);
+  static_assert(std::is_same_v<typename SpStream::pos_type, typename Traits::pos_type>);
+  static_assert(std::is_same_v<typename SpStream::off_type, typename Traits::off_type>);
+  static_assert(std::is_same_v<typename SpStream::traits_type, Traits>);
+
+  // Copy properties
+
+  static_assert(!std::is_copy_constructible_v<SpStream>);
+  static_assert(!std::is_copy_assignable_v<SpStream>);
+
+  // Move properties
+
+  static_assert(!std::is_copy_constructible_v<SpStream>);
+  static_assert(!std::is_copy_assignable_v<SpStream>);
+
+  // Move properties
+
+  static_assert(std::is_move_constructible_v<SpStream>);
+  static_assert(std::is_move_assignable_v<SpStream>);
+}
+
+void test() {
+  test<char>();
+  test<char, constexpr_char_traits<char>>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  test<wchar_t>();
+  test<wchar_t, constexpr_char_traits<wchar_t>>();
+#endif
+}
+
+// Aliases
 
 static_assert(std::is_base_of_v<std::basic_ostream<char>, std::ospanstream>);
-static_assert(std::is_same_v<std::ospanstream::char_type, char>);
-static_assert(std::is_same_v<std::ospanstream::int_type, std::char_traits<char>::int_type>);
-static_assert(std::is_same_v<std::ospanstream::pos_type, std::char_traits<char>::pos_type>);
-static_assert(std::is_same_v<std::ospanstream::off_type, std::char_traits<char>::off_type>);
-static_assert(std::is_same_v<std::ospanstream::traits_type, std::char_traits<char>>);
-
+static_assert(std::is_same_v<std::basic_ospanstream<char>, std::ospanstream>);
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
 static_assert(std::is_base_of_v<std::basic_ostream<wchar_t>, std::wospanstream>);
-static_assert(std::is_same_v<std::wospanstream::char_type, wchar_t>);
-static_assert(std::is_same_v<std::wospanstream::int_type, std::char_traits<wchar_t>::int_type>);
-static_assert(std::is_same_v<std::wospanstream::pos_type, std::char_traits<wchar_t>::pos_type>);
-static_assert(std::is_same_v<std::wospanstream::off_type, std::char_traits<wchar_t>::off_type>);
-static_assert(std::is_same_v<std::wospanstream::traits_type, std::char_traits<wchar_t>>);
+static_assert(std::is_same_v<std::basic_ospanstream<wchar_t>, std::wospanstream>);
 #endif
-
-// Copy properties
-
-static_assert(!std::is_copy_constructible_v<std::ospanstream>);
-static_assert(!std::is_copy_assignable_v<std::ospanstream>);
-
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(!std::is_copy_constructible_v<std::wospanstream>);
-static_assert(!std::is_copy_assignable_v<std::wospanstream>);
-#endif
-
-// Move properties
-
-static_assert(!std::is_copy_constructible_v<std::ospanstream>);
-static_assert(!std::is_copy_assignable_v<std::ospanstream>);
-
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(!std::is_copy_constructible_v<std::wospanstream>);
-static_assert(!std::is_copy_assignable_v<std::wospanstream>);
-#endif
-
-// Move properties
-
-static_assert(std::is_move_constructible_v<std::ospanstream>);
-static_assert(std::is_move_assignable_v<std::ospanstream>);
-
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(std::is_move_constructible_v<std::wospanstream>);
-static_assert(std::is_move_assignable_v<std::wospanstream>);
-#endif
-
