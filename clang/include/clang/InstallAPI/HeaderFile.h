@@ -15,6 +15,7 @@
 
 #include "clang/Basic/LangStandard.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include <optional>
 #include <string>
@@ -31,6 +32,20 @@ enum class HeaderType {
   /// input library.
   Project,
 };
+
+inline StringRef getName(const HeaderType T) {
+  switch (T) {
+  case HeaderType::Public:
+    return "Public";
+  case HeaderType::Private:
+    return "Private";
+  case HeaderType::Project:
+    return "Project";
+  case HeaderType::Unknown:
+    return "Unknown";
+  }
+  llvm_unreachable("unexpected header type");
+}
 
 class HeaderFile {
   /// Full input path to header.
@@ -51,6 +66,14 @@ public:
         Language(Language) {}
 
   static llvm::Regex getFrameworkIncludeRule();
+
+  HeaderType getType() const { return Type; }
+  StringRef getIncludeName() const { return IncludeName; }
+  StringRef getPath() const { return FullPath; }
+
+  bool useIncludeName() const {
+    return Type != HeaderType::Project && !IncludeName.empty();
+  }
 
   bool operator==(const HeaderFile &Other) const {
     return std::tie(Type, FullPath, IncludeName, Language) ==
