@@ -7453,8 +7453,8 @@ LoopVectorizationPlanner::executePlan(
   if (!IsEpilogueVectorization)
     VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
 
-  LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF << ", UF=" << BestUF
-                    << '\n');
+  LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF
+                    << ", UF=" << BestUF << '\n');
   BestVPlan.setName("Final VPlan");
   LLVM_DEBUG(BestVPlan.dump());
 
