@@ -8,6 +8,7 @@ add_llvm_unittest(TargetParserTests
   Host.cpp
   TargetParserTest.cpp
   TripleTest.cpp
+  RISCVTargetParserTest.cpp
   )
 
 target_link_libraries(TargetParserTests PRIVATE LLVMTestingSupport)
