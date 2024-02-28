@@ -1378,10 +1378,25 @@ public:
     BranchProtectionInfo() = default;
 
     const char *getSignReturnAddrStr() const {
-      static const char *SignReturnAddrStr[] = {"none", "non-leaf", "all"};
-      assert(static_cast<unsigned>(SignReturnAddr) <= 2 &&
-             "Unexpected SignReturnAddressScopeKind");
-      return SignReturnAddrStr[static_cast<int>(SignReturnAddr)];
+      switch (SignReturnAddr) {
+      case LangOptions::SignReturnAddressScopeKind::None:
+        return "none";
+      case LangOptions::SignReturnAddressScopeKind::NonLeaf:
+        return "non-leaf";
+      case LangOptions::SignReturnAddressScopeKind::All:
+        return "all";
+      }
+      assert(false && "Unexpected SignReturnAddressScopeKind");
+    }
+
+    const char *getSignKeyStr() const {
+      switch (SignKey) {
+      case LangOptions::SignReturnAddressKeyKind::AKey:
+        return "a_key";
+      case LangOptions::SignReturnAddressKeyKind::BKey:
+        return "b_key";
+      }
+      assert(false && "Unexpected SignReturnAddressKeyKind");
     }
   };
 
