@@ -572,7 +572,8 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Inc(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
+  if (Ptr.isDummy())
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
     return false;
 
@@ -585,7 +586,8 @@ bool Inc(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool IncPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
+  if (Ptr.isDummy())
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
     return false;
 
@@ -599,7 +601,8 @@ bool IncPop(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Dec(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
+  if (Ptr.isDummy())
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
     return false;
 
@@ -612,7 +615,8 @@ bool Dec(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool DecPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
+  if (Ptr.isDummy())
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
     return false;
 
@@ -641,7 +645,8 @@ bool IncDecFloatHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
+  if (Ptr.isDummy())
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
     return false;
 
@@ -650,7 +655,8 @@ inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
+  if (Ptr.isDummy())
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
     return false;
 
@@ -659,6 +665,9 @@ inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (Ptr.isDummy())
+    return false;
 
   if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
     return false;
@@ -669,6 +678,8 @@ inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 inline bool DecfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
+  if (Ptr.isDummy())
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
     return false;
 
@@ -774,9 +785,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     // element in the same array are NOT equal. They have the same Base value,
     // but a different Offset. This is a pretty rare case, so we fix this here
     // by comparing pointers to the first elements.
-    if (LHS.isArrayRoot())
+    if (!LHS.isDummy() && LHS.isArrayRoot())
       VL = LHS.atIndex(0).getByteOffset();
-    if (RHS.isArrayRoot())
+    if (!RHS.isDummy() && RHS.isArrayRoot())
       VR = RHS.atIndex(0).getByteOffset();
 
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
@@ -1895,7 +1906,7 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!CheckDummy(S, OpPC, Ptr))
+  if (Ptr.isDummy())
     return true;
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
@@ -1909,7 +1920,7 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!CheckDummy(S, OpPC, Ptr)) {
+  if (Ptr.isDummy()) {
     S.Stk.push<Pointer>(Ptr);
     return true;
   }
