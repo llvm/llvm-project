@@ -66,10 +66,7 @@ public:
                      MachineLoopInfo *MLI, MachinePostDominatorTree *PDT,
                      AliasAnalysis *AA)
       : AMDGPUWaitCntInserter(ST, MRI, WCG, MC), MLI(MLI), PDT(PDT), AA(AA),
-        ForceEmitZeroWaitcnts(FEZWC) {
-    for (auto T : inst_counter_types())
-      ForceEmitWaitcnt[T] = false;
-  }
+        ForceEmitZeroWaitcnts(FEZWC) {}
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
                                  MachineInstr *OldWaitcntInstr, bool FlushVmCnt,
@@ -98,7 +95,7 @@ private:
   // ForceEmitZeroWaitcnts: force all waitcnts insts to be s_waitcnt 0
   // because of amdgpu-waitcnt-forcezero flag
   bool ForceEmitZeroWaitcnts;
-  bool ForceEmitWaitcnt[NUM_INST_CNTS];
+  bool ForceEmitWaitcnt[NUM_INST_CNTS] = {false};
 };
 
 // This is a flat memory operation. Check to see if it has memory tokens for
