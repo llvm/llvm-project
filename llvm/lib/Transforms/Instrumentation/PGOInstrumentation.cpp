@@ -1797,11 +1797,11 @@ static bool InstrumentAllFunctions(
   Triple TT(M.getTargetTriple());
   LLVMContext &Ctx = M.getContext();
   if (!TT.isOSBinFormatELF() && EnableVTableValueProfiling)
-    Ctx.diagnose(
-        DiagnosticInfoPGOProfile(M.getName().data(),
-                                 Twine("VTable value profiling is presently not "
-                                       "supported for non-ELF object formats"),
-                                 DS_Warning));
+    Ctx.diagnose(DiagnosticInfoPGOProfile(
+        M.getName().data(),
+        Twine("VTable value profiling is presently not "
+              "supported for non-ELF object formats"),
+        DS_Warning));
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
 
