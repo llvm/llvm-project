@@ -291,7 +291,7 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     return Error::success();
 
   Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
-    if (ELFConfig.SymbolsToSkip.matches(Sym.Name))
+    if (Config.SymbolsToSkip.matches(Sym.Name))
       return;
 
     // Common and undefined symbols don't make sense as local symbols, and can
