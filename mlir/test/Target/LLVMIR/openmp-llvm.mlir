@@ -2192,6 +2192,8 @@ llvm.func @copy_f32(!llvm.ptr, !llvm.ptr)
 // CHECK-LABEL: @single_copyprivate
 // CHECK-SAME: (ptr %[[ip:.*]], ptr %[[fp:.*]])
 llvm.func @single_copyprivate(%ip: !llvm.ptr, %fp: !llvm.ptr) {
+  // CHECK: %[[didit_addr:.*]] = alloca i32
+  // CHECK: store i32 0, ptr %[[didit_addr]]
   // CHECK: call i32 @__kmpc_single
   omp.single copyprivate(%ip -> @copy_i32 : !llvm.ptr, %fp -> @copy_f32 : !llvm.ptr) {
     // CHECK: %[[i:.*]] = load i32, ptr %[[ip]]
@@ -2206,9 +2208,12 @@ llvm.func @single_copyprivate(%ip: !llvm.ptr, %fp: !llvm.ptr) {
     %f2 = llvm.fadd %f, %f : f32
     // CHECK: store float %[[f2]], ptr %[[fp]]
     llvm.store %f2, %fp : f32, !llvm.ptr
+    // CHECK: store i32 1, ptr %[[didit_addr]]
     // CHECK: call void @__kmpc_end_single
-    // CHECK: call void @__kmpc_copyprivate({{.*}}, ptr %[[ip]], ptr @copy_i32, {{.*}})
-    // CHECK: call void @__kmpc_copyprivate({{.*}}, ptr %[[fp]], ptr @copy_f32, {{.*}})
+    // CHECK: %[[didit:.*]] = load i32, ptr %[[didit_addr]]
+    // CHECK: call void @__kmpc_copyprivate({{.*}}, ptr %[[ip]], ptr @copy_i32, i32 %[[didit]])
+    // CHECK: %[[didit2:.*]] = load i32, ptr %[[didit_addr]]
+    // CHECK: call void @__kmpc_copyprivate({{.*}}, ptr %[[fp]], ptr @copy_f32, i32 %[[didit2]])
     // CHECK-NOT: call void @__kmpc_barrier
     omp.terminator
   }

@@ -4008,7 +4008,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSingle(
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  // If needed allocate and initialize `DidIt` with 0
+  // If needed allocate and initialize `DidIt` with 0.
+  // DidIt: flag variable: 1=single thread; 0=not single thread.
   llvm::Value *DidIt = nullptr;
   if (!CPVars.empty()) {
     DidIt = Builder.CreateAlloca(llvm::Type::getInt32Ty(Builder.getContext()));
@@ -4031,6 +4032,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSingle(
   auto FiniCBWrapper = [&](InsertPointTy IP) {
     FiniCB(IP);
 
+    // The thread that executes the single region must set `DidIt` to 1.
+    // This is used by __kmpc_copyprivate, to know if the caller is the
+    // single thread or not.
     if (DidIt)
       Builder.CreateStore(Builder.getInt32(1), DidIt);
   };
