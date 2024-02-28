@@ -71,10 +71,10 @@ dumpDXContainer(MemoryBufferRef Source) {
       break;
     }
     case dxbc::PartType::SFI0: {
-      std::optional<uint64_t> Flags = Container.getShaderFlags();
+      std::optional<uint64_t> Flags = Container.getShaderFeatureFlags();
       // Omit the flags in the YAML if they are missing or zero.
       if (Flags && *Flags > 0)
-        NewPart.Flags = DXContainerYAML::ShaderFlags(*Flags);
+        NewPart.Flags = DXContainerYAML::ShaderFeatureFlags(*Flags);
       break;
     }
     case dxbc::PartType::HASH: {
