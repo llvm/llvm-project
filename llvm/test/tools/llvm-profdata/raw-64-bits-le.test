@@ -1,5 +1,5 @@
 RUN: printf '\201rforpl\377' > %t
-RUN: printf '\11\0\0\0\0\0\0\0' >> %t
+RUN: printf '\12\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\2\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
@@ -12,6 +12,8 @@ RUN: printf '\0\0\4\0\1\0\0\0' >> %t
 RUN: printf '\0\0\4\0\3\0\0\0' >> %t
 RUN: printf '\0\0\4\0\2\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 
 RUN: printf '\254\275\030\333\114\302\370\134' >> %t
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t
@@ -20,9 +22,8 @@ RUN: printf '\0\0\4\0\3\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\1\0\0\0' >> %t
-RUN: printf '\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\3\0\0\0' >> %t
-RUN: printf '\0\0\0\0' >> %t
 
 RUN: printf '\067\265\035\031\112\165\023\344' >> %t
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t
@@ -31,9 +32,8 @@ RUN: printf '\xc3\xff\3\0\3\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\02\0\0\0' >> %t
-RUN: printf '\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\1\0\0\0' >> %t
-RUN: printf '\0\0\0\0' >> %t
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t
 RUN: printf '\067\0\0\0\0\0\0\0' >> %t

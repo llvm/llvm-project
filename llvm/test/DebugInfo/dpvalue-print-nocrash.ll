@@ -3,8 +3,7 @@
 ; REQUIRES: asserts
 ; REQUIRES: disabled-fix-me
 
-; CHECK: CLONE:   DPValue value {
-; CHECK-SAME: marker @0x0
+; CHECK: CLONE:   #dbg_value(
 
 define ptr @func_10(i32 %p_11) {
 entry:

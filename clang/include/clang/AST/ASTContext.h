@@ -2981,6 +2981,10 @@ public:
   // corresponding saturated type for a given fixed point type.
   QualType getCorrespondingSaturatedType(QualType Ty) const;
 
+  // Per ISO N1169, this method accepts fixed point types and returns the
+  // corresponding non-saturated type for a given fixed point type.
+  QualType getCorrespondingUnsaturatedType(QualType Ty) const;
+
   // This method accepts fixed point types and returns the corresponding signed
   // type. Unlike getCorrespondingUnsignedType(), this only accepts unsigned
   // fixed point types because there are unsigned integer types like bool and
