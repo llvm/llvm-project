@@ -1696,6 +1696,7 @@ private:
     StringLiteral Id;
     StringLiteral Desc;
     unsigned Width;
+    bool IsDefined = false;
 
     StructuredOpField(StringLiteral Id, StringLiteral Desc, unsigned Width,
                       int64_t Default)
@@ -7289,7 +7290,8 @@ ParseStatus AMDGPUAsmParser::parseHwreg(OperandVector &Operands) {
     ImmVal = HwregEncoding::encode(HwReg.Val, Offset.Val, Width.Val);
   }
 
-  if (Res.isNoMatch() && parseExpr(ImmVal, "a hwreg macro"))
+  if (Res.isNoMatch() &&
+      parseExpr(ImmVal, "a hwreg macro, structured immediate"))
     Res = ParseStatus::Success;
 
   if (!Res.isSuccess())
@@ -7748,7 +7750,8 @@ AMDGPUAsmParser::parseStructuredOpFields(ArrayRef<StructuredOpField *> Fields) {
 
   bool First = true;
   while (!trySkipToken(AsmToken::RCurly)) {
-    if (!First && !skipToken(AsmToken::Comma, "comma expected"))
+    if (!First &&
+        !skipToken(AsmToken::Comma, "comma or closing brace expected"))
       return ParseStatus::Failure;
 
     StringRef Id = getTokenStr();
@@ -7761,11 +7764,14 @@ AMDGPUAsmParser::parseStructuredOpFields(ArrayRef<StructuredOpField *> Fields) {
         find_if(Fields, [Id](StructuredOpField *F) { return F->Id == Id; });
     if (I == Fields.end())
       return Error(IdLoc, "unknown field");
+    if ((*I)->IsDefined)
+      return Error(IdLoc, "duplicate field");
 
     // TODO: Support symbolic values.
     (*I)->Loc = getLoc();
     if (!parseExpr((*I)->Val))
       return ParseStatus::Failure;
+    (*I)->IsDefined = true;
 
     First = false;
   }

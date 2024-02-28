@@ -448,7 +448,7 @@ ds_swizzle_b32 v8, v2 offset:SWZ(QUAD_PERM, 0, 1, 2, 3)
 // expected a hwreg macro or an absolute expression
 
 s_setreg_b32 undef, s2
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a hwreg macro or an absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a hwreg macro, structured immediate or an absolute expression
 // CHECK-NEXT:{{^}}s_setreg_b32 undef, s2
 // CHECK-NEXT:{{^}}             ^
 

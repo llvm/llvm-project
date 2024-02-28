@@ -18,7 +18,7 @@ s_setreg_b32  0x1f803, s2
 // GCN-NEXT: {{^}}              ^
 
 s_setreg_b32  typo(0x40), s2
-// GCN: :[[@LINE-1]]:{{[0-9]+}}: error: expected a hwreg macro or an absolute expression
+// GCN: :[[@LINE-1]]:{{[0-9]+}}: error: expected a hwreg macro, structured immediate or an absolute expression
 // GCN-NEXT: {{^}}s_setreg_b32  typo(0x40), s2
 // GCN-NEXT: {{^}}              ^
 
@@ -53,12 +53,12 @@ s_setreg_b32  hwreg(1,2,3, s2
 // GCN-NEXT: {{^}}                         ^
 
 s_setreg_b32  {id: 1 offset: 2, size: 3}, s2
-// GCN: :[[@LINE-1]]:{{[0-9]+}}: error: comma expected
+// GCN: :[[@LINE-1]]:{{[0-9]+}}: error: comma or closing brace expected
 // GCN-NEXT: {{^}}s_setreg_b32  {id: 1 offset: 2, size: 3}, s2
 // GCN-NEXT: {{^}}                     ^
 
 s_setreg_b32  {id: 1 offset: 2, size: 3}, s2
-// GCN: :[[@LINE-1]]:{{[0-9]+}}: error: comma expected
+// GCN: :[[@LINE-1]]:{{[0-9]+}}: error: comma or closing brace expected
 // GCN-NEXT: {{^}}s_setreg_b32  {id: 1 offset: 2, size: 3}, s2
 // GCN-NEXT: {{^}}                     ^
 
@@ -76,6 +76,11 @@ s_setreg_b32  {id: 1, offset: 2, blah: 3}, s2
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: unknown field
 // GCN-NEXT: {{^}}s_setreg_b32  {id: 1, offset: 2, blah: 3}, s2
 // GCN-NEXT: {{^}}                                 ^
+
+s_setreg_b32  {id: 1, id: 2}, s2
+// GCN: :[[@LINE-1]]:{{[0-9]+}}: error: duplicate field
+// GCN-NEXT: {{^}}s_setreg_b32  {id: 1, id: 2}, s2
+// GCN-NEXT: {{^}}                      ^
 
 s_setreg_b32  hwreg(3,32,32), s2
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: invalid bit offset: only 5-bit values are legal
