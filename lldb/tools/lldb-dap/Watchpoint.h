@@ -17,6 +17,9 @@
 namespace lldb_dap {
 
 struct Watchpoint : public BreakpointBase {
+  lldb::addr_t addr;
+  size_t size;
+  lldb::SBWatchpointOptions options;
   // The LLDB breakpoint associated wit this watchpoint.
   lldb::SBWatchpoint wp;
   lldb::SBError error;
@@ -28,6 +31,8 @@ struct Watchpoint : public BreakpointBase {
   void SetCondition() override;
   void SetHitCondition() override;
   void CreateJsonObject(llvm::json::Object &object) override;
+
+  void SetWatchpoint();
 };
 } // namespace lldb_dap
 

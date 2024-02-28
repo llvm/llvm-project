@@ -2880,15 +2880,29 @@ void request_setDataBreakpoints(const llvm::json::Object &request) {
   const auto *breakpoints = arguments->getArray("breakpoints");
   llvm::json::Array response_breakpoints;
   g_dap.target.DeleteAllWatchpoints();
+  std::vector<Watchpoint> watchpoints;
   if (breakpoints) {
     for (const auto &bp : *breakpoints) {
       const auto *bp_obj = bp.getAsObject();
       if (bp_obj) {
         Watchpoint wp(*bp_obj);
-        AppendBreakpoint(&wp, response_breakpoints);
+        watchpoints.push_back(wp);
       }
     }
   }
+  // If two watchpoints start at the same address, the latter overwrite the
+  // former. So, we only enable those at first-seen addresses when iterating
+  // backward.
+  std::set<lldb::addr_t> addresses;
+  for (auto iter = watchpoints.rbegin(); iter != watchpoints.rend(); ++iter) {
+    if (addresses.count(iter->addr) == 0) {
+      iter->SetWatchpoint();
+      addresses.insert(iter->addr);
+    }
+  }
+  for (auto wp : watchpoints)
+    AppendBreakpoint(&wp, response_breakpoints);
+
   llvm::json::Object body;
   body.try_emplace("breakpoints", std::move(response_breakpoints));
   response.try_emplace("body", std::move(body));
