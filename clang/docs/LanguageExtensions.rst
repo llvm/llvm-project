@@ -833,6 +833,7 @@ to ``float``; see below for more information on this emulation.
   * 32-bit ARM (natively on some architecture versions)
   * 64-bit ARM (AArch64) (natively on ARMv8.2a and above)
   * AMDGPU (natively)
+  * NVPTX (natively)
   * SPIR (natively)
   * X86 (if SSE2 is available; natively if AVX512-FP16 is also available)
   * RISC-V (natively if Zfh or Zhinx is available)
@@ -1582,6 +1583,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_integral`` (C++, Embarcadero)
 * ``__is_interface_class`` (Microsoft):
   Returns ``false``, even for types defined with ``__interface``.
+* ``__is_layout_compatible`` (C++, GNU, Microsoft)
 * ``__is_literal`` (Clang):
   Synonym for ``__is_literal_type``.
 * ``__is_literal_type`` (C++, GNU, Microsoft):
@@ -3471,6 +3473,37 @@ builtin, the mangler emits their usual pattern without any special treatment.
   // Computes a unique stable name for the given type.
   constexpr const char * __builtin_sycl_unique_stable_name( type-id );
 
+``__builtin_popcountg``
+-----------------------
+
+``__builtin_popcountg`` returns the number of 1 bits in the argument. The
+argument can be of any integer type.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  int __builtin_popcountg(type x)
+
+**Examples**:
+
+.. code-block:: c++
+
+  int x = 1;
+  int x_pop = __builtin_popcountg(x);
+
+  unsigned long y = 3;
+  int y_pop = __builtin_popcountg(y);
+
+  _BitInt(128) z = 7;
+  int z_pop = __builtin_popcountg(z);
+
+**Description**:
+
+``__builtin_popcountg`` is meant to be a type-generic alternative to the
+``__builtin_popcount{,l,ll}`` builtins, with support for other integer types,
+such as ``__int128`` and C23 ``_BitInt(N)``.
+
 Multiprecision Arithmetic Builtins
 ----------------------------------
 
@@ -5274,6 +5307,11 @@ Intrinsics Support within Constant Expressions
 
 The following builtin intrinsics can be used in constant expressions:
 
+* ``__builtin_addcb``
+* ``__builtin_addcs``
+* ``__builtin_addc``
+* ``__builtin_addcl``
+* ``__builtin_addcll``
 * ``__builtin_bitreverse8``
 * ``__builtin_bitreverse16``
 * ``__builtin_bitreverse32``
@@ -5320,6 +5358,11 @@ The following builtin intrinsics can be used in constant expressions:
 * ``__builtin_rotateright16``
 * ``__builtin_rotateright32``
 * ``__builtin_rotateright64``
+* ``__builtin_subcb``
+* ``__builtin_subcs``
+* ``__builtin_subc``
+* ``__builtin_subcl``
+* ``__builtin_subcll``
 
 The following x86-specific intrinsics can be used in constant expressions:
 

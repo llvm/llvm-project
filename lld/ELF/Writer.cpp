@@ -911,11 +911,12 @@ enum RankFlags {
   RF_NOT_ALLOC = 1 << 26,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
   RF_NOT_SPECIAL = 1 << 17,
-  RF_WRITE = 1 << 16,
-  RF_EXEC_WRITE = 1 << 15,
-  RF_EXEC = 1 << 14,
-  RF_RODATA = 1 << 13,
-  RF_LARGE = 1 << 12,
+  RF_LARGE_ALT = 1 << 15,
+  RF_WRITE = 1 << 14,
+  RF_EXEC_WRITE = 1 << 13,
+  RF_EXEC = 1 << 12,
+  RF_RODATA = 1 << 11,
+  RF_LARGE = 1 << 10,
   RF_NOT_RELRO = 1 << 9,
   RF_NOT_TLS = 1 << 8,
   RF_BSS = 1 << 7,
@@ -974,8 +975,14 @@ static unsigned getSectionRank(OutputSection &osec) {
     if (osec.type == SHT_PROGBITS)
       rank |= RF_RODATA;
     // Among PROGBITS sections, place .lrodata further from .text.
-    if (!(osec.flags & SHF_X86_64_LARGE && config->emachine == EM_X86_64))
-      rank |= RF_LARGE;
+    // For -z lrodata-after-bss, place .lrodata after .lbss like GNU ld. This
+    // layout has one extra PT_LOAD, but alleviates relocation overflow
+    // pressure for absolute relocations referencing small data from -fno-pic
+    // relocatable files.
+    if (osec.flags & SHF_X86_64_LARGE && config->emachine == EM_X86_64)
+      rank |= config->zLrodataAfterBss ? RF_LARGE_ALT : 0;
+    else
+      rank |= config->zLrodataAfterBss ? 0 : RF_LARGE;
   } else if (isExec) {
     rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
   } else {
@@ -988,10 +995,15 @@ static unsigned getSectionRank(OutputSection &osec) {
       osec.relro = true;
     else
       rank |= RF_NOT_RELRO;
-    // Place .ldata and .lbss after .bss. Making .bss closer to .text alleviates
-    // relocation overflow pressure.
-    if (osec.flags & SHF_X86_64_LARGE && config->emachine == EM_X86_64)
-      rank |= RF_LARGE;
+    // Place .ldata and .lbss after .bss. Making .bss closer to .text
+    // alleviates relocation overflow pressure.
+    // For -z lrodata-after-bss, place .lbss/.lrodata/.ldata after .bss.
+    // .bss/.lbss being adjacent reuses the NOBITS size optimization.
+    if (osec.flags & SHF_X86_64_LARGE && config->emachine == EM_X86_64) {
+      rank |= config->zLrodataAfterBss
+                  ? (osec.type == SHT_NOBITS ? 1 : RF_LARGE_ALT)
+                  : RF_LARGE;
+    }
   }
 
   // Within TLS sections, or within other RelRo sections, or within non-RelRo
@@ -1103,7 +1115,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   }
 
   PhdrEntry *last = nullptr;
-  PhdrEntry *lastRO = nullptr;
+  OutputSection *lastRO = nullptr;
   auto isLarge = [](OutputSection *osec) {
     return config->emachine == EM_X86_64 && osec->flags & SHF_X86_64_LARGE;
   };
@@ -1112,17 +1124,18 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
       if (p->p_type != PT_LOAD)
         continue;
       last = p;
-      if (!(p->p_flags & PF_W))
-        lastRO = p;
+      if (!(p->p_flags & PF_W) && p->lastSec && !isLarge(p->lastSec))
+        lastRO = p->lastSec;
     }
   }
 
   if (lastRO) {
-    // _etext is the first location after the last read-only loadable segment.
+    // _etext is the first location after the last read-only loadable segment
+    // that does not contain large sections.
     if (ElfSym::etext1)
-      ElfSym::etext1->section = lastRO->lastSec;
+      ElfSym::etext1->section = lastRO;
     if (ElfSym::etext2)
-      ElfSym::etext2->section = lastRO->lastSec;
+      ElfSym::etext2->section = lastRO;
   }
 
   if (last) {
@@ -2044,8 +2057,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
           if (sym->dsoDefined)
             continue;
           if (sym->isUndefined() && !sym->isWeak()) {
-            diagnose("undefined reference due to --no-allow-shlib-undefined: " +
-                     toString(*sym) + "\n>>> referenced by " + toString(file));
+            diagnose("undefined reference: " + toString(*sym) +
+                     "\n>>> referenced by " + toString(file) +
+                     " (disallowed by --no-allow-shlib-undefined)");
           } else if (sym->isDefined() && sym->computeBinding() == STB_LOCAL) {
             diagnose("non-exported symbol '" + toString(*sym) + "' in '" +
                      toString(sym->file) + "' is referenced by DSO '" +

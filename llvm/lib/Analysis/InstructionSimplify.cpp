@@ -6960,8 +6960,8 @@ Value *llvm::simplifyLoadInst(LoadInst *LI, Value *PtrOp,
 
   // If GlobalVariable's initializer is uniform, then return the constant
   // regardless of its offset.
-  if (Constant *C =
-          ConstantFoldLoadFromUniformValue(GV->getInitializer(), LI->getType()))
+  if (Constant *C = ConstantFoldLoadFromUniformValue(GV->getInitializer(),
+                                                     LI->getType(), Q.DL))
     return C;
 
   // Try to convert operand into a constant by stripping offsets while looking

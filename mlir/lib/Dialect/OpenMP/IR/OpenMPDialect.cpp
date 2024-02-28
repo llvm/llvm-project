@@ -430,68 +430,102 @@ static void printScheduleClause(OpAsmPrinter &p, Operation *op,
 // Parser, printer and verifier for ReductionVarList
 //===----------------------------------------------------------------------===//
 
-ParseResult
-parseReductionClause(OpAsmParser &parser, Region &region,
-                     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
-                     SmallVectorImpl<Type> &types, ArrayAttr &reductionSymbols,
-                     SmallVectorImpl<OpAsmParser::Argument> &privates) {
-  if (failed(parser.parseOptionalKeyword("reduction")))
-    return failure();
-
+ParseResult parseClauseWithRegionArgs(
+    OpAsmParser &parser, Region &region,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
+    SmallVectorImpl<Type> &types, ArrayAttr &symbols,
+    SmallVectorImpl<OpAsmParser::Argument> &regionPrivateArgs) {
   SmallVector<SymbolRefAttr> reductionVec;
+  unsigned regionArgOffset = regionPrivateArgs.size();
 
   if (failed(
           parser.parseCommaSeparatedList(OpAsmParser::Delimiter::Paren, [&]() {
             if (parser.parseAttribute(reductionVec.emplace_back()) ||
                 parser.parseOperand(operands.emplace_back()) ||
                 parser.parseArrow() ||
-                parser.parseArgument(privates.emplace_back()) ||
+                parser.parseArgument(regionPrivateArgs.emplace_back()) ||
                 parser.parseColonType(types.emplace_back()))
               return failure();
             return success();
           })))
     return failure();
 
-  for (auto [prv, type] : llvm::zip_equal(privates, types)) {
+  auto *argsBegin = regionPrivateArgs.begin();
+  MutableArrayRef argsSubrange(argsBegin + regionArgOffset,
+                               argsBegin + regionArgOffset + types.size());
+  for (auto [prv, type] : llvm::zip_equal(argsSubrange, types)) {
     prv.type = type;
   }
   SmallVector<Attribute> reductions(reductionVec.begin(), reductionVec.end());
-  reductionSymbols = ArrayAttr::get(parser.getContext(), reductions);
+  symbols = ArrayAttr::get(parser.getContext(), reductions);
   return success();
 }
 
-static void printReductionClause(OpAsmPrinter &p, Operation *op,
-                                 ValueRange reductionArgs, ValueRange operands,
-                                 TypeRange types, ArrayAttr reductionSymbols) {
-  p << "reduction(";
+static void printClauseWithRegionArgs(OpAsmPrinter &p, Operation *op,
+                                      ValueRange argsSubrange,
+                                      StringRef clauseName, ValueRange operands,
+                                      TypeRange types, ArrayAttr symbols) {
+  p << clauseName << "(";
   llvm::interleaveComma(
-      llvm::zip_equal(reductionSymbols, operands, reductionArgs, types), p,
-      [&p](auto t) {
+      llvm::zip_equal(symbols, operands, argsSubrange, types), p, [&p](auto t) {
         auto [sym, op, arg, type] = t;
         p << sym << " " << op << " -> " << arg << " : " << type;
       });
   p << ") ";
 }
 
-static ParseResult
-parseParallelRegion(OpAsmParser &parser, Region &region,
-                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
-                    SmallVectorImpl<Type> &types, ArrayAttr &reductionSymbols) {
+static ParseResult parseParallelRegion(
+    OpAsmParser &parser, Region &region,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &reductionVarOperands,
+    SmallVectorImpl<Type> &reductionVarTypes, ArrayAttr &reductionSymbols,
+    llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVarOperands,
+    llvm::SmallVectorImpl<Type> &privateVarsTypes,
+    ArrayAttr &privatizerSymbols) {
+  llvm::SmallVector<OpAsmParser::Argument> regionPrivateArgs;
 
-  llvm::SmallVector<OpAsmParser::Argument> privates;
-  if (succeeded(parseReductionClause(parser, region, operands, types,
-                                     reductionSymbols, privates)))
-    return parser.parseRegion(region, privates);
+  if (succeeded(parser.parseOptionalKeyword("reduction"))) {
+    if (failed(parseClauseWithRegionArgs(parser, region, reductionVarOperands,
+                                         reductionVarTypes, reductionSymbols,
+                                         regionPrivateArgs)))
+      return failure();
+  }
 
-  return parser.parseRegion(region);
+  if (succeeded(parser.parseOptionalKeyword("private"))) {
+    if (failed(parseClauseWithRegionArgs(parser, region, privateVarOperands,
+                                         privateVarsTypes, privatizerSymbols,
+                                         regionPrivateArgs)))
+      return failure();
+  }
+
+  return parser.parseRegion(region, regionPrivateArgs);
 }
 
 static void printParallelRegion(OpAsmPrinter &p, Operation *op, Region &region,
-                                ValueRange operands, TypeRange types,
-                                ArrayAttr reductionSymbols) {
-  if (reductionSymbols)
-    printReductionClause(p, op, region.front().getArguments(), operands, types,
-                         reductionSymbols);
+                                ValueRange reductionVarOperands,
+                                TypeRange reductionVarTypes,
+                                ArrayAttr reductionSymbols,
+                                ValueRange privateVarOperands,
+                                TypeRange privateVarTypes,
+                                ArrayAttr privatizerSymbols) {
+  if (reductionSymbols) {
+    auto *argsBegin = region.front().getArguments().begin();
+    MutableArrayRef argsSubrange(argsBegin,
+                                 argsBegin + reductionVarTypes.size());
+    printClauseWithRegionArgs(p, op, argsSubrange, "reduction",
+                              reductionVarOperands, reductionVarTypes,
+                              reductionSymbols);
+  }
+
+  if (privatizerSymbols) {
+    auto *argsBegin = region.front().getArguments().begin();
+    MutableArrayRef argsSubrange(argsBegin + reductionVarOperands.size(),
+                                 argsBegin + reductionVarOperands.size() +
+                                     privateVarTypes.size());
+    printClauseWithRegionArgs(p, op, argsSubrange, "private",
+                              privateVarOperands, privateVarTypes,
+                              privatizerSymbols);
+  }
+
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
@@ -568,6 +602,110 @@ static LogicalResult verifyReductionVarList(Operation *op,
              << "expected accumulator (" << varType
              << ") to be the same type as reduction declaration ("
              << decl.getAccumulatorType() << ")";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Parser, printer and verifier for CopyPrivateVarList
+//===----------------------------------------------------------------------===//
+
+/// copyprivate-entry-list ::= copyprivate-entry
+///                          | copyprivate-entry-list `,` copyprivate-entry
+/// copyprivate-entry ::= ssa-id `->` symbol-ref `:` type
+static ParseResult parseCopyPrivateVarList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
+    SmallVectorImpl<Type> &types, ArrayAttr &copyPrivateSymbols) {
+  SmallVector<SymbolRefAttr> copyPrivateFuncsVec;
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (parser.parseOperand(operands.emplace_back()) ||
+            parser.parseArrow() ||
+            parser.parseAttribute(copyPrivateFuncsVec.emplace_back()) ||
+            parser.parseColonType(types.emplace_back()))
+          return failure();
+        return success();
+      })))
+    return failure();
+  SmallVector<Attribute> copyPrivateFuncs(copyPrivateFuncsVec.begin(),
+                                          copyPrivateFuncsVec.end());
+  copyPrivateSymbols = ArrayAttr::get(parser.getContext(), copyPrivateFuncs);
+  return success();
+}
+
+/// Print CopyPrivate clause
+static void printCopyPrivateVarList(OpAsmPrinter &p, Operation *op,
+                                    OperandRange copyPrivateVars,
+                                    TypeRange copyPrivateTypes,
+                                    std::optional<ArrayAttr> copyPrivateFuncs) {
+  if (!copyPrivateFuncs.has_value())
+    return;
+  llvm::interleaveComma(
+      llvm::zip(copyPrivateVars, *copyPrivateFuncs, copyPrivateTypes), p,
+      [&](const auto &args) {
+        p << std::get<0>(args) << " -> " << std::get<1>(args) << " : "
+          << std::get<2>(args);
+      });
+}
+
+/// Verifies CopyPrivate Clause
+static LogicalResult
+verifyCopyPrivateVarList(Operation *op, OperandRange copyPrivateVars,
+                         std::optional<ArrayAttr> copyPrivateFuncs) {
+  size_t copyPrivateFuncsSize =
+      copyPrivateFuncs.has_value() ? copyPrivateFuncs->size() : 0;
+  if (copyPrivateFuncsSize != copyPrivateVars.size())
+    return op->emitOpError() << "inconsistent number of copyPrivate vars (= "
+                             << copyPrivateVars.size()
+                             << ") and functions (= " << copyPrivateFuncsSize
+                             << "), both must be equal";
+  if (!copyPrivateFuncs.has_value())
+    return success();
+
+  for (auto copyPrivateVarAndFunc :
+       llvm::zip(copyPrivateVars, *copyPrivateFuncs)) {
+    auto symbolRef =
+        llvm::cast<SymbolRefAttr>(std::get<1>(copyPrivateVarAndFunc));
+    std::optional<std::variant<mlir::func::FuncOp, mlir::LLVM::LLVMFuncOp>>
+        funcOp;
+    if (mlir::func::FuncOp mlirFuncOp =
+            SymbolTable::lookupNearestSymbolFrom<mlir::func::FuncOp>(op,
+                                                                     symbolRef))
+      funcOp = mlirFuncOp;
+    else if (mlir::LLVM::LLVMFuncOp llvmFuncOp =
+                 SymbolTable::lookupNearestSymbolFrom<mlir::LLVM::LLVMFuncOp>(
+                     op, symbolRef))
+      funcOp = llvmFuncOp;
+
+    auto getNumArguments = [&] {
+      return std::visit([](auto &f) { return f.getNumArguments(); }, *funcOp);
+    };
+
+    auto getArgumentType = [&](unsigned i) {
+      return std::visit([i](auto &f) { return f.getArgumentTypes()[i]; },
+                        *funcOp);
+    };
+
+    if (!funcOp)
+      return op->emitOpError() << "expected symbol reference " << symbolRef
+                               << " to point to a copy function";
+
+    if (getNumArguments() != 2)
+      return op->emitOpError()
+             << "expected copy function " << symbolRef << " to have 2 operands";
+
+    Type argTy = getArgumentType(0);
+    if (argTy != getArgumentType(1))
+      return op->emitOpError() << "expected copy function " << symbolRef
+                               << " arguments to have the same type";
+
+    Type varType = std::get<0>(copyPrivateVarAndFunc).getType();
+    if (argTy != varType)
+      return op->emitOpError()
+             << "expected copy function arguments' type (" << argTy
+             << ") to be the same as copyprivate variable's type (" << varType
+             << ")";
   }
 
   return success();
@@ -1070,14 +1208,64 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
       builder, state, /*if_expr_var=*/nullptr, /*num_threads_var=*/nullptr,
       /*allocate_vars=*/ValueRange(), /*allocators_vars=*/ValueRange(),
       /*reduction_vars=*/ValueRange(), /*reductions=*/nullptr,
-      /*proc_bind_val=*/nullptr);
+      /*proc_bind_val=*/nullptr, /*private_vars=*/ValueRange(),
+      /*privatizers=*/nullptr);
   state.addAttributes(attributes);
+}
+
+template <typename OpType>
+static LogicalResult verifyPrivateVarList(OpType &op) {
+  auto privateVars = op.getPrivateVars();
+  auto privatizers = op.getPrivatizersAttr();
+
+  if (privateVars.empty() && (privatizers == nullptr || privatizers.empty()))
+    return success();
+
+  auto numPrivateVars = privateVars.size();
+  auto numPrivatizers = (privatizers == nullptr) ? 0 : privatizers.size();
+
+  if (numPrivateVars != numPrivatizers)
+    return op.emitError() << "inconsistent number of private variables and "
+                             "privatizer op symbols, private vars: "
+                          << numPrivateVars
+                          << " vs. privatizer op symbols: " << numPrivatizers;
+
+  for (auto privateVarInfo : llvm::zip_equal(privateVars, privatizers)) {
+    Type varType = std::get<0>(privateVarInfo).getType();
+    SymbolRefAttr privatizerSym =
+        std::get<1>(privateVarInfo).template cast<SymbolRefAttr>();
+    PrivateClauseOp privatizerOp =
+        SymbolTable::lookupNearestSymbolFrom<PrivateClauseOp>(op,
+                                                              privatizerSym);
+
+    if (privatizerOp == nullptr)
+      return op.emitError() << "failed to lookup privatizer op with symbol: '"
+                            << privatizerSym << "'";
+
+    Type privatizerType = privatizerOp.getType();
+
+    if (varType != privatizerType)
+      return op.emitError()
+             << "type mismatch between a "
+             << (privatizerOp.getDataSharingType() ==
+                         DataSharingClauseType::Private
+                     ? "private"
+                     : "firstprivate")
+             << " variable and its privatizer op, var type: " << varType
+             << " vs. privatizer op type: " << privatizerType;
+  }
+
+  return success();
 }
 
 LogicalResult ParallelOp::verify() {
   if (getAllocateVars().size() != getAllocatorsVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
   return verifyReductionVarList(*this, getReductions(), getReductionVars());
 }
 
@@ -1152,7 +1340,8 @@ LogicalResult SingleOp::verify() {
     return emitError(
         "expected equal sizes for allocate and allocator variables");
 
-  return success();
+  return verifyCopyPrivateVarList(*this, getCopyprivateVars(),
+                                  getCopyprivateFuncs());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1174,9 +1363,10 @@ parseWsLoop(OpAsmParser &parser, Region &region,
 
   // Parse an optional reduction clause
   llvm::SmallVector<OpAsmParser::Argument> privates;
-  bool hasReduction = succeeded(
-      parseReductionClause(parser, region, reductionOperands, reductionTypes,
-                           reductionSymbols, privates));
+  bool hasReduction = succeeded(parser.parseOptionalKeyword("reduction")) &&
+                      succeeded(parseClauseWithRegionArgs(
+                          parser, region, reductionOperands, reductionTypes,
+                          reductionSymbols, privates));
 
   if (parser.parseKeyword("for"))
     return failure();
@@ -1223,8 +1413,9 @@ void printWsLoop(OpAsmPrinter &p, Operation *op, Region &region,
   if (reductionSymbols) {
     auto reductionArgs =
         region.front().getArguments().drop_front(loopVarTypes.size());
-    printReductionClause(p, op, reductionArgs, reductionOperands,
-                         reductionTypes, reductionSymbols);
+    printClauseWithRegionArgs(p, op, reductionArgs, "reduction",
+                              reductionOperands, reductionTypes,
+                              reductionSymbols);
   }
 
   p << " for ";
@@ -1753,11 +1944,23 @@ LogicalResult DataBoundsOp::verify() {
   return success();
 }
 
+void PrivateClauseOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                            TypeRange /*result_types*/, StringAttr symName,
+                            TypeAttr type) {
+  PrivateClauseOp::build(
+      odsBuilder, odsState, symName, type,
+      DataSharingClauseTypeAttr::get(odsBuilder.getContext(),
+                                     DataSharingClauseType::Private));
+}
+
 LogicalResult PrivateClauseOp::verify() {
   Type symType = getType();
 
   auto verifyTerminator = [&](Operation *terminator) -> LogicalResult {
-    if (!terminator->hasSuccessors() && !llvm::isa<YieldOp>(terminator))
+    if (!terminator->getBlock()->getSuccessors().empty())
+      return success();
+
+    if (!llvm::isa<YieldOp>(terminator))
       return mlir::emitError(terminator->getLoc())
              << "expected exit block terminator to be an `omp.yield` op.";
 

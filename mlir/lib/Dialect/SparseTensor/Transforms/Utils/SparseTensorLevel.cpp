@@ -63,7 +63,7 @@ protected:
 class DenseLevel : public SparseTensorLevel {
 public:
   DenseLevel(unsigned tid, Level lvl, Value lvlSize, bool encoded)
-      : SparseTensorLevel(tid, lvl, LevelType::Dense, lvlSize),
+      : SparseTensorLevel(tid, lvl, LevelFormat::Dense, lvlSize),
         encoded(encoded) {}
 
   Value peekCrdAt(OpBuilder &, Location, Value pos) const override {
@@ -1275,9 +1275,11 @@ sparse_tensor::makeSparseTensorLevel(OpBuilder &b, Location l, Value t,
   Value sz = stt.hasEncoding() ? b.create<LvlOp>(l, t, lvl).getResult()
                                : b.create<tensor::DimOp>(l, t, lvl).getResult();
 
-  switch (*getLevelFormat(lt)) {
+  switch (lt.getLvlFmt()) {
   case LevelFormat::Dense:
     return std::make_unique<DenseLevel>(tid, lvl, sz, stt.hasEncoding());
+  case LevelFormat::Batch:
+    llvm_unreachable("not implemented");
   case LevelFormat::Compressed: {
     Value pos = genToPositions(b, l, t, lvl);
     Value crd = genToCoordinates(b, l, t, lvl);
@@ -1296,6 +1298,8 @@ sparse_tensor::makeSparseTensorLevel(OpBuilder &b, Location l, Value t,
     Value crd = genToCoordinates(b, l, t, lvl);
     return std::make_unique<NOutOfMLevel>(tid, lvl, lt, sz, crd);
   }
+  case LevelFormat::Undef:
+    llvm_unreachable("undefined level format");
   }
   llvm_unreachable("unrecognizable level format");
 }

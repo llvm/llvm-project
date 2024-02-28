@@ -26,6 +26,11 @@ def StdC : StandardSpec<"stdc"> {
       []
   >;
 
+  FunctionAttrSpec ConstAttr = FunctionAttrSpec<"__LIBC_CONST_ATTR", [
+    Cxx11FunctionAttr<"const", "gnu">,
+    GnuFunctionAttr<"const">,
+  ]>;
+
   HeaderSpec CType = HeaderSpec<
       "ctype.h",
       [], // Macros
@@ -366,7 +371,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"ceill", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
           GuardedFunctionSpec<"ceilf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
 
-          FunctionSpec<"fabs", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"fabs", RetValSpec<DoubleType>, [ArgSpec<DoubleType>], [ConstAttr]>,
           FunctionSpec<"fabsf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"fabsl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
           GuardedFunctionSpec<"fabsf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
@@ -409,10 +414,17 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"ilogb", RetValSpec<IntType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"ilogbf", RetValSpec<IntType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"ilogbl", RetValSpec<IntType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"ilogbf128", RetValSpec<IntType>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
+
+          FunctionSpec<"llogb", RetValSpec<LongType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"llogbf", RetValSpec<LongType>, [ArgSpec<FloatType>]>,
+          FunctionSpec<"llogbl", RetValSpec<LongType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"llogbf128", RetValSpec<LongType>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
 
           FunctionSpec<"ldexp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>]>,
           FunctionSpec<"ldexpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>]>,
           FunctionSpec<"ldexpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>]>,
+          GuardedFunctionSpec<"ldexpf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FLOAT128">,
 
           FunctionSpec<"log10", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"log10f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
@@ -429,6 +441,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"logb", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"logbf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"logbl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"logbf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
 
           FunctionSpec<"modf", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoublePtr>]>,
           FunctionSpec<"modff", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatPtr>]>,
@@ -784,7 +797,10 @@ def StdC : StandardSpec<"stdc"> {
         Macro<"stdc_first_leading_zero">,
         Macro<"stdc_first_leading_one">,
         Macro<"stdc_first_trailing_zero">,
-        Macro<"stdc_first_trailing_one">
+        Macro<"stdc_first_trailing_one">,
+        Macro<"stdc_count_zeros">,
+        Macro<"stdc_count_ones">,
+        Macro<"stdc_has_single_bit">
       ], // Macros
       [], // Types
       [], // Enumerations
@@ -823,8 +839,36 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"stdc_first_trailing_one_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
           FunctionSpec<"stdc_first_trailing_one_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
           FunctionSpec<"stdc_first_trailing_one_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
-          FunctionSpec<"stdc_first_trailing_one_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>
+          FunctionSpec<"stdc_first_trailing_one_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>,
+          FunctionSpec<"stdc_count_zeros_uc", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_count_zeros_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_count_zeros_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_count_zeros_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_count_zeros_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>,
+          FunctionSpec<"stdc_count_ones_uc", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_count_ones_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_count_ones_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_count_ones_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_count_ones_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>,
+          FunctionSpec<"stdc_has_single_bit_uc", RetValSpec<BoolType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_has_single_bit_us", RetValSpec<BoolType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_has_single_bit_ui", RetValSpec<BoolType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_has_single_bit_ul", RetValSpec<BoolType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_has_single_bit_ull", RetValSpec<BoolType>, [ArgSpec<UnsignedLongLongType>]>
       ] // Functions
+  >;
+
+  HeaderSpec StdCkdInt = HeaderSpec<
+      "stdckdint.h",
+      [
+        Macro<"__STDC_VERSION_STDCKDINT_H__">,
+        Macro<"ckd_add">,
+        Macro<"ckd_sub">,
+        Macro<"ckd_mul">
+      ], // Macros
+      [], // Types
+      [], // Enumerations
+      [] // Functions
   >;
 
   HeaderSpec StdLib = HeaderSpec<
@@ -1228,6 +1272,7 @@ def StdC : StandardSpec<"stdc"> {
     Math,
     String,
     StdBit,
+    StdCkdInt,
     StdIO,
     StdLib,
     IntTypes,

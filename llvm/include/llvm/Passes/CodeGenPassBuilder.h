@@ -37,6 +37,7 @@
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
+#include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
@@ -88,12 +89,8 @@ namespace llvm {
 #define DUMMY_MACHINE_MODULE_PASS(NAME, PASS_NAME)                             \
   struct PASS_NAME : public MachinePassInfoMixin<PASS_NAME> {                  \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
-    Error run(Module &, MachineFunctionAnalysisManager &) {                    \
-      return Error::success();                                                 \
-    }                                                                          \
-    PreservedAnalyses run(MachineFunction &,                                   \
-                          MachineFunctionAnalysisManager &) {                  \
-      llvm_unreachable("this api is to make new PM api happy");                \
+    PreservedAnalyses run(Module &, ModuleAnalysisManager &) {                 \
+      return PreservedAnalyses::all();                                         \
     }                                                                          \
   };
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME)                           \
@@ -114,7 +111,8 @@ namespace llvm {
 /// construction.
 template <typename DerivedT> class CodeGenPassBuilder {
 public:
-  explicit CodeGenPassBuilder(LLVMTargetMachine &TM, CGPassBuilderOption Opts,
+  explicit CodeGenPassBuilder(LLVMTargetMachine &TM,
+                              const CGPassBuilderOption &Opts,
                               PassInstrumentationCallbacks *PIC)
       : TM(TM), Opt(Opts), PIC(PIC) {
     // Target could set CGPassBuilderOption::MISchedPostRA to true to achieve
@@ -132,8 +130,8 @@ public:
       Opt.OptimizeRegAlloc = getOptLevel() != CodeGenOptLevel::None;
   }
 
-  Error buildPipeline(ModulePassManager &MPM, MachineFunctionPassManager &MFPM,
-                      raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+  Error buildPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
+                      raw_pwrite_stream *DwoOut,
                       CodeGenFileType FileType) const;
 
   PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
@@ -149,7 +147,15 @@ protected:
   using is_function_pass_t = decltype(std::declval<PassT &>().run(
       std::declval<Function &>(), std::declval<FunctionAnalysisManager &>()));
 
+  template <typename PassT>
+  using is_machine_function_pass_t = decltype(std::declval<PassT &>().run(
+      std::declval<MachineFunction &>(),
+      std::declval<MachineFunctionAnalysisManager &>()));
+
   // Function object to maintain state while adding codegen IR passes.
+  // TODO: add a Function -> MachineFunction adaptor and merge
+  // AddIRPass/AddMachinePass so we can have a function pipeline that runs both
+  // function passes and machine function passes.
   class AddIRPass {
   public:
     AddIRPass(ModulePassManager &MPM, const DerivedT &PB) : MPM(MPM), PB(PB) {}
@@ -196,31 +202,47 @@ protected:
   // Function object to maintain state while adding codegen machine passes.
   class AddMachinePass {
   public:
-    AddMachinePass(MachineFunctionPassManager &PM, const DerivedT &PB)
-        : PM(PM), PB(PB) {}
+    AddMachinePass(ModulePassManager &MPM, const DerivedT &PB)
+        : MPM(MPM), PB(PB) {}
+    ~AddMachinePass() {
+      if (!MFPM.isEmpty())
+        MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+    }
 
-    template <typename PassT> void operator()(PassT &&Pass) {
-      if (!PB.runBeforeAdding(PassT::name()))
+    template <typename PassT>
+    void operator()(PassT &&Pass, bool Force = false,
+                    StringRef Name = PassT::name()) {
+      static_assert((is_detected<is_machine_function_pass_t, PassT>::value ||
+                     is_detected<is_module_pass_t, PassT>::value) &&
+                    "Only module pass and function pass are supported.");
+
+      if (!Force && !PB.runBeforeAdding(Name))
         return;
 
-      PM.addPass(std::forward<PassT>(Pass));
+      // Add Function Pass
+      if constexpr (is_detected<is_machine_function_pass_t, PassT>::value) {
+        MFPM.addPass(std::forward<PassT>(Pass));
 
-      for (auto &C : PB.AfterCallbacks)
-        C(PassT::name());
+        for (auto &C : PB.AfterCallbacks)
+          C(Name);
+      } else {
+        // Add Module Pass
+        if (!MFPM.isEmpty()) {
+          MPM.addPass(
+              createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+          MFPM = MachineFunctionPassManager();
+        }
+
+        MPM.addPass(std::forward<PassT>(Pass));
+
+        for (auto &C : PB.AfterCallbacks)
+          C(Name);
+      }
     }
-
-    template <typename PassT> void insertPass(StringRef PassName, PassT Pass) {
-      PB.AfterCallbacks.emplace_back(
-          [this, PassName, Pass = std::move(Pass)](StringRef Name) {
-            if (PassName == Name)
-              this->PM.addPass(std::move(Pass));
-          });
-    }
-
-    MachineFunctionPassManager releasePM() { return std::move(PM); }
 
   private:
-    MachineFunctionPassManager &PM;
+    ModulePassManager &MPM;
+    MachineFunctionPassManager MFPM;
     const DerivedT &PB;
   };
 
@@ -467,30 +489,43 @@ private:
 
 template <typename Derived>
 Error CodeGenPassBuilder<Derived>::buildPipeline(
-    ModulePassManager &MPM, MachineFunctionPassManager &MFPM,
-    raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
     CodeGenFileType FileType) const {
   auto StartStopInfo = TargetPassConfig::getStartStopInfo(*PIC);
   if (!StartStopInfo)
     return StartStopInfo.takeError();
   setStartStopPasses(*StartStopInfo);
-  AddIRPass addIRPass(MPM, derived());
-  // `ProfileSummaryInfo` is always valid.
-  addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
-  addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>());
-  addISelPasses(addIRPass);
 
-  AddMachinePass addPass(MFPM, derived());
+  bool PrintAsm = TargetPassConfig::willCompleteCodeGenPipeline();
+  bool PrintMIR = !PrintAsm && FileType != CodeGenFileType::Null;
+
+  {
+    AddIRPass addIRPass(MPM, derived());
+    addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+    addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>());
+    addISelPasses(addIRPass);
+  }
+
+  AddMachinePass addPass(MPM, derived());
+
+  if (PrintMIR)
+    addPass(PrintMIRPreparePass(Out), /*Force=*/true);
+
   if (auto Err = addCoreISelPasses(addPass))
     return std::move(Err);
 
   if (auto Err = derived().addMachinePasses(addPass))
     return std::move(Err);
 
-  derived().addAsmPrinter(
-      addPass, [this, &Out, DwoOut, FileType](MCContext &Ctx) {
-        return this->TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
-      });
+  if (PrintAsm) {
+    derived().addAsmPrinter(
+        addPass, [this, &Out, DwoOut, FileType](MCContext &Ctx) {
+          return this->TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
+        });
+  }
+
+  if (PrintMIR)
+    addPass(PrintMIRPass(Out), /*Force=*/true);
 
   addPass(FreeMachineFunctionPass());
   return verifyStartStop(*StartStopInfo);
@@ -1031,6 +1066,8 @@ template <typename Derived>
 void CodeGenPassBuilder<Derived>::addOptimizedRegAlloc(
     AddMachinePass &addPass) const {
   addPass(DetectDeadLanesPass());
+
+  addPass(InitUndefPass());
 
   addPass(ProcessImplicitDefsPass());
 

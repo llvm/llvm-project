@@ -414,6 +414,26 @@ struct FormatStyle {
   /// \version 17
   ShortCaseStatementsAlignmentStyle AlignConsecutiveShortCaseStatements;
 
+  /// Style of aligning consecutive TableGen cond operator colons.
+  /// Align the colons of cases inside !cond operators.
+  /// \code
+  ///   !cond(!eq(size, 1) : 1,
+  ///         !eq(size, 16): 1,
+  ///         true         : 0)
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenCondOperatorColons;
+
+  /// Style of aligning consecutive TableGen definition colons.
+  /// This aligns the inheritance colons of consecutive definitions.
+  /// \code
+  ///   def Def       : Parent {}
+  ///   def DefDef    : Parent {}
+  ///   def DefDefDef : Parent {}
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenDefinitionColons;
+
   /// Different styles for aligning escaped newlines.
   enum EscapedNewlineAlignmentStyle : int8_t {
     /// Don't align escaped newlines.
@@ -1013,7 +1033,7 @@ struct FormatStyle {
   /// This option is renamed to ``BreakAfterReturnType``.
   /// \version 3.8
   /// @deprecated
-  ReturnTypeBreakingStyle AlwaysBreakAfterReturnType;
+  // ReturnTypeBreakingStyle AlwaysBreakAfterReturnType;
 
   /// If ``true``, always break before multiline string literals.
   ///
@@ -1579,7 +1599,7 @@ struct FormatStyle {
 
   /// The function declaration return type breaking style to use.
   /// \version 19
-  // ReturnTypeBreakingStyle BreakAfterReturnType;
+  ReturnTypeBreakingStyle BreakAfterReturnType;
 
   /// If ``true``, clang-format will always break after a Json array ``[``
   /// otherwise it will scan until the closing ``]`` to determine if it should
@@ -3771,7 +3791,8 @@ struct FormatStyle {
   /// \version 17
   RemoveParenthesesStyle RemoveParentheses;
 
-  /// Remove semicolons after the closing brace of a non-empty function.
+  /// Remove semicolons after the closing braces of functions and
+  /// constructors/destructors.
   /// \warning
   ///  Setting this option to ``true`` could lead to incorrect code formatting
   ///  due to clang-format's lack of complete semantic information. As such,
@@ -4804,6 +4825,10 @@ struct FormatStyle {
            AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
            AlignConsecutiveShortCaseStatements ==
                R.AlignConsecutiveShortCaseStatements &&
+           AlignConsecutiveTableGenCondOperatorColons ==
+               R.AlignConsecutiveTableGenCondOperatorColons &&
+           AlignConsecutiveTableGenDefinitionColons ==
+               R.AlignConsecutiveTableGenDefinitionColons &&
            AlignEscapedNewlines == R.AlignEscapedNewlines &&
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&
@@ -4824,7 +4849,6 @@ struct FormatStyle {
                R.AllowShortIfStatementsOnASingleLine &&
            AllowShortLambdasOnASingleLine == R.AllowShortLambdasOnASingleLine &&
            AllowShortLoopsOnASingleLine == R.AllowShortLoopsOnASingleLine &&
-           AlwaysBreakAfterReturnType == R.AlwaysBreakAfterReturnType &&
            AlwaysBreakBeforeMultilineStrings ==
                R.AlwaysBreakBeforeMultilineStrings &&
            AttributeMacros == R.AttributeMacros &&
@@ -4835,6 +4859,7 @@ struct FormatStyle {
            BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
            BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
+           BreakAfterReturnType == R.BreakAfterReturnType &&
            BreakArrays == R.BreakArrays &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&

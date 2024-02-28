@@ -126,30 +126,10 @@ public:
                          LLDB_OPT_SET_ALL);
     m_all_options.Finalize();
 
-    CommandArgumentEntry arg;
-    CommandArgumentData run_args_arg;
-
-    // Define the first (and only) variant of this arg.
-    run_args_arg.arg_type = eArgTypeRunArgs;
-    run_args_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(run_args_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeRunArgs, eArgRepeatOptional);
   }
 
   ~CommandObjectProcessLaunch() override = default;
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
-  }
 
   Options *GetOptions() override { return &m_all_options; }
 
@@ -878,8 +858,7 @@ public:
       : CommandObjectParsed(interpreter, "process connect",
                             "Connect to a remote debug service.",
                             "process connect <remote-url>", 0) {
-    CommandArgumentData connect_arg{eArgTypeConnectURL, eArgRepeatPlain};
-    m_arguments.push_back({connect_arg});
+    AddSimpleArgumentList(eArgTypeConnectURL);
   }
 
   ~CommandObjectProcessConnect() override = default;
@@ -1004,8 +983,7 @@ public:
                             eCommandRequiresProcess | eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused) {
-    CommandArgumentData file_arg{eArgTypePath, eArgRepeatPlus};
-    m_arguments.push_back({file_arg});
+    AddSimpleArgumentList(eArgTypePath, eArgRepeatPlus);
   }
 
   ~CommandObjectProcessLoad() override = default;
@@ -1015,9 +993,7 @@ public:
                            OptionElementVector &opt_element_vector) override {
     if (!m_exe_ctx.HasProcessScope())
       return;
-
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
+    CommandObject::HandleArgumentCompletion(request, opt_element_vector);
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -1080,8 +1056,7 @@ public:
             "process unload <index>",
             eCommandRequiresProcess | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {
-    CommandArgumentData load_idx_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
-    m_arguments.push_back({load_idx_arg});
+    AddSimpleArgumentList(eArgTypeUnsignedInteger);
   }
 
   ~CommandObjectProcessUnload() override = default;
@@ -1141,19 +1116,7 @@ public:
             interpreter, "process signal",
             "Send a UNIX signal to the current target process.", nullptr,
             eCommandRequiresProcess | eCommandTryTargetAPILock) {
-    CommandArgumentEntry arg;
-    CommandArgumentData signal_arg;
-
-    // Define the first (and only) variant of this arg.
-    signal_arg.arg_type = eArgTypeUnixSignal;
-    signal_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(signal_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeUnixSignal);
   }
 
   ~CommandObjectProcessSignal() override = default;
@@ -1284,20 +1247,12 @@ public:
             "process save-core [-s corefile-style -p plugin-name] FILE",
             eCommandRequiresProcess | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched) {
-    CommandArgumentData file_arg{eArgTypePath, eArgRepeatPlain};
-    m_arguments.push_back({file_arg});
+    AddSimpleArgumentList(eArgTypePath);
   }
 
   ~CommandObjectProcessSaveCore() override = default;
 
   Options *GetOptions() override { return &m_options; }
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
-  }
 
   class CommandOptions : public Options {
   public:
@@ -1576,15 +1531,7 @@ public:
                 "by passing the -t option."
                 "\nYou can also clear the target modification for a signal"
                 "by passing the -c option");
-    CommandArgumentEntry arg;
-    CommandArgumentData signal_arg;
-
-    signal_arg.arg_type = eArgTypeUnixSignal;
-    signal_arg.arg_repetition = eArgRepeatStar;
-
-    arg.push_back(signal_arg);
-
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeUnixSignal, eArgRepeatStar);
   }
 
   ~CommandObjectProcessHandle() override = default;

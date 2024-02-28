@@ -83,6 +83,8 @@ add_macro_header(
   math_macros
   HDR
     math-macros.h
+  DEPENDS
+    .limits_macros
 )
 
 add_macro_header(
@@ -232,4 +234,10 @@ add_macro_header(
   stdfix_macros
   HDR
     stdfix-macros.h
+)
+
+add_macro_header(
+  stdckdint_macros
+  HDR
+    stdckdint-macros.h
 )

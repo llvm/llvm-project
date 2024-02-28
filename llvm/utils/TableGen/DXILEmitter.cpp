@@ -74,44 +74,32 @@ struct DXILOperationDesc {
 };
 } // end anonymous namespace
 
-// Convert DXIL type name string to dxil::ParameterKind
-//
-// @param typeNameStr Type name string
-// @return ParameterKind as defined in llvm/Support/DXILABI.h
-static ParameterKind getDXILTypeNameToKind(StringRef typeNameStr) {
-  return StringSwitch<ParameterKind>(typeNameStr)
-      .Case("voidTy", ParameterKind::VOID)
-      .Case("f16Ty", ParameterKind::HALF)
-      .Case("f32Ty", ParameterKind::FLOAT)
-      .Case("f64Ty", ParameterKind::DOUBLE)
-      .Case("i1Ty", ParameterKind::I1)
-      .Case("i8Ty", ParameterKind::I8)
-      .Case("i16Ty", ParameterKind::I16)
-      .Case("i32Ty", ParameterKind::I32)
-      .Case("i64Ty", ParameterKind::I64)
-      .Case("overloadTy", ParameterKind::OVERLOAD)
-      .Case("handleTy", ParameterKind::DXIL_HANDLE)
-      .Case("cbufferRetTy", ParameterKind::CBUFFER_RET)
-      .Case("resourceRetTy", ParameterKind::RESOURCE_RET)
-      .Default(ParameterKind::INVALID);
-}
+/*!
+ Convert DXIL type name string to dxil::ParameterKind
 
-static ParameterKind parameterTypeNameToKind(StringRef Name) {
-  return StringSwitch<ParameterKind>(Name)
-      .Case("void", ParameterKind::VOID)
-      .Case("half", ParameterKind::HALF)
-      .Case("float", ParameterKind::FLOAT)
-      .Case("double", ParameterKind::DOUBLE)
-      .Case("i1", ParameterKind::I1)
-      .Case("i8", ParameterKind::I8)
-      .Case("i16", ParameterKind::I16)
-      .Case("i32", ParameterKind::I32)
-      .Case("i64", ParameterKind::I64)
-      .Case("$o", ParameterKind::OVERLOAD)
-      .Case("dx.types.Handle", ParameterKind::DXIL_HANDLE)
-      .Case("dx.types.CBufRet", ParameterKind::CBUFFER_RET)
-      .Case("dx.types.ResRet", ParameterKind::RESOURCE_RET)
-      .Default(ParameterKind::INVALID);
+ @param typeNameStr Type name string
+ @return ParameterKind As defined in llvm/Support/DXILABI.h
+*/
+static ParameterKind lookupParameterKind(StringRef typeNameStr) {
+  auto paramKind = StringSwitch<ParameterKind>(typeNameStr)
+                       .Case("llvm_void_ty", ParameterKind::VOID)
+                       .Case("llvm_half_ty", ParameterKind::HALF)
+                       .Case("llvm_float_ty", ParameterKind::FLOAT)
+                       .Case("llvm_double_ty", ParameterKind::DOUBLE)
+                       .Case("llvm_i1_ty", ParameterKind::I1)
+                       .Case("llvm_i8_ty", ParameterKind::I8)
+                       .Case("llvm_i16_ty", ParameterKind::I16)
+                       .Case("llvm_i32_ty", ParameterKind::I32)
+                       .Case("llvm_i64_ty", ParameterKind::I64)
+                       .Case("llvm_anyfloat_ty", ParameterKind::OVERLOAD)
+                       .Case("llvm_anyint_ty", ParameterKind::OVERLOAD)
+                       .Case("dxil_handle_ty", ParameterKind::DXIL_HANDLE)
+                       .Case("dxil_cbuffer_ty", ParameterKind::CBUFFER_RET)
+                       .Case("dxil_resource_ty", ParameterKind::RESOURCE_RET)
+                       .Default(ParameterKind::INVALID);
+  assert(paramKind != ParameterKind::INVALID &&
+         "Unsupported DXIL Type specified");
+  return paramKind;
 }
 
 DXILOperationDesc::DXILOperationDesc(const Record *R) {
@@ -143,7 +131,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 
   for (unsigned I = 0; I < OverloadTypeList->size(); ++I) {
     Record *R = OverloadTypeList->getElementAsRecord(I);
-    OverloadTypes.emplace_back(getDXILTypeNameToKind(R->getNameInitAsString()));
+    OverloadTypes.emplace_back(lookupParameterKind(R->getNameInitAsString()));
   }
   Attr = StringRef(R->getValue("Attribute")->getNameInitAsString());
 }
@@ -151,7 +139,8 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 DXILParameter::DXILParameter(const Record *R) {
   Name = R->getValueAsString("Name");
   Pos = R->getValueAsInt("Pos");
-  Kind = parameterTypeNameToKind(R->getValueAsString("Type"));
+  Kind =
+      lookupParameterKind(R->getValue("ParamType")->getValue()->getAsString());
   if (R->getValue("Doc"))
     Doc = R->getValueAsString("Doc");
   IsConst = R->getValueAsBit("IsConstant");
@@ -296,10 +285,12 @@ static void emitDXILIntrinsicMap(std::vector<DXILOperationDesc> &Ops,
   OS << "\n";
 }
 
-// Convert operation attribute string to Attribute enum
-//
-// @param Attr string reference
-// @return std::string Attribute enum string
+/*!
+ Convert operation attribute string to Attribute enum
+
+ @param Attr string reference
+ @return std::string Attribute enum string
+ */
 static std::string emitDXILOperationAttr(StringRef Attr) {
   return StringSwitch<std::string>(Attr)
       .Case("ReadNone", "Attribute::ReadNone")

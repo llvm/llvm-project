@@ -1,9 +1,9 @@
 ; RUN: opt -S -passes=hotcoldsplit -hotcoldsplit-threshold=-1 < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: define {{.*}}@fun
-; CHECK: call {{.*}}@fun.cold.2(
-; CHECK-NEXT: ret void
 ; CHECK: call {{.*}}@fun.cold.1(
+; CHECK-NEXT: ret void
+; CHECK: call {{.*}}@fun.cold.2(
 ; CHECK-NEXT: ret void
 define void @fun() {
 entry:
@@ -49,9 +49,10 @@ B.cleanup:
 }
 
 ; CHECK-LABEL: define {{.*}}@fun.cold.1(
-; CHECK: %B.cleanup.dest.slot.0 = phi i32 [ 1, %B.then5 ], [ 0, %B.end ]
+; CHECK: %A.cleanup.dest.slot.0 = phi i32 [ 1, %A.then5 ], [ 0, %A.end ]
 ; CHECK-NEXT: unreachable
 
 ; CHECK-LABEL: define {{.*}}@fun.cold.2(
-; CHECK: %A.cleanup.dest.slot.0 = phi i32 [ 1, %A.then5 ], [ 0, %A.end ]
+; CHECK: %B.cleanup.dest.slot.0 = phi i32 [ 1, %B.then5 ], [ 0, %B.end ]
 ; CHECK-NEXT: unreachable
+

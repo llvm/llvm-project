@@ -688,6 +688,12 @@ def Popcount : Builtin, BitInt_Long_LongLongTemplate {
   let Prototype = "int(unsigned T)";
 }
 
+def Popcountg : Builtin {
+  let Spellings = ["__builtin_popcountg"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "int(...)";
+}
+
 def Clrsb : Builtin, BitInt_Long_LongLongTemplate {
   let Spellings = ["__builtin_clrsb"];
   let Attributes = [NoThrow, Const, Constexpr];
@@ -4067,14 +4073,14 @@ class MPATemplate : Template<
 
 def Addc : Builtin, MPATemplate {
   let Spellings = ["__builtin_addc"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   // FIXME: Why are these argumentes marked const?
   let Prototype = "T(T const, T const, T const, T*)";
 }
 
 def Subc : Builtin, MPATemplate {
   let Spellings = ["__builtin_subc"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   // FIXME: Why are these argumentes marked const?
   let Prototype = "T(T const, T const, T const, T*)";
 }
@@ -4522,6 +4528,12 @@ def HLSLCreateHandle : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_create_handle"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void*(unsigned char)";
+}
+
+def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_dot"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
 }
 
 // Builtins for XRay.

@@ -41,6 +41,17 @@ struct SCEVOperand {
   const SCEV* S;
 };
 
+struct PoisonFlags {
+  unsigned NUW : 1;
+  unsigned NSW : 1;
+  unsigned Exact : 1;
+  unsigned Disjoint : 1;
+  unsigned NNeg : 1;
+
+  PoisonFlags(const Instruction *I);
+  void apply(Instruction *I);
+};
+
 /// This class uses information about analyze scalars to rewrite expressions
 /// in canonical form.
 ///
@@ -48,6 +59,8 @@ struct SCEVOperand {
 /// and destroy it when finished to allow the release of the associated
 /// memory.
 class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
+  friend class SCEVExpanderCleaner;
+
   ScalarEvolution &SE;
   const DataLayout &DL;
 
@@ -69,6 +82,10 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   /// FIXME: Ideally re-used instructions would not be added to
   /// InsertedValues/InsertedPostIncValues.
   SmallPtrSet<Value *, 16> ReusedValues;
+
+  /// Original flags of instructions for which they were modified. Used
+  /// by SCEVExpanderCleaner to undo changes.
+  DenseMap<AssertingVH<Instruction>, PoisonFlags> OrigFlags;
 
   // The induction variables generated.
   SmallVector<WeakVH, 2> InsertedIVs;
@@ -188,6 +205,7 @@ public:
     InsertedValues.clear();
     InsertedPostIncValues.clear();
     ReusedValues.clear();
+    OrigFlags.clear();
     ChainedPhis.clear();
     InsertedIVs.clear();
   }
@@ -257,6 +275,14 @@ public:
   /// trigger new UB in case of poison.
   bool hoistIVInc(Instruction *IncV, Instruction *InsertPos,
                   bool RecomputePoisonFlags = false);
+
+  /// Return true if both increments directly increment the corresponding IV PHI
+  /// nodes and have the same opcode. It is not safe to re-use the flags from
+  /// the original increment, if it is more complex and SCEV expansion may have
+  /// yielded a more simplified wider increment.
+  static bool canReuseFlagsFromOriginalIVInc(PHINode *OrigPhi, PHINode *WidePhi,
+                                             Instruction *OrigInc,
+                                             Instruction *WideInc);
 
   /// replace congruent phis with their most canonical representative. Return
   /// the number of phis eliminated.
@@ -482,6 +508,8 @@ private:
   Value *visitUnknown(const SCEVUnknown *S) { return S->getValue(); }
 
   void rememberInstruction(Value *I);
+
+  void rememberFlags(Instruction *I);
 
   bool isNormalAddRecExprPHI(PHINode *PN, Instruction *IncV, const Loop *L);
 
