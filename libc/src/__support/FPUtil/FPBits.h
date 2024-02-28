@@ -254,7 +254,7 @@ protected:
 
   // An opaque type to store a floating point biased exponent.
   // We define special values but it is valid to create arbitrary values as long
-  // as they are in the range [BITS_ALL_zeroES, bits_all_ones].
+  // as they are in the range [zero, bits_all_ones].
   // Values greater than bits_all_ones are truncated.
   struct BiasedExponent : public TypedInt<uint32_t> {
     using UP = TypedInt<uint32_t>;
