@@ -558,6 +558,7 @@ genOrderedRegionOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::ParallelOp
 genParallelOp(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::SymMap &symTable,
               Fortran::semantics::SemanticsContext &semaCtx,
               Fortran::lower::pft::Evaluation &eval, bool genNested,
               mlir::Location currentLocation,
@@ -590,8 +591,8 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   auto reductionCallback = [&](mlir::Operation *op) {
     llvm::SmallVector<mlir::Location> locs(reductionVars.size(),
                                            currentLocation);
-    auto block = converter.getFirOpBuilder().createBlock(&op->getRegion(0), {},
-                                                         reductionTypes, locs);
+    auto *block = converter.getFirOpBuilder().createBlock(&op->getRegion(0), {},
+                                                          reductionTypes, locs);
     for (auto [arg, prv] :
          llvm::zip_equal(reductionSymbols, block->getArguments())) {
       converter.bindSymbol(*arg, prv);
@@ -599,13 +600,78 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
     return reductionSymbols;
   };
 
-  return genOpWithBody<mlir::omp::ParallelOp>(
+  OpWithBodyGenInfo genInfo =
       OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
           .setGenNested(genNested)
           .setOuterCombined(outerCombined)
           .setClauses(&clauseList)
           .setReductions(&reductionSymbols, &reductionTypes)
-          .setGenRegionEntryCb(reductionCallback),
+          .setGenRegionEntryCb(reductionCallback);
+
+  if (!enableDelayedPrivatization) {
+    return genOpWithBody<mlir::omp::ParallelOp>(
+        genInfo,
+        /*resultTypes=*/mlir::TypeRange(), ifClauseOperand,
+        numThreadsClauseOperand, allocateOperands, allocatorOperands,
+        reductionVars,
+        reductionDeclSymbols.empty()
+            ? nullptr
+            : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
+                                   reductionDeclSymbols),
+        procBindKindAttr, /*private_vars=*/llvm::SmallVector<mlir::Value>{},
+        /*privatizers=*/nullptr);
+  }
+
+  bool privatize = !outerCombined;
+  DataSharingProcessor dsp(converter, clauseList, eval,
+                           /*useDelayedPrivatization=*/true, &symTable);
+
+  if (privatize)
+    dsp.processStep1();
+
+  const auto &delayedPrivatizationInfo = dsp.getDelayedPrivatizationInfo();
+
+  auto genRegionEntryCB = [&](mlir::Operation *op) {
+    auto parallelOp = llvm::cast<mlir::omp::ParallelOp>(op);
+
+    llvm::SmallVector<mlir::Location> reductionLocs(reductionVars.size(),
+                                                    currentLocation);
+
+    mlir::OperandRange privateVars = parallelOp.getPrivateVars();
+    mlir::Region &region = parallelOp.getRegion();
+
+    llvm::SmallVector<mlir::Type> privateVarTypes = reductionTypes;
+    privateVarTypes.reserve(privateVarTypes.size() + privateVars.size());
+    llvm::transform(privateVars, std::back_inserter(privateVarTypes),
+                    [](mlir::Value v) { return v.getType(); });
+
+    llvm::SmallVector<mlir::Location> privateVarLocs = reductionLocs;
+    privateVarLocs.reserve(privateVarLocs.size() + privateVars.size());
+    llvm::transform(privateVars, std::back_inserter(privateVarLocs),
+                    [](mlir::Value v) { return v.getLoc(); });
+
+    converter.getFirOpBuilder().createBlock(&region, /*insertPt=*/{},
+                                            privateVarTypes, privateVarLocs);
+
+    llvm::SmallVector<const Fortran::semantics::Symbol *> allSymbols =
+        reductionSymbols;
+    allSymbols.append(delayedPrivatizationInfo.symbols);
+    for (auto [arg, prv] : llvm::zip_equal(allSymbols, region.getArguments())) {
+      converter.bindSymbol(*arg, prv);
+    }
+
+    return allSymbols;
+  };
+
+  // TODO Merge with the reduction CB.
+  genInfo.setGenRegionEntryCb(genRegionEntryCB).setDataSharingProcessor(&dsp);
+
+  llvm::SmallVector<mlir::Attribute> privatizers(
+      delayedPrivatizationInfo.privatizers.begin(),
+      delayedPrivatizationInfo.privatizers.end());
+
+  return genOpWithBody<mlir::omp::ParallelOp>(
+      genInfo,
       /*resultTypes=*/mlir::TypeRange(), ifClauseOperand,
       numThreadsClauseOperand, allocateOperands, allocatorOperands,
       reductionVars,
@@ -613,8 +679,11 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
           ? nullptr
           : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
                                  reductionDeclSymbols),
-      procBindKindAttr, /*private_vars=*/llvm::SmallVector<mlir::Value>{},
-      /*privatizers=*/nullptr);
+      procBindKindAttr, delayedPrivatizationInfo.originalAddresses,
+      delayedPrivatizationInfo.privatizers.empty()
+          ? nullptr
+          : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
+                                 privatizers));
 }
 
 static mlir::omp::SectionOp
@@ -1621,7 +1690,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     if ((llvm::omp::allParallelSet & llvm::omp::loopConstructSet)
             .test(ompDirective)) {
       validDirective = true;
-      genParallelOp(converter, semaCtx, eval, /*genNested=*/false,
+      genParallelOp(converter, symTable, semaCtx, eval, /*genNested=*/false,
                     currentLocation, loopOpClauseList,
                     /*outerCombined=*/true);
     }
@@ -1711,8 +1780,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                        currentLocation);
     break;
   case llvm::omp::Directive::OMPD_parallel:
-    genParallelOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation,
-                  beginClauseList);
+    genParallelOp(converter, symTable, semaCtx, eval, /*genNested=*/true,
+                  currentLocation, beginClauseList);
     break;
   case llvm::omp::Directive::OMPD_single:
     genSingleOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation,
@@ -1769,7 +1838,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
           .test(directive.v)) {
     bool outerCombined =
         directive.v != llvm::omp::Directive::OMPD_target_parallel;
-    genParallelOp(converter, semaCtx, eval, /*genNested=*/false,
+    genParallelOp(converter, symTable, semaCtx, eval, /*genNested=*/false,
                   currentLocation, beginClauseList, outerCombined);
     combinedDirective = true;
   }
@@ -1852,7 +1921,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   // Parallel wrapper of PARALLEL SECTIONS construct
   if (dir == llvm::omp::Directive::OMPD_parallel_sections) {
-    genParallelOp(converter, semaCtx, eval,
+    genParallelOp(converter, symTable, semaCtx, eval,
                   /*genNested=*/false, currentLocation, sectionsClauseList,
                   /*outerCombined=*/true);
   } else {
