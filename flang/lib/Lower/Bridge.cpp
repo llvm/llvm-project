@@ -1000,6 +1000,17 @@ private:
       if (sym.detailsIf<Fortran::semantics::CommonBlockDetails>())
         return symMap->lookupSymbol(sym);
 
+      // For symbols to be privatized in OMP, the symbol is mapped to an
+      // instance of `SymbolBox::Intrinsic` (i.e. a direct mapping to an MLIR
+      // SSA value). This MLIR SSA value is the block argument to the
+      // `omp.private`'s `alloc` block. If this is the case, we return this
+      // `SymbolBox::Intrinsic` value.
+      if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
+        return v.match(
+            [&](const Fortran::lower::SymbolBox::Intrinsic &)
+                -> Fortran::lower::SymbolBox { return v; },
+            [](const auto &) -> Fortran::lower::SymbolBox { return {}; });
+
       return {};
     }
     if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
@@ -1018,7 +1029,7 @@ private:
   /// Find the symbol in one level up of symbol map such as for host-association
   /// in OpenMP code or return null.
   Fortran::lower::SymbolBox
-  lookupOneLevelUpSymbol(const Fortran::semantics::Symbol &sym) {
+  lookupOneLevelUpSymbol(const Fortran::semantics::Symbol &sym) override {
     if (Fortran::lower::SymbolBox v = localSymbols.lookupOneLevelUpSymbol(sym))
       return v;
     return {};

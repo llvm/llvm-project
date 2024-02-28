@@ -937,7 +937,7 @@ define <vscale x 32 x i1> @vfptosi_nxv32f16_nxv32i1(<vscale x 32 x half> %va) {
 ; ZVFHMIN-NEXT:    vfncvt.rtz.x.f.w v8, v24
 ; ZVFHMIN-NEXT:    vand.vi v8, v8, 1
 ; ZVFHMIN-NEXT:    vmsne.vi v0, v8, 0
-; ZVFHMIN-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vslideup.vx v0, v16, a0
 ; ZVFHMIN-NEXT:    ret
   %evec = fptosi <vscale x 32 x half> %va to <vscale x 32 x i1>
@@ -967,7 +967,7 @@ define <vscale x 32 x i1> @vfptoui_nxv32f16_nxv32i1(<vscale x 32 x half> %va) {
 ; ZVFHMIN-NEXT:    vfncvt.rtz.xu.f.w v8, v24
 ; ZVFHMIN-NEXT:    vand.vi v8, v8, 1
 ; ZVFHMIN-NEXT:    vmsne.vi v0, v8, 0
-; ZVFHMIN-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vslideup.vx v0, v16, a0
 ; ZVFHMIN-NEXT:    ret
   %evec = fptoui <vscale x 32 x half> %va to <vscale x 32 x i1>

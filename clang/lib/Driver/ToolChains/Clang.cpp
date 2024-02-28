@@ -4527,10 +4527,9 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                       options::OPT_gpubnames, options::OPT_gno_pubnames);
   if (DwarfFission != DwarfFissionKind::None ||
       (PubnamesArg && checkDebugInfoOption(PubnamesArg, Args, D, TC)))
-    if (DebuggerTuning != llvm::DebuggerKind::LLDB &&
-        (!PubnamesArg ||
-         (!PubnamesArg->getOption().matches(options::OPT_gno_gnu_pubnames) &&
-          !PubnamesArg->getOption().matches(options::OPT_gno_pubnames))))
+    if (!PubnamesArg ||
+        (!PubnamesArg->getOption().matches(options::OPT_gno_gnu_pubnames) &&
+         !PubnamesArg->getOption().matches(options::OPT_gno_pubnames)))
       CmdArgs.push_back(PubnamesArg && PubnamesArg->getOption().matches(
                                            options::OPT_gpubnames)
                             ? "-gpubnames"
@@ -6019,7 +6018,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *A = Args.getLastArg(options::OPT_fbasic_block_address_map,
                                options::OPT_fno_basic_block_address_map)) {
-    if (Triple.isX86() && Triple.isOSBinFormatELF()) {
+    if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF()) {
       if (A->getOption().matches(options::OPT_fbasic_block_address_map))
         A->render(Args, CmdArgs);
     } else {

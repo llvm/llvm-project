@@ -61,7 +61,6 @@ DEFINE_FALLBACK(Asinh)
 DEFINE_FALLBACK(Atan)
 DEFINE_FALLBACK(Atan2)
 DEFINE_FALLBACK(Atanh)
-DEFINE_FALLBACK(CAbs)
 DEFINE_FALLBACK(Ceil)
 DEFINE_FALLBACK(Cos)
 DEFINE_FALLBACK(Cosh)
@@ -90,15 +89,6 @@ DEFINE_FALLBACK(Trunc)
 DEFINE_FALLBACK(Y0)
 DEFINE_FALLBACK(Y1)
 DEFINE_FALLBACK(Yn)
-
-// Define ComplexF128 type that is compatible with
-// the type of results/arguments of libquadmath.
-// TODO: this may need more work for other libraries/compilers.
-#if !defined(_ARCH_PPC) || defined(__LONG_DOUBLE_IEEE128__)
-typedef _Complex float __attribute__((mode(TC))) ComplexF128;
-#else
-typedef _Complex float __attribute__((mode(KC))) ComplexF128;
-#endif
 
 #if HAS_LIBM
 // Define wrapper callers for libm.
@@ -172,7 +162,6 @@ DEFINE_SIMPLE_ALIAS(Asinh, asinhq)
 DEFINE_SIMPLE_ALIAS(Atan, atanq)
 DEFINE_SIMPLE_ALIAS(Atan2, atan2q)
 DEFINE_SIMPLE_ALIAS(Atanh, atanhq)
-DEFINE_SIMPLE_ALIAS(CAbs, cabsq)
 DEFINE_SIMPLE_ALIAS(Ceil, ceilq)
 DEFINE_SIMPLE_ALIAS(Cos, cosq)
 DEFINE_SIMPLE_ALIAS(Cosh, coshq)
