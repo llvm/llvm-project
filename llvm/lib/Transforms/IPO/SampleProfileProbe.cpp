@@ -191,7 +191,7 @@ SampleProfileProber::SampleProfileProber(Function &Func,
 // This discrepancy in probe ID could cause profile mismatching issues.
 // Note that those ignored blocks are either cold blocks or new split blocks
 // whose original blocks are instrumented, so it shouldn't degrade the profile
-// quailty.
+// quality.
 void SampleProfileProber::computeBlocksToIgnore(
     DenseSet<BasicBlock *> &BlocksToIgnore,
     DenseSet<BasicBlock *> &BlocksAndCallsToIgnore) {
@@ -201,11 +201,17 @@ void SampleProfileProber::computeBlocksToIgnore(
 
   BlocksToIgnore.insert(BlocksAndCallsToIgnore.begin(),
                         BlocksAndCallsToIgnore.end());
-  // Handle the call-to-invoke conversion case, ignore the normal dests of
-  // invoke.
+
+  // Handle the call-to-invoke conversion case: make sure that the probe id and
+  // callsite id are consistent before and after the block split. For block
+  // probe, we only keep the head block probe id and ignore the block ids of the
+  // normal dests. For callsite probe, it's different to block probe, there is
+  // no additional callsite in the normal dests, so we don't ignore the
+  // callsites.
   findInvokeNormalDests(BlocksToIgnore);
 }
 
+// Unreachable blocks and calls are always cold, ignore them.
 void SampleProfileProber::findUnreachableBlocks(
     DenseSet<BasicBlock *> &BlocksToIgnore) {
   for (auto &BB : *F) {
