@@ -4601,10 +4601,20 @@ SourceRange DesignatedInitExpr::getDesignatorsSourceRange() const {
 SourceLocation DesignatedInitExpr::getBeginLoc() const {
   auto *DIE = const_cast<DesignatedInitExpr *>(this);
   Designator &First = *DIE->getDesignator(0);
-  if (First.isFieldDesignator())
-    return GNUSyntax ? First.getFieldLoc() : First.getDotLoc();
+  if (First.isFieldDesignator()) {
+    /* search all designators in case the first one is not
+       initialized */
+    for (unsigned int i=0; i<DIE->size(); i++) {
+      Designator &Des = *DIE->getDesignator(i);
+      SourceLocation retval = GNUSyntax ? Des.getFieldLoc() : Des.getDotLoc();
+      if (!retval.isValid ())
+	continue;
+      return retval;
+    }
+  }
   return First.getLBracketLoc();
 }
+
 
 SourceLocation DesignatedInitExpr::getEndLoc() const {
   return getInit()->getEndLoc();
