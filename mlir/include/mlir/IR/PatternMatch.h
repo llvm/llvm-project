@@ -579,7 +579,7 @@ public:
 
   /// Split the operations starting at "before" (inclusive) out of the given
   /// block into a new block, and return it.
-  virtual Block *splitBlock(Block *block, Block::iterator before);
+  Block *splitBlock(Block *block, Block::iterator before);
 
   /// Unlink this operation from its current block and insert it right before
   /// `existingOp` which may be in the same or another block in the same

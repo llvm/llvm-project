@@ -69,6 +69,7 @@ set(sources
   log.cpp
   log10.cpp
   lround.cpp
+  norm2.cpp
   pow.cpp
   round.cpp
   sin.cpp

@@ -472,12 +472,11 @@ bool SDWADstPreserveOperand::convertToSDWA(MachineInstr &MI,
   }
 
   // Move MI before v_or_b32
-  auto MBB = MI.getParent();
-  MBB->remove(&MI);
-  MBB->insert(getParentInst(), &MI);
+  MI.getParent()->remove(&MI);
+  getParentInst()->getParent()->insert(getParentInst(), &MI);
 
   // Add Implicit use of preserved register
-  MachineInstrBuilder MIB(*MBB->getParent(), MI);
+  MachineInstrBuilder MIB(*MI.getMF(), MI);
   MIB.addReg(getPreservedOperand()->getReg(),
              RegState::ImplicitKill,
              getPreservedOperand()->getSubReg());
