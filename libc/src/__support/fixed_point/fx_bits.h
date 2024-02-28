@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_FIXEDPOINT_FXBITS_H
-#define LLVM_LIBC_SRC___SUPPORT_FIXEDPOINT_FXBITS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_BITS_H
+#define LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_BITS_H
 
 #include "llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/bit.h"
@@ -165,4 +165,4 @@ template <typename T> LIBC_INLINE constexpr T round(T x, int n) {
 
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 
-#endif // LLVM_LIBC_SRC___SUPPORT_FIXEDPOINT_FXBITS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_BITS_H
