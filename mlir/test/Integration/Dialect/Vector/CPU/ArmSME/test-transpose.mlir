@@ -51,9 +51,9 @@ func.func @entry() {
   // CHECK-NEXT: ( 2, 2, 2, 2
   // CHECK-NEXT: ( 3, 3, 3, 3
   // CHECK:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %tile : vector<[4]x[4]xi32>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   // Dump the transposed tile. The smallest SVL is 128-bits so the tile will be
   // at least 4x4xi32.
@@ -64,9 +64,9 @@ func.func @entry() {
   // CHECK-NEXT: ( 0, 1, 2, 3
   // CHECK-NEXT: ( 0, 1, 2, 3
   // CHECK:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %transposed_tile : vector<[4]x[4]xi32>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   return
 }
