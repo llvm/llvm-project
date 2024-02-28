@@ -76,6 +76,7 @@ static long_double_Complex_t CMPLXL(long double r, long double i) {
 #endif
 
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#ifndef CMPLXF128
 /*
  * GCC 7.4.0 (currently minimum GCC version for llvm builds)
  * supports __builtin_complex. For Clang, require >=12.0.
@@ -93,6 +94,7 @@ static CFloat128ComplexType CMPLXF128(CFloat128Type r, CFloat128Type i) {
   u.x.i = i;
   return u.result;
 }
+#endif
 #endif
 #endif
 

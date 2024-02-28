@@ -20,6 +20,8 @@
 #ifndef FORTRAN_COMMON_FLOAT128_H_
 #define FORTRAN_COMMON_FLOAT128_H_
 
+#include <float.h>
+
 #ifdef __cplusplus
 /*
  * libc++ does not fully support __float128 right now, e.g.
