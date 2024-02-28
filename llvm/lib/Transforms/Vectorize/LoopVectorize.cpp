@@ -1517,7 +1517,7 @@ public:
 
   /// Selects and saves TailFoldingStyle for 2 options - if IV update may
   /// overflow or not.
-  void setTailFoldinStyles() {
+  void setTailFoldingStyles() {
     assert(ChosenTailFoldingStyle.first == TailFoldingStyle::None &&
            ChosenTailFoldingStyle.second == TailFoldingStyle::None &&
            "Tail folding must not be selected yet.");
@@ -4652,7 +4652,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // found modulo the vectorization factor is not zero, try to fold the tail
   // by masking.
   // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
-  setTailFoldinStyles();
+  setTailFoldingStyles();
   if (foldTailByMasking())
     return MaxFactors;
 
