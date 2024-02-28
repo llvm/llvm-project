@@ -100,9 +100,6 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target, unsigned targetBitWidth) {
 
-  // Can't pass a paramter into lambda function directory. So need to store
-  // it in a local variable.
-  unsigned targBitWidth = targetBitWidth;
   typeConverter.addConversion([](VectorType type) -> std::optional<Type> {
     // Ignore scalable vectors for now.
     if (type.getRank() <= 1 || type.isScalable())
@@ -123,15 +120,16 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
   typeConverter.addSourceMaterialization(materializeCast);
   typeConverter.addTargetMaterialization(materializeCast);
   target.markUnknownOpDynamicallyLegal(
-      [&](Operation *op) -> std::optional<bool> {
+      [=](Operation *op) -> std::optional<bool> {
         if ((isa<arith::ConstantOp>(op) ||
-             op->hasTrait<OpTrait::Vectorizable>()) &&
-            isLessThanTargetBitWidth(op, targBitWidth))
-          return typeConverter.isLegal(op);
-
+             op->hasTrait<OpTrait::Vectorizable>())) {
+          return (isLessThanTargetBitWidth(op, targetBitWidth)
+                      ? typeConverter.isLegal(op)
+                      : true);
+        }
         return std::nullopt;
       });
 
   patterns.add<LinearizeConstant, LinearizeVectorizable>(
-      typeConverter, patterns.getContext(), targBitWidth);
+      typeConverter, patterns.getContext(), targetBitWidth);
 }
