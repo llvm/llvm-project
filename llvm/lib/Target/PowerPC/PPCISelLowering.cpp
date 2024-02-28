@@ -12760,7 +12760,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     //  ...
     //   TrueVal = ...
     //   cmpTY ccX, r1, r2
-    //   bCC copy1MBB
+    //   bCC sinkMBB
     //   fallthrough --> copy0MBB
     MachineBasicBlock *thisMBB = BB;
     MachineBasicBlock *copy0MBB = F->CreateMachineBasicBlock(LLVM_BB);
@@ -12769,6 +12769,12 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     F->insert(It, copy0MBB);
     F->insert(It, sinkMBB);
 
+    // Set the call frame size on entry to the new basic blocks.
+    // See https://reviews.llvm.org/D156113.
+    unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
+    copy0MBB->setCallFrameSize(CallFrameSize);
+    sinkMBB->setCallFrameSize(CallFrameSize);
+    
     // Transfer the remainder of BB and its successor edges to sinkMBB.
     sinkMBB->splice(sinkMBB->begin(), BB,
                     std::next(MachineBasicBlock::iterator(MI)), BB->end());
