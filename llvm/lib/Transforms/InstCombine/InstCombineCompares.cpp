@@ -7286,6 +7286,10 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
 Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
                                                     Instruction *LHSI,
                                                     Constant *RHSC) {
+  if (RHSC->getType()->isVectorTy()) {
+    if (Constant *CV = RHSC->getSplatValue(false))
+      RHSC = CV;
+  }
   if (!isa<ConstantFP>(RHSC)) return nullptr;
   const APFloat &RHS = cast<ConstantFP>(RHSC)->getValueAPF();
 
@@ -7297,6 +7301,16 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
   Type *IntTy = LHSI->getOperand(0)->getType();
   unsigned IntWidth = IntTy->getScalarSizeInBits();
   bool LHSUnsigned = isa<UIToFPInst>(LHSI);
+
+  Value *False, *True;
+  if (IntTy->isVectorTy()) {
+    ElementCount EC = cast<VectorType>(IntTy)->getElementCount();
+    True = Builder.CreateVectorSplat(EC, Builder.getTrue());
+    False = Builder.CreateVectorSplat(EC, Builder.getFalse());
+  } else {
+    True = Builder.getTrue();
+    False = Builder.getFalse();
+  }
 
   if (I.isEquality()) {
     FCmpInst::Predicate P = I.getPredicate();
@@ -7312,10 +7326,10 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
       RHSRoundInt.roundToIntegral(APFloat::rmNearestTiesToEven);
       if (RHS != RHSRoundInt) {
         if (P == FCmpInst::FCMP_OEQ || P == FCmpInst::FCMP_UEQ)
-          return replaceInstUsesWith(I, Builder.getFalse());
+          return replaceInstUsesWith(I, False);
 
         assert(P == FCmpInst::FCMP_ONE || P == FCmpInst::FCMP_UNE);
-        return replaceInstUsesWith(I, Builder.getTrue());
+        return replaceInstUsesWith(I, True);
       }
     }
 
@@ -7380,9 +7394,9 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
     Pred = ICmpInst::ICMP_NE;
     break;
   case FCmpInst::FCMP_ORD:
-    return replaceInstUsesWith(I, Builder.getTrue());
+    return replaceInstUsesWith(I, True);
   case FCmpInst::FCMP_UNO:
-    return replaceInstUsesWith(I, Builder.getFalse());
+    return replaceInstUsesWith(I, False);
   }
 
   // Now we know that the APFloat is a normal number, zero or inf.
@@ -7398,8 +7412,8 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
     if (SMax < RHS) { // smax < 13123.0
       if (Pred == ICmpInst::ICMP_NE  || Pred == ICmpInst::ICMP_SLT ||
           Pred == ICmpInst::ICMP_SLE)
-        return replaceInstUsesWith(I, Builder.getTrue());
-      return replaceInstUsesWith(I, Builder.getFalse());
+        return replaceInstUsesWith(I, True);
+      return replaceInstUsesWith(I, False);
     }
   } else {
     // If the RHS value is > UnsignedMax, fold the comparison. This handles
@@ -7410,8 +7424,8 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
     if (UMax < RHS) { // umax < 13123.0
       if (Pred == ICmpInst::ICMP_NE  || Pred == ICmpInst::ICMP_ULT ||
           Pred == ICmpInst::ICMP_ULE)
-        return replaceInstUsesWith(I, Builder.getTrue());
-      return replaceInstUsesWith(I, Builder.getFalse());
+        return replaceInstUsesWith(I, True);
+      return replaceInstUsesWith(I, False);
     }
   }
 
@@ -7423,8 +7437,8 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
     if (SMin > RHS) { // smin > 12312.0
       if (Pred == ICmpInst::ICMP_NE || Pred == ICmpInst::ICMP_SGT ||
           Pred == ICmpInst::ICMP_SGE)
-        return replaceInstUsesWith(I, Builder.getTrue());
-      return replaceInstUsesWith(I, Builder.getFalse());
+        return replaceInstUsesWith(I, True);
+      return replaceInstUsesWith(I, False);
     }
   } else {
     // See if the RHS value is < UnsignedMin.
@@ -7434,8 +7448,8 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
     if (UMin > RHS) { // umin > 12312.0
       if (Pred == ICmpInst::ICMP_NE || Pred == ICmpInst::ICMP_UGT ||
           Pred == ICmpInst::ICMP_UGE)
-        return replaceInstUsesWith(I, Builder.getTrue());
-      return replaceInstUsesWith(I, Builder.getFalse());
+        return replaceInstUsesWith(I, True);
+      return replaceInstUsesWith(I, False);
     }
   }
 
@@ -7454,14 +7468,14 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
       switch (Pred) {
       default: llvm_unreachable("Unexpected integer comparison!");
       case ICmpInst::ICMP_NE:  // (float)int != 4.4   --> true
-        return replaceInstUsesWith(I, Builder.getTrue());
+        return replaceInstUsesWith(I, True);
       case ICmpInst::ICMP_EQ:  // (float)int == 4.4   --> false
-        return replaceInstUsesWith(I, Builder.getFalse());
+        return replaceInstUsesWith(I, False);
       case ICmpInst::ICMP_ULE:
         // (float)int <= 4.4   --> int <= 4
         // (float)int <= -4.4  --> false
         if (RHS.isNegative())
-          return replaceInstUsesWith(I, Builder.getFalse());
+          return replaceInstUsesWith(I, False);
         break;
       case ICmpInst::ICMP_SLE:
         // (float)int <= 4.4   --> int <= 4
@@ -7473,7 +7487,7 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
         // (float)int < -4.4   --> false
         // (float)int < 4.4    --> int <= 4
         if (RHS.isNegative())
-          return replaceInstUsesWith(I, Builder.getFalse());
+          return replaceInstUsesWith(I, False);
         Pred = ICmpInst::ICMP_ULE;
         break;
       case ICmpInst::ICMP_SLT:
@@ -7486,7 +7500,7 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
         // (float)int > 4.4    --> int > 4
         // (float)int > -4.4   --> true
         if (RHS.isNegative())
-          return replaceInstUsesWith(I, Builder.getTrue());
+          return replaceInstUsesWith(I, True);
         break;
       case ICmpInst::ICMP_SGT:
         // (float)int > 4.4    --> int > 4
@@ -7498,7 +7512,7 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
         // (float)int >= -4.4   --> true
         // (float)int >= 4.4    --> int > 4
         if (RHS.isNegative())
-          return replaceInstUsesWith(I, Builder.getTrue());
+          return replaceInstUsesWith(I, True);
         Pred = ICmpInst::ICMP_UGT;
         break;
       case ICmpInst::ICMP_SGE:
@@ -7509,6 +7523,13 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
         break;
       }
     }
+  }
+
+  if (IntTy->isVectorTy()) {
+    Value *RHSV = Builder.CreateVectorSplat(
+                     cast<VectorType>(IntTy)->getElementCount(),
+                     Builder.getInt(RHSInt));
+    return new ICmpInst(Pred, LHSI->getOperand(0), RHSV);
   }
 
   // Lower this FP comparison into an appropriate integer version of the
