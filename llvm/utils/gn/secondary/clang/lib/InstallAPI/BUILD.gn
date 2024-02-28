@@ -8,6 +8,8 @@ static_library("InstallAPI") {
   ]
   sources = [
     "FileList.cpp",
+    "Frontend.cpp",
     "HeaderFile.cpp",
+    "Visitor.cpp",
   ]
 }
