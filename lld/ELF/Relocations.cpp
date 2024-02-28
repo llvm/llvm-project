@@ -1160,8 +1160,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
           // relative relocation section. The R_AARCH64_AUTH_RELATIVE has a
           // smaller addend field as bits [63:32] encode the signing-schema.
           sec->addReloc({expr, type, offset, addend, &sym});
-          part.relrAuthDyn->relocsVec[parallel::getThreadIndex()].push_back(
-              {sec, offset});
+          part.relrAuthDyn->relocs.push_back({sec, offset});
         } else {
           part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
                                   DynamicReloc::AddendOnlyWithTargetVA, sym,
