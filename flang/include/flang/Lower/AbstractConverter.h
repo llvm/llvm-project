@@ -53,6 +53,7 @@ class DerivedTypeSpec;
 
 namespace lower {
 class SymMap;
+class SymbolBox;
 namespace pft {
 struct Variable;
 }
@@ -120,6 +121,9 @@ public:
   virtual void copyHostAssociateVar(
       const Fortran::semantics::Symbol &sym,
       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;
+
+  virtual void copyVar(mlir::Location loc, mlir::Value dst,
+                       mlir::Value src) = 0;
 
   /// For a given symbol, check if it is present in the inner-most
   /// level of the symbol map.
@@ -295,6 +299,11 @@ public:
   const Fortran::lower::LoweringOptions &getLoweringOptions() const {
     return loweringOptions;
   }
+
+  /// Find the symbol in one level up of symbol map such as for host-association
+  /// in OpenMP code or return null.
+  virtual Fortran::lower::SymbolBox
+  lookupOneLevelUpSymbol(const Fortran::semantics::Symbol &sym) = 0;
 
 private:
   /// Options controlling lowering behavior.

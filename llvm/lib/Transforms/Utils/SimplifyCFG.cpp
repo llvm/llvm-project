@@ -1538,7 +1538,7 @@ hoistLockstepIdenticalDPValues(Instruction *TI, Instruction *I1,
   if (!I1->hasDbgValues())
     return;
   using CurrentAndEndIt =
-      std::pair<DPValue::self_iterator, DPValue::self_iterator>;
+      std::pair<DbgRecord::self_iterator, DbgRecord::self_iterator>;
   // Vector of {Current, End} iterators.
   SmallVector<CurrentAndEndIt> Itrs;
   Itrs.reserve(OtherInsts.size() + 1);
@@ -1550,7 +1550,7 @@ hoistLockstepIdenticalDPValues(Instruction *TI, Instruction *I1,
   // Return true if all Current are identical.
   auto allIdentical = [](const SmallVector<CurrentAndEndIt> &Itrs) {
     return all_of(make_first_range(ArrayRef(Itrs).drop_front()),
-                  [&](DPValue::self_iterator I) {
+                  [&](DbgRecord::self_iterator I) {
                     return Itrs[0].first->isIdenticalToWhenDefined(*I);
                   });
   };
@@ -1565,18 +1565,18 @@ hoistLockstepIdenticalDPValues(Instruction *TI, Instruction *I1,
         {Other->getDbgValueRange().begin(), Other->getDbgValueRange().end()});
   }
 
-  // Iterate in lock-step until any of the DPValue lists are exausted. If
-  // the lock-step DPValues are identical, hoist all of them to TI.
+  // Iterate in lock-step until any of the DbgRecord lists are exausted. If
+  // the lock-step DbgRecord are identical, hoist all of them to TI.
   // This replicates the dbg.* intrinsic behaviour in
   // hoistCommonCodeFromSuccessors.
   while (none_of(Itrs, atEnd)) {
     bool HoistDPVs = allIdentical(Itrs);
     for (CurrentAndEndIt &Pair : Itrs) {
       // Increment Current iterator now as we may be about to move the DPValue.
-      DPValue &DPV = *Pair.first++;
+      DbgRecord &DR = *Pair.first++;
       if (HoistDPVs) {
-        DPV.removeFromParent();
-        TI->getParent()->insertDPValueBefore(&DPV, TI->getIterator());
+        DR.removeFromParent();
+        TI->getParent()->insertDPValueBefore(&DR, TI->getIterator());
       }
     }
   }
@@ -3207,9 +3207,10 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
   // instructions, in the same way that dbg.value intrinsics are dropped at the
   // end of this block.
   for (auto &It : make_range(ThenBB->begin(), ThenBB->end()))
-    for (DPValue &DPV : make_early_inc_range(It.getDbgValueRange()))
-      if (!DPV.isDbgAssign())
-        It.dropOneDbgValue(&DPV);
+    for (DbgRecord &DR : make_early_inc_range(It.getDbgValueRange()))
+      // Drop all records except assign-kind DPValues (dbg.assign equivalent).
+      if (DPValue *DPV = dyn_cast<DPValue>(&DR); !DPV || !DPV->isDbgAssign())
+        It.dropOneDbgValue(&DR);
   BB->splice(BI->getIterator(), ThenBB, ThenBB->begin(),
              std::prev(ThenBB->end()));
 
@@ -3847,7 +3848,8 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   if (PredBlock->IsNewDbgInfoFormat) {
     PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
-    for (DPValue &DPV : PredBlock->getTerminator()->getDbgValueRange()) {
+    for (DPValue &DPV :
+         DPValue::filter(PredBlock->getTerminator()->getDbgValueRange())) {
       RemapDPValue(M, &DPV, VMap,
                    RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }

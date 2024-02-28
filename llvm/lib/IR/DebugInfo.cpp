@@ -240,8 +240,8 @@ void DebugInfoFinder::processInstruction(const Module &M,
   if (auto DbgLoc = I.getDebugLoc())
     processLocation(M, DbgLoc.get());
 
-  for (const DPValue &DPV : I.getDbgValueRange())
-    processDPValue(M, DPV);
+  for (const DbgRecord &DPR : I.getDbgValueRange())
+    processDbgRecord(M, DPR);
 }
 
 void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
@@ -251,9 +251,10 @@ void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
   processLocation(M, Loc->getInlinedAt());
 }
 
-void DebugInfoFinder::processDPValue(const Module &M, const DPValue &DPV) {
-  processVariable(M, DPV.getVariable());
-  processLocation(M, DPV.getDebugLoc().get());
+void DebugInfoFinder::processDbgRecord(const Module &M, const DbgRecord &DR) {
+  if (const DPValue *DPV = dyn_cast<const DPValue>(&DR))
+    processVariable(M, DPV->getVariable());
+  processLocation(M, DR.getDebugLoc().get());
 }
 
 void DebugInfoFinder::processType(DIType *DT) {
@@ -1822,7 +1823,7 @@ void at::deleteAll(Function *F) {
   SmallVector<DPValue *, 12> DPToDelete;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
-      for (auto &DPV : I.getDbgValueRange())
+      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
         if (DPV.isDbgAssign())
           DPToDelete.push_back(&DPV);
       if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
@@ -2246,7 +2247,7 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   };
   for (auto &BB : F) {
     for (auto &I : BB) {
-      for (auto &DPV : I.getDbgValueRange()) {
+      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
         if (DPV.isDbgDeclare())
           ProcessDeclare(&DPV, DPVDeclares);
       }

@@ -17,5 +17,20 @@ add_header_library(
     libc.include.llvm-libc-macros.stdfix_macros
     libc.src.__support.macros.attributes
     libc.src.__support.macros.optimization
+    libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.bit
+    libc.src.__support.math_extras
+)
+
+add_header_library(
+  sqrt
+  HDRS
+    sqrt.h
+  DEPENDS
+    .fx_rep
+    libc.include.llvm-libc-macros.stdfix_macros
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
 )

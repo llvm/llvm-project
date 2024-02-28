@@ -323,6 +323,9 @@ public:
     return isRegOrInline(AMDGPU::VS_32RegClassID, MVT::f32);
   }
 
+  bool isPackedFP16InputMods() const {
+    return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::v2f16);
+  }
 
   bool isVReg() const {
     return isRegClass(AMDGPU::VGPR_32RegClassID) ||
@@ -7269,11 +7272,11 @@ ParseStatus AMDGPUAsmParser::parseHwreg(OperandVector &Operands) {
 
   if (trySkipId("hwreg", AsmToken::LParen)) {
     OperandInfoTy HwReg(OPR_ID_UNKNOWN);
-    OperandInfoTy Offset(OFFSET_DEFAULT_);
-    OperandInfoTy Width(WIDTH_DEFAULT_);
+    OperandInfoTy Offset(HwregOffset::Default);
+    OperandInfoTy Width(HwregSize::Default);
     if (parseHwregBody(HwReg, Offset, Width) &&
         validateHwreg(HwReg, Offset, Width)) {
-      ImmVal = encodeHwreg(HwReg.Id, Offset.Id, Width.Id);
+      ImmVal = HwregEncoding::encode(HwReg.Id, Offset.Id, Width.Id);
     } else {
       return ParseStatus::Failure;
     }

@@ -18,12 +18,11 @@
 #include "clang/Basic/LangStandard.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendOptions.h"
-#include "clang/Frontend/InstallAPIOptions.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <memory>
 #include <string>
 
@@ -112,9 +111,6 @@ protected:
   /// Options controlling preprocessed output.
   std::shared_ptr<PreprocessorOutputOptions> PreprocessorOutputOpts;
 
-  /// Options controlling InstallAPI operations and output.
-  std::shared_ptr<InstallAPIOptions> InstallAPIOpts;
-
   /// Dummy tag type whose instance can be passed into the constructor to
   /// prevent creation of the reference-counted option objects.
   struct EmptyConstructor {};
@@ -149,7 +145,6 @@ public:
   const PreprocessorOutputOptions &getPreprocessorOutputOpts() const {
     return *PreprocessorOutputOpts;
   }
-  const InstallAPIOptions &getInstallAPIOpts() const { return *InstallAPIOpts; }
   /// @}
 
   /// Command line generation.
@@ -242,7 +237,6 @@ public:
   using CompilerInvocationBase::getFrontendOpts;
   using CompilerInvocationBase::getDependencyOutputOpts;
   using CompilerInvocationBase::getPreprocessorOutputOpts;
-  using CompilerInvocationBase::getInstallAPIOpts;
   /// @}
 
   /// Mutable getters.
@@ -264,7 +258,6 @@ public:
   PreprocessorOutputOptions &getPreprocessorOutputOpts() {
     return *PreprocessorOutputOpts;
   }
-  InstallAPIOptions &getInstallAPIOpts() { return *InstallAPIOpts; }
   /// @}
 
   /// Base class internals.
@@ -278,6 +271,7 @@ public:
   std::shared_ptr<PreprocessorOptions> getPreprocessorOptsPtr() {
     return PPOpts;
   }
+  std::shared_ptr<LangOptions> getLangOptsPtr() { return LangOpts; }
   /// @}
 
   /// Create a compiler invocation from a list of input options.

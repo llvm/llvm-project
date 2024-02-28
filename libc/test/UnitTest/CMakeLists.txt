@@ -12,7 +12,7 @@ function(add_unittest_framework_library name)
   endif()
 
   # The Nvidia 'nvlink' linker does not support static libraries.
-  if(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     set(library_type OBJECT)
   else()
     set(library_type STATIC)
@@ -26,7 +26,8 @@ function(add_unittest_framework_library name)
       ${TEST_LIB_SRCS}
       ${TEST_LIB_HDRS}
     )
-    target_include_directories(${lib} PUBLIC ${LIBC_SOURCE_DIR})
+    target_include_directories(${lib} PUBLIC 
+                               ${LIBC_SOURCE_DIR} ${LIBC_SOURCE_DIR}/include)
     list(APPEND compile_options -fno-exceptions -fno-rtti)
     if(TARGET libc.src.time.clock)
       target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
@@ -36,9 +37,9 @@ function(add_unittest_framework_library name)
     endif()
     target_compile_options(${lib} PUBLIC ${compile_options})
   endforeach()
+  _get_hermetic_test_compile_options(compile_options -nostdinc++)
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_BUILD_DIR}/include)
-  target_compile_options(${name}.hermetic
-      PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS} -ffreestanding -nostdinc++)
+  target_compile_options(${name}.hermetic PRIVATE ${compile_options})
 
   if(TEST_LIB_DEPENDS)
     foreach(dep IN LISTS ${TEST_LIB_DEPENDS})

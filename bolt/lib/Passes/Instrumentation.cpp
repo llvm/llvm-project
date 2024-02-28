@@ -17,7 +17,9 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/RWMutex.h"
+#include <queue>
 #include <stack>
+#include <unordered_set>
 
 #define DEBUG_TYPE "bolt-instrumentation"
 
@@ -86,20 +88,88 @@ cl::opt<bool> InstrumentCalls("instrument-calls",
 namespace llvm {
 namespace bolt {
 
-static bool hasAArch64ExclusiveMemop(BinaryFunction &Function) {
+static bool hasAArch64ExclusiveMemop(
+    BinaryFunction &Function,
+    std::unordered_set<const BinaryBasicBlock *> &BBToSkip) {
   // FIXME ARMv8-a architecture reference manual says that software must avoid
   // having any explicit memory accesses between exclusive load and associated
-  // store instruction. So for now skip instrumentation for functions that have
-  // these instructions, since it might lead to runtime deadlock.
+  // store instruction. So for now skip instrumentation for basic blocks that
+  // have these instructions, since it might lead to runtime deadlock.
   BinaryContext &BC = Function.getBinaryContext();
-  for (const BinaryBasicBlock &BB : Function)
-    for (const MCInst &Inst : BB)
-      if (BC.MIB->isAArch64Exclusive(Inst)) {
-        if (opts::Verbosity >= 1)
-          BC.outs() << "BOLT-INSTRUMENTER: Function " << Function
-                    << " has exclusive instructions, skip instrumentation\n";
+  std::queue<std::pair<BinaryBasicBlock *, bool>> BBQueue; // {BB, isLoad}
+  std::unordered_set<BinaryBasicBlock *> Visited;
+
+  if (Function.getLayout().block_begin() == Function.getLayout().block_end())
+    return 0;
+
+  BinaryBasicBlock *BBfirst = *Function.getLayout().block_begin();
+  BBQueue.push({BBfirst, false});
+
+  while (!BBQueue.empty()) {
+    BinaryBasicBlock *BB = BBQueue.front().first;
+    bool IsLoad = BBQueue.front().second;
+    BBQueue.pop();
+    if (Visited.find(BB) != Visited.end())
+      continue;
+    Visited.insert(BB);
+
+    for (const MCInst &Inst : *BB) {
+      // Two loads one after another - skip whole function
+      if (BC.MIB->isAArch64ExclusiveLoad(Inst) && IsLoad) {
+        if (opts::Verbosity >= 2) {
+          outs() << "BOLT-INSTRUMENTER: function " << Function.getPrintName()
+                 << " has two exclusive loads. Ignoring the function.\n";
+        }
         return true;
       }
+
+      if (BC.MIB->isAArch64ExclusiveLoad(Inst))
+        IsLoad = true;
+
+      if (IsLoad && BBToSkip.find(BB) == BBToSkip.end()) {
+        BBToSkip.insert(BB);
+        if (opts::Verbosity >= 2) {
+          outs() << "BOLT-INSTRUMENTER: skip BB " << BB->getName()
+                 << " due to exclusive instruction in function "
+                 << Function.getPrintName() << "\n";
+        }
+      }
+
+      if (!IsLoad && BC.MIB->isAArch64ExclusiveStore(Inst)) {
+        if (opts::Verbosity >= 2) {
+          outs() << "BOLT-INSTRUMENTER: function " << Function.getPrintName()
+                 << " has exclusive store without corresponding load. Ignoring "
+                    "the function.\n";
+        }
+        return true;
+      }
+
+      if (IsLoad && (BC.MIB->isAArch64ExclusiveStore(Inst) ||
+                     BC.MIB->isAArch64ExclusiveClear(Inst)))
+        IsLoad = false;
+    }
+
+    if (IsLoad && BB->succ_size() == 0) {
+      if (opts::Verbosity >= 2) {
+        outs()
+            << "BOLT-INSTRUMENTER: function " << Function.getPrintName()
+            << " has exclusive load in trailing BB. Ignoring the function.\n";
+      }
+      return true;
+    }
+
+    for (BinaryBasicBlock *BBS : BB->successors())
+      BBQueue.push({BBS, IsLoad});
+  }
+
+  if (BBToSkip.size() == Visited.size()) {
+    if (opts::Verbosity >= 2) {
+      outs() << "BOLT-INSTRUMENTER: all BBs are marked with true. Ignoring the "
+                "function "
+             << Function.getPrintName() << "\n";
+    }
+    return true;
+  }
 
   return false;
 }
@@ -307,7 +377,8 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   if (BC.isMachO() && Function.hasName("___GLOBAL_init_65535/1"))
     return;
 
-  if (BC.isAArch64() && hasAArch64ExclusiveMemop(Function))
+  std::unordered_set<const BinaryBasicBlock *> BBToSkip;
+  if (BC.isAArch64() && hasAArch64ExclusiveMemop(Function, BBToSkip))
     return;
 
   SplitWorklistTy SplitWorklist;
@@ -389,6 +460,11 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 
   for (auto BBI = Function.begin(), BBE = Function.end(); BBI != BBE; ++BBI) {
     BinaryBasicBlock &BB = *BBI;
+
+    // Skip BBs with exclusive load/stores
+    if (BBToSkip.find(&BB) != BBToSkip.end())
+      continue;
+
     bool HasUnconditionalBranch = false;
     bool HasJumpTable = false;
     bool IsInvokeBlock = InvokeBlocks.count(&BB) > 0;

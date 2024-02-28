@@ -40,7 +40,7 @@ class BadAddressBreakpointTestCase(TestBase):
             bkpt = target.BreakpointCreateByAddress(illegal_address)
             # Verify that breakpoint is not resolved.
             for bp_loc in bkpt:
-                self.assertEqual(bp_loc.IsResolved(), False)
+                self.assertFalse(bp_loc.IsResolved())
         else:
             self.fail(
                 "Could not find an illegal address at which to set a bad breakpoint."

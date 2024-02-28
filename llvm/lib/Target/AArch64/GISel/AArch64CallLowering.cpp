@@ -535,7 +535,8 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   }
 
   SMEAttrs Attrs(F);
-  if (Attrs.hasZAState() || Attrs.hasStreamingInterfaceOrBody() ||
+  if (Attrs.hasZAState() || Attrs.hasZT0State() ||
+      Attrs.hasStreamingInterfaceOrBody() ||
       Attrs.hasStreamingCompatibleInterface())
     return true;
 

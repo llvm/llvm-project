@@ -120,7 +120,19 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
 endif()
 
+# If we are targeting a GPU architecture in a runtimes build we want to ignore
+# all the standard flag handling.
+if("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn" OR
+   "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
+  return()
+endif()
+
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
+  # When LLVM_ENABLE_EXPENSIVE_CHECKS is ON, LLVM will intercept errors
+  # using assert(). An explicit check is performed here.
+  if (NOT LLVM_ENABLE_ASSERTIONS)
+    message(FATAL_ERROR "LLVM_ENABLE_EXPENSIVE_CHECKS requires LLVM_ENABLE_ASSERTIONS \"ON\".")
+  endif()
   add_compile_definitions(EXPENSIVE_CHECKS)
 
   # In some libstdc++ versions, std::min_element is not constexpr when
