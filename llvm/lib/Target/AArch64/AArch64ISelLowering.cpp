@@ -21034,7 +21034,7 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // These optimizations only works on little endian.
+  // These optimizations only work on little endian.
   if (!DAG.getDataLayout().isLittleEndian())
     return SDValue();
 
@@ -21054,46 +21054,20 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   if (ResVT != MVT::v2i32 && ResVT != MVT::v4i16 && ResVT != MVT::v8i8)
     return SDValue();
 
-  auto getSourceOp = [](SDValue Operand) -> SDValue {
-    if (Operand.getOpcode() == ISD::BITCAST)
-      Operand = Operand->getOperand(0);
-    if (Operand.getOpcode() == ISD::AssertSext ||
-        Operand.getOpcode() == ISD::AssertZext)
-      Operand = Operand->getOperand(0);
-    return Operand;
-  };
+  SDValue SourceOp0 = peekThroughBitcasts(Op0);
+  SDValue SourceOp1 = peekThroughBitcasts(Op1);
 
-  SDValue SourceOp0 = getSourceOp(Op0);
-  SDValue SourceOp1 = getSourceOp(Op1);
-
-  auto IsTruncatingUZP1Concat = [](SDNode *N, LLVMContext &Ctx) -> bool {
-    if (N->getOpcode() != AArch64ISD::UZP1)
-      return false;
-    SDValue Op0 = N->getOperand(0);
-    SDValue Op1 = N->getOperand(1);
-    if (Op0.getOpcode() != ISD::BITCAST || Op1.getOpcode() != ISD::BITCAST)
-      return false;
-    EVT Op0Ty = Op0.getOperand(0).getValueType();
-    if (Op0Ty != Op1.getOperand(0).getValueType())
-      return false;
-
-    EVT ResVT = N->getValueType(0);
-    return ResVT.widenIntegerVectorElementType(Ctx).getHalfNumVectorElementsVT(
-               Ctx) == Op0Ty;
-  };
-
-  // truncating uzp1(x=uzp1, y=uzp1) -> trunc(concat (x, y))
-  // This is similar to the transform below, except that it looks for truncation
-  // done using the uzp1 node.
-  LLVMContext &Ctx = *DAG.getContext();
-  if (IsTruncatingUZP1Concat(N, Ctx) &&
-      IsTruncatingUZP1Concat(SourceOp0.getNode(), Ctx) &&
-      IsTruncatingUZP1Concat(SourceOp1.getNode(), Ctx)) {
-    SDValue UZP1 =
-        DAG.getNode(ISD::CONCAT_VECTORS, DL,
-                    SourceOp0.getValueType().getDoubleNumVectorElementsVT(Ctx),
-                    SourceOp0, SourceOp1);
-    return DAG.getNode(ISD::TRUNCATE, DL, ResVT, UZP1);
+  // truncating uzp1(x, y) -> xtn(concat (x, y))
+  if (SourceOp0.getValueType() == SourceOp1.getValueType()) {
+    EVT Op0Ty = SourceOp0.getValueType();
+    if ((ResVT == MVT::v4i16 && Op0Ty == MVT::v2i32) ||
+        (ResVT == MVT::v8i8 && Op0Ty == MVT::v4i16)) {
+      SDValue Concat =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL,
+                      Op0Ty.getDoubleNumVectorElementsVT(*DAG.getContext()),
+                      SourceOp0, SourceOp1);
+      return DAG.getNode(ISD::TRUNCATE, DL, ResVT, Concat);
+    }
   }
 
   // uzp1(xtn x, xtn y) -> xtn(uzp1 (x, y))
