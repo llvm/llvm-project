@@ -331,3 +331,27 @@ emitc.declare_func @bar
 
 // expected-error@+1 {{'emitc.declare_func' op requires attribute 'sym_name'}}
 "emitc.declare_func"()  : () -> ()
+
+// -----
+
+func.func @logical_and_resulterror(%arg0: i32, %arg1: i32) {
+  // expected-error @+1 {{'emitc.logical_and' op result #0 must be 1-bit signless integer, but got 'i32'}}
+  %0 = "emitc.logical_and"(%arg0, %arg1) : (i32, i32) -> i32
+  return
+}
+
+// -----
+
+func.func @logical_not_resulterror(%arg0: i32) {
+  // expected-error @+1 {{'emitc.logical_not' op result #0 must be 1-bit signless integer, but got 'i32'}}
+  %0 = "emitc.logical_not"(%arg0) : (i32) -> i32
+  return
+}
+
+// -----
+
+func.func @logical_or_resulterror(%arg0: i32, %arg1: i32) {
+  // expected-error @+1 {{'emitc.logical_or' op result #0 must be 1-bit signless integer, but got 'i32'}}
+  %0 = "emitc.logical_or"(%arg0, %arg1) : (i32, i32) -> i32
+  return
+}
