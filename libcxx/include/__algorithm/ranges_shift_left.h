@@ -46,7 +46,8 @@ struct __fn {
     return __shift_left_impl(std::move(__first), std::move(__last), std::move(__n));
   }
 
-  template < forward_range _Range>
+  template <forward_range _Range>
+  requires permutable<iterator_t<_Range>>
   _LIBCPP_HIDE_FROM_ABI constexpr borrowed_subrange_t<_Range>
   operator()(_Range&& __range, range_difference_t<_Range> __n) const {
     return __shift_left_impl(ranges::begin(__range), ranges::end(__range), std::move(__n));
@@ -62,7 +63,7 @@ inline constexpr auto shift_left = __shift_left::__fn{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER == 23
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_POP_MACROS
 
