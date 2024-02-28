@@ -467,7 +467,7 @@ them.
 .. option:: --skip-symbol <symbol>
 
  Do not change parameters of symbol <symbol> when executing other options that
- can change the symbol's name, binding or visibility
+ can change the symbol's name, binding or visibility.
 
 .. option:: --skip-symbols <filename>
 

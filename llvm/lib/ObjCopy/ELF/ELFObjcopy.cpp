@@ -293,6 +293,7 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
   Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
     if (ELFConfig.SymbolsToSkip.matches(Sym.Name))
       return;
+
     // Common and undefined symbols don't make sense as local symbols, and can
     // even cause crashes if we localize those, so skip them.
     if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
