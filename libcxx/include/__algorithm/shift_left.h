@@ -13,6 +13,7 @@
 #include <__algorithm/move.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
