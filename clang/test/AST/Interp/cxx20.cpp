@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexperimental-new-constant-interpreter -std=c++20 -verify %s
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=ref %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexperimental-new-constant-interpreter -std=c++20 -verify=both,expected -fcxx-exceptions %s
+// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,ref -fcxx-exceptions %s
 
 void test_alignas_operand() {
   alignas(8) char dummy;
@@ -798,4 +798,22 @@ void f2() {
     bool c = (a == b); // no diagnostic nor crash during codegen attempting to
                        // access info for unnamed bit-field
 }
+}
+
+namespace FailingDestructor {
+  struct D {
+    int n;
+    bool can_destroy;
+
+    constexpr ~D() {
+      if (!can_destroy)
+        throw "oh no";
+    }
+  };
+  template<D d>
+  void f() {} // both-note {{invalid explicitly-specified argument}}
+
+  void g() {
+    f<D{0, false}>(); // both-error {{no matching function}}
+  }
 }

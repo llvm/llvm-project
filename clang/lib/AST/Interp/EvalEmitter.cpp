@@ -38,8 +38,11 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
   this->ConvertResultToRValue = ConvertResultToRValue;
   EvalResult.setSource(E);
 
-  if (!this->visitExpr(E) && EvalResult.empty())
+  if (!this->visitExpr(E)) {
+    // EvalResult may already have a result set, but something failed
+    // after that (e.g. evaluating destructors).
     EvalResult.setInvalid();
+  }
 
   return std::move(this->EvalResult);
 }

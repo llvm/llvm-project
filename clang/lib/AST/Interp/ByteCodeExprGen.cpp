@@ -2587,7 +2587,10 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *E) {
 
     if (!this->emitFinishInit(E))
       return false;
-    return this->emitRetValue(E);
+    // We are destroying the locals AFTER the Ret op.
+    // The Ret op needs to copy the (alive) values, but the
+    // destructors may still turn the entire expression invalid.
+    return this->emitRetValue(E) && RootScope.destroyLocals();
   }
 
   return false;
@@ -3414,14 +3417,15 @@ bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Record *R) {
   // Now emit the destructor and recurse into base classes.
   if (const CXXDestructorDecl *Dtor = R->getDestructor();
       Dtor && !Dtor->isTrivial()) {
-    if (const Function *DtorFunc = getFunction(Dtor)) {
-      assert(DtorFunc->hasThisPointer());
-      assert(DtorFunc->getNumParams() == 1);
-      if (!this->emitDupPtr(SourceInfo{}))
-        return false;
-      if (!this->emitCall(DtorFunc, 0, SourceInfo{}))
-        return false;
-    }
+    const Function *DtorFunc = getFunction(Dtor);
+    if (!DtorFunc)
+      return false;
+    assert(DtorFunc->hasThisPointer());
+    assert(DtorFunc->getNumParams() == 1);
+    if (!this->emitDupPtr(SourceInfo{}))
+      return false;
+    if (!this->emitCall(DtorFunc, 0, SourceInfo{}))
+      return false;
   }
 
   for (const Record::Base &Base : llvm::reverse(R->bases())) {
