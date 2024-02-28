@@ -155,11 +155,15 @@ public:
   /// Load all the external specializations for the Decl \param D if \param
   /// OnlyPartial is false. Otherwise, load all the external **partial**
   /// specializations for the \param D.
-  virtual void LoadExternalSpecializations(const Decl *D, bool OnlyPartial);
+  ///
+  /// Return true if any new specializations get loaded. Return false otherwise.
+  virtual bool LoadExternalSpecializations(const Decl *D, bool OnlyPartial);
 
   /// Load all the specializations for the Decl \param D with the same template
   /// args specified by \param TemplateArgs.
-  virtual void
+  ///
+  /// Return true if any new specializations get loaded. Return false otherwise.
+  virtual bool
   LoadExternalSpecializations(const Decl *D,
                               ArrayRef<TemplateArgument> TemplateArgs);
 

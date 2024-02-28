@@ -819,16 +819,6 @@ void ODRHash::AddDecl(const Decl *D) {
 
   AddDeclarationName(ND->getDeclName());
 
-  const auto *Specialization =
-            dyn_cast<ClassTemplateSpecializationDecl>(D);
-  AddBoolean(Specialization);
-  if (Specialization) {
-    const TemplateArgumentList &List = Specialization->getTemplateArgs();
-    ID.AddInteger(List.size());
-    for (const TemplateArgument &TA : List.asArray())
-      AddTemplateArgument(TA);
-  }
-
   // If this was a specialization we should take into account its template
   // arguments. This helps to reduce collisions coming when visiting template
   // specialization types (eg. when processing type template arguments).

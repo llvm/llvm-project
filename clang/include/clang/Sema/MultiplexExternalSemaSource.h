@@ -97,9 +97,9 @@ public:
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
                                       DeclarationName Name) override;
 
-  void LoadExternalSpecializations(const Decl *D, bool OnlyPartial) override;
+  bool LoadExternalSpecializations(const Decl *D, bool OnlyPartial) override;
 
-  void
+  bool
   LoadExternalSpecializations(const Decl *D,
                               ArrayRef<TemplateArgument> TemplateArgs) override;
 

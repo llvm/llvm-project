@@ -737,6 +737,8 @@ enum ASTRecordTypes {
 
   /// Record code for updated specialization
   UPDATE_SPECIALIZATION = 73,
+  
+  CXX_ADDED_TEMPLATE_SPECIALIZATION = 74,
 };
 
 /// Record types used within a source manager block.

@@ -362,69 +362,54 @@ void RedeclarableTemplateDecl::loadLazySpecializationsImpl(
   ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
                                               OnlyPartial);
   return;
-
-  // Grab the most recent declaration to ensure we've loaded any lazy
-  // redeclarations of this template.
-  CommonBase *CommonBasePtr = getMostRecentDecl()->getCommonPtr();
-  if (auto *Specs = CommonBasePtr->LazySpecializations) {
-    if (!OnlyPartial)
-      CommonBasePtr->LazySpecializations = nullptr;
-    unsigned N = Specs[0].DeclID.getRawValue();
-    for (unsigned I = 0; I != N; ++I) {
-      // Skip over already loaded specializations.
-      if (!Specs[I + 1].ODRHash)
-        continue;
-      if (!OnlyPartial || Specs[I + 1].IsPartial)
-        (void)loadLazySpecializationImpl(Specs[I + 1]);
-    }
-  }
 }
 
-Decl *RedeclarableTemplateDecl::loadLazySpecializationImpl(
-    LazySpecializationInfo &LazySpecInfo) const {
-  llvm_unreachable("We don't use LazySpecializationInfo any more");
-
-  GlobalDeclID ID = LazySpecInfo.DeclID;
-  assert(ID.isValid() && "Loading already loaded specialization!");
-  // Note that we loaded the specialization.
-  LazySpecInfo.DeclID = GlobalDeclID();
-  LazySpecInfo.ODRHash = LazySpecInfo.IsPartial = 0;
-  return getASTContext().getExternalSource()->GetExternalDecl(ID);
-}
-
-void RedeclarableTemplateDecl::loadLazySpecializationsImpl(
+bool RedeclarableTemplateDecl::loadLazySpecializationsImpl(
     ArrayRef<TemplateArgument> Args, TemplateParameterList *TPL) const {
   auto *ExternalSource = getASTContext().getExternalSource();
   if (!ExternalSource)
-    return;
+    return false;
 
-  ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(), Args);
-  return;
+  // If TPL is not null, it implies that we're loading specializations for
+  // partial templates. We need to load all specializations in such cases.
+  if (TPL)
+    return ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
+                                                       /*OnlyPartial=*/false);
 
-  CommonBase *CommonBasePtr = getMostRecentDecl()->getCommonPtr();
-  if (auto *Specs = CommonBasePtr->LazySpecializations) {
-    unsigned Hash = TemplateArgumentList::ComputeODRHash(Args);
-    unsigned N = Specs[0].DeclID.getRawValue();
-    for (unsigned I = 0; I != N; ++I)
-      if (Specs[I + 1].ODRHash && Specs[I + 1].ODRHash == Hash)
-        (void)loadLazySpecializationImpl(Specs[I + 1]);
-  }
+  return ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
+                                                     Args);
 }
 
-template<class EntryType, typename... ProfileArguments>
+template <class EntryType, typename... ProfileArguments>
 typename RedeclarableTemplateDecl::SpecEntryTraits<EntryType>::DeclType *
-RedeclarableTemplateDecl::findSpecializationImpl(
+RedeclarableTemplateDecl::findSpecializationLocally(
     llvm::FoldingSetVector<EntryType> &Specs, void *&InsertPos,
-    ProfileArguments&&... ProfileArgs) {
-  using SETraits = SpecEntryTraits<EntryType>;
-
-  loadLazySpecializationsImpl(std::forward<ProfileArguments>(ProfileArgs)...);
+    ProfileArguments &&...ProfileArgs) {
+  using SETraits = RedeclarableTemplateDecl::SpecEntryTraits<EntryType>;
 
   llvm::FoldingSetNodeID ID;
   EntryType::Profile(ID, std::forward<ProfileArguments>(ProfileArgs)...,
                      getASTContext());
   EntryType *Entry = Specs.FindNodeOrInsertPos(ID, InsertPos);
   return Entry ? SETraits::getDecl(Entry)->getMostRecentDecl() : nullptr;
+}
+
+template <class EntryType, typename... ProfileArguments>
+typename RedeclarableTemplateDecl::SpecEntryTraits<EntryType>::DeclType *
+RedeclarableTemplateDecl::findSpecializationImpl(
+    llvm::FoldingSetVector<EntryType> &Specs, void *&InsertPos,
+    ProfileArguments &&...ProfileArgs) {
+
+  if (auto *Found = findSpecializationLocally(
+          Specs, InsertPos, std::forward<ProfileArguments>(ProfileArgs)...))
+    return Found;
+
+  if (!loadLazySpecializationsImpl(
+          std::forward<ProfileArguments>(ProfileArgs)...))
+    return nullptr;
+
+  return findSpecializationLocally(
+      Specs, InsertPos, std::forward<ProfileArguments>(ProfileArgs)...);
 }
 
 template<class Derived, class EntryType>
@@ -953,14 +938,6 @@ TemplateArgumentList::CreateCopy(ASTContext &Context,
                                  ArrayRef<TemplateArgument> Args) {
   void *Mem = Context.Allocate(totalSizeToAlloc<TemplateArgument>(Args.size()));
   return new (Mem) TemplateArgumentList(Args);
-}
-
-unsigned TemplateArgumentList::ComputeODRHash(ArrayRef<TemplateArgument> Args) {
-  ODRHash Hasher;
-  for (TemplateArgument TA : Args)
-    Hasher.AddTemplateArgument(TA);
-
-  return Hasher.CalculateHash();
 }
 
 FunctionTemplateSpecializationInfo *FunctionTemplateSpecializationInfo::Create(

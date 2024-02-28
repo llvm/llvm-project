@@ -125,11 +125,10 @@ struct LazySpecializationInfo {
   // Whether or not this specialization is partial.
   bool IsPartial;
 
-  bool operator==(const LazySpecializationInfo &Other) {
+  bool operator==(const LazySpecializationInfo &Other) const {
     assert(ID != Other.ID || IsPartial == Other.IsPartial);
     return ID == Other.ID;
   }
-
   // Records the size record in OnDiskHashTable.
   // sizeof() may return 8 due to align requirements.
   static constexpr unsigned Length = sizeof(DeclID) + sizeof(IsPartial);
