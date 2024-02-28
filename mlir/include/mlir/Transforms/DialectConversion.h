@@ -741,9 +741,6 @@ public:
   /// implemented for dialect conversion.
   void eraseBlock(Block *block) override;
 
-  /// PatternRewriter hook for splitting a block into two parts.
-  Block *splitBlock(Block *block, Block::iterator before) override;
-
   /// PatternRewriter hook for inlining the ops of a block into another block.
   void inlineBlockBefore(Block *source, Block *dest, Block::iterator before,
                          ValueRange argValues = std::nullopt) override;

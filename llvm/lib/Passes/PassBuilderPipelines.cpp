@@ -227,7 +227,6 @@ static cl::opt<bool>
                            cl::desc("Enable DFA jump threading when optimizing for size"),
                            cl::init(false), cl::Hidden);
 
-
 // TODO: turn on and remove flag
 static cl::opt<bool> EnablePGOForceFunctionAttrs(
     "enable-pgo-force-function-attrs",

@@ -295,6 +295,10 @@ unsigned getVGPREncodingGranule(
 /// \returns Total number of VGPRs for given subtarget \p STI.
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
 
+/// \returns Addressable number of architectural VGPRs for a given subtarget \p
+/// STI.
+unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI);
+
 /// \returns Addressable number of VGPRs for given subtarget \p STI.
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI);
 
@@ -1063,15 +1067,6 @@ using HwregEncoding = EncodingFields<HwregId, HwregOffset, HwregSize>;
 
 LLVM_READONLY
 int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI);
-
-LLVM_READNONE
-bool isValidHwreg(int64_t Id);
-
-LLVM_READNONE
-bool isValidHwregOffset(int64_t Offset);
-
-LLVM_READNONE
-bool isValidHwregWidth(int64_t Width);
 
 LLVM_READNONE
 StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI);

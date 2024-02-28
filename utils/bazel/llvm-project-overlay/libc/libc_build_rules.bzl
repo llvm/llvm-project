@@ -17,6 +17,7 @@ def libc_common_copts():
     libc_include_path = paths.join(root_label.workspace_root, root_label.package)
     return [
         "-I" + libc_include_path,
+        "-I" + paths.join(libc_include_path, "include"),
         "-DLIBC_NAMESPACE=" + LIBC_NAMESPACE,
     ]
 
