@@ -240,7 +240,7 @@ Supported
   .. _riscv-zacas-note:
 
 ``Zacas``
-  amocas.w will be used for i32 cmpxchg on RV32. amocas.d will be used i64 cmpxchg on RV64. The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibilty. These can only be used in the assembler.
+  amocas.w will be used for i32 cmpxchg. amocas.d will be used i64 cmpxchg on RV64. The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibilty. These can only be used in the assembler.
 
 Experimental Extensions
 =======================
