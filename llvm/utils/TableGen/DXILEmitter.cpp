@@ -106,7 +106,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
     assert(DefName.starts_with("int_") && "invalid intrinsic name");
     // Remove the int_ from intrinsic name.
     Intrinsic = DefName.substr(4);
-    // NOTE: It is expected that return type and parameter types of
+    // TODO: It is expected that return type and parameter types of
     // DXIL Operation are the same as that of the intrinsic. Deviations
     // are expected to be encoded in TableGen record specification and
     // handled accordingly here. Support to be added later, as needed.
@@ -119,9 +119,10 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
     for (unsigned i = 0; i < TypeListSize; i++) {
       OpTypeNames.emplace_back(TypeList->getElement(i)->getAsString());
       // Get the overload parameter index.
-      // REVISIT : Seems hacky. Is it possible that more than one parameter can
-      // be of overload kind?? REVISIT-2: Check for any additional constraints
-      // specified for DXIL operation restricting return type.
+      // TODO : Seems hacky. Is it possible that more than one parameter can
+      // be of overload kind??
+      // TODO: Check for any additional constraints specified for DXIL operation
+      // restricting return type.
       if (i > 0) {
         auto &CurParam = OpTypeNames.back();
         if (lookupParameterKind(CurParam) >= ParameterKind::OVERLOAD) {
@@ -248,8 +249,8 @@ static void emitDXILIntrinsicMap(std::vector<DXILOperationDesc> &Ops,
  */
 static std::string emitDXILOperationAttr(SmallVector<std::string> Attrs) {
   for (auto Attr : Attrs) {
-    // For now just recognize IntrNoMem and IntrReadMem as valid and ignore
-    // others
+    // TODO: For now just recognize IntrNoMem and IntrReadMem as valid and
+    //  ignore others.
     if (Attr == "IntrNoMem") {
       return "Attribute::ReadNone";
     } else if (Attr == "IntrReadMem") {
