@@ -196,10 +196,10 @@ def ROCDL_GridDimZOp : ROCDL_DeviceFunctionOp<"grid.dim.z",
 
 // Emits the waintcnt instruction. The bitfield's semantics depend
 // on the target chipset
-def ROCDL_WaitcntOp : ROCDL_Op<"waitcnt">, Arguments<(ins I32:$bitfield)> {
+def ROCDL_WaitcntOp : ROCDL_Op<"waitcnt">, Arguments<(ins I32Attr:$bitfield)> {
   string llvmBuilder = [{
     createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_waitcnt,
-      {$bitfield});
+      {builder.getInt32($bitfield)});
   }];
   let assemblyFormat = "attr-dict $bitfield";
 }

@@ -217,11 +217,9 @@ func.func @amdgpu_raw_buffer_atomic_cmpswap_i64(%src : i64, %cmp : i64, %buf : m
 func.func @lds_barrier() {
   // GFX908: llvm.inline_asm has_side_effects asm_dialect = att
   // GFX908-SAME: ";;;WARNING: BREAKS DEBUG WATCHES\0As_waitcnt lgkmcnt(0)\0As_barrier"
-  // GFX90A:  %[[cst:.*]] = llvm.mlir.constant(-7937 : i32) : i32
-  // GFX90A: rocdl.waitcnt %[[cst]]
+  // GFX90A: rocdl.waitcnt -7937
   // GFX90A-NEXT: rocdl.s.barrier
-  // GFX10:  %[[cst:.*]] = llvm.mlir.constant(-16129 : i32) : i32
-  // GFX10:  rocdl.waitcnt %[[cst]]
+  // GFX10:  rocdl.waitcnt -16129
   // GFX10-NEXT: rocdl.s.barrier
   // GFX11:  llvm.inline_asm has_side_effects asm_dialect = att
   // GFX11-SAME: ";;;WARNING: BREAKS DEBUG WATCHES\0As_waitcnt lgkmcnt(0)\0As_barrier"

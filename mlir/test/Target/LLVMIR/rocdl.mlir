@@ -91,8 +91,7 @@ llvm.func @rocdl.bpermute(%src : i32) -> i32 {
 llvm.func @rocdl.waitcnt() {
   // CHECK-LABEL: rocdl.waitcnt
   // CHECK-NEXT: call void @llvm.amdgcn.s.waitcnt(i32 0)
-  %0 = llvm.mlir.constant(0 : i32) : i32
-  rocdl.waitcnt %0
+  rocdl.waitcnt 0
   llvm.return
 }
 

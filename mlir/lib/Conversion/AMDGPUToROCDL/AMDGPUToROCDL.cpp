@@ -316,8 +316,7 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
              << chipset.majorVersion;
 
     Location loc = op->getLoc();
-    Value constant = createI32Constant(rewriter, loc, ldsOnlyBits);
-    rewriter.create<ROCDL::WaitcntOp>(loc, constant);
+    rewriter.create<ROCDL::WaitcntOp>(loc, ldsOnlyBits);
     rewriter.replaceOpWithNewOp<ROCDL::SBarrierOp>(op);
     return success();
   }
