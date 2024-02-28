@@ -35,6 +35,24 @@ void f() {
   TC<int>{}.f();
 }
 
+namespace gh18121 {
+struct Foo {
+  void member() __restrict {
+    Foo *__restrict This = this;
+  }
+};
+}
+
+namespace gh42411 {
+struct foo {
+    int v;
+    void f() const __restrict {
+        static_assert(__is_same(decltype((v)), const int&));
+        (void) [this]() { static_assert(__is_same(decltype((v)), const int&)); };
+    }
+};
+}
+
 namespace gh82941 {
 void f(int& x) {
     (void)x;
