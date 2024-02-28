@@ -21,8 +21,8 @@
 !CHECK:    %[[Z_VAL:.*]] = fir.load %[[Z_DECL]]#0 : !fir.ref<i32>
 !CHECK:    %[[C2:.*]] = arith.constant 2 : i32
 !CHECK:    %[[Z_DIV_2:.*]] = arith.divsi %[[Z_VAL]], %[[C2]] : i32
-!CHECK:    %172 = arith.addi %[[TEN_X]], %[[Z_DIV_2]] : i32
-!CHECK:    omp.atomic.write %163#1 = %172   hint(speculative) memory_order(release) : !fir.ref<i32>, i32
+!CHECK:    %[[ADD_RES:.*]] = arith.addi %[[TEN_X]], %[[Z_DIV_2]] : i32
+!CHECK:    omp.atomic.write %[[Y_DECL]]#1 = %[[ADD_RES]]   hint(speculative) memory_order(release) : !fir.ref<i32>, i32
 
 program OmpAtomicWrite
     use omp_lib
