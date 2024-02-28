@@ -105,6 +105,7 @@ public:
   }
 
   basic_spanbuf(const basic_spanbuf&) = delete;
+
   _LIBCPP_HIDE_FROM_ABI basic_spanbuf(basic_spanbuf&& __rhs)
       : basic_streambuf<_CharT, _Traits>{std::move(__rhs)},
         __mode_{std::move(__rhs.__mode_)},
@@ -113,6 +114,7 @@ public:
   // [spanbuf.assign], assignment and swap
 
   basic_spanbuf& operator=(const basic_spanbuf&) = delete;
+
   _LIBCPP_HIDE_FROM_ABI basic_spanbuf& operator=(basic_spanbuf&& __rhs) {
     basic_spanbuf __tmp{std::move(__rhs)};
     this->swap(__tmp);
@@ -213,13 +215,13 @@ private:
 };
 
 template <class _CharT, class _Traits>
-void swap(basic_spanbuf<_CharT, _Traits>& __x, basic_spanbuf<_CharT, _Traits>& __y) {
+_LIBCPP_HIDE_FROM_ABI void swap(basic_spanbuf<_CharT, _Traits>& __x, basic_spanbuf<_CharT, _Traits>& __y) {
   __x.swap(__y);
 }
 
-using spanbuf = basic_spanbuf<char>;
+using std::spanbuf;
 #  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-using wspanbuf = basic_spanbuf<wchar_t>;
+using std::wspanbuf;
 #  endif
 
 // Class template basic_ispanstream [ispanstream]
@@ -235,27 +237,28 @@ public:
 
   // [ispanstream.cons], constructors
 
-  explicit basic_ispanstream(std::span<_CharT> __s, ios_base::openmode __which = ios_base::in)
+  _LIBCPP_HIDE_FROM_ABI explicit basic_ispanstream(std::span<_CharT> __s, ios_base::openmode __which = ios_base::in)
       : basic_istream<_CharT, _Traits>(std::addressof(__sb_)),
         __sb_(basic_spanbuf<_CharT, _Traits>(__s, __which | ios_base::in)) {}
 
   basic_ispanstream(const basic_ispanstream&) = delete;
 
-  basic_ispanstream(basic_ispanstream&& __rhs)
+  _LIBCPP_HIDE_FROM_ABI basic_ispanstream(basic_ispanstream&& __rhs)
       : basic_istream<_CharT, _Traits>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
     basic_istream<_CharT, _Traits>::set_rdbuf(std::addressof(__sb_));
   }
 
   template <ranges::borrowed_range _ROSeq>
     requires(!convertible_to<_ROSeq, std::span<_CharT>>) && convertible_to<_ROSeq, std::span<const _CharT>>
-  explicit basic_ispanstream(_ROSeq&& __s) : basic_istream<_CharT, _Traits>(std::addressof(__sb_)) {
+  _LIBCPP_HIDE_FROM_ABI explicit basic_ispanstream(_ROSeq&& __s)
+      : basic_istream<_CharT, _Traits>(std::addressof(__sb_)) {
     std::span<const _CharT> __sp(std::forward<_ROSeq>(__s));
     this->span(std::span<_CharT>(std::span<_CharT>(const_cast<_CharT*>(__sp.data()), __sp.size())));
   }
 
   basic_ispanstream& operator=(const basic_ispanstream&) = delete;
 
-  basic_ispanstream& operator=(basic_ispanstream&& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI basic_ispanstream& operator=(basic_ispanstream&& __rhs) {
     basic_ispanstream __tmp{std::move(__rhs)};
     this->swap(__tmp);
     return *this;
@@ -263,24 +266,24 @@ public:
 
   // [ispanstream.swap], swap
 
-  void swap(basic_ispanstream& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI void swap(basic_ispanstream& __rhs) {
     basic_istream<_CharT, _Traits>::swap(__rhs);
     __sb_.swap(__rhs.__sb_);
   }
 
   // [ispanstream.members], member functions
 
-  basic_spanbuf<_CharT, _Traits>* rdbuf() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI basic_spanbuf<_CharT, _Traits>* rdbuf() const noexcept {
     return const_cast<basic_spanbuf<_CharT, _Traits>*>(std::addressof(__sb_));
   }
 
-  std::span<const _CharT> span() const noexcept { return rdbuf()->span(); }
+  _LIBCPP_HIDE_FROM_ABI std::span<const _CharT> span() const noexcept { return rdbuf()->span(); }
 
-  void span(std::span<_CharT> __s) noexcept { rdbuf()->span(__s); }
+  _LIBCPP_HIDE_FROM_ABI void span(std::span<_CharT> __s) noexcept { rdbuf()->span(__s); }
 
   template <ranges::borrowed_range _ROSeq>
     requires(!convertible_to<_ROSeq, std::span<_CharT>>) && convertible_to<_ROSeq, std::span<const _CharT>>
-  void span(_ROSeq&& __s) noexcept {
+  _LIBCPP_HIDE_FROM_ABI void span(_ROSeq&& __s) noexcept {
     std::span<const _CharT> __sp(std::forward<_ROSeq>(__s));
     this->span(std::span<_CharT>(const_cast<_CharT*>(__sp.data()), __sp.size()));
   }
@@ -290,13 +293,13 @@ private:
 };
 
 template <class _CharT, class _Traits>
-void swap(basic_ispanstream<_CharT, _Traits>& __x, basic_ispanstream<_CharT, _Traits>& __y) {
+_LIBCPP_HIDE_FROM_ABI void swap(basic_ispanstream<_CharT, _Traits>& __x, basic_ispanstream<_CharT, _Traits>& __y) {
   __x.swap(__y);
 }
 
-using ispanstream = basic_ispanstream<char>;
+using std::ispanstream;
 #  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-using wispanstream = basic_ispanstream<wchar_t>;
+using std::wispanstream;
 #  endif
 
 // Class template basic_ospanstream [ospanstream]
@@ -312,19 +315,20 @@ public:
 
   // [ospanstream.cons], constructors
 
-  explicit basic_ospanstream(std::span<_CharT> __s, ios_base::openmode __which = ios_base::out)
+  _LIBCPP_HIDE_FROM_ABI explicit basic_ospanstream(std::span<_CharT> __s, ios_base::openmode __which = ios_base::out)
       : basic_ostream<_CharT, _Traits>(std::addressof(__sb_)),
         __sb_(basic_spanbuf<_CharT, _Traits>(__s, __which | ios_base::out)) {}
 
   basic_ospanstream(const basic_ospanstream&) = delete;
 
-  basic_ospanstream(basic_ospanstream&& __rhs) : basic_ospanstream(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
+  _LIBCPP_HIDE_FROM_ABI basic_ospanstream(basic_ospanstream&& __rhs)
+      : basic_ospanstream(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
     basic_ostream<_CharT, _Traits>::set_rdbuf(std::addressof(__sb_));
   }
 
   basic_ospanstream& operator=(const basic_ospanstream&) = delete;
 
-  basic_ospanstream& operator=(basic_ospanstream&& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI basic_ospanstream& operator=(basic_ospanstream&& __rhs) {
     basic_ospanstream __tmp{std::move(__rhs)};
     this->swap(__tmp);
     return *this;
@@ -332,31 +336,31 @@ public:
 
   // [ospanstream.swap], swap
 
-  void swap(basic_ospanstream& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI void swap(basic_ospanstream& __rhs) {
     basic_ostream<_CharT, _Traits>::swap(__rhs);
     __sb_.swap(__rhs.__sb_);
   }
 
   // [ospanstream.members], member functions
 
-  basic_spanbuf<_CharT, _Traits>* rdbuf() const noexcept { return __sb_; }
+  _LIBCPP_HIDE_FROM_ABI basic_spanbuf<_CharT, _Traits>* rdbuf() const noexcept { return __sb_; }
 
-  std::span<_CharT> span() const noexcept { return __sb_.rdbuf()->span(); }
+  _LIBCPP_HIDE_FROM_ABI std::span<_CharT> span() const noexcept { return __sb_.rdbuf()->span(); }
 
-  void span(std::span<_CharT> __s) noexcept { rdbuf()->span(__s); }
+  _LIBCPP_HIDE_FROM_ABI void span(std::span<_CharT> __s) noexcept { rdbuf()->span(__s); }
 
 private:
   basic_spanbuf<_CharT, _Traits> __sb_; // exposition only
 };
 
 template <class _CharT, class _Traits>
-void swap(basic_ospanstream<_CharT, _Traits>& __x, basic_ospanstream<_CharT, _Traits>& __y) {
+_LIBCPP_HIDE_FROM_ABI void swap(basic_ospanstream<_CharT, _Traits>& __x, basic_ospanstream<_CharT, _Traits>& __y) {
   __x.swap(__y);
 }
 
-using ospanstream = basic_ospanstream<char>;
+using std::ospanstream;
 #  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-using wospanstream = basic_ospanstream<wchar_t>;
+using std::wospanstream;
 #  endif
 
 template <class _CharT, class _Traits>
@@ -370,18 +374,20 @@ public:
 
   // [spanstream.cons], constructors
 
-  explicit basic_spanstream(std::span<_CharT> __s, ios_base::openmode __which = ios_base::out | ios_base::in)
+  _LIBCPP_HIDE_FROM_ABI explicit basic_spanstream(std::span<_CharT> __s,
+                                                  ios_base::openmode __which = ios_base::out | ios_base::in)
       : basic_iostream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(basic_spanbuf<_CharT, _Traits>(__s, __which)) {}
 
   basic_spanstream(const basic_spanstream&) = delete;
 
-  basic_spanstream(basic_spanstream&& __rhs) : basic_spanstream(std::move(__rhs)), __sb_(__rhs.__sb_) {
+  _LIBCPP_HIDE_FROM_ABI basic_spanstream(basic_spanstream&& __rhs)
+      : basic_spanstream(std::move(__rhs)), __sb_(__rhs.__sb_) {
     basic_iostream<_CharT, _Traits>::set_rdbuf(std::addressof(__sb_));
   }
 
   basic_spanstream& operator=(const basic_spanstream&) = delete;
 
-  basic_spanstream& operator=(basic_spanstream&& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI basic_spanstream& operator=(basic_spanstream&& __rhs) {
     basic_spanstream __tmp{std::move(__rhs)};
     this->swap(__tmp);
     return *this;
@@ -396,24 +402,24 @@ public:
 
   // [spanstream.members], members
 
-  basic_spanbuf<_CharT, _Traits>* rdbuf() const noexcept { return __sb_; }
+  _LIBCPP_HIDE_FROM_ABI basic_spanbuf<_CharT, _Traits>* rdbuf() const noexcept { return __sb_; }
 
-  std::span<_CharT> span() const noexcept { return rdbuf()->span(); }
+  _LIBCPP_HIDE_FROM_ABI std::span<_CharT> span() const noexcept { return rdbuf()->span(); }
 
-  void span(std::span<_CharT> __s) noexcept { rdbuf()->span(__s); }
+  _LIBCPP_HIDE_FROM_ABI void span(std::span<_CharT> __s) noexcept { rdbuf()->span(__s); }
 
 private:
   basic_spanbuf<_CharT, _Traits> __sb_; // exposition only
 };
 
 template <class _CharT, class _Traits>
-void swap(basic_spanstream<_CharT, _Traits>& __x, basic_spanstream<_CharT, _Traits>& __y) {
+_LIBCPP_HIDE_FROM_ABI void swap(basic_spanstream<_CharT, _Traits>& __x, basic_spanstream<_CharT, _Traits>& __y) {
   __x.swap(__y);
 }
 
-using spanstream = basic_spanstream<char>;
+using std::spanstream;
 #  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-using wspanstream = basic_spanstream<wchar_t>;
+using std::wspanstream;
 #  endif
 
 #endif // _LIBCPP_STD_VER >= 23
