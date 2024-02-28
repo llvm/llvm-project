@@ -20,13 +20,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 23
 
-template <class _CharT, class traits = char_traits<_CharT>>
+template <class _CharT, class _Traits = char_traits<_CharT>>
 class _LIBCPP_TEMPLATE_VIS basic_spanbuf;
-template <class _CharT, class traits = char_traits<_CharT>>
+template <class _CharT, class _Traits = char_traits<_CharT>>
 class _LIBCPP_TEMPLATE_VIS basic_ispanstream;
-template <class _CharT, class traits = char_traits<_CharT>>
+template <class _CharT, class _Traits = char_traits<_CharT>>
 class _LIBCPP_TEMPLATE_VIS basic_ospanstream;
-template <class _CharT, class traits = char_traits<_CharT>>
+template <class _CharT, class _Traits = char_traits<_CharT>>
 class _LIBCPP_TEMPLATE_VIS basic_spanstream;
 
 using spanbuf     = basic_spanbuf<char>;
