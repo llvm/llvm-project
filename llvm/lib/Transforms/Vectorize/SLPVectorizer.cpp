@@ -13914,7 +13914,7 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
 
       if (MaxVF < MinVF) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
-                          << ") <= "
+                          << ") < "
                           << "MinVF (" << MinVF << ")\n");
         return;
       }
