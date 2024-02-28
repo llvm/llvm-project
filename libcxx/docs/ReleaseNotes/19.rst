@@ -73,6 +73,11 @@ Deprecations and Removals
 
 - The ``_LIBCPP_INLINE_VISIBILITY`` and ``_VSTD`` macros have been removed in LLVM 19.
 
+- The ``_LIBCPP_ATOMIC_ONLY_USE_BUILTINS`` configuration option has been removed in LLVM 19. This should not affect
+  many users, except perhaps users using the library with ``-ffreestanding`` with a toolchain where compiler-rt or
+  libatomic is not available. If you are one such user, please reach out to the libc++ developers so we can collaborate
+  on a path for supporting atomics properly on freestanding platforms.
+
 
 Upcoming Deprecations and Removals
 ----------------------------------
