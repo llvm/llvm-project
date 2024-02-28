@@ -1,3 +1,4 @@
+// NOLINT(llvm-header-guard) https://github.com/llvm/llvm-project/issues/83339
 //===-- Internal header for assert ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -5,9 +6,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#ifndef LLVM_LIBC_SRC_ASSERT_ASSERT_H
-#define LLVM_LIBC_SRC_ASSERT_ASSERT_H
 
 #include "src/assert/__assert_fail.h"
 
@@ -25,5 +23,3 @@
        : LIBC_NAMESPACE::__assert_fail(#e, __FILE__, __LINE__,                 \
                                        __PRETTY_FUNCTION__))
 #endif // NDEBUG
-
-#endif // LLVM_LIBC_SRC_ASSERT_ASSERT_H
