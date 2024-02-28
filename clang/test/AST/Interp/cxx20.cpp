@@ -765,3 +765,12 @@ namespace FailingDestructor {
     f<D{0, false}>(); // both-error {{no matching function}}
   }
 }
+
+
+void overflowInSwitchCase(int n) {
+  switch (n) {
+  case (int)(float)1e300: // both-error {{constant expression}} \
+                          // both-note {{value +Inf is outside the range of representable values of type 'int'}}
+    break;
+  }
+}
