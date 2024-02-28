@@ -2307,7 +2307,8 @@ def FlattenElementwiseLinalgOp : Op<Transform_Dialect,
      TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Flattens elementwise linalg ops.
+    Flattens the iteration space and (applicable) operands of elementwise
+    linalg ops to a single dimension.
 
     Returns one handle:
     - Flattened linalg operation.

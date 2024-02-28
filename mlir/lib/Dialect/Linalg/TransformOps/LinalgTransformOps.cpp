@@ -3263,8 +3263,8 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
                 target, "only elementwise flattening is supported"));
   if (failed(maybeFlattened))
     return emitDefaultSilenceableFailure(target);
-  results.push_back((*maybeFlattened).collapsedOp);
-  rewriter.replaceOp(target, (*maybeFlattened).results);
+  results.push_back(maybeFlattened->collapsedOp);
+  rewriter.replaceOp(target, maybeFlattened->results);
   return DiagnosedSilenceableFailure::success();
 }
 

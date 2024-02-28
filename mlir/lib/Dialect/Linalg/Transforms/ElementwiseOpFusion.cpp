@@ -1661,7 +1661,7 @@ public:
             genericOp, "failed to do the fusion by collapsing transformation");
       }
 
-      rewriter.replaceOp(genericOp, (*collapseResult).results);
+      rewriter.replaceOp(genericOp, collapseResult->results);
       return success();
     }
     return failure();
@@ -1700,7 +1700,7 @@ public:
     if (!collapseResult) {
       return rewriter.notifyMatchFailure(op, "failed to collapse dimensions");
     }
-    rewriter.replaceOp(op, (*collapseResult).results);
+    rewriter.replaceOp(op, collapseResult->results);
     return success();
   }
 
