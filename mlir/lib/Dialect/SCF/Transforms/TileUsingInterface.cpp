@@ -1133,6 +1133,5 @@ mlir::scf::lowerToLoopsUsingSCFForOp(RewriterBase &rewriter,
   if (failed(op.generateScalarImplementation(rewriter, op.getLoc(), ivs))) {
     return failure();
   }
-  rewriter.eraseOp(op);
   return loops;
 }
