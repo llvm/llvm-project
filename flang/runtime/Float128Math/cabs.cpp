@@ -12,10 +12,8 @@ namespace Fortran::runtime {
 extern "C" {
 
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-// FIXME: the argument should be CppTypeFor<TypeCategory::Complex, 16>,
-// and it should be translated into the underlying library's
-// corresponding complex128 type.
-CppTypeFor<TypeCategory::Real, 16> RTDEF(CAbsF128)(ComplexF128 x) {
+// NOTE: Flang calls the runtime APIs using C _Complex ABI
+CppTypeFor<TypeCategory::Real, 16> RTDEF(CAbsF128)(CFloat128ComplexType x) {
   return CAbs<RTNAME(CAbsF128)>::invoke(x);
 }
 #endif
