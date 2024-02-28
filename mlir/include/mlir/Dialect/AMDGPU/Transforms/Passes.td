@@ -41,10 +41,10 @@ def OptimizeSharedMemory : Pass<"amdgpu-optimize-shared-memory"> {
     "memref::MemRefDialect", "vector::VectorDialect"
   ];
   let options = [
-    Option<"sharedMemoryLineSizeBytes", "shared-memory-line-size-bytes", "uint64_t",
+    Option<"sharedMemoryLineSizeBytes", "shared-memory-line-size-bytes", "int64_t",
            /*default=*/"128",
            "Shared memory line size in bytes">,
-    Option<"defaultVectorSizeBits", "default-vector-size-bits", "uint64_t",
+    Option<"defaultVectorSizeBits", "default-vector-size-bits", "int64_t",
            /*default=*/"128",
            "Default vector size in bits">,
   ];
