@@ -100,13 +100,17 @@ if (LIBCXX_CONFIGURE_IDE)
   # Create dummy targets for each of the tests in the test suite, this allows
   # IDE's such as CLion to correctly highlight the tests because it knows
   # roughly what include paths/compile flags/macro definitions are needed.
-  include_directories(support)
   file(GLOB_RECURSE LIBCXX_TESTS ${CMAKE_CURRENT_SOURCE_DIR}/*.pass.cpp)
   file(GLOB LIBCXX_TEST_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/support/*)
   file(GLOB_RECURSE LIBCXX_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../include/*)
   add_executable(libcxx_test_objects EXCLUDE_FROM_ALL
           ${LIBCXX_TESTS} ${LIBCXX_TEST_HEADERS} ${LIBCXX_HEADERS})
   add_dependencies(libcxx_test_objects cxx)
+  target_include_directories(libcxx_test_objects
+          PRIVATE
+          support
+          ${CMAKE_CURRENT_SOURCE_DIR}/../include
+  )
 
   split_list(LIBCXX_COMPILE_FLAGS)
   split_list(LIBCXX_LINK_FLAGS)

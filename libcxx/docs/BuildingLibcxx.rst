@@ -299,6 +299,12 @@ libc++ specific options
 
   Additional libraries libc++ is linked to which can be provided in cache.
 
+.. option:: LIBCXX_CONFIGURE_IDE:BOOL
+
+  **Default**: ``"ON"`` when ``XCODE``` or ``MSVC_IDE`` CMake variables are set.
+
+  Generate dummy CMake test targets to provide rough information to IDEs about
+  where test sources will find project headers.
 
 .. _ABI Library Specific Options:
 
