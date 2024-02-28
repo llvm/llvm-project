@@ -149,7 +149,6 @@ getShmReadAndWriteOps(Operation *parentOp, Value shmMemRef,
 LogicalResult amdgpu::optimizeSharedMemoryReadsAndWrites(
     Operation *parentOp, Value memrefValue, int64_t sharedMemoryLineSizeBytes,
     int64_t defaultVectorSizeBits) {
-
   auto memRefType = dyn_cast<MemRefType>(memrefValue.getType());
   if (!memRefType ||
       !amdgpu::AMDGPUDialect::hasSharedMemoryAddressSpace(memRefType))
@@ -239,20 +238,12 @@ amdgpu::optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp,
 
 struct OptimizeSharedMemoryPass
     : public amdgpu::impl::OptimizeSharedMemoryBase<OptimizeSharedMemoryPass> {
-
 public:
-  OptimizeSharedMemoryPass()
-      : OptimizeSharedMemoryBase(),
-        sharedMemoryLineSizeBytes(sharedMemoryLineSizeBytes = 128),
-        defaultVectorSizeBits(defaultVectorSizeBits = 128){};
-
-  OptimizeSharedMemoryPass(int64_t sharedMemoryLineSizeBytes,
-                           int64_t defaultVectorSizeBits)
-      : OptimizeSharedMemoryBase(),
-        sharedMemoryLineSizeBytes(sharedMemoryLineSizeBytes),
-        defaultVectorSizeBits(defaultVectorSizeBits){};
-
+  OptimizeSharedMemoryPass() = default;
+  OptimizeSharedMemoryPass(const OptimizeSharedMemoryOptions &options)
+      : OptimizeSharedMemoryBase(options) {}
   void runOnOperation() override {
+
     Operation *op = getOperation();
     SmallVector<memref::AllocOp> shmAllocOps;
     op->walk([&](memref::AllocOp allocOp) {
@@ -268,8 +259,4 @@ public:
         return;
     }
   }
-
-private:
-  int64_t sharedMemoryLineSizeBytes;
-  int64_t defaultVectorSizeBits;
 };
