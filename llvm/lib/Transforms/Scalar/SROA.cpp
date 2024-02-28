@@ -3956,11 +3956,11 @@ private:
     return false;
   }
 
-  // Unfold gep (select cond, ptr1, ptr2), idx
+  // Fold gep (select cond, ptr1, ptr2), idx
   //   => select cond, gep(ptr1, idx), gep(ptr2, idx)
   // and  gep ptr, (select cond, idx1, idx2)
   //   => select cond, gep(ptr, idx1), gep(ptr, idx2)
-  bool unfoldGEPSelect(GetElementPtrInst &GEPI) {
+  bool foldGEPSelect(GetElementPtrInst &GEPI) {
     // Check whether the GEP has exactly one select operand and all indices
     // will become constant after the transform.
     SelectInst *Sel = dyn_cast<SelectInst>(GEPI.getPointerOperand());
@@ -4029,100 +4029,67 @@ private:
     return true;
   }
 
-  // Unfold gep (phi ptr1, ptr2), idx
-  //   => phi ((gep ptr1, idx), (gep ptr2, idx))
-  // and  gep ptr, (phi idx1, idx2)
-  //   => phi ((gep ptr, idx1), (gep ptr, idx2))
-  bool unfoldGEPPhi(GetElementPtrInst &GEPI) {
-    // To prevent infinitely expanding recursive phis, bail if the GEP pointer
-    // operand (looking through the phi if it is the phi we want to unfold) is
-    // an instruction besides an alloca.
-    PHINode *Phi = dyn_cast<PHINode>(GEPI.getPointerOperand());
-    auto IsInvalidPointerOperand = [](Value *V) {
-      return isa<Instruction>(V) && !isa<AllocaInst>(V);
-    };
-    if (Phi) {
-      if (any_of(Phi->operands(), IsInvalidPointerOperand))
-        return false;
-    } else {
-      if (IsInvalidPointerOperand(GEPI.getPointerOperand()))
-        return false;
-    }
-    // Check whether the GEP has exactly one phi operand (including the pointer
-    // operand) and all indices will become constant after the transform.
-    for (Value *Op : GEPI.indices()) {
-      if (auto *SI = dyn_cast<PHINode>(Op)) {
-        if (Phi)
-          return false;
+  // Fold gep (phi ptr1, ptr2) => phi gep(ptr1), gep(ptr2)
+  bool foldGEPPhi(GetElementPtrInst &GEPI) {
+    if (!GEPI.hasAllConstantIndices())
+      return false;
 
-        Phi = SI;
-        if (!all_of(Phi->incoming_values(),
-                    [](Value *V) { return isa<ConstantInt>(V); }))
-          return false;
-        continue;
-      }
-
-      if (!isa<ConstantInt>(Op))
-        return false;
-    }
-
-    if (!Phi)
+    PHINode *PHI = cast<PHINode>(GEPI.getPointerOperand());
+    if (GEPI.getParent() != PHI->getParent() ||
+        llvm::any_of(PHI->incoming_values(), [](Value *In) {
+          Instruction *I = dyn_cast<Instruction>(In);
+          return !I || isa<GetElementPtrInst>(I) || isa<PHINode>(I) ||
+                 succ_empty(I->getParent()) ||
+                 !I->getParent()->isLegalToHoistInto();
+        }))
       return false;
 
     LLVM_DEBUG(dbgs() << "  Rewriting gep(phi) -> phi(gep):\n";
-               dbgs() << "    original: " << *Phi << "\n";
+               dbgs() << "    original: " << *PHI << "\n";
                dbgs() << "              " << GEPI << "\n";);
 
-    auto GetNewOps = [&](Value *PhiOp) {
-      SmallVector<Value *> NewOps;
-      for (Value *Op : GEPI.operands())
-        if (Op == Phi)
-          NewOps.push_back(PhiOp);
-        else
-          NewOps.push_back(Op);
-      return NewOps;
-    };
-
-    IRB.SetInsertPoint(Phi);
-    PHINode *NewPhi = IRB.CreatePHI(GEPI.getType(), Phi->getNumIncomingValues(),
-                                    Phi->getName() + ".sroa.phi");
-
+    SmallVector<Value *, 4> Index(GEPI.indices());
     bool IsInBounds = GEPI.isInBounds();
-    Type *SourceTy = GEPI.getSourceElementType();
-    // We only handle arguments, constants, and static allocas here, so we can
-    // insert GEPs at the beginning of the function after static allocas.
-    IRB.SetInsertPointPastAllocas(GEPI.getFunction());
-    for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
-      Value *Op = Phi->getIncomingValue(I);
-      BasicBlock *BB = Phi->getIncomingBlock(I);
-      SmallVector<Value *> NewOps = GetNewOps(Op);
+    IRB.SetInsertPoint(GEPI.getParent(), GEPI.getParent()->getFirstNonPHIIt());
+    PHINode *NewPN = IRB.CreatePHI(GEPI.getType(), PHI->getNumIncomingValues(),
+                                   PHI->getName() + ".sroa.phi");
+    for (unsigned I = 0, E = PHI->getNumIncomingValues(); I != E; ++I) {
+      BasicBlock *B = PHI->getIncomingBlock(I);
+      Value *NewVal = nullptr;
+      int Idx = NewPN->getBasicBlockIndex(B);
+      if (Idx >= 0) {
+        NewVal = NewPN->getIncomingValue(Idx);
+      } else {
+        Instruction *In = cast<Instruction>(PHI->getIncomingValue(I));
 
-      Value *NewGEP =
-          IRB.CreateGEP(SourceTy, NewOps[0], ArrayRef(NewOps).drop_front(),
-                        Phi->getName() + ".sroa.gep", IsInBounds);
-      NewPhi->addIncoming(NewGEP, BB);
+        IRB.SetInsertPoint(In->getParent(), std::next(In->getIterator()));
+        Type *Ty = GEPI.getSourceElementType();
+        NewVal = IRB.CreateGEP(Ty, In, Index, In->getName() + ".sroa.gep",
+                               IsInBounds);
+      }
+      NewPN->addIncoming(NewVal, B);
     }
 
     Visited.erase(&GEPI);
-    GEPI.replaceAllUsesWith(NewPhi);
+    GEPI.replaceAllUsesWith(NewPN);
     GEPI.eraseFromParent();
-    Visited.insert(NewPhi);
-    enqueueUsers(*NewPhi);
+    Visited.insert(NewPN);
+    enqueueUsers(*NewPN);
 
     LLVM_DEBUG(dbgs() << "          to: ";
                for (Value *In
-                    : NewPhi->incoming_values()) dbgs()
+                    : NewPN->incoming_values()) dbgs()
                << "\n              " << *In;
-               dbgs() << "\n              " << *NewPhi << '\n');
+               dbgs() << "\n              " << *NewPN << '\n');
 
     return true;
   }
 
   bool visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-    if (unfoldGEPSelect(GEPI))
+    if (foldGEPSelect(GEPI))
       return true;
 
-    if (unfoldGEPPhi(GEPI))
+    if (isa<PHINode>(GEPI.getPointerOperand()) && foldGEPPhi(GEPI))
       return true;
 
     enqueueUsers(GEPI);
