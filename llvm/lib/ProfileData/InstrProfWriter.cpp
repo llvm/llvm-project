@@ -613,12 +613,13 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   std::vector<std::string> VTableNameStrs;
   for (const auto &VTableName : VTableNames.keys())
-      VTableNameStrs.push_back(VTableName.str());
+    VTableNameStrs.push_back(VTableName.str());
 
   std::string CompressedVTableNames;
   if (!VTableNameStrs.empty())
     if (Error E = collectGlobalObjectNameStrings(
-      VTableNameStrs, compression::zlib::isAvailable(), CompressedVTableNames))
+            VTableNameStrs, compression::zlib::isAvailable(),
+            CompressedVTableNames))
       return E;
 
   const uint64_t CompressedStringLen = CompressedVTableNames.length();

@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes=pgo-instr-gen -enable-vtable-value-profiling -S | FileCheck %s --check-prefix=GEN
-; RUN: opt < %s -passes=pgo-instr-gen,instrprof -enable-vtable-value-profiling -S | FileCheck %s --check-prefix=LOWER
+; RUN: opt < %s -passes=pgo-instr-gen -enable-vtable-value-profiling -S 2>&1 | FileCheck %s --check-prefix=GEN --implicit-check-not="VTable value profiling is presently not supported"
+; RUN: opt < %s -passes=pgo-instr-gen,instrprof -enable-vtable-value-profiling -S 2>&1 | FileCheck %s --check-prefix=LOWER --implicit-check-not="VTable value profiling is presently not supported"
 
 ; __llvm_prf_vnm stores zlib-compressed vtable names.
 ; REQUIRES: zlib

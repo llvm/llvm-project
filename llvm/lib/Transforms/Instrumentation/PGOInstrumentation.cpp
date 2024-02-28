@@ -1793,6 +1793,15 @@ static bool InstrumentAllFunctions(
   // (before LTO/ThinLTO linking) to create these variables.
   if (!IsCS)
     createIRLevelProfileFlagVar(M, /*IsCS=*/false);
+
+  Triple TT(M.getTargetTriple());
+  LLVMContext &Ctx = M.getContext();
+  if (!TT.isOSBinFormatELF() && EnableVTableValueProfiling)
+    Ctx.diagnose(
+        DiagnosticInfoPGOProfile(M.getName().data(),
+                                 Twine("VTable value profiling is presently not "
+                                       "supported for non-ELF object formats"),
+                                 DS_Warning));
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
 
