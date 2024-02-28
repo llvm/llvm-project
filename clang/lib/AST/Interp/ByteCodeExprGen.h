@@ -117,6 +117,7 @@ public:
   bool VisitRequiresExpr(const RequiresExpr *E);
   bool VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
   bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *E);
+  bool VisitPseudoObjectExpr(const PseudoObjectExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -182,7 +183,7 @@ protected:
     if (!visitInitializer(Init))
       return false;
 
-    if (!this->emitInitPtr(Init))
+    if (!this->emitFinishInit(Init))
       return false;
 
     return this->emitPopPtr(Init);
@@ -196,7 +197,7 @@ protected:
     if (!visitInitializer(Init))
       return false;
 
-    if (!this->emitInitPtr(Init))
+    if (!this->emitFinishInit(Init))
       return false;
 
     return this->emitPopPtr(Init);
@@ -210,7 +211,7 @@ protected:
     if (!visitInitializer(I))
       return false;
 
-    return this->emitInitPtrPop(I);
+    return this->emitFinishInitPop(I);
   }
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *E);

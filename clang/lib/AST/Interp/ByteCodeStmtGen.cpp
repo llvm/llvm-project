@@ -200,7 +200,7 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
           return false;
         if (!this->visitInitializer(InitExpr))
           return false;
-        if (!this->emitInitPtrPop(InitExpr))
+        if (!this->emitFinishInitPop(InitExpr))
           return false;
       } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
         assert(IFD->getChainingSize() >= 2);
