@@ -105,7 +105,7 @@ subroutine teams_allocate()
    use omp_lib
    integer :: x
    ! CHECK: omp.teams
-   ! CHECK-SAME: allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>)
+   ! CHECK-SAME: allocate(%{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>)
    !$omp teams allocate(omp_high_bw_mem_alloc: x) private(x)
    ! CHECK: arith.addi
    x = x + 12

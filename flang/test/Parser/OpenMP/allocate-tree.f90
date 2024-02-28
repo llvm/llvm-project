@@ -36,8 +36,8 @@ end program allocate_tree
 !CHECK-NEXT: | | | | | Designator -> DataRef -> Name =
 !CHECK-NEXT: | | | AllocateStmt
 
-!UNPARSE: !$OMP ALLOCATE (w) ALLOCATOR(1_4)
-!UNPARSE-NEXT: !$OMP ALLOCATE (xarray) ALLOCATOR(1_4)
-!UNPARSE-NEXT: !$OMP ALLOCATE (zarray) ALLOCATOR(1_4)
+!UNPARSE: !$OMP ALLOCATE (w) ALLOCATOR(3_8)
+!UNPARSE-NEXT: !$OMP ALLOCATE (xarray) ALLOCATOR(2_8)
+!UNPARSE-NEXT: !$OMP ALLOCATE (zarray) ALLOCATOR(1_8)
 !UNPARSE-NEXT: !$OMP ALLOCATE
 !UNPARSE-NEXT: ALLOCATE(w, xarray(4_4), zarray(t,z))
