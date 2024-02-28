@@ -6422,7 +6422,11 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
   // Parse the instructions and debug values in this block until we get a
   // terminator.
   Instruction *Inst;
-  SmallVector<std::unique_ptr<DPValue>> TrailingDPValues;
+  auto DeleteDbgRecord = [](DbgRecord *DR) {
+    DR->deleteRecord();
+  };
+  using DbgRecordPtr = std::unique_ptr<DbgRecord, decltype(DeleteDbgRecord)>;
+  SmallVector<DbgRecordPtr> TrailingDbgRecord;
   do {
     // Handle debug records first - there should always be an instruction
     // following the debug records, i.e. they cannot appear after the block
@@ -6436,10 +6440,10 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       if (!M->IsNewDbgInfoFormat)
         M->convertToNewDbgValues();
 
-      DPValue *DPV;
-      if (parseDebugProgramValue(DPV, PFS))
+      DbgRecord *DR;
+      if (parseDebugRecord(DR, PFS))
         return true;
-      TrailingDPValues.emplace_back(DPV);
+      TrailingDbgRecord.emplace_back(DR, DeleteDbgRecord);
     }
 
     // This instruction may have three possibilities for a name: a) none
@@ -6488,35 +6492,58 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       return true;
 
     // Attach any preceding debug values to this instruction.
-    for (std::unique_ptr<DPValue> &DPV : TrailingDPValues)
-      BB->insertDPValueBefore(DPV.release(), Inst->getIterator());
-    TrailingDPValues.clear();
+    for (DbgRecordPtr &DR : TrailingDbgRecord)
+      BB->insertDPValueBefore(DR.release(), Inst->getIterator());
+    TrailingDbgRecord.clear();
   } while (!Inst->isTerminator());
 
-  assert(TrailingDPValues.empty() &&
+  assert(TrailingDbgRecord.empty() &&
          "All debug values should have been attached to an instruction.");
 
   return false;
 }
 
-/// parseDebugProgramValue
+/// parseDebugRecord
+///   ::= #dbg_label '(' MDNode ')'
 ///   ::= #dbg_type '(' Metadata ',' MDNode ',' Metadata ','
 ///                 (MDNode ',' Metadata ',' Metadata ',')? MDNode ')'
-bool LLParser::parseDebugProgramValue(DPValue *&DPV, PerFunctionState &PFS) {
+bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
+  using RecordKind = DbgRecord::Kind;
   using LocType = DPValue::LocationType;
   LocTy DPVLoc = Lex.getLoc();
   if (Lex.getKind() != lltok::DbgRecordType)
     return error(DPVLoc, "expected debug record type here");
-  auto Type = StringSwitch<LocType>(Lex.getStrVal())
+  RecordKind RecordType = StringSwitch<RecordKind>(Lex.getStrVal())
+                  .Case("declare", RecordKind::ValueKind)
+                  .Case("value", RecordKind::ValueKind)
+                  .Case("assign", RecordKind::ValueKind)
+                  .Case("label", RecordKind::LabelKind);
+
+  // Parsing labels is trivial; parse here and early exit, otherwise go into the
+  // full DPValue processing stage.
+  if (RecordType == RecordKind::LabelKind) {
+    Lex.Lex();
+    if (parseToken(lltok::lparen, "Expected '(' here"))
+      return true;
+    MDNode *Label;
+    if (parseMDNode(Label))
+      return true;
+    if (parseToken(lltok::comma, "Expected ',' here"))
+      return true;
+    MDNode *DbgLoc;
+    if (parseMDNode(DbgLoc))
+      return true;
+    if (parseToken(lltok::rparen, "Expected ')' here"))
+      return true;
+    DR = DPLabel::createUnresolvedDPLabel(Label, DbgLoc);
+    return false;
+  }
+
+  LocType ValueType = StringSwitch<LocType>(Lex.getStrVal())
                   .Case("declare", LocType::Declare)
                   .Case("value", LocType::Value)
-                  .Case("assign", LocType::Assign)
-                  .Default(LocType::End);
-  // If the file contained an invalid debug record type then parsing should fail
-  // above; the assert here should only fire if the Lexer gives us an invalid
-  // value.
-  assert(Type != LocType::End &&
-         "Lexer returned an invalid DbgRecordType string.");
+                  .Case("assign", LocType::Assign);
+
   Lex.Lex();
   if (parseToken(lltok::lparen, "Expected '(' here"))
     return true;
@@ -6549,7 +6576,7 @@ bool LLParser::parseDebugProgramValue(DPValue *&DPV, PerFunctionState &PFS) {
   MDNode *AssignID = nullptr;
   Metadata *AddressLocation = nullptr;
   Metadata *AddressExpression = nullptr;
-  if (Type == LocType::Assign) {
+  if (ValueType == LocType::Assign) {
     // Parse DIAssignID.
     if (parseMDNode(AssignID))
       return true;
@@ -6579,8 +6606,8 @@ bool LLParser::parseDebugProgramValue(DPValue *&DPV, PerFunctionState &PFS) {
 
   if (parseToken(lltok::rparen, "Expected ')' here"))
     return true;
-  DPV = DPValue::createUnresolvedDPValue(
-      Type, ValLocMD, Variable, cast<DIExpression>(Expression), AssignID,
+  DR = DPValue::createUnresolvedDPValue(
+      ValueType, ValLocMD, Variable, cast<DIExpression>(Expression), AssignID,
       AddressLocation, cast_or_null<DIExpression>(AddressExpression), DebugLoc);
   return false;
 }

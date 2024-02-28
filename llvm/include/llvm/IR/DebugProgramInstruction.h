@@ -223,8 +223,17 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DbgRecord &R) {
 class DPLabel : public DbgRecord {
   DbgRecordParamRef<DILabel> Label;
 
+  /// This constructor intentionally left private, so that it is only called via
+  /// "createUnresolvedDPLabel", which clearly expresses that it is for parsing
+  /// only.
+  DPLabel(MDNode *Label, MDNode *DL);
 public:
   DPLabel(DILabel *Label, DebugLoc DL);
+
+  /// For use during parsing; creates a DPLabel from as-of-yet unresolved
+  /// MDNodes. Trying to access the resulting DPLabel's fields before they are
+  /// resolved, or if they resolve to the wrong type, will result in a crash.
+  static DPLabel *createUnresolvedDPLabel(MDNode *Label, MDNode *DL);
 
   DPLabel *clone() const;
   void print(raw_ostream &O, bool IsForDebug = false) const;
