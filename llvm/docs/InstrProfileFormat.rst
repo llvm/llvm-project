@@ -346,11 +346,11 @@ Virtual Table Profile Data
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This section is used for `type profiling`_. Each entry corresponds to one virtual
-table and could be illustrated with the following C++ struct
+table and is defined by the following C++ struct
 
 .. code-block:: c++
 
-  struct VTableProfileInfo {
+  struct VTableProfData {
     // The start address of the vtable, collected at runtime.
     uint64_t StartAddress;
     // The byte size of the vtable. `StartAddress` and `ByteSize` specifies an address range to look up.
@@ -359,7 +359,7 @@ table and could be illustrated with the following C++ struct
     uint64_t MD5HashOfName;
   };
 
-At profile use time, compiler looks up a profiled address in the sorted vtable
+At profile use time, the compiler looks up a profiled address in the sorted vtable
 address ranges and maps the address to a specific vtable through hashed name.
 
 Virtual Table Names
@@ -368,7 +368,7 @@ Virtual Table Names
 This section is similar to `function names`_ section above, except it contains the PGO
 names of profiled virtual tables. It's a standalone section such that raw profile
 readers could directly find each name set by accessing the corresponding profile
-data seciton (i.e., no join across sections to tell vtable from functions).
+data section.
 
 This section is stored in raw profiles such that `llvm-profdata` could show the
 profiles in a human-readable way.
@@ -499,11 +499,11 @@ See `temporal profiling`_ for the design.
 
 Virtual Table Names
 ^^^^^^^^^^^^^^^^^^^^
-This section is used to carry on the names of vtables from raw profiles into
-indexed profiles.
+This section is used to store the names of vtables from raw profile in the indexed
+profile.
 
 Unlike function names which are stored as keys of `function data`_ hash table,
-vtable names needs to be stored in a standalone section in indexed profiles.
+vtable names need to be stored in a standalone section in indexed profiles.
 This way, `llvm-profdata` could show the profiled vtable information in a
 human-readable way.
 
