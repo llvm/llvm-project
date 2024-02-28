@@ -569,6 +569,46 @@ end:
   ret i64 %load
 }
 
+define i64 @test_phi_mem2reg_pointer_op_is_non_const_gep(i1 %arg, i64 %idx) {
+; CHECK-LABEL: @test_phi_mem2reg_pointer_op_is_non_const_gep(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i64], align 8
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, ptr [[ALLOCA]], i64 1
+; CHECK-NEXT:    store i64 2, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    store i64 3, ptr [[GEP1]], align 4
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[BB1]] ], [ 1, [[BB2]] ]
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr inbounds i64, ptr [[ALLOCA]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GETELEMENTPTR2:%.*]] = getelementptr inbounds i64, ptr [[GETELEMENTPTR]], i64 [[PHI]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GETELEMENTPTR]], align 4
+; CHECK-NEXT:    ret i64 [[LOAD]]
+;
+bb:
+  %alloca = alloca [2 x i64], align 8
+  %gep1 = getelementptr inbounds i64, ptr %alloca, i64 1
+  store i64 2, ptr %alloca
+  store i64 3, ptr %gep1
+  br i1 %arg, label %bb1, label %bb2
+
+bb1:
+  br label %end
+
+bb2:
+  br label %end
+
+end:
+  %phi = phi i64 [ 0, %bb1 ], [ 1, %bb2 ]
+  %getelementptr = getelementptr inbounds i64, ptr %alloca, i64 %idx
+  %getelementptr2 = getelementptr inbounds i64, ptr %getelementptr, i64 %phi
+  %load = load i64, ptr %getelementptr
+  ret i64 %load
+}
+
 declare ptr @foo()
 
 declare i32 @__gxx_personality_v0(...)

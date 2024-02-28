@@ -4034,16 +4034,22 @@ private:
   // and  gep ptr, (phi idx1, idx2)
   //   => phi ((gep ptr, idx1), (gep ptr, idx2))
   bool foldGEPPhi(GetElementPtrInst &GEPI) {
-    // Check whether the GEP has exactly one phi operand and all indices
-    // will become constant after the transform.
-    PHINode *Phi = dyn_cast<PHINode>(GEPI.getPointerOperand());
     // To prevent infinitely expanding recursive phis, bail if the GEP pointer
-    // operand is the phi and any of its incoming values is an instruction
-    // besides an alloca.
-    if (Phi && any_of(Phi->operands(), [](Value *V) {
-          return isa<Instruction>(V) && !isa<AllocaInst>(V);
-        }))
-      return false;
+    // operand (looking through the phi if it is the phi we want to unfold) is
+    // an instruction besides an alloca.
+    PHINode *Phi = dyn_cast<PHINode>(GEPI.getPointerOperand());
+    auto IsInvalidPointerOperand = [](Value *V) {
+      return isa<Instruction>(V) && !isa<AllocaInst>(V);
+    };
+    if (Phi) {
+      if (any_of(Phi->operands(), IsInvalidPointerOperand))
+        return false;
+    } else {
+      if (IsInvalidPointerOperand(GEPI.getPointerOperand()))
+        return false;
+    }
+    // Check whether the GEP has exactly one phi operand (including the pointer
+    // operand) and all indices will become constant after the transform.
     for (Value *Op : GEPI.indices()) {
       if (auto *SI = dyn_cast<PHINode>(Op)) {
         if (Phi)
