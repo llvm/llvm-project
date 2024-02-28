@@ -9106,26 +9106,6 @@ SDValue SelectionDAG::getExtStridedLoadVP(
                           Stride, Mask, EVL, MemVT, MMO, IsExpanding);
 }
 
-SDValue SelectionDAG::getIndexedStridedLoadVP(SDValue OrigLoad, const SDLoc &DL,
-                                              SDValue Base, SDValue Offset,
-                                              ISD::MemIndexedMode AM) {
-  auto *SLD = cast<VPStridedLoadSDNode>(OrigLoad);
-  assert(SLD->getOffset().isUndef() &&
-         "Strided load is already a indexed load!");
-  // Don't propagate the invariant or dereferenceable flags.
-  auto MMOFlags =
-      SLD->getMemOperand()->getFlags() &
-      ~(MachineMemOperand::MOInvariant | MachineMemOperand::MODereferenceable);
-  MachineFunction &MF = getMachineFunction();
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      SLD->getPointerInfo(), MMOFlags, SLD->getMemOperand()->getSize(),
-      SLD->getOriginalAlign(), SLD->getAAInfo());
-  return getStridedLoadVP(AM, SLD->getExtensionType(), OrigLoad.getValueType(),
-                          DL, SLD->getChain(), Base, Offset, SLD->getStride(),
-                          SLD->getMask(), SLD->getVectorLength(),
-                          SLD->getMemoryVT(), MMO, SLD->isExpandingLoad());
-}
-
 SDValue SelectionDAG::getStridedStoreVP(SDValue Chain, const SDLoc &DL,
                                         SDValue Val, SDValue Ptr,
                                         SDValue Offset, SDValue Stride,
@@ -9202,38 +9182,6 @@ SDValue SelectionDAG::getTruncStridedStoreVP(SDValue Chain, const SDLoc &DL,
   auto *N = newSDNode<VPStridedStoreSDNode>(DL.getIROrder(), DL.getDebugLoc(),
                                             VTs, ISD::UNINDEXED, true,
                                             IsCompressing, SVT, MMO);
-  createOperands(N, Ops);
-
-  CSEMap.InsertNode(N, IP);
-  InsertNode(N);
-  SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
-  return V;
-}
-
-SDValue SelectionDAG::getIndexedStridedStoreVP(SDValue OrigStore,
-                                               const SDLoc &DL, SDValue Base,
-                                               SDValue Offset,
-                                               ISD::MemIndexedMode AM) {
-  auto *SST = cast<VPStridedStoreSDNode>(OrigStore);
-  assert(SST->getOffset().isUndef() &&
-         "Strided store is already an indexed store!");
-  SDVTList VTs = getVTList(Base.getValueType(), MVT::Other);
-  SDValue Ops[] = {
-      SST->getChain(), SST->getValue(),       Base, Offset, SST->getStride(),
-      SST->getMask(),  SST->getVectorLength()};
-  FoldingSetNodeID ID;
-  AddNodeIDNode(ID, ISD::EXPERIMENTAL_VP_STRIDED_STORE, VTs, Ops);
-  ID.AddInteger(SST->getMemoryVT().getRawBits());
-  ID.AddInteger(SST->getRawSubclassData());
-  ID.AddInteger(SST->getPointerInfo().getAddrSpace());
-  void *IP = nullptr;
-  if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
-    return SDValue(E, 0);
-
-  auto *N = newSDNode<VPStridedStoreSDNode>(
-      DL.getIROrder(), DL.getDebugLoc(), VTs, AM, SST->isTruncatingStore(),
-      SST->isCompressingStore(), SST->getMemoryVT(), SST->getMemOperand());
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);
