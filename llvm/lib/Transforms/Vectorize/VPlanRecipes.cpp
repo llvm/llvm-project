@@ -386,6 +386,43 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     Value *Zero = ConstantInt::get(ScalarTC->getType(), 0);
     return Builder.CreateSelect(Cmp, Sub, Zero);
   }
+  case VPInstruction::ExplicitVectorLength: {
+    // Compute EVL
+    auto GetSetVL = [=](VPTransformState &State, Value *EVL) {
+      assert(EVL->getType()->isIntegerTy() &&
+             "Requested vector length should be an integer.");
+
+      // TODO: Add support for MaxSafeDist for correct loop emission.
+      assert(State.VF.isScalable() && "Expected scalable vector factor.");
+      Value *VFArg = State.Builder.getInt32(State.VF.getKnownMinValue());
+
+      Value *GVL = State.Builder.CreateIntrinsic(
+          State.Builder.getInt32Ty(), Intrinsic::experimental_get_vector_length,
+          {EVL, VFArg, State.Builder.getTrue()});
+      return GVL;
+    };
+    // TODO: Restructure this code with an explicit remainder loop, vsetvli can
+    // be outside of the main loop.
+    assert(Part == 0 && "No unrolling expected for predicated vectorization.");
+    // Compute VTC - IV as the EVL(requested vector length).
+    Value *Index = State.get(getOperand(0), 0);
+    Value *TripCount = State.get(getOperand(1), VPIteration(0, 0));
+    Value *EVL = State.Builder.CreateSub(TripCount, Index);
+    Value *SetVL = GetSetVL(State, EVL);
+    assert(!State.EVL && "multiple EVL recipes");
+    State.EVL = this;
+    return SetVL;
+  }
+  // TODO: remove this once a regular Add VPInstruction is supported.
+  case VPInstruction::ExplicitVectorLengthIVIncrement: {
+    assert(Part == 0 && "Expected unroll factor 1 for VP vectorization.");
+    Value *Phi = State.get(getOperand(0), VPIteration(Part, 0));
+    Value *EVL = State.get(getOperand(1), VPIteration(Part, 0));
+    assert(EVL->getType() == Phi->getType() &&
+           "EVL and Phi must have the same type.");
+    return Builder.CreateAdd(Phi, EVL, Name, hasNoUnsignedWrap(),
+                             hasNoSignedWrap());
+  }
   case VPInstruction::CanonicalIVIncrementForPart: {
     auto *IV = State.get(getOperand(0), VPIteration(0, 0));
     if (Part == 0)
@@ -627,6 +664,12 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";
+    break;
+  case VPInstruction::ExplicitVectorLength:
+    O << "EXPLICIT-VECTOR-LENGTH";
+    break;
+  case VPInstruction::ExplicitVectorLengthIVIncrement:
+    O << "EXPLICIT-VECTOR-LENGTH +";
     break;
   case VPInstruction::FirstOrderRecurrenceSplice:
     O << "first-order splice";
@@ -1968,6 +2011,28 @@ void VPActiveLaneMaskPHIRecipe::execute(VPTransformState &State) {
 void VPActiveLaneMaskPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                                       VPSlotTracker &SlotTracker) const {
   O << Indent << "ACTIVE-LANE-MASK-PHI ";
+
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPEVLBasedIVPHIRecipe::execute(VPTransformState &State) {
+  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  assert(State.UF == 1 && "Expected unroll factor 1 for VP vectorization.");
+  Value *Start = State.get(getOperand(0), VPIteration(0, 0));
+  PHINode *EntryPart =
+      State.Builder.CreatePHI(Start->getType(), 2, "evl.based.iv");
+  EntryPart->addIncoming(Start, VectorPH);
+  EntryPart->setDebugLoc(getDebugLoc());
+  State.set(this, EntryPart, 0);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPEVLBasedIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
+                                  VPSlotTracker &SlotTracker) const {
+  O << Indent << "EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI ";
 
   printAsOperand(O, SlotTracker);
   O << " = phi ";

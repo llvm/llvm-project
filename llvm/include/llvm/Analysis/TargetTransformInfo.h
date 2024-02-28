@@ -190,7 +190,10 @@ enum class TailFoldingStyle {
   /// Use predicate to control both data and control flow, but modify
   /// the trip count so that a runtime overflow check can be avoided
   /// and such that the scalar epilogue loop can always be removed.
-  DataAndControlFlowWithoutRuntimeCheck
+  DataAndControlFlowWithoutRuntimeCheck,
+  /// Use predicated EVL instructions for tail-folding.
+  /// Indicates that VP intrinsics should be used if tail-folding is enabled.
+  DataWithEVL,
 };
 
 struct TailFoldingInfo {
