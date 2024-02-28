@@ -1,5 +1,5 @@
 struct A {
-  let field = 4.2
+  let field = 4.5
 }
 
 struct B {
@@ -99,14 +99,14 @@ let e3 = Sup()
 e3.supField = 44
 let bigMultipayloadEnum1 = BigMultipayloadEnum.one(e1, e2, e3)
 let fullMultipayloadEnum1 = FullMultipayloadEnum.one(120)
-let fullMultipayloadEnum2 = FullMultipayloadEnum.two(9.21)
+let fullMultipayloadEnum2 = FullMultipayloadEnum.two(9.5)
 let bigFullMultipayloadEnum1 = BigFullMultipayloadEnum.one(209, 315)
-let bigFullMultipayloadEnum2 = BigFullMultipayloadEnum.two(452.2, 753.9)
+let bigFullMultipayloadEnum2 = BigFullMultipayloadEnum.two(452.5, 753.5)
 let sup = Sup()
 let sub = Sub()
 let subSub = SubSub()
 let sup2: Sup = SubSub()
-let gsp = GenericStructPair(t: 42, u: 94.3)
+let gsp = GenericStructPair(t: 42, u: 94.5)
 let gsp2 = GenericStructPair(t: Sup(), u: B())
 let gsp3 = GenericStructPair(t: bigFullMultipayloadEnum1, u: smallMultipayloadEnum2)
 let gcp = GenericClassPair(t: 43.8, u: 9348)

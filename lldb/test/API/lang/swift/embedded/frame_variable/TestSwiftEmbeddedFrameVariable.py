@@ -17,15 +17,15 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
 
         self.expect(
             "frame variable varB",
-            substrs=["varB = ", "a = (field = 4.2000000000000002)", "b = 123456"],
+            substrs=["varB = ", "a = (field = 4.5)", "b = 123456"],
         )
         self.expect(
             "frame variable tuple",
             substrs=[
                 "(a.A, a.B) tuple = {",
-                "0 = (field = 4.2000000000000002)",
+                "0 = (field = 4.5)",
                 "1 = {",
-                "a = (field = 4.2000000000000002)",
+                "a = (field = 4.5)",
                 "b = 123456",
             ],
         )
@@ -41,7 +41,7 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
             substrs=[
                 "SinglePayloadEnum) singlePayload = ",
                 "payload {",
-                "a = (field = 4.2000000000000002)",
+                "a = (field = 4.5)",
                 "b = 123456",
             ],
         )
@@ -85,7 +85,7 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
             "frame variable fullMultipayloadEnum2",
             substrs=[
                 "FullMultipayloadEnum) fullMultipayloadEnum2 = ",
-                "(two = 9.2100000000000008)",
+                "(two = 9.5)",
             ],
         )
 
@@ -100,7 +100,7 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
             "frame variable bigFullMultipayloadEnum2",
             substrs=[
                 "a.BigFullMultipayloadEnum) bigFullMultipayloadEnum2 = two {",
-                "two = (0 = 452.19999999999999, 1 = 753.89999999999998)",
+                "two = (0 = 452.5, 1 = 753.5)",
             ],
         )
 
@@ -112,7 +112,7 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
                 "Sup = {",
                 "supField = 42",
                 "subField = {",
-                "a = (field = 4.2000000000000002",
+                "a = (field = 4.5",
                 "b = 123456",
             ],
         )
@@ -124,9 +124,9 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
                 "a.Sup = {",
                 "supField = 42",
                 "subField = {",
-                "a = (field = 4.2000000000000002",
+                "a = (field = 4.5",
                 "b = 123456",
-                "subSubField = (field = 4.2000000000000002)",
+                "subSubField = (field = 4.5)",
             ],
         )
 
@@ -134,7 +134,7 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
             "frame variable gsp",
             substrs=[
                 "GenericStructPair<Int, Double>) gsp =",
-                "(t = 42, u = 94.299999999999997)",
+                "(t = 42, u = 94.5)",
             ],
         )
 
@@ -145,7 +145,7 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
                 "t = ",
                 "(supField = 42)",
                 "u = {",
-                "a = (field = 4.2000000000000002)",
+                "a = (field = 4.5)",
                 "b = 123456",
             ],
         )
