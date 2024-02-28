@@ -1478,6 +1478,15 @@ def F16_FP8BF8X128_SWMMAC_w32 : VOP3PWMMA_Profile<[v8f16, v8i32,  v16i32, v8f16]
 def I32_IU8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8i32, v8i32,  v16i32, v8i32], 1, 16, 1, 0, 1>;
 def I32_IU4X256_SWMMAC_w32    : VOP3PWMMA_Profile<[v8i32, v8i32,  v16i32, v8i32], 1, 16, 1, 0, 1>;
 
+def VOP_WMMA_LD_SCALE : VOP3P_Profile<VOPProfile<[untyped, i32, i32, untyped]>> {
+  let HasMaxtrixScale = 1;
+  let HasNeg = 0;
+  let Src0RC64 = VCSrc_b32_Lo256;
+  let Src1RC64 = VCSrc_b32_Lo256;
+  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, MatrixAScale:$matrix_a_scale, MatrixBScale:$matrix_b_scale);
+  let AsmVOP3P = " $src0, $src1$matrix_a_scale$matrix_b_scale";
+}
+
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Only in {
 defm V_WMMA_F64_16X16X4_F64_w32       : WMMAInstGFX12<"v_wmma_f64_16x16x4_f64",       F64_F64X4_WMMA_w32, "_w32">;
 defm V_WMMA_F64_16X16X8_F64_w32       : WMMAInstGFX12<"v_wmma_f64_16x16x8_f64",       F64_F64X8_WMMA_w32, "_w32">;
@@ -1516,6 +1525,8 @@ defm V_SWMMAC_F16_16X16X128_BF8_FP8_w32 : SWMMACInstGFX12<"v_swmmac_f16_16x16x12
 defm V_SWMMAC_F16_16X16X128_BF8_BF8_w32 : SWMMACInstGFX12<"v_swmmac_f16_16x16x128_bf8_bf8", F16_FP8BF8X128_SWMMAC_w32, "_w32">;
 defm V_SWMMAC_I32_16X16X128_IU8_w32     : SWMMACInstGFX12<"v_swmmac_i32_16x16x128_iu8",     I32_IU8X128_SWMMAC_w32, "_w32">;
 defm V_SWMMAC_I32_16X16X256_IU4_w32     : SWMMACInstGFX12<"v_swmmac_i32_16x16x256_iu4",     I32_IU4X256_SWMMAC_w32, "_w32">;
+
+defm V_WMMA_LD_SCALE_PAIRED_B32 : VOP3PInst<"v_wmma_ld_scale_paired_b32", VOP_WMMA_LD_SCALE>;
 }
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12Not12_10 in {
@@ -1941,6 +1952,8 @@ defm V_PK_ADD_BF16     : VOP3P_Real_gfx1210<0x23>;
 defm V_PK_MUL_BF16     : VOP3P_Real_gfx1210<0x2a>;
 defm V_PK_MIN_NUM_BF16 : VOP3P_Real_gfx1210<0x2b>;
 defm V_PK_MAX_NUM_BF16 : VOP3P_Real_gfx1210<0x2c>;
+
+defm V_WMMA_LD_SCALE_PAIRED_B32 : VOP3P_Real_gfx1210<0x35>;
 
 //===----------------------------------------------------------------------===//
 // GFX11

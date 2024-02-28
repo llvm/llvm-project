@@ -1154,6 +1154,9 @@ def bitop3_0 : DefaultOperand<BitOp3, 0>;
 def MatrixAFMT : CustomOperand<i32, 1, "MatrixAFMT">;
 def MatrixBFMT : CustomOperand<i32, 1, "MatrixBFMT">;
 
+def MatrixAScale : CustomOperand<i32, 1, "MatrixAScale">;
+def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
+
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_KIMM"#vt.Size;
@@ -2463,6 +2466,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                isModifierType<Src2VT>.ret,
                                HasOMod);
   field bit HasNeg = HasModifiers;
+  field bit HasMaxtrixScale = 0;
 
   field bit HasSrc0Mods = HasModifiers;
   field bit HasSrc1Mods = !if(HasModifiers, !or(HasSrc1FloatMods, HasSrc1IntMods), 0);

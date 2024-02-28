@@ -1030,6 +1030,17 @@ enum MatrixFMT : unsigned {
   MATRIX_FMT_BF6 = 3,
   MATRIX_FMT_FP4 = 4
 };
+
+enum MatrixScale : unsigned {
+  MATRIX_SCALE_DEFAULT = 0,
+  MATRIX_SCALE_ROW1 = 1,
+  MATRIX_SCALE_WORD1 = 2,
+  MATRIX_SCALE_ROW1_WORD1 = 3,
+  MATRIX_SCALE_BYTE1 = 4,
+  MATRIX_SCALE_ROW1_BYTE1 = 5,
+  MATRIX_SCALE_WORD1_BYTE1 = 6,
+  MATRIX_SCALE_ROW1_WORD1_BYTE1 = 7
+};
 } // namespace WMMA
 
 namespace VOP3PEncoding {
