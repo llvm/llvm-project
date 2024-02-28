@@ -2035,10 +2035,7 @@ static void getTrivialDefaultFunctionAttributes(
 
   if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
     FuncAttrs.addAttribute("sign-return-address", BPI.getSignReturnAddrStr());
-    FuncAttrs.addAttribute(
-        "sign-return-address-key",
-        BPI.SignKey == LangOptions::SignReturnAddressKeyKind::AKey ? "a_key"
-                                                                   : "b_key");
+    FuncAttrs.addAttribute("sign-return-address-key", BPI.getSignKeyStr());
   }
   if (BPI.BranchTargetEnforcement)
     FuncAttrs.addAttribute("branch-target-enforcement", "true");
