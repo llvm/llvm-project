@@ -67,7 +67,7 @@ public:
   unsigned createGlobalString(const StringLiteral *S);
 
   /// Returns a pointer to a global.
-  Pointer getPtrGlobal(unsigned Idx);
+  Pointer getPtrGlobal(unsigned Idx) const;
 
   /// Returns the value of a global.
   Block *getGlobal(unsigned Idx) {
@@ -190,6 +190,7 @@ private:
     std::byte *data() { return B.data(); }
     /// Return a pointer to the block.
     Block *block() { return &B; }
+    const Block *block() const { return &B; }
 
   private:
     /// Required metadata - does not actually track pointers.

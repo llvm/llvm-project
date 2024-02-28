@@ -13,6 +13,7 @@
 
 #include "mlir/Target/LLVM/NVVM/Target.h"
 
+#include "mlir/Config/mlir-config.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Target/LLVM/NVVM/Utils.h"
@@ -156,7 +157,7 @@ SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module) {
   return std::move(bcFiles);
 }
 
-#if MLIR_CUDA_CONVERSIONS_ENABLED == 1
+#if MLIR_ENABLE_CUDA_CONVERSIONS
 namespace {
 class NVPTXSerializer : public SerializeGPUModuleBase {
 public:
@@ -562,7 +563,7 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
   return compileToBinary(*serializedISA);
 #endif // MLIR_NVPTXCOMPILER_ENABLED == 1
 }
-#endif // MLIR_CUDA_CONVERSIONS_ENABLED == 1
+#endif // MLIR_ENABLE_CUDA_CONVERSIONS
 
 std::optional<SmallVector<char, 0>>
 NVVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
@@ -574,7 +575,7 @@ NVVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
     module->emitError("Module must be a GPU module.");
     return std::nullopt;
   }
-#if MLIR_CUDA_CONVERSIONS_ENABLED == 1
+#if MLIR_ENABLE_CUDA_CONVERSIONS
   NVPTXSerializer serializer(*module, cast<NVVMTargetAttr>(attribute), options);
   serializer.init();
   return serializer.run();
@@ -582,7 +583,7 @@ NVVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
   module->emitError(
       "The `NVPTX` target was not built. Please enable it when building LLVM.");
   return std::nullopt;
-#endif // MLIR_CUDA_CONVERSIONS_ENABLED == 1
+#endif // MLIR_ENABLE_CUDA_CONVERSIONS
 }
 
 Attribute

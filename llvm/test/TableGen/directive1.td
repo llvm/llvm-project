@@ -258,6 +258,7 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-EMPTY:
 // IMPL-NEXT:  #undef __IMPLICIT_CLAUSE_NO_CLASS
 // IMPL-NEXT:  #undef __IMPLICIT_CLAUSE_CLASS
+// IMPL-NEXT:  #undef __CLAUSE_NO_CLASS
 // IMPL-NEXT:  #undef __CLAUSE
 // IMPL-NEXT:  #undef CLAUSE_NO_CLASS
 // IMPL-NEXT:  #undef CLAUSE_CLASS

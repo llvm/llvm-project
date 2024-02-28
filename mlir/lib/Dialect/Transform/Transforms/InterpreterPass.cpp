@@ -50,12 +50,79 @@ static Operation *findPayloadRoot(Operation *passRoot, StringRef tag) {
     return WalkResult::interrupt();
   });
 
+  if (!target) {
+    passRoot->emitError()
+        << "could not find the operation with transform.target_tag=\"" << tag
+        << "\" attribute";
+    return nullptr;
+  }
+
   return walkResult.wasInterrupted() ? nullptr : target;
 }
 
 namespace {
 class InterpreterPass
     : public transform::impl::InterpreterPassBase<InterpreterPass> {
+  // Parses the pass arguments to bind trailing arguments of the entry point.
+  std::optional<RaggedArray<transform::MappedValue>>
+  parseArguments(Operation *payloadRoot) {
+    MLIRContext *context = payloadRoot->getContext();
+
+    SmallVector<SmallVector<transform::MappedValue>, 2> trailingBindings;
+    trailingBindings.resize(debugBindTrailingArgs.size());
+
+    // Construct lists of op names to match.
+    SmallVector<std::optional<OperationName>> debugBindNames;
+    debugBindNames.reserve(debugBindTrailingArgs.size());
+    for (auto &&[position, nameString] :
+         llvm::enumerate(debugBindTrailingArgs)) {
+      StringRef name = nameString;
+
+      // Parse the integer literals.
+      if (name.starts_with("#")) {
+        debugBindNames.push_back(std::nullopt);
+        StringRef lhs = "";
+        StringRef rhs = name.drop_front();
+        do {
+          std::tie(lhs, rhs) = rhs.split(';');
+          int64_t value;
+          if (lhs.getAsInteger(10, value)) {
+            emitError(UnknownLoc::get(context))
+                << "couldn't parse integer pass argument " << name;
+            return std::nullopt;
+          }
+          trailingBindings[position].push_back(
+              Builder(context).getI64IntegerAttr(value));
+        } while (!rhs.empty());
+      } else if (name.starts_with("^")) {
+        debugBindNames.emplace_back(OperationName(name.drop_front(), context));
+      } else {
+        debugBindNames.emplace_back(OperationName(name, context));
+      }
+    }
+
+    // Collect operations or results for extra bindings.
+    payloadRoot->walk([&](Operation *payload) {
+      for (auto &&[position, name] : llvm::enumerate(debugBindNames)) {
+        if (!name || payload->getName() != *name)
+          continue;
+
+        if (StringRef(*std::next(debugBindTrailingArgs.begin(), position))
+                .starts_with("^")) {
+          llvm::append_range(trailingBindings[position], payload->getResults());
+        } else {
+          trailingBindings[position].push_back(payload);
+        }
+      }
+    });
+
+    RaggedArray<transform::MappedValue> bindings;
+    bindings.push_back(ArrayRef<Operation *>{payloadRoot});
+    for (SmallVector<transform::MappedValue> &trailing : trailingBindings)
+      bindings.push_back(std::move(trailing));
+    return bindings;
+  }
+
 public:
   using Base::Base;
 
@@ -67,34 +134,18 @@ public:
         findPayloadRoot(getOperation(), debugPayloadRootTag);
     if (!payloadRoot)
       return signalPassFailure();
-    auto debugBindNames = llvm::map_to_vector(
-        debugBindTrailingArgs,
-        [&](const std::string &name) { return OperationName(name, context); });
-    SmallVector<SmallVector<Operation *>, 2> trailingBindings;
-    trailingBindings.resize(debugBindNames.size());
-    payloadRoot->walk([&](Operation *payload) {
-      for (auto &&[position, name] : llvm::enumerate(debugBindNames)) {
-        if (payload->getName() == name)
-          trailingBindings[position].push_back(payload);
-      }
-    });
 
     Operation *transformEntryPoint = transform::detail::findTransformEntryPoint(
         getOperation(), transformModule, entryPoint);
-    if (!transformEntryPoint) {
-      getOperation()->emitError()
-          << "could not find transform entry point: " << entryPoint
-          << " in either payload or transform module";
+    if (!transformEntryPoint)
       return signalPassFailure();
-    }
 
-    RaggedArray<transform::MappedValue> bindings;
-    bindings.push_back(ArrayRef<Operation *>{payloadRoot});
-    for (SmallVector<Operation *> &trailing : trailingBindings)
-      bindings.push_back(std::move(trailing));
-
+    std::optional<RaggedArray<transform::MappedValue>> bindings =
+        parseArguments(payloadRoot);
+    if (!bindings)
+      return signalPassFailure();
     if (failed(transform::applyTransformNamedSequence(
-            bindings,
+            *bindings,
             cast<transform::TransformOpInterface>(transformEntryPoint),
             transformModule,
             options.enableExpensiveChecks(!disableExpensiveChecks)))) {
