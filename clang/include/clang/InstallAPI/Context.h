@@ -9,6 +9,9 @@
 #ifndef LLVM_CLANG_INSTALLAPI_CONTEXT_H
 #define LLVM_CLANG_INSTALLAPI_CONTEXT_H
 
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/InstallAPI/HeaderFile.h"
 #include "llvm/TextAPI/InterfaceFile.h"
 #include "llvm/TextAPI/RecordVisitor.h"
 #include "llvm/TextAPI/RecordsSlice.h"
@@ -24,8 +27,23 @@ struct InstallAPIContext {
   /// Library attributes that are typically passed as linker inputs.
   llvm::MachO::RecordsSlice::BinaryAttrs BA;
 
-  /// Active target triple to parse.
-  llvm::Triple TargetTriple{};
+  /// All headers that represent a library.
+  HeaderSeq InputHeaders;
+
+  /// Active language mode to parse in.
+  Language LangMode = Language::ObjC;
+
+  /// Active header access type.
+  HeaderType Type = HeaderType::Unknown;
+
+  /// Active TargetSlice for symbol record collection.
+  std::shared_ptr<llvm::MachO::RecordsSlice> Slice;
+
+  /// FileManager for all I/O operations.
+  FileManager *FM = nullptr;
+
+  /// DiagnosticsEngine for all error reporting.
+  DiagnosticsEngine *Diags = nullptr;
 
   /// File Path of output location.
   llvm::StringRef OutputLoc{};

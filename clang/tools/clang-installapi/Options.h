@@ -43,6 +43,9 @@ struct DriverOptions {
 
   /// \brief File encoding to print.
   llvm::MachO::FileType OutFT = llvm::MachO::FileType::TBD_V5;
+
+  /// \brief Print verbose output.
+  bool Verbose = false;
 };
 
 struct LinkerOptions {
@@ -78,9 +81,14 @@ public:
   Options(clang::DiagnosticsEngine &Diag, FileManager *FM,
           llvm::opt::InputArgList &Args);
 
+  /// \brief Get CC1 arguments after extracting out the irrelevant
+  /// ones.
+  std::vector<std::string> &getClangFrontendArgs() { return FrontendArgs; }
+
 private:
   DiagnosticsEngine *Diags;
   FileManager *FM;
+  std::vector<std::string> FrontendArgs;
 };
 
 } // namespace installapi
