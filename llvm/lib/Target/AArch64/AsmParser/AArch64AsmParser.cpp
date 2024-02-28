@@ -6019,6 +6019,7 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "Invalid restricted vector register, expected z0.d..z15.d");
   case Match_InvalidSVEPattern:
     return Error(Loc, "invalid predicate pattern");
+  case Match_InvalidSVEPPRorPNRAnyReg:
   case Match_InvalidSVEPredicateAnyReg:
   case Match_InvalidSVEPredicateBReg:
   case Match_InvalidSVEPredicateHReg:
@@ -6653,6 +6654,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidZPR_4b16:
   case Match_InvalidZPR_4b32:
   case Match_InvalidZPR_4b64:
+  case Match_InvalidSVEPPRorPNRAnyReg:
   case Match_InvalidSVEPredicateAnyReg:
   case Match_InvalidSVEPattern:
   case Match_InvalidSVEVecLenSpecifier:
