@@ -24,23 +24,23 @@ func.func @use_too_many_tiles(%a: memref<?x?xi16>, %b:  memref<?x?xi16>, %c: mem
 
   // CHECK-LABEL: tile_a:
   // CHECK-COUNT-8: ( 0, 0, 0, 0, 0, 0, 0, 0
-  vector.print str "tile_a:"
+  vector.print str "tile_a:\n"
   vector.print %tile_a : vector<[8]x[8]xi16>
   // CHECK-LABEL: tile_b:
   // CHECK-COUNT-8: ( 1, 1, 1, 1, 1, 1, 1, 1
-  vector.print str "tile_b:"
+  vector.print str "tile_b:\n"
   vector.print %tile_b : vector<[8]x[8]xi16>
   // CHECK-LABEL: tile_c:
   // CHECK-COUNT-8: ( 2, 2, 2, 2, 2, 2, 2, 2
-  vector.print str "tile_c:"
+  vector.print str "tile_c:\n"
   vector.print %tile_c : vector<[8]x[8]xi16>
   // CHECK-LABEL: tile_d:
   // CHECK-COUNT-8: ( 3, 3, 3, 3, 3, 3, 3, 3
-  vector.print str "tile_d:"
+  vector.print str "tile_d:\n"
   vector.print %tile_d : vector<[8]x[8]xi16>
   // CHECK-LABEL: tile_e:
   // CHECK-COUNT-8: ( 4, 4, 4, 4, 4, 4, 4, 4
-  vector.print str "tile_e:"
+  vector.print str "tile_e:\n"
   vector.print %tile_e : vector<[8]x[8]xi16>
   return
 }
