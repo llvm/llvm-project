@@ -26,7 +26,7 @@
 !CHECK-DAG: define void @_copy_box_ptr_Uxc8x9(ptr %{{.*}}, ptr %{{.*}})
 
 !CHECK-LABEL: define void @_copy_i32(
-!CHECK-SAME:                         ptr %[[DST:.*]], ptr %[[SRC:.*]]) {
+!CHECK-SAME:                         ptr %[[DST:.*]], ptr %[[SRC:.*]]){{.*}} {
 !CHECK-NEXT:    %[[SRC_VAL:.*]] = load i32, ptr %[[SRC]]
 !CHECK-NEXT:    store i32 %[[SRC_VAL]], ptr %[[DST]]
 !CHECK-NEXT:    ret void
