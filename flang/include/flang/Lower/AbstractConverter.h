@@ -16,7 +16,6 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTDefs.h"
-#include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/IR/Builders.h"
@@ -54,6 +53,7 @@ class DerivedTypeSpec;
 
 namespace lower {
 class SymMap;
+class SymbolBox;
 namespace pft {
 struct Variable;
 }

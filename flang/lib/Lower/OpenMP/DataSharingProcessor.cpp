@@ -14,6 +14,7 @@
 
 #include "Utils.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
