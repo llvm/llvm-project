@@ -2190,7 +2190,7 @@ static bool SemaBuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
 }
 
 /// Checks that __builtin_popcountg was called with a single argument, which is
-/// an integer.
+/// an unsigned integer.
 static bool SemaBuiltinPopcountg(Sema &S, CallExpr *TheCall) {
   if (checkArgCount(S, TheCall, 1))
     return true;
