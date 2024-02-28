@@ -33,11 +33,11 @@ define i64 @scalable_int_min_max(ptr %arg, ptr %arg1, <vscale x 2 x ptr> %i37, <
 entry:
   %i56 = getelementptr inbounds float, ptr %arg, i64 0
   %i57 = load <vscale x 2 x float>, ptr %i56, align 4
-  %i58 = fmul <vscale x 2 x float> %i57, shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 0x401D41D420000000, i64 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
-  %i59 = fadd <vscale x 2 x float> %i58, shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 1.023500e+03, i64 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
+  %i58 = fmul <vscale x 2 x float> %i57, splat (float 0x401D41D420000000)
+  %i59 = fadd <vscale x 2 x float> %i58, splat (float 1.023500e+03)
   %i60 = fptosi <vscale x 2 x float> %i59 to <vscale x 2 x i32>
   %i61 = tail call <vscale x 2 x i32> @llvm.smax.nxv2i32(<vscale x 2 x i32> %i60, <vscale x 2 x i32> zeroinitializer)
-  %i62 = tail call <vscale x 2 x i32> @llvm.smin.nxv2i32(<vscale x 2 x i32> %i61, <vscale x 2 x i32> shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1023, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer))
+  %i62 = tail call <vscale x 2 x i32> @llvm.smin.nxv2i32(<vscale x 2 x i32> %i61, <vscale x 2 x i32> splat (i32 1023))
   %i63 = icmp ne <vscale x 2 x i32> %i62, zeroinitializer
   %i64 = getelementptr float, ptr %arg1, i64 0
   %i65 = tail call <vscale x 2 x float> @llvm.masked.load.nxv2f32.p0(ptr %i64, i32 4, <vscale x 2 x i1> %i63, <vscale x 2 x float> poison)

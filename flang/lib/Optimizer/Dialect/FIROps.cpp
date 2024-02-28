@@ -3866,6 +3866,103 @@ mlir::LogicalResult fir::DeclareOp::verify() {
   return fortranVar.verifyDeclareLikeOpImpl(getMemref());
 }
 
+llvm::SmallVector<mlir::Region *> fir::CUDAKernelOp::getLoopRegions() {
+  return {&getRegion()};
+}
+
+mlir::ParseResult parseCUFKernelValues(
+    mlir::OpAsmParser &parser,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &values,
+    llvm::SmallVectorImpl<mlir::Type> &types) {
+  if (mlir::succeeded(parser.parseOptionalStar()))
+    return mlir::success();
+
+  if (parser.parseOptionalLParen()) {
+    if (mlir::failed(parser.parseCommaSeparatedList(
+            mlir::AsmParser::Delimiter::None, [&]() {
+              if (parser.parseOperand(values.emplace_back()))
+                return mlir::failure();
+              return mlir::success();
+            })))
+      return mlir::failure();
+    if (parser.parseRParen())
+      return mlir::failure();
+  } else {
+    if (parser.parseOperand(values.emplace_back()))
+      return mlir::failure();
+    return mlir::success();
+  }
+  return mlir::success();
+}
+
+void printCUFKernelValues(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                          mlir::ValueRange values, mlir::TypeRange types) {
+  if (values.empty())
+    p << "*";
+
+  if (values.size() > 1)
+    p << "(";
+  llvm::interleaveComma(values, p, [&p](mlir::Value v) { p << v; });
+  if (values.size() > 1)
+    p << ")";
+}
+
+mlir::ParseResult parseCUFKernelLoopControl(
+    mlir::OpAsmParser &parser, mlir::Region &region,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &lowerbound,
+    llvm::SmallVectorImpl<mlir::Type> &lowerboundType,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &upperbound,
+    llvm::SmallVectorImpl<mlir::Type> &upperboundType,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &step,
+    llvm::SmallVectorImpl<mlir::Type> &stepType) {
+
+  llvm::SmallVector<mlir::OpAsmParser::Argument> inductionVars;
+  if (parser.parseLParen() ||
+      parser.parseArgumentList(inductionVars,
+                               mlir::OpAsmParser::Delimiter::None,
+                               /*allowType=*/true) ||
+      parser.parseRParen() || parser.parseEqual() || parser.parseLParen() ||
+      parser.parseOperandList(lowerbound, inductionVars.size(),
+                              mlir::OpAsmParser::Delimiter::None) ||
+      parser.parseColonTypeList(lowerboundType) || parser.parseRParen() ||
+      parser.parseKeyword("to") || parser.parseLParen() ||
+      parser.parseOperandList(upperbound, inductionVars.size(),
+                              mlir::OpAsmParser::Delimiter::None) ||
+      parser.parseColonTypeList(upperboundType) || parser.parseRParen() ||
+      parser.parseKeyword("step") || parser.parseLParen() ||
+      parser.parseOperandList(step, inductionVars.size(),
+                              mlir::OpAsmParser::Delimiter::None) ||
+      parser.parseColonTypeList(stepType) || parser.parseRParen())
+    return mlir::failure();
+  return parser.parseRegion(region, inductionVars);
+}
+
+void printCUFKernelLoopControl(
+    mlir::OpAsmPrinter &p, mlir::Operation *op, mlir::Region &region,
+    mlir::ValueRange lowerbound, mlir::TypeRange lowerboundType,
+    mlir::ValueRange upperbound, mlir::TypeRange upperboundType,
+    mlir::ValueRange steps, mlir::TypeRange stepType) {
+  mlir::ValueRange regionArgs = region.front().getArguments();
+  if (!regionArgs.empty()) {
+    p << "(";
+    llvm::interleaveComma(
+        regionArgs, p, [&p](mlir::Value v) { p << v << " : " << v.getType(); });
+    p << ") = (" << lowerbound << " : " << lowerboundType << ") to ("
+      << upperbound << " : " << upperboundType << ") "
+      << " step (" << steps << " : " << stepType << ") ";
+  }
+  p.printRegion(region, /*printEntryBlockArgs=*/false);
+}
+
+mlir::LogicalResult fir::CUDAKernelOp::verify() {
+  if (getLowerbound().size() != getUpperbound().size() ||
+      getLowerbound().size() != getStep().size())
+    return emitOpError(
+        "expect same number of values in lowerbound, upperbound and step");
+
+  return mlir::success();
+}
+
 //===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//

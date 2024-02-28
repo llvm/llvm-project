@@ -2448,6 +2448,21 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     }
   }
 
+  {
+    // (sub (xor X, (sext C)), (sext C)) => (select C, (neg X), X)
+    // (sub (sext C), (xor X, (sext C))) => (select C, X, (neg X))
+    Value *C, *X;
+    auto m_SubXorCmp = [&C, &X](Value *LHS, Value *RHS) {
+      return match(LHS, m_OneUse(m_c_Xor(m_Value(X), m_Specific(RHS)))) &&
+             match(RHS, m_SExt(m_Value(C))) &&
+             (C->getType()->getScalarSizeInBits() == 1);
+    };
+    if (m_SubXorCmp(Op0, Op1))
+      return SelectInst::Create(C, Builder.CreateNeg(X), X);
+    if (m_SubXorCmp(Op1, Op0))
+      return SelectInst::Create(C, X, Builder.CreateNeg(X));
+  }
+
   if (Instruction *R = tryFoldInstWithCtpopWithNot(&I))
     return R;
 

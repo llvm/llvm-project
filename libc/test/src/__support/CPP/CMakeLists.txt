@@ -64,7 +64,7 @@ add_libc_test(
 
 
 # This test fails with invalid address space operations on sm_60
-if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
     atomic_test
     SUITE

@@ -670,6 +670,7 @@ class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
 
   let SubtargetPredicate = HasSDWA9;
   let AssemblerPredicate = HasSDWA9;
+  let OtherPredicates    = ps.OtherPredicates;
   let AsmVariantName = !if(ps.Pfl.HasExtSDWA9, AMDGPUAsmVariants.SDWA9,
                                                AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "GFX9";
@@ -818,6 +819,7 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   let VALU = 1;
   let DPP = 1;
   let Size = 8;
+  let IsPacked = P.IsPacked;
 
   let ReadsModeReg = !or(P.DstVT.isFP, P.Src0VT.isFP);
 

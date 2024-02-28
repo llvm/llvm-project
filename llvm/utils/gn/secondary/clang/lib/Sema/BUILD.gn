@@ -50,6 +50,7 @@ static_library("Sema") {
     "Scope.cpp",
     "ScopeInfo.cpp",
     "Sema.cpp",
+    "SemaAPINotes.cpp",
     "SemaAccess.cpp",
     "SemaAttr.cpp",
     "SemaAvailability.cpp",

@@ -51,7 +51,6 @@ add_llvm_target(HexagonCodeGen
   HexagonOptAddrMode.cpp
   HexagonOptimizeSZextends.cpp
   HexagonPeephole.cpp
-  HexagonPostIncOpt.cpp
   HexagonRDFOpt.cpp
   HexagonRegisterInfo.cpp
   HexagonSelectionDAGInfo.cpp
@@ -62,6 +61,7 @@ add_llvm_target(HexagonCodeGen
   HexagonTargetMachine.cpp
   HexagonTargetObjectFile.cpp
   HexagonTargetTransformInfo.cpp
+  HexagonTfrCleanup.cpp
   HexagonVectorCombine.cpp
   HexagonVectorLoopCarriedReuse.cpp
   HexagonVectorPrint.cpp
