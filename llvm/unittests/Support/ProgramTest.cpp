@@ -265,12 +265,13 @@ TEST_F(ProgramEnvTest, TestExecuteNoWaitDetached) {
 
   if (getenv("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED")) {
     sleep_for(/*seconds=*/5);
-
+    char *Detached = getenv("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED_TRUE");
 #if _WIN32
-    HWND ConsoleWnd = GetConsoleWindow();
-    if (ConsoleWnd == NULL)
+    HANDLE StdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    if (Detached && (StdHandle == INVALID_HANDLE_VALUE || StdHandle == NULL))
       exit(100);
-    else
+    if (!Detached && (StdHandle != INVALID_HANDLE_VALUE && StdHandle != NULL))
       exit(200);
 #else
     int ParentSID = std::stoi(
@@ -282,7 +283,6 @@ TEST_F(ProgramEnvTest, TestExecuteNoWaitDetached) {
       exit(1);
     }
 
-    char *Detached = getenv("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED_TRUE");
     if (Detached && (ChildSID != ParentSID))
       exit(100);
     if (!Detached && (ChildSID == ParentSID))
@@ -297,7 +297,16 @@ TEST_F(ProgramEnvTest, TestExecuteNoWaitDetached) {
       Executable, "--gtest_filter=ProgramEnvTest.TestExecuteNoWaitDetached"};
   addEnvVar("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED=1");
 
-#ifndef _WIN32
+#if _WIN32
+  // Depending on how the test is run it may already be detached from a
+  // console. Temporarily allocate a new console. If a console already
+  // exists AllocConsole will harmlessly fail and return false
+  BOOL AllocConsoleSuccess = AllocConsole();
+
+  // Confirm existence of console
+  HANDLE StdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+  ASSERT_TRUE(StdHandle != INVALID_HANDLE_VALUE && StdHandle != NULL);
+#else
   pid_t SID = ::getsid(0);
   ASSERT_NE(SID, -1);
   std::string SIDEnvVar =
@@ -332,6 +341,13 @@ TEST_F(ProgramEnvTest, TestExecuteNoWaitDetached) {
     ProcessInfo WaitResult = Wait(PI2, std::nullopt, &Error);
     ASSERT_EQ(WaitResult.ReturnCode, 200);
   }
+#if _WIN32
+  // If console was allocated then free the console
+  if (AllocConsoleSuccess) {
+    BOOL FreeConsoleSuccess = FreeConsole();
+    ASSERT_NE(FreeConsoleSuccess, 0);
+  }
+#endif
 }
 
 TEST_F(ProgramEnvTest, TestExecuteAndWaitTimeout) {
