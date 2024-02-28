@@ -186,17 +186,17 @@ bool PPCSubtarget::enableSubRegLiveness() const {
 }
 
 bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
+  if (isAIXABI() && isa<GlobalVariable>(GV)) {
+    // On AIX the only symbols that aren't indirect are toc-data.
+    if (cast<GlobalVariable>(GV)->hasAttribute("toc-data"))
+      return false;
+
+    return true;
+  }
+
   // Large code model always uses the TOC even for local symbols.
   if (TM.getCodeModel() == CodeModel::Large)
     return true;
-
-  // AIX may have a per global code model attribute.
-  if (isAIXABI() && isa<GlobalVariable>(GV)) {
-    const GlobalVariable *GVar = cast<GlobalVariable>(GV);
-    std::optional<CodeModel::Model> OptionalCM = GVar->getCodeModel();
-    if (OptionalCM && *OptionalCM == CodeModel::Large)
-      return true;
-  }
 
   if (TM.shouldAssumeDSOLocal(GV))
     return false;

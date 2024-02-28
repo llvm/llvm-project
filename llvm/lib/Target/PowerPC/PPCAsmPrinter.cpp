@@ -478,7 +478,7 @@ static CodeModel::Model getCodeModel(const PPCSubtarget &S,
                                      const TargetMachine &TM,
                                      const MachineOperand &MO) {
   CodeModel::Model ModuleModel = TM.getCodeModel();
-  // Per global code model is only support on AIX.
+  // Per global code model is only supported on AIX.
   if (!S.isAIXABI())
     return ModuleModel;
 
@@ -502,7 +502,7 @@ static CodeModel::Model getCodeModel(const PPCSubtarget &S,
 }
 
 static std::optional<CodeModel::Model>
-hasPerGlobalCodeModel(const GlobalValue *GV) {
+getPerGlobalCodeModel(const GlobalValue *GV) {
   // Symbols that aren't global variables cannot have the attribute.
   if (!isa<GlobalVariable>(GV))
     return std::nullopt;
@@ -3044,7 +3044,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
 
     setCsectAlignment(&G);
     std::optional<CodeModel::Model> OptionalCodeModel =
-        hasPerGlobalCodeModel(&G);
+        getPerGlobalCodeModel(&G);
     if (OptionalCodeModel)
       setOptionalCodeModel(cast<MCSymbolXCOFF>(getSymbol(&G)),
                            *OptionalCodeModel);
