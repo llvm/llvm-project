@@ -348,28 +348,16 @@ private:
       {{{"fgets"}, 3},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
         std::bind(&StreamChecker::evalFgetx, _1, _2, _3, _4, false), 2}},
-      {{{"getc"}, 1},
-       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
-        std::bind(&StreamChecker::evalFgetx, _1, _2, _3, _4, true), 0}},
       {{{"fputc"}, 2},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
         std::bind(&StreamChecker::evalFputx, _1, _2, _3, _4, true), 1}},
       {{{"fputs"}, 2},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
         std::bind(&StreamChecker::evalFputx, _1, _2, _3, _4, false), 1}},
-      {{{"putc"}, 2},
-       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
-        std::bind(&StreamChecker::evalFputx, _1, _2, _3, _4, true), 1}},
       {{{"fprintf"}},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
         std::bind(&StreamChecker::evalFprintf, _1, _2, _3, _4), 0}},
-      {{{"vfprintf"}, 3},
-       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
-        std::bind(&StreamChecker::evalFprintf, _1, _2, _3, _4), 0}},
       {{{"fscanf"}},
-       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
-        std::bind(&StreamChecker::evalFscanf, _1, _2, _3, _4), 0}},
-      {{{"vfscanf"}, 3},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
         std::bind(&StreamChecker::evalFscanf, _1, _2, _3, _4), 0}},
       {{{"ungetc"}, 2},
@@ -1050,13 +1038,10 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
     if (!StateNotFailed)
       return;
 
-    if (auto const *Callee = Call.getCalleeIdentifier();
-        !Callee || !Callee->getName().equals("vfscanf")) {
-      SmallVector<unsigned int> EscArgs;
-      for (auto EscArg : llvm::seq(2u, Call.getNumArgs()))
-        EscArgs.push_back(EscArg);
-      StateNotFailed = escapeArgs(StateNotFailed, C, Call, EscArgs);
-    }
+    SmallVector<unsigned int> EscArgs;
+    for (auto EscArg : llvm::seq(2u, Call.getNumArgs()))
+      EscArgs.push_back(EscArg);
+    StateNotFailed = escapeArgs(StateNotFailed, C, Call, EscArgs);
 
     if (StateNotFailed)
       C.addTransition(StateNotFailed);
