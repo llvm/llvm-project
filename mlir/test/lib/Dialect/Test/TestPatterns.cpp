@@ -1768,7 +1768,6 @@ struct TestMergeSingleBlockOps
     rewriter.inlineBlockBefore(&innerBlock, op);
     rewriter.eraseOp(innerTerminator);
     rewriter.eraseOp(op);
-    rewriter.modifyOpInPlace(op, [] {});
     return success();
   }
 };
