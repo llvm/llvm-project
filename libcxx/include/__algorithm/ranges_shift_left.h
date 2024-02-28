@@ -47,7 +47,7 @@ struct __fn {
   }
 
   template <forward_range _Range>
-  requires permutable<iterator_t<_Range>>
+    requires permutable<iterator_t<_Range>>
   _LIBCPP_HIDE_FROM_ABI constexpr borrowed_subrange_t<_Range>
   operator()(_Range&& __range, range_difference_t<_Range> __n) const {
     return __shift_left_impl(ranges::begin(__range), ranges::end(__range), std::move(__n));
