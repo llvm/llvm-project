@@ -255,7 +255,7 @@ func.func @load_store_two_za_s_tiles() -> i32 {
   // CHECK-NEXT: ( 1, 1, 1, 1
   // CHECK-NEXT: ( 1, 1, 1, 1
   // CHECK:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   scf.for %i = %c0 to %size_of_two_tiles step %svl_s {
     %av = vector.load %mem2[%i] : memref<?xi32>, vector<[4]xi32>
     vector.print %av : vector<[4]xi32>
@@ -263,11 +263,11 @@ func.func @load_store_two_za_s_tiles() -> i32 {
     %tileSizeMinusStep = arith.subi %size_of_tile, %svl_s : index
     %isNextTile = arith.cmpi eq, %i, %tileSizeMinusStep : index
     scf.if %isNextTile {
-      vector.print str "TILE END"
-      vector.print str "TILE BEGIN"
+      vector.print str "TILE END\n"
+      vector.print str "TILE BEGIN\n"
     }
   }
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   return %c0_i32 : i32
 }
