@@ -181,16 +181,11 @@ static void cleanSimpleOp(Operation *op, RunLivenessAnalysis &la) {
   if (!isMemoryEffectFree(op) || hasLive(op->getResults(), la))
     return;
 
-  for (auto &use : op->getUses()) {
-    if (auto callOp = dyn_cast<CallOpInterface>(use.getOwner())) {
-      if (auto funcOp =
-              dyn_cast<FunctionOpInterface>(callOp.resolveCallable())) {
-        if (funcOp.isPublic()) {
+  for (OpOperand &use : op->getUses())
+    if (auto callOp = dyn_cast<CallOpInterface>(use.getOwner()))
+      if (auto funcOp = dyn_cast<FunctionOpInterface>(callOp.resolveCallable()))
+        if (funcOp.isPublic())
           return;
-        }
-      }
-    }
-  }
 
   op->dropAllUses();
   op->erase();
