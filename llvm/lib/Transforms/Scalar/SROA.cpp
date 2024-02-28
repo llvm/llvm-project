@@ -2258,10 +2258,9 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
 }
 
 static VectorType *createAndCheckVectorTypesForPromotion(
-    SetVector<Type *> &OtherTys,
-    SmallVectorImpl<VectorType *> &CandidateTysCopy,
+    SetVector<Type *> &OtherTys, ArrayRef<VectorType *> CandidateTysCopy,
     function_ref<void(Type *)> CheckCandidateType, Partition &P,
-    const DataLayout &DL, SmallVector<VectorType *, 4> &CandidateTys,
+    const DataLayout &DL, SmallVectorImpl<VectorType *> &CandidateTys,
     bool &HaveCommonEltTy, Type *&CommonEltTy, bool &HaveVecPtrTy,
     bool &HaveCommonVecPtrTy, VectorType *&CommonVecPtrTy) {
   // Consider additional vector types where the element type size is a
@@ -2272,7 +2271,7 @@ static VectorType *createAndCheckVectorTypesForPromotion(
     unsigned TypeSize = DL.getTypeSizeInBits(Ty).getFixedValue();
     // Make a copy of CandidateTys and iterate through it, because we
     // might append to CandidateTys in the loop.
-    for (VectorType *&VTy : CandidateTysCopy) {
+    for (VectorType *const &VTy : CandidateTysCopy) {
       unsigned VectorSize = DL.getTypeSizeInBits(VTy).getFixedValue();
       unsigned ElementSize =
           DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
@@ -2362,13 +2361,13 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
       CheckCandidateType(Ty);
   }
 
-  SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
   if (auto *VTy = createAndCheckVectorTypesForPromotion(
-          LoadStoreTys, CandidateTysCopy, CheckCandidateType, P, DL,
-          CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
-          HaveCommonVecPtrTy, CommonVecPtrTy))
+          LoadStoreTys, CandidateTys, CheckCandidateType, P, DL, CandidateTys,
+          HaveCommonEltTy, CommonEltTy, HaveVecPtrTy, HaveCommonVecPtrTy,
+          CommonVecPtrTy))
     return VTy;
 
+  SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
   CandidateTys.clear();
   return createAndCheckVectorTypesForPromotion(
       DeferredTys, CandidateTysCopy, CheckCandidateType, P, DL, CandidateTys,
