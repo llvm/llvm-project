@@ -2931,6 +2931,14 @@ public:
     return TripCount;
   }
 
+  /// Resets the trip count for the VPlan. The caller must make sure all uses of
+  /// the original trip count have been replaced.
+  void resetTripCount(VPValue *NewTripCount) {
+    assert(TripCount && NewTripCount && TripCount->getNumUsers() == 0 &&
+           "TripCount always must be set");
+    TripCount = NewTripCount;
+  }
+
   /// The backedge taken count of the original loop.
   VPValue *getOrCreateBackedgeTakenCount() {
     if (!BackedgeTakenCount)
