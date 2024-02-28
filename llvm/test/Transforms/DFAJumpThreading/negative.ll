@@ -188,6 +188,7 @@ define i32 @negative5(i32 %num) minsize {
 ; CHECK-NEXT:    ret i32 0
 ;
 ; IGNORESIZE-LABEL: define i32 @negative5(
+; IGNORESIZE-SAME: i32 [[NUM:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IGNORESIZE-NEXT:  entry:
 ; IGNORESIZE-NEXT:    br label [[FOR_BODY:%.*]]
 ; IGNORESIZE:       for.body:
