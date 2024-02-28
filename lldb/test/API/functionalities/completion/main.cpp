@@ -1,21 +1,17 @@
 #include <iostream>
 
-class Baz
-{
+class Baz {
 public:
-    int x;
+  int x;
 };
 
 class Foo
 {
 public:
-    Baz t;
-    int temp;
+  Baz t;
+  int temp;
 
-    int Bar(int x, int y)
-    {
-        return x + y;
-    }
+  int Bar(int x, int y) { return x + y; }
 };
 
 namespace { int Quux (void) { return 0; } }
