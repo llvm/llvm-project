@@ -76,7 +76,7 @@ define <vscale x 4 x i8> @insert_nxv1i8_nxv4i8_3(<vscale x 4 x i8> %vec, <vscale
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a1, a1, a0
 ; CHECK-NEXT:    add a0, a1, a0
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v9, a1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i8> @llvm.vector.insert.nxv1i8.nxv4i8(<vscale x 4 x i8> %vec, <vscale x 1 x i8> %subvec, i64 3)
