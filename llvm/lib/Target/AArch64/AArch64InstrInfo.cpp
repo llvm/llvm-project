@@ -9496,9 +9496,8 @@ bool AArch64InstrInfo::isReallyTriviallyReMaterializable(
     // results when the runtime vector length is different.
     const MachineFrameInfo &MFI = MF.getFrameInfo();
     if (any_of(MI.operands(), [&MFI](const MachineOperand &MO) {
-          if (MO.isFI() &&
-              MFI.getStackID(MO.getIndex()) == TargetStackID::ScalableVector)
-            return true;
+          return MO.isFI() &&
+                 MFI.getStackID(MO.getIndex()) == TargetStackID::ScalableVector;
         }))
       return false;
   }
