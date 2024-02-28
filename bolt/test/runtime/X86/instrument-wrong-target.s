@@ -1,8 +1,8 @@
 # Test that BOLT errs when trying to instrument a binary with a different
 # architecture than the one BOLT is built for.
 
-# REQUIRES: x86_64-linux,bolt-runtime
-# REQUIRES: target-x86_64 && aarch64-registered-target
+# REQUIRES: system-linux,bolt-runtime
+# REQUIRES: aarch64-registered-target
 
 # RUN: llvm-mc -triple aarch64 -filetype=obj %s -o %t.o
 # RUN: ld.lld -q -pie -o %t.exe %t.o
