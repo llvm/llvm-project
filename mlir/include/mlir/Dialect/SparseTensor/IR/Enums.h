@@ -342,7 +342,7 @@ public:
   /// Check if the `LevelType` needs coordinates array.
   constexpr bool isWithCrdLT() const {
     // All sparse levels has coordinate array.
-    return !isa<LevelFormat::Dense>();
+    return !isa<LevelFormat::Dense, LevelFormat::Batch>();
   }
 
   std::string toMLIRString() const {
