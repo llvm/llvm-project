@@ -629,6 +629,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   zstd. Allowed values are ``OFF``, ``ON`` (default, enable if zstd is found),
   and ``FORCE_ON`` (error if zstd is not found).
 
+**LLVM_ENABLE_LZMA**:STRING
+  Used to decide if LLVM tools should support compression/decompression with
+  lzma. Allowed values are ``OFF``, ``ON`` (default, enable if lzma is found),
+  and ``FORCE_ON`` (error if lzma is not found).
+
 **LLVM_EXPERIMENTAL_TARGETS_TO_BUILD**:STRING
   Semicolon-separated list of experimental targets to build and linked into
   llvm. This will build the experimental target without needing it to add to the

@@ -73,9 +73,31 @@ Error decompress(ArrayRef<uint8_t> Input, SmallVectorImpl<uint8_t> &Output,
 
 } // End of namespace zstd
 
+namespace lzma {
+
+constexpr int NoCompression = 0;
+constexpr int BestSpeedCompression = 1;
+constexpr int DefaultCompression = 6;
+constexpr int BestSizeCompression = 9;
+
+bool isAvailable();
+
+void compress(ArrayRef<uint8_t> Input,
+              SmallVectorImpl<uint8_t> &CompressedBuffer,
+              int Level = DefaultCompression);
+
+Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
+                 size_t &UncompressedSize);
+
+Error decompress(ArrayRef<uint8_t> Input, SmallVectorImpl<uint8_t> &Output,
+                 size_t UncompressedSize);
+
+} // End of namespace lzma
+
 enum class Format {
   Zlib,
   Zstd,
+  Lzma,
 };
 
 inline Format formatFor(DebugCompressionType Type) {
@@ -104,8 +126,8 @@ struct Params {
 };
 
 // Return nullptr if LLVM was built with support (LLVM_ENABLE_ZLIB,
-// LLVM_ENABLE_ZSTD) for the specified compression format; otherwise
-// return a string literal describing the reason.
+// LLVM_ENABLE_ZSTD, LLVM_ENABLE_LZMA) for the specified compression format;
+// otherwise return a string literal describing the reason.
 const char *getReasonIfUnsupported(Format F);
 
 // Compress Input with the specified format P.Format. If Level is -1, use

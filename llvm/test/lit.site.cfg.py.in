@@ -35,6 +35,7 @@ config.llvm_use_intel_jitevents = @LLVM_USE_INTEL_JITEVENTS@
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
 config.have_zstd = @LLVM_ENABLE_ZSTD@
+config.have_lzma = @LLVM_ENABLE_LZMA@
 config.have_libxml2 = @LLVM_ENABLE_LIBXML2@
 config.have_curl = @LLVM_ENABLE_CURL@
 config.have_httplib = @LLVM_ENABLE_HTTPLIB@

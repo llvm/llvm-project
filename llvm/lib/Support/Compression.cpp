@@ -23,6 +23,9 @@
 #if LLVM_ENABLE_ZSTD
 #include <zstd.h>
 #endif
+#if LLVM_ENABLE_LZMA
+#include <lzma.h>
+#endif
 
 using namespace llvm;
 using namespace llvm::compression;
@@ -39,6 +42,11 @@ const char *compression::getReasonIfUnsupported(compression::Format F) {
       return nullptr;
     return "LLVM was not built with LLVM_ENABLE_ZSTD or did not find zstd at "
            "build time";
+  case compression::Format::Lzma:
+    if (lzma::isAvailable())
+      return nullptr;
+    return "LLVM was not built with LLVM_ENABLE_LZMA or did not find lzma at "
+           "build time";
   }
   llvm_unreachable("");
 }
@@ -52,6 +60,9 @@ void compression::compress(Params P, ArrayRef<uint8_t> Input,
   case compression::Format::Zstd:
     zstd::compress(Input, Output, P.level);
     break;
+  case compression::Format::Lzma:
+    lzma::compress(Input, Output, P.level);
+    break;
   }
 }
 
@@ -62,6 +73,8 @@ Error compression::decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
     return zlib::decompress(Input, Output, UncompressedSize);
   case compression::Format::Zstd:
     return zstd::decompress(Input, Output, UncompressedSize);
+  case compression::Format::Lzma:
+    break;
   }
   llvm_unreachable("");
 }
@@ -74,6 +87,8 @@ Error compression::decompress(compression::Format F, ArrayRef<uint8_t> Input,
     return zlib::decompress(Input, Output, UncompressedSize);
   case compression::Format::Zstd:
     return zstd::decompress(Input, Output, UncompressedSize);
+  case compression::Format::Lzma:
+    return lzma::decompress(Input, Output, UncompressedSize);
   }
   llvm_unreachable("");
 }
@@ -216,5 +231,88 @@ Error zstd::decompress(ArrayRef<uint8_t> Input,
                        SmallVectorImpl<uint8_t> &Output,
                        size_t UncompressedSize) {
   llvm_unreachable("zstd::decompress is unavailable");
+}
+#endif
+#if LLVM_ENABLE_LZMA
+
+bool lzma::isAvailable() { return true; }
+
+void lzma::compress(ArrayRef<uint8_t> Input,
+                    SmallVectorImpl<uint8_t> &CompressedBuffer, int Level) {
+  lzma_options_lzma Opt;
+  if (lzma_lzma_preset(&Opt, Level) != LZMA_OK) {
+    report_bad_alloc_error("lzma::compress failed: preset error");
+    return;
+  }
+
+  lzma_filter Filters[] = {{LZMA_FILTER_LZMA2, &Opt},
+                           {LZMA_VLI_UNKNOWN, nullptr}};
+
+  size_t MaxOutSize = lzma_stream_buffer_bound(Input.size());
+  CompressedBuffer.resize_for_overwrite(MaxOutSize);
+
+  size_t OutPos = 0;
+  lzma_ret Ret = lzma_stream_buffer_encode(
+      Filters, LZMA_CHECK_CRC64, nullptr, Input.data(), Input.size(),
+      CompressedBuffer.data(), &OutPos, MaxOutSize);
+  if (Ret == LZMA_OK)
+    CompressedBuffer.resize(OutPos);
+  else
+    report_bad_alloc_error("lzma::compress failed");
+}
+
+Error lzma::decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
+                       size_t &UncompressedSize) {
+  const size_t DecoderMemoryLimit = 100 * 1024 * 1024;
+  lzma_stream Strm = LZMA_STREAM_INIT;
+  size_t InPos = 0;
+  size_t OutPos = 0;
+
+  lzma_ret Ret = lzma_auto_decoder(&Strm, DecoderMemoryLimit, 0);
+  if (Ret != LZMA_OK)
+    return make_error<StringError>("Failed to initialize LZMA decoder",
+                                   inconvertibleErrorCode());
+
+  Strm.next_in = Input.data();
+  Strm.avail_in = Input.size();
+  Strm.next_out = Output;
+  Strm.avail_out = UncompressedSize;
+
+  Ret = lzma_code(&Strm, LZMA_FINISH);
+  if (Ret == LZMA_STREAM_END) {
+    UncompressedSize = Strm.total_out;
+    lzma_end(&Strm);
+    return Error::success();
+  } else {
+    lzma_end(&Strm);
+    return make_error<StringError>("LZMA decompression failed",
+                                   inconvertibleErrorCode());
+  }
+}
+
+Error lzma::decompress(ArrayRef<uint8_t> Input,
+                       SmallVectorImpl<uint8_t> &Output,
+                       size_t UncompressedSize) {
+  Output.resize_for_overwrite(UncompressedSize);
+  Error E = lzma::decompress(Input, Output.data(), UncompressedSize);
+  if (UncompressedSize < Output.size())
+    Output.truncate(UncompressedSize);
+  return E;
+}
+
+#else
+bool lzma::isAvailable() { return false; }
+void lzma::compress(ArrayRef<uint8_t> Input,
+                    SmallVectorImpl<uint8_t> &CompressedBuffer, int Level) {
+  llvm_unreachable("lzma::compress is unavailable");
+}
+Error lzma::decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
+                       size_t &UncompressedSize) {
+  llvm_unreachable("lzma::decompress is unavailable");
+}
+Error lzma::decompress(ArrayRef<uint8_t> Input,
+                       SmallVectorImpl<uint8_t> &Output,
+                       size_t UncompressedSize) {
+  llvm_unreachable("lzma::decompress is unavailable");
 }
 #endif

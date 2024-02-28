@@ -80,6 +80,11 @@ if(LLVM_ENABLE_ZSTD)
   find_package(zstd)
 endif()
 
+set(LLVM_ENABLE_LZMA @LLVM_ENABLE_LZMA@)
+if(LLVM_ENABLE_LZMA)
+  find_package(LibLZMA)
+endif()
+
 set(LLVM_ENABLE_LIBXML2 @LLVM_ENABLE_LIBXML2@)
 if(LLVM_ENABLE_LIBXML2)
   find_package(LibXml2)

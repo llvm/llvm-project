@@ -37,6 +37,10 @@ if(LLVM_ENABLE_ZSTD)
   list(APPEND imported_libs ${zstd_target})
 endif()
 
+if(LLVM_ENABLE_LZMA)
+  list(APPEND imported_libs LibLZMA::LibLZMA)
+endif()
+
 if( MSVC OR MINGW )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
@@ -321,6 +325,19 @@ if(LLVM_ENABLE_ZSTD)
   endif()
   get_library_name(${zstd_library} zstd_library)
   set(llvm_system_libs ${llvm_system_libs} "${zstd_library}")
+endif()
+
+if(LLVM_ENABLE_LZMA)
+  # CMAKE_BUILD_TYPE is only meaningful to single-configuration generators.
+  if(CMAKE_BUILD_TYPE)
+    string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
+    get_property(lzma_library TARGET LibLZMA::LibLZMA PROPERTY LOCATION_${build_type})
+  endif()
+  if(NOT lzma_library)
+    get_property(lzma_library TARGET LibLZMA::LibLZMA PROPERTY LOCATION)
+  endif()
+  get_library_name(${lzma_library} lzma_library)
+  set(llvm_system_libs ${llvm_system_libs} "${lzma_library}")
 endif()
 
 if(LLVM_ENABLE_TERMINFO)
