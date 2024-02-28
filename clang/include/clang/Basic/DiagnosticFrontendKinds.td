@@ -292,6 +292,8 @@ def warn_avx_calling_convention
       InGroup<DiagGroup<"psabi">>;
 def err_avx_calling_convention : Error<warn_avx_calling_convention.Summary>;
 
+def err_target_unsupported_type_for_abi
+    : Error<"%0 requires %1 type support, but ABI '%2' does not support it">;
 }
 
 def err_alias_to_undefined : Error<

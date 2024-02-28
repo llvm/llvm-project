@@ -27,6 +27,8 @@ public:
   AArch64ABIInfo(CodeGenTypes &CGT, AArch64ABIKind Kind)
       : ABIInfo(CGT), Kind(Kind) {}
 
+  bool isSoftFloat() const { return Kind == AArch64ABIKind::AAPCSSoft; }
+
 private:
   AArch64ABIKind getABIKind() const { return Kind; }
   bool isDarwinPCS() const { return Kind == AArch64ABIKind::DarwinPCS; }
@@ -162,6 +164,9 @@ public:
     }
     return TargetCodeGenInfo::isScalarizableAsmOperand(CGF, Ty);
   }
+
+  void checkFunctionABI(CodeGenModule &CGM,
+                        const FunctionDecl *Decl) const override;
 
   void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
                             const FunctionDecl *Caller,
@@ -846,6 +851,33 @@ static bool isStreamingCompatible(const FunctionDecl *F) {
     return T->getAArch64SMEAttributes() &
            FunctionType::SME_PStateSMCompatibleMask;
   return false;
+}
+
+void AArch64TargetCodeGenInfo::checkFunctionABI(
+    CodeGenModule &CGM, const FunctionDecl *FuncDecl) const {
+  const AArch64ABIInfo &ABIInfo = getABIInfo<AArch64ABIInfo>();
+  const TargetInfo &TI = ABIInfo.getContext().getTargetInfo();
+
+  // If we are using a hard-float ABI, but do not have floating point
+  // registers, then report an error for any function arguments or returns
+  // which would be passed in floating-pint registers.
+  auto CheckType = [&CGM, &TI, &ABIInfo](const QualType &Ty, const NamedDecl *D) {
+    const Type *HABase = nullptr;
+    uint64_t HAMembers = 0;
+    if (Ty->isFloatingType() || Ty->isVectorType() ||
+        ABIInfo.isHomogeneousAggregate(Ty, HABase, HAMembers)) {
+      CGM.getDiags().Report(D->getLocation(),
+                            diag::err_target_unsupported_type_for_abi)
+          << D->getDeclName() << Ty << TI.getABI();
+    }
+  };
+
+  if (!TI.hasFeature("fp") && !ABIInfo.isSoftFloat()) {
+    CheckType(FuncDecl->getReturnType(), FuncDecl);
+    for (ParmVarDecl *PVD : FuncDecl->parameters()) {
+      CheckType(PVD->getType(), PVD);
+    }
+  }
 }
 
 void AArch64TargetCodeGenInfo::checkFunctionCallABI(

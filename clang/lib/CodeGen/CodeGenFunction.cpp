@@ -1360,6 +1360,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   FunctionArgList Args;
   QualType ResTy = BuildFunctionArgList(GD, Args);
 
+  CGM.getTargetCodeGenInfo().checkFunctionABI(CGM, FD);
+
   if (FD->isInlineBuiltinDeclaration()) {
     // When generating code for a builtin with an inline declaration, use a
     // mangled name to hold the actual body, while keeping an external
