@@ -321,7 +321,7 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
     return false;
 
   auto *AFI = MF.getInfo<AArch64FunctionInfo>();
-  if (AFI->hasSwiftAsyncContext())
+  if (AFI->hasSwiftAsyncContext() || AFI->hasStreamingModeChanges())
     return false;
 
   // If there are an odd number of GPRs before LR and FP in the CSRs list,
@@ -697,6 +697,9 @@ static void emitCalleeSavedRestores(MachineBasicBlock &MBB,
     unsigned Reg = Info.getReg();
     if (SVE &&
         !static_cast<const AArch64RegisterInfo &>(TRI).regNeedsCFI(Reg, Reg))
+      continue;
+
+    if (!Info.isRestored())
       continue;
 
     unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestore(
@@ -1352,6 +1355,7 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
     MachineInstr::MIFlag FrameFlag = MachineInstr::FrameSetup,
     int CFAOffset = 0) {
   unsigned NewOpc;
+
   switch (MBBI->getOpcode()) {
   default:
     llvm_unreachable("Unexpected callee-save save/restore opcode!");
@@ -1660,6 +1664,13 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     LiveRegs.removeReg(AArch64::X19);
     LiveRegs.removeReg(AArch64::FP);
     LiveRegs.removeReg(AArch64::LR);
+  }
+
+  // If the function contains streaming mode changes, we expect the first
+  // instruction of MBB to be a CNTD. Move past this instruction if found.
+  if (AFI->hasStreamingModeChanges()) {
+    assert(MBBI->getOpcode() == AArch64::CNTD_XPiI && "Unexpected instruction");
+    MBBI = std::next(MBBI);
   }
 
   auto VerifyClobberOnExit = make_scope_exit([&]() {
@@ -2768,7 +2779,7 @@ struct RegPairInfo {
   unsigned Reg2 = AArch64::NoRegister;
   int FrameIdx;
   int Offset;
-  enum RegType { GPR, FPR64, FPR128, PPR, ZPR } Type;
+  enum RegType { GPR, FPR64, FPR128, PPR, ZPR, VG } Type;
 
   RegPairInfo() = default;
 
@@ -2780,6 +2791,7 @@ struct RegPairInfo {
       return 2;
     case GPR:
     case FPR64:
+    case VG:
       return 8;
     case ZPR:
     case FPR128:
@@ -2855,6 +2867,8 @@ static void computeCalleeSaveRegisterPairs(
       RPI.Type = RegPairInfo::ZPR;
     else if (AArch64::PPRRegClass.contains(RPI.Reg1))
       RPI.Type = RegPairInfo::PPR;
+    else if (RPI.Reg1 == AArch64::VG)
+      RPI.Type = RegPairInfo::VG;
     else
       llvm_unreachable("Unsupported register class.");
 
@@ -2886,6 +2900,8 @@ static void computeCalleeSaveRegisterPairs(
         if (AFI->getPredicateRegForFillSpill() != 0)
           if (((RPI.Reg1 - AArch64::Z0) & 1) == 0 && (NextReg == RPI.Reg1 + 1))
             RPI.Reg2 = NextReg;
+        break;
+      case RegPairInfo::VG:
         break;
       }
     }
@@ -3070,7 +3086,23 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
        Size = 2;
        Alignment = Align(2);
        break;
+    case RegPairInfo::VG:
+      StrOpc = AArch64::STRXui;
+      Size = 8;
+      Alignment = Align(8);
+      break;
     }
+
+    if (Reg1 == AArch64::VG) {
+      // Find an available register to store value of VG to.
+      Reg1 = findScratchNonCalleeSaveRegister(&MBB);
+      assert(Reg1 != AArch64::NoRegister);
+
+      BuildMI(MBB, MBB.begin(), DL, TII.get(AArch64::CNTD_XPiI), Reg1)
+          .addImm(31)
+          .addImm(1);
+    }
+
     LLVM_DEBUG(dbgs() << "CSR spill: (" << printReg(Reg1, TRI);
                if (RPI.isPaired()) dbgs() << ", " << printReg(Reg2, TRI);
                dbgs() << ") -> fi#(" << RPI.FrameIdx;
@@ -3241,6 +3273,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
        Size = 2;
        Alignment = Align(2);
        break;
+    case RegPairInfo::VG:
+      continue;
     }
     LLVM_DEBUG(dbgs() << "CSR restore: (" << printReg(Reg1, TRI);
                if (RPI.isPaired()) dbgs() << ", " << printReg(Reg2, TRI);
@@ -3440,6 +3474,11 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       CSStackSize += RegSize;
   }
 
+  // Increase the callee-saved stack size if the function has streaming mode
+  // changes, as we will need to spill the value of the VG register.
+  if (AFI->hasStreamingModeChanges())
+    CSStackSize += 8;
+
   // Save number of saved regs, so we can easily update CSStackSize later.
   unsigned NumSavedRegs = SavedRegs.count();
 
@@ -3574,6 +3613,23 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
     if ((unsigned)FrameIdx < MinCSFrameIndex) MinCSFrameIndex = FrameIdx;
     if ((unsigned)FrameIdx > MaxCSFrameIndex) MaxCSFrameIndex = FrameIdx;
+  }
+
+  // Insert VG into the list of CSRs, immediately before LR if saved.
+  if (AFI->hasStreamingModeChanges()) {
+    auto VGInfo = CalleeSavedInfo(AArch64::VG);
+    VGInfo.setRestored(false);
+    bool InsertBeforeLR = false;
+
+    for (unsigned I = 0; I < CSI.size(); I++)
+      if (CSI[I].getReg() == AArch64::LR) {
+        InsertBeforeLR = true;
+        CSI.insert(CSI.begin() + I, VGInfo);
+        break;
+      }
+
+    if (!InsertBeforeLR)
+      CSI.push_back(VGInfo);
   }
 
   for (auto &CS : CSI) {
