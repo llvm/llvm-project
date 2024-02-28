@@ -4029,11 +4029,11 @@ private:
     return true;
   }
 
-  // Fold gep (phi ptr1, ptr2), idx
+  // Unfold gep (phi ptr1, ptr2), idx
   //   => phi ((gep ptr1, idx), (gep ptr2, idx))
   // and  gep ptr, (phi idx1, idx2)
   //   => phi ((gep ptr, idx1), (gep ptr, idx2))
-  bool foldGEPPhi(GetElementPtrInst &GEPI) {
+  bool unfoldGEPPhi(GetElementPtrInst &GEPI) {
     // To prevent infinitely expanding recursive phis, bail if the GEP pointer
     // operand (looking through the phi if it is the phi we want to unfold) is
     // an instruction besides an alloca.
@@ -4122,7 +4122,7 @@ private:
     if (foldGEPSelect(GEPI))
       return true;
 
-    if (foldGEPPhi(GEPI))
+    if (unfoldGEPPhi(GEPI))
       return true;
 
     enqueueUsers(GEPI);
