@@ -310,8 +310,12 @@ public:
         return true;
       if (isa<EnumConstantDecl>(decl))
         return true;
-      if (auto *VD = dyn_cast<VarDecl>(decl))
-        return VD->hasConstantInitialization() && VD->getEvaluatedValue();
+      if (auto *VD = dyn_cast<VarDecl>(decl)) {
+        if (VD->hasConstantInitialization() && VD->getEvaluatedValue())
+          return true;
+        auto *Init = VD->getInit();
+        return !Init || Visit(Init);
+      }
     }
     return false;
   }

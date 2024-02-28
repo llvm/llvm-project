@@ -111,8 +111,10 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   alignConsecutiveDeclarations();
   alignConsecutiveBitFields();
   alignConsecutiveAssignments();
-  if (Style.isTableGen())
+  if (Style.isTableGen()) {
     alignConsecutiveTableGenCondOperatorColons();
+    alignConsecutiveTableGenDefinitions();
+  }
   alignChainedConditionals();
   alignTrailingComments();
   alignEscapedNewlines();
@@ -982,6 +984,11 @@ void WhitespaceManager::alignConsecutiveShortCaseStatements() {
 void WhitespaceManager::alignConsecutiveTableGenCondOperatorColons() {
   alignConsecutiveColons(Style.AlignConsecutiveTableGenCondOperatorColons,
                          TT_TableGenCondOperatorColon);
+}
+
+void WhitespaceManager::alignConsecutiveTableGenDefinitions() {
+  alignConsecutiveColons(Style.AlignConsecutiveTableGenDefinitionColons,
+                         TT_InheritanceColon);
 }
 
 void WhitespaceManager::alignConsecutiveDeclarations() {
