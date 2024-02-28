@@ -1186,7 +1186,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_testnzc_si128(__m128i __M,
 
 /* SSE4 64-bit Packed Integer Comparisons.  */
 /// Compares each of the corresponding 64-bit values of the 128-bit
-///    integer vectors for equality.
+///    integer vectors for equality. Returns zero for false and all 1's for
+///    true in corresponding elements of the result.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2303,7 +2304,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_minpos_epu16(__m128i __V) {
 /* SSE4.2 Compare Packed Data -- Greater Than.  */
 /// Compares each of the corresponding 64-bit values of the 128-bit
 ///    integer vectors to determine if the values in the first operand are
-///    greater than those in the second operand.
+///    greater than those in the second operand. Returns zero for false and
+///    all 1's for true in corresponding elements of the result.
 ///
 /// \headerfile <x86intrin.h>
 ///
