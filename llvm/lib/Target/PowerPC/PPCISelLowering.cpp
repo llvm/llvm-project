@@ -12774,7 +12774,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
     copy0MBB->setCallFrameSize(CallFrameSize);
     sinkMBB->setCallFrameSize(CallFrameSize);
-    
+
     // Transfer the remainder of BB and its successor edges to sinkMBB.
     sinkMBB->splice(sinkMBB->begin(), BB,
                     std::next(MachineBasicBlock::iterator(MI)), BB->end());
