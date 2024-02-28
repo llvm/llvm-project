@@ -1010,9 +1010,9 @@ class PPRorPNRClass : RegisterClass<
                                   (add PPR, PNR)> {
   let Size = 16;
 }
-def PPRorPNR    : PPRorPNRClass;
-def PPRorPNRAsmOpAny   : PPRAsmOperand<"PPRorPNRAny",   "PPRorPNR",     0>;
-def PPRorPNRAny   : PPRRegOp<"",  PPRorPNRAsmOpAny,   ElementSizeNone, PPRorPNR>;
+def PPRorPNR         : PPRorPNRClass;
+def PPRorPNRAsmOpAny : PPRAsmOperand<"PPRorPNRAny",   "PPRorPNR",     0>;
+def PPRorPNRAny      : PPRRegOp<"",  PPRorPNRAsmOpAny,   ElementSizeNone, PPRorPNR>;
 
 // Pairs of SVE predicate vector registers.
 def PSeqPairs : RegisterTuples<[psub0, psub1], [(rotl PPR, 0), (rotl PPR, 1)]>;
