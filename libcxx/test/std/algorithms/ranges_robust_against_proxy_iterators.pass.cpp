@@ -166,7 +166,7 @@ constexpr void run_tests() {
   test(std::ranges::reverse, in);
   test_mid(std::ranges::rotate, in, mid);
 #if TEST_STD_VER >= 23
-    test(std::ranges::shift_left, in, count);
+  test(std::ranges::shift_left, in, count);
 #endif
   if (!std::is_constant_evaluated()) // `shuffle` isn't `constexpr`.
     test(std::ranges::shuffle, in, rand_gen());
