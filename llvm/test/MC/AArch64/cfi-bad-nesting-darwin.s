@@ -21,7 +21,7 @@ _engineer:
 	.p2align	2
 _caboose:
 ; DARWIN: [[#@LINE-1]]:1: error: non-private labels cannot appear between .cfi_startproc / .cfi_endproc pairs
-; DARWIN: [[#@LINE-12]]:2: error: previous .cfi_startproc was here
+; DARWIN: [[#@LINE-14]]:2: error: previous .cfi_startproc was here
 	ret
 	.cfi_endproc
 
