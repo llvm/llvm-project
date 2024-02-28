@@ -2190,17 +2190,23 @@ static bool SemaBuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
 }
 
 /// Checks that __builtin_popcountg was called with a single argument, which is
-/// an integer.
+/// an unsigned integer.
 static bool SemaBuiltinPopcountg(Sema &S, CallExpr *TheCall) {
   if (checkArgCount(S, TheCall, 1))
     return true;
 
-  Expr *Arg = TheCall->getArg(0);
+  ExprResult ArgRes = S.DefaultLvalueConversion(TheCall->getArg(0));
+  if (ArgRes.isInvalid())
+    return true;
+
+  Expr *Arg = ArgRes.get();
+  TheCall->setArg(0, Arg);
+
   QualType ArgTy = Arg->getType();
 
-  if (!ArgTy->isIntegerType()) {
+  if (!ArgTy->isUnsignedIntegerType()) {
     S.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-        << 1 << /*integer ty*/ 7 << ArgTy;
+        << 1 << /*unsigned integer ty*/ 7 << ArgTy;
     return true;
   }
   return false;
