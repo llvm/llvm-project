@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SYS_QUEUE_H
-#define LLVM_LIBC_SYS_QUEUE_H
+#ifndef SYS_QUEUE_H
+#define SYS_QUEUE_H
 
 #include <llvm-libc-macros/sys-queue-macros.h>
 
-#endif // LLVM_LIBC_SYS_QUEUE_H
+#endif // SYS_QUEUE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_FLOAT_MACROS_H
-#define __LLVM_LIBC_MACROS_FLOAT_MACROS_H
+#ifndef LLVM_LIBC_MACROS_FLOAT_MACROS_H
+#define LLVM_LIBC_MACROS_FLOAT_MACROS_H
 
 // Suppress `#include_next is a language extension` warnings.
 #ifdef __clang__
@@ -169,4 +169,4 @@
 
 // TODO: Add FLT16 and FLT128 constants.
 
-#endif // __LLVM_LIBC_MACROS_FLOAT_MACROS_H
+#endif // LLVM_LIBC_MACROS_FLOAT_MACROS_H
