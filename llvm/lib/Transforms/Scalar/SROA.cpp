@@ -3956,11 +3956,11 @@ private:
     return false;
   }
 
-  // Fold gep (select cond, ptr1, ptr2), idx
+  // Unfold gep (select cond, ptr1, ptr2), idx
   //   => select cond, gep(ptr1, idx), gep(ptr2, idx)
   // and  gep ptr, (select cond, idx1, idx2)
   //   => select cond, gep(ptr, idx1), gep(ptr, idx2)
-  bool foldGEPSelect(GetElementPtrInst &GEPI) {
+  bool unfoldGEPSelect(GetElementPtrInst &GEPI) {
     // Check whether the GEP has exactly one select operand and all indices
     // will become constant after the transform.
     SelectInst *Sel = dyn_cast<SelectInst>(GEPI.getPointerOperand());
@@ -4119,7 +4119,7 @@ private:
   }
 
   bool visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-    if (foldGEPSelect(GEPI))
+    if (unfoldGEPSelect(GEPI))
       return true;
 
     if (unfoldGEPPhi(GEPI))
