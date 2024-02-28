@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_ASSERT_ASSERT_H
-#define LLVM_LIBC_SRC_ASSERT_ASSERT_H
-
 #include "src/assert/__assert_fail.h"
 
 // There is no header guard here since assert is intended to be capable of being
@@ -25,5 +22,3 @@
        : LIBC_NAMESPACE::__assert_fail(#e, __FILE__, __LINE__,                 \
                                        __PRETTY_FUNCTION__))
 #endif // NDEBUG
-
-#endif // LLVM_LIBC_SRC_ASSERT_ASSERT_H
