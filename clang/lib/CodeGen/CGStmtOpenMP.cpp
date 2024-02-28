@@ -7026,7 +7026,7 @@ void CodeGenFunction::EmitOMPInteropDirective(const OMPInteropDirective &S) {
   auto ItOMPInitClause = S.getClausesOfKind<OMPInitClause>();
   if (!ItOMPInitClause.empty()) {
     // Look at the multiple init clauses
-    for (const class OMPInitClause *C : ItOMPInitClause) {
+    for (const OMPInitClause *C : ItOMPInitClause) {
       llvm::Value *InteropvarPtr =
           EmitLValue(C->getInteropVar()).getPointer(*this);
       llvm::omp::OMPInteropType InteropType =
@@ -7046,7 +7046,7 @@ void CodeGenFunction::EmitOMPInteropDirective(const OMPInteropDirective &S) {
   auto ItOMPDestroyClause = S.getClausesOfKind<OMPDestroyClause>();
   if (!ItOMPDestroyClause.empty()) {
     // Look at the multiple destroy clauses
-    for (const class OMPDestroyClause *C : ItOMPDestroyClause) {
+    for (const OMPDestroyClause *C : ItOMPDestroyClause) {
       llvm::Value *InteropvarPtr =
           EmitLValue(C->getInteropVar()).getPointer(*this);
       OMPBuilder.createOMPInteropDestroy(Builder, InteropvarPtr, Device,
@@ -7057,7 +7057,7 @@ void CodeGenFunction::EmitOMPInteropDirective(const OMPInteropDirective &S) {
   auto ItOMPUseClause = S.getClausesOfKind<OMPUseClause>();
   if (!ItOMPUseClause.empty()) {
     // Look at the multiple use clauses
-    for (const class OMPUseClause *C : ItOMPUseClause) {
+    for (const OMPUseClause *C : ItOMPUseClause) {
       llvm::Value *InteropvarPtr =
           EmitLValue(C->getInteropVar()).getPointer(*this);
       OMPBuilder.createOMPInteropUse(Builder, InteropvarPtr, Device,
