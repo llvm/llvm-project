@@ -547,6 +547,7 @@ private:
 
   void visitTemplateParams(const MDNode &N, const Metadata &RawParams);
 
+  void visit(DPLabel &DPL);
   void visit(DPValue &DPV);
   // InstVisitor overrides...
   using InstVisitor<Verifier>::visit;
@@ -683,10 +684,17 @@ void Verifier::visitDbgRecords(Instruction &I) {
           &I);
   CheckDI(!isa<PHINode>(&I) || !I.hasDbgValues(),
           "PHI Node must not have any attached DbgRecords", &I);
-  for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
-    CheckDI(DPV.getMarker() == I.DbgMarker, "DbgRecord had invalid DbgMarker",
-            &I, &DPV);
-    visit(DPV);
+  for (DbgRecord &DR : I.getDbgValueRange()) {
+    CheckDI(DR.getMarker() == I.DbgMarker, "DbgRecord had invalid DbgMarker",
+            &I, &DR);
+    if (MDNode *N = DR.getDebugLoc().getAsMDNode()) {
+      CheckDI(isa<DILocation>(N), "invalid #dbg record location", &DR, N);
+      visitDILocation(*cast<DILocation>(N));
+    }
+    if (auto *DPV = dyn_cast<DPValue>(&DR))
+      visit(*DPV);
+    else if (auto *DPL = dyn_cast<DPLabel>(&DR))
+      visit(*DPL);
   }
 }
 
@@ -6187,6 +6195,34 @@ static DISubprogram *getSubprogram(Metadata *LocalScope) {
   return nullptr;
 }
 
+void Verifier::visit(DPLabel &DPL) {
+  CheckDI(isa<DILabel>(DPL.getRawLabel()),
+          "invalid #dbg_label intrinsic variable", &DPL, DPL.getRawLabel());
+
+  // Ignore broken !dbg attachments; they're checked elsewhere.
+  if (MDNode *N = DPL.getDebugLoc().getAsMDNode())
+    if (!isa<DILocation>(N))
+      return;
+
+  BasicBlock *BB = DPL.getParent();
+  Function *F = BB ? BB->getParent() : nullptr;
+
+  // The scopes for variables and !dbg attachments must agree.
+  DILabel *Label = DPL.getLabel();
+  DILocation *Loc = DPL.getDebugLoc();
+  Check(Loc, "#dbg_label record requires a !dbg attachment", &DPL, BB, F);
+
+  DISubprogram *LabelSP = getSubprogram(Label->getRawScope());
+  DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
+  if (!LabelSP || !LocSP)
+    return;
+
+  CheckDI(LabelSP == LocSP,
+          "mismatched subprogram between #dbg_label label and !dbg attachment",
+          &DPL, BB, F, Label, Label->getScope()->getSubprogram(), Loc,
+          Loc->getScope()->getSubprogram());
+}
+
 void Verifier::visit(DPValue &DPV) {
   CheckDI(DPV.getType() == DPValue::LocationType::Value ||
               DPV.getType() == DPValue::LocationType::Declare ||
@@ -6223,16 +6259,20 @@ void Verifier::visit(DPValue &DPV) {
               "inst not in same function as #dbg_assign", I, &DPV);
   }
 
-  if (MDNode *N = DPV.getDebugLoc().getAsMDNode()) {
-    CheckDI(isa<DILocation>(N), "invalid #dbg record location", &DPV, N);
-    visitDILocation(*cast<DILocation>(N));
-  }
+  // This check is redundant with one in visitLocalVariable().
+  DILocalVariable *Var = DPV.getVariable();
+  CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
+          Var->getRawType());
+
+  // Ignore broken !dbg attachments; they're checked elsewhere.
+  if (MDNode *N = DPV.getDebugLoc().getAsMDNode())
+    if (!isa<DILocation>(N))
+      return;
 
   BasicBlock *BB = DPV.getParent();
   Function *F = BB ? BB->getParent() : nullptr;
 
   // The scopes for variables and !dbg attachments must agree.
-  DILocalVariable *Var = DPV.getVariable();
   DILocation *Loc = DPV.getDebugLoc();
   CheckDI(Loc, "missing #dbg record DILocation", &DPV, BB, F);
 
@@ -6245,10 +6285,6 @@ void Verifier::visit(DPValue &DPV) {
           "mismatched subprogram between #dbg record variable and DILocation",
           &DPV, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
           Loc->getScope()->getSubprogram());
-
-  // This check is redundant with one in visitLocalVariable().
-  CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
-          Var->getRawType());
 }
 
 void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {

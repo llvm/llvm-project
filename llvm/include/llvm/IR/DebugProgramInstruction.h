@@ -174,13 +174,10 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DbgRecord &R) {
 /// llvm.dbg.label intrinsic.
 /// FIXME: Rename DbgLabelRecord when DPValue is renamed to DbgVariableRecord.
 class DPLabel : public DbgRecord {
-  DILabel *Label;
+  TrackingMDNodeRef Label;
 
 public:
-  DPLabel(DILabel *Label, DebugLoc DL)
-      : DbgRecord(LabelKind, DL), Label(Label) {
-    assert(Label && "Unexpected nullptr");
-  }
+  DPLabel(DILabel *Label, DebugLoc DL);
 
   DPLabel *clone() const;
   void print(raw_ostream &O, bool IsForDebug = false) const;
@@ -188,8 +185,9 @@ public:
   DbgLabelInst *createDebugIntrinsic(Module *M,
                                      Instruction *InsertBefore) const;
 
-  void setLabel(DILabel *NewLabel) { Label = NewLabel; }
-  DILabel *getLabel() const { return Label; }
+  void setLabel(DILabel *NewLabel);
+  DILabel *getLabel() const;
+  MDNode *getRawLabel() const { return Label; };
 
   /// Support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const DbgRecord *E) {

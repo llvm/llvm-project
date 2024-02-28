@@ -123,6 +123,14 @@ DbgRecord::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
   llvm_unreachable("unsupported DbgRecord kind");
 }
 
+DPLabel::DPLabel(DILabel *Label, DebugLoc DL)
+    : DbgRecord(LabelKind, DL), Label(Label) {
+  assert(Label && "Unexpected nullptr");
+}
+
+void DPLabel::setLabel(DILabel *NewLabel) { Label.reset(NewLabel); }
+DILabel *DPLabel::getLabel() const { return cast<DILabel>(Label); }
+
 DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
                                 DIExpression *Expr, const DILocation *DI) {
   return new DPValue(ValueAsMetadata::get(Location), DV, Expr, DI,
@@ -337,7 +345,9 @@ DbgRecord *DbgRecord::clone() const {
 
 DPValue *DPValue::clone() const { return new DPValue(*this); }
 
-DPLabel *DPLabel::clone() const { return new DPLabel(Label, getDebugLoc()); }
+DPLabel *DPLabel::clone() const {
+  return new DPLabel(getLabel(), getDebugLoc());
+}
 
 DbgVariableIntrinsic *
 DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {

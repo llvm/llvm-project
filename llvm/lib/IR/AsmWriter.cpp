@@ -4660,6 +4660,8 @@ void AssemblyWriter::printDPLabel(const DPLabel &Label) {
   auto WriterCtx = getContext();
   Out << "#dbg_label(";
   WriteAsOperandInternal(Out, Label.getLabel(), WriterCtx, true);
+  Out << ", ";
+  WriteAsOperandInternal(Out, Label.getDebugLoc(), WriterCtx, true);
   Out << ")";
 }
 
