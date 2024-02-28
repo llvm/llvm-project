@@ -536,6 +536,9 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
     auto newWarpOp =
         newWriteOp.getVector().getDefiningOp<WarpExecuteOnLane0Op>();
 
+    // Delinearize the lane id based on the way threads are divided across the
+    // vector. To get the number of threads per vector dimension, divide the
+    // sequential size by the distributed size along each dim.
     rewriter.setInsertionPoint(newWriteOp);
     SmallVector<OpFoldResult> delinearizedIdSizes;
     for (auto [seqSize, distSize] :
@@ -551,6 +554,8 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
                              delinearizedIdSizes)
                          .getResults();
     } else {
+      // If there is only one map result, we can elide the delinearization
+      // op and use the lane id directly.
       delinearized.append(targetType.getRank(), newWarpOp.getLaneid());
     }
 
