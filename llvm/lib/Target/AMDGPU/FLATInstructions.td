@@ -93,6 +93,7 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let SubtargetPredicate   = ps.SubtargetPredicate;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let OtherPredicates      = ps.OtherPredicates;
+  let WaveSizePredicate    = ps.WaveSizePredicate;
   let TSFlags              = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SchedRW              = ps.SchedRW;
@@ -154,6 +155,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
 
   // copy relevant pseudo op flags
   let SubtargetPredicate   = ps.SubtargetPredicate;
+  let WaveSizePredicate    = ps.WaveSizePredicate;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let OtherPredicates      = ps.OtherPredicates;
   let TSFlags              = ps.TSFlags;
@@ -3227,13 +3229,12 @@ defm GLOBAL_STORE_ASYNC_FROM_LDS_B32  : VGLOBAL_Real_AllAddr_gfx1210<0x64>;
 defm GLOBAL_STORE_ASYNC_FROM_LDS_B64  : VGLOBAL_Real_AllAddr_gfx1210<0x65>;
 defm GLOBAL_STORE_ASYNC_FROM_LDS_B128 : VGLOBAL_Real_AllAddr_gfx1210<0x66>;
 
-let WaveSizePredicate = isWave32 in {
-  defm GLOBAL_LOAD_TR16_B128 : VGLOBAL_Real_AllAddr_gfx1210<0x057, "GLOBAL_LOAD_TR_B128_w32", "global_load_tr16_b128", true>;
-  defm GLOBAL_LOAD_TR8_B64   : VGLOBAL_Real_AllAddr_gfx1210<0x058, "GLOBAL_LOAD_TR_B64_w32", "global_load_tr8_b64", true>;
+// Use alias instead of new real.
+def : MnemonicAlias<"global_load_tr8_b64",   "global_load_tr_b64">,  Requires<[isGFX12_10Plus,isWave32]>;
+def : MnemonicAlias<"global_load_tr16_b128", "global_load_tr_b128">, Requires<[isGFX12_10Plus,isWave32]>;
 
-  defm GLOBAL_LOAD_TR6_B96   : VGLOBAL_Real_AllAddr_gfx1210<0x075>;
-  defm GLOBAL_LOAD_TR4_B64   : VGLOBAL_Real_AllAddr_gfx1210<0x074>;
-}
+defm GLOBAL_LOAD_TR6_B96   : VGLOBAL_Real_AllAddr_gfx1210<0x075>;
+defm GLOBAL_LOAD_TR4_B64   : VGLOBAL_Real_AllAddr_gfx1210<0x074>;
 
 defm FLAT_ATOMIC_ADD_F64     : VFLAT_Real_Atomics_gfx1210<0x055>;
 defm FLAT_ATOMIC_MIN_NUM_F64 : VFLAT_Real_Atomics_gfx1210<0x05b, "FLAT_ATOMIC_MIN_F64", "flat_atomic_min_num_f64", true>;
