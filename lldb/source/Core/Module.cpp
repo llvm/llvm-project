@@ -1200,6 +1200,34 @@ bool Module::IsSwiftCxxInteropEnabled() {
   }
   return m_is_swift_cxx_interop_enabled == eLazyBoolYes;
 }
+
+bool Module::IsEmbeddedSwift() {
+  switch (m_is_embedded_swift) {
+  case eLazyBoolYes:
+    return true;
+  case eLazyBoolNo:
+    return false;
+  case eLazyBoolCalculate:
+    auto *sym_file = GetSymbolFile();
+    if (!sym_file)
+      return false;
+
+    m_is_embedded_swift = eLazyBoolNo;
+    auto options = sym_file->GetCompileOptions();
+    StringRef enable_embedded_swift("-enable-embedded-swift");
+    for (auto &[_, args] : options) {
+      for (const char *arg : args.GetArgumentArrayRef()) {
+        if (enable_embedded_swift == arg) {
+          m_is_embedded_swift = eLazyBoolYes;
+          return true;
+        }
+      }
+    }
+
+    return m_is_embedded_swift == eLazyBoolYes;
+  }
+}
+
 #endif
 
 void Module::ReportErrorIfModifyDetected(
