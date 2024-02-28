@@ -9,7 +9,7 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; Function Attrs: noinline nounwind optnone
 define i32 @test_thread_id(i32 %a) #0 {
 entry:
-; CHECK:call i32 @dx.op.unary.i32(i32 93, i32 %{{.*}})
+; CHECK:call i32 @dx.op.threadId.i32(i32 93, i32 %{{.*}})
   %0 = call i32 @llvm.dx.thread.id(i32 %a)
   ret i32 %0
 }
@@ -18,7 +18,7 @@ entry:
 ; Function Attrs: noinline nounwind optnone
 define i32 @test_group_id(i32 %a) #0 {
 entry:
-; CHECK: call i32 @dx.op.unary.i32(i32 94, i32 %{{.*}})
+; CHECK: call i32 @dx.op.groupId.i32(i32 94, i32 %{{.*}})
   %0 = call i32 @llvm.dx.group.id(i32 %a)
   ret i32 %0
 }
@@ -27,7 +27,7 @@ entry:
 ; Function Attrs: noinline nounwind optnone
 define i32 @test_thread_id_in_group(i32 %a) #0 {
 entry:
-; CHECK: call i32 @dx.op.unary.i32(i32 95, i32 %{{.*}})
+; CHECK: call i32 @dx.op.threadIdInGroup.i32(i32 95, i32 %{{.*}})
   %0 = call i32 @llvm.dx.thread.id.in.group(i32 %a)
   ret i32 %0
 }
@@ -36,7 +36,7 @@ entry:
 ; Function Attrs: noinline nounwind optnone
 define i32 @test_flattened_thread_id_in_group() #0 {
 entry:
-; CHECK: call i32 @dx.op.nullary.i32(i32 96)
+; CHECK: call i32 @dx.op.flattenedThreadIdInGroup.i32(i32 96)
   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
   ret i32 %0
 }

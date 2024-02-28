@@ -130,19 +130,9 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
         }
       }
     }
-    // Determine the operation class (unary/binary) based on the number of
-    // parameters As parameter types are being considered, skip return type
-    auto ParamSize = TypeListSize - 1;
-    if (ParamSize == 0) {
-      OpClass = "Nullary";
-    } else if (ParamSize == 1) {
-      OpClass = "Unary";
-    } else if (ParamSize == 2) {
-      OpClass = "Binary";
-    } else {
-      // TODO: Extend as needed
-      llvm_unreachable("Unhandled parameter size");
-    }
+    // Get the operation class
+    OpClass = R->getValueAsDef("OpClass")->getName();
+
     // NOTE: For now, assume that attributes of DXIL Operation are the same as
     // that of the intrinsic. Deviations are expected to be encoded in TableGen
     // record specification and handled accordingly here. Support to be added
