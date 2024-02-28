@@ -26083,7 +26083,8 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
     auto CallerAttrs = SMEAttrs(*Inst.getFunction());
     auto CalleeAttrs = SMEAttrs(*Base);
     if (CallerAttrs.requiresSMChange(CalleeAttrs) ||
-        CallerAttrs.requiresLazySave(CalleeAttrs))
+        CallerAttrs.requiresLazySave(CalleeAttrs) ||
+        CallerAttrs.requiresPreservingZT0(CalleeAttrs))
       return true;
   }
   return false;
