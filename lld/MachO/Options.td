@@ -966,8 +966,12 @@ def interposable_list : Separate<["-"], "interposable_list">,
 def no_function_starts : Flag<["-"], "no_function_starts">,
     HelpText<"Do not create table of function start addresses">,
     Group<grp_rare>;
+def objc_category_merging : Flag<["-"], "objc_category_merging">,
+    HelpText<"Merge Objective-C categories that share the same base class">,
+    Flags<[HelpHidden]>,
+    Group<grp_rare>;
 def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
-    HelpText<"Do not merge Objective-C categories into their classes">,
+    HelpText<"Do not merge Objective-C categories">,
     Flags<[HelpHidden]>,
     Group<grp_rare>;
 def object_path_lto : Separate<["-"], "object_path_lto">,

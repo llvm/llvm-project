@@ -1639,7 +1639,7 @@ void CStringSection::addInput(CStringInputSection *isec) {
 void CStringSection::writeTo(uint8_t *buf) const {
   for (const CStringInputSection *isec : inputs) {
     for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-      if (!piece.live)
+      if (piece.shouldOmitFromOutput())
         continue;
       StringRef string = isec->getStringRef(i);
       memcpy(buf + piece.outSecOff, string.data(), string.size());
@@ -1651,7 +1651,7 @@ void CStringSection::finalizeContents() {
   uint64_t offset = 0;
   for (CStringInputSection *isec : inputs) {
     for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-      if (!piece.live)
+      if (piece.shouldOmitFromOutput())
         continue;
       // See comment above DeduplicatedCStringSection for how alignment is
       // handled.
@@ -1709,7 +1709,7 @@ void DeduplicatedCStringSection::finalizeContents() {
   // Find the largest alignment required for each string.
   for (const CStringInputSection *isec : inputs) {
     for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-      if (!piece.live)
+      if (piece.shouldOmitFromOutput())
         continue;
       auto s = isec->getCachedHashStringRef(i);
       assert(isec->align != 0);
@@ -1725,7 +1725,7 @@ void DeduplicatedCStringSection::finalizeContents() {
   // StringPieces for easy access.
   for (CStringInputSection *isec : inputs) {
     for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-      if (!piece.live)
+      if (piece.shouldOmitFromOutput())
         continue;
       auto s = isec->getCachedHashStringRef(i);
       auto it = stringOffsetMap.find(s);
