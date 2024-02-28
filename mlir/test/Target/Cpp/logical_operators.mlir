@@ -10,5 +10,5 @@ func.func @logical(%arg0: i32, %arg1: i32) -> () {
 
 // CHECK-LABEL: void logical
 // CHECK-NEXT:  bool [[V2:[^ ]*]] = [[V0:[^ ]*]] && [[V1:[^ ]*]];
-// CHECK-NEXT:  bool [[V3:[^ ]*]] = ![[V0:[^ ]*]];
-// CHECK-NEXT:  bool [[V4:[^ ]*]] = [[V0:[^ ]*]] || [[V1:[^ ]*]];
+// CHECK-NEXT:  bool [[V3:[^ ]*]] = ![[V0]];
+// CHECK-NEXT:  bool [[V4:[^ ]*]] = [[V0]] || [[V1]];
