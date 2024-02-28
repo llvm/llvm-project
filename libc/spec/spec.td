@@ -51,6 +51,7 @@ def LongDoubleType : NamedType<"long double">;
 def CharType : NamedType<"char">;
 def UnsignedCharType : NamedType<"unsigned char">;
 def UnsignedShortType : NamedType<"unsigned short">;
+def BoolType : NamedType<"bool">;
 
 def Float128Type : NamedType<"float128">;
 

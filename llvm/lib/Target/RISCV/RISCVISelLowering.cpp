@@ -9728,7 +9728,14 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
 
   auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
 
+  ElementCount EndIndex =
+      ElementCount::getScalable(RemIdx) + SubVecVT.getVectorElementCount();
   VL = computeVLMax(SubVecVT, DL, DAG);
+
+  // Use tail agnostic policy if we're inserting over Vec's tail.
+  unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+  if (EndIndex == VecVT.getVectorElementCount())
+    Policy = RISCVII::TAIL_AGNOSTIC;
 
   // If we're inserting into the lowest elements, use a tail undisturbed
   // vmv.v.v.
@@ -9743,7 +9750,7 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     VL = DAG.getNode(ISD::ADD, DL, XLenVT, SlideupAmt, VL);
 
     SubVec = getVSlideup(DAG, Subtarget, DL, InterSubVT, AlignedExtract, SubVec,
-                         SlideupAmt, Mask, VL);
+                         SlideupAmt, Mask, VL, Policy);
   }
 
   // If required, insert this subvector back into the correct vector register.
