@@ -1,4 +1,4 @@
-// NOLINT(llvm-header-guard)
+// NOLINT(llvm-header-guard) https://github.com/llvm/llvm-project/issues/83339
 //===-- Internal header for assert ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
