@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_STRUCT_DIRENT_H__
-#define __LLVM_LIBC_TYPES_STRUCT_DIRENT_H__
+#ifndef LLVM_LIBC_TYPES_STRUCT_DIRENT_H
+#define LLVM_LIBC_TYPES_STRUCT_DIRENT_H
 
 #include <llvm-libc-types/ino_t.h>
 #include <llvm-libc-types/off_t.h>
@@ -26,4 +26,4 @@ struct dirent {
   char d_name[1];
 };
 
-#endif // __LLVM_LIBC_TYPES_STRUCT_DIRENT_H__
+#endif // LLVM_LIBC_TYPES_STRUCT_DIRENT_H
