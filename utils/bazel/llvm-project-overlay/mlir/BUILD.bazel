@@ -6,7 +6,6 @@
 #   The MLIR "Multi-Level Intermediate Representation" Compiler Infrastructure
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load(
     ":build_defs.bzl",
     "cc_headers_only",
@@ -36,7 +35,10 @@ expand_template(
         "#cmakedefine01 MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS": "#define MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS 0",
         "#cmakedefine MLIR_GREEDY_REWRITE_RANDOMIZER_SEED ${MLIR_GREEDY_REWRITE_RANDOMIZER_SEED}": "/* #undef MLIR_GREEDY_REWRITE_RANDOMIZER_SEED */",
         "#cmakedefine01 MLIR_ENABLE_PDL_IN_PATTERNMATCH": "#define MLIR_ENABLE_PDL_IN_PATTERNMATCH 1",
-    },
+    } | if_cuda_available(
+        {"#cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS": "#define MLIR_ENABLE_CUDA_CONVERSIONS 1"},
+        {"#cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS": "#define MLIR_ENABLE_CUDA_CONVERSIONS 0"},
+    ),
     template = "include/mlir/Config/mlir-config.h.cmake",
 )
 
@@ -5468,7 +5470,6 @@ cc_library(
     srcs = ["lib/Dialect/GPU/Pipelines/GPUToNVVMPipeline.cpp"],
     hdrs = ["include/mlir/Dialect/GPU/Pipelines/Passes.h"],
     includes = ["include"],
-    local_defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     deps = [
         ":AffineToStandard",
         ":ArithToLLVM",
@@ -5492,6 +5493,7 @@ cc_library(
         ":Transforms",
         ":VectorToLLVM",
         ":VectorToSCF",
+        ":config",
     ],
 )
 
@@ -5541,6 +5543,7 @@ cc_library(
         ":Transforms",
         ":VCIXToLLVMIRTranslation",
         ":VectorDialect",
+        ":config",
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Support",
@@ -6176,6 +6179,7 @@ cc_library(
         ":NVVMToLLVMIRTranslation",
         ":TargetLLVM",
         ":ToLLVMIRTranslation",
+        ":config",
         "//llvm:NVPTXCodeGen",
         "//llvm:Support",
     ],
@@ -9131,6 +9135,7 @@ cc_library(
         ":VectorTransforms",
         ":X86VectorDialect",
         ":X86VectorTransforms",
+        ":config",
     ],
 )
 
