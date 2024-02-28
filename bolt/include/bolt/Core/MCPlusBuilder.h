@@ -1199,6 +1199,16 @@ public:
   /// Set instruction size.
   void setSize(MCInst &Inst, uint32_t Size) const;
 
+  /// Check if the branch instruction could be modified at runtime.
+  bool isDynamicBranch(const MCInst &Inst) const;
+
+  /// Return ID for runtime-modifiable instruction.
+  std::optional<uint32_t> getDynamicBranchID(const MCInst &Inst) const;
+
+  /// Mark instruction as a dynamic branch, i.e. a branch that can be
+  /// overwritten at runtime.
+  void setDynamicBranch(MCInst &Inst, uint32_t ID) const;
+
   /// Return MCSymbol that represents a target of this instruction at a given
   /// operand number \p OpNum. If there's no symbol associated with
   /// the operand - return nullptr.
@@ -1206,6 +1216,14 @@ public:
                                           unsigned OpNum = 0) const {
     llvm_unreachable("not implemented");
     return nullptr;
+  }
+
+  /// Return MCSymbol that represents a target of this instruction at a given
+  /// operand number \p OpNum. If there's no symbol associated with
+  /// the operand - return nullptr.
+  virtual MCSymbol *getTargetSymbol(MCInst &Inst, unsigned OpNum = 0) const {
+    return const_cast<MCSymbol *>(
+        getTargetSymbol(const_cast<const MCInst &>(Inst), OpNum));
   }
 
   /// Return MCSymbol extracted from a target expression
@@ -1685,6 +1703,13 @@ public:
   /// Create a conditional branch with a target-specific conditional code \p CC.
   virtual void createCondBranch(MCInst &Inst, const MCSymbol *Target,
                                 unsigned CC, MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Create long conditional branch with a target-specific conditional code
+  /// \p CC.
+  virtual void createLongCondBranch(MCInst &Inst, const MCSymbol *Target,
+                                    unsigned CC, MCContext *Ctx) const {
     llvm_unreachable("not implemented");
   }
 
