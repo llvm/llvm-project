@@ -54,9 +54,13 @@
 /* Define pure C CFloat128Type and CFloat128ComplexType. */
 #if LDBL_MANT_DIG == 113
 typedef long double CFloat128Type;
+#ifndef __cplusplus
 typedef long double _Complex CFloat128ComplexType;
+#endif
 #elif HAS_FLOAT128
 typedef __float128 CFloat128Type;
+
+#ifndef __cplusplus
 /*
  * Use mode() attribute supported by GCC and Clang.
  * Adjust it for other compilers as needed.
@@ -66,5 +70,6 @@ typedef _Complex float __attribute__((mode(TC))) CFloat128ComplexType;
 #else
 typedef _Complex float __attribute__((mode(KC))) CFloat128ComplexType;
 #endif
+#endif // __cplusplus
 #endif
 #endif /* FORTRAN_COMMON_FLOAT128_H_ */
