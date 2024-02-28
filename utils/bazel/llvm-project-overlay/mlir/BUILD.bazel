@@ -9135,6 +9135,7 @@ cc_library(
         ":VectorTransforms",
         ":X86VectorDialect",
         ":X86VectorTransforms",
+        ":config",
     ],
 )
 
