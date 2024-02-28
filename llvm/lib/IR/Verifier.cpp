@@ -174,13 +174,10 @@ private:
   }
 
   void Write(const DbgRecord *DR) {
-    if (DR)
+    if (DR) {
       DR->print(*OS, MST, false);
-  }
-
-  void Write(const DPValue *V) {
-    if (V)
-      V->print(*OS, MST, false);
+      *OS << '\n';
+    }
   }
 
   void Write(DPValue::LocationType Type) {
@@ -635,12 +632,15 @@ private:
   void verifySiblingFuncletUnwinds();
 
   void verifyFragmentExpression(const DbgVariableIntrinsic &I);
+  void verifyFragmentExpression(const DPValue &I);
   template <typename ValueOrMetadata>
   void verifyFragmentExpression(const DIVariable &V,
                                 DIExpression::FragmentInfo Fragment,
                                 ValueOrMetadata *Desc);
   void verifyFnArgs(const DbgVariableIntrinsic &I);
+  void verifyFnArgs(const DPValue &DPV);
   void verifyNotEntryValue(const DbgVariableIntrinsic &I);
+  void verifyNotEntryValue(const DPValue &I);
 
   /// Module-level debug info verification...
   void verifyCompileUnits();
@@ -687,14 +687,18 @@ void Verifier::visitDbgRecords(Instruction &I) {
   for (DbgRecord &DR : I.getDbgValueRange()) {
     CheckDI(DR.getMarker() == I.DbgMarker, "DbgRecord had invalid DbgMarker",
             &I, &DR);
-    if (MDNode *N = DR.getDebugLoc().getAsMDNode()) {
-      CheckDI(isa<DILocation>(N), "invalid #dbg record location", &DR, N);
-      visitDILocation(*cast<DILocation>(N));
-    }
-    if (auto *DPV = dyn_cast<DPValue>(&DR))
+    if (auto *Loc =
+            dyn_cast_or_null<DILocation>(DR.getDebugLoc().getAsMDNode()))
+      visitMDNode(*Loc, AreDebugLocsAllowed::Yes);
+    if (auto *DPV = dyn_cast<DPValue>(&DR)) {
       visit(*DPV);
-    else if (auto *DPL = dyn_cast<DPLabel>(&DR))
+      // These have to appear after `visit` for consistency with existing
+      // intrinsic behaviour.
+      verifyFragmentExpression(*DPV);
+      verifyNotEntryValue(*DPV);
+    } else if (auto *DPL = dyn_cast<DPLabel>(&DR)) {
       visit(*DPL);
+    }
   }
 }
 
@@ -3026,9 +3030,10 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
   }
 
   // Confirm that no issues arise from the debug program.
-  if (BB.IsNewDbgInfoFormat)
+  if (BB.IsNewDbgInfoFormat) {
     CheckDI(!BB.getTrailingDPValues(), "Basic Block has trailing DbgRecords!",
             &BB);
+  }
 }
 
 void Verifier::visitTerminator(Instruction &I) {
@@ -6210,7 +6215,7 @@ void Verifier::visit(DPLabel &DPL) {
   // The scopes for variables and !dbg attachments must agree.
   DILabel *Label = DPL.getLabel();
   DILocation *Loc = DPL.getDebugLoc();
-  Check(Loc, "#dbg_label record requires a !dbg attachment", &DPL, BB, F);
+  CheckDI(Loc, "#dbg_label record requires a !dbg attachment", &DPL, BB, F);
 
   DISubprogram *LabelSP = getSubprogram(Label->getRawScope());
   DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
@@ -6224,24 +6229,39 @@ void Verifier::visit(DPLabel &DPL) {
 }
 
 void Verifier::visit(DPValue &DPV) {
+  BasicBlock *BB = DPV.getParent();
+  Function *F = BB->getParent();
+
   CheckDI(DPV.getType() == DPValue::LocationType::Value ||
               DPV.getType() == DPValue::LocationType::Declare ||
               DPV.getType() == DPValue::LocationType::Assign,
           "invalid #dbg record type", &DPV, DPV.getType());
+
   // The location for a DPValue must be either a ValueAsMetadata, DIArgList, or
   // an empty MDNode (which is a legacy representation for an "undef" location).
   auto *MD = DPV.getRawLocation();
-  CheckDI(isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
-              (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands()),
+  CheckDI(MD && (isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
+                 (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands())),
           "invalid #dbg record address/value", &DPV, MD);
-  CheckDI(isa<DILocalVariable>(DPV.getRawVariable()),
+  if (auto *VAM = dyn_cast<ValueAsMetadata>(MD))
+    visitValueAsMetadata(*VAM, F);
+  else if (auto *AL = dyn_cast<DIArgList>(MD))
+    visitDIArgList(*AL, F);
+
+  CheckDI(isa_and_nonnull<DILocalVariable>(DPV.getRawVariable()),
           "invalid #dbg record variable", &DPV, DPV.getRawVariable());
-  CheckDI(DPV.getExpression(), "missing #dbg record expression", &DPV,
-          DPV.getExpression());
+  visitMDNode(*DPV.getRawVariable(), AreDebugLocsAllowed::No);
+
+  CheckDI(isa_and_nonnull<DIExpression>(DPV.getRawExpression()),
+          "invalid #dbg record expression", &DPV, DPV.getRawExpression());
+  visitMDNode(*DPV.getExpression(), AreDebugLocsAllowed::No);
 
   if (DPV.isDbgAssign()) {
-    CheckDI(isa<DIAssignID>(DPV.getRawAssignID()),
+    CheckDI(isa_and_nonnull<DIAssignID>(DPV.getRawAssignID()),
             "invalid #dbg_assign DIAssignID", &DPV, DPV.getRawAssignID());
+    visitMDNode(*cast<DIAssignID>(DPV.getRawAssignID()),
+                AreDebugLocsAllowed::No);
+
     const auto *RawAddr = DPV.getRawAddress();
     // Similarly to the location above, the address for an assign DPValue must
     // be a ValueAsMetadata or an empty MDNode, which represents an undef
@@ -6250,9 +6270,14 @@ void Verifier::visit(DPValue &DPV) {
         isa<ValueAsMetadata>(RawAddr) ||
             (isa<MDNode>(RawAddr) && !cast<MDNode>(RawAddr)->getNumOperands()),
         "invalid #dbg_assign address", &DPV, DPV.getRawAddress());
-    CheckDI(DPV.getAddressExpression(),
-            "missing #dbg_assign address expression", &DPV,
-            DPV.getAddressExpression());
+    if (auto *VAM = dyn_cast<ValueAsMetadata>(RawAddr))
+      visitValueAsMetadata(*VAM, F);
+
+    CheckDI(isa_and_nonnull<DIExpression>(DPV.getRawAddressExpression()),
+            "invalid #dbg_assign address expression", &DPV,
+            DPV.getRawAddressExpression());
+    visitMDNode(*DPV.getAddressExpression(), AreDebugLocsAllowed::No);
+
     // All of the linked instructions should be in the same function as DPV.
     for (Instruction *I : at::getAssignmentInsts(&DPV))
       CheckDI(DPV.getFunction() == I->getFunction(),
@@ -6264,18 +6289,12 @@ void Verifier::visit(DPValue &DPV) {
   CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
           Var->getRawType());
 
-  // Ignore broken !dbg attachments; they're checked elsewhere.
-  if (MDNode *N = DPV.getDebugLoc().getAsMDNode())
-    if (!isa<DILocation>(N))
-      return;
-
-  BasicBlock *BB = DPV.getParent();
-  Function *F = BB ? BB->getParent() : nullptr;
+  auto *DLNode = DPV.getDebugLoc().getAsMDNode();
+  CheckDI(isa_and_nonnull<DILocation>(DLNode), "invalid #dbg record location",
+          &DPV, DLNode);
+  DILocation *Loc = DPV.getDebugLoc();
 
   // The scopes for variables and !dbg attachments must agree.
-  DILocation *Loc = DPV.getDebugLoc();
-  CheckDI(Loc, "missing #dbg record DILocation", &DPV, BB, F);
-
   DISubprogram *VarSP = getSubprogram(Var->getRawScope());
   DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
   if (!VarSP || !LocSP)
@@ -6285,6 +6304,8 @@ void Verifier::visit(DPValue &DPV) {
           "mismatched subprogram between #dbg record variable and DILocation",
           &DPV, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
           Loc->getScope()->getSubprogram());
+
+  verifyFnArgs(DPV);
 }
 
 void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
@@ -6645,6 +6666,30 @@ void Verifier::verifyFragmentExpression(const DbgVariableIntrinsic &I) {
 
   verifyFragmentExpression(*V, *Fragment, &I);
 }
+void Verifier::verifyFragmentExpression(const DPValue &DPV) {
+  DILocalVariable *V = dyn_cast_or_null<DILocalVariable>(DPV.getRawVariable());
+  DIExpression *E = dyn_cast_or_null<DIExpression>(DPV.getRawExpression());
+
+  // We don't know whether this intrinsic verified correctly.
+  if (!V || !E || !E->isValid())
+    return;
+
+  // Nothing to do if this isn't a DW_OP_LLVM_fragment expression.
+  auto Fragment = E->getFragmentInfo();
+  if (!Fragment)
+    return;
+
+  // The frontend helps out GDB by emitting the members of local anonymous
+  // unions as artificial local variables with shared storage. When SROA splits
+  // the storage for artificial local variables that are smaller than the entire
+  // union, the overhang piece will be outside of the allotted space for the
+  // variable and this check fails.
+  // FIXME: Remove this check as soon as clang stops doing this; it hides bugs.
+  if (V->isArtificial())
+    return;
+
+  verifyFragmentExpression(*V, *Fragment, &DPV);
+}
 
 template <typename ValueOrMetadata>
 void Verifier::verifyFragmentExpression(const DIVariable &V,
@@ -6691,6 +6736,34 @@ void Verifier::verifyFnArgs(const DbgVariableIntrinsic &I) {
   CheckDI(!Prev || (Prev == Var), "conflicting debug info for argument", &I,
           Prev, Var);
 }
+void Verifier::verifyFnArgs(const DPValue &DPV) {
+  // This function does not take the scope of noninlined function arguments into
+  // account. Don't run it if current function is nodebug, because it may
+  // contain inlined debug intrinsics.
+  if (!HasDebugInfo)
+    return;
+
+  // For performance reasons only check non-inlined ones.
+  if (DPV.getDebugLoc()->getInlinedAt())
+    return;
+
+  DILocalVariable *Var = DPV.getVariable();
+  CheckDI(Var, "#dbg record without variable");
+
+  unsigned ArgNo = Var->getArg();
+  if (!ArgNo)
+    return;
+
+  // Verify there are no duplicate function argument debug info entries.
+  // These will cause hard-to-debug assertions in the DWARF backend.
+  if (DebugFnArgs.size() < ArgNo)
+    DebugFnArgs.resize(ArgNo, nullptr);
+
+  auto *Prev = DebugFnArgs[ArgNo - 1];
+  DebugFnArgs[ArgNo - 1] = Var;
+  CheckDI(!Prev || (Prev == Var), "conflicting debug info for argument", &DPV,
+          Prev, Var);
+}
 
 void Verifier::verifyNotEntryValue(const DbgVariableIntrinsic &I) {
   DIExpression *E = dyn_cast_or_null<DIExpression>(I.getRawExpression());
@@ -6714,6 +6787,29 @@ void Verifier::verifyNotEntryValue(const DbgVariableIntrinsic &I) {
           "Entry values are only allowed in MIR unless they target a "
           "swiftasync Argument",
           &I);
+}
+void Verifier::verifyNotEntryValue(const DPValue &DPV) {
+  DIExpression *E = dyn_cast_or_null<DIExpression>(DPV.getRawExpression());
+
+  // We don't know whether this intrinsic verified correctly.
+  if (!E || !E->isValid())
+    return;
+
+  if (isa<ValueAsMetadata>(DPV.getRawLocation())) {
+    Value *VarValue = DPV.getVariableLocationOp(0);
+    if (isa<UndefValue>(VarValue) || isa<PoisonValue>(VarValue))
+      return;
+    // We allow EntryValues for swift async arguments, as they have an
+    // ABI-guarantee to be turned into a specific register.
+    if (auto *ArgLoc = dyn_cast_or_null<Argument>(VarValue);
+        ArgLoc && ArgLoc->hasAttribute(Attribute::SwiftAsync))
+      return;
+  }
+
+  CheckDI(!E->isEntryValue(),
+          "Entry values are only allowed in MIR unless they target a "
+          "swiftasync Argument",
+          &DPV);
 }
 
 void Verifier::verifyCompileUnits() {
