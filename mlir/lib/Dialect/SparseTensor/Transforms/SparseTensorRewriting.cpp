@@ -632,8 +632,8 @@ public:
         rewriter.create<vector::PrintOp>(
             loc, lvl, vector::PrintPunctuation::NoPunctuation);
         rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("] : "));
-        auto poss = rewriter.create<ToPositionsOp>(loc, tp, tensor, l);
-        printContents(rewriter, loc, tp, poss);
+        auto pos = rewriter.create<ToPositionsOp>(loc, tp, tensor, l);
+        printContents(rewriter, loc, tp, pos);
         break;
       }
       case SparseTensorFieldKind::CrdMemRef: {
@@ -642,15 +642,15 @@ public:
         rewriter.create<vector::PrintOp>(
             loc, lvl, vector::PrintPunctuation::NoPunctuation);
         rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("] : "));
-        auto crds = rewriter.create<ToCoordinatesOp>(loc, tp, tensor, l);
-        printContents(rewriter, loc, tp, crds);
+        auto crd = rewriter.create<ToCoordinatesOp>(loc, tp, tensor, l);
+        printContents(rewriter, loc, tp, crd);
         break;
       }
       case SparseTensorFieldKind::ValMemRef: {
         rewriter.create<vector::PrintOp>(loc,
                                          rewriter.getStringAttr("values : "));
-        auto vals = rewriter.create<ToValuesOp>(loc, tp, tensor);
-        printContents(rewriter, loc, tp, vals);
+        auto val = rewriter.create<ToValuesOp>(loc, tp, tensor);
+        printContents(rewriter, loc, tp, val);
         break;
       }
       }
