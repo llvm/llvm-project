@@ -239,22 +239,16 @@ const char *amdgpu::dlr::getLinkCommandArgs(
 
   llvm::SmallVector<std::string, 12> BCLibs;
 
+  std::string AsanRTL;
   if (Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
                    true) &&
       TC.getSanitizerArgs(Args).needsAsanRt()) {
     if (!Args.hasArg(options::OPT_nogpulib)){
-      std::string AsanRTL(RocmInstallation.getAsanRTLPath());
-      // asanrtl is dependent on ockl so for every asanrtl bitcode linking
-      // requires ockl but viceversa is not true.
-      std::string OcklRTL(RocmInstallation.getOCKLPath());
+      AsanRTL = RocmInstallation.getAsanRTLPath();
       if(AsanRTL.empty())
         TC.getDriver().Diag(diag::err_drv_no_asan_rt_lib);
-      else if(OcklRTL.empty())
-        TC.getDriver().Diag(diag::err_drv_no_rocm_device_lib);
-      else{
+      else
         BCLibs.push_back(AsanRTL);
-        BCLibs.push_back(OcklRTL);
-      }
     }
   }
   StringRef GPUArch = getProcessorFromTargetID(Triple, TargetID);
@@ -264,12 +258,25 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   // where it is expected it means we are using the build tree compiler
   // not the installed compiler.
   std::string LibDeviceName = "/libomptarget-amdgpu-" + GPUArch.str() + ".bc";
+
   SmallString<128> Path(Args.MakeArgString(libpath + LibDeviceName));
   if (LibSuffix != "lib" || llvm::sys::fs::exists(Path)) {
     BCLibs.push_back(Args.MakeArgString(Path));
   } else {
     std::string RtDir = "/../runtimes/runtimes-bins/openmp/libomptarget";
     BCLibs.push_back(Args.MakeArgString(libpath + RtDir + LibDeviceName));
+  }
+
+  if (!AsanRTL.empty()) {
+    if (!Args.hasArg(options::OPT_nogpulib)) {
+      // asanrtl is dependent on ockl so for every asanrtl bitcode linking
+      // requires ockl but viceversa is not true.
+      std::string OcklRTL(RocmInstallation.getOCKLPath());
+      if (OcklRTL.empty())
+        TC.getDriver().Diag(diag::err_drv_no_rocm_device_lib);
+      else
+        BCLibs.push_back(OcklRTL);
+    }
   }
 
   // Add the generic set of libraries, OpenMP subset only
