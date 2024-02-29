@@ -5197,43 +5197,49 @@ bool Sema::CheckPPCMMAType(QualType Type, SourceLocation TypeLoc) {
 bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() > 1);
   ExprResult A = TheCall->getArg(0);
-  ExprResult B = TheCall->getArg(1);
+
   QualType ArgTyA = A.get()->getType();
-  QualType ArgTyB = B.get()->getType();
+
   auto *VecTyA = ArgTyA->getAs<VectorType>();
-  auto *VecTyB = ArgTyB->getAs<VectorType>();
   SourceLocation BuiltinLoc = TheCall->getBeginLoc();
-  if (VecTyA == nullptr && VecTyB == nullptr)
-    return false;
 
-  if (VecTyA && VecTyB) {
-    bool retValue = false;
-    if (VecTyA->getElementType() != VecTyB->getElementType()) {
-      // Note: type promotion is intended to be handeled via the intrinsics
-      //  and not the builtin itself.
-      S->Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_incompatible_vector)
-          << TheCall->getDirectCallee()
-          << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
-      retValue = true;
+  for (unsigned i = 1; i < TheCall->getNumArgs(); ++i) {
+    ExprResult B = TheCall->getArg(i);
+    QualType ArgTyB = B.get()->getType();
+    auto *VecTyB = ArgTyB->getAs<VectorType>();
+    if (VecTyA == nullptr && VecTyB == nullptr)
+      return false;
+
+    if (VecTyA && VecTyB) {
+      bool retValue = false;
+      if (VecTyA->getElementType() != VecTyB->getElementType()) {
+        // Note: type promotion is intended to be handeled via the intrinsics
+        //  and not the builtin itself.
+        S->Diag(TheCall->getBeginLoc(),
+                diag::err_vec_builtin_incompatible_vector_all)
+            << TheCall->getDirectCallee()
+            << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
+        retValue = true;
+      }
+      if (VecTyA->getNumElements() != VecTyB->getNumElements()) {
+        // if we get here a HLSLVectorTruncation is needed.
+        S->Diag(BuiltinLoc, diag::err_vec_builtin_incompatible_vector_all)
+            << TheCall->getDirectCallee()
+            << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                           TheCall->getArg(1)->getEndLoc());
+        retValue = true;
+      }
+
+      if (!retValue)
+        TheCall->setType(VecTyA->getElementType());
+
+      return retValue;
     }
-    if (VecTyA->getNumElements() != VecTyB->getNumElements()) {
-      // if we get here a HLSLVectorTruncation is needed.
-      S->Diag(BuiltinLoc, diag::err_vec_builtin_incompatible_vector)
-          << TheCall->getDirectCallee()
-          << SourceRange(TheCall->getArg(0)->getBeginLoc(),
-                         TheCall->getArg(1)->getEndLoc());
-      retValue = true;
-    }
-
-    if (retValue)
-      TheCall->setType(VecTyA->getElementType());
-
-    return retValue;
   }
 
   // Note: if we get here one of the args is a scalar which
   // requires a VectorSplat on Arg0 or Arg1
-  S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
+  S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector_all)
       << TheCall->getDirectCallee()
       << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                      TheCall->getArg(1)->getEndLoc());
@@ -5250,6 +5256,15 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckVectorElementCallArgs(this, TheCall))
       return true;
     if (SemaBuiltinVectorToScalarMath(TheCall))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_lerp: {
+    if (checkArgCount(*this, TheCall, 3))
+      return true;
+    if (CheckVectorElementCallArgs(this, TheCall))
+      return true;
+    if (SemaBuiltinElementwiseTernaryMath(TheCall))
       return true;
     break;
   }
