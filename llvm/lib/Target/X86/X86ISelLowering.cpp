@@ -5878,13 +5878,16 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       }
     }
 
-    // Peek through trunc/aext/zext.
+    // Peek through trunc/aext/zext/bitcast.
     // TODO: aext shouldn't require SM_SentinelZero padding.
     // TODO: handle shift of scalars.
     unsigned MinBitsPerElt = Scl.getScalarValueSizeInBits();
     while (Scl.getOpcode() == ISD::TRUNCATE ||
            Scl.getOpcode() == ISD::ANY_EXTEND ||
-           Scl.getOpcode() == ISD::ZERO_EXTEND) {
+           Scl.getOpcode() == ISD::ZERO_EXTEND ||
+           (Scl.getOpcode() == ISD::BITCAST &&
+            Scl.getScalarValueSizeInBits() ==
+                Scl.getOperand(0).getScalarValueSizeInBits())) {
       Scl = Scl.getOperand(0);
       MinBitsPerElt =
           std::min<unsigned>(MinBitsPerElt, Scl.getScalarValueSizeInBits());
@@ -41399,7 +41402,9 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     break;
   }
   case X86ISD::CVTSI2P:
-  case X86ISD::CVTUI2P: {
+  case X86ISD::CVTUI2P:
+  case X86ISD::CVTPH2PS:
+  case X86ISD::CVTPS2PH: {
     SDValue Src = Op.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
     APInt SrcUndef, SrcZero;

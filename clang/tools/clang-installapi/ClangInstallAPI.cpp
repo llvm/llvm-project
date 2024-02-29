@@ -96,7 +96,6 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   auto DriverArgs = llvm::ArrayRef(Args).slice(1);
   clang::driver::Driver Driver(ProgName, llvm::sys::getDefaultTargetTriple(),
                                *Diag, "clang installapi tool");
-  Driver.setInstalledDir(llvm::sys::path::parent_path(ProgName));
   auto TargetAndMode =
       clang::driver::ToolChain::getTargetAndModeFromProgramName(ProgName);
   Driver.setTargetAndMode(TargetAndMode);
