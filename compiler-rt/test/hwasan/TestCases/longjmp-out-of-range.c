@@ -1,12 +1,11 @@
 // RUN: %clang_hwasan -O0 %s -o %t && %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: pointer-tagging
-#include <stdlib.h>
 #include <assert.h>
 #include <sanitizer/hwasan_interface.h>
+#include <stdlib.h>
 
-__attribute__((noinline))
-int f(void *caller_frame) {
+__attribute__((noinline)) int f(void *caller_frame) {
   int z = 0;
   int *volatile p = &z;
   // Tag of local is never zero.
