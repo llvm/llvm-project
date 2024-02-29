@@ -58,6 +58,38 @@ static Value createTruncatedFPValue(Value operand, ImplicitLocOpBuilder &b) {
   return b.create<math::CopySignOp>(fpFixedConvert, operand);
 }
 
+// sinhf(float x) -> (exp(x) - exp(-x)) / 2
+static LogicalResult convertSinhOp(math::SinhOp op, PatternRewriter &rewriter) {
+  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  Value operand = op.getOperand();
+  Type opType = operand.getType();
+  Value exp = b.create<math::ExpOp>(operand);
+
+  Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
+  Value nexp = b.create<arith::DivFOp>(one, exp);
+  Value sub = b.create<arith::SubFOp>(exp, nexp);
+  Value two = createFloatConst(op->getLoc(), opType, 2.0, rewriter);
+  Value div = b.create<arith::DivFOp>(sub, two);
+  rewriter.replaceOp(op, div);
+  return success();
+}
+
+// coshf(float x) -> (exp(x) + exp(-x)) / 2
+static LogicalResult convertCoshOp(math::CoshOp op, PatternRewriter &rewriter) {
+  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  Value operand = op.getOperand();
+  Type opType = operand.getType();
+  Value exp = b.create<math::ExpOp>(operand);
+
+  Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
+  Value nexp = b.create<arith::DivFOp>(one, exp);
+  Value add = b.create<arith::AddFOp>(exp, nexp);
+  Value two = createFloatConst(op->getLoc(), opType, 2.0, rewriter);
+  Value div = b.create<arith::DivFOp>(add, two);
+  rewriter.replaceOp(op, div);
+  return success();
+}
+
 /// Expands tanh op into
 ///   1) 1-exp^{-2x} / 1+exp^{-2x}, if x => 0
 ///   2) exp^{2x}-1 / exp^{2x}+1  , if x < 0
@@ -443,6 +475,14 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
 
 void mlir::populateExpandCtlzPattern(RewritePatternSet &patterns) {
   patterns.add(convertCtlzOp);
+}
+
+void mlir::populateExpandSinhPattern(RewritePatternSet &patterns) {
+  patterns.add(convertSinhOp);
+}
+
+void mlir::populateExpandCoshPattern(RewritePatternSet &patterns) {
+  patterns.add(convertCoshOp);
 }
 
 void mlir::populateExpandTanPattern(RewritePatternSet &patterns) {

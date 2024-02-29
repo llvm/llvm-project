@@ -30,20 +30,21 @@
 
 using namespace llvm;
 
-char BasicBlockSectionsProfileReader::ID = 0;
-INITIALIZE_PASS(BasicBlockSectionsProfileReader, "bbsections-profile-reader",
+char BasicBlockSectionsProfileReaderWrapperPass::ID = 0;
+INITIALIZE_PASS(BasicBlockSectionsProfileReaderWrapperPass,
+                "bbsections-profile-reader",
                 "Reads and parses a basic block sections profile.", false,
                 false)
 
-Expected<ProfileBBID>
-BasicBlockSectionsProfileReader::parseProfileBBID(StringRef S) const {
+Expected<UniqueBBID>
+BasicBlockSectionsProfileReader::parseUniqueBBID(StringRef S) const {
   SmallVector<StringRef, 2> Parts;
   S.split(Parts, '.');
   if (Parts.size() > 2)
     return createProfileParseError(Twine("unable to parse basic block id: '") +
                                    S + "'");
-  unsigned long long BBID;
-  if (getAsUnsignedInteger(Parts[0], 10, BBID))
+  unsigned long long BaseBBID;
+  if (getAsUnsignedInteger(Parts[0], 10, BaseBBID))
     return createProfileParseError(
         Twine("unable to parse BB id: '" + Parts[0]) +
         "': unsigned integer expected");
@@ -51,21 +52,27 @@ BasicBlockSectionsProfileReader::parseProfileBBID(StringRef S) const {
   if (Parts.size() > 1 && getAsUnsignedInteger(Parts[1], 10, CloneID))
     return createProfileParseError(Twine("unable to parse clone id: '") +
                                    Parts[1] + "': unsigned integer expected");
-  return ProfileBBID{static_cast<unsigned>(BBID),
-                     static_cast<unsigned>(CloneID)};
+  return UniqueBBID{static_cast<unsigned>(BaseBBID),
+                    static_cast<unsigned>(CloneID)};
 }
 
 bool BasicBlockSectionsProfileReader::isFunctionHot(StringRef FuncName) const {
-  return getPathAndClusterInfoForFunction(FuncName).first;
+  return getClusterInfoForFunction(FuncName).first;
 }
 
-std::pair<bool, FunctionPathAndClusterInfo>
-BasicBlockSectionsProfileReader::getPathAndClusterInfoForFunction(
+std::pair<bool, SmallVector<BBClusterInfo>>
+BasicBlockSectionsProfileReader::getClusterInfoForFunction(
     StringRef FuncName) const {
   auto R = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
   return R != ProgramPathAndClusterInfo.end()
-             ? std::pair(true, R->second)
-             : std::pair(false, FunctionPathAndClusterInfo());
+             ? std::pair(true, R->second.ClusterInfo)
+             : std::pair(false, SmallVector<BBClusterInfo>());
+}
+
+SmallVector<SmallVector<unsigned>>
+BasicBlockSectionsProfileReader::getClonePathsForFunction(
+    StringRef FuncName) const {
+  return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName)).ClonePaths;
 }
 
 // Reads the version 1 basic block sections profile. Profile for each function
@@ -133,7 +140,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
 
   // Temporary set to ensure every basic block ID appears once in the clusters
   // of a function.
-  DenseSet<ProfileBBID> FuncBBIDs;
+  DenseSet<UniqueBBID> FuncBBIDs;
 
   // Debug-info-based module filename for the current function. Empty string
   // means no filename.
@@ -199,7 +206,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       // Reset current cluster position.
       CurrentPosition = 0;
       for (auto BasicBlockIDStr : Values) {
-        auto BasicBlockID = parseProfileBBID(BasicBlockIDStr);
+        auto BasicBlockID = parseUniqueBBID(BasicBlockIDStr);
         if (!BasicBlockID)
           return BasicBlockID.takeError();
         if (!FuncBBIDs.insert(*BasicBlockID).second)
@@ -207,28 +214,28 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
               Twine("duplicate basic block id found '") + BasicBlockIDStr +
               "'");
 
-        if (!BasicBlockID->BBID && CurrentPosition)
-          return createProfileParseError(
-              "entry BB (0) does not begin a cluster.");
-
-        FI->second.ClusterInfo.emplace_back(BBClusterInfo<ProfileBBID>{
+        FI->second.ClusterInfo.emplace_back(BBClusterInfo{
             *std::move(BasicBlockID), CurrentCluster, CurrentPosition++});
       }
       CurrentCluster++;
       continue;
     case 'p': { // Basic block cloning path specifier.
+      // Skip the profile when we the profile iterator (FI) refers to the
+      // past-the-end element.
+      if (FI == ProgramPathAndClusterInfo.end())
+        continue;
       SmallSet<unsigned, 5> BBsInPath;
       FI->second.ClonePaths.push_back({});
       for (size_t I = 0; I < Values.size(); ++I) {
-        auto BBIDStr = Values[I];
-        unsigned long long BBID = 0;
-        if (getAsUnsignedInteger(BBIDStr, 10, BBID))
+        auto BaseBBIDStr = Values[I];
+        unsigned long long BaseBBID = 0;
+        if (getAsUnsignedInteger(BaseBBIDStr, 10, BaseBBID))
           return createProfileParseError(Twine("unsigned integer expected: '") +
-                                         BBIDStr + "'");
-        if (I != 0 && !BBsInPath.insert(BBID).second)
+                                         BaseBBIDStr + "'");
+        if (I != 0 && !BBsInPath.insert(BaseBBID).second)
           return createProfileParseError(
-              Twine("duplicate cloned block in path: '") + BBIDStr + "'");
-        FI->second.ClonePaths.back().push_back(BBID);
+              Twine("duplicate cloned block in path: '") + BaseBBIDStr + "'");
+        FI->second.ClonePaths.back().push_back(BaseBBID);
       }
       continue;
     }
@@ -277,14 +284,11 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
         if (!FuncBBIDs.insert(BBID).second)
           return createProfileParseError(
               Twine("duplicate basic block id found '") + BBIDStr + "'");
-        if (BBID == 0 && CurrentPosition)
-          return createProfileParseError(
-              "entry BB (0) does not begin a cluster");
 
         FI->second.ClusterInfo.emplace_back(
-            BBClusterInfo<ProfileBBID>({{static_cast<unsigned>(BBID), 0},
-                                        CurrentCluster,
-                                        CurrentPosition++}));
+            BBClusterInfo({{static_cast<unsigned>(BBID), 0},
+                           CurrentCluster,
+                           CurrentPosition++}));
       }
       CurrentCluster++;
     } else {
@@ -292,7 +296,7 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
       // specifier starting with `M=`.
       auto [AliasesStr, DIFilenameStr] = S.split(' ');
       SmallString<128> DIFilename;
-      if (DIFilenameStr.startswith("M=")) {
+      if (DIFilenameStr.starts_with("M=")) {
         DIFilename =
             sys::path::remove_leading_dotslash(DIFilenameStr.substr(2));
         if (DIFilename.empty())
@@ -385,11 +389,11 @@ Error BasicBlockSectionsProfileReader::ReadProfile() {
   }
 }
 
-bool BasicBlockSectionsProfileReader::doInitialization(Module &M) {
-  if (!MBuf)
+bool BasicBlockSectionsProfileReaderWrapperPass::doInitialization(Module &M) {
+  if (!BBSPR.MBuf)
     return false;
   // Get the function name to debug info filename mapping.
-  FunctionNameToDIFilename.clear();
+  BBSPR.FunctionNameToDIFilename.clear();
   for (const Function &F : M) {
     SmallString<128> DIFilename;
     if (F.isDeclaration())
@@ -401,15 +405,46 @@ bool BasicBlockSectionsProfileReader::doInitialization(Module &M) {
         DIFilename = sys::path::remove_leading_dotslash(CU->getFilename());
     }
     [[maybe_unused]] bool inserted =
-        FunctionNameToDIFilename.try_emplace(F.getName(), DIFilename).second;
+        BBSPR.FunctionNameToDIFilename.try_emplace(F.getName(), DIFilename)
+            .second;
     assert(inserted);
   }
-  if (auto Err = ReadProfile())
+  if (auto Err = BBSPR.ReadProfile())
     report_fatal_error(std::move(Err));
   return false;
 }
 
-ImmutablePass *
-llvm::createBasicBlockSectionsProfileReaderPass(const MemoryBuffer *Buf) {
-  return new BasicBlockSectionsProfileReader(Buf);
+AnalysisKey BasicBlockSectionsProfileReaderAnalysis::Key;
+
+BasicBlockSectionsProfileReader
+BasicBlockSectionsProfileReaderAnalysis::run(Function &F,
+                                             FunctionAnalysisManager &AM) {
+  return BasicBlockSectionsProfileReader(TM->getBBSectionsFuncListBuf());
+}
+
+bool BasicBlockSectionsProfileReaderWrapperPass::isFunctionHot(
+    StringRef FuncName) const {
+  return BBSPR.isFunctionHot(FuncName);
+}
+
+std::pair<bool, SmallVector<BBClusterInfo>>
+BasicBlockSectionsProfileReaderWrapperPass::getClusterInfoForFunction(
+    StringRef FuncName) const {
+  return BBSPR.getClusterInfoForFunction(FuncName);
+}
+
+SmallVector<SmallVector<unsigned>>
+BasicBlockSectionsProfileReaderWrapperPass::getClonePathsForFunction(
+    StringRef FuncName) const {
+  return BBSPR.getClonePathsForFunction(FuncName);
+}
+
+BasicBlockSectionsProfileReader &
+BasicBlockSectionsProfileReaderWrapperPass::getBBSPR() {
+  return BBSPR;
+}
+
+ImmutablePass *llvm::createBasicBlockSectionsProfileReaderWrapperPass(
+    const MemoryBuffer *Buf) {
+  return new BasicBlockSectionsProfileReaderWrapperPass(Buf);
 }

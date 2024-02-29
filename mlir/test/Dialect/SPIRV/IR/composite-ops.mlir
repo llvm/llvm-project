@@ -32,13 +32,6 @@ func.func @composite_construct_coopmatrix_khr(%arg0 : f32) -> !spirv.coopmatrix<
   return %0: !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA>
 }
 
-// CHECK-LABEL: func @composite_construct_coopmatrix_nv
-func.func @composite_construct_coopmatrix_nv(%arg0 : f32) -> !spirv.NV.coopmatrix<8x16xf32, Subgroup> {
-  // CHECK: spirv.CompositeConstruct {{%.*}} : (f32) -> !spirv.NV.coopmatrix<8x16xf32, Subgroup>
-  %0 = spirv.CompositeConstruct %arg0 : (f32) -> !spirv.NV.coopmatrix<8x16xf32, Subgroup>
-  return %0: !spirv.NV.coopmatrix<8x16xf32, Subgroup>
-}
-
 // -----
 
 func.func @composite_construct_invalid_result_type(%arg0: f32, %arg1: f32, %arg2 : f32) -> vector<3xf32> {
@@ -71,22 +64,6 @@ func.func @composite_construct_khr_coopmatrix_incorrect_element_type(%arg0 : i32
   // expected-error @+1 {{operand type mismatch: expected operand type 'f32', but provided 'i32'}}
   %0 = spirv.CompositeConstruct %arg0 : (i32) -> !spirv.coopmatrix<8x16xf32, Subgroup, MatrixB>
   return %0: !spirv.coopmatrix<8x16xf32, Subgroup, MatrixB>
-}
-
-// -----
-
-func.func @composite_construct_NV.coopmatrix_incorrect_operand_count(%arg0 : f32, %arg1 : f32) -> !spirv.NV.coopmatrix<8x16xf32, Subgroup> {
-  // expected-error @+1 {{has incorrect number of operands: expected 1, but provided 2}}
-  %0 = spirv.CompositeConstruct %arg0, %arg1 : (f32, f32) -> !spirv.NV.coopmatrix<8x16xf32, Subgroup>
-  return %0: !spirv.NV.coopmatrix<8x16xf32, Subgroup>
-}
-
-// -----
-
-func.func @composite_construct_NV.coopmatrix_incorrect_element_type(%arg0 : i32) -> !spirv.NV.coopmatrix<8x16xf32, Subgroup> {
-  // expected-error @+1 {{operand type mismatch: expected operand type 'f32', but provided 'i32'}}
-  %0 = spirv.CompositeConstruct %arg0 : (i32) -> !spirv.NV.coopmatrix<8x16xf32, Subgroup>
-  return %0: !spirv.NV.coopmatrix<8x16xf32, Subgroup>
 }
 
 // -----
@@ -138,14 +115,6 @@ func.func @composite_extract_struct(%arg0 : !spirv.struct<(f32, !spirv.array<4xf
 func.func @composite_extract_vector(%arg0 : vector<4xf32>) -> f32 {
   // CHECK: {{%.*}} = spirv.CompositeExtract {{%.*}}[1 : i32] : vector<4xf32>
   %0 = spirv.CompositeExtract %arg0[1 : i32] : vector<4xf32>
-  return %0 : f32
-}
-
-// -----
-
-func.func @composite_extract_NV.coopmatrix(%arg0 : !spirv.NV.coopmatrix<8x16xf32, Subgroup>) -> f32 {
-  // CHECK: {{%.*}} = spirv.CompositeExtract {{%.*}}[2 : i32] : !spirv.NV.coopmatrix<8x16xf32, Subgroup>
-  %0 = spirv.CompositeExtract %arg0[2 : i32] : !spirv.NV.coopmatrix<8x16xf32, Subgroup>
   return %0 : f32
 }
 
@@ -271,14 +240,6 @@ func.func @composite_insert_struct(%arg0: !spirv.struct<(!spirv.array<4xf32>, f3
 
 // -----
 
-func.func @composite_insert_NV.coopmatrix(%arg0: !spirv.NV.coopmatrix<8x16xi32, Subgroup>, %arg1: i32) -> !spirv.NV.coopmatrix<8x16xi32, Subgroup> {
-  // CHECK: {{%.*}} = spirv.CompositeInsert {{%.*}}, {{%.*}}[5 : i32] : i32 into !spirv.NV.coopmatrix<8x16xi32, Subgroup>
-  %0 = spirv.CompositeInsert %arg1, %arg0[5 : i32] : i32 into !spirv.NV.coopmatrix<8x16xi32, Subgroup>
-  return %0: !spirv.NV.coopmatrix<8x16xi32, Subgroup>
-}
-
-// -----
-
 func.func @composite_insert_no_indices(%arg0: !spirv.array<4xf32>, %arg1: f32) -> !spirv.array<4xf32> {
   // expected-error @+1 {{expected at least one index}}
   %0 = spirv.CompositeInsert %arg1, %arg0[] : f32 into !spirv.array<4xf32>
@@ -338,8 +299,8 @@ func.func @vector_dynamic_insert(%val: f32, %vec: vector<4xf32>, %id : i32) -> v
 //===----------------------------------------------------------------------===//
 
 func.func @vector_shuffle(%vector1: vector<4xf32>, %vector2: vector<2xf32>) -> vector<3xf32> {
-  // CHECK: %{{.+}} = spirv.VectorShuffle [1 : i32, 3 : i32, -1 : i32] %{{.+}} : vector<4xf32>, %arg1 : vector<2xf32> -> vector<3xf32>
-  %0 = spirv.VectorShuffle [1: i32, 3: i32, 0xffffffff: i32] %vector1: vector<4xf32>, %vector2: vector<2xf32> -> vector<3xf32>
+  // CHECK: %{{.+}} = spirv.VectorShuffle [1 : i32, 3 : i32, -1 : i32] %{{.+}}, %arg1 : vector<4xf32>, vector<2xf32> -> vector<3xf32>
+  %0 = spirv.VectorShuffle [1: i32, 3: i32, 0xffffffff: i32] %vector1, %vector2 : vector<4xf32>, vector<2xf32> -> vector<3xf32>
   return %0: vector<3xf32>
 }
 
@@ -347,7 +308,7 @@ func.func @vector_shuffle(%vector1: vector<4xf32>, %vector2: vector<2xf32>) -> v
 
 func.func @vector_shuffle_extra_selector(%vector1: vector<4xf32>, %vector2: vector<2xf32>) -> vector<3xf32> {
   // expected-error @+1 {{result type element count (3) mismatch with the number of component selectors (4)}}
-  %0 = spirv.VectorShuffle [1: i32, 3: i32, 5: i32, 2: i32] %vector1: vector<4xf32>, %vector2: vector<2xf32> -> vector<3xf32>
+  %0 = spirv.VectorShuffle [1: i32, 3: i32, 5: i32, 2: i32] %vector1, %vector2 : vector<4xf32>, vector<2xf32> -> vector<3xf32>
   return %0: vector<3xf32>
 }
 
@@ -355,6 +316,6 @@ func.func @vector_shuffle_extra_selector(%vector1: vector<4xf32>, %vector2: vect
 
 func.func @vector_shuffle_extra_selector(%vector1: vector<4xf32>, %vector2: vector<2xf32>) -> vector<3xf32> {
   // expected-error @+1 {{component selector 7 out of range: expected to be in [0, 6) or 0xffffffff}}
-  %0 = spirv.VectorShuffle [1: i32, 7: i32, 5: i32] %vector1: vector<4xf32>, %vector2: vector<2xf32> -> vector<3xf32>
+  %0 = spirv.VectorShuffle [1: i32, 7: i32, 5: i32] %vector1, %vector2 : vector<4xf32>, vector<2xf32> -> vector<3xf32>
   return %0: vector<3xf32>
 }

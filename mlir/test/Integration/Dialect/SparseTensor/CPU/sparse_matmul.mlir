@@ -5,10 +5,10 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
 // DEFINE: %{run_opts} = -e entry -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
@@ -20,19 +20,19 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with parallelization strategy.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=true parallelization-strategy=any-storage-any-loop
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=true parallelization-strategy=any-storage-any-loop
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and parallelization strategy.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true parallelization-strategy=any-storage-any-loop
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true parallelization-strategy=any-storage-any-loop
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and VLA vectorization.
@@ -316,10 +316,19 @@ module {
     bufferization.dealloc_tensor %b2 : tensor<8x4xf64, #DCSR>
     bufferization.dealloc_tensor %b3 : tensor<8x4xf64, #CSR>
     bufferization.dealloc_tensor %b4 : tensor<8x4xf64, #DCSR>
+    bufferization.dealloc_tensor %c1 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %c2 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %c4 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %c5 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %c7 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %c8 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %0 : tensor<4x4xf64>
     bufferization.dealloc_tensor %1 : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %2 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %3 : tensor<4x4xf64>
     bufferization.dealloc_tensor %4 : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %5 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %6 : tensor<4x4xf64>
     bufferization.dealloc_tensor %7 : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %8 : tensor<4x4xf64, #DCSR>
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
 # Run as: CLANG=bin/clang build_symbolizer.sh out.o
+# If you want to use a local copy of zlib, set ZLIB_SRC.
 # zlib can be downloaded from http://www.zlib.net.
 #
 # Script compiles self-contained object file with symbolization code.
@@ -20,6 +21,12 @@ set -u
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 SRC_DIR=$(readlink -f $SCRIPT_DIR/..)
+
+if [[ $# -ne 1 ]]; then
+  echo "Missing output file"
+  exit 1
+fi
+
 OUTPUT=$(readlink -f $1)
 COMPILER_RT_SRC=$(readlink -f ${SCRIPT_DIR}/../../../..)
 LLVM_SRC=${LLVM_SRC:-${COMPILER_RT_SRC}/../llvm}
@@ -52,6 +59,7 @@ LLVM_BUILD=${BUILD_DIR}/llvm
 SYMBOLIZER_BUILD=${BUILD_DIR}/symbolizer
 
 FLAGS=${FLAGS:-}
+ZLIB_SRC=${ZLIB_SRC:-}
 TARGET_TRIPLE=$($CC -print-target-triple $FLAGS)
 if [[ "$FLAGS" =~ "-m32" ]] ; then
   # Avoid new wrappers.
@@ -63,7 +71,16 @@ FLAGS+=" -include ${SRC_DIR}/../sanitizer_redefine_builtins.h -DSANITIZER_COMMON
 LINKFLAGS="-fuse-ld=lld -target $TARGET_TRIPLE"
 
 # Build zlib.
-[[ -d ${ZLIB_BUILD} ]] || git clone https://github.com/madler/zlib ${ZLIB_BUILD}
+if [[ ! -d ${ZLIB_BUILD} ]]; then
+  if [[ -z "${ZLIB_SRC}" ]]; then
+    git clone https://github.com/madler/zlib ${ZLIB_BUILD}
+  else
+    ZLIB_SRC=$(readlink -f $ZLIB_SRC)
+    mkdir -p ${ZLIB_BUILD}
+    cp -r ${ZLIB_SRC}/* ${ZLIB_BUILD}/
+  fi
+fi
+
 cd ${ZLIB_BUILD}
 AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype" RANLIB=/bin/true ./configure --static
 make -j libz.a
@@ -87,6 +104,7 @@ if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
     -DCMAKE_CXX_FLAGS_RELEASE="${LIBCXX_FLAGS}" \
     -DLIBCXXABI_ENABLE_ASSERTIONS=OFF \
     -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
+    -DLIBCXXABI_USE_LLVM_UNWINDER=OFF \
     -DLIBCXX_ENABLE_ASSERTIONS=OFF \
     -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
     -DLIBCXX_ENABLE_RTTI=OFF \
@@ -173,8 +191,10 @@ $OPT -passes=internalize -internalize-public-api-list=${SYMBOLIZER_API_LIST} all
 $CC $FLAGS -fno-lto -c opt.bc -o symbolizer.o
 
 echo "Checking undefined symbols..."
-nm -f posix -g symbolizer.o | cut -f 1,2 -d \  | LC_COLLATE=C sort -u > undefined.new
-(diff -u $SCRIPT_DIR/global_symbols.txt undefined.new | grep -E "^\+[^+]") && \
+export LC_ALL=C
+nm -f posix -g symbolizer.o | cut -f 1,2 -d \  | sort -u > undefined.new
+grep -Ev "^#|^$" $SCRIPT_DIR/global_symbols.txt | sort -u > expected.new
+(diff -u expected.new undefined.new | grep -E "^\+[^+]") && \
   (echo "Failed: unexpected symbols"; exit 1)
 
 cp -f symbolizer.o $OUTPUT

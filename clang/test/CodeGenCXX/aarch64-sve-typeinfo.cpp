@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:   | FileCheck %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:   -target-feature +sve,+bf16 | FileCheck %s
 
 namespace std { class type_info; };

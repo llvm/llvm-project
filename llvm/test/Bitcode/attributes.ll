@@ -511,10 +511,19 @@ define void @f87() fn_ret_thunk_extern { ret void }
 ; CHECK: define void @f88() [[SKIPPROFILE:#[0-9]+]]
 define void @f88() skipprofile { ret void }
 
-define void @f89() optdebug
 ; CHECK: define void @f89() [[OPTDEBUG:#[0-9]+]]
-{
+define void @f89() optdebug {
         ret void;
+}
+
+; CHECK: define void @f90(ptr writable %p)
+define void @f90(ptr writable %p) {
+  ret void
+}
+
+; CHECK: define void @f91(ptr dead_on_unwind %p)
+define void @f91(ptr dead_on_unwind %p) {
+  ret void
 }
 
 ; CHECK: attributes #0 = { noreturn }

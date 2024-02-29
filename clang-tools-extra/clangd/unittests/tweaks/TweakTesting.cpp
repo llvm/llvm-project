@@ -43,7 +43,7 @@ llvm::StringRef unwrap(Context Ctx, llvm::StringRef Outer) {
   auto Wrapping = wrapping(Ctx);
   // Unwrap only if the code matches the expected wrapping.
   // Don't allow the begin/end wrapping to overlap!
-  if (Outer.startswith(Wrapping.first) && Outer.endswith(Wrapping.second) &&
+  if (Outer.starts_with(Wrapping.first) && Outer.ends_with(Wrapping.second) &&
       Outer.size() >= Wrapping.first.size() + Wrapping.second.size())
     return Outer.drop_front(Wrapping.first.size())
         .drop_back(Wrapping.second.size());

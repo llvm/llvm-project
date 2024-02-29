@@ -467,10 +467,10 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
-  /// Collects input files that didn't affect compilation of the current module,
+  /// Computes input files that didn't affect compilation of the current module,
   /// and initializes data structures necessary for leaving those files out
   /// during \c SourceManager serialization.
-  void collectNonAffectingInputFiles();
+  void computeNonAffectingInputFiles();
 
   /// Returns an adjusted \c FileID, accounting for any non-affecting input
   /// files.
@@ -564,11 +564,25 @@ private:
   unsigned DeclEnumAbbrev = 0;
   unsigned DeclObjCIvarAbbrev = 0;
   unsigned DeclCXXMethodAbbrev = 0;
+  unsigned DeclDependentNonTemplateCXXMethodAbbrev = 0;
+  unsigned DeclTemplateCXXMethodAbbrev = 0;
+  unsigned DeclMemberSpecializedCXXMethodAbbrev = 0;
+  unsigned DeclTemplateSpecializedCXXMethodAbbrev = 0;
+  unsigned DeclDependentSpecializationCXXMethodAbbrev = 0;
+  unsigned DeclTemplateTypeParmAbbrev = 0;
+  unsigned DeclUsingShadowAbbrev = 0;
 
   unsigned DeclRefExprAbbrev = 0;
   unsigned CharacterLiteralAbbrev = 0;
   unsigned IntegerLiteralAbbrev = 0;
   unsigned ExprImplicitCastAbbrev = 0;
+  unsigned BinaryOperatorAbbrev = 0;
+  unsigned CompoundAssignOperatorAbbrev = 0;
+  unsigned CallExprAbbrev = 0;
+  unsigned CXXOperatorCallExprAbbrev = 0;
+  unsigned CXXMemberCallExprAbbrev = 0;
+
+  unsigned CompoundStmtAbbrev = 0;
 
   void WriteDeclAbbrevs();
   void WriteDecl(ASTContext &Context, Decl *D);
@@ -735,18 +749,47 @@ public:
   unsigned getDeclFieldAbbrev() const { return DeclFieldAbbrev; }
   unsigned getDeclEnumAbbrev() const { return DeclEnumAbbrev; }
   unsigned getDeclObjCIvarAbbrev() const { return DeclObjCIvarAbbrev; }
-  unsigned getDeclCXXMethodAbbrev() const { return DeclCXXMethodAbbrev; }
+  unsigned getDeclCXXMethodAbbrev(FunctionDecl::TemplatedKind Kind) const {
+    switch (Kind) {
+    case FunctionDecl::TK_NonTemplate:
+      return DeclCXXMethodAbbrev;
+    case FunctionDecl::TK_FunctionTemplate:
+      return DeclTemplateCXXMethodAbbrev;
+    case FunctionDecl::TK_MemberSpecialization:
+      return DeclMemberSpecializedCXXMethodAbbrev;
+    case FunctionDecl::TK_FunctionTemplateSpecialization:
+      return DeclTemplateSpecializedCXXMethodAbbrev;
+    case FunctionDecl::TK_DependentNonTemplate:
+      return DeclDependentNonTemplateCXXMethodAbbrev;
+    case FunctionDecl::TK_DependentFunctionTemplateSpecialization:
+      return DeclDependentSpecializationCXXMethodAbbrev;
+    }
+    llvm_unreachable("Unknwon Template Kind!");
+  }
+  unsigned getDeclTemplateTypeParmAbbrev() const {
+    return DeclTemplateTypeParmAbbrev;
+  }
+  unsigned getDeclUsingShadowAbbrev() const { return DeclUsingShadowAbbrev; }
 
   unsigned getDeclRefExprAbbrev() const { return DeclRefExprAbbrev; }
   unsigned getCharacterLiteralAbbrev() const { return CharacterLiteralAbbrev; }
   unsigned getIntegerLiteralAbbrev() const { return IntegerLiteralAbbrev; }
   unsigned getExprImplicitCastAbbrev() const { return ExprImplicitCastAbbrev; }
+  unsigned getBinaryOperatorAbbrev() const { return BinaryOperatorAbbrev; }
+  unsigned getCompoundAssignOperatorAbbrev() const {
+    return CompoundAssignOperatorAbbrev;
+  }
+  unsigned getCallExprAbbrev() const { return CallExprAbbrev; }
+  unsigned getCXXOperatorCallExprAbbrev() { return CXXOperatorCallExprAbbrev; }
+  unsigned getCXXMemberCallExprAbbrev() { return CXXMemberCallExprAbbrev; }
+
+  unsigned getCompoundStmtAbbrev() const { return CompoundStmtAbbrev; }
 
   bool hasChain() const { return Chain; }
   ASTReader *getChain() const { return Chain; }
 
   bool isWritingStdCXXNamedModules() const {
-    return WritingModule && WritingModule->isModulePurview();
+    return WritingModule && WritingModule->isNamedModule();
   }
 
 private:
@@ -828,6 +871,46 @@ public:
   ASTMutationListener *GetASTMutationListener() override;
   ASTDeserializationListener *GetASTDeserializationListener() override;
   bool hasEmittedPCH() const { return Buffer->IsComplete; }
+};
+
+/// A simple helper class to pack several bits in order into (a) 32 bit
+/// integer(s).
+class BitsPacker {
+  constexpr static uint32_t BitIndexUpbound = 32u;
+
+public:
+  BitsPacker() = default;
+  BitsPacker(const BitsPacker &) = delete;
+  BitsPacker(BitsPacker &&) = delete;
+  BitsPacker operator=(const BitsPacker &) = delete;
+  BitsPacker operator=(BitsPacker &&) = delete;
+  ~BitsPacker() = default;
+
+  bool canWriteNextNBits(uint32_t BitsWidth) const {
+    return CurrentBitIndex + BitsWidth < BitIndexUpbound;
+  }
+
+  void reset(uint32_t Value) {
+    UnderlyingValue = Value;
+    CurrentBitIndex = 0;
+  }
+
+  void addBit(bool Value) { addBits(Value, 1); }
+  void addBits(uint32_t Value, uint32_t BitsWidth) {
+    assert(BitsWidth < BitIndexUpbound);
+    assert((Value < (1u << BitsWidth)) && "Passing narrower bit width!");
+    assert(canWriteNextNBits(BitsWidth) &&
+           "Inserting too much bits into a value!");
+
+    UnderlyingValue |= Value << CurrentBitIndex;
+    CurrentBitIndex += BitsWidth;
+  }
+
+  operator uint32_t() { return UnderlyingValue; }
+
+private:
+  uint32_t UnderlyingValue = 0;
+  uint32_t CurrentBitIndex = 0;
 };
 
 } // namespace clang

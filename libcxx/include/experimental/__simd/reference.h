@@ -10,6 +10,11 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_REFERENCE_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_REFERENCE_H
 
+#include <__type_traits/is_assignable.h>
+#include <__type_traits/is_same.h>
+#include <__utility/forward.h>
+#include <cstddef>
+#include <experimental/__config>
 #include <experimental/__simd/utility.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
@@ -44,6 +49,12 @@ public:
   __simd_reference(const __simd_reference&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI operator value_type() const noexcept { return __get(); }
+
+  template <class _Up, enable_if_t<is_assignable_v<value_type&, _Up&&>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI __simd_reference operator=(_Up&& __v) && noexcept {
+    __set(static_cast<value_type>(std::forward<_Up>(__v)));
+    return {__s_, __idx_};
+  }
 };
 
 } // namespace parallelism_v2

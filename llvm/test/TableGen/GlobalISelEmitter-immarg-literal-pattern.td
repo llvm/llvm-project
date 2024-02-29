@@ -22,19 +22,19 @@ def CAT1 : I<(outs GPR32:$dst), (ins GPR32:$src0), []>;
 // Test immarg intrinsic pattern
 
 // Make sure there is no type check.
-// GISEL: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS,
-// GISEL: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/0, Intrinsic::mytarget_sleep,
+// GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
+// GISEL: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/0, GIMT_Encode2(Intrinsic::mytarget_sleep),
 // GISEL-NEXT: // MIs[0] Operand 1
-// GISEL-NEXT: GIM_CheckLiteralInt, /*MI*/0, /*Op*/1, 0,
+// GISEL-NEXT: GIM_CheckLiteralInt, /*MI*/0, /*Op*/1, GIMT_Encode8(0),
 def : Pat<
   (int_mytarget_sleep 0),
   (SLEEP0)
 >;
 
-// GISEL: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS,
-// GISEL: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/0, Intrinsic::mytarget_sleep,
+// GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
+// GISEL: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/0, GIMT_Encode2(Intrinsic::mytarget_sleep),
 // GISEL-NEXT: // MIs[0] Operand 1
-// GISEL-NEXT: GIM_CheckLiteralInt, /*MI*/0, /*Op*/1, 1,
+// GISEL-NEXT: GIM_CheckLiteralInt, /*MI*/0, /*Op*/1, GIMT_Encode8(1),
 def : Pat<
   (int_mytarget_sleep 1),
   (SLEEP1)
@@ -42,21 +42,20 @@ def : Pat<
 
 // Check a non-intrinsic instruction with an immediate parameter.
 
-// GISEL: GIM_CheckOpcode, /*MI*/0, MyTarget::G_TGT_CAT,
+// GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(MyTarget::G_TGT_CAT),
 // GISEL: GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // GISEL-NEXT: // MIs[0] Operand 2
-// GISEL-NEXT: GIM_CheckLiteralInt, /*MI*/0, /*Op*/2, 0,
+// GISEL-NEXT: GIM_CheckLiteralInt, /*MI*/0, /*Op*/2, GIMT_Encode8(0),
 def : Pat<
   (TgtCat i32:$src0, 0),
   (CAT0 GPR32:$src0)
 >;
 
-// GISEL: GIM_CheckOpcode, /*MI*/0, MyTarget::G_TGT_CAT,
+// GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(MyTarget::G_TGT_CAT),
 // GISEL: GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // GISEL-NEXT: // MIs[0] Operand 2
-// GISEL-NEXT: GIM_CheckLiteralInt, /*MI*/0, /*Op*/2, 93,
+// GISEL-NEXT: GIM_CheckLiteralInt, /*MI*/0, /*Op*/2, GIMT_Encode8(93),
 def : Pat<
   (TgtCat i32:$src0, 93),
   (CAT1 GPR32:$src0)
 >;
-

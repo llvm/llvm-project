@@ -2,7 +2,7 @@
 Printf Behavior Under All Conditions
 ====================================
 
-Introduction: 
+Introduction:
 =============
 On the "defining undefined behavior" page, I said you should write down your
 decisions regarding undefined behavior in your functions. This is that document
@@ -13,7 +13,7 @@ C standard and POSIX standard. If any behavior is not mentioned here, it should
 be assumed to follow the behavior described in those standards.
 
 The LLVM-libc codebase is under active development, and may change. This
-document was last updated [August 18, 2023] by [michaelrj] and may
+document was last updated [January 8, 2024] by [michaelrj] and may
 not be accurate after this point.
 
 The behavior of LLVM-libc's printf is heavily influenced by compile-time flags.
@@ -62,6 +62,13 @@ When set, this flag disables support for floating point numbers and all their
 conversions (%a, %f, %e, %g); any floating point number conversion will be
 treated as invalid. This reduces code size.
 
+LIBC_COPT_PRINTF_DISABLE_FIXED_POINT
+------------------------------------
+When set, this flag disables support for fixed point numbers and all their
+conversions (%r, %k); any fixed point number conversion will be treated as
+invalid. This reduces code size. This has no effect if the current compiler does
+not support fixed point numbers.
+
 LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 ----------------------------------
 When set, this flag disables the nullptr checks in %n and %s.
@@ -87,14 +94,26 @@ are not recommended to be adjusted except by persons familiar with the Printf
 Ryu Algorithm. Additionally they have no effect when float conversions are
 disabled.
 
+LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD
+---------------------------------------
+This flag disables the separate long double conversion implementation. It is
+not based on the Ryu algorithm, instead generating the digits by
+multiplying/dividing the written-out number by 10^9 to get blocks. It's
+significantly faster than INT_CALC, only about 10x slower than MEGA_TABLE,
+and is small in binary size. Its downside is that it always calculates all
+of the digits above the decimal point, making it slightly inefficient for %e
+calls with large exponents. This is the default. This specialization overrides
+other flags, so this flag must be set for other flags to effect the long double
+behavior.
+
 LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
 -------------------------------------------------
 When set, the float to string decimal conversion algorithm will use a larger
-table to accelerate long double conversions. This larger table is around 5MB of 
-size when compiled. This flag is enabled by default in the CMake.
+table to accelerate long double conversions. This larger table is around 5MB of
+size when compiled.
 
-LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT(_LD)
---------------------------------------------
+LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT
+---------------------------------------
 When set, the float to string decimal conversion algorithm will use dyadic
 floats instead of a table when performing floating point conversions. This
 results in ~50 digits of accuracy in the result, then zeroes for the remaining
@@ -107,8 +126,7 @@ LIBC_COPT_FLOAT_TO_STR_USE_INT_CALC
 When set, the float to string decimal conversion algorithm will use wide
 integers instead of a table when performing floating point conversions. This
 gives the same results as the table, but is very slow at the extreme ends of
-the long double range. If no flags are set this is the default behavior for
-long double conversions.
+the long double range.
 
 LIBC_COPT_FLOAT_TO_STR_NO_TABLE
 -------------------------------
@@ -180,3 +198,8 @@ original conversion.
 The %p conversion will display a null pointer as if it was the string
 "(nullptr)" passed to a "%s" conversion, with all other options remaining the
 same as the original conversion.
+
+The %r, %R, %k, and %K fixed point number format specifiers are accepted as
+defined in ISO/IEC TR 18037 (the fixed point number extension). These are
+available when the compiler is detected as having support for fixed point
+numbers and the LIBC_COPT_PRINTF_DISABLE_FIXED_POINT flag is not set.

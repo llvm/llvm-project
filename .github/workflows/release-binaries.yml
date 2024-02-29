@@ -1,20 +1,32 @@
 name: Release Binaries
 
 on:
-  push:
-    tags:
-      - 'llvmorg-*'
   workflow_dispatch:
     inputs:
+      release-version:
+        description: 'Release Version'
+        required: true
+        type: string
       upload:
         description: 'Upload binaries to the release page'
         required: true
-        default: true
+        default: false
         type: boolean
-      tag:
-        description: 'Tag to build'
+
+  workflow_call:
+    inputs:
+      release-version:
+        description: 'Release Version'
         required: true
         type: string
+      upload:
+        description: 'Upload binaries to the release page'
+        required: true
+        default: false
+        type: boolean
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '0 8 1 * *'
 
 permissions:
   contents: read # Default everything to read-only
@@ -23,21 +35,26 @@ jobs:
   prepare:
     name: Prepare to build binaries
     runs-on: ubuntu-22.04
-    if: github.repository == 'llvm/llvm-project'
     outputs:
-      release-version: ${{ steps.validate-tag.outputs.release-version }}
-      release: ${{ steps.validate-tag.outputs.release }}
-      build-dir: ${{ steps.validate-tag.outputs.build-dir }}
-      rc-flags: ${{ steps.validate-tag.outputs.rc-flags }}
-      ref: ${{ steps.validate-tag.outputs.ref }}
-      upload: ${{ steps.validate-tag.outputs.upload }}
+      release-version: ${{ steps.vars.outputs.release-version }}
+      flags: ${{ steps.vars.outputs.flags }}
+      build-dir: ${{ steps.vars.outputs.build-dir }}
+      rc-flags: ${{ steps.vars.outputs.rc-flags }}
+      ref: ${{ steps.vars.outputs.ref }}
+      upload: ${{ steps.vars.outputs.upload }}
 
     steps:
     - name: Checkout LLVM
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-    - name: Validate and parse tag
-      id: validate-tag
+    - name: Check Permissions
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} check-permissions
+
+    - name: Collect Variables
+      id: vars
       # In order for the test-release.sh script to run correctly, the LLVM
       # source needs to be at the following location relative to the build dir:
       # | X.Y.Z-rcN | ./rcN/llvm-project
@@ -50,24 +67,64 @@ jobs:
         tag="${{ github.ref_name }}"
         trimmed=$(echo ${{ inputs.tag }} | xargs)
         [[ "$trimmed" != "" ]] && tag="$trimmed"
+        if [ "$tag" = "main" ]; then
+          # If tag is main, then we've been triggered by a scheduled so pass so
+          # use the head commit as the tag.
+          tag=`git rev-parse HEAD`
+        fi
         if [ -n "${{ inputs.upload }}" ]; then
           upload="${{ inputs.upload }}"
         else
-          upload="true"
+          upload="false"
         fi
-        bash .github/workflows/set-release-binary-outputs.sh "${{ github.actor }}" "$tag" "$upload"
+        bash .github/workflows/set-release-binary-outputs.sh "$tag" "$upload"
+
+  # Try to get around the 6 hour timeout by first running a job to fill
+  # the build cache.
+  fill-cache:
+    name: "Fill Cache ${{ matrix.os }}"
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-22.04
+    steps:
+    - name: Checkout LLVM
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      with:
+        ref: ${{ needs.prepare.outputs.ref }}
+
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@22e9f909d35b50bd1181709564bfe816eaeaae81 # main
+
+    - name: Setup sccache
+      uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
+      with:
+        max-size: 250M
+        key: sccache-${{ matrix.os }}-release
+        variant: sccache
+
+    - name: Build Clang
+      run: |
+        cmake -G Ninja -C clang/cmake/caches/Release.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DCMAKE_POSITION_INDEPENDENT_CODE=ON -S llvm -B build
+        ninja -v -C build clang
+
 
   build-binaries:
     name: ${{ matrix.target.triple }}
     permissions:
       contents: write # To upload assets to release.
-    needs: prepare
+    needs:
+      - prepare
+      - fill-cache
     runs-on: ${{ matrix.target.runs-on }}
     strategy:
       fail-fast: false
       matrix:
         target:
           - triple: x86_64-linux-gnu-ubuntu-22.04
+            os: ubuntu-22.04
             runs-on: ubuntu-22.04-16x64
             debian-build-deps: >
               chrpath
@@ -76,10 +133,18 @@ jobs:
 
     steps:
     - name: Checkout LLVM
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
         ref: ${{ needs.prepare.outputs.ref }}
         path: ${{ needs.prepare.outputs.build-dir }}/llvm-project
+
+    - name: Setup sccache
+      uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
+      with:
+        max-size: 250M
+        key: sccache-${{ matrix.target.os }}-release
+        save: false
+        variant: sccache
 
     - name: Install Brew build dependencies
       if: matrix.target.brew-build-deps != ''
@@ -97,12 +162,13 @@ jobs:
     - name: Build and test release
       run: |
         ${{ needs.prepare.outputs.build-dir }}/llvm-project/llvm/utils/release/test-release.sh \
-        -release ${{ needs.prepare.outputs.release }} \
-        ${{ needs.prepare.outputs.rc-flags }} \
+        ${{ needs.prepare.outputs.flags }} \
         -triple ${{ matrix.target.triple }} \
         -use-ninja \
         -no-checkout \
-        -no-test-suite
+        -use-cmake-cache \
+        -no-test-suite \
+        -configure-flags "-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
 
     - name: Upload binaries
       if: ${{ always() && needs.prepare.outputs.upload == 'true' }}

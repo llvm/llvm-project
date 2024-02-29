@@ -61,7 +61,7 @@ body:             |
 # CHECK-NEXT:  DBG_VALUE $x0, $noreg,
 # CHECK-NEXT:  STRXui killed renamable $x8, renamable $x19, 2 :: (store (s64))
 # CHECK-NEXT:  $x8 = ADDXrs renamable $x0, killed renamable $x20, 0
-# CHECK-NEXT:  STPXi $xzr, renamable $x8, renamable $x19, 0 :: (store (s64))
+# CHECK-NEXT:  STPXi $xzr, killed renamable $x8, renamable $x19, 0 :: (store (s64))
 # CHECK-NEXT:  RET undef $lr, implicit $x0
 name:            test_dbg_value2
 alignment:       4

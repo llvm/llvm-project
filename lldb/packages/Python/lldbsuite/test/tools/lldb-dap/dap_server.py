@@ -501,6 +501,18 @@ class DebugCommunication(object):
             return variable["value"]
         return None
 
+    def get_local_variable_child(self, name, child_name, frameIndex=0, threadId=None):
+        local = self.get_local_variable(name, frameIndex, threadId)
+        if local["variablesReference"] == 0:
+            return None
+        children = self.request_variables(local["variablesReference"])["body"][
+            "variables"
+        ]
+        for child in children:
+            if child["name"] == child_name:
+                return child
+        return None
+
     def replay_packets(self, replay_file_path):
         f = open(replay_file_path, "r")
         mode = "invalid"
@@ -731,7 +743,9 @@ class DebugCommunication(object):
         postRunCommands=None,
         enableAutoVariableSummaries=False,
         enableSyntheticChildDebugging=False,
-        commandEscapePrefix="`",
+        commandEscapePrefix=None,
+        customFrameFormat=None,
+        customThreadFormat=None,
     ):
         args_dict = {"program": program}
         if args:
@@ -773,6 +787,11 @@ class DebugCommunication(object):
             args_dict["runInTerminal"] = runInTerminal
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
+        if customFrameFormat:
+            args_dict["customFrameFormat"] = customFrameFormat
+        if customThreadFormat:
+            args_dict["customThreadFormat"] = customThreadFormat
+
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
         args_dict["commandEscapePrefix"] = commandEscapePrefix
@@ -883,6 +902,41 @@ class DebugCommunication(object):
         args_dict = {"breakpoints": breakpoints}
         command_dict = {
             "command": "setFunctionBreakpoints",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
+    def request_dataBreakpointInfo(
+        self, variablesReference, name, frameIndex=0, threadId=None
+    ):
+        stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
+        if stackFrame is None:
+            return []
+        args_dict = {
+            "variablesReference": variablesReference,
+            "name": name,
+            "frameId": stackFrame["id"],
+        }
+        command_dict = {
+            "command": "dataBreakpointInfo",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
+    def request_setDataBreakpoint(self, dataBreakpoints):
+        """dataBreakpoints is a list of dictionary with following fields:
+        {
+            dataId: (address in hex)/(size in bytes)
+            accessType: read/write/readWrite
+            [condition]: string
+            [hitCondition]: string
+        }
+        """
+        args_dict = {"breakpoints": dataBreakpoints}
+        command_dict = {
+            "command": "setDataBreakpoints",
             "type": "request",
             "arguments": args_dict,
         }

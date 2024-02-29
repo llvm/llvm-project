@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/CFG.h"
@@ -31,6 +32,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
@@ -322,6 +324,24 @@ bool MipsDAGToDAGISel::SelectInlineAsmMemoryOperand(
     return false;
   }
   return true;
+}
+
+bool MipsDAGToDAGISel::isUnneededShiftMask(SDNode *N,
+                                           unsigned ShAmtBits) const {
+  assert(N->getOpcode() == ISD::AND && "Unexpected opcode");
+
+  const APInt &RHS = N->getConstantOperandAPInt(1);
+  if (RHS.countr_one() >= ShAmtBits) {
+    LLVM_DEBUG(
+        dbgs()
+        << DEBUG_TYPE
+        << " Need optimize 'and & shl/srl/sra' and operand value bits is "
+        << RHS.countr_one() << "\n");
+    return true;
+  }
+
+  KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0));
+  return (Known.Zero | RHS).countr_one() >= ShAmtBits;
 }
 
 char MipsDAGToDAGISel::ID = 0;

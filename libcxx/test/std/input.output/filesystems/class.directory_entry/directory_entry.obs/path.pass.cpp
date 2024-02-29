@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
@@ -15,12 +15,12 @@
 // const path& path() const noexcept;
 // operator const path&() const noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
-
+namespace fs = std::filesystem;
 
 void test_path_method() {
   using namespace fs;

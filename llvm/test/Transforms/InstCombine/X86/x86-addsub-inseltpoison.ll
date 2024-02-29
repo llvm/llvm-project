@@ -146,7 +146,7 @@ define void @PR46277(float %0, float %1, float %2, float %3, <4 x float> %4, ptr
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP1:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = tail call <4 x float> @llvm.x86.sse3.addsub.ps(<4 x float> [[TMP8]], <4 x float> [[TMP4:%.*]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[TMP5:%.*]], i64 1
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[TMP5:%.*]], i64 4
 ; CHECK-NEXT:    store float [[TMP10]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x float> [[TMP9]], i64 1
 ; CHECK-NEXT:    store float [[TMP12]], ptr [[TMP11]], align 4

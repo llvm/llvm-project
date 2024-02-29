@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Tosa/Transforms/PassesEnums.cpp.inc"
 
 #include <string>
-#include <unordered_map>
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"

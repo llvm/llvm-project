@@ -31,7 +31,7 @@ llvm::cl::opt<bool>
 namespace llvm {
 namespace bolt {
 
-void PatchEntries::runOnFunctions(BinaryContext &BC) {
+Error PatchEntries::runOnFunctions(BinaryContext &BC) {
   if (!opts::ForcePatch) {
     // Mark the binary for patching if we did not create external references
     // for original code in any of functions we are not going to emit.
@@ -42,11 +42,11 @@ void PatchEntries::runOnFunctions(BinaryContext &BC) {
         });
 
     if (!NeedsPatching)
-      return;
+      return Error::success();
   }
 
   if (opts::Verbosity >= 1)
-    outs() << "BOLT-INFO: patching entries in original code\n";
+    BC.outs() << "BOLT-INFO: patching entries in original code\n";
 
   // Calculate the size of the patch.
   static size_t PatchSize = 0;
@@ -78,8 +78,8 @@ void PatchEntries::runOnFunctions(BinaryContext &BC) {
                                                   const MCSymbol *Symbol) {
       if (Offset < NextValidByte) {
         if (opts::Verbosity >= 1)
-          outs() << "BOLT-INFO: unable to patch entry point in " << Function
-                 << " at offset 0x" << Twine::utohexstr(Offset) << '\n';
+          BC.outs() << "BOLT-INFO: unable to patch entry point in " << Function
+                    << " at offset 0x" << Twine::utohexstr(Offset) << '\n';
         return false;
       }
 
@@ -89,8 +89,8 @@ void PatchEntries::runOnFunctions(BinaryContext &BC) {
       NextValidByte = Offset + PatchSize;
       if (NextValidByte > Function.getMaxSize()) {
         if (opts::Verbosity >= 1)
-          outs() << "BOLT-INFO: function " << Function
-                 << " too small to patch its entry point\n";
+          BC.outs() << "BOLT-INFO: function " << Function
+                    << " too small to patch its entry point\n";
         return false;
       }
 
@@ -98,10 +98,21 @@ void PatchEntries::runOnFunctions(BinaryContext &BC) {
     });
 
     if (!Success) {
+      // We can't change output layout for AArch64 due to LongJmp pass
+      if (BC.isAArch64()) {
+        if (opts::ForcePatch) {
+          BC.errs() << "BOLT-ERROR: unable to patch entries in " << Function
+                    << "\n";
+          return createFatalBOLTError("");
+        }
+
+        continue;
+      }
+
       // If the original function entries cannot be patched, then we cannot
       // safely emit new function body.
-      errs() << "BOLT-WARNING: failed to patch entries in " << Function
-             << ". The function will not be optimized.\n";
+      BC.errs() << "BOLT-WARNING: failed to patch entries in " << Function
+                << ". The function will not be optimized.\n";
       Function.setIgnored();
       continue;
     }
@@ -127,6 +138,7 @@ void PatchEntries::runOnFunctions(BinaryContext &BC) {
 
     Function.setIsPatched(true);
   }
+  return Error::success();
 }
 
 } // end namespace bolt

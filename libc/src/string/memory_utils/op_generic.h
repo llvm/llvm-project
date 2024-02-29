@@ -154,14 +154,18 @@ template <typename T> struct Memset {
     tail(dst, value, count);
   }
 
-  LIBC_INLINE static void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
+  LIBC_INLINE static void loop_and_tail_offset(Ptr dst, uint8_t value,
+                                               size_t count, size_t offset) {
     static_assert(SIZE > 1, "a loop of size 1 does not need tail");
-    size_t offset = 0;
     do {
       block(dst + offset, value);
       offset += SIZE;
     } while (offset < count - SIZE);
     tail(dst, value, count);
+  }
+
+  LIBC_INLINE static void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
+    return loop_and_tail_offset(dst, value, count, 0);
   }
 };
 
@@ -386,7 +390,7 @@ private:
     if constexpr (cmp_is_expensive<T>::value) {
       if (!eq<T>(p1, p2, offset))
         return cmp_neq<T>(p1, p2, offset);
-      return MemcmpReturnType::ZERO();
+      return MemcmpReturnType::zero();
     } else {
       return cmp<T>(p1, p2, offset);
     }
@@ -439,7 +443,7 @@ public:
       for (; offset < count; offset += SIZE)
         if (auto value = cmp<T>(p1, p2, offset))
           return value;
-      return MemcmpReturnType::ZERO();
+      return MemcmpReturnType::zero();
     }
   }
 
@@ -471,7 +475,7 @@ template <typename T, typename... TS> struct MemcmpSequence {
     if constexpr (sizeof...(TS) > 0)
       return MemcmpSequence<TS...>::block(p1 + sizeof(T), p2 + sizeof(T));
     else
-      return MemcmpReturnType::ZERO();
+      return MemcmpReturnType::zero();
   }
 };
 
@@ -517,7 +521,7 @@ template <typename T> struct Bcmp {
       for (; offset < count; offset += SIZE)
         if (const auto value = neq<T>(p1, p2, offset))
           return value;
-      return BcmpReturnType::ZERO();
+      return BcmpReturnType::zero();
     }
   }
 
@@ -543,7 +547,7 @@ template <typename T, typename... TS> struct BcmpSequence {
     if constexpr (sizeof...(TS) > 0)
       return BcmpSequence<TS...>::block(p1 + sizeof(T), p2 + sizeof(T));
     else
-      return BcmpReturnType::ZERO();
+      return BcmpReturnType::zero();
   }
 };
 

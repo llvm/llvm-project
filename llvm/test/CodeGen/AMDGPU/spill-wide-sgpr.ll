@@ -1,5 +1,5 @@
-; RUN: llc -O0 -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VGPR %s
-; RUN: llc -O0 -march=amdgcn -mcpu=fiji -amdgpu-spill-sgpr-to-vgpr=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VMEM %s
+; RUN: llc -O0 -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VGPR %s
+; RUN: llc -O0 -mtriple=amdgcn -mcpu=fiji -amdgpu-spill-sgpr-to-vgpr=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VMEM %s
 
 ; GCN-LABEL: {{^}}spill_sgpr_x2:
 

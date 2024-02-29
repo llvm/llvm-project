@@ -36,15 +36,16 @@ void BPFInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 }
 
 static void printExpr(const MCExpr *Expr, raw_ostream &O) {
-#ifndef NDEBUG
   const MCSymbolRefExpr *SRE;
 
   if (const MCBinaryExpr *BE = dyn_cast<MCBinaryExpr>(Expr))
     SRE = dyn_cast<MCSymbolRefExpr>(BE->getLHS());
   else
     SRE = dyn_cast<MCSymbolRefExpr>(Expr);
-  assert(SRE && "Unexpected MCExpr type.");
+  if (!SRE)
+    report_fatal_error("Unexpected MCExpr type.");
 
+#ifndef NDEBUG
   MCSymbolRefExpr::VariantKind Kind = SRE->getKind();
 
   assert(Kind == MCSymbolRefExpr::VK_None);

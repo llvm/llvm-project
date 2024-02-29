@@ -17,6 +17,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
@@ -69,7 +70,7 @@ bool isTargetMD(const MDNode *ProfData, const char *Name, unsigned MinOps) {
 namespace llvm {
 
 bool hasProfMD(const Instruction &I) {
-  return nullptr != I.getMetadata(LLVMContext::MD_prof);
+  return I.hasMetadata(LLVMContext::MD_prof);
 }
 
 bool isBranchWeightMD(const MDNode *ProfileData) {
@@ -181,6 +182,12 @@ bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalVal) {
 
 bool extractProfTotalWeight(const Instruction &I, uint64_t &TotalVal) {
   return extractProfTotalWeight(I.getMetadata(LLVMContext::MD_prof), TotalVal);
+}
+
+void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights) {
+  MDBuilder MDB(I.getContext());
+  MDNode *BranchWeights = MDB.createBranchWeights(Weights);
+  I.setMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
 } // namespace llvm

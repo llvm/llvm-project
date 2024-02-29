@@ -18,7 +18,7 @@ namespace llvm {
 namespace dwarfutil {
 
 inline bool isDebugSection(StringRef SecName) {
-  return SecName.startswith(".debug") || SecName.startswith(".zdebug") ||
+  return SecName.starts_with(".debug") || SecName.starts_with(".zdebug") ||
          SecName == ".gdb_index";
 }
 

@@ -128,6 +128,7 @@ class APINotesWriter::Implementation {
   SelectorID getSelector(ObjCSelectorRef SelectorRef) {
     // Translate the selector reference into a stored selector.
     StoredObjCSelector Selector;
+    Selector.NumArgs = SelectorRef.NumArgs;
     Selector.Identifiers.reserve(SelectorRef.Identifiers.size());
     for (auto piece : SelectorRef.Identifiers)
       Selector.Identifiers.push_back(getIdentifier(piece));
@@ -823,7 +824,7 @@ public:
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
     llvm::support::endian::Writer writer(OS, llvm::endianness::little);
-    writer.write<uint16_t>(Key.NumPieces);
+    writer.write<uint16_t>(Key.NumArgs);
     for (auto Identifier : Key.Identifiers)
       writer.write<uint32_t>(Identifier);
   }

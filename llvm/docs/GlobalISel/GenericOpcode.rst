@@ -536,15 +536,15 @@ G_FMINIMUM
 ^^^^^^^^^^
 
 NaN-propagating minimum that also treat -0.0 as less than 0.0. While
-FMINNUM_IEEE follow IEEE 754-2008 semantics, FMINIMUM follows IEEE 754-2018
-draft semantics.
+FMINNUM_IEEE follow IEEE 754-2008 semantics, FMINIMUM follows IEEE
+754-2019 semantics.
 
 G_FMAXIMUM
 ^^^^^^^^^^
 
 NaN-propagating maximum that also treat -0.0 as less than 0.0. While
-FMAXNUM_IEEE follow IEEE 754-2008 semantics, FMAXIMUM follows IEEE 754-2018
-draft semantics.
+FMAXNUM_IEEE follow IEEE 754-2008 semantics, FMAXIMUM follows IEEE
+754-2019 semantics.
 
 G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FREM
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -751,9 +751,10 @@ operands.
 G_FENCE
 ^^^^^^^
 
-.. caution::
+Generic fence. The first operand is the memory ordering. The second operand is
+the syncscope.
 
-  I couldn't find any documentation on this at the time of writing.
+See the LLVM LangRef entry on the '``fence'`` instruction for more details.
 
 G_MEMCPY
 ^^^^^^^^

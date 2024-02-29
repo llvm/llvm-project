@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_BASIC_IDENTIFIERTABLE_H
 #define LLVM_CLANG_BASIC_IDENTIFIERTABLE_H
 
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TokenKinds.h"
@@ -83,22 +84,29 @@ using IdentifierLocPair = std::pair<IdentifierInfo *, SourceLocation>;
 /// of a pointer to one of these classes.
 enum { IdentifierInfoAlignment = 8 };
 
-static constexpr int ObjCOrBuiltinIDBits = 16;
+static constexpr int InterestingIdentifierBits = 16;
 
-/// The "layout" of ObjCOrBuiltinID is:
-///  - The first value (0) represents "not a special identifier".
-///  - The next (NUM_OBJC_KEYWORDS - 1) values represent ObjCKeywordKinds (not
-///    including objc_not_keyword).
-///  - The next (NUM_INTERESTING_IDENTIFIERS - 1) values represent
-///    InterestingIdentifierKinds (not including not_interesting).
-///  - The rest of the values represent builtin IDs (not including NotBuiltin).
-static constexpr int FirstObjCKeywordID = 1;
-static constexpr int LastObjCKeywordID =
-    FirstObjCKeywordID + tok::NUM_OBJC_KEYWORDS - 2;
-static constexpr int FirstInterestingIdentifierID = LastObjCKeywordID + 1;
-static constexpr int LastInterestingIdentifierID =
-    FirstInterestingIdentifierID + tok::NUM_INTERESTING_IDENTIFIERS - 2;
-static constexpr int FirstBuiltinID = LastInterestingIdentifierID + 1;
+/// The "layout" of InterestingIdentifier is:
+///  - ObjCKeywordKind enumerators
+///  - NotableIdentifierKind enumerators
+///  - Builtin::ID enumerators
+///  - NotInterestingIdentifier
+enum class InterestingIdentifier {
+#define OBJC_AT_KEYWORD(X) objc_##X,
+#include "clang/Basic/TokenKinds.def"
+  NUM_OBJC_KEYWORDS,
+
+#define NOTABLE_IDENTIFIER(X) X,
+#include "clang/Basic/TokenKinds.def"
+  NUM_OBJC_KEYWORDS_AND_NOTABLE_IDENTIFIERS,
+
+  NotBuiltin,
+#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#include "clang/Basic/Builtins.inc"
+  FirstTSBuiltin,
+
+  NotInterestingIdentifier = 65534
+};
 
 /// One of these records is kept for each identifier that
 /// is lexed.  This contains information about whether the token was \#define'd,
@@ -110,66 +118,82 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   friend class IdentifierTable;
 
   // Front-end token ID or tok::identifier.
+  LLVM_PREFERRED_TYPE(tok::TokenKind)
   unsigned TokenID : 9;
 
-  // ObjC keyword ('protocol' in '@protocol') or builtin (__builtin_inf).
-  // First NUM_OBJC_KEYWORDS values are for Objective-C,
-  // the remaining values are for builtins.
-  unsigned ObjCOrBuiltinID : ObjCOrBuiltinIDBits;
+  LLVM_PREFERRED_TYPE(InterestingIdentifier)
+  unsigned InterestingIdentifierID : InterestingIdentifierBits;
 
   // True if there is a #define for this.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasMacro : 1;
 
   // True if there was a #define for this.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HadMacro : 1;
 
   // True if the identifier is a language extension.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsExtension : 1;
 
   // True if the identifier is a keyword in a newer or proposed Standard.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFutureCompatKeyword : 1;
 
   // True if the identifier is poisoned.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsPoisoned : 1;
 
   // True if the identifier is a C++ operator keyword.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsCPPOperatorKeyword : 1;
 
   // Internal bit set by the member function RecomputeNeedsHandleIdentifier.
   // See comment about RecomputeNeedsHandleIdentifier for more info.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NeedsHandleIdentifier : 1;
 
   // True if the identifier was loaded (at least partially) from an AST file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFromAST : 1;
 
   // True if the identifier has changed from the definition
   // loaded from an AST file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ChangedAfterLoad : 1;
 
   // True if the identifier's frontend information has changed from the
   // definition loaded from an AST file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FEChangedAfterLoad : 1;
 
   // True if revertTokenIDToIdentifier was called.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned RevertedTokenID : 1;
 
   // True if there may be additional information about
   // this identifier stored externally.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned OutOfDate : 1;
 
   // True if this is the 'import' contextual keyword.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsModulesImport : 1;
 
   // True if this is a mangled OpenMP variant name.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsMangledOpenMPVariantName : 1;
 
   // True if this is a deprecated macro.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsDeprecatedMacro : 1;
 
   // True if this macro is unsafe in headers.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsRestrictExpansion : 1;
 
   // True if this macro is final.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFinal : 1;
 
   // 22 bits left in a 64-bit word.
@@ -180,13 +204,16 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   llvm::StringMapEntry<IdentifierInfo *> *Entry = nullptr;
 
   IdentifierInfo()
-      : TokenID(tok::identifier), ObjCOrBuiltinID(0), HasMacro(false),
-        HadMacro(false), IsExtension(false), IsFutureCompatKeyword(false),
-        IsPoisoned(false), IsCPPOperatorKeyword(false),
-        NeedsHandleIdentifier(false), IsFromAST(false), ChangedAfterLoad(false),
-        FEChangedAfterLoad(false), RevertedTokenID(false), OutOfDate(false),
-        IsModulesImport(false), IsMangledOpenMPVariantName(false),
-        IsDeprecatedMacro(false), IsRestrictExpansion(false), IsFinal(false) {}
+      : TokenID(tok::identifier),
+        InterestingIdentifierID(llvm::to_underlying(
+            InterestingIdentifier::NotInterestingIdentifier)),
+        HasMacro(false), HadMacro(false), IsExtension(false),
+        IsFutureCompatKeyword(false), IsPoisoned(false),
+        IsCPPOperatorKeyword(false), NeedsHandleIdentifier(false),
+        IsFromAST(false), ChangedAfterLoad(false), FEChangedAfterLoad(false),
+        RevertedTokenID(false), OutOfDate(false), IsModulesImport(false),
+        IsMangledOpenMPVariantName(false), IsDeprecatedMacro(false),
+        IsRestrictExpansion(false), IsFinal(false) {}
 
 public:
   IdentifierInfo(const IdentifierInfo &) = delete;
@@ -314,47 +341,63 @@ public:
   ///
   /// For example, 'class' will return tok::objc_class if ObjC is enabled.
   tok::ObjCKeywordKind getObjCKeywordID() const {
-    static_assert(FirstObjCKeywordID == 1,
-                  "hard-coding this assumption to simplify code");
-    if (ObjCOrBuiltinID <= LastObjCKeywordID)
-      return tok::ObjCKeywordKind(ObjCOrBuiltinID);
-    else
-      return tok::objc_not_keyword;
+    assert(0 == llvm::to_underlying(InterestingIdentifier::objc_not_keyword));
+    auto Value = static_cast<InterestingIdentifier>(InterestingIdentifierID);
+    if (Value < InterestingIdentifier::NUM_OBJC_KEYWORDS)
+      return static_cast<tok::ObjCKeywordKind>(InterestingIdentifierID);
+    return tok::objc_not_keyword;
   }
-  void setObjCKeywordID(tok::ObjCKeywordKind ID) { ObjCOrBuiltinID = ID; }
+  void setObjCKeywordID(tok::ObjCKeywordKind ID) {
+    assert(0 == llvm::to_underlying(InterestingIdentifier::objc_not_keyword));
+    InterestingIdentifierID = ID;
+    assert(getObjCKeywordID() == ID && "ID too large for field!");
+  }
 
   /// Return a value indicating whether this is a builtin function.
-  ///
-  /// 0 is not-built-in. 1+ are specific builtin functions.
   unsigned getBuiltinID() const {
-    if (ObjCOrBuiltinID >= FirstBuiltinID)
-      return 1 + (ObjCOrBuiltinID - FirstBuiltinID);
-    else
-      return 0;
+    auto Value = static_cast<InterestingIdentifier>(InterestingIdentifierID);
+    if (Value >
+            InterestingIdentifier::NUM_OBJC_KEYWORDS_AND_NOTABLE_IDENTIFIERS &&
+        Value != InterestingIdentifier::NotInterestingIdentifier) {
+      auto FirstBuiltin =
+          llvm::to_underlying(InterestingIdentifier::NotBuiltin);
+      return static_cast<Builtin::ID>(InterestingIdentifierID - FirstBuiltin);
+    }
+    return Builtin::ID::NotBuiltin;
   }
   void setBuiltinID(unsigned ID) {
-    assert(ID != 0);
-    ObjCOrBuiltinID = FirstBuiltinID + (ID - 1);
+    assert(ID != Builtin::ID::NotBuiltin);
+    auto FirstBuiltin = llvm::to_underlying(InterestingIdentifier::NotBuiltin);
+    InterestingIdentifierID = ID + FirstBuiltin;
     assert(getBuiltinID() == ID && "ID too large for field!");
   }
-  void clearBuiltinID() { ObjCOrBuiltinID = 0; }
-
-  tok::InterestingIdentifierKind getInterestingIdentifierID() const {
-    if (ObjCOrBuiltinID >= FirstInterestingIdentifierID &&
-        ObjCOrBuiltinID <= LastInterestingIdentifierID)
-      return tok::InterestingIdentifierKind(
-          1 + (ObjCOrBuiltinID - FirstInterestingIdentifierID));
-    else
-      return tok::not_interesting;
-  }
-  void setInterestingIdentifierID(unsigned ID) {
-    assert(ID != tok::not_interesting);
-    ObjCOrBuiltinID = FirstInterestingIdentifierID + (ID - 1);
-    assert(getInterestingIdentifierID() == ID && "ID too large for field!");
+  void clearBuiltinID() {
+    InterestingIdentifierID =
+        llvm::to_underlying(InterestingIdentifier::NotInterestingIdentifier);
   }
 
-  unsigned getObjCOrBuiltinID() const { return ObjCOrBuiltinID; }
-  void setObjCOrBuiltinID(unsigned ID) { ObjCOrBuiltinID = ID; }
+  tok::NotableIdentifierKind getNotableIdentifierID() const {
+    auto Value = static_cast<InterestingIdentifier>(InterestingIdentifierID);
+    if (Value > InterestingIdentifier::NUM_OBJC_KEYWORDS &&
+        Value <
+            InterestingIdentifier::NUM_OBJC_KEYWORDS_AND_NOTABLE_IDENTIFIERS) {
+      auto FirstNotableIdentifier =
+          1 + llvm::to_underlying(InterestingIdentifier::NUM_OBJC_KEYWORDS);
+      return static_cast<tok::NotableIdentifierKind>(InterestingIdentifierID -
+                                                     FirstNotableIdentifier);
+    }
+    return tok::not_notable;
+  }
+  void setNotableIdentifierID(unsigned ID) {
+    assert(ID != tok::not_notable);
+    auto FirstNotableIdentifier =
+        1 + llvm::to_underlying(InterestingIdentifier::NUM_OBJC_KEYWORDS);
+    InterestingIdentifierID = ID + FirstNotableIdentifier;
+    assert(getNotableIdentifierID() == ID && "ID too large for field!");
+  }
+
+  unsigned getObjCOrBuiltinID() const { return InterestingIdentifierID; }
+  void setObjCOrBuiltinID(unsigned ID) { InterestingIdentifierID = ID; }
 
   /// get/setExtension - Initialize information about whether or not this
   /// language token is an extension.  This controls extension warnings, and is
@@ -493,7 +536,7 @@ public:
   ///   function(<#int x#>);
   /// \endcode
   bool isEditorPlaceholder() const {
-    return getName().startswith("<#") && getName().endswith("#>");
+    return getName().starts_with("<#") && getName().ends_with("#>");
   }
 
   /// Determine whether \p this is a name reserved for the implementation (C99

@@ -83,13 +83,16 @@ class TemplateParameterList final
 
   /// Whether this template parameter list contains an unexpanded parameter
   /// pack.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ContainsUnexpandedParameterPack : 1;
 
   /// Whether this template parameter list has a requires clause.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasRequiresClause : 1;
 
   /// Whether any of the template parameters has constrained-parameter
   /// constraint-expression.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasConstrainedParameters : 1;
 
 protected:
@@ -131,6 +134,7 @@ public:
   const_iterator end() const { return begin() + NumParams; }
 
   unsigned size() const { return NumParams; }
+  bool empty() const { return NumParams == 0; }
 
   ArrayRef<NamedDecl *> asArray() { return llvm::ArrayRef(begin(), end()); }
   ArrayRef<const NamedDecl*> asArray() const {
@@ -238,9 +242,6 @@ public:
 /// A template argument list.
 class TemplateArgumentList final
     : private llvm::TrailingObjects<TemplateArgumentList, TemplateArgument> {
-  /// The template argument list.
-  const TemplateArgument *Arguments;
-
   /// The number of template arguments in this template
   /// argument list.
   unsigned NumArguments;
@@ -255,29 +256,10 @@ public:
   TemplateArgumentList(const TemplateArgumentList &) = delete;
   TemplateArgumentList &operator=(const TemplateArgumentList &) = delete;
 
-  /// Type used to indicate that the template argument list itself is a
-  /// stack object. It does not own its template arguments.
-  enum OnStackType { OnStack };
-
   /// Create a new template argument list that copies the given set of
   /// template arguments.
   static TemplateArgumentList *CreateCopy(ASTContext &Context,
                                           ArrayRef<TemplateArgument> Args);
-
-  /// Construct a new, temporary template argument list on the stack.
-  ///
-  /// The template argument list does not own the template arguments
-  /// provided.
-  explicit TemplateArgumentList(OnStackType, ArrayRef<TemplateArgument> Args)
-      : Arguments(Args.data()), NumArguments(Args.size()) {}
-
-  /// Produces a shallow copy of the given template argument list.
-  ///
-  /// This operation assumes that the input argument list outlives it.
-  /// This takes the list as a pointer to avoid looking like a copy
-  /// constructor, since this really isn't safe to use that way.
-  explicit TemplateArgumentList(const TemplateArgumentList *Other)
-      : Arguments(Other->data()), NumArguments(Other->size()) {}
 
   /// Retrieve the template argument at a given index.
   const TemplateArgument &get(unsigned Idx) const {
@@ -298,7 +280,9 @@ public:
   unsigned size() const { return NumArguments; }
 
   /// Retrieve a pointer to the template argument list.
-  const TemplateArgument *data() const { return Arguments; }
+  const TemplateArgument *data() const {
+    return getTrailingObjects<TemplateArgument>();
+  }
 };
 
 void *allocateDefaultArgStorageChain(const ASTContext &C);
@@ -1833,7 +1817,7 @@ class ClassTemplateSpecializationDecl
   SourceLocation PointOfInstantiation;
 
   /// The kind of specialization this declaration refers to.
-  /// Really a value of type TemplateSpecializationKind.
+  LLVM_PREFERRED_TYPE(TemplateSpecializationKind)
   unsigned SpecializationKind : 3;
 
 protected:
@@ -2638,13 +2622,14 @@ class VarTemplateSpecializationDecl : public VarDecl,
   SourceLocation PointOfInstantiation;
 
   /// The kind of specialization this declaration refers to.
-  /// Really a value of type TemplateSpecializationKind.
+  LLVM_PREFERRED_TYPE(TemplateSpecializationKind)
   unsigned SpecializationKind : 3;
 
   /// Whether this declaration is a complete definition of the
   /// variable template specialization. We can't otherwise tell apart
   /// an instantiated declaration from an instantiated definition with
   /// no initializer.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsCompleteDefinition : 1;
 
 protected:

@@ -59,7 +59,7 @@ extern cl::opt<bool> NoPGOWarnMismatchComdatWeak;
 constexpr int LLVM_MEM_PROFILER_VERSION = 1;
 
 // Size of memory mapped to a single shadow location.
-constexpr uint64_t DefaultShadowGranularity = 64;
+constexpr uint64_t DefaultMemGranularity = 64;
 
 // Scale from granularity down to shadow size.
 constexpr uint64_t DefaultShadowScale = 3;
@@ -120,7 +120,7 @@ static cl::opt<int> ClMappingScale("memprof-mapping-scale",
 static cl::opt<int>
     ClMappingGranularity("memprof-mapping-granularity",
                          cl::desc("granularity of memprof shadow mapping"),
-                         cl::Hidden, cl::init(DefaultShadowGranularity));
+                         cl::Hidden, cl::init(DefaultMemGranularity));
 
 static cl::opt<bool> ClStack("memprof-instrument-stack",
                              cl::desc("Instrument scalar stack variables"),
@@ -171,7 +171,6 @@ struct InterestingMemoryAccess {
   Value *Addr = nullptr;
   bool IsWrite;
   Type *AccessTy;
-  uint64_t TypeSize;
   Value *MaybeMask = nullptr;
 };
 
@@ -182,6 +181,7 @@ public:
     C = &(M.getContext());
     LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
+    PtrTy = PointerType::getUnqual(*C);
   }
 
   /// If it is an interesting memory access, populate information
@@ -193,7 +193,7 @@ public:
   void instrumentMop(Instruction *I, const DataLayout &DL,
                      InterestingMemoryAccess &Access);
   void instrumentAddress(Instruction *OrigIns, Instruction *InsertBefore,
-                         Value *Addr, uint32_t TypeSize, bool IsWrite);
+                         Value *Addr, bool IsWrite);
   void instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
                                    Instruction *I, Value *Addr, Type *AccessTy,
                                    bool IsWrite);
@@ -209,11 +209,11 @@ private:
   LLVMContext *C;
   int LongSize;
   Type *IntptrTy;
+  PointerType *PtrTy;
   ShadowMapping Mapping;
 
   // These arrays is indexed by AccessIsWrite
   FunctionCallee MemProfMemoryAccessCallback[2];
-  FunctionCallee MemProfMemoryAccessCallbackSized[2];
 
   FunctionCallee MemProfMemmove, MemProfMemcpy, MemProfMemset;
   Value *DynamicShadowOffset = nullptr;
@@ -267,15 +267,13 @@ Value *MemProfiler::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
 void MemProfiler::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> IRB(MI);
   if (isa<MemTransferInst>(MI)) {
-    IRB.CreateCall(
-        isa<MemMoveInst>(MI) ? MemProfMemmove : MemProfMemcpy,
-        {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
-         IRB.CreatePointerCast(MI->getOperand(1), IRB.getInt8PtrTy()),
-         IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
+    IRB.CreateCall(isa<MemMoveInst>(MI) ? MemProfMemmove : MemProfMemcpy,
+                   {MI->getOperand(0), MI->getOperand(1),
+                    IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
   } else if (isa<MemSetInst>(MI)) {
     IRB.CreateCall(
         MemProfMemset,
-        {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
+        {MI->getOperand(0),
          IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
          IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
   }
@@ -364,18 +362,16 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
       StringRef SectionName = GV->getSection();
       // Check if the global is in the PGO counters section.
       auto OF = Triple(I->getModule()->getTargetTriple()).getObjectFormat();
-      if (SectionName.endswith(
+      if (SectionName.ends_with(
               getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false)))
         return std::nullopt;
     }
 
     // Do not instrument accesses to LLVM internal variables.
-    if (GV->getName().startswith("__llvm"))
+    if (GV->getName().starts_with("__llvm"))
       return std::nullopt;
   }
 
-  const DataLayout &DL = I->getModule()->getDataLayout();
-  Access.TypeSize = DL.getTypeStoreSizeInBits(Access.AccessTy);
   return Access;
 }
 
@@ -383,7 +379,6 @@ void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
                                               Instruction *I, Value *Addr,
                                               Type *AccessTy, bool IsWrite) {
   auto *VTy = cast<FixedVectorType>(AccessTy);
-  uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
   unsigned Num = VTy->getNumElements();
   auto *Zero = ConstantInt::get(IntptrTy, 0);
   for (unsigned Idx = 0; Idx < Num; ++Idx) {
@@ -408,8 +403,7 @@ void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
     IRBuilder<> IRB(InsertBefore);
     InstrumentedAddress =
         IRB.CreateGEP(VTy, Addr, {Zero, ConstantInt::get(IntptrTy, Idx)});
-    instrumentAddress(I, InsertBefore, InstrumentedAddress, ElemTypeSize,
-                      IsWrite);
+    instrumentAddress(I, InsertBefore, InstrumentedAddress, IsWrite);
   }
 }
 
@@ -436,13 +430,13 @@ void MemProfiler::instrumentMop(Instruction *I, const DataLayout &DL,
     // Since the access counts will be accumulated across the entire allocation,
     // we only update the shadow access count for the first location and thus
     // don't need to worry about alignment and type size.
-    instrumentAddress(I, I, Access.Addr, Access.TypeSize, Access.IsWrite);
+    instrumentAddress(I, I, Access.Addr, Access.IsWrite);
   }
 }
 
 void MemProfiler::instrumentAddress(Instruction *OrigIns,
                                     Instruction *InsertBefore, Value *Addr,
-                                    uint32_t TypeSize, bool IsWrite) {
+                                    bool IsWrite) {
   IRBuilder<> IRB(InsertBefore);
   Value *AddrLong = IRB.CreatePointerCast(Addr, IntptrTy);
 
@@ -508,25 +502,18 @@ void MemProfiler::initializeCallbacks(Module &M) {
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
 
-    SmallVector<Type *, 3> Args2 = {IntptrTy, IntptrTy};
     SmallVector<Type *, 2> Args1{1, IntptrTy};
-    MemProfMemoryAccessCallbackSized[AccessIsWrite] =
-        M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + TypeStr + "N",
-                              FunctionType::get(IRB.getVoidTy(), Args2, false));
-
     MemProfMemoryAccessCallback[AccessIsWrite] =
         M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + TypeStr,
                               FunctionType::get(IRB.getVoidTy(), Args1, false));
   }
   MemProfMemmove = M.getOrInsertFunction(
-      ClMemoryAccessCallbackPrefix + "memmove", IRB.getInt8PtrTy(),
-      IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy);
+      ClMemoryAccessCallbackPrefix + "memmove", PtrTy, PtrTy, PtrTy, IntptrTy);
   MemProfMemcpy = M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + "memcpy",
-                                        IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                                        IRB.getInt8PtrTy(), IntptrTy);
-  MemProfMemset = M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + "memset",
-                                        IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                                        IRB.getInt32Ty(), IntptrTy);
+                                        PtrTy, PtrTy, PtrTy, IntptrTy);
+  MemProfMemset =
+      M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + "memset", PtrTy,
+                            PtrTy, IRB.getInt32Ty(), IntptrTy);
 }
 
 bool MemProfiler::maybeInsertMemProfInitAtFunctionEntry(Function &F) {
@@ -537,7 +524,7 @@ bool MemProfiler::maybeInsertMemProfInitAtFunctionEntry(Function &F) {
   // the shadow memory.
   // We cannot just ignore these methods, because they may call other
   // instrumented functions.
-  if (F.getName().find(" load]") != std::string::npos) {
+  if (F.getName().contains(" load]")) {
     FunctionCallee MemProfInitFunction =
         declareSanitizerInitFunction(*F.getParent(), MemProfInitName, {});
     IRBuilder<> IRB(&F.front(), F.front().begin());
@@ -562,7 +549,7 @@ bool MemProfiler::instrumentFunction(Function &F) {
     return false;
   if (ClDebugFunc == F.getName())
     return false;
-  if (F.getName().startswith("__memprof_"))
+  if (F.getName().starts_with("__memprof_"))
     return false;
 
   bool FunctionModified = false;
@@ -678,25 +665,17 @@ static void readMemprof(Module &M, Function &F,
                         IndexedInstrProfReader *MemProfReader,
                         const TargetLibraryInfo &TLI) {
   auto &Ctx = M.getContext();
-
-  auto FuncName = getIRPGOFuncName(F);
+  // Previously we used getIRPGOFuncName() here. If F is local linkage,
+  // getIRPGOFuncName() returns FuncName with prefix 'FileName;'. But
+  // llvm-profdata uses FuncName in dwarf to create GUID which doesn't
+  // contain FileName's prefix. It caused local linkage function can't
+  // find MemProfRecord. So we use getName() now.
+  // 'unique-internal-linkage-names' can make MemProf work better for local
+  // linkage function.
+  auto FuncName = F.getName();
   auto FuncGUID = Function::getGUID(FuncName);
   std::optional<memprof::MemProfRecord> MemProfRec;
   auto Err = MemProfReader->getMemProfRecord(FuncGUID).moveInto(MemProfRec);
-  if (Err) {
-    // If we don't find getIRPGOFuncName(), try getPGOFuncName() to handle
-    // profiles built by older compilers
-    Err = handleErrors(std::move(Err), [&](const InstrProfError &IE) -> Error {
-      if (IE.get() != instrprof_error::unknown_function)
-        return make_error<InstrProfError>(IE);
-      auto FuncName = getPGOFuncName(F);
-      auto FuncGUID = Function::getGUID(FuncName);
-      if (auto Err =
-              MemProfReader->getMemProfRecord(FuncGUID).moveInto(MemProfRec))
-        return Err;
-      return Error::success();
-    });
-  }
   if (Err) {
     handleAllErrors(std::move(Err), [&](const InstrProfError &IPE) {
       auto Err = IPE.get();
@@ -729,6 +708,12 @@ static void readMemprof(Module &M, Function &F,
     return;
   }
 
+  // Detect if there are non-zero column numbers in the profile. If not,
+  // treat all column numbers as 0 when matching (i.e. ignore any non-zero
+  // columns in the IR). The profiled binary might have been built with
+  // column numbers disabled, for example.
+  bool ProfileHasColumns = false;
+
   // Build maps of the location hash to all profile data with that leaf location
   // (allocation info and the callsites).
   std::map<uint64_t, std::set<const AllocationInfo *>> LocHashToAllocInfo;
@@ -742,6 +727,7 @@ static void readMemprof(Module &M, Function &F,
     // of call stack frames.
     uint64_t StackId = computeStackId(AI.CallStack[0]);
     LocHashToAllocInfo[StackId].insert(&AI);
+    ProfileHasColumns |= AI.CallStack[0].Column;
   }
   for (auto &CS : MemProfRec->CallSites) {
     // Need to record all frames from leaf up to and including this function,
@@ -750,6 +736,7 @@ static void readMemprof(Module &M, Function &F,
     for (auto &StackFrame : CS) {
       uint64_t StackId = computeStackId(StackFrame);
       LocHashToCallSites[StackId].insert(std::make_pair(&CS, Idx++));
+      ProfileHasColumns |= StackFrame.Column;
       // Once we find this function, we can stop recording.
       if (StackFrame.Function == FuncGUID)
         break;
@@ -798,21 +785,21 @@ static void readMemprof(Module &M, Function &F,
         if (Name.empty())
           Name = DIL->getScope()->getSubprogram()->getName();
         auto CalleeGUID = Function::getGUID(Name);
-        auto StackId =
-            computeStackId(CalleeGUID, GetOffset(DIL), DIL->getColumn());
-        // LeafFound will only be false on the first iteration, since we either
-        // set it true or break out of the loop below.
+        auto StackId = computeStackId(CalleeGUID, GetOffset(DIL),
+                                      ProfileHasColumns ? DIL->getColumn() : 0);
+        // Check if we have found the profile's leaf frame. If yes, collect
+        // the rest of the call's inlined context starting here. If not, see if
+        // we find a match further up the inlined context (in case the profile
+        // was missing debug frames at the leaf).
         if (!LeafFound) {
           AllocInfoIter = LocHashToAllocInfo.find(StackId);
           CallSitesIter = LocHashToCallSites.find(StackId);
-          // Check if the leaf is in one of the maps. If not, no need to look
-          // further at this call.
-          if (AllocInfoIter == LocHashToAllocInfo.end() &&
-              CallSitesIter == LocHashToCallSites.end())
-            break;
-          LeafFound = true;
+          if (AllocInfoIter != LocHashToAllocInfo.end() ||
+              CallSitesIter != LocHashToCallSites.end())
+            LeafFound = true;
         }
-        InlinedCallStack.push_back(StackId);
+        if (LeafFound)
+          InlinedCallStack.push_back(StackId);
       }
       // If leaf not in either of the maps, skip inst.
       if (!LeafFound)

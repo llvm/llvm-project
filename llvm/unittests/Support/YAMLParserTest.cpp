@@ -441,4 +441,106 @@ TEST(YAMLParser, ParsesBools) {
   expectCannotParseBool("0");
 }
 
+// Checks that the given string can be parsed into an expected scalar value.
+static void expectCanParseScalar(StringRef Input, StringRef Expected) {
+  SourceMgr SM;
+  yaml::Stream Stream(Input, SM);
+  yaml::Node *Root = Stream.begin()->getRoot();
+  ASSERT_NE(Root, nullptr);
+  auto *ScalarNode = dyn_cast<yaml::ScalarNode>(Root);
+  ASSERT_NE(ScalarNode, nullptr);
+  SmallVector<char> Storage;
+  StringRef Result = ScalarNode->getValue(Storage);
+  EXPECT_EQ(Result, Expected);
+}
+
+TEST(YAMLParser, UnfoldsScalarValue) {
+  // Double-quoted values
+  expectCanParseScalar("\"\"", "");
+  expectCanParseScalar("\"  \t\t  \t\t  \"", "  \t\t  \t\t  ");
+  expectCanParseScalar("\"\n\"", " ");
+  expectCanParseScalar("\"\r\"", " ");
+  expectCanParseScalar("\"\r\n\"", " ");
+  expectCanParseScalar("\"\n\n\"", "\n");
+  expectCanParseScalar("\"\r\r\"", "\n");
+  expectCanParseScalar("\"\n\r\"", "\n");
+  expectCanParseScalar("\"\r\n\r\n\"", "\n");
+  expectCanParseScalar("\"\n\n\n\"", "\n\n");
+  expectCanParseScalar("\"\r\r\r\"", "\n\n");
+  expectCanParseScalar("\"\r\n\r\n\r\n\"", "\n\n");
+  expectCanParseScalar("\" \t \t \n\t \t \t\r \t \t \"", "\n");
+  expectCanParseScalar("\" \t A \t \n \t B \t \"", " \t A B \t ");
+  expectCanParseScalar("\" \t \\ \r\r\t \\  \t \"", " \t  \n  \t ");
+  expectCanParseScalar("\"A\nB\"", "A B");
+  expectCanParseScalar("\"A\rB\"", "A B");
+  expectCanParseScalar("\"A\r\nB\"", "A B");
+  expectCanParseScalar("\"A\n\nB\"", "A\nB");
+  expectCanParseScalar("\"A\r\rB\"", "A\nB");
+  expectCanParseScalar("\"A\n\rB\"", "A\nB");
+  expectCanParseScalar("\"A\r\n\r\nB\"", "A\nB");
+  expectCanParseScalar("\"A\n\n\nB\"", "A\n\nB");
+  expectCanParseScalar("\"A\r\r\rB\"", "A\n\nB");
+  expectCanParseScalar("\"A\r\n\r\n\r\nB\"", "A\n\nB");
+  expectCanParseScalar("\"A \t \t \n\t \t \t B\"", "A B");
+  expectCanParseScalar("\"A \t \t \n\t \t \t\r \t \t B\"", "A\nB");
+  expectCanParseScalar("\"A \t \t \n\t \t \t\r\n \t \r  \t B\"", "A\n\nB");
+  expectCanParseScalar("\"A\\\rB\"", "AB");
+  expectCanParseScalar("\"A\\\nB\"", "AB");
+  expectCanParseScalar("\"A\\\r\nB\"", "AB");
+  expectCanParseScalar("\"A \t \\\rB\"", "A \t B");
+  expectCanParseScalar("\"A  \t\\\nB\"", "A  \tB");
+  expectCanParseScalar("\"A\t  \\\r\nB\"", "A\t  B");
+  expectCanParseScalar("\"A\\\r\rB\"", "A B");
+  expectCanParseScalar("\"A\\\n\nB\"", "A B");
+  expectCanParseScalar("\"A\\\r\n\r\nB\"", "A B");
+  expectCanParseScalar("\"A\\\r\r\rB\"", "A\nB");
+  expectCanParseScalar("\"A\\\n\n\nB\"", "A\nB");
+  expectCanParseScalar("\"A\\\r\n\r\n\r\nB\"", "A\nB");
+  expectCanParseScalar("\"A\r\\ \rB\"", "A   B");
+  // Single-quoted values
+  expectCanParseScalar("''", "");
+  expectCanParseScalar("'  \t\t  \t\t  '", "  \t\t  \t\t  ");
+  expectCanParseScalar("'\n'", " ");
+  expectCanParseScalar("'\r'", " ");
+  expectCanParseScalar("'\r\n'", " ");
+  expectCanParseScalar("'\n\n'", "\n");
+  expectCanParseScalar("'\r\r'", "\n");
+  expectCanParseScalar("'\n\r'", "\n");
+  expectCanParseScalar("'\r\n\r\n'", "\n");
+  expectCanParseScalar("'\n\n\n'", "\n\n");
+  expectCanParseScalar("'\r\r\r'", "\n\n");
+  expectCanParseScalar("'\r\n\r\n\r\n'", "\n\n");
+  expectCanParseScalar("' \t \t \n\t \t \t\r \t \t '", "\n");
+  expectCanParseScalar("' \t A \t \n \t B \t '", " \t A B \t ");
+  expectCanParseScalar("'A\nB'", "A B");
+  expectCanParseScalar("'A\rB'", "A B");
+  expectCanParseScalar("'A\r\nB'", "A B");
+  expectCanParseScalar("'A\n\nB'", "A\nB");
+  expectCanParseScalar("'A\r\rB'", "A\nB");
+  expectCanParseScalar("'A\n\rB'", "A\nB");
+  expectCanParseScalar("'A\r\n\r\nB'", "A\nB");
+  expectCanParseScalar("'A\n\n\nB'", "A\n\nB");
+  expectCanParseScalar("'A\r\r\rB'", "A\n\nB");
+  expectCanParseScalar("'A\r\n\r\n\r\nB'", "A\n\nB");
+  expectCanParseScalar("'A \t \t \n\t \t \t B'", "A B");
+  expectCanParseScalar("'A \t \t \n\t \t \t\r \t \t B'", "A\nB");
+  expectCanParseScalar("'A \t \t \n\t \t \t\r\n \t \r  \t B'", "A\n\nB");
+  // Plain values
+  expectCanParseScalar("A  \t \r \n \t \r\n \t\r\r\t  ", "A");
+  expectCanParseScalar("A \t \n \t B", "A B");
+  expectCanParseScalar("A\nB", "A B");
+  expectCanParseScalar("A\rB", "A B");
+  expectCanParseScalar("A\r\nB", "A B");
+  expectCanParseScalar("A\n\nB", "A\nB");
+  expectCanParseScalar("A\r\rB", "A\nB");
+  expectCanParseScalar("A\n\rB", "A\nB");
+  expectCanParseScalar("A\r\n\r\nB", "A\nB");
+  expectCanParseScalar("A\n\n\nB", "A\n\nB");
+  expectCanParseScalar("A\r\r\rB", "A\n\nB");
+  expectCanParseScalar("A\r\n\r\n\r\nB", "A\n\nB");
+  expectCanParseScalar("A \t \t \n\t \t \t B", "A B");
+  expectCanParseScalar("A \t \t \n\t \t \t\r \t \t B", "A\nB");
+  expectCanParseScalar("A \t \t \n\t \t \t\r\n \t \r  \t B", "A\n\nB");
+}
+
 } // end namespace llvm

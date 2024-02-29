@@ -13,6 +13,7 @@
 #ifndef LLVM_TEXTAPI_TEXT_STUB_COMMON_H
 #define LLVM_TEXTAPI_TEXT_STUB_COMMON_H
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/TextAPI/Architecture.h"
@@ -29,7 +30,8 @@ enum TBDFlags : unsigned {
   NotApplicationExtensionSafe  = 1U << 1,
   InstallAPI                   = 1U << 2,
   SimulatorSupport             = 1U << 3,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/SimulatorSupport),
+  OSLibNotForSharedCache       = 1U << 4,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/OSLibNotForSharedCache),
 };
 // clang-format on
 

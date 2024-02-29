@@ -18,8 +18,8 @@ body: |
     liveins: $x3
 
     %0:g8rc = COPY killed $x3
-    %1:g8rc_and_g8rc_nox0 = PADDI8pc 0, target-flags(ppc-pcrel, ppc-got, ppc-tlsld) @x
-    %2:g8rc_and_g8rc_nox0 = PADDIdtprel killed %1, target-flags(ppc-pcrel, ppc-got, ppc-tlsld) @x
+    %1:g8rc_and_g8rc_nox0 = PADDI8pc 0, target-flags(ppc-got-tlsld-pcrel) @x
+    %2:g8rc_and_g8rc_nox0 = PADDIdtprel killed %1, target-flags(ppc-got-tlsld-pcrel) @x
     STD killed %0, 0, killed %2 :: (store (s64) into `i8** bitcast (%0** @x to i8**)`)
     BLR8 implicit $lr8, implicit $rm
 ...

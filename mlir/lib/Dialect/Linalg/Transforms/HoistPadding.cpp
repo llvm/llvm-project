@@ -25,6 +25,7 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/Debug.h"
 
@@ -292,8 +293,8 @@ void HoistPaddingAnalysis::enableHoistPadding(RewriterBase &rewriter) {
   // enclosing loop, try to apply hoisting on this outermost loop.
   // TODO: we may want finer-grained hoisting of only that particular `sliceOp`.
   if (!outermostEnclosingForOp.isDefinedOutsideOfLoop(sliceOp.getSource())) {
-    outermostEnclosingForOp =
-        hoistRedundantSubsetExtractInsert(rewriter, outermostEnclosingForOp);
+    outermostEnclosingForOp = cast<scf::ForOp>(
+        hoistLoopInvariantSubsets(rewriter, outermostEnclosingForOp));
   }
 }
 
@@ -558,7 +559,7 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
       break;
     if (forOp != outerLoop && !outerLoop->isAncestor(forOp))
       break;
-    OpOperand &operand = forOp.getOpOperandForRegionIterArg(bbArg);
+    OpOperand &operand = *forOp.getTiedLoopInit(bbArg);
     bvm.map(bbArg, operand.get());
     bbArg = dyn_cast<BlockArgument>(operand.get());
   }
@@ -810,7 +811,7 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPointAfter(hoistedPackedTensor.getDefiningOp());
 
-  unsigned iterArgNumber = forOp.getResultForOpOperand(*pUse).getResultNumber();
+  unsigned iterArgNumber = forOp.getTiedLoopResult(pUse).getResultNumber();
   auto yieldingExtractSliceOp = forOp.getYieldedValues()[iterArgNumber]
                                     .getDefiningOp<tensor::ExtractSliceOp>();
   if (!yieldingExtractSliceOp)
@@ -853,10 +854,10 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
   LLVM_DEBUG(DBGS() << "with result #"
                     << numOriginalForOpResults + iterArgNumber
                     << " of forOp, giving us: " << extracted << "\n");
-  rewriter.startRootUpdate(extracted);
+  rewriter.startOpModification(extracted);
   extracted.getSourceMutable().assign(
       newForOp.getResult(numOriginalForOpResults + iterArgNumber));
-  rewriter.finalizeRootUpdate(extracted);
+  rewriter.finalizeOpModification(extracted);
 
   LLVM_DEBUG(DBGS() << "replace uses of: " << paddedValueBeforeHoisting
                     << "\n");

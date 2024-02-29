@@ -10,10 +10,12 @@
 // file does not yet support:
 //   - C++ modules TS
 
+#include "abort_message.h"
+#define DEMANGLE_ASSERT(expr, msg) _LIBCXXABI_ASSERT(expr, msg)
+
 #include "demangle/DemangleConfig.h"
 #include "demangle/ItaniumDemangle.h"
 #include "__cxxabi_config.h"
-#include <cassert>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -395,7 +397,7 @@ __cxa_demangle(const char *MangledName, char *Buf, size_t *N, int *Status) {
     InternalStatus = demangle_invalid_mangled_name;
   else {
     OutputBuffer O(Buf, N);
-    assert(Parser.ForwardTemplateRefs.empty());
+    DEMANGLE_ASSERT(Parser.ForwardTemplateRefs.empty(), "");
     AST->print(O);
     O += '\0';
     if (N != nullptr)

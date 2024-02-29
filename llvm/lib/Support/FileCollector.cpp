@@ -71,7 +71,7 @@ void FileCollector::PathCanonicalizer::updateWithRealPath(
     // cases? What if there is nothing on disk?
     if (sys::fs::real_path(Directory, RealPath))
       return;
-    CachedDirs[Directory] = std::string(RealPath.str());
+    CachedDirs[Directory] = std::string(RealPath);
   } else {
     RealPath = DirWithSymlink->second;
   }

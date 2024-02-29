@@ -1,23 +1,11 @@
 // DEFINE: %{entry_point} = test_load_store_zaq0
-// DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -enable-arm-streaming="mode=locally enable-za" \
-// DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// DEFINE:   -convert-vector-to-llvm="enable-arm-sme" -cse -canonicalize \
-// DEFINE:   -allocate-arm-sme-tiles -test-lower-to-llvm
+// DEFINE: %{compile} = mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:  -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=void \
-// DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
+// DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib
 
 // RUN: %{compile} | %{run} | FileCheck %s
-
-/// Note: The SME ST1Q/LD1Q instructions are currently broken in QEMU
-/// see: https://gitlab.com/qemu-project/qemu/-/issues/1833
-/// This test is expected to fail until a fixed version of QEMU can be used.
-
-/// FIXME: Remove the 'XFAIL' below once a fixed QEMU version is available
-/// (and installed on CI buildbot).
-// XFAIL: {{.*}}
 
 func.func @print_i8s(%bytes: memref<?xi8>, %len: index) {
   %c0 = arith.constant 0 : index
@@ -37,11 +25,6 @@ func.func @vector_copy_i128(%src: memref<?x?xi128>, %dst: memref<?x?xi128>) {
 }
 
 func.func @test_load_store_zaq0() {
-  %init_a_str = llvm.mlir.addressof @init_tile_a : !llvm.ptr<array<17 x i8>>
-  %init_b_str = llvm.mlir.addressof @init_tile_b : !llvm.ptr<array<17 x i8>>
-  %final_a_str = llvm.mlir.addressof @final_tile_a : !llvm.ptr<array<17 x i8>>
-  %final_b_str = llvm.mlir.addressof @final_tile_b : !llvm.ptr<array<17 x i8>>
-
   %c0 = arith.constant 0 : index
   %min_elts_q = arith.constant 1 : index
   %bytes_per_128_bit = arith.constant 16 : index
@@ -70,13 +53,13 @@ func.func @test_load_store_zaq0() {
 
   // CHECK-LABEL: INITIAL TILE A:
   // CHECK: ( 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 )
-  vector.print str "INITIAL TILE A:"
+  vector.print str "INITIAL TILE A:\n"
   func.call @print_i8s(%tile_a_bytes, %zaq_size_bytes) : (memref<?xi8>, index) -> ()
   vector.print punctuation <newline>
 
   // CHECK-LABEL: INITIAL TILE B:
   // CHECK: ( 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64 )
-  vector.print str "INITIAL TILE B:"
+  vector.print str "INITIAL TILE B:\n"
   func.call @print_i8s(%tile_b_bytes, %zaq_size_bytes) : (memref<?xi8>, index) -> ()
   vector.print punctuation <newline>
 
@@ -85,13 +68,13 @@ func.func @test_load_store_zaq0() {
 
   // CHECK-LABEL: FINAL TILE A:
   // CHECK: ( 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 )
-  vector.print str "FINAL TILE A:"
+  vector.print str "FINAL TILE A:\n"
   func.call @print_i8s(%tile_a_bytes, %zaq_size_bytes) : (memref<?xi8>, index) -> ()
   vector.print punctuation <newline>
 
   // CHECK-LABEL: FINAL TILE B:
   // CHECK: ( 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 )
-  vector.print str "FINAL TILE B:"
+  vector.print str "FINAL TILE B:\n"
   func.call @print_i8s(%tile_b_bytes, %zaq_size_bytes) : (memref<?xi8>, index) -> ()
 
   return

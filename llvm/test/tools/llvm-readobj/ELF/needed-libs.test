@@ -5,6 +5,8 @@
 # RUN:   | FileCheck %s -DFILE=%t1 --implicit-check-not=warning: --strict-whitespace --check-prefix=NEEDED-LIBS
 # RUN: llvm-readelf --needed-libs %t1 2>&1 \
 # RUN:   | FileCheck %s -DFILE=%t1 --implicit-check-not=warning: --strict-whitespace --check-prefix=NEEDED-LIBS
+# RUN: llvm-readobj --elf-output-style=JSON --needed-libs --pretty-print %t1 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t1 --implicit-check-not=warning: --match-full-lines --strict-whitespace --check-prefix=JSON
 
 ## Check that library names are sorted when printed.
 ## Document that we also sort error entries.
@@ -18,6 +20,17 @@
 # NEEDED-LIBS-NEXT:{{^}}  bbb{{$}}
 # NEEDED-LIBS-NEXT:{{^}}  ccc{{$}}
 # NEEDED-LIBS-NEXT:{{^}}]{{$}}
+
+#      JSON:    "FileSummary": {
+#      JSON:    "NeededLibraries": [{{.*}}warning: '[[FILE]]': string table at offset 0x78: unable to read the string at 0x9999a11: it goes past the end of the table (0x85)
+# JSON-NEXT:{{.*}}warning: '[[FILE]]': string table at offset 0x78: unable to read the string at 0x1111189: it goes past the end of the table (0x85)
+# JSON-EMPTY:
+# JSON-NEXT:      "<?>",
+# JSON-NEXT:      "<?>",
+# JSON-NEXT:      "aaa",
+# JSON-NEXT:      "bbb",
+# JSON-NEXT:      "ccc"
+# JSON-NEXT:    ]
 
 --- !ELF
 FileHeader:

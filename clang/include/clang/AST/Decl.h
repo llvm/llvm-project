@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_DECL_H
 #define LLVM_CLANG_AST_DECL_H
 
+#include "clang/AST/APNumericStorage.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContextAllocate.h"
 #include "clang/AST/DeclAccessPair.h"
@@ -75,6 +76,7 @@ class TemplateParameterList;
 class TypeAliasTemplateDecl;
 class UnresolvedSetImpl;
 class VarTemplateDecl;
+enum class ImplicitParamKind;
 
 /// The top declaration context.
 class TranslationUnitDecl : public Decl,
@@ -357,7 +359,8 @@ public:
   ///
   /// \param IsKnownNewer \c true if this declaration is known to be newer
   /// than \p OldD (for instance, if this declaration is newly-created).
-  bool declarationReplaces(NamedDecl *OldD, bool IsKnownNewer = true) const;
+  bool declarationReplaces(const NamedDecl *OldD,
+                           bool IsKnownNewer = true) const;
 
   /// Determine whether this declaration has linkage.
   bool hasLinkage() const;
@@ -969,12 +972,16 @@ private:
     friend class ASTDeclReader;
     friend class VarDecl;
 
+    LLVM_PREFERRED_TYPE(StorageClass)
     unsigned SClass : 3;
+    LLVM_PREFERRED_TYPE(ThreadStorageClassSpecifier)
     unsigned TSCSpec : 2;
+    LLVM_PREFERRED_TYPE(InitializationStyle)
     unsigned InitStyle : 2;
 
     /// Whether this variable is an ARC pseudo-__strong variable; see
     /// isARCPseudoStrong() for details.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ARCPseudoStrong : 1;
   };
   enum { NumVarDeclBits = 8 };
@@ -995,22 +1002,27 @@ protected:
     friend class ASTDeclReader;
     friend class ParmVarDecl;
 
+    LLVM_PREFERRED_TYPE(VarDeclBitfields)
     unsigned : NumVarDeclBits;
 
     /// Whether this parameter inherits a default argument from a
     /// prior declaration.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasInheritedDefaultArg : 1;
 
     /// Describes the kind of default argument for this parameter. By default
     /// this is none. If this is normal, then the default argument is stored in
     /// the \c VarDecl initializer expression unless we were unable to parse
     /// (even an invalid) expression for the default argument.
+    LLVM_PREFERRED_TYPE(DefaultArgKind)
     unsigned DefaultArgKind : 2;
 
     /// Whether this parameter undergoes K&R argument promotion.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsKNRPromoted : 1;
 
     /// Whether this parameter is an ObjC method parameter or not.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsObjCMethodParam : 1;
 
     /// If IsObjCMethodParam, a Decl::ObjCDeclQualifier.
@@ -1029,51 +1041,64 @@ protected:
     friend class ImplicitParamDecl;
     friend class VarDecl;
 
+    LLVM_PREFERRED_TYPE(VarDeclBitfields)
     unsigned : NumVarDeclBits;
 
     // FIXME: We need something similar to CXXRecordDecl::DefinitionData.
     /// Whether this variable is a definition which was demoted due to
     /// module merge.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsThisDeclarationADemotedDefinition : 1;
 
     /// Whether this variable is the exception variable in a C++ catch
     /// or an Objective-C @catch statement.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ExceptionVar : 1;
 
     /// Whether this local variable could be allocated in the return
     /// slot of its function, enabling the named return value optimization
     /// (NRVO).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned NRVOVariable : 1;
 
     /// Whether this variable is the for-range-declaration in a C++0x
     /// for-range statement.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned CXXForRangeDecl : 1;
 
     /// Whether this variable is the for-in loop declaration in Objective-C.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ObjCForDecl : 1;
 
     /// Whether this variable is (C++1z) inline.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsInline : 1;
 
     /// Whether this variable has (C++1z) inline explicitly specified.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsInlineSpecified : 1;
 
     /// Whether this variable is (C++0x) constexpr.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsConstexpr : 1;
 
     /// Whether this variable is the implicit variable for a lambda
     /// init-capture.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsInitCapture : 1;
 
     /// Whether this local extern variable's previous declaration was
     /// declared in the same block scope. This controls whether we should merge
     /// the type of this declaration with its previous declaration.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned PreviousDeclInSameBlockScope : 1;
 
     /// Defines kind of the ImplicitParamDecl: 'this', 'self', 'vtt', '_cmd' or
     /// something else.
+    LLVM_PREFERRED_TYPE(ImplicitParamKind)
     unsigned ImplicitParamKind : 3;
 
+    LLVM_PREFERRED_TYPE(bool)
     unsigned EscapingByref : 1;
   };
 
@@ -1654,36 +1679,36 @@ public:
   static bool classofKind(Kind K) { return K >= firstVar && K <= lastVar; }
 };
 
+/// Defines the kind of the implicit parameter: is this an implicit parameter
+/// with pointer to 'this', 'self', '_cmd', virtual table pointers, captured
+/// context or something else.
+enum class ImplicitParamKind {
+  /// Parameter for Objective-C 'self' argument
+  ObjCSelf,
+
+  /// Parameter for Objective-C '_cmd' argument
+  ObjCCmd,
+
+  /// Parameter for C++ 'this' argument
+  CXXThis,
+
+  /// Parameter for C++ virtual table pointers
+  CXXVTT,
+
+  /// Parameter for captured context
+  CapturedContext,
+
+  /// Parameter for Thread private variable
+  ThreadPrivateVar,
+
+  /// Other implicit parameter
+  Other,
+};
+
 class ImplicitParamDecl : public VarDecl {
   void anchor() override;
 
 public:
-  /// Defines the kind of the implicit parameter: is this an implicit parameter
-  /// with pointer to 'this', 'self', '_cmd', virtual table pointers, captured
-  /// context or something else.
-  enum ImplicitParamKind : unsigned {
-    /// Parameter for Objective-C 'self' argument
-    ObjCSelf,
-
-    /// Parameter for Objective-C '_cmd' argument
-    ObjCCmd,
-
-    /// Parameter for C++ 'this' argument
-    CXXThis,
-
-    /// Parameter for C++ virtual table pointers
-    CXXVTT,
-
-    /// Parameter for captured context
-    CapturedContext,
-
-    /// Parameter for Thread private variable
-    ThreadPrivateVar,
-
-    /// Other implicit parameter
-    Other,
-  };
-
   /// Create implicit parameter.
   static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
                                    SourceLocation IdLoc, IdentifierInfo *Id,
@@ -1698,7 +1723,7 @@ public:
                     ImplicitParamKind ParamKind)
       : VarDecl(ImplicitParam, C, DC, IdLoc, IdLoc, Id, Type,
                 /*TInfo=*/nullptr, SC_None) {
-    NonParmVarDeclBits.ImplicitParamKind = ParamKind;
+    NonParmVarDeclBits.ImplicitParamKind = llvm::to_underlying(ParamKind);
     setImplicit();
   }
 
@@ -1706,7 +1731,7 @@ public:
       : VarDecl(ImplicitParam, C, /*DC=*/nullptr, SourceLocation(),
                 SourceLocation(), /*Id=*/nullptr, Type,
                 /*TInfo=*/nullptr, SC_None) {
-    NonParmVarDeclBits.ImplicitParamKind = ParamKind;
+    NonParmVarDeclBits.ImplicitParamKind = llvm::to_underlying(ParamKind);
     setImplicit();
   }
 
@@ -2269,8 +2294,8 @@ public:
 
   /// Whether this virtual function is pure, i.e. makes the containing class
   /// abstract.
-  bool isPure() const { return FunctionDeclBits.IsPure; }
-  void setPure(bool P = true);
+  bool isPureVirtual() const { return FunctionDeclBits.IsPureVirtual; }
+  void setIsPureVirtual(bool P = true);
 
   /// Whether this templated function will be late parsed.
   bool isLateTemplateParsed() const {
@@ -2590,9 +2615,17 @@ public:
   /// the target functionality.
   bool isTargetMultiVersion() const;
 
+  /// True if this function is the default version of a multiversioned dispatch
+  /// function as a part of the target functionality.
+  bool isTargetMultiVersionDefault() const;
+
   /// True if this function is a multiversioned dispatch function as a part of
   /// the target-clones functionality.
   bool isTargetClonesMultiVersion() const;
+
+  /// True if this function is a multiversioned dispatch function as a part of
+  /// the target-version functionality.
+  bool isTargetVersionMultiVersion() const;
 
   /// \brief Get the associated-constraints of this function declaration.
   /// Currently, this will either be a vector of size 1 containing the
@@ -3013,8 +3046,11 @@ class FieldDecl : public DeclaratorDecl, public Mergeable<FieldDecl> {
     ISK_CapturedVLAType,
   };
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned BitField : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Mutable : 1;
+  LLVM_PREFERRED_TYPE(InitStorageKind)
   unsigned StorageKind : 2;
   mutable unsigned CachedFieldIndex : 28;
 
@@ -3224,15 +3260,16 @@ public:
 /// that is defined.  For example, in "enum X {a,b}", each of a/b are
 /// EnumConstantDecl's, X is an instance of EnumDecl, and the type of a/b is a
 /// TagType for the X EnumDecl.
-class EnumConstantDecl : public ValueDecl, public Mergeable<EnumConstantDecl> {
+class EnumConstantDecl : public ValueDecl,
+                         public Mergeable<EnumConstantDecl>,
+                         public APIntStorage {
   Stmt *Init; // an integer constant expression
-  llvm::APSInt Val; // The value.
+  bool IsUnsigned;
 
 protected:
-  EnumConstantDecl(DeclContext *DC, SourceLocation L,
+  EnumConstantDecl(const ASTContext &C, DeclContext *DC, SourceLocation L,
                    IdentifierInfo *Id, QualType T, Expr *E,
-                   const llvm::APSInt &V)
-    : ValueDecl(EnumConstant, DC, L, Id, T), Init((Stmt*)E), Val(V) {}
+                   const llvm::APSInt &V);
 
 public:
   friend class StmtIteratorBase;
@@ -3245,10 +3282,15 @@ public:
 
   const Expr *getInitExpr() const { return (const Expr*) Init; }
   Expr *getInitExpr() { return (Expr*) Init; }
-  const llvm::APSInt &getInitVal() const { return Val; }
+  llvm::APSInt getInitVal() const {
+    return llvm::APSInt(getValue(), IsUnsigned);
+  }
 
   void setInitExpr(Expr *E) { Init = (Stmt*) E; }
-  void setInitVal(const llvm::APSInt &V) { Val = V; }
+  void setInitVal(const ASTContext &C, const llvm::APSInt &V) {
+    setValue(C, V);
+    IsUnsigned = V.isUnsigned();
+  }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -3703,13 +3745,15 @@ public:
     return static_cast<TagKind>(TagDeclBits.TagDeclKind);
   }
 
-  void setTagKind(TagKind TK) { TagDeclBits.TagDeclKind = TK; }
+  void setTagKind(TagKind TK) {
+    TagDeclBits.TagDeclKind = llvm::to_underlying(TK);
+  }
 
-  bool isStruct() const { return getTagKind() == TTK_Struct; }
-  bool isInterface() const { return getTagKind() == TTK_Interface; }
-  bool isClass()  const { return getTagKind() == TTK_Class; }
-  bool isUnion()  const { return getTagKind() == TTK_Union; }
-  bool isEnum()   const { return getTagKind() == TTK_Enum; }
+  bool isStruct() const { return getTagKind() == TagTypeKind::Struct; }
+  bool isInterface() const { return getTagKind() == TagTypeKind::Interface; }
+  bool isClass() const { return getTagKind() == TagTypeKind::Class; }
+  bool isUnion() const { return getTagKind() == TagTypeKind::Union; }
+  bool isEnum() const { return getTagKind() == TagTypeKind::Enum; }
 
   /// Is this tag type named, either directly or via being defined in
   /// a typedef of this type?
@@ -4059,6 +4103,29 @@ public:
   static bool classofKind(Kind K) { return K == Enum; }
 };
 
+/// Enum that represents the different ways arguments are passed to and
+/// returned from function calls. This takes into account the target-specific
+/// and version-specific rules along with the rules determined by the
+/// language.
+enum class RecordArgPassingKind {
+  /// The argument of this type can be passed directly in registers.
+  CanPassInRegs,
+
+  /// The argument of this type cannot be passed directly in registers.
+  /// Records containing this type as a subobject are not forced to be passed
+  /// indirectly. This value is used only in C++. This value is required by
+  /// C++ because, in uncommon situations, it is possible for a class to have
+  /// only trivial copy/move constructors even when one of its subobjects has
+  /// a non-trivial copy/move constructor (if e.g. the corresponding copy/move
+  /// constructor in the derived class is deleted).
+  CannotPassInRegs,
+
+  /// The argument of this type cannot be passed directly in registers.
+  /// Records containing this type as a subobject are forced to be passed
+  /// indirectly.
+  CanNeverPassInRegs
+};
+
 /// Represents a struct/union/class.  For example:
 ///   struct X;                  // Forward declaration, no "body".
 ///   union Y { int A, B; };     // Has body with members A and B (FieldDecls).
@@ -4069,28 +4136,6 @@ class RecordDecl : public TagDecl {
 public:
   friend class DeclContext;
   friend class ASTDeclReader;
-  /// Enum that represents the different ways arguments are passed to and
-  /// returned from function calls. This takes into account the target-specific
-  /// and version-specific rules along with the rules determined by the
-  /// language.
-  enum ArgPassingKind : unsigned {
-    /// The argument of this type can be passed directly in registers.
-    APK_CanPassInRegs,
-
-    /// The argument of this type cannot be passed directly in registers.
-    /// Records containing this type as a subobject are not forced to be passed
-    /// indirectly. This value is used only in C++. This value is required by
-    /// C++ because, in uncommon situations, it is possible for a class to have
-    /// only trivial copy/move constructors even when one of its subobjects has
-    /// a non-trivial copy/move constructor (if e.g. the corresponding copy/move
-    /// constructor in the derived class is deleted).
-    APK_CannotPassInRegs,
-
-    /// The argument of this type cannot be passed directly in registers.
-    /// Records containing this type as a subobject are forced to be passed
-    /// indirectly.
-    APK_CanNeverPassInRegs
-  };
 
 protected:
   RecordDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
@@ -4215,15 +4260,16 @@ public:
   /// it must have at least one trivial, non-deleted copy or move constructor.
   /// FIXME: This should be set as part of completeDefinition.
   bool canPassInRegisters() const {
-    return getArgPassingRestrictions() == APK_CanPassInRegs;
+    return getArgPassingRestrictions() == RecordArgPassingKind::CanPassInRegs;
   }
 
-  ArgPassingKind getArgPassingRestrictions() const {
-    return static_cast<ArgPassingKind>(RecordDeclBits.ArgPassingRestrictions);
+  RecordArgPassingKind getArgPassingRestrictions() const {
+    return static_cast<RecordArgPassingKind>(
+        RecordDeclBits.ArgPassingRestrictions);
   }
 
-  void setArgPassingRestrictions(ArgPassingKind Kind) {
-    RecordDeclBits.ArgPassingRestrictions = Kind;
+  void setArgPassingRestrictions(RecordArgPassingKind Kind) {
+    RecordDeclBits.ArgPassingRestrictions = llvm::to_underlying(Kind);
   }
 
   bool isParamDestroyedInCallee() const {
@@ -4300,30 +4346,6 @@ public:
   // Whether there are any fields (non-static data members) in this record.
   bool field_empty() const {
     return field_begin() == field_end();
-  }
-
-  FieldDecl *getLastField() {
-    FieldDecl *FD = nullptr;
-    for (FieldDecl *Field : fields())
-      FD = Field;
-    return FD;
-  }
-  const FieldDecl *getLastField() const {
-    return const_cast<RecordDecl *>(this)->getLastField();
-  }
-
-  template <typename Functor>
-  const FieldDecl *findFieldIf(Functor &Pred) const {
-    for (const Decl *D : decls()) {
-      if (const auto *FD = dyn_cast<FieldDecl>(D); FD && Pred(FD))
-        return FD;
-
-      if (const auto *RD = dyn_cast<RecordDecl>(D))
-        if (const FieldDecl *FD = RD->findFieldIf(Pred))
-          return FD;
-    }
-
-    return nullptr;
   }
 
   /// Note that the definition of this type is now complete.

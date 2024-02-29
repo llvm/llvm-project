@@ -1,6 +1,6 @@
 ! This test checks lowering of OpenMP DO Directive(Worksharing) with collapse.
 
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 program wsloop_collapse
   integer :: i, j, k

@@ -45,7 +45,6 @@
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -55,6 +54,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/SubsetOpInterface.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 
@@ -279,7 +279,7 @@ static bool isReachable(Block *from, Block *to, ArrayRef<Block *> except) {
     worklist.push_back(succ);
   while (!worklist.empty()) {
     Block *next = worklist.pop_back_val();
-    if (llvm::find(except, next) != except.end())
+    if (llvm::is_contained(except, next))
       continue;
     if (next == to)
       return true;
@@ -1028,13 +1028,6 @@ OneShotAnalysisState::analyzeSingleOp(Operation *op,
       if (failed(bufferizableInPlaceAnalysisImpl(opOperand, *this, domInfo)))
         return failure();
   return success();
-}
-
-/// Return true if the given op has a tensor result or a tensor operand.
-static bool hasTensorSemantics(Operation *op) {
-  bool hasTensorResult = any_of(op->getResultTypes(), isaTensor);
-  bool hasTensorOperand = any_of(op->getOperandTypes(), isaTensor);
-  return hasTensorResult || hasTensorOperand;
 }
 
 /// Analyze equivalence of tied OpResult/OpOperand pairs of the given ops.

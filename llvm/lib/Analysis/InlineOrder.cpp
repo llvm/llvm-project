@@ -262,7 +262,7 @@ public:
 
   void erase_if(function_ref<bool(T)> Pred) override {
     auto PredWrapper = [=](CallBase *CB) -> bool {
-      return Pred(std::make_pair(CB, 0));
+      return Pred(std::make_pair(CB, InlineHistoryMap[CB]));
     };
     llvm::erase_if(Heap, PredWrapper);
     std::make_heap(Heap.begin(), Heap.end(), isLess);

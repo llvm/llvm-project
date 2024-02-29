@@ -38,3 +38,18 @@ float fp_reassoc_no_fast(float a, float b) {
 #pragma clang fp reassociate(fast)
   return a - b;
 }
+
+float fp_recip_fail(float a, float b) {
+  // CHECK-LABEL: fp_recip_fail
+  // expected-error@+2{{'#pragma clang fp' can only appear at file scope or at the start of a compound statement}}
+  float c = a + b;
+#pragma clang fp reciprocal(off)
+  return c - b;
+}
+
+float fp_recip_no_fast(float a, float b) {
+// CHECK-LABEL: fp_recip_no_fast
+// expected-error@+1{{unexpected argument 'fast' to '#pragma clang fp reciprocal'; expected 'on' or 'off'}}
+#pragma clang fp reciprocal(fast)
+  return a - b;
+}

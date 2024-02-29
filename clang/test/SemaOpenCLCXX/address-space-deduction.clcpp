@@ -6,7 +6,7 @@
 constexpr int foo = 0;
 
 //CHECK: |-VarDecl {{.*}} foo1 'T' cinit
-//CHECK: `-VarTemplateSpecializationDecl {{.*}} used foo1 '__global long':'__global long' implicit_instantiation cinit
+//CHECK: `-VarTemplateSpecializationDecl {{.*}} used foo1 '__global long' implicit_instantiation cinit
 template <typename T>
 T foo1 = 0;
 

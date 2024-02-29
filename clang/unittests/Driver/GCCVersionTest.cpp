@@ -39,6 +39,7 @@ const VersionParseTest TestCases[] = {
     {"4.4.2-rc4", 4, 4, 2, "4", "4", "-rc4"},
     {"4.4.x-patched", 4, 4, -1, "4", "4", ""},
     {"not-a-version", -1, -1, -1, "", "", ""},
+    {"10-win32", 10, -1, -1, "10", "", "-win32"},
 };
 
 TEST(GCCVersionTest, Parse) {

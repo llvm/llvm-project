@@ -20,9 +20,9 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -116,6 +117,8 @@ private:
   bool selectImplicitDefOrPHI(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectMulDivRem(MachineInstr &I, MachineRegisterInfo &MRI,
                        MachineFunction &MF) const;
+  bool selectSelect(MachineInstr &I, MachineRegisterInfo &MRI,
+                    MachineFunction &MF) const;
   bool selectIntrinsicWSideEffects(MachineInstr &I, MachineRegisterInfo &MRI,
                                    MachineFunction &MF) const;
 
@@ -429,6 +432,8 @@ bool X86InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_UREM:
     return selectMulDivRem(I, MRI, MF);
+  case TargetOpcode::G_SELECT:
+    return selectSelect(I, MRI, MF);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return selectIntrinsicWSideEffects(I, MRI, MF);
   }
@@ -1786,6 +1791,49 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
   }
   I.eraseFromParent();
 
+  return true;
+}
+
+bool X86InstructionSelector::selectSelect(MachineInstr &I,
+                                          MachineRegisterInfo &MRI,
+                                          MachineFunction &MF) const {
+  GSelect &Sel = cast<GSelect>(I);
+  unsigned DstReg = Sel.getReg(0);
+  BuildMI(*Sel.getParent(), Sel, Sel.getDebugLoc(), TII.get(X86::TEST32rr))
+      .addReg(Sel.getCondReg())
+      .addReg(Sel.getCondReg());
+
+  unsigned OpCmp;
+  LLT Ty = MRI.getType(DstReg);
+  switch (Ty.getSizeInBits()) {
+  default:
+    return false;
+  case 8:
+    OpCmp = X86::CMOV_GR8;
+    break;
+  case 16:
+    OpCmp = STI.canUseCMOV() ? X86::CMOV16rr : X86::CMOV_GR16;
+    break;
+  case 32:
+    OpCmp = STI.canUseCMOV() ? X86::CMOV32rr : X86::CMOV_GR32;
+    break;
+  case 64:
+    assert(STI.is64Bit() && STI.canUseCMOV());
+    OpCmp = X86::CMOV64rr;
+    break;
+  }
+  BuildMI(*Sel.getParent(), Sel, Sel.getDebugLoc(), TII.get(OpCmp), DstReg)
+      .addReg(Sel.getTrueReg())
+      .addReg(Sel.getFalseReg())
+      .addImm(X86::COND_E);
+
+  const TargetRegisterClass *DstRC = getRegClass(Ty, DstReg, MRI);
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+    LLVM_DEBUG(dbgs() << "Failed to constrain CMOV\n");
+    return false;
+  }
+
+  Sel.eraseFromParent();
   return true;
 }
 

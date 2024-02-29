@@ -201,7 +201,7 @@ createInvocationForMigration(CompilerInvocation &origCI,
   for (std::vector<std::string>::iterator
          I = CInvok->getDiagnosticOpts().Warnings.begin(),
          E = CInvok->getDiagnosticOpts().Warnings.end(); I != E; ++I) {
-    if (!StringRef(*I).startswith("error"))
+    if (!StringRef(*I).starts_with("error"))
       WarnOpts.push_back(*I);
   }
   WarnOpts.push_back("error=arc-unsafe-retained-assign");

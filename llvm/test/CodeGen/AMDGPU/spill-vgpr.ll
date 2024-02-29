@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX908 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX900 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX908 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX900 %s
 
 ; GCN-LABEL: {{^}}max_11_vgprs:
 ; GFX900-NOT: SCRATCH_RSRC
@@ -136,13 +136,13 @@ define amdgpu_kernel void @max_256_vgprs_spill_9x32(ptr addrspace(1) %p) #1 {
 ; GFX908-DAG: v_accvgpr_read_b32
 
 ; GFX900: NumVgprs: 256
-; GFX908: NumVgprs: 254
-; GFX900: ScratchSize: 1796
+; GFX908: NumVgprs: 252
+; GFX900: ScratchSize: 132
 ; GFX908: ScratchSize: 0
 ; GFX900: VGPRBlocks: 63
-; GFX908: VGPRBlocks: 63
+; GFX908: VGPRBlocks: 62
 ; GFX900: NumVGPRsForWavesPerEU: 256
-; GFX908: NumVGPRsForWavesPerEU: 254
+; GFX908: NumVGPRsForWavesPerEU: 252
 define amdgpu_kernel void @max_256_vgprs_spill_9x32_2bb(ptr addrspace(1) %p) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %p1 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p, i32 %tid

@@ -75,7 +75,7 @@ define i1 @alloca_argument_compare_escaped_through_store(ptr %arg, ptr %ptr) {
 ; CHECK-LABEL: @alloca_argument_compare_escaped_through_store(
 ; CHECK-NEXT:    [[ALLOC:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[ALLOC]], [[ARG:%.*]]
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i64, ptr [[ALLOC]], i32 1
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, ptr [[ALLOC]], i32 8
 ; CHECK-NEXT:    store ptr [[P]], ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

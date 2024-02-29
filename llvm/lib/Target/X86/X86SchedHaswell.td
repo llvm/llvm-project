@@ -876,8 +876,8 @@ def HWWriteResGroup0_1 : SchedWriteRes<[HWPort23]> {
   let NumMicroOps = 1;
   let ReleaseAtCycles = [1];
 }
-def: InstRW<[HWWriteResGroup0_1], (instrs VBROADCASTF128,
-                                          VBROADCASTI128,
+def: InstRW<[HWWriteResGroup0_1], (instrs VBROADCASTF128rm,
+                                          VBROADCASTI128rm,
                                           VBROADCASTSDYrm,
                                           VBROADCASTSSYrm,
                                           VMOVDDUPYrm,

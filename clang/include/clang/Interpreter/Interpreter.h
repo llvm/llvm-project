@@ -101,6 +101,7 @@ public:
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;
+  CompilerInstance *getCompilerInstance();
   llvm::Expected<llvm::orc::LLJIT &> getExecutionEngine();
 
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
@@ -128,7 +129,7 @@ public:
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 
-  enum InterfaceKind { NoAlloc, WithAlloc, CopyArray };
+  enum InterfaceKind { NoAlloc, WithAlloc, CopyArray, NewTag };
 
   const llvm::SmallVectorImpl<Expr *> &getValuePrintingInfo() const {
     return ValuePrintingInfo;
@@ -143,7 +144,7 @@ private:
 
   llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
 
-  llvm::SmallVector<Expr *, 3> ValuePrintingInfo;
+  llvm::SmallVector<Expr *, 4> ValuePrintingInfo;
 };
 } // namespace clang
 

@@ -41,5 +41,5 @@
 // CHECKYAML: 'contents': [
 // CHECKYAML-NEXT:   {
 // CHECKYAML-NEXT:     'type': 'file',
-// CHECKYAML-NEXT:     'name': "module.map",
+// CHECKYAML-NEXT:     'name': "module.modulemap",
 // CHECKYAML-NEXT:     'external-contents': "/[[OTHERPATH:.*]]/actual_module2.map"

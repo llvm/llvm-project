@@ -16,11 +16,7 @@ namespace clang::tidy {
 // from the GlobList.
 static bool consumeNegativeIndicator(StringRef &GlobList) {
   GlobList = GlobList.trim();
-  if (GlobList.startswith("-")) {
-    GlobList = GlobList.substr(1);
-    return true;
-  }
-  return false;
+  return GlobList.consume_front("-");
 }
 
 // Converts first glob from the comma-separated list of globs to Regex and

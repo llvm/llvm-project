@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s --split-input-file --verify-diagnostics \
-// RUN:          --pass-pipeline="builtin.module(test-transform-dialect-interpreter{enable-expensive-checks=1 bind-first-extra-to-ops=scf.for})"
+// RUN:             --transform-interpreter
 
 func.func private @bar()
 
@@ -17,12 +17,15 @@ func.func @foo() {
   return
 }
 
-transform.sequence failures(suppress) {
-^bb0(%arg0: !transform.any_op, %arg1: !transform.op<"scf.for">):
-  %1 = transform.test_reverse_payload_ops %arg1 : (!transform.op<"scf.for">) -> !transform.op<"scf.for">
-  // expected-error @below {{transform operation consumes a handle pointing to an ancestor payload operation before its descendant}}
-  // expected-note @below {{the ancestor is likely erased or rewritten before the descendant is accessed, leading to undefined behavior}}
-  transform.test_consume_operand_each %1 : !transform.op<"scf.for">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    %0 = transform.structured.match ops{["scf.for"]} in %arg0 : (!transform.any_op) -> !transform.op<"scf.for">
+    %1 = transform.test_reverse_payload_ops %0 : (!transform.op<"scf.for">) -> !transform.op<"scf.for">
+    // expected-error @below {{transform operation consumes a handle pointing to an ancestor payload operation before its descendant}}
+    // expected-note @below {{the ancestor is likely erased or rewritten before the descendant is accessed, leading to undefined behavior}}
+    transform.test_consume_operand_each %1 : !transform.op<"scf.for">
+    transform.yield
+  }
 }
 
 // -----
@@ -42,7 +45,10 @@ func.func @foo() {
 }
 
 // No error here, processing ancestors before descendants.
-transform.sequence failures(suppress) {
-^bb0(%arg0: !transform.any_op, %arg1: !transform.op<"scf.for">):
-  transform.test_consume_operand_each %arg1 : !transform.op<"scf.for">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    %0 = transform.structured.match ops{["scf.for"]} in %arg0 : (!transform.any_op) -> !transform.op<"scf.for">
+    transform.test_consume_operand_each %0 : !transform.op<"scf.for">
+    transform.yield
+  }
 }

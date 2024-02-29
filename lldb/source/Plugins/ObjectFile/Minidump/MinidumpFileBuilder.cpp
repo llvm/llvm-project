@@ -8,6 +8,7 @@
 
 #include "MinidumpFileBuilder.h"
 
+#include "Plugins/Process/minidump/RegisterContextMinidump_ARM64.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_64.h"
 
 #include "lldb/Core/Module.h"
@@ -293,7 +294,7 @@ Status MinidumpFileBuilder::AddModuleList(Target &target) {
 }
 
 uint16_t read_register_u16_raw(RegisterContext *reg_ctx,
-                               const std::string &reg_name) {
+                               llvm::StringRef reg_name) {
   const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
   if (!reg_info)
     return 0;
@@ -305,7 +306,7 @@ uint16_t read_register_u16_raw(RegisterContext *reg_ctx,
 }
 
 uint32_t read_register_u32_raw(RegisterContext *reg_ctx,
-                               const std::string &reg_name) {
+                               llvm::StringRef reg_name) {
   const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
   if (!reg_info)
     return 0;
@@ -317,7 +318,7 @@ uint32_t read_register_u32_raw(RegisterContext *reg_ctx,
 }
 
 uint64_t read_register_u64_raw(RegisterContext *reg_ctx,
-                               const std::string &reg_name) {
+                               llvm::StringRef reg_name) {
   const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
   if (!reg_info)
     return 0;
@@ -329,25 +330,42 @@ uint64_t read_register_u64_raw(RegisterContext *reg_ctx,
 }
 
 llvm::support::ulittle16_t read_register_u16(RegisterContext *reg_ctx,
-                                             const std::string &reg_name) {
+                                             llvm::StringRef reg_name) {
   return static_cast<llvm::support::ulittle16_t>(
       read_register_u16_raw(reg_ctx, reg_name));
 }
 
 llvm::support::ulittle32_t read_register_u32(RegisterContext *reg_ctx,
-                                             const std::string &reg_name) {
+                                             llvm::StringRef reg_name) {
   return static_cast<llvm::support::ulittle32_t>(
       read_register_u32_raw(reg_ctx, reg_name));
 }
 
 llvm::support::ulittle64_t read_register_u64(RegisterContext *reg_ctx,
-                                             const std::string &reg_name) {
+                                             llvm::StringRef reg_name) {
   return static_cast<llvm::support::ulittle64_t>(
       read_register_u64_raw(reg_ctx, reg_name));
 }
 
+void read_register_u128(RegisterContext *reg_ctx, llvm::StringRef reg_name,
+                        uint8_t *dst) {
+  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+  if (reg_info) {
+    lldb_private::RegisterValue reg_value;
+    if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+      Status error;
+      uint32_t bytes_copied = reg_value.GetAsMemoryData(
+          *reg_info, dst, 16, lldb::ByteOrder::eByteOrderLittle, error);
+      if (bytes_copied == 16)
+        return;
+    }
+  }
+  // If anything goes wrong, then zero out the register value.
+  memset(dst, 0, 16);
+}
+
 lldb_private::minidump::MinidumpContext_x86_64
-GetThreadContext_64(RegisterContext *reg_ctx) {
+GetThreadContext_x86_64(RegisterContext *reg_ctx) {
   lldb_private::minidump::MinidumpContext_x86_64 thread_context = {};
   thread_context.p1_home = {};
   thread_context.context_flags = static_cast<uint32_t>(
@@ -380,6 +398,71 @@ GetThreadContext_64(RegisterContext *reg_ctx) {
   thread_context.ds = read_register_u16(reg_ctx, "ds");
   return thread_context;
 }
+
+minidump::RegisterContextMinidump_ARM64::Context
+GetThreadContext_ARM64(RegisterContext *reg_ctx) {
+  minidump::RegisterContextMinidump_ARM64::Context thread_context = {};
+  thread_context.context_flags = static_cast<uint32_t>(
+      minidump::RegisterContextMinidump_ARM64::Flags::ARM64_Flag |
+      minidump::RegisterContextMinidump_ARM64::Flags::Integer |
+      minidump::RegisterContextMinidump_ARM64::Flags::FloatingPoint);
+  char reg_name[16];
+  for (uint32_t i = 0; i < 31; ++i) {
+    snprintf(reg_name, sizeof(reg_name), "x%u", i);
+    thread_context.x[i] = read_register_u64(reg_ctx, reg_name);
+  }
+  // Work around a bug in debugserver where "sp" on arm64 doesn't have the alt
+  // name set to "x31"
+  thread_context.x[31] = read_register_u64(reg_ctx, "sp");
+  thread_context.pc = read_register_u64(reg_ctx, "pc");
+  thread_context.cpsr = read_register_u32(reg_ctx, "cpsr");
+  thread_context.fpsr = read_register_u32(reg_ctx, "fpsr");
+  thread_context.fpcr = read_register_u32(reg_ctx, "fpcr");
+  for (uint32_t i = 0; i < 32; ++i) {
+    snprintf(reg_name, sizeof(reg_name), "v%u", i);
+    read_register_u128(reg_ctx, reg_name, &thread_context.v[i * 16]);
+  }
+  return thread_context;
+}
+
+class ArchThreadContexts {
+  llvm::Triple::ArchType m_arch;
+  union {
+    lldb_private::minidump::MinidumpContext_x86_64 x86_64;
+    lldb_private::minidump::RegisterContextMinidump_ARM64::Context arm64;
+  };
+
+public:
+  ArchThreadContexts(llvm::Triple::ArchType arch) : m_arch(arch) {}
+
+  bool prepareRegisterContext(RegisterContext *reg_ctx) {
+    switch (m_arch) {
+    case llvm::Triple::ArchType::x86_64:
+      x86_64 = GetThreadContext_x86_64(reg_ctx);
+      return true;
+    case llvm::Triple::ArchType::aarch64:
+      arm64 = GetThreadContext_ARM64(reg_ctx);
+      return true;
+    default:
+      break;
+    }
+    return false;
+  }
+
+  const void *data() const { return &x86_64; }
+
+  size_t size() const {
+    switch (m_arch) {
+    case llvm::Triple::ArchType::x86_64:
+      return sizeof(x86_64);
+    case llvm::Triple::ArchType::aarch64:
+      return sizeof(arm64);
+    default:
+      break;
+    }
+    return 0;
+  }
+};
 
 // Function returns start and size of the memory region that contains
 // memory location pointed to by the current stack pointer.
@@ -434,11 +517,20 @@ Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
       return error;
     }
     RegisterContext *reg_ctx = reg_ctx_sp.get();
-    auto thread_context = GetThreadContext_64(reg_ctx);
-    uint64_t rsp = read_register_u64_raw(reg_ctx, "rsp");
-    auto expected_address_range = findStackHelper(process_sp, rsp);
+    Target &target = process_sp->GetTarget();
+    const ArchSpec &arch = target.GetArchitecture();
+    ArchThreadContexts thread_context(arch.GetMachine());
+    if (!thread_context.prepareRegisterContext(reg_ctx)) {
+      error.SetErrorStringWithFormat(
+          "architecture %s not supported.",
+          arch.GetTriple().getArchName().str().c_str());
+      return error;
+    }
+    uint64_t sp = reg_ctx->GetSP();
+    auto expected_address_range = findStackHelper(process_sp, sp);
 
     if (!expected_address_range) {
+      consumeError(expected_address_range.takeError());
       error.SetErrorString("Unable to get the stack address.");
       return error;
     }
@@ -468,13 +560,13 @@ Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
 
     LocationDescriptor thread_context_memory_locator;
     thread_context_memory_locator.DataSize =
-        static_cast<llvm::support::ulittle32_t>(sizeof(thread_context));
+        static_cast<llvm::support::ulittle32_t>(thread_context.size());
     thread_context_memory_locator.RVA = static_cast<llvm::support::ulittle32_t>(
         size_before + thread_stream_size + helper_data.GetByteSize());
+    // Cache thie thread context memory so we can reuse for exceptions.
+    m_tid_to_reg_ctx[thread_sp->GetID()] = thread_context_memory_locator;
 
-    helper_data.AppendData(
-        &thread_context,
-        sizeof(lldb_private::minidump::MinidumpContext_x86_64));
+    helper_data.AppendData(thread_context.data(), thread_context.size());
 
     llvm::minidump::Thread t;
     t.ThreadId = static_cast<llvm::support::ulittle32_t>(thread_sp->GetID());
@@ -492,108 +584,76 @@ Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
   return Status();
 }
 
-Status MinidumpFileBuilder::AddException(const lldb::ProcessSP &process_sp) {
-  Status error;
+void MinidumpFileBuilder::AddExceptions(const lldb::ProcessSP &process_sp) {
   lldb_private::ThreadList thread_list = process_sp->GetThreadList();
 
   const uint32_t num_threads = thread_list.GetSize();
-  uint32_t stop_reason_thread_idx = 0;
-  for (stop_reason_thread_idx = 0; stop_reason_thread_idx < num_threads;
-       ++stop_reason_thread_idx) {
-    ThreadSP thread_sp(thread_list.GetThreadAtIndex(stop_reason_thread_idx));
+  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+    ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
+    bool add_exception = false;
+    if (stop_info_sp) {
+      switch (stop_info_sp->GetStopReason()) {
+      case eStopReasonSignal:
+      case eStopReasonException:
+        add_exception = true;
+        break;
+      default:
+        break;
+      }
+    }
+    if (add_exception) {
+      constexpr size_t minidump_exception_size =
+          sizeof(llvm::minidump::ExceptionStream);
+      AddDirectory(StreamType::Exception, minidump_exception_size);
+      StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
+      RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
+      Exception exp_record = {};
+      exp_record.ExceptionCode =
+          static_cast<llvm::support::ulittle32_t>(stop_info_sp->GetValue());
+      exp_record.ExceptionFlags = static_cast<llvm::support::ulittle32_t>(0);
+      exp_record.ExceptionRecord = static_cast<llvm::support::ulittle64_t>(0);
+      exp_record.ExceptionAddress = reg_ctx_sp->GetPC();
+      exp_record.NumberParameters = static_cast<llvm::support::ulittle32_t>(0);
+      exp_record.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
+      // exp_record.ExceptionInformation;
 
-    if (stop_info_sp && stop_info_sp->IsValid())
-      break;
+      ExceptionStream exp_stream;
+      exp_stream.ThreadId =
+          static_cast<llvm::support::ulittle32_t>(thread_sp->GetID());
+      exp_stream.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
+      exp_stream.ExceptionRecord = exp_record;
+      auto Iter = m_tid_to_reg_ctx.find(thread_sp->GetID());
+      if (Iter != m_tid_to_reg_ctx.end()) {
+        exp_stream.ThreadContext = Iter->second;
+      } else {
+        exp_stream.ThreadContext.DataSize = 0;
+        exp_stream.ThreadContext.RVA = 0;
+      }
+      m_data.AppendData(&exp_stream, minidump_exception_size);
+    }
   }
-
-  if (stop_reason_thread_idx == num_threads) {
-    error.SetErrorString("No stop reason thread found.");
-    return error;
-  }
-
-  constexpr size_t minidump_exception_size =
-      sizeof(llvm::minidump::ExceptionStream);
-  AddDirectory(StreamType::Exception, minidump_exception_size);
-  size_t size_before = GetCurrentDataEndOffset();
-
-  ThreadSP thread_sp(thread_list.GetThreadAtIndex(stop_reason_thread_idx));
-  RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
-  RegisterContext *reg_ctx = reg_ctx_sp.get();
-  auto thread_context = GetThreadContext_64(reg_ctx);
-  StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
-
-  DataBufferHeap helper_data;
-
-  LocationDescriptor thread_context_memory_locator;
-  thread_context_memory_locator.DataSize =
-      static_cast<llvm::support::ulittle32_t>(sizeof(thread_context));
-  thread_context_memory_locator.RVA = static_cast<llvm::support::ulittle32_t>(
-      size_before + minidump_exception_size + helper_data.GetByteSize());
-
-  helper_data.AppendData(
-      &thread_context, sizeof(lldb_private::minidump::MinidumpContext_x86_64));
-
-  Exception exp_record = {};
-  exp_record.ExceptionCode =
-      static_cast<llvm::support::ulittle32_t>(stop_info_sp->GetValue());
-  exp_record.ExceptionFlags = static_cast<llvm::support::ulittle32_t>(0);
-  exp_record.ExceptionRecord = static_cast<llvm::support::ulittle64_t>(0);
-  exp_record.ExceptionAddress = read_register_u64(reg_ctx, "rip");
-  exp_record.NumberParameters = static_cast<llvm::support::ulittle32_t>(0);
-  exp_record.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
-  // exp_record.ExceptionInformation;
-
-  ExceptionStream exp_stream;
-  exp_stream.ThreadId =
-      static_cast<llvm::support::ulittle32_t>(thread_sp->GetID());
-  exp_stream.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
-  exp_stream.ExceptionRecord = exp_record;
-  exp_stream.ThreadContext = thread_context_memory_locator;
-
-  m_data.AppendData(&exp_stream, minidump_exception_size);
-  m_data.AppendData(helper_data.GetBytes(), helper_data.GetByteSize());
-  return error;
 }
 
 lldb_private::Status
-MinidumpFileBuilder::AddMemoryList(const lldb::ProcessSP &process_sp) {
+MinidumpFileBuilder::AddMemoryList(const lldb::ProcessSP &process_sp,
+                                   lldb::SaveCoreStyle core_style) {
   Status error;
-
+  Process::CoreFileMemoryRanges core_ranges;
+  error = process_sp->CalculateCoreFileSaveRanges(core_style, core_ranges);
   if (error.Fail()) {
     error.SetErrorString("Process doesn't support getting memory region info.");
     return error;
   }
 
-  // Get interesting addresses
-  std::vector<size_t> interesting_addresses;
-  auto thread_list = process_sp->GetThreadList();
-  for (size_t i = 0; i < thread_list.GetSize(); ++i) {
-    ThreadSP thread_sp(thread_list.GetThreadAtIndex(i));
-    RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
-    RegisterContext *reg_ctx = reg_ctx_sp.get();
-
-    interesting_addresses.push_back(read_register_u64(reg_ctx, "rsp"));
-    interesting_addresses.push_back(read_register_u64(reg_ctx, "rip"));
-  }
-
   DataBufferHeap helper_data;
   std::vector<MemoryDescriptor> mem_descriptors;
-
-  std::set<addr_t> visited_region_base_addresses;
-  for (size_t interesting_address : interesting_addresses) {
-    MemoryRegionInfo range_info;
-    error = process_sp->GetMemoryRegionInfo(interesting_address, range_info);
-    // Skip failed memory region requests or any regions with no permissions.
-    if (error.Fail() || range_info.GetLLDBPermissions() == 0)
+  for (const auto &core_range : core_ranges) {
+    // Skip empty memory regions or any regions with no permissions.
+    if (core_range.range.empty() || core_range.lldb_permissions == 0)
       continue;
-    const addr_t addr = range_info.GetRange().GetRangeBase();
-    // Skip any regions we have already saved out.
-    if (visited_region_base_addresses.insert(addr).second == false)
-      continue;
-    const addr_t size = range_info.GetRange().GetByteSize();
-    if (size == 0)
-      continue;
+    const addr_t addr = core_range.range.start();
+    const addr_t size = core_range.range.size();
     auto data_up = std::make_unique<DataBufferHeap>(size, 0);
     const size_t bytes_read =
         process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);

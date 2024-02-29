@@ -900,7 +900,7 @@ define i1 @ashrsgt_01_00(i4 %x) {
 define i1 @ashrsgt_01_00_multiuse(i4 %x, ptr %p) {
 ; CHECK-LABEL: @ashrsgt_01_00_multiuse(
 ; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 [[X]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 [[S]], 0
 ; CHECK-NEXT:    store i4 [[S]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -2442,7 +2442,7 @@ define i1 @ashr_sle_noexact(i8 %x) {
 define i1 @ashr_00_00_ashr_extra_use(i8 %x, ptr %ptr) {
 ; CHECK-LABEL: @ashr_00_00_ashr_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 88
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[S]], 11
 ; CHECK-NEXT:    store i8 [[S]], ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;

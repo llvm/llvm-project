@@ -57,14 +57,6 @@ memref.global "private" @memref3 : memref<2xf32>  = uninitialized
 // CHECK-LABEL: memref.global "private" constant @memref4 : memref<2xf32> = uninitialized
 memref.global "private" constant @memref4 : memref<2xf32>  = uninitialized
 
-// CHECK-LABEL: func @write_global_memref
-func.func @write_global_memref() {
-  %0 = memref.get_global @memref0 : memref<2xf32>
-  %1 = arith.constant dense<[1.0, 2.0]> : tensor<2xf32>
-  memref.tensor_store %1, %0 : memref<2xf32>
-  return
-}
-
 // CHECK-LABEL: func @read_global_memref
 func.func @read_global_memref() {
   %0 = memref.get_global @memref0 : memref<2xf32>
@@ -385,4 +377,10 @@ func.func @memref_extract_aligned_pointer(%src : memref<?xf32>) -> index {
 func.func @memref_memory_space_cast(%src : memref<?xf32>) -> memref<?xf32, 1> {
   %dst = memref.memory_space_cast %src : memref<?xf32> to memref<?xf32, 1>
   return %dst : memref<?xf32, 1>
+}
+
+// CHECK-LABEL: func @memref_transpose_map
+func.func @memref_transpose_map(%src : memref<?x?xf32>) -> memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>> {
+  %dst = memref.transpose %src (i, j) -> (j, i) : memref<?x?xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
+  return %dst : memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
 }

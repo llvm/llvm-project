@@ -29,7 +29,7 @@
 #include "llvm/ADT/GenericConvergenceVerifier.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicInst.h"
 
 #define Check(C, ...)                                                          \
   do {                                                                         \
@@ -48,17 +48,6 @@
   } while (false)
 
 namespace llvm {
-static bool isConvergenceControlIntrinsic(unsigned IntrinsicID) {
-  switch (IntrinsicID) {
-  default:
-    return false;
-  case Intrinsic::experimental_convergence_anchor:
-  case Intrinsic::experimental_convergence_entry:
-  case Intrinsic::experimental_convergence_loop:
-    return true;
-  }
-}
-
 template <class ContextT> void GenericConvergenceVerifier<ContextT>::clear() {
   Tokens.clear();
   CI.clear();

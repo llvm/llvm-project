@@ -23,7 +23,7 @@ module {
         %20 = llvm.trunc %19 : i64 to i32
         %5 = llvm.mlir.addressof @str0 : !llvm.ptr
         %6 = llvm.getelementptr %5[%4, %4] : (!llvm.ptr, i32, i32) -> !llvm.ptr, !llvm.array<29 x i8>
-        %21 = llvm.call @printf(%6, %20, %20) vararg(!llvm.func<i32 (ptr<i8>, ...)>): (!llvm.ptr, i32, i32) -> i32
+        %21 = llvm.call @printf(%6, %20, %20) vararg(!llvm.func<i32 (ptr, ...)>): (!llvm.ptr, i32, i32) -> i32
         omp.yield
       }
       omp.terminator

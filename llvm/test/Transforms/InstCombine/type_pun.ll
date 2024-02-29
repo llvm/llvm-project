@@ -145,7 +145,7 @@ tail:
 ; should stay the same.
 define i40 @type_pun_unhandled(<16 x i8> %in) {
 ; CHECK-LABEL: @type_pun_unhandled(
-; CHECK-NEXT:    [[SROA:%.*]] = shufflevector <16 x i8> [[IN:%.*]], <16 x i8> undef, <5 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8>
+; CHECK-NEXT:    [[SROA:%.*]] = shufflevector <16 x i8> [[IN:%.*]], <16 x i8> poison, <5 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <5 x i8> [[SROA]] to i40
 ; CHECK-NEXT:    ret i40 [[TMP1]]
 ;

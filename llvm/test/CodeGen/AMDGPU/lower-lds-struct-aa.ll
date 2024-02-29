@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -O3 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -O3 < %s | FileCheck -check-prefix=GCN %s
 ; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds < %s | FileCheck %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds < %s | FileCheck %s
 
@@ -110,7 +110,7 @@ bb:
   ret void
 }
 
-; CHECK: !0 = !{i64 0, i64 1}
+; CHECK: !0 = !{i32 0, i32 1}
 ; CHECK: !1 = !{!2}
 ; CHECK: !2 = distinct !{!2, !3}
 ; CHECK: !3 = distinct !{!3}

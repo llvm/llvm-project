@@ -375,12 +375,7 @@ TEST(DomTreeUpdater, LazyUpdateDTInheritedPreds) {
   std::vector<BasicBlock *> BasicBlocks;
   BasicBlocks.push_back(BB1);
   BasicBlocks.push_back(BB2);
-  auto Eraser = [&](BasicBlock *BB) {
-    BasicBlocks.erase(
-        std::remove_if(BasicBlocks.begin(), BasicBlocks.end(),
-                       [&](const BasicBlock *i) { return i == BB; }),
-        BasicBlocks.end());
-  };
+  auto Eraser = [&](BasicBlock *BB) { llvm::erase(BasicBlocks, BB); };
   ASSERT_EQ(BasicBlocks.size(), static_cast<size_t>(2));
   // Remove bb2 from F. This has to happen before the call to
   // applyUpdates() for DTU to detect there is no longer an edge between

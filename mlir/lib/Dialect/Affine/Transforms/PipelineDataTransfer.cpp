@@ -59,7 +59,7 @@ mlir::affine::createPipelineDataTransferPass() {
 
 // Returns the position of the tag memref operand given a DMA operation.
 // Temporary utility: will be replaced when DmaStart/DmaFinish abstract op's are
-// added.  TODO
+// added.
 static unsigned getTagMemRefPos(Operation &dmaOp) {
   assert((isa<AffineDmaStartOp, AffineDmaWaitOp>(dmaOp)));
   if (auto dmaStartOp = dyn_cast<AffineDmaStartOp>(dmaOp)) {

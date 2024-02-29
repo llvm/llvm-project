@@ -34,7 +34,7 @@ produces: ::
 
     Watchpoint 1: addr = 0x1034ca048 size = 4 state = enabled type = rw
         declare @ '/Volumes/data/lldb/svn/trunk/test/python_api/watchpoint/main.c:12'
-        hw_index = 0  hit_count = 2     ignore_count = 0"
+        hit_count = 2     ignore_count = 0"
 ) lldb::SBTarget;
 
 %feature("docstring", "

@@ -156,6 +156,7 @@ protected:
   ///
   /// Otherwise, when this flag is not set, the normal built-in boolean type is
   /// used.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseSignedCharForObjCBool : 1;
 
   /// Control whether the alignment of bit-field types is respected when laying
@@ -163,6 +164,7 @@ protected:
   /// used to (a) impact the alignment of the containing structure, and (b)
   /// ensure that the individual bit-field will not straddle an alignment
   /// boundary.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseBitFieldTypeAlignment : 1;
 
   /// Whether zero length bitfields (e.g., int : 0;) force alignment of
@@ -171,13 +173,16 @@ protected:
   /// If the alignment of the zero length bitfield is greater than the member
   /// that follows it, `bar', `bar' will be aligned as the type of the
   /// zero-length bitfield.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseZeroLengthBitfieldAlignment : 1;
 
   /// Whether zero length bitfield alignment is respected if they are the
   /// leading members.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseLeadingZeroLengthBitfield : 1;
 
   ///  Whether explicit bit field alignment attributes are honored.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseExplicitBitFieldAlignment : 1;
 
   /// If non-zero, specifies a fixed alignment value for bitfields that follow
@@ -239,18 +244,26 @@ protected:
   mutable StringRef PlatformName;
   mutable VersionTuple PlatformMinVersion;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasAlignMac68kSupport : 1;
+  LLVM_PREFERRED_TYPE(FloatModeKind)
   unsigned RealTypeUsesObjCFPRetMask : llvm::BitWidth<FloatModeKind>;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ComplexLongDoubleUsesFP2Ret : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasBuiltinMSVaList : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsRenderScriptTarget : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasAArch64SVETypes : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasRISCVVTypes : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned AllowAMDGPUUnsafeFPAtomics : 1;
 
   unsigned ARMCDECoprocMask : 8;
@@ -691,8 +704,10 @@ public:
   }
 
   /// getMinGlobalAlign - Return the minimum alignment of a global variable,
-  /// unless its alignment is explicitly reduced via attributes.
-  virtual unsigned getMinGlobalAlign (uint64_t) const {
+  /// unless its alignment is explicitly reduced via attributes. If \param
+  /// HasNonWeakDef is true, this concerns a VarDecl which has a definition
+  /// in current translation unit and that is not weak.
+  virtual unsigned getMinGlobalAlign(uint64_t Size, bool HasNonWeakDef) const {
     return MinGlobalAlign;
   }
 
@@ -1291,20 +1306,20 @@ public:
     fillValidCPUList(Values);
   }
 
-  /// brief Determine whether this TargetInfo supports the given CPU name.
+  /// Determine whether this TargetInfo supports the given CPU name.
   virtual bool isValidCPUName(StringRef Name) const {
     return true;
   }
 
-  /// brief Determine whether this TargetInfo supports the given CPU name for
-  // tuning.
+  /// Determine whether this TargetInfo supports the given CPU name for
+  /// tuning.
   virtual bool isValidTuneCPUName(StringRef Name) const {
     return isValidCPUName(Name);
   }
 
   virtual ParsedTargetAttr parseTargetAttr(StringRef Str) const;
 
-  /// brief Determine whether this TargetInfo supports tune in target attribute.
+  /// Determine whether this TargetInfo supports tune in target attribute.
   virtual bool supportsTargetAttributeTune() const {
     return false;
   }
@@ -1359,6 +1374,8 @@ public:
     LangOptions::SignReturnAddressKeyKind SignKey =
         LangOptions::SignReturnAddressKeyKind::AKey;
     bool BranchTargetEnforcement = false;
+    bool BranchProtectionPAuthLR = false;
+    bool GuardedControlStack = false;
   };
 
   /// Determine if the Architecture in this TargetInfo supports branch
@@ -1410,10 +1427,18 @@ public:
 
   /// Identify whether this target supports IFuncs.
   bool supportsIFunc() const {
+    if (getTriple().isOSBinFormatMachO())
+      return true;
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());
   }
+
+  // Identify whether this target supports __builtin_cpu_supports and
+  // __builtin_cpu_is.
+  virtual bool supportsCpuSupports() const { return false; }
+  virtual bool supportsCpuIs() const { return false; }
+  virtual bool supportsCpuInit() const { return false; }
 
   // Validate the contents of the __builtin_cpu_supports(const char*)
   // argument.

@@ -20,6 +20,7 @@ using ::llvm::DIInliningInfo;
 using ::llvm::DILineInfo;
 using ::llvm::DILineInfoSpecifier;
 using ::llvm::DILocal;
+using ::llvm::StringRef;
 using ::llvm::memprof::CallStackMap;
 using ::llvm::memprof::Frame;
 using ::llvm::memprof::FrameId;
@@ -51,6 +52,10 @@ public:
     llvm_unreachable("unused");
   }
   virtual std::vector<DILocal> symbolizeFrame(SectionedAddress) const {
+    llvm_unreachable("unused");
+  }
+  virtual std::vector<SectionedAddress> findSymbol(StringRef Symbol,
+                                                   uint64_t Offset) const {
     llvm_unreachable("unused");
   }
   virtual bool isWin32Module() const { llvm_unreachable("unused"); }

@@ -220,6 +220,22 @@ bool AttrDef::classof(const AttrOrTypeDef *def) {
   return def->getDef()->isSubClassOf("AttrDef");
 }
 
+StringRef AttrDef::getAttrName() const {
+  return def->getValueAsString("attrName");
+}
+
+//===----------------------------------------------------------------------===//
+// TypeDef
+//===----------------------------------------------------------------------===//
+
+bool TypeDef::classof(const AttrOrTypeDef *def) {
+  return def->getDef()->isSubClassOf("TypeDef");
+}
+
+StringRef TypeDef::getTypeName() const {
+  return def->getValueAsString("typeName");
+}
+
 //===----------------------------------------------------------------------===//
 // AttrOrTypeParameter
 //===----------------------------------------------------------------------===//

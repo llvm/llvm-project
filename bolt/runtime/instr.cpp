@@ -323,7 +323,7 @@ public:
 
   /// Basic member accessing interface. Here we pass the allocator explicitly to
   /// avoid storing a pointer to it as part of this table (remember there is one
-  /// hash for each indirect call site, so we wan't to minimize our footprint).
+  /// hash for each indirect call site, so we want to minimize our footprint).
   MapEntry &get(uint64_t Key, BumpPtrAllocator &Alloc) {
     if (!__bolt_instr_conservative) {
       TryLock L(M);
@@ -1281,7 +1281,7 @@ void Graph::computeEdgeFrequencies(const uint64_t *Counters,
 
 /// Write to \p FD all of the edge profiles for function \p FuncDesc. Uses
 /// \p Alloc to allocate helper dynamic structures used to compute profile for
-/// edges that we do not explictly instrument.
+/// edges that we do not explicitly instrument.
 const uint8_t *writeFunctionProfile(int FD, ProfileWriterContext &Ctx,
                                     const uint8_t *FuncDesc,
                                     BumpPtrAllocator &Alloc) {
@@ -1514,7 +1514,7 @@ extern "C" void __bolt_instr_clear_counters() {
 ///  * Program execution ended, finalization methods are running and BOLT
 ///    hooked into FINI from your binary dynamic section;
 ///  * You used the sleep timer option and during initialization we forked
-///    a separete process that will call this function periodically;
+///    a separate process that will call this function periodically;
 ///  * BOLT prints this function address so you can attach a debugger and
 ///    call this function directly to get your profile written to disk
 ///    on demand.

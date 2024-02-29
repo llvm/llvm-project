@@ -38,13 +38,6 @@ operator<<(llvm::raw_ostream &os, T const &t) {
 }
 
 //===----------------------------------------------------------------------===//
-/// Convert an enum to its underlying type.
-template <typename Enum>
-constexpr std::underlying_type_t<Enum> to_underlying(Enum e) noexcept {
-  return static_cast<std::underlying_type_t<Enum>>(e);
-}
-
-//===----------------------------------------------------------------------===//
 template <typename T>
 static constexpr bool IsZeroCostAbstraction =
     // These two predicates license the compiler to make optimizations.

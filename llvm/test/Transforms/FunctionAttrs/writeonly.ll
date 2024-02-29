@@ -179,9 +179,9 @@ define void @test_atomicrmw(ptr %p) {
 }
 
 define void @test_ptrmask(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: write)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; FNATTRS-LABEL: define {{[^@]+}}@test_ptrmask
-; FNATTRS-SAME: (ptr writeonly [[P:%.*]]) #[[ATTR8:[0-9]+]] {
+; FNATTRS-SAME: (ptr writeonly [[P:%.*]]) #[[ATTR3]] {
 ; FNATTRS-NEXT:    [[MASK:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -5)
 ; FNATTRS-NEXT:    store i8 0, ptr [[MASK]], align 1
 ; FNATTRS-NEXT:    ret void
@@ -218,7 +218,7 @@ declare void @direct2_callee(ptr %p) writeonly
 define void @direct2(ptr %p) {
 ; FNATTRS: Function Attrs: memory(write)
 ; FNATTRS-LABEL: define {{[^@]+}}@direct2
-; FNATTRS-SAME: (ptr [[P:%.*]]) #[[ATTR10:[0-9]+]] {
+; FNATTRS-SAME: (ptr [[P:%.*]]) #[[ATTR9:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @direct2_callee(ptr [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
@@ -236,7 +236,7 @@ define void @direct2(ptr %p) {
 define void @direct2b(ptr %p) {
 ; FNATTRS: Function Attrs: memory(write)
 ; FNATTRS-LABEL: define {{[^@]+}}@direct2b
-; FNATTRS-SAME: (ptr nocapture writeonly [[P:%.*]]) #[[ATTR10]] {
+; FNATTRS-SAME: (ptr nocapture writeonly [[P:%.*]]) #[[ATTR9]] {
 ; FNATTRS-NEXT:    call void @direct2_callee(ptr nocapture [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
@@ -325,8 +325,8 @@ define void @fptr_test2(ptr %p, ptr %f) {
 define void @fptr_test3(ptr %p, ptr %f) {
 ; FNATTRS: Function Attrs: memory(write)
 ; FNATTRS-LABEL: define {{[^@]+}}@fptr_test3
-; FNATTRS-SAME: (ptr nocapture writeonly [[P:%.*]], ptr nocapture readonly [[F:%.*]]) #[[ATTR10]] {
-; FNATTRS-NEXT:    call void [[F]](ptr nocapture [[P]]) #[[ATTR10]]
+; FNATTRS-SAME: (ptr nocapture writeonly [[P:%.*]], ptr nocapture readonly [[F:%.*]]) #[[ATTR9]] {
+; FNATTRS-NEXT:    call void [[F]](ptr nocapture [[P]]) #[[ATTR9]]
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: memory(write)
@@ -342,7 +342,7 @@ define void @fptr_test3(ptr %p, ptr %f) {
 define void @test_argmem_none_callee(ptr %p) {
 ; FNATTRS-LABEL: define {{[^@]+}}@test_argmem_none_callee
 ; FNATTRS-SAME: (ptr nocapture readnone [[P:%.*]]) {
-; FNATTRS-NEXT:    call void @direct1_callee(ptr nocapture [[P]]) #[[ATTR11:[0-9]+]]
+; FNATTRS-NEXT:    call void @direct1_callee(ptr nocapture [[P]]) #[[ATTR10:[0-9]+]]
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_argmem_none_callee
@@ -357,7 +357,7 @@ define void @test_argmem_none_callee(ptr %p) {
 define void @test_argmem_read_callee(ptr %p) {
 ; FNATTRS-LABEL: define {{[^@]+}}@test_argmem_read_callee
 ; FNATTRS-SAME: (ptr nocapture readonly [[P:%.*]]) {
-; FNATTRS-NEXT:    call void @direct1_callee(ptr nocapture [[P]]) #[[ATTR12:[0-9]+]]
+; FNATTRS-NEXT:    call void @direct1_callee(ptr nocapture [[P]]) #[[ATTR11:[0-9]+]]
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_argmem_read_callee
@@ -372,7 +372,7 @@ define void @test_argmem_read_callee(ptr %p) {
 define void @test_argmem_write_callee(ptr %p) {
 ; FNATTRS-LABEL: define {{[^@]+}}@test_argmem_write_callee
 ; FNATTRS-SAME: (ptr nocapture writeonly [[P:%.*]]) {
-; FNATTRS-NEXT:    call void @direct1_callee(ptr nocapture [[P]]) #[[ATTR13:[0-9]+]]
+; FNATTRS-NEXT:    call void @direct1_callee(ptr nocapture [[P]]) #[[ATTR12:[0-9]+]]
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_argmem_write_callee

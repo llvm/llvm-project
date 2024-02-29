@@ -18,6 +18,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Optimizer/Builder/Complex.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Todo.h"
 
 #include <algorithm>
@@ -362,10 +363,25 @@ static mlir::Value genStructureComponentInit(
       loc, fieldTy, name, recTy,
       /*typeParams=*/mlir::ValueRange{} /*TODO*/);
 
-  if (Fortran::semantics::IsAllocatable(sym))
-    TODO(loc, "allocatable component in structure constructor");
+  if (Fortran::semantics::IsAllocatable(sym)) {
+    if (!Fortran::evaluate::IsNullPointer(expr)) {
+      fir::emitFatalError(loc, "constant structure constructor with an "
+                               "allocatable component value that is not NULL");
+    } else {
+      // Handle NULL() initialization
+      mlir::Value componentValue{fir::factory::createUnallocatedBox(
+          builder, loc, componentTy, std::nullopt)};
+      componentValue = builder.createConvert(loc, componentTy, componentValue);
+
+      return builder.create<fir::InsertValueOp>(
+          loc, recTy, res, componentValue,
+          builder.getArrayAttr(field.getAttributes()));
+    }
+  }
 
   if (Fortran::semantics::IsPointer(sym)) {
+    if (Fortran::semantics::IsProcedure(sym))
+      TODO(loc, "procedure pointer component initial value");
     mlir::Value initialTarget =
         Fortran::lower::genInitialDataTarget(converter, loc, componentTy, expr);
     res = builder.create<fir::InsertValueOp>(
@@ -476,10 +492,6 @@ static mlir::Value genInlinedStructureCtorLitImpl(
 
   const Fortran::semantics::DerivedTypeSpec *curentType = nullptr;
   for (const auto &[sym, expr] : ctor.values()) {
-    // This TODO is not needed here anymore, but should be removed in a separate
-    // patch.
-    if (sym->test(Fortran::semantics::Symbol::Flag::ParentComp))
-      TODO(loc, "parent component in structure constructor");
     const Fortran::semantics::DerivedTypeSpec *componentParentType =
         sym->owner().derivedTypeSpec();
     assert(componentParentType && "failed to retrieve component parent type");

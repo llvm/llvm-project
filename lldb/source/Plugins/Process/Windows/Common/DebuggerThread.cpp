@@ -501,7 +501,7 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
     llvm::convertWideToUTF8(buffer.data(), path_str_utf8);
     llvm::StringRef path_str = path_str_utf8;
     const char *path = path_str.data();
-    if (path_str.startswith("\\\\?\\"))
+    if (path_str.starts_with("\\\\?\\"))
       path += 4;
 
     on_load_dll(path);

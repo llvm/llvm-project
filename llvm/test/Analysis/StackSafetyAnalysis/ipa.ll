@@ -731,7 +731,7 @@ entry:
 ; INDEX-DAG: guid: [[Write1SameModule]], {{.*}}, params: ((param: 0, offset: [0, 0])))))
 ; INDEX-DAG: guid: [[Write8]], {{.*}}, params: ((param: 0, offset: [0, 7])))))
 ; INDEX-DAG: guid: [[Write4_2]], {{.*}}, params: ((param: 0, offset: [0, 3]), (param: 1, offset: [0, 3])))))
-; INDEX-DAG: guid: [[RecursiveWithOffset]], {{.*}}, calls: ((callee: ^{{[0-9]+}})))))
+; INDEX-DAG: guid: [[RecursiveWithOffset]], {{.*}}, calls: ((callee: ^{{[0-9]+}}, tail: 1)))))
 ; INDEX-DAG: guid: [[Weak]], {{.*}}, funcFlags: ({{.*}}))))
 ; INDEX-DAG: guid: [[Write1Private]], {{.*}}, params: ((param: 0, offset: [-1, -1])))))
 ; INDEX-DAG: guid: [[InterposableWrite1]], {{.*}}, params: ((param: 0, offset: [0, 0])))))

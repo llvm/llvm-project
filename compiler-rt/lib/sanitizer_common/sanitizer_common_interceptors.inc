@@ -33,15 +33,16 @@
 //   COMMON_INTERCEPTOR_STRERROR
 //===----------------------------------------------------------------------===//
 
+#include <stdarg.h>
+
 #include "interception/interception.h"
 #include "sanitizer_addrhashmap.h"
+#include "sanitizer_dl.h"
 #include "sanitizer_errno.h"
 #include "sanitizer_placement_new.h"
 #include "sanitizer_platform_interceptors.h"
 #include "sanitizer_symbolizer.h"
 #include "sanitizer_tls_get_addr.h"
-
-#include <stdarg.h>
 
 #if SANITIZER_INTERCEPTOR_HOOKS
 #define CALL_WEAK_INTERCEPTOR_HOOK(f, ...) f(__VA_ARGS__);
@@ -6307,7 +6308,36 @@ INTERCEPTOR(int, fclose, __sanitizer_FILE *fp) {
 INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER_NOIGNORE(ctx, dlopen, filename, flag);
-  if (filename) COMMON_INTERCEPTOR_READ_STRING(ctx, filename, 0);
+
+  if (filename) {
+    COMMON_INTERCEPTOR_READ_STRING(ctx, filename, 0);
+
+#  if !SANITIZER_DYNAMIC
+    // We care about a very specific use-case: dladdr on
+    // statically-linked ASan may return <main program>
+    // instead of the library.
+    // We therefore only take effect if the sanitizer is statically
+    // linked, and we don't bother canonicalizing paths because
+    // dladdr should return the same address both times (we assume
+    // the user did not canonicalize the result from dladdr).
+    if (common_flags()->test_only_replace_dlopen_main_program) {
+      VPrintf(1, "dlopen interceptor: filename: %s\n", filename);
+
+      const char *SelfFName = DladdrSelfFName();
+      VPrintf(1, "dlopen interceptor: DladdrSelfFName: %p %s\n",
+              (void *)SelfFName, SelfFName);
+
+      if (SelfFName && internal_strcmp(SelfFName, filename) == 0) {
+        // It's possible they copied the string from dladdr, so
+        // we do a string comparison rather than pointer comparison.
+        VPrintf(1, "dlopen interceptor: replacing %s because it matches %s\n",
+                filename, SelfFName);
+        filename = (char *)0;  // RTLD_DEFAULT
+      }
+    }
+#  endif  // !SANITIZER_DYNAMIC
+  }
+
   void *res = COMMON_INTERCEPTOR_DLOPEN(filename, flag);
   Symbolizer::GetOrInit()->InvalidateModuleList();
   COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, res);
@@ -6755,7 +6785,7 @@ INTERCEPTOR(SSIZE_T, sendto, int fd, void *buf, SIZE_T len, int flags,
 #endif
 
 #if SANITIZER_INTERCEPT_EVENTFD_READ_WRITE
-INTERCEPTOR(int, eventfd_read, int fd, u64 *value) {
+INTERCEPTOR(int, eventfd_read, int fd, __sanitizer_eventfd_t *value) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, eventfd_read, fd, value);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
@@ -6766,7 +6796,7 @@ INTERCEPTOR(int, eventfd_read, int fd, u64 *value) {
   }
   return res;
 }
-INTERCEPTOR(int, eventfd_write, int fd, u64 value) {
+INTERCEPTOR(int, eventfd_write, int fd, __sanitizer_eventfd_t value) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, eventfd_write, fd, value);
   if (fd >= 0) {
@@ -9935,7 +9965,13 @@ INTERCEPTOR(void, sl_free, void *sl, int freeall) {
 INTERCEPTOR(SSIZE_T, getrandom, void *buf, SIZE_T buflen, unsigned int flags) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, getrandom, buf, buflen, flags);
-  SSIZE_T n = REAL(getrandom)(buf, buflen, flags);
+  // If GRND_NONBLOCK is set in the flags, it is non blocking.
+  static const int grnd_nonblock = 1; 
+  SSIZE_T n;
+  if ((flags & grnd_nonblock))
+    n = REAL(getrandom)(buf, buflen, flags);
+  else
+    n = COMMON_INTERCEPTOR_BLOCK_REAL(getrandom)(buf, buflen, flags);
   if (n > 0) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, n);
   }
@@ -10180,20 +10216,6 @@ INTERCEPTOR(int, __xuname, int size, void *utsname) {
 #define INIT___XUNAME COMMON_INTERCEPT_FUNCTION(__xuname)
 #else
 #define INIT___XUNAME
-#endif
-
-#if SANITIZER_INTERCEPT_HEXDUMP
-INTERCEPTOR(void, hexdump, const void *ptr, int length, const char *header, int flags) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, hexdump, ptr, length, header, flags);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, length);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, header, internal_strlen(header) + 1);
-  REAL(hexdump)(ptr, length, header, flags);
-}
-
-#define INIT_HEXDUMP COMMON_INTERCEPT_FUNCTION(hexdump);
-#else
-#define INIT_HEXDUMP
 #endif
 
 #if SANITIZER_INTERCEPT_ARGP_PARSE
@@ -10545,7 +10567,6 @@ static void InitializeCommonInterceptors() {
   INIT_PROCCTL
   INIT_UNAME;
   INIT___XUNAME;
-  INIT_HEXDUMP;
   INIT_ARGP_PARSE;
   INIT_CPUSET_GETAFFINITY;
 

@@ -21,7 +21,6 @@
 #include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
@@ -168,6 +167,10 @@ public:
   }
 
   InstrProfKind getProfileKind() const { return ProfileKind; }
+
+  bool hasSingleByteCoverage() const {
+    return static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage);
+  }
 
   // Internal interface for testing purpose only.
   void setValueProfDataEndianness(llvm::endianness Endianness);

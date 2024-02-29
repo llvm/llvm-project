@@ -32,3 +32,6 @@
 // RUN: %clang -### --target=amdgcn-amd-amdhsa-opencl -Wl,--unresolved-symbols=ignore-all -x cl -mcpu=fiji -nogpulib %s 2>&1 | FileCheck -check-prefix=CHK-LINK_UR %s
 // RUN: %clang -### --target=amdgcn-amd-amdhsa-opencl -Xlinker --unresolved-symbols=ignore-all -x cl -mcpu=fiji -nogpulib %s 2>&1 | FileCheck -check-prefix=CHK-LINK_UR %s
 // CHK-LINK_UR: ld.lld{{.*}} "--no-undefined"{{.*}} "--unresolved-symbols=ignore-all"
+
+// RUN: %clang -### --target=amdgcn-amd-amdhsa-opencl -x cl -c -emit-llvm -mcpu=fiji -nogpulib %s 2>&1 | FileCheck -check-prefix=CHECK-WARN-ATOMIC %s
+// CHECK-WARN-ATOMIC: "-cc1"{{.*}} "-Werror=atomic-alignment"

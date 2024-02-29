@@ -49,7 +49,7 @@ loop:
   %qadd.1 = call i32 @llvm.arm.qadd(i32 %a.1, i32 %b.1)
   %addr.1 = getelementptr inbounds i32, ptr %out.array, i32 %idx.1
   store i32 %qadd.1, ptr %addr.1
-  %idx.2 = or i32 %idx.1, 1
+  %idx.2 = or disjoint i32 %idx.1, 1
   %gep.a.2 = getelementptr inbounds i32, ptr %a.array, i32 %idx.2
   %a.2 = load i32, ptr %gep.a.2
   %gep.b.2 = getelementptr inbounds i32, ptr %b.array, i32 %idx.2
@@ -228,7 +228,7 @@ loop:
   %qadd.1 = call i32 @llvm.arm.qadd(i32 %a.1, i32 %b.1)
   %addr.1 = getelementptr inbounds i32, ptr %out.array, i32 %idx.1
   store i32 %qadd.1, ptr %addr.1
-  %idx.2 = or i32 %idx.1, 1
+  %idx.2 = or disjoint i32 %idx.1, 1
   %gep.a.2 = getelementptr inbounds i32, ptr %a.array, i32 %idx.2
   %a.2 = load i32, ptr %gep.a.2
   %gep.b.2 = getelementptr inbounds i32, ptr %b.array, i32 %idx.2
@@ -236,7 +236,7 @@ loop:
   %qadd.2 = call i32 @llvm.arm.qadd(i32 %a.2, i32 %b.2)
   %addr.2 = getelementptr inbounds i32, ptr %out.array, i32 %idx.2
   store i32 %qadd.2, ptr %addr.2
-  %idx.3 = or i32 %idx.1, 2
+  %idx.3 = or disjoint i32 %idx.1, 2
   %gep.a.3 = getelementptr inbounds i32, ptr %a.array, i32 %idx.3
   %a.3 = load i32, ptr %gep.a.3
   %gep.b.3 = getelementptr inbounds i32, ptr %b.array, i32 %idx.3
@@ -244,7 +244,7 @@ loop:
   %qadd.3 = call i32 @llvm.arm.qadd(i32 %a.3, i32 %b.3)
   %addr.3 = getelementptr inbounds i32, ptr %out.array, i32 %idx.3
   store i32 %qadd.3, ptr %addr.3
-  %idx.4 = or i32 %idx.1, 3
+  %idx.4 = or disjoint i32 %idx.1, 3
   %gep.a.4 = getelementptr inbounds i32, ptr %a.array, i32 %idx.4
   %a.4 = load i32, ptr %gep.a.4
   %gep.b.4 = getelementptr inbounds i32, ptr %b.array, i32 %idx.4

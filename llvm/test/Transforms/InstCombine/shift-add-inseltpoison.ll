@@ -5,7 +5,7 @@
 
 define i32 @shl_C1_add_A_C2_i32(i16 %A) {
 ; CHECK-LABEL: @shl_C1_add_A_C2_i32(
-; CHECK-NEXT:    [[B:%.*]] = zext i16 [[A:%.*]] to i32
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i16 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[D:%.*]] = shl i32 192, [[B]]
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
@@ -39,7 +39,7 @@ define i32 @lshr_C1_add_A_C2_i32(i32 %A) {
 
 define <4 x i32> @shl_C1_add_A_C2_v4i32(<4 x i16> %A) {
 ; CHECK-LABEL: @shl_C1_add_A_C2_v4i32(
-; CHECK-NEXT:    [[B:%.*]] = zext <4 x i16> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[B:%.*]] = zext nneg <4 x i16> [[A:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[D:%.*]] = shl <4 x i32> <i32 6, i32 4, i32 poison, i32 -458752>, [[B]]
 ; CHECK-NEXT:    ret <4 x i32> [[D]]
 ;

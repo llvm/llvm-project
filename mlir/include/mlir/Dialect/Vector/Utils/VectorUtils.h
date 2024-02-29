@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 #define MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
@@ -41,6 +42,61 @@ Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
 /// Returns two dims that are greater than one if the transposition is applied
 /// on a 2D slice. Otherwise, returns a failure.
 FailureOr<std::pair<int, int>> isTranspose2DSlice(vector::TransposeOp op);
+
+/// Return true if `vectorType` is a contiguous slice of `memrefType`.
+///
+/// Only the N = vectorType.getRank() trailing dims of `memrefType` are
+/// checked (the other dims are not relevant). Note that for `vectorType` to be
+/// a contiguous slice of `memrefType`, the trailing dims of the latter have
+/// to be contiguous - this is checked by looking at the corresponding strides.
+///
+/// There might be some restriction on the leading dim of `VectorType`:
+///
+/// Case 1. If all the trailing dims of `vectorType` match the trailing dims
+///         of `memrefType` then the leading dim of `vectorType` can be
+///         arbitrary.
+///
+///        Ex. 1.1 contiguous slice, perfect match
+///          vector<4x3x2xi32> from memref<5x4x3x2xi32>
+///        Ex. 1.2 contiguous slice, the leading dim does not match (2 != 4)
+///          vector<2x3x2xi32> from memref<5x4x3x2xi32>
+///
+/// Case 2. If an "internal" dim of `vectorType` does not match the
+///         corresponding trailing dim in `memrefType` then the remaining
+///         leading dims of `vectorType` have to be 1 (the first non-matching
+///         dim can be arbitrary).
+///
+///        Ex. 2.1 non-contiguous slice, 2 != 3 and the leading dim != <1>
+///          vector<2x2x2xi32> from memref<5x4x3x2xi32>
+///        Ex. 2.2  contiguous slice, 2 != 3 and the leading dim == <1>
+///          vector<1x2x2xi32> from memref<5x4x3x2xi32>
+///        Ex. 2.3. contiguous slice, 2 != 3 and the leading dims == <1x1>
+///          vector<1x1x2x2xi32> from memref<5x4x3x2xi32>
+///        Ex. 2.4. non-contiguous slice, 2 != 3 and the leading dims != <1x1>
+///         vector<2x1x2x2xi32> from memref<5x4x3x2xi32>)
+bool isContiguousSlice(MemRefType memrefType, VectorType vectorType);
+
+/// Returns an iterator for all positions in the leading dimensions of `vType`
+/// up to the `targetRank`. If any leading dimension before the `targetRank` is
+/// scalable (so cannot be unrolled), it will return an iterator for positions
+/// up to the first scalable dimension.
+///
+/// If no leading dimensions can be unrolled an empty optional will be returned.
+///
+/// Examples:
+///
+///   For vType = vector<2x3x4> and targetRank = 1
+///
+///   The resulting iterator will yield:
+///     [0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2]
+///
+///   For vType = vector<3x[4]x5> and targetRank = 0
+///
+///   The scalable dimension blocks unrolling so the iterator yields only:
+///     [0], [1], [2]
+///
+std::optional<StaticTileOffsetRange>
+createUnrollIterator(VectorType vType, int64_t targetRank = 1);
 
 } // namespace vector
 

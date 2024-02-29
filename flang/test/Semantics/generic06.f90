@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 module m
   !PORTABILITY: Specific procedure 'sin' of generic interface 'yintercept' should not be INTRINSIC
   intrinsic sin

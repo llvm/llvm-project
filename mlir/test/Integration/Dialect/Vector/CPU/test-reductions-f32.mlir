@@ -45,10 +45,10 @@ func.func @entry() {
   %3 = vector.reduction <maximumf>, %v9 : vector<10xf32> into f32
   vector.print %3 : f32
   // CHECK: 5
-  %4 = vector.reduction <minf>, %v9 : vector<10xf32> into f32
+  %4 = vector.reduction <minnumf>, %v9 : vector<10xf32> into f32
   vector.print %4 : f32
   // CHECK: -16
-  %5 = vector.reduction <maxf>, %v9 : vector<10xf32> into f32
+  %5 = vector.reduction <maxnumf>, %v9 : vector<10xf32> into f32
   vector.print %5 : f32
   // CHECK: 5
 

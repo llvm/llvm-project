@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
 // enum class perms;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
 #include "check_bitmask_types.h"
-
+namespace fs = std::filesystem;
 
 constexpr fs::perms ME(int val) { return static_cast<fs::perms>(val); }
 
@@ -30,7 +30,7 @@ int main(int, char**) {
   typedef std::underlying_type<E>::type UT;
   static_assert(!std::is_convertible<E, UT>::value, "");
 
-  LIBCPP_ONLY(static_assert(std::is_same<UT, unsigned >::value, "")); // Implementation detail
+  LIBCPP_STATIC_ASSERT(std::is_same<UT, unsigned >::value, ""); // Implementation detail
 
   typedef check_bitmask_type<E, E::group_all, E::owner_all> BitmaskTester;
   assert(BitmaskTester::check());

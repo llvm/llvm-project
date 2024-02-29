@@ -21,24 +21,12 @@ CommandObjectApropos::CommandObjectApropos(CommandInterpreter &interpreter)
     : CommandObjectParsed(
           interpreter, "apropos",
           "List debugger commands related to a word or subject.", nullptr) {
-  CommandArgumentEntry arg;
-  CommandArgumentData search_word_arg;
-
-  // Define the first (and only) variant of this arg.
-  search_word_arg.arg_type = eArgTypeSearchWord;
-  search_word_arg.arg_repetition = eArgRepeatPlain;
-
-  // There is only one variant this argument could be; put it into the argument
-  // entry.
-  arg.push_back(search_word_arg);
-
-  // Push the data for the first argument into the m_arguments vector.
-  m_arguments.push_back(arg);
+  AddSimpleArgumentList(eArgTypeSearchWord);
 }
 
 CommandObjectApropos::~CommandObjectApropos() = default;
 
-bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
+void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
   const size_t argc = args.GetArgumentCount();
 
   if (argc == 1) {
@@ -90,6 +78,4 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
   } else {
     result.AppendError("'apropos' must be called with exactly one argument.\n");
   }
-
-  return result.Succeeded();
 }

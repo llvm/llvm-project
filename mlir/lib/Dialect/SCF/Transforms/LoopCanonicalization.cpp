@@ -98,8 +98,8 @@ struct DimOfIterArgFolder : public OpRewritePattern<OpTy> {
     if (!isShapePreserving(forOp, blockArg.getArgNumber() - 1))
       return failure();
 
-    Value initArg = forOp.getOpOperandForRegionIterArg(blockArg).get();
-    rewriter.updateRootInPlace(
+    Value initArg = forOp.getTiedLoopInit(blockArg)->get();
+    rewriter.modifyOpInPlace(
         dimOp, [&]() { dimOp.getSourceMutable().assign(initArg); });
 
     return success();
@@ -141,7 +141,7 @@ struct DimOfLoopResultFolder : public OpRewritePattern<OpTy> {
     unsigned resultNumber = opResult.getResultNumber();
     if (!isShapePreserving(forOp, resultNumber))
       return failure();
-    rewriter.updateRootInPlace(dimOp, [&]() {
+    rewriter.modifyOpInPlace(dimOp, [&]() {
       dimOp.getSourceMutable().assign(forOp.getInitArgs()[resultNumber]);
     });
     return success();

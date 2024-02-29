@@ -433,12 +433,13 @@ func.func @_QPomp_target() {
   %1 = arith.subi %c512, %c1 : index
   %2 = omp.bounds   lower_bound(%c0 : index) upper_bound(%1 : index) extent(%c512 : index) stride(%c1 : index) start_idx(%c1 : index)
   %3 = omp.map_info var_ptr(%0 : !fir.ref<!fir.array<512xi32>>, !fir.array<512xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%2) -> !fir.ref<!fir.array<512xi32>> {name = "a"}
-  omp.target   thread_limit(%c64_i32 : i32) map_entries(%3 : !fir.ref<!fir.array<512xi32>>) {
+  omp.target   thread_limit(%c64_i32 : i32) map_entries(%3 -> %arg0 : !fir.ref<!fir.array<512xi32>>) {
+    ^bb0(%arg0: !fir.ref<!fir.array<512xi32>>):
     %c10_i32 = arith.constant 10 : i32
     %c1_i64 = arith.constant 1 : i64
     %c1_i64_0 = arith.constant 1 : i64
     %4 = arith.subi %c1_i64, %c1_i64_0 : i64
-    %5 = fir.coordinate_of %0, %4 : (!fir.ref<!fir.array<512xi32>>, i64) -> !fir.ref<i32>
+    %5 = fir.coordinate_of %arg0, %4 : (!fir.ref<!fir.array<512xi32>>, i64) -> !fir.ref<i32>
     fir.store %c10_i32 to %5 : !fir.ref<i32>
     omp.terminator
   }
@@ -455,12 +456,13 @@ func.func @_QPomp_target() {
 // CHECK:           %[[UPPER:.*]] = llvm.mlir.constant(511 : index) : i64
 // CHECK:           %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[LOWER]] : i64) upper_bound(%[[UPPER]] : i64) extent(%[[EXTENT]] : i64) stride(%[[STRIDE]] : i64) start_idx(%[[STRIDE]] : i64)
 // CHECK:           %[[MAP:.*]] = omp.map_info var_ptr(%2 : !llvm.ptr, !llvm.array<512 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = "a"}
-// CHECK:           omp.target   thread_limit(%[[VAL_2]] : i32) map_entries(%[[MAP]] : !llvm.ptr) {
+// CHECK:           omp.target   thread_limit(%[[VAL_2]] : i32) map_entries(%[[MAP]] -> %[[ARG_0:.*]] : !llvm.ptr) {
+// CHECK:           ^bb0(%[[ARG_0]]: !llvm.ptr):
 // CHECK:             %[[VAL_3:.*]] = llvm.mlir.constant(10 : i32) : i32
 // CHECK:             %[[VAL_4:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:             %[[VAL_5:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:             %[[VAL_6:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:             %[[VAL_7:.*]] = llvm.getelementptr %[[VAL_1]][0, %[[VAL_6]]] : (!llvm.ptr, i64) -> !llvm.ptr
+// CHECK:             %[[VAL_7:.*]] = llvm.getelementptr %[[ARG_0]][0, %[[VAL_6]]] : (!llvm.ptr, i64) -> !llvm.ptr
 // CHECK:             llvm.store %[[VAL_3]], %[[VAL_7]] : i32, !llvm.ptr
 // CHECK:             omp.terminator
 // CHECK:           }
@@ -699,10 +701,17 @@ func.func @_QPsb() {
 // CHECK-SAME: %[[ARRAY_REF:.*]]: !llvm.ptr
 // CHECK:    %[[RED_ACCUMULATOR:.*]] = llvm.alloca %2 x i32 {bindc_name = "x"} : (i64) -> !llvm.ptr
 // CHECK:    omp.parallel   {
-// CHECK:      omp.wsloop   reduction(@[[EQV_REDUCTION]] -> %[[RED_ACCUMULATOR]] : !llvm.ptr) for
+// CHECK:      omp.wsloop   reduction(@[[EQV_REDUCTION]] %[[RED_ACCUMULATOR]] -> %[[PRV:.+]] : !llvm.ptr) for
 // CHECK:        %[[ARRAY_ELEM_REF:.*]] = llvm.getelementptr %[[ARRAY_REF]][0, %{{.*}}] : (!llvm.ptr, i64) -> !llvm.ptr
 // CHECK:        %[[ARRAY_ELEM:.*]] = llvm.load %[[ARRAY_ELEM_REF]] : !llvm.ptr -> i32
-// CHECK:        omp.reduction %[[ARRAY_ELEM]], %[[RED_ACCUMULATOR]] : i32, !llvm.ptr
+// CHECK:        %[[LPRV:.+]] = llvm.load %[[PRV]] : !llvm.ptr -> i32
+// CHECK:        %[[ZERO_1:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:        %[[ARGVAL_1:.*]] = llvm.icmp "ne" %[[LPRV]], %[[ZERO_1]] : i32
+// CHECK:        %[[ZERO_2:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:        %[[ARGVAL_2:.*]] = llvm.icmp "ne" %[[ARRAY_ELEM]], %[[ZERO_2]] : i32
+// CHECK:        %[[RES:.*]] = llvm.icmp "eq" %[[ARGVAL_2]], %[[ARGVAL_1]] : i1
+// CHECK:        %[[RES_EXT:.*]] = llvm.zext %[[RES]] : i1 to i32
+// CHECK:        llvm.store %[[RES_EXT]], %[[PRV]] : i32, !llvm.ptr
 // CHECK:        omp.yield
 // CHECK:      omp.terminator
 // CHECK:    llvm.return
@@ -731,7 +740,7 @@ func.func @_QPsimple_reduction(%arg0: !fir.ref<!fir.array<100x!fir.logical<4>>> 
     %c1_i32 = arith.constant 1 : i32
     %c100_i32 = arith.constant 100 : i32
     %c1_i32_0 = arith.constant 1 : i32
-    omp.wsloop   reduction(@eqv_reduction -> %1 : !fir.ref<!fir.logical<4>>) for  (%arg1) : i32 = (%c1_i32) to (%c100_i32) inclusive step (%c1_i32_0) {
+    omp.wsloop   reduction(@eqv_reduction %1 -> %prv : !fir.ref<!fir.logical<4>>) for  (%arg1) : i32 = (%c1_i32) to (%c100_i32) inclusive step (%c1_i32_0) {
       fir.store %arg1 to %3 : !fir.ref<i32>
       %4 = fir.load %3 : !fir.ref<i32>
       %5 = fir.convert %4 : (i32) -> i64
@@ -739,7 +748,12 @@ func.func @_QPsimple_reduction(%arg0: !fir.ref<!fir.array<100x!fir.logical<4>>> 
       %6 = arith.subi %5, %c1_i64 : i64
       %7 = fir.coordinate_of %arg0, %6 : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
       %8 = fir.load %7 : !fir.ref<!fir.logical<4>>
-      omp.reduction %8, %1 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+      %lprv = fir.load %prv : !fir.ref<!fir.logical<4>>
+      %lprv1 = fir.convert %lprv : (!fir.logical<4>) -> i1
+      %9 = fir.convert %8 : (!fir.logical<4>) -> i1
+      %10 = arith.cmpi eq, %9, %lprv1 : i1
+      %11 = fir.convert %10 : (i1) -> !fir.logical<4>
+      fir.store %11 to %prv : !fir.ref<!fir.logical<4>>
       omp.yield
     }
     omp.terminator
@@ -891,3 +905,22 @@ func.func @omp_critical_() {
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL:  llvm.func @omp_map_info_descriptor_type_conversion
+// CHECK-SAME:   %[[ARG_0:.*]]: !llvm.ptr)
+
+func.func @omp_map_info_descriptor_type_conversion(%arg0 : !fir.ref<!fir.box<!fir.heap<i32>>>) {
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ARG_0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+  %0 = fir.box_offset %arg0 base_addr : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.llvm_ptr<!fir.ref<i32>>
+  // CHECK: %[[MEMBER_MAP:.*]] = omp.map_info var_ptr(%[[GEP]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  %1 = omp.map_info var_ptr(%0 : !fir.llvm_ptr<!fir.ref<i32>>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.llvm_ptr<!fir.ref<i32>> {name = ""}
+  // CHECK: %[[DESC_MAP:.*]] = omp.map_info var_ptr(%[[ARG_0]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, delete) capture(ByRef) members(%[[MEMBER_MAP]] : !llvm.ptr) -> !llvm.ptr {name = ""}
+  %2 = omp.map_info var_ptr(%arg0 : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(always, delete) capture(ByRef) members(%1 : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.ref<!fir.box<!fir.heap<i32>>> {name = ""}
+  // CHECK: omp.target_exit_data map_entries(%[[DESC_MAP]] : !llvm.ptr) 
+  omp.target_exit_data   map_entries(%2 : !fir.ref<!fir.box<!fir.heap<i32>>>)
+  return 
+}
+
+// -----

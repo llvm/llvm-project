@@ -147,7 +147,7 @@ private:   // Intermediate data structures
   bool HandlePhysRegKill(Register Reg, MachineInstr *MI);
 
   /// HandleRegMask - Call HandlePhysRegKill for all registers clobbered by Mask.
-  void HandleRegMask(const MachineOperand&);
+  void HandleRegMask(const MachineOperand &, unsigned);
 
   void HandlePhysRegUse(Register Reg, MachineInstr &MI);
   void HandlePhysRegDef(Register Reg, MachineInstr *MI,
@@ -170,7 +170,8 @@ private:   // Intermediate data structures
   /// is coming from.
   void analyzePHINodes(const MachineFunction& Fn);
 
-  void runOnInstr(MachineInstr &MI, SmallVectorImpl<unsigned> &Defs);
+  void runOnInstr(MachineInstr &MI, SmallVectorImpl<unsigned> &Defs,
+                  unsigned NumRegs);
 
   void runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs);
 public:

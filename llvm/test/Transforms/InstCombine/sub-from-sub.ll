@@ -17,14 +17,82 @@ define i8 @t0(i8 %x, i8 %y, i8 %z) {
   ret i8 %r
 }
 
-; No flags are propagated
+; NSW/NUW flags are propagated
 define i8 @t1_flags(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @t1_flags(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %o0 = sub nuw nsw i8 %x, %y
+  %r = sub nuw nsw i8 %o0, %z
+  ret i8 %r
+}
+
+; NUW flags are propagated
+define i8 @t1_flags_nuw_only(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @t1_flags_nuw_only(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %o0 = sub nuw i8 %x, %y
+  %r = sub nuw i8 %o0, %z
+  ret i8 %r
+}
+
+; Negative tests
+define i8 @t1_flags_sub_nsw_sub(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @t1_flags_sub_nsw_sub(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %o0 = sub nsw i8 %x, %y
+  %r = sub i8 %o0, %z
+  ret i8 %r
+}
+
+define i8 @t1_flags_nuw_first(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @t1_flags_nuw_first(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %o0 = sub nuw i8 %x, %y
+  %r = sub i8 %o0, %z
+  ret i8 %r
+}
+
+define i8 @t1_flags_nuw_second(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @t1_flags_nuw_second(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %o0 = sub i8 %x, %y
+  %r = sub nuw i8 %o0, %z
+  ret i8 %r
+}
+
+define i8 @t1_flags_nuw_nsw_first(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @t1_flags_nuw_nsw_first(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %o0 = sub nuw nsw i8 %x, %y
+  %r = sub i8 %o0, %z
+  ret i8 %r
+}
+
+define i8 @t1_flags_nuw_nsw_second(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @t1_flags_nuw_nsw_second(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %o0 = sub i8 %x, %y
   %r = sub nuw nsw i8 %o0, %z
   ret i8 %r
 }

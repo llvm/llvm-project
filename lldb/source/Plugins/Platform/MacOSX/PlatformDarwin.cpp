@@ -29,7 +29,6 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
@@ -321,8 +320,8 @@ Status PlatformDarwin::ResolveSymbolFile(Target &target,
                                          FileSpec &sym_file) {
   sym_file = sym_spec.GetSymbolFileSpec();
   if (FileSystem::Instance().IsDirectory(sym_file)) {
-    sym_file = Symbols::FindSymbolFileInBundle(sym_file, sym_spec.GetUUIDPtr(),
-                                               sym_spec.GetArchitecturePtr());
+    sym_file = PluginManager::FindSymbolFileInBundle(
+        sym_file, sym_spec.GetUUIDPtr(), sym_spec.GetArchitecturePtr());
   }
   return {};
 }
@@ -433,7 +432,7 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode(Target &target,
 
     // Auto detect arm/thumb if it wasn't explicitly specified
     if (!bp_is_thumb) {
-      lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
+      lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
       if (bp_loc_sp)
         bp_is_thumb = bp_loc_sp->GetAddress().GetAddressClass() ==
                       AddressClass::eCodeAlternateISA;
@@ -797,6 +796,9 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(XcodeSDK::Type sdk_type) {
   case XcodeSDK::Type::AppleTVSimulator:
     sdks_spec.AppendPathComponent("AppleTVSimulator.platform");
     break;
+  case XcodeSDK::Type::XRSimulator:
+    sdks_spec.AppendPathComponent("XRSimulator.platform");
+    break;
   default:
     llvm_unreachable("unsupported sdk");
   }
@@ -1033,6 +1035,9 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   case XcodeSDK::Type::watchOS:
     use_current_os_version = get_host_os() == llvm::Triple::WatchOS;
     break;
+  case XcodeSDK::Type::XROS:
+    use_current_os_version = get_host_os() == llvm::Triple::XROS;
+    break;
   default:
     break;
   }
@@ -1050,8 +1055,10 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
         version = object_file->GetMinimumOSVersion();
     }
   }
-  // Only add the version-min options if we got a version from somewhere
-  if (!version.empty() && sdk_type != XcodeSDK::Type::Linux) {
+  // Only add the version-min options if we got a version from somewhere.
+  // clang has no version-min clang flag for XROS.
+  if (!version.empty() && sdk_type != XcodeSDK::Type::Linux &&
+      sdk_type != XcodeSDK::Type::XROS) {
 #define OPTION(PREFIX, NAME, VAR, ...)                                         \
   llvm::StringRef opt_##VAR = NAME;                                            \
   (void)opt_##VAR;
@@ -1080,6 +1087,9 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     case XcodeSDK::Type::watchOS:
       minimum_version_option << opt_mwatchos_version_min_EQ;
       break;
+    case XcodeSDK::Type::XRSimulator:
+    case XcodeSDK::Type::XROS:
+      // FIXME: Pass the right argument once it exists.
     case XcodeSDK::Type::bridgeOS:
     case XcodeSDK::Type::Linux:
     case XcodeSDK::Type::unknown:
@@ -1344,6 +1354,8 @@ llvm::Triple::OSType PlatformDarwin::GetHostOSType() {
   return llvm::Triple::TvOS;
 #elif TARGET_OS_BRIDGE
   return llvm::Triple::BridgeOS;
+#elif TARGET_OS_XR
+  return llvm::Triple::XROS;
 #else
 #error "LLDB being compiled for an unrecognized Darwin OS"
 #endif

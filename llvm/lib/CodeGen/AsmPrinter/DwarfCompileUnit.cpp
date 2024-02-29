@@ -58,7 +58,7 @@ static dwarf::Tag GetCompileUnitType(UnitKind Kind, DwarfDebug *DW) {
 DwarfCompileUnit::DwarfCompileUnit(unsigned UID, const DICompileUnit *Node,
                                    AsmPrinter *A, DwarfDebug *DW,
                                    DwarfFile *DWU, UnitKind Kind)
-    : DwarfUnit(GetCompileUnitType(Kind, DW), Node, A, DW, DWU), UniqueID(UID) {
+    : DwarfUnit(GetCompileUnitType(Kind, DW), Node, A, DW, DWU, UID) {
   insertDIE(Node, &getUnitDie());
   MacroLabelBegin = Asm->createTempSymbol("cu_macro_begin");
 }
@@ -367,13 +367,15 @@ void DwarfCompileUnit::addLocationAttribute(
     addLinkageName(*VariableDIE, GV->getLinkageName());
 
   if (addToAccelTable) {
-    DD->addAccelName(*CUNode, GV->getName(), *VariableDIE);
+    DD->addAccelName(*this, CUNode->getNameTableKind(), GV->getName(),
+                     *VariableDIE);
 
     // If the linkage name is different than the name, go ahead and output
     // that as well into the name table.
     if (GV->getLinkageName() != "" && GV->getName() != GV->getLinkageName() &&
         DD->useAllLinkageNames())
-      DD->addAccelName(*CUNode, GV->getLinkageName(), *VariableDIE);
+      DD->addAccelName(*this, CUNode->getNameTableKind(), GV->getLinkageName(),
+                       *VariableDIE);
   }
 }
 
@@ -561,7 +563,7 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
 
   // Add name to the name table, we do this here because we're guaranteed
   // to have concrete versions of our DW_TAG_subprogram nodes.
-  DD->addSubprogramNames(*CUNode, SP, *SPDie);
+  DD->addSubprogramNames(*this, CUNode->getNameTableKind(), SP, *SPDie);
 
   return *SPDie;
 }
@@ -710,7 +712,8 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope,
 
   // Add name to the name table, we do this here because we're guaranteed
   // to have concrete versions of our DW_TAG_inlined_subprogram nodes.
-  DD->addSubprogramNames(*CUNode, InlinedSP, *ScopeDIE);
+  DD->addSubprogramNames(*this, CUNode->getNameTableKind(), InlinedSP,
+                         *ScopeDIE);
 
   return ScopeDIE;
 }
@@ -1358,7 +1361,7 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
     // or `using namespace std::ranges`, we could add the
     // import declaration into the accelerator table with the
     // name being the one of the entity being imported.
-    DD->addAccelNamespace(*CUNode, Name, *IMDie);
+    DD->addAccelNamespace(*this, CUNode->getNameTableKind(), Name, *IMDie);
   }
 
   // This is for imported module with renamed entities (such as variables and
@@ -1422,9 +1425,18 @@ void DwarfCompileUnit::finishEntityDefinition(const DbgEntity *Entity) {
       llvm_unreachable("DbgEntity must be DbgVariable or DbgLabel.");
   }
 
-  if (Label)
-    if (const auto *Sym = Label->getSymbol())
-      addLabelAddress(*Die, dwarf::DW_AT_low_pc, Sym);
+  if (!Label)
+    return;
+
+  const auto *Sym = Label->getSymbol();
+  if (!Sym)
+    return;
+
+  addLabelAddress(*Die, dwarf::DW_AT_low_pc, Sym);
+
+  // A TAG_label with a name and an AT_low_pc must be placed in debug_names.
+  if (StringRef Name = Label->getName(); !Name.empty())
+    getDwarfDebug().addAccelName(*this, CUNode->getNameTableKind(), Name, *Die);
 }
 
 DbgEntity *DwarfCompileUnit::getExistingAbstractEntity(const DINode *Node) {

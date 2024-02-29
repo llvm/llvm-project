@@ -26,6 +26,20 @@ if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
   endforeach()
 endif()
 
+# The "pexpect" package should come from the system environment, not from the
+# LLDB tree. However, we delay the deletion of it from the tree in case
+# users/buildbots don't have the package yet and need some time to install it.
+if (NOT LLDB_TEST_USE_VENDOR_PACKAGES)
+  lldb_find_python_module(pexpect)
+  if (NOT PY_pexpect_FOUND)
+    message(FATAL_ERROR
+      "Python module 'pexpect' not found. Please install it via pip or via "
+      "your operating system's package manager. For a temporary workaround, "
+      "use a version from the LLDB tree with "
+      "`LLDB_TEST_USE_VENDOR_PACKAGES=ON`")
+  endif()
+endif()
+
 if(LLDB_BUILT_STANDALONE)
   # In order to run check-lldb-* we need the correct map_config directives in
   # llvm-lit. Because this is a standalone build, LLVM doesn't know about LLDB,
@@ -139,6 +153,10 @@ if(NOT LLDB_BUILT_STANDALONE)
   )
 endif()
 
+if (LLVM_ENABLE_RUNTIMES)
+  add_lldb_test_dependency(runtimes)
+endif()
+
 # Add dependencies if we test with the in-tree clang.
 # This works with standalone builds as they import the clang target.
 if(TARGET clang)
@@ -157,12 +175,10 @@ if(TARGET clang)
       set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
       set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
     endif()
-    add_lldb_test_dependency(cxx)
   endif()
 
   if (TARGET compiler-rt OR "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
     set(LLDB_HAS_COMPILER_RT ON)
-    add_lldb_test_dependency(compiler-rt)
   endif()
 
   if(APPLE AND NOT LLVM_TARGET_IS_CROSSCOMPILE_HOST)
@@ -238,7 +254,8 @@ llvm_canonicalize_cmake_booleans(
   LLDB_HAS_LIBCXX
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
-  LLDB_IS_64_BITS)
+  LLDB_IS_64_BITS
+  LLDB_TEST_USE_VENDOR_PACKAGES)
 
 # Configure the individual test suites.
 add_subdirectory(API)

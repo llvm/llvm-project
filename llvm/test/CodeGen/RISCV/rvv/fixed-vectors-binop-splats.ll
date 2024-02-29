@@ -636,4 +636,3 @@ define <1 x double> @v2f64(double %x, double %y) {
   %v = fadd <1 x double> %splat.x, %splat.y
   ret <1 x double> %v
 }
-

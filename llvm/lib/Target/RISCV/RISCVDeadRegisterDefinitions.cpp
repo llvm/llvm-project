@@ -28,10 +28,7 @@ class RISCVDeadRegisterDefinitions : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVDeadRegisterDefinitions() : MachineFunctionPass(ID) {
-    initializeRISCVDeadRegisterDefinitionsPass(
-        *PassRegistry::getPassRegistry());
-  }
+  RISCVDeadRegisterDefinitions() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

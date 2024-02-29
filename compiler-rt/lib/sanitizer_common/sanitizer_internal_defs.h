@@ -15,6 +15,11 @@
 #include "sanitizer_platform.h"
 #include "sanitizer_redefine_builtins.h"
 
+// GCC does not understand __has_feature.
+#if !defined(__has_feature)
+#define __has_feature(x) 0
+#endif
+
 #ifndef SANITIZER_DEBUG
 # define SANITIZER_DEBUG 0
 #endif
@@ -30,13 +35,20 @@
 # define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllexport)
 #endif
 # define SANITIZER_WEAK_ATTRIBUTE
+#  define SANITIZER_WEAK_IMPORT
 #elif SANITIZER_GO
 # define SANITIZER_INTERFACE_ATTRIBUTE
 # define SANITIZER_WEAK_ATTRIBUTE
+#  define SANITIZER_WEAK_IMPORT
 #else
 # define SANITIZER_INTERFACE_ATTRIBUTE __attribute__((visibility("default")))
 # define SANITIZER_WEAK_ATTRIBUTE  __attribute__((weak))
-#endif
+#  if SANITIZER_APPLE
+#    define SANITIZER_WEAK_IMPORT extern "C" __attribute((weak_import))
+#  else
+#    define SANITIZER_WEAK_IMPORT extern "C" SANITIZER_WEAK_ATTRIBUTE
+#  endif  // SANITIZER_APPLE
+#endif    // SANITIZER_WINDOWS
 
 //--------------------------- WEAK FUNCTIONS ---------------------------------//
 // When working with weak functions, to simplify the code and make it more

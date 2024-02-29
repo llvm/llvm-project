@@ -2,6 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -stop-after=legalizer -o - %s | FileCheck -check-prefix=GFX6 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -stop-after=legalizer -o - %s | FileCheck -check-prefix=GFX10NSA %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -stop-after=legalizer -o - %s | FileCheck -check-prefix=GFX10NSA %s
+; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -stop-after=legalizer -o - %s | FileCheck -check-prefix=GFX10NSA %s
 
 define amdgpu_ps float @image_load_3d_f32(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %r) {
   ; GFX6-LABEL: name: image_load_3d_f32
@@ -24,6 +25,7 @@ define amdgpu_ps float @image_load_3d_f32(<8 x i32> inreg %rsrc, i32 %s, i32 %t,
   ; GFX6-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.3d), 1, [[BUILD_VECTOR1]](<3 x s32>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (s32), addrspace 8)
   ; GFX6-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX6-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ;
   ; GFX10NSA-LABEL: name: image_load_3d_f32
   ; GFX10NSA: bb.1 (%ir-block.0):
   ; GFX10NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1, $vgpr2
@@ -71,6 +73,7 @@ define amdgpu_ps float @image_load_3d_tfe_f32(<8 x i32> inreg %rsrc, i32 %s, i32
   ; GFX6-NEXT:   G_STORE [[UV1]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
   ; GFX6-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX6-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ;
   ; GFX10NSA-LABEL: name: image_load_3d_tfe_f32
   ; GFX10NSA: bb.1 (%ir-block.0):
   ; GFX10NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1, $vgpr2

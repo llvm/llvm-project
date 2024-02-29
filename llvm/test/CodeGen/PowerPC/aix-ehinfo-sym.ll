@@ -4,6 +4,10 @@
 ; RUN: llc -mtriple powerpc64-ibm-aix -fast-isel -verify-machineinstrs < %s | \
 ; RUN:  FileCheck %s
 
+; RUN: llc -mtriple powerpc64-ibm-aix -verify-machineinstrs  -filetype=obj \
+; RUN:   -o %t.o < %s
+; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYM %s
+
 ; Function Attrs: nounwind
 declare i32 @func1() #0
 
@@ -47,4 +51,11 @@ attributes #0 = { nounwind }
 attributes #1 = { mustprogress noinline optnone }
 
 ; CHECK: __ehinfo.0:
-; CHECK: .tc __ehinfo.0[TC],__ehinfo.0
+; CHECK: .tc __ehinfo.0[TE],__ehinfo.0
+
+; SYM:    Symbol {
+; SYM:      Name: __ehinfo.0
+; SYM:      CSECT Auxiliary Entry {
+; SYM:        StorageMappingClass: XMC_TE (0x16)
+; SYM:      }
+; SYM:    }

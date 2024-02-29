@@ -313,4 +313,6 @@ TEST_F(FIRTypesTest, getTypeAsString) {
       fir::getTypeAsString(
           fir::LLVMPointerType::get(mlir::IntegerType::get(&context, 32)),
           *kindMap));
+  EXPECT_EQ("boxchar_c8xU",
+      fir::getTypeAsString(fir::BoxCharType::get(&context, 1), *kindMap));
 }

@@ -96,8 +96,8 @@ Region::iterator getBlockIt(Region &region, unsigned index) {
 template <typename OpTy>
 class SCFToSPIRVPattern : public OpConversionPattern<OpTy> {
 public:
-  SCFToSPIRVPattern<OpTy>(MLIRContext *context, SPIRVTypeConverter &converter,
-                          ScfToSPIRVContextImpl *scfToSPIRVContext)
+  SCFToSPIRVPattern(MLIRContext *context, SPIRVTypeConverter &converter,
+                    ScfToSPIRVContextImpl *scfToSPIRVContext)
       : OpConversionPattern<OpTy>::OpConversionPattern(converter, context),
         scfToSPIRVContext(scfToSPIRVContext), typeConverter(converter) {}
 
@@ -138,14 +138,13 @@ struct ForOpConversion final : SCFToSPIRVPattern<scf::ForOp> {
     // from header to merge.
     auto loc = forOp.getLoc();
     auto loopOp = rewriter.create<spirv::LoopOp>(loc, spirv::LoopControl::None);
-    loopOp.addEntryAndMergeBlock();
+    loopOp.addEntryAndMergeBlock(rewriter);
 
     OpBuilder::InsertionGuard guard(rewriter);
     // Create the block for the header.
-    auto *header = new Block();
-    // Insert the header.
-    loopOp.getBody().getBlocks().insert(getBlockIt(loopOp.getBody(), 1),
-                                        header);
+    Block *header = rewriter.createBlock(&loopOp.getBody(),
+                                         getBlockIt(loopOp.getBody(), 1));
+    rewriter.setInsertionPointAfter(loopOp);
 
     // Create the new induction variable to use.
     Value adapLowerBound = adaptor.getLowerBound();
@@ -342,7 +341,7 @@ struct WhileOpConversion final : SCFToSPIRVPattern<scf::WhileOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = whileOp.getLoc();
     auto loopOp = rewriter.create<spirv::LoopOp>(loc, spirv::LoopControl::None);
-    loopOp.addEntryAndMergeBlock();
+    loopOp.addEntryAndMergeBlock(rewriter);
 
     Region &beforeRegion = whileOp.getBefore();
     Region &afterRegion = whileOp.getAfter();

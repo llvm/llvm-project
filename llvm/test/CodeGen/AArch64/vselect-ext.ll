@@ -219,17 +219,17 @@ define <3 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v3i16(<3 x i8> 
 ; CHECK-NEXT:    fmov s0, w0
 ; CHECK-NEXT:  Lloh0:
 ; CHECK-NEXT:    adrp x8, lCPI9_0@PAGE
+; CHECK-NEXT:    movi.2d v3, #0x0000ff000000ff
 ; CHECK-NEXT:  Lloh1:
 ; CHECK-NEXT:    ldr d2, [x8, lCPI9_0@PAGEOFF]
 ; CHECK-NEXT:    mov.h v0[1], w1
 ; CHECK-NEXT:    mov.h v0[2], w2
-; CHECK-NEXT:    fmov d1, d0
-; CHECK-NEXT:    bic.4h v1, #255, lsl #8
-; CHECK-NEXT:    cmhi.4h v1, v1, v2
-; CHECK-NEXT:    and.8b v0, v0, v1
-; CHECK-NEXT:    movi.2d v1, #0x0000ff000000ff
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v0, v1
+; CHECK-NEXT:    ushll.4s v1, v0, #0
+; CHECK-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-NEXT:    cmhi.4h v0, v0, v2
+; CHECK-NEXT:    and.16b v1, v1, v3
+; CHECK-NEXT:    sshll.4s v0, v0, #0
+; CHECK-NEXT:    and.16b v0, v1, v0
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
   %ext = zext <3 x i8> %a to <3 x i32>
@@ -543,15 +543,14 @@ entry:
 define <16 x i32> @same_zext_used_in_cmp_signed_pred_and_select_can_convert_to_unsigned_pred(<16 x i8> %a) {
 ; CHECK-LABEL: same_zext_used_in_cmp_signed_pred_and_select_can_convert_to_unsigned_pred:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    movi.2d v1, #0xffffffffffffffff
+; CHECK-NEXT:    cmge.16b v1, v0, #0
 ; CHECK-NEXT:    ushll.8h v2, v0, #0
-; CHECK-NEXT:    ushll.4s v4, v2, #0
-; CHECK-NEXT:    ushll2.4s v2, v2, #0
-; CHECK-NEXT:    cmgt.16b v1, v0, v1
 ; CHECK-NEXT:    ushll2.8h v0, v0, #0
 ; CHECK-NEXT:    sshll.8h v3, v1, #0
 ; CHECK-NEXT:    sshll2.8h v1, v1, #0
+; CHECK-NEXT:    ushll.4s v4, v2, #0
 ; CHECK-NEXT:    ushll.4s v5, v0, #0
+; CHECK-NEXT:    ushll2.4s v2, v2, #0
 ; CHECK-NEXT:    ushll2.4s v6, v0, #0
 ; CHECK-NEXT:    sshll.4s v0, v3, #0
 ; CHECK-NEXT:    sshll.4s v7, v1, #0
@@ -574,52 +573,51 @@ define void @extension_in_loop_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh2:
 ; CHECK-NEXT:    adrp x8, lCPI24_0@PAGE
-; CHECK-NEXT:    movi.2d v0, #0xffffffffffffffff
 ; CHECK-NEXT:  Lloh3:
-; CHECK-NEXT:    adrp x9, lCPI24_2@PAGE
+; CHECK-NEXT:    adrp x9, lCPI24_1@PAGE
 ; CHECK-NEXT:  Lloh4:
-; CHECK-NEXT:    ldr q1, [x8, lCPI24_0@PAGEOFF]
+; CHECK-NEXT:    adrp x10, lCPI24_2@PAGE
 ; CHECK-NEXT:  Lloh5:
-; CHECK-NEXT:    adrp x8, lCPI24_1@PAGE
+; CHECK-NEXT:    ldr q0, [x8, lCPI24_0@PAGEOFF]
 ; CHECK-NEXT:  Lloh6:
-; CHECK-NEXT:    adrp x10, lCPI24_3@PAGE
+; CHECK-NEXT:    adrp x8, lCPI24_3@PAGE
 ; CHECK-NEXT:  Lloh7:
-; CHECK-NEXT:    ldr q2, [x8, lCPI24_1@PAGEOFF]
+; CHECK-NEXT:    ldr q1, [x9, lCPI24_1@PAGEOFF]
 ; CHECK-NEXT:  Lloh8:
-; CHECK-NEXT:    ldr q3, [x9, lCPI24_2@PAGEOFF]
+; CHECK-NEXT:    ldr q2, [x10, lCPI24_2@PAGEOFF]
 ; CHECK-NEXT:  Lloh9:
-; CHECK-NEXT:    ldr q4, [x10, lCPI24_3@PAGEOFF]
+; CHECK-NEXT:    ldr q3, [x8, lCPI24_3@PAGEOFF]
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB24_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q5, [x0, x8]
+; CHECK-NEXT:    ldr q4, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    cmgt.16b v6, v5, v0
-; CHECK-NEXT:    tbl.16b v16, { v5 }, v1
-; CHECK-NEXT:    tbl.16b v17, { v5 }, v2
-; CHECK-NEXT:    tbl.16b v19, { v5 }, v3
-; CHECK-NEXT:    tbl.16b v5, { v5 }, v4
-; CHECK-NEXT:    sshll2.8h v7, v6, #0
-; CHECK-NEXT:    sshll.8h v6, v6, #0
-; CHECK-NEXT:    sshll2.4s v18, v7, #0
-; CHECK-NEXT:    sshll.4s v7, v7, #0
-; CHECK-NEXT:    sshll2.4s v20, v6, #0
+; CHECK-NEXT:    cmge.16b v5, v4, #0
+; CHECK-NEXT:    tbl.16b v7, { v4 }, v0
+; CHECK-NEXT:    tbl.16b v16, { v4 }, v1
+; CHECK-NEXT:    tbl.16b v18, { v4 }, v2
+; CHECK-NEXT:    tbl.16b v4, { v4 }, v3
+; CHECK-NEXT:    sshll2.8h v6, v5, #0
+; CHECK-NEXT:    sshll.8h v5, v5, #0
+; CHECK-NEXT:    sshll2.4s v17, v6, #0
 ; CHECK-NEXT:    sshll.4s v6, v6, #0
-; CHECK-NEXT:    and.16b v16, v16, v18
-; CHECK-NEXT:    and.16b v7, v17, v7
-; CHECK-NEXT:    and.16b v17, v19, v20
-; CHECK-NEXT:    and.16b v5, v5, v6
-; CHECK-NEXT:    stp q7, q16, [x1, #32]
-; CHECK-NEXT:    stp q5, q17, [x1], #64
+; CHECK-NEXT:    sshll2.4s v19, v5, #0
+; CHECK-NEXT:    sshll.4s v5, v5, #0
+; CHECK-NEXT:    and.16b v7, v7, v17
+; CHECK-NEXT:    and.16b v6, v16, v6
+; CHECK-NEXT:    and.16b v16, v18, v19
+; CHECK-NEXT:    and.16b v4, v4, v5
+; CHECK-NEXT:    stp q6, q7, [x1, #32]
+; CHECK-NEXT:    stp q4, q16, [x1], #64
 ; CHECK-NEXT:    b.ne LBB24_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh6, Lloh9
-; CHECK-NEXT:    .loh AdrpLdr Lloh5, Lloh7
-; CHECK-NEXT:    .loh AdrpLdr Lloh3, Lloh8
-; CHECK-NEXT:    .loh AdrpAdrp Lloh2, Lloh5
-; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh4
+; CHECK-NEXT:    .loh AdrpLdr Lloh4, Lloh8
+; CHECK-NEXT:    .loh AdrpLdr Lloh3, Lloh7
+; CHECK-NEXT:    .loh AdrpAdrp Lloh2, Lloh6
+; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh5
 entry:
   br label %loop
 
@@ -645,52 +643,51 @@ define void @extension_in_loop_as_shuffle_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh10:
 ; CHECK-NEXT:    adrp x8, lCPI25_0@PAGE
-; CHECK-NEXT:    movi.2d v0, #0xffffffffffffffff
 ; CHECK-NEXT:  Lloh11:
-; CHECK-NEXT:    adrp x9, lCPI25_2@PAGE
+; CHECK-NEXT:    adrp x9, lCPI25_1@PAGE
 ; CHECK-NEXT:  Lloh12:
-; CHECK-NEXT:    ldr q1, [x8, lCPI25_0@PAGEOFF]
+; CHECK-NEXT:    adrp x10, lCPI25_2@PAGE
 ; CHECK-NEXT:  Lloh13:
-; CHECK-NEXT:    adrp x8, lCPI25_1@PAGE
+; CHECK-NEXT:    ldr q0, [x8, lCPI25_0@PAGEOFF]
 ; CHECK-NEXT:  Lloh14:
-; CHECK-NEXT:    adrp x10, lCPI25_3@PAGE
+; CHECK-NEXT:    adrp x8, lCPI25_3@PAGE
 ; CHECK-NEXT:  Lloh15:
-; CHECK-NEXT:    ldr q2, [x8, lCPI25_1@PAGEOFF]
+; CHECK-NEXT:    ldr q1, [x9, lCPI25_1@PAGEOFF]
 ; CHECK-NEXT:  Lloh16:
-; CHECK-NEXT:    ldr q3, [x9, lCPI25_2@PAGEOFF]
+; CHECK-NEXT:    ldr q2, [x10, lCPI25_2@PAGEOFF]
 ; CHECK-NEXT:  Lloh17:
-; CHECK-NEXT:    ldr q4, [x10, lCPI25_3@PAGEOFF]
+; CHECK-NEXT:    ldr q3, [x8, lCPI25_3@PAGEOFF]
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB25_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q5, [x0, x8]
+; CHECK-NEXT:    ldr q4, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    cmgt.16b v6, v5, v0
-; CHECK-NEXT:    tbl.16b v16, { v5 }, v1
-; CHECK-NEXT:    tbl.16b v17, { v5 }, v2
-; CHECK-NEXT:    tbl.16b v19, { v5 }, v3
-; CHECK-NEXT:    tbl.16b v5, { v5 }, v4
-; CHECK-NEXT:    sshll2.8h v7, v6, #0
-; CHECK-NEXT:    sshll.8h v6, v6, #0
-; CHECK-NEXT:    sshll2.4s v18, v7, #0
-; CHECK-NEXT:    sshll.4s v7, v7, #0
-; CHECK-NEXT:    sshll2.4s v20, v6, #0
+; CHECK-NEXT:    cmge.16b v5, v4, #0
+; CHECK-NEXT:    tbl.16b v7, { v4 }, v0
+; CHECK-NEXT:    tbl.16b v16, { v4 }, v1
+; CHECK-NEXT:    tbl.16b v18, { v4 }, v2
+; CHECK-NEXT:    tbl.16b v4, { v4 }, v3
+; CHECK-NEXT:    sshll2.8h v6, v5, #0
+; CHECK-NEXT:    sshll.8h v5, v5, #0
+; CHECK-NEXT:    sshll2.4s v17, v6, #0
 ; CHECK-NEXT:    sshll.4s v6, v6, #0
-; CHECK-NEXT:    and.16b v16, v16, v18
-; CHECK-NEXT:    and.16b v7, v17, v7
-; CHECK-NEXT:    and.16b v17, v19, v20
-; CHECK-NEXT:    and.16b v5, v5, v6
-; CHECK-NEXT:    stp q7, q16, [x1, #32]
-; CHECK-NEXT:    stp q5, q17, [x1], #64
+; CHECK-NEXT:    sshll2.4s v19, v5, #0
+; CHECK-NEXT:    sshll.4s v5, v5, #0
+; CHECK-NEXT:    and.16b v7, v7, v17
+; CHECK-NEXT:    and.16b v6, v16, v6
+; CHECK-NEXT:    and.16b v16, v18, v19
+; CHECK-NEXT:    and.16b v4, v4, v5
+; CHECK-NEXT:    stp q6, q7, [x1, #32]
+; CHECK-NEXT:    stp q4, q16, [x1], #64
 ; CHECK-NEXT:    b.ne LBB25_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh14, Lloh17
-; CHECK-NEXT:    .loh AdrpLdr Lloh13, Lloh15
-; CHECK-NEXT:    .loh AdrpLdr Lloh11, Lloh16
-; CHECK-NEXT:    .loh AdrpAdrp Lloh10, Lloh13
-; CHECK-NEXT:    .loh AdrpLdr Lloh10, Lloh12
+; CHECK-NEXT:    .loh AdrpLdr Lloh12, Lloh16
+; CHECK-NEXT:    .loh AdrpLdr Lloh11, Lloh15
+; CHECK-NEXT:    .loh AdrpAdrp Lloh10, Lloh14
+; CHECK-NEXT:    .loh AdrpLdr Lloh10, Lloh13
 entry:
   br label %loop
 
@@ -717,52 +714,51 @@ define void @shuffle_in_loop_is_no_extend_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh18:
 ; CHECK-NEXT:    adrp x8, lCPI26_0@PAGE
-; CHECK-NEXT:    movi.2d v0, #0xffffffffffffffff
 ; CHECK-NEXT:  Lloh19:
-; CHECK-NEXT:    adrp x9, lCPI26_2@PAGE
+; CHECK-NEXT:    adrp x9, lCPI26_1@PAGE
 ; CHECK-NEXT:  Lloh20:
-; CHECK-NEXT:    ldr q1, [x8, lCPI26_0@PAGEOFF]
+; CHECK-NEXT:    adrp x10, lCPI26_2@PAGE
 ; CHECK-NEXT:  Lloh21:
-; CHECK-NEXT:    adrp x8, lCPI26_1@PAGE
+; CHECK-NEXT:    ldr q0, [x8, lCPI26_0@PAGEOFF]
 ; CHECK-NEXT:  Lloh22:
-; CHECK-NEXT:    adrp x10, lCPI26_3@PAGE
+; CHECK-NEXT:    adrp x8, lCPI26_3@PAGE
 ; CHECK-NEXT:  Lloh23:
-; CHECK-NEXT:    ldr q2, [x8, lCPI26_1@PAGEOFF]
+; CHECK-NEXT:    ldr q1, [x9, lCPI26_1@PAGEOFF]
 ; CHECK-NEXT:  Lloh24:
-; CHECK-NEXT:    ldr q3, [x9, lCPI26_2@PAGEOFF]
+; CHECK-NEXT:    ldr q2, [x10, lCPI26_2@PAGEOFF]
 ; CHECK-NEXT:  Lloh25:
-; CHECK-NEXT:    ldr q4, [x10, lCPI26_3@PAGEOFF]
+; CHECK-NEXT:    ldr q3, [x8, lCPI26_3@PAGEOFF]
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB26_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q5, [x0, x8]
+; CHECK-NEXT:    ldr q4, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    cmgt.16b v6, v5, v0
-; CHECK-NEXT:    tbl.16b v16, { v5 }, v1
-; CHECK-NEXT:    tbl.16b v17, { v5 }, v2
-; CHECK-NEXT:    tbl.16b v19, { v5 }, v3
-; CHECK-NEXT:    tbl.16b v5, { v5 }, v4
-; CHECK-NEXT:    sshll2.8h v7, v6, #0
-; CHECK-NEXT:    sshll.8h v6, v6, #0
-; CHECK-NEXT:    sshll2.4s v18, v7, #0
-; CHECK-NEXT:    sshll.4s v7, v7, #0
-; CHECK-NEXT:    sshll2.4s v20, v6, #0
+; CHECK-NEXT:    cmge.16b v5, v4, #0
+; CHECK-NEXT:    tbl.16b v7, { v4 }, v0
+; CHECK-NEXT:    tbl.16b v16, { v4 }, v1
+; CHECK-NEXT:    tbl.16b v18, { v4 }, v2
+; CHECK-NEXT:    tbl.16b v4, { v4 }, v3
+; CHECK-NEXT:    sshll2.8h v6, v5, #0
+; CHECK-NEXT:    sshll.8h v5, v5, #0
+; CHECK-NEXT:    sshll2.4s v17, v6, #0
 ; CHECK-NEXT:    sshll.4s v6, v6, #0
-; CHECK-NEXT:    and.16b v16, v16, v18
-; CHECK-NEXT:    and.16b v7, v17, v7
-; CHECK-NEXT:    and.16b v17, v19, v20
-; CHECK-NEXT:    and.16b v5, v5, v6
-; CHECK-NEXT:    stp q7, q16, [x1, #32]
-; CHECK-NEXT:    stp q5, q17, [x1], #64
+; CHECK-NEXT:    sshll2.4s v19, v5, #0
+; CHECK-NEXT:    sshll.4s v5, v5, #0
+; CHECK-NEXT:    and.16b v7, v7, v17
+; CHECK-NEXT:    and.16b v6, v16, v6
+; CHECK-NEXT:    and.16b v16, v18, v19
+; CHECK-NEXT:    and.16b v4, v4, v5
+; CHECK-NEXT:    stp q6, q7, [x1, #32]
+; CHECK-NEXT:    stp q4, q16, [x1], #64
 ; CHECK-NEXT:    b.ne LBB26_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh22, Lloh25
-; CHECK-NEXT:    .loh AdrpLdr Lloh21, Lloh23
-; CHECK-NEXT:    .loh AdrpLdr Lloh19, Lloh24
-; CHECK-NEXT:    .loh AdrpAdrp Lloh18, Lloh21
-; CHECK-NEXT:    .loh AdrpLdr Lloh18, Lloh20
+; CHECK-NEXT:    .loh AdrpLdr Lloh20, Lloh24
+; CHECK-NEXT:    .loh AdrpLdr Lloh19, Lloh23
+; CHECK-NEXT:    .loh AdrpAdrp Lloh18, Lloh22
+; CHECK-NEXT:    .loh AdrpLdr Lloh18, Lloh21
 entry:
   br label %loop
 

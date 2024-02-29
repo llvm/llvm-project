@@ -140,7 +140,6 @@ define <3 x i32> @fsext_v3i32(ptr %a) {
 ; CHECK-BE-NEXT:    ldr s0, [x0]
 ; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-BE-NEXT:    rev16 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-BE-NEXT:    shl v0.4s, v0.4s, #24
 ; CHECK-BE-NEXT:    sshr v0.4s, v0.4s, #24
@@ -284,7 +283,6 @@ define <3 x i16> @fsext_v3i16(ptr %a) {
 ; CHECK-BE-NEXT:    ldr s0, [x0]
 ; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-BE-NEXT:    rev16 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-BE-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
@@ -447,7 +445,7 @@ define <4 x i8> @bitcast(i32 %0) {
 ; CHECK-BE-NEXT:    fmov s0, w0
 ; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
   %2 = bitcast i32 %0 to <4 x i8>
   ret <4 x i8> %2

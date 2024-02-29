@@ -232,19 +232,3 @@ mlir::Value fir::factory::getExtentAtDimension(mlir::Location loc,
     return extents[dim];
   return {};
 }
-
-static inline bool isUndefOp(mlir::Value v) {
-  return mlir::isa_and_nonnull<fir::UndefOp>(v.getDefiningOp());
-}
-
-bool fir::ExtendedValue::isAssumedSize() const {
-  return match(
-      [](const fir::ArrayBoxValue &box) -> bool {
-        return !box.getExtents().empty() && isUndefOp(box.getExtents().back());
-        ;
-      },
-      [](const fir::CharArrayBoxValue &box) -> bool {
-        return !box.getExtents().empty() && isUndefOp(box.getExtents().back());
-      },
-      [](const auto &box) -> bool { return false; });
-}

@@ -26,4 +26,11 @@
    numeric seed that is passed to the random number generator. */
 #cmakedefine MLIR_GREEDY_REWRITE_RANDOMIZER_SEED ${MLIR_GREEDY_REWRITE_RANDOMIZER_SEED}
 
+/* If set, enables PDL usage. */
+#cmakedefine01 MLIR_ENABLE_PDL_IN_PATTERNMATCH
+
+/* If set, enables CUDA-related features in CUDA-related transforms, pipelines,
+   and targets. */
+#cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS
+
 #endif

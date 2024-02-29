@@ -1,4 +1,5 @@
 ; RUN: opt -passes=instcombine %s -S -o - | FileCheck %s
+; RUN: opt -passes=instcombine %s -S -o - --try-experimental-debuginfo-iterators | FileCheck %s
 ; Verify that the eliminated instructions (bitcast, gep, load) are salvaged into
 ; a DIExpression.
 ;

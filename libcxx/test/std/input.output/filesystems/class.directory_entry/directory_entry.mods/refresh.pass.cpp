@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 
 // The string reported on errors changed, which makes those tests fail when run
 // against already-released libc++'s.
@@ -21,13 +21,14 @@
 // void assign(path const&);
 // void replace_filename(path const&);
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "assert_macros.h"
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
+namespace fs = std::filesystem;
 
 static void test_refresh_method() {
   using namespace fs;

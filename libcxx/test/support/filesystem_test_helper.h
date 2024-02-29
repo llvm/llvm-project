@@ -1,7 +1,7 @@
 #ifndef FILESYSTEM_TEST_HELPER_H
 #define FILESYSTEM_TEST_HELPER_H
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include <sys/stat.h> // for stat, mkdir, mkfifo
 #ifndef _WIN32
@@ -33,6 +33,7 @@
 # include <sys/socket.h>
 # include <sys/un.h>
 #endif
+namespace fs = std::filesystem;
 
 namespace utils {
 #ifdef _WIN32
@@ -319,16 +320,26 @@ struct scoped_test_env
   // allow tests to call this unguarded.
 #if !defined(__FreeBSD__) && !defined(__APPLE__) && !defined(_WIN32)
     std::string create_socket(std::string file) {
-        file = sanitize_path(std::move(file));
+      file = sanitize_path(std::move(file));
 
-        ::sockaddr_un address;
-        address.sun_family = AF_UNIX;
-        assert(file.size() <= sizeof(address.sun_path));
-        ::strncpy(address.sun_path, file.c_str(), sizeof(address.sun_path));
-        int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
-        ::bind(fd, reinterpret_cast<::sockaddr*>(&address), sizeof(address));
-        return file;
+      ::sockaddr_un address;
+      address.sun_family = AF_UNIX;
+
+// If file.size() is too big, try to create a file directly inside
+// /tmp to make sure file path is short enough.
+// Android platform warns about tmpnam, since the problem does not appear
+// on Android, let's not apply it for Android.
+#  if !defined(__ANDROID__)
+    if (file.size() > sizeof(address.sun_path)) {
+      file = std::tmpnam(nullptr);
     }
+#  endif
+    assert(file.size() <= sizeof(address.sun_path));
+    ::strncpy(address.sun_path, file.c_str(), sizeof(address.sun_path));
+    int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+    assert(::bind(fd, reinterpret_cast<::sockaddr*>(&address), sizeof(address)) == 0);
+    return file;
+  }
 #endif
 
     fs::path test_root;

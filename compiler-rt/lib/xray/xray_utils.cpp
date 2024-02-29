@@ -28,7 +28,7 @@
 #include <utility>
 
 #if SANITIZER_FUCHSIA
-#include "sanitizer_common/sanitizer_symbolizer_fuchsia.h"
+#include "sanitizer_common/sanitizer_symbolizer_markup_constants.h"
 
 #include <inttypes.h>
 #include <zircon/process.h>

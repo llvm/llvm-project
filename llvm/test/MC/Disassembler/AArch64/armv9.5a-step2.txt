@@ -1,0 +1,7 @@
+# RUN: llvm-mc -triple aarch64 -disassemble < %s | FileCheck %s
+
+[0x40,0x05,0x30,0xd5]
+# CHECK: mrs x0, MDSTEPOP_EL1
+
+[0x40,0x05,0x10,0xd5]
+# CHECK: msr MDSTEPOP_EL1, x0

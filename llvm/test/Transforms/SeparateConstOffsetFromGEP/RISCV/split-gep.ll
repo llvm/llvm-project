@@ -12,12 +12,12 @@ define i64 @test1(ptr %array, i64 %i, i64 %j)  {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[ARRAY:%.*]], i64 [[I]]
-; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 5
-; CHECK-NEXT:    store i64 [[J:%.*]], ptr [[GEP4]], align 4
-; CHECK-NEXT:    [[GEP26:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 6
-; CHECK-NEXT:    store i64 [[J]], ptr [[GEP26]], align 4
-; CHECK-NEXT:    [[GEP38:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 35
-; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP38]], align 4
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 40
+; CHECK-NEXT:    store i64 [[J:%.*]], ptr [[GEP4]], align 8
+; CHECK-NEXT:    [[GEP26:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 48
+; CHECK-NEXT:    store i64 [[J]], ptr [[GEP26]], align 8
+; CHECK-NEXT:    [[GEP38:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 280
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP38]], align 8
 ; CHECK-NEXT:    ret i64 undef
 ;
 entry:
@@ -40,11 +40,11 @@ define i32 @test2(ptr %array, i32 %i, i32 %j) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[ARRAY:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 5
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 20
 ; CHECK-NEXT:    store i32 [[J:%.*]], ptr [[GEP2]], align 4
-; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 6
+; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 24
 ; CHECK-NEXT:    store i32 [[J]], ptr [[GEP54]], align 4
-; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 35
+; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 140
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP86]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
@@ -72,13 +72,13 @@ define i32 @test3(ptr %array, i32 %i) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[ARRAY:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 5
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 20
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[I]], 6
-; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 6
+; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 24
 ; CHECK-NEXT:    store i32 [[ADD3]], ptr [[GEP54]], align 4
 ; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[I]], 35
-; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 35
+; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 140
 ; CHECK-NEXT:    store i32 [[ADD6]], ptr [[GEP86]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
@@ -105,11 +105,11 @@ define i32 @test4(ptr %array2, i32 %i) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [50 x i32], ptr [[ARRAY2:%.*]], i64 [[TMP0]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 255
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 1020
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP3]], align 4
-; CHECK-NEXT:    [[GEP56:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 256
+; CHECK-NEXT:    [[GEP56:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 1024
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP56]], align 4
-; CHECK-NEXT:    [[GEP89:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 285
+; CHECK-NEXT:    [[GEP89:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 1140
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP89]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
@@ -136,10 +136,10 @@ define i32 @test5(ptr %array2, i32 %i, i64 %j) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [50 x i32], ptr [[ARRAY2:%.*]], i64 [[TMP0]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 255
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 1020
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP3]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [50 x i32], ptr [[ARRAY2]], i64 [[TMP0]], i64 [[J:%.*]]
-; CHECK-NEXT:    [[GEP55:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 300
+; CHECK-NEXT:    [[GEP55:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 1200
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP55]], align 4
 ; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[I]], 35
 ; CHECK-NEXT:    [[SEXT7:%.*]] = sext i32 [[ADD6]] to i64
@@ -169,11 +169,11 @@ define i64 @test6(ptr %array, i64 %i, i64 %j) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[I:%.*]], 5
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[ARRAY:%.*]], i64 [[J:%.*]]
-; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP]], align 4
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[ARRAY]], i64 [[I]]
-; CHECK-NEXT:    [[GEP52:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 6
-; CHECK-NEXT:    store i64 [[I]], ptr [[GEP52]], align 4
-; CHECK-NEXT:    store i64 [[I]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[GEP52:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 48
+; CHECK-NEXT:    store i64 [[I]], ptr [[GEP52]], align 8
+; CHECK-NEXT:    store i64 [[I]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    ret i64 undef
 ;
 entry:
@@ -196,15 +196,15 @@ define i32 @test7(ptr %array, i32 %i, i32 %j, i32 %k) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[ARRAY:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 5
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 20
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[K:%.*]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[ARRAY]], i64 [[TMP2]]
-; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 6
+; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 24
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP54]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[J:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[ARRAY]], i64 [[TMP4]]
-; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 35
+; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 140
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP86]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
@@ -231,13 +231,13 @@ define i32 @test8(ptr %array, ptr %array2, ptr %array3, i32 %i) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[ARRAY:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 5
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 20
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[ARRAY2:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 6
+; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 24
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP54]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[ARRAY3:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 35
+; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 140
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP86]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
@@ -264,12 +264,12 @@ define i32 @test9(ptr %array, i32 %i) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [50 x i32], ptr [[ARRAY:%.*]], i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 5
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 20
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [50 x i32], ptr [[ARRAY]], i64 [[TMP0]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 6
+; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 24
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP54]], align 4
-; CHECK-NEXT:    [[GEP87:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 335
+; CHECK-NEXT:    [[GEP87:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 1340
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP87]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;

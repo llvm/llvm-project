@@ -2,11 +2,11 @@
 
 --- |
 
-  define void @test(i32* %a) {
+  define void @test(ptr %a) {
   entry2:
-    %b = load i32, i32* %a
+    %b = load i32, ptr %a
     %c = add i32 %b, 1
-    store i32 %c, i32* %a
+    store i32 %c, ptr %a
     ret void
   }
 

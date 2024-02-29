@@ -29,7 +29,9 @@
 #include <semaphore.h>
 #endif // KMP_OS_LINUX
 #include <sys/resource.h>
+#if !KMP_OS_AIX
 #include <sys/syscall.h>
+#endif
 #include <sys/time.h>
 #include <sys/times.h>
 #include <unistd.h>
@@ -57,9 +59,14 @@
 #include <sys/sysctl.h>
 #include <sys/user.h>
 #include <pthread_np.h>
+#if KMP_OS_DRAGONFLY
+#include <kvm.h>
+#endif
 #elif KMP_OS_NETBSD || KMP_OS_OPENBSD
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#elif KMP_OS_SOLARIS
+#include <sys/loadavg.h>
 #endif
 
 #include <ctype.h>
@@ -69,6 +76,15 @@
 struct kmp_sys_timer {
   struct timespec start;
 };
+
+#ifndef TIMEVAL_TO_TIMESPEC
+// Convert timeval to timespec.
+#define TIMEVAL_TO_TIMESPEC(tv, ts)                                            \
+  do {                                                                         \
+    (ts)->tv_sec = (tv)->tv_sec;                                               \
+    (ts)->tv_nsec = (tv)->tv_usec * 1000;                                      \
+  } while (0)
+#endif
 
 // Convert timespec to nanoseconds.
 #define TS2NS(timespec)                                                        \
@@ -266,7 +282,7 @@ int __kmp_futex_determine_capable() {
 
 #endif // KMP_USE_FUTEX
 
-#if (KMP_ARCH_X86 || KMP_ARCH_X86_64) && (!KMP_ASM_INTRINS)
+#if (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_WASM) && (!KMP_ASM_INTRINS)
 /* Only 32-bit "add-exchange" instruction on IA-32 architecture causes us to
    use compare_and_store for these routines */
 
@@ -326,7 +342,7 @@ kmp_uint32 __kmp_test_then_and32(volatile kmp_uint32 *p, kmp_uint32 d) {
   return old_value;
 }
 
-#if KMP_ARCH_X86
+#if KMP_ARCH_X86 || KMP_ARCH_WASM
 kmp_int8 __kmp_test_then_add8(volatile kmp_int8 *p, kmp_int8 d) {
   kmp_int8 old_value, new_value;
 
@@ -409,7 +425,7 @@ void __kmp_terminate_thread(int gtid) {
 static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
   int stack_data;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_HURD
+    KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
   pthread_attr_t attr;
   int status;
   size_t size = 0;
@@ -448,7 +464,7 @@ static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
     return TRUE;
   }
 #endif /* KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD  \
-          || KMP_OS_HURD */
+          || KMP_OS_HURD || KMP_OS_SOLARIS */
   /* Use incremental refinement starting from initial conservative estimate */
   TCW_PTR(th->th.th_info.ds.ds_stacksize, 0);
   TCW_PTR(th->th.th_info.ds.ds_stackbase, &stack_data);
@@ -463,7 +479,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
   void *exit_val;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS
   void *volatile padding = 0;
 #endif
   int gtid;
@@ -512,7 +528,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS
   if (__kmp_stkoffset > 0 && gtid > 0) {
     padding = KMP_ALLOCA(gtid * __kmp_stkoffset);
     (void)padding;
@@ -974,7 +990,11 @@ retry:
 #endif // KMP_USE_MONITOR
 
 void __kmp_exit_thread(int exit_status) {
+#if KMP_OS_WASI
+// TODO: the wasm32-wasi-threads target does not yet support pthread_exit.
+#else
   pthread_exit((void *)(intptr_t)exit_status);
+#endif
 } // __kmp_exit_thread
 
 #if KMP_USE_MONITOR
@@ -1025,9 +1045,7 @@ extern "C" void __kmp_reap_monitor(kmp_info_t *th) {
 #else
 // Empty symbol to export (see exports_so.txt) when
 // monitor thread feature is disabled
-extern "C" void __kmp_reap_monitor(kmp_info_t *th) {
-  (void)th;
-}
+extern "C" void __kmp_reap_monitor(kmp_info_t *th) { (void)th; }
 #endif // KMP_USE_MONITOR
 
 void __kmp_reap_worker(kmp_info_t *th) {
@@ -1319,9 +1337,11 @@ static void __kmp_atfork_child(void) {
 
 void __kmp_register_atfork(void) {
   if (__kmp_need_register_atfork) {
+#if !KMP_OS_WASI
     int status = pthread_atfork(__kmp_atfork_prepare, __kmp_atfork_parent,
                                 __kmp_atfork_child);
     KMP_CHECK_SYSFAIL("pthread_atfork", status);
+#endif
     __kmp_need_register_atfork = FALSE;
   }
 }
@@ -1763,6 +1783,7 @@ int __kmp_read_system_info(struct kmp_sys_info *info) {
   status = getrusage(RUSAGE_SELF, &r_usage);
   KMP_CHECK_SYSFAIL_ERRNO("getrusage", status);
 
+#if !KMP_OS_WASI
   // The maximum resident set size utilized (in kilobytes)
   info->maxrss = r_usage.ru_maxrss;
   // The number of page faults serviced without any I/O
@@ -1779,6 +1800,7 @@ int __kmp_read_system_info(struct kmp_sys_info *info) {
   info->nvcsw = r_usage.ru_nvcsw;
   // The number of times a context switch was forced
   info->nivcsw = r_usage.ru_nivcsw;
+#endif
 
   return (status != 0);
 }
@@ -1813,7 +1835,7 @@ static int __kmp_get_xproc(void) {
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_CONF), &(r));
 
 #elif KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_OPENBSD || \
-    KMP_OS_HURD
+    KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
 
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_ONLN), &(r));
 
@@ -2112,7 +2134,47 @@ int __kmp_is_address_mapped(void *addr) {
     lw += cursz;
   }
   kmpc_free(buf);
+#elif KMP_OS_DRAGONFLY
+  char err[_POSIX2_LINE_MAX];
+  kinfo_proc *proc;
+  vmspace sp;
+  vm_map *cur;
+  vm_map_entry entry, *c;
+  struct proc p;
+  kvm_t *fd;
+  uintptr_t uaddr;
+  int num;
 
+  fd = kvm_openfiles(nullptr, nullptr, nullptr, O_RDONLY, err);
+  if (!fd) {
+    return 0;
+  }
+
+  proc = kvm_getprocs(fd, KERN_PROC_PID, getpid(), &num);
+
+  if (kvm_read(fd, static_cast<uintptr_t>(proc->kp_paddr), &p, sizeof(p)) !=
+          sizeof(p) ||
+      kvm_read(fd, reinterpret_cast<uintptr_t>(p.p_vmspace), &sp, sizeof(sp)) !=
+          sizeof(sp)) {
+    kvm_close(fd);
+    return 0;
+  }
+
+  (void)rc;
+  cur = &sp.vm_map;
+  uaddr = reinterpret_cast<uintptr_t>(addr);
+  for (c = kvm_vm_map_entry_first(fd, cur, &entry); c;
+       c = kvm_vm_map_entry_next(fd, c, &entry)) {
+    if ((uaddr >= entry.ba.start) && (uaddr <= entry.ba.end)) {
+      if ((entry.protection & VM_PROT_READ) != 0 &&
+          (entry.protection & VM_PROT_WRITE) != 0) {
+        found = 1;
+        break;
+      }
+    }
+  }
+
+  kvm_close(fd);
 #elif KMP_OS_DARWIN
 
   /* On OS X*, /proc pseudo filesystem is not available. Try to read memory
@@ -2189,9 +2251,11 @@ int __kmp_is_address_mapped(void *addr) {
     }
     kiv.kve_start += 1;
   }
-#elif KMP_OS_DRAGONFLY
+#elif KMP_OS_WASI
+  found = (int)addr < (__builtin_wasm_memory_size(0) * PAGESIZE);
+#elif KMP_OS_SOLARIS || KMP_OS_AIX
 
-  // FIXME(DragonFly): Implement this
+  // FIXME(Solaris, AIX): Implement this
   found = 1;
 
 #else
@@ -2206,7 +2270,8 @@ int __kmp_is_address_mapped(void *addr) {
 
 #ifdef USE_LOAD_BALANCE
 
-#if KMP_OS_DARWIN || KMP_OS_NETBSD
+#if KMP_OS_DARWIN || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||    \
+    KMP_OS_OPENBSD || KMP_OS_SOLARIS
 
 // The function returns the rounded value of the system load average
 // during given time interval which depends on the value of
@@ -2295,7 +2360,7 @@ int __kmp_get_load_balance(int max) {
   // Open "/proc/" directory.
   proc_dir = opendir("/proc");
   if (proc_dir == NULL) {
-    // Cannot open "/prroc/". Probably the kernel does not support it. Return an
+    // Cannot open "/proc/". Probably the kernel does not support it. Return an
     // error now and in subsequent calls.
     running_threads = -1;
     permanent_error = 1;
@@ -2308,9 +2373,14 @@ int __kmp_get_load_balance(int max) {
 
   proc_entry = readdir(proc_dir);
   while (proc_entry != NULL) {
+#if KMP_OS_AIX
+    // Proc entry name starts with a digit. Assume it is a  process' directory.
+    if (isdigit(proc_entry->d_name[0])) {
+#else
     // Proc entry is a directory and name starts with a digit. Assume it is a
     // process' directory.
     if (proc_entry->d_type == DT_DIR && isdigit(proc_entry->d_name[0])) {
+#endif
 
 #ifdef KMP_DEBUG
       ++total_processes;
@@ -2354,7 +2424,11 @@ int __kmp_get_load_balance(int max) {
         task_entry = readdir(task_dir);
         while (task_entry != NULL) {
           // It is a directory and name starts with a digit.
+#if KMP_OS_AIX
+          if (isdigit(task_entry->d_name[0])) {
+#else
           if (proc_entry->d_type == DT_DIR && isdigit(task_entry->d_name[0])) {
+#endif
 
             // Construct complete stat file path. Easiest way would be:
             //  __kmp_str_buf_print( & stat_path, "%s/%s/stat", task_path.str,
@@ -2464,7 +2538,7 @@ finish: // Clean up and exit.
 #if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC ||                            \
       ((KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64) ||                 \
       KMP_ARCH_PPC64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||            \
-      KMP_ARCH_ARM || KMP_ARCH_VE)
+      KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC_XCOFF)
 
 // we really only need the case with 1 argument, because CLANG always build
 // a struct of pointers to shared variables referenced in the outlined function

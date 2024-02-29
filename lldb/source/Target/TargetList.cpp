@@ -271,7 +271,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     arch = specified_arch;
 
   FileSpec file(user_exe_path);
-  if (!FileSystem::Instance().Exists(file) && user_exe_path.startswith("~")) {
+  if (!FileSystem::Instance().Exists(file) && user_exe_path.starts_with("~")) {
     // we want to expand the tilde but we don't want to resolve any symbolic
     // links so we can't use the FileSpec constructor's resolve flag
     llvm::SmallString<64> unglobbed_path;
@@ -532,9 +532,13 @@ void TargetList::SetSelectedTarget(uint32_t index) {
 }
 
 void TargetList::SetSelectedTarget(const TargetSP &target_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = llvm::find(m_target_list, target_sp);
-  SetSelectedTargetInternal(std::distance(m_target_list.begin(), it));
+  // Don't allow an invalid target shared pointer or a target that has been
+  // destroyed to become the selected target.
+  if (target_sp && target_sp->IsValid()) {
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+    auto it = llvm::find(m_target_list, target_sp);
+    SetSelectedTargetInternal(std::distance(m_target_list.begin(), it));
+  }
 }
 
 lldb::TargetSP TargetList::GetSelectedTarget() {

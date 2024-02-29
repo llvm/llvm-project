@@ -164,7 +164,7 @@ define void @convert(ptr %dst.addr, <2 x i64> %src) {
 define <2 x i65> @foo(<2 x i64> %t) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[A_MASK:%.*]] = and <2 x i64> [[T:%.*]], <i64 4294967295, i64 4294967295>
-; CHECK-NEXT:    [[B:%.*]] = zext <2 x i64> [[A_MASK]] to <2 x i65>
+; CHECK-NEXT:    [[B:%.*]] = zext nneg <2 x i64> [[A_MASK]] to <2 x i65>
 ; CHECK-NEXT:    ret <2 x i65> [[B]]
 ;
   %a = trunc <2 x i64> %t to <2 x i32>
@@ -294,7 +294,7 @@ define <8 x i32> @pr24458(<8 x float> %n) {
 define <3 x i16> @trunc_inselt_undef(i32 %x) {
 ; CHECK-LABEL: @trunc_inselt_undef(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <3 x i16> undef, i16 [[TMP1]], i64 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <3 x i16> <i16 undef, i16 poison, i16 undef>, i16 [[TMP1]], i64 1
 ; CHECK-NEXT:    ret <3 x i16> [[TRUNC]]
 ;
   %vec = insertelement <3 x i32> undef, i32 %x, i32 1

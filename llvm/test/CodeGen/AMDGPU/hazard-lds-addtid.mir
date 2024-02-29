@@ -1,6 +1,6 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,GFX9
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN
-# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,GFX9
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN
 ---
 
 # GCN-LABEL: name: addtid

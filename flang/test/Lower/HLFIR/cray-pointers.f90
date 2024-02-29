@@ -125,7 +125,6 @@ end subroutine test5
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest5Ecp"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 9 : index
-! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<9x!fir.type<_QFtest5Tt{r:f32,i:i32}>> {bindc_name = "v", uniq_name = "_QFtest5Ev"}
 ! CHECK:           %[[VAL_8:.*]] = fir.shape_shift %[[VAL_5]], %[[VAL_6]] : (index, index) -> !fir.shapeshift<1>
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest5Ev"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>)
 ! CHECK:           %[[VAL_14:.*]] = fir.zero_bits !fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>
@@ -193,3 +192,141 @@ end subroutine test6
 ! CHECK:           %[[VAL_63:.*]] = arith.constant 5 : index
 ! CHECK:           %[[VAL_64:.*]] = hlfir.designate %[[VAL_62]] (%[[VAL_63]])  : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> !fir.ref<f32>
 ! CHECK:           %[[VAL_65:.*]] = fir.load %[[VAL_64]] : !fir.ref<f32>
+
+subroutine test7()
+  integer :: pte, arr(5)
+  pointer(ptr, pte(5))
+  arr = pte
+end subroutine test7
+! CHECK-LABEL:     func.func @_QPtest7(
+! CHECK:    %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
+! CHECK:    %[[VAL_2:.*]] = arith.constant 5 : index
+! CHECK:    %[[VAL_3:.*]] = fir.alloca !fir.array<5xi32> {bindc_name = "arr", uniq_name = "_QFtest7Earr"}
+! CHECK:    %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+! CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_4]]) {uniq_name = "_QFtest7Earr"} : (!fir.ref<!fir.array<5xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<5xi32>>, !fir.ref<!fir.array<5xi32>>)
+! CHECK:    %[[VAL_6:.*]] = arith.constant 5 : index
+! CHECK:    %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
+! CHECK:    %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest7Epte"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK:    %[[VAL_10:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
+! CHECK:    %[[VAL_11:.*]] = fir.embox %[[VAL_10]](%[[VAL_8]]) : (!fir.ptr<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
+! CHECK:    fir.store %[[VAL_11]] to %[[VAL_9]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:    %[[VAL_12:.*]] = fir.alloca i64 {bindc_name = "ptr", uniq_name = "_QFtest7Eptr"}
+! CHECK:    %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFtest7Eptr"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:    %[[VAL_14:.*]] = fir.convert %[[VAL_13]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
+! CHECK:    %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ref<!fir.ptr<i64>>
+! CHECK:    %[[VAL_16:.*]] = fir.convert %[[VAL_9]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:    %[[VAL_17:.*]] = fir.convert %[[VAL_15]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
+! CHECK:    %[[VAL_18:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_16]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:    %[[VAL_19:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+
+subroutine test8()
+  integer :: pte
+  pointer(ptr, pte(5))
+  call sub(pte)
+end subroutine test8
+! CHECK-LABEL:     func.func @_QPtest8(
+! CHECK:    %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
+! CHECK:    %[[VAL_2:.*]] = arith.constant 5 : index
+! CHECK:    %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+! CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest8Epte"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK:    %[[VAL_6:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
+! CHECK:    %[[VAL_7:.*]] = fir.embox %[[VAL_6]](%[[VAL_4]]) : (!fir.ptr<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
+! CHECK:    fir.store %[[VAL_7]] to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:    %[[VAL_8:.*]] = fir.alloca i64 {bindc_name = "ptr", uniq_name = "_QFtest8Eptr"}
+! CHECK:    %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFtest8Eptr"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:    %[[VAL_10:.*]] = fir.convert %[[VAL_9]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
+! CHECK:    %[[VAL_11:.*]] = fir.load %[[VAL_10]] : !fir.ref<!fir.ptr<i64>>
+! CHECK:    %[[VAL_12:.*]] = fir.convert %[[VAL_5]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:    %[[VAL_13:.*]] = fir.convert %[[VAL_11]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
+! CHECK:    %[[VAL_14:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_12]], %[[VAL_13]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:    %[[VAL_15:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:    %[[VAL_16:.*]] = fir.box_addr %[[VAL_15]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
+! CHECK:    %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.ptr<!fir.array<?xi32>>) -> !fir.ref<!fir.array<5xi32>>
+! CHECK:    fir.call @_QPsub(%[[VAL_17]]) fastmath<contract> : (!fir.ref<!fir.array<5xi32>>) -> ()
+
+subroutine test9()
+  integer :: pte
+  pointer(ptr, pte(5))
+  interface
+    subroutine sub(x)
+    integer, value :: x(5)
+    end
+  end interface
+  call sub(pte)
+end subroutine test9
+! CHECK-LABEL:     func.func @_QPtest9(
+! CHECK:    %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
+! CHECK:    %[[VAL_2:.*]] = arith.constant 5 : index
+! CHECK:    %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+! CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest9Epte"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK:    %[[VAL_6:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
+! CHECK:    %[[VAL_7:.*]] = fir.embox %[[VAL_6]](%[[VAL_4]]) : (!fir.ptr<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
+! CHECK:    fir.store %[[VAL_7]] to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:    %[[VAL_8:.*]] = fir.alloca i64 {bindc_name = "ptr", uniq_name = "_QFtest9Eptr"}
+! CHECK:    %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFtest9Eptr"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:    %[[VAL_10:.*]] = fir.convert %[[VAL_9]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
+! CHECK:    %[[VAL_11:.*]] = fir.load %[[VAL_10]] : !fir.ref<!fir.ptr<i64>>
+! CHECK:    %[[VAL_12:.*]] = fir.convert %[[VAL_5]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:    %[[VAL_13:.*]] = fir.convert %[[VAL_11]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
+! CHECK:    %[[VAL_14:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_12]], %[[VAL_13]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:    %[[VAL_15:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:    %[[VAL_16:.*]] = hlfir.as_expr %[[VAL_15]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !hlfir.expr<?xi32>
+! CHECK:    %[[VAL_17:.*]] = arith.constant 0 : index
+! CHECK:    %[[VAL_18:.*]]:3 = fir.box_dims %[[VAL_15]], %[[VAL_17]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK:    %[[VAL_19:.*]] = fir.shape %[[VAL_18]]#1 : (index) -> !fir.shape<1>
+! CHECK:    %[[VAL_20:.*]]:3 = hlfir.associate %[[VAL_16]](%[[VAL_19]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
+! CHECK:    %[[VAL_21:.*]] = fir.convert %[[VAL_20]]#1 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<5xi32>>
+! CHECK:    fir.call @_QPsub(%[[VAL_21]]) fastmath<contract> : (!fir.ref<!fir.array<5xi32>>) -> ()
+! CHECK:    hlfir.end_associate %[[VAL_20]]#1, %[[VAL_20]]#2 : !fir.ref<!fir.array<?xi32>>, i1
+
+
+subroutine test10()
+  integer :: pte
+  pointer(ptr, pte)
+  call sub1(pte)
+end subroutine test10
+! CHECK-LABEL:  func.func @_QPtest10(
+! CHECK:    %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
+! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest10Epte"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+! CHECK:    %[[VAL_4:.*]] = fir.zero_bits !fir.ptr<i32>
+! CHECK:    %[[VAL_5:.*]] = fir.embox %[[VAL_4]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
+! CHECK:    fir.store %[[VAL_5]] to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:    %[[VAL_6:.*]] = fir.alloca i64 {bindc_name = "ptr", uniq_name = "_QFtest10Eptr"}
+! CHECK:    %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFtest10Eptr"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:    %[[VAL_8:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
+! CHECK:    %[[VAL_9:.*]] = fir.load %[[VAL_8]] : !fir.ref<!fir.ptr<i64>>
+! CHECK:    %[[VAL_10:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:    %[[VAL_11:.*]] = fir.convert %[[VAL_9]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
+! CHECK:    %[[VAL_12:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_10]], %[[VAL_11]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:    %[[VAL_13:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:    %[[VAL_14:.*]] = fir.box_addr %[[VAL_13]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+! CHECK:    %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (!fir.ptr<i32>) -> !fir.ref<i32>
+! CHECK:    fir.call @_QPsub1(%[[VAL_15]]) fastmath<contract> : (!fir.ref<i32>) -> ()
+
+subroutine test11()
+  integer :: pte
+  pointer(ptr, pte)
+  interface
+    subroutine sub2(x)
+    integer, value :: x
+    end
+  end interface
+  call sub2(pte)
+end subroutine test11
+! CHECK-LABEL:  func.func @_QPtest11(
+! CHECK:    %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
+! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest11Epte"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+! CHECK:    %[[VAL_4:.*]] = fir.zero_bits !fir.ptr<i32>
+! CHECK:    %[[VAL_5:.*]] = fir.embox %[[VAL_4]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
+! CHECK:    fir.store %[[VAL_5]] to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:    %[[VAL_6:.*]] = fir.alloca i64 {bindc_name = "ptr", uniq_name = "_QFtest11Eptr"}
+! CHECK:    %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFtest11Eptr"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:    %[[VAL_8:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
+! CHECK:    %[[VAL_9:.*]] = fir.load %[[VAL_8]] : !fir.ref<!fir.ptr<i64>>
+! CHECK:    %[[VAL_10:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:    %[[VAL_11:.*]] = fir.convert %[[VAL_9]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
+! CHECK:    %[[VAL_12:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_10]], %[[VAL_11]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:    %[[VAL_13:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:    %[[VAL_14:.*]] = fir.box_addr %[[VAL_13]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+! CHECK:    %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ptr<i32>
+! CHECK:    fir.call @_QPsub2(%[[VAL_15]]) fastmath<contract> : (i32) -> ()

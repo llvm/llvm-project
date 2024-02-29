@@ -282,7 +282,7 @@ bool isStandardFunction(const FunctionDecl *FD) {
 /// and every other statement that is declared in file ExprCXX.h.
 bool isCXXOnlyStmt(const Stmt *S) {
   StringRef Name = S->getStmtClassName();
-  if (Name.startswith("CXX"))
+  if (Name.starts_with("CXX"))
     return true;
   // Check for all other class names in ExprCXX.h that have no 'CXX' prefix.
   return isa<ArrayTypeTraitExpr, BuiltinBitCastExpr, CUDAKernelCallExpr,

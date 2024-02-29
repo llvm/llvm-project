@@ -52,9 +52,9 @@ cl::opt<RetpolineInsertion::AvailabilityOptions> R11Availability(
     cl::values(clEnumValN(RetpolineInsertion::AvailabilityOptions::NEVER,
                           "never", "r11 not available"),
                clEnumValN(RetpolineInsertion::AvailabilityOptions::ALWAYS,
-                          "always", "r11 avaialable before calls and jumps"),
+                          "always", "r11 available before calls and jumps"),
                clEnumValN(RetpolineInsertion::AvailabilityOptions::ABI, "abi",
-                          "r11 avaialable before calls but not before jumps")),
+                          "r11 available before calls but not before jumps")),
     cl::ZeroOrMore, cl::cat(BoltCategory));
 
 } // namespace opts
@@ -271,9 +271,9 @@ IndirectBranchInfo::IndirectBranchInfo(MCInst &Inst, MCPlusBuilder &MIB) {
   }
 }
 
-void RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
+Error RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
   if (!opts::InsertRetpolines)
-    return;
+    return Error::success();
 
   assert(BC.isX86() &&
          "retpoline insertion not supported for target architecture");
@@ -327,10 +327,11 @@ void RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
       }
     }
   }
-  outs() << "BOLT-INFO: The number of created retpoline functions is : "
-         << CreatedRetpolines.size()
-         << "\nBOLT-INFO: The number of retpolined branches is : "
-         << RetpolinedBranches << "\n";
+  BC.outs() << "BOLT-INFO: The number of created retpoline functions is : "
+            << CreatedRetpolines.size()
+            << "\nBOLT-INFO: The number of retpolined branches is : "
+            << RetpolinedBranches << "\n";
+  return Error::success();
 }
 
 } // namespace bolt

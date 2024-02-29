@@ -127,6 +127,9 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
     return getRegisterTypeForCallingConv(Context, CC,
                                          VT.changeVectorElementType(MVT::f16));
 
+  if (VT == MVT::bf16)
+    return MVT::f16;
+
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
 
@@ -281,7 +284,7 @@ EVT X86TargetLowering::getOptimalMemOpType(
     if (Op.size() >= 16 &&
         (!Subtarget.isUnalignedMem16Slow() || Op.isAligned(Align(16)))) {
       // FIXME: Check if unaligned 64-byte accesses are slow.
-      if (Op.size() >= 64 && Subtarget.hasAVX512() &&
+      if (Op.size() >= 64 && Subtarget.hasAVX512() && Subtarget.hasEVEX512() &&
           (Subtarget.getPreferVectorWidth() >= 512)) {
         return Subtarget.hasBWI() ? MVT::v64i8 : MVT::v16i32;
       }
@@ -395,7 +398,7 @@ bool X86TargetLowering::allowsMemoryAccess(LLVMContext &Context,
         return true;
       return false;
     case 512:
-      if (Subtarget.hasAVX512())
+      if (Subtarget.hasAVX512() && Subtarget.hasEVEX512())
         return true;
       return false;
     default:
@@ -419,40 +422,6 @@ unsigned X86TargetLowering::getJumpTableEncoding() const {
 
   // Otherwise, use the normal jump table encoding heuristics.
   return TargetLowering::getJumpTableEncoding();
-}
-
-bool X86TargetLowering::splitValueIntoRegisterParts(
-    SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
-    unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC) const {
-  bool IsABIRegCopy = CC.has_value();
-  EVT ValueVT = Val.getValueType();
-  if (IsABIRegCopy && ValueVT == MVT::bf16 && PartVT == MVT::f32) {
-    unsigned ValueBits = ValueVT.getSizeInBits();
-    unsigned PartBits = PartVT.getSizeInBits();
-    Val = DAG.getNode(ISD::BITCAST, DL, MVT::getIntegerVT(ValueBits), Val);
-    Val = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::getIntegerVT(PartBits), Val);
-    Val = DAG.getNode(ISD::BITCAST, DL, PartVT, Val);
-    Parts[0] = Val;
-    return true;
-  }
-  return false;
-}
-
-SDValue X86TargetLowering::joinRegisterPartsIntoValue(
-    SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts, unsigned NumParts,
-    MVT PartVT, EVT ValueVT, std::optional<CallingConv::ID> CC) const {
-  bool IsABIRegCopy = CC.has_value();
-  if (IsABIRegCopy && ValueVT == MVT::bf16 && PartVT == MVT::f32) {
-    unsigned ValueBits = ValueVT.getSizeInBits();
-    unsigned PartBits = PartVT.getSizeInBits();
-    SDValue Val = Parts[0];
-
-    Val = DAG.getNode(ISD::BITCAST, DL, MVT::getIntegerVT(PartBits), Val);
-    Val = DAG.getNode(ISD::TRUNCATE, DL, MVT::getIntegerVT(ValueBits), Val);
-    Val = DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
-    return Val;
-  }
-  return SDValue();
 }
 
 bool X86TargetLowering::useSoftFloat() const {
@@ -622,12 +591,12 @@ void X86TargetLowering::insertSSPDeclarations(Module &M) const {
       Subtarget.getTargetTriple().isWindowsItaniumEnvironment()) {
     // MSVC CRT has a global variable holding security cookie.
     M.getOrInsertGlobal("__security_cookie",
-                        Type::getInt8PtrTy(M.getContext()));
+                        PointerType::getUnqual(M.getContext()));
 
     // MSVC CRT has a function to validate security cookie.
     FunctionCallee SecurityCheckCookie = M.getOrInsertFunction(
         "__security_check_cookie", Type::getVoidTy(M.getContext()),
-        Type::getInt8PtrTy(M.getContext()));
+        PointerType::getUnqual(M.getContext()));
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::X86_FastCall);
       F->addParamAttr(0, Attribute::AttrKind::InReg);
@@ -1288,6 +1257,7 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   case CallingConv::C:
   case CallingConv::Win64:
   case CallingConv::X86_64_SysV:
+  case CallingConv::PreserveNone:
   // Callee pop conventions:
   case CallingConv::X86_ThisCall:
   case CallingConv::X86_StdCall:
@@ -1844,14 +1814,17 @@ SDValue X86TargetLowering::LowerFormalArguments(
   for (unsigned I = 0, E = Ins.size(); I != E; ++I) {
     if (Ins[I].Flags.isSwiftAsync()) {
       auto X86FI = MF.getInfo<X86MachineFunctionInfo>();
-      if (Subtarget.is64Bit())
+      if (X86::isExtendedSwiftAsyncFrameSupported(Subtarget, MF))
         X86FI->setHasSwiftAsyncContext(true);
       else {
-        int FI = MF.getFrameInfo().CreateStackObject(4, Align(4), false);
+        int PtrSize = Subtarget.is64Bit() ? 8 : 4;
+        int FI =
+            MF.getFrameInfo().CreateStackObject(PtrSize, Align(PtrSize), false);
         X86FI->setSwiftAsyncContextFrameIdx(FI);
-        SDValue St = DAG.getStore(DAG.getEntryNode(), dl, InVals[I],
-                                  DAG.getFrameIndex(FI, MVT::i32),
-                                  MachinePointerInfo::getFixedStack(MF, FI));
+        SDValue St = DAG.getStore(
+            DAG.getEntryNode(), dl, InVals[I],
+            DAG.getFrameIndex(FI, PtrSize == 8 ? MVT::i64 : MVT::i32),
+            MachinePointerInfo::getFixedStack(MF, FI));
         Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, St, Chain);
       }
     }
@@ -1933,6 +1906,16 @@ SDValue X86TargetLowering::LowerFormalArguments(
     for (std::pair<Register, Register> Pair : MRI.liveins())
       MRI.disableCalleeSavedRegister(Pair.first);
   }
+
+  if (CallingConv::PreserveNone == CallConv)
+    for (unsigned I = 0, E = Ins.size(); I != E; ++I) {
+      if (Ins[I].Flags.isSwiftSelf() || Ins[I].Flags.isSwiftAsync() ||
+          Ins[I].Flags.isSwiftError()) {
+        errorUnsupported(DAG, dl,
+                         "Swift attributes can't be used with preserve_none");
+        break;
+      }
+    }
 
   return Chain;
 }
@@ -2584,6 +2567,16 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                InGlue, dl);
     InGlue = Chain.getValue(1);
   }
+
+  if (CallingConv::PreserveNone == CallConv)
+    for (unsigned I = 0, E = Outs.size(); I != E; ++I) {
+      if (Outs[I].Flags.isSwiftSelf() || Outs[I].Flags.isSwiftAsync() ||
+          Outs[I].Flags.isSwiftError()) {
+        errorUnsupported(DAG, dl,
+                         "Swift attributes can't be used with preserve_none");
+        break;
+      }
+    }
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.

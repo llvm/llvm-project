@@ -48,12 +48,6 @@ def PoisonOp : UB_Op<"poison", [ConstantLike, Pure]> {
     semantics (e.g. partially poisoned vectors), default value indicates results
     is fully poisoned.
 
-    Syntax:
-
-    ```
-    poison-op ::= `poison` (`<` value `>`)? `:` type
-    ```
-
     Examples:
 
     ```

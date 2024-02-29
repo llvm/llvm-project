@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/MPInt.h"
-#include "llvm/Support/MathExtras.h"
+#include "mlir/Analysis/Presburger/SlowMPInt.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace presburger;

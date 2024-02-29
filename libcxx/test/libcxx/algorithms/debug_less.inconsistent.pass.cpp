@@ -12,8 +12,8 @@
 
 // Make sure __debug_less asserts when the comparator is not consistent.
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
+// REQUIRES: has-unix-headers, libcpp-hardening-mode=debug
+// UNSUPPORTED: c++03
 
 #include <algorithm>
 #include <iterator>

@@ -17,8 +17,8 @@
 
 #include "LlvmState.h"
 #include "RegisterValue.h"
+#include "ValidationEvent.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -71,12 +71,19 @@ struct BenchmarkKey {
   // An opaque configuration, that can be used to separate several benchmarks of
   // the same instruction under different configurations.
   std::string Config;
+  // The address that the snippet should be loaded in at if the execution mode
+  // being used supports it.
+  intptr_t SnippetAddress = 0;
+  // The register that should be used to hold the loop counter.
+  unsigned LoopRegister;
 };
 
 struct BenchmarkMeasure {
   // A helper to create an unscaled BenchmarkMeasure.
-  static BenchmarkMeasure Create(std::string Key, double Value) {
-    return {Key, Value, Value};
+  static BenchmarkMeasure
+  Create(std::string Key, double Value,
+         std::map<ValidationEvent, int64_t> ValCounters) {
+    return {Key, Value, Value, Value, ValCounters};
   }
   std::string Key;
   // This is the per-instruction value, i.e. measured quantity scaled per
@@ -85,6 +92,10 @@ struct BenchmarkMeasure {
   // This is the per-snippet value, i.e. measured quantity for one repetition of
   // the whole snippet.
   double PerSnippetValue;
+  // This is the raw value collected from the full execution.
+  double RawValue;
+  // These are the validation counter values.
+  std::map<ValidationEvent, int64_t> ValidationCounters;
 };
 
 // The result of an instruction benchmark.
@@ -98,8 +109,14 @@ struct Benchmark {
   const MCInst &keyInstruction() const { return Key.Instructions[0]; }
   // The number of instructions inside the repeated snippet. For example, if a
   // snippet of 3 instructions is repeated 4 times, this is 12.
-  unsigned NumRepetitions = 0;
-  enum RepetitionModeE { Duplicate, Loop, AggregateMin };
+  unsigned MinInstructions = 0;
+  enum RepetitionModeE {
+    Duplicate,
+    Loop,
+    AggregateMin,
+    MiddleHalfDuplicate,
+    MiddleHalfLoop
+  };
   // Note that measurements are per instruction.
   std::vector<BenchmarkMeasure> Measurements;
   std::string Error;

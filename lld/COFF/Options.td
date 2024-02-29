@@ -56,6 +56,9 @@ def filealign : P<"filealign", "Section alignment in the output file">;
 def functionpadmin : F<"functionpadmin">;
 def functionpadmin_opt : P<"functionpadmin",
     "Prepares an image for hotpatching">;
+def dependentloadflag : F<"dependentloadflag">;
+def dependentloadflag_opt : P<"dependentloadflag",
+    "Sets the default load flags used to resolve the statically linked imports of a module">;
 def guard   : P<"guard", "Control flow guard">;
 def heap    : P<"heap", "Size of the heap">;
 def ignore : P<"ignore", "Specify warning codes to ignore">;
@@ -298,6 +301,11 @@ def : Flag<["--"], "time-trace">, Alias<time_trace_eq>,
 
 def time_trace_granularity_eq: Joined<["--"], "time-trace-granularity=">,
     HelpText<"Minimum time granularity (in microseconds) traced by time profiler">;
+
+defm build_id: B<
+     "build-id", 
+     "Generate build ID (always on when generating PDB)",
+     "Do not Generate build ID">;
 
 // Flags for debugging
 def lldmap : F<"lldmap">;

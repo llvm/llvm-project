@@ -1,0 +1,40 @@
+# RUN: not --crash llc -o - -mtriple=aarch64 -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name: test_fcmp
+legalized: true
+regBankSelected: false
+selected: false
+tracksRegLiveness: true
+liveins:
+body: |
+  bb.0:
+    liveins: $x0, $w0, $q0
+    %s32:_(s32) = COPY $w0
+    %ptr:_(p0) = COPY $x0
+
+    G_PREFETCH %ptr
+    ; CHECK: *** Bad machine code: Too few operands ***
+    ; CHECK: 4 operands expected, but 1 given.
+
+    G_PREFETCH %ptr, 0, 0, 0, 0
+    ; CHECK: *** Bad machine code: Extra explicit operand on non-variadic instruction ***
+    ; CHECK: operand 4:
+
+    G_PREFETCH %s32, 0, 0, 0
+    ; CHECK: *** Bad machine code: addr operand must be a pointer ***
+    ; CHECK: operand 0:
+
+    G_PREFETCH %ptr, 10, 0, 0
+    ; CHECK: *** Bad machine code: rw operand must be an immediate 0-1 ***
+    ; CHECK: operand 1:
+
+    G_PREFETCH %ptr, 0, 10, 0
+    ; CHECK: *** Bad machine code: locality operand must be an immediate 0-3 ***
+    ; CHECK: operand 2:
+
+    G_PREFETCH %ptr, 0, 0, 10
+    ; CHECK: *** Bad machine code: cache type operand must be an immediate 0-1 ***
+    ; CHECK: operand 3:
+...

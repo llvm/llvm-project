@@ -1,7 +1,6 @@
 #ifndef LLVM_PROFILEDATA_MEMPROF_H_
 #define LLVM_PROFILEDATA_MEMPROF_H_
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/GlobalValue.h"
@@ -539,6 +538,11 @@ public:
                 offset_type /*Unused*/) {
     assert(Schema != nullptr && "MemProf schema is not initialized!");
     V.serialize(*Schema, Out);
+    // Clear the IndexedMemProfRecord which results in clearing/freeing its
+    // vectors of allocs and callsites. This is owned by the associated on-disk
+    // hash table, but unused after this point. See also the comment added to
+    // the client which constructs the on-disk hash table for this trait.
+    V.clear();
   }
 };
 

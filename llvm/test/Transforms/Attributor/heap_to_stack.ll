@@ -503,6 +503,7 @@ define i32 @malloc_in_loop(i32 %arg) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[I1:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[I11:%.*]] = alloca i8, i32 0, align 8
 ; CHECK-NEXT:    store i32 [[ARG]], ptr [[I]], align 4
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:

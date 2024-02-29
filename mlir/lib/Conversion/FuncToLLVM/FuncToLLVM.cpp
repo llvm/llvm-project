@@ -135,7 +135,7 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   propagateArgResAttrs(rewriter, !!resultStructType, funcOp, wrapperFuncOp);
 
   OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPointToStart(wrapperFuncOp.addEntryBlock());
+  rewriter.setInsertionPointToStart(wrapperFuncOp.addEntryBlock(rewriter));
 
   SmallVector<Value, 8> args;
   size_t argOffset = resultStructType ? 1 : 0;
@@ -203,7 +203,7 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
 
   // The wrapper that we synthetize here should only be visible in this module.
   newFuncOp.setLinkage(LLVM::Linkage::Private);
-  builder.setInsertionPointToStart(newFuncOp.addEntryBlock());
+  builder.setInsertionPointToStart(newFuncOp.addEntryBlock(builder));
 
   // Get a ValueRange containing arguments.
   FunctionType type = cast<FunctionType>(funcOp.getFunctionType());
@@ -241,7 +241,7 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
                     builder, loc, typeConverter, unrankedMemRefType,
                     wrapperArgsRange.take_front(numToDrop));
 
-      auto ptrTy = typeConverter.getPointerType(packed.getType());
+      auto ptrTy = LLVM::LLVMPointerType::get(builder.getContext());
       Value one = builder.create<LLVM::ConstantOp>(
           loc, typeConverter.convertType(builder.getIndexType()),
           builder.getIntegerAttr(builder.getIndexType(), 1));
@@ -790,7 +790,6 @@ struct ConvertFuncToLLVMPass
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
     options.dataLayout = llvm::DataLayout(dataLayout);
-    options.useOpaquePointers = useOpaquePointers;
 
     LLVMTypeConverter typeConverter(&getContext(), options,
                                     &dataLayoutAnalysis);
@@ -805,7 +804,8 @@ struct ConvertFuncToLLVMPass
     RewritePatternSet patterns(&getContext());
     populateFuncToLLVMConversionPatterns(typeConverter, patterns, symbolTable);
 
-    // TODO: Remove these in favor of their dedicated conversion passes.
+    // TODO(https://github.com/llvm/llvm-project/issues/70982): Remove these in
+    // favor of their dedicated conversion passes.
     arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
     cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
 

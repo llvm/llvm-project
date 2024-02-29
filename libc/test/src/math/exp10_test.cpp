@@ -79,7 +79,7 @@ TEST_F(LlvmLibcExp10Test, TrickyInputs) {
       0x4037000000000000, // x = 23
   };
   for (int i = 0; i < N; ++i) {
-    double x = double(FPBits(INPUTS[i]));
+    double x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
                                    LIBC_NAMESPACE::exp10(x), 0.5);
   }
@@ -106,7 +106,7 @@ TEST_F(LlvmLibcExp10Test, InDoubleRange) {
       double x = FPBits(v).get_val();
       if (isnan(x) || isinf(x) || x < 0.0)
         continue;
-      libc_errno = 0;
+      LIBC_NAMESPACE::libc_errno = 0;
       double result = LIBC_NAMESPACE::exp10(x);
       ++cc;
       if (isnan(result) || isinf(result))

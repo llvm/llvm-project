@@ -164,6 +164,13 @@ func.func @fext(%a: vector<5xi8>) {
   return
 }
 
+func.func @fcst_maskedload(%A: memref<?xi4>, %passthru: vector<6xi4>) -> vector<6xi4> {
+  %c0 = arith.constant 0: index
+  %mask = vector.constant_mask [3] : vector<6xi1>
+  %1 = vector.maskedload %A[%c0], %mask, %passthru :
+    memref<?xi4>, vector<6xi1>, vector<6xi4> into vector<6xi4>
+  return %1 : vector<6xi4>
+}
 
 func.func @entry() {
   %v = arith.constant dense<[
@@ -186,6 +193,21 @@ func.func @entry() {
     0xef, 0xee, 0xed, 0xec, 0xeb
   ]> : vector<5xi8>
   func.call @fext(%v4) : (vector<5xi8>) -> ()
+
+  // Set up memory.
+  %c0 = arith.constant 0: index
+  %c1 = arith.constant 1: index
+  %c6 = arith.constant 6: index
+  %A = memref.alloc(%c6) : memref<?xi4>
+  scf.for %i = %c0 to %c6 step %c1 {
+    %i4 = arith.index_cast %i : index to i4
+    memref.store %i4, %A[%i] : memref<?xi4>
+  }
+  %passthru = arith.constant dense<[7, 8, 9, 10, 11, 12]> : vector<6xi4>
+  %load = call @fcst_maskedload(%A, %passthru) : (memref<?xi4>, vector<6xi4>) -> (vector<6xi4>)
+  vector.print %load : vector<6xi4>
+  // CHECK: ( 0, 1, 2, -6, -5, -4 )
+  memref.dealloc %A : memref<?xi4>
 
   return
 }

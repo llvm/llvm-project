@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-optimize-exec-masking -o -  %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-optimize-exec-masking -o -  %s | FileCheck %s
 
 --- |
   define amdgpu_kernel void @optimize_if_and_saveexec_xor(i32 %z, i32 %v) {

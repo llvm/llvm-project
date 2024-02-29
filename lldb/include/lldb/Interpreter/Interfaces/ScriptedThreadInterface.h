@@ -23,10 +23,7 @@ public:
   virtual llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
                      StructuredData::DictionarySP args_sp,
-                     StructuredData::Generic *script_obj = nullptr) {
-    llvm_unreachable(
-        "Cannot create an instance of the ScriptedThreadInterface!");
-  }
+                     StructuredData::Generic *script_obj = nullptr) = 0;
 
   virtual lldb::tid_t GetThreadID() { return LLDB_INVALID_THREAD_ID; }
 

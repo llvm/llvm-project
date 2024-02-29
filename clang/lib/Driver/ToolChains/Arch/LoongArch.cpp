@@ -175,6 +175,38 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     A->ignoreTargetSpecific();
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_mfpu_EQ))
     A->ignoreTargetSpecific();
+
+  // Select lsx feature determined by -m[no-]lsx.
+  if (const Arg *A = Args.getLastArg(options::OPT_mlsx, options::OPT_mno_lsx)) {
+    // LSX depends on 64-bit FPU.
+    // -m*-float and -mfpu=none/0/32 conflict with -mlsx.
+    if (A->getOption().matches(options::OPT_mlsx)) {
+      if (llvm::find(Features, "-d") != Features.end())
+        D.Diag(diag::err_drv_loongarch_wrong_fpu_width_for_lsx);
+      else /*-mlsx*/
+        Features.push_back("+lsx");
+    } else /*-mno-lsx*/ {
+      Features.push_back("-lsx");
+    }
+  }
+
+  // Select lasx feature determined by -m[no-]lasx.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mlasx, options::OPT_mno_lasx)) {
+    // LASX depends on 64-bit FPU and LSX.
+    // -mno-lsx conflicts with -mlasx.
+    if (A->getOption().matches(options::OPT_mlasx)) {
+      if (llvm::find(Features, "-d") != Features.end())
+        D.Diag(diag::err_drv_loongarch_wrong_fpu_width_for_lasx);
+      else if (llvm::find(Features, "-lsx") != Features.end())
+        D.Diag(diag::err_drv_loongarch_invalid_simd_option_combination);
+      else { /*-mlasx*/
+        Features.push_back("+lsx");
+        Features.push_back("+lasx");
+      }
+    } else /*-mno-lasx*/
+      Features.push_back("-lasx");
+  }
 }
 
 std::string loongarch::postProcessTargetCPUString(const std::string &CPU,

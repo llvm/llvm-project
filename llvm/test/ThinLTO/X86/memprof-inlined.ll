@@ -170,7 +170,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[FOO2]] to Caller: [[MAIN2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 2
 
 ; DUMP: Node [[MAIN1]]
-; DUMP: 	Callee: 2229562716906371625 (_Z3foov) Clones: 0 StackIds: 2	(clone 0)
+; DUMP: 	Callee: 644169328058379925 (_Z3foov) Clones: 0 StackIds: 2	(clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1 3
 ; DUMP: 	CalleeEdges:
@@ -179,7 +179,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN2]]
-; DUMP: 	Callee: 2229562716906371625 (_Z3foov) Clones: 0 StackIds: 3	(clone 0)
+; DUMP: 	Callee: 644169328058379925 (_Z3foov) Clones: 0 StackIds: 3	(clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2 4
 ; DUMP: 	CalleeEdges:
@@ -201,7 +201,7 @@ attributes #0 = { noinline optnone }
 ;; This is the node synthesized for the call to bar in foo that was created
 ;; by inlining baz into foo.
 ; DUMP: Node [[FOO]]
-; DUMP: 	Callee: 16064618363798697104 (_Z3barv) Clones: 0 StackIds: 0, 1	(clone 0)
+; DUMP: 	Callee: 10349908617508457487 (_Z3barv) Clones: 0 StackIds: 0, 1	(clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 3 4
 ; DUMP: 	CalleeEdges:
@@ -234,7 +234,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[FOO2]] to Caller: [[MAIN2]] AllocTypes: Cold ContextIds: 2
 
 ; DUMP: Node [[MAIN1]]
-; DUMP:         Callee: 2229562716906371625 (_Z3foov) Clones: 0 StackIds: 2     (clone 0)
+; DUMP:         Callee: 644169328058379925 (_Z3foov) Clones: 0 StackIds: 2     (clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1 3
 ; DUMP: 	CalleeEdges:
@@ -243,7 +243,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN2]]
-; DUMP:         Callee: 2229562716906371625 (_Z3foov) Clones: 0 StackIds: 3     (clone 0)
+; DUMP:         Callee: 644169328058379925 (_Z3foov) Clones: 0 StackIds: 3     (clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2 4
 ; DUMP: 	CalleeEdges:
@@ -264,7 +264,7 @@ attributes #0 = { noinline optnone }
 ; DUMP:         Clones: [[BAR2:0x[a-z0-9]+]]
 
 ; DUMP: Node [[FOO]]
-; DUMP:         Callee: 16064618363798697104 (_Z3barv) Clones: 0 StackIds: 0, 1 (clone 0)
+; DUMP:         Callee: 10349908617508457487 (_Z3barv) Clones: 0 StackIds: 0, 1 (clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 3
 ; DUMP: 	CalleeEdges:
@@ -274,7 +274,7 @@ attributes #0 = { noinline optnone }
 ; DUMP:         Clones: [[FOO3]]
 
 ; DUMP: Node [[FOO3]]
-; DUMP:         Callee: 16064618363798697104 (_Z3barv) Clones: 0 StackIds: 0, 1 (clone 0)
+; DUMP:         Callee: 10349908617508457487 (_Z3barv) Clones: 0 StackIds: 0, 1 (clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 4
 ; DUMP: 	CalleeEdges:

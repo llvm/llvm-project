@@ -37,8 +37,7 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
                        "dwim-print [<variable-name> | <expression>]",
                        eCommandProcessMustBePaused | eCommandTryTargetAPILock) {
 
-  CommandArgumentData var_name_arg(eArgTypeVarName, eArgRepeatPlain);
-  m_arguments.push_back({var_name_arg});
+  AddSimpleArgumentList(eArgTypeVarName);
 
   m_option_group.Append(&m_format_options,
                         OptionGroupFormat::OPTION_GROUP_FORMAT |
@@ -52,13 +51,7 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
 
 Options *CommandObjectDWIMPrint::GetOptions() { return &m_option_group; }
 
-void CommandObjectDWIMPrint::HandleArgumentCompletion(
-    CompletionRequest &request, OptionElementVector &opt_element_vector) {
-  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-      GetCommandInterpreter(), lldb::eVariablePathCompletion, request, nullptr);
-}
-
-bool CommandObjectDWIMPrint::DoExecute(StringRef command,
+void CommandObjectDWIMPrint::DoExecute(StringRef command,
                                        CommandReturnObject &result) {
   m_option_group.NotifyOptionParsingStarting(&m_exe_ctx);
   OptionsWithRaw args{command};
@@ -67,13 +60,13 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
   if (expr.empty()) {
     result.AppendErrorWithFormatv("'{0}' takes a variable or expression",
                                   m_cmd_name);
-    return false;
+    return;
   }
 
   if (args.HasArgs()) {
     if (!ParseOptionsAndNotify(args.GetArgs(), result, m_option_group,
                                m_exe_ctx))
-      return false;
+      return;
   }
 
   // If the user has not specified, default to disabling persistent results.
@@ -164,7 +157,7 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
         valobj_sp->Dump(result.GetOutputStream(), dump_options);
       }
       result.SetStatus(eReturnStatusSuccessFinishResult);
-      return true;
+      return;
     }
   }
 
@@ -216,14 +209,12 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
         }
 
       result.SetStatus(eReturnStatusSuccessFinishResult);
-      return true;
     } else {
       if (valobj_sp)
         result.SetError(valobj_sp->GetError());
       else
         result.AppendErrorWithFormatv(
             "unknown error evaluating expression `{0}`", expr);
-      return false;
     }
   }
 }

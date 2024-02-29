@@ -60,7 +60,7 @@
 // CHECK:         ^bb3(%[[VAL_17:.*]]: !fir.class<!fir.ptr<none>>):
 // CHECK:           %[[VAL_18:.*]] = fir.rebox %[[VAL_17]] : (!fir.class<!fir.ptr<none>>) -> !fir.class<none>
 // CHECK:           fir.call @_QPfoo(%[[VAL_18]]) fastmath<contract> : (!fir.class<none>) -> ()
-// CHECK:           %[[VAL_19:.*]] = fir.address_of(@_QQcl.6661696C2074797065) : !fir.ref<!fir.char<1,9>>
+// CHECK:           %[[VAL_19:.*]] = fir.address_of(@_QQclX6661696C2074797065) : !fir.ref<!fir.char<1,9>>
 // CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<!fir.char<1,9>>) -> !fir.ref<i8>
 // CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_2]] : (index) -> i64
 // CHECK:           %[[VAL_22:.*]] = fir.call @_FortranAStopStatementText(%[[VAL_20]], %[[VAL_21]], %[[VAL_1]], %[[VAL_1]]) fastmath<contract> : (!fir.ref<i8>, i64, i1, i1) -> none
@@ -93,7 +93,7 @@ func.func @_QPtest() {
 ^bb2(%7: !fir.class<!fir.ptr<none>>):  // 2 preds: ^bb0, ^bb1
   %8 = fir.rebox %7 : (!fir.class<!fir.ptr<none>>) -> !fir.class<none>
   fir.call @_QPfoo(%8) fastmath<contract> : (!fir.class<none>) -> ()
-  %9 = fir.address_of(@_QQcl.6661696C2074797065) : !fir.ref<!fir.char<1,9>>
+  %9 = fir.address_of(@_QQclX6661696C2074797065) : !fir.ref<!fir.char<1,9>>
   %10 = fir.convert %9 : (!fir.ref<!fir.char<1,9>>) -> !fir.ref<i8>
   %11 = fir.convert %c9 : (index) -> i64
   %12 = fir.call @_FortranAStopStatementText(%10, %11, %false, %false) fastmath<contract> : (!fir.ref<i8>, i64, i1, i1) -> none
