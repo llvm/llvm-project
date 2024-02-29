@@ -9,10 +9,13 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_SHIFT_LEFT_H
 #define _LIBCPP___ALGORITHM_RANGES_SHIFT_LEFT_H
 
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/shift_left.h>
 #include <__config>
 #include <__iterator/concepts.h>
+#include <__iterator/incrementable_traits.h>
 #include <__iterator/permutable.h>
+#include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/subrange.h>
 #include <__utility/move.h>
