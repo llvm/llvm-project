@@ -239,12 +239,14 @@ class HipBinBase {
   bool canRunCompiler(string exeName, string& cmdOut);
   HipBinCommand gethipconfigCmd(string argument);
   const string& getrocm_pathOption() const;
+  const string& gethip_pathOption() const;
 
  protected:
   // hipBinUtilPtr used by derived platforms
   // so therefore its protected
   HipBinUtil* hipBinUtilPtr_;
   string rocm_pathOption_ = "";
+  string hip_pathOption_ = "";
   void readOSInfo();
   void readEnvVariables();
   void constructHipPath();
@@ -320,11 +322,16 @@ void HipBinBase::readEnvVariables() {
 
 // constructs the HIP path
 void HipBinBase::constructHipPath() {
-  fs::path full_path(hipBinUtilPtr_->getSelfPath());
-  if (envVariables_.hipPathEnv_.empty())
+  // we need to use --hip-path option
+  string hip_path_name = gethip_pathOption();
+  if (!hip_path_name.empty()) {
+    variables_.hipPathEnv_ = hip_path_name;
+  } else if (envVariables_.hipPathEnv_.empty()) {
+    fs::path full_path(hipBinUtilPtr_->getSelfPath());
     variables_.hipPathEnv_ = (full_path.parent_path()).string();
-  else
+  } else {
     variables_.hipPathEnv_ = envVariables_.hipPathEnv_;
+  }
 }
 
 
@@ -524,6 +531,10 @@ HipBinCommand HipBinBase::gethipconfigCmd(string argument) {
 
 const  string& HipBinBase::getrocm_pathOption() const {
   return rocm_pathOption_;
+}
+
+const  string& HipBinBase::gethip_pathOption() const {
+  return hip_pathOption_;
 }
 
 #endif  // SRC_HIPBIN_BASE_H_

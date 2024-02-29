@@ -555,6 +555,10 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
     const string& rocmPathOption = "--rocm-path=";
     if (arg.compare(0,rocmPathOption.length(),rocmPathOption) == 0)
     	rocm_pathOption_ = arg.substr(rocmPathOption.length());
+    // Process --hip-path option
+    const string& hipPathOption = "--hip-path=";
+    if (arg.compare(0,hipPathOption.length(),hipPathOption) == 0)
+    	hip_pathOption_ = arg.substr(hipPathOption.length());
 
     // Check target selection option: --offload-arch= and --amdgpu-target=...
     for (unsigned int i = 0; i <targetOpts.size(); i++) {

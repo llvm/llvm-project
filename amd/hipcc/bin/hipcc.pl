@@ -229,11 +229,12 @@ if($HIP_PLATFORM eq "nvidia"){
     if($ARGV[0] eq "--genco"){
         foreach $isaarg (@ARGV[1..$#ARGV]){
             $ISACMD .= " ";
-            # ignore --rocm-path=xxxx on nvcc nvidia platform
-            if ($isaarg !~ /--rocm-path/) {
-              $ISACMD .= $isaarg;
+            # use the headers from rocm-path or hip-path
+            if (($isaarg =~ /--rocm-path/) or ($isaarg =~ /--hip-path/)) {
+              my @header_path = split('=', $isaarg);
+              $ISACMD .= '-I' . $header_path[1] .'/include';
             } else {
-              print "Ignoring --rocm-path= on nvidia nvcc platform.\n";
+              $ISACMD .= $isaarg;
             }
         }
         if ($verbose & 0x1) {
