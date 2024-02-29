@@ -2231,6 +2231,37 @@ public:
   }
 };
 
+class CIRInlineAsmOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::InlineAsmOp> {
+
+  using mlir::OpConversionPattern<mlir::cir::InlineAsmOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::InlineAsmOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+
+    mlir::Type llResTy;
+    if (op.getNumResults())
+      llResTy = getTypeConverter()->convertType(op.getType(0));
+
+    auto dialect = op.getAsmFlavor();
+    auto llDialect = dialect == mlir::cir::AsmFlavor::x86_att
+                         ? mlir::LLVM::AsmDialect::AD_ATT
+                         : mlir::LLVM::AsmDialect::AD_Intel;
+
+    std::vector<mlir::Attribute> opAttrs;
+
+    rewriter.replaceOpWithNewOp<mlir::LLVM::InlineAsmOp>(
+        op, llResTy, adaptor.getOperands(), op.getAsmStringAttr(),
+        op.getConstraintsAttr(), op.getSideEffectsAttr(),
+        /*is_align_stack*/ mlir::UnitAttr(),
+        mlir::LLVM::AsmDialectAttr::get(getContext(), llDialect),
+        rewriter.getArrayAttr(opAttrs));
+
+    return mlir::success();
+  }
+};
+
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
@@ -2246,8 +2277,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering,
       CIRFAbsOpLowering, CIRVTableAddrPointOpLowering, CIRVectorCreateLowering,
       CIRVectorInsertLowering, CIRVectorExtractLowering, CIRVectorCmpOpLowering,
-      CIRStackSaveLowering, CIRStackRestoreLowering, CIRUnreachableLowering>(
-      converter, patterns.getContext());
+      CIRStackSaveLowering, CIRStackRestoreLowering, CIRUnreachableLowering,
+      CIRInlineAsmOpLowering>(converter, patterns.getContext());
 }
 
 namespace {
