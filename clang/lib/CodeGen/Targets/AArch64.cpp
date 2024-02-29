@@ -132,8 +132,7 @@ public:
     assert(Error.empty());
 
     auto *Fn = cast<llvm::Function>(GV);
-    static const char *SignReturnAddrStr[] = {"none", "non-leaf", "all"};
-    Fn->addFnAttr("sign-return-address", SignReturnAddrStr[static_cast<int>(BPI.SignReturnAddr)]);
+    Fn->addFnAttr("sign-return-address", BPI.getSignReturnAddrStr());
 
     if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
       Fn->addFnAttr("sign-return-address-key",

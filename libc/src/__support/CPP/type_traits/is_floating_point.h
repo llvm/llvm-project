@@ -11,7 +11,7 @@
 #include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/CPP/type_traits/remove_cv.h"
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/properties/float.h"
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE::cpp {
 
