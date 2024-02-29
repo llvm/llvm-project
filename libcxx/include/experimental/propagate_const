@@ -107,7 +107,6 @@
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__functional/operations.h>
 #include <__fwd/hash.h>
 #include <__type_traits/conditional.h>

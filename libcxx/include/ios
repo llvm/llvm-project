@@ -217,7 +217,6 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 #  error "The iostreams library is not supported since libc++ has been configured without support for localization."
 #endif
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__fwd/ios.h>
 #include <__ios/fpos.h>
 #include <__locale>

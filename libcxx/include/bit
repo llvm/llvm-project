@@ -61,7 +61,6 @@ namespace std {
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__bit/bit_cast.h>
 #include <__bit/bit_ceil.h>
 #include <__bit/bit_floor.h>

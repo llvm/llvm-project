@@ -106,7 +106,6 @@ using wosyncstream = basic_osyncstream<wchar_t>;  // C++20
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__fwd/fstream.h>
 #include <__fwd/ios.h>

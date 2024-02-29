@@ -533,7 +533,6 @@ inline constexpr bool std::ranges::enable_view<std::filesystem::recursive_direct
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__filesystem/copy_options.h>
 #include <__filesystem/directory_entry.h>

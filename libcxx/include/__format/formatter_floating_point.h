@@ -16,6 +16,7 @@
 #include <__algorithm/min.h>
 #include <__algorithm/rotate.h>
 #include <__algorithm/transform.h>
+#include <__assert>
 #include <__charconv/chars_format.h>
 #include <__charconv/to_chars_floating_point.h>
 #include <__charconv/to_chars_result.h>

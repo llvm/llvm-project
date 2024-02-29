@@ -13,6 +13,7 @@
 #include <__atomic/contention_t.h>
 #include <__atomic/cxx_atomic_impl.h>
 #include <__atomic/memory_order.h>
+#include <__availability>
 #include <__chrono/duration.h>
 #include <__config>
 #include <__thread/support.h>

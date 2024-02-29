@@ -171,7 +171,6 @@ void vprint_nonunicode(ostream& os, string_view fmt, format_args args);         
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
 #include <__exception/operations.h>
