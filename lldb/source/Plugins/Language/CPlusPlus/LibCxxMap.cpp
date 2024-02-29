@@ -177,7 +177,7 @@ public:
 
   ~LibcxxStdMapSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -209,7 +209,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     Update();
 }
 
-size_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
+uint32_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     CalculateNumChildren() {
   if (m_count != UINT32_MAX)
     return m_count;

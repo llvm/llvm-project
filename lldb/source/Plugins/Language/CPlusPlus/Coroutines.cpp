@@ -104,7 +104,7 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
 lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
     ~StdlibCoroutineHandleSyntheticFrontEnd() = default;
 
-size_t lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
+uint32_t lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
     CalculateNumChildren() {
   if (!m_resume_ptr_sp || !m_destroy_ptr_sp)
     return 0;

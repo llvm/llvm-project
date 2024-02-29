@@ -74,7 +74,7 @@ public:
 
   ~BlockPointerSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override {
+  uint32_t CalculateNumChildren() override {
     const bool omit_empty_base_classes = false;
     return m_block_struct_type.GetNumChildren(omit_empty_base_classes, nullptr);
   }

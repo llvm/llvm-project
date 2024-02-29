@@ -40,7 +40,7 @@ public:
 
   ~NSIndexPathSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override { return m_impl.GetNumIndexes(); }
+  uint32_t CalculateNumChildren() override { return m_impl.GetNumIndexes(); }
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
     return m_impl.GetIndexAtIndex(idx, m_uint_star_type);

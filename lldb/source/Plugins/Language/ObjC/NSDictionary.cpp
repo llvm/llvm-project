@@ -103,7 +103,7 @@ public:
 
   ~NSDictionaryISyntheticFrontEnd() override;
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -144,7 +144,7 @@ class NSConstantDictionarySyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   NSConstantDictionarySyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -176,7 +176,7 @@ class NSCFDictionarySyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   NSCFDictionarySyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -209,7 +209,7 @@ public:
 
   ~NSDictionary1SyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -230,7 +230,7 @@ public:
 
   ~GenericNSDictionaryMSyntheticFrontEnd() override;
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -263,7 +263,7 @@ namespace Foundation1100 {
     
     ~NSDictionaryMSyntheticFrontEnd() override;
     
-    size_t CalculateNumChildren() override;
+    uint32_t CalculateNumChildren() override;
     
     lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -606,7 +606,7 @@ size_t lldb_private::formatters::NSDictionaryISyntheticFrontEnd::
   return idx;
 }
 
-size_t lldb_private::formatters::NSDictionaryISyntheticFrontEnd::
+uint32_t lldb_private::formatters::NSDictionaryISyntheticFrontEnd::
     CalculateNumChildren() {
   if (!m_data_32 && !m_data_64)
     return 0;
@@ -744,7 +744,7 @@ size_t lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::
   return idx;
 }
 
-size_t lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::
+uint32_t lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::
     CalculateNumChildren() {
   if (!m_hashtable.IsValid())
     return 0;
@@ -880,7 +880,7 @@ size_t lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
   return idx;
 }
 
-size_t lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
+uint32_t lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
     CalculateNumChildren() {
   return m_size;
 }
@@ -994,7 +994,7 @@ size_t lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
   return name == g_zero ? 0 : UINT32_MAX;
 }
 
-size_t lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
+uint32_t lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
     CalculateNumChildren() {
   return 1;
 }
@@ -1087,7 +1087,7 @@ size_t lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<
 }
 
 template <typename D32, typename D64>
-size_t
+uint32_t
 lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<D32,D64>::CalculateNumChildren() {
   if (!m_data_32 && !m_data_64)
     return 0;
@@ -1250,7 +1250,7 @@ lldb_private::formatters::Foundation1100::
   return idx;
 }
 
-size_t
+uint32_t
 lldb_private::formatters::Foundation1100::
   NSDictionaryMSyntheticFrontEnd::CalculateNumChildren() {
   if (!m_data_32 && !m_data_64)

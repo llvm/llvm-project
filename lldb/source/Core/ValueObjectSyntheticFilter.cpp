@@ -31,7 +31,7 @@ public:
   DummySyntheticFrontEnd(ValueObject &backend)
       : SyntheticChildrenFrontEnd(backend) {}
 
-  size_t CalculateNumChildren() override { return m_backend.GetNumChildren(); }
+  uint32_t CalculateNumChildren() override { return m_backend.GetNumChildren(); }
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
     return m_backend.GetChildAtIndex(idx);

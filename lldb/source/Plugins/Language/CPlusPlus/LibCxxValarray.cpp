@@ -24,7 +24,7 @@ public:
 
   ~LibcxxStdValarraySyntheticFrontEnd() override;
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -63,7 +63,7 @@ lldb_private::formatters::LibcxxStdValarraySyntheticFrontEnd::
   // delete m_finish;
 }
 
-size_t lldb_private::formatters::LibcxxStdValarraySyntheticFrontEnd::
+uint32_t lldb_private::formatters::LibcxxStdValarraySyntheticFrontEnd::
     CalculateNumChildren() {
   if (!m_start || !m_finish)
     return 0;
