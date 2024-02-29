@@ -1414,40 +1414,39 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              the frame. This is an internal detail of how LDS variables are lowered,
                                              language front ends should not set this attribute.
 
-    "amdgpu-gds-size"                        Bytes expected to be allocated at the start of GDS memory at entry.
+     "amdgpu-gds-size"                       Bytes expected to be allocated at the start of GDS memory at entry.
 
-    "amdgpu-git-ptr-high"                    The hard-wired high half of the address of the global information table
+     "amdgpu-git-ptr-high"                   The hard-wired high half of the address of the global information table
                                              for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
                                              current hardware only allows a 16 bit value.
 
-    "amdgpu-32bit-address-high-bits"         Assumed high 32-bits for
-                                             32-bit address spaces which are really truncated
+     "amdgpu-32bit-address-high-bits"        Assumed high 32-bits for 32-bit address spaces which are really truncated
                                              64-bit addresses (i.e., addrspace(6))
 
-    "amdgpu-color-export"                    Indicates shader exports color information if set to 1.
+     "amdgpu-color-export"                   Indicates shader exports color information if set to 1.
                                              Defaults to 1 for :ref:`amdgpu_ps <amdgpu_ps>`, and 0 for other calling
                                              conventions. Determines the necessity and type of null exports when a shader
                                              terminates early by killing lanes.
 
-    "amdgpu-depth-export"                    Indicates shader exports depth information if set to 1. Determines the
+     "amdgpu-depth-export"                   Indicates shader exports depth information if set to 1. Determines the
                                              necessity and type of null exports when a shader terminates early by killing
                                              lanes. A depth-only shader will export to depth channel when no null export
                                              target is available (GFX11+).
 
-    "InitialPSInputAddr"                     Set the initial value of the `spi_ps_input_addr` register for
+     "InitialPSInputAddr"                    Set the initial value of the `spi_ps_input_addr` register for
                                              :ref:`amdgpu_ps <amdgpu_ps>` shaders. Any bits enabled by this value will
                                              be enabled in the final register value.
 
-    "amdgpu-wave-priority-threshold"         VALU instruction count threshold for adjusting wave priority. If exceeded,
+     "amdgpu-wave-priority-threshold"        VALU instruction count threshold for adjusting wave priority. If exceeded,
                                              temporarily raise the wave priority at the start of the shader function
                                              until its last VMEM instructions to allow younger waves to issue their VMEM
                                              instructions as well.
 
-    "amdgpu-memory-bound".                   Set internally by backend
+     "amdgpu-memory-bound"                   Set internally by backend
 
-    "amdgpu-wave-limiter"                    Set internally by backend
+     "amdgpu-wave-limiter"                   Set internally by backend
 
-    "amdgpu-unroll-threshold"                Set base cost threshold preference for loop unrolling within this function,
+     "amdgpu-unroll-threshold"               Set base cost threshold preference for loop unrolling within this function,
                                              default is 300. Actual threshold may be varied by per-loop metadata or
                                              reduced by heuristics.
 
