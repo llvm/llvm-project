@@ -48,6 +48,11 @@ void RISCVTargetStreamer::setTargetABI(RISCVABI::ABI ABI) {
   TargetABI = ABI;
 }
 
+void RISCVTargetStreamer::setFlagsFromFeatures(const MCSubtargetInfo &STI) {
+  HasRVC = STI.hasFeature(RISCV::FeatureStdExtC);
+  HasTSO = STI.hasFeature(RISCV::FeatureStdExtZtso);
+}
+
 void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
                                                bool EmitStackAlign) {
   if (EmitStackAlign) {
