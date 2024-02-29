@@ -1389,8 +1389,9 @@ inline APFloat neg(APFloat X) {
   return X;
 }
 
-/// Implements IEEE minNum semantics. Returns the smaller of the 2 arguments if
-/// both are not NaN. If either argument is a NaN, returns the other argument.
+/// Implements IEEE-754 2019 minimumNumber semantics. Returns the smaller of the
+/// 2 arguments if both are not NaN. If either argument is a NaN, returns the
+/// other argument. -0 is treated as ordered
 LLVM_READONLY
 inline APFloat minnum(const APFloat &A, const APFloat &B) {
   if (A.isNaN())
@@ -1402,8 +1403,9 @@ inline APFloat minnum(const APFloat &A, const APFloat &B) {
   return B < A ? B : A;
 }
 
-/// Implements IEEE maxNum semantics. Returns the larger of the 2 arguments if
-/// both are not NaN. If either argument is a NaN, returns the other argument.
+/// Implements IEEE-754 2019 maximumNumber semantics. Returns the larger of the
+/// 2 arguments if both are not NaN. If either argument is a NaN, returns the
+/// other argument.
 LLVM_READONLY
 inline APFloat maxnum(const APFloat &A, const APFloat &B) {
   if (A.isNaN())
