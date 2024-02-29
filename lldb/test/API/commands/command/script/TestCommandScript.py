@@ -230,5 +230,3 @@ class CmdPythonTestCase(TestBase):
         interp.HandleCommand("my_cmd", result)
         self.assertCommandReturn(result, "Running the command succeeds")
         self.assertIn("My Command Result", result.GetOutput(), "Command was correct")
-        
-                        
