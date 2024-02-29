@@ -1,0 +1,35 @@
+#+title: 缺陷路径生成工具
+#+date: <2024-02-29 Thu 14:22>
+#+author: thebesttv
+
+使用方法：
+#+begin_src bash
+  # 使用 ninja 编译 LLVM 和工具
+  ./build-release.sh
+  cd build-release/ninja
+  # 运行工具
+  cd ../graph-generation/
+  ./tool npe/input.json
+  # 输出位于 input.json 所在目录
+#+end_src
+
+** 代码实现
+
+*** CFG 生成
+
+为了确保函数调用成为 CFGBlock 的最后一跳语句，
+修改了 [[clang/lib/Analysis/CFG.cpp]]，
+见 22308f8d25fc9bd183461b362c1971c806134394。
+
+*** ICFG 生成
+
+=clang/tools/thebesttv/ICFG.cpp= 的 =ICFG::addFunction()= 函数
+将 CFG 中 CFGBlock 的连边信息加入 ICFG 中。
+
+为了减少内存占用，ICFG 中的每个节点只会记录对应函数和 Block ID，
+不保存更细粒度的语句信息。
+
+为了确保生成路径中，函数的进入和返回能够匹配，ICFG中共有三种边：
+- =INTRA_PROC=: 过程内 CFGBlock 的连边
+- =CALL_EDGE=: 调用边，从调用点所在的 block 指向被调用函数的 entry
+- =RETURN_EDGE=: 返回边，从被调用函数的 exit 指向调用点的后继 block
