@@ -143,7 +143,8 @@ community for violating the code of conduct. The goal of a ban is to protect
 community members from having to interact with people who are consistently not
 respecting the code of conduct. Please refer to the
 :doc:`Developer Policy<DeveloperPolicy>` section on Bans for how to handle
-interactions with former community members.
+interactions with former community members. If you need further guidance,
+please contact conduct@llvm.org.
 
 Code of Conduct Committee
 =========================
