@@ -618,10 +618,10 @@ public:
     rewriter.create<vector::PrintOp>(loc, nse);
     // Use the "codegen" foreach loop construct to iterate over
     // all typical sparse tensor components for printing.
-    foreachFieldAndTypeInSparseTensor(stt, [&rewriter, &loc,
-                                            &tensor](Type tp, FieldIndex,
-                                                     SparseTensorFieldKind kind,
-                                                     Level l, LevelType) {
+    foreachFieldAndTypeInSparseTensor(stt, [&rewriter, &loc, &tensor,
+                                            &stt](Type, FieldIndex,
+                                                  SparseTensorFieldKind kind,
+                                                  Level l, LevelType) {
       switch (kind) {
       case SparseTensorFieldKind::StorageSpec: {
         break;
@@ -632,8 +632,8 @@ public:
         rewriter.create<vector::PrintOp>(
             loc, lvl, vector::PrintPunctuation::NoPunctuation);
         rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("] : "));
-        auto pos = rewriter.create<ToPositionsOp>(loc, tp, tensor, l);
-        printContents(rewriter, loc, tp, pos);
+        auto pos = rewriter.create<ToPositionsOp>(loc, tensor, l);
+        printContents(rewriter, loc, pos);
         break;
       }
       case SparseTensorFieldKind::CrdMemRef: {
@@ -642,15 +642,20 @@ public:
         rewriter.create<vector::PrintOp>(
             loc, lvl, vector::PrintPunctuation::NoPunctuation);
         rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("] : "));
-        auto crd = rewriter.create<ToCoordinatesOp>(loc, tp, tensor, l);
-        printContents(rewriter, loc, tp, crd);
+        Value crd = nullptr;
+        // TODO: eliminates ToCoordinateBufferOp!
+        if (stt.getAoSCOOStart() == l)
+          crd = rewriter.create<ToCoordinatesBufferOp>(loc, tensor);
+        else
+          crd = rewriter.create<ToCoordinatesOp>(loc, tensor, l);
+        printContents(rewriter, loc, crd);
         break;
       }
       case SparseTensorFieldKind::ValMemRef: {
         rewriter.create<vector::PrintOp>(loc,
                                          rewriter.getStringAttr("values : "));
-        auto val = rewriter.create<ToValuesOp>(loc, tp, tensor);
-        printContents(rewriter, loc, tp, val);
+        auto val = rewriter.create<ToValuesOp>(loc, tensor);
+        printContents(rewriter, loc, val);
         break;
       }
       }
@@ -670,7 +675,7 @@ private:
   //
   // Generates code to print:
   //    ( a0, a1, ... )
-  static void printContents(PatternRewriter &rewriter, Location loc, Type tp,
+  static void printContents(PatternRewriter &rewriter, Location loc,
                             Value vec) {
     // Open bracket.
     rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Open);
