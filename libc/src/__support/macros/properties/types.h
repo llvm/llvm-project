@@ -54,8 +54,7 @@ using float16 = _Float16;
 #if defined(LIBC_COMPILER_HAS_C23_FLOAT128) ||                                 \
     defined(LIBC_COMPILER_HAS_FLOAT128_EXTENSION) ||                           \
     defined(LIBC_LONG_DOUBLE_IS_FLOAT128)
-// TODO: Replace with LIBC_HAS_FLOAT128
-#define LIBC_COMPILER_HAS_FLOAT128
+#define LIBC_TYPES_HAS_FLOAT128
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
