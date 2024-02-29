@@ -54,7 +54,7 @@ KnownBits KnownBits::computeForAddCarry(
       LHS, RHS, Carry.Zero.getBoolValue(), Carry.One.getBoolValue());
 }
 
-KnownBits KnownBits::computeForAddSub(bool Add, bool NSW,
+KnownBits KnownBits::computeForAddSub(bool Add, bool NSW, bool /*NUW*/,
                                       const KnownBits &LHS, KnownBits RHS) {
   KnownBits KnownOut;
   if (Add) {
@@ -180,11 +180,14 @@ KnownBits KnownBits::absdiff(const KnownBits &LHS, const KnownBits &RHS) {
   // absdiff(LHS,RHS) = sub(umax(LHS,RHS), umin(LHS,RHS)).
   KnownBits UMaxValue = umax(LHS, RHS);
   KnownBits UMinValue = umin(LHS, RHS);
-  KnownBits MinMaxDiff = computeForAddSub(false, false, UMaxValue, UMinValue);
+  KnownBits MinMaxDiff = computeForAddSub(/*Add=*/false, /*NSW=*/false,
+                                          /*NUW=*/true, UMaxValue, UMinValue);
 
   // find the common bits between sub(LHS,RHS) and sub(RHS,LHS).
-  KnownBits Diff0 = computeForAddSub(false, false, LHS, RHS);
-  KnownBits Diff1 = computeForAddSub(false, false, RHS, LHS);
+  KnownBits Diff0 =
+      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, LHS, RHS);
+  KnownBits Diff1 =
+      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, RHS, LHS);
   KnownBits SubDiff = Diff0.intersectWith(Diff1);
 
   KnownBits KnownAbsDiff = MinMaxDiff.unionWith(SubDiff);
@@ -459,7 +462,7 @@ KnownBits KnownBits::abs(bool IntMinIsPoison) const {
       Tmp.One.setBit(countMinTrailingZeros());
 
     KnownAbs = computeForAddSub(
-        /*Add*/ false, IntMinIsPoison,
+        /*Add*/ false, IntMinIsPoison, /*NUW=*/false,
         KnownBits::makeConstant(APInt(getBitWidth(), 0)), Tmp);
 
     // One more special case for IntMinIsPoison. If we don't know any ones other
@@ -505,7 +508,8 @@ static KnownBits computeForSatAddSub(bool Add, bool Signed,
   assert(!LHS.hasConflict() && !RHS.hasConflict() && "Bad inputs");
   // We don't see NSW even for sadd/ssub as we want to check if the result has
   // signed overflow.
-  KnownBits Res = KnownBits::computeForAddSub(Add, /*NSW*/ false, LHS, RHS);
+  KnownBits Res =
+      KnownBits::computeForAddSub(Add, /*NSW=*/false, /*NUW=*/false, LHS, RHS);
   unsigned BitWidth = Res.getBitWidth();
   auto SignBitKnown = [&](const KnownBits &K) {
     return K.Zero[BitWidth - 1] || K.One[BitWidth - 1];
