@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! RUN: %flang_fc1 -fopenmp -fdebug-dump-parse-tree %s | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -fdebug-unparse %s | FileCheck %s --check-prefix="UNPARSE"
 ! Ensures associated declarative OMP allocations are nested in their

@@ -13,6 +13,8 @@ from lit.llvm import llvm_config
 from lit.llvm.subst import ToolSubst
 from lit.llvm.subst import FindTool
 
+print(f'LIK MK: config.have_openmp_rtl={config.have_openmp_rtl}')
+
 # Configuration file for the 'lit' test runner.
 
 # name: The name of this test suite.
@@ -199,3 +201,7 @@ else:
 result = lit_config.params.get("LIBPGMATH")
 if result:
     config.environment["LIBPGMATH"] = True
+
+# Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
+if config.have_openmp_rtl:
+    config.available_features.add("openmp_runtime")

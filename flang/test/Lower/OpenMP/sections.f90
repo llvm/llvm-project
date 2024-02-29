@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! This test checks the lowering of OpenMP sections construct with several clauses present
 
 ! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenmp %s -o - | FileCheck %s
