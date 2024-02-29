@@ -658,10 +658,10 @@ inline constexpr CpuInfo CpuInfos[] = {
           AArch64::AEK_SSBS}))},
     {"neoverse-n2", ARMV9A,
      (AArch64::ExtensionBitset(
-         {AArch64::AEK_BF16, AArch64::AEK_DOTPROD,
-          AArch64::AEK_FP16, AArch64::AEK_I8MM, AArch64::AEK_MTE,
+         {AArch64::AEK_BF16, AArch64::AEK_DOTPROD, AArch64::AEK_FP16,
+          AArch64::AEK_FP16FML, AArch64::AEK_I8MM, AArch64::AEK_MTE,
           AArch64::AEK_SB, AArch64::AEK_SSBS, AArch64::AEK_SVE,
-          AArch64::AEK_SVE2, AArch64::AEK_FP16FML, AArch64::AEK_SVE2BITPERM}))},
+          AArch64::AEK_SVE2, AArch64::AEK_SVE2BITPERM}))},
     {"neoverse-512tvb", ARMV8_4A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
