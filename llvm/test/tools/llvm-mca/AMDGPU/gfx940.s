@@ -5,6 +5,15 @@
 # CHECK: Total Cycles:      562
 # CHECK: Total uOps:        77
 
+# CHECK: Resources:
+# CHECK: [0]   - HWBranch
+# CHECK: [1]   - HWExport
+# CHECK: [2]   - HWLGKM
+# CHECK: [3]   - HWSALU
+# CHECK: [4]   - HWVALU
+# CHECK: [5]   - HWVMEM
+# CHECK: [6]   - HWXDL
+
 v_pk_fma_f32 v[0:1], v[0:1], v[0:1], v[0:1]
 v_pk_mov_b32 v[0:1], v[2:3], v[4:5]
 v_pk_add_f32 v[0:1], v[0:1], v[0:1]
