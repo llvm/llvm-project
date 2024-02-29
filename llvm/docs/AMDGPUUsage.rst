@@ -1438,7 +1438,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              :ref:`amdgpu_ps <amdgpu_ps>` shaders. Any bits enabled by this value will
                                              be enabled in the final register value.
 
-    "amdgpu-wave-priority-threshold"         ..TODO:: Describe.
+    "amdgpu-wave-priority-threshold"         VALU instruction count threshold for adjusting wave priority. If exceeded,
+                                             temporarily raise the wave priority at the start of the shader function
+                                             until its last VMEM instructions to allow younger waves to issue their VMEM
+                                             instructions as well.
 
     "amdgpu-memory-bound".                   Set internally by backend
 
