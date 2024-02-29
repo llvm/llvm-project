@@ -117,7 +117,7 @@ void getFeaturesForCPU(StringRef CPU,
     if (NeedPlus)
       EnabledFeatures.push_back(F);
     else
-      EnabledFeatures.push_back(F.substr(1, F.size() - 1));
+      EnabledFeatures.push_back(F.substr(1));
 }
 } // namespace RISCV
 } // namespace llvm
