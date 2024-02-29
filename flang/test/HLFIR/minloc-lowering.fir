@@ -56,7 +56,7 @@ func.func @_QPminloc2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"
 // CHECK:           %[[ARG2:.*]]: !fir.ref<index>
 // CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 // CHECK-DAG:     %[[FALSE:.*]] = arith.constant false
-// CHECK-DAG:    %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : i32
 // CHECK:         %[[V0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
 // CHECK-NEXT:    %[[V1:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFminloc2Ea"} : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
