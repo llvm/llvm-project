@@ -1867,14 +1867,13 @@ floating point semantic models: precise (the default), strict, and fast.
      sometimes replace the library call if it knows enough about the potential
      range of the inputs). Overflow and non-finite values are handled by the
      library implementation. For the case of multiplication overflow will occur in
-     accordance with normal floating-point rules.
+     accordance with normal floating-point rules. This is the default value.
    * ``promoted`` Implementation of complex division using algebraic formulas at
      higher precision. Overflow is handled. Non-finite values are handled in some
      cases. If the target does not have native support for a higher precision
      data type, an implementation for the complex operation will be used to provide
      improved guards against intermediate overflow, but overflow and underflow may
      still occur in some cases. NaN and infinite values are not handled.
-     This is the default value.
 
 .. option:: -fcx-limited-range:
 
