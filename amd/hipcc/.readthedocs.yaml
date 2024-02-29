@@ -4,7 +4,7 @@
 version: 2
 
 sphinx:
-  configuration: docs/conf.py
+  configuration: amd/hipcc/docs/conf.py
 
 formats: [htmlzip, pdf, epub]
 
