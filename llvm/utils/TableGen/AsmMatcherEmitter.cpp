@@ -1990,6 +1990,9 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   CvtOS << "  Inst.setOpcode(Opcode);\n";
   CvtOS << "  for (const uint8_t *p = Converter; *p; p += 2) {\n";
   if (HasOptionalOperands) {
+    // When optional operands are involved, formal and actual operand indices
+    // may differ. Map the former to the latter by subtracting the number of
+    // absent optional operands.
     CvtOS << "    OpIdx = *(p + 1) - DefaultsOffset[*(p + 1)];\n";
   } else {
     CvtOS << "    OpIdx = *(p + 1);\n";
@@ -3041,6 +3044,9 @@ static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
   OS << "      unsigned OpndNum1 = TiedAsmOperandTable[OpIdx][1];\n";
   OS << "      unsigned OpndNum2 = TiedAsmOperandTable[OpIdx][2];\n";
   if (HasOptionalOperands) {
+    // When optional operands are involved, formal and actual operand indices
+    // may differ. Map the former to the latter by subtracting the number of
+    // absent optional operands.
     OS << "      OpndNum1 = OpndNum1 - DefaultsOffset[OpndNum1];\n";
     OS << "      OpndNum2 = OpndNum2 - DefaultsOffset[OpndNum2];\n";
   }
@@ -3921,6 +3927,14 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "    }\n\n";
   }
 
+  // When converting parsed operands to MCInst we need to know whether optional
+  // operands were parsed or not so that we can choose the correct converter
+  // function. We also need to know this when checking tied operand constraints.
+  // DefaultsOffset is an array of deltas between the formal (MCInst) and the
+  // actual (parsed operand array) operand indices. When all optional operands
+  // are present, all elements of the array are zeros. If some of the optional
+  // operands are absent, the array might look like '0, 0, 1, 1, 1, 2, 2, 3',
+  // where each increment in value reflects the absence of an optional operand.
   if (HasOptionalOperands) {
     OS << "    unsigned DefaultsOffset[" << (MaxNumOperands + 1)
        << "] = { 0 };\n";
