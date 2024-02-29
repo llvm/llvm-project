@@ -304,6 +304,20 @@ void LandingPadInst::addClause(Constant *Val) {
 //===----------------------------------------------------------------------===//
 
 CallBase *CallBase::Create(CallBase *CB, ArrayRef<OperandBundleDef> Bundles,
+                           BasicBlock::iterator InsertPt) {
+  switch (CB->getOpcode()) {
+  case Instruction::Call:
+    return CallInst::Create(cast<CallInst>(CB), Bundles, InsertPt);
+  case Instruction::Invoke:
+    return InvokeInst::Create(cast<InvokeInst>(CB), Bundles, InsertPt);
+  case Instruction::CallBr:
+    return CallBrInst::Create(cast<CallBrInst>(CB), Bundles, InsertPt);
+  default:
+    llvm_unreachable("Unknown CallBase sub-class!");
+  }
+}
+
+CallBase *CallBase::Create(CallBase *CB, ArrayRef<OperandBundleDef> Bundles,
                            Instruction *InsertPt) {
   switch (CB->getOpcode()) {
   case Instruction::Call:
@@ -559,6 +573,18 @@ CallBase::BundleOpInfo &CallBase::getBundleOpInfoForOperand(unsigned OpIdx) {
 
 CallBase *CallBase::addOperandBundle(CallBase *CB, uint32_t ID,
                                      OperandBundleDef OB,
+                                     BasicBlock::iterator InsertPt) {
+  if (CB->getOperandBundle(ID))
+    return CB;
+
+  SmallVector<OperandBundleDef, 1> Bundles;
+  CB->getOperandBundlesAsDefs(Bundles);
+  Bundles.push_back(OB);
+  return Create(CB, Bundles, InsertPt);
+}
+
+CallBase *CallBase::addOperandBundle(CallBase *CB, uint32_t ID,
+                                     OperandBundleDef OB,
                                      Instruction *InsertPt) {
   if (CB->getOperandBundle(ID))
     return CB;
@@ -567,6 +593,23 @@ CallBase *CallBase::addOperandBundle(CallBase *CB, uint32_t ID,
   CB->getOperandBundlesAsDefs(Bundles);
   Bundles.push_back(OB);
   return Create(CB, Bundles, InsertPt);
+}
+
+CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
+                                        BasicBlock::iterator InsertPt) {
+  SmallVector<OperandBundleDef, 1> Bundles;
+  bool CreateNew = false;
+
+  for (unsigned I = 0, E = CB->getNumOperandBundles(); I != E; ++I) {
+    auto Bundle = CB->getOperandBundleAt(I);
+    if (Bundle.getTagID() == ID) {
+      CreateNew = true;
+      continue;
+    }
+    Bundles.emplace_back(Bundle);
+  }
+
+  return CreateNew ? Create(CB, Bundles, InsertPt) : CB;
 }
 
 CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
@@ -714,6 +757,13 @@ void CallInst::init(FunctionType *FTy, Value *Func, const Twine &NameStr) {
   assert(FTy->getNumParams() == 0 && "Calling a function with bad signature");
 
   setName(NameStr);
+}
+
+CallInst::CallInst(FunctionType *Ty, Value *Func, const Twine &Name,
+                   BasicBlock::iterator InsertBefore)
+    : CallBase(Ty->getReturnType(), Instruction::Call,
+               OperandTraits<CallBase>::op_end(this) - 1, 1, InsertBefore) {
+  init(Ty, Func, Name);
 }
 
 CallInst::CallInst(FunctionType *Ty, Value *Func, const Twine &Name,
@@ -881,6 +931,20 @@ InvokeInst::InvokeInst(const InvokeInst &II)
 }
 
 InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
+                               BasicBlock::iterator InsertPt) {
+  std::vector<Value *> Args(II->arg_begin(), II->arg_end());
+
+  auto *NewII = InvokeInst::Create(
+      II->getFunctionType(), II->getCalledOperand(), II->getNormalDest(),
+      II->getUnwindDest(), Args, OpB, II->getName(), InsertPt);
+  NewII->setCallingConv(II->getCallingConv());
+  NewII->SubclassOptionalData = II->SubclassOptionalData;
+  NewII->setAttributes(II->getAttributes());
+  NewII->setDebugLoc(II->getDebugLoc());
+  return NewII;
+}
+
+InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
                                Instruction *InsertPt) {
   std::vector<Value *> Args(II->arg_begin(), II->arg_end());
 
@@ -951,6 +1015,21 @@ CallBrInst::CallBrInst(const CallBrInst &CBI)
             bundle_op_info_begin());
   SubclassOptionalData = CBI.SubclassOptionalData;
   NumIndirectDests = CBI.NumIndirectDests;
+}
+
+CallBrInst *CallBrInst::Create(CallBrInst *CBI, ArrayRef<OperandBundleDef> OpB,
+                               BasicBlock::iterator InsertPt) {
+  std::vector<Value *> Args(CBI->arg_begin(), CBI->arg_end());
+
+  auto *NewCBI = CallBrInst::Create(
+      CBI->getFunctionType(), CBI->getCalledOperand(), CBI->getDefaultDest(),
+      CBI->getIndirectDests(), Args, OpB, CBI->getName(), InsertPt);
+  NewCBI->setCallingConv(CBI->getCallingConv());
+  NewCBI->SubclassOptionalData = CBI->SubclassOptionalData;
+  NewCBI->setAttributes(CBI->getAttributes());
+  NewCBI->setDebugLoc(CBI->getDebugLoc());
+  NewCBI->NumIndirectDests = CBI->NumIndirectDests;
+  return NewCBI;
 }
 
 CallBrInst *CallBrInst::Create(CallBrInst *CBI, ArrayRef<OperandBundleDef> OpB,
@@ -1134,6 +1213,18 @@ CatchReturnInst::CatchReturnInst(Value *CatchPad, BasicBlock *BB,
 //===----------------------------------------------------------------------===//
 //                       CatchSwitchInst Implementation
 //===----------------------------------------------------------------------===//
+
+CatchSwitchInst::CatchSwitchInst(Value *ParentPad, BasicBlock *UnwindDest,
+                                 unsigned NumReservedValues,
+                                 const Twine &NameStr,
+                                 BasicBlock::iterator InsertBefore)
+    : Instruction(ParentPad->getType(), Instruction::CatchSwitch, nullptr, 0,
+                  InsertBefore) {
+  if (UnwindDest)
+    ++NumReservedValues;
+  init(ParentPad, UnwindDest, NumReservedValues + 1);
+  setName(NameStr);
+}
 
 CatchSwitchInst::CatchSwitchInst(Value *ParentPad, BasicBlock *UnwindDest,
                                  unsigned NumReservedValues,
@@ -3224,6 +3315,14 @@ void BinaryOperator::AssertOK() {
 
 BinaryOperator *BinaryOperator::Create(BinaryOps Op, Value *S1, Value *S2,
                                        const Twine &Name,
+                                       BasicBlock::iterator InsertBefore) {
+  assert(S1->getType() == S2->getType() &&
+         "Cannot create binary operator with two operands of differing type!");
+  return new BinaryOperator(Op, S1, S2, S1->getType(), Name, InsertBefore);
+}
+
+BinaryOperator *BinaryOperator::Create(BinaryOps Op, Value *S1, Value *S2,
+                                       const Twine &Name,
                                        Instruction *InsertBefore) {
   assert(S1->getType() == S2->getType() &&
          "Cannot create binary operator with two operands of differing type!");
@@ -3275,6 +3374,13 @@ BinaryOperator *BinaryOperator::CreateNUWNeg(Value *Op, const Twine &Name,
                                              BasicBlock *InsertAtEnd) {
   Value *Zero = ConstantInt::get(Op->getType(), 0);
   return BinaryOperator::CreateNUWSub(Zero, Op, Name, InsertAtEnd);
+}
+
+BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
+                                          BasicBlock::iterator InsertBefore) {
+  Constant *C = Constant::getAllOnesValue(Op->getType());
+  return new BinaryOperator(Instruction::Xor, Op, C,
+                            Op->getType(), Name, InsertBefore);
 }
 
 BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
@@ -3817,6 +3923,17 @@ CastInst *CastInst::CreatePointerBitCastOrAddrSpaceCast(
 
   if (S->getType()->getPointerAddressSpace() != Ty->getPointerAddressSpace())
     return Create(Instruction::AddrSpaceCast, S, Ty, Name, InsertBefore);
+
+  return Create(Instruction::BitCast, S, Ty, Name, InsertBefore);
+}
+
+CastInst *CastInst::CreateBitOrPointerCast(Value *S, Type *Ty,
+                                           const Twine &Name,
+                                           BasicBlock::iterator InsertBefore) {
+  if (S->getType()->isPointerTy() && Ty->isIntegerTy())
+    return Create(Instruction::PtrToInt, S, Ty, Name, InsertBefore);
+  if (S->getType()->isIntegerTy() && Ty->isPointerTy())
+    return Create(Instruction::IntToPtr, S, Ty, Name, InsertBefore);
 
   return Create(Instruction::BitCast, S, Ty, Name, InsertBefore);
 }
@@ -4453,6 +4570,18 @@ CmpInst::CmpInst(Type *ty, OtherOps op, Predicate predicate, Value *LHS,
   Op<1>() = RHS;
   setPredicate((Predicate)predicate);
   setName(Name);
+}
+
+CmpInst *
+CmpInst::Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,
+                const Twine &Name, BasicBlock::iterator InsertBefore) {
+  if (Op == Instruction::ICmp) {
+    return new ICmpInst(InsertBefore, CmpInst::Predicate(predicate),
+                        S1, S2, Name);
+  }
+
+  return new FCmpInst(InsertBefore, CmpInst::Predicate(predicate),
+                      S1, S2, Name);
 }
 
 CmpInst *
