@@ -134,13 +134,13 @@ func.func @test_remove_cyclic_blocks() {
 
 // -----
 
-// CHECK-AN: notifyOperationErased: test.dummy_op
 // CHECK-AN: notifyOperationErased: test.bar
-// CHECK-AN: notifyOperationErased: test.qux
 // CHECK-AN: notifyOperationErased: test.qux_unreachable
+// CHECK-AN: notifyOperationErased: test.qux
 // CHECK-AN: notifyOperationErased: test.nested_dummy
 // CHECK-AN: notifyOperationErased: cf.br
 // CHECK-AN: notifyOperationErased: test.foo
+// CHECK-AN: notifyOperationErased: test.dummy_op
 // CHECK-AN: notifyOperationErased: test.erase_op
 // CHECK-AN-LABEL: func @test_remove_dead_blocks()
 //  CHECK-AN-NEXT:   return
@@ -172,13 +172,13 @@ func.func @test_remove_dead_blocks() {
 // CHECK-AN: notifyOperationErased: cf.br
 // CHECK-AN: notifyOperationErased: test.bar
 // CHECK-AN: notifyOperationErased: cf.br
-// CHECK-AN: notifyOperationErased: test.nested_b
-// CHECK-AN: notifyOperationErased: test.nested_a
-// CHECK-AN: notifyOperationErased: test.nested_d
 // CHECK-AN: notifyOperationErased: cf.br
 // CHECK-AN: notifyOperationErased: test.nested_e
+// CHECK-AN: notifyOperationErased: test.nested_d
 // CHECK-AN: notifyOperationErased: cf.br
 // CHECK-AN: notifyOperationErased: test.nested_c
+// CHECK-AN: notifyOperationErased: test.nested_b
+// CHECK-AN: notifyOperationErased: test.nested_a
 // CHECK-AN: notifyOperationErased: test.foo
 // CHECK-AN: notifyOperationErased: cf.br
 // CHECK-AN: notifyOperationErased: test.dummy_op
@@ -214,9 +214,9 @@ func.func @test_remove_nested_ops() {
 
 // CHECK-AN: notifyOperationErased: test.qux
 // CHECK-AN: notifyOperationErased: cf.br
-// CHECK-AN: notifyOperationErased: test.foo
-// CHECK-AN: notifyOperationErased: cf.br
 // CHECK-AN: notifyOperationErased: test.bar
+// CHECK-AN: notifyOperationErased: cf.br
+// CHECK-AN: notifyOperationErased: test.foo
 // CHECK-AN: notifyOperationErased: cf.cond_br
 // CHECK-AN-LABEL: func @test_remove_diamond(
 //  CHECK-AN-NEXT:   return
