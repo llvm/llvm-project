@@ -491,8 +491,7 @@ TEST(CallDescription, MatchBuiltins) {
   // Test CDM::CLibrary - a flag that allows matching weird builtins.
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-          {{{{"memset"}, 3}, false},
-           {{CDM::CLibrary, {"memset"}, 3}, true}})),
+          {{{{"memset"}, 3}, false}, {{CDM::CLibrary, {"memset"}, 3}, true}})),
       "void foo() {"
       "  int x;"
       "  __builtin___memset_chk(&x, 0, sizeof(x),"
@@ -522,8 +521,8 @@ TEST(CallDescription, MatchBuiltins) {
   {
     SCOPED_TRACE("lookbehind and lookahead mismatches");
     EXPECT_TRUE(tooling::runToolOnCode(
-        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDM::CLibrary, {"func"}}, false}})),
+        std::unique_ptr<FrontendAction>(
+            new CallDescriptionAction<>({{{CDM::CLibrary, {"func"}}, false}})),
         R"(
           void funcXXX();
           void XXXfunc();
@@ -537,8 +536,8 @@ TEST(CallDescription, MatchBuiltins) {
   {
     SCOPED_TRACE("lookbehind and lookahead matches");
     EXPECT_TRUE(tooling::runToolOnCode(
-        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDM::CLibrary, {"func"}}, true}})),
+        std::unique_ptr<FrontendAction>(
+            new CallDescriptionAction<>({{{CDM::CLibrary, {"func"}}, true}})),
         R"(
           void func();
           void func_XXX();

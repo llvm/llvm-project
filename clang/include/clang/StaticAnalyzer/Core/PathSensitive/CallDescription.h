@@ -42,7 +42,8 @@ public:
     ///    greater than the specified value.
     /// For the exact heuristics, see CheckerContext::isCLibraryFunction().
     /// Note that functions whose declaration context is not a TU (e.g.
-    /// methods, functions in namespaces) are not accepted as C library functions.
+    /// methods, functions in namespaces) are not accepted as C library
+    /// functions.
     /// FIXME: If I understand it correctly, this discards calls where C++ code
     /// refers a C library function through the namespace `std::` via headers
     /// like <cstdlib>.
@@ -66,6 +67,7 @@ public:
     /// in `bool matches(const CallEvent &Call) const;` discards all
     /// Objective-C method calls.
   };
+
 private:
   friend class CallEvent;
   using MaybeCount = std::optional<unsigned>;

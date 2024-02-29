@@ -52,7 +52,8 @@ ento::CallDescription::CallDescription(Mode MatchAs,
 ento::CallDescription::CallDescription(ArrayRef<StringRef> QualifiedName,
                                        MaybeCount RequiredArgs /*= None*/,
                                        MaybeCount RequiredParams /*= None*/)
-    : CallDescription(Mode::Unspecified, QualifiedName, RequiredArgs, RequiredParams) {}
+    : CallDescription(Mode::Unspecified, QualifiedName, RequiredArgs,
+                      RequiredParams) {}
 
 bool ento::CallDescription::matches(const CallEvent &Call) const {
   // FIXME: Add ObjC Message support.
@@ -74,8 +75,7 @@ bool ento::CallDescription::matchesAsWritten(const CallExpr &CE) const {
   return matchesImpl(FD, CE.getNumArgs(), FD->param_size());
 }
 
-bool ento::CallDescription::matchesImpl(const FunctionDecl *FD,
-                                        size_t ArgCount,
+bool ento::CallDescription::matchesImpl(const FunctionDecl *FD, size_t ArgCount,
                                         size_t ParamCount) const {
   if (!FD)
     return false;
