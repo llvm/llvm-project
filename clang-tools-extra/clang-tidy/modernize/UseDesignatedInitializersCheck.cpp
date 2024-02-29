@@ -43,7 +43,7 @@ struct Designators {
   unsigned size() { return getCached().size(); }
 
   std::optional<llvm::StringRef> operator[](const SourceLocation &Location) {
-    const auto Designators = getCached();
+    const auto &Designators = getCached();
     const auto Result = Designators.find(Location);
     if (Result == Designators.end())
       return {};
