@@ -853,11 +853,9 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
   // The iterator types of the expanded op are all parallel.
   SmallVector<utils::IteratorType> iteratorTypes(
       expansionInfo.getExpandedOpNumDims(), utils::IteratorType::parallel);
-  for (auto [i, type] : llvm::enumerate(genericOp.getIteratorTypesArray())) {
-    ReassociationIndicesRef group = expansionInfo.getExpandedDims(i);
-    for (auto i : group)
-      iteratorTypes[i] = type;
-  }
+  for (auto [i, type] : llvm::enumerate(genericOp.getIteratorTypesArray()))
+    for (auto j : expansionInfo.getExpandedDims(i))
+      iteratorTypes[j] = type;
 
   TypeRange resultTypes = ValueRange(outputs).getTypes();
   auto fusedOp =
