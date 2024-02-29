@@ -73,7 +73,7 @@ if (NOT CMAKE_CROSSCOMPILING)
   endforeach()
 
   # Special case for omp_lib.mod, because its source comes from openmp/runtime/src/include.
-  # It also produces to module files: omp_lib.mod and omp_lib_kinds.mod.  Compile these
+  # It also produces two module files: omp_lib.mod and omp_lib_kinds.mod.  Compile these
   # files only if OpenMP support has been configured.
   if (LLVM_TOOL_OPENMP_BUILD)
     message(STATUS "OpenMP runtime support enabled, building omp_lib.mod")
