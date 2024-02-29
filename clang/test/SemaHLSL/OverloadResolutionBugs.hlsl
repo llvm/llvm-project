@@ -64,6 +64,18 @@ int64_t test_builtin_dot_vec_int16_to_int64_promotion( int64_t2 p0, int16_t2 p1 
   return dot( p0, p1 );
 }
 
+float4 test_frac_int4 ( int4 p0 ) {
+  return frac ( p0 );
+}
+
+float test_frac_int ( int p0 ) {
+  return frac ( p0 );
+}
+
+float test_frac_bool( bool p0 ) {
+  return frac ( p0 );
+}
+
 // https://github.com/llvm/llvm-project/issues/81049
 
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \

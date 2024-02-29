@@ -5246,6 +5246,14 @@ bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   return true;
 }
 
+bool checkAllArgsAreFloatRepresentation(CallExpr *TheCall) {
+  for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
+    if (!TheCall->getArg(0)->getType()->hasFloatingRepresentation())
+      return true;
+  }
+  return false;
+}
+
 // Note: returning true in this case results in CheckBuiltinFunctionCall
 // returning an ExprError
 bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
@@ -5259,12 +5267,29 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_frac: {
+    if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return true;
+    QualType PassedType = TheCall->getArg(0)->getType();
+    if (!PassedType->hasFloatingRepresentation()) {
+      QualType ExpectedType = this->Context.FloatTy;
+      if (auto *VecTyA = PassedType->getAs<VectorType>())
+        ExpectedType = this->Context.getVectorType(
+            ExpectedType, VecTyA->getNumElements(), VecTyA->getVectorKind());
+      Diag(TheCall->getArg(0)->getBeginLoc(),
+           diag::err_typecheck_convert_incompatible)
+          << PassedType << ExpectedType << 1 << 0 << 0;
+      return true;
+    }
+  }
   case Builtin::BI__builtin_hlsl_lerp: {
     if (checkArgCount(*this, TheCall, 3))
       return true;
     if (CheckVectorElementCallArgs(this, TheCall))
       return true;
     if (SemaBuiltinElementwiseTernaryMath(TheCall))
+      return true;
+    if (checkAllArgsAreFloatRepresentation(TheCall))
       return true;
     break;
   }
