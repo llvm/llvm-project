@@ -297,7 +297,10 @@ long double    truncl(long double x);
 #    pragma GCC system_header
 #  endif
 
-#  if defined(__APPLE__)
+// This is required to define functions like lgamma_r on Apple platforms.
+// These functions are not required by the Standard but our implementation
+// uses them.
+#  if defined(__APPLE__) && !defined(_REENTRANT)
 #    define _REENTRANT
 #  endif
 
