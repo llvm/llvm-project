@@ -895,8 +895,8 @@ static bool processSRem(BinaryOperator *SDI, const ConstantRange &LCR,
   for (Operand &Op : Ops) {
     if (Op.D == Domain::NonNegative)
       continue;
-    auto *BO =
-        BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg", SDI);
+    auto *BO = BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg",
+                                         SDI->getIterator());
     BO->setDebugLoc(SDI->getDebugLoc());
     Op.V = BO;
   }
@@ -909,7 +909,8 @@ static bool processSRem(BinaryOperator *SDI, const ConstantRange &LCR,
 
   // If the divident was non-positive, we need to negate the result.
   if (Ops[0].D == Domain::NonPositive) {
-    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg",
+                                    SDI->getIterator());
     Res->setDebugLoc(SDI->getDebugLoc());
   }
 
@@ -956,8 +957,8 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
   for (Operand &Op : Ops) {
     if (Op.D == Domain::NonNegative)
       continue;
-    auto *BO =
-        BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg", SDI);
+    auto *BO = BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg",
+                                         SDI->getIterator());
     BO->setDebugLoc(SDI->getDebugLoc());
     Op.V = BO;
   }
@@ -971,7 +972,8 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
 
   // If the operands had two different domains, we need to negate the result.
   if (Ops[0].D != Ops[1].D) {
-    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg",
+                                    SDI->getIterator());
     Res->setDebugLoc(SDI->getDebugLoc());
   }
 
