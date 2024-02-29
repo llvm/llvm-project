@@ -23,7 +23,7 @@ define void @test_compresstore_i8_v1(ptr %p, <1 x i1> %mask, <1 x i8> %data) {
 ; RV32-NEXT:    vse8.v v9, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v1i8(<1 x i8> %data, ptr %p, <1 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v1i8(<1 x i8> %data, ptr align 1 %p, <1 x i1> %mask)
   ret void
 }
 
@@ -46,7 +46,7 @@ define void @test_compresstore_i8_v2(ptr %p, <2 x i1> %mask, <2 x i8> %data) {
 ; RV32-NEXT:    vse8.v v9, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v2i8(<2 x i8> %data, ptr %p, <2 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v2i8(<2 x i8> %data, ptr align 1 %p, <2 x i1> %mask)
   ret void
 }
 
@@ -69,7 +69,7 @@ define void @test_compresstore_i8_v4(ptr %p, <4 x i1> %mask, <4 x i8> %data) {
 ; RV32-NEXT:    vse8.v v9, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v4i8(<4 x i8> %data, ptr %p, <4 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v4i8(<4 x i8> %data, ptr align 1 %p, <4 x i1> %mask)
   ret void
 }
 
@@ -92,7 +92,7 @@ define void @test_compresstore_i8_v8(ptr %p, <8 x i1> %mask, <8 x i8> %data) {
 ; RV32-NEXT:    vse8.v v9, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v8i8(<8 x i8> %data, ptr %p, <8 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v8i8(<8 x i8> %data, ptr align 1 %p, <8 x i1> %mask)
   ret void
 }
 
@@ -115,7 +115,7 @@ define void @test_compresstore_i8_v16(ptr %p, <16 x i1> %mask, <16 x i8> %data) 
 ; RV32-NEXT:    vse8.v v9, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v16i8(<16 x i8> %data, ptr %p, <16 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v16i8(<16 x i8> %data, ptr align 1 %p, <16 x i1> %mask)
   ret void
 }
 
@@ -140,7 +140,7 @@ define void @test_compresstore_i8_v32(ptr %p, <32 x i1> %mask, <32 x i8> %data) 
 ; RV32-NEXT:    vse8.v v10, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v32i8(<32 x i8> %data, ptr %p, <32 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v32i8(<32 x i8> %data, ptr align 1 %p, <32 x i1> %mask)
   ret void
 }
 
@@ -165,7 +165,7 @@ define void @test_compresstore_i8_v64(ptr %p, <64 x i1> %mask, <64 x i8> %data) 
 ; RV32-NEXT:    vse8.v v12, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v64i8(<64 x i8> %data, ptr %p, <64 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v64i8(<64 x i8> %data, ptr align 1 %p, <64 x i1> %mask)
   ret void
 }
 
@@ -190,7 +190,7 @@ define void @test_compresstore_i8_v128(ptr %p, <128 x i1> %mask, <128 x i8> %dat
 ; RV32-NEXT:    vse8.v v16, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v128i8(<128 x i8> %data, ptr %p, <128 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v128i8(<128 x i8> %data, ptr align 1 %p, <128 x i1> %mask)
   ret void
 }
 
@@ -8604,7 +8604,7 @@ define void @test_compresstore_i8_v256(ptr %p, <256 x i1> %mask, <256 x i8> %dat
 ; RV32-NEXT:  .LBB8_526: # %cond.store760
 ; RV32-NEXT:    j .LBB8_283
 entry:
-  tail call void @llvm.masked.compressstore.v256i8(<256 x i8> %data, ptr %p, <256 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v256i8(<256 x i8> %data, ptr align 1 %p, <256 x i1> %mask)
   ret void
 }
 
@@ -8629,7 +8629,7 @@ define void @test_compresstore_i16_v1(ptr %p, <1 x i1> %mask, <1 x i16> %data) {
 ; RV32-NEXT:    vse16.v v9, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v1i16(<1 x i16> %data, ptr %p, <1 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v1i16(<1 x i16> %data, ptr align 2 %p, <1 x i1> %mask)
   ret void
 }
 
@@ -8652,7 +8652,7 @@ define void @test_compresstore_i16_v2(ptr %p, <2 x i1> %mask, <2 x i16> %data) {
 ; RV32-NEXT:    vse16.v v9, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v2i16(<2 x i16> %data, ptr %p, <2 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v2i16(<2 x i16> %data, ptr align 2 %p, <2 x i1> %mask)
   ret void
 }
 
@@ -8675,7 +8675,7 @@ define void @test_compresstore_i16_v4(ptr %p, <4 x i1> %mask, <4 x i16> %data) {
 ; RV32-NEXT:    vse16.v v9, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v4i16(<4 x i16> %data, ptr %p, <4 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v4i16(<4 x i16> %data, ptr align 2 %p, <4 x i1> %mask)
   ret void
 }
 
@@ -8698,7 +8698,7 @@ define void @test_compresstore_i16_v8(ptr %p, <8 x i1> %mask, <8 x i16> %data) {
 ; RV32-NEXT:    vse16.v v9, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v8i16(<8 x i16> %data, ptr %p, <8 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v8i16(<8 x i16> %data, ptr align 2 %p, <8 x i1> %mask)
   ret void
 }
 
@@ -8721,7 +8721,7 @@ define void @test_compresstore_i16_v16(ptr %p, <16 x i1> %mask, <16 x i16> %data
 ; RV32-NEXT:    vse16.v v10, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v16i16(<16 x i16> %data, ptr %p, <16 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v16i16(<16 x i16> %data, ptr align 2 %p, <16 x i1> %mask)
   ret void
 }
 
@@ -8746,7 +8746,7 @@ define void @test_compresstore_i16_v32(ptr %p, <32 x i1> %mask, <32 x i16> %data
 ; RV32-NEXT:    vse16.v v12, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v32i16(<32 x i16> %data, ptr %p, <32 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v32i16(<32 x i16> %data, ptr align 2 %p, <32 x i1> %mask)
   ret void
 }
 
@@ -8771,7 +8771,7 @@ define void @test_compresstore_i16_v64(ptr %p, <64 x i1> %mask, <64 x i16> %data
 ; RV32-NEXT:    vse16.v v16, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v64i16(<64 x i16> %data, ptr %p, <64 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v64i16(<64 x i16> %data, ptr align 2 %p, <64 x i1> %mask)
   ret void
 }
 
@@ -13007,7 +13007,7 @@ define void @test_compresstore_i16_v128(ptr %p, <128 x i1> %mask, <128 x i16> %d
 ; RV32-NEXT:  .LBB16_258: # %cond.store376
 ; RV32-NEXT:    j .LBB16_141
 entry:
-  tail call void @llvm.masked.compressstore.v128i16(<128 x i16> %data, ptr %p, <128 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v128i16(<128 x i16> %data, ptr align 2 %p, <128 x i1> %mask)
   ret void
 }
 
@@ -13032,7 +13032,7 @@ define void @test_compresstore_i32_v1(ptr %p, <1 x i1> %mask, <1 x i32> %data) {
 ; RV32-NEXT:    vse32.v v9, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v1i32(<1 x i32> %data, ptr %p, <1 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v1i32(<1 x i32> %data, ptr align 4 %p, <1 x i1> %mask)
   ret void
 }
 
@@ -13055,7 +13055,7 @@ define void @test_compresstore_i32_v2(ptr %p, <2 x i1> %mask, <2 x i32> %data) {
 ; RV32-NEXT:    vse32.v v9, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v2i32(<2 x i32> %data, ptr %p, <2 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v2i32(<2 x i32> %data, ptr align 4 %p, <2 x i1> %mask)
   ret void
 }
 
@@ -13078,7 +13078,7 @@ define void @test_compresstore_i32_v4(ptr %p, <4 x i1> %mask, <4 x i32> %data) {
 ; RV32-NEXT:    vse32.v v9, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v4i32(<4 x i32> %data, ptr %p, <4 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v4i32(<4 x i32> %data, ptr align 4 %p, <4 x i1> %mask)
   ret void
 }
 
@@ -13101,7 +13101,7 @@ define void @test_compresstore_i32_v8(ptr %p, <8 x i1> %mask, <8 x i32> %data) {
 ; RV32-NEXT:    vse32.v v10, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v8i32(<8 x i32> %data, ptr %p, <8 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v8i32(<8 x i32> %data, ptr align 4 %p, <8 x i1> %mask)
   ret void
 }
 
@@ -13124,7 +13124,7 @@ define void @test_compresstore_i32_v16(ptr %p, <16 x i1> %mask, <16 x i32> %data
 ; RV32-NEXT:    vse32.v v12, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v16i32(<16 x i32> %data, ptr %p, <16 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v16i32(<16 x i32> %data, ptr align 4 %p, <16 x i1> %mask)
   ret void
 }
 
@@ -13149,7 +13149,7 @@ define void @test_compresstore_i32_v32(ptr %p, <32 x i1> %mask, <32 x i32> %data
 ; RV32-NEXT:    vse32.v v16, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v32i32(<32 x i32> %data, ptr %p, <32 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v32i32(<32 x i32> %data, ptr align 4 %p, <32 x i1> %mask)
   ret void
 }
 
@@ -15663,7 +15663,7 @@ define void @test_compresstore_i32_v64(ptr %p, <64 x i1> %mask, <64 x i32> %data
 ; RV32-NEXT:    bltz a1, .LBB23_70
 ; RV32-NEXT:    j .LBB23_71
 entry:
-  tail call void @llvm.masked.compressstore.v64i32(<64 x i32> %data, ptr %p, <64 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v64i32(<64 x i32> %data, ptr align 4 %p, <64 x i1> %mask)
   ret void
 }
 
@@ -15688,7 +15688,7 @@ define void @test_compresstore_i64_v1(ptr %p, <1 x i1> %mask, <1 x i64> %data) {
 ; RV32-NEXT:    vse64.v v9, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v1i64(<1 x i64> %data, ptr %p, <1 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v1i64(<1 x i64> %data, ptr align 8 %p, <1 x i1> %mask)
   ret void
 }
 
@@ -15711,7 +15711,7 @@ define void @test_compresstore_i64_v2(ptr %p, <2 x i1> %mask, <2 x i64> %data) {
 ; RV32-NEXT:    vse64.v v9, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v2i64(<2 x i64> %data, ptr %p, <2 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v2i64(<2 x i64> %data, ptr align 8 %p, <2 x i1> %mask)
   ret void
 }
 
@@ -15734,7 +15734,7 @@ define void @test_compresstore_i64_v4(ptr %p, <4 x i1> %mask, <4 x i64> %data) {
 ; RV32-NEXT:    vse64.v v10, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v4i64(<4 x i64> %data, ptr %p, <4 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v4i64(<4 x i64> %data, ptr align 8 %p, <4 x i1> %mask)
   ret void
 }
 
@@ -15757,7 +15757,7 @@ define void @test_compresstore_i64_v8(ptr %p, <8 x i1> %mask, <8 x i64> %data) {
 ; RV32-NEXT:    vse64.v v12, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v8i64(<8 x i64> %data, ptr %p, <8 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v8i64(<8 x i64> %data, ptr align 8 %p, <8 x i1> %mask)
   ret void
 }
 
@@ -15780,7 +15780,7 @@ define void @test_compresstore_i64_v16(ptr %p, <16 x i1> %mask, <16 x i64> %data
 ; RV32-NEXT:    vse64.v v16, (a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v16i64(<16 x i64> %data, ptr %p, <16 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v16i64(<16 x i64> %data, ptr align 8 %p, <16 x i1> %mask)
   ret void
 }
 
@@ -17499,7 +17499,7 @@ define void @test_compresstore_i64_v32(ptr %p, <32 x i1> %mask, <32 x i64> %data
 ; RV32-NEXT:    sb a1, 5(a0)
 ; RV32-NEXT:    ret
 entry:
-  tail call void @llvm.masked.compressstore.v32i64(<32 x i64> %data, ptr %p, <32 x i1> %mask)
+  tail call void @llvm.masked.compressstore.v32i64(<32 x i64> %data, ptr align 8 %p, <32 x i1> %mask)
   ret void
 }
 
@@ -17536,10 +17536,3 @@ declare void @llvm.masked.compressstore.v4i64(<4 x i64>, ptr, <4 x i1>)
 declare void @llvm.masked.compressstore.v8i64(<8 x i64>, ptr, <8 x i1>)
 declare void @llvm.masked.compressstore.v16i64(<16 x i64>, ptr, <16 x i1>)
 declare void @llvm.masked.compressstore.v32i64(<32 x i64>, ptr, <32 x i1>)
-
-;define void @test_compresstore_iYYYY_vXXXX(ptr %p, <XXXX x i1> %mask, <XXXX x iYYYY> %data) {
-;entry:
-;  tail call void @llvm.masked.compressstore.vXXXXiYYYY(<XXXX x iYYYY> %data, ptr %p, <XXXX x i1> %mask)
-;  ret void
-;}
-;declare void @llvm.masked.compressstore.vXXXXiYYYY(<XXXX x iYYYY>, ptr, <XXXX x i1>)
