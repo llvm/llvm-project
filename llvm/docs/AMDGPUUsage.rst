@@ -1424,12 +1424,19 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              32-bit address spaces which are really truncated
                                              64-bit addresses (i.e., addrspace(6))
 
-    "amdgpu-color-export"                    Assumed 1 for :ref:`amdgpu_ps <amdgpu_ps>`, and 0 for other calling conventions.
+    "amdgpu-color-export"                    Indicates shader exports color information if set to 1.
+                                             Defaults to 1 for :ref:`amdgpu_ps <amdgpu_ps>`, and 0 for other calling
+                                             conventions. Determines the necessity and type of null exports when a shader
+                                             terminates early by killing lanes.
 
-    "amdgpu-depth-export"                    ..TODO:: Describe.
+    "amdgpu-depth-export"                    Indicates shader exports depth information if set to 1. Determines the
+                                             necessity and type of null exports when a shader terminates early by killing
+                                             lanes. A depth-only shader will export to depth channel when no null export
+                                             target is available (GFX11+).
 
-    "InitialPSInputAddr"                     ..TODO:: Describe.
-
+    "InitialPSInputAddr"                     Set the initial value of the `spi_ps_input_addr` register for
+                                             :ref:`amdgpu_ps <amdgpu_ps>` shaders. Any bits enabled by this value will
+                                             be enabled in the final register value.
 
     "amdgpu-wave-priority-threshold"         ..TODO:: Describe.
 
@@ -1437,7 +1444,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
     "amdgpu-wave-limiter"                    Set internally by backend
 
-    "amdgpu-unroll-threshold"                ..TODO:: Describe.
+    "amdgpu-unroll-threshold"                Set base cost threshold preference for loop unrolling within this function,
+                                             default is 300. Actual threshold may be varied by per-loop metadata or
+                                             reduced by heuristics.
 
      ======================================= ==========================================================
 
