@@ -25,8 +25,10 @@ def int_dx_dot :
     [llvm_anyvector_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
     [IntrNoMem, IntrWillReturn, Commutative] >;
 
+def int_dx_frac  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+
 def int_dx_lerp :
-    Intrinsic<[LLVMMatchType<0>], 
-    [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>],
-    [IntrNoMem, IntrWillReturn, Commutative] >;
+    Intrinsic<[LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
+    [llvm_anyvector_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>,LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
+    [IntrNoMem, IntrWillReturn] >;
 }
