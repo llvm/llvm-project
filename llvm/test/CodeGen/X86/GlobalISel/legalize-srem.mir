@@ -2,36 +2,12 @@
 # RUN: llc -mtriple=x86_64-linux-gnu -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,X64
 # RUN: llc -mtriple=i686-linux-gnu -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,X86
 
---- |
-  source_filename = "srem.ll"
-  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-
-  define i8 @test_srem_i8(i8 %arg1, i8 %arg2) {
-    %res = srem i8 %arg1, %arg2
-    ret i8 %res
-  }
-
-  define i16 @test_srem_i16(i16 %arg1, i16 %arg2) {
-    %res = srem i16 %arg1, %arg2
-    ret i16 %res
-  }
-
-  define i32 @test_srem_i32(i32 %arg1, i32 %arg2) {
-    %res = srem i32 %arg1, %arg2
-    ret i32 %res
-  }
-
-  define i64 @test_srem_i64(i64 %arg1, i64 %arg2) {
-    %res = srem i64 %arg1, %arg2
-    ret i64 %res
-  }
-
 ...
 ---
 name:            test_srem_i8
 tracksRegLiveness: true
 body:             |
-  bb.1 (%ir-block.0):
+  bb.1:
     liveins: $edi, $esi
 
     ; CHECK-LABEL: name: test_srem_i8
@@ -57,7 +33,7 @@ body:             |
 name:            test_srem_i16
 tracksRegLiveness: true
 body:             |
-  bb.1 (%ir-block.0):
+  bb.1:
     liveins: $edi, $esi
 
     ; CHECK-LABEL: name: test_srem_i16
@@ -83,7 +59,7 @@ body:             |
 name:            test_srem_i32
 tracksRegLiveness: true
 body:             |
-  bb.1 (%ir-block.0):
+  bb.1:
     liveins: $edi, $esi
 
     ; CHECK-LABEL: name: test_srem_i32
@@ -105,7 +81,7 @@ body:             |
 name:            test_srem_i64
 tracksRegLiveness: true
 body:             |
-  bb.1 (%ir-block.0):
+  bb.1:
     ; X64-LABEL: name: test_srem_i64
     ; X64: [[DEF:%[0-9]+]]:_(s64) = IMPLICIT_DEF
     ; X64-NEXT: [[DEF1:%[0-9]+]]:_(s64) = IMPLICIT_DEF
