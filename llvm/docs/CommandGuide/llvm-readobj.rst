@@ -56,6 +56,11 @@ file formats.
 
  Display the address-significance table.
 
+.. option:: --decompress, -z
+
+  Dump decompressed section content when used with ``-x`` or ``-p``.
+  If the section(s) are not compressed, they are displayed as is.
+
 .. option:: --expand-relocs
 
  When used with :option:`--relocs`, display each relocation in an expanded
@@ -158,6 +163,17 @@ The following options are implemented only for the ELF file format.
 
  Display the contents of the basic block address map section(s), which contain the
  address of each function, along with the relative offset of each basic block.
+
+ When pgo analysis maps are present, all analyses are printed as their raw
+ value.
+
+.. option:: --pretty-pgo-analysis-map
+
+ When pgo analysis maps are present in the basic block address map section(s),
+ analyses with special formats (i.e. BlockFrequency, BranchProbability, etc)
+ are printed using the same format as their respective analysis pass.
+
+ Requires :option:`--bb-addr-map` to have an effect.
 
 .. option:: --demangle, -C
 

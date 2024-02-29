@@ -1,8 +1,4 @@
-// RUN: mlir-opt %s -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
-// RUN:   -convert-vector-to-arm-sme -convert-arith-to-arm-sme \
-// RUN:   -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
-// RUN:   -convert-arm-sme-to-llvm -cse -canonicalize \
-// RUN:   -test-lower-to-llvm | \
+// RUN: mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:  -march=aarch64 -mattr=+sve,+sme \
 // RUN:  -e entry -entry-point-result=i32 \
@@ -27,9 +23,9 @@ func.func @entry() -> i32 {
   // CHECK-NEXT: ( 123, 123, 123, 123
   // CHECK-NEXT: ( 123, 123, 123, 123
   // CHECK:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %tile : vector<[4]x[4]xi32>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   %c0_i32 = arith.constant 0 : i32
   return %c0_i32 : i32

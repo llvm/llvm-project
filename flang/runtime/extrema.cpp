@@ -528,35 +528,6 @@ inline RT_API_ATTRS CppTypeFor<CAT, KIND> TotalNumericMaxOrMin(
       NumericExtremumAccumulator<CAT, KIND, IS_MAXVAL>{x}, intrinsic);
 }
 
-template <TypeCategory CAT, int KIND, typename ACCUMULATOR>
-static RT_API_ATTRS void DoMaxMinNorm2(Descriptor &result, const Descriptor &x,
-    int dim, const Descriptor *mask, const char *intrinsic,
-    Terminator &terminator) {
-  using Type = CppTypeFor<CAT, KIND>;
-  ACCUMULATOR accumulator{x};
-  if (dim == 0 || x.rank() == 1) {
-    // Total reduction
-
-    // Element size of the destination descriptor is the same
-    // as the element size of the source.
-    result.Establish(x.type(), x.ElementBytes(), nullptr, 0, nullptr,
-        CFI_attribute_allocatable);
-    if (int stat{result.Allocate()}) {
-      terminator.Crash(
-          "%s: could not allocate memory for result; STAT=%d", intrinsic, stat);
-    }
-    DoTotalReduction<Type>(x, dim, mask, accumulator, intrinsic, terminator);
-    accumulator.GetResult(result.OffsetElement<Type>());
-  } else {
-    // Partial reduction
-
-    // Element size of the destination descriptor is the same
-    // as the element size of the source.
-    PartialReduction<ACCUMULATOR, CAT, KIND>(result, x, x.ElementBytes(), dim,
-        mask, terminator, intrinsic, accumulator);
-  }
-}
-
 template <TypeCategory CAT, bool IS_MAXVAL> struct MaxOrMinHelper {
   template <int KIND> struct Functor {
     RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x,
@@ -802,66 +773,11 @@ RT_EXT_API_GROUP_END
 
 // NORM2
 
-RT_VAR_GROUP_BEGIN
-
-// Use at least double precision for accumulators.
-// Don't use __float128, it doesn't work with abs() or sqrt() yet.
-static constexpr RT_CONST_VAR_ATTRS int largestLDKind {
-#if LDBL_MANT_DIG == 113
-  16
-#elif LDBL_MANT_DIG == 64
-  10
-#else
-  8
-#endif
-};
-
-RT_VAR_GROUP_END
-
-template <int KIND> class Norm2Accumulator {
-public:
-  using Type = CppTypeFor<TypeCategory::Real, KIND>;
-  using AccumType =
-      CppTypeFor<TypeCategory::Real, std::clamp(KIND, 8, largestLDKind)>;
-  explicit RT_API_ATTRS Norm2Accumulator(const Descriptor &array)
-      : array_{array} {}
-  RT_API_ATTRS void Reinitialize() { max_ = sum_ = 0; }
-  template <typename A>
-  RT_API_ATTRS void GetResult(A *p, int /*zeroBasedDim*/ = -1) const {
-    // m * sqrt(1 + sum((others(:)/m)**2))
-    *p = static_cast<Type>(max_ * std::sqrt(1 + sum_));
-  }
-  RT_API_ATTRS bool Accumulate(Type x) {
-    auto absX{std::abs(static_cast<AccumType>(x))};
-    if (!max_) {
-      max_ = absX;
-    } else if (absX > max_) {
-      auto t{max_ / absX}; // < 1.0
-      auto tsq{t * t};
-      sum_ *= tsq; // scale sum to reflect change to the max
-      sum_ += tsq; // include a term for the previous max
-      max_ = absX;
-    } else { // absX <= max_
-      auto t{absX / max_};
-      sum_ += t * t;
-    }
-    return true;
-  }
-  template <typename A>
-  RT_API_ATTRS bool AccumulateAt(const SubscriptValue at[]) {
-    return Accumulate(*array_.Element<A>(at));
-  }
-
-private:
-  const Descriptor &array_;
-  AccumType max_{0}; // value (m) with largest magnitude
-  AccumType sum_{0}; // sum((others(:)/m)**2)
-};
-
 template <int KIND> struct Norm2Helper {
   RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x, int dim,
       const Descriptor *mask, Terminator &terminator) const {
-    DoMaxMinNorm2<TypeCategory::Real, KIND, Norm2Accumulator<KIND>>(
+    DoMaxMinNorm2<TypeCategory::Real, KIND,
+        typename Norm2AccumulatorGetter<KIND>::Type>(
         result, x, dim, mask, "NORM2", terminator);
   }
 };
@@ -872,26 +788,27 @@ RT_EXT_API_GROUP_BEGIN
 // TODO: REAL(2 & 3)
 CppTypeFor<TypeCategory::Real, 4> RTDEF(Norm2_4)(
     const Descriptor &x, const char *source, int line, int dim) {
-  return GetTotalReduction<TypeCategory::Real, 4>(
-      x, source, line, dim, nullptr, Norm2Accumulator<4>{x}, "NORM2");
+  return GetTotalReduction<TypeCategory::Real, 4>(x, source, line, dim, nullptr,
+      Norm2AccumulatorGetter<4>::create(x), "NORM2");
 }
 CppTypeFor<TypeCategory::Real, 8> RTDEF(Norm2_8)(
     const Descriptor &x, const char *source, int line, int dim) {
-  return GetTotalReduction<TypeCategory::Real, 8>(
-      x, source, line, dim, nullptr, Norm2Accumulator<8>{x}, "NORM2");
+  return GetTotalReduction<TypeCategory::Real, 8>(x, source, line, dim, nullptr,
+      Norm2AccumulatorGetter<8>::create(x), "NORM2");
 }
 #if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(Norm2_10)(
     const Descriptor &x, const char *source, int line, int dim) {
-  return GetTotalReduction<TypeCategory::Real, 10>(
-      x, source, line, dim, nullptr, Norm2Accumulator<10>{x}, "NORM2");
+  return GetTotalReduction<TypeCategory::Real, 10>(x, source, line, dim,
+      nullptr, Norm2AccumulatorGetter<10>::create(x), "NORM2");
 }
 #endif
 #if LDBL_MANT_DIG == 113
+// The __float128 implementation resides in FortranFloat128Math library.
 CppTypeFor<TypeCategory::Real, 16> RTDEF(Norm2_16)(
     const Descriptor &x, const char *source, int line, int dim) {
-  return GetTotalReduction<TypeCategory::Real, 16>(
-      x, source, line, dim, nullptr, Norm2Accumulator<16>{x}, "NORM2");
+  return GetTotalReduction<TypeCategory::Real, 16>(x, source, line, dim,
+      nullptr, Norm2AccumulatorGetter<16>::create(x), "NORM2");
 }
 #endif
 
@@ -901,7 +818,7 @@ void RTDEF(Norm2Dim)(Descriptor &result, const Descriptor &x, int dim,
   auto type{x.type().GetCategoryAndKind()};
   RUNTIME_CHECK(terminator, type);
   if (type->first == TypeCategory::Real) {
-    ApplyFloatingPointKind<Norm2Helper, void>(
+    ApplyFloatingPointKind<Norm2Helper, void, true>(
         type->second, terminator, result, x, dim, nullptr, terminator);
   } else {
     terminator.Crash("NORM2: bad type code %d", x.type().raw());

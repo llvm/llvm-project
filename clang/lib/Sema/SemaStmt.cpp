@@ -3356,6 +3356,15 @@ Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope) {
     // initialization of that variable.
     return StmtError(Diag(ContinueLoc, diag::err_continue_from_cond_var_init));
   }
+
+  // A 'continue' that would normally have execution continue on a block outside
+  // of a compute construct counts as 'branching out of' the compute construct,
+  // so diagnose here.
+  if (S->isOpenACCComputeConstructScope())
+    return StmtError(
+        Diag(ContinueLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*out of */ 0);
+
   CheckJumpOutOfSEHFinally(*this, ContinueLoc, *S);
 
   return new (Context) ContinueStmt(ContinueLoc);
@@ -3371,6 +3380,21 @@ Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
   if (S->isOpenMPLoopScope())
     return StmtError(Diag(BreakLoc, diag::err_omp_loop_cannot_use_stmt)
                      << "break");
+
+  // OpenACC doesn't allow 'break'ing from a compute construct, so diagnose if
+  // we are trying to do so.  This can come in 2 flavors: 1-the break'able thing
+  // (besides the compute construct) 'contains' the compute construct, at which
+  // point the 'break' scope will be the compute construct.  Else it could be a
+  // loop of some sort that has a direct parent of the compute construct.
+  // However, a 'break' in a 'switch' marked as a compute construct doesn't
+  // count as 'branch out of' the compute construct.
+  if (S->isOpenACCComputeConstructScope() ||
+      (S->isLoopScope() && S->getParent() &&
+       S->getParent()->isOpenACCComputeConstructScope()))
+    return StmtError(
+        Diag(BreakLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*out of */ 0);
+
   CheckJumpOutOfSEHFinally(*this, BreakLoc, *S);
 
   return new (Context) BreakStmt(BreakLoc);
@@ -3925,6 +3949,12 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
       RetValExp, nullptr, /*RecoverUncorrectedTypos=*/true);
   if (RetVal.isInvalid())
     return StmtError();
+
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    return StmtError(
+        Diag(ReturnLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*return*/ 1 << /*out of */ 0);
+
   StmtResult R =
       BuildReturnStmt(ReturnLoc, RetVal.get(), /*AllowRecovery=*/true);
   if (R.isInvalid() || ExprEvalContexts.back().isDiscardedStatementContext())

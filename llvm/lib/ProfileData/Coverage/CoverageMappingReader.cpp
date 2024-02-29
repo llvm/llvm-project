@@ -244,7 +244,10 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
   unsigned LineStart = 0;
   for (size_t I = 0; I < NumRegions; ++I) {
     Counter C, C2;
-    uint64_t BIDX = 0, NC = 0, ID = 0, TID = 0, FID = 0;
+    uint64_t BIDX, NC;
+    // They are stored as internal values plus 1 (min is -1)
+    uint64_t ID1, TID1, FID1;
+    mcdc::Parameters Params;
     CounterMappingRegion::RegionKind Kind = CounterMappingRegion::CodeRegion;
 
     // Read the combined counter + region kind.
@@ -302,23 +305,29 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
             return Err;
           if (auto Err = readCounter(C2))
             return Err;
-          if (auto Err = readIntMax(ID, std::numeric_limits<unsigned>::max()))
+          if (auto Err = readIntMax(ID1, std::numeric_limits<int16_t>::max()))
             return Err;
-          if (auto Err = readIntMax(TID, std::numeric_limits<unsigned>::max()))
+          if (auto Err = readIntMax(TID1, std::numeric_limits<int16_t>::max()))
             return Err;
-          if (auto Err = readIntMax(FID, std::numeric_limits<unsigned>::max()))
+          if (auto Err = readIntMax(FID1, std::numeric_limits<int16_t>::max()))
             return Err;
-          if (ID == 0)
+          if (ID1 == 0)
             return make_error<CoverageMapError>(
                 coveragemap_error::malformed,
                 "MCDCConditionID shouldn't be zero");
+          Params = mcdc::BranchParameters{
+              static_cast<int16_t>(static_cast<int16_t>(ID1) - 1),
+              {static_cast<int16_t>(static_cast<int16_t>(FID1) - 1),
+               static_cast<int16_t>(static_cast<int16_t>(TID1) - 1)}};
           break;
         case CounterMappingRegion::MCDCDecisionRegion:
           Kind = CounterMappingRegion::MCDCDecisionRegion;
           if (auto Err = readIntMax(BIDX, std::numeric_limits<unsigned>::max()))
             return Err;
-          if (auto Err = readIntMax(NC, std::numeric_limits<unsigned>::max()))
+          if (auto Err = readIntMax(NC, std::numeric_limits<int16_t>::max()))
             return Err;
+          Params = mcdc::DecisionParameters{static_cast<unsigned>(BIDX),
+                                            static_cast<uint16_t>(NC)};
           break;
         default:
           return make_error<CoverageMapError>(coveragemap_error::malformed,
@@ -374,12 +383,8 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
     });
 
     auto CMR = CounterMappingRegion(
-        C, C2,
-        mcdc::Parameters{static_cast<unsigned>(BIDX), static_cast<unsigned>(NC),
-                         static_cast<unsigned>(ID), static_cast<unsigned>(TID),
-                         static_cast<unsigned>(FID)},
-        InferredFileID, ExpandedFileID, LineStart, ColumnStart,
-        LineStart + NumLines, ColumnEnd, Kind);
+        C, C2, InferredFileID, ExpandedFileID, LineStart, ColumnStart,
+        LineStart + NumLines, ColumnEnd, Kind, Params);
     if (CMR.startLoc() > CMR.endLoc())
       return make_error<CoverageMapError>(
           coveragemap_error::malformed,

@@ -290,25 +290,14 @@ void SPIRVEmitIntrinsics::insertPtrCastInstr(Instruction *I) {
   Value *Pointer;
   Type *ExpectedElementType;
   unsigned OperandToReplace;
-  bool AllowCastingToChar = false;
 
   StoreInst *SI = dyn_cast<StoreInst>(I);
   if (SI && F->getCallingConv() == CallingConv::SPIR_KERNEL &&
       SI->getValueOperand()->getType()->isPointerTy() &&
       isa<Argument>(SI->getValueOperand())) {
-    Argument *Arg = cast<Argument>(SI->getValueOperand());
-    MDString *ArgType = getOCLKernelArgType(*Arg->getParent(), Arg->getArgNo());
-    if (!ArgType || ArgType->getString().starts_with("uchar*"))
-      return;
-
-    // Handle special case when StoreInst's value operand is a kernel argument
-    // of a pointer type. Since these arguments could have either a basic
-    // element type (e.g. float*) or OpenCL builtin type (sampler_t), bitcast
-    // the StoreInst's value operand to default pointer element type (i8).
-    Pointer = Arg;
+    Pointer = SI->getValueOperand();
     ExpectedElementType = IntegerType::getInt8Ty(F->getContext());
     OperandToReplace = 0;
-    AllowCastingToChar = true;
   } else if (SI) {
     Pointer = SI->getPointerOperand();
     ExpectedElementType = SI->getValueOperand()->getType();
@@ -390,9 +379,19 @@ void SPIRVEmitIntrinsics::insertPtrCastInstr(Instruction *I) {
   }
 
   // Do not emit spv_ptrcast if it would cast to the default pointer element
-  // type (i8) of the same address space.
-  if (ExpectedElementType->isIntegerTy(8) && !AllowCastingToChar)
+  // type (i8) of the same address space. In case of OpenCL kernels, make sure
+  // i8 is the pointer element type defined for the given kernel argument.
+  if (ExpectedElementType->isIntegerTy(8) &&
+      F->getCallingConv() != CallingConv::SPIR_KERNEL)
     return;
+
+  Argument *Arg = dyn_cast<Argument>(Pointer);
+  if (ExpectedElementType->isIntegerTy(8) &&
+      F->getCallingConv() == CallingConv::SPIR_KERNEL && Arg) {
+    MDString *ArgType = getOCLKernelArgType(*Arg->getParent(), Arg->getArgNo());
+    if (ArgType && ArgType->getString().starts_with("uchar*"))
+      return;
+  }
 
   // If this would be the first spv_ptrcast, the pointer's defining instruction
   // requires spv_assign_ptr_type and does not already have one, do not emit
@@ -501,9 +500,25 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
 }
 
 Instruction *SPIRVEmitIntrinsics::visitAllocaInst(AllocaInst &I) {
+  Value *ArraySize = nullptr;
+  if (I.isArrayAllocation()) {
+    const SPIRVSubtarget *STI = TM->getSubtargetImpl(*I.getFunction());
+    if (!STI->canUseExtension(
+            SPIRV::Extension::SPV_INTEL_variable_length_array))
+      report_fatal_error(
+          "array allocation: this instruction requires the following "
+          "SPIR-V extension: SPV_INTEL_variable_length_array",
+          false);
+    ArraySize = I.getArraySize();
+  }
+
   TrackConstants = false;
   Type *PtrTy = I.getType();
-  auto *NewI = IRB->CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy}, {});
+  auto *NewI =
+      ArraySize
+          ? IRB->CreateIntrinsic(Intrinsic::spv_alloca_array,
+                                 {PtrTy, ArraySize->getType()}, {ArraySize})
+          : IRB->CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy}, {});
   std::string InstName = I.hasName() ? I.getName().str() : "";
   I.replaceAllUsesWith(NewI);
   I.eraseFromParent();

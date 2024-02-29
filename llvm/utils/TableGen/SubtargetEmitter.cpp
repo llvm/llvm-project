@@ -486,11 +486,10 @@ void SubtargetEmitter::EmitStageAndOperandCycleData(
   std::map<std::string, unsigned> ItinStageMap, ItinOperandMap;
   for (const CodeGenProcModel &ProcModel : SchedModels.procModels()) {
     // Add process itinerary to the list.
-    ProcItinLists.resize(ProcItinLists.size() + 1);
+    std::vector<InstrItinerary> &ItinList = ProcItinLists.emplace_back();
 
     // If this processor defines no itineraries, then leave the itinerary list
     // empty.
-    std::vector<InstrItinerary> &ItinList = ProcItinLists.back();
     if (!ProcModel.hasItineraries())
       continue;
 
@@ -1029,17 +1028,16 @@ void SubtargetEmitter::ExpandProcResources(
 // tables. Must be called for each processor in order.
 void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
                                            SchedClassTables &SchedTables) {
-  SchedTables.ProcSchedClasses.resize(SchedTables.ProcSchedClasses.size() + 1);
+  std::vector<MCSchedClassDesc> &SCTab =
+      SchedTables.ProcSchedClasses.emplace_back();
   if (!ProcModel.hasInstrSchedModel())
     return;
 
-  std::vector<MCSchedClassDesc> &SCTab = SchedTables.ProcSchedClasses.back();
   LLVM_DEBUG(dbgs() << "\n+++ SCHED CLASSES (GenSchedClassTables) +++\n");
   for (const CodeGenSchedClass &SC : SchedModels.schedClasses()) {
     LLVM_DEBUG(SC.dump(&SchedModels));
 
-    SCTab.resize(SCTab.size() + 1);
-    MCSchedClassDesc &SCDesc = SCTab.back();
+    MCSchedClassDesc &SCDesc = SCTab.emplace_back();
     // SCDesc.Name is guarded by NDEBUG
     SCDesc.NumMicroOps = 0;
     SCDesc.BeginGroup = false;
@@ -1264,7 +1262,10 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         WriteIDs.push_back(0);
       else {
         for (Record *VW : ValidWrites) {
-          WriteIDs.push_back(SchedModels.getSchedRWIdx(VW, /*IsRead=*/false));
+          unsigned WriteID = SchedModels.getSchedRWIdx(VW, /*IsRead=*/false);
+          assert(WriteID != 0 &&
+                 "Expected a valid SchedRW in the list of ValidWrites");
+          WriteIDs.push_back(WriteID);
         }
       }
       llvm::sort(WriteIDs);
@@ -1649,7 +1650,7 @@ static void collectProcessorIndices(const CodeGenSchedClass &SC,
     IdxVec PI;
     std::set_union(&T.ProcIndex, &T.ProcIndex + 1, ProcIndices.begin(),
                    ProcIndices.end(), std::back_inserter(PI));
-    ProcIndices.swap(PI);
+    ProcIndices = std::move(PI);
   }
 }
 

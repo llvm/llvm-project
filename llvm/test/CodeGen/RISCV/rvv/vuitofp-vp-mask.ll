@@ -25,7 +25,7 @@ define <vscale x 2 x half> @vuitofp_nxv2f16_nxv2i1_unmasked(<vscale x 2 x i1> %v
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x half> @llvm.vp.uitofp.nxv2f16.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
+  %v = call <vscale x 2 x half> @llvm.vp.uitofp.nxv2f16.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x half> %v
 }
 
@@ -52,7 +52,7 @@ define <vscale x 2 x float> @vuitofp_nxv2f32_nxv2i1_unmasked(<vscale x 2 x i1> %
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2f32.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
+  %v = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2f32.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x float> %v
 }
 
@@ -79,6 +79,6 @@ define <vscale x 2 x double> @vuitofp_nxv2f64_nxv2i1_unmasked(<vscale x 2 x i1> 
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2f64.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
+  %v = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2f64.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x double> %v
 }

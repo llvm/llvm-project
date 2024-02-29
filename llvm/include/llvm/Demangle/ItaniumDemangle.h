@@ -5540,7 +5540,7 @@ Node *AbstractManglingParser<Alloc, Derived>::parseFloatingLiteral() {
     return nullptr;
   std::string_view Data(First, N);
   for (char C : Data)
-    if (!std::isxdigit(C))
+    if (!(C >= '0' && C <= '9') && !(C >= 'a' && C <= 'f'))
       return nullptr;
   First += N;
   if (!consumeIf('E'))

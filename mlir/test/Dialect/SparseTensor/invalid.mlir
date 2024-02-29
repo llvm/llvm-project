@@ -1027,3 +1027,13 @@ func.func @sparse_reinterpret_map(%t0 : tensor<6x12xi32, #BSR>) -> tensor<3x4x2x
                                          to tensor<3x4x2x4xi32, #DSDD>
   return %t1 : tensor<3x4x2x4xi32, #DSDD>
 }
+
+// -----
+
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
+
+func.func @sparse_print(%arg0: tensor<10x10xf64>) {
+  // expected-error@+1 {{'sparse_tensor.print' op operand #0 must be sparse tensor of any type values}}
+  sparse_tensor.print %arg0 : tensor<10x10xf64>
+  return
+}

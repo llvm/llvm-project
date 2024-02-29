@@ -28,7 +28,7 @@ def testEncodingAttr1D():
         # CHECK: equal: True
         print(f"equal: {casted == parsed}")
 
-        # CHECK: lvl_types: [131072]
+        # CHECK: lvl_types: [262144]
         print(f"lvl_types: {casted.lvl_types}")
         # CHECK: dim_to_lvl: (d0) -> (d0)
         print(f"dim_to_lvl: {casted.dim_to_lvl}")
@@ -71,10 +71,10 @@ def testEncodingAttrStructure():
         # CHECK: equal: True
         print(f"equal: {casted == parsed}")
 
-        # CHECK: lvl_types: [65536, 65536, 4406637494272]
+        # CHECK: lvl_types: [65536, 65536, 4406638542848]
         print(f"lvl_types: {casted.lvl_types}")
-        # CHECK: lvl_types_enum: [<LevelType.dense: 65536>, <LevelType.dense: 65536>, <LevelType.n_out_of_m: 1048576>]
-        print(f"lvl_types_enum: {casted.lvl_types_enum}")
+        # CHECK: lvl_formats_enum: [<LevelFormat.dense: 65536>, <LevelFormat.dense: 65536>, <LevelFormat.n_out_of_m: 2097152>]
+        print(f"lvl_formats_enum: {casted.lvl_formats_enum}")
         # CHECK: structured_n: 2
         print(f"structured_n: {casted.structured_n}")
         # CHECK: structured_m: 4
@@ -96,7 +96,10 @@ def testEncodingAttrStructure():
         # CHECK: created_equal: False
         print(f"created_equal: {created == casted}")
 
-        built_2_4 = st.EncodingAttr.build_level_type(st.LevelType.n_out_of_m, 2, 4)
+        built_2_4 = st.EncodingAttr.build_level_type(
+            st.LevelFormat.n_out_of_m, [], 2, 4
+        )
+        built_dense = st.EncodingAttr.build_level_type(st.LevelFormat.dense)
         dim_to_lvl = AffineMap.get(
             2,
             0,
@@ -118,7 +121,7 @@ def testEncodingAttrStructure():
             ],
         )
         built = st.EncodingAttr.get(
-            [st.LevelType.dense, st.LevelType.dense, built_2_4],
+            [built_dense, built_dense, built_2_4],
             dim_to_lvl,
             lvl_to_dim,
             0,
@@ -154,7 +157,7 @@ def testEncodingAttr2D():
         # CHECK: equal: True
         print(f"equal: {casted == parsed}")
 
-        # CHECK: lvl_types: [65536, 131072]
+        # CHECK: lvl_types: [65536, 262144]
         print(f"lvl_types: {casted.lvl_types}")
         # CHECK: dim_to_lvl: (d0, d1) -> (d1, d0)
         print(f"dim_to_lvl: {casted.dim_to_lvl}")

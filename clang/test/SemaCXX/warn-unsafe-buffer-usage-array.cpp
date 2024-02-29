@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage \
+// RUN: %clang_cc1 -std=c++20 -Wno-everything -Wunsafe-buffer-usage \
 // RUN:            -fsafe-buffer-usage-suggestions \
 // RUN:            -verify %s
 
@@ -21,4 +21,20 @@ struct Foo {
 };
 void foo2(Foo& f, unsigned idx) {
   f.member_buffer[idx] = 0; // expected-warning{{unsafe buffer access}}
+}
+
+void constant_idx_safe(unsigned idx) {
+  int buffer[10];
+  buffer[9] = 0;
+}
+
+void constant_idx_safe0(unsigned idx) {
+  int buffer[10];
+  buffer[0] = 0;
+}
+
+void constant_idx_unsafe(unsigned idx) {
+  int buffer[10];       // expected-warning{{'buffer' is an unsafe buffer that does not perform bounds checks}}
+                        // expected-note@-1{{change type of 'buffer' to 'std::array' to label it for hardening}}
+  buffer[10] = 0;       // expected-note{{used in buffer access here}}
 }

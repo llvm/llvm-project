@@ -213,6 +213,7 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
     }
     Counter Count = Minimizer.adjust(I->Count);
     Counter FalseCount = Minimizer.adjust(I->FalseCount);
+    bool ParamsShouldBeNull = true;
     switch (I->Kind) {
     case CounterMappingRegion::CodeRegion:
     case CounterMappingRegion::GapRegion:
@@ -251,17 +252,29 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
                     OS);
       writeCounter(MinExpressions, Count, OS);
       writeCounter(MinExpressions, FalseCount, OS);
-      assert(I->MCDCParams.ID > 0);
-      encodeULEB128(unsigned(I->MCDCParams.ID), OS);
-      encodeULEB128(unsigned(I->MCDCParams.TrueID), OS);
-      encodeULEB128(unsigned(I->MCDCParams.FalseID), OS);
+      {
+        // They are written as internal values plus 1.
+        const auto &BranchParams = I->getBranchParams();
+        ParamsShouldBeNull = false;
+        assert(BranchParams.ID >= 0);
+        unsigned ID1 = BranchParams.ID + 1;
+        unsigned TID1 = BranchParams.Conds[true] + 1;
+        unsigned FID1 = BranchParams.Conds[false] + 1;
+        encodeULEB128(ID1, OS);
+        encodeULEB128(TID1, OS);
+        encodeULEB128(FID1, OS);
+      }
       break;
     case CounterMappingRegion::MCDCDecisionRegion:
       encodeULEB128(unsigned(I->Kind)
                         << Counter::EncodingCounterTagAndExpansionRegionTagBits,
                     OS);
-      encodeULEB128(unsigned(I->MCDCParams.BitmapIdx), OS);
-      encodeULEB128(unsigned(I->MCDCParams.NumConditions), OS);
+      {
+        const auto &DecisionParams = I->getDecisionParams();
+        ParamsShouldBeNull = false;
+        encodeULEB128(static_cast<unsigned>(DecisionParams.BitmapIdx), OS);
+        encodeULEB128(static_cast<unsigned>(DecisionParams.NumConditions), OS);
+      }
       break;
     }
     assert(I->LineStart >= PrevLineStart);
@@ -271,6 +284,9 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
     encodeULEB128(I->LineEnd - I->LineStart, OS);
     encodeULEB128(I->ColumnEnd, OS);
     PrevLineStart = I->LineStart;
+    assert((!ParamsShouldBeNull || std::get_if<0>(&I->MCDCParams)) &&
+           "MCDCParams should be empty");
+    (void)ParamsShouldBeNull;
   }
   // Ensure that all file ids have at least one mapping region.
   assert(CurrentFileID == (VirtualFileMapping.size() - 1));

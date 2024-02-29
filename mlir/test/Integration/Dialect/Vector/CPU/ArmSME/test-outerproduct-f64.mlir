@@ -1,10 +1,6 @@
 // DEFINE: %{entry_point} = test_outerproduct_no_accumulator_2x2xf64
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
-// DEFINE:   -convert-vector-to-arm-sme -convert-arith-to-arm-sme \
-// DEFINE:   -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
-// DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
-// DEFINE:   -test-lower-to-llvm -o %t
+// DEFINE:   -test-lower-to-arm-sme -test-lower-to-llvm -o %t
 // DEFINE: %{run} = %mcr_aarch64_cmd %t \
 // DEFINE:   -march=aarch64 -mattr=+sve,+sme-f64f64 \
 // DEFINE:   -e %{entry_point} -entry-point-result=void \
@@ -44,9 +40,9 @@ func.func @test_outerproduct_no_accumulator_2x2xf64() {
   // CHECK-NEXT: ( 1, 2
   // CHECK-NEXT: ( 2, 4
   // CHECK:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %tile : vector<[2]x[2]xf64>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   return
 }
@@ -70,9 +66,9 @@ func.func @test_outerproduct_with_accumulator_2x2xf64() {
   // WITH-ACC-NEXT: ( 11, 12
   // WITH-ACC-NEXT: ( 12, 14
   // WITH-ACC:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %tile : vector<[2]x[2]xf64>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   return
 }
@@ -100,9 +96,9 @@ func.func @test_masked_outerproduct_no_accumulator_2x2xf64() {
   // WITH-MASK-NEXT: ( 1, 0
   // WITH-MASK-NEXT: ( 2, 0
   // WITH-MASK:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %tile : vector<[2]x[2]xf64>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   return
 }
@@ -131,9 +127,9 @@ func.func @test_masked_outerproduct_with_accumulator_2x2xf64() {
   // WITH-MASK-AND-ACC-NEXT: ( 11, 12
   // WITH-MASK-AND-ACC-NEXT: ( 10, 10
   // WITH-MASK-AND-ACC:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %tile : vector<[2]x[2]xf64>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   return
 }

@@ -504,13 +504,6 @@ int main() {
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK1-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK1-NEXT:    ret void
-//
-//
 // CHECK3-LABEL: define {{[^@]+}}@main
 // CHECK3-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK3-NEXT:  entry:
@@ -756,13 +749,6 @@ int main() {
 // CHECK3-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK3:       omp.loop.exit:
 // CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP5]])
-// CHECK3-NEXT:    ret void
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK3-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK3-NEXT:    ret void
 //
 //
@@ -1207,7 +1193,7 @@ int main() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@_Z5tmainIiET_v
-// CHECK8-SAME: () #[[ATTR5:[0-9]+]] comdat {
+// CHECK8-SAME: () #[[ATTR1]] comdat {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK8-NEXT:    [[TEST:%.*]] = alloca [[STRUCT_S_0:%.*]], align 4
@@ -1685,13 +1671,6 @@ int main() {
 // CHECK8-NEXT:    ret void
 //
 //
-// CHECK8-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK8-SAME: () #[[ATTR6:[0-9]+]] {
-// CHECK8-NEXT:  entry:
-// CHECK8-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK8-NEXT:    ret void
-//
-//
 // CHECK10-LABEL: define {{[^@]+}}@main
 // CHECK10-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK10-NEXT:  entry:
@@ -2127,7 +2106,7 @@ int main() {
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@_Z5tmainIiET_v
-// CHECK10-SAME: () #[[ATTR5:[0-9]+]] comdat {
+// CHECK10-SAME: () #[[ATTR1]] comdat {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK10-NEXT:    [[TEST:%.*]] = alloca [[STRUCT_S_0:%.*]], align 4
@@ -2596,12 +2575,5 @@ int main() {
 // CHECK10-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK10-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK10-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK10-NEXT:    ret void
-//
-//
-// CHECK10-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK10-SAME: () #[[ATTR6:[0-9]+]] {
-// CHECK10-NEXT:  entry:
-// CHECK10-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK10-NEXT:    ret void
 //

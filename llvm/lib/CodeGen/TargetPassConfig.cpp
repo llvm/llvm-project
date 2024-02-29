@@ -918,7 +918,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     // on catchpads and cleanuppads because it does not outline them into
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
     // should remove PHIs there.
-    addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/false));
+    addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/true));
     addPass(createWasmEHPass());
     break;
   case ExceptionHandling::None:
@@ -1426,6 +1426,8 @@ void TargetPassConfig::addFastRegAlloc() {
 /// scheduling, and register allocation itself.
 void TargetPassConfig::addOptimizedRegAlloc() {
   addPass(&DetectDeadLanesID);
+
+  addPass(&InitUndefID);
 
   addPass(&ProcessImplicitDefsID);
 

@@ -163,8 +163,8 @@ TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   EXPECT_EQ(Marker2->StoredDPValues.size(), 1u);
 
   // Unlink them and try to re-insert them through the basic block.
-  DPValue *DPV1 = &*Marker1->StoredDPValues.begin();
-  DPValue *DPV2 = &*Marker2->StoredDPValues.begin();
+  DbgRecord *DPV1 = &*Marker1->StoredDPValues.begin();
+  DbgRecord *DPV2 = &*Marker2->StoredDPValues.begin();
   DPV1->removeFromParent();
   DPV2->removeFromParent();
   EXPECT_TRUE(Marker1->StoredDPValues.empty());
@@ -188,8 +188,8 @@ TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   EXPECT_EQ(BB.size(), 1u);
   EXPECT_EQ(Marker2->StoredDPValues.size(), 2u);
   // They should also be in the correct order.
-  SmallVector<DPValue *, 2> DPVs;
-  for (DPValue &DPV : Marker2->getDbgValueRange())
+  SmallVector<DbgRecord *, 2> DPVs;
+  for (DbgRecord &DPV : Marker2->getDbgValueRange())
     DPVs.push_back(&DPV);
   EXPECT_EQ(DPVs[0], DPV1);
   EXPECT_EQ(DPVs[1], DPV2);
@@ -199,13 +199,13 @@ TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   EXPECT_EQ(BB.getTrailingDPValues(), nullptr);
   Instr2->removeFromParent();
   EXPECT_TRUE(BB.empty());
-  EndMarker = BB.getTrailingDPValues();;
+  EndMarker = BB.getTrailingDPValues();
   ASSERT_NE(EndMarker, nullptr);
   EXPECT_EQ(EndMarker->StoredDPValues.size(), 2u);
   // Again, these should arrive in the correct order.
 
   DPVs.clear();
-  for (DPValue &DPV : EndMarker->getDbgValueRange())
+  for (DbgRecord &DPV : EndMarker->getDbgValueRange())
     DPVs.push_back(&DPV);
   EXPECT_EQ(DPVs[0], DPV1);
   EXPECT_EQ(DPVs[1], DPV2);
@@ -226,7 +226,7 @@ TEST(BasicBlockDbgInfoTest, MarkerOperations) {
 
   // Remove Instr1: now the DPValues will fall down again,
   Instr1->removeFromParent();
-  EndMarker = BB.getTrailingDPValues();;
+  EndMarker = BB.getTrailingDPValues();
   EXPECT_EQ(EndMarker->StoredDPValues.size(), 2u);
 
   // Inserting a terminator, however it's intended, should dislodge the
@@ -391,7 +391,7 @@ TEST(BasicBlockDbgInfoTest, InstrDbgAccess) {
   ASSERT_FALSE(BInst->DbgMarker);
   ASSERT_TRUE(CInst->DbgMarker);
   ASSERT_EQ(CInst->DbgMarker->StoredDPValues.size(), 1u);
-  DPValue *DPV1 = &*CInst->DbgMarker->StoredDPValues.begin();
+  DbgRecord *DPV1 = &*CInst->DbgMarker->StoredDPValues.begin();
   ASSERT_TRUE(DPV1);
   EXPECT_FALSE(BInst->hasDbgValues());
 
@@ -399,7 +399,7 @@ TEST(BasicBlockDbgInfoTest, InstrDbgAccess) {
   // tested in DPMarker test.
   auto Range1 = BInst->cloneDebugInfoFrom(CInst);
   EXPECT_EQ(BInst->DbgMarker->StoredDPValues.size(), 1u);
-  DPValue *DPV2 = &*BInst->DbgMarker->StoredDPValues.begin();
+  DbgRecord *DPV2 = &*BInst->DbgMarker->StoredDPValues.begin();
   EXPECT_EQ(std::distance(Range1.begin(), Range1.end()), 1u);
   EXPECT_EQ(&*Range1.begin(), DPV2);
   EXPECT_NE(DPV1, DPV2);
@@ -531,15 +531,15 @@ protected:
     Branch = &*Last;
     CInst = &*Dest;
 
-    DPVA = &*BInst->DbgMarker->StoredDPValues.begin();
-    DPVB = &*Branch->DbgMarker->StoredDPValues.begin();
-    DPVConst = &*CInst->DbgMarker->StoredDPValues.begin();
+    DPVA = cast<DPValue>(&*BInst->DbgMarker->StoredDPValues.begin());
+    DPVB = cast<DPValue>(&*Branch->DbgMarker->StoredDPValues.begin());
+    DPVConst = cast<DPValue>(&*CInst->DbgMarker->StoredDPValues.begin());
   }
 
   void TearDown() override { UseNewDbgInfoFormat = false; }
 
   bool InstContainsDPValue(Instruction *I, DPValue *DPV) {
-    for (DPValue &D : I->getDbgValueRange()) {
+    for (DbgRecord &D : I->getDbgValueRange()) {
       if (&D == DPV) {
         // Confirm too that the links between the records are correct.
         EXPECT_EQ(DPV->Marker, I->DbgMarker);
@@ -551,8 +551,8 @@ protected:
   }
 
   bool CheckDPVOrder(Instruction *I, SmallVector<DPValue *> CheckVals) {
-    SmallVector<DPValue *> Vals;
-    for (DPValue &D : I->getDbgValueRange())
+    SmallVector<DbgRecord *> Vals;
+    for (DbgRecord &D : I->getDbgValueRange())
       Vals.push_back(&D);
 
     EXPECT_EQ(Vals.size(), CheckVals.size());
@@ -1389,8 +1389,8 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty1) {
   ASSERT_TRUE(BInst->hasDbgValues());
   EXPECT_EQ(BInst->DbgMarker->StoredDPValues.size(), 2u);
   SmallVector<DPValue *, 2> DPValues;
-  for (DPValue &DPV : BInst->getDbgValueRange())
-    DPValues.push_back(&DPV);
+  for (DbgRecord &DPV : BInst->getDbgValueRange())
+    DPValues.push_back(cast<DPValue>(&DPV));
 
   EXPECT_EQ(DPValues[0]->getVariableLocationOp(0), F.getArg(0));
   Value *SecondDPVValue = DPValues[1]->getVariableLocationOp(0);
@@ -1459,8 +1459,8 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty2) {
   ASSERT_TRUE(BInst->hasDbgValues());
   EXPECT_EQ(BInst->DbgMarker->StoredDPValues.size(), 1u);
   SmallVector<DPValue *, 2> DPValues;
-  for (DPValue &DPV : BInst->getDbgValueRange())
-    DPValues.push_back(&DPV);
+  for (DbgRecord &DPV : BInst->getDbgValueRange())
+    DPValues.push_back(cast<DPValue>(&DPV));
 
   EXPECT_EQ(DPValues[0]->getVariableLocationOp(0), F.getArg(0));
   // No trailing DPValues in the entry block now.
