@@ -1354,12 +1354,10 @@ public:
       Signal->increaseUseCount();
     }
 
-    AMDGPUSignalTy *OutputSignal = OutputSignals[0];
-
     std::lock_guard<std::mutex> Lock(Mutex);
 
     // Consume stream slot and compute dependencies.
-    auto [Curr, InputSignal] = consume(OutputSignal);
+    auto [Curr, InputSignal] = consume(OutputSignals[0]);
 
     // Avoid defining the input dependency if already satisfied.
     if (InputSignal && !InputSignal->load())
@@ -1383,21 +1381,16 @@ public:
       if (auto Err = Plugin::check(Status,
                                    "Error in hsa_amd_signal_async_handler: %s"))
         return Err;
-
-      // Let's use now the second output signal.
-      OutputSignal = OutputSignals[1];
-
-      // Consume another stream slot and compute dependencies.
-      std::tie(Curr, InputSignal) = consume(OutputSignal);
     } else {
       // All preceding operations completed, copy the memory synchronously.
       std::memcpy(Inter, Src, CopySize);
 
-      // Return the second signal because it will not be used.
-      OutputSignals[1]->decreaseUseCount();
-      if (auto Err = SignalManager.returnResource(OutputSignals[1]))
-        return Err;
+      // Signal the end of the operation.
+      Slots[Curr].Signal->signal();
     }
+
+    // Consume another stream slot and compute dependencies.
+    std::tie(Curr, InputSignal) = consume(OutputSignals[1]);
 
     // Setup the post action to release the intermediate pinned buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(Inter, MemoryManager))
@@ -1409,10 +1402,10 @@ public:
       hsa_signal_t InputSignalRaw = InputSignal->get();
       return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Inter,
                                  Agent, CopySize, 1, &InputSignalRaw,
-                                 OutputSignal->get());
+                                 OutputSignals[1]->get());
     }
     return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Inter, Agent,
-                               CopySize, 0, nullptr, OutputSignal->get());
+                               CopySize, 0, nullptr, OutputSignals[1]->get());
   }
 
   // AMDGPUDeviceTy is incomplete here, passing the underlying agent instead
