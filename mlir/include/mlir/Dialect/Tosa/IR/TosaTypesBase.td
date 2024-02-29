@@ -43,6 +43,7 @@ class Tosa_QuantizedType<string n, list<int> params, bit signed>
 
 def Tosa_Int4 : I<4>;
 def Tosa_Int8 : I<8>;
+def Tosa_Int16 : I<16>;
 def Tosa_Int32 : I<32>;
 def Tosa_Int64 : I<64>;
 
@@ -54,7 +55,10 @@ def Tosa_Int : AnyTypeOf<[AnyUnsignedInteger,
                           AnySignlessInteger]>;
 
 def Tosa_Int32Or64 : AnyTypeOf<[Tosa_Int32,
-                   	        Tosa_Int64]>;
+                          Tosa_Int64]>;
+
+def Tosa_Int16Or32 : AnyTypeOf<[Tosa_Int16,
+                          Tosa_Int32]>;
 
 //===----------------------------------------------------------------------===//
 // Quantized Integer Types.
@@ -68,11 +72,23 @@ def Tosa_Int32Or64 : AnyTypeOf<[Tosa_Int32,
 // int8  : symmetric  per tensor/per channel, signed
 // int16 : symmetric  per tensor,             signed
 //===----------------------------------------------------------------------===//
-def Tosa_QuantizedInt : AnyTypeOf<[Tosa_QuantizedType<"uint8", [8], 0>,
-                                   Tosa_QuantizedType<"int4", [4, 0], 1>,
-                                   Tosa_QuantizedType<"int8", [8, 0], 1>,
-                                   Tosa_QuantizedType<"int16", [16, 0], 1>,
-                                   Tosa_QuantizedType<"int32", [32, 0], 1>]>;
+def Tosa_QuantizedInt	: AnyTypeOf<[ Tosa_QuantizedType<"uint8", [8], 0>,
+                                     Tosa_QuantizedType<"int4", [4, 0], 1>,
+                                     Tosa_QuantizedType<"int8", [8, 0], 1>,
+                                     Tosa_QuantizedType<"int16", [16, 0], 1>,
+                                     Tosa_QuantizedType<"int32", [32, 0], 1>]>;
+
+//===----------------------------------------------------------------------===//
+// Floating-point types.
+//===----------------------------------------------------------------------===//
+def Tosa_Float : AnyTypeOf<[
+                            F32,
+                            F16,
+                            BF16]>;
+
+def Tosa_F8 : AnyTypeOf<[
+                        F8E4M3FN,
+                        F8E5M2]>;
 
 //===----------------------------------------------------------------------===//
 // Multi-category types.
@@ -161,6 +177,10 @@ def Tosa_Tensor2D : AnyTypeOf<[Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNu
 def Tosa_Tensor3D : AnyTypeOf<[Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [3]>], "3-d tosa-conformant tensor", "::mlir::TensorType">;
 def Tosa_Tensor4D : AnyTypeOf<[Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [4]>], "4-d tosa-conformant tensor", "::mlir::TensorType">;
 def Tosa_Tensor5D : AnyTypeOf<[Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [5]>], "5-d tosa-conformant tensor", "::mlir::TensorType">;
+
+// 1D tensor of specific types
+def Tosa_1DInt8Tensor : 1DTensorOf<[Tosa_Int8]>;
+def Tosa_1DInt16Or32Tensor : 1DTensorOf<[Tosa_Int16Or32]>;
 
 // Ranked tensors up to given rank.
 def Tosa_Tensor1Dto4D : AnyTypeOf<[

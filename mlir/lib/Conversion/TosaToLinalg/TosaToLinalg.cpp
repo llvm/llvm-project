@@ -1389,8 +1389,24 @@ public:
     }
 
     // The shift and multiplier values.
-    SmallVector<int32_t> multiplierValues(op.getMultiplier());
-    SmallVector<int8_t> shiftValues(op.getShift());
+    ElementsAttr shiftElems;
+    if (!matchPattern(op.getShift(), m_Constant(&shiftElems)))
+      return rewriter.notifyMatchFailure(
+          op, "tosa.rescale requires constant shift input values");
+
+    ElementsAttr multiplierElems;
+    if (!matchPattern(op.getMultiplier(), m_Constant(&multiplierElems)))
+      return rewriter.notifyMatchFailure(
+          op, "tosa.rescale requires constant multiplier input values");
+
+    SmallVector<int8_t> shiftValues;
+    for (auto idx : shiftElems.getValues<IntegerAttr>()) {
+      shiftValues.push_back(static_cast<int8_t>(idx.getInt()));
+    }
+    SmallVector<int32_t> multiplierValues;
+    for (auto idx : multiplierElems.getValues<IntegerAttr>()) {
+      multiplierValues.push_back(static_cast<int32_t>(idx.getInt()));
+    }
 
     // If we shift by more than the bitwidth, this just sets to 0.
     for (int i = 0, s = multiplierValues.size(); i < s; i++) {
