@@ -1,0 +1,6 @@
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+BUILD_DIR=$SCRIPT_DIR/../build-release
+CUR_DIR=$PWD
+
+cd $BUILD_DIR && ninja && cd $CUR_DIR && \
+$BUILD_DIR/bin/clang++ $@
