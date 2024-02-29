@@ -1397,6 +1397,8 @@ inline APFloat minnum(const APFloat &A, const APFloat &B) {
     return B;
   if (B.isNaN())
     return A;
+  if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
+    return A.isNegative() ? A : B;
   return B < A ? B : A;
 }
 
@@ -1408,6 +1410,8 @@ inline APFloat maxnum(const APFloat &A, const APFloat &B) {
     return B;
   if (B.isNaN())
     return A;
+  if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
+    return A.isNegative() ? B : A;
   return A < B ? B : A;
 }
 
