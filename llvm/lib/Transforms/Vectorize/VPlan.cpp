@@ -825,7 +825,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   if (WidenVFxUF.getNumUsers() > 0)
     for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part) {
       Value *Step =
-          createStepForVF(Builder, TripCountV->getType(), State.VF, Part+1);
+          createStepForVF(Builder, TripCountV->getType(), State.VF, Part + 1);
       if (State.VF.isScalar())
         State.set(&WidenVFxUF, Step, Part);
       else
