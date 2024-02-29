@@ -412,13 +412,9 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX512F-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512F-NEXT:    movzwl %ax, %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm2
+; AVX512F-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512F-NEXT:    vpextrw $0, %xmm1, %eax
-; AVX512F-NEXT:    movzwl %ax, %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm3
+; AVX512F-NEXT:    vpmovzxwq {{.*#+}} xmm3 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; AVX512F-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512F-NEXT:    xorl %eax, %eax
 ; AVX512F-NEXT:    vucomiss %xmm3, %xmm2
@@ -433,13 +429,9 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; AVX512VL-LABEL: test_v2f16:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX512VL-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512VL-NEXT:    movzwl %ax, %eax
-; AVX512VL-NEXT:    vmovd %eax, %xmm2
+; AVX512VL-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512VL-NEXT:    vpextrw $0, %xmm1, %eax
-; AVX512VL-NEXT:    movzwl %ax, %eax
-; AVX512VL-NEXT:    vmovd %eax, %xmm3
+; AVX512VL-NEXT:    vpmovzxwq {{.*#+}} xmm3 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vucomiss %xmm3, %xmm2
