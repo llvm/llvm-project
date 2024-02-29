@@ -1207,6 +1207,10 @@ foreach mx = SchedMxList in {
     def : ReadAdvance<!cast<SchedRead>("ReadVMergeOp_" # mx  # "_E" # sew), 0>;
 }
 
+let Latency = 100 in
+def WriteVCIX : SchedWriteRes<[SiFive7VCQ, SiFive7VA]>;
+def : InstRW<[WriteVCIX], (instregex "PseudoVC_.*")>;
+
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
 defm : UnsupportedSchedZabha;
