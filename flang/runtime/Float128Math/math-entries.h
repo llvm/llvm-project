@@ -54,6 +54,7 @@ namespace Fortran::runtime {
   };
 
 // Define fallback callers.
+DEFINE_FALLBACK(Abs)
 DEFINE_FALLBACK(Acos)
 DEFINE_FALLBACK(Acosh)
 DEFINE_FALLBACK(Asin)
@@ -61,7 +62,6 @@ DEFINE_FALLBACK(Asinh)
 DEFINE_FALLBACK(Atan)
 DEFINE_FALLBACK(Atan2)
 DEFINE_FALLBACK(Atanh)
-DEFINE_FALLBACK(CAbs)
 DEFINE_FALLBACK(Ceil)
 DEFINE_FALLBACK(Cos)
 DEFINE_FALLBACK(Cosh)
@@ -91,15 +91,6 @@ DEFINE_FALLBACK(Y0)
 DEFINE_FALLBACK(Y1)
 DEFINE_FALLBACK(Yn)
 
-// Define ComplexF128 type that is compatible with
-// the type of results/arguments of libquadmath.
-// TODO: this may need more work for other libraries/compilers.
-#if !defined(_ARCH_PPC) || defined(__LONG_DOUBLE_IEEE128__)
-typedef _Complex float __attribute__((mode(TC))) ComplexF128;
-#else
-typedef _Complex float __attribute__((mode(KC))) ComplexF128;
-#endif
-
 #if HAS_LIBM
 // Define wrapper callers for libm.
 #include <ccomplex>
@@ -109,6 +100,7 @@ typedef _Complex float __attribute__((mode(KC))) ComplexF128;
 // Use STD math functions. They provide IEEE-754 128-bit float
 // support either via 'long double' or __float128.
 // The Bessel's functions are not present in STD namespace.
+DEFINE_SIMPLE_ALIAS(Abs, std::abs)
 DEFINE_SIMPLE_ALIAS(Acos, std::acos)
 DEFINE_SIMPLE_ALIAS(Acosh, std::acosh)
 DEFINE_SIMPLE_ALIAS(Asin, std::asin)
@@ -165,6 +157,7 @@ DEFINE_SIMPLE_ALIAS(Yn, ynl)
 #elif HAS_QUADMATHLIB
 // Define wrapper callers for libquadmath.
 #include "quadmath.h"
+DEFINE_SIMPLE_ALIAS(Abs, fabsq)
 DEFINE_SIMPLE_ALIAS(Acos, acosq)
 DEFINE_SIMPLE_ALIAS(Acosh, acoshq)
 DEFINE_SIMPLE_ALIAS(Asin, asinq)
@@ -172,7 +165,6 @@ DEFINE_SIMPLE_ALIAS(Asinh, asinhq)
 DEFINE_SIMPLE_ALIAS(Atan, atanq)
 DEFINE_SIMPLE_ALIAS(Atan2, atan2q)
 DEFINE_SIMPLE_ALIAS(Atanh, atanhq)
-DEFINE_SIMPLE_ALIAS(CAbs, cabsq)
 DEFINE_SIMPLE_ALIAS(Ceil, ceilq)
 DEFINE_SIMPLE_ALIAS(Cos, cosq)
 DEFINE_SIMPLE_ALIAS(Cosh, coshq)
@@ -202,6 +194,19 @@ DEFINE_SIMPLE_ALIAS(Y0, y0q)
 DEFINE_SIMPLE_ALIAS(Y1, y1q)
 DEFINE_SIMPLE_ALIAS(Yn, ynq)
 #endif
+
+extern "C" {
+// Declarations of the entry points that might be referenced
+// within the Float128Math library itself.
+// Note that not all of these entry points are actually
+// defined in this library. Some of them are used just
+// as template parameters to call the corresponding callee directly.
+CppTypeFor<TypeCategory::Real, 16> RTDECL(AbsF128)(
+    CppTypeFor<TypeCategory::Real, 16> x);
+CppTypeFor<TypeCategory::Real, 16> RTDECL(SqrtF128)(
+    CppTypeFor<TypeCategory::Real, 16> x);
+} // extern "C"
+
 } // namespace Fortran::runtime
 
 #endif // FORTRAN_RUNTIME_FLOAT128MATH_MATH_ENTRIES_H_

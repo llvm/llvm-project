@@ -192,6 +192,9 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses declarative nested name specifiers that name alias templates.
 
+- Clang now diagnoses lambda function expressions being implicitly cast to boolean values, under ``-Wpointer-bool-conversion``.
+  Fixes `#82512 <https://github.com/llvm/llvm-project/issues/82512>`_.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

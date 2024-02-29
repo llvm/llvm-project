@@ -25,6 +25,7 @@
 #include "tools.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
+#include <algorithm>
 
 namespace Fortran::runtime {
 
@@ -330,6 +331,120 @@ template <typename ACCUMULATOR> struct PartialLocationHelper {
           terminator, intrinsic, accumulator);
     }
   };
+};
+
+// NORM2 templates
+
+RT_VAR_GROUP_BEGIN
+
+// Use at least double precision for accumulators.
+// Don't use __float128, it doesn't work with abs() or sqrt() yet.
+static constexpr RT_CONST_VAR_ATTRS int Norm2LargestLDKind {
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+  16
+#elif LDBL_MANT_DIG == 64
+  10
+#else
+  8
+#endif
+};
+
+RT_VAR_GROUP_END
+
+template <TypeCategory CAT, int KIND, typename ACCUMULATOR>
+inline RT_API_ATTRS void DoMaxMinNorm2(Descriptor &result, const Descriptor &x,
+    int dim, const Descriptor *mask, const char *intrinsic,
+    Terminator &terminator) {
+  using Type = CppTypeFor<CAT, KIND>;
+  ACCUMULATOR accumulator{x};
+  if (dim == 0 || x.rank() == 1) {
+    // Total reduction
+
+    // Element size of the destination descriptor is the same
+    // as the element size of the source.
+    result.Establish(x.type(), x.ElementBytes(), nullptr, 0, nullptr,
+        CFI_attribute_allocatable);
+    if (int stat{result.Allocate()}) {
+      terminator.Crash(
+          "%s: could not allocate memory for result; STAT=%d", intrinsic, stat);
+    }
+    DoTotalReduction<Type>(x, dim, mask, accumulator, intrinsic, terminator);
+    accumulator.GetResult(result.OffsetElement<Type>());
+  } else {
+    // Partial reduction
+
+    // Element size of the destination descriptor is the same
+    // as the element size of the source.
+    PartialReduction<ACCUMULATOR, CAT, KIND>(result, x, x.ElementBytes(), dim,
+        mask, terminator, intrinsic, accumulator);
+  }
+}
+
+// The data type used by Norm2Accumulator.
+template <int KIND>
+using Norm2AccumType =
+    CppTypeFor<TypeCategory::Real, std::clamp(KIND, 8, Norm2LargestLDKind)>;
+
+template <int KIND, typename ABS, typename SQRT> class Norm2Accumulator {
+public:
+  using Type = CppTypeFor<TypeCategory::Real, KIND>;
+  using AccumType = Norm2AccumType<KIND>;
+  explicit RT_API_ATTRS Norm2Accumulator(const Descriptor &array)
+      : array_{array} {}
+  RT_API_ATTRS void Reinitialize() { max_ = sum_ = 0; }
+  template <typename A>
+  RT_API_ATTRS void GetResult(A *p, int /*zeroBasedDim*/ = -1) const {
+    // m * sqrt(1 + sum((others(:)/m)**2))
+    *p = static_cast<Type>(max_ * SQRT::compute(1 + sum_));
+  }
+  RT_API_ATTRS bool Accumulate(Type x) {
+    auto absX{ABS::compute(static_cast<AccumType>(x))};
+    if (!max_) {
+      max_ = absX;
+    } else if (absX > max_) {
+      auto t{max_ / absX}; // < 1.0
+      auto tsq{t * t};
+      sum_ *= tsq; // scale sum to reflect change to the max
+      sum_ += tsq; // include a term for the previous max
+      max_ = absX;
+    } else { // absX <= max_
+      auto t{absX / max_};
+      sum_ += t * t;
+    }
+    return true;
+  }
+  template <typename A>
+  RT_API_ATTRS bool AccumulateAt(const SubscriptValue at[]) {
+    return Accumulate(*array_.Element<A>(at));
+  }
+
+private:
+  const Descriptor &array_;
+  AccumType max_{0}; // value (m) with largest magnitude
+  AccumType sum_{0}; // sum((others(:)/m)**2)
+};
+
+// Helper class for creating Norm2Accumulator instance
+// based on the given KIND. This helper returns and instance
+// that uses std::abs and std::sqrt for the computations.
+template <int KIND> class Norm2AccumulatorGetter {
+  using AccumType = Norm2AccumType<KIND>;
+
+public:
+  struct ABSTy {
+    static constexpr RT_API_ATTRS AccumType compute(AccumType &&x) {
+      return std::abs(std::forward<AccumType>(x));
+    }
+  };
+  struct SQRTTy {
+    static constexpr RT_API_ATTRS AccumType compute(AccumType &&x) {
+      return std::sqrt(std::forward<AccumType>(x));
+    }
+  };
+
+  using Type = Norm2Accumulator<KIND, ABSTy, SQRTTy>;
+
+  static RT_API_ATTRS Type create(const Descriptor &x) { return Type(x); }
 };
 
 } // namespace Fortran::runtime

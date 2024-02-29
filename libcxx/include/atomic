@@ -587,7 +587,6 @@ template <class T>
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__atomic/aliases.h>
 #include <__atomic/atomic.h>
 #include <__atomic/atomic_base.h>
@@ -620,6 +619,7 @@ template <class T>
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <cmath>
 #  include <compare>
+#  include <cstdlib>
 #  include <cstring>
 #  include <type_traits>
 #endif
