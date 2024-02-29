@@ -49,20 +49,21 @@ void AMDGPUVariadicMCExpr::printImpl(raw_ostream &OS,
   OS << ')';
 }
 
+static int64_t Op(AMDGPUVariadicMCExpr::AMDGPUVariadicKind Kind, int64_t Arg1,
+                  int64_t Arg2) {
+  switch (Kind) {
+  default:
+    llvm_unreachable("Unknown AMDGPUVariadicMCExpr kind.");
+  case AMDGPUVariadicMCExpr::AMDGPUVariadicKind::AGVK_Max:
+    return std::max(Arg1, Arg2);
+  case AMDGPUVariadicMCExpr::AMDGPUVariadicKind::AGVK_Or:
+    return Arg1 || Arg2;
+  }
+}
+
 bool AMDGPUVariadicMCExpr::evaluateAsRelocatableImpl(
     MCValue &Res, const MCAsmLayout *Layout, const MCFixup *Fixup) const {
-  std::optional<int64_t> Total = {};
-
-  auto Op = [this](int64_t Arg1, int64_t Arg2) -> int64_t {
-    switch (Kind) {
-    default:
-      llvm_unreachable("Unknown AMDGPUVariadicMCExpr kind.");
-    case AGVK_Max:
-      return std::max(Arg1, Arg2);
-    case AGVK_Or:
-      return Arg1 || Arg2;
-    }
-  };
+  std::optional<int64_t> Total;
 
   for (const MCExpr *Arg : Args) {
     MCValue ArgRes;
@@ -72,7 +73,7 @@ bool AMDGPUVariadicMCExpr::evaluateAsRelocatableImpl(
 
     if (!Total.has_value())
       Total = ArgRes.getConstant();
-    Total = Op(*Total, ArgRes.getConstant());
+    Total = Op(Kind, *Total, ArgRes.getConstant());
   }
 
   Res = MCValue::get(*Total);

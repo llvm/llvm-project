@@ -8296,6 +8296,7 @@ bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
 
     if (VK != AGVK::AGVK_None && peekToken().is(AsmToken::LParen)) {
       SmallVector<const MCExpr *, 4> Exprs;
+      uint64_t CommaCount = 0;
       lex(); // Eat 'max'/'or'
       lex(); // Eat '('
       while (true) {
@@ -8305,6 +8306,11 @@ bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
                   "empty " + Twine(TokenId) + " expression");
             return true;
           }
+          if (CommaCount + 1 != Exprs.size()) {
+            Error(getToken().getLoc(),
+                  "mismatch of commas in " + Twine(TokenId) + " expression");
+            return true;
+          }
           Res = AMDGPUVariadicMCExpr::create(VK, Exprs, getContext());
           return false;
         }
@@ -8312,7 +8318,10 @@ bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
         if (getParser().parseExpression(Expr, EndLoc))
           return true;
         Exprs.push_back(Expr);
-        if (!trySkipToken(AsmToken::Comma) && !isToken(AsmToken::RParen)) {
+        bool LastTokenWasComma = trySkipToken(AsmToken::Comma);
+        if (LastTokenWasComma)
+          CommaCount++;
+        if (!LastTokenWasComma && !isToken(AsmToken::RParen)) {
           Error(getToken().getLoc(),
                 "unexpected token in " + Twine(TokenId) + " expression");
           return true;
