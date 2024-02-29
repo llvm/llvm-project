@@ -10,4 +10,3 @@ define spir_func void @test(<8 x i16> %in) {
 }
 
 declare spir_func float @_Z27__spirv_ConvertBF16ToFINTELDv8_s(<8 x i16>)
-
