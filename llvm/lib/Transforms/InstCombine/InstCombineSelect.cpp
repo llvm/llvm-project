@@ -500,6 +500,41 @@ static bool isSelect01(const APInt &C1I, const APInt &C2I) {
   return C1I.isOne() || C1I.isAllOnes() || C2I.isOne() || C2I.isAllOnes();
 }
 
+/// Try to simplify seletion chain with partially identical conditions, eg:
+///   %s1 = select i1 %c1, i32 23, i32 45
+///   %s2 = select i1 %c2, i32 666, i32 %s1
+///   %s3 = select i1 %c1, i32 789, i32 %s2
+/// -->
+///   %s2 = select i1 %c2, i32 666, i32 45
+///   %s3 = select i1 %c1, i32 789, i32 %s2
+static bool simplifySeqSelectWithSameCond(SelectInst &SI,
+                                          const SimplifyQuery &SQ,
+                                          InstCombinerImpl &IC) {
+  Value *CondVal = SI.getCondition();
+  Type *CondType = CondVal->getType();
+  SelectInst *SINext = &SI;
+  Type *SelType = SINext->getType();
+  Value *FalseVal = SINext->getFalseValue();
+  Value *CondNext;
+  Value *FalseNext;
+  while (match(FalseVal,
+               m_Select(m_Value(CondNext), m_Value(), m_Value(FalseNext)))) {
+    // Only support the type of select is an integer type as float type need
+    // address FMF flag.
+    if (CondNext == CondVal && SelType->isIntOrIntVectorTy() &&
+        SINext->hasOneUse()) {
+      IC.replaceOperand(*SINext, 2, FalseNext);
+      return true;
+    }
+
+    SINext = cast<SelectInst>(FalseVal);
+    SelType = SINext->getType();
+    FalseVal = SINext->getFalseValue();
+  }
+
+  return false;
+}
+
 /// Try to fold the select into one of the operands to allow further
 /// optimization.
 Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
@@ -566,6 +601,9 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
 
   if (Instruction *R = TryFoldSelectIntoOp(SI, FalseVal, TrueVal, true))
     return R;
+
+  if (simplifySeqSelectWithSameCond(SI, SQ, *this))
+    return &SI;
 
   return nullptr;
 }
