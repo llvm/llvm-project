@@ -92,9 +92,11 @@ using namespace lldb_private;
 #if !defined(_WIN32)
 #include <syslog.h>
 void Host::SystemLog(llvm::StringRef message) {
-  openlog("lldb", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_USER);
+  static llvm::once_flag g_openlog_once;
+  llvm::call_once(g_openlog_once, [] {
+    openlog("lldb", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_USER);
+  });
   syslog(LOG_INFO, "%s", message.data());
-  closelog();
 }
 #else
 void Host::SystemLog(llvm::StringRef message) { llvm::errs() << message; }
