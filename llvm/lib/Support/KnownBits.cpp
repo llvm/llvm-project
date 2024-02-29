@@ -54,34 +54,89 @@ KnownBits KnownBits::computeForAddCarry(
       LHS, RHS, Carry.Zero.getBoolValue(), Carry.One.getBoolValue());
 }
 
-KnownBits KnownBits::computeForAddSub(bool Add, bool NSW, bool /*NUW*/,
-                                      const KnownBits &LHS, KnownBits RHS) {
-  KnownBits KnownOut;
-  if (Add) {
-    // Sum = LHS + RHS + 0
-    KnownOut = ::computeForAddCarry(
-        LHS, RHS, /*CarryZero*/true, /*CarryOne*/false);
-  } else {
-    // Sum = LHS + ~RHS + 1
-    std::swap(RHS.Zero, RHS.One);
-    KnownOut = ::computeForAddCarry(
-        LHS, RHS, /*CarryZero*/false, /*CarryOne*/true);
-  }
+KnownBits KnownBits::computeForAddSub(bool Add, bool NSW, bool NUW,
+                                      const KnownBits &LHS,
+                                      const KnownBits &RHS) {
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits KnownOut(BitWidth);
+  // This can be a relatively expensive helper, so optimistically save some
+  // work.
+  if (LHS.isUnknown() && RHS.isUnknown())
+    return KnownOut;
 
-  // Are we still trying to solve for the sign bit?
-  if (!KnownOut.isNegative() && !KnownOut.isNonNegative()) {
-    if (NSW) {
-      // Adding two non-negative numbers, or subtracting a negative number from
-      // a non-negative one, can't wrap into negative.
-      if (LHS.isNonNegative() && RHS.isNonNegative())
-        KnownOut.makeNonNegative();
-      // Adding two negative numbers, or subtracting a non-negative number from
-      // a negative one, can't wrap into non-negative.
-      else if (LHS.isNegative() && RHS.isNegative())
-        KnownOut.makeNegative();
+  if (!LHS.isUnknown() && !RHS.isUnknown()) {
+    if (Add) {
+      // Sum = LHS + RHS + 0
+      KnownOut = ::computeForAddCarry(LHS, RHS, /*CarryZero=*/true,
+                                      /*CarryOne=*/false);
+    } else {
+      // Sum = LHS + ~RHS + 1
+      KnownBits NotRHS = RHS;
+      std::swap(NotRHS.Zero, NotRHS.One);
+      KnownOut = ::computeForAddCarry(LHS, NotRHS, /*CarryZero=*/false,
+                                      /*CarryOne=*/true);
     }
   }
 
+  // Handle add/sub given nsw and/or nuw.
+  if (NUW) {
+    if (Add) {
+      // (add nuw X, Y)
+      APInt MinVal = LHS.getMinValue().uadd_sat(RHS.getMinValue());
+      // None of the adds can end up overflowing, so min consecutive highbits
+      // in minimum possible of X + Y must all remain set.
+      if (NSW) {
+        unsigned NumBits = MinVal.trunc(BitWidth - 1).countl_one();
+        // If we have NSW as well, we also know we can't overflow the signbit so
+        // can start counting from 1 bit back.
+        KnownOut.One.setBits(BitWidth - 1 - NumBits, BitWidth - 1);
+      }
+      KnownOut.One.setHighBits(MinVal.countl_one());
+    } else {
+      // (sub nuw X, Y)
+      APInt MaxVal = LHS.getMaxValue().usub_sat(RHS.getMinValue());
+      // None of the subs can overflow at any point, so any common high bits
+      // will subtract away and result in zeros.
+      if (NSW) {
+        // If we have NSW as well, we also know we can't overflow the signbit so
+        // can start counting from 1 bit back.
+        unsigned NumBits = MaxVal.trunc(BitWidth - 1).countl_zero();
+        KnownOut.Zero.setBits(BitWidth - 1 - NumBits, BitWidth - 1);
+      }
+      KnownOut.Zero.setHighBits(MaxVal.countl_zero());
+    }
+  }
+
+  if (NSW) {
+    APInt MinVal;
+    APInt MaxVal;
+    if (Add) {
+      // (add nsw X, Y)
+      MinVal = LHS.getSignedMinValue().sadd_sat(RHS.getSignedMinValue());
+      MaxVal = LHS.getSignedMaxValue().sadd_sat(RHS.getSignedMaxValue());
+    } else {
+      // (sub nsw X, Y)
+      MinVal = LHS.getSignedMinValue().ssub_sat(RHS.getSignedMaxValue());
+      MaxVal = LHS.getSignedMaxValue().ssub_sat(RHS.getSignedMinValue());
+    }
+    if (MinVal.isNonNegative()) {
+      // If min is non-negative, result will always be non-neg (can't overflow
+      // around).
+      unsigned NumBits = MinVal.trunc(BitWidth - 1).countl_one();
+      KnownOut.One.setBits(BitWidth - 1 - NumBits, BitWidth - 1);
+      KnownOut.Zero.setSignBit();
+    }
+    if (MaxVal.isNegative()) {
+      // If max is negative, result will always be neg (can't overflow around).
+      unsigned NumBits = MaxVal.trunc(BitWidth - 1).countl_zero();
+      KnownOut.Zero.setBits(BitWidth - 1 - NumBits, BitWidth - 1);
+      KnownOut.One.setSignBit();
+    }
+  }
+
+  // Just return 0 if the nsw/nuw is violated and we have poison.
+  if (KnownOut.hasConflict())
+    KnownOut.setAllZero();
   return KnownOut;
 }
 
