@@ -468,9 +468,7 @@ public:
   static BinaryOperator *CreateNeg(Value *Op, const Twine &Name,
                                    BasicBlock::iterator InsertBefore);
   static BinaryOperator *CreateNeg(Value *Op, const Twine &Name = "",
-                                   Instruction *InsertBefore = nullptr);
-  static BinaryOperator *CreateNeg(Value *Op, const Twine &Name,
-                                   BasicBlock *InsertAtEnd);
+                                   BasicBlock *InsertAtEnd = nullptr);
   static BinaryOperator *CreateNSWNeg(Value *Op, const Twine &Name,
                                       BasicBlock::iterator InsertBefore);
   static BinaryOperator *CreateNSWNeg(Value *Op, const Twine &Name = "",
