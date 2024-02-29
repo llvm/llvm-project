@@ -856,14 +856,6 @@ bool isReadOnlySegment(const GlobalValue *GV);
 /// target triple \p TT, false otherwise.
 bool shouldEmitConstantsToTextSection(const Triple &TT);
 
-/// \returns Integer value requested using \p F's \p Name attribute.
-///
-/// \returns \p Default if attribute is not present.
-///
-/// \returns \p Default and emits error if requested value cannot be converted
-/// to integer.
-int getIntegerAttribute(const Function &F, StringRef Name, int Default);
-
 /// \returns A pair of integer values requested using \p F's \p Name attribute
 /// in "first[,second]" format ("second" is optional unless \p OnlyFirstRequired
 /// is false).
@@ -1067,15 +1059,6 @@ using HwregEncoding = EncodingFields<HwregId, HwregOffset, HwregSize>;
 
 LLVM_READONLY
 int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI);
-
-LLVM_READNONE
-bool isValidHwreg(int64_t Id);
-
-LLVM_READNONE
-bool isValidHwregOffset(int64_t Offset);
-
-LLVM_READNONE
-bool isValidHwregWidth(int64_t Width);
 
 LLVM_READNONE
 StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI);

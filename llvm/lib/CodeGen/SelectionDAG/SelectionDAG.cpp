@@ -3645,32 +3645,42 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
           }
         }
       }
-    } else if (ISD::isZEXTLoad(Op.getNode()) && Op.getResNo() == 0) {
-      // If this is a ZEXTLoad and we are looking at the loaded value.
-      EVT VT = LD->getMemoryVT();
-      unsigned MemBits = VT.getScalarSizeInBits();
-      Known.Zero.setBitsFrom(MemBits);
-    } else if (const MDNode *Ranges = LD->getRanges()) {
-      EVT VT = LD->getValueType(0);
-
-      // TODO: Handle for extending loads
-      if (LD->getExtensionType() == ISD::NON_EXTLOAD) {
+    } else if (Op.getResNo() == 0) {
+      KnownBits Known0(!LD->getMemoryVT().isScalableVT()
+                           ? LD->getMemoryVT().getFixedSizeInBits()
+                           : BitWidth);
+      EVT VT = Op.getValueType();
+      // Fill in any known bits from range information. There are 3 types being
+      // used. The results VT (same vector elt size as BitWidth), the loaded
+      // MemoryVT (which may or may not be vector) and the range VTs original
+      // type. The range matadata needs the full range (i.e
+      // MemoryVT().getSizeInBits()), which is truncated to the correct elt size
+      // if it is know. These are then extended to the original VT sizes below.
+      if (const MDNode *MD = LD->getRanges()) {
+        computeKnownBitsFromRangeMetadata(*MD, Known0);
         if (VT.isVector()) {
           // Handle truncation to the first demanded element.
           // TODO: Figure out which demanded elements are covered
           if (DemandedElts != 1 || !getDataLayout().isLittleEndian())
             break;
-
-          // Handle the case where a load has a vector type, but scalar memory
-          // with an attached range.
-          EVT MemVT = LD->getMemoryVT();
-          KnownBits KnownFull(MemVT.getSizeInBits());
-
-          computeKnownBitsFromRangeMetadata(*Ranges, KnownFull);
-          Known = KnownFull.trunc(BitWidth);
-        } else
-          computeKnownBitsFromRangeMetadata(*Ranges, Known);
+          Known0 = Known0.trunc(BitWidth);
+        }
       }
+
+      if (LD->getMemoryVT().isVector())
+        Known0 = Known0.trunc(LD->getMemoryVT().getScalarSizeInBits());
+
+      // Extend the Known bits from memory to the size of the result.
+      if (ISD::isZEXTLoad(Op.getNode()))
+        Known = Known0.zext(BitWidth);
+      else if (ISD::isSEXTLoad(Op.getNode()))
+        Known = Known0.sext(BitWidth);
+      else if (ISD::isEXTLoad(Op.getNode()))
+        Known = Known0.anyext(BitWidth);
+      else
+        Known = Known0;
+      assert(Known.getBitWidth() == BitWidth);
+      return Known;
     }
     break;
   }
@@ -9106,26 +9116,6 @@ SDValue SelectionDAG::getExtStridedLoadVP(
                           Stride, Mask, EVL, MemVT, MMO, IsExpanding);
 }
 
-SDValue SelectionDAG::getIndexedStridedLoadVP(SDValue OrigLoad, const SDLoc &DL,
-                                              SDValue Base, SDValue Offset,
-                                              ISD::MemIndexedMode AM) {
-  auto *SLD = cast<VPStridedLoadSDNode>(OrigLoad);
-  assert(SLD->getOffset().isUndef() &&
-         "Strided load is already a indexed load!");
-  // Don't propagate the invariant or dereferenceable flags.
-  auto MMOFlags =
-      SLD->getMemOperand()->getFlags() &
-      ~(MachineMemOperand::MOInvariant | MachineMemOperand::MODereferenceable);
-  MachineFunction &MF = getMachineFunction();
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      SLD->getPointerInfo(), MMOFlags, SLD->getMemOperand()->getSize(),
-      SLD->getOriginalAlign(), SLD->getAAInfo());
-  return getStridedLoadVP(AM, SLD->getExtensionType(), OrigLoad.getValueType(),
-                          DL, SLD->getChain(), Base, Offset, SLD->getStride(),
-                          SLD->getMask(), SLD->getVectorLength(),
-                          SLD->getMemoryVT(), MMO, SLD->isExpandingLoad());
-}
-
 SDValue SelectionDAG::getStridedStoreVP(SDValue Chain, const SDLoc &DL,
                                         SDValue Val, SDValue Ptr,
                                         SDValue Offset, SDValue Stride,
@@ -9202,38 +9192,6 @@ SDValue SelectionDAG::getTruncStridedStoreVP(SDValue Chain, const SDLoc &DL,
   auto *N = newSDNode<VPStridedStoreSDNode>(DL.getIROrder(), DL.getDebugLoc(),
                                             VTs, ISD::UNINDEXED, true,
                                             IsCompressing, SVT, MMO);
-  createOperands(N, Ops);
-
-  CSEMap.InsertNode(N, IP);
-  InsertNode(N);
-  SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
-  return V;
-}
-
-SDValue SelectionDAG::getIndexedStridedStoreVP(SDValue OrigStore,
-                                               const SDLoc &DL, SDValue Base,
-                                               SDValue Offset,
-                                               ISD::MemIndexedMode AM) {
-  auto *SST = cast<VPStridedStoreSDNode>(OrigStore);
-  assert(SST->getOffset().isUndef() &&
-         "Strided store is already an indexed store!");
-  SDVTList VTs = getVTList(Base.getValueType(), MVT::Other);
-  SDValue Ops[] = {
-      SST->getChain(), SST->getValue(),       Base, Offset, SST->getStride(),
-      SST->getMask(),  SST->getVectorLength()};
-  FoldingSetNodeID ID;
-  AddNodeIDNode(ID, ISD::EXPERIMENTAL_VP_STRIDED_STORE, VTs, Ops);
-  ID.AddInteger(SST->getMemoryVT().getRawBits());
-  ID.AddInteger(SST->getRawSubclassData());
-  ID.AddInteger(SST->getPointerInfo().getAddrSpace());
-  void *IP = nullptr;
-  if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
-    return SDValue(E, 0);
-
-  auto *N = newSDNode<VPStridedStoreSDNode>(
-      DL.getIROrder(), DL.getDebugLoc(), VTs, AM, SST->isTruncatingStore(),
-      SST->isCompressingStore(), SST->getMemoryVT(), SST->getMemOperand());
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);

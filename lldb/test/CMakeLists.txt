@@ -12,7 +12,8 @@ endif()
 if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
   message(STATUS "Enforcing strict test requirements for LLDB")
   set(useful_python_modules
-    psutil # Lit uses psutil to do per-test timeouts.
+    psutil  # Lit uses psutil to do per-test timeouts.
+    pexpect # We no longer vendor pexpect.
   )
   foreach(module ${useful_python_modules})
     lldb_find_python_module(${module})
@@ -24,6 +25,21 @@ if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
         "`LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=OFF`")
     endif()
   endforeach()
+endif()
+
+# The "pexpect" package should come from the system environment, not from the
+# LLDB tree. However, we delay the deletion of it from the tree in case
+# users/buildbots don't have the package yet and need some time to install it.
+if (NOT LLDB_TEST_USE_VENDOR_PACKAGES)
+  unset(PY_pexpect_FOUND CACHE)
+  lldb_find_python_module(pexpect)
+  if (NOT PY_pexpect_FOUND)
+    message(FATAL_ERROR
+      "Python module 'pexpect' not found. Please install it via pip or via "
+      "your operating system's package manager. For a temporary workaround, "
+      "use a version from the LLDB tree with "
+      "`LLDB_TEST_USE_VENDOR_PACKAGES=ON`")
+  endif()
 endif()
 
 if(LLDB_BUILT_STANDALONE)
@@ -240,7 +256,8 @@ llvm_canonicalize_cmake_booleans(
   LLDB_HAS_LIBCXX
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
-  LLDB_IS_64_BITS)
+  LLDB_IS_64_BITS
+  LLDB_TEST_USE_VENDOR_PACKAGES)
 
 # Configure the individual test suites.
 add_subdirectory(API)

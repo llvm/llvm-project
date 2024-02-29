@@ -190,6 +190,7 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
+  let WaveSizePredicate  = ps.WaveSizePredicate;
   let OtherPredicates    = ps.OtherPredicates;
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let AsmVariantName     = ps.AsmVariantName;

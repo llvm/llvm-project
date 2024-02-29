@@ -1834,10 +1834,7 @@ mlir::func::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
     // First time this wrapper is needed, build it.
     function = builder.createFunction(loc, wrapperName, funcType);
     function->setAttr("fir.intrinsic", builder.getUnitAttr());
-    auto internalLinkage = mlir::LLVM::linkage::Linkage::Internal;
-    auto linkage =
-        mlir::LLVM::LinkageAttr::get(builder.getContext(), internalLinkage);
-    function->setAttr("llvm.linkage", linkage);
+    fir::factory::setInternalLinkage(function);
     function.addEntryBlock();
 
     // Create local context to emit code into the newly created function
