@@ -567,6 +567,11 @@ Sema::ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
     Diag(IdentLoc, diag::warn_reserved_extern_symbol)
         << TheDecl << static_cast<int>(Status);
 
+  // If this label is in a compute construct scope, we need to make sure we
+  // check gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
+
   // Otherwise, things are good.  Fill in the declaration and return it.
   LabelStmt *LS = new (Context) LabelStmt(IdentLoc, TheDecl, SubStmt);
   TheDecl->setStmt(LS);
@@ -3304,6 +3309,12 @@ StmtResult Sema::ActOnGotoStmt(SourceLocation GotoLoc,
                                SourceLocation LabelLoc,
                                LabelDecl *TheDecl) {
   setFunctionHasBranchIntoScope();
+
+  // If this goto is in a compute construct scope, we need to make sure we check
+  // gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
+
   TheDecl->markUsed(Context);
   return new (Context) GotoStmt(TheDecl, GotoLoc, LabelLoc);
 }
@@ -3331,6 +3342,11 @@ Sema::ActOnIndirectGotoStmt(SourceLocation GotoLoc, SourceLocation StarLoc,
   E = ExprRes.get();
 
   setFunctionHasIndirectGoto();
+
+  // If this goto is in a compute construct scope, we need to make sure we
+  // check gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
 
   return new (Context) IndirectGotoStmt(GotoLoc, StarLoc, E);
 }
