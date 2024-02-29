@@ -50,6 +50,7 @@ when ``-fexperimental-library`` is passed:
 * ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
 * ``std::jthread``
 * ``std::chrono::tzdb`` and related time zone functionality
+* ``std::ranges::join_with_view``
 
 .. warning::
   Experimental libraries are experimental.

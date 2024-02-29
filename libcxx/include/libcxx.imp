@@ -634,6 +634,7 @@
   { include: [ "<__ranges/iota_view.h>", "private", "<ranges>", "public" ] },
   { include: [ "<__ranges/istream_view.h>", "private", "<ranges>", "public" ] },
   { include: [ "<__ranges/join_view.h>", "private", "<ranges>", "public" ] },
+  { include: [ "<__ranges/join_with_view.h>", "private", "<ranges>", "public" ] },
   { include: [ "<__ranges/lazy_split_view.h>", "private", "<ranges>", "public" ] },
   { include: [ "<__ranges/movable_box.h>", "private", "<ranges>", "public" ] },
   { include: [ "<__ranges/non_propagating_cache.h>", "private", "<ranges>", "public" ] },
