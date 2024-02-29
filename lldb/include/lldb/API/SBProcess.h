@@ -416,10 +416,11 @@ public:
   /// There can be different address masks for code addresses and
   /// data addresses, this argument can select which to get/set,
   /// or to use when clearing non-addressable bits from an address.
-  /// On AArch32 code with arm+thumb code, where instructions start
-  /// on even addresses, the 0th bit may be used to indicate that
-  /// a function is thumb code.  On such a target, the eAddressMaskTypeCode
-  /// may clear the 0th bit from an address to get the actual address.
+  /// This choice of mask can be important for example on AArch32 systems. Where
+  /// instructions where instructions start on even addresses, the 0th bit may
+  /// be used to indicate that a function is thumb code.  On such a target, the
+  /// eAddressMaskTypeCode may clear the 0th bit from an address to get the
+  /// actual address Whereas eAddressMaskTypeData would not.
   ///
   /// \a addr_range
   /// Many of the methods in this group take an \a addr_range argument
@@ -500,7 +501,7 @@ public:
   SetAddressableBits(AddressMaskType type, uint32_t num_bits,
                      AddressMaskRange addr_range = lldb::eAddressMaskRangeLow);
 
-  /// Clear the non-addressable bits of an \a addr value and return a
+  /// Clear the non-address bits of an \a addr value and return a
   /// virtual address in memory.
   ///
   /// Bits that are not used in addressing may be used for other purposes;
@@ -508,7 +509,7 @@ public:
   /// of armv7 code addresses to indicate arm/thumb are common examples.
   ///
   /// \param[in] addr
-  ///     The address that should be cleared of non-addressable bits.
+  ///     The address that should be cleared of non-address bits.
   ///
   /// \param[in] type
   ///     See \ref Mask Address Methods description of this argument.
