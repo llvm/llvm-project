@@ -2423,6 +2423,10 @@ TEST(TransferTest, EmptyInitListExprForUnion) {
       } F;
 
      public:
+      // Empty initializer list means that `F` is aggregate-initialized.
+      // For a union, this has the effect that the first member of the union
+      // is copy-initialized from an empty initializer list; in this specific
+      // case, this has the effect of initializing `a` with null.
       constexpr target() : F{} {
         int *null = nullptr;
         F.b;  // Make sure we reference 'b' so it is modeled.
@@ -2469,10 +2473,10 @@ TEST(TransferTest, EmptyInitListExprForStruct) {
         auto &FLoc = getFieldLoc<RecordStorageLocation>(
             *Env.getThisPointeeStorageLocation(), "F", ASTCtx);
         auto *AVal = cast<PointerValue>(getFieldValue(&FLoc, "a", ASTCtx, Env));
-        ASSERT_EQ(AVal,
+        EXPECT_EQ(AVal,
                   &getValueForDecl<PointerValue>(ASTCtx, Env, "NullIntPtr"));
         auto *BVal = cast<PointerValue>(getFieldValue(&FLoc, "b", ASTCtx, Env));
-        ASSERT_EQ(BVal,
+        EXPECT_EQ(BVal,
                   &getValueForDecl<PointerValue>(ASTCtx, Env, "NullBoolPtr"));
       });
 }
