@@ -37,7 +37,7 @@ class TestSTTYBeforeAndAfter(TestBase):
         lldb_prompt = "(lldb) "
 
         # So that the child gets torn down after the test.
-        self.child = pexpect.spawnu("expect")
+        self.child = pexpect.spawn("expect", encoding="utf-8")
         child = self.child
 
         child.expect(expect_prompt)
