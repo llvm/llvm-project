@@ -460,6 +460,9 @@ public:
     LoopComputable ///< The SCEV varies predictably with the loop.
   };
 
+  bool AssumeLoopExists = false;
+  void setAssumeLoopExists();
+
   /// An enum describing the relationship between a SCEV and a basic block.
   enum BlockDisposition {
     DoesNotDominateBlock,  ///< The SCEV does not dominate the block.
@@ -1345,7 +1348,7 @@ public:
     }
   };
 
-protected:
+  private:
   /// A CallbackVH to arrange for ScalarEvolution to be notified whenever a
   /// Value is deleted.
   class SCEVCallbackVH final : public CallbackVH {
@@ -1364,7 +1367,7 @@ protected:
 
   /// The function we are analyzing.
   Function &F;
-
+  
   /// Does the module have any calls to the llvm.experimental.guard intrinsic
   /// at all?  If this is false, we avoid doing work that will only help if
   /// thare are guards present in the IR.
@@ -1765,7 +1768,7 @@ protected:
   /// an arbitrary expression as opposed to only constants.
   const SCEV *computeSymbolicMaxBackedgeTakenCount(const Loop *L);
 
-  // Helper functions for computeExitLimitFromCond to avoid exponential time
+// Helper functions for computeExitLimitFromCond to avoid exponential time
   // complexity.
 
   class ExitLimitCache {

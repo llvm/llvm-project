@@ -82,6 +82,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Analysis/Utils/EnzymeFunctionUtils.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -507,6 +508,10 @@ const SCEV *ScalarEvolution::getVScale(Type *Ty) {
   SCEV *S = new (SCEVAllocator) SCEVVScale(ID.Intern(SCEVAllocator), Ty);
   UniqueSCEVs.InsertNode(S, IP);
   return S;
+}
+
+void ScalarEvolution::setAssumeLoopExists() {
+  this->AssumeLoopExists=true;
 }
 
 SCEVCastExpr::SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
@@ -7413,7 +7418,7 @@ bool ScalarEvolution::loopIsFiniteByAssumption(const Loop *L) {
   // A mustprogress loop without side effects must be finite.
   // TODO: The check used here is very conservative.  It's only *specific*
   // side effects which are well defined in infinite loops.
-  return isFinite(L) || (isMustProgress(L) && loopHasNoSideEffects(L));
+  return this->AssumeLoopExists || isFinite(L) || (isMustProgress(L) && loopHasNoSideEffects(L));
 }
 
 const SCEV *ScalarEvolution::createSCEVIter(Value *V) {
@@ -13353,6 +13358,7 @@ const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
   Type *ETy = getEffectiveSCEVType(PointerType::getUnqual(Ty));
   return getSizeOfExpr(ETy, Ty);
 }
+
 
 //===----------------------------------------------------------------------===//
 //                   SCEVCallbackVH Class Implementation
