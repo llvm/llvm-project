@@ -61,7 +61,7 @@ class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
         llvm::function_ref<void(mlir::Value, mlir::StringRef)> setNameFn) {
       auto dimStr = stringifyDimension(getDimensionAttr().getValue());
       auto opName = getOperationName();
-      assert(opName.consume_front("gpu."));
+      opName.consume_front("gpu.");
       SmallString<8> resultName({opName, "_", dimStr});
       setNameFn(getResult(),resultName);
     }
