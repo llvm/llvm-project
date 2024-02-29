@@ -174,6 +174,9 @@ using FnCheck = std::function<void(const StreamChecker *, const FnDescription *,
 using ArgNoTy = unsigned int;
 static const ArgNoTy ArgNone = std::numeric_limits<ArgNoTy>::max();
 
+const char *FeofNote = "Assuming stream reaches end-of-file here";
+const char *FerrorNote = "Assuming this stream operation fails";
+
 struct FnDescription {
   FnCheck PreFn;
   FnCheck EvalFn;
@@ -231,9 +234,6 @@ class StreamChecker : public Checker<check::PreCall, eval::Call,
   BugType BT_StreamEof{this, "Stream already in EOF", "Stream handling error"};
   BugType BT_ResourceLeak{this, "Resource leak", "Stream handling error",
                           /*SuppressOnSink =*/true};
-
-  const char *FeofNote = "Assuming stream reaches end-of-file here";
-  const char *FerrorNote = "Assuming this stream operation fails";
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
@@ -647,8 +647,7 @@ struct StreamOperationEvaluator {
     return C.getConstraintManager().assumeDual(State, RetVal);
   }
 
-  const NoteTag *getStreamErrorNoteTag(const StreamChecker *Ch,
-                                       CheckerContext &C) {
+  const NoteTag *getFailureNoteTag(const StreamChecker *Ch, CheckerContext &C) {
     bool SetFeof = NewES.FEof && !SS->ErrorState.FEof;
     bool SetFerror = NewES.FError && !SS->ErrorState.FError;
     if (SetFeof && !SetFerror)
@@ -921,7 +920,7 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
   // indicator for the stream is indeterminate.
   StateFailed = E.setStreamState(
       StateFailed, StreamState::getOpened(Desc, NewES, !NewES.isFEof()));
-  C.addTransition(StateFailed, E.getStreamErrorNoteTag(this, C));
+  C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
 }
 
 void StreamChecker::evalFgetx(const FnDescription *Desc, const CallEvent &Call,
@@ -980,7 +979,7 @@ void StreamChecker::evalFgetx(const FnDescription *Desc, const CallEvent &Call,
       E.isStreamEof() ? ErrorFEof : ErrorFEof | ErrorFError;
   StateFailed = E.setStreamState(
       StateFailed, StreamState::getOpened(Desc, NewES, !NewES.isFEof()));
-  C.addTransition(StateFailed, E.getStreamErrorNoteTag(this, C));
+  C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
 }
 
 void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
@@ -1022,7 +1021,7 @@ void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
   ProgramStateRef StateFailed = E.bindReturnValue(State, C, *EofVal);
   StateFailed = E.setStreamState(
       StateFailed, StreamState::getOpened(Desc, ErrorFError, true));
-  C.addTransition(StateFailed, E.getStreamErrorNoteTag(this, C));
+  C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
 }
 
 void StreamChecker::evalFprintf(const FnDescription *Desc,
@@ -1056,7 +1055,7 @@ void StreamChecker::evalFprintf(const FnDescription *Desc,
   // position indicator for the stream is indeterminate.
   StateFailed = E.setStreamState(
       StateFailed, StreamState::getOpened(Desc, ErrorFError, true));
-  C.addTransition(StateFailed, E.getStreamErrorNoteTag(this, C));
+  C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
 }
 
 void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
@@ -1106,7 +1105,7 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
       E.isStreamEof() ? ErrorFEof : ErrorNone | ErrorFEof | ErrorFError;
   StateFailed = E.setStreamState(
       StateFailed, StreamState::getOpened(Desc, NewES, !NewES.isFEof()));
-  C.addTransition(StateFailed, E.getStreamErrorNoteTag(this, C));
+  C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
 }
 
 void StreamChecker::evalUngetc(const FnDescription *Desc, const CallEvent &Call,
@@ -1174,7 +1173,7 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
       E.isStreamEof() ? ErrorFEof : ErrorFEof | ErrorFError;
   StateFailed = E.setStreamState(
       StateFailed, StreamState::getOpened(Desc, NewES, !NewES.isFEof()));
-  C.addTransition(StateFailed, E.getStreamErrorNoteTag(this, C));
+  C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
 }
 
 void StreamChecker::preFseek(const FnDescription *Desc, const CallEvent &Call,
@@ -1226,7 +1225,7 @@ void StreamChecker::evalFseek(const FnDescription *Desc, const CallEvent &Call,
     NewErrS = NewErrS | ErrorFEof;
   StateFailed = E.setStreamState(StateFailed,
                                  StreamState::getOpened(Desc, NewErrS, true));
-  C.addTransition(StateFailed, E.getStreamErrorNoteTag(this, C));
+  C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
 }
 
 void StreamChecker::evalFgetpos(const FnDescription *Desc,
@@ -1270,7 +1269,7 @@ void StreamChecker::evalFsetpos(const FnDescription *Desc,
       StateFailed, StreamState::getOpened(Desc, ErrorNone | ErrorFError, true));
 
   C.addTransition(StateNotFailed);
-  C.addTransition(StateFailed, E.getStreamErrorNoteTag(this, C));
+  C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
 }
 
 void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
