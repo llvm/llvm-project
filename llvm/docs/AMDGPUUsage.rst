@@ -1424,7 +1424,7 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              64-bit addresses (i.e., addrspace(6))
 
      "amdgpu-color-export"                   Indicates shader exports color information if set to 1.
-                                             Defaults to 1 for :ref:`amdgpu_ps <amdgpu_ps>`, and 0 for other calling
+                                             Defaults to 1 for :ref:`amdgpu_ps <amdgpu-cc>`, and 0 for other calling
                                              conventions. Determines the necessity and type of null exports when a shader
                                              terminates early by killing lanes.
 
@@ -1434,7 +1434,7 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              target is available (GFX11+).
 
      "InitialPSInputAddr"                    Set the initial value of the `spi_ps_input_addr` register for
-                                             :ref:`amdgpu_ps <amdgpu_ps>` shaders. Any bits enabled by this value will
+                                             :ref:`amdgpu_ps <amdgpu-cc>` shaders. Any bits enabled by this value will
                                              be enabled in the final register value.
 
      "amdgpu-wave-priority-threshold"        VALU instruction count threshold for adjusting wave priority. If exceeded,
@@ -1535,7 +1535,6 @@ The AMDGPU backend supports the following calling conventions:
      ``amdgpu_ls``                   Used for AMDPAL vertex shader if tessellation is in use.
                                      ..TODO::
                                      Describe.
-.. _amdgpu_ps:
 
      ``amdgpu_ps``                   Used for Mesa/AMDPAL pixel shaders.
                                      ..TODO::
