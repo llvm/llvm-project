@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MissingFeatures.h"
+
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -31,6 +33,8 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
+
+using cir::MissingFeatures;
 
 //===----------------------------------------------------------------------===//
 // CIR Custom Parser/Printer Signatures
@@ -407,6 +411,7 @@ llvm::TypeSize
 DataMemberType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                                   ::mlir::DataLayoutEntryListRef params) const {
   // FIXME: consider size differences under different ABIs
+  assert(!MissingFeatures::cxxABI());
   return llvm::TypeSize::getFixed(64);
 }
 
@@ -414,6 +419,7 @@ uint64_t
 DataMemberType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                                 ::mlir::DataLayoutEntryListRef params) const {
   // FIXME: consider alignment differences under different ABIs
+  assert(!MissingFeatures::cxxABI());
   return 8;
 }
 
@@ -421,6 +427,7 @@ uint64_t DataMemberType::getPreferredAlignment(
     const ::mlir::DataLayout &dataLayout,
     ::mlir::DataLayoutEntryListRef params) const {
   // FIXME: consider alignment differences under different ABIs
+  assert(!MissingFeatures::cxxABI());
   return 8;
 }
 
@@ -442,20 +449,20 @@ ArrayType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
   return dataLayout.getTypePreferredAlignment(getEltType());
 }
 
-llvm::TypeSize cir::VectorType::getTypeSizeInBits(
+llvm::TypeSize mlir::cir::VectorType::getTypeSizeInBits(
     const ::mlir::DataLayout &dataLayout,
     ::mlir::DataLayoutEntryListRef params) const {
   return llvm::TypeSize::getFixed(getSize() *
                                   dataLayout.getTypeSizeInBits(getEltType()));
 }
 
-uint64_t
-cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
-                                 ::mlir::DataLayoutEntryListRef params) const {
+uint64_t mlir::cir::VectorType::getABIAlignment(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
   return getSize() * dataLayout.getTypeABIAlignment(getEltType());
 }
 
-uint64_t cir::VectorType::getPreferredAlignment(
+uint64_t mlir::cir::VectorType::getPreferredAlignment(
     const ::mlir::DataLayout &dataLayout,
     ::mlir::DataLayoutEntryListRef params) const {
   return getSize() * dataLayout.getTypePreferredAlignment(getEltType());
