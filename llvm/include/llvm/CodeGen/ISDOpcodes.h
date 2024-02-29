@@ -978,7 +978,7 @@ enum NodeType {
 
   /// FMINIMUM/FMAXIMUM - NaN-propagating minimum/maximum that also treat -0.0
   /// as less than 0.0. While FMINNUM_IEEE/FMAXNUM_IEEE follow IEEE 754-2008
-  /// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2018 draft semantics.
+  /// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2019 semantics.
   FMINIMUM,
   FMAXIMUM,
 
