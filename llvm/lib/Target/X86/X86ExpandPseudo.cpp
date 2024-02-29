@@ -264,7 +264,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
   const DebugLoc &DL = MBBI->getDebugLoc();
-  bool HasEGPR = STI->hasEGPR();
+#define GET_EGPR_IF_ENABLED(OPC) (STI->hasEGPR() ? OPC##_EVEX : OPC)
   switch (Opcode) {
   default:
     return false;
@@ -468,12 +468,10 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     Register Reg1 = TRI->getSubReg(Reg, X86::sub_mask_1);
 
     auto MIBLo =
-        BuildMI(MBB, MBBI, DL,
-                TII->get(HasEGPR ? X86::KMOVWkm_EVEX : X86::KMOVWkm))
+        BuildMI(MBB, MBBI, DL, TII->get(GET_EGPR_IF_ENABLED(X86::KMOVWkm)))
             .addReg(Reg0, RegState::Define | getDeadRegState(DstIsDead));
     auto MIBHi =
-        BuildMI(MBB, MBBI, DL,
-                TII->get(HasEGPR ? X86::KMOVWkm_EVEX : X86::KMOVWkm))
+        BuildMI(MBB, MBBI, DL, TII->get(GET_EGPR_IF_ENABLED(X86::KMOVWkm)))
             .addReg(Reg1, RegState::Define | getDeadRegState(DstIsDead));
 
     for (int i = 0; i < X86::AddrNumOperands; ++i) {
@@ -505,10 +503,10 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     Register Reg0 = TRI->getSubReg(Reg, X86::sub_mask_0);
     Register Reg1 = TRI->getSubReg(Reg, X86::sub_mask_1);
 
-    auto MIBLo = BuildMI(MBB, MBBI, DL,
-                         TII->get(HasEGPR ? X86::KMOVWmk_EVEX : X86::KMOVWmk));
-    auto MIBHi = BuildMI(MBB, MBBI, DL,
-                         TII->get(HasEGPR ? X86::KMOVWmk_EVEX : X86::KMOVWmk));
+    auto MIBLo =
+        BuildMI(MBB, MBBI, DL, TII->get(GET_EGPR_IF_ENABLED(X86::KMOVWmk)));
+    auto MIBHi =
+        BuildMI(MBB, MBBI, DL, TII->get(GET_EGPR_IF_ENABLED(X86::KMOVWmk)));
 
     for (int i = 0; i < X86::AddrNumOperands; ++i) {
       MIBLo.add(MBBI->getOperand(i));
@@ -556,7 +554,6 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case TargetOpcode::ICALL_BRANCH_FUNNEL:
     ExpandICallBranchFunnel(&MBB, MBBI);
     return true;
-#define GET_EGPR_IF_ENABLED(OPC) (STI->hasEGPR() ? OPC##_EVEX : OPC)
   case X86::PLDTILECFGV: {
     MI.setDesc(TII->get(GET_EGPR_IF_ENABLED(X86::LDTILECFG)));
     return true;
