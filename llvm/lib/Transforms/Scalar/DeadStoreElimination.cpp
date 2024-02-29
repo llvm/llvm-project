@@ -1716,6 +1716,7 @@ struct DSEState {
       bool IsMemDef = MA && isa<MemoryDef>(MA);
       if (MA) {
         if (IsMemDef) {
+          auto *MD = cast<MemoryDef>(MA);
           SkipStores.insert(MD);
           if (auto *SI = dyn_cast<StoreInst>(MD->getMemoryInst())) {
             if (SI->getValueOperand()->getType()->isPointerTy()) {
