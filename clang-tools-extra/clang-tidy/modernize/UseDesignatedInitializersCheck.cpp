@@ -150,7 +150,7 @@ void UseDesignatedInitializersCheck::check(
     return;
   }
 
-  // In case that a only few elements are un-designated (not all as before), the
+  // In case that only a few elements are un-designated (not all as before), the
   // check offers dedicated issues and fix-its for each of them.
   for (const auto *InitExpr : *SyntacticInitList) {
     if (isa<DesignatedInitExpr>(InitExpr))
