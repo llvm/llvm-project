@@ -14,7 +14,7 @@ extern "C" {
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(LroundF128)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Lround<RTNAME(LroundF128)>::invoke(x);
+  return Lround<true>::invoke(x);
 }
 #endif
 

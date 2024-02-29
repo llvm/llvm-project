@@ -424,62 +424,6 @@ RT_EXT_API_GROUP_END
 
 // MAXVAL and MINVAL
 
-template <TypeCategory CAT, int KIND, bool IS_MAXVAL, typename Enable = void>
-struct MaxOrMinIdentity {
-  using Type = CppTypeFor<CAT, KIND>;
-  static constexpr RT_API_ATTRS Type Value() {
-    return IS_MAXVAL ? std::numeric_limits<Type>::lowest()
-                     : std::numeric_limits<Type>::max();
-  }
-};
-
-// std::numeric_limits<> may not know int128_t
-template <bool IS_MAXVAL>
-struct MaxOrMinIdentity<TypeCategory::Integer, 16, IS_MAXVAL> {
-  using Type = CppTypeFor<TypeCategory::Integer, 16>;
-  static constexpr RT_API_ATTRS Type Value() {
-    return IS_MAXVAL ? Type{1} << 127 : ~Type{0} >> 1;
-  }
-};
-
-#if HAS_FLOAT128
-// std::numeric_limits<> may not support __float128.
-//
-// Usage of GCC quadmath.h's FLT128_MAX is complicated by the fact that
-// even GCC complains about 'Q' literal suffix under -Wpedantic.
-// We just recreate FLT128_MAX ourselves.
-//
-// This specialization must engage only when
-// CppTypeFor<TypeCategory::Real, 16> is __float128.
-template <bool IS_MAXVAL>
-struct MaxOrMinIdentity<TypeCategory::Real, 16, IS_MAXVAL,
-    typename std::enable_if_t<
-        std::is_same_v<CppTypeFor<TypeCategory::Real, 16>, __float128>>> {
-  using Type = __float128;
-  static RT_API_ATTRS Type Value() {
-    // Create a buffer to store binary representation of __float128 constant.
-    constexpr std::size_t alignment =
-        std::max(alignof(Type), alignof(std::uint64_t));
-    alignas(alignment) char data[sizeof(Type)];
-
-    // First, verify that our interpretation of __float128 format is correct,
-    // e.g. by checking at least one known constant.
-    *reinterpret_cast<Type *>(data) = Type(1.0);
-    if (*reinterpret_cast<std::uint64_t *>(data) != 0 ||
-        *(reinterpret_cast<std::uint64_t *>(data) + 1) != 0x3FFF000000000000) {
-      Terminator terminator{__FILE__, __LINE__};
-      terminator.Crash("not yet implemented: no full support for __float128");
-    }
-
-    // Recreate FLT128_MAX.
-    *reinterpret_cast<std::uint64_t *>(data) = 0xFFFFFFFFFFFFFFFF;
-    *(reinterpret_cast<std::uint64_t *>(data) + 1) = 0x7FFEFFFFFFFFFFFF;
-    Type max = *reinterpret_cast<Type *>(data);
-    return IS_MAXVAL ? -max : max;
-  }
-};
-#endif // HAS_FLOAT128
-
 template <TypeCategory CAT, int KIND, bool IS_MAXVAL>
 class NumericExtremumAccumulator {
 public:
@@ -773,42 +717,25 @@ RT_EXT_API_GROUP_END
 
 // NORM2
 
-template <int KIND> struct Norm2Helper {
-  RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x, int dim,
-      const Descriptor *mask, Terminator &terminator) const {
-    DoMaxMinNorm2<TypeCategory::Real, KIND,
-        typename Norm2AccumulatorGetter<KIND>::Type>(
-        result, x, dim, mask, "NORM2", terminator);
-  }
-};
-
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
 // TODO: REAL(2 & 3)
 CppTypeFor<TypeCategory::Real, 4> RTDEF(Norm2_4)(
     const Descriptor &x, const char *source, int line, int dim) {
-  return GetTotalReduction<TypeCategory::Real, 4>(x, source, line, dim, nullptr,
-      Norm2AccumulatorGetter<4>::create(x), "NORM2");
+  return GetTotalReduction<TypeCategory::Real, 4>(
+      x, source, line, dim, nullptr, Norm2Accumulator<4>{x}, "NORM2");
 }
 CppTypeFor<TypeCategory::Real, 8> RTDEF(Norm2_8)(
     const Descriptor &x, const char *source, int line, int dim) {
-  return GetTotalReduction<TypeCategory::Real, 8>(x, source, line, dim, nullptr,
-      Norm2AccumulatorGetter<8>::create(x), "NORM2");
+  return GetTotalReduction<TypeCategory::Real, 8>(
+      x, source, line, dim, nullptr, Norm2Accumulator<8>{x}, "NORM2");
 }
 #if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(Norm2_10)(
     const Descriptor &x, const char *source, int line, int dim) {
-  return GetTotalReduction<TypeCategory::Real, 10>(x, source, line, dim,
-      nullptr, Norm2AccumulatorGetter<10>::create(x), "NORM2");
-}
-#endif
-#if LDBL_MANT_DIG == 113
-// The __float128 implementation resides in FortranFloat128Math library.
-CppTypeFor<TypeCategory::Real, 16> RTDEF(Norm2_16)(
-    const Descriptor &x, const char *source, int line, int dim) {
-  return GetTotalReduction<TypeCategory::Real, 16>(x, source, line, dim,
-      nullptr, Norm2AccumulatorGetter<16>::create(x), "NORM2");
+  return GetTotalReduction<TypeCategory::Real, 10>(
+      x, source, line, dim, nullptr, Norm2Accumulator<10>{x}, "NORM2");
 }
 #endif
 

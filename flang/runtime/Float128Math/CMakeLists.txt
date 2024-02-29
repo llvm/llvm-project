@@ -59,7 +59,9 @@ set(sources
   erf.cpp
   erfc.cpp
   exp.cpp
+  exponent.cpp
   floor.cpp
+  fraction.cpp
   hypot.cpp
   j0.cpp
   j1.cpp
@@ -69,11 +71,18 @@ set(sources
   log.cpp
   log10.cpp
   lround.cpp
+  mod-real.cpp
+  modulo-real.cpp
+  nearest.cpp
   norm2.cpp
   pow.cpp
   round.cpp
+  rrspacing.cpp
+  scale.cpp
+  set-exponent.cpp
   sin.cpp
   sinh.cpp
+  spacing.cpp
   sqrt.cpp
   tan.cpp
   tanh.cpp

@@ -14,7 +14,7 @@ extern "C" {
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(AsinF128)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Asin<RTNAME(AsinF128)>::invoke(x);
+  return Asin<true>::invoke(x);
 }
 #endif
 

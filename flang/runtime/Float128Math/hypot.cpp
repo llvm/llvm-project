@@ -15,7 +15,7 @@ extern "C" {
 CppTypeFor<TypeCategory::Real, 16> RTDEF(HypotF128)(
     CppTypeFor<TypeCategory::Real, 16> x,
     CppTypeFor<TypeCategory::Real, 16> y) {
-  return Hypot<RTNAME(HypotF128)>::invoke(x, y);
+  return Hypot<true>::invoke(x, y);
 }
 #endif
 
