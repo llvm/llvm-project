@@ -92,6 +92,19 @@ void foo() {
   bool is_true = [](){ return true; };
   // expected-warning@-1{{address of lambda function pointer conversion operator will always evaluate to 'true'}}
 }
+
+template <typename... Ts>
+static bool IsFalse(const Ts&...) { return false; }
+template <typename T>
+static bool IsFalse(const T& p) {
+  bool b;
+  b = f7; // expected-warning {{address of lambda function pointer conversion operator will always evaluate to 'true'}}
+  return p ? false : true;
+}
+
+bool use_instantiation() {
+  return IsFalse([]() { return 0; });
+}
 #endif
 
 void bar() {
