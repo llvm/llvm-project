@@ -25,7 +25,7 @@ public:
 
   ~LibcxxStdVectorSyntheticFrontEnd() override;
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -46,7 +46,7 @@ class LibcxxVectorBoolSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   LibcxxVectorBoolSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -82,7 +82,7 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
   // delete m_finish;
 }
 
-size_t lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
+uint32_t lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
     CalculateNumChildren() {
   if (!m_start || !m_finish)
     return 0;
@@ -165,7 +165,7 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
   }
 }
 
-size_t lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
+uint32_t lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
     CalculateNumChildren() {
   return m_count;
 }

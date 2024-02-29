@@ -41,7 +41,7 @@ public:
   }
 
   bool MightHaveChildren() override { return true; }
-  size_t CalculateNumChildren() override { return m_has_value ? 1U : 0U; }
+  uint32_t CalculateNumChildren() override { return m_has_value ? 1U : 0U; }
 
   ValueObjectSP GetChildAtIndex(size_t idx) override;
   lldb::ChildCacheState Update() override;

@@ -26,7 +26,7 @@ class LibStdcppUniquePtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   explicit LibStdcppUniquePtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -135,7 +135,7 @@ LibStdcppUniquePtrSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
   return lldb::ValueObjectSP();
 }
 
-size_t LibStdcppUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
+uint32_t LibStdcppUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
   if (m_del_obj)
     return 2;
   return 1;
