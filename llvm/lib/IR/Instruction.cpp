@@ -46,7 +46,7 @@ Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
 
 Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
                          BasicBlock *InsertAtEnd)
-  : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
+    : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
 
   // If requested, append this instruction into the basic block.
   if (InsertAtEnd)
@@ -72,7 +72,6 @@ Instruction::~Instruction() {
   // mapping in LLVMContext.
   setMetadata(LLVMContext::MD_DIAssignID, nullptr);
 }
-
 
 void Instruction::setParent(BasicBlock *P) {
   Parent = P;
