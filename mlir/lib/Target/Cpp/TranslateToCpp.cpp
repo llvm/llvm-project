@@ -361,6 +361,22 @@ static LogicalResult printBinaryOperation(CppEmitter &emitter,
   return success();
 }
 
+static LogicalResult printUnaryOperation(CppEmitter &emitter,
+                                         Operation *operation,
+                                         StringRef unaryOperator) {
+  raw_ostream &os = emitter.ostream();
+
+  if (failed(emitter.emitAssignPrefix(*operation)))
+    return failure();
+
+  os << unaryOperator;
+
+  if (failed(emitter.emitOperand(operation->getOperand(0))))
+    return failure();
+
+  return success();
+}
+
 static LogicalResult printOperation(CppEmitter &emitter, emitc::AddOp addOp) {
   Operation *operation = addOp.getOperation();
 
@@ -603,17 +619,8 @@ printOperation(CppEmitter &emitter,
 
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::BitwiseNotOp bitwiseNotOp) {
-  raw_ostream &os = emitter.ostream();
-
-  if (failed(emitter.emitAssignPrefix(*bitwiseNotOp.getOperation())))
-    return failure();
-
-  os << "~";
-
-  if (failed(emitter.emitOperand(bitwiseNotOp.getOperand())))
-    return failure();
-
-  return success();
+  Operation *operation = bitwiseNotOp.getOperation();
+  return printUnaryOperation(emitter, operation, "~");
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
@@ -682,17 +689,8 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::LogicalNotOp logicalNotOp) {
-  raw_ostream &os = emitter.ostream();
-
-  if (failed(emitter.emitAssignPrefix(*logicalNotOp.getOperation())))
-    return failure();
-
-  os << "!";
-
-  if (failed(emitter.emitOperand(logicalNotOp.getOperand())))
-    return failure();
-
-  return success();
+  Operation *operation = logicalNotOp.getOperation();
+  return printUnaryOperation(emitter, operation, "!");
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
