@@ -840,7 +840,8 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Attribute> dependTypeOperands;
 
   Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName;
-  llvm::omp::Directive directive;
+  // GCC 9.3.0 emits a (probably) bogus warning about an unused variable.
+  [[maybe_unused]] llvm::omp::Directive directive;
   if constexpr (std::is_same_v<OpTy, mlir::omp::EnterDataOp>) {
     directiveName =
         Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetEnterData;
