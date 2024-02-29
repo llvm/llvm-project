@@ -1,15 +1,14 @@
-//===-- Float type support --------------------------------------*- C++ -*-===//
+//===-- Types support -------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// Floating point properties are a combination of compiler support, target OS
-// and target architecture.
+// Types detection and support.
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_FLOAT_H
-#define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_FLOAT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
+#define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 
 #include "llvm-libc-macros/float-macros.h" // LDBL_MANT_DIG
 #include "llvm-libc-types/float128.h"      // float128
@@ -60,4 +59,4 @@ using float16 = _Float16;
 #define LIBC_COMPILER_HAS_FLOAT128
 #endif
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_FLOAT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H

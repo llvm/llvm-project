@@ -15,7 +15,7 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"       // LIBC_ASSERT
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
-#include "src/__support/macros/properties/float.h" // LIBC_COMPILER_HAS_FLOAT128
+#include "src/__support/macros/properties/types.h" // LIBC_COMPILER_HAS_FLOAT128
 #include "src/__support/math_extras.h"             // mask_trailing_ones
 
 #include <stdint.h>
