@@ -36,6 +36,26 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+func.func @gemm(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>,
+  %arg2 : memref<?x?xf32>) {
+  linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
+      outs(%arg2 : memref<?x?xf32>)
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.convert_to_loops %matmul : !transform.any_op
+    transform.yield
+  }
+}
+// CHECK-LABEL: func @gemm
+//   CHECK-NOT:   linalg.matmul ins({{.*}})
+
+// -----
+
 func.func @indexed_generic(%arg0 : memref<200x300xi32>, %arg1 : memref<300xi16>,
     %arg2 : memref<200xi8>, %arg3 : memref<300x200xi64>) {
   linalg.generic {
