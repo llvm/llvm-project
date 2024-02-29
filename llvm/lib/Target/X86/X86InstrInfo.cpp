@@ -3148,9 +3148,13 @@ X86::CondCode X86::getCondFromSETCC(const MachineInstr &MI) {
 }
 
 X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
-  return X86::isCMOVCC(MI.getOpcode()) || X86::isCFCMOVCC(MI.getOpcode())
-             ? X86::getCondFromMI(MI)
-             : X86::COND_INVALID;
+  return X86::isCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
+                                       : X86::COND_INVALID;
+}
+
+X86::CondCode X86::getCondFromCFCMov(const MachineInstr &MI) {
+  return X86::isCFCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
+                                         : X86::COND_INVALID;
 }
 
 /// Return the inverse of the specified condition,
