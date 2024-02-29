@@ -12,7 +12,8 @@ endif()
 if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
   message(STATUS "Enforcing strict test requirements for LLDB")
   set(useful_python_modules
-    psutil # Lit uses psutil to do per-test timeouts.
+    psutil  # Lit uses psutil to do per-test timeouts.
+    pexpect # We no longer vendor pexpect.
   )
   foreach(module ${useful_python_modules})
     lldb_find_python_module(${module})
