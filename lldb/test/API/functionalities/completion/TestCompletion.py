@@ -60,10 +60,12 @@ class CommandLineCompletionTestCase(TestBase):
 
     def do_test_variable_completion(self, command):
         self.complete_from_to(f"{command} fo", f"{command} fooo")
-        self.complete_from_to(f"{command} fooo.", f"{command} fooo.")
+        self.complete_from_to(f"{command} fooo.", f"{command} fooo.t")
+        self.complete_from_to(f"{command} fooo.t.", f"{command} fooo.t.x")
         self.complete_from_to(f"{command} fooo.dd", f"{command} fooo.dd")
 
-        self.complete_from_to(f"{command} ptr_fooo->", f"{command} ptr_fooo->")
+        self.complete_from_to(f"{command} ptr_fooo->", f"{command} ptr_fooo->t")
+        self.complete_from_to(f"{command} ptr_fooo->t.", f"{command} ptr_fooo->t.x")
         self.complete_from_to(f"{command} ptr_fooo->dd", f"{command} ptr_fooo->dd")
 
         self.complete_from_to(f"{command} cont", f"{command} container")
