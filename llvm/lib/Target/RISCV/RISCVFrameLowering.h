@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_RISCV_RISCVFRAMELOWERING_H
 #define LLVM_LIB_TARGET_RISCV_RISCVFRAMELOWERING_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Support/TypeSize.h"
 
@@ -37,6 +38,7 @@ public:
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                            RegScavenger *RS) const override;
 
+  Align maxPossibleSpillAlign(const MachineFunction &MF) const;
   bool hasFP(const MachineFunction &MF) const override;
 
   bool hasBP(const MachineFunction &MF) const;
@@ -82,6 +84,7 @@ public:
 
 protected:
   const RISCVSubtarget &STI;
+  mutable llvm::DenseMap<const MachineFunction *, Align> MaxSpillAlign;
 
 private:
   void determineFrameLayout(MachineFunction &MF) const;

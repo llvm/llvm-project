@@ -306,9 +306,12 @@ static Register getMaxPushPopReg(const MachineFunction &MF,
 // variable sized allocas, or if the frame address is taken.
 bool RISCVFrameLowering::hasFP(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
-
+  bool HasExtE =
+      MF.getSubtarget<RISCVSubtarget>().getTargetABI() == RISCVABI::ABI_ILP32E;
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
+         (HasExtE && maxPossibleSpillAlign(MF) > Align(4)) ||
          RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
          MFI.isFrameAddressTaken();
 }
@@ -1173,6 +1176,35 @@ static unsigned estimateFunctionSizeInBytes(const MachineFunction &MF,
     }
   }
   return FnSize;
+}
+
+Align RISCVFrameLowering::maxPossibleSpillAlign(
+    const MachineFunction &MF) const {
+  if (MaxSpillAlign.contains(&MF))
+    return MaxSpillAlign.at(&MF);
+
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  Align CurrMaxAlign = Align(1);
+  // The maximum spill alignment has not yet been computed. Compute it.
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isReg())
+          continue;
+        Register Reg = MO.getReg();
+        const TargetRegisterClass *RC;
+        if (Reg.isPhysical())
+          RC = TRI->getMinimalPhysRegClass(Reg);
+        else
+          RC = MRI.getRegClassOrNull(MO.getReg());
+        if (RC && TRI->getSpillAlign(*RC) > CurrMaxAlign)
+          CurrMaxAlign = TRI->getSpillAlign(*RC);
+      }
+    }
+  }
+  MaxSpillAlign[&MF] = CurrMaxAlign;
+  return CurrMaxAlign;
 }
 
 void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
