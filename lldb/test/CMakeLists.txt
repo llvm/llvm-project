@@ -30,6 +30,7 @@ endif()
 # LLDB tree. However, we delay the deletion of it from the tree in case
 # users/buildbots don't have the package yet and need some time to install it.
 if (NOT LLDB_TEST_USE_VENDOR_PACKAGES)
+  unset(PY_pexpect_FOUND CACHE)
   lldb_find_python_module(pexpect)
   if (NOT PY_pexpect_FOUND)
     message(FATAL_ERROR
