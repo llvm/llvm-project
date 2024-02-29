@@ -874,7 +874,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // We can fold the conditional branch in the preheader, this makes things
       // simpler. The first step is to remove the extra edge to the Exit block.
       Exit->removePredecessor(OrigPreheader, true /*preserve LCSSA*/);
-      BranchInst *NewBI = BranchInst::Create(NewHeader, PHBI->getIterator());
+      BranchInst *NewBI = BranchInst::Create(NewHeader, PHBI);
       NewBI->setDebugLoc(PHBI->getDebugLoc());
       PHBI->eraseFromParent();
 

@@ -2811,7 +2811,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool PreserveLCSSA,
     if (DTU)
       UniqueSuccessors.insert(Successor);
   }
-  auto *UI = new UnreachableInst(I->getContext(), I->getIterator());
+  auto *UI = new UnreachableInst(I->getContext(), I);
   UI->setDebugLoc(I->getDebugLoc());
 
   // All instructions after this are dead.
@@ -2868,7 +2868,7 @@ CallInst *llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
 
   // Follow the call by a branch to the normal destination.
   BasicBlock *NormalDestBB = II->getNormalDest();
-  BranchInst::Create(NormalDestBB, II->getIterator());
+  BranchInst::Create(NormalDestBB, II);
 
   // Update PHI nodes in the unwind destination
   BasicBlock *BB = II->getParent();
@@ -3048,7 +3048,7 @@ static bool markAliveBlocks(Function &F,
             // jump to the normal destination branch.
             BasicBlock *NormalDestBB = II->getNormalDest();
             BasicBlock *UnwindDestBB = II->getUnwindDest();
-            BranchInst::Create(NormalDestBB, II->getIterator());
+            BranchInst::Create(NormalDestBB, II);
             UnwindDestBB->removePredecessor(II->getParent());
             II->eraseFromParent();
             if (DTU)
@@ -3131,12 +3131,12 @@ Instruction *llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
   BasicBlock *UnwindDest;
 
   if (auto *CRI = dyn_cast<CleanupReturnInst>(TI)) {
-    NewTI = CleanupReturnInst::Create(CRI->getCleanupPad(), nullptr, CRI->getIterator());
+    NewTI = CleanupReturnInst::Create(CRI->getCleanupPad(), nullptr, CRI);
     UnwindDest = CRI->getUnwindDest();
   } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(TI)) {
     auto *NewCatchSwitch = CatchSwitchInst::Create(
         CatchSwitch->getParentPad(), nullptr, CatchSwitch->getNumHandlers(),
-        CatchSwitch->getName(), CatchSwitch->getIterator());
+        CatchSwitch->getName(), CatchSwitch);
     for (BasicBlock *PadBB : CatchSwitch->handlers())
       NewCatchSwitch->addHandler(PadBB);
 
@@ -3972,23 +3972,23 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   // We may need to truncate the provider.
   if (DemandedTy != Provider->getType()) {
     auto *Trunc =
-        CastInst::CreateIntegerCast(Provider, DemandedTy, false, "trunc", I->getIterator());
+        CastInst::CreateIntegerCast(Provider, DemandedTy, false, "trunc", I);
     InsertedInsts.push_back(Trunc);
     Provider = Trunc;
   }
 
-  Instruction *Result = CallInst::Create(F, Provider, "rev", I->getIterator());
+  Instruction *Result = CallInst::Create(F, Provider, "rev", I);
   InsertedInsts.push_back(Result);
 
   if (!DemandedMask.isAllOnes()) {
     auto *Mask = ConstantInt::get(DemandedTy, DemandedMask);
-    Result = BinaryOperator::Create(Instruction::And, Result, Mask, "mask", I->getIterator());
+    Result = BinaryOperator::Create(Instruction::And, Result, Mask, "mask", I);
     InsertedInsts.push_back(Result);
   }
 
   // We may need to zeroextend back to the result type.
   if (ITy != Result->getType()) {
-    auto *ExtInst = CastInst::CreateIntegerCast(Result, ITy, false, "zext", I->getIterator());
+    auto *ExtInst = CastInst::CreateIntegerCast(Result, ITy, false, "zext", I);
     InsertedInsts.push_back(ExtInst);
   }
 

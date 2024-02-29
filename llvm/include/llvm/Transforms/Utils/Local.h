@@ -206,12 +206,12 @@ bool FoldBranchToCommonDest(BranchInst *BI, llvm::DomTreeUpdater *DTU = nullptr,
 /// to create a stack slot for X.
 AllocaInst *DemoteRegToStack(Instruction &X,
                              bool VolatileLoads = false,
-                             std::optional<BasicBlock::iterator> AllocaPoint = std::nullopt);
+                             Instruction *AllocaPoint = nullptr);
 
 /// This function takes a virtual register computed by a phi node and replaces
 /// it with a slot in the stack frame, allocated via alloca. The phi node is
 /// deleted and it returns the pointer to the alloca inserted.
-AllocaInst *DemotePHIToStack(PHINode *P, std::optional<BasicBlock::iterator> AllocaPoint = std::nullopt);
+AllocaInst *DemotePHIToStack(PHINode *P, Instruction *AllocaPoint = nullptr);
 
 /// If the specified pointer points to an object that we control, try to modify
 /// the object's alignment to PrefAlign. Returns a minimum known alignment of
