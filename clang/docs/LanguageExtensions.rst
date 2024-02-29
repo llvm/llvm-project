@@ -3477,7 +3477,7 @@ builtin, the mangler emits their usual pattern without any special treatment.
 -----------------------
 
 ``__builtin_popcountg`` returns the number of 1 bits in the argument. The
-argument can be of any integer type.
+argument can be of any unsigned integer type.
 
 **Syntax**:
 
@@ -3489,20 +3489,20 @@ argument can be of any integer type.
 
 .. code-block:: c++
 
-  int x = 1;
+  unsigned int x = 1;
   int x_pop = __builtin_popcountg(x);
 
   unsigned long y = 3;
   int y_pop = __builtin_popcountg(y);
 
-  _BitInt(128) z = 7;
+  unsigned _BitInt(128) z = 7;
   int z_pop = __builtin_popcountg(z);
 
 **Description**:
 
 ``__builtin_popcountg`` is meant to be a type-generic alternative to the
 ``__builtin_popcount{,l,ll}`` builtins, with support for other integer types,
-such as ``__int128`` and C23 ``_BitInt(N)``.
+such as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 
 Multiprecision Arithmetic Builtins
 ----------------------------------

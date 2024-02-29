@@ -256,7 +256,6 @@ template<class T> complex<T> tanh (const complex<T>&);
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__fwd/complex.h>
 #include <__tuple/tuple_element.h>
