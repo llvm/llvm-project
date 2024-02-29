@@ -850,7 +850,7 @@ createTemporaryFile(const Twine &Model, int &ResultFD,
          "Model must be a simple filename.");
   // Use P.begin() so that createUniqueEntity doesn't need to recreate Storage.
   return createUniqueEntity(P.begin(), ResultFD, ResultPath, true, Type, Flags,
-                            owner_read | owner_write);
+                            all_read | all_write);
 }
 
 static std::error_code
