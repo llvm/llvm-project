@@ -32,6 +32,8 @@
 #include "arm/FEnvImpl.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "riscv/FEnvImpl.h"
+#elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)
+#include "amdgpu/FEnvImpl.h"
 #else
 
 namespace LIBC_NAMESPACE::fputil {
