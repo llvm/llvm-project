@@ -33,18 +33,6 @@ Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
 }
 
 Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
-                         Instruction *InsertBefore)
-  : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
-
-  // If requested, insert this instruction into a basic block...
-  if (InsertBefore) {
-    BasicBlock *BB = InsertBefore->getParent();
-    assert(BB && "Instruction to insert before is not in a basic block!");
-    insertInto(BB, InsertBefore->getIterator());
-  }
-}
-
-Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
                          BasicBlock *InsertAtEnd)
     : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
 
