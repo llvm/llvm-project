@@ -31,6 +31,14 @@ include "mlir/IR/RegionKindInterface.td"
 class EmitC_Op<string mnemonic, list<Trait> traits = []>
     : Op<EmitC_Dialect, mnemonic, traits>;
 
+// Base class for unary operations.
+class EmitC_UnaryOp<string mnemonic, list<Trait> traits = []> :
+    EmitC_Op<mnemonic, traits> {
+  let arguments = (ins AnyType);
+  let results = (outs AnyType);
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+}
+
 // Base class for binary operations.
 class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
     EmitC_Op<mnemonic, traits> {
@@ -131,7 +139,7 @@ def EmitC_BitwiseLeftShiftOp : EmitC_BinaryOp<"bitwise_left_shift", []> {
   }];
 }
 
-def EmitC_BitwiseNotOp : EmitC_Op<"bitwise_not", []> {
+def EmitC_BitwiseNotOp : EmitC_UnaryOp<"bitwise_not", []> {
   let summary = "Bitwise not operation";
   let description = [{
     With the `bitwise_not` operation the bitwise operator ~ (not) can
@@ -147,10 +155,6 @@ def EmitC_BitwiseNotOp : EmitC_Op<"bitwise_not", []> {
     int32_t v2 = ~v1;
     ```
   }];
-
-  let arguments = (ins AnyType);
-  let results = (outs AnyType);
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 def EmitC_BitwiseOrOp : EmitC_BinaryOp<"bitwise_or", []> {
@@ -791,7 +795,7 @@ def EmitC_LogicalAndOp : EmitC_BinaryOp<"logical_and", []> {
   let assemblyFormat = "operands attr-dict `:` type(operands)";
 }
 
-def EmitC_LogicalNotOp : EmitC_Op<"logical_not", []> {
+def EmitC_LogicalNotOp : EmitC_UnaryOp<"logical_not", []> {
   let summary = "Logical not operation";
   let description = [{
     With the `logical_not` operation the logical operator ! (negation) can
@@ -808,7 +812,6 @@ def EmitC_LogicalNotOp : EmitC_Op<"logical_not", []> {
     ```
   }];
 
-  let arguments = (ins AnyType);
   let results = (outs I1);
   let assemblyFormat = "operands attr-dict `:` type(operands)";
 }
