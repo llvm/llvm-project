@@ -2710,7 +2710,7 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
 
     // Form a PHI out of all the data ops under this index.
     PHINode *PN = PHINode::Create(
-        U->getType(), /*NumReservedValues=*/Invokes.size(), "", MergedInvoke->getIterator());
+        U->getType(), /*NumReservedValues=*/Invokes.size(), "", MergedInvoke);
     for (InvokeInst *II : Invokes)
       PN->addIncoming(II->getOperand(U.getOperandNo()), II->getParent());
 
@@ -4663,7 +4663,7 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
   } else if (KeepEdge1 && (KeepEdge2 || TrueBB == FalseBB)) {
     // Neither of the selected blocks were successors, so this
     // terminator must be unreachable.
-    new UnreachableInst(OldTerm->getContext(), OldTerm->getIterator());
+    new UnreachableInst(OldTerm->getContext(), OldTerm);
   } else {
     // One of the selected values was a successor, but the other wasn't.
     // Insert an unconditional branch to the one that was found;
@@ -5353,7 +5353,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
       // or a degenerate conditional branch with matching destinations.
       if (all_of(BI->successors(),
                  [BB](auto *Successor) { return Successor == BB; })) {
-        new UnreachableInst(TI->getContext(), TI->getIterator());
+        new UnreachableInst(TI->getContext(), TI);
         TI->eraseFromParent();
         Changed = true;
       } else {
@@ -5452,7 +5452,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
             removeUnwindEdge(EHPred, DTU);
         }
         // The catchswitch is no longer reachable.
-        new UnreachableInst(CSI->getContext(), CSI->getIterator());
+        new UnreachableInst(CSI->getContext(), CSI);
         CSI->eraseFromParent();
         Changed = true;
       }
@@ -5462,7 +5462,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
              "Expected to always have an unwind to BB.");
       if (DTU)
         Updates.push_back({DominatorTree::Delete, Predecessor, BB});
-      new UnreachableInst(TI->getContext(), TI->getIterator());
+      new UnreachableInst(TI->getContext(), TI);
       TI->eraseFromParent();
       Changed = true;
     }
@@ -6604,7 +6604,7 @@ static void reuseTableCompare(
     // The compare yields the same result, just inverted. We can replace it.
     Value *InvertedTableCmp = BinaryOperator::CreateXor(
         RangeCmp, ConstantInt::get(RangeCmp->getType(), 1), "inverted.cmp",
-        RangeCheckBranch->getIterator());
+        RangeCheckBranch);
     CmpInst->replaceAllUsesWith(InvertedTableCmp);
     ++NumTableCmpReuses;
   }
@@ -7155,14 +7155,14 @@ bool SimplifyCFGOpt::simplifyIndirectBr(IndirectBrInst *IBI) {
 
   if (IBI->getNumDestinations() == 0) {
     // If the indirectbr has no successors, change it to unreachable.
-    new UnreachableInst(IBI->getContext(), IBI->getIterator());
+    new UnreachableInst(IBI->getContext(), IBI);
     EraseTerminatorAndDCECond(IBI);
     return true;
   }
 
   if (IBI->getNumDestinations() == 1) {
     // If the indirectbr has one successor, change it to a direct branch.
-    BranchInst::Create(IBI->getDestination(0), IBI->getIterator());
+    BranchInst::Create(IBI->getDestination(0), IBI);
     EraseTerminatorAndDCECond(IBI);
     return true;
   }
