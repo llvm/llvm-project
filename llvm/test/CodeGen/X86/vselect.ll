@@ -741,14 +741,24 @@ define i64 @vselect_any_extend_vector_inreg_crash(ptr %x) {
 ; SSE-NEXT:    shll $15, %eax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: vselect_any_extend_vector_inreg_crash:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    andl $1, %eax
-; AVX-NEXT:    shll $15, %eax
-; AVX-NEXT:    retq
+; AVX1-LABEL: vselect_any_extend_vector_inreg_crash:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    shll $15, %eax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: vselect_any_extend_vector_inreg_crash:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [49,49,49,49]
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    shll $15, %eax
+; AVX2-NEXT:    retq
 0:
   %1 = load <8 x i8>, ptr %x
   %2 = icmp eq <8 x i8> %1, <i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49>
