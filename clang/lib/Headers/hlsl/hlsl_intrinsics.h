@@ -318,6 +318,42 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 double4 floor(double4);
 
 //===----------------------------------------------------------------------===//
+// lerp builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T lerp(T x, T y, T s)
+/// \brief Returns the linear interpolation of x to y by s.
+/// \param x [in] The first-floating point value.
+/// \param y [in] The second-floating point value.
+/// \param s [in] A value that linearly interpolates between the x parameter and
+/// the y parameter.
+///
+/// Linear interpolation is based on the following formula: x*(1-s) + y*s which
+/// can equivalently be written as x + s(y-x).
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+half lerp(half, half, half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+half2 lerp(half2, half2, half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+half3 lerp(half3, half3, half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+half4 lerp(half4, half4, half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+float lerp(float, float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+float2 lerp(float2, float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+float3 lerp(float3, float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+float4 lerp(float4, float4, float4);
+
+//===----------------------------------------------------------------------===//
 // log builtins
 //===----------------------------------------------------------------------===//
 

@@ -10266,6 +10266,11 @@ def err_block_on_vm : Error<
 def err_sizeless_nonlocal : Error<
   "non-local variable with sizeless type %0">;
 
+def err_vec_builtin_non_vector_all : Error<
+ "all arguments to %0 must be vectors">;
+def err_vec_builtin_incompatible_vector_all : Error<
+  "all arguments to %0 must have vectors of the same type">;
+  
 def err_vec_builtin_non_vector : Error<
  "first two arguments to %0 must be vectors">;
 def err_vec_builtin_incompatible_vector : Error<
