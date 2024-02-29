@@ -164,8 +164,7 @@ static void handleUleb128(uint8_t *loc, uint64_t val) {
   if (count < maxcount)
     mask = (1ULL << 7 * count) - 1;
 
-  val = (orig + val) & mask;
-  encodeULEB128(val, loc, count);
+  encodeULEB128((orig + val) & mask, loc, count);
 }
 
 LoongArch::LoongArch() {

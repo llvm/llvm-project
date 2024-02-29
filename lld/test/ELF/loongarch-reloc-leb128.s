@@ -10,7 +10,7 @@
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax extraspace.s -o extraspace64.o --defsym=size64=1
 # RUN: not ld.lld -shared extraspace32.o 2>&1 | FileCheck %s --check-prefix=ERROR
 # RUN: not ld.lld -shared extraspace64.o 2>&1 | FileCheck %s --check-prefix=ERROR
-# ERROR: error: {{.*}}.o:(.rodata+0x0): extra space for uleb128
+# ERROR: error: extraspace{{.*}}.o:(.rodata+0x0): extra space for uleb128
 
 #--- a.s
 .cfi_startproc
