@@ -222,7 +222,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     case ARM::R8:
     case ARM::R9:
     case ARM::R10:
-      if (STI.splitFramePushPopR7(MF)) {
+      if (STI.getPushPopSplitVariation(MF) ==
+          ARMSubtarget::PushPopSplitVariation::R7Split) {
         GPRCS2Size += 4;
         break;
       }
@@ -366,7 +367,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R10:
       case ARM::R11:
       case ARM::R12:
-        if (STI.splitFramePushPopR7(MF))
+        if (STI.getPushPopSplitVariation(MF) ==
+            ARMSubtarget::PushPopSplitVariation::R7Split)
           break;
         [[fallthrough]];
       case ARM::R0:

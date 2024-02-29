@@ -62,14 +62,16 @@ ARMBaseRegisterInfo::ARMBaseRegisterInfo()
 const MCPhysReg*
 ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const ARMSubtarget &STI = MF->getSubtarget<ARMSubtarget>();
-  bool UseSplitPush = STI.splitFramePushPopR7(*MF);
+  bool UseSplitPush = (STI.getPushPopSplitVariation(*MF) ==
+                       ARMSubtarget::PushPopSplitVariation::R7Split);
   const Function &F = MF->getFunction();
 
   if (F.getCallingConv() == CallingConv::GHC) {
     // GHC set of callee saved regs is empty as all those regs are
     // used for passing STG regs around
     return CSR_NoRegs_SaveList;
-  } else if (STI.framePointerRequiredForSEHUnwind(*MF)) {
+  } else if (STI.getPushPopSplitVariation(*MF) ==
+             ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind) {
     return CSR_Win_SplitFP_SaveList;
   } else if (F.getCallingConv() == CallingConv::CFGuard_Check) {
     return CSR_Win_AAPCS_CFGuard_Check_SaveList;

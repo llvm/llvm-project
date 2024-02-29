@@ -150,6 +150,23 @@ public:
     SingleIssuePlusExtras,
   };
 
+  /// How the pushing and popping of callee saved registers to and from the
+  /// stack should be split.
+  enum PushPopSplitVariation {
+    /// r4-r11+lr (+r12 if necessary) can be pushed in a single instruction.
+    NoSplit,
+    /// The registers need to be split into a push of r4-r7+lr and another
+    /// containing r8-r11 (+r12 if necessary).
+    R7Split,
+    /// The registers need to be split into a push containing r4-r10+r12 and
+    /// another containing r11 + lr.
+    R11SplitAAPCSBranchSigning,
+    /// The registers need to be split into a push containing r4-r10 and another
+    /// containing r11 + lr. In this case, the floating point registers are
+    /// pushed between these two pushes.
+    R11SplitWindowsSEHUnwind
+  };
+
 protected:
 // Bool members corresponding to the SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -440,29 +457,8 @@ public:
     return ARM::R11;
   }
 
-  /// Returns true if the frame setup is split into two separate pushes (first
-  /// r0-r7,lr then r8-r11), principally so that the frame pointer r7 is
-  /// adjacent to lr. This is always required on Thumb1-only targets, as the
-  /// push and pop instructions can't access the high registers.
-  bool splitFramePushPopR7(const MachineFunction &MF) const {
-    if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
-        !createAAPCSFrameChain())
-      return true;
-    return (getFramePointerReg() == ARM::R7 &&
-            MF.getTarget().Options.DisableFramePointerElim(MF)) ||
-           isThumb1Only();
-  }
-
-  bool framePointerRequiredForSEHUnwind(const MachineFunction &MF) const;
-
-  // Returns true if R11 and lr are not adjacent to each other in the list of
-  // callee saved registers in a frame.
-  bool r11AndLRNotAdjacent(const MachineFunction &MF) const;
-
-  // Returns true if the frame setup is split into two separate pushes (first
-  // r0-r10,r12 then r11,lr), principally so that the frame pointer r11 is
-  // adjacent to lr.
-  bool splitFramePushPopR11(const MachineFunction &MF) const;
+  enum PushPopSplitVariation
+  getPushPopSplitVariation(const MachineFunction &MF) const;
 
   bool useStride4VFPs() const;
 
