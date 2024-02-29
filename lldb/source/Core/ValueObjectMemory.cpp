@@ -126,7 +126,7 @@ ConstString ValueObjectMemory::GetDisplayTypeName() {
   return m_compiler_type.GetDisplayTypeName();
 }
 
-size_t ValueObjectMemory::CalculateNumChildren(uint32_t max) {
+uint32_t ValueObjectMemory::CalculateNumChildren(uint32_t max) {
   if (m_type_sp) {
     auto child_count = m_type_sp->GetNumChildren(true);
     return child_count <= max ? child_count : max;

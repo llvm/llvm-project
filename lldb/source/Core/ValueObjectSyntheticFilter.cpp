@@ -84,7 +84,7 @@ ConstString ValueObjectSynthetic::GetDisplayTypeName() {
   return m_parent->GetDisplayTypeName();
 }
 
-size_t ValueObjectSynthetic::CalculateNumChildren(uint32_t max) {
+uint32_t ValueObjectSynthetic::CalculateNumChildren(uint32_t max) {
   Log *log = GetLog(LLDBLog::DataFormatters);
 
   UpdateValueIfNeeded();

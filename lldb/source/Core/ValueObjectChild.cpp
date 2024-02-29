@@ -49,7 +49,7 @@ lldb::ValueType ValueObjectChild::GetValueType() const {
   return m_parent->GetValueType();
 }
 
-size_t ValueObjectChild::CalculateNumChildren(uint32_t max) {
+uint32_t ValueObjectChild::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
   return children_count <= max ? children_count : max;

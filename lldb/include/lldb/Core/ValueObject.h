@@ -958,7 +958,7 @@ protected:
                                           int32_t synthetic_index);
 
   /// Should only be called by ValueObject::GetNumChildren().
-  virtual size_t CalculateNumChildren(uint32_t max = UINT32_MAX) = 0;
+  virtual uint32_t CalculateNumChildren(uint32_t max = UINT32_MAX) = 0;
 
   void SetNumChildren(size_t num_children);
 
