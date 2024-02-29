@@ -804,8 +804,8 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
     else if constexpr (__LDBL_MANT_DIG__ == 113)
       return FPType::IEEE754_Binary128;
   }
-#if defined(LIBC_COMPILER_HAS_C23_FLOAT16)
-  else if constexpr (cpp::is_same_v<UnqualT, _Float16>)
+#if defined(LIBC_TYPES_HAS_FLOAT16)
+  else if constexpr (cpp::is_same_v<UnqualT, float16>)
     return FPType::IEEE754_Binary16;
 #endif
 #if defined(LIBC_COMPILER_HAS_C23_FLOAT128)
