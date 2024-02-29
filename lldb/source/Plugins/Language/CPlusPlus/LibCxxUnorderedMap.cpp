@@ -33,7 +33,7 @@ public:
 
   ~LibcxxStdUnorderedMapSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -62,7 +62,7 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     Update();
 }
 
-size_t lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
+uint32_t lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     CalculateNumChildren() {
   return m_num_elements;
 }

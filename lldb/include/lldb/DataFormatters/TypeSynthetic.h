@@ -38,9 +38,9 @@ public:
 
   virtual ~SyntheticChildrenFrontEnd() = default;
 
-  virtual size_t CalculateNumChildren() = 0;
+  virtual uint32_t CalculateNumChildren() = 0;
 
-  virtual size_t CalculateNumChildren(uint32_t max) {
+  virtual uint32_t CalculateNumChildren(uint32_t max) {
     auto count = CalculateNumChildren();
     return count <= max ? count : max;
   }
@@ -109,7 +109,7 @@ public:
 
   ~SyntheticValueProviderFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override { return 0; }
+  uint32_t CalculateNumChildren() override { return 0; }
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override { return nullptr; }
 
@@ -322,7 +322,7 @@ public:
 
     ~FrontEnd() override = default;
 
-    size_t CalculateNumChildren() override { return filter->GetCount(); }
+    uint32_t CalculateNumChildren() override { return filter->GetCount(); }
 
     lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
       if (idx >= filter->GetCount())
@@ -426,9 +426,9 @@ public:
 
     bool IsValid();
 
-    size_t CalculateNumChildren() override;
+    uint32_t CalculateNumChildren() override;
 
-    size_t CalculateNumChildren(uint32_t max) override;
+    uint32_t CalculateNumChildren(uint32_t max) override;
 
     lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
