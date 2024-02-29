@@ -63,8 +63,8 @@ file formats.
 
 .. option:: --demangle, -C
 
- Display demangled symbol names in the output; the option only is for ELF and
- XCOFF file format.
+ Display demangled symbol names in the output. This option is only for ELF and
+ XCOFF file formats.
 
 .. option:: --expand-relocs
 
