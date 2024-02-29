@@ -426,7 +426,7 @@ public:
   /// which is an AddressMaskRange enum value.
   /// Needing to specify the address range is highly unusual, and the
   /// default argument can be used in nearly all circumstances.
-  /// On some architectures like AArch64, it is possible to have
+  /// On some architectures (e.g., AArch64), it is possible to have
   /// different page table setups for low and high memory, so different
   /// numbers of bits relevant to addressing. It is possible to have
   /// a program running in one half of memory and accessing the other
@@ -488,8 +488,8 @@ public:
   ///
   /// \param[in] num_bits
   ///     Number of bits that are used for addressing.
-  ///     A value of 42 indicates that the low 42 bits are relevant for
-  ///     addressing, and that higher order bits may be used for various
+  ///     For example, a value of 42 indicates that the low 42 bits are relevant for
+  ///     addressing, and that higher-order bits may be used for various
   ///     metadata like pointer authentication, Type Byte Ignore, etc.
   ///
   /// \param[in] addr_range
