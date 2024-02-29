@@ -1340,7 +1340,9 @@ defm DS_ADD_RTN_F64 : DS_Real_gfx12_gfx13<0x074>;
 
 // New aliases added in GFX12 without renaming the instructions.
 def : MnemonicAlias<"ds_subrev_u32", "ds_rsub_u32">, Requires<[isGFX12Plus]>;
+def : MnemonicAlias<"ds_subrev_rtn_u32", "ds_rsub_rtn_u32">, Requires<[isGFX12Plus]>;
 def : MnemonicAlias<"ds_subrev_u64", "ds_rsub_u64">, Requires<[isGFX12Plus]>;
+def : MnemonicAlias<"ds_subrev_rtn_u64", "ds_rsub_rtn_u64">, Requires<[isGFX12Plus]>;
 
 // Aliases that have existed since these instructions were introduced.
 def : MnemonicAlias<"ds_load_tr_b64", "ds_load_tr8_b64">, Requires<[isGFX12_10Plus]>;
