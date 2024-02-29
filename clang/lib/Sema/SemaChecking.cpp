@@ -5246,10 +5246,19 @@ bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   return true;
 }
 
-bool checkAllArgsAreFloatRepresentation(CallExpr *TheCall) {
+bool CheckAllArgsAreFloatRepresentation(Sema *S, CallExpr *TheCall) {
+  QualType ExpectedType = S->Context.FloatTy;
   for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
-    if (!TheCall->getArg(0)->getType()->hasFloatingRepresentation())
+    QualType PassedType = TheCall->getArg(i)->getType();
+    if (!PassedType->hasFloatingRepresentation()) {
+      if (auto *VecTyA = PassedType->getAs<VectorType>())
+        ExpectedType = S->Context.getVectorType(
+            ExpectedType, VecTyA->getNumElements(), VecTyA->getVectorKind());
+      S->Diag(TheCall->getArg(0)->getBeginLoc(),
+              diag::err_typecheck_convert_incompatible)
+          << PassedType << ExpectedType << 1 << 0 << 0;
       return true;
+    }
   }
   return false;
 }
@@ -5270,17 +5279,8 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
-    QualType PassedType = TheCall->getArg(0)->getType();
-    if (!PassedType->hasFloatingRepresentation()) {
-      QualType ExpectedType = this->Context.FloatTy;
-      if (auto *VecTyA = PassedType->getAs<VectorType>())
-        ExpectedType = this->Context.getVectorType(
-            ExpectedType, VecTyA->getNumElements(), VecTyA->getVectorKind());
-      Diag(TheCall->getArg(0)->getBeginLoc(),
-           diag::err_typecheck_convert_incompatible)
-          << PassedType << ExpectedType << 1 << 0 << 0;
+    if (CheckAllArgsAreFloatRepresentation(this, TheCall))
       return true;
-    }
     break;
   }
   case Builtin::BI__builtin_hlsl_lerp: {
@@ -5290,7 +5290,7 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     if (SemaBuiltinElementwiseTernaryMath(TheCall))
       return true;
-    if (checkAllArgsAreFloatRepresentation(TheCall))
+    if (CheckAllArgsAreFloatRepresentation(this, TheCall))
       return true;
     break;
   }
