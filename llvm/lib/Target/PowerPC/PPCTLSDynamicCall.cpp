@@ -217,8 +217,8 @@ protected:
                     }
                   }
 
-                // Check the two nodes that load from the TOC: one should be
-                // _$TLSML, and the other will be moved before the node that
+                // Check the two nodes that loaded from the TOC: one should be
+                // "_$TLSML", and the other will be moved before the node that
                 // uses the OutReg of the .__tls_get_mod node.
                 if (LoadFromTocs.size() == 2) {
                   MachineBasicBlock::iterator TLSMLIter = MBB.end();
