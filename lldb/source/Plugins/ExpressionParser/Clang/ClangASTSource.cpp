@@ -21,8 +21,6 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclVisitor.h"
-#include "clang/AST/RecordLayout.h"
 #include "clang/Basic/SourceManager.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
