@@ -228,17 +228,6 @@ void deallocDenseTensor(OpBuilder &builder, Location loc, Value buffer);
 void sizesFromSrc(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
                   Location loc, Value src);
 
-/// Generates a 1D MemRefType with a dynamic size. When withLayout is set, the
-/// returned memref has a layout has unknown strides and offsets. Otherwise,
-/// a memref with a standard unit stride zero offset layout is returned.
-inline MemRefType get1DMemRefType(Type etp, bool withLayout) {
-  auto layout = withLayout ? StridedLayoutAttr::StridedLayoutAttr::get(
-                                 etp.getContext(), ShapedType::kDynamic,
-                                 {ShapedType::kDynamic})
-                           : StridedLayoutAttr();
-  return MemRefType::get(ShapedType::kDynamic, etp, layout);
-}
-
 /// Scans to top of generated loop.
 Operation *getTop(Operation *op);
 
