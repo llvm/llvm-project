@@ -63,6 +63,7 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   // copy relevant pseudo op flags
   let GWS                = ps.GWS;
   let SubtargetPredicate = ps.SubtargetPredicate;
+  let WaveSizePredicate  = ps.WaveSizePredicate;
   let OtherPredicates    = ps.OtherPredicates;
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;
