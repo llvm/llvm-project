@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FIXEDPOINT_SQRT_H
 #define LLVM_LIBC_SRC___SUPPORT_FIXEDPOINT_SQRT_H
 
-#include "llvm-libc-macros/stdfix-macros.h"
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE

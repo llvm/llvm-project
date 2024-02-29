@@ -184,7 +184,6 @@ function(create_libc_unittest fq_target_name)
   )
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR}/include)
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
 
   if(NOT LIBC_UNITTEST_CXX_STANDARD)
@@ -318,7 +317,6 @@ function(add_libc_fuzzer target_name)
   )
   target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR}/include)
 
   target_link_libraries(${fq_target_name} PRIVATE
     ${link_object_files}
@@ -459,7 +457,6 @@ function(add_integration_test test_name)
       PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR}/include)
 
   _get_hermetic_test_compile_options(compile_options "${INTEGRATION_TEST_COMPILE_OPTIONS}")
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
@@ -635,7 +632,6 @@ function(add_libc_hermetic_test test_name)
   _get_hermetic_test_compile_options(compile_options "${HERMETIC_TEST_COMPILE_OPTIONS}")
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR}/include)
   _get_hermetic_test_compile_options(compile_options "${HERMETIC_TEST_COMPILE_OPTIONS}")
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
 
