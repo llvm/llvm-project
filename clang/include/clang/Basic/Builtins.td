@@ -662,6 +662,12 @@ def Clz : Builtin, BitShort_Int_Long_LongLongTemplate {
 
 // FIXME: Add int clzimax(uintmax_t)
 
+def Clzg : Builtin {
+  let Spellings = ["__builtin_clzg"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "int(...)";
+}
+
 def Ctz : Builtin, BitShort_Int_Long_LongLongTemplate {
   let Spellings = ["__builtin_ctz"];
   let Attributes = [NoThrow, Const, Constexpr];
@@ -669,6 +675,12 @@ def Ctz : Builtin, BitShort_Int_Long_LongLongTemplate {
 }
 
 // FIXME: Add int ctzimax(uintmax_t)
+
+def Ctzg : Builtin {
+  let Spellings = ["__builtin_ctzg"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "int(...)";
+}
 
 def FFS : Builtin, BitInt_Long_LongLongTemplate {
   let Spellings = ["__builtin_ffs"];
