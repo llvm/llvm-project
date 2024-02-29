@@ -21,7 +21,6 @@ set(MODULES
   "__fortran_type_info"
 )
 
-message("MK: LLVM_TOOL_OPENMP_BUILD=${LLVM_TOOL_OPENMP_BUILD}")
 # Create module files directly from the top-level module source directory.
 # If CMAKE_CROSSCOMPILING, then the newly built flang-new executable was
 # cross compiled, and thus can't be executed on the build system and thus

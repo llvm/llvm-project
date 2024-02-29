@@ -13,8 +13,6 @@ from lit.llvm import llvm_config
 from lit.llvm.subst import ToolSubst
 from lit.llvm.subst import FindTool
 
-print(f'LIK MK: config.have_openmp_rtl={config.have_openmp_rtl}')
-
 # Configuration file for the 'lit' test runner.
 
 # name: The name of this test suite.
