@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -13891,12 +13892,17 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         if (Idx != Set.size() - 1)
           continue;
       }
-      if (Operands.size() <= 1) {
+      // Capturing structured bindings are a C++ 20 extension, so use a separate
+      // variable for now.
+      auto &DataVar = Data;
+      auto E = make_scope_exit([&]() {
         Operands.clear();
-        Operands.push_back(Stores[Data.first]);
-        PrevDist = Data.second;
+        Operands.push_back(Stores[DataVar.first]);
+        PrevDist = DataVar.second;
+      });
+
+      if (Operands.size() <= 1)
         continue;
-      }
 
       unsigned MaxVecRegSize = R.getMaxVecRegSize();
       unsigned EltSize = R.getVectorElementSize(Operands[0]);
@@ -13955,9 +13961,6 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         if (StartIdx >= Operands.size())
           break;
       }
-      Operands.clear();
-      Operands.push_back(Stores[Data.first]);
-      PrevDist = Data.second;
     }
   };
 
