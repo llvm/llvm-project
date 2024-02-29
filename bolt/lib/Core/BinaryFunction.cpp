@@ -1446,7 +1446,7 @@ add_instruction:
 }
 
 MCSymbol *BinaryFunction::registerBranch(uint64_t Src, uint64_t Dst) {
-  assert(CurrentState == Disassembled &&
+  assert(CurrentState == State::Disassembled &&
          "Cannot register branch unless function is in disassembled state.");
   assert(containsAddress(Src) && containsAddress(Dst) &&
          "Cannot register external branch.");
