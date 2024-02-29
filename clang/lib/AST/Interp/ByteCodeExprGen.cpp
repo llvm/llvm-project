@@ -3213,12 +3213,6 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   // we haven't seen yet.
   if (Ctx.getLangOpts().CPlusPlus) {
     if (const auto *VD = dyn_cast<VarDecl>(D)) {
-      // Dummy for static locals
-      if (VD->isStaticLocal()) {
-        if (std::optional<unsigned> I = P.getOrCreateDummy(D))
-          return this->emitGetPtrGlobal(*I, E);
-        return false;
-      }
       // Visit local const variables like normal.
       if (VD->isLocalVarDecl() && VD->getType().isConstQualified()) {
         if (!this->visitVarDecl(VD))
@@ -3226,6 +3220,9 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
         // Retry.
         return this->VisitDeclRefExpr(E);
       }
+
+      if (VD->hasExternalStorage())
+        return this->emitInvalidDeclRef(E, E);
     }
   } else {
     if (const auto *VD = dyn_cast<VarDecl>(D);
@@ -3235,10 +3232,10 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
       // Retry.
       return this->VisitDeclRefExpr(E);
     }
-
-    if (std::optional<unsigned> I = P.getOrCreateDummy(D))
-      return this->emitGetPtrGlobal(*I, E);
   }
+
+  if (std::optional<unsigned> I = P.getOrCreateDummy(D))
+    return this->emitGetPtrGlobal(*I, E);
 
   return this->emitInvalidDeclRef(E, E);
 }
