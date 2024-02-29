@@ -581,13 +581,20 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     LLVMContext &C = RetTy->getContext();
     EVT MRTy = getTLI()->getValueType(DL, RetTy);
     EVT MPTy = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+    // Skip this if either the return type or the vector argument are unpacked
+    // SVE types; they may get lowered to stack stores and loads.
+    if ((MRTy.isScalableVector() &&
+         MRTy.getSizeInBits().getKnownMinValue() != AArch64::SVEBitsPerBlock) ||
+        (MPTy.isScalableVector() &&
+         MPTy.getSizeInBits().getKnownMinValue() != AArch64::SVEBitsPerBlock))
+      break;
     TargetLoweringBase::LegalizeKind RLK = getTLI()->getTypeConversion(C, MRTy);
     TargetLoweringBase::LegalizeKind PLK = getTLI()->getTypeConversion(C, MPTy);
     const ConstantInt *Idx = dyn_cast<ConstantInt>(ICA.getArgs()[1]);
     if (RLK.first == TargetLoweringBase::TypeLegal &&
         PLK.first == TargetLoweringBase::TypeLegal && Idx &&
         Idx->getZExtValue() == 0)
-      return TTI::TCC_Basic;
+      return TTI::TCC_Free;
     break;
   }
   case Intrinsic::vector_insert: {
@@ -603,13 +610,20 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     LLVMContext &C = RetTy->getContext();
     EVT MTy0 = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
     EVT MTy1 = getTLI()->getValueType(DL, ICA.getArgTypes()[1]);
+    // Skip this if either type is an unpacked SVE type; they may get lowered
+    // to stack stores and loads.
+    if ((MTy0.isScalableVector() &&
+         MTy0.getSizeInBits().getKnownMinValue() != AArch64::SVEBitsPerBlock) ||
+        (MTy1.isScalableVector() &&
+         MTy1.getSizeInBits().getKnownMinValue() != AArch64::SVEBitsPerBlock))
+      break;
     TargetLoweringBase::LegalizeKind LK0 = getTLI()->getTypeConversion(C, MTy0);
     TargetLoweringBase::LegalizeKind LK1 = getTLI()->getTypeConversion(C, MTy1);
     const ConstantInt *Idx = dyn_cast<ConstantInt>(ICA.getArgs()[2]);
     if (LK0.first == TargetLoweringBase::TypeLegal &&
         LK1.first == TargetLoweringBase::TypeLegal && Idx &&
         Idx->getZExtValue() == 0)
-      return TTI::TCC_Basic;
+      return TTI::TCC_Free;
     break;
   }
   case Intrinsic::bitreverse: {
