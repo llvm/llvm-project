@@ -43,7 +43,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
@@ -216,7 +216,7 @@ add_entrypoint_object(
   HDRS
     ../fabsf128.h
   DEPENDS
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
@@ -267,7 +267,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
@@ -316,7 +316,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
@@ -365,7 +365,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
@@ -908,7 +908,7 @@ add_entrypoint_object(
   HDRS
     ../copysignf128.h
   DEPENDS
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
@@ -959,7 +959,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
 )
 
@@ -1008,7 +1008,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
 )
 
@@ -1057,7 +1057,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
 )
 
@@ -1106,7 +1106,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
 )
 
@@ -1412,7 +1412,7 @@ add_entrypoint_object(
   HDRS
     ../fminf128.h
   DEPENDS
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
@@ -1461,7 +1461,7 @@ add_entrypoint_object(
   HDRS
     ../fmaxf128.h
   DEPENDS
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
@@ -1510,7 +1510,7 @@ add_entrypoint_object(
   HDRS
     ../sqrtf128.h
   DEPENDS
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.sqrt
   COMPILE_OPTIONS
     -O3
@@ -1647,7 +1647,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.basic_operations
 )
 
