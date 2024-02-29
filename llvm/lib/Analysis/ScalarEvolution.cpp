@@ -12983,38 +12983,50 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     if (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS)) {
       const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(ZExt->getOperand());
       if (AR && AR->getLoop() == L && AR->isAffine()) {
-        auto canProveNUW = [&]() {
-          // We can use the comparison to infer no-wrap flags only if it fully
-          // controls the loop exit.
-          if (!ControlsOnlyExit)
-            return false;
+        if (!AssumeLoopExists) {
+          auto canProveNUW = [&]() {
+            // We can use the comparison to infer no-wrap flags only if it fully
+            // controls the loop exit.
+            if (!ControlsOnlyExit)
+              return false;
 
-          if (!isLoopInvariant(RHS, L))
-            return false;
+            if (!isLoopInvariant(RHS, L))
+              return false;
 
-          if (!isKnownNonZero(AR->getStepRecurrence(*this)))
-            // We need the sequence defined by AR to strictly increase in the
-            // unsigned integer domain for the logic below to hold.
-            return false;
+            if (!isKnownNonZero(AR->getStepRecurrence(*this)))
+              // We need the sequence defined by AR to strictly increase in the
+              // unsigned integer domain for the logic below to hold.
+              return false;
 
-          const unsigned InnerBitWidth = getTypeSizeInBits(AR->getType());
-          const unsigned OuterBitWidth = getTypeSizeInBits(RHS->getType());
-          // If RHS <=u Limit, then there must exist a value V in the sequence
-          // defined by AR (e.g. {Start,+,Step}) such that V >u RHS, and
-          // V <=u UINT_MAX.  Thus, we must exit the loop before unsigned
-          // overflow occurs.  This limit also implies that a signed comparison
-          // (in the wide bitwidth) is equivalent to an unsigned comparison as
-          // the high bits on both sides must be zero.
-          APInt StrideMax = getUnsignedRangeMax(AR->getStepRecurrence(*this));
-          APInt Limit = APInt::getMaxValue(InnerBitWidth) - (StrideMax - 1);
-          Limit = Limit.zext(OuterBitWidth);
-          return getUnsignedRangeMax(applyLoopGuards(RHS, L)).ule(Limit);
-        };
-        auto Flags = AR->getNoWrapFlags();
-        if (!hasFlags(Flags, SCEV::FlagNUW) && canProveNUW())
-          Flags = setFlags(Flags, SCEV::FlagNUW);
+            const unsigned InnerBitWidth = getTypeSizeInBits(AR->getType());
+            const unsigned OuterBitWidth = getTypeSizeInBits(RHS->getType());
+            // If RHS <=u Limit, then there must exist a value V in the sequence
+            // defined by AR (e.g. {Start,+,Step}) such that V >u RHS, and
+            // V <=u UINT_MAX.  Thus, we must exit the loop before unsigned
+            // overflow occurs.  This limit also implies that a signed
+            // comparison (in the wide bitwidth) is equivalent to an unsigned
+            // comparison as the high bits on both sides must be zero.
+            APInt StrideMax = getUnsignedRangeMax(AR->getStepRecurrence(*this));
+            APInt Limit = APInt::getMaxValue(InnerBitWidth) - (StrideMax - 1);
+            Limit = Limit.zext(OuterBitWidth);
+            return getUnsignedRangeMax(applyLoopGuards(RHS, L)).ule(Limit);
+          };
+          auto Flags = AR->getNoWrapFlags();
+          if (!hasFlags(Flags, SCEV::FlagNUW) && canProveNUW())
+            Flags = setFlags(Flags, SCEV::FlagNUW);
 
-        setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
+          setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
+        } else {
+          auto Flags = AR->getNoWrapFlags();
+          if (!hasFlags(Flags, SCEV::FlagNW) && canAssumeNoSelfWrap(AR)) {
+            Flags = setFlags(Flags, SCEV::FlagNW);
+
+            SmallVector<const SCEV *, 4> Operands{AR->operands()};
+            Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
+
+            setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
+          }
+        }
         if (AR->hasNoUnsignedWrap()) {
           // Emulate what getZeroExtendExpr would have done during construction
           // if we'd been able to infer the fact just above at that time.
@@ -13096,6 +13108,13 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     //
     if (PredicatedIV || !NoWrap || !loopIsFiniteByAssumption(L) ||
         !loopHasNoAbnormalExits(L))
+      return getCouldNotCompute();
+
+    // This bailout is protecting the logic in computeMaxBECountForLT which
+    // has not yet been sufficiently auditted or tested with negative strides.
+    // We used to filter out all known-non-positive cases here, we're in the
+    // process of being less restrictive bit by bit.
+    if (AssumeLoopExists && IsSigned && isKnownNonPositive(Stride))
       return getCouldNotCompute();
 
     if (!isKnownNonZero(Stride)) {
@@ -13227,13 +13246,17 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   if (!BECount) {
     auto canProveRHSGreaterThanEqualStart = [&]() {
       auto CondGE = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
-      const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
-      const SCEV *GuardedStart = applyLoopGuards(OrigStart, L);
 
-      if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart) ||
-          isKnownPredicate(CondGE, GuardedRHS, GuardedStart))
-        return true;
+      if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart)) {
+        if (AssumeLoopExists) {
+          return true;
+        }
+        const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
+        const SCEV *GuardedStart = applyLoopGuards(OrigStart, L);
 
+        if (isKnownPredicate(CondGE, GuardedRHS, GuardedStart))
+          return true;
+      }
       // (RHS > Start - 1) implies RHS >= Start.
       // * "RHS >= Start" is trivially equivalent to "RHS > Start - 1" if
       //   "Start - 1" doesn't overflow.
@@ -13370,7 +13393,10 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   if (isa<SCEVCouldNotCompute>(ConstantMaxBECount) &&
       !isa<SCEVCouldNotCompute>(BECount))
     ConstantMaxBECount = getConstant(getUnsignedRangeMax(BECount));
-
+  if (AssumeLoopExists) {
+    return ExitLimit(BECount, ConstantMaxBECount, ConstantMaxBECount, MaxOrZero,
+                     Predicates);
+  }
   const SCEV *SymbolicMaxBECount =
       isa<SCEVCouldNotCompute>(BECount) ? ConstantMaxBECount : BECount;
   return ExitLimit(BECount, ConstantMaxBECount, SymbolicMaxBECount, MaxOrZero,
