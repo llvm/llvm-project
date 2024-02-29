@@ -127,6 +127,9 @@
 #define MAX_PATH 260
 #endif
 
+/// Address Mask
+#define LLDB_INVALID_ADDRESS_MASK 0
+
 // ignore GCC function attributes
 #if defined(_MSC_VER) && !defined(__clang__)
 #define __attribute__(X)

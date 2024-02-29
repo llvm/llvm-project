@@ -1258,7 +1258,7 @@ lldb::SBFileSpec SBProcess::GetCoreFile() {
 addr_t SBProcess::GetAddressMask(AddressMaskType type,
                                  AddressMaskRange addr_range) {
   LLDB_INSTRUMENT_VA(this, type, addr_range);
-  addr_t default_mask = 0;
+
   if (ProcessSP process_sp = GetSP()) {
     switch (type) {
     case eAddressMaskTypeCode:
@@ -1278,12 +1278,13 @@ addr_t SBProcess::GetAddressMask(AddressMaskType type,
         return process_sp->GetDataAddressMask();
     }
   }
-  return default_mask;
+  return LLDB_INVALID_ADDRESS_MASK;
 }
 
 void SBProcess::SetAddressMask(AddressMaskType type, addr_t mask,
                                AddressMaskRange addr_range) {
   LLDB_INSTRUMENT_VA(this, type, mask, addr_range);
+
   if (ProcessSP process_sp = GetSP()) {
     switch (type) {
     case eAddressMaskTypeCode:
@@ -1327,12 +1328,14 @@ void SBProcess::SetAddressMask(AddressMaskType type, addr_t mask,
 void SBProcess::SetAddressableBits(AddressMaskType type, uint32_t num_bits,
                                    AddressMaskRange addr_range) {
   LLDB_INSTRUMENT_VA(this, type, num_bits, addr_range);
+
   SetAddressMask(type, AddressableBits::AddressableBitToMask(num_bits),
                  addr_range);
 }
 
 addr_t SBProcess::FixAddress(addr_t addr, AddressMaskType type) {
   LLDB_INSTRUMENT_VA(this, addr, type);
+
   if (ProcessSP process_sp = GetSP()) {
     if (type == eAddressMaskTypeAny)
       return process_sp->FixAnyAddress(addr);
