@@ -2509,7 +2509,7 @@ class MUBUF_Real_Atomic_gfx12_impl<bits<8> op, string ps_name,
 
 multiclass MUBUF_Real_Atomic_gfx11_Renamed_impl<bits<8> op, bit is_return,
                                                 string real_name> {
-  defvar Rtn = !if(!eq(is_return, 1), "_RTN", "");
+  defvar Rtn = !if(is_return, "_RTN", "");
   def _BOTHEN#Rtn#_gfx11 :
     MUBUF_Real_Atomic_gfx11_impl<op, NAME # "_BOTHEN" # Rtn, real_name>,
     AtomicNoRet<NAME # "_BOTHEN_gfx11", is_return>;
@@ -2526,7 +2526,7 @@ multiclass MUBUF_Real_Atomic_gfx11_Renamed_impl<bits<8> op, bit is_return,
 
 multiclass MUBUF_Real_Atomic_gfx12_Renamed_impl<bits<8> op, bit is_return,
                                                 string real_name> {
-  defvar Rtn = !if(!eq(is_return, 1), "_RTN", "");
+  defvar Rtn = !if(is_return, "_RTN", "");
   def _BOTHEN#Rtn#_gfx12 :
     MUBUF_Real_Atomic_gfx12_impl<op, NAME # "_VBUFFER_BOTHEN" # Rtn, real_name>,
     AtomicNoRet<NAME # "_BOTHEN_gfx12", is_return>;
