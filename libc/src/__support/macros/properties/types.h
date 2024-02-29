@@ -10,8 +10,9 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 
-#include "llvm-libc-macros/float-macros.h" // LDBL_MANT_DIG
-#include "llvm-libc-types/float128.h"      // float128
+#include "llvm-libc-macros/float-macros.h"  // LDBL_MANT_DIG
+#include "llvm-libc-macros/stdint-macros.h" // UINT64_MAX
+#include "llvm-libc-types/float128.h"       // float128
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/cpu_features.h"
@@ -25,6 +26,11 @@
 #elif (LDBL_MANT_DIG == 113)
 #define LIBC_LONG_DOUBLE_IS_FLOAT128
 #endif
+
+// int64 / uint64 support
+#if defined(UINT64_MAX)
+#define LIBC_TYPES_HAS_INT64
+#endif // UINT64_MAX
 
 // float16 support.
 #if defined(LIBC_TARGET_ARCH_IS_X86_64) && defined(LIBC_TARGET_CPU_HAS_SSE2)
