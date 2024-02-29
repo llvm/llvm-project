@@ -351,7 +351,7 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
+uint32_t lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
     CalculateNumChildren() {
   return 2;
 }
@@ -509,7 +509,7 @@ lldb::ChildCacheState lldb_private::formatters::
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
+uint32_t lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
     CalculateNumChildren() {
   return 2;
 }
@@ -566,7 +566,7 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
     Update();
 }
 
-size_t lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
+uint32_t lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
     CalculateNumChildren() {
   return (m_cntrl ? 1 : 0);
 }
@@ -661,7 +661,7 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEndCreator(
                     : nullptr);
 }
 
-size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
+uint32_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     CalculateNumChildren() {
   if (m_value_ptr_sp)
     return m_deleter_sp ? 2 : 1;

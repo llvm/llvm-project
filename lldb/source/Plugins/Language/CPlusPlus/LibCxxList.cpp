@@ -136,7 +136,7 @@ class ForwardListFrontEnd : public AbstractListFrontEnd {
 public:
   ForwardListFrontEnd(ValueObject &valobj);
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
   ValueObjectSP GetChildAtIndex(size_t idx) override;
   lldb::ChildCacheState Update() override;
 };
@@ -147,7 +147,7 @@ public:
 
   ~ListFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -240,7 +240,7 @@ ForwardListFrontEnd::ForwardListFrontEnd(ValueObject &valobj)
   Update();
 }
 
-size_t ForwardListFrontEnd::CalculateNumChildren() {
+uint32_t ForwardListFrontEnd::CalculateNumChildren() {
   if (m_count != UINT32_MAX)
     return m_count;
 
@@ -308,7 +308,7 @@ ListFrontEnd::ListFrontEnd(lldb::ValueObjectSP valobj_sp)
     Update();
 }
 
-size_t ListFrontEnd::CalculateNumChildren() {
+uint32_t ListFrontEnd::CalculateNumChildren() {
   if (m_count != UINT32_MAX)
     return m_count;
   if (!m_head || !m_tail || m_node_address == 0)

@@ -26,7 +26,7 @@ public:
 
   bool MightHaveChildren() override { return true; }
   lldb::ChildCacheState Update() override;
-  size_t CalculateNumChildren() override { return m_elements.size(); }
+  uint32_t CalculateNumChildren() override { return m_elements.size(); }
   ValueObjectSP GetChildAtIndex(size_t idx) override;
 
 private:

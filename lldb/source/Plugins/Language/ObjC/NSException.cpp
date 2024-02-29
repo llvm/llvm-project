@@ -123,7 +123,7 @@ public:
 
   ~NSExceptionSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override {
+  uint32_t CalculateNumChildren() override {
     return 4;
   }
 

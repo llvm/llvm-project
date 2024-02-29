@@ -116,7 +116,7 @@ public:
   // no need to delete m_child_ptr - it's kept alive by the cluster manager on
   // our behalf
 
-  size_t CalculateNumChildren() override {
+  uint32_t CalculateNumChildren() override {
     if (m_child_ptr)
       return 1;
     if (m_child_sp)

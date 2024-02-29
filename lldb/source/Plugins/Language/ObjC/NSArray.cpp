@@ -50,7 +50,7 @@ public:
 
   ~NSArrayMSyntheticFrontEndBase() override = default;
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -214,7 +214,7 @@ public:
 
   ~GenericNSArrayISyntheticFrontEnd() override;
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -302,7 +302,7 @@ public:
 
   ~NSArray0SyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -319,7 +319,7 @@ public:
 
   ~NSArray1SyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -477,8 +477,8 @@ lldb_private::formatters::
     : NSArrayMSyntheticFrontEndBase(valobj_sp), m_data_32(nullptr),
       m_data_64(nullptr) {}
 
-size_t
-lldb_private::formatters::NSArrayMSyntheticFrontEndBase::CalculateNumChildren() {
+uint32_t lldb_private::formatters::NSArrayMSyntheticFrontEndBase::
+    CalculateNumChildren() {
   return GetUsedCount();
 }
 
@@ -634,7 +634,7 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
 }
 
 template <typename D32, typename D64, bool Inline>
-size_t
+uint32_t
 lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
   CalculateNumChildren() {
   return m_data_32 ? m_data_32->used : m_data_64->used;
@@ -719,7 +719,7 @@ lldb_private::formatters::NSArray0SyntheticFrontEnd::GetIndexOfChildWithName(
   return UINT32_MAX;
 }
 
-size_t
+uint32_t
 lldb_private::formatters::NSArray0SyntheticFrontEnd::CalculateNumChildren() {
   return 0;
 }
@@ -754,7 +754,7 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::GetIndexOfChildWithName(
   return UINT32_MAX;
 }
 
-size_t
+uint32_t
 lldb_private::formatters::NSArray1SyntheticFrontEnd::CalculateNumChildren() {
   return 1;
 }
