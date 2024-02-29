@@ -43,6 +43,7 @@ void registerSliceAnalysisTestPass();
 void registerSymbolTestPasses();
 void registerRegionTestPasses();
 void registerTestAffineDataCopyPass();
+void registerTestAffineAccessAnalysisPass();
 void registerTestAffineReifyValueBoundsPass();
 void registerTestAffineLoopUnswitchingPass();
 void registerTestAffineWalk();
@@ -169,6 +170,7 @@ void registerTestPasses() {
   registerSymbolTestPasses();
   registerRegionTestPasses();
   registerTestAffineDataCopyPass();
+  registerTestAffineAccessAnalysisPass();
   registerTestAffineLoopUnswitchingPass();
   registerTestAffineReifyValueBoundsPass();
   registerTestAffineWalk();
