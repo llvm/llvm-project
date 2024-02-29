@@ -68,22 +68,10 @@ private:
   llvm::DIFile *translateFile(StringRef fileName);
 
   /// Translate the given attribute to the corresponding llvm debug metadata.
-  ///
-  /// For attributes corresponding to DITypes that can be recursive (i.e.
-  /// supports replacing subelements), an additional optional argument with type
-  /// `SetRecursivePlaceholderFn` should be supported.
-  /// The translation impl for recursive support must follow these three steps:
-  /// 1. Produce a placeholder version of the translated node without calling
-  /// `translate` on any subelements of the MLIR attr.
-  /// 2. Call the SetRecursivePlaceholderFn with the placeholder node.
-  /// 3. Translate subelements recursively using `translate` and fill the
-  /// original placeholder.
-  using SetRecursivePlaceholderFn = llvm::function_ref<void(llvm::DIType *)>;
   llvm::DIType *translateImpl(DINullTypeAttr attr);
   llvm::DIBasicType *translateImpl(DIBasicTypeAttr attr);
   llvm::DICompileUnit *translateImpl(DICompileUnitAttr attr);
-  llvm::DICompositeType *translateImpl(DICompositeTypeAttr attr,
-                                       SetRecursivePlaceholderFn setRec = {});
+  llvm::DICompositeType *translateImpl(DICompositeTypeAttr attr);
   llvm::DIDerivedType *translateImpl(DIDerivedTypeAttr attr);
   llvm::DIFile *translateImpl(DIFileAttr attr);
   llvm::DILabel *translateImpl(DILabelAttr attr);
@@ -100,6 +88,19 @@ private:
   llvm::DISubrange *translateImpl(DISubrangeAttr attr);
   llvm::DISubroutineType *translateImpl(DISubroutineTypeAttr attr);
   llvm::DIType *translateImpl(DITypeAttr attr);
+
+  /// Attributes that support self recursion need to implement two methods and
+  /// hook into the `translateImpl` method of `DIRecursiveTypeAttr`.
+  /// - `<llvm type> translateImplGetPlaceholder(<mlir type>)`:
+  ///   Translate the DI attr without translating any potentially recursive
+  ///   nested DI attrs.
+  /// - `void translateImplFillPlaceholder(<mlir type>, <llvm type>)`:
+  ///   Given the placeholder returned by `translateImplGetPlaceholder`, fill
+  ///   any holes by recursively translating nested DI attrs. This method must
+  ///   mutate the placeholder that is passed in, instead of creating a new one.
+  llvm::DICompositeType *translateImplGetPlaceholder(DICompositeTypeAttr attr);
+  void translateImplFillPlaceholder(DICompositeTypeAttr attr,
+                                    llvm::DICompositeType *placeholder);
 
   /// Constructs a string metadata node from the string attribute. Returns
   /// nullptr if `stringAttr` is null or contains and empty string.

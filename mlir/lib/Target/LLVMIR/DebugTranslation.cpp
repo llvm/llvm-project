@@ -117,8 +117,7 @@ static DINodeT *getDistinctOrUnique(bool isDistinct, Ts &&...args) {
 }
 
 llvm::DICompositeType *
-DebugTranslation::translateImpl(DICompositeTypeAttr attr,
-                                SetRecursivePlaceholderFn setRec) {
+DebugTranslation::translateImplGetPlaceholder(DICompositeTypeAttr attr) {
   // TODO: Use distinct attributes to model this, once they have landed.
   // Depending on the tag, composite types must be distinct.
   bool isDistinct = false;
@@ -132,26 +131,29 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr,
 
   llvm::TempMDTuple placeholderElements =
       llvm::MDNode::getTemporary(llvmCtx, std::nullopt);
-  llvm::DICompositeType *placeholder =
-      getDistinctOrUnique<llvm::DICompositeType>(
-          isDistinct, llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
-          translate(attr.getFile()), attr.getLine(), translate(attr.getScope()),
-          translate(attr.getBaseType()), attr.getSizeInBits(),
-          attr.getAlignInBits(),
-          /*OffsetInBits=*/0,
-          /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
-          /*Elements=*/placeholderElements.get(), /*RuntimeLang=*/0,
-          /*VTableHolder=*/nullptr);
+  return getDistinctOrUnique<llvm::DICompositeType>(
+      isDistinct, llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
+      translate(attr.getFile()), attr.getLine(), translate(attr.getScope()),
+      translate(attr.getBaseType()), attr.getSizeInBits(),
+      attr.getAlignInBits(),
+      /*OffsetInBits=*/0,
+      /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
+      /*Elements=*/placeholderElements.get(), /*RuntimeLang=*/0,
+      /*VTableHolder=*/nullptr);
+}
 
-  if (setRec)
-    setRec(placeholder);
-
+void DebugTranslation::translateImplFillPlaceholder(
+    DICompositeTypeAttr attr, llvm::DICompositeType *placeholder) {
   SmallVector<llvm::Metadata *> elements;
   for (auto member : attr.getElements())
     elements.push_back(translate(member));
-
   placeholder->replaceElements(llvm::MDNode::get(llvmCtx, elements));
+}
 
+llvm::DICompositeType *
+DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
+  llvm::DICompositeType *placeholder = translateImplGetPlaceholder(attr);
+  translateImplFillPlaceholder(attr, placeholder);
   return placeholder;
 }
 
@@ -212,29 +214,33 @@ DebugTranslation::translateImpl(DIGlobalVariableAttr attr) {
 }
 
 llvm::DIType *DebugTranslation::translateImpl(DIRecursiveTypeAttr attr) {
+  DistinctAttr recursiveId = attr.getId();
   if (attr.isRecSelf()) {
-    auto *iter = recursiveTypeMap.find(attr.getId());
+    auto *iter = recursiveTypeMap.find(recursiveId);
     assert(iter != recursiveTypeMap.end() && "unbound DI recursive self type");
     return iter->second;
   }
 
-  size_t recursiveStackSize = recursiveTypeMap.size();
-  auto setRecursivePlaceholderFn = [&](llvm::DIType *node) {
-    auto [iter, inserted] = recursiveTypeMap.try_emplace(attr.getId(), node);
-    assert(inserted && "illegal reuse of recursive id");
-  };
-
-  llvm::DIType *node =
+  llvm::DIType *placeholder =
       TypeSwitch<DITypeAttr, llvm::DIType *>(attr.getBaseType())
-          .Case<DICompositeTypeAttr>([&](auto attr) {
-            return translateImpl(attr, setRecursivePlaceholderFn);
-          });
+          .Case<DICompositeTypeAttr>(
+              [&](auto attr) { return translateImplGetPlaceholder(attr); });
 
-  assert((recursiveStackSize + 1 == recursiveTypeMap.size()) &&
+  auto [iter, inserted] =
+      recursiveTypeMap.try_emplace(recursiveId, placeholder);
+  assert(inserted && "illegal reuse of recursive id");
+
+  TypeSwitch<DITypeAttr>(attr.getBaseType())
+      .Case<DICompositeTypeAttr>([&](auto attr) {
+        translateImplFillPlaceholder(attr,
+                                     cast<llvm::DICompositeType>(placeholder));
+      });
+
+  assert(recursiveTypeMap.back().first == recursiveId &&
          "internal inconsistency: unexpected recursive translation stack");
   recursiveTypeMap.pop_back();
 
-  return node;
+  return placeholder;
 }
 
 llvm::DIScope *DebugTranslation::translateImpl(DIScopeAttr attr) {
