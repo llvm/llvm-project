@@ -1158,7 +1158,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 
 // Some float128 systems (specifically the ones used for aarch64 buildbots)
 // don't respect signs for long double NaNs.
-#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80) ||                                \
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80) ||                          \
     defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   written = LIBC_NAMESPACE::sprintf(buff, "%LF", -ld_nan);
   ASSERT_STREQ_LEN(written, buff, "-NAN");
@@ -1363,9 +1363,9 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   #endif
 
     written = LIBC_NAMESPACE::sprintf(buff, "%.1La",
-  0xf.fffffffffffffffp16380L); #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
-    ASSERT_STREQ_LEN(written, buff, "0x1.0p+16384");
-  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
+  0xf.fffffffffffffffp16380L); #if
+  defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80) ASSERT_STREQ_LEN(written, buff,
+  "0x1.0p+16384"); #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
     ASSERT_STREQ_LEN(written, buff, "inf");
   #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
     ASSERT_STREQ_LEN(written, buff, "0x2.0p+16383");
@@ -1603,8 +1603,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
 
   // Length Modifier Tests.
 
-  // TODO(michaelrj): Add tests for LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64 and 128 bit long
-  // double systems.
+  // TODO(michaelrj): Add tests for LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64 and 128
+  // bit long double systems.
   // TODO(michaelrj): Fix the tests to only depend on the digits the long double
   // is accurate for.
 
@@ -2180,9 +2180,9 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
   #endif
 
     written = LIBC_NAMESPACE::sprintf(buff, "%.1La",
-  0xf.fffffffffffffffp16380L); #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
-    ASSERT_STREQ_LEN(written, buff, "0x1.0p+16384");
-  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
+  0xf.fffffffffffffffp16380L); #if
+  defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80) ASSERT_STREQ_LEN(written, buff,
+  "0x1.0p+16384"); #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
     ASSERT_STREQ_LEN(written, buff, "inf");
   #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
     ASSERT_STREQ_LEN(written, buff, "0x2.0p+16383");
@@ -2806,9 +2806,9 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   #endif
 
     written = LIBC_NAMESPACE::sprintf(buff, "%.1La",
-  0xf.fffffffffffffffp16380L); #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
-    ASSERT_STREQ_LEN(written, buff, "0x1.0p+16384");
-  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
+  0xf.fffffffffffffffp16380L); #if
+  defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80) ASSERT_STREQ_LEN(written, buff,
+  "0x1.0p+16384"); #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
     ASSERT_STREQ_LEN(written, buff, "inf");
   #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
     ASSERT_STREQ_LEN(written, buff, "0x2.0p+16383");
