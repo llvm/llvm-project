@@ -633,9 +633,6 @@ int OmptTracingBufferMgr::flushAllBuffers(int DeviceId) {
     ++curr_buf_id;
   }
 
-  // Wake up all helper threads to invoke buffer-completion callbacks
-  FlushCv.notify_all();
-
   // This is best effort. It is possible that some trace records are
   // not flushed when the wait is done.
   waitForFlushCompletion();
@@ -644,10 +641,22 @@ int OmptTracingBufferMgr::flushAllBuffers(int DeviceId) {
 }
 
 void OmptTracingBufferMgr::waitForFlushCompletion() {
-  std::unique_lock<std::mutex> flush_lock(FlushMutex);
-  for (uint32_t i = 0; i < OMPT_NUM_HELPER_THREADS; ++i)
-    setThreadFlush(i);
-  ThreadFlushCv.wait(flush_lock, [this] { return ThreadFlushTracker == 0; });
+  {
+    std::unique_lock<std::mutex> flush_lock(FlushMutex);
+    // Setting the flush bit for a given helper thread indicates that the worker
+    // thread is ready for the helper thread to do some work.
+    for (uint32_t i = 0; i < OMPT_NUM_HELPER_THREADS; ++i)
+      setThreadFlush(i);
+  }
+
+  // Wake up all helper threads to invoke buffer-completion callbacks.
+  FlushCv.notify_all();
+
+  // Now wait for all helper threads  to complete flushing.
+  {
+    std::unique_lock<std::mutex> flush_lock(FlushMutex);
+    ThreadFlushCv.wait(flush_lock, [this] { return ThreadFlushTracker == 0; });
+  }
 }
 
 void OmptTracingBufferMgr::init() {
