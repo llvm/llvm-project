@@ -2271,7 +2271,7 @@ static VectorType *createAndCheckVectorTypesForPromotion(
     unsigned TypeSize = DL.getTypeSizeInBits(Ty).getFixedValue();
     // Make a copy of CandidateTys and iterate through it, because we
     // might append to CandidateTys in the loop.
-    for (VectorType *const &VTy : CandidateTysCopy) {
+    for (VectorType *const VTy : CandidateTysCopy) {
       unsigned VectorSize = DL.getTypeSizeInBits(VTy).getFixedValue();
       unsigned ElementSize =
           DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
@@ -2347,8 +2347,7 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
     else
       continue;
 
-    auto CandTy =
-        isa<VectorType>(Ty) ? cast<VectorType>(Ty)->getElementType() : Ty;
+    auto CandTy = Ty->getScalarType();
     if (CandTy->isPointerTy() && (S.beginOffset() != P.beginOffset() ||
                                   S.endOffset() != P.endOffset())) {
       DeferredTys.insert(Ty);
