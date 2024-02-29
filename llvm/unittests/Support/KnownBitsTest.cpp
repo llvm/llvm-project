@@ -194,14 +194,14 @@ static void TestAddSubExhaustive(bool IsAdd) {
         });
       });
 
-      KnownBits KnownComputed =
-          KnownBits::computeForAddSub(IsAdd, /*NSW*/ false, Known1, Known2);
+      KnownBits KnownComputed = KnownBits::computeForAddSub(
+          IsAdd, /*NSW=*/false, /*NUW=*/false, Known1, Known2);
       EXPECT_EQ(Known, KnownComputed);
 
       // The NSW calculation is not precise, only check that it's
       // conservatively correct.
       KnownBits KnownNSWComputed = KnownBits::computeForAddSub(
-          IsAdd, /*NSW*/true, Known1, Known2);
+          IsAdd, /*NSW=*/true, /*NUW=*/false, Known1, Known2);
       EXPECT_TRUE(KnownNSWComputed.Zero.isSubsetOf(KnownNSW.Zero));
       EXPECT_TRUE(KnownNSWComputed.One.isSubsetOf(KnownNSW.One));
     });
