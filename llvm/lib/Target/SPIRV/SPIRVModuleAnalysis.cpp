@@ -1156,18 +1156,19 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
               SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
           // add SPV_KHR_float_controls if the version is too low
           switch (EM) {
-            case SPIRV::ExecutionMode::DenormPreserve:
-            case SPIRV::ExecutionMode::DenormFlushToZero:
-            case SPIRV::ExecutionMode::SignedZeroInfNanPreserve:
-            case SPIRV::ExecutionMode::RoundingModeRTE:
-            case SPIRV::ExecutionMode::RoundingModeRTZ:
-              RequireFloatControls = VerLower14;
-              break;
+          case SPIRV::ExecutionMode::DenormPreserve:
+          case SPIRV::ExecutionMode::DenormFlushToZero:
+          case SPIRV::ExecutionMode::SignedZeroInfNanPreserve:
+          case SPIRV::ExecutionMode::RoundingModeRTE:
+          case SPIRV::ExecutionMode::RoundingModeRTZ:
+            RequireFloatControls = VerLower14;
+            break;
           }
         }
       }
     }
-    if (RequireFloatControls && ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls))
+    if (RequireFloatControls &&
+        ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls))
       MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls);
   }
   for (auto FI = M.begin(), E = M.end(); FI != E; ++FI) {
