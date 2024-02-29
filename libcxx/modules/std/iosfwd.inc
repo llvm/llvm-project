@@ -34,7 +34,7 @@ export namespace std {
   using std::wosyncstream;
   using std::wsyncbuf;
 #  endif
-#endif
+#endif // _LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM
 
   using std::fpos;
 } // namespace std
