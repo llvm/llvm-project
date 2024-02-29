@@ -168,12 +168,12 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 
   // Determine an appropriate location to create the bitcast for the return
   // value. The location depends on if we have a call or invoke instruction.
-  Instruction *InsertBefore = nullptr;
+  BasicBlock::iterator InsertBefore;
   if (auto *Invoke = dyn_cast<InvokeInst>(&CB))
     InsertBefore =
-        &SplitEdge(Invoke->getParent(), Invoke->getNormalDest())->front();
+        SplitEdge(Invoke->getParent(), Invoke->getNormalDest())->begin();
   else
-    InsertBefore = &*std::next(CB.getIterator());
+    InsertBefore = std::next(CB.getIterator());
 
   // Bitcast the return value to the correct type.
   auto *Cast = CastInst::CreateBitOrPointerCast(&CB, RetTy, "", InsertBefore);
@@ -509,7 +509,7 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
     Type *FormalTy = CalleeType->getParamType(ArgNo);
     Type *ActualTy = Arg->getType();
     if (FormalTy != ActualTy) {
-      auto *Cast = CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", &CB);
+      auto *Cast = CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", CB.getIterator());
       CB.setArgOperand(ArgNo, Cast);
 
       // Remove any incompatible attributes for the argument.
