@@ -554,26 +554,6 @@ sparse_tensor::genToMemref(OpBuilder &builder, Location loc, Value tensor) {
       .getResult();
 }
 
-Value sparse_tensor::genToPositions(OpBuilder &builder, Location loc,
-                                    Value tensor, Level lvl) {
-  return builder.create<ToPositionsOp>(loc, tensor, lvl);
-}
-
-Value sparse_tensor::genToCoordinates(OpBuilder &builder, Location loc,
-                                      Value tensor, Level lvl) {
-  return builder.create<ToCoordinatesOp>(loc, tensor, lvl);
-}
-
-Value sparse_tensor::genToCoordinatesBuffer(OpBuilder &builder, Location loc,
-                                            Value tensor) {
-  return builder.create<ToCoordinatesBufferOp>(loc, tensor);
-}
-
-Value sparse_tensor::genToValues(OpBuilder &builder, Location loc,
-                                 Value tensor) {
-  return builder.create<ToValuesOp>(loc, tensor);
-}
-
 Value sparse_tensor::genValMemSize(OpBuilder &builder, Location loc,
                                    Value tensor) {
   return getDescriptorFromTensorTuple(tensor).getValMemSize(builder, loc);

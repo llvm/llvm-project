@@ -270,22 +270,6 @@ void storeAll(OpBuilder &builder, Location loc, Value mem, ValueRange vs,
 TypedValue<BaseMemRefType> genToMemref(OpBuilder &builder, Location loc,
                                        Value tensor);
 
-/// Infers the result type and generates `ToPositionsOp`.
-Value genToPositions(OpBuilder &builder, Location loc, Value tensor, Level lvl);
-
-/// Infers the result type and generates `ToCoordinatesOp`.  If the
-/// level is within a COO region, the result type is a memref with unknown
-/// stride and offset.  Otherwise, the result type is a memref without
-/// any specified layout.
-Value genToCoordinates(OpBuilder &builder, Location loc, Value tensor,
-                       Level lvl);
-
-/// Infers the result type and generates `ToCoordinatesBufferOp`.
-Value genToCoordinatesBuffer(OpBuilder &builder, Location loc, Value tensor);
-
-/// Infers the result type and generates `ToValuesOp`.
-Value genToValues(OpBuilder &builder, Location loc, Value tensor);
-
 /// Generates code to retrieve the values size for the sparse tensor.
 Value genValMemSize(OpBuilder &builder, Location loc, Value tensor);
 
