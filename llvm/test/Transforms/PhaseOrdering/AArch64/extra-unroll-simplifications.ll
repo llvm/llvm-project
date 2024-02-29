@@ -101,9 +101,7 @@ define void @cse_matching_load_from_previous_unrolled_iteration(i32 %N, ptr %src
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[GEP_SRC_12_1:%.*]] = getelementptr <2 x i32>, ptr [[SRC_12]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[L_12_1:%.*]] = load <2 x i32>, ptr [[GEP_SRC_12_1]], align 8
-; CHECK-NEXT:    [[GEP_SRC_4_1:%.*]] = getelementptr <2 x i32>, ptr [[SRC_4]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    [[L_4_1:%.*]] = load <2 x i32>, ptr [[GEP_SRC_4_1]], align 8
-; CHECK-NEXT:    [[MUL_1:%.*]] = mul <2 x i32> [[L_4_1]], [[L_12_1]]
+; CHECK-NEXT:    [[MUL_1:%.*]] = mul <2 x i32> [[L_12]], [[L_12_1]]
 ; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr <2 x i32>, ptr [[DST]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    store <2 x i32> [[MUL_1]], ptr [[GEP_DST_1]], align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_1]] = add nuw nsw i64 [[INDVARS_IV]], 2
