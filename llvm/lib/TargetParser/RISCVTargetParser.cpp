@@ -96,6 +96,7 @@ void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 }
 
+// This function is currently used by IREE, so it's not dead code.
 void getFeaturesForCPU(StringRef CPU,
                        SmallVectorImpl<std::string> &EnabledFeatures,
                        bool NeedPlus) {
@@ -111,16 +112,12 @@ void getFeaturesForCPU(StringRef CPU,
     return;
 
   std::vector<std::string> FeatStrings =
-      (*RII)->toFeatures(/* AddAllExtensions */ true);
-  for (const auto &F : FeatStrings) {
-    if (F[0] == '-')
-      continue;
-
+      (*RII)->toFeatures(/* AddAllExtensions */ false);
+  for (const auto &F : FeatStrings)
     if (NeedPlus)
       EnabledFeatures.push_back(F);
     else
       EnabledFeatures.push_back(F.substr(1, F.size() - 1));
-  }
 }
 } // namespace RISCV
 } // namespace llvm
