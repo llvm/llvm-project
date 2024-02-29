@@ -131,11 +131,11 @@ global_load_tr6_b96 v[1:4], s[5:6], off
 // WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 ds_load_tr8_b64 v[1:2], v0
-// GFX1210: encoding: [0x00,0x00,0xf0,0xdb,0x00,0x00,0x00,0x01]
+// GFX1210: encoding: [0x00,0x00,0xf4,0xdb,0x00,0x00,0x00,0x01]
 // WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 ds_load_tr8_b64 v[1:2], v0 offset:64
-// GFX1210: encoding: [0x40,0x00,0xf0,0xdb,0x00,0x00,0x00,0x01]
+// GFX1210: encoding: [0x40,0x00,0xf4,0xdb,0x00,0x00,0x00,0x01]
 // WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 ds_load_tr8_b64 v[1:2], v0 offset:-64
@@ -171,11 +171,11 @@ ds_load_tr4_b64 v[1:2], s0
 // WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 ds_load_tr16_b128 v[1:4], v0
-// GFX1210: encoding: [0x00,0x00,0xf4,0xdb,0x00,0x00,0x00,0x01]
+// GFX1210: encoding: [0x00,0x00,0xf0,0xdb,0x00,0x00,0x00,0x01]
 // WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 ds_load_tr16_b128 v[1:4], v0 offset:64
-// GFX1210: encoding: [0x40,0x00,0xf4,0xdb,0x00,0x00,0x00,0x01]
+// GFX1210: encoding: [0x40,0x00,0xf0,0xdb,0x00,0x00,0x00,0x01]
 // WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 ds_load_tr16_b128 v[1:4], v0 offset:-64
