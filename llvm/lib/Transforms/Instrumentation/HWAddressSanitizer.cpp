@@ -187,8 +187,6 @@ static cl::opt<bool>
 
 static cl::opt<int> HotPercentileCutoff("opt-hwasan-percentile-cutoff-hot",
                                         cl::init(0));
-static cl::opt<int> ColdPercentileCutoff("opt-hwasan-percentile-cutoff-cold",
-                                         cl::init(0));
 
 STATISTIC(NumTotalFuncs, "Number of funcs seen by HWASAN");
 STATISTIC(NumHwasanCtors, "Number of HWASAN ctors");
@@ -197,7 +195,6 @@ STATISTIC(NumConsideredFuncs, "Number of funcs considered for HWASAN");
 STATISTIC(NumInstrumentedFuncs, "Number of HWASAN instrumented funcs");
 STATISTIC(NumNoProfileSummaryFuncs, "Number of HWASAN funcs without PS");
 STATISTIC(NumSkippedHotFuncs, "Number of skipped hot HWASAN funcs");
-STATISTIC(NumSkippedNotColdFuncs, "Number of skipped not cold HWASAN funcs");
 
 // Mode for selecting how to insert frame record info into the stack ring
 // buffer.
@@ -1541,25 +1538,14 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
         MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
     if (PSI != nullptr && PSI->hasProfileSummary()) {
       auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-
       const bool is_hot =
           (HotPercentileCutoff.getNumOccurrences() && HotPercentileCutoff >= 0)
               ? PSI->isFunctionHotInCallGraphNthPercentile(HotPercentileCutoff,
                                                            &F, BFI)
               : PSI->isFunctionEntryHot(&F);
 
-      const auto is_cold = (ColdPercentileCutoff.getNumOccurrences() &&
-                            ColdPercentileCutoff >= 0)
-                               ? PSI->isFunctionColdInCallGraphNthPercentile(
-                                     ColdPercentileCutoff, &F, BFI)
-                               : PSI->isFunctionEntryCold(&F);
-
       if (is_hot) {
         ++NumSkippedHotFuncs;
-        return;
-      }
-      if (!is_cold) {
-        ++NumSkippedNotColdFuncs;
         return;
       }
     } else {
