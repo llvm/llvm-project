@@ -336,7 +336,6 @@ CppTypeFor<TypeCategory::Integer, 8> RTDEF(Exponent16_8)(
 }
 #endif
 
-
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(Floor4_1)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 1>>(x);
