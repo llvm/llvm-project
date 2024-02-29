@@ -12,7 +12,7 @@
 ; CHECK:       call void @llvm.dbg.assign(metadata ptr %[[frame]]
 ; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetX]])
 ;; FIXME: Should we be updating the addresses on assigns here as well?
-; CHECK-SAME:    , metadata ptr %[[frame]], !DIExpression())
+; CHECK-SAME:    , metadata ptr %[[frame]], metadata !DIExpression())
 
 ; CHECK:       call void @llvm.dbg.value(metadata ptr %[[frame]]
 ; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetSpill:[0-9]*]], DW_OP_deref))
