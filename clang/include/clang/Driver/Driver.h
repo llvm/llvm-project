@@ -164,7 +164,7 @@ public:
   /// Target and driver mode components extracted from clang executable name.
   ParsedClangName ClangNameParts;
 
-  /// The path to the installed clang directory, if any.
+  /// TODO: Remove this in favor of Dir.
   std::string InstalledDir;
 
   /// The path to the compiler resource directory.

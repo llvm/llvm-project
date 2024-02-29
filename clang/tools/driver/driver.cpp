@@ -507,7 +507,6 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
 
   Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags);
-  SetInstallDir(Args, TheDriver, CanonicalPrefixes);
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(ProgName);
   TheDriver.setTargetAndMode(TargetAndMode);
   // If -canonical-prefixes is set, GetExecutablePath will have resolved Path

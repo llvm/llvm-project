@@ -188,7 +188,6 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   if (args.hasArg(OPT_no_use_colors)) {
     m_debugger.SetUseColor(false);
     WithColor::setAutoDetectFunction(disable_color);
-    m_option_data.m_debug_mode = true;
   }
 
   if (args.hasArg(OPT_version)) {
@@ -455,16 +454,7 @@ int Driver::MainLoop() {
   // Process lldbinit files before handling any options from the command line.
   SBCommandReturnObject result;
   sb_interpreter.SourceInitFileInGlobalDirectory(result);
-  if (m_option_data.m_debug_mode) {
-    result.PutError(m_debugger.GetErrorFile());
-    result.PutOutput(m_debugger.GetOutputFile());
-  }
-
   sb_interpreter.SourceInitFileInHomeDirectory(result, m_option_data.m_repl);
-  if (m_option_data.m_debug_mode) {
-    result.PutError(m_debugger.GetErrorFile());
-    result.PutOutput(m_debugger.GetOutputFile());
-  }
 
   // Source the local .lldbinit file if it exists and we're allowed to source.
   // Here we want to always print the return object because it contains the
@@ -534,11 +524,6 @@ int Driver::MainLoop() {
     // We're in repl mode and after-file-load commands were specified.
     WithColor::warning() << "commands specified to run after file load (via -o "
                             "or -s) are ignored in REPL mode.\n";
-  }
-
-  if (m_option_data.m_debug_mode) {
-    result.PutError(m_debugger.GetErrorFile());
-    result.PutOutput(m_debugger.GetOutputFile());
   }
 
   const bool handle_events = true;

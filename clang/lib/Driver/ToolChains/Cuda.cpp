@@ -936,7 +936,7 @@ void CudaToolChain::addClangTargetOptions(
       return;
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch.str(),
-                       getTriple());
+                       getTriple(), HostTC);
     AddStaticDeviceLibsPostLinking(getDriver(), DriverArgs, CC1Args, "nvptx",
                                    GpuArch, /*isBitCodeSDL=*/true,
                                    /*postClangLink=*/true);

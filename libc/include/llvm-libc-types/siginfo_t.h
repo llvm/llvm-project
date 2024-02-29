@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_SIGINFO_T_H__
-#define __LLVM_LIBC_TYPES_SIGINFO_T_H__
+#ifndef LLVM_LIBC_TYPES_SIGINFO_T_H
+#define LLVM_LIBC_TYPES_SIGINFO_T_H
 
 #include <llvm-libc-types/clock_t.h>
 #include <llvm-libc-types/pid_t.h>
@@ -106,4 +106,4 @@ typedef struct {
 #define si_syscall _sifields._sigsys._syscall
 #define si_arch _sifields._sigsys._arch
 
-#endif // __LLVM_LIBC_TYPES_SIGINFO_T_H__
+#endif // LLVM_LIBC_TYPES_SIGINFO_T_H
