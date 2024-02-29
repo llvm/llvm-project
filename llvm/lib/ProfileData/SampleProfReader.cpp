@@ -704,9 +704,6 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
       FunctionSamples::ProfileIsPreInlined = ProfileIsPreInlined = true;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       FunctionSamples::ProfileIsFS = ProfileIsFS = true;
-    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagIsMixedProbeOrder))
-      FunctionSamples::ProfileIsMixedProbeOrder = ProfileIsMixedProbeOrder =
-          true;
     break;
   case SecNameTable: {
     bool FixedLengthMD5 =
@@ -1372,8 +1369,6 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
       Flags.append("preInlined,");
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       Flags.append("fs-discriminator,");
-    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagIsMixedProbeOrder))
-      Flags.append("mixed-probe-order,");
     break;
   case SecFuncOffsetTable:
     if (hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered))

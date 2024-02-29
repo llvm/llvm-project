@@ -1077,7 +1077,7 @@ void SampleProfileLoader::findExternalInlineCandidate(
         CalleeSample->getContext().hasAttribute(ContextShouldBeInlined);
     if (!PreInline && CalleeSample->getHeadSamplesEstimate() < Threshold)
       continue;
-
+    
     Function *Func = SymbolMap.lookup(CalleeSample->getFunction());
     // Add to the import list only when it's defined out of module.
     if (!Func || Func->isDeclaration())
@@ -2066,14 +2066,6 @@ bool SampleProfileLoader::doInitialization(Module &M,
       Ctx.diagnose(DiagnosticInfoSampleProfile(M.getModuleIdentifier(), Msg,
                                                DS_Warning));
       return false;
-    }
-
-    if (!FunctionSamples::ProfileIsMixedProbeOrder) {
-      const char *Msg =
-          "Pseudo-probe-based profile is on an old version ID order which "
-          "could cause profile mismatch(performance regression)";
-      Ctx.diagnose(DiagnosticInfoSampleProfile(M.getModuleIdentifier(), Msg,
-                                               DS_Warning));
     }
   }
 

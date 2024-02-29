@@ -513,66 +513,6 @@ ProfileGenerator::getTopLevelFunctionProfile(FunctionId FuncName) {
   return ProfileMap.Create(Context);
 }
 
-// Use a heuristic to determine probe order by checking callsite insertion
-// position relative to the BB probes. Sort all the BB probes is in a list, for
-// each calliste, compute "ratio = insert position / length of the list". For
-// the old order, the probe ids for BB should be all before(smaller than) the
-// probe ids for callsite, this ratio should be equal to or close to 1.
-bool checkProbeIDIsInMixedOrder(const SampleProfileMap &Profiles) {
-  // Use flattned profile to maximize the callsites in the profile.
-  SampleProfileMap flattenProfile;
-  ProfileConverter::flattenProfile(Profiles, flattenProfile);
-
-  uint32_t PossibleOldOrderNum = 0;
-  uint32_t PossibleNewOrderNum = 0;
-
-  for (const auto &I : flattenProfile) {
-    const FunctionSamples &FS = I.second;
-    // Skip small functions whose profile order are likely random.
-    if (FS.getBodySamples().size() < 10)
-      continue;
-
-    std::set<uint32_t> PossibleBBProbeIDs;
-    std::set<uint32_t> CallsiteIDs;
-    for (const auto &I : FS.getBodySamples()) {
-      if (I.second.getCallTargets().empty())
-        PossibleBBProbeIDs.insert(I.first.LineOffset);
-      else
-        CallsiteIDs.insert(I.first.LineOffset);
-    }
-
-    if (PossibleBBProbeIDs.empty() || CallsiteIDs.empty())
-      continue;
-
-    uint32_t DistanceToBeginSum = 0;
-    for (const auto &ID : CallsiteIDs)
-      DistanceToBeginSum += std::distance(PossibleBBProbeIDs.begin(),
-                                          PossibleBBProbeIDs.upper_bound(ID));
-    uint32_t LengthSum = PossibleBBProbeIDs.size() * CallsiteIDs.size();
-
-    // Note that PossibleBBProbeIDs could contains some callsite probe id, the
-    // ratio is not exactly 1 for the old order, hence use a smaller threshold
-    // to determine.
-    if ((float)DistanceToBeginSum / LengthSum > 0.8)
-      PossibleOldOrderNum++;
-    else
-      PossibleNewOrderNum++;
-  }
-  return PossibleNewOrderNum >= PossibleOldOrderNum;
-}
-
-void warnOrWriteProbeOrderFlag(const SampleProfileMap &Profiles) {
-  if (FunctionSamples::ProfileIsProbeBased) {
-    FunctionSamples::ProfileIsMixedProbeOrder = true;
-    if (!checkProbeIDIsInMixedOrder(Profiles)) {
-      WithColor::warning()
-          << "Pseudo-probe-based profile is on an old version ID order which "
-             "could cause profile mismatch(performance regression)\n";
-      FunctionSamples::ProfileIsMixedProbeOrder = false;
-    }
-  }
-}
-
 void ProfileGenerator::generateProfile() {
   collectProfiledFunctions();
 
@@ -595,7 +535,6 @@ void ProfileGenerator::postProcessProfiles() {
   trimColdProfiles(ProfileMap, ColdCountThreshold);
   filterAmbiguousProfile(ProfileMap);
   calculateAndShowDensity(ProfileMap);
-  warnOrWriteProbeOrderFlag(ProfileMap);
 }
 
 void ProfileGenerator::trimColdProfiles(const SampleProfileMap &Profiles,
@@ -1129,7 +1068,6 @@ void CSProfileGenerator::postProcessProfiles() {
     FunctionSamples::ProfileIsCS = false;
   }
   filterAmbiguousProfile(ProfileMap);
-  warnOrWriteProbeOrderFlag(ProfileMap);
 }
 
 void ProfileGeneratorBase::computeSummaryAndThreshold(

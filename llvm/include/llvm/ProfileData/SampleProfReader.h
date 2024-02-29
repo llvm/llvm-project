@@ -525,9 +525,6 @@ protected:
   /// \brief Whether samples are collected based on pseudo probes.
   bool ProfileIsProbeBased = false;
 
-  /// Whether profiles are in mixed BB and callsite probe order.
-  bool ProfileIsMixedProbeOrder = false;
-
   /// Whether function profiles are context-sensitive flat profiles.
   bool ProfileIsCS = false;
 

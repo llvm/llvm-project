@@ -437,10 +437,6 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagIsPreInlined);
   if (Type == SecProfSummary && FunctionSamples::ProfileIsFS)
     addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagFSDiscriminator);
-  if (Type == SecProfSummary && FunctionSamples::ProfileIsProbeBased &&
-      FunctionSamples::ProfileIsMixedProbeOrder)
-    addSectionFlag(SecProfSummary,
-                   SecProfSummaryFlags::SecFlagIsMixedProbeOrder);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);
   switch (Type) {
