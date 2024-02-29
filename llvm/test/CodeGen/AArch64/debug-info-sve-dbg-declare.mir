@@ -193,7 +193,7 @@ body:             |
     liveins: $z0, $z1, $p0, $p1, $w0
 
     renamable $p2 = COPY killed $p0
-    renamable $p0 = PTRUE_S 31
+    renamable $p0 = PTRUE_S 31, implicit $vg
     ST1W_IMM killed renamable $z0, renamable $p0, %stack.0.z0.addr, 0 :: (store unknown-size into %ir.z0.addr, align 16)
     ST1W_IMM killed renamable $z1, renamable $p0, %stack.1.z1.addr, 0 :: (store unknown-size into %ir.z1.addr, align 16)
     STR_PXI killed renamable $p2, %stack.2.p0.addr, 0 :: (store unknown-size into %ir.p0.addr, align 2)
