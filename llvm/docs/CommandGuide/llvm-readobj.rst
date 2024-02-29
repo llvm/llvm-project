@@ -185,10 +185,6 @@ The following options are implemented only for the ELF file format.
 
  Requires :option:`--bb-addr-map` to have an effect.
 
-.. option:: --demangle, -C
-
- Display demangled symbol names in the output.
-
 .. option:: --dependent-libraries
 
  Display the dependent libraries section.
