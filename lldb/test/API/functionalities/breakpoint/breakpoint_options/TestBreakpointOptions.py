@@ -90,6 +90,15 @@ class BreakpointOptionsTestCase(TestBase):
             num_expected_locations=1,
         )
 
+        self.expect(
+            "breakpoint list -v",
+            "Verbose breakpoint list contains mangled names",
+            substrs=[
+                "function = ns::func"
+                "mangled function ="
+            ],
+        )
+
         # This should create a breakpoint with 0 locations.
         lldbutil.run_break_set_by_symbol(
             self,

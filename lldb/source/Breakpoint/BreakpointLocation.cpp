@@ -524,6 +524,9 @@ void BreakpointLocation::GetDescription(Stream *s,
           s->EOL();
           s->Indent("function = ");
           s->PutCString(sc.function->GetName().AsCString("<unknown>"));
+          s->EOL();
+          s->Indent("mangled function = ");
+          s->PutCString(sc.function->GetMangled().GetMangledName().AsCString("<unknown>"));
         }
 
         if (sc.line_entry.line > 0) {
