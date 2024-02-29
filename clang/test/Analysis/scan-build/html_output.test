@@ -19,12 +19,16 @@ CHECK-FILENAMES: report-{{.*}}.html
 CHECK-FILENAMES: scanview.css
 CHECK-FILENAMES: sorttable.js
 
-
-// The index should have a link to the report for the single issue.
+// Tests for the front page.
 RUN: cat %t.output_dir/*/index.html \
 RUN:     | FileCheck %s -check-prefix CHECK-INDEX-HTML
 
+// Let's confirm that the new filtering facility is present.
+CHECK-INDEX-HTML: Filter Results by File
+
+// The index should have a link to the report for the single issue.
 CHECK-INDEX-HTML: <!-- REPORTBUG id="report-{{.*}}.html" -->
+
 
 // The report should describe the issue.
 RUN: cat %t.output_dir/*/report-*.html \

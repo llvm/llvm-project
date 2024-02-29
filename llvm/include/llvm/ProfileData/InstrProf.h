@@ -195,7 +195,7 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO = false);
 
 /// \return the filename and the function name parsed from the output of
 /// \c getIRPGOFuncName()
-std::pair<StringRef, StringRef> getParsedIRPGOFuncName(StringRef IRPGOFuncName);
+std::pair<StringRef, StringRef> getParsedIRPGOName(StringRef IRPGOName);
 
 /// Return the name of the global variable used to store a function
 /// name in PGO instrumentation. \c FuncName is the IRPGO function name
@@ -449,6 +449,17 @@ private:
     return "** External Symbol **";
   }
 
+  // Returns the canonial name of the given PGOName. In a canonical name, all
+  // suffixes that begins with "." except ".__uniq." are stripped.
+  // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
+  static StringRef getCanonicalName(StringRef PGOName);
+
+  // Add the function into the symbol table, by creating the following
+  // map entries:
+  // name-set = {PGOFuncName} + {getCanonicalName(PGOFuncName)} if the canonical
+  // name is different from pgo name
+  // - In MD5NameMap: <MD5Hash(name), name> for name in name-set
+  // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set
   Error addFuncWithName(Function &F, StringRef PGOFuncName);
 
   // If the symtab is created by a series of calls to \c addFuncName, \c
@@ -820,6 +831,7 @@ private:
   struct ValueProfData {
     std::vector<InstrProfValueSiteRecord> IndirectCallSites;
     std::vector<InstrProfValueSiteRecord> MemOPSizes;
+    std::vector<InstrProfValueSiteRecord> VTableTargets;
   };
   std::unique_ptr<ValueProfData> ValueData;
 
@@ -842,6 +854,8 @@ private:
       return ValueData->IndirectCallSites;
     case IPVK_MemOPSize:
       return ValueData->MemOPSizes;
+    case IPVK_VTableTarget:
+      return ValueData->VTableTargets;
     default:
       llvm_unreachable("Unknown value kind!");
     }
@@ -1025,7 +1039,9 @@ enum ProfVersion {
   Version10 = 10,
   // An additional field is used for bitmap bytes.
   Version11 = 11,
-  // The current version is 11.
+  // VTable profiling,
+  Version12 = 12,
+  // The current version is 12.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;
@@ -1046,6 +1062,7 @@ struct Header {
   uint64_t MemProfOffset;
   uint64_t BinaryIdOffset;
   uint64_t TemporalProfTracesOffset;
+  uint64_t VTableNamesOffset;
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
   // the new field is read correctly.
@@ -1182,8 +1199,13 @@ template <> inline uint64_t getMagic<uint32_t>() {
 // It should also match the synthesized type in
 // Transforms/Instrumentation/InstrProfiling.cpp:getOrCreateRegionCounters.
 template <class IntPtrT> struct alignas(8) ProfileData {
-  #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Type Name;
-  #include "llvm/ProfileData/InstrProfData.inc"
+#define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Type Name;
+#include "llvm/ProfileData/InstrProfData.inc"
+};
+
+template <class IntPtrT> struct alignas(8) VTableProfileData {
+#define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Init) Type Name;
+#include "llvm/ProfileData/InstrProfData.inc"
 };
 
 // File header structure of the LLVM profile data in raw format.

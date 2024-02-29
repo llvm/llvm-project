@@ -15,6 +15,25 @@ func.func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
   return
 }
 
+emitc.declare_func @func
+
+emitc.func @func(%arg0 : i32) {
+  emitc.call_opaque "foo"(%arg0) : (i32) -> ()
+  emitc.return
+}
+
+emitc.func @return_i32() -> i32 attributes {specifiers = ["static","inline"]} {
+  %0 = emitc.call_opaque "foo"(): () -> i32
+  emitc.return %0 : i32
+}
+
+emitc.func @call() -> i32 {
+  %0 = emitc.call @return_i32() : () -> (i32)
+  emitc.return %0 : i32
+}
+
+emitc.func private @extern(i32) attributes {specifiers = ["extern"]}
+
 func.func @cast(%arg0: i32) {
   %1 = emitc.cast %arg0: i32 to f32
   return
@@ -95,6 +114,13 @@ func.func @cmp(%arg0 : i32, %arg1 : f32, %arg2 : i64, %arg3 : f64, %arg4 : !emit
   %12 = emitc.cmp ge, %arg5, %arg5 : (!emitc.opaque<"std::valarray<int>">, !emitc.opaque<"std::valarray<int>">) -> !emitc.opaque<"std::valarray<bool>">
   %13 = "emitc.cmp" (%arg6, %arg6) {predicate = 6} : (!emitc.opaque<"custom">, !emitc.opaque<"custom">) -> !emitc.opaque<"custom">
   %14 = emitc.cmp three_way, %arg6, %arg6 : (!emitc.opaque<"custom">, !emitc.opaque<"custom">) -> !emitc.opaque<"custom">
+  return
+}
+
+func.func @logical(%arg0: i32, %arg1: i32) {
+  %0 = emitc.logical_and %arg0, %arg1 : i32, i32
+  %1 = emitc.logical_not %arg0 : i32
+  %2 = emitc.logical_or %arg0, %arg1 : i32, i32
   return
 }
 

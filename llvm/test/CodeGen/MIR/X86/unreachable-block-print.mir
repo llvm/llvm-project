@@ -7,7 +7,6 @@ body: |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   RET 0, $eax
   bb.0:

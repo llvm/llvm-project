@@ -187,7 +187,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   if (!lowerCall(MIRBuilder, Info))
     return false;
 
-  if (ReturnHintAlignReg && !Info.IsTailCall) {
+  if (ReturnHintAlignReg && !Info.LoweredTailCall) {
     MIRBuilder.buildAssertAlign(ResRegs[0], ReturnHintAlignReg,
                                 ReturnHintAlign);
   }
@@ -412,7 +412,7 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     // size, e.g. PartLLT == v2s64 and LLTy is v3s32, then first coerce it to
     // have the same elt type, i.e. v4s32.
     // TODO: Extend this coersion to element multiples other than just 2.
-    if (PartLLT.getSizeInBits() > LLTy.getSizeInBits() &&
+    if (TypeSize::isKnownGT(PartLLT.getSizeInBits(), LLTy.getSizeInBits()) &&
         PartLLT.getScalarSizeInBits() == LLTy.getScalarSizeInBits() * 2 &&
         Regs.size() == 1) {
       LLT NewTy = PartLLT.changeElementType(LLTy.getElementType())
@@ -529,7 +529,7 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   // We could just insert a regular copy, but this is unreachable at the moment.
   assert(SrcTy != PartTy && "identical part types shouldn't reach here");
 
-  const unsigned PartSize = PartTy.getSizeInBits();
+  const TypeSize PartSize = PartTy.getSizeInBits();
 
   if (PartTy.isVector() == SrcTy.isVector() &&
       PartTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits()) {
@@ -539,7 +539,7 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   }
 
   if (SrcTy.isVector() && !PartTy.isVector() &&
-      PartSize > SrcTy.getElementType().getSizeInBits()) {
+      TypeSize::isKnownGT(PartSize, SrcTy.getElementType().getSizeInBits())) {
     // Vector was scalarized, and the elements extended.
     auto UnmergeToEltTy = B.buildUnmerge(SrcTy.getElementType(), SrcReg);
     for (int i = 0, e = DstRegs.size(); i != e; ++i)
@@ -548,9 +548,10 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   }
 
   if (SrcTy.isVector() && PartTy.isVector() &&
-      PartTy.getScalarSizeInBits() == SrcTy.getScalarSizeInBits() &&
-      SrcTy.getNumElements() < PartTy.getNumElements()) {
-    // A coercion like: v2f32 -> v4f32.
+      PartTy.getSizeInBits() == SrcTy.getSizeInBits() &&
+      ElementCount::isKnownLT(SrcTy.getElementCount(),
+                              PartTy.getElementCount())) {
+    // A coercion like: v2f32 -> v4f32 or nxv2f32 -> nxv4f32
     Register DstReg = DstRegs.front();
     B.buildPadVectorWithUndefElements(DstReg, SrcReg);
     return;

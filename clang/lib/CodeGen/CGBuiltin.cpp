@@ -44,6 +44,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsBPF.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
@@ -3216,7 +3217,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__popcnt64:
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
-  case Builtin::BI__builtin_popcountll: {
+  case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
 
     llvm::Type *ArgType = ArgValue->getType();
@@ -3441,6 +3443,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_readcyclecounter: {
     Function *F = CGM.getIntrinsic(Intrinsic::readcyclecounter);
+    return RValue::get(Builder.CreateCall(F));
+  }
+  case Builtin::BI__builtin_readsteadycounter: {
+    Function *F = CGM.getIntrinsic(Intrinsic::readsteadycounter);
     return RValue::get(Builder.CreateCall(F));
   }
   case Builtin::BI__builtin___clear_cache: {
@@ -5710,6 +5716,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *HalfVal = Builder.CreateLoad(Address);
     return RValue::get(Builder.CreateFPExt(HalfVal, Builder.getFloatTy()));
   }
+  case Builtin::BI__builtin_printf:
   case Builtin::BIprintf:
     if (getTarget().getTriple().isNVPTX() ||
         getTarget().getTriple().isAMDGCN()) {
@@ -5907,8 +5914,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           }
         }
 
-        assert(PTy->canLosslesslyBitCastTo(FTy->getParamType(i)) &&
-               "Must be able to losslessly bit cast to param");
         // Cast vector type (e.g., v256i32) to x86_amx, this only happen
         // in amx intrinsics.
         if (PTy->isX86_AMXTy())
@@ -5938,8 +5943,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         }
       }
 
-      assert(V->getType()->canLosslesslyBitCastTo(RetTy) &&
-             "Must be able to losslessly bit cast result type");
       // Cast x86_amx to vector type (e.g., v256i32), this only happen
       // in amx intrinsics.
       if (V->getType()->isX86_AMXTy())
@@ -5980,6 +5983,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     }
     llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
   }
+
+  // EmitHLSLBuiltinExpr will check getLangOpts().HLSL
+  if (Value *V = EmitHLSLBuiltinExpr(BuiltinID, E))
+    return RValue::get(V);
 
   if (getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice)
     return EmitHipStdParUnsupportedBuiltin(this, FD);
@@ -10637,6 +10644,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID <= clang::AArch64::LastSMEBuiltin)
     return EmitAArch64SMEBuiltinExpr(BuiltinID, E);
 
+  if (BuiltinID == Builtin::BI__builtin_cpu_supports)
+    return EmitAArch64CpuSupports(E);
+
   unsigned HintID = static_cast<unsigned>(-1);
   switch (BuiltinID) {
   default: break;
@@ -10676,10 +10686,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         llvm::FunctionType::get(StructType::get(CGM.Int64Ty, CGM.Int64Ty), {},
                                 false),
         "__arm_sme_state"));
-    auto Attrs =
-        AttributeList()
-            .addFnAttribute(getLLVMContext(), "aarch64_pstate_sm_compatible")
-            .addFnAttribute(getLLVMContext(), "aarch64_pstate_za_preserved");
+    auto Attrs = AttributeList().addFnAttribute(getLLVMContext(),
+                                                "aarch64_pstate_sm_compatible");
     CI->setAttributes(Attrs);
     CI->setCallingConv(
         llvm::CallingConv::
@@ -12044,7 +12052,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                                         "vgetq_lane");
   }
 
-  case clang::AArch64::BI_InterlockedAdd: {
+  case clang::AArch64::BI_InterlockedAdd:
+  case clang::AArch64::BI_InterlockedAdd64: {
     Address DestAddr = CheckAtomicAlignment(*this, E);
     Value *Val = EmitScalarExpr(E->getArg(1));
     AtomicRMWInst *RMWI =
@@ -14023,6 +14032,19 @@ Value *CodeGenFunction::EmitX86CpuInit() {
   cast<llvm::GlobalValue>(Func.getCallee())
       ->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
   return Builder.CreateCall(Func);
+}
+
+Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
+  const Expr *ArgExpr = E->getArg(0)->IgnoreParenCasts();
+  StringRef ArgStr = cast<StringLiteral>(ArgExpr)->getString();
+  llvm::SmallVector<StringRef, 8> Features;
+  ArgStr.split(Features, "+");
+  for (auto &Feature : Features) {
+    Feature = Feature.trim();
+    if (Feature != "default")
+      Features.push_back(Feature);
+  }
+  return EmitAArch64CpuSupports(Features);
 }
 
 llvm::Value *
@@ -16542,12 +16564,59 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
 
+#include "llvm/TargetParser/PPCTargetParser.def"
+  auto GenAIXPPCBuiltinCpuExpr = [&](unsigned SupportMethod, unsigned FieldIdx,
+                                     unsigned CompOp,
+                                     unsigned OpValue) -> Value * {
+    if (SupportMethod == AIX_BUILTIN_PPC_FALSE)
+      return llvm::ConstantInt::getFalse(ConvertType(E->getType()));
+
+    if (SupportMethod == AIX_BUILTIN_PPC_TRUE)
+      return llvm::ConstantInt::getTrue(ConvertType(E->getType()));
+
+    assert(SupportMethod <= USE_SYS_CONF && "Invalid value for SupportMethod.");
+    assert((CompOp == COMP_EQ) && "Only equal comparisons are supported.");
+
+    llvm::Type *STy = llvm::StructType::get(PPC_SYSTEMCONFIG_TYPE);
+    llvm::Constant *SysConf =
+        CGM.CreateRuntimeVariable(STy, "_system_configuration");
+
+    // Grab the appropriate field from _system_configuration.
+    llvm::Value *Idxs[] = {ConstantInt::get(Int32Ty, 0),
+                           ConstantInt::get(Int32Ty, FieldIdx)};
+
+    llvm::Value *FieldValue = Builder.CreateGEP(STy, SysConf, Idxs);
+    FieldValue = Builder.CreateAlignedLoad(Int32Ty, FieldValue,
+                                           CharUnits::fromQuantity(4));
+    assert(FieldValue->getType()->isIntegerTy(32) &&
+           "Only 32-bit integers are supported in GenAIXPPCBuiltinCpuExpr().");
+    return Builder.CreateICmp(ICmpInst::ICMP_EQ, FieldValue,
+                              ConstantInt::get(Int32Ty, OpValue));
+  };
+
   switch (BuiltinID) {
   default: return nullptr;
 
   case Builtin::BI__builtin_cpu_is: {
     const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
     StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+    llvm::Triple Triple = getTarget().getTriple();
+
+    if (Triple.isOSAIX()) {
+      unsigned IsCpuSupport, FieldIdx, CompareOp, CpuIdValue;
+      typedef std::tuple<unsigned, unsigned, unsigned, unsigned> CPUType;
+      std::tie(IsCpuSupport, FieldIdx, CompareOp, CpuIdValue) =
+          static_cast<CPUType>(StringSwitch<CPUType>(CPUStr)
+#define PPC_AIX_CPU(NAME, SUPPORT_MAGIC, INDEX, COMPARE_OP, VALUE)             \
+  .Case(NAME, {SUPPORT_MAGIC, INDEX, COMPARE_OP, VALUE})
+#include "llvm/TargetParser/PPCTargetParser.def"
+          );
+      return GenAIXPPCBuiltinCpuExpr(IsCpuSupport, FieldIdx, CompareOp,
+                                     CpuIdValue);
+    }
+
+    assert(Triple.isOSLinux() &&
+           "__builtin_cpu_is() is only supported for AIX and Linux.");
     unsigned NumCPUID = StringSwitch<unsigned>(CPUStr)
 #define PPC_LNX_CPU(Name, NumericID) .Case(Name, NumericID)
 #include "llvm/TargetParser/PPCTargetParser.def"
@@ -17758,9 +17827,9 @@ Value *EmitAMDGPUImplicitArgPtr(CodeGenFunction &CGF) {
 // \p Index is 0, 1, and 2 for x, y, and z dimension, respectively.
 /// Emit code based on Code Object ABI version.
 /// COV_4    : Emit code to use dispatch ptr
-/// COV_5    : Emit code to use implicitarg ptr
+/// COV_5+   : Emit code to use implicitarg ptr
 /// COV_NONE : Emit code to load a global variable "__oclc_ABI_version"
-///            and use its value for COV_4 or COV_5 approach. It is used for
+///            and use its value for COV_4 or COV_5+ approach. It is used for
 ///            compiling device libraries in an ABI-agnostic way.
 ///
 /// Note: "__oclc_ABI_version" is supposed to be emitted and intialized by
@@ -17803,7 +17872,7 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
         Address(Result, CGF.Int16Ty, CharUnits::fromQuantity(2)));
   } else {
     Value *GEP = nullptr;
-    if (Cov == CodeObjectVersionKind::COV_5) {
+    if (Cov >= CodeObjectVersionKind::COV_5) {
       // Indexing the implicit kernarg segment.
       GEP = CGF.Builder.CreateConstGEP1_32(
           CGF.Int8Ty, EmitAMDGPUImplicitArgPtr(CGF), 12 + Index * 2);
@@ -17894,6 +17963,52 @@ llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
     Arg = llvm::ConstantInt::get(getLLVMContext(), *Result);
   }
   return Arg;
+}
+
+Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
+                                            const CallExpr *E) {
+  if (!getLangOpts().HLSL)
+    return nullptr;
+
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_dot: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    llvm::Type *T0 = Op0->getType();
+    llvm::Type *T1 = Op1->getType();
+    if (!T0->isVectorTy() && !T1->isVectorTy()) {
+      if (T0->isFloatingPointTy())
+        return Builder.CreateFMul(Op0, Op1, "dx.dot");
+
+      if (T0->isIntegerTy())
+        return Builder.CreateMul(Op0, Op1, "dx.dot");
+
+      // Bools should have been promoted
+      llvm_unreachable(
+          "Scalar dot product is only supported on ints and floats.");
+    }
+    // A VectorSplat should have happened
+    assert(T0->isVectorTy() && T1->isVectorTy() &&
+           "Dot product of vector and scalar is not supported.");
+
+    // A vector sext or sitofp should have happened
+    assert(T0->getScalarType() == T1->getScalarType() &&
+           "Dot product of vectors need the same element types.");
+
+    [[maybe_unused]] auto *VecTy0 =
+        E->getArg(0)->getType()->getAs<VectorType>();
+    [[maybe_unused]] auto *VecTy1 =
+        E->getArg(1)->getType()->getAs<VectorType>();
+    // A HLSLVectorTruncation should have happend
+    assert(VecTy0->getNumElements() == VecTy1->getNumElements() &&
+           "Dot product requires vectors to be of the same size.");
+
+    return Builder.CreateIntrinsic(
+        /*ReturnType*/ T0->getScalarType(), Intrinsic::dx_dot,
+        ArrayRef<Value *>{Op0, Op1}, nullptr, "dx.dot");
+  } break;
+  }
+  return nullptr;
 }
 
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,

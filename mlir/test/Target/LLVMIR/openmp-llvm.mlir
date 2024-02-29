@@ -179,6 +179,27 @@ llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 
 // -----
 
+// CHECK-LABEL: define void @test_omp_parallel_attrs()
+llvm.func @test_omp_parallel_attrs() -> () attributes {
+  target_cpu = "x86-64",
+  target_features = #llvm.target_features<["+mmx", "+sse"]>
+} {
+  // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN:.*]])
+  omp.parallel {
+    omp.barrier
+    omp.terminator
+  }
+
+  llvm.return
+}
+
+// CHECK: define {{.*}} @[[OMP_OUTLINED_FN]]{{.*}} #[[ATTRS:[0-9]+]]
+// CHECK: attributes #[[ATTRS]] = {
+// CHECK-SAME: "target-cpu"="x86-64"
+// CHECK-SAME: "target-features"="+mmx,+sse"
+
+// -----
+
 // CHECK-LABEL: define void @test_omp_parallel_3()
 llvm.func @test_omp_parallel_3() -> () {
   // CHECK: [[OMP_THREAD_3_1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @{{[0-9]+}})
@@ -2165,6 +2186,43 @@ llvm.func @single_nowait(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 
 // -----
 
+llvm.func @copy_i32(!llvm.ptr, !llvm.ptr)
+llvm.func @copy_f32(!llvm.ptr, !llvm.ptr)
+
+// CHECK-LABEL: @single_copyprivate
+// CHECK-SAME: (ptr %[[ip:.*]], ptr %[[fp:.*]])
+llvm.func @single_copyprivate(%ip: !llvm.ptr, %fp: !llvm.ptr) {
+  // CHECK: %[[didit_addr:.*]] = alloca i32
+  // CHECK: store i32 0, ptr %[[didit_addr]]
+  // CHECK: call i32 @__kmpc_single
+  omp.single copyprivate(%ip -> @copy_i32 : !llvm.ptr, %fp -> @copy_f32 : !llvm.ptr) {
+    // CHECK: %[[i:.*]] = load i32, ptr %[[ip]]
+    %i = llvm.load %ip : !llvm.ptr -> i32
+    // CHECK: %[[i2:.*]] = add i32 %[[i]], %[[i]]
+    %i2 = llvm.add %i, %i : i32
+    // CHECK: store i32 %[[i2]], ptr %[[ip]]
+    llvm.store %i2, %ip : i32, !llvm.ptr
+    // CHECK: %[[f:.*]] = load float, ptr %[[fp]]
+    %f = llvm.load %fp : !llvm.ptr -> f32
+    // CHECK: %[[f2:.*]] = fadd float %[[f]], %[[f]]
+    %f2 = llvm.fadd %f, %f : f32
+    // CHECK: store float %[[f2]], ptr %[[fp]]
+    llvm.store %f2, %fp : f32, !llvm.ptr
+    // CHECK: store i32 1, ptr %[[didit_addr]]
+    // CHECK: call void @__kmpc_end_single
+    // CHECK: %[[didit:.*]] = load i32, ptr %[[didit_addr]]
+    // CHECK: call void @__kmpc_copyprivate({{.*}}, ptr %[[ip]], ptr @copy_i32, i32 %[[didit]])
+    // CHECK: %[[didit2:.*]] = load i32, ptr %[[didit_addr]]
+    // CHECK: call void @__kmpc_copyprivate({{.*}}, ptr %[[fp]], ptr @copy_f32, i32 %[[didit2]])
+    // CHECK-NOT: call void @__kmpc_barrier
+    omp.terminator
+  }
+  // CHECK: ret void
+  llvm.return
+}
+
+// -----
+
 // CHECK: @_QFsubEx = internal global i32 undef
 // CHECK: @_QFsubEx.cache = common global ptr null
 
@@ -2235,6 +2293,28 @@ llvm.func @omp_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 // CHECK:   br label %[[exit_stub:[^, ]+]]
 // CHECK: [[exit_stub]]:
 // CHECK:   ret void
+
+// -----
+
+// CHECK-LABEL: define void @omp_task_attrs()
+llvm.func @omp_task_attrs() -> () attributes {
+  target_cpu = "x86-64",
+  target_features = #llvm.target_features<["+mmx", "+sse"]>
+} {
+  // CHECK: %[[task_data:.*]] = call {{.*}}@__kmpc_omp_task_alloc{{.*}}@[[outlined_fn:.*]])
+  // CHECK: call {{.*}}@__kmpc_omp_task(
+  // CHECK-SAME: ptr %[[task_data]]
+  omp.task {
+    omp.terminator
+  }
+
+  llvm.return
+}
+
+// CHECK: define {{.*}} @[[outlined_fn]]{{.*}} #[[attrs:[0-9]+]]
+// CHECK: attributes #[[attrs]] = {
+// CHECK-SAME: "target-cpu"="x86-64"
+// CHECK-SAME: "target-features"="+mmx,+sse"
 
 // -----
 
@@ -2701,10 +2781,4 @@ llvm.func @omp_task_if(%boolexpr: i1) {
 
 // -----
 
-// Check that OpenMP requires flags are registered by a global constructor.
-// CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }]
-// CHECK-SAME: [{ i32, ptr, ptr } { i32 0, ptr @[[REG_FN:.*]], ptr null }]
-// CHECK: define {{.*}} @[[REG_FN]]({{.*}})
-// CHECK-NOT: }
-// CHECK:   call void @__tgt_register_requires(i64 10)
 module attributes {omp.requires = #omp<clause_requires reverse_offload|unified_shared_memory>} {}

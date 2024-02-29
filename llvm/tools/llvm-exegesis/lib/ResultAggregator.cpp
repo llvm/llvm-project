@@ -47,10 +47,10 @@ void MiddleHalfResultAggregator::AggregateMeasurement(
     const Benchmark &Result) const {
   Measurement.RawValue = NewMeasurement.RawValue - Measurement.RawValue;
   Measurement.PerInstructionValue = Measurement.RawValue;
-  Measurement.PerInstructionValue /= Result.NumRepetitions;
+  Measurement.PerInstructionValue /= Result.MinInstructions;
   Measurement.PerSnippetValue = Measurement.RawValue;
   Measurement.PerSnippetValue /=
-      std::ceil(Result.NumRepetitions /
+      std::ceil(Result.MinInstructions /
                 static_cast<double>(Result.Key.Instructions.size()));
 }
 

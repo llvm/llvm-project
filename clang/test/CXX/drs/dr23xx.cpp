@@ -147,6 +147,31 @@ enum struct alignas(64) B {};
 #endif
 } // namespace dr2354
 
+namespace dr2356 { // dr2356: 4
+#if __cplusplus >= 201103L
+struct A {
+  A();
+  A(A &&);                        // #1
+  template<typename T> A(T &&);   // #2
+};
+struct B : A {
+  using A::A;
+  B(const B &);                   // #3
+  B(B &&) = default;              // #4, implicitly deleted
+  // since-cxx11-warning@-1 {{explicitly defaulted move constructor is implicitly deleted}}
+  //   since-cxx11-note@#dr2356-X {{move constructor of 'B' is implicitly deleted because field 'x' has a deleted move constructor}}
+  //   since-cxx11-note@#dr2356-X {{'X' has been explicitly marked deleted here}}
+  //   since-cxx11-note@-4 {{replace 'default' with 'delete'}}
+
+  struct X { X(X &&) = delete; } x; // #dr2356-X
+};
+extern B b1;
+B b2 = static_cast<B&&>(b1);      // calls #3: #1, #2, and #4 are not viable
+struct C { operator B&&(); };
+B b3 = C();                       // calls #3
+#endif
+}
+
 #if __cplusplus >= 201402L
 namespace dr2358 { // dr2358: 16
   void f2() {
@@ -157,6 +182,40 @@ namespace dr2358 { // dr2358: 16
   }
 }
 #endif
+
+// CWG2363 was closed as NAD, but its resolution does affirm that
+// a friend declaration cannot have an opaque-enumm-specifier.
+namespace dr2363 { // dr2363: yes
+#if __cplusplus >= 201103L
+enum class E0;
+enum E1 : int;
+
+struct A {
+  friend enum class E0;
+  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
+  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+
+  friend enum E0;
+  // expected-error@-1 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-2 {{remove 'enum' to befriend an enum}}
+
+  friend enum class E1;
+  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
+  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+
+  friend enum E1;
+  // expected-error@-1 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-2 {{remove 'enum' to befriend an enum}}
+
+  friend enum class E2;
+  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
+  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+};
+#endif
+} // namespace dr2363
 
 namespace dr2370 { // dr2370: no
 namespace N {
@@ -182,8 +241,8 @@ struct Bad2 { int a, b; };
 } // namespace dr2386
 namespace std {
 template <typename T> struct tuple_size;
-template <> struct std::tuple_size<dr2386::Bad1> {};
-template <> struct std::tuple_size<dr2386::Bad2> {
+template <> struct tuple_size<dr2386::Bad1> {};
+template <> struct tuple_size<dr2386::Bad2> {
   static const int value = 42;
 };
 } // namespace std
@@ -236,9 +295,9 @@ namespace dr2396 { // dr2396: no
 
   // FIXME: per P1787 "Calling a conversion function" example, all of the
   // examples below are well-formed, with B resolving to A::B, but currently
-  // it's been resolved to dr2396::B. 
+  // it's been resolved to dr2396::B.
 
-  // void f(A a) { a.operator B B::*(); }            
+  // void f(A a) { a.operator B B::*(); }
   // void g(A a) { a.operator decltype(B()) B::*(); }
   // void g2(A a) { a.operator B decltype(B())::*(); }
 }
@@ -252,4 +311,5 @@ namespace dr2397 { // dr2397: 17
     auto (*c)[5] = &a;
   }
 } // namespace dr2397
+
 #endif

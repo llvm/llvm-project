@@ -295,6 +295,8 @@ defm SPV_INTEL_usm_storage_classes : ExtensionOperand<100>;
 defm SPV_INTEL_fpga_latency_control : ExtensionOperand<101>;
 defm SPV_INTEL_fpga_argument_interfaces : ExtensionOperand<102>;
 defm SPV_INTEL_optnone : ExtensionOperand<103>;
+defm SPV_INTEL_function_pointers : ExtensionOperand<104>;
+defm SPV_INTEL_variable_length_array : ExtensionOperand<105>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -431,9 +433,9 @@ defm InputAttachmentArrayNonUniformIndexingEXT : CapabilityOperand<5310, 0, 0, [
 defm UniformTexelBufferArrayNonUniformIndexingEXT : CapabilityOperand<5311, 0, 0, [], [SampledBuffer, ShaderNonUniformEXT]>;
 defm StorageTexelBufferArrayNonUniformIndexingEXT : CapabilityOperand<5312, 0, 0, [], [ImageBuffer, ShaderNonUniformEXT]>;
 defm RayTracingNV : CapabilityOperand<5340, 0, 0, [], [Shader]>;
-defm SubgroupShuffleINTEL : CapabilityOperand<5568, 0, 0, [], []>;
-defm SubgroupBufferBlockIOINTEL : CapabilityOperand<5569, 0, 0, [], []>;
-defm SubgroupImageBlockIOINTEL : CapabilityOperand<5570, 0, 0, [], []>;
+defm SubgroupShuffleINTEL : CapabilityOperand<5568, 0, 0, [SPV_INTEL_subgroups], []>;
+defm SubgroupBufferBlockIOINTEL : CapabilityOperand<5569, 0, 0, [SPV_INTEL_subgroups], []>;
+defm SubgroupImageBlockIOINTEL : CapabilityOperand<5570, 0, 0, [SPV_INTEL_subgroups], []>;
 defm SubgroupImageMediaBlockIOINTEL : CapabilityOperand<5579, 0, 0, [], []>;
 defm SubgroupAvcMotionEstimationINTEL : CapabilityOperand<5696, 0, 0, [], []>;
 defm SubgroupAvcMotionEstimationIntraINTEL : CapabilityOperand<5697, 0, 0, [], []>;
@@ -452,6 +454,18 @@ defm ArbitraryPrecisionIntegersINTEL : CapabilityOperand<5844, 0, 0, [SPV_INTEL_
 defm OptNoneINTEL : CapabilityOperand<6094, 0, 0, [SPV_INTEL_optnone], []>;
 defm BitInstructions : CapabilityOperand<6025, 0, 0, [SPV_KHR_bit_instructions], []>;
 defm ExpectAssumeKHR : CapabilityOperand<5629, 0, 0, [SPV_KHR_expect_assume], []>;
+defm FunctionPointersINTEL : CapabilityOperand<5603, 0, 0, [SPV_INTEL_function_pointers], []>;
+defm IndirectReferencesINTEL : CapabilityOperand<5604, 0, 0, [SPV_INTEL_function_pointers], []>;
+defm GroupNonUniformRotateKHR : CapabilityOperand<6026, 0, 0, [SPV_KHR_subgroup_rotate], [GroupNonUniform]>;
+defm AtomicFloat32AddEXT : CapabilityOperand<6033, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
+defm AtomicFloat64AddEXT : CapabilityOperand<6034, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
+defm AtomicFloat16AddEXT : CapabilityOperand<6095, 0, 0, [SPV_EXT_shader_atomic_float16_add], []>;
+defm AtomicFloat16MinMaxEXT : CapabilityOperand<5616, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
+defm AtomicFloat32MinMaxEXT : CapabilityOperand<5612, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
+defm AtomicFloat64MinMaxEXT : CapabilityOperand<5613, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
+defm VariableLengthArrayINTEL : CapabilityOperand<5817, 0, 0, [SPV_INTEL_variable_length_array], []>;
+defm GroupUniformArithmeticKHR : CapabilityOperand<6400, 0, 0, [SPV_KHR_uniform_group_instructions], []>;
+defm USMStorageClassesINTEL : CapabilityOperand<5935, 0, 0, [SPV_INTEL_usm_storage_classes], [Kernel]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -688,6 +702,9 @@ defm HitAttributeNV : StorageClassOperand<5339, [RayTracingNV]>;
 defm IncomingRayPayloadNV : StorageClassOperand<5342, [RayTracingNV]>;
 defm ShaderRecordBufferNV : StorageClassOperand<5343, [RayTracingNV]>;
 defm PhysicalStorageBufferEXT : StorageClassOperand<5349, [PhysicalStorageBufferAddressesEXT]>;
+defm CodeSectionINTEL : StorageClassOperand<5605, [FunctionPointersINTEL]>;
+defm DeviceOnlyINTEL : StorageClassOperand<5936, [USMStorageClassesINTEL]>;
+defm HostOnlyINTEL : StorageClassOperand<5937, [USMStorageClassesINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Dim enum values and at the same time
@@ -1036,6 +1053,7 @@ multiclass LinkageTypeOperand<bits<32> value, list<Capability> reqCapabilities> 
 
 defm Export : LinkageTypeOperand<0, [Linkage]>;
 defm Import : LinkageTypeOperand<1, [Linkage]>;
+defm LinkOnceODR : LinkageTypeOperand<2, [Linkage]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define AccessQualifier enum values and at the same time
@@ -1179,6 +1197,8 @@ defm CountBuffer : DecorationOperand<5634, 0, 0, [], []>;
 defm UserSemantic : DecorationOperand<5635, 0, 0, [], []>;
 defm RestrictPointerEXT : DecorationOperand<5355, 0, 0, [], [PhysicalStorageBufferAddressesEXT]>;
 defm AliasedPointerEXT : DecorationOperand<5356, 0, 0, [], [PhysicalStorageBufferAddressesEXT]>;
+defm ReferencedIndirectlyINTEL : DecorationOperand<5602, 0, 0, [], [IndirectReferencesINTEL]>;
+defm ArgumentAttributeINTEL : DecorationOperand<6409, 0, 0, [], [FunctionPointersINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define BuiltIn enum values and at the same time

@@ -816,7 +816,7 @@ void FormatTokenLexer::handleTableGenMultilineString() {
   auto CloseOffset = Lex->getBuffer().find("}]", OpenOffset);
   if (CloseOffset == StringRef::npos)
     return;
-  auto Text = Lex->getBuffer().substr(OpenOffset, CloseOffset + 2);
+  auto Text = Lex->getBuffer().substr(OpenOffset, CloseOffset - OpenOffset + 2);
   MultiLineString->TokenText = Text;
   resetLexer(SourceMgr.getFileOffset(
       Lex->getSourceLocation(Lex->getBufferLocation() - 2 + Text.size())));
@@ -1420,7 +1420,7 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
   // For formatting, treat unterminated string literals like normal string
   // literals.
   if (Tok.is(tok::unknown)) {
-    if (!Tok.TokenText.empty() && Tok.TokenText[0] == '"') {
+    if (Tok.TokenText.starts_with("\"")) {
       Tok.Tok.setKind(tok::string_literal);
       Tok.IsUnterminatedLiteral = true;
     } else if (Style.isJavaScript() && Tok.TokenText == "''") {

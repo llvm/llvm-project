@@ -144,16 +144,25 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
   SmallVector<OpFoldResult> finalStrides;
   finalStrides.reserve(subRank);
 
+#ifndef NDEBUG
+  // Iteration variable for result dimensions of the subview op.
+  int64_t j = 0;
+#endif // NDEBUG
   for (unsigned i = 0; i < sourceRank; ++i) {
     if (droppedDims.test(i))
       continue;
 
     finalSizes.push_back(subSizes[i]);
     finalStrides.push_back(strides[i]);
-    // TODO: Assert that the computed stride matches the respective stride of
-    // the result type of the subview op (if both are static), once the verifier
-    // of memref.subview verfies result strides correctly for ops with rank
-    // reductions.
+#ifndef NDEBUG
+    // Assert that the computed stride matches the stride of the result type of
+    // the subview op (if both are static).
+    std::optional<int64_t> computedStride = getConstantIntValue(strides[i]);
+    if (computedStride && !ShapedType::isDynamic(resultStrides[j]))
+      assert(*computedStride == resultStrides[j] &&
+             "mismatch between computed stride and result type stride");
+    ++j;
+#endif // NDEBUG
   }
   assert(finalSizes.size() == subRank &&
          "Should have populated all the values at this point");

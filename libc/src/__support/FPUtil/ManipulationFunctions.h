@@ -12,6 +12,8 @@
 #include "FPBits.h"
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
+#include "dyadic_float.h"
+#include "rounding_mode.h"
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
@@ -69,58 +71,82 @@ LIBC_INLINE T copysign(T x, T y) {
   return xbits.get_val();
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE int ilogb(T x) {
-  // TODO: Raise appropriate floating point exceptions and set errno to the
-  // an appropriate error value wherever relevant.
-  FPBits<T> bits(x);
-  if (bits.is_zero()) {
-    return FP_ILOGB0;
-  } else if (bits.is_nan()) {
-    return FP_ILOGBNAN;
-  } else if (bits.is_inf()) {
-    return INT_MAX;
+template <typename T> struct IntLogbConstants;
+
+template <> struct IntLogbConstants<int> {
+  LIBC_INLINE_VAR static constexpr int FP_LOGB0 = FP_ILOGB0;
+  LIBC_INLINE_VAR static constexpr int FP_LOGBNAN = FP_ILOGBNAN;
+  LIBC_INLINE_VAR static constexpr int T_MAX = INT_MAX;
+  LIBC_INLINE_VAR static constexpr int T_MIN = INT_MIN;
+};
+
+template <> struct IntLogbConstants<long> {
+  LIBC_INLINE_VAR static constexpr long FP_LOGB0 = FP_ILOGB0;
+  LIBC_INLINE_VAR static constexpr long FP_LOGBNAN = FP_ILOGBNAN;
+  LIBC_INLINE_VAR static constexpr long T_MAX = LONG_MAX;
+  LIBC_INLINE_VAR static constexpr long T_MIN = LONG_MIN;
+};
+
+template <typename T, typename U>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<U>, T>
+intlogb(U x) {
+  FPBits<U> bits(x);
+  if (LIBC_UNLIKELY(bits.is_zero() || bits.is_inf_or_nan())) {
+    set_errno_if_required(EDOM);
+    raise_except_if_required(FE_INVALID);
+
+    if (bits.is_zero())
+      return IntLogbConstants<T>::FP_LOGB0;
+    if (bits.is_nan())
+      return IntLogbConstants<T>::FP_LOGBNAN;
+    // bits is inf.
+    return IntLogbConstants<T>::T_MAX;
   }
 
-  NormalFloat<T> normal(bits);
+  DyadicFloat<FPBits<U>::STORAGE_LEN> normal(bits.get_val());
+  int exponent = normal.get_unbiased_exponent();
   // The C standard does not specify the return value when an exponent is
   // out of int range. However, XSI conformance required that INT_MAX or
   // INT_MIN are returned.
   // NOTE: It is highly unlikely that exponent will be out of int range as
   // the exponent is only 15 bits wide even for the 128-bit floating point
   // format.
-  if (normal.exponent > INT_MAX)
-    return INT_MAX;
-  else if (normal.exponent < INT_MIN)
-    return INT_MIN;
-  else
-    return normal.exponent;
+  if (LIBC_UNLIKELY(exponent > IntLogbConstants<T>::T_MAX ||
+                    exponent < IntLogbConstants<T>::T_MIN)) {
+    set_errno_if_required(ERANGE);
+    raise_except_if_required(FE_INVALID);
+    return exponent > 0 ? IntLogbConstants<T>::T_MAX
+                        : IntLogbConstants<T>::T_MIN;
+  }
+
+  return static_cast<T>(exponent);
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T logb(T x) {
+LIBC_INLINE constexpr T logb(T x) {
   FPBits<T> bits(x);
-  if (bits.is_zero()) {
-    // TODO(Floating point exception): Raise div-by-zero exception.
-    // TODO(errno): POSIX requires setting errno to ERANGE.
-    return FPBits<T>::inf(Sign::NEG).get_val();
-  } else if (bits.is_nan()) {
-    return x;
-  } else if (bits.is_inf()) {
-    // Return positive infinity.
+  if (LIBC_UNLIKELY(bits.is_zero() || bits.is_inf_or_nan())) {
+    if (bits.is_nan())
+      return x;
+
+    raise_except_if_required(FE_DIVBYZERO);
+
+    if (bits.is_zero()) {
+      set_errno_if_required(ERANGE);
+      return FPBits<T>::inf(Sign::NEG).get_val();
+    }
+    // bits is inf.
     return FPBits<T>::inf().get_val();
   }
 
-  NormalFloat<T> normal(bits);
-  return static_cast<T>(normal.exponent);
+  DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
+  return static_cast<T>(normal.get_unbiased_exponent());
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T ldexp(T x, int exp) {
-  if (LIBC_UNLIKELY(exp == 0))
-    return x;
+LIBC_INLINE constexpr T ldexp(T x, int exp) {
   FPBits<T> bits(x);
-  if (LIBC_UNLIKELY(bits.is_zero() || bits.is_inf_or_nan()))
+  if (LIBC_UNLIKELY((exp == 0) || bits.is_zero() || bits.is_inf_or_nan()))
     return x;
 
   // NormalFloat uses int32_t to store the true exponent value. We should ensure
@@ -129,18 +155,40 @@ LIBC_INLINE T ldexp(T x, int exp) {
   // early. Because the result of the ldexp operation can be a subnormal number,
   // we need to accommodate the (mantissaWidth + 1) worth of shift in
   // calculating the limit.
-  int exp_limit = FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
-  if (exp > exp_limit)
-    return FPBits<T>::inf(bits.sign()).get_val();
+  constexpr int EXP_LIMIT =
+      FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
+  if (LIBC_UNLIKELY(exp > EXP_LIMIT)) {
+    int rounding_mode = quick_get_round();
+    Sign sign = bits.sign();
+
+    if ((sign == Sign::POS && rounding_mode == FE_DOWNWARD) ||
+        (sign == Sign::NEG && rounding_mode == FE_UPWARD) ||
+        (rounding_mode == FE_TOWARDZERO))
+      return FPBits<T>::max_normal(sign).get_val();
+
+    set_errno_if_required(ERANGE);
+    raise_except_if_required(FE_OVERFLOW);
+    return FPBits<T>::inf(sign).get_val();
+  }
 
   // Similarly on the negative side we return zero early if |exp| is too small.
-  if (exp < -exp_limit)
-    return FPBits<T>::zero(bits.sign()).get_val();
+  if (LIBC_UNLIKELY(exp < -EXP_LIMIT)) {
+    int rounding_mode = quick_get_round();
+    Sign sign = bits.sign();
+
+    if ((sign == Sign::POS && rounding_mode == FE_UPWARD) ||
+        (sign == Sign::NEG && rounding_mode == FE_DOWNWARD))
+      return FPBits<T>::min_subnormal(sign).get_val();
+
+    set_errno_if_required(ERANGE);
+    raise_except_if_required(FE_UNDERFLOW);
+    return FPBits<T>::zero(sign).get_val();
+  }
 
   // For all other values, NormalFloat to T conversion handles it the right way.
-  NormalFloat<T> normal(bits);
+  DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
   normal.exponent += exp;
-  return normal;
+  return static_cast<T>(normal);
 }
 
 template <typename T, typename U,

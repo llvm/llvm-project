@@ -85,8 +85,8 @@
 #ifndef PRAGMA_ANNOTATION
 #define PRAGMA_ANNOTATION(X) ANNOTATION(X)
 #endif
-#ifndef INTERESTING_IDENTIFIER
-#define INTERESTING_IDENTIFIER(X)
+#ifndef NOTABLE_IDENTIFIER
+#define NOTABLE_IDENTIFIER(X)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -520,6 +520,7 @@ TYPE_TRAIT_1(__is_trivially_copyable, IsTriviallyCopyable, KEYCXX)
 TYPE_TRAIT_1(__is_union, IsUnion, KEYCXX)
 TYPE_TRAIT_1(__has_unique_object_representations,
              HasUniqueObjectRepresentations, KEYCXX)
+TYPE_TRAIT_2(__is_layout_compatible, IsLayoutCompatible, KEYCXX)
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) KEYWORD(__##Trait, KEYCXX)
 #include "clang/Basic/TransformTypeTraits.def"
@@ -567,6 +568,7 @@ TYPE_TRAIT_1(__is_unsigned, IsUnsigned, KEYCXX)
 // Embarcadero Binary Type Traits
 TYPE_TRAIT_2(__is_same, IsSame, KEYCXX)
 TYPE_TRAIT_2(__is_convertible, IsConvertible, KEYCXX)
+TYPE_TRAIT_2(__is_nothrow_convertible, IsNothrowConvertible, KEYCXX)
 ARRAY_TYPE_TRAIT(__array_rank, ArrayRank, KEYCXX)
 ARRAY_TYPE_TRAIT(__array_extent, ArrayExtent, KEYCXX)
 // Name for GCC 6 compatibility.
@@ -807,15 +809,15 @@ OBJC_AT_KEYWORD(import)
 OBJC_AT_KEYWORD(available)
 
 //===----------------------------------------------------------------------===//
-// Interesting identifiers.
+// Notable identifiers.
 //===----------------------------------------------------------------------===//
-INTERESTING_IDENTIFIER(not_interesting)
-INTERESTING_IDENTIFIER(FILE)
-INTERESTING_IDENTIFIER(jmp_buf)
-INTERESTING_IDENTIFIER(sigjmp_buf)
-INTERESTING_IDENTIFIER(ucontext_t)
-INTERESTING_IDENTIFIER(float_t)
-INTERESTING_IDENTIFIER(double_t)
+NOTABLE_IDENTIFIER(not_notable)
+NOTABLE_IDENTIFIER(FILE)
+NOTABLE_IDENTIFIER(jmp_buf)
+NOTABLE_IDENTIFIER(sigjmp_buf)
+NOTABLE_IDENTIFIER(ucontext_t)
+NOTABLE_IDENTIFIER(float_t)
+NOTABLE_IDENTIFIER(double_t)
 
 // TODO: What to do about context-sensitive keywords like:
 //       bycopy/byref/in/inout/oneway/out?
@@ -1010,4 +1012,4 @@ ANNOTATION(repl_input_end)
 #undef TOK
 #undef C99_KEYWORD
 #undef C23_KEYWORD
-#undef INTERESTING_IDENTIFIER
+#undef NOTABLE_IDENTIFIER

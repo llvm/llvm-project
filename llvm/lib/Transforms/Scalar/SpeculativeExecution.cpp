@@ -263,37 +263,40 @@ static InstructionCost ComputeSpeculationCost(const Instruction *I,
 bool SpeculativeExecutionPass::considerHoistingFromTo(
     BasicBlock &FromBlock, BasicBlock &ToBlock) {
   SmallPtrSet<const Instruction *, 8> NotHoisted;
-  const auto AllPrecedingUsesFromBlockHoisted = [&NotHoisted](const User *U) {
-    // Debug variable has special operand to check it's not hoisted.
-    if (const auto *DVI = dyn_cast<DbgVariableIntrinsic>(U)) {
-      return all_of(DVI->location_ops(), [&NotHoisted](Value *V) {
-        if (const auto *I = dyn_cast_or_null<Instruction>(V)) {
-          if (!NotHoisted.contains(I))
-            return true;
-        }
-        return false;
-      });
-    }
-
-    // Usially debug label intrinsic corresponds to label in LLVM IR. In these
-    // cases we should not move it here.
-    // TODO: Possible special processing needed to detect it is related to a
-    // hoisted instruction.
-    if (isa<DbgLabelInst>(U))
-      return false;
-
-    for (const Value *V : U->operand_values()) {
-      if (const Instruction *I = dyn_cast<Instruction>(V)) {
+  SmallDenseMap<const Instruction *, SmallVector<DPValue *>> DPValuesToHoist;
+  auto HasNoUnhoistedInstr = [&NotHoisted](auto Values) {
+    for (const Value *V : Values) {
+      if (const auto *I = dyn_cast_or_null<Instruction>(V))
         if (NotHoisted.contains(I))
           return false;
-      }
     }
     return true;
   };
+  auto AllPrecedingUsesFromBlockHoisted =
+      [&HasNoUnhoistedInstr](const User *U) {
+        // Debug variable has special operand to check it's not hoisted.
+        if (const auto *DVI = dyn_cast<DbgVariableIntrinsic>(U))
+          return HasNoUnhoistedInstr(DVI->location_ops());
+
+        // Usially debug label intrinsic corresponds to label in LLVM IR. In
+        // these cases we should not move it here.
+        // TODO: Possible special processing needed to detect it is related to a
+        // hoisted instruction.
+        if (isa<DbgLabelInst>(U))
+          return false;
+
+        return HasNoUnhoistedInstr(U->operand_values());
+      };
 
   InstructionCost TotalSpeculationCost = 0;
   unsigned NotHoistedInstCount = 0;
   for (const auto &I : FromBlock) {
+    // Make note of any DPValues that need hoisting. DPLabels
+    // get left behind just like llvm.dbg.labels.
+    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+      if (HasNoUnhoistedInstr(DPV.location_ops()))
+        DPValuesToHoist[DPV.getInstruction()].push_back(&DPV);
+    }
     const InstructionCost Cost = ComputeSpeculationCost(&I, *TTI);
     if (Cost.isValid() && isSafeToSpeculativelyExecute(&I) &&
         AllPrecedingUsesFromBlockHoisted(&I)) {
@@ -311,12 +314,22 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   }
 
   for (auto I = FromBlock.begin(); I != FromBlock.end();) {
+    // If any DPValues attached to this instruction should be hoisted, hoist
+    // them now - they will end up attached to either the next hoisted
+    // instruction or the ToBlock terminator.
+    if (DPValuesToHoist.contains(&*I)) {
+      for (auto *DPV : DPValuesToHoist[&*I]) {
+        DPV->removeFromParent();
+        ToBlock.insertDPValueBefore(DPV,
+                                    ToBlock.getTerminator()->getIterator());
+      }
+    }
     // We have to increment I before moving Current as moving Current
     // changes the list that I is iterating through.
     auto Current = I;
     ++I;
     if (!NotHoisted.count(&*Current)) {
-      Current->moveBeforePreserving(ToBlock.getTerminator());
+      Current->moveBefore(ToBlock.getTerminator());
     }
   }
   return true;

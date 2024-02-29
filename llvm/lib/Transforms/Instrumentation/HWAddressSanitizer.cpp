@@ -348,7 +348,7 @@ private:
   void instrumentGlobals();
 
   Value *getPC(IRBuilder<> &IRB);
-  Value *getSP(IRBuilder<> &IRB);
+  Value *getFP(IRBuilder<> &IRB);
   Value *getFrameRecordInfo(IRBuilder<> &IRB);
 
   void instrumentPersonalityFunctions();
@@ -1148,7 +1148,7 @@ Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
   // Extract some entropy from the stack pointer for the tags.
   // Take bits 20..28 (ASLR entropy) and xor with bits 0..8 (these differ
   // between functions).
-  Value *StackPointerLong = getSP(IRB);
+  Value *StackPointerLong = getFP(IRB);
   Value *StackTag =
       applyTagMask(IRB, IRB.CreateXor(StackPointerLong,
                                       IRB.CreateLShr(StackPointerLong, 20)));
@@ -1165,7 +1165,7 @@ Value *HWAddressSanitizer::getAllocaTag(IRBuilder<> &IRB, Value *StackTag,
 }
 
 Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB) {
-  Value *StackPointerLong = getSP(IRB);
+  Value *StackPointerLong = getFP(IRB);
   Value *UARTag =
       applyTagMask(IRB, IRB.CreateLShr(StackPointerLong, PointerTagShift));
 
@@ -1232,7 +1232,7 @@ Value *HWAddressSanitizer::getPC(IRBuilder<> &IRB) {
   return IRB.CreatePtrToInt(IRB.GetInsertBlock()->getParent(), IntptrTy);
 }
 
-Value *HWAddressSanitizer::getSP(IRBuilder<> &IRB) {
+Value *HWAddressSanitizer::getFP(IRBuilder<> &IRB) {
   if (!CachedSP) {
     // FIXME: use addressofreturnaddress (but implement it in aarch64 backend
     // first).
@@ -1251,7 +1251,7 @@ Value *HWAddressSanitizer::getSP(IRBuilder<> &IRB) {
 Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
   // Prepare ring buffer data.
   Value *PC = getPC(IRB);
-  Value *SP = getSP(IRB);
+  Value *SP = getFP(IRB);
 
   // Mix SP and PC.
   // Assumptions:
@@ -1371,6 +1371,14 @@ static bool isLifetimeIntrinsic(Value *V) {
   return II && II->isLifetimeStartOrEnd();
 }
 
+static DbgAssignIntrinsic *DynCastToDbgAssign(DbgVariableIntrinsic *DVI) {
+  return dyn_cast<DbgAssignIntrinsic>(DVI);
+}
+
+static DPValue *DynCastToDbgAssign(DPValue *DPV) {
+  return DPV->isDbgAssign() ? DPV : nullptr;
+}
+
 bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
                                          Value *StackTag, Value *UARTag,
                                          const DominatorTree &DT,
@@ -1437,6 +1445,11 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
         if (DPtr->getVariableLocationOp(LocNo) == AI)
           DPtr->setExpression(DIExpression::appendOpsToArg(
               DPtr->getExpression(), NewOps, LocNo));
+      if (auto *DAI = DynCastToDbgAssign(DPtr)) {
+        if (DAI->getAddress() == AI)
+          DAI->setAddressExpression(DIExpression::prependOpcodes(
+              DAI->getAddressExpression(), NewOps));
+      }
     };
 
     llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord);
@@ -1455,10 +1468,10 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     bool StandardLifetime =
+        !SInfo.CallsReturnTwice &&
         SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &DT,
-                                   &LI, ClMaxLifetimes) &&
-        !SInfo.CallsReturnTwice;
+                                   &LI, ClMaxLifetimes);
     if (DetectUseAfterScope && StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       IRB.SetInsertPoint(Start->getNextNode());

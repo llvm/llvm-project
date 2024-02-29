@@ -450,6 +450,7 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   }
 
   markSuperRegs(Reserved, AArch64::FPCR);
+  markSuperRegs(Reserved, AArch64::FPSR);
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
     markSuperRegs(Reserved, AArch64::X27);
@@ -505,6 +506,10 @@ bool AArch64RegisterInfo::isAsmClobberable(const MachineFunction &MF,
   // for normal codegen.
   if (MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening) &&
         MCRegisterInfo::regsOverlap(PhysReg, AArch64::X16))
+    return true;
+
+  // ZA/ZT0 registers are reserved but may be permitted in the clobber list.
+  if (PhysReg == AArch64::ZA || PhysReg == AArch64::ZT0)
     return true;
 
   return !isReservedReg(MF, PhysReg);

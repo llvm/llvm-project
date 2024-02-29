@@ -250,7 +250,7 @@ define <1 x i32> @abs_v1i32(<1 x i32> %a){
 ;
 ; CHECK-GI-LABEL: abs_v1i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    asr w9, w8, #31
 ; CHECK-GI-NEXT:    add w8, w8, w9
 ; CHECK-GI-NEXT:    eor w8, w8, w9

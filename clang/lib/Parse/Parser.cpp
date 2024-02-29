@@ -1040,8 +1040,8 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
              diag::warn_cxx98_compat_extern_template :
              diag::ext_extern_template) << SourceRange(ExternLoc, TemplateLoc);
       SourceLocation DeclEnd;
-      return Actions.ConvertDeclToDeclGroup(ParseExplicitInstantiation(
-          DeclaratorContext::File, ExternLoc, TemplateLoc, DeclEnd, Attrs));
+      return ParseExplicitInstantiation(DeclaratorContext::File, ExternLoc,
+                                        TemplateLoc, DeclEnd, Attrs);
     }
     goto dont_know;
 
@@ -1143,9 +1143,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
   DS.SetRangeEnd(DeclSpecAttrs.Range.getEnd());
   DS.takeAttributesFrom(DeclSpecAttrs);
 
+  ParsedTemplateInfo TemplateInfo;
   MaybeParseMicrosoftAttributes(DS.getAttributes());
   // Parse the common declaration-specifiers piece.
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS,
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS,
                              DeclSpecContext::DSC_top_level);
 
   // If we had a free-standing type definition with a missing semicolon, we
@@ -1241,7 +1242,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
 
-  return ParseDeclGroup(DS, DeclaratorContext::File, Attrs);
+  return ParseDeclGroup(DS, DeclaratorContext::File, Attrs, TemplateInfo);
 }
 
 Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
@@ -2739,6 +2740,15 @@ bool Parser::parseMisplacedModuleImport() {
     }
   }
   return false;
+}
+
+void Parser::diagnoseUseOfC11Keyword(const Token &Tok) {
+  // Warn that this is a C11 extension if in an older mode or if in C++.
+  // Otherwise, warn that it is incompatible with standards before C11 if in
+  // C11 or later.
+  Diag(Tok, getLangOpts().C11 ? diag::warn_c11_compat_keyword
+                              : diag::ext_c11_feature)
+      << Tok.getName();
 }
 
 bool BalancedDelimiterTracker::diagnoseOverflow() {

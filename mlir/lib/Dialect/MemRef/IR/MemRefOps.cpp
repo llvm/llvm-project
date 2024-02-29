@@ -1420,6 +1420,7 @@ OpFoldResult ExtractStridedMetadataOp::getConstifiedMixedOffset() {
 
 void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
                                Value memref, ValueRange ivs) {
+  OpBuilder::InsertionGuard g(builder);
   result.addOperands(memref);
   result.addOperands(ivs);
 
@@ -1428,7 +1429,7 @@ void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
     result.addTypes(elementType);
 
     Region *bodyRegion = result.addRegion();
-    bodyRegion->push_back(new Block());
+    builder.createBlock(bodyRegion);
     bodyRegion->addArgument(elementType, memref.getLoc());
   }
 }
@@ -2756,17 +2757,26 @@ static bool haveCompatibleOffsets(MemRefType t1, MemRefType t2) {
 }
 
 /// Return true if `t1` and `t2` have equal strides (both dynamic or of same
-/// static value).
-static bool haveCompatibleStrides(MemRefType t1, MemRefType t2) {
+/// static value). Dimensions of `t1` may be dropped in `t2`; these must be
+/// marked as dropped in `droppedDims`.
+static bool haveCompatibleStrides(MemRefType t1, MemRefType t2,
+                                  const llvm::SmallBitVector &droppedDims) {
+  assert(size_t(t1.getRank()) == droppedDims.size() && "incorrect number of bits");
+  assert(size_t(t1.getRank() - t2.getRank()) == droppedDims.count() &&
+         "incorrect number of dropped dims");
   int64_t t1Offset, t2Offset;
   SmallVector<int64_t> t1Strides, t2Strides;
   auto res1 = getStridesAndOffset(t1, t1Strides, t1Offset);
   auto res2 = getStridesAndOffset(t2, t2Strides, t2Offset);
   if (failed(res1) || failed(res2))
     return false;
-  for (auto [s1, s2] : llvm::zip_equal(t1Strides, t2Strides))
-    if (s1 != s2)
+  for (int64_t i = 0, j = 0, e = t1.getRank(); i < e; ++i) {
+    if (droppedDims[i])
+      continue;
+    if (t1Strides[i] != t2Strides[j])
       return false;
+    ++j;
+  }
   return true;
 }
 
@@ -2843,10 +2853,8 @@ LogicalResult SubViewOp::verify() {
     return produceSubViewErrorMsg(SliceVerificationResult::LayoutMismatch,
                                   *this, expectedType);
 
-  // Strides must match if there are no rank reductions.
-  // TODO: Verify strides when there are rank reductions. Strides are partially
-  // checked in `computeMemRefRankReductionMask`.
-  if (unusedDims->none() && !haveCompatibleStrides(expectedType, subViewType))
+  // Strides must match.
+  if (!haveCompatibleStrides(expectedType, subViewType, *unusedDims))
     return produceSubViewErrorMsg(SliceVerificationResult::LayoutMismatch,
                                   *this, expectedType);
 

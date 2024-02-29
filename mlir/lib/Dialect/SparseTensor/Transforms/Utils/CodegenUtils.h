@@ -228,17 +228,6 @@ void deallocDenseTensor(OpBuilder &builder, Location loc, Value buffer);
 void sizesFromSrc(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
                   Location loc, Value src);
 
-/// Generates a 1D MemRefType with a dynamic size. When withLayout is set, the
-/// returned memref has a layout has unknown strides and offsets. Otherwise,
-/// a memref with a standard unit stride zero offset layout is returned.
-inline MemRefType get1DMemRefType(Type etp, bool withLayout) {
-  auto layout = withLayout ? StridedLayoutAttr::StridedLayoutAttr::get(
-                                 etp.getContext(), ShapedType::kDynamic,
-                                 {ShapedType::kDynamic})
-                           : StridedLayoutAttr();
-  return MemRefType::get(ShapedType::kDynamic, etp, layout);
-}
-
 /// Scans to top of generated loop.
 Operation *getTop(Operation *op);
 
@@ -280,22 +269,6 @@ void storeAll(OpBuilder &builder, Location loc, Value mem, ValueRange vs,
 // Generates code to cast a tensor to a memref.
 TypedValue<BaseMemRefType> genToMemref(OpBuilder &builder, Location loc,
                                        Value tensor);
-
-/// Infers the result type and generates `ToPositionsOp`.
-Value genToPositions(OpBuilder &builder, Location loc, Value tensor, Level lvl);
-
-/// Infers the result type and generates `ToCoordinatesOp`.  If the
-/// level is within a COO region, the result type is a memref with unknown
-/// stride and offset.  Otherwise, the result type is a memref without
-/// any specified layout.
-Value genToCoordinates(OpBuilder &builder, Location loc, Value tensor,
-                       Level lvl);
-
-/// Infers the result type and generates `ToCoordinatesBufferOp`.
-Value genToCoordinatesBuffer(OpBuilder &builder, Location loc, Value tensor);
-
-/// Infers the result type and generates `ToValuesOp`.
-Value genToValues(OpBuilder &builder, Location loc, Value tensor);
 
 /// Generates code to retrieve the values size for the sparse tensor.
 Value genValMemSize(OpBuilder &builder, Location loc, Value tensor);
@@ -423,7 +396,7 @@ inline Value constantPrimaryTypeEncoding(OpBuilder &builder, Location loc,
 /// Generates a constant of the internal dimension level type encoding.
 inline Value constantLevelTypeEncoding(OpBuilder &builder, Location loc,
                                        LevelType lt) {
-  return constantI8(builder, loc, static_cast<uint8_t>(lt));
+  return constantI64(builder, loc, static_cast<uint64_t>(lt));
 }
 
 inline bool isZeroRankedTensorOrScalar(Type type) {

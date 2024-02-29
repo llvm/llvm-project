@@ -844,7 +844,20 @@ const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
       return &RISCV::FPR64RegClass;
   }
 
-  // TODO: Non-GPR register classes.
+  if (RB.getID() == RISCV::VRBRegBankID) {
+    if (Ty.getSizeInBits().getKnownMinValue() <= 64)
+      return &RISCV::VRRegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 128)
+      return &RISCV::VRM2RegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 256)
+      return &RISCV::VRM4RegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 512)
+      return &RISCV::VRM8RegClass;
+  }
+
   return nullptr;
 }
 

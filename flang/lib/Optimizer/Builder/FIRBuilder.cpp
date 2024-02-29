@@ -18,6 +18,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -271,19 +272,24 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
 
 /// Create a global variable in the (read-only) data section. A global variable
 /// must have a unique name to identify and reference it.
-fir::GlobalOp fir::FirOpBuilder::createGlobal(mlir::Location loc,
-                                              mlir::Type type,
-                                              llvm::StringRef name,
-                                              mlir::StringAttr linkage,
-                                              mlir::Attribute value,
-                                              bool isConst, bool isTarget) {
+fir::GlobalOp fir::FirOpBuilder::createGlobal(
+    mlir::Location loc, mlir::Type type, llvm::StringRef name,
+    mlir::StringAttr linkage, mlir::Attribute value, bool isConst,
+    bool isTarget, fir::CUDADataAttributeAttr cudaAttr) {
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
   if (auto glob = module.lookupSymbol<fir::GlobalOp>(name))
     return glob;
   setInsertionPoint(module.getBody(), module.getBody()->end());
-  auto glob =
-      create<fir::GlobalOp>(loc, name, isConst, isTarget, type, value, linkage);
+  llvm::SmallVector<mlir::NamedAttribute> attrs;
+  if (cudaAttr) {
+    auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
+                                            module.getContext());
+    attrs.push_back(mlir::NamedAttribute(
+        fir::GlobalOp::getCudaAttrAttrName(globalOpName), cudaAttr));
+  }
+  auto glob = create<fir::GlobalOp>(loc, name, isConst, isTarget, type, value,
+                                    linkage, attrs);
   restoreInsertionPoint(insertPt);
   return glob;
 }
@@ -291,7 +297,7 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(mlir::Location loc,
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name, bool isConst,
     bool isTarget, std::function<void(FirOpBuilder &)> bodyBuilder,
-    mlir::StringAttr linkage) {
+    mlir::StringAttr linkage, fir::CUDADataAttributeAttr cudaAttr) {
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
   if (auto glob = module.lookupSymbol<fir::GlobalOp>(name))
@@ -1527,4 +1533,11 @@ mlir::Value fir::factory::createNullBoxProc(fir::FirOpBuilder &builder,
   auto boxEleTy{fir::unwrapRefType(boxTy.getEleTy())};
   mlir::Value initVal{builder.create<fir::ZeroOp>(loc, boxEleTy)};
   return builder.create<fir::EmboxProcOp>(loc, boxTy, initVal);
+}
+
+void fir::factory::setInternalLinkage(mlir::func::FuncOp func) {
+  auto internalLinkage = mlir::LLVM::linkage::Linkage::Internal;
+  auto linkage =
+      mlir::LLVM::LinkageAttr::get(func->getContext(), internalLinkage);
+  func->setAttr("llvm.linkage", linkage);
 }

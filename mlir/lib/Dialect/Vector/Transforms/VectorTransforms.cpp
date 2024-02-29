@@ -160,8 +160,9 @@ struct MultiReduceToContract
         iteratorTypes.push_back(vector::IteratorType::reduction);
       }
     }
-    auto dstMap = AffineMap::get(/*dimCount=*/reductionMask.size(),
-                                 /*symCount=*/0, exprs, reduceOp.getContext());
+    auto dstMap =
+        AffineMap::get(/*dimCount=*/reductionMask.size(),
+                       /*symbolCount=*/0, exprs, reduceOp.getContext());
     rewriter.replaceOpWithNewOp<mlir::vector::ContractionOp>(
         reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), reduceOp.getAcc(),
         rewriter.getAffineMapArrayAttr({srcMap, srcMap, dstMap}),
@@ -705,6 +706,76 @@ struct BubbleDownBitCastForStridedSliceExtract
     rewriter.replaceOpWithNewOp<vector::BitCastOp>(
         extractOp, extractOp.getType(), newExtractOp);
 
+    return success();
+  }
+};
+
+// Shuffles vector.bitcast op before vector.insert_strided_slice op.
+//
+// This transforms IR like:
+//   %0 = vector.insert %val, %dst[4] : vector<32xi4> into vector<8x32xi4>
+//   %1 = vector.bitcast %0 : vector<8x32xi4> to vector<8x16xi8>
+// Into:
+//   %0 = vector.bitcast %val : vector<32xi4> to vector<16xi8>
+//   %1 = vector.bitcast %dst : vector<8x32xi4> to vector<8x16xi8>
+//   %2 = vector.insert %0, %1 [4] : vector<16xi8> into vector<8x16xi8>
+//
+struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::BitCastOp bitcastOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType castSrcType = bitcastOp.getSourceVectorType();
+    VectorType castDstType = bitcastOp.getResultVectorType();
+
+    // 0-D and scalable vectors are not supported yet.
+    if (castSrcType.getRank() == 0 || castSrcType.isScalable() ||
+        castDstType.isScalable())
+      return failure();
+
+    int64_t castSrcLastDim = castSrcType.getShape().back();
+    int64_t castDstLastDim = castDstType.getShape().back();
+    bool isNumElemsShrink = castSrcLastDim >= castDstLastDim;
+    int64_t ratio;
+    if (isNumElemsShrink) {
+      assert(castSrcLastDim % castDstLastDim == 0);
+      ratio = castSrcLastDim / castDstLastDim;
+    } else {
+      assert(castDstLastDim % castSrcLastDim == 0);
+      ratio = castDstLastDim / castSrcLastDim;
+    }
+
+    auto insertOp = bitcastOp.getSource().getDefiningOp<vector::InsertOp>();
+    if (!insertOp)
+      return failure();
+
+    // Only vector sources are supported for now.
+    auto insertSrcType = dyn_cast<VectorType>(insertOp.getSourceType());
+    if (!insertSrcType)
+      return failure();
+
+    // Bitcast the source.
+    SmallVector<int64_t> srcDims(insertSrcType.getShape());
+    srcDims.back() =
+        isNumElemsShrink ? srcDims.back() / ratio : srcDims.back() * ratio;
+    VectorType newCastSrcType =
+        VectorType::get(srcDims, castDstType.getElementType());
+    auto newCastSrcOp = rewriter.create<vector::BitCastOp>(
+        bitcastOp.getLoc(), newCastSrcType, insertOp.getSource());
+
+    SmallVector<int64_t> dstDims(insertOp.getDestVectorType().getShape());
+    dstDims.back() =
+        isNumElemsShrink ? dstDims.back() / ratio : dstDims.back() * ratio;
+    VectorType newCastDstType =
+        VectorType::get(dstDims, castDstType.getElementType());
+
+    // Bitcast the destination.
+    auto newCastDstOp = rewriter.create<vector::BitCastOp>(
+        bitcastOp.getLoc(), newCastDstType, insertOp.getDest());
+
+    // Generate new insert.
+    rewriter.replaceOpWithNewOp<vector::InsertOp>(
+        bitcastOp, newCastSrcOp, newCastDstOp, insertOp.getMixedPosition());
     return success();
   }
 };
@@ -1401,7 +1472,9 @@ struct CanonicalizeContractMatmulToMMT final
 
     // Set up the parallel/reduction structure in right form.
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-    auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+    auto infer = [&](MapList m) {
+      return AffineMap::inferFromExprList(m, op.getContext());
+    };
     AffineExpr m;
     AffineExpr n;
     AffineExpr k;
@@ -1779,8 +1852,8 @@ void mlir::vector::populateBubbleVectorBitCastOpPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<BubbleDownVectorBitCastForExtract,
                BubbleDownBitCastForStridedSliceExtract,
-               BubbleUpBitCastForStridedSliceInsert>(patterns.getContext(),
-                                                     benefit);
+               BubbleUpBitCastForInsert, BubbleUpBitCastForStridedSliceInsert>(
+      patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateBreakDownVectorBitCastOpPatterns(

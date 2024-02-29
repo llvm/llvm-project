@@ -209,7 +209,7 @@ void RewriterBase::eraseOp(Operation *op) {
       assert(mayBeGraphRegion(*op->getParentRegion()) &&
              "expected that op has no uses");
 #endif // NDEBUG
-    rewriteListener->notifyOperationRemoved(op);
+    rewriteListener->notifyOperationErased(op);
 
     // Explicitly drop all uses in case the op is in a graph region.
     op->dropAllUses();
@@ -265,7 +265,7 @@ void RewriterBase::eraseBlock(Block *block) {
 
   // Notify the listener that the block is about to be removed.
   if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-    rewriteListener->notifyBlockRemoved(block);
+    rewriteListener->notifyBlockErased(block);
 
   block->erase();
 }
@@ -382,24 +382,6 @@ void RewriterBase::inlineRegionBefore(Region &region, Region &parent,
 }
 void RewriterBase::inlineRegionBefore(Region &region, Block *before) {
   inlineRegionBefore(region, *before->getParent(), before->getIterator());
-}
-
-/// Clone the blocks that belong to "region" before the given position in
-/// another region "parent". The two regions must be different. The caller is
-/// responsible for creating or updating the operation transferring flow of
-/// control to the region and passing it the correct block arguments.
-void RewriterBase::cloneRegionBefore(Region &region, Region &parent,
-                                     Region::iterator before,
-                                     IRMapping &mapping) {
-  region.cloneInto(&parent, before, mapping);
-}
-void RewriterBase::cloneRegionBefore(Region &region, Region &parent,
-                                     Region::iterator before) {
-  IRMapping mapping;
-  cloneRegionBefore(region, parent, before, mapping);
-}
-void RewriterBase::cloneRegionBefore(Region &region, Block *before) {
-  cloneRegionBefore(region, *before->getParent(), before->getIterator());
 }
 
 void RewriterBase::moveBlockBefore(Block *block, Block *anotherBlock) {

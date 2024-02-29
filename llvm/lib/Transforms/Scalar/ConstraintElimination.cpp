@@ -461,7 +461,7 @@ static Decomposition decomposeGEP(GEPOperator &GEP,
 
     // If Op0 is signed non-negative, the GEP is increasing monotonically and
     // can be de-composed.
-    if (!isKnownNonNegative(Index, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
+    if (!isKnownNonNegative(Index, DL))
       Preconditions.emplace_back(CmpInst::ICMP_SGE, Index,
                                  ConstantInt::get(Index->getType(), 0));
   }
@@ -499,6 +499,8 @@ static Decomposition decompose(Value *V,
   if (!Ty->isIntegerTy() || Ty->getIntegerBitWidth() > 64)
     return V;
 
+  bool IsKnownNonNegative = false;
+
   // Decompose \p V used with a signed predicate.
   if (IsSigned) {
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
@@ -507,6 +509,14 @@ static Decomposition decompose(Value *V,
     }
     Value *Op0;
     Value *Op1;
+
+    if (match(V, m_SExt(m_Value(Op0))))
+      V = Op0;
+    else if (match(V, m_NNegZExt(m_Value(Op0)))) {
+      V = Op0;
+      IsKnownNonNegative = true;
+    }
+
     if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1))))
       return MergeResults(Op0, Op1, IsSigned);
 
@@ -529,7 +539,7 @@ static Decomposition decompose(Value *V,
       }
     }
 
-    return V;
+    return {V, IsKnownNonNegative};
   }
 
   if (auto *CI = dyn_cast<ConstantInt>(V)) {
@@ -539,7 +549,6 @@ static Decomposition decompose(Value *V,
   }
 
   Value *Op0;
-  bool IsKnownNonNegative = false;
   if (match(V, m_ZExt(m_Value(Op0)))) {
     IsKnownNonNegative = true;
     V = Op0;
@@ -551,10 +560,10 @@ static Decomposition decompose(Value *V,
     return MergeResults(Op0, Op1, IsSigned);
   }
   if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1)))) {
-    if (!isKnownNonNegative(Op0, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
+    if (!isKnownNonNegative(Op0, DL))
       Preconditions.emplace_back(CmpInst::ICMP_SGE, Op0,
                                  ConstantInt::get(Op0->getType(), 0));
-    if (!isKnownNonNegative(Op1, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
+    if (!isKnownNonNegative(Op1, DL))
       Preconditions.emplace_back(CmpInst::ICMP_SGE, Op1,
                                  ConstantInt::get(Op1->getType(), 0));
 
@@ -1065,6 +1074,9 @@ void State::addInfoFor(BasicBlock &BB) {
     case Intrinsic::umax:
     case Intrinsic::smin:
     case Intrinsic::smax:
+      // TODO: handle llvm.abs as well
+      WorkList.push_back(
+          FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       // TODO: Check if it is possible to instead only added the min/max facts
       // when simplifying uses of the min/max intrinsics.
       if (!isGuaranteedNotToBePoison(&I))
@@ -1395,6 +1407,26 @@ static bool checkAndReplaceCondition(
   return false;
 }
 
+static bool checkAndReplaceMinMax(MinMaxIntrinsic *MinMax, ConstraintInfo &Info,
+                                  SmallVectorImpl<Instruction *> &ToRemove) {
+  auto ReplaceMinMaxWithOperand = [&](MinMaxIntrinsic *MinMax, bool UseLHS) {
+    // TODO: generate reproducer for min/max.
+    MinMax->replaceAllUsesWith(MinMax->getOperand(UseLHS ? 0 : 1));
+    ToRemove.push_back(MinMax);
+    return true;
+  };
+
+  ICmpInst::Predicate Pred =
+      ICmpInst::getNonStrictPredicate(MinMax->getPredicate());
+  if (auto ImpliedCondition = checkCondition(
+          Pred, MinMax->getOperand(0), MinMax->getOperand(1), MinMax, Info))
+    return ReplaceMinMaxWithOperand(MinMax, *ImpliedCondition);
+  if (auto ImpliedCondition = checkCondition(
+          Pred, MinMax->getOperand(1), MinMax->getOperand(0), MinMax, Info))
+    return ReplaceMinMaxWithOperand(MinMax, !*ImpliedCondition);
+  return false;
+}
+
 static void
 removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
                      Module *ReproducerModule,
@@ -1695,6 +1727,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                          ReproducerCondStack, DFSInStack);
         }
         Changed |= Simplified;
+      } else if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(Inst)) {
+        Changed |= checkAndReplaceMinMax(MinMax, Info, ToRemove);
       }
       continue;
     }
@@ -1730,7 +1764,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     if (!CB.isConditionFact()) {
       Value *X;
       if (match(CB.Inst, m_Intrinsic<Intrinsic::abs>(m_Value(X)))) {
-        // TODO: Add CB.Inst >= 0 fact.
+        // If is_int_min_poison is true then we may assume llvm.abs >= 0.
+        if (cast<ConstantInt>(CB.Inst->getOperand(1))->isOne())
+          AddFact(CmpInst::ICMP_SGE, CB.Inst,
+                  ConstantInt::get(CB.Inst->getType(), 0));
         AddFact(CmpInst::ICMP_SGE, CB.Inst, X);
         continue;
       }

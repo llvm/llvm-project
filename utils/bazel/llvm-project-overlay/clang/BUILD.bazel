@@ -3,10 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("//:workspace_root.bzl", "workspace_root")
-load("//llvm:tblgen.bzl", "gentbl")
-load("//llvm:binary_alias.bzl", "binary_alias")
-load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
 load(
     "//:vars.bzl",
     "LLVM_VERSION",
@@ -14,6 +10,10 @@ load(
     "LLVM_VERSION_MINOR",
     "LLVM_VERSION_PATCH",
 )
+load("//:workspace_root.bzl", "workspace_root")
+load("//llvm:binary_alias.bzl", "binary_alias")
+load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
+load("//llvm:tblgen.bzl", "gentbl")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -316,6 +316,20 @@ gentbl(
     td_file = "include/clang/Basic/BuiltinsBPF.td",
     td_srcs = [
         "include/clang/Basic/BuiltinsBPF.td",
+        "include/clang/Basic/BuiltinsBase.td",
+    ],
+)
+
+gentbl(
+    name = "basic_builtins_riscv_gen",
+    tbl_outs = [(
+        "-gen-clang-builtins",
+        "include/clang/Basic/BuiltinsRISCV.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsRISCV.td",
+    td_srcs = [
+        "include/clang/Basic/BuiltinsRISCV.td",
         "include/clang/Basic/BuiltinsBase.td",
     ],
 )
@@ -656,6 +670,7 @@ cc_library(
         ":basic_attr_gen",
         ":basic_builtins_bpf_gen",
         ":basic_builtins_gen",
+        ":basic_builtins_riscv_gen",
         ":basic_internal_headers",
         ":basic_riscv_sifive_vector_builtins_gen",
         ":basic_riscv_vector_builtin_cg_gen",
@@ -1847,6 +1862,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
+        "//llvm:TextAPI",
         "//llvm:config",
     ],
 )
@@ -2034,6 +2050,26 @@ cc_library(
     includes = ["include"],
     deps = [
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "install_api",
+    srcs = glob([
+        "lib/InstallAPI/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/clang/InstallAPI/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":basic",
+        ":frontend",
+        ":support",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//llvm:TextAPI",
     ],
 )
 
@@ -2417,8 +2453,8 @@ cc_binary(
 cc_binary(
     name = "clang-format",
     srcs = [
-        "tools/clang-format/ClangFormat.cpp",
         "lib/Format/MatchFilePath.h",
+        "tools/clang-format/ClangFormat.cpp",
     ],
     stamp = 0,
     deps = [
@@ -2634,6 +2670,7 @@ cc_library(
         ":basic",
         ":frontend",
         ":index",
+        ":install_api",
         ":lex",
         "//llvm:Option",
         "//llvm:Support",

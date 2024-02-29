@@ -95,6 +95,7 @@ module {
 
     // Release the resources.
     bufferization.dealloc_tensor %a : tensor<?x?xbf16, #SparseMatrix>
+    bufferization.dealloc_tensor %0 : tensor<bf16>
 
     return
   }

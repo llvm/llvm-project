@@ -4,7 +4,7 @@
 ; This demonstrates that we can pass a struct containing scalable vectors across
 ; a basic block.
 
-define i32 @foo({ {<vscale x 2 x i32>, <vscale x 2 x i32>}, i32 } %x, <vscale x 2 x i32>* %y, <vscale x 2 x i32>* %z) {
+define i32 @foo({ {<vscale x 2 x i32>, <vscale x 2 x i32>}, i32 } %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vs1r.v v8, (a1)
@@ -17,8 +17,8 @@ return:
   %a = extractvalue { {<vscale x 2 x i32>, <vscale x 2 x i32>}, i32 } %x, 1
   %b = extractvalue { {<vscale x 2 x i32>, <vscale x 2 x i32>}, i32 } %x, 0, 0
   %c = extractvalue { {<vscale x 2 x i32>, <vscale x 2 x i32>}, i32 } %x, 0, 1
-  store <vscale x 2 x i32> %b, <vscale x 2 x i32>* %y
-  store <vscale x 2 x i32> %c, <vscale x 2 x i32>* %z
+  store <vscale x 2 x i32> %b, ptr %y
+  store <vscale x 2 x i32> %c, ptr %z
 
   ret i32 %a
 }

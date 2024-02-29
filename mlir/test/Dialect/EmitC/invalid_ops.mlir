@@ -289,3 +289,69 @@ func.func @test_expression_multiple_results(%arg0: i32) -> i32 {
   }
   return %r : i32
 }
+
+// -----
+
+// expected-error @+1 {{'emitc.func' op requires zero or exactly one result, but has 2}}
+emitc.func @multiple_results(%0: i32) -> (i32, i32) {
+  emitc.return %0 : i32
+}
+
+// -----
+
+emitc.func @resulterror() -> i32 {
+^bb42:
+  emitc.return    // expected-error {{'emitc.return' op has 0 operands, but enclosing function (@resulterror) returns 1}}
+}
+
+// -----
+
+emitc.func @return_type_mismatch() -> i32 {
+  %0 = emitc.call_opaque "foo()"(): () -> f32
+  emitc.return %0 : f32  // expected-error {{type of the return operand ('f32') doesn't match function result type ('i32') in function @return_type_mismatch}}
+}
+
+// -----
+
+func.func @return_inside_func.func(%0: i32) -> (i32) {
+  // expected-error@+1 {{'emitc.return' op expects parent op 'emitc.func'}}
+  emitc.return %0 : i32
+}
+// -----
+
+// expected-error@+1 {{expected non-function type}}
+emitc.func @func_variadic(...)
+
+// -----
+
+// expected-error@+1 {{'emitc.declare_func' op 'bar' does not reference a valid function}}
+emitc.declare_func @bar
+
+// -----
+
+// expected-error@+1 {{'emitc.declare_func' op requires attribute 'sym_name'}}
+"emitc.declare_func"()  : () -> ()
+
+// -----
+
+func.func @logical_and_resulterror(%arg0: i32, %arg1: i32) {
+  // expected-error @+1 {{'emitc.logical_and' op result #0 must be 1-bit signless integer, but got 'i32'}}
+  %0 = "emitc.logical_and"(%arg0, %arg1) : (i32, i32) -> i32
+  return
+}
+
+// -----
+
+func.func @logical_not_resulterror(%arg0: i32) {
+  // expected-error @+1 {{'emitc.logical_not' op result #0 must be 1-bit signless integer, but got 'i32'}}
+  %0 = "emitc.logical_not"(%arg0) : (i32) -> i32
+  return
+}
+
+// -----
+
+func.func @logical_or_resulterror(%arg0: i32, %arg1: i32) {
+  // expected-error @+1 {{'emitc.logical_or' op result #0 must be 1-bit signless integer, but got 'i32'}}
+  %0 = "emitc.logical_or"(%arg0, %arg1) : (i32, i32) -> i32
+  return
+}

@@ -35,6 +35,14 @@
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
+// Support hashing LevelType such that SparseTensorEncodingAttr can be hashed as
+// well.
+namespace mlir::sparse_tensor {
+llvm::hash_code hash_value(LevelType lt) {
+  return llvm::hash_value(static_cast<uint64_t>(lt));
+}
+} // namespace mlir::sparse_tensor
+
 //===----------------------------------------------------------------------===//
 // Local Convenience Methods.
 //===----------------------------------------------------------------------===//
@@ -66,11 +74,12 @@ void StorageLayout::foreachField(
         callback) const {
   const auto lvlTypes = enc.getLvlTypes();
   const Level lvlRank = enc.getLvlRank();
-  const Level cooStart = SparseTensorType(enc).getCOOStart();
-  const Level end = cooStart == lvlRank ? cooStart : cooStart + 1;
+  SmallVector<COOSegment> cooSegs = SparseTensorType(enc).getCOOSegments();
   FieldIndex fieldIdx = kDataFieldStartingIdx;
+
+  ArrayRef cooSegsRef = cooSegs;
   // Per-level storage.
-  for (Level l = 0; l < end; l++) {
+  for (Level l = 0; l < lvlRank; /*l += 1 or l += AoSCooLen*/) {
     const auto lt = lvlTypes[l];
     if (isWithPosLT(lt)) {
       if (!(callback(fieldIdx++, SparseTensorFieldKind::PosMemRef, l, lt)))
@@ -80,14 +89,29 @@ void StorageLayout::foreachField(
       if (!(callback(fieldIdx++, SparseTensorFieldKind::CrdMemRef, l, lt)))
         return;
     }
+    if (!cooSegsRef.empty() && cooSegsRef.front().isSegmentStart(l)) {
+      if (!cooSegsRef.front().isSoA) {
+        // AoS COO, all singletons are fused into one memrefs. Skips the entire
+        // COO segement.
+        l = cooSegsRef.front().lvlRange.second;
+      } else {
+        // SoA COO, each singleton level has one memref.
+        l++;
+      }
+      // Expire handled COO segment.
+      cooSegsRef = cooSegsRef.drop_front();
+    } else {
+      // Non COO levels.
+      l++;
+    }
   }
   // The values array.
   if (!(callback(fieldIdx++, SparseTensorFieldKind::ValMemRef, kInvalidLevel,
-                 LevelType::Undef)))
+                 LevelFormat::Undef)))
     return;
   // Put metadata at the end.
   if (!(callback(fieldIdx++, SparseTensorFieldKind::StorageSpec, kInvalidLevel,
-                 LevelType::Undef)))
+                 LevelFormat::Undef)))
     return;
 }
 
@@ -102,13 +126,16 @@ void sparse_tensor::foreachFieldAndTypeInSparseTensor(
   const Type posType = stt.getPosType();
   const Type eltType = stt.getElementType();
 
+  SmallVector<int64_t> memrefShape = stt.getBatchLvlShape();
+  memrefShape.push_back(ShapedType::kDynamic);
+
   const Type specType = StorageSpecifierType::get(stt.getEncoding());
-  // memref<? x pos>  positions
-  const Type posMemType = MemRefType::get({ShapedType::kDynamic}, posType);
-  // memref<? x crd>  coordinates
-  const Type crdMemType = MemRefType::get({ShapedType::kDynamic}, crdType);
-  // memref<? x eltType> values
-  const Type valMemType = MemRefType::get({ShapedType::kDynamic}, eltType);
+  // memref<[batch] x ? x pos>  positions
+  const Type posMemType = MemRefType::get(memrefShape, posType);
+  // memref<[batch] x ? x crd>  coordinates
+  const Type crdMemType = MemRefType::get(memrefShape, crdType);
+  // memref<[batch] x ? x eltType> values
+  const Type valMemType = MemRefType::get(memrefShape, eltType);
 
   StorageLayout(stt).foreachField([specType, posMemType, crdMemType, valMemType,
                                    callback](FieldIndex fieldIdx,
@@ -158,7 +185,7 @@ StorageLayout::getFieldIndexAndStride(SparseTensorFieldKind kind,
   unsigned stride = 1;
   if (kind == SparseTensorFieldKind::CrdMemRef) {
     assert(lvl.has_value());
-    const Level cooStart = SparseTensorType(enc).getCOOStart();
+    const Level cooStart = SparseTensorType(enc).getAoSCOOStart();
     const Level lvlRank = enc.getLvlRank();
     if (lvl.value() >= cooStart && lvl.value() < lvlRank) {
       lvl = cooStart;
@@ -312,6 +339,12 @@ SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutDimSlices() const {
   return withDimSlices(ArrayRef<SparseTensorDimSliceAttr>{});
 }
 
+uint64_t SparseTensorEncodingAttr::getBatchLvlRank() const {
+  ArrayRef<LevelType> lvlTypes = getLvlTypes();
+  auto lastBatch = std::find_if(lvlTypes.rbegin(), lvlTypes.rend(), isBatchLT);
+  return std::distance(lastBatch, lvlTypes.rend());
+}
+
 bool SparseTensorEncodingAttr::isAllDense() const {
   return !getImpl() || llvm::all_of(getLvlTypes(), isDenseLT);
 }
@@ -341,7 +374,7 @@ Level SparseTensorEncodingAttr::getLvlRank() const {
 
 LevelType SparseTensorEncodingAttr::getLvlType(Level l) const {
   if (!getImpl())
-    return LevelType::Dense;
+    return LevelFormat::Dense;
   assert(l < getLvlRank() && "Level is out of bounds");
   return getLvlTypes()[l];
 }
@@ -613,16 +646,28 @@ void SparseTensorEncodingAttr::printDimensions(
   }
 }
 
+std::string getNOutOfMString(LevelType lt) {
+  if (isNOutOfMLT(lt)) {
+    unsigned n = getN(lt);
+    unsigned m = getM(lt);
+    auto output = "[" + std::to_string(n) + ", " + std::to_string(m) + "]";
+    return output;
+  }
+  return "";
+}
+
 void SparseTensorEncodingAttr::printLevels(AffineMap &map, AsmPrinter &printer,
                                            ArrayRef<LevelType> lvlTypes) const {
   for (unsigned i = 0, n = map.getNumResults() - 1; i < n; i++) {
     map.getResult(i).print(printer.getStream());
-    printer << " : " << toMLIRString(lvlTypes[i]) << ", ";
+    printer << " : " << toMLIRString(lvlTypes[i])
+            << getNOutOfMString(lvlTypes[i]) << ", ";
   }
   if (map.getNumResults() >= 1) {
     auto lastIndex = map.getNumResults() - 1;
     map.getResult(lastIndex).print(printer.getStream());
-    printer << " : " << toMLIRString(lvlTypes[lastIndex]);
+    printer << " : " << toMLIRString(lvlTypes[lastIndex])
+            << getNOutOfMString(lvlTypes[lastIndex]);
   }
 }
 
@@ -644,6 +689,60 @@ LogicalResult SparseTensorEncodingAttr::verify(
                      [](LevelType i) { return isSingletonLT(i); }))
       return emitError() << "expected all singleton lvlTypes "
                             "following a singleton level";
+    // We can potentially support mixed SoA/AoS singleton levels.
+    if (!std::all_of(it, lvlTypes.end(), [it](LevelType i) {
+          return it->isa<LevelPropNonDefault::SoA>() ==
+                 i.isa<LevelPropNonDefault::SoA>();
+        })) {
+      return emitError() << "expected all singleton lvlTypes stored in the "
+                            "same memory layout (SoA vs AoS).";
+    }
+  }
+
+  auto lastBatch = std::find_if(lvlTypes.rbegin(), lvlTypes.rend(), isBatchLT);
+  if (!std::all_of(lastBatch, lvlTypes.rend(), isBatchLT))
+    return emitError() << "Batch lvlType can only be leading levels.";
+
+  // SoA property can only be applied on singleton level.
+  auto soaLvls = llvm::make_filter_range(lvlTypes, [](LevelType lt) {
+    return lt.isa<LevelPropNonDefault::SoA>();
+  });
+  if (llvm::any_of(soaLvls, [](LevelType lt) {
+        return !lt.isa<LevelFormat::Singleton>();
+      })) {
+    return emitError() << "SoA is only applicable to singleton lvlTypes.";
+  }
+
+  // TODO: audit formats that actually are supported by backend.
+  if (auto it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isNOutOfMLT);
+      it != std::end(lvlTypes)) {
+    if (it != lvlTypes.end() - 1)
+      return emitError() << "expected n_out_of_m to be the last level type";
+    if (!std::all_of(lvlTypes.begin(), it,
+                     [](LevelType i) { return isDenseLT(i); }))
+      return emitError() << "expected all dense lvlTypes "
+                            "before a n_out_of_m level";
+    if (dimToLvl && (dimToLvl.getNumDims() != dimToLvl.getNumResults())) {
+      if (!isBlockSparsity(dimToLvl)) {
+        return emitError()
+               << "expected 1xm block structure for n_out_of_m level";
+      }
+      auto sizes = getBlockSize(dimToLvl);
+      unsigned coefficient = 0;
+      for (const auto &elem : sizes) {
+        if (elem != 0) {
+          if (elem != coefficient && coefficient != 0) {
+            return emitError() << "expected only one blocked level "
+                                  "with the same coefficients";
+          }
+          coefficient = elem;
+        }
+      }
+      if (coefficient != getM(*it)) {
+        return emitError() << "expected coeffiencts of Affine expressions "
+                              "to be equal to m of n_out_of_m level";
+      }
+    }
   }
   // Before we can check that the level-rank is consistent/coherent
   // across all fields, we need to define it.  The source-of-truth for
@@ -725,12 +824,45 @@ bool mlir::sparse_tensor::SparseTensorType::isCOOType(Level startLvl,
   return !isUnique || isUniqueLvl(lvlRank - 1);
 }
 
-Level mlir::sparse_tensor::SparseTensorType::getCOOStart() const {
-  if (hasEncoding() && lvlRank > 1)
-    for (Level l = 0; l < lvlRank - 1; l++)
-      if (isCOOType(l, /*isUnique=*/false))
-        return l;
+Level mlir::sparse_tensor::SparseTensorType::getAoSCOOStart() const {
+  SmallVector<COOSegment> coo = getCOOSegments();
+  assert(coo.size() == 1 || coo.empty());
+  if (!coo.empty() && coo.front().isAoS()) {
+    return coo.front().lvlRange.first;
+  }
   return lvlRank;
+}
+
+SmallVector<COOSegment>
+mlir::sparse_tensor::SparseTensorType::getCOOSegments() const {
+  SmallVector<COOSegment> ret;
+  if (!hasEncoding() || lvlRank <= 1)
+    return ret;
+
+  ArrayRef<LevelType> lts = getLvlTypes();
+  Level l = 0;
+  while (l < lvlRank) {
+    auto lt = lts[l];
+    if (lt.isa<LevelFormat::Compressed, LevelFormat::LooseCompressed>()) {
+      auto cur = lts.begin() + l;
+      auto end = std::find_if(cur + 1, lts.end(), [](LevelType lt) {
+        return !lt.isa<LevelFormat::Singleton>();
+      });
+      unsigned cooLen = std::distance(cur, end);
+      if (cooLen > 1) {
+        // To support mixed SoA/AoS COO, we should break the segment when the
+        // storage scheme changes, for now we faithfully assume that all
+        // consecutive singleton levels have the same storage format as verified
+        // STEA.
+        ret.push_back(COOSegment{std::make_pair(l, l + cooLen),
+                                 lts[l + 1].isa<LevelPropNonDefault::SoA>()});
+      }
+      l += cooLen;
+    } else {
+      l++;
+    }
+  }
+  return ret;
 }
 
 RankedTensorType
@@ -932,7 +1064,7 @@ static SparseTensorEncodingAttr
 getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
   SmallVector<LevelType> lts;
   for (auto lt : enc.getLvlTypes())
-    lts.push_back(*buildLevelType(*getLevelFormat(lt), true, true));
+    lts.push_back(lt.stripStorageIrrelevantProperties());
 
   return SparseTensorEncodingAttr::get(
       enc.getContext(), lts,
@@ -1016,11 +1148,9 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
     return op->emitError("the sparse-tensor must have static shape");
   if (!stt.hasEncoding())
     return op->emitError("the sparse-tensor must have an encoding attribute");
-  if (!stt.isIdentity())
-    return op->emitError("the sparse-tensor must have the identity mapping");
 
   // Verifies the trailing COO.
-  Level cooStartLvl = stt.getCOOStart();
+  Level cooStartLvl = stt.getAoSCOOStart();
   if (cooStartLvl < stt.getLvlRank()) {
     // We only supports trailing COO for now, must be the last input.
     auto cooTp = llvm::cast<ShapedType>(lvlTps.back());
@@ -1315,6 +1445,38 @@ OpFoldResult ReinterpretMapOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+template <typename ToBufferOp>
+static LogicalResult inferSparseBufferType(ValueRange ops, DictionaryAttr attr,
+                                           OpaqueProperties prop,
+                                           RegionRange region,
+                                           SmallVectorImpl<mlir::Type> &ret) {
+  typename ToBufferOp::Adaptor adaptor(ops, attr, prop, region);
+  SparseTensorType stt = getSparseTensorType(adaptor.getTensor());
+  Type elemTp = nullptr;
+  bool withStride = false;
+  if constexpr (std::is_same_v<ToBufferOp, ToPositionsOp>) {
+    elemTp = stt.getPosType();
+  } else if constexpr (std::is_same_v<ToBufferOp, ToCoordinatesOp> ||
+                       std::is_same_v<ToBufferOp, ToCoordinatesBufferOp>) {
+    elemTp = stt.getCrdType();
+    if constexpr (std::is_same_v<ToBufferOp, ToCoordinatesOp>)
+      withStride = stt.getAoSCOOStart() <= adaptor.getLevel();
+  } else if constexpr (std::is_same_v<ToBufferOp, ToValuesOp>) {
+    elemTp = stt.getElementType();
+  }
+
+  assert(elemTp && "unhandled operation.");
+  SmallVector<int64_t> bufShape = stt.getBatchLvlShape();
+  bufShape.push_back(ShapedType::kDynamic);
+
+  auto layout = withStride ? StridedLayoutAttr::StridedLayoutAttr::get(
+                                 stt.getContext(), ShapedType::kDynamic,
+                                 {ShapedType::kDynamic})
+                           : StridedLayoutAttr();
+  ret.emplace_back(MemRefType::get(bufShape, elemTp, layout));
+  return success();
+}
+
 LogicalResult ToPositionsOp::verify() {
   auto stt = getSparseTensorType(getTensor());
   if (failed(lvlIsInBounds(getLevel(), getTensor())))
@@ -1322,6 +1484,14 @@ LogicalResult ToPositionsOp::verify() {
   if (failed(isMatchingWidth(getResult(), stt.getPosWidth())))
     return emitError("unexpected type for positions");
   return success();
+}
+
+LogicalResult
+ToPositionsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
+                                ValueRange ops, DictionaryAttr attr,
+                                OpaqueProperties prop, RegionRange region,
+                                SmallVectorImpl<mlir::Type> &ret) {
+  return inferSparseBufferType<ToPositionsOp>(ops, attr, prop, region, ret);
 }
 
 LogicalResult ToCoordinatesOp::verify() {
@@ -1333,11 +1503,27 @@ LogicalResult ToCoordinatesOp::verify() {
   return success();
 }
 
+LogicalResult
+ToCoordinatesOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
+                                  ValueRange ops, DictionaryAttr attr,
+                                  OpaqueProperties prop, RegionRange region,
+                                  SmallVectorImpl<mlir::Type> &ret) {
+  return inferSparseBufferType<ToCoordinatesOp>(ops, attr, prop, region, ret);
+}
+
 LogicalResult ToCoordinatesBufferOp::verify() {
   auto stt = getSparseTensorType(getTensor());
-  if (stt.getCOOStart() >= stt.getLvlRank())
+  if (stt.getAoSCOOStart() >= stt.getLvlRank())
     return emitError("expected sparse tensor with a COO region");
   return success();
+}
+
+LogicalResult ToCoordinatesBufferOp::inferReturnTypes(
+    MLIRContext *ctx, std::optional<Location> loc, ValueRange ops,
+    DictionaryAttr attr, OpaqueProperties prop, RegionRange region,
+    SmallVectorImpl<mlir::Type> &ret) {
+  return inferSparseBufferType<ToCoordinatesBufferOp>(ops, attr, prop, region,
+                                                      ret);
 }
 
 LogicalResult ToValuesOp::verify() {
@@ -1346,6 +1532,15 @@ LogicalResult ToValuesOp::verify() {
   if (stt.getElementType() != mtp.getElementType())
     return emitError("unexpected mismatch in element types");
   return success();
+}
+
+LogicalResult ToValuesOp::inferReturnTypes(MLIRContext *ctx,
+                                           std::optional<Location> loc,
+                                           ValueRange ops, DictionaryAttr attr,
+                                           OpaqueProperties prop,
+                                           RegionRange region,
+                                           SmallVectorImpl<mlir::Type> &ret) {
+  return inferSparseBufferType<ToValuesOp>(ops, attr, prop, region, ret);
 }
 
 LogicalResult ToSliceOffsetOp::verify() {

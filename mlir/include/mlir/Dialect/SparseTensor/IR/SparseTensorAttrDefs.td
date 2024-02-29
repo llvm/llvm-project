@@ -141,11 +141,13 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     The supported level-formats are the following:
 
-    - **dense** : all entries along this level are stored
+    - **dense** : all entries along this level are stored and linearized.
+    - **batch** : all entries along this level are stored but not linearized.
     - **compressed** : only nonzeros along this level are stored
     - **loose_compressed** : as compressed, but allows for free space between regions
     - **singleton** : a variant of the compressed format, where coordinates have no siblings
-    - **block2_4** : the compression uses a 2:4 encoding per 1x4 block
+    - **structured[n, m]** : the compression uses a n:m encoding
+      (viz. n out of m consecutive elements are nonzero)
 
     For a compressed level, each position interval is represented in a compact
     way with a lowerbound `pos(i)` and an upperbound `pos(i+1) - 1`, which implies
@@ -156,11 +158,14 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     By default, each level-type has the property of being unique (no duplicate
     coordinates at that level) and ordered (coordinates appear sorted at that
-    level). The following properties can be added to a level-format to change
-    this default behavior:
+    level). For singleton levels, the coordinates are fused with its parents in AoS
+    (array of structures) scheme. The following properties can be added to a level-format
+    to change this default behavior:
 
     - **nonunique** : duplicate coordinates may appear at the level
     - **nonordered** : coordinates may appear in arbribratry order
+    - **soa** : only applicable to singleton levels, fuses the singleton
+      level in SoA (structure of arrays) scheme.
 
     In addition to the map, the following two fields are optional:
 
@@ -187,10 +192,18 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     }>
     ... tensor<?xf32, #SparseVector> ...
 
-    // Sorted coordinate scheme.
+    // Sorted coordinate scheme (arranged in AoS format by default).
     #SortedCOO = #sparse_tensor.encoding<{
       map = (i, j) -> (i : compressed(nonunique), j : singleton)
     }>
+    // coordinates = {x_crd, y_crd}[nnz]
+    ... tensor<?x?xf64, #SortedCOO> ...
+
+    // Sorted coordinate scheme (arranged in SoA format).
+    #SortedCOO = #sparse_tensor.encoding<{
+      map = (i, j) -> (i : compressed(nonunique), j : singleton(soa))
+    }>
+    // coordinates = {x_crd[nnz], y_crd[nnz]}
     ... tensor<?x?xf64, #SortedCOO> ...
 
     // Batched sorted coordinate scheme, with high encoding.
@@ -361,6 +374,8 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// is non-null (since no fixed result is valid for every dense-tensor).
     ::mlir::sparse_tensor::Level getLvlRank() const;
 
+    uint64_t getBatchLvlRank() const;
+
     //
     // lvlTypes methods.
     //
@@ -374,7 +389,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     bool isCompressedLvl(::mlir::sparse_tensor::Level l) const { return isCompressedLT(getLvlType(l)); }
     bool isSingletonLvl(::mlir::sparse_tensor::Level l) const { return isSingletonLT(getLvlType(l)); }
     bool isLooseCompressedLvl(::mlir::sparse_tensor::Level l) const { return isLooseCompressedLT(getLvlType(l)); }
-    bool isTwoOutOfFourLvl(::mlir::sparse_tensor::Level l) const { return is2OutOf4LT(getLvlType(l)); }
+    bool isNOutOfMLvl(::mlir::sparse_tensor::Level l) const { return isNOutOfMLT(getLvlType(l)); }
     bool isOrderedLvl(::mlir::sparse_tensor::Level l) const { return isOrderedLT(getLvlType(l)); }
     bool isUniqueLvl(::mlir::sparse_tensor::Level l) const { return isUniqueLT(getLvlType(l)); }
 

@@ -3557,10 +3557,10 @@ static bool GetProcessNameFrom_vAttach(const char *&p,
 rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
   uint32_t max_packet_size = 128 * 1024; // 128KBytes is a reasonable max packet
                                          // size--debugger can always use less
-  char buf[256];
-  snprintf(buf, sizeof(buf),
-           "qXfer:features:read+;PacketSize=%x;qEcho+;native-signals+",
-           max_packet_size);
+  std::stringstream reply;
+  reply << "qXfer:features:read+;PacketSize=" << std::hex << max_packet_size
+        << ";";
+  reply << "qEcho+;native-signals+;";
 
   bool enable_compression = false;
   (void)enable_compression;
@@ -3574,15 +3574,17 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
 #endif
 
   if (enable_compression) {
-    strcat(buf, ";SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;"
-                "DefaultCompressionMinSize=");
-    char numbuf[16];
-    snprintf(numbuf, sizeof(numbuf), "%zu", m_compression_minsize);
-    numbuf[sizeof(numbuf) - 1] = '\0';
-    strcat(buf, numbuf);
-  } 
+    reply << "SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;";
+  }
 
-  return SendPacket(buf);
+#if (defined(__arm64__) || defined(__aarch64__))
+  reply << "SupportedWatchpointTypes=aarch64-mask,aarch64-bas;";
+#endif
+#if defined(__x86_64__)
+  reply << "SupportedWatchpointTypes=x86_64;";
+#endif
+
+  return SendPacket(reply.str().c_str());
 }
 
 static bool process_does_not_exist (nub_process_t pid) {
@@ -4478,46 +4480,25 @@ rnb_err_t RNBRemote::HandlePacket_SetEnableAsyncProfiling(const char *p) {
   return SendPacket("OK");
 }
 
-// QEnableCompression:type:<COMPRESSION-TYPE>;minsize:<MINIMUM PACKET SIZE TO
-// COMPRESS>;
+// QEnableCompression:type:<COMPRESSION-TYPE>;
 //
 // type: must be a type previously reported by the qXfer:features:
 // SupportedCompressions list
-//
-// minsize: is optional; by default the qXfer:features:
-// DefaultCompressionMinSize value is used
-// debugserver may have a better idea of what a good minimum packet size to
-// compress is than lldb.
 
 rnb_err_t RNBRemote::HandlePacket_QEnableCompression(const char *p) {
   p += sizeof("QEnableCompression:") - 1;
 
-  size_t new_compression_minsize = m_compression_minsize;
-  const char *new_compression_minsize_str = strstr(p, "minsize:");
-  if (new_compression_minsize_str) {
-    new_compression_minsize_str += strlen("minsize:");
-    errno = 0;
-    new_compression_minsize = strtoul(new_compression_minsize_str, NULL, 10);
-    if (errno != 0 || new_compression_minsize == ULONG_MAX) {
-      new_compression_minsize = m_compression_minsize;
-    }
-  }
-
   if (strstr(p, "type:zlib-deflate;") != nullptr) {
     EnableCompressionNextSendPacket(compression_types::zlib_deflate);
-    m_compression_minsize = new_compression_minsize;
     return SendPacket("OK");
   } else if (strstr(p, "type:lz4;") != nullptr) {
     EnableCompressionNextSendPacket(compression_types::lz4);
-    m_compression_minsize = new_compression_minsize;
     return SendPacket("OK");
   } else if (strstr(p, "type:lzma;") != nullptr) {
     EnableCompressionNextSendPacket(compression_types::lzma);
-    m_compression_minsize = new_compression_minsize;
     return SendPacket("OK");
   } else if (strstr(p, "type:lzfse;") != nullptr) {
     EnableCompressionNextSendPacket(compression_types::lzfse);
-    m_compression_minsize = new_compression_minsize;
     return SendPacket("OK");
   }
 
@@ -6214,57 +6195,12 @@ rnb_err_t RNBRemote::HandlePacket_qSymbol(const char *command) {
   }
 }
 
-// Note that all numeric values returned by qProcessInfo are hex encoded,
-// including the pid and the cpu type.
-
-rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
-  nub_process_t pid;
-  std::ostringstream rep;
-
-  // If we haven't run the process yet, return an error.
-  if (!m_ctx.HasValidProcessID())
-    return SendPacket("E68");
-
-  pid = m_ctx.ProcessID();
-
-  rep << "pid:" << std::hex << pid << ';';
-
-  int procpid_mib[4];
-  procpid_mib[0] = CTL_KERN;
-  procpid_mib[1] = KERN_PROC;
-  procpid_mib[2] = KERN_PROC_PID;
-  procpid_mib[3] = pid;
-  struct kinfo_proc proc_kinfo;
-  size_t proc_kinfo_size = sizeof(struct kinfo_proc);
-
-  if (::sysctl(procpid_mib, 4, &proc_kinfo, &proc_kinfo_size, NULL, 0) == 0) {
-    if (proc_kinfo_size > 0) {
-      rep << "parent-pid:" << std::hex << proc_kinfo.kp_eproc.e_ppid << ';';
-      rep << "real-uid:" << std::hex << proc_kinfo.kp_eproc.e_pcred.p_ruid
-          << ';';
-      rep << "real-gid:" << std::hex << proc_kinfo.kp_eproc.e_pcred.p_rgid
-          << ';';
-      rep << "effective-uid:" << std::hex << proc_kinfo.kp_eproc.e_ucred.cr_uid
-          << ';';
-      if (proc_kinfo.kp_eproc.e_ucred.cr_ngroups > 0)
-        rep << "effective-gid:" << std::hex
-            << proc_kinfo.kp_eproc.e_ucred.cr_groups[0] << ';';
-    }
-  }
-
+static std::pair<cpu_type_t, cpu_subtype_t>
+GetCPUTypesFromHost(nub_process_t pid) {
   cpu_type_t cputype = DNBProcessGetCPUType(pid);
   if (cputype == 0) {
     DNBLog("Unable to get the process cpu_type, making a best guess.");
     cputype = best_guess_cpu_type();
-  }
-
-  uint32_t addr_size = 0;
-  if (cputype != 0) {
-    rep << "cputype:" << std::hex << cputype << ";";
-    if (cputype & CPU_ARCH_ABI64)
-      addr_size = 8;
-    else
-      addr_size = 4;
   }
 
   bool host_cpu_is_64bit = false;
@@ -6307,14 +6243,69 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
     if (cputype == CPU_TYPE_ARM64_32 && cpusubtype == 2)
       cpusubtype = CPU_SUBTYPE_ARM64_32_V8;
 #endif
+  }
 
+  return {cputype, cpusubtype};
+}
+
+// Note that all numeric values returned by qProcessInfo are hex encoded,
+// including the pid and the cpu type.
+
+rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
+  nub_process_t pid;
+  std::ostringstream rep;
+
+  // If we haven't run the process yet, return an error.
+  if (!m_ctx.HasValidProcessID())
+    return SendPacket("E68");
+
+  pid = m_ctx.ProcessID();
+
+  rep << "pid:" << std::hex << pid << ';';
+
+  int procpid_mib[4];
+  procpid_mib[0] = CTL_KERN;
+  procpid_mib[1] = KERN_PROC;
+  procpid_mib[2] = KERN_PROC_PID;
+  procpid_mib[3] = pid;
+  struct kinfo_proc proc_kinfo;
+  size_t proc_kinfo_size = sizeof(struct kinfo_proc);
+
+  if (::sysctl(procpid_mib, 4, &proc_kinfo, &proc_kinfo_size, NULL, 0) == 0) {
+    if (proc_kinfo_size > 0) {
+      rep << "parent-pid:" << std::hex << proc_kinfo.kp_eproc.e_ppid << ';';
+      rep << "real-uid:" << std::hex << proc_kinfo.kp_eproc.e_pcred.p_ruid
+          << ';';
+      rep << "real-gid:" << std::hex << proc_kinfo.kp_eproc.e_pcred.p_rgid
+          << ';';
+      rep << "effective-uid:" << std::hex << proc_kinfo.kp_eproc.e_ucred.cr_uid
+          << ';';
+      if (proc_kinfo.kp_eproc.e_ucred.cr_ngroups > 0)
+        rep << "effective-gid:" << std::hex
+            << proc_kinfo.kp_eproc.e_ucred.cr_groups[0] << ';';
+    }
+  }
+
+  cpu_type_t cputype;
+  cpu_subtype_t cpusubtype;
+  if (auto cputypes = DNBGetMainBinaryCPUTypes(pid))
+    std::tie(cputype, cpusubtype) = *cputypes;
+  else
+    std::tie(cputype, cpusubtype) = GetCPUTypesFromHost(pid);
+
+  uint32_t addr_size = 0;
+  if (cputype != 0) {
+    rep << "cputype:" << std::hex << cputype << ";";
     rep << "cpusubtype:" << std::hex << cpusubtype << ';';
+    if (cputype & CPU_ARCH_ABI64)
+      addr_size = 8;
+    else
+      addr_size = 4;
   }
 
   bool os_handled = false;
   if (addr_size > 0) {
     rep << "ptrsize:" << std::dec << addr_size << ';';
-
 #if defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
     // Try and get the OS type by looking at the load commands in the main
     // executable and looking for a LC_VERSION_MIN load command. This is the

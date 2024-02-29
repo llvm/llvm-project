@@ -537,9 +537,11 @@ SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
     for (EhSectionPiece *fde : rec->fdes) {
       uint64_t pc = getFdePc(buf, fde->outputOff, enc);
       uint64_t fdeVA = getParent()->addr + fde->outputOff;
-      if (!isInt<32>(pc - va))
-        fatal(toString(fde->sec) + ": PC offset is too large: 0x" +
-              Twine::utohexstr(pc - va));
+      if (!isInt<32>(pc - va)) {
+        errorOrWarn(toString(fde->sec) + ": PC offset is too large: 0x" +
+                    Twine::utohexstr(pc - va));
+        continue;
+      }
       ret.push_back({uint32_t(pc - va), uint32_t(fdeVA - va)});
     }
   }
@@ -1418,6 +1420,9 @@ DynamicSection<ELFT>::computeContents() {
     switch (config->emachine) {
     case EM_MIPS:
       addInSec(DT_MIPS_PLTGOT, *in.gotPlt);
+      break;
+    case EM_S390:
+      addInSec(DT_PLTGOT, *in.got);
       break;
     case EM_SPARCV9:
       addInSec(DT_PLTGOT, *in.plt);

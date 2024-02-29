@@ -26,6 +26,7 @@
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/TargetParser/TargetParser.h"
 
@@ -35,6 +36,12 @@ using namespace llvm::AMDGPU;
 //===----------------------------------------------------------------------===//
 // AMDGPUTargetStreamer
 //===----------------------------------------------------------------------===//
+
+static cl::opt<unsigned>
+    ForceGenericVersion("amdgpu-force-generic-version",
+                        cl::desc("Force a specific generic_v<N> flag to be "
+                                 "added. For testing purposes only."),
+                        cl::ReallyHidden, cl::init(0));
 
 bool AMDGPUTargetStreamer::EmitHSAMetadataV3(StringRef HSAMetadataString) {
   msgpack::Document HSAMetadataDoc;
@@ -108,6 +115,10 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151: AK = GK_GFX1151; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200: AK = GK_GFX1200; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201: AK = GK_GFX1201; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:     AK = GK_GFX9_GENERIC; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:  AK = GK_GFX10_1_GENERIC; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:  AK = GK_GFX10_3_GENERIC; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:    AK = GK_GFX11_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_NONE:           AK = GK_NONE;    break;
   default:                                 AK = GK_NONE;    break;
   }
@@ -186,6 +197,10 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1151: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151;
   case GK_GFX1200: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200;
   case GK_GFX1201: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201;
+  case GK_GFX9_GENERIC:     return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC;
+  case GK_GFX10_1_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC;
+  case GK_GFX10_3_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC;
+  case GK_GFX11_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC;
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
   // clang-format on
@@ -575,6 +590,8 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsUnknownOS() {
 unsigned AMDGPUTargetELFStreamer::getEFlagsAMDHSA() {
   assert(isHsaAbi(STI));
 
+  if (CodeObjectVersion >= 6)
+    return getEFlagsV6();
   return getEFlagsV4();
 }
 
@@ -644,6 +661,41 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV4() {
   }
 
   return EFlagsV4;
+}
+
+unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
+  unsigned Flags = getEFlagsV4();
+
+  unsigned Version = ForceGenericVersion;
+  if (!Version) {
+    switch (parseArchAMDGCN(STI.getCPU())) {
+    case AMDGPU::GK_GFX9_GENERIC:
+      Version = GenericVersion::GFX9;
+      break;
+    case AMDGPU::GK_GFX10_1_GENERIC:
+      Version = GenericVersion::GFX10_1;
+      break;
+    case AMDGPU::GK_GFX10_3_GENERIC:
+      Version = GenericVersion::GFX10_3;
+      break;
+    case AMDGPU::GK_GFX11_GENERIC:
+      Version = GenericVersion::GFX11;
+      break;
+    default:
+      break;
+    }
+  }
+
+  // Versions start at 1.
+  if (Version) {
+    if (Version > ELF::EF_AMDGPU_GENERIC_VERSION_MAX)
+      report_fatal_error("Cannot encode generic code object version " +
+                         Twine(Version) +
+                         " - no ELF flag can represent this version!");
+    Flags |= (Version << ELF::EF_AMDGPU_GENERIC_VERSION_OFFSET);
+  }
+
+  return Flags;
 }
 
 void AMDGPUTargetELFStreamer::EmitDirectiveAMDGCNTarget() {}
@@ -730,18 +782,26 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(msgpack::Document &HSAMetadataDoc,
 }
 
 bool AMDGPUTargetAsmStreamer::EmitKernargPreloadHeader(
-    const MCSubtargetInfo &STI) {
-  for (int i = 0; i < 64; ++i) {
+    const MCSubtargetInfo &STI, bool TrapEnabled) {
+  const char *TrapInstr = TrapEnabled ? "\ts_trap 2" : "\ts_endpgm";
+  OS << TrapInstr
+     << " ; Trap with incompatible firmware that doesn't "
+        "support preloading kernel arguments.\n";
+  for (int i = 0; i < 63; ++i) {
     OS << "\ts_nop 0\n";
   }
   return true;
 }
 
 bool AMDGPUTargetELFStreamer::EmitKernargPreloadHeader(
-    const MCSubtargetInfo &STI) {
+    const MCSubtargetInfo &STI, bool TrapEnabled) {
   const uint32_t Encoded_s_nop = 0xbf800000;
+  const uint32_t Encoded_s_trap = 0xbf920002;
+  const uint32_t Encoded_s_endpgm = 0xbf810000;
+  const uint32_t TrapInstr = TrapEnabled ? Encoded_s_trap : Encoded_s_endpgm;
   MCStreamer &OS = getStreamer();
-  for (int i = 0; i < 64; ++i) {
+  OS.emitInt32(TrapInstr);
+  for (int i = 0; i < 63; ++i) {
     OS.emitInt32(Encoded_s_nop);
   }
   return true;
