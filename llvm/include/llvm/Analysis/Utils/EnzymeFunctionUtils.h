@@ -9,7 +9,6 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <deque>
 
-
 // TODO note this doesn't go through [loop, unreachable], and we could get more
 // performance by doing this can consider doing some domtree magic potentially
 static inline llvm::SmallPtrSet<llvm::BasicBlock *, 4>

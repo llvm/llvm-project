@@ -462,6 +462,7 @@ public:
 
   bool AssumeLoopExists = false;
   void setAssumeLoopExists();
+  llvm::SmallPtrSet<llvm::BasicBlock *, 4> GuaranteedUnreachable;
 
   /// An enum describing the relationship between a SCEV and a basic block.
   enum BlockDisposition {
@@ -1348,7 +1349,7 @@ public:
     }
   };
 
-  private:
+private:
   /// A CallbackVH to arrange for ScalarEvolution to be notified whenever a
   /// Value is deleted.
   class SCEVCallbackVH final : public CallbackVH {
@@ -1367,7 +1368,7 @@ public:
 
   /// The function we are analyzing.
   Function &F;
-  
+
   /// Does the module have any calls to the llvm.experimental.guard intrinsic
   /// at all?  If this is false, we avoid doing work that will only help if
   /// thare are guards present in the IR.
@@ -1768,7 +1769,7 @@ public:
   /// an arbitrary expression as opposed to only constants.
   const SCEV *computeSymbolicMaxBackedgeTakenCount(const Loop *L);
 
-// Helper functions for computeExitLimitFromCond to avoid exponential time
+  // Helper functions for computeExitLimitFromCond to avoid exponential time
   // complexity.
 
   class ExitLimitCache {

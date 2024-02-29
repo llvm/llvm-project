@@ -80,9 +80,9 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/Utils/EnzymeFunctionUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Analysis/Utils/EnzymeFunctionUtils.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -510,9 +510,7 @@ const SCEV *ScalarEvolution::getVScale(Type *Ty) {
   return S;
 }
 
-void ScalarEvolution::setAssumeLoopExists() {
-  this->AssumeLoopExists=true;
-}
+void ScalarEvolution::setAssumeLoopExists() { this->AssumeLoopExists = true; }
 
 SCEVCastExpr::SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                            const SCEV *op, Type *ty)
@@ -7418,7 +7416,8 @@ bool ScalarEvolution::loopIsFiniteByAssumption(const Loop *L) {
   // A mustprogress loop without side effects must be finite.
   // TODO: The check used here is very conservative.  It's only *specific*
   // side effects which are well defined in infinite loops.
-  return this->AssumeLoopExists || isFinite(L) || (isMustProgress(L) && loopHasNoSideEffects(L));
+  return this->AssumeLoopExists || isFinite(L) ||
+         (isMustProgress(L) && loopHasNoSideEffects(L));
 }
 
 const SCEV *ScalarEvolution::createSCEVIter(Value *V) {
@@ -8833,6 +8832,26 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
 ScalarEvolution::ExitLimit
 ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
                                       bool AllowPredicates) {
+  if (AssumeLoopExists) {
+    SmallVector<BasicBlock *, 8> ExitingBlocks;
+    L->getExitingBlocks(ExitingBlocks);
+    for (auto &ExitingBlock : ExitingBlocks) {
+      BasicBlock *Exit = nullptr;
+      for (auto *SBB : successors(ExitingBlock)) {
+        if (!L->contains(SBB)) {
+          if (GuaranteedUnreachable.count(SBB))
+            continue;
+          Exit = SBB;
+          break;
+        }
+      }
+      if (!Exit)
+        ExitingBlock = nullptr;
+    }
+    ExitingBlocks.erase(
+        std::remove(ExitingBlocks.begin(), ExitingBlocks.end(), nullptr),
+        ExitingBlocks.end());
+  }
   assert(L->contains(ExitingBlock) && "Exit count for non-loop block?");
   // If our exiting block does not dominate the latch, then its connection with
   // loop's exit limit may be far from trivial.
@@ -8858,6 +8877,8 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
     BasicBlock *Exit = nullptr;
     for (auto *SBB : successors(ExitingBlock))
       if (!L->contains(SBB)) {
+        if (AssumeLoopExists and GuaranteedUnreachable.count(SBB))
+          continue;
         if (Exit) // Multiple exit successors.
           return getCouldNotCompute();
         Exit = SBB;
@@ -13358,7 +13379,6 @@ const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
   Type *ETy = getEffectiveSCEVType(PointerType::getUnqual(Ty));
   return getSizeOfExpr(ETy, Ty);
 }
-
 
 //===----------------------------------------------------------------------===//
 //                   SCEVCallbackVH Class Implementation
