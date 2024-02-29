@@ -437,12 +437,12 @@ public:
   /// before reading from memory.
   ///
   /// \param[in] type
-  ///     See \ref Mask Address Methods descripton of this argument.
+  ///     See \ref Mask Address Methods description of this argument.
   ///     eAddressMaskTypeAny is often a suitable value when code and
   ///     data masks are the same on a given target.
   ///
   /// \param[in] addr_range
-  ///     See \ref Mask Address Methods descripton of this argument.
+  ///     See \ref Mask Address Methods description of this argument.
   ///     This will default to eAddressMaskRangeLow which is the
   ///     only set of masks used normally.
   ///
@@ -457,7 +457,7 @@ public:
   /// before reading from memory.
   ///
   /// \param[in] type
-  ///     See \ref Mask Address Methods descripton of this argument.
+  ///     See \ref Mask Address Methods description of this argument.
   ///     eAddressMaskTypeAll is often a suitable value when the
   ///     same mask is being set for both code and data.
   ///
@@ -466,7 +466,7 @@ public:
   ///     should be set to 1 in the mask.
   ///
   /// \param[in] addr_range
-  ///     See \ref Mask Address Methods descripton of this argument.
+  ///     See \ref Mask Address Methods description of this argument.
   ///     This will default to eAddressMaskRangeLow which is the
   ///     only set of masks used normally.
   void SetAddressMask(
@@ -475,13 +475,14 @@ public:
 
   /// Set the number of bits used for addressing in this Process.
   ///
-  /// In some environments, the number of bits that are used for addressing
-  /// is the natural representation instead of a mask, but lldb
-  /// internally represents this as a mask.  This method calculates
-  /// the addressing mask that lldb uses that number of addressable bits.
+  /// On Darwin and similar systems, the addressable bits are expressed
+  /// as the number of low order bits that are relevant to addressing,
+  /// instead of a more general address mask.
+  /// This method calculates the correct mask value for a given number
+  /// of low order addressable bits.
   ///
   /// \param[in] type
-  ///     See \ref Mask Address Methods descripton of this argument.
+  ///     See \ref Mask Address Methods description of this argument.
   ///     eAddressMaskTypeAll is often a suitable value when the
   ///     same mask is being set for both code and data.
   ///
@@ -492,7 +493,7 @@ public:
   ///     metadata like pointer authentication, Type Byte Ignore, etc.
   ///
   /// \param[in] addr_range
-  ///     See \ref Mask Address Methods descripton of this argument.
+  ///     See \ref Mask Address Methods description of this argument.
   ///     This will default to eAddressMaskRangeLow which is the
   ///     only set of masks used normally.
   void
@@ -510,7 +511,7 @@ public:
   ///     The address that should be cleared of non-addressable bits.
   ///
   /// \param[in] type
-  ///     See \ref Mask Address Methods descripton of this argument.
+  ///     See \ref Mask Address Methods description of this argument.
   ///     eAddressMaskTypeAny is the default value, correct when it
   ///     is unknown if the address is a code or data address.
   lldb::addr_t
