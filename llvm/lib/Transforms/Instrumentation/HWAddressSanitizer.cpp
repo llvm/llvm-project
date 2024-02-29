@@ -185,7 +185,7 @@ static cl::opt<bool>
                  cl::desc("Do not instument hot functions based on FDO."),
                  cl::Hidden, cl::init(false));
 
-static cl::opt<int> HotPercentileCutoff("opt-hwasan-percentile-cutoff-hot",
+static cl::opt<int> HotPercentileCutoff("hwasan-percentile-cutoff-hot",
                                         cl::init(0));
 
 STATISTIC(NumTotalFuncs, "Number of funcs seen by HWASAN");
