@@ -2305,6 +2305,20 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     }
 #endif
 
+    if (ST->isPreciseMemoryEnabled()) {
+      AMDGPU::Waitcnt Wait;
+      if (WCG == &WCGPreGFX12)
+        Wait = AMDGPU::Waitcnt(0, 0, 0, 0);
+      else
+        Wait = AMDGPU::Waitcnt(0, 0, 0, 0, 0, 0, 0);
+
+      if (!Inst.mayStore())
+        Wait.StoreCnt = ~0u;
+      ScoreBrackets.simplifyWaitcnt(Wait);
+      Modified |= generateWaitcnt(Wait, std::next(Inst.getIterator()), Block,
+                                  ScoreBrackets, /*OldWaitcntInstr=*/nullptr);
+    }
+
     LLVM_DEBUG({
       Inst.print(dbgs());
       ScoreBrackets.dump();

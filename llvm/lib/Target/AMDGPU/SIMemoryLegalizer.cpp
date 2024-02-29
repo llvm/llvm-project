@@ -17,7 +17,6 @@
 #include "AMDGPUMachineModuleInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -365,18 +364,6 @@ public:
                                    MachineBasicBlock::iterator &MI) const {
     return false;
   }
-
-public:
-  // The following is for supporting precise memory mode. When the feature
-  // precise-memory is enabled, an s_waitcnt instruction is inserted
-  // after each memory instruction.
-
-  virtual bool
-  handleNonAtomicForPreciseMemory(MachineBasicBlock::iterator &MI) = 0;
-  /// Handles atomic instruction \p MI with \p IsAtomicWithRet indicating
-  /// whether \p MI returns a result.
-  virtual bool handleAtomicForPreciseMemory(MachineBasicBlock::iterator &MI,
-                                            bool IsAtomicWithRet) = 0;
 };
 
 class SIGfx6CacheControl : public SICacheControl {
@@ -432,11 +419,6 @@ public:
                      SIAtomicAddrSpace AddrSpace,
                      bool IsCrossAddrSpaceOrdering,
                      Position Pos) const override;
-
-  bool
-  handleNonAtomicForPreciseMemory(MachineBasicBlock::iterator &MI) override;
-  bool handleAtomicForPreciseMemory(MachineBasicBlock::iterator &MI,
-                                    bool IsAtomicWithRet) override;
 };
 
 class SIGfx7CacheControl : public SIGfx6CacheControl {
@@ -589,11 +571,6 @@ public:
                      SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace,
                      Position Pos) const override;
-
-  bool
-  handleNonAtomicForPreciseMemory(MachineBasicBlock::iterator &MI) override;
-  bool handleAtomicForPreciseMemory(MachineBasicBlock::iterator &MI,
-                                    bool IsAtomicWithRet) override;
 };
 
 class SIGfx11CacheControl : public SIGfx10CacheControl {
@@ -646,11 +623,6 @@ public:
                                       bool IsLastUse) const override;
 
   bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const override;
-
-  bool
-  handleNonAtomicForPreciseMemory(MachineBasicBlock::iterator &MI) override;
-  bool handleAtomicForPreciseMemory(MachineBasicBlock::iterator &MI,
-                                    bool IsAtomicWithRet) override;
 };
 
 class SIMemoryLegalizer final : public MachineFunctionPass {
@@ -658,9 +630,6 @@ private:
 
   /// Cache Control.
   std::unique_ptr<SICacheControl> CC = nullptr;
-
-  /// Precise Memory support.
-  bool PrecMem = false;
 
   /// List of atomic pseudo instructions.
   std::list<MachineBasicBlock::iterator> AtomicPseudoMIs;
@@ -2461,217 +2430,8 @@ bool SIGfx12CacheControl::expandSystemScopeStore(
   MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
   if (CPol && ((CPol->getImm() & CPol::SCOPE) == CPol::SCOPE_SYS))
     return insertWaitsBeforeSystemScopeStore(MI);
+
   return false;
-}
-
-
-bool SIGfx6CacheControl ::handleNonAtomicForPreciseMemory(
-    MachineBasicBlock::iterator &MI) {
-  assert(MI->mayLoadOrStore());
-
-  MachineInstr &Inst = *MI;
-  AMDGPU::Waitcnt Wait;
-
-  if (TII->isSMRD(Inst)) { // scalar
-    if (Inst.mayStore())
-      return false;
-    Wait.DsCnt = 0;                 // LgkmCnt
-  } else {                          // vector
-    if (Inst.mayLoad()) {           // vector load
-      if (TII->isVMEM(Inst))        // VMEM load
-        Wait.LoadCnt = 0;           // VmCnt
-      else if (TII->isFLAT(Inst)) { // Flat load
-        Wait.LoadCnt = 0;           // VmCnt
-        Wait.DsCnt = 0;             // LgkmCnt
-      } else                        // LDS load
-        Wait.DsCnt = 0;             // LgkmCnt
-    } else {                        // vector store
-      if (TII->isVMEM(Inst))        // VMEM store
-        Wait.LoadCnt = 0;           // VmCnt
-      else if (TII->isFLAT(Inst)) { // Flat store
-        Wait.LoadCnt = 0;           // VmCnt
-        Wait.DsCnt = 0;             // LgkmCnt
-      } else
-        Wait.DsCnt = 0; // LDS store; LgkmCnt
-    }
-  }
-
-  unsigned Enc = AMDGPU::encodeWaitcnt(IV, Wait);
-  MachineBasicBlock &MBB = *MI->getParent();
-  BuildMI(MBB, ++MI, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
-  --MI;
-  return true;
-}
-
-bool SIGfx6CacheControl::handleAtomicForPreciseMemory(
-    MachineBasicBlock::iterator &MI, bool IsAtomicWithRet) {
-  assert(MI->mayLoadOrStore());
-
-  AMDGPU::Waitcnt Wait;
-
-  Wait.LoadCnt = 0; // VmCnt
-  Wait.DsCnt = 0;   // LgkmCnt
-
-  unsigned Enc = AMDGPU::encodeWaitcnt(IV, Wait);
-  MachineBasicBlock &MBB = *MI->getParent();
-  BuildMI(MBB, ++MI, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
-  --MI;
-  return true;
-}
-
-bool SIGfx10CacheControl::handleNonAtomicForPreciseMemory(
-    MachineBasicBlock::iterator &MI) {
-  assert(MI->mayLoadOrStore());
-
-  MachineInstr &Inst = *MI;
-  AMDGPU::Waitcnt Wait;
-
-  bool BuildWaitCnt = true;
-  bool BuildVsCnt = false;
-
-  if (TII->isSMRD(Inst)) { // scalar
-    if (Inst.mayStore())
-      return false;
-    Wait.DsCnt = 0;                 // LgkmCnt
-  } else {                          // vector
-    if (Inst.mayLoad()) {           // vector load
-      if (TII->isVMEM(Inst))        // VMEM load
-        Wait.LoadCnt = 0;           // VmCnt
-      else if (TII->isFLAT(Inst)) { // Flat load
-        Wait.LoadCnt = 0;           // VmCnt
-        Wait.DsCnt = 0;             // LgkmCnt
-      } else                        // LDS load
-        Wait.DsCnt = 0;             // LgkmCnt
-    }
-
-    // For some vector instructions, mayLoad() and mayStore() can be both true.
-    if (Inst.mayStore()) {     // vector store; an instruction can be both
-                               // load/store
-      if (TII->isVMEM(Inst)) { // VMEM store
-        if (!Inst.mayLoad())
-          BuildWaitCnt = false;
-        BuildVsCnt = true;
-      } else if (TII->isFLAT(Inst)) { // Flat store
-        Wait.DsCnt = 0;               // LgkmCnt
-        BuildVsCnt = true;
-      } else
-        Wait.DsCnt = 0; // LDS store; LgkmCnt
-    }
-  }
-
-  MachineBasicBlock &MBB = *MI->getParent();
-  if (BuildWaitCnt) {
-    unsigned Enc = AMDGPU::encodeWaitcnt(IV, Wait);
-    BuildMI(MBB, ++MI, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
-    --MI;
-  }
-
-  if (BuildVsCnt) {
-    BuildMI(MBB, ++MI, DebugLoc(), TII->get(AMDGPU::S_WAITCNT_VSCNT))
-        .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
-        .addImm(0);
-    --MI;
-  }
-  return true;
-}
-
-bool SIGfx10CacheControl ::handleAtomicForPreciseMemory(
-    MachineBasicBlock::iterator &MI, bool IsAtomicWithRet) {
-  assert(MI->mayLoadOrStore());
-
-  AMDGPU::Waitcnt Wait;
-
-  Wait.DsCnt = 0; // LgkmCnt
-  if (IsAtomicWithRet)
-    Wait.LoadCnt = 0; // VmCnt
-
-  unsigned Enc = AMDGPU::encodeWaitcnt(IV, Wait);
-  MachineBasicBlock &MBB = *MI->getParent();
-  BuildMI(MBB, ++MI, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
-  --MI;
-  if (!IsAtomicWithRet) {
-    BuildMI(MBB, ++MI, DebugLoc(), TII->get(AMDGPU::S_WAITCNT_VSCNT))
-        .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
-        .addImm(0);
-    --MI;
-  }
-  return true;
-}
-
-bool SIGfx12CacheControl ::handleNonAtomicForPreciseMemory(
-    MachineBasicBlock::iterator &MI) {
-  assert(MI->mayLoadOrStore());
-
-  MachineInstr &Inst = *MI;
-  unsigned WaitType = 0;
-  // For some vector instructions, mayLoad() and mayStore() can be both true.
-  bool LoadAndStore = false;
-
-  if (TII->isSMRD(Inst)) { // scalar
-    if (Inst.mayStore())
-      return false;
-
-    WaitType = AMDGPU::S_WAIT_KMCNT;
-  } else { // vector
-    if (Inst.mayLoad() && Inst.mayStore()) {
-      WaitType = AMDGPU::S_WAIT_LOADCNT;
-      LoadAndStore = true;
-    } else if (Inst.mayLoad()) { // vector load
-      if (TII->isVMEM(Inst))     // VMEM load
-        WaitType = AMDGPU::S_WAIT_LOADCNT;
-      else if (TII->isFLAT(Inst)) // Flat load
-        WaitType = AMDGPU::S_WAIT_LOADCNT_DSCNT;
-      else // LDS load
-        WaitType = AMDGPU::S_WAIT_DSCNT;
-    } else {                 // vector store
-      if (TII->isVMEM(Inst)) // VMEM store
-        WaitType = AMDGPU::S_WAIT_STORECNT;
-      else if (TII->isFLAT(Inst)) // Flat store
-        WaitType = AMDGPU::S_WAIT_STORECNT_DSCNT;
-      else
-        WaitType = AMDGPU::S_WAIT_DSCNT;
-    }
-  }
-
-  assert(WaitType != 0);
-
-  MachineBasicBlock &MBB = *MI->getParent();
-
-  unsigned Enc = 0;
-  if (WaitType == AMDGPU::S_WAIT_LOADCNT_DSCNT) {
-    AMDGPU::Waitcnt Wait;
-    Wait.DsCnt = 0;
-    Wait.LoadCnt = 0;
-    Enc = AMDGPU::encodeLoadcntDscnt(IV, Wait);
-  } else if (WaitType == AMDGPU::S_WAIT_STORECNT_DSCNT) {
-    AMDGPU::Waitcnt Wait;
-    Wait.DsCnt = 0;
-    Wait.StoreCnt = 0;
-    Enc = AMDGPU::encodeStorecntDscnt(IV, Wait);
-  }
-
-  BuildMI(MBB, ++MI, DebugLoc(), TII->get(WaitType)).addImm(Enc);
-  --MI;
-  if (LoadAndStore) {
-    BuildMI(MBB, ++MI, DebugLoc(), TII->get(AMDGPU::S_WAIT_STORECNT))
-        .addImm(Enc);
-    --MI;
-  }
-  return true;
-}
-
-bool SIGfx12CacheControl ::handleAtomicForPreciseMemory(
-    MachineBasicBlock::iterator &MI, bool IsAtomicWithRet) {
-  assert(MI->mayLoadOrStore());
-
-  MachineBasicBlock &MBB = *MI->getParent();
-  if (IsAtomicWithRet)
-    BuildMI(MBB, ++MI, DebugLoc(), TII->get(AMDGPU::S_WAIT_LOADCNT)).addImm(0);
-  else
-    BuildMI(MBB, ++MI, DebugLoc(), TII->get(AMDGPU::S_WAIT_STORECNT)).addImm(0);
-
-  --MI;
-  return true;
 }
 
 bool SIMemoryLegalizer::removeAtomicPseudoMIs() {
@@ -2729,9 +2489,6 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
   Changed |= CC->enableVolatileAndOrNonTemporal(MI, MOI.getInstrAddrSpace(),
                                                 SIMemOp::LOAD, MOI.isVolatile(),
                                                 MOI.isNonTemporal());
-  if (PrecMem)
-    Changed |= CC->handleNonAtomicForPreciseMemory(MI);
-
   return Changed;
 }
 
@@ -2769,10 +2526,6 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
   // GFX12 specific, scope(desired coherence domain in cache hierarchy) is
   // instruction field, do not confuse it with atomic scope.
   Changed |= CC->expandSystemScopeStore(MI);
-
-  if (PrecMem)
-    Changed |= CC->handleNonAtomicForPreciseMemory(MI);
-
   return Changed;
 }
 
@@ -2865,9 +2618,6 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
     return Changed;
   }
 
-  if (PrecMem)
-    Changed |= CC->handleNonAtomicForPreciseMemory(MI);
-
   return Changed;
 }
 
@@ -2876,11 +2626,6 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
 
   SIMemOpAccess MOA(MF);
   CC = SICacheControl::create(MF.getSubtarget<GCNSubtarget>());
-
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  PrecMem = false;
-  if (ST.isPreciseMemoryEnabled())
-    PrecMem = true;
 
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {
@@ -2900,12 +2645,8 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
         MI = II->getIterator();
       }
 
-      if (!(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic)) {
-        if (PrecMem && MI->mayLoadOrStore()) {
-          Changed |= CC->handleNonAtomicForPreciseMemory(MI);
-        }
+      if (!(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic))
         continue;
-      }
 
       if (const auto &MOI = MOA.getLoadInfo(MI))
         Changed |= expandLoad(*MOI, MI);
