@@ -261,6 +261,8 @@ public:
     return TLI->isLegalStridedLoadStore(DataTypeVT, Alignment);
   }
 
+  bool isLegalMaskedCompressStore(Type *DataTy);
+
   bool isVScaleKnownToBeAPowerOfTwo() const {
     return TLI->isVScaleKnownToBeAPowerOfTwo();
   }

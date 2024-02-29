@@ -1620,3 +1620,10 @@ bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                   C2.NumIVMuls, C2.NumBaseAdds,
                   C2.ScaleCost, C2.ImmCost, C2.SetupCost);
 }
+
+bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy) {
+  auto *VTy = dyn_cast<VectorType>(DataTy);
+  if (!VTy || VTy->isScalableTy() || !ST->hasVInstructions())
+    return false;
+  return getRegUsageForType(VTy) <= 8;
+}
