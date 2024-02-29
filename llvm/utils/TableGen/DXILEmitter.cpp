@@ -18,10 +18,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include "llvm/CodeGenTypes/MachineValueType.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -71,27 +71,27 @@ struct DXILOperationDesc {
 
 static ParameterKind getParameterKind(MVT::SimpleValueType VT) {
   switch (VT) {
-    case MVT::isVoid :
-      return ParameterKind::VOID;
-    case MVT::f16 :
-      return ParameterKind::HALF;
-    case MVT::f32 :
-      return ParameterKind::FLOAT;
-    case MVT::f64 :
-      return ParameterKind::DOUBLE;
-    case MVT::i1 :
-      return ParameterKind::I1;
-    case MVT::i8 :
-      return ParameterKind::I8;
-    case MVT::i16 :
-      return ParameterKind::I16;
-    case MVT::i32 :
-      return ParameterKind::I32;
-    case MVT::fAny :
-    case MVT::iAny :
-      return ParameterKind::OVERLOAD;
-    default:
-      llvm_unreachable("Support for specified DXIL Type not yet implemented");
+  case MVT::isVoid:
+    return ParameterKind::VOID;
+  case MVT::f16:
+    return ParameterKind::HALF;
+  case MVT::f32:
+    return ParameterKind::FLOAT;
+  case MVT::f64:
+    return ParameterKind::DOUBLE;
+  case MVT::i1:
+    return ParameterKind::I1;
+  case MVT::i8:
+    return ParameterKind::I8;
+  case MVT::i16:
+    return ParameterKind::I16;
+  case MVT::i32:
+    return ParameterKind::I32;
+  case MVT::fAny:
+  case MVT::iAny:
+    return ParameterKind::OVERLOAD;
+  default:
+    llvm_unreachable("Support for specified DXIL Type not yet implemented");
   }
 }
 
@@ -197,30 +197,31 @@ static std::string getParameterKindStr(ParameterKind Kind) {
 
 static std::string getOverloadKindStr(MVT::SimpleValueType VT) {
   switch (VT) {
-    case MVT::isVoid :
-      return "OverloadKind::VOID";
-    case MVT::f16 :
-      return "OverloadKind::HALF";
-    case MVT::f32 :
-      return "OverloadKind::FLOAT";
-    case MVT::f64 :
-      return "OverloadKind::DOUBLE";
-    case MVT::i1 :
-      return "OverloadKind::I1";
-    case MVT::i8 :
-      return "OverloadKind::I8";
-    case MVT::i16 :
-      return "OverloadKind::I16";
-    case MVT::i32 :
-      return "OverloadKind::I32";
-    case MVT::i64 :
-      return "OverloadKind::I64";
-    case MVT::iAny :
-      return "OverloadKind::I16 | OverloadKind::I32 | OverloadKind::I64";
-    case MVT::fAny :
-      return "OverloadKind::HALF | OverloadKind::FLOAT | OverloadKind::DOUBLE";
-    default:
-      llvm_unreachable("Support for specified parameter OverloadKind not yet implemented");
+  case MVT::isVoid:
+    return "OverloadKind::VOID";
+  case MVT::f16:
+    return "OverloadKind::HALF";
+  case MVT::f32:
+    return "OverloadKind::FLOAT";
+  case MVT::f64:
+    return "OverloadKind::DOUBLE";
+  case MVT::i1:
+    return "OverloadKind::I1";
+  case MVT::i8:
+    return "OverloadKind::I8";
+  case MVT::i16:
+    return "OverloadKind::I16";
+  case MVT::i32:
+    return "OverloadKind::I32";
+  case MVT::i64:
+    return "OverloadKind::I64";
+  case MVT::iAny:
+    return "OverloadKind::I16 | OverloadKind::I32 | OverloadKind::I64";
+  case MVT::fAny:
+    return "OverloadKind::HALF | OverloadKind::FLOAT | OverloadKind::DOUBLE";
+  default:
+    llvm_unreachable(
+        "Support for specified parameter OverloadKind not yet implemented");
   }
 }
 
