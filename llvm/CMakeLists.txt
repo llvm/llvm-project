@@ -599,9 +599,6 @@ set(LLVM_TARGETS_TO_BUILD
    ${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD})
 list(REMOVE_DUPLICATES LLVM_TARGETS_TO_BUILD)
 
-if (NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
-  option(LLVM_ENABLE_PIC "Build Position-Independent Code" ON)
-endif()
 option(LLVM_ENABLE_MODULES "Compile with C++ modules enabled." OFF)
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   option(LLVM_ENABLE_MODULE_DEBUGGING "Compile with -gmodules." ON)
@@ -929,17 +926,6 @@ set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE_DEFAULT}" CACHE STR
 message(STATUS "LLVM default target triple: ${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 set(LLVM_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
-
-if(WIN32 OR CYGWIN)
-  if(BUILD_SHARED_LIBS OR LLVM_BUILD_LLVM_DYLIB)
-    set(LLVM_ENABLE_PLUGINS_default ON)
-  else()
-    set(LLVM_ENABLE_PLUGINS_default OFF)
-  endif()
-else()
-  set(LLVM_ENABLE_PLUGINS_default ${LLVM_ENABLE_PIC})
-endif()
-option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default})
 
 set(LLVM_ENABLE_NEW_PASS_MANAGER TRUE CACHE BOOL
   "Enable the new pass manager by default.")
