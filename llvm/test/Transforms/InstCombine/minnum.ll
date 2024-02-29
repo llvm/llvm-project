@@ -60,7 +60,7 @@ define float @constant_fold_minnum_f32_p0_p0() {
 
 define float @constant_fold_minnum_f32_p0_n0() {
 ; CHECK-LABEL: @constant_fold_minnum_f32_p0_n0(
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float -0.000000e+00
 ;
   %x = call float @llvm.minnum.f32(float 0.0, float -0.0)
   ret float %x
@@ -199,7 +199,7 @@ define float @minnum_f32_1_minnum_p0_val_fmf3(float %x) {
 
 define float @minnum_f32_p0_minnum_val_n0(float %x) {
 ; CHECK-LABEL: @minnum_f32_p0_minnum_val_n0(
-; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float -0.000000e+00)
 ; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call float @llvm.minnum.f32(float %x, float -0.0)
