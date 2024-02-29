@@ -1987,7 +1987,8 @@ static bool generateConvertInst(const StringRef DemangledCall,
                     SPIRV::Decoration::FPRoundingMode,
                     {(unsigned)Builtin->RoundingMode});
 
-  std::string NeedExtMsg; // no errors if empty
+  std::string NeedExtMsg;              // no errors if empty
+  bool IsRightComponentsNumber = true; // check if input/output accepts vectors
   unsigned Opcode = SPIRV::OpNop;
   if (GR->isScalarOrVectorOfType(Call->Arguments[0], SPIRV::OpTypeInt)) {
     // Int -> ...
@@ -2008,6 +2009,9 @@ static bool generateConvertInst(const StringRef DemangledCall,
         if (!ST->canUseExtension(
                 SPIRV::Extension::SPV_INTEL_bfloat16_conversion))
           NeedExtMsg = "SPV_INTEL_bfloat16_conversion";
+        IsRightComponentsNumber =
+            GR->getScalarOrVectorComponentCount(Call->Arguments[0]) ==
+            GR->getScalarOrVectorComponentCount(Call->ReturnRegister);
         Opcode = SPIRV::OpConvertBF16ToFINTEL;
       } else {
         bool IsSourceSigned =
@@ -2026,6 +2030,9 @@ static bool generateConvertInst(const StringRef DemangledCall,
         if (!ST->canUseExtension(
                 SPIRV::Extension::SPV_INTEL_bfloat16_conversion))
           NeedExtMsg = "SPV_INTEL_bfloat16_conversion";
+        IsRightComponentsNumber =
+            GR->getScalarOrVectorComponentCount(Call->Arguments[0]) ==
+            GR->getScalarOrVectorComponentCount(Call->ReturnRegister);
         Opcode = SPIRV::OpConvertFToBF16INTEL;
       } else {
         Opcode = Builtin->IsDestinationSigned ? SPIRV::OpConvertFToS
@@ -2043,6 +2050,12 @@ static bool generateConvertInst(const StringRef DemangledCall,
                           ": the builtin requires the following SPIR-V "
                           "extension: " +
                           NeedExtMsg;
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
+  if (!IsRightComponentsNumber) {
+    std::string DiagMsg =
+        std::string(Builtin->Name) +
+        ": result and argument must have the same number of components";
     report_fatal_error(DiagMsg.c_str(), false);
   }
   assert(Opcode != SPIRV::OpNop &&
