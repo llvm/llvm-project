@@ -1635,12 +1635,13 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
     if (T->getKeyword() != ElaboratedTypeKeyword::None)
       OS << " ";
     NestedNameSpecifier *Qualifier = T->getQualifier();
-    if (Policy.SuppressTagKeyword && Policy.SuppressScope) {
+    if (!Policy.SuppressTagKeyword && Policy.SuppressScope) {
       std::string prefix = T->isClassType()       ? "class "
                            : T->isStructureType() ? "struct "
                            : T->isUnionType()     ? "union "
                                                   : "";
       OS << prefix;
+      Policy.SuppressTagKeyword = true;
       Policy.SuppressScope = false;
       return printBefore(T->getNamedType(), OS);
     }

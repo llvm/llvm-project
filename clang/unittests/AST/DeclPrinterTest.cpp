@@ -367,7 +367,7 @@ TEST(DeclPrinter, TestCXXRecordDecl12) {
       "struct S foo(struct S s1, class NS::C c1) {\nusing namespace NS;\nclass "
       "NS::C c;\nreturn s1;\n}\n",
       [](PrintingPolicy &Policy) {
-        Policy.SuppressTagKeyword = true;
+        Policy.SuppressTagKeyword = false;
         Policy.SuppressScope = true;
         Policy.TerseOutput = false;
       }));
