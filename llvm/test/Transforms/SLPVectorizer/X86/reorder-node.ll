@@ -14,7 +14,7 @@ define void @test(ptr noalias %arg, ptr noalias %arg1, ptr %arg2) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP2]], <4 x float> [[TMP3]], <4 x float> [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> poison, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
 ; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[TMP_I_I4]], align 8
 ; CHECK-NEXT:    ret void
 ;
