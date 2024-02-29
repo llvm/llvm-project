@@ -7414,9 +7414,9 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
               !VectorizedLoads.count(Slice.back()) && allSameBlock(Slice)) {
             SmallVector<Value *> PointerOps;
             OrdersType CurrentOrder;
-            LoadsState LS = canVectorizeLoads(R, Slice, Slice.front(), TTI,
-                                              *R.DL, *R.SE, *R.LI, *R.TLI,
-                                              CurrentOrder, PointerOps);
+            LoadsState LS =
+                canVectorizeLoads(R, Slice, Slice.front(), TTI, *R.DL, *R.SE,
+                                  *R.LI, *R.TLI, CurrentOrder, PointerOps);
             switch (LS) {
             case LoadsState::Vectorize:
             case LoadsState::ScatterVectorize:
