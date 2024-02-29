@@ -1843,7 +1843,7 @@ bool X86InstructionSelector::selectIntrinsicWSideEffects(
   assert(I.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
          "unexpected instruction");
 
-  if (I.getOperand(0).getIntrinsicID() != Intrinsic::trap)
+  if (cast<GIntrinsic>(I).getIntrinsicID() != Intrinsic::trap)
     return false;
 
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::TRAP));
