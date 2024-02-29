@@ -1658,10 +1658,18 @@ static void privatizeIv(Fortran::lower::AbstractConverter &converter,
       mlir::acc::DataClause::acc_private, ivValue.getType());
 
   privateOperands.push_back(op.getAccPtr());
-  ivPrivate.push_back(op.getAccPtr());
   privatizations.push_back(mlir::SymbolRefAttr::get(builder.getContext(),
                                                     recipe.getSymName().str()));
+
+  // Map the new private iv to its symbol for the scope of the loop. bindSymbol
+  // might create a hlfir.declare op, if so, we map its result in order to
+  // use the sym value in the scope.
   converter.bindSymbol(sym, op.getAccPtr());
+  auto privateValue = converter.getSymbolAddress(sym);
+  if (auto declareOp =
+          mlir::dyn_cast<hlfir::DeclareOp>(privateValue.getDefiningOp()))
+    privateValue = declareOp.getResults()[0];
+  ivPrivate.push_back(privateValue);
 }
 
 static mlir::acc::LoopOp
@@ -3239,7 +3247,7 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
                                   fir::FirOpBuilder &builder,
                                   mlir::Location loc, fir::GlobalOp globalOp,
                                   mlir::acc::DataClause clause,
-                                  const std::string declareGlobalName,
+                                  const std::string &declareGlobalName,
                                   bool implicit, std::stringstream &asFortran) {
   GlobalOp declareGlobalOp =
       modBuilder.create<GlobalOp>(loc, declareGlobalName);

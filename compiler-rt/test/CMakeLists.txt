@@ -116,7 +116,11 @@ endif()
 
 # Now that we've traversed all the directories and know all the lit testsuites,
 # introduce a rule to run to run all of them.
-add_custom_target(compiler-rt-test-depends DEPENDS ${LLVM_COMPILER_RT_LIT_DEPENDS})
+get_property(LLVM_COMPILER_RT_LIT_DEPENDS GLOBAL PROPERTY LLVM_COMPILER_RT_LIT_DEPENDS)
+add_custom_target(compiler-rt-test-depends)
+if(LLVM_COMPILER_RT_LIT_DEPENDS)
+  add_dependencies(compiler-rt-test-depends ${LLVM_COMPILER_RT_LIT_DEPENDS})
+endif()
 umbrella_lit_testsuite_end(check-compiler-rt)
 
 if(COMPILER_RT_STANDALONE_BUILD)

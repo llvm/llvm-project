@@ -199,7 +199,7 @@ fir::FortranVariableOpInterface
 hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                   const fir::ExtendedValue &exv, llvm::StringRef name,
                   fir::FortranVariableFlagsAttr flags,
-                  fir::CUDAAttributeAttr cudaAttr) {
+                  fir::CUDADataAttributeAttr cudaAttr) {
 
   mlir::Value base = fir::getBase(exv);
   assert(fir::conformsWithPassByRef(base.getType()) &&

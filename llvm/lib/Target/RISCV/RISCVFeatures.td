@@ -185,7 +185,7 @@ def HasStdExtZabha : Predicate<"Subtarget->hasStdExtZabha()">,
                          "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
 
 def FeatureStdExtZacas
-    : SubtargetFeature<"experimental-zacas", "HasStdExtZacas", "true",
+    : SubtargetFeature<"zacas", "HasStdExtZacas", "true",
                        "'Zacas' (Atomic Compare-And-Swap Instructions)">;
 def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
                      AssemblerPredicate<(all_of FeatureStdExtZacas),
@@ -350,7 +350,7 @@ def FeatureStdExtZcd
                        [FeatureStdExtZca]>;
 
 def HasStdExtCOrZcd
-    : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZcd()">,
+    : Predicate<"Subtarget->hasStdExtCOrZcd()">,
       AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZcd),
                          "'C' (Compressed Instructions) or "
                          "'Zcd' (Compressed Double-Precision Floating-Point Instructions)">;
@@ -1227,3 +1227,8 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
+
+def FeatureForcedSWShadowStack : SubtargetFeature<
+    "forced-sw-shadow-stack", "HasForcedSWShadowStack", "true",
+    "Implement shadow stack with software.">;
+def HasForcedSWShadowStack : Predicate<"Subtarget->hasForcedSWShadowStack()">;

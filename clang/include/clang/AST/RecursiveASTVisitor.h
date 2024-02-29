@@ -34,6 +34,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
@@ -505,6 +506,9 @@ private:
   bool VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *Node);
 
   bool PostVisitStmt(Stmt *S);
+  bool TraverseOpenACCConstructStmt(OpenACCConstructStmt *S);
+  bool
+  TraverseOpenACCAssociatedStmtConstruct(OpenACCAssociatedStmtConstruct *S);
 };
 
 template <typename Derived>
@@ -3909,6 +3913,24 @@ template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPXBareClause(OMPXBareClause *C) {
   return true;
 }
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::TraverseOpenACCConstructStmt(
+    OpenACCConstructStmt *) {
+  // TODO OpenACC: When we implement clauses, ensure we traverse them here.
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::TraverseOpenACCAssociatedStmtConstruct(
+    OpenACCAssociatedStmtConstruct *S) {
+  TRY_TO(TraverseOpenACCConstructStmt(S));
+  TRY_TO(TraverseStmt(S->getAssociatedStmt()));
+  return true;
+}
+
+DEF_TRAVERSE_STMT(OpenACCComputeConstruct,
+                  { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
 
 // FIXME: look at the following tricky-seeming exprs to see if we
 // need to recurse on anything.  These are ones that have methods

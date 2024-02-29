@@ -124,7 +124,7 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
                              llvm::StringRef uniq_name, mlir::Value shape,
                              mlir::ValueRange typeparams,
                              fir::FortranVariableFlagsAttr fortran_attrs,
-                             fir::CUDAAttributeAttr cuda_attr) {
+                             fir::CUDADataAttributeAttr cuda_attr) {
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);

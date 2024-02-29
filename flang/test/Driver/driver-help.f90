@@ -134,7 +134,7 @@
 ! HELP-NEXT: -Rpass=<value>          Report transformations performed by optimization passes whose name matches the given POSIX regular expression
 ! HELP-NEXT: -R<remark>              Enable the specified remark
 ! HELP-NEXT: -save-temps=<value>     Save intermediate compilation results.
-! HELP-NEXT: -save-temps             Save intermediate compilation results
+! HELP-NEXT: -save-temps             Alias for --save-temps=cwd
 ! HELP-NEXT: -std=<value>            Language standard to compile for
 ! HELP-NEXT: -S                      Only run preprocess and compilation steps
 ! HELP-NEXT: --target=<value>        Generate code for the given target
@@ -275,7 +275,7 @@
 ! HELP-FC1-NEXT: -Rpass=<value>          Report transformations performed by optimization passes whose name matches the given POSIX regular expression
 ! HELP-FC1-NEXT: -R<remark>              Enable the specified remark
 ! HELP-FC1-NEXT: -save-temps=<value>     Save intermediate compilation results.
-! HELP-FC1-NEXT: -save-temps             Save intermediate compilation results
+! HELP-FC1-NEXT: -save-temps             Alias for --save-temps=cwd
 ! HELP-FC1-NEXT: -std=<value>            Language standard to compile for
 ! HELP-FC1-NEXT: -S                      Only run preprocess and compilation steps
 ! HELP-FC1-NEXT: -target-cpu <value>     Target a specific cpu type

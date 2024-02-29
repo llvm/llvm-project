@@ -139,9 +139,9 @@ translateSymbolAttributes(mlir::MLIRContext *mlirContext,
 
 /// Translate the CUDA Fortran attributes of \p sym into the FIR CUDA attribute
 /// representation.
-fir::CUDAAttributeAttr
-translateSymbolCUDAAttribute(mlir::MLIRContext *mlirContext,
-                             const Fortran::semantics::Symbol &sym);
+fir::CUDADataAttributeAttr
+translateSymbolCUDADataAttribute(mlir::MLIRContext *mlirContext,
+                                 const Fortran::semantics::Symbol &sym);
 
 /// Map a symbol to a given fir::ExtendedValue. This will generate an
 /// hlfir.declare when lowering to HLFIR and map the hlfir.declare result to the

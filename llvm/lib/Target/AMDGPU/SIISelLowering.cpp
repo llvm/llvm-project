@@ -468,6 +468,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   // On SI this is s_memtime and s_memrealtime on VI.
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
+
+  if (Subtarget->hasSMemRealTime() ||
+      Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11)
+    setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64, Legal);
   setOperationAction({ISD::TRAP, ISD::DEBUGTRAP}, MVT::Other, Custom);
 
   if (Subtarget->has16BitInsts()) {
@@ -2826,8 +2830,7 @@ SDValue SITargetLowering::LowerFormalArguments(
   if (IsEntryFunc) {
     allocateSpecialEntryInputVGPRs(CCInfo, MF, *TRI, *Info);
     allocateHSAUserSGPRs(CCInfo, MF, *TRI, *Info);
-    if (IsKernel && Subtarget->hasKernargPreload() &&
-        !Subtarget->needsKernargPreloadBackwardsCompatibility())
+    if (IsKernel && Subtarget->hasKernargPreload())
       allocatePreloadKernArgSGPRs(CCInfo, ArgLocs, Ins, MF, *TRI, *Info);
 
     allocateLDSKernelId(CCInfo, MF, *TRI, *Info);
@@ -3957,7 +3960,7 @@ SDValue SITargetLowering::lowerGET_ROUNDING(SDValue Op,
   assert(Op.getValueType() == MVT::i32);
 
   uint32_t BothRoundHwReg =
-      AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_MODE, 0, 4);
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4);
   SDValue GetRoundBothImm = DAG.getTargetConstant(BothRoundHwReg, SL, MVT::i32);
 
   SDValue IntrinID =
@@ -4192,8 +4195,8 @@ SITargetLowering::emitGWSMemViolTestLoop(MachineInstr &MI,
 
   MachineBasicBlock::iterator I = LoopBB->end();
 
-  const unsigned EncodedReg = AMDGPU::Hwreg::encodeHwreg(
-    AMDGPU::Hwreg::ID_TRAPSTS, AMDGPU::Hwreg::OFFSET_MEM_VIOL, 1);
+  const unsigned EncodedReg = AMDGPU::Hwreg::HwregEncoding::encode(
+      AMDGPU::Hwreg::ID_TRAPSTS, AMDGPU::Hwreg::OFFSET_MEM_VIOL, 1);
 
   // Clear TRAP_STS.MEM_VIOL
   BuildMI(*LoopBB, LoopBB->begin(), DL, TII->get(AMDGPU::S_SETREG_IMM32_B32))
@@ -4996,18 +4999,16 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     // Otherwise there was overflow and the result is hi2:0. In both cases the
     // result should represent the actual time at some point during the sequence
     // of three getregs.
+    using namespace AMDGPU::Hwreg;
     Register RegHi1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_GETREG_B32), RegHi1)
-        .addImm(AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_SHADER_CYCLES_HI,
-                                           0, 32));
+        .addImm(HwregEncoding::encode(ID_SHADER_CYCLES_HI, 0, 32));
     Register RegLo1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_GETREG_B32), RegLo1)
-        .addImm(
-            AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_SHADER_CYCLES, 0, 32));
+        .addImm(HwregEncoding::encode(ID_SHADER_CYCLES, 0, 32));
     Register RegHi2 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_GETREG_B32), RegHi2)
-        .addImm(AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_SHADER_CYCLES_HI,
-                                           0, 32));
+        .addImm(HwregEncoding::encode(ID_SHADER_CYCLES_HI, 0, 32));
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CMP_EQ_U32))
         .addReg(RegHi1)
         .addReg(RegHi2);
@@ -5204,8 +5205,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     // FIXME: This could be predicates on the immediate, but tablegen doesn't
     // allow you to have a no side effect instruction in the output of a
     // sideeffecting pattern.
-    unsigned ID, Offset, Width;
-    AMDGPU::Hwreg::decodeHwreg(MI.getOperand(1).getImm(), ID, Offset, Width);
+    auto [ID, Offset, Width] =
+        AMDGPU::Hwreg::HwregEncoding::decode(MI.getOperand(1).getImm());
     if (ID != AMDGPU::Hwreg::ID_MODE)
       return BB;
 
@@ -5306,18 +5307,6 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
   default:
     return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
-  }
-}
-
-bool SITargetLowering::hasAtomicFaddRtnForTy(SDValue &Op) const {
-  switch (Op.getValue(0).getSimpleValueType().SimpleTy) {
-  case MVT::f32:
-    return Subtarget->hasAtomicFaddRtnInsts();
-  case MVT::v2f16:
-  case MVT::f64:
-    return Subtarget->hasGFX90AInsts();
-  default:
-    return false;
   }
 }
 
@@ -6303,7 +6292,7 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
     return expandFMINNUM_FMAXNUM(Op.getNode(), DAG);
 
   if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
-      VT == MVT::v16f16)
+      VT == MVT::v16bf16)
     return splitBinaryVectorOp(Op, DAG);
   return Op;
 }
@@ -10492,9 +10481,8 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
   SDValue NegDivScale0 = DAG.getNode(ISD::FNEG, SL, MVT::f32,
                                      DenominatorScaled, Flags);
 
-  const unsigned Denorm32Reg = AMDGPU::Hwreg::ID_MODE |
-                               (4 << AMDGPU::Hwreg::OFFSET_SHIFT_) |
-                               (1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_);
+  using namespace AMDGPU::Hwreg;
+  const unsigned Denorm32Reg = HwregEncoding::encode(ID_MODE, 4, 2);
   const SDValue BitField = DAG.getTargetConstant(Denorm32Reg, SL, MVT::i32);
 
   const MachineFunction &MF = DAG.getMachineFunction();
@@ -12962,10 +12950,8 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
 
     const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
 
-    if ((!K0->hasOneUse() ||
-         TII->isInlineConstant(K0->getValueAPF().bitcastToAPInt())) &&
-        (!K1->hasOneUse() ||
-         TII->isInlineConstant(K1->getValueAPF().bitcastToAPInt()))) {
+    if ((!K0->hasOneUse() || TII->isInlineConstant(K0->getValueAPF())) &&
+        (!K1->hasOneUse() || TII->isInlineConstant(K1->getValueAPF()))) {
       return DAG.getNode(AMDGPUISD::FMED3, SL, K0->getValueType(0),
                          Var, SDValue(K0, 0), SDValue(K1, 0));
     }
@@ -14570,7 +14556,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     EVT VT = N->getValueType(0);
 
     // v2i16 (scalar_to_vector i16:x) -> v2i16 (bitcast (any_extend i16:x))
-    if (VT == MVT::v2i16 || VT == MVT::v2f16 || VT == MVT::v2f16) {
+    if (VT == MVT::v2i16 || VT == MVT::v2f16 || VT == MVT::v2bf16) {
       SDLoc SL(N);
       SDValue Src = N->getOperand(0);
       EVT EltVT = Src.getValueType();

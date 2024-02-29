@@ -1710,7 +1710,7 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   };
 
   // Helper-util for updating debug-info records attached to instructions.
-  auto UpdateDPV = [&](DPValue *DPV) {
+  auto UpdateDPV = [&](DbgRecord *DPV) {
     assert(DPV->getDebugLoc() && "Debug Value must have debug loc");
     if (NoInlineLineTables) {
       DPV->setDebugLoc(TheCallDL);
@@ -1728,7 +1728,7 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
     for (BasicBlock::iterator BI = FI->begin(), BE = FI->end(); BI != BE;
          ++BI) {
       UpdateInst(*BI);
-      for (DPValue &DPV : BI->getDbgValueRange()) {
+      for (DbgRecord &DPV : BI->getDbgValueRange()) {
         UpdateDPV(&DPV);
       }
     }
@@ -1829,7 +1829,7 @@ static void fixupAssignments(Function::iterator Start, Function::iterator End) {
   // attachment or use, replace it with a new version.
   for (auto BBI = Start; BBI != End; ++BBI) {
     for (Instruction &I : *BBI) {
-      for (DPValue &DPV : I.getDbgValueRange()) {
+      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
         if (DPV.isDbgAssign())
           DPV.setAssignId(GetNewID(DPV.getAssignID()));
       }
@@ -2102,13 +2102,6 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
   BasicBlock *OrigBB = CB.getParent();
   Function *Caller = OrigBB->getParent();
-
-  // Do not inline strictfp function into non-strictfp one. It would require
-  // conversion of all FP operations in host function to constrained intrinsics.
-  if (CalledFunc->getAttributes().hasFnAttr(Attribute::StrictFP) &&
-      !Caller->getAttributes().hasFnAttr(Attribute::StrictFP)) {
-    return InlineResult::failure("incompatible strictfp attributes");
-  }
 
   // GC poses two hazards to inlining, which only occur when the callee has GC:
   //  1. If the caller has no GC, then the callee's GC must be propagated to the

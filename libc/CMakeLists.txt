@@ -43,7 +43,7 @@ set(LIBC_NAMESPACE "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LL
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
 )
 
-if(LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
   if(NOT LIBC_HDRGEN_EXE)
     # We need to set up hdrgen first since other targets depend on it.
     add_subdirectory(utils/LibcTableGenUtil)
@@ -57,19 +57,32 @@ if(LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
   endif()
 endif()
 
+set(NEED_LIBC_HDRGEN FALSE)
+if(NOT LLVM_RUNTIMES_BUILD)
+  if("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
+    set(NEED_LIBC_HDRGEN TRUE)
+  else()
+    foreach(_name ${LLVM_RUNTIME_TARGETS})
+      if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
+        set(NEED_LIBC_HDRGEN TRUE)
+        break()
+      endif()
+    endforeach()
+  endif()
+endif()
 option(LIBC_HDRGEN_ONLY "Only build the 'libc-hdrgen' executable" OFF)
-if(("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT LLVM_RUNTIMES_BUILD) OR 
-   LIBC_HDRGEN_ONLY)
+if(LIBC_HDRGEN_ONLY OR NEED_LIBC_HDRGEN)
   # When libc is build as part of the runtimes/bootstrap build's CMake run, we
   # only need to build the host tools to build the libc. So, we just do enough
   # to build libc-hdrgen and return.
 
   # Always make the RPC server availible to other projects for GPU mode.
-  if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+  if(LLVM_LIBC_GPU_BUILD)
     add_subdirectory(utils/gpu/server)
   endif()
   return()
 endif()
+unset(NEED_LIBC_HDRGEN)
 
 option(LIBC_CMAKE_VERBOSE_LOGGING
   "Log details warnings and notifications during CMake configuration." OFF)
@@ -105,7 +118,7 @@ if(COMMAND_RETURN_CODE EQUAL 0)
   message(STATUS "Set COMPILER_RESOURCE_DIR to "
                  "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
 else()
-  if (LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  if (LIBC_TARGET_OS_IS_GPU)
     message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
   else()
     set(COMPILER_RESOURCE_DIR OFF)
@@ -149,7 +162,7 @@ elseif(LIBC_CMAKE_VERBOSE_LOGGING)
   message(STATUS "Path for config files is: ${LIBC_CONFIG_PATH}")
 endif()
 
-# option(LIBC_ENABLE_WIDE_CHARACTERS 
+# option(LIBC_ENABLE_WIDE_CHARACTERS
 # "Whether to enable wide character functions on supported platforms. This may
 # also set flags to enable or disable wide character support within other
 # functions (e.g. printf)." ON)
@@ -203,11 +216,7 @@ foreach(config_path IN LISTS LIBC_CONFIG_JSON_FILE_LIST)
   load_libc_config(${config_path}/config.json ${cmd_line_conf})
 endforeach()
 
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-  set(LIBC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
-  set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/gpu-none-llvm)
-  set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
-elseif(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND LIBC_ENABLE_USE_BY_CLANG)
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND LIBC_ENABLE_USE_BY_CLANG)
   set(LIBC_INCLUDE_DIR ${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
@@ -222,10 +231,23 @@ else()
     set(LIBC_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
     set(LIBC_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
   endif()
-  set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+  if(LIBC_TARGET_OS_IS_GPU)
+    set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+  else()
+    set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+  endif()
 endif()
 
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LIBC_TARGET_TRIPLE)
+  set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBC_TARGET_TRIPLE})
+elseif(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT LIBC_GPU_BUILD)
+  set(LIBC_INSTALL_LIBRARY_DIR
+      lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE})
+else()
+  set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX})
+endif()
+
+if(LIBC_TARGET_OS_IS_GPU)
   include(prepare_libc_gpu_build)
   set(LIBC_ENABLE_UNITTESTS OFF)
 endif()

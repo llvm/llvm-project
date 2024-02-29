@@ -2497,6 +2497,40 @@ TEST(APIntTest, clearLowBits) {
   EXPECT_EQ(16u, i32hi16.popcount());
 }
 
+TEST(APIntTest, AbsDiff) {
+  using APIntOps::absdiff;
+
+  APInt MaxU1(1, 1, false);
+  APInt MinU1(1, 0, false);
+  EXPECT_EQ(1u, absdiff(MaxU1, MinU1).getZExtValue());
+  EXPECT_EQ(1u, absdiff(MinU1, MaxU1).getZExtValue());
+
+  APInt MaxU4(4, 15, false);
+  APInt MinU4(4, 0, false);
+  EXPECT_EQ(15u, absdiff(MaxU4, MinU4).getZExtValue());
+  EXPECT_EQ(15u, absdiff(MinU4, MaxU4).getZExtValue());
+
+  APInt MaxS8(8, 127, true);
+  APInt MinS8(8, -128, true);
+  EXPECT_EQ(1u, absdiff(MaxS8, MinS8).getZExtValue());
+  EXPECT_EQ(1u, absdiff(MinS8, MaxS8).getZExtValue());
+
+  APInt MaxU16(16, 65535, false);
+  APInt MinU16(16, 0, false);
+  EXPECT_EQ(65535u, absdiff(MaxU16, MinU16).getZExtValue());
+  EXPECT_EQ(65535u, absdiff(MinU16, MaxU16).getZExtValue());
+
+  APInt MaxS16(16, 32767, true);
+  APInt MinS16(16, -32768, true);
+  APInt ZeroS16(16, 0, true);
+  EXPECT_EQ(1u, absdiff(MaxS16, MinS16).getZExtValue());
+  EXPECT_EQ(1u, absdiff(MinS16, MaxS16).getZExtValue());
+  EXPECT_EQ(32768u, absdiff(ZeroS16, MinS16));
+  EXPECT_EQ(32768u, absdiff(MinS16, ZeroS16));
+  EXPECT_EQ(32767u, absdiff(ZeroS16, MaxS16));
+  EXPECT_EQ(32767u, absdiff(MaxS16, ZeroS16));
+}
+
 TEST(APIntTest, GCD) {
   using APIntOps::GreatestCommonDivisor;
 

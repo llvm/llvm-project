@@ -134,15 +134,17 @@ public:
 
   explicit LLT(MVT VT);
 
-  constexpr bool isValid() const { return IsScalar || RawData != 0; }
+  constexpr bool isValid() const { return IsScalar || IsPointer || IsVector; }
 
   constexpr bool isScalar() const { return IsScalar; }
 
-  constexpr bool isPointer() const {
-    return isValid() && IsPointer && !IsVector;
-  }
+  constexpr bool isPointer() const { return IsPointer && !IsVector; }
 
-  constexpr bool isVector() const { return isValid() && IsVector; }
+  constexpr bool isPointerVector() const { return IsPointer && IsVector; }
+
+  constexpr bool isPointerOrPointerVector() const { return IsPointer; }
+
+  constexpr bool isVector() const { return IsVector; }
 
   /// Returns the number of elements in a vector LLT. Must only be called on
   /// vector types.
@@ -209,7 +211,7 @@ public:
   /// but the new element size. Otherwise, return the new element type. Invalid
   /// for pointer types. For pointer types, use changeElementType.
   constexpr LLT changeElementSize(unsigned NewEltSize) const {
-    assert(!getScalarType().isPointer() &&
+    assert(!isPointerOrPointerVector() &&
            "invalid to directly change element size for pointers");
     return isVector() ? LLT::vector(getElementCount(), NewEltSize)
                       : LLT::scalar(NewEltSize);

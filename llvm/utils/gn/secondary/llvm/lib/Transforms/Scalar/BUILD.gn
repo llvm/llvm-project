@@ -35,6 +35,7 @@ static_library("Scalar") {
     "InferAddressSpaces.cpp",
     "InferAlignment.cpp",
     "InstSimplifyPass.cpp",
+    "JumpTableToSwitch.cpp",
     "JumpThreading.cpp",
     "LICM.cpp",
     "LoopAccessAnalysisPrinter.cpp",

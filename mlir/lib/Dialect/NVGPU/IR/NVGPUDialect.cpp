@@ -362,7 +362,8 @@ std::optional<InFlightDiagnostic> verifyTmaDescriptorWithMemref(
                              << kMaxTMADimension << " but it is " << dim;
     }
   }
-  if (descMemref.getRank() > 1) {
+  if (descMemref.getRank() > 1 &&
+      descType.getSwizzle() != TensorMapSwizzleKind::SWIZZLE_NONE) {
     unsigned lastDimensionByte =
         descMemref.getElementTypeBitWidth() * descMemref.getShape().back() / 8;
     if (lastDimensionByte != kMaxTMALastdimByte)

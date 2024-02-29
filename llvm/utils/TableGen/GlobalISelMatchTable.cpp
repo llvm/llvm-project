@@ -408,18 +408,18 @@ bool LLTCodeGen::operator<(const LLTCodeGen &Other) const {
     return Ty.getAddressSpace() < Other.Ty.getAddressSpace();
 
   if (Ty.isVector() && Ty.getElementCount() != Other.Ty.getElementCount())
-    return std::make_tuple(Ty.isScalable(),
-                           Ty.getElementCount().getKnownMinValue()) <
-           std::make_tuple(Other.Ty.isScalable(),
-                           Other.Ty.getElementCount().getKnownMinValue());
+    return std::tuple(Ty.isScalable(),
+                      Ty.getElementCount().getKnownMinValue()) <
+           std::tuple(Other.Ty.isScalable(),
+                      Other.Ty.getElementCount().getKnownMinValue());
 
   assert((!Ty.isVector() || Ty.isScalable() == Other.Ty.isScalable()) &&
          "Unexpected mismatch of scalable property");
   return Ty.isVector()
-             ? std::make_tuple(Ty.isScalable(),
-                               Ty.getSizeInBits().getKnownMinValue()) <
-                   std::make_tuple(Other.Ty.isScalable(),
-                                   Other.Ty.getSizeInBits().getKnownMinValue())
+             ? std::tuple(Ty.isScalable(),
+                          Ty.getSizeInBits().getKnownMinValue()) <
+                   std::tuple(Other.Ty.isScalable(),
+                              Other.Ty.getSizeInBits().getKnownMinValue())
              : Ty.getSizeInBits().getFixedValue() <
                    Other.Ty.getSizeInBits().getFixedValue();
 }
@@ -545,8 +545,8 @@ void GroupMatcher::optimize() {
     if (T != E)
       F = ++T;
   }
-  optimizeRules<GroupMatcher>(Matchers, MatcherStorage).swap(Matchers);
-  optimizeRules<SwitchMatcher>(Matchers, MatcherStorage).swap(Matchers);
+  Matchers = optimizeRules<GroupMatcher>(Matchers, MatcherStorage);
+  Matchers = optimizeRules<SwitchMatcher>(Matchers, MatcherStorage);
 }
 
 //===- SwitchMatcher ------------------------------------------------------===//
@@ -720,8 +720,8 @@ void RuleMatcher::optimize() {
   }
   llvm::sort(EpilogueMatchers, [](const std::unique_ptr<PredicateMatcher> &L,
                                   const std::unique_ptr<PredicateMatcher> &R) {
-    return std::make_tuple(L->getKind(), L->getInsnVarID(), L->getOpIdx()) <
-           std::make_tuple(R->getKind(), R->getInsnVarID(), R->getOpIdx());
+    return std::tuple(L->getKind(), L->getInsnVarID(), L->getOpIdx()) <
+           std::tuple(R->getKind(), R->getInsnVarID(), R->getOpIdx());
   });
 }
 
@@ -822,7 +822,7 @@ Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
   }
 
   ComplexSubOperands[SymbolicName] =
-      std::make_tuple(ComplexPattern, RendererID, SubOperandID);
+      std::tuple(ComplexPattern, RendererID, SubOperandID);
   ComplexSubOperandsParentName[SymbolicName] = ParentName;
 
   return Error::success();

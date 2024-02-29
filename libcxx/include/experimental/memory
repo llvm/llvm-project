@@ -79,7 +79,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr observer_ptr(nullptr_t) noexcept : __ptr_(nullptr) {}
   _LIBCPP_HIDE_FROM_ABI constexpr explicit observer_ptr(element_type* __p) noexcept : __ptr_(__p) {}
 
-  template <class _W2, class = __enable_if_t<is_convertible<_W2*, _Wp*>::value>>
+  template <class _W2, __enable_if_t<is_convertible<_W2*, _Wp*>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr observer_ptr(observer_ptr<_W2> __other) noexcept : __ptr_(__other.get()) {}
 
   // observers

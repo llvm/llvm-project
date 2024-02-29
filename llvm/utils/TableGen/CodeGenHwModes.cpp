@@ -52,7 +52,7 @@ HwModeSelect::HwModeSelect(Record *R, CodeGenHwModes &CGH) {
   }
   for (unsigned i = 0, e = Modes.size(); i != e; ++i) {
     unsigned ModeId = CGH.getHwModeId(Modes[i]);
-    Items.push_back(std::make_pair(ModeId, Objects[i]));
+    Items.push_back(std::pair(ModeId, Objects[i]));
   }
 }
 
@@ -71,11 +71,11 @@ CodeGenHwModes::CodeGenHwModes(RecordKeeper &RK) : Records(RK) {
     if (R->getName() == DefaultModeName)
       continue;
     Modes.emplace_back(R);
-    ModeIds.insert(std::make_pair(R, Modes.size()));
+    ModeIds.insert(std::pair(R, Modes.size()));
   }
 
   for (Record *R : Records.getAllDerivedDefinitions("HwModeSelect")) {
-    auto P = ModeSelects.emplace(std::make_pair(R, HwModeSelect(R, *this)));
+    auto P = ModeSelects.emplace(std::pair(R, HwModeSelect(R, *this)));
     assert(P.second);
     (void)P;
   }

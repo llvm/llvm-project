@@ -33,47 +33,47 @@ class TestStatsAPI(TestBase):
         stream = lldb.SBStream()
         res = stats.GetAsJSON(stream)
         debug_stats = json.loads(stream.GetData())
-        self.assertEqual(
-            "targets" in debug_stats,
-            True,
+        self.assertIn(
+            "targets",
+            debug_stats,
             'Make sure the "targets" key in in target.GetStatistics()',
         )
-        self.assertEqual(
-            "modules" in debug_stats,
-            True,
+        self.assertIn(
+            "modules",
+            debug_stats,
             'Make sure the "modules" key in in target.GetStatistics()',
         )
         stats_json = debug_stats["targets"][0]
-        self.assertEqual(
-            "expressionEvaluation" in stats_json,
-            True,
+        self.assertIn(
+            "expressionEvaluation",
+            stats_json,
             'Make sure the "expressionEvaluation" key in in target.GetStatistics()["targets"][0]',
         )
-        self.assertEqual(
-            "frameVariable" in stats_json,
-            True,
+        self.assertIn(
+            "frameVariable",
+            stats_json,
             'Make sure the "frameVariable" key in in target.GetStatistics()["targets"][0]',
         )
         expressionEvaluation = stats_json["expressionEvaluation"]
-        self.assertEqual(
-            "successes" in expressionEvaluation,
-            True,
+        self.assertIn(
+            "successes",
+            expressionEvaluation,
             'Make sure the "successes" key in in "expressionEvaluation" dictionary"',
         )
-        self.assertEqual(
-            "failures" in expressionEvaluation,
-            True,
+        self.assertIn(
+            "failures",
+            expressionEvaluation,
             'Make sure the "failures" key in in "expressionEvaluation" dictionary"',
         )
         frameVariable = stats_json["frameVariable"]
-        self.assertEqual(
-            "successes" in frameVariable,
-            True,
+        self.assertIn(
+            "successes",
+            frameVariable,
             'Make sure the "successes" key in in "frameVariable" dictionary"',
         )
-        self.assertEqual(
-            "failures" in frameVariable,
-            True,
+        self.assertIn(
+            "failures",
+            frameVariable,
             'Make sure the "failures" key in in "frameVariable" dictionary"',
         )
 
@@ -117,3 +117,42 @@ class TestStatsAPI(TestBase):
         self.assertNotIn("bt", command_stats)
         # Verify bt's regex command is not duplicatedly captured.
         self.assertNotIn("_regexp-bt", command_stats)
+
+    @add_test_categories(["dwo"])
+    def test_command_stats_force(self):
+        """
+        Test reporting all pssible debug info stats by force loading all debug
+        info. For example, dwo files
+        """
+        src_dir = self.getSourceDir()
+        dwo_yaml_path = os.path.join(src_dir, "main-main.dwo.yaml")
+        exe_yaml_path = os.path.join(src_dir, "main.yaml")
+        dwo_path = self.getBuildArtifact("main-main.dwo")
+        exe_path = self.getBuildArtifact("main")
+        self.yaml2obj(dwo_yaml_path, dwo_path)
+        self.yaml2obj(exe_yaml_path, exe_path)
+
+        # Turn on symbols on-demand loading
+        self.runCmd("settings set symbols.load-on-demand true")
+
+        # We need the current working directory to be set to the build directory
+        os.chdir(self.getBuildDir())
+        # Create a target with the object file we just created from YAML
+        target = self.dbg.CreateTarget(exe_path)
+        self.assertTrue(target, VALID_TARGET)
+
+        # Get statistics
+        stats_options = lldb.SBStatisticsOptions()
+        stats = target.GetStatistics(stats_options)
+        stream = lldb.SBStream()
+        stats.GetAsJSON(stream)
+        debug_stats = json.loads(stream.GetData())
+        self.assertEqual(debug_stats["totalDebugInfoByteSize"], 193)
+
+        # Get statistics with force loading
+        stats_options.SetReportAllAvailableDebugInfo(True)
+        stats_force = target.GetStatistics(stats_options)
+        stream_force = lldb.SBStream()
+        stats_force.GetAsJSON(stream_force)
+        debug_stats_force = json.loads(stream_force.GetData())
+        self.assertEqual(debug_stats_force["totalDebugInfoByteSize"], 445)

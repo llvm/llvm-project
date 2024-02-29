@@ -100,6 +100,7 @@ module {
     bufferization.dealloc_tensor %x1 : tensor<8x2xf64, #CSC>
     bufferization.dealloc_tensor %x2 : tensor<2x4xf64, #CSC>
     bufferization.dealloc_tensor %x3 : tensor<8x4xf64, #CSC>
+    bufferization.dealloc_tensor %xc : tensor<8x4xf64>
 
     return
   }

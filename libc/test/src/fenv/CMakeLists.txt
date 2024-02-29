@@ -87,7 +87,7 @@ add_libc_unittest(
 
 if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
          OR (${LIBC_TARGET_OS} STREQUAL "darwin")))
-  # Sanitizers don't like SIGFPE. So, we will run the 
+  # Sanitizers don't like SIGFPE. So, we will run the
   # tests which raise SIGFPE only in non-sanitizer builds.
   # The tests are also disabled for Windows and MacOS as they fail currently.
   # TODO: Investigate and fix the windows failures and enable them for Windows

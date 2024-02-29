@@ -47,11 +47,11 @@ module;
 
 // *** Headers not yet available ***
 //
-// This validation is mainly to aid libc++ developers to add modules for new
-// headers. On Windows the Windows SDK can be in the include path. This SDK
-// contains the MSVC STL headers. This may give false positives when MSVC STL
-// provides a header libc++ has not implemented yet. Therefore this validation
-// is not done on Windows.
+// This validation is mainly to catch when a new header is added but adding the
+// corresponding .inc file is forgotten. However, the check based on __has_include
+// alone doesn't work on Windows because the Windows SDK is on the include path,
+// and that means the MSVC STL headers can be found as well, tricking __has_include
+// into thinking that libc++ provides the header.
 //
 #ifndef _WIN32
 #  if __has_include(<debugging>)

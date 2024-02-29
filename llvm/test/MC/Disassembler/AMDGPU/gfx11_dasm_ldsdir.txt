@@ -1,5 +1,4 @@
 # RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX11 %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-WavefrontSize32,+WavefrontSize64 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX11 %s
 
 # GFX11: lds_direct_load v10 wait_vdst:6         ; encoding: [0x0a,0x00,0x16,0xce]
 0x0a,0x00,0x16,0xce

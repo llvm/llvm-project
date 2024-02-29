@@ -1243,7 +1243,7 @@ def : InstAlias<"chkfeat\tx16", (CHKFEAT), 0>;
 def : InstAlias<"chkfeat\tx16", (CHKFEAT), 1>, Requires<[HasCHK]>;
 
 class GCSSt<string mnemonic, bits<3> op>
-    : I<(outs), (ins GPR64:$Rt, GPR64sp:$Rn), mnemonic, "\t$Rt, $Rn", "", []>, Sched<[]> {
+    : I<(outs), (ins GPR64:$Rt, GPR64sp:$Rn), mnemonic, "\t$Rt, [$Rn]", "", []>, Sched<[]> {
   bits<5> Rt;
   bits<5> Rn;
   let Inst{31-15} = 0b11011001000111110;
@@ -1805,7 +1805,7 @@ def HWASAN_CHECK_MEMACCESS_SHORTGRANULES : Pseudo<
 // The virtual cycle counter register is CNTVCT_EL0.
 def : Pat<(readcyclecounter), (MRS 0xdf02)>;
 
-// FPCR register
+// FPCR and FPSR registers.
 let Uses = [FPCR] in
 def MRS_FPCR : Pseudo<(outs GPR64:$dst), (ins),
                       [(set GPR64:$dst, (int_aarch64_get_fpcr))]>,
@@ -1815,6 +1815,17 @@ let Defs = [FPCR] in
 def MSR_FPCR : Pseudo<(outs), (ins GPR64:$val),
                       [(int_aarch64_set_fpcr i64:$val)]>,
                PseudoInstExpansion<(MSR 0xda20, GPR64:$val)>,
+               Sched<[WriteSys]>;
+
+let Uses = [FPSR] in
+def MRS_FPSR : Pseudo<(outs GPR64:$dst), (ins),
+                      [(set GPR64:$dst, (int_aarch64_get_fpsr))]>,
+               PseudoInstExpansion<(MRS GPR64:$dst, 0xda21)>,
+               Sched<[WriteSys]>;
+let Defs = [FPSR] in
+def MSR_FPSR : Pseudo<(outs), (ins GPR64:$val),
+                      [(int_aarch64_set_fpsr i64:$val)]>,
+               PseudoInstExpansion<(MSR 0xda21, GPR64:$val)>,
                Sched<[WriteSys]>;
 
 // Generic system instructions
@@ -6656,31 +6667,29 @@ def : Pat<(vector_extract (v8bf16 V128:$Rn), VectorIndexH:$idx),
 // All concat_vectors operations are canonicalised to act on i64 vectors for
 // AArch64. In the general case we need an instruction, which had just as well be
 // INS.
-class ConcatPat<ValueType DstTy, ValueType SrcTy>
-  : Pat<(DstTy (concat_vectors (SrcTy V64:$Rd), V64:$Rn)),
-        (INSvi64lane (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub), 1,
-                     (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), 0)>;
+multiclass ConcatPat<ValueType DstTy, ValueType SrcTy> {
+  def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rd), V64:$Rn)),
+            (INSvi64lane (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub), 1,
+                         (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), 0)>;
 
-def : ConcatPat<v2i64, v1i64>;
-def : ConcatPat<v2f64, v1f64>;
-def : ConcatPat<v4i32, v2i32>;
-def : ConcatPat<v4f32, v2f32>;
-def : ConcatPat<v8i16, v4i16>;
-def : ConcatPat<v8f16, v4f16>;
-def : ConcatPat<v8bf16, v4bf16>;
-def : ConcatPat<v16i8, v8i8>;
+  // If the high lanes are zero we can instead emit a d->d register mov, which
+  // will implicitly clear the upper bits.
+  def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rn), immAllZerosV)),
+            (SUBREG_TO_REG (i64 0), (FMOVDr V64:$Rn), dsub)>;
 
-// If the high lanes are undef, though, we can just ignore them:
-class ConcatUndefPat<ValueType DstTy, ValueType SrcTy>
-  : Pat<(DstTy (concat_vectors (SrcTy V64:$Rn), undef)),
-        (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub)>;
+  // If the high lanes are undef we can just ignore them:
+  def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rn), undef)),
+            (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub)>;
+}
 
-def : ConcatUndefPat<v2i64, v1i64>;
-def : ConcatUndefPat<v2f64, v1f64>;
-def : ConcatUndefPat<v4i32, v2i32>;
-def : ConcatUndefPat<v4f32, v2f32>;
-def : ConcatUndefPat<v8i16, v4i16>;
-def : ConcatUndefPat<v16i8, v8i8>;
+defm : ConcatPat<v2i64, v1i64>;
+defm : ConcatPat<v2f64, v1f64>;
+defm : ConcatPat<v4i32, v2i32>;
+defm : ConcatPat<v4f32, v2f32>;
+defm : ConcatPat<v8i16, v4i16>;
+defm : ConcatPat<v8f16, v4f16>;
+defm : ConcatPat<v8bf16, v4bf16>;
+defm : ConcatPat<v16i8, v8i8>;
 
 //----------------------------------------------------------------------------
 // AdvSIMD across lanes instructions
@@ -7595,13 +7604,17 @@ defm USHR    : SIMDVectorRShiftBHSD<1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA    : SIMDVectorRShiftBHSDTied<1, 0b00010, "usra",
                 TriOpFrag<(add_and_or_is_add node:$LHS, (AArch64vlshr node:$MHS, node:$RHS))> >;
 
+def VImm0080:         PatLeaf<(AArch64movi_shift (i32 128), (i32 0))>;
+def VImm00008000:     PatLeaf<(AArch64movi_shift (i32 128), (i32 8))>;
+def VImm0000000080000000: PatLeaf<(AArch64NvCast (v2f64 (fneg (AArch64NvCast (v4i32 (AArch64movi_shift (i32 128), (i32 24)))))))>;
+
 // RADDHN patterns for when RSHRN shifts by half the size of the vector element
-def : Pat<(v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), (AArch64movi_shift (i32 128), (i32 0))), (i32 8)))),
+def : Pat<(v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), VImm0080), (i32 8)))),
           (RADDHNv8i16_v8i8 V128:$Vn, (v8i16 (MOVIv2d_ns (i32 0))))>;
-def : Pat<(v4i16 (trunc (AArch64vlshr (add (v4i32 V128:$Vn), (AArch64movi_shift (i32 128), (i32 8))), (i32 16)))),
+def : Pat<(v4i16 (trunc (AArch64vlshr (add (v4i32 V128:$Vn), VImm00008000), (i32 16)))),
           (RADDHNv4i32_v4i16 V128:$Vn, (v4i32 (MOVIv2d_ns (i32 0))))>;
 let AddedComplexity = 5 in
-def : Pat<(v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), (AArch64dup (i64 2147483648))), (i32 32)))),
+def : Pat<(v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), VImm0000000080000000), (i32 32)))),
           (RADDHNv2i64_v2i32 V128:$Vn, (v2i64 (MOVIv2d_ns (i32 0))))>;
 def : Pat<(v8i8 (int_aarch64_neon_rshrn (v8i16 V128:$Vn), (i32 8))),
           (RADDHNv8i16_v8i8 V128:$Vn, (v8i16 (MOVIv2d_ns (i32 0))))>;
@@ -7613,20 +7626,20 @@ def : Pat<(v2i32 (int_aarch64_neon_rshrn (v2i64 V128:$Vn), (i32 32))),
 // RADDHN2 patterns for when RSHRN shifts by half the size of the vector element
 def : Pat<(v16i8 (concat_vectors
                  (v8i8 V64:$Vd),
-                 (v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), (AArch64movi_shift (i32 128), (i32 0))), (i32 8)))))),
+                 (v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), VImm0080), (i32 8)))))),
           (RADDHNv8i16_v16i8
                  (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn,
                  (v8i16 (MOVIv2d_ns (i32 0))))>;
 def : Pat<(v8i16 (concat_vectors
                  (v4i16 V64:$Vd),
-                 (v4i16 (trunc (AArch64vlshr (add (v4i32 V128:$Vn), (AArch64movi_shift (i32 128), (i32 8))), (i32 16)))))),
+                 (v4i16 (trunc (AArch64vlshr (add (v4i32 V128:$Vn), VImm00008000), (i32 16)))))),
           (RADDHNv4i32_v8i16
                  (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn,
                  (v4i32 (MOVIv2d_ns (i32 0))))>;
 let AddedComplexity = 5 in
 def : Pat<(v4i32 (concat_vectors
                  (v2i32 V64:$Vd),
-                 (v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), (AArch64dup (i64 2147483648))), (i32 32)))))),
+                 (v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), VImm0000000080000000), (i32 32)))))),
           (RADDHNv2i64_v4i32
                  (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn,
                  (v2i64 (MOVIv2d_ns (i32 0))))>;

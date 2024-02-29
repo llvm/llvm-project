@@ -633,9 +633,9 @@ void TailDuplication::runOnFunction(BinaryFunction &Function) {
     ModifiedFunctions++;
 }
 
-void TailDuplication::runOnFunctions(BinaryContext &BC) {
+Error TailDuplication::runOnFunctions(BinaryContext &BC) {
   if (opts::TailDuplicationMode == TailDuplication::TD_NONE)
-    return;
+    return Error::success();
 
   for (auto &It : BC.getBinaryFunctions()) {
     BinaryFunction &Function = It.second;
@@ -644,23 +644,26 @@ void TailDuplication::runOnFunctions(BinaryContext &BC) {
     runOnFunction(Function);
   }
 
-  outs() << "BOLT-INFO: tail duplication"
-         << format(" modified %zu (%.2f%%) functions;", ModifiedFunctions,
-                   100.0 * ModifiedFunctions / BC.getBinaryFunctions().size())
-         << format(" duplicated %zu blocks (%zu bytes) responsible for",
-                   DuplicatedBlockCount, DuplicatedByteCount)
-         << format(" %zu dynamic executions (%.2f%% of all block executions)",
-                   DuplicationsDynamicCount,
-                   100.0 * DuplicationsDynamicCount / AllDynamicCount)
-         << "\n";
+  BC.outs()
+      << "BOLT-INFO: tail duplication"
+      << format(" modified %zu (%.2f%%) functions;", ModifiedFunctions,
+                100.0 * ModifiedFunctions / BC.getBinaryFunctions().size())
+      << format(" duplicated %zu blocks (%zu bytes) responsible for",
+                DuplicatedBlockCount, DuplicatedByteCount)
+      << format(" %zu dynamic executions (%.2f%% of all block executions)",
+                DuplicationsDynamicCount,
+                100.0 * DuplicationsDynamicCount / AllDynamicCount)
+      << "\n";
 
   if (opts::TailDuplicationConstCopyPropagation) {
-    outs() << "BOLT-INFO: tail duplication "
-           << format("applied %zu static and %zu dynamic propagation deletions",
+    BC.outs() << "BOLT-INFO: tail duplication "
+              << format(
+                     "applied %zu static and %zu dynamic propagation deletions",
                      StaticInstructionDeletionCount,
                      DynamicInstructionDeletionCount)
-           << "\n";
+              << "\n";
   }
+  return Error::success();
 }
 
 } // end namespace bolt

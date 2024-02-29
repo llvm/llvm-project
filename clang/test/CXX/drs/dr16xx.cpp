@@ -61,7 +61,7 @@ namespace dr1631 {  // dr1631: 3.7
     void f(B, int);           // TODO: expected- note {{candidate function}}
     void f(int, A);           // #dr1631-f
     void f(int, A, int = 0);  // #dr1631-f-int
-    
+
     void test() {
       f({0}, {{1}});
       // since-cxx11-error@-1 {{call to 'f' is ambiguous}}
@@ -107,6 +107,8 @@ namespace dr1638 { // dr1638: 3.1
   struct B {
     friend enum class A<unsigned>::E;
     // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
+    // since-cxx11-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+    // since-cxx11-note@-3 {{remove 'enum class' to befriend an enum}}
   };
 #endif
 }
@@ -179,7 +181,7 @@ namespace dr1658 { // dr1658: 5
     // In all other cases, we are not so lucky.
     struct E : A { E(); virtual void foo() = 0; }; // #dr1658-E1
     E::E() = default; // #dr1658-E1-ctor
-    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}} 
+    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
     // cxx98-error@-2 {{base class 'A' has private default constructor}}
     //   cxx98-note@-3 {{in defaulted default constructor for 'dr1658::DefCtor::E' first required here}}
     //   cxx98-note@#dr1658-A1 {{implicitly declared private here}}
@@ -188,7 +190,7 @@ namespace dr1658 { // dr1658: 5
     struct F : virtual A { F(); }; // #dr1658-F1
     F::F() = default; // #dr1658-F1-ctor
     // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
-    // cxx98-error@-2 {{inherited virtual base class 'A' has private default constructor}} 
+    // cxx98-error@-2 {{inherited virtual base class 'A' has private default constructor}}
     //   cxx98-note@-3 {{in defaulted default constructor for 'dr1658::DefCtor::F' first required here}}
     //   cxx98-note@#dr1658-A1 {{implicitly declared private here}}
     // since-cxx11-error@#dr1658-F1-ctor {{defaulting this default constructor would delete it after its first declaration}}

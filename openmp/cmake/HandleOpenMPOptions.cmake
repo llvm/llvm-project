@@ -41,7 +41,6 @@ append_if(OPENMP_HAVE_WSIGN_COMPARE_FLAG "-Wsign-compare" CMAKE_C_FLAGS CMAKE_CX
 # printed. Therefore, check for whether the compiler supports options in the
 # form -W<foo>, and if supported, add the corresponding -Wno-<foo> option.
 
-append_if(OPENMP_HAVE_WENUM_CONSTEXPR_CONVERSION_FLAG "-Wno-enum-constexpr-conversion" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 append_if(OPENMP_HAVE_WEXTRA_FLAG "-Wno-extra" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 append_if(OPENMP_HAVE_WPEDANTIC_FLAG "-Wno-pedantic" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 append_if(OPENMP_HAVE_WMAYBE_UNINITIALIZED_FLAG "-Wno-maybe-uninitialized" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)

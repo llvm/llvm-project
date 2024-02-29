@@ -956,7 +956,8 @@ struct NVGPUMBarrierTryWaitParityLowering
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
     Value ticks = truncToI32(b, adaptor.getTicks());
-    Value phase = truncToI32(b, adaptor.getPhase());
+    Value phase =
+        b.create<LLVM::ZExtOp>(b.getI32Type(), adaptor.getPhaseParity());
 
     if (isMbarrierShared(op.getBarriers().getType())) {
       rewriter.replaceOpWithNewOp<NVVM::MBarrierTryWaitParitySharedOp>(

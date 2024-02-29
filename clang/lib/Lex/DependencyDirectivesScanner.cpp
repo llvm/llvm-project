@@ -369,7 +369,7 @@ static void skipBlockComment(const char *&First, const char *const End) {
     }
 }
 
-/// \returns True if the current single quotation mark character is a C++ 14
+/// \returns True if the current single quotation mark character is a C++14
 /// digit separator.
 static bool isQuoteCppDigitSeparator(const char *const Start,
                                      const char *const Cur,

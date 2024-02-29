@@ -5,7 +5,7 @@
 ; inserted at a point where LR is live.
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-arm-none-eabi"
+target triple = "aarch64"
 
 define hidden void @_ZTv0_n24_N2C6D1Ev(ptr %this) minsize sspreq "target-features"="+harden-sls-retbr" {
 ; CHECK-LABEL: _ZTv0_n24_N2C6D1Ev:

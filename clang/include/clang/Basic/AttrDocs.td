@@ -5321,6 +5321,29 @@ Putting the attribute on a compound statement suppresses all warnings in scope:
     }
   }
 
+The attribute can also be placed on entire declarations of functions, classes,
+variables, member variables, and so on, to suppress warnings related
+to the declarations themselves. When used this way, the attribute additionally
+suppresses all warnings in the lexical scope of the declaration:
+
+.. code-block:: c++
+
+  class [[clang::suppress]] C {
+    int foo() {
+      int *x = nullptr;
+      ...
+      return *x;  // warnings suppressed in the entire class scope
+    }
+
+    int bar();
+  };
+
+  int C::bar() {
+    int *x = nullptr;
+    ...
+    return *x;  // warning NOT suppressed! - not lexically nested in 'class C{}'
+  }
+
 Some static analysis warnings are accompanied by one or more notes, and the
 line of code against which the warning is emitted isn't necessarily the best
 for suppression purposes. In such cases the tools are allowed to implement
@@ -5582,6 +5605,25 @@ def LTOVisibilityDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 See :doc:`LTOVisibility`.
+  }];
+}
+
+def TypeVisibilityDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``type_visibility`` attribute allows the visibility of a type and its vague
+linkage objects (vtable, typeinfo, typeinfo name) to be controlled separately from
+the visibility of functions and data members of the type.
+
+For example, this can be used to give default visibility to the typeinfo and the vtable
+of a type while still keeping hidden visibility on its member functions and static data
+members.
+
+This attribute can only be applied to types and namespaces.
+
+If both ``visibility`` and ``type_visibility`` are applied to a type or a namespace, the
+visibility specified with the ``type_visibility`` attribute overrides the visibility
+provided with the regular ``visibility`` attribute.
   }];
 }
 
