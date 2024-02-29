@@ -4127,8 +4127,8 @@ def ext_ms_impcast_fn_obj : ExtWarn<
   "Microsoft extension">, InGroup<MicrosoftCast>;
 
 def warn_impcast_pointer_to_bool : Warning<
-    "address of%select{| function| array}0 '%1' will always evaluate to "
-    "'true'">,
+    "address of %select{'%1'|function '%1'|array '%1'|lambda function pointer "
+    "conversion operator}0 will always evaluate to 'true'">,
     InGroup<PointerBoolConversion>;
 def warn_cast_nonnull_to_bool : Warning<
     "nonnull %select{function call|parameter}0 '%1' will evaluate to "

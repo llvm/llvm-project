@@ -81,6 +81,18 @@ struct S2 {
 
 bool f5();
 bool f6(int);
+#if __cplusplus >= 201103L
+auto f7 = []{};
+auto f8 = [](){};
+
+void foo() {
+  bool b;
+  b = f7; // expected-warning {{address of lambda function pointer conversion operator will always evaluate to 'true'}}
+  b = f8; // expected-warning {{address of lambda function pointer conversion operator will always evaluate to 'true'}}
+  bool is_true = [](){ return true; };
+  // expected-warning@-1{{address of lambda function pointer conversion operator will always evaluate to 'true'}}
+}
+#endif
 
 void bar() {
   bool b;
