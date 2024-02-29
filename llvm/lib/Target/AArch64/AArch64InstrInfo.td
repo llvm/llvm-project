@@ -8216,8 +8216,10 @@ defm ST4 : SIMDLdSt4SingleAliases<"st4">;
 //----------------------------------------------------------------------------
 
 let Predicates = [HasAES] in {
+let isCommutable = 1 in {
 def AESErr   : AESTiedInst<0b0100, "aese",   int_aarch64_crypto_aese>;
 def AESDrr   : AESTiedInst<0b0101, "aesd",   int_aarch64_crypto_aesd>;
+}
 def AESMCrr  : AESInst<    0b0110, "aesmc",  int_aarch64_crypto_aesmc>;
 def AESIMCrr : AESInst<    0b0111, "aesimc", int_aarch64_crypto_aesimc>;
 }
