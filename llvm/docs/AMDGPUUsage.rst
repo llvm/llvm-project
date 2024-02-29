@@ -1536,6 +1536,7 @@ The AMDGPU backend supports the following calling conventions:
                                      ..TODO::
                                      Describe.
 .. _amdgpu_ps:
+
      ``amdgpu_ps``                   Used for Mesa/AMDPAL pixel shaders.
                                      ..TODO::
                                      Describe.
