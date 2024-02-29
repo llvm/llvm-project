@@ -41,15 +41,11 @@ define <1 x half> @ir_fadd_v1f16(<1 x half> %arg0, <1 x half> %arg1) nounwind {
 ;
 ; F16C-LABEL: ir_fadd_v1f16:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vpextrw $0, %xmm1, %ecx
-; F16C-NEXT:    movzwl %cx, %ecx
-; F16C-NEXT:    vmovd %ecx, %xmm0
-; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; F16C-NEXT:    movzwl %ax, %eax
-; F16C-NEXT:    vmovd %eax, %xmm1
+; F16C-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; F16C-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; F16C-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; F16C-NEXT:    vmovd %xmm0, %eax
 ; F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
