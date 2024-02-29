@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_STRUCT_SOCKADDR_UN_H__
-#define __LLVM_LIBC_TYPES_STRUCT_SOCKADDR_UN_H__
+#ifndef LLVM_LIBC_TYPES_STRUCT_SOCKADDR_UN_H
+#define LLVM_LIBC_TYPES_STRUCT_SOCKADDR_UN_H
 
 #include <llvm-libc-types/sa_family_t.h>
 
@@ -19,4 +19,4 @@ struct sockaddr_un {
   char sun_path[108];     /* Pathname */
 };
 
-#endif // __LLVM_LIBC_TYPES_STRUCT_SOCKADDR_UN_H__
+#endif // LLVM_LIBC_TYPES_STRUCT_SOCKADDR_UN_H

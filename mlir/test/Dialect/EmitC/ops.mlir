@@ -117,6 +117,13 @@ func.func @cmp(%arg0 : i32, %arg1 : f32, %arg2 : i64, %arg3 : f64, %arg4 : !emit
   return
 }
 
+func.func @logical(%arg0: i32, %arg1: i32) {
+  %0 = emitc.logical_and %arg0, %arg1 : i32, i32
+  %1 = emitc.logical_not %arg0 : i32
+  %2 = emitc.logical_or %arg0, %arg1 : i32, i32
+  return
+}
+
 func.func @test_if(%arg0: i1, %arg1: f32) {
   emitc.if %arg0 {
      %0 = emitc.call_opaque "func_const"(%arg1) : (f32) -> i32

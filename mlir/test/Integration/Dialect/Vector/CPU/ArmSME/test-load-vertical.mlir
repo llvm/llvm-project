@@ -49,12 +49,12 @@ func.func @entry() {
   // CHECK-NEXT: ( 2, 2, 2, 2
   // CHECK-NEXT: ( 3, 3, 3, 3
   // CHECK:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   scf.for %i = %c0 to %za_s_size step %svl_s {
     %tileslice = vector.load %mem1[%i] : memref<?xi32>, vector<[4]xi32>
     vector.print %tileslice : vector<[4]xi32>
   }
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   // 2. VERTICAL LAYOUT
   // Dump "mem2". The smallest SVL is 128-bits so the tile will be at least
@@ -66,9 +66,9 @@ func.func @entry() {
   // CHECK-NEXT: ( 0, 1, 2, 3
   // CHECK-NEXT: ( 0, 1, 2, 3
   // CHECK:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %0 : vector<[4]x[4]xi32>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   return
 }
