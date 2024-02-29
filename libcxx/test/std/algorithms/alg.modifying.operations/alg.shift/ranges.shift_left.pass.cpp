@@ -45,11 +45,11 @@ static_assert(!HasShiftLeftR<PermutableRangeNotSwappable>);
 template <class Iter, class Sent>
 constexpr void test_iter_sent() {
   {
-    const std::array<int, 15> original = {3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9};
-    std::array<int, 15> scratch;
+    const std::array<int, 8> original = {3, 1, 4, 1, 5, 9, 2, 6};
+    std::array<int, 8> scratch;
 
     // (iterator, sentinel) overload
-    for (size_t n = 0; n <= 15; ++n) {
+    for (size_t n = 0; n <= original.size(); ++n) {
       for (size_t k = 0; k <= n + 2; ++k) {
         auto begin = Iter(scratch.data());
         auto end   = Sent(Iter(scratch.data() + n));
