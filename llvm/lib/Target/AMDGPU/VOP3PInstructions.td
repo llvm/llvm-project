@@ -1164,7 +1164,7 @@ let WaveSizePredicate = isWave64 in {
 
 class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                         bit _IsIU, bit _IsFP8BF8XF32, bit _Has_ImodOp = 0,
-                        bit _HasMatrxFMT = 0>
+                        bit _HasMatrxFMT = 0, bit _HasMatrixScale = 0>
     : VOP3P_Profile<VOPProfile<ArgTy>> {
   bit IsIU = _IsIU;
   bit IsFP8BF8XF32 = _IsFP8BF8XF32; // No IMOD support for A and B
@@ -1172,6 +1172,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
 
   int IndexType = _IndexType;
   bit HasMatrxFMT = _HasMatrxFMT;
+  bit HasMatrixScale = _HasMatrixScale;
 
   bit HasIModOp = _Has_ImodOp;
   let HasClamp = !and(IsIU, !not(HasIModOp));
@@ -1266,7 +1267,13 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   dag IndexKey = !cond(!eq(IndexType, 0) : (ins),
                        !eq(IndexType, 8) : (ins IndexKey8bit:$index_key_8bit),
                        !eq(IndexType, 16): (ins IndexKey16bit:$index_key_16bit));
-  dag MatrixFMT = !if(HasMatrxFMT, (ins MatrixAFMT:$matrix_a_fmt, MatrixBFMT:$matrix_b_fmt), (ins));
+  dag MatrixFMT = !if(HasMatrxFMT,
+                      !con(!if(HasMatrixScale, (ins VCSrc_b32_Lo256:$scale_src0, VCSrc_b32_Lo256:$scale_src1),
+                                               (ins)),
+                           (ins MatrixAFMT:$matrix_a_fmt, MatrixBFMT:$matrix_b_fmt),
+                           !if(HasMatrixScale, (ins MatrixAScale:$matrix_a_scale, MatrixBScale:$matrix_b_scale),
+                                               (ins))),
+                      (ins));
   dag Clamp = !if(HasClamp, (ins clampmod0:$clamp), (ins));
   dag Neg = !cond(!and(NegLoAny, NegHiAny)             : (ins neg_lo0:$neg_lo, neg_hi0:$neg_hi),
                   !and(NegLoAny, !not(NegHiAny))       : (ins neg_lo0:$neg_lo),
@@ -1282,7 +1289,10 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   string IndexKeyAsm = !cond(!eq(IndexType, 0)  : "",
                              !eq(IndexType, 8)  : "$index_key_8bit",
                              !eq(IndexType, 16) : "$index_key_16bit");
-  string MatrxFMTAsm = !if(HasMatrxFMT, "$matrix_a_fmt$matrix_b_fmt", "");
+  string MatrxFMTAsm = !if(HasMatrxFMT, !if(HasMatrixScale, ", $scale_src0, $scale_src1", "")#
+                                        "$matrix_a_fmt$matrix_b_fmt"#
+                                        !if(HasMatrixScale, "$matrix_a_scale$matrix_b_scale", ""),
+                                        "");
   string ClampAsm = !if(HasClamp, "$clamp", "");
   string NegAsm = !cond(!and(NegLoAny, NegHiAny)             : "$neg_lo$neg_hi",
                         !and(NegLoAny, !not(NegHiAny))       : "$neg_lo",
@@ -1371,11 +1381,15 @@ multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string Pse
     let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = 1 in
       def _twoaddr : VOP3P_Pseudo<Instr, WMMAProfile>{
         let PseudoInstr = Instr#PseudoInstrSuffix;
+        let FixedSize = WMMAProfile.HasMatrixScale;
+        let Size = !if(WMMAProfile.HasMatrixScale, 16, 8);
       }
 
     let Constraints = WMMAConstraints3Addr, SchedRW = [Write32Bit, Write32Bit] in
       def _threeaddr : VOP3P_Pseudo<Instr, WMMAProfile>{
         let PseudoInstr = Instr#PseudoInstrSuffix;
+        let FixedSize = WMMAProfile.HasMatrixScale;
+        let Size = !if(WMMAProfile.HasMatrixScale, 16, 8);
       }
 
   }
@@ -1477,6 +1491,8 @@ def F32_FP8BF8X128_SWMMAC_w32 : VOP3PWMMA_Profile<[v8f32, v8i32,  v16i32, v8f32]
 def F16_FP8BF8X128_SWMMAC_w32 : VOP3PWMMA_Profile<[v8f16, v8i32,  v16i32, v8f16], 1, 16, 0, 1, 1>;
 def I32_IU8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8i32, v8i32,  v16i32, v8i32], 1, 16, 1, 0, 1>;
 def I32_IU4X256_SWMMAC_w32    : VOP3PWMMA_Profile<[v8i32, v8i32,  v16i32, v8i32], 1, 16, 1, 0, 1>;
+def F32_16x16x128_F8F6F4_SCALE_w32  : VOP3PWMMA_Profile<[v8f32, v16i32, v16i32, v8f32], 0, 0, 0, 1, 1, 1, 1>;
+def BF16_16x16x128_F8F6F4_SCALE_w32 : VOP3PWMMA_Profile<[v8bf16, v16i32, v16i32, v8bf16], 0, 0, 0, 1, 1, 1, 1>;
 
 def VOP_WMMA_LD_SCALE : VOP3P_Profile<VOPProfile<[untyped, i32, i32, untyped]>> {
   let HasMaxtrixScale = 1;
@@ -1527,6 +1543,8 @@ defm V_SWMMAC_I32_16X16X128_IU8_w32     : SWMMACInstGFX12<"v_swmmac_i32_16x16x12
 defm V_SWMMAC_I32_16X16X256_IU4_w32     : SWMMACInstGFX12<"v_swmmac_i32_16x16x256_iu4",     I32_IU4X256_SWMMAC_w32, "_w32">;
 
 defm V_WMMA_LD_SCALE_PAIRED_B32 : VOP3PInst<"v_wmma_ld_scale_paired_b32", VOP_WMMA_LD_SCALE>;
+defm V_WMMA_SCALE_F32_16x16x128_F8F6F4_w32  : WMMAInstGFX12<"v_wmma_scale_f32_16x16x128_f8f6f4",  F32_16x16x128_F8F6F4_SCALE_w32,  "_w32">;
+defm V_WMMA_SCALE_BF16_16x16x128_F8F6F4_w32 : WMMAInstGFX12<"v_wmma_scale_bf16_16x16x128_f8f6f4", BF16_16x16x128_F8F6F4_SCALE_w32, "_w32">;
 }
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12Not12_10 in {
@@ -1785,6 +1803,62 @@ multiclass VOP3P_Real_WMMA_gfx12_10 <bits<7> op, VOP3PWMMA_Profile WMMAP> {
   }
 }
 
+class VOP3PX2e <bits<7> op, VOP3PWMMA_Profile P> : Enc128, VOP3Pe_Base {
+  bits<9> scale_src0;
+  bits<9> scale_src1;
+
+  // Inst{7-0} = unused
+  let Inst{10-8} = 0; // neg_hi
+  let Inst{11} = matrix_a_scale{0}; // scale_op_sel(0)
+  let Inst{12} = matrix_a_scale{1}; // scale_op_sel(1)
+  let Inst{13} = matrix_a_scale{2}; // scale_op_sel(2)
+  let Inst{14} = matrix_b_scale{2}; // scale_op_sel_hi(2)
+  let Inst{15} = 0; // scale_clamp
+  let Inst{31-16} = 0b1100110000110101; //X2ENCODING
+  let Inst{40-32} = scale_src0;
+  let Inst{49-41} = scale_src1;
+  let Inst{58-50} = 0; // scale src2
+  let Inst{59}    = matrix_b_scale{0}; // scale_op_sel_hi(0)
+  let Inst{60}    = matrix_b_scale{1}; // scale_op_sel_hi(1)
+  let Inst{63-61} = 0; // neg (lo)
+
+  // The high half of the encoding is the unscaled wmma op.
+  let Inst{71-64} = vdst;
+
+  let Inst{72} = !if(P.NegHi01, src0_modifiers{1}, 0); // neg_hi src0
+  let Inst{73} = !if(P.NegHi01, src1_modifiers{1}, 0); // neg_hi src1
+  let Inst{74} = !if(P.NegHi2, src2_modifiers{1}, 0); // neg_hi src2
+
+  let Inst{75} = matrix_a_fmt{0}; // op_sel(0)
+  let Inst{76} = matrix_a_fmt{1}; // op_sel(1)
+  let Inst{77} = matrix_a_fmt{2}; // op_sel(2)
+
+  let Inst{78} = matrix_b_fmt{2}; // op_sel_hi(2)
+  let Inst{79} = !if(P.HasClamp, clamp{0}, 0);
+
+  let Inst{86-80} = op;
+  let Inst{95-87} = 0x198; //encoding
+  let Inst{104-96} = !if(P.HasSrc0, src0, 0);
+  let Inst{113-105} = !if(P.HasSrc1, src1, 0);
+  let Inst{122-114} = !if(P.HasSrc2, src2, 0);
+
+  let Inst{123} = matrix_b_fmt{0}; // op_sel_hi(0)
+  let Inst{124} = matrix_b_fmt{1}; // op_sel_hi(1)
+  // neg_lo
+  let Inst{125} = !if(P.NegLo01, src0_modifiers{0}, 0);
+  let Inst{126} = !if(P.NegLo01, src1_modifiers{0}, 0);
+  let Inst{127} = !if(P.NegLo2, src2_modifiers{0}, 0);
+}
+
+multiclass VOP3PX2_Real_ScaledWMMA<bits<7> op, VOP3PWMMA_Profile WMMAP> {
+  defvar PS = !cast<VOP3P_Pseudo>(NAME # "_twoaddr");
+  let SubtargetPredicate = isGFX12_10Plus, WaveSizePredicate = isWave32,
+      DecoderNamespace = "GFX12_10" in {
+    def _gfx1210 : VOP3P_Real_Gen<PS, GFX12_10Gen, PS.Mnemonic>,
+                   VOP3PX2e <op, WMMAP>;
+  }
+}
+
 defm V_WMMA_F32_16X16X16_F16_w32     : VOP3P_Real_WMMA_gfx12 <0x040, F32_F16_WMMA_w32>;
 defm V_WMMA_F32_16X16X16_BF16_w32    : VOP3P_Real_WMMA_gfx12 <0x041, F32_BF16_WMMA_w32>;
 defm V_WMMA_F16_16X16X16_F16_w32     : VOP3P_Real_WMMA_gfx12 <0x042, F16_F16_WMMA_w32>;
@@ -1855,6 +1929,9 @@ defm V_WMMA_I32_16X16X64_IU8_w32      : VOP3P_Real_WMMA_gfx12_10 <0x072, I32_IU8
 defm V_WMMA_I32_16X16X128_IU4_w32     : VOP3P_Real_WMMA_gfx12_10 <0x07c, I32_IU4X128_WMMA_w32>;
 defm V_WMMA_F32_16x16x128_F8F6F4_w32  : VOP3P_Real_WMMA_gfx12_10 <0x033, F32_16x16x128_F8F6F4_w32>;
 defm V_WMMA_BF16_16x16x128_F8F6F4_w32 : VOP3P_Real_WMMA_gfx12_10 <0x034, BF16_16x16x128_F8F6F4_w32>;
+
+defm V_WMMA_SCALE_F32_16x16x128_F8F6F4_w32  : VOP3PX2_Real_ScaledWMMA<0x033, F32_16x16x128_F8F6F4_w32>;
+defm V_WMMA_SCALE_BF16_16x16x128_F8F6F4_w32 : VOP3PX2_Real_ScaledWMMA<0x034, BF16_16x16x128_F8F6F4_w32>;
 
 defm V_SWMMAC_F32_16X16X64_F16_w32      : VOP3P_Real_WMMA_gfx12_10 <0x065, F32_F16X64_SWMMAC_w32>;
 defm V_SWMMAC_F32_16X16X64_BF16_w32     : VOP3P_Real_WMMA_gfx12_10 <0x066, F32_BF16X64_SWMMAC_w32>;
