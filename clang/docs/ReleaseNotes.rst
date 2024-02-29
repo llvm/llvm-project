@@ -192,6 +192,9 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses declarative nested name specifiers that name alias templates.
 
+- Clang now diagnoses lambda function expressions being implicitly cast to boolean values, under ``-Wpointer-bool-conversion``.
+  Fixes `#82512 <https://github.com/llvm/llvm-project/issues/82512>`_.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -290,6 +293,11 @@ Bug Fixes to C++ Support
   lookup searches the bases of an incomplete class.
 - Fix a crash when an unresolved overload set is encountered on the RHS of a ``.*`` operator.
   (`#53815 <https://github.com/llvm/llvm-project/issues/53815>`_)
+- In ``__restrict``-qualified member functions, attach ``__restrict`` to the pointer type of
+  ``this`` rather than the pointee type.
+  Fixes (`#82941 <https://github.com/llvm/llvm-project/issues/82941>`_),
+  (`#42411 <https://github.com/llvm/llvm-project/issues/42411>`_), and
+  (`#18121 <https://github.com/llvm/llvm-project/issues/18121>`_).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
