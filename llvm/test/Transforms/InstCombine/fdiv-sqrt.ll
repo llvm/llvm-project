@@ -173,7 +173,6 @@ entry:
   ret double %div1
 }
 
-; Function Attrs: nounwind ssp uwtable(sync)
 define float @sqrt_non_div_operator(float %a) {
 ; CHECK-LABEL: @sqrt_non_div_operator(
 ; CHECK-NEXT:  entry:
