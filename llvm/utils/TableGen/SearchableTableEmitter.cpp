@@ -220,7 +220,8 @@ int64_t SearchableTableEmitter::getNumericKey(const SearchIndex &Index,
   if (Index.Fields[0].IsInstruction) {
     Record *TheDef = Rec->getValueAsDef(Index.Fields[0].Name);
     return Target->getInstrIntValue(TheDef);
-  } else if (Index.Fields[0].Enum) {
+  }
+  if (Index.Fields[0].Enum) {
     Record *EnumEntry = Rec->getValueAsDef(Index.Fields[0].Name);
     return Index.Fields[0].Enum->EntryMap[EnumEntry]->second;
   }
