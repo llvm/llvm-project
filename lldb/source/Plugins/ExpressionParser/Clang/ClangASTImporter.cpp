@@ -520,6 +520,24 @@ bool ClangASTImporter::CompleteType(const CompilerType &compiler_type) {
   return false;
 }
 
+/// Copy layout information from \ref source_map to the \ref destination_map.
+///
+/// In the process of copying over layout info, we may need to import
+/// decls from the \ref source_map. This function will use the supplied
+/// \ref importer to import the necessary decls into \ref dest_ctx.
+///
+/// \param[in,out] dest_ctx Destination ASTContext into which we import
+///                         decls from the \ref source_map.
+/// \param[out]    destination_map A map from decls in \ref dest_ctx to an
+///                                integral offest, which will be copies
+///                                of the decl/offest pairs in \ref source_map
+///                                if successful.
+/// \param[in]     source_map A map from decls to integral offests. These will
+///                           be copied into \ref destination_map.
+/// \param[in,out] importer Used to import decls into \ref dest_ctx.
+/// 
+/// \returns On success, will return 'true' and the offsets in \ref destination_map
+///          are usable copies of \ref source_map.
 template <class D, class O>
 static bool ImportOffsetMap(clang::ASTContext *dest_ctx,
                             llvm::DenseMap<const D *, O> &destination_map,
@@ -549,6 +567,16 @@ static bool ImportOffsetMap(clang::ASTContext *dest_ctx,
   return true;
 }
 
+/// Given a CXXRecordDecl, will calculate and populate \ref base_offsets
+/// with the integral offsets of any of its (possibly virtual) base classes.
+///
+/// \param[in] record_layout ASTRecordLayout of \ref record.
+/// \param[in] record The record that we're calculating the base layouts of.
+/// \param[out] base_offsets Map of base-class decl to integral offset which
+///                          this function will fill in.
+/// 
+/// \returns On success, will return 'true' and the offsets in \ref base_offsets
+///          are usable.
 template <bool IsVirtual>
 bool ExtractBaseOffsets(const ASTRecordLayout &record_layout,
                         DeclFromUser<const CXXRecordDecl> &record,

@@ -128,6 +128,19 @@ public:
       llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
           &vbase_offsets);
 
+  /// If \ref record has a valid origin, this function copies that
+  /// origin's layout into this ClangASTImporter instance.
+  ///
+  /// \param[in] record The decl whose layout we're calculating.
+  /// \param[out] size Size of \ref record in bytes.
+  /// \param[out] alignment Alignment of \ref record in bytes.
+  /// \param[out] field_offsets Offsets of fields of \ref record.
+  /// \param[out] base_offsets Offsets of base classes of \ref record.
+  /// \param[out] vbase_offsets Offsets of virtual base classes of \ref record.
+  ///
+  /// \returns Returns 'false' if no valid origin was found for \ref record or
+  /// this function failed to import the layout from the origin. Otherwise, returns
+  /// 'true' and the offsets/size/alignment are valid for use.
   bool importRecordLayoutFromOrigin(
       const clang::RecordDecl *record, uint64_t &size, uint64_t &alignment,
       llvm::DenseMap<const clang::FieldDecl *, uint64_t> &field_offsets,
