@@ -10,7 +10,7 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -68,20 +68,8 @@ module {
     return %0 : tensor<?xf16, #DenseVector>
   }
 
-  // Dumps a dense vector of type f16.
-  func.func @dump_vec(%arg0: tensor<?xf16, #DenseVector>) {
-    // Dump the values array to verify only sparse contents are stored.
-    %c0 = arith.constant 0 : index
-    %d0 = arith.constant -1.0 : f16
-    %0 = sparse_tensor.values %arg0 : tensor<?xf16, #DenseVector> to memref<?xf16>
-    %1 = vector.transfer_read %0[%c0], %d0: memref<?xf16>, vector<32xf16>
-    %f1 = arith.extf %1: vector<32xf16> to vector<32xf32>
-    vector.print %f1 : vector<32xf32>
-    return
-  }
-
   // Driver method to call and verify the kernel.
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
 
     // Setup sparse vectors.
@@ -104,8 +92,12 @@ module {
     //
     // Verify the result.
     //
-    // CHECK: ( 1, 11, 0, 2, 13, 0, 0, 0, 0, 0, 14, 3, 0, 0, 0, 0, 15, 4, 16, 0, 5, 6, 0, 0, 0, 0, 0, 0, 7, 8, 0, 9 )
-    call @dump_vec(%0) : (tensor<?xf16, #DenseVector>) -> ()
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 32
+    // CHECK-NEXT: values : ( 1, 11, 0, 2, 13, 0, 0, 0, 0, 0, 14, 3, 0, 0, 0, 0, 15, 4, 16, 0, 5, 6, 0, 0, 0, 0, 0, 0, 7, 8, 0, 9,
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %0 : tensor<?xf16, #DenseVector>
 
     // Release the resources.
     bufferization.dealloc_tensor %sv1 : tensor<?xf16, #SparseVector>
