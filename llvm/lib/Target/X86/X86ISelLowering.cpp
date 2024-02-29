@@ -18524,11 +18524,11 @@ static SDValue getTLSADDR(SelectionDAG &DAG, SDValue Chain,
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SDLoc dl(GA);
   SDValue TGA = DAG.getTargetGlobalAddress(
-      GA->getGlobal(), dl, GA->getValueType(0), GA->getOffset(),
-      UseTLSDESC ? X86II::MO_TLSDESC : OperandFlags);
+      GA->getGlobal(), dl, GA->getValueType(0), GA->getOffset(), OperandFlags);
 
-  X86ISD::NodeType CallType = LocalDynamic ? X86ISD::TLSBASEADDR
-                                           : X86ISD::TLSADDR;
+  X86ISD::NodeType CallType = UseTLSDESC     ? X86ISD::TLSDESC
+                              : LocalDynamic ? X86ISD::TLSBASEADDR
+                                             : X86ISD::TLSADDR;
 
   if (InGlue) {
     SDValue Ops[] = { Chain,  TGA, *InGlue };
@@ -33338,6 +33338,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(TLSADDR)
   NODE_NAME_CASE(TLSBASEADDR)
   NODE_NAME_CASE(TLSCALL)
+  NODE_NAME_CASE(TLSDESC)
   NODE_NAME_CASE(EH_SJLJ_SETJMP)
   NODE_NAME_CASE(EH_SJLJ_LONGJMP)
   NODE_NAME_CASE(EH_SJLJ_SETUP_DISPATCH)
@@ -36118,6 +36119,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::TLS_base_addr32:
   case X86::TLS_base_addr64:
   case X86::TLS_base_addrX32:
+  case X86::TLS_desc32:
+  case X86::TLS_desc64:
     return EmitLoweredTLSAddr(MI, BB);
   case X86::INDIRECT_THUNK_CALL32:
   case X86::INDIRECT_THUNK_CALL64:

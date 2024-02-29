@@ -257,12 +257,6 @@ MCOperand X86MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   case X86II::MO_TLSLDM:
     RefKind = MCSymbolRefExpr::VK_TLSLDM;
     break;
-  case X86II::MO_TLSDESC:
-    RefKind = MCSymbolRefExpr::VK_TLSDESC;
-    break;
-  case X86II::MO_TLSCALL:
-    RefKind = MCSymbolRefExpr::VK_TLSCALL;
-    break;
   case X86II::MO_GOTTPOFF:
     RefKind = MCSymbolRefExpr::VK_GOTTPOFF;
     break;
@@ -525,19 +519,18 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
 void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
                                  const MachineInstr &MI) {
   NoAutoPaddingScope NoPadScope(*OutStreamer);
-  bool Is64Bits = MI.getOpcode() != X86::TLS_addr32 &&
-                  MI.getOpcode() != X86::TLS_base_addr32;
+  bool Is64Bits = getSubtarget().is64Bit();
   bool Is64BitsLP64 = MI.getOpcode() == X86::TLS_addr64 ||
-                      MI.getOpcode() == X86::TLS_base_addr64;
+                      MI.getOpcode() == X86::TLS_base_addr64 ||
+                      MI.getOpcode() == X86::TLS_desc64;
   MCContext &Ctx = OutStreamer->getContext();
-  bool isTLSDESC = MI.getOperand(3).getTargetFlags() == X86II::MO_TLSDESC;
 
   MCSymbolRefExpr::VariantKind SRVK;
   switch (MI.getOpcode()) {
   case X86::TLS_addr32:
   case X86::TLS_addr64:
   case X86::TLS_addrX32:
-    SRVK = isTLSDESC ? MCSymbolRefExpr::VK_TLSDESC : MCSymbolRefExpr::VK_TLSGD;
+    SRVK = MCSymbolRefExpr::VK_TLSGD;
     break;
   case X86::TLS_base_addr32:
     SRVK = MCSymbolRefExpr::VK_TLSLDM;
@@ -545,6 +538,10 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   case X86::TLS_base_addr64:
   case X86::TLS_base_addrX32:
     SRVK = MCSymbolRefExpr::VK_TLSLD;
+    break;
+  case X86::TLS_desc32:
+  case X86::TLS_desc64:
+    SRVK = MCSymbolRefExpr::VK_TLSDESC;
     break;
   default:
     llvm_unreachable("unexpected opcode");
@@ -561,7 +558,7 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   bool UseGot = MMI->getModule()->getRtLibUseGOT() &&
                 Ctx.getAsmInfo()->canRelaxRelocations();
 
-  if (isTLSDESC) {
+  if (SRVK == MCSymbolRefExpr::VK_TLSDESC) {
     const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(
         MCInstLowering.GetSymbolFromOperand(MI.getOperand(3)),
         MCSymbolRefExpr::VK_TLSCALL, Ctx);
@@ -2190,6 +2187,8 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::TLS_base_addr32:
   case X86::TLS_base_addr64:
   case X86::TLS_base_addrX32:
+  case X86::TLS_desc32:
+  case X86::TLS_desc64:
     return LowerTlsAddr(MCInstLowering, *MI);
 
   case X86::MOVPC32r: {

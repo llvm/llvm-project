@@ -431,20 +431,6 @@ enum TOF {
   /// See 'ELF Handling for Thread-Local Storage' for more details.
   ///    SYMBOL_LABEL @TLSLDM
   MO_TLSLDM,
-  /// MO_TLSCALL - On a symbol operand this indicates that the immediate is
-  /// the index of the TLS descriptor function for the symbol. Used in both
-  /// the IA32 and x86-64 local dynamic TLS access model.
-  /// See 'RFC-TLSDESC-x86' for more details.
-  ///    SYMBOL_LABEL @TLSCALL
-  MO_TLSCALL,
-  /// MO_TLSDESC - On a symbol operand this indicates that the immediate is
-  /// the index of the TLS descriptor argument for the symbol. When this
-  /// argument is passed to a call getting from index@TLSCALL, the function will
-  /// return the offset for the symbol. Used in both the IA32 and x86-64 local
-  /// dynamic TLS access model.
-  /// See 'RFC-TLSDESC-x86' for more details.
-  ///    SYMBOL_LABEL @TLSDESC
-  MO_TLSDESC,
   /// MO_GOTTPOFF - On a symbol operand this indicates that the immediate is
   /// the offset of the GOT entry with the thread-pointer offset for the
   /// symbol. Used in the x86-64 initial exec TLS access model.
