@@ -68,7 +68,7 @@ constexpr void test_iter_sent() {
     }
 
     // (range) overload
-    for (size_t n = 0; n <= 15; ++n) {
+    for (size_t n = 0; n <= original.size(); ++n) {
       for (size_t k = 0; k <= n + 2; ++k) {
         auto begin = Iter(scratch.data());
         auto end   = Sent(Iter(scratch.data() + n));
