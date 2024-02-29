@@ -42,6 +42,13 @@ class AddressMasksTestCase(TestBase):
         self.assertEqual(0x000002950001F694, process.FixAddress(0x00265E950001F694))
         self.assertEqual(0xFFFFFE950000F694, process.FixAddress(0xFFA65E950000F694))
 
+        # Set a eAddressMaskTypeCode which has the low 3 bits marked as non-address
+        # bits, confirm that they're cleared by FixAddress.
+        process.SetAddressableBits(
+            lldb.eAddressMaskTypeAll, 42, lldb.eAddressMaskRangeAll
+        )
+        mask = process.GetAddressMask(lldb.eAddressMaskTypeAny)
+        process.SetAddressMask(lldb.eAddressMaskTypeCode, mask | 0x3)
         process.SetAddressMask(lldb.eAddressMaskTypeCode, 0xFFFFFC0000000003)
         self.assertEqual(0x000002950001F697, process.FixAddress(0x00265E950001F697))
         self.assertEqual(0xFFFFFE950000F697, process.FixAddress(0xFFA65E950000F697))
@@ -62,3 +69,6 @@ class AddressMasksTestCase(TestBase):
         self.runCmd("settings set target.process.highmem-virtual-addressable-bits 15")
         self.assertEqual(0x0000000000007694, process.FixAddress(0x00265E950001F694))
         self.assertEqual(0xFFFFFFFFFFFFF694, process.FixAddress(0xFFA65E950000F694))
+        self.runCmd("settings set target.process.virtual-addressable-bits 0")
+        self.runCmd("settings set target.process.highmem-virtual-addressable-bits 0")
+        self.assertEqual(0x000002950001F694, process.FixAddress(0x00265E950001F694))
