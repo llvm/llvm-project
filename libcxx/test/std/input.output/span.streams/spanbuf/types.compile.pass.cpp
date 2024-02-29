@@ -30,18 +30,18 @@
 #include "constexpr_char_traits.h"
 #include "test_macros.h"
 
-template <typename CharT, typename Traits = std::char_traits<CharT>>
+template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpBuf = std::basic_spanbuf<CharT, Traits>;
+  using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
 
   // Types
 
-  static_assert(std::is_base_of_v<std::basic_streambuf<CharT, Traits>, SpBuf>);
+  static_assert(std::is_base_of_v<std::basic_streambuf<CharT, TraitsT>, SpBuf>);
   static_assert(std::is_same_v<typename SpBuf::char_type, CharT>);
-  static_assert(std::is_same_v<typename SpBuf::int_type, typename Traits::int_type>);
-  static_assert(std::is_same_v<typename SpBuf::pos_type, typename Traits::pos_type>);
-  static_assert(std::is_same_v<typename SpBuf::off_type, typename Traits::off_type>);
-  static_assert(std::is_same_v<typename SpBuf::traits_type, Traits>);
+  static_assert(std::is_same_v<typename SpBuf::int_type, typename TraitsT::int_type>);
+  static_assert(std::is_same_v<typename SpBuf::pos_type, typename TraitsT::pos_type>);
+  static_assert(std::is_same_v<typename SpBuf::off_type, typename TraitsT::off_type>);
+  static_assert(std::is_same_v<typename SpBuf::traits_type, TraitsT>);
 
   // Copy properties
 

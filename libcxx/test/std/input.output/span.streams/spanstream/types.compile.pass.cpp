@@ -30,18 +30,18 @@
 #include "constexpr_char_traits.h"
 #include "test_macros.h"
 
-template <typename CharT, typename Traits = std::char_traits<CharT>>
+template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpStream = std::basic_spanstream<CharT, Traits>;
+  using SpStream = std::basic_spanstream<CharT, TraitsT>;
 
   // Types
 
-  static_assert(std::is_base_of_v<std::basic_iostream<CharT, Traits>, SpStream>);
+  static_assert(std::is_base_of_v<std::basic_iostream<CharT, TraitsT>, SpStream>);
   static_assert(std::is_same_v<typename SpStream::char_type, CharT>);
-  static_assert(std::is_same_v<typename SpStream::int_type, typename Traits::int_type>);
-  static_assert(std::is_same_v<typename SpStream::pos_type, typename Traits::pos_type>);
-  static_assert(std::is_same_v<typename SpStream::off_type, typename Traits::off_type>);
-  static_assert(std::is_same_v<typename SpStream::traits_type, Traits>);
+  static_assert(std::is_same_v<typename SpStream::int_type, typename TraitsT::int_type>);
+  static_assert(std::is_same_v<typename SpStream::pos_type, typename TraitsT::pos_type>);
+  static_assert(std::is_same_v<typename SpStream::off_type, typename TraitsT::off_type>);
+  static_assert(std::is_same_v<typename SpStream::traits_type, TraitsT>);
 
   // Copy properties
 
