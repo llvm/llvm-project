@@ -1,0 +1,11 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "main.cpp"
+    ],
+    "directory": "/home/thebesttv/vul/llvm-project/graph-generation/zrq",
+    "file": "/home/thebesttv/vul/llvm-project/graph-generation/zrq/main.cpp"
+  }
+]
