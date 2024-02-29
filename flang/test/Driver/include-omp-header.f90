@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! Verify that the omp_lib.h header is found and included correctly. This header file should be available at a path:
 !   * relative to the driver, that's
 !   * known the driver.
