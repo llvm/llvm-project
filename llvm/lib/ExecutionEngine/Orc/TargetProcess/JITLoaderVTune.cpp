@@ -87,9 +87,8 @@ static void registerJITLoaderVTuneUnregisterImpl(
 extern "C" llvm::orc::shared::CWrapperFunctionResult
 llvm_orc_registerVTuneImpl(const char *Data, uint64_t Size) {
   using namespace orc::shared;
-  if (!Wrapper) {
+  if (!Wrapper)
     Wrapper.reset(new IntelJITEventsWrapper);
-  }
 
   return WrapperFunction<SPSError(SPSVTuneMethodBatch)>::handle(
              Data, Size, registerJITLoaderVTuneRegisterImpl)
@@ -170,7 +169,6 @@ static unsigned int GetNewMethodID(void) {
 extern "C" llvm::orc::shared::CWrapperFunctionResult
 llvm_orc_test_registerVTuneImpl(const char *Data, uint64_t Size) {
   using namespace orc::shared;
-  // TODO: replace Wrapper with test mocking
   Wrapper.reset(new IntelJITEventsWrapper(
       NotifyEvent, NULL, NULL, IsProfilingActive, 0, 0, GetNewMethodID));
   return WrapperFunction<SPSError(SPSVTuneMethodBatch)>::handle(

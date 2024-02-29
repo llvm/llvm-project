@@ -31,7 +31,6 @@ static VTuneMethodBatch getMethodBatch(LinkGraph &G, bool EmitDebugInfo) {
   if (EmitDebugInfo) {
     auto EDC = createDWARFContext(G);
     if (!EDC) {
-      // ERROR
       EmitDebugInfo = false;
     } else {
       DC = std::move(EDC->first);
@@ -42,16 +41,15 @@ static VTuneMethodBatch getMethodBatch(LinkGraph &G, bool EmitDebugInfo) {
   auto GetStringIdx = [Deduplicator = StringMap<uint32_t>(),
                        &Batch](StringRef S) mutable {
     auto I = Deduplicator.find(S);
-    if (I != Deduplicator.end()) {
+    if (I != Deduplicator.end())
       return I->second;
-    }
+
     Batch.Strings.push_back(S.str());
     return Deduplicator[S] = Batch.Strings.size();
   };
   for (auto Sym : G.defined_symbols()) {
-    if (!Sym->isCallable()) {
+    if (!Sym->isCallable())
       continue;
-    }
 
     Batch.Methods.push_back(VTuneMethodInfo());
     auto &Method = Batch.Methods.back();
@@ -63,10 +61,9 @@ static VTuneMethodBatch getMethodBatch(LinkGraph &G, bool EmitDebugInfo) {
     Method.ClassFileSI = 0;
     Method.SourceFileSI = 0;
 
-    if (!EmitDebugInfo) {
+    if (!EmitDebugInfo)
       continue;
-    }
-    // TODO: Emit debug info
+
     auto &Section = Sym->getBlock().getSection();
     auto Addr = Sym->getAddress();
     auto SAddr =
@@ -94,7 +91,6 @@ void VTuneSupportPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     // the object file is generated but not linked yet
     auto Batch = getMethodBatch(G, EmitDebugInfo);
     if (Batch.Methods.empty()) {
-      // Nothing to do.
       return Error::success();
     }
     {
@@ -120,9 +116,9 @@ Error VTuneSupportPlugin::notifyEmitted(MaterializationResponsibility &MR) {
   if (auto Err = MR.withResourceKeyDo([this, MR = &MR](ResourceKey K) {
         std::lock_guard<std::mutex> Lock(PluginMutex);
         auto I = PendingMethodIDs.find(MR);
-        if (I == PendingMethodIDs.end()) {
+        if (I == PendingMethodIDs.end())
           return;
-        }
+
         LoadedMethodIDs[K].push_back(I->second);
         PendingMethodIDs.erase(I);
       })) {
@@ -146,16 +142,16 @@ Error VTuneSupportPlugin::notifyRemovingResources(JITDylib &JD, ResourceKey K) {
   {
     std::lock_guard<std::mutex> Lock(PluginMutex);
     auto I = LoadedMethodIDs.find(K);
-    if (I == LoadedMethodIDs.end()) {
+    if (I == LoadedMethodIDs.end())
       return Error::success();
-    }
+
     UnloadedIDs = std::move(I->second);
     LoadedMethodIDs.erase(I);
   }
   if (auto Err = EPC.callSPSWrapper<void(shared::SPSVTuneUnloadedMethodIDs)>(
-          UnregisterVTuneImplAddr, UnloadedIDs)) {
+          UnregisterVTuneImplAddr, UnloadedIDs))
     return Err;
-  }
+
   return Error::success();
 }
 
@@ -164,11 +160,12 @@ void VTuneSupportPlugin::notifyTransferringResources(JITDylib &JD,
                                                      ResourceKey SrcKey) {
   std::lock_guard<std::mutex> Lock(PluginMutex);
   auto I = LoadedMethodIDs.find(SrcKey);
-  if (I == LoadedMethodIDs.end()) {
+  if (I == LoadedMethodIDs.end())
     return;
-  }
+
   auto &Dest = LoadedMethodIDs[DstKey];
   Dest.insert(Dest.end(), I->second.begin(), I->second.end());
+  LoadedMethodIDs.erase(SrcKey);
 }
 
 Expected<std::unique_ptr<VTuneSupportPlugin>>
