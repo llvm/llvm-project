@@ -2809,6 +2809,7 @@ class AddSubImmShift<bit isSub, bit setFlags, RegisterClass dstRegtype,
   let Inst{23-22} = imm{13-12}; // '00' => lsl #0, '01' => lsl #12
   let Inst{21-10} = imm{11-0};
   let DecoderMethod = "DecodeAddSubImmShift";
+  let hasPostISelHook = 1;
 }
 
 class BaseAddSubRegPseudo<RegisterClass regtype,
