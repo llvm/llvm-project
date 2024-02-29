@@ -1126,6 +1126,7 @@ public:
     case CK_NonAtomicToAtomic:
     case CK_NoOp:
     case CK_ConstructorConversion:
+    case CK_HLSLArrayRValue:
       return Visit(subExpr, destType);
 
     case CK_ArrayToPointerDecay:

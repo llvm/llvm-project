@@ -4655,6 +4655,13 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     return emitWritebackArg(*this, args, CRE);
   }
 
+  // If an argument is an array paramter expression being passed through. Emit
+  // the argument to a temporary and pass the temporary as the call arg.
+  if (auto AT = dyn_cast<ArrayParameterType>(type)) {
+    args.add(EmitAnyExprToTemp(E), type);
+    return;
+  }
+
   assert(type->isReferenceType() == E->isGLValue() &&
          "reference binding to unmaterialized r-value!");
 
