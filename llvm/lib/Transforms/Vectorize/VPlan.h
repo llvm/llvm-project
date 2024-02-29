@@ -2254,8 +2254,7 @@ public:
 class VPMonotonicHeaderPHIRecipe final : public VPHeaderPHIRecipe {
 public:
   VPMonotonicHeaderPHIRecipe(PHINode *Phi, VPValue *StartValue)
-      : VPHeaderPHIRecipe(VPDef::VPMonotonicHeaderPHISC, Phi,
-                          StartValue) {}
+      : VPHeaderPHIRecipe(VPDef::VPMonotonicHeaderPHISC, Phi, StartValue) {}
 
   ~VPMonotonicHeaderPHIRecipe() override = default;
 

@@ -4115,7 +4115,7 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
 bool LoopVectorizationCostModel::memoryInstructionUsesMonotonic(
     Instruction *I, ElementCount VF) {
   assert((isa<LoadInst, StoreInst>(I)) && "Invalid memory instruction");
-  return Legal->ptrHasMonotonicOperand(getLoadStorePointerOperand(I));
+  return Legal->hasMonotonicOperand(getLoadStorePointerOperand(I));
 }
 
 void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
@@ -6084,7 +6084,7 @@ LoopVectorizationCostModel::getMonotonicMemoryOpCost(Instruction *I,
     return InstructionCost::getInvalid();
 
   LLVMContext &Ctx = I->getContext();
-  SmallVector<Type *> ParamTys;;
+  SmallVector<Type *> ParamTys;
   ParamTys.push_back(VectorTy);
   ParamTys.push_back(Ptr->getType());
   ParamTys.push_back(VectorType::get(Type::getInt1Ty(Ctx), VF));
@@ -6484,7 +6484,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
 
           // Load or store with monotonic index in pointer's computation
           // requires special handling of a mask.
-          if (Legal->ptrHasMonotonicOperand(Ptr))
+          if (Legal->hasMonotonicOperand(Ptr))
             return false;
 
           // For scalable vectors, a uniform memop load is always
@@ -9492,6 +9492,8 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
         NewSI = Builder.CreateIntrinsic(
             Builder.getVoidTy(), Intrinsic::masked_compressstore,
             {StoredVal, VecPtr, BlockInMaskParts[Part]});
+        cast<IntrinsicInst>(NewSI)->addParamAttr(
+            1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
       } else {
         if (isReverse()) {
           // If we store to reverse consecutive memory locations, then we need

@@ -1575,7 +1575,8 @@ MonotonicDescriptor::isMonotonicPHI(PHINode *Phi, const Loop *L,
 
   // It's important to check all uses of the Phi and make sure they are either
   // outside of the loop.
-  // TODO: Support uses under nested predicate, which can be supported by vectorizer
+  // TODO: Support uses under nested predicate, which can be supported by
+  // vectorizer
   for (User *U : Phi->users()) {
     auto *UI = cast<Instruction>(U);
     if (!L->contains(UI))

@@ -13,11 +13,11 @@
 #ifndef LLVM_ANALYSIS_IVDESCRIPTORS_H
 #define LLVM_ANALYSIS_IVDESCRIPTORS_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/ADT/SetVector.h"
 
 namespace llvm {
 
@@ -400,7 +400,7 @@ class MonotonicDescriptor {
 public:
   /// This enum represents the kinds of monotonic that we support.
   enum MonotonicKind {
-    MK_None,  ///< Not a monotonic variable.
+    MK_None,    ///< Not a monotonic variable.
     MK_Integer, /// < Integer monotonic variable. Step = C
     MK_Pointer, /// < Pointer monotonic variable. Step = C
   };

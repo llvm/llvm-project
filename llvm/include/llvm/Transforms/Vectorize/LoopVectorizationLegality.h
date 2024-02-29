@@ -258,8 +258,7 @@ public:
   using InductionList = MapVector<PHINode *, InductionDescriptor>;
 
   /// MonotonicPhiList contains phi nodes that represent monotonic idiom
-  using MonotonicPhiList =
-      MapVector<const PHINode *, MonotonicDescriptor>;
+  using MonotonicPhiList = MapVector<const PHINode *, MonotonicDescriptor>;
 
   /// RecurrenceSet contains the phi nodes that are recurrences other than
   /// inductions and reductions.
@@ -315,9 +314,10 @@ public:
 
   /// Returns the MonotonicDescriptor associated with an \p I instruction
   /// Returns emtpy descriptor if \p I instruction is non-monotonic.
-  const MonotonicDescriptor *getMonotonicDescriptor(const Instruction *I) const {
+  const MonotonicDescriptor *
+  getMonotonicDescriptor(const Instruction *I) const {
     for (const auto &PMD : getMonotonics()) {
-      if (const auto *Phi = dyn_cast<const PHINode>(I))
+      if (const auto *Phi = dyn_cast<PHINode>(I))
         if (PMD.second.getPhis().contains(const_cast<PHINode *>(Phi)))
           return &PMD.second;
       if (PMD.second.getUpdateOp() == I)
@@ -391,7 +391,7 @@ public:
   bool isConsecutiveMonotonicPtr(Value *Ptr) const;
 
   /// Return true if \p Ptr computation depends on monotonic value.
-  bool ptrHasMonotonicOperand(Value *Ptr) const;
+  bool hasMonotonicOperand(Value *Ptr) const;
 
   /// Returns true if value V is uniform across \p VF lanes, when \p VF is
   /// provided, and otherwise if \p V is invariant across all loop iterations.

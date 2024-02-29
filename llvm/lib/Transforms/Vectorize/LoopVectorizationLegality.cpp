@@ -477,7 +477,7 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
 }
 
 bool LoopVectorizationLegality::isConsecutiveMonotonicPtr(Value *Ptr) const {
-  assert(ptrHasMonotonicOperand(Ptr) &&
+  assert(hasMonotonicOperand(Ptr) &&
          "Pointer's computation does not use monotonic values.");
 
   auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
@@ -494,8 +494,7 @@ bool LoopVectorizationLegality::isConsecutiveMonotonicPtr(Value *Ptr) const {
   return Step && Step->getAPInt().getZExtValue() == 1;
 }
 
-bool LoopVectorizationLegality::ptrHasMonotonicOperand(
-    Value *Ptr) const {
+bool LoopVectorizationLegality::hasMonotonicOperand(Value *Ptr) const {
   auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
   if (!GEP)
     return false;
@@ -962,8 +961,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           continue;
         }
         if (EnableMonotonics && TTI->enableMonotonicVectorization())
-          if (auto MD =
-                  MonotonicDescriptor::isMonotonicPHI(Phi, TheLoop, PSE))
+          if (auto MD = MonotonicDescriptor::isMonotonicPHI(Phi, TheLoop, PSE))
             if (canVectorizeMonotonic(MD)) {
               addMonotonic(MD);
               continue;

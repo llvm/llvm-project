@@ -1146,7 +1146,8 @@ void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
   getStepValue()->printAsOperand(O, SlotTracker);
 }
 
-void VPMonotonicUpdateInstruction::print(raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
+void VPMonotonicUpdateInstruction::print(raw_ostream &O, const Twine &Indent,
+                                         VPSlotTracker &SlotTracker) const {
   O << Indent << "monotonic-update ";
   printAsOperand(O, SlotTracker);
   O << " = ";

@@ -96,7 +96,7 @@ define i32 @compress_store(i32 %n, ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[MONOTONIC_PHI]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[TMP6]], i32 0
-; CHECK-NEXT:    call void @llvm.masked.compressstore.v4i32(<4 x i32> [[WIDE_LOAD]], ptr [[TMP7]], <4 x i1> [[TMP4]])
+; CHECK-NEXT:    call void @llvm.masked.compressstore.v4i32(<4 x i32> [[WIDE_LOAD]], ptr align 4 [[TMP7]], <4 x i1> [[TMP4]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i1> [[TMP4]] to i4
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i4 @llvm.ctpop.i4(i4 [[TMP8]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i4 [[TMP9]] to i32
@@ -196,7 +196,7 @@ define i64 @compress_store_i64(i32 %n, ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i1> [[TMP3]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[A]], i64 [[MONOTONIC_PHI]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    call void @llvm.masked.compressstore.v4i32(<4 x i32> [[WIDE_LOAD]], ptr [[TMP6]], <4 x i1> [[TMP4]])
+; CHECK-NEXT:    call void @llvm.masked.compressstore.v4i32(<4 x i32> [[WIDE_LOAD]], ptr align 4 [[TMP6]], <4 x i1> [[TMP4]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i1> [[TMP4]] to i4
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i4 @llvm.ctpop.i4(i4 [[TMP7]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i4 [[TMP8]] to i64
