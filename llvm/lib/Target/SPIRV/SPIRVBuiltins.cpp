@@ -134,6 +134,7 @@ struct ConvertBuiltin {
   bool IsDestinationSigned;
   bool IsSaturated;
   bool IsRounded;
+  bool IsBfloat16;
   FPRoundingMode::FPRoundingMode RoundingMode;
 };
 
@@ -1986,6 +1987,7 @@ static bool generateConvertInst(const StringRef DemangledCall,
                     SPIRV::Decoration::FPRoundingMode,
                     {(unsigned)Builtin->RoundingMode});
 
+  std::string NeedExtMsg; // no errors if empty
   unsigned Opcode = SPIRV::OpNop;
   if (GR->isScalarOrVectorOfType(Call->Arguments[0], SPIRV::OpTypeInt)) {
     // Int -> ...
@@ -2000,23 +2002,49 @@ static bool generateConvertInst(const StringRef DemangledCall,
     } else if (GR->isScalarOrVectorOfType(Call->ReturnRegister,
                                           SPIRV::OpTypeFloat)) {
       // Int -> Float
-      bool IsSourceSigned =
-          DemangledCall[DemangledCall.find_first_of('(') + 1] != 'u';
-      Opcode = IsSourceSigned ? SPIRV::OpConvertSToF : SPIRV::OpConvertUToF;
+      if (Builtin->IsBfloat16) {
+        const auto *ST = static_cast<const SPIRVSubtarget *>(
+            &MIRBuilder.getMF().getSubtarget());
+        if (!ST->canUseExtension(
+                SPIRV::Extension::SPV_INTEL_bfloat16_conversion))
+          NeedExtMsg = "SPV_INTEL_bfloat16_conversion";
+        Opcode = SPIRV::OpConvertBF16ToFINTEL;
+      } else {
+        bool IsSourceSigned =
+            DemangledCall[DemangledCall.find_first_of('(') + 1] != 'u';
+        Opcode = IsSourceSigned ? SPIRV::OpConvertSToF : SPIRV::OpConvertUToF;
+      }
     }
   } else if (GR->isScalarOrVectorOfType(Call->Arguments[0],
                                         SPIRV::OpTypeFloat)) {
     // Float -> ...
-    if (GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeInt))
+    if (GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeInt)) {
       // Float -> Int
-      Opcode = Builtin->IsDestinationSigned ? SPIRV::OpConvertFToS
-                                            : SPIRV::OpConvertFToU;
-    else if (GR->isScalarOrVectorOfType(Call->ReturnRegister,
-                                        SPIRV::OpTypeFloat))
+      if (Builtin->IsBfloat16) {
+        const auto *ST = static_cast<const SPIRVSubtarget *>(
+            &MIRBuilder.getMF().getSubtarget());
+        if (!ST->canUseExtension(
+                SPIRV::Extension::SPV_INTEL_bfloat16_conversion))
+          NeedExtMsg = "SPV_INTEL_bfloat16_conversion";
+        Opcode = SPIRV::OpConvertFToBF16INTEL;
+      } else {
+        Opcode = Builtin->IsDestinationSigned ? SPIRV::OpConvertFToS
+                                              : SPIRV::OpConvertFToU;
+      }
+    } else if (GR->isScalarOrVectorOfType(Call->ReturnRegister,
+                                          SPIRV::OpTypeFloat)) {
       // Float -> Float
       Opcode = SPIRV::OpFConvert;
+    }
   }
 
+  if (!NeedExtMsg.empty()) {
+    std::string DiagMsg = std::string(Builtin->Name) +
+                          ": the builtin requires the following SPIR-V "
+                          "extension: " +
+                          NeedExtMsg;
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
   assert(Opcode != SPIRV::OpNop &&
          "Conversion between the types not implemented!");
 
