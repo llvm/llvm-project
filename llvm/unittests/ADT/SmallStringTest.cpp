@@ -244,4 +244,10 @@ TEST_F(SmallStringTest, GTestPrinter) {
   EXPECT_EQ(R"("foo")", ::testing::PrintToString(ErasedSmallString));
 }
 
+TEST_F(SmallStringTest, StringView) {
+  theString = "hello from std::string_view";
+  EXPECT_EQ("hello from std::string_view",
+            static_cast<std::string_view>(theString));
+}
+
 } // namespace

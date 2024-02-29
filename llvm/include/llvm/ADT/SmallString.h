@@ -265,6 +265,11 @@ public:
   /// Implicit conversion to StringRef.
   operator StringRef() const { return str(); }
 
+  /// Implicit conversion to std::string_view.
+  operator std::string_view() const {
+    return std::string_view(this->data(), this->size());
+  }
+
   explicit operator std::string() const {
     return std::string(this->data(), this->size());
   }
