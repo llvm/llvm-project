@@ -18,7 +18,6 @@ void ReturnTest() {
 
 template<typename T>
 void BreakContinue() {
-
 #pragma acc parallel
   for(int i =0; i < 5; ++i) {
     switch(i) {
@@ -109,6 +108,35 @@ void BreakContinue() {
   } while (j );
 }
 
+template<typename T>
+void DuffsDevice() {
+  int j;
+  switch (j) {
+#pragma acc parallel
+  for(int i =0; i < 5; ++i) {
+    case 0: // expected-error{{invalid branch into OpenACC Compute Construct}}
+      {}
+  }
+  }
+
+  switch (j) {
+#pragma acc parallel
+  for(int i =0; i < 5; ++i) {
+    default: // expected-error{{invalid branch into OpenACC Compute Construct}}
+      {}
+  }
+  }
+
+  switch (j) {
+#pragma acc parallel
+  for(int i =0; i < 5; ++i) {
+    case 'a' ... 'z': // expected-error{{invalid branch into OpenACC Compute Construct}}
+      {}
+  }
+  }
+}
+
 void Instantiate() {
   BreakContinue<int>();
+  DuffsDevice<int>();
 }
