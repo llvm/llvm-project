@@ -366,7 +366,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary,
   SmallString<128> PerfTraceFile;
   sys::fs::createUniquePath("perf-script-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%.tmp",
                             PerfTraceFile, /*MakeAbsolute=*/true);
-  std::string ErrorFile = std::string(PerfTraceFile) + ".script.err.tmp";
+  std::string ErrorFile = std::string(PerfTraceFile) + ".err";
   StringRef ScriptMMapArgs[] = {PerfPath, "script",   "--show-mmap-events",
                                 "-F",     "comm,pid", "-i",
                                 PerfData};
