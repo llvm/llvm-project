@@ -5246,7 +5246,7 @@ bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   return true;
 }
 
-bool CheckAllArgsAreFloatRepresentation(Sema *S, CallExpr *TheCall) {
+bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
   QualType ExpectedType = S->Context.FloatTy;
   for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
     QualType PassedType = TheCall->getArg(i)->getType();
@@ -5279,7 +5279,7 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
-    if (CheckAllArgsAreFloatRepresentation(this, TheCall))
+    if (CheckAllArgsHaveFloatRepresentation(this, TheCall))
       return true;
     break;
   }
@@ -5290,7 +5290,7 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     if (SemaBuiltinElementwiseTernaryMath(TheCall))
       return true;
-    if (CheckAllArgsAreFloatRepresentation(this, TheCall))
+    if (CheckAllArgsHaveFloatRepresentation(this, TheCall))
       return true;
     break;
   }
