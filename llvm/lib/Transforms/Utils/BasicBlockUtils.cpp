@@ -1297,7 +1297,7 @@ static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
     // PHI.
     // Create the new PHI node, insert it into NewBB at the end of the block
     PHINode *NewPHI =
-        PHINode::Create(PN->getType(), Preds.size(), PN->getName() + ".ph", BI->getIterator());
+        PHINode::Create(PN->getType(), Preds.size(), PN->getName() + ".ph", BI);
 
     // NOTE! This loop walks backwards for a reason! First off, this minimizes
     // the cost of removal if we end up removing a large number of values, and
@@ -1517,7 +1517,7 @@ static void SplitLandingPadPredecessorsImpl(
       assert(!LPad->getType()->isTokenTy() &&
              "Split cannot be applied if LPad is token type. Otherwise an "
              "invalid PHINode of token type would be created.");
-      PHINode *PN = PHINode::Create(LPad->getType(), 2, "lpad.phi", LPad->getIterator());
+      PHINode *PN = PHINode::Create(LPad->getType(), 2, "lpad.phi", LPad);
       PN->addIncoming(Clone1, NewBB1);
       PN->addIncoming(Clone2, NewBB2);
       LPad->replaceAllUsesWith(PN);
@@ -1904,7 +1904,7 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
     auto Phi = cast<PHINode>(I);
     auto NewPhi =
         PHINode::Create(Phi->getType(), Incoming.size(),
-                        Phi->getName() + ".moved", FirstGuardBlock->begin());
+                        Phi->getName() + ".moved", &FirstGuardBlock->front());
     for (auto *In : Incoming) {
       Value *V = UndefValue::get(Phi->getType());
       if (In == Out) {
@@ -2023,7 +2023,7 @@ static void calcPredicateUsingInteger(
       Value *Id1 = ConstantInt::get(Type::getInt32Ty(Context),
                                     std::distance(Outgoing.begin(), Succ1Iter));
       IncomingId = SelectInst::Create(Condition, Id0, Id1, "target.bb.idx",
-                                      In->getTerminator()->getIterator());
+                                      In->getTerminator());
     } else {
       // Get the index of the non-null successor.
       auto SuccIter = Succ0 ? find(Outgoing, Succ0) : find(Outgoing, Succ1);

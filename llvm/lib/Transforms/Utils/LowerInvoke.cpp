@@ -52,7 +52,7 @@ static bool runImpl(Function &F) {
       // Insert a normal call instruction...
       CallInst *NewCall =
           CallInst::Create(II->getFunctionType(), II->getCalledOperand(),
-                           CallArgs, OpBundles, "", II->getIterator());
+                           CallArgs, OpBundles, "", II);
       NewCall->takeName(II);
       NewCall->setCallingConv(II->getCallingConv());
       NewCall->setAttributes(II->getAttributes());
@@ -60,7 +60,7 @@ static bool runImpl(Function &F) {
       II->replaceAllUsesWith(NewCall);
 
       // Insert an unconditional branch to the normal destination.
-      BranchInst::Create(II->getNormalDest(), II->getIterator());
+      BranchInst::Create(II->getNormalDest(), II);
 
       // Remove any PHI node entries from the exception destination.
       II->getUnwindDest()->removePredecessor(&BB);

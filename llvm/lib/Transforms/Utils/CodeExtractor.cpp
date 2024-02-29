@@ -570,7 +570,7 @@ void CodeExtractor::findAllocas(const CodeExtractorAnalysisCache &CEAC,
       LLVMContext &Ctx = M->getContext();
       auto *Int8PtrTy = PointerType::getUnqual(Ctx);
       CastInst *CastI =
-          CastInst::CreatePointerCast(AI, Int8PtrTy, "lt.cast", I->getIterator());
+          CastInst::CreatePointerCast(AI, Int8PtrTy, "lt.cast", I);
       I->replaceUsesOfWith(I->getOperand(1), CastI);
     }
 
@@ -1024,7 +1024,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       Value *Idx[2];
       Idx[0] = Constant::getNullValue(Type::getInt32Ty(header->getContext()));
       Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), aggIdx);
-      BasicBlock::iterator TI = newFunction->begin()->getTerminator()->getIterator();
+      Instruction *TI = newFunction->begin()->getTerminator();
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructTy, &*AggAI, Idx, "gep_" + inputs[i]->getName(), TI);
       RewriteVal = new LoadInst(StructTy->getElementType(aggIdx), GEP,
@@ -1173,7 +1173,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       AllocaInst *alloca =
         new AllocaInst(output->getType(), DL.getAllocaAddrSpace(),
                        nullptr, output->getName() + ".loc",
-                       codeReplacer->getParent()->front().begin());
+                       &codeReplacer->getParent()->front().front());
       ReloadOutputs.push_back(alloca);
       params.push_back(alloca);
       ++ScalarOutputArgNo;
@@ -1192,8 +1192,8 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
     StructArgTy = StructType::get(newFunction->getContext(), ArgTypes);
     Struct = new AllocaInst(
         StructArgTy, DL.getAllocaAddrSpace(), nullptr, "structArg",
-        AllocationBlock ? AllocationBlock->getFirstInsertionPt()
-                        : codeReplacer->getParent()->front().begin());
+        AllocationBlock ? &*AllocationBlock->getFirstInsertionPt()
+                        : &codeReplacer->getParent()->front().front());
 
     if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
       auto *StructSpaceCast = new AddrSpaceCastInst(
@@ -1358,8 +1358,9 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
     else
       InsertPt = std::next(OutI->getIterator());
 
-    assert((InsertPt->getFunction() == newFunction ||
-            Blocks.count(InsertPt->getParent())) &&
+    Instruction *InsertBefore = &*InsertPt;
+    assert((InsertBefore->getFunction() == newFunction ||
+            Blocks.count(InsertBefore->getParent())) &&
            "InsertPt should be in new function");
     if (AggregateArgs && StructValues.contains(outputs[i])) {
       assert(AggOutputArgBegin != newFunction->arg_end() &&
@@ -1370,8 +1371,8 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), aggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, &*AggOutputArgBegin, Idx, "gep_" + outputs[i]->getName(),
-          InsertPt);
-      new StoreInst(outputs[i], GEP, InsertPt);
+          InsertBefore);
+      new StoreInst(outputs[i], GEP, InsertBefore);
       ++aggIdx;
       // Since there should be only one struct argument aggregating
       // all the output values, we shouldn't increment AggOutputArgBegin, which
@@ -1380,7 +1381,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       assert(ScalarOutputArgBegin != newFunction->arg_end() &&
              "Number of scalar output arguments should match "
              "the number of defined values");
-      new StoreInst(outputs[i], &*ScalarOutputArgBegin, InsertPt);
+      new StoreInst(outputs[i], &*ScalarOutputArgBegin, InsertBefore);
       ++ScalarOutputArgBegin;
     }
   }
@@ -1395,15 +1396,15 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
 
     // Check if the function should return a value
     if (OldFnRetTy->isVoidTy()) {
-      ReturnInst::Create(Context, nullptr, TheSwitch->getIterator());  // Return void
+      ReturnInst::Create(Context, nullptr, TheSwitch);  // Return void
     } else if (OldFnRetTy == TheSwitch->getCondition()->getType()) {
       // return what we have
-      ReturnInst::Create(Context, TheSwitch->getCondition(), TheSwitch->getIterator());
+      ReturnInst::Create(Context, TheSwitch->getCondition(), TheSwitch);
     } else {
       // Otherwise we must have code extracted an unwind or something, just
       // return whatever we want.
       ReturnInst::Create(Context,
-                         Constant::getNullValue(OldFnRetTy), TheSwitch->getIterator());
+                         Constant::getNullValue(OldFnRetTy), TheSwitch);
     }
 
     TheSwitch->eraseFromParent();
@@ -1411,12 +1412,12 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
   case 1:
     // Only a single destination, change the switch into an unconditional
     // branch.
-    BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch->getIterator());
+    BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch);
     TheSwitch->eraseFromParent();
     break;
   case 2:
     BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch->getSuccessor(2),
-                       call, TheSwitch->getIterator());
+                       call, TheSwitch);
     TheSwitch->eraseFromParent();
     break;
   default:

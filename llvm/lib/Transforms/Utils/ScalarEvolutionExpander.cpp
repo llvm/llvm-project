@@ -1267,7 +1267,7 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
         // corresponding to the back-edge.
         Instruction *Add = BinaryOperator::CreateAdd(CanonicalIV, One,
                                                      "indvar.next",
-                                                     HP->getTerminator()->getIterator());
+                                                     HP->getTerminator());
         Add->setDebugLoc(HP->getTerminator()->getDebugLoc());
         rememberInstruction(Add);
         CanonicalIV->addIncoming(Add, HP);
@@ -2232,7 +2232,7 @@ Value *SCEVExpander::fixupLCSSAFormFor(Value *V) {
   if (!PreserveLCSSA || !DefI)
     return V;
 
-  BasicBlock::iterator InsertPt = Builder.GetInsertPoint();
+  Instruction *InsertPt = &*Builder.GetInsertPoint();
   Loop *DefLoop = SE.LI.getLoopFor(DefI->getParent());
   Loop *UseLoop = SE.LI.getLoopFor(InsertPt->getParent());
   if (!DefLoop || UseLoop == DefLoop || DefLoop->contains(UseLoop))
