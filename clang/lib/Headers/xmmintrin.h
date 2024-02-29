@@ -1295,7 +1295,12 @@ _mm_ucomineq_ss(__m128 __a, __m128 __b)
 }
 
 /// Converts a float value contained in the lower 32 bits of a vector of
-///    [4 x float] into a 32-bit integer.
+///    [4 x float] into a 32-bit integer. Rounds an inexact result according to
+///    the rounding control bits in the MXCSR register.
+///
+///    If a converted value is larger than the maximum possible result,
+///    raises a floating-point invalid exception. If the exception is
+///    masked, returns the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1313,7 +1318,12 @@ _mm_cvtss_si32(__m128 __a)
 }
 
 /// Converts a float value contained in the lower 32 bits of a vector of
-///    [4 x float] into a 32-bit integer.
+///    [4 x float] into a 32-bit integer. Rounds an inexact result according to
+///    the rounding control bits in the MXCSR register.
+///
+///    If a converted value is larger than the maximum possible result,
+///    raises a floating-point invalid exception. If the exception is
+///    masked, returns the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1333,7 +1343,12 @@ _mm_cvt_ss2si(__m128 __a)
 #ifdef __x86_64__
 
 /// Converts a float value contained in the lower 32 bits of a vector of
-///    [4 x float] into a 64-bit integer.
+///    [4 x float] into a 64-bit integer. Rounds an inexact result according to
+///    the rounding control bits in the MXCSR register.
+///
+///    If a converted value is larger than the maximum possible result,
+///    raises a floating-point invalid exception. If the exception is
+///    masked, returns the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1352,8 +1367,13 @@ _mm_cvtss_si64(__m128 __a)
 
 #endif
 
-/// Converts two low-order float values in a 128-bit vector of
-///    [4 x float] into a 64-bit vector of [2 x i32].
+/// Converts two low-order float values in a 128-bit vector of [4 x float] into
+///    a 64-bit vector of [2 x i32]. Rounds inexact results according to the
+///    rounding control bits in the MXCSR register.
+///
+///    If a converted value is larger than the maximum possible result,
+///    raises a floating-point invalid exception. If the exception is
+///    masked, returns the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1368,8 +1388,13 @@ _mm_cvtps_pi32(__m128 __a)
   return (__m64)__builtin_ia32_cvtps2pi((__v4sf)__a);
 }
 
-/// Converts two low-order float values in a 128-bit vector of
-///    [4 x float] into a 64-bit vector of [2 x i32].
+/// Converts two low-order float values in a 128-bit vector of [4 x float] into
+///    a 64-bit vector of [2 x i32]. Rounds inexact results according to the
+///    rounding control bits in the MXCSR register.
+///
+///    If a converted value is larger than the maximum possible result,
+///    raises a floating-point invalid exception. If the exception is
+///    masked, returns the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1385,8 +1410,11 @@ _mm_cvt_ps2pi(__m128 __a)
 }
 
 /// Converts a float value contained in the lower 32 bits of a vector of
-///    [4 x float] into a 32-bit integer, truncating the result when it is
-///    inexact.
+///    [4 x float] into a 32-bit integer, truncating an inexact result.
+///
+///    If a converted value is larger than the maximum possible result,
+///    raises a floating-point invalid exception. If the exception is
+///    masked, returns the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1404,8 +1432,11 @@ _mm_cvttss_si32(__m128 __a)
 }
 
 /// Converts a float value contained in the lower 32 bits of a vector of
-///    [4 x float] into a 32-bit integer, truncating the result when it is
-///    inexact.
+///    [4 x float] into a 32-bit integer, truncating an inexact result.
+///
+///    If a converted value is larger than the maximum possible result,
+///    raises a floating-point invalid exception. If the exception is
+///    masked, returns the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1424,8 +1455,11 @@ _mm_cvtt_ss2si(__m128 __a)
 
 #ifdef __x86_64__
 /// Converts a float value contained in the lower 32 bits of a vector of
-///    [4 x float] into a 64-bit integer, truncating the result when it is
-///    inexact.
+///    [4 x float] into a 64-bit integer, truncating an inexact result.
+///
+///    If a converted value is larger than the maximum possible result,
+///    raises a floating-point invalid exception. If the exception is
+///    masked, returns the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1444,8 +1478,12 @@ _mm_cvttss_si64(__m128 __a)
 #endif
 
 /// Converts two low-order float values in a 128-bit vector of
-///    [4 x float] into a 64-bit vector of [2 x i32], truncating the result
-///    when it is inexact.
+///    [4 x float] into a 64-bit vector of [2 x i32], truncating inexact
+///    results.
+///
+///    If a converted value is larger than the maximum possible result,
+///    raises a floating-point invalid exception. If the exception is
+///    masked, returns the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1462,8 +1500,11 @@ _mm_cvttps_pi32(__m128 __a)
 }
 
 /// Converts two low-order float values in a 128-bit vector of [4 x
-///    float] into a 64-bit vector of [2 x i32], truncating the result when it
-///    is inexact.
+///    float] into a 64-bit vector of [2 x i32], truncating inexact results.
+///
+///    If a converted value is larger than the maximum possible result,
+///    raises a floating-point invalid exception. If the exception is
+///    masked, returns the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1478,10 +1519,11 @@ _mm_cvtt_ps2pi(__m128 __a)
   return _mm_cvttps_pi32(__a);
 }
 
-/// Converts a 32-bit signed integer value into a floating point value
-///    and writes it to the lower 32 bits of the destination. The remaining
-///    higher order elements of the destination vector are copied from the
-///    corresponding elements in the first operand.
+/// Converts a 32-bit signed integer value into a floating point value and
+///    writes it to the lower 32 bits of the destination. Rounds an inexact
+///    result according to the rounding control bits in the MXCSR register.
+///    The remaining higher order elements of the destination vector are copied
+///    from the corresponding elements in the first operand.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1501,10 +1543,11 @@ _mm_cvtsi32_ss(__m128 __a, int __b)
   return __a;
 }
 
-/// Converts a 32-bit signed integer value into a floating point value
-///    and writes it to the lower 32 bits of the destination. The remaining
-///    higher order elements of the destination are copied from the
-///    corresponding elements in the first operand.
+/// Converts a 32-bit signed integer value into a floating point value and
+///    writes it to the lower 32 bits of the destination. Rounds an inexact
+///    result according to the rounding control bits in the MXCSR register.
+///    The remaining higher order elements of the destination are copied from
+///    the corresponding elements in the first operand.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1525,10 +1568,11 @@ _mm_cvt_si2ss(__m128 __a, int __b)
 
 #ifdef __x86_64__
 
-/// Converts a 64-bit signed integer value into a floating point value
-///    and writes it to the lower 32 bits of the destination. The remaining
-///    higher order elements of the destination are copied from the
-///    corresponding elements in the first operand.
+/// Converts a 64-bit signed integer value into a floating point value and
+///    writes it to the lower 32 bits of the destination. Rounds an inexact
+///    result according to the rounding control bits in the MXCSR register.
+///    The remaining higher order elements of the destination are copied from
+///    the corresponding elements in the first operand.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1552,8 +1596,10 @@ _mm_cvtsi64_ss(__m128 __a, long long __b)
 
 /// Converts two elements of a 64-bit vector of [2 x i32] into two
 ///    floating point values and writes them to the lower 64-bits of the
-///    destination. The remaining higher order elements of the destination are
-///    copied from the corresponding elements in the first operand.
+///    destination. Rounds inexact results according to the rounding control
+///    bits in the MXCSR register. The remaining higher order elements of the
+///    destination are copied from the corresponding elements in the first
+///    operand.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1575,8 +1621,10 @@ _mm_cvtpi32_ps(__m128 __a, __m64 __b)
 
 /// Converts two elements of a 64-bit vector of [2 x i32] into two
 ///    floating point values and writes them to the lower 64-bits of the
-///    destination. The remaining higher order elements of the destination are
-///    copied from the corresponding elements in the first operand.
+///    destination. Rounds inexact results according to the rounding control
+///    bits in the MXCSR register. The remaining higher order elements of the
+///    destination are copied from the corresponding elements in the first
+///    operand.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2835,7 +2883,9 @@ _mm_cvtpu8_ps(__m64 __a)
 }
 
 /// Converts the two 32-bit signed integer values from each 64-bit vector
-///    operand of [2 x i32] into a 128-bit vector of [4 x float].
+///    operand of [2 x i32] into a 128-bit vector of [4 x float]. Rounds
+///    inexact results according to the rounding control bits in the MXCSR
+///    register.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2864,7 +2914,9 @@ _mm_cvtpi32x2_ps(__m64 __a, __m64 __b)
 
 /// Converts each single-precision floating-point element of a 128-bit
 ///    floating-point vector of [4 x float] into a 16-bit signed integer, and
-///    packs the results into a 64-bit integer vector of [4 x i16].
+///    packs the results into a 64-bit integer vector of [4 x i16]. Rounds
+///    inexact results according to the rounding control bits in the MXCSR
+///    register.
 ///
 ///    If the floating-point element is NaN or infinity, or if the
 ///    floating-point element is greater than 0x7FFFFFFF or less than -0x8000,
@@ -2894,7 +2946,8 @@ _mm_cvtps_pi16(__m128 __a)
 /// Converts each single-precision floating-point element of a 128-bit
 ///    floating-point vector of [4 x float] into an 8-bit signed integer, and
 ///    packs the results into the lower 32 bits of a 64-bit integer vector of
-///    [8 x i8]. The upper 32 bits of the vector are set to 0.
+///    [8 x i8]. The upper 32 bits of the vector are set to 0. Rounds inexact
+///    results according to the rounding control bits in the MXCSR register.
 ///
 ///    If the floating-point element is NaN or infinity, or if the
 ///    floating-point element is greater than 0x7FFFFFFF or less than -0x80, it
