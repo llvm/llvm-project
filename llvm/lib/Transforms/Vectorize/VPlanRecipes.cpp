@@ -413,17 +413,6 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     State.EVL = this;
     return EVL;
   }
-  // TODO: remove this once a regular Add VPInstruction is supported.
-  case VPInstruction::ExplicitVectorLengthIVIncrement: {
-    assert(Part == 0 && "Expected unroll factor 1 for VP vectorization.");
-    Value *Phi = State.get(getOperand(0), VPIteration(0, 0));
-    Value *EVL = State.get(getOperand(1), VPIteration(0, 0));
-    assert(EVL->getType() == Phi->getType() &&
-           "EVL and Phi must have the same type.");
-    return Builder.CreateAdd(Phi, EVL, Name, hasNoUnsignedWrap(),
-                             hasNoSignedWrap());
-    return EVL;
-  }
   case VPInstruction::CanonicalIVIncrementForPart: {
     auto *IV = State.get(getOperand(0), VPIteration(0, 0));
     if (Part == 0)
@@ -631,7 +620,6 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ExplicitVectorLength:
-  case VPInstruction::ExplicitVectorLengthIVIncrement:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
@@ -670,9 +658,6 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExplicitVectorLength:
     O << "EXPLICIT-VECTOR-LENGTH";
-    break;
-  case VPInstruction::ExplicitVectorLengthIVIncrement:
-    O << "EXPLICIT-VECTOR-LENGTH +";
     break;
   case VPInstruction::FirstOrderRecurrenceSplice:
     O << "first-order splice";

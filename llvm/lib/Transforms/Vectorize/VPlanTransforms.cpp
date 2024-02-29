@@ -1332,11 +1332,11 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
                                      CanonicalIVPHI->getScalarType());
     OpVPEVL->insertBefore(CanonicalIVIncrement);
   }
-  auto *NextEVLIV = new VPInstruction(
-      VPInstruction::ExplicitVectorLengthIVIncrement, {OpVPEVL, EVLPhi},
-      {CanonicalIVIncrement->hasNoUnsignedWrap(),
-       CanonicalIVIncrement->hasNoSignedWrap()},
-      CanonicalIVIncrement->getDebugLoc(), "index.evl.next");
+  auto *NextEVLIV =
+      new VPInstruction(Instruction::Add, {OpVPEVL, EVLPhi},
+                        {CanonicalIVIncrement->hasNoUnsignedWrap(),
+                         CanonicalIVIncrement->hasNoSignedWrap()},
+                        CanonicalIVIncrement->getDebugLoc(), "index.evl.next");
   NextEVLIV->insertBefore(CanonicalIVIncrement);
   EVLPhi->addOperand(NextEVLIV);
 

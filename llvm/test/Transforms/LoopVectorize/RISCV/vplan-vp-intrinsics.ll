@@ -36,7 +36,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:    vp<[[PTR3:%[0-9]+]]> = vector-pointer ir<[[GEP3]]>
 ; IF-EVL-NEXT:    WIDEN store vp<[[PTR3]]>, ir<[[ADD]]>, ir<true>
 ; IF-EVL-NEXT:    SCALAR-CAST vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
-; IF-EVL-NEXT:    EMIT vp<[[IV_NEXT]]> = EXPLICIT-VECTOR-LENGTH + vp<[[CAST]]>, vp<[[EVL_PHI]]>
+; IF-EVL-NEXT:    EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
 ; IF-EVL-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%[0-9]+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
 ; IF-EVL-NEXT:    EMIT branch-on-count  vp<[[IV_NEXT_EXIT]]>, vp<[[VTC]]>
 ; IF-EVL-NEXT:  No successors

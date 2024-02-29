@@ -95,13 +95,9 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
   // Set of recipe types along with VPInstruction Opcodes of all EVL-related
   // recipes that must appear at most once in Entry or Exiting blocks.
   DenseSet<unsigned> EVLFound;
-  bool IsHeader = false;
-  bool IsExiting = false;
   const VPlan *Plan = VPBB->getPlan();
-  if (Plan && Plan->getEntry()->getNumSuccessors() == 1) {
-    IsHeader = Plan->getVectorLoopRegion()->getEntry() == VPBB;
-    IsExiting = Plan->getVectorLoopRegion()->getExiting() == VPBB;
-  }
+  bool IsHeader = Plan && Plan->getEntry()->getNumSuccessors() == 1 &&
+                  Plan->getVectorLoopRegion()->getEntry() == VPBB;
   auto CheckEVLRecipiesInsts = [&](const VPRecipeBase *R) {
     if (isa<VPEVLBasedIVPHIRecipe>(R)) {
       if (!IsHeader) {
@@ -121,12 +117,6 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
     case VPInstruction::ExplicitVectorLength:
       if (!IsHeader) {
         errs() << "EVL instruction not in entry block!\n";
-        return false;
-      }
-      break;
-    case VPInstruction::ExplicitVectorLengthIVIncrement:
-      if (!IsExiting) {
-        errs() << "EVL inc instruction not in exit block!\n";
         return false;
       }
       break;
