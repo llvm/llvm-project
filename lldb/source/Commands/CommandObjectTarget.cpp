@@ -3376,15 +3376,19 @@ protected:
 
       case 'r': {
         size_t ref_count = 0;
+        char in_shared_cache = 'Y';
+        
         ModuleSP module_sp(module->shared_from_this());
+        if (!ModuleList::ModuleIsInCache(module))
+          in_shared_cache = 'N';
         if (module_sp) {
           // Take one away to make sure we don't count our local "module_sp"
           ref_count = module_sp.use_count() - 1;
         }
         if (width)
-          strm.Printf("{%*" PRIu64 "}", width, (uint64_t)ref_count);
+          strm.Printf("{%c %*" PRIu64 "}", in_shared_cache, width, (uint64_t)ref_count);
         else
-          strm.Printf("{%" PRIu64 "}", (uint64_t)ref_count);
+          strm.Printf("{%c %" PRIu64 "}", in_shared_cache, (uint64_t)ref_count);
       } break;
 
       case 's':
