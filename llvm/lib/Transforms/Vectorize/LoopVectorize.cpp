@@ -9003,11 +9003,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
 
       BasicBlock *BB = CurrentLinkI->getParent();
       VPValue *CondOp = nullptr;
-      if (CM.blockNeedsPredicationForAnyReason(BB)) {
-        VPBuilder::InsertPointGuard Guard(Builder);
-        Builder.setInsertPoint(CurrentLink);
+      if (CM.blockNeedsPredicationForAnyReason(BB))
         CondOp = RecipeBuilder.getBlockInMask(BB);
-      }
 
       VPReductionRecipe *RedRecipe = new VPReductionRecipe(
           RdxDesc, CurrentLinkI, PreviousLink, VecOp, CondOp);
