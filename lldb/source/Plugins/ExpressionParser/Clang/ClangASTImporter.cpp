@@ -535,8 +535,9 @@ bool ClangASTImporter::CompleteType(const CompilerType &compiler_type) {
 /// \param[in]     source_map A map from decls to integral offests. These will
 ///                           be copied into \ref destination_map.
 /// \param[in,out] importer Used to import decls into \ref dest_ctx.
-/// 
-/// \returns On success, will return 'true' and the offsets in \ref destination_map
+///
+/// \returns On success, will return 'true' and the offsets in \ref
+/// destination_map
 ///          are usable copies of \ref source_map.
 template <class D, class O>
 static bool ImportOffsetMap(clang::ASTContext *dest_ctx,
@@ -574,7 +575,7 @@ static bool ImportOffsetMap(clang::ASTContext *dest_ctx,
 /// \param[in] record The record that we're calculating the base layouts of.
 /// \param[out] base_offsets Map of base-class decl to integral offset which
 ///                          this function will fill in.
-/// 
+///
 /// \returns On success, will return 'true' and the offsets in \ref base_offsets
 ///          are usable.
 template <bool IsVirtual>

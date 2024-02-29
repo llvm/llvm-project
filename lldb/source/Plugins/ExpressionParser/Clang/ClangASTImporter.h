@@ -139,8 +139,8 @@ public:
   /// \param[out] vbase_offsets Offsets of virtual base classes of \ref record.
   ///
   /// \returns Returns 'false' if no valid origin was found for \ref record or
-  /// this function failed to import the layout from the origin. Otherwise, returns
-  /// 'true' and the offsets/size/alignment are valid for use.
+  /// this function failed to import the layout from the origin. Otherwise,
+  /// returns 'true' and the offsets/size/alignment are valid for use.
   bool importRecordLayoutFromOrigin(
       const clang::RecordDecl *record, uint64_t &size, uint64_t &alignment,
       llvm::DenseMap<const clang::FieldDecl *, uint64_t> &field_offsets,
