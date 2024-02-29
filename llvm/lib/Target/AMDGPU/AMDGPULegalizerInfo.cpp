@@ -1988,6 +1988,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_READCYCLECOUNTER)
     .legalFor({S64});
 
+  getActionDefinitionsBuilder(G_READSTEADYCOUNTER).legalFor({S64});
+
   getActionDefinitionsBuilder(G_FENCE)
     .alwaysLegal();
 
@@ -4822,9 +4824,8 @@ bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
   return true;
 }
 
-static const unsigned SPDenormModeBitField =
-    AMDGPU::Hwreg::ID_MODE | (4 << AMDGPU::Hwreg::OFFSET_SHIFT_) |
-    (1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_);
+static constexpr unsigned SPDenormModeBitField =
+    AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 4, 2);
 
 // Enable or disable FP32 denorm mode. When 'Enable' is true, emit instructions
 // to enable denorm mode. When 'Enable' is false, disable denorm mode.

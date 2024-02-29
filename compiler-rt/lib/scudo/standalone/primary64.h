@@ -12,6 +12,7 @@
 #include "allocator_common.h"
 #include "bytemap.h"
 #include "common.h"
+#include "condition_variable.h"
 #include "list.h"
 #include "local_cache.h"
 #include "mem_map.h"
@@ -21,8 +22,6 @@
 #include "stats.h"
 #include "string_utils.h"
 #include "thread_annotations.h"
-
-#include "condition_variable.h"
 
 namespace scudo {
 
@@ -221,41 +220,24 @@ public:
     DCHECK_EQ(BlocksInUse, BatchClassUsedInFreeLists);
   }
 
-  // Note that the `MaxBlockCount` will be used when we support arbitrary blocks
-  // count. Now it's the same as the number of blocks stored in the
-  // `TransferBatch`.
   u16 popBlocks(CacheT *C, uptr ClassId, CompactPtrT *ToArray,
-                UNUSED const u16 MaxBlockCount) {
-    TransferBatchT *B = popBatch(C, ClassId);
-    if (!B)
-      return 0;
-
-    const u16 Count = B->getCount();
-    DCHECK_GT(Count, 0U);
-    B->moveToArray(ToArray);
-
-    if (ClassId != SizeClassMap::BatchClassId)
-      C->deallocate(SizeClassMap::BatchClassId, B);
-
-    return Count;
-  }
-
-  TransferBatchT *popBatch(CacheT *C, uptr ClassId) {
+                const u16 MaxBlockCount) {
     DCHECK_LT(ClassId, NumClasses);
     RegionInfo *Region = getRegionInfo(ClassId);
+    u16 PopCount = 0;
 
     {
       ScopedLock L(Region->FLLock);
-      TransferBatchT *B = popBatchImpl(C, ClassId, Region);
-      if (LIKELY(B))
-        return B;
+      PopCount = popBlocksImpl(C, ClassId, Region, ToArray, MaxBlockCount);
+      if (PopCount != 0U)
+        return PopCount;
     }
 
     bool ReportRegionExhausted = false;
-    TransferBatchT *B = nullptr;
 
     if (conditionVariableEnabled()) {
-      B = popBatchWithCV(C, ClassId, Region, ReportRegionExhausted);
+      PopCount = popBlocksWithCV(C, ClassId, Region, ToArray, MaxBlockCount,
+                                 ReportRegionExhausted);
     } else {
       while (true) {
         // When two threads compete for `Region->MMLock`, we only want one of
@@ -264,13 +246,15 @@ public:
         ScopedLock ML(Region->MMLock);
         {
           ScopedLock FL(Region->FLLock);
-          if ((B = popBatchImpl(C, ClassId, Region)))
-            break;
+          PopCount = popBlocksImpl(C, ClassId, Region, ToArray, MaxBlockCount);
+          if (PopCount != 0U)
+            return PopCount;
         }
 
         const bool RegionIsExhausted = Region->Exhausted;
         if (!RegionIsExhausted)
-          B = populateFreeListAndPopBatch(C, ClassId, Region);
+          PopCount = populateFreeListAndPopBlocks(C, ClassId, Region, ToArray,
+                                                  MaxBlockCount);
         ReportRegionExhausted = !RegionIsExhausted && Region->Exhausted;
         break;
       }
@@ -286,7 +270,7 @@ public:
         reportOutOfBatchClass();
     }
 
-    return B;
+    return PopCount;
   }
 
   // Push the array of free blocks to the designated batch group.
@@ -640,7 +624,7 @@ private:
     // by TransferBatch is also free for use. We don't need to recycle the
     // TransferBatch. Note that the correctness is maintained by the invariant,
     //
-    //   The unit of each popBatch() request is entire TransferBatch. Return
+    //   Each popBlocks() request returns the entire TransferBatch. Returning
     //   part of the blocks in a TransferBatch is invalid.
     //
     // This ensures that TransferBatch won't leak the address itself while it's
@@ -763,7 +747,7 @@ private:
       BG->Batches.push_front(TB);
       BG->PushedBlocks = 0;
       BG->BytesInBGAtLastCheckpoint = 0;
-      BG->MaxCachedPerBatch = CacheT::getMaxCached(getSizeByClassId(ClassId));
+      BG->MaxCachedPerBatch = TransferBatchT::MaxNumCached;
 
       return BG;
     };
@@ -855,9 +839,10 @@ private:
     InsertBlocks(Cur, Array + Size - Count, Count);
   }
 
-  TransferBatchT *popBatchWithCV(CacheT *C, uptr ClassId, RegionInfo *Region,
-                                 bool &ReportRegionExhausted) {
-    TransferBatchT *B = nullptr;
+  u16 popBlocksWithCV(CacheT *C, uptr ClassId, RegionInfo *Region,
+                      CompactPtrT *ToArray, const u16 MaxBlockCount,
+                      bool &ReportRegionExhausted) {
+    u16 PopCount = 0;
 
     while (true) {
       // We only expect one thread doing the freelist refillment and other
@@ -878,7 +863,8 @@ private:
 
         const bool RegionIsExhausted = Region->Exhausted;
         if (!RegionIsExhausted)
-          B = populateFreeListAndPopBatch(C, ClassId, Region);
+          PopCount = populateFreeListAndPopBlocks(C, ClassId, Region, ToArray,
+                                                  MaxBlockCount);
         ReportRegionExhausted = !RegionIsExhausted && Region->Exhausted;
 
         {
@@ -905,7 +891,8 @@ private:
       // blocks were used up right after the refillment. Therefore, we have to
       // check if someone is still populating the freelist.
       ScopedLock FL(Region->FLLock);
-      if (LIKELY(B = popBatchImpl(C, ClassId, Region)))
+      PopCount = popBlocksImpl(C, ClassId, Region, ToArray, MaxBlockCount);
+      if (PopCount != 0U)
         break;
 
       if (!Region->isPopulatingFreeList)
@@ -918,21 +905,19 @@ private:
       // `pushBatchClassBlocks()` and `mergeGroupsToReleaseBack()`.
       Region->FLLockCV.wait(Region->FLLock);
 
-      if (LIKELY(B = popBatchImpl(C, ClassId, Region)))
+      PopCount = popBlocksImpl(C, ClassId, Region, ToArray, MaxBlockCount);
+      if (PopCount != 0U)
         break;
     }
 
-    return B;
+    return PopCount;
   }
 
-  // Pop one TransferBatch from a BatchGroup. The BatchGroup with the smallest
-  // group id will be considered first.
-  //
-  // The region mutex needs to be held while calling this method.
-  TransferBatchT *popBatchImpl(CacheT *C, uptr ClassId, RegionInfo *Region)
+  u16 popBlocksImpl(CacheT *C, uptr ClassId, RegionInfo *Region,
+                    CompactPtrT *ToArray, const u16 MaxBlockCount)
       REQUIRES(Region->FLLock) {
     if (Region->FreeListInfo.BlockList.empty())
-      return nullptr;
+      return 0U;
 
     SinglyLinkedList<TransferBatchT> &Batches =
         Region->FreeListInfo.BlockList.front()->Batches;
@@ -945,39 +930,64 @@ private:
       // Block used by `BatchGroup` is from BatchClassId. Turn the block into
       // `TransferBatch` with single block.
       TransferBatchT *TB = reinterpret_cast<TransferBatchT *>(BG);
-      TB->clear();
-      TB->add(
-          compactPtr(SizeClassMap::BatchClassId, reinterpret_cast<uptr>(TB)));
+      ToArray[0] =
+          compactPtr(SizeClassMap::BatchClassId, reinterpret_cast<uptr>(TB));
       Region->FreeListInfo.PoppedBlocks += 1;
-      return TB;
+      return 1U;
     }
 
+    // So far, instead of always filling blocks to `MaxBlockCount`, we only
+    // examine single `TransferBatch` to minimize the time spent in the primary
+    // allocator. Besides, the sizes of `TransferBatch` and
+    // `CacheT::getMaxCached()` may also impact the time spent on accessing the
+    // primary allocator.
+    // TODO(chiahungduan): Evaluate if we want to always prepare `MaxBlockCount`
+    // blocks and/or adjust the size of `TransferBatch` according to
+    // `CacheT::getMaxCached()`.
     TransferBatchT *B = Batches.front();
-    Batches.pop_front();
     DCHECK_NE(B, nullptr);
     DCHECK_GT(B->getCount(), 0U);
 
-    if (Batches.empty()) {
-      BatchGroupT *BG = Region->FreeListInfo.BlockList.front();
-      Region->FreeListInfo.BlockList.pop_front();
+    // BachClassId should always take all blocks in the TransferBatch. Read the
+    // comment in `pushBatchClassBlocks()` for more details.
+    const u16 PopCount = ClassId == SizeClassMap::BatchClassId
+                             ? B->getCount()
+                             : Min(MaxBlockCount, B->getCount());
+    B->moveNToArray(ToArray, PopCount);
 
-      // We don't keep BatchGroup with zero blocks to avoid empty-checking while
-      // allocating. Note that block used by constructing BatchGroup is recorded
-      // as free blocks in the last element of BatchGroup::Batches. Which means,
-      // once we pop the last TransferBatch, the block is implicitly
-      // deallocated.
+    // TODO(chiahungduan): The deallocation of unused BatchClassId blocks can be
+    // done without holding `FLLock`.
+    if (B->empty()) {
+      Batches.pop_front();
+      // `TransferBatch` of BatchClassId is self-contained, no need to
+      // deallocate. Read the comment in `pushBatchClassBlocks()` for more
+      // details.
       if (ClassId != SizeClassMap::BatchClassId)
-        C->deallocate(SizeClassMap::BatchClassId, BG);
+        C->deallocate(SizeClassMap::BatchClassId, B);
+
+      if (Batches.empty()) {
+        BatchGroupT *BG = Region->FreeListInfo.BlockList.front();
+        Region->FreeListInfo.BlockList.pop_front();
+
+        // We don't keep BatchGroup with zero blocks to avoid empty-checking
+        // while allocating. Note that block used for constructing BatchGroup is
+        // recorded as free blocks in the last element of BatchGroup::Batches.
+        // Which means, once we pop the last TransferBatch, the block is
+        // implicitly deallocated.
+        if (ClassId != SizeClassMap::BatchClassId)
+          C->deallocate(SizeClassMap::BatchClassId, BG);
+      }
     }
 
-    Region->FreeListInfo.PoppedBlocks += B->getCount();
+    Region->FreeListInfo.PoppedBlocks += PopCount;
 
-    return B;
+    return PopCount;
   }
 
-  // Refill the freelist and return one batch.
-  NOINLINE TransferBatchT *populateFreeListAndPopBatch(CacheT *C, uptr ClassId,
-                                                       RegionInfo *Region)
+  NOINLINE u16 populateFreeListAndPopBlocks(CacheT *C, uptr ClassId,
+                                            RegionInfo *Region,
+                                            CompactPtrT *ToArray,
+                                            const u16 MaxBlockCount)
       REQUIRES(Region->MMLock) EXCLUDES(Region->FLLock) {
     const uptr Size = getSizeByClassId(ClassId);
     const u16 MaxCount = CacheT::getMaxCached(Size);
@@ -994,7 +1004,7 @@ private:
       const uptr RegionBase = RegionBeg - getRegionBaseByClassId(ClassId);
       if (UNLIKELY(RegionBase + MappedUser + MapSize > RegionSize)) {
         Region->Exhausted = true;
-        return nullptr;
+        return 0U;
       }
 
       if (UNLIKELY(!Region->MemMapInfo.MemMap.remap(
@@ -1002,7 +1012,7 @@ private:
               MAP_ALLOWNOMEM | MAP_RESIZABLE |
                   (useMemoryTagging<Config>(Options.load()) ? MAP_MEMTAG
                                                             : 0)))) {
-        return nullptr;
+        return 0U;
       }
       Region->MemMapInfo.MappedUser += MapSize;
       C->getStats().add(StatMapped, MapSize);
@@ -1049,8 +1059,9 @@ private:
       pushBatchClassBlocks(Region, ShuffleArray, NumberOfBlocks);
     }
 
-    TransferBatchT *B = popBatchImpl(C, ClassId, Region);
-    DCHECK_NE(B, nullptr);
+    const u16 PopCount =
+        popBlocksImpl(C, ClassId, Region, ToArray, MaxBlockCount);
+    DCHECK_NE(PopCount, 0U);
 
     // Note that `PushedBlocks` and `PoppedBlocks` are supposed to only record
     // the requests from `PushBlocks` and `PopBatch` which are external
@@ -1062,7 +1073,7 @@ private:
     C->getStats().add(StatFree, AllocatedUser);
     Region->MemMapInfo.AllocatedUser += AllocatedUser;
 
-    return B;
+    return PopCount;
   }
 
   void getStats(ScopedString *Str, uptr ClassId, RegionInfo *Region)
@@ -1186,7 +1197,7 @@ private:
     }
 
     // Note that we have extracted the `GroupsToRelease` from region freelist.
-    // It's safe to let pushBlocks()/popBatches() access the remaining region
+    // It's safe to let pushBlocks()/popBlocks() access the remaining region
     // freelist. In the steps 3 and 4, we will temporarily release the FLLock
     // and lock it again before step 5.
 

@@ -68,6 +68,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeLowerGlobalDtorsLegacyPassPass(PR);
   initializeFixFunctionBitcastsPass(PR);
   initializeOptimizeReturnedPass(PR);
+  initializeWebAssemblyRefTypeMem2LocalPass(PR);
   initializeWebAssemblyArgumentMovePass(PR);
   initializeWebAssemblySetP2AlignOperandsPass(PR);
   initializeWebAssemblyReplacePhysRegsPass(PR);
@@ -484,7 +485,7 @@ void WebAssemblyPassConfig::addISelPrepare() {
   addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
 
   // This is a no-op if atomics are not used in the module
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addISelPrepare();
 }

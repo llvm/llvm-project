@@ -3,7 +3,7 @@
 // RUN:   -emit-llvm -disable-llvm-passes -O3 -o - | FileCheck %s
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
-// RUN:   -D__HLSL_ENABLE_16_BIT -o - | FileCheck %s --check-prefix=NO_HALF
+// RUN:   -o - | FileCheck %s --check-prefix=NO_HALF
 
 // CHECK: define noundef half @
 // CHECK: call half @llvm.pow.f16(

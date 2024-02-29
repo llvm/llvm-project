@@ -41,6 +41,7 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -13311,6 +13312,42 @@ QualType ASTContext::getCommonSugaredType(QualType X, QualType Y,
   QualType R = getQualifiedType(SX.Ty, QX);
   assert(Unqualified ? hasSameUnqualifiedType(R, X) : hasSameType(R, X));
   return R;
+}
+
+QualType ASTContext::getCorrespondingUnsaturatedType(QualType Ty) const {
+  assert(Ty->isFixedPointType());
+
+  if (Ty->isUnsaturatedFixedPointType())
+    return Ty;
+
+  switch (Ty->castAs<BuiltinType>()->getKind()) {
+  default:
+    llvm_unreachable("Not a saturated fixed point type!");
+  case BuiltinType::SatShortAccum:
+    return ShortAccumTy;
+  case BuiltinType::SatAccum:
+    return AccumTy;
+  case BuiltinType::SatLongAccum:
+    return LongAccumTy;
+  case BuiltinType::SatUShortAccum:
+    return UnsignedShortAccumTy;
+  case BuiltinType::SatUAccum:
+    return UnsignedAccumTy;
+  case BuiltinType::SatULongAccum:
+    return UnsignedLongAccumTy;
+  case BuiltinType::SatShortFract:
+    return ShortFractTy;
+  case BuiltinType::SatFract:
+    return FractTy;
+  case BuiltinType::SatLongFract:
+    return LongFractTy;
+  case BuiltinType::SatUShortFract:
+    return UnsignedShortFractTy;
+  case BuiltinType::SatUFract:
+    return UnsignedFractTy;
+  case BuiltinType::SatULongFract:
+    return UnsignedLongFractTy;
+  }
 }
 
 QualType ASTContext::getCorrespondingSaturatedType(QualType Ty) const {

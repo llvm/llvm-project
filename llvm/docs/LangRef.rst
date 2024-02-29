@@ -61,10 +61,13 @@ run by the parser after parsing input assembly and by the optimizer
 before it outputs bitcode. The violations pointed out by the verifier
 pass indicate bugs in transformation passes or input to the parser.
 
+Syntax
+======
+
 .. _identifiers:
 
 Identifiers
-===========
+-----------
 
 LLVM identifiers come in two basic types: global and local. Global
 identifiers (functions, global variables) begin with the ``'@'``
@@ -139,6 +142,34 @@ lexical features of LLVM:
 It also shows a convention that we follow in this document. When
 demonstrating instructions, we will follow an instruction with a comment
 that defines the type and name of value produced.
+
+.. _strings:
+
+String constants
+----------------
+
+Strings in LLVM programs are delimited by ``"`` characters. Within a
+string, all bytes are treated literally with the exception of ``\``
+characters, which start escapes, and the first ``"`` character, which
+ends the string.
+
+There are two kinds of escapes.
+
+* ``\\`` represents a single ``\`` character.
+
+* ``\`` followed by two hexadecimal characters (0-9, a-f, or A-F)
+  represents the byte with the given value (e.g. \x00 represents a
+  null byte).
+
+To represent a ``"`` character, use ``\22``. (``\"`` will end the string
+with a trailing ``\``.)
+
+Newlines do not terminate string constants; strings can span multiple
+lines.
+
+The interpretation of string constants (e.g. their character encoding)
+depends on context.
+
 
 High Level Structure
 ====================
@@ -4333,7 +4364,7 @@ constants and smaller complex constants.
 
     When creating a vector whose elements have the same constant value, the
     preferred syntax is ``splat (<Ty> Val)``. For example: "``splat (i32 11)``".
-    These vector constants must have ::ref:`vector type <t_vector>` with an
+    These vector constants must have :ref:`vector type <t_vector>` with an
     element type that matches the ``splat`` operand.
 **Zero initialization**
     The string '``zeroinitializer``' can be used to zero initialize a
@@ -15990,6 +16021,8 @@ functions would, but without setting errno. If the rounded value is
 too large to be stored in the result type, the return value is a
 non-deterministic value (equivalent to `freeze poison`).
 
+.. _int_lrint:
+
 '``llvm.lrint.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -16034,6 +16067,8 @@ This function returns the same values as the libm ``lrint`` functions
 would, but without setting errno. If the rounded value is too large to
 be stored in the result type, the return value is a non-deterministic
 value (equivalent to `freeze poison`).
+
+.. _int_llrint:
 
 '``llvm.llrint.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16718,6 +16753,7 @@ an operation is greater than the maximum value, the result is set (or
 "clamped") to this maximum. If it is below the minimum, it is clamped to this
 minimum.
 
+.. _int_sadd_sat:
 
 '``llvm.sadd.sat.*``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16767,6 +16803,8 @@ Examples
       %res = call i4 @llvm.sadd.sat.i4(i4 -4, i4 -5)  ; %res = -8
 
 
+.. _int_uadd_sat:
+
 '``llvm.uadd.sat.*``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -16813,6 +16851,8 @@ Examples
       %res = call i4 @llvm.uadd.sat.i4(i4 5, i4 6)  ; %res = 11
       %res = call i4 @llvm.uadd.sat.i4(i4 8, i4 8)  ; %res = 15
 
+
+.. _int_ssub_sat:
 
 '``llvm.ssub.sat.*``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16861,6 +16901,8 @@ Examples
       %res = call i4 @llvm.ssub.sat.i4(i4 -4, i4 5)  ; %res = -8
       %res = call i4 @llvm.ssub.sat.i4(i4 4, i4 -5)  ; %res = 7
 
+
+.. _int_usub_sat:
 
 '``llvm.usub.sat.*``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -23344,6 +23386,100 @@ Examples:
       %t = call <4 x float> @llvm.trunc.v4f32(<4 x float> %a)
       %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
+.. _int_vp_lrint:
+
+'``llvm.vp.lrint.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32> @llvm.vp.lrint.v16i32.v16f32(<16 x float> <op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32> @llvm.vp.lrint.nxv4i32.nxv4f32(<vscale x 4 x float> <op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64> @llvm.vp.lrint.v256i64.v256f64(<256 x double> <op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated lrint of a vector of floating-point values.
+
+
+Arguments:
+""""""""""
+
+The result is an integer vector and the first operand is a vector of :ref:`floating-point <t_floating>`
+type with the same number of elements as the result vector type. The second
+operand is the vector mask and has the same number of elements as the result
+vector type. The third operand is the explicit vector length of the operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.lrint``' intrinsic performs lrint (:ref:`lrint <int_lrint>`) of
+the first vector operand on each enabled lane. The result on disabled lanes is a
+:ref:`poison value <poisonvalues>`.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.lrint.v4i32.v4f32(<4 x float> %a, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.lrint.v4f32(<4 x float> %a)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
+.. _int_vp_llrint:
+
+'``llvm.vp.llrint.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32> @llvm.vp.llrint.v16i32.v16f32(<16 x float> <op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32> @llvm.vp.llrint.nxv4i32.nxv4f32(<vscale x 4 x float> <op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64> @llvm.vp.llrint.v256i64.v256f64(<256 x double> <op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated llrint of a vector of floating-point values.
+
+
+Arguments:
+""""""""""
+The result is an integer vector and the first operand is a vector of :ref:`floating-point <t_floating>`
+type with the same number of elements as the result vector type. The second
+operand is the vector mask and has the same number of elements as the result
+vector type. The third operand is the explicit vector length of the operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.llrint``' intrinsic performs lrint (:ref:`llrint <int_llrint>`) of
+the first vector operand on each enabled lane. The result on disabled lanes is a
+:ref:`poison value <poisonvalues>`.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.llrint.v4i32.v4f32(<4 x float> %a, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.llrint.v4f32(<4 x float> %a)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
+
 .. _int_vp_bitreverse:
 
 '``llvm.vp.bitreverse.*``' Intrinsics
@@ -23576,6 +23712,202 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %a, i1 false)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
+
+.. _int_vp_sadd_sat:
+
+'``llvm.vp.sadd.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32>  @llvm.vp.sadd.sat.v16i32 (<16 x i32> <left_op> <16 x i32> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.sadd.sat.nxv4i32 (<vscale x 4 x i32> <left_op>, <vscale x 4 x i32> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.sadd.sat.v256i64 (<256 x i64> <left_op>, <256 x i64> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated signed saturating addition of two vectors of integers.
+
+
+Arguments:
+""""""""""
+
+The first two operands and the result have the same vector of integer type. The
+third operand is the vector mask and has the same number of elements as the
+result vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.sadd.sat``' intrinsic performs sadd.sat (:ref:`sadd.sat <int_sadd_sat>`)
+of the first and second vector operands on each enabled lane. The result on
+disabled lanes is a :ref:`poison value <poisonvalues>`.
+
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.sadd.sat.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %a, <4 x i32> %b)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
+
+.. _int_vp_uadd_sat:
+
+'``llvm.vp.uadd.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32>  @llvm.vp.uadd.sat.v16i32 (<16 x i32> <left_op> <16 x i32> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.uadd.sat.nxv4i32 (<vscale x 4 x i32> <left_op>, <vscale x 4 x i32> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.uadd.sat.v256i64 (<256 x i64> <left_op>, <256 x i64> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated unsigned saturating addition of two vectors of integers.
+
+
+Arguments:
+""""""""""
+
+The first two operands and the result have the same vector of integer type. The
+third operand is the vector mask and has the same number of elements as the
+result vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.uadd.sat``' intrinsic performs uadd.sat (:ref:`uadd.sat <int_uadd_sat>`)
+of the first and second vector operands on each enabled lane. The result on
+disabled lanes is a :ref:`poison value <poisonvalues>`.
+
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.uadd.sat.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> %a, <4 x i32> %b)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
+
+.. _int_vp_ssub_sat:
+
+'``llvm.vp.ssub.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32>  @llvm.vp.ssub.sat.v16i32 (<16 x i32> <left_op> <16 x i32> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.ssub.sat.nxv4i32 (<vscale x 4 x i32> <left_op>, <vscale x 4 x i32> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.ssub.sat.v256i64 (<256 x i64> <left_op>, <256 x i64> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated signed saturating subtraction of two vectors of integers.
+
+
+Arguments:
+""""""""""
+
+The first two operands and the result have the same vector of integer type. The
+third operand is the vector mask and has the same number of elements as the
+result vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.ssub.sat``' intrinsic performs ssub.sat (:ref:`ssub.sat <int_ssub_sat>`)
+of the first and second vector operands on each enabled lane. The result on
+disabled lanes is a :ref:`poison value <poisonvalues>`.
+
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.ssub.sat.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %a, <4 x i32> %b)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
+
+.. _int_vp_usub_sat:
+
+'``llvm.vp.usub.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32>  @llvm.vp.usub.sat.v16i32 (<16 x i32> <left_op> <16 x i32> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.usub.sat.nxv4i32 (<vscale x 4 x i32> <left_op>, <vscale x 4 x i32> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.usub.sat.v256i64 (<256 x i64> <left_op>, <256 x i64> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated unsigned saturating subtraction of two vectors of integers.
+
+
+Arguments:
+""""""""""
+
+The first two operands and the result have the same vector of integer type. The
+third operand is the vector mask and has the same number of elements as the
+result vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.usub.sat``' intrinsic performs usub.sat (:ref:`usub.sat <int_usub_sat>`)
+of the first and second vector operands on each enabled lane. The result on
+disabled lanes is a :ref:`poison value <poisonvalues>`.
+
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.usub.sat.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> %a, <4 x i32> %b)
       %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 

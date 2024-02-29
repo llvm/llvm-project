@@ -106,6 +106,7 @@ tools = [
     "mlir-capi-quant-test",
     "mlir-capi-sparse-tensor-test",
     "mlir-capi-transform-test",
+    "mlir-capi-transform-interpreter-test",
     "mlir-capi-translation-test",
     "mlir-cpu-runner",
     add_runtime("mlir_runner_utils"),
@@ -160,6 +161,7 @@ tools.extend(
         ToolSubst("transform-opt-ch2", unresolved="ignore"),
         ToolSubst("transform-opt-ch3", unresolved="ignore"),
         ToolSubst("transform-opt-ch4", unresolved="ignore"),
+        ToolSubst("mlir-transform-opt", unresolved="ignore"),
         ToolSubst("%mlir_lib_dir", config.mlir_lib_dir, unresolved="ignore"),
         ToolSubst("%mlir_src_dir", config.mlir_src_root, unresolved="ignore"),
     ]

@@ -163,6 +163,7 @@ module {
   }
 
   func.func @entry() {
+    // Note: Constants bufferize to read-only buffers.
     %ri = arith.constant dense< 7   > : tensor<i32>
     %rf = arith.constant dense< 2.0 > : tensor<f32>
 
@@ -269,6 +270,17 @@ module {
     bufferization.dealloc_tensor %s1_i32 : tensor<32xi32, #SV>
     bufferization.dealloc_tensor %s1_f32 : tensor<32xf32, #SV>
     bufferization.dealloc_tensor %s0     : tensor<32xi32, #SV>
+    bufferization.dealloc_tensor %0 : tensor<i32>
+    bufferization.dealloc_tensor %1 : tensor<f32>
+    bufferization.dealloc_tensor %2 : tensor<i32>
+    bufferization.dealloc_tensor %3 : tensor<f32>
+    bufferization.dealloc_tensor %4 : tensor<i32>
+    bufferization.dealloc_tensor %5 : tensor<f32>
+    bufferization.dealloc_tensor %6 : tensor<i32>
+    bufferization.dealloc_tensor %7 : tensor<f32>
+    bufferization.dealloc_tensor %8 : tensor<i32>
+    bufferization.dealloc_tensor %9 : tensor<i32>
+    bufferization.dealloc_tensor %10 : tensor<i32>
 
     return
   }

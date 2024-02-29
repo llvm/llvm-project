@@ -762,6 +762,12 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_PARALLEL_LINK_JOBS**:STRING
   Define the maximum number of concurrent link jobs.
 
+**LLVM_PARALLEL_LIT**:BOOL
+  Defaults to ``OFF``. If set to ``OFF``, lit testsuites will be configured
+  with CMake's ``USES_TERMINAL`` flag to give direct access to the terminal. If
+  set to ``ON``, that flag will be removed allowing Ninja to schedule multiple
+  lit testsuites in parallel.
+
 **LLVM_RAM_PER_COMPILE_JOB**:STRING
   Calculates the amount of Ninja compile jobs according to available resources.
   Value has to be in MB, overwrites LLVM_PARALLEL_COMPILE_JOBS. Compile jobs 

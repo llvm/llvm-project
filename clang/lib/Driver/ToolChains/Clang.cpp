@@ -1111,8 +1111,8 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
         C.getActiveOffloadKinds() == Action::OFK_None) {
       SmallString<128> P(llvm::sys::path::parent_path(D.InstalledDir));
       llvm::sys::path::append(P, "include");
-      llvm::sys::path::append(P, "gpu-none-llvm");
-      CmdArgs.push_back("-c-isystem");
+      llvm::sys::path::append(P, getToolChain().getTripleString());
+      CmdArgs.push_back("-internal-isystem");
       CmdArgs.push_back(Args.MakeArgString(P));
     } else if (C.getActiveOffloadKinds() == Action::OFK_OpenMP) {
       // TODO: CUDA / HIP include their own headers for some common functions
@@ -5958,7 +5958,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *A = Args.getLastArg(options::OPT_fbasic_block_address_map,
                                options::OPT_fno_basic_block_address_map)) {
-    if (Triple.isX86() && Triple.isOSBinFormatELF()) {
+    if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF()) {
       if (A->getOption().matches(options::OPT_fbasic_block_address_map))
         A->render(Args, CmdArgs);
     } else {
@@ -6648,11 +6648,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (A->getOption().matches(options::OPT_fno_strict_overflow))
       CmdArgs.push_back("-fwrapv");
   }
-
-  if (Arg *A = Args.getLastArg(options::OPT_freroll_loops,
-                               options::OPT_fno_reroll_loops))
-    if (A->getOption().matches(options::OPT_freroll_loops))
-      CmdArgs.push_back("-freroll-loops");
 
   Args.AddLastArg(CmdArgs, options::OPT_ffinite_loops,
                   options::OPT_fno_finite_loops);

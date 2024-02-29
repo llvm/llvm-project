@@ -940,7 +940,7 @@ void elf::addGotEntry(Symbol &sym) {
 static void addTpOffsetGotEntry(Symbol &sym) {
   in.got->addEntry(sym);
   uint64_t off = sym.getGotOffset();
-  if (!sym.isPreemptible && !config->isPic) {
+  if (!sym.isPreemptible && !config->shared) {
     in.got->addConstant({R_TPREL, target->symbolicRel, off, 0, &sym});
     return;
   }

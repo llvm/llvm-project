@@ -49,11 +49,11 @@ struct DXILOperationDesc {
   StringRef Doc;      // the documentation description of this instruction
 
   SmallVector<DXILParameter> Params; // the operands that this instruction takes
-  StringRef OverloadTypes;           // overload types if applicable
-  StringRef FnAttr;                  // attribute shorthands: rn=does not access
-                                     // memory,ro=only reads from memory
+  SmallVector<ParameterKind> OverloadTypes; // overload types if applicable
+  StringRef Attr; // operation attribute; reference to string representation
+                  // of llvm::Attribute::AttrKind
   StringRef Intrinsic;  // The llvm intrinsic map to OpName. Default is "" which
-                        // means no map exist
+                        // means no map exists
   bool IsDeriv = false; // whether this is some kind of derivative
   bool IsGradient = false; // whether this requires a gradient calculation
   bool IsFeedback = false; // whether this is a sampler feedback op
@@ -70,59 +70,77 @@ struct DXILOperationDesc {
   int OverloadParamIndex; // parameter index which control the overload.
                           // When < 0, should be only 1 overload type.
   SmallVector<StringRef, 4> counters; // counters for this inst.
-  DXILOperationDesc(const Record *R) {
-    OpName = R->getValueAsString("OpName");
-    OpCode = R->getValueAsInt("OpCode");
-    OpClass = R->getValueAsDef("OpClass")->getValueAsString("Name");
-    Category = R->getValueAsDef("OpCategory")->getValueAsString("Name");
-
-    if (R->getValue("llvm_intrinsic")) {
-      auto *IntrinsicDef = R->getValueAsDef("llvm_intrinsic");
-      auto DefName = IntrinsicDef->getName();
-      assert(DefName.starts_with("int_") && "invalid intrinsic name");
-      // Remove the int_ from intrinsic name.
-      Intrinsic = DefName.substr(4);
-    }
-
-    Doc = R->getValueAsString("Doc");
-
-    ListInit *ParamList = R->getValueAsListInit("Params");
-    OverloadParamIndex = -1;
-    for (unsigned I = 0; I < ParamList->size(); ++I) {
-      Record *Param = ParamList->getElementAsRecord(I);
-      Params.emplace_back(DXILParameter(Param));
-      auto &CurParam = Params.back();
-      if (CurParam.Kind >= ParameterKind::OVERLOAD)
-        OverloadParamIndex = I;
-    }
-    OverloadTypes = R->getValueAsString("OverloadTypes");
-    FnAttr = R->getValueAsString("Attributes");
-  }
+  DXILOperationDesc(const Record *);
 };
 } // end anonymous namespace
 
-static ParameterKind parameterTypeNameToKind(StringRef Name) {
-  return StringSwitch<ParameterKind>(Name)
-      .Case("void", ParameterKind::VOID)
-      .Case("half", ParameterKind::HALF)
-      .Case("float", ParameterKind::FLOAT)
-      .Case("double", ParameterKind::DOUBLE)
-      .Case("i1", ParameterKind::I1)
-      .Case("i8", ParameterKind::I8)
-      .Case("i16", ParameterKind::I16)
-      .Case("i32", ParameterKind::I32)
-      .Case("i64", ParameterKind::I64)
-      .Case("$o", ParameterKind::OVERLOAD)
-      .Case("dx.types.Handle", ParameterKind::DXIL_HANDLE)
-      .Case("dx.types.CBufRet", ParameterKind::CBUFFER_RET)
-      .Case("dx.types.ResRet", ParameterKind::RESOURCE_RET)
-      .Default(ParameterKind::INVALID);
+/*!
+ Convert DXIL type name string to dxil::ParameterKind
+
+ @param typeNameStr Type name string
+ @return ParameterKind As defined in llvm/Support/DXILABI.h
+*/
+static ParameterKind lookupParameterKind(StringRef typeNameStr) {
+  auto paramKind = StringSwitch<ParameterKind>(typeNameStr)
+                       .Case("llvm_void_ty", ParameterKind::VOID)
+                       .Case("llvm_half_ty", ParameterKind::HALF)
+                       .Case("llvm_float_ty", ParameterKind::FLOAT)
+                       .Case("llvm_double_ty", ParameterKind::DOUBLE)
+                       .Case("llvm_i1_ty", ParameterKind::I1)
+                       .Case("llvm_i8_ty", ParameterKind::I8)
+                       .Case("llvm_i16_ty", ParameterKind::I16)
+                       .Case("llvm_i32_ty", ParameterKind::I32)
+                       .Case("llvm_i64_ty", ParameterKind::I64)
+                       .Case("llvm_anyfloat_ty", ParameterKind::OVERLOAD)
+                       .Case("llvm_anyint_ty", ParameterKind::OVERLOAD)
+                       .Case("dxil_handle_ty", ParameterKind::DXIL_HANDLE)
+                       .Case("dxil_cbuffer_ty", ParameterKind::CBUFFER_RET)
+                       .Case("dxil_resource_ty", ParameterKind::RESOURCE_RET)
+                       .Default(ParameterKind::INVALID);
+  assert(paramKind != ParameterKind::INVALID &&
+         "Unsupported DXIL Type specified");
+  return paramKind;
+}
+
+DXILOperationDesc::DXILOperationDesc(const Record *R) {
+  OpName = R->getValueAsString("OpName");
+  OpCode = R->getValueAsInt("OpCode");
+  OpClass = R->getValueAsDef("OpClass")->getValueAsString("Name");
+  Category = R->getValueAsDef("OpCategory")->getValueAsString("Name");
+
+  if (R->getValue("llvm_intrinsic")) {
+    auto *IntrinsicDef = R->getValueAsDef("llvm_intrinsic");
+    auto DefName = IntrinsicDef->getName();
+    assert(DefName.starts_with("int_") && "invalid intrinsic name");
+    // Remove the int_ from intrinsic name.
+    Intrinsic = DefName.substr(4);
+  }
+
+  Doc = R->getValueAsString("Doc");
+
+  ListInit *ParamList = R->getValueAsListInit("Params");
+  OverloadParamIndex = -1;
+  for (unsigned I = 0; I < ParamList->size(); ++I) {
+    Record *Param = ParamList->getElementAsRecord(I);
+    Params.emplace_back(DXILParameter(Param));
+    auto &CurParam = Params.back();
+    if (CurParam.Kind >= ParameterKind::OVERLOAD)
+      OverloadParamIndex = I;
+  }
+  ListInit *OverloadTypeList = R->getValueAsListInit("OverloadTypes");
+
+  for (unsigned I = 0; I < OverloadTypeList->size(); ++I) {
+    Record *R = OverloadTypeList->getElementAsRecord(I);
+    OverloadTypes.emplace_back(lookupParameterKind(R->getNameInitAsString()));
+  }
+  Attr = StringRef(R->getValue("Attribute")->getNameInitAsString());
 }
 
 DXILParameter::DXILParameter(const Record *R) {
   Name = R->getValueAsString("Name");
   Pos = R->getValueAsInt("Pos");
-  Kind = parameterTypeNameToKind(R->getValueAsString("LLVMType"));
+  Kind =
+      lookupParameterKind(R->getValue("ParamType")->getValue()->getAsString());
   if (R->getValue("Doc"))
     Doc = R->getValueAsString("Doc");
   IsConst = R->getValueAsBit("IsConstant");
@@ -216,7 +234,7 @@ static void emitDXILEnums(std::vector<DXILOperationDesc> &Ops,
   std::vector<std::pair<std::string, std::string>> ClassVec;
   for (auto &It : ClassMap) {
     ClassVec.emplace_back(
-        std::make_pair(It.getKey().str(), buildCategoryStr(It.second)));
+        std::pair(It.getKey().str(), buildCategoryStr(It.second)));
   }
   // Sort by Category + ClassName.
   llvm::sort(ClassVec, [](std::pair<std::string, std::string> &A,
@@ -267,38 +285,53 @@ static void emitDXILIntrinsicMap(std::vector<DXILOperationDesc> &Ops,
   OS << "\n";
 }
 
-static std::string emitDXILOperationFnAttr(StringRef FnAttr) {
-  return StringSwitch<std::string>(FnAttr)
-      .Case("rn", "Attribute::ReadNone")
-      .Case("ro", "Attribute::ReadOnly")
+/*!
+ Convert operation attribute string to Attribute enum
+
+ @param Attr string reference
+ @return std::string Attribute enum string
+ */
+static std::string emitDXILOperationAttr(StringRef Attr) {
+  return StringSwitch<std::string>(Attr)
+      .Case("ReadNone", "Attribute::ReadNone")
+      .Case("ReadOnly", "Attribute::ReadOnly")
       .Default("Attribute::None");
 }
 
-static std::string getOverloadKind(StringRef Overload) {
-  return StringSwitch<std::string>(Overload)
-      .Case("half", "OverloadKind::HALF")
-      .Case("float", "OverloadKind::FLOAT")
-      .Case("double", "OverloadKind::DOUBLE")
-      .Case("i1", "OverloadKind::I1")
-      .Case("i16", "OverloadKind::I16")
-      .Case("i32", "OverloadKind::I32")
-      .Case("i64", "OverloadKind::I64")
-      .Case("udt", "OverloadKind::UserDefineType")
-      .Case("obj", "OverloadKind::ObjectType")
-      .Default("OverloadKind::VOID");
+static std::string overloadKindStr(ParameterKind Overload) {
+  switch (Overload) {
+  case ParameterKind::HALF:
+    return "OverloadKind::HALF";
+  case ParameterKind::FLOAT:
+    return "OverloadKind::FLOAT";
+  case ParameterKind::DOUBLE:
+    return "OverloadKind::DOUBLE";
+  case ParameterKind::I1:
+    return "OverloadKind::I1";
+  case ParameterKind::I8:
+    return "OverloadKind::I8";
+  case ParameterKind::I16:
+    return "OverloadKind::I16";
+  case ParameterKind::I32:
+    return "OverloadKind::I32";
+  case ParameterKind::I64:
+    return "OverloadKind::I64";
+  case ParameterKind::VOID:
+    return "OverloadKind::VOID";
+  default:
+    return "OverloadKind::UNKNOWN";
+  }
 }
 
-static std::string getDXILOperationOverload(StringRef Overloads) {
-  SmallVector<StringRef> OverloadStrs;
-  Overloads.split(OverloadStrs, ';', /*MaxSplit*/ -1, /*KeepEmpty*/ false);
+static std::string
+getDXILOperationOverloads(SmallVector<ParameterKind> Overloads) {
   // Format is: OverloadKind::FLOAT | OverloadKind::HALF
-  assert(!OverloadStrs.empty() && "Invalid overloads");
-  auto It = OverloadStrs.begin();
+  auto It = Overloads.begin();
   std::string Result;
   raw_string_ostream OS(Result);
-  OS << getOverloadKind(*It);
-  for (++It; It != OverloadStrs.end(); ++It) {
-    OS << " | " << getOverloadKind(*It);
+  OS << overloadKindStr(*It);
+  for (++It; It != Overloads.end(); ++It) {
+    OS << " | " << overloadKindStr(*It);
   }
   return OS.str();
 }
@@ -368,8 +401,8 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
     OS << "  { dxil::OpCode::" << Op.OpName << ", "
        << OpStrings.get(Op.OpName.str()) << ", OpCodeClass::" << Op.OpClass
        << ", " << OpClassStrings.get(getDXILOpClassName(Op.OpClass)) << ", "
-       << getDXILOperationOverload(Op.OverloadTypes) << ", "
-       << emitDXILOperationFnAttr(Op.FnAttr) << ", " << Op.OverloadParamIndex
+       << getDXILOperationOverloads(Op.OverloadTypes) << ", "
+       << emitDXILOperationAttr(Op.Attr) << ", " << Op.OverloadParamIndex
        << ", " << Op.Params.size() << ", "
        << Parameters.get(ParameterMap[Op.OpClass]) << " },\n";
   }

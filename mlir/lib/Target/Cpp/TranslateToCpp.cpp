@@ -332,14 +332,6 @@ static LogicalResult printOperation(CppEmitter &emitter,
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
-                                    func::ConstantOp constantOp) {
-  Operation *operation = constantOp.getOperation();
-  Attribute value = constantOp.getValueAttr();
-
-  return printConstantOp(emitter, operation, value);
-}
-
-static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::AssignOp assignOp) {
   auto variableOp = cast<emitc::VariableOp>(assignOp.getVar().getDefiningOp());
   OpResult result = variableOp->getResult(0);
@@ -633,6 +625,33 @@ static LogicalResult printOperation(CppEmitter &emitter,
     os << "\"" << includeOp.getInclude() << "\"";
 
   return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::LogicalAndOp logicalAndOp) {
+  Operation *operation = logicalAndOp.getOperation();
+  return printBinaryOperation(emitter, operation, "&&");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::LogicalNotOp logicalNotOp) {
+  raw_ostream &os = emitter.ostream();
+
+  if (failed(emitter.emitAssignPrefix(*logicalNotOp.getOperation())))
+    return failure();
+
+  os << "!";
+
+  if (failed(emitter.emitOperand(logicalNotOp.getOperand())))
+    return failure();
+
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::LogicalOrOp logicalOrOp) {
+  Operation *operation = logicalOrOp.getOperation();
+  return printBinaryOperation(emitter, operation, "||");
 }
 
 static LogicalResult printOperation(CppEmitter &emitter, emitc::ForOp forOp) {
@@ -1292,11 +1311,12 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::CmpOp,
                 emitc::ConstantOp, emitc::DeclareFuncOp, emitc::DivOp,
                 emitc::ExpressionOp, emitc::ForOp, emitc::FuncOp, emitc::IfOp,
-                emitc::IncludeOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
+                emitc::IncludeOp, emitc::LogicalAndOp, emitc::LogicalNotOp,
+                emitc::LogicalOrOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
                 emitc::SubOp, emitc::VariableOp, emitc::VerbatimOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
-          .Case<func::CallOp, func::ConstantOp, func::FuncOp, func::ReturnOp>(
+          .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Arithmetic ops.
           .Case<arith::ConstantOp>(

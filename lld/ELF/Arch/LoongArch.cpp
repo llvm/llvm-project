@@ -75,7 +75,7 @@ enum Reg {
 //
 // Here a "page" is in fact just another way to refer to the 12-bit range
 // allowed by the immediate field of the addi/ld/st instructions, and not
-// related to the system or the kernel's actual page size. The sematics happens
+// related to the system or the kernel's actual page size. The semantics happen
 // to match the AArch64 `adrp`, so the concept of "page" is borrowed here.
 static uint64_t getLoongArchPage(uint64_t p) {
   return p & ~static_cast<uint64_t>(0xfff);
@@ -86,7 +86,7 @@ static uint32_t lo12(uint32_t val) { return val & 0xfff; }
 // Calculate the adjusted page delta between dest and PC.
 uint64_t elf::getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type) {
   // Note that if the sequence being relocated is `pcalau12i + addi.d + lu32i.d
-  // + lu52i.d`, they must be adjancent so that we can infer the PC of
+  // + lu52i.d`, they must be adjacent so that we can infer the PC of
   // `pcalau12i` when calculating the page delta for the other two instructions
   // (lu32i.d and lu52i.d). Compensate all the sign-extensions is a bit
   // complicated. Just use psABI recommended algorithm.
@@ -539,7 +539,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     return;
 
   case R_LARCH_CALL36: {
-    // This relocation is designed for adjancent pcaddu18i+jirl pairs that
+    // This relocation is designed for adjacent pcaddu18i+jirl pairs that
     // are patched in one time. Because of sign extension of these insns'
     // immediate fields, the relocation range is [-128G - 0x20000, +128G -
     // 0x20000) (of course must be 4-byte aligned).

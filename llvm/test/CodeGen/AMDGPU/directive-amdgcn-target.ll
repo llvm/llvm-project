@@ -110,9 +110,9 @@
 
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-generic -mattr=-xnack < %s | FileCheck --check-prefixes=GFX9_GENERIC_NOXNACK %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-generic -mattr=+xnack < %s | FileCheck --check-prefixes=GFX9_GENERIC_XNACK %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10.1-generic -mattr=-xnack < %s | FileCheck --check-prefixes=GFX10_1_GENERIC_NOXNACK %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10.1-generic -mattr=+xnack < %s | FileCheck --check-prefixes=GFX10_1_GENERIC_XNACK %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10.3-generic < %s | FileCheck --check-prefixes=GFX10_3_GENERIC %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-1-generic -mattr=-xnack < %s | FileCheck --check-prefixes=GFX10_1_GENERIC_NOXNACK %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-1-generic -mattr=+xnack < %s | FileCheck --check-prefixes=GFX10_1_GENERIC_XNACK %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-3-generic < %s | FileCheck --check-prefixes=GFX10_3_GENERIC %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx11-generic < %s | FileCheck --check-prefixes=GFX11_GENERIC %s
 
 ; GFX600: .amdgcn_target "amdgcn-amd-amdhsa--gfx600"
@@ -205,9 +205,9 @@
 
 ; GFX9_GENERIC_NOXNACK:     .amdgcn_target "amdgcn-amd-amdhsa--gfx9-generic:xnack-"
 ; GFX9_GENERIC_XNACK:       .amdgcn_target "amdgcn-amd-amdhsa--gfx9-generic:xnack+"
-; GFX10_1_GENERIC_NOXNACK:  .amdgcn_target "amdgcn-amd-amdhsa--gfx10.1-generic:xnack-"
-; GFX10_1_GENERIC_XNACK:    .amdgcn_target "amdgcn-amd-amdhsa--gfx10.1-generic:xnack+"
-; GFX10_3_GENERIC:          .amdgcn_target "amdgcn-amd-amdhsa--gfx10.3-generic"
+; GFX10_1_GENERIC_NOXNACK:  .amdgcn_target "amdgcn-amd-amdhsa--gfx10-1-generic:xnack-"
+; GFX10_1_GENERIC_XNACK:    .amdgcn_target "amdgcn-amd-amdhsa--gfx10-1-generic:xnack+"
+; GFX10_3_GENERIC:          .amdgcn_target "amdgcn-amd-amdhsa--gfx10-3-generic"
 ; GFX11_GENERIC:            .amdgcn_target "amdgcn-amd-amdhsa--gfx11-generic"
 
 define amdgpu_kernel void @directive_amdgcn_target() {
