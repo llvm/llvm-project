@@ -2129,20 +2129,20 @@ template <typename T> bool Equivalent(std::optional<T> l, T r) {
 constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
 
 // This can be removed once the transition is complete.
-#define FALLBACK(REFERENCE, ARGS)                                              \
+#define FALLBACK(REFERENCE, ARGS, DEFAULT)                                     \
   do {                                                                         \
     if (!ModuleList::GetGlobalModuleListProperties()                           \
              .GetUseSwiftTypeRefTypeSystem()) {                                \
       if (auto *swift_ast_context = GetSwiftASTContext(nullptr))               \
         return swift_ast_context->REFERENCE ARGS;                              \
-      return {};                                                               \
+      return DEFAULT;                                                          \
     }                                                                          \
   } while (0)
 
 #ifndef NDEBUG
 #define VALIDATE_AND_RETURN_STATIC(IMPL, REFERENCE)                            \
   do {                                                                         \
-    FALLBACK(REFERENCE, ());                                                   \
+    FALLBACK(REFERENCE, (), {});                                               \
     auto result = IMPL();                                                      \
     if (!ModuleList::GetGlobalModuleListProperties()                           \
              .GetSwiftValidateTypeSystem())                                    \
@@ -2157,7 +2157,7 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
 #define VALIDATE_AND_RETURN(IMPL, REFERENCE, TYPE, EXE_CTX, ARGS,              \
                             FALLBACK_ARGS)                                     \
   do {                                                                         \
-    FALLBACK(REFERENCE, FALLBACK_ARGS);                                        \
+    FALLBACK(REFERENCE, FALLBACK_ARGS, {});                                    \
     auto result = IMPL();                                                      \
     if (!ModuleList::GetGlobalModuleListProperties()                           \
              .GetSwiftValidateTypeSystem())                                    \
@@ -2185,6 +2185,41 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
     assert(equivalent &&                                                       \
            "TypeSystemSwiftTypeRef diverges from SwiftASTContext");            \
     return result;                                                             \
+  } while (0)
+
+#define VALIDATE_AND_RETURN_EXPECTED(IMPL, REFERENCE, TYPE, EXE_CTX, ARGS,     \
+                                     FALLBACK_ARGS, DEFAULT)                   \
+  do {                                                                         \
+    FALLBACK(REFERENCE, FALLBACK_ARGS, DEFAULT);                               \
+    auto result = IMPL();                                                      \
+    if (!ModuleList::GetGlobalModuleListProperties()                           \
+             .GetSwiftValidateTypeSystem())                                    \
+      return result;                                                           \
+    if (!GetSwiftASTContext(nullptr))                                          \
+      return result;                                                           \
+    if (ShouldSkipValidation(TYPE))                                            \
+      return result;                                                           \
+    if ((TYPE) && !ReconstructType(TYPE))                                      \
+      return result;                                                           \
+    ExecutionContext _exe_ctx(EXE_CTX);                                        \
+    /* When in the error backstop the sc will point into the stdlib. */        \
+    if (auto *frame = _exe_ctx.GetFramePtr())                                  \
+      if (frame->GetSymbolContext(eSymbolContextFunction).GetFunctionName() == \
+          SwiftLanguageRuntime::GetErrorBackstopName())                        \
+        return result;                                                         \
+    auto swift_scratch_ctx_lock = SwiftScratchContextLock(                     \
+        _exe_ctx == ExecutionContext() ? nullptr : &_exe_ctx);                 \
+    bool equivalent =                                                          \
+        !ReconstructType(TYPE) /* missing .swiftmodule */ ||                   \
+        (Equivalent(llvm::expectedToStdOptional(std::move(result)),            \
+                    llvm::expectedToStdOptional(                               \
+                        GetSwiftASTContextFromExecutionContext(&_exe_ctx)      \
+                            ->REFERENCE ARGS)));                               \
+    if (!equivalent)                                                           \
+      llvm::dbgs() << "failing type was " << (const char *)TYPE << "\n";       \
+    assert(equivalent &&                                                       \
+           "TypeSystemSwiftTypeRef diverges from SwiftASTContext");            \
+    return IMPL();                                                             \
   } while (0)
 
 #else
@@ -2897,7 +2932,7 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
               AsMangledName(type));
     return {};
   };
-  FALLBACK(GetBitSize, (ReconstructType(type, exe_scope), exe_scope));
+  FALLBACK(GetBitSize, (ReconstructType(type, exe_scope), exe_scope), {});
   if (exe_scope && exe_scope->CalculateProcess()) {
     VALIDATE_AND_RETURN(impl, GetBitSize, type, exe_scope,
                         (ReconstructType(type, exe_scope), exe_scope),
@@ -3006,15 +3041,12 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
                       (ReconstructType(type), count));
 }
 
-uint32_t
+llvm::Expected<uint32_t>
 TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
                                        bool omit_empty_base_classes,
                                        const ExecutionContext *exe_ctx) {
   LLDB_SCOPED_TIMER();
-  FALLBACK(GetNumChildren,
-           (ReconstructType(type, exe_ctx), omit_empty_base_classes, exe_ctx));
-
-  auto impl = [&]() -> std::optional<uint32_t> {
+  auto impl = [&]() -> llvm::Expected<uint32_t> {
     if (exe_ctx)
       if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
         if (auto *runtime =
@@ -3028,37 +3060,43 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
         return 1;
       return clang_type.GetNumChildren(omit_empty_base_classes, exe_ctx);
     }
-    return {};
+    return llvm::make_error<llvm::StringError>("incomplete type information",
+                                               llvm::inconvertibleErrorCode());
   };
-  if (std::optional<uint32_t> num_children = impl())
-    // Use a lambda to intercept and unwrap the `Optional` return value.
-    // Optional<uint32_t> uses more lax equivalency function.
-    return [&]() -> std::optional<uint32_t> {
-      auto impl = [&]() { return num_children; };
-      ExecutionContext exe_ctx_obj;
-      if (exe_ctx)
-        exe_ctx_obj = *exe_ctx;
-      VALIDATE_AND_RETURN(
-          impl, GetNumChildren, type, exe_ctx_obj,
-          (ReconstructType(type, exe_ctx), omit_empty_base_classes, exe_ctx),
-          (ReconstructType(type, exe_ctx), omit_empty_base_classes, exe_ctx));
-    }()
-                        .value_or(0);
-
+  llvm::Expected<uint32_t> num_children = impl();
+  if (num_children) {
+    ExecutionContext exe_ctx_obj;
+    if (exe_ctx)
+      exe_ctx_obj = *exe_ctx;
+    VALIDATE_AND_RETURN_EXPECTED(
+        impl, GetNumChildren, type, exe_ctx_obj,
+        (ReconstructType(type, exe_ctx), omit_empty_base_classes, exe_ctx),
+        (ReconstructType(type, exe_ctx), omit_empty_base_classes, exe_ctx),
+        llvm::make_error<llvm::StringError>("incomplete AST type information",
+                                            llvm::inconvertibleErrorCode()));
+  }
   LLDB_LOGF(GetLog(LLDBLog::Types),
             "Using SwiftASTContext::GetNumChildren fallback for type %s",
             AsMangledName(type));
 
+  // Try SwiftASTContext.
   if (auto *swift_ast_context = GetSwiftASTContextFromExecutionContext(exe_ctx))
-    return swift_ast_context->GetNumChildren(ReconstructType(type, exe_ctx),
-                                             omit_empty_base_classes, exe_ctx);
-  return {};
+    if (auto n = llvm::expectedToStdOptional(swift_ast_context->GetNumChildren(
+            ReconstructType(type, exe_ctx), omit_empty_base_classes,
+            exe_ctx))) {
+      LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), num_children.takeError(),
+                      "SwiftLanguageRuntime::GetNumChildren() failed: {0}");
+      return *n;
+    }
+
+  // Otherwise return the error from the runtime.
+  return num_children.takeError();
 }
 
 uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type,
                                               ExecutionContext *exe_ctx) {
   LLDB_SCOPED_TIMER();
-  FALLBACK(GetNumFields, (ReconstructType(type, exe_ctx), exe_ctx));
+  FALLBACK(GetNumFields, (ReconstructType(type, exe_ctx), exe_ctx), {});
 
   auto impl = [&]() -> std::optional<uint32_t> {
     if (exe_ctx)
@@ -3192,15 +3230,17 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
             omit_empty_base_classes, ignore_array_bounds, child_name,
             child_byte_size, child_byte_offset, child_bitfield_bit_size,
             child_bitfield_bit_offset, child_is_base_class,
-            child_is_deref_of_parent, valobj, language_flags));
+            child_is_deref_of_parent, valobj, language_flags),
+           {});
   std::optional<unsigned> ast_num_children;
   auto get_ast_num_children = [&]() {
     if (ast_num_children)
       return *ast_num_children;
     if (auto *swift_ast_context =
             GetSwiftASTContextFromExecutionContext(exe_ctx))
-      ast_num_children = swift_ast_context->GetNumChildren(
-          ReconstructType(type, exe_ctx), omit_empty_base_classes, exe_ctx);
+      ast_num_children = llvm::expectedToStdOptional(
+          swift_ast_context->GetNumChildren(ReconstructType(type, exe_ctx),
+                                            omit_empty_base_classes, exe_ctx));
     return ast_num_children.value_or(0);
   };
   auto impl = [&]() -> CompilerType {
@@ -3224,7 +3264,8 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
             return GetTypeFromMangledTypename(ConstString("$sSo8NSStringCD"));
           if (result.GetMangledTypeName().GetStringRef().count('$') > 1 &&
               get_ast_num_children() ==
-                  runtime->GetNumChildren({weak_from_this(), type}, exe_scope))
+                  llvm::expectedToStdOptional(runtime->GetNumChildren(
+                      {weak_from_this(), type}, exe_scope)))
             // If available, prefer the AST for private types. Private
             // identifiers are not ABI; the runtime returns anonymous private
             // identifiers (using a '$' prefix) which cannot match identifiers
@@ -3365,7 +3406,8 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   // can't mix&match between the two typesystems if there is such a
   // divergence. We'll need to replace all calls at once.
   if (get_ast_num_children() <
-      runtime->GetNumChildren({weak_from_this(), type}, exe_scope)
+      llvm::expectedToStdOptional(
+          runtime->GetNumChildren({weak_from_this(), type}, exe_scope))
           .value_or(0))
     return result;
   // When the child compiler type is an anonymous clang type,
@@ -3429,8 +3471,9 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
   LLDB_SCOPED_TIMER();
   FALLBACK(GetIndexOfChildMemberWithName,
-           (ReconstructType(type, exe_ctx), name, exe_ctx, omit_empty_base_classes,
-            child_indexes));
+           (ReconstructType(type, exe_ctx), name, exe_ctx,
+            omit_empty_base_classes, child_indexes),
+           {});
   if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
     if (auto *runtime =
             SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
@@ -3641,7 +3684,7 @@ bool TypeSystemSwiftTypeRef::IsImportedType(opaque_compiler_type_t type,
         *original_type = clang_type->GetForwardCompilerType();
     return true;
   };
-  FALLBACK(IsImportedType, (ReconstructType(type), original_type));
+  FALLBACK(IsImportedType, (ReconstructType(type), original_type), {});
   // We can't validate the result because ReconstructType may call this
   // function, causing an infinite loop.
   return impl();
@@ -3923,7 +3966,7 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
 
   // The signature of VALIDATE_AND_RETURN doesn't support this function, below
   // is an inlined function-specific variation.
-  FALLBACK(CreateTupleType, (elements));
+  FALLBACK(CreateTupleType, (elements), {});
 #ifndef NDEBUG
   if (ModuleList::GetGlobalModuleListProperties()
           .GetSwiftValidateTypeSystem()) {
@@ -4225,9 +4268,11 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
   }
 
 #ifndef NDEBUG
-  FALLBACK(DumpTypeValue, (ReconstructType(type, exe_scope), s, format, data,
-                           data_offset, data_byte_size, bitfield_bit_size,
-                           bitfield_bit_offset, exe_scope, is_base_class));
+  FALLBACK(DumpTypeValue,
+           (ReconstructType(type, exe_scope), s, format, data, data_offset,
+            data_byte_size, bitfield_bit_size, bitfield_bit_offset, exe_scope,
+            is_base_class),
+           {});
   StreamString ast_s;
   auto defer = llvm::make_scope_exit([&] {
     assert(Equivalent(ConstString(ast_s.GetString()),
@@ -4264,7 +4309,7 @@ std::optional<size_t>
 TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
                                         ExecutionContextScope *exe_scope) {
   LLDB_SCOPED_TIMER();
-  FALLBACK(GetTypeBitAlign, (ReconstructType(type, exe_scope), exe_scope));
+  FALLBACK(GetTypeBitAlign, (ReconstructType(type, exe_scope), exe_scope), {});
   // This method doesn't use VALIDATE_AND_RETURN because except for
   // fixed-size types the SwiftASTContext implementation forwards to
   // SwiftLanguageRuntime anyway and for many fixed-size types the

@@ -839,11 +839,9 @@ class ValueObjectWrapperSyntheticChildren : public SyntheticChildren {
     ValueObjectWrapperFrontEndProvider(ValueObject &backend)
         : SyntheticChildrenFrontEnd(backend) {}
 
-    size_t CalculateNumChildren() override {
-      return 1;
-    }
+    llvm::Expected<uint32_t> CalculateNumChildren() override { return 1; }
 
-    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+    lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
       return idx == 0 ? m_backend.GetSP() : nullptr;
     }
 

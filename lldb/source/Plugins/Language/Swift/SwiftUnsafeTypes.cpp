@@ -514,8 +514,8 @@ class UnsafeTypeSyntheticFrontEnd : public SwiftBasicTypeSyntheticFrontEnd {
 public:
   UnsafeTypeSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
   lldb::ChildCacheState Update() override;
   bool MightHaveChildren() override;
   size_t GetIndexOfChildWithName(ConstString name) override;
@@ -547,15 +547,15 @@ lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::
     Update();
 }
 
-size_t lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::swift::
+    UnsafeTypeSyntheticFrontEnd::CalculateNumChildren() {
   return m_unsafe_ptr->GetCount();
 }
 
 lldb::ValueObjectSP
 lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
-  const size_t num_children = CalculateNumChildren();
+    uint32_t idx) {
+  const uint32_t num_children = CalculateNumChildrenIgnoringErrors();
 
   if (idx >= num_children || idx >= m_children.size())
     return lldb::ValueObjectSP();
@@ -575,7 +575,7 @@ lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::Update() {
   if (m_unsafe_ptr->Update() == ChildCacheState::eRefetch)
     return ChildCacheState::eRefetch;
 
-  const size_t num_children = CalculateNumChildren();
+  const uint32_t num_children = CalculateNumChildrenIgnoringErrors();
   m_children = ::ExtractChildrenFromSwiftPointerValueObject(valobj_sp,
                                                           *m_unsafe_ptr.get());
   return m_children.size() == num_children ? ChildCacheState::eReuse

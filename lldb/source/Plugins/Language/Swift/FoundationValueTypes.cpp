@@ -131,12 +131,12 @@ bool lldb_private::formatters::swift::IndexPath_SummaryProvider(
     stream.PutCString("2 indices");
   else if (value == g_array)
   {
-    if (underlying_enum_sp->GetNumChildren() != 1) 
+    if (underlying_enum_sp->GetNumChildrenIgnoringErrors() != 1)
       return false;
   
     underlying_enum_sp = underlying_enum_sp->GetChildAtIndex(0, true)
        ->GetQualifiedRepresentationIfAvailable(lldb::eDynamicDontRunTarget, true);
-    size_t num_children = underlying_enum_sp->GetNumChildren();
+    size_t num_children = underlying_enum_sp->GetNumChildrenIgnoringErrors();
     stream.Printf("%zu indices", num_children);
   }
   return true;
@@ -214,7 +214,7 @@ bool lldb_private::formatters::swift::UUID_SummaryProvider(
   if (!uuid_sp)
     return false;
 
-  if (uuid_sp->GetNumChildren() < 16)
+  if (uuid_sp->GetNumChildrenIgnoringErrors() < 16)
     return false;
 
   ValueObjectSP children[] = {
@@ -300,7 +300,7 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     // Do nothing; count is already 0.
   } else if (representation_case == g_inline) {
     // Grab the associated value from `case inline(InlineData)`.
-    if (representation_enum_sp->GetNumChildren() != 1)
+    if (representation_enum_sp->GetNumChildrenIgnoringErrors() != 1)
       return false;
 
     ValueObjectSP inline_data_sp =
@@ -330,7 +330,7 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     }
   } else if (representation_case == g_slice) {
     // Grab the associated value from `case slice(InlineSlice)`.
-    if (representation_enum_sp->GetNumChildren() != 1)
+    if (representation_enum_sp->GetNumChildrenIgnoringErrors() != 1)
       return false;
 
     ValueObjectSP slice_data_sp =
@@ -392,7 +392,7 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     count = upperBound - lowerBound;
   } else if (representation_case == g_large) {
     // Grab the associated value from `case large(LargeSlice)`.
-    if (representation_enum_sp->GetNumChildren() != 1)
+    if (representation_enum_sp->GetNumChildrenIgnoringErrors() != 1)
       return false;
 
     ValueObjectSP large_data_sp =
@@ -521,7 +521,7 @@ bool lldb_private::formatters::swift::Decimal_SummaryProvider(
 
   // Mantissa is represented as a tuple of 8 UInt16.
   const uint8_t num_children = 8;
-  if (mantissa_sp->GetNumChildren() != num_children)
+  if (mantissa_sp->GetNumChildrenIgnoringErrors() != num_children)
     return false;
 
   std::vector<double> mantissa_elements;
@@ -570,13 +570,13 @@ public:
 
   ~URLComponentsSyntheticChildrenFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override {
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
     if (IsValid())
       return 9;
     return 0;
   }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     if (IsValid()) {
       switch (idx) {
 #define COMPONENT(Name, PrettyName, ID)                                        \

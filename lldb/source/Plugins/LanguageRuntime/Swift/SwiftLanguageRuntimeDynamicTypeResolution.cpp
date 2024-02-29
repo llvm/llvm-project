@@ -648,14 +648,15 @@ void LogUnimplementedTypeKind(const char *function, CompilerType type) {
 
 } // namespace
 
-std::optional<unsigned>
+llvm::Expected<uint32_t>
 SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
                                          ExecutionContextScope *exe_scope) {
   LLDB_SCOPED_TIMER();
 
   auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
   if (!ts)
-    return {};
+    return llvm::make_error<llvm::StringError>("no Swift typesystem",
+                                               llvm::inconvertibleErrorCode());
 
   // Deal with the LLDB-only SILPackType variant.
   if (auto pack_type = ts->IsSILPackType(type))
@@ -665,11 +666,11 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   // Try the static type metadata.
   const swift::reflection::TypeRef *tr = nullptr;
   auto *ti = GetSwiftRuntimeTypeInfo(type, exe_scope, &tr);
-  if (!ti) {
-    LLDB_LOG(GetLog(LLDBLog::Types), "GetSwiftRuntimeTypeInfo() failed for {0}",
-             type.GetMangledTypeName());
-    return {};
-  }
+  if (!ti)
+    return llvm::make_error<llvm::StringError>(
+        "could not get Swift runtime type info for type " +
+            type.GetMangledTypeName().GetString(),
+        llvm::inconvertibleErrorCode());
   if (llvm::isa<swift::reflection::BuiltinTypeInfo>(ti)) {
     // This logic handles Swift Builtin types. By handling them now, the cost of
     // unnecessarily loading ASTContexts can be avoided. Builtin types are
@@ -687,11 +688,13 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     if (builtin_type)
       return 0;
     LLDB_LOG(GetLog(LLDBLog::Types),
-             "{0}: unrecognized builtin type info or this is a Clang type with "
-             "DWARF debug info",
+             "{0}: unrecognized builtin type info or this is a Clang type "
+             "without DWARF debug info",
              type.GetMangledTypeName());
-    return {};
-
+    return llvm::make_error<llvm::StringError>(
+        "missing Clang debug info for type " +
+            type.GetDisplayTypeName().GetString(),
+        llvm::inconvertibleErrorCode());
   }
   // Structs and Tuples.
   if (auto *rti = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(ti)) {
@@ -736,7 +739,9 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     }
 
     if (!tr)
-      return {};
+      return llvm::make_error<llvm::StringError>(
+          "could not typeref for " + type.GetMangledTypeName().GetString(),
+          llvm::inconvertibleErrorCode());
 
     // Existentials.
     if (size_t n = GetExistentialSyntheticChildren(ts, tr, ti).size())
@@ -744,7 +749,8 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
 
     ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
     if (!reflection_ctx)
-      return {};
+      return llvm::make_error<llvm::StringError>(
+          "no reflection context", llvm::inconvertibleErrorCode());
 
     LLDBTypeInfoProvider tip(*this, exe_scope);
     auto *cti = reflection_ctx->GetClassInstanceTypeInfo(
@@ -761,12 +767,18 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
         return rti->getNumFields() + 1;
       return rti->getNumFields();
     }
-
-    return {};
+    return llvm::make_error<llvm::StringError>(
+        "No Swift runtime type info for " +
+            type.GetMangledTypeName().GetString(),
+        llvm::inconvertibleErrorCode());
   }
 
   LogUnimplementedTypeKind(__FUNCTION__, type);
-  return {};
+  return llvm::make_error<llvm::StringError>(
+      "GetNumChildren unimplemented for type " +
+          type.GetMangledTypeName().GetString(),
+      llvm::inconvertibleErrorCode());
+  {};
 }
 
 std::optional<unsigned>
@@ -1023,6 +1035,11 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
         child_indexes.push_back(0);
         return {SwiftLanguageRuntime::eFound, {1}};
       }
+      // ReflectionContext returns unknown types as
+      // Builtins. ClangImported builtins are rare, and if we ask for
+      // a child of a builtin, most likely this means this is a type
+      // we couldn't find in DWARF.
+      return {SwiftLanguageRuntime::eError, {0}};
     }
     // SIMD types have an artificial _value.
     if (name == "_value" && TypeSystemSwiftTypeRef::IsSIMDType(type)) {

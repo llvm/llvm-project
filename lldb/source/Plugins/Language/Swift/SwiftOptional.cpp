@@ -189,11 +189,9 @@ bool lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
   if (!summary_sp) {
     if (lldb_private::DataVisualization::ShouldPrintAsOneLiner(*some))
       return false;
-    else
-      return (some->GetNumChildren() > 0);
-  } else
-    return (some->GetNumChildren() > 0) &&
-           (summary_sp->DoesPrintChildren(some));
+    return some->HasChildren();
+  }
+  return some->HasChildren() && summary_sp->DoesPrintChildren(some);
 }
 
 bool lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
@@ -211,15 +209,15 @@ bool lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::IsEmpty()
   return (m_is_none == true || m_children == false || m_some == nullptr);
 }
 
-size_t lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::swift::
+    SwiftOptionalSyntheticFrontEnd::CalculateNumChildren() {
   if (IsEmpty())
     return 0;
   return m_some->GetNumChildren();
 }
 
 lldb::ValueObjectSP lldb_private::formatters::swift::
-    SwiftOptionalSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+    SwiftOptionalSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (IsEmpty())
     return nullptr;
   auto child = m_some->GetChildAtIndex(idx, true);
@@ -243,7 +241,7 @@ lldb::ChildCacheState lldb_private::formatters::swift::SwiftOptionalSyntheticFro
 
   m_is_none = false;
 
-  m_children = (m_some->GetNumChildren() > 0);
+  m_children = m_some->HasChildren();
 
   return ChildCacheState::eRefetch;
 }

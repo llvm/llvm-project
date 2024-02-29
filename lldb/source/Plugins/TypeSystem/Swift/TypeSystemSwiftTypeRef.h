@@ -193,9 +193,10 @@ public:
                 ExecutionContextScope *exe_scope) override;
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                              uint64_t &count) override;
-  uint32_t GetNumChildren(lldb::opaque_compiler_type_t type,
-                          bool omit_empty_base_classes,
-                          const ExecutionContext *exe_ctx) override;
+  llvm::Expected<uint32_t>
+  GetNumChildren(lldb::opaque_compiler_type_t type,
+                 bool omit_empty_base_classes,
+                 const ExecutionContext *exe_ctx) override;
   uint32_t GetNumFields(lldb::opaque_compiler_type_t type,
                         ExecutionContext *exe_ctx = nullptr) override;
   CompilerType GetFieldAtIndex(lldb::opaque_compiler_type_t type, size_t idx,
