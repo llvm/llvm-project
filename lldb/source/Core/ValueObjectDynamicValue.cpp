@@ -85,7 +85,7 @@ ConstString ValueObjectDynamicValue::GetDisplayTypeName() {
   return m_parent->GetDisplayTypeName();
 }
 
-size_t ValueObjectDynamicValue::CalculateNumChildren(uint32_t max) {
+uint32_t ValueObjectDynamicValue::CalculateNumChildren(uint32_t max) {
   const bool success = UpdateValueIfNeeded(false);
   if (success && m_dynamic_type_info.HasType()) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
