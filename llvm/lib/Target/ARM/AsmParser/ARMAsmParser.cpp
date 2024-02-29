@@ -6340,7 +6340,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
     unsigned CC = ARMCondCodeFromString(Mnemonic.substr(Mnemonic.size()-2));
     if (CC != ~0U) {
       Mnemonic = Mnemonic.slice(0, Mnemonic.size() - 2);
-      PredicationCode = (ARMCC::CondCodes)CC;
+      PredicationCode = static_cast<ARMCC::CondCodes>(CC);
     }
   }
 
@@ -6384,10 +6384,11 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
       Mnemonic != "vqmovnt" && Mnemonic != "vqmovunt" &&
       Mnemonic != "vqmovnt" && Mnemonic != "vmovnt" && Mnemonic != "vqdmullt" &&
       Mnemonic != "vpnot" && Mnemonic != "vcvtt" && Mnemonic != "vcvt") {
-    unsigned CC = ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size()-1));
-    if (CC != ~0U) {
+    unsigned VCC =
+        ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size() - 1));
+    if (VCC != ~0U) {
       Mnemonic = Mnemonic.slice(0, Mnemonic.size()-1);
-      VPTPredicationCode = (ARMVCC::VPTCodes)CC;
+      VPTPredicationCode = static_cast<ARMVCC::VPTCodes>(VCC);
     }
     return Mnemonic;
   }
