@@ -5281,6 +5281,7 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
           << PassedType << ExpectedType << 1 << 0 << 0;
       return true;
     }
+    break;
   }
   case Builtin::BI__builtin_hlsl_lerp: {
     if (checkArgCount(*this, TheCall, 3))
