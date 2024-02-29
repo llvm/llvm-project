@@ -1,4 +1,4 @@
-//===-- runtime/Float128Math/asinh.cpp ------------------------------------===//
+//===-- runtime/Float128Math/mod-real.cpp ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,14 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "math-entries.h"
+#include "numeric-template-specs.h"
 
 namespace Fortran::runtime {
 extern "C" {
 
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-CppTypeFor<TypeCategory::Real, 16> RTDEF(AsinhF128)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Asinh<true>::invoke(x);
+// MOD (16.9.135)
+F128Type RTDEF(ModReal16)(
+    F128Type x, F128Type p, const char *sourceFile, int sourceLine) {
+  return RealMod<false>(x, p, sourceFile, sourceLine);
 }
 #endif
 

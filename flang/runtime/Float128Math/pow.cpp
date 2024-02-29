@@ -15,7 +15,7 @@ extern "C" {
 CppTypeFor<TypeCategory::Real, 16> RTDEF(PowF128)(
     CppTypeFor<TypeCategory::Real, 16> x,
     CppTypeFor<TypeCategory::Real, 16> y) {
-  return Pow<RTNAME(PowF128)>::invoke(x, y);
+  return Pow<true>::invoke(x, y);
 }
 #endif
 

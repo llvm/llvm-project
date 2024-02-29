@@ -18,7 +18,7 @@ extern "C" {
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(TruncF128)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Trunc<RTNAME(TruncF128)>::invoke(x);
+  return Trunc<true>::invoke(x);
 }
 #endif
 

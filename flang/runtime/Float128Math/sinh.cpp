@@ -14,7 +14,7 @@ extern "C" {
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(SinhF128)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Sinh<RTNAME(SinhF128)>::invoke(x);
+  return Sinh<true>::invoke(x);
 }
 #endif
 
