@@ -9264,8 +9264,14 @@ ScalarEvolution::computeExitLimitFromSingleExitSwitch(const Loop *L,
   if (Switch->getDefaultDest() == ExitingBlock)
     return getCouldNotCompute();
 
-  assert(L->contains(Switch->getDefaultDest()) &&
-         "Default case must not exit the loop!");
+  // if not using enzyme executes by default
+  // if using enzyme and the code is guaranteed unreachable,
+  // the default destination doesn't matter
+  if (!AssumeLoopExists ||
+      !GuaranteedUnreachable.count(Switch->getDefaultDest())) {
+    assert(L->contains(Switch->getDefaultDest()) &&
+           "Default case must not exit the loop!");
+  }
   const SCEV *LHS = getSCEVAtScope(Switch->getCondition(), L);
   const SCEV *RHS = getConstant(Switch->findCaseDest(ExitingBlock));
 
