@@ -53,15 +53,11 @@ adr_data = test_adr_prel_lo21 + 0xe46f2
 
 # Check R_AARCH64_LD_PREL_LO19 relocation of a local symbol
 #
-# jitlink-check: decode_operand(test_ldr_prel_lo19 + 12, 1)[19:0] = \
-# jitlink-check:     (ldr_data - test_ldr_prel_lo19_inst + 0x4)[21:2]
-        .globl  test_ldr_prel_lo19, test_ldr_prel_lo19_inst, ldr_data
+# jitlink-check: decode_operand(test_ldr_prel_lo19 + 0, 1)[19:0] = \
+# jitlink-check:     (ldr_data - test_ldr_prel_lo19 + 0x4)[21:2]
+        .globl  test_ldr_prel_lo19, ldr_data
         .p2align  2
 test_ldr_prel_lo19:
-        nop
-        nop
-        nop
-test_ldr_prel_lo19_inst:
         ldr	x0, ldr_data + 0x4
         .size test_ldr_prel_lo19, .-test_ldr_prel_lo19
 ldr_data = test_ldr_prel_lo19 + 4
