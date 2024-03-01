@@ -3654,4 +3654,11 @@ def int_amdgcn_flat_load_monitor_b128   : AMDGPULoadMonitor<flat_ptr_ty>;
 def int_amdgcn_global_load_monitor_b32  : AMDGPULoadMonitor<global_ptr_ty>;
 def int_amdgcn_global_load_monitor_b64  : AMDGPULoadMonitor<global_ptr_ty>;
 def int_amdgcn_global_load_monitor_b128 : AMDGPULoadMonitor<global_ptr_ty>;
+
+/// Emit an addrspacecast without null pointer checking.
+/// Should only be inserted by a pass based on analysis of an addrspacecast's src.
+def int_amdgcn_addrspacecast_nonnull : DefaultAttrsIntrinsic<
+  [llvm_anyptr_ty], [llvm_anyptr_ty],
+  [IntrNoMem, IntrSpeculatable]
+>;
 }
