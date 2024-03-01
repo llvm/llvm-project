@@ -21,6 +21,7 @@
 #include "terminator.h"
 #include "tools.h"
 #include "flang/Common/float128.h"
+#include "flang/Runtime/api-attrs.h"
 #include <cstdint>
 #include <limits>
 
