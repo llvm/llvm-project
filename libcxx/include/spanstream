@@ -323,7 +323,7 @@ public:
   basic_ospanstream(const basic_ospanstream&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI basic_ospanstream(basic_ospanstream&& __rhs)
-      : basic_ostream(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
+      : basic_iostream<_CharT, _Traits>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
     basic_ostream<_CharT, _Traits>::set_rdbuf(std::addressof(__sb_));
   }
 
@@ -382,7 +382,7 @@ public:
   basic_spanstream(const basic_spanstream&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI basic_spanstream(basic_spanstream&& __rhs)
-      : basic_iostream(std::move(__rhs)), __sb_(__rhs.__sb_) {
+      : basic_iostream<_CharT, _Traits>(std::move(__rhs)), __sb_(__rhs.__sb_) {
     basic_iostream<_CharT, _Traits>::set_rdbuf(std::addressof(__sb_));
   }
 
