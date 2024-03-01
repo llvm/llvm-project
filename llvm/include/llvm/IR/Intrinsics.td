@@ -2136,7 +2136,14 @@ let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
                                llvm_metadata_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-
+  def int_vp_sthreecmp : DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i8_ty> ],
+                             [LLVMMatchType<0>,
+                              LLVMMatchType<0>],
+                              [IntrSpeculatable]>;
+  def int_vp_uthreecmp : DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i8_ty>],
+                             [LLVMMatchType<0>,
+                              LLVMMatchType<0>],
+                              [IntrSpeculatable]>;
   // Reductions
   def int_vp_reduce_fadd : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                              [ LLVMVectorElementType<0>,
