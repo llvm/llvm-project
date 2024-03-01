@@ -25,11 +25,13 @@
 #include "nasty_string.h"
 #include "test_macros.h"
 
+#ifndef TEST_HAS_NO_NASTY_STRING
 void test_sfinae_with_nasty_char() {
   using SpStream = std::basic_ispanstream<nasty_char, nasty_char_traits>;
 
   // TODO:
 }
+#endif // TEST_HAS_NO_NASTY_STRING
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test_sfinae() {
@@ -46,7 +48,9 @@ void test() {
 }
 
 int main(int, char**) {
+#ifndef TEST_HAS_NO_NASTY_STRING
   test_sfinae_with_nasty_char();
+#endif
   test_sfinae<char>();
   test_sfinae<char, constexpr_char_traits<char>>();
   test<char>();
