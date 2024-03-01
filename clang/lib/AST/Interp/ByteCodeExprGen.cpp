@@ -1220,14 +1220,18 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
-  if (Initializing)
-    return this->visitInitializer(E->getSourceExpr());
+  const Expr *SourceExpr = E->getSourceExpr();
+  if (!SourceExpr)
+    return false;
 
-  PrimType SubExprT = classify(E->getSourceExpr()).value_or(PT_Ptr);
+  if (Initializing)
+    return this->visitInitializer(SourceExpr);
+
+  PrimType SubExprT = classify(SourceExpr).value_or(PT_Ptr);
   if (auto It = OpaqueExprs.find(E); It != OpaqueExprs.end())
     return this->emitGetLocal(SubExprT, It->second, E);
 
-  if (!this->visit(E->getSourceExpr()))
+  if (!this->visit(SourceExpr))
     return false;
 
   // At this point we either have the evaluated source expression or a pointer
