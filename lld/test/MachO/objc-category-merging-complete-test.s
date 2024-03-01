@@ -14,6 +14,7 @@
 
 
 MERGE_CATS:     __OBJC_$_CATEGORY_MyBaseClass_$_(Category02|Category03)
+MERGE_CATS-NEXT:              name {{.*}} Category02|Category03
 MERGE_CATS:           instanceMethods
 MERGE_CATS-NEXT:           entsize 24
 MERGE_CATS-NEXT:             count 4

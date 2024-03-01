@@ -1708,7 +1708,8 @@ void CStringSection::finalizeContents() {
 void DeduplicatedCStringSection::finalizeContents() {
   // Find the largest alignment required for each string.
   for (const CStringInputSection *isec : inputs) {
-    for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
+    for (int i = 0; i < isec->pieces.size(); ++i) {
+      const StringPiece &piece = isec->pieces[i];
       if (!piece.live)
         continue;
       auto s = isec->getCachedHashStringRef(i);
@@ -1724,7 +1725,8 @@ void DeduplicatedCStringSection::finalizeContents() {
   // Assign an offset for each string and save it to the corresponding
   // StringPieces for easy access.
   for (CStringInputSection *isec : inputs) {
-    for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
+    for (int i = 0; i < isec->pieces.size(); ++i) {
+      StringPiece &piece = isec->pieces[i];
       if (!piece.live)
         continue;
       auto s = isec->getCachedHashStringRef(i);

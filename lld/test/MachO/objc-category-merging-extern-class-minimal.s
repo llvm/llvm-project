@@ -21,9 +21,10 @@ MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_Category02
 
 # Check that the merged cateogry is there, in the correct format
 MERGE_CATS: __OBJC_$_CATEGORY_MyBaseClass_$_(Category01|Category02)
-MERGE_CATS: instanceMethods
-MERGE_CATS-NEXT: 24
-MERGE_CATS-NEXT: 2
+MERGE_CATS-NEXT:   name {{.*}} Category01|Category02
+MERGE_CATS:       instanceMethods
+MERGE_CATS-NEXT:  24
+MERGE_CATS-NEXT:  2
 MERGE_CATS-NEXT:   name {{.*}} cat01_InstanceMethod
 MERGE_CATS-NEXT:  types {{.*}} v16@0:8
 MERGE_CATS-NEXT:    imp -[MyBaseClass(Category01) cat01_InstanceMethod]
