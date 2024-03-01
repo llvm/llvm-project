@@ -7,6 +7,7 @@ add_header_library(
     aarch64/inline_memcpy.h
     aarch64/inline_memmove.h
     aarch64/inline_memset.h
+    aarch64/flush_cacheline.h
     generic/aligned_access.h
     generic/byte_per_byte.h
     inline_bcmp.h
@@ -30,6 +31,7 @@ add_header_library(
     x86_64/inline_memcpy.h
     x86_64/inline_memmove.h
     x86_64/inline_memset.h
+    x86_64/flush_cacheline.h
   DEPENDS
     libc.src.__support.common
     libc.src.__support.CPP.bit
@@ -96,4 +98,22 @@ add_header_library(
   inline_memmem
   HDRS
     inline_memmem.h
+)
+
+if (CLFLUSHOPT IN_LIST LIBC_CPU_FEATURES)
+  set(clflushopt_option "-DLIBC_TARGET_CPU_HAS_CLFLUSHOPT")
+  message(STATUS "Using clflushopt for cacheline flushing")
+else()
+  set(clflushopt_option "")
+endif()
+
+add_header_library(
+  flush_cache
+  HDRS
+    flush_cache.h
+  COMPILE_OPTIONS
+    ${clflushopt_option}
+  DEPENDS
+    .memory_utils
+    libc.src.__support.CPP.atomic
 )

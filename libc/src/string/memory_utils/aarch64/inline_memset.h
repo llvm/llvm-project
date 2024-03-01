@@ -17,6 +17,7 @@
 
 namespace LIBC_NAMESPACE {
 
+template <bool OPAQUE_VALUE = false>
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_aarch64(Ptr dst, uint8_t value, size_t count) {
   static_assert(aarch64::kNeon, "aarch64 supports vector types");
@@ -45,7 +46,7 @@ inline_memset_aarch64(Ptr dst, uint8_t value, size_t count) {
     generic::Memset<uint256_t>::tail(dst, value, count);
     return;
   }
-  if (count >= 448 && value == 0 && aarch64::neon::hasZva()) {
+  if (!OPAQUE_VALUE && count >= 448 && value == 0 && aarch64::neon::hasZva()) {
     generic::Memset<uint512_t>::block(dst, 0);
     align_to_next_boundary<64>(dst, count);
     return aarch64::neon::BzeroCacheLine::loop_and_tail(dst, 0, count);

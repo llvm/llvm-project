@@ -441,6 +441,18 @@ add_entrypoint_object(
     .memory_utils.inline_memcpy
 )
 
+add_entrypoint_object(
+  memset_explicit
+  SRCS
+    memset_explicit.cpp
+  HDRS
+    memset_explicit.h
+  DEPENDS
+    .string_utils
+    .memory_utils.inline_memset
+    .memory_utils.flush_cache
+)
+
 # Helper to define a function with multiple implementations
 # - Computes flags to satisfy required/rejected features and arch,
 # - Declares an entry point,
