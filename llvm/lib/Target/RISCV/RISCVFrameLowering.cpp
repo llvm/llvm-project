@@ -1193,10 +1193,8 @@ Align RISCVFrameLowering::maxPossibleSpillAlign(
         if (!MO.isReg())
           continue;
         Register Reg = MO.getReg();
-        const TargetRegisterClass *RC;
-        if (Reg.isPhysical())
-          RC = TRI->getMinimalPhysRegClass(Reg);
-        else
+        const TargetRegisterClass *RC = nullptr;
+        if (Reg.isVirtual())
           RC = MRI.getRegClassOrNull(MO.getReg());
         if (RC && TRI->getSpillAlign(*RC) > CurrMaxAlign)
           CurrMaxAlign = TRI->getSpillAlign(*RC);
