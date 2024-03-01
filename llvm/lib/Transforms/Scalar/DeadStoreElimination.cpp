@@ -1743,12 +1743,12 @@ struct DSEState {
         }
 
       EI.removeInstruction(DeadInst);
-      // Remove memory defs directly, but only queue other dead instructions for
-      // later removal. They may have been used as memory locations that have
-      // been cached by BatchAA. Removing them here may lead to newly created
-      // instructions to be allocated at the same address, yielding stale cache
-      // entries.
-      if (IsMemDef)
+      // Remove memory defs directly if they don't produce results, but only
+      // queue other dead instructions for later removal. They may have been
+      // used as memory locations that have been cached by BatchAA. Removing
+      // them here may lead to newly created instructions to be allocated at the
+      // same address, yielding stale cache entries.
+      if (IsMemDef && DeadInst->getType()->isVoidTy())
         DeadInst->eraseFromParent();
       else
         ToRemove.push_back(DeadInst);
@@ -2305,7 +2305,6 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 
   while (!State.ToRemove.empty()) {
     Instruction *DeadInst = State.ToRemove.pop_back_val();
-    assert(!MSSA.getMemoryAccess(DeadInst));
     DeadInst->eraseFromParent();
   }
 
