@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_MATH_LDEXPF128_H
 #define LLVM_LIBC_SRC_MATH_LDEXPF128_H
 
-#include "src/__support/macros/properties/float.h"
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE {
 

@@ -705,8 +705,25 @@ func.func @sparse_lvl(%arg0: index, %t : tensor<?x?xi32, #BSR>) -> index {
   map = (i, j, k, l) -> (i: dense, j: compressed, k: dense, l: dense)
 }>
 
+// CHECK-LABEL:   func.func @sparse_reinterpret_map(
+// CHECK-SAME:      %[[A0:.*]]: tensor<6x12xi32, #sparse{{[0-9]*}}>)
+// CHECK:           %[[VAL:.*]] = sparse_tensor.reinterpret_map %[[A0]]
+// CHECK:           return %[[VAL]]
 func.func @sparse_reinterpret_map(%t0 : tensor<6x12xi32, #BSR>) -> tensor<3x4x2x3xi32, #DSDD> {
   %t1 = sparse_tensor.reinterpret_map %t0 : tensor<6x12xi32, #BSR>
                                          to tensor<3x4x2x3xi32, #DSDD>
   return %t1 : tensor<3x4x2x3xi32, #DSDD>
+}
+
+// -----
+
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
+
+// CHECK-LABEL:   func.func @sparse_print(
+// CHECK-SAME:      %[[A0:.*]]: tensor<10x10xf64, #sparse{{[0-9]*}}>)
+// CHECK:           sparse_tensor.print %[[A0]]
+// CHECK:           return
+func.func @sparse_print(%arg0: tensor<10x10xf64, #CSR>) {
+  sparse_tensor.print %arg0 : tensor<10x10xf64, #CSR>
+  return
 }
