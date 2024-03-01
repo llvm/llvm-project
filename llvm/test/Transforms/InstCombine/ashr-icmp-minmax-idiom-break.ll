@@ -10,7 +10,8 @@ define i64 @dont_break_minmax_i64(i64 %conv, i64 %conv2) {
 ; CHECK-SAME: (i64 [[CONV:%.*]], i64 [[CONV2:%.*]]) {
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV2]]
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i64 [[MUL]], 4
-; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = call i64 @llvm.smin.i64(i64 [[SHR]], i64 348731)
+; CHECK-NEXT:    [[CMP4_I:%.*]] = icmp slt i64 [[MUL]], 5579712
+; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[CMP4_I]], i64 [[SHR]], i64 348731
 ; CHECK-NEXT:    ret i64 [[SPEC_SELECT_I]]
 ;
   %mul = mul nsw i64 %conv, %conv2
