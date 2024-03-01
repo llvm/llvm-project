@@ -2048,7 +2048,9 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
 }
 
 bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
-  // Intrinsic doesn't support vectors, also it seems that it's often difficult to prove that a vector cannot have any nulls in it so it's unclear if it's worth supporting.
+  // Intrinsic doesn't support vectors, also it seems that it's often difficult
+  // to prove that a vector cannot have any nulls in it so it's unclear if it's
+  // worth supporting.
   if (I.getType()->isVectorTy())
     return false;
 
@@ -2069,7 +2071,9 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
 
   SmallVector<const Value *, 4> WorkList;
   getUnderlyingObjects(I.getOperand(0), WorkList);
-  if(!all_of(WorkList, [&](const Value* V) { return isPtrKnownNeverNull(V, *DL, *TM, SrcAS); }))
+  if (!all_of(WorkList, [&](const Value *V) {
+        return isPtrKnownNeverNull(V, *DL, *TM, SrcAS);
+      }))
     return false;
 
   IRBuilder<> B(&I);

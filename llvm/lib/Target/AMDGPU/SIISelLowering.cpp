@@ -1421,8 +1421,7 @@ void SITargetLowering::CollectTargetIntrinsicOperands(
   case Intrinsic::amdgcn_addrspacecast_nonnull: {
     // The DAG's ValueType loses the addrspaces.
     // Add them as 2 extra Constant operands "from" and "to".
-    unsigned SrcAS =
-        I.getOperand(0)->getType()->getPointerAddressSpace();
+    unsigned SrcAS = I.getOperand(0)->getType()->getPointerAddressSpace();
     unsigned DstAS = I.getType()->getPointerAddressSpace();
     Ops.push_back(DAG.getTargetConstant(SrcAS, SDLoc(), MVT::i32));
     Ops.push_back(DAG.getTargetConstant(DstAS, SDLoc(), MVT::i32));
