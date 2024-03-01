@@ -306,7 +306,10 @@ Bug Fixes to C++ Support
   instead of only on class, alias, and variable templates, as last updated by
   CWG2032.
   Fixes (`#83461 <https://github.com/llvm/llvm-project/issues/83461>`_)
-
+- Fixed an issue where an attribute on a declarator would cause the attribute to
+  be destructed prematurely. This fixes a pair of Chromium that were brought to
+  our attention by an attempt to fix in
+  `#77703 <https://github.com/llvm/llvm-project/pull/77703>`_.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
