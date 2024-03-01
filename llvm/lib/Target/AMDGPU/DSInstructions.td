@@ -1327,8 +1327,8 @@ defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12_gfx13<0x0ab>;
 
 defm DS_LOAD_TR4_B64      : DS_Real_gfx12_gfx13<0x0fa>;
 defm DS_LOAD_TR6_B96      : DS_Real_gfx12_gfx13<0x0fb>;
-defm DS_LOAD_TR8_B64      : DS_Real_gfx12_gfx13<0x0fc>;
-defm DS_LOAD_TR16_B128    : DS_Real_gfx12_gfx13<0x0fd>;
+defm DS_LOAD_TR16_B128    : DS_Real_gfx12_gfx13<0x0fc>;
+defm DS_LOAD_TR8_B64      : DS_Real_gfx12_gfx13<0x0fd>;
 
 defm DS_BVH_STACK_RTN_B32             : DS_Real_Renamed_gfx12<0x0e0,
   "ds_bvh_stack_push4_pop1_rtn_b32">;

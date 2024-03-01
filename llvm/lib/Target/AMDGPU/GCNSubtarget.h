@@ -663,6 +663,10 @@ public:
     return hasGFX90AInsts() || hasGFX12_10Insts();
   }
 
+  bool hasMTBUFInsts() const {
+    return !hasGFX12_10Insts();
+  }
+
   // DS_ADD_F64/DS_ADD_RTN_F64
   bool hasLdsAtomicAddF64() const {
     return hasGFX90AInsts() || hasGFX12_10Insts();

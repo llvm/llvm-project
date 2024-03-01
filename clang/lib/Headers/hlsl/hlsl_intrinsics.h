@@ -318,6 +318,38 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 double4 floor(double4);
 
 //===----------------------------------------------------------------------===//
+// frac builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T frac(T x)
+/// \brief Returns the fractional (or decimal) part of x. \a x parameter.
+/// \param x The specified input value.
+///
+/// If \a the return value is greater than or equal to 0 and less than 1.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+half frac(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+half2 frac(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+half3 frac(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+half4 frac(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+float frac(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+float2 frac(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+float3 frac(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+float4 frac(float4);
+
+//===----------------------------------------------------------------------===//
 // lerp builtins
 //===----------------------------------------------------------------------===//
 
