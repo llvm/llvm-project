@@ -4218,7 +4218,12 @@ bool SubprogramVisitor::BeginMpSubprogram(const parser::Name &name) {
     EraseSymbol(name);
     Symbol &newSymbol{MakeSymbol(name, SubprogramDetails{})};
     PushScope(Scope::Kind::Subprogram, &newSymbol);
-    newSymbol.get<SubprogramDetails>().set_moduleInterface(*symbol);
+    auto &newSubprogram{newSymbol.get<SubprogramDetails>()};
+    newSubprogram.set_moduleInterface(*symbol);
+    auto &subprogram{symbol->get<SubprogramDetails>()};
+    if (const auto *name{subprogram.bindName()}) {
+      newSubprogram.set_bindName(std::string{*name});
+    }
     newSymbol.attrs() |= symbol->attrs();
     newSymbol.set(symbol->test(Symbol::Flag::Subroutine)
             ? Symbol::Flag::Subroutine
