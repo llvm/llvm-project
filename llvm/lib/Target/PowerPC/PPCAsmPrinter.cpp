@@ -621,12 +621,23 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::NOP));
 }
 
-/// This helper function creates the TlsGetAddr MCSymbol for AIX. We will
-/// create the csect and use the qual-name symbol instead of creating just the
-/// external symbol.
+/// This helper function creates the TlsGetAddr/TlsGetMod MCSymbol for AIX. We
+/// will create the csect and use the qual-name symbol instead of creating just
+/// the external symbol.
 static MCSymbol *createMCSymbolForTlsGetAddr(MCContext &Ctx, unsigned MIOpc) {
-  StringRef SymName =
-      MIOpc == PPC::GETtlsTpointer32AIX ? ".__get_tpointer" : ".__tls_get_addr";
+  StringRef SymName;
+  switch (MIOpc) {
+  default:
+    SymName = ".__tls_get_addr";
+    break;
+  case PPC::GETtlsTpointer32AIX:
+    SymName = ".__get_tpointer";
+    break;
+  case PPC::GETtlsMOD32AIX:
+  case PPC::GETtlsMOD64AIX:
+    SymName = ".__tls_get_mod";
+    break;
+  }
   return Ctx
       .getXCOFFSection(SymName, SectionKind::getText(),
                        XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER))
@@ -668,14 +679,16 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
          "GETtls[ld]ADDR[32] must read GPR3");
 
   if (Subtarget->isAIXABI()) {
-    // On AIX, the variable offset should already be in R4 and the region handle
-    // should already be in R3.
-    // For TLSGD, which currently is the only supported access model, we only
-    // need to generate an absolute branch to .__tls_get_addr.
+    // For TLSGD, the variable offset should already be in R4 and the region
+    // handle should already be in R3. We generate an absolute branch to
+    // .__tls_get_addr. For TLSLD, the module handle should already be in R3.
+    // We generate an absolute branch to .__tls_get_mod.
     Register VarOffsetReg = Subtarget->isPPC64() ? PPC::X4 : PPC::R4;
     (void)VarOffsetReg;
-    assert(MI->getOperand(2).isReg() &&
-           MI->getOperand(2).getReg() == VarOffsetReg &&
+    assert((MI->getOpcode() == PPC::GETtlsMOD32AIX ||
+            MI->getOpcode() == PPC::GETtlsMOD64AIX ||
+            (MI->getOperand(2).isReg() &&
+             MI->getOperand(2).getReg() == VarOffsetReg)) &&
            "GETtls[ld]ADDR[32] must read GPR4");
     EmitAIXTlsCallHelper(MI);
     return;
@@ -844,6 +857,13 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM;
     if (Flag == PPCII::MO_TLSGD_FLAG || Flag == PPCII::MO_GOT_TLSGD_PCREL_FLAG)
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD;
+    // For local-dynamic TLS access on AIX, we have one TOC entry for the symbol
+    // (the variable offset) and one shared TOC entry for the module handle.
+    // They are differentiated by MO_TLSLD_FLAG and MO_TLSLDM_FLAG.
+    if (Flag == PPCII::MO_TLSLD_FLAG && IsAIX)
+      return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD;
+    if (Flag == PPCII::MO_TLSLDM_FLAG && IsAIX)
+      return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML;
     return MCSymbolRefExpr::VariantKind::VK_None;
   };
 
@@ -1354,6 +1374,11 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
                    .addExpr(SymGotTlsGD));
     return;
   }
+  case PPC::GETtlsMOD32AIX:
+  case PPC::GETtlsMOD64AIX:
+    // Transform: %r3 = GETtlsMODNNAIX %r3 (for NN == 32/64).
+    // Into: BLA .__tls_get_mod()
+    // Input parameter is a module handle (_$TLSML[TC]@ml) for all variables.
   case PPC::GETtlsADDR:
     // Transform: %x3 = GETtlsADDR %x3, @sym
     // Into: BL8_NOP_TLS __tls_get_addr(sym at tlsgd)
@@ -2166,6 +2191,11 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
       break;
     }
   }
+
+  // Do not emit the _$TLSML symbol.
+  if (GV->getThreadLocalMode() == GlobalVariable::LocalDynamicTLSModel &&
+      GV->hasName() && GV->getName() == "_$TLSML")
+    return;
 
   OutStreamer->emitXCOFFSymbolLinkageWithVisibility(GVSym, LinkageAttr,
                                                     VisibilityAttr);
@@ -2981,11 +3011,13 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 		 MMI->hasDebugInfo());
     break;
   }
+  case PPC::GETtlsMOD32AIX:
+  case PPC::GETtlsMOD64AIX:
   case PPC::GETtlsTpointer32AIX:
   case PPC::GETtlsADDR64AIX:
   case PPC::GETtlsADDR32AIX: {
-    // A reference to .__tls_get_addr/.__get_tpointer is unknown to the
-    // assembler so we need to emit an external symbol reference.
+    // A reference to .__tls_get_mod/.__tls_get_addr/.__get_tpointer is unknown
+    // to the assembler so we need to emit an external symbol reference.
     MCSymbol *TlsGetAddr =
         createMCSymbolForTlsGetAddr(OutContext, MI->getOpcode());
     ExtSymSDNodeSymbols.insert(TlsGetAddr);
