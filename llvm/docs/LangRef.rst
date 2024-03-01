@@ -12044,7 +12044,7 @@ pointer, or pointer vector operands.
 Arguments:
 """"""""""
 
-The '``uthreecmp``' instruction takes two signed integer operands.
+The '``uthreecmp``' instruction takes two unsigned integer operands.
 
 Semantics:
 """"""""""
