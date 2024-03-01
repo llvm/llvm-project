@@ -60,6 +60,26 @@ uint64_t getLargestDivisorOfTripCount(AffineForOp forOp);
 DenseSet<Value, DenseMapInfo<Value>>
 getInvariantAccesses(Value iv, ArrayRef<Value> indices);
 
+/// Given:
+///   1. an induction variable `iv` of type AffineForOp;
+///   2. a `memoryOp` of type const LoadOp& or const StoreOp&;
+/// determines whether `memoryOp` has a contiguous access along `iv`. Contiguous
+/// is defined as either invariant or varying only along a unique MemRef dim.
+/// Upon success, the unique MemRef dim is written in `memRefDim` (or -1 to
+/// convey the memRef access is invariant along `iv`).
+///
+/// Prerequisites:
+///   1. `memRefDim` ~= nullptr;
+///   2. `iv` of the proper type;
+///   3. the MemRef accessed by `memoryOp` has no layout map or at most an
+///      identity layout map.
+///
+/// Currently only supports no layout map or identity layout map in the memref.
+/// Returns false if the memref has a non-identity layoutMap. This behavior is
+/// conservative.
+template <typename LoadOrStoreOp>
+bool isContiguousAccess(Value iv, LoadOrStoreOp memoryOp, int *memRefDim);
+
 using VectorizableLoopFun = std::function<bool(AffineForOp)>;
 
 /// Checks whether the loop is structurally vectorizable; i.e.:

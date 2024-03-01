@@ -63,6 +63,7 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   // copy relevant pseudo op flags
   let GWS                = ps.GWS;
   let SubtargetPredicate = ps.SubtargetPredicate;
+  let WaveSizePredicate  = ps.WaveSizePredicate;
   let OtherPredicates    = ps.OtherPredicates;
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;
@@ -1261,7 +1262,9 @@ defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
 
 // New aliases added in GFX12 without renaming the instructions.
 def : MnemonicAlias<"ds_subrev_u32", "ds_rsub_u32">, Requires<[isGFX12Plus]>;
+def : MnemonicAlias<"ds_subrev_rtn_u32", "ds_rsub_rtn_u32">, Requires<[isGFX12Plus]>;
 def : MnemonicAlias<"ds_subrev_u64", "ds_rsub_u64">, Requires<[isGFX12Plus]>;
+def : MnemonicAlias<"ds_subrev_rtn_u64", "ds_rsub_rtn_u64">, Requires<[isGFX12Plus]>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.

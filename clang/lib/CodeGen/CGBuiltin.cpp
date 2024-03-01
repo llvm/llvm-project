@@ -13952,6 +13952,8 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
 Value *CodeGenFunction::EmitX86CpuSupports(const CallExpr *E) {
   const Expr *FeatureExpr = E->getArg(0)->IgnoreParenCasts();
   StringRef FeatureStr = cast<StringLiteral>(FeatureExpr)->getString();
+  if (!getContext().getTargetInfo().validateCpuSupports(FeatureStr))
+    return Builder.getFalse();
   return EmitX86CpuSupports(FeatureStr);
 }
 
@@ -14041,6 +14043,8 @@ Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
   ArgStr.split(Features, "+");
   for (auto &Feature : Features) {
     Feature = Feature.trim();
+    if (!llvm::AArch64::parseArchExtension(Feature))
+      return Builder.getFalse();
     if (Feature != "default")
       Features.push_back(Feature);
   }
@@ -16639,7 +16643,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   .Case(Name, {FA_WORD, Bitmask})
 #include "llvm/TargetParser/PPCTargetParser.def"
             .Default({0, 0});
-    assert(BitMask && "Invalid target feature string. Missed by SemaChecking?");
+    if (!BitMask)
+      return Builder.getFalse();
     Value *Op0 = llvm::ConstantInt::get(Int32Ty, FeatureWord);
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_fixed_addr_ld);
     Value *TheCall = Builder.CreateCall(F, {Op0}, "cpu_supports");
@@ -18007,6 +18012,51 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType*/ T0->getScalarType(), Intrinsic::dx_dot,
         ArrayRef<Value *>{Op0, Op1}, nullptr, "dx.dot");
   } break;
+  case Builtin::BI__builtin_hlsl_lerp: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+    Value *Y = EmitScalarExpr(E->getArg(1));
+    Value *S = EmitScalarExpr(E->getArg(2));
+    llvm::Type *Xty = X->getType();
+    llvm::Type *Yty = Y->getType();
+    llvm::Type *Sty = S->getType();
+    if (!Xty->isVectorTy() && !Yty->isVectorTy() && !Sty->isVectorTy()) {
+      if (Xty->isFloatingPointTy()) {
+        auto V = Builder.CreateFSub(Y, X);
+        V = Builder.CreateFMul(S, V);
+        return Builder.CreateFAdd(X, V, "dx.lerp");
+      }
+      llvm_unreachable("Scalar Lerp is only supported on floats.");
+    }
+    // A VectorSplat should have happened
+    assert(Xty->isVectorTy() && Yty->isVectorTy() && Sty->isVectorTy() &&
+           "Lerp of vector and scalar is not supported.");
+
+    [[maybe_unused]] auto *XVecTy =
+        E->getArg(0)->getType()->getAs<VectorType>();
+    [[maybe_unused]] auto *YVecTy =
+        E->getArg(1)->getType()->getAs<VectorType>();
+    [[maybe_unused]] auto *SVecTy =
+        E->getArg(2)->getType()->getAs<VectorType>();
+    // A HLSLVectorTruncation should have happend
+    assert(XVecTy->getNumElements() == YVecTy->getNumElements() &&
+           XVecTy->getNumElements() == SVecTy->getNumElements() &&
+           "Lerp requires vectors to be of the same size.");
+    assert(XVecTy->getElementType()->isRealFloatingType() &&
+           XVecTy->getElementType() == YVecTy->getElementType() &&
+           XVecTy->getElementType() == SVecTy->getElementType() &&
+           "Lerp requires float vectors to be of the same type.");
+    return Builder.CreateIntrinsic(
+        /*ReturnType*/ Xty, Intrinsic::dx_lerp, ArrayRef<Value *>{X, Y, S},
+        nullptr, "dx.lerp");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_frac: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("frac operand must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType*/ Op0->getType(), Intrinsic::dx_frac,
+        ArrayRef<Value *>{Op0}, nullptr, "dx.frac");
+  }
   }
   return nullptr;
 }
