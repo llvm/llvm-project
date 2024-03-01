@@ -1064,8 +1064,6 @@ namespace {
 /// The expectation is that we'll eventually hit one of three expression types:
 ///
 ///   1. DeclRefExpr - This is the expression for the base of the structure.
-///      It's exactly what we want to build an access to the \p counted_by
-///      field.
 ///   2. MemberExpr - This is the field in the structure.
 ///   3. CompoundLiteralExpr - This is for people who create something
 ///      heretical like (struct foo has a flexible array member):
@@ -1130,7 +1128,7 @@ static std::pair<uint64_t, uint64_t> getFieldInfo(CodeGenFunction &CGF,
       continue;
     }
 
-    if (const auto *FD = dyn_cast<FieldDecl>(D); FD && FD == VD) {
+    if (const auto *FD = dyn_cast<FieldDecl>(D); FD == VD) {
       Offset += Layout.getFieldOffset(FieldNo);
       return std::make_pair(Ctx.getTypeSizeInChars(FD->getType()).getQuantity(),
                             Ctx.toCharUnitsFromBits(Offset).getQuantity());
