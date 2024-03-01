@@ -1001,25 +1001,30 @@ int ExternalFileUnit::GetAsynchronousId(IoErrorHandler &handler) {
   if (!mayAsynchronous()) {
     handler.SignalError(IostatBadAsynchronous);
     return -1;
-  } else if (auto least{asyncIdAvailable_.LeastElement()}) {
-    asyncIdAvailable_.reset(*least);
-    return static_cast<int>(*least);
   } else {
+    for (int j{0}; 64 * j < maxAsyncIds; ++j) {
+      if (auto least{asyncIdAvailable_[j].LeastElement()}) {
+        asyncIdAvailable_[j].reset(*least);
+        return 64 * j + static_cast<int>(*least);
+      }
+    }
     handler.SignalError(IostatTooManyAsyncOps);
     return -1;
   }
 }
 
 bool ExternalFileUnit::Wait(int id) {
-  if (static_cast<std::size_t>(id) >= asyncIdAvailable_.size() ||
-      asyncIdAvailable_.test(id)) {
+  if (static_cast<std::size_t>(id) >= maxAsyncIds ||
+      asyncIdAvailable_[id / 64].test(id % 64)) {
     return false;
   } else {
     if (id == 0) { // means "all IDs"
-      asyncIdAvailable_.set();
-      asyncIdAvailable_.reset(0);
+      for (int j{0}; 64 * j < maxAsyncIds; ++j) {
+        asyncIdAvailable_[j].set();
+      }
+      asyncIdAvailable_[0].reset(0);
     } else {
-      asyncIdAvailable_.set(id);
+      asyncIdAvailable_[id / 64].set(id % 64);
     }
     return true;
   }
