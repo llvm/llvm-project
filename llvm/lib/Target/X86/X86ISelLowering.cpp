@@ -36995,6 +36995,18 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     }
     break;
   }
+  case ISD::INTRINSIC_WO_CHAIN: {
+    switch (Op->getConstantOperandVal(0)) {
+    case Intrinsic::x86_sse2_psad_bw:
+    case Intrinsic::x86_avx2_psad_bw:
+    case Intrinsic::x86_avx512_psad_bw_512:
+      // PSADBW - fills low 16 bits and zeros upper 48 bits of each i64 result.
+      assert(VT.getScalarType() == MVT::i64 && "Unexpected PSADBW types");
+      Known.Zero.setBitsFrom(16);
+      break;
+    }
+    break;
+  }
   }
 
   // Handle target shuffles.
