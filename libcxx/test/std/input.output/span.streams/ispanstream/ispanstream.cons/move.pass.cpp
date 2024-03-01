@@ -24,7 +24,6 @@
 #include <spanstream>
 
 #include "constexpr_char_traits.h"
-#include "nasty_string.h"
 #include "test_convertible.h"
 #include "test_macros.h"
 
