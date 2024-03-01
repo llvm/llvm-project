@@ -1443,11 +1443,14 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   const ToolChain &TC = getToolChain(
       *UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));
 
-  if (TC.getTriple().isAndroid()) {
-    llvm::Triple Triple = TC.getTriple();
+  // Check if the environment version is valid except wasm case.
+  llvm::Triple Triple = TC.getTriple();
+  if (!Triple.isWasm()) {
     StringRef TripleVersionName = Triple.getEnvironmentVersionString();
-
-    if (Triple.getEnvironmentVersion().empty() && TripleVersionName != "") {
+    StringRef TripleObjectFormat =
+        Triple.getObjectFormatTypeName(Triple.getObjectFormat());
+    if (Triple.getEnvironmentVersion().empty() && TripleVersionName != "" &&
+        TripleVersionName != TripleObjectFormat) {
       Diags.Report(diag::err_drv_triple_version_invalid)
           << TripleVersionName << TC.getTripleString();
       ContainsError = true;

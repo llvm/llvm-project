@@ -4,18 +4,18 @@
 ;
 ; Pass first two arguments in registers %d0 and %d1
 
-define void @foo_inreg(i32* nocapture inreg %out, i32 inreg %in) nounwind {
+define void @foo_inreg(ptr nocapture inreg %out, i32 inreg %in) nounwind {
 ; CHECK-LABEL: foo_inreg:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l %d0, %a0
 ; CHECK-NEXT:    move.l %d1, (%a0)
 ; CHECK-NEXT:    rts
 entry:
-  store i32 %in, i32* %out, align 4
+  store i32 %in, ptr %out, align 4
   ret void
 }
 
-define void @bar_inreg(i32* nocapture inreg %pOut, i32* nocapture inreg %pIn) nounwind {
+define void @bar_inreg(ptr nocapture inreg %pOut, ptr nocapture inreg %pIn) nounwind {
 ; CHECK-LABEL: bar_inreg:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l %d1, %a0
@@ -23,7 +23,7 @@ define void @bar_inreg(i32* nocapture inreg %pOut, i32* nocapture inreg %pIn) no
 ; CHECK-NEXT:    move.l (%a0), (%a1)
 ; CHECK-NEXT:    rts
 entry:
-  %0 = load i32, i32* %pIn, align 4
-  store i32 %0, i32* %pOut, align 4
+  %0 = load i32, ptr %pIn, align 4
+  store i32 %0, ptr %pOut, align 4
   ret void
 }

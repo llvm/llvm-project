@@ -51,15 +51,15 @@ using binary_semaphore = counting_semaphore<1>;
 #  error "<semaphore> is not supported since libc++ has been configured without support for threads."
 #endif
 
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__atomic/atomic_base.h>
 #include <__atomic/atomic_sync.h>
 #include <__atomic/memory_order.h>
 #include <__availability>
 #include <__chrono/time_point.h>
 #include <__thread/poll_with_backoff.h>
+#include <__thread/support.h>
 #include <__thread/timed_backoff_policy.h>
-#include <__threading_support>
 #include <cstddef>
 #include <limits>
 #include <version>
@@ -94,35 +94,33 @@ public:
     auto __old = __a_.fetch_add(__update, memory_order_release);
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __update <= _LIBCPP_SEMAPHORE_MAX - __old, "update is greater than the expected value");
-
-    if (__old > 0) {
-      // Nothing to do
-    } else if (__update > 1)
+    if (__old == 0) {
       __a_.notify_all();
-    else
-      __a_.notify_one();
+    }
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void acquire() {
-    auto const __test_fn = [this]() -> bool {
-      auto __old = __a_.load(memory_order_relaxed);
-      return (__old != 0) && __a_.compare_exchange_strong(__old, __old - 1, memory_order_acquire, memory_order_relaxed);
-    };
-    __cxx_atomic_wait(&__a_.__a_, __test_fn);
+    __cxx_atomic_wait_unless(
+        &__a_.__a_, [this](ptrdiff_t& __old) { return __try_acquire_impl(__old); }, memory_order_relaxed);
   }
   template <class _Rep, class _Period>
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool
   try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time) {
     if (__rel_time == chrono::duration<_Rep, _Period>::zero())
       return try_acquire();
-    auto const __test_fn = [this]() { return try_acquire(); };
-    return std::__libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy(), __rel_time);
+    auto const __poll_fn = [this]() { return try_acquire(); };
+    return std::__libcpp_thread_poll_with_backoff(__poll_fn, __libcpp_timed_backoff_policy(), __rel_time);
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool try_acquire() {
-    auto __old = __a_.load(memory_order_acquire);
+    auto __old = __a_.load(memory_order_relaxed);
+    return __try_acquire_impl(__old);
+  }
+
+private:
+  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool __try_acquire_impl(ptrdiff_t& __old) {
     while (true) {
       if (__old == 0)
         return false;
-      if (__a_.compare_exchange_strong(__old, __old - 1, memory_order_acquire, memory_order_relaxed))
+      if (__a_.compare_exchange_weak(__old, __old - 1, memory_order_acquire, memory_order_relaxed))
         return true;
     }
   }

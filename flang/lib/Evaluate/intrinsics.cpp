@@ -335,11 +335,14 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
                 common::Intent::In, {ArgFlag::canBeNull}}},
         DefaultLogical, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"atan", {{"x", SameFloating}}, SameFloating},
-    {"atand", {{"x", SameFloating}}, SameFloating},
     {"atan", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
+    {"atand", {{"x", SameFloating}}, SameFloating},
     {"atand", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
     {"atan2", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
     {"atan2d", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
+    {"atanpi", {{"x", SameFloating}}, SameFloating},
+    {"atanpi", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
+    {"atan2pi", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
     {"atanh", {{"x", SameFloating}}, SameFloating},
     {"bessel_j0", {{"x", SameReal}}, SameReal},
     {"bessel_j1", {{"x", SameReal}}, SameReal},
@@ -531,6 +534,17 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"ieor", {{"i", OperandInt}, {"j", OperandInt, Rank::elementalOrBOZ}},
         OperandInt},
     {"ieor", {{"i", BOZ}, {"j", SameInt}}, SameInt},
+    {"image_index",
+        {{"coarray", AnyData, Rank::coarray}, {"sub", AnyInt, Rank::vector}},
+        DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"image_index",
+        {{"coarray", AnyData, Rank::coarray}, {"sub", AnyInt, Rank::vector},
+            {"team", TeamType, Rank::scalar}},
+        DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"image_index",
+        {{"coarray", AnyData, Rank::coarray}, {"sub", AnyInt, Rank::vector},
+            {"team_number", AnyInt, Rank::scalar}},
+        DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"image_status", {{"image", SameInt}, OptionalTEAM}, DefaultInt},
     {"index",
         {{"string", SameCharNoLen}, {"substring", SameCharNoLen},
@@ -932,7 +946,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 };
 
 // TODO: Coarray intrinsic functions
-//  IMAGE_INDEX, COSHAPE
+//  COSHAPE
 // TODO: Non-standard intrinsic functions
 //  SHIFT,
 //  COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT,

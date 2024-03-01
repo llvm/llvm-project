@@ -1984,7 +1984,7 @@ define i1 @allones_v2i64_and1(<2 x i64> %arg) {
 ; KNL-LABEL: allones_v2i64_and1:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; KNL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [1,1]
+; KNL-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [1,1]
 ; KNL-NEXT:    vptestnmq %zmm1, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb $3, %al
@@ -3185,7 +3185,7 @@ define i1 @allones_v2i64_and4(<2 x i64> %arg) {
 ; KNL-LABEL: allones_v2i64_and4:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; KNL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4,4]
+; KNL-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [4,4]
 ; KNL-NEXT:    vptestnmq %zmm1, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb $3, %al

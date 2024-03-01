@@ -90,7 +90,7 @@ entry:
 define i16 @and16ri8(i16 noundef %a) {
 ; CHECK-LABEL: and16ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xe7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    andl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xe7,0x7b]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -101,7 +101,7 @@ entry:
 define i32 @and32ri8(i32 noundef %a) {
 ; CHECK-LABEL: and32ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xe7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    andl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xe7,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i32 %a, 123
@@ -111,7 +111,7 @@ entry:
 define i64 @and64ri8(i64 noundef %a) {
 ; CHECK-LABEL: and64ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xe7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    andl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xe7,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i64 %a, 123
@@ -222,7 +222,7 @@ entry:
 define i32 @and32mi8(ptr %a) {
 ; CHECK-LABEL: and32mi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl $123, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0x27,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    andl $123, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0x27,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i32, ptr %a
@@ -482,7 +482,7 @@ define i1 @andflag64ri(i64 %a) {
 define i1 @andflag16ri8(i16 %a) {
 ; CHECK-LABEL: andflag16ri8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andw $-124, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x81,0xe7,0x84,0xff]
+; CHECK-NEXT:    andw $-124, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x83,0xe7,0x84]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
@@ -497,7 +497,7 @@ define i1 @andflag16ri8(i16 %a) {
 define i1 @andflag32ri8(i32 %a) {
 ; CHECK-LABEL: andflag32ri8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $123, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x81,0xe7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    andl $123, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x83,0xe7,0x7b]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
@@ -511,7 +511,7 @@ define i1 @andflag32ri8(i32 %a) {
 define i1 @andflag64ri8(i64 %a) {
 ; CHECK-LABEL: andflag64ri8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andq $123, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x81,0xe7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    andq $123, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x83,0xe7,0x7b]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte

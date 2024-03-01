@@ -682,25 +682,25 @@ class FileHandleTestCase(lldbtest.TestBase):
     def test_identity(self):
         f = io.StringIO()
         sbf = lldb.SBFile(f)
-        self.assertTrue(f is sbf.GetFile())
+        self.assertIs(f, sbf.GetFile())
         sbf.Close()
         self.assertTrue(f.closed)
 
         f = io.StringIO()
         sbf = lldb.SBFile.Create(f, borrow=True)
-        self.assertTrue(f is sbf.GetFile())
+        self.assertIs(f, sbf.GetFile())
         sbf.Close()
         self.assertFalse(f.closed)
 
         with open(self.out_filename, "w") as f:
             sbf = lldb.SBFile(f)
-            self.assertTrue(f is sbf.GetFile())
+            self.assertIs(f, sbf.GetFile())
             sbf.Close()
             self.assertTrue(f.closed)
 
         with open(self.out_filename, "w") as f:
             sbf = lldb.SBFile.Create(f, borrow=True)
-            self.assertFalse(f is sbf.GetFile())
+            self.assertIsNot(f, sbf.GetFile())
             sbf.Write(b"foobar\n")
             self.assertEqual(f.fileno(), sbf.GetFile().fileno())
             sbf.Close()
@@ -711,7 +711,7 @@ class FileHandleTestCase(lldbtest.TestBase):
 
         with open(self.out_filename, "wb") as f:
             sbf = lldb.SBFile.Create(f, borrow=True, force_io_methods=True)
-            self.assertTrue(f is sbf.GetFile())
+            self.assertIs(f, sbf.GetFile())
             sbf.Write(b"foobar\n")
             self.assertEqual(f.fileno(), sbf.GetFile().fileno())
             sbf.Close()
@@ -722,7 +722,7 @@ class FileHandleTestCase(lldbtest.TestBase):
 
         with open(self.out_filename, "wb") as f:
             sbf = lldb.SBFile.Create(f, force_io_methods=True)
-            self.assertTrue(f is sbf.GetFile())
+            self.assertIs(f, sbf.GetFile())
             sbf.Write(b"foobar\n")
             self.assertEqual(f.fileno(), sbf.GetFile().fileno())
             sbf.Close()

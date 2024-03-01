@@ -691,6 +691,8 @@ static PlatformVersion parsePlatformVersion(const Arg *arg) {
           .Cases("tvos-simulator", "8", PLATFORM_TVOSSIMULATOR)
           .Cases("watchos-simulator", "9", PLATFORM_WATCHOSSIMULATOR)
           .Cases("driverkit", "10", PLATFORM_DRIVERKIT)
+          .Cases("xros", "11", PLATFORM_XROS)
+          .Cases("xros-simulator", "12", PLATFORM_XROS_SIMULATOR)
           .Default(PLATFORM_UNKNOWN);
   if (platformVersion.platform == PLATFORM_UNKNOWN)
     error(Twine("malformed platform: ") + platformStr);
@@ -985,6 +987,8 @@ PlatformType macho::removeSimulator(PlatformType platform) {
     return PLATFORM_TVOS;
   case PLATFORM_WATCHOSSIMULATOR:
     return PLATFORM_WATCHOS;
+  case PLATFORM_XROS_SIMULATOR:
+    return PLATFORM_XROS;
   default:
     return platform;
   }
@@ -1001,15 +1005,17 @@ static bool shouldAdhocSignByDefault(Architecture arch, PlatformType platform) {
 
   return platform == PLATFORM_MACOS || platform == PLATFORM_IOSSIMULATOR ||
          platform == PLATFORM_TVOSSIMULATOR ||
-         platform == PLATFORM_WATCHOSSIMULATOR;
+         platform == PLATFORM_WATCHOSSIMULATOR ||
+         platform == PLATFORM_XROS_SIMULATOR;
 }
 
 static bool dataConstDefault(const InputArgList &args) {
-  static const std::array<std::pair<PlatformType, VersionTuple>, 5> minVersion =
+  static const std::array<std::pair<PlatformType, VersionTuple>, 6> minVersion =
       {{{PLATFORM_MACOS, VersionTuple(10, 15)},
         {PLATFORM_IOS, VersionTuple(13, 0)},
         {PLATFORM_TVOS, VersionTuple(13, 0)},
         {PLATFORM_WATCHOS, VersionTuple(6, 0)},
+        {PLATFORM_XROS, VersionTuple(1, 0)},
         {PLATFORM_BRIDGEOS, VersionTuple(4, 0)}}};
   PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
   auto it = llvm::find_if(minVersion,
@@ -1045,11 +1051,12 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
   bool isRequested = arg != nullptr;
 
   // Version numbers taken from the Xcode 13.3 release notes.
-  static const std::array<std::pair<PlatformType, VersionTuple>, 4> minVersion =
+  static const std::array<std::pair<PlatformType, VersionTuple>, 5> minVersion =
       {{{PLATFORM_MACOS, VersionTuple(11, 0)},
         {PLATFORM_IOS, VersionTuple(13, 4)},
         {PLATFORM_TVOS, VersionTuple(14, 0)},
-        {PLATFORM_WATCHOS, VersionTuple(7, 0)}}};
+        {PLATFORM_WATCHOS, VersionTuple(7, 0)},
+        {PLATFORM_XROS, VersionTuple(1, 0)}}};
   PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
   auto it = llvm::find_if(minVersion,
                           [&](const auto &p) { return p.first == platform; });
@@ -1275,11 +1282,10 @@ static void foldIdenticalLiterals() {
 static void addSynthenticMethnames() {
   std::string &data = *make<std::string>();
   llvm::raw_string_ostream os(data);
-  const int prefixLength = ObjCStubsSection::symbolPrefix.size();
   for (Symbol *sym : symtab->getSymbols())
     if (isa<Undefined>(sym))
-      if (sym->getName().starts_with(ObjCStubsSection::symbolPrefix))
-        os << sym->getName().drop_front(prefixLength) << '\0';
+      if (ObjCStubsSection::isObjCStubSymbol(sym))
+        os << ObjCStubsSection::getMethname(sym) << '\0';
 
   if (data.empty())
     return;
@@ -1689,8 +1695,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   if (args.getLastArg(OPT_reproducible))
     config->zeroModTime = true;
 
-  std::array<PlatformType, 3> encryptablePlatforms{
-      PLATFORM_IOS, PLATFORM_WATCHOS, PLATFORM_TVOS};
+  std::array<PlatformType, 4> encryptablePlatforms{
+      PLATFORM_IOS, PLATFORM_WATCHOS, PLATFORM_TVOS, PLATFORM_XROS};
   config->emitEncryptionInfo =
       args.hasFlag(OPT_encryptable, OPT_no_encryption,
                    is_contained(encryptablePlatforms, config->platform()));

@@ -180,7 +180,7 @@ for.body:                                         ; preds = %for.body, %entry
 
   %a = load ptr, ptr %Aidx , align 8
   %c = getelementptr i8, ptr %a, i64 57
-  %c.i64p = ptrtoint i8* %c to i64
+  %c.i64p = ptrtoint ptr %c to i64
   store i64 %c.i64p, ptr %Cidx, align 8
 
   %exitcond = icmp eq i64 %indvars.iv.next, %N
@@ -241,7 +241,7 @@ for.body:                                         ; preds = %for.body, %entry
   %a_p1 = add i32 %b, 2
   store i32 %a_p1, ptr %Aidx_next, align 4
 
-  %a = load <2 x half>, <2 x half>* %Aidx, align 4
+  %a = load <2 x half>, ptr %Aidx, align 4
   %c = fmul <2 x half> %a, <half 2.0, half 2.0>
   %c.int = bitcast <2 x half> %c to i32
   store i32 %c.int, ptr %Cidx, align 4
@@ -297,7 +297,7 @@ for.body:                                         ; preds = %for.body, %entry
 
   %a = load ptr, ptr %Aidx , align 8
   %c = getelementptr i8, ptr %a, i32 57
-  %c.i64p = ptrtoint i8* %c to i32
+  %c.i64p = ptrtoint ptr %c to i32
   store i32 %c.i64p, ptr %Cidx, align 8
 
   %exitcond = icmp eq i64 %indvars.iv.next, %N

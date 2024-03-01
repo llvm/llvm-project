@@ -286,7 +286,7 @@ static bool isDuplexPairMatch(unsigned Ga, unsigned Gb) {
 /// the destination along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than loading from the stack slot.
-unsigned HexagonInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register HexagonInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                                int &FrameIndex) const {
   switch (MI.getOpcode()) {
     default:
@@ -334,7 +334,7 @@ unsigned HexagonInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 /// the source reg along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than storing to the stack slot.
-unsigned HexagonInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register HexagonInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                               int &FrameIndex) const {
   switch (MI.getOpcode()) {
     default:
@@ -2765,12 +2765,40 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::PS_vloadrw_nt_ai:
   case Hexagon::V6_vL32b_ai:
   case Hexagon::V6_vS32b_ai:
+  case Hexagon::V6_vS32b_pred_ai:
+  case Hexagon::V6_vS32b_npred_ai:
   case Hexagon::V6_vS32b_qpred_ai:
   case Hexagon::V6_vS32b_nqpred_ai:
+  case Hexagon::V6_vS32b_new_ai:
+  case Hexagon::V6_vS32b_new_pred_ai:
+  case Hexagon::V6_vS32b_new_npred_ai:
+  case Hexagon::V6_vS32b_nt_pred_ai:
+  case Hexagon::V6_vS32b_nt_npred_ai:
+  case Hexagon::V6_vS32b_nt_new_ai:
+  case Hexagon::V6_vS32b_nt_new_pred_ai:
+  case Hexagon::V6_vS32b_nt_new_npred_ai:
+  case Hexagon::V6_vS32b_nt_qpred_ai:
+  case Hexagon::V6_vS32b_nt_nqpred_ai:
   case Hexagon::V6_vL32b_nt_ai:
   case Hexagon::V6_vS32b_nt_ai:
   case Hexagon::V6_vL32Ub_ai:
   case Hexagon::V6_vS32Ub_ai:
+  case Hexagon::V6_vL32b_cur_ai:
+  case Hexagon::V6_vL32b_tmp_ai:
+  case Hexagon::V6_vL32b_pred_ai:
+  case Hexagon::V6_vL32b_npred_ai:
+  case Hexagon::V6_vL32b_cur_pred_ai:
+  case Hexagon::V6_vL32b_cur_npred_ai:
+  case Hexagon::V6_vL32b_tmp_pred_ai:
+  case Hexagon::V6_vL32b_tmp_npred_ai:
+  case Hexagon::V6_vL32b_nt_cur_ai:
+  case Hexagon::V6_vL32b_nt_tmp_ai:
+  case Hexagon::V6_vL32b_nt_pred_ai:
+  case Hexagon::V6_vL32b_nt_npred_ai:
+  case Hexagon::V6_vL32b_nt_cur_pred_ai:
+  case Hexagon::V6_vL32b_nt_cur_npred_ai:
+  case Hexagon::V6_vL32b_nt_tmp_pred_ai:
+  case Hexagon::V6_vL32b_nt_tmp_npred_ai:
   case Hexagon::V6_vgathermh_pseudo:
   case Hexagon::V6_vgathermw_pseudo:
   case Hexagon::V6_vgathermhw_pseudo:

@@ -360,6 +360,15 @@ def ConvertControlFlowToSPIRV : Pass<"convert-cf-to-spirv"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FuncToEmitC
+//===----------------------------------------------------------------------===//
+
+def ConvertFuncToEmitC : Pass<"convert-func-to-emitc", "ModuleOp"> {
+  let summary = "Convert Func dialect to EmitC dialect";
+  let dependentDialects = ["emitc::EmitCDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // FuncToLLVM
 //===----------------------------------------------------------------------===//
 

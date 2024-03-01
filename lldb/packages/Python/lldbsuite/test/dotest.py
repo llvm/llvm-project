@@ -33,7 +33,7 @@ import sys
 import tempfile
 
 # Third-party modules
-import unittest2
+import unittest
 
 # LLDB Modules
 import lldbsuite
@@ -658,7 +658,7 @@ def visit_file(dir, name):
     for filterspec in iter_filters():
         filtered = True
         print("adding filter spec %s to module %s" % (filterspec, repr(module)))
-        tests = unittest2.defaultTestLoader.loadTestsFromName(filterspec, module)
+        tests = unittest.defaultTestLoader.loadTestsFromName(filterspec, module)
         configuration.suite.addTests(tests)
 
     # Forgo this module if the (base, filterspec) combo is invalid
@@ -669,9 +669,7 @@ def visit_file(dir, name):
         # Add the entire file's worth of tests since we're not filtered.
         # Also the fail-over case when the filterspec branch
         # (base, filterspec) combo doesn't make sense.
-        configuration.suite.addTests(
-            unittest2.defaultTestLoader.loadTestsFromName(base)
-        )
+        configuration.suite.addTests(unittest.defaultTestLoader.loadTestsFromName(base))
 
 
 def visit(prefix, dir, names):
@@ -1032,7 +1030,7 @@ def run_suite():
     #
 
     # Install the control-c handler.
-    unittest2.signals.installHandler()
+    unittest.signals.installHandler()
 
     #
     # Invoke the default TextTestRunner to run the test suite
@@ -1066,7 +1064,7 @@ def run_suite():
 
     # Invoke the test runner.
     if configuration.count == 1:
-        result = unittest2.TextTestRunner(
+        result = unittest.TextTestRunner(
             stream=sys.stderr,
             verbosity=configuration.verbose,
             resultclass=test_result.LLDBTestResult,
@@ -1077,7 +1075,7 @@ def run_suite():
         # not enforced.
         test_result.LLDBTestResult.__ignore_singleton__ = True
         for i in range(configuration.count):
-            result = unittest2.TextTestRunner(
+            result = unittest.TextTestRunner(
                 stream=sys.stderr,
                 verbosity=configuration.verbose,
                 resultclass=test_result.LLDBTestResult,

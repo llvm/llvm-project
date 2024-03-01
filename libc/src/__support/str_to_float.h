@@ -1167,7 +1167,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
           index = left_paren;
         }
       }
-      result = FPBits(result.build_quiet_nan(result.sign(), nan_mantissa));
+      result = FPBits(result.quiet_nan(result.sign(), nan_mantissa));
     }
   } else if (tolower(src[index]) == 'i') { // INF
     if (tolower(src[index + 1]) == inf_string[1] &&
@@ -1215,7 +1215,7 @@ template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
     nan_mantissa = static_cast<StorageType>(nan_mantissa_result);
   }
 
-  result = FPBits::build_quiet_nan(fputil::Sign::POS, nan_mantissa);
+  result = FPBits::quiet_nan(fputil::Sign::POS, nan_mantissa);
   return {result.get_val(), 0, error};
 }
 

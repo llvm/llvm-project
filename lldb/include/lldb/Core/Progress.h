@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/StringMap.h"
 #include <atomic>
 #include <mutex>
 #include <optional>
@@ -63,6 +64,9 @@ public:
   ///
   /// @param [in] title The title of this progress activity.
   ///
+  /// @param [in] details Specific information about what the progress report
+  /// is currently working on.
+  ///
   /// @param [in] total The total units of work to be done if specified, if
   /// set to std::nullopt then an indeterminate progress indicator should be
   /// displayed.
@@ -93,6 +97,9 @@ public:
   void Increment(uint64_t amount = 1,
                  std::optional<std::string> updated_detail = {});
 
+  /// Used to indicate a non-deterministic progress report
+  static constexpr uint64_t kNonDeterministicTotal = UINT64_MAX;
+
 private:
   void ReportProgress();
   static std::atomic<uint64_t> g_id;
@@ -114,6 +121,26 @@ private:
   /// to ensure that we don't send progress updates after progress has
   /// completed.
   bool m_complete = false;
+};
+
+/// A class used to group progress reports by category. This is done by using a
+/// map that maintains a refcount of each category of progress reports that have
+/// come in. Keeping track of progress reports this way will be done if a
+/// debugger is listening to the eBroadcastBitProgressByCategory broadcast bit.
+class ProgressManager {
+public:
+  ProgressManager();
+  ~ProgressManager();
+
+  /// Control the refcount of the progress report category as needed.
+  void Increment(std::string category);
+  void Decrement(std::string category);
+
+  static ProgressManager &Instance();
+
+private:
+  llvm::StringMap<uint64_t> m_progress_category_map;
+  std::mutex m_progress_map_mutex;
 };
 
 } // namespace lldb_private

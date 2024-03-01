@@ -983,6 +983,17 @@ const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {
 #undef ECase
 };
 
+const EnumEntry<XCOFF::DwarfSectionSubtypeFlags>
+    DWARFSectionSubtypeFlagsNames[] = {
+#define ECase(X)                                                               \
+  { #X, XCOFF::X }
+        ECase(SSUBTYP_DWINFO),  ECase(SSUBTYP_DWLINE),  ECase(SSUBTYP_DWPBNMS),
+        ECase(SSUBTYP_DWPBTYP), ECase(SSUBTYP_DWARNGE), ECase(SSUBTYP_DWABREV),
+        ECase(SSUBTYP_DWSTR),   ECase(SSUBTYP_DWRNGES), ECase(SSUBTYP_DWLOC),
+        ECase(SSUBTYP_DWFRAME), ECase(SSUBTYP_DWMAC)
+#undef ECase
+};
+
 template <typename T>
 void XCOFFDumper::printOverflowSectionHeader(T &Sec) const {
   if (Obj.is64Bit()) {
@@ -1180,6 +1191,7 @@ void XCOFFDumper::printSectionHeaders(ArrayRef<T> Sections) {
 
     W.printNumber("Index", Index++);
     uint16_t SectionType = Sec.getSectionType();
+    int32_t SectionSubtype = Sec.getSectionSubtype();
     switch (SectionType) {
     case XCOFF::STYP_OVRFLO:
       printOverflowSectionHeader(Sec);
@@ -1197,8 +1209,13 @@ void XCOFFDumper::printSectionHeaders(ArrayRef<T> Sections) {
     }
     if (Sec.isReservedSectionType())
       W.printHex("Flags", "Reserved", SectionType);
-    else
+    else {
       W.printEnum("Type", SectionType, ArrayRef(SectionTypeFlagsNames));
+      if (SectionType == XCOFF::STYP_DWARF) {
+        W.printEnum("DWARFSubType", SectionSubtype,
+                    ArrayRef(DWARFSectionSubtypeFlagsNames));
+      }
+    }
   }
 
   if (opts::SectionRelocations)

@@ -1067,7 +1067,7 @@ multiclass avx512_broadcast_rm_split<bits<8> opc, string OpcodeStr,
                         MaskInfo.RC:$src0))],
                       DestInfo.ExeDomain>, T8, PD, EVEX, EVEX_K, Sched<[SchedRR]>;
 
-  let hasSideEffects = 0, mayLoad = 1 in
+  let hasSideEffects = 0, mayLoad = 1, isReMaterializable = 1, canFoldAsLoad = 1 in
   def rm : AVX512PI<opc, MRMSrcMem, (outs MaskInfo.RC:$dst),
                     (ins SrcInfo.ScalarMemOp:$src),
                     !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
@@ -12716,13 +12716,13 @@ multiclass avx512_dpbf16ps_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                (src_v.LdFrag addr:$src3)))>, EVEX, VVVV,
                                Sched<[sched.Folded, sched.ReadAfterFold]>;
 
+  let mayLoad = 1, hasSideEffects = 0 in
   defm mb: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
                   (ins src_v.RC:$src2, f32mem:$src3),
                   OpcodeStr,
                   !strconcat("${src3}", _.BroadcastStr,", $src2"),
                   !strconcat("$src2, ${src3}", _.BroadcastStr),
-                  (_.VT (OpNode _.RC:$src1, src_v.RC:$src2,
-                  (src_v.VT (src_v.BroadcastLdFrag addr:$src3))))>,
+                  (null_frag)>,
                   EVEX_B, EVEX, VVVV, Sched<[sched.Folded, sched.ReadAfterFold]>;
 
 }

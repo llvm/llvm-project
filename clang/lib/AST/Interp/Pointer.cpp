@@ -19,7 +19,9 @@
 using namespace clang;
 using namespace clang::interp;
 
-Pointer::Pointer(Block *Pointee) : Pointer(Pointee, 0, 0) {}
+Pointer::Pointer(Block *Pointee)
+    : Pointer(Pointee, Pointee->getDescriptor()->getMetadataSize(),
+              Pointee->getDescriptor()->getMetadataSize()) {}
 
 Pointer::Pointer(Block *Pointee, unsigned BaseAndOffset)
     : Pointer(Pointee, BaseAndOffset, BaseAndOffset) {}
@@ -81,63 +83,48 @@ void Pointer::operator=(Pointer &&P) {
 }
 
 APValue Pointer::toAPValue() const {
-  APValue::LValueBase Base;
   llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
-  CharUnits Offset;
-  bool IsNullPtr;
-  bool IsOnePastEnd;
 
-  if (isZero()) {
-    Base = static_cast<const Expr *>(nullptr);
-    IsNullPtr = true;
-    IsOnePastEnd = false;
-    Offset = CharUnits::Zero();
-  } else {
-    // Build the lvalue base from the block.
-    const Descriptor *Desc = getDeclDesc();
-    if (auto *VD = Desc->asValueDecl())
-      Base = VD;
-    else if (auto *E = Desc->asExpr())
-      Base = E;
-    else
-      llvm_unreachable("Invalid allocation type");
+  if (isZero())
+    return APValue(static_cast<const Expr *>(nullptr), CharUnits::Zero(), Path,
+                   /*IsOnePastEnd=*/false, /*IsNullPtr=*/true);
 
-    // Not a null pointer.
-    IsNullPtr = false;
+  // Build the lvalue base from the block.
+  const Descriptor *Desc = getDeclDesc();
+  APValue::LValueBase Base;
+  if (const auto *VD = Desc->asValueDecl())
+    Base = VD;
+  else if (const auto *E = Desc->asExpr())
+    Base = E;
+  else
+    llvm_unreachable("Invalid allocation type");
 
-    if (isUnknownSizeArray()) {
-      IsOnePastEnd = false;
-      Offset = CharUnits::Zero();
-    } else if (Desc->asExpr()) {
-      // Pointer pointing to a an expression.
-      IsOnePastEnd = false;
-      Offset = CharUnits::Zero();
+  if (isDummy() || isUnknownSizeArray() || Desc->asExpr())
+    return APValue(Base, CharUnits::Zero(), Path,
+                   /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
+
+  // TODO: compute the offset into the object.
+  CharUnits Offset = CharUnits::Zero();
+  bool IsOnePastEnd = isOnePastEnd();
+
+  // Build the path into the object.
+  Pointer Ptr = *this;
+  while (Ptr.isField() || Ptr.isArrayElement()) {
+    if (Ptr.isArrayElement()) {
+      Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getIndex()));
+      Ptr = Ptr.getArray();
     } else {
-      // TODO: compute the offset into the object.
-      Offset = CharUnits::Zero();
+      // TODO: figure out if base is virtual
+      bool IsVirtual = false;
 
-      // Build the path into the object.
-      Pointer Ptr = *this;
-      while (Ptr.isField() || Ptr.isArrayElement()) {
-        if (Ptr.isArrayElement()) {
-          Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getIndex()));
-          Ptr = Ptr.getArray();
-        } else {
-          // TODO: figure out if base is virtual
-          bool IsVirtual = false;
-
-          // Create a path entry for the field.
-          const Descriptor *Desc = Ptr.getFieldDesc();
-          if (const auto *BaseOrMember = Desc->asDecl()) {
-            Path.push_back(APValue::LValuePathEntry({BaseOrMember, IsVirtual}));
-            Ptr = Ptr.getBase();
-            continue;
-          }
-          llvm_unreachable("Invalid field type");
-        }
+      // Create a path entry for the field.
+      const Descriptor *Desc = Ptr.getFieldDesc();
+      if (const auto *BaseOrMember = Desc->asDecl()) {
+        Path.push_back(APValue::LValuePathEntry({BaseOrMember, IsVirtual}));
+        Ptr = Ptr.getBase();
+        continue;
       }
-
-      IsOnePastEnd = isOnePastEnd();
+      llvm_unreachable("Invalid field type");
     }
   }
 
@@ -147,7 +134,7 @@ APValue Pointer::toAPValue() const {
   // Just invert the order of the elements.
   std::reverse(Path.begin(), Path.end());
 
-  return APValue(Base, Offset, Path, IsOnePastEnd, IsNullPtr);
+  return APValue(Base, Offset, Path, IsOnePastEnd, /*IsNullPtr=*/false);
 }
 
 std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
@@ -245,11 +232,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
 
     // Primitive values.
     if (std::optional<PrimType> T = Ctx.classify(Ty)) {
-      if (T == PT_Ptr || T == PT_FnPtr) {
-        R = Ptr.toAPValue();
-      } else {
-        TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue());
-      }
+      TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue());
       return true;
     }
 

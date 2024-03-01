@@ -369,16 +369,12 @@ define void @simplify_before_foldAndOfICmps(ptr %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[L7]], -1
 ; CHECK-NEXT:    [[B11:%.*]] = zext i1 [[TMP1]] to i16
 ; CHECK-NEXT:    [[C10:%.*]] = icmp ugt i16 [[L7]], [[B11]]
-; CHECK-NEXT:    [[C5:%.*]] = icmp slt i16 [[L7]], 1
 ; CHECK-NEXT:    [[C7:%.*]] = icmp slt i16 [[L7]], 0
-; CHECK-NEXT:    [[B15:%.*]] = xor i1 [[C7]], [[C10]]
-; CHECK-NEXT:    [[C6:%.*]] = xor i1 [[B15]], true
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[C5]], [[C6]]
-; CHECK-NEXT:    [[C3:%.*]] = and i1 [[TMP2]], [[C10]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[C10]], true
-; CHECK-NEXT:    [[C18:%.*]] = or i1 [[C7]], [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[C3]] to i64
-; CHECK-NEXT:    [[G26:%.*]] = getelementptr i1, ptr null, i64 [[TMP4]]
+; CHECK-NEXT:    [[C3:%.*]] = and i1 [[C7]], [[C10]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[C10]], true
+; CHECK-NEXT:    [[C18:%.*]] = or i1 [[C7]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[C3]] to i64
+; CHECK-NEXT:    [[G26:%.*]] = getelementptr i1, ptr null, i64 [[TMP3]]
 ; CHECK-NEXT:    store i16 [[L7]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    store i1 [[C18]], ptr [[P]], align 1
 ; CHECK-NEXT:    store ptr [[G26]], ptr [[P]], align 8

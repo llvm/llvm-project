@@ -119,7 +119,7 @@ entry:
 ; Testing imm limits of SI form
 ;
 
-define void @test_svprf_vnum_under(<vscale x 16 x i1> %pg, <vscale x 16 x i8>* %base) {
+define void @test_svprf_vnum_under(<vscale x 16 x i1> %pg, ptr %base) {
 ; CHECK-LABEL: test_svprf_vnum_under:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    rdvl x8, #1
@@ -129,23 +129,23 @@ define void @test_svprf_vnum_under(<vscale x 16 x i1> %pg, <vscale x 16 x i8>* %
 ; CHECK-NEXT:    prfb pstl3strm, p0, [x0, x8]
 ; CHECK-NEXT:    ret
 entry:
-  %gep = getelementptr inbounds <vscale x 16 x i8>, <vscale x 16 x i8>* %base, i64 -33, i64 0
+  %gep = getelementptr inbounds <vscale x 16 x i8>, ptr %base, i64 -33, i64 0
   tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> %pg, ptr %gep, i32 13)
   ret void
 }
 
-define void @test_svprf_vnum_min(<vscale x 16 x i1> %pg, <vscale x 16 x i8>* %base) {
+define void @test_svprf_vnum_min(<vscale x 16 x i1> %pg, ptr %base) {
 ; CHECK-LABEL: test_svprf_vnum_min:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    prfb pstl3strm, p0, [x0, #-32, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  %gep = getelementptr inbounds <vscale x 16 x i8>, <vscale x 16 x i8>* %base, i64 -32, i64 0
+  %gep = getelementptr inbounds <vscale x 16 x i8>, ptr %base, i64 -32, i64 0
   tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> %pg, ptr %gep, i32 13)
   ret void
 }
 
-define void @test_svprf_vnum_over(<vscale x 16 x i1> %pg, <vscale x 16 x i8>* %base) {
+define void @test_svprf_vnum_over(<vscale x 16 x i1> %pg, ptr %base) {
 ; CHECK-LABEL: test_svprf_vnum_over:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    rdvl x8, #1
@@ -155,18 +155,18 @@ define void @test_svprf_vnum_over(<vscale x 16 x i1> %pg, <vscale x 16 x i8>* %b
 ; CHECK-NEXT:    prfb pstl3strm, p0, [x0, x8]
 ; CHECK-NEXT:    ret
 entry:
-  %gep = getelementptr inbounds <vscale x 16 x i8>, <vscale x 16 x i8>* %base, i64 32, i64 0
+  %gep = getelementptr inbounds <vscale x 16 x i8>, ptr %base, i64 32, i64 0
   tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> %pg, ptr %gep, i32 13)
   ret void
 }
 
-define void @test_svprf_vnum_max(<vscale x 16 x i1> %pg, <vscale x 16 x i8>* %base) {
+define void @test_svprf_vnum_max(<vscale x 16 x i1> %pg, ptr %base) {
 ; CHECK-LABEL: test_svprf_vnum_max:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    prfb pstl3strm, p0, [x0, #31, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  %gep = getelementptr inbounds <vscale x 16 x i8>, <vscale x 16 x i8>* %base, i64 31, i64 0
+  %gep = getelementptr inbounds <vscale x 16 x i8>, ptr %base, i64 31, i64 0
   tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> %pg, ptr %gep, i32 13)
   ret void
 }
@@ -220,38 +220,38 @@ entry:
 ;
 ; imm form of prfb is tested above
 
-define void @test_svprfh_vnum(<vscale x 8 x i1> %pg, <vscale x 8 x i16>* %base) {
+define void @test_svprfh_vnum(<vscale x 8 x i1> %pg, ptr %base) {
 ; CHECK-LABEL: test_svprfh_vnum:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    prfh pstl3strm, p0, [x0, #31, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  %gep = getelementptr <vscale x 8 x i16>, <vscale x 8 x i16>* %base, i64 31
-  %addr = bitcast <vscale x 8 x i16>* %gep to ptr
+  %gep = getelementptr <vscale x 8 x i16>, ptr %base, i64 31
+  %addr = bitcast ptr %gep to ptr
   tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> %pg, ptr %addr, i32 13)
   ret void
 }
 
-define void @test_svprfw_vnum(<vscale x 4 x i1> %pg, <vscale x 4 x i32>* %base) {
+define void @test_svprfw_vnum(<vscale x 4 x i1> %pg, ptr %base) {
 ; CHECK-LABEL: test_svprfw_vnum:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    prfw pstl3strm, p0, [x0, #31, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  %gep = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %base, i64 31
-  %addr = bitcast <vscale x 4 x i32>* %gep to ptr
+  %gep = getelementptr <vscale x 4 x i32>, ptr %base, i64 31
+  %addr = bitcast ptr %gep to ptr
   tail call void @llvm.aarch64.sve.prf.nxv4i1(<vscale x 4 x i1> %pg, ptr %addr, i32 13)
   ret void
 }
 
-define void @test_svprfd_vnum(<vscale x 2 x i1> %pg, <vscale x 2 x i64>* %base) {
+define void @test_svprfd_vnum(<vscale x 2 x i1> %pg, ptr %base) {
 ; CHECK-LABEL: test_svprfd_vnum:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    prfd pstl3strm, p0, [x0, #31, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  %gep = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %base, i64 31
-  %addr = bitcast <vscale x 2 x i64>* %gep to ptr
+  %gep = getelementptr <vscale x 2 x i64>, ptr %base, i64 31
+  %addr = bitcast ptr %gep to ptr
   tail call void @llvm.aarch64.sve.prf.nxv2i1(<vscale x 2 x i1> %pg, ptr %addr, i32 13)
   ret void
 }

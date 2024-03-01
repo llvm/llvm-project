@@ -339,8 +339,7 @@ FunctionPass *llvm::createMachineVerifierPass(const std::string &Banner) {
   return new MachineVerifierPass(Banner);
 }
 
-void llvm::verifyMachineFunction(MachineFunctionAnalysisManager *,
-                                 const std::string &Banner,
+void llvm::verifyMachineFunction(const std::string &Banner,
                                  const MachineFunction &MF) {
   // TODO: Use MFAM after porting below analyses.
   // LiveVariables *LiveVars;
@@ -1289,10 +1288,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!DstTy.isValid() || !PtrTy.isValid() || !OffsetTy.isValid())
       break;
 
-    if (!PtrTy.getScalarType().isPointer())
+    if (!PtrTy.isPointerOrPointerVector())
       report("gep first operand must be a pointer", MI);
 
-    if (OffsetTy.getScalarType().isPointer())
+    if (OffsetTy.isPointerOrPointerVector())
       report("gep offset operand must not be a pointer", MI);
 
     // TODO: Is the offset allowed to be a scalar with a vector?
@@ -1305,7 +1304,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!DstTy.isValid() || !SrcTy.isValid() || !MaskTy.isValid())
       break;
 
-    if (!DstTy.getScalarType().isPointer())
+    if (!DstTy.isPointerOrPointerVector())
       report("ptrmask result type must be a pointer", MI);
 
     if (!MaskTy.getScalarType().isScalar())
@@ -1331,15 +1330,13 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!DstTy.isValid() || !SrcTy.isValid())
       break;
 
-    LLT DstElTy = DstTy.getScalarType();
-    LLT SrcElTy = SrcTy.getScalarType();
-    if (DstElTy.isPointer() || SrcElTy.isPointer())
+    if (DstTy.isPointerOrPointerVector() || SrcTy.isPointerOrPointerVector())
       report("Generic extend/truncate can not operate on pointers", MI);
 
     verifyVectorElementMatch(DstTy, SrcTy, MI);
 
-    unsigned DstSize = DstElTy.getSizeInBits();
-    unsigned SrcSize = SrcElTy.getSizeInBits();
+    unsigned DstSize = DstTy.getScalarSizeInBits();
+    unsigned SrcSize = SrcTy.getScalarSizeInBits();
     switch (MI->getOpcode()) {
     default:
       if (DstSize <= SrcSize)
@@ -1400,7 +1397,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (DstTy.isVector()) {
       // This case is the converse of G_CONCAT_VECTORS.
       if (!SrcTy.isVector() || SrcTy.getScalarType() != DstTy.getScalarType() ||
-          SrcTy.getNumElements() != NumDsts * DstTy.getNumElements())
+          SrcTy.isScalableVector() != DstTy.isScalableVector() ||
+          SrcTy.getSizeInBits() != NumDsts * DstTy.getSizeInBits())
         report("G_UNMERGE_VALUES source operand does not match vector "
                "destination operands",
                MI);
@@ -1477,8 +1475,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 2))
       if (MRI->getType(MI->getOperand(1).getReg()) != MRI->getType(MO.getReg()))
         report("G_CONCAT_VECTOR source operand types are not homogeneous", MI);
-    if (DstTy.getNumElements() !=
-        SrcTy.getNumElements() * (MI->getNumOperands() - 1))
+    if (DstTy.getElementCount() !=
+        SrcTy.getElementCount() * (MI->getNumOperands() - 1))
       report("G_CONCAT_VECTOR num dest and source elements should match", MI);
     break;
   }

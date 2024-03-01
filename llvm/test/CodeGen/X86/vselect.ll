@@ -686,21 +686,33 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ; Test to make sure we don't try to insert a new setcc to swap the operands
 ; of select with all zeros LHS if the setcc has additional users.
 define void @vselect_allzeros_LHS_multiple_use_setcc(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, ptr %p1, ptr %p2) {
-; SSE-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
-; SSE-NEXT:    pand %xmm3, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm0
-; SSE-NEXT:    movdqa %xmm0, %xmm3
-; SSE-NEXT:    pandn %xmm1, %xmm3
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    movdqa %xmm3, (%rdi)
-; SSE-NEXT:    movdqa %xmm0, (%rsi)
-; SSE-NEXT:    retq
+; SSE2-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
+; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm3
+; SSE2-NEXT:    pandn %xmm1, %xmm3
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    movdqa %xmm3, (%rdi)
+; SSE2-NEXT:    movdqa %xmm0, (%rsi)
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
+; SSE41-NEXT:    pand %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm3, %xmm0
+; SSE41-NEXT:    movdqa %xmm0, %xmm3
+; SSE41-NEXT:    pandn %xmm1, %xmm3
+; SSE41-NEXT:    pand %xmm2, %xmm0
+; SSE41-NEXT:    movdqa %xmm3, (%rdi)
+; SSE41-NEXT:    movdqa %xmm0, (%rsi)
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,4,8]
+; AVX-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
 ; AVX-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm1
@@ -729,14 +741,24 @@ define i64 @vselect_any_extend_vector_inreg_crash(ptr %x) {
 ; SSE-NEXT:    shll $15, %eax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: vselect_any_extend_vector_inreg_crash:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    andl $1, %eax
-; AVX-NEXT:    shll $15, %eax
-; AVX-NEXT:    retq
+; AVX1-LABEL: vselect_any_extend_vector_inreg_crash:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    shll $15, %eax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: vselect_any_extend_vector_inreg_crash:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [49,49,49,49]
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    shll $15, %eax
+; AVX2-NEXT:    retq
 0:
   %1 = load <8 x i8>, ptr %x
   %2 = icmp eq <8 x i8> %1, <i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49>

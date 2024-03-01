@@ -425,7 +425,7 @@ define <vscale x 2 x i64> @mla_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b,
   ret <vscale x 2 x i64> %res
 }
 
-define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8>* %p) {
+define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, ptr %p) {
 ; CHECK-LABEL: mla_i8_multiuse:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
@@ -434,7 +434,7 @@ define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x
 ; CHECK-NEXT:    st1b { z1.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %prod = mul <vscale x 16 x i8> %a, %b
-  store <vscale x 16 x i8> %prod, <vscale x 16 x i8>* %p
+  store <vscale x 16 x i8> %prod, ptr %p
   %res = add <vscale x 16 x i8> %c, %prod
   ret <vscale x 16 x i8> %res
 }
@@ -538,7 +538,7 @@ define <vscale x 2 x i64> @mls_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b,
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 2 x i64> %a, %b
-  %2 = add <vscale x 2 x i64> %1, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 4294967295, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %2 = add <vscale x 2 x i64> %1, splat (i64 4294967295)
   ret <vscale x 2 x i64> %2
 }
 
@@ -551,7 +551,7 @@ define <vscale x 2 x i64> @muladd_i64_negativeAddend(<vscale x 2 x i64> %a, <vsc
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 2 x i64> %a, %b
-  %2 = add <vscale x 2 x i64> %1, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -4294967295, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %2 = add <vscale x 2 x i64> %1, splat (i64 -4294967295)
   ret <vscale x 2 x i64> %2
 }
 
@@ -565,7 +565,7 @@ define <vscale x 4 x i32> @muladd_i32_positiveAddend(<vscale x 4 x i32> %a, <vsc
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 4 x i32> %a, %b
-  %2 = add <vscale x 4 x i32> %1, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 65536, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %2 = add <vscale x 4 x i32> %1, splat (i32 65536)
   ret <vscale x 4 x i32> %2
 }
 
@@ -578,7 +578,7 @@ define <vscale x 4 x i32> @muladd_i32_negativeAddend(<vscale x 4 x i32> %a, <vsc
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 4 x i32> %a, %b
-  %2 = add <vscale x 4 x i32> %1, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -65536, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %2 = add <vscale x 4 x i32> %1, splat (i32 -65536)
   ret <vscale x 4 x i32> %2
 }
 
@@ -591,7 +591,7 @@ define <vscale x 8 x i16> @muladd_i16_positiveAddend(<vscale x 8 x i16> %a, <vsc
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 8 x i16> %a, %b
-  %2 = add <vscale x 8 x i16> %1, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 255, i16 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %2 = add <vscale x 8 x i16> %1, splat (i16 255)
   ret <vscale x 8 x i16> %2
 }
 
@@ -604,7 +604,7 @@ define <vscale x 8 x i16> @muladd_i16_negativeAddend(<vscale x 8 x i16> %a, <vsc
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 8 x i16> %a, %b
-  %2 = add <vscale x 8 x i16> %1, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -255, i16 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %2 = add <vscale x 8 x i16> %1, splat (i16 -255)
   ret <vscale x 8 x i16> %2
 }
 
@@ -617,7 +617,7 @@ define <vscale x 16 x i8> @muladd_i8_positiveAddend(<vscale x 16 x i8> %a, <vsca
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 16 x i8> %a, %b
-  %2 = add <vscale x 16 x i8> %1, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 15, i8 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %2 = add <vscale x 16 x i8> %1, splat (i8 15)
   ret <vscale x 16 x i8> %2
 }
 
@@ -630,7 +630,7 @@ define <vscale x 16 x i8> @muladd_i8_negativeAddend(<vscale x 16 x i8> %a, <vsca
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 16 x i8> %a, %b
-  %2 = add <vscale x 16 x i8> %1, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -15, i8 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %2 = add <vscale x 16 x i8> %1, splat (i8 -15)
   ret <vscale x 16 x i8> %2
 }
 
@@ -644,7 +644,7 @@ define <vscale x 2 x i64> @mulsub_i64_positiveAddend(<vscale x 2 x i64> %a, <vsc
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 2 x i64> %a, %b
-  %2 = sub <vscale x 2 x i64> %1, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 4294967295, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %2 = sub <vscale x 2 x i64> %1, splat (i64 4294967295)
   ret <vscale x 2 x i64> %2
 }
 
@@ -658,7 +658,7 @@ define <vscale x 2 x i64> @mulsub_i64_negativeAddend(<vscale x 2 x i64> %a, <vsc
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 2 x i64> %a, %b
-  %2 = sub <vscale x 2 x i64> %1, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -4294967295, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %2 = sub <vscale x 2 x i64> %1, splat (i64 -4294967295)
   ret <vscale x 2 x i64> %2
 }
 
@@ -673,7 +673,7 @@ define <vscale x 4 x i32> @mulsub_i32_positiveAddend(<vscale x 4 x i32> %a, <vsc
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 4 x i32> %a, %b
-  %2 = sub <vscale x 4 x i32> %1, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 65536, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %2 = sub <vscale x 4 x i32> %1, splat (i32 65536)
   ret <vscale x 4 x i32> %2
 }
 
@@ -687,7 +687,7 @@ define <vscale x 4 x i32> @mulsub_i32_negativeAddend(<vscale x 4 x i32> %a, <vsc
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 4 x i32> %a, %b
-  %2 = sub <vscale x 4 x i32> %1, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -65536, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %2 = sub <vscale x 4 x i32> %1, splat (i32 -65536)
   ret <vscale x 4 x i32> %2
 }
 
@@ -700,7 +700,7 @@ define <vscale x 8 x i16> @mulsub_i16_positiveAddend(<vscale x 8 x i16> %a, <vsc
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 8 x i16> %a, %b
-  %2 = sub <vscale x 8 x i16> %1, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 255, i16 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %2 = sub <vscale x 8 x i16> %1, splat (i16 255)
   ret <vscale x 8 x i16> %2
 }
 
@@ -714,7 +714,7 @@ define <vscale x 8 x i16> @mulsub_i16_negativeAddend(<vscale x 8 x i16> %a, <vsc
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 8 x i16> %a, %b
-  %2 = sub <vscale x 8 x i16> %1, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -255, i16 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %2 = sub <vscale x 8 x i16> %1, splat (i16 -255)
   ret <vscale x 8 x i16> %2
 }
 
@@ -727,7 +727,7 @@ define <vscale x 16 x i8> @mulsub_i8_positiveAddend(<vscale x 16 x i8> %a, <vsca
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 16 x i8> %a, %b
-  %2 = sub <vscale x 16 x i8> %1, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 15, i8 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %2 = sub <vscale x 16 x i8> %1, splat (i8 15)
   ret <vscale x 16 x i8> %2
 }
 
@@ -740,7 +740,7 @@ define <vscale x 16 x i8> @mulsub_i8_negativeAddend(<vscale x 16 x i8> %a, <vsca
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 16 x i8> %a, %b
-  %2 = sub <vscale x 16 x i8> %1, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -15, i8 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %2 = sub <vscale x 16 x i8> %1, splat (i8 -15)
   ret <vscale x 16 x i8> %2
 }
 
@@ -757,7 +757,7 @@ define <vscale x 8 x i16> @multiple_fused_ops(<vscale x 8 x i16> %a, <vscale x 8
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 8 x i16> %a, %b
-  %2 = add  <vscale x 8 x i16> %1, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 200, i16 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %2 = add  <vscale x 8 x i16> %1, splat (i16 200)
   %3 = mul <vscale x 8 x i16> %2, %a
   %4 = sub <vscale x 8 x i16> %3, %b
   ret <vscale x 8 x i16> %4
@@ -805,7 +805,7 @@ vector.body:                                      ; preds = %vector.body, %for.b
   %3 = getelementptr inbounds i32, ptr %src2, i64 %index
   %wide.masked.load12 = tail call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr %3, i32 4, <vscale x 4 x i1> %active.lane.mask, <vscale x 4 x i32> poison)
   %4 = mul nsw <vscale x 4 x i32> %wide.masked.load12, %wide.masked.load
-  %5 = add nsw <vscale x 4 x i32> %4, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %5 = add nsw <vscale x 4 x i32> %4, splat (i32 1)
   %6 = getelementptr inbounds i32, ptr %dst, i64 %index
   tail call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> %5, ptr %6, i32 4, <vscale x 4 x i1> %active.lane.mask)
   %index.next = add i64 %index, %1

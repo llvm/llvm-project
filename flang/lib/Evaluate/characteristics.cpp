@@ -461,6 +461,34 @@ bool DummyDataObject::CanBePassedViaImplicitInterface(
   }
 }
 
+bool DummyDataObject::IsPassedByDescriptor(bool isBindC) const {
+  constexpr TypeAndShape::Attrs shapeRequiringBox = {
+      TypeAndShape::Attr::AssumedShape, TypeAndShape::Attr::DeferredShape,
+      TypeAndShape::Attr::AssumedRank, TypeAndShape::Attr::Coarray};
+  if ((attrs & Attrs{Attr::Allocatable, Attr::Pointer}).any()) {
+    return true;
+  } else if ((type.attrs() & shapeRequiringBox).any()) {
+    // Need to pass shape/coshape info in a descriptor.
+    return true;
+  } else if (type.type().IsPolymorphic() && !type.type().IsAssumedType()) {
+    // Need to pass dynamic type info in a descriptor.
+    return true;
+  } else if (const auto *derived{GetDerivedTypeSpec(type.type())}) {
+    if (!derived->parameters().empty()) {
+      for (const auto &param : derived->parameters()) {
+        if (param.second.isLen()) {
+          // Need to pass length type parameters in a descriptor.
+          return true;
+        }
+      }
+    }
+  } else if (isBindC && type.type().IsAssumedLengthCharacter()) {
+    // Fortran 2018 18.3.6 point 2 (5)
+    return true;
+  }
+  return false;
+}
+
 llvm::raw_ostream &DummyDataObject::Dump(llvm::raw_ostream &o) const {
   attrs.Dump(o, EnumToString);
   if (intent != common::Intent::Default) {

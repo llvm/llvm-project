@@ -1066,17 +1066,10 @@ bool DevirtModule::tryFindVirtualCallTargets(
         GlobalObject::VCallVisibilityPublic)
       return false;
 
-    Constant *Ptr = getPointerAtOffset(TM.Bits->GV->getInitializer(),
-                                       TM.Offset + ByteOffset, M, TM.Bits->GV);
-    if (!Ptr)
-      return false;
-
-    auto C = Ptr->stripPointerCasts();
-    // Make sure this is a function or alias to a function.
-    auto Fn = dyn_cast<Function>(C);
-    auto A = dyn_cast<GlobalAlias>(C);
-    if (!Fn && A)
-      Fn = dyn_cast<Function>(A->getAliasee());
+    Function *Fn = nullptr;
+    Constant *C = nullptr;
+    std::tie(Fn, C) =
+        getFunctionAtVTableOffset(TM.Bits->GV, TM.Offset + ByteOffset, M);
 
     if (!Fn)
       return false;

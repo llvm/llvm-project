@@ -18,6 +18,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -39,13 +40,18 @@ enum class OpenVariant {
 
 namespace {
 
-class UnixAPIMisuseChecker : public Checker< check::PreStmt<CallExpr> > {
+class UnixAPIMisuseChecker
+    : public Checker<check::PreStmt<CallExpr>,
+                     check::ASTDecl<TranslationUnitDecl>> {
   const BugType BT_open{this, "Improper use of 'open'", categories::UnixAPI};
   const BugType BT_pthreadOnce{this, "Improper use of 'pthread_once'",
                                categories::UnixAPI};
   mutable std::optional<uint64_t> Val_O_CREAT;
 
 public:
+  void checkASTDecl(const TranslationUnitDecl *TU, AnalysisManager &Mgr,
+                    BugReporter &BR) const;
+
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 
   void CheckOpen(CheckerContext &C, const CallExpr *CE) const;
@@ -55,11 +61,8 @@ public:
   void CheckOpenVariant(CheckerContext &C,
                         const CallExpr *CE, OpenVariant Variant) const;
 
-  void ReportOpenBug(CheckerContext &C,
-                     ProgramStateRef State,
-                     const char *Msg,
+  void ReportOpenBug(CheckerContext &C, ProgramStateRef State, const char *Msg,
                      SourceRange SR) const;
-
 };
 
 class UnixAPIPortabilityChecker : public Checker< check::PreStmt<CallExpr> > {
@@ -90,7 +93,21 @@ private:
                             const char *fn) const;
 };
 
-} //end anonymous namespace
+} // end anonymous namespace
+
+void UnixAPIMisuseChecker::checkASTDecl(const TranslationUnitDecl *TU,
+                                        AnalysisManager &Mgr,
+                                        BugReporter &) const {
+  // The definition of O_CREAT is platform specific.
+  // Try to get the macro value from the preprocessor.
+  Val_O_CREAT = tryExpandAsInteger("O_CREAT", Mgr.getPreprocessor());
+  // If we failed, fall-back to known values.
+  if (!Val_O_CREAT) {
+    if (TU->getASTContext().getTargetInfo().getTriple().getVendor() ==
+        llvm::Triple::Apple)
+      Val_O_CREAT = 0x0200;
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // "open" (man 2 open)
@@ -204,19 +221,8 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
     return;
   }
 
-  // The definition of O_CREAT is platform specific.  We need a better way
-  // of querying this information from the checking environment.
   if (!Val_O_CREAT) {
-    if (C.getASTContext().getTargetInfo().getTriple().getVendor()
-                                                      == llvm::Triple::Apple)
-      Val_O_CREAT = 0x0200;
-    else {
-      // FIXME: We need a more general way of getting the O_CREAT value.
-      // We could possibly grovel through the preprocessor state, but
-      // that would require passing the Preprocessor object to the ExprEngine.
-      // See also: MallocChecker.cpp / M_ZERO.
-      return;
-    }
+    return;
   }
 
   // Now check if oflags has O_CREAT set.

@@ -1255,7 +1255,9 @@ void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,
     emitRRI(Mips::SD, GPReg, Mips::SP, RegOrOffset, SMLoc(), &STI);
   }
 
-  if (getABI().IsN32()) {
+#if 0
+  // We haven't support -mabicalls -mno-shared yet.
+  if (-mno-shared) {
     MCSymbol *GPSym = MCA.getContext().getOrCreateSymbol("__gnu_local_gp");
     const MipsMCExpr *HiExpr = MipsMCExpr::create(
         MipsMCExpr::MEK_HI, MCSymbolRefExpr::create(GPSym, MCA.getContext()),
@@ -1273,6 +1275,7 @@ void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,
 
     return;
   }
+#endif
 
   const MipsMCExpr *HiExpr = MipsMCExpr::createGpOff(
       MipsMCExpr::MEK_HI, MCSymbolRefExpr::create(&Sym, MCA.getContext()),
@@ -1288,8 +1291,11 @@ void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,
   emitRRX(Mips::ADDiu, GPReg, GPReg, MCOperand::createExpr(LoExpr), SMLoc(),
           &STI);
 
-  // daddu  $gp, $gp, $funcreg
-  emitRRR(Mips::DADDu, GPReg, GPReg, RegNo, SMLoc(), &STI);
+  // (d)addu  $gp, $gp, $funcreg
+  if (getABI().IsN32())
+    emitRRR(Mips::ADDu, GPReg, GPReg, RegNo, SMLoc(), &STI);
+  else
+    emitRRR(Mips::DADDu, GPReg, GPReg, RegNo, SMLoc(), &STI);
 }
 
 void MipsTargetELFStreamer::emitDirectiveCpreturn(unsigned SaveLocation,

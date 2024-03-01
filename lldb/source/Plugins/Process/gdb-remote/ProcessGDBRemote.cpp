@@ -24,6 +24,7 @@
 #include <sys/types.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Breakpoint/WatchpointAlgorithms.h"
 #include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -1599,6 +1600,26 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
     // has no stop reason.
     thread->GetRegisterContext()->InvalidateIfNeeded(true);
     if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp)) {
+      // If a thread is stopped at a breakpoint site, set that as the stop
+      // reason even if it hasn't executed the breakpoint instruction yet.
+      // We will silently step over the breakpoint when we resume execution
+      // and miss the fact that this thread hit the breakpoint.
+      const size_t num_thread_ids = m_thread_ids.size();
+      for (size_t i = 0; i < num_thread_ids; i++) {
+        if (m_thread_ids[i] == thread->GetID() && m_thread_pcs.size() > i) {
+          addr_t pc = m_thread_pcs[i];
+          lldb::BreakpointSiteSP bp_site_sp =
+              thread->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
+          if (bp_site_sp) {
+            if (bp_site_sp->ValidForThisThread(*thread)) {
+              thread->SetStopInfo(
+                  StopInfo::CreateStopReasonWithBreakpointSiteID(
+                      *thread, bp_site_sp->GetID()));
+              return true;
+            }
+          }
+        }
+      }
       thread->SetStopInfo(StopInfoSP());
     }
     return true;
@@ -1721,7 +1742,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     } else {
       bool handled = false;
       bool did_exec = false;
-      if (!reason.empty()) {
+      // debugserver can send reason = "none" which is equivalent
+      // to no reason.
+      if (!reason.empty() && reason != "none") {
         if (reason == "trace") {
           addr_t pc = thread_sp->GetRegisterContext()->GetPC();
           lldb::BreakpointSiteSP bp_site_sp =
@@ -1863,11 +1886,10 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
         lldb::BreakpointSiteSP bp_site_sp =
             thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
 
-        // If the current pc is a breakpoint site then the StopInfo should be
-        // set to Breakpoint even though the remote stub did not set it as such.
-        // This can happen when the thread is involuntarily interrupted (e.g.
-        // due to stops on other threads) just as it is about to execute the
-        // breakpoint instruction.
+        // If a thread is stopped at a breakpoint site, set that as the stop
+        // reason even if it hasn't executed the breakpoint instruction yet.
+        // We will silently step over the breakpoint when we resume execution
+        // and miss the fact that this thread hit the breakpoint.
         if (bp_site_sp && bp_site_sp->ValidForThisThread(*thread_sp)) {
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithBreakpointSiteID(
               *thread_sp, bp_site_sp->GetID()));
@@ -3153,23 +3175,13 @@ Status ProcessGDBRemote::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
   bool write = wp_sp->WatchpointWrite() || wp_sp->WatchpointModify();
   size_t size = wp_sp->GetByteSize();
 
-  // New WatchpointResources needed to implement this Watchpoint.
-  std::vector<WatchpointResourceSP> resources;
+  ArchSpec target_arch = GetTarget().GetArchitecture();
+  WatchpointHardwareFeature supported_features =
+      m_gdb_comm.GetSupportedWatchpointTypes();
 
-  // LWP_TODO: Break up the user's request into pieces that can be watched
-  // given the capabilities of the target cpu / stub software.
-  // As a default, breaking the watched region up into target-pointer-sized,
-  // aligned, groups.
-  //
-  // Beyond the default, a stub can / should inform us of its capabilities,
-  // e.g. a stub that can do AArch64 power-of-2 MASK watchpoints.
-  //
-  // And the cpu may have unique capabilities. AArch64 BAS watchpoints
-  // can watch any sequential bytes in a doubleword, but Intel watchpoints
-  // can only watch 1, 2, 4, 8 bytes within a doubleword.
-  WatchpointResourceSP wp_res_sp =
-      std::make_shared<WatchpointResource>(addr, size, read, write);
-  resources.push_back(wp_res_sp);
+  std::vector<WatchpointResourceSP> resources =
+      WatchpointAlgorithms::AtomizeWatchpointRequest(
+          addr, size, read, write, supported_features, target_arch);
 
   // LWP_TODO: Now that we know the WP Resources needed to implement this
   // Watchpoint, we need to look at currently allocated Resources in the
@@ -4620,6 +4632,8 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
       // We don't have any information about vendor or OS.
       arch_to_use.SetTriple(llvm::StringSwitch<std::string>(target_info.arch)
                                 .Case("i386:x86-64", "x86_64")
+                                .Case("riscv:rv64", "riscv64")
+                                .Case("riscv:rv32", "riscv32")
                                 .Default(target_info.arch) +
                             "--");
 
@@ -5340,8 +5354,7 @@ public:
             interpreter, "process plugin packet xfer-size",
             "Maximum size that lldb will try to read/write one one chunk.",
             nullptr) {
-    CommandArgumentData max_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
-    m_arguments.push_back({max_arg});
+    AddSimpleArgumentList(eArgTypeUnsignedInteger);
   }
 
   ~CommandObjectProcessGDBRemotePacketXferSize() override = default;
@@ -5383,8 +5396,7 @@ public:
                             "be added to the packet prior to sending and "
                             "stripped from the result.",
                             nullptr) {
-    CommandArgumentData packet_arg{eArgTypeNone, eArgRepeatStar};
-    m_arguments.push_back({packet_arg});
+    AddSimpleArgumentList(eArgTypeNone, eArgRepeatStar);
   }
 
   ~CommandObjectProcessGDBRemotePacketSend() override = default;

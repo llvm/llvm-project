@@ -28,6 +28,8 @@ def AArch64_restore_zt : SDNode<"AArch64ISD::RESTORE_ZT", SDTypeProfile<0, 2,
 def AArch64_save_zt : SDNode<"AArch64ISD::SAVE_ZT", SDTypeProfile<0, 2,
                              [SDTCisInt<0>, SDTCisPtrTy<1>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPMayStore]>;
+def AArch64CoalescerBarrier
+    : SDNode<"AArch64ISD::COALESCER_BARRIER", SDTypeProfile<1, 1, []>, []>;
 
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
@@ -189,6 +191,26 @@ def : Pat<(int_aarch64_sme_set_tpidr2 i64:$val),
           (MSR 0xde85, GPR64:$val)>;
 def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
           (MRS 0xde85)>;
+
+multiclass CoalescerBarrierPseudo<RegisterClass rc, list<ValueType> vts> {
+  def NAME : Pseudo<(outs rc:$dst), (ins rc:$src), []>, Sched<[]> {
+    let Constraints = "$dst = $src";
+  }
+  foreach vt = vts in {
+    def : Pat<(vt (AArch64CoalescerBarrier (vt rc:$src))),
+              (!cast<Instruction>(NAME) rc:$src)>;
+  }
+}
+
+multiclass CoalescerBarriers {
+  defm _FPR16  : CoalescerBarrierPseudo<FPR16, [bf16, f16]>;
+  defm _FPR32  : CoalescerBarrierPseudo<FPR32, [f32]>;
+  defm _FPR64  : CoalescerBarrierPseudo<FPR64, [f64, v8i8, v4i16, v2i32, v1i64, v4f16, v2f32, v1f64, v4bf16]>;
+  defm _FPR128 : CoalescerBarrierPseudo<FPR128, [f128, v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64, v8bf16]>;
+}
+
+defm COALESCER_BARRIER : CoalescerBarriers;
+
 } // End let Predicates = [HasSME]
 
 // Pseudo to match to smstart/smstop. This expands:
@@ -211,6 +233,8 @@ def MSRpstatePseudo :
            (ins svcr_op:$pstatefield, timm0_1:$imm, GPR64:$rtpstate, timm0_1:$expected_pstate, variable_ops), []>,
     Sched<[WriteSys]> {
   let hasPostISelHook = 1;
+  let Uses = [VG];
+  let Defs = [VG];
 }
 
 def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 GPR64:$rtpstate), (i64 timm0_1:$expected_pstate)),

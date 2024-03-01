@@ -9,163 +9,24 @@ from .._structured_transform_enum_gen import *
 try:
     from ...ir import *
     from ...dialects import transform
-    from .._ods_common import _cext as _ods_cext
+    from .._ods_common import (
+        DynamicIndexList,
+        IntOrAttrList,
+        MixedValues,
+        OptionalBoolList,
+        OptionalIntList,
+        _cext as _ods_cext,
+        _dispatch_dynamic_index_list,
+        _dispatch_mixed_values,
+        _get_int_array_array_attr,
+        _get_int_array_attr,
+        _get_value_list,
+        _get_value_or_attribute_value,
+    )
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
-from typing import List, Optional, Sequence, Tuple, Union, overload
-
-StaticIntLike = Union[int, IntegerAttr]
-ValueLike = Union[Operation, OpView, Value]
-MixedInt = Union[StaticIntLike, ValueLike]
-
-IntOrAttrList = Sequence[Union[IntegerAttr, int]]
-OptionalIntList = Optional[Union[ArrayAttr, IntOrAttrList]]
-
-BoolOrAttrList = Sequence[Union[BoolAttr, bool]]
-OptionalBoolList = Optional[Union[ArrayAttr, BoolOrAttrList]]
-
-MixedValues = Union[Sequence[Union[StaticIntLike, ValueLike]], ArrayAttr, ValueLike]
-
-DynamicIndexList = Sequence[Union[MixedInt, Sequence[MixedInt]]]
-
-
-def _dispatch_dynamic_index_list(
-    indices: Union[DynamicIndexList, ArrayAttr],
-) -> Tuple[List[ValueLike], Union[List[int], ArrayAttr], List[bool]]:
-    """Dispatches a list of indices to the appropriate form.
-
-    This is similar to the custom `DynamicIndexList` directive upstream:
-    provided indices may be in the form of dynamic SSA values or static values,
-    and they may be scalable (i.e., as a singleton list) or not. This function
-    dispatches each index into its respective form. It also extracts the SSA
-    values and static indices from various similar structures, respectively.
-    """
-    dynamic_indices = []
-    static_indices = [ShapedType.get_dynamic_size()] * len(indices)
-    scalable_indices = [False] * len(indices)
-
-    # ArrayAttr: Extract index values.
-    if isinstance(indices, ArrayAttr):
-        indices = [idx for idx in indices]
-
-    def process_nonscalable_index(i, index):
-        """Processes any form of non-scalable index.
-
-        Returns False if the given index was scalable and thus remains
-        unprocessed; True otherwise.
-        """
-        if isinstance(index, int):
-            static_indices[i] = index
-        elif isinstance(index, IntegerAttr):
-            static_indices[i] = index.value  # pytype: disable=attribute-error
-        elif isinstance(index, (Operation, Value, OpView)):
-            dynamic_indices.append(index)
-        else:
-            return False
-        return True
-
-    # Process each index at a time.
-    for i, index in enumerate(indices):
-        if not process_nonscalable_index(i, index):
-            # If it wasn't processed, it must be a scalable index, which is
-            # provided as a Sequence of one value, so extract and process that.
-            scalable_indices[i] = True
-            assert len(index) == 1
-            ret = process_nonscalable_index(i, index[0])
-            assert ret
-
-    return dynamic_indices, static_indices, scalable_indices
-
-
-# Dispatches `MixedValues` that all represents integers in various forms into
-# the following three categories:
-#   - `dynamic_values`: a list of `Value`s, potentially from op results;
-#   - `packed_values`: a value handle, potentially from an op result, associated
-#                      to one or more payload operations of integer type;
-#   - `static_values`: an `ArrayAttr` of `i64`s with static values, from Python
-#                      `int`s, from `IntegerAttr`s, or from an `ArrayAttr`.
-# The input is in the form for `packed_values`, only that result is set and the
-# other two are empty. Otherwise, the input can be a mix of the other two forms,
-# and for each dynamic value, a special value is added to the `static_values`.
-def _dispatch_mixed_values(
-    values: MixedValues,
-) -> Tuple[List[Value], Union[Operation, Value, OpView], DenseI64ArrayAttr]:
-    dynamic_values = []
-    packed_values = None
-    static_values = None
-    if isinstance(values, ArrayAttr):
-        static_values = values
-    elif isinstance(values, (Operation, Value, OpView)):
-        packed_values = values
-    else:
-        static_values = []
-        for size in values or []:
-            if isinstance(size, int):
-                static_values.append(size)
-            else:
-                static_values.append(ShapedType.get_dynamic_size())
-                dynamic_values.append(size)
-        static_values = DenseI64ArrayAttr.get(static_values)
-
-    return (dynamic_values, packed_values, static_values)
-
-
-def _get_value_or_attribute_value(
-    value_or_attr: Union[any, Attribute, ArrayAttr]
-) -> any:
-    if isinstance(value_or_attr, Attribute) and hasattr(value_or_attr, "value"):
-        return value_or_attr.value
-    if isinstance(value_or_attr, ArrayAttr):
-        return _get_value_list(value_or_attr)
-    return value_or_attr
-
-
-def _get_value_list(
-    sequence_or_array_attr: Union[Sequence[any], ArrayAttr]
-) -> Sequence[any]:
-    return [_get_value_or_attribute_value(v) for v in sequence_or_array_attr]
-
-
-def _get_int_array_attr(values: Optional[Union[ArrayAttr, IntOrAttrList]]) -> ArrayAttr:
-    if values is None:
-        return None
-
-    # Turn into a Python list of Python ints.
-    values = _get_value_list(values)
-
-    # Make an ArrayAttr of IntegerAttrs out of it.
-    return ArrayAttr.get(
-        [IntegerAttr.get(IntegerType.get_signless(64), v) for v in values]
-    )
-
-
-def _get_int_array_array_attr(
-    values: Optional[Union[ArrayAttr, Sequence[Union[ArrayAttr, IntOrAttrList]]]]
-) -> ArrayAttr:
-    """Creates an ArrayAttr of ArrayAttrs of IntegerAttrs.
-
-    The input has to be a collection of collection of integers, where any
-    Python Sequence and ArrayAttr are admissible collections and Python ints and
-    any IntegerAttr are admissible integers. Both levels of collections are
-    turned into ArrayAttr; the inner level is turned into IntegerAttrs of i64s.
-    If the input is None, an empty ArrayAttr is returned.
-    """
-    if values is None:
-        return None
-
-    # Make sure the outer level is a list.
-    values = _get_value_list(values)
-
-    # The inner level is now either invalid or a mixed sequence of ArrayAttrs and
-    # Sequences. Make sure the nested values are all lists.
-    values = [_get_value_list(nested) for nested in values]
-
-    # Turn each nested list into an ArrayAttr.
-    values = [_get_int_array_attr(nested) for nested in values]
-
-    # Turn the outer list into an ArrayAttr.
-    return ArrayAttr.get(values)
+from typing import List, Optional, Sequence, Union, overload
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)

@@ -2,27 +2,27 @@
 # RUN: llc -mtriple=aarch64-unknown-unknown -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 
 --- |
-  define void @ldrxrox_breg_oreg(i64* %addr) { ret void }
-  define void @ldrdrox_breg_oreg(i64* %addr) { ret void }
-  define void @more_than_one_use(i64* %addr) { ret void }
-  define void @ldrxrox_shl(i64* %addr) { ret void }
-  define void @ldrdrox_shl(i64* %addr) { ret void }
-  define void @ldrxrox_mul_rhs(i64* %addr) { ret void }
-  define void @ldrdrox_mul_rhs(i64* %addr) { ret void }
-  define void @ldrxrox_mul_lhs(i64* %addr) { ret void }
-  define void @ldrdrox_mul_lhs(i64* %addr) { ret void }
-  define void @mul_not_pow_2(i64* %addr) { ret void }
-  define void @mul_wrong_pow_2(i64* %addr) { ret void }
-  define void @more_than_one_use_shl_1(i64* %addr) { ret void }
-  define void @more_than_one_use_shl_2(i64* %addr) { ret void }
-  define void @more_than_one_use_shl_lsl_fast(i64* %addr) #1 { ret void }
-  define void @more_than_one_use_shl_lsl_slow(i64* %addr) { ret void }
-  define void @more_than_one_use_shl_minsize(i64* %addr) #0 { ret void }
-  define void @ldrwrox(i64* %addr) { ret void }
-  define void @ldrsrox(i64* %addr) { ret void }
-  define void @ldrhrox(i64* %addr) { ret void }
-  define void @ldbbrox(i64* %addr) { ret void }
-  define void @ldrqrox(i64* %addr) { ret void }
+  define void @ldrxrox_breg_oreg(ptr %addr) { ret void }
+  define void @ldrdrox_breg_oreg(ptr %addr) { ret void }
+  define void @more_than_one_use(ptr %addr) { ret void }
+  define void @ldrxrox_shl(ptr %addr) { ret void }
+  define void @ldrdrox_shl(ptr %addr) { ret void }
+  define void @ldrxrox_mul_rhs(ptr %addr) { ret void }
+  define void @ldrdrox_mul_rhs(ptr %addr) { ret void }
+  define void @ldrxrox_mul_lhs(ptr %addr) { ret void }
+  define void @ldrdrox_mul_lhs(ptr %addr) { ret void }
+  define void @mul_not_pow_2(ptr %addr) { ret void }
+  define void @mul_wrong_pow_2(ptr %addr) { ret void }
+  define void @more_than_one_use_shl_1(ptr %addr) { ret void }
+  define void @more_than_one_use_shl_2(ptr %addr) { ret void }
+  define void @more_than_one_use_shl_lsl_fast(ptr %addr) #1 { ret void }
+  define void @more_than_one_use_shl_lsl_slow(ptr %addr) { ret void }
+  define void @more_than_one_use_shl_minsize(ptr %addr) #0 { ret void }
+  define void @ldrwrox(ptr %addr) { ret void }
+  define void @ldrsrox(ptr %addr) { ret void }
+  define void @ldrhrox(ptr %addr) { ret void }
+  define void @ldbbrox(ptr %addr) { ret void }
+  define void @ldrqrox(ptr %addr) { ret void }
   attributes #0 = { optsize }
   attributes #1 = { "target-features"="+addr-lsl-fast" }
 ...

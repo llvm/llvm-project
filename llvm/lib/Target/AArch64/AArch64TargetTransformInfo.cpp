@@ -233,15 +233,20 @@ static bool hasPossibleIncompatibleOps(const Function *F) {
 
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
-  SMEAttrs CallerAttrs(*Caller);
-  SMEAttrs CalleeAttrs(*Callee);
-  if (CalleeAttrs.hasNewZABody())
+  SMEAttrs CallerAttrs(*Caller), CalleeAttrs(*Callee);
+
+  // When inlining, we should consider the body of the function, not the
+  // interface.
+  if (CalleeAttrs.hasStreamingBody()) {
+    CalleeAttrs.set(SMEAttrs::SM_Compatible, false);
+    CalleeAttrs.set(SMEAttrs::SM_Enabled, true);
+  }
+
+  if (CalleeAttrs.isNewZA())
     return false;
 
   if (CallerAttrs.requiresLazySave(CalleeAttrs) ||
-      (CallerAttrs.requiresSMChange(CalleeAttrs) &&
-       (!CallerAttrs.hasStreamingInterfaceOrBody() ||
-        !CalleeAttrs.hasStreamingBody()))) {
+      CallerAttrs.requiresSMChange(CalleeAttrs)) {
     if (hasPossibleIncompatibleOps(Callee))
       return false;
   }
@@ -1625,6 +1630,36 @@ static std::optional<Instruction *> instCombineSVETBL(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, VectorSplat);
 }
 
+static std::optional<Instruction *> instCombineSVEUzp1(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  Value *A, *B;
+  Type *RetTy = II.getType();
+  constexpr Intrinsic::ID FromSVB = Intrinsic::aarch64_sve_convert_from_svbool;
+  constexpr Intrinsic::ID ToSVB = Intrinsic::aarch64_sve_convert_to_svbool;
+
+  // uzp1(to_svbool(A), to_svbool(B)) --> <A, B>
+  // uzp1(from_svbool(to_svbool(A)), from_svbool(to_svbool(B))) --> <A, B>
+  if ((match(II.getArgOperand(0),
+             m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(A)))) &&
+       match(II.getArgOperand(1),
+             m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(B))))) ||
+      (match(II.getArgOperand(0), m_Intrinsic<ToSVB>(m_Value(A))) &&
+       match(II.getArgOperand(1), m_Intrinsic<ToSVB>(m_Value(B))))) {
+    auto *TyA = cast<ScalableVectorType>(A->getType());
+    if (TyA == B->getType() &&
+        RetTy == ScalableVectorType::getDoubleElementsVectorType(TyA)) {
+      auto *SubVec = IC.Builder.CreateInsertVector(
+          RetTy, PoisonValue::get(RetTy), A, IC.Builder.getInt64(0));
+      auto *ConcatVec = IC.Builder.CreateInsertVector(
+          RetTy, SubVec, B, IC.Builder.getInt64(TyA->getMinNumElements()));
+      ConcatVec->takeName(&II);
+      return IC.replaceInstUsesWith(II, ConcatVec);
+    }
+  }
+
+  return std::nullopt;
+}
+
 static std::optional<Instruction *> instCombineSVEZip(InstCombiner &IC,
                                                       IntrinsicInst &II) {
   // zip1(uzp1(A, B), uzp2(A, B)) --> A
@@ -2007,6 +2042,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_sunpkhi:
   case Intrinsic::aarch64_sve_sunpklo:
     return instCombineSVEUnpack(IC, II);
+  case Intrinsic::aarch64_sve_uzp1:
+    return instCombineSVEUzp1(IC, II);
   case Intrinsic::aarch64_sve_zip1:
   case Intrinsic::aarch64_sve_zip2:
     return instCombineSVEZip(IC, II);
@@ -2935,6 +2972,13 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info);
+  case ISD::FREM:
+    // Pass nullptr as fmod/fmodf calls are emitted by the backend even when
+    // those functions are not declared in the module.
+    if (!Ty->isVectorTy())
+      return getCallInstrCost(/*Function*/ nullptr, Ty, {Ty, Ty}, CostKind);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                         Op2Info);
   }
 }
 
@@ -3804,6 +3848,10 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   }
 
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
+  // Treat extractsubvector as single op permutation.
+  bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
+  if (IsExtractSubvector && LT.second.isFixedLengthVector())
+    Kind = TTI::SK_PermuteSingleSrc;
 
   // Check for broadcast loads, which are supported by the LD1R instruction.
   // In terms of code-size, the shuffle vector is free when a load + dup get
@@ -3966,6 +4014,9 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
+  // Restore optimal kind.
+  if (IsExtractSubvector)
+    Kind = TTI::SK_ExtractSubvector;
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
 

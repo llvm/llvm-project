@@ -45,15 +45,17 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
   assert(I->getType()->isIntOrIntVectorTy() &&
          "Trivializing a non-integer value?");
 
+  // If all bits of a user are demanded, then we know that nothing below that
+  // in the def-use chain needs to be changed.
+  if (DB.getDemandedBits(I).isAllOnes())
+    return;
+
   // Initialize the worklist with eligible direct users.
   SmallPtrSet<Instruction *, 16> Visited;
   SmallVector<Instruction *, 16> WorkList;
   for (User *JU : I->users()) {
-    // If all bits of a user are demanded, then we know that nothing below that
-    // in the def-use chain needs to be changed.
-    auto *J = dyn_cast<Instruction>(JU);
-    if (J && J->getType()->isIntOrIntVectorTy() &&
-        !DB.getDemandedBits(J).isAllOnes()) {
+    auto *J = cast<Instruction>(JU);
+    if (J->getType()->isIntOrIntVectorTy()) {
       Visited.insert(J);
       WorkList.push_back(J);
     }
@@ -73,18 +75,19 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
     Instruction *J = WorkList.pop_back_val();
 
     // NSW, NUW, and exact are based on operands that might have changed.
-    J->dropPoisonGeneratingFlags();
+    J->dropPoisonGeneratingFlagsAndMetadata();
 
-    // We do not have to worry about llvm.assume or range metadata:
-    // 1. llvm.assume demands its operand, so trivializing can't change it.
-    // 2. range metadata only applies to memory accesses which demand all bits.
+    // We do not have to worry about llvm.assume, because it demands its
+    // operand, so trivializing can't change it.
+
+    // If all bits of a user are demanded, then we know that nothing below
+    // that in the def-use chain needs to be changed.
+    if (DB.getDemandedBits(J).isAllOnes())
+      continue;
 
     for (User *KU : J->users()) {
-      // If all bits of a user are demanded, then we know that nothing below
-      // that in the def-use chain needs to be changed.
-      auto *K = dyn_cast<Instruction>(KU);
-      if (K && Visited.insert(K).second && K->getType()->isIntOrIntVectorTy() &&
-          !DB.getDemandedBits(K).isAllOnes())
+      auto *K = cast<Instruction>(KU);
+      if (Visited.insert(K).second && K->getType()->isIntOrIntVectorTy())
         WorkList.push_back(K);
     }
   }

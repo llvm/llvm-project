@@ -5019,7 +5019,7 @@ TEST_F(FormatTest, DesignatedInitializers) {
                "             .b = 2,\n"
                "         },\n"
                "     }) {\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTest, BracedInitializerIndentWidth) {
@@ -9867,19 +9867,53 @@ TEST_F(FormatTest, AlignsStringLiterals) {
 
 TEST_F(FormatTest, ReturnTypeBreakingStyle) {
   FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 60;
+
   // No declarations or definitions should be moved to own line.
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
+  Style.BreakAfterReturnType = FormatStyle::RTBS_None;
   verifyFormat("class A {\n"
                "  int f() { return 1; }\n"
                "  int g();\n"
+               "  long\n"
+               "  foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int f() { return 1; }\n"
-               "int g();",
+               "int g();\n"
+               "int foooooooooooooooooooooooooooo::\n"
+               "    baaaaaaaaaaaaaaaaaaaaar();",
+               Style);
+
+  // It is now allowed to break after a short return type if necessary.
+  Style.BreakAfterReturnType = FormatStyle::RTBS_Automatic;
+  verifyFormat("class A {\n"
+               "  int f() { return 1; }\n"
+               "  int g();\n"
+               "  long\n"
+               "  foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaar();\n"
+               "};\n"
+               "int f() { return 1; }\n"
+               "int g();\n"
+               "int\n"
+               "foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();",
+               Style);
+
+  // It now must never break after a short return type.
+  Style.BreakAfterReturnType = FormatStyle::RTBS_ExceptShortType;
+  verifyFormat("class A {\n"
+               "  int f() { return 1; }\n"
+               "  int g();\n"
+               "  long foooooooooooooooooooooooooooo::\n"
+               "      baaaaaaaaaaaaaaaaaaaar();\n"
+               "};\n"
+               "int f() { return 1; }\n"
+               "int g();\n"
+               "int foooooooooooooooooooooooooooo::\n"
+               "    baaaaaaaaaaaaaaaaaaaaar();",
                Style);
 
   // All declarations and definitions should have the return type moved to its
   // own line.
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_All;
+  Style.BreakAfterReturnType = FormatStyle::RTBS_All;
   Style.TypenameMacros = {"LIST"};
   verifyFormat("SomeType\n"
                "funcdecl(LIST(uint64_t));",
@@ -9891,18 +9925,22 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "  }\n"
                "  int\n"
                "  g();\n"
+               "  long\n"
+               "  foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int\n"
                "f() {\n"
                "  return 1;\n"
                "}\n"
                "int\n"
-               "g();",
+               "g();\n"
+               "int\n"
+               "foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();",
                Style);
 
   // Top-level definitions, and no kinds of declarations should have the
   // return type moved to its own line.
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_TopLevelDefinitions;
+  Style.BreakAfterReturnType = FormatStyle::RTBS_TopLevelDefinitions;
   verifyFormat("class B {\n"
                "  int f() { return 1; }\n"
                "  int g();\n"
@@ -9916,7 +9954,7 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
 
   // Top-level definitions and declarations should have the return type moved
   // to its own line.
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_TopLevel;
+  Style.BreakAfterReturnType = FormatStyle::RTBS_TopLevel;
   verifyFormat("class C {\n"
                "  int f() { return 1; }\n"
                "  int g();\n"
@@ -9926,12 +9964,14 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "  return 1;\n"
                "}\n"
                "int\n"
-               "g();",
+               "g();\n"
+               "int\n"
+               "foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();",
                Style);
 
   // All definitions should have the return type moved to its own line, but no
   // kinds of declarations.
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
+  Style.BreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
   verifyFormat("class D {\n"
                "  int\n"
                "  f() {\n"
@@ -10598,7 +10638,7 @@ TEST_F(FormatTest, WrapsTemplateDeclarations) {
                "    const typename aaaaaaaaaaaaaaaa aaaaaaaaaaaaaaaaaaa);");
 
   FormatStyle AlwaysBreak = getLLVMStyle();
-  AlwaysBreak.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
+  AlwaysBreak.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   verifyFormat("template <typename T>\nclass C {};", AlwaysBreak);
   verifyFormat("template <typename T>\nvoid f();", AlwaysBreak);
   verifyFormat("template <typename T>\nvoid f() {}", AlwaysBreak);
@@ -10627,7 +10667,7 @@ TEST_F(FormatTest, WrapsTemplateDeclarations) {
                "};");
 
   FormatStyle NeverBreak = getLLVMStyle();
-  NeverBreak.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_No;
+  NeverBreak.BreakTemplateDeclarations = FormatStyle::BTDS_No;
   verifyFormat("template <typename T> class C {};", NeverBreak);
   verifyFormat("template <typename T> void f();", NeverBreak);
   verifyFormat("template <typename T> void f() {}", NeverBreak);
@@ -10657,6 +10697,74 @@ TEST_F(FormatTest, WrapsTemplateDeclarations) {
   verifyFormat("template <typename T> void\nfoo(aaaaaaaaaaaaaaaaaaaaaaaaaa "
                "bbbbbbbbbbbbbbbbbbbb) {}",
                NeverBreak);
+
+  auto Style = getLLVMStyle();
+  Style.BreakTemplateDeclarations = FormatStyle::BTDS_Leave;
+
+  verifyNoChange("template <typename T>\n"
+                 "class C {};",
+                 Style);
+  verifyFormat("template <typename T> class C {};", Style);
+
+  verifyNoChange("template <typename T>\n"
+                 "void f();",
+                 Style);
+  verifyFormat("template <typename T> void f();", Style);
+
+  verifyNoChange("template <typename T>\n"
+                 "void f() {}",
+                 Style);
+  verifyFormat("template <typename T> void f() {}", Style);
+
+  verifyNoChange("template <typename T>\n"
+                 "// T can be A, B or C.\n"
+                 "struct C {};",
+                 Style);
+  verifyFormat("template <typename T> // T can be A, B or C.\n"
+               "struct C {};",
+               Style);
+
+  verifyNoChange("template <typename T>\n"
+                 "C(T) noexcept;",
+                 Style);
+  verifyFormat("template <typename T> C(T) noexcept;", Style);
+
+  verifyNoChange("template <enum E>\n"
+                 "class A {\n"
+                 "public:\n"
+                 "  E *f();\n"
+                 "};",
+                 Style);
+  verifyFormat("template <enum E> class A {\n"
+               "public:\n"
+               "  E *f();\n"
+               "};",
+               Style);
+
+  verifyNoChange("template <auto x>\n"
+                 "constexpr int simple(int) {\n"
+                 "  char c;\n"
+                 "  return 1;\n"
+                 "}",
+                 Style);
+  verifyFormat("template <auto x> constexpr int simple(int) {\n"
+               "  char c;\n"
+               "  return 1;\n"
+               "}",
+               Style);
+
+  Style.RequiresClausePosition = FormatStyle::RCPS_WithPreceding;
+  verifyNoChange("template <auto x>\n"
+                 "requires(x > 1)\n"
+                 "constexpr int with_req(int) {\n"
+                 "  return 1;\n"
+                 "}",
+                 Style);
+  verifyFormat("template <auto x> requires(x > 1)\n"
+               "constexpr int with_req(int) {\n"
+               "  return 1;\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, WrapsTemplateDeclarationsWithComments) {
@@ -11189,7 +11297,7 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("SomeType MemberFunction( const Deleted & ) &;", Spaces);
 
   FormatStyle BreakTemplate = getLLVMStyle();
-  BreakTemplate.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
+  BreakTemplate.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
@@ -11222,8 +11330,7 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
                BreakTemplate);
 
   FormatStyle AlignLeftBreakTemplate = getLLVMStyle();
-  AlignLeftBreakTemplate.AlwaysBreakTemplateDeclarations =
-      FormatStyle::BTDS_Yes;
+  AlignLeftBreakTemplate.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   AlignLeftBreakTemplate.PointerAlignment = FormatStyle::PAS_Left;
 
   verifyFormat("struct f {\n"
@@ -11347,28 +11454,9 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
 
   FormatStyle AfterPlacementOperator = getLLVMStyle();
   AfterPlacementOperator.SpaceBeforeParens = FormatStyle::SBPO_Custom;
-  EXPECT_EQ(
-      AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator,
-      FormatStyle::SpaceBeforeParensCustom::APO_Leave);
+  EXPECT_TRUE(
+      AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator);
   verifyFormat("new (buf) int;", AfterPlacementOperator);
-  verifyFormat("new(buf) int;", AfterPlacementOperator);
-
-  AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator =
-      FormatStyle::SpaceBeforeParensCustom::APO_Never;
-  verifyFormat("struct A {\n"
-               "  int *a;\n"
-               "  A(int *p) : a(new(p) int) {\n"
-               "    new(p) int;\n"
-               "    int *b = new(p) int;\n"
-               "    int *c = new(p) int(3);\n"
-               "    delete(b);\n"
-               "  }\n"
-               "};",
-               AfterPlacementOperator);
-  verifyFormat("void operator new(void *foo) ATTRIB;", AfterPlacementOperator);
-
-  AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator =
-      FormatStyle::SpaceBeforeParensCustom::APO_Always;
   verifyFormat("struct A {\n"
                "  int *a;\n"
                "  A(int *p) : a(new (p) int) {\n"
@@ -11376,6 +11464,21 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "    int *b = new (p) int;\n"
                "    int *c = new (p) int(3);\n"
                "    delete (b);\n"
+               "  }\n"
+               "};",
+               AfterPlacementOperator);
+  verifyFormat("void operator new(void *foo) ATTRIB;", AfterPlacementOperator);
+
+  AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator =
+      false;
+  verifyFormat("new(buf) int;", AfterPlacementOperator);
+  verifyFormat("struct A {\n"
+               "  int *a;\n"
+               "  A(int *p) : a(new(p) int) {\n"
+               "    new(p) int;\n"
+               "    int *b = new(p) int;\n"
+               "    int *c = new(p) int(3);\n"
+               "    delete(b);\n"
                "  }\n"
                "};",
                AfterPlacementOperator);
@@ -11836,7 +11939,7 @@ TEST_F(FormatTest, UnderstandsAttributes) {
                "aaaaaaaaaaaaaaaaaaaaaaa(int i);");
   verifyFormat("__attribute__((nodebug)) ::qualified_type f();");
   FormatStyle AfterType = getLLVMStyle();
-  AfterType.AlwaysBreakAfterReturnType = FormatStyle::RTBS_All;
+  AfterType.BreakAfterReturnType = FormatStyle::RTBS_All;
   verifyFormat("__attribute__((nodebug)) void\n"
                "foo() {}",
                AfterType);
@@ -13400,6 +13503,12 @@ TEST_F(FormatTest, IncorrectCodeUnbalancedBraces) {
   verifyFormat("{");
   verifyFormat("#})");
   verifyNoCrash("(/**/[:!] ?[).");
+  verifyNoCrash("struct X {\n"
+                "  operator iunt(\n"
+                "};");
+  verifyNoCrash("struct Foo {\n"
+                "  operator foo(bar\n"
+                "};");
 }
 
 TEST_F(FormatTest, IncorrectUnbalancedBracesInMacrosWithUnicode) {
@@ -16388,6 +16497,10 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("T A::operator()();", NoSpace);
   verifyFormat("X A::operator++(T);", NoSpace);
   verifyFormat("auto lambda = []() { return 0; };", NoSpace);
+  verifyFormat("#if (foo || bar) && baz\n"
+               "#elif ((a || b) && c) || d\n"
+               "#endif",
+               NoSpace);
 
   FormatStyle Space = getLLVMStyle();
   Space.SpaceBeforeParens = FormatStyle::SBPO_Always;
@@ -21556,7 +21669,7 @@ TEST_F(FormatTest, BreakPenaltyAfterCastLParen) {
                "    int)aaaaaaaaaaaaaaaaaaaaaaaa);",
 
                Style);
-  Style.PenaltyBreakOpenParenthesis = 100000;
+  Style.PenaltyBreakOpenParenthesis = 100'000;
   verifyFormat("foo((int)\n"
                "        aaaaaaaaaaaaaaaaaaaaaaaa);",
                "foo((\n"
@@ -22786,6 +22899,19 @@ TEST_F(FormatTest, FormatsLambdas) {
                LLVMWithBeforeLambdaBody);
   verifyFormat("FctWithTwoParams_SLS_All([]() { return 43; }, 87);",
                LLVMWithBeforeLambdaBody);
+  verifyFormat(
+      "FctWithTwoParams_SLS_All(\n"
+      "    87, []() { return LongLineThatWillForceBothParamsToNewLine(); });",
+      LLVMWithBeforeLambdaBody);
+  verifyFormat(
+      "FctWithTwoParams_SLS_All(\n"
+      "    87,\n"
+      "    []()\n"
+      "    {\n"
+      "      return "
+      "LongLineThatWillForceTheLambdaBodyToBeBrokenIntoMultipleLines();\n"
+      "    });",
+      LLVMWithBeforeLambdaBody);
   verifyFormat("FctWithOneNestedLambdas_SLS_All([]() { return 17; });",
                LLVMWithBeforeLambdaBody);
   verifyFormat(
@@ -24110,6 +24236,15 @@ TEST_F(FormatTest, C11Generic) {
                "    float _Complex: fc,\n"
                "    double _Complex: dc,\n"
                "    long double _Complex: ldc)");
+
+  verifyFormat("while (_Generic(x, //\n"
+               "           long: x)(x) > x) {\n"
+               "}");
+  verifyFormat("while (_Generic(x, //\n"
+               "           long: x)(x)) {\n"
+               "}");
+  verifyFormat("x(_Generic(x, //\n"
+               "      long: x)(x));");
 
   FormatStyle Style = getLLVMStyle();
   Style.ColumnLimit = 40;
@@ -26591,13 +26726,20 @@ TEST_F(FormatTest, RemoveSemicolon) {
 
   verifyIncompleteFormat("class C final [[deprecated(l]] {});", Style);
 
-  // These tests are here to show a problem that may not be easily
-  // solved, our implementation to remove semicolons is only as good
-  // as our FunctionLBrace detection and this fails for empty braces
-  // because we can't distringuish this from a bracelist.
-  // We will enable when that is resolved.
-#if 0
   verifyFormat("void main() {}", "void main() {};", Style);
+
+  verifyFormat("struct Foo {\n"
+               "  Foo() {}\n"
+               "  ~Foo() {}\n"
+               "};",
+               "struct Foo {\n"
+               "  Foo() {};\n"
+               "  ~Foo() {};\n"
+               "};",
+               Style);
+
+// We can't (and probably shouldn't) support the following.
+#if 0
   verifyFormat("void foo() {} //\n"
                "int bar;",
                "void foo() {}; //\n"
@@ -26860,6 +27002,7 @@ TEST_F(FormatTest, RemoveParentheses) {
   EXPECT_EQ(Style.RemoveParentheses, FormatStyle::RPS_Leave);
 
   Style.RemoveParentheses = FormatStyle::RPS_MultipleParentheses;
+  verifyFormat("#define Foo(...) foo((__VA_ARGS__))", Style);
   verifyFormat("int x __attribute__((aligned(16))) = 0;", Style);
   verifyFormat("decltype((foo->bar)) baz;", Style);
   verifyFormat("class __declspec(dllimport) X {};",
@@ -26894,6 +27037,7 @@ TEST_F(FormatTest, RemoveParentheses) {
   verifyFormat("return (({ 0; }));", "return ((({ 0; })));", Style);
 
   Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
+  verifyFormat("#define Return0 return (0);", Style);
   verifyFormat("return 0;", "return (0);", Style);
   verifyFormat("co_return 0;", "co_return ((0));", Style);
   verifyFormat("return 0;", "return (((0)));", Style);

@@ -63,5 +63,6 @@ static_library("readability") {
     "UniqueptrDeleteReleaseCheck.cpp",
     "UppercaseLiteralSuffixCheck.cpp",
     "UseAnyOfAllOfCheck.cpp",
+    "UseStdMinMaxCheck.cpp",
   ]
 }

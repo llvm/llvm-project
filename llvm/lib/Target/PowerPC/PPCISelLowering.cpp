@@ -1774,9 +1774,11 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::ADDIS_TLSGD_HA:  return "PPCISD::ADDIS_TLSGD_HA";
   case PPCISD::ADDI_TLSGD_L:    return "PPCISD::ADDI_TLSGD_L";
   case PPCISD::GET_TLS_ADDR:    return "PPCISD::GET_TLS_ADDR";
+  case PPCISD::GET_TLS_MOD_AIX: return "PPCISD::GET_TLS_MOD_AIX";
   case PPCISD::GET_TPOINTER:    return "PPCISD::GET_TPOINTER";
   case PPCISD::ADDI_TLSGD_L_ADDR: return "PPCISD::ADDI_TLSGD_L_ADDR";
   case PPCISD::TLSGD_AIX:       return "PPCISD::TLSGD_AIX";
+  case PPCISD::TLSLD_AIX:       return "PPCISD::TLSLD_AIX";
   case PPCISD::ADDIS_TLSLD_HA:  return "PPCISD::ADDIS_TLSLD_HA";
   case PPCISD::ADDI_TLSLD_L:    return "PPCISD::ADDI_TLSLD_L";
   case PPCISD::GET_TLSLD_ADDR:  return "PPCISD::GET_TLSLD_ADDR";
@@ -3415,13 +3417,36 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
     return DAG.getNode(PPCISD::ADD_TLS, dl, PtrVT, TLSReg, VariableOffset);
   }
 
-  // Only Local-Exec, Initial-Exec and General-Dynamic TLS models are currently
-  // supported models. If Local- or Initial-exec are not possible or specified,
-  // all GlobalTLSAddress nodes are lowered using the general-dynamic model.
-  // We need to generate two TOC entries, one for the variable offset, one for
-  // the region handle. The global address for the TOC entry of the region
-  // handle is created with the MO_TLSGDM_FLAG flag and the global address
-  // for the TOC entry of the variable offset is created with MO_TLSGD_FLAG.
+  if (Model == TLSModel::LocalDynamic) {
+    // For local-dynamic on AIX, we need to generate one TOC entry for each
+    // variable offset, and a single module-handle TOC entry for the entire
+    // file.
+
+    SDValue VariableOffsetTGA =
+        DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TLSLD_FLAG);
+    SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
+
+    Module *M = DAG.getMachineFunction().getFunction().getParent();
+    GlobalVariable *TLSGV =
+        dyn_cast_or_null<GlobalVariable>(M->getOrInsertGlobal(
+            StringRef("_$TLSML"), PointerType::getUnqual(*DAG.getContext())));
+    TLSGV->setThreadLocalMode(GlobalVariable::LocalDynamicTLSModel);
+    assert(TLSGV && "Not able to create GV for _$TLSML.");
+    SDValue ModuleHandleTGA =
+        DAG.getTargetGlobalAddress(TLSGV, dl, PtrVT, 0, PPCII::MO_TLSLDM_FLAG);
+    SDValue ModuleHandleTOC = getTOCEntry(DAG, dl, ModuleHandleTGA);
+    SDValue ModuleHandle =
+        DAG.getNode(PPCISD::TLSLD_AIX, dl, PtrVT, ModuleHandleTOC);
+
+    return DAG.getNode(ISD::ADD, dl, PtrVT, ModuleHandle, VariableOffset);
+  }
+
+  // If Local- or Initial-exec or Local-dynamic is not possible or specified,
+  // all GlobalTLSAddress nodes are lowered using the general-dynamic model. We
+  // need to generate two TOC entries, one for the variable offset, one for the
+  // region handle. The global address for the TOC entry of the region handle is
+  // created with the MO_TLSGDM_FLAG flag and the global address for the TOC
+  // entry of the variable offset is created with MO_TLSGD_FLAG.
   SDValue VariableOffsetTGA =
       DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TLSGD_FLAG);
   SDValue RegionHandleTGA =
@@ -12661,6 +12686,44 @@ PPCTargetLowering::emitProbedAlloca(MachineInstr &MI,
   return TailMBB;
 }
 
+static bool IsSelectCC(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case PPC::SELECT_CC_I4:
+  case PPC::SELECT_CC_I8:
+  case PPC::SELECT_CC_F4:
+  case PPC::SELECT_CC_F8:
+  case PPC::SELECT_CC_F16:
+  case PPC::SELECT_CC_VRRC:
+  case PPC::SELECT_CC_VSFRC:
+  case PPC::SELECT_CC_VSSRC:
+  case PPC::SELECT_CC_VSRC:
+  case PPC::SELECT_CC_SPE4:
+  case PPC::SELECT_CC_SPE:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool IsSelect(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case PPC::SELECT_I4:
+  case PPC::SELECT_I8:
+  case PPC::SELECT_F4:
+  case PPC::SELECT_F8:
+  case PPC::SELECT_F16:
+  case PPC::SELECT_SPE:
+  case PPC::SELECT_SPE4:
+  case PPC::SELECT_VRRC:
+  case PPC::SELECT_VSFRC:
+  case PPC::SELECT_VSSRC:
+  case PPC::SELECT_VSRC:
+    return true;
+  default:
+    return false;
+  }
+}
+
 MachineBasicBlock *
 PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
@@ -12698,9 +12761,10 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   MachineFunction *F = BB->getParent();
   MachineRegisterInfo &MRI = F->getRegInfo();
 
-  if (MI.getOpcode() == PPC::SELECT_CC_I4 ||
-      MI.getOpcode() == PPC::SELECT_CC_I8 || MI.getOpcode() == PPC::SELECT_I4 ||
-      MI.getOpcode() == PPC::SELECT_I8) {
+  if (Subtarget.hasISEL() &&
+      (MI.getOpcode() == PPC::SELECT_CC_I4 ||
+       MI.getOpcode() == PPC::SELECT_CC_I8 ||
+       MI.getOpcode() == PPC::SELECT_I4 || MI.getOpcode() == PPC::SELECT_I8)) {
     SmallVector<MachineOperand, 2> Cond;
     if (MI.getOpcode() == PPC::SELECT_CC_I4 ||
         MI.getOpcode() == PPC::SELECT_CC_I8)
@@ -12712,24 +12776,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     DebugLoc dl = MI.getDebugLoc();
     TII->insertSelect(*BB, MI, dl, MI.getOperand(0).getReg(), Cond,
                       MI.getOperand(2).getReg(), MI.getOperand(3).getReg());
-  } else if (MI.getOpcode() == PPC::SELECT_CC_F4 ||
-             MI.getOpcode() == PPC::SELECT_CC_F8 ||
-             MI.getOpcode() == PPC::SELECT_CC_F16 ||
-             MI.getOpcode() == PPC::SELECT_CC_VRRC ||
-             MI.getOpcode() == PPC::SELECT_CC_VSFRC ||
-             MI.getOpcode() == PPC::SELECT_CC_VSSRC ||
-             MI.getOpcode() == PPC::SELECT_CC_VSRC ||
-             MI.getOpcode() == PPC::SELECT_CC_SPE4 ||
-             MI.getOpcode() == PPC::SELECT_CC_SPE ||
-             MI.getOpcode() == PPC::SELECT_F4 ||
-             MI.getOpcode() == PPC::SELECT_F8 ||
-             MI.getOpcode() == PPC::SELECT_F16 ||
-             MI.getOpcode() == PPC::SELECT_SPE ||
-             MI.getOpcode() == PPC::SELECT_SPE4 ||
-             MI.getOpcode() == PPC::SELECT_VRRC ||
-             MI.getOpcode() == PPC::SELECT_VSFRC ||
-             MI.getOpcode() == PPC::SELECT_VSSRC ||
-             MI.getOpcode() == PPC::SELECT_VSRC) {
+  } else if (IsSelectCC(MI) || IsSelect(MI)) {
     // The incoming instruction knows the destination vreg to set, the
     // condition code register to branch on, the true/false values to
     // select between, and a branch opcode to use.
@@ -12738,7 +12785,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     //  ...
     //   TrueVal = ...
     //   cmpTY ccX, r1, r2
-    //   bCC copy1MBB
+    //   bCC sinkMBB
     //   fallthrough --> copy0MBB
     MachineBasicBlock *thisMBB = BB;
     MachineBasicBlock *copy0MBB = F->CreateMachineBasicBlock(LLVM_BB);
@@ -12746,6 +12793,12 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     DebugLoc dl = MI.getDebugLoc();
     F->insert(It, copy0MBB);
     F->insert(It, sinkMBB);
+
+    // Set the call frame size on entry to the new basic blocks.
+    // See https://reviews.llvm.org/D156113.
+    unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
+    copy0MBB->setCallFrameSize(CallFrameSize);
+    sinkMBB->setCallFrameSize(CallFrameSize);
 
     // Transfer the remainder of BB and its successor edges to sinkMBB.
     sinkMBB->splice(sinkMBB->begin(), BB,
@@ -12756,15 +12809,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     BB->addSuccessor(copy0MBB);
     BB->addSuccessor(sinkMBB);
 
-    if (MI.getOpcode() == PPC::SELECT_I4 || MI.getOpcode() == PPC::SELECT_I8 ||
-        MI.getOpcode() == PPC::SELECT_F4 || MI.getOpcode() == PPC::SELECT_F8 ||
-        MI.getOpcode() == PPC::SELECT_F16 ||
-        MI.getOpcode() == PPC::SELECT_SPE4 ||
-        MI.getOpcode() == PPC::SELECT_SPE ||
-        MI.getOpcode() == PPC::SELECT_VRRC ||
-        MI.getOpcode() == PPC::SELECT_VSFRC ||
-        MI.getOpcode() == PPC::SELECT_VSSRC ||
-        MI.getOpcode() == PPC::SELECT_VSRC) {
+    if (IsSelect(MI)) {
       BuildMI(BB, dl, TII->get(PPC::BC))
           .addReg(MI.getOperand(1).getReg())
           .addMBB(sinkMBB);

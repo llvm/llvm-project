@@ -11,6 +11,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Utility/StreamString.h"
 
+#include <mutex>
 #include <optional>
 
 using namespace lldb;
@@ -22,8 +23,7 @@ Progress::Progress(std::string title, std::string details,
                    std::optional<uint64_t> total,
                    lldb_private::Debugger *debugger)
     : m_title(title), m_details(details), m_id(++g_id), m_completed(0),
-      m_total(1) {
-  assert(total == std::nullopt || total > 0);
+      m_total(Progress::kNonDeterministicTotal) {
   if (total)
     m_total = *total;
 
@@ -66,4 +66,36 @@ void Progress::ReportProgress() {
     Debugger::ReportProgress(m_id, m_title, m_details, m_completed, m_total,
                              m_debugger_id);
   }
+}
+
+ProgressManager::ProgressManager() : m_progress_category_map() {}
+
+ProgressManager::~ProgressManager() {}
+
+ProgressManager &ProgressManager::Instance() {
+  static std::once_flag g_once_flag;
+  static ProgressManager *g_progress_manager = nullptr;
+  std::call_once(g_once_flag, []() {
+    // NOTE: known leak to avoid global destructor chain issues.
+    g_progress_manager = new ProgressManager();
+  });
+  return *g_progress_manager;
+}
+
+void ProgressManager::Increment(std::string title) {
+  std::lock_guard<std::mutex> lock(m_progress_map_mutex);
+  m_progress_category_map[title]++;
+}
+
+void ProgressManager::Decrement(std::string title) {
+  std::lock_guard<std::mutex> lock(m_progress_map_mutex);
+  auto pos = m_progress_category_map.find(title);
+
+  if (pos == m_progress_category_map.end())
+    return;
+
+  if (pos->second <= 1)
+    m_progress_category_map.erase(title);
+  else
+    --pos->second;
 }

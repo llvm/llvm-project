@@ -54,4 +54,4 @@ far:
 // CHECK-NEXT: <far>:
 // CHECK-NEXT: 12345678:        bx      lr
 
-// CHECK-PI:  error: relocation R_ARM_THM_CALL to far not supported for Armv6-M targets for position independant and execute only code
+// CHECK-PI:  error: relocation R_ARM_THM_CALL to far not supported for Armv6-M targets for position independent and execute only code

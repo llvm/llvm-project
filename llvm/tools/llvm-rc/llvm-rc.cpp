@@ -710,7 +710,10 @@ void doCvtres(std::string Src, std::string Dest, std::string TargetTriple) {
     MachineType = COFF::IMAGE_FILE_MACHINE_ARMNT;
     break;
   case Triple::aarch64:
-    MachineType = COFF::IMAGE_FILE_MACHINE_ARM64;
+    if (T.isWindowsArm64EC())
+      MachineType = COFF::IMAGE_FILE_MACHINE_ARM64EC;
+    else
+      MachineType = COFF::IMAGE_FILE_MACHINE_ARM64;
     break;
   default:
     fatalError("Unsupported architecture in target '" + Twine(TargetTriple) +

@@ -1,3 +1,5 @@
+add_subdirectory(Transforms)
+
 set(LLVM_TARGET_DEFINITIONS ${LLVM_MAIN_INCLUDE_DIR}/llvm/Frontend/OpenACC/ACC.td)
 mlir_tablegen(AccCommon.td --gen-directive-decl --directives-dialect=OpenACC)
 add_public_tablegen_target(acc_common_td)

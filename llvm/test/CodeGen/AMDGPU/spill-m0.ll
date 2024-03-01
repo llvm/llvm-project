@@ -17,7 +17,7 @@
 ; TOVMEM: s_mov_b64 [[COPY_EXEC:s\[[0-9]+:[0-9]+\]]], exec
 ; TOVMEM: s_mov_b64 exec, 1
 ; TOVMEM: v_writelane_b32 [[SPILL_VREG:v[0-9]+]], [[M0_COPY]], 0
-; TOVMEM: buffer_store_dword [[SPILL_VREG]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:4 ; 4-byte Folded Spill
+; TOVMEM: buffer_store_dword [[SPILL_VREG]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 ; 4-byte Folded Spill
 ; TOVMEM: s_mov_b64 exec, [[COPY_EXEC]]
 
 ; GCN: s_cbranch_scc1 [[ENDIF:.LBB[0-9]+_[0-9]+]]
@@ -26,7 +26,7 @@
 ; TOVGPR: v_readlane_b32 [[M0_RESTORE:s[0-9]+]], [[SPILL_VREG]], [[M0_LANE]]
 ; TOVGPR: s_mov_b32 m0, [[M0_RESTORE]]
 
-; TOVMEM: buffer_load_dword [[RELOAD_VREG:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:4 ; 4-byte Folded Reload
+; TOVMEM: buffer_load_dword [[RELOAD_VREG:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 ; 4-byte Folded Reload
 ; TOVMEM: s_waitcnt vmcnt(0)
 ; TOVMEM: v_readlane_b32 [[M0_RESTORE:s[0-9]+]], [[RELOAD_VREG]], 0
 ; TOVMEM: s_mov_b32 m0, [[M0_RESTORE]]

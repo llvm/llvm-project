@@ -47,7 +47,7 @@ LIBC_INLINE float log(double x) {
     if (xbits.is_neg() && !xbits.is_nan()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
-      return fputil::FPBits<float>::build_quiet_nan().get_val();
+      return fputil::FPBits<float>::quiet_nan().get_val();
     }
     return static_cast<float>(x);
   }
@@ -64,7 +64,7 @@ LIBC_INLINE float log(double x) {
   FPBits f = xbits;
 
   // Clear the lowest 45 bits.
-  f.bits &= ~0x0000'1FFF'FFFF'FFFFULL;
+  f.set_uintval(f.uintval() & ~0x0000'1FFF'FFFF'FFFFULL);
 
   double d = xbits.get_val() - f.get_val();
   d *= ONE_OVER_F[f_index];

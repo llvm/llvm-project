@@ -1213,7 +1213,10 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24(IRBuilder<> &Builder,
                                                 BinaryOperator &I, Value *Num,
                                                 Value *Den, bool IsDiv,
                                                 bool IsSigned) const {
-  int DivBits = getDivNumBits(I, Num, Den, 9, IsSigned);
+  unsigned SSBits = Num->getType()->getScalarSizeInBits();
+  // If Num bits <= 24, assume 0 signbits.
+  unsigned AtLeast = (SSBits <= 24) ? 0 : (SSBits - 24 + IsSigned);
+  int DivBits = getDivNumBits(I, Num, Den, AtLeast, IsSigned);
   if (DivBits == -1)
     return nullptr;
   return expandDivRem24Impl(Builder, I, Num, Den, DivBits, IsDiv, IsSigned);
@@ -1385,13 +1388,13 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
   Type *I32Ty = Builder.getInt32Ty();
   Type *F32Ty = Builder.getFloatTy();
 
-  if (Ty->getScalarSizeInBits() < 32) {
+  if (Ty->getScalarSizeInBits() != 32) {
     if (IsSigned) {
-      X = Builder.CreateSExt(X, I32Ty);
-      Y = Builder.CreateSExt(Y, I32Ty);
+      X = Builder.CreateSExtOrTrunc(X, I32Ty);
+      Y = Builder.CreateSExtOrTrunc(Y, I32Ty);
     } else {
-      X = Builder.CreateZExt(X, I32Ty);
-      Y = Builder.CreateZExt(Y, I32Ty);
+      X = Builder.CreateZExtOrTrunc(X, I32Ty);
+      Y = Builder.CreateZExtOrTrunc(Y, I32Ty);
     }
   }
 
@@ -1482,10 +1485,10 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
   if (IsSigned) {
     Res = Builder.CreateXor(Res, Sign);
     Res = Builder.CreateSub(Res, Sign);
+    Res = Builder.CreateSExtOrTrunc(Res, Ty);
+  } else {
+    Res = Builder.CreateZExtOrTrunc(Res, Ty);
   }
-
-  Res = Builder.CreateTrunc(Res, Ty);
-
   return Res;
 }
 
@@ -2095,7 +2098,8 @@ bool AMDGPUCodeGenPrepareImpl::visitMinNum(IntrinsicInst &I) {
 
   // Match pattern for fract intrinsic in contexts where the nan check has been
   // optimized out (and hope the knowledge the source can't be nan wasn't lost).
-  if (!I.hasNoNaNs() && !isKnownNeverNaN(FractArg, *DL, TLInfo))
+  if (!I.hasNoNaNs() &&
+      !isKnownNeverNaN(FractArg, /*Depth=*/0, SimplifyQuery(*DL, TLInfo)))
     return false;
 
   IRBuilder<> Builder(&I);

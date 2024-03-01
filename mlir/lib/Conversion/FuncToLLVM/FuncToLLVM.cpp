@@ -135,7 +135,7 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   propagateArgResAttrs(rewriter, !!resultStructType, funcOp, wrapperFuncOp);
 
   OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPointToStart(wrapperFuncOp.addEntryBlock());
+  rewriter.setInsertionPointToStart(wrapperFuncOp.addEntryBlock(rewriter));
 
   SmallVector<Value, 8> args;
   size_t argOffset = resultStructType ? 1 : 0;
@@ -203,7 +203,7 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
 
   // The wrapper that we synthetize here should only be visible in this module.
   newFuncOp.setLinkage(LLVM::Linkage::Private);
-  builder.setInsertionPointToStart(newFuncOp.addEntryBlock());
+  builder.setInsertionPointToStart(newFuncOp.addEntryBlock(builder));
 
   // Get a ValueRange containing arguments.
   FunctionType type = cast<FunctionType>(funcOp.getFunctionType());

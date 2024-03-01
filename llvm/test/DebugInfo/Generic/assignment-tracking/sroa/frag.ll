@@ -34,9 +34,9 @@ entry:
   call void @llvm.dbg.assign(metadata i1 undef, metadata !11, metadata !DIExpression(), metadata !22, metadata ptr %a, metadata !DIExpression()), !dbg !23
   %ref.tmp = alloca %class.c, align 4
   %0 = bitcast ptr %a to ptr, !dbg !24
-  call void @llvm.lifetime.start.p0i8(i64 48, ptr %0) #4, !dbg !24
+  call void @llvm.lifetime.start.p0(i64 48, ptr %0) #4, !dbg !24
   %1 = bitcast ptr %ref.tmp to ptr, !dbg !25
-  call void @llvm.lifetime.start.p0i8(i64 16, ptr %1) #4, !dbg !25
+  call void @llvm.lifetime.start.p0(i64 16, ptr %1) #4, !dbg !25
   %call = call { <2 x float>, <2 x float> } @_Z3fn1v(), !dbg !25
   %coerce.dive = getelementptr inbounds %class.c, ptr %ref.tmp, i32 0, i32 0, !dbg !25
   %2 = bitcast ptr %coerce.dive to ptr, !dbg !25
@@ -49,17 +49,17 @@ entry:
   %arrayidx = getelementptr inbounds [3 x %class.c], ptr %a, i64 0, i64 2, !dbg !26
   %7 = bitcast ptr %arrayidx to ptr, !dbg !27
   %8 = bitcast ptr %ref.tmp to ptr, !dbg !27
-  call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 16 %7, ptr align 4 %8, i64 16, i1 false), !dbg !27, !DIAssignID !32
+  call void @llvm.memcpy.p0.p0.i64(ptr align 16 %7, ptr align 4 %8, i64 16, i1 false), !dbg !27, !DIAssignID !32
   call void @llvm.dbg.assign(metadata i1 undef, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 256, 128), metadata !32, metadata ptr %7, metadata !DIExpression()), !dbg !23
   %9 = bitcast ptr %ref.tmp to ptr, !dbg !26
-  call void @llvm.lifetime.end.p0i8(i64 16, ptr %9) #4, !dbg !26
+  call void @llvm.lifetime.end.p0(i64 16, ptr %9) #4, !dbg !26
   %10 = bitcast ptr %a to ptr, !dbg !33
-  call void @llvm.lifetime.end.p0i8(i64 48, ptr %10) #4, !dbg !33
+  call void @llvm.lifetime.end.p0(i64 48, ptr %10) #4, !dbg !33
   ret void, !dbg !33
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
@@ -67,10 +67,10 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 declare !dbg !34 dso_local { <2 x float>, <2 x float> } @_Z3fn1v() #3
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #2

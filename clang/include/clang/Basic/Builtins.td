@@ -688,6 +688,12 @@ def Popcount : Builtin, BitInt_Long_LongLongTemplate {
   let Prototype = "int(unsigned T)";
 }
 
+def Popcountg : Builtin {
+  let Spellings = ["__builtin_popcountg"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "int(...)";
+}
+
 def Clrsb : Builtin, BitInt_Long_LongLongTemplate {
   let Spellings = ["__builtin_clrsb"];
   let Attributes = [NoThrow, Const, Constexpr];
@@ -1065,7 +1071,7 @@ def FPrintfChk : Builtin {
 def PrintfChk : Builtin {
   let Spellings = ["__builtin___printf_chk"];
   let Attributes = [FunctionWithBuiltinPrefix, PrintfFormat<1>];
-  let Prototype = "int(int, int, char const* restrict, ...)";
+  let Prototype = "int(int, char const* restrict, ...)";
 }
 
 def VFPrintfChk : Builtin {
@@ -1106,6 +1112,12 @@ def Prefetch : Builtin {
 
 def ReadCycleCounter : Builtin {
   let Spellings = ["__builtin_readcyclecounter"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned long long int()";
+}
+
+def ReadSteadyCounter : Builtin {
+  let Spellings = ["__builtin_readsteadycounter"];
   let Attributes = [NoThrow];
   let Prototype = "unsigned long long int()";
 }
@@ -4061,14 +4073,14 @@ class MPATemplate : Template<
 
 def Addc : Builtin, MPATemplate {
   let Spellings = ["__builtin_addc"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   // FIXME: Why are these argumentes marked const?
   let Prototype = "T(T const, T const, T const, T*)";
 }
 
 def Subc : Builtin, MPATemplate {
   let Spellings = ["__builtin_subc"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   // FIXME: Why are these argumentes marked const?
   let Prototype = "T(T const, T const, T const, T*)";
 }
@@ -4516,6 +4528,24 @@ def HLSLCreateHandle : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_create_handle"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void*(unsigned char)";
+}
+
+def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_dot"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_frac"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLLerp : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_lerp"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
 }
 
 // Builtins for XRay.

@@ -23,10 +23,10 @@ inner.header.preheader:                           ; preds = %outer.header, %oute
 
 inner.header:                                     ; preds = %inner.header.preheader, %inner.header
   %inner.iv = phi i64 [ %inner.iv.next, %inner.header ], [ 5, %inner.header.preheader ]
-  %ptr = getelementptr inbounds [1000 x [1000 x i32]], [1000 x [1000 x i32]]* @global, i64 0, i64 %inner.iv, i64 %outer.iv
-  %lv = load i32, i32* %ptr, align 4
+  %ptr = getelementptr inbounds [1000 x [1000 x i32]], ptr @global, i64 0, i64 %inner.iv, i64 %outer.iv
+  %lv = load i32, ptr %ptr, align 4
   %v = mul i32 %lv, 100
-  store i32 %v, i32* %ptr, align 4
+  store i32 %v, ptr %ptr, align 4
   %inner.iv.next = add nsw i64 %inner.iv, 1
   %cond1 = icmp eq i64 %inner.iv.next, 1000
   br i1 %cond1, label %outer.latch, label %inner.header

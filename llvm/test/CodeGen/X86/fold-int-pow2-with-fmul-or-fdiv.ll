@@ -884,7 +884,7 @@ define <2 x float> @fmul_pow_shl_cnt_vec_fail_expensive_cast(<2 x i64> %cnt) nou
 ;
 ; CHECK-AVX2-LABEL: fmul_pow_shl_cnt_vec_fail_expensive_cast:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,2]
+; CHECK-AVX2-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [2,2]
 ; CHECK-AVX2-NEXT:    vpsllvq %xmm0, %xmm1, %xmm0
 ; CHECK-AVX2-NEXT:    vpsrlq $1, %xmm0, %xmm1
 ; CHECK-AVX2-NEXT:    vblendvpd %xmm0, %xmm1, %xmm0, %xmm1
@@ -904,7 +904,7 @@ define <2 x float> @fmul_pow_shl_cnt_vec_fail_expensive_cast(<2 x i64> %cnt) nou
 ;
 ; CHECK-NO-FASTFMA-LABEL: fmul_pow_shl_cnt_vec_fail_expensive_cast:
 ; CHECK-NO-FASTFMA:       # %bb.0:
-; CHECK-NO-FASTFMA-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,2]
+; CHECK-NO-FASTFMA-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [2,2]
 ; CHECK-NO-FASTFMA-NEXT:    vpsllvq %xmm0, %xmm1, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    vpextrq $1, %xmm0, %rax
 ; CHECK-NO-FASTFMA-NEXT:    vcvtusi2ss %rax, %xmm2, %xmm1
@@ -1070,8 +1070,7 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    subq $56, %rsp
 ; CHECK-AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; CHECK-AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [2,2,0,0,2,2,0,0]
-; CHECK-AVX2-NEXT:    # ymm1 = mem[0,1,0,1]
+; CHECK-AVX2-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [2,2,0,0,0,0,0,0]
 ; CHECK-AVX2-NEXT:    vpsllvd %ymm0, %ymm1, %ymm0
 ; CHECK-AVX2-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-AVX2-NEXT:    vpextrw $2, %xmm0, %eax
@@ -1101,8 +1100,7 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ; CHECK-NO-FASTFMA-LABEL: fmul_pow_shl_cnt_vec_fail_to_large:
 ; CHECK-NO-FASTFMA:       # %bb.0:
 ; CHECK-NO-FASTFMA-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; CHECK-NO-FASTFMA-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [2,2,0,0,2,2,0,0]
-; CHECK-NO-FASTFMA-NEXT:    # ymm1 = mem[0,1,0,1]
+; CHECK-NO-FASTFMA-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [2,2,0,0,0,0,0,0]
 ; CHECK-NO-FASTFMA-NEXT:    vpsllvd %ymm0, %ymm1, %ymm0
 ; CHECK-NO-FASTFMA-NEXT:    vpmovdw %zmm0, %ymm0
 ; CHECK-NO-FASTFMA-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
@@ -1370,49 +1368,21 @@ define float @fdiv_pow_shl_cnt_fail_neg_int(i64 %cnt) nounwind {
 define float @fdiv_pow_shl_cnt(i64 %cnt_in) nounwind {
 ; CHECK-SSE-LABEL: fdiv_pow_shl_cnt:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    movq %rdi, %rcx
-; CHECK-SSE-NEXT:    andb $31, %cl
-; CHECK-SSE-NEXT:    movl $8, %eax
-; CHECK-SSE-NEXT:    # kill: def $cl killed $cl killed $rcx
-; CHECK-SSE-NEXT:    shlq %cl, %rax
-; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm1
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = [-5.0E-1,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-SSE-NEXT:    divss %xmm1, %xmm0
+; CHECK-SSE-NEXT:    andl $31, %edi
+; CHECK-SSE-NEXT:    shll $23, %edi
+; CHECK-SSE-NEXT:    movl $-1115684864, %eax # imm = 0xBD800000
+; CHECK-SSE-NEXT:    subl %edi, %eax
+; CHECK-SSE-NEXT:    movd %eax, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: fdiv_pow_shl_cnt:
-; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    movq %rdi, %rcx
-; CHECK-AVX2-NEXT:    andb $31, %cl
-; CHECK-AVX2-NEXT:    movl $8, %eax
-; CHECK-AVX2-NEXT:    # kill: def $cl killed $cl killed $rcx
-; CHECK-AVX2-NEXT:    shlq %cl, %rax
-; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [-5.0E-1,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-AVX2-NEXT:    vdivss %xmm0, %xmm1, %xmm0
-; CHECK-AVX2-NEXT:    retq
-;
-; CHECK-NO-FASTFMA-LABEL: fdiv_pow_shl_cnt:
-; CHECK-NO-FASTFMA:       # %bb.0:
-; CHECK-NO-FASTFMA-NEXT:    movq %rdi, %rcx
-; CHECK-NO-FASTFMA-NEXT:    andb $31, %cl
-; CHECK-NO-FASTFMA-NEXT:    movl $8, %eax
-; CHECK-NO-FASTFMA-NEXT:    # kill: def $cl killed $cl killed $rcx
-; CHECK-NO-FASTFMA-NEXT:    shlq %cl, %rax
-; CHECK-NO-FASTFMA-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vmovss {{.*#+}} xmm1 = [-5.0E-1,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NO-FASTFMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    retq
-;
-; CHECK-FMA-LABEL: fdiv_pow_shl_cnt:
-; CHECK-FMA:       # %bb.0:
-; CHECK-FMA-NEXT:    andb $31, %dil
-; CHECK-FMA-NEXT:    movl $8, %eax
-; CHECK-FMA-NEXT:    shlxq %rdi, %rax, %rax
-; CHECK-FMA-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
-; CHECK-FMA-NEXT:    vmovss {{.*#+}} xmm1 = [-5.0E-1,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-FMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
-; CHECK-FMA-NEXT:    retq
+; CHECK-AVX-LABEL: fdiv_pow_shl_cnt:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    andl $31, %edi
+; CHECK-AVX-NEXT:    shll $23, %edi
+; CHECK-AVX-NEXT:    movl $-1115684864, %eax # imm = 0xBD800000
+; CHECK-AVX-NEXT:    subl %edi, %eax
+; CHECK-AVX-NEXT:    vmovd %eax, %xmm0
+; CHECK-AVX-NEXT:    retq
   %cnt = and i64 %cnt_in, 31
   %shl = shl i64 8, %cnt
   %conv = sitofp i64 %shl to float
@@ -1462,7 +1432,6 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bounds(i32 %cnt) nounwind {
 ; CHECK-NO-FASTFMA-NEXT:    shll %cl, %eax
 ; CHECK-NO-FASTFMA-NEXT:    vcvtusi2ss %eax, %xmm0, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; CHECK-NO-FASTFMA-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    vmovss {{.*#+}} xmm1 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NO-FASTFMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
@@ -1477,7 +1446,6 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bounds(i32 %cnt) nounwind {
 ; CHECK-FMA-NEXT:    shlxl %edi, %eax, %eax
 ; CHECK-FMA-NEXT:    vcvtusi2ss %eax, %xmm0, %xmm0
 ; CHECK-FMA-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-FMA-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; CHECK-FMA-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; CHECK-FMA-NEXT:    vmovss {{.*#+}} xmm1 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-FMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
@@ -1580,7 +1548,6 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bound2(i16 %cnt) nounwind {
 ; CHECK-NO-FASTFMA-NEXT:    movzwl %ax, %eax
 ; CHECK-NO-FASTFMA-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; CHECK-NO-FASTFMA-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    vmovss {{.*#+}} xmm1 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NO-FASTFMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
@@ -1596,7 +1563,6 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bound2(i16 %cnt) nounwind {
 ; CHECK-FMA-NEXT:    movzwl %ax, %eax
 ; CHECK-FMA-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; CHECK-FMA-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-FMA-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; CHECK-FMA-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; CHECK-FMA-NEXT:    vmovss {{.*#+}} xmm1 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-FMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0

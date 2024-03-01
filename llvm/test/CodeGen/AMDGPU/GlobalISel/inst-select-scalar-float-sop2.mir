@@ -212,7 +212,6 @@ body:             |
 
     ; GFX1150-LABEL: name: fmax_f16
     ; GFX1150: liveins: $sgpr0, $sgpr1
-    ; GFX1150-NEXT: {{  $}}
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0(s32)
     %2:sgpr(s32) = COPY $sgpr1

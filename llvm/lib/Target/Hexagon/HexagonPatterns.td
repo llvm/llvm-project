@@ -525,11 +525,11 @@ def Vsplatpi: OutPatFrag<(ops node:$V),
                          (Combinew (A2_tfrsi $V), (A2_tfrsi $V))>;
 
 def: Pat<(v2i16 (azext V2I1:$Pu)),
-         (A2_andir (LoReg (C2_mask V2I1:$Pu)), (i32 0x00010001))>;
+         (A2_andir (S2_vtrunehb (C2_mask V2I1:$Pu)), (i32 0x00010001))>;
 def: Pat<(v2i32 (azext V2I1:$Pu)),
          (A2_andp (C2_mask V2I1:$Pu), (A2_combineii (i32 1), (i32 1)))>;
 def: Pat<(v4i8 (azext V4I1:$Pu)),
-         (A2_andir (LoReg (C2_mask V4I1:$Pu)), (i32 0x01010101))>;
+         (A2_andir (S2_vtrunehb (C2_mask V4I1:$Pu)), (i32 0x01010101))>;
 def: Pat<(v4i16 (azext V4I1:$Pu)),
          (A2_andp (C2_mask V4I1:$Pu), (Vsplatpi (i32 0x00010001)))>;
 def: Pat<(v8i8 (azext V8I1:$Pu)),

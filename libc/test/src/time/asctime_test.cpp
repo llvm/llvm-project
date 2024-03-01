@@ -22,7 +22,7 @@ static inline char *call_asctime(struct tm *tm_data, int year, int month,
 TEST(LlvmLibcAsctime, Nullptr) {
   char *result;
   result = LIBC_NAMESPACE::asctime(nullptr);
-  ASSERT_EQ(EINVAL, libc_errno);
+  ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 }
 
@@ -40,7 +40,7 @@ TEST(LlvmLibcAsctime, InvalidWday) {
                0,    // sec
                -1,   // wday
                0);   // yday
-  ASSERT_EQ(EINVAL, libc_errno);
+  ASSERT_ERRNO_EQ(EINVAL);
 
   // Test with wday = 7.
   call_asctime(&tm_data,
@@ -52,7 +52,7 @@ TEST(LlvmLibcAsctime, InvalidWday) {
                0,    // sec
                7,    // wday
                0);   // yday
-  ASSERT_EQ(EINVAL, libc_errno);
+  ASSERT_ERRNO_EQ(EINVAL);
 }
 
 // Months are from January to December. Test passing invalid value in month.
@@ -69,7 +69,7 @@ TEST(LlvmLibcAsctime, InvalidMonth) {
                0,    // sec
                4,    // wday
                0);   // yday
-  ASSERT_EQ(EINVAL, libc_errno);
+  ASSERT_ERRNO_EQ(EINVAL);
 
   // Test with month = 13.
   call_asctime(&tm_data,
@@ -81,7 +81,7 @@ TEST(LlvmLibcAsctime, InvalidMonth) {
                0,    // sec
                4,    // wday
                0);   // yday
-  ASSERT_EQ(EINVAL, libc_errno);
+  ASSERT_ERRNO_EQ(EINVAL);
 }
 
 TEST(LlvmLibcAsctime, ValidWeekdays) {
@@ -209,6 +209,6 @@ TEST(LlvmLibcAsctime, Max64BitYear) {
                         50,         // sec
                         2,          // wday
                         50);        // yday
-  ASSERT_EQ(EOVERFLOW, libc_errno);
+  ASSERT_ERRNO_EQ(EOVERFLOW);
   ASSERT_STREQ(nullptr, result);
 }

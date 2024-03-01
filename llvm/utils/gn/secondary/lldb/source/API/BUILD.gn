@@ -86,6 +86,7 @@ target(liblldb_type, "liblldb") {
     "SBScriptObject.cpp",
     "SBSection.cpp",
     "SBSourceManager.cpp",
+    "SBStatisticsOptions.cpp",
     "SBStream.cpp",
     "SBStringList.cpp",
     "SBStructuredData.cpp",

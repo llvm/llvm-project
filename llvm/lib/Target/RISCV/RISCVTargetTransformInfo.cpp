@@ -432,6 +432,26 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // must be implemented here.
     break;
   case TTI::SK_ExtractSubvector:
+    // Extract at zero is always a subregister extract
+    if (Index == 0)
+      return TTI::TCC_Free;
+
+    // If we're extracting a subvector of at most m1 size at a sub-register
+    // boundary - which unfortunately we need exact vlen to identify - this is
+    // a subregister extract at worst and thus won't require a vslidedown.
+    // TODO: Extend for aligned m2, m4 subvector extracts
+    // TODO: Extend for misalgined (but contained) extracts
+    // TODO: Extend for scalable subvector types
+    if (std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
+        SubLT.second.isValid() && SubLT.second.isFixedLengthVector()) {
+      const unsigned MinVLen = ST->getRealMinVLen();
+      const unsigned MaxVLen = ST->getRealMaxVLen();
+      if (MinVLen == MaxVLen &&
+          SubLT.second.getScalarSizeInBits() * Index % MinVLen == 0 &&
+          SubLT.second.getSizeInBits() <= MinVLen)
+        return TTI::TCC_Free;
+    }
+
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslidedown.vi  v8, v9, 2
@@ -468,9 +488,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         //   vmv.v.x v8, a0
         //   vmsne.vi v0, v8, 0
         return LT.first *
-               (TLI->getLMULCost(LT.second) + // FIXME: should be 1 for andi
-                getRISCVInstructionCost({RISCV::VMV_V_X, RISCV::VMSNE_VI},
-                                        LT.second, CostKind));
+               (1 + getRISCVInstructionCost({RISCV::VMV_V_X, RISCV::VMSNE_VI},
+                                            LT.second, CostKind));
       }
       // Example sequence:
       //   vsetivli  zero, 2, e8, mf8, ta, mu (ignored)
@@ -482,11 +501,10 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       //   vmsne.vi  v0, v8, 0
 
       return LT.first *
-             (TLI->getLMULCost(LT.second) + // FIXME: this should be 1 for andi
-              getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM,
-                                       RISCV::VMV_X_S, RISCV::VMV_V_X,
-                                       RISCV::VMSNE_VI},
-                                      LT.second, CostKind));
+             (1 + getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM,
+                                           RISCV::VMV_X_S, RISCV::VMV_V_X,
+                                           RISCV::VMSNE_VI},
+                                          LT.second, CostKind));
     }
 
     if (HasScalar) {
@@ -531,9 +549,12 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     if (LT.second.isFixedLengthVector())
       // vrsub.vi has a 5 bit immediate field, otherwise an li suffices
       LenCost = isInt<5>(LT.second.getVectorNumElements() - 1) ? 0 : 1;
-    // FIXME: replace the constant `2` below with cost of {VID_V,VRSUB_VX}
+    unsigned Opcodes[] = {RISCV::VID_V, RISCV::VRSUB_VX, RISCV::VRGATHER_VV};
+    if (LT.second.isFixedLengthVector() &&
+        isInt<5>(LT.second.getVectorNumElements() - 1))
+      Opcodes[1] = RISCV::VRSUB_VI;
     InstructionCost GatherCost =
-        2 + getRISCVInstructionCost(RISCV::VRGATHER_VV, LT.second, CostKind);
+        getRISCVInstructionCost(Opcodes, LT.second, CostKind);
     // Mask operation additionally required extend and truncate
     InstructionCost ExtendCost = Tp->getElementType()->isIntegerTy(1) ? 3 : 0;
     return LT.first * (LenCost + GatherCost + ExtendCost);
@@ -646,6 +667,29 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
        !isLegalMaskedScatter(DataTy, Align(Alignment))))
     return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
+
+  // Cost is proportional to the number of memory operations implied.  For
+  // scalable vectors, we use an estimate on that number since we don't
+  // know exactly what VL will be.
+  auto &VTy = *cast<VectorType>(DataTy);
+  InstructionCost MemOpCost =
+      getMemoryOpCost(Opcode, VTy.getElementType(), Alignment, 0, CostKind,
+                      {TTI::OK_AnyValue, TTI::OP_None}, I);
+  unsigned NumLoads = getEstimatedVLFor(&VTy);
+  return NumLoads * MemOpCost;
+}
+
+InstructionCost RISCVTTIImpl::getStridedMemoryOpCost(
+    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
+    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
+  if (((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
+       !isLegalStridedLoadStore(DataTy, Alignment)) ||
+      (Opcode != Instruction::Load && Opcode != Instruction::Store))
+    return BaseT::getStridedMemoryOpCost(Opcode, DataTy, Ptr, VariableMask,
+                                         Alignment, CostKind, I);
+
+  if (CostKind == TTI::TCK_CodeSize)
+    return TTI::TCC_Basic;
 
   // Cost is proportional to the number of memory operations implied.  For
   // scalable vectors, we use an estimate on that number since we don't

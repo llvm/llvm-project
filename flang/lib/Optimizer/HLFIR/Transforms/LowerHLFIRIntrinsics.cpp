@@ -176,7 +176,14 @@ protected:
           rewriter.eraseOp(use);
       }
     }
-    rewriter.replaceAllUsesWith(op->getResults(), {base});
+    // TODO: This entire pass should be a greedy pattern rewrite or a manual
+    // IR traversal. A dialect conversion cannot be used here because
+    // `replaceAllUsesWith` is not supported. Similarly, `replaceOp` is not
+    // suitable because "op->getResult(0)" and "base" can have different types.
+    // In such a case, the dialect conversion will attempt to convert the type,
+    // but no type converter is specified in this pass. Also note that all
+    // patterns in this pass are actually rewrite patterns.
+    op->getResult(0).replaceAllUsesWith(base);
     rewriter.replaceOp(op, base);
   }
 };

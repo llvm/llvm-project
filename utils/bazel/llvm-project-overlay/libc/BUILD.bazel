@@ -80,13 +80,15 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_macros_properties_float",
-    hdrs = ["src/__support/macros/properties/float.h"],
+    name = "__support_macros_properties_types",
+    hdrs = ["src/__support/macros/properties/types.h"],
     deps = [
         ":__support_macros_properties_architectures",
         ":__support_macros_properties_compiler",
         ":__support_macros_properties_cpu_features",
         ":__support_macros_properties_os",
+        ":llvm_libc_macros_float_macros",
+        ":llvm_libc_types_float128",
     ],
 )
 
@@ -294,6 +296,7 @@ libc_support_library(
         "src/__support/CPP/type_traits/is_convertible.h",
         "src/__support/CPP/type_traits/is_destructible.h",
         "src/__support/CPP/type_traits/is_enum.h",
+        "src/__support/CPP/type_traits/is_fixed_point.h",
         "src/__support/CPP/type_traits/is_floating_point.h",
         "src/__support/CPP/type_traits/is_function.h",
         "src/__support/CPP/type_traits/is_integral.h",
@@ -329,7 +332,8 @@ libc_support_library(
     deps = [
         ":__support_macros_attributes",
         ":__support_macros_config",
-        ":__support_macros_properties_float",
+        ":__support_macros_properties_types",
+        ":llvm_libc_macros_stdfix_macros",
     ],
 )
 
@@ -471,6 +475,15 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_integer_literals",
+    hdrs = ["src/__support/integer_literals.h"],
+    deps = [
+        ":__support_cpp_limits",
+        ":__support_uint128",
+    ],
+)
+
+libc_support_library(
     name = "__support_str_to_num_result",
     hdrs = ["src/__support/str_to_num_result.h"],
     deps = [":__support_macros_attributes"],
@@ -598,6 +611,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_fixed_point",
+    hdrs = [
+        "src/__support/fixed_point/fx_bits.h",
+        "src/__support/fixed_point/fx_rep.h",
+    ],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_cpp_type_traits",
+        ":__support_macros_attributes",
+        ":__support_macros_optimization",
+        ":__support_math_extras",
+        ":llvm_libc_macros_stdfix_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_fputil_generic_fmod",
     hdrs = ["src/__support/FPUtil/generic/FMod.h"],
     deps = [
@@ -666,8 +695,9 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
+        ":__support_libc_assert",
         ":__support_macros_attributes",
-        ":__support_macros_properties_float",
+        ":__support_macros_properties_types",
         ":__support_math_extras",
         ":__support_uint128",
     ],
@@ -710,6 +740,7 @@ libc_support_library(
         ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_type_traits",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fp_bits",
         ":__support_fputil_nearest_integer_operations",
         ":__support_fputil_normal_float",
@@ -959,6 +990,23 @@ libc_support_library(
 libc_support_library(
     name = "llvm_libc_macros_limits_macros",
     hdrs = ["include/llvm-libc-macros/limits-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_float_macros",
+    hdrs = ["include/llvm-libc-macros/float-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_stdfix_macros",
+    hdrs = ["include/llvm-libc-macros/stdfix-macros.h"],
+    deps = [":llvm_libc_macros_float_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_float128",
+    hdrs = ["include/llvm-libc-types/float128.h"],
+    deps = [":llvm_libc_macros_float_macros"],
 )
 
 ############################### errno targets ################################
@@ -1260,6 +1308,7 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_fputil_triple_double",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":common_constants",
         ":explogxf",
@@ -1290,6 +1339,7 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_fputil_triple_double",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":common_constants",
         ":explogxf",
@@ -1319,6 +1369,7 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_fputil_triple_double",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":common_constants",
         ":explogxf",
@@ -1342,6 +1393,7 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_fputil_triple_double",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":common_constants",
         ":explogxf",
@@ -1405,11 +1457,12 @@ libc_math_function(
 libc_math_function(
     name = "log",
     additional_deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":common_constants",
@@ -1420,11 +1473,12 @@ libc_math_function(
 libc_math_function(
     name = "log2",
     additional_deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":common_constants",
@@ -1435,11 +1489,12 @@ libc_math_function(
 libc_math_function(
     name = "log10",
     additional_deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":common_constants",
@@ -1450,11 +1505,12 @@ libc_math_function(
 libc_math_function(
     name = "log1p",
     additional_deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":common_constants",
@@ -2502,7 +2558,53 @@ libc_function(
     ],
 )
 
-############################### unistd targets ###############################
+################################ fcntl targets #################################
+
+libc_function(
+    name = "open",
+    srcs = ["src/fcntl/linux/open.cpp"],
+    hdrs = ["src/fcntl/open.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "openat",
+    srcs = ["src/fcntl/linux/openat.cpp"],
+    hdrs = ["src/fcntl/openat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "creat",
+    srcs = ["src/fcntl/linux/creat.cpp"],
+    hdrs = ["src/fcntl/creat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+################################ unistd targets ################################
+
+libc_function(
+    name = "access",
+    srcs = ["src/unistd/linux/access.cpp"],
+    hdrs = ["src/unistd/access.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
 
 libc_function(
     name = "chdir",
@@ -2519,6 +2621,50 @@ libc_function(
     name = "close",
     srcs = ["src/unistd/linux/close.cpp"],
     hdrs = ["src/unistd/close.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "dup",
+    srcs = ["src/unistd/linux/dup.cpp"],
+    hdrs = ["src/unistd/dup.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "dup2",
+    srcs = ["src/unistd/linux/dup2.cpp"],
+    hdrs = ["src/unistd/dup2.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "dup3",
+    srcs = ["src/unistd/linux/dup3.cpp"],
+    hdrs = ["src/unistd/dup3.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "environ",
+    srcs = ["src/unistd/environ.cpp"],
+    hdrs = ["src/unistd/environ.h"],
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -2552,6 +2698,86 @@ libc_function(
     name = "ftruncate",
     srcs = ["src/unistd/linux/ftruncate.cpp"],
     hdrs = ["src/unistd/ftruncate.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+# libc_function(
+#     name = "getcwd",
+#     srcs = ["src/unistd/linux/getcwd.cpp"],
+#     hdrs = ["src/unistd/getcwd.h"],
+#     deps = [
+#         ":__support_common",
+#         ":__support_osutil_syscall",
+#         ":errno",
+#     ],
+# )
+
+libc_function(
+    name = "geteuid",
+    srcs = ["src/unistd/linux/geteuid.cpp"],
+    hdrs = ["src/unistd/geteuid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "getpid",
+    srcs = ["src/unistd/linux/getpid.cpp"],
+    hdrs = ["src/unistd/getpid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "getppid",
+    srcs = ["src/unistd/linux/getppid.cpp"],
+    hdrs = ["src/unistd/getppid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "getuid",
+    srcs = ["src/unistd/linux/getuid.cpp"],
+    hdrs = ["src/unistd/getuid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+# libc_function(
+#     name = "getopt",
+#     srcs = ["src/unistd/getopt.cpp"],
+#     hdrs = ["src/unistd/getopt.h"],
+#     deps = [
+#         ":__support_common",
+#         ":__support_cpp_optional",
+#         ":__support_cpp_string_view",
+#         ":__support_file_file",
+#         ":__support_osutil_syscall",
+#         ":errno",
+#     ],
+# )
+
+libc_function(
+    name = "isatty",
+    srcs = ["src/unistd/linux/isatty.cpp"],
+    hdrs = ["src/unistd/isatty.h"],
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -2594,11 +2820,35 @@ libc_function(
 )
 
 libc_function(
+    name = "pread",
+    srcs = ["src/unistd/linux/pread.cpp"],
+    hdrs = ["src/unistd/pread.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "pwrite",
+    srcs = ["src/unistd/linux/pwrite.cpp"],
+    hdrs = ["src/unistd/pwrite.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
     name = "read",
     srcs = ["src/unistd/linux/read.cpp"],
     hdrs = ["src/unistd/read.h"],
+    weak = True,
     deps = [
         ":__support_common",
+        ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
     ],
@@ -2659,6 +2909,31 @@ libc_function(
     ],
 )
 
+#TODO: Enable once fullbuild is added to bazel, since this depends on a macro
+# definition in the public header
+
+# libc_function(
+#     name = "syscall",
+#     srcs = ["src/unistd/linux/syscall.cpp"],
+#     hdrs = ["src/unistd/syscall.h"],
+#     deps = [
+#         ":__support_common",
+#         ":__support_osutil_syscall",
+#         ":errno",
+#     ],
+# )
+
+libc_function(
+    name = "swab",
+    srcs = ["src/unistd/swab.cpp"],
+    hdrs = ["src/unistd/swab.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
 libc_function(
     name = "truncate",
     srcs = ["src/unistd/linux/truncate.cpp"],
@@ -2696,6 +2971,7 @@ libc_function(
     name = "write",
     srcs = ["src/unistd/linux/write.cpp"],
     hdrs = ["src/unistd/write.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -2706,20 +2982,21 @@ libc_function(
 ################################ stdio targets #################################
 
 libc_support_library(
+    name = "printf_config",
+    hdrs = ["src/stdio/printf_core/printf_config.h"],
+    defines = PRINTF_COPTS,
+    deps = [
+    ],
+)
+
+libc_support_library(
     name = "printf_core_structs",
     hdrs = ["src/stdio/printf_core/core_structs.h"],
     defines = PRINTF_COPTS,
     deps = [
         ":__support_cpp_string_view",
         ":__support_fputil_fp_bits",
-    ],
-)
-
-libc_support_library(
-    name = "printf_config",
-    hdrs = ["src/stdio/printf_core/printf_config.h"],
-    defines = PRINTF_COPTS,
-    deps = [
+        ":printf_config",
     ],
 )
 
@@ -2805,6 +3082,7 @@ libc_support_library(
         ":__support_libc_assert",
         ":__support_uint",
         ":__support_uint128",
+        ":printf_config",
         ":printf_core_structs",
         ":printf_writer",
     ],
@@ -2942,3 +3220,75 @@ libc_function(
         ":vfprintf_internal",
     ],
 )
+
+libc_function(
+    name = "remove",
+    srcs = ["src/stdio/linux/remove.cpp"],
+    hdrs = ["src/stdio/remove.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+############################### sys/stat targets ###############################
+
+libc_function(
+    name = "mkdir",
+    srcs = ["src/sys/stat/linux/mkdir.cpp"],
+    hdrs = ["src/sys/stat/mkdir.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "mkdirat",
+    srcs = ["src/sys/stat/linux/mkdirat.cpp"],
+    hdrs = ["src/sys/stat/mkdirat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+############################## sys/epoll targets ###############################
+
+libc_function(
+    name = "epoll_wait",
+    srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
+    hdrs = ["src/sys/epoll/epoll_wait.h"],
+    weak = True,
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "epoll_pwait",
+    srcs = ["src/sys/epoll/linux/epoll_pwait.cpp"],
+    hdrs = ["src/sys/epoll/epoll_pwait.h"],
+    weak = True,
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+#TODO: Enable once epoll_pwait2 availablilty can be checked first.
+# https://github.com/llvm/llvm-project/issues/80060
+# libc_function(
+#     name = "epoll_pwait2",
+#     srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
+#     hdrs = ["src/sys/epoll/epoll_pwait2.h"],
+#     weak = True,
+#     deps = [
+#         ":__support_osutil_syscall",
+#         ":errno",
+#     ],
+# )
