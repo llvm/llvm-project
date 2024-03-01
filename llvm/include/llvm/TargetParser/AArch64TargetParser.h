@@ -813,14 +813,16 @@ inline constexpr CpuInfo CpuInfos[] = {
                                 AArch64::AEK_SSBS, AArch64::AEK_CSSC}))},
 };
 
-// An alias for a CPU.
-struct CpuAlias {
-  StringRef Alias;
+// Name alias.
+struct Alias {
+  StringRef AltName;
   StringRef Name;
 };
 
-inline constexpr CpuAlias CpuAliases[] = {{"cobalt-100", "neoverse-n2"},
-                                          {"grace", "neoverse-v2"}};
+inline constexpr Alias CpuAliases[] = {{"cobalt-100", "neoverse-n2"},
+                                       {"grace", "neoverse-v2"}};
+
+inline constexpr Alias ExtAliases[] = {{"rdma", "rdm"}};
 
 bool getExtensionFeatures(
     const AArch64::ExtensionBitset &Extensions,
@@ -828,6 +830,7 @@ bool getExtensionFeatures(
 
 StringRef getArchExtFeature(StringRef ArchExt);
 StringRef resolveCPUAlias(StringRef CPU);
+StringRef resolveExtAlias(StringRef ArchExt);
 
 // Information by Name
 const ArchInfo *getArchForCpu(StringRef CPU);
