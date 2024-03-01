@@ -60,6 +60,8 @@ public:
 
   Register buildReadFirstLaneSrc(MachineIRBuilder &B, Register Src) const;
 
+  void buildReadFirstLaneDst(MachineIRBuilder &B, MachineInstr &MI) const;
+
   MachineInstrBuilder buildReadFirstLaneForType(MachineIRBuilder &B,
                                                 const DstOp &SgprDst,
                                                 const SrcOp &VgprSrc) const;
@@ -78,6 +80,10 @@ public:
 
   void constrainOpWithReadfirstlane(MachineIRBuilder &B, MachineInstr &MI,
                                     unsigned OpIdx) const;
+  void
+  constrainVgprDstOpWithReadfirstlane(MachineIRBuilder &B, MachineInstr &MI,
+                                      const OperandsMapper &OpdMapper) const;
+
   bool applyMappingDynStackAlloc(MachineIRBuilder &B,
                                  const OperandsMapper &OpdMapper,
                                  MachineInstr &MI) const;

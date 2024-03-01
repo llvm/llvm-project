@@ -186,6 +186,9 @@ define amdgpu_ps half @v_interp_f16_imm_params(float inreg %i, float inreg %j) #
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GCN-NEXT:    v_add_f16_e32 v0, v1, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %l_p0 = call float @llvm.amdgcn.interp.inreg.p10.f16(float 0.0, float %i, float 0.0, i1 0)

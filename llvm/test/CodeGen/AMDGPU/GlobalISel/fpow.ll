@@ -1480,7 +1480,8 @@ define amdgpu_ps float @v_pow_f32_sgpr_sgpr(float inreg %x, float inreg %y) {
 ; GFX6-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GFX6-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GFX6-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX6-NEXT:    v_exp_f32_e32 v0, v0
+; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX6-NEXT:    v_exp_f32_e32 v0, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, 0x1f800000
 ; GFX6-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
 ; GFX6-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -1503,7 +1504,8 @@ define amdgpu_ps float @v_pow_f32_sgpr_sgpr(float inreg %x, float inreg %y) {
 ; GFX8-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GFX8-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX8-NEXT:    v_exp_f32_e32 v0, v0
+; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX8-NEXT:    v_exp_f32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0x1f800000
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
 ; GFX8-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -1526,7 +1528,8 @@ define amdgpu_ps float @v_pow_f32_sgpr_sgpr(float inreg %x, float inreg %y) {
 ; GFX9-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GFX9-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX9-NEXT:    v_exp_f32_e32 v0, v0
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    v_exp_f32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x1f800000
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
 ; GFX9-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -1545,7 +1548,8 @@ define amdgpu_ps float @v_pow_f32_sgpr_sgpr(float inreg %x, float inreg %y) {
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42800000, vcc_lo
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, 1.0, 0x1f800000, vcc_lo
-; GFX10-NEXT:    v_exp_f32_e32 v0, v0
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-NEXT:    v_exp_f32_e32 v0, s0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -1566,8 +1570,9 @@ define amdgpu_ps float @v_pow_f32_sgpr_sgpr(float inreg %x, float inreg %y) {
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42800000, vcc_lo
 ; GFX11-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 1.0, 0x1f800000, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_exp_f32_e32 v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    v_exp_f32_e32 v0, s0
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX11-NEXT:    ; return to shader part epilog
