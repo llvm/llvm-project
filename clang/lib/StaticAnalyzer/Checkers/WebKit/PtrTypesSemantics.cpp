@@ -256,7 +256,7 @@ class TrivialFunctionAnalysisVisitor
   template <typename StmtType, typename CheckFunction>
   bool withCachedResult(const StmtType *S, CheckFunction Function) {
     // Insert false to the cache first to avoid infinite recursion.
-    auto [It, IsNew] = StatementCache.insert(std::make_pair(S, false));
+    auto [It, IsNew] = Cache.insert(std::make_pair(S, false));
     if (!IsNew)
       return It->second;
     bool Result = Function();
@@ -265,12 +265,9 @@ class TrivialFunctionAnalysisVisitor
   }
 
 public:
-  using FunctionCacheTy = TrivialFunctionAnalysis::FunctionCacheTy;
-  using StatementCacheTy = TrivialFunctionAnalysis::StatementCacheTy;
+  using CacheTy = TrivialFunctionAnalysis::CacheTy;
 
-  TrivialFunctionAnalysisVisitor(FunctionCacheTy &FunctionCache,
-                                 StatementCacheTy &StatementCache)
-      : FunctionCache(FunctionCache), StatementCache(StatementCache) {}
+  TrivialFunctionAnalysisVisitor(CacheTy &Cache) : Cache(Cache) {}
 
   bool VisitStmt(const Stmt *S) {
     // All statements are non-trivial unless overriden later.
@@ -314,6 +311,7 @@ public:
     auto op = UO->getOpcode();
     if (op == UO_Deref || op == UO_AddrOf || op == UO_LNot)
       return Visit(UO->getSubExpr());
+
     if (UO->isIncrementOp() || UO->isDecrementOp()) {
       // Allow increment or decrement of a POD type.
       if (auto *RefExpr = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
@@ -373,8 +371,7 @@ public:
         Name == "compilerFenceForCrash" || Name == "__builtin_unreachable")
       return true;
 
-    return TrivialFunctionAnalysis::isTrivialImpl(Callee, FunctionCache,
-                                                  StatementCache);
+    return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
   }
 
   bool VisitPredefinedExpr(const PredefinedExpr *E) {
@@ -398,9 +395,8 @@ public:
     if (IsGetterOfRefCounted && *IsGetterOfRefCounted)
       return true;
 
-    // Recursively descend into the callee to confirm it's trivial as well.
-    return TrivialFunctionAnalysis::isTrivialImpl(Callee, FunctionCache,
-                                                  StatementCache);
+    // Recursively descend into the callee to confirm that it's trivial as well.
+    return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
   }
 
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
@@ -426,8 +422,7 @@ public:
     }
 
     // Recursively descend into the callee to confirm that it's trivial.
-    return TrivialFunctionAnalysis::isTrivialImpl(
-        CE->getConstructor(), FunctionCache, StatementCache);
+    return TrivialFunctionAnalysis::isTrivialImpl(CE->getConstructor(), Cache);
   }
 
   bool VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
@@ -484,18 +479,16 @@ public:
   }
 
 private:
-  FunctionCacheTy FunctionCache;
-  StatementCacheTy StatementCache;
+  CacheTy Cache;
 };
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
-    const Decl *D, TrivialFunctionAnalysis::FunctionCacheTy &FunctionCache,
-    TrivialFunctionAnalysis::StatementCacheTy &StatementCache) {
+    const Decl *D, TrivialFunctionAnalysis::CacheTy &Cache) {
   // If the function isn't in the cache, conservatively assume that
   // it's not trivial until analysis completes. This makes every recursive
   // function non-trivial. This also guarantees that each function
   // will be scanned at most once.
-  auto [It, IsNew] = FunctionCache.insert(std::make_pair(D, false));
+  auto [It, IsNew] = Cache.insert(std::make_pair(D, false));
   if (!IsNew)
     return It->second;
 
@@ -503,29 +496,28 @@ bool TrivialFunctionAnalysis::isTrivialImpl(
   if (!Body)
     return false;
 
-  TrivialFunctionAnalysisVisitor V(FunctionCache, StatementCache);
+  TrivialFunctionAnalysisVisitor V(Cache);
   bool Result = V.Visit(Body);
   if (Result)
-    FunctionCache[D] = true;
+    Cache[D] = true;
 
   return Result;
 }
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
-    const Stmt *S, TrivialFunctionAnalysis::FunctionCacheTy &FunctionCache,
-    TrivialFunctionAnalysis::StatementCacheTy &StatementCache) {
+    const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache) {
   // If the statement isn't in the cache, conservatively assume that
   // it's not trivial until analysis completes. Unlike a function case,
   // we don't insert an entry into the cache until Visit returns
   // since Visit* functions themselves make use of the cache.
 
-  auto It = StatementCache.find(S);
-  if (It != StatementCache.end())
+  auto It = Cache.find(S);
+  if (It != Cache.end())
     return It->second;
 
-  TrivialFunctionAnalysisVisitor V(FunctionCache, StatementCache);
+  TrivialFunctionAnalysisVisitor V(Cache);
   bool Result = V.Visit(S);
-  StatementCache[S] = Result;
+  Cache[S] = Result;
 
   return Result;
 }

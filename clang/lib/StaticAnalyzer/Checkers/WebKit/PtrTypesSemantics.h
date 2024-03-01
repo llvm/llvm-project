@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerUnion.h"
 #include <optional>
 
 namespace clang {
@@ -72,26 +73,22 @@ class TrivialFunctionAnalysis {
 public:
   /// \returns true if \p D is a "trivial" function.
   bool isTrivial(const Decl *D) const {
-    return isTrivialImpl(D, TheFunctionCache, TheStatementCache);
+    return isTrivialImpl(D, TheCache);
   }
 
   bool isTrivial(const Stmt *S) const {
-    return isTrivialImpl(S, TheFunctionCache, TheStatementCache);
+    return isTrivialImpl(S, TheCache);
   }
 
 private:
   friend class TrivialFunctionAnalysisVisitor;
 
-  using FunctionCacheTy = llvm::DenseMap<const Decl *, bool>;
-  mutable FunctionCacheTy TheFunctionCache{};
+  using CacheTy = llvm::DenseMap<llvm::PointerUnion<const Decl *,
+      const Stmt *>, bool>;
+  mutable CacheTy TheCache{};
 
-  using StatementCacheTy = llvm::DenseMap<const Stmt *, bool>;
-  mutable StatementCacheTy TheStatementCache{};
-
-  static bool isTrivialImpl(const Decl *D, FunctionCacheTy &FunctionCache,
-                            StatementCacheTy &StatementCache);
-  static bool isTrivialImpl(const Stmt *S, FunctionCacheTy &FunctionCache,
-                            StatementCacheTy &StatementCache);
+  static bool isTrivialImpl(const Decl *D, CacheTy &Cache);
+  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache);
 };
 
 } // namespace clang
