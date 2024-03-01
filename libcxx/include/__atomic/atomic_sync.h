@@ -137,9 +137,9 @@ _LIBCPP_HIDE_FROM_ABI bool __cxx_nonatomic_compare_equal(_Tp const& __lhs, _Tp c
 
 template <class _Tp>
 struct __atomic_compare_unequal_to {
-  _Tp __val;
-  _LIBCPP_HIDE_FROM_ABI bool operator()(_Tp& __current_val) const {
-    return !std::__cxx_nonatomic_compare_equal(__current_val, __val);
+  _Tp __val_;
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __arg) const {
+    return !std::__cxx_nonatomic_compare_equal(__arg, __val_);
   }
 };
 
