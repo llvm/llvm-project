@@ -256,8 +256,8 @@ TEST(KnownBitsTest, AbsDiffSpecialCase) {
   LHS.Zero = APInt(4, 0b0100);
   RHS.Zero = APInt(4, 0b0100);
   Res = KnownBits::absdiff(LHS, RHS);
-  EXPECT_EQ(0b0000, Res.One.getZExtValue());
-  EXPECT_EQ(0b1110, Res.Zero.getZExtValue());
+  EXPECT_EQ(0b0000ul, Res.One.getZExtValue());
+  EXPECT_EQ(0b1110ul, Res.Zero.getZExtValue());
 
   // find the common bits between sub(LHS,RHS) and sub(RHS,LHS).
   // Actual: false (Inputs = ???1, 1000, Computed = ???1, Exact = 0??1)
@@ -266,8 +266,8 @@ TEST(KnownBitsTest, AbsDiffSpecialCase) {
   LHS.Zero = APInt(4, 0b0000);
   RHS.Zero = APInt(4, 0b0111);
   Res = KnownBits::absdiff(LHS, RHS);
-  EXPECT_EQ(0b0001, Res.One.getZExtValue());
-  EXPECT_EQ(0b0000, Res.Zero.getZExtValue());
+  EXPECT_EQ(0b0001ul, Res.One.getZExtValue());
+  EXPECT_EQ(0b0000ul, Res.Zero.getZExtValue());
 }
 
 TEST(KnownBitsTest, BinaryExhaustive) {
