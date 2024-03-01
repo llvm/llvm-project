@@ -188,13 +188,9 @@ static cl::opt<bool>
 static cl::opt<int> HotPercentileCutoff("hwasan-percentile-cutoff-hot",
                                         cl::init(0));
 
-STATISTIC(NumTotalFuncs, "Number of funcs seen by HWASAN");
-STATISTIC(NumHwasanCtors, "Number of HWASAN ctors");
-STATISTIC(NumNoSanitizeFuncs, "Number of no-sanitize HWASAN funcs");
-STATISTIC(NumConsideredFuncs, "Number of funcs considered for HWASAN");
+STATISTIC(NumTotalFuncs, "Number of total funcs HWASAN");
 STATISTIC(NumInstrumentedFuncs, "Number of HWASAN instrumented funcs");
 STATISTIC(NumNoProfileSummaryFuncs, "Number of HWASAN funcs without PS");
-STATISTIC(NumSkippedHotFuncs, "Number of skipped hot HWASAN funcs");
 
 // Mode for selecting how to insert frame record info into the stack ring
 // buffer.
@@ -1520,34 +1516,27 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
 
 void HWAddressSanitizer::sanitizeFunction(Function &F,
                                           FunctionAnalysisManager &FAM) {
+  if (&F == HwasanCtorFunction)
+    return;
+
+  if (!F.hasFnAttribute(Attribute::SanitizeHWAddress))
+    return;
+
+  if (F.empty())
+    return;
+
   NumTotalFuncs++;
-  if (&F == HwasanCtorFunction) {
-    NumHwasanCtors++;
-    return;
-  }
-
-  if (!F.hasFnAttribute(Attribute::SanitizeHWAddress)) {
-    NumNoSanitizeFuncs++;
-    return;
-  }
-
-  NumConsideredFuncs++;
   if (CSkipHotCode) {
     auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
     ProfileSummaryInfo *PSI =
         MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-    if (PSI != nullptr && PSI->hasProfileSummary()) {
+    if (PSI && PSI->hasProfileSummary()) {
       auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-      const bool is_hot =
-          (HotPercentileCutoff.getNumOccurrences() && HotPercentileCutoff >= 0)
+      if ((HotPercentileCutoff.getNumOccurrences() && HotPercentileCutoff >= 0)
               ? PSI->isFunctionHotInCallGraphNthPercentile(HotPercentileCutoff,
                                                            &F, BFI)
-              : PSI->isFunctionEntryHot(&F);
-
-      if (is_hot) {
-        ++NumSkippedHotFuncs;
+              : PSI->isFunctionHotInCallGraph(&F, BFI))
         return;
-      }
     } else {
       ++NumNoProfileSummaryFuncs;
     }
