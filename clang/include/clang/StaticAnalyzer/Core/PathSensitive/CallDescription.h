@@ -53,7 +53,7 @@ public:
     /// methods.)
     SimpleFunc,
 
-    /// Matches a C+ method (may be static, may be virtual, may be an
+    /// Matches a C++ method (may be static, may be virtual, may be an
     /// overloaded operator, a constructor or a destructor).
     CXXMethod,
 
