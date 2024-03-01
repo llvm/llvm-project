@@ -416,11 +416,11 @@ public:
   /// There can be different address masks for code addresses and
   /// data addresses, this argument can select which to get/set,
   /// or to use when clearing non-addressable bits from an address.
-  /// This choice of mask can be important for example on AArch32 systems. Where
-  /// instructions where instructions start on even addresses, the 0th bit may
-  /// be used to indicate that a function is thumb code.  On such a target, the
-  /// eAddressMaskTypeCode may clear the 0th bit from an address to get the
-  /// actual address Whereas eAddressMaskTypeData would not.
+  /// This choice of mask can be important for example on AArch32
+  /// systems. Where instructions where instructions start on even addresses,
+  /// the 0th bit may be used to indicate that a function is thumb code.  On
+  /// such a target, the eAddressMaskTypeCode may clear the 0th bit from an
+  /// address to get the actual address Whereas eAddressMaskTypeData would not.
   ///
   /// \a addr_range
   /// Many of the methods in this group take an \a addr_range argument
@@ -489,9 +489,10 @@ public:
   ///
   /// \param[in] num_bits
   ///     Number of bits that are used for addressing.
-  ///     For example, a value of 42 indicates that the low 42 bits are relevant for
-  ///     addressing, and that higher-order bits may be used for various
-  ///     metadata like pointer authentication, Type Byte Ignore, etc.
+  ///     For example, a value of 42 indicates that the low 42 bits
+  ///     are relevant for addressing, and that higher-order bits may
+  ///     be used for various metadata like pointer authentication,
+  ///     Type Byte Ignore, etc.
   ///
   /// \param[in] addr_range
   ///     See \ref Mask Address Methods description of this argument.
