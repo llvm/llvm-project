@@ -224,6 +224,9 @@ const CXXMethodDecl *
 Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
                                const CXXRecordDecl *StaticDecl,
                                const CXXMethodDecl *InitialFunction) const {
+  assert(DynamicDecl);
+  assert(StaticDecl);
+  assert(InitialFunction);
 
   const CXXRecordDecl *CurRecord = DynamicDecl;
   const CXXMethodDecl *FoundFunction = InitialFunction;
