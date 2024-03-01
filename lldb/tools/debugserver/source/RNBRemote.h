@@ -33,6 +33,7 @@ enum class compression_types { zlib_deflate, lz4, lzma, lzfse, none };
 
 class RNBRemote {
 public:
+  // clang-format off
   enum PacketEnum {
     invalid_packet = 0,
     ack,                           // '+'
@@ -140,6 +141,7 @@ public:
     enable_error_strings,               // 'QEnableErrorStrings'
     unknown_type
   };
+  // clang-format on
 
   typedef rnb_err_t (RNBRemote::*HandlePacketCallback)(const char *p);
 
