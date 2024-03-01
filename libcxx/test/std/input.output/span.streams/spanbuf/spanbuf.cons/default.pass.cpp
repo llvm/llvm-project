@@ -21,7 +21,6 @@
 #include <spanstream>
 
 #include "constexpr_char_traits.h"
-#include "nasty_string.h"
 #include "test_macros.h"
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
