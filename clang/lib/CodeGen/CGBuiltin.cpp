@@ -13965,6 +13965,8 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
 Value *CodeGenFunction::EmitX86CpuSupports(const CallExpr *E) {
   const Expr *FeatureExpr = E->getArg(0)->IgnoreParenCasts();
   StringRef FeatureStr = cast<StringLiteral>(FeatureExpr)->getString();
+  if (!getContext().getTargetInfo().validateCpuSupports(FeatureStr))
+    return Builder.getFalse();
   return EmitX86CpuSupports(FeatureStr);
 }
 
@@ -14054,6 +14056,8 @@ Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
   ArgStr.split(Features, "+");
   for (auto &Feature : Features) {
     Feature = Feature.trim();
+    if (!llvm::AArch64::parseArchExtension(Feature))
+      return Builder.getFalse();
     if (Feature != "default")
       Features.push_back(Feature);
   }
@@ -16652,7 +16656,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   .Case(Name, {FA_WORD, Bitmask})
 #include "llvm/TargetParser/PPCTargetParser.def"
             .Default({0, 0});
-    assert(BitMask && "Invalid target feature string. Missed by SemaChecking?");
+    if (!BitMask)
+      return Builder.getFalse();
     Value *Op0 = llvm::ConstantInt::get(Int32Ty, FeatureWord);
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_fixed_addr_ld);
     Value *TheCall = Builder.CreateCall(F, {Op0}, "cpu_supports");

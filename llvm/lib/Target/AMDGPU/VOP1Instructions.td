@@ -375,6 +375,21 @@ def VOP_MOVRELS : VOPProfile<[i32, i32, untyped, untyped]> {
   let Src0RC64 = VRegSrc_32;
 }
 
+def VOP_PERMLANE_SWAP : VOPProfile<[i32, i32, untyped, untyped]> {
+  let Src0RC32 = VRegSrc_32;
+  let Src0RC64 = VRegSrc_32;
+  let HasClamp = 0;
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
+  let HasExtSDWA = 0;
+
+  let Ins32 = (ins Src0RC64:$vdst_in, Src0RC64:$src0);
+  let Ins64 = (ins Src0RC64:$vdst_in, Src0RC64:$src0, DppBoundCtrl:$bound_ctrl, Dpp16FI:$fi);
+  let InsVOP3OpSel = (ins Src0RC64:$vdst_in, Src0RC64:$src0, DppBoundCtrl:$bound_ctrl, Dpp16FI:$fi);
+  let Asm64 = "$vdst, $src0$bound_ctrl$fi";
+  let AsmVOP3OpSel = "$vdst, $src0$bound_ctrl$fi";
+}
+
 // Special case because there are no true output operands.  Hack vdst
 // to be a src operand. The custom inserter must add a tied implicit
 // def and use of the super register since there seems to be no way to
@@ -836,6 +851,40 @@ let SubtargetPredicate = isGFX11Plus in {
 
 let SubtargetPredicate = HasPrngInst in
 defm V_PRNG_B32 : VOP1Inst <"v_prng_b32", VOP_I32_I32, int_amdgcn_prng_b32>;
+
+let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+let SubtargetPredicate = HasPermlane16Swap in {
+defm V_PERMLANE16_SWAP_B32 : VOP1Inst<"v_permlane16_swap_b32", VOP_PERMLANE_SWAP>;
+}
+
+let SubtargetPredicate = HasPermlane32Swap in {
+defm V_PERMLANE32_SWAP_B32 : VOP1Inst<"v_permlane32_swap_b32", VOP_PERMLANE_SWAP>;
+}
+}
+
+multiclass PermlaneSwapPat<SDPatternOperator node,
+                           string InstName> {
+  // Can use vop1 form without bound_ctrl/fi
+  // TODO: Can we avoid using standard SIShrinkInstructions handling?
+  def : GCNPat<
+    (i32 (node i32:$vdst_in, i32:$src0, 0, 0)),
+    (!cast<Instruction>(InstName#"_e32") $vdst_in, $src0)
+  >;
+
+  def : GCNPat<
+    (i32 (node i32:$vdst_in, i32:$src0,
+               timm:$fi, timm:$bound_ctrl)),
+    (!cast<Instruction>(InstName#"_e64") $vdst_in, $src0,
+      (as_i1timm $bound_ctrl), (as_i1timm_zext $fi))
+  >;
+}
+
+let SubtargetPredicate = HasGFX950Insts in {
+defm : PermlaneSwapPat<int_amdgcn_permlane16_swap,
+                       "V_PERMLANE16_SWAP_B32">;
+defm : PermlaneSwapPat<int_amdgcn_permlane32_swap,
+                       "V_PERMLANE32_SWAP_B32">;
+}
 
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
@@ -1576,6 +1625,20 @@ let AssemblerPredicate = isGFX9Only, DecoderNamespace = "GFX9" in {
   }
 }
 
+/// Special case of VOP1 instructions, with a VOP3 form where op_sel
+/// is used for DPP operands.
+multiclass VOP1_OpSel_Real_e32e64_gfx9 <bits<10> op> {
+  let AssemblerPredicate = isGFX9Only, DecoderNamespace = "GFX9" in {
+    def _e32_gfx9 :
+      VOP1_Real<!cast<VOP1_Pseudo>(NAME#"_e32"), SIEncodingFamily.GFX9>,
+      VOP1e<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32").Pfl>;
+
+   def _e64_gfx9 :
+        VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.GFX9>,
+        VOP3OpSelIsDPP_gfx9<!add(0x140, op), !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
+  }
+}
+
 defm V_SCREEN_PARTITION_4SE_B32 : VOP1_Real_gfx9 <0x37>;
 
 let AssemblerPredicate = isGFX940Plus in
@@ -1587,6 +1650,8 @@ defm V_CVT_PK_F32_FP8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x56>;
 defm V_CVT_PK_F32_BF8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x57>;
 
 defm V_PRNG_B32              : VOP1_Real_gfx9 <0x58>;
+defm V_PERMLANE16_SWAP_B32 : VOP1_OpSel_Real_e32e64_gfx9<0x059>;
+defm V_PERMLANE32_SWAP_B32 : VOP1_OpSel_Real_e32e64_gfx9<0x05a>;
 
 //===----------------------------------------------------------------------===//
 // GFX10

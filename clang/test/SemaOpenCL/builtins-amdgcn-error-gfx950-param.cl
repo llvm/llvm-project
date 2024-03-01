@@ -150,3 +150,13 @@ void test_mfma_scale_f32_32x32x64_f8f6f4(__global float16* out, int8 a, int8 b, 
   *out = __builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4(a, b, c, 0, 0, 0, X, Y, 2, Y); // expected-error{{argument to '__builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4' must be a constant integer}}
   *out = __builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4(a, b, c, 0, 0, 0, 0, Y, X, Y); // expected-error{{argument to '__builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4' must be a constant integer}}
 }
+
+void test_permlane16_swap(__global int* out, int old, int src, bool X) {
+  *out = __builtin_amdgcn_permlane16_swap(old, src, X, false); // expected-error{{argument to '__builtin_amdgcn_permlane16_swap' must be a constant integer}}
+  *out = __builtin_amdgcn_permlane16_swap(old, src, false, X); // expected-error{{argument to '__builtin_amdgcn_permlane16_swap' must be a constant integer}}
+}
+
+void test_permlane32_swap(__global int* out, int old, int src, bool X) {
+  *out = __builtin_amdgcn_permlane32_swap(old, src, X, false); // expected-error{{argument to '__builtin_amdgcn_permlane32_swap' must be a constant integer}}
+  *out = __builtin_amdgcn_permlane32_swap(old, src, false, X); // expected-error{{argument to '__builtin_amdgcn_permlane32_swap' must be a constant integer}}
+}

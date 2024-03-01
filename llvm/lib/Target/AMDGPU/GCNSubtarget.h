@@ -217,7 +217,8 @@ protected:
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
   bool HasPrngInst = false;
-
+  bool HasPermlane16Swap = false;
+  bool HasPermlane32Swap = false;
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
@@ -1272,6 +1273,8 @@ public:
   bool hasTanhInsts() const { return HasTanhInsts; }
 
   bool hasPrngInst() const { return HasPrngInst; }
+  bool hasPermlane16Swap() const { return HasPermlane16Swap; }
+  bool hasPermlane32Swap() const { return HasPermlane32Swap; }
 
   bool hasAddPC64Inst() const { return GFX12_10Insts || GFX13Insts; }
 

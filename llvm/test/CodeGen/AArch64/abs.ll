@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel -global-isel-abort=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:         warning: Instruction selection used fallback path for abs_v4i8
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for abs_v2i16
-
 ; ===== Legal Scalars =====
 
 define i8 @abs_i8(i8 %a){

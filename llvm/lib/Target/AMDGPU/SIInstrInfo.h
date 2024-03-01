@@ -1512,11 +1512,6 @@ namespace AMDGPU {
   LLVM_READONLY
   int getMFMAEarlyClobberOp(uint16_t Opcode);
 
-  /// \returns MFMA base pseudo instruction from the _scaled pseudo if it
-  /// exists.
-  LLVM_READONLY
-  int getMFMABaseOpFromScaledOp(uint16_t Opcode);
-
   /// \returns v_cmpx version of a v_cmp instruction.
   LLVM_READONLY
   int getVCMPXOpFromVCMP(uint16_t Opcode);

@@ -454,6 +454,17 @@ static inline DecoderUInt128 eat12Bytes(ArrayRef<uint8_t> &Bytes) {
   return DecoderUInt128(Lo, Hi);
 }
 
+static inline DecoderUInt128 eat16Bytes(ArrayRef<uint8_t> &Bytes) {
+  assert(Bytes.size() >= 16);
+  uint64_t Lo =
+      support::endian::read<uint64_t, llvm::endianness::little>(Bytes.data());
+  Bytes = Bytes.slice(8);
+  uint64_t Hi =
+      support::endian::read<uint64_t, llvm::endianness::little>(Bytes.data());
+  Bytes = Bytes.slice(8);
+  return DecoderUInt128(Lo, Hi);
+}
+
 DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                 ArrayRef<uint8_t> Bytes_,
                                                 uint64_t Address,
@@ -501,6 +512,12 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
             tryDecodeInst(DecoderTableGFX12_1096, MI, DecW, Address, CS))
           break;
       }
+
+    } else if (Bytes.size() >= 16 &&
+               STI.hasFeature(AMDGPU::FeatureGFX950Insts)) {
+      DecoderUInt128 DecW = eat16Bytes(Bytes);
+      if (tryDecodeInst(DecoderTableGFX940128, MI, DecW, Address, CS))
+        break;
     }
 
     // Reinitialize Bytes
