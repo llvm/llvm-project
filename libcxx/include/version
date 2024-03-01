@@ -244,7 +244,6 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
 

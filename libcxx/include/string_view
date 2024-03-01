@@ -206,7 +206,7 @@ namespace std {
 // clang-format on
 
 #include <__algorithm/min.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__config>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>

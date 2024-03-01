@@ -225,7 +225,7 @@ define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ; X86-AVX512-NEXT:    pushl %esi
 ; X86-AVX512-NEXT:    vpbroadcastb {{[0-9]+}}(%esp), %xmm0
 ; X86-AVX512-NEXT:    vptestnmb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %k1
-; X86-AVX512-NEXT:    vmovdqu8 {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 {%k1} {z}
+; X86-AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} {z} = [17,17,17,17,17,17,17,17,u,u,u,u,u,u,u,u]
 ; X86-AVX512-NEXT:    vpextrd $1, %xmm0, %eax
 ; X86-AVX512-NEXT:    vmovd %xmm0, %edx
 ; X86-AVX512-NEXT:    movl $286331152, %ecx # imm = 0x11111110
@@ -258,7 +258,7 @@ define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ; X64-AVX512:       # %bb.0: # %entry
 ; X64-AVX512-NEXT:    vpbroadcastb %edi, %xmm0
 ; X64-AVX512-NEXT:    vptestnmb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k1
-; X64-AVX512-NEXT:    vmovdqu8 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1} {z}
+; X64-AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} {z} = [17,17,17,17,17,17,17,17,u,u,u,u,u,u,u,u]
 ; X64-AVX512-NEXT:    vmovq %xmm0, %rax
 ; X64-AVX512-NEXT:    movabsq $1229782938247303440, %rcx # imm = 0x1111111111111110
 ; X64-AVX512-NEXT:    movabsq $76861433640456465, %rdx # imm = 0x111111111111111
