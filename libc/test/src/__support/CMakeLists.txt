@@ -1,17 +1,14 @@
 add_custom_target(libc-support-tests)
 
-# FIXME: These tests are currently broken on the GPU.
-if(NOT LIBC_TARGET_OS_IS_GPU)
-  add_libc_test(
-    blockstore_test
-    SUITE
-      libc-support-tests
-    SRCS
-      blockstore_test.cpp
-    DEPENDS
-      libc.src.__support.blockstore
-  )
-endif()
+add_libc_test(
+  blockstore_test
+  SUITE
+    libc-support-tests
+  SRCS
+    blockstore_test.cpp
+  DEPENDS
+    libc.src.__support.blockstore
+)
 
 add_libc_test(
   endian_test
@@ -42,8 +39,6 @@ add_libc_test(
   DEPENDS
     libc.src.__support.high_precision_decimal
     libc.src.__support.uint128
-  # FIXME Test segfaults on gfx90a GPU
-  UNIT_TEST_ONLY
 )
 
 add_libc_test(

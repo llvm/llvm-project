@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_FIXEDPOINT_FXREP_H
-#define LLVM_LIBC_SRC___SUPPORT_FIXEDPOINT_FXREP_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_REP_H
+#define LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_REP_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/type_traits.h"
@@ -273,4 +273,4 @@ struct FXRep<unsigned long sat accum> : FXRep<unsigned long accum> {};
 
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 
-#endif // LLVM_LIBC_SRC___SUPPORT_FIXEDPOINT_FXREP_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_REP_H

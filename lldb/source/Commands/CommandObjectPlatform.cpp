@@ -155,8 +155,7 @@ public:
   {
     m_option_group.Append(&m_platform_options, LLDB_OPT_SET_ALL, 1);
     m_option_group.Finalize();
-    CommandArgumentData platform_arg{eArgTypePlatform, eArgRepeatPlain};
-    m_arguments.push_back({platform_arg});
+    AddSimpleArgumentList(eArgTypePlatform);
   }
 
   ~CommandObjectPlatformSelect() override = default;
@@ -276,8 +275,7 @@ public:
             interpreter, "platform connect",
             "Select the current platform by providing a connection URL.",
             "platform connect <connect-url>", 0) {
-    CommandArgumentData platform_arg{eArgTypeConnectURL, eArgRepeatPlain};
-    m_arguments.push_back({platform_arg});
+    AddSimpleArgumentList(eArgTypeConnectURL);
   }
 
   ~CommandObjectPlatformConnect() override = default;
@@ -418,8 +416,7 @@ public:
       : CommandObjectParsed(interpreter, "platform mkdir",
                             "Make a new directory on the remote end.", nullptr,
                             0) {
-    CommandArgumentData thread_arg{eArgTypeRemotePath, eArgRepeatPlain};
-    m_arguments.push_back({thread_arg});
+    AddSimpleArgumentList(eArgTypeRemotePath);
   }
 
   ~CommandObjectPlatformMkDir() override = default;
@@ -467,8 +464,7 @@ public:
   CommandObjectPlatformFOpen(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "platform file open",
                             "Open a file on the remote end.", nullptr, 0) {
-    CommandArgumentData path_arg{eArgTypeRemotePath, eArgRepeatPlain};
-    m_arguments.push_back({path_arg});
+    AddSimpleArgumentList(eArgTypeRemotePath);
   }
 
   ~CommandObjectPlatformFOpen() override = default;
@@ -521,8 +517,7 @@ public:
   CommandObjectPlatformFClose(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "platform file close",
                             "Close a file on the remote end.", nullptr, 0) {
-    CommandArgumentData path_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
-    m_arguments.push_back({path_arg});
+    AddSimpleArgumentList(eArgTypeUnsignedInteger);
   }
 
   ~CommandObjectPlatformFClose() override = default;
@@ -564,8 +559,7 @@ public:
       : CommandObjectParsed(interpreter, "platform file read",
                             "Read data from a file on the remote end.", nullptr,
                             0) {
-    CommandArgumentData path_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
-    m_arguments.push_back({path_arg});
+    AddSimpleArgumentList(eArgTypeUnsignedInteger);
   }
 
   ~CommandObjectPlatformFRead() override = default;
@@ -659,8 +653,7 @@ public:
       : CommandObjectParsed(interpreter, "platform file write",
                             "Write data to a file on the remote end.", nullptr,
                             0) {
-    CommandArgumentData path_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
-    m_arguments.push_back({path_arg});
+    AddSimpleArgumentList(eArgTypeUnsignedInteger);
   }
 
   ~CommandObjectPlatformFWrite() override = default;
@@ -863,18 +856,7 @@ public:
 
     Get the file size from the remote end with path /the/remote/file/path.)");
 
-    CommandArgumentEntry arg1;
-    CommandArgumentData file_arg_remote;
-
-    // Define the first (and only) variant of this arg.
-    file_arg_remote.arg_type = eArgTypeRemoteFilename;
-    file_arg_remote.arg_repetition = eArgRepeatPlain;
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg1.push_back(file_arg_remote);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeRemoteFilename);
   }
 
   ~CommandObjectPlatformGetSize() override = default;
@@ -922,18 +904,7 @@ public:
 
     Get the file permissions from the remote end with path /the/remote/file/path.)");
 
-    CommandArgumentEntry arg1;
-    CommandArgumentData file_arg_remote;
-
-    // Define the first (and only) variant of this arg.
-    file_arg_remote.arg_type = eArgTypeRemoteFilename;
-    file_arg_remote.arg_repetition = eArgRepeatPlain;
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg1.push_back(file_arg_remote);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeRemoteFilename);
   }
 
   ~CommandObjectPlatformGetPermissions() override = default;
@@ -980,18 +951,7 @@ public:
 
     Check if /the/remote/file/path exists on the remote end.)");
 
-    CommandArgumentEntry arg1;
-    CommandArgumentData file_arg_remote;
-
-    // Define the first (and only) variant of this arg.
-    file_arg_remote.arg_type = eArgTypeRemoteFilename;
-    file_arg_remote.arg_repetition = eArgRepeatPlain;
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg1.push_back(file_arg_remote);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeRemoteFilename);
   }
 
   ~CommandObjectPlatformFileExists() override = default;
@@ -1093,8 +1053,7 @@ public:
     m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
                          LLDB_OPT_SET_ALL);
     m_all_options.Finalize();
-    CommandArgumentData run_arg_arg{eArgTypeRunArgs, eArgRepeatStar};
-    m_arguments.push_back({run_arg_arg});
+    AddSimpleArgumentList(eArgTypeRunArgs, eArgRepeatStar);
   }
 
   void
@@ -1503,19 +1462,7 @@ public:
             interpreter, "platform process info",
             "Get detailed information for one or more process by process ID.",
             "platform process info <pid> [<pid> <pid> ...]", 0) {
-    CommandArgumentEntry arg;
-    CommandArgumentData pid_args;
-
-    // Define the first (and only) variant of this arg.
-    pid_args.arg_type = eArgTypePid;
-    pid_args.arg_repetition = eArgRepeatStar;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(pid_args);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypePid, eArgRepeatStar);
   }
 
   ~CommandObjectPlatformProcessInfo() override = default;
@@ -1721,8 +1668,7 @@ public:
       : CommandObjectRaw(interpreter, "platform shell",
                          "Run a shell command on the current platform.",
                          "platform shell <shell-command>", 0) {
-    CommandArgumentData thread_arg{eArgTypeNone, eArgRepeatStar};
-    m_arguments.push_back({thread_arg});
+    AddSimpleArgumentList(eArgTypeNone, eArgRepeatStar);
   }
 
   ~CommandObjectPlatformShell() override = default;
