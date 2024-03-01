@@ -390,6 +390,25 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
   let assemblyFormat = "attr-dict";
 }
 
+def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
+  let arguments = (ins     
+    Optional<I32>:$barrierId,
+    Optional<I32>:$numberOfThreads);
+  string llvmBuilder = [{
+    if ($numberOfThreads && $barrierId) {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier,
+                {$barrierId, $numberOfThreads});
+    } else if($barrierId) {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_n,
+                {$barrierId});   
+    } else {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier0);
+    }
+  }];
+  let hasVerifier = 1;
+  let assemblyFormat = "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? attr-dict";
+}
+
 def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 

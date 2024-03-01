@@ -53,6 +53,7 @@ add_llvm_target(SystemZCodeGen
   SystemZInfo
   Target
   TargetParser
+  TransformUtils
 
   ADD_TO_COMPONENT
   SystemZ

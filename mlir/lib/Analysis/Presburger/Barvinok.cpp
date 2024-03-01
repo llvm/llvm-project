@@ -10,6 +10,7 @@
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/Sequence.h"
 #include <algorithm>
+#include <bitset>
 
 using namespace mlir;
 using namespace presburger;
@@ -76,7 +77,8 @@ MPInt mlir::presburger::detail::getIndex(ConeV cone) {
 /// num is computed by expressing the vertex as a weighted
 /// sum of the generators, and then taking the floor of the
 /// coefficients.
-GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
+GeneratingFunction
+mlir::presburger::detail::computeUnimodularConeGeneratingFunction(
     ParamPoint vertex, int sign, ConeH cone) {
   // Consider a cone with H-representation [0  -1].
   //                                       [-1 -2]
@@ -84,7 +86,7 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
   //                                       [-1 -1/2 1]
 
   // `cone` must be unimodular.
-  assert(getIndex(getDual(cone)) == 1 && "input cone is not unimodular!");
+  assert(abs(getIndex(getDual(cone))) == 1 && "input cone is not unimodular!");
 
   unsigned numVar = cone.getNumVars();
   unsigned numIneq = cone.getNumInequalities();
@@ -145,6 +147,304 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
   return GeneratingFunction(numColumns - 1, SmallVector<int>(1, sign),
                             std::vector({numerator}),
                             std::vector({denominator}));
+}
+
+/// We use Gaussian elimination to find the solution to a set of d equations
+/// of the form
+/// a_1 x_1 + ... + a_d x_d + b_1 m_1 + ... + b_p m_p + c = 0
+/// where x_i are variables,
+/// m_i are parameters and
+/// a_i, b_i, c are rational coefficients.
+///
+/// The solution expresses each x_i as an affine function of the m_i, and is
+/// therefore represented as a matrix of size d x (p+1).
+/// If there is no solution, we return null.
+std::optional<ParamPoint>
+mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
+  // equations is a d x (d + p + 1) matrix.
+  // Each row represents an equation.
+  unsigned d = equations.getNumRows();
+  unsigned numCols = equations.getNumColumns();
+
+  // If the determinant is zero, there is no unique solution.
+  // Thus we return null.
+  if (FracMatrix(equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/d - 1,
+                                        /*fromColumn=*/0,
+                                        /*toColumn=*/d - 1))
+          .determinant() == 0)
+    return std::nullopt;
+
+  // Perform row operations to make each column all zeros except for the
+  // diagonal element, which is made to be one.
+  for (unsigned i = 0; i < d; ++i) {
+    // First ensure that the diagonal element is nonzero, by swapping
+    // it with a row that is non-zero at column i.
+    if (equations(i, i) != 0)
+      continue;
+    for (unsigned j = i + 1; j < d; ++j) {
+      if (equations(j, i) == 0)
+        continue;
+      equations.swapRows(j, i);
+      break;
+    }
+
+    Fraction diagElement = equations(i, i);
+
+    // Apply row operations to make all elements except the diagonal to zero.
+    for (unsigned j = 0; j < d; ++j) {
+      if (i == j)
+        continue;
+      if (equations(j, i) == 0)
+        continue;
+      // Apply row operations to make element (j, i) zero by subtracting the
+      // ith row, appropriately scaled.
+      Fraction currentElement = equations(j, i);
+      equations.addToRow(/*sourceRow=*/i, /*targetRow=*/j,
+                         /*scale=*/-currentElement / diagElement);
+    }
+  }
+
+  // Rescale diagonal elements to 1.
+  for (unsigned i = 0; i < d; ++i)
+    equations.scaleRow(i, 1 / equations(i, i));
+
+  // Now we have reduced the equations to the form
+  // x_i + b_1' m_1 + ... + b_p' m_p + c' = 0
+  // i.e. each variable appears exactly once in the system, and has coefficient
+  // one.
+  //
+  // Thus we have
+  // x_i = - b_1' m_1 - ... - b_p' m_p - c
+  // and so we return the negation of the last p + 1 columns of the matrix.
+  //
+  // We copy these columns and return them.
+  ParamPoint vertex =
+      equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/d - 1,
+                             /*fromColumn=*/d, /*toColumn=*/numCols - 1);
+  vertex.negateMatrix();
+  return vertex;
+}
+
+/// This is an implementation of the Clauss-Loechner algorithm for chamber
+/// decomposition.
+///
+/// We maintain a list of pairwise disjoint chambers and the generating
+/// functions corresponding to each one. We iterate over the list of regions,
+/// each time adding the current region's generating function to the chambers
+/// where it is active and separating the chambers where it is not.
+///
+/// Given the region each generating function is active in, for each subset of
+/// generating functions the region that (the sum of) precisely this subset is
+/// in, is the intersection of the regions that these are active in,
+/// intersected with the complements of the remaining regions.
+std::vector<std::pair<PresburgerSet, GeneratingFunction>>
+mlir::presburger::detail::computeChamberDecomposition(
+    unsigned numSymbols, ArrayRef<std::pair<PresburgerSet, GeneratingFunction>>
+                             regionsAndGeneratingFunctions) {
+  assert(!regionsAndGeneratingFunctions.empty() &&
+         "there must be at least one chamber!");
+  // We maintain a list of regions and their associated generating function
+  // initialized with the universe and the empty generating function.
+  std::vector<std::pair<PresburgerSet, GeneratingFunction>> chambers = {
+      {PresburgerSet::getUniverse(PresburgerSpace::getSetSpace(numSymbols)),
+       GeneratingFunction(numSymbols, {}, {}, {})}};
+
+  // We iterate over the region list.
+  //
+  // For each activity region R_j (corresponding to the generating function
+  // gf_j), we examine all the current chambers R_i.
+  //
+  // If R_j has a full-dimensional intersection with an existing chamber R_i,
+  // then that chamber is replaced by two new ones:
+  // 1. the intersection R_i \cap R_j, where the generating function is
+  // gf_i + gf_j.
+  // 2. the difference R_i - R_j, where the generating function is gf_i.
+  //
+  // At each step, we define a new chamber list after considering gf_j,
+  // replacing and appending chambers as discussed above.
+  //
+  // The loop has the invariant that the union over all the chambers gives the
+  // universe at every step.
+  for (const auto &[region, generatingFunction] :
+       regionsAndGeneratingFunctions) {
+    std::vector<std::pair<PresburgerSet, GeneratingFunction>> newChambers;
+
+    for (const auto &[currentRegion, currentGeneratingFunction] : chambers) {
+      PresburgerSet intersection = currentRegion.intersect(region);
+
+      // If the intersection is not full-dimensional, we do not modify
+      // the chamber list.
+      if (!intersection.isFullDim()) {
+        newChambers.emplace_back(currentRegion, currentGeneratingFunction);
+        continue;
+      }
+
+      // If it is, we add the intersection and the difference as chambers.
+      newChambers.emplace_back(intersection,
+                               currentGeneratingFunction + generatingFunction);
+      newChambers.emplace_back(currentRegion.subtract(region),
+                               currentGeneratingFunction);
+    }
+    chambers = std::move(newChambers);
+  }
+
+  return chambers;
+}
+
+/// For a polytope expressed as a set of n inequalities, compute the generating
+/// function corresponding to the lattice points included in the polytope. This
+/// algorithm has three main steps:
+/// 1. Enumerate the vertices, by iterating over subsets of inequalities and
+///    checking for satisfiability. For each d-subset of inequalities (where d
+///    is the number of variables), we solve to obtain the vertex in terms of
+///    the parameters, and then check for the region in parameter space where
+///    this vertex satisfies the remaining (n - d) inequalities.
+/// 2. For each vertex, identify the tangent cone and compute the generating
+///    function corresponding to it. The generating function depends on the
+///    parametric expression of the vertex and the (non-parametric) generators
+///    of the tangent cone.
+/// 3. [Clauss-Loechner decomposition] Identify the regions in parameter space
+///    (chambers) where each vertex is active, and accordingly compute the
+///    GF of the polytope in each chamber.
+///
+/// Verdoolaege, Sven, et al. "Counting integer points in parametric
+/// polytopes using Barvinok's rational functions." Algorithmica 48 (2007):
+/// 37-66.
+std::vector<std::pair<PresburgerSet, GeneratingFunction>>
+mlir::presburger::detail::computePolytopeGeneratingFunction(
+    const PolyhedronH &poly) {
+  unsigned numVars = poly.getNumRangeVars();
+  unsigned numSymbols = poly.getNumSymbolVars();
+  unsigned numIneqs = poly.getNumInequalities();
+
+  // We store a list of the computed vertices.
+  std::vector<ParamPoint> vertices;
+  // For each vertex, we store the corresponding active region and the
+  // generating functions of the tangent cone, in order.
+  std::vector<std::pair<PresburgerSet, GeneratingFunction>>
+      regionsAndGeneratingFunctions;
+
+  // We iterate over all subsets of inequalities with cardinality numVars,
+  // using permutations of numVars 1's and (numIneqs - numVars) 0's.
+  //
+  // For a given permutation, we consider a subset which contains
+  // the i'th inequality if the i'th bit in the bitset is 1.
+  //
+  // We start with the permutation that takes the last numVars inequalities.
+  SmallVector<int> indicator(numIneqs);
+  for (unsigned i = numIneqs - numVars; i < numIneqs; ++i)
+    indicator[i] = 1;
+
+  do {
+    // Collect the inequalities corresponding to the bits which are set
+    // and the remaining ones.
+    auto [subset, remainder] = poly.getInequalities().splitByBitset(indicator);
+    // All other inequalities are stored in a2 and b2c2.
+    //
+    // These are column-wise splits of the inequalities;
+    // a2 stores the coefficients of the variables, and
+    // b2c2 stores the coefficients of the parameters and the constant term.
+    FracMatrix a2(numIneqs - numVars, numVars);
+    FracMatrix b2c2(numIneqs - numVars, numSymbols + 1);
+    a2 = FracMatrix(
+        remainder.getSubMatrix(0, numIneqs - numVars - 1, 0, numVars - 1));
+    b2c2 = FracMatrix(remainder.getSubMatrix(0, numIneqs - numVars - 1, numVars,
+                                             numVars + numSymbols));
+
+    // Find the vertex, if any, corresponding to the current subset of
+    // inequalities.
+    std::optional<ParamPoint> vertex =
+        solveParametricEquations(FracMatrix(subset)); // d x (p+1)
+
+    if (!vertex)
+      continue;
+    if (std::find(vertices.begin(), vertices.end(), vertex) != vertices.end())
+      continue;
+    // If this subset corresponds to a vertex that has not been considered,
+    // store it.
+    vertices.push_back(*vertex);
+
+    // If a vertex is formed by the intersection of more than d facets, we
+    // assume that any d-subset of these facets can be solved to obtain its
+    // expression. This assumption is valid because, if the vertex has two
+    // distinct parametric expressions, then a nontrivial equality among the
+    // parameters holds, which is a contradiction as we know the parameter
+    // space to be full-dimensional.
+
+    // Let the current vertex be [X | y], where
+    // X represents the coefficients of the parameters and
+    // y represents the constant term.
+    //
+    // The region (in parameter space) where this vertex is active is given
+    // by substituting the vertex into the *remaining* inequalities of the
+    // polytope (those which were not collected into `subset`), i.e., into the
+    // inequalities [A2 | B2 | c2].
+    //
+    // Thus, the coefficients of the parameters after substitution become
+    // (A2 • X + B2)
+    // and the constant terms become
+    // (A2 • y + c2).
+    //
+    // The region is therefore given by
+    // (A2 • X + B2) p + (A2 • y + c2) ≥ 0
+    //
+    // This is equivalent to A2 • [X | y] + [B2 | c2].
+    //
+    // Thus we premultiply [X | y] with each row of A2
+    // and add each row of [B2 | c2].
+    FracMatrix activeRegion(numIneqs - numVars, numSymbols + 1);
+    for (unsigned i = 0; i < numIneqs - numVars; i++) {
+      activeRegion.setRow(i, vertex->preMultiplyWithRow(a2.getRow(i)));
+      activeRegion.addToRow(i, b2c2.getRow(i), 1);
+    }
+
+    // We convert the representation of the active region to an integers-only
+    // form so as to store it as a PresburgerSet.
+    IntegerPolyhedron activeRegionRel(
+        PresburgerSpace::getRelationSpace(0, numSymbols, 0, 0), activeRegion);
+
+    // Now, we compute the generating function at this vertex.
+    // We collect the inequalities corresponding to each vertex to compute
+    // the tangent cone at that vertex.
+    //
+    // We only need the coefficients of the variables (NOT the parameters)
+    // as the generating function only depends on these.
+    // We translate the cones to be pointed at the origin by making the
+    // constant terms zero.
+    ConeH tangentCone = defineHRep(numVars);
+    for (unsigned j = 0, e = subset.getNumRows(); j < e; ++j) {
+      SmallVector<MPInt> ineq(numVars + 1);
+      for (unsigned k = 0; k < numVars; ++k)
+        ineq[k] = subset(j, k);
+      tangentCone.addInequality(ineq);
+    }
+    // We assume that the tangent cone is unimodular, so there is no need
+    // to decompose it.
+    //
+    // In the general case, the unimodular decomposition may have several
+    // cones.
+    GeneratingFunction vertexGf(numSymbols, {}, {}, {});
+    SmallVector<std::pair<int, ConeH>, 4> unimodCones = {{1, tangentCone}};
+    for (const std::pair<int, ConeH> &signedCone : unimodCones) {
+      auto [sign, cone] = signedCone;
+      vertexGf = vertexGf +
+                 computeUnimodularConeGeneratingFunction(*vertex, sign, cone);
+    }
+    // We store the vertex we computed with the generating function of its
+    // tangent cone.
+    regionsAndGeneratingFunctions.emplace_back(PresburgerSet(activeRegionRel),
+                                               vertexGf);
+  } while (std::next_permutation(indicator.begin(), indicator.end()));
+
+  // Now, we use Clauss-Loechner decomposition to identify regions in parameter
+  // space where each vertex is active. These regions (chambers) have the
+  // property that no two of them have a full-dimensional intersection, i.e.,
+  // they may share "facets" or "edges", but their intersection can only have
+  // up to numVars - 1 dimensions.
+  //
+  // In each chamber, we sum up the generating functions of the active vertices
+  // to find the generating function of the polytope.
+  return computeChamberDecomposition(numSymbols, regionsAndGeneratingFunctions);
 }
 
 /// We use an iterative procedure to find a vector not orthogonal

@@ -150,7 +150,8 @@ getKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
 
 static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
                                   SPIRVGlobalRegistry *GR,
-                                  MachineIRBuilder &MIRBuilder) {
+                                  MachineIRBuilder &MIRBuilder,
+                                  const SPIRVSubtarget &ST) {
   // Read argument's access qualifier from metadata or default.
   SPIRV::AccessQualifier::AccessQualifier ArgAccessQual =
       getArgAccessQual(F, ArgIdx);
@@ -169,8 +170,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
     if (MDTypeStr.ends_with("*"))
       ResArgType = GR->getOrCreateSPIRVTypeByName(
           MDTypeStr, MIRBuilder,
-          addressSpaceToStorageClass(
-              OriginalArgType->getPointerAddressSpace()));
+          addressSpaceToStorageClass(OriginalArgType->getPointerAddressSpace(),
+                                     ST));
     else if (MDTypeStr.ends_with("_t"))
       ResArgType = GR->getOrCreateSPIRVTypeByName(
           "opencl." + MDTypeStr.str(), MIRBuilder,
@@ -179,20 +180,6 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
   return ResArgType ? ResArgType
                     : GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder,
                                                ArgAccessQual);
-}
-
-static bool isEntryPoint(const Function &F) {
-  // OpenCL handling: any function with the SPIR_KERNEL
-  // calling convention will be a potential entry point.
-  if (F.getCallingConv() == CallingConv::SPIR_KERNEL)
-    return true;
-
-  // HLSL handling: special attribute are emitted from the
-  // front-end.
-  if (F.getFnAttribute("hlsl.shader").isValid())
-    return true;
-
-  return false;
 }
 
 static SPIRV::ExecutionModel::ExecutionModel
@@ -220,6 +207,10 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   assert(GR && "Must initialize the SPIRV type registry before lowering args.");
   GR->setCurrentFunc(MIRBuilder.getMF());
 
+  // Get access to information about available extensions
+  const SPIRVSubtarget *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+
   // Assign types and names to all args, and store their types for later.
   FunctionType *FTy = getOriginalFunctionType(F);
   SmallVector<SPIRVType *, 4> ArgTypeVRegs;
@@ -230,7 +221,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       // TODO: handle the case of multiple registers.
       if (VRegs[i].size() > 1)
         return false;
-      auto *SpirvTy = getArgSPIRVType(F, i, GR, MIRBuilder);
+      auto *SpirvTy = getArgSPIRVType(F, i, GR, MIRBuilder, *ST);
       GR->assignSPIRVTypeToVReg(SpirvTy, VRegs[i][0], MIRBuilder.getMF());
       ArgTypeVRegs.push_back(SpirvTy);
 
@@ -342,15 +333,19 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     addStringImm(F.getName(), MIB);
   } else if (F.getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage ||
              F.getLinkage() == GlobalValue::LinkOnceODRLinkage) {
-    auto LnkTy = F.isDeclaration() ? SPIRV::LinkageType::Import
-                                   : SPIRV::LinkageType::Export;
+    SPIRV::LinkageType::LinkageType LnkTy =
+        F.isDeclaration()
+            ? SPIRV::LinkageType::Import
+            : (F.getLinkage() == GlobalValue::LinkOnceODRLinkage &&
+                       ST->canUseExtension(
+                           SPIRV::Extension::SPV_KHR_linkonce_odr)
+                   ? SPIRV::LinkageType::LinkOnceODR
+                   : SPIRV::LinkageType::Export);
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
                     {static_cast<uint32_t>(LnkTy)}, F.getGlobalIdentifier());
   }
 
   // Handle function pointers decoration
-  const auto *ST =
-      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   bool hasFunctionPointers =
       ST->canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
   if (hasFunctionPointers) {
@@ -393,7 +388,7 @@ void SPIRVCallLowering::produceIndirectPtrTypes(
     // SPIR-V pointer to function type:
     SPIRVType *IndirectFuncPtrTy = GR->getOrCreateSPIRVPointerType(
         SpirvFuncTy, MIRBuilder, SPIRV::StorageClass::Function);
-    // Correct the Calee type
+    // Correct the Callee type
     GR->assignSPIRVTypeToVReg(IndirectFuncPtrTy, IC.Callee, MF);
   }
 }

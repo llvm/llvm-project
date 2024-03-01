@@ -15,6 +15,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Expression/REPL.h"
@@ -365,7 +366,7 @@ bool Debugger::SetREPLLanguage(lldb::LanguageType repl_lang) {
 
 uint64_t Debugger::GetTerminalWidth() const {
   const uint32_t idx = ePropertyTerminalWidth;
-  return GetPropertyAtIndexAs<int64_t>(
+  return GetPropertyAtIndexAs<uint64_t>(
       idx, g_debugger_properties[idx].default_uint_value);
 }
 
@@ -886,8 +887,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   }
   assert(m_dummy_target_sp.get() && "Couldn't construct dummy target?");
 
-  OptionValueSInt64 *term_width =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueSInt64(
+  OptionValueUInt64 *term_width =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(
           ePropertyTerminalWidth);
   term_width->SetMinimumValue(10);
   term_width->SetMaximumValue(1024);
@@ -1433,13 +1434,14 @@ void Debugger::SetDestroyCallback(
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
                                   std::string title, std::string details,
                                   uint64_t completed, uint64_t total,
-                                  bool is_debugger_specific) {
+                                  bool is_debugger_specific,
+                                  uint32_t progress_broadcast_bit) {
   // Only deliver progress events if we have any progress listeners.
-  const uint32_t event_type = Debugger::eBroadcastBitProgress;
-  if (!debugger.GetBroadcaster().EventTypeHasListeners(event_type))
+  if (!debugger.GetBroadcaster().EventTypeHasListeners(progress_broadcast_bit))
     return;
+
   EventSP event_sp(new Event(
-      event_type,
+      progress_broadcast_bit,
       new ProgressEventData(progress_id, std::move(title), std::move(details),
                             completed, total, is_debugger_specific)));
   debugger.GetBroadcaster().BroadcastEvent(event_sp);
@@ -1448,7 +1450,8 @@ static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
 void Debugger::ReportProgress(uint64_t progress_id, std::string title,
                               std::string details, uint64_t completed,
                               uint64_t total,
-                              std::optional<lldb::user_id_t> debugger_id) {
+                              std::optional<lldb::user_id_t> debugger_id,
+                              uint32_t progress_category_bit) {
   // Check if this progress is for a specific debugger.
   if (debugger_id) {
     // It is debugger specific, grab it and deliver the event if the debugger
@@ -1457,7 +1460,8 @@ void Debugger::ReportProgress(uint64_t progress_id, std::string title,
     if (debugger_sp)
       PrivateReportProgress(*debugger_sp, progress_id, std::move(title),
                             std::move(details), completed, total,
-                            /*is_debugger_specific*/ true);
+                            /*is_debugger_specific*/ true,
+                            progress_category_bit);
     return;
   }
   // The progress event is not debugger specific, iterate over all debuggers
@@ -1467,7 +1471,8 @@ void Debugger::ReportProgress(uint64_t progress_id, std::string title,
     DebuggerList::iterator pos, end = g_debugger_list_ptr->end();
     for (pos = g_debugger_list_ptr->begin(); pos != end; ++pos)
       PrivateReportProgress(*(*pos), progress_id, title, details, completed,
-                            total, /*is_debugger_specific*/ false);
+                            total, /*is_debugger_specific*/ false,
+                            progress_category_bit);
   }
 }
 

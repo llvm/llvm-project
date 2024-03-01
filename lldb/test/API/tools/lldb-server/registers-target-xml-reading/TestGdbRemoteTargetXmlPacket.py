@@ -46,7 +46,7 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(feature)
 
         target_xml_registers = feature.findall("reg")
-        self.assertTrue(len(target_xml_registers) > 0)
+        self.assertGreater(len(target_xml_registers), 0)
 
         # registers info collected by qRegisterInfo
         self.add_register_info_collection_packets()

@@ -113,4 +113,28 @@ def fir_CUDAProcAttributeAttr :
   let assemblyFormat = [{ ```<` $value `>` }];
 }
 
+def fir_CUDALaunchBoundsAttr : fir_Attr<"CUDALaunchBounds"> {
+  let mnemonic = "launch_bounds";
+
+  let parameters = (ins
+    "mlir::IntegerAttr":$maxTPB,
+    "mlir::IntegerAttr":$minBPM,
+    OptionalParameter<"mlir::IntegerAttr">:$upperBoundClusterSize
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def fir_CUDAClusterDimsAttr : fir_Attr<"CUDAClusterDims"> {
+  let mnemonic = "cluster_dims";
+
+  let parameters = (ins
+    "mlir::IntegerAttr":$x,
+    "mlir::IntegerAttr":$y,
+    "mlir::IntegerAttr":$z
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 #endif // FIR_DIALECT_FIR_ATTRS

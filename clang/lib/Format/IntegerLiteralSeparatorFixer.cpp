@@ -79,7 +79,7 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
   AffectedRangeManager AffectedRangeMgr(SourceMgr, Env.getCharRanges());
 
   const auto ID = Env.getFileID();
-  assert(LangOpts.CPlusPlus);
+  const auto LangOpts = getFormattingLangOpts(Style);
   Lexer Lex(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts);
   Lex.SetCommentRetentionState(true);
 

@@ -2215,8 +2215,8 @@ GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
                                                const Matcher *B) {
     auto *L = static_cast<const RuleMatcher *>(A);
     auto *R = static_cast<const RuleMatcher *>(B);
-    return std::make_tuple(OpcodeOrder[L->getOpcode()], L->getNumOperands()) <
-           std::make_tuple(OpcodeOrder[R->getOpcode()], R->getNumOperands());
+    return std::tuple(OpcodeOrder[L->getOpcode()], L->getNumOperands()) <
+           std::tuple(OpcodeOrder[R->getOpcode()], R->getNumOperands());
   });
 
   for (Matcher *Rule : InputRules)

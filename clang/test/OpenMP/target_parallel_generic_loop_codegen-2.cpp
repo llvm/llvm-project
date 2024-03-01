@@ -283,13 +283,6 @@ int nested(int a){
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define internal void @.omp_offloading.requires_reg
-// CHECK-SAME: () #[[ATTR3:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK-NEXT:    ret void
-//
-//
 // CHECK-X86-LABEL: define dso_local noundef i32 @_Z6nestedi
 // CHECK-X86-SAME: (i32 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-X86-NEXT:  entry:
@@ -505,13 +498,6 @@ int nested(int a){
 // CHECK-X86-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK-X86:       omp.loop.exit:
 // CHECK-X86-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP1]])
-// CHECK-X86-NEXT:    ret void
-//
-//
-// CHECK-X86-LABEL: define internal void @.omp_offloading.requires_reg
-// CHECK-X86-SAME: () #[[ATTR3:[0-9]+]] {
-// CHECK-X86-NEXT:  entry:
-// CHECK-X86-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK-X86-NEXT:    ret void
 //
 //

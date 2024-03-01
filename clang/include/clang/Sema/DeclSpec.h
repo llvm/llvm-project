@@ -346,10 +346,7 @@ public:
     // FIXME: Attributes should be included here.
   };
 
-  enum FriendSpecified : bool {
-    No,
-    Yes,
-  };
+  enum FriendSpecified : bool { No, Yes };
 
 private:
   // storage-class-specifier
@@ -400,7 +397,7 @@ private:
 
   // friend-specifier
   LLVM_PREFERRED_TYPE(bool)
-  unsigned Friend_specified : 1;
+  unsigned FriendSpecifiedFirst : 1;
 
   // constexpr-specifier
   LLVM_PREFERRED_TYPE(ConstexprSpecKind)
@@ -491,7 +488,7 @@ public:
         TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
         TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
         FS_forceinline_specified(false), FS_virtual_specified(false),
-        FS_noreturn_specified(false), Friend_specified(false),
+        FS_noreturn_specified(false), FriendSpecifiedFirst(false),
         ConstexprSpecifier(
             static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
         Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
@@ -818,8 +815,10 @@ public:
                         const char *&PrevSpec, unsigned &DiagID);
 
   FriendSpecified isFriendSpecified() const {
-    return static_cast<FriendSpecified>(Friend_specified);
+    return static_cast<FriendSpecified>(FriendLoc.isValid());
   }
+
+  bool isFriendSpecifiedFirst() const { return FriendSpecifiedFirst; }
 
   SourceLocation getFriendSpecLoc() const { return FriendLoc; }
 

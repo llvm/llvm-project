@@ -1283,7 +1283,6 @@ define i32 @zext_load_i32_by_i8_bswap_shl_16(ptr %arg) {
   ret i32 %tmp8
 }
 
-; FIXME: This is a miscompile.
 define i32 @pr80911_vector_load_multiuse(ptr %ptr, ptr %clobber) nounwind {
 ; CHECK-LABEL: pr80911_vector_load_multiuse:
 ; CHECK:       # %bb.0:
@@ -1299,9 +1298,9 @@ define i32 @pr80911_vector_load_multiuse(ptr %ptr, ptr %clobber) nounwind {
 ;
 ; CHECK64-LABEL: pr80911_vector_load_multiuse:
 ; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    movl (%rdi), %ecx
 ; CHECK64-NEXT:    movzwl (%rdi), %eax
 ; CHECK64-NEXT:    movl $0, (%rsi)
-; CHECK64-NEXT:    movl (%rdi), %ecx
 ; CHECK64-NEXT:    movl %ecx, (%rdi)
 ; CHECK64-NEXT:    retq
   %load = load <4 x i8>, ptr %ptr, align 16

@@ -361,8 +361,8 @@ getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
     if (const auto *FD = dyn_cast<FieldDecl>(VD))
       Fields.insert(FD);
   } else if (auto *InitList = dyn_cast<InitListExpr>(&S)) {
-    if (RecordDecl *RD = InitList->getType()->getAsRecordDecl())
-      for (const auto *FD : getFieldsForInitListExpr(RD))
+    if (InitList->getType()->isRecordType())
+      for (const auto *FD : getFieldsForInitListExpr(InitList))
         Fields.insert(FD);
   }
 }
@@ -887,34 +887,10 @@ Value *Environment::createValueUnlessSelfReferential(
 
   if (Type->isRecordType()) {
     CreatedValuesCount++;
-    llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
-    for (const FieldDecl *Field : DACtx->getModeledFields(Type)) {
-      assert(Field != nullptr);
+    auto &Loc = cast<RecordStorageLocation>(createStorageLocation(Type));
+    initializeFieldsWithValues(Loc, Visited, Depth, CreatedValuesCount);
 
-      QualType FieldType = Field->getType();
-
-      FieldLocs.insert(
-          {Field, &createLocAndMaybeValue(FieldType, Visited, Depth + 1,
-                                          CreatedValuesCount)});
-    }
-
-    RecordStorageLocation::SyntheticFieldMap SyntheticFieldLocs;
-    for (const auto &Entry : DACtx->getSyntheticFields(Type)) {
-      SyntheticFieldLocs.insert(
-          {Entry.getKey(),
-           &createLocAndMaybeValue(Entry.getValue(), Visited, Depth + 1,
-                                   CreatedValuesCount)});
-    }
-
-    RecordStorageLocation &Loc = DACtx->createRecordStorageLocation(
-        Type, std::move(FieldLocs), std::move(SyntheticFieldLocs));
-    RecordValue &RecordVal = create<RecordValue>(Loc);
-
-    // As we already have a storage location for the `RecordValue`, we can and
-    // should associate them in the environment.
-    setValue(Loc, RecordVal);
-
-    return &RecordVal;
+    return &refreshRecordValue(Loc, *this);
   }
 
   return nullptr;
@@ -943,6 +919,50 @@ Environment::createLocAndMaybeValue(QualType Ty,
   return Loc;
 }
 
+void Environment::initializeFieldsWithValues(RecordStorageLocation &Loc,
+                                             llvm::DenseSet<QualType> &Visited,
+                                             int Depth,
+                                             int &CreatedValuesCount) {
+  auto initField = [&](QualType FieldType, StorageLocation &FieldLoc) {
+    if (FieldType->isRecordType()) {
+      auto &FieldRecordLoc = cast<RecordStorageLocation>(FieldLoc);
+      setValue(FieldRecordLoc, create<RecordValue>(FieldRecordLoc));
+      initializeFieldsWithValues(FieldRecordLoc, Visited, Depth + 1,
+                                 CreatedValuesCount);
+    } else {
+      if (!Visited.insert(FieldType.getCanonicalType()).second)
+        return;
+      if (Value *Val = createValueUnlessSelfReferential(
+              FieldType, Visited, Depth + 1, CreatedValuesCount))
+        setValue(FieldLoc, *Val);
+      Visited.erase(FieldType.getCanonicalType());
+    }
+  };
+
+  for (const auto &[Field, FieldLoc] : Loc.children()) {
+    assert(Field != nullptr);
+    QualType FieldType = Field->getType();
+
+    if (FieldType->isReferenceType()) {
+      Loc.setChild(*Field,
+                   &createLocAndMaybeValue(FieldType, Visited, Depth + 1,
+                                           CreatedValuesCount));
+    } else {
+      assert(FieldLoc != nullptr);
+      initField(FieldType, *FieldLoc);
+    }
+  }
+  for (const auto &[FieldName, FieldLoc] : Loc.synthetic_fields()) {
+    assert(FieldLoc != nullptr);
+    QualType FieldType = FieldLoc->getType();
+
+    // Synthetic fields cannot have reference type, so we don't need to deal
+    // with this case.
+    assert(!FieldType->isReferenceType());
+    initField(FieldType, Loc.getSyntheticField(FieldName));
+  }
+}
+
 StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
                                                    QualType Ty,
                                                    const Expr *InitExpr) {
@@ -963,7 +983,7 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
   }
 
   Value *Val = nullptr;
-  if (InitExpr)
+  if (InitExpr) {
     // In the (few) cases where an expression is intentionally
     // "uninterpreted", `InitExpr` is not associated with a value.  There are
     // two ways to handle this situation: propagate the status, so that
@@ -978,6 +998,11 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
     // default value (assuming we don't update the environment API to return
     // references).
     Val = getValue(*InitExpr);
+
+    if (!Val && isa<ImplicitValueInitExpr>(InitExpr) &&
+        InitExpr->getType()->isPointerType())
+      Val = &getOrCreateNullPointerValue(InitExpr->getType()->getPointeeType());
+  }
   if (!Val)
     Val = createValue(Ty);
 
@@ -1084,12 +1109,22 @@ RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
   return Env.get<RecordStorageLocation>(*Base);
 }
 
-std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD) {
+std::vector<const FieldDecl *>
+getFieldsForInitListExpr(const InitListExpr *InitList) {
+  const RecordDecl *RD = InitList->getType()->getAsRecordDecl();
+  assert(RD != nullptr);
+
+  std::vector<const FieldDecl *> Fields;
+
+  if (InitList->getType()->isUnionType()) {
+    Fields.push_back(InitList->getInitializedFieldInUnion());
+    return Fields;
+  }
+
   // Unnamed bitfields are only used for padding and do not appear in
   // `InitListExpr`'s inits. However, those fields do appear in `RecordDecl`'s
   // field list, and we thus need to remove them before mapping inits to
   // fields to avoid mapping inits to the wrongs fields.
-  std::vector<FieldDecl *> Fields;
   llvm::copy_if(
       RD->fields(), std::back_inserter(Fields),
       [](const FieldDecl *Field) { return !Field->isUnnamedBitfield(); });

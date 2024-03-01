@@ -691,16 +691,19 @@ public:
   /// lifetime is expected to extend past that of the returned ASTUnit.
   ///
   /// \returns - The initialized ASTUnit or null if the AST failed to load.
-  static std::unique_ptr<ASTUnit> LoadFromASTFile(
-      const std::string &Filename, const PCHContainerReader &PCHContainerRdr,
-      WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-      const FileSystemOptions &FileSystemOpts,
-      std::shared_ptr<HeaderSearchOptions> HSOpts, bool OnlyLocalDecls = false,
-      CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
-      bool AllowASTWithCompilerErrors = false,
-      bool UserFilesAreVolatile = false,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-          llvm::vfs::getRealFileSystem());
+  static std::unique_ptr<ASTUnit>
+  LoadFromASTFile(const std::string &Filename,
+                  const PCHContainerReader &PCHContainerRdr, WhatToLoad ToLoad,
+                  IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
+                  const FileSystemOptions &FileSystemOpts,
+                  std::shared_ptr<HeaderSearchOptions> HSOpts,
+                  std::shared_ptr<LangOptions> LangOpts = nullptr,
+                  bool OnlyLocalDecls = false,
+                  CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
+                  bool AllowASTWithCompilerErrors = false,
+                  bool UserFilesAreVolatile = false,
+                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+                      llvm::vfs::getRealFileSystem());
 
 private:
   /// Helper function for \c LoadFromCompilerInvocation() and

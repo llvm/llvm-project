@@ -192,7 +192,7 @@ public:
 
 private:
   void SayNotDistinguishable(const Scope &, const SourceName &, GenericKind,
-      const Symbol &, const Symbol &, bool isError);
+      const Symbol &, const Symbol &, bool isHardConflict);
   void AttachDeclaration(parser::Message &, const Scope &, const Symbol &);
 
   SemanticsContext &context_;
@@ -920,7 +920,12 @@ void CheckHelper::CheckObjectEntity(
     auto attr{*details.cudaDataAttr()};
     switch (attr) {
     case common::CUDADataAttr::Constant:
-      if (IsAllocatableOrPointer(symbol) || symbol.attrs().test(Attr::TARGET)) {
+      if (subpDetails && !inDeviceSubprogram) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram"_err_en_US,
+            symbol.name());
+      } else if (IsAllocatableOrPointer(symbol) ||
+          symbol.attrs().test(Attr::TARGET)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target"_err_en_US,
             symbol.name());
@@ -3513,6 +3518,11 @@ void DistinguishabilityHelper::Add(const Symbol &generic, GenericKind kind,
 }
 
 void DistinguishabilityHelper::Check(const Scope &scope) {
+  if (FindModuleFileContaining(scope)) {
+    // Distinguishability was checked when the module was created;
+    // don't let optional warnings then become errors now.
+    return;
+  }
   for (const auto &[name, info] : nameToSpecifics_) {
     for (auto iter1{info.begin()}; iter1 != info.end(); ++iter1) {
       const auto &[ultimate, procInfo]{*iter1};
@@ -3534,15 +3544,21 @@ void DistinguishabilityHelper::Check(const Scope &scope) {
 
 void DistinguishabilityHelper::SayNotDistinguishable(const Scope &scope,
     const SourceName &name, GenericKind kind, const Symbol &proc1,
-    const Symbol &proc2, bool isError) {
-  if (!isError &&
-      !context_.ShouldWarn(
-          common::LanguageFeature::IndistinguishableSpecifics)) {
-    // The rules for distinguishing specific procedures (F'2023 15.4.3.4.5)
-    // are inadequate for some real-world cases like pFUnit.
-    // When there are optional dummy arguments or unlimited polymorphic
-    // dummy data object arguments, the best that we can do is emit an optional
-    // portability warning.
+    const Symbol &proc2, bool isHardConflict) {
+  bool isUseAssociated{!scope.sourceRange().Contains(name)};
+  // The rules for distinguishing specific procedures (F'2023 15.4.3.4.5)
+  // are inadequate for some real-world cases like pFUnit.
+  // When there are optional dummy arguments or unlimited polymorphic
+  // dummy data object arguments, the best that we can do is emit an optional
+  // portability warning.  Also, named generics created by USE association
+  // merging shouldn't receive hard errors for ambiguity.
+  // (Non-named generics might be defined I/O procedures or defined
+  // assignments that need to be used by the runtime.)
+  bool isWarning{!isHardConflict || (isUseAssociated && kind.IsName())};
+  if (isWarning &&
+      (!context_.ShouldWarn(
+           common::LanguageFeature::IndistinguishableSpecifics) ||
+          FindModuleFileContaining(scope))) {
     return;
   }
   std::string name1{proc1.name().ToString()};
@@ -3557,17 +3573,20 @@ void DistinguishabilityHelper::SayNotDistinguishable(const Scope &scope,
     }
   }
   parser::Message *msg;
-  if (scope.sourceRange().Contains(name)) {
+  if (!isUseAssociated) {
+    CHECK(isWarning == !isHardConflict);
     msg = &context_.Say(name,
-        isError
+        isHardConflict
             ? "Generic '%s' may not have specific procedures '%s' and '%s' as their interfaces are not distinguishable"_err_en_US
             : "Generic '%s' should not have specific procedures '%s' and '%s' as their interfaces are not distinguishable by the rules in the standard"_port_en_US,
         MakeOpName(name), name1, name2);
   } else {
     msg = &context_.Say(*GetTopLevelUnitContaining(proc1).GetName(),
-        isError
-            ? "USE-associated generic '%s' may not have specific procedures '%s' and '%s' as their interfaces are not distinguishable"_err_en_US
-            : "USE-associated generic '%s' should not have specific procedures '%s' and '%s' as their interfaces are not distinguishable by the incomplete rules in the standard"_port_en_US,
+        isHardConflict
+            ? (isWarning
+                      ? "USE-associated generic '%s' should not have specific procedures '%s' and '%s' as their interfaces are not distinguishable"_warn_en_US
+                      : "USE-associated generic '%s' may not have specific procedures '%s' and '%s' as their interfaces are not distinguishable"_err_en_US)
+            : "USE-associated generic '%s' should not have specific procedures '%s' and '%s' as their interfaces are not distinguishable by the rules in the standard"_port_en_US,
         MakeOpName(name), name1, name2);
   }
   AttachDeclaration(*msg, scope, proc1);

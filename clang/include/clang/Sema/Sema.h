@@ -33,6 +33,7 @@
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/StmtCXX.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
@@ -41,6 +42,7 @@
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PragmaKinds.h"
@@ -1156,7 +1158,9 @@ public:
       if (FD) {
         FD->setWillHaveBody(true);
         S.ExprEvalContexts.back().InImmediateFunctionContext =
-            FD->isImmediateFunction();
+            FD->isImmediateFunction() ||
+            S.ExprEvalContexts[S.ExprEvalContexts.size() - 2]
+                .isConstantEvaluated();
         S.ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
             S.getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
       } else
@@ -4879,6 +4883,12 @@ public:
   bool checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A,
                                     bool SkipArgCountCheck = false);
 
+  /// Map any API notes provided for this declaration to attributes on the
+  /// declaration.
+  ///
+  /// Triggered by declaration-attribute processing.
+  void ProcessAPINotes(Decl *D);
+
   /// Determine if type T is a valid subject for a nonnull and similar
   /// attributes. By default, we look through references (the behavior used by
   /// nonnull), but if the second parameter is true, then we treat a reference
@@ -8039,9 +8049,6 @@ public:
                                      SourceLocation RParenLoc, bool Failed);
   void DiagnoseStaticAssertDetails(const Expr *E);
 
-  FriendDecl *CheckFriendTypeDecl(SourceLocation LocStart,
-                                  SourceLocation FriendLoc,
-                                  TypeSourceInfo *TSInfo);
   Decl *ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
                             MultiTemplateParamsArg TemplateParams);
   NamedDecl *ActOnFriendFunctionDecl(Scope *S, Declarator &D,
@@ -8539,7 +8546,7 @@ public:
   /// if the arguments are dependent.
   ExprResult CheckVarTemplateId(const CXXScopeSpec &SS,
                                 const DeclarationNameInfo &NameInfo,
-                                VarTemplateDecl *Template,
+                                VarTemplateDecl *Template, NamedDecl *FoundD,
                                 SourceLocation TemplateLoc,
                                 const TemplateArgumentListInfo *TemplateArgs);
 
@@ -12704,6 +12711,46 @@ public:
   OMPClause *ActOnOpenMPXBareClause(SourceLocation StartLoc,
                                     SourceLocation EndLoc);
 
+  //===--------------------------------------------------------------------===//
+  // OpenACC directives and clauses.
+
+  /// Called after parsing an OpenACC Clause so that it can be checked.
+  bool ActOnOpenACCClause(OpenACCClauseKind ClauseKind,
+                          SourceLocation StartLoc);
+
+  /// Called after the construct has been parsed, but clauses haven't been
+  /// parsed.  This allows us to diagnose not-implemented, as well as set up any
+  /// state required for parsing the clauses.
+  void ActOnOpenACCConstruct(OpenACCDirectiveKind K, SourceLocation StartLoc);
+
+  /// Called after the directive, including its clauses, have been parsed and
+  /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
+  /// happen before any associated declarations or statements have been parsed.
+  /// This function is only called when we are parsing a 'statement' context.
+  bool ActOnStartOpenACCStmtDirective(OpenACCDirectiveKind K,
+                                      SourceLocation StartLoc);
+
+  /// Called after the directive, including its clauses, have been parsed and
+  /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
+  /// happen before any associated declarations or statements have been parsed.
+  /// This function is only called when we are parsing a 'Decl' context.
+  bool ActOnStartOpenACCDeclDirective(OpenACCDirectiveKind K,
+                                      SourceLocation StartLoc);
+  /// Called when we encounter an associated statement for our construct, this
+  /// should check legality of the statement as it appertains to this Construct.
+  StmtResult ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
+                                        StmtResult AssocStmt);
+
+  /// Called after the directive has been completely parsed, including the
+  /// declaration group or associated statement.
+  StmtResult ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
+                                          SourceLocation StartLoc,
+                                          SourceLocation EndLoc,
+                                          StmtResult AssocStmt);
+  /// Called after the directive has been completely parsed, including the
+  /// declaration group or associated statement.
+  DeclGroupRef ActOnEndOpenACCDeclDirective();
+
   /// The kind of conversion being performed.
   enum CheckedConversionKind {
     /// An implicit conversion.
@@ -14016,6 +14063,7 @@ private:
   bool CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                    CallExpr *TheCall);
   bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+  bool CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckRISCVLMUL(CallExpr *TheCall, unsigned ArgNum);
   bool CheckRISCVBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                      CallExpr *TheCall);
@@ -14039,6 +14087,8 @@ private:
   bool SemaValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum);
 
 public:
+  bool IsLayoutCompatible(QualType T1, QualType T2) const;
+
   // Used by C++ template instantiation.
   ExprResult SemaBuiltinShuffleVector(CallExpr *TheCall);
   ExprResult SemaConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
@@ -14079,6 +14129,8 @@ private:
 
   bool CheckPPCMMAType(QualType Type, SourceLocation TypeLoc);
 
+  bool SemaBuiltinVectorMath(CallExpr *TheCall, QualType &Res);
+  bool SemaBuiltinVectorToScalarMath(CallExpr *TheCall);
   bool SemaBuiltinElementwiseMath(CallExpr *TheCall);
   bool SemaBuiltinElementwiseTernaryMath(CallExpr *TheCall);
   bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);

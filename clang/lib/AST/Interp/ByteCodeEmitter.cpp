@@ -22,6 +22,15 @@
 using namespace clang;
 using namespace clang::interp;
 
+/// Unevaluated builtins don't get their arguments put on the stack
+/// automatically. They instead operate on the AST of their Call
+/// Expression.
+/// Similar information is available via ASTContext::BuiltinInfo,
+/// but that is not correct for our use cases.
+static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
+  return BuiltinID == Builtin::BI__builtin_classify_type;
+}
+
 Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   bool IsLambdaStaticInvoker = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
@@ -99,8 +108,12 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
         this->LambdaCaptures[Cap.first] = {
             Offset, Cap.second->getType()->isReferenceType()};
       }
-      if (LTC)
-        this->LambdaThisCapture = R->getField(LTC)->Offset;
+      if (LTC) {
+        QualType CaptureType = R->getField(LTC)->Decl->getType();
+        this->LambdaThisCapture = {R->getField(LTC)->Offset,
+                                   CaptureType->isReferenceType() ||
+                                       CaptureType->isPointerType()};
+      }
     }
   }
 
@@ -122,7 +135,7 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   if (!Func) {
     bool IsUnevaluatedBuiltin = false;
     if (unsigned BI = FuncDecl->getBuiltinID())
-      IsUnevaluatedBuiltin = Ctx.getASTContext().BuiltinInfo.isUnevaluated(BI);
+      IsUnevaluatedBuiltin = isUnevaluatedBuiltin(BI);
 
     Func =
         P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
