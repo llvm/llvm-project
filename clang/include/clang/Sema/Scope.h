@@ -43,6 +43,9 @@ public:
   /// ScopeFlags - These are bitfields that are or'd together when creating a
   /// scope, which defines the sorts of things the scope contains.
   enum ScopeFlags {
+    // A bitfield value representing no scopes.
+    NoScope = 0,
+
     /// This indicates that the scope corresponds to a function, which
     /// means that labels are set here.
     FnScope = 0x01,
@@ -521,33 +524,21 @@ public:
     return getFlags() & Scope::OpenACCComputeConstructScope;
   }
 
-  bool isInOpenACCComputeConstructScope() const {
+  /// Determine if this scope (or its parents) are a compute construct. If the
+  /// argument is provided, the search will stop at any of the specified scopes.
+  /// Otherwise, it will stop only at the normal 'no longer search' scopes.
+  bool isInOpenACCComputeConstructScope(ScopeFlags Flags = NoScope) const {
     for (const Scope *S = this; S; S = S->getParent()) {
-      if (S->getFlags() & Scope::OpenACCComputeConstructScope)
+      if (S->isOpenACCComputeConstructScope())
         return true;
+
+      if (S->getFlags() & Flags)
+        return false;
+
       else if (S->getFlags() &
                (Scope::FnScope | Scope::ClassScope | Scope::BlockScope |
                 Scope::TemplateParamScope | Scope::FunctionPrototypeScope |
                 Scope::AtCatchScope | Scope::ObjCMethodScope))
-        return false;
-    }
-    return false;
-  }
-
-  /// Determine if this scope (or its parents) are a compute construct inside of
-  /// the nearest 'switch' scope.  This is needed to check whether we are inside
-  /// of a 'duffs' device, which is an illegal branch into a compute construct.
-  bool isInOpenACCComputeConstructBeforeSwitch() const {
-    for (const Scope *S = this; S; S = S->getParent()) {
-      if (S->getFlags() & Scope::OpenACCComputeConstructScope)
-        return true;
-      if (S->getFlags() & Scope::SwitchScope)
-        return false;
-
-      if (S->getFlags() &
-          (Scope::FnScope | Scope::ClassScope | Scope::BlockScope |
-           Scope::TemplateParamScope | Scope::FunctionPrototypeScope |
-           Scope::AtCatchScope | Scope::ObjCMethodScope))
         return false;
     }
     return false;
