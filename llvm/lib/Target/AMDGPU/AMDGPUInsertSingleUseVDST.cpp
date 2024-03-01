@@ -132,6 +132,153 @@ public:
 
   AMDGPUInsertSingleUseVDST() : MachineFunctionPass(ID) {}
 
+  static bool IsValidOpcode(const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::V_MOVRELSD_B32_e32:
+    case AMDGPU::V_MOVRELSD_B32_e64:
+    case AMDGPU::V_SWAPREL_B32:
+    case AMDGPU::V_PERMLANE64_B32:
+    case AMDGPU::V_PERMLANE16_B32_e64:
+    case AMDGPU::V_PERMLANE16_B32_gfx10:
+    case AMDGPU::V_PERMLANEX16_B32_e64:
+    case AMDGPU::V_PERMLANEX16_B32_gfx10:
+    case AMDGPU::V_WRITELANE_B32:
+      return false;
+    default:
+      if (SIInstrInfo::isDPP(MI)) {
+        switch (MI.getOpcode()) {
+        case AMDGPU::V_INTERP_MOV_F32:
+        case AMDGPU::V_INTERP_P1_F32_16bank:
+        case AMDGPU::V_INTERP_P1_F32:
+        case AMDGPU::V_INTERP_P2_F32:
+        case AMDGPU::V_INTERP_MOV_F32_e64:
+        case AMDGPU::V_INTERP_P10_F16_F32_inreg:
+        case AMDGPU::V_INTERP_P10_F32_inreg:
+        case AMDGPU::V_INTERP_P10_RTZ_F16_F32_inreg:
+        case AMDGPU::V_INTERP_P1_F32_e64_vi:
+        case AMDGPU::V_INTERP_P1LL_F16_vi:
+        case AMDGPU::V_INTERP_P1LV_F16_vi:
+        case AMDGPU::V_INTERP_P2_F16_vi:
+        case AMDGPU::V_INTERP_P2_F16_F32_inreg:
+        case AMDGPU::V_INTERP_P2_F32_inreg:
+        case AMDGPU::V_INTERP_P2_F32_e64:
+        case AMDGPU::V_INTERP_P2_LEGACY_F16_gfx9:
+        case AMDGPU::V_INTERP_P2_RTZ_F16_F32_inreg:
+          return true;
+        default:
+          return false;
+        }
+      }
+      return true;
+    }
+  }
+
+  static bool IsValidConsumerOpcode(const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::V_MOVRELS_B32_e32:
+    case AMDGPU::V_MOVRELS_B32_e64:
+    case AMDGPU::V_READFIRSTLANE_B32:
+    case AMDGPU::V_READLANE_B32:
+    case AMDGPU::V_MAD_I64_I32_vi:
+    case AMDGPU::V_MAD_U64_U32_vi:
+    case AMDGPU::V_ASHRREV_I64_vi:
+    case AMDGPU::V_LSHLREV_B64_vi:
+    case AMDGPU::V_LSHRREV_B64_vi:
+    case AMDGPU::V_MQSAD_PK_U16_U8_vi:
+    case AMDGPU::V_MQSAD_U32_U8_vi:
+    case AMDGPU::V_QSAD_PK_U16_U8_vi:
+    case AMDGPU::V_CMPX_EQ_I64_e32:
+    case AMDGPU::V_CMPX_EQ_I64_e64:
+    case AMDGPU::V_CMPX_EQ_U64_e32:
+    case AMDGPU::V_CMPX_EQ_U64_e64:
+    case AMDGPU::V_CMPX_F_I64_e32:
+    case AMDGPU::V_CMPX_F_I64_e64:
+    case AMDGPU::V_CMPX_F_U64_e32:
+    case AMDGPU::V_CMPX_F_U64_e64:
+    case AMDGPU::V_CMPX_GE_I64_e32:
+    case AMDGPU::V_CMPX_GE_I64_e64:
+    case AMDGPU::V_CMPX_GE_U64_e32:
+    case AMDGPU::V_CMPX_GE_U64_e64:
+    case AMDGPU::V_CMPX_GT_I64_e32:
+    case AMDGPU::V_CMPX_GT_I64_e64:
+    case AMDGPU::V_CMPX_GT_U64_e32:
+    case AMDGPU::V_CMPX_GT_U64_e64:
+    case AMDGPU::V_CMPX_LE_I64_e32:
+    case AMDGPU::V_CMPX_LE_I64_e64:
+    case AMDGPU::V_CMPX_LE_U64_e32:
+    case AMDGPU::V_CMPX_LE_U64_e64:
+    case AMDGPU::V_CMPX_LT_I64_e32:
+    case AMDGPU::V_CMPX_LT_I64_e64:
+    case AMDGPU::V_CMPX_LT_U64_e32:
+    case AMDGPU::V_CMPX_LT_U64_e64:
+    case AMDGPU::V_CMPX_NE_I64_e32:
+    case AMDGPU::V_CMPX_NE_I64_e64:
+    case AMDGPU::V_CMPX_NE_U64_e32:
+    case AMDGPU::V_CMPX_NE_U64_e64:
+    case AMDGPU::V_CMPX_T_I64_e32:
+    case AMDGPU::V_CMPX_T_I64_e64:
+    case AMDGPU::V_CMPX_T_U64_e32:
+    case AMDGPU::V_CMPX_T_U64_e64:
+    case AMDGPU::V_CMP_EQ_I64_e32:
+    case AMDGPU::V_CMP_EQ_I64_e64:
+    case AMDGPU::V_CMP_EQ_U64_e32:
+    case AMDGPU::V_CMP_EQ_U64_e64:
+    case AMDGPU::V_CMP_F_I64_e32:
+    case AMDGPU::V_CMP_F_I64_e64:
+    case AMDGPU::V_CMP_F_U64_e32:
+    case AMDGPU::V_CMP_F_U64_e64:
+    case AMDGPU::V_CMP_GE_I64_e32:
+    case AMDGPU::V_CMP_GE_I64_e64:
+    case AMDGPU::V_CMP_GE_U64_e32:
+    case AMDGPU::V_CMP_GE_U64_e64:
+    case AMDGPU::V_CMP_GT_I64_e32:
+    case AMDGPU::V_CMP_GT_I64_e64:
+    case AMDGPU::V_CMP_GT_U64_e32:
+    case AMDGPU::V_CMP_GT_U64_e64:
+    case AMDGPU::V_CMP_LE_I64_e32:
+    case AMDGPU::V_CMP_LE_I64_e64:
+    case AMDGPU::V_CMP_LE_U64_e32:
+    case AMDGPU::V_CMP_LE_U64_e64:
+    case AMDGPU::V_CMP_LT_I64_e32:
+    case AMDGPU::V_CMP_LT_I64_e64:
+    case AMDGPU::V_CMP_LT_U64_e32:
+    case AMDGPU::V_CMP_LT_U64_e64:
+    case AMDGPU::V_CMP_NE_I64_e32:
+    case AMDGPU::V_CMP_NE_I64_e64:
+    case AMDGPU::V_CMP_NE_U64_e32:
+    case AMDGPU::V_CMP_NE_U64_e64:
+    case AMDGPU::V_CMP_T_I64_e32:
+    case AMDGPU::V_CMP_T_I64_e64:
+    case AMDGPU::V_CMP_T_U64_e32:
+    case AMDGPU::V_CMP_T_U64_e64:
+    case AMDGPU::V_MUL_LO_U32_e64:
+    case AMDGPU::V_MUL_HI_U32_e64:
+    case AMDGPU::V_MUL_HI_I32_e64:
+    case AMDGPU::V_SWAP_B32:
+    case AMDGPU::V_DOT4_I32_I8:
+    case AMDGPU::V_DOT4_U32_U8:
+      return false;
+    default:
+      return IsValidOpcode(MI);
+    }
+  }
+
+  static bool IsValidProducerOpcode(const MachineInstr &MI) {
+    // Only VALU instructions are valid producers.
+    if (!SIInstrInfo::isVALU(MI))
+      return false;
+
+    // VALU instructions that take multiple cycles should not be marked as
+    // single use.
+    switch (MI.getOpcode()) {
+    case AMDGPU::V_MOVRELD_B32_e32:
+    case AMDGPU::V_MOVRELD_B32_e64:
+      return false;
+    default:
+      return IsValidOpcode(MI);
+    }
+  }
+
   void insertSingleUseInstructions(
       ArrayRef<std::pair<unsigned, MachineInstr *>> SingleUseProducers) const {
     SmallVector<SingleUseInstruction> Instructions;
@@ -214,12 +361,13 @@ public:
           RegisterUseCount[Unit]++;
 
         // Do not attempt to optimise across exec mask changes.
-        if (MI.modifiesRegister(AMDGPU::EXEC, TRI)) {
+        if (MI.modifiesRegister(AMDGPU::EXEC, TRI) ||
+            !IsValidConsumerOpcode(MI)) {
           for (auto &UsedReg : RegisterUseCount)
             UsedReg.second = 2;
         }
 
-        if (!SIInstrInfo::isVALU(MI))
+        if (!IsValidProducerOpcode(MI))
           continue;
         if (AllProducerOperandsAreSingleUse) {
           SingleUseProducerPositions.push_back({VALUInstrCount, &MI});
