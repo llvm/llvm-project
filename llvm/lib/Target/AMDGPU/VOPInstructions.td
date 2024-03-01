@@ -304,6 +304,18 @@ class VOP3OpSel_gfx9 <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
   let Inst{14} = !if(P.HasDst,  src0_modifiers{3}, 0);
 }
 
+// Special case for v_permlane16_swap_b32/v_permlane32_swap_b32
+// op_sel[0]/op_sel[1] are treated as bound_ctrl and fi dpp operands.
+class VOP3OpSelIsDPP_gfx9 <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
+  bits<1> fi;
+  bits<1> bound_ctrl;
+
+  // OPSEL[0] specifies FI
+  let Inst{11} = fi;
+  // OPSEL[1] specifies BOUND_CTRL
+  let Inst{12} = bound_ctrl;
+}
+
 class VOP3OpSel_gfx10<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
   let Inst{11} = !if(!or(p.HasSrc0, p.HasSrc0Mods), src0_modifiers{2}, 0);
   let Inst{12} = !if(!or(p.HasSrc1, p.HasSrc1Mods), src1_modifiers{2}, 0);
@@ -441,7 +453,7 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64 {
   let Inst{63}    = !if(P.HasSrc2Mods, src2_modifiers{0}, 0); // neg (lo)
 }
 
-class VOP3Pe_MAI <bits<7> op, VOPProfile P, bit acc_cd = 0> : Enc64 {
+class VOP3Pe_MAI_Base {
   bits<8> vdst;
   bits<10> src0;
   bits<10> src1;
@@ -449,7 +461,9 @@ class VOP3Pe_MAI <bits<7> op, VOPProfile P, bit acc_cd = 0> : Enc64 {
   bits<3> blgp;
   bits<3> cbsz;
   bits<4> abid;
+}
 
+class VOP3Pe_MAI <bits<7> op, VOPProfile P, bit acc_cd = 0> : Enc64, VOP3Pe_MAI_Base {
   let Inst{7-0} = vdst;
 
   let Inst{10-8}  = !if(P.HasSrc1, cbsz, 0);
@@ -497,6 +511,56 @@ class VOP3Pe_SMFMAC <bits<7> op> : Enc64 {
   let Inst{60}    = src1{9}; // acc(1)
 
   let Inst{63-61} = blgp;
+}
+
+class VOP3PXe <bits<7> op, VOPProfile MFMAPfl, bit acc_cd = 0> : Enc128, VOP3Pe_MAI_Base {
+  bits<9> scale_src0;
+  bits<9> scale_src1;
+
+  bits<2> scale_src0_opsel;
+  bits<2> scale_src1_opsel;
+
+  // Inst{7-0} = unused
+  // Inst{10-8} = neg_hi;
+  // Inst{13-11} = op_sel
+  let Inst{11} = scale_src0_opsel{0};
+  let Inst{12} = scale_src1_opsel{0};
+  // Inst{13} = unused op_sel
+  // Inst{14} = unused op_sel_hi2
+  let Inst{31-16} = 0b1101001110101100;
+  let Inst{40-32} = scale_src0;
+  let Inst{49-41} = scale_src1;
+  // Inst{50-58} = unused
+  // Inst{60-59} = op_sel_hi;
+  let Inst{59} = scale_src0_opsel{1};
+  let Inst{60} = scale_src1_opsel{1};
+  // Inst{63-61} = neg;
+
+  // The high half of the encoding is the unscaled mfma op.
+  //
+  // FIXME: Defining the encoding in terms of the base instruction
+  // seems to not work, results in all 0 encoding, so replicate all
+  // the fields from VOP3Pe_MAI, shifted up by 64
+  //
+  // defvar Hi = VOP3Pe_MAI<op, MFMAPfl, acc_cd>;
+  // let Inst{127-64} = Hi.Inst;
+
+  let Inst{71-64} = vdst;
+  let Inst{74-72} = !if(MFMAPfl.HasSrc1, cbsz, 0);
+  let Inst{78-75} = !if(MFMAPfl.HasSrc1, abid, 0);
+
+  let Inst{79} = acc_cd;
+
+  let Inst{86-80} = op;
+  let Inst{95-87} = 0x1a7; //encoding
+  let Inst{104-96} = !if(MFMAPfl.HasSrc0, src0{8-0}, 0);
+  let Inst{113-105} = !if(MFMAPfl.HasSrc1, src1{8-0}, 0);
+  let Inst{122-114} = !if(MFMAPfl.HasSrc2, src2, 0);
+
+  let Inst{123}    = !if(MFMAPfl.HasSrc0, src0{9}, 0); // acc(0)
+  let Inst{124}    = !if(MFMAPfl.HasSrc1, src1{9}, 0); // acc(1)
+
+  let Inst{127-125} = !if(MFMAPfl.HasSrc1, blgp, 0);
 }
 
 class VOP3Pe_gfx10 <bits<7> op, VOPProfile P> : VOP3Pe<op, P> {
@@ -1281,18 +1345,18 @@ class getVOP3MAIScaledPat<VOPProfile P, SDPatternOperator node> {
                       // mfma
                       [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
                                             timm:$cbsz, timm:$abid, timm:$blgp,
-                                            MFMALdScaleModifierOp:$ld_scale_src0_opsel,
-                                            i32:$ld_scale_src0,
-                                            MFMALdScaleModifierOp:$ld_scale_src1_opsel,
-                                            i32:$ld_scale_src1
+                                            MFMALdScaleModifierOp:$scale_src0_opsel,
+                                            i32:$scale_src0,
+                                            MFMALdScaleModifierOp:$scale_src1_opsel,
+                                            i32:$scale_src1
                                             ))],
                       // smfmac
                       [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2, i32:$idx,
                                             timm:$cbsz, timm:$abid,
-                                            MFMALdScaleModifierOp:$ld_scale_src0_opsel,
-                                            i32:$ld_scale_src0,
-                                            MFMALdScaleModifierOp:$ld_scale_src1_opsel,
-                                            i32:$ld_scale_src1))]);
+                                            MFMALdScaleModifierOp:$scale_src0_opsel,
+                                            i32:$scale_src0,
+                                            MFMALdScaleModifierOp:$scale_src1_opsel,
+                                            i32:$scale_src1))]);
 }
 
 class VOP3Features<bit Clamp, bit OpSel, bit Packed, bit MAI> {

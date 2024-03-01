@@ -2527,33 +2527,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addReg(DstHi);
     }
     break;
-  case AMDGPU::V_MFMA_SCALE_F32_16X16X128_F8F6F4_e64:
-  case AMDGPU::V_MFMA_SCALE_F32_16X16X128_F8F6F4_vgprcd_e64:
-  case AMDGPU::V_MFMA_SCALE_F32_32X32X64_F8F6F4_e64:
-  case AMDGPU::V_MFMA_SCALE_F32_32X32X64_F8F6F4_vgprcd_e64:
-  case AMDGPU::V_MFMA_SCALE_F32_32X32X64_F8F6F4_mac_e64:
-  case AMDGPU::V_MFMA_SCALE_F32_32X32X64_F8F6F4_mac_vgprcd_e64: {
-    unsigned NewOp = AMDGPU::getMFMABaseOpFromScaledOp(MI.getOpcode());
-
-    // TODO: Elide V_MFMA_LD_SCALE_B32 if the factor is 0
-    auto LdScale = BuildMI(*MBB.getParent(), DL, get(AMDGPU::V_MFMA_LD_SCALE_B32))
-      .add(MI.getOperand(7))
-      .add(MI.getOperand(8))
-      .add(MI.getOperand(9))
-      .add(MI.getOperand(10))
-      .addImm(0)  // FIXME: op_sel0: should not be defined
-      .addImm(0); // FIXME: op_sel_hi0: Should not be defined
-    MI.setDesc(get(NewOp));
-    MI.removeOperand(10);
-    MI.removeOperand(9);
-    MI.removeOperand(8);
-    MI.removeOperand(7);
-
-    MIBundleBuilder Bundler(&MI);
-    Bundler.prepend(LdScale);
-    finalizeBundle(MBB, Bundler.begin());
-    break;
-  }
   }
   return true;
 }
@@ -4443,7 +4416,11 @@ bool SIInstrInfo::canShrink(const MachineInstr &MI,
 
   // Check output modifiers
   return !hasModifiersSet(MI, AMDGPU::OpName::omod) &&
-         !hasModifiersSet(MI, AMDGPU::OpName::clamp);
+         !hasModifiersSet(MI, AMDGPU::OpName::clamp) &&
+         // TODO: Can we avoid checking bound_ctrl/fi here?
+         // They are only used by permlane*_swap special case.
+         !hasModifiersSet(MI, AMDGPU::OpName::bound_ctrl) &&
+         !hasModifiersSet(MI, AMDGPU::OpName::fi);
 }
 
 // Set VCC operand with all flags from \p Orig, except for setting it as

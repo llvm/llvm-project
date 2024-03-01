@@ -752,6 +752,10 @@ def as_i1timm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i1);
 }]>;
 
+def as_i1timm_zext : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i32);
+}]>;
+
 def as_i8imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i8);
 }]>;
@@ -3052,15 +3056,6 @@ def getMFMAEarlyClobberOp : InstrMapping {
   let FilterClass = "MFMATable";
   let RowFields = ["FMAOp"];
   let ColFields = ["IsMac"];
-  let KeyCol = ["1"];
-  let ValueCols = [["0"]];
-}
-
-// Convert a _scaled pseudo mfma operation into the unscaled pseudo
-def getMFMABaseOpFromScaledOp : InstrMapping {
-  let FilterClass = "ScaledMFMATable";
-  let RowFields = ["UnscaledMFMAOp"];
-  let ColFields = ["IsScaled"];
   let KeyCol = ["1"];
   let ValueCols = [["0"]];
 }
