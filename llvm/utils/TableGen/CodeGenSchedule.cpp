@@ -2190,6 +2190,15 @@ void CodeGenSchedModels::addWriteRes(Record *ProcWriteResDef, unsigned PIdx) {
 // Add resources for a ReadAdvance to this processor if they don't exist.
 void CodeGenSchedModels::addReadAdvance(Record *ProcReadAdvanceDef,
                                         unsigned PIdx) {
+  for (const Record *ValidWrite :
+       ProcReadAdvanceDef->getValueAsListOfDefs("ValidWrites"))
+    if (getSchedRWIdx(ValidWrite, /*IsRead=*/false) == 0)
+      PrintFatalError(
+          ProcReadAdvanceDef->getLoc(),
+          "ReadAdvance referencing a ValidWrite that is not used by "
+          "any instruction (" +
+              ValidWrite->getName() + ")");
+
   RecVec &RADefs = ProcModels[PIdx].ReadAdvanceDefs;
   if (is_contained(RADefs, ProcReadAdvanceDef))
     return;

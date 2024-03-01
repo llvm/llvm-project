@@ -64,6 +64,9 @@ public:
   ///
   /// @param [in] title The title of this progress activity.
   ///
+  /// @param [in] details Specific information about what the progress report
+  /// is currently working on.
+  ///
   /// @param [in] total The total units of work to be done if specified, if
   /// set to std::nullopt then an indeterminate progress indicator should be
   /// displayed.

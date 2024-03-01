@@ -688,6 +688,12 @@ def Popcount : Builtin, BitInt_Long_LongLongTemplate {
   let Prototype = "int(unsigned T)";
 }
 
+def Popcountg : Builtin {
+  let Spellings = ["__builtin_popcountg"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "int(...)";
+}
+
 def Clrsb : Builtin, BitInt_Long_LongLongTemplate {
   let Spellings = ["__builtin_clrsb"];
   let Attributes = [NoThrow, Const, Constexpr];
@@ -4526,6 +4532,18 @@ def HLSLCreateHandle : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_dot"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_frac"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLLerp : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_lerp"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
