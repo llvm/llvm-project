@@ -22,6 +22,7 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
+#include <mlir/Dialect/OpenMP/OpenMPDialect.h>
 
 namespace fir {
 #define GEN_PASS_DEF_CODEGENREWRITE
@@ -318,6 +319,10 @@ public:
       runOn(func, func.getBody());
     for (auto global : mod.getOps<fir::GlobalOp>())
       runOn(global, global.getRegion());
+    for (auto omp : mod.getOps<mlir::omp::ReductionDeclareOp>()) {
+      runOn(omp, omp.getInitializerRegion());
+      runOn(omp, omp.getReductionRegion());
+    }
   }
 };
 
