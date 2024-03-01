@@ -2767,10 +2767,6 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
                                const ToolChain &HostTC) {
   SmallVector<StringRef, 8> LibraryPaths;
 
-  // Check all of the standard library search paths used by the compiler.
-  for (const auto &LibPath : HostTC.getFilePaths())
-    LibraryPaths.emplace_back(LibPath);
-
   // Add user defined library paths from LIBRARY_PATH.
   std::optional<std::string> LibPath =
       llvm::sys::Process::GetEnv("LIBRARY_PATH");
@@ -2781,6 +2777,10 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
     for (StringRef Path : Frags)
       LibraryPaths.emplace_back(Path.trim());
   }
+
+  // Check all of the standard library search paths used by the compiler.
+  for (const auto &LibPath : HostTC.getFilePaths())
+    LibraryPaths.emplace_back(LibPath);
 
   OptSpecifier LibomptargetBCPathOpt =
       Triple.isAMDGCN() ? options::OPT_libomptarget_amdgpu_bc_path_EQ
