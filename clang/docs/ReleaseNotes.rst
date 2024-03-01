@@ -346,6 +346,11 @@ Arm and AArch64 Support
   improvements for most targets. We have not changed the default behavior for
   ARMv6, but may revisit that decision in the future. Users can restore the old
   behavior with -m[no-]unaligned-access.
+- An alias identifier (rdma) has been added for targeting the AArch64
+  Architecture Extension which uses Rounding Doubling Multiply Accumulate
+  instructions (rdm). The identifier is available on the command line as
+  a feature modifier for -march and -mcpu as well as via target attributes
+  like ``target_version`` or ``target_clones``.
 
 Android Support
 ^^^^^^^^^^^^^^^
