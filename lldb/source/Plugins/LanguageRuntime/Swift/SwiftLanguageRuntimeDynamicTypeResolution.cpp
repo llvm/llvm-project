@@ -17,6 +17,7 @@
 #include "SwiftMetadataCache.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/Language/Swift/LogChannelSwift.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
 #include "lldb/Core/ValueObjectMemory.h"
@@ -40,6 +41,12 @@
 #include "swift/Strings.h"
 
 #include <sstream>
+
+#define HEALTH_LOG(FMT, ...)                                                   \
+  do {                                                                         \
+    LLDB_LOG(GetLog(LLDBLog::Types), FMT, ##__VA_ARGS__);                      \
+    LLDB_LOG(lldb_private::GetSwiftHealthLog(), FMT, ##__VA_ARGS__);           \
+  } while (0)
 
 using namespace lldb;
 using namespace lldb_private;
@@ -328,10 +335,9 @@ public:
     bool is_imported =
         ts->IsImportedType(swift_type.GetOpaqueQualType(), &clang_type);
     if (!is_imported || !clang_type) {
-      LLDB_LOG(GetLog(LLDBLog::Types),
-               "[LLDBTypeInfoProvider] Could not find clang debug type info "
-               "for {0}",
-               mangledName);
+      HEALTH_LOG("[LLDBTypeInfoProvider] Could not find clang debug type info "
+                 "for {0}",
+                 mangledName);
       return nullptr;
     }
 
@@ -630,8 +636,8 @@ GetExistentialSyntheticChildren(std::shared_ptr<TypeSystemSwiftTypeRef> ts,
 /// Log the fact that a type kind is not supported.
 void LogUnimplementedTypeKind(const char *function, CompilerType type) {
   // When running the test suite assert that all cases are covered.
-  LLDB_LOG(GetLog(LLDBLog::Types), "{0}: unimplemented type info in {1}",
-           type.GetMangledTypeName(), function);
+  HEALTH_LOG("{0}: unimplemented type info in {1}", type.GetMangledTypeName(),
+             function);
 #ifndef NDEBUG
   llvm::dbgs() << function << ": unimplemented type info in"
                << type.GetMangledTypeName() << "\n";
@@ -1768,17 +1774,15 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
                                                ts.GetDescriptorFinder());
 
   if (!typeref) {
-    LLDB_LOGF(log,
-              "could not read typeref for type: %s (instance_ptr = 0x%" PRIx64
-              ")",
-              class_type.GetMangledTypeName().GetCString(), instance_ptr);
+    HEALTH_LOG("could not read typeref for type: {0} (instance_ptr = {0:x})",
+               class_type.GetMangledTypeName(), instance_ptr);
     return false;
   }
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = typeref->getDemangling(dem);
   CompilerType dynamic_type = ts.RemangleAsType(dem, node);
-  LLDB_LOGF(log, "dynamic type of instance_ptr 0x%" PRIx64 " is %s",
-            instance_ptr, class_type.GetMangledTypeName().GetCString());
+  LLDB_LOG(log, "dynamic type of instance_ptr {0:x} is {1}", instance_ptr,
+           class_type.GetMangledTypeName());
   class_type_or_name.SetCompilerType(dynamic_type);
 
 #ifndef NDEBUG
