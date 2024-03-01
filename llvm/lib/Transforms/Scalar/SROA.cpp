@@ -2360,13 +2360,13 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
       CheckCandidateType(Ty);
   }
 
+  SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
   if (auto *VTy = createAndCheckVectorTypesForPromotion(
-          LoadStoreTys, CandidateTys, CheckCandidateType, P, DL, CandidateTys,
-          HaveCommonEltTy, CommonEltTy, HaveVecPtrTy, HaveCommonVecPtrTy,
-          CommonVecPtrTy))
+          LoadStoreTys, CandidateTysCopy, CheckCandidateType, P, DL,
+          CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
+          HaveCommonVecPtrTy, CommonVecPtrTy))
     return VTy;
 
-  SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
   CandidateTys.clear();
   return createAndCheckVectorTypesForPromotion(
       DeferredTys, CandidateTysCopy, CheckCandidateType, P, DL, CandidateTys,
