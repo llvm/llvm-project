@@ -3711,13 +3711,17 @@ bool SubprogramVisitor::Pre(const parser::Suffix &suffix) {
 bool SubprogramVisitor::Pre(const parser::PrefixSpec &x) {
   // Save this to process after UseStmt and ImplicitPart
   if (const auto *parsedType{std::get_if<parser::DeclarationTypeSpec>(&x.u)}) {
-    FuncResultStack::FuncInfo &info{DEREF(funcResultStack().Top())};
-    if (info.parsedType) { // C1543
-      Say(currStmtSource().value(),
-          "FUNCTION prefix cannot specify the type more than once"_err_en_US);
+    if (FuncResultStack::FuncInfo * info{funcResultStack().Top()}) {
+      if (info->parsedType) { // C1543
+        Say(currStmtSource().value(),
+            "FUNCTION prefix cannot specify the type more than once"_err_en_US);
+      } else {
+        info->parsedType = parsedType;
+        info->source = currStmtSource();
+      }
     } else {
-      info.parsedType = parsedType;
-      info.source = currStmtSource();
+      Say(currStmtSource().value(),
+          "SUBROUTINE prefix cannot specify a type"_err_en_US);
     }
     return false;
   } else {
