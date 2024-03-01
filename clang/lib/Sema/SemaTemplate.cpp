@@ -3141,12 +3141,14 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
            diag::note_template_param_prev_default_arg_in_other_module)
           << PrevModuleName;
       Invalid = true;
-    } else if (MissingDefaultArg && TPC != TPC_FunctionTemplate) {
-      // C++ [temp.param]p11:
-      //   If a template-parameter of a class template has a default
-      //   template-argument, each subsequent template-parameter shall either
-      //   have a default template-argument supplied or be a template parameter
-      //   pack.
+    } else if (MissingDefaultArg &&
+               (TPC == TPC_ClassTemplate || TPC == TPC_FriendClassTemplate ||
+                TPC == TPC_VarTemplate || TPC == TPC_TypeAliasTemplate)) {
+      // C++ 23[temp.param]p14:
+      // If a template-parameter of a class template, variable template, or
+      // alias template has a default template argument, each subsequent
+      // template-parameter shall either have a default template argument
+      // supplied or be a template parameter pack.
       Diag((*NewParam)->getLocation(),
            diag::err_template_param_default_arg_missing);
       Diag(PreviousDefaultArgLoc, diag::note_template_param_prev_default_arg);
