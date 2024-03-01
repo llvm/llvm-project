@@ -177,46 +177,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  lround
-  SRCS
-    lround.cpp
-  HDRS
-    ../lround.h
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
-  lroundf
-  SRCS
-    lroundf.cpp
-  HDRS
-    ../lroundf.h
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
-  llround
-  SRCS
-    llround.cpp
-  HDRS
-    ../llround.h
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
-  llroundf
-  SRCS
-    llroundf.cpp
-  HDRS
-    ../llroundf.h
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
   modf
   SRCS
     modf.cpp

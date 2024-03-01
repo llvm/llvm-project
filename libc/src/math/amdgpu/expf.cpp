@@ -13,6 +13,6 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(float, expf, (float x)) { return __builtin_expf(x); }
+LLVM_LIBC_FUNCTION(float, expf, (float x)) { return __ocml_exp_f32(x); }
 
 } // namespace LIBC_NAMESPACE
