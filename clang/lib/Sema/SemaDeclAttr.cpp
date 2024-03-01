@@ -2053,12 +2053,6 @@ static void handleTLSModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  if (S.Context.getTargetInfo().getTriple().isOSAIX() &&
-      Model == "local-dynamic") {
-    S.Diag(LiteralLoc, diag::err_aix_attr_unsupported_tls_model) << Model;
-    return;
-  }
-
   D->addAttr(::new (S.Context) TLSModelAttr(S.Context, AL, Model));
 }
 

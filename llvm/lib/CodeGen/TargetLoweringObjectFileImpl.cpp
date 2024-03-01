@@ -2418,6 +2418,15 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForExternalReference(
   SmallString<128> Name;
   getNameWithPrefix(Name, GO, TM);
 
+  // AIX TLS local-dynamic does not need the external reference for the
+  // "_$TLSML" symbol.
+  if (GO->getThreadLocalMode() == GlobalVariable::LocalDynamicTLSModel &&
+      GO->hasName() && GO->getName() == "_$TLSML") {
+    return getContext().getXCOFFSection(
+        Name, SectionKind::getData(),
+        XCOFF::CsectProperties(XCOFF::XMC_TC, XCOFF::XTY_SD));
+  }
+
   XCOFF::StorageMappingClass SMC =
       isa<Function>(GO) ? XCOFF::XMC_DS : XCOFF::XMC_UA;
   if (GO->isThreadLocal())
@@ -2675,13 +2684,17 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
   // the chance of needing -bbigtoc is decreased. Also, the toc-entry for
   // EH info is never referenced directly using instructions so it can be
   // allocated with TE storage-mapping class.
+  // The "_$TLSML" symbol for TLS local-dynamic mode requires XMC_TC, otherwise
+  // the AIX assembler will complain.
   return getContext().getXCOFFSection(
       cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(), SectionKind::getData(),
-      XCOFF::CsectProperties((TM.getCodeModel() == CodeModel::Large ||
-                              cast<MCSymbolXCOFF>(Sym)->isEHInfo())
-                                 ? XCOFF::XMC_TE
-                                 : XCOFF::XMC_TC,
-                             XCOFF::XTY_SD));
+      XCOFF::CsectProperties(
+          ((TM.getCodeModel() == CodeModel::Large &&
+            cast<MCSymbolXCOFF>(Sym)->getSymbolTableName() != "_$TLSML") ||
+           cast<MCSymbolXCOFF>(Sym)->isEHInfo())
+              ? XCOFF::XMC_TE
+              : XCOFF::XMC_TC,
+          XCOFF::XTY_SD));
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForLSDA(

@@ -1774,9 +1774,11 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::ADDIS_TLSGD_HA:  return "PPCISD::ADDIS_TLSGD_HA";
   case PPCISD::ADDI_TLSGD_L:    return "PPCISD::ADDI_TLSGD_L";
   case PPCISD::GET_TLS_ADDR:    return "PPCISD::GET_TLS_ADDR";
+  case PPCISD::GET_TLS_MOD_AIX: return "PPCISD::GET_TLS_MOD_AIX";
   case PPCISD::GET_TPOINTER:    return "PPCISD::GET_TPOINTER";
   case PPCISD::ADDI_TLSGD_L_ADDR: return "PPCISD::ADDI_TLSGD_L_ADDR";
   case PPCISD::TLSGD_AIX:       return "PPCISD::TLSGD_AIX";
+  case PPCISD::TLSLD_AIX:       return "PPCISD::TLSLD_AIX";
   case PPCISD::ADDIS_TLSLD_HA:  return "PPCISD::ADDIS_TLSLD_HA";
   case PPCISD::ADDI_TLSLD_L:    return "PPCISD::ADDI_TLSLD_L";
   case PPCISD::GET_TLSLD_ADDR:  return "PPCISD::GET_TLSLD_ADDR";
@@ -3415,13 +3417,36 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
     return DAG.getNode(PPCISD::ADD_TLS, dl, PtrVT, TLSReg, VariableOffset);
   }
 
-  // Only Local-Exec, Initial-Exec and General-Dynamic TLS models are currently
-  // supported models. If Local- or Initial-exec are not possible or specified,
-  // all GlobalTLSAddress nodes are lowered using the general-dynamic model.
-  // We need to generate two TOC entries, one for the variable offset, one for
-  // the region handle. The global address for the TOC entry of the region
-  // handle is created with the MO_TLSGDM_FLAG flag and the global address
-  // for the TOC entry of the variable offset is created with MO_TLSGD_FLAG.
+  if (Model == TLSModel::LocalDynamic) {
+    // For local-dynamic on AIX, we need to generate one TOC entry for each
+    // variable offset, and a single module-handle TOC entry for the entire
+    // file.
+
+    SDValue VariableOffsetTGA =
+        DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TLSLD_FLAG);
+    SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
+
+    Module *M = DAG.getMachineFunction().getFunction().getParent();
+    GlobalVariable *TLSGV =
+        dyn_cast_or_null<GlobalVariable>(M->getOrInsertGlobal(
+            StringRef("_$TLSML"), PointerType::getUnqual(*DAG.getContext())));
+    TLSGV->setThreadLocalMode(GlobalVariable::LocalDynamicTLSModel);
+    assert(TLSGV && "Not able to create GV for _$TLSML.");
+    SDValue ModuleHandleTGA =
+        DAG.getTargetGlobalAddress(TLSGV, dl, PtrVT, 0, PPCII::MO_TLSLDM_FLAG);
+    SDValue ModuleHandleTOC = getTOCEntry(DAG, dl, ModuleHandleTGA);
+    SDValue ModuleHandle =
+        DAG.getNode(PPCISD::TLSLD_AIX, dl, PtrVT, ModuleHandleTOC);
+
+    return DAG.getNode(ISD::ADD, dl, PtrVT, ModuleHandle, VariableOffset);
+  }
+
+  // If Local- or Initial-exec or Local-dynamic is not possible or specified,
+  // all GlobalTLSAddress nodes are lowered using the general-dynamic model. We
+  // need to generate two TOC entries, one for the variable offset, one for the
+  // region handle. The global address for the TOC entry of the region handle is
+  // created with the MO_TLSGDM_FLAG flag and the global address for the TOC
+  // entry of the variable offset is created with MO_TLSGD_FLAG.
   SDValue VariableOffsetTGA =
       DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TLSGD_FLAG);
   SDValue RegionHandleTGA =

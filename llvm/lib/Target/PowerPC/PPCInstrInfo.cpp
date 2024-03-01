@@ -2965,6 +2965,7 @@ PPCInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_PCREL_OPT_FLAG, "ppc-opt-pcrel"},
       {MO_TLSGD_FLAG, "ppc-tlsgd"},
       {MO_TPREL_FLAG, "ppc-tprel"},
+      {MO_TLSLDM_FLAG, "ppc-tlsldm"},
       {MO_TLSLD_FLAG, "ppc-tlsld"},
       {MO_TLSGDM_FLAG, "ppc-tlsgdm"},
       {MO_GOT_TLSGD_PCREL_FLAG, "ppc-got-tlsgd-pcrel"},
