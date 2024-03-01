@@ -567,6 +567,7 @@ set(files
   __mutex/once_flag.h
   __mutex/tag_types.h
   __mutex/unique_lock.h
+  __new/hardware_interference_size.h
   __node_handle
   __numeric/accumulate.h
   __numeric/adjacent_difference.h

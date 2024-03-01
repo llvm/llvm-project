@@ -47,6 +47,11 @@ new_handler get_new_handler() noexcept;
 
 // 21.6.4, pointer optimization barrier
 template <class T> [[nodiscard]] constexpr T* launder(T* p) noexcept;   // C++17, nodiscard since C++20
+
+// [hardware.interference], hardware interference size
+inline constexpr size_t hardware_destructive_interference_size = implementation-defined;  // since C++17
+inline constexpr size_t hardware_constructive_interference_size = implementation-defined; // since C++17
+
 }  // std
 
 void* operator new(std::size_t size);                                   // replaceable, nodiscard in C++20
@@ -89,6 +94,7 @@ void  operator delete[](void* ptr, void*) noexcept;
 #include <__availability>
 #include <__config>
 #include <__exception/exception.h>
+#include <__new/hardware_interference_size.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cv.h>
@@ -346,17 +352,6 @@ _LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp* launde
   return std::__launder(__p);
 }
 #endif
-
-#if _LIBCPP_STD_VER >= 17
-
-#  if defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
-
-inline constexpr size_t hardware_destructive_interference_size  = __GCC_DESTRUCTIVE_SIZE;
-inline constexpr size_t hardware_constructive_interference_size = __GCC_CONSTRUCTIVE_SIZE;
-
-#  endif // defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
-
-#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

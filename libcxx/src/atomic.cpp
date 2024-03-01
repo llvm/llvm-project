@@ -103,7 +103,7 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
 
 static constexpr size_t __libcpp_contention_table_size = (1 << 8); /* < there's no magic in this number */
 
-struct alignas(64) /*  aim to avoid false sharing */ __libcpp_contention_table_entry {
+struct alignas(std::hardware_destructive_interference_size) __libcpp_contention_table_entry {
   __cxx_atomic_contention_t __contention_state;
   __cxx_atomic_contention_t __platform_state;
   inline constexpr __libcpp_contention_table_entry() : __contention_state(0), __platform_state(0) {}

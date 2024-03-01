@@ -1576,6 +1576,8 @@ module std_private_mutex_once_flag  [system]  { header "__mutex/once_flag.h" }
 module std_private_mutex_tag_types   [system] { header "__mutex/tag_types.h" }
 module std_private_mutex_unique_lock [system] { header "__mutex/unique_lock.h" }
 
+module std_private_new_harware_interference_size [system] { header "__new/hardware_interference_size.h" }
+
 module std_private_numeric_accumulate               [system] { header "__numeric/accumulate.h" }
 module std_private_numeric_adjacent_difference      [system] { header "__numeric/adjacent_difference.h" }
 module std_private_numeric_exclusive_scan           [system] { header "__numeric/exclusive_scan.h" }

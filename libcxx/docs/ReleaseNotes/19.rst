@@ -43,6 +43,7 @@ Implemented Papers
 - P2819R2 - Add ``tuple`` protocol to ``complex``
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
+- P0154R1 - ``std::hardware_interference_size`` has been implemented even when Clang is used
 
 Improvements and New Features
 -----------------------------
