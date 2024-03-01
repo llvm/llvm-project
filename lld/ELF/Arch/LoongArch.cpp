@@ -41,6 +41,7 @@ public:
 };
 } // end anonymous namespace
 
+namespace {
 enum Op {
   SUB_W = 0x00110000,
   SUB_D = 0x00118000,
@@ -65,6 +66,7 @@ enum Reg {
   R_T2 = 14,
   R_T3 = 15,
 };
+} // namespace
 
 // Mask out the input's lowest 12 bits for use with `pcalau12i`, in sequences
 // like `pcalau12i + addi.[wd]` or `pcalau12i + {ld,st}.*` where the `pcalau12i`
