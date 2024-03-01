@@ -291,9 +291,6 @@ enum NodeType : unsigned {
   EORV_PRED,
   ANDV_PRED,
 
-  // Vector bitwise insertion
-  BIT,
-
   // Compare-and-branch
   CBZ,
   CBNZ,
