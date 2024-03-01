@@ -9170,9 +9170,8 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
 
   unsigned Gen = subtargetEncodingFamily(ST);
 
-  if (isRenamedInGFX9(Opcode) && ST.getGeneration() == AMDGPUSubtarget::GFX9) {
+  if (ST.getGeneration() == AMDGPUSubtarget::GFX9 && isRenamedInGFX9(Opcode))
     Gen = SIEncodingFamily::GFX9;
-  }
 
   // Adjust the encoding family to GFX80 for D16 buffer instructions when the
   // subtarget has UnpackedD16VMem feature.
