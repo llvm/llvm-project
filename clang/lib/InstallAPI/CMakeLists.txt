@@ -13,4 +13,5 @@ add_clang_library(clangInstallAPI
   LINK_LIBS
   clangAST
   clangBasic
+  clangLex
   )
