@@ -18,8 +18,10 @@
 #include <errno.h>
 #include <io.h>
 #include <iomanip>
+#include <libloaderapi.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stringapiset.h>
 #include <sys/types.h>
 #include <windows.h>
 
@@ -234,8 +236,20 @@ size_t PageSize() {
 }
 
 void SetThreadName(std::thread &thread, const std::string &name) {
-  // TODO ?
-  // to UTF-8 then SetThreadDescription ?
+  typedef HRESULT(WINAPI * proc)(HANDLE, PCWSTR);
+  HMODULE kbase = GetModuleHandleA("KernelBase.dll");
+  proc ThreadNameProc =
+      reinterpret_cast<proc>(GetProcAddress, "SetThreadDescription");
+  if (proc) {
+    std::wstring buf;
+    auto sz = MultiByteToWideChar(CP_UTF8, 0, name.data(), -1, nullptr, 0);
+    if (sz > 0) {
+      buf.resize(sz);
+      if (MultyByteToWideChar(CP_UTF8, 0, name.data(), -1, &buf[0], sz) > 0) {
+        (void)ThreadNameProc(thread.native_handle(), buf.c_str());
+      }
+    }
+  }
 }
 
 } // namespace fuzzer
