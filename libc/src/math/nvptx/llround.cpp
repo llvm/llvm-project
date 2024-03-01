@@ -12,7 +12,7 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long long, llround, (double x)) {
-  return __builtin_llround(x);
+  return static_cast<long long>(__builtin_round(x));
 }
 
 } // namespace LIBC_NAMESPACE
