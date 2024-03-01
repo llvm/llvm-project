@@ -401,7 +401,8 @@ static Value *promoteAllocaUserToVector(
     // We're loading the full vector.
     Type *AccessTy = Inst->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
-    if (AccessSize == VecStoreSize && cast<Constant>(Index)->isZeroValue()) {
+    if (AccessSize == VecStoreSize && isa<Constant>(Index) &&
+        cast<Constant>(Index)->isZeroValue()) {
       if (AccessTy->isPtrOrPtrVectorTy())
         CurVal = CreateTempPtrIntCast(CurVal, AccessTy);
       else if (CurVal->getType()->isPtrOrPtrVectorTy())
@@ -456,7 +457,7 @@ static Value *promoteAllocaUserToVector(
     // We're storing the full vector, we can handle this without knowing CurVal.
     Type *AccessTy = Val->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
-    if (AccessSize == VecStoreSize && cast<Constant>(Index)->isZeroValue()) {
+    if (AccessSize == VecStoreSize && isa<Constant>(Index) && cast<Constant>(Index)->isZeroValue()) {
       if (AccessTy->isPtrOrPtrVectorTy())
         Val = CreateTempPtrIntCast(Val, AccessTy);
       else if (VectorTy->isPtrOrPtrVectorTy())
