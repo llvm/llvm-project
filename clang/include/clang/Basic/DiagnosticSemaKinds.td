@@ -6826,6 +6826,10 @@ def warn_floatingpoint_eq : Warning<
   "comparing floating point with == or != is unsafe">,
   InGroup<DiagGroup<"float-equal">>, DefaultIgnore;
 
+def warn_fenv_access : Warning<
+  "floating point environment access without #pragma STDC FENV_ACCESS set ON">,
+  InGroup<DiagGroup<"float-env">>;
+
 def err_setting_eval_method_used_in_unsafe_context : Error <
   "%select{'#pragma clang fp eval_method'|option 'ffp-eval-method'}0 cannot be used with "
   "%select{option 'fapprox-func'|option 'mreassociate'|option 'freciprocal'|option 'ffp-eval-method'|'#pragma clang fp reassociate'|'#pragma clang fp reciprocal'}1">;

@@ -227,3 +227,11 @@ void test_atomic_dec64() {
   __INT64_TYPE__ signedVal = 15;
   signedVal = __builtin_amdgcn_atomic_dec64(&signedVal, signedVal, __ATOMIC_ACQUIRE, ""); // expected-warning {{passing '__private long *' to parameter of type 'volatile __private unsigned long *' converts between pointers to integer types with different sign}}
 }
+
+unsigned long test_get_fpenv() {
+  return __builtin_amdgcn_get_fpenv(); // expected-warning {{floating point environment access without #pragma STDC FENV_ACCESS set ON}}
+}
+
+void test_set_fpenv(unsigned long env) {
+  __builtin_amdgcn_set_fpenv(env); // expected-warning {{floating point environment access without #pragma STDC FENV_ACCESS set ON}}
+}
