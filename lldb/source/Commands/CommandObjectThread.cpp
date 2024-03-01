@@ -67,13 +67,18 @@ public:
         if (option_arg.getAsInteger(0, m_count)) {
           m_count = UINT32_MAX;
           error.SetErrorStringWithFormat(
-              "invalid integer value for option '%c'", short_option);
+              "invalid integer value for option '%c': %s", short_option,
+              option_arg.data());
         }
+        // A count of 0 means all frames.
+        if (m_count == 0)
+          m_count = UINT32_MAX;
         break;
       case 's':
         if (option_arg.getAsInteger(0, m_start))
           error.SetErrorStringWithFormat(
-              "invalid integer value for option '%c'", short_option);
+              "invalid integer value for option '%c': %s", short_option,
+              option_arg.data());
         break;
       case 'e': {
         bool success;
@@ -81,7 +86,8 @@ public:
             OptionArgParser::ToBoolean(option_arg, false, &success);
         if (!success)
           error.SetErrorStringWithFormat(
-              "invalid boolean value for option '%c'", short_option);
+              "invalid boolean value for option '%c': %s", short_option,
+              option_arg.data());
       } break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -228,9 +234,9 @@ protected:
           thread->GetIndexID());
       return false;
     }
-    if (m_options.m_extended_backtrace) { 
-      if (!INTERRUPT_REQUESTED(GetDebugger(), 
-                              "Interrupt skipped extended backtrace")) {
+    if (m_options.m_extended_backtrace) {
+      if (!INTERRUPT_REQUESTED(GetDebugger(),
+                               "Interrupt skipped extended backtrace")) {
         DoExtendedBacktrace(thread, result);
       }
     }
@@ -272,8 +278,9 @@ public:
       bool avoid_no_debug =
           OptionArgParser::ToBoolean(option_arg, true, &success);
       if (!success)
-        error.SetErrorStringWithFormat("invalid boolean value for option '%c'",
-                                       short_option);
+        error.SetErrorStringWithFormat(
+            "invalid boolean value for option '%c': %s", short_option,
+            option_arg);
       else {
         m_step_in_avoid_no_debug = avoid_no_debug ? eLazyBoolYes : eLazyBoolNo;
       }
@@ -284,8 +291,9 @@ public:
       bool avoid_no_debug =
           OptionArgParser::ToBoolean(option_arg, true, &success);
       if (!success)
-        error.SetErrorStringWithFormat("invalid boolean value for option '%c'",
-                                       short_option);
+        error.SetErrorStringWithFormat(
+            "invalid boolean value for option '%c': %s", short_option,
+            option_arg);
       else {
         m_step_out_avoid_no_debug = avoid_no_debug ? eLazyBoolYes : eLazyBoolNo;
       }
@@ -293,8 +301,9 @@ public:
 
     case 'c':
       if (option_arg.getAsInteger(0, m_step_count))
-        error.SetErrorStringWithFormat("invalid step count '%s'",
-                                       option_arg.str().c_str());
+        error.SetErrorStringWithFormat(
+            "invalid integer value for option '%c': %s", short_option,
+            option_arg.data());
       break;
 
     case 'm': {
