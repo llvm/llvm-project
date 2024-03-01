@@ -2461,8 +2461,9 @@ collectHwModesReferencedForEncodings(const CodeGenHwModes &HWM,
         BV.set(P.first);
     }
   }
-  transform(BV.set_bits(), std::back_inserter(Names),
-            [&HWM](const int &M) { return HWM.getMode(M).Name; });
+  transform(BV.set_bits(), std::back_inserter(Names), [&HWM](const int &M) {
+    return HWM.getModeName(M, /*IncludeDefault=*/true);
+  });
 }
 
 // Emits disassembler code for instruction decoding.
@@ -2503,8 +2504,9 @@ void DecoderEmitter::run(raw_ostream &o) {
       if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
         EncodingInfoByHwMode EBM(DI->getDef(), HWM);
         for (auto &KV : EBM)
-          NumberedEncodings.emplace_back(KV.second, NumberedInstruction,
-                                         HWM.getMode(KV.first).Name);
+          NumberedEncodings.emplace_back(
+              KV.second, NumberedInstruction,
+              HWM.getModeName(KV.first, /*IncludeDefault=*/true));
         continue;
       }
     }
