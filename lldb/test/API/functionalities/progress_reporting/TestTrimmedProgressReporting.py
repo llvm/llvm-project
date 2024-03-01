@@ -24,7 +24,8 @@ class TestTrimmedProgressReporting(PExpectTest):
         )
         self.expect("set set term-width " + str(term_width))
         self.expect(
-            "set show term-width", substrs=["term-width (int) = " + str(term_width)]
+            "set show term-width",
+            substrs=["term-width (unsigned) = " + str(term_width)],
         )
 
         self.child.send("file " + self.getBuildArtifact("a.out") + "\n")

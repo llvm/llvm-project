@@ -949,6 +949,8 @@ public:
       return AMDGPU::S_WAIT_BVHCNT;
     case AMDGPU::S_WAIT_DSCNT_soft:
       return AMDGPU::S_WAIT_DSCNT;
+    case AMDGPU::S_WAIT_KMCNT_soft:
+      return AMDGPU::S_WAIT_KMCNT;
     default:
       return Opcode;
     }

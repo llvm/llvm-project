@@ -26,7 +26,7 @@
 template <typename T>
 static Fortran::semantics::Scope *GetScope(
     Fortran::semantics::SemanticsContext &context, const T &x) {
-  std::optional<Fortran::parser::CharBlock> source{GetSource(x)};
+  std::optional<Fortran::parser::CharBlock> source{GetLastSource(x)};
   return source ? &context.FindScope(*source) : nullptr;
 }
 

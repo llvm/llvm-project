@@ -268,6 +268,16 @@ getSimplifiedOffsets(NonLoc offset, nonloc::ConcreteInt extent,
   return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
 }
 
+static bool isNegative(SValBuilder &SVB, ProgramStateRef State, NonLoc Value) {
+  const llvm::APSInt *MaxV = SVB.getMaxValue(State, Value);
+  return MaxV && MaxV->isNegative();
+}
+
+static bool isUnsigned(SValBuilder &SVB, NonLoc Value) {
+  QualType T = Value.getType(SVB.getContext());
+  return T->isUnsignedIntegerType();
+}
+
 // Evaluate the comparison Value < Threshold with the help of the custom
 // simplification algorithm defined for this checker. Return a pair of states,
 // where the first one corresponds to "value below threshold" and the second
@@ -281,18 +291,32 @@ compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
   if (auto ConcreteThreshold = Threshold.getAs<nonloc::ConcreteInt>()) {
     std::tie(Value, Threshold) = getSimplifiedOffsets(Value, *ConcreteThreshold, SVB);
   }
-  if (auto ConcreteThreshold = Threshold.getAs<nonloc::ConcreteInt>()) {
-    QualType T = Value.getType(SVB.getContext());
-    if (T->isUnsignedIntegerType() && ConcreteThreshold->getValue().isNegative()) {
-      // In this case we reduced the bound check to a comparison of the form
-      //   (symbol or value with unsigned type) < (negative number)
-      // which is always false. We are handling these cases separately because
-      // evalBinOpNN can perform a signed->unsigned conversion that turns the
-      // negative number into a huge positive value and leads to wildly
-      // inaccurate conclusions.
+
+  // We want to perform a _mathematical_ comparison between the numbers `Value`
+  // and `Threshold`; but `evalBinOpNN` evaluates a C/C++ operator that may
+  // perform automatic conversions. For example the number -1 is less than the
+  // number 1000, but -1 < `1000ull` will evaluate to `false` because the `int`
+  // -1 is converted to ULONGLONG_MAX.
+  // To avoid automatic conversions, we evaluate the "obvious" cases without
+  // calling `evalBinOpNN`:
+  if (isNegative(SVB, State, Value) && isUnsigned(SVB, Threshold)) {
+    if (CheckEquality) {
+      // negative_value == unsigned_value is always false
       return {nullptr, State};
     }
+    // negative_value < unsigned_value is always false
+    return {State, nullptr};
   }
+  if (isUnsigned(SVB, Value) && isNegative(SVB, State, Threshold)) {
+    // unsigned_value == negative_value and unsigned_value < negative_value are
+    // both always false
+    return {nullptr, State};
+  }
+  // FIXME: these special cases are sufficient for handling real-world
+  // comparisons, but in theory there could be contrived situations where
+  // automatic conversion of a symbolic value (which can be negative and can be
+  // positive) leads to incorrect results.
+
   const BinaryOperatorKind OpKind = CheckEquality ? BO_EQ : BO_LT;
   auto BelowThreshold =
       SVB.evalBinOpNN(State, OpKind, Value, Threshold, SVB.getConditionType())
