@@ -310,3 +310,30 @@ LABEL5:// #GOTOLBL5
 
   ptr=&&LABEL5;
 }
+
+void DuffsDevice() {
+  int j;
+  switch (j) {
+#pragma acc parallel
+  for(int i =0; i < 5; ++i) {
+    case 0: // expected-error{{invalid branch into OpenACC Compute Construct}}
+      {}
+  }
+  }
+
+  switch (j) {
+#pragma acc parallel
+  for(int i =0; i < 5; ++i) {
+    default: // expected-error{{invalid branch into OpenACC Compute Construct}}
+      {}
+  }
+  }
+
+  switch (j) {
+#pragma acc parallel
+  for(int i =0; i < 5; ++i) {
+    case 'a' ... 'z': // expected-error{{invalid branch into OpenACC Compute Construct}}
+      {}
+  }
+  }
+}
