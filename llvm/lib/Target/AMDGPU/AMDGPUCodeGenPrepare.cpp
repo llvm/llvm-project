@@ -2020,7 +2020,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
 /// \param TM TargetMachine (TODO: remove once DL contains nullptr values)
 /// \param AS Target Address Space
 /// \return true if \p V cannot be the null value of \p AS, false otherwise.
-static bool isPtrKnownNeverNull(Value *V, const DataLayout &DL,
+static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
                                 const AMDGPUTargetMachine &TM, unsigned AS) {
   // Pointer cannot be null if it's a block address, GV or alloca.
   // NOTE: We don't support extern_weak, but if we did, we'd need to check for
@@ -2048,6 +2048,10 @@ static bool isPtrKnownNeverNull(Value *V, const DataLayout &DL,
 }
 
 bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
+  // Intrinsic doesn't support vectors, also it seems that it's often difficult to prove that a vector cannot have any nulls in it so it's unclear if it's worth supporting.
+  if (I.getType()->isVectorTy())
+    return false;
+
   // Check if this can be lowered to a amdgcn.addrspacecast.nonnull.
   // This is only worthwhile for casts from/to priv/local to flat.
   const unsigned SrcAS = I.getSrcAddressSpace();
@@ -2063,28 +2067,10 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
   if (!CanLower)
     return false;
 
-  // Check the Src operand, looking through any PHIs.
-  SmallVector<Value *, 4> WorkList;
-  DenseSet<const PHINode *> SeenPHIs;
-  WorkList.push_back(I.getOperand(0));
-  while (!WorkList.empty()) {
-    Value *Cur = getUnderlyingObject(WorkList.pop_back_val());
-
-    // Look through PHIs - add all incoming values to the queue.
-    if (const auto *Phi = dyn_cast<PHINode>(Cur)) {
-      auto [It, Inserted] = SeenPHIs.insert(Phi);
-      if (!Inserted)
-        return false; // infinite recursion
-
-      for (auto &Inc : Phi->incoming_values())
-        WorkList.push_back(Inc.get());
-      continue;
-    }
-
-    if (isPtrKnownNeverNull(Cur, *DL, *TM, SrcAS))
-      continue;
+  SmallVector<const Value *, 4> WorkList;
+  getUnderlyingObjects(I.getOperand(0), WorkList);
+  if(!all_of(WorkList, [&](const Value* V) { return isPtrKnownNeverNull(V, *DL, *TM, SrcAS); }))
     return false;
-  }
 
   IRBuilder<> B(&I);
   auto *Intrin = B.CreateIntrinsic(

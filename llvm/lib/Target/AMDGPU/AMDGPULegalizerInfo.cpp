@@ -2272,7 +2272,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
   // G_ADDRSPACE_CAST we need to guess.
   const bool IsKnownNonNull =
-      isa<GIntrinsic>(MI) ? true : isKnownNonNull(Src, MRI, TM, SrcAS);
+      isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS);
 
   if (TM.isNoopAddrSpaceCast(SrcAS, DestAS)) {
     MI.setDesc(B.getTII().get(TargetOpcode::G_BITCAST));

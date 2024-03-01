@@ -168,7 +168,6 @@ define void @knownbits_on_priv_to_flat(ptr addrspace(5) %ptr) {
   ret void
 }
 
-; this would recursive infinitely and we'll give up once we notice it.
 define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; OPT-LABEL: define void @recursive_phis(
 ; OPT-SAME: i1 [[COND:%.*]], ptr addrspace(5) [[PTR:%.*]]) {
@@ -185,8 +184,8 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; OPT-NEXT:    br label [[FINALLY]]
 ; OPT:       finally:
 ; OPT-NEXT:    [[PHI_PTR]] = phi ptr addrspace(5) [ [[KB_PTR]], [[THEN]] ], [ [[OTHER_PHI]], [[ELSE]] ]
-; OPT-NEXT:    [[X:%.*]] = addrspacecast ptr addrspace(5) [[PHI_PTR]] to ptr
-; OPT-NEXT:    store volatile i32 7, ptr [[X]], align 4
+; OPT-NEXT:    [[TMP0:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p5(ptr addrspace(5) [[PHI_PTR]])
+; OPT-NEXT:    store volatile i32 7, ptr [[TMP0]], align 4
 ; OPT-NEXT:    br i1 [[COND]], label [[ELSE]], label [[END:%.*]]
 ; OPT:       end:
 ; OPT-NEXT:    ret void
@@ -202,19 +201,16 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; DAGISEL-ASM-NEXT:    v_and_b32_e32 v0, 0xffff, v1
 ; DAGISEL-ASM-NEXT:  ; %bb.2: ; %finallyendcf.split
 ; DAGISEL-ASM-NEXT:    s_or_b64 exec, exec, s[4:5]
-; DAGISEL-ASM-NEXT:    s_mov_b64 s[8:9], src_private_base
 ; DAGISEL-ASM-NEXT:    s_xor_b64 s[6:7], vcc, -1
 ; DAGISEL-ASM-NEXT:    s_mov_b64 s[4:5], 0
-; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v1, s9
+; DAGISEL-ASM-NEXT:    s_mov_b64 s[8:9], src_private_base
 ; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
 ; DAGISEL-ASM-NEXT:  .LBB7_3: ; %finally
 ; DAGISEL-ASM-NEXT:    ; =>This Inner Loop Header: Depth=1
-; DAGISEL-ASM-NEXT:    s_and_b64 s[8:9], exec, s[6:7]
-; DAGISEL-ASM-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
-; DAGISEL-ASM-NEXT:    s_or_b64 s[4:5], s[8:9], s[4:5]
-; DAGISEL-ASM-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
-; DAGISEL-ASM-NEXT:    v_cndmask_b32_e32 v3, 0, v0, vcc
-; DAGISEL-ASM-NEXT:    flat_store_dword v[3:4], v2
+; DAGISEL-ASM-NEXT:    s_and_b64 s[10:11], exec, s[6:7]
+; DAGISEL-ASM-NEXT:    s_or_b64 s[4:5], s[10:11], s[4:5]
+; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v1, s9
+; DAGISEL-ASM-NEXT:    flat_store_dword v[0:1], v2
 ; DAGISEL-ASM-NEXT:    s_waitcnt vmcnt(0)
 ; DAGISEL-ASM-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; DAGISEL-ASM-NEXT:    s_cbranch_execnz .LBB7_3
@@ -242,11 +238,8 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; GISEL-ASM-NEXT:  .LBB7_3: ; %finally
 ; GISEL-ASM-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-ASM-NEXT:    s_and_b64 s[8:9], exec, s[4:5]
-; GISEL-ASM-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GISEL-ASM-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
-; GISEL-ASM-NEXT:    v_cndmask_b32_e32 v3, 0, v0, vcc
-; GISEL-ASM-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
-; GISEL-ASM-NEXT:    flat_store_dword v[3:4], v2
+; GISEL-ASM-NEXT:    flat_store_dword v[0:1], v2
 ; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-ASM-NEXT:    s_andn2_b64 exec, exec, s[6:7]
 ; GISEL-ASM-NEXT:    s_cbranch_execnz .LBB7_3
