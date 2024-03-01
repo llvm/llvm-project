@@ -112,7 +112,7 @@ define void @private_alloca_to_flat(ptr %ptr) {
   ret void
 }
 
-@lds = internal unnamed_addr addrspace(3) global i8 undef, align 4
+@lds = internal unnamed_addr addrspace(3) global i8 poison, align 4
 
 define void @knownbits_on_flat_to_priv(ptr %ptr) {
 ; OPT-LABEL: define void @knownbits_on_flat_to_priv(
