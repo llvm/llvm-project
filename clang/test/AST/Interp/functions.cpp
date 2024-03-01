@@ -555,3 +555,13 @@ namespace Local {
     return t;
   }
 }
+
+namespace VariadicOperator {
+  struct Callable {
+    float& operator()(...);
+  };
+
+  void test_callable(Callable c) {
+    float &fr = c(10);
+  }
+}
