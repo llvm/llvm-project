@@ -1009,6 +1009,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     ABSActions
         .legalFor({s32, s64});
   ABSActions.legalFor(PackedVectorAllTypeList)
+      .widenScalarIf(
+          [=](const LegalityQuery &Query) { return Query.Types[0] == v4s8; },
+          [=](const LegalityQuery &Query) { return std::make_pair(0, v4s16); })
+      .widenScalarIf(
+          [=](const LegalityQuery &Query) { return Query.Types[0] == v2s16; },
+          [=](const LegalityQuery &Query) { return std::make_pair(0, v2s32); })
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
