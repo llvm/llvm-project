@@ -1762,6 +1762,8 @@ void InitializeInterceptors() {
   static int inited = 0;
   CHECK_EQ(inited, 0);
 
+  __interception::DoesNotSupportStaticLinking();
+
   new(interceptor_ctx()) InterceptorContext();
 
   InitializeCommonInterceptors();

@@ -2861,6 +2861,8 @@ void InitializeInterceptors() {
   REAL(memcpy) = internal_memcpy;
 #endif
 
+  __interception::DoesNotSupportStaticLinking();
+
   new(interceptor_ctx()) InterceptorContext();
 
   InitializeCommonInterceptors();
