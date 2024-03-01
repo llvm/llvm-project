@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 typedef double A;
 template<typename T> class B {
@@ -334,7 +334,7 @@ int arr[sizeof(Sub)];
 namespace PR11421 {
 template < unsigned > struct X {
   static const unsigned dimension = 3;
-  template<unsigned dim=dimension> 
+  template<unsigned dim=dimension>
   struct Y: Y<dim> { }; // expected-error{{circular inheritance between 'Y<dim>' and 'Y<dim>'}}
 };
 typedef X<3> X3;

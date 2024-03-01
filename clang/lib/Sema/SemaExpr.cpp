@@ -673,7 +673,9 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   // expressions of certain types in C++.
   if (getLangOpts().CPlusPlus &&
       (E->getType() == Context.OverloadTy ||
-       T->isDependentType() ||
+      // FIXME: This is a hack! We want the lvalue-to-rvalue conversion applied
+      // to pointer types even if the pointee type is dependent.
+      (T->isDependentType() && !T->isPointerType()) ||
        T->isRecordType()))
     return E;
 
