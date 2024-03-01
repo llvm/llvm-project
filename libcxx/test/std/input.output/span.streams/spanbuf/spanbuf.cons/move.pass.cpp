@@ -32,7 +32,7 @@ template <typename CharT, typename TraitsT>
 struct TestSpanBuf : std::basic_spanbuf<CharT, TraitsT> {
   using std::basic_spanbuf<CharT, TraitsT>::basic_spanbuf;
 
-  TestSpanBuf(std::basic_spanbuf<CharT, TraitsT>&& rhs) : std::basic_spanbuf<CharT, TraitsT>(std::move(rhs)) {}
+  TestSpanBuf(std::basic_spanbuf<CharT, TraitsT>&& rhs_p) : std::basic_spanbuf<CharT, TraitsT>(std::move(rhs_p)) {}
 
   void check_postconditions(TestSpanBuf<CharT, TraitsT> const& rhs_p) const {
     assert(this->span().data() == rhs_p.span().data());
@@ -67,6 +67,14 @@ void test() {
   {
     // Empty `span`
     {
+      // Mode: default
+      {
+        SpBuf rhsSpBuf;
+        SpBuf spBuf(std::move(rhsSpBuf));
+        assert(spBuf.span().data() == nullptr);
+        assert(spBuf.span().empty());
+        assert(spBuf.span().size() == 0);
+      }
       // Mode: `ios_base::in`
       {
         SpBuf rhsSpBuf{std::ios_base::in};
@@ -98,6 +106,14 @@ void test() {
       CharT arr[4];
       std::span<CharT> sp{arr};
 
+      // Mode: default
+      {
+        SpBuf rhsSpBuf{sp};
+        SpBuf spBuf(std::move(rhsSpBuf));
+        assert(spBuf.span().data() == arr);
+        assert(spBuf.span().empty());
+        assert(spBuf.span().size() == 0);
+      }
       // Mode: `ios_base::in`
       {
         SpBuf rhsSpBuf{sp, std::ios_base::in};
@@ -129,6 +145,7 @@ void test() {
   {
     // Empty `span`
     {
+      // Mode: default
       {
         std::span<CharT> sp;
         TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp);
@@ -158,7 +175,7 @@ void test() {
       // Mode: multiple
       {
         std::span<CharT> sp;
-        TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::out | std::ios_base::in | std::ios_base::binary);
+        TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
         TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
         assert(rhsSpBuf.span().empty());
         assert(spBuf.span().data() == nullptr);
@@ -170,6 +187,7 @@ void test() {
     {
       CharT arr[4];
 
+      // Mode: default
       {
         std::span<CharT> sp{arr};
         TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp);
@@ -199,7 +217,7 @@ void test() {
       // Mode: multiple
       {
         std::span<CharT> sp{arr};
-        TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::out | std::ios_base::in | std::ios_base::binary);
+        TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
         TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
         assert(rhsSpBuf.span().empty());
         assert(spBuf.span().data() == arr);

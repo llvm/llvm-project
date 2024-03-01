@@ -28,11 +28,16 @@
 #include <type_traits>
 
 #include "constexpr_char_traits.h"
+#include "nasty_string.h"
 #include "test_macros.h"
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
   using SpStream = std::basic_spanstream<CharT, TraitsT>;
+
+  // Constructors
+
+  static_assert(!std::is_default_constructible_v<SpStream>);
 
   // Types
 
@@ -50,11 +55,6 @@ void test() {
 
   // Move properties
 
-  static_assert(!std::is_copy_constructible_v<SpStream>);
-  static_assert(!std::is_copy_assignable_v<SpStream>);
-
-  // Move properties
-
   static_assert(std::is_move_constructible_v<SpStream>);
   static_assert(std::is_move_assignable_v<SpStream>);
 }
@@ -62,6 +62,7 @@ void test() {
 void test() {
   test<char>();
   test<char, constexpr_char_traits<char>>();
+  test<nasty_char, nasty_char_traits>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
   test<wchar_t, constexpr_char_traits<wchar_t>>();
