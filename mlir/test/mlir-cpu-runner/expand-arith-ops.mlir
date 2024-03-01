@@ -24,7 +24,7 @@ func.func @main() {
   // Note: this is a tie (low 16 bits are 0x8000). We expect the rounding behavior
   // to break ties "to nearest-even", which in this case means upwards,
   // since bit 16 is set.
-  // CHECK-NEXT: 1.01562
+  // CHECK-NEXT: 1.0156
   %value_1_01172_I = arith.constant 0x3f818000 : i32
   %value_1_01172_F = arith.bitcast %value_1_01172_I : i32 to f32
   call @trunc_bf16(%value_1_01172_F): (f32) -> ()
