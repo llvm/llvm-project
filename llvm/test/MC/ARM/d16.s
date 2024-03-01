@@ -5,8 +5,8 @@
 
 @ D16: error: invalid instruction, any one of the following would fix this:
 @ D16-NEXT: vadd.f64 d1, d2, d16
-@ D16: note: operand must be a register in range [d0, d15]
 @ D16: note: too many operands for instruction
+@ D16: note: operand must be a register in range [d0, d15]
 vadd.f64 d1, d2, d16
 
 @ D16: error: operand must be a register in range [d0, d15]

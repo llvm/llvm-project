@@ -155,7 +155,13 @@ def iflags_op : Operand<i32> {
 
 // ARM Predicate operand. Default to 14 = always (AL). Second part is CC
 // register whose default is 0 (no register).
-def CondCodeOperand : AsmOperandClass { let Name = "CondCode"; }
+def CondCodeOperand : AsmOperandClass {
+  let Name = "CondCode";
+  let PredicateMethod = "isCondCode";
+  let DefaultMethod = "defaultCondCodeOp";
+  let IsOptional = true;
+  let OptionalShouldOffsetCustomParsers = false;
+}
 def pred : PredicateOperand<OtherVT, (ops i32imm, i32imm),
                                      (ops (i32 14), (i32 zero_reg))> {
   let PrintMethod = "printPredicateOperand";
@@ -174,7 +180,12 @@ def cmovpred : Operand<i32>, PredicateOp,
 }
 
 // Conditional code result for instructions whose 's' bit is set, e.g. subs.
-def CCOutOperand : AsmOperandClass { let Name = "CCOut"; }
+def CCOutOperand : AsmOperandClass {
+  let Name = "CCOut";
+  let DefaultMethod = "defaultCCOutOp";
+  let IsOptional = true;
+  let OptionalShouldOffsetCustomParsers = false;
+}
 def cc_out : OptionalDefOperand<OtherVT, (ops CCR), (ops (i32 zero_reg))> {
   let EncoderMethod = "getCCOutOpValue";
   let PrintMethod = "printSBitModifierOperand";
@@ -468,7 +479,7 @@ class InstThumb<AddrMode am, int sz, IndexMode im,
 // These are aliases that require C++ handling to convert to the target
 // instruction, while InstAliases can be handled directly by tblgen.
 class AsmPseudoInst<string asm, dag iops, dag oops = (outs)>
-  : InstTemplate<AddrModeNone, 0, IndexModeNone, Pseudo, GenericDomain,
+  : InstTemplate<AddrModeNone, 4, IndexModeNone, Pseudo, GenericDomain,
                  "", NoItinerary> {
   let OutOperandList = oops;
   let InOperandList = iops;
