@@ -621,8 +621,8 @@ bool clang::isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind) {
 bool clang::isOpenMPNestingTeamsDirective(OpenMPDirectiveKind DKind) {
   if (DKind == OMPD_teams)
     return true;
-  auto leafs = getLeafConstructs(DKind);
-  return !leafs.empty() && leafs.front() == OMPD_teams;
+  auto Leafs = getLeafConstructs(DKind);
+  return !Leafs.empty() && Leafs.front() == OMPD_teams;
 }
 
 bool clang::isOpenMPTeamsDirective(OpenMPDirectiveKind DKind) {
@@ -632,9 +632,10 @@ bool clang::isOpenMPTeamsDirective(OpenMPDirectiveKind DKind) {
 
 bool clang::isOpenMPSimdDirective(OpenMPDirectiveKind DKind) {
   // Avoid OMPD_declare_simd
-  if (DKind == OMPD_end_do_simd ||
-      getDirectiveAssociation(DKind) != Association::Loop)
+  if (getDirectiveAssociation(DKind) != Association::Loop)
     return false;
+  // Formally, OMPD_end_do_simd also has a loop association, but
+  // it's a Fortran-specific directive.
 
   return DKind == OMPD_simd ||
          llvm::is_contained(getLeafConstructs(DKind), OMPD_simd);
@@ -643,8 +644,8 @@ bool clang::isOpenMPSimdDirective(OpenMPDirectiveKind DKind) {
 bool clang::isOpenMPNestingDistributeDirective(OpenMPDirectiveKind Kind) {
   if (Kind == OMPD_distribute)
     return true;
-  auto leafs = getLeafConstructs(Kind);
-  return !leafs.empty() && leafs.front() == OMPD_distribute;
+  auto Leafs = getLeafConstructs(Kind);
+  return !Leafs.empty() && Leafs.front() == OMPD_distribute;
 }
 
 bool clang::isOpenMPDistributeDirective(OpenMPDirectiveKind Kind) {
@@ -655,8 +656,8 @@ bool clang::isOpenMPDistributeDirective(OpenMPDirectiveKind Kind) {
 bool clang::isOpenMPGenericLoopDirective(OpenMPDirectiveKind Kind) {
   if (Kind == OMPD_loop)
     return true;
-  auto leafs = getLeafConstructs(Kind);
-  return !leafs.empty() && leafs.back() == OMPD_loop;
+  auto Leafs = getLeafConstructs(Kind);
+  return !Leafs.empty() && Leafs.back() == OMPD_loop;
 }
 
 bool clang::isOpenMPPrivate(OpenMPClauseKind Kind) {
