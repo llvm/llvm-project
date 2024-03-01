@@ -515,8 +515,7 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
 /// barvinokalgorithm-latte1.pdf, p. 1285
 QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
     unsigned power, ArrayRef<QuasiPolynomial> num, ArrayRef<Fraction> den) {
-  assert(den.size() != 0 &&
-         "division by empty denominator in rational function!");
+  assert(!den.empty() && "division by empty denominator in rational function!");
 
   unsigned numParam = num[0].getNumInputs();
   // We use the `isEqual` method of PresburgerSpace, which QuasiPolynomial
