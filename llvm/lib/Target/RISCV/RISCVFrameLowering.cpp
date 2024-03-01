@@ -1186,20 +1186,13 @@ Align RISCVFrameLowering::maxPossibleSpillAlign(
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   Align CurrMaxAlign = Align(1);
+
   // The maximum spill alignment has not yet been computed. Compute it.
-  for (const MachineBasicBlock &MBB : MF) {
-    for (const MachineInstr &MI : MBB) {
-      for (const MachineOperand &MO : MI.operands()) {
-        if (!MO.isReg())
-          continue;
-        Register Reg = MO.getReg();
-        const TargetRegisterClass *RC = nullptr;
-        if (Reg.isVirtual())
-          RC = MRI.getRegClassOrNull(MO.getReg());
-        if (RC && TRI->getSpillAlign(*RC) > CurrMaxAlign)
-          CurrMaxAlign = TRI->getSpillAlign(*RC);
-      }
-    }
+  for (int Idx = 0, End = MRI.getNumVirtRegs(); Idx < End; Idx++) {
+    Register Reg = Register::index2VirtReg(Idx);
+    const TargetRegisterClass *RC = MRI.getRegClassOrNull(Reg);
+    if (RC && TRI->getSpillAlign(*RC) > CurrMaxAlign)
+      CurrMaxAlign = TRI->getSpillAlign(*RC);
   }
   MaxSpillAlign[&MF] = CurrMaxAlign;
   return CurrMaxAlign;
