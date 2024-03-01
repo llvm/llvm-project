@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE {
 
-void *memset_explicit(void *ptr, int value, size_t count);
+[[gnu::noinline]] void *memset_explicit(void *ptr, int value, size_t count);
 
 } // namespace LIBC_NAMESPACE
 

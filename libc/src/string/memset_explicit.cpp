@@ -13,8 +13,8 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(void *, memset_explicit,
-                   (void *dst, int value, size_t count)) {
+[[gnu::noinline]] LLVM_LIBC_FUNCTION(void *, memset_explicit,
+                                     (void *dst, int value, size_t count)) {
   // Use the inline memset function to set the memory.
   inline_memset<true>(dst, static_cast<uint8_t>(value), count);
 
