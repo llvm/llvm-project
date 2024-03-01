@@ -17930,16 +17930,14 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   EVT VT = N->getValueType(0);
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
+  const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
 
   if (!VT.isVector())
     return SDValue();
 
-  // The combining code currently only works for NEON vectors. In particular,
-  // it does not work for SVE when dealing with vectors wider than 128 bits.
-  // It also doesn't work for streaming mode because it causes generating
-  // bsl instructions that are invalid in streaming mode.
-  if (TLI.useSVEForFixedLengthVectorVT(
-          VT, !DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable()))
+  // The combining code works for NEON, SVE2 and SME.
+  if (TLI.useSVEForFixedLengthVectorVT(VT, !Subtarget.isNeonAvailable()) ||
+      (VT.isScalableVector() && !Subtarget.hasSVE2orSME()))
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -17996,23 +17994,32 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     for (int j = 1; j >= 0; --j) {
       BuildVectorSDNode *BVN0 = dyn_cast<BuildVectorSDNode>(N0->getOperand(i));
       BuildVectorSDNode *BVN1 = dyn_cast<BuildVectorSDNode>(N1->getOperand(j));
-      if (!BVN0 || !BVN1)
+      APInt Val1, Val2;
+      if ((!BVN0 || !BVN1) &&
+          (!ISD::isConstantSplatVector(N0->getOperand(i).getNode(), Val1) ||
+           !ISD::isConstantSplatVector(N1->getOperand(j).getNode(), Val2)))
         continue;
 
       bool FoundMatch = true;
-      for (unsigned k = 0; k < VT.getVectorNumElements(); ++k) {
-        ConstantSDNode *CN0 = dyn_cast<ConstantSDNode>(BVN0->getOperand(k));
-        ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(BVN1->getOperand(k));
-        if (!CN0 || !CN1 ||
-            CN0->getZExtValue() != (BitMask & ~CN1->getZExtValue())) {
-          FoundMatch = false;
-          break;
+      if (BVN0) {
+        for (unsigned k = 0; k < VT.getVectorNumElements(); ++k) {
+          ConstantSDNode *CN0 = dyn_cast<ConstantSDNode>(BVN0->getOperand(k));
+          ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(BVN1->getOperand(k));
+          if (!CN0 || !CN1 ||
+              CN0->getZExtValue() != (BitMask & ~CN1->getZExtValue())) {
+            FoundMatch = false;
+            break;
+          }
         }
+      } else {
+        FoundMatch = ((BitMask & ~Val1.getZExtValue()) == Val2.getZExtValue());
       }
 
-      if (FoundMatch)
-        return DAG.getNode(AArch64ISD::BSP, DL, VT, SDValue(BVN0, 0),
+      if (FoundMatch) {
+        SDNode *Arg = (BVN0) ? BVN0 : N0->getOperand(i).getNode();
+        return DAG.getNode(AArch64ISD::BSP, DL, VT, SDValue(Arg, 0),
                            N0->getOperand(1 - i), N1->getOperand(1 - j));
+      }
     }
 
   return SDValue();
