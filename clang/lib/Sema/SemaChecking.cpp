@@ -6333,12 +6333,13 @@ void Sema::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D) {
   unsigned MinElts = Info.EC.getKnownMinValue();
 
   if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double) &&
-           !TI.hasFeature("zve64d"))
+      !TI.hasFeature("zve64d"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64d";
   // (ELEN, LMUL) pairs of (8, mf8), (16, mf4), (32, mf2), (64, m1) requires at
   // least zve64x
-  else if (((EltSize == 64 && Info.ElementType->isIntegerType()) || MinElts == 1) &&
-      !TI.hasFeature("zve64x"))
+  else if (((EltSize == 64 && Info.ElementType->isIntegerType()) ||
+            MinElts == 1) &&
+           !TI.hasFeature("zve64x"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64x";
   else if (Info.ElementType->isFloat16Type() && !TI.hasFeature("zvfh") &&
            !TI.hasFeature("zvfhmin"))
