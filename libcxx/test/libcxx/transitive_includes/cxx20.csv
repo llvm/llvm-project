@@ -1993,6 +1993,14 @@ span utility
 span variant
 span vector
 span version
+spanstream cstddef
+spanstream initializer_list
+spanstream iostream
+spanstream limits
+spanstream span
+spanstream streambuf
+spanstream type_traits
+spanstream version
 sstream algorithm
 sstream array
 sstream atomic
