@@ -38,14 +38,27 @@ def TDL_DirA : Directive<"dira"> {
     VersionedClause<TDLC_ClauseB, 2>
   ];
   let isDefault = 1;
+  let association = AS_Block;
 }
 
 // CHECK:       #ifndef LLVM_Tdl_INC
 // CHECK-NEXT:  #define LLVM_Tdl_INC
+// CHECK-NEXT:  #include "llvm/ADT/SmallVector.h"
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm {
 // CHECK-NEXT:  class StringRef;
 // CHECK-NEXT:  namespace tdl {
+// CHECK-EMPTY:
+// CHECK-NEXT:  enum class Association {
+// CHECK-NEXT:    Block,
+// CHECK-NEXT:    Declaration,
+// CHECK-NEXT:    Delimited,
+// CHECK-NEXT:    Loop,
+// CHECK-NEXT:    None,
+// CHECK-NEXT:    Separating,
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 6;
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Directive {
 // CHECK-NEXT:    TDLD_dira,
@@ -74,6 +87,8 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  /// Return true if \p C is a valid clause for \p D in version \p Version.
 // CHECK-NEXT:  bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
 // CHECK-EMPTY:
+// CHECK-NEXT:  const llvm::SmallVector<Directive> &getLeafConstructs(Directive D);
+// CHECK-NEXT:  Association getDirectiveAssociation(Directive D);
 // CHECK-NEXT:  } // namespace tdl
 // CHECK-NEXT:  } // namespace llvm
 // CHECK-NEXT:  #endif // LLVM_Tdl_INC
@@ -270,6 +285,20 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:        break;
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
+// IMPL-NEXT:  }
+// IMPL-NEXT:  const llvm::SmallVector<llvm::tdl::Directive> &llvm::tdl::getLeafConstructs(llvm::tdl::Directive Dir) {
+// IMPL-NEXT:    static llvm::SmallVector<llvm::tdl::Directive> nothing {};
+// IMPL-EMPTY:
+// IMPL-NEXT:    switch (Dir) {
+// IMPL-NEXT:    default:
+// IMPL-NEXT:      return nothing;
+// IMPL-NEXT:    } // switch (Dir)
+// IMPL-NEXT:  }
+// IMPL-NEXT:  llvm::tdl::Association llvm::tdl::getDirectiveAssociation(llvm::tdl::Directive Dir) {
+// IMPL-NEXT:    switch (Dir) {
+// IMPL-NEXT:    case llvm::tdl::Directive::TDLD_dira:
+// IMPL-NEXT:      return llvm::tdl::Association::Block;
+// IMPL-NEXT:    } // switch(Dir)
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
 // IMPL-NEXT:  #endif // GEN_DIRECTIVES_IMPL
