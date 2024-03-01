@@ -18,15 +18,18 @@
 #include <errno.h>
 #include <io.h>
 #include <iomanip>
-#include <libloaderapi.h>
 #include <signal.h>
 #include <stdio.h>
-#include <stringapiset.h>
 #include <sys/types.h>
+// clang-format off
 #include <windows.h>
-
-// This must be included after windows.h.
+// These must be included after windows.h.
+// archicture need to be set before including
+// libloaderapi
+#include <libloaderapi.h>
+#include <stringapiset.h>
 #include <psapi.h>
+// clang-format on
 
 namespace fuzzer {
 
