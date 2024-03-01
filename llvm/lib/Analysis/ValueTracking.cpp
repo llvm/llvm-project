@@ -2742,8 +2742,8 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       }
         [[fallthrough]];
       case Intrinsic::umin:
-        return isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q) &&
-               isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q);
+        return isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q) &&
+               isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q);
       case Intrinsic::cttz:
         return computeKnownBits(II->getArgOperand(0), DemandedElts, Depth, Q)
             .Zero[0];
