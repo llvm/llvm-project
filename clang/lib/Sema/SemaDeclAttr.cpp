@@ -7184,16 +7184,15 @@ Sema::mergeHLSLRootSignatureAttr(Decl *D, const AttributeCommonInfo &AL,
 
   // Create a record decl for the root signature.
   IdentifierInfo *II = &Context.Idents.get(FD->getName().str() + ".RS");
-  RecordDecl *RD =
-      RecordDecl::Create(Context, TagDecl::TagKind::Struct, DC,
-                         SourceLocation(), SourceLocation(), II);
+  RecordDecl *RD = RecordDecl::Create(Context, TagDecl::TagKind::Struct, DC,
+                                      SourceLocation(), SourceLocation(), II);
   // TODO: Add fields to the record decl.
 
   // Create a type for the root signature.
   QualType T = Context.getRecordType(RD);
   // Create a variable decl for the root signature.
-  VarDecl *VD = VarDecl::Create(Context, DC, SourceLocation(),
-                                SourceLocation(), II, T, nullptr, SC_None);
+  VarDecl *VD = VarDecl::Create(Context, DC, SourceLocation(), SourceLocation(),
+                                II, T, nullptr, SC_None);
 
   // TODO: Add initializers to the variable decl.
 
