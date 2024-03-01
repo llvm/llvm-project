@@ -56,7 +56,7 @@ define amdgpu_ps <2 x float> @struct_buffer_load_v2f32__sgpr_rsrc__vgpr_vindex__
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX8-NEXT:   [[BUFFER_LOAD_DWORDX2_BOTHEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (<2 x s32>), align 1, addrspace 8)
+  ; GFX8-NEXT:   [[BUFFER_LOAD_DWORDX2_BOTHEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 8)
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_BOTHEN]].sub0
   ; GFX8-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_BOTHEN]].sub1
   ; GFX8-NEXT:   $vgpr0 = COPY [[COPY7]]
@@ -76,7 +76,7 @@ define amdgpu_ps <2 x float> @struct_buffer_load_v2f32__sgpr_rsrc__vgpr_vindex__
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX12-NEXT:   [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (<2 x s32>), align 1, addrspace 8)
+  ; GFX12-NEXT:   [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 8)
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN]].sub0
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN]].sub1
   ; GFX12-NEXT:   $vgpr0 = COPY [[COPY7]]
@@ -101,7 +101,7 @@ define amdgpu_ps <3 x float> @struct_buffer_load_v3f32__sgpr_rsrc__vgpr_vindex__
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX8-NEXT:   [[BUFFER_LOAD_DWORDX3_BOTHEN:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (<3 x s32>), align 1, addrspace 8)
+  ; GFX8-NEXT:   [[BUFFER_LOAD_DWORDX3_BOTHEN:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 8)
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_BOTHEN]].sub0
   ; GFX8-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_BOTHEN]].sub1
   ; GFX8-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_BOTHEN]].sub2
@@ -123,7 +123,7 @@ define amdgpu_ps <3 x float> @struct_buffer_load_v3f32__sgpr_rsrc__vgpr_vindex__
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX12-NEXT:   [[BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (<3 x s32>), align 1, addrspace 8)
+  ; GFX12-NEXT:   [[BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 8)
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN]].sub0
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN]].sub1
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN]].sub2
@@ -150,7 +150,7 @@ define amdgpu_ps <4 x float> @struct_buffer_load_v4f32__sgpr_rsrc__vgpr_vindex__
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX8-NEXT:   [[BUFFER_LOAD_DWORDX4_BOTHEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
+  ; GFX8-NEXT:   [[BUFFER_LOAD_DWORDX4_BOTHEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 8)
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_BOTHEN]].sub0
   ; GFX8-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_BOTHEN]].sub1
   ; GFX8-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_BOTHEN]].sub2
@@ -174,7 +174,7 @@ define amdgpu_ps <4 x float> @struct_buffer_load_v4f32__sgpr_rsrc__vgpr_vindex__
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX12-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
+  ; GFX12-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 8)
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN]].sub0
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN]].sub1
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN]].sub2
@@ -720,7 +720,7 @@ define amdgpu_ps <2 x half> @struct_buffer_load_v2f16__sgpr_rsrc__vgpr_vindex__v
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX8-NEXT:   [[BUFFER_LOAD_DWORD_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (<2 x s16>), align 1, addrspace 8)
+  ; GFX8-NEXT:   [[BUFFER_LOAD_DWORD_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_BOTHEN]]
   ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
@@ -737,7 +737,7 @@ define amdgpu_ps <2 x half> @struct_buffer_load_v2f16__sgpr_rsrc__vgpr_vindex__v
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX12-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (<2 x s16>), align 1, addrspace 8)
+  ; GFX12-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_BOTHEN]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %val = call <2 x half> @llvm.amdgcn.struct.buffer.load.v2f16(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
@@ -765,7 +765,7 @@ define amdgpu_ps <4 x half> @struct_buffer_load_v4f16__sgpr_rsrc__vgpr_vindex__v
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX8-NEXT:   [[BUFFER_LOAD_DWORDX2_BOTHEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s16>), align 1, addrspace 8)
+  ; GFX8-NEXT:   [[BUFFER_LOAD_DWORDX2_BOTHEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 8)
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_BOTHEN]].sub0
   ; GFX8-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_BOTHEN]].sub1
   ; GFX8-NEXT:   $vgpr0 = COPY [[COPY7]]
@@ -785,7 +785,7 @@ define amdgpu_ps <4 x half> @struct_buffer_load_v4f16__sgpr_rsrc__vgpr_vindex__v
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX12-NEXT:   [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s16>), align 1, addrspace 8)
+  ; GFX12-NEXT:   [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 8)
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN]].sub0
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN]].sub1
   ; GFX12-NEXT:   $vgpr0 = COPY [[COPY7]]

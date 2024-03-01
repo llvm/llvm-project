@@ -74,7 +74,7 @@ define amdgpu_ps <2 x half> @struct_tbuffer_load_v2f16__sgpr_rsrc__vgpr_vindex__
   ; PACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; PACKED-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; PACKED-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XY_BOTHEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_D16_XY_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (<2 x s16>), align 1, addrspace 8)
+  ; PACKED-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XY_BOTHEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_D16_XY_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; PACKED-NEXT:   $vgpr0 = COPY [[TBUFFER_LOAD_FORMAT_D16_XY_BOTHEN]]
   ; PACKED-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
@@ -91,7 +91,7 @@ define amdgpu_ps <2 x half> @struct_tbuffer_load_v2f16__sgpr_rsrc__vgpr_vindex__
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX12-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XY_VBUFFER_BOTHEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_D16_XY_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (<2 x s16>), align 1, addrspace 8)
+  ; GFX12-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XY_VBUFFER_BOTHEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_D16_XY_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[TBUFFER_LOAD_FORMAT_D16_XY_VBUFFER_BOTHEN]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
@@ -108,7 +108,7 @@ define amdgpu_ps <2 x half> @struct_tbuffer_load_v2f16__sgpr_rsrc__vgpr_vindex__
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; UNPACKED-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; UNPACKED-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XY_gfx80_BOTHEN:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_D16_XY_gfx80_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (<2 x s16>), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XY_gfx80_BOTHEN:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_D16_XY_gfx80_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_XY_gfx80_BOTHEN]].sub0
   ; UNPACKED-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_XY_gfx80_BOTHEN]].sub1
   ; UNPACKED-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
@@ -146,7 +146,7 @@ define amdgpu_ps <4 x half> @struct_tbuffer_load_v4f16__sgpr_rsrc__vgpr_vindex__
   ; PACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; PACKED-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; PACKED-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XYZW_BOTHEN:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_D16_XYZW_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (<4 x s16>), align 1, addrspace 8)
+  ; PACKED-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XYZW_BOTHEN:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_D16_XYZW_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 8)
   ; PACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_XYZW_BOTHEN]].sub0
   ; PACKED-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_XYZW_BOTHEN]].sub1
   ; PACKED-NEXT:   $vgpr0 = COPY [[COPY7]]
@@ -166,7 +166,7 @@ define amdgpu_ps <4 x half> @struct_tbuffer_load_v4f16__sgpr_rsrc__vgpr_vindex__
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX12-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XYZW_VBUFFER_BOTHEN:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_D16_XYZW_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (<4 x s16>), align 1, addrspace 8)
+  ; GFX12-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XYZW_VBUFFER_BOTHEN:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_D16_XYZW_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 8)
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_XYZW_VBUFFER_BOTHEN]].sub0
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_XYZW_VBUFFER_BOTHEN]].sub1
   ; GFX12-NEXT:   $vgpr0 = COPY [[COPY7]]
@@ -186,7 +186,7 @@ define amdgpu_ps <4 x half> @struct_tbuffer_load_v4f16__sgpr_rsrc__vgpr_vindex__
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; UNPACKED-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; UNPACKED-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80_BOTHEN:%[0-9]+]]:vreg_128 = TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (<4 x s16>), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80_BOTHEN:%[0-9]+]]:vreg_128 = TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 8)
   ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80_BOTHEN]].sub0
   ; UNPACKED-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80_BOTHEN]].sub1
   ; UNPACKED-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80_BOTHEN]].sub2
@@ -314,7 +314,7 @@ define amdgpu_ps <4 x half> @struct_tbuffer_load_v4f16__vgpr_rsrc__sgpr_vindex__
   ; PACKED-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY8]], %subreg.sub1
-  ; PACKED-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XYZW_BOTHEN:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_D16_XYZW_BOTHEN [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (<4 x s16>), align 1, addrspace 8)
+  ; PACKED-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XYZW_BOTHEN:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_D16_XYZW_BOTHEN [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 8)
   ; PACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; PACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; PACKED-NEXT: {{  $}}
@@ -371,7 +371,7 @@ define amdgpu_ps <4 x half> @struct_tbuffer_load_v4f16__vgpr_rsrc__sgpr_vindex__
   ; GFX12-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY8]], %subreg.sub1
-  ; GFX12-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XYZW_VBUFFER_BOTHEN:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_D16_XYZW_VBUFFER_BOTHEN [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (<4 x s16>), align 1, addrspace 8)
+  ; GFX12-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XYZW_VBUFFER_BOTHEN:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_D16_XYZW_VBUFFER_BOTHEN [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 8)
   ; GFX12-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX12-NEXT: {{  $}}
@@ -428,7 +428,7 @@ define amdgpu_ps <4 x half> @struct_tbuffer_load_v4f16__vgpr_rsrc__sgpr_vindex__
   ; UNPACKED-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY8]], %subreg.sub1
-  ; UNPACKED-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80_BOTHEN:%[0-9]+]]:vreg_128 = TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80_BOTHEN [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (<4 x s16>), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80_BOTHEN:%[0-9]+]]:vreg_128 = TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80_BOTHEN [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 8)
   ; UNPACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; UNPACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; UNPACKED-NEXT: {{  $}}

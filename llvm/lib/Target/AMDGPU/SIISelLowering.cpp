@@ -17,11 +17,14 @@
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIDefines.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -34,6 +37,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -1158,9 +1162,36 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                           const CallInst &CI,
                                           MachineFunction &MF,
                                           unsigned IntrID) const {
-  Info.flags = MachineMemOperand::MONone;
+  MachineMemOperand::Flags Flags = MachineMemOperand::MONone;
+  std::optional<unsigned> FallbackAddressSpace;
+  MaybeAlign BaseAlignment = Align(1);
+  PointerUnion<const Value *, const PseudoSourceValue *> PtrVal;
+  uint64_t Size = 0;
+  int Offset = 0;
+
+  auto CreateMMO = [&]() {
+    MachinePointerInfo PtrInfo;
+    if (PtrVal)
+      PtrInfo = MachinePointerInfo(PtrVal, Offset);
+    else if (FallbackAddressSpace)
+      PtrInfo = MachinePointerInfo(*FallbackAddressSpace);
+
+    if (!Size && Info.memVT.isScalableVector())
+      Size = MemoryLocation::UnknownSize;
+    else if (!Size)
+      Size = Info.memVT.getStoreSize();
+
+    Type *Ty = Info.memVT == MVT::iPTR
+                   ? PointerType::get(CI.getContext(), 0)
+                   : Info.memVT.getTypeForEVT(CI.getContext());
+    Align Alignment = MF.getDataLayout().getABITypeAlign(Ty);
+    return MF.getMachineMemOperand(PtrInfo, Flags, Size,
+                                   BaseAlignment.value_or(Alignment),
+                                   CI.getAAMetadata());
+  };
+
   if (CI.hasMetadata(LLVMContext::MD_invariant_load))
-    Info.flags |= MachineMemOperand::MOInvariant;
+    Flags |= MachineMemOperand::MOInvariant;
 
   if (const AMDGPU::RsrcIntrinsic *RsrcIntr =
           AMDGPU::lookupRsrcIntrinsic(IntrID)) {
@@ -1171,10 +1202,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       return false;
 
     // TODO: Should images get their own address space?
-    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
+    FallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
 
     if (RsrcIntr->IsImage)
-      Info.align.reset();
+      BaseAlignment.reset();
 
     Value *RsrcArg = CI.getArgOperand(RsrcIntr->RsrcArg);
     if (auto *RsrcPtrTy = dyn_cast<PointerType>(RsrcArg->getType())) {
@@ -1184,13 +1215,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
         // those pointers. Cases like "this points at the same value
         // but with a different offset" are handled in
         // areMemAccessesTriviallyDisjoint.
-        Info.ptrVal = RsrcArg;
+        PtrVal = RsrcArg;
     }
 
     auto *Aux = cast<ConstantInt>(CI.getArgOperand(CI.arg_size() - 1));
     if (Aux->getZExtValue() & AMDGPU::CPol::VOLATILE)
-      Info.flags |= MachineMemOperand::MOVolatile;
-    Info.flags |= MachineMemOperand::MODereferenceable;
+      Flags |= MachineMemOperand::MOVolatile;
+    Flags |= MachineMemOperand::MODereferenceable;
     if (ME.onlyReadsMemory()) {
       unsigned MaxNumLanes = 4;
 
@@ -1213,7 +1244,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
       // FIXME: What does alignment mean for an image?
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.flags |= MachineMemOperand::MOLoad;
+      Flags |= MachineMemOperand::MOLoad;
     } else if (ME.onlyWritesMemory()) {
       Info.opc = ISD::INTRINSIC_VOID;
 
@@ -1225,15 +1256,17 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       } else
         Info.memVT = EVT::getEVT(DataTy);
 
-      Info.flags |= MachineMemOperand::MOStore;
+      Flags |= MachineMemOperand::MOStore;
     } else {
       // Atomic
       Info.opc = CI.getType()->isVoidTy() ? ISD::INTRINSIC_VOID :
                                             ISD::INTRINSIC_W_CHAIN;
       Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
-      Info.flags |= MachineMemOperand::MOLoad |
-                    MachineMemOperand::MOStore |
-                    MachineMemOperand::MODereferenceable;
+      Flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
+               MachineMemOperand::MODereferenceable;
+
+      // XXX - Should this be volatile without known ordering?
+      Flags |= MachineMemOperand::MOVolatile;
 
       switch (IntrID) {
       default:
@@ -1246,11 +1279,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
         unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
         Info.memVT = EVT::getIntegerVT(CI.getContext(), Width * 8);
-        Info.ptrVal = CI.getArgOperand(1);
+        PtrVal = CI.getArgOperand(1);
+        Info.MMO = CreateMMO();
         return true;
       }
       }
     }
+    Info.MMO = CreateMMO();
     return true;
   }
 
@@ -1262,70 +1297,72 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_ds_fmax: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
-    Info.ptrVal = CI.getOperand(0);
-    Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    PtrVal = CI.getOperand(0);
+    BaseAlignment.reset();
+    Flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
     const ConstantInt *Vol = cast<ConstantInt>(CI.getOperand(4));
     if (!Vol->isZero())
-      Info.flags |= MachineMemOperand::MOVolatile;
+      Flags |= MachineMemOperand::MOVolatile;
 
+    Info.MMO = CreateMMO();
     return true;
   }
   case Intrinsic::amdgcn_buffer_atomic_fadd: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getOperand(0)->getType());
-    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
-    Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    FallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
+    BaseAlignment.reset();
+    Flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
     const ConstantInt *Vol = dyn_cast<ConstantInt>(CI.getOperand(4));
     if (!Vol || !Vol->isZero())
-      Info.flags |= MachineMemOperand::MOVolatile;
-
+      Flags |= MachineMemOperand::MOVolatile;
+    Info.MMO = CreateMMO();
     return true;
   }
   case Intrinsic::amdgcn_ds_add_gs_reg_rtn:
   case Intrinsic::amdgcn_ds_sub_gs_reg_rtn: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getOperand(0)->getType());
-    Info.ptrVal = nullptr;
-    Info.fallbackAddressSpace = AMDGPUAS::STREAMOUT_REGISTER;
-    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    PtrVal = nullptr;
+    FallbackAddressSpace = AMDGPUAS::STREAMOUT_REGISTER;
+    Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.MMO = CreateMMO();
     return true;
   }
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
-    Info.ptrVal = CI.getOperand(0);
-    Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    PtrVal = CI.getOperand(0);
+    BaseAlignment.reset();
+    Flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
     const ConstantInt *Vol = cast<ConstantInt>(CI.getOperand(1));
     if (!Vol->isZero())
-      Info.flags |= MachineMemOperand::MOVolatile;
-
+      Flags |= MachineMemOperand::MOVolatile;
+    Info.MMO = CreateMMO();
     return true;
   }
   case Intrinsic::amdgcn_global_atomic_csub: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
-    Info.ptrVal = CI.getOperand(0);
-    Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad |
-                  MachineMemOperand::MOStore |
-                  MachineMemOperand::MOVolatile;
+    PtrVal = CI.getOperand(0);
+    BaseAlignment.reset();
+    Flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
+             MachineMemOperand::MOVolatile;
+    Info.MMO = CreateMMO();
     return true;
   }
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType()); // XXX: what is correct VT?
 
-    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
-    Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad |
-                  MachineMemOperand::MODereferenceable;
+    FallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
+    BaseAlignment.reset();
+    Flags |= MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable;
+    Info.MMO = CreateMMO();
     return true;
   }
   case Intrinsic::amdgcn_global_atomic_fadd:
@@ -1344,20 +1381,21 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
-    Info.ptrVal = CI.getOperand(0);
-    Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad |
-                  MachineMemOperand::MOStore |
-                  MachineMemOperand::MODereferenceable |
-                  MachineMemOperand::MOVolatile;
+    PtrVal = CI.getOperand(0);
+    BaseAlignment.reset();
+    Flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
+             MachineMemOperand::MODereferenceable |
+             MachineMemOperand::MOVolatile;
+    Info.MMO = CreateMMO();
     return true;
   }
   case Intrinsic::amdgcn_global_load_tr: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
-    Info.ptrVal = CI.getOperand(0);
-    Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad;
+    PtrVal = CI.getOperand(0);
+    BaseAlignment.reset();
+    Flags |= MachineMemOperand::MOLoad;
+    Info.MMO = CreateMMO();
     return true;
   }
   case Intrinsic::amdgcn_ds_gws_init:
@@ -1372,25 +1410,29 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
         static_cast<const GCNTargetMachine &>(getTargetMachine());
 
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    Info.ptrVal = MFI->getGWSPSV(TM);
+    PtrVal = MFI->getGWSPSV(TM);
 
     // This is an abstract access, but we need to specify a type and size.
     Info.memVT = MVT::i32;
-    Info.size = 4;
-    Info.align = Align(4);
+    Size = 4;
+    BaseAlignment = Align(4);
 
     if (IntrID == Intrinsic::amdgcn_ds_gws_barrier)
-      Info.flags |= MachineMemOperand::MOLoad;
+      Flags |= MachineMemOperand::MOLoad;
     else
-      Info.flags |= MachineMemOperand::MOStore;
+      Flags |= MachineMemOperand::MOStore;
+    Info.MMO = CreateMMO();
     return true;
   }
   case Intrinsic::amdgcn_global_load_lds: {
     Info.opc = ISD::INTRINSIC_VOID;
     unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
     Info.memVT = EVT::getIntegerVT(CI.getContext(), Width * 8);
-    Info.ptrVal = CI.getArgOperand(1);
-    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+
+    Flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
+             MachineMemOperand::MOVolatile;
+    PtrVal = CI.getArgOperand(1);
+    Info.MMO = CreateMMO();
     return true;
   }
   case Intrinsic::amdgcn_ds_bvh_stack_rtn: {
@@ -1400,14 +1442,15 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
         static_cast<const GCNTargetMachine &>(getTargetMachine());
 
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    Info.ptrVal = MFI->getGWSPSV(TM);
+    PtrVal = MFI->getGWSPSV(TM);
 
     // This is an abstract access, but we need to specify a type and size.
     Info.memVT = MVT::i32;
-    Info.size = 4;
-    Info.align = Align(4);
+    Size = 4;
+    BaseAlignment = Align(4);
 
-    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.MMO = CreateMMO();
     return true;
   }
   default:

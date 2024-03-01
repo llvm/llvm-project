@@ -38,7 +38,7 @@ define amdgpu_ps void @raw_tbuffer_store_v2f32__sgpr_rsrc__vgpr_voffset__sgpr_so
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
-  ; CHECK-NEXT:   TBUFFER_STORE_FORMAT_XY_OFFEN_exact [[REG_SEQUENCE]], [[COPY6]], [[REG_SEQUENCE1]], [[COPY7]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<2 x s32>) into %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   TBUFFER_STORE_FORMAT_XY_OFFEN_exact [[REG_SEQUENCE]], [[COPY6]], [[REG_SEQUENCE1]], [[COPY7]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (s64) into %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.ptr.tbuffer.store.v2f32(<2 x float> %val, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 0)
   ret void
@@ -61,7 +61,7 @@ define amdgpu_ps void @raw_tbuffer_store_v3f32__sgpr_rsrc__vgpr_voffset__sgpr_so
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY5]], %subreg.sub2, [[COPY6]], %subreg.sub3
-  ; CHECK-NEXT:   TBUFFER_STORE_FORMAT_XYZ_OFFEN_exact [[REG_SEQUENCE]], [[COPY7]], [[REG_SEQUENCE1]], [[COPY8]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<3 x s32>) into %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   TBUFFER_STORE_FORMAT_XYZ_OFFEN_exact [[REG_SEQUENCE]], [[COPY7]], [[REG_SEQUENCE1]], [[COPY8]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (s96) into %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.ptr.tbuffer.store.v3f32(<3 x float> %val, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 0)
   ret void
@@ -85,7 +85,7 @@ define amdgpu_ps void @raw_tbuffer_store_v4f32__sgpr_rsrc__vgpr_voffset__sgpr_so
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1, [[COPY6]], %subreg.sub2, [[COPY7]], %subreg.sub3
-  ; CHECK-NEXT:   TBUFFER_STORE_FORMAT_XYZW_OFFEN_exact [[REG_SEQUENCE]], [[COPY8]], [[REG_SEQUENCE1]], [[COPY9]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<4 x s32>) into %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   TBUFFER_STORE_FORMAT_XYZW_OFFEN_exact [[REG_SEQUENCE]], [[COPY8]], [[REG_SEQUENCE1]], [[COPY9]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (s128) into %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.ptr.tbuffer.store.v4f32(<4 x float> %val, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 0)
   ret void

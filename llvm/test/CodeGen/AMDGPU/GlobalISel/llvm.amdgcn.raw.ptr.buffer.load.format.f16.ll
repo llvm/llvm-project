@@ -49,7 +49,7 @@ define amdgpu_ps <2 x half> @raw_ptr_buffer_load_format_v2f16__sgpr_rsrc__vgpr_v
   ; PACKED-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; PACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; PACKED-NEXT:   [[BUFFER_LOAD_FORMAT_D16_XY_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_D16_XY_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (<2 x s16>) from %ir.rsrc, align 1, addrspace 8)
+  ; PACKED-NEXT:   [[BUFFER_LOAD_FORMAT_D16_XY_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_D16_XY_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; PACKED-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_D16_XY_OFFEN]]
   ; PACKED-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
@@ -64,7 +64,7 @@ define amdgpu_ps <2 x half> @raw_ptr_buffer_load_format_v2f16__sgpr_rsrc__vgpr_v
   ; UNPACKED-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; UNPACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; UNPACKED-NEXT:   [[BUFFER_LOAD_FORMAT_D16_XY_gfx80_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_FORMAT_D16_XY_gfx80_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (<2 x s16>) from %ir.rsrc, align 1, addrspace 8)
+  ; UNPACKED-NEXT:   [[BUFFER_LOAD_FORMAT_D16_XY_gfx80_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_FORMAT_D16_XY_gfx80_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XY_gfx80_OFFEN]].sub0
   ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XY_gfx80_OFFEN]].sub1
   ; UNPACKED-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
@@ -100,7 +100,7 @@ define amdgpu_ps <4 x half> @raw_ptr_buffer_load_format_v4f16__sgpr_rsrc__vgpr_v
   ; PACKED-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; PACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; PACKED-NEXT:   [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s16>) from %ir.rsrc, align 1, addrspace 8)
+  ; PACKED-NEXT:   [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (s64) from %ir.rsrc, align 1, addrspace 8)
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN]].sub0
   ; PACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN]].sub1
   ; PACKED-NEXT:   $vgpr0 = COPY [[COPY6]]
@@ -118,7 +118,7 @@ define amdgpu_ps <4 x half> @raw_ptr_buffer_load_format_v4f16__sgpr_rsrc__vgpr_v
   ; UNPACKED-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; UNPACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; UNPACKED-NEXT:   [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s16>) from %ir.rsrc, align 1, addrspace 8)
+  ; UNPACKED-NEXT:   [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (s64) from %ir.rsrc, align 1, addrspace 8)
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN]].sub0
   ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN]].sub1
   ; UNPACKED-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN]].sub2
@@ -265,7 +265,7 @@ define amdgpu_ps <4 x half> @raw_ptr_buffer_load_format_v4f16__sgpr_rsrc__vgpr_v
   ; PACKED-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; PACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; PACKED-NEXT:   [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, implicit $exec :: (dereferenceable load (<4 x s16>) from %ir.rsrc, align 1, addrspace 8)
+  ; PACKED-NEXT:   [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, implicit $exec :: (dereferenceable load (s64) from %ir.rsrc, align 1, addrspace 8)
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN]].sub0
   ; PACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN]].sub1
   ; PACKED-NEXT:   $vgpr0 = COPY [[COPY6]]
@@ -283,7 +283,7 @@ define amdgpu_ps <4 x half> @raw_ptr_buffer_load_format_v4f16__sgpr_rsrc__vgpr_v
   ; UNPACKED-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; UNPACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; UNPACKED-NEXT:   [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, implicit $exec :: (dereferenceable load (<4 x s16>) from %ir.rsrc, align 1, addrspace 8)
+  ; UNPACKED-NEXT:   [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, implicit $exec :: (dereferenceable load (s64) from %ir.rsrc, align 1, addrspace 8)
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN]].sub0
   ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN]].sub1
   ; UNPACKED-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN]].sub2

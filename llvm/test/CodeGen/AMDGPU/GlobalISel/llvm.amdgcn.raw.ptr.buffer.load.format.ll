@@ -33,7 +33,7 @@ define amdgpu_ps <2 x float> @raw_ptr_buffer_load_format_v2f32__sgpr_rsrc__vgpr_
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XY_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_FORMAT_XY_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (<2 x s32>) from %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XY_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_FORMAT_XY_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (s64) from %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XY_OFFEN]].sub0
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XY_OFFEN]].sub1
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY6]]
@@ -55,7 +55,7 @@ define amdgpu_ps <3 x float> @raw_ptr_buffer_load_format_v3f32__sgpr_rsrc__vgpr_
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XYZ_OFFEN:%[0-9]+]]:vreg_96 = BUFFER_LOAD_FORMAT_XYZ_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (<3 x s32>) from %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XYZ_OFFEN:%[0-9]+]]:vreg_96 = BUFFER_LOAD_FORMAT_XYZ_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (s96) from %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZ_OFFEN]].sub0
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZ_OFFEN]].sub1
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZ_OFFEN]].sub2
@@ -79,7 +79,7 @@ define amdgpu_ps <4 x float> @raw_ptr_buffer_load_format_v4f32__sgpr_rsrc__vgpr_
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XYZW_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>) from %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XYZW_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_OFFEN]].sub0
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_OFFEN]].sub1
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_OFFEN]].sub2
@@ -161,7 +161,7 @@ define amdgpu_ps <4 x float> @raw_ptr_buffer_load_format_v4f32__sgpr_rsrc__vgpr_
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XYZW_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>) from %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XYZW_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, implicit $exec :: (dereferenceable load (s128) from %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_OFFEN]].sub0
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_OFFEN]].sub1
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_OFFEN]].sub2

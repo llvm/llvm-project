@@ -2643,8 +2643,12 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
       MPI = MachinePointerInfo(Info.ptrVal, Info.offset);
     else if (Info.fallbackAddressSpace)
       MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
-    MIB.addMemOperand(
-        MF->getMachineMemOperand(MPI, Info.flags, MemTy, Alignment, CI.getAAMetadata()));
+
+    if (Info.MMO)
+      MIB.addMemOperand(Info.MMO);
+    else
+      MIB.addMemOperand(MF->getMachineMemOperand(
+          MPI, Info.flags, MemTy, Alignment, CI.getAAMetadata()));
   }
 
   return true;
