@@ -4510,23 +4510,21 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       return std::nullopt; // No need to reorder.
     return std::move(ResOrder);
   }
-  if (TE.State == TreeEntry::NeedToGather) {
+  if (TE.State == TreeEntry::NeedToGather && !TE.isAltShuffle() &&
+      allSameType(TE.Scalars)) {
     // TODO: add analysis of other gather nodes with extractelement
     // instructions and other values/instructions, not only undefs.
-    if (((TE.getOpcode() == Instruction::ExtractElement &&
-          !TE.isAltShuffle()) ||
+    if ((TE.getOpcode() == Instruction::ExtractElement ||
          (all_of(TE.Scalars,
                  [](Value *V) {
                    return isa<UndefValue, ExtractElementInst>(V);
                  }) &&
           any_of(TE.Scalars,
                  [](Value *V) { return isa<ExtractElementInst>(V); }))) &&
-        all_of(TE.Scalars,
-               [](Value *V) {
-                 auto *EE = dyn_cast<ExtractElementInst>(V);
-                 return !EE || isa<FixedVectorType>(EE->getVectorOperandType());
-               }) &&
-        allSameType(TE.Scalars)) {
+        all_of(TE.Scalars, [](Value *V) {
+          auto *EE = dyn_cast<ExtractElementInst>(V);
+          return !EE || isa<FixedVectorType>(EE->getVectorOperandType());
+        })) {
       // Check that gather of extractelements can be represented as
       // just a shuffle of a single vector.
       OrdersType CurrentOrder;
