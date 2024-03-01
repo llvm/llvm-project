@@ -4114,8 +4114,13 @@ static LoadsState canVectorizeLoads(const BoUpSLP &R, ArrayRef<Value *> VL,
               canVectorizeLoads(R, Slice, Slice.front(), TTI, DL, SE, LI, TLI,
                                 Order, PointerOps, /*TryRecursiveCheck=*/false);
           // Check that the sorted loads are consecutive.
-          if (LS != LoadsState::Vectorize && LS != LoadsState::StridedVectorize)
+          if (LS == LoadsState::Gather)
             break;
+          // If need the reorder - consider as high-cost masked gather for now.
+          if ((LS == LoadsState::Vectorize ||
+               LS == LoadsState::StridedVectorize) &&
+              !Order.empty() && !isReverseOrder(Order))
+            LS = LoadsState::ScatterVectorize;
           States.push_back(LS);
         }
         // Can be vectorized later as a serie of loads/insertelements.
@@ -4143,8 +4148,13 @@ static LoadsState canVectorizeLoads(const BoUpSLP &R, ArrayRef<Value *> VL,
                   /*VariableMask=*/false, CommonAlignment, CostKind);
               break;
             case LoadsState::ScatterVectorize:
+              VecLdCost += TTI.getGatherScatterOpCost(
+                  Instruction::Load, SubVecTy, LI0->getPointerOperand(),
+                  /*VariableMask=*/false, CommonAlignment, CostKind);
+              break;
             case LoadsState::Gather:
-              llvm_unreachable("Expected only consecutive or strided loads.");
+              llvm_unreachable(
+                  "Expected only consecutive, strided or masked gather loads.");
             }
             VecLdCost +=
                 TTI.getShuffleCost(TTI ::SK_InsertSubvector, VecTy,
