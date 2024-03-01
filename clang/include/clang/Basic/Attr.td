@@ -4403,6 +4403,14 @@ def HLSLParamModifier : TypeAttr {
   let Args = [DefaultBoolArgument<"MergedSpelling", /*default*/0, /*fake*/1>];
 }
 
+def HLSLRootSignature : InheritableAttr {
+  let Spellings = [Microsoft<"RootSignature">];
+  let Subjects = SubjectList<[HLSLEntry]>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLParamQualifierDocs];
+  let Args = [StringArgument<"InputString"> , DeclArgument<Var, "RootSignatureObject", 0, /*fake*/ 1>];
+}
+
 def RandomizeLayout : InheritableAttr {
   let Spellings = [GCC<"randomize_layout">];
   let Subjects = SubjectList<[Record]>;

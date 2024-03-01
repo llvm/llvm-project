@@ -2958,6 +2958,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   else if (const auto *NT = dyn_cast<HLSLNumThreadsAttr>(Attr))
     NewAttr =
         S.mergeHLSLNumThreadsAttr(D, *NT, NT->getX(), NT->getY(), NT->getZ());
+  else if (const auto *RS = dyn_cast<HLSLRootSignatureAttr>(Attr))
+    NewAttr = S.mergeHLSLRootSignatureAttr(D, *RS, RS->getInputString());
   else if (const auto *SA = dyn_cast<HLSLShaderAttr>(Attr))
     NewAttr = S.mergeHLSLShaderAttr(D, *SA, SA->getType());
   else if (isa<SuppressAttr>(Attr))

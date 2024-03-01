@@ -7154,6 +7154,52 @@ static void handleUuidAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     D->addAttr(UA);
 }
 
+static void handleHLSLRootSignatureAttr(Sema &S, Decl *D,
+                                        const ParsedAttr &AL) {
+  StringRef OrigStrRef;
+  SourceLocation LiteralLoc;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, OrigStrRef, &LiteralLoc))
+    return;
+  HLSLRootSignatureAttr *RSA = S.mergeHLSLRootSignatureAttr(D, AL, OrigStrRef);
+  if (RSA)
+    D->addAttr(RSA);
+}
+
+HLSLRootSignatureAttr *
+Sema::mergeHLSLRootSignatureAttr(Decl *D, const AttributeCommonInfo &AL,
+                                 StringRef OrigStr) {
+  if (HLSLRootSignatureAttr *RS = D->getAttr<HLSLRootSignatureAttr>()) {
+    if (RS->getInputString() != OrigStr) {
+      Diag(RS->getLocation(), diag::err_hlsl_attribute_param_mismatch) << AL;
+      Diag(AL.getLoc(), diag::note_conflicting_attribute);
+    }
+    return nullptr;
+  }
+
+  // TODO: parse the OrigStr, report error if it's not valid.
+
+  FunctionDecl *FD = D->getAsFunction();
+
+  DeclContext *DC = FD->getParent();
+
+  // Create a record decl for the root signature.
+  IdentifierInfo *II = &Context.Idents.get(FD->getName().str() + ".RS");
+  RecordDecl *RD =
+      RecordDecl::Create(Context, TagDecl::TagKind::Struct, DC,
+                         SourceLocation(), SourceLocation(), II);
+  // TODO: Add fields to the record decl.
+
+  // Create a type for the root signature.
+  QualType T = Context.getRecordType(RD);
+  // Create a variable decl for the root signature.
+  VarDecl *VD = VarDecl::Create(Context, DC, SourceLocation(),
+                                SourceLocation(), II, T, nullptr, SC_None);
+
+  // TODO: Add initializers to the variable decl.
+
+  return ::new (Context) HLSLRootSignatureAttr(Context, AL, OrigStr, VD);
+}
+
 static void handleHLSLNumThreadsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   llvm::VersionTuple SMVersion =
       S.Context.getTargetInfo().getTriple().getOSVersion();
@@ -9644,6 +9690,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   // HLSL attributes:
   case ParsedAttr::AT_HLSLNumThreads:
     handleHLSLNumThreadsAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_HLSLRootSignature:
+    handleHLSLRootSignatureAttr(S, D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_GroupIndex:
     handleSimpleAttribute<HLSLSV_GroupIndexAttr>(S, D, AL);
