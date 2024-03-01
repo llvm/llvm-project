@@ -1626,22 +1626,9 @@ bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
   if (!VTy || VTy->isScalableTy() || !ST->hasVInstructions())
     return false;
 
-  Type *ScalarTy = VTy->getScalarType();
-  if (ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
-    return true;
-
-  if (!ScalarTy->isIntegerTy())
+  if (!TLI->isLegalElementTypeForRVV(
+          TLI->getValueType(DL, VTy->getElementType())))
     return false;
-
-  switch (ScalarTy->getIntegerBitWidth()) {
-  case 8:
-  case 16:
-  case 32:
-  case 64:
-    break;
-  default:
-    return false;
-  }
 
   return getRegUsageForType(VTy) <= 8;
 }
