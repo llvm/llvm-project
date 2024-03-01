@@ -16,6 +16,73 @@ using namespace llvm::MachO;
 
 namespace clang::installapi {
 
+GlobalRecord *FrontendRecordsSlice::addGlobal(
+    StringRef Name, RecordLinkage Linkage, GlobalRecord::Kind GV,
+    const clang::AvailabilityInfo Avail, const Decl *D, const HeaderType Access,
+    SymbolFlags Flags) {
+
+  auto *GR = llvm::MachO::RecordsSlice::addGlobal(Name, Linkage, GV, Flags);
+  FrontendRecords.insert({GR, FrontendAttrs{Avail, D, Access}});
+  return GR;
+}
+
+ObjCInterfaceRecord *FrontendRecordsSlice::addObjCInterface(
+    StringRef Name, RecordLinkage Linkage, const clang::AvailabilityInfo Avail,
+    const Decl *D, HeaderType Access, bool IsEHType) {
+  ObjCIFSymbolKind SymType =
+      ObjCIFSymbolKind::Class | ObjCIFSymbolKind::MetaClass;
+  if (IsEHType)
+    SymType |= ObjCIFSymbolKind::EHType;
+  auto *ObjCR =
+      llvm::MachO::RecordsSlice::addObjCInterface(Name, Linkage, SymType);
+  FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  return ObjCR;
+}
+
+std::optional<HeaderType>
+InstallAPIContext::findAndRecordFile(const FileEntry *FE,
+                                     const Preprocessor &PP) {
+  if (!FE)
+    return std::nullopt;
+
+  // Check if header has been looked up already and whether it is something
+  // installapi should use.
+  auto It = KnownFiles.find(FE);
+  if (It != KnownFiles.end()) {
+    if (It->second != HeaderType::Unknown)
+      return It->second;
+    else
+      return std::nullopt;
+  }
+
+  // If file was not found, search by how the header was
+  // included. This is primarily to resolve headers found
+  // in a different location than what passed directly as input.
+  StringRef IncludeName = PP.getHeaderSearchInfo().getIncludeNameForHeader(FE);
+  auto BackupIt = KnownIncludes.find(IncludeName.str());
+  if (BackupIt != KnownIncludes.end()) {
+    KnownFiles[FE] = BackupIt->second;
+    return BackupIt->second;
+  }
+
+  // Record that the file was found to avoid future string searches for the
+  // same file.
+  KnownFiles.insert({FE, HeaderType::Unknown});
+  return std::nullopt;
+}
+
+void InstallAPIContext::addKnownHeader(const HeaderFile &H) {
+  auto FE = FM->getFile(H.getPath());
+  if (!FE)
+    return; // File does not exist.
+  KnownFiles[*FE] = H.getType();
+
+  if (!H.useIncludeName())
+    return;
+
+  KnownIncludes[H.getIncludeName()] = H.getType();
+}
+
 static StringRef getFileExtension(clang::Language Lang) {
   switch (Lang) {
   default:
@@ -31,7 +98,7 @@ static StringRef getFileExtension(clang::Language Lang) {
   }
 }
 
-std::unique_ptr<MemoryBuffer> createInputBuffer(const InstallAPIContext &Ctx) {
+std::unique_ptr<MemoryBuffer> createInputBuffer(InstallAPIContext &Ctx) {
   assert(Ctx.Type != HeaderType::Unknown &&
          "unexpected access level for parsing");
   SmallString<4096> Contents;
@@ -47,6 +114,8 @@ std::unique_ptr<MemoryBuffer> createInputBuffer(const InstallAPIContext &Ctx) {
       OS << "<" << H.getIncludeName() << ">";
     else
       OS << "\"" << H.getPath() << "\"";
+
+    Ctx.addKnownHeader(H);
   }
   if (Contents.empty())
     return nullptr;
