@@ -3129,7 +3129,8 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
       if (auto iter{implicitInterfaces_.find(name)};
           iter != implicitInterfaces_.end()) {
         std::string whyNot;
-        if (!chars->IsCompatibleWith(iter->second.second, &whyNot)) {
+        if (!chars->IsCompatibleWith(iter->second.second,
+                /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
           if (auto *msg{Say(callSite,
                   "Reference to the procedure '%s' has an implicit interface that is distinct from another reference: %s"_warn_en_US,
                   name, whyNot)}) {
@@ -3169,7 +3170,7 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     }
     ok &= semantics::CheckArguments(*chars, arguments, context_,
         context_.FindScope(callSite), treatExternalAsImplicit,
-        specificIntrinsic);
+        /*ignoreImplicitVsExplicit=*/false, specificIntrinsic);
   }
   if (procSymbol && !IsPureProcedure(*procSymbol)) {
     if (const semantics::Scope *
@@ -3188,7 +3189,8 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
       if (auto globalChars{characteristics::Procedure::Characterize(
               *global, context_.foldingContext())}) {
         semantics::CheckArguments(*globalChars, arguments, context_,
-            context_.FindScope(callSite), true,
+            context_.FindScope(callSite), /*treatExternalAsImplicit=*/true,
+            /*ignoreImplicitVsExplicit=*/false,
             nullptr /*not specific intrinsic*/);
       }
     }

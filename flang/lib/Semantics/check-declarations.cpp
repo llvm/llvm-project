@@ -1481,7 +1481,8 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
           if (auto globalChars{Characterize(*global)}) {
             if (chars->HasExplicitInterface()) {
               std::string whyNot;
-              if (!chars->IsCompatibleWith(*globalChars, &whyNot)) {
+              if (!chars->IsCompatibleWith(*globalChars,
+                      /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
                 msg = WarnIfNotInModuleFile(
                     "The global subprogram '%s' is not compatible with its local procedure declaration (%s)"_warn_en_US,
                     global->name(), whyNot);
@@ -1507,7 +1508,8 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
       if (auto chars{Characterize(symbol)}) {
         if (auto previousChars{Characterize(previous)}) {
           std::string whyNot;
-          if (!chars->IsCompatibleWith(*previousChars, &whyNot)) {
+          if (!chars->IsCompatibleWith(*previousChars,
+                  /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
             if (auto *msg{WarnIfNotInModuleFile(
                     "The external interface '%s' is not compatible with an earlier definition (%s)"_warn_en_US,
                     symbol.name(), whyNot)}) {
