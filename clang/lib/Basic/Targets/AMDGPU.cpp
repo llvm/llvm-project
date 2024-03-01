@@ -292,8 +292,14 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
+
+  // Don't emit feature macros in host code because in such cases the
+  // feature list is not accurate.
+  if (IsHIPHost)
+    return;
+
   // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
-  if (isAMDGCN(getTriple()) && !IsHIPHost) {
+  if (isAMDGCN(getTriple())) {
     assert(StringRef(CanonName).starts_with("gfx") &&
            "Invalid amdgcn canonical name");
     StringRef CanonFamilyName = getArchFamilyNameAMDGCN(GPUKind);
