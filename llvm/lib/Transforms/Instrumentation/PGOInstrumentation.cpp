@@ -961,21 +961,16 @@ namespace {
 struct PGOUseEdge : public PGOEdge {
   using PGOEdge::PGOEdge;
 
-  bool CountValid = false;
-  uint64_t CountValue = 0;
+  std::optional<uint64_t> Count;
 
   // Set edge count value
-  void setEdgeCount(uint64_t Value) {
-    CountValue = Value;
-    CountValid = true;
-  }
+  void setEdgeCount(uint64_t Value) { Count = Value; }
 
   // Return the information string for this object.
   std::string infoString() const {
-    if (!CountValid)
+    if (!Count)
       return PGOEdge::infoString();
-    return (Twine(PGOEdge::infoString()) + "  Count=" + Twine(CountValue))
-        .str();
+    return (Twine(PGOEdge::infoString()) + "  Count=" + Twine(*Count)).str();
   }
 };
 
@@ -1022,7 +1017,8 @@ static uint64_t sumEdgeCount(const ArrayRef<PGOUseEdge *> Edges) {
   for (const auto &E : Edges) {
     if (E->Removed)
       continue;
-    Total += E->CountValue;
+    if (E->Count)
+      Total += *E->Count;
   }
   return Total;
 }
@@ -1221,7 +1217,7 @@ bool PGOUseFunc::setInstrumentedCounts(
       if (DestInfo.Count && DestInfo.InEdges.size() == 1)
         setEdgeCount(E.get(), *DestInfo.Count);
     }
-    if (E->CountValid)
+    if (E->Count)
       continue;
     // E's count should have been set from profile. If not, this meenas E skips
     // the instrumentation. We set the count to 0.
@@ -1234,7 +1230,7 @@ bool PGOUseFunc::setInstrumentedCounts(
 // unknown edge in Edges vector.
 void PGOUseFunc::setEdgeCount(DirectEdges &Edges, uint64_t Value) {
   for (auto &E : Edges) {
-    if (E->CountValid)
+    if (E->Count)
       continue;
     E->setEdgeCount(Value);
 
@@ -1574,7 +1570,7 @@ void PGOUseFunc::setBranchWeights() {
       if (DestBB == nullptr)
         continue;
       unsigned SuccNum = GetSuccessorNumber(SrcBB, DestBB);
-      uint64_t EdgeCount = E->CountValue;
+      uint64_t EdgeCount = *E->Count;
       if (EdgeCount > MaxCount)
         MaxCount = EdgeCount;
       EdgeCounts[SuccNum] = EdgeCount;
