@@ -1580,7 +1580,7 @@ public:
 
   /// Returns true if VP intrinsics with explicit vector length support should
   /// be generated in the tail folded loop.
-  bool useVPIWithVPEVLVectorization() const {
+  bool foldTailWithEVL() const {
     return getTailFoldingStyle() == TailFoldingStyle::DataWithEVL;
   }
 
@@ -5311,7 +5311,7 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
     return 1;
 
   // Do not interleave if EVL is preferred and no User IC is specified.
-  if (useVPIWithVPEVLVectorization()) {
+  if (foldTailWithEVL()) {
     LLVM_DEBUG(dbgs() << "LV: Preference for VP intrinsics indicated. "
                          "Unroll factor forced to be 1.\n");
     return 1;
@@ -8547,7 +8547,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
         VPlanTransforms::truncateToMinimalBitwidths(
             *Plan, CM.getMinimalBitwidths(), PSE.getSE()->getContext());
       VPlanTransforms::optimize(*Plan, *PSE.getSE());
-      if (CM.useVPIWithVPEVLVectorization())
+      if (CM.foldTailWithEVL())
         VPlanTransforms::addExplicitVectorLength(*Plan);
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));

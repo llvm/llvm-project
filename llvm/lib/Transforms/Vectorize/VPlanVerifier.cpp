@@ -93,8 +93,9 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
     RecipeNumbering[&R] = Cnt++;
 
   // Set of recipe types along with VPInstruction Opcodes of all EVL-related
-  // recipes that must appear at most once in Entry or Exiting blocks.
+  // recipes that must appear at most once in the header block.
   DenseSet<unsigned> EVLFound;
+  const VPRecipeBase *VPWidenMemRecipe = nullptr;
   const VPlan *Plan = VPBB->getPlan();
   bool IsHeader = Plan && Plan->getEntry()->getNumSuccessors() == 1 &&
                   Plan->getVectorLoopRegion()->getEntry() == VPBB;
@@ -110,23 +111,25 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
       }
       return true;
     }
-    auto *RInst = dyn_cast<VPInstruction>(R);
-    if (!RInst)
-      return true;
-    switch (RInst->getOpcode()) {
-    case VPInstruction::ExplicitVectorLength:
+    if (const auto *RInst = dyn_cast<VPInstruction>(R);
+        RInst && RInst->getOpcode() == VPInstruction::ExplicitVectorLength) {
       if (!IsHeader) {
-        errs() << "EVL instruction not in entry block!\n";
+        errs() << "EVL instruction not in the header block!\n";
         return false;
       }
-      break;
-    default:
+      if (!EVLFound.insert(RInst->getOpcode() + VPDef::VPLastPHISC).second) {
+        errs() << "EVL instruction inserted more than once!\n";
+        return false;
+      }
+      if (VPWidenMemRecipe) {
+        errs() << "Use of EVL instruction by widen memory recipe before "
+                  "definition!\n";
+        return false;
+      }
       return true;
     }
-    if (!EVLFound.insert(RInst->getOpcode() + VPDef::VPLastPHISC).second) {
-      errs() << "EVL instruction inserted more than once!\n";
-      return false;
-    }
+    if (isa<VPWidenMemoryInstructionRecipe>(R))
+      VPWidenMemRecipe = R;
     return true;
   };
 
