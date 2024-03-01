@@ -11976,6 +11976,98 @@ Example:
       <result> = icmp ule i16 -4, 5        ; yields: result=false
       <result> = icmp sge i16  4, 5        ; yields: result=false
 
+.. _i_sthreecmp:
+
+'``sthreecmp``' Instruction
+^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      <result> = sthreecmp <op1>, <op2>  ; yields i2 or <N x i2>:result
+
+Overview:
+"""""""""
+
+The '``sthreecmp``' instruction returns an integer value or a vector of
+integer values based on comparison of its two integer, integer vector,
+pointer, or pointer vector operands.
+
+Arguments:
+""""""""""
+
+The '``sthreecmp``' instruction takes two signed integer operands.
+
+Semantics:
+""""""""""
+If the operands are equal, it returns 0. If ``op1`` is less than ``op2``,
+it returns -1, and if ``op1`` is greater than ``op2``, it returns 1.
+It is also known as the '``<=>``' spaceship operator.
+
+If the operands are :ref:`pointer <t_pointer>` typed, the pointer values
+are compared as if they were integers.
+
+If the operands are integer vectors, then they are compared element by
+element. The result is an ``i2`` vector with the same number of elements
+as the values being compared. Otherwise, the result is an ``i2``.
+
+Example:
+""""""""
+
+.. code-block:: text
+
+      <result> = sthreecmp 4, 5          ; yields: result=-1
+      <result> = sthreecmp 2, 2          ; yields: result=0
+      <result> = sthreecmp -2, -1        ; yields: result=1
+
+.. _i_uthreecmp:
+
+'``uthreecmp``' Instruction
+^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      <result> = uthreecmp <op1>, <op2>  ; yields i2 or <N x i2>:result
+
+Overview:
+"""""""""
+
+The '``uthreecmp``' instruction returns an integer value or a vector of
+integer values based on comparison of its two integer, integer vector,
+pointer, or pointer vector operands.
+
+Arguments:
+""""""""""
+
+The '``uthreecmp``' instruction takes two signed integer operands.
+
+Semantics:
+""""""""""
+If the operands are equal, it returns 0. If ``op1`` is less than ``op2``,
+it returns -1, and if ``op1`` is greater than ``op2``, it returns 1.
+It is also known as the '``<=>``' spaceship operator.
+
+If the operands are :ref:`pointer <t_pointer>` typed, the pointer values
+are compared as if they were integers.
+
+If the operands are integer vectors, then they are compared element by
+element. The result is an ``i2`` vector with the same number of elements
+as the values being compared. Otherwise, the result is an ``i2``.
+
+Example:
+""""""""
+
+.. code-block:: text
+
+      <result> = uthreecmp 4, 5          ; yields: result=-1
+      <result> = uthreecmp 2, 2          ; yields: result=0
+      <result> = uthreecmp 9, 0          ; yields: result=1
+
 .. _i_fcmp:
 
 '``fcmp``' Instruction
