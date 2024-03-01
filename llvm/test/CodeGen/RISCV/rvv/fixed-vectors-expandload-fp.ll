@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+f,+d,+zfh,+zvfh -verify-machineinstrs < %s | FileCheck %s --check-prefixes=RV64
 
 declare <1 x half> @llvm.masked.expandload.v1f16(ptr, <1 x i1>, <1 x half>)
-define <1 x half> @expandload_v1f16(ptr align 2 %base, <1 x half> %src0, <1 x i1> %mask) {
+define <1 x half> @expandload_v1f16(ptr %base, <1 x half> %src0, <1 x i1> %mask) {
 ; RV32-LABEL: expandload_v1f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
@@ -25,12 +25,12 @@ define <1 x half> @expandload_v1f16(ptr align 2 %base, <1 x half> %src0, <1 x i1
 ; RV64-NEXT:    vle16.v v8, (a0)
 ; RV64-NEXT:  .LBB0_2: # %else
 ; RV64-NEXT:    ret
-  %res = call <1 x half> @llvm.masked.expandload.v1f16(ptr %base, <1 x i1> %mask, <1 x half> %src0)
+  %res = call <1 x half> @llvm.masked.expandload.v1f16(ptr align 2 %base, <1 x i1> %mask, <1 x half> %src0)
   ret <1 x half>%res
 }
 
 declare <2 x half> @llvm.masked.expandload.v2f16(ptr, <2 x i1>, <2 x half>)
-define <2 x half> @expandload_v2f16(ptr align 2 %base, <2 x half> %src0, <2 x i1> %mask) {
+define <2 x half> @expandload_v2f16(ptr %base, <2 x half> %src0, <2 x i1> %mask) {
 ; RV32-LABEL: expandload_v2f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -80,12 +80,12 @@ define <2 x half> @expandload_v2f16(ptr align 2 %base, <2 x half> %src0, <2 x i1
 ; RV64-NEXT:    vfmv.s.f v9, fa5
 ; RV64-NEXT:    vslideup.vi v8, v9, 1
 ; RV64-NEXT:    ret
-  %res = call <2 x half> @llvm.masked.expandload.v2f16(ptr %base, <2 x i1> %mask, <2 x half> %src0)
+  %res = call <2 x half> @llvm.masked.expandload.v2f16(ptr align 2 %base, <2 x i1> %mask, <2 x half> %src0)
   ret <2 x half>%res
 }
 
 declare <4 x half> @llvm.masked.expandload.v4f16(ptr, <4 x i1>, <4 x half>)
-define <4 x half> @expandload_v4f16(ptr align 2 %base, <4 x half> %src0, <4 x i1> %mask) {
+define <4 x half> @expandload_v4f16(ptr %base, <4 x half> %src0, <4 x i1> %mask) {
 ; RV32-LABEL: expandload_v4f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -179,12 +179,12 @@ define <4 x half> @expandload_v4f16(ptr align 2 %base, <4 x half> %src0, <4 x i1
 ; RV64-NEXT:    vfmv.s.f v9, fa5
 ; RV64-NEXT:    vslideup.vi v8, v9, 3
 ; RV64-NEXT:    ret
-  %res = call <4 x half> @llvm.masked.expandload.v4f16(ptr %base, <4 x i1> %mask, <4 x half> %src0)
+  %res = call <4 x half> @llvm.masked.expandload.v4f16(ptr align 2 %base, <4 x i1> %mask, <4 x half> %src0)
   ret <4 x half>%res
 }
 
 declare <8 x half> @llvm.masked.expandload.v8f16(ptr, <8 x i1>, <8 x half>)
-define <8 x half> @expandload_v8f16(ptr align 2 %base, <8 x half> %src0, <8 x i1> %mask) {
+define <8 x half> @expandload_v8f16(ptr %base, <8 x half> %src0, <8 x i1> %mask) {
 ; RV32-LABEL: expandload_v8f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -366,12 +366,12 @@ define <8 x half> @expandload_v8f16(ptr align 2 %base, <8 x half> %src0, <8 x i1
 ; RV64-NEXT:    vfmv.s.f v9, fa5
 ; RV64-NEXT:    vslideup.vi v8, v9, 7
 ; RV64-NEXT:    ret
-  %res = call <8 x half> @llvm.masked.expandload.v8f16(ptr %base, <8 x i1> %mask, <8 x half> %src0)
+  %res = call <8 x half> @llvm.masked.expandload.v8f16(ptr align 2 %base, <8 x i1> %mask, <8 x half> %src0)
   ret <8 x half>%res
 }
 
 declare <1 x float> @llvm.masked.expandload.v1f32(ptr, <1 x i1>, <1 x float>)
-define <1 x float> @expandload_v1f32(ptr align 4 %base, <1 x float> %src0, <1 x i1> %mask) {
+define <1 x float> @expandload_v1f32(ptr %base, <1 x float> %src0, <1 x i1> %mask) {
 ; RV32-LABEL: expandload_v1f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
@@ -393,12 +393,12 @@ define <1 x float> @expandload_v1f32(ptr align 4 %base, <1 x float> %src0, <1 x 
 ; RV64-NEXT:    vle32.v v8, (a0)
 ; RV64-NEXT:  .LBB4_2: # %else
 ; RV64-NEXT:    ret
-  %res = call <1 x float> @llvm.masked.expandload.v1f32(ptr %base, <1 x i1> %mask, <1 x float> %src0)
+  %res = call <1 x float> @llvm.masked.expandload.v1f32(ptr align 4 %base, <1 x i1> %mask, <1 x float> %src0)
   ret <1 x float>%res
 }
 
 declare <2 x float> @llvm.masked.expandload.v2f32(ptr, <2 x i1>, <2 x float>)
-define <2 x float> @expandload_v2f32(ptr align 4 %base, <2 x float> %src0, <2 x i1> %mask) {
+define <2 x float> @expandload_v2f32(ptr %base, <2 x float> %src0, <2 x i1> %mask) {
 ; RV32-LABEL: expandload_v2f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -448,12 +448,12 @@ define <2 x float> @expandload_v2f32(ptr align 4 %base, <2 x float> %src0, <2 x 
 ; RV64-NEXT:    vfmv.s.f v9, fa5
 ; RV64-NEXT:    vslideup.vi v8, v9, 1
 ; RV64-NEXT:    ret
-  %res = call <2 x float> @llvm.masked.expandload.v2f32(ptr %base, <2 x i1> %mask, <2 x float> %src0)
+  %res = call <2 x float> @llvm.masked.expandload.v2f32(ptr align 4 %base, <2 x i1> %mask, <2 x float> %src0)
   ret <2 x float>%res
 }
 
 declare <4 x float> @llvm.masked.expandload.v4f32(ptr, <4 x i1>, <4 x float>)
-define <4 x float> @expandload_v4f32(ptr align 4 %base, <4 x float> %src0, <4 x i1> %mask) {
+define <4 x float> @expandload_v4f32(ptr %base, <4 x float> %src0, <4 x i1> %mask) {
 ; RV32-LABEL: expandload_v4f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -547,12 +547,12 @@ define <4 x float> @expandload_v4f32(ptr align 4 %base, <4 x float> %src0, <4 x 
 ; RV64-NEXT:    vfmv.s.f v9, fa5
 ; RV64-NEXT:    vslideup.vi v8, v9, 3
 ; RV64-NEXT:    ret
-  %res = call <4 x float> @llvm.masked.expandload.v4f32(ptr %base, <4 x i1> %mask, <4 x float> %src0)
+  %res = call <4 x float> @llvm.masked.expandload.v4f32(ptr align 4 %base, <4 x i1> %mask, <4 x float> %src0)
   ret <4 x float>%res
 }
 
 declare <8 x float> @llvm.masked.expandload.v8f32(ptr, <8 x i1>, <8 x float>)
-define <8 x float> @expandload_v8f32(ptr align 4 %base, <8 x float> %src0, <8 x i1> %mask) {
+define <8 x float> @expandload_v8f32(ptr %base, <8 x float> %src0, <8 x i1> %mask) {
 ; RV32-LABEL: expandload_v8f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -734,12 +734,12 @@ define <8 x float> @expandload_v8f32(ptr align 4 %base, <8 x float> %src0, <8 x 
 ; RV64-NEXT:    vfmv.s.f v10, fa5
 ; RV64-NEXT:    vslideup.vi v8, v10, 7
 ; RV64-NEXT:    ret
-  %res = call <8 x float> @llvm.masked.expandload.v8f32(ptr %base, <8 x i1> %mask, <8 x float> %src0)
+  %res = call <8 x float> @llvm.masked.expandload.v8f32(ptr align 4 %base, <8 x i1> %mask, <8 x float> %src0)
   ret <8 x float>%res
 }
 
 declare <1 x double> @llvm.masked.expandload.v1f64(ptr, <1 x i1>, <1 x double>)
-define <1 x double> @expandload_v1f64(ptr align 8 %base, <1 x double> %src0, <1 x i1> %mask) {
+define <1 x double> @expandload_v1f64(ptr %base, <1 x double> %src0, <1 x i1> %mask) {
 ; RV32-LABEL: expandload_v1f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
@@ -761,12 +761,12 @@ define <1 x double> @expandload_v1f64(ptr align 8 %base, <1 x double> %src0, <1 
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:  .LBB8_2: # %else
 ; RV64-NEXT:    ret
-  %res = call <1 x double> @llvm.masked.expandload.v1f64(ptr %base, <1 x i1> %mask, <1 x double> %src0)
+  %res = call <1 x double> @llvm.masked.expandload.v1f64(ptr align 8 %base, <1 x i1> %mask, <1 x double> %src0)
   ret <1 x double>%res
 }
 
 declare <2 x double> @llvm.masked.expandload.v2f64(ptr, <2 x i1>, <2 x double>)
-define <2 x double> @expandload_v2f64(ptr align 8 %base, <2 x double> %src0, <2 x i1> %mask) {
+define <2 x double> @expandload_v2f64(ptr %base, <2 x double> %src0, <2 x i1> %mask) {
 ; RV32-LABEL: expandload_v2f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -816,12 +816,12 @@ define <2 x double> @expandload_v2f64(ptr align 8 %base, <2 x double> %src0, <2 
 ; RV64-NEXT:    vfmv.s.f v9, fa5
 ; RV64-NEXT:    vslideup.vi v8, v9, 1
 ; RV64-NEXT:    ret
-  %res = call <2 x double> @llvm.masked.expandload.v2f64(ptr %base, <2 x i1> %mask, <2 x double> %src0)
+  %res = call <2 x double> @llvm.masked.expandload.v2f64(ptr align 8 %base, <2 x i1> %mask, <2 x double> %src0)
   ret <2 x double>%res
 }
 
 declare <4 x double> @llvm.masked.expandload.v4f64(ptr, <4 x i1>, <4 x double>)
-define <4 x double> @expandload_v4f64(ptr align 8 %base, <4 x double> %src0, <4 x i1> %mask) {
+define <4 x double> @expandload_v4f64(ptr %base, <4 x double> %src0, <4 x i1> %mask) {
 ; RV32-LABEL: expandload_v4f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -915,12 +915,12 @@ define <4 x double> @expandload_v4f64(ptr align 8 %base, <4 x double> %src0, <4 
 ; RV64-NEXT:    vfmv.s.f v10, fa5
 ; RV64-NEXT:    vslideup.vi v8, v10, 3
 ; RV64-NEXT:    ret
-  %res = call <4 x double> @llvm.masked.expandload.v4f64(ptr %base, <4 x i1> %mask, <4 x double> %src0)
+  %res = call <4 x double> @llvm.masked.expandload.v4f64(ptr align 8 %base, <4 x i1> %mask, <4 x double> %src0)
   ret <4 x double>%res
 }
 
 declare <8 x double> @llvm.masked.expandload.v8f64(ptr, <8 x i1>, <8 x double>)
-define <8 x double> @expandload_v8f64(ptr align 8 %base, <8 x double> %src0, <8 x i1> %mask) {
+define <8 x double> @expandload_v8f64(ptr %base, <8 x double> %src0, <8 x i1> %mask) {
 ; RV32-LABEL: expandload_v8f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -1102,6 +1102,6 @@ define <8 x double> @expandload_v8f64(ptr align 8 %base, <8 x double> %src0, <8 
 ; RV64-NEXT:    vfmv.s.f v12, fa5
 ; RV64-NEXT:    vslideup.vi v8, v12, 7
 ; RV64-NEXT:    ret
-  %res = call <8 x double> @llvm.masked.expandload.v8f64(ptr %base, <8 x i1> %mask, <8 x double> %src0)
+  %res = call <8 x double> @llvm.masked.expandload.v8f64(ptr align 8 %base, <8 x i1> %mask, <8 x double> %src0)
   ret <8 x double>%res
 }

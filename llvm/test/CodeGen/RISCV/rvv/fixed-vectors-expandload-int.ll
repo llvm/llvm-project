@@ -197,7 +197,7 @@ define <8 x i8> @expandload_v8i8(ptr %base, <8 x i8> %src0, <8 x i1> %mask) {
 }
 
 declare <1 x i16> @llvm.masked.expandload.v1i16(ptr, <1 x i1>, <1 x i16>)
-define <1 x i16> @expandload_v1i16(ptr align 2 %base, <1 x i16> %src0, <1 x i1> %mask) {
+define <1 x i16> @expandload_v1i16(ptr %base, <1 x i16> %src0, <1 x i1> %mask) {
 ; CHECK-LABEL: expandload_v1i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
@@ -208,12 +208,12 @@ define <1 x i16> @expandload_v1i16(ptr align 2 %base, <1 x i16> %src0, <1 x i1> 
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:  .LBB4_2: # %else
 ; CHECK-NEXT:    ret
-  %res = call <1 x i16> @llvm.masked.expandload.v1i16(ptr %base, <1 x i1> %mask, <1 x i16> %src0)
+  %res = call <1 x i16> @llvm.masked.expandload.v1i16(ptr align 2 %base, <1 x i1> %mask, <1 x i16> %src0)
   ret <1 x i16>%res
 }
 
 declare <2 x i16> @llvm.masked.expandload.v2i16(ptr, <2 x i1>, <2 x i16>)
-define <2 x i16> @expandload_v2i16(ptr align 2 %base, <2 x i16> %src0, <2 x i1> %mask) {
+define <2 x i16> @expandload_v2i16(ptr %base, <2 x i16> %src0, <2 x i1> %mask) {
 ; CHECK-LABEL: expandload_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -238,12 +238,12 @@ define <2 x i16> @expandload_v2i16(ptr align 2 %base, <2 x i16> %src0, <2 x i1> 
 ; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.masked.expandload.v2i16(ptr %base, <2 x i1> %mask, <2 x i16> %src0)
+  %res = call <2 x i16> @llvm.masked.expandload.v2i16(ptr align 2 %base, <2 x i1> %mask, <2 x i16> %src0)
   ret <2 x i16>%res
 }
 
 declare <4 x i16> @llvm.masked.expandload.v4i16(ptr, <4 x i1>, <4 x i16>)
-define <4 x i16> @expandload_v4i16(ptr align 2 %base, <4 x i16> %src0, <4 x i1> %mask) {
+define <4 x i16> @expandload_v4i16(ptr %base, <4 x i16> %src0, <4 x i1> %mask) {
 ; CHECK-LABEL: expandload_v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -290,12 +290,12 @@ define <4 x i16> @expandload_v4i16(ptr align 2 %base, <4 x i16> %src0, <4 x i1> 
 ; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vslideup.vi v8, v9, 3
 ; CHECK-NEXT:    ret
-  %res = call <4 x i16> @llvm.masked.expandload.v4i16(ptr %base, <4 x i1> %mask, <4 x i16> %src0)
+  %res = call <4 x i16> @llvm.masked.expandload.v4i16(ptr align 2 %base, <4 x i1> %mask, <4 x i16> %src0)
   ret <4 x i16>%res
 }
 
 declare <8 x i16> @llvm.masked.expandload.v8i16(ptr, <8 x i1>, <8 x i16>)
-define <8 x i16> @expandload_v8i16(ptr align 2 %base, <8 x i16> %src0, <8 x i1> %mask) {
+define <8 x i16> @expandload_v8i16(ptr %base, <8 x i16> %src0, <8 x i1> %mask) {
 ; CHECK-LABEL: expandload_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -386,12 +386,12 @@ define <8 x i16> @expandload_v8i16(ptr align 2 %base, <8 x i16> %src0, <8 x i1> 
 ; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vslideup.vi v8, v9, 7
 ; CHECK-NEXT:    ret
-  %res = call <8 x i16> @llvm.masked.expandload.v8i16(ptr %base, <8 x i1> %mask, <8 x i16> %src0)
+  %res = call <8 x i16> @llvm.masked.expandload.v8i16(ptr align 2 %base, <8 x i1> %mask, <8 x i16> %src0)
   ret <8 x i16>%res
 }
 
 declare <1 x i32> @llvm.masked.expandload.v1i32(ptr, <1 x i1>, <1 x i32>)
-define <1 x i32> @expandload_v1i32(ptr align 4 %base, <1 x i32> %src0, <1 x i1> %mask) {
+define <1 x i32> @expandload_v1i32(ptr %base, <1 x i32> %src0, <1 x i1> %mask) {
 ; CHECK-LABEL: expandload_v1i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
@@ -402,12 +402,12 @@ define <1 x i32> @expandload_v1i32(ptr align 4 %base, <1 x i32> %src0, <1 x i1> 
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:  .LBB8_2: # %else
 ; CHECK-NEXT:    ret
-  %res = call <1 x i32> @llvm.masked.expandload.v1i32(ptr %base, <1 x i1> %mask, <1 x i32> %src0)
+  %res = call <1 x i32> @llvm.masked.expandload.v1i32(ptr align 4 %base, <1 x i1> %mask, <1 x i32> %src0)
   ret <1 x i32>%res
 }
 
 declare <2 x i32> @llvm.masked.expandload.v2i32(ptr, <2 x i1>, <2 x i32>)
-define <2 x i32> @expandload_v2i32(ptr align 4 %base, <2 x i32> %src0, <2 x i1> %mask) {
+define <2 x i32> @expandload_v2i32(ptr %base, <2 x i32> %src0, <2 x i1> %mask) {
 ; CHECK-LABEL: expandload_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -432,12 +432,12 @@ define <2 x i32> @expandload_v2i32(ptr align 4 %base, <2 x i32> %src0, <2 x i1> 
 ; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    ret
-  %res = call <2 x i32> @llvm.masked.expandload.v2i32(ptr %base, <2 x i1> %mask, <2 x i32> %src0)
+  %res = call <2 x i32> @llvm.masked.expandload.v2i32(ptr align 4 %base, <2 x i1> %mask, <2 x i32> %src0)
   ret <2 x i32>%res
 }
 
 declare <4 x i32> @llvm.masked.expandload.v4i32(ptr, <4 x i1>, <4 x i32>)
-define <4 x i32> @expandload_v4i32(ptr align 4 %base, <4 x i32> %src0, <4 x i1> %mask) {
+define <4 x i32> @expandload_v4i32(ptr %base, <4 x i32> %src0, <4 x i1> %mask) {
 ; CHECK-LABEL: expandload_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -484,12 +484,12 @@ define <4 x i32> @expandload_v4i32(ptr align 4 %base, <4 x i32> %src0, <4 x i1> 
 ; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vslideup.vi v8, v9, 3
 ; CHECK-NEXT:    ret
-  %res = call <4 x i32> @llvm.masked.expandload.v4i32(ptr %base, <4 x i1> %mask, <4 x i32> %src0)
+  %res = call <4 x i32> @llvm.masked.expandload.v4i32(ptr align 4 %base, <4 x i1> %mask, <4 x i32> %src0)
   ret <4 x i32>%res
 }
 
 declare <8 x i32> @llvm.masked.expandload.v8i32(ptr, <8 x i1>, <8 x i32>)
-define <8 x i32> @expandload_v8i32(ptr align 4 %base, <8 x i32> %src0, <8 x i1> %mask) {
+define <8 x i32> @expandload_v8i32(ptr %base, <8 x i32> %src0, <8 x i1> %mask) {
 ; CHECK-LABEL: expandload_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -580,12 +580,12 @@ define <8 x i32> @expandload_v8i32(ptr align 4 %base, <8 x i32> %src0, <8 x i1> 
 ; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vslideup.vi v8, v10, 7
 ; CHECK-NEXT:    ret
-  %res = call <8 x i32> @llvm.masked.expandload.v8i32(ptr %base, <8 x i1> %mask, <8 x i32> %src0)
+  %res = call <8 x i32> @llvm.masked.expandload.v8i32(ptr align 4 %base, <8 x i1> %mask, <8 x i32> %src0)
   ret <8 x i32>%res
 }
 
 declare <1 x i64> @llvm.masked.expandload.v1i64(ptr, <1 x i1>, <1 x i64>)
-define <1 x i64> @expandload_v1i64(ptr align 8 %base, <1 x i64> %src0, <1 x i1> %mask) {
+define <1 x i64> @expandload_v1i64(ptr %base, <1 x i64> %src0, <1 x i1> %mask) {
 ; RV32-LABEL: expandload_v1i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
@@ -615,12 +615,12 @@ define <1 x i64> @expandload_v1i64(ptr align 8 %base, <1 x i64> %src0, <1 x i1> 
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:  .LBB12_2: # %else
 ; RV64-NEXT:    ret
-  %res = call <1 x i64> @llvm.masked.expandload.v1i64(ptr %base, <1 x i1> %mask, <1 x i64> %src0)
+  %res = call <1 x i64> @llvm.masked.expandload.v1i64(ptr align 8 %base, <1 x i1> %mask, <1 x i64> %src0)
   ret <1 x i64>%res
 }
 
 declare <2 x i64> @llvm.masked.expandload.v2i64(ptr, <2 x i1>, <2 x i64>)
-define <2 x i64> @expandload_v2i64(ptr align 8 %base, <2 x i64> %src0, <2 x i1> %mask) {
+define <2 x i64> @expandload_v2i64(ptr %base, <2 x i64> %src0, <2 x i1> %mask) {
 ; RV32-LABEL: expandload_v2i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -675,12 +675,12 @@ define <2 x i64> @expandload_v2i64(ptr align 8 %base, <2 x i64> %src0, <2 x i1> 
 ; RV64-NEXT:    vmv.s.x v9, a0
 ; RV64-NEXT:    vslideup.vi v8, v9, 1
 ; RV64-NEXT:    ret
-  %res = call <2 x i64> @llvm.masked.expandload.v2i64(ptr %base, <2 x i1> %mask, <2 x i64> %src0)
+  %res = call <2 x i64> @llvm.masked.expandload.v2i64(ptr align 8 %base, <2 x i1> %mask, <2 x i64> %src0)
   ret <2 x i64>%res
 }
 
 declare <4 x i64> @llvm.masked.expandload.v4i64(ptr, <4 x i1>, <4 x i64>)
-define <4 x i64> @expandload_v4i64(ptr align 8 %base, <4 x i64> %src0, <4 x i1> %mask) {
+define <4 x i64> @expandload_v4i64(ptr %base, <4 x i64> %src0, <4 x i1> %mask) {
 ; RV32-LABEL: expandload_v4i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -785,12 +785,12 @@ define <4 x i64> @expandload_v4i64(ptr align 8 %base, <4 x i64> %src0, <4 x i1> 
 ; RV64-NEXT:    vmv.s.x v10, a0
 ; RV64-NEXT:    vslideup.vi v8, v10, 3
 ; RV64-NEXT:    ret
-  %res = call <4 x i64> @llvm.masked.expandload.v4i64(ptr %base, <4 x i1> %mask, <4 x i64> %src0)
+  %res = call <4 x i64> @llvm.masked.expandload.v4i64(ptr align 8 %base, <4 x i1> %mask, <4 x i64> %src0)
   ret <4 x i64>%res
 }
 
 declare <8 x i64> @llvm.masked.expandload.v8i64(ptr, <8 x i1>, <8 x i64>)
-define <8 x i64> @expandload_v8i64(ptr align 8 %base, <8 x i64> %src0, <8 x i1> %mask) {
+define <8 x i64> @expandload_v8i64(ptr %base, <8 x i64> %src0, <8 x i1> %mask) {
 ; RV32-LABEL: expandload_v8i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -995,6 +995,6 @@ define <8 x i64> @expandload_v8i64(ptr align 8 %base, <8 x i64> %src0, <8 x i1> 
 ; RV64-NEXT:    vmv.s.x v12, a0
 ; RV64-NEXT:    vslideup.vi v8, v12, 7
 ; RV64-NEXT:    ret
-  %res = call <8 x i64> @llvm.masked.expandload.v8i64(ptr %base, <8 x i1> %mask, <8 x i64> %src0)
+  %res = call <8 x i64> @llvm.masked.expandload.v8i64(ptr align 8 %base, <8 x i1> %mask, <8 x i64> %src0)
   ret <8 x i64>%res
 }
