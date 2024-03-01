@@ -1,5 +1,5 @@
 C_SOURCES := main.c
-CFLAGS_EXTRAS := -std=c99
+LDFLAGS := -Wl,--build-id
 
 MAKE_DWO := YES
 SPLIT_DEBUG_SYMBOLS := YES

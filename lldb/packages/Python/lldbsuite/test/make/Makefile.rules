@@ -363,7 +363,7 @@ ifneq "$(OS)" "Darwin"
 
 	OBJCOPY ?= $(call replace_cc_with,objcopy)
 	ARCHIVER ?= $(call replace_cc_with,ar)
-	DWP ?= $(call reaplce_cc_with,dwp)
+	DWP ?= $(call replace_cc_with,dwp)
 	override AR = $(ARCHIVER)
 endif
 
@@ -572,15 +572,15 @@ else
 endif
 else
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
-	ifneq "$(KEEP_FULL_DEBUG_BINARY)" "YES"
+  ifneq "$(KEEP_FULL_DEBUG_BINARY)" "YES"
 	$(OBJCOPY) --only-keep-debug "$(EXE)" "$(DSYM)"
-	else
+  else
 	cp "$(EXE)" "$(DSYM)"
-	endif
+  endif
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
 endif
 ifeq "$(MERGE_DWOS)" "YES"
-	$(DWP) -o "$(DWP_FILE)" $(DWOS)
+	$(DWP) -o "$(DWP_NAME)" $(DWOS)
 endif
 endif
 

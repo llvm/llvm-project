@@ -1,5 +1,5 @@
 """
-Describe the purpose of the test class here.
+Test support for the DebugInfoD network symbol acquisition protocol.
 """
 
 
@@ -8,14 +8,14 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
 
-class RenameThisSampleTestTestCase(TestBase):
+class DebugInfodTests(TestBase):
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
-    def test_sample_rename_this(self):
-        """There can be many tests in a test case - describe this test here."""
+    def test_stuff(self):
+        """This should test stuff."""
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.sample_test()
@@ -25,7 +25,8 @@ class RenameThisSampleTestTestCase(TestBase):
         TestBase.setUp(self)
         # Set up your test case here. If your test doesn't need any set up then
         # remove this method from your TestCase class.
-        # I need to setup the file-system-hosted Debuginfod server
+        # I need to setup the file-system-hosted Debuginfod server 'root'.
+        # The files it should host can be generated per-test
 
     def sample_test(self):
         """You might use the test implementation in several ways, say so here."""
