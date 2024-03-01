@@ -8595,16 +8595,25 @@ bool ResolveNamesVisitor::Pre(const parser::PointerAssignmentStmt &x) {
   const auto &bounds{std::get<parser::PointerAssignmentStmt::Bounds>(x.t)};
   const auto &expr{std::get<parser::Expr>(x.t)};
   ResolveDataRef(dataRef);
+  Symbol *ptrSymbol{parser::GetLastName(dataRef).symbol};
   Walk(bounds);
   // Resolve unrestricted specific intrinsic procedures as in "p => cos".
   if (const parser::Name * name{parser::Unwrap<parser::Name>(expr)}) {
     if (NameIsKnownOrIntrinsic(*name)) {
-      // If the name is known because it is an object entity from a host
-      // procedure, create a host associated symbol.
-      if (Symbol * symbol{name->symbol}; symbol &&
-          symbol->GetUltimate().has<ObjectEntityDetails>() &&
-          IsUplevelReference(*symbol)) {
-        MakeHostAssocSymbol(*name, *symbol);
+      if (Symbol * symbol{name->symbol}) {
+        if (IsProcedurePointer(ptrSymbol) &&
+            !ptrSymbol->test(Symbol::Flag::Function) &&
+            !ptrSymbol->test(Symbol::Flag::Subroutine)) {
+          if (symbol->test(Symbol::Flag::Function)) {
+            ApplyImplicitRules(*ptrSymbol);
+          }
+        }
+        // If the name is known because it is an object entity from a host
+        // procedure, create a host associated symbol.
+        if (symbol->GetUltimate().has<ObjectEntityDetails>() &&
+            IsUplevelReference(*symbol)) {
+          MakeHostAssocSymbol(*name, *symbol);
+        }
       }
       return false;
     }
