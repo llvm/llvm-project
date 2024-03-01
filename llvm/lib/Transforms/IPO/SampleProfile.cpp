@@ -234,6 +234,24 @@ static cl::opt<unsigned> ProfileICPRelativeHotnessSkip(
     cl::desc(
         "Skip relative hotness check for ICP up to given number of targets."));
 
+static cl::opt<unsigned> ChecksumMismatchFuncHotBlockSkip(
+    "checksum-mismatch-func-hot-block-skip", cl::Hidden, cl::init(100),
+    cl::desc("For checksum-mismatch error check, skip checking the function "
+             "whose num of hot(on average) blocks is smaller than the "
+             "given number."));
+
+static cl::opt<unsigned> ChecksumMismatchNumFuncSkip(
+    "checksum-mismatch-num-func-skip", cl::Hidden, cl::init(50),
+    cl::desc("For checksum-mismatch error check, skip the check if the total "
+             "number of selected function is smaller than the given number."));
+
+static cl::opt<unsigned> ChecksumMismatchErrorThreshold(
+    "checksum-mismatch-error-threshold", cl::Hidden, cl::init(80),
+    cl::desc(
+        "For checksum-mismatch error check, error out if the percentage of "
+        "function mismatched-checksum is higher than the given percentage "
+        "threshold"));
+
 static cl::opt<bool> CallsitePrioritizedInline(
     "sample-profile-prioritized-inline", cl::Hidden,
 
@@ -630,6 +648,8 @@ protected:
   std::vector<Function *> buildFunctionOrder(Module &M, LazyCallGraph &CG);
   std::unique_ptr<ProfiledCallGraph> buildProfiledCallGraph(Module &M);
   void generateMDProfMetadata(Function &F);
+  bool errorIfHighChecksumMismatch(Module &M, ProfileSummaryInfo *PSI,
+                                   const SampleProfileMap &Profiles);
 
   /// Map from function name to Function *. Used to find the function from
   /// the function name. If the function name contains suffix, additional
@@ -2187,6 +2207,61 @@ bool SampleProfileLoader::doInitialization(Module &M,
   return true;
 }
 
+// Note that this is a module-level check. Even if one module is errored out,
+// the entire build will be errored out. However, the user could make big
+// changes to functions in single module but those changes might not be
+// performance significant to the whole binary. Therefore, we use a conservative
+// approach to make sure we only error out if it globally impacts the binary
+// performance. To achieve this, we use heuristics to select a reasonable
+// big set of functions that are supposed to be globally performance
+// significant, only compute and check the mismatch within those functions. The
+// function selection is based on two criteria: 1) The function is "hot" enough,
+// which is tuned by a hotness-based flag(ChecksumMismatchFuncHotBlockSkip). 2)
+// The num of function is large enough which is tuned by the
+// ChecksumMismatchNumFuncSkip flag.
+bool SampleProfileLoader::errorIfHighChecksumMismatch(
+    Module &M, ProfileSummaryInfo *PSI, const SampleProfileMap &Profiles) {
+  assert(FunctionSamples::ProfileIsProbeBased &&
+         "Only support for probe-based profile");
+  uint64_t TotalSelectedFunc = 0;
+  uint64_t NumMismatchedFunc = 0;
+  for (const auto &I : Profiles) {
+    const auto &FS = I.second;
+    const auto *FuncDesc = ProbeManager->getDesc(FS.getGUID());
+    if (!FuncDesc)
+      continue;
+
+    // We want to select a set of functions that are globally performance
+    // significant, in other words, if those functions profiles are
+    // checksum-mismatched and dropped, the whole binary will likely be
+    // impacted, so here we use a hotness-based threshold to control the
+    // selection.
+    if (FS.getTotalSamples() <
+        ChecksumMismatchFuncHotBlockSkip * PSI->getOrCompHotCountThreshold())
+      continue;
+
+    TotalSelectedFunc++;
+    if (ProbeManager->profileIsHashMismatched(*FuncDesc, FS))
+      NumMismatchedFunc++;
+  }
+  // Make sure that the num of selected function is not too small to distinguish
+  // from the user's benign changes.
+  if (TotalSelectedFunc < ChecksumMismatchNumFuncSkip)
+    return false;
+
+  // Finally check the mismatch percentage against the threshold.
+  if (NumMismatchedFunc * 100 >=
+      TotalSelectedFunc * ChecksumMismatchErrorThreshold) {
+    auto &Ctx = M.getContext();
+    const char *Msg =
+        "The FDO profile is too old and will cause big performance regression, "
+        "please drop the profile and collect a new one.";
+    Ctx.diagnose(DiagnosticInfoSampleProfile(M.getModuleIdentifier(), Msg));
+    return true;
+  }
+  return false;
+}
+
 void SampleProfileMatcher::findIRAnchors(
     const Function &F, std::map<LineLocation, StringRef> &IRAnchors) {
   // For inlined code, recover the original callsite and callee by finding the
@@ -2718,6 +2793,12 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
                         ProfileSummary::PSK_Sample);
     PSI->refresh();
   }
+
+  // Error out if the profile checksum mismatch is too high.
+  if (FunctionSamples::ProfileIsProbeBased &&
+      errorIfHighChecksumMismatch(M, PSI, Reader->getProfiles()))
+    return false;
+
   // Compute the total number of samples collected in this profile.
   for (const auto &I : Reader->getProfiles())
     TotalCollectedSamples += I.second.getTotalSamples();
