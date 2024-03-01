@@ -7682,7 +7682,6 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       transformMaskAfterShuffle(CommonMask, CommonMask);
     }
     SameNodesEstimated = false;
-    Cost += createShuffle(&E1, E2, Mask);
     if (!E2 && InVectors.size() == 1) {
       unsigned VF = E1.getVectorFactor();
       if (Value *V1 = InVectors.front().dyn_cast<Value *>()) {
@@ -9066,6 +9065,20 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // If we have a tiny tree (a tree whose size is less than MinTreeSize), we
   // can vectorize it if we can prove it fully vectorizable.
   if (isFullyVectorizableTinyTree(ForReduction))
+    return false;
+
+  // Check if any of the gather node forms an insertelement buildvector
+  // somewhere.
+  if (any_of(VectorizableTree, [](const std::unique_ptr<TreeEntry> &TE) {
+        return TE->State == TreeEntry::NeedToGather &&
+               all_of(TE->Scalars, [](Value *V) {
+                 return isa<ExtractElementInst, UndefValue>(V) ||
+                        (!V->hasNUsesOrMore(UsesLimit) &&
+                         any_of(V->users(), [](User *U) {
+                           return isa<InsertElementInst>(U);
+                         }));
+               });
+      }))
     return false;
 
   assert(VectorizableTree.empty()
