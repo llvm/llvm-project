@@ -318,9 +318,8 @@ protected:
 /// A generic PDL pattern constraint function. This function applies a
 /// constraint to a given set of opaque PDLValue entities. Returns success if
 /// the constraint successfully held, failure otherwise.
-using PDLConstraintFunction = std::function<LogicalResult(
-    PatternRewriter &, PDLResultList &, ArrayRef<PDLValue>)>;
-
+using PDLConstraintFunction =
+    std::function<LogicalResult(PatternRewriter &, ArrayRef<PDLValue>)>;
 /// A native PDL rewrite function. This function performs a rewrite on the
 /// given set of values. Any results from this rewrite that should be passed
 /// back to PDL should be added to the provided result list. This method is only
@@ -727,7 +726,7 @@ std::enable_if_t<
     PDLConstraintFunction>
 buildConstraintFn(ConstraintFnT &&constraintFn) {
   return [constraintFn = std::forward<ConstraintFnT>(constraintFn)](
-             PatternRewriter &rewriter, PDLResultList &,
+             PatternRewriter &rewriter,
              ArrayRef<PDLValue> values) -> LogicalResult {
     auto argIndices = std::make_index_sequence<
         llvm::function_traits<ConstraintFnT>::num_args - 1>();
@@ -843,13 +842,10 @@ public:
   /// Register a constraint function with PDL. A constraint function may be
   /// specified in one of two ways:
   ///
-  ///   * `LogicalResult (PatternRewriter &,
-  ///                     PDLResultList &,
-  ///                     ArrayRef<PDLValue>)`
+  ///   * `LogicalResult (PatternRewriter &, ArrayRef<PDLValue>)`
   ///
   ///   In this overload the arguments of the constraint function are passed via
-  ///   the low-level PDLValue form, and the results are manually appended to
-  ///   the given result list.
+  ///   the low-level PDLValue form.
   ///
   ///   * `LogicalResult (PatternRewriter &, ValueTs... values)`
   ///
@@ -964,8 +960,8 @@ public:
   }
 };
 class PDLResultList {};
-using PDLConstraintFunction = std::function<LogicalResult(
-    PatternRewriter &, PDLResultList &, ArrayRef<PDLValue>)>;
+using PDLConstraintFunction =
+    std::function<LogicalResult(PatternRewriter &, ArrayRef<PDLValue>)>;
 using PDLRewriteFunction = std::function<LogicalResult(
     PatternRewriter &, PDLResultList &, ArrayRef<PDLValue>)>;
 
