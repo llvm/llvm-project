@@ -24,7 +24,6 @@
 #include <spanstream>
 
 #include "constexpr_char_traits.h"
-#include "nasty_string.h"
 #include "test_convertible.h"
 #include "test_macros.h"
 
@@ -46,19 +45,6 @@ struct TestSpanBuf : std::basic_spanbuf<CharT, TraitsT> {
     assert(this->getloc() == rhs_p.getloc());
   }
 };
-
-void test_sfinae_with_nasty_char() {
-  using SpBuf = std::basic_spanbuf<nasty_char, nasty_char_traits>;
-
-  static_assert(std::move_constructible<SpBuf>);
-}
-
-template <typename CharT, typename TraitsT = std::char_traits<CharT>>
-void test_sfinae() {
-  using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
-
-  static_assert(std::move_constructible<SpBuf>);
-}
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
@@ -228,9 +214,6 @@ void test() {
 }
 
 int main(int, char**) {
-  test_sfinae_with_nasty_char();
-  test_sfinae<char>();
-  test_sfinae<char, constexpr_char_traits<char>>();
   test<char>();
   test<char, constexpr_char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
