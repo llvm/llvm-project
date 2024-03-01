@@ -562,6 +562,9 @@ void fir::factory::associateMutableBox(fir::FirOpBuilder &builder,
       },
       [&](const fir::ProcBoxValue &) {
         TODO(loc, "procedure pointer assignment");
+      },
+      [&](const hlfir::FortranVariableShadow &) {
+        TODO(loc, "FortranVariableShadow assignment");
       });
 }
 
@@ -663,6 +666,9 @@ void fir::factory::associateMutableBoxWithRemap(
       },
       [&](const fir::ProcBoxValue &) {
         TODO(loc, "procedure pointer assignment");
+      },
+      [&](const hlfir::FortranVariableShadow &) {
+        TODO(loc, "FortranVariableShadow assignment");
       });
 }
 

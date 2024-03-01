@@ -468,6 +468,10 @@ public:
           return hlfir::translateToExtendedValue(getCurrentLocation(),
                                                  getFirOpBuilder(), x);
         },
+        [&](const hlfir::FortranVariableShadow &x) -> fir::ExtendedValue {
+          return hlfir::translateToExtendedValue(getCurrentLocation(),
+                                                 getFirOpBuilder(), x);
+        },
         [](const auto &box) -> fir::ExtendedValue { return box; });
   }
 
@@ -1009,6 +1013,16 @@ private:
         return v.match(
             [&](const Fortran::lower::SymbolBox::Intrinsic &)
                 -> Fortran::lower::SymbolBox { return v; },
+            [&](const hlfir::FortranVariableShadow &box)
+                -> Fortran::lower::SymbolBox {
+              auto exv =
+                  hlfir::translateToExtendedValue(toLocation(), *builder, box);
+              return exv.match(
+                  [](mlir::Value x) -> Fortran::lower::SymbolBox {
+                    return Fortran::lower::SymbolBox::Intrinsic{x};
+                  },
+                  [](auto x) -> Fortran::lower::SymbolBox { return x; });
+            },
             [](const auto &) -> Fortran::lower::SymbolBox { return {}; });
 
       return {};
@@ -1066,6 +1080,7 @@ private:
     assert(lowerToHighLevelFIR());
     hlfir::Entity lhs{dst};
     hlfir::Entity rhs{src};
+
     // Temporary_lhs is set to true in hlfir.assign below to avoid user
     // assignment to be used and finalization to be called on the LHS.
     // This may or may not be correct but mimics the current behaviour

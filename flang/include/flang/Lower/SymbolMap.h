@@ -15,6 +15,7 @@
 
 #include "flang/Common/reference.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/VariableShadow.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/Support/Matcher.h"
@@ -77,7 +78,8 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
 
   using VT =
       std::variant<Intrinsic, FullDim, Char, CharFullDim, PointerOrAllocatable,
-                   Box, fir::FortranVariableOpInterface, None>;
+                   Box, fir::FortranVariableOpInterface,
+                   hlfir::FortranVariableShadow, None>;
 
   //===--------------------------------------------------------------------===//
   // Constructors
@@ -97,11 +99,13 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
   /// scalar. For an array, this is the address of the first element in the
   /// array, etc.
   mlir::Value getAddr() const {
-    return match([](const None &) { return mlir::Value{}; },
-                 [](const fir::FortranVariableOpInterface &x) {
-                   return fir::FortranVariableOpInterface(x).getBase();
-                 },
-                 [](const auto &x) { return x.getAddr(); });
+    return match(
+        [](const None &) { return mlir::Value{}; },
+        [](const fir::FortranVariableOpInterface &x) {
+          return fir::FortranVariableOpInterface(x).getBase();
+        },
+        [](const hlfir::FortranVariableShadow &x) { return x.getBase(); },
+        [](const auto &x) { return x.getAddr(); });
   }
 
   std::optional<fir::FortranVariableOpInterface>

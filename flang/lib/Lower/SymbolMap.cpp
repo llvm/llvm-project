@@ -21,16 +21,18 @@
 void Fortran::lower::SymMap::addSymbol(Fortran::semantics::SymbolRef sym,
                                        const fir::ExtendedValue &exv,
                                        bool force) {
-  exv.match([&](const fir::UnboxedValue &v) { addSymbol(sym, v, force); },
-            [&](const fir::CharBoxValue &v) { makeSym(sym, v, force); },
-            [&](const fir::ArrayBoxValue &v) { makeSym(sym, v, force); },
-            [&](const fir::CharArrayBoxValue &v) { makeSym(sym, v, force); },
-            [&](const fir::BoxValue &v) { makeSym(sym, v, force); },
-            [&](const fir::MutableBoxValue &v) { makeSym(sym, v, force); },
-            [&](const fir::PolymorphicValue &v) { makeSym(sym, v, force); },
-            [](auto) {
-              llvm::report_fatal_error("value not added to symbol table");
-            });
+  exv.match(
+      [&](const fir::UnboxedValue &v) { addSymbol(sym, v, force); },
+      [&](const fir::CharBoxValue &v) { makeSym(sym, v, force); },
+      [&](const fir::ArrayBoxValue &v) { makeSym(sym, v, force); },
+      [&](const fir::CharArrayBoxValue &v) { makeSym(sym, v, force); },
+      [&](const fir::BoxValue &v) { makeSym(sym, v, force); },
+      [&](const fir::MutableBoxValue &v) { makeSym(sym, v, force); },
+      [&](const fir::PolymorphicValue &v) { makeSym(sym, v, force); },
+      [&](const hlfir::FortranVariableShadow &v) { makeSym(sym, v, force); },
+      [](auto) {
+        llvm::report_fatal_error("value not added to symbol table");
+      });
 }
 
 Fortran::lower::SymbolBox

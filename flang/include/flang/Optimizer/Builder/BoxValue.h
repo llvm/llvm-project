@@ -13,6 +13,8 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_BOXVALUE_H
 #define FORTRAN_OPTIMIZER_BUILDER_BOXVALUE_H
 
+#include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Builder/VariableShadow.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/Matcher.h"
@@ -479,7 +481,8 @@ class ExtendedValue : public details::matcher<ExtendedValue> {
 public:
   using VT =
       std::variant<UnboxedValue, CharBoxValue, ArrayBoxValue, CharArrayBoxValue,
-                   ProcBoxValue, BoxValue, MutableBoxValue, PolymorphicValue>;
+                   ProcBoxValue, BoxValue, MutableBoxValue, PolymorphicValue,
+                   hlfir::FortranVariableShadow>;
 
   ExtendedValue() : box{UnboxedValue{}} {}
   template <typename A, typename = std::enable_if_t<
@@ -516,6 +519,11 @@ public:
                  [](const fir::CharBoxValue &box) -> unsigned { return 0; },
                  [](const fir::ProcBoxValue &box) -> unsigned { return 0; },
                  [](const fir::PolymorphicValue &box) -> unsigned { return 0; },
+                 [](const hlfir::FortranVariableShadow &box) -> unsigned {
+                   TODO(box.getValue().getLoc(),
+                        "rank(): FortranVariableShadow");
+                   return 0;
+                 },
                  [](const auto &box) -> unsigned { return box.rank(); });
   }
 

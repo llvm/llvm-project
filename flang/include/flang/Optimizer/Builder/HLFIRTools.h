@@ -14,6 +14,7 @@
 #define FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H
 
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/VariableShadow.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
@@ -55,8 +56,12 @@ public:
   }
   Entity(fir::FortranVariableOpInterface variable)
       : mlir::Value(variable.getBase()) {}
+  Entity(FortranVariableShadow variableShadow)
+      : mlir::Value(variableShadow.getValue()) {}
+
   bool isValue() const { return isFortranValue(*this); }
   bool isVariable() const { return !isValue(); }
+  bool isMutableShadow() const;
   bool isMutableBox() const { return hlfir::isBoxAddressType(getType()); }
   bool isProcedurePointer() const {
     return fir::isBoxProcAddressType(getType());
@@ -73,6 +78,10 @@ public:
 
   /// Is this an assumed ranked entity?
   bool isAssumedRank() const { return getRank() == -1; }
+
+  bool isFortranVariableShadow() const {
+    return this->getType().isa<fir::ShadowType>();
+  }
 
   /// Return the rank of this entity or -1 if it is an assumed rank.
   int getRank() const {
@@ -152,6 +161,14 @@ public:
     return this->getDefiningOp<fir::FortranVariableOpInterface>();
   }
 
+  fir::ShadowType getIfVariableShadow() const {
+    fir::ExtractValueOp op = this->getDefiningOp<fir::ExtractValueOp>();
+    if (!op)
+      return fir::ShadowType();
+
+    return op.getAdt().getType().dyn_cast<fir::ShadowType>();
+  }
+
   // Return a "declaration" operation for this variable if visible,
   // or the "declaration" operation of the allocatable/pointer this
   // variable was dereferenced from (if it is visible).
@@ -174,8 +191,13 @@ public:
   }
 
   bool isAllocatable() const {
-    auto varIface = getIfVariableInterface();
-    return varIface ? varIface.isAllocatable() : false;
+    if (auto varIface = getIfVariableInterface())
+      return varIface.isAllocatable();
+
+    if (auto shadowType = getIfVariableShadow())
+      return shadowType.getAllocatable();
+
+    return false;
   }
 
   bool isPointer() const {
@@ -185,7 +207,7 @@ public:
 
   // Get the entity as an mlir SSA value containing all the shape, type
   // parameters and dynamic shape information.
-  mlir::Value getBase() const { return *this; }
+  mlir::Value getBase() const;
 
   // Get the entity as a FIR base. This may not carry the shape and type
   // parameters information, and even when it is a box with shape information.
@@ -231,6 +253,9 @@ translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 fir::ExtendedValue
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
                          fir::FortranVariableOpInterface fortranVariable);
+fir::ExtendedValue
+translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                         hlfir::FortranVariableShadow fortranVariableShadow);
 
 /// Generate declaration for a fir::ExtendedValue in memory.
 fir::FortranVariableOpInterface

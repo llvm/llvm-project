@@ -981,6 +981,9 @@ public:
           },
           [&](const fir::ProcBoxValue &toBox) {
             TODO(loc, "procedure pointer component in derived type assignment");
+          },
+          [&](const hlfir::FortranVariableShadow &toBox) {
+            TODO(loc, "FortranVariableShadow in derived type assignment");
           });
     }
     return res;

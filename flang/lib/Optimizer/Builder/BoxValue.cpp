@@ -19,8 +19,10 @@
 #define DEBUG_TYPE "flang-box-value"
 
 mlir::Value fir::getBase(const fir::ExtendedValue &exv) {
-  return exv.match([](const fir::UnboxedValue &x) { return x; },
-                   [](const auto &x) { return x.getAddr(); });
+  return exv.match(
+      [](const fir::UnboxedValue &x) { return x; },
+      [](const hlfir::FortranVariableShadow &x) { return x.getBase(); },
+      [](const auto &x) { return x.getAddr(); });
 }
 
 mlir::Value fir::getLen(const fir::ExtendedValue &exv) {
@@ -40,6 +42,11 @@ fir::ExtendedValue fir::substBase(const fir::ExtendedValue &exv,
                                   mlir::Value base) {
   return exv.match(
       [=](const fir::UnboxedValue &x) { return fir::ExtendedValue(base); },
+      [=](const hlfir::FortranVariableShadow &x) {
+        [[maybe_unused]] auto loc = fir::getBase(exv).getLoc();
+        TODO(loc, "substBase not supported for hlfir::FortranVariableShadow");
+        return fir::ExtendedValue();
+      },
       [=](const auto &x) { return fir::ExtendedValue(x.clone(base)); });
 }
 

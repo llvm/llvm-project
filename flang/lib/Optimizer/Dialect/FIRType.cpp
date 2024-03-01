@@ -1325,7 +1325,7 @@ void FIROpsDialect::registerTypes() {
            fir::ComplexType, FieldType, HeapType, fir::IntegerType, LenType,
            LogicalType, LLVMPointerType, PointerType, RealType, RecordType,
            ReferenceType, SequenceType, ShapeType, ShapeShiftType, ShiftType,
-           SliceType, TypeDescType, fir::VectorType>();
+           SliceType, TypeDescType, fir::VectorType, fir::ShadowType>();
   fir::ReferenceType::attachInterface<
       OpenMPPointerLikeModel<fir::ReferenceType>>(*getContext());
   fir::ReferenceType::attachInterface<

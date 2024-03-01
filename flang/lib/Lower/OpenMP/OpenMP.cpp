@@ -650,14 +650,31 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
     llvm::transform(privateVars, std::back_inserter(privateVarLocs),
                     [](mlir::Value v) { return v.getLoc(); });
 
-    converter.getFirOpBuilder().createBlock(&region, /*insertPt=*/{},
-                                            privateVarTypes, privateVarLocs);
+    auto &opBuilder = converter.getFirOpBuilder();
+    opBuilder.createBlock(&region, /*insertPt=*/{}, privateVarTypes,
+                          privateVarLocs);
 
     llvm::SmallVector<const Fortran::semantics::Symbol *> allSymbols =
         reductionSymbols;
     allSymbols.append(delayedPrivatizationInfo.symbols);
     for (auto [arg, prv] : llvm::zip_equal(allSymbols, region.getArguments())) {
-      converter.bindSymbol(*arg, prv);
+      // TODO Another place where a custom type would be more suitable.
+      bool isFortranVariableShadow = [](mlir::Value val) {
+        return val.getType().dyn_cast<fir::ShadowType>() != nullptr;
+      }(prv);
+
+      if (isFortranVariableShadow) {
+        fir::ShadowType tupleType = prv.getType().cast<fir::ShadowType>();
+        auto firBase = opBuilder
+                           .create<fir::ExtractValueOp>(
+                               prv.getLoc(), tupleType.getType(1), prv,
+                               opBuilder.getArrayAttr({opBuilder.getIntegerAttr(
+                                   opBuilder.getIndexType(), 1)}))
+                           .getRes();
+        converter.bindSymbol(*arg, firBase);
+      } else {
+        converter.bindSymbol(*arg, prv);
+      }
     }
 
     return allSymbols;

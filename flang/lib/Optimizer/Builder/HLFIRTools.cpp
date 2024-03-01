@@ -183,6 +183,36 @@ static fir::CharBoxValue genUnboxChar(mlir::Location loc,
   return {addr, len};
 }
 
+static bool checkIsIntegerConstant(mlir::Attribute attr, std::int64_t conVal) {
+  if (auto iattr = attr.dyn_cast<mlir::IntegerAttr>())
+    return iattr.getInt() == conVal;
+  return false;
+}
+
+static bool isZero(mlir::Attribute a) { return checkIsIntegerConstant(a, 0); }
+static bool isOne(mlir::Attribute a) { return checkIsIntegerConstant(a, 1); }
+
+bool hlfir::Entity::isMutableShadow() const {
+  if (!isFortranVariableShadow())
+    return false;
+
+  auto tupleType = getType().cast<fir::ShadowType>();
+  return hlfir::isBoxAddressType(tupleType.getType(1));
+}
+
+mlir::Value hlfir::Entity::getBase() const {
+  if (isFortranVariableShadow()) {
+    for (auto *user : getUsers()) {
+      if (auto extractOp = mlir::dyn_cast<fir::ExtractValueOp>(*user)) {
+        if (isZero(extractOp.getCoor()[0]))
+          return extractOp;
+      }
+    }
+  }
+
+  return *this;
+}
+
 mlir::Value hlfir::Entity::getFirBase() const {
   if (fir::FortranVariableOpInterface variable = getIfVariableInterface()) {
     if (auto declareOp =
@@ -192,7 +222,36 @@ mlir::Value hlfir::Entity::getFirBase() const {
             mlir::dyn_cast<hlfir::AssociateOp>(variable.getOperation()))
       return associateOp.getFirBase();
   }
+
+  if (isFortranVariableShadow()) {
+    for (auto *user : getUsers()) {
+      if (auto extractOp = mlir::dyn_cast<fir::ExtractValueOp>(*user)) {
+        if (isOne(extractOp.getCoor()[0])) {
+          return extractOp;
+        }
+      }
+    }
+  }
+
   return getBase();
+}
+
+hlfir::FortranVariableShadow::FortranVariableShadow(
+    fir::FirOpBuilder &builder, mlir::BlockArgument shadowingVal,
+    fir::FortranVariableOpInterface shadowedVariable)
+    : shadowingVal(shadowingVal), shadowedVariable(shadowedVariable) {
+  fir::ShadowType shadowingValType =
+      shadowingVal.getType().cast<fir::ShadowType>();
+  auto baseExtractor = [&](unsigned elementIdx) {
+    return builder.create<fir::ExtractValueOp>(
+        shadowingVal.getLoc(), shadowingValType.getType(elementIdx),
+        shadowingVal,
+        builder.getArrayAttr(
+            {builder.getIntegerAttr(builder.getIndexType(), elementIdx)}));
+  };
+
+  base = baseExtractor(0);
+  firBase = baseExtractor(1);
 }
 
 fir::FortranVariableOpInterface
@@ -853,9 +912,10 @@ translateVariableToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
   /// When going towards FIR, use the original base value to avoid
   /// introducing descriptors at runtime when they are not required.
   mlir::Value firBase = variable.getFirBase();
-  if (variable.isMutableBox())
+  if (variable.isMutableBox() || variable.isMutableShadow()) {
     return fir::MutableBoxValue(firBase, getExplicitTypeParams(variable),
                                 fir::MutableProperties{});
+  }
 
   if (firBase.getType().isa<fir::BaseBoxType>()) {
     if (!variable.isSimplyContiguous() || variable.isPolymorphic() ||
@@ -901,6 +961,12 @@ translateVariableToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 fir::ExtendedValue
 hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
                                 fir::FortranVariableOpInterface var) {
+  return translateVariableToExtendedValue(loc, builder, var);
+}
+
+fir::ExtendedValue
+hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                                hlfir::FortranVariableShadow var) {
   return translateVariableToExtendedValue(loc, builder, var);
 }
 

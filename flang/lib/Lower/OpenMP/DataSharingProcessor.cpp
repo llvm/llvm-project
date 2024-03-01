@@ -15,7 +15,9 @@
 #include "Utils.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
@@ -357,6 +359,28 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
   bool isFirstPrivate =
       sym->test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate);
 
+  mlir::Type privatizerArgType = hsb.match(
+      [&](const fir::FortranVariableOpInterface &box) -> mlir::Type {
+        hlfir::Entity variable(box);
+        return fir::ShadowType::get(
+            &converter.getMLIRContext(), variable.getBase().getType(),
+            variable.getFirBase().getType(), variable.isAllocatable());
+      },
+      [&](const auto &box) -> mlir::Type { return symType; });
+
+  auto addSymbol = [&](mlir::Region &region, unsigned argIdx, bool force) {
+    hsb.match(
+        [&](const fir::FortranVariableOpInterface &box) {
+          hlfir::Entity variable(box);
+          hlfir::FortranVariableShadow variableShadow(
+              firOpBuilder, region.getArgument(argIdx), box);
+          symTable->addSymbol(*sym, variableShadow, force);
+        },
+        [&](const auto &box) {
+          symTable->addSymbol(*sym, region.getArgument(argIdx), force);
+        });
+  };
+
   mlir::omp::PrivateClauseOp privatizerOp = [&]() {
     auto moduleOp = firOpBuilder.getModule();
     auto uniquePrivatizerName = fir::getTypeAsString(
@@ -373,7 +397,7 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
     firOpBuilder.setInsertionPoint(&moduleOp.getBodyRegion().front(),
                                    moduleOp.getBodyRegion().front().begin());
     auto result = firOpBuilder.create<mlir::omp::PrivateClauseOp>(
-        symLoc, uniquePrivatizerName, symType,
+        symLoc, uniquePrivatizerName, privatizerArgType,
         isFirstPrivate ? mlir::omp::DataSharingClauseType::FirstPrivate
                        : mlir::omp::DataSharingClauseType::Private);
 
@@ -383,15 +407,44 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
     {
       mlir::Region &allocRegion = result.getAllocRegion();
       mlir::Block *allocEntryBlock = firOpBuilder.createBlock(
-          &allocRegion, /*insertPt=*/{}, symType, symLoc);
+          &allocRegion, /*insertPt=*/{}, privatizerArgType, symLoc);
 
       firOpBuilder.setInsertionPointToEnd(allocEntryBlock);
-      symTable->addSymbol(*sym, allocRegion.getArgument(0));
+      addSymbol(allocRegion, 0, false);
       symTable->pushScope();
       cloneSymbol(sym);
-      firOpBuilder.create<mlir::omp::YieldOp>(
-          hsb.getAddr().getLoc(),
-          symTable->shallowLookupSymbol(*sym).getAddr());
+
+      auto genYieldedVal = [&]() -> mlir::Value {
+        auto symBox = symTable->shallowLookupSymbol(*sym);
+        mlir::Value addr = symBox.getAddr();
+        mlir::Operation *definingOp = addr.getDefiningOp();
+        hlfir::DeclareOp declareOp =
+            mlir::dyn_cast<hlfir::DeclareOp>(definingOp);
+
+        if (declareOp == nullptr) {
+          return addr;
+        }
+        declareOp.getBase();
+        declareOp.getOriginalBase();
+        mlir::Location loc = declareOp.getLoc();
+
+        mlir::Value yieldTuple =
+            firOpBuilder.create<fir::UndefOp>(loc, privatizerArgType);
+
+        mlir::Type idxTy = firOpBuilder.getIndexType();
+
+        yieldTuple = firOpBuilder.create<fir::InsertValueOp>(
+            loc, privatizerArgType, yieldTuple, declareOp.getBase(),
+            firOpBuilder.getArrayAttr({firOpBuilder.getIntegerAttr(idxTy, 0)}));
+
+        yieldTuple = firOpBuilder.create<fir::InsertValueOp>(
+            loc, privatizerArgType, yieldTuple, declareOp.getOriginalBase(),
+            firOpBuilder.getArrayAttr({firOpBuilder.getIntegerAttr(idxTy, 1)}));
+        return yieldTuple;
+      };
+
+      firOpBuilder.create<mlir::omp::YieldOp>(hsb.getAddr().getLoc(),
+                                              genYieldedVal());
       symTable->popScope();
     }
 
@@ -401,18 +454,19 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
       // First block argument corresponding to the original/host value while
       // second block argument corresponding to the privatized value.
       mlir::Block *copyEntryBlock = firOpBuilder.createBlock(
-          &copyRegion, /*insertPt=*/{}, {symType, symType}, {symLoc, symLoc});
+          &copyRegion, /*insertPt=*/{}, {privatizerArgType, privatizerArgType},
+          {symLoc, symLoc});
       firOpBuilder.setInsertionPointToEnd(copyEntryBlock);
-      symTable->addSymbol(*sym, copyRegion.getArgument(0),
-                          /*force=*/true);
+      addSymbol(copyRegion, 0, true);
+
       symTable->pushScope();
-      symTable->addSymbol(*sym, copyRegion.getArgument(1));
+      addSymbol(copyRegion, 1, false);
+
       auto ip = firOpBuilder.saveInsertionPoint();
       copyFirstPrivateSymbol(sym, &ip);
 
-      firOpBuilder.create<mlir::omp::YieldOp>(
-          hsb.getAddr().getLoc(),
-          symTable->shallowLookupSymbol(*sym).getAddr());
+      firOpBuilder.create<mlir::omp::YieldOp>(hsb.getAddr().getLoc(),
+                                              copyRegion.getArgument(1));
       symTable->popScope();
     }
 
@@ -423,7 +477,36 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
 
   delayedPrivatizationInfo.privatizers.push_back(
       mlir::SymbolRefAttr::get(privatizerOp));
-  delayedPrivatizationInfo.originalAddresses.push_back(hsb.getAddr());
+
+  hsb.match(
+      [&](const fir::FortranVariableOpInterface &box) {
+        mlir::Location loc = hsb.getAddr().getLoc();
+        mlir::Operation *boxDefiningOp =
+            fir::FortranVariableOpInterface(box).getOperation();
+        if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(boxDefiningOp)) {
+          hlfir::Entity entity{box};
+          mlir::Value originalTuple =
+              firOpBuilder.create<fir::UndefOp>(loc, privatizerArgType);
+
+          mlir::Type idxTy = firOpBuilder.getIndexType();
+
+          originalTuple = firOpBuilder.create<fir::InsertValueOp>(
+              loc, privatizerArgType, originalTuple, entity.getBase(),
+              firOpBuilder.getArrayAttr(
+                  {firOpBuilder.getIntegerAttr(idxTy, 0)}));
+
+          originalTuple = firOpBuilder.create<fir::InsertValueOp>(
+              loc, privatizerArgType, originalTuple, entity.getFirBase(),
+              firOpBuilder.getArrayAttr(
+                  {firOpBuilder.getIntegerAttr(idxTy, 1)}));
+
+          delayedPrivatizationInfo.originalAddresses.push_back(originalTuple);
+        } else
+          TODO(loc, "Unsupported FortranVariableOpInterface operation.");
+      },
+      [&](const auto &box) {
+        delayedPrivatizationInfo.originalAddresses.push_back(hsb.getAddr());
+      });
   delayedPrivatizationInfo.symbols.push_back(sym);
 }
 

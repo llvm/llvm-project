@@ -576,6 +576,65 @@ def fir_VoidType : FIR_Type<"Void", "void"> {
   let genStorageClass = 0;
 }
 
+def fir_VariableShadowType : FIR_Type<"Shadow", "shadow"> {
+  let summary = "Type for Fortran-variables shadow values";
+
+  let description = [{
+    A type to encapulate required data for a Fortran-variable shadow value. A
+    shadow type encapsulates the base type as well as the original base type. It
+    also encapsulates information other information about the shadowed value,
+    such as whether it is allocatable or not.
+
+    For example, if we want to shadow a value produced a `hlfir.declare`
+    instruction similar to the following:
+    ```
+    %1:2 = hlfir.declare %0
+      {fortran_attrs = #fir.var_attrs<allocatable>}
+      : (!fir.ref<!fir.box<!fir.heap<i32>>>)
+        -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+    ```
+
+    We would need to somehow create a value of the type:
+    ```
+    !fir.shadow<!fir.ref<!fir.box<!fir.heap<i32>>>,
+                !fir.ref<!fir.box<!fir.heap<i32>>>,
+                allocatable : true>
+    ```
+
+    The mechanism to create this value can be, for example, through a
+    combincation `fir.undefined`, `fir.insert_value` instructions similar to what
+    would be done for other composite types like `tuple`s:
+    ```
+    %2 = fir.undefined !fir.shadow<!fir.ref<!fir.box<!fir.heap<i32>>>,
+                                   !fir.ref<!fir.box<!fir.heap<i32>>>,
+                                   allocatable : true>
+    %3 = fir.insert_value %2, %1#0, [0 : index] : <... type info omitted ...>
+    %4 = fir.insert_value %3, %3#1, [1 : index] : <... type info omitted ...>
+    ```
+
+    From that point on, you can use `%4` as the shadow of the originally declared
+    variable being shadowed `%1`.
+
+    For more info about the concept of variable shadows, check `VariableShadow.h`.
+  }];
+
+  let parameters = (ins "mlir::Type":$baseTy,
+                        "mlir::Type":$firBaseTy,
+                        "bool":$allocatable);
+
+  let assemblyFormat = [{
+    `<` $baseTy `,` $firBaseTy `,` `allocatable` `:` $allocatable `>`
+  }];
+
+  let extraClassDeclaration = [{
+    mlir::Type getType(unsigned idx) const {
+      if (idx == 0) return getBaseTy();
+      if (idx == 1) return getFirBaseTy();
+      return mlir::Type();
+    }
+  }];
+}
+
 // Whether a type is a BaseBoxType
 def IsBaseBoxTypePred
         : CPred<"$_self.isa<::fir::BaseBoxType>()">;
@@ -590,13 +649,17 @@ def AnyRealLike : TypeConstraint<Or<[FloatLike.predicate,
     fir_RealType.predicate]>, "any real">;
 def AnyIntegerType : Type<AnyIntegerLike.predicate, "any integer">;
 
+def IsShadowTypePred
+        : CPred<"$_self.isa<::fir::ShadowType>()">;
+
 // Composable types
 // Note that we include both fir_ComplexType and AnyComplex, so we can use both
 // the FIR ComplexType and the MLIR ComplexType (the former is used to represent
 // Fortran complex and the latter for C++ std::complex).
 def AnyCompositeLike : TypeConstraint<Or<[fir_RecordType.predicate,
     fir_SequenceType.predicate, fir_ComplexType.predicate, AnyComplex.predicate,
-    fir_VectorType.predicate, IsTupleTypePred, fir_CharacterType.predicate]>,
+    fir_VectorType.predicate, IsTupleTypePred, fir_CharacterType.predicate,
+    IsShadowTypePred]>,
     "any composite">;
 
 // Reference types
