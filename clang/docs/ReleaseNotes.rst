@@ -298,6 +298,9 @@ Bug Fixes to C++ Support
   Fixes (`#82941 <https://github.com/llvm/llvm-project/issues/82941>`_),
   (`#42411 <https://github.com/llvm/llvm-project/issues/42411>`_), and
   (`#18121 <https://github.com/llvm/llvm-project/issues/18121>`_).
+- Clang now properly reports supported C++11 attributes when using
+  ``__has_cpp_attribute`` and parses attributes with arguments in C++03
+  (`#82995 <https://github.com/llvm/llvm-project/issues/82995>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
