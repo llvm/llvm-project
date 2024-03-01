@@ -1,5 +1,6 @@
 # RUN: llc -march=hexagon -O3 -run-pass hexagon-loop-align -o - %s\
 # RUN: -debug-only=hexagon-loop-align -verify-machineinstrs 2>&1 | FileCheck %s
+# REQUIRES: asserts
 
 # Test that we only count til endloop instruction and we align this
 # loop to 32.
