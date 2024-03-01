@@ -298,6 +298,10 @@ Bug Fixes to C++ Support
   Fixes (`#82941 <https://github.com/llvm/llvm-project/issues/82941>`_),
   (`#42411 <https://github.com/llvm/llvm-project/issues/42411>`_), and
   (`#18121 <https://github.com/llvm/llvm-project/issues/18121>`_).
+- Clang now properly diagnoses missing 'default' template arguments on a variety
+  of templates. Previously we were diagnosing on any non-function template
+  instead of only on class, alias, and variable templates.
+  Fixes (`#83461 <https://github.com/llvm/llvm-project/issues/83461>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
