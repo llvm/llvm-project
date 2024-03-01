@@ -432,6 +432,9 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
     if (MI.isCall())
       FPInstClass = X86II::SpecialFP;
 
+    if (MI.isReturn())
+      FPInstClass = X86II::SpecialFP;
+
     if (FPInstClass == X86II::NotFP)
       continue;  // Efficiently ignore non-fp insts!
 
