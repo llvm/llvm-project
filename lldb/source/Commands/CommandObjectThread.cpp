@@ -280,7 +280,7 @@ public:
       if (!success)
         error.SetErrorStringWithFormat(
             "invalid boolean value for option '%c': %s", short_option,
-            option_arg);
+            option_arg.data());
       else {
         m_step_in_avoid_no_debug = avoid_no_debug ? eLazyBoolYes : eLazyBoolNo;
       }
@@ -293,7 +293,7 @@ public:
       if (!success)
         error.SetErrorStringWithFormat(
             "invalid boolean value for option '%c': %s", short_option,
-            option_arg);
+            option_arg.data());
       else {
         m_step_out_avoid_no_debug = avoid_no_debug ? eLazyBoolYes : eLazyBoolNo;
       }
