@@ -12217,8 +12217,8 @@ def err_acc_construct_appertainment
     : Error<"OpenACC construct '%0' cannot be used here; it can only "
             "be used in a statement context">;
 def err_acc_branch_in_out_compute_construct
-    : Error<"invalid %select{branch|return}0 %select{out of|into}1 OpenACC "
-            "Compute Construct">;
+    : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
+            "OpenACC Compute Construct">;
 def note_acc_branch_into_compute_construct
     : Note<"invalid branch into OpenACC Compute Construct">;
 def note_acc_branch_out_of_compute_construct
