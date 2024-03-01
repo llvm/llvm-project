@@ -41,7 +41,7 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
 }
 
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
-  assert(Stk.empty());
+  bool Recursing = !Stk.empty();
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
 
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue());
@@ -51,12 +51,14 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
     return false;
   }
 
-  assert(Stk.empty());
+  if (!Recursing) {
+    assert(Stk.empty());
 #ifndef NDEBUG
-  // Make sure we don't rely on some value being still alive in
-  // InterpStack memory.
-  Stk.clear();
+    // Make sure we don't rely on some value being still alive in
+    // InterpStack memory.
+    Stk.clear();
 #endif
+  }
 
   Result = Res.toAPValue();
 
@@ -64,7 +66,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
 }
 
 bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
-  assert(Stk.empty());
+  bool Recursing = !Stk.empty();
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
 
   auto Res = C.interpretExpr(E);
@@ -73,19 +75,22 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
     return false;
   }
 
-  assert(Stk.empty());
+  if (!Recursing) {
+    assert(Stk.empty());
 #ifndef NDEBUG
-  // Make sure we don't rely on some value being still alive in
-  // InterpStack memory.
-  Stk.clear();
+    // Make sure we don't rely on some value being still alive in
+    // InterpStack memory.
+    Stk.clear();
 #endif
+  }
+
   Result = Res.toAPValue();
   return true;
 }
 
 bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
                                     APValue &Result) {
-  assert(Stk.empty());
+  bool Recursing = !Stk.empty();
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
 
   bool CheckGlobalInitialized =
@@ -97,12 +102,14 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
     return false;
   }
 
-  assert(Stk.empty());
+  if (!Recursing) {
+    assert(Stk.empty());
 #ifndef NDEBUG
-  // Make sure we don't rely on some value being still alive in
-  // InterpStack memory.
-  Stk.clear();
+    // Make sure we don't rely on some value being still alive in
+    // InterpStack memory.
+    Stk.clear();
 #endif
+  }
 
   Result = Res.toAPValue();
   return true;
