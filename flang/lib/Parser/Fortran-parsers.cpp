@@ -1268,9 +1268,13 @@ constexpr auto ignore_tkr{
 constexpr auto loopCount{
     "DIR$ LOOP COUNT" >> construct<CompilerDirective::LoopCount>(
                              parenthesized(nonemptyList(digitString64)))};
+constexpr auto assumeAligned{"DIR$ ASSUME_ALIGNED" >>
+    optionalList(construct<CompilerDirective::AssumeAligned>(
+        indirect(designator), ":"_tok >> digitString64))};
 TYPE_PARSER(beginDirective >>
     sourced(construct<CompilerDirective>(ignore_tkr) ||
         construct<CompilerDirective>(loopCount) ||
+        construct<CompilerDirective>(assumeAligned) ||
         construct<CompilerDirective>(
             "DIR$" >> many(construct<CompilerDirective::NameValue>(name,
                           maybe(("="_tok || ":"_tok) >> digitString64))))) /
