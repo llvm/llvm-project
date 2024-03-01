@@ -304,7 +304,7 @@ compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
       // negative_value == unsigned_value is always false
       return {nullptr, State};
     }
-    // negative_value < unsigned_value is always false
+    // negative_value < unsigned_value is always true
     return {State, nullptr};
   }
   if (isUnsigned(SVB, Value) && isNegative(SVB, State, Threshold)) {
