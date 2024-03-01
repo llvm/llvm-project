@@ -265,16 +265,19 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   if (Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
                    true) &&
       TC.getSanitizerArgs(Args).needsAsanRt()) {
-    std::string AsanRTL(RocmInstallation.getAsanRTLPath());
-    // asanrtl is dependent on ockl so for every asanrtl bitcode linking
-    // requires ockl but viceversa is not true.
-    std::string OcklRTL(RocmInstallation.getOCKLPath());
-    if (AsanRTL.empty() && OcklRTL.empty()) {
-      if (!Args.hasArg(options::OPT_nogpulib))
+    if (!Args.hasArg(options::OPT_nogpulib)){
+      std::string AsanRTL(RocmInstallation.getAsanRTLPath());
+      // asanrtl is dependent on ockl so for every asanrtl bitcode linking
+      // requires ockl but viceversa is not true.
+      std::string OcklRTL(RocmInstallation.getOCKLPath());
+      if(AsanRTL.empty())
         TC.getDriver().Diag(diag::err_drv_no_asan_rt_lib);
-    } else {
-      BCLibs.push_back(AsanRTL);
-      BCLibs.push_back(OcklRTL);
+      else if(OcklRTL.empty())
+        TC.getDriver().Diag(diag::err_drv_no_rocm_device_lib);
+      else{
+        BCLibs.push_back(AsanRTL);
+        BCLibs.push_back(OcklRTL);
+      }
     }
   }
   StringRef GPUArch = getProcessorFromTargetID(Triple, TargetID);
