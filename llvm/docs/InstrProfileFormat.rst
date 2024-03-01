@@ -374,35 +374,39 @@ payload sections.
                             |        HashType       |   H
                             +-----------------------+   E
                             |       Byte Offset     |   A
-                    +------ |      of section 2     |   D
+                    +------ |      of section A     |   D
                     |       +-----------------------+   E
-                    |       |       Byte Offset     |   R
-                +-----------|      of section 3     |   |
+                    |       |       Byte Of fset    |   R
+                +-----------|      of section B     |   |
                 |   |       +-----------------------+   |
                 |   |       |         ...           |   |
                 |   |       +-----------------------+   |
                 |   |       |      Byte Offset      |   |
-            +---------------|     of section N      |   |
+            +---------------|     of section Z      |   |
             |   |   |       +-----------------------+---+
-            |   |   |       |      Section 1        |   |
-            |   |   |       |   (Profile Summary)   |   |
+            |   |   |       |    Profile Summary    |   |
             |   |   |       +-----------------------+   P
-            |   |   +------>|      Section 2        |   A
+            |   |   +------>|      Section A        |   A
             |   |           +-----------------------+   Y
-            |   +---------->|      Section 3        |   L
+            |   +---------->|      Section B        |   L
             |               +-----------------------+   O
             |               |         ...           |   A
             |               +-----------------------+   D
-            +-------------->|      Section N        |   |
+            +-------------->|      Section Z        |   |
                             +-----------------------+---+
+
+.. note::
+
+  Profile summary section is at the beginning of payload. It's right after the
+  header so its position is implicitly known after reading the header.
 
 Header
 --------
 
-The `Header struct`_ should be the source of truth. Field names and comments
-should explain the meaning of each field. At a high level, `*Offset` fields
-records the byte offset of individual payload sections. Readers use the offset
-information to locate interesting sections and skip uninteresting ones.
+The `Header struct`_ is the source of truth and struct fields should explain
+what's in the header. At a high level, `*Offset` fields record section byte
+offsets, which are used by readers to locate interesting sections and skip
+uninteresting ones.
 
 .. note::
 
