@@ -1,6 +1,7 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv73 -O2 -mattr=+hvxv73,hvx-length64b \
 ; RUN: -debug-only=hexagon-loop-align 2>&1 < %s | FileCheck %s
 ; Validate that there are 4 bundles in the loop.
+; REQUIRES: asserts
 
 ; CHECK: Loop Align Pass:
 ; CHECK: Bundle Count : 4

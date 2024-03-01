@@ -915,6 +915,11 @@ feature_test_macros = [
             "headers": ["ranges"],
         },
         {
+            "name": "__cpp_lib_ranges_contains",
+            "values": {"c++23": 202207},
+            "headers": ["algorithm"],
+        },
+        {
             "name": "__cpp_lib_ranges_iota",
             "values": {"c++23": 202202},
             "headers": ["numeric"],
@@ -941,7 +946,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_starts_ends_with",
             "values": {"c++23": 202106},
             "headers": ["algorithm"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_to_container",
