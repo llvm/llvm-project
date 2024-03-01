@@ -882,8 +882,7 @@ void AArch64ABIInfo::appendAttributeMangling(StringRef AttrStr,
   for (auto &Feat : Features)
     Feat = Feat.trim();
 
-  const TargetInfo &TI = CGT.getTarget();
-  llvm::sort(Features, [&TI](const StringRef LHS, const StringRef RHS) {
+  llvm::sort(Features, [](const StringRef LHS, const StringRef RHS) {
     return LHS.compare(RHS) < 0;
   });
 
