@@ -5,6 +5,12 @@
 #include <cstdlib>
 #include <cstring>
 
+// Callback handler, which receives and relays OMPT callbacks
+extern OmptCallbackHandler *Handler;
+
+// EventListener, which will actually print the OMPT events
+static OmptEventReporter *EventReporter;
+
 // From openmp/runtime/test/ompt/callback.h
 #define register_ompt_callback_t(name, type)                                   \
   do {                                                                         \
@@ -24,9 +30,6 @@ std::unordered_map<std::string, TestSuite> TestRegistrar::Tests;
 static std::atomic<ompt_id_t> NextOpId{0x8000000000000001};
 static bool UseEMICallbacks = false;
 static bool UseTracing = false;
-
-// EventListener which will print OMPT events
-static OmptEventReporter EventReporter;
 
 // OMPT entry point handles
 static ompt_set_trace_ompt_t ompt_set_trace_ompt = 0;
@@ -87,23 +90,23 @@ static void on_ompt_callback_buffer_complete(
     delete_buffer_ompt(buffer);
 }
 
-static ompt_set_result_t set_trace_ompt() {
+static ompt_set_result_t set_trace_ompt(ompt_device_t *Device) {
   if (!ompt_set_trace_ompt)
     return ompt_set_error;
 
   if (UseEMICallbacks) {
-    ompt_set_trace_ompt(/*device=*/0, /*enable=*/1,
+    ompt_set_trace_ompt(/*device=*/Device, /*enable=*/1,
                         /*etype=*/ompt_callback_target_emi);
-    ompt_set_trace_ompt(/*device=*/0, /*enable=*/1,
+    ompt_set_trace_ompt(/*device=*/Device, /*enable=*/1,
                         /*etype=*/ompt_callback_target_data_op_emi);
-    ompt_set_trace_ompt(/*device=*/0, /*enable=*/1,
+    ompt_set_trace_ompt(/*device=*/Device, /*enable=*/1,
                         /*etype=*/ompt_callback_target_submit_emi);
   } else {
-    ompt_set_trace_ompt(/*device=*/0, /*enable=*/1,
+    ompt_set_trace_ompt(/*device=*/Device, /*enable=*/1,
                         /*etype=*/ompt_callback_target);
-    ompt_set_trace_ompt(/*device=*/0, /*enable=*/1,
+    ompt_set_trace_ompt(/*device=*/Device, /*enable=*/1,
                         /*etype=*/ompt_callback_target_data_op);
-    ompt_set_trace_ompt(/*device=*/0, /*enable=*/1,
+    ompt_set_trace_ompt(/*device=*/Device, /*enable=*/1,
                         /*etype=*/ompt_callback_target_submit);
   }
 
@@ -217,7 +220,7 @@ static void on_ompt_callback_device_initialize(int device_num, const char *type,
     IsDeviceMapInitialized = true;
   }
 
-  set_trace_ompt();
+  set_trace_ompt(device);
 
   // In many scenarios, this will be a good place to start the
   // trace. If start_trace is called from the main program before this
@@ -375,13 +378,19 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
     register_ompt_callback(ompt_callback_target_map);
   }
 
-  // Subscribe the reporter, so it will be notified of events
-  OmptCallbackHandler::get().subscribe(&EventReporter);
+  // Construct & subscribe the reporter, so it will be notified of events
+  EventReporter = new OmptEventReporter();
+  OmptCallbackHandler::get().subscribe(EventReporter);
 
   return 1; // success
 }
 
-void ompt_finalize(ompt_data_t *tool_data) {}
+void ompt_finalize(ompt_data_t *tool_data) {
+  assert(Handler && "Callback handler should be present at this point");
+  assert(EventReporter && "EventReporter should be present at this point");
+  delete Handler;
+  delete EventReporter;
+}
 
 #ifdef __cplusplus
 extern "C" {
@@ -421,7 +430,7 @@ int stop_trace(ompt_device_t *Device) {
 
 // This is primarily used to stop unwanted prints from happening.
 void libomptest_global_eventreporter_set_active(bool State) {
-  EventReporter.setActive(State);
+  EventReporter->setActive(State);
 }
 #ifdef __cplusplus
 }

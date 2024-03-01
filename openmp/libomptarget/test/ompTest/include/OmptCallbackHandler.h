@@ -16,6 +16,8 @@
 /// actually executed.
 class OmptCallbackHandler {
 public:
+  ~OmptCallbackHandler() = default;
+
   /// Singleton handler
   static OmptCallbackHandler &get();
 
@@ -129,4 +131,8 @@ private:
   /// Recorded events in Record and Replay mode
   std::vector<omptest::OmptAssertEvent> RecordedEvents;
 };
+
+// Pointer to global callback handler
+extern OmptCallbackHandler *Handler;
+
 #endif

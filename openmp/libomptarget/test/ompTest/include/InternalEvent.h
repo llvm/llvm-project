@@ -16,7 +16,9 @@ event_class_w_custom_body(ThreadBegin,                                         \
                                                                                \
   ompt_thread_t ThreadType;                                                    \
 )
-event_class_stub(ThreadEnd)
+event_class_w_custom_body(ThreadEnd,                                           \
+  ThreadEnd() : InternalEvent(EventTy::ThreadEnd) {}                           \
+)
 event_class_w_custom_body(ParallelBegin,                                       \
   ParallelBegin(int NumThreads)                                                \
     : InternalEvent(EventTy::ParallelBegin), NumThreads(NumThreads) {}         \

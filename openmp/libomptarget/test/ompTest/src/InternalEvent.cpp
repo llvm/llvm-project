@@ -37,6 +37,11 @@ std::string internal::ThreadBegin::toString() const {
   return S;
 }
 
+std::string internal::ThreadEnd::toString() const {
+  std::string S{"OMPT Callback ThreadEnd"};
+  return S;
+}
+
 std::string internal::ParallelBegin::toString() const {
   std::string S{"OMPT Callback ParallelBegin: "};
   S.append("NumThreads=").append(std::to_string(NumThreads));
