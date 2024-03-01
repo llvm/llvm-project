@@ -3309,12 +3309,18 @@ struct CompilerDirective {
   struct LoopCount {
     WRAPPER_CLASS_BOILERPLATE(LoopCount, std::list<std::uint64_t>);
   };
+  struct AssumeAligned {
+    TUPLE_CLASS_BOILERPLATE(AssumeAligned);
+    std::tuple<common::Indirection<Designator>, uint64_t> t;
+  };
   struct NameValue {
     TUPLE_CLASS_BOILERPLATE(NameValue);
     std::tuple<Name, std::optional<std::uint64_t>> t;
   };
   CharBlock source;
-  std::variant<std::list<IgnoreTKR>, LoopCount, std::list<NameValue>> u;
+  std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
+      std::list<NameValue>>
+      u;
 };
 
 // (CUDA) ATTRIBUTE(attribute) [::] name-list
