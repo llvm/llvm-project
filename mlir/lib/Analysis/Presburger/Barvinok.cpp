@@ -613,10 +613,10 @@ void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
   // denominator, and convert them to their absolute values.
   unsigned numNegExps = 0;
   Fraction sumNegExps(0, 1);
-  for (unsigned j = 0, e = dens.size(); j < e; ++j) {
-    if (dens[j] < 0) {
+  for (const auto &den : dens) {
+    if (den < 0) {
       numNegExps += 1;
-      sumNegExps += dens[j];
+      sumNegExps += den;
     }
   }
 
@@ -722,8 +722,8 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // Then, using the formula for geometric series, we replace each (1 -
     // (s+1)^(dens[j])) with
     // (-s)(\sum_{0 ≤ k < dens[j]} (s+1)^k).
-    for (unsigned j = 0, e = dens.size(); j < e; ++j)
-      dens[j] = abs(dens[j]) - 1;
+    for (auto &j : dens)
+      j = abs(j) - 1;
     // Note that at this point, the semantics of `dens[j]` changes to mean
     // a term (\sum_{0 ≤ k ≤ dens[j]} (s+1)^k). The denominator is, as before,
     // a product of these terms.
