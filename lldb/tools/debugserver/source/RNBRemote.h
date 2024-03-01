@@ -358,6 +358,8 @@ protected:
   rnb_err_t GetPacket(std::string &packet_data, RNBRemote::Packet &packet_info,
                       bool wait);
   rnb_err_t SendPacket(const std::string &);
+  rnb_err_t SendErrorPacket(std::string errcode,
+                            const std::string &errmsg = "");
   std::string CompressString(const std::string &);
 
   void CreatePacketTable();
