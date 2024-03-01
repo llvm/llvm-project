@@ -508,17 +508,17 @@ defvar VM8VTs = [vint8m8_t, vint16m8_t, vint32m8_t, vint64m8_t,
                  vfloat16m8_t, vbfloat16m8_t,
                  vfloat32m8_t, vfloat64m8_t];
 
+// We reverse the order of last 8 registers so that we don't needlessly prevent
+// allocation of higher lmul register groups while still putting v0 last in the
+// allocation order.
+
 def VR : VReg<!listconcat(VM1VTs, VMaskVTs),
               (add (sequence "V%u", 8, 31),
-                   // Reverse the order so that we don't kill too much
-                   // LMUL groups.
                    (sequence "V%u", 7, 0)), 1>;
 
 def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs), (sub VR, V0), 1>;
 
 def VRM2 : VReg<VM2VTs, (add (sequence "V%uM2", 8, 31, 2),
-                             // Reverse the order so that we don't kill too much
-                             // LMUL groups.
                              (sequence "V%uM2", 6, 0, 2)), 2>;
 
 def VRM2NoV0 : VReg<VM2VTs, (sub VRM2, V0M2), 2>;
