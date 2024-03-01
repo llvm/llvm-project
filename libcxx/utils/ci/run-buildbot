@@ -127,7 +127,7 @@ function generate-cmake-base() {
           -DLIBCXXABI_ENABLE_WERROR=YES \
           -DLIBUNWIND_ENABLE_WERROR=YES \
           -DLIBCXX_ENABLE_CLANG_TIDY=${ENABLE_CLANG_TIDY} \
-          -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
+          -DLLVM_LIT_ARGS="-v --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
           "${@}"
 }
 
