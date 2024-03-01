@@ -770,11 +770,8 @@ Error LinuxKernelRewriter::rewriteORCTables() {
           continue;
 
         // Issue label for the instruction.
-        MCSymbol *Label = BC.MIB->getLabel(Inst);
-        if (!Label) {
-          Label = BC.Ctx->createTempSymbol("__ORC_");
-          BC.MIB->setLabel(Inst, Label);
-        }
+        MCSymbol *Label =
+            BC.MIB->getOrCreateInstLabel(Inst, "__ORC_", BC.Ctx.get());
 
         if (Error E = emitORCEntry(0, *ErrorOrState, Label))
           return E;
@@ -908,11 +905,8 @@ Error LinuxKernelRewriter::readStaticCalls() {
 
     BC.MIB->addAnnotation(*Inst, "StaticCall", EntryID);
 
-    MCSymbol *Label = BC.MIB->getLabel(*Inst);
-    if (!Label) {
-      Label = BC.Ctx->createTempSymbol("__SC_");
-      BC.MIB->setLabel(*Inst, Label);
-    }
+    MCSymbol *Label =
+        BC.MIB->getOrCreateInstLabel(*Inst, "__SC_", BC.Ctx.get());
 
     StaticCallEntries.push_back({EntryID, BF, Label});
   }

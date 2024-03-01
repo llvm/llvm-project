@@ -404,7 +404,7 @@ subroutine tt1
   ! CHECK-NEXT: fir.call @_FortranAioEndIoStatement
   print*, [(r([7.0]),i=1,3)]
 contains
-  ! CHECK-LABEL: func @_QFtt1Pr
+  ! CHECK-LABEL: func private @_QFtt1Pr
   function r(x)
     real x(:)
     r = x(1)

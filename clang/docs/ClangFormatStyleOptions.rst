@@ -955,6 +955,286 @@ the configuration (without a prefix: ``Auto``).
       }
 
 
+.. _AlignConsecutiveTableGenCondOperatorColons:
+
+**AlignConsecutiveTableGenCondOperatorColons** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 19` :ref:`¶ <AlignConsecutiveTableGenCondOperatorColons>`
+  Style of aligning consecutive TableGen cond operator colons.
+  Align the colons of cases inside !cond operators.
+
+  .. code-block:: c++
+
+    !cond(!eq(size, 1) : 1,
+          !eq(size, 16): 1,
+          true         : 0)
+
+  Nested configuration flags:
+
+  Alignment options.
+
+  They can also be read as a whole for compatibility. The choices are:
+  - None
+  - Consecutive
+  - AcrossEmptyLines
+  - AcrossComments
+  - AcrossEmptyLinesAndComments
+
+  For example, to align across empty lines and not across comments, either
+  of these work.
+
+  .. code-block:: c++
+
+    AlignConsecutiveMacros: AcrossEmptyLines
+
+    AlignConsecutiveMacros:
+      Enabled: true
+      AcrossEmptyLines: true
+      AcrossComments: false
+
+  * ``bool Enabled`` Whether aligning is enabled.
+
+    .. code-block:: c++
+
+      #define SHORT_NAME       42
+      #define LONGER_NAME      0x007f
+      #define EVEN_LONGER_NAME (2)
+      #define foo(x)           (x * x)
+      #define bar(y, z)        (y + z)
+
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int aaaa : 1;
+      int b    : 12;
+      int ccc  : 8;
+
+      int         aaaa = 12;
+      float       b = 23;
+      std::string ccc;
+
+  * ``bool AcrossEmptyLines`` Whether to align across empty lines.
+
+    .. code-block:: c++
+
+      true:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d            = 3;
+
+      false:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d = 3;
+
+  * ``bool AcrossComments`` Whether to align across comments.
+
+    .. code-block:: c++
+
+      true:
+      int d    = 3;
+      /* A comment. */
+      double e = 4;
+
+      false:
+      int d = 3;
+      /* A comment. */
+      double e = 4;
+
+  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
+    like ``+=`` are aligned along with ``=``.
+
+    .. code-block:: c++
+
+      true:
+      a   &= 2;
+      bbb  = 2;
+
+      false:
+      a &= 2;
+      bbb = 2;
+
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int      (*f)();
+
+      false:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int (*f)();
+
+  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
+    operators are left-padded to the same length as long ones in order to
+    put all assignment operators to the right of the left hand side.
+
+    .. code-block:: c++
+
+      true:
+      a   >>= 2;
+      bbb   = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+      false:
+      a >>= 2;
+      bbb = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+
+.. _AlignConsecutiveTableGenDefinitionColons:
+
+**AlignConsecutiveTableGenDefinitionColons** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 19` :ref:`¶ <AlignConsecutiveTableGenDefinitionColons>`
+  Style of aligning consecutive TableGen definition colons.
+  This aligns the inheritance colons of consecutive definitions.
+
+  .. code-block:: c++
+
+    def Def       : Parent {}
+    def DefDef    : Parent {}
+    def DefDefDef : Parent {}
+
+  Nested configuration flags:
+
+  Alignment options.
+
+  They can also be read as a whole for compatibility. The choices are:
+  - None
+  - Consecutive
+  - AcrossEmptyLines
+  - AcrossComments
+  - AcrossEmptyLinesAndComments
+
+  For example, to align across empty lines and not across comments, either
+  of these work.
+
+  .. code-block:: c++
+
+    AlignConsecutiveMacros: AcrossEmptyLines
+
+    AlignConsecutiveMacros:
+      Enabled: true
+      AcrossEmptyLines: true
+      AcrossComments: false
+
+  * ``bool Enabled`` Whether aligning is enabled.
+
+    .. code-block:: c++
+
+      #define SHORT_NAME       42
+      #define LONGER_NAME      0x007f
+      #define EVEN_LONGER_NAME (2)
+      #define foo(x)           (x * x)
+      #define bar(y, z)        (y + z)
+
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int aaaa : 1;
+      int b    : 12;
+      int ccc  : 8;
+
+      int         aaaa = 12;
+      float       b = 23;
+      std::string ccc;
+
+  * ``bool AcrossEmptyLines`` Whether to align across empty lines.
+
+    .. code-block:: c++
+
+      true:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d            = 3;
+
+      false:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d = 3;
+
+  * ``bool AcrossComments`` Whether to align across comments.
+
+    .. code-block:: c++
+
+      true:
+      int d    = 3;
+      /* A comment. */
+      double e = 4;
+
+      false:
+      int d = 3;
+      /* A comment. */
+      double e = 4;
+
+  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
+    like ``+=`` are aligned along with ``=``.
+
+    .. code-block:: c++
+
+      true:
+      a   &= 2;
+      bbb  = 2;
+
+      false:
+      a &= 2;
+      bbb = 2;
+
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int      (*f)();
+
+      false:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int (*f)();
+
+  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
+    operators are left-padded to the same length as long ones in order to
+    put all assignment operators to the right of the left hand side.
+
+    .. code-block:: c++
+
+      true:
+      a   >>= 2;
+      bbb   = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+      false:
+      a >>= 2;
+      bbb = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+
 .. _AlignEscapedNewlines:
 
 **AlignEscapedNewlines** (``EscapedNewlineAlignmentStyle``) :versionbadge:`clang-format 5` :ref:`¶ <AlignEscapedNewlines>`
@@ -4844,7 +5124,8 @@ the configuration (without a prefix: ``Auto``).
 .. _RemoveSemicolon:
 
 **RemoveSemicolon** (``Boolean``) :versionbadge:`clang-format 16` :ref:`¶ <RemoveSemicolon>`
-  Remove semicolons after the closing brace of a non-empty function.
+  Remove semicolons after the closing braces of functions and
+  constructors/destructors.
 
   .. warning::
 

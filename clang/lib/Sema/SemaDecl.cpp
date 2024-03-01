@@ -16424,6 +16424,7 @@ void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
     D = TD->getTemplatedDecl();
   ProcessDeclAttributeList(S, D, Attrs);
+  ProcessAPINotes(D);
 
   if (CXXMethodDecl *Method = dyn_cast_or_null<CXXMethodDecl>(D))
     if (Method->isStatic())
@@ -19683,6 +19684,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       CDecl->setIvarRBraceLoc(RBrac);
     }
   }
+  ProcessAPINotes(Record);
 }
 
 /// Determine whether the given integral value is representable within
@@ -19997,6 +19999,7 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
   // Process attributes.
   ProcessDeclAttributeList(S, New, Attrs);
   AddPragmaAttributes(S, New);
+  ProcessAPINotes(New);
 
   // Register this decl in the current scope stack.
   New->setAccess(TheEnumDecl->getAccess());
@@ -20195,6 +20198,7 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
   QualType EnumType = Context.getTypeDeclType(Enum);
 
   ProcessDeclAttributeList(S, Enum, Attrs);
+  ProcessAPINotes(Enum);
 
   if (Enum->isDependentType()) {
     for (unsigned i = 0, e = Elements.size(); i != e; ++i) {

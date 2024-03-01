@@ -4127,8 +4127,8 @@ def ext_ms_impcast_fn_obj : ExtWarn<
   "Microsoft extension">, InGroup<MicrosoftCast>;
 
 def warn_impcast_pointer_to_bool : Warning<
-    "address of%select{| function| array}0 '%1' will always evaluate to "
-    "'true'">,
+    "address of %select{'%1'|function '%1'|array '%1'|lambda function pointer "
+    "conversion operator}0 will always evaluate to 'true'">,
     InGroup<PointerBoolConversion>;
 def warn_cast_nonnull_to_bool : Warning<
     "nonnull %select{function call|parameter}0 '%1' will evaluate to "
@@ -10266,6 +10266,11 @@ def err_block_on_vm : Error<
 def err_sizeless_nonlocal : Error<
   "non-local variable with sizeless type %0">;
 
+def err_vec_builtin_non_vector_all : Error<
+ "all arguments to %0 must be vectors">;
+def err_vec_builtin_incompatible_vector_all : Error<
+  "all arguments to %0 must have vectors of the same type">;
+
 def err_vec_builtin_non_vector : Error<
  "first two arguments to %0 must be vectors">;
 def err_vec_builtin_incompatible_vector : Error<
@@ -10759,6 +10764,13 @@ def warn_imp_cast_drops_unaligned : Warning<
   InGroup<DiagGroup<"unaligned-qualifier-implicit-cast">>;
 
 } // end of sema category
+
+let CategoryName = "API Notes Issue" in {
+
+def err_incompatible_replacement_type : Error<
+  "API notes replacement type %0 has a different size from original type %1">;
+
+} // end of API Notes category
 
 let CategoryName = "OpenMP Issue" in {
 // OpenMP support.
@@ -11976,7 +11988,8 @@ def err_builtin_invalid_arg_type: Error <
   "pointer to a valid matrix element type|"
   "signed integer or floating point type|vector type|"
   "floating point type|"
-  "vector of integers}1 (was %2)">;
+  "vector of integers|"
+  "type of unsigned integer}1 (was %2)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
@@ -12203,6 +12216,11 @@ def warn_acc_clause_unimplemented
 def err_acc_construct_appertainment
     : Error<"OpenACC construct '%0' cannot be used here; it can only "
             "be used in a statement context">;
-def err_acc_branch_in_out
-    : Error<"invalid branch %select{out of|into}0 OpenACC Compute Construct">;
+def err_acc_branch_in_out_compute_construct
+    : Error<"invalid %select{branch|return}0 %select{out of|into}1 OpenACC "
+            "Compute Construct">;
+def note_acc_branch_into_compute_construct
+    : Note<"invalid branch into OpenACC Compute Construct">;
+def note_acc_branch_out_of_compute_construct
+    : Note<"invalid branch out of OpenACC Compute Construct">;
 } // end of sema component.

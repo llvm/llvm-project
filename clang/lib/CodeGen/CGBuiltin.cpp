@@ -44,6 +44,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsBPF.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
@@ -3216,7 +3217,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__popcnt64:
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
-  case Builtin::BI__builtin_popcountll: {
+  case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
 
     llvm::Type *ArgType = ArgValue->getType();
@@ -5981,6 +5983,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     }
     llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
   }
+
+  // EmitHLSLBuiltinExpr will check getLangOpts().HLSL
+  if (Value *V = EmitHLSLBuiltinExpr(BuiltinID, E))
+    return RValue::get(V);
 
   if (getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice)
     return EmitHipStdParUnsupportedBuiltin(this, FD);
@@ -17957,6 +17963,97 @@ llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
     Arg = llvm::ConstantInt::get(getLLVMContext(), *Result);
   }
   return Arg;
+}
+
+Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
+                                            const CallExpr *E) {
+  if (!getLangOpts().HLSL)
+    return nullptr;
+
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_dot: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    llvm::Type *T0 = Op0->getType();
+    llvm::Type *T1 = Op1->getType();
+    if (!T0->isVectorTy() && !T1->isVectorTy()) {
+      if (T0->isFloatingPointTy())
+        return Builder.CreateFMul(Op0, Op1, "dx.dot");
+
+      if (T0->isIntegerTy())
+        return Builder.CreateMul(Op0, Op1, "dx.dot");
+
+      // Bools should have been promoted
+      llvm_unreachable(
+          "Scalar dot product is only supported on ints and floats.");
+    }
+    // A VectorSplat should have happened
+    assert(T0->isVectorTy() && T1->isVectorTy() &&
+           "Dot product of vector and scalar is not supported.");
+
+    // A vector sext or sitofp should have happened
+    assert(T0->getScalarType() == T1->getScalarType() &&
+           "Dot product of vectors need the same element types.");
+
+    [[maybe_unused]] auto *VecTy0 =
+        E->getArg(0)->getType()->getAs<VectorType>();
+    [[maybe_unused]] auto *VecTy1 =
+        E->getArg(1)->getType()->getAs<VectorType>();
+    // A HLSLVectorTruncation should have happend
+    assert(VecTy0->getNumElements() == VecTy1->getNumElements() &&
+           "Dot product requires vectors to be of the same size.");
+
+    return Builder.CreateIntrinsic(
+        /*ReturnType*/ T0->getScalarType(), Intrinsic::dx_dot,
+        ArrayRef<Value *>{Op0, Op1}, nullptr, "dx.dot");
+  } break;
+  case Builtin::BI__builtin_hlsl_lerp: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+    Value *Y = EmitScalarExpr(E->getArg(1));
+    Value *S = EmitScalarExpr(E->getArg(2));
+    llvm::Type *Xty = X->getType();
+    llvm::Type *Yty = Y->getType();
+    llvm::Type *Sty = S->getType();
+    if (!Xty->isVectorTy() && !Yty->isVectorTy() && !Sty->isVectorTy()) {
+      if (Xty->isFloatingPointTy()) {
+        auto V = Builder.CreateFSub(Y, X);
+        V = Builder.CreateFMul(S, V);
+        return Builder.CreateFAdd(X, V, "dx.lerp");
+      }
+      llvm_unreachable("Scalar Lerp is only supported on floats.");
+    }
+    // A VectorSplat should have happened
+    assert(Xty->isVectorTy() && Yty->isVectorTy() && Sty->isVectorTy() &&
+           "Lerp of vector and scalar is not supported.");
+
+    [[maybe_unused]] auto *XVecTy =
+        E->getArg(0)->getType()->getAs<VectorType>();
+    [[maybe_unused]] auto *YVecTy =
+        E->getArg(1)->getType()->getAs<VectorType>();
+    [[maybe_unused]] auto *SVecTy =
+        E->getArg(2)->getType()->getAs<VectorType>();
+    // A HLSLVectorTruncation should have happend
+    assert(XVecTy->getNumElements() == YVecTy->getNumElements() &&
+           XVecTy->getNumElements() == SVecTy->getNumElements() &&
+           "Lerp requires vectors to be of the same size.");
+    assert(XVecTy->getElementType()->isRealFloatingType() &&
+           XVecTy->getElementType() == YVecTy->getElementType() &&
+           XVecTy->getElementType() == SVecTy->getElementType() &&
+           "Lerp requires float vectors to be of the same type.");
+    return Builder.CreateIntrinsic(
+        /*ReturnType*/ Xty, Intrinsic::dx_lerp, ArrayRef<Value *>{X, Y, S},
+        nullptr, "dx.lerp");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_frac: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("frac operand must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType*/ Op0->getType(), Intrinsic::dx_frac,
+        ArrayRef<Value *>{Op0}, nullptr, "dx.frac");
+  }
+  }
+  return nullptr;
 }
 
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,

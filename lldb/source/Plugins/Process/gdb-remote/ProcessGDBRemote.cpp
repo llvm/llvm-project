@@ -5354,8 +5354,7 @@ public:
             interpreter, "process plugin packet xfer-size",
             "Maximum size that lldb will try to read/write one one chunk.",
             nullptr) {
-    CommandArgumentData max_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
-    m_arguments.push_back({max_arg});
+    AddSimpleArgumentList(eArgTypeUnsignedInteger);
   }
 
   ~CommandObjectProcessGDBRemotePacketXferSize() override = default;
@@ -5397,8 +5396,7 @@ public:
                             "be added to the packet prior to sending and "
                             "stripped from the result.",
                             nullptr) {
-    CommandArgumentData packet_arg{eArgTypeNone, eArgRepeatStar};
-    m_arguments.push_back({packet_arg});
+    AddSimpleArgumentList(eArgTypeNone, eArgRepeatStar);
   }
 
   ~CommandObjectProcessGDBRemotePacketSend() override = default;
