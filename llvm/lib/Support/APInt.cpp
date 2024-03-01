@@ -2229,7 +2229,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
 
     int Pos = 0;
     while (N) {
-      if (InsertSeparators && Pos % Grouping == 0 && Pos > 0) 
+      if (InsertSeparators && Pos % Grouping == 0 && Pos > 0)
         *--BufPtr = '\'';
       *--BufPtr = Digits[N % Radix];
       N /= Radix;
@@ -2268,7 +2268,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
     int Pos = 0;
     while (Tmp.getBoolValue()) {
       unsigned Digit = unsigned(Tmp.getRawData()[0]) & MaskAmt;
-      if (InsertSeparators && Pos % Grouping == 0 && Pos > 0) 
+      if (InsertSeparators && Pos % Grouping == 0 && Pos > 0)
         Str.push_back('\'');
 
       Str.push_back(Digits[Digit]);

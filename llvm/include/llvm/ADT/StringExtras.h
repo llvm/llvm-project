@@ -330,7 +330,8 @@ inline std::string itostr(int64_t X) {
 
 inline std::string toString(const APInt &I, unsigned Radix, bool Signed,
                             bool formatAsCLiteral = false,
-                            bool UpperCase = true, bool InsertSeparators = false) {
+                            bool UpperCase = true,
+                            bool InsertSeparators = false) {
   SmallString<40> S;
   I.toString(S, Radix, Signed, formatAsCLiteral, UpperCase, InsertSeparators);
   return std::string(S);
