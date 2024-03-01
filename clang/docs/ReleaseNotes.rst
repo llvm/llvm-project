@@ -156,6 +156,9 @@ Improvements to Clang's diagnostics
 - The ``-Wshorten-64-to-32`` diagnostic is now grouped under ``-Wimplicit-int-conversion`` instead
    of ``-Wconversion``. Fixes `#69444 <https://github.com/llvm/llvm-project/issues/69444>`_.
 
+- Clang now uses thousand separators when printing large numbers in integer overflow diagnostics.
+  Fixes `#80939 <https://github.com/llvm/llvm-project/issues/80939>`_.
+  
 Improvements to Clang's time-trace
 ----------------------------------
 

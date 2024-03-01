@@ -2162,7 +2162,7 @@ void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
 
 void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
                      bool formatAsCLiteral, bool UpperCase,
-                     bool insertSeparators) const {
+                     bool InsertSeparators) const {
   assert((Radix == 10 || Radix == 8 || Radix == 16 || Radix == 2 ||
           Radix == 36) &&
          "Radix should be 2, 8, 10, 16, or 36!");
@@ -2229,9 +2229,8 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
 
     int Pos = 0;
     while (N) {
-      if (insertSeparators && Pos % Grouping == 0 && Pos > 0) {
+      if (InsertSeparators && Pos % Grouping == 0 && Pos > 0) 
         *--BufPtr = '\'';
-      }
       *--BufPtr = Digits[N % Radix];
       N /= Radix;
       Pos++;
@@ -2269,9 +2268,9 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
     int Pos = 0;
     while (Tmp.getBoolValue()) {
       unsigned Digit = unsigned(Tmp.getRawData()[0]) & MaskAmt;
-      if (insertSeparators && Pos % Grouping == 0 && Pos > 0) {
+      if (InsertSeparators && Pos % Grouping == 0 && Pos > 0) 
         Str.push_back('\'');
-      }
+
       Str.push_back(Digits[Digit]);
       Tmp.lshrInPlace(ShiftAmt);
       Pos++;
@@ -2282,9 +2281,9 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
       uint64_t Digit;
       udivrem(Tmp, Radix, Tmp, Digit);
       assert(Digit < Radix && "divide failed");
-      if (insertSeparators && Pos % Grouping == 0 && Pos > 0) {
+      if (InsertSeparators && Pos % Grouping == 0 && Pos > 0)
         Str.push_back('\'');
-      }
+
       Str.push_back(Digits[Digit]);
       Pos++;
     }

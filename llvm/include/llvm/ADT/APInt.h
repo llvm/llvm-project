@@ -1627,7 +1627,7 @@ public:
   /// digits.
   void toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
                 bool formatAsCLiteral = false, bool UpperCase = true,
-                bool insertSeparators = false) const;
+                bool InsertSeparators = false) const;
 
   /// Considers the APInt to be unsigned and converts it into a string in the
   /// radix given. The radix can be 2, 8, 10 16, or 36.
