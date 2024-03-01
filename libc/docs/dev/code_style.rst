@@ -48,7 +48,7 @@ We define two kinds of macros:
      * ``cpu_features.h`` - Target cpu feature availability.
        e.g., ``LIBC_TARGET_CPU_HAS_AVX2``.
      * ``types.h`` - Type properties and availability.
-       e.g., ``LIBC_COMPILER_HAS_FLOAT128``.
+       e.g., ``LIBC_TYPES_HAS_FLOAT128``.
      * ``os.h`` - Target os properties.
        e.g., ``LIBC_TARGET_OS_IS_LINUX``.
 
