@@ -3817,7 +3817,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
         do {
           Tok = Tok->Next;
         } while (Tok && Tok->isNot(TT_OverloadedOperatorLParen));
-        if (!Tok)
+        if (!Tok || !Tok->MatchingParen)
           break;
         const auto *LeftParen = Tok;
         for (Tok = Tok->Next; Tok && Tok != LeftParen->MatchingParen;

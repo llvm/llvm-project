@@ -5,18 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Top level types for interacting with the generic clang driver and frontend
-// for InstallAPI operations.
-//
-//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_INSTALLAPI_CONTEXT_H
 #define LLVM_CLANG_INSTALLAPI_CONTEXT_H
 
-#include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/Diagnostic.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/InstallAPI/HeaderFile.h"
 #include "llvm/TextAPI/InterfaceFile.h"
 #include "llvm/TextAPI/RecordVisitor.h"
 #include "llvm/TextAPI/RecordsSlice.h"
@@ -32,31 +27,29 @@ struct InstallAPIContext {
   /// Library attributes that are typically passed as linker inputs.
   llvm::MachO::RecordsSlice::BinaryAttrs BA;
 
-  /// Active target triple to parse.
-  llvm::Triple TargetTriple{};
+  /// All headers that represent a library.
+  HeaderSeq InputHeaders;
 
-  /// Output stream to write TextAPI file to.
-  std::unique_ptr<llvm::raw_pwrite_stream> OS = nullptr;
+  /// Active language mode to parse in.
+  Language LangMode = Language::ObjC;
 
-  /// DiagnosticsEngine to report errors.
-  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags = nullptr;
+  /// Active header access type.
+  HeaderType Type = HeaderType::Unknown;
+
+  /// Active TargetSlice for symbol record collection.
+  std::shared_ptr<llvm::MachO::RecordsSlice> Slice;
+
+  /// FileManager for all I/O operations.
+  FileManager *FM = nullptr;
+
+  /// DiagnosticsEngine for all error reporting.
+  DiagnosticsEngine *Diags = nullptr;
 
   /// File Path of output location.
-  StringRef OutputLoc{};
+  llvm::StringRef OutputLoc{};
 
   /// What encoding to write output as.
   llvm::MachO::FileType FT = llvm::MachO::FileType::TBD_V5;
-};
-
-class InstallAPIConsumer : public ASTConsumer {
-public:
-  InstallAPIConsumer(InstallAPIContext InstallAPICtx)
-      : Ctx(std::move(InstallAPICtx)) {}
-
-  void HandleTranslationUnit(ASTContext &ASTContext) override;
-
-private:
-  InstallAPIContext Ctx;
 };
 
 } // namespace installapi

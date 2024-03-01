@@ -168,6 +168,10 @@ public:
 
   InstrProfKind getProfileKind() const { return ProfileKind; }
 
+  bool hasSingleByteCoverage() const {
+    return static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage);
+  }
+
   // Internal interface for testing purpose only.
   void setValueProfDataEndianness(llvm::endianness Endianness);
   void setOutputSparse(bool Sparse);

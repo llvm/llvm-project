@@ -1,4 +1,4 @@
-//===-- Unittests for the DyadicFloat class -------------------------------===//
+//===-- Unittests for the FPBits class ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -575,7 +575,7 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
 }
 #endif
 
-#if defined(LIBC_COMPILER_HAS_FLOAT128)
+#if defined(LIBC_TYPES_HAS_FLOAT128)
 TEST(LlvmLibcFPBitsTest, Float128Type) {
   using Float128Bits = FPBits<float128>;
 
@@ -643,4 +643,4 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
   Float128Bits quiet_nan = Float128Bits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
-#endif // LIBC_COMPILER_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_FLOAT128

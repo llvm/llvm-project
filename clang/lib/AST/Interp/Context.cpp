@@ -160,7 +160,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isReferenceType() || T->isPointerType())
     return PT_Ptr;
 
-  if (const auto *AT = dyn_cast<AtomicType>(T))
+  if (const auto *AT = T->getAs<AtomicType>())
     return classify(AT->getValueType());
 
   if (const auto *DT = dyn_cast<DecltypeType>(T))

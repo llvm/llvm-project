@@ -619,7 +619,8 @@ class GroupBuiltin<string name, Op operation> {
                              !eq(operation, OpGroupNonUniformShuffleDown),
                              !eq(operation, OpGroupBroadcast),
                              !eq(operation, OpGroupNonUniformBroadcast),
-                             !eq(operation, OpGroupNonUniformBroadcastFirst));
+                             !eq(operation, OpGroupNonUniformBroadcastFirst),
+                             !eq(operation, OpGroupNonUniformRotateKHR));
   bit HasBoolArg = !or(!and(IsAllOrAny, !eq(IsAllEqual, false)), IsBallot, IsLogical);
 }
 
@@ -876,6 +877,10 @@ defm : DemangledGroupBuiltin<"group_non_uniform_reduce_logical_xors", WorkOrSub,
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_inclusive_logical_xors", WorkOrSub, OpGroupNonUniformLogicalXor>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_logical_xors", WorkOrSub, OpGroupNonUniformLogicalXor>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_logical_xor", WorkOrSub, OpGroupNonUniformLogicalXor>;
+
+// cl_khr_subgroup_rotate / SPV_KHR_subgroup_rotate
+defm : DemangledGroupBuiltin<"group_rotate", OnlySub, OpGroupNonUniformRotateKHR>;
+defm : DemangledGroupBuiltin<"group_clustered_rotate", OnlySub, OpGroupNonUniformRotateKHR>;
 
 // cl_khr_work_group_uniform_arithmetic / SPV_KHR_uniform_group_instructions
 defm : DemangledGroupBuiltin<"group_reduce_imul", OnlyWork, OpGroupIMulKHR>;

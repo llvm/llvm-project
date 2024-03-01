@@ -116,7 +116,7 @@ enum ArchExtKind : unsigned {
   AEK_PROFILE =       7,  // FEAT_SPE
   AEK_RAS =           8,  // FEAT_RAS, FEAT_RASv1p1
   AEK_LSE =           9,  // FEAT_LSE
-  AEK_SVE =           10,  // FEAT_SVE
+  AEK_SVE =           10, // FEAT_SVE
   AEK_DOTPROD =       11, // FEAT_DotProd
   AEK_RCPC =          12, // FEAT_LRCPC
   AEK_RDM =           13, // FEAT_RDM
@@ -273,7 +273,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"sme-i16i64", AArch64::AEK_SMEI16I64, "+sme-i16i64", "-sme-i16i64", FEAT_SME_I64, "+sme,+sme-i16i64,+bf16", 570},
     {"sme", AArch64::AEK_SME, "+sme", "-sme", FEAT_SME, "+sme,+bf16", 430},
     {"sme2", AArch64::AEK_SME2, "+sme2", "-sme2", FEAT_SME2, "+sme2,+sme,+bf16", 580},
-    {"sme2p1", AArch64::AEK_SME2p1, "+sme2p1", "-sme2p1", FEAT_INIT, "", 0},
+    {"sme2p1", AArch64::AEK_SME2p1, "+sme2p1", "-sme2p1", FEAT_INIT, "+sme2p1,+sme2,+sme,+bf16", 0},
     {"ssbs", AArch64::AEK_SSBS, "+ssbs", "-ssbs", FEAT_SSBS, "", 490},
     {"ssbs2", AArch64::AEK_NONE, {}, {}, FEAT_SSBS2, "+ssbs", 500},
     {"sve-bf16", AArch64::AEK_NONE, {}, {}, FEAT_SVE_BF16, "+sve,+bf16,+fullfp16,+fp-armv8,+neon", 320},
@@ -658,8 +658,8 @@ inline constexpr CpuInfo CpuInfos[] = {
           AArch64::AEK_SSBS}))},
     {"neoverse-n2", ARMV9A,
      (AArch64::ExtensionBitset(
-         {AArch64::AEK_BF16, AArch64::AEK_DOTPROD,
-          AArch64::AEK_FP16, AArch64::AEK_I8MM, AArch64::AEK_MTE,
+         {AArch64::AEK_BF16, AArch64::AEK_DOTPROD, AArch64::AEK_FP16,
+          AArch64::AEK_FP16FML, AArch64::AEK_I8MM, AArch64::AEK_MTE,
           AArch64::AEK_SB, AArch64::AEK_SSBS, AArch64::AEK_SVE,
           AArch64::AEK_SVE2, AArch64::AEK_SVE2BITPERM}))},
     {"neoverse-512tvb", ARMV8_4A,

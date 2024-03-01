@@ -593,7 +593,7 @@ public:
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
-  void printBBAddrMaps() override;
+  void printBBAddrMaps(bool PrettyPGOAnalysis) override;
   void printAddrsig() override;
   void printNotes() override;
   void printELFLinkerOptions() override;
@@ -704,7 +704,7 @@ public:
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
-  void printBBAddrMaps() override;
+  void printBBAddrMaps(bool PrettyPGOAnalysis) override;
   void printAddrsig() override;
   void printNotes() override;
   void printELFLinkerOptions() override;
@@ -1095,7 +1095,8 @@ const EnumEntry<unsigned> AMDGPUElfOSABI[] = {
 };
 
 const EnumEntry<unsigned> ARMElfOSABI[] = {
-  {"ARM", "ARM", ELF::ELFOSABI_ARM}
+    {"ARM", "ARM", ELF::ELFOSABI_ARM},
+    {"ARM FDPIC", "ARM FDPIC", ELF::ELFOSABI_ARM_FDPIC},
 };
 
 const EnumEntry<unsigned> C6000ElfOSABI[] = {
@@ -5035,7 +5036,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
   OS << "GNUStyle::printCGProfile not implemented\n";
 }
 
-template <class ELFT> void GNUELFDumper<ELFT>::printBBAddrMaps() {
+template <class ELFT>
+void GNUELFDumper<ELFT>::printBBAddrMaps(bool /*PrettyPGOAnalysis*/) {
   OS << "GNUStyle::printBBAddrMaps not implemented\n";
 }
 
@@ -7525,7 +7527,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
   }
 }
 
-template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
+template <class ELFT>
+void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
   bool IsRelocatable = this->Obj.getHeader().e_type == ELF::ET_REL;
   using Elf_Shdr = typename ELFT::Shdr;
   auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
@@ -7604,21 +7607,28 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
           for (const PGOAnalysisMap::PGOBBEntry &PBBE : PAM.BBEntries) {
             DictScope L(W);
 
-            /// FIXME: currently we just emit the raw frequency, it may be
-            /// better to provide an option to scale it by the first entry
-            /// frequence using BlockFrequency::Scaled64 number
-            if (PAM.FeatEnable.BBFreq)
-              W.printNumber("Frequency", PBBE.BlockFreq.getFrequency());
+            if (PAM.FeatEnable.BBFreq) {
+              if (PrettyPGOAnalysis) {
+                std::string BlockFreqStr;
+                raw_string_ostream SS(BlockFreqStr);
+                printRelativeBlockFreq(SS, PAM.BBEntries.front().BlockFreq,
+                                       PBBE.BlockFreq);
+                W.printString("Frequency", BlockFreqStr);
+              } else {
+                W.printNumber("Frequency", PBBE.BlockFreq.getFrequency());
+              }
+            }
 
             if (PAM.FeatEnable.BrProb) {
               ListScope L(W, "Successors");
               for (const auto &Succ : PBBE.Successors) {
                 DictScope L(W);
                 W.printNumber("ID", Succ.ID);
-                /// FIXME: currently we just emit the raw numerator of the
-                /// probably, it may be better to provide an option to emit it
-                /// as a percentage or other prettied representation
-                W.printHex("Probability", Succ.Prob.getNumerator());
+                if (PrettyPGOAnalysis) {
+                  W.printObject("Probability", Succ.Prob);
+                } else {
+                  W.printHex("Probability", Succ.Prob.getNumerator());
+                }
               }
             }
           }

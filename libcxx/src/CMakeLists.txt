@@ -231,19 +231,14 @@ if (LIBCXX_ENABLE_SHARED)
   # In particular, we don't re-export the symbols if libc++abi is merged statically
   # into libc++ because in that case there's no dylib to re-export from.
   if (APPLE AND LIBCXX_CXX_ABI MATCHES "libcxxabi$"
-            AND NOT DEFINED LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS
             AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
-    set(LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS ON)
-  endif()
+    target_link_libraries(cxx_shared PRIVATE cxxabi-reexports)
 
-  if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
+    # TODO: These exports controls should not be tied to whether we re-export libc++abi symbols
     target_link_libraries(cxx_shared PRIVATE
       "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++unexp.exp"
-      "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.exp"
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
       "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
-
-    target_link_libraries(cxx_shared PRIVATE $<TARGET_NAME_IF_EXISTS:cxxabi-reexports>)
   endif()
 
   # Generate a linker script in place of a libc++.so symlink.

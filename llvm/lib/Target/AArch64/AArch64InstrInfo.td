@@ -1243,7 +1243,7 @@ def : InstAlias<"chkfeat\tx16", (CHKFEAT), 0>;
 def : InstAlias<"chkfeat\tx16", (CHKFEAT), 1>, Requires<[HasCHK]>;
 
 class GCSSt<string mnemonic, bits<3> op>
-    : I<(outs), (ins GPR64:$Rt, GPR64sp:$Rn), mnemonic, "\t$Rt, $Rn", "", []>, Sched<[]> {
+    : I<(outs), (ins GPR64:$Rt, GPR64sp:$Rn), mnemonic, "\t$Rt, [$Rn]", "", []>, Sched<[]> {
   bits<5> Rt;
   bits<5> Rn;
   let Inst{31-15} = 0b11011001000111110;
@@ -1805,7 +1805,7 @@ def HWASAN_CHECK_MEMACCESS_SHORTGRANULES : Pseudo<
 // The virtual cycle counter register is CNTVCT_EL0.
 def : Pat<(readcyclecounter), (MRS 0xdf02)>;
 
-// FPCR register
+// FPCR and FPSR registers.
 let Uses = [FPCR] in
 def MRS_FPCR : Pseudo<(outs GPR64:$dst), (ins),
                       [(set GPR64:$dst, (int_aarch64_get_fpcr))]>,
@@ -1815,6 +1815,17 @@ let Defs = [FPCR] in
 def MSR_FPCR : Pseudo<(outs), (ins GPR64:$val),
                       [(int_aarch64_set_fpcr i64:$val)]>,
                PseudoInstExpansion<(MSR 0xda20, GPR64:$val)>,
+               Sched<[WriteSys]>;
+
+let Uses = [FPSR] in
+def MRS_FPSR : Pseudo<(outs GPR64:$dst), (ins),
+                      [(set GPR64:$dst, (int_aarch64_get_fpsr))]>,
+               PseudoInstExpansion<(MRS GPR64:$dst, 0xda21)>,
+               Sched<[WriteSys]>;
+let Defs = [FPSR] in
+def MSR_FPSR : Pseudo<(outs), (ins GPR64:$val),
+                      [(int_aarch64_set_fpsr i64:$val)]>,
+               PseudoInstExpansion<(MSR 0xda21, GPR64:$val)>,
                Sched<[WriteSys]>;
 
 // Generic system instructions
@@ -6656,31 +6667,29 @@ def : Pat<(vector_extract (v8bf16 V128:$Rn), VectorIndexH:$idx),
 // All concat_vectors operations are canonicalised to act on i64 vectors for
 // AArch64. In the general case we need an instruction, which had just as well be
 // INS.
-class ConcatPat<ValueType DstTy, ValueType SrcTy>
-  : Pat<(DstTy (concat_vectors (SrcTy V64:$Rd), V64:$Rn)),
-        (INSvi64lane (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub), 1,
-                     (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), 0)>;
+multiclass ConcatPat<ValueType DstTy, ValueType SrcTy> {
+  def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rd), V64:$Rn)),
+            (INSvi64lane (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub), 1,
+                         (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), 0)>;
 
-def : ConcatPat<v2i64, v1i64>;
-def : ConcatPat<v2f64, v1f64>;
-def : ConcatPat<v4i32, v2i32>;
-def : ConcatPat<v4f32, v2f32>;
-def : ConcatPat<v8i16, v4i16>;
-def : ConcatPat<v8f16, v4f16>;
-def : ConcatPat<v8bf16, v4bf16>;
-def : ConcatPat<v16i8, v8i8>;
+  // If the high lanes are zero we can instead emit a d->d register mov, which
+  // will implicitly clear the upper bits.
+  def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rn), immAllZerosV)),
+            (SUBREG_TO_REG (i64 0), (FMOVDr V64:$Rn), dsub)>;
 
-// If the high lanes are undef, though, we can just ignore them:
-class ConcatUndefPat<ValueType DstTy, ValueType SrcTy>
-  : Pat<(DstTy (concat_vectors (SrcTy V64:$Rn), undef)),
-        (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub)>;
+  // If the high lanes are undef we can just ignore them:
+  def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rn), undef)),
+            (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub)>;
+}
 
-def : ConcatUndefPat<v2i64, v1i64>;
-def : ConcatUndefPat<v2f64, v1f64>;
-def : ConcatUndefPat<v4i32, v2i32>;
-def : ConcatUndefPat<v4f32, v2f32>;
-def : ConcatUndefPat<v8i16, v4i16>;
-def : ConcatUndefPat<v16i8, v8i8>;
+defm : ConcatPat<v2i64, v1i64>;
+defm : ConcatPat<v2f64, v1f64>;
+defm : ConcatPat<v4i32, v2i32>;
+defm : ConcatPat<v4f32, v2f32>;
+defm : ConcatPat<v8i16, v4i16>;
+defm : ConcatPat<v8f16, v4f16>;
+defm : ConcatPat<v8bf16, v4bf16>;
+defm : ConcatPat<v16i8, v8i8>;
 
 //----------------------------------------------------------------------------
 // AdvSIMD across lanes instructions

@@ -86,8 +86,9 @@ class BreakpointCommandTestCase(TestBase):
         ]
         for path in valid_paths:
             bkpt = target.BreakpointCreateByLocation(path, 2)
-            self.assertTrue(
-                bkpt.GetNumLocations() > 0,
+            self.assertGreater(
+                bkpt.GetNumLocations(),
+                0,
                 'Couldn\'t resolve breakpoint using full path "%s" in executate "%s" with '
                 "debug info that has relative path with matching suffix"
                 % (path, self.getBuildArtifact("a.out")),
@@ -142,8 +143,9 @@ class BreakpointCommandTestCase(TestBase):
         target = self.dbg.CreateTarget(obj_path)
         src_path = "/tmp/ab/main.cpp"
         bkpt = target.BreakpointCreateByLocation(src_path, 2)
-        self.assertTrue(
-            bkpt.GetNumLocations() > 0,
+        self.assertGreater(
+            bkpt.GetNumLocations(),
+            0,
             'Couldn\'t resolve breakpoint using "%s" in executate "%s" with '
             "debug info that has a bad .debug_aranges section"
             % (src_path, self.getBuildArtifact("a.out")),
@@ -570,9 +572,9 @@ class BreakpointCommandTestCase(TestBase):
         res = target.GetStatistics().GetAsJSON(stream)
         self.assertTrue(res.Success())
         debug_stats = json.loads(stream.GetData())
-        self.assertEqual(
-            "targets" in debug_stats,
-            True,
+        self.assertIn(
+            "targets",
+            debug_stats,
             'Make sure the "targets" key in in target.GetStatistics()',
         )
         target_stats = debug_stats["targets"][0]
@@ -613,8 +615,9 @@ class BreakpointCommandTestCase(TestBase):
         # is a suffix of request breakpoint file path
         path = "/x/y/a/b/c/main.cpp"
         bp = target.BreakpointCreateByLocation(path, 2)
-        self.assertTrue(
-            bp.GetNumLocations() > 0,
+        self.assertGreater(
+            bp.GetNumLocations(),
+            0,
             'Couldn\'t resolve breakpoint using full path "%s" in executate "%s" with '
             "debug info that has relative path with matching suffix"
             % (path, self.getBuildArtifact("a.out")),
@@ -632,8 +635,9 @@ class BreakpointCommandTestCase(TestBase):
         # equals the file path in debug info.
         path = "a/b/c/main.cpp"
         bp = target.BreakpointCreateByLocation(path, 2)
-        self.assertTrue(
-            bp.GetNumLocations() > 0,
+        self.assertGreater(
+            bp.GetNumLocations(),
+            0,
             'Couldn\'t resolve breakpoint using full path "%s" in executate "%s" with '
             "debug info that has relative path with matching suffix"
             % (path, self.getBuildArtifact("a.out")),
@@ -655,9 +659,9 @@ class BreakpointCommandTestCase(TestBase):
         res = target.GetStatistics().GetAsJSON(stream)
         self.assertTrue(res.Success())
         debug_stats = json.loads(stream.GetData())
-        self.assertEqual(
-            "targets" in debug_stats,
-            True,
+        self.assertIn(
+            "targets",
+            debug_stats,
             'Make sure the "targets" key in in target.GetStatistics()',
         )
         target_stats = debug_stats["targets"][0]

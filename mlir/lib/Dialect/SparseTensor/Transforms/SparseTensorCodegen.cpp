@@ -1058,17 +1058,9 @@ public:
     // Replace the requested coordinates access with corresponding field.
     // The cast_op is inserted by type converter to intermix 1:N type
     // conversion.
-    Location loc = op.getLoc();
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
-    Value field = desc.getCrdMemRefOrView(rewriter, loc, op.getLevel());
-
-    // Insert a cast to bridge the actual type to the user expected type. If the
-    // actual type and the user expected type aren't compatible, the compiler or
-    // the runtime will issue an error.
-    Type resType = op.getResult().getType();
-    if (resType != field.getType())
-      field = rewriter.create<memref::CastOp>(loc, resType, field);
-    rewriter.replaceOp(op, field);
+    rewriter.replaceOp(
+        op, desc.getCrdMemRefOrView(rewriter, op.getLoc(), op.getLevel()));
 
     return success();
   }
@@ -1293,7 +1285,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
             Value tensor = fKind == SparseTensorFieldKind::ValMemRef
                                ? op.getValues()
                                : op.getLevels()[fIdx];
-
+            // TODO: handle batch.
             TypedValue<BaseMemRefType> mem = genToMemref(rewriter, loc, tensor);
             if (mem.getType().getRank() > 1) {
               // Flattens the buffer to rank 1.
@@ -1322,9 +1314,8 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
     for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
       assert(!ShapedType::isDynamic(stt.getDimShape()[lvl]));
 
-      // FIXME: dim/lvl confusion!
       // Sets up the level size.
-      auto lvlSize = constantIndex(rewriter, loc, stt.getDimShape()[lvl]);
+      auto lvlSize = constantIndex(rewriter, loc, stt.getLvlShape()[lvl]);
       desc.setLvlSize(rewriter, loc, lvl, lvlSize);
       // We use a single AOS array to store the trailing COO, so there is only
       // one memory size to set for the entire COO section.

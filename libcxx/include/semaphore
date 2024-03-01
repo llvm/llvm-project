@@ -51,7 +51,7 @@ using binary_semaphore = counting_semaphore<1>;
 #  error "<semaphore> is not supported since libc++ has been configured without support for threads."
 #endif
 
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__atomic/atomic_base.h>
 #include <__atomic/atomic_sync.h>
 #include <__atomic/memory_order.h>

@@ -538,6 +538,11 @@ Value *Mapper::mapValue(const Value *V) {
 }
 
 void Mapper::remapDPValue(DbgRecord &DR) {
+  if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
+    DPL->setLabel(cast<DILabel>(mapMetadata(DPL->getLabel())));
+    return;
+  }
+
   DPValue &V = cast<DPValue>(DR);
   // Remap variables and DILocations.
   auto *MappedVar = mapMetadata(V.getVariable());

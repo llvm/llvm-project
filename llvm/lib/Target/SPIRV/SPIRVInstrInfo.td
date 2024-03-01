@@ -287,6 +287,15 @@ def OpPtrNotEqual: Op<402, (outs ID:$res), (ins TYPE:$resType, ID:$a, ID:$b),
 def OpPtrDiff: Op<403, (outs ID:$res), (ins TYPE:$resType, ID:$a, ID:$b),
                   "$res = OpPtrDiff $resType $a $b">;
 
+// - SPV_INTEL_variable_length_array
+
+def OpVariableLengthArrayINTEL: Op<5818, (outs ID:$res), (ins TYPE:$type, ID:$length),
+                  "$res = OpVariableLengthArrayINTEL $type $length">;
+def OpSaveMemoryINTEL: Op<5819, (outs ID:$res), (ins TYPE:$type),
+                  "$res = OpSaveMemoryINTEL $type">;
+def OpRestoreMemoryINTEL: Op<5820, (outs), (ins ID:$ptr),
+                  "OpRestoreMemoryINTEL $ptr">;
+
 // 3.42.9 Function Instructions
 
 def OpFunction: Op<54, (outs ID:$func),
@@ -429,6 +438,10 @@ def OpGenericCastToPtr : UnOp<"OpGenericCastToPtr", 122>;
 def OpGenericCastToPtrExplicit : Op<123, (outs ID:$r), (ins TYPE:$t, ID:$p, StorageClass:$s),
                               "$r = OpGenericCastToPtrExplicit $t $p $s">;
 def OpBitcast : UnOp<"OpBitcast", 124>;
+
+// SPV_INTEL_usm_storage_classes
+def OpPtrCastToCrossWorkgroupINTEL : UnOp<"OpPtrCastToCrossWorkgroupINTEL", 5934>;
+def OpCrossWorkgroupCastToPtrINTEL : UnOp<"OpCrossWorkgroupCastToPtrINTEL", 5938>;
 
 // 3.42.12 Composite Instructions
 
@@ -764,6 +777,11 @@ def OpGroupNonUniformBitwiseXor: OpGroupNUGroup<"BitwiseXor", 361>;
 def OpGroupNonUniformLogicalAnd: OpGroupNUGroup<"LogicalAnd", 362>;
 def OpGroupNonUniformLogicalOr: OpGroupNUGroup<"LogicalOr", 363>;
 def OpGroupNonUniformLogicalXor: OpGroupNUGroup<"LogicalXor", 364>;
+
+// SPV_KHR_subgroup_rotate
+def OpGroupNonUniformRotateKHR: Op<4431, (outs ID:$res),
+                  (ins TYPE:$type, ID:$scope, ID:$value, ID:$delta, variable_ops),
+                  "$res = OpGroupNonUniformRotateKHR $type $scope $value $delta">;
 
 // 3.49.7, Constant-Creation Instructions
 

@@ -71,6 +71,21 @@ unsigned stdc_first_trailing_one_ul(unsigned long) noexcept { return 0x1DU; }
 unsigned stdc_first_trailing_one_ull(unsigned long long) noexcept {
   return 0x1FU;
 }
+unsigned stdc_count_zeros_uc(unsigned char) noexcept { return 0x2AU; }
+unsigned stdc_count_zeros_us(unsigned short) noexcept { return 0x2BU; }
+unsigned stdc_count_zeros_ui(unsigned) noexcept { return 0x2CU; }
+unsigned stdc_count_zeros_ul(unsigned long) noexcept { return 0x2DU; }
+unsigned stdc_count_zeros_ull(unsigned long long) noexcept { return 0x2FU; }
+unsigned stdc_count_ones_uc(unsigned char) noexcept { return 0x3AU; }
+unsigned stdc_count_ones_us(unsigned short) noexcept { return 0x3BU; }
+unsigned stdc_count_ones_ui(unsigned) noexcept { return 0x3CU; }
+unsigned stdc_count_ones_ul(unsigned long) noexcept { return 0x3DU; }
+unsigned stdc_count_ones_ull(unsigned long long) noexcept { return 0x3FU; }
+bool stdc_has_single_bit_uc(unsigned char) noexcept { return false; }
+bool stdc_has_single_bit_us(unsigned short) noexcept { return false; }
+bool stdc_has_single_bit_ui(unsigned) noexcept { return false; }
+bool stdc_has_single_bit_ul(unsigned long) noexcept { return false; }
+bool stdc_has_single_bit_ull(unsigned long long) noexcept { return false; }
 }
 
 #include "include/llvm-libc-macros/stdbit-macros.h"
@@ -137,4 +152,28 @@ TEST(LlvmLibcStdbitTest, TypeGenericMacroFirstTrailingOne) {
   EXPECT_EQ(stdc_first_trailing_one(0U), 0x1CU);
   EXPECT_EQ(stdc_first_trailing_one(0UL), 0x1DU);
   EXPECT_EQ(stdc_first_trailing_one(0ULL), 0x1FU);
+}
+
+TEST(LlvmLibcStdbitTest, TypeGenericMacroCountZeros) {
+  EXPECT_EQ(stdc_count_zeros(static_cast<unsigned char>(0U)), 0x2AU);
+  EXPECT_EQ(stdc_count_zeros(static_cast<unsigned short>(0U)), 0x2BU);
+  EXPECT_EQ(stdc_count_zeros(0U), 0x2CU);
+  EXPECT_EQ(stdc_count_zeros(0UL), 0x2DU);
+  EXPECT_EQ(stdc_count_zeros(0ULL), 0x2FU);
+}
+
+TEST(LlvmLibcStdbitTest, TypeGenericMacroCountOnes) {
+  EXPECT_EQ(stdc_count_ones(static_cast<unsigned char>(0U)), 0x3AU);
+  EXPECT_EQ(stdc_count_ones(static_cast<unsigned short>(0U)), 0x3BU);
+  EXPECT_EQ(stdc_count_ones(0U), 0x3CU);
+  EXPECT_EQ(stdc_count_ones(0UL), 0x3DU);
+  EXPECT_EQ(stdc_count_ones(0ULL), 0x3FU);
+}
+
+TEST(LlvmLibcStdbitTest, TypeGenericMacroHasSingleBit) {
+  EXPECT_EQ(stdc_has_single_bit(static_cast<unsigned char>(1U)), false);
+  EXPECT_EQ(stdc_has_single_bit(static_cast<unsigned short>(1U)), false);
+  EXPECT_EQ(stdc_has_single_bit(1U), false);
+  EXPECT_EQ(stdc_has_single_bit(1UL), false);
+  EXPECT_EQ(stdc_has_single_bit(1ULL), false);
 }

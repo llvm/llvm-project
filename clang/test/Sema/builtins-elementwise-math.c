@@ -76,6 +76,7 @@ void test_builtin_elementwise_add_sat(int i, short s, double d, float4 v, int3 i
 
   enum f { three };
   enum f x = __builtin_elementwise_add_sat(one, three);
+  // expected-warning@-1 {{comparison of different enumeration types ('enum e' and 'enum f')}}
 
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_add_sat(ext, ext);
@@ -134,6 +135,7 @@ void test_builtin_elementwise_sub_sat(int i, short s, double d, float4 v, int3 i
 
   enum f { three };
   enum f x = __builtin_elementwise_sub_sat(one, three);
+  // expected-warning@-1 {{comparison of different enumeration types ('enum e' and 'enum f')}}
 
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_sub_sat(ext, ext);
@@ -189,6 +191,7 @@ void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, u
 
   enum f { three };
   enum f x = __builtin_elementwise_max(one, three);
+  // expected-warning@-1 {{comparison of different enumeration types ('enum e' and 'enum f')}}
 
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_max(ext, ext);
@@ -244,6 +247,7 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, u
 
   enum f { three };
   enum f x = __builtin_elementwise_min(one, three);
+  // expected-warning@-1 {{comparison of different enumeration types ('enum e' and 'enum f')}}
 
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_min(ext, ext);

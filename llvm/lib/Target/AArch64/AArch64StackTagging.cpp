@@ -21,7 +21,6 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -520,7 +519,6 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     assert(Info.AI && SIB.isInterestingAlloca(*Info.AI));
-    TrackingVH<Instruction> OldAI = Info.AI;
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     AllocaInst *AI = Info.AI;
     int Tag = NextTag;
@@ -534,7 +532,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
                               ConstantInt::get(IRB.getInt64Ty(), Tag)});
     if (Info.AI->hasName())
       TagPCall->setName(Info.AI->getName() + ".tag");
-    Info.AI->replaceAllUsesWith(TagPCall);
+    // Does not replace metadata, so we don't have to handle DPValues.
+    Info.AI->replaceNonMetadataUsesWith(TagPCall);
     TagPCall->setOperand(0, Info.AI);
 
     // Calls to functions that may return twice (e.g. setjmp) confuse the
@@ -574,12 +573,6 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       for (auto *II : Info.LifetimeEnd)
         II->eraseFromParent();
     }
-
-    // Fixup debug intrinsics to point to the new alloca.
-    for (auto *DVI : Info.DbgVariableIntrinsics)
-      DVI->replaceVariableLocationOp(OldAI, Info.AI);
-    for (auto *DPV : Info.DbgVariableRecords)
-      DPV->replaceVariableLocationOp(OldAI, Info.AI);
   }
 
   // If we have instrumented at least one alloca, all unrecognized lifetime

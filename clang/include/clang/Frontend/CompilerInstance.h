@@ -294,13 +294,6 @@ public:
     return Invocation->getFrontendOpts();
   }
 
-  InstallAPIOptions &getInstallAPIOpts() {
-    return Invocation->getInstallAPIOpts();
-  }
-  const InstallAPIOptions &getInstallAPIOpts() const {
-    return Invocation->getInstallAPIOpts();
-  }
-
   HeaderSearchOptions &getHeaderSearchOpts() {
     return Invocation->getHeaderSearchOpts();
   }
@@ -318,6 +311,9 @@ public:
 
   LangOptions &getLangOpts() { return Invocation->getLangOpts(); }
   const LangOptions &getLangOpts() const { return Invocation->getLangOpts(); }
+  std::shared_ptr<LangOptions> getLangOptsPtr() const {
+    return Invocation->getLangOptsPtr();
+  }
 
   PreprocessorOptions &getPreprocessorOpts() {
     return Invocation->getPreprocessorOpts();
