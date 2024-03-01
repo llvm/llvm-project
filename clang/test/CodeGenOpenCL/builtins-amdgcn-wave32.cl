@@ -42,6 +42,6 @@ void test_read_exec_hi(global uint* out) {
   *out = __builtin_amdgcn_read_exec_hi();
 }
 
-#if __AMDGCN_WAVEFRONT_SIZE != 32
+#if defined(__AMDGCN_WAVEFRONT_SIZE) && __AMDGCN_WAVEFRONT_SIZE != 32
 #error Wrong wavesize detected
 #endif

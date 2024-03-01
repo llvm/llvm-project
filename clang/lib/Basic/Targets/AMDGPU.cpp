@@ -295,7 +295,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   // Don't emit feature macros in host code because in such cases the
   // feature list is not accurate.
-  if (IsHIPHost)
+  if (!Opts.CUDAIsDevice)
     return;
 
   // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___

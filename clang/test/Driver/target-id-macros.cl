@@ -1,23 +1,23 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang -E -dM -target amdgcn-amd-amdhsa \
+// RUN: %clang -E -dM -Xclang -fcuda-is-device -target amdgcn-amd-amdhsa \
 // RUN:   -mcpu=gfx908:xnack+:sramecc- -nogpulib -o - %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=PROC,ID1 %s
 
-// RUN: %clang -E -dM -target amdgcn-amd-amdpal \
+// RUN: %clang -E -dM -Xclang -fcuda-is-device -target amdgcn-amd-amdpal \
 // RUN:   -mcpu=gfx908:xnack+:sramecc- -nogpulib -o - %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=PROC,ID1 %s
 
-// RUN: %clang -E -dM -target amdgcn--mesa3d \
+// RUN: %clang -E -dM -Xclang -fcuda-is-device -target amdgcn--mesa3d \
 // RUN:   -mcpu=gfx908:xnack+:sramecc- -nogpulib -o - %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=PROC,ID1 %s
 
-// RUN: %clang -E -dM -target amdgcn-amd-amdhsa \
+// RUN: %clang -E -dM -Xclang -fcuda-is-device -target amdgcn-amd-amdhsa \
 // RUN:   -mcpu=gfx908 -nogpulib -o - %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=PROC,ID2 %s
 
-// RUN: %clang -E -dM -target amdgcn-amd-amdhsa \
+// RUN: %clang -E -dM -Xclang -fcuda-is-device -target amdgcn-amd-amdhsa \
 // RUN:   -nogpulib -o - %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=NONE %s
 
