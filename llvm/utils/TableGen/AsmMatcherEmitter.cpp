@@ -502,6 +502,9 @@ struct MatchableInfo {
   /// matchable came from.
   Record *const TheDef;
 
+  // ResInstSize - The size of the resulting instruction for this matchable.
+  unsigned ResInstSize;
+
   /// DefRec - This is the definition that it came from.
   PointerUnion<const CodeGenInstruction *, const CodeGenInstAlias *> DefRec;
 
@@ -543,10 +546,12 @@ struct MatchableInfo {
 
   MatchableInfo(const CodeGenInstruction &CGI)
       : AsmVariantID(0), AsmString(CGI.AsmString), TheDef(CGI.TheDef),
-        DefRec(&CGI), UseInstAsmMatchConverter(true) {}
+        ResInstSize(TheDef->getValueAsInt("Size")), DefRec(&CGI),
+        UseInstAsmMatchConverter(true) {}
 
   MatchableInfo(std::unique_ptr<const CodeGenInstAlias> Alias)
       : AsmVariantID(0), AsmString(Alias->AsmString), TheDef(Alias->TheDef),
+        ResInstSize(Alias->ResultInst->TheDef->getValueAsInt("Size")),
         DefRec(Alias.release()), UseInstAsmMatchConverter(TheDef->getValueAsBit(
                                      "UseInstAsmMatchConverter")) {}
 
@@ -608,11 +613,17 @@ struct MatchableInfo {
   void buildInstructionResultOperands();
   void buildAliasResultOperands(bool AliasConstraintsAreChecked);
 
-  /// operator< - Compare two matchables.
-  bool operator<(const MatchableInfo &RHS) const {
+  /// shouldBeMatchedBefore - Compare two matchables for ordering.
+  bool shouldBeMatchedBefore(const MatchableInfo &RHS,
+                             const CodeGenTarget &Target) const {
     // The primary comparator is the instruction mnemonic.
     if (int Cmp = Mnemonic.compare_insensitive(RHS.Mnemonic))
       return Cmp == -1;
+
+    // Sort by the resultant instuctions size, eg. for ARM instructions
+    // we must choose the smallest matching instruction.
+    if (Target.getPreferSmallerInstructions() && ResInstSize != RHS.ResInstSize)
+      return ResInstSize < RHS.ResInstSize;
 
     if (AsmOperands.size() != RHS.AsmOperands.size())
       return AsmOperands.size() < RHS.AsmOperands.size();
@@ -652,13 +663,19 @@ struct MatchableInfo {
   /// couldMatchAmbiguouslyWith - Check whether this matchable could
   /// ambiguously match the same set of operands as \p RHS (without being a
   /// strictly superior match).
-  bool couldMatchAmbiguouslyWith(const MatchableInfo &RHS) const {
+  bool couldMatchAmbiguouslyWith(const MatchableInfo &RHS,
+                                 const CodeGenTarget &Target) const {
     // The primary comparator is the instruction mnemonic.
     if (Mnemonic != RHS.Mnemonic)
       return false;
 
     // Different variants can't conflict.
     if (AsmVariantID != RHS.AsmVariantID)
+      return false;
+
+    // Sort by the resultant instuctions size, eg. for ARM instructions
+    // we must choose the smallest matching instruction.
+    if (Target.getPreferSmallerInstructions() && ResInstSize != RHS.ResInstSize)
       return false;
 
     // The number of operands is unambiguous.
@@ -3224,17 +3241,18 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   // Sort the instruction table using the partial order on classes. We use
   // stable_sort to ensure that ambiguous instructions are still
   // deterministically ordered.
-  llvm::stable_sort(
-      Info.Matchables,
-      [](const std::unique_ptr<MatchableInfo> &a,
-         const std::unique_ptr<MatchableInfo> &b) { return *a < *b; });
+  llvm::stable_sort(Info.Matchables,
+                    [&Target](const std::unique_ptr<MatchableInfo> &a,
+                              const std::unique_ptr<MatchableInfo> &b) {
+                      return a->shouldBeMatchedBefore(*b, Target);
+                    });
 
 #ifdef EXPENSIVE_CHECKS
   // Verify that the table is sorted and operator < works transitively.
   for (auto I = Info.Matchables.begin(), E = Info.Matchables.end(); I != E;
        ++I) {
     for (auto J = I; J != E; ++J) {
-      assert(!(**J < **I));
+      assert(!((*J)->shouldBeMatchedBefore(**I, Target)));
     }
   }
 #endif
@@ -3253,7 +3271,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
         const MatchableInfo &A = **I;
         const MatchableInfo &B = **J;
 
-        if (A.couldMatchAmbiguouslyWith(B)) {
+        if (A.couldMatchAmbiguouslyWith(B, Target)) {
           errs() << "warning: ambiguous matchables:\n";
           A.dump();
           errs() << "\nis incomparable with:\n";

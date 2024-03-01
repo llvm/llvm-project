@@ -332,6 +332,10 @@ bool CodeGenTarget::getAllowRegisterRenaming() const {
   return TargetRec->getValueAsInt("AllowRegisterRenaming");
 }
 
+bool CodeGenTarget::getPreferSmallerInstructions() const {
+  return TargetRec->getValueAsBit("PreferSmallerInstructions");
+}
+
 /// getAsmParser - Return the AssemblyParser definition for this target.
 ///
 Record *CodeGenTarget::getAsmParser() const {
