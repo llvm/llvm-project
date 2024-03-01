@@ -24,11 +24,6 @@
 namespace lld {
 namespace macho {
 
-enum LinkerOptReason : uint8_t {
-  NotOptimized,
-  CategoryMerging,
-};
-
 class InputFile;
 class OutputSection;
 
@@ -65,7 +60,6 @@ public:
   // Whether the data at \p off in this InputSection is live.
   virtual bool isLive(uint64_t off) const = 0;
   virtual void markLive(uint64_t off) = 0;
-  virtual bool isLinkOptimizedAway() const { return false; }
   virtual InputSection *canonical() { return this; }
   virtual const InputSection *canonical() const { return this; }
 
@@ -120,12 +114,7 @@ public:
   bool isLive(uint64_t off) const override { return live; }
   void markLive(uint64_t off) override { live = true; }
   bool isCoalescedWeak() const { return wasCoalesced && symbols.empty(); }
-  bool isLinkOptimizedAway() const override {
-    return linkerOptimizeReason != LinkerOptReason::NotOptimized;
-  }
-  bool shouldOmitFromOutput() const {
-    return isLinkOptimizedAway() || !live || isCoalescedWeak();
-  }
+  bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
   void writeTo(uint8_t *buf);
 
   void foldIdentical(ConcatInputSection *redundant);
@@ -152,11 +141,6 @@ public:
   // first and not copied to the output.
   bool wasCoalesced = false;
   bool live = !config->deadStrip;
-  // Flag to specify if a linker optimzation flagged this section to be
-  // discarded. Need a separate flag from live as live specifically means
-  // 'dead-stripped' which is rellevant in contexts such as linker map
-  // generation
-  LinkerOptReason linkerOptimizeReason = LinkerOptReason::NotOptimized;
   bool hasCallSites = false;
   // This variable has two usages. Initially, it represents the input order.
   // After assignAddresses is called, it represents the offset from the
@@ -192,20 +176,10 @@ struct StringPiece {
   // Only set if deduplicating literals
   uint32_t hash : 31;
   // Offset from the start of the containing output section.
-  uint64_t outSecOff : 48;
-  // Have to declare the 'linkerOptimizeReason' and 'live' as uint64_t so that
-  // the MSVC compiler will merge the storage of it and 'outSecOff' above.
-  uint64_t /*LinkerOptReason*/ linkerOptimizeReason : 8;
-
-  bool shouldOmitFromOutput() const {
-    return !live || linkerOptimizeReason != LinkerOptReason::NotOptimized;
-  }
+  uint64_t outSecOff = 0;
 
   StringPiece(uint64_t off, uint32_t hash)
-      : inSecOff(off), live(!config->deadStrip), hash(hash) {
-    outSecOff = 0;
-    linkerOptimizeReason = LinkerOptReason::NotOptimized;
-  }
+      : inSecOff(off), live(!config->deadStrip), hash(hash) {}
 };
 
 static_assert(sizeof(StringPiece) == 16, "StringPiece is too big!");

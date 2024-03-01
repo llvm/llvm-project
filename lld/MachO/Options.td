@@ -129,6 +129,12 @@ def strict_auto_link : Flag<["--"], "strict-auto-link">,
 def check_category_conflicts : Flag<["--"], "check-category-conflicts">,
     HelpText<"Check for conflicts between category & class methods">,
     Group<grp_lld>;
+def objc_category_merging : Flag<["-"], "objc_category_merging">,
+    HelpText<"Merge Objective-C categories that share the same base class">,
+    Group<grp_lld>;
+def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
+    HelpText<"Do not merge Objective-C categories">,
+    Group<grp_lld>;
 def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
 def cs_profile_generate: Flag<["--"], "cs-profile-generate">,
@@ -965,14 +971,6 @@ def interposable_list : Separate<["-"], "interposable_list">,
     Group<grp_rare>;
 def no_function_starts : Flag<["-"], "no_function_starts">,
     HelpText<"Do not create table of function start addresses">,
-    Group<grp_rare>;
-def objc_category_merging : Flag<["-"], "objc_category_merging">,
-    HelpText<"Merge Objective-C categories that share the same base class">,
-    Flags<[HelpHidden]>,
-    Group<grp_rare>;
-def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
-    HelpText<"Do not merge Objective-C categories">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def object_path_lto : Separate<["-"], "object_path_lto">,
     MetaVarName<"<path>">,

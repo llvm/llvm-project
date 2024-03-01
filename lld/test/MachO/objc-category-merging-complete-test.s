@@ -13,15 +13,83 @@
 # RUN: llvm-objdump --objc-meta-data --macho a64_file2_merge.exe | FileCheck %s --check-prefixes=MERGE_CATS
 
 
-MERGE_CATS: __OBJC_$_CATEGORY_MyBaseClass_$_(Category02|Category03)
-MERGE_CATS: instanceMethods
-MERGE_CATS-NEXT: 24
-MERGE_CATS-NEXT: 4
-MERGE_CATS: classMethods
-MERGE_CATS-NEXT: 24
-MERGE_CATS-NEXT: 4
+MERGE_CATS:     __OBJC_$_CATEGORY_MyBaseClass_$_(Category02|Category03)
+MERGE_CATS:           instanceMethods
+MERGE_CATS-NEXT:           entsize 24
+MERGE_CATS-NEXT:             count 4
+MERGE_CATS-NEXT:              name {{.*}} class02InstanceMethod
+MERGE_CATS-NEXT:             types {{.*}} v16@0:8
+MERGE_CATS-NEXT:               imp -[MyBaseClass(Category02) class02InstanceMethod]
+MERGE_CATS-NEXT:              name {{.*}} myProtocol02Method
+MERGE_CATS-NEXT:             types {{.*}} v16@0:8
+MERGE_CATS-NEXT:               imp -[MyBaseClass(Category02) myProtocol02Method]
+MERGE_CATS-NEXT:              name {{.*}} class03InstanceMethod
+MERGE_CATS-NEXT:             types {{.*}} v16@0:8
+MERGE_CATS-NEXT:               imp -[MyBaseClass(Category03) class03InstanceMethod]
+MERGE_CATS-NEXT:              name {{.*}} myProtocol03Method
+MERGE_CATS-NEXT:             types {{.*}} v16@0:8
+MERGE_CATS-NEXT:               imp -[MyBaseClass(Category03) myProtocol03Method]
+MERGE_CATS-NEXT:      classMethods {{.*}}
+MERGE_CATS-NEXT:           entsize 24
+MERGE_CATS-NEXT:             count 4
+MERGE_CATS-NEXT:              name {{.*}} class02ClassMethod
+MERGE_CATS-NEXT:             types {{.*}} v16@0:8
+MERGE_CATS-NEXT:               imp +[MyBaseClass(Category02) class02ClassMethod]
+MERGE_CATS-NEXT:              name {{.*}} MyProtocol02Prop
+MERGE_CATS-NEXT:             types {{.*}} i16@0:8
+MERGE_CATS-NEXT:               imp +[MyBaseClass(Category02) MyProtocol02Prop]
+MERGE_CATS-NEXT:              name {{.*}} class03ClassMethod
+MERGE_CATS-NEXT:             types {{.*}} v16@0:8
+MERGE_CATS-NEXT:               imp +[MyBaseClass(Category03) class03ClassMethod]
+MERGE_CATS-NEXT:              name {{.*}} MyProtocol03Prop
+MERGE_CATS-NEXT:             types {{.*}} i16@0:8
+MERGE_CATS-NEXT:               imp +[MyBaseClass(Category03) MyProtocol03Prop]
+MERGE_CATS-NEXT:         protocols
+MERGE_CATS-NEXT:                      count 2
+MERGE_CATS-NEXT:              list[0] {{.*}} (struct protocol_t *)
+MERGE_CATS-NEXT:                  isa 0x0
+MERGE_CATS-NEXT:                 name {{.*}} MyProtocol02
+MERGE_CATS-NEXT:            protocols 0x0
+MERGE_CATS-NEXT:          instanceMethods
+MERGE_CATS-NEXT:               entsize 24
+MERGE_CATS-NEXT:                 count 2
+MERGE_CATS-NEXT:                  name {{.*}} myProtocol02Method
+MERGE_CATS-NEXT:                 types {{.*}} v16@0:8
+MERGE_CATS-NEXT:                   imp 0x0
+MERGE_CATS-NEXT:                  name {{.*}} MyProtocol02Prop
+MERGE_CATS-NEXT:                 types {{.*}} i16@0:8
+MERGE_CATS-NEXT:                   imp 0x0
+MERGE_CATS-NEXT:             classMethods
+MERGE_CATS-NEXT:      optionalInstanceMethods 0x0
+MERGE_CATS-NEXT:         optionalClassMethods 0x0
+MERGE_CATS-NEXT:           instanceProperties {{.*}}
+MERGE_CATS-NEXT:              list[1] {{.*}}
+MERGE_CATS-NEXT:                  isa 0x0
+MERGE_CATS-NEXT:                 name {{.*}} MyProtocol03
+MERGE_CATS-NEXT:            protocols 0x0
+MERGE_CATS-NEXT:          instanceMethods
+MERGE_CATS-NEXT:               entsize 24
+MERGE_CATS-NEXT:                 count 2
+MERGE_CATS-NEXT:                  name {{.*}} myProtocol03Method
+MERGE_CATS-NEXT:                 types {{.*}} v16@0:8
+MERGE_CATS-NEXT:                   imp 0x0
+MERGE_CATS-NEXT:                  name {{.*}} MyProtocol03Prop
+MERGE_CATS-NEXT:                 types {{.*}} i16@0:8
+MERGE_CATS-NEXT:                   imp 0x0
+MERGE_CATS-NEXT:             classMethods 0x0
+MERGE_CATS-NEXT:      optionalInstanceMethods 0x0
+MERGE_CATS-NEXT:         optionalClassMethods 0x0
+MERGE_CATS-NEXT:           instanceProperties {{.*}}
+MERGE_CATS-NEXT:      instanceProperties
+MERGE_CATS-NEXT:                    entsize 16
+MERGE_CATS-NEXT:                      count 2
+MERGE_CATS-NEXT:                 name {{.*}} MyProtocol02Prop
+MERGE_CATS-NEXT:            attributes {{.*}} Ti,R,D
+MERGE_CATS-NEXT:                 name {{.*}} MyProtocol03Prop
+MERGE_CATS-NEXT:            attributes {{.*}} Ti,R,D
 
 
+NO_MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_(Category02|Category03)
 NO_MERGE_CATS: __OBJC_$_CATEGORY_MyBaseClass_$_Category02
 NO_MERGE_CATS: instanceMethods
 NO_MERGE_CATS-NEXT: 24

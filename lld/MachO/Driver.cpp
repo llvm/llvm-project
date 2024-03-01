@@ -1437,6 +1437,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     resetOutputSegments();
     resetWriter();
     InputFile::resetIdCount();
+
+    objc::doCleanup();
   };
 
   ctx->e.logName = args::getFilenameWithoutExe(argsArr[0]);
@@ -1984,6 +1986,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     if (args.hasArg(OPT_check_category_conflicts))
       objc::checkCategories();
 
+    // Category merging uses "->live = false" to erase old category data, so
+    // it has to run after dead-stripping (markLive).
     if (args.hasArg(OPT_objc_category_merging, OPT_no_objc_category_merging))
       objc::mergeCategories();
 

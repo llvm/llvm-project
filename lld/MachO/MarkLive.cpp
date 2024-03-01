@@ -259,8 +259,6 @@ void markLive() {
           dyn_cast_or_null<DylibSymbol>(symtab->find("dyld_stub_binder")))
     marker->addSym(stubBinder);
   for (ConcatInputSection *isec : inputSections) {
-    if (isec->isLinkOptimizedAway())
-      continue;
     // Sections marked no_dead_strip
     if (isec->getFlags() & S_ATTR_NO_DEAD_STRIP) {
       marker->enqueue(isec, 0);

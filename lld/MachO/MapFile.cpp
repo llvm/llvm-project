@@ -80,7 +80,7 @@ static MapInfo gatherMapInfo() {
           if (d->isec && d->getFile() == file &&
               !isa<CStringInputSection>(d->isec)) {
             isReferencedFile = true;
-            if (!d->isLive() && (!d->isec || !d->isec->isLinkOptimizedAway()))
+            if (!d->isLive())
               info.deadSymbols.push_back(d);
           }
       }
@@ -93,8 +93,6 @@ static MapInfo gatherMapInfo() {
           if (auto isec = dyn_cast<CStringInputSection>(subsec.isec)) {
             auto &liveCStrings = info.liveCStringsForSection[isec->parent];
             for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-              if (piece.linkerOptimizeReason != LinkerOptReason::NotOptimized)
-                continue;
               if (piece.live)
                 liveCStrings.push_back({isec->parent->addr + piece.outSecOff,
                                         {fileIndex, isec->getStringRef(i)}});
@@ -205,8 +203,6 @@ void macho::writeMapFile() {
     for (const OutputSection *osec : seg->getSections()) {
       if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
         for (const InputSection *isec : concatOsec->inputs) {
-          if (isec->isLinkOptimizedAway())
-            continue;
           for (Defined *sym : isec->symbols)
             if (!(isPrivateLabel(sym->getName()) && sym->size == 0))
               os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),

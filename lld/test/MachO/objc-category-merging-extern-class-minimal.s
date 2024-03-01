@@ -24,6 +24,15 @@ MERGE_CATS: __OBJC_$_CATEGORY_MyBaseClass_$_(Category01|Category02)
 MERGE_CATS: instanceMethods
 MERGE_CATS-NEXT: 24
 MERGE_CATS-NEXT: 2
+MERGE_CATS-NEXT:   name {{.*}} cat01_InstanceMethod
+MERGE_CATS-NEXT:  types {{.*}} v16@0:8
+MERGE_CATS-NEXT:    imp -[MyBaseClass(Category01) cat01_InstanceMethod]
+MERGE_CATS-NEXT:   name {{.*}} cat02_InstanceMethod
+MERGE_CATS-NEXT:  types {{.*}} v16@0:8
+MERGE_CATS-NEXT:    imp -[MyBaseClass(Category02) cat02_InstanceMethod]
+MERGE_CATS-NEXT:         classMethods 0x0
+MERGE_CATS-NEXT:            protocols 0x0
+MERGE_CATS-NEXT:   instanceProperties 0x0
 
 #### Check merge categories disabled ###
 # Check that the merged category is not there
