@@ -99,6 +99,8 @@ template <typename T>
 static bool IsFalse(const T& p) {
   bool b;
   b = f7; // expected-warning {{address of lambda function pointer conversion operator will always evaluate to 'true'}}
+  // Intentionally not warned on because p could be a lambda type in one
+  // instantiation, but a pointer type in another.
   return p ? false : true;
 }
 
