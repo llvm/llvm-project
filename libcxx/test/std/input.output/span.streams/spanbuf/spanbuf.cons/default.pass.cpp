@@ -24,33 +24,17 @@
 #include "nasty_string.h"
 #include "test_macros.h"
 
-void test_sfinae_with_nasty_char() {
-  using SpBuf = std::basic_spanbuf<nasty_char, nasty_char_traits>;
-
-  static_assert(std::default_initializable<SpBuf>);
-}
-
-template <typename CharT, typename TraitsT = std::char_traits<CharT>>
-void test_sfinae() {
-  using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
-
-  static_assert(std::default_initializable<SpBuf>);
-}
-
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpanBuf = std::basic_spanbuf<CharT, TraitsT>;
+  using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
 
-  SpanBuf spBuf;
+  SpBuf spBuf;
   assert(spBuf.span().data() == nullptr);
   assert(spBuf.span().empty());
   assert(spBuf.span().size() == 0);
 }
 
 int main(int, char**) {
-  test_sfinae_with_nasty_char();
-  test_sfinae<char>();
-  test_sfinae<char, constexpr_char_traits<char>>();
   test<char>();
   test<char, constexpr_char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
