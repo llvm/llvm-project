@@ -103,12 +103,12 @@ define <16 x i32> @concat_8xv2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x
 ; CHECK-NEXT:    vmv1r.v v20, v14
 ; CHECK-NEXT:    vmv1r.v v24, v13
 ; CHECK-NEXT:    vmv1r.v v28, v11
-; CHECK-NEXT:    vmv1r.v v0, v10
-; CHECK-NEXT:    vmv1r.v v4, v9
+; CHECK-NEXT:    vmv1r.v v4, v10
+; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m4, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v4, 2
+; CHECK-NEXT:    vslideup.vi v8, v0, 2
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m4, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v0, 4
+; CHECK-NEXT:    vslideup.vi v8, v4, 4
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m4, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v28, 6
 ; CHECK-NEXT:    vsetivli zero, 10, e32, m4, tu, ma
