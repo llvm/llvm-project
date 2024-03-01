@@ -463,9 +463,6 @@ static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
                                      const InterpFrame *Frame,
                                      const Function *Func,
                                      const CallExpr *Call) {
-
-  Func->getDecl()->dump();
-
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt Val = peekToAPSInt(S.Stk, ArgT);
   pushInteger(S, Val.popcount(), Call->getType());
