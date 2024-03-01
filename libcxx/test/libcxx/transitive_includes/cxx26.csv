@@ -872,6 +872,13 @@ span initializer_list
 span limits
 span stdexcept
 span version
+spanstream cstddef
+spanstream initializer_list
+spanstream iostream
+spanstream limits
+spanstream span
+spanstream streambuf
+spanstream version
 sstream bitset
 sstream cctype
 sstream cerrno
