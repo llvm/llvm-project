@@ -254,7 +254,7 @@ class TrivialFunctionAnalysisVisitor
   }
 
   template <typename StmtType, typename CheckFunction>
-  bool withCachedResult(const StmtType *S, CheckFunction Function) {
+  bool WithCachedResult(const StmtType *S, CheckFunction Function) {
     // Insert false to the cache first to avoid infinite recursion.
     auto [It, IsNew] = Cache.insert(std::make_pair(S, false));
     if (!IsNew)
@@ -278,7 +278,7 @@ public:
   bool VisitCompoundStmt(const CompoundStmt *CS) {
     // A compound statement is allowed as long each individual sub-statement
     // is trivial.
-    return withCachedResult(CS, [&]() { return VisitChildren(CS); });
+    return WithCachedResult(CS, [&]() { return VisitChildren(CS); });
   }
 
   bool VisitReturnStmt(const ReturnStmt *RS) {
@@ -291,16 +291,16 @@ public:
   bool VisitDeclStmt(const DeclStmt *DS) { return VisitChildren(DS); }
   bool VisitDoStmt(const DoStmt *DS) { return VisitChildren(DS); }
   bool VisitIfStmt(const IfStmt *IS) {
-    return withCachedResult(IS, [&]() { return VisitChildren(IS); });
+    return WithCachedResult(IS, [&]() { return VisitChildren(IS); });
   }
   bool VisitForStmt(const ForStmt *FS) {
-    return withCachedResult(FS, [&]() { return VisitChildren(FS); });
+    return WithCachedResult(FS, [&]() { return VisitChildren(FS); });
   }
   bool VisitCXXForRangeStmt(const CXXForRangeStmt *FS) {
-    return withCachedResult(FS, [&]() { return VisitChildren(FS); });
+    return WithCachedResult(FS, [&]() { return VisitChildren(FS); });
   }
   bool VisitWhileStmt(const WhileStmt *WS) {
-    return withCachedResult(WS, [&]() { return VisitChildren(WS); });
+    return WithCachedResult(WS, [&]() { return VisitChildren(WS); });
   }
   bool VisitSwitchStmt(const SwitchStmt *SS) { return VisitChildren(SS); }
   bool VisitCaseStmt(const CaseStmt *CS) { return VisitChildren(CS); }

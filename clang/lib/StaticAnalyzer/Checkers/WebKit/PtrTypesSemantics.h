@@ -72,19 +72,14 @@ bool isSingleton(const FunctionDecl *F);
 class TrivialFunctionAnalysis {
 public:
   /// \returns true if \p D is a "trivial" function.
-  bool isTrivial(const Decl *D) const {
-    return isTrivialImpl(D, TheCache);
-  }
-
-  bool isTrivial(const Stmt *S) const {
-    return isTrivialImpl(S, TheCache);
-  }
+  bool isTrivial(const Decl *D) const { return isTrivialImpl(D, TheCache); }
+  bool isTrivial(const Stmt *S) const { return isTrivialImpl(S, TheCache); }
 
 private:
   friend class TrivialFunctionAnalysisVisitor;
 
-  using CacheTy = llvm::DenseMap<llvm::PointerUnion<const Decl *,
-      const Stmt *>, bool>;
+  using CacheTy =
+      llvm::DenseMap<llvm::PointerUnion<const Decl *, const Stmt *>, bool>;
   mutable CacheTy TheCache{};
 
   static bool isTrivialImpl(const Decl *D, CacheTy &Cache);

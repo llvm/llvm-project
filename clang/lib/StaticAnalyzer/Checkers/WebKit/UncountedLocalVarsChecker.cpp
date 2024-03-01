@@ -168,7 +168,6 @@ public:
           return Base::TraverseCompoundStmt(CS);
         return true;
       }
-
     };
 
     LocalVisitor visitor(this);
