@@ -231,7 +231,7 @@ void RewriterBase::eraseOp(Operation *op) {
         SmallVector<Block *> erasedBlocks;
         // Some blocks may have invalid successor, use a set including nullptr
         // to avoid null pointer.
-        std::set<Block *> visited{nullptr};
+        llvm::SmallPtrSet<Block *, 4> visited{nullptr};
         for (Block *b : llvm::post_order_ext(&r.front(), visited)) {
           // Visit ops in reverse order.
           for (Operation &op :
