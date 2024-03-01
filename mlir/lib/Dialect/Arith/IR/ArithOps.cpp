@@ -423,6 +423,35 @@ OpFoldResult arith::MulIOp::fold(FoldAdaptor adaptor) {
       [](const APInt &a, const APInt &b) { return a * b; });
 }
 
+void arith::MulIOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  if (!isa<IndexType>(getType()))
+    return;
+
+  // Match vector.vscale by name to avoid depending on the vector dialect (which
+  // is a circular dependency).
+  auto isVscale = [](Operation *op) {
+    return op && op->getName().getStringRef() == "vector.vscale";
+  };
+
+  // Name `base * vscale` or `vscale * base` as `c<base_value>_vscale`.
+  IntegerAttr baseValue;
+  if (matchPattern(getLhs(), m_Constant(&baseValue)) &&
+      isVscale(getRhs().getDefiningOp())) {
+    // base * vscale
+  } else if (isVscale(getLhs().getDefiningOp()) &&
+             matchPattern(getRhs(), m_Constant(&baseValue))) {
+    // vscale * base
+  } else {
+    return;
+  }
+
+  SmallString<32> specialNameBuffer;
+  llvm::raw_svector_ostream specialName(specialNameBuffer);
+  specialName << 'c' << baseValue.getInt() << "_vscale";
+  setNameFn(getResult(), specialName.str());
+}
+
 void arith::MulIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
   patterns.add<MulIMulIConstant>(context);
