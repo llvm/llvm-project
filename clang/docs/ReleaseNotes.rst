@@ -301,6 +301,12 @@ Bug Fixes to C++ Support
 - Clang now properly reports supported C++11 attributes when using
   ``__has_cpp_attribute`` and parses attributes with arguments in C++03
   (`#82995 <https://github.com/llvm/llvm-project/issues/82995>`_)
+- Clang now properly diagnoses missing 'default' template arguments on a variety
+  of templates. Previously we were diagnosing on any non-function template
+  instead of only on class, alias, and variable templates, as last updated by
+  CWG2032.
+  Fixes (`#83461 <https://github.com/llvm/llvm-project/issues/83461>`_)
+
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
