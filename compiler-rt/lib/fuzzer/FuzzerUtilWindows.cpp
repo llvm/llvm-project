@@ -21,15 +21,10 @@
 #include <signal.h>
 #include <stdio.h>
 #include <sys/types.h>
-// clang-format off
 #include <windows.h>
-// These must be included after windows.h.
-// archicture need to be set before including
-// libloaderapi
-#include <libloaderapi.h>
-#include <stringapiset.h>
+
+// This must be included after windows.h.
 #include <psapi.h>
-// clang-format on
 
 namespace fuzzer {
 
@@ -239,20 +234,8 @@ size_t PageSize() {
 }
 
 void SetThreadName(std::thread &thread, const std::string &name) {
-  typedef HRESULT(WINAPI * proc)(HANDLE, PCWSTR);
-  HMODULE kbase = GetModuleHandleA("KernelBase.dll");
-  proc ThreadNameProc =
-      reinterpret_cast<proc>(GetProcAddress, "SetThreadDescription");
-  if (proc) {
-    std::wstring buf;
-    auto sz = MultiByteToWideChar(CP_UTF8, 0, name.data(), -1, nullptr, 0);
-    if (sz > 0) {
-      buf.resize(sz);
-      if (MultyByteToWideChar(CP_UTF8, 0, name.data(), -1, &buf[0], sz) > 0) {
-        (void)ThreadNameProc(thread.native_handle(), buf.c_str());
-      }
-    }
-  }
+  // TODO ?
+  // to UTF-8 then SetThreadDescription ?
 }
 
 } // namespace fuzzer
