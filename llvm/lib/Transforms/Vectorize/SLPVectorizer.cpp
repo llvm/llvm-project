@@ -13892,10 +13892,7 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         if (Idx != Set.size() - 1)
           continue;
       }
-      // Capturing structured bindings are a C++ 20 extension, so use a separate
-      // variable for now.
-      auto &DataVar = Data;
-      auto E = make_scope_exit([&]() {
+      auto E = make_scope_exit([&, &DataVar = Data]() {
         Operands.clear();
         Operands.push_back(Stores[DataVar.first]);
         PrevDist = DataVar.second;
