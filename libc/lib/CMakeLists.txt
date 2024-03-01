@@ -40,22 +40,33 @@ foreach(archive IN ZIP_LISTS
   # Add the offloading version of the library for offloading languages. These
   # are installed in the standard search path separate from the other libraries.
   if(LIBC_TARGET_OS_IS_GPU)
-    set(libc_gpu_archive_target ${archive_1}gpu)
-    set(libc_gpu_archive_name ${archive_0}gpu-${LIBC_TARGET_ARCHITECTURE})
-
     add_gpu_entrypoint_library(
-      ${libc_gpu_archive_target}
+      ${archive_1}gpu
+      ${archive_1}
       DEPENDS
         ${${archive_2}}
     )
     set_target_properties(
-      ${libc_gpu_archive_target}
+      ${archive_1}gpu
       PROPERTIES
-        ARCHIVE_OUTPUT_NAME ${libc_gpu_archive_name}
+        ARCHIVE_OUTPUT_NAME ${archive_0}gpu-${LIBC_TARGET_ARCHITECTURE}
+        ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBRARY_OUTPUT_INTDIR}
     )
-    set_target_properties(${libc_gpu_archive_target} PROPERTIES 
-                          ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBRARY_OUTPUT_INTDIR})
-    list(APPEND added_gpu_archive_targets ${libc_gpu_archive_target})
+    list(APPEND added_gpu_archive_targets ${archive_1}gpu)
+
+    add_bitcode_entrypoint_library(
+      ${archive_1}bitcode
+      ${archive_1}
+      DEPENDS
+        ${${archive_2}}
+    )
+    set_target_properties(
+      ${archive_1}bitcode
+      PROPERTIES
+        OUTPUT_NAME ${archive_1}.bc
+    )
+    add_dependencies(${archive_1}gpu ${archive_1}bitcode)
+    list(APPEND added_gpu_bitcode_targets ${archive_1}bitcode)
   endif()
 endforeach()
 
@@ -71,6 +82,13 @@ if(LIBC_TARGET_OS_IS_GPU)
     ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
     COMPONENT libc
   )
+  foreach(file ${added_gpu_bitcode_targets})
+    install(FILES $<TARGET_PROPERTY:${file},TARGET_OBJECT>
+            DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+            RENAME $<TARGET_PROPERTY:${file},OUTPUT_NAME>
+            COMPONENT libc
+    )
+  endforeach()
 endif()
 
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL)

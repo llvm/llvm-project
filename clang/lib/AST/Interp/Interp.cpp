@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Interp.h"
-#include <limits>
-#include <vector>
 #include "Function.h"
 #include "InterpFrame.h"
+#include "InterpShared.h"
 #include "InterpStack.h"
 #include "Opcode.h"
 #include "PrimType.h"
@@ -22,6 +21,10 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "llvm/ADT/APSInt.h"
+#include <limits>
+#include <vector>
+
+using namespace clang;
 
 using namespace clang;
 using namespace clang::interp;
@@ -620,6 +623,28 @@ bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
   }
 
   return false;
+}
+
+bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
+                      const CallExpr *CE, unsigned ArgSize) {
+  auto Args = llvm::ArrayRef(CE->getArgs(), CE->getNumArgs());
+  auto NonNullArgs = collectNonNullArgs(F->getDecl(), Args);
+  unsigned Offset = 0;
+  unsigned Index = 0;
+  for (const Expr *Arg : Args) {
+    if (NonNullArgs[Index] && Arg->getType()->isPointerType()) {
+      const Pointer &ArgPtr = S.Stk.peek<Pointer>(ArgSize - Offset);
+      if (ArgPtr.isZero()) {
+        const SourceLocation &Loc = S.Current->getLocation(OpPC);
+        S.CCEDiag(Loc, diag::note_non_null_attribute_failed);
+        return false;
+      }
+    }
+
+    Offset += align(primSize(S.Ctx.classify(Arg).value_or(PT_Ptr)));
+    ++Index;
+  }
+  return true;
 }
 
 bool Interpret(InterpState &S, APValue &Result) {

@@ -34,7 +34,6 @@ static void findAffectedValues(Value *Cond,
     }
   };
 
-  bool TopLevelIsAnd = match(Cond, m_LogicalAnd());
   SmallVector<Value *, 8> Worklist;
   SmallPtrSet<Value *, 8> Visited;
   Worklist.push_back(Cond);
@@ -45,9 +44,7 @@ static void findAffectedValues(Value *Cond,
 
     CmpInst::Predicate Pred;
     Value *A, *B;
-    // Only recurse into and/or if it matches the top-level and/or type.
-    if (TopLevelIsAnd ? match(V, m_LogicalAnd(m_Value(A), m_Value(B)))
-                      : match(V, m_LogicalOr(m_Value(A), m_Value(B)))) {
+    if (match(V, m_LogicalOp(m_Value(A), m_Value(B)))) {
       Worklist.push_back(A);
       Worklist.push_back(B);
     } else if (match(V, m_ICmp(Pred, m_Value(A), m_Constant()))) {

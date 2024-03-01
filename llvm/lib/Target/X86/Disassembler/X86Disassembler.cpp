@@ -819,8 +819,12 @@ static int readModRM(struct InternalInstruction *insn) {
         *valid = 0;                                                            \
       return prefix##_ES + (index & 7);                                        \
     case TYPE_DEBUGREG:                                                        \
+      if (index > 15)                                                          \
+        *valid = 0;                                                            \
       return prefix##_DR0 + index;                                             \
     case TYPE_CONTROLREG:                                                      \
+      if (index > 15)                                                          \
+        *valid = 0;                                                            \
       return prefix##_CR0 + index;                                             \
     case TYPE_MVSIBX:                                                          \
       return prefix##_XMM0 + index;                                            \

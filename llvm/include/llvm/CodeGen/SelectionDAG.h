@@ -1479,46 +1479,11 @@ public:
   SDValue getStridedLoadVP(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
                            EVT VT, const SDLoc &DL, SDValue Chain, SDValue Ptr,
                            SDValue Offset, SDValue Stride, SDValue Mask,
-                           SDValue EVL, MachinePointerInfo PtrInfo, EVT MemVT,
-                           Align Alignment, MachineMemOperand::Flags MMOFlags,
-                           const AAMDNodes &AAInfo,
-                           const MDNode *Ranges = nullptr,
-                           bool IsExpanding = false);
-  inline SDValue getStridedLoadVP(
-      ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT, const SDLoc &DL,
-      SDValue Chain, SDValue Ptr, SDValue Offset, SDValue Stride, SDValue Mask,
-      SDValue EVL, MachinePointerInfo PtrInfo, EVT MemVT,
-      MaybeAlign Alignment = MaybeAlign(),
-      MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-      const AAMDNodes &AAInfo = AAMDNodes(), const MDNode *Ranges = nullptr,
-      bool IsExpanding = false) {
-    // Ensures that codegen never sees a None Alignment.
-    return getStridedLoadVP(AM, ExtType, VT, DL, Chain, Ptr, Offset, Stride,
-                            Mask, EVL, PtrInfo, MemVT,
-                            Alignment.value_or(getEVTAlign(MemVT)), MMOFlags,
-                            AAInfo, Ranges, IsExpanding);
-  }
-  SDValue getStridedLoadVP(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
-                           EVT VT, const SDLoc &DL, SDValue Chain, SDValue Ptr,
-                           SDValue Offset, SDValue Stride, SDValue Mask,
                            SDValue EVL, EVT MemVT, MachineMemOperand *MMO,
                            bool IsExpanding = false);
   SDValue getStridedLoadVP(EVT VT, const SDLoc &DL, SDValue Chain, SDValue Ptr,
                            SDValue Stride, SDValue Mask, SDValue EVL,
-                           MachinePointerInfo PtrInfo, MaybeAlign Alignment,
-                           MachineMemOperand::Flags MMOFlags,
-                           const AAMDNodes &AAInfo,
-                           const MDNode *Ranges = nullptr,
-                           bool IsExpanding = false);
-  SDValue getStridedLoadVP(EVT VT, const SDLoc &DL, SDValue Chain, SDValue Ptr,
-                           SDValue Stride, SDValue Mask, SDValue EVL,
                            MachineMemOperand *MMO, bool IsExpanding = false);
-  SDValue
-  getExtStridedLoadVP(ISD::LoadExtType ExtType, const SDLoc &DL, EVT VT,
-                      SDValue Chain, SDValue Ptr, SDValue Stride, SDValue Mask,
-                      SDValue EVL, MachinePointerInfo PtrInfo, EVT MemVT,
-                      MaybeAlign Alignment, MachineMemOperand::Flags MMOFlags,
-                      const AAMDNodes &AAInfo, bool IsExpanding = false);
   SDValue getExtStridedLoadVP(ISD::LoadExtType ExtType, const SDLoc &DL, EVT VT,
                               SDValue Chain, SDValue Ptr, SDValue Stride,
                               SDValue Mask, SDValue EVL, EVT MemVT,
@@ -1532,13 +1497,6 @@ public:
                             MachineMemOperand *MMO, ISD::MemIndexedMode AM,
                             bool IsTruncating = false,
                             bool IsCompressing = false);
-  SDValue getTruncStridedStoreVP(SDValue Chain, const SDLoc &DL, SDValue Val,
-                                 SDValue Ptr, SDValue Stride, SDValue Mask,
-                                 SDValue EVL, MachinePointerInfo PtrInfo,
-                                 EVT SVT, Align Alignment,
-                                 MachineMemOperand::Flags MMOFlags,
-                                 const AAMDNodes &AAInfo,
-                                 bool IsCompressing = false);
   SDValue getTruncStridedStoreVP(SDValue Chain, const SDLoc &DL, SDValue Val,
                                  SDValue Ptr, SDValue Stride, SDValue Mask,
                                  SDValue EVL, EVT SVT, MachineMemOperand *MMO,

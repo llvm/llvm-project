@@ -1278,6 +1278,8 @@ sparse_tensor::makeSparseTensorLevel(OpBuilder &b, Location l, Value t,
   switch (lt.getLvlFmt()) {
   case LevelFormat::Dense:
     return std::make_unique<DenseLevel>(tid, lvl, sz, stt.hasEncoding());
+  case LevelFormat::Batch:
+    llvm_unreachable("not implemented");
   case LevelFormat::Compressed: {
     Value pos = genToPositions(b, l, t, lvl);
     Value crd = genToCoordinates(b, l, t, lvl);

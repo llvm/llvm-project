@@ -51,8 +51,6 @@ Improvements and New Features
 Deprecations and Removals
 -------------------------
 
-- TODO: The ``LIBCXX_EXECUTOR`` CMake variables have been removed.
-
 - TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode has been deprecated and setting
   it triggers an error; use the ``LIBCXX_HARDENING_MODE`` CMake variable with the value ``extensive`` instead. Similarly,
   the ``_LIBCPP_ENABLE_ASSERTIONS`` macro has been deprecated (setting it to ``1`` still enables the extensive mode in
@@ -74,6 +72,11 @@ Deprecations and Removals
   been removed in LLVM 19. C++17 and C++20 removed features can still be re-enabled individually.
 
 - The ``_LIBCPP_INLINE_VISIBILITY`` and ``_VSTD`` macros have been removed in LLVM 19.
+
+- The ``_LIBCPP_ATOMIC_ONLY_USE_BUILTINS`` configuration option has been removed in LLVM 19. This should not affect
+  many users, except perhaps users using the library with ``-ffreestanding`` with a toolchain where compiler-rt or
+  libatomic is not available. If you are one such user, please reach out to the libc++ developers so we can collaborate
+  on a path for supporting atomics properly on freestanding platforms.
 
 
 Upcoming Deprecations and Removals
@@ -98,4 +101,5 @@ TODO
 Build System Changes
 --------------------
 
-TODO
+- The ``LIBCXX_EXECUTOR`` and ``LIBCXXABI_EXECUTOR`` CMake variables have been removed. Please
+  set ``LIBCXX_TEST_PARAMS`` to ``executor=<...>`` instead.

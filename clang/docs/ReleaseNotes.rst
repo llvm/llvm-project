@@ -197,6 +197,9 @@ Improvements to Clang's time-trace
 
 Bug Fixes in This Version
 -------------------------
+- Fixed missing warnings when comparing mismatched enumeration constants
+  in C (`#29217 <https://github.com/llvm/llvm-project/issues/29217>`).
+
 - Clang now accepts elaborated-type-specifiers that explicitly specialize
   a member class template for an implicit instantiation of a class template.
 
@@ -281,6 +284,12 @@ Bug Fixes to C++ Support
   a requires-clause lie at the same depth as those of the surrounding lambda. This,
   in turn, results in the wrong template argument substitution during constraint checking.
   (`#78524 <https://github.com/llvm/llvm-project/issues/78524>`_)
+- Clang no longer instantiates the exception specification of discarded candidate function
+  templates when determining the primary template of an explicit specialization.
+- Fixed a crash in Microsoft compatibility mode where unqualified dependent base class
+  lookup searches the bases of an incomplete class.
+- Fix a crash when an unresolved overload set is encountered on the RHS of a ``.*`` operator.
+  (`#53815 <https://github.com/llvm/llvm-project/issues/53815>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

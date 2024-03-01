@@ -89,7 +89,7 @@ endfunction()
 #     add_gpu_entrypoint_library(
 #       DEPENDS <list of add_entrypoint_object targets>
 #     )
-function(add_gpu_entrypoint_library target_name)
+function(add_gpu_entrypoint_library target_name base_target_name)
   cmake_parse_arguments(
     "ENTRYPOINT_LIBRARY"
     "" # No optional arguments
@@ -125,9 +125,9 @@ function(add_gpu_entrypoint_library target_name)
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin"
       COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/binary
       COMMAND ${LIBC_CLANG_OFFLOAD_PACKAGER}
-              "${prefix},file=$<JOIN:${object},,file=>" -o 
+              "${prefix},file=$<JOIN:${object},,file=>" -o
               ${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin
-      DEPENDS ${dep}
+      DEPENDS ${dep} ${base_target_name}
       COMMENT "Packaging LLVM offloading binary for '${object}'"
     )
     add_custom_target(${dep}.__gpubin__ DEPENDS ${dep}
@@ -140,9 +140,9 @@ function(add_gpu_entrypoint_library target_name)
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stubs/${name}.cpp"
       COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stubs
       COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/stubs/${name}.cpp
-      DEPENDS ${dep} ${dep}.__gpubin__
+      DEPENDS ${dep} ${dep}.__gpubin__ ${base_target_name}
     )
-    add_custom_target(${dep}.__stub__ 
+    add_custom_target(${dep}.__stub__
                       DEPENDS ${dep}.__gpubin__ "${CMAKE_CURRENT_BINARY_DIR}/stubs/${name}.cpp")
 
     add_library(${dep}.__fatbin__
@@ -151,12 +151,13 @@ function(add_gpu_entrypoint_library target_name)
     )
 
     # This is always compiled for the LLVM host triple instead of the native GPU
-    # triple that is used by default in the build. 
+    # triple that is used by default in the build.
     target_compile_options(${dep}.__fatbin__ BEFORE PRIVATE -nostdlib)
-    target_compile_options(${dep}.__fatbin__ PRIVATE 
+    target_compile_options(${dep}.__fatbin__ PRIVATE
       --target=${LLVM_HOST_TRIPLE}
       "SHELL:-Xclang -fembed-offload-object=${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin")
-    add_dependencies(${dep}.__fatbin__ ${dep} ${dep}.__stub__ ${dep}.__gpubin__)
+    add_dependencies(${dep}.__fatbin__
+                     ${dep} ${dep}.__stub__ ${dep}.__gpubin__ ${base_target_name})
 
     # Set the list of newly create fat binaries containing embedded device code.
     list(APPEND objects $<TARGET_OBJECTS:${dep}.__fatbin__>)
@@ -169,6 +170,46 @@ function(add_gpu_entrypoint_library target_name)
   )
   set_target_properties(${target_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
 endfunction(add_gpu_entrypoint_library)
+
+# A rule to build a library from a collection of entrypoint objects and bundle
+# it in a single LLVM-IR bitcode file.
+# Usage:
+#     add_gpu_entrypoint_library(
+#       DEPENDS <list of add_entrypoint_object targets>
+#     )
+function(add_bitcode_entrypoint_library target_name base_target_name)
+  cmake_parse_arguments(
+    "ENTRYPOINT_LIBRARY"
+    "" # No optional arguments
+    "" # No single value arguments
+    "DEPENDS" # Multi-value arguments
+    ${ARGN}
+  )
+  if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
+    message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
+                        "of 'add_entrypoint_object' targets.")
+  endif()
+
+  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
+  get_all_object_file_deps(all_deps "${fq_deps_list}")
+
+  set(objects "")
+  foreach(dep IN LISTS all_deps)
+    set(object $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
+    list(APPEND objects ${object})
+  endforeach()
+
+  set(output ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.bc)
+  add_custom_command(
+    OUTPUT ${output}
+    COMMAND ${LIBC_LLVM_LINK} ${objects} -o ${output}
+    DEPENDS ${all_deps} ${base_target_name}
+    COMMENT "Linking LLVM-IR bitcode for ${base_target_name}"
+    COMMAND_EXPAND_LISTS
+  )
+  add_custom_target(${target_name} DEPENDS ${output} ${all_deps})
+  set_target_properties(${target_name} PROPERTIES TARGET_OBJECT ${output})
+endfunction(add_bitcode_entrypoint_library)
 
 # A rule to build a library from a collection of entrypoint objects.
 # Usage:

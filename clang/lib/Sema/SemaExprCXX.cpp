@@ -4843,7 +4843,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                  .get();
       break;
     case ICK_Floating_Integral:
-      if (ToType->isRealFloatingType())
+      if (ToType->hasFloatingRepresentation())
         From =
             ImpCastExprToType(From, ToType, CK_IntegralToFloating, VK_PRValue,
                               /*BasePath=*/nullptr, CCK)

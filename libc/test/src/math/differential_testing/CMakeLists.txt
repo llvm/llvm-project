@@ -47,6 +47,7 @@ function(add_diff_binary target_name)
     ${fq_target_name}
     PRIVATE
       ${LIBC_SOURCE_DIR}
+      ${LIBC_SOURCE_DIR}/include
   )
   if(DIFF_COMPILE_OPTIONS)
     target_compile_options(
@@ -61,7 +62,7 @@ function(add_diff_binary target_name)
 
   set_target_properties(${fq_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  
+
   if(DIFF_CXX_STANDARD)
     set_target_properties(
       ${fq_target_name}

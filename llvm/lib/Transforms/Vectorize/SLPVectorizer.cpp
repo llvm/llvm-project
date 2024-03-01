@@ -9405,7 +9405,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
                 VectorCasts
                     .insert(std::make_pair(ScalarTE, FTy->getElementType()))
                     .second) {
-              unsigned BWSz = It->second.second;
+              unsigned BWSz = It->second.first;
               unsigned DstBWSz = DL->getTypeSizeInBits(FTy->getElementType());
               unsigned VecOpcode;
               if (DstBWSz < BWSz)
@@ -9417,7 +9417,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
               InstructionCost C = TTI->getCastInstrCost(
                   VecOpcode, FTy,
                   FixedVectorType::get(
-                      IntegerType::get(FTy->getContext(), It->second.first),
+                      IntegerType::get(FTy->getContext(), BWSz),
                       FTy->getNumElements()),
                   TTI::CastContextHint::None, CostKind);
               LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
@@ -13960,26 +13960,33 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
       unsigned MinVF = TTI->getStoreMinimumVF(
           R.getMinVF(DL->getTypeSizeInBits(ValueTy)), StoreTy, ValueTy);
 
-      if (MaxVF <= MinVF) {
+      if (MaxVF < MinVF) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
                           << ") <= "
                           << "MinVF (" << MinVF << ")\n");
+        return;
       }
 
-      SmallVector<unsigned> CandidateVFs;
+      unsigned Sz = 1 + Log2_32(MaxVF) - Log2_32(MinVF) + 1;
+      SmallVector<unsigned> CandidateVFs(Sz);
+      auto VFsToFill = make_range(CandidateVFs.begin(), CandidateVFs.end());
       if (VectorizeNonPowerOf2) {
         // First try vectorizing with a non-power-of-2 VF. At the moment, only
         // consider cases where VF + 1 is a power-of-2, i.e. almost all vector
         // lanes are used.
         unsigned CandVF = Operands.size();
-        if (isPowerOf2_32(CandVF + 1) && CandVF <= MaxVF)
-          CandidateVFs.push_back(CandVF);
+        if (isPowerOf2_32(CandVF + 1) && CandVF <= MaxVF) {
+          CandidateVFs[0] = CandVF;
+          VFsToFill = make_range(CandidateVFs.begin() + 1, CandidateVFs.end());
+        }
       }
-      for (unsigned Size = MaxVF; Size >= MinVF; Size /= 2) {
-        // FIXME: Is division-by-2 the correct step? Should we assert that the
-        // register size is a power-of-2?
-        CandidateVFs.push_back(Size);
-      }
+      // FIXME: Is division-by-2 the correct step? Should we assert that the
+      // register size is a power-of-2?
+      unsigned Size = MaxVF;
+      for_each(VFsToFill, [&](unsigned &VF) {
+        VF = Size;
+        Size /= 2;
+      });
       unsigned StartIdx = 0;
       for (unsigned Size : CandidateVFs) {
         for (unsigned Cnt = StartIdx, E = Operands.size(); Cnt + Size <= E;) {

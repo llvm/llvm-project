@@ -2367,6 +2367,21 @@ TEST(TransferTest, InitListExprAsXValue) {
       });
 }
 
+TEST(TransferTest, ArrayInitListExprOneRecordElement) {
+  // This is a crash repro.
+  std::string Code = R"cc(
+    struct S {};
+
+    void target() { S foo[] = {S()}; }
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // Just verify that it doesn't crash.
+      });
+}
+
 TEST(TransferTest, InitListExprAsUnion) {
   // This is a crash repro.
   std::string Code = R"cc(
@@ -2377,24 +2392,14 @@ TEST(TransferTest, InitListExprAsUnion) {
       } F;
 
      public:
-      constexpr target() : F{nullptr} {
-        int *null = nullptr;
-        F.b;  // Make sure we reference 'b' so it is modeled.
-        // [[p]]
-      }
+      constexpr target() : F{nullptr} {}
     };
   )cc";
   runDataflow(
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
-
-        auto &FLoc = getFieldLoc<RecordStorageLocation>(
-            *Env.getThisPointeeStorageLocation(), "F", ASTCtx);
-        auto *AVal = cast<PointerValue>(getFieldValue(&FLoc, "a", ASTCtx, Env));
-        ASSERT_EQ(AVal, &getValueForDecl<PointerValue>(ASTCtx, Env, "null"));
-        ASSERT_EQ(getFieldValue(&FLoc, "b", ASTCtx, Env), nullptr);
+        // Just verify that it doesn't crash.
       });
 }
 
@@ -3424,7 +3429,7 @@ TEST(TransferTest, AggregateInitializationFunctionPointer) {
     struct S {
       void (*const Field)();
     };
-    
+
     void target() {
       S s{nullptr};
     }

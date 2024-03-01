@@ -1506,6 +1506,11 @@ public:
   /// Collection of regions that need to be outlined during finalization.
   SmallVector<OutlineInfo, 16> OutlineInfos;
 
+  /// A collection of candidate target functions that's constant allocas will
+  /// attempt to be raised on a call of finalize after all currently enqueued
+  /// outline info's have been processed.
+  SmallVector<llvm::Function *, 16> ConstantAllocaRaiseCandidates;
+
   /// Collection of owned canonical loop objects that eventually need to be
   /// free'd.
   std::forward_list<CanonicalLoopInfo> LoopInfos;

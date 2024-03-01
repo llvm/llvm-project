@@ -23,6 +23,16 @@
 using namespace llvm;
 
 Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
+                         InstListType::iterator InsertBefore)
+    : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
+
+  // When called with an iterator, there must be a block to insert into.
+  BasicBlock *BB = InsertBefore->getParent();
+  assert(BB && "Instruction to insert before is not in a basic block!");
+  insertInto(BB, InsertBefore);
+}
+
+Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
                          Instruction *InsertBefore)
   : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
 

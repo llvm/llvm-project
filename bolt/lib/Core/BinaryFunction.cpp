@@ -1424,7 +1424,7 @@ add_instruction:
     InstrMapType::iterator II = Instructions.find(Offset);
     assert(II != Instructions.end() && "reference to non-existing instruction");
 
-    BC.MIB->setLabel(II->second, Label);
+    BC.MIB->setInstLabel(II->second, Label);
   }
 
   // Reset symbolizer for the disassembler.

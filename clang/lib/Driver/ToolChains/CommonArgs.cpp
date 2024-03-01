@@ -1316,13 +1316,16 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
   // add the correct libraries to link against as dependents in the object
   // file.
   if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    StringRef f128LibName = TC.getDriver().getFlangF128MathLibrary();
-    f128LibName.consume_front_insensitive("lib");
-    if (!f128LibName.empty()) {
+    StringRef F128LibName = TC.getDriver().getFlangF128MathLibrary();
+    F128LibName.consume_front_insensitive("lib");
+    if (!F128LibName.empty()) {
+      bool AsNeeded = !TC.getTriple().isOSAIX();
       CmdArgs.push_back("-lFortranFloat128Math");
-      addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/true);
-      CmdArgs.push_back(Args.MakeArgString("-l" + f128LibName));
-      addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/false);
+      if (AsNeeded)
+        addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/true);
+      CmdArgs.push_back(Args.MakeArgString("-l" + F128LibName));
+      if (AsNeeded)
+        addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/false);
     }
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
