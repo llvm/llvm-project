@@ -42,7 +42,7 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
 
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   bool Recursing = !Stk.empty();
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
+  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue());
 
@@ -67,7 +67,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
 
 bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
   bool Recursing = !Stk.empty();
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
+  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto Res = C.interpretExpr(E);
   if (Res.isInvalid()) {
@@ -91,7 +91,7 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
 bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
                                     APValue &Result) {
   bool Recursing = !Stk.empty();
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
+  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
 
   bool CheckGlobalInitialized =
       shouldBeGloballyIndexed(VD) &&

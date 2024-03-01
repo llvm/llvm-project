@@ -41,8 +41,7 @@ public:
   InterpState &getState() { return S; }
 
 protected:
-  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
-              APValue &Result);
+  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
 
   virtual ~EvalEmitter();
 
