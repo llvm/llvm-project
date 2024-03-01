@@ -218,6 +218,10 @@ Bug Fixes in This Version
   for logical operators in C23.
   Fixes (`#64356 <https://github.com/llvm/llvm-project/issues/64356>`_).
 
+- Clang no longer produces a false-positive `-Wunused-variable` warning
+  for variables created through copy initialization having side-effects in C++17 and later.
+  Fixes (`#79518 <https://github.com/llvm/llvm-project/issues/79518>`_).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
