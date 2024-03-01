@@ -132,6 +132,9 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   if (!CheckLive(S, OpPC, A, AK_Read) || !CheckLive(S, OpPC, B, AK_Read))
     return false;
 
+  if (A.isDummy() || B.isDummy())
+    return false;
+
   assert(A.getFieldDesc()->isPrimitiveArray());
   assert(B.getFieldDesc()->isPrimitiveArray());
 

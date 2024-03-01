@@ -34,6 +34,14 @@ namespace strcmp {
   static_assert(__builtin_strcmp(kFoobar, kFoobazfoobar + 6) == 0, ""); // both-error {{not an integral constant}} \
                                                                         // both-note {{dereferenced one-past-the-end}} \
                                                                         // expected-note {{in call to}}
+
+  /// Used to assert because we're passing a dummy pointer to
+  /// __builtin_strcmp() when evaluating the return statement.
+  constexpr bool char_memchr_mutable() {
+    char buffer[] = "mutable";
+    return __builtin_strcmp(buffer, "mutable") == 0;
+  }
+  static_assert(char_memchr_mutable(), "");
 }
 
 /// Copied from constant-expression-cxx11.cpp
