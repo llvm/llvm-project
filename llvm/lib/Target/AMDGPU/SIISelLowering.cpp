@@ -6658,12 +6658,11 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
 
   unsigned DestAS, SrcAS;
   SDValue Src;
-  bool KnownNonNull;
+  bool IsNonNull = false;
   if (const auto *ASC = dyn_cast<AddrSpaceCastSDNode>(Op)) {
     SrcAS = ASC->getSrcAddressSpace();
     Src = ASC->getOperand(0);
     DestAS = ASC->getDestAddressSpace();
-    KnownNonNull = isKnownNonNull(Op, DAG, TM, SrcAS);
   } else {
     assert(Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
            Op.getConstantOperandVal(0) ==
@@ -6671,7 +6670,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
     Src = Op->getOperand(1);
     SrcAS = Op->getConstantOperandVal(2);
     DestAS = Op->getConstantOperandVal(3);
-    KnownNonNull = true;
+    IsNonNull = true;
   }
 
   SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
@@ -6682,7 +6681,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
         DestAS == AMDGPUAS::PRIVATE_ADDRESS) {
       SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
 
-      if (KnownNonNull)
+      if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
         return Ptr;
 
       unsigned NullVal = TM.getNullPointerValue(DestAS);
@@ -6704,7 +6703,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
           DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Aperture);
       CvtPtr = DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr);
 
-      if (KnownNonNull)
+      if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
         return CvtPtr;
 
       unsigned NullVal = TM.getNullPointerValue(SrcAS);
