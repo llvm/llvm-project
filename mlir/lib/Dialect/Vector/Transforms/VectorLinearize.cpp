@@ -23,6 +23,9 @@ static bool isLessThanTargetBitWidth(Operation *op, unsigned targetBitWidth) {
   auto resultTypes = op->getResultTypes();
   for (auto resType : resultTypes) {
     VectorType vecType = cast<VectorType>(resType);
+    // Reject index since getElementTypeBitWidth will abort for Index types.
+    if (vecType.getElementType().isIndex())
+      return false;
     unsigned trailingVecDimBitWidth =
         vecType.getShape().back() * vecType.getElementTypeBitWidth();
     if (trailingVecDimBitWidth >= targetBitWidth)

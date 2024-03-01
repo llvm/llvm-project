@@ -1,27 +1,34 @@
 // RUN: mlir-opt %s -split-input-file -test-vector-linearize | FileCheck %s
-// RUN: mlir-opt %s -split-input-file -test-vector-linearize=target-vector-bitwidth=128 | FileCheck %s
-// RUN: mlir-opt %s -split-input-file -test-vector-linearize=target-vector-bitwidth=12 | FileCheck %s --check-prefix=CHECK12
+// RUN: mlir-opt %s -split-input-file -test-vector-linearize=target-vector-bitwidth=128 | FileCheck %s --check-prefix=CHECK128
+// RUN: mlir-opt %s -split-input-file -test-vector-linearize=target-vector-bitwidth=0 | FileCheck %s --check-prefix=CHECK0
 
 // CHECK-LABEL: test_linearize
-// CHECK12-LABEL: test_linearize
+// CHECK128-LABEL: test_linearize
+// CHECK0-LABEL: test_linearize
 //  CHECK-SAME: (%[[ORIG_ARG:.*]]: vector<2x2xf32>)
+//  CHECK128-SAME: (%[[ORIG_ARG:.*]]: vector<2x2xf32>)
 //       CHECK: %[[ARG:.*]] = vector.shape_cast %[[ORIG_ARG]] : vector<2x2xf32> to vector<4xf32>
+//       CHECK128: %[[ARG:.*]] = vector.shape_cast %[[ORIG_ARG]] : vector<2x2xf32> to vector<4xf32>
 func.func @test_linearize(%arg0: vector<2x2xf32>) -> vector<2x2xf32> {
 //       CHECK: %[[C1:.*]] = arith.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : vector<4xf32>
-//       CHECK12: %[[C1:.*]] = arith.constant dense<{{.*}}> : vector<2x2xf32>
+//       CHECK128: %[[C1:.*]] = arith.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : vector<4xf32>
+//       CHECK0: %[[C1:.*]] = arith.constant dense<{{.*}}> : vector<2x2xf32>
 
   %0 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : vector<2x2xf32>
 //       CHECK: %[[RES:.*]] = vector.shape_cast %[[C1]] : vector<4xf32> to vector<2x2xf32>
-
+//       CHECK128: %[[RES:.*]] = vector.shape_cast %[[C1]] : vector<4xf32> to vector<2x2xf32>
 // Arith and math ops are handled in generic way, check some of them
 //       CHECK: %{{.*}} =  math.sin %[[ARG]] : vector<4xf32>
-//       CHECK12: %{{.*}} =  math.sin %{{.*}} : vector<2x2xf32>
+//       CHECK128: %{{.*}} =  math.sin %[[ARG]] : vector<4xf32>
+//       CHECK0: %{{.*}} =  math.sin %{{.*}} : vector<2x2xf32>
   %1 = math.sin %arg0 : vector<2x2xf32>
 //       CHECK: %{{.*}} = arith.addf %[[ARG]], %[[C1]] : vector<4xf32>
-//       CHECK12: %{{.*}} = arith.addf %{{.*}} : vector<2x2xf32>
+//       CHECK128: %{{.*}} = arith.addf %[[ARG]], %[[C1]] : vector<4xf32>
+//       CHECK0: %{{.*}} = arith.addf %{{.*}} : vector<2x2xf32>
 
   %2 = arith.addf %arg0, %0 :  vector<2x2xf32>
 
 //       CHECK: return %[[RES]] : vector<2x2xf32>
+//       CHECK128: return %[[RES]] : vector<2x2xf32>
   return %0 : vector<2x2xf32>
 }
