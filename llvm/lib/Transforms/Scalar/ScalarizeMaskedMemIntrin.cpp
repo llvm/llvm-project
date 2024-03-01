@@ -627,6 +627,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
   Value *Ptr = CI->getArgOperand(0);
   Value *Mask = CI->getArgOperand(1);
   Value *PassThru = CI->getArgOperand(2);
+  Align Alignment = Ptr->getPointerAlignment(DL);
 
   auto *VecType = cast<FixedVectorType>(CI->getType());
 
@@ -659,7 +660,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
       } else {
         Value *NewPtr =
             Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, MemIndex);
-        InsertElt = Builder.CreateAlignedLoad(EltTy, NewPtr, Align(1),
+        InsertElt = Builder.CreateAlignedLoad(EltTy, NewPtr, Alignment,
                                               "Load" + Twine(Idx));
         ShuffleMask[Idx] = Idx;
         ++MemIndex;
@@ -713,7 +714,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
     CondBlock->setName("cond.load");
 
     Builder.SetInsertPoint(CondBlock->getTerminator());
-    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Ptr, Align(1));
+    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Ptr, Alignment);
     Value *NewVResult = Builder.CreateInsertElement(VResult, Load, Idx);
 
     // Move the pointer if there are more blocks to come.
@@ -755,6 +756,7 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
   Value *Src = CI->getArgOperand(0);
   Value *Ptr = CI->getArgOperand(1);
   Value *Mask = CI->getArgOperand(2);
+  Align Alignment = Ptr->getPointerAlignment(DL);
 
   auto *VecType = cast<FixedVectorType>(Src->getType());
 
@@ -778,7 +780,7 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
       Value *OneElt =
           Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
       Value *NewPtr = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, MemIndex);
-      Builder.CreateAlignedStore(OneElt, NewPtr, Align(1));
+      Builder.CreateAlignedStore(OneElt, NewPtr, Alignment);
       ++MemIndex;
     }
     CI->eraseFromParent();
@@ -824,7 +826,7 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
 
     Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *OneElt = Builder.CreateExtractElement(Src, Idx);
-    Builder.CreateAlignedStore(OneElt, Ptr, Align(1));
+    Builder.CreateAlignedStore(OneElt, Ptr, Alignment);
 
     // Move the pointer if there are more blocks to come.
     Value *NewPtr;

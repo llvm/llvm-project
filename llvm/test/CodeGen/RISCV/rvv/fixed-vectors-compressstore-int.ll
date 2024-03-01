@@ -190,11 +190,8 @@ define void @compressstore_v1i16(ptr align 2 %base, <1 x i16> %v, <1 x i1> %mask
 ; CHECK-NEXT:    vfirst.m a1, v0
 ; CHECK-NEXT:    bnez a1, .LBB4_2
 ; CHECK-NEXT:  # %bb.1: # %cond.store
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.x.s a1, v8
-; CHECK-NEXT:    sb a1, 0(a0)
-; CHECK-NEXT:    srli a1, a1, 8
-; CHECK-NEXT:    sb a1, 1(a0)
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:  .LBB4_2: # %else
 ; CHECK-NEXT:    ret
   call void @llvm.masked.compressstore.v1i16(<1 x i16> %v, ptr %base, <1 x i1> %mask)
@@ -215,21 +212,15 @@ define void @compressstore_v2i16(ptr align 2 %base, <2 x i16> %v, <2 x i1> %mask
 ; CHECK-NEXT:  .LBB5_2: # %else2
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB5_3: # %cond.store
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.x.s a2, v8
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a1, a1, 2
 ; CHECK-NEXT:    beqz a1, .LBB5_2
 ; CHECK-NEXT:  .LBB5_4: # %cond.store1
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    vmv.x.s a1, v8
-; CHECK-NEXT:    sb a1, 0(a0)
-; CHECK-NEXT:    srli a1, a1, 8
-; CHECK-NEXT:    sb a1, 1(a0)
+; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   call void @llvm.masked.compressstore.v2i16(<2 x i16> %v, ptr %base, <2 x i1> %mask)
   ret void
@@ -255,41 +246,29 @@ define void @compressstore_v4i16(ptr align 2 %base, <4 x i16> %v, <4 x i1> %mask
 ; CHECK-NEXT:  .LBB6_4: # %else8
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB6_5: # %cond.store
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.x.s a2, v8
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a2, a1, 2
 ; CHECK-NEXT:    beqz a2, .LBB6_2
 ; CHECK-NEXT:  .LBB6_6: # %cond.store1
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vse16.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a2, a1, 4
 ; CHECK-NEXT:    beqz a2, .LBB6_3
 ; CHECK-NEXT:  .LBB6_7: # %cond.store4
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vse16.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a1, a1, 8
 ; CHECK-NEXT:    beqz a1, .LBB6_4
 ; CHECK-NEXT:  .LBB6_8: # %cond.store7
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 3
-; CHECK-NEXT:    vmv.x.s a1, v8
-; CHECK-NEXT:    sb a1, 0(a0)
-; CHECK-NEXT:    srli a1, a1, 8
-; CHECK-NEXT:    sb a1, 1(a0)
+; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   call void @llvm.masked.compressstore.v4i16(<4 x i16> %v, ptr %base, <4 x i1> %mask)
   ret void
@@ -327,81 +306,57 @@ define void @compressstore_v8i16(ptr align 2 %base, <8 x i16> %v, <8 x i1> %mask
 ; CHECK-NEXT:  .LBB7_8: # %else20
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB7_9: # %cond.store
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.x.s a2, v8
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a2, a1, 2
 ; CHECK-NEXT:    beqz a2, .LBB7_2
 ; CHECK-NEXT:  .LBB7_10: # %cond.store1
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vse16.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a2, a1, 4
 ; CHECK-NEXT:    beqz a2, .LBB7_3
 ; CHECK-NEXT:  .LBB7_11: # %cond.store4
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vse16.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a2, a1, 8
 ; CHECK-NEXT:    beqz a2, .LBB7_4
 ; CHECK-NEXT:  .LBB7_12: # %cond.store7
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 3
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vse16.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a2, a1, 16
 ; CHECK-NEXT:    beqz a2, .LBB7_5
 ; CHECK-NEXT:  .LBB7_13: # %cond.store10
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 4
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vse16.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a2, a1, 32
 ; CHECK-NEXT:    beqz a2, .LBB7_6
 ; CHECK-NEXT:  .LBB7_14: # %cond.store13
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 5
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vse16.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a2, a1, 64
 ; CHECK-NEXT:    beqz a2, .LBB7_7
 ; CHECK-NEXT:  .LBB7_15: # %cond.store16
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 6
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vse16.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a1, a1, -128
 ; CHECK-NEXT:    beqz a1, .LBB7_8
 ; CHECK-NEXT:  .LBB7_16: # %cond.store19
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 7
-; CHECK-NEXT:    vmv.x.s a1, v8
-; CHECK-NEXT:    sb a1, 0(a0)
-; CHECK-NEXT:    srli a1, a1, 8
-; CHECK-NEXT:    sb a1, 1(a0)
+; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   call void @llvm.masked.compressstore.v8i16(<8 x i16> %v, ptr %base, <8 x i1> %mask)
   ret void
@@ -415,15 +370,8 @@ define void @compressstore_v1i32(ptr align 4 %base, <1 x i32> %v, <1 x i1> %mask
 ; CHECK-NEXT:    vfirst.m a1, v0
 ; CHECK-NEXT:    bnez a1, .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %cond.store
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.x.s a1, v8
-; CHECK-NEXT:    sb a1, 0(a0)
-; CHECK-NEXT:    srli a2, a1, 24
-; CHECK-NEXT:    sb a2, 3(a0)
-; CHECK-NEXT:    srli a2, a1, 16
-; CHECK-NEXT:    sb a2, 2(a0)
-; CHECK-NEXT:    srli a1, a1, 8
-; CHECK-NEXT:    sb a1, 1(a0)
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:  .LBB8_2: # %else
 ; CHECK-NEXT:    ret
   call void @llvm.masked.compressstore.v1i32(<1 x i32> %v, ptr %base, <1 x i1> %mask)
@@ -444,29 +392,15 @@ define void @compressstore_v2i32(ptr align 4 %base, <2 x i32> %v, <2 x i1> %mask
 ; CHECK-NEXT:  .LBB9_2: # %else2
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB9_3: # %cond.store
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.x.s a2, v8
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a3, a2, 24
-; CHECK-NEXT:    sb a3, 3(a0)
-; CHECK-NEXT:    srli a3, a2, 16
-; CHECK-NEXT:    sb a3, 2(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a1, a1, 2
 ; CHECK-NEXT:    beqz a1, .LBB9_2
 ; CHECK-NEXT:  .LBB9_4: # %cond.store1
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    vmv.x.s a1, v8
-; CHECK-NEXT:    sb a1, 0(a0)
-; CHECK-NEXT:    srli a2, a1, 24
-; CHECK-NEXT:    sb a2, 3(a0)
-; CHECK-NEXT:    srli a2, a1, 16
-; CHECK-NEXT:    sb a2, 2(a0)
-; CHECK-NEXT:    srli a1, a1, 8
-; CHECK-NEXT:    sb a1, 1(a0)
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   call void @llvm.masked.compressstore.v2i32(<2 x i32> %v, ptr %base, <2 x i1> %mask)
   ret void
@@ -492,57 +426,29 @@ define void @compressstore_v4i32(ptr align 4 %base, <4 x i32> %v, <4 x i1> %mask
 ; CHECK-NEXT:  .LBB10_4: # %else8
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB10_5: # %cond.store
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.x.s a2, v8
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a3, a2, 24
-; CHECK-NEXT:    sb a3, 3(a0)
-; CHECK-NEXT:    srli a3, a2, 16
-; CHECK-NEXT:    sb a3, 2(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a2, a1, 2
 ; CHECK-NEXT:    beqz a2, .LBB10_2
 ; CHECK-NEXT:  .LBB10_6: # %cond.store1
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a3, a2, 24
-; CHECK-NEXT:    sb a3, 3(a0)
-; CHECK-NEXT:    srli a3, a2, 16
-; CHECK-NEXT:    sb a3, 2(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a2, a1, 4
 ; CHECK-NEXT:    beqz a2, .LBB10_3
 ; CHECK-NEXT:  .LBB10_7: # %cond.store4
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a3, a2, 24
-; CHECK-NEXT:    sb a3, 3(a0)
-; CHECK-NEXT:    srli a3, a2, 16
-; CHECK-NEXT:    sb a3, 2(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a1, a1, 8
 ; CHECK-NEXT:    beqz a1, .LBB10_4
 ; CHECK-NEXT:  .LBB10_8: # %cond.store7
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 3
-; CHECK-NEXT:    vmv.x.s a1, v8
-; CHECK-NEXT:    sb a1, 0(a0)
-; CHECK-NEXT:    srli a2, a1, 24
-; CHECK-NEXT:    sb a2, 3(a0)
-; CHECK-NEXT:    srli a2, a1, 16
-; CHECK-NEXT:    sb a2, 2(a0)
-; CHECK-NEXT:    srli a1, a1, 8
-; CHECK-NEXT:    sb a1, 1(a0)
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   call void @llvm.masked.compressstore.v4i32(<4 x i32> %v, ptr %base, <4 x i1> %mask)
   ret void
@@ -580,113 +486,61 @@ define void @compressstore_v8i32(ptr align 4 %base, <8 x i32> %v, <8 x i1> %mask
 ; CHECK-NEXT:  .LBB11_8: # %else20
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB11_9: # %cond.store
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.x.s a2, v8
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a3, a2, 24
-; CHECK-NEXT:    sb a3, 3(a0)
-; CHECK-NEXT:    srli a3, a2, 16
-; CHECK-NEXT:    sb a3, 2(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a2, a1, 2
 ; CHECK-NEXT:    beqz a2, .LBB11_2
 ; CHECK-NEXT:  .LBB11_10: # %cond.store1
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 1
-; CHECK-NEXT:    vmv.x.s a2, v10
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a3, a2, 24
-; CHECK-NEXT:    sb a3, 3(a0)
-; CHECK-NEXT:    srli a3, a2, 16
-; CHECK-NEXT:    sb a3, 2(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vse32.v v10, (a0)
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a2, a1, 4
 ; CHECK-NEXT:    beqz a2, .LBB11_3
 ; CHECK-NEXT:  .LBB11_11: # %cond.store4
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 2
-; CHECK-NEXT:    vmv.x.s a2, v10
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a3, a2, 24
-; CHECK-NEXT:    sb a3, 3(a0)
-; CHECK-NEXT:    srli a3, a2, 16
-; CHECK-NEXT:    sb a3, 2(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vse32.v v10, (a0)
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a2, a1, 8
 ; CHECK-NEXT:    beqz a2, .LBB11_4
 ; CHECK-NEXT:  .LBB11_12: # %cond.store7
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 3
-; CHECK-NEXT:    vmv.x.s a2, v10
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a3, a2, 24
-; CHECK-NEXT:    sb a3, 3(a0)
-; CHECK-NEXT:    srli a3, a2, 16
-; CHECK-NEXT:    sb a3, 2(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vse32.v v10, (a0)
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a2, a1, 16
 ; CHECK-NEXT:    beqz a2, .LBB11_5
 ; CHECK-NEXT:  .LBB11_13: # %cond.store10
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vmv.x.s a2, v10
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a3, a2, 24
-; CHECK-NEXT:    sb a3, 3(a0)
-; CHECK-NEXT:    srli a3, a2, 16
-; CHECK-NEXT:    sb a3, 2(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vse32.v v10, (a0)
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a2, a1, 32
 ; CHECK-NEXT:    beqz a2, .LBB11_6
 ; CHECK-NEXT:  .LBB11_14: # %cond.store13
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 5
-; CHECK-NEXT:    vmv.x.s a2, v10
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a3, a2, 24
-; CHECK-NEXT:    sb a3, 3(a0)
-; CHECK-NEXT:    srli a3, a2, 16
-; CHECK-NEXT:    sb a3, 2(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vse32.v v10, (a0)
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a2, a1, 64
 ; CHECK-NEXT:    beqz a2, .LBB11_7
 ; CHECK-NEXT:  .LBB11_15: # %cond.store16
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 6
-; CHECK-NEXT:    vmv.x.s a2, v10
-; CHECK-NEXT:    sb a2, 0(a0)
-; CHECK-NEXT:    srli a3, a2, 24
-; CHECK-NEXT:    sb a3, 3(a0)
-; CHECK-NEXT:    srli a3, a2, 16
-; CHECK-NEXT:    sb a3, 2(a0)
-; CHECK-NEXT:    srli a2, a2, 8
-; CHECK-NEXT:    sb a2, 1(a0)
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vse32.v v10, (a0)
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a1, a1, -128
 ; CHECK-NEXT:    beqz a1, .LBB11_8
 ; CHECK-NEXT:  .LBB11_16: # %cond.store19
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 7
-; CHECK-NEXT:    vmv.x.s a1, v8
-; CHECK-NEXT:    sb a1, 0(a0)
-; CHECK-NEXT:    srli a2, a1, 24
-; CHECK-NEXT:    sb a2, 3(a0)
-; CHECK-NEXT:    srli a2, a1, 16
-; CHECK-NEXT:    sb a2, 2(a0)
-; CHECK-NEXT:    srli a1, a1, 8
-; CHECK-NEXT:    sb a1, 1(a0)
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   call void @llvm.masked.compressstore.v8i32(<8 x i32> %v, ptr %base, <8 x i1> %mask)
   ret void
@@ -705,20 +559,8 @@ define void @compressstore_v1i64(ptr align 8 %base, <1 x i64> %v, <1 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v9, v8, a1
 ; RV32-NEXT:    vmv.x.s a1, v9
 ; RV32-NEXT:    vmv.x.s a2, v8
-; RV32-NEXT:    sb a2, 0(a0)
-; RV32-NEXT:    sb a1, 4(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 3(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 2(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 1(a0)
-; RV32-NEXT:    srli a2, a1, 24
-; RV32-NEXT:    sb a2, 7(a0)
-; RV32-NEXT:    srli a2, a1, 16
-; RV32-NEXT:    sb a2, 6(a0)
-; RV32-NEXT:    srli a1, a1, 8
-; RV32-NEXT:    sb a1, 5(a0)
+; RV32-NEXT:    sw a2, 0(a0)
+; RV32-NEXT:    sw a1, 4(a0)
 ; RV32-NEXT:  .LBB12_2: # %else
 ; RV32-NEXT:    ret
 ;
@@ -728,23 +570,8 @@ define void @compressstore_v1i64(ptr align 8 %base, <1 x i64> %v, <1 x i1> %mask
 ; RV64-NEXT:    vfirst.m a1, v0
 ; RV64-NEXT:    bnez a1, .LBB12_2
 ; RV64-NEXT:  # %bb.1: # %cond.store
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV64-NEXT:    vmv.x.s a1, v8
-; RV64-NEXT:    sb a1, 0(a0)
-; RV64-NEXT:    srli a2, a1, 56
-; RV64-NEXT:    sb a2, 7(a0)
-; RV64-NEXT:    srli a2, a1, 48
-; RV64-NEXT:    sb a2, 6(a0)
-; RV64-NEXT:    srli a2, a1, 40
-; RV64-NEXT:    sb a2, 5(a0)
-; RV64-NEXT:    srli a2, a1, 32
-; RV64-NEXT:    sb a2, 4(a0)
-; RV64-NEXT:    srli a2, a1, 24
-; RV64-NEXT:    sb a2, 3(a0)
-; RV64-NEXT:    srli a2, a1, 16
-; RV64-NEXT:    sb a2, 2(a0)
-; RV64-NEXT:    srli a1, a1, 8
-; RV64-NEXT:    sb a1, 1(a0)
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:  .LBB12_2: # %else
 ; RV64-NEXT:    ret
   call void @llvm.masked.compressstore.v1i64(<1 x i64> %v, ptr %base, <1 x i1> %mask)
@@ -770,20 +597,8 @@ define void @compressstore_v2i64(ptr align 8 %base, <2 x i64> %v, <2 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v9, v8, a2
 ; RV32-NEXT:    vmv.x.s a2, v9
 ; RV32-NEXT:    vmv.x.s a3, v8
-; RV32-NEXT:    sb a3, 0(a0)
-; RV32-NEXT:    sb a2, 4(a0)
-; RV32-NEXT:    srli a4, a3, 24
-; RV32-NEXT:    sb a4, 3(a0)
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    sb a4, 2(a0)
-; RV32-NEXT:    srli a3, a3, 8
-; RV32-NEXT:    sb a3, 1(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 7(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 6(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 5(a0)
+; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a1, a1, 2
 ; RV32-NEXT:    beqz a1, .LBB13_2
@@ -794,20 +609,8 @@ define void @compressstore_v2i64(ptr align 8 %base, <2 x i64> %v, <2 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v9, v8, a1
 ; RV32-NEXT:    vmv.x.s a1, v9
 ; RV32-NEXT:    vmv.x.s a2, v8
-; RV32-NEXT:    sb a2, 0(a0)
-; RV32-NEXT:    sb a1, 4(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 3(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 2(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 1(a0)
-; RV32-NEXT:    srli a2, a1, 24
-; RV32-NEXT:    sb a2, 7(a0)
-; RV32-NEXT:    srli a2, a1, 16
-; RV32-NEXT:    sb a2, 6(a0)
-; RV32-NEXT:    srli a1, a1, 8
-; RV32-NEXT:    sb a1, 5(a0)
+; RV32-NEXT:    sw a2, 0(a0)
+; RV32-NEXT:    sw a1, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: compressstore_v2i64:
@@ -822,45 +625,15 @@ define void @compressstore_v2i64(ptr align 8 %base, <2 x i64> %v, <2 x i1> %mask
 ; RV64-NEXT:  .LBB13_2: # %else2
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB13_3: # %cond.store
-; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmv.x.s a2, v8
-; RV64-NEXT:    sb a2, 0(a0)
-; RV64-NEXT:    srli a3, a2, 56
-; RV64-NEXT:    sb a3, 7(a0)
-; RV64-NEXT:    srli a3, a2, 48
-; RV64-NEXT:    sb a3, 6(a0)
-; RV64-NEXT:    srli a3, a2, 40
-; RV64-NEXT:    sb a3, 5(a0)
-; RV64-NEXT:    srli a3, a2, 32
-; RV64-NEXT:    sb a3, 4(a0)
-; RV64-NEXT:    srli a3, a2, 24
-; RV64-NEXT:    sb a3, 3(a0)
-; RV64-NEXT:    srli a3, a2, 16
-; RV64-NEXT:    sb a3, 2(a0)
-; RV64-NEXT:    srli a2, a2, 8
-; RV64-NEXT:    sb a2, 1(a0)
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a1, a1, 2
 ; RV64-NEXT:    beqz a1, .LBB13_2
 ; RV64-NEXT:  .LBB13_4: # %cond.store1
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 1
-; RV64-NEXT:    vmv.x.s a1, v8
-; RV64-NEXT:    sb a1, 0(a0)
-; RV64-NEXT:    srli a2, a1, 56
-; RV64-NEXT:    sb a2, 7(a0)
-; RV64-NEXT:    srli a2, a1, 48
-; RV64-NEXT:    sb a2, 6(a0)
-; RV64-NEXT:    srli a2, a1, 40
-; RV64-NEXT:    sb a2, 5(a0)
-; RV64-NEXT:    srli a2, a1, 32
-; RV64-NEXT:    sb a2, 4(a0)
-; RV64-NEXT:    srli a2, a1, 24
-; RV64-NEXT:    sb a2, 3(a0)
-; RV64-NEXT:    srli a2, a1, 16
-; RV64-NEXT:    sb a2, 2(a0)
-; RV64-NEXT:    srli a1, a1, 8
-; RV64-NEXT:    sb a1, 1(a0)
+; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:    ret
   call void @llvm.masked.compressstore.v2i64(<2 x i64> %v, ptr %base, <2 x i1> %mask)
   ret void
@@ -891,20 +664,8 @@ define void @compressstore_v4i64(ptr align 8 %base, <4 x i64> %v, <4 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v10, v8, a2
 ; RV32-NEXT:    vmv.x.s a2, v10
 ; RV32-NEXT:    vmv.x.s a3, v8
-; RV32-NEXT:    sb a3, 0(a0)
-; RV32-NEXT:    sb a2, 4(a0)
-; RV32-NEXT:    srli a4, a3, 24
-; RV32-NEXT:    sb a4, 3(a0)
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    sb a4, 2(a0)
-; RV32-NEXT:    srli a3, a3, 8
-; RV32-NEXT:    sb a3, 1(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 7(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 6(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 5(a0)
+; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a2, a1, 2
 ; RV32-NEXT:    beqz a2, .LBB14_2
@@ -915,20 +676,8 @@ define void @compressstore_v4i64(ptr align 8 %base, <4 x i64> %v, <4 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v12, v10, a2
 ; RV32-NEXT:    vmv.x.s a2, v12
 ; RV32-NEXT:    vmv.x.s a3, v10
-; RV32-NEXT:    sb a3, 0(a0)
-; RV32-NEXT:    sb a2, 4(a0)
-; RV32-NEXT:    srli a4, a3, 24
-; RV32-NEXT:    sb a4, 3(a0)
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    sb a4, 2(a0)
-; RV32-NEXT:    srli a3, a3, 8
-; RV32-NEXT:    sb a3, 1(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 7(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 6(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 5(a0)
+; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a2, a1, 4
 ; RV32-NEXT:    beqz a2, .LBB14_3
@@ -939,20 +688,8 @@ define void @compressstore_v4i64(ptr align 8 %base, <4 x i64> %v, <4 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v12, v10, a2
 ; RV32-NEXT:    vmv.x.s a2, v12
 ; RV32-NEXT:    vmv.x.s a3, v10
-; RV32-NEXT:    sb a3, 0(a0)
-; RV32-NEXT:    sb a2, 4(a0)
-; RV32-NEXT:    srli a4, a3, 24
-; RV32-NEXT:    sb a4, 3(a0)
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    sb a4, 2(a0)
-; RV32-NEXT:    srli a3, a3, 8
-; RV32-NEXT:    sb a3, 1(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 7(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 6(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 5(a0)
+; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a1, a1, 8
 ; RV32-NEXT:    beqz a1, .LBB14_4
@@ -963,20 +700,8 @@ define void @compressstore_v4i64(ptr align 8 %base, <4 x i64> %v, <4 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v10, v8, a1
 ; RV32-NEXT:    vmv.x.s a1, v10
 ; RV32-NEXT:    vmv.x.s a2, v8
-; RV32-NEXT:    sb a2, 0(a0)
-; RV32-NEXT:    sb a1, 4(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 3(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 2(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 1(a0)
-; RV32-NEXT:    srli a2, a1, 24
-; RV32-NEXT:    sb a2, 7(a0)
-; RV32-NEXT:    srli a2, a1, 16
-; RV32-NEXT:    sb a2, 6(a0)
-; RV32-NEXT:    srli a1, a1, 8
-; RV32-NEXT:    sb a1, 5(a0)
+; RV32-NEXT:    sw a2, 0(a0)
+; RV32-NEXT:    sw a1, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: compressstore_v4i64:
@@ -997,89 +722,31 @@ define void @compressstore_v4i64(ptr align 8 %base, <4 x i64> %v, <4 x i1> %mask
 ; RV64-NEXT:  .LBB14_4: # %else8
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB14_5: # %cond.store
-; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmv.x.s a2, v8
-; RV64-NEXT:    sb a2, 0(a0)
-; RV64-NEXT:    srli a3, a2, 56
-; RV64-NEXT:    sb a3, 7(a0)
-; RV64-NEXT:    srli a3, a2, 48
-; RV64-NEXT:    sb a3, 6(a0)
-; RV64-NEXT:    srli a3, a2, 40
-; RV64-NEXT:    sb a3, 5(a0)
-; RV64-NEXT:    srli a3, a2, 32
-; RV64-NEXT:    sb a3, 4(a0)
-; RV64-NEXT:    srli a3, a2, 24
-; RV64-NEXT:    sb a3, 3(a0)
-; RV64-NEXT:    srli a3, a2, 16
-; RV64-NEXT:    sb a3, 2(a0)
-; RV64-NEXT:    srli a2, a2, 8
-; RV64-NEXT:    sb a2, 1(a0)
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 2
 ; RV64-NEXT:    beqz a2, .LBB14_2
 ; RV64-NEXT:  .LBB14_6: # %cond.store1
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v10, v8, 1
-; RV64-NEXT:    vmv.x.s a2, v10
-; RV64-NEXT:    sb a2, 0(a0)
-; RV64-NEXT:    srli a3, a2, 56
-; RV64-NEXT:    sb a3, 7(a0)
-; RV64-NEXT:    srli a3, a2, 48
-; RV64-NEXT:    sb a3, 6(a0)
-; RV64-NEXT:    srli a3, a2, 40
-; RV64-NEXT:    sb a3, 5(a0)
-; RV64-NEXT:    srli a3, a2, 32
-; RV64-NEXT:    sb a3, 4(a0)
-; RV64-NEXT:    srli a3, a2, 24
-; RV64-NEXT:    sb a3, 3(a0)
-; RV64-NEXT:    srli a3, a2, 16
-; RV64-NEXT:    sb a3, 2(a0)
-; RV64-NEXT:    srli a2, a2, 8
-; RV64-NEXT:    sb a2, 1(a0)
+; RV64-NEXT:    vse64.v v10, (a0)
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 4
 ; RV64-NEXT:    beqz a2, .LBB14_3
 ; RV64-NEXT:  .LBB14_7: # %cond.store4
 ; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v10, v8, 2
-; RV64-NEXT:    vmv.x.s a2, v10
-; RV64-NEXT:    sb a2, 0(a0)
-; RV64-NEXT:    srli a3, a2, 56
-; RV64-NEXT:    sb a3, 7(a0)
-; RV64-NEXT:    srli a3, a2, 48
-; RV64-NEXT:    sb a3, 6(a0)
-; RV64-NEXT:    srli a3, a2, 40
-; RV64-NEXT:    sb a3, 5(a0)
-; RV64-NEXT:    srli a3, a2, 32
-; RV64-NEXT:    sb a3, 4(a0)
-; RV64-NEXT:    srli a3, a2, 24
-; RV64-NEXT:    sb a3, 3(a0)
-; RV64-NEXT:    srli a3, a2, 16
-; RV64-NEXT:    sb a3, 2(a0)
-; RV64-NEXT:    srli a2, a2, 8
-; RV64-NEXT:    sb a2, 1(a0)
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vse64.v v10, (a0)
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a1, a1, 8
 ; RV64-NEXT:    beqz a1, .LBB14_4
 ; RV64-NEXT:  .LBB14_8: # %cond.store7
 ; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 3
-; RV64-NEXT:    vmv.x.s a1, v8
-; RV64-NEXT:    sb a1, 0(a0)
-; RV64-NEXT:    srli a2, a1, 56
-; RV64-NEXT:    sb a2, 7(a0)
-; RV64-NEXT:    srli a2, a1, 48
-; RV64-NEXT:    sb a2, 6(a0)
-; RV64-NEXT:    srli a2, a1, 40
-; RV64-NEXT:    sb a2, 5(a0)
-; RV64-NEXT:    srli a2, a1, 32
-; RV64-NEXT:    sb a2, 4(a0)
-; RV64-NEXT:    srli a2, a1, 24
-; RV64-NEXT:    sb a2, 3(a0)
-; RV64-NEXT:    srli a2, a1, 16
-; RV64-NEXT:    sb a2, 2(a0)
-; RV64-NEXT:    srli a1, a1, 8
-; RV64-NEXT:    sb a1, 1(a0)
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:    ret
   call void @llvm.masked.compressstore.v4i64(<4 x i64> %v, ptr %base, <4 x i1> %mask)
   ret void
@@ -1122,20 +789,8 @@ define void @compressstore_v8i64(ptr align 8 %base, <8 x i64> %v, <8 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v12, v8, a2
 ; RV32-NEXT:    vmv.x.s a2, v12
 ; RV32-NEXT:    vmv.x.s a3, v8
-; RV32-NEXT:    sb a3, 0(a0)
-; RV32-NEXT:    sb a2, 4(a0)
-; RV32-NEXT:    srli a4, a3, 24
-; RV32-NEXT:    sb a4, 3(a0)
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    sb a4, 2(a0)
-; RV32-NEXT:    srli a3, a3, 8
-; RV32-NEXT:    sb a3, 1(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 7(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 6(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 5(a0)
+; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a2, a1, 2
 ; RV32-NEXT:    beqz a2, .LBB15_2
@@ -1146,20 +801,8 @@ define void @compressstore_v8i64(ptr align 8 %base, <8 x i64> %v, <8 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v16, v12, a2
 ; RV32-NEXT:    vmv.x.s a2, v16
 ; RV32-NEXT:    vmv.x.s a3, v12
-; RV32-NEXT:    sb a3, 0(a0)
-; RV32-NEXT:    sb a2, 4(a0)
-; RV32-NEXT:    srli a4, a3, 24
-; RV32-NEXT:    sb a4, 3(a0)
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    sb a4, 2(a0)
-; RV32-NEXT:    srli a3, a3, 8
-; RV32-NEXT:    sb a3, 1(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 7(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 6(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 5(a0)
+; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a2, a1, 4
 ; RV32-NEXT:    beqz a2, .LBB15_3
@@ -1170,20 +813,8 @@ define void @compressstore_v8i64(ptr align 8 %base, <8 x i64> %v, <8 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v16, v12, a2
 ; RV32-NEXT:    vmv.x.s a2, v16
 ; RV32-NEXT:    vmv.x.s a3, v12
-; RV32-NEXT:    sb a3, 0(a0)
-; RV32-NEXT:    sb a2, 4(a0)
-; RV32-NEXT:    srli a4, a3, 24
-; RV32-NEXT:    sb a4, 3(a0)
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    sb a4, 2(a0)
-; RV32-NEXT:    srli a3, a3, 8
-; RV32-NEXT:    sb a3, 1(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 7(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 6(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 5(a0)
+; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a2, a1, 8
 ; RV32-NEXT:    beqz a2, .LBB15_4
@@ -1194,20 +825,8 @@ define void @compressstore_v8i64(ptr align 8 %base, <8 x i64> %v, <8 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v16, v12, a2
 ; RV32-NEXT:    vmv.x.s a2, v16
 ; RV32-NEXT:    vmv.x.s a3, v12
-; RV32-NEXT:    sb a3, 0(a0)
-; RV32-NEXT:    sb a2, 4(a0)
-; RV32-NEXT:    srli a4, a3, 24
-; RV32-NEXT:    sb a4, 3(a0)
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    sb a4, 2(a0)
-; RV32-NEXT:    srli a3, a3, 8
-; RV32-NEXT:    sb a3, 1(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 7(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 6(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 5(a0)
+; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a2, a1, 16
 ; RV32-NEXT:    beqz a2, .LBB15_5
@@ -1218,20 +837,8 @@ define void @compressstore_v8i64(ptr align 8 %base, <8 x i64> %v, <8 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v16, v12, a2
 ; RV32-NEXT:    vmv.x.s a2, v16
 ; RV32-NEXT:    vmv.x.s a3, v12
-; RV32-NEXT:    sb a3, 0(a0)
-; RV32-NEXT:    sb a2, 4(a0)
-; RV32-NEXT:    srli a4, a3, 24
-; RV32-NEXT:    sb a4, 3(a0)
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    sb a4, 2(a0)
-; RV32-NEXT:    srli a3, a3, 8
-; RV32-NEXT:    sb a3, 1(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 7(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 6(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 5(a0)
+; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a2, a1, 32
 ; RV32-NEXT:    beqz a2, .LBB15_6
@@ -1242,20 +849,8 @@ define void @compressstore_v8i64(ptr align 8 %base, <8 x i64> %v, <8 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v16, v12, a2
 ; RV32-NEXT:    vmv.x.s a2, v16
 ; RV32-NEXT:    vmv.x.s a3, v12
-; RV32-NEXT:    sb a3, 0(a0)
-; RV32-NEXT:    sb a2, 4(a0)
-; RV32-NEXT:    srli a4, a3, 24
-; RV32-NEXT:    sb a4, 3(a0)
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    sb a4, 2(a0)
-; RV32-NEXT:    srli a3, a3, 8
-; RV32-NEXT:    sb a3, 1(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 7(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 6(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 5(a0)
+; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a2, a1, 64
 ; RV32-NEXT:    beqz a2, .LBB15_7
@@ -1266,20 +861,8 @@ define void @compressstore_v8i64(ptr align 8 %base, <8 x i64> %v, <8 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v16, v12, a2
 ; RV32-NEXT:    vmv.x.s a2, v16
 ; RV32-NEXT:    vmv.x.s a3, v12
-; RV32-NEXT:    sb a3, 0(a0)
-; RV32-NEXT:    sb a2, 4(a0)
-; RV32-NEXT:    srli a4, a3, 24
-; RV32-NEXT:    sb a4, 3(a0)
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    sb a4, 2(a0)
-; RV32-NEXT:    srli a3, a3, 8
-; RV32-NEXT:    sb a3, 1(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 7(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 6(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 5(a0)
+; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a1, a1, -128
 ; RV32-NEXT:    beqz a1, .LBB15_8
@@ -1290,20 +873,8 @@ define void @compressstore_v8i64(ptr align 8 %base, <8 x i64> %v, <8 x i1> %mask
 ; RV32-NEXT:    vsrl.vx v12, v8, a1
 ; RV32-NEXT:    vmv.x.s a1, v12
 ; RV32-NEXT:    vmv.x.s a2, v8
-; RV32-NEXT:    sb a2, 0(a0)
-; RV32-NEXT:    sb a1, 4(a0)
-; RV32-NEXT:    srli a3, a2, 24
-; RV32-NEXT:    sb a3, 3(a0)
-; RV32-NEXT:    srli a3, a2, 16
-; RV32-NEXT:    sb a3, 2(a0)
-; RV32-NEXT:    srli a2, a2, 8
-; RV32-NEXT:    sb a2, 1(a0)
-; RV32-NEXT:    srli a2, a1, 24
-; RV32-NEXT:    sb a2, 7(a0)
-; RV32-NEXT:    srli a2, a1, 16
-; RV32-NEXT:    sb a2, 6(a0)
-; RV32-NEXT:    srli a1, a1, 8
-; RV32-NEXT:    sb a1, 5(a0)
+; RV32-NEXT:    sw a2, 0(a0)
+; RV32-NEXT:    sw a1, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: compressstore_v8i64:
@@ -1324,22 +895,8 @@ define void @compressstore_v8i64(ptr align 8 %base, <8 x i64> %v, <8 x i1> %mask
 ; RV64-NEXT:  .LBB15_4: # %cond.store7
 ; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v12, v8, 3
-; RV64-NEXT:    vmv.x.s a2, v12
-; RV64-NEXT:    sb a2, 0(a0)
-; RV64-NEXT:    srli a3, a2, 56
-; RV64-NEXT:    sb a3, 7(a0)
-; RV64-NEXT:    srli a3, a2, 48
-; RV64-NEXT:    sb a3, 6(a0)
-; RV64-NEXT:    srli a3, a2, 40
-; RV64-NEXT:    sb a3, 5(a0)
-; RV64-NEXT:    srli a3, a2, 32
-; RV64-NEXT:    sb a3, 4(a0)
-; RV64-NEXT:    srli a3, a2, 24
-; RV64-NEXT:    sb a3, 3(a0)
-; RV64-NEXT:    srli a3, a2, 16
-; RV64-NEXT:    sb a3, 2(a0)
-; RV64-NEXT:    srli a2, a2, 8
-; RV64-NEXT:    sb a2, 1(a0)
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vse64.v v12, (a0)
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:  .LBB15_5: # %else8
 ; RV64-NEXT:    addi sp, sp, -320
@@ -1367,21 +924,7 @@ define void @compressstore_v8i64(ptr align 8 %base, <8 x i64> %v, <8 x i1> %mask
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vse64.v v8, (a1)
 ; RV64-NEXT:    ld a1, 56(sp)
-; RV64-NEXT:    sb a1, 0(a0)
-; RV64-NEXT:    srli a2, a1, 56
-; RV64-NEXT:    sb a2, 7(a0)
-; RV64-NEXT:    srli a2, a1, 48
-; RV64-NEXT:    sb a2, 6(a0)
-; RV64-NEXT:    srli a2, a1, 40
-; RV64-NEXT:    sb a2, 5(a0)
-; RV64-NEXT:    srli a2, a1, 32
-; RV64-NEXT:    sb a2, 4(a0)
-; RV64-NEXT:    srli a2, a1, 24
-; RV64-NEXT:    sb a2, 3(a0)
-; RV64-NEXT:    srli a2, a1, 16
-; RV64-NEXT:    sb a2, 2(a0)
-; RV64-NEXT:    srli a1, a1, 8
-; RV64-NEXT:    sb a1, 1(a0)
+; RV64-NEXT:    sd a1, 0(a0)
 ; RV64-NEXT:  .LBB15_10: # %else20
 ; RV64-NEXT:    addi sp, s0, -320
 ; RV64-NEXT:    ld ra, 312(sp) # 8-byte Folded Reload
@@ -1389,67 +932,23 @@ define void @compressstore_v8i64(ptr align 8 %base, <8 x i64> %v, <8 x i1> %mask
 ; RV64-NEXT:    addi sp, sp, 320
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB15_11: # %cond.store
-; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmv.x.s a2, v8
-; RV64-NEXT:    sb a2, 0(a0)
-; RV64-NEXT:    srli a3, a2, 56
-; RV64-NEXT:    sb a3, 7(a0)
-; RV64-NEXT:    srli a3, a2, 48
-; RV64-NEXT:    sb a3, 6(a0)
-; RV64-NEXT:    srli a3, a2, 40
-; RV64-NEXT:    sb a3, 5(a0)
-; RV64-NEXT:    srli a3, a2, 32
-; RV64-NEXT:    sb a3, 4(a0)
-; RV64-NEXT:    srli a3, a2, 24
-; RV64-NEXT:    sb a3, 3(a0)
-; RV64-NEXT:    srli a3, a2, 16
-; RV64-NEXT:    sb a3, 2(a0)
-; RV64-NEXT:    srli a2, a2, 8
-; RV64-NEXT:    sb a2, 1(a0)
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 2
 ; RV64-NEXT:    beqz a2, .LBB15_2
 ; RV64-NEXT:  .LBB15_12: # %cond.store1
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v12, v8, 1
-; RV64-NEXT:    vmv.x.s a2, v12
-; RV64-NEXT:    sb a2, 0(a0)
-; RV64-NEXT:    srli a3, a2, 56
-; RV64-NEXT:    sb a3, 7(a0)
-; RV64-NEXT:    srli a3, a2, 48
-; RV64-NEXT:    sb a3, 6(a0)
-; RV64-NEXT:    srli a3, a2, 40
-; RV64-NEXT:    sb a3, 5(a0)
-; RV64-NEXT:    srli a3, a2, 32
-; RV64-NEXT:    sb a3, 4(a0)
-; RV64-NEXT:    srli a3, a2, 24
-; RV64-NEXT:    sb a3, 3(a0)
-; RV64-NEXT:    srli a3, a2, 16
-; RV64-NEXT:    sb a3, 2(a0)
-; RV64-NEXT:    srli a2, a2, 8
-; RV64-NEXT:    sb a2, 1(a0)
+; RV64-NEXT:    vse64.v v12, (a0)
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 4
 ; RV64-NEXT:    beqz a2, .LBB15_3
 ; RV64-NEXT:  .LBB15_13: # %cond.store4
 ; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v12, v8, 2
-; RV64-NEXT:    vmv.x.s a2, v12
-; RV64-NEXT:    sb a2, 0(a0)
-; RV64-NEXT:    srli a3, a2, 56
-; RV64-NEXT:    sb a3, 7(a0)
-; RV64-NEXT:    srli a3, a2, 48
-; RV64-NEXT:    sb a3, 6(a0)
-; RV64-NEXT:    srli a3, a2, 40
-; RV64-NEXT:    sb a3, 5(a0)
-; RV64-NEXT:    srli a3, a2, 32
-; RV64-NEXT:    sb a3, 4(a0)
-; RV64-NEXT:    srli a3, a2, 24
-; RV64-NEXT:    sb a3, 3(a0)
-; RV64-NEXT:    srli a3, a2, 16
-; RV64-NEXT:    sb a3, 2(a0)
-; RV64-NEXT:    srli a2, a2, 8
-; RV64-NEXT:    sb a2, 1(a0)
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vse64.v v12, (a0)
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 8
 ; RV64-NEXT:    bnez a2, .LBB15_4
@@ -1459,21 +958,7 @@ define void @compressstore_v8i64(ptr align 8 %base, <8 x i64> %v, <8 x i1> %mask
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vse64.v v8, (a2)
 ; RV64-NEXT:    ld a2, 224(sp)
-; RV64-NEXT:    sb a2, 0(a0)
-; RV64-NEXT:    srli a3, a2, 56
-; RV64-NEXT:    sb a3, 7(a0)
-; RV64-NEXT:    srli a3, a2, 48
-; RV64-NEXT:    sb a3, 6(a0)
-; RV64-NEXT:    srli a3, a2, 40
-; RV64-NEXT:    sb a3, 5(a0)
-; RV64-NEXT:    srli a3, a2, 32
-; RV64-NEXT:    sb a3, 4(a0)
-; RV64-NEXT:    srli a3, a2, 24
-; RV64-NEXT:    sb a3, 3(a0)
-; RV64-NEXT:    srli a3, a2, 16
-; RV64-NEXT:    sb a3, 2(a0)
-; RV64-NEXT:    srli a2, a2, 8
-; RV64-NEXT:    sb a2, 1(a0)
+; RV64-NEXT:    sd a2, 0(a0)
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 32
 ; RV64-NEXT:    beqz a2, .LBB15_7
@@ -1482,21 +967,7 @@ define void @compressstore_v8i64(ptr align 8 %base, <8 x i64> %v, <8 x i1> %mask
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vse64.v v8, (a2)
 ; RV64-NEXT:    ld a2, 168(sp)
-; RV64-NEXT:    sb a2, 0(a0)
-; RV64-NEXT:    srli a3, a2, 56
-; RV64-NEXT:    sb a3, 7(a0)
-; RV64-NEXT:    srli a3, a2, 48
-; RV64-NEXT:    sb a3, 6(a0)
-; RV64-NEXT:    srli a3, a2, 40
-; RV64-NEXT:    sb a3, 5(a0)
-; RV64-NEXT:    srli a3, a2, 32
-; RV64-NEXT:    sb a3, 4(a0)
-; RV64-NEXT:    srli a3, a2, 24
-; RV64-NEXT:    sb a3, 3(a0)
-; RV64-NEXT:    srli a3, a2, 16
-; RV64-NEXT:    sb a3, 2(a0)
-; RV64-NEXT:    srli a2, a2, 8
-; RV64-NEXT:    sb a2, 1(a0)
+; RV64-NEXT:    sd a2, 0(a0)
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 64
 ; RV64-NEXT:    beqz a2, .LBB15_8
@@ -1505,21 +976,7 @@ define void @compressstore_v8i64(ptr align 8 %base, <8 x i64> %v, <8 x i1> %mask
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vse64.v v8, (a2)
 ; RV64-NEXT:    ld a2, 112(sp)
-; RV64-NEXT:    sb a2, 0(a0)
-; RV64-NEXT:    srli a3, a2, 56
-; RV64-NEXT:    sb a3, 7(a0)
-; RV64-NEXT:    srli a3, a2, 48
-; RV64-NEXT:    sb a3, 6(a0)
-; RV64-NEXT:    srli a3, a2, 40
-; RV64-NEXT:    sb a3, 5(a0)
-; RV64-NEXT:    srli a3, a2, 32
-; RV64-NEXT:    sb a3, 4(a0)
-; RV64-NEXT:    srli a3, a2, 24
-; RV64-NEXT:    sb a3, 3(a0)
-; RV64-NEXT:    srli a3, a2, 16
-; RV64-NEXT:    sb a3, 2(a0)
-; RV64-NEXT:    srli a2, a2, 8
-; RV64-NEXT:    sb a2, 1(a0)
+; RV64-NEXT:    sd a2, 0(a0)
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a1, a1, -128
 ; RV64-NEXT:    bnez a1, .LBB15_9
