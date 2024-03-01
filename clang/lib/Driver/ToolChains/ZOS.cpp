@@ -301,19 +301,6 @@ void ZOS::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   addSystemInclude(DriverArgs, CC1Args, "/usr/include");
 }
 
-void ZOS::TryAddIncludeFromPath(llvm::SmallString<128> Path,
-                                const llvm::opt::ArgList &DriverArgs,
-                                llvm::opt::ArgStringList &CC1Args) const {
-  if (!getVFS().exists(Path)) {
-    if (DriverArgs.hasArg(options::OPT_v))
-      WithColor::warning(errs(), "Clang")
-          << "ignoring nonexistent directory \"" << Path << "\"\n";
-    if (!DriverArgs.hasArg(options::OPT__HASH_HASH_HASH))
-      return;
-  }
-  addSystemInclude(DriverArgs, CC1Args, Path);
-}
-
 void ZOS::AddClangCXXStdlibIncludeArgs(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
@@ -327,8 +314,13 @@ void ZOS::AddClangCXXStdlibIncludeArgs(
     // <install>/bin/../include/c++/v1
     llvm::SmallString<128> InstallBin =
         llvm::StringRef(getDriver().getInstalledDir());
-    llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
-    TryAddIncludeFromPath(InstallBin, DriverArgs, CC1Args);
+    llvm::sys::path::append(InstallBin, "..", "include");
+    IncludeStrategy Strategy = DriverArgs.hasArg(options::OPT__HASH_HASH_HASH)
+                                   ? IncludeStrategy::AssumeAvailable
+                                   : IncludeStrategy::CheckIfAvailable;
+    Strategy.PrintDebugStatements = DriverArgs.hasArg(options::OPT_v);
+
+    ToolChain::AddLibcxxInclude(DriverArgs, CC1Args, InstallBin, Strategy);
     break;
   }
   case ToolChain::CST_Libstdcxx:

@@ -351,8 +351,9 @@ void OpenBSD::AddClangSystemIncludeArgs(
 
 void OpenBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                     llvm::opt::ArgStringList &CC1Args) const {
-  addSystemInclude(DriverArgs, CC1Args,
-                   concat(getDriver().SysRoot, "/usr/include/c++/v1"));
+  ToolChain::AddLibcxxInclude(DriverArgs, CC1Args,
+                              concat(getDriver().SysRoot, "/usr/include"),
+                              IncludeStrategy::AssumeAvailable);
 }
 
 void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,

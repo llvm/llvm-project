@@ -317,24 +317,22 @@ void NaClToolChain::addLibCxxIncludePaths(
   SmallString<128> P(D.Dir + "/../");
   switch (getTriple().getArch()) {
   default:
-    break;
+    return;
   case llvm::Triple::arm:
-    llvm::sys::path::append(P, "arm-nacl/include/c++/v1");
-    addSystemInclude(DriverArgs, CC1Args, P.str());
+    llvm::sys::path::append(P, "arm-nacl/include");
     break;
   case llvm::Triple::x86:
-    llvm::sys::path::append(P, "x86_64-nacl/include/c++/v1");
-    addSystemInclude(DriverArgs, CC1Args, P.str());
+    llvm::sys::path::append(P, "x86_64-nacl/include");
     break;
   case llvm::Triple::x86_64:
-    llvm::sys::path::append(P, "x86_64-nacl/include/c++/v1");
-    addSystemInclude(DriverArgs, CC1Args, P.str());
+    llvm::sys::path::append(P, "x86_64-nacl/include");
     break;
   case llvm::Triple::mipsel:
-    llvm::sys::path::append(P, "mipsel-nacl/include/c++/v1");
-    addSystemInclude(DriverArgs, CC1Args, P.str());
+    llvm::sys::path::append(P, "mipsel-nacl/include");
     break;
   }
+  ToolChain::AddLibcxxInclude(DriverArgs, CC1Args, P,
+                              IncludeStrategy::AssumeAvailable);
 }
 
 ToolChain::CXXStdlibType

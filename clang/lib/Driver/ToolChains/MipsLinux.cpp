@@ -97,11 +97,10 @@ void MipsLLVMToolChain::addLibCxxIncludePaths(
     llvm::opt::ArgStringList &CC1Args) const {
   if (const auto &Callback = Multilibs.includeDirsCallback()) {
     for (std::string Path : Callback(SelectedMultilibs.back())) {
-      Path = getDriver().getInstalledDir() + Path + "/c++/v1";
-      if (llvm::sys::fs::exists(Path)) {
-        addSystemInclude(DriverArgs, CC1Args, Path);
+      if (ToolChain::AddLibcxxInclude(DriverArgs, CC1Args,
+                                      getDriver().getInstalledDir() + Path,
+                                      IncludeStrategy::CheckIfAvailable))
         return;
-      }
     }
   }
 }

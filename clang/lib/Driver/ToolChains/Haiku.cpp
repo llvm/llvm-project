@@ -270,8 +270,9 @@ void Haiku::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
 
 void Haiku::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args) const {
-  addSystemInclude(DriverArgs, CC1Args,
-                   concat(getDriver().SysRoot, "/boot/system/develop/headers/c++/v1"));
+  AddLibcxxInclude(DriverArgs, CC1Args,
+                   concat(getDriver().SysRoot, "/boot/system/develop/headers"),
+                   IncludeStrategy::AssumeAvailable);
 }
 
 Tool *Haiku::buildLinker() const { return new tools::haiku::Linker(*this); }

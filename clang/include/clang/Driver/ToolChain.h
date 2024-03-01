@@ -705,6 +705,47 @@ public:
   AddClangCXXStdlibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                llvm::opt::ArgStringList &CC1Args) const;
 
+  struct IncludeStrategy {
+    enum AvailabilityOptions {
+      // Check whether the directory is exists before adding it to the
+      // include path. This is the case if AssumeAvailable isn't set.
+      CheckIfAvailable,
+
+      // Don't check whether the directory exists. Just assume it does and add
+      // the include.
+      AssumeAvailable,
+
+      // Use v<MaxNumber> that is inside `<IncludeRoot>/c++`. If not set, always
+      // uses v1.
+      UseMaxVersionAvailable,
+    };
+
+    IncludeStrategy(AvailabilityOptions Availability,
+                    bool AddTargetDirIfAvailable = false,
+                    bool PrintDebugStatements = false)
+        : Availability(Availability),
+          AddTargetDirIfAvailable(AddTargetDirIfAvailable),
+          PrintDebugStatements(PrintDebugStatements) {}
+
+    LLVM_PREFERRED_TYPE(AvailabilityOptions)
+    unsigned Availability : 2;
+
+    // Check whether the directory `<IncludeRoot>/<target-triple>/c++/v<N>`
+    // exists, and add it to the include path if it does.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned AddTargetDirIfAvailable : 1;
+
+    // Whether to print a message if a checked directory isn't available.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned PrintDebugStatements : 1;
+  };
+
+  /// Helper function to implement AddClangCXXStdlibIncludeArgs for libc++.
+  bool AddLibcxxInclude(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::Twine IncludeRoot,
+                        IncludeStrategy Strategy) const;
+
   /// AddClangCXXStdlibIsystemArgs - Add the clang -cc1 level arguments to set
   /// the specified include paths for the C++ standard library.
   void AddClangCXXStdlibIsystemArgs(const llvm::opt::ArgList &DriverArgs,

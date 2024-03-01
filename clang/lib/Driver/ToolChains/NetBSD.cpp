@@ -495,21 +495,21 @@ void NetBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
   const std::string Candidates[] = {
     // directory relative to build tree
-    concat(getDriver().Dir, "/../include/c++/v1"),
+    concat(getDriver().Dir, "/../include"),
     // system install with full upstream path
-    concat(getDriver().SysRoot, "/usr/include/c++/v1"),
-    // system install from src
-    concat(getDriver().SysRoot, "/usr/include/c++"),
+    concat(getDriver().SysRoot, "/usr/include"),
   };
 
   for (const auto &IncludePath : Candidates) {
-    if (!getVFS().exists(IncludePath + "/__config"))
-      continue;
-
-    // Use the first candidate that looks valid.
-    addSystemInclude(DriverArgs, CC1Args, IncludePath);
-    return;
+    if (ToolChain::AddLibcxxInclude(DriverArgs, CC1Args, IncludePath,
+                                    IncludeStrategy::CheckIfAvailable))
+      return;
   }
+
+  // system install from src
+  auto NonV1Path = concat(getDriver().SysRoot, "/usr/include/c++");
+  if (getVFS().exists(NonV1Path))
+    addSystemInclude(DriverArgs, CC1Args, NonV1Path);
 }
 
 void NetBSD::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,

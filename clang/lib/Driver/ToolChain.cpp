@@ -40,6 +40,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
@@ -1248,6 +1249,46 @@ void ToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   // header search paths with it. Once all systems are overriding this
   // function, the CC1 flag and this line can be removed.
   DriverArgs.AddAllArgs(CC1Args, options::OPT_stdlib_EQ);
+}
+
+bool ToolChain::AddLibcxxInclude(const llvm::opt::ArgList &DriverArgs,
+                                 llvm::opt::ArgStringList &CC1Args,
+                                 llvm::Twine IncludeRoot,
+                                 IncludeStrategy Strategy) const {
+  SmallString<128> Path;
+  IncludeRoot.toVector(Path);
+
+  auto VersionDirName =
+      Strategy.Availability == IncludeStrategy::UseMaxVersionAvailable
+          ? detectLibcxxVersion(Path)
+          : "v1";
+
+  if (VersionDirName.empty())
+    return false;
+
+  if (Strategy.AddTargetDirIfAvailable) {
+    SmallString<128> TargetDir(Path);
+    llvm::sys::path::append(TargetDir, getTripleString(), "c++",
+                            VersionDirName);
+    if (getVFS().exists(TargetDir))
+      addSystemInclude(DriverArgs, CC1Args, TargetDir);
+  }
+
+  llvm::sys::path::append(Path, "c++", VersionDirName);
+
+  if ((Strategy.Availability != IncludeStrategy::AssumeAvailable ||
+       Strategy.PrintDebugStatements) &&
+      !D.getVFS().exists(Path)) {
+    if (Strategy.PrintDebugStatements)
+      WithColor::warning(errs(), "Clang")
+          << "ignoring nonexistent directory \"" << Path << "\"\n";
+
+    if (Strategy.Availability != IncludeStrategy::AssumeAvailable)
+      return false;
+  }
+
+  addSystemInclude(DriverArgs, CC1Args, Path.str());
+  return true;
 }
 
 void ToolChain::AddClangCXXStdlibIsystemArgs(

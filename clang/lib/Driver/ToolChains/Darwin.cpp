@@ -2536,38 +2536,28 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
     // parent_path.
     llvm::SmallString<128> InstallBin =
         llvm::StringRef(getDriver().getInstalledDir()); // <install>/bin
-    llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
-    if (getVFS().exists(InstallBin)) {
-      addSystemInclude(DriverArgs, CC1Args, InstallBin);
+    llvm::sys::path::append(InstallBin, "..", "include");
+    IncludeStrategy Strategy = IncludeStrategy::CheckIfAvailable;
+    Strategy.PrintDebugStatements = DriverArgs.hasArg(options::OPT_v);
+    if (ToolChain::AddLibcxxInclude(DriverArgs, CC1Args, InstallBin.str(),
+                                    Strategy))
       return;
-    } else if (DriverArgs.hasArg(options::OPT_v)) {
-      llvm::errs() << "ignoring nonexistent directory \"" << InstallBin
-                   << "\"\n";
-    }
 
     // (2) Check for the folder where the executable is located, if different.
     if (getDriver().getInstalledDir() != getDriver().Dir) {
       InstallBin = llvm::StringRef(getDriver().Dir);
-      llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
-      if (getVFS().exists(InstallBin)) {
-        addSystemInclude(DriverArgs, CC1Args, InstallBin);
+      llvm::sys::path::append(InstallBin, "..", "include");
+      if (ToolChain::AddLibcxxInclude(DriverArgs, CC1Args, InstallBin.str(),
+                                      Strategy))
         return;
-      } else if (DriverArgs.hasArg(options::OPT_v)) {
-        llvm::errs() << "ignoring nonexistent directory \"" << InstallBin
-                     << "\"\n";
-      }
     }
 
     // Otherwise, check for (3)
     llvm::SmallString<128> SysrootUsr = Sysroot;
-    llvm::sys::path::append(SysrootUsr, "usr", "include", "c++", "v1");
-    if (getVFS().exists(SysrootUsr)) {
-      addSystemInclude(DriverArgs, CC1Args, SysrootUsr);
+    llvm::sys::path::append(SysrootUsr, "usr", "include");
+    if (ToolChain::AddLibcxxInclude(DriverArgs, CC1Args, SysrootUsr.str(),
+                                    Strategy))
       return;
-    } else if (DriverArgs.hasArg(options::OPT_v)) {
-      llvm::errs() << "ignoring nonexistent directory \"" << SysrootUsr
-                   << "\"\n";
-    }
 
     // Otherwise, don't add any path.
     break;

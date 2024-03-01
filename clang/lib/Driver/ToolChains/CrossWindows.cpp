@@ -269,7 +269,8 @@ AddClangCXXStdlibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
     return;
 
   if (GetCXXStdlibType(DriverArgs) == ToolChain::CST_Libcxx)
-    addSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/include/c++/v1");
+    ToolChain::AddLibcxxInclude(DriverArgs, CC1Args, SysRoot + "/usr/include",
+                                IncludeStrategy::AssumeAvailable);
 }
 
 void CrossWindowsToolChain::

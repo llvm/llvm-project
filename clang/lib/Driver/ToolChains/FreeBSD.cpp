@@ -436,8 +436,9 @@ void FreeBSD::AddClangSystemIncludeArgs(
 
 void FreeBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                     llvm::opt::ArgStringList &CC1Args) const {
-  addSystemInclude(DriverArgs, CC1Args,
-                   concat(getDriver().SysRoot, "/usr/include/c++/v1"));
+  AddLibcxxInclude(DriverArgs, CC1Args,
+                   concat(getDriver().SysRoot, "/usr/include"),
+                   IncludeStrategy::AssumeAvailable);
 }
 
 void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,

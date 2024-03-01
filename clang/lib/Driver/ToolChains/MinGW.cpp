@@ -745,16 +745,12 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
 
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
-    std::string TargetDir = (Base + "include" + Slash + getTripleString() +
-                             Slash + "c++" + Slash + "v1")
-                                .str();
-    if (getDriver().getVFS().exists(TargetDir))
-      addSystemInclude(DriverArgs, CC1Args, TargetDir);
-    addSystemInclude(DriverArgs, CC1Args,
-                     Base + SubdirName + Slash + "include" + Slash + "c++" +
-                         Slash + "v1");
-    addSystemInclude(DriverArgs, CC1Args,
-                     Base + "include" + Slash + "c++" + Slash + "v1");
+    ToolChain::AddLibcxxInclude(
+        DriverArgs, CC1Args, Base + "include",
+        IncludeStrategy{IncludeStrategy::AssumeAvailable, true});
+    ToolChain::AddLibcxxInclude(DriverArgs, CC1Args,
+                                Base + SubdirName + Slash + "include",
+                                IncludeStrategy::AssumeAvailable);
     break;
   }
 

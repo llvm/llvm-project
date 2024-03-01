@@ -737,18 +737,27 @@ void HexagonToolChain::addLibCxxIncludePaths(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
-  if (!D.SysRoot.empty() && getTriple().isMusl())
-    addLibStdCXXIncludePaths(D.SysRoot + "/usr/include/c++/v1", "", "",
-                             DriverArgs, CC1Args);
-  else if (getTriple().isMusl())
-    addLibStdCXXIncludePaths("/usr/include/c++/v1", "", "", DriverArgs,
-                             CC1Args);
-  else {
+  if (!D.SysRoot.empty() && getTriple().isMusl()) {
+    ToolChain::AddLibcxxInclude(DriverArgs, CC1Args, D.SysRoot + "/usr/include",
+                                IncludeStrategy::AssumeAvailable);
+    // FIXME: Is this actually expected? (Same below)
+    addSystemInclude(DriverArgs, CC1Args,
+                     D.SysRoot + "/usr/include/c++/v1/backward");
+  }
+  else if (getTriple().isMusl()) {
+    ToolChain::AddLibcxxInclude(DriverArgs, CC1Args, "/usr/include",
+                                IncludeStrategy::AssumeAvailable);
+    addSystemInclude(DriverArgs, CC1Args, "/usr/include/c++/v1/backward");
+  } else {
     std::string TargetDir = getHexagonTargetDir(D.InstalledDir, D.PrefixDirs);
-    addLibStdCXXIncludePaths(TargetDir + "/hexagon/include/c++/v1", "", "",
-                             DriverArgs, CC1Args);
+    ToolChain::AddLibcxxInclude(DriverArgs, CC1Args,
+                                TargetDir + "/hexagon/include",
+                                IncludeStrategy::AssumeAvailable);
+    addSystemInclude(DriverArgs, CC1Args,
+                     TargetDir + "/hexagon/include/c++/v1/backward");
   }
 }
+
 void HexagonToolChain::addLibStdCxxIncludePaths(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {

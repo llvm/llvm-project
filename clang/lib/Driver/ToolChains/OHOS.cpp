@@ -242,12 +242,9 @@ void OHOS::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
     std::string IncPath = makePath({getDriver().Dir, "..", "include"});
-    std::string IncTargetPath =
-        makePath({IncPath, getMultiarchTriple(getTriple()), "c++", "v1"});
-    if (getVFS().exists(IncTargetPath)) {
-      addSystemInclude(DriverArgs, CC1Args, makePath({IncPath, "c++", "v1"}));
-      addSystemInclude(DriverArgs, CC1Args, IncTargetPath);
-    }
+    ToolChain::AddLibcxxInclude(
+        DriverArgs, CC1Args, IncPath,
+        IncludeStrategy{IncludeStrategy::CheckIfAvailable, true});
     break;
   }
 

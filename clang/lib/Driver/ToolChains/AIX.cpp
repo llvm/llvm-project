@@ -404,11 +404,11 @@ void AIX::AddClangCXXStdlibIncludeArgs(
     llvm::report_fatal_error(
         "picking up libstdc++ headers is unimplemented on AIX");
   case ToolChain::CST_Libcxx: {
-    llvm::StringRef Sysroot = GetHeaderSysroot(DriverArgs);
-    SmallString<128> PathCPP(Sysroot);
-    llvm::sys::path::append(PathCPP, "opt/IBM/openxlCSDK", "include", "c++",
-                            "v1");
-    addSystemInclude(DriverArgs, CC1Args, PathCPP.str());
+    llvm::SmallString<128> Path = GetHeaderSysroot(DriverArgs);
+    llvm::sys::path::append(Path, "opt/IBM/openxlCSDK/include");
+    ToolChain::AddLibcxxInclude(DriverArgs, CC1Args, Path,
+                                IncludeStrategy::AssumeAvailable);
+
     // Required in order to suppress conflicting C++ overloads in the system
     // libc headers that were used by XL C++.
     CC1Args.push_back("-D__LIBC_NO_CPP_MATH_OVERLOADS__");

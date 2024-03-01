@@ -309,14 +309,13 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
     case ToolChain::CST_Libcxx: {
       // First check sysroot/usr/include/c++/v1 if it exists.
       SmallString<128> TargetDir(Dir);
-      llvm::sys::path::append(TargetDir, "usr", "include", "c++", "v1");
-      if (D.getVFS().exists(TargetDir)) {
-        addSystemInclude(DriverArgs, CC1Args, TargetDir.str());
-        break;
+      llvm::sys::path::append(TargetDir, "usr", "include");
+      if (!ToolChain::AddLibcxxInclude(DriverArgs, CC1Args, TargetDir.str(),
+                                       IncludeStrategy::CheckIfAvailable)) {
+        llvm::sys::path::append(Dir, "include");
+        ToolChain::AddLibcxxInclude(DriverArgs, CC1Args, Dir.str(),
+                                    IncludeStrategy::AssumeAvailable);
       }
-      // Add generic path if nothing else succeeded so far.
-      llvm::sys::path::append(Dir, "include", "c++", "v1");
-      addSystemInclude(DriverArgs, CC1Args, Dir.str());
       break;
     }
     case ToolChain::CST_Libstdcxx: {

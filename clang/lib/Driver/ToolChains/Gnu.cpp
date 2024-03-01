@@ -3284,6 +3284,7 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
     if (Version.empty())
       return false;
 
+    // FIXME: This should be part of AddLibcxxInclude
     // First add the per-target include path if it exists.
     bool TargetDirExists = false;
     std::optional<std::string> TargetIncludeDir = getTargetSubDirPath(Path);
@@ -3299,9 +3300,8 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
       return false;
 
     // Second add the generic one.
-    SmallString<128> GenericDir(Path);
-    llvm::sys::path::append(GenericDir, "c++", Version);
-    addSystemInclude(DriverArgs, CC1Args, GenericDir);
+    ToolChain::AddLibcxxInclude(DriverArgs, CC1Args, Path,
+                                IncludeStrategy::UseMaxVersionAvailable);
     return true;
   };
 

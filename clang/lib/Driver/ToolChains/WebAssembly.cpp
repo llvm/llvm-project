@@ -507,6 +507,7 @@ void WebAssembly::addLibCxxIncludePaths(
   if (Version.empty())
     return;
 
+  // FIXME: This should be part of AddLibcxxInclude
   // First add the per-target include path if the OS is known.
   if (IsKnownOs) {
     std::string TargetDir = LibPath + "/" + MultiarchTriple + "/c++/" + Version;
@@ -514,7 +515,8 @@ void WebAssembly::addLibCxxIncludePaths(
   }
 
   // Second add the generic one.
-  addSystemInclude(DriverArgs, CC1Args, LibPath + "/c++/" + Version);
+  ToolChain::AddLibcxxInclude(DriverArgs, CC1Args, LibPath,
+                              IncludeStrategy::UseMaxVersionAvailable);
 }
 
 void WebAssembly::addLibStdCXXIncludePaths(
