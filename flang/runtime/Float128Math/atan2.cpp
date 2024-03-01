@@ -15,7 +15,7 @@ extern "C" {
 CppTypeFor<TypeCategory::Real, 16> RTDEF(Atan2F128)(
     CppTypeFor<TypeCategory::Real, 16> x,
     CppTypeFor<TypeCategory::Real, 16> y) {
-  return Atan2<RTNAME(Atan2F128)>::invoke(x, y);
+  return Atan2<true>::invoke(x, y);
 }
 #endif
 

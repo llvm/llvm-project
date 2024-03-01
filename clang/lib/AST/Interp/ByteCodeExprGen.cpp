@@ -1220,14 +1220,18 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
-  if (Initializing)
-    return this->visitInitializer(E->getSourceExpr());
+  const Expr *SourceExpr = E->getSourceExpr();
+  if (!SourceExpr)
+    return false;
 
-  PrimType SubExprT = classify(E->getSourceExpr()).value_or(PT_Ptr);
+  if (Initializing)
+    return this->visitInitializer(SourceExpr);
+
+  PrimType SubExprT = classify(SourceExpr).value_or(PT_Ptr);
   if (auto It = OpaqueExprs.find(E); It != OpaqueExprs.end())
     return this->emitGetLocal(SubExprT, It->second, E);
 
-  if (!this->visit(E->getSourceExpr()))
+  if (!this->visit(SourceExpr))
     return false;
 
   // At this point we either have the evaluated source expression or a pointer
@@ -2587,7 +2591,10 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *E) {
 
     if (!this->emitFinishInit(E))
       return false;
-    return this->emitRetValue(E);
+    // We are destroying the locals AFTER the Ret op.
+    // The Ret op needs to copy the (alive) values, but the
+    // destructors may still turn the entire expression invalid.
+    return this->emitRetValue(E) && RootScope.destroyLocals();
   }
 
   return false;
@@ -3210,12 +3217,6 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   // we haven't seen yet.
   if (Ctx.getLangOpts().CPlusPlus) {
     if (const auto *VD = dyn_cast<VarDecl>(D)) {
-      // Dummy for static locals
-      if (VD->isStaticLocal()) {
-        if (std::optional<unsigned> I = P.getOrCreateDummy(D))
-          return this->emitGetPtrGlobal(*I, E);
-        return false;
-      }
       // Visit local const variables like normal.
       if (VD->isLocalVarDecl() && VD->getType().isConstQualified()) {
         if (!this->visitVarDecl(VD))
@@ -3223,6 +3224,9 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
         // Retry.
         return this->VisitDeclRefExpr(E);
       }
+
+      if (VD->hasExternalStorage())
+        return this->emitInvalidDeclRef(E, E);
     }
   } else {
     if (const auto *VD = dyn_cast<VarDecl>(D);
@@ -3232,10 +3236,10 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
       // Retry.
       return this->VisitDeclRefExpr(E);
     }
-
-    if (std::optional<unsigned> I = P.getOrCreateDummy(D))
-      return this->emitGetPtrGlobal(*I, E);
   }
+
+  if (std::optional<unsigned> I = P.getOrCreateDummy(D))
+    return this->emitGetPtrGlobal(*I, E);
 
   return this->emitInvalidDeclRef(E, E);
 }
@@ -3414,14 +3418,15 @@ bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Record *R) {
   // Now emit the destructor and recurse into base classes.
   if (const CXXDestructorDecl *Dtor = R->getDestructor();
       Dtor && !Dtor->isTrivial()) {
-    if (const Function *DtorFunc = getFunction(Dtor)) {
-      assert(DtorFunc->hasThisPointer());
-      assert(DtorFunc->getNumParams() == 1);
-      if (!this->emitDupPtr(SourceInfo{}))
-        return false;
-      if (!this->emitCall(DtorFunc, 0, SourceInfo{}))
-        return false;
-    }
+    const Function *DtorFunc = getFunction(Dtor);
+    if (!DtorFunc)
+      return false;
+    assert(DtorFunc->hasThisPointer());
+    assert(DtorFunc->getNumParams() == 1);
+    if (!this->emitDupPtr(SourceInfo{}))
+      return false;
+    if (!this->emitCall(DtorFunc, 0, SourceInfo{}))
+      return false;
   }
 
   for (const Record::Base &Base : llvm::reverse(R->bases())) {

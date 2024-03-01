@@ -1029,8 +1029,11 @@ unsigned char Editline::TabCommand(int ch) {
     case CompletionMode::Normal: {
       std::string to_add = completion.GetCompletion();
       // Terminate the current argument with a quote if it started with a quote.
-      if (!request.GetParsedLine().empty() && request.GetParsedArg().IsQuoted())
+      Args &parsedLine = request.GetParsedLine();
+      if (!parsedLine.empty() && request.GetCursorIndex() < parsedLine.size() &&
+          request.GetParsedArg().IsQuoted()) {
         to_add.push_back(request.GetParsedArg().GetQuoteChar());
+      }
       to_add.push_back(' ');
       el_deletestr(m_editline, request.GetCursorArgumentPrefix().size());
       el_insertstr(m_editline, to_add.c_str());
