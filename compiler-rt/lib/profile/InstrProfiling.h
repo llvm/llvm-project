@@ -276,6 +276,17 @@ void __llvm_profile_get_padding_sizes_for_counters(
 void __llvm_profile_set_dumped();
 
 /*!
+ * \brief Write custom target-specific profiling data to a seperate file.
+ * Used by libomptarget for GPU PGO.
+ */
+int __llvm_write_custom_profile(const char *Target,
+                                const __llvm_profile_data *DataBegin,
+                                const __llvm_profile_data *DataEnd,
+                                const char *CountersBegin,
+                                const char *CountersEnd, const char *NamesBegin,
+                                const char *NamesEnd);
+
+/*!
  * This variable is defined in InstrProfilingRuntime.cpp as a hidden
  * symbol. Its main purpose is to enable profile runtime user to
  * bypass runtime initialization code -- if the client code explicitly
