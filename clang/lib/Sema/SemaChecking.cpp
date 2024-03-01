@@ -5219,14 +5219,16 @@ bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
         //  and not the builtin itself.
         S->Diag(TheCall->getBeginLoc(),
                 diag::err_vec_builtin_incompatible_vector)
-            << TheCall->getDirectCallee() << /*all args*/ true
+            << TheCall->getDirectCallee() << /*useAllTerminology*/ true
             << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
         retValue = true;
       }
       if (VecTyA->getNumElements() != VecTyB->getNumElements()) {
-        // if we get here a HLSLVectorTruncation is needed.
+        // You should only be hitting this case if you are calling the builtin
+        // directly. HLSL intrinsics should avoid this case via a
+        // HLSLVectorTruncation.
         S->Diag(BuiltinLoc, diag::err_vec_builtin_incompatible_vector)
-            << TheCall->getDirectCallee() << /*all args*/ true
+            << TheCall->getDirectCallee() << /*useAllTerminology*/ true
             << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                            TheCall->getArg(1)->getEndLoc());
         retValue = true;
@@ -5242,7 +5244,7 @@ bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   // Note: if we get here one of the args is a scalar which
   // requires a VectorSplat on Arg0 or Arg1
   S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
-      << TheCall->getDirectCallee() << /*all args*/ true
+      << TheCall->getDirectCallee() << /*useAllTerminology*/ true
       << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                      TheCall->getArg(1)->getEndLoc());
   return true;
