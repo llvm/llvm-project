@@ -214,7 +214,7 @@ DebugTranslation::translateImpl(DIGlobalVariableAttr attr) {
 }
 
 llvm::DIType *DebugTranslation::translateImpl(DIRecursiveTypeAttr attr) {
-  DistinctAttr recursiveId = attr.getId();
+  DistinctAttr recursiveId = attr.getRecId();
   if (attr.isRecSelf()) {
     auto *iter = recursiveTypeMap.find(recursiveId);
     assert(iter != recursiveTypeMap.end() && "unbound DI recursive self type");

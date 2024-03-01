@@ -313,25 +313,25 @@ def LLVM_DIRecursiveTypeAttr : LLVM_Attr<"DIRecursiveType", "di_recursive_type",
 
     1. If `baseType` is present:
       - This type is considered a recursive declaration (rec-decl).
-      - The `baseType` is a self-recursive type identified by the `id` field.
+      - The `baseType` is a self-recursive type identified by the `recId` field.
 
     2. If `baseType` is not present:
       - This type is considered a recursive self reference (rec-self).
       - This DIRecursiveType itself is a placeholder type that should be
         conceptually replaced with the closet parent DIRecursiveType with the
-        same `id` field.
+        same `recId` field.
 
     e.g. To represent a linked list struct:
 
-      #rec_self = di_recursive_type<self_id = 0>
+      #rec_self = di_recursive_type<recId = 0>
       #ptr = di_derived_type<baseType: #rec_self, ...>
       #field = di_derived_type<name = "next", baseType: #ptr, ...>
       #struct = di_composite_type<name = "Node", elements: #field, ...>
-      #rec = di_recursive_type<self_id = 0, baseType: #struct>
+      #rec = di_recursive_type<recId = 0, baseType: #struct>
 
       #var = di_local_variable<type = #struct_type, ...>
 
-    Note that a rec-self without an outer rec-decl with the same id is
+    Note that a rec-self without an outer rec-decl with the same recId is
     conceptually the same as an "unbound" variable. The context needs to provide
     meaning to the rec-self.
 
@@ -343,13 +343,13 @@ def LLVM_DIRecursiveTypeAttr : LLVM_Attr<"DIRecursiveType", "di_recursive_type",
   }];
 
   let parameters = (ins
-    "DistinctAttr":$id,
+    "DistinctAttr":$recId,
     OptionalParameter<"DITypeAttr">:$baseType
   );
 
   let builders = [
-    AttrBuilderWithInferredContext<(ins "DistinctAttr":$id), [{
-      return $_get(id.getContext(), id, nullptr);
+    AttrBuilderWithInferredContext<(ins "DistinctAttr":$recId), [{
+      return $_get(recId.getContext(), recId, nullptr);
     }]>
   ];
 
