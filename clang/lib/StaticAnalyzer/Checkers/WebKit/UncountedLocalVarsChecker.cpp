@@ -111,8 +111,6 @@ class UncountedLocalVarsChecker
               "WebKit coding guidelines"};
   mutable BugReporter *BR;
 
-  TrivialFunctionAnalysis TFA;
-
 public:
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
@@ -123,6 +121,11 @@ public:
     // want to visit those, so we make our own RecursiveASTVisitor.
     struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
       const UncountedLocalVarsChecker *Checker;
+
+      TrivialFunctionAnalysis TFA;
+
+      using Base = RecursiveASTVisitor<LocalVisitor>;
+
       explicit LocalVisitor(const UncountedLocalVarsChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
@@ -135,6 +138,37 @@ public:
         Checker->visitVarDecl(V);
         return true;
       }
+
+      bool TraverseIfStmt(IfStmt *IS) {
+        if (!TFA.isTrivial(IS))
+          return Base::TraverseIfStmt(IS);
+        return true;
+      }
+
+      bool TraverseForStmt(ForStmt *FS) {
+        if (!TFA.isTrivial(FS))
+          return Base::TraverseForStmt(FS);
+        return true;
+      }
+
+      bool TraverseCXXForRangeStmt(CXXForRangeStmt *FRS) {
+        if (!TFA.isTrivial(FRS))
+          return Base::TraverseCXXForRangeStmt(FRS);
+        return true;
+      }
+
+      bool TraverseWhileStmt(WhileStmt *WS) {
+        if (!TFA.isTrivial(WS))
+          return Base::TraverseWhileStmt(WS);
+        return true;
+      }
+
+      bool TraverseCompoundStmt(CompoundStmt *CS) {
+        if (!TFA.isTrivial(CS))
+          return Base::TraverseCompoundStmt(CS);
+        return true;
+      }
+
     };
 
     LocalVisitor visitor(this);
@@ -151,24 +185,6 @@ public:
 
     std::optional<bool> IsUncountedPtr = isUncountedPtr(ArgType);
     if (IsUncountedPtr && *IsUncountedPtr) {
-
-      ASTContext &ctx = V->getASTContext();
-      for (DynTypedNodeList ancestors = ctx.getParents(*V); !ancestors.empty();
-           ancestors = ctx.getParents(*ancestors.begin())) {
-        for (auto &ancestor : ancestors) {
-          if (auto *S = ancestor.get<IfStmt>(); S && TFA.isTrivial(S))
-            return;
-          if (auto *S = ancestor.get<ForStmt>(); S && TFA.isTrivial(S))
-            return;
-          if (auto *S = ancestor.get<CXXForRangeStmt>(); S && TFA.isTrivial(S))
-            return;
-          if (auto *S = ancestor.get<WhileStmt>(); S && TFA.isTrivial(S))
-            return;
-          if (auto *S = ancestor.get<CompoundStmt>(); S && TFA.isTrivial(S))
-            return;
-        }
-      }
-
       const Expr *const InitExpr = V->getInit();
       if (!InitExpr)
         return; // FIXME: later on we might warn on uninitialized vars too

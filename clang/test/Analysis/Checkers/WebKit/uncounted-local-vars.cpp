@@ -150,7 +150,6 @@ void foo() {
 }
 
 void bar() {
-  // no warnings
   if (RefCountable *a = provide_ref_ctnbl()) {
     // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
     a->method();    
