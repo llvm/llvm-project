@@ -1535,7 +1535,7 @@ define <32 x i64> @vp_ctpop_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %ev
 ; RV32-NEXT:    addi a1, a1, 48
 ; RV32-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; RV32-NEXT:    vslidedown.vi v1, v0, 2
+; RV32-NEXT:    vslidedown.vi v7, v0, 2
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
 ; RV32-NEXT:    sw a1, 44(sp)
@@ -1638,7 +1638,7 @@ define <32 x i64> @vp_ctpop_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %ev
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    and a0, a0, a2
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vmv1r.v v0, v1
+; RV32-NEXT:    vmv1r.v v0, v7
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a2, 40
 ; RV32-NEXT:    mul a0, a0, a2
