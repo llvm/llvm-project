@@ -361,8 +361,8 @@ getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
     if (const auto *FD = dyn_cast<FieldDecl>(VD))
       Fields.insert(FD);
   } else if (auto *InitList = dyn_cast<InitListExpr>(&S)) {
-    if (RecordDecl *RD = InitList->getType()->getAsRecordDecl())
-      for (const auto *FD : getFieldsForInitListExpr(RD))
+    if (InitList->getType()->isRecordType())
+      for (const auto *FD : getFieldsForInitListExpr(InitList))
         Fields.insert(FD);
   }
 }
@@ -983,7 +983,7 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
   }
 
   Value *Val = nullptr;
-  if (InitExpr)
+  if (InitExpr) {
     // In the (few) cases where an expression is intentionally
     // "uninterpreted", `InitExpr` is not associated with a value.  There are
     // two ways to handle this situation: propagate the status, so that
@@ -998,6 +998,11 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
     // default value (assuming we don't update the environment API to return
     // references).
     Val = getValue(*InitExpr);
+
+    if (!Val && isa<ImplicitValueInitExpr>(InitExpr) &&
+        InitExpr->getType()->isPointerType())
+      Val = &getOrCreateNullPointerValue(InitExpr->getType()->getPointeeType());
+  }
   if (!Val)
     Val = createValue(Ty);
 
@@ -1104,12 +1109,22 @@ RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
   return Env.get<RecordStorageLocation>(*Base);
 }
 
-std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD) {
+std::vector<const FieldDecl *>
+getFieldsForInitListExpr(const InitListExpr *InitList) {
+  const RecordDecl *RD = InitList->getType()->getAsRecordDecl();
+  assert(RD != nullptr);
+
+  std::vector<const FieldDecl *> Fields;
+
+  if (InitList->getType()->isUnionType()) {
+    Fields.push_back(InitList->getInitializedFieldInUnion());
+    return Fields;
+  }
+
   // Unnamed bitfields are only used for padding and do not appear in
   // `InitListExpr`'s inits. However, those fields do appear in `RecordDecl`'s
   // field list, and we thus need to remove them before mapping inits to
   // fields to avoid mapping inits to the wrongs fields.
-  std::vector<FieldDecl *> Fields;
   llvm::copy_if(
       RD->fields(), std::back_inserter(Fields),
       [](const FieldDecl *Field) { return !Field->isUnnamedBitfield(); });
