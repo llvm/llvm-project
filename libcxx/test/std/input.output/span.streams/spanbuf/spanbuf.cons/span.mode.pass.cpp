@@ -36,15 +36,20 @@
 void test_sfinae_with_nasty_char() {
   using SpBuf = std::basic_spanbuf<nasty_char, nasty_char_traits>;
 
+  // Mode
   static_assert(std::constructible_from<SpBuf, const std::span<nasty_char>, std::ios_base::openmode>);
   static_assert(!test_convertible<SpBuf, std::ios_base::openmode>());
+
+  // Non-mode
+  static_assert(!std::constructible_from<SpBuf, const std::span<nasty_char>, const NonMode>);
+  static_assert(!test_convertible<SpBuf, const NonMode>());
 }
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test_sfinae() {
   using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
 
-  // `Mode`
+  // Mode
   static_assert(std::constructible_from<SpBuf, const std::span<CharT>, std::ios_base::openmode>);
   static_assert(!test_convertible<SpBuf, const std::span<CharT>, std::ios_base::openmode>());
 
@@ -63,6 +68,13 @@ void test() {
   {
     std::span<CharT> sp{};
 
+    // Mode: default
+    {
+      SpBuf spBuf(sp);
+      assert(spBuf.span().data() == nullptr);
+      assert(spBuf.span().empty());
+      assert(spBuf.span().size() == 0);
+    }
     // Mode: `ios_base::in`
     {
       SpBuf spBuf(sp, std::ios_base::in);
@@ -89,6 +101,19 @@ void test() {
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
     }
+    // Mode: multiple
+    {
+      SpBuf spBuf(sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+      assert(spBuf.span().data() == nullptr);
+      assert(spBuf.span().empty());
+      assert(spBuf.span().size() == 0);
+    }
+    {
+      SpBuf spBuf(std::as_const(sp), std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+      assert(spBuf.span().data() == nullptr);
+      assert(spBuf.span().empty());
+      assert(spBuf.span().size() == 0);
+    }
   }
 
   // Non-empty `span`
@@ -96,6 +121,13 @@ void test() {
     CharT arr[4];
     std::span<CharT> sp{arr};
 
+    // Mode: default
+    {
+      SpBuf spBuf(sp);
+      assert(spBuf.span().data() == arr);
+      assert(spBuf.span().empty());
+      assert(spBuf.span().size() == 0);
+    }
     // Mode: `ios_base::in`
     {
       SpBuf spBuf(sp, std::ios_base::in);
@@ -124,13 +156,13 @@ void test() {
     }
     // Mode: multiple
     {
-      SpBuf spBuf(sp, std::ios_base::out | std::ios_base::in);
+      SpBuf spBuf(sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
       assert(spBuf.span().data() == arr);
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
     }
     {
-      SpBuf spBuf(std::as_const(sp), std::ios_base::out | std::ios_base::in | std::ios_base::binary);
+      SpBuf spBuf(std::as_const(sp), std::ios_base::in | std::ios_base::out | std::ios_base::binary);
       assert(spBuf.span().data() == arr);
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
