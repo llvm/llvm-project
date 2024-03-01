@@ -603,7 +603,7 @@ struct CastInfo<
   /// that returns the dynamic type. This means that T::classof would end up
   /// comparing the static Kind of the children to the static Kind of its
   /// parent, making it impossible to downcast from the parent to the child.
-  static inline bool isPossible(mlir::Value ty) {
+  static inline bool isPossible([[maybe_unused]] mlir::Value ty) {
     /// Return a constant true instead of a dynamic true when casting to self or
     /// up the hierarchy.
     if constexpr (std::is_base_of_v<To, From>) {

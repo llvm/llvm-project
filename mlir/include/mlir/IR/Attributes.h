@@ -409,7 +409,7 @@ struct CastInfo<To, From,
   /// returns the dynamic ID. This means that T::classof would end up comparing
   /// the static TypeID of the children to the static TypeID of its parent,
   /// making it impossible to downcast from the parent to the child.
-  static inline bool isPossible(mlir::Attribute ty) {
+  static inline bool isPossible([[maybe_unused]] mlir::Attribute ty) {
     /// Return a constant true instead of a dynamic true when casting to self or
     /// up the hierarchy.
     if constexpr (std::is_base_of_v<To, From>) {
