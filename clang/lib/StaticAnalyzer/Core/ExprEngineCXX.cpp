@@ -354,8 +354,13 @@ SVal ExprEngine::computeObjectUnderConstruction(
         // Operator arguments do not correspond to operator parameters
         // because this-argument is implemented as a normal argument in
         // operator call expressions but not in operator declarations.
-        const TypedValueRegion *TVR = Caller->getParameterLocation(
-            *Caller->getAdjustedParameterIndex(Idx), BldrCtx->blockCount());
+        std::optional<unsigned int> Index =
+            Caller->getAdjustedParameterIndex(Idx);
+        if (!Index) {
+          return std::nullopt;
+        }
+        const TypedValueRegion *TVR =
+            Caller->getParameterLocation(*Index, BldrCtx->blockCount());
         if (!TVR)
           return std::nullopt;
 
