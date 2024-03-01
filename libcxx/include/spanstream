@@ -323,7 +323,7 @@ public:
   basic_ospanstream(const basic_ospanstream&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI basic_ospanstream(basic_ospanstream&& __rhs)
-      : basic_iostream<_CharT, _Traits>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
+      : basic_ostream<_CharT, _Traits>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
     basic_ostream<_CharT, _Traits>::set_rdbuf(std::addressof(__sb_));
   }
 
@@ -344,9 +344,11 @@ public:
 
   // [ospanstream.members], member functions
 
-  _LIBCPP_HIDE_FROM_ABI basic_spanbuf<_CharT, _Traits>* rdbuf() const noexcept { return __sb_; }
+  _LIBCPP_HIDE_FROM_ABI basic_spanbuf<_CharT, _Traits>* rdbuf() const noexcept {
+    return const_cast<basic_spanbuf<_CharT, _Traits>*>(std::addressof(__sb_));
+  }
 
-  _LIBCPP_HIDE_FROM_ABI std::span<_CharT> span() const noexcept { return __sb_.rdbuf()->span(); }
+  _LIBCPP_HIDE_FROM_ABI std::span<_CharT> span() const noexcept { return rdbuf()->span(); }
 
   _LIBCPP_HIDE_FROM_ABI void span(std::span<_CharT> __s) noexcept { rdbuf()->span(__s); }
 
@@ -382,7 +384,7 @@ public:
   basic_spanstream(const basic_spanstream&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI basic_spanstream(basic_spanstream&& __rhs)
-      : basic_iostream<_CharT, _Traits>(std::move(__rhs)), __sb_(__rhs.__sb_) {
+      : basic_iostream<_CharT, _Traits>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
     basic_iostream<_CharT, _Traits>::set_rdbuf(std::addressof(__sb_));
   }
 
@@ -403,7 +405,9 @@ public:
 
   // [spanstream.members], members
 
-  _LIBCPP_HIDE_FROM_ABI basic_spanbuf<_CharT, _Traits>* rdbuf() const noexcept { return __sb_; }
+  _LIBCPP_HIDE_FROM_ABI basic_spanbuf<_CharT, _Traits>* rdbuf() const noexcept {
+    return const_cast<basic_spanbuf<_CharT, _Traits>*>(std::addressof(__sb_));
+  }
 
   _LIBCPP_HIDE_FROM_ABI std::span<_CharT> span() const noexcept { return rdbuf()->span(); }
 
