@@ -1,13 +1,13 @@
-;; Test that we get a parser error when we have a debug assign record that does
-;; not use an inline DIExpression for its address expression.
+;; Test that we get a parser error when we have a debug record with an
+;; incorrect number of arguments.
 ; RUN: not llvm-as < %s 2>&1 | FileCheck %s
 ; ModuleID = '<stdin>'
 source_filename = "<stdin>"
 
 define dso_local i32 @f(i32 %a) !dbg !7 {
 entry:
-; CHECK: <stdin>:[[@LINE+1]]:63: error: expected valid inline DIExpression here
-    #dbg_assign(i32 %a, !12, !DIExpression(), !15, ptr undef, !20, !14)
+; CHECK: <stdin>:[[@LINE+1]]:46: error: expected '!' here
+    #dbg_value(i32 %a, !12, !DIExpression(), i32 0)
   ret i32 %a, !dbg !18
 }
 
@@ -34,4 +34,3 @@ entry:
 !16 = !DILocation(line: 3, column: 20, scope: !7)
 !17 = !DILocation(line: 3, column: 25, scope: !7)
 !18 = !DILocation(line: 3, column: 30, scope: !7)
-!20 = !DIExpression()
