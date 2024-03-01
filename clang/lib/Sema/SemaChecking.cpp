@@ -16588,13 +16588,16 @@ void Sema::DiagnoseAlwaysNonNullPointer(Expr *E,
   }
 
   // Complain if we are converting a lambda expression to a boolean value
-  if (const auto *MCallExpr = dyn_cast<CXXMemberCallExpr>(E)) {
-    if (const auto *MRecordDecl = MCallExpr->getRecordDecl();
-        MRecordDecl && MRecordDecl->isLambda()) {
-      Diag(E->getExprLoc(), diag::warn_impcast_pointer_to_bool)
-          << /*LambdaPointerConversionOperatorType=*/3
-          << MRecordDecl->getSourceRange() << Range << IsEqual;
-      return;
+  // outside of instantiation.
+  if (!inTemplateInstantiation()) {
+    if (const auto *MCallExpr = dyn_cast<CXXMemberCallExpr>(E)) {
+      if (const auto *MRecordDecl = MCallExpr->getRecordDecl();
+          MRecordDecl && MRecordDecl->isLambda()) {
+        Diag(E->getExprLoc(), diag::warn_impcast_pointer_to_bool)
+            << /*LambdaPointerConversionOperatorType=*/3
+            << MRecordDecl->getSourceRange() << Range << IsEqual;
+        return;
+      }
     }
   }
 
