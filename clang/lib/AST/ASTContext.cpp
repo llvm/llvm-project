@@ -4418,7 +4418,8 @@ QualType ASTContext::getFunctionTypeInternal(
 
   // Determine whether the type being created is already canonical or not.
   bool isCanonical = !Unique && IsCanonicalExceptionSpec &&
-                     isCanonicalResultType(ResultTy) && !EPI.HasTrailingReturn;
+                     isCanonicalResultType(ResultTy) &&
+                     !EPI.HasTrailingReturn && !EPI.TypeQuals.hasRestrict();
   for (unsigned i = 0; i != NumArgs && isCanonical; ++i)
     if (!ArgArray[i].isCanonicalAsParam())
       isCanonical = false;
@@ -4439,6 +4440,7 @@ QualType ASTContext::getFunctionTypeInternal(
     llvm::SmallVector<QualType, 8> ExceptionTypeStorage;
     FunctionProtoType::ExtProtoInfo CanonicalEPI = EPI;
     CanonicalEPI.HasTrailingReturn = false;
+    CanonicalEPI.TypeQuals.removeRestrict();
 
     if (IsCanonicalExceptionSpec) {
       // Exception spec is already OK.
