@@ -700,17 +700,11 @@ static LLT getHalfSizedType(LLT Ty) {
 
 // Build one or more V_READFIRSTLANE_B32 instructions to move the given vector
 // source value into a scalar register.
-Register AMDGPURegisterBankInfo::buildReadFirstLane(MachineIRBuilder &B,
-                                                    MachineRegisterInfo &MRI,
-                                                    Register Src) const {
+Register AMDGPURegisterBankInfo::buildReadFirstLaneSrc(MachineIRBuilder &B,
+                                                       Register Src) const {
+  MachineRegisterInfo &MRI = *B.getMRI();
   LLT Ty = MRI.getType(Src);
   const RegisterBank *Bank = getRegBank(Src, MRI, *TRI);
-
-  if (Bank == &AMDGPU::SGPRRegBank)
-    return Src;
-
-  unsigned Bits = Ty.getSizeInBits();
-  assert(Bits % 32 == 0);
 
   if (Bank != &AMDGPU::VGPRRegBank) {
     // We need to copy from AGPR to VGPR
@@ -718,40 +712,57 @@ Register AMDGPURegisterBankInfo::buildReadFirstLane(MachineIRBuilder &B,
     MRI.setRegBank(Src, AMDGPU::VGPRRegBank);
   }
 
+  return buildReadFirstLaneForType(B, Ty, Src).getReg(0);
+}
+
+MachineInstrBuilder AMDGPURegisterBankInfo::buildReadFirstLaneB32(
+    MachineIRBuilder &B, const DstOp &SgprDst, const SrcOp &VgprSrc) const {
+  MachineRegisterInfo &MRI = *B.getMRI();
+  auto RFL = B.buildInstr(AMDGPU::V_READFIRSTLANE_B32, {SgprDst}, {VgprSrc});
+  MRI.setRegClass(RFL.getReg(0), &AMDGPU::SReg_32RegClass);
+  MRI.setRegClass(RFL.getReg(1), &AMDGPU::VGPR_32RegClass);
+  return RFL;
+}
+
+MachineInstrBuilder AMDGPURegisterBankInfo::buildReadFirstLaneSequenceOfB32(
+    MachineIRBuilder &B, const DstOp &SgprDst, const SrcOp &VgprSrc,
+    unsigned NumElts) const {
+  MachineRegisterInfo &MRI = *B.getMRI();
   LLT S32 = LLT::scalar(32);
-  unsigned NumParts = Bits / 32;
-  SmallVector<Register, 8> SrcParts;
-  SmallVector<Register, 8> DstParts;
+  SmallVector<Register, 8> SgprDstParts;
 
-  if (Bits == 32) {
-    SrcParts.push_back(Src);
-  } else {
-    auto Unmerge = B.buildUnmerge(S32, Src);
-    for (unsigned i = 0; i < NumParts; ++i)
-      SrcParts.push_back(Unmerge.getReg(i));
+  auto Unmerge = B.buildUnmerge(S32, VgprSrc);
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SgprDstParts.push_back(
+        buildReadFirstLaneB32(B, S32, Unmerge.getReg(i)).getReg(0));
   }
 
-  for (unsigned i = 0; i < NumParts; ++i) {
-    Register SrcPart = SrcParts[i];
-    Register DstPart = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-    MRI.setType(DstPart, NumParts == 1 ? Ty : S32);
+  auto Merge = B.buildMergeLikeInstr(SgprDst, SgprDstParts);
+  MRI.setRegBank(Merge.getReg(0), AMDGPU::SGPRRegBank);
+  return Merge;
+}
 
-    const TargetRegisterClass *Constrained =
-        constrainGenericRegister(SrcPart, AMDGPU::VGPR_32RegClass, MRI);
-    (void)Constrained;
-    assert(Constrained && "Failed to constrain readfirstlane src reg");
+MachineInstrBuilder AMDGPURegisterBankInfo::buildReadFirstLaneForType(
+    MachineIRBuilder &B, const DstOp &SgprDst, const SrcOp &VgprSrc) const {
+  MachineRegisterInfo &MRI = *B.getMRI();
+  LLT S32 = LLT::scalar(32);
+  LLT S64 = LLT::scalar(64);
+  LLT Ty = SgprDst.getLLTTy(MRI);
 
-    B.buildInstr(AMDGPU::V_READFIRSTLANE_B32, {DstPart}, {SrcPart});
-
-    DstParts.push_back(DstPart);
+  if (Ty == S32 || (Ty.isPointer() && Ty.getSizeInBits() == 32)) {
+    return buildReadFirstLaneB32(B, SgprDst, VgprSrc);
   }
 
-  if (Bits == 32)
-    return DstParts[0];
+  if (Ty == S64 || (Ty.isPointer() && Ty.getSizeInBits() == 64)) {
+    return buildReadFirstLaneSequenceOfB32(B, SgprDst, VgprSrc, 2);
+  }
 
-  Register Dst = B.buildMergeLikeInstr(Ty, DstParts).getReg(0);
-  MRI.setRegBank(Dst, AMDGPU::SGPRRegBank);
-  return Dst;
+  if (Ty.isVector() && Ty.getElementType() == S32) {
+    return buildReadFirstLaneSequenceOfB32(B, SgprDst, VgprSrc,
+                                           Ty.getNumElements());
+  }
+
+  llvm_unreachable("Type not supported");
 }
 
 /// Legalize instruction \p MI where operands in \p OpIndices must be SGPRs. If
@@ -888,7 +899,7 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
         B.setMBB(*LoopBB);
       }
 
-      Register CurrentLaneReg = buildReadFirstLane(B, MRI, OpReg);
+      Register CurrentLaneReg = buildReadFirstLaneSrc(B, OpReg);
 
       // Build the comparison(s).
       unsigned OpSize = OpTy.getSizeInBits();
@@ -1020,7 +1031,7 @@ void AMDGPURegisterBankInfo::constrainOpWithReadfirstlane(
   if (Bank == &AMDGPU::SGPRRegBank)
     return;
 
-  Reg = buildReadFirstLane(B, MRI, Reg);
+  Reg = buildReadFirstLaneSrc(B, Reg);
   MI.getOperand(OpIdx).setReg(Reg);
 }
 
@@ -1603,7 +1614,7 @@ bool AMDGPURegisterBankInfo::applyMappingMAD_64_32(
     MRI.setRegBank(DstHi, AMDGPU::VGPRRegBank);
 
     if (!DstOnValu) {
-      DstHi = buildReadFirstLane(B, MRI, DstHi);
+      DstHi = buildReadFirstLaneSrc(B, DstHi);
     } else {
       MulHiInVgpr = true;
     }
