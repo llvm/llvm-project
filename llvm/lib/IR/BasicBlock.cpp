@@ -61,10 +61,6 @@ DPMarker *BasicBlock::createMarker(InstListType::iterator It) {
 }
 
 void BasicBlock::convertToNewDbgValues() {
-  // Is the command line option set?
-  if (!UseNewDbgInfoFormat)
-    return;
-
   IsNewDbgInfoFormat = true;
 
   // Iterate over all instructions in the instruction list, collecting dbg.value
@@ -78,6 +74,12 @@ void BasicBlock::convertToNewDbgValues() {
       DPValue *Value = new DPValue(DVI);
       DPVals.push_back(Value);
       DVI->eraseFromParent();
+      continue;
+    }
+
+    if (DbgLabelInst *DLI = dyn_cast<DbgLabelInst>(&I)) {
+      DPVals.push_back(new DPLabel(DLI->getLabel(), DLI->getDebugLoc()));
+      DLI->eraseFromParent();
       continue;
     }
 
@@ -107,82 +109,17 @@ void BasicBlock::convertFromNewDbgValues() {
       continue;
 
     DPMarker &Marker = *Inst.DbgMarker;
-    for (DbgRecord &DR : Marker.getDbgValueRange()) {
-      if (auto *DPV = dyn_cast<DPValue>(&DR))
-        InstList.insert(Inst.getIterator(),
-                        DPV->createDebugIntrinsic(getModule(), nullptr));
-      else
-        llvm_unreachable("unsupported DbgRecord kind");
-    }
+    for (DbgRecord &DR : Marker.getDbgValueRange())
+      InstList.insert(Inst.getIterator(),
+                      DR.createDebugIntrinsic(getModule(), nullptr));
 
     Marker.eraseFromParent();
-  };
+  }
 
   // Assume no trailing DPValues: we could technically create them at the end
   // of the block, after a terminator, but this would be non-cannonical and
   // indicates that something else is broken somewhere.
   assert(!getTrailingDPValues());
-}
-
-bool BasicBlock::validateDbgValues(bool Assert, bool Msg, raw_ostream *OS) {
-  bool RetVal = false;
-  if (!OS)
-    OS = &errs();
-
-  // Helper lambda for reporting failures: via assertion, printing, and return
-  // value.
-  auto TestFailure = [Assert, Msg, &RetVal, OS](bool Val, const char *Text) {
-    // Did the test fail?
-    if (Val)
-      return;
-
-    // If we're asserting, then fire off an assertion.
-    if (Assert)
-      llvm_unreachable(Text);
-
-    if (Msg)
-      *OS << Text << "\n";
-    RetVal = true;
-  };
-
-  // We should have the same debug-format as the parent function.
-  TestFailure(getParent()->IsNewDbgInfoFormat == IsNewDbgInfoFormat,
-              "Parent function doesn't have the same debug-info format");
-
-  // Only validate if we are using the new format.
-  if (!IsNewDbgInfoFormat)
-    return RetVal;
-
-  // Match every DPMarker to every Instruction and vice versa, and
-  // verify that there are no invalid DPValues.
-  for (auto It = begin(); It != end(); ++It) {
-    if (!It->DbgMarker)
-      continue;
-
-    // Validate DebugProgramMarkers.
-    DPMarker *CurrentDebugMarker = It->DbgMarker;
-
-    // If this is a marker, it should match the instruction and vice versa.
-    TestFailure(CurrentDebugMarker->MarkedInstr == &*It,
-                "Debug Marker points to incorrect instruction?");
-
-    // Now validate any DPValues in the marker.
-    for (DbgRecord &DPR : CurrentDebugMarker->getDbgValueRange()) {
-      // Validate DebugProgramValues.
-      TestFailure(DPR.getMarker() == CurrentDebugMarker,
-                  "Not pointing at correct next marker!");
-
-      // Verify that no DbgValues appear prior to PHIs.
-      TestFailure(
-          !isa<PHINode>(It),
-          "DebugProgramValues must not appear before PHI nodes in a block!");
-    }
-  }
-
-  // Except transiently when removing + re-inserting the block terminator, there
-  // should be no trailing DPValues.
-  TestFailure(!getTrailingDPValues(), "Trailing DPValues in block");
-  return RetVal;
 }
 
 #ifndef NDEBUG

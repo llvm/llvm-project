@@ -567,7 +567,9 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_EVEX_L2_W_OPSIZE_KZ_B:
     return false;
   case IC_EVEX_NF:
+    return WIG && inheritsFrom(child, IC_EVEX_W_NF);
   case IC_EVEX_B_NF:
+    return WIG && inheritsFrom(child, IC_EVEX_W_B_NF);
   case IC_EVEX_OPSIZE_NF:
   case IC_EVEX_OPSIZE_B_NF:
   case IC_EVEX_W_NF:

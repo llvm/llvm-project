@@ -22,7 +22,7 @@ namespace {
 class X86CodeGenPassBuilder : public CodeGenPassBuilder<X86CodeGenPassBuilder> {
 public:
   explicit X86CodeGenPassBuilder(LLVMTargetMachine &TM,
-                                 CGPassBuilderOption Opts,
+                                 const CGPassBuilderOption &Opts,
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
   void addPreISel(AddIRPass &addPass) const;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_UNITTEST_SIMPLE_STRING_CONV_H
-#define LLVM_LIBC_UTILS_UNITTEST_SIMPLE_STRING_CONV_H
+#ifndef LLVM_LIBC_TEST_UNITTEST_STRINGUTILS_H
+#define LLVM_LIBC_TEST_UNITTEST_STRINGUTILS_H
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
@@ -33,4 +33,4 @@ int_to_hex(T value, size_t length = sizeof(T) * 2) {
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_UTILS_UNITTEST_SIMPLE_STRING_CONV_H
+#endif // LLVM_LIBC_TEST_UNITTEST_STRINGUTILS_H
