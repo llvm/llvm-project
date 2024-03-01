@@ -619,6 +619,162 @@ define <16 x i1> @shl_to_ror_eq_16xi16_s8_fail_preserve_i16(<16 x i16> %x) {
   ret <16 x i1> %r
 }
 
+define <16 x i8> @shl_s3_cmp_v16i8(<16 x i8> %x, <16 x i8> %y) {
+; CHECK-NOBMI-LABEL: shl_s3_cmp_v16i8:
+; CHECK-NOBMI:       # %bb.0:
+; CHECK-NOBMI-NEXT:    pcmpeqb %xmm1, %xmm0
+; CHECK-NOBMI-NEXT:    psllw $3, %xmm0
+; CHECK-NOBMI-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI2-SSE2-LABEL: shl_s3_cmp_v16i8:
+; CHECK-BMI2-SSE2:       # %bb.0:
+; CHECK-BMI2-SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
+; CHECK-BMI2-SSE2-NEXT:    psllw $3, %xmm0
+; CHECK-BMI2-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-BMI2-SSE2-NEXT:    retq
+;
+; CHECK-AVX12-LABEL: shl_s3_cmp_v16i8:
+; CHECK-AVX12:       # %bb.0:
+; CHECK-AVX12-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; CHECK-AVX12-NEXT:    vpsllw $3, %xmm0, %xmm0
+; CHECK-AVX12-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX12-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: shl_s3_cmp_v16i8:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpsllw $3, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    retq
+  %cmp = icmp eq <16 x i8> %x, %y
+  %ext = sext <16 x i1> %cmp to <16 x i8>
+  %shr = shl <16 x i8> %ext, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
+  ret <16 x i8> %shr
+}
+
+define <4 x i64> @shl_s31_cmp_v4f64(<4 x double> %x, <4 x double> %y) {
+; CHECK-NOBMI-LABEL: shl_s31_cmp_v4f64:
+; CHECK-NOBMI:       # %bb.0:
+; CHECK-NOBMI-NEXT:    cmpeqpd %xmm3, %xmm1
+; CHECK-NOBMI-NEXT:    cmpeqpd %xmm2, %xmm0
+; CHECK-NOBMI-NEXT:    psllq $31, %xmm0
+; CHECK-NOBMI-NEXT:    psllq $31, %xmm1
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI2-SSE2-LABEL: shl_s31_cmp_v4f64:
+; CHECK-BMI2-SSE2:       # %bb.0:
+; CHECK-BMI2-SSE2-NEXT:    cmpeqpd %xmm3, %xmm1
+; CHECK-BMI2-SSE2-NEXT:    cmpeqpd %xmm2, %xmm0
+; CHECK-BMI2-SSE2-NEXT:    psllq $31, %xmm0
+; CHECK-BMI2-SSE2-NEXT:    psllq $31, %xmm1
+; CHECK-BMI2-SSE2-NEXT:    retq
+;
+; CHECK-AVX1-LABEL: shl_s31_cmp_v4f64:
+; CHECK-AVX1:       # %bb.0:
+; CHECK-AVX1-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
+; CHECK-AVX1-NEXT:    vpsllq $31, %xmm0, %xmm1
+; CHECK-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-AVX1-NEXT:    vpsllq $31, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; CHECK-AVX1-NEXT:    retq
+;
+; CHECK-AVX2-LABEL: shl_s31_cmp_v4f64:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
+; CHECK-AVX2-NEXT:    vpsllq $31, %ymm0, %ymm0
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: shl_s31_cmp_v4f64:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
+; CHECK-AVX512-NEXT:    vpsllq $31, %ymm0, %ymm0
+; CHECK-AVX512-NEXT:    retq
+  %cmp = fcmp oeq <4 x double> %x, %y
+  %ext = sext <4 x i1> %cmp to <4 x i64>
+  %shr = shl <4 x i64> %ext, <i64 31, i64 31, i64 31, i64 31>
+  ret <4 x i64> %shr
+}
+
+define <16 x i8> @shr_s1_cmp_v16i8(<16 x i8> %x, <16 x i8> %y) {
+; CHECK-NOBMI-LABEL: shr_s1_cmp_v16i8:
+; CHECK-NOBMI:       # %bb.0:
+; CHECK-NOBMI-NEXT:    pcmpeqb %xmm1, %xmm0
+; CHECK-NOBMI-NEXT:    psrlw $1, %xmm0
+; CHECK-NOBMI-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI2-SSE2-LABEL: shr_s1_cmp_v16i8:
+; CHECK-BMI2-SSE2:       # %bb.0:
+; CHECK-BMI2-SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
+; CHECK-BMI2-SSE2-NEXT:    psrlw $1, %xmm0
+; CHECK-BMI2-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-BMI2-SSE2-NEXT:    retq
+;
+; CHECK-AVX12-LABEL: shr_s1_cmp_v16i8:
+; CHECK-AVX12:       # %bb.0:
+; CHECK-AVX12-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; CHECK-AVX12-NEXT:    vpsrlw $1, %xmm0, %xmm0
+; CHECK-AVX12-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX12-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: shr_s1_cmp_v16i8:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpsrlw $1, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    retq
+  %cmp = icmp eq <16 x i8> %x, %y
+  %ext = sext <16 x i1> %cmp to <16 x i8>
+  %shr = lshr <16 x i8> %ext, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  ret <16 x i8> %shr
+}
+
+define <8 x i32> @shr_s9_cmp_v8i32(<8 x i32> %x, <8 x i32> %y) {
+; CHECK-NOBMI-LABEL: shr_s9_cmp_v8i32:
+; CHECK-NOBMI:       # %bb.0:
+; CHECK-NOBMI-NEXT:    pcmpgtd %xmm3, %xmm1
+; CHECK-NOBMI-NEXT:    pcmpgtd %xmm2, %xmm0
+; CHECK-NOBMI-NEXT:    psrld $9, %xmm0
+; CHECK-NOBMI-NEXT:    psrld $9, %xmm1
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI2-SSE2-LABEL: shr_s9_cmp_v8i32:
+; CHECK-BMI2-SSE2:       # %bb.0:
+; CHECK-BMI2-SSE2-NEXT:    pcmpgtd %xmm3, %xmm1
+; CHECK-BMI2-SSE2-NEXT:    pcmpgtd %xmm2, %xmm0
+; CHECK-BMI2-SSE2-NEXT:    psrld $9, %xmm0
+; CHECK-BMI2-SSE2-NEXT:    psrld $9, %xmm1
+; CHECK-BMI2-SSE2-NEXT:    retq
+;
+; CHECK-AVX1-LABEL: shr_s9_cmp_v8i32:
+; CHECK-AVX1:       # %bb.0:
+; CHECK-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; CHECK-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; CHECK-AVX1-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
+; CHECK-AVX1-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpsrld $9, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpsrld $9, %xmm2, %xmm1
+; CHECK-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-AVX1-NEXT:    retq
+;
+; CHECK-AVX2-LABEL: shr_s9_cmp_v8i32:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
+; CHECK-AVX2-NEXT:    vpsrld $9, %ymm0, %ymm0
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: shr_s9_cmp_v8i32:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
+; CHECK-AVX512-NEXT:    vpsrld $9, %ymm0, %ymm0
+; CHECK-AVX512-NEXT:    retq
+  %cmp = icmp sgt <8 x i32> %x, %y
+  %ext = sext <8 x i1> %cmp to <8 x i32>
+  %shr = lshr <8 x i32> %ext, <i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
+  ret <8 x i32> %shr
+}
+
 define i1 @shr_to_shl_eq_i32_s5_fail_doesnt_add_up(i32 %x) {
 ; CHECK-LABEL: shr_to_shl_eq_i32_s5_fail_doesnt_add_up:
 ; CHECK:       # %bb.0:
