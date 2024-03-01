@@ -3243,4 +3243,53 @@ define amdgpu_cs void @amdgpu_cs_inreg_v32i1(<32 x i1> inreg %arg0) {
   ret void
 }
 
+define amdgpu_cs void @amdgpu_cs_i1_sext(i1 signext %arg0) {
+; SI-LABEL: amdgpu_cs_i1_sext:
+; SI:       ; %bb.0:
+; SI-NEXT:    v_and_b32_e32 v0, 1, v0
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: amdgpu_cs_i1_sext:
+; VI:       ; %bb.0:
+; VI-NEXT:    v_and_b32_e32 v0, 1, v0
+; VI-NEXT:    flat_store_byte v[0:1], v0
+; VI-NEXT:    s_endpgm
+;
+; GFX11-LABEL: amdgpu_cs_i1_sext:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+  store i1 %arg0, ptr addrspace(1) undef
+  ret void
+}
+
+define amdgpu_cs void @amdgpu_cs_i1_zext(i1 zeroext %arg0) {
+; SI-LABEL: amdgpu_cs_i1_zext:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: amdgpu_cs_i1_zext:
+; VI:       ; %bb.0:
+; VI-NEXT:    flat_store_byte v[0:1], v0
+; VI-NEXT:    s_endpgm
+;
+; GFX11-LABEL: amdgpu_cs_i1_zext:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+  store i1 %arg0, ptr addrspace(1) undef
+  ret void
+}
+
 attributes #0 = { nounwind noinline }
