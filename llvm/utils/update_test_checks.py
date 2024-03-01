@@ -235,6 +235,7 @@ def main():
             )
         else:
             # "Normal" mode.
+            dropped_previous_line = False
             for input_line_info in ti.iterlines(output_lines):
                 input_line = input_line_info.line
                 args = input_line_info.args
@@ -282,7 +283,10 @@ def main():
                     has_checked_pre_function_globals = True
 
                 if common.should_add_line_to_output(
-                    input_line, prefix_set, not is_in_function
+                    input_line,
+                    prefix_set,
+                    skip_global_checks=not is_in_function,
+                    skip_same_checks=dropped_previous_line,
                 ):
                     # This input line of the function body will go as-is into the output.
                     # Except make leading whitespace uniform: 2 spaces.
@@ -290,9 +294,13 @@ def main():
                         r"  ", input_line
                     )
                     output_lines.append(input_line)
+                    dropped_previous_line = False
                     if input_line.strip() == "}":
                         is_in_function = False
                         continue
+                else:
+                    # If we are removing a check line, and the next line is CHECK-SAME, it MUST also be removed
+                    dropped_previous_line = True
 
                 if is_in_function:
                     continue
