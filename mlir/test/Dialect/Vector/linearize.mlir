@@ -79,3 +79,14 @@ func.func @test_partial_linearize(%arg0: vector<2x2xf32>, %arg1: vector<4x4xf32>
 //       CHECK128: return %[[RES]] : vector<2x2xf32>
   return %0 : vector<2x2xf32>
 }
+
+// CHECK-LABEL: test_index_no_linearize
+// CHECK128-LABEL: test_index_no_linearize
+// CHECK0-LABEL: test_index_no_linearize
+func.func @test_index_no_linearize(%arg0: vector<2x2xindex>, %arg1: vector<2x2xindex>) -> vector<2x2xindex> {
+    // CHECK: %[[ADD:.*]] = arith.addi {{.*}} : vector<2x2xindex>
+    // CHECK128: %[[ADD:.*]] = arith.addi {{.*}} : vector<2x2xindex>
+    // CHECK0: %[[ADD:.*]] = arith.addi {{.*}} : vector<2x2xindex>
+    %0 = arith.addi %arg0, %arg1 : vector<2x2xindex>
+    return %0 : vector<2x2xindex>
+}
