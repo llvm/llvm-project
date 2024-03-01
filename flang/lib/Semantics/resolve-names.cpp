@@ -3375,7 +3375,8 @@ void ModuleVisitor::BeginModule(const parser::Name &name, bool isSubmodule) {
 Scope *ModuleVisitor::FindModule(const parser::Name &name,
     std::optional<bool> isIntrinsic, Scope *ancestor) {
   ModFileReader reader{context()};
-  Scope *scope{reader.Read(name.source, isIntrinsic, ancestor)};
+  Scope *scope{
+      reader.Read(name.source, isIntrinsic, ancestor, /*silent=*/false)};
   if (!scope) {
     return nullptr;
   }
