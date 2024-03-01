@@ -18,15 +18,15 @@
 using namespace llvm;
 
 const AMDGPUVariadicMCExpr *
-AMDGPUVariadicMCExpr::create(AMDGPUVariadicKind Kind,
-                             ArrayRef<const MCExpr *> Args, MCContext &Ctx) {
+AMDGPUVariadicMCExpr::create(VariadicKind Kind, ArrayRef<const MCExpr *> Args,
+                             MCContext &Ctx) {
   return new (Ctx) AMDGPUVariadicMCExpr(Kind, Args);
 }
 
-const MCExpr *AMDGPUVariadicMCExpr::GetSubExpr(size_t index) const {
-  assert(index < Args.size() &&
+const MCExpr *AMDGPUVariadicMCExpr::getSubExpr(size_t Index) const {
+  assert(Index < Args.size() &&
          "Indexing out of bounds AMDGPUVariadicMCExpr sub-expr");
-  return Args[index];
+  return Args[Index];
 }
 
 void AMDGPUVariadicMCExpr::printImpl(raw_ostream &OS,
@@ -49,14 +49,14 @@ void AMDGPUVariadicMCExpr::printImpl(raw_ostream &OS,
   OS << ')';
 }
 
-static int64_t Op(AMDGPUVariadicMCExpr::AMDGPUVariadicKind Kind, int64_t Arg1,
+static int64_t op(AMDGPUVariadicMCExpr::VariadicKind Kind, int64_t Arg1,
                   int64_t Arg2) {
   switch (Kind) {
   default:
     llvm_unreachable("Unknown AMDGPUVariadicMCExpr kind.");
-  case AMDGPUVariadicMCExpr::AMDGPUVariadicKind::AGVK_Max:
+  case AMDGPUVariadicMCExpr::AGVK_Max:
     return std::max(Arg1, Arg2);
-  case AMDGPUVariadicMCExpr::AMDGPUVariadicKind::AGVK_Or:
+  case AMDGPUVariadicMCExpr::AGVK_Or:
     return Arg1 || Arg2;
   }
 }
@@ -73,7 +73,7 @@ bool AMDGPUVariadicMCExpr::evaluateAsRelocatableImpl(
 
     if (!Total.has_value())
       Total = ArgRes.getConstant();
-    Total = Op(Kind, *Total, ArgRes.getConstant());
+    Total = op(Kind, *Total, ArgRes.getConstant());
   }
 
   Res = MCValue::get(*Total);

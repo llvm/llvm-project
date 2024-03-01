@@ -27,34 +27,35 @@ namespace llvm {
 ///
 class AMDGPUVariadicMCExpr : public MCTargetExpr {
 public:
-  enum AMDGPUVariadicKind { AGVK_None, AGVK_Or, AGVK_Max };
+  enum VariadicKind { AGVK_None, AGVK_Or, AGVK_Max };
 
 private:
-  AMDGPUVariadicKind Kind;
+  VariadicKind Kind;
   SmallVector<const MCExpr *, 2> Args;
 
-  AMDGPUVariadicMCExpr(AMDGPUVariadicKind Kind, ArrayRef<const MCExpr *> Args)
+  AMDGPUVariadicMCExpr(VariadicKind Kind, ArrayRef<const MCExpr *> Args)
       : Kind(Kind), Args(Args) {
     assert(Args.size() >= 1 && "Needs a minimum of one expression.");
+    assert(Kind != AGVK_None &&
+           "Cannot construct AMDGPUVariadicMCExpr of kind none.");
   }
 
 public:
-  static const AMDGPUVariadicMCExpr *create(AMDGPUVariadicKind Kind,
-                                            ArrayRef<const MCExpr *> Args,
-                                            MCContext &Ctx);
+  static const AMDGPUVariadicMCExpr *
+  create(VariadicKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
 
   static const AMDGPUVariadicMCExpr *createOr(ArrayRef<const MCExpr *> Args,
                                               MCContext &Ctx) {
-    return create(AMDGPUVariadicKind::AGVK_Or, Args, Ctx);
+    return create(VariadicKind::AGVK_Or, Args, Ctx);
   }
 
   static const AMDGPUVariadicMCExpr *createMax(ArrayRef<const MCExpr *> Args,
                                                MCContext &Ctx) {
-    return create(AMDGPUVariadicKind::AGVK_Max, Args, Ctx);
+    return create(VariadicKind::AGVK_Max, Args, Ctx);
   }
 
-  AMDGPUVariadicKind getKind() const { return Kind; }
-  const MCExpr *GetSubExpr(size_t index) const;
+  VariadicKind getKind() const { return Kind; }
+  const MCExpr *getSubExpr(size_t Index) const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,

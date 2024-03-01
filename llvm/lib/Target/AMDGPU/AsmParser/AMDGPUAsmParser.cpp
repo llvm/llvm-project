@@ -8285,7 +8285,7 @@ void AMDGPUAsmParser::onBeginOfFile() {
 ///           max(expr, ...)
 ///
 bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
-  using AGVK = AMDGPUVariadicMCExpr::AMDGPUVariadicKind;
+  using AGVK = AMDGPUVariadicMCExpr::VariadicKind;
 
   if (isToken(AsmToken::Identifier)) {
     StringRef TokenId = getTokenStr();

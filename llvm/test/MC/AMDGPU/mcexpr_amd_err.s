@@ -40,5 +40,14 @@
 // ASM: :[[@LINE-1]]:{{[0-9]+}}: error: unexpected token in or expression
 // ASM: :[[@LINE-2]]:{{[0-9]+}}: error: missing expression
 
+.set max_no_lparen, max four, five)
+// ASM: :[[@LINE-1]]:{{[0-9]+}}: error: expected newline
+
+.set max_no_paren, max one, two, three
+// ASM: :[[@LINE-1]]:{{[0-9]+}}: error: expected newline
+
+.set max_rparen_only, max)
+// ASM: :[[@LINE-1]]:{{[0-9]+}}: error: expected newline
+
 .set four, 4
 .set five, 5
