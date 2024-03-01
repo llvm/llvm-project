@@ -116,6 +116,10 @@ def gi_smrd_sgpr_imm :
     GIComplexOperandMatcher<s64, "selectSmrdSgprImm">,
     GIComplexPatternEquiv<SMRDSgprImm>;
 
+def gi_smrd_prefetch_imm :
+    GIComplexOperandMatcher<s64, "selectSmrdPrefetchImm">,
+    GIComplexPatternEquiv<SMRDPrefetchImm>;
+
 def gi_flat_offset :
     GIComplexOperandMatcher<s64, "selectFlatOffset">,
     GIComplexPatternEquiv<FlatOffset>;

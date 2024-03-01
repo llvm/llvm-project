@@ -2071,13 +2071,15 @@ SDValue AMDGPUDAGToDAGISel::Expand32BitAddress(SDValue Addr) const {
 // true, match only 32-bit immediate offsets available on CI.
 bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
                                               SDValue *SOffset, SDValue *Offset,
-                                              bool Imm32Only,
-                                              bool IsBuffer) const {
+                                              bool Imm32Only, bool IsBuffer,
+                                              bool IsPrefetch) const {
   if (SOffset && Offset) {
     assert(!Imm32Only && !IsBuffer);
     SDValue B;
-    return SelectSMRDBaseOffset(Addr, B, nullptr, Offset) &&
-           SelectSMRDBaseOffset(B, SBase, SOffset, nullptr);
+    return SelectSMRDBaseOffset(Addr, B, nullptr, Offset, false, false,
+                                IsPrefetch) &&
+           SelectSMRDBaseOffset(B, SBase, SOffset, nullptr, false, false,
+                                IsPrefetch);
   }
 
   // A 32-bit (address + offset) should not cause unsigned 32-bit integer
@@ -2109,8 +2111,9 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
 
 bool AMDGPUDAGToDAGISel::SelectSMRD(SDValue Addr, SDValue &SBase,
                                     SDValue *SOffset, SDValue *Offset,
-                                    bool Imm32Only) const {
-  if (SelectSMRDBaseOffset(Addr, SBase, SOffset, Offset, Imm32Only)) {
+                                    bool Imm32Only, bool IsPrefetch) const {
+  if (SelectSMRDBaseOffset(Addr, SBase, SOffset, Offset, Imm32Only,
+                           IsPrefetch)) {
     SBase = Expand32BitAddress(SBase);
     return true;
   }
@@ -2167,6 +2170,12 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,
          SelectSMRDBaseOffset(N, /* SBase */ SOffset, /* SOffset*/ nullptr,
                               &Offset, /* Imm32Only */ false,
                               /* IsBuffer */ true);
+}
+
+bool AMDGPUDAGToDAGISel::SelectSMRDPrefetchImm(SDValue Addr, SDValue &SBase,
+                                               SDValue &Offset) const {
+  return SelectSMRD(Addr, SBase, /*SOffset=*/nullptr, &Offset,
+                    /*Imm32Only=*/false, /*IsPretch=*/true);
 }
 
 bool AMDGPUDAGToDAGISel::SelectMOVRELOffset(SDValue Index,
