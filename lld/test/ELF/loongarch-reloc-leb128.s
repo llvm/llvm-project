@@ -6,8 +6,13 @@
 # RUN: ld.lld -shared --gc-sections a.o -o a.so
 # RUN: llvm-readelf -x .gcc_except_table -x .debug_rnglists -x .debug_loclists a.so | FileCheck %s
 
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 --mattr=+relax a.s -o a32.o
+# RUN: llvm-readobj -r -x .gcc_except_table -x .debug_rnglists -x .debug_loclists a32.o | FileCheck %s --check-prefix=REL
+# RUN: ld.lld -shared --gc-sections a32.o -o a32.so
+# RUN: llvm-readelf -x .gcc_except_table -x .debug_rnglists -x .debug_loclists a32.so | FileCheck %s
+
 # RUN: llvm-mc --filetype=obj --triple=loongarch32 --mattr=+relax extraspace.s -o extraspace32.o
-# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax extraspace.s -o extraspace64.o --defsym=size64=1
+# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax extraspace.s -o extraspace64.o
 # RUN: not ld.lld -shared extraspace32.o 2>&1 | FileCheck %s --check-prefix=ERROR
 # RUN: not ld.lld -shared extraspace64.o 2>&1 | FileCheck %s --check-prefix=ERROR
 # ERROR: error: extraspace{{.*}}.o:(.rodata+0x0): extra space for uleb128
@@ -93,8 +98,5 @@ w2:
 .rodata
 .reloc ., R_LARCH_ADD_ULEB128, w2
 .reloc ., R_LARCH_SUB_ULEB128, w1
-.fill 5, 1, 0x80
-.ifdef size64
-  .fill 5, 1, 0x80
-.endif
+.fill 10, 1, 0x80
 .byte 0
