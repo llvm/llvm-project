@@ -14074,7 +14074,7 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         continue;
       }
 
-      unsigned Sz = 1 + Log2_32(MaxVF) - Log2_32(MinVF) + 1;
+      unsigned Sz = 1 + Log2_32(MaxVF) - Log2_32(MinVF);
       SmallVector<unsigned> CandidateVFs(Sz);
       auto VFsToFill = make_range(CandidateVFs.begin(), CandidateVFs.end());
       if (VectorizeNonPowerOf2) {
@@ -14084,6 +14084,7 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         unsigned CandVF = Operands.size();
         if (isPowerOf2_32(CandVF + 1) && CandVF <= MaxVF) {
           CandidateVFs[0] = CandVF;
+          CandidateVFs.push_back(0);
           VFsToFill = make_range(CandidateVFs.begin() + 1, CandidateVFs.end());
         }
       }
