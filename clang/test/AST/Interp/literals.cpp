@@ -1131,3 +1131,40 @@ namespace nullptrsub {
     f = (char *)((char *)0 - (char *)0);
   }
 }
+
+namespace incdecbool {
+#if __cplusplus >= 201402L
+  constexpr bool incb(bool c) {
+    if (!c)
+      ++c;
+    else {++c; c++; }
+#if __cplusplus >= 202002L
+    // both-error@-3 {{ISO C++17 does not allow incrementing expression of type bool}}
+    // both-error@-3 2{{ISO C++17 does not allow incrementing expression of type bool}}
+#else
+    // both-warning@-6 {{incrementing expression of type bool is deprecated and incompatible with C++17}}
+#endif
+    return c;
+  }
+  static_assert(incb(false), "");
+  static_assert(incb(true), "");
+  static_assert(incb(true) == 1, "");
+#endif
+
+
+#if __cplusplus == 201103L
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    bool b = true; // both-warning {{variable declaration in a constexpr function is a C++14 extension}}
+    b++; // both-warning {{incrementing expression of type bool is deprecated and incompatible with C++17}} \
+         // both-warning {{use of this statement in a constexpr function is a C++14 extension}} \
+         // both-note 2{{subexpression not valid in a constant expression}}
+
+    return b;
+  }
+  static_assert(foo() == 1, ""); // both-error {{not an integral constant expression}} \
+                                 // both-note {{in call to}}
+#endif
+
+
+
+}
