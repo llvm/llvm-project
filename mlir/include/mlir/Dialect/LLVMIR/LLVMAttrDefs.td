@@ -331,7 +331,7 @@ def LLVM_DIRecursiveTypeAttr : LLVM_Attr<"DIRecursiveType", "di_recursive_type",
 
       #var = di_local_variable<type = #struct_type, ...>
 
-    Note that the a rec-self without an outer rec-decl with the same id is
+    Note that a rec-self without an outer rec-decl with the same id is
     conceptually the same as an "unbound" variable. The context needs to provide
     meaning to the rec-self.
 

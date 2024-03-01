@@ -93,15 +93,13 @@ private:
 
   /// A mapping between LLVM debug metadata and the corresponding attribute.
   DenseMap<llvm::DINode *, DINodeAttr> nodeToAttr;
-  /// A mapping between LLVM debug metadata and the distinct ID attr for DI
-  /// nodes that require distinction.
+  /// A mapping between distinct LLVM debug metadata nodes and the corresponding distinct id attribute.
   DenseMap<llvm::DINode *, DistinctAttr> nodeToDistinctAttr;
 
   /// A stack that stores the metadata type nodes that are being traversed. The
   /// stack is used to detect cyclic dependencies during the metadata
   /// translation. Nodes are pushed with a null value. If it is ever seen twice,
-  /// it is given a DistinctAttr, indicating that it is a recursive node and
-  /// should take on that DistinctAttr as ID.
+  /// it is given a DistinctAttr ID, indicating that it is a recursive node.
   llvm::MapVector<llvm::DIType *, DistinctAttr> typeTranslationStack;
   /// All the unbound recursive self references in the translation stack.
   SmallVector<DenseSet<DistinctAttr>> unboundRecursiveSelfRefs;

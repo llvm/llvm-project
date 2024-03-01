@@ -107,7 +107,7 @@ public:
     return llvm::isa<BaseType>(attr);
   }
 
-  DIRecursiveTypeAttrOf(BaseType baseType) : DITypeAttr(baseType) {}
+  DIRecursiveTypeAttrOf(BaseType baseTypeAttr) : DITypeAttr(baseTypeAttr) {}
 
   BaseType getUnfoldedBaseType() {
     if (auto rec = llvm::dyn_cast<DIRecursiveTypeAttr>(this))

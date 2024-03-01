@@ -189,9 +189,10 @@ void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
 //===----------------------------------------------------------------------===//
 // DIRecursiveTypeAttr
 //===----------------------------------------------------------------------===//
+
 DITypeAttr DIRecursiveTypeAttr::getUnfoldedBaseType() {
   assert(!isRecSelf() && "cannot get baseType from a rec-self type");
-  return llvm::cast<DITypeAttr>(getBaseType().replace(
+  return cast<DITypeAttr>(getBaseType().replace(
       [&](DIRecursiveTypeAttr rec) -> std::optional<DIRecursiveTypeAttr> {
         if (rec.getId() == getId())
           return *this;

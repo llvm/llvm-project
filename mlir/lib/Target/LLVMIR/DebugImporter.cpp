@@ -178,7 +178,7 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   std::optional<DISubprogramFlags> subprogramFlags =
       symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
   // Return nullptr if the scope or type is invalid.
-  DIScopeAttr scope = cast<DIScopeAttr>(translate(node->getScope()));
+  auto scope = cast<DIScopeAttr>(translate(node->getScope()));
   if (node->getScope() && !scope)
     return nullptr;
   DIRecursiveTypeAttrOf<DISubroutineTypeAttr> type = translate(node->getType());
@@ -325,7 +325,7 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
         DITypeAttr typeAttr = cast<DITypeAttr>(attr);
         attr = DIRecursiveTypeAttr::get(context, id, typeAttr);
 
-        // Remove the unbound recursive attr.
+        // Remove the unbound recursive DistinctAttr ID.
         unboundRecursiveSelfRefs.back().erase(id);
       }
     }
