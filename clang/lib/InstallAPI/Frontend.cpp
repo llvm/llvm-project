@@ -51,8 +51,10 @@ std::unique_ptr<MemoryBuffer> createInputBuffer(const InstallAPIContext &Ctx) {
   if (Contents.empty())
     return nullptr;
 
-  return llvm::MemoryBuffer::getMemBufferCopy(
-      Contents, "installapi-includes" + getFileExtension(Ctx.LangMode));
+  SmallString<64> BufferName(
+      {"installapi-includes-", Ctx.Slice->getTriple().str(), "-",
+       getName(Ctx.Type), getFileExtension(Ctx.LangMode)});
+  return llvm::MemoryBuffer::getMemBufferCopy(Contents, BufferName);
 }
 
 } // namespace clang::installapi
