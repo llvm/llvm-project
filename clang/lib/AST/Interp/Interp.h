@@ -199,6 +199,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
                        llvm::ArrayRef<int64_t> ArrayIndices, int64_t &Result);
 
+inline bool Invalid(InterpState &S, CodePtr OpPC);
+
 enum class ArithOp { Add, Sub };
 
 //===----------------------------------------------------------------------===//
@@ -521,6 +523,11 @@ template <typename T, IncDecOp Op, PushVal DoPush>
 bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (Ptr.isDummy())
     return false;
+
+  if constexpr (std::is_same_v<T, Boolean>) {
+    if (!S.getLangOpts().CPlusPlus14)
+      return Invalid(S, OpPC);
+  }
 
   const T &Value = Ptr.deref<T>();
   T Result;

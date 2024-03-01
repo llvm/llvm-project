@@ -4395,24 +4395,16 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
           if (!areTwoInsertFromSameBuildVector(
                   IE1, IE2,
                   [](InsertElementInst *II) { return II->getOperand(0); }))
-            return false;
-          std::optional<unsigned> Idx1 = getInsertIndex(IE1);
-          std::optional<unsigned> Idx2 = getInsertIndex(IE2);
-          if (Idx1 == std::nullopt || Idx2 == std::nullopt)
-            return false;
-          return *Idx1 < *Idx2;
+            return I1 < I2;
+          return getInsertIndex(IE1) < getInsertIndex(IE2);
         }
       if (auto *EE1 = dyn_cast<ExtractElementInst>(FirstUserOfPhi1))
         if (auto *EE2 = dyn_cast<ExtractElementInst>(FirstUserOfPhi2)) {
           if (EE1->getOperand(0) != EE2->getOperand(0))
-            return false;
-          std::optional<unsigned> Idx1 = getExtractIndex(EE1);
-          std::optional<unsigned> Idx2 = getExtractIndex(EE2);
-          if (Idx1 == std::nullopt || Idx2 == std::nullopt)
-            return false;
-          return *Idx1 < *Idx2;
+            return I1 < I2;
+          return getInsertIndex(EE1) < getInsertIndex(EE2);
         }
-      return false;
+      return I1 < I2;
     };
     auto IsIdentityOrder = [](const OrdersType &Order) {
       for (unsigned Idx : seq<unsigned>(0, Order.size()))
