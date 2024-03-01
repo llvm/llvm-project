@@ -13,6 +13,7 @@
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-include-next"
+#pragma clang diagnostic ignored "-Winclude-next-absolute-path"
 #else // gcc
 #pragma GCC system_header
 #endif //__clang__
