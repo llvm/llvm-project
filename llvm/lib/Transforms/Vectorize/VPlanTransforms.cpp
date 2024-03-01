@@ -571,9 +571,9 @@ static void optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
           ConstantInt::get(ID.getStep()->getType(), 0));
       VPValue *StepV = PtrIV->getOperand(1);
       VPRecipeBase *Steps =
-          createScalarIVSteps(Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr, SE,
-                              nullptr, StartV, StepV,
-                              InsertPt)
+          createScalarIVSteps(Plan, InductionDescriptor::IK_IntInduction,
+                              Instruction::Add, nullptr, SE, nullptr, StartV,
+                              StepV, InsertPt)
               ->getDefiningRecipe();
 
       auto *Recipe =
@@ -596,9 +596,10 @@ static void optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
 
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
     VPValue *Steps = createScalarIVSteps(
-        Plan, ID.getKind(), ID.getInductionOpcode(), dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()), SE, WideIV->getTruncInst(), WideIV->getStartValue(),
-        WideIV->getStepValue(), InsertPt
-        );
+        Plan, ID.getKind(), ID.getInductionOpcode(),
+        dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()), SE,
+        WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
+        InsertPt);
 
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs)

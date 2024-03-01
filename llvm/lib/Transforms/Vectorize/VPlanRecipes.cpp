@@ -275,8 +275,7 @@ VPInstruction::VPInstruction(unsigned Opcode,
 }
 
 bool VPInstruction::generatesScalars() const {
-  return
-         Opcode == VPInstruction::PtrAdd;
+  return Opcode == VPInstruction::PtrAdd;
 }
 
 Value *VPInstruction::generatePerLane(VPTransformState &State,

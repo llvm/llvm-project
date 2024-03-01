@@ -2492,7 +2492,6 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
   /// for floating point inductions.
   const FPMathOperator *FPBinOp;
 
-
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
                     VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step)
