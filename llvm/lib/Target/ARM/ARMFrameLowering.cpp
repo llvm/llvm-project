@@ -933,7 +933,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   AFI->setGPRCalleeSavedArea2Offset(GPRCS2Offset);
   AFI->setDPRCalleeSavedAreaOffset(DPRCSOffset);
 
-  // Move past area 2, unless following Win_AAPCS_CFGuard calling convention.
+  // Move past area 2, unless following the CSR_Win_SplitFP calling convention.
   if (GPRCS2Size > 0 &&
       STI.getPushPopSplitVariation(MF) !=
           ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind) {
@@ -976,7 +976,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   } else
     NumBytes = DPRCSOffset;
 
-  // Move past area 2 if following Win_AAPCS_CFGuard calling convention.
+  // Move past area 2 if following the CSR_Win_SplitFP calling convention.
   if (GPRCS2Size > 0 &&
       STI.getPushPopSplitVariation(MF) ==
           ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind) {
@@ -1238,17 +1238,14 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
         case ARM::R10:
         case ARM::R11:
         case ARM::R12:
-          if (STI.getPushPopSplitVariation(MF) ==
-              ARMSubtarget::PushPopSplitVariation::R7Split) {
-            unsigned DwarfReg = MRI->getDwarfRegNum(
-                Reg == ARM::R12 ? ARM::RA_AUTH_CODE : Reg, true);
-            unsigned Offset = MFI.getObjectOffset(FI);
-            unsigned CFIIndex = MF.addFrameInst(
-                MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
-            BuildMI(MBB, Pos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-                .addCFIIndex(CFIIndex)
-                .setMIFlags(MachineInstr::FrameSetup);
-          }
+          unsigned DwarfReg = MRI->getDwarfRegNum(
+              Reg == ARM::R12 ? ARM::RA_AUTH_CODE : Reg, true);
+          unsigned Offset = MFI.getObjectOffset(FI);
+          unsigned CFIIndex = MF.addFrameInst(
+              MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
+          BuildMI(MBB, Pos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
+              .addCFIIndex(CFIIndex)
+              .setMIFlags(MachineInstr::FrameSetup);
           break;
         }
       }

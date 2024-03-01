@@ -156,7 +156,10 @@ public:
     /// r4-r11+lr (+r12 if necessary) can be pushed in a single instruction.
     NoSplit,
     /// The registers need to be split into a push of r4-r7+lr and another
-    /// containing r8-r11 (+r12 if necessary).
+    /// containing r8-r11 (+r12 if necessary). Due to Thumb1FrameLowering
+    /// having separate handling of AAPCS being enabled, and therefore r11+lr
+    /// needing to be in a separate push, this value is also used as the push
+    /// variation in that case.
     R7Split,
     /// The registers need to be split into a push containing r4-r10+r12 and
     /// another containing r11 + lr.

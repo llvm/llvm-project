@@ -222,12 +222,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     case ARM::R8:
     case ARM::R9:
     case ARM::R10:
-      if (STI.getPushPopSplitVariation(MF) ==
-          ARMSubtarget::PushPopSplitVariation::R7Split) {
-        GPRCS2Size += 4;
-        break;
-      }
-      [[fallthrough]];
+      GPRCS2Size += 4;
+      break;
     case ARM::LR:
       if (HasFrameRecordArea) {
         FRSize += 4;
@@ -362,15 +358,6 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
       Register Reg = I.getReg();
       int FI = I.getFrameIdx();
       switch (Reg) {
-      case ARM::R8:
-      case ARM::R9:
-      case ARM::R10:
-      case ARM::R11:
-      case ARM::R12:
-        if (STI.getPushPopSplitVariation(MF) ==
-            ARMSubtarget::PushPopSplitVariation::R7Split)
-          break;
-        [[fallthrough]];
       case ARM::R0:
       case ARM::R1:
       case ARM::R2:

@@ -508,9 +508,9 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // enabled and AAPCS is disabled.
   if ((MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
        !createAAPCSFrameChain()) ||
-      ((getFramePointerReg() == ARM::R7 &&
-        MF.getTarget().Options.DisableFramePointerElim(MF)) ||
-       isThumb1Only()))
+      (getFramePointerReg() == ARM::R7 &&
+       MF.getTarget().Options.DisableFramePointerElim(MF)) ||
+      isThumb1Only())
     return R7Split;
   // Returns R11SplitWindowsSEHUnwind when the stack pointer needs to be
   // restored from the frame pointer r11 + an offset and Windows CFI is enabled.
@@ -524,25 +524,8 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // Returns R11SplitAAPCSBranchSigning if R11 and lr are not adjacent to each
   // other in the list of callee saved registers in a frame, and branch
   // signing is enabled.
-  if (CSI.size() > 1 &&
-      MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
-      getFramePointerReg() == ARM::R11) {
-    bool r11InCSI = false;
-    bool lrInCSI = false;
-    unsigned long r11Idx = 0;
-    unsigned long lrIdx = 0;
-
-    for (unsigned long i = 0; i < CSI.size(); i++) {
-      if (CSI[i].getReg() == ARM::LR) {
-        lrIdx = i;
-        lrInCSI = true;
-      } else if (CSI[i].getReg() == ARM::R11) {
-        r11Idx = i;
-        r11InCSI = true;
-      }
-    }
-    if (lrIdx + 1 != r11Idx && r11InCSI && lrInCSI)
-      return R11SplitAAPCSBranchSigning;
-  }
+  if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
+      getFramePointerReg() == ARM::R11)
+    return R11SplitAAPCSBranchSigning;
   return NoSplit;
 }
