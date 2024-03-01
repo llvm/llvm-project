@@ -109,9 +109,13 @@ void BasicBlock::convertFromNewDbgValues() {
       continue;
 
     DPMarker &Marker = *Inst.DbgMarker;
-    for (DbgRecord &DR : Marker.getDbgValueRange())
-      InstList.insert(Inst.getIterator(),
-                      DR.createDebugIntrinsic(getModule(), nullptr));
+    for (DbgRecord &DR : Marker.getDbgValueRange()) {
+      auto I = Inst.getIterator();
+      // Avoid inserting debug info between phi nodes.
+      if (isa<PHINode>(Inst))
+        I = getFirstNonPHIOrDbg()->getIterator();
+      InstList.insert(I, DR.createDebugIntrinsic(getModule(), nullptr));
+    }
 
     Marker.eraseFromParent();
   }
