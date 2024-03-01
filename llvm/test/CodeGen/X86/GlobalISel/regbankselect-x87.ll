@@ -37,9 +37,9 @@ entry:
   %x = alloca x86_fp80, align 16
   store x86_fp80 %a, ptr %a.addr, align 16
   store x86_fp80 0xK400A8000000000000000, ptr %x, align 16
-  %0 = load x86_fp80, ptr %a.addr, align 16
-  %1 = load x86_fp80, ptr %x, align 16
-  %add = fadd x86_fp80 %0, %1
+  %load1 = load x86_fp80, ptr %a.addr, align 16
+  %load2 = load x86_fp80, ptr %x, align 16
+  %add = fadd x86_fp80 %load1, %load2
   ret x86_fp80 %add
 }
 
@@ -69,9 +69,9 @@ define void @f1(ptr %a, ptr %b) {
   ; X64-NEXT:   [[FSUB:%[0-9]+]]:psr(s80) = G_FSUB [[LOAD]], [[LOAD1]]
   ; X64-NEXT:   G_STORE [[FSUB]](s80), [[COPY]](p0) :: (store (s80) into %ir.a, align 4)
   ; X64-NEXT:   RET 0
-  %1 = load x86_fp80, ptr %a, align 4
-  %2 = load x86_fp80, ptr %b, align 4
-  %sub = fsub x86_fp80 %1, %2
+  %load1 = load x86_fp80, ptr %a, align 4
+  %load2 = load x86_fp80, ptr %b, align 4
+  %sub = fsub x86_fp80 %load1, %load2
   store x86_fp80 %sub, ptr %a, align 4
   ret void
 }
@@ -100,9 +100,9 @@ define void @f2(ptr %a, ptr %b) {
   ; X64-NEXT:   [[FMUL:%[0-9]+]]:psr(s80) = G_FMUL [[LOAD]], [[LOAD1]]
   ; X64-NEXT:   G_STORE [[FMUL]](s80), [[COPY]](p0) :: (store (s80) into %ir.a, align 16)
   ; X64-NEXT:   RET 0
-  %1 = load x86_fp80, ptr %a, align 16
-  %2 = load x86_fp80, ptr %b, align 16
-  %mul = fmul x86_fp80 %1, %2
+  %load1 = load x86_fp80, ptr %a, align 16
+  %load2 = load x86_fp80, ptr %b, align 16
+  %mul = fmul x86_fp80 %load1, %load2
   store x86_fp80 %mul, ptr %a, align 16
   ret void
 }
@@ -131,9 +131,9 @@ define void @f3(ptr %a, ptr %b) {
   ; X64-NEXT:   [[FDIV:%[0-9]+]]:psr(s80) = G_FDIV [[LOAD]], [[LOAD1]]
   ; X64-NEXT:   G_STORE [[FDIV]](s80), [[COPY]](p0) :: (store (s80) into %ir.a, align 4)
   ; X64-NEXT:   RET 0
-  %1 = load x86_fp80, ptr %a, align 4
-  %2 = load x86_fp80, ptr %b, align 4
-  %div = fdiv x86_fp80 %1, %2
+  %load1 = load x86_fp80, ptr %a, align 4
+  %load2 = load x86_fp80, ptr %b, align 4
+  %div = fdiv x86_fp80 %load1, %load2
   store x86_fp80 %div, ptr %a, align 4
   ret void
 }
@@ -195,9 +195,9 @@ define void @f5(ptr %a, ptr %b) {
   ; X64-NEXT:   [[COPY4:%[0-9]+]]:gpr(s64) = COPY [[FADD]](s64)
   ; X64-NEXT:   G_STORE [[COPY4]](s64), [[COPY]](p0) :: (store (s64) into %ir.a)
   ; X64-NEXT:   RET 0
-  %1 = load double, ptr %a, align 8
-  %2 = load double, ptr %b, align 8
-  %add = fadd double %1, %2
+  %load1 = load double, ptr %a, align 8
+  %load2 = load double, ptr %b, align 8
+  %add = fadd double %load1, %load2
   store double %add, ptr %a, align 8
   ret void
 }
@@ -230,8 +230,8 @@ define void @f6(ptr %0, ptr %1) {
   ; X64-NEXT:   [[COPY3:%[0-9]+]]:gpr(s32) = COPY [[FADD]](s32)
   ; X64-NEXT:   G_STORE [[COPY3]](s32), [[COPY1]](p0) :: (store (s32) into %ir.1)
   ; X64-NEXT:   RET 0
-  %3 = load float, ptr %0
-  %4 = fadd float %3, 20.0
-  store float %4, ptr %1
+  %load1 = load float, ptr %0
+  %add = fadd float %load1, 20.0
+  store float %add, ptr %1
   ret void
 }
