@@ -747,8 +747,7 @@ class MUBUF_AtomicNoRet_Pseudo<string opName, int addrKind,
                         (outs),
                         getMUBUFAtomicIns<addrKindCopy, vdataClassCopy, 0, hasRestrictedSOffset>.ret,
                         getMUBUFAsmOps<addrKindCopy>.ret,
-                        pattern>,
-    AtomicNoRet<opName # "_" # getAddrName<addrKindCopy>.ret, 0> {
+                        pattern> {
   let PseudoInstr = opName # "_" # getAddrName<addrKindCopy>.ret;
   let glc_value = 0;
   let dlc_value = 0;
@@ -768,8 +767,7 @@ class MUBUF_AtomicRet_Pseudo<string opName, int addrKind,
                         (outs vdata_op:$vdata),
                         getMUBUFAtomicIns<addrKindCopy, vdataClassCopy, 1, hasRestrictedSOffset>.ret,
                         getMUBUFAsmOps<addrKindCopy>.ret,
-                        pattern>,
-    AtomicNoRet<opName # "_" # getAddrName<addrKindCopy>.ret, 1> {
+                        pattern> {
   let PseudoInstr = opName # "_rtn_" # getAddrName<addrKindCopy>.ret;
   let glc_value = 1;
   let dlc_value = 0;
@@ -2511,34 +2509,26 @@ multiclass MUBUF_Real_Atomic_gfx11_Renamed_impl<bits<8> op, bit is_return,
                                                 string real_name> {
   defvar Rtn = !if(is_return, "_RTN", "");
   def _BOTHEN#Rtn#_gfx11 :
-    MUBUF_Real_Atomic_gfx11_impl<op, NAME # "_BOTHEN" # Rtn, real_name>,
-    AtomicNoRet<NAME # "_BOTHEN_gfx11", is_return>;
+    MUBUF_Real_Atomic_gfx11_impl<op, NAME # "_BOTHEN" # Rtn, real_name>;
   def _IDXEN#Rtn#_gfx11 :
-    MUBUF_Real_Atomic_gfx11_impl<op, NAME # "_IDXEN" # Rtn, real_name>,
-    AtomicNoRet<NAME # "_IDXEN_gfx11", is_return>;
+    MUBUF_Real_Atomic_gfx11_impl<op, NAME # "_IDXEN" # Rtn, real_name>;
   def _OFFEN#Rtn#_gfx11 :
-    MUBUF_Real_Atomic_gfx11_impl<op, NAME # "_OFFEN" # Rtn, real_name>,
-    AtomicNoRet<NAME # "_OFFEN_gfx11", is_return>;
+    MUBUF_Real_Atomic_gfx11_impl<op, NAME # "_OFFEN" # Rtn, real_name>;
   def _OFFSET#Rtn#_gfx11 :
-    MUBUF_Real_Atomic_gfx11_impl<op, NAME # "_OFFSET" # Rtn, real_name>,
-    AtomicNoRet<NAME # "_OFFSET_gfx11", is_return>;
+    MUBUF_Real_Atomic_gfx11_impl<op, NAME # "_OFFSET" # Rtn, real_name>;
 }
 
 multiclass MUBUF_Real_Atomic_gfx12_Renamed_impl<bits<8> op, bit is_return,
                                                 string real_name> {
   defvar Rtn = !if(is_return, "_RTN", "");
   def _BOTHEN#Rtn#_gfx12 :
-    MUBUF_Real_Atomic_gfx12_impl<op, NAME # "_VBUFFER_BOTHEN" # Rtn, real_name>,
-    AtomicNoRet<NAME # "_BOTHEN_gfx12", is_return>;
+    MUBUF_Real_Atomic_gfx12_impl<op, NAME # "_VBUFFER_BOTHEN" # Rtn, real_name>;
   def _IDXEN#Rtn#_gfx12 :
-    MUBUF_Real_Atomic_gfx12_impl<op, NAME # "_VBUFFER_IDXEN" # Rtn, real_name>,
-    AtomicNoRet<NAME # "_IDXEN_gfx12", is_return>;
+    MUBUF_Real_Atomic_gfx12_impl<op, NAME # "_VBUFFER_IDXEN" # Rtn, real_name>;
   def _OFFEN#Rtn#_gfx12 :
-    MUBUF_Real_Atomic_gfx12_impl<op, NAME # "_VBUFFER_OFFEN" # Rtn, real_name>,
-    AtomicNoRet<NAME # "_OFFEN_gfx12", is_return>;
+    MUBUF_Real_Atomic_gfx12_impl<op, NAME # "_VBUFFER_OFFEN" # Rtn, real_name>;
   def _OFFSET#Rtn#_gfx12 :
-    MUBUF_Real_Atomic_gfx12_impl<op, NAME # "_VBUFFER_OFFSET" # Rtn, real_name>,
-    AtomicNoRet<NAME # "_OFFSET_gfx12", is_return>;
+    MUBUF_Real_Atomic_gfx12_impl<op, NAME # "_VBUFFER_OFFSET" # Rtn, real_name>;
 }
 
 multiclass MUBUF_Real_Atomic_gfx11_gfx12_Renamed_impl<bits<8> op, bit is_return,
@@ -2695,32 +2685,24 @@ multiclass MUBUF_Real_AllAddr_Lds_gfx10<bits<8> op, bit isTFE = 0> {
 }
 multiclass MUBUF_Real_Atomics_RTN_gfx10<bits<8> op> {
   def _BOTHEN_RTN_gfx10 :
-    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_BOTHEN_RTN")>,
-    AtomicNoRet<NAME # "_BOTHEN_gfx10", 1>;
+    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_BOTHEN_RTN")>;
   def _IDXEN_RTN_gfx10 :
-    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_IDXEN_RTN")>,
-    AtomicNoRet<NAME # "_IDXEN_gfx10", 1>;
+    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_IDXEN_RTN")>;
   def _OFFEN_RTN_gfx10 :
-    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_OFFEN_RTN")>,
-    AtomicNoRet<NAME # "_OFFEN_gfx10", 1>;
+    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_OFFEN_RTN")>;
   def _OFFSET_RTN_gfx10 :
-    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_OFFSET_RTN")>,
-    AtomicNoRet<NAME # "_OFFSET_gfx10", 1>;
+    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_OFFSET_RTN")>;
 }
 multiclass MUBUF_Real_Atomics_gfx10<bits<8> op> :
     MUBUF_Real_Atomics_RTN_gfx10<op> {
   def _BOTHEN_gfx10 :
-    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_BOTHEN")>,
-    AtomicNoRet<NAME # "_BOTHEN_gfx10", 0>;
+    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_BOTHEN")>;
   def _IDXEN_gfx10 :
-    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_IDXEN")>,
-    AtomicNoRet<NAME # "_IDXEN_gfx10", 0>;
+    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_IDXEN")>;
   def _OFFEN_gfx10 :
-    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_OFFEN")>,
-    AtomicNoRet<NAME # "_OFFEN_gfx10", 0>;
+    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_OFFEN")>;
   def _OFFSET_gfx10 :
-    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_OFFSET")>,
-    AtomicNoRet<NAME # "_OFFSET_gfx10", 0>;
+    MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_OFFSET")>;
 }
 
 defm BUFFER_STORE_BYTE_D16_HI     : MUBUF_Real_AllAddr_gfx10<0x019>;
@@ -2795,36 +2777,26 @@ multiclass MUBUF_Real_AllAddr_Lds_gfx6_gfx7<bits<8> op, bit isTFE = 0> {
 }
 multiclass MUBUF_Real_Atomics_gfx6_gfx7<bits<8> op> {
   def _ADDR64_gfx6_gfx7 :
-    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_ADDR64")>,
-    AtomicNoRet<NAME # "_ADDR64_gfx6_gfx7", 0>;
+    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_ADDR64")>;
   def _BOTHEN_gfx6_gfx7 :
-    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_BOTHEN")>,
-    AtomicNoRet<NAME # "_BOTHEN_gfx6_gfx7", 0>;
+    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_BOTHEN")>;
   def _IDXEN_gfx6_gfx7 :
-    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_IDXEN")>,
-    AtomicNoRet<NAME # "_IDXEN_gfx6_gfx7", 0>;
+    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_IDXEN")>;
   def _OFFEN_gfx6_gfx7 :
-    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_OFFEN")>,
-    AtomicNoRet<NAME # "_OFFEN_gfx6_gfx7", 0>;
+    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_OFFEN")>;
   def _OFFSET_gfx6_gfx7 :
-    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_OFFSET")>,
-    AtomicNoRet<NAME # "_OFFSET_gfx6_gfx7", 0>;
+    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_OFFSET")>;
 
   def _ADDR64_RTN_gfx6_gfx7 :
-    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_ADDR64_RTN")>,
-    AtomicNoRet<NAME # "_ADDR64_gfx6_gfx7", 1>;
+    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_ADDR64_RTN")>;
   def _BOTHEN_RTN_gfx6_gfx7 :
-    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_BOTHEN_RTN")>,
-    AtomicNoRet<NAME # "_BOTHEN_gfx6_gfx7", 1>;
+    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_BOTHEN_RTN")>;
   def _IDXEN_RTN_gfx6_gfx7 :
-    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_IDXEN_RTN")>,
-    AtomicNoRet<NAME # "_IDXEN_gfx6_gfx7", 1>;
+    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_IDXEN_RTN")>;
   def _OFFEN_RTN_gfx6_gfx7 :
-    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_OFFEN_RTN")>,
-    AtomicNoRet<NAME # "_OFFEN_gfx6_gfx7", 1>;
+    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_OFFEN_RTN")>;
   def _OFFSET_RTN_gfx6_gfx7 :
-    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_OFFSET_RTN")>,
-    AtomicNoRet<NAME # "_OFFSET_gfx6_gfx7", 1>;
+    MUBUF_Real_gfx6_gfx7<op, !cast<MUBUF_Pseudo>(NAME#"_OFFSET_RTN")>;
 }
 
 multiclass MUBUF_Real_AllAddr_gfx6_gfx7_gfx10<bits<8> op> :
@@ -3081,9 +3053,7 @@ class MUBUF_Real_Base_vi <bits<7> op, MUBUF_Pseudo ps, int Enc,
                           bit has_sccb = ps.has_sccb> :
   MUBUF_Real<ps>,
   Enc64,
-  SIMCInstr<ps.PseudoInstr, Enc>,
-  AtomicNoRet<!subst("_RTN","",NAME), !if(ps.IsAtomicNoRet, 0,
-                                        !if(ps.IsAtomicRet, 1, ?))> {
+  SIMCInstr<ps.PseudoInstr, Enc> {
 
   let Inst{11-0}  = !if(ps.has_offset, offset, ?);
   let Inst{12}    = ps.offen;
