@@ -137,11 +137,12 @@ public:
                        llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
                            &useDeviceSymbols) const;
   bool
-  processUseDevicePtr(llvm::SmallVectorImpl<mlir::Value> &operands,
+  processUseDevicePtr(llvm::SmallVectorImpl<mlir::Value> &ptrOperands,
                       llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
                       llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
                       llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-                          &useDeviceSymbols) const;
+                          &useDeviceSymbols,
+                      llvm::SmallVectorImpl<mlir::Value> *addrOperands) const;
 
   template <typename T>
   bool processMotionClauses(Fortran::lower::StatementContext &stmtCtx,
