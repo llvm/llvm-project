@@ -223,6 +223,7 @@ add_mlir_upstream_c_api_library(MLIRCAPIOpenMP
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIROpenMPDialect
+  MLIROpenMPTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIPDL
