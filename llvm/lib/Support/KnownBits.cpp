@@ -176,6 +176,22 @@ KnownBits KnownBits::smin(const KnownBits &LHS, const KnownBits &RHS) {
   return Flip(umax(Flip(LHS), Flip(RHS)));
 }
 
+KnownBits KnownBits::absdiff(const KnownBits &LHS, const KnownBits &RHS) {
+  // absdiff(LHS,RHS) = sub(umax(LHS,RHS), umin(LHS,RHS)).
+  KnownBits UMaxValue = umax(LHS, RHS);
+  KnownBits UMinValue = umin(LHS, RHS);
+  KnownBits MinMaxDiff = computeForAddSub(false, false, UMaxValue, UMinValue);
+
+  // find the common bits between sub(LHS,RHS) and sub(RHS,LHS).
+  KnownBits Diff0 = computeForAddSub(false, false, LHS, RHS);
+  KnownBits Diff1 = computeForAddSub(false, false, RHS, LHS);
+  KnownBits SubDiff = Diff0.intersectWith(Diff1);
+
+  KnownBits KnownAbsDiff = MinMaxDiff.unionWith(SubDiff);
+  assert(!KnownAbsDiff.hasConflict() && "Bad Output");
+  return KnownAbsDiff;
+}
+
 static unsigned getMaxShiftAmount(const APInt &MaxValue, unsigned BitWidth) {
   if (isPowerOf2_32(BitWidth))
     return MaxValue.extractBitsAsZExtValue(Log2_32(BitWidth), 0);
