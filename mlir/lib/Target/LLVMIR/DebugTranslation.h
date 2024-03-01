@@ -82,7 +82,6 @@ private:
   llvm::DIGlobalVariable *translateImpl(DIGlobalVariableAttr attr);
   llvm::DIModule *translateImpl(DIModuleAttr attr);
   llvm::DINamespace *translateImpl(DINamespaceAttr attr);
-  llvm::DIType *translateImpl(DIRecursiveTypeAttr attr);
   llvm::DIScope *translateImpl(DIScopeAttr attr);
   llvm::DISubprogram *translateImpl(DISubprogramAttr attr);
   llvm::DISubrange *translateImpl(DISubrangeAttr attr);
@@ -90,7 +89,7 @@ private:
   llvm::DIType *translateImpl(DITypeAttr attr);
 
   /// Attributes that support self recursion need to implement two methods and
-  /// hook into the `translateImpl` method of `DIRecursiveTypeAttr`.
+  /// hook into the `translateImpl` overload for `DIRecursiveTypeAttr`.
   /// - `<llvm type> translateImplGetPlaceholder(<mlir type>)`:
   ///   Translate the DI attr without translating any potentially recursive
   ///   nested DI attrs.
@@ -98,7 +97,12 @@ private:
   ///   Given the placeholder returned by `translateImplGetPlaceholder`, fill
   ///   any holes by recursively translating nested DI attrs. This method must
   ///   mutate the placeholder that is passed in, instead of creating a new one.
+  llvm::DIType *translateImpl(DIRecursiveTypeAttr attr);
+
+  /// Get a placeholder DICompositeType without recursing into the elements.
   llvm::DICompositeType *translateImplGetPlaceholder(DICompositeTypeAttr attr);
+  /// Fill out the DICompositeType placeholder by recursively translating the
+  /// elements.
   void translateImplFillPlaceholder(DICompositeTypeAttr attr,
                                     llvm::DICompositeType *placeholder);
 
@@ -116,12 +120,13 @@ private:
   /// metadata.
   DenseMap<Attribute, llvm::DINode *> attrToNode;
 
-  /// A mapping from DIRecursiveTypeAttr id to the translated DIType.
+  /// A mapping from DistinctAttr ID of DIRecursiveTypeAttr to the translated
+  /// DIType.
   llvm::MapVector<DistinctAttr, llvm::DIType *> recursiveTypeMap;
 
-  /// A mapping between distinct ID attr for DI nodes that require distinction
-  /// and the translate LLVM metadata node. This helps identify attrs that
-  /// should translate into the same LLVM debug node.
+  /// A mapping between DistinctAttr ID and the translated LLVM metadata node.
+  /// This helps identify attrs that should translate into the same LLVM debug
+  /// node.
   DenseMap<DistinctAttr, llvm::DINode *> distinctAttrToNode;
 
   /// A mapping between filename and llvm debug file.

@@ -178,7 +178,7 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   std::optional<DISubprogramFlags> subprogramFlags =
       symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
   // Return nullptr if the scope or type is invalid.
-  auto scope = cast<DIScopeAttr>(translate(node->getScope()));
+  auto scope = translate(node->getScope());
   if (node->getScope() && !scope)
     return nullptr;
   DIRecursiveTypeAttrOf<DISubroutineTypeAttr> type = translate(node->getType());

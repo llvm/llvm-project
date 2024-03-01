@@ -306,7 +306,7 @@ def LLVM_DIExpressionAttr : LLVM_Attr<"DIExpression", "di_expression"> {
 //===----------------------------------------------------------------------===//
 
 def LLVM_DIRecursiveTypeAttr : LLVM_Attr<"DIRecursiveType", "di_recursive_type",
-                                    /*traits=*/[], "DITypeAttr"> {
+                                          /*traits=*/[], "DITypeAttr"> {
   let description = [{
     This attribute enables recursive DITypes. There are two modes for this
     attribute.
