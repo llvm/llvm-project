@@ -14,7 +14,6 @@
 #ifndef LLVM_TARGET_DIRECTX_DXILSHADERFLAGS_H
 #define LLVM_TARGET_DIRECTX_DXILSHADERFLAGS_H
 
-#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
@@ -29,21 +28,33 @@ class GlobalVariable;
 namespace dxil {
 
 struct ComputedShaderFlags {
-#define SHADER_FEATURE_FLAG(bit, FlagName, Str) bool FlagName : 1;
+#define SHADER_FEATURE_FLAG(bit, DxilModuleBit, FlagName, Str)                 \
+  bool FlagName : 1;
+#define DXIL_MODULE_FLAG(bit, FlagName, Str) bool FlagName : 1;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 
-#define SHADER_FEATURE_FLAG(bit, FlagName, Str) FlagName = false;
+#define SHADER_FEATURE_FLAG(bit, DxilModuleBit, FlagName, Str) FlagName = false;
+#define DXIL_MODULE_FLAG(bit, FlagName, Str) FlagName = false;
   ComputedShaderFlags() {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   }
 
   operator uint64_t() const {
     uint64_t FlagValue = 0;
-#define SHADER_FEATURE_FLAG(bit, FlagName, Str)                                \
-  FlagValue |=                                                                 \
-      FlagName ? static_cast<uint64_t>(dxbc::FeatureFlags::FlagName) : 0ull;
+#define SHADER_FEATURE_FLAG(bit, DxilModuleBit, FlagName, Str)                 \
+  FlagValue |= FlagName ? (uint64_t)1 << DxilModuleBit : 0ull;
+#define DXIL_MODULE_FLAG(bit, FlagName, Str)                                   \
+  FlagValue |= FlagName ? (uint64_t)1 << bit : 0ull;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
     return FlagValue;
+  }
+
+  uint64_t getFeatureInfo() const {
+    uint64_t FeatureInfo = 0;
+#define SHADER_FEATURE_FLAG(bit, DxilModuleBit, FlagName, Str)                 \
+  FeatureInfo |= FlagName ? (uint64_t)1 << bit : 0ull;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+    return FeatureInfo;
   }
 
   static ComputedShaderFlags computeFlags(Module &M);

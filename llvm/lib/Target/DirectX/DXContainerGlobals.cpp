@@ -28,7 +28,7 @@ using namespace llvm::dxil;
 namespace {
 class DXContainerGlobals : public llvm::ModulePass {
 
-  GlobalVariable *getShaderFlags(Module &M);
+  GlobalVariable *getFeatureInfo(Module &M);
   GlobalVariable *computeShaderHash(Module &M);
 
 public:
@@ -53,21 +53,24 @@ public:
 
 bool DXContainerGlobals::runOnModule(Module &M) {
   llvm::SmallVector<GlobalValue *> Globals;
-  Globals.push_back(getShaderFlags(M));
+  Globals.push_back(getFeatureInfo(M));
   Globals.push_back(computeShaderHash(M));
 
   appendToCompilerUsed(M, Globals);
   return true;
 }
 
-GlobalVariable *DXContainerGlobals::getShaderFlags(Module &M) {
-  const uint64_t Flags =
-      (uint64_t)(getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags());
+GlobalVariable *DXContainerGlobals::getFeatureInfo(Module &M) {
+  const uint64_t FeatureInfo =
+      (uint64_t)(getAnalysis<ShaderFlagsAnalysisWrapper>()
+                     .getShaderFlags()
+                     .getFeatureInfo());
 
-  Constant *FlagsConstant = ConstantInt::get(M.getContext(), APInt(64, Flags));
-  auto *GV = new llvm::GlobalVariable(M, FlagsConstant->getType(), true,
+  Constant *FeatureInfoConstant =
+      ConstantInt::get(M.getContext(), APInt(64, FeatureInfo));
+  auto *GV = new llvm::GlobalVariable(M, FeatureInfoConstant->getType(), true,
                                       GlobalValue::PrivateLinkage,
-                                      FlagsConstant, "dx.sfi0");
+                                      FeatureInfoConstant, "dx.sfi0");
   GV->setSection("SFI0");
   GV->setAlignment(Align(4));
   return GV;

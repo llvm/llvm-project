@@ -51,7 +51,10 @@ void ComputedShaderFlags::print(raw_ostream &OS) const {
   if (FlagVal == 0)
     return;
   OS << "; Note: shader requires additional functionality:\n";
-#define SHADER_FEATURE_FLAG(bit, FlagName, Str)                                \
+#define SHADER_FEATURE_FLAG(bit, DxilModuleNum, FlagName, Str)                 \
+  if (FlagName)                                                                \
+    OS << ";       " Str "\n";
+#define DXIL_MODULE_FLAG(bit, FlagName, Str)                                   \
   if (FlagName)                                                                \
     OS << ";       " Str "\n";
 #include "llvm/BinaryFormat/DXContainerConstants.def"
