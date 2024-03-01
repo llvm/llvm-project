@@ -17,7 +17,7 @@ import argparse
 import os
 import platform
 import subprocess
-
+import signal
 
 def main():
     parser = argparse.ArgumentParser()
@@ -65,8 +65,10 @@ def main():
             env["TEMP"] = os.environ.get("TEMP")
 
     # Run the command line with the given environment in the execution directory.
-    return subprocess.call(commandLine, cwd=args.execdir, env=env, shell=False)
-
+    result = subprocess.call(commandLine, cwd=args.execdir, env=env, shell=False)
+    if result == -signal.SIGINT:
+        raise KeyboardInterrupt
+    return result
 
 if __name__ == "__main__":
     exit(main())
