@@ -101,9 +101,9 @@ void AttributePool::takePool(AttributePool &pool) {
 }
 
 void AttributePool::takeFrom(ParsedAttributesView &List, AttributePool &Pool) {
-    assert(&Pool != this && "AttributePool can't take attributes from itself");
-    llvm::for_each(List.AttrList, [&Pool](ParsedAttr *A) { Pool.remove(A); });
-    Attrs.insert(Attrs.end(), List.AttrList.begin(), List.AttrList.end());
+  assert(&Pool != this && "AttributePool can't take attributes from itself");
+  llvm::for_each(List.AttrList, [&Pool](ParsedAttr *A) { Pool.remove(A); });
+  Attrs.insert(Attrs.end(), List.AttrList.begin(), List.AttrList.end());
 }
 
 namespace {
