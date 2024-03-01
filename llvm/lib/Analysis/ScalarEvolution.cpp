@@ -7416,7 +7416,7 @@ bool ScalarEvolution::loopIsFiniteByAssumption(const Loop *L) {
   // A mustprogress loop without side effects must be finite.
   // TODO: The check used here is very conservative.  It's only *specific*
   // side effects which are well defined in infinite loops.
-  return this->AssumeLoopExists || isFinite(L) ||
+  return AssumeLoopExists || isFinite(L) ||
          (isMustProgress(L) && loopHasNoSideEffects(L));
 }
 
@@ -13248,9 +13248,12 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       auto CondGE = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
 
       if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart)) {
-        if (AssumeLoopExists) {
-          return true;
-        }
+        return true;
+      }
+      // In the Enzyme MustExitScalarEvolutionCode, this check was missing
+      // I do not have enough context to know if these two checks should be
+      // mutually Exclusive. If they aren't then this bool check is unnecessary
+      if (!AssumeLoopExists) {
         const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
         const SCEV *GuardedStart = applyLoopGuards(OrigStart, L);
 
