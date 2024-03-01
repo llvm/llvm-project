@@ -90,6 +90,12 @@ private:
 
 } // end anonymous namespace
 
+std::ostream &operator<<(std::ostream &Stream, const UnwrappedLine &Line) {
+  llvm::raw_os_ostream OS(Stream);
+  printLine(OS, Line);
+  return Stream;
+}
+
 class ScopedLineState {
 public:
   ScopedLineState(UnwrappedLineParser &Parser,

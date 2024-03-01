@@ -13,8 +13,8 @@ target datalayout = "p:64:64:64"
 declare void @my_other_async_function(ptr %async.ctxt)
 
 ; Function that implements the dispatch to the callee function.
-define swifttailcc void @my_async_function.my_other_async_function_fp.apply(ptr %fnPtr, ptr %async.ctxt, ptr %task, ptr %actor) alwaysinline {
-  musttail call swifttailcc void %fnPtr(ptr %async.ctxt, ptr %task, ptr %actor)
+define swiftcc void @my_async_function.my_other_async_function_fp.apply(ptr %fnPtr, ptr %async.ctxt, ptr %task, ptr %actor) {
+  tail call swiftcc void %fnPtr(ptr %async.ctxt, ptr %task, ptr %actor)
   ret void
 }
 
@@ -38,7 +38,7 @@ entry:
      i32 128    ; Initial async context size without space for frame
 }>
 
-define swifttailcc void @unreachable(ptr %async.ctxt, ptr %task, ptr %actor)  {
+define swiftcc void @unreachable(ptr %async.ctxt, ptr %task, ptr %actor)  {
 entry:
   %tmp = alloca { i64, i64 }, align 8
   %proj.1 = getelementptr inbounds { i64, i64 }, ptr %tmp, i64 0, i32 0
@@ -77,11 +77,11 @@ entry:
   unreachable
 }
 
-; CHECK: define swifttailcc void @unreachable
+; CHECK: define swiftcc void @unreachable
 ; CHECK-NOT: @llvm.coro.suspend.async
 ; CHECK: return
 
-; CHECK: define internal swifttailcc void @unreachable.resume.0
+; CHECK: define internal swiftcc void @unreachable.resume.0
 ; CHECK: unreachable
 
 declare ptr @llvm.coro.prepare.async(ptr)

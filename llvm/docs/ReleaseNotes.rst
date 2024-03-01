@@ -103,6 +103,7 @@ Changes to the RISC-V Backend
 * Codegen support was added for the Zimop (May-Be-Operations) extension.
 * The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 0.8.1 Pointer Masking extensions are supported.
 * The experimental Ssqosid extension is supported.
+* Zacas is no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -142,6 +143,14 @@ Changes to the LLVM tools
   are printed as offsets in the file, allowing for binary size analysis. Wasm
   files using reference types and GC are also supported (but also only for
   functions, globals, and data, and only for listing symbols and names).
+
+* llvm-ar now utilizes LLVM_DEFAULT_TARGET_TRIPLE to determine the archive format
+  if it's not specified with the ``--format`` argument and cannot be inferred from
+  input files.
+
+* llvm-objcopy now supports ``--set-symbol-visibility`` and
+  ``--set-symbols-visibility`` options for ELF input to change the
+  visibility of symbols.
 
 Changes to LLDB
 ---------------------------------

@@ -420,11 +420,10 @@ namespace DeriveFailures {
 
   constexpr Derived D(12); // both-error {{must be initialized by a constant expression}} \
                            // both-note {{in call to 'Derived(12)'}} \
-                           // ref-note {{declared here}}
+                           // both-note {{declared here}}
 
   static_assert(D.Val == 0, ""); // both-error {{not an integral constant expression}} \
-                                 // ref-note {{initializer of 'D' is not a constant expression}} \
-                                 // expected-note {{read of uninitialized object}}
+                                 // both-note {{initializer of 'D' is not a constant expression}}
 #endif
 
   struct AnotherBase {
@@ -478,10 +477,11 @@ namespace ConditionalInit {
 namespace DeclRefs {
   struct A{ int m; const int &f = m; }; // expected-note {{implicit use of 'this'}}
 
-  constexpr A a{10}; // expected-error {{must be initialized by a constant expression}}
+  constexpr A a{10}; // expected-error {{must be initialized by a constant expression}} \
+                     // expected-note {{declared here}}
   static_assert(a.m == 10, "");
   static_assert(a.f == 10, ""); // expected-error {{not an integral constant expression}} \
-                                // expected-note {{read of uninitialized object}}
+                                // expected-note {{initializer of 'a' is not a constant expression}}
 
   class Foo {
   public:

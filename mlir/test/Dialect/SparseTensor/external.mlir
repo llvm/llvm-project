@@ -100,3 +100,27 @@ func.func @sparse_out2(%arg0: tensor<64x64xf32>) -> (tensor<64x64xf32>, tensor<6
 func.func @sparse_inout(%arg0: tensor<64x64xf32, #sparse>) -> tensor<64x64xf32, #sparse> {
   return %arg0 : tensor<64x64xf32, #sparse>
 }
+
+// -----
+
+// CHECK-LABEL: func.func @sparse_inout_coo_soa(
+// CHECK-SAME:    %[[A:.*0]]: tensor<?xf32>,
+// CHECK-SAME:    %[[B:.*1]]: tensor<?xindex>,
+// CHECK-SAME:    %[[C:.*2]]: tensor<?xindex>,
+// CHECK-SAME:    %[[D:.*3]]: tensor<?xindex>,
+// CHECK-SAME:    %[[E:.*4]]: tensor<?xf32>,
+// CHECK-SAME:    %[[F:.*5]]: tensor<?xindex>,
+// CHECK-SAME:    %[[G:.*6]]: tensor<?xindex>,
+// CHECK-SAME:    %[[H:.*7]]: tensor<?xindex>) -> (tensor<?xf32>, tensor<?xindex>, tensor<?xindex>, tensor<?xindex>) {
+// CHECK:         %[[I:.*]] = sparse_tensor.assemble %[[A]], %[[B]], %[[C]], %[[D]]
+// CHECK:         %[[F:.*]] = call @_internal_sparse_inout_coo_soa(%[[I]])
+// CHECK:         sparse_tensor.disassemble %[[F]]
+// CHECK:         return
+// CHECK:       }
+// CHECK:       func.func private @_internal_sparse_inout
+#sparse = #sparse_tensor.encoding<{
+   map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton(soa))
+}>
+func.func @sparse_inout_coo_soa(%arg0: tensor<64x64xf32, #sparse>) -> tensor<64x64xf32, #sparse> {
+  return %arg0 : tensor<64x64xf32, #sparse>
+}

@@ -382,3 +382,22 @@ contains
 end module
 
 ! CHECK: acc.parallel private(@privatization_ref_10xf32 -> %{{.*}} : !fir.ref<!fir.array<10xf32>>)
+
+subroutine acc_private_use()
+  integer :: i, j
+
+  !$acc parallel loop
+  do i = 1, 10
+    j = i
+  end do
+end
+
+! CHECK-LABEL: func.func @_QPacc_private_use()
+! CHECK: %[[I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFacc_private_useEi"}
+! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %0 {uniq_name = "_QFacc_private_useEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: acc.parallel
+! CHECK: %[[PRIV_I:.*]] = acc.private varPtr(%[[DECL_I]]#1 : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = ""}
+! CHECK: %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[PRIV_I]] {uniq_name = "_QFacc_private_useEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: acc.loop private(@privatization_ref_i32 -> %[[PRIV_I]] : !fir.ref<i32>) control(%[[IV0:.*]] : i32) = (%c1{{.*}} : i32) to (%c10{{.*}} : i32) step (%c1{{.*}} : i32)
+! CHECK:   fir.store %[[IV0]] to %[[DECL_PRIV_I]]#0 : !fir.ref<i32>
+! CHECK:   %{{.*}} = fir.load %[[DECL_PRIV_I]]#0 : !fir.ref<i32>

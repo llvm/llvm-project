@@ -1274,7 +1274,7 @@ void transform::TrackingListener::notifyMatchFailure(
   });
 }
 
-void transform::TrackingListener::notifyOperationRemoved(Operation *op) {
+void transform::TrackingListener::notifyOperationErased(Operation *op) {
   // TODO: Walk can be removed when D144193 has landed.
   op->walk([&](Operation *op) {
     // Remove mappings for result values.

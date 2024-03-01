@@ -201,7 +201,7 @@ struct _IsFancyPointer {
 };
 
 // enable_if is needed here to avoid instantiating checks for fancy pointers on raw pointers
-template <class _Pointer, class = __enable_if_t< _And<is_class<_Pointer>, _IsFancyPointer<_Pointer> >::value > >
+template <class _Pointer, __enable_if_t< _And<is_class<_Pointer>, _IsFancyPointer<_Pointer> >::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
     __decay_t<decltype(__to_address_helper<_Pointer>::__call(std::declval<const _Pointer&>()))>
     __to_address(const _Pointer& __p) _NOEXCEPT {

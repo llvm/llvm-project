@@ -47,11 +47,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "correlated-value-propagation"
 
-static cl::opt<bool> CanonicalizeICmpPredicatesToUnsigned(
-    "canonicalize-icmp-predicates-to-unsigned", cl::init(true), cl::Hidden,
-    cl::desc("Enables canonicalization of signed relational predicates to "
-             "unsigned (e.g. sgt => ugt)"));
-
 STATISTIC(NumPhis,      "Number of phis propagated");
 STATISTIC(NumPhiCommon, "Number of phis deleted via common incoming value");
 STATISTIC(NumSelects,   "Number of selects propagated");
@@ -90,6 +85,8 @@ STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
 STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
+STATISTIC(NumSMinMax,
+          "Number of llvm.s{min,max} intrinsics simplified to unsigned");
 STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
 STATISTIC(NumZExt, "Number of non-negative deductions");
@@ -289,9 +286,6 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI, DominatorTree *DT,
 }
 
 static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
-  if (!CanonicalizeICmpPredicatesToUnsigned)
-    return false;
-
   // Only for signed relational comparisons of scalar integers.
   if (Cmp->getType()->isVectorTy() ||
       !Cmp->getOperand(0)->getType()->isIntegerTy())
@@ -528,17 +522,40 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
 }
 
 // See if this min/max intrinsic always picks it's one specific operand.
+// If not, check whether we can canonicalize signed minmax into unsigned version
 static bool processMinMaxIntrinsic(MinMaxIntrinsic *MM, LazyValueInfo *LVI) {
   CmpInst::Predicate Pred = CmpInst::getNonStrictPredicate(MM->getPredicate());
-  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
-      Pred, MM->getLHS(), MM->getRHS(), MM, /*UseBlockValue=*/true);
-  if (Result == LazyValueInfo::Unknown)
-    return false;
+  ConstantRange LHS_CR = LVI->getConstantRangeAtUse(MM->getOperandUse(0),
+                                                    /*UndefAllowed*/ false);
+  ConstantRange RHS_CR = LVI->getConstantRangeAtUse(MM->getOperandUse(1),
+                                                    /*UndefAllowed*/ false);
+  if (LHS_CR.icmp(Pred, RHS_CR)) {
+    ++NumMinMax;
+    MM->replaceAllUsesWith(MM->getLHS());
+    MM->eraseFromParent();
+    return true;
+  }
+  if (RHS_CR.icmp(Pred, LHS_CR)) {
+    ++NumMinMax;
+    MM->replaceAllUsesWith(MM->getRHS());
+    MM->eraseFromParent();
+    return true;
+  }
 
-  ++NumMinMax;
-  MM->replaceAllUsesWith(MM->getOperand(!Result));
-  MM->eraseFromParent();
-  return true;
+  if (MM->isSigned() &&
+      ConstantRange::areInsensitiveToSignednessOfICmpPredicate(LHS_CR,
+                                                               RHS_CR)) {
+    ++NumSMinMax;
+    IRBuilder<> B(MM);
+    MM->replaceAllUsesWith(B.CreateBinaryIntrinsic(
+        MM->getIntrinsicID() == Intrinsic::smin ? Intrinsic::umin
+                                                : Intrinsic::umax,
+        MM->getLHS(), MM->getRHS()));
+    MM->eraseFromParent();
+    return true;
+  }
+
+  return false;
 }
 
 // Rewrite this with.overflow intrinsic as non-overflowing.
@@ -888,8 +905,8 @@ static bool processSRem(BinaryOperator *SDI, const ConstantRange &LCR,
   for (Operand &Op : Ops) {
     if (Op.D == Domain::NonNegative)
       continue;
-    auto *BO =
-        BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg", SDI);
+    auto *BO = BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg",
+                                         SDI->getIterator());
     BO->setDebugLoc(SDI->getDebugLoc());
     Op.V = BO;
   }
@@ -902,7 +919,8 @@ static bool processSRem(BinaryOperator *SDI, const ConstantRange &LCR,
 
   // If the divident was non-positive, we need to negate the result.
   if (Ops[0].D == Domain::NonPositive) {
-    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg",
+                                    SDI->getIterator());
     Res->setDebugLoc(SDI->getDebugLoc());
   }
 
@@ -949,8 +967,8 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
   for (Operand &Op : Ops) {
     if (Op.D == Domain::NonNegative)
       continue;
-    auto *BO =
-        BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg", SDI);
+    auto *BO = BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg",
+                                         SDI->getIterator());
     BO->setDebugLoc(SDI->getDebugLoc());
     Op.V = BO;
   }
@@ -964,7 +982,8 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
 
   // If the operands had two different domains, we need to negate the result.
   if (Ops[0].D != Ops[1].D) {
-    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg",
+                                    SDI->getIterator());
     Res->setDebugLoc(SDI->getDebugLoc());
   }
 

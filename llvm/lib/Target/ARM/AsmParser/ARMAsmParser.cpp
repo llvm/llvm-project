@@ -737,6 +737,9 @@ public:
   void ReportNearMisses(SmallVectorImpl<NearMissInfo> &NearMisses, SMLoc IDLoc,
                         OperandVector &Operands);
 
+  MCSymbolRefExpr::VariantKind
+  getVariantKindForName(StringRef Name) const override;
+
   void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override;
 
   void onLabelParsed(MCSymbol *Symbol) override;
@@ -11356,6 +11359,37 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
   getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
   getParser().getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
   return false;
+}
+
+MCSymbolRefExpr::VariantKind
+ARMAsmParser::getVariantKindForName(StringRef Name) const {
+  return StringSwitch<MCSymbolRefExpr::VariantKind>(Name.lower())
+      .Case("funcdesc", MCSymbolRefExpr::VK_FUNCDESC)
+      .Case("got", MCSymbolRefExpr::VK_GOT)
+      .Case("got_prel", MCSymbolRefExpr::VK_ARM_GOT_PREL)
+      .Case("gotfuncdesc", MCSymbolRefExpr::VK_GOTFUNCDESC)
+      .Case("gotoff", MCSymbolRefExpr::VK_GOTOFF)
+      .Case("gotofffuncdesc", MCSymbolRefExpr::VK_GOTOFFFUNCDESC)
+      .Case("gottpoff", MCSymbolRefExpr::VK_GOTTPOFF)
+      .Case("gottpoff_fdpic", MCSymbolRefExpr::VK_GOTTPOFF_FDPIC)
+      .Case("imgrel", MCSymbolRefExpr::VK_COFF_IMGREL32)
+      .Case("none", MCSymbolRefExpr::VK_ARM_NONE)
+      .Case("plt", MCSymbolRefExpr::VK_PLT)
+      .Case("prel31", MCSymbolRefExpr::VK_ARM_PREL31)
+      .Case("sbrel", MCSymbolRefExpr::VK_ARM_SBREL)
+      .Case("secrel32", MCSymbolRefExpr::VK_SECREL)
+      .Case("target1", MCSymbolRefExpr::VK_ARM_TARGET1)
+      .Case("target2", MCSymbolRefExpr::VK_ARM_TARGET2)
+      .Case("tlscall", MCSymbolRefExpr::VK_TLSCALL)
+      .Case("tlsdesc", MCSymbolRefExpr::VK_TLSDESC)
+      .Case("tlsgd", MCSymbolRefExpr::VK_TLSGD)
+      .Case("tlsgd_fdpic", MCSymbolRefExpr::VK_TLSGD_FDPIC)
+      .Case("tlsld", MCSymbolRefExpr::VK_TLSLD)
+      .Case("tlsldm", MCSymbolRefExpr::VK_TLSLDM)
+      .Case("tlsldm_fdpic", MCSymbolRefExpr::VK_TLSLDM_FDPIC)
+      .Case("tlsldo", MCSymbolRefExpr::VK_ARM_TLSLDO)
+      .Case("tpoff", MCSymbolRefExpr::VK_TPOFF)
+      .Default(MCSymbolRefExpr::VK_Invalid);
 }
 
 void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {

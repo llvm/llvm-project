@@ -239,11 +239,6 @@ static cl::opt<bool> EnableRedZone("aarch64-redzone",
                                    cl::desc("enable use of redzone on AArch64"),
                                    cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    ReverseCSRRestoreSeq("reverse-csr-restore-seq",
-                         cl::desc("reverse the CSR restore sequence"),
-                         cl::init(false), cl::Hidden);
-
 static cl::opt<bool> StackTaggingMergeSetTag(
     "stack-tagging-merge-settag",
     cl::desc("merge settag instruction in function epilog"), cl::init(true),
@@ -306,8 +301,6 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
   if (!MF.getFunction().hasMinSize())
     return false;
   if (!EnableHomogeneousPrologEpilog)
-    return false;
-  if (ReverseCSRRestoreSeq)
     return false;
   if (EnableRedZone)
     return false;
@@ -1060,6 +1053,12 @@ bool AArch64FrameLowering::canUseAsPrologue(
         !LiveRegs.available(MRI, AArch64::X17))
       return false;
   }
+
+  // Certain stack probing sequences might clobber flags, then we can't use
+  // the block as a prologue if the flags register is a live-in.
+  if (MF->getInfo<AArch64FunctionInfo>()->hasStackProbing() &&
+      MBB.isLiveIn(AArch64::NZCV))
+    return false;
 
   // Don't need a scratch register if we're not going to re-align the stack or
   // emit stack probes.
@@ -3111,7 +3110,27 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
 
   computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs, hasFP(MF));
 
-  auto EmitMI = [&](const RegPairInfo &RPI) -> MachineBasicBlock::iterator {
+  if (homogeneousPrologEpilog(MF, &MBB)) {
+    auto MIB = BuildMI(MBB, MBBI, DL, TII.get(AArch64::HOM_Epilog))
+                   .setMIFlag(MachineInstr::FrameDestroy);
+    for (auto &RPI : RegPairs) {
+      MIB.addReg(RPI.Reg1, RegState::Define);
+      MIB.addReg(RPI.Reg2, RegState::Define);
+    }
+    return true;
+  }
+
+  // For performance reasons restore SVE register in increasing order
+  auto IsPPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::PPR; };
+  auto PPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsPPR);
+  auto PPREnd = std::find_if_not(PPRBegin, RegPairs.end(), IsPPR);
+  std::reverse(PPRBegin, PPREnd);
+  auto IsZPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::ZPR; };
+  auto ZPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsZPR);
+  auto ZPREnd = std::find_if_not(ZPRBegin, RegPairs.end(), IsZPR);
+  std::reverse(ZPRBegin, ZPREnd);
+
+  for (const RegPairInfo &RPI : RegPairs) {
     unsigned Reg1 = RPI.Reg1;
     unsigned Reg2 = RPI.Reg2;
 
@@ -3185,43 +3204,6 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
         MachineMemOperand::MOLoad, Size, Alignment));
     if (NeedsWinCFI)
       InsertSEH(MIB, TII, MachineInstr::FrameDestroy);
-
-    return MIB->getIterator();
-  };
-
-  if (homogeneousPrologEpilog(MF, &MBB)) {
-    auto MIB = BuildMI(MBB, MBBI, DL, TII.get(AArch64::HOM_Epilog))
-                   .setMIFlag(MachineInstr::FrameDestroy);
-    for (auto &RPI : RegPairs) {
-      MIB.addReg(RPI.Reg1, RegState::Define);
-      MIB.addReg(RPI.Reg2, RegState::Define);
-    }
-    return true;
-  }
-
-  // For performance reasons restore SVE register in increasing order
-  auto IsPPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::PPR; };
-  auto PPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsPPR);
-  auto PPREnd = std::find_if(RegPairs.rbegin(), RegPairs.rend(), IsPPR);
-  std::reverse(PPRBegin, PPREnd.base());
-  auto IsZPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::ZPR; };
-  auto ZPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsZPR);
-  auto ZPREnd = std::find_if(RegPairs.rbegin(), RegPairs.rend(), IsZPR);
-  std::reverse(ZPRBegin, ZPREnd.base());
-
-  if (ReverseCSRRestoreSeq) {
-    MachineBasicBlock::iterator First = MBB.end();
-    for (const RegPairInfo &RPI : reverse(RegPairs)) {
-      MachineBasicBlock::iterator It = EmitMI(RPI);
-      if (First == MBB.end())
-        First = It;
-    }
-    if (First != MBB.end())
-      MBB.splice(MBBI, &MBB, First);
-  } else {
-    for (const RegPairInfo &RPI : RegPairs) {
-      (void)EmitMI(RPI);
-    }
   }
 
   return true;

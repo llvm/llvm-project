@@ -10,6 +10,7 @@
 // RUN: %clang -O0 -target %itanium_abi_triple %s -c -emit-llvm -o %t.bc
 // RUN: %clang -O0 -target %itanium_abi_triple %s -S -o %t.s
 // RUN: %clang -O0 -target %itanium_abi_triple %s -c -o %t.o
+// RUN: obj2yaml %t.o > %t.o.yaml
 // RUN: %clang -O0 -target %itanium_abi_triple %s -emit-ast -o %t.ast
 
 //
@@ -305,11 +306,13 @@
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -output=%t.bundle3.o
 // RUN: clang-offload-bundler -type=o -input=%t.bundle3.o -list | FileCheck -check-prefix=CKLST %s
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -output=%t.res.o -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.bundle3.o -unbundle
-// RUN: diff %t.bundle3.o %t.res.o
+// RUN: obj2yaml %t.res.o > %t.res.o.yaml
+// RUN: diff %t.o.yaml %t.res.o.yaml
 // RUN: diff %t.tgt1 %t.res.tgt1
 // RUN: diff %t.tgt2 %t.res.tgt2
 // RUN: clang-offload-bundler -type=o -targets=openmp-powerpc64le-ibm-linux-gnu,host-%itanium_abi_triple,openmp-x86_64-pc-linux-gnu -output=%t.res.tgt1 -output=%t.res.o -output=%t.res.tgt2 -input=%t.bundle3.o -unbundle
-// RUN: diff %t.bundle3.o %t.res.o
+// RUN: obj2yaml %t.res.o > %t.res.o.yaml
+// RUN: diff %t.o.yaml %t.res.o.yaml
 // RUN: diff %t.tgt1 %t.res.tgt1
 // RUN: diff %t.tgt2 %t.res.tgt2
 // RUN: clang-offload-bundler -type=o -targets=openmp-powerpc64le-ibm-linux-gnu -output=%t.res.tgt1 -input=%t.bundle3.o -unbundle
@@ -318,11 +321,13 @@
 // Check if we can unbundle a file with no magic strings.
 // RUN: clang-offload-bundler -type=o -input=%t.o -list | FileCheck -check-prefix=CKLST2 --allow-empty %s
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -output=%t.res.o -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.o -unbundle -allow-missing-bundles
-// RUN: diff %t.o %t.res.o
+// RUN: obj2yaml %t.res.o > %t.res.o.yaml
+// RUN: diff %t.o.yaml %t.res.o.yaml
 // RUN: diff %t.empty %t.res.tgt1
 // RUN: diff %t.empty %t.res.tgt2
 // RUN: clang-offload-bundler -type=o -targets=openmp-powerpc64le-ibm-linux-gnu,host-%itanium_abi_triple,openmp-x86_64-pc-linux-gnu -output=%t.res.tgt1 -output=%t.res.o -output=%t.res.tgt2 -input=%t.o -unbundle -allow-missing-bundles
-// RUN: diff %t.o %t.res.o
+// RUN: obj2yaml %t.res.o > %t.res.o.yaml
+// RUN: diff %t.o.yaml %t.res.o.yaml
 // RUN: diff %t.empty %t.res.tgt1
 // RUN: diff %t.empty %t.res.tgt2
 

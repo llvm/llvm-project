@@ -4127,8 +4127,8 @@ def ext_ms_impcast_fn_obj : ExtWarn<
   "Microsoft extension">, InGroup<MicrosoftCast>;
 
 def warn_impcast_pointer_to_bool : Warning<
-    "address of%select{| function| array}0 '%1' will always evaluate to "
-    "'true'">,
+    "address of %select{'%1'|function '%1'|array '%1'|lambda function pointer "
+    "conversion operator}0 will always evaluate to 'true'">,
     InGroup<PointerBoolConversion>;
 def warn_cast_nonnull_to_bool : Warning<
     "nonnull %select{function call|parameter}0 '%1' will evaluate to "
@@ -5325,7 +5325,7 @@ def err_alias_template_extra_headers : Error<
 def err_template_spec_extra_headers : Error<
   "extraneous template parameter list in template specialization or "
   "out-of-line template definition">;
-def warn_template_spec_extra_headers : Warning<
+def ext_template_spec_extra_headers : ExtWarn<
   "extraneous template parameter list in template specialization">;
 def note_explicit_template_spec_does_not_need_header : Note<
   "'template<>' header not required for explicitly-specialized class %0 "
@@ -8255,6 +8255,9 @@ def err_not_tag_in_scope : Error<
 def ext_template_after_declarative_nns : ExtWarn<
     "'template' cannot be used after a declarative nested name specifier">,
     InGroup<DiagGroup<"template-in-declaration-name">>;
+def ext_alias_template_in_declarative_nns : ExtWarn<
+  "a declarative nested name specifier cannot name an alias template">,
+  InGroup<DiagGroup<"alias-template-in-declaration-name">>;
 
 def err_no_typeid_with_fno_rtti : Error<
   "use of typeid requires -frtti">;
@@ -10263,6 +10266,11 @@ def err_block_on_vm : Error<
 def err_sizeless_nonlocal : Error<
   "non-local variable with sizeless type %0">;
 
+def err_vec_builtin_non_vector_all : Error<
+ "all arguments to %0 must be vectors">;
+def err_vec_builtin_incompatible_vector_all : Error<
+  "all arguments to %0 must have vectors of the same type">;
+
 def err_vec_builtin_non_vector : Error<
  "first two arguments to %0 must be vectors">;
 def err_vec_builtin_incompatible_vector : Error<
@@ -10361,6 +10369,8 @@ def err_x86_builtin_tile_arg_duplicate : Error<
 
 def err_builtin_target_unsupported : Error<
   "builtin is not supported on this target">;
+def err_builtin_aix_os_unsupported : Error<
+  "this builtin is available only on AIX 7.2 and later operating systems">;
 def err_builtin_longjmp_unsupported : Error<
   "__builtin_longjmp is not supported for the current target">;
 def err_builtin_setjmp_unsupported : Error<
@@ -10754,6 +10764,13 @@ def warn_imp_cast_drops_unaligned : Warning<
   InGroup<DiagGroup<"unaligned-qualifier-implicit-cast">>;
 
 } // end of sema category
+
+let CategoryName = "API Notes Issue" in {
+
+def err_incompatible_replacement_type : Error<
+  "API notes replacement type %0 has a different size from original type %1">;
+
+} // end of API Notes category
 
 let CategoryName = "OpenMP Issue" in {
 // OpenMP support.
@@ -11971,7 +11988,8 @@ def err_builtin_invalid_arg_type: Error <
   "pointer to a valid matrix element type|"
   "signed integer or floating point type|vector type|"
   "floating point type|"
-  "vector of integers}1 (was %2)">;
+  "vector of integers|"
+  "type of unsigned integer}1 (was %2)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
@@ -12198,4 +12216,11 @@ def warn_acc_clause_unimplemented
 def err_acc_construct_appertainment
     : Error<"OpenACC construct '%0' cannot be used here; it can only "
             "be used in a statement context">;
+def err_acc_branch_in_out_compute_construct
+    : Error<"invalid %select{branch|return}0 %select{out of|into}1 OpenACC "
+            "Compute Construct">;
+def note_acc_branch_into_compute_construct
+    : Note<"invalid branch into OpenACC Compute Construct">;
+def note_acc_branch_out_of_compute_construct
+    : Note<"invalid branch out of OpenACC Compute Construct">;
 } // end of sema component.

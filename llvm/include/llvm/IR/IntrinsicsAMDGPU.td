@@ -2835,8 +2835,8 @@ def int_amdgcn_fdot2_f32_bf16 :
   DefaultAttrsIntrinsic<
     [llvm_float_ty], // %r
     [
-      llvm_v2i16_ty, // %a
-      llvm_v2i16_ty, // %b
+      llvm_v2bf16_ty, // %a
+      llvm_v2bf16_ty, // %b
       llvm_float_ty, // %c
       llvm_i1_ty     // %clamp
     ],
