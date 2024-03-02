@@ -973,7 +973,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
         }
       }
       if (!isWholeAssumedSizeArrayOk_ &&
-          semantics::IsAssumedSizeArray(*n.symbol)) { // C1002, C1014, C1231
+          semantics::IsAssumedSizeArray(
+              ResolveAssociations(*n.symbol))) { // C1002, C1014, C1231
         AttachDeclaration(
             SayAt(n,
                 "Whole assumed-size array '%s' may not appear here without subscripts"_err_en_US,
@@ -1329,15 +1330,29 @@ std::optional<Component> ExpressionAnalyzer::CreateComponent(DataRef &&base,
 
 // Derived type component references and type parameter inquiries
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
-  MaybeExpr base{Analyze(sc.base)};
   Symbol *sym{sc.component.symbol};
-  if (!base || !sym || context_.HasError(sym)) {
+  if (context_.HasError(sym)) {
+    return std::nullopt;
+  }
+  const auto *misc{sym->detailsIf<semantics::MiscDetails>()};
+  bool isTypeParamInquiry{sym->has<semantics::TypeParamDetails>() ||
+      (misc &&
+          (misc->kind() == semantics::MiscDetails::Kind::KindParamInquiry ||
+              misc->kind() == semantics::MiscDetails::Kind::LenParamInquiry))};
+  MaybeExpr base;
+  if (isTypeParamInquiry) {
+    auto restorer{AllowWholeAssumedSizeArray()};
+    base = Analyze(sc.base);
+  } else {
+    base = Analyze(sc.base);
+  }
+  if (!base) {
     return std::nullopt;
   }
   const auto &name{sc.component.source};
   if (auto *dtExpr{UnwrapExpr<Expr<SomeDerived>>(*base)}) {
     const auto *dtSpec{GetDerivedTypeSpec(dtExpr->GetType())};
-    if (sym->detailsIf<semantics::TypeParamDetails>()) {
+    if (isTypeParamInquiry) {
       if (auto *designator{UnwrapExpr<Designator<SomeDerived>>(*dtExpr)}) {
         if (std::optional<DynamicType> dyType{DynamicType::From(*sym)}) {
           if (dyType->category() == TypeCategory::Integer) {
@@ -1350,8 +1365,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
         Say(name, "Type parameter is not INTEGER"_err_en_US);
       } else {
         Say(name,
-            "A type parameter inquiry must be applied to "
-            "a designator"_err_en_US);
+            "A type parameter inquiry must be applied to a designator"_err_en_US);
       }
     } else if (!dtSpec || !dtSpec->scope()) {
       CHECK(context_.AnyFatalError() || !foldingContext_.messages().empty());
@@ -1393,8 +1407,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
           return AsGenericExpr(std::move(realExpr));
         }
       }
-    } else if (kind == MiscKind::KindParamInquiry ||
-        kind == MiscKind::LenParamInquiry) {
+    } else if (isTypeParamInquiry) { // %kind or %len
       ActualArgument arg{std::move(*base)};
       SetArgSourceLocation(arg, name);
       return MakeFunctionRef(name, ActualArguments{std::move(arg)});
@@ -3743,9 +3756,12 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Selector &selector) {
         }
       }
     }
+    // Not a Variable -> FunctionReference
+    auto restorer{AllowWholeAssumedSizeArray()};
+    return Analyze(selector.u);
+  } else { // Expr
+    return Analyze(selector.u);
   }
-  // Not a Variable -> FunctionReference; handle normally as Variable or Expr
-  return Analyze(selector.u);
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::DataStmtConstant &x) {
@@ -4001,6 +4017,7 @@ void ArgumentAnalyzer::Analyze(
     const parser::ActualArgSpec &arg, bool isSubroutine) {
   // TODO: C1534: Don't allow a "restricted" specific intrinsic to be passed.
   std::optional<ActualArgument> actual;
+  auto restorer{context_.AllowWholeAssumedSizeArray()};
   common::visit(
       common::visitors{
           [&](const common::Indirection<parser::Expr> &x) {
