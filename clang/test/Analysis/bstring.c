@@ -529,3 +529,70 @@ void nocrash_on_locint_offset(void *addr, void* from, struct S s) {
   size_t iAdd = (size_t) addr;
   memcpy(((void *) &(s.f)), from, iAdd);
 }
+
+//===----------------------------------------------------------------------===//
+// getentropy()
+//===----------------------------------------------------------------------===//
+
+int getentropy(void *d, size_t n);
+
+int getentropy0(void) {
+  char buf[16] = {0};
+
+  int r = getentropy(buf, sizeof(buf)); // no-warning
+  return r;
+}
+
+int getentropy1(void) {
+  char buf[257] = {0};
+
+  int r = getentropy(buf, 256); // no-warning
+  return r;
+}
+
+int getentropy2(void) {
+  char buf[1024] = {0};
+
+  int r = getentropy(buf, sizeof(buf)); // expected-warning{{must be smaller than or equal to 256}}
+  return r;
+}
+
+int getentropy3(void) {
+  char buf[256] = {0};
+
+  int r = getentropy(buf, 0); // no-warning
+  return r;
+}
+
+int getentropy4(size_t arg) {
+  char buf[256] = {0};
+
+  int r = getentropy(buf, arg); // no-warning
+  return r;
+}
+
+int do_something(size_t arg) {
+  char buf[256] = {0};
+  int r = getentropy(buf, arg); // no-warning
+  return r;
+}
+
+int getentropy5(size_t arg) {
+  char buf[257] = {0};
+
+  // split the state and introduce a separate execution path where arg > 256
+  if (arg <= 256)
+    return do_something(arg);
+
+  int r = getentropy(buf, arg); // expected-warning{{must be smaller than or equal to 256}}
+  return r;
+}
+
+int getentropy6(void) {
+  return getentropy(0, 256); // expected-warning{{Null pointer passed as 1st argument to  [unix.cstring.NullArg]}}
+}
+
+int getentropy7(void) {
+  char buf[128] = {0};
+  return getentropy(buf, sizeof(buf) * 2); // expected-warning{{'getentropy' will always overflow; destination buffer has size 128, but size argument is 256}}
+}
