@@ -5,7 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+//
+// This file implements the \c APINotesReader class that reads source
+// API notes data providing additional information about source code as
+// a separate input, such as the non-nil/nilable annotations for
+// method parameters.
+//
+//===----------------------------------------------------------------------===//
 #include "clang/APINotes/APINotesReader.h"
 #include "APINotesFormat.h"
 #include "llvm/ADT/Hashing.h"
