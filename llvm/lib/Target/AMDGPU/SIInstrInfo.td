@@ -1155,6 +1155,9 @@ def bitop3_0 : DefaultOperand<BitOp3, 0>;
 def MatrixAFMT : CustomOperand<i32, 1, "MatrixAFMT">;
 def MatrixBFMT : CustomOperand<i32, 1, "MatrixBFMT">;
 
+def MatrixAScale : CustomOperand<i32, 1, "MatrixAScale">;
+def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
+
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_KIMM"#vt.Size;
@@ -2464,6 +2467,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                isModifierType<Src2VT>.ret,
                                HasOMod);
   field bit HasNeg = HasModifiers;
+  field bit HasMaxtrixScale = 0;
 
   field bit HasSrc0Mods = HasModifiers;
   field bit HasSrc1Mods = !if(HasModifiers, !or(HasSrc1FloatMods, HasSrc1IntMods), 0);
@@ -2799,11 +2803,6 @@ class Commutable_REV <string revOp, bit isOrig> {
   bit IsOrig = isOrig;
 }
 
-class AtomicNoRet <string noRetOp, bit isRet> {
-  string NoRetOp = noRetOp;
-  bit IsRet = isRet;
-}
-
 //===----------------------------------------------------------------------===//
 // Interpolation opcodes
 //===----------------------------------------------------------------------===//
@@ -2974,15 +2973,6 @@ def getIfAddr64Inst : InstrMapping {
   let ColFields = ["IsAddr64"];
   let KeyCol = ["1"];
   let ValueCols = [["1"]];
-}
-
-// Maps an atomic opcode to its returnless version.
-def getAtomicNoRetOp : InstrMapping {
-  let FilterClass = "AtomicNoRet";
-  let RowFields = ["NoRetOp"];
-  let ColFields = ["IsRet"];
-  let KeyCol = ["1"];
-  let ValueCols = [["0"]];
 }
 
 // Maps a GLOBAL to its SADDR form.

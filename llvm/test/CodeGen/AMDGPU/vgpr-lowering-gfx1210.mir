@@ -697,3 +697,24 @@ body:             |
     ; GCN: illegal copy v0 to s0
     SI_RETURN_TO_EPILOG killed $sgpr0
 ...
+
+# LD_SCALE operands ignores MSB and always use low 256 VGPRs.
+
+# GCN-LABEL: {{^}}ld_scale:
+---
+name:            ld_scale
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN: %bb.0:
+
+    ; GCN: s_set_vgpr_msb 5
+    ; GCN-NEXT: v_add_nc_u32_e32 v0, v253 /*v509*/, v252 /*v508*/
+    $vgpr0 = V_ADD_U32_e32 undef $vgpr509, undef $vgpr508, implicit $exec
+
+    ; Do not change mode for LD_SCALE.
+
+    ; GCN-NOT: s_set_vgpr_msb
+    ; GCN-NEXT: v_wmma_ld_scale_paired_b32 v1, v2
+    V_WMMA_LD_SCALE_PAIRED_B32 undef $vgpr1, undef $vgpr2, 0, 0, implicit $exec
+...

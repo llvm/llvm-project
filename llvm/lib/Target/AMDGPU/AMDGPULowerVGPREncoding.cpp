@@ -216,9 +216,14 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
 
   unsigned TSFlags = MI.getDesc().TSFlags;
 
-  if (TSFlags & (SIInstrFlags::VOP1 | SIInstrFlags::VOP2 | SIInstrFlags::VOP3 |
-                 SIInstrFlags::VOP3P | SIInstrFlags::VOPC | SIInstrFlags::DPP))
+  if (TSFlags &
+      (SIInstrFlags::VOP1 | SIInstrFlags::VOP2 | SIInstrFlags::VOP3 |
+       SIInstrFlags::VOP3P | SIInstrFlags::VOPC | SIInstrFlags::DPP)) {
+    // LD_SCALE operands ignore MSB.
+    if (MI.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32)
+      return false;
     return runOnMachineInstr(MI, VOPOps);
+  }
 
   if (TSFlags & SIInstrFlags::DS)
     return runOnMachineInstr(MI, VDSOps);

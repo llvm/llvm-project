@@ -1083,7 +1083,7 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
     const std::optional<characteristics::Procedure> &lhsProcedure,
     const characteristics::Procedure *rhsProcedure,
     const SpecificIntrinsic *specificIntrinsic, std::string &whyNotCompatible,
-    std::optional<std::string> &warning) {
+    std::optional<std::string> &warning, bool ignoreImplicitVsExplicit) {
   std::optional<parser::MessageFixedText> msg;
   if (!lhsProcedure) {
     msg = "In assignment to object %s, the target '%s' is a procedure"
@@ -1097,8 +1097,9 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
           *rhsProcedure->functionResult, &whyNotCompatible)) {
     msg =
         "Function %s associated with incompatible function designator '%s': %s"_err_en_US;
-  } else if (lhsProcedure->IsCompatibleWith(*rhsProcedure, &whyNotCompatible,
-                 specificIntrinsic, &warning)) {
+  } else if (lhsProcedure->IsCompatibleWith(*rhsProcedure,
+                 ignoreImplicitVsExplicit, &whyNotCompatible, specificIntrinsic,
+                 &warning)) {
     // OK
   } else if (isCall) {
     msg = "Procedure %s associated with result of reference to function '%s'"

@@ -601,8 +601,7 @@ multiclass FLAT_Atomic_Pseudo_NO_RTN<
     (outs),
     (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_0:$cpol),
     " $vaddr, $vdata$offset$cpol">,
-    GlobalSaddrTable<0, opName>,
-    AtomicNoRet <opName, 0> {
+    GlobalSaddrTable<0, opName> {
     let PseudoInstr = NAME;
     let FPAtomic = data_vt.isFP;
     let AddedComplexity = -1; // Prefer global atomics if available
@@ -620,8 +619,7 @@ multiclass FLAT_Atomic_Pseudo_RTN<
     (outs getLdStRegisterOperand<vdst_rc>.ret:$vdst),
     (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata$offset$cpol">,
-    GlobalSaddrTable<0, opName#"_rtn">,
-    AtomicNoRet <opName, 1> {
+    GlobalSaddrTable<0, opName#"_rtn"> {
     let FPAtomic = data_vt.isFP;
     let AddedComplexity = -1; // Prefer global atomics if available
   }
@@ -650,8 +648,7 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
     (outs),
     (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_0:$cpol),
     " $vaddr, $vdata, off$offset$cpol">,
-    GlobalSaddrTable<0, opName>,
-    AtomicNoRet <opName, 0> {
+    GlobalSaddrTable<0, opName> {
     let has_saddr = 1;
     let PseudoInstr = NAME;
     let FPAtomic = data_vt.isFP;
@@ -661,8 +658,7 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
     (outs),
     (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_0:$cpol),
     " $vaddr, $vdata, $saddr$offset$cpol">,
-    GlobalSaddrTable<1, opName>,
-    AtomicNoRet <opName#"_saddr", 0> {
+    GlobalSaddrTable<1, opName> {
     let has_saddr = 1;
     let enabled_saddr = 1;
     let PseudoInstr = NAME#"_SADDR";
@@ -683,8 +679,7 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
     (outs vdst_op:$vdst),
       (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata, off$offset$cpol">,
-    GlobalSaddrTable<0, opName#"_rtn">,
-    AtomicNoRet <opName, 1> {
+    GlobalSaddrTable<0, opName#"_rtn"> {
     let has_saddr = 1;
     let FPAtomic = data_vt.isFP;
   }
@@ -693,8 +688,7 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
     (outs vdst_op:$vdst),
       (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata, $saddr$offset$cpol">,
-    GlobalSaddrTable<1, opName#"_rtn">,
-    AtomicNoRet <opName#"_saddr", 1> {
+    GlobalSaddrTable<1, opName#"_rtn"> {
      let has_saddr = 1;
      let enabled_saddr = 1;
      let PseudoInstr = NAME#"_SADDR_RTN";
@@ -3088,12 +3082,12 @@ defm GLOBAL_ATOMIC_MIN_NUM_F32     : VGLOBAL_Real_Atomics_gfx12<0x051, "GLOBAL_A
 defm GLOBAL_ATOMIC_MAX_NUM_F32     : VGLOBAL_Real_Atomics_gfx12<0x052, "GLOBAL_ATOMIC_FMAX", "global_atomic_max_num_f32", true, "global_atomic_max_f32">;
 defm GLOBAL_ATOMIC_ADD_F32         : VGLOBAL_Real_Atomics_gfx12<0x056>;
 
-let WaveSizePredicate = isWave32, DecoderNamespace = "GFX12" in {
+let SubtargetPredicate = isGFX12Not12_10, DecoderNamespace = "GFX12" in {
   defm GLOBAL_LOAD_TR_B128_w32     : VGLOBAL_Real_AllAddr_gfx12<0x057, "GLOBAL_LOAD_TR_B128_w32", "global_load_tr_b128">;
   defm GLOBAL_LOAD_TR_B64_w32      : VGLOBAL_Real_AllAddr_gfx12<0x058, "GLOBAL_LOAD_TR_B64_w32", "global_load_tr_b64">;
 }
 
-let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12Not12_10, DecoderNamespace = "GFX12W64" in {
+let DecoderNamespace = "GFX12W64" in {
   defm GLOBAL_LOAD_TR_B128_w64     : VGLOBAL_Real_AllAddr_gfx12<0x057, "GLOBAL_LOAD_TR_B128_w64", "global_load_tr_b128">;
   defm GLOBAL_LOAD_TR_B64_w64      : VGLOBAL_Real_AllAddr_gfx12<0x058, "GLOBAL_LOAD_TR_B64_w64", "global_load_tr_b64">;
 }
@@ -3229,9 +3223,8 @@ defm GLOBAL_STORE_ASYNC_FROM_LDS_B32  : VGLOBAL_Real_AllAddr_gfx1210<0x64>;
 defm GLOBAL_STORE_ASYNC_FROM_LDS_B64  : VGLOBAL_Real_AllAddr_gfx1210<0x65>;
 defm GLOBAL_STORE_ASYNC_FROM_LDS_B128 : VGLOBAL_Real_AllAddr_gfx1210<0x66>;
 
-// Use alias instead of new real.
-def : MnemonicAlias<"global_load_tr8_b64",   "global_load_tr_b64">,  Requires<[isGFX12_10Plus,isWave32]>;
-def : MnemonicAlias<"global_load_tr16_b128", "global_load_tr_b128">, Requires<[isGFX12_10Plus,isWave32]>;
+defm GLOBAL_LOAD_TR16_B128 : VGLOBAL_Real_AllAddr_gfx1210<0x057, "GLOBAL_LOAD_TR_B128_w32", "global_load_tr16_b128", false, "global_load_tr_b128">;
+defm GLOBAL_LOAD_TR8_B64   : VGLOBAL_Real_AllAddr_gfx1210<0x058, "GLOBAL_LOAD_TR_B64_w32", "global_load_tr8_b64", false, "global_load_tr_b64">;
 
 defm GLOBAL_LOAD_TR6_B96   : VGLOBAL_Real_AllAddr_gfx1210<0x075>;
 defm GLOBAL_LOAD_TR4_B64   : VGLOBAL_Real_AllAddr_gfx1210<0x074>;
