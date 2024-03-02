@@ -29,6 +29,10 @@
 #include "test_macros.h"
 #include "platform_support.h" // locale name macros
 
+#if defined(_WIN32) && !defined(TEST_HAS_NO_WIDE_CHARACTERS)
+#include "locale_helpers.h"
+#endif
+
 class Fnf
     : public std::moneypunct_byname<char, false>
 {
@@ -115,7 +119,11 @@ int main(int, char**)
 #if defined(_CS_GNU_LIBC_VERSION)
     const wchar_t fr_sep = glibc_version_less_than("2.27") ? L' ' : L'\u202F';
 #elif defined(_WIN32)
-    const wchar_t fr_sep = L'\u00A0';
+    // Windows has changed it's fr thousands sep between releases.
+    // Fetch the host's separator in order to know what to expect from the test results.
+    const std::wstring fr_sep_s = LocaleHelpers::get_locale_mon_thousands_sep(LOCALE_fr_FR_UTF_8);
+    assert(fr_sep_s.size() == 1);
+    const wchar_t fr_sep = fr_sep_s[0];
 #elif defined(_AIX)
     const wchar_t fr_sep = L'\u202F';
 #else

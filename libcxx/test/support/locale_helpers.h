@@ -41,11 +41,90 @@ std::wstring convert_thousands_sep(std::wstring const& in, wchar_t sep) {
   return out;
 }
 
+#if defined(_WIN32)
+// This implementation is similar to the locale_guard in the private libcxx implementation headers
+// but exists here for usability from the libcxx/test/std conformance test suites.
+class LocaleGuard {
+public:
+  explicit LocaleGuard(const char* locale_in) : status_(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)) {
+    assert(status_ != -1);
+    // Setting the locale can be expensive even when the locale given is
+    // already the current locale, so do an explicit check to see if the
+    // current locale is already the one we want.
+    const char* curr_locale = set_locale_asserts(nullptr);
+    // If every category is the same, the locale string will simply be the
+    // locale name, otherwise it will be a semicolon-separated string listing
+    // each category.  In the second case, we know at least one category won't
+    // be what we want, so we only have to check the first case.
+    if (std::strcmp(locale_in, curr_locale) != 0) {
+      locale_all_ = _strdup(curr_locale);
+      assert(locale_all_ != nullptr);
+      set_locale_asserts(locale_in);
+    }
+  }
+
+  ~LocaleGuard() {
+    // The CRT documentation doesn't explicitly say, but setlocale() does the
+    // right thing when given a semicolon-separated list of locale settings
+    // for the different categories in the same format as returned by
+    // setlocale(LC_ALL, nullptr).
+    if (locale_all_ != nullptr) {
+      set_locale_asserts(locale_all_);
+      free(locale_all_);
+    }
+    _configthreadlocale(status_);
+  }
+
+private:
+  static const char* set_locale_asserts(const char* locale_in) {
+    const char* new_locale = setlocale(LC_ALL, locale_in);
+    assert(new_locale != nullptr);
+    return new_locale;
+  }
+
+  int status_;
+  char* locale_all_ = nullptr;
+};
+
+template <typename T>
+std::wstring get_locale_lconv_cstr_member(const char* locale, T lconv::*cstr_member) {
+  // Store and later restore current locale
+  LocaleGuard g(locale);
+
+  char* locale_set = setlocale(LC_ALL, locale);
+  assert(locale_set != nullptr);
+  lconv* lc            = localeconv();
+  const char* selected = lc->*cstr_member;
+  if (selected == nullptr) {
+    // member is empty string on the locale
+    return std::wstring();
+  }
+
+  std::size_t len = std::mbsrtowcs(nullptr, &selected, 0, nullptr);
+  assert(len != static_cast<std::size_t>(-1));
+
+  std::wstring ws_out(len, L'\0');
+  std::mbstate_t mb = {};
+  std::size_t ret   = std::mbsrtowcs(&ws_out[0], &selected, len, &mb);
+  assert(ret != static_cast<std::size_t>(-1));
+
+  return ws_out;
+}
+
+std::wstring get_locale_mon_thousands_sep(const char* locale) {
+  return get_locale_lconv_cstr_member(locale, &lconv::mon_thousands_sep);
+}
+
+std::wstring get_locale_thousands_sep(const char* locale) {
+  return get_locale_lconv_cstr_member(locale, &lconv::thousands_sep);
+}
+#endif // _WIN32
+
 // GLIBC 2.27 and newer use U+202F NARROW NO-BREAK SPACE as a thousands separator.
 // This function converts the spaces in string inputs to U+202F if need
 // be. FreeBSD's locale data also uses U+202F, since 2018.
-// Windows uses U+00A0 NO-BREAK SPACE.
-std::wstring convert_thousands_sep_fr_FR(std::wstring const& in) {
+// Windows may use U+00A0 NO-BREAK SPACE or U+0202F NARROW NO-BREAK SPACE.
+std::wstring convert_mon_thousands_sep_fr_FR(std::wstring const& in) {
 #if defined(_CS_GNU_LIBC_VERSION)
   if (glibc_version_less_than("2.27"))
     return in;
@@ -54,7 +133,11 @@ std::wstring convert_thousands_sep_fr_FR(std::wstring const& in) {
 #elif defined(__FreeBSD__)
   return convert_thousands_sep(in, L'\u202F');
 #elif defined(_WIN32)
-  return convert_thousands_sep(in, L'\u00A0');
+  // Windows has changed it's fr thousands sep between releases,
+  // so we find the host's separator instead of hard-coding it.
+  std::wstring fr_sep_s = get_locale_mon_thousands_sep(LOCALE_fr_FR_UTF_8);
+  assert(fr_sep_s.size() == 1);
+  return convert_thousands_sep(in, fr_sep_s[0]);
 #else
   return in;
 #endif

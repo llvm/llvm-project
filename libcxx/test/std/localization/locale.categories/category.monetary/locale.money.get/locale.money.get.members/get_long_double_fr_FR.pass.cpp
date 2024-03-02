@@ -54,7 +54,7 @@ public:
 };
 
 static std::wstring convert_thousands_sep(std::wstring const& in) {
-  return LocaleHelpers::convert_thousands_sep_fr_FR(in);
+  return LocaleHelpers::convert_mon_thousands_sep_fr_FR(in);
 }
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
 

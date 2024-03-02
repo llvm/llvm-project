@@ -28,6 +28,10 @@
 #include "test_macros.h"
 #include "platform_support.h" // locale name macros
 
+#if defined(_WIN32) && !defined(TEST_HAS_NO_WIDE_CHARACTERS)
+#include "locale_helpers.h"
+#endif
+
 int main(int, char**)
 {
     {
@@ -78,7 +82,11 @@ int main(int, char**)
 #if defined(_CS_GNU_LIBC_VERSION)
             const wchar_t wsep = glibc_version_less_than("2.27") ? L' ' : L'\u202f';
 #elif defined(_WIN32)
-            const wchar_t wsep = L'\u00A0';
+            // Windows has changed it's fr thousands sep between releases.
+            // Fetch the host's separator in order to know what to expect from the test results.
+            const std::wstring wsep_s = LocaleHelpers::get_locale_mon_thousands_sep(LOCALE_fr_FR_UTF_8);
+            assert(wsep_s.size() == 1);
+            const wchar_t wsep = wsep_s[0];
 #else
             const wchar_t wsep = L',';
 #endif
