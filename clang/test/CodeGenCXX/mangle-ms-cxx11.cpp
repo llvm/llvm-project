@@ -16,8 +16,7 @@ S<B> b;
 
 using C = int () __restrict;
 S<C> c;
-// FIXME: `__restrict` needs to be included in the mangled name:
-// FIXME-CHECK-DAG: @"?c@FTypeWithQuals@@3U?$S@$$A8@@IAAHXZ@1@A"
+// CHECK-DAG: @"?c@FTypeWithQuals@@3U?$S@$$A8@@IAAHXZ@1@A"
 
 using D = int () const &;
 S<D> d;
@@ -29,8 +28,7 @@ S<E> e;
 
 using F = int () __restrict &;
 S<F> f;
-// FIXME: See comment above.
-// FIXME-CHECK-DAG: @"?f@FTypeWithQuals@@3U?$S@$$A8@@IGAAHXZ@1@A"
+// CHECK-DAG: @"?f@FTypeWithQuals@@3U?$S@$$A8@@IGAAHXZ@1@A"
 
 using G = int () const &&;
 S<G> g;
@@ -42,8 +40,7 @@ S<H> h;
 
 using I = int () __restrict &&;
 S<I> i;
-// FIXME: See comment above.
-// FIXME-CHECK-DAG: @"?i@FTypeWithQuals@@3U?$S@$$A8@@IHAAHXZ@1@A"
+// CHECK-DAG: @"?i@FTypeWithQuals@@3U?$S@$$A8@@IHAAHXZ@1@A"
 
 using J = int ();
 S<J> j;
@@ -208,11 +205,9 @@ struct A {
   void foo() __restrict &&;
 };
 void A::foo() __restrict & {}
-// FIXME: See comment above
-// FIXME-CHECK-DAG: @"?foo@A@PR19361@@QIGAEXXZ"
+// CHECK-DAG: @"?foo@A@PR19361@@QIGAEXXZ"
 void A::foo() __restrict && {}
-// FIXME: See comment above
-// FIXME-CHECK-DAG: @"?foo@A@PR19361@@QIHAEXXZ"
+// CHECK-DAG: @"?foo@A@PR19361@@QIHAEXXZ"
 }
 
 int operator"" _deg(long double) { return 0; }
