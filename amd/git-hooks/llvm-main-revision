@@ -16,6 +16,9 @@ if test "$ACTION_TYPE" = "pre-commit"; then
   fi
 fi
 
+#disable automatic llvm-config.h.cmake LLVM_MAIN_REVISION update
+exit 0
+
 LLVM_CONFIG_H_CMAKE_PATH="llvm/include/llvm/Config/llvm-config.h.cmake"
 
 FETCH_HASH=$(git log --oneline --format='%h' --max-count=1 FETCH_HEAD)
