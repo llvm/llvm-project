@@ -129,7 +129,7 @@ class Run(object):
 
             soft_limit, hard_limit = resource.getrlimit(NPROC)
             desired_limit = min(desired_limit, hard_limit)
-
+            assert desired_limit > 0
             if soft_limit < desired_limit:
                 resource.setrlimit(NPROC, (desired_limit, hard_limit))
                 self.lit_config.note(
