@@ -37,6 +37,9 @@ static cl::opt<unsigned> SLPMaxVF(
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                       TTI::TargetCostKind CostKind) {
+  // Check if the type is valid for all CostKind
+  if (!VT.isVector())
+    return InstructionCost::getInvalid();
   size_t NumInstr = OpCodes.size();
   if (CostKind == TTI::TCK_CodeSize)
     return NumInstr;
