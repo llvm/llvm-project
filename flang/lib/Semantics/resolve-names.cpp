@@ -6037,7 +6037,7 @@ void DeclarationVisitor::Post(const parser::BasedPointer &bp) {
       if (const auto *derived{pointeeType->AsDerived()}) {
         if (!IsSequenceOrBindCType(derived)) {
           Say(pointeeName,
-              "Type of Cray pointee '%s' is a derived type that is neither SEQUENCE nor BIND(C)"_err_en_US);
+              "Type of Cray pointee '%s' is a derived type that is neither SEQUENCE nor BIND(C)"_warn_en_US);
         }
       }
     }
