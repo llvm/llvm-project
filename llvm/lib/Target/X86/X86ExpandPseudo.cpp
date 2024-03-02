@@ -640,6 +640,9 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     //
     //  movq %fs:257(%rbx, %rcx)，%rax
     //  subq $184, %rax
+    //
+    //  Therefore we consider the OPmi_ND to be a pseudo instruction to some
+    //  extent.
     const MachineOperand &ImmOp =
         MI.getOperand(MI.getNumExplicitOperands() - 1);
     // If the immediate is a expr, conservatively estimate 4 bytes.
@@ -647,14 +650,13 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       return false;
     int MemOpNo = X86::getFirstAddrOperandIdx(MI);
     const MachineOperand &DispOp = MI.getOperand(MemOpNo + X86::AddrDisp);
+    Register Base = MI.getOperand(MemOpNo + X86::AddrBaseReg).getReg();
     // If the displacement is a expr, conservatively estimate 4 bytes.
-    if (DispOp.isImm() && isInt<8>(DispOp.getImm()))
+    if (Base && DispOp.isImm() && isInt<8>(DispOp.getImm()))
       return false;
     // There can only be one of three: SIB, segment override register, ADSIZE
-    Register Segment = MI.getOperand(MemOpNo + X86::AddrSegmentReg).getReg();
-    Register Base = MI.getOperand(MemOpNo + X86::AddrBaseReg).getReg();
     Register Index = MI.getOperand(MemOpNo + X86::AddrIndexReg).getReg();
-    unsigned Count = Segment ? 1 : 0;
+    unsigned Count = !!MI.getOperand(MemOpNo + X86::AddrSegmentReg).getReg();
     if (X86II::needSIB(Base, Index, /*In64BitMode=*/true))
       ++Count;
     if (X86MCRegisterClasses[X86::GR32RegClassID].contains(Base) ||
