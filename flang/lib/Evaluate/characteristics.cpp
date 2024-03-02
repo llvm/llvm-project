@@ -534,7 +534,8 @@ bool DummyProcedure::IsCompatibleWith(
     }
     return false;
   }
-  if (!procedure.value().IsCompatibleWith(actual.procedure.value(), whyNot)) {
+  if (!procedure.value().IsCompatibleWith(actual.procedure.value(),
+          /*ignoreImplicitVsExplicit=*/false, whyNot)) {
     if (whyNot) {
       *whyNot = "incompatible dummy procedure interfaces: "s + *whyNot;
     }
@@ -1207,7 +1208,8 @@ bool FunctionResult::IsCompatibleWith(
     CHECK(ifaceProc != nullptr);
     if (const auto *actualProc{
             std::get_if<CopyableIndirection<Procedure>>(&actual.u)}) {
-      if (ifaceProc->value().IsCompatibleWith(actualProc->value(), whyNot)) {
+      if (ifaceProc->value().IsCompatibleWith(actualProc->value(),
+              /*ignoreImplicitVsExplicit=*/false, whyNot)) {
         return true;
       }
       if (whyNot) {
@@ -1252,7 +1254,8 @@ bool Procedure::operator==(const Procedure &that) const {
       cudaSubprogramAttrs == that.cudaSubprogramAttrs;
 }
 
-bool Procedure::IsCompatibleWith(const Procedure &actual, std::string *whyNot,
+bool Procedure::IsCompatibleWith(const Procedure &actual,
+    bool ignoreImplicitVsExplicit, std::string *whyNot,
     const SpecificIntrinsic *specificIntrinsic,
     std::optional<std::string> *warning) const {
   // 15.5.2.9(1): if dummy is not pure, actual need not be.
@@ -1266,6 +1269,9 @@ bool Procedure::IsCompatibleWith(const Procedure &actual, std::string *whyNot,
   }
   Attrs differences{attrs ^ actualAttrs};
   differences.reset(Attr::Subroutine); // dealt with specifically later
+  if (ignoreImplicitVsExplicit) {
+    differences.reset(Attr::ImplicitInterface);
+  }
   if (!differences.empty()) {
     if (whyNot) {
       auto sep{": "s};
