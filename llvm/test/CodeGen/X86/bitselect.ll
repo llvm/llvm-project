@@ -45,11 +45,12 @@ define i16 @bitselect_i16(i16 %a, i16 %b, i16 %m) nounwind {
 ;
 ; X64-NOBMI-LABEL: bitselect_i16:
 ; X64-NOBMI:       # %bb.0:
-; X64-NOBMI-NEXT:    movl %edx, %eax
+; X64-NOBMI-NEXT:    # kill: def $edx killed $edx def $rdx
+; X64-NOBMI-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NOBMI-NEXT:    andl %edx, %esi
-; X64-NOBMI-NEXT:    notl %eax
-; X64-NOBMI-NEXT:    andl %edi, %eax
-; X64-NOBMI-NEXT:    orl %esi, %eax
+; X64-NOBMI-NEXT:    notl %edx
+; X64-NOBMI-NEXT:    andl %edi, %edx
+; X64-NOBMI-NEXT:    leal (%rdx,%rsi), %eax
 ; X64-NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NOBMI-NEXT:    retq
 ;

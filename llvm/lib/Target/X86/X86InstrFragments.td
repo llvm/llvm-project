@@ -679,12 +679,7 @@ def def32 : PatLeaf<(i32 GR32:$src), [{
 
 // Treat an 'or' node is as an 'add' if the or'ed bits are known to be zero.
 def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
-  if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N->getOperand(1)))
-    return CurDAG->MaskedValueIsZero(N->getOperand(0), CN->getAPIntValue());
-
-  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
-  return (~Known0.Zero & ~Known1.Zero) == 0;
+  return CurDAG->isADDLike(SDValue(N, 0));
 }]>;
 
 def shiftMask8 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
