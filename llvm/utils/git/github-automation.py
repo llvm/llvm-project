@@ -616,9 +616,8 @@ class ReleaseWorkflow:
     def execute_command(self) -> bool:
         """
         This function reads lines from STDIN and executes the first command
-        that it finds.  The 2 supported commands are:
+        that it finds.  The supported command is:
         /cherry-pick< ><:> commit0 <commit1> <commit2> <...>
-        /branch< ><:> <owner>/<repo>/<branch>
         """
         for line in sys.stdin:
             line.rstrip()
@@ -628,10 +627,9 @@ class ReleaseWorkflow:
             command = m.group(1)
             args = m.group(2)
 
-            if command == "cherry-pick":
-                arg_list = args.split()
-                commits = list(map(lambda a: extract_commit_hash(a), arg_list))
-                return self.create_branch(commits)
+            arg_list = args.split()
+            commits = list(map(lambda a: extract_commit_hash(a), arg_list))
+            return self.create_branch(commits)
 
         print("Do not understand input:")
         print(sys.stdin.readlines())
