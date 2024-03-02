@@ -271,11 +271,9 @@ static bool isMergePassthruOpcode(unsigned Opc) {
 static bool isZeroingInactiveLanes(SDValue Op) {
   switch (Op.getOpcode()) {
   default:
-    // We guarantee i1 splat_vectors to zero the other lanes by
-    // implementing it with ptrue and possibly a punpklo for nxv1i1.
-    if (ISD::isConstantSplatVectorAllOnes(Op.getNode()))
-      return true;
     return false;
+  // We guarantee i1 splat_vectors to zero the other lanes
+  case ISD::SPLAT_VECTOR:
   case AArch64ISD::PTRUE:
   case AArch64ISD::SETCC_MERGE_ZERO:
     return true;
@@ -2549,7 +2547,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::FSUB_PRED)
     MAKE_CASE(AArch64ISD::RDSVL)
     MAKE_CASE(AArch64ISD::BIC)
-    MAKE_CASE(AArch64ISD::BIT)
     MAKE_CASE(AArch64ISD::CBZ)
     MAKE_CASE(AArch64ISD::CBNZ)
     MAKE_CASE(AArch64ISD::TBZ)
@@ -7520,6 +7517,22 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
           (AArch64::GPR32RegClass.contains(MO.getReg()) ||
            AArch64::GPR64RegClass.contains(MO.getReg())))
         MI.removeOperand(I);
+
+  // Add an implicit use of 'VG' for ADDXri/SUBXri, which are instructions that
+  // have nothing to do with VG, were it not that they are used to materialise a
+  // frame-address. If they contain a frame-index to a scalable vector, this
+  // will likely require an ADDVL instruction to materialise the address, thus
+  // reading VG.
+  const MachineFunction &MF = *MI.getMF();
+  if (MF.getInfo<AArch64FunctionInfo>()->hasStreamingModeChanges() &&
+      (MI.getOpcode() == AArch64::ADDXri ||
+       MI.getOpcode() == AArch64::SUBXri)) {
+    const MachineOperand &MO = MI.getOperand(1);
+    if (MO.isFI() && MF.getFrameInfo().getStackID(MO.getIndex()) ==
+                         TargetStackID::ScalableVector)
+      MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/false,
+                                              /*IsImplicit=*/true));
+  }
 }
 
 SDValue AArch64TargetLowering::changeStreamingMode(
@@ -25892,7 +25905,8 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
     auto CallerAttrs = SMEAttrs(*Inst.getFunction());
     auto CalleeAttrs = SMEAttrs(*Base);
     if (CallerAttrs.requiresSMChange(CalleeAttrs) ||
-        CallerAttrs.requiresLazySave(CalleeAttrs))
+        CallerAttrs.requiresLazySave(CalleeAttrs) ||
+        CallerAttrs.requiresPreservingZT0(CalleeAttrs))
       return true;
   }
   return false;

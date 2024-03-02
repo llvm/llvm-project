@@ -345,87 +345,6 @@ _LIBCPP_HARDENING_MODE_EXTENSIVE, \
 _LIBCPP_HARDENING_MODE_DEBUG
 #  endif
 
-// clang-format off
-// Fast hardening mode checks.
-
-#  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
-
-// Enabled checks.
-#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)        _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)     _LIBCPP_ASSERT(expression, message)
-// Disabled checks.
-// On most modern platforms, dereferencing a null pointer does not lead to an actual memory access.
-#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                 _LIBCPP_ASSUME(expression)
-// Overlapping ranges will make algorithms produce incorrect results but don't directly lead to a security
-// vulnerability.
-#    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_VALID_DEALLOCATION(expression, message)       _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(expression, message)  _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(expression, message)   _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                 _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)     _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSUME(expression)
-
-// Extensive hardening mode checks.
-
-#  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_EXTENSIVE
-
-// Enabled checks.
-#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)        _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)     _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                 _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_VALID_DEALLOCATION(expression, message)       _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(expression, message)  _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(expression, message)   _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                 _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSERT(expression, message)
-// Disabled checks.
-#    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)     _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
-
-// Debug hardening mode checks.
-
-#  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
-
-// All checks enabled.
-#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)         _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)      _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_VALID_DEALLOCATION(expression, message)        _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(expression, message)   _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(expression, message)    _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                  _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)      _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSERT(expression, message)
-
-// Disable all checks if hardening is not enabled.
-
-#  else
-
-// All checks disabled.
-#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)         _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)      _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_VALID_DEALLOCATION(expression, message)        _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(expression, message)   _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(expression, message)    _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                  _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)      _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSUME(expression)
-
-#  endif // _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
-// clang-format on
-
 // } HARDENING
 
 #  define _LIBCPP_TOSTRING2(x) #x
@@ -458,6 +377,11 @@ _LIBCPP_HARDENING_MODE_DEBUG
 
 #  ifndef __has_constexpr_builtin
 #    define __has_constexpr_builtin(x) 0
+#  endif
+
+// This checks wheter a Clang module is built
+#  ifndef __building_module
+#    define __building_module(...) 0
 #  endif
 
 // '__is_identifier' returns '0' if '__x' is a reserved identifier provided by
@@ -1199,9 +1123,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #  else
 #    ifndef _LIBCPP_ATOMIC_FLAG_TYPE
 #      define _LIBCPP_ATOMIC_FLAG_TYPE bool
-#    endif
-#    ifdef _LIBCPP_FREESTANDING
-#      define _LIBCPP_ATOMIC_ONLY_USE_BUILTINS
 #    endif
 #  endif
 
