@@ -11976,98 +11976,6 @@ Example:
       <result> = icmp ule i16 -4, 5        ; yields: result=false
       <result> = icmp sge i16  4, 5        ; yields: result=false
 
-.. _i_sthreecmp:
-
-'``sthreecmp``' Instruction
-^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      <result> = sthreecmp <op1>, <op2>  ; yields i2 or <N x i2>:result
-
-Overview:
-"""""""""
-
-The '``sthreecmp``' instruction returns an integer value or a vector of
-integer values based on comparison of its two integer, integer vector,
-pointer, or pointer vector operands.
-
-Arguments:
-""""""""""
-
-The '``sthreecmp``' instruction takes two signed integer operands.
-
-Semantics:
-""""""""""
-If the operands are equal, it returns 0. If ``op1`` is less than ``op2``,
-it returns -1, and if ``op1`` is greater than ``op2``, it returns 1.
-It is also known as the '``<=>``' spaceship operator.
-
-If the operands are :ref:`pointer <t_pointer>` typed, the pointer values
-are compared as if they were integers.
-
-If the operands are integer vectors, then they are compared element by
-element. The result is an ``i2`` vector with the same number of elements
-as the values being compared. Otherwise, the result is an ``i2``.
-
-Example:
-""""""""
-
-.. code-block:: text
-
-      <result> = sthreecmp 4, 5          ; yields: result=-1
-      <result> = sthreecmp 2, 2          ; yields: result=0
-      <result> = sthreecmp -2, -1        ; yields: result=1
-
-.. _i_uthreecmp:
-
-'``uthreecmp``' Instruction
-^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      <result> = uthreecmp <op1>, <op2>  ; yields i2 or <N x i2>:result
-
-Overview:
-"""""""""
-
-The '``uthreecmp``' instruction returns an integer value or a vector of
-integer values based on comparison of its two integer, integer vector,
-pointer, or pointer vector operands.
-
-Arguments:
-""""""""""
-
-The '``uthreecmp``' instruction takes two unsigned integer operands.
-
-Semantics:
-""""""""""
-If the operands are equal, it returns 0. If ``op1`` is less than ``op2``,
-it returns -1, and if ``op1`` is greater than ``op2``, it returns 1.
-It is also known as the '``<=>``' spaceship operator.
-
-If the operands are :ref:`pointer <t_pointer>` typed, the pointer values
-are compared as if they were integers.
-
-If the operands are integer vectors, then they are compared element by
-element. The result is an ``i2`` vector with the same number of elements
-as the values being compared. Otherwise, the result is an ``i2``.
-
-Example:
-""""""""
-
-.. code-block:: text
-
-      <result> = uthreecmp 4, 5          ; yields: result=-1
-      <result> = uthreecmp 2, 2          ; yields: result=0
-      <result> = uthreecmp 9, 0          ; yields: result=1
-
 .. _i_fcmp:
 
 '``fcmp``' Instruction
@@ -14623,6 +14531,63 @@ The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
 integer element type. The argument types must match each other, and the return
 type must match the argument type.
 
+.. _int_sthreecmp:
+
+'``llvm.sthreecmp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.sthreecmp`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i32 @llvm.sthreecmp.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.sthreecmp.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return ``-1`` if ``%a`` is less than ``%b``, ``0`` if they are equal, and 
+``1`` if ``%a`` is greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any signed integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must be at least as wide as ``i2``, to uphold the ``-1`` return value.
+
+.. _int_uthreecmp:
+
+'``llvm.uthreecmp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.sthreecmp`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i2 @llvm.uthreecmp.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.uthreecmp.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return ``-1`` if ``%a`` is less than ``%b``, ``0`` if they are equal, and 
+``1`` if ``%a`` is greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any unsigned integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must be at least as wide as ``i2``, to uphold the ``-1`` return value.
 
 .. _int_memcpy:
 
