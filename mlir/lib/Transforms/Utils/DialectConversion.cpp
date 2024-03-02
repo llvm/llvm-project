@@ -230,8 +230,6 @@ protected:
   /// Erase the given block (unless it was already erased).
   void eraseBlock(Block *block);
 
-  const ConversionConfig &getConfig() const;
-
   const Kind kind;
   ConversionPatternRewriterImpl &rewriterImpl;
 };
@@ -734,9 +732,8 @@ static RewriteTy *findSingleRewrite(R &&rewrites, Block *block) {
 namespace mlir {
 namespace detail {
 struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
-  explicit ConversionPatternRewriterImpl(MLIRContext *ctx,
-                                         const ConversionConfig &config)
-      : eraseRewriter(ctx), config(config) {}
+  explicit ConversionPatternRewriterImpl(PatternRewriter &rewriter)
+      : eraseRewriter(rewriter.getContext()) {}
 
   //===--------------------------------------------------------------------===//
   // State Management
@@ -936,8 +933,14 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// converting the arguments of blocks within that region.
   DenseMap<Region *, const TypeConverter *> regionToConverter;
 
-  /// Dialect conversion configuration.
-  const ConversionConfig &config;
+  /// This allows the user to collect the match failure message.
+  function_ref<void(Diagnostic &)> notifyCallback;
+
+  /// A set of pre-existing operations. When mode == OpConversionMode::Analysis,
+  /// this is populated with ops found to be legalizable to the target.
+  /// When mode == OpConversionMode::Partial, this is populated with ops found
+  /// *not* to be legalizable to the target.
+  DenseSet<Operation *> *trackedOps = nullptr;
 
 #ifndef NDEBUG
   /// A set of operations that have pending updates. This tracking isn't
@@ -958,10 +961,6 @@ void IRRewrite::eraseOp(Operation *op) {
 
 void IRRewrite::eraseBlock(Block *block) {
   rewriterImpl.eraseRewriter.eraseBlock(block);
-}
-
-const ConversionConfig &IRRewrite::getConfig() const {
-  return rewriterImpl.config;
 }
 
 void BlockTypeConversionRewrite::commit() {
@@ -1081,8 +1080,8 @@ void ReplaceOperationRewrite::commit() {
     if (Value newValue =
             rewriterImpl.mapping.lookupOrNull(result, result.getType()))
       result.replaceAllUsesWith(newValue);
-  if (getConfig().unlegalizedOps)
-    getConfig().unlegalizedOps->erase(op);
+  if (rewriterImpl.trackedOps)
+    rewriterImpl.trackedOps->erase(op);
   // Do not erase the operation yet. It may still be referenced in `mapping`.
   op->getBlock()->getOperations().remove(op);
 }
@@ -1505,8 +1504,8 @@ void ConversionPatternRewriterImpl::notifyMatchFailure(
     Diagnostic diag(loc, DiagnosticSeverity::Remark);
     reasonCallback(diag);
     logger.startLine() << "** Failure : " << diag.str() << "\n";
-    if (config.notifyCallback)
-      config.notifyCallback(diag);
+    if (notifyCallback)
+      notifyCallback(diag);
   });
 }
 
@@ -1514,10 +1513,9 @@ void ConversionPatternRewriterImpl::notifyMatchFailure(
 // ConversionPatternRewriter
 //===----------------------------------------------------------------------===//
 
-ConversionPatternRewriter::ConversionPatternRewriter(
-    MLIRContext *ctx, const ConversionConfig &config)
+ConversionPatternRewriter::ConversionPatternRewriter(MLIRContext *ctx)
     : PatternRewriter(ctx),
-      impl(new detail::ConversionPatternRewriterImpl(ctx, config)) {
+      impl(new detail::ConversionPatternRewriterImpl(*this)) {
   setListener(impl.get());
 }
 
@@ -1986,12 +1984,12 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
     assert(rewriterImpl.pendingRootUpdates.empty() && "dangling root updates");
     LLVM_DEBUG({
       logFailure(rewriterImpl.logger, "pattern failed to match");
-      if (rewriterImpl.config.notifyCallback) {
+      if (rewriterImpl.notifyCallback) {
         Diagnostic diag(op->getLoc(), DiagnosticSeverity::Remark);
         diag << "Failed to apply pattern \"" << pattern.getDebugName()
              << "\" on op:\n"
              << *op;
-        rewriterImpl.config.notifyCallback(diag);
+        rewriterImpl.notifyCallback(diag);
       }
     });
     rewriterImpl.resetState(curState);
@@ -2379,12 +2377,14 @@ namespace mlir {
 struct OperationConverter {
   explicit OperationConverter(const ConversionTarget &target,
                               const FrozenRewritePatternSet &patterns,
-                              const ConversionConfig &config,
-                              OpConversionMode mode)
-      : opLegalizer(target, patterns), config(config), mode(mode) {}
+                              OpConversionMode mode,
+                              DenseSet<Operation *> *trackedOps = nullptr)
+      : opLegalizer(target, patterns), mode(mode), trackedOps(trackedOps) {}
 
   /// Converts the given operations to the conversion target.
-  LogicalResult convertOperations(ArrayRef<Operation *> ops);
+  LogicalResult
+  convertOperations(ArrayRef<Operation *> ops,
+                    function_ref<void(Diagnostic &)> notifyCallback = nullptr);
 
 private:
   /// Converts an operation with the given rewriter.
@@ -2421,11 +2421,14 @@ private:
   /// The legalizer to use when converting operations.
   OperationLegalizer opLegalizer;
 
-  /// Dialect conversion configuration.
-  ConversionConfig config;
-
   /// The conversion mode to use when legalizing operations.
   OpConversionMode mode;
+
+  /// A set of pre-existing operations. When mode == OpConversionMode::Analysis,
+  /// this is populated with ops found to be legalizable to the target.
+  /// When mode == OpConversionMode::Partial, this is populated with ops found
+  /// *not* to be legalizable to the target.
+  DenseSet<Operation *> *trackedOps;
 };
 } // namespace mlir
 
@@ -2439,27 +2442,28 @@ LogicalResult OperationConverter::convert(ConversionPatternRewriter &rewriter,
       return op->emitError()
              << "failed to legalize operation '" << op->getName() << "'";
     // Partial conversions allow conversions to fail iff the operation was not
-    // explicitly marked as illegal. If the user provided a `unlegalizedOps`
-    // set, non-legalizable ops are added to that set.
+    // explicitly marked as illegal. If the user provided a nonlegalizableOps
+    // set, non-legalizable ops are included.
     if (mode == OpConversionMode::Partial) {
       if (opLegalizer.isIllegal(op))
         return op->emitError()
                << "failed to legalize operation '" << op->getName()
                << "' that was explicitly marked illegal";
-      if (config.unlegalizedOps)
-        config.unlegalizedOps->insert(op);
+      if (trackedOps)
+        trackedOps->insert(op);
     }
   } else if (mode == OpConversionMode::Analysis) {
     // Analysis conversions don't fail if any operations fail to legalize,
     // they are only interested in the operations that were successfully
     // legalized.
-    if (config.legalizableOps)
-      config.legalizableOps->insert(op);
+    trackedOps->insert(op);
   }
   return success();
 }
 
-LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
+LogicalResult OperationConverter::convertOperations(
+    ArrayRef<Operation *> ops,
+    function_ref<void(Diagnostic &)> notifyCallback) {
   if (ops.empty())
     return success();
   const ConversionTarget &target = opLegalizer.getTarget();
@@ -2480,8 +2484,10 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
   }
 
   // Convert each operation and discard rewrites on failure.
-  ConversionPatternRewriter rewriter(ops.front()->getContext(), config);
+  ConversionPatternRewriter rewriter(ops.front()->getContext());
   ConversionPatternRewriterImpl &rewriterImpl = rewriter.getImpl();
+  rewriterImpl.notifyCallback = notifyCallback;
+  rewriterImpl.trackedOps = trackedOps;
 
   for (auto *op : toConvert)
     if (failed(convert(rewriter, op)))
@@ -3468,51 +3474,57 @@ void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
 //===----------------------------------------------------------------------===//
 // Partial Conversion
 
-LogicalResult mlir::applyPartialConversion(
-    ArrayRef<Operation *> ops, const ConversionTarget &target,
-    const FrozenRewritePatternSet &patterns, ConversionConfig config) {
-  OperationConverter opConverter(target, patterns, config,
-                                 OpConversionMode::Partial);
+LogicalResult
+mlir::applyPartialConversion(ArrayRef<Operation *> ops,
+                             const ConversionTarget &target,
+                             const FrozenRewritePatternSet &patterns,
+                             DenseSet<Operation *> *unconvertedOps) {
+  OperationConverter opConverter(target, patterns, OpConversionMode::Partial,
+                                 unconvertedOps);
   return opConverter.convertOperations(ops);
 }
 LogicalResult
 mlir::applyPartialConversion(Operation *op, const ConversionTarget &target,
                              const FrozenRewritePatternSet &patterns,
-                             ConversionConfig config) {
-  return applyPartialConversion(llvm::ArrayRef(op), target, patterns, config);
+                             DenseSet<Operation *> *unconvertedOps) {
+  return applyPartialConversion(llvm::ArrayRef(op), target, patterns,
+                                unconvertedOps);
 }
 
 //===----------------------------------------------------------------------===//
 // Full Conversion
 
-LogicalResult mlir::applyFullConversion(ArrayRef<Operation *> ops,
-                                        const ConversionTarget &target,
-                                        const FrozenRewritePatternSet &patterns,
-                                        ConversionConfig config) {
-  OperationConverter opConverter(target, patterns, config,
-                                 OpConversionMode::Full);
+LogicalResult
+mlir::applyFullConversion(ArrayRef<Operation *> ops,
+                          const ConversionTarget &target,
+                          const FrozenRewritePatternSet &patterns) {
+  OperationConverter opConverter(target, patterns, OpConversionMode::Full);
   return opConverter.convertOperations(ops);
 }
-LogicalResult mlir::applyFullConversion(Operation *op,
-                                        const ConversionTarget &target,
-                                        const FrozenRewritePatternSet &patterns,
-                                        ConversionConfig config) {
-  return applyFullConversion(llvm::ArrayRef(op), target, patterns, config);
+LogicalResult
+mlir::applyFullConversion(Operation *op, const ConversionTarget &target,
+                          const FrozenRewritePatternSet &patterns) {
+  return applyFullConversion(llvm::ArrayRef(op), target, patterns);
 }
 
 //===----------------------------------------------------------------------===//
 // Analysis Conversion
 
-LogicalResult mlir::applyAnalysisConversion(
-    ArrayRef<Operation *> ops, ConversionTarget &target,
-    const FrozenRewritePatternSet &patterns, ConversionConfig config) {
-  OperationConverter opConverter(target, patterns, config,
-                                 OpConversionMode::Analysis);
-  return opConverter.convertOperations(ops);
+LogicalResult
+mlir::applyAnalysisConversion(ArrayRef<Operation *> ops,
+                              ConversionTarget &target,
+                              const FrozenRewritePatternSet &patterns,
+                              DenseSet<Operation *> &convertedOps,
+                              function_ref<void(Diagnostic &)> notifyCallback) {
+  OperationConverter opConverter(target, patterns, OpConversionMode::Analysis,
+                                 &convertedOps);
+  return opConverter.convertOperations(ops, notifyCallback);
 }
 LogicalResult
 mlir::applyAnalysisConversion(Operation *op, ConversionTarget &target,
                               const FrozenRewritePatternSet &patterns,
-                              ConversionConfig config) {
-  return applyAnalysisConversion(llvm::ArrayRef(op), target, patterns, config);
+                              DenseSet<Operation *> &convertedOps,
+                              function_ref<void(Diagnostic &)> notifyCallback) {
+  return applyAnalysisConversion(llvm::ArrayRef(op), target, patterns,
+                                 convertedOps, notifyCallback);
 }
