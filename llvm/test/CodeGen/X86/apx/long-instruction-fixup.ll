@@ -210,3 +210,45 @@ entry:
   %add = add i32 %t, 127
   ret i32 %add
 }
+
+define i32 @add32mi_GS_Disp0(ptr addrspace(256) %a, i32 %i) {
+; CHECK-LABEL: add32mi_GS_Disp0:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movslq %esi, %rax
+; CHECK-NEXT:    addl $123456, %gs:(%rdi,%rax,4), %eax # imm = 0x1E240
+; CHECK-NEXT:    retq
+entry:
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(256) %a, i32 %i
+  %t = load i32, ptr addrspace(256) %arrayidx
+  %add = add i32 %t, 123456
+  ret i32 %add
+}
+
+define i32 @add32mi_GS_Disp8(ptr addrspace(256) %a, i32 %i) {
+; CHECK-LABEL: add32mi_GS_Disp8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movslq %esi, %rax
+; CHECK-NEXT:    addl $123456, %gs:123(%rdi,%rax,4), %eax # imm = 0x1E240
+; CHECK-NEXT:    retq
+entry:
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(256) %a, i32 %i
+  %add.ptr = getelementptr inbounds i8, ptr addrspace(256) %arrayidx, i32 123
+  %t = load i32, ptr addrspace(256) %add.ptr
+  %add = add i32 %t, 123456
+  ret i32 %add
+}
+
+define i32 @add32mi_GS_Disp32(ptr addrspace(256) %a, i32 %i) {
+; CHECK-LABEL: add32mi_GS_Disp32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movslq %esi, %rax
+; CHECK-NEXT:    movl %gs:1234(%rdi,%rax,4), %eax
+; CHECK-NEXT:    addl $123456, %eax # imm = 0x1E240
+; CHECK-NEXT:    retq
+entry:
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(256) %a, i32 %i
+  %add.ptr = getelementptr inbounds i8, ptr addrspace(256) %arrayidx, i32 1234
+  %t = load i32, ptr addrspace(256) %add.ptr
+  %add = add i32 %t, 123456
+  ret i32 %add
+}
