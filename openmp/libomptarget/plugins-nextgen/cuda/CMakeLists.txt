@@ -39,6 +39,7 @@ add_llvm_library(omptarget.rtl.cuda SHARED
   ${OPENMP_PTHREAD_LIB}
 
   NO_INSTALL_RPATH
+  BUILDTREE_ONLY
 )
 
 if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)

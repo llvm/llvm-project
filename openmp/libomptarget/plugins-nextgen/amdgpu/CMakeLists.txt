@@ -96,6 +96,7 @@ add_llvm_library(omptarget.rtl.amdgpu SHARED
   ${LDFLAGS_UNDEFINED}
 
   NO_INSTALL_RPATH
+  BUILDTREE_ONLY
 )
 add_dependencies(omptarget.rtl.amdgpu amdgcn_hostexec_services)
 
