@@ -450,11 +450,12 @@ class ARMAsmParser : public MCTargetAsmParser {
   bool validatetSTMRegList(const MCInst &Inst, const OperandVector &Operands,
                            unsigned ListNo);
 
-  int tryParseRegister();
+  int tryParseRegister(bool AllowOutofBoundReg = false);
   bool tryParseRegisterWithWriteBack(OperandVector &);
   int tryParseShiftRegister(OperandVector &);
   bool parseRegisterList(OperandVector &, bool EnforceOrder = true,
-                         bool AllowRAAC = false);
+                         bool AllowRAAC = false,
+                         bool AllowOutOfBoundReg = false);
   bool parseMemory(OperandVector &);
   bool parseOperand(OperandVector &, StringRef Mnemonic);
   bool parseImmExpr(int64_t &Out);
@@ -4073,7 +4074,7 @@ ParseStatus ARMAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
 /// Try to parse a register name.  The token must be an Identifier when called,
 /// and if it is a register name the token is eaten and the register number is
 /// returned.  Otherwise return -1.
-int ARMAsmParser::tryParseRegister() {
+int ARMAsmParser::tryParseRegister(bool AllowOutOfBoundReg) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
   if (Tok.isNot(AsmToken::Identifier)) return -1;
@@ -4117,7 +4118,8 @@ int ARMAsmParser::tryParseRegister() {
   }
 
   // Some FPUs only have 16 D registers, so D16-D31 are invalid
-  if (!hasD32() && RegNum >= ARM::D16 && RegNum <= ARM::D31)
+  if (!AllowOutOfBoundReg && !hasD32() && RegNum >= ARM::D16 &&
+      RegNum <= ARM::D31)
     return -1;
 
   Parser.Lex(); // Eat identifier token.
@@ -4457,7 +4459,7 @@ insertNoDuplicates(SmallVectorImpl<std::pair<unsigned, unsigned>> &Regs,
 
 /// Parse a register list.
 bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
-                                     bool AllowRAAC) {
+                                     bool AllowRAAC, bool AllowOutOfBoundReg) {
   MCAsmParser &Parser = getParser();
   if (Parser.getTok().isNot(AsmToken::LCurly))
     return TokError("Token is not a Left Curly Brace");
@@ -4511,7 +4513,7 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
         return Error(RegLoc, "pseudo-register not allowed");
       Parser.Lex(); // Eat the minus.
       SMLoc AfterMinusLoc = Parser.getTok().getLoc();
-      int EndReg = tryParseRegister();
+      int EndReg = tryParseRegister(AllowOutOfBoundReg);
       if (EndReg == -1)
         return Error(AfterMinusLoc, "register expected");
       if (EndReg == ARM::RA_AUTH_CODE)
@@ -4546,7 +4548,7 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
     RegLoc = Parser.getTok().getLoc();
     int OldReg = Reg;
     const AsmToken RegTok = Parser.getTok();
-    Reg = tryParseRegister();
+    Reg = tryParseRegister(AllowOutOfBoundReg);
     if (Reg == -1)
       return Error(RegLoc, "register expected");
     if (!AllowRAAC && Reg == ARM::RA_AUTH_CODE)
@@ -6086,8 +6088,11 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   }
   case AsmToken::LBrac:
     return parseMemory(Operands);
-  case AsmToken::LCurly:
-    return parseRegisterList(Operands, !Mnemonic.starts_with("clr"));
+  case AsmToken::LCurly: {
+    bool AllowOutOfBoundReg = Mnemonic == "vlldm" || Mnemonic == "vlstm";
+    return parseRegisterList(Operands, !Mnemonic.starts_with("clr"), false,
+                             AllowOutOfBoundReg);
+  }
   case AsmToken::Dollar:
   case AsmToken::Hash: {
     // #42 -> immediate
@@ -7597,6 +7602,33 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
 
   const unsigned Opcode = Inst.getOpcode();
   switch (Opcode) {
+  case ARM::VLLDM:
+  case ARM::VLLDM_T2:
+  case ARM::VLSTM:
+  case ARM::VLSTM_T2: {
+    // Since in some cases both T1 and T2 are valid, tablegen can not always
+    // pick the correct instruction.
+    if (Operands.size() == 4) { // a register list has been provided
+      ARMOperand &Op = static_cast<ARMOperand &>(
+          *Operands[3]); // the register list, a dpr_reglist
+      assert(Op.isDPRRegList());
+      auto &RegList = Op.getRegList();
+      // T2 requires v8.1-M.Main (cannot be handled by tablegen)
+      if (RegList.size() == 32 && !hasV8_1MMainline()) {
+        return Error(Op.getEndLoc(), "T2 version requires v8.1-M.Main");
+      }
+      // When target has 32 D registers, T1 is undefined.
+      if (hasD32() && RegList.size() != 32) {
+        return Error(Op.getEndLoc(), "operand must be exactly {d0-d31}");
+      }
+      // When target has 16 D registers, both T1 and T2 are valid.
+      if (!hasD32() && (RegList.size() != 16 && RegList.size() != 32)) {
+        return Error(Op.getEndLoc(),
+                     "operand must be exactly {d0-d15} (T1) or {d0-d31} (T2)");
+      }
+    }
+    return false;
+  }
   case ARM::t2IT: {
     // Encoding is unpredictable if it ever results in a notional 'NV'
     // predicate. Since we don't parse 'NV' directly this means an 'AL'
@@ -8732,6 +8764,32 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
   }
 
   switch (Inst.getOpcode()) {
+  case ARM::VLLDM:
+  case ARM::VLSTM: {
+    // In some cases both T1 and T2 are valid, causing tablegen pick T1 instead
+    // of T2
+    if (Operands.size() == 4) { // a register list has been provided
+      ARMOperand &Op = static_cast<ARMOperand &>(
+          *Operands[3]); // the register list, a dpr_reglist
+      assert(Op.isDPRRegList());
+      auto &RegList = Op.getRegList();
+      // When the register list is {d0-d31} the instruction has to be the T2
+      // variant
+      if (RegList.size() == 32) {
+        const unsigned Opcode =
+            (Inst.getOpcode() == ARM::VLLDM) ? ARM::VLLDM_T2 : ARM::VLSTM_T2;
+        MCInst TmpInst;
+        TmpInst.setOpcode(Opcode);
+        TmpInst.addOperand(Inst.getOperand(0));
+        TmpInst.addOperand(Inst.getOperand(1));
+        TmpInst.addOperand(Inst.getOperand(2));
+        TmpInst.addOperand(Inst.getOperand(3));
+        Inst = TmpInst;
+        return true;
+      }
+    }
+    return false;
+  }
   // Alias for alternate form of 'ldr{,b}t Rt, [Rn], #imm' instruction.
   case ARM::LDRT_POST:
   case ARM::LDRBT_POST: {
