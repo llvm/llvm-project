@@ -1048,8 +1048,11 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
         BA == Backend_EmitObj && OutputFile != "-") {
       std::string OutputPathCASIDFile = std::string(OutputFile);
       OutputPathCASIDFile.append(".casid");
-      CasIDOS = CI.createOutputFile(OutputPathCASIDFile, true, true,
-                                    CI.getFrontendOpts().UseTemporary, false);
+      std::error_code EC;
+      CasIDOS = std::make_unique<raw_fd_ostream>(OutputPathCASIDFile, EC);
+      if (EC)
+        CI.getDiagnostics().Report(diag::err_fe_unable_to_open_output)
+            << EC.message();
     }
   }
 
