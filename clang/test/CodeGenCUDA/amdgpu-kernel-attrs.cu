@@ -44,6 +44,16 @@ __attribute__((amdgpu_max_num_work_groups(32, 4, 2))) // expected-no-diagnostics
 __global__ void max_num_work_groups_32_4_2() {
 // CHECK: define{{.*}} amdgpu_kernel void @_Z26max_num_work_groups_32_4_2v() [[MAX_NUM_WORK_GROUPS_32_4_2:#[0-9]+]]
 }
+__attribute__((amdgpu_max_num_work_groups(32))) // expected-no-diagnostics
+__global__ void max_num_work_groups_32() {
+// CHECK: define{{.*}} amdgpu_kernel void @_Z22max_num_work_groups_32v() [[MAX_NUM_WORK_GROUPS_32_1_1:#[0-9]+]]
+}
+__attribute__((amdgpu_max_num_work_groups(32,1))) // expected-no-diagnostics
+__global__ void max_num_work_groups_32_1() {
+// CHECK: define{{.*}} amdgpu_kernel void @_Z24max_num_work_groups_32_1v() [[MAX_NUM_WORK_GROUPS_32_1_1:#[0-9]+]]
+}
+
+
 
 template<unsigned a>
 __attribute__((amdgpu_max_num_work_groups(a, 4, 2)))
@@ -77,5 +87,6 @@ template __global__ void template_32_4_a_max_num_work_groups<2>();
 // CHECK-DAG: attributes [[NUM_SGPR_32]] = {{.*}}"amdgpu-num-sgpr"="32"
 // CHECK-DAG: attributes [[NUM_VGPR_64]] = {{.*}}"amdgpu-num-vgpr"="64"
 // CHECK-DAG: attributes [[MAX_NUM_WORK_GROUPS_32_4_2]] = {{.*}}"amdgpu-max-num-work-groups"="32,4,2"
+// CHECK-DAG: attributes [[MAX_NUM_WORK_GROUPS_32_1_1]] = {{.*}}"amdgpu-max-num-work-groups"="32,1,1"
 
 // NOUB-NOT: "uniform-work-group-size"="true"

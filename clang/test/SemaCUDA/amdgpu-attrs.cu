@@ -205,17 +205,27 @@ __global__ void non_cexpr_waves_per_eu_2() {}
 __attribute__((amdgpu_waves_per_eu(2, ipow2(2))))
 __global__ void non_cexpr_waves_per_eu_2_4() {}
 
-// expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires exactly 3 arguments}}
 __attribute__((amdgpu_max_num_work_groups(32)))
 __global__ void max_num_work_groups_32() {}
 
-// expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires exactly 3 arguments}}
 __attribute__((amdgpu_max_num_work_groups(32, 1)))
 __global__ void max_num_work_groups_32_1() {}
 
-// expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires exactly 3 arguments}}
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute takes no more than 3 arguments}}
 __attribute__((amdgpu_max_num_work_groups(32, 1, 1, 1)))
 __global__ void max_num_work_groups_32_1_1_1() {}
+
+// expected-error@+1{{'amdgpu_max_num_work_groups' attribute takes at least 1 argument}}
+__attribute__((amdgpu_max_num_work_groups()))
+__global__ void max_num_work_groups_no_arg() {}
+
+// expected-error@+1{{expected expression}}
+__attribute__((amdgpu_max_num_work_groups(,1,1)))
+__global__ void max_num_work_groups_empty_1_1() {}
+
+// expected-error@+1{{expected expression}}
+__attribute__((amdgpu_max_num_work_groups(32,,1)))
+__global__ void max_num_work_groups_32_empty_1() {}
 
 // expected-error@+1{{'amdgpu_max_num_work_groups' attribute requires parameter 0 to be an integer constant}}
 __attribute__((amdgpu_max_num_work_groups(ipow2(5), 1, 1)))
@@ -249,6 +259,9 @@ __global__ void max_num_work_groups_32_0_1() {}
 __attribute__((amdgpu_max_num_work_groups(32, 1, 0)))
 __global__ void max_num_work_groups_32_1_0() {}
 
+// expected-error@+1{{integer constant expression evaluates to value 10000000000 that cannot be represented in a 32-bit unsigned integer type}}
+__attribute__((amdgpu_max_num_work_groups(10000000000)))
+__global__ void max_num_work_groups_too_large() {}
 
 int num_wg_x = 32;
 int num_wg_y = 1;

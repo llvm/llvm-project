@@ -2727,7 +2727,8 @@ definitions and is an optimization hint.
 
 The ``<x>`` parameter specifies the maximum number of work groups in the x dimension.
 Similarly ``<y>`` and ``<z>`` are for the y and z dimensions respectively.
-Each of the three values must be greater than 0.
+Each of the three values must be greater than 0 when provided. The ``<x>`` parameter
+is required, while ``<y>`` and ``<z>`` are optional with default value of 1.
 
 If specified, the AMDGPU target backend might be able to produce better machine
 code.

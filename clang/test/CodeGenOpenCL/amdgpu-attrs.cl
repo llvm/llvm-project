@@ -169,6 +169,16 @@ kernel void max_num_work_groups_4_8_32() {
 // CHECK: define{{.*}} amdgpu_kernel void @max_num_work_groups_4_8_32() [[MAX_NUM_WORK_GROUPS_4_8_32:#[0-9]+]]
 }
 
+__attribute__((amdgpu_max_num_work_groups(32))) // expected-no-diagnostics
+kernel void max_num_work_groups_32() {
+// CHECK: define{{.*}} amdgpu_kernel void @max_num_work_groups_32() [[MAX_NUM_WORK_GROUPS_32_1_1:#[0-9]+]]
+}
+
+__attribute__((amdgpu_max_num_work_groups(32,1))) // expected-no-diagnostics
+kernel void max_num_work_groups_32_1() {
+// CHECK: define{{.*}} amdgpu_kernel void @max_num_work_groups_32_1() [[MAX_NUM_WORK_GROUPS_32_1_1:#[0-9]+]]
+}
+
 void a_function() {
 // CHECK: define{{.*}} void @a_function() [[A_FUNCTION:#[0-9]+]]
 }

@@ -8083,26 +8083,28 @@ checkAMDGPUMaxNumWorkGroupsArguments(Sema &S, Expr *XExpr, Expr *YExpr,
                                      Expr *ZExpr,
                                      const AMDGPUMaxNumWorkGroupsAttr &Attr) {
   if (S.DiagnoseUnexpandedParameterPack(XExpr) ||
-      S.DiagnoseUnexpandedParameterPack(YExpr) ||
-      S.DiagnoseUnexpandedParameterPack(ZExpr))
+      (YExpr && S.DiagnoseUnexpandedParameterPack(YExpr)) ||
+      (ZExpr && S.DiagnoseUnexpandedParameterPack(ZExpr)))
     return true;
 
   // Accept template arguments for now as they depend on something else.
   // We'll get to check them when they eventually get instantiated.
-  if (XExpr->isValueDependent() || YExpr->isValueDependent() ||
-      ZExpr->isValueDependent())
+  if (XExpr->isValueDependent() || (YExpr && YExpr->isValueDependent()) ||
+      (ZExpr && ZExpr->isValueDependent()))
     return false;
 
-  uint32_t NumWG[3];
+  uint32_t NumWG = 0;
   Expr *Exprs[3] = {XExpr, YExpr, ZExpr};
   for (int i = 0; i < 3; i++) {
-    if (!checkUInt32Argument(S, Attr, Exprs[i], NumWG[i], i,
-                             /*StrictlyUnsigned=*/true))
-      return true;
-    if (NumWG[i] == 0) {
-      S.Diag(Attr.getLoc(), diag::err_attribute_argument_is_zero)
-          << &Attr << Exprs[i]->getSourceRange();
-      return true;
+    if (Exprs[i]) {
+      if (!checkUInt32Argument(S, Attr, Exprs[i], NumWG, i,
+                               /*StrictlyUnsigned=*/true))
+        return true;
+      if (NumWG == 0) {
+        S.Diag(Attr.getLoc(), diag::err_attribute_argument_is_zero)
+            << &Attr << Exprs[i]->getSourceRange();
+        return true;
+      }
     }
   }
 
@@ -8130,8 +8132,9 @@ void Sema::addAMDGPUMaxNumWorkGroupsAttr(Decl *D, const AttributeCommonInfo &CI,
 
 static void handleAMDGPUMaxNumWorkGroupsAttr(Sema &S, Decl *D,
                                              const ParsedAttr &AL) {
-  S.addAMDGPUMaxNumWorkGroupsAttr(D, AL, AL.getArgAsExpr(0), AL.getArgAsExpr(1),
-                                  AL.getArgAsExpr(2));
+  Expr *YExpr = (AL.getNumArgs() > 1) ? AL.getArgAsExpr(1) : nullptr;
+  Expr *ZExpr = (AL.getNumArgs() > 2) ? AL.getArgAsExpr(2) : nullptr;
+  S.addAMDGPUMaxNumWorkGroupsAttr(D, AL, AL.getArgAsExpr(0), YExpr, ZExpr);
 }
 
 static void handleX86ForceAlignArgPointerAttr(Sema &S, Decl *D,

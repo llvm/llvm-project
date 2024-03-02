@@ -871,15 +871,6 @@ bool shouldEmitConstantsToTextSection(const Triple &TT);
 /// to integer.
 int getIntegerAttribute(const Function &F, StringRef Name, int Default);
 
-/// \returns Unsigned Integer value requested using \p F's \p Name attribute.
-///
-/// \returns \p Default if attribute is not present.
-///
-/// \returns \p Default and emits error if requested value cannot be converted
-/// to integer.
-unsigned getUnsignedIntegerAttribute(const Function &F, StringRef Name,
-                                     unsigned Default);
-
 /// \returns A pair of integer values requested using \p F's \p Name attribute
 /// in "first[,second]" format ("second" is optional unless \p OnlyFirstRequired
 /// is false).
