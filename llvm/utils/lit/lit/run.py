@@ -128,9 +128,10 @@ class Run(object):
             NPROC = resource.RLIMIT_NPROC
 
             soft_limit, hard_limit = resource.getrlimit(NPROC)
+            asked_limit = desired_limit
             desired_limit = min(desired_limit, hard_limit)
             self.lit_config.warning(
-                "Raise process limit from %d to %d" % (soft_limit, desired_limit)
+                "soft limit: %d\nhard limit: %d\ndesired limit: %d\nasked limit: %d" % (soft_limit, hard_limit, desired_limit, asked_limit)
             )
             assert desired_limit > 0
             if soft_limit < desired_limit:
