@@ -17772,7 +17772,6 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     if (lhq.getAddressSpace() != rhq.getAddressSpace()) {
       DiagKind = diag::err_typecheck_incompatible_address_space;
       break;
-
     } else if (lhq.getObjCLifetime() != rhq.getObjCLifetime()) {
       DiagKind = diag::err_typecheck_incompatible_ownership;
       break;

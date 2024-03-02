@@ -7294,7 +7294,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   bool CanPass = canPassInRegisters(*this, Record, CCK);
 
   // Do not change ArgPassingRestrictions if it has already been set to
-  // ArgPassingKind::CanNeverPassInRegs.
+  // RecordArgPassingKind::CanNeverPassInRegs.
   if (Record->getArgPassingRestrictions() !=
       RecordArgPassingKind::CanNeverPassInRegs)
     Record->setArgPassingRestrictions(
