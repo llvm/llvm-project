@@ -302,10 +302,7 @@ bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &... Args, const SourceInfo &S
   if (SI)
     SrcMap.emplace_back(Code.size(), SI);
 
-  // The initializer list forces the expression to be evaluated
-  // for each argument in the variadic template, in order.
-  (void)std::initializer_list<int>{(emit(P, Code, Args, Success), 0)...};
-
+  (..., emit(P, Code, Args, Success));
   return Success;
 }
 
