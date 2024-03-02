@@ -571,6 +571,44 @@ Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
   return nullptr;
 }
 
+Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
+  Value *X, *Y, *Z;
+  auto createPowiExpr = [](BinaryOperator &I, InstCombinerImpl &IC, Value *X,
+                           Value *Y, Value *Z) {
+    Value *YZ;
+    InstCombiner::BuilderTy &Builder = IC.Builder;
+
+    if (auto *C = dyn_cast<ConstantInt>(Z)) {
+      if (C->isOne())
+        YZ = Builder.CreateAdd(Y, ConstantInt::get(Y->getType(), 1));
+    } else
+      YZ = Builder.CreateAdd(Y, Z);
+
+    auto *NewPow = Builder.CreateIntrinsic(
+        Intrinsic::powi, {X->getType(), YZ->getType()}, {X, YZ}, &I);
+    return IC.replaceInstUsesWith(I, NewPow);
+  };
+
+  // powi(X, Y) * X --> powi(X, Y+1)
+  // X * powi(X, Y) --> powi(X, Y+1)
+  if (match(&I, m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::powi>(m_Value(X),
+                                                               m_Value(Y))),
+                         m_Deferred(X))) &&
+      willNotOverflowSignedAdd(Y, ConstantInt::get(Y->getType(), 1), I))
+    return createPowiExpr(I, *this, X, Y, ConstantInt::get(Y->getType(), 1));
+
+  // powi(x, y) * powi(x, z) -> powi(x, y + z)
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  if (I.isOnlyUserOfAnyOperand() &&
+      match(Op0, m_Intrinsic<Intrinsic::powi>(m_Value(X), m_Value(Y))) &&
+      match(Op1, m_Intrinsic<Intrinsic::powi>(m_Specific(X), m_Value(Z))) &&
+      Y->getType() == Z->getType())
+    return createPowiExpr(I, *this, X, Y, Z);
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0);
   Value *Op1 = I.getOperand(1);
@@ -683,17 +721,8 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
     return replaceInstUsesWith(I, Pow);
   }
 
-  // powi(X, Y) * X --> powi(X, Y+1)
-  // X * powi(X, Y) --> powi(X, Y+1)
-  if (match(&I, m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::powi>(m_Value(X),
-                                                               m_Value(Y))),
-                         m_Deferred(X))) &&
-      willNotOverflowSignedAdd(Y, ConstantInt::get(Y->getType(), 1), I)) {
-    auto *Y1 = Builder.CreateAdd(Y, ConstantInt::get(Y->getType(), 1));
-    auto *NewPow = Builder.CreateIntrinsic(
-        Intrinsic::powi, {X->getType(), Y1->getType()}, {X, Y1}, &I);
-    return replaceInstUsesWith(I, NewPow);
-  }
+  if (Instruction *FoldedPowi = foldPowiReassoc(I))
+    return FoldedPowi;
 
   if (I.isOnlyUserOfAnyOperand()) {
     // pow(X, Y) * pow(X, Z) -> pow(X, Y + Z)
@@ -708,16 +737,6 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
         match(Op1, m_Intrinsic<Intrinsic::pow>(m_Value(Z), m_Specific(Y)))) {
       auto *XZ = Builder.CreateFMulFMF(X, Z, &I);
       auto *NewPow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, XZ, Y, &I);
-      return replaceInstUsesWith(I, NewPow);
-    }
-
-    // powi(x, y) * powi(x, z) -> powi(x, y + z)
-    if (match(Op0, m_Intrinsic<Intrinsic::powi>(m_Value(X), m_Value(Y))) &&
-        match(Op1, m_Intrinsic<Intrinsic::powi>(m_Specific(X), m_Value(Z))) &&
-        Y->getType() == Z->getType()) {
-      auto *YZ = Builder.CreateAdd(Y, Z);
-      auto *NewPow = Builder.CreateIntrinsic(
-          Intrinsic::powi, {X->getType(), YZ->getType()}, {X, YZ}, &I);
       return replaceInstUsesWith(I, NewPow);
     }
 
