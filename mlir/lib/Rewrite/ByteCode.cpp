@@ -1444,7 +1444,7 @@ void ByteCodeExecutor::executeApplyConstraint(PatternRewriter &rewriter) {
   const PDLRewriteFunction &constraintFn = constraintFunctions[fun_idx];
   ByteCodeRewriteResultList results(numResults);
   LogicalResult rewriteResult = constraintFn(rewriter, results, args);
-  ArrayRef<PDLValue> constraintResults = results.getResults();
+  [[maybe_unused]] ArrayRef<PDLValue> constraintResults = results.getResults();
   LLVM_DEBUG({
     if (succeeded(rewriteResult)) {
       llvm::dbgs() << "  * Constraint succeeded\n";
