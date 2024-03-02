@@ -1327,7 +1327,9 @@ inline bool needSIB(unsigned BaseReg, unsigned IndexReg, bool In64BitMode) {
   // present.
   switch (BaseReg) {
   default:
-    break;
+    // If there is no base register and we're in 64-bit mode, we need a SIB
+    // byte to emit an addr that is just 'disp32' (the non-RIP relative form).
+    return In64BitMode && !BaseReg;
   case X86::ESP:
   case X86::RSP:
   case X86::R12:
@@ -1338,10 +1340,6 @@ inline bool needSIB(unsigned BaseReg, unsigned IndexReg, bool In64BitMode) {
   case X86::R28D:
     return true;
   }
-
-  // If there is no base register and we're in 64-bit mode, we need a SIB
-  // byte to emit an addr that is just 'disp32' (the non-RIP relative form).
-  return In64BitMode && !BaseReg;
 }
 
 } // namespace X86II
