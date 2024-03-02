@@ -601,8 +601,7 @@ multiclass FLAT_Atomic_Pseudo_NO_RTN<
     (outs),
     (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_0:$cpol),
     " $vaddr, $vdata$offset$cpol">,
-    GlobalSaddrTable<0, opName>,
-    AtomicNoRet <opName, 0> {
+    GlobalSaddrTable<0, opName> {
     let PseudoInstr = NAME;
     let FPAtomic = data_vt.isFP;
     let AddedComplexity = -1; // Prefer global atomics if available
@@ -620,8 +619,7 @@ multiclass FLAT_Atomic_Pseudo_RTN<
     (outs getLdStRegisterOperand<vdst_rc>.ret:$vdst),
     (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata$offset$cpol">,
-    GlobalSaddrTable<0, opName#"_rtn">,
-    AtomicNoRet <opName, 1> {
+    GlobalSaddrTable<0, opName#"_rtn"> {
     let FPAtomic = data_vt.isFP;
     let AddedComplexity = -1; // Prefer global atomics if available
   }
@@ -650,8 +648,7 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
     (outs),
     (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_0:$cpol),
     " $vaddr, $vdata, off$offset$cpol">,
-    GlobalSaddrTable<0, opName>,
-    AtomicNoRet <opName, 0> {
+    GlobalSaddrTable<0, opName> {
     let has_saddr = 1;
     let PseudoInstr = NAME;
     let FPAtomic = data_vt.isFP;
@@ -661,8 +658,7 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
     (outs),
     (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_0:$cpol),
     " $vaddr, $vdata, $saddr$offset$cpol">,
-    GlobalSaddrTable<1, opName>,
-    AtomicNoRet <opName#"_saddr", 0> {
+    GlobalSaddrTable<1, opName> {
     let has_saddr = 1;
     let enabled_saddr = 1;
     let PseudoInstr = NAME#"_SADDR";
@@ -683,8 +679,7 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
     (outs vdst_op:$vdst),
       (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata, off$offset$cpol">,
-    GlobalSaddrTable<0, opName#"_rtn">,
-    AtomicNoRet <opName, 1> {
+    GlobalSaddrTable<0, opName#"_rtn"> {
     let has_saddr = 1;
     let FPAtomic = data_vt.isFP;
   }
@@ -693,8 +688,7 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
     (outs vdst_op:$vdst),
       (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata, $saddr$offset$cpol">,
-    GlobalSaddrTable<1, opName#"_rtn">,
-    AtomicNoRet <opName#"_saddr", 1> {
+    GlobalSaddrTable<1, opName#"_rtn"> {
      let has_saddr = 1;
      let enabled_saddr = 1;
      let PseudoInstr = NAME#"_SADDR_RTN";
