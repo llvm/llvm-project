@@ -14,9 +14,8 @@
 //   class basic_ispanstream
 //     : public basic_streambuf<charT, traits> {
 
-//     // [spanbuf.cons], constructors
-//
-//     basic_ispanstream(basic_ispanstream&& rhs);
+//     // [ispanstream.swap], swap
+//     void swap(basic_ispanstream& rhs);
 
 #include <cassert>
 #include <concepts>
@@ -37,7 +36,8 @@ void test() {
   // Mode: default
   {
     SpStream rhsSpSt{sp};
-    SpStream spSt(std::move(rhsSpSt));
+    SpStream spSt(std::span<CharT>{});
+    spSt.swap(rhsSpSt);
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
@@ -45,7 +45,8 @@ void test() {
   // Mode: `ios_base::in`
   {
     SpStream rhsSpSt{sp, std::ios_base::in};
-    SpStream spSt(std::move(rhsSpSt));
+    SpStream spSt(std::span<CharT>{});
+    spSt.swap(rhsSpSt);
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
@@ -53,7 +54,8 @@ void test() {
   // Mode `ios_base::out`
   {
     SpStream rhsSpSt{sp, std::ios_base::out};
-    SpStream spSt(std::move(rhsSpSt));
+    SpStream spSt(std::span<CharT>{});
+    spSt.swap(rhsSpSt);
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
@@ -61,7 +63,8 @@ void test() {
   // Mode: multiple
   {
     SpStream rhsSpSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-    SpStream spSt(std::move(rhsSpSt));
+    SpStream spSt(std::span<CharT>{});
+    spSt.swap(rhsSpSt);
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
