@@ -167,24 +167,37 @@ protected:
     if ((__which & ios_base::in) && (__which & ios_base::out) && (ios_base::cur == __way))
       return __error;
 
-    off_type __baseoff = [this, __way, __which] {
-      switch (__way) {
-      case ios_base::beg:
-        return off_type(0);
+    // Calculate __baseoff
 
-      case ios_base::cur:
-        if (__which & ios_base::out)
-          return off_type(this->pptr() - this->pbase());
-        return off_type(this->gptr() - this->eback());
+    off_type __baseoff;
 
-      case ios_base::end:
-        if ((__which & ios_base::out) && !(__which & ios_base::in))
-          return off_type(this->pptr() - this->pbase());
-        return off_type(__buf_.size());
-      }
-    }();
+    switch (__way) {
+    case ios_base::beg:
+      __baseoff = off_type(0);
+      break;
+
+    case ios_base::cur:
+      if (__which & ios_base::out)
+        __baseoff = off_type(this->pptr() - this->pbase());
+      else
+        __baseoff = off_type(this->gptr() - this->eback());
+      break;
+
+    case ios_base::end:
+      if ((__which & ios_base::out) && !(__which & ios_base::in))
+        __baseoff = off_type(this->pptr() - this->pbase());
+      else
+        __baseoff = off_type(__buf_.size());
+      break;
+
+    default:
+      return __error;
+    };
+
+    // Calculate __newoff
 
     off_type __newoff;
+
     if (__builtin_add_overflow(__baseoff, __off, &__newoff) || (__newoff < off_type(0)) ||
         (std::cmp_greater(__newoff, __buf_.size())))
       return __error;
