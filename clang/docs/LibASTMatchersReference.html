@@ -7049,7 +7049,7 @@ binary operator or fold expression matches.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFoldExpr.html">CXXFoldExpr</a>&gt;</td><td class="name" onclick="toggle('hasFoldInit0')"><a name="hasFoldInit0Anchor">hasFoldInit</a></td><td>ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMacher</td></tr>
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFoldExpr.html">CXXFoldExpr</a>&gt;</td><td class="name" onclick="toggle('hasFoldInit0')"><a name="hasFoldInit0Anchor">hasFoldInit</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMacher</td></tr>
 <tr><td colspan="4" class="doc" id="hasFoldInit0"><pre>Matches the operand that does not contain the parameter pack.
 
 Example matches `(0 + ... + args)` and `(args * ... * 1)`
@@ -7089,7 +7089,7 @@ Example matcher = binaryOperator(hasOperands(integerLiteral(equals(1),
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFoldExpr.html">CXXFoldExpr</a>&gt;</td><td class="name" onclick="toggle('hasPattern0')"><a name="hasPattern0Anchor">hasPattern</a></td><td>ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMacher</td></tr>
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFoldExpr.html">CXXFoldExpr</a>&gt;</td><td class="name" onclick="toggle('hasPattern0')"><a name="hasPattern0Anchor">hasPattern</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMacher</td></tr>
 <tr><td colspan="4" class="doc" id="hasPattern0"><pre>Matches the operand that contains the parameter pack.
 
 Example matches `(0 + ... + args)`
@@ -7859,7 +7859,7 @@ int a = b ?: 1;
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument0')"><a name="forEachTemplateArgument0Anchor">forEachTemplateArgument</a></td><td>clang::ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument0')"><a name="forEachTemplateArgument0Anchor">forEachTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="forEachTemplateArgument0"><pre>Matches classTemplateSpecialization, templateSpecializationType and
 functionDecl nodes where the template argument matches the inner matcher.
 This matcher may produce multiple matches.
@@ -8454,7 +8454,7 @@ Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;</td><td class="name" onclick="toggle('ignoringElidableConstructorCall0')"><a name="ignoringElidableConstructorCall0Anchor">ignoringElidableConstructorCall</a></td><td>ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;</td><td class="name" onclick="toggle('ignoringElidableConstructorCall0')"><a name="ignoringElidableConstructorCall0Anchor">ignoringElidableConstructorCall</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="ignoringElidableConstructorCall0"><pre>Matches expressions that match InnerMatcher that are possibly wrapped in an
 elidable constructor and other corresponding bookkeeping nodes.
 
@@ -8691,7 +8691,7 @@ Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument2')"><a name="forEachTemplateArgument2Anchor">forEachTemplateArgument</a></td><td>clang::ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument2')"><a name="forEachTemplateArgument2Anchor">forEachTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="forEachTemplateArgument2"><pre>Matches classTemplateSpecialization, templateSpecializationType and
 functionDecl nodes where the template argument matches the inner matcher.
 This matcher may produce multiple matches.
@@ -8959,7 +8959,7 @@ matcher.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1InitListExpr.html">InitListExpr</a>&gt;</td><td class="name" onclick="toggle('hasInit0')"><a name="hasInit0Anchor">hasInit</a></td><td>unsigned N, ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1InitListExpr.html">InitListExpr</a>&gt;</td><td class="name" onclick="toggle('hasInit0')"><a name="hasInit0Anchor">hasInit</a></td><td>unsigned N, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasInit0"><pre>Matches the n'th item of an initializer list expression.
 
 Example matches y.
@@ -10026,7 +10026,7 @@ varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(0,
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument1')"><a name="forEachTemplateArgument1Anchor">forEachTemplateArgument</a></td><td>clang::ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument1')"><a name="forEachTemplateArgument1Anchor">forEachTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="forEachTemplateArgument1"><pre>Matches classTemplateSpecialization, templateSpecializationType and
 functionDecl nodes where the template argument matches the inner matcher.
 This matcher may produce multiple matches.

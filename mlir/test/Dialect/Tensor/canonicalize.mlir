@@ -822,7 +822,7 @@ func.func @infer_src_shape_pack(%src: tensor<?x?x?x?xf32>, %dest: tensor<10x20x3
 // CHECK-LABEL: func.func @infer_src_shape_pack
 // CHECK-SAME:    %[[SRC:[0-9a-zA-Z]+]]
 // CHECK-SAME:    %[[DEST:[0-9a-zA-Z]+]]
-// CHECK:         %[[CAST_SRC:.+]] = tensor.cast %[[SRC]] : tensor<?x?x?x?xf32> to tensor<30x20x?x10xf32>
+// CHECK:         %[[CAST_SRC:.+]] = tensor.cast %[[SRC]] : tensor<?x?x?x?xf32> to tensor<40x20x?x30xf32>
 // CHECK:         %[[PACK:.+]] = tensor.pack %[[CAST_SRC]] {{.+}} into %[[DEST]]
 // CHECK:         return %[[PACK]]
 
@@ -841,10 +841,21 @@ func.func @infer_dest_shape_pack(%src: tensor<30x20x?x10xf32>, %dest: tensor<?x?
 // CHECK-LABEL: func.func @infer_dest_shape_pack
 // CHECK-SAME:    %[[SRC:[0-9a-zA-Z]+]]
 // CHECK-SAME:    %[[DEST:[0-9a-zA-Z]+]]
-// CHECK:         %[[CAST_DEST:.+]] = tensor.cast %[[DEST]] : tensor<?x?x?x?x16xf32> to tensor<10x20x30x?x16xf32>
+// CHECK:         %[[CAST_DEST:.+]] = tensor.cast %[[DEST]] : tensor<?x?x?x?x16xf32> to tensor<?x20x10x30x16xf32>
 // CHECK:         %[[PACK:.+]] = tensor.pack %[[SRC]] {{.+}} into %[[CAST_DEST]]
-// CHECK:         %[[CAST_PACK:.+]] = tensor.cast %[[PACK]] : tensor<10x20x30x?x16xf32> to tensor<?x?x?x?x16xf32>
+// CHECK:         %[[CAST_PACK:.+]] = tensor.cast %[[PACK]] : tensor<?x20x10x30x16xf32> to tensor<?x?x?x?x16xf32>
 // CHECK:         return %[[CAST_PACK]]
+
+// -----
+
+func.func @no_infer_pack_shape(%arg0: tensor<?x32x100xf32>, %arg1: index) -> tensor<32x7x?x16x1xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = tensor.empty(%arg1) : tensor<32x7x?x16x1xf32>
+  %pack = tensor.pack %arg0 padding_value(%cst : f32) outer_dims_perm = [1, 2, 0] inner_dims_pos = [2, 0] inner_tiles = [16, 1] into %0 : tensor<?x32x100xf32> -> tensor<32x7x?x16x1xf32>
+  return %pack : tensor<32x7x?x16x1xf32>
+}
+// CHECK-LABEL: func.func @no_infer_pack_shape
+// CHECK-NOT:     tensor.cast
 
 // -----
 
@@ -920,9 +931,9 @@ func.func @infer_dest_shape_unpack(%src: tensor<10x20x30x40x16xf32>, %dest: tens
 // CHECK-LABEL: func.func @infer_dest_shape_unpack
 // CHECK-SAME:    %[[SRC:[0-9a-zA-Z]+]]
 // CHECK-SAME:    %[[DEST:[0-9a-zA-Z]+]]
-// CHECK:         %[[CAST_DEST:.+]] = tensor.cast %[[DEST]] : tensor<?x?x?x?xf32> to tensor<30x20x?x10xf32>
+// CHECK:         %[[CAST_DEST:.+]] = tensor.cast %[[DEST]] : tensor<?x?x?x?xf32> to tensor<40x20x?x30xf32>
 // CHECK:         %[[UNPACK:.+]] = tensor.unpack %[[SRC]] {{.+}} into %[[CAST_DEST]]
-// CHECK:         %[[CAST_UNPACK:.+]] = tensor.cast %[[UNPACK]] : tensor<30x20x?x10xf32> to tensor<?x?x?x?xf32>
+// CHECK:         %[[CAST_UNPACK:.+]] = tensor.cast %[[UNPACK]] : tensor<40x20x?x30xf32> to tensor<?x?x?x?xf32>
 // CHECK:         return %[[CAST_UNPACK]]
 
 // -----
@@ -938,11 +949,23 @@ func.func @infer_src_shape_unpack(%src: tensor<?x?x?x?x16xf32>, %dest: tensor<30
 // CHECK-LABEL: func.func @infer_src_shape_unpack
 // CHECK-SAME:    %[[SRC:[0-9a-zA-Z]+]]
 // CHECK-SAME:    %[[DEST:[0-9a-zA-Z]+]]
-// CHECK:         %[[CAST_SRC:.+]] = tensor.cast %[[SRC]] : tensor<?x?x?x?x16xf32> to tensor<10x20x30x?x16xf32>
+// CHECK:         %[[CAST_SRC:.+]] = tensor.cast %[[SRC]] : tensor<?x?x?x?x16xf32> to tensor<?x20x10x30x16xf32>
 // CHECK:         %[[UNPACK:.+]] = tensor.unpack %[[CAST_SRC]]
 // CHECK:         return %[[UNPACK]]
 
 // -----
+
+func.func @no_infer_unpack_shape(%arg1: tensor<32x7x?x16x1xf32>, %arg2: index) -> tensor<?x32x100xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = tensor.empty(%arg2) : tensor<?x32x100xf32>
+  %unpack = tensor.unpack %arg1 outer_dims_perm = [1, 2, 0] inner_dims_pos = [2, 0] inner_tiles = [16, 1] into %0 : tensor<32x7x?x16x1xf32> -> tensor<?x32x100xf32>
+  return %unpack : tensor<?x32x100xf32>
+}
+// CHECK-LABEL: func.func @no_infer_unpack_shape
+// CHECK-NOT:     tensor.cast
+
+// -----
+
 
 // CHECK-LABEL: func @fold_overlapping_insert
 //  CHECK-SAME: %[[INPUT:.+]]: tensor<?x?x?xf32>, %{{.+}}: tensor<4x?x8xf32>, %[[SLICE2:.+]]: tensor<4x?x8xf32>
