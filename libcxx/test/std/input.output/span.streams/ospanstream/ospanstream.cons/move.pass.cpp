@@ -36,35 +36,35 @@ void test() {
 
   // Mode: default
   {
-    SpStream rhsSpStream{sp};
-    SpStream sps(std::move(rhsSpStream));
-    assert(sps.span().data() == arr);
-    assert(sps.span().empty());
-    assert(sps.span().size() == 0);
+    SpStream rhsSpSt{sp};
+    SpStream spSt(std::move(rhsSpSt));
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
   }
   // Mode: `ios_base::in`
   {
-    SpStream rhsSpStream{sp, std::ios_base::in};
-    SpStream sps(std::move(rhsSpStream));
-    assert(sps.span().data() == arr);
-    assert(sps.span().empty());
-    assert(sps.span().size() == 0);
+    SpStream rhsSpSt{sp, std::ios_base::in};
+    SpStream spSt(std::move(rhsSpSt));
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
   }
   // Mode `ios_base::out`
   {
-    SpStream rhsSpStream{sp, std::ios_base::out};
-    SpStream sps(std::move(rhsSpStream));
-    assert(sps.span().data() == arr);
-    assert(sps.span().empty());
-    assert(sps.span().size() == 0);
+    SpStream rhsSpSt{sp, std::ios_base::out};
+    SpStream spSt(std::move(rhsSpSt));
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
   }
   // Mode: multiple
   {
-    SpStream rhsSpStream{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-    SpStream sps(std::move(rhsSpStream));
-    assert(sps.span().data() == arr);
-    assert(sps.span().empty());
-    assert(sps.span().size() == 0);
+    SpStream rhsSpSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
+    SpStream spSt(std::move(rhsSpSt));
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
   }
 }
 
