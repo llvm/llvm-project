@@ -102,8 +102,8 @@ public:
     return try_wait_impl(__value);
   }
   inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void wait() const {
-    __cxx_atomic_wait_unless(
-        &__a_.__a_, [this](ptrdiff_t& __value) -> bool { return try_wait_impl(__value); }, memory_order_acquire);
+    std::__atomic_wait_unless(
+        __a_, [this](ptrdiff_t& __value) -> bool { return try_wait_impl(__value); }, memory_order_acquire);
   }
   inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void arrive_and_wait(ptrdiff_t __update = 1) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__update >= 0, "latch::arrive_and_wait called with a negative value");
@@ -114,7 +114,7 @@ public:
   }
 
 private:
-  inline _LIBCPP_HIDE_FROM_ABI bool try_wait_impl(ptrdiff_t& __value) const noexcept { return __value == 0; }
+  _LIBCPP_HIDE_FROM_ABI bool try_wait_impl(ptrdiff_t& __value) const noexcept { return __value == 0; }
 };
 
 _LIBCPP_END_NAMESPACE_STD
