@@ -419,7 +419,6 @@ public:
 
   const Symbol *procInterface() const { return procInterface_; }
   void set_procInterface(const Symbol &sym) { procInterface_ = &sym; }
-  bool IsInterfaceSet() { return procInterface_ || type(); }
   inline bool HasExplicitInterface() const;
 
   // Be advised: !init().has_value() => uninitialized pointer,
