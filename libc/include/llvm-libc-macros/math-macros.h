@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_MATH_MACROS_H
-#define __LLVM_LIBC_MACROS_MATH_MACROS_H
+#ifndef LLVM_LIBC_MACROS_MATH_MACROS_H
+#define LLVM_LIBC_MACROS_MATH_MACROS_H
 
 #include "limits-macros.h"
 
@@ -32,8 +32,10 @@
 #define math_errhandling 0
 #elif defined(__NO_MATH_ERRNO__)
 #define math_errhandling (MATH_ERREXCEPT)
+#elif defined(__NVPTX__) || defined(__AMDGPU__)
+#define math_errhandling (MATH_ERRNO)
 #else
 #define math_errhandling (MATH_ERRNO | MATH_ERREXCEPT)
 #endif
 
-#endif // __LLVM_LIBC_MACROS_MATH_MACROS_H
+#endif // LLVM_LIBC_MACROS_MATH_MACROS_H

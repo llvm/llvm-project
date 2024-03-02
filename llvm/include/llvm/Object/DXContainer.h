@@ -276,7 +276,7 @@ private:
   dxbc::Header Header;
   SmallVector<uint32_t, 4> PartOffsets;
   std::optional<DXILData> DXIL;
-  std::optional<uint64_t> ShaderFlags;
+  std::optional<uint64_t> ShaderFeatureFlags;
   std::optional<dxbc::ShaderHash> Hash;
   std::optional<DirectX::PSVRuntimeInfo> PSVInfo;
   DirectX::Signature InputSignature;
@@ -286,7 +286,7 @@ private:
   Error parseHeader();
   Error parsePartOffsets();
   Error parseDXILHeader(StringRef Part);
-  Error parseShaderFlags(StringRef Part);
+  Error parseShaderFeatureFlags(StringRef Part);
   Error parseHash(StringRef Part);
   Error parsePSVInfo(StringRef Part);
   Error parseSignature(StringRef Part, DirectX::Signature &Array);
@@ -368,7 +368,9 @@ public:
 
   const std::optional<DXILData> &getDXIL() const { return DXIL; }
 
-  std::optional<uint64_t> getShaderFlags() const { return ShaderFlags; }
+  std::optional<uint64_t> getShaderFeatureFlags() const {
+    return ShaderFeatureFlags;
+  }
 
   std::optional<dxbc::ShaderHash> getShaderHash() const { return Hash; }
 

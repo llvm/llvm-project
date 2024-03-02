@@ -366,8 +366,7 @@ bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
 }
 
 bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {
-  return isTargetELF() && TM.isPositionIndependent() &&
-         !TM.shouldAssumeDSOLocal(*GV->getParent(), GV);
+  return isTargetELF() && TM.isPositionIndependent() && !GV->isDSOLocal();
 }
 
 unsigned ARMSubtarget::getMispredictionPenalty() const {

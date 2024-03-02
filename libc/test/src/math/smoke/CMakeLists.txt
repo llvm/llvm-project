@@ -758,38 +758,35 @@ add_fp_unittest(
     libc.src.math.frexpf128
 )
 
-# FIXME: These tests are currently broken for NVPTX.
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-  add_fp_unittest(
-    ilogb_test
-    SUITE
-      libc-math-smoke-tests
-    SRCS
-      ilogb_test.cpp
-    HDRS
-      ILogbTest.h
-    DEPENDS
-      libc.src.math.ilogb
-      libc.src.__support.CPP.limits
-      libc.src.__support.FPUtil.fp_bits
-      libc.src.__support.FPUtil.manipulation_functions
-  )
+add_fp_unittest(
+  ilogb_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ilogb_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.ilogb
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
 
-  add_fp_unittest(
-    ilogbf_test
-    SUITE
-      libc-math-smoke-tests
-    SRCS
-      ilogbf_test.cpp
-    HDRS
-      ILogbTest.h
-    DEPENDS
-      libc.src.math.ilogbf
-      libc.src.__support.CPP.limits
-      libc.src.__support.FPUtil.fp_bits
-      libc.src.__support.FPUtil.manipulation_functions
-  )
-endif()
+add_fp_unittest(
+  ilogbf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ilogbf_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.ilogbf
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
 
 add_fp_unittest(
   ilogbl_test
@@ -1417,38 +1414,35 @@ add_fp_unittest(
   UNIT_TEST_ONLY
 )
 
-# FIXME: These tests are currently spurious for NVPTX.
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-  add_fp_unittest(
-    nextafter_test
-    SUITE
-      libc-math-smoke-tests
-    SRCS
-      nextafter_test.cpp
-    HDRS
-      NextAfterTest.h
-    DEPENDS
-      libc.include.math
-      libc.src.math.nextafter
-      libc.src.__support.FPUtil.basic_operations
-      libc.src.__support.FPUtil.fp_bits
-  )
+add_fp_unittest(
+  nextafter_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextafter_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextafter
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
 
-  add_fp_unittest(
-    nextafterf_test
-    SUITE
-      libc-math-smoke-tests
-    SRCS
-      nextafterf_test.cpp
-    HDRS
-      NextAfterTest.h
-    DEPENDS
-      libc.include.math
-      libc.src.math.nextafterf
-      libc.src.__support.FPUtil.basic_operations
-      libc.src.__support.FPUtil.fp_bits
-  )
-endif()
+add_fp_unittest(
+  nextafterf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextafterf_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextafterf
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
 
 add_fp_unittest(
   nextafterl_test

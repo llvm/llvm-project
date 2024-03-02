@@ -318,6 +318,74 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 double4 floor(double4);
 
 //===----------------------------------------------------------------------===//
+// frac builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T frac(T x)
+/// \brief Returns the fractional (or decimal) part of x. \a x parameter.
+/// \param x The specified input value.
+///
+/// If \a the return value is greater than or equal to 0 and less than 1.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+half frac(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+half2 frac(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+half3 frac(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+half4 frac(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+float frac(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+float2 frac(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+float3 frac(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+float4 frac(float4);
+
+//===----------------------------------------------------------------------===//
+// lerp builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T lerp(T x, T y, T s)
+/// \brief Returns the linear interpolation of x to y by s.
+/// \param x [in] The first-floating point value.
+/// \param y [in] The second-floating point value.
+/// \param s [in] A value that linearly interpolates between the x parameter and
+/// the y parameter.
+///
+/// Linear interpolation is based on the following formula: x*(1-s) + y*s which
+/// can equivalently be written as x + s(y-x).
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+half lerp(half, half, half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+half2 lerp(half2, half2, half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+half3 lerp(half3, half3, half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+half4 lerp(half4, half4, half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+float lerp(float, float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+float2 lerp(float2, float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+float3 lerp(float3, float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+float4 lerp(float4, float4, float4);
+
+//===----------------------------------------------------------------------===//
 // log builtins
 //===----------------------------------------------------------------------===//
 
@@ -762,6 +830,40 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint64_t3 reversebits(uint64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint64_t4 reversebits(uint64_t4);
+
+//===----------------------------------------------------------------------===//
+// round builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T round(T x)
+/// \brief Rounds the specified value \a x to the nearest integer.
+/// \param x The specified input value.
+///
+/// The return value is the \a x parameter, rounded to the nearest integer
+/// within a floating-point type. Halfway cases are
+/// rounded to the nearest even value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+half round(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+half2 round(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+half3 round(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+half4 round(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+float round(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+float2 round(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+float3 round(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+float4 round(float4);
 
 //===----------------------------------------------------------------------===//
 // sin builtins
