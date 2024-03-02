@@ -52128,7 +52128,19 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   if (SDValue R = combineBMILogicOp(N, DAG, Subtarget))
     return R;
 
-  return combineFneg(N, DAG, DCI, Subtarget);
+  if (SDValue R = combineFneg(N, DAG, DCI, Subtarget))
+    return R;
+
+  // (xor x, SIGN_BIT) == (add x, SIGN_BIT), since we can lower `add` with `lea`
+  // which can be fused with shift/eliminate register moves, its preferable.
+  if (VT.isScalarInteger() && VT.getScalarSizeInBits() <= 32) {
+    if (auto *C = dyn_cast<ConstantSDNode>(N1)) {
+      if (C->getAPIntValue().isSignMask())
+        return DAG.getNode(ISD::ADD, SDLoc(N), VT, N0, N1);
+    }
+  }
+
+  return SDValue();
 }
 
 static SDValue combineBITREVERSE(SDNode *N, SelectionDAG &DAG,

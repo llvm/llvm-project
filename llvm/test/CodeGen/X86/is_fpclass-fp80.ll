@@ -249,7 +249,7 @@ define i1 @is_inf_f80(x86_fp80 %x) {
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-32-NEXT:    notl %eax
 ; CHECK-32-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
-; CHECK-32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; CHECK-32-NEXT:    addl {{[0-9]+}}(%esp), %ecx
 ; CHECK-32-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; CHECK-32-NEXT:    orl {{[0-9]+}}(%esp), %eax
 ; CHECK-32-NEXT:    orl %ecx, %eax
@@ -276,7 +276,7 @@ define i1 @is_posinf_f80(x86_fp80 %x) {
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-32-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
-; CHECK-32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; CHECK-32-NEXT:    addl {{[0-9]+}}(%esp), %ecx
 ; CHECK-32-NEXT:    xorl $32767, %eax # imm = 0x7FFF
 ; CHECK-32-NEXT:    orl {{[0-9]+}}(%esp), %eax
 ; CHECK-32-NEXT:    orl %ecx, %eax
@@ -303,7 +303,7 @@ define i1 @is_neginf_f80(x86_fp80 %x) {
 ; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-32-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; CHECK-32-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
-; CHECK-32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; CHECK-32-NEXT:    addl {{[0-9]+}}(%esp), %ecx
 ; CHECK-32-NEXT:    orl {{[0-9]+}}(%esp), %eax
 ; CHECK-32-NEXT:    orl %ecx, %eax
 ; CHECK-32-NEXT:    sete %al

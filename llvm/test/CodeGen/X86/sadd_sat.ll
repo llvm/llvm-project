@@ -76,7 +76,7 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; X86-NEXT:    addw %cx, %dx
 ; X86-NEXT:    movswl %dx, %edx
 ; X86-NEXT:    sarl $15, %edx
-; X86-NEXT:    xorl $-32768, %edx # imm = 0x8000
+; X86-NEXT:    addl $-32768, %edx # imm = 0x8000
 ; X86-NEXT:    addw %cx, %ax
 ; X86-NEXT:    cmovol %edx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -89,7 +89,7 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; X64-NEXT:    leal (%rdi,%rsi), %eax
 ; X64-NEXT:    cwtl
 ; X64-NEXT:    sarl $15, %eax
-; X64-NEXT:    xorl $-32768, %eax # imm = 0x8000
+; X64-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; X64-NEXT:    addw %si, %di
 ; X64-NEXT:    cmovnol %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax

@@ -1195,7 +1195,7 @@ define i16 @test_v8i16(<8 x i16> %a0) {
 ; SSE4-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    phminposuw %xmm0, %xmm0
 ; SSE4-NEXT:    movd %xmm0, %eax
-; SSE4-NEXT:    xorl $32768, %eax # imm = 0x8000
+; SSE4-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; SSE4-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE4-NEXT:    retq
 ;
@@ -1204,7 +1204,7 @@ define i16 @test_v8i16(<8 x i16> %a0) {
 ; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX-NEXT:    retq
 ;
@@ -1213,7 +1213,7 @@ define i16 @test_v8i16(<8 x i16> %a0) {
 ; AVX512BW-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
-; AVX512BW-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX512BW-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX512BW-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512BW-NEXT:    retq
 ;
@@ -1222,7 +1222,7 @@ define i16 @test_v8i16(<8 x i16> %a0) {
 ; AVX512VL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovd %xmm0, %eax
-; AVX512VL-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX512VL-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX512VL-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512VL-NEXT:    retq
   %1 = call i16 @llvm.vector.reduce.smin.v8i16(<8 x i16> %a0)
@@ -1250,7 +1250,7 @@ define i16 @test_v16i16(<16 x i16> %a0) {
 ; SSE4-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    phminposuw %xmm0, %xmm0
 ; SSE4-NEXT:    movd %xmm0, %eax
-; SSE4-NEXT:    xorl $32768, %eax # imm = 0x8000
+; SSE4-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; SSE4-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE4-NEXT:    retq
 ;
@@ -1261,7 +1261,7 @@ define i16 @test_v16i16(<16 x i16> %a0) {
 ; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX1-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX1-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -1273,7 +1273,7 @@ define i16 @test_v16i16(<16 x i16> %a0) {
 ; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX2-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -1285,7 +1285,7 @@ define i16 @test_v16i16(<16 x i16> %a0) {
 ; AVX512BW-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
-; AVX512BW-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX512BW-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX512BW-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -1297,7 +1297,7 @@ define i16 @test_v16i16(<16 x i16> %a0) {
 ; AVX512VL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovd %xmm0, %eax
-; AVX512VL-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX512VL-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX512VL-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -1330,7 +1330,7 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 ; SSE4-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    phminposuw %xmm0, %xmm0
 ; SSE4-NEXT:    movd %xmm0, %eax
-; SSE4-NEXT:    xorl $32768, %eax # imm = 0x8000
+; SSE4-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; SSE4-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE4-NEXT:    retq
 ;
@@ -1344,7 +1344,7 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 ; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX1-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX1-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -1357,7 +1357,7 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 ; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX2-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -1371,7 +1371,7 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 ; AVX512BW-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
-; AVX512BW-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX512BW-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX512BW-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -1385,7 +1385,7 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 ; AVX512VL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovd %xmm0, %eax
-; AVX512VL-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX512VL-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX512VL-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -1426,7 +1426,7 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 ; SSE4-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    phminposuw %xmm0, %xmm0
 ; SSE4-NEXT:    movd %xmm0, %eax
-; SSE4-NEXT:    xorl $32768, %eax # imm = 0x8000
+; SSE4-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; SSE4-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE4-NEXT:    retq
 ;
@@ -1446,7 +1446,7 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 ; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX1-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX1-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -1461,7 +1461,7 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 ; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX2-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -1476,7 +1476,7 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 ; AVX512BW-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
-; AVX512BW-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX512BW-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX512BW-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -1491,7 +1491,7 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 ; AVX512VL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovd %xmm0, %eax
-; AVX512VL-NEXT:    xorl $32768, %eax # imm = 0x8000
+; AVX512VL-NEXT:    addl $-32768, %eax # imm = 0x8000
 ; AVX512VL-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq

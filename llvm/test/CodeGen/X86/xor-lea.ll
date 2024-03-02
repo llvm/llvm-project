@@ -50,15 +50,15 @@ define i8 @xor_notsminval_i8(i8 %x) {
 define i16 @xor_sminval_i16(i16 %x) {
 ; X86-LABEL: xor_sminval_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl $32768, %eax # imm = 0x8000
-; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $-32768, %eax # imm = 0x8000
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_sminval_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    xorl $32768, %eax # imm = 0x8000
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal -32768(%rdi), %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %r = xor i16 %x, 32768
@@ -69,7 +69,7 @@ define i32 @xor_sminval_i32(i32 %x) {
 ; X86-LABEL: xor_sminval_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
-; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_sminval_i32:
@@ -103,7 +103,7 @@ define i64 @xor_sminval_i64(i64 %x) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $-2147483648, %edx # imm = 0x80000000
-; X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_sminval_i64:
@@ -205,15 +205,15 @@ define i8 @sub_xor_sminval_i8(i8 %x, i8 %y) {
 ; X86-LABEL: sub_xor_sminval_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    addb $-128, %al
 ; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    addb $-128, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sub_xor_sminval_i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    subb %sil, %dil
 ; X64-NEXT:    leal -128(%rdi), %eax
-; X64-NEXT:    subb %sil, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %r = xor i8 %x, 128
@@ -306,16 +306,14 @@ define i16 @xor_shl_sminval_i16(i16 %x) {
 ; X86-LABEL: xor_shl_sminval_i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $2, %eax
-; X86-NEXT:    xorl $32768, %eax # imm = 0x8000
+; X86-NEXT:    leal -32768(,%eax,4), %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_shl_sminval_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (,%rdi,4), %eax
-; X64-NEXT:    xorl $32768, %eax # imm = 0x8000
+; X64-NEXT:    leal -32768(,%rdi,4), %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %s = shl i16 %x, 2

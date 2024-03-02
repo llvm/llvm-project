@@ -469,7 +469,7 @@ define void @v1i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-NEXT:    leal (%rax,%rcx), %esi
 ; SSE-NEXT:    movswl %si, %esi
 ; SSE-NEXT:    sarl $15, %esi
-; SSE-NEXT:    xorl $-32768, %esi # imm = 0x8000
+; SSE-NEXT:    addl $-32768, %esi # imm = 0x8000
 ; SSE-NEXT:    addw %cx, %ax
 ; SSE-NEXT:    cmovol %esi, %eax
 ; SSE-NEXT:    movw %ax, (%rdx)
@@ -482,7 +482,7 @@ define void @v1i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; AVX-NEXT:    leal (%rax,%rcx), %esi
 ; AVX-NEXT:    movswl %si, %esi
 ; AVX-NEXT:    sarl $15, %esi
-; AVX-NEXT:    xorl $-32768, %esi # imm = 0x8000
+; AVX-NEXT:    addl $-32768, %esi # imm = 0x8000
 ; AVX-NEXT:    addw %cx, %ax
 ; AVX-NEXT:    cmovol %esi, %eax
 ; AVX-NEXT:    movw %ax, (%rdx)
