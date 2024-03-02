@@ -59,7 +59,7 @@ attributes #1 = { "frame-pointer"="all" "no-trapping-math"="true" "stack-protect
 !2 = !{i32 7, !"PIE Level", i32 2}
 !3 = !{i32 7, !"uwtable", i32 2}
 !4 = !{i32 7, !"frame-pointer", i32 2}
-!5 = !{!"clang version 19.0.0git (https://github.com/lifengxiang1025/llvm-project.git ead0a9777f8ccb5c26d50d96bade6cd5b47f496b)"}
+!5 = !{!"clang version 19.0.0"}
 !6 = !{i64 1}
 !7 = !{i64 5}
 !8 = !{i64 7}
@@ -224,7 +224,7 @@ attributes #3 = { mustprogress uwtable "frame-pointer"="all" "min-legal-vector-w
 !2 = !{i32 7, !"PIE Level", i32 2}
 !3 = !{i32 7, !"uwtable", i32 2}
 !4 = !{i32 7, !"frame-pointer", i32 2}
-!5 = !{!"clang version 19.0.0git (https://github.com/lifengxiang1025/llvm-project.git ead0a9777f8ccb5c26d50d96bade6cd5b47f496b)"}
+!5 = !{!"clang version 19.0.0"}
 !6 = !{i64 6}
 !7 = !{i64 3}
 !8 = !{i64 4}
@@ -381,7 +381,7 @@ attributes #3 = { mustprogress uwtable "frame-pointer"="all" "min-legal-vector-w
 !2 = !{i32 7, !"PIE Level", i32 2}
 !3 = !{i32 7, !"uwtable", i32 2}
 !4 = !{i32 7, !"frame-pointer", i32 2}
-!5 = !{!"clang version 19.0.0git (https://github.com/lifengxiang1025/llvm-project.git ead0a9777f8ccb5c26d50d96bade6cd5b47f496b)"}
+!5 = !{!"clang version 19.0.0"}
 !6 = !{i64 2}
 !7 = !{i64 4, i64 3}
 !8 = !{i64 9, i64 3}
