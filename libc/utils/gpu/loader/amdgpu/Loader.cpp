@@ -230,12 +230,12 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   implicit_args_t *implicit_args = reinterpret_cast<implicit_args_t *>(
       reinterpret_cast<uint8_t *>(args) + sizeof(args_t));
   implicit_args->grid_dims = dims;
-  implicit_args->grid_size_x = params.num_threads_x;
-  implicit_args->grid_size_y = params.num_threads_y;
-  implicit_args->grid_size_z = params.num_threads_z;
-  implicit_args->workgroup_size_x = params.num_blocks_x;
-  implicit_args->workgroup_size_y = params.num_blocks_y;
-  implicit_args->workgroup_size_z = params.num_blocks_z;
+  implicit_args->grid_size_x = params.num_blocks_x;
+  implicit_args->grid_size_y = params.num_blocks_y;
+  implicit_args->grid_size_z = params.num_blocks_z;
+  implicit_args->workgroup_size_x = params.num_threads_x;
+  implicit_args->workgroup_size_y = params.num_threads_y;
+  implicit_args->workgroup_size_z = params.num_threads_z;
 
   // Obtain a packet from the queue.
   uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
