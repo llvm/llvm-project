@@ -28,7 +28,7 @@ public:
   struct Field {
     const FieldDecl *Decl;
     unsigned Offset;
-    Descriptor *Desc;
+    const Descriptor *Desc;
     bool isBitField() const { return Decl->isBitField(); }
   };
 
@@ -36,8 +36,8 @@ public:
   struct Base {
     const RecordDecl *Decl;
     unsigned Offset;
-    Descriptor *Desc;
-    Record *R;
+    const Descriptor *Desc;
+    const Record *R;
   };
 
   /// Mapping from identifiers to field descriptors.
@@ -80,7 +80,6 @@ public:
 
   unsigned getNumFields() const { return Fields.size(); }
   const Field *getField(unsigned I) const { return &Fields[I]; }
-  Field *getField(unsigned I) { return &Fields[I]; }
 
   using const_base_iter = BaseList::const_iterator;
   llvm::iterator_range<const_base_iter> bases() const {
@@ -120,9 +119,9 @@ private:
   VirtualBaseList VirtualBases;
 
   /// Mapping from declarations to bases.
-  llvm::DenseMap<const RecordDecl *, Base *> BaseMap;
+  llvm::DenseMap<const RecordDecl *, const Base *> BaseMap;
   /// Mapping from field identifiers to descriptors.
-  llvm::DenseMap<const FieldDecl *, Field *> FieldMap;
+  llvm::DenseMap<const FieldDecl *, const Field *> FieldMap;
   /// Mapping from declarations to virtual bases.
   llvm::DenseMap<const RecordDecl *, Base *> VirtualBaseMap;
   /// Size of the structure.

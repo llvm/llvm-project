@@ -21,6 +21,7 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
+#include "src/__support/integer_literals.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <errno.h>
@@ -31,6 +32,7 @@ using fputil::DoubleDouble;
 using fputil::TripleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
 using Sign = fputil::Sign;
+using LIBC_NAMESPACE::operator""_u128;
 
 // log2(10)
 constexpr double LOG2_10 = 0x1.a934f0979a371p+1;
@@ -99,17 +101,15 @@ DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // For |dx| < 2^-14:
 //   | output - 10^dx | < 1.5 * 2^-124.
 Float128 poly_approx_f128(const Float128 &dx) {
-  using MType = typename Float128::MantissaType;
-
   constexpr Float128 COEFFS_128[]{
-      {Sign::POS, -127, MType({0, 0x8000000000000000})}, // 1.0
-      {Sign::POS, -126, MType({0xea56d62b82d30a2d, 0x935d8dddaaa8ac16})},
-      {Sign::POS, -126, MType({0x80a99ce75f4d5bdb, 0xa9a92639e753443a})},
-      {Sign::POS, -126, MType({0x6a4f9d7dbf6c9635, 0x82382c8ef1652304})},
-      {Sign::POS, -124, MType({0x345787019216c7af, 0x12bd7609fd98c44c})},
-      {Sign::POS, -127, MType({0xcc41ed7e0d27aee5, 0x450a7ff47535d889})},
-      {Sign::POS, -130, MType({0x8326bb91a6e7601d, 0xd3f6b844702d636b})},
-      {Sign::POS, -130, MType({0xfa7b46df314112a9, 0x45b937f0d05bb1cd})},
+      {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
+      {Sign::POS, -126, 0x935d8ddd'aaa8ac16'ea56d62b'82d30a2d_u128},
+      {Sign::POS, -126, 0xa9a92639'e753443a'80a99ce7'5f4d5bdb_u128},
+      {Sign::POS, -126, 0x82382c8e'f1652304'6a4f9d7d'bf6c9635_u128},
+      {Sign::POS, -124, 0x12bd7609'fd98c44c'34578701'9216c7af_u128},
+      {Sign::POS, -127, 0x450a7ff4'7535d889'cc41ed7e'0d27aee5_u128},
+      {Sign::POS, -130, 0xd3f6b844'702d636b'8326bb91'a6e7601d_u128},
+      {Sign::POS, -130, 0x45b937f0'd05bb1cd'fa7b46df'314112a9_u128},
   };
 
   Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],

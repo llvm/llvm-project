@@ -84,6 +84,7 @@ public:
     eBroadcastBitWarning = (1 << 1),
     eBroadcastBitError = (1 << 2),
     eBroadcastSymbolChange = (1 << 3),
+    eBroadcastBitProgressCategory = (1 << 4),
   };
 
   using DebuggerList = std::vector<lldb::DebuggerSP>;
@@ -592,6 +593,7 @@ protected:
   friend class CommandInterpreter;
   friend class REPL;
   friend class Progress;
+  friend class ProgressManager;
 
   /// Report progress events.
   ///
@@ -622,10 +624,11 @@ protected:
   ///   debugger identifier that this progress should be delivered to. If this
   ///   optional parameter does not have a value, the progress will be
   ///   delivered to all debuggers.
-  static void ReportProgress(uint64_t progress_id, std::string title,
-                             std::string details, uint64_t completed,
-                             uint64_t total,
-                             std::optional<lldb::user_id_t> debugger_id);
+  static void
+  ReportProgress(uint64_t progress_id, std::string title, std::string details,
+                 uint64_t completed, uint64_t total,
+                 std::optional<lldb::user_id_t> debugger_id,
+                 uint32_t progress_category_bit = eBroadcastBitProgress);
 
   static void ReportDiagnosticImpl(DiagnosticEventData::Type type,
                                    std::string message,

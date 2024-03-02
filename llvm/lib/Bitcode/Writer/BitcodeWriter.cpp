@@ -1804,6 +1804,11 @@ void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
 
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
 
+  if (auto PtrAuthData = N->getPtrAuthData())
+    Record.push_back(PtrAuthData->Payload.RawData);
+  else
+    Record.push_back(0);
+
   Stream.EmitRecord(bitc::METADATA_DERIVED_TYPE, Record, Abbrev);
   Record.clear();
 }
@@ -2624,7 +2629,7 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
       }
     } else if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C)) {
       Code = bitc::CST_CODE_FLOAT;
-      Type *Ty = CFP->getType();
+      Type *Ty = CFP->getType()->getScalarType();
       if (Ty->isHalfTy() || Ty->isBFloatTy() || Ty->isFloatTy() ||
           Ty->isDoubleTy()) {
         Record.push_back(CFP->getValueAPF().bitcastToAPInt().getZExtValue());

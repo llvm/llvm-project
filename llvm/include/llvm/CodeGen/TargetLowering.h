@@ -596,6 +596,42 @@ public:
   /// avoided.
   bool isJumpExpensive() const { return JumpIsExpensive; }
 
+  // Costs parameters used by
+  // SelectionDAGBuilder::shouldKeepJumpConditionsTogether.
+  // shouldKeepJumpConditionsTogether will use these parameter value to
+  // determine if two conditions in the form `br (and/or cond1, cond2)` should
+  // be split into two branches or left as one.
+  //
+  // BaseCost is the cost threshold (in latency). If the estimated latency of
+  // computing both `cond1` and `cond2` is below the cost of just computing
+  // `cond1` + BaseCost, the two conditions will be kept together. Otherwise
+  // they will be split.
+  //
+  // LikelyBias increases BaseCost if branch probability info indicates that it
+  // is likely that both `cond1` and `cond2` will be computed.
+  //
+  // UnlikelyBias decreases BaseCost if branch probability info indicates that
+  // it is likely that both `cond1` and `cond2` will be computed.
+  //
+  // Set any field to -1 to make it ignored (setting BaseCost to -1 results in
+  // `shouldKeepJumpConditionsTogether` always returning false).
+  struct CondMergingParams {
+    int BaseCost;
+    int LikelyBias;
+    int UnlikelyBias;
+  };
+  // Return params for deciding if we should keep two branch conditions merged
+  // or split them into two separate branches.
+  // Arg0: The binary op joining the two conditions (and/or).
+  // Arg1: The first condition (cond1)
+  // Arg2: The second condition (cond2)
+  virtual CondMergingParams
+  getJumpConditionMergingParams(Instruction::BinaryOps, const Value *,
+                                const Value *) const {
+    // -1 will always result in splitting.
+    return {-1, -1, -1};
+  }
+
   /// Return true if selects are only cheaper than branches if the branch is
   /// unlikely to be predicted right.
   bool isPredictableSelectExpensive() const {
@@ -5123,6 +5159,19 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result
   SDValue expandFP_TO_INT_SAT(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Truncate Op to ResultVT. If the result is exact, leave it alone. If it is
+  /// not exact, force the result to be odd.
+  /// \param ResultVT The type of result.
+  /// \param Op The value to round.
+  /// \returns The expansion result
+  SDValue expandRoundInexactToOdd(EVT ResultVT, SDValue Op, const SDLoc &DL,
+                                  SelectionDAG &DAG) const;
+
+  /// Expand round(fp) to fp conversion
+  /// \param N Node to expand
+  /// \returns The expansion result
+  SDValue expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Expand check for floating point class.
   /// \param ResultVT The type of intrinsic call result.

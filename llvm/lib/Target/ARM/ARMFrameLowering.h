@@ -59,6 +59,10 @@ public:
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
 
+  /// Update the IsRestored flag on LR if it is spilled, based on the return
+  /// instructions.
+  static void updateLRRestored(MachineFunction &MF);
+
   void processFunctionBeforeFrameFinalized(
       MachineFunction &MF, RegScavenger *RS = nullptr) const override;
 

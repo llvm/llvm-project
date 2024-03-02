@@ -87,6 +87,7 @@ module {
 
     // Release the resources.
     bufferization.dealloc_tensor %sv : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %empty : tensor<?xf64>
     memref.dealloc %array : memref<?xi64>
     func.call @rtdrand(%g) : (!Generator) -> ()
 

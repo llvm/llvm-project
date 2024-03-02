@@ -721,6 +721,7 @@ private:
     unsigned ID;
 
     /// Whether this is a wildcard export.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsWildcard : 1;
 
     /// String data.

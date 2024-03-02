@@ -554,7 +554,9 @@ struct RVVIntrinsicRecord {
   bool HasMaskPolicy : 1;
   bool HasFRMRoundModeOp : 1;
   bool IsTuple : 1;
+  LLVM_PREFERRED_TYPE(PolicyScheme)
   uint8_t UnMaskedPolicyScheme : 2;
+  LLVM_PREFERRED_TYPE(PolicyScheme)
   uint8_t MaskedPolicyScheme : 2;
 };
 

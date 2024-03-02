@@ -259,6 +259,19 @@ public:
 
 } // end anonymous namespace
 
+// Helper function that generates an MMO that considers the alignment of the
+// stack, and the size of the stack object
+static MachineMemOperand *getStackAlignedMMO(SDValue StackPtr,
+                                             MachineFunction &MF,
+                                             bool isObjectScalable) {
+  auto &MFI = MF.getFrameInfo();
+  int FI = cast<FrameIndexSDNode>(StackPtr)->getIndex();
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
+  uint64_t ObjectSize = isObjectScalable ? ~UINT64_C(0) : MFI.getObjectSize(FI);
+  return MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
+                                 ObjectSize, MFI.getObjectAlign(FI));
+}
+
 /// Return a vector shuffle operation which
 /// performs the same shuffle in terms of order or result bytes, but on a type
 /// whose vector element type is narrower than the original shuffle type.
@@ -1127,8 +1140,9 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
       Action = TargetLowering::Custom;
     break;
   case ISD::READCYCLECOUNTER:
-    // READCYCLECOUNTER returns an i64, even if type legalization might have
-    // expanded that to several smaller types.
+  case ISD::READSTEADYCOUNTER:
+    // READCYCLECOUNTER and READSTEADYCOUNTER return a i64, even if type
+    // legalization might have expanded that to several smaller types.
     Action = TLI.getOperationAction(Node->getOpcode(), MVT::i64);
     break;
   case ISD::READ_REGISTER:
@@ -1376,19 +1390,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::STORE:
     return LegalizeStoreOps(Node);
   }
-}
-
-// Helper function that generates an MMO that considers the alignment of the
-// stack, and the size of the stack object
-static MachineMemOperand *getStackAlignedMMO(SDValue StackPtr,
-                                             MachineFunction &MF,
-                                             bool isObjectScalable) {
-  auto &MFI = MF.getFrameInfo();
-  int FI = cast<FrameIndexSDNode>(StackPtr)->getIndex();
-  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
-  uint64_t ObjectSize = isObjectScalable ? ~UINT64_C(0) : MFI.getObjectSize(FI);
-  return MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
-                                 ObjectSize, MFI.getObjectAlign(FI));
 }
 
 SDValue SelectionDAGLegalize::ExpandExtractFromVectorThroughStack(SDValue Op) {
@@ -3080,6 +3081,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Node->getOperand(0));
     break;
   case ISD::READCYCLECOUNTER:
+  case ISD::READSTEADYCOUNTER:
     // If the target didn't expand this, just return 'zero' and preserve the
     // chain.
     Results.append(Node->getNumValues() - 1,
@@ -3215,10 +3217,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   case ISD::FP_ROUND: {
-    EVT VT = Node->getValueType(0);
-    if (VT.getScalarType() == MVT::bf16) {
-      Results.push_back(
-          DAG.getNode(ISD::FP_TO_BF16, SDLoc(Node), VT, Node->getOperand(0)));
+    if ((Tmp1 = TLI.expandFP_ROUND(Node, DAG))) {
+      Results.push_back(Tmp1);
       break;
     }
 
@@ -3291,6 +3291,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (Op.getValueType() != MVT::f32)
       Op = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, Op,
                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+    // Certain SNaNs will turn into infinities if we do a simple shift right.
+    if (!DAG.isKnownNeverSNaN(Op)) {
+      Op = DAG.getNode(ISD::FCANONICALIZE, dl, MVT::f32, Op, Node->getFlags());
+    }
     Op = DAG.getNode(
         ISD::SRL, dl, MVT::i32, DAG.getNode(ISD::BITCAST, dl, MVT::i32, Op),
         DAG.getConstant(16, dl,

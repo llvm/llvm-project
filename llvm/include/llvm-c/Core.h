@@ -2328,6 +2328,16 @@ LLVMValueRef LLVMConstShuffleVector(LLVMValueRef VectorAConstant,
                                     LLVMValueRef MaskConstant);
 LLVMValueRef LLVMBlockAddress(LLVMValueRef F, LLVMBasicBlockRef BB);
 
+/**
+ * Gets the function associated with a given BlockAddress constant value.
+ */
+LLVMValueRef LLVMGetBlockAddressFunction(LLVMValueRef BlockAddr);
+
+/**
+ * Gets the basic block associated with a given BlockAddress constant value.
+ */
+LLVMBasicBlockRef LLVMGetBlockAddressBasicBlock(LLVMValueRef BlockAddr);
+
 /** Deprecated: Use LLVMGetInlineAsm instead. */
 LLVMValueRef LLVMConstInlineAsm(LLVMTypeRef Ty,
                                 const char *AsmString, const char *Constraints,

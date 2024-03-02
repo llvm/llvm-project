@@ -40,7 +40,8 @@ protected:
 
   void initializeBOLT() {
     BC = cantFail(BinaryContext::createBinaryContext(
-        ObjFile.get(), true, DWARFContext::create(*ObjFile.get())));
+        ObjFile.get(), true, DWARFContext::create(*ObjFile.get()),
+        {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
   }
 
@@ -76,10 +77,11 @@ TEST_P(BinaryContextTester, FlushPendingRelocCALL26) {
   // 12: bl func2
   // 16: func2
 
-  char Data[20] = {};
+  constexpr size_t DataSize = 20;
+  uint8_t *Data = new uint8_t[DataSize];
   BinarySection &BS = BC->registerOrUpdateSection(
-      ".text", ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC,
-      (uint8_t *)Data, sizeof(Data), 4);
+      ".text", ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC, Data,
+      DataSize, 4);
   MCSymbol *RelSymbol1 = BC->getOrCreateGlobalSymbol(4, "Func1");
   ASSERT_TRUE(RelSymbol1);
   BS.addRelocation(8, RelSymbol1, ELF::R_AARCH64_CALL26, 0, 0, true);
@@ -88,7 +90,7 @@ TEST_P(BinaryContextTester, FlushPendingRelocCALL26) {
   BS.addRelocation(12, RelSymbol2, ELF::R_AARCH64_CALL26, 0, 0, true);
 
   std::error_code EC;
-  SmallVector<char> Vect(sizeof(Data));
+  SmallVector<char> Vect(DataSize);
   raw_svector_ostream OS(Vect);
 
   BS.flushPendingRelocations(OS, [&](const MCSymbol *S) {

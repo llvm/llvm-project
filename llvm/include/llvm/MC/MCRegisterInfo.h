@@ -572,9 +572,10 @@ public:
   bool isValid() const { return SRIter.isValid(); }
 
   /// Moves to the next position.
-  void operator++() {
+  MCSubRegIndexIterator &operator++() {
     ++SRIter;
     ++SRIndex;
+    return *this;
   }
 };
 
@@ -688,9 +689,10 @@ public:
   bool isValid() const { return RUIter.isValid(); }
 
   /// Moves to the next position.
-  void operator++() {
+  MCRegUnitMaskIterator &operator++() {
     ++MaskListIter;
     ++RUIter;
+    return *this;
   }
 };
 
@@ -728,10 +730,11 @@ public:
   }
 
   /// Preincrement to move to the next root register.
-  void operator++() {
+  MCRegUnitRootIterator &operator++() {
     assert(isValid() && "Cannot move off the end of the list.");
     Reg0 = Reg1;
     Reg1 = 0;
+    return *this;
   }
 };
 
@@ -788,10 +791,11 @@ public:
     }
   }
 
-  void operator++() {
+  MCRegAliasIterator &operator++() {
     assert(isValid() && "Cannot move off the end of the list.");
     do advance();
     while (!IncludeSelf && isValid() && *SI == Reg);
+    return *this;
   }
 };
 

@@ -99,8 +99,8 @@ static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
   SmallPtrSet<DPValue *, 4> EncounteredDPValues;
 
   /// Append IntrinsicT users of MetadataAsValue(MD).
-  auto AppendUsers = [&Ctx, &EncounteredIntrinsics, &Result,
-                      DPValues](Metadata *MD) {
+  auto AppendUsers = [&Ctx, &EncounteredIntrinsics, &EncounteredDPValues,
+                      &Result, DPValues](Metadata *MD) {
     if (auto *MDV = MetadataAsValue::getIfExists(Ctx, MD)) {
       for (User *U : MDV->users())
         if (IntrinsicT *DVI = dyn_cast<IntrinsicT>(U))
@@ -113,7 +113,8 @@ static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
     if (LocalAsMetadata *L = dyn_cast<LocalAsMetadata>(MD)) {
       for (DPValue *DPV : L->getAllDPValueUsers()) {
         if (Type == DPValue::LocationType::Any || DPV->getType() == Type)
-          DPValues->push_back(DPV);
+          if (EncounteredDPValues.insert(DPV).second)
+            DPValues->push_back(DPV);
       }
     }
   };
@@ -240,8 +241,8 @@ void DebugInfoFinder::processInstruction(const Module &M,
   if (auto DbgLoc = I.getDebugLoc())
     processLocation(M, DbgLoc.get());
 
-  for (const DPValue &DPV : I.getDbgValueRange())
-    processDPValue(M, DPV);
+  for (const DbgRecord &DPR : I.getDbgValueRange())
+    processDbgRecord(M, DPR);
 }
 
 void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
@@ -251,9 +252,10 @@ void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
   processLocation(M, Loc->getInlinedAt());
 }
 
-void DebugInfoFinder::processDPValue(const Module &M, const DPValue &DPV) {
-  processVariable(M, DPV.getVariable());
-  processLocation(M, DPV.getDebugLoc().get());
+void DebugInfoFinder::processDbgRecord(const Module &M, const DbgRecord &DR) {
+  if (const DPValue *DPV = dyn_cast<const DPValue>(&DR))
+    processVariable(M, DPV->getVariable());
+  processLocation(M, DR.getDebugLoc().get());
 }
 
 void DebugInfoFinder::processType(DIType *DT) {
@@ -1334,9 +1336,9 @@ LLVMMetadataRef LLVMDIBuilderCreatePointerType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef PointeeTy,
     uint64_t SizeInBits, uint32_t AlignInBits, unsigned AddressSpace,
     const char *Name, size_t NameLen) {
-  return wrap(unwrap(Builder)->createPointerType(unwrapDI<DIType>(PointeeTy),
-                                         SizeInBits, AlignInBits,
-                                         AddressSpace, {Name, NameLen}));
+  return wrap(unwrap(Builder)->createPointerType(
+      unwrapDI<DIType>(PointeeTy), SizeInBits, AlignInBits, AddressSpace,
+      {Name, NameLen}));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateStructType(
@@ -1822,7 +1824,7 @@ void at::deleteAll(Function *F) {
   SmallVector<DPValue *, 12> DPToDelete;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
-      for (auto &DPV : I.getDbgValueRange())
+      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
         if (DPV.isDbgAssign())
           DPToDelete.push_back(&DPV);
       if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
@@ -2214,10 +2216,6 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   if (F.hasFnAttribute(Attribute::OptimizeNone))
     return /*Changed*/ false;
 
-  // FIXME: https://github.com/llvm/llvm-project/issues/76545
-  if (F.hasFnAttribute(Attribute::SanitizeHWAddress))
-    return /*Changed*/ false;
-
   bool Changed = false;
   auto *DL = &F.getParent()->getDataLayout();
   // Collect a map of {backing storage : dbg.declares} (currently "backing
@@ -2250,7 +2248,7 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   };
   for (auto &BB : F) {
     for (auto &I : BB) {
-      for (auto &DPV : I.getDbgValueRange()) {
+      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
         if (DPV.isDbgDeclare())
           ProcessDeclare(&DPV, DPVDeclares);
       }

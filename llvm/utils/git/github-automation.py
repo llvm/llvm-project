@@ -343,6 +343,7 @@ class ReleaseWorkflow:
         branch_repo_name: str,
         branch_repo_token: str,
         llvm_project_dir: str,
+        requested_by: str,
     ) -> None:
         self._token = token
         self._repo_name = repo
@@ -353,6 +354,7 @@ class ReleaseWorkflow:
         else:
             self._branch_repo_token = self.token
         self._llvm_project_dir = llvm_project_dir
+        self._requested_by = requested_by
 
     @property
     def token(self) -> str:
@@ -381,6 +383,10 @@ class ReleaseWorkflow:
     @property
     def llvm_project_dir(self) -> str:
         return self._llvm_project_dir
+
+    @property
+    def requested_by(self) -> str:
+        return self._requested_by
 
     @property
     def repo(self) -> github.Repository.Repository:
@@ -536,7 +542,7 @@ class ReleaseWorkflow:
 
         self.issue_remove_cherry_pick_failed_label()
         return self.create_pull_request(
-            self.branch_repo_owner, self.repo_name, branch_name
+            self.branch_repo_owner, self.repo_name, branch_name, commits
         )
 
     def check_if_pull_request_exists(
@@ -545,7 +551,9 @@ class ReleaseWorkflow:
         pulls = repo.get_pulls(head=head)
         return pulls.totalCount != 0
 
-    def create_pull_request(self, owner: str, repo_name: str, branch: str) -> bool:
+    def create_pull_request(
+        self, owner: str, repo_name: str, branch: str, commits: List[str]
+    ) -> bool:
         """
         Create a pull request in `self.repo_name`.  The base branch of the
         pull request will be chosen based on the the milestone attached to
@@ -567,9 +575,15 @@ class ReleaseWorkflow:
             print("PR already exists...")
             return True
         try:
+            commit_message = repo.get_commit(commits[-1]).commit.message
+            message_lines = commit_message.splitlines()
+            title = "{}: {}".format(release_branch_for_issue, message_lines[0])
+            body = "Backport {}\n\nRequested by: @{}".format(
+                " ".join(commits), self.requested_by
+            )
             pull = repo.create_pull(
-                title=f"PR for {issue_ref}",
-                body="resolves {}".format(issue_ref),
+                title=title,
+                body=body,
                 base=release_branch_for_issue,
                 head=head,
                 maintainer_can_modify=False,
@@ -683,6 +697,12 @@ llvmbot_git_config_parser = subparsers.add_parser(
     "setup-llvmbot-git",
     help="Set the default user and email for the git repo in LLVM_PROJECT_DIR to llvmbot",
 )
+release_workflow_parser.add_argument(
+    "--requested-by",
+    type=str,
+    required=True,
+    help="The user that requested this backport",
+)
 
 args = parser.parse_args()
 
@@ -712,6 +732,7 @@ elif args.command == "release-workflow":
         args.branch_repo,
         args.branch_repo_token,
         args.llvm_project_dir,
+        args.requested_by,
     )
     if not release_workflow.release_branch_for_issue:
         release_workflow.issue_notify_no_milestone(sys.stdin.readlines())

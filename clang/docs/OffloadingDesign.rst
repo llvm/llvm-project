@@ -474,27 +474,27 @@ We can see the steps created by clang to generate the offloading code using the
 Relocatable Linking
 -------------------
 
-The offloading compilation pipeline normally will defer the final device linking 
-and runtime registration until the ``clang-linker-wrapper`` is run to create the 
-executable. This is the standard behaviour when compiling for OpenMP offloading 
-or CUDA and HIP in ``-fgpu-rdc`` mode. However, there are some cases where the 
-user may wish to perform this device handling prematurely. This is described in 
+The offloading compilation pipeline normally will defer the final device linking
+and runtime registration until the ``clang-linker-wrapper`` is run to create the
+executable. This is the standard behaviour when compiling for OpenMP offloading
+or CUDA and HIP in ``-fgpu-rdc`` mode. However, there are some cases where the
+user may wish to perform this device handling prematurely. This is described in
 the :doc:`linker wrapper documentation<ClangLinkerWrapper>`.
 
-Effectively, this allows the user to handle offloading specific linking ahead of 
-time when shipping objects or static libraries. This can be thought of as 
-performing a standard ``-fno-gpu-rdc`` compilation on a subset of object files. 
-This can be useful to reduce link time, prevent users from interacting with the 
+Effectively, this allows the user to handle offloading specific linking ahead of
+time when shipping objects or static libraries. This can be thought of as
+performing a standard ``-fno-gpu-rdc`` compilation on a subset of object files.
+This can be useful to reduce link time, prevent users from interacting with the
 library's device code, or for shipping libraries to incompatible compilers.
 
-Normally, if a relocatable link is done using ``clang -r`` it will simply merge 
-the ``.llvm.offloading`` sections which will then be linked later when the 
-executable is created. However, if the ``-r`` flag is used with the offloading 
-toolchain, it will perform the device linking and registration phases and then 
+Normally, if a relocatable link is done using ``clang -r`` it will simply merge
+the ``.llvm.offloading`` sections which will then be linked later when the
+executable is created. However, if the ``-r`` flag is used with the offloading
+toolchain, it will perform the device linking and registration phases and then
 merge the registration code into the final relocatable object file.
 
-The following example shows how using the relocatable link with the offloading 
-pipeline can create a static library with offloading code that can be 
+The following example shows how using the relocatable link with the offloading
+pipeline can create a static library with offloading code that can be
 redistributed without requiring any additional handling.
 
 .. code-block:: console

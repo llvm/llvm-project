@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-eabi -mattr=+v8.2a,+neon,+fullfp16  | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 -mattr=+v8.2a,+neon,+fullfp16  | FileCheck %s
 
 define dso_local half @t_vfmah_f16(half %a, half %b, half %c) {
 ; CHECK-LABEL: t_vfmah_f16:
