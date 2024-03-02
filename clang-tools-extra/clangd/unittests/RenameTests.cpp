@@ -861,6 +861,19 @@ TEST(RenameTest, WithinFileRename) {
 
         void func([[Fo^o]] *f) {}
       )cpp",
+
+      // ObjC property.
+      R"cpp(
+        @interface Foo
+        @property(nonatomic) int [[f^oo]];
+        @end
+        @implementation Foo
+        @end
+
+        void func(Foo *f) {
+          f.[[f^oo]] += [f [[fo^o]]];
+        }
+      )cpp",
   };
   llvm::StringRef NewName = "NewName";
   for (llvm::StringRef T : Tests) {
@@ -1008,18 +1021,144 @@ TEST(RenameTest, ObjCWithinFileRename) {
                           "performNewAction:by:",
                           // Expected
                           std::nullopt,
+                      },
+                      {
+                          R"cpp(
+                          @interface Foo
+                          @property(nonatomic) int fo^o;
+                          @end
+                          @implementation Foo
+                          @end
+
+                          void func(Foo *f) {
+                            [f setFoo:[f foo] ];
+                          }
+                        )cpp",
+                          "bar",
+                          R"cpp(
+                          @interface Foo
+                          @property(nonatomic) int bar;
+                          @end
+                          @implementation Foo
+                          @end
+
+                          void func(Foo *f) {
+                            [f setBar:[f bar] ];
+                          }
+                        )cpp",
+                      },
+                      {
+                          R"cpp(
+                          @interface Foo
+                          @property(nonatomic) int foo;
+                          @end
+                          @implementation Foo
+                          @end
+
+                          void func(Foo *f) {
+                            [f setF^oo:[f foo] ];
+                          }
+                        )cpp",
+                          "setBar:",
+                          R"cpp(
+                          @interface Foo
+                          @property(nonatomic) int bar;
+                          @end
+                          @implementation Foo
+                          @end
+
+                          void func(Foo *f) {
+                            [f setBar:[f bar] ];
+                          }
+                        )cpp",
+                      },
+                      {
+                          R"cpp(
+                          @interface Foo
+                          @property(nonatomic) int foo;
+                          @end
+                          @implementation Foo
+                          @end
+
+                          void func(Foo *f) {
+                            [f setFoo:[f fo^o] ];
+                          }
+                        )cpp",
+                          "bar",
+                          R"cpp(
+                          @interface Foo
+                          @property(nonatomic) int bar;
+                          @end
+                          @implementation Foo
+                          @end
+
+                          void func(Foo *f) {
+                            [f setBar:[f bar] ];
+                          }
+                        )cpp",
+                      },
+                      {
+                          R"cpp(
+                          @interface Foo
+                          - (int)fo^o;
+                          - (void)setFoo:(int)foo;
+                          @end
+                          @implementation Foo
+                          - (int)fo^o { return 0; }
+                          - (void)setFoo:(int)foo {}
+                          @end
+
+                          void func(Foo *f) {
+                            f.foo = f.fo^o + 1;
+                          }
+                        )cpp",
+                          "bar",
+                          R"cpp(
+                          @interface Foo
+                          - (int)bar;
+                          - (void)setFoo:(int)foo;
+                          @end
+                          @implementation Foo
+                          - (int)bar { return 0; }
+                          - (void)setFoo:(int)foo {}
+                          @end
+
+                          void func(Foo *f) {
+                            f.foo = f.bar + 1;
+                          }
+                        )cpp",
+                      },
+                      {
+                          R"cpp(
+                          @interface Foo
+                          - (int)foo;
+                          - (void)setFoo:(int)foo;
+                          @end
+                          @implementation Foo
+                          - (int)foo { return 1; }
+                          - (void)setFoo:(int)foo {}
+                          @end
+
+                          void func(Foo *f) {
+                            f.f^oo += 1;
+                          }
+                        )cpp",
+                          "bar",
+                          std::nullopt,
                       }};
   for (TestCase T : Tests) {
     SCOPED_TRACE(T.Input);
     Annotations Code(T.Input);
     auto TU = TestTU::withCode(Code.code());
     TU.ExtraArgs.push_back("-xobjective-c");
+
     auto AST = TU.build();
     auto Index = TU.index();
     for (const auto &RenamePos : Code.points()) {
       auto RenameResult =
           rename({RenamePos, T.NewName, AST, testPath(TU.Filename),
                   getVFSFromAST(AST), Index.get()});
+
       if (std::optional<StringRef> Expected = T.Expected) {
         ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
         ASSERT_EQ(1u, RenameResult->GlobalChanges.size());
