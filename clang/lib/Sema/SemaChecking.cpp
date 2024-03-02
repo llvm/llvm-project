@@ -5218,15 +5218,17 @@ bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
         // Note: type promotion is intended to be handeled via the intrinsics
         //  and not the builtin itself.
         S->Diag(TheCall->getBeginLoc(),
-                diag::err_vec_builtin_incompatible_vector_all)
-            << TheCall->getDirectCallee()
+                diag::err_vec_builtin_incompatible_vector)
+            << TheCall->getDirectCallee() << /*useAllTerminology*/ true
             << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
         retValue = true;
       }
       if (VecTyA->getNumElements() != VecTyB->getNumElements()) {
-        // if we get here a HLSLVectorTruncation is needed.
-        S->Diag(BuiltinLoc, diag::err_vec_builtin_incompatible_vector_all)
-            << TheCall->getDirectCallee()
+        // You should only be hitting this case if you are calling the builtin
+        // directly. HLSL intrinsics should avoid this case via a
+        // HLSLVectorTruncation.
+        S->Diag(BuiltinLoc, diag::err_vec_builtin_incompatible_vector)
+            << TheCall->getDirectCallee() << /*useAllTerminology*/ true
             << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                            TheCall->getArg(1)->getEndLoc());
         retValue = true;
@@ -5241,8 +5243,8 @@ bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
 
   // Note: if we get here one of the args is a scalar which
   // requires a VectorSplat on Arg0 or Arg1
-  S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector_all)
-      << TheCall->getDirectCallee()
+  S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
+      << TheCall->getDirectCallee() << /*useAllTerminology*/ true
       << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                      TheCall->getArg(1)->getEndLoc());
   return true;
@@ -9472,7 +9474,7 @@ bool Sema::SemaBuiltinVSX(CallExpr *TheCall) {
   if ((!Arg1Ty->isVectorType() && !Arg1Ty->isDependentType()) ||
       (!Arg2Ty->isVectorType() && !Arg2Ty->isDependentType())) {
     return Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
-           << TheCall->getDirectCallee()
+           << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ false
            << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                           TheCall->getArg(1)->getEndLoc());
   }
@@ -9480,7 +9482,7 @@ bool Sema::SemaBuiltinVSX(CallExpr *TheCall) {
   // Check the first two arguments are the same type.
   if (!Context.hasSameUnqualifiedType(Arg1Ty, Arg2Ty)) {
     return Diag(BuiltinLoc, diag::err_vec_builtin_incompatible_vector)
-           << TheCall->getDirectCallee()
+           << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ false
            << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                           TheCall->getArg(1)->getEndLoc());
   }
@@ -9516,7 +9518,7 @@ ExprResult Sema::SemaBuiltinShuffleVector(CallExpr *TheCall) {
     if (!LHSType->isVectorType() || !RHSType->isVectorType())
       return ExprError(
           Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_non_vector)
-          << TheCall->getDirectCallee()
+          << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ false
           << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                          TheCall->getArg(1)->getEndLoc()));
 
@@ -9532,12 +9534,14 @@ ExprResult Sema::SemaBuiltinShuffleVector(CallExpr *TheCall) {
         return ExprError(Diag(TheCall->getBeginLoc(),
                               diag::err_vec_builtin_incompatible_vector)
                          << TheCall->getDirectCallee()
+                         << /*isMorethantwoArgs*/ false
                          << SourceRange(TheCall->getArg(1)->getBeginLoc(),
                                         TheCall->getArg(1)->getEndLoc()));
     } else if (!Context.hasSameUnqualifiedType(LHSType, RHSType)) {
       return ExprError(Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
                        << TheCall->getDirectCallee()
+                       << /*isMorethantwoArgs*/ false
                        << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                                       TheCall->getArg(1)->getEndLoc()));
     } else if (numElements != numResElements) {
