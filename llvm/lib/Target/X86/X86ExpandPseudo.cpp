@@ -632,33 +632,35 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     // byte of ModRM + 1 byte of SIB + 4 bytes of displacement + 4 bytes of
     // immediate = 15 bytes in total, e.g.
     //
-    //  addq    $184, -96, %rax
-    //
-    // In such a case, no additional segment override prefix can be used. To
-    // resolve the issue, we split the “long” instruction into 2 instructions:
-    //
     //  subq    $184, %fs:257(%rbx, %rcx), %rax
     //
-    //  ->
+    // In such a case, no additional (ADSIZE or segment override) prefix can be
+    // used. To resolve the issue, we split the “long” instruction into 2
+    // instructions:
     //
     //  movq %fs:257(%rbx, %rcx)，%rax
     //  subq $184, %rax
-    int MemOpNo = X86::getFirstAddrOperandIdx(MI);
-    Register Segment = MI.getOperand(MemOpNo + X86::AddrSegmentReg).getReg();
-    if (Segment == X86::NoRegister)
-      return false;
     const MachineOperand &ImmOp =
         MI.getOperand(MI.getNumExplicitOperands() - 1);
     // If the immediate is a expr, conservatively estimate 4 bytes.
     if (ImmOp.isImm() && isInt<8>(ImmOp.getImm()))
       return false;
-    Register Base = MI.getOperand(MemOpNo + X86::AddrBaseReg).getReg();
-    Register Index = MI.getOperand(MemOpNo + X86::AddrIndexReg).getReg();
-    if (!X86II::needSIB(Base, Index, /*In64BitMode=*/true))
-      return false;
+    int MemOpNo = X86::getFirstAddrOperandIdx(MI);
     const MachineOperand &DispOp = MI.getOperand(MemOpNo + X86::AddrDisp);
     // If the displacement is a expr, conservatively estimate 4 bytes.
     if (DispOp.isImm() && isInt<8>(DispOp.getImm()))
+      return false;
+    // There can only be one of three: SIB, segment override register, ADSIZE
+    Register Segment = MI.getOperand(MemOpNo + X86::AddrSegmentReg).getReg();
+    Register Base = MI.getOperand(MemOpNo + X86::AddrBaseReg).getReg();
+    Register Index = MI.getOperand(MemOpNo + X86::AddrIndexReg).getReg();
+    unsigned Count = Segment ? 1 : 0;
+    if (X86II::needSIB(Base, Index, /*In64BitMode=*/true))
+      ++Count;
+    if (X86MCRegisterClasses[X86::GR32RegClassID].contains(Base) ||
+        X86MCRegisterClasses[X86::GR32RegClassID].contains(Index))
+      ++Count;
+    if (Count < 2)
       return false;
     unsigned Opc, LoadOpc;
     switch (Opcode) {
