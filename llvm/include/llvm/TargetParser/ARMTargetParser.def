@@ -346,8 +346,8 @@ ARM_CPU_NAME("cortex-x1c", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
 ARM_CPU_NAME("neoverse-n1", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
              (ARM::AEK_FP16 | ARM::AEK_DOTPROD))
 ARM_CPU_NAME("neoverse-n2", ARMV9A, FK_NEON_FP_ARMV8, false,
-             (ARM::AEK_BF16 | ARM::AEK_DOTPROD | ARM::AEK_I8MM | ARM::AEK_RAS |
-              ARM::AEK_SB))
+             (ARM::AEK_BF16 | ARM::AEK_DOTPROD | ARM::AEK_FP16FML |
+              ARM::AEK_I8MM | ARM::AEK_RAS | ARM::AEK_SB ))
 ARM_CPU_NAME("neoverse-v1", ARMV8_4A, FK_CRYPTO_NEON_FP_ARMV8, false,
              (ARM::AEK_RAS | ARM::AEK_FP16 | ARM::AEK_BF16 | ARM::AEK_DOTPROD))
 ARM_CPU_NAME("cyclone", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false, ARM::AEK_CRC)
