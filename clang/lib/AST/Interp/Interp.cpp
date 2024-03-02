@@ -285,10 +285,6 @@ static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return CheckConstant(S, OpPC, Ptr.getDeclDesc());
 }
 
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  return !Ptr.isDummy();
-}
-
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                CheckSubobjectKind CSK) {
   if (!Ptr.isZero())
@@ -595,10 +591,8 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
   return true;
 }
 
-/// We aleady know the given DeclRefExpr is invalid for some reason,
-/// now figure out why and print appropriate diagnostics.
-bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
-  const ValueDecl *D = DR->getDecl();
+static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
+                                const ValueDecl *D) {
   const SourceInfo &E = S.Current->getSource(OpPC);
 
   if (isa<ParmVarDecl>(D)) {
@@ -621,8 +615,26 @@ bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
       return false;
     }
   }
-
   return false;
+}
+
+/// We aleady know the given DeclRefExpr is invalid for some reason,
+/// now figure out why and print appropriate diagnostics.
+bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
+  const ValueDecl *D = DR->getDecl();
+  return diagnoseUnknownDecl(S, OpPC, D);
+}
+
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!Ptr.isDummy())
+    return true;
+
+  const Descriptor *Desc = Ptr.getDeclDesc();
+  const ValueDecl *D = Desc->asValueDecl();
+  if (!D)
+    return false;
+
+  return diagnoseUnknownDecl(S, OpPC, D);
 }
 
 bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
