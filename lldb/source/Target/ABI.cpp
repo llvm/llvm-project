@@ -147,6 +147,32 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
   return return_valobj_sp;
 }
 
+addr_t ABI::FixCodeAddress(lldb::addr_t pc) {
+  ProcessSP process_sp(GetProcessSP());
+  addr_t mask = process_sp->GetCodeAddressMask();
+  bool is_highmem = pc & (1ULL << 63);
+  if (is_highmem &&
+      process_sp->GetHighmemCodeAddressMask() != LLDB_INVALID_ADDRESS_MASK)
+    mask = process_sp->GetHighmemCodeAddressMask();
+  if (mask == LLDB_INVALID_ADDRESS_MASK)
+    return pc;
+
+  return is_highmem ? pc | mask : pc & (~mask);
+}
+
+addr_t ABI::FixDataAddress(lldb::addr_t pc) {
+  ProcessSP process_sp(GetProcessSP());
+  addr_t mask = process_sp->GetDataAddressMask();
+  bool is_highmem = pc & (1ULL << 63);
+  if (is_highmem &&
+      process_sp->GetHighmemDataAddressMask() != LLDB_INVALID_ADDRESS_MASK)
+    mask = process_sp->GetHighmemCodeAddressMask();
+  if (mask == LLDB_INVALID_ADDRESS_MASK)
+    return pc;
+
+  return is_highmem ? pc | mask : pc & (~mask);
+}
+
 ValueObjectSP ABI::GetReturnValueObject(Thread &thread, llvm::Type &ast_type,
                                         bool persistent) const {
   ValueObjectSP return_valobj_sp;
