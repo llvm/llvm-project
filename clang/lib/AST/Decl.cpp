@@ -5042,7 +5042,7 @@ void RecordDecl::completeDefinition() {
 
   // Layouts are dumped when computed, so if we are dumping for all complete
   // types, we need to force usage to get types that wouldn't be used elsewhere.
-  if (Ctx.getLangOpts().DumpRecordLayoutsComplete)
+  if (Ctx.getLangOpts().DumpRecordLayoutsComplete && !isDependentType())
     (void)Ctx.getASTRecordLayout(this);
 }
 
