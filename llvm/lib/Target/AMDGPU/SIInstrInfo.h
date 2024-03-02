@@ -1460,9 +1460,6 @@ namespace AMDGPU {
   int getIfAddr64Inst(uint16_t Opcode);
 
   LLVM_READONLY
-  int getAtomicNoRetOp(uint16_t Opcode);
-
-  LLVM_READONLY
   int getSOPKOp(uint16_t Opcode);
 
   /// \returns SADDR form of a FLAT Global instruction given an \p Opcode
