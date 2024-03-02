@@ -1,6 +1,6 @@
 a
 
-; RUN: not FileCheck -input-file %s %s 2>&1 | \
+; RUN: not FileCheck -color=0 -input-file %s %s 2>&1 | \
 ; RUN:   FileCheck -check-prefix CHECK-ERROR -DDIR=%S \
 ; RUN:   --match-full-lines --strict-whitespace %s
 
@@ -11,7 +11,7 @@ a
 
 b
 
-; RUN: not FileCheck -input-file %s -check-prefix CHECK-PSEUDO %s 2>&1 | \
+; RUN: not FileCheck -color=0 -input-file %s -check-prefix CHECK-PSEUDO %s 2>&1 | \
 ; RUN:   FileCheck -check-prefix CHECK-ERROR-PSEUDO -DDIR=%S \
 ; RUN:   --match-full-lines --strict-whitespace %s
 
@@ -22,7 +22,7 @@ b
 
 c
 
-; RUN: not FileCheck -input-file %s -check-prefix CHECK-GLOBAL %s 2>&1 | \
+; RUN: not FileCheck -color=0 -input-file %s -check-prefix CHECK-GLOBAL %s 2>&1 | \
 ; RUN:   FileCheck -check-prefix CHECK-ERROR-GLOBAL -DDIR=%S \
 ; RUN:   --match-full-lines --strict-whitespace %s
 
