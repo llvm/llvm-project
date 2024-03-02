@@ -15,6 +15,8 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/Support/Debug.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_OPENMPTASKBASEDTARGET
@@ -33,13 +35,34 @@ struct OpenMPTaskBasedTargetPass
 
   void runOnOperation() override;
 };
-
+template <typename OpTy>
+class OmpTaskBasedTargetRewritePattern : public OpRewritePattern<OpTy> {
+public:
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    if (op.getDependVars().empty()) {
+      return rewriter.notifyMatchFailure(op, "depend clause not found on op");
+    }
+    return success();
+  }
+};
 } // namespace
+static void
+populateOmpTaskBasedTargetRewritePatterns(RewritePatternSet &patterns) {
+  patterns.add<OmpTaskBasedTargetRewritePattern<omp::TargetOp>>(
+      patterns.getContext());
+}
 
 void OpenMPTaskBasedTargetPass::runOnOperation() {
   Operation *op = getOperation();
+  LLVM_DEBUG(llvm::dbgs() << "Running on the following operation\n");
+  //  LLVM_DEBUG(llvm::dbgs() << op->dump());
 
-  op->dump();
+  RewritePatternSet patterns(op->getContext());
+  populateOmpTaskBasedTargetRewritePatterns(patterns);
+  if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+    signalPassFailure();
 }
 std::unique_ptr<Pass> mlir::createOpenMPTaskBasedTargetPass() {
   return std::make_unique<OpenMPTaskBasedTargetPass>();
