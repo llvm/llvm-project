@@ -27,7 +27,7 @@ float2 test_lerp_vector_size_mismatch(float3 p0, float2 p1) {
 
 float2 test_lerp_builtin_vector_size_mismatch(float3 p0, float2 p1) {
   return __builtin_hlsl_lerp(p0, p1, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have vectors of the same type}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
 float test_lerp_scalar_mismatch(float p0, half p1) {
