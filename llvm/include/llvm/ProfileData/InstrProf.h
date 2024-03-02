@@ -650,11 +650,9 @@ Error InstrProfSymtab::create(const FuncNameIterRange &FuncIterRange,
     if (Error E = addFuncName(Name))
       return E;
 
-  for (auto VTableName : VTableIterRange) {
-    if (Error E = addVTableName(VTableName)) {
+  for (auto VTableName : VTableIterRange)
+    if (Error E = addVTableName(VTableName))
       return E;
-    }
-  }
 
   finalizeSymtab();
   return Error::success();

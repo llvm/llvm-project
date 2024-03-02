@@ -479,9 +479,8 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
       continue;
     Types.clear();
     G.getMetadata(LLVMContext::MD_type, Types);
-    if (!Types.empty()) {
+    if (!Types.empty())
       MD5VTableMap.emplace_back(G.getGUID(), &G);
-    }
   }
   Sorted = false;
   finalizeSymtab();
@@ -616,9 +615,9 @@ uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
       });
 
   // Returns the MD5 hash if Address is within the address range of an entry.
-  if (It != VTableAddrRangeToMD5Map.end() && It->first.first <= Address) {
+  if (It != VTableAddrRangeToMD5Map.end() && It->first.first <= Address)
     return It->second;
-  }
+
   // The virtual table address collected from value profiler could be defined
   // in another module that is not instrumented. Force the value to be 0 in
   // this case.
@@ -704,9 +703,8 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
 Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
                            std::string &Result, bool doCompression) {
   std::vector<std::string> VTableNameStrs;
-  for (auto *VTable : VTables) {
+  for (auto *VTable : VTables)
     VTableNameStrs.push_back(getPGOName(*VTable));
-  }
   return collectGlobalObjectNameStrings(
       VTableNameStrs, compression::zlib::isAvailable() && doCompression,
       Result);

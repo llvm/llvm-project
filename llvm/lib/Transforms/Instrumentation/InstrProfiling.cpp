@@ -755,14 +755,11 @@ bool InstrLowerer::lower() {
     }
   }
 
-  if (EnableVTableValueProfiling) {
-    for (GlobalVariable &GV : M.globals()) {
+  if (EnableVTableValueProfiling)
+    for (GlobalVariable &GV : M.globals())
       // Global variables with type metadata are virtual table variables.
-      if (GV.hasMetadata(LLVMContext::MD_type)) {
+      if (GV.hasMetadata(LLVMContext::MD_type))
         getOrCreateVTableProfData(&GV);
-      }
-    }
-  }
 
   for (Function &F : M)
     MadeChange |= lowerIntrinsics(&F);
@@ -1342,9 +1339,9 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
       // COFF doesn't allow the comdat group leader to have private linkage, so
       // upgrade private linkage to internal linkage to produce a symbol table
       // entry.
-      if (TT.isOSBinFormatCOFF() && GV->hasPrivateLinkage()) {
+      if (TT.isOSBinFormatCOFF() && GV->hasPrivateLinkage())
         GV->setLinkage(GlobalValue::InternalLinkage);
-      }
+
       return;
     }
   };

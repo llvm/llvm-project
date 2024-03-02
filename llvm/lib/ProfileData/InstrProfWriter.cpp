@@ -607,9 +607,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       OS.writeByte(0);
   }
 
-  uint64_t VTableNamesSectionStart = 0;
-
-  VTableNamesSectionStart = OS.tell();
+  uint64_t VTableNamesSectionStart = OS.tell();
 
   std::vector<std::string> VTableNameStrs;
   for (const auto &VTableName : VTableNames.keys())
@@ -822,10 +820,9 @@ Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
     }
   }
 
-  for (const auto &VTableName : VTableNames) {
+  for (const auto &VTableName : VTableNames)
     if (Error E = Symtab.addVTableName(VTableName.getKey()))
       return E;
-  }
 
   if (static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile))
     writeTextTemporalProfTraceData(OS, Symtab);

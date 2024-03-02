@@ -367,9 +367,9 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
             Value = IndexedInstrProf::ComputeHash(VD.first);
           }
         } else if (ValueKind == IPVK_VTableTarget) {
-          if (InstrProfSymtab::isExternalSymbol(VD.first)) {
+          if (InstrProfSymtab::isExternalSymbol(VD.first))
             Value = 0;
-          } else {
+          else {
             if (Error E = Symtab->addVTableName(VD.first))
               return E;
             Value = IndexedInstrProf::ComputeHash(VD.first);
@@ -1378,8 +1378,7 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
   if (Symtab)
     return *Symtab;
 
-  std::unique_ptr<InstrProfSymtab> NewSymtab =
-      std::make_unique<InstrProfSymtab>();
+  auto NewSymtab = std::make_unique<InstrProfSymtab>();
 
   if (Error E = NewSymtab->initVTableNamesFromCompressedStrings(
           StringRef(VTableNamePtr, CompressedVTableNamesLen))) {

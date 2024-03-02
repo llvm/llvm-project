@@ -58,9 +58,8 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
         // of symbols). So the performance overhead from non-vtable profiled
         // address is negligible if exists at all. Comparing loaded address
         // with symbol address guarantees correctness.
-        if (VTablePtr != nullptr && isa<Instruction>(VTablePtr)) {
+        if (VTablePtr != nullptr && isa<Instruction>(VTablePtr))
           ProfiledAddresses.push_back(cast<Instruction>(VTablePtr));
-        }
       }
     }
   }
