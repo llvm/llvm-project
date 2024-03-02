@@ -124,13 +124,9 @@ struct LoopVectorizeOptions {
   /// EnableLoopInterleaving = true and EnableLoopVectorization = true. This
   /// means that interleaving default is consistent with the cl::opt flag, while
   /// vectorization is not.
-  /// FIXME: The default for EnableLoopVectorization in the cl::opt should be
-  /// set to true, and the corresponding change to account for this be made in
-  /// opt.cpp. The initializations below will become:
-  /// InterleaveOnlyWhenForced(!EnableLoopInterleaving)
-  /// VectorizeOnlyWhenForced(!EnableLoopVectorization).
   LoopVectorizeOptions()
-      : InterleaveOnlyWhenForced(false), VectorizeOnlyWhenForced(false) {}
+      : InterleaveOnlyWhenForced(!EnableLoopInterleaving),
+        VectorizeOnlyWhenForced(!EnableLoopVectorization) {}
   LoopVectorizeOptions(bool InterleaveOnlyWhenForced,
                        bool VectorizeOnlyWhenForced)
       : InterleaveOnlyWhenForced(InterleaveOnlyWhenForced),
