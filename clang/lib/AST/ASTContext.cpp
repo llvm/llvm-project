@@ -3479,9 +3479,7 @@ QualType ASTContext::getRValueReferenceType(QualType T) const {
   return QualType(New, 0);
 }
 
-/// getMemberPointerType - Return the uniqued reference to the type for a
-/// member pointer to the specified type, in the specified class.
-QualType ASTContext::getMemberPointerType(QualType T, const Type *Cls) const {
+QualType ASTContext::getMemberPointerTypeInternal(QualType T, const Type *Cls) const {
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
   llvm::FoldingSetNodeID ID;
@@ -3508,6 +3506,26 @@ QualType ASTContext::getMemberPointerType(QualType T, const Type *Cls) const {
   Types.push_back(New);
   MemberPointerTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
+}
+
+/// getMemberPointerType - Return the uniqued reference to the type for a
+/// member pointer to the specified type, in the specified class.
+QualType ASTContext::getMemberPointerType(QualType T, const Type *Cls) const {
+  bool Paren = isa<ParenType>(T);
+  T = T.IgnoreParens();
+
+  // GCC and MSVC effectively drop '__restrict' from the function type,
+  // so do the same as well.
+  if (auto *FPT = dyn_cast<FunctionProtoType>(T);
+      FPT && FPT->getMethodQuals().hasRestrict()) {
+    FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+    EPI.TypeQuals.removeRestrict();
+    T = getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI);
+  }
+
+  if (Paren)
+    T = getParenType(T);
+  return getMemberPointerTypeInternal(T, Cls);
 }
 
 /// getConstantArrayType - Return the unique reference to the type for an
@@ -4419,7 +4437,7 @@ QualType ASTContext::getFunctionTypeInternal(
   // Determine whether the type being created is already canonical or not.
   bool isCanonical = !Unique && IsCanonicalExceptionSpec &&
                      isCanonicalResultType(ResultTy) &&
-                     !EPI.HasTrailingReturn && !EPI.TypeQuals.hasRestrict();
+                     !EPI.HasTrailingReturn;
   for (unsigned i = 0; i != NumArgs && isCanonical; ++i)
     if (!ArgArray[i].isCanonicalAsParam())
       isCanonical = false;
@@ -4440,7 +4458,6 @@ QualType ASTContext::getFunctionTypeInternal(
     llvm::SmallVector<QualType, 8> ExceptionTypeStorage;
     FunctionProtoType::ExtProtoInfo CanonicalEPI = EPI;
     CanonicalEPI.HasTrailingReturn = false;
-    CanonicalEPI.TypeQuals.removeRestrict();
 
     if (IsCanonicalExceptionSpec) {
       // Exception spec is already OK.

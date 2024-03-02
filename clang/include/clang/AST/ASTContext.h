@@ -1435,6 +1435,10 @@ public:
   /// The class \p Cls is a \c Type because it could be a dependent name.
   QualType getMemberPointerType(QualType T, const Type *Cls) const;
 
+private:
+  QualType getMemberPointerTypeInternal(QualType T, const Type *Cls) const;
+
+public:
   /// Return a non-unique reference to the type for a variable array of
   /// the specified element type.
   QualType getVariableArrayType(QualType EltTy, Expr *NumElts,

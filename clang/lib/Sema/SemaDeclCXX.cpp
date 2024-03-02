@@ -725,6 +725,26 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
       Old->isDefined(OldDefinition, true))
     CheckForFunctionRedefinition(New, OldDefinition);
 
+  // Both GCC and MSVC allow a mismatch in '__restrict'-qualification between
+  // the old and new declarations' cv-qualifier-seq's. Unfortunately, they
+  // also handle this mismatch differently: GCC considers '__restrict' on the
+  // definition to be authoritative (i.e. the type of 'this' is '__restrict'
+  // in the body of a definition, if that definition is '__restrict'-qualified),
+  // while MSVC does the opposite: it only looks at the first declaration).
+  //
+  // To support this behaviour, copy '__restrict' from the old declaration to
+  // the new one in MSVC mode only.
+  if (isa<CXXMethodDecl>(New) and getLangOpts().MSVCCompat) {
+    auto NewType = New->getType()->castAs<FunctionProtoType>();
+    auto Quals = Old->getType()->castAs<FunctionProtoType>()->getMethodQuals();
+    if (Quals.hasRestrict() && !NewType->getMethodQuals().hasRestrict()) {
+      FunctionProtoType::ExtProtoInfo EPI = NewType->getExtProtoInfo();
+      EPI.TypeQuals.addRestrict();
+      New->setType(Context.getFunctionType(NewType->getReturnType(),
+                                               NewType->getParamTypes(), EPI));
+    }
+  }
+
   return Invalid;
 }
 
