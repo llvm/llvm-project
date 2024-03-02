@@ -125,22 +125,55 @@ entry:
   ret double %mul
 }
 
-define double @powi_fmul_powi_no_reassoc(double %x, i32 %y, i32 %z) {
-; CHECK-LABEL: @powi_fmul_powi_no_reassoc(
+; Negative test: Missing reassoc flag on fmul
+define double @powi_fmul_powi_no_reassoc1(double %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @powi_fmul_powi_no_reassoc1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[P2:%.*]] = tail call double @llvm.powi.f64.i32(double [[X]], i32 [[Z:%.*]])
+; CHECK-NEXT:    [[P1:%.*]] = tail call reassoc double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[P2:%.*]] = tail call reassoc double @llvm.powi.f64.i32(double [[X]], i32 [[Z:%.*]])
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[P2]], [[P1]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
 entry:
-  %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 %y)
-  %p2 = tail call double @llvm.powi.f64.i32(double %x, i32 %z)
+  %p1 = tail call reassoc double @llvm.powi.f64.i32(double %x, i32 %y)
+  %p2 = tail call reassoc double @llvm.powi.f64.i32(double %x, i32 %z)
   %mul = fmul double %p2, %p1
   ret double %mul
 }
 
+; Negative test: Missing reassoc flag on 2nd operand
+define double @powi_fmul_powi_no_reassoc2(double %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @powi_fmul_powi_no_reassoc2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = tail call reassoc double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[P2:%.*]] = tail call double @llvm.powi.f64.i32(double [[X]], i32 [[Z:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[P2]], [[P1]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+entry:
+  %p1 = tail call reassoc double @llvm.powi.f64.i32(double %x, i32 %y)
+  %p2 = tail call double @llvm.powi.f64.i32(double %x, i32 %z)
+  %mul = fmul reassoc double %p2, %p1
+  ret double %mul
+}
 
+; Negative test: Missing reassoc flag on 1st operand
+define double @powi_fmul_powi_no_reassoc3(double %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @powi_fmul_powi_no_reassoc3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[P2:%.*]] = tail call reassoc double @llvm.powi.f64.i32(double [[X]], i32 [[Z:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[P2]], [[P1]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+entry:
+  %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 %y)
+  %p2 = tail call reassoc double @llvm.powi.f64.i32(double %x, i32 %z)
+  %mul = fmul reassoc double %p2, %p1
+  ret double %mul
+}
+
+; All of the fmul and its operands should have the reassoc flags
 define double @powi_fmul_powi(double %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @powi_fmul_powi(
 ; CHECK-NEXT:  entry:
@@ -149,8 +182,8 @@ define double @powi_fmul_powi(double %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
 entry:
-  %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 %y)
-  %p2 = tail call double @llvm.powi.f64.i32(double %x, i32 %z)
+  %p1 = tail call reassoc double @llvm.powi.f64.i32(double %x, i32 %y)
+  %p2 = tail call reassoc double @llvm.powi.f64.i32(double %x, i32 %z)
   %mul = fmul reassoc double %p2, %p1
   ret double %mul
 }
@@ -163,8 +196,8 @@ define double @powi_fmul_powi_fast_on_fmul(double %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
 entry:
-  %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 %y)
-  %p2 = tail call double @llvm.powi.f64.i32(double %x, i32 %z)
+  %p1 = tail call fast double @llvm.powi.f64.i32(double %x, i32 %y)
+  %p2 = tail call fast double @llvm.powi.f64.i32(double %x, i32 %z)
   %mul = fmul fast double %p2, %p1
   ret double %mul
 }
@@ -192,8 +225,23 @@ define double @powi_fmul_powi_same_power(double %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
 entry:
-  %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 %y)
-  %p2 = tail call double @llvm.powi.f64.i32(double %x, i32 %y)
+  %p1 = tail call reassoc double @llvm.powi.f64.i32(double %x, i32 %y)
+  %p2 = tail call reassoc double @llvm.powi.f64.i32(double %x, i32 %y)
+  %mul = fmul reassoc double %p2, %p1
+  ret double %mul
+}
+
+define double @powi_fmul_powi_different_integer_types(double %x, i32 %y, i16 %z) {
+; CHECK-LABEL: @powi_fmul_powi_different_integer_types(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = tail call reassoc double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[P2:%.*]] = tail call reassoc double @llvm.powi.f64.i16(double [[X]], i16 [[Z:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[P2]], [[P1]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+entry:
+  %p1 = tail call reassoc double @llvm.powi.f64.i32(double %x, i32 %y)
+  %p2 = tail call reassoc double @llvm.powi.f64.i16(double %x, i16 %z)
   %mul = fmul reassoc double %p2, %p1
   ret double %mul
 }
@@ -201,16 +249,16 @@ entry:
 define double @powi_fmul_powi_use_first(double %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @powi_fmul_powi_use_first(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[P1:%.*]] = tail call reassoc double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    tail call void @use(double [[P1]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X]], i32 [[TMP0]])
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
 entry:
-  %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 %y)
+  %p1 = tail call reassoc double @llvm.powi.f64.i32(double %x, i32 %y)
   tail call void @use(double %p1)
-  %p2 = tail call double @llvm.powi.f64.i32(double %x, i32 %z)
+  %p2 = tail call reassoc double @llvm.powi.f64.i32(double %x, i32 %z)
   %mul = fmul reassoc double %p1, %p2
   ret double %mul
 }
@@ -218,16 +266,16 @@ entry:
 define double @powi_fmul_powi_use_second(double %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @powi_fmul_powi_use_second(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Z:%.*]])
+; CHECK-NEXT:    [[P1:%.*]] = tail call reassoc double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Z:%.*]])
 ; CHECK-NEXT:    tail call void @use(double [[P1]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    [[MUL:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X]], i32 [[TMP0]])
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
 entry:
-  %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 %z)
+  %p1 = tail call reassoc double @llvm.powi.f64.i32(double %x, i32 %z)
   tail call void @use(double %p1)
-  %p2 = tail call double @llvm.powi.f64.i32(double %x, i32 %y)
+  %p2 = tail call reassoc double @llvm.powi.f64.i32(double %x, i32 %y)
   %mul = fmul reassoc double %p2, %p1
   ret double %mul
 }
@@ -333,11 +381,11 @@ define double @fdiv_pow_powi_negative(double %x) {
 ; Negative test: The 2nd powi argument is a variable
 define double @fdiv_pow_powi_negative_variable(double %x, i32 %y) {
 ; CHECK-LABEL: @fdiv_pow_powi_negative_variable(
-; CHECK-NEXT:    [[P1:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[P1:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nnan double [[P1]], [[X]]
 ; CHECK-NEXT:    ret double [[DIV]]
 ;
-  %p1 = call double @llvm.powi.f64.i32(double %x, i32 %y)
+  %p1 = call reassoc double @llvm.powi.f64.i32(double %x, i32 %y)
   %div = fdiv reassoc nnan double %p1, %x
   ret double %div
 }
@@ -348,7 +396,7 @@ define double @powi_fmul_powi_x(double noundef %x) {
 ; CHECK-NEXT:    [[MUL:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
-  %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 3)
+  %p1 = tail call reassoc double @llvm.powi.f64.i32(double %x, i32 3)
   %mul = fmul reassoc double %p1, %x
   ret double %mul
 }
