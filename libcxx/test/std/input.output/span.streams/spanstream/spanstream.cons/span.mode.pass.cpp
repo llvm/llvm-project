@@ -69,55 +69,55 @@ void test() {
 
   // Mode: default
   {
-    SpStream sps(sp);
-    assert(sps.span().data() == arr);
-    assert(sps.span().empty());
-    assert(sps.span().size() == 0);
+    SpStream spSt(sp);
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
   }
   {
-    SpStream sps(std::as_const(sp));
-    assert(sps.span().data() == arr);
-    assert(sps.span().empty());
-    assert(sps.span().size() == 0);
+    SpStream spSt(std::as_const(sp));
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
   }
   // Mode: `ios_base::in`
   {
-    SpStream sps(sp, std::ios_base::in);
-    assert(sps.span().data() == arr);
-    assert(!sps.span().empty());
-    assert(sps.span().size() == 4);
+    SpStream spSt(sp, std::ios_base::in);
+    assert(spSt.span().data() == arr);
+    assert(!spSt.span().empty());
+    assert(spSt.span().size() == 4);
   }
   {
-    SpStream sps(std::as_const(sp), std::ios_base::in);
-    assert(sps.span().data() == arr);
-    assert(!sps.span().empty());
-    assert(sps.span().size() == 4);
+    SpStream spSt(std::as_const(sp), std::ios_base::in);
+    assert(spSt.span().data() == arr);
+    assert(!spSt.span().empty());
+    assert(spSt.span().size() == 4);
   }
   // Mode `ios_base::out`
   {
-    SpStream sps(sp, std::ios_base::out);
-    assert(sps.span().data() == arr);
-    assert(sps.span().empty());
-    assert(sps.span().size() == 0);
+    SpStream spSt(sp, std::ios_base::out);
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
   }
   {
-    SpStream sps(std::as_const(sp), std::ios_base::out);
-    assert(sps.span().data() == arr);
-    assert(sps.span().empty());
-    assert(sps.span().size() == 0);
+    SpStream spSt(std::as_const(sp), std::ios_base::out);
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
   }
   // Mode: multiple
   {
-    SpStream sps(sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-    assert(sps.span().data() == arr);
-    assert(sps.span().empty());
-    assert(sps.span().size() == 0);
+    SpStream spSt(sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
   }
   {
-    SpStream sps(std::as_const(sp), std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-    assert(sps.span().data() == arr);
-    assert(sps.span().empty());
-    assert(sps.span().size() == 0);
+    SpStream spSt(std::as_const(sp), std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
   }
 }
 
