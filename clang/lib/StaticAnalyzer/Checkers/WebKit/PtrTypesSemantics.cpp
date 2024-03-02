@@ -260,7 +260,7 @@ class TrivialFunctionAnalysisVisitor
     if (!IsNew)
       return It->second;
     bool Result = Function();
-    It->second = Result;
+    Cache[S] = Result;
     return Result;
   }
 
