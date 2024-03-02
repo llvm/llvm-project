@@ -692,6 +692,20 @@ end
   essentially ignored unless there are some unmasked array entries and
   *all* of them are NaNs.
 
+* When `INDEX` is used as an unrestricted specific intrinsic function
+  in the context of an actual procedure, as the explicit interface in
+  a `PROCEDURE` declaration statement, or as the target of a procedure
+  pointer assignment, its interface has exactly two dummy arguments
+  (`STRING=` and `SUBSTRING=`), and includes neither `BACK=` nor
+  `KIND=`.
+  This is how `INDEX` as an unrestricted specific intrinsic function was
+  documented in FORTRAN '77 and Fortran '90; later revisions of the
+  standard deleted the argument information from the section on
+  unrestricted specific intrinsic functions.
+  At least one other compiler (XLF) seems to expect that the interface for
+  `INDEX` include an optional `BACK=` argument, but it doesn't actually
+  work.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
