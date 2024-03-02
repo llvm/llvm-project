@@ -1,0 +1,26 @@
+src/
+*.map
+*.tgz
+
+# tool
+.github
+.eslintrc.js
+.prettierrc
+
+# package manager
+yarn.lock
+yarn-error.log
+
+# bundler
+tsconfig.json
+webpack.config.js
+esbuild.mjs
+esbuild.js
+
+# vscode
+.vscodeignore
+.vscode/
+grammar.json
+*-grammar.json
+language-configuration.json
+*-language-configuration.json
