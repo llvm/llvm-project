@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=i686-- -mcpu=yonah -stats 2>&1 | grep "Number of block tails merged" | grep 16
+; RUN: llc < %s -mtriple=i686-- -mcpu=yonah -stats 2>&1 | grep "Number of block tails merged" | grep 9
 ; PR1909
 
 @.str = internal constant [48 x i8] c"transformed bounds: (%.2f, %.2f), (%.2f, %.2f)\0A\00"		; <ptr> [#uses=1]
@@ -217,4 +217,4 @@ bb456:		; preds = %bb448, %bb425, %bb417, %bb395, %bb385, %bb371
 	ret void
 }
 
-declare i32 @printf(ptr, ...) nounwind 
+declare i32 @printf(ptr, ...) nounwind
