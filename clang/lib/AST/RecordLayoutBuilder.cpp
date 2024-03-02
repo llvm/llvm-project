@@ -205,15 +205,15 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
 
   // Check the fields.
   for (const FieldDecl *FD : Class->fields()) {
+    const CXXRecordDecl *MemberDecl;
     const RecordType *RT =
         Context.getBaseElementType(FD->getType())->getAs<RecordType>();
 
-    // We only care about record types.
-    if (!RT)
+    // We only care about members layout.
+    if (!RT || !(MemberDecl = RT->getAsCXXRecordDecl()))
       continue;
 
     CharUnits EmptySize;
-    const CXXRecordDecl *MemberDecl = RT->getAsCXXRecordDecl();
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(MemberDecl);
     if (MemberDecl->isEmpty()) {
       // If the class decl is empty, get its size.
