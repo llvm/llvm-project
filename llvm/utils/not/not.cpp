@@ -12,6 +12,7 @@
 //     Will return true if cmd crashes (e.g. for testing crash reporting).
 
 #include "llvm/Support/Program.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -41,6 +42,9 @@ int main(int argc, const char **argv) {
     setenv("LLVM_DISABLE_CRASH_REPORT", "1", 0);
     setenv("LLVM_DISABLE_SYMBOLIZATION", "1", 0);
 #endif
+    // Try to disable coredumps for expected crashes as well since this can
+    // noticeably slow down running the test suite.
+    sys::Process::PreventCoreFiles();
   }
 
   if (argc == 0)
