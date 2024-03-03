@@ -1901,6 +1901,62 @@ public:
   }
 };
 
+/// Canonicalize extract(transpose(broadcast))) constructs, where the broadcast
+/// adds a new dimension and the extraction removes it again.
+class ExtractOpTransposedBroadcastDim final
+    : public OpRewritePattern<ExtractOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    // Skip vector.extract ops that do not remove any dimensions.
+    if (extractOp.getNumIndices() == 0)
+      return failure();
+    // Look for extract(transpose(broadcast(x))) pattern.
+    auto transposeOp =
+        extractOp.getVector().getDefiningOp<vector::TransposeOp>();
+    if (!transposeOp || transposeOp.getPermutation().empty())
+      return failure();
+    auto broadcastOp =
+        transposeOp.getVector().getDefiningOp<vector::BroadcastOp>();
+    if (!broadcastOp)
+      return failure();
+    // Check if the first dimension that is being removed by the vector.extract
+    // was added by the vector.broadcast.
+    int64_t removedDim = transposeOp.getPermutation()[0];
+    llvm::SetVector<int64_t> rankExtendedDims =
+        broadcastOp.computeRankExtendedDims();
+    if (!rankExtendedDims.contains(removedDim))
+      return failure();
+
+    // 1. Create new vector.broadcast without the removed dimension.
+    SmallVector<int64_t> newBroadcastShape(
+        broadcastOp.getResultVectorType().getShape());
+    newBroadcastShape.erase(newBroadcastShape.begin() + removedDim);
+    auto newBroadcast = rewriter.create<vector::BroadcastOp>(
+        broadcastOp.getLoc(),
+        VectorType::get(newBroadcastShape,
+                        broadcastOp.getResultVectorType().getElementType()),
+        broadcastOp.getSource());
+
+    // 2. Create new vector.transpose.
+    SmallVector<int64_t> newPermutation;
+    for (int64_t dim : transposeOp.getPermutation().drop_front())
+      newPermutation.push_back(dim < transposeOp.getPermutation()[0] ? dim
+                                                                     : dim - 1);
+    auto newTranspose = rewriter.create<vector::TransposeOp>(
+        transposeOp.getLoc(), newBroadcast, newPermutation);
+
+    // 3. Create new vector.extract without the outermost dimension.
+    SmallVector<OpFoldResult> mixedPositions = extractOp.getMixedPosition();
+    rewriter.replaceOpWithNewOp<vector::ExtractOp>(
+        extractOp, newTranspose, ArrayRef(mixedPositions).drop_front());
+
+    return success();
+  }
+};
+
 // Pattern to rewrite a ExtractOp(splat ConstantOp) -> ConstantOp.
 class ExtractOpSplatConstantFolder final : public OpRewritePattern<ExtractOp> {
 public:
@@ -2066,7 +2122,8 @@ LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add<ExtractOpSplatConstantFolder, ExtractOpNonSplatConstantFolder,
-              ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
+              ExtractOpFromBroadcast, ExtractOpTransposedBroadcastDim,
+              ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
 }
 
@@ -2114,6 +2171,20 @@ llvm::SetVector<int64_t> BroadcastOp::computeBroadcastedUnitDims() {
     return {};
   return ::computeBroadcastedUnitDims(srcVectorType.getShape(),
                                       getResultVectorType().getShape());
+}
+
+llvm::SetVector<int64_t> BroadcastOp::computeRankExtendedDims() {
+  llvm::SetVector<int64_t> broadcastedUnitDims = computeBroadcastedUnitDims();
+  llvm::SetVector<int64_t> result;
+  auto vecSrcType = dyn_cast<VectorType>(getSourceType());
+  int64_t rankDiff =
+      vecSrcType ? getResultVectorType().getRank() - vecSrcType.getRank()
+                 : getResultVectorType().getRank();
+  for (int64_t i = 0; i < rankDiff; ++i) {
+    if (!broadcastedUnitDims.contains(i))
+      result.insert(i);
+  }
+  return result;
 }
 
 /// Broadcast `value` to a vector of `dstShape`, knowing that exactly the
