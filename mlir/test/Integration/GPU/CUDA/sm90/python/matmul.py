@@ -98,6 +98,7 @@ def generate_matmul(
     use_warp_specialization=True,
     saveIR=False,
     max_num_stages=3,
+    options=f"cubin-chip=sm_90a cubin-features=+ptx80 opt-level=3",
 ):
     with matmulBuilder.ir.Context() as ctx, matmulBuilder.ir.Location.unknown():
         if use_warp_specialization:
@@ -137,7 +138,6 @@ def generate_matmul(
                 sys.stdout = original_stdout
 
         # Get compiler
-        options = f"cubin-chip=sm_90a cubin-features=+ptx80 opt-level=3"
         support_lib = os.getenv("SUPPORT_LIB")
         if not os.path.exists(support_lib):
             raise FileNotFoundError(

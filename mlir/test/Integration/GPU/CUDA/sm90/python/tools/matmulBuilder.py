@@ -22,6 +22,7 @@ CONSUMER_REGISTER_SIZE = 232
 PRODUCER_PRIMARY_THREAD = 128
 CONSUMER_PRIMARY_THREAD = 0
 
+# C++ uses this value to understand whether it's dynamic or not.
 MLIR_DYNAMIC = -9223372036854775808
 
 DEBUG = False
@@ -58,31 +59,11 @@ def debug_print(fmt, *args, predicate=None, threadNumber=-1, forcePrint=False):
         scf.yield_([])
 
 
-def get_type_str(ty):
-    if ir.F16Type.isinstance(ty):
-        return "f16"
-    if ir.F32Type.isinstance(ty):
-        return "f32"
-    if ir.F64Type.isinstance(ty):
-        return "f64"
-    if ir.IntegerType.isinstance(ty):
-        return "i" + str(ir.IntegerType(ty).width)
-    if ir.IndexType.isinstance(ty):
-        return "T.index()"
-    raise NotImplementedError(ty)
-
-
 def get_type_size(ty):
-    if ir.F16Type.isinstance(ty):
-        return 2
-    if ir.F32Type.isinstance(ty):
-        return 4
-    if ir.F64Type.isinstance(ty):
-        return 8
+    if ir.FloatType.isinstance(ty):
+        return ir.FloatType(ty).width // 8
     if ir.IntegerType.isinstance(ty):
         return ir.IntegerType(ty).width // 8
-    if ir.IndexType.isinstance(ty):
-        return 8
     raise NotImplementedError(ty)
 
 
@@ -187,7 +168,7 @@ def generate_matmul_ws(
         + "x"
         + str(TMA_LAST_DIM_F16)
         + "x"
-        + get_type_str(a_elem_ty)
+        + str(a_elem_ty)
         + ", "
         + str(smem_space)
         + ">, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>"
@@ -198,7 +179,7 @@ def generate_matmul_ws(
         + "x"
         + str(TMA_LAST_DIM_F16)
         + "x"
-        + get_type_str(b_elem_ty)
+        + str(b_elem_ty)
         + ", "
         + str(smem_space)
         + ">, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>"
@@ -209,7 +190,7 @@ def generate_matmul_ws(
         + "x"
         + str(BLOCK_N)
         + "x"
-        + get_type_str(c_elem_ty)
+        + str(c_elem_ty)
         + ">>"
     )
     a_wgmma_ty = ir.Type.parse(
@@ -218,7 +199,7 @@ def generate_matmul_ws(
         + "x"
         + str(BLOCK_K)
         + "x"
-        + get_type_str(a_elem_ty)
+        + str(a_elem_ty)
         + ", "
         + smem_space_str
         + ">>"
@@ -229,7 +210,7 @@ def generate_matmul_ws(
         + "x"
         + str(BLOCK_N)
         + "x"
-        + get_type_str(a_elem_ty)
+        + str(a_elem_ty)
         + ", "
         + smem_space_str
         + ">>"
@@ -704,7 +685,7 @@ def generate_matmul_multistage(
         + "x"
         + str(TMA_LAST_DIM_F16)
         + "x"
-        + get_type_str(a_elem_ty)
+        + str(a_elem_ty)
         + ", "
         + str(smem_space)
         + ">, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>"
@@ -715,7 +696,7 @@ def generate_matmul_multistage(
         + "x"
         + str(TMA_LAST_DIM_F16)
         + "x"
-        + get_type_str(b_elem_ty)
+        + str(b_elem_ty)
         + ", "
         + str(smem_space)
         + ">, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>"
@@ -726,7 +707,7 @@ def generate_matmul_multistage(
         + "x"
         + str(BLOCK_N)
         + "x"
-        + get_type_str(c_elem_ty)
+        + str(c_elem_ty)
         + ">>"
     )
     a_wgmma_ty = ir.Type.parse(
@@ -735,7 +716,7 @@ def generate_matmul_multistage(
         + "x"
         + str(BLOCK_K)
         + "x"
-        + get_type_str(a_elem_ty)
+        + str(a_elem_ty)
         + ", "
         + smem_space_str
         + ">>"
@@ -746,7 +727,7 @@ def generate_matmul_multistage(
         + "x"
         + str(BLOCK_N)
         + "x"
-        + get_type_str(a_elem_ty)
+        + str(a_elem_ty)
         + ", "
         + smem_space_str
         + ">>"
