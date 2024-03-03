@@ -27,7 +27,6 @@
 #include <tuple>
 #include <utility>
 
-#include "test_format_context.h"
 #include "test_macros.h"
 #include "make_string.h"
 
