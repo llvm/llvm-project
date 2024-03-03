@@ -201,8 +201,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_L, options::OPT_T_Group, options::OPT_r});
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group});
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
