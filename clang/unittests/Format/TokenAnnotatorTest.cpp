@@ -624,7 +624,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   Tokens = annotate("#define FOO(bar) foo((uint64_t)&bar)");
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_CastRParen);
-  // FIXME: should be TT_PointerOrReference instead.
   EXPECT_TOKEN(Tokens[11], tok::amp, TT_UnaryOperator);
 }
 
