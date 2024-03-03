@@ -2275,11 +2275,9 @@ Sema::CheckObjCForCollectionOperand(SourceLocation forLoc, Expr *collection) {
     // Otherwise, if we have any useful type information, check that
     // the type declares the appropriate method.
   } else if (iface || !objectType->qual_empty()) {
-    IdentifierInfo *selectorIdents[] = {
-      &Context.Idents.get("countByEnumeratingWithState"),
-      &Context.Idents.get("objects"),
-      &Context.Idents.get("count")
-    };
+    const IdentifierInfo *selectorIdents[] = {
+        &Context.Idents.get("countByEnumeratingWithState"),
+        &Context.Idents.get("objects"), &Context.Idents.get("count")};
     Selector selector = Context.Selectors.getSelector(3, &selectorIdents[0]);
 
     ObjCMethodDecl *method = nullptr;

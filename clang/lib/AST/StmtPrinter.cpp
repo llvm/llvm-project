@@ -1438,7 +1438,7 @@ void StmtPrinter::VisitOffsetOfExpr(OffsetOfExpr *Node) {
       continue;
 
     // Field or identifier node.
-    IdentifierInfo *Id = ON.getFieldName();
+    const IdentifierInfo *Id = ON.getFieldName();
     if (!Id)
       continue;
 
@@ -2339,7 +2339,7 @@ void StmtPrinter::VisitCXXPseudoDestructorExpr(CXXPseudoDestructorExpr *E) {
     E->getQualifier()->print(OS, Policy);
   OS << "~";
 
-  if (IdentifierInfo *II = E->getDestroyedTypeIdentifier())
+  if (const IdentifierInfo *II = E->getDestroyedTypeIdentifier())
     OS << II->getName();
   else
     E->getDestroyedType().print(OS, Policy);

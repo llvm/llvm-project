@@ -772,7 +772,7 @@ private:
   // Synthesize ivar for this property
   ObjCIvarDecl *PropertyIvarDecl = nullptr;
 
-  ObjCPropertyDecl(DeclContext *DC, SourceLocation L, IdentifierInfo *Id,
+  ObjCPropertyDecl(DeclContext *DC, SourceLocation L, const IdentifierInfo *Id,
                    SourceLocation AtLocation, SourceLocation LParenLocation,
                    QualType T, TypeSourceInfo *TSI, PropertyControl propControl)
       : NamedDecl(ObjCProperty, DC, L, Id), AtLoc(AtLocation),
@@ -782,10 +782,12 @@ private:
         PropertyImplementation(propControl) {}
 
 public:
-  static ObjCPropertyDecl *
-  Create(ASTContext &C, DeclContext *DC, SourceLocation L, IdentifierInfo *Id,
-         SourceLocation AtLocation, SourceLocation LParenLocation, QualType T,
-         TypeSourceInfo *TSI, PropertyControl propControl = None);
+  static ObjCPropertyDecl *Create(ASTContext &C, DeclContext *DC,
+                                  SourceLocation L, const IdentifierInfo *Id,
+                                  SourceLocation AtLocation,
+                                  SourceLocation LParenLocation, QualType T,
+                                  TypeSourceInfo *TSI,
+                                  PropertyControl propControl = None);
 
   static ObjCPropertyDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
@@ -1794,9 +1796,9 @@ public:
     data().CategoryList = category;
   }
 
-  ObjCPropertyDecl
-    *FindPropertyVisibleInPrimaryClass(IdentifierInfo *PropertyId,
-                                       ObjCPropertyQueryKind QueryKind) const;
+  ObjCPropertyDecl *
+  FindPropertyVisibleInPrimaryClass(const IdentifierInfo *PropertyId,
+                                    ObjCPropertyQueryKind QueryKind) const;
 
   void collectPropertiesToImplement(PropertyMap &PM) const override;
 
@@ -1954,8 +1956,8 @@ public:
 
 private:
   ObjCIvarDecl(ObjCContainerDecl *DC, SourceLocation StartLoc,
-               SourceLocation IdLoc, IdentifierInfo *Id,
-               QualType T, TypeSourceInfo *TInfo, AccessControl ac, Expr *BW,
+               SourceLocation IdLoc, const IdentifierInfo *Id, QualType T,
+               TypeSourceInfo *TInfo, AccessControl ac, Expr *BW,
                bool synthesized)
       : FieldDecl(ObjCIvar, DC, StartLoc, IdLoc, Id, T, TInfo, BW,
                   /*Mutable=*/false, /*HasInit=*/ICIS_NoInit),
@@ -1964,10 +1966,9 @@ private:
 public:
   static ObjCIvarDecl *Create(ASTContext &C, ObjCContainerDecl *DC,
                               SourceLocation StartLoc, SourceLocation IdLoc,
-                              IdentifierInfo *Id, QualType T,
-                              TypeSourceInfo *TInfo,
-                              AccessControl ac, Expr *BW = nullptr,
-                              bool synthesized=false);
+                              const IdentifierInfo *Id, QualType T,
+                              TypeSourceInfo *TInfo, AccessControl ac,
+                              Expr *BW = nullptr, bool synthesized = false);
 
   static ObjCIvarDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 

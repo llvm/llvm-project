@@ -378,10 +378,8 @@ SourceLocation ObjCInterfaceDecl::getSuperClassLoc() const {
 /// FindPropertyVisibleInPrimaryClass - Finds declaration of the property
 /// with name 'PropertyId' in the primary class; including those in protocols
 /// (direct or indirect) used by the primary class.
-ObjCPropertyDecl *
-ObjCInterfaceDecl::FindPropertyVisibleInPrimaryClass(
-                       IdentifierInfo *PropertyId,
-                       ObjCPropertyQueryKind QueryKind) const {
+ObjCPropertyDecl *ObjCInterfaceDecl::FindPropertyVisibleInPrimaryClass(
+    const IdentifierInfo *PropertyId, ObjCPropertyQueryKind QueryKind) const {
   // FIXME: Should make sure no callers ever do this.
   if (!hasDefinition())
     return nullptr;
@@ -1838,10 +1836,10 @@ void ObjCIvarDecl::anchor() {}
 
 ObjCIvarDecl *ObjCIvarDecl::Create(ASTContext &C, ObjCContainerDecl *DC,
                                    SourceLocation StartLoc,
-                                   SourceLocation IdLoc, IdentifierInfo *Id,
-                                   QualType T, TypeSourceInfo *TInfo,
-                                   AccessControl ac, Expr *BW,
-                                   bool synthesized) {
+                                   SourceLocation IdLoc,
+                                   const IdentifierInfo *Id, QualType T,
+                                   TypeSourceInfo *TInfo, AccessControl ac,
+                                   Expr *BW, bool synthesized) {
   if (DC) {
     // Ivar's can only appear in interfaces, implementations (via synthesized
     // properties), and class extensions (via direct declaration, or synthesized
@@ -2365,14 +2363,11 @@ ObjCCompatibleAliasDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
 
 void ObjCPropertyDecl::anchor() {}
 
-ObjCPropertyDecl *ObjCPropertyDecl::Create(ASTContext &C, DeclContext *DC,
-                                           SourceLocation L,
-                                           IdentifierInfo *Id,
-                                           SourceLocation AtLoc,
-                                           SourceLocation LParenLoc,
-                                           QualType T,
-                                           TypeSourceInfo *TSI,
-                                           PropertyControl propControl) {
+ObjCPropertyDecl *
+ObjCPropertyDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
+                         const IdentifierInfo *Id, SourceLocation AtLoc,
+                         SourceLocation LParenLoc, QualType T,
+                         TypeSourceInfo *TSI, PropertyControl propControl) {
   return new (C, DC) ObjCPropertyDecl(DC, L, Id, AtLoc, LParenLoc, T, TSI,
                                       propControl);
 }

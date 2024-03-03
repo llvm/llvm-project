@@ -799,11 +799,11 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
                                              addedToDeclSpec);
 
         // Install the property declarator into interfaceDecl.
-        IdentifierInfo *SelName =
+        const IdentifierInfo *SelName =
             OCDS.getGetterName() ? OCDS.getGetterName() : FD.D.getIdentifier();
 
         Selector GetterSel = PP.getSelectorTable().getNullarySelector(SelName);
-        IdentifierInfo *SetterName = OCDS.getSetterName();
+        const IdentifierInfo *SetterName = OCDS.getSetterName();
         Selector SetterSel;
         if (SetterName)
           SetterSel = PP.getSelectorTable().getSelector(1, &SetterName);
@@ -1445,7 +1445,7 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
     return Result;
   }
 
-  SmallVector<IdentifierInfo *, 12> KeyIdents;
+  SmallVector<const IdentifierInfo *, 12> KeyIdents;
   SmallVector<SourceLocation, 12> KeyLocs;
   SmallVector<Sema::ObjCArgInfo, 12> ArgInfos;
   ParseScope PrototypeScope(this, Scope::FunctionPrototypeScope |
@@ -1541,7 +1541,7 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
     Declarator ParmDecl(DS, ParsedAttributesView::none(),
                         DeclaratorContext::Prototype);
     ParseDeclarator(ParmDecl);
-    IdentifierInfo *ParmII = ParmDecl.getIdentifier();
+    const IdentifierInfo *ParmII = ParmDecl.getIdentifier();
     Decl *Param = Actions.ActOnParamDeclarator(getCurScope(), ParmDecl);
     CParamInfo.push_back(DeclaratorChunk::ParamInfo(ParmII,
                                                     ParmDecl.getIdentifierLoc(),
@@ -3242,7 +3242,7 @@ Parser::ParseObjCMessageExpressionBody(SourceLocation LBracLoc,
   SourceLocation Loc;
   IdentifierInfo *selIdent = ParseObjCSelectorPiece(Loc);
 
-  SmallVector<IdentifierInfo *, 12> KeyIdents;
+  SmallVector<const IdentifierInfo *, 12> KeyIdents;
   SmallVector<SourceLocation, 12> KeyLocs;
   ExprVector KeyExprs;
 
@@ -3642,7 +3642,7 @@ ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
   if (Tok.isNot(tok::l_paren))
     return ExprError(Diag(Tok, diag::err_expected_lparen_after) << "@selector");
 
-  SmallVector<IdentifierInfo *, 12> KeyIdents;
+  SmallVector<const IdentifierInfo *, 12> KeyIdents;
   SourceLocation sLoc;
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
