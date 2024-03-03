@@ -105,32 +105,130 @@ Users need to be able to build their own BMI files.
    system vendors, with the goal that building the BMI files is done by
    the build system.
 
-Currently this requires a local build of libc++ with modules installation enabled.
-Since modules are not installed by default. You can build and install the modules
-to ``<install_prefix>`` with the following commands.
+Currently this requires a local build of libc++ with modules enabled. Since
+modules are not part of the installation yet, they are used from the build
+directory. First libc++ needs to be build with module support enabled. If
+the libc++ is built with installation of modules enabled, they can also be
+used from the installation directory. The following instructions enable the
+installation of modules and install the modules into ``<install_prefix>``.
 
 .. code-block:: bash
 
-  $ git clone https://github.com/llvm/llvm-project.git --depth 1
+  $ git clone https://github.com/llvm/llvm-project.git
   $ cd llvm-project
   $ mkdir build
-  $ cmake -G Ninja -S runtimes -B build -DCMAKE_C_COMPILER=<path-to-compiler> -DCMAKE_CXX_COMPILER=<path-to-compiler> -DLIBCXX_INSTALL_MODULES=ON -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
-  $ cmake --build build -- -j $(nproc)
-  $ cmake --install build --prefix <install_prefix>
+  $ cmake -G Ninja -S runtimes -B build -DLIBCXX_INSTALL_MODULES=ON -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
+  $ ninja --build build -- -j $(nproc)
+  $ ninja --install build --prefix <install_prefix>
 
-This is a small sample program that uses the module ``std``. It consists of a
-``CMakeLists.txt``, an ``std.cmake``, and a ``main.cpp`` file.
+The above ``build`` directory will be referred to as ``<build>`` in the
+rest of these instructions.
+
+This is a small sample program that uses the module ``std`` from build
+directory. It consists of a ``CMakeLists.txt`` and a ``main.cpp`` file.
 
 .. code-block:: cpp
 
-  // main.cpp
   import std; // When importing std.compat it's not needed to import std.
   import std.compat;
 
   int main() {
-    std::println("Hello modular world");
+    std::cout << "Hello modular world\n";
     ::printf("Hello compat modular world\n");
   }
+
+.. code-block:: cmake
+
+  cmake_minimum_required(VERSION 3.26.0 FATAL_ERROR)
+  project("module"
+    LANGUAGES CXX
+  )
+
+  #
+  # Set language version used
+  #
+
+  set(CMAKE_CXX_STANDARD 23)
+  set(CMAKE_CXX_STANDARD_REQUIRED YES)
+  # Libc++ doesn't support compiler extensions for modules.
+  set(CMAKE_CXX_EXTENSIONS OFF)
+
+  #
+  # Enable modules in CMake
+  #
+
+  # This is required to write your own modules in your project.
+  if(CMAKE_VERSION VERSION_LESS "3.28.0")
+    if(CMAKE_VERSION VERSION_LESS "3.27.0")
+      set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
+    else()
+      set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
+    endif()
+    set(CMAKE_EXPERIMENTAL_CXX_MODULE_DYNDEP 1)
+  else()
+    cmake_policy(VERSION 3.28)
+  endif()
+
+  #
+  # Import the modules from libc++
+  #
+
+  include(FetchContent)
+  FetchContent_Declare(
+    std
+    URL "file://${LIBCXX_BUILD}/modules/c++/v1/"
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    SYSTEM
+  )
+  FetchContent_MakeAvailable(std)
+
+  #
+  # Adjust project compiler flags
+  #
+
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${std_BINARY_DIR}/CMakeFiles/std.dir/>)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${std_BINARY_DIR}/CMakeFiles/std.compat.dir/>)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
+  # The include path needs to be set to be able to use macros from headers.
+  # For example from, the headers <cassert> and <version>.
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-isystem>)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:${LIBCXX_BUILD}/include/c++/v1>)
+
+  #
+  # Adjust project linker flags
+  #
+
+  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-nostdlib++>)
+  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-L${LIBCXX_BUILD}/lib>)
+  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-Wl,-rpath,${LIBCXX_BUILD}/lib>)
+  # Linking against the standard c++ library is required for CMake to get the proper dependencies.
+  link_libraries(std c++)
+  link_libraries(std.compat c++)
+
+  #
+  # Add the project
+  #
+
+  add_executable(main)
+  target_sources(main
+    PRIVATE
+      main.cpp
+  )
+
+Building this project is done with the following steps, assuming the files
+``main.cpp`` and ``CMakeLists.txt`` are copied in the current directory.
+
+.. code-block:: bash
+
+  $ mkdir build
+  $ cmake -G Ninja -S . -B build -DCMAKE_CXX_COMPILER=<path-to-compiler> -DLIBCXX_BUILD=<build>
+  $ ninja -C build
+  $ build/main
+
+This is another small sample program that uses the module ``std`` from
+installation directory. It consists of a ``CMakeLists.txt``, an
+``std.cmake``, and a ``main.cpp`` file. The ``main.cpp`` is the same as
+the previous example.
 
 .. code-block:: cmake
 
@@ -191,7 +289,7 @@ This is a small sample program that uses the module ``std``. It consists of a
   # Add std static library
   #
 
-  add_library(std)
+  add_library(std STATIC)
 
   target_sources(std
     PUBLIC FILE_SET cxx_modules TYPE CXX_MODULES FILES
