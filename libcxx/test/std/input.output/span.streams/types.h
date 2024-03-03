@@ -9,62 +9,214 @@
 #ifndef TEST_STD_INPUTOUTPUT_SPANSTREAMS_TYPES_H
 #define TEST_STD_INPUTOUTPUT_SPANSTREAMS_TYPES_H
 
-#include <string_view>
 #include <concepts>
+#include <cstddef>
+#include <span>
+#include <ranges>
 
 #include "test_macros.h"
 
-// template <typename CharT, class Traits = std::char_traits<CharT>>
-// class ConstConvertibleStringView {
-// public:
-//   explicit ConstConvertibleStringView(const CharT* cs) : cs_{cs} {}
+template <typename CharT, std::size_t N = 0>
+class ReadOnlySpan {
+  explicit ReadOnlySpan(CharT (&arr)[N]) : arr_{arr} {}
 
-//   operator std::basic_string_view<CharT, Traits>() = delete;
-//   operator std::basic_string_view<CharT, Traits>() const { return std::basic_string_view<CharT, Traits>(cs_); }
+public:
+  operator std::span<CharT>() = delete;
 
-// private:
-//   const CharT* cs_;
-// };
+  operator std::span<const CharT>() { return std::span<const CharT, N>{arr_}; }
 
-// static_assert(!std::constructible_from<std::basic_string_view<char>, ConstConvertibleStringView<char>>);
-// static_assert(!std::convertible_to<ConstConvertibleStringView<char>, std::basic_string_view<char>>);
+  const CharT* begin() { return arr_; }
+  const CharT* end() { return arr_ + N; }
 
-// static_assert(std::constructible_from<std::basic_string_view<char>, const ConstConvertibleStringView<char>>);
-// static_assert(std::convertible_to<const ConstConvertibleStringView<char>, std::basic_string_view<char>>);
+private:
+  CharT* arr_;
+};
 
-// #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-// static_assert(!std::constructible_from<std::basic_string_view<wchar_t>, ConstConvertibleStringView<wchar_t>>);
-// static_assert(!std::convertible_to<ConstConvertibleStringView<wchar_t>, std::basic_string_view<wchar_t>>);
+template <typename CharT, std::size_t N>
+inline constexpr bool std::ranges::enable_borrowed_range<ReadOnlySpan<CharT, N>> = true;
 
-// static_assert(std::constructible_from<std::basic_string_view<wchar_t>, const ConstConvertibleStringView<wchar_t>>);
-// static_assert(std::convertible_to<const ConstConvertibleStringView<wchar_t>, std::basic_string_view<wchar_t>>);
-// #endif
+static_assert(std::ranges::borrowed_range<ReadOnlySpan<char>>);
 
-// template <typename CharT, class Traits = std::char_traits<CharT>>
-// class NonConstConvertibleStringView {
-// public:
-//   explicit NonConstConvertibleStringView(const CharT* cs) : cs_{cs} {}
+static_assert(!std::constructible_from<std::span<char>, ReadOnlySpan<char>>);
+static_assert(!std::convertible_to<ReadOnlySpan<char>, std::span<char>>);
 
-//   operator std::basic_string_view<CharT, Traits>() { return std::basic_string_view<CharT, Traits>(cs_); }
-//   operator std::basic_string_view<CharT, Traits>() const = delete;
+static_assert(!std::constructible_from<std::span<char>, const ReadOnlySpan<char>>);
+static_assert(!std::convertible_to<const ReadOnlySpan<char>, std::span<char>>);
 
-// private:
-//   const CharT* cs_;
-// };
+static_assert(std::constructible_from<std::span<const char>, ReadOnlySpan<char>>);
+static_assert(std::convertible_to<ReadOnlySpan<char>, std::span<const char>>);
 
-// static_assert(std::constructible_from<std::basic_string_view<char>, NonConstConvertibleStringView<char>>);
-// static_assert(std::convertible_to<NonConstConvertibleStringView<char>, std::basic_string_view<char>>);
+static_assert(!std::constructible_from<std::span<const char>, const ReadOnlySpan<char>>);
+static_assert(!std::convertible_to<const ReadOnlySpan<char>, std::span<const char>>);
 
-// static_assert(!std::constructible_from<std::basic_string_view<char>, const NonConstConvertibleStringView<char>>);
-// static_assert(!std::convertible_to<const NonConstConvertibleStringView<char>, std::basic_string_view<char>>);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 
-// #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-// static_assert(std::constructible_from<std::basic_string_view<wchar_t>, NonConstConvertibleStringView<wchar_t>>);
-// static_assert(std::convertible_to<NonConstConvertibleStringView<wchar_t>, std::basic_string_view<wchar_t>>);
+static_assert(std::ranges::borrowed_range<ReadOnlySpan<wchar_t>>);
 
-// static_assert(!std::constructible_from<std::basic_string_view<wchar_t>, const NonConstConvertibleStringView<wchar_t>>);
-// static_assert(!std::convertible_to<const NonConstConvertibleStringView<wchar_t>, std::basic_string_view<wchar_t>>);
-// #endif
+static_assert(!std::constructible_from<std::span<wchar_t>, ReadOnlySpan<wchar_t>>);
+static_assert(!std::convertible_to<ReadOnlySpan<wchar_t>, std::span<wchar_t>>);
+
+static_assert(!std::constructible_from<std::span<wchar_t>, const ReadOnlySpan<wchar_t>>);
+static_assert(!std::convertible_to<const ReadOnlySpan<wchar_t>, std::span<wchar_t>>);
+
+static_assert(std::constructible_from<std::span<const wchar_t>, ReadOnlySpan<wchar_t>>);
+static_assert(std::convertible_to<ReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
+
+static_assert(!std::constructible_from<std::span<const wchar_t>, const ReadOnlySpan<wchar_t>>);
+static_assert(!std::convertible_to<const ReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
+#endif
+
+template <typename CharT, std::size_t N = 0>
+class NonReadOnlySpan {
+  explicit NonReadOnlySpan(CharT (&arr)[N]) : arr_{arr} {}
+
+public:
+  operator std::span<CharT>() { return std::span<CharT, N>{arr_}; }
+
+  operator std::span<const CharT>() = delete;
+
+  CharT* begin() { return arr_; }
+  CharT* end() { return arr_ + N; }
+
+private:
+  CharT* arr_;
+};
+
+template <typename CharT, std::size_t N>
+inline constexpr bool std::ranges::enable_borrowed_range<NonReadOnlySpan<CharT, N>> = true;
+
+static_assert(std::ranges::borrowed_range<NonReadOnlySpan<char>>);
+
+static_assert(std::constructible_from<std::span<char>, NonReadOnlySpan<char>>);
+static_assert(std::convertible_to<NonReadOnlySpan<char>, std::span<char>>);
+
+static_assert(!std::constructible_from<std::span<char>, const NonReadOnlySpan<char>>);
+static_assert(!std::convertible_to<const NonReadOnlySpan<char>, std::span<char>>);
+
+static_assert(std::constructible_from<std::span<const char>, NonReadOnlySpan<char>>);
+static_assert(!std::convertible_to<NonReadOnlySpan<char>, std::span<const char>>);
+
+static_assert(!std::constructible_from<std::span<const char>, const NonReadOnlySpan<char>>);
+static_assert(!std::convertible_to<const NonReadOnlySpan<char>, std::span<const char>>);
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+static_assert(std::ranges::borrowed_range<NonReadOnlySpan<wchar_t>>);
+
+static_assert(std::constructible_from<std::span<wchar_t>, NonReadOnlySpan<wchar_t>>);
+static_assert(std::convertible_to<NonReadOnlySpan<wchar_t>, std::span<wchar_t>>);
+
+static_assert(!std::constructible_from<std::span<wchar_t>, const NonReadOnlySpan<wchar_t>>);
+static_assert(!std::convertible_to<const NonReadOnlySpan<wchar_t>, std::span<wchar_t>>);
+
+static_assert(std::constructible_from<std::span<const wchar_t>, NonReadOnlySpan<wchar_t>>);
+static_assert(!std::convertible_to<NonReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
+
+static_assert(!std::constructible_from<std::span<const wchar_t>, const NonReadOnlySpan<wchar_t>>);
+static_assert(!std::convertible_to<const NonReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
+#endif
+
+template <typename CharT, std::size_t N = 0>
+class ConstConvertibleReadOnlySpan {
+  explicit ConstConvertibleReadOnlySpan(CharT (&arr)[N]) : arr_{arr} {}
+
+public:
+  operator std::span<CharT>()       = delete;
+  operator std::span<CharT>() const = delete;
+
+  operator std::span<const CharT>() = delete;
+  operator std::span<const CharT>() const { return std::span<const CharT, N>{arr_}; }
+
+  const CharT* begin() { return arr_; }
+  const CharT* end() { return arr_ + N; }
+
+private:
+  CharT* arr_;
+};
+
+template <typename CharT, std::size_t N>
+inline constexpr bool std::ranges::enable_borrowed_range<ConstConvertibleReadOnlySpan<CharT, N>> = true;
+
+static_assert(std::ranges::borrowed_range<ConstConvertibleReadOnlySpan<char>>);
+
+static_assert(!std::constructible_from<std::span<char>, ConstConvertibleReadOnlySpan<char>>);
+static_assert(!std::convertible_to<ConstConvertibleReadOnlySpan<char>, std::span<char>>);
+
+static_assert(!std::constructible_from<std::span<char>, const ConstConvertibleReadOnlySpan<char>>);
+static_assert(!std::convertible_to<const ConstConvertibleReadOnlySpan<char>, std::span<char>>);
+
+static_assert(std::constructible_from<std::span<const char>, ConstConvertibleReadOnlySpan<char>>);
+static_assert(!std::convertible_to<ConstConvertibleReadOnlySpan<char>, std::span<const char>>);
+
+static_assert(std::constructible_from<std::span<const char>, const ConstConvertibleReadOnlySpan<char>>);
+static_assert(std::convertible_to<const ConstConvertibleReadOnlySpan<char>, std::span<const char>>);
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+
+static_assert(std::ranges::borrowed_range<ConstConvertibleReadOnlySpan<wchar_t>>);
+
+static_assert(!std::constructible_from<std::span<wchar_t>, ConstConvertibleReadOnlySpan<wchar_t>>);
+static_assert(!std::convertible_to<ConstConvertibleReadOnlySpan<wchar_t>, std::span<wchar_t>>);
+
+static_assert(!std::constructible_from<std::span<wchar_t>, const ConstConvertibleReadOnlySpan<wchar_t>>);
+static_assert(!std::convertible_to<const ConstConvertibleReadOnlySpan<wchar_t>, std::span<wchar_t>>);
+
+static_assert(std::constructible_from<std::span<const wchar_t>, ConstConvertibleReadOnlySpan<wchar_t>>);
+static_assert(!std::convertible_to<ConstConvertibleReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
+
+static_assert(std::constructible_from<std::span<const wchar_t>, const ConstConvertibleReadOnlySpan<wchar_t>>);
+static_assert(std::convertible_to<const ConstConvertibleReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
+#endif
+
+template <typename CharT, std::size_t N = 0>
+class NonConstConvertibleReadOnlySpan {
+  explicit NonConstConvertibleReadOnlySpan(CharT (&arr)[N]) : arr_{arr} {}
+
+public:
+  operator std::span<CharT>()       = delete;
+  operator std::span<CharT>() const = delete;
+
+  operator std::span<const CharT>() { return std::span<const CharT, N>{arr_}; }
+  operator std::span<const CharT>() const = delete;
+
+  const CharT* begin() { return arr_; }
+  const CharT* end() { return arr_ + N; }
+
+private:
+  CharT* arr_;
+};
+
+template <typename CharT, std::size_t N>
+inline constexpr bool std::ranges::enable_borrowed_range<NonConstConvertibleReadOnlySpan<CharT, N>> = true;
+
+static_assert(std::ranges::borrowed_range<NonConstConvertibleReadOnlySpan<char>>);
+
+static_assert(!std::constructible_from<std::span<char>, NonConstConvertibleReadOnlySpan<char>>);
+static_assert(!std::convertible_to<NonConstConvertibleReadOnlySpan<char>, std::span<char>>);
+
+static_assert(!std::constructible_from<std::span<char>, const NonConstConvertibleReadOnlySpan<char>>);
+static_assert(!std::convertible_to<const NonConstConvertibleReadOnlySpan<char>, std::span<char>>);
+
+static_assert(std::constructible_from<std::span<const char>, NonConstConvertibleReadOnlySpan<char>>);
+static_assert(std::convertible_to<NonConstConvertibleReadOnlySpan<char>, std::span<const char>>);
+
+static_assert(!std::constructible_from<std::span<const char>, const NonConstConvertibleReadOnlySpan<char>>);
+static_assert(!std::convertible_to<const NonConstConvertibleReadOnlySpan<char>, std::span<const char>>);
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+static_assert(std::ranges::borrowed_range<NonConstConvertibleReadOnlySpan<wchar_t>>);
+
+static_assert(!std::constructible_from<std::span<wchar_t>, NonConstConvertibleReadOnlySpan<wchar_t>>);
+static_assert(!std::convertible_to<NonConstConvertibleReadOnlySpan<wchar_t>, std::span<wchar_t>>);
+
+static_assert(!std::constructible_from<std::span<wchar_t>, const NonConstConvertibleReadOnlySpan<wchar_t>>);
+static_assert(!std::convertible_to<const NonConstConvertibleReadOnlySpan<wchar_t>, std::span<wchar_t>>);
+
+static_assert(std::constructible_from<std::span<const wchar_t>, NonConstConvertibleReadOnlySpan<wchar_t>>);
+static_assert(std::convertible_to<NonConstConvertibleReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
+
+static_assert(!std::constructible_from<std::span<const wchar_t>, const NonConstConvertibleReadOnlySpan<wchar_t>>);
+static_assert(!std::convertible_to<const NonConstConvertibleReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
+#endif
 
 struct SomeObject {};
 
