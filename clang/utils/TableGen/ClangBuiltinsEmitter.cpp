@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
+#include "clang/Support/BuiltinsUtils.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-
 using namespace llvm;
 
 namespace {
@@ -53,77 +53,7 @@ private:
   }
 
   void ParseType(StringRef T) {
-    T = T.trim();
-    if (T.consume_back("*")) {
-      ParseType(T);
-      Type += "*";
-    } else if (T.consume_back("const")) {
-      ParseType(T);
-      Type += "C";
-    } else if (T.consume_back("volatile")) {
-      ParseType(T);
-      Type += "D";
-    } else if (T.consume_back("restrict")) {
-      ParseType(T);
-      Type += "R";
-    } else if (T.consume_back("&")) {
-      ParseType(T);
-      Type += "&";
-    } else if (T.consume_front("long")) {
-      Type += "L";
-      ParseType(T);
-    } else if (T.consume_front("unsigned")) {
-      Type += "U";
-      ParseType(T);
-    } else if (T.consume_front("_Complex")) {
-      Type += "X";
-      ParseType(T);
-    } else if (T.consume_front("_Constant")) {
-      Type += "I";
-      ParseType(T);
-    } else if (T.consume_front("T")) {
-      if (Substitution.empty())
-        PrintFatalError(Loc, "Not a template");
-      ParseType(Substitution);
-    } else {
-      auto ReturnTypeVal = StringSwitch<std::string>(T)
-                               .Case("__builtin_va_list_ref", "A")
-                               .Case("__builtin_va_list", "a")
-                               .Case("__float128", "LLd")
-                               .Case("__fp16", "h")
-                               .Case("__int128_t", "LLLi")
-                               .Case("_Float16", "x")
-                               .Case("bool", "b")
-                               .Case("char", "c")
-                               .Case("constant_CFString", "F")
-                               .Case("double", "d")
-                               .Case("FILE", "P")
-                               .Case("float", "f")
-                               .Case("id", "G")
-                               .Case("int", "i")
-                               .Case("int32_t", "Zi")
-                               .Case("int64_t", "Wi")
-                               .Case("jmp_buf", "J")
-                               .Case("msint32_t", "Ni")
-                               .Case("msuint32_t", "UNi")
-                               .Case("objc_super", "M")
-                               .Case("pid_t", "p")
-                               .Case("ptrdiff_t", "Y")
-                               .Case("SEL", "H")
-                               .Case("short", "s")
-                               .Case("sigjmp_buf", "SJ")
-                               .Case("size_t", "z")
-                               .Case("ucontext_t", "K")
-                               .Case("uint32_t", "UZi")
-                               .Case("uint64_t", "UWi")
-                               .Case("void", "v")
-                               .Case("wchar_t", "w")
-                               .Case("...", ".")
-                               .Default("error");
-      if (ReturnTypeVal == "error")
-        PrintFatalError(Loc, "Unknown Type: " + T);
-      Type += ReturnTypeVal;
-    }
+    clang::ParseBuiltinType(T, Substitution, Type, &Loc);
   }
 
 public:
