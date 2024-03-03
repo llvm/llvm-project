@@ -466,3 +466,16 @@ define float @negated_op_extra_use(float %x) {
   %r = call float @llvm.maxnum.f32(float %negx, float %x)
   ret float %r
 }
+
+define float @negated_op_extra_use_comm(float %x) {
+; CHECK-LABEL: @negated_op_extra_use_comm(
+; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    call void @use(float [[NEGX]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[NEGX]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %negx = fneg float %x
+  call void @use(float %negx)
+  %r = call float @llvm.maxnum.f32(float %x, float %negx)
+  ret float %r
+}
