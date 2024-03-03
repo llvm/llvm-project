@@ -34,6 +34,7 @@ def get_path_from_clang(args, allow_failure):
             lit_config.fatal(msg)
     return path, clang_cmd
 
+
 def find_compiler_libdir():
     """
     Returns the path to library resource directory used
@@ -186,8 +187,10 @@ local_build_resource_dir = os.path.realpath(config.compiler_rt_output_dir)
 if test_cc_resource_dir != local_build_resource_dir:
     if config.test_standalone_build_libs and config.compiler_id == "Clang":
         if lit_config.debug:
-            lit_config.note(f'Overriding test compiler resource dir to use '
-                            f'libraries in "{config.compiler_rt_libdir}"')
+            lit_config.note(
+                f"Overriding test compiler resource dir to use "
+                f'libraries in "{config.compiler_rt_libdir}"'
+            )
         # Ensure that we use the just-built static libraries when linking by
         # overriding the Clang resource directory. Additionally, we want to use
         # the builtin headers shipped with clang (e.g. stdint.h), so we
