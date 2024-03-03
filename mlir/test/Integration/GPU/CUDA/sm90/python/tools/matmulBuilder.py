@@ -117,11 +117,7 @@ def make_kernel_name(
     num_stages=3,
     use_warp_specialization=False,
 ):
-    kernelName = (
-        "warpspecialized"
-        if use_warp_specialization
-        else "multistage"
-    )
+    kernelName = "warpspecialized" if use_warp_specialization else "multistage"
     return (
         kernelName
         + "_"
@@ -139,6 +135,7 @@ def make_kernel_name(
         + "_"
         + str(num_stages)
     )
+
 
 def generate_matmul_ws(
     input_type=np.float16,
@@ -644,7 +641,7 @@ def generate_matmul_ws(
             t8 = gpu.wait(token_ty, [launch_op])
             t9 = gpu.memcpy(token_ty, [t8], c_host, c_device)
             gpu.dealloc(token_ty, [t8], a_device)
-            gpu.dealloc(token_ty, [t8], b_device)            
+            gpu.dealloc(token_ty, [t8], b_device)
             gpu.wait(token_ty, [t9])
             gpu.dealloc(token_ty, [t8], c_device)
             func.ReturnOp([])
@@ -1162,7 +1159,7 @@ def generate_matmul_multistage(
             t8 = gpu.wait(token_ty, [launch_op])
             t9 = gpu.memcpy(token_ty, [t8], c_host, c_device)
             gpu.dealloc(token_ty, [t8], a_device)
-            gpu.dealloc(token_ty, [t8], b_device)            
+            gpu.dealloc(token_ty, [t8], b_device)
             gpu.wait(token_ty, [t9])
             gpu.dealloc(token_ty, [t8], c_device)
             func.ReturnOp([])
