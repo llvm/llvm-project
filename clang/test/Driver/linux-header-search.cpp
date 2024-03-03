@@ -1,6 +1,24 @@
 // General tests that the header search paths detected by the driver and passed
 // to CC1 are sane.
 //
+
+// Test a simulated installation of libc++ in C++03 mode on Linux, both through sysroot and
+// the installation path of Clang.
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-unknown-linux-gnu \
+// RUN:     -stdlib=libc++ \
+// RUN:     -std=c++03 \
+// RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-SYSROOT-CXX03 %s
+// CHECK-BASIC-LIBCXX-SYSROOT-CXX03: "-cc1"
+// CHECK-BASIC-LIBCXX-SYSROOT-CXX03: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-BASIC-LIBCXX-SYSROOT-CXX03: "-internal-isystem" "[[SYSROOT]][[SEP:/|\\\\]]usr[[SEP]]include[[SEP]]x86_64-unknown-linux-gnu[[SEP]]c++[[SEP]]v1"
+// CHECK-BASIC-LIBCXX-SYSROOT-CXX03: "-internal-isystem" "[[SYSROOT]][[SEP]]usr[[SEP]]include[[SEP]]c++[[SEP]]c++03"
+// CHECK-BASIC-LIBCXX-SYSROOT-CXX03: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+
 // Test a simulated installation of libc++ on Linux, both through sysroot and
 // the installation path of Clang.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \

@@ -738,6 +738,12 @@ public:
     // Whether to print a message if a checked directory isn't available.
     LLVM_PREFERRED_TYPE(bool)
     unsigned PrintDebugStatements : 1;
+
+  private:
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CheckCxx03 : 1;
+
+    friend class ToolChain;
   };
 
   /// Helper function to implement AddClangCXXStdlibIncludeArgs for libc++.

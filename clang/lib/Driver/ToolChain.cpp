@@ -1255,13 +1255,20 @@ bool ToolChain::AddLibcxxInclude(const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args,
                                  llvm::Twine IncludeRoot,
                                  IncludeStrategy Strategy) const {
+  using namespace std::literals;
+
   SmallString<128> Path;
   IncludeRoot.toVector(Path);
 
-  auto VersionDirName =
-      Strategy.Availability == IncludeStrategy::UseMaxVersionAvailable
-          ? detectLibcxxVersion(Path)
-          : "v1";
+  auto VersionDirName = [&] {
+    if (Strategy.CheckCxx03)
+      return "c++03"s;
+
+    if (Strategy.Availability == IncludeStrategy::UseMaxVersionAvailable)
+      return detectLibcxxVersion(Path);
+
+    return "v1"s;
+  }();
 
   if (VersionDirName.empty())
     return false;
@@ -1272,6 +1279,20 @@ bool ToolChain::AddLibcxxInclude(const llvm::opt::ArgList &DriverArgs,
                             VersionDirName);
     if (getVFS().exists(TargetDir))
       addSystemInclude(DriverArgs, CC1Args, TargetDir);
+  }
+
+  if (const Arg *A =
+          DriverArgs.getLastArg(options::OPT_std_EQ, options::OPT_ansi);
+      !Strategy.CheckCxx03 &&
+      (A && (A->getOption().matches(options::OPT_ansi) ||
+             A->getValue() == "c++98"sv || A->getValue() == "c++03"sv ||
+             A->getValue() == "gnu++98"sv || A->getValue() == "gnu++03"sv))) {
+    auto StrategyCopy = Strategy;
+    StrategyCopy.AddTargetDirIfAvailable = false;
+    StrategyCopy.Availability = IncludeStrategy::CheckIfAvailable;
+    StrategyCopy.CheckCxx03 = true;
+    if (AddLibcxxInclude(DriverArgs, CC1Args, IncludeRoot, StrategyCopy))
+      return true;
   }
 
   llvm::sys::path::append(Path, "c++", VersionDirName);
