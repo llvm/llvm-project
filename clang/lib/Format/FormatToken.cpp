@@ -36,8 +36,8 @@ const char *getTokenTypeName(TokenType Type) {
 
 // Sorted common C++ non-keyword types.
 static SmallVector<StringRef> CppNonKeywordTypes = {
-    "byte",   "int16_t",  "int32_t",  "int64_t",  "int8_t",
-    "size_t", "uint16_t", "uint32_t", "uint64_t", "uint8_t",
+    "int16_t",  "int32_t",  "int64_t",  "int8_t",  "intptr_t",  "size_t",
+    "uint16_t", "uint32_t", "uint64_t", "uint8_t", "uintptr_t",
 };
 
 // FIXME: This is copy&pasted from Sema. Put it in a common place and remove
