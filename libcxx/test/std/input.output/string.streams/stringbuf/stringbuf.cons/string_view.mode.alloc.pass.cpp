@@ -29,7 +29,7 @@
 #include "test_convertible.h"
 #include "test_macros.h"
 helper_
-#include "../../heper_string_macros.h"
+#include "../../helper_string_macros.h"
 #include "../../helper_types.h"
 
 template <typename AllocT = std::allocator<nasty_char>>

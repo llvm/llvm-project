@@ -29,8 +29,8 @@
 #include "test_convertible.h"
 #include "test_macros.h"
 
-#include "../../heper_string_macros.h"
-#include "../../heper_types.h"
+#include "../../helper_string_macros.h"
+#include "../../helper_types.h"
 
 template <typename AllocT = std::allocator<nasty_char>>
 void test_sfinae_with_nasty_char() {
