@@ -5044,8 +5044,11 @@ void RecordDecl::completeDefinition() {
   // types, we need to force usage to get types that wouldn't be used elsewhere.
   //
   // If the type is dependent, then we can't compute its layout because there
-  // is no way for us to know the size or alignment of a dependent type.
-  if (Ctx.getLangOpts().DumpRecordLayoutsComplete && !isDependentType())
+  // is no way for us to know the size or alignment of a dependent type. Also
+  // ignore declarations marked as invalid since 'getASTRecordLayout()' asserts
+  // on that.
+  if (Ctx.getLangOpts().DumpRecordLayoutsComplete && !isDependentType() &&
+      !isInvalidDecl())
     (void)Ctx.getASTRecordLayout(this);
 }
 
