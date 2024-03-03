@@ -1152,10 +1152,8 @@ struct TestLegalizePatternDriver
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {
       DenseSet<Operation *> unlegalizedOps;
-      ConversionConfig config;
-      config.unlegalizedOps = &unlegalizedOps;
-      if (failed(applyPartialConversion(getOperation(), target,
-                                        std::move(patterns), config))) {
+      if (failed(applyPartialConversion(
+              getOperation(), target, std::move(patterns), &unlegalizedOps))) {
         getOperation()->emitRemark() << "applyPartialConversion failed";
       }
       // Emit remarks for each legalizable operation.
@@ -1183,10 +1181,8 @@ struct TestLegalizePatternDriver
 
     // Analyze the convertible operations.
     DenseSet<Operation *> legalizedOps;
-    ConversionConfig config;
-    config.legalizableOps = &legalizedOps;
     if (failed(applyAnalysisConversion(getOperation(), target,
-                                       std::move(patterns), config)))
+                                       std::move(patterns), legalizedOps)))
       return signalPassFailure();
 
     // Emit remarks for each legalizable operation.
@@ -1768,7 +1764,6 @@ struct TestMergeSingleBlockOps
     rewriter.inlineBlockBefore(&innerBlock, op);
     rewriter.eraseOp(innerTerminator);
     rewriter.eraseOp(op);
-    rewriter.modifyOpInPlace(op, [] {});
     return success();
   }
 };
@@ -1810,10 +1805,8 @@ struct TestMergeBlocksPatternDriver
         });
 
     DenseSet<Operation *> unlegalizedOps;
-    ConversionConfig config;
-    config.unlegalizedOps = &unlegalizedOps;
     (void)applyPartialConversion(getOperation(), target, std::move(patterns),
-                                 config);
+                                 &unlegalizedOps);
     for (auto *op : unlegalizedOps)
       op->emitRemark() << "op '" << op->getName() << "' is not legalizable";
   }

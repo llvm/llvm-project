@@ -2053,12 +2053,6 @@ static void handleTLSModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  if (S.Context.getTargetInfo().getTriple().isOSAIX() &&
-      Model == "local-dynamic") {
-    S.Diag(LiteralLoc, diag::err_aix_attr_unsupported_tls_model) << Model;
-    return;
-  }
-
   D->addAttr(::new (S.Context) TLSModelAttr(S.Context, AL, Model));
 }
 
@@ -10146,6 +10140,9 @@ void Sema::ProcessDeclAttributes(Scope *S, Decl *D, const Declarator &PD) {
 
   // Apply additional attributes specified by '#pragma clang attribute'.
   AddPragmaAttributes(S, D);
+
+  // Look for API notes that map to attributes.
+  ProcessAPINotes(D);
 }
 
 /// Is the given declaration allowed to use a forbidden type?

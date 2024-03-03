@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++1y-extensions -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++1y-extensions -verify -std=gnu++11 %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++1y-extensions -verify=expected,cxx98-14 -std=gnu++11 %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++1y-extensions -verify=expected,cxx98-14 -std=gnu++14 %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++1y-extensions -verify -std=gnu++17 %s
 template<typename T> void f() {
   T t;
   t = 17;
@@ -183,7 +185,8 @@ void foo(int size) {
   NonTriviallyDestructible array[2];  // no warning
   NonTriviallyDestructible nestedArray[2][2]; // no warning
 
-  Foo fooScalar = 1; // expected-warning {{unused variable 'fooScalar'}}
+  // Copy initialzation gives warning before C++17
+  Foo fooScalar = 1; // cxx98-14-warning {{unused variable 'fooScalar'}}
   Foo fooArray[] = {1,2}; // expected-warning {{unused variable 'fooArray'}}
   Foo fooNested[2][2] = { {1,2}, {3,4} }; // expected-warning {{unused variable 'fooNested'}}
 }
@@ -297,3 +300,29 @@ void RAIIWrapperTest() {
 }
 
 } // namespace gh54489
+
+// Ensure that -Wunused-variable does not emit warning
+// on copy constructors with side effects (C++17 and later)
+#if __cplusplus >= 201703L
+namespace gh79518 {
+
+struct S {
+    S(int);
+};
+
+// With an initializer list
+struct A {
+  int x;
+  A(int x) : x(x) {}
+};
+
+void foo() {
+    S s(0); // no warning
+    S s2 = 0; // no warning
+    S s3{0}; // no warning
+
+    A a = 1; // no warning
+}
+
+} // namespace gh79518
+#endif
