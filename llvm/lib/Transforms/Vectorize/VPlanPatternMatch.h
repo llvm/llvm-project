@@ -65,11 +65,11 @@ template <typename Op0_t, unsigned Opcode> struct UnaryVPInstruction_match {
 
   bool match(const VPRecipeBase *R) {
     auto *DefR = dyn_cast<VPInstruction>(R);
-    if (!DefR)
+    if (!DefR || DefR->getOpcode() != Opcode)
       return false;
-    assert((DefR->getOpcode() != Opcode || DefR->getNumOperands() == 1) &&
+    assert(DefR->getNumOperands() == 1 &&
            "recipe with matched opcode does not have 1 operands");
-    return DefR->getOpcode() == Opcode && Op0.match(DefR->getOperand(0));
+    return Op0.match(DefR->getOperand(0));
   }
 };
 
@@ -87,12 +87,11 @@ struct BinaryVPInstruction_match {
 
   bool match(const VPRecipeBase *R) {
     auto *DefR = dyn_cast<VPInstruction>(R);
-    if (!DefR)
+    if (!DefR || DefR->getOpcode() != Opcode)
       return false;
-    assert((DefR->getOpcode() != Opcode || DefR->getNumOperands() == 2) &&
+    assert(DefR->getNumOperands() == 2 &&
            "recipe with matched opcode does not have 2 operands");
-    return DefR->getOpcode() == Opcode && Op0.match(DefR->getOperand(0)) &&
-           Op1.match(DefR->getOperand(1));
+    return Op0.match(DefR->getOperand(0)) && Op1.match(DefR->getOperand(1));
   }
 };
 
