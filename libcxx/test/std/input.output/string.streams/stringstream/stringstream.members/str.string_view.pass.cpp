@@ -30,7 +30,7 @@
 #include "../../helper_concepts.h"
 #include "../../heper_string_macros.h"
 #include "../../helper_types.h"
-helper_
+
 template <typename AllocT = std::allocator<nasty_char>>
 void test_sfinae_with_nasty_char() {
   using NStrStream = std::basic_stringstream<nasty_char, nasty_char_traits, AllocT>;
