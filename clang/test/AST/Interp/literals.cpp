@@ -1168,3 +1168,10 @@ namespace incdecbool {
 
 
 }
+
+#if __cplusplus >= 201402L
+constexpr int externvar1() { // both-error {{never produces a constant expression}}
+  extern char arr[]; // both-note {{declared here}}
+  return arr[0]; // both-note {{read of non-constexpr variable 'arr'}}
+}
+#endif
