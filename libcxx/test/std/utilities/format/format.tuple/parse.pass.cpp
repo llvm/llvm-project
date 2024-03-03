@@ -24,6 +24,7 @@
 #include <cassert>
 #include <concepts>
 #include <format>
+#include <memory>
 #include <tuple>
 #include <utility>
 
@@ -40,7 +41,7 @@ constexpr void test(StringViewT fmt, std::size_t offset) {
   static_assert(std::semiregular<decltype(formatter)>);
 
   std::same_as<typename StringViewT::iterator> auto it = formatter.parse(parse_ctx);
-  assert(it == fmt.end() - offset);
+  assert(std::to_address(it) == std::to_address(fmt.end()) - offset);
 }
 
 template <class CharT, class Arg>
