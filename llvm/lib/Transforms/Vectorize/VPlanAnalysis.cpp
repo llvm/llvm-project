@@ -35,12 +35,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
-  case Instruction::ICmp: {
-    // TODO: Check if types for both operands agree. This also requires
-    // type-inference for the vector-trip-count, which is missing at the moment.
-    Type *ResTy = inferScalarType(R->getOperand(0));
-    return ResTy;
-  }
+  case Instruction::ICmp:
   case VPInstruction::FirstOrderRecurrenceSplice: {
     Type *ResTy = inferScalarType(R->getOperand(0));
     VPValue *OtherV = R->getOperand(1);
@@ -207,8 +202,13 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (Type *CachedTy = CachedTypes.lookup(V))
     return CachedTy;
 
-  if (V->isLiveIn())
-    return V->getLiveInIRValue()->getType();
+  if (V->isLiveIn()) {
+    if (auto *IRValue = V->getLiveInIRValue())
+      return IRValue->getType();
+    // All VPValues without any underlying IR value (like the vector trip count
+    // or the backedge-taken count) have the same type as the canonical IV.
+    return CanonicalIVTy;
+  }
 
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())

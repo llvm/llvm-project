@@ -8,7 +8,7 @@ let Definition = "modulelist" in {
   def EnableBackgroundLookup: Property<"enable-background-lookup", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"Alias for backward compatibility: when enabled this is the equivalent to 'symbols.download background'.">;
+    Desc<"Alias for backward compatibility: when enabled this is the equivalent to 'symbols.auto-download background'.">;
   def AutoDownload: Property<"auto-download", "Enum">,
     Global,
     DefaultEnumValue<"eSymbolDownloadOff">,
@@ -132,7 +132,7 @@ let Definition = "debugger" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying the line marker in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the line to be marked.">;
-  def TerminalWidth: Property<"term-width", "SInt64">,
+  def TerminalWidth: Property<"term-width", "UInt64">,
     Global,
     DefaultUnsignedValue<80>,
     Desc<"The maximum number of columns to use for displaying text.">;

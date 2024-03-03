@@ -19,7 +19,7 @@
 
 namespace LIBC_NAMESPACE {
 
-template <typename T> NumberPair<T> full_mul(T a, T b) {
+template <typename T> constexpr NumberPair<T> full_mul(T a, T b) {
   NumberPair<T> pa = split(a);
   NumberPair<T> pb = split(b);
   NumberPair<T> prod;
@@ -43,7 +43,8 @@ template <typename T> NumberPair<T> full_mul(T a, T b) {
 }
 
 template <>
-LIBC_INLINE NumberPair<uint32_t> full_mul<uint32_t>(uint32_t a, uint32_t b) {
+LIBC_INLINE constexpr NumberPair<uint32_t> full_mul<uint32_t>(uint32_t a,
+                                                              uint32_t b) {
   uint64_t prod = uint64_t(a) * uint64_t(b);
   NumberPair<uint32_t> result;
   result.lo = uint32_t(prod);
@@ -53,7 +54,8 @@ LIBC_INLINE NumberPair<uint32_t> full_mul<uint32_t>(uint32_t a, uint32_t b) {
 
 #ifdef __SIZEOF_INT128__
 template <>
-LIBC_INLINE NumberPair<uint64_t> full_mul<uint64_t>(uint64_t a, uint64_t b) {
+LIBC_INLINE constexpr NumberPair<uint64_t> full_mul<uint64_t>(uint64_t a,
+                                                              uint64_t b) {
   __uint128_t prod = __uint128_t(a) * __uint128_t(b);
   NumberPair<uint64_t> result;
   result.lo = uint64_t(prod);

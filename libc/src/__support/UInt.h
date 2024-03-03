@@ -54,8 +54,7 @@ struct BigInt {
 
   LIBC_INLINE constexpr BigInt() = default;
 
-  LIBC_INLINE constexpr BigInt(const BigInt<Bits, Signed, WordType> &other) =
-      default;
+  LIBC_INLINE constexpr BigInt(const BigInt &other) = default;
 
   template <size_t OtherBits, bool OtherSigned>
   LIBC_INLINE constexpr BigInt(
@@ -65,12 +64,12 @@ struct BigInt {
         val[i] = other[i];
     } else {
       size_t i = 0;
-      for (; i < OtherBits / 64; ++i)
+      for (; i < OtherBits / WORD_SIZE; ++i)
         val[i] = other[i];
       WordType sign = 0;
       if constexpr (Signed && OtherSigned) {
-        sign = static_cast<WordType>(-static_cast<make_signed_t<WordType>>(
-            other[OtherBits / WORD_SIZE - 1] >> (WORD_SIZE - 1)));
+        sign = static_cast<WordType>(
+            -static_cast<make_signed_t<WordType>>(other.is_neg()));
       }
       for (; i < WORD_COUNT; ++i)
         val[i] = sign;
@@ -126,6 +125,11 @@ struct BigInt {
       val[i] = words[i];
   }
 
+  // TODO: Reuse the Sign type.
+  LIBC_INLINE constexpr bool is_neg() const {
+    return val.back() >> (WORD_SIZE - 1);
+  }
+
   template <typename T> LIBC_INLINE constexpr explicit operator T() const {
     return to<T>();
   }
@@ -149,7 +153,7 @@ struct BigInt {
     if constexpr (Signed && (T_BITS > Bits)) {
       // Extend sign for negative numbers.
       constexpr T MASK = (~T(0) << Bits);
-      if (val[WORD_COUNT - 1] >> (WORD_SIZE - 1))
+      if (is_neg())
         lo |= MASK;
     }
 
@@ -158,8 +162,7 @@ struct BigInt {
 
   LIBC_INLINE constexpr explicit operator bool() const { return !is_zero(); }
 
-  LIBC_INLINE BigInt<Bits, Signed, WordType> &
-  operator=(const BigInt<Bits, Signed, WordType> &other) = default;
+  LIBC_INLINE constexpr BigInt &operator=(const BigInt &other) = default;
 
   LIBC_INLINE constexpr bool is_zero() const {
     for (size_t i = 0; i < WORD_COUNT; ++i) {
@@ -171,18 +174,17 @@ struct BigInt {
 
   // Add x to this number and store the result in this number.
   // Returns the carry value produced by the addition operation.
-  LIBC_INLINE constexpr WordType add(const BigInt<Bits, Signed, WordType> &x) {
+  LIBC_INLINE constexpr WordType add(const BigInt &x) {
     SumCarry<WordType> s{0, 0};
     for (size_t i = 0; i < WORD_COUNT; ++i) {
-      s = add_with_carry_const(val[i], x.val[i], s.carry);
+      s = add_with_carry(val[i], x.val[i], s.carry);
       val[i] = s.sum;
     }
     return s.carry;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType>
-  operator+(const BigInt<Bits, Signed, WordType> &other) const {
-    BigInt<Bits, Signed, WordType> result;
+  LIBC_INLINE constexpr BigInt operator+(const BigInt &other) const {
+    BigInt result;
     SumCarry<WordType> s{0, 0};
     for (size_t i = 0; i < WORD_COUNT; ++i) {
       s = add_with_carry(val[i], other.val[i], s.carry);
@@ -193,37 +195,34 @@ struct BigInt {
 
   // This will only apply when initializing a variable from constant values, so
   // it will always use the constexpr version of add_with_carry.
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType>
-  operator+(BigInt<Bits, Signed, WordType> &&other) const {
-    BigInt<Bits, Signed, WordType> result;
+  LIBC_INLINE constexpr BigInt operator+(BigInt &&other) const {
+    BigInt result;
     SumCarry<WordType> s{0, 0};
     for (size_t i = 0; i < WORD_COUNT; ++i) {
-      s = add_with_carry_const(val[i], other.val[i], s.carry);
+      s = add_with_carry(val[i], other.val[i], s.carry);
       result.val[i] = s.sum;
     }
     return result;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> &
-  operator+=(const BigInt<Bits, Signed, WordType> &other) {
+  LIBC_INLINE constexpr BigInt &operator+=(const BigInt &other) {
     add(other); // Returned carry value is ignored.
     return *this;
   }
 
   // Subtract x to this number and store the result in this number.
   // Returns the carry value produced by the subtraction operation.
-  LIBC_INLINE constexpr WordType sub(const BigInt<Bits, Signed, WordType> &x) {
+  LIBC_INLINE constexpr WordType sub(const BigInt &x) {
     DiffBorrow<WordType> d{0, 0};
     for (size_t i = 0; i < WORD_COUNT; ++i) {
-      d = sub_with_borrow_const(val[i], x.val[i], d.borrow);
+      d = sub_with_borrow(val[i], x.val[i], d.borrow);
       val[i] = d.diff;
     }
     return d.borrow;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType>
-  operator-(const BigInt<Bits, Signed, WordType> &other) const {
-    BigInt<Bits, Signed, WordType> result;
+  LIBC_INLINE constexpr BigInt operator-(const BigInt &other) const {
+    BigInt result;
     DiffBorrow<WordType> d{0, 0};
     for (size_t i = 0; i < WORD_COUNT; ++i) {
       d = sub_with_borrow(val[i], other.val[i], d.borrow);
@@ -232,19 +231,17 @@ struct BigInt {
     return result;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType>
-  operator-(BigInt<Bits, Signed, WordType> &&other) const {
-    BigInt<Bits, Signed, WordType> result;
+  LIBC_INLINE constexpr BigInt operator-(BigInt &&other) const {
+    BigInt result;
     DiffBorrow<WordType> d{0, 0};
     for (size_t i = 0; i < WORD_COUNT; ++i) {
-      d = sub_with_borrow_const(val[i], other.val[i], d.borrow);
+      d = sub_with_borrow(val[i], other.val[i], d.borrow);
       result.val[i] = d.diff;
     }
     return result;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> &
-  operator-=(const BigInt<Bits, Signed, WordType> &other) {
+  LIBC_INLINE constexpr BigInt &operator-=(const BigInt &other) {
     // TODO(lntue): Set overflow flag / errno when carry is true.
     sub(other);
     return *this;
@@ -271,13 +268,12 @@ struct BigInt {
     return partial_sum.val[1];
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType>
-  operator*(const BigInt<Bits, Signed, WordType> &other) const {
+  LIBC_INLINE constexpr BigInt operator*(const BigInt &other) const {
     if constexpr (Signed) {
       BigInt<Bits, false, WordType> a(*this);
       BigInt<Bits, false, WordType> b(other);
-      bool a_neg = (a.val[WORD_COUNT - 1] >> (WORD_SIZE - 1));
-      bool b_neg = (b.val[WORD_COUNT - 1] >> (WORD_SIZE - 1));
+      const bool a_neg = a.is_neg();
+      const bool b_neg = b.is_neg();
       if (a_neg)
         a = -a;
       if (b_neg)
@@ -287,11 +283,10 @@ struct BigInt {
         prod = -prod;
       return static_cast<BigInt<Bits, true, WordType>>(prod);
     } else {
-
       if constexpr (WORD_COUNT == 1) {
         return {val[0] * other.val[0]};
       } else {
-        BigInt<Bits, Signed, WordType> result(0);
+        BigInt result(0);
         BigInt<2 * WORD_SIZE, Signed, WordType> partial_sum(0);
         WordType carry = 0;
         for (size_t i = 0; i < WORD_COUNT; ++i) {
@@ -358,9 +353,8 @@ struct BigInt {
   //    196      3         9           6            2
   //    256      4        16          10            3
   //    512      8        64          36            7
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType>
-  quick_mul_hi(const BigInt<Bits, Signed, WordType> &other) const {
-    BigInt<Bits, Signed, WordType> result(0);
+  LIBC_INLINE constexpr BigInt quick_mul_hi(const BigInt &other) const {
+    BigInt result(0);
     BigInt<2 * WORD_SIZE, Signed, WordType> partial_sum(0);
     WordType carry = 0;
     // First round of accumulation for those at WORD_COUNT - 1 in the full
@@ -389,14 +383,13 @@ struct BigInt {
   // pow takes a power and sets this to its starting value to that power. Zero
   // to the zeroth power returns 1.
   LIBC_INLINE constexpr void pow_n(uint64_t power) {
-    BigInt<Bits, Signed, WordType> result = 1;
-    BigInt<Bits, Signed, WordType> cur_power = *this;
+    BigInt result = 1;
+    BigInt cur_power = *this;
 
     while (power > 0) {
-      if ((power % 2) > 0) {
-        result = result * cur_power;
-      }
-      power = power >> 1;
+      if ((power % 2) > 0)
+        result *= cur_power;
+      power >>= 1;
       cur_power *= cur_power;
     }
     *this = result;
@@ -406,12 +399,11 @@ struct BigInt {
 
   // div takes another BigInt of the same size and divides this by it. The value
   // of this will be set to the quotient, and the return value is the remainder.
-  LIBC_INLINE constexpr optional<BigInt<Bits, Signed, WordType>>
-  div(const BigInt<Bits, Signed, WordType> &other) {
-    BigInt<Bits, Signed, WordType> remainder(0);
+  LIBC_INLINE constexpr optional<BigInt> div(const BigInt &other) {
+    BigInt remainder(0);
     if (*this < other) {
       remainder = *this;
-      *this = BigInt<Bits, Signed, WordType>(0);
+      *this = BigInt(0);
       return remainder;
     }
     if (other == 1) {
@@ -421,15 +413,15 @@ struct BigInt {
       return nullopt;
     }
 
-    BigInt<Bits, Signed, WordType> quotient(0);
-    BigInt<Bits, Signed, WordType> subtractor = other;
+    BigInt quotient(0);
+    BigInt subtractor = other;
     int cur_bit = static_cast<int>(subtractor.clz() - this->clz());
     subtractor.shift_left(cur_bit);
 
     for (; cur_bit >= 0 && *this > 0; --cur_bit, subtractor.shift_right(1)) {
       if (*this >= subtractor) {
         this->sub(subtractor);
-        quotient = quotient | (BigInt<Bits, Signed, WordType>(1) << cur_bit);
+        quotient = quotient | (BigInt(1) << cur_bit);
       }
     }
     remainder = *this;
@@ -449,9 +441,9 @@ struct BigInt {
   //   Since the remainder of each division step < x < 2^(WORD_SIZE / 2), the
   // computation of each step is now properly contained within WordType.
   //   And finally we perform some extra alignment steps for the remaining bits.
-  LIBC_INLINE constexpr optional<BigInt<Bits, Signed, WordType>>
+  LIBC_INLINE constexpr optional<BigInt>
   div_uint_half_times_pow_2(internal::half_width_t<WordType> x, size_t e) {
-    BigInt<Bits, Signed, WordType> remainder(0);
+    BigInt remainder(0);
 
     if (x == 0) {
       return nullopt;
@@ -462,7 +454,7 @@ struct BigInt {
       return remainder;
     }
 
-    BigInt<Bits, Signed, WordType> quotient(0);
+    BigInt quotient(0);
     WordType x_word = static_cast<WordType>(x);
     constexpr size_t LOG2_WORD_SIZE = bit_width(WORD_SIZE) - 1;
     constexpr size_t HALF_WORD_SIZE = WORD_SIZE >> 1;
@@ -566,27 +558,23 @@ struct BigInt {
     return remainder;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType>
-  operator/(const BigInt<Bits, Signed, WordType> &other) const {
-    BigInt<Bits, Signed, WordType> result(*this);
+  LIBC_INLINE constexpr BigInt operator/(const BigInt &other) const {
+    BigInt result(*this);
     result.div(other);
     return result;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> &
-  operator/=(const BigInt<Bits, Signed, WordType> &other) {
+  LIBC_INLINE constexpr BigInt &operator/=(const BigInt &other) {
     div(other);
     return *this;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType>
-  operator%(const BigInt<Bits, Signed, WordType> &other) const {
-    BigInt<Bits, Signed, WordType> result(*this);
+  LIBC_INLINE constexpr BigInt operator%(const BigInt &other) const {
+    BigInt result(*this);
     return *result.div(other);
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> &
-  operator*=(const BigInt<Bits, Signed, WordType> &other) {
+  LIBC_INLINE constexpr BigInt &operator*=(const BigInt &other) {
     *this = *this * other;
     return *this;
   }
@@ -669,14 +657,13 @@ struct BigInt {
     }
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType>
-  operator<<(size_t s) const {
-    BigInt<Bits, Signed, WordType> result(*this);
+  LIBC_INLINE constexpr BigInt operator<<(size_t s) const {
+    BigInt result(*this);
     result.shift_left(s);
     return result;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> &operator<<=(size_t s) {
+  LIBC_INLINE constexpr BigInt &operator<<=(size_t s) {
     shift_left(s);
     return *this;
   }
@@ -725,7 +712,7 @@ struct BigInt {
     const size_t shift = s % WORD_SIZE; // Bit shift in the remaining words.
 
     size_t i = 0;
-    WordType sign = Signed ? (val[WORD_COUNT - 1] >> (WORD_SIZE - 1)) : 0;
+    WordType sign = Signed ? is_neg() : 0;
 
     if (drop < WORD_COUNT) {
       if (shift > 0) {
@@ -752,215 +739,127 @@ struct BigInt {
     }
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType>
-  operator>>(size_t s) const {
-    BigInt<Bits, Signed, WordType> result(*this);
+  LIBC_INLINE constexpr BigInt operator>>(size_t s) const {
+    BigInt result(*this);
     result.shift_right(s);
     return result;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> &operator>>=(size_t s) {
+  LIBC_INLINE constexpr BigInt &operator>>=(size_t s) {
     shift_right(s);
     return *this;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType>
-  operator&(const BigInt<Bits, Signed, WordType> &other) const {
-    BigInt<Bits, Signed, WordType> result;
+#define DEFINE_BINOP(OP)                                                       \
+  LIBC_INLINE friend constexpr BigInt operator OP(const BigInt &lhs,           \
+                                                  const BigInt &rhs) {         \
+    BigInt result;                                                             \
+    for (size_t i = 0; i < WORD_COUNT; ++i)                                    \
+      result[i] = lhs[i] OP rhs[i];                                            \
+    return result;                                                             \
+  }                                                                            \
+  LIBC_INLINE friend constexpr BigInt operator OP##=(BigInt &lhs,              \
+                                                     const BigInt &rhs) {      \
+    for (size_t i = 0; i < WORD_COUNT; ++i)                                    \
+      lhs[i] OP## = rhs[i];                                                    \
+    return lhs;                                                                \
+  }
+
+  DEFINE_BINOP(&)
+  DEFINE_BINOP(|)
+  DEFINE_BINOP(^)
+
+#undef DEFINE_BINOP
+
+  LIBC_INLINE constexpr BigInt operator~() const {
+    BigInt result;
     for (size_t i = 0; i < WORD_COUNT; ++i)
-      result.val[i] = val[i] & other.val[i];
+      result[i] = ~val[i];
     return result;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> &
-  operator&=(const BigInt<Bits, Signed, WordType> &other) {
-    for (size_t i = 0; i < WORD_COUNT; ++i)
-      val[i] &= other.val[i];
-    return *this;
-  }
-
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType>
-  operator|(const BigInt<Bits, Signed, WordType> &other) const {
-    BigInt<Bits, Signed, WordType> result;
-    for (size_t i = 0; i < WORD_COUNT; ++i)
-      result.val[i] = val[i] | other.val[i];
+  LIBC_INLINE constexpr BigInt operator-() const {
+    BigInt result = ~(*this);
+    result.add(BigInt(1));
     return result;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> &
-  operator|=(const BigInt<Bits, Signed, WordType> &other) {
+  LIBC_INLINE friend constexpr bool operator==(const BigInt &lhs,
+                                               const BigInt &rhs) {
     for (size_t i = 0; i < WORD_COUNT; ++i)
-      val[i] |= other.val[i];
-    return *this;
-  }
-
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType>
-  operator^(const BigInt<Bits, Signed, WordType> &other) const {
-    BigInt<Bits, Signed, WordType> result;
-    for (size_t i = 0; i < WORD_COUNT; ++i)
-      result.val[i] = val[i] ^ other.val[i];
-    return result;
-  }
-
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> &
-  operator^=(const BigInt<Bits, Signed, WordType> &other) {
-    for (size_t i = 0; i < WORD_COUNT; ++i)
-      val[i] ^= other.val[i];
-    return *this;
-  }
-
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> operator~() const {
-    BigInt<Bits, Signed, WordType> result;
-    for (size_t i = 0; i < WORD_COUNT; ++i)
-      result.val[i] = ~val[i];
-    return result;
-  }
-
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> operator-() const {
-    BigInt<Bits, Signed, WordType> result = ~(*this);
-    result.add(BigInt<Bits, Signed, WordType>(1));
-    return result;
-  }
-
-  LIBC_INLINE constexpr bool
-  operator==(const BigInt<Bits, Signed, WordType> &other) const {
-    for (size_t i = 0; i < WORD_COUNT; ++i) {
-      if (val[i] != other.val[i])
+      if (lhs.val[i] != rhs.val[i])
         return false;
-    }
     return true;
   }
 
-  LIBC_INLINE constexpr bool
-  operator!=(const BigInt<Bits, Signed, WordType> &other) const {
-    for (size_t i = 0; i < WORD_COUNT; ++i) {
-      if (val[i] != other.val[i])
-        return true;
-    }
-    return false;
+  LIBC_INLINE friend constexpr bool operator!=(const BigInt &lhs,
+                                               const BigInt &rhs) {
+    return !(lhs == rhs);
   }
 
-  LIBC_INLINE constexpr bool
-  operator>(const BigInt<Bits, Signed, WordType> &other) const {
+private:
+  LIBC_INLINE friend constexpr int cmp(const BigInt &lhs, const BigInt &rhs) {
+    const auto compare = [](WordType a, WordType b) {
+      return a == b ? 0 : a > b ? 1 : -1;
+    };
     if constexpr (Signed) {
-      // Check for different signs;
-      bool a_sign = val[WORD_COUNT - 1] >> (WORD_SIZE - 1);
-      bool b_sign = other.val[WORD_COUNT - 1] >> (WORD_SIZE - 1);
-      if (a_sign != b_sign) {
-        return b_sign;
-      }
+      const bool lhs_is_neg = lhs.is_neg();
+      const bool rhs_is_neg = rhs.is_neg();
+      if (lhs_is_neg != rhs_is_neg)
+        return rhs_is_neg ? 1 : -1;
     }
-    for (size_t i = WORD_COUNT; i > 0; --i) {
-      WordType word = val[i - 1];
-      WordType other_word = other.val[i - 1];
-      if (word > other_word)
-        return true;
-      else if (word < other_word)
-        return false;
-    }
-    // Equal
-    return false;
+    for (size_t i = WORD_COUNT; i-- > 0;)
+      if (auto cmp = compare(lhs[i], rhs[i]); cmp != 0)
+        return cmp;
+    return 0;
   }
 
-  LIBC_INLINE constexpr bool
-  operator>=(const BigInt<Bits, Signed, WordType> &other) const {
-    if constexpr (Signed) {
-      // Check for different signs;
-      bool a_sign = val[WORD_COUNT - 1] >> (WORD_SIZE - 1);
-      bool b_sign = other.val[WORD_COUNT - 1] >> (WORD_SIZE - 1);
-      if (a_sign != b_sign) {
-        return b_sign;
-      }
-    }
-    for (size_t i = WORD_COUNT; i > 0; --i) {
-      WordType word = val[i - 1];
-      WordType other_word = other.val[i - 1];
-      if (word > other_word)
-        return true;
-      else if (word < other_word)
-        return false;
-    }
-    // Equal
-    return true;
+public:
+  LIBC_INLINE friend constexpr bool operator>(const BigInt &lhs,
+                                              const BigInt &rhs) {
+    return cmp(lhs, rhs) > 0;
+  }
+  LIBC_INLINE friend constexpr bool operator>=(const BigInt &lhs,
+                                               const BigInt &rhs) {
+    return cmp(lhs, rhs) >= 0;
+  }
+  LIBC_INLINE friend constexpr bool operator<(const BigInt &lhs,
+                                              const BigInt &rhs) {
+    return cmp(lhs, rhs) < 0;
+  }
+  LIBC_INLINE friend constexpr bool operator<=(const BigInt &lhs,
+                                               const BigInt &rhs) {
+    return cmp(lhs, rhs) <= 0;
   }
 
-  LIBC_INLINE constexpr bool
-  operator<(const BigInt<Bits, Signed, WordType> &other) const {
-    if constexpr (Signed) {
-      // Check for different signs;
-      bool a_sign = val[WORD_COUNT - 1] >> (WORD_SIZE - 1);
-      bool b_sign = other.val[WORD_COUNT - 1] >> (WORD_SIZE - 1);
-      if (a_sign != b_sign) {
-        return a_sign;
-      }
-    }
-
-    for (size_t i = WORD_COUNT; i > 0; --i) {
-      WordType word = val[i - 1];
-      WordType other_word = other.val[i - 1];
-      if (word > other_word)
-        return false;
-      else if (word < other_word)
-        return true;
-    }
-    // Equal
-    return false;
-  }
-
-  LIBC_INLINE constexpr bool
-  operator<=(const BigInt<Bits, Signed, WordType> &other) const {
-    if constexpr (Signed) {
-      // Check for different signs;
-      bool a_sign = val[WORD_COUNT - 1] >> (WORD_SIZE - 1);
-      bool b_sign = other.val[WORD_COUNT - 1] >> (WORD_SIZE - 1);
-      if (a_sign != b_sign) {
-        return a_sign;
-      }
-    }
-    for (size_t i = WORD_COUNT; i > 0; --i) {
-      WordType word = val[i - 1];
-      WordType other_word = other.val[i - 1];
-      if (word > other_word)
-        return false;
-      else if (word < other_word)
-        return true;
-    }
-    // Equal
-    return true;
-  }
-
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> &operator++() {
-    BigInt<Bits, Signed, WordType> one(1);
-    add(one);
+  LIBC_INLINE constexpr BigInt &operator++() {
+    add(BigInt(1));
     return *this;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> operator++(int) {
-    BigInt<Bits, Signed, WordType> oldval(*this);
-    BigInt<Bits, Signed, WordType> one(1);
-    add(one);
+  LIBC_INLINE constexpr BigInt operator++(int) {
+    BigInt oldval(*this);
+    add(BigInt(1));
     return oldval;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> &operator--() {
-    BigInt<Bits, Signed, WordType> one(1);
-    sub(one);
+  LIBC_INLINE constexpr BigInt &operator--() {
+    sub(BigInt(1));
     return *this;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed, WordType> operator--(int) {
-    BigInt<Bits, Signed, WordType> oldval(*this);
-    BigInt<Bits, Signed, WordType> one(1);
-    sub(one);
+  LIBC_INLINE constexpr BigInt operator--(int) {
+    BigInt oldval(*this);
+    sub(BigInt(1));
     return oldval;
   }
 
-  // Return the i-th 64-bit word of the number.
+  // Return the i-th word of the number.
   LIBC_INLINE constexpr const WordType &operator[](size_t i) const {
     return val[i];
   }
 
-  // Return the i-th 64-bit word of the number.
+  // Return the i-th word of the number.
   LIBC_INLINE constexpr WordType &operator[](size_t i) { return val[i]; }
 
   LIBC_INLINE WordType *data() { return val; }
@@ -968,14 +867,29 @@ struct BigInt {
   LIBC_INLINE const WordType *data() const { return val; }
 };
 
+namespace internal {
+// We default BigInt's WordType to 'uint64_t' or 'uint32_t' depending on type
+// availability.
 template <size_t Bits>
-using UInt =
-    typename cpp::conditional_t<Bits == 32, BigInt<32, false, uint32_t>,
-                                BigInt<Bits, false, uint64_t>>;
+struct WordTypeSelector : cpp::type_identity<
+#if defined(UINT64_MAX)
+                              uint64_t
+#else
+                              uint32_t
+#endif
+                              > {
+};
+// Except if we request 32 bits explicitly.
+template <> struct WordTypeSelector<32> : cpp::type_identity<uint32_t> {};
+template <size_t Bits>
+using WordTypeSelectorT = typename WordTypeSelector<Bits>::type;
+} // namespace internal
 
 template <size_t Bits>
-using Int = typename cpp::conditional_t<Bits == 32, BigInt<32, true, uint32_t>,
-                                        BigInt<Bits, true, uint64_t>>;
+using UInt = BigInt<Bits, false, internal::WordTypeSelectorT<Bits>>;
+
+template <size_t Bits>
+using Int = BigInt<Bits, true, internal::WordTypeSelectorT<Bits>>;
 
 // Provides limits of U/Int<128>.
 template <> class numeric_limits<UInt<128>> {

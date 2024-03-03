@@ -24,10 +24,11 @@ OpenACCComputeConstruct::CreateEmpty(const ASTContext &C, EmptyShell) {
 
 OpenACCComputeConstruct *
 OpenACCComputeConstruct::Create(const ASTContext &C, OpenACCDirectiveKind K,
-                                SourceLocation BeginLoc,
-                                SourceLocation EndLoc) {
+                                SourceLocation BeginLoc, SourceLocation EndLoc,
+                                Stmt *StructuredBlock) {
   void *Mem = C.Allocate(sizeof(OpenACCComputeConstruct),
                          alignof(OpenACCComputeConstruct));
-  auto *Inst = new (Mem) OpenACCComputeConstruct(K, BeginLoc, EndLoc);
+  auto *Inst =
+      new (Mem) OpenACCComputeConstruct(K, BeginLoc, EndLoc, StructuredBlock);
   return Inst;
 }

@@ -480,6 +480,10 @@ public:
   // WaitEventType to corresponding counter values in InstCounterType.
   virtual const unsigned *getWaitEventMask() const = 0;
 
+  // Returns a new waitcnt with all counters except VScnt set to 0. If
+  // IncludeVSCnt is true, VScnt is set to 0, otherwise it is set to ~0u.
+  virtual AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const = 0;
+
   virtual ~WaitcntGenerator() = default;
 };
 
@@ -516,6 +520,8 @@ public:
 
     return WaitEventMaskForInstPreGFX12;
   }
+
+  virtual AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
 };
 
 class WaitcntGeneratorGFX12Plus : public WaitcntGenerator {
@@ -549,6 +555,8 @@ public:
 
     return WaitEventMaskForInstGFX12Plus;
   }
+
+  virtual AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
 };
 
 class SIInsertWaitcnts : public MachineFunctionPass {
@@ -1304,6 +1312,16 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
   return Modified;
 }
 
+AMDGPU::Waitcnt
+WaitcntGeneratorPreGFX12::getAllZeroWaitcnt(bool IncludeVSCnt) const {
+  return AMDGPU::Waitcnt(0, 0, 0, IncludeVSCnt && ST->hasVscnt() ? 0 : ~0u);
+}
+
+AMDGPU::Waitcnt
+WaitcntGeneratorGFX12Plus::getAllZeroWaitcnt(bool IncludeVSCnt) const {
+  return AMDGPU::Waitcnt(0, 0, 0, IncludeVSCnt ? 0 : ~0u, 0, 0, 0);
+}
+
 /// Combine consecutive S_WAIT_*CNT instructions that precede \p It and
 /// follow \p OldWaitcntInstr and apply any extra waits from \p Wait that
 /// were added by previous passes. Currently this pass conservatively
@@ -1613,8 +1631,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       MI.getOpcode() == AMDGPU::SI_RETURN ||
       MI.getOpcode() == AMDGPU::S_SETPC_B64_return ||
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
-    Wait = Wait.combined(
-        AMDGPU::Waitcnt::allZeroExceptVsCnt(ST->hasExtendedWaitCounts()));
+    Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
   }
   // Identify S_ENDPGM instructions which may have to wait for outstanding VMEM
   // stores. In this case it can be useful to send a message to explicitly
@@ -1834,8 +1851,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // cause an exception. Otherwise, insert an explicit S_WAITCNT 0 here.
   if (MI.getOpcode() == AMDGPU::S_BARRIER &&
       !ST->hasAutoWaitcntBeforeBarrier() && !ST->supportsBackOffBarrier()) {
-    Wait = Wait.combined(
-        AMDGPU::Waitcnt::allZero(ST->hasExtendedWaitCounts(), ST->hasVscnt()));
+    Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/true));
   }
 
   // TODO: Remove this work-around, enable the assert for Bug 457939
@@ -1851,7 +1867,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   ScoreBrackets.simplifyWaitcnt(Wait);
 
   if (ForceEmitZeroWaitcnts)
-    Wait = AMDGPU::Waitcnt::allZeroExceptVsCnt(ST->hasExtendedWaitCounts());
+    Wait = WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
 
   if (ForceEmitWaitcnt[LOAD_CNT])
     Wait.LoadCnt = 0;
@@ -2089,7 +2105,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     if (callWaitsOnFunctionReturn(Inst)) {
       // Act as a wait on everything
       ScoreBrackets->applyWaitcnt(
-          AMDGPU::Waitcnt::allZeroExceptVsCnt(ST->hasExtendedWaitCounts()));
+          WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
       ScoreBrackets->setStateOnFunctionEntryOrReturn();
     } else {
       // May need to way wait for anything.

@@ -16,6 +16,7 @@
 #include <map>
 #include <optional>
 #include <system_error>
+#include <unordered_map>
 
 namespace llvm {
 class raw_ostream;
@@ -111,6 +112,9 @@ public:
   /// addresses when aggregating profile
   bool enabledFor(llvm::object::ELFObjectFileBase *InputFile) const;
 
+  /// Save function and basic block hashes used for metadata dump.
+  void saveMetadata(BinaryContext &BC);
+
 private:
   /// Helper to update \p Map by inserting one or more BAT entries reflecting
   /// \p BB for function located at \p FuncAddress. At least one entry will be
@@ -139,6 +143,9 @@ private:
   size_t getNumEqualOffsets(const MapTy &Map) const;
 
   std::map<uint64_t, MapTy> Maps;
+
+  using BBHashMap = std::unordered_map<uint32_t, size_t>;
+  std::unordered_map<uint64_t, std::pair<size_t, BBHashMap>> FuncHashes;
 
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;

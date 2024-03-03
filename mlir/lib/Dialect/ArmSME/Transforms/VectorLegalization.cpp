@@ -40,12 +40,12 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 // Common match failure reasons.
-static constexpr StringLiteral MATCH_FAILURE_NOT_SME_TILE_TYPE_MULTIPLE(
+static constexpr StringLiteral kMatchFailureNotSMETileTypeMultiple(
     "op vector size is not multiple of SME tiles");
-static constexpr StringLiteral MATCH_FAILURE_UNSUPPORTED_MASK_OP(
+static constexpr StringLiteral kMatchFailureUnsupportedMaskOp(
     "op mask is unsupported for legalization/decomposition");
 static constexpr StringLiteral
-    MATCH_FAILURE_NON_PERMUTATION_MAP("op affine map is not a permutation");
+    kMatchFailureNonPermutationMap("op affine map is not a permutation");
 
 /// An SMESubTile represents a single SME-sized sub-tile from decomposing a
 /// larger vector type. The (`row`, `col`) are the position of the tile in the
@@ -174,8 +174,8 @@ struct LegalizeVectorOuterProductOpsByDecomposition
                   OneToNPatternRewriter &rewriter) const override {
     auto vectorType = outerProductOp.getResultVectorType();
     if (!isMultipleOfSMETileVectorType(vectorType))
-      return rewriter.notifyMatchFailure(
-          outerProductOp, MATCH_FAILURE_NOT_SME_TILE_TYPE_MULTIPLE);
+      return rewriter.notifyMatchFailure(outerProductOp,
+                                         kMatchFailureNotSMETileTypeMultiple);
 
     Value mask;
     Operation *rootOp = outerProductOp;
@@ -188,7 +188,7 @@ struct LegalizeVectorOuterProductOpsByDecomposition
 
     if (!isSupportedMaskOp(mask))
       return rewriter.notifyMatchFailure(outerProductOp,
-                                         MATCH_FAILURE_UNSUPPORTED_MASK_OP);
+                                         kMatchFailureUnsupportedMaskOp);
 
     ValueRange accSMETiles = adaptor.getAcc();
     auto smeTileType = getSMETileTypeForElement(vectorType.getElementType());
@@ -252,18 +252,18 @@ struct LegalizeTransferReadOpsByDecomposition
                   OneToNPatternRewriter &rewriter) const override {
     auto vectorType = readOp.getVectorType();
     if (!isMultipleOfSMETileVectorType(vectorType))
-      return rewriter.notifyMatchFailure(
-          readOp, MATCH_FAILURE_NOT_SME_TILE_TYPE_MULTIPLE);
+      return rewriter.notifyMatchFailure(readOp,
+                                         kMatchFailureNotSMETileTypeMultiple);
 
     auto mask = readOp.getMask();
     if (!isSupportedMaskOp(mask))
       return rewriter.notifyMatchFailure(readOp,
-                                         MATCH_FAILURE_UNSUPPORTED_MASK_OP);
+                                         kMatchFailureUnsupportedMaskOp);
 
     auto permutationMap = readOp.getPermutationMap();
     if (!permutationMap.isPermutation())
       return rewriter.notifyMatchFailure(readOp,
-                                         MATCH_FAILURE_NON_PERMUTATION_MAP);
+                                         kMatchFailureNonPermutationMap);
 
     // Note: For 2D vector types the only non-identity permutation is a simple
     // tranpose [1, 0].
@@ -300,18 +300,18 @@ struct LegalizeTransferWriteOpsByDecomposition
                   OneToNPatternRewriter &rewriter) const override {
     auto vectorType = writeOp.getVectorType();
     if (!isMultipleOfSMETileVectorType(vectorType))
-      return rewriter.notifyMatchFailure(
-          writeOp, MATCH_FAILURE_NOT_SME_TILE_TYPE_MULTIPLE);
+      return rewriter.notifyMatchFailure(writeOp,
+                                         kMatchFailureNotSMETileTypeMultiple);
 
     auto mask = writeOp.getMask();
     if (!isSupportedMaskOp(mask))
       return rewriter.notifyMatchFailure(writeOp,
-                                         MATCH_FAILURE_UNSUPPORTED_MASK_OP);
+                                         kMatchFailureUnsupportedMaskOp);
 
     auto permutationMap = writeOp.getPermutationMap();
     if (!permutationMap.isPermutation())
       return rewriter.notifyMatchFailure(writeOp,
-                                         MATCH_FAILURE_NON_PERMUTATION_MAP);
+                                         kMatchFailureNonPermutationMap);
 
     // Note: For 2D vector types the only non-identity permutation is a simple
     // tranpose [1, 0].
@@ -459,7 +459,7 @@ struct LiftIllegalVectorTransposeToMemory
   }
 
   static Value getExtensionSource(Operation *op) {
-    if (isa<arith::ExtSIOp, arith::ExtUIOp, arith::ExtFOp>(op))
+    if (isa_and_present<arith::ExtSIOp, arith::ExtUIOp, arith::ExtFOp>(op))
       return op->getOperand(0);
     return {};
   }

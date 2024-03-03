@@ -25,6 +25,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
@@ -643,10 +644,21 @@ bool SimplifyIndvar::replaceIVUserWithLoopInvariant(Instruction *I) {
   }
 
   auto *Invariant = Rewriter.expandCodeFor(S, I->getType(), IP);
+  bool NeedToEmitLCSSAPhis = false;
+  if (!LI->replacementPreservesLCSSAForm(I, Invariant))
+    NeedToEmitLCSSAPhis = true;
 
   I->replaceAllUsesWith(Invariant);
   LLVM_DEBUG(dbgs() << "INDVARS: Replace IV user: " << *I
                     << " with loop invariant: " << *S << '\n');
+
+  if (NeedToEmitLCSSAPhis) {
+    SmallVector<Instruction *, 1> NeedsLCSSAPhis;
+    NeedsLCSSAPhis.push_back(cast<Instruction>(Invariant));
+    formLCSSAForInstructions(NeedsLCSSAPhis, *DT, *LI, SE);
+    LLVM_DEBUG(dbgs() << " INDVARS: Replacement breaks LCSSA form"
+                      << " inserting LCSSA Phis" << '\n');
+  }
   ++NumFoldedUser;
   Changed = true;
   DeadInsts.emplace_back(I);
@@ -1131,7 +1143,8 @@ protected:
   const SCEV *getSCEVByOpCode(const SCEV *LHS, const SCEV *RHS,
                               unsigned OpCode) const;
 
-  Instruction *widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter);
+  Instruction *widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter,
+                          PHINode *OrigPhi, PHINode *WidePhi);
 
   bool widenLoopCompare(NarrowIVDefUse DU);
   bool widenWithVariantUse(NarrowIVDefUse DU);
@@ -1731,7 +1744,9 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
 
 /// Determine whether an individual user of the narrow IV can be widened. If so,
 /// return the wide clone of the user.
-Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewriter) {
+Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
+                                 SCEVExpander &Rewriter, PHINode *OrigPhi,
+                                 PHINode *WidePhi) {
   assert(ExtendKindMap.count(DU.NarrowDef) &&
          "Should already know the kind of extension used to widen NarrowDef");
 
@@ -1825,11 +1840,18 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewri
     if (!WideAddRec.first)
       return nullptr;
 
-    // Reuse the IV increment that SCEVExpander created as long as it dominates
-    // NarrowUse.
+    // Reuse the IV increment that SCEVExpander created. Recompute flags, unless
+    // the flags for both increments agree and it is safe to use the ones from
+    // the original inc. In that case, the new use of the wide increment won't
+    // be more poisonous.
+    bool NeedToRecomputeFlags =
+        !SCEVExpander::canReuseFlagsFromOriginalIVInc(OrigPhi, WidePhi,
+                                                      DU.NarrowUse, WideInc) ||
+        DU.NarrowUse->hasNoUnsignedWrap() != WideInc->hasNoUnsignedWrap() ||
+        DU.NarrowUse->hasNoSignedWrap() != WideInc->hasNoSignedWrap();
     Instruction *WideUse = nullptr;
     if (WideAddRec.first == WideIncExpr &&
-        Rewriter.hoistIVInc(WideInc, DU.NarrowUse))
+        Rewriter.hoistIVInc(WideInc, DU.NarrowUse, NeedToRecomputeFlags))
       WideUse = WideInc;
     else {
       WideUse = cloneIVUser(DU, WideAddRec.first);
@@ -1996,11 +2018,9 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
       // the same opcode. It is not safe to re-use the flags from the original
       // increment, if it is more complex and SCEV expansion may have yielded a
       // more simplified wider increment.
-      bool MatchingOps =
-          match(OrigInc, m_c_BinOp(m_Specific(OrigPhi), m_Value())) &&
-          match(WideInc, m_c_BinOp(m_Specific(WidePhi), m_Value())) &&
-          OrigInc->getOpcode() == WideInc->getOpcode();
-      if (MatchingOps && isa<OverflowingBinaryOperator>(OrigInc) &&
+      if (SCEVExpander::canReuseFlagsFromOriginalIVInc(OrigPhi, WidePhi,
+                                                       OrigInc, WideInc) &&
+          isa<OverflowingBinaryOperator>(OrigInc) &&
           isa<OverflowingBinaryOperator>(WideInc)) {
         WideInc->setHasNoUnsignedWrap(WideInc->hasNoUnsignedWrap() ||
                                       OrigInc->hasNoUnsignedWrap());
@@ -2024,7 +2044,7 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
 
     // Process a def-use edge. This may replace the use, so don't hold a
     // use_iterator across it.
-    Instruction *WideUse = widenIVUse(DU, Rewriter);
+    Instruction *WideUse = widenIVUse(DU, Rewriter, OrigPhi, WidePhi);
 
     // Follow all def-use edges from the previous narrow use.
     if (WideUse)

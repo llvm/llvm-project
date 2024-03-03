@@ -748,8 +748,8 @@ define i32 @test54(i64 %A) {
 define i64 @test55(i32 %A) {
 ; ALL-LABEL: @test55(
 ; ALL-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 7224
-; ALL-NEXT:    [[C:%.*]] = zext nneg i32 [[TMP1]] to i64
-; ALL-NEXT:    [[D:%.*]] = or disjoint i64 [[C]], -32574
+; ALL-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[TMP1]], -32574
+; ALL-NEXT:    [[D:%.*]] = sext i32 [[TMP2]] to i64
 ; ALL-NEXT:    ret i64 [[D]]
 ;
   %B = trunc i32 %A to i16

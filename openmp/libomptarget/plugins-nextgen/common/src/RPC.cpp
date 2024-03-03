@@ -12,13 +12,8 @@
 
 #include "PluginInterface.h"
 
-// This header file may be present in-tree or from an LLVM installation. The
-// installed version lives alongside the GPU headers so we do not want to
-// include it directly.
-#if __has_include(<gpu-none-llvm/rpc_server.h>)
-#include <gpu-none-llvm/rpc_server.h>
-#elif defined(LIBOMPTARGET_RPC_SUPPORT)
-#include <rpc_server.h>
+#if defined(LIBOMPTARGET_RPC_SUPPORT)
+#include "llvmlibc_rpc_server.h"
 #endif
 
 using namespace llvm;

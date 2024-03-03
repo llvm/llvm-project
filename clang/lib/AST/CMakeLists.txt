@@ -32,6 +32,7 @@ add_clang_library(clangAST
   ASTTypeTraits.cpp
   AttrDocTable.cpp
   AttrImpl.cpp
+  Availability.cpp
   Comment.cpp
   CommentBriefParser.cpp
   CommentCommandTraits.cpp
@@ -87,6 +88,7 @@ add_clang_library(clangAST
   Interp/Record.cpp
   Interp/Source.cpp
   Interp/State.cpp
+  Interp/InterpShared.cpp
   ItaniumCXXABI.cpp
   ItaniumMangle.cpp
   JSONNodeDumper.cpp

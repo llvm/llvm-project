@@ -10,7 +10,7 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -90,7 +90,7 @@ module {
   //
   // Main driver.
   //
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
 
     // Initialize various matrices, dense for stress testing,
@@ -140,33 +140,94 @@ module {
     %b4 = sparse_tensor.convert %sb : tensor<8x4xf64> to tensor<8x4xf64, #DCSR>
 
     //
-    // Sanity check on stored entries before going into the computations.
+    // Sanity check before going into the computations.
     //
-    // CHECK:      32
-    // CHECK-NEXT: 32
-    // CHECK-NEXT: 4
-    // CHECK-NEXT: 4
-    // CHECK-NEXT: 32
-    // CHECK-NEXT: 32
-    // CHECK-NEXT: 8
-    // CHECK-NEXT: 8
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 32
+    // CHECK-NEXT: pos[1] : ( 0, 8, 16, 24, 32
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7
+    // CHECK-NEXT: values : ( 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 1.2, 2.2, 3.2, 4.2, 5.2, 6.2, 7.2, 8.2, 1.3, 2.3, 3.3, 4.3, 5.3, 6.3, 7.3, 8.3, 1.4, 2.4, 3.4, 4.4, 5.4, 6.4, 7.4, 8.4
+    // CHECK-NEXT: ----
     //
-    %noea1 = sparse_tensor.number_of_entries %a1 : tensor<4x8xf64, #CSR>
-    %noea2 = sparse_tensor.number_of_entries %a2 : tensor<4x8xf64, #DCSR>
-    %noea3 = sparse_tensor.number_of_entries %a3 : tensor<4x8xf64, #CSR>
-    %noea4 = sparse_tensor.number_of_entries %a4 : tensor<4x8xf64, #DCSR>
-    %noeb1 = sparse_tensor.number_of_entries %b1 : tensor<8x4xf64, #CSR>
-    %noeb2 = sparse_tensor.number_of_entries %b2 : tensor<8x4xf64, #DCSR>
-    %noeb3 = sparse_tensor.number_of_entries %b3 : tensor<8x4xf64, #CSR>
-    %noeb4 = sparse_tensor.number_of_entries %b4 : tensor<8x4xf64, #DCSR>
-    vector.print %noea1 : index
-    vector.print %noea2 : index
-    vector.print %noea3 : index
-    vector.print %noea4 : index
-    vector.print %noeb1 : index
-    vector.print %noeb2 : index
-    vector.print %noeb3 : index
-    vector.print %noeb4 : index
+    sparse_tensor.print %a1 : tensor<4x8xf64, #CSR>
+
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 32
+    // CHECK-NEXT: pos[0] : ( 0, 4
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
+    // CHECK-NEXT: pos[1] : ( 0, 8, 16, 24, 32
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7
+    // CHECK-NEXT: values : ( 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 1.2, 2.2, 3.2, 4.2, 5.2, 6.2, 7.2, 8.2, 1.3, 2.3, 3.3, 4.3, 5.3, 6.3, 7.3, 8.3, 1.4, 2.4, 3.4, 4.4, 5.4, 6.4, 7.4, 8.4
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %a2 : tensor<4x8xf64, #DCSR>
+
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 4
+    // CHECK-NEXT: pos[1] : ( 0, 2, 2, 3, 4
+    // CHECK-NEXT: crd[1] : ( 1, 5, 1, 7
+    // CHECK-NEXT: values : ( 2.1, 6.1, 2.3, 1
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %a3 : tensor<4x8xf64, #CSR>
+
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 4
+    // CHECK-NEXT: pos[0] : ( 0, 3
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 4
+    // CHECK-NEXT: crd[1] : ( 1, 5, 1, 7
+    // CHECK-NEXT: values : ( 2.1, 6.1, 2.3, 1
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %a4 : tensor<4x8xf64, #DCSR>
+
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 32
+    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16, 20, 24, 28, 32
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+    // CHECK-NEXT: values : ( 10.1, 11.1, 12.1, 13.1, 10.2, 11.2, 12.2, 13.2, 10.3, 11.3, 12.3, 13.3, 10.4, 11.4, 12.4, 13.4, 10.5, 11.5, 12.5, 13.5, 10.6, 11.6, 12.6, 13.6, 10.7, 11.7, 12.7, 13.7, 10.8, 11.8, 12.8, 13.8
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %b1 : tensor<8x4xf64, #CSR>
+
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 32
+    // CHECK-NEXT: pos[0] : ( 0, 8
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4, 5, 6, 7
+    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16, 20, 24, 28, 32
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+    // CHECK-NEXT: values : ( 10.1, 11.1, 12.1, 13.1, 10.2, 11.2, 12.2, 13.2, 10.3, 11.3, 12.3, 13.3, 10.4, 11.4, 12.4, 13.4, 10.5, 11.5, 12.5, 13.5, 10.6, 11.6, 12.6, 13.6, 10.7, 11.7, 12.7, 13.7, 10.8, 11.8, 12.8, 13.8
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %b2 : tensor<8x4xf64, #DCSR>
+
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 8
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 3, 4, 4, 5, 6, 8
+    // CHECK-NEXT: crd[1] : ( 3, 2, 1, 0, 1, 2, 2, 3
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %b3 : tensor<8x4xf64, #CSR>
+
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 8
+    // CHECK-NEXT: pos[0] : ( 0, 7
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 5, 6, 7
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 3, 4, 5, 6, 8
+    // CHECK-NEXT: crd[1] : ( 3, 2, 1, 0, 1, 2, 2, 3
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %b4 : tensor<8x4xf64, #DCSR>
 
     // Call kernels with dense.
     %0 = call @matmul1(%da, %db, %zero)
@@ -208,24 +269,26 @@ module {
     call @printMemrefF64(%u0) : (tensor<*xf64>) -> ()
 
     //
-    // CHECK:      {{\[}}[388.76,   425.56,   462.36,   499.16],
-    // CHECK-NEXT: [397.12,   434.72,   472.32,   509.92],
-    // CHECK-NEXT: [405.48,   443.88,   482.28,   520.68],
-    // CHECK-NEXT: [413.84,   453.04,   492.24,   531.44]]
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 16
+    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+    // CHECK-NEXT: values : ( 388.76, 425.56, 462.36, 499.16, 397.12, 434.72, 472.32, 509.92, 405.48, 443.88, 482.28, 520.68, 413.84, 453.04, 492.24, 531.44
+    // CHECK-NEXT: ----
     //
-    %c1 = sparse_tensor.convert %1 : tensor<4x4xf64, #CSR> to tensor<4x4xf64>
-    %c1u = tensor.cast %c1 : tensor<4x4xf64> to tensor<*xf64>
-    call @printMemrefF64(%c1u) : (tensor<*xf64>) -> ()
+    sparse_tensor.print %1 : tensor<4x4xf64, #CSR>
 
     //
-    // CHECK:      {{\[}}[388.76,   425.56,   462.36,   499.16],
-    // CHECK-NEXT: [397.12,   434.72,   472.32,   509.92],
-    // CHECK-NEXT: [405.48,   443.88,   482.28,   520.68],
-    // CHECK-NEXT: [413.84,   453.04,   492.24,   531.44]]
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 16
+    // CHECK-NEXT: pos[0] : ( 0, 4
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
+    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+    // CHECK-NEXT: values : ( 388.76, 425.56, 462.36, 499.16, 397.12, 434.72, 472.32, 509.92, 405.48, 443.88, 482.28, 520.68, 413.84, 453.04, 492.24, 531.44
+    // CHECK-NEXT: ----
     //
-    %c2 = sparse_tensor.convert %2 : tensor<4x4xf64, #DCSR> to tensor<4x4xf64>
-    %c2u = tensor.cast %c2 : tensor<4x4xf64> to tensor<*xf64>
-    call @printMemrefF64(%c2u) : (tensor<*xf64>) -> ()
+    sparse_tensor.print %2 : tensor<4x4xf64, #DCSR>
 
     //
     // CHECK:      {{\[}}[86.08,   94.28,   102.48,   110.68],
@@ -237,24 +300,26 @@ module {
     call @printMemrefF64(%u3) : (tensor<*xf64>) -> ()
 
     //
-    // CHECK:      {{\[}}[86.08,   94.28,   102.48,   110.68],
-    // CHECK-NEXT: [0,   0,   0,   0],
-    // CHECK-NEXT: [23.46,   25.76,   28.06,   30.36],
-    // CHECK-NEXT: [10.8,   11.8,   12.8,   13.8]]
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 12
+    // CHECK-NEXT: pos[1] : ( 0, 4, 4, 8, 12
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+    // CHECK-NEXT: values : ( 86.08, 94.28, 102.48, 110.68, 23.46, 25.76, 28.06, 30.36, 10.8, 11.8, 12.8, 13.8
+    // CHECK-NEXT: ----
     //
-    %c4 = sparse_tensor.convert %4 : tensor<4x4xf64, #CSR> to tensor<4x4xf64>
-    %c4u = tensor.cast %c4 : tensor<4x4xf64> to tensor<*xf64>
-    call @printMemrefF64(%c4u) : (tensor<*xf64>) -> ()
+    sparse_tensor.print %4 : tensor<4x4xf64, #CSR>
 
     //
-    // CHECK:      {{\[}}[86.08,   94.28,   102.48,   110.68],
-    // CHECK-NEXT: [0,   0,   0,   0],
-    // CHECK-NEXT: [23.46,   25.76,   28.06,   30.36],
-    // CHECK-NEXT: [10.8,   11.8,   12.8,   13.8]]
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 12
+    // CHECK-NEXT: pos[0] : ( 0, 3
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3
+    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+    // CHECK-NEXT: values : ( 86.08, 94.28, 102.48, 110.68, 23.46, 25.76, 28.06, 30.36, 10.8, 11.8, 12.8, 13.8
+    // CHECK-NEXT: ----
     //
-    %c5 = sparse_tensor.convert %5 : tensor<4x4xf64, #DCSR> to tensor<4x4xf64>
-    %c5u = tensor.cast %c5 : tensor<4x4xf64> to tensor<*xf64>
-    call @printMemrefF64(%c5u) : (tensor<*xf64>) -> ()
+    sparse_tensor.print %5 : tensor<4x4xf64, #DCSR>
 
     //
     // CHECK:      {{\[}}[0,   30.5,   4.2,   0],
@@ -266,46 +331,26 @@ module {
     call @printMemrefF64(%u6) : (tensor<*xf64>) -> ()
 
     //
-    // CHECK:      {{\[}}[0,   30.5,   4.2,   0],
-    // CHECK-NEXT: [0,   0,   0,   0],
-    // CHECK-NEXT: [0,   0,   4.6,   0],
-    // CHECK-NEXT: [0,   0,   7,   8]]
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 5
+    // CHECK-NEXT: pos[1] : ( 0, 2, 2, 3, 5
+    // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3
+    // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8
+    // CHECK-NEXT: ----
     //
-    %c7 = sparse_tensor.convert %7 : tensor<4x4xf64, #CSR> to tensor<4x4xf64>
-    %c7u = tensor.cast %c7 : tensor<4x4xf64> to tensor<*xf64>
-    call @printMemrefF64(%c7u) : (tensor<*xf64>) -> ()
+    sparse_tensor.print %7 : tensor<4x4xf64, #CSR>
 
     //
-    // CHECK:      {{\[}}[0,   30.5,   4.2,   0],
-    // CHECK-NEXT: [0,   0,   0,   0],
-    // CHECK-NEXT: [0,   0,   4.6,   0],
-    // CHECK-NEXT: [0,   0,   7,   8]]
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 5
+    // CHECK-NEXT: pos[0] : ( 0, 3
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 5
+    // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3
+    // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8
+    // CHECK-NEXT: ----
     //
-    %c8 = sparse_tensor.convert %8 : tensor<4x4xf64, #DCSR> to tensor<4x4xf64>
-    %c8u = tensor.cast %c8 : tensor<4x4xf64> to tensor<*xf64>
-    call @printMemrefF64(%c8u) : (tensor<*xf64>) -> ()
-
-    //
-    // Sanity check on nonzeros.
-    //
-    // CHECK: [30.5,  4.2,  4.6,  7,  8{{.*}}]
-    // CHECK: [30.5,  4.2,  4.6,  7,  8{{.*}}]
-    //
-    %val7 = sparse_tensor.values %7 : tensor<4x4xf64, #CSR> to memref<?xf64>
-    %val8 = sparse_tensor.values %8 : tensor<4x4xf64, #DCSR> to memref<?xf64>
-    call @printMemref1dF64(%val7) : (memref<?xf64>) -> ()
-    call @printMemref1dF64(%val8) : (memref<?xf64>) -> ()
-
-    //
-    // Sanity check on stored entries after the computations.
-    //
-    // CHECK-NEXT: 5
-    // CHECK-NEXT: 5
-    //
-    %noe7 = sparse_tensor.number_of_entries %7 : tensor<4x4xf64, #CSR>
-    %noe8 = sparse_tensor.number_of_entries %8 : tensor<4x4xf64, #DCSR>
-    vector.print %noe7 : index
-    vector.print %noe8 : index
+    sparse_tensor.print %8 : tensor<4x4xf64, #DCSR>
 
     // Release the resources.
     bufferization.dealloc_tensor %a1 : tensor<4x8xf64, #CSR>
@@ -316,10 +361,13 @@ module {
     bufferization.dealloc_tensor %b2 : tensor<8x4xf64, #DCSR>
     bufferization.dealloc_tensor %b3 : tensor<8x4xf64, #CSR>
     bufferization.dealloc_tensor %b4 : tensor<8x4xf64, #DCSR>
+    bufferization.dealloc_tensor %0 : tensor<4x4xf64>
     bufferization.dealloc_tensor %1 : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %2 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %3 : tensor<4x4xf64>
     bufferization.dealloc_tensor %4 : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %5 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %6 : tensor<4x4xf64>
     bufferization.dealloc_tensor %7 : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %8 : tensor<4x4xf64, #DCSR>
 

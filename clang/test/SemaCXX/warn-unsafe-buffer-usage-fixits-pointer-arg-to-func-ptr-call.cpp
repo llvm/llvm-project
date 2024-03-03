@@ -14,7 +14,7 @@ void unsafe_array_func_ptr_call(void (*fn_ptr)(int *param)) {
 
 void unsafe_ptr_func_ptr_call(void (*fn_ptr)(int *param)) {
   int *p;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:9}:"std::span<int> p"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int> "
 
   p[5] = 10;
   fn_ptr(p);
@@ -23,7 +23,7 @@ void unsafe_ptr_func_ptr_call(void (*fn_ptr)(int *param)) {
 
 void addr_of_unsafe_ptr_func_ptr_call(void (*fn_ptr)(int *param)) {
   int *p;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:9}:"std::span<int> p"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int> "
 
   p[5] = 10;
   fn_ptr(&p[0]);
@@ -32,7 +32,7 @@ void addr_of_unsafe_ptr_func_ptr_call(void (*fn_ptr)(int *param)) {
 
 void addr_of_unsafe_ptr_w_offset_func_ptr_call(void (*fn_ptr)(int *param)) {
   int *p;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:9}:"std::span<int> p"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int> "
 
   p[5] = 10;
   fn_ptr(&p[3]);
@@ -41,7 +41,7 @@ void addr_of_unsafe_ptr_w_offset_func_ptr_call(void (*fn_ptr)(int *param)) {
 
 void preincrement_unsafe_ptr_func_ptr_call(void (*fn_ptr)(int *param)) {
   int *p;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:9}:"std::span<int> p"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int> "
 
   p[5] = 10;
   fn_ptr(++p);
