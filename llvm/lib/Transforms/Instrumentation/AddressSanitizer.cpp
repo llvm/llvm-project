@@ -43,6 +43,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -787,6 +788,10 @@ private:
   FunctionCallee AMDGPUAddressPrivate;
   int InstrumentationWithCallsThreshold;
   uint32_t MaxInlinePoisoningSize;
+
+  // Block coloring for inserting "funclet" op bundle to calls in case of scoped
+  // EH functionality
+  DenseMap<BasicBlock *, ColorVector> BlockColors;
 };
 
 class ModuleAddressSanitizer {
@@ -900,6 +905,39 @@ private:
   Function *AsanDtorFunction = nullptr;
 };
 
+// Returns a "funclet" operand bundle in case the BB is within a funclet.
+static SmallVector<OperandBundleDef>
+getEHFuncletBundle(const BasicBlock *BB,
+                   const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
+  if (BlockColors.empty())
+    return {};
+  SmallVector<OperandBundleDef> OpBundle;
+  auto *CurBB = BB;
+  // AddressSanitizer creates BBs on the fly, especially with
+  // SplitBlockAndInsertIfThenElse or its variants, in which case the BB does
+  // not exist in BlockColors. If this BB is one of those newly created BBs,
+  // navigating to its predecessors until we find one of original BBs will pick
+  // the right funclet.
+  auto It = BlockColors.find(CurBB);
+  while (It == BlockColors.end()) {
+    if (pred_empty(CurBB))
+      // This BB cannot be reached from the entry BB, because the entry BB has
+      // to be in BlockColors. Skip it.
+      return {};
+    CurBB = *pred_begin(CurBB);
+    It = BlockColors.find(CurBB);
+  }
+
+  const ColorVector &CV = BlockColors.find(CurBB)->second;
+  if (CV.size() != 1)
+    // Invalid funclet nest. Can't pick a single funclet bundle.
+    return {};
+  Instruction *Pad = CV.front()->getFirstNonPHI();
+  if (Pad->isEHPad())
+    OpBundle.emplace_back("funclet", Pad);
+  return OpBundle;
+}
+
 // Stack poisoning does not play well with exception handling.
 // When an exception is thrown, we essentially bypass the code
 // that unpoisones the stack. This is why the run-time library has
@@ -948,12 +986,17 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
   bool HasReturnsTwiceCall = false;
   bool PoisonStack;
 
+  // Block coloring for inserting "funclet" op bundle to calls in case of scoped
+  // EH functionality
+  const DenseMap<BasicBlock *, ColorVector> &BlockColors;
+
   FunctionStackPoisoner(Function &F, AddressSanitizer &ASan)
       : F(F), ASan(ASan), DIB(*F.getParent(), /*AllowUnresolved*/ false),
         C(ASan.C), IntptrTy(ASan.IntptrTy),
         IntptrPtrTy(PointerType::get(IntptrTy, 0)), Mapping(ASan.Mapping),
         PoisonStack(ClStack &&
-                    !Triple(F.getParent()->getTargetTriple()).isAMDGPU()) {}
+                    !Triple(F.getParent()->getTargetTriple()).isAMDGPU()),
+        BlockColors(ASan.BlockColors) {}
 
   bool runOnFunction() {
     if (!PoisonStack)
@@ -1036,7 +1079,8 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
 
     IRB.CreateCall(
         AsanAllocasUnpoisonFunc,
-        {IRB.CreateLoad(IntptrTy, DynamicAllocaLayout), DynamicAreaPtr});
+        {IRB.CreateLoad(IntptrTy, DynamicAllocaLayout), DynamicAreaPtr},
+        getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
   }
 
   // Unpoison dynamic allocas redzones.
@@ -1257,13 +1301,15 @@ void AddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
     IRB.CreateCall(isa<MemMoveInst>(MI) ? AsanMemmove : AsanMemcpy,
                    {IRB.CreateAddrSpaceCast(MI->getOperand(0), PtrTy),
                     IRB.CreateAddrSpaceCast(MI->getOperand(1), PtrTy),
-                    IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
+                    IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)},
+                   getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
   } else if (isa<MemSetInst>(MI)) {
     IRB.CreateCall(
         AsanMemset,
         {IRB.CreateAddrSpaceCast(MI->getOperand(0), PtrTy),
          IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
-         IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
+         IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)},
+        getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
   }
   MI->eraseFromParent();
 }
@@ -1506,7 +1552,8 @@ void AddressSanitizer::instrumentPointerComparisonOrSubtraction(
     if (i->getType()->isPointerTy())
       i = IRB.CreatePointerCast(i, IntptrTy);
   }
-  IRB.CreateCall(F, Param);
+  IRB.CreateCall(F, Param,
+                 getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
 }
 
 static void doInstrumentAddress(AddressSanitizer *Pass, Instruction *I,
@@ -1667,18 +1714,22 @@ Instruction *AddressSanitizer::generateCrashCode(Instruction *InsertBefore,
   CallInst *Call = nullptr;
   if (SizeArgument) {
     if (Exp == 0)
-      Call = IRB.CreateCall(AsanErrorCallbackSized[IsWrite][0],
-                            {Addr, SizeArgument});
+      Call = IRB.CreateCall(
+          AsanErrorCallbackSized[IsWrite][0], {Addr, SizeArgument},
+          getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
     else
-      Call = IRB.CreateCall(AsanErrorCallbackSized[IsWrite][1],
-                            {Addr, SizeArgument, ExpVal});
+      Call = IRB.CreateCall(
+          AsanErrorCallbackSized[IsWrite][1], {Addr, SizeArgument, ExpVal},
+          getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
   } else {
     if (Exp == 0)
       Call =
-          IRB.CreateCall(AsanErrorCallback[IsWrite][0][AccessSizeIndex], Addr);
+          IRB.CreateCall(AsanErrorCallback[IsWrite][0][AccessSizeIndex], Addr,
+                         getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
     else
-      Call = IRB.CreateCall(AsanErrorCallback[IsWrite][1][AccessSizeIndex],
-                            {Addr, ExpVal});
+      Call = IRB.CreateCall(
+          AsanErrorCallback[IsWrite][1][AccessSizeIndex], {Addr, ExpVal},
+          getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
   }
 
   Call->setCannotMerge();
@@ -1715,8 +1766,12 @@ Instruction *AddressSanitizer::instrumentAMDGPUAddress(
     return InsertBefore;
   // Instrument generic addresses in supported addressspaces.
   IRBuilder<> IRB(InsertBefore);
-  Value *IsShared = IRB.CreateCall(AMDGPUAddressShared, {Addr});
-  Value *IsPrivate = IRB.CreateCall(AMDGPUAddressPrivate, {Addr});
+  Value *IsShared =
+      IRB.CreateCall(AMDGPUAddressShared, {Addr},
+                     getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
+  Value *IsPrivate =
+      IRB.CreateCall(AMDGPUAddressPrivate, {Addr},
+                     getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
   Value *IsSharedOrPrivate = IRB.CreateOr(IsShared, IsPrivate);
   Value *Cmp = IRB.CreateNot(IsSharedOrPrivate);
   Value *AddrSpaceZeroLanding =
@@ -1732,7 +1787,8 @@ Instruction *AddressSanitizer::genAMDGPUReportBlock(IRBuilder<> &IRB,
   if (!Recover) {
     auto Ballot = M.getOrInsertFunction(kAMDGPUBallotName, IRB.getInt64Ty(),
                                         IRB.getInt1Ty());
-    ReportCond = IRB.CreateIsNotNull(IRB.CreateCall(Ballot, {Cond}));
+    ReportCond = IRB.CreateIsNotNull(IRB.CreateCall(
+        Ballot, {Cond}, getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors)));
   }
 
   auto *Trm =
@@ -1746,7 +1802,8 @@ Instruction *AddressSanitizer::genAMDGPUReportBlock(IRBuilder<> &IRB,
   Trm = SplitBlockAndInsertIfThen(Cond, Trm, false);
   IRB.SetInsertPoint(Trm);
   return IRB.CreateCall(
-      M.getOrInsertFunction(kAMDGPUUnreachableName, IRB.getVoidTy()), {});
+      M.getOrInsertFunction(kAMDGPUUnreachableName, IRB.getVoidTy()), {},
+      getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
 }
 
 void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
@@ -1780,10 +1837,12 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
   if (UseCalls) {
     if (Exp == 0)
       IRB.CreateCall(AsanMemoryAccessCallback[IsWrite][0][AccessSizeIndex],
-                     AddrLong);
+                     AddrLong,
+                     getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
     else
       IRB.CreateCall(AsanMemoryAccessCallback[IsWrite][1][AccessSizeIndex],
-                     {AddrLong, ConstantInt::get(IRB.getInt32Ty(), Exp)});
+                     {AddrLong, ConstantInt::get(IRB.getInt32Ty(), Exp)},
+                     getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
     return;
   }
 
@@ -1851,10 +1910,12 @@ void AddressSanitizer::instrumentUnusualSizeOrAlignment(
   if (UseCalls) {
     if (Exp == 0)
       IRB.CreateCall(AsanMemoryAccessCallbackSized[IsWrite][0],
-                     {AddrLong, Size});
+                     {AddrLong, Size},
+                     getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
     else
       IRB.CreateCall(AsanMemoryAccessCallbackSized[IsWrite][1],
-                     {AddrLong, Size, ConstantInt::get(IRB.getInt32Ty(), Exp)});
+                     {AddrLong, Size, ConstantInt::get(IRB.getInt32Ty(), Exp)},
+                     getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
   } else {
     Value *SizeMinusOne = IRB.CreateSub(Size, ConstantInt::get(IntptrTy, 1));
     Value *LastByte = IRB.CreateIntToPtr(
@@ -2861,6 +2922,12 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   if (!ClDebugFunc.empty() && ClDebugFunc == F.getName()) return false;
   if (F.getName().starts_with("__asan_")) return false;
 
+  if (F.hasPersonalityFn() &&
+      isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
+    BlockColors = colorEHFunclets(F);
+  else
+    BlockColors.clear();
+
   bool FunctionModified = false;
 
   // If needed, insert __asan_init before checking for SanitizeAddress attr.
@@ -2892,7 +2959,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   SmallPtrSet<Value *, 16> TempsToInstrument;
   SmallVector<InterestingMemoryOperand, 16> OperandsToInstrument;
   SmallVector<MemIntrinsic *, 16> IntrinToInstrument;
-  SmallVector<Instruction *, 8> NoReturnCalls;
+  SmallVector<CallBase *, 8> NoReturnCalls;
   SmallVector<BasicBlock *, 16> AllBlocks;
   SmallVector<Instruction *, 16> PointerComparisonsOrSubtracts;
 
@@ -2979,7 +3046,11 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   // See e.g. https://github.com/google/sanitizers/issues/37
   for (auto *CI : NoReturnCalls) {
     IRBuilder<> IRB(CI);
-    IRB.CreateCall(AsanHandleNoReturnFunc, {});
+    auto Bundle = CI->getOperandBundle(LLVMContext::OB_funclet);
+    if (Bundle)
+      IRB.CreateCall(AsanHandleNoReturnFunc, {}, OperandBundleDef(*Bundle));
+    else
+      IRB.CreateCall(AsanHandleNoReturnFunc, {});
   }
 
   for (auto *Inst : PointerComparisonsOrSubtracts) {
@@ -3130,7 +3201,8 @@ void FunctionStackPoisoner::copyToShadow(ArrayRef<uint8_t> ShadowMask,
       copyToShadowInline(ShadowMask, ShadowBytes, Done, i, IRB, ShadowBase);
       IRB.CreateCall(AsanSetShadowFunc[Val],
                      {IRB.CreateAdd(ShadowBase, ConstantInt::get(IntptrTy, i)),
-                      ConstantInt::get(IntptrTy, j - i)});
+                      ConstantInt::get(IntptrTy, j - i)},
+                     getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
       Done = j;
     }
   }
@@ -3416,9 +3488,10 @@ void FunctionStackPoisoner::processStaticAllocas() {
       IRBuilder<> IRBIf(Term);
       StackMallocIdx = StackMallocSizeClass(LocalStackSize);
       assert(StackMallocIdx <= kMaxAsanStackMallocSizeClass);
-      Value *FakeStackValue =
-          IRBIf.CreateCall(AsanStackMallocFunc[StackMallocIdx],
-                           ConstantInt::get(IntptrTy, LocalStackSize));
+      Value *FakeStackValue = IRBIf.CreateCall(
+          AsanStackMallocFunc[StackMallocIdx],
+          ConstantInt::get(IntptrTy, LocalStackSize),
+          getEHFuncletBundle(IRBIf.GetInsertBlock(), BlockColors));
       IRB.SetInsertPoint(InsBefore);
       FakeStack = createPHI(IRB, UseAfterReturnIsEnabled, FakeStackValue, Term,
                             ConstantInt::get(IntptrTy, 0));
@@ -3428,8 +3501,10 @@ void FunctionStackPoisoner::processStaticAllocas() {
       // void *LocalStackBase = (FakeStack) ? FakeStack :
       //                        alloca(LocalStackSize);
       StackMallocIdx = StackMallocSizeClass(LocalStackSize);
-      FakeStack = IRB.CreateCall(AsanStackMallocFunc[StackMallocIdx],
-                                 ConstantInt::get(IntptrTy, LocalStackSize));
+      FakeStack =
+          IRB.CreateCall(AsanStackMallocFunc[StackMallocIdx],
+                         ConstantInt::get(IntptrTy, LocalStackSize),
+                         getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
     }
     Value *NoFakeStack =
         IRB.CreateICmpEQ(FakeStack, Constant::getNullValue(IntptrTy));
@@ -3565,7 +3640,8 @@ void FunctionStackPoisoner::processStaticAllocas() {
         // For larger frames call __asan_stack_free_*.
         IRBPoison.CreateCall(
             AsanStackFreeFunc[StackMallocIdx],
-            {FakeStack, ConstantInt::get(IntptrTy, LocalStackSize)});
+            {FakeStack, ConstantInt::get(IntptrTy, LocalStackSize)},
+            getEHFuncletBundle(IRBPoison.GetInsertBlock(), BlockColors));
       }
 
       IRBuilder<> IRBElse(ElseTerm);
@@ -3585,9 +3661,10 @@ void FunctionStackPoisoner::poisonAlloca(Value *V, uint64_t Size,
   // For now just insert the call to ASan runtime.
   Value *AddrArg = IRB.CreatePointerCast(V, IntptrTy);
   Value *SizeArg = ConstantInt::get(IntptrTy, Size);
-  IRB.CreateCall(
-      DoPoison ? AsanPoisonStackMemoryFunc : AsanUnpoisonStackMemoryFunc,
-      {AddrArg, SizeArg});
+  IRB.CreateCall(DoPoison ? AsanPoisonStackMemoryFunc
+                          : AsanUnpoisonStackMemoryFunc,
+                 {AddrArg, SizeArg},
+                 getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
 }
 
 // Handling llvm.lifetime intrinsics for a given %alloca:
@@ -3647,7 +3724,8 @@ void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
                     ConstantInt::get(IntptrTy, Alignment.value()));
 
   // Insert __asan_alloca_poison call for new created alloca.
-  IRB.CreateCall(AsanAllocaPoisonFunc, {NewAddress, OldSize});
+  IRB.CreateCall(AsanAllocaPoisonFunc, {NewAddress, OldSize},
+                 getEHFuncletBundle(IRB.GetInsertBlock(), BlockColors));
 
   // Store the last alloca's address to DynamicAllocaLayout. We'll need this
   // for unpoisoning stuff.
