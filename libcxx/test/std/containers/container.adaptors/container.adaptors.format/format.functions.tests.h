@@ -154,7 +154,6 @@ void test_char_string(TestFunction check, ExceptionTest check_exception, auto&& 
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<s}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<s}"), input);
-  check_exception("The type option contains an invalid value for a character formatting argument", SV("{::<s}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-s}"), input);
@@ -178,6 +177,7 @@ void test_char_string(TestFunction check, ExceptionTest check_exception, auto&& 
 
   // *** type ***
   check_exception("Type m requires a pair or a tuple with two elements", SV("{:m}"), input);
+  check_exception("The type option contains an invalid value for a character formatting argument", SV("{::<s}"), input);
 
   // ***** Only underlying has a format-spec
   check_exception("Type s and an underlying format specification can't be used together", SV("{:s:}"), input);
