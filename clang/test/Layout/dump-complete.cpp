@@ -33,6 +33,26 @@ void f() {
   ts<void> c;
 }
 
+namespace gh83671 {
+template <class _Tp, _Tp __v>
+struct integral_constant {
+  static constexpr const _Tp value = __v;
+  typedef integral_constant type;
+};
+
+template <bool _Val>
+using _BoolConstant = integral_constant<bool, _Val>;
+
+template <class _Tp, class _Up>
+struct is_same : _BoolConstant<__is_same(_Tp, _Up)> {};
+
+template < class _Tp >
+class numeric_limits {};
+
+template < class _Tp >
+class numeric_limits< const _Tp > : public numeric_limits< _Tp > {};
+}
+
 namespace gh83684 {
 template <class Pointer>
 struct AllocationResult {
