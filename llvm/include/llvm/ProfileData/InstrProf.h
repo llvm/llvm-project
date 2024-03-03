@@ -305,7 +305,7 @@ void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName);
 
 /// Check if we can use Comdat for profile variables. This will eliminate
 /// the duplicated profile variables for Comdat functions.
-bool needsComdatForCounter(const GlobalValue &GV, const Module &M);
+bool needsComdatForCounter(const GlobalObject &GV, const Module &M);
 
 /// An enum describing the attributes of an instrumented profile.
 enum class InstrProfKind {

@@ -1365,8 +1365,8 @@ void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
   F.setMetadata(getPGOFuncNameMetadataName(), N);
 }
 
-bool needsComdatForCounter(const GlobalValue &GV, const Module &M) {
-  if (GV.hasComdat())
+bool needsComdatForCounter(const GlobalObject &GO, const Module &M) {
+  if (GO.hasComdat())
     return true;
 
   if (!Triple(M.getTargetTriple()).supportsCOMDAT())
@@ -1382,7 +1382,7 @@ bool needsComdatForCounter(const GlobalValue &GV, const Module &M) {
   // available_externally functions will end up being duplicated in raw profile
   // data. This can result in distorted profile as the counts of those dups
   // will be accumulated by the profile merger.
-  GlobalValue::LinkageTypes Linkage = GV.getLinkage();
+  GlobalValue::LinkageTypes Linkage = GO.getLinkage();
   if (Linkage != GlobalValue::ExternalWeakLinkage &&
       Linkage != GlobalValue::AvailableExternallyLinkage)
     return false;
