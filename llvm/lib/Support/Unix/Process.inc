@@ -143,7 +143,18 @@ void Process::GetTimeUsage(TimePoint<> &elapsed,
 void Process::PreventCoreFiles() {
 #if HAVE_SETRLIMIT
   struct rlimit rlim;
-  rlim.rlim_cur = rlim.rlim_max = 0;
+  getrlimit(RLIMIT_CORE, &rlim);
+#ifdef __linux__
+  // On Linux, if the kernel.core_pattern sysctl starts with a '|' (i.e. it
+  // is being piped to a coredump handler such as systemd-coredumpd), the
+  // kernel ignores RLIMIT_CORE (since we aren't creating a file in the file
+  // system) except for the magic value of 1, that disables coredumps when
+  // piping. 1 byte is also too small for any kind of valid core dump, so it
+  // also disables coredumps if kernel.core_pattern creates files directly.
+  rlim.rlim_cur = std::min<rlim_t>(1, rlim.rlim_max);
+#else
+  rlim.rlim_cur = 0;
+#endif
   setrlimit(RLIMIT_CORE, &rlim);
 #endif
 
