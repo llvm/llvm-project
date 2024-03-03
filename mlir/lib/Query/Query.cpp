@@ -65,7 +65,7 @@ static Operation *extractFunction(std::vector<Operation *> &ops,
 
   // Create the function
   FunctionType funcType =
-      builder.getFunctionType(ValueRange(values), outputTypes);
+      builder.getFunctionType(TypeRange(values), outputTypes);
   auto loc = builder.getUnknownLoc();
   func::FuncOp funcOp = func::FuncOp::create(loc, functionName, funcType);
 
