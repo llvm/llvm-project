@@ -91,12 +91,12 @@ static rlim_t getlim(int res) {
 
 static void setlim(int res, rlim_t lim) {
   struct rlimit rlim;
-  if (getrlimit(res, const_cast<struct rlimit *>(&rlim))) {
+  if (getrlimit(res, &rlim)) {
     Report("ERROR: %s getrlimit() failed %d\n", SanitizerToolName, errno);
     Die();
   }
   rlim.rlim_cur = lim;
-  if (setrlimit(res, const_cast<struct rlimit *>(&rlim))) {
+  if (setrlimit(res, &rlim)) {
     Report("ERROR: %s setrlimit() failed %d\n", SanitizerToolName, errno);
     Die();
   }
