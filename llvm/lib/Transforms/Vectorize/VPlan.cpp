@@ -212,12 +212,13 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
   return It;
 }
 
-VPTransformState::VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
+VPTransformState::VPTransformState(ElementCount VF, unsigned UF,
+                                   ElementCount MaxPred, LoopInfo *LI,
                                    DominatorTree *DT, IRBuilderBase &Builder,
                                    InnerLoopVectorizer *ILV, VPlan *Plan,
                                    LLVMContext &Ctx)
-    : VF(VF), UF(UF), LI(LI), DT(DT), Builder(Builder), ILV(ILV), Plan(Plan),
-      LVer(nullptr),
+    : VF(VF), UF(UF), MaxPred(MaxPred), LI(LI), DT(DT), Builder(Builder),
+      ILV(ILV), Plan(Plan), LVer(nullptr),
       TypeAnalysis(Plan->getCanonicalIV()->getScalarType(), Ctx) {}
 
 Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
