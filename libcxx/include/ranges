@@ -404,6 +404,7 @@ namespace std {
 #include <__ranges/reverse_view.h>
 #include <__ranges/single_view.h>
 #include <__ranges/size.h>
+#include <__ranges/slide_view.h>
 #include <__ranges/split_view.h>
 #include <__ranges/subrange.h>
 #include <__ranges/take_view.h>

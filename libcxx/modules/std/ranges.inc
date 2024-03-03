@@ -303,15 +303,15 @@ export namespace std {
     namespace views {
       using std::ranges::views::chunk;
     }
+#endif
 
+#if _LIBCPP_STD_VER >= 23
     using std::ranges::slide_view;
 
     namespace views {
       using std::ranges::views::slide;
     }
-#endif
 
-#if _LIBCPP_STD_VER >= 23
     // [range.chunk.by], chunk by view
     using std::ranges::chunk_by_view;
 
