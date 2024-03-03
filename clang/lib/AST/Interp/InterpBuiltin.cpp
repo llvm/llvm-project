@@ -132,6 +132,9 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   if (!CheckLive(S, OpPC, A, AK_Read) || !CheckLive(S, OpPC, B, AK_Read))
     return false;
 
+  if (A.isDummy() || B.isDummy())
+    return false;
+
   assert(A.getFieldDesc()->isPrimitiveArray());
   assert(B.getFieldDesc()->isPrimitiveArray());
 
@@ -460,9 +463,6 @@ static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
                                      const InterpFrame *Frame,
                                      const Function *Func,
                                      const CallExpr *Call) {
-
-  Func->getDecl()->dump();
-
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt Val = peekToAPSInt(S.Stk, ArgT);
   pushInteger(S, Val.popcount(), Call->getType());
@@ -1207,6 +1207,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
 
   default:
+    S.FFDiag(S.Current->getLocation(OpPC),
+             diag::note_invalid_subexpr_in_const_expr)
+        << S.Current->getRange(OpPC);
+
     return false;
   }
 
@@ -1230,7 +1234,7 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       const RecordType *RT = CurrentType->getAs<RecordType>();
       if (!RT)
         return false;
-      RecordDecl *RD = RT->getDecl();
+      const RecordDecl *RD = RT->getDecl();
       if (RD->isInvalidDecl())
         return false;
       const ASTRecordLayout &RL = S.getCtx().getASTRecordLayout(RD);
