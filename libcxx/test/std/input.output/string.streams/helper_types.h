@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef TEST_STD_INPUTOUTPUT_STRINGSTREAMS_TYPES_H
-#define TEST_STD_INPUTOUTPUT_STRINGSTREAMS_TYPES_H
+#ifndef TEST_STD_INPUTOUTPUT_STRINGSTREAMS_HELPER_TYPES_H
+#define TEST_STD_INPUTOUTPUT_STRINGSTREAMS_HELPER_TYPES_H
 
 #include <string_view>
 #include <concepts>
@@ -72,4 +72,4 @@ struct NonMode {};
 
 struct NonAllocator {};
 
-#endif // TEST_STD_INPUTOUTPUT_STRINGSTREAMS_TYPES_H
+#endif // TEST_STD_INPUTOUTPUT_STRINGSTREAMS_HELPER_TYPES_H

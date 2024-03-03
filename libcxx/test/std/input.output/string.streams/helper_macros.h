@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef TEST_STD_INPUTOUTPUT_STRINGSTREAMS_MACROS_H
-#define TEST_STD_INPUTOUTPUT_STRINGSTREAMS_MACROS_H
+#ifndef TEST_STD_INPUTOUTPUT_STRINGSTREAMS_HELPER_MACROS_H
+#define TEST_STD_INPUTOUTPUT_STRINGSTREAMS_HELPER_MACROS_H
 
 #include "make_string.h"
 
@@ -15,4 +15,4 @@
 #define ST(S, a) std::basic_string<CharT, TraitsT, AllocT>(MAKE_CSTRING(CharT, S), MKSTR_LEN(CharT, S), a)
 #define SV(S) std::basic_string_view<CharT, TraitsT>(MAKE_CSTRING(CharT, S), MKSTR_LEN(CharT, S))
 
-#endif // TEST_STD_INPUTOUTPUT_STRINGSTREAMS_MACROS_H
+#endif // TEST_STD_INPUTOUTPUT_STRINGSTREAMS_HELPER_MACROS_H

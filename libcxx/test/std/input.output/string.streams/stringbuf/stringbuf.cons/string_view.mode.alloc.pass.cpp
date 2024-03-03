@@ -28,9 +28,9 @@
 #include "test_allocator.h"
 #include "test_convertible.h"
 #include "test_macros.h"
-
-#include "../../macros.h"
-#include "../../types.h"
+helper_
+#include "../../helper_macros.h"
+#include "../../helper_types.h"
 
 template <typename AllocT = std::allocator<nasty_char>>
 void test_sfinae_with_nasty_char() {
