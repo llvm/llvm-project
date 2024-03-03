@@ -94,6 +94,8 @@ def err_fe_backend_error_attr :
 def warn_fe_backend_warning_attr :
   Warning<"call to '%0' declared with 'warning' attribute: %1">, BackendInfo,
   InGroup<BackendWarningAttributes>;
+def note_fe_backend_in : Note<"called by function '%0'">;
+def note_fe_backend_inlined : Note<"inlined by function '%0'">;
 
 def err_fe_invalid_code_complete_file : Error<
     "cannot locate code-completion file %0">, DefaultFatal;

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
@@ -433,8 +434,9 @@ void llvm::diagnoseDontCall(const CallInst &CI) {
       if (MDNode *MD = CI.getMetadata("srcloc"))
         LocCookie =
             mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
-      DiagnosticInfoDontCall D(F->getName(), A.getValueAsString(), Sev,
-                               LocCookie);
+      DiagnosticInfoDontCall D(CI.getParent()->getParent()->getName(),
+                               F->getName(), A.getValueAsString(), Sev,
+                               LocCookie, CI.getMetadata("inlined.from"));
       F->getContext().diagnose(D);
     }
   }
@@ -448,4 +450,23 @@ void DiagnosticInfoDontCall::print(DiagnosticPrinter &DP) const {
     DP << "warn\"";
   if (!getNote().empty())
     DP << ": " << getNote();
+}
+
+SmallVector<StringRef> DiagnosticInfoDontCall::getInliningDecisions() const {
+  SmallVector<StringRef> InliningDecisions;
+
+  if (MDN) {
+    const MDOperand &MO = MDN->getOperand(0);
+    if (auto *MDT = dyn_cast<MDTuple>(MO)) {
+      for (const MDOperand &MO : MDT->operands()) {
+        if (auto *S = dyn_cast<MDString>(MO)) {
+          InliningDecisions.push_back(S->getString());
+        }
+      }
+    } else if (auto *S = dyn_cast<MDString>(MO)) {
+      InliningDecisions.push_back(S->getString());
+    }
+  }
+
+  return InliningDecisions;
 }

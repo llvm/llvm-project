@@ -1886,13 +1886,17 @@ example:
     call of a function with this attribute is not eliminated via optimization.
     Front ends can provide optional ``srcloc`` metadata nodes on call sites of
     such callees to attach information about where in the source language such a
-    call came from. A string value can be provided as a note.
+    call came from. A string value can be provided as a note. The optimizer may
+    add the optional ``inlined.from`` metadata to call sites which front ends
+    might consume to display more precise diagnostics.
 ``"dontcall-warn"``
     This attribute denotes that a warning diagnostic should be emitted when a
     call of a function with this attribute is not eliminated via optimization.
     Front ends can provide optional ``srcloc`` metadata nodes on call sites of
     such callees to attach information about where in the source language such a
-    call came from. A string value can be provided as a note.
+    call came from. A string value can be provided as a note. The optimizer may
+    add the optional ``inlined.from`` metadata to call sites which front ends
+    might consume to display more precise diagnostics.
 ``fn_ret_thunk_extern``
     This attribute tells the code generator that returns from functions should
     be replaced with jumps to externally-defined architecture-specific symbols.

@@ -9,6 +9,7 @@ int x(void) {
 }
 void baz(void) {
   foo(); // expected-error {{call to 'foo' declared with 'error' attribute: oh no foo}}
+         // expected-note@* {{called by function 'baz'}}
   if (x())
     bar();
 }
@@ -19,4 +20,24 @@ void (*quux)(void);
 void indirect(void) {
   quux = foo;
   quux();
+}
+
+static inline void a(int x) {
+  if (x == 10)
+    foo(); // expected-error {{call to 'foo' declared with 'error' attribute: oh no foo}}
+           // expected-note@* {{called by function 'a'}}
+           // expected-note@* {{inlined by function 'b'}}
+           // expected-note@* {{inlined by function 'd'}}
+}
+
+static inline void b() {
+  a(10);
+}
+
+void c() {
+  a(9);
+}
+
+void d() {
+  b();
 }

@@ -2519,6 +2519,19 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         // inlining, commonly when the callee is an intrinsic.
         if (MarkNoUnwind && !CI->doesNotThrow())
           CI->setDoesNotThrow();
+
+        const Function *Callee = CI->getCalledFunction();
+        if (Callee && (Callee->hasFnAttribute("dontcall-error") ||
+                       Callee->hasFnAttribute("dontcall-warn"))) {
+          Metadata *MD = MDString::get(CI->getContext(), CalledFunc->getName());
+          if (MDNode *N = CI->getMetadata("inlined.from")) {
+            TempMDTuple Temp = cast<MDTuple>(N)->clone();
+            Temp->push_back(MD);
+            MD = MDNode::replaceWithUniqued(std::move(Temp));
+          }
+          MDTuple *MDT = MDNode::get(CI->getContext(), {MD});
+          CI->setMetadata("inlined.from", MDT);
+        }
       }
     }
   }
