@@ -356,6 +356,8 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     if (NumVGPR != 0)
       F->addFnAttr("amdgpu-num-vgpr", llvm::utostr(NumVGPR));
   }
+  if (FD->getAttr<AMDGPULibFunAttr>())
+    F->addFnAttr("amdgpu-lib-fun");
 }
 
 /// Emits control constants used to change per-architecture behaviour in the
