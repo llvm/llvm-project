@@ -43,7 +43,7 @@ void test(std::string expected, std::string_view fmt, color arg, std::size_t off
   static_assert(std::semiregular<decltype(formatter)>);
 
   std::same_as<typename std::string_view::iterator> auto it = formatter.parse(parse_ctx);
-  assert(it == fmt.end() - offset);
+  assert(std::to_address(it) == std::to_address(fmt.end()) - offset); // LWG3989
 
   std::string result;
   auto out = std::back_inserter(result);

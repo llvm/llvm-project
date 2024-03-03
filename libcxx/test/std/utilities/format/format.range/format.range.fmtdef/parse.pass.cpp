@@ -23,7 +23,6 @@
 #include <concepts>
 #include <format>
 
-#include "test_format_context.h"
 #include "test_macros.h"
 #include "make_string.h"
 
@@ -37,7 +36,7 @@ constexpr void test_parse(StringViewT fmt, std::size_t offset) {
   static_assert(std::semiregular<decltype(formatter)>);
 
   std::same_as<typename StringViewT::iterator> auto it = formatter.parse(parse_ctx);
-  assert(it == fmt.end() - offset);
+  assert(std::to_address(it) == std::to_address(fmt.end()) - offset); // LWG3989
 }
 
 template <class CharT>

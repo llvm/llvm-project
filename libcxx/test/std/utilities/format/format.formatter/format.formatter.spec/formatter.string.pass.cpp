@@ -46,7 +46,7 @@ void test(StringT expected, StringViewT fmt, StringT a, std::size_t offset) {
   static_assert(std::semiregular<decltype(formatter)>);
 
   std::same_as<typename StringViewT::iterator> auto it = formatter.parse(parse_ctx);
-  assert(it == fmt.end() - offset);
+  assert(std::to_address(it) == std::to_address(fmt.end()) - offset); // LWG3989
 
   StringT result;
   auto out = std::back_inserter(result);
