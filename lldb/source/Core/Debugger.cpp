@@ -2195,7 +2195,7 @@ Status Debugger::RunREPL(LanguageType language, const char *repl_options) {
   return err;
 }
 
-llvm::ThreadPool &Debugger::GetThreadPool() {
+llvm::ThreadPoolInterface &Debugger::GetThreadPool() {
   assert(g_thread_pool &&
          "Debugger::GetThreadPool called before Debugger::Initialize");
   return *g_thread_pool;
