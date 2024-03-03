@@ -160,7 +160,7 @@ public:
   /// Target and driver mode components extracted from clang executable name.
   ParsedClangName ClangNameParts;
 
-  /// The path to the installed clang directory, if any.
+  /// TODO: Remove this in favor of Dir.
   std::string InstalledDir;
 
   /// The path to the compiler resource directory.
@@ -433,7 +433,6 @@ public:
       return InstalledDir.c_str();
     return Dir.c_str();
   }
-  void setInstalledDir(StringRef Value) { InstalledDir = std::string(Value); }
 
   bool isSaveTempsEnabled() const { return SaveTemps != SaveTempsNone; }
   bool isSaveTempsObj() const { return SaveTemps == SaveTempsObj; }
@@ -620,6 +619,16 @@ public:
   //
   // FIXME: This should be in CompilationInfo.
   std::string GetProgramPath(StringRef Name, const ToolChain &TC) const;
+
+  /// Lookup the path to the Standard library module manifest.
+  ///
+  /// \param C - The compilation.
+  /// \param TC - The tool chain for additional information on
+  /// directories to search.
+  //
+  // FIXME: This should be in CompilationInfo.
+  std::string GetStdModuleManifestPath(const Compilation &C,
+                                       const ToolChain &TC) const;
 
   /// HandleAutocompletions - Handle --autocomplete by searching and printing
   /// possible flags, descriptions, and its arguments.

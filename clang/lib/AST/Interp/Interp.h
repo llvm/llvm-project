@@ -199,6 +199,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
                        llvm::ArrayRef<int64_t> ArrayIndices, int64_t &Result);
 
+inline bool Invalid(InterpState &S, CodePtr OpPC);
+
 enum class ArithOp { Add, Sub };
 
 //===----------------------------------------------------------------------===//
@@ -522,6 +524,11 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (Ptr.isDummy())
     return false;
 
+  if constexpr (std::is_same_v<T, Boolean>) {
+    if (!S.getLangOpts().CPlusPlus14)
+      return Invalid(S, OpPC);
+  }
+
   const T &Value = Ptr.deref<T>();
   T Result;
 
@@ -572,7 +579,8 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Inc(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
+  if (Ptr.isDummy())
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
     return false;
 
@@ -585,7 +593,8 @@ bool Inc(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool IncPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
+  if (Ptr.isDummy())
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
     return false;
 
@@ -599,7 +608,8 @@ bool IncPop(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Dec(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
+  if (Ptr.isDummy())
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
     return false;
 
@@ -612,7 +622,8 @@ bool Dec(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool DecPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
+  if (Ptr.isDummy())
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
     return false;
 
@@ -641,7 +652,8 @@ bool IncDecFloatHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
+  if (Ptr.isDummy())
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
     return false;
 
@@ -650,7 +662,8 @@ inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
+  if (Ptr.isDummy())
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
     return false;
 
@@ -659,6 +672,9 @@ inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (Ptr.isDummy())
+    return false;
 
   if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
     return false;
@@ -669,6 +685,8 @@ inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 inline bool DecfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
+  if (Ptr.isDummy())
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
     return false;
 
@@ -774,9 +792,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     // element in the same array are NOT equal. They have the same Base value,
     // but a different Offset. This is a pretty rare case, so we fix this here
     // by comparing pointers to the first elements.
-    if (LHS.isArrayRoot())
+    if (!LHS.isDummy() && LHS.isArrayRoot())
       VL = LHS.atIndex(0).getByteOffset();
-    if (RHS.isArrayRoot())
+    if (!RHS.isDummy() && RHS.isArrayRoot())
       VR = RHS.atIndex(0).getByteOffset();
 
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
@@ -808,7 +826,8 @@ bool CMP3(InterpState &S, CodePtr OpPC, const ComparisonCategoryInfo *CmpInfo) {
   }
 
   assert(CmpInfo);
-  const auto *CmpValueInfo = CmpInfo->getValueInfo(CmpResult);
+  const auto *CmpValueInfo =
+      CmpInfo->getValueInfo(CmpInfo->makeWeakResult(CmpResult));
   assert(CmpValueInfo);
   assert(CmpValueInfo->hasValidIntValue());
   const APSInt &IntValue = CmpValueInfo->getIntValue();
@@ -1047,7 +1066,7 @@ bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 /// 1) Converts the value on top of the stack to an APValue
 /// 2) Sets that APValue on \Temp
-/// 3) Initialized global with index \I with that
+/// 3) Initializes global with index \I with that
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
                     const LifetimeExtendedTemporaryDecl *Temp) {
@@ -1279,14 +1298,14 @@ inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   return true;
 }
 
-inline bool InitPtrPop(InterpState &S, CodePtr OpPC) {
+inline bool FinishInitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.canBeInitialized())
     Ptr.initialize();
   return true;
 }
 
-inline bool InitPtr(InterpState &S, CodePtr OpPC) {
+inline bool FinishInit(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
   if (Ptr.canBeInitialized())
@@ -1395,6 +1414,19 @@ bool StoreBitFieldPop(InterpState &S, CodePtr OpPC) {
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue(S.getCtx()));
   else
     Ptr.deref<T>() = Value;
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool Init(InterpState &S, CodePtr OpPC) {
+  const T &Value = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckInit(S, OpPC, Ptr)) {
+    assert(false);
+    return false;
+  }
+  Ptr.initialize();
+  new (&Ptr.deref<T>()) T(Value);
   return true;
 }
 
@@ -1666,7 +1698,7 @@ bool CastFloatingIntegral(InterpState &S, CodePtr OpPC) {
     auto Status = F.convertToInteger(Result);
 
     // Float-to-Integral overflow check.
-    if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite()) {
+    if ((Status & APFloat::opStatus::opInvalidOp)) {
       const Expr *E = S.Current->getExpr(OpPC);
       QualType Type = E->getType();
 
@@ -1881,7 +1913,7 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!CheckDummy(S, OpPC, Ptr))
+  if (Ptr.isDummy())
     return true;
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
@@ -1895,7 +1927,7 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!CheckDummy(S, OpPC, Ptr)) {
+  if (Ptr.isDummy()) {
     S.Stk.push<Pointer>(Ptr);
     return true;
   }
@@ -1919,7 +1951,7 @@ inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
 inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isDummy()) {
+  if (Ptr.isZero() || Ptr.isDummy()) {
     S.Stk.push<Pointer>(Ptr);
     return true;
   }
@@ -2042,8 +2074,12 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   size_t ThisOffset = ArgSize - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
   Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
 
-  const CXXRecordDecl *DynamicDecl =
-      ThisPtr.getDeclDesc()->getType()->getAsCXXRecordDecl();
+  QualType DynamicType = ThisPtr.getDeclDesc()->getType();
+  const CXXRecordDecl *DynamicDecl;
+  if (DynamicType->isPointerType() || DynamicType->isReferenceType())
+    DynamicDecl = DynamicType->getPointeeCXXRecordDecl();
+  else
+    DynamicDecl = ThisPtr.getDeclDesc()->getType()->getAsCXXRecordDecl();
   const auto *StaticDecl = cast<CXXRecordDecl>(Func->getParentDecl());
   const auto *InitialFunction = cast<CXXMethodDecl>(Func->getDecl());
   const CXXMethodDecl *Overrider = S.getContext().getOverridingFunction(
