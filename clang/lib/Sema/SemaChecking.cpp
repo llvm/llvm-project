@@ -18143,6 +18143,45 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     index = -index;
   }
 
+  if (EffectiveType->isVectorType()) {
+    if (AllowOnePastEnd) {
+      // Pointer arithmetic on vectors isn't legal, so let's not emit a
+      // diagnostic since we'll produce an error later anyway.
+      return;
+    }
+
+    if (index.isUnsigned() || !index.isNegative()) {
+      const auto *VT = EffectiveType->castAs<VectorType>();
+      if (index.ult(VT->getNumElements()))
+        return;
+
+      DiagRuntimeBehavior(BaseExpr->getBeginLoc(), BaseExpr,
+                          PDiag(diag::warn_vector_index_exceeds_bounds)
+                              << toString(index, 10, true) << VT->desugar()
+                              << IndexExpr->getSourceRange());
+    } else {
+      DiagRuntimeBehavior(BaseExpr->getBeginLoc(), BaseExpr,
+                          PDiag(diag::warn_vector_index_precedes_bounds)
+                              << toString(index, 10, true)
+                              << IndexExpr->getSourceRange());
+    }
+
+    const NamedDecl *ND = nullptr;
+    // Try harder to find a NamedDecl to point at in the note.
+    while (const auto *ASE = dyn_cast<ArraySubscriptExpr>(BaseExpr))
+      BaseExpr = ASE->getBase()->IgnoreParenCasts();
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(BaseExpr))
+      ND = DRE->getDecl();
+    if (const auto *ME = dyn_cast<MemberExpr>(BaseExpr))
+      ND = ME->getMemberDecl();
+
+    if (ND)
+      DiagRuntimeBehavior(ND->getBeginLoc(), BaseExpr,
+                          PDiag(diag::note_vector_declared_here) << ND);
+
+    return;
+  }
+
   if (IsUnboundedArray) {
     if (EffectiveType->isFunctionType())
       return;
