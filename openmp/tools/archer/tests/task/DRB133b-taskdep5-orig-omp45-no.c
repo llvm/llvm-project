@@ -1,0 +1,61 @@
+/*
+ * DRB133b-taskdep5-orig-omp45-no.c -- Archer testcase
+ */
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+//
+// See tools/archer/LICENSE.txt for details.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// RUN: %libarcher-compile && env ARCHER_OPTIONS=tasking=1 %libarcher-run | FileCheck %s
+// RUN: %libarcher-compile && env ARCHER_OPTIONS=tasking=1:ignore_serial=1 %libarcher-run | FileCheck %s
+// REQUIRES: tsan
+#include "ompt/ompt-signal.h"
+#include <omp.h>
+#include <stdio.h>
+
+int sem = 0;
+
+void foo() {
+  int x = 0, y = 2;
+
+#pragma omp task depend(inout : x) shared(x, sem)
+  {
+    OMPT_SIGNAL(sem);
+    x++; // 1st child task
+  }
+
+#pragma omp task depend(in : x) depend(inout : y) shared(x, y, sem)
+  {
+    OMPT_SIGNAL(sem);
+    y -= x; //2nd child task
+  }
+
+#pragma omp task depend(in : x) if (0) // 1st taskwait
+  {}
+
+  printf("x=%d\n", x);
+
+#pragma omp taskwait // 2nd taskwait
+
+  printf("y=%d\n", y);
+}
+
+int main() {
+#pragma omp parallel num_threads(2)
+  {
+#pragma omp masked
+    { foo(); }
+    OMPT_WAIT(sem, 2);
+  }
+
+  fprintf(stderr, "DONE.\n");
+  return 0;
+}
+
+// CHECK-NOT: ThreadSanitizer: data race
+// CHECK-NOT: ThreadSanitizer: reported
+// CHECK: DONE

@@ -19,6 +19,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
+#include <dlfcn.h>
 #include <inttypes.h>
 #include <iostream>
 #include <list>
@@ -29,7 +30,6 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
-#include <dlfcn.h>
 
 #include "omp-tools.h"
 
@@ -52,7 +52,7 @@
 
 static int hasReductionCallback;
 
-namespace {
+namespace __archer {
 class ArcherFlags {
 public:
 #if (LLVM_VERSION) >= 40
@@ -64,34 +64,50 @@ public:
   int report_data_leak{0};
   int ignore_serial{0};
   std::atomic<int> all_memory{0};
+  int tasking{0};
+  int stack_size{1024};
+  std::atomic<int> untieds{0};
 
   ArcherFlags(const char *env) {
     if (env) {
       std::vector<std::string> tokens;
-      std::string token;
       std::string str(env);
-      std::istringstream iss(str);
-      int tmp_int;
-      while (std::getline(iss, token, ' '))
-        tokens.push_back(token);
+      auto end = str.end();
+      auto it = str.begin();
+      auto is_sep = [](char c) {
+        return c == ' ' || c == ',' || c == ':' || c == '\n' || c == '\t' ||
+               c == '\r';
+      };
+      while (it != end) {
+        auto next_it = std::find_if(it, end, is_sep);
+        tokens.emplace_back(it, next_it);
+        it = next_it;
+        if (it != end) {
+          ++it;
+        }
+      }
 
-      for (std::vector<std::string>::iterator it = tokens.begin();
-           it != tokens.end(); ++it) {
+      int tmp_int = 0;
+      for (const auto &token : tokens) {
 #if (LLVM_VERSION) >= 40
-        if (sscanf(it->c_str(), "flush_shadow=%d", &flush_shadow))
+        if (sscanf(token.c_str(), "flush_shadow=%d", &flush_shadow))
           continue;
 #endif
-        if (sscanf(it->c_str(), "print_max_rss=%d", &print_max_rss))
+        if (sscanf(token.c_str(), "print_max_rss=%d", &print_max_rss))
           continue;
-        if (sscanf(it->c_str(), "verbose=%d", &verbose))
+        if (sscanf(token.c_str(), "verbose=%d", &verbose))
           continue;
-        if (sscanf(it->c_str(), "report_data_leak=%d", &report_data_leak))
+        if (sscanf(token.c_str(), "report_data_leak=%d", &report_data_leak))
           continue;
-        if (sscanf(it->c_str(), "enable=%d", &enabled))
+        if (sscanf(token.c_str(), "enable=%d", &enabled))
           continue;
-        if (sscanf(it->c_str(), "ignore_serial=%d", &ignore_serial))
+        if (sscanf(token.c_str(), "tasking=%d", &tasking))
           continue;
-        if (sscanf(it->c_str(), "all_memory=%d", &tmp_int)) {
+        if (sscanf(token.c_str(), "stack_size=%d", &stack_size))
+          continue;
+        if (sscanf(token.c_str(), "ignore_serial=%d", &ignore_serial))
+          continue;
+        if (sscanf(token.c_str(), "all_memory=%d", &tmp_int)) {
           all_memory = tmp_int;
           continue;
         }
@@ -135,7 +151,9 @@ public:
     }
   }
 };
-} // namespace
+
+static ArcherFlags *archer_flags;
+} // namespace __archer
 
 #if (LLVM_VERSION) >= 40
 extern "C" {
@@ -143,7 +161,6 @@ int __attribute__((weak)) __archer_get_omp_status();
 void __attribute__((weak)) __tsan_flush_memory() {}
 }
 #endif
-static ArcherFlags *archer_flags;
 
 #ifndef TsanHappensBefore
 // Thread Sanitizer is a tool that finds races in code.
@@ -159,6 +176,10 @@ static void (*AnnotateNewMemory)(const char *, int, const volatile void *,
 static void (*__tsan_func_entry)(const void *);
 static void (*__tsan_func_exit)(void);
 static int (*RunningOnValgrind)(void);
+static void *(*__tsan_get_current_fiber)();
+static void *(*__tsan_create_fiber)(unsigned flags);
+static void (*__tsan_destroy_fiber)(void *fiber);
+static void (*__tsan_switch_to_fiber)(void *fiber, unsigned flags);
 }
 
 // This marker is used to define a happens-before arc. The race detector will
@@ -189,9 +210,16 @@ static int (*RunningOnValgrind)(void);
 #define TsanFuncEntry(pc) __tsan_func_entry(pc)
 #define TsanFuncExit() __tsan_func_exit()
 
+// Fibers
+#define TsanGetCurrentFiber() __tsan_get_current_fiber()
+#define TsanCreateFiber(flags) __tsan_create_fiber(flags)
+#define TsanSwitchToFiber(fiber, flags) __tsan_switch_to_fiber(fiber, flags)
+#define TsanDestroyFiber(fiber) __tsan_destroy_fiber(fiber)
+
 /// Required OMPT inquiry functions.
 static ompt_get_parallel_info_t ompt_get_parallel_info;
-static ompt_get_thread_data_t ompt_get_thread_data;
+typedef int (*ompt_get_task_memory_t)(void **addr, size_t *size, int blocknum);
+static ompt_get_task_memory_t ompt_get_task_memory;
 
 typedef char ompt_tsan_clockid;
 
@@ -201,11 +229,11 @@ static uint64_t my_next_id() {
   return ret;
 }
 
-static int pagesize{0};
-
 // Data structure to provide a threadsafe pool of reusable objects.
 // DataPool<Type of objects>
-namespace {
+namespace __archer {
+static int pagesize{0};
+
 template <typename T> struct DataPool final {
   static __thread DataPool<T> *ThreadDataPool;
   std::mutex DPMutex{};
@@ -399,7 +427,7 @@ struct ParallelData final : DataPoolEntry<ParallelData> {
   void *GetBarrierPtr(unsigned Index) { return &(Barrier[Index]); }
 
   ParallelData *Init(const void *codeptr) {
-    codePtr = codeptr;
+    this->codePtr = codeptr;
     return this;
   }
 
@@ -474,6 +502,10 @@ struct TaskData final : DataPoolEntry<TaskData> {
   /// count execution phase
   int execution{0};
 
+  size_t PrivateDataSize{0};
+  void *PrivateDataAddr{nullptr};
+
+  const void *CodePtr{nullptr};
   /// Count how often this structure has been put into child tasks + 1.
   std::atomic_int RefCount{1};
 
@@ -503,6 +535,13 @@ struct TaskData final : DataPoolEntry<TaskData> {
   int freed{0};
 #endif
 
+  void *Fiber{nullptr};
+
+  void activate() {
+    if (Fiber)
+      TsanSwitchToFiber(Fiber, 1);
+  }
+  void deactivate() { assert(!Fiber || Fiber == TsanGetCurrentFiber()); }
   bool isIncluded() { return TaskType & ompt_task_undeferred; }
   bool isUntied() { return TaskType & ompt_task_untied; }
   bool isFinal() { return TaskType & ompt_task_final; }
@@ -527,7 +566,8 @@ struct TaskData final : DataPoolEntry<TaskData> {
   void *GetLastAllMemoryPtr() { return AllMemory; }
   void *GetNextAllMemoryPtr() { return AllMemory + 1; }
 
-  TaskData *Init(TaskData *parent, int taskType) {
+  TaskData *Init(TaskData *parent, int taskType, const void *codePtr) {
+    CodePtr = codePtr;
     TaskType = taskType;
     Parent = parent;
     Team = Parent->Team;
@@ -537,6 +577,8 @@ struct TaskData final : DataPoolEntry<TaskData> {
       // Copy over pointer to taskgroup. This task may set up its own stack
       // but for now belongs to its parent's taskgroup.
       TaskGroup = Parent->TaskGroup;
+      if (archer_flags->tasking && !isIncluded() && !isUntied())
+        Fiber = TsanCreateFiber(0);
     }
     return this;
   }
@@ -545,10 +587,17 @@ struct TaskData final : DataPoolEntry<TaskData> {
     TaskType = taskType;
     execution = 1;
     Team = team;
+    if (archer_flags->tasking)
+      Fiber = TsanGetCurrentFiber();
     return this;
   }
 
   void Reset() {
+    if (archer_flags->tasking && !isImplicit() && Fiber) {
+      TsanDestroyFiber(Fiber);
+    }
+    CodePtr = nullptr;
+    Fiber = nullptr;
     InBarrier = false;
     TaskType = 0;
     execution = 0;
@@ -557,6 +606,8 @@ struct TaskData final : DataPoolEntry<TaskData> {
     Parent = nullptr;
     Team = nullptr;
     TaskGroup = nullptr;
+    PrivateDataSize = 0;
+    PrivateDataAddr = nullptr;
     if (DependencyMap) {
       for (auto i : *DependencyMap)
         i.second->Delete();
@@ -572,8 +623,9 @@ struct TaskData final : DataPoolEntry<TaskData> {
 #endif
   }
 
-  static TaskData *New(TaskData *parent, int taskType) {
-    return DataPoolEntry<TaskData>::New()->Init(parent, taskType);
+  static TaskData *New(TaskData *parent, int taskType,
+                       const void *codePtr = nullptr) {
+    return DataPoolEntry<TaskData>::New()->Init(parent, taskType, codePtr);
   }
 
   static TaskData *New(ParallelData *team, int taskType) {
@@ -582,7 +634,6 @@ struct TaskData final : DataPoolEntry<TaskData> {
 
   TaskData(DataPool<TaskData> *dp) : DataPoolEntry<TaskData>(dp) {}
 };
-} // namespace
 
 static inline TaskData *ToTaskData(ompt_data_t *task_data) {
   if (task_data)
@@ -608,6 +659,10 @@ static void ompt_tsan_thread_begin(ompt_thread_t thread_type,
   DependencyDataPool::ThreadDataPool = new DependencyDataPool;
   TsanNewMemory(DependencyDataPool::ThreadDataPool,
                 sizeof(DependencyDataPool::ThreadDataPool));
+  if (archer_flags->tasking) {
+    TsanGetCurrentFiber();
+  }
+
   thread_data->value = my_next_id();
 }
 
@@ -850,19 +905,21 @@ static void ompt_tsan_task_create(
 
     Data = TaskData::New(PData, type);
     new_task_data->ptr = Data;
-  } else if (type & ompt_task_undeferred) {
-    Data = TaskData::New(ToTaskData(parent_task_data), type);
+  } else if (type & ompt_task_explicit || type & ompt_task_target ||
+             type & ompt_task_taskwait) {
+    Data = TaskData::New(ToTaskData(parent_task_data), type, codeptr_ra);
     new_task_data->ptr = Data;
-  } else if (type & ompt_task_explicit || type & ompt_task_target) {
-    Data = TaskData::New(ToTaskData(parent_task_data), type);
-    new_task_data->ptr = Data;
-
-    // Use the newly created address. We cannot use a single address from the
-    // parent because that would declare wrong relationships with other
-    // sibling tasks that may be created before this task is started!
-    TsanHappensBefore(Data->GetTaskPtr());
-    ToTaskData(parent_task_data)->execution++;
+    if (!Data->isIncluded()) {
+      // Use the newly created address. We cannot use a single address from the
+      // parent because that would declare wrong relationships with other
+      // sibling tasks that may be created before this task is started!
+      TsanHappensBefore(Data->GetTaskPtr());
+      ToTaskData(parent_task_data)->execution++;
+    }
   }
+  if (archer_flags->tasking && Data->isUntied() && !archer_flags->untieds++)
+    fprintf(stderr, "Archer Warning: Task-level analysis not yet supported for "
+                    "untied tasks\n");
 }
 
 static void freeTask(TaskData *task) {
@@ -950,16 +1007,10 @@ static void switchTasks(TaskData *FromTask, TaskData *ToTask) {
       TsanIgnoreWritesBegin();
     }
   }
-  //// Not yet used
-  //  if (FromTask)
-  //    FromTask->deactivate();
-  //  if (ToTask)
-  //    ToTask->activate();
-}
-
-static void endTask(TaskData *FromTask) {
-  if (!FromTask)
-    return;
+  if (FromTask)
+    FromTask->deactivate();
+  if (ToTask)
+    ToTask->activate();
 }
 
 static void startTask(TaskData *ToTask) {
@@ -967,12 +1018,45 @@ static void startTask(TaskData *ToTask) {
     return;
   // Handle dependencies on first execution of the task
   if (ToTask->execution == 0) {
+    TsanFuncEntry(ToTask->CodePtr);
+    if (ompt_get_task_memory) {
+      void *addr;
+      size_t size;
+      int ret_task_memory = 0, block = 0;
+      do {
+        size = 0;
+        ret_task_memory = ompt_get_task_memory(&addr, &size, block++);
+        if (size > 0) {
+          TsanNewMemory((/*(void**)*/ addr), size + 8);
+          ToTask->PrivateDataAddr = addr;
+          ToTask->PrivateDataSize = size;
+          //          printf("NewMemory(%p, %zu)\n",addr, size);
+        }
+      } while (ret_task_memory);
+    }
+    if (archer_flags->tasking) {
+      auto stack_size = archer_flags->stack_size;
+      TsanNewMemory((char *)__builtin_frame_address(0) - stack_size,
+                    stack_size);
+    }
+
     ToTask->execution++;
     acquireDependencies(ToTask);
   }
   // 1. Task will begin execution after it has been created.
   // 2. Task will resume after it has been switched away.
   TsanHappensAfter(ToTask->GetTaskPtr());
+}
+
+static void endTask(TaskData *FromTask) {
+  if (!FromTask)
+    return;
+  if (ompt_get_task_memory) {
+    if (FromTask->PrivateDataSize > 0)
+      TsanNewMemory((/*(void**)*/ FromTask->PrivateDataAddr),
+                    FromTask->PrivateDataSize + 8);
+  }
+  TsanFuncExit();
 }
 
 static void ompt_tsan_task_schedule(ompt_data_t *first_task_data,
@@ -983,10 +1067,13 @@ static void ompt_tsan_task_schedule(ompt_data_t *first_task_data,
   //  The necessary action depends on prior_task_status:
   //
   //    ompt_task_early_fulfill = 5,
-  //     -> ignored
+  //     -> first got fulfill event, second ignored
   //
   //    ompt_task_late_fulfill  = 6,
   //     -> first completed, first freed, second ignored
+  //
+  //    ompt_taskwait_complete = 8,
+  //     -> first starts, first completes, first freed, second ignored
   //
   //    ompt_task_complete      = 1,
   //    ompt_task_cancel        = 3,
@@ -1120,10 +1207,12 @@ static void ompt_tsan_mutex_released(ompt_mutex_t kind, ompt_wait_id_t wait_id,
   Lock.unlock();
 }
 
+} // namespace __archer
+
 // callback , signature , variable to store result , required support level
 #define SET_OPTIONAL_CALLBACK_T(event, type, result, level)                    \
   do {                                                                         \
-    ompt_callback_##type##_t tsan_##event = &ompt_tsan_##event;                \
+    ompt_callback_##type##_t tsan_##event = &__archer::ompt_tsan_##event;      \
     result = ompt_set_callback(ompt_callback_##event,                          \
                                (ompt_callback_t)tsan_##event);                 \
     if (result < level)                                                        \
@@ -1147,11 +1236,12 @@ static void ompt_tsan_mutex_released(ompt_mutex_t kind, ompt_wait_id_t wait_id,
   } while (0)
 
 #define findTsanFunctionSilent(f, fSig) f = fSig dlsym(RTLD_DEFAULT, #f)
+#define findTsanFunctionName(f, name, fSig) f = fSig dlsym(RTLD_DEFAULT, #name)
 
 static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
                                 ompt_data_t *tool_data) {
   const char *options = getenv("TSAN_OPTIONS");
-  TsanFlags tsan_flags(options);
+  __archer::TsanFlags tsan_flags(options);
 
   ompt_set_callback_t ompt_set_callback =
       (ompt_set_callback_t)lookup("ompt_set_callback");
@@ -1161,7 +1251,7 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
   }
   ompt_get_parallel_info =
       (ompt_get_parallel_info_t)lookup("ompt_get_parallel_info");
-  ompt_get_thread_data = (ompt_get_thread_data_t)lookup("ompt_get_thread_data");
+  ompt_get_task_memory = (ompt_get_task_memory_t)lookup("ompt_get_task_memory");
 
   if (ompt_get_parallel_info == NULL) {
     fprintf(stderr, "Could not get inquiry function 'ompt_get_parallel_info', "
@@ -1180,6 +1270,10 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
       (void (*)(const char *, int, const volatile void *, size_t)));
   findTsanFunction(__tsan_func_entry, (void (*)(const void *)));
   findTsanFunction(__tsan_func_exit, (void (*)(void)));
+  findTsanFunction(__tsan_create_fiber, (void *(*)(unsigned int)));
+  findTsanFunction(__tsan_destroy_fiber, (void (*)(void *)));
+  findTsanFunction(__tsan_get_current_fiber, (void *(*)()));
+  findTsanFunction(__tsan_switch_to_fiber, (void (*)(void *, unsigned int)));
 
   SET_CALLBACK(thread_begin);
   SET_CALLBACK(thread_end);
@@ -1202,37 +1296,37 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
             "Warning: please export "
             "TSAN_OPTIONS='ignore_noninstrumented_modules=1' "
             "to avoid false positive reports from the OpenMP runtime!\n");
-  if (archer_flags->ignore_serial)
+  if (__archer::archer_flags->ignore_serial)
     TsanIgnoreWritesBegin();
 
   return 1; // success
 }
 
 static void ompt_tsan_finalize(ompt_data_t *tool_data) {
-  if (archer_flags->ignore_serial)
+  if (__archer::archer_flags->ignore_serial)
     TsanIgnoreWritesEnd();
-  if (archer_flags->print_max_rss) {
+  if (__archer::archer_flags->print_max_rss) {
     struct rusage end;
     getrusage(RUSAGE_SELF, &end);
     printf("MAX RSS[KBytes] during execution: %ld\n", end.ru_maxrss);
   }
 
-  if (archer_flags)
-    delete archer_flags;
+  if (__archer::archer_flags)
+    delete __archer::archer_flags;
 }
 
 extern "C" ompt_start_tool_result_t *
 ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
   const char *options = getenv("ARCHER_OPTIONS");
-  archer_flags = new ArcherFlags(options);
-  if (!archer_flags->enabled) {
-    if (archer_flags->verbose)
+  __archer::archer_flags = new __archer::ArcherFlags(options);
+  if (!__archer::archer_flags->enabled) {
+    if (__archer::archer_flags->verbose)
       std::cout << "Archer disabled, stopping operation" << std::endl;
-    delete archer_flags;
+    delete __archer::archer_flags;
     return NULL;
   }
 
-  pagesize = getpagesize();
+  __archer::pagesize = getpagesize();
 
   static ompt_start_tool_result_t ompt_start_tool_result = {
       &ompt_tsan_initialize, &ompt_tsan_finalize, {0}};
@@ -1247,17 +1341,23 @@ ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
   if (!RunningOnValgrind) // if we are not running on TSAN, give a different
                           // tool the chance to be loaded
   {
-    if (archer_flags->verbose)
+    if (__archer::archer_flags->verbose)
       std::cout << "Archer detected OpenMP application without TSan "
                    "stopping operation"
                 << std::endl;
-    delete archer_flags;
+    delete __archer::archer_flags;
     return NULL;
   }
 
-  if (archer_flags->verbose)
-    std::cout << "Archer detected OpenMP application with TSan, supplying "
-                 "OpenMP synchronization semantics"
-              << std::endl;
+  if (__archer::archer_flags->verbose) {
+    if (__archer::archer_flags->tasking)
+      std::cout << "Archer detected OpenMP application with TSan, supplying "
+                   "OpenMP tasking synchronization semantics"
+                << std::endl;
+    else
+      std::cout << "Archer detected OpenMP application with TSan, supplying "
+                   "OpenMP synchronization semantics"
+                << std::endl;
+  }
   return &ompt_start_tool_result;
 }

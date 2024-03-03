@@ -476,6 +476,9 @@ int __ompt_get_task_memory_internal(void **addr, size_t *size, int blocknum) {
   if (taskdata->td_flags.tasktype != TASK_EXPLICIT)
     return 0; // support only explicit task
 
+  if (taskdata->td_size_alloc < 0)
+    return 0;
+
   *addr = taskdata;
   *size = taskdata->td_size_alloc;
   return 0;
