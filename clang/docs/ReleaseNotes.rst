@@ -308,8 +308,8 @@ Miscellaneous Bug Fixes
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Do not attempt to dump the layout of dependent types when ``-fdump-record-layouts-complete``
-  is passed.
+- Do not attempt to dump the layout of dependent types or invalid declarations
+  when ``-fdump-record-layouts-complete`` is passed.
   Fixes (`#83684 <https://github.com/llvm/llvm-project/issues/83684>`_).
 
 OpenACC Specific Changes
