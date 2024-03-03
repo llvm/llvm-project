@@ -151,6 +151,9 @@ def generate_matmul_ws(
     # Limitaitons for now
     assert input_type == np.float16
     assert output_type == np.float32
+    assert BLOCK_M == 128
+    assert BLOCK_N == 128
+    assert BLOCK_K == 64
     assert M % BLOCK_M == 0
     assert N % BLOCK_N == 0
     assert K % BLOCK_K == 0
@@ -665,6 +668,9 @@ def generate_matmul_multistage(
     # Limitaitons for now
     assert input_type == np.float16
     assert output_type == np.float32
+    assert BLOCK_M == 128
+    assert BLOCK_N == 128
+    assert BLOCK_K == 64
     assert M % BLOCK_M == 0
     assert N % BLOCK_N == 0
     assert K % BLOCK_K == 0
