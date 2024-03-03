@@ -22,9 +22,15 @@ struct ts {
   T x;
 };
 
+template <>
+struct ts<void> {
+  float f;
+};
+
 void f() {
   ts<int> a;
   ts<double> b;
+  ts<void> c;
 }
 
 namespace gh83684 {
@@ -38,6 +44,8 @@ struct AllocationResult {
 // CHECK:          0 | struct a
 // CHECK:          0 | struct b
 // CHECK:          0 | class c
+// CHECK:          0 | struct ts<void>
+// CHECK-NEXT:     0 |   float
 // CHECK:          0 | struct ts<int>
 // CHECK:          0 | struct ts<double>
 // CHECK-NOT:      0 | class d
