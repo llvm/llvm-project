@@ -600,8 +600,6 @@ bool clang::isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind) {
 }
 
 bool clang::isOpenMPParallelDirective(OpenMPDirectiveKind DKind) {
-  if (DKind == OMPD_parallel_workshare)
-    return false;
   if (DKind == OMPD_teams_loop)
     return true;
   return DKind == OMPD_parallel ||
