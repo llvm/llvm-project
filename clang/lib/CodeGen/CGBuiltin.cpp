@@ -17963,6 +17963,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return nullptr;
 
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_elementwise_any: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateIntrinsic(
+        /*ReturnType*/ llvm::Type::getInt1Ty(getLLVMContext()),
+        Intrinsic::dx_any, ArrayRef<Value *>{Op0}, nullptr, "dx.any");
+  }
   case Builtin::BI__builtin_hlsl_dot: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
