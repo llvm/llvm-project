@@ -14,7 +14,6 @@
 #include <__chrono/convert_to_timespec.h>
 #include <__chrono/duration.h>
 #include <__config>
-#include <__fwd/hash.h>
 #include <ctime>
 #include <errno.h>
 #include <pthread.h>

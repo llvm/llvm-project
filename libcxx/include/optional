@@ -186,8 +186,8 @@ namespace std {
 #include <__exception/exception.h>
 #include <__functional/hash.h>
 #include <__functional/invoke.h>
-#include <__functional/reference_wrapper.h>
 #include <__functional/unary_function.h>
+#include <__fwd/functional.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
 #include <__tuple/sfinae_helpers.h>

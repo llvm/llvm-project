@@ -426,7 +426,7 @@
   { include: [ "<__fwd/bit_reference.h>", "private", "<vector>", "public" ] },
   { include: [ "<__fwd/complex.h>", "private", "<complex>", "public" ] },
   { include: [ "<__fwd/fstream.h>", "private", "<iosfwd>", "public" ] },
-  { include: [ "<__fwd/hash.h>", "private", "<functional>", "public" ] },
+  { include: [ "<__fwd/functional.h>", "private", "<functional>", "public" ] },
   { include: [ "<__fwd/ios.h>", "private", "<iosfwd>", "public" ] },
   { include: [ "<__fwd/istream.h>", "private", "<iosfwd>", "public" ] },
   { include: [ "<__fwd/mdspan.h>", "private", "<mdspan>", "public" ] },

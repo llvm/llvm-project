@@ -12,7 +12,7 @@
 #include <__config>
 #include <__functional/invoke.h>
 #include <__functional/unary_function.h>
-#include <__fwd/hash.h>
+#include <__fwd/functional.h>
 #include <__tuple/sfinae_helpers.h>
 #include <__type_traits/is_copy_constructible.h>
 #include <__type_traits/is_default_constructible.h>
