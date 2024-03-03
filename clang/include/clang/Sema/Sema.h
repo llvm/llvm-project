@@ -2507,6 +2507,11 @@ public:
 
   bool isModuleVisible(const Module *M, bool ModulePrivate = false);
 
+  /// Determine if the current module scope is the implementation.
+  bool isModuleImplementation() const {
+    return ModuleScopes.empty() ? false : !ModuleScopes.back().ModuleInterface;
+  }
+
   // When loading a non-modular PCH files, this is used to restore module
   // visibility.
   void makeModuleVisible(Module *Mod, SourceLocation ImportLoc) {
