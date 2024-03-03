@@ -1150,10 +1150,6 @@ namespace llvm {
 
     bool preferScalarizeSplat(SDNode *N) const override;
 
-    CondMergingParams
-    getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
-                                  const Value *Rhs) const override;
-
     bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                            CombineLevel Level) const override;
 

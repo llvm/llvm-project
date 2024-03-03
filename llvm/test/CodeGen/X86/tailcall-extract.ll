@@ -6,7 +6,7 @@
 ; containing call. And later tail call can be generated.
 
 ; CHECK-LABEL: test1:
-; CHECK:       jne foo # TAILCALL
+; CHECK:       je foo # TAILCALL
 ; CHECK:       jmp bar # TAILCALL
 
 ; OPT-LABEL:   test1
@@ -48,8 +48,8 @@ exit:
 ; can't be duplicated.
 
 ; CHECK-LABEL: test2:
-; CHECK:       callq foo
 ; CHECK:       callq bar
+; CHECK:       callq foo
 
 ; OPT-LABEL:   test2
 ; OPT:         if.then.i:
@@ -93,7 +93,7 @@ exit:
 ; offset, so the exit block can still be duplicated, and tail call generated.
 
 ; CHECK-LABEL: test3:
-; CHECK:       jne qux # TAILCALL
+; CHECK:       je qux # TAILCALL
 ; CHECK:       jmp baz # TAILCALL
 
 ; OPT-LABEL:   test3
@@ -136,8 +136,8 @@ exit:
 ; block can't be duplicated.
 
 ; CHECK-LABEL: test4:
-; CHECK:       callq qux
 ; CHECK:       callq baz
+; CHECK:       callq qux
 
 ; OPT-LABEL:   test4
 ; OPT:         if.then.i:

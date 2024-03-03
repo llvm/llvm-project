@@ -14,33 +14,31 @@ declare i32 @bar(i64)
 define i1 @plus_one() nounwind {
 ; CHECK32-LABEL: plus_one:
 ; CHECK32:       # %bb.0: # %entry
+; CHECK32-NEXT:    movzbl M, %eax
 ; CHECK32-NEXT:    incl L
-; CHECK32-NEXT:    sete %al
-; CHECK32-NEXT:    movzbl M, %ecx
-; CHECK32-NEXT:    andb $8, %cl
-; CHECK32-NEXT:    shrb $3, %cl
-; CHECK32-NEXT:    testb %cl, %al
-; CHECK32-NEXT:    je .LBB0_1
-; CHECK32-NEXT:  # %bb.2: # %exit2
+; CHECK32-NEXT:    jne .LBB0_2
+; CHECK32-NEXT:  # %bb.1: # %entry
+; CHECK32-NEXT:    andb $8, %al
+; CHECK32-NEXT:    je .LBB0_2
+; CHECK32-NEXT:  # %bb.3: # %exit2
 ; CHECK32-NEXT:    xorl %eax, %eax
 ; CHECK32-NEXT:    retl
-; CHECK32-NEXT:  .LBB0_1: # %exit
+; CHECK32-NEXT:  .LBB0_2: # %exit
 ; CHECK32-NEXT:    movb $1, %al
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: plus_one:
 ; CHECK64:       # %bb.0: # %entry
+; CHECK64-NEXT:    movzbl M(%rip), %eax
 ; CHECK64-NEXT:    incl L(%rip)
-; CHECK64-NEXT:    sete %al
-; CHECK64-NEXT:    movzbl M(%rip), %ecx
-; CHECK64-NEXT:    andb $8, %cl
-; CHECK64-NEXT:    shrb $3, %cl
-; CHECK64-NEXT:    testb %cl, %al
-; CHECK64-NEXT:    je .LBB0_1
-; CHECK64-NEXT:  # %bb.2: # %exit2
+; CHECK64-NEXT:    jne .LBB0_2
+; CHECK64-NEXT:  # %bb.1: # %entry
+; CHECK64-NEXT:    andb $8, %al
+; CHECK64-NEXT:    je .LBB0_2
+; CHECK64-NEXT:  # %bb.3: # %exit2
 ; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB0_1: # %exit
+; CHECK64-NEXT:  .LBB0_2: # %exit
 ; CHECK64-NEXT:    movb $1, %al
 ; CHECK64-NEXT:    retq
 entry:
@@ -65,32 +63,30 @@ define i1 @plus_forty_two() nounwind {
 ; CHECK32-LABEL: plus_forty_two:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movzbl M, %eax
-; CHECK32-NEXT:    andb $8, %al
-; CHECK32-NEXT:    shrb $3, %al
 ; CHECK32-NEXT:    addl $42, L
-; CHECK32-NEXT:    sete %cl
-; CHECK32-NEXT:    testb %al, %cl
-; CHECK32-NEXT:    je .LBB1_1
-; CHECK32-NEXT:  # %bb.2: # %exit2
+; CHECK32-NEXT:    jne .LBB1_2
+; CHECK32-NEXT:  # %bb.1: # %entry
+; CHECK32-NEXT:    andb $8, %al
+; CHECK32-NEXT:    je .LBB1_2
+; CHECK32-NEXT:  # %bb.3: # %exit2
 ; CHECK32-NEXT:    xorl %eax, %eax
 ; CHECK32-NEXT:    retl
-; CHECK32-NEXT:  .LBB1_1: # %exit
+; CHECK32-NEXT:  .LBB1_2: # %exit
 ; CHECK32-NEXT:    movb $1, %al
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: plus_forty_two:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    movzbl M(%rip), %eax
-; CHECK64-NEXT:    andb $8, %al
-; CHECK64-NEXT:    shrb $3, %al
 ; CHECK64-NEXT:    addl $42, L(%rip)
-; CHECK64-NEXT:    sete %cl
-; CHECK64-NEXT:    testb %al, %cl
-; CHECK64-NEXT:    je .LBB1_1
-; CHECK64-NEXT:  # %bb.2: # %exit2
+; CHECK64-NEXT:    jne .LBB1_2
+; CHECK64-NEXT:  # %bb.1: # %entry
+; CHECK64-NEXT:    andb $8, %al
+; CHECK64-NEXT:    je .LBB1_2
+; CHECK64-NEXT:  # %bb.3: # %exit2
 ; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB1_1: # %exit
+; CHECK64-NEXT:  .LBB1_2: # %exit
 ; CHECK64-NEXT:    movb $1, %al
 ; CHECK64-NEXT:    retq
 entry:
@@ -115,32 +111,30 @@ define i1 @minus_one() nounwind {
 ; CHECK32-LABEL: minus_one:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movzbl M, %eax
-; CHECK32-NEXT:    andb $8, %al
-; CHECK32-NEXT:    shrb $3, %al
 ; CHECK32-NEXT:    decl L
-; CHECK32-NEXT:    sete %cl
-; CHECK32-NEXT:    testb %al, %cl
-; CHECK32-NEXT:    je .LBB2_1
-; CHECK32-NEXT:  # %bb.2: # %exit2
+; CHECK32-NEXT:    jne .LBB2_2
+; CHECK32-NEXT:  # %bb.1: # %entry
+; CHECK32-NEXT:    andb $8, %al
+; CHECK32-NEXT:    je .LBB2_2
+; CHECK32-NEXT:  # %bb.3: # %exit2
 ; CHECK32-NEXT:    xorl %eax, %eax
 ; CHECK32-NEXT:    retl
-; CHECK32-NEXT:  .LBB2_1: # %exit
+; CHECK32-NEXT:  .LBB2_2: # %exit
 ; CHECK32-NEXT:    movb $1, %al
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: minus_one:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    movzbl M(%rip), %eax
-; CHECK64-NEXT:    andb $8, %al
-; CHECK64-NEXT:    shrb $3, %al
 ; CHECK64-NEXT:    decl L(%rip)
-; CHECK64-NEXT:    sete %cl
-; CHECK64-NEXT:    testb %al, %cl
-; CHECK64-NEXT:    je .LBB2_1
-; CHECK64-NEXT:  # %bb.2: # %exit2
+; CHECK64-NEXT:    jne .LBB2_2
+; CHECK64-NEXT:  # %bb.1: # %entry
+; CHECK64-NEXT:    andb $8, %al
+; CHECK64-NEXT:    je .LBB2_2
+; CHECK64-NEXT:  # %bb.3: # %exit2
 ; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB2_1: # %exit
+; CHECK64-NEXT:  .LBB2_2: # %exit
 ; CHECK64-NEXT:    movb $1, %al
 ; CHECK64-NEXT:    retq
 entry:
@@ -165,32 +159,30 @@ define i1 @minus_forty_two() nounwind {
 ; CHECK32-LABEL: minus_forty_two:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movzbl M, %eax
-; CHECK32-NEXT:    andb $8, %al
-; CHECK32-NEXT:    shrb $3, %al
 ; CHECK32-NEXT:    addl $-42, L
-; CHECK32-NEXT:    sete %cl
-; CHECK32-NEXT:    testb %al, %cl
-; CHECK32-NEXT:    je .LBB3_1
-; CHECK32-NEXT:  # %bb.2: # %exit2
+; CHECK32-NEXT:    jne .LBB3_2
+; CHECK32-NEXT:  # %bb.1: # %entry
+; CHECK32-NEXT:    andb $8, %al
+; CHECK32-NEXT:    je .LBB3_2
+; CHECK32-NEXT:  # %bb.3: # %exit2
 ; CHECK32-NEXT:    xorl %eax, %eax
 ; CHECK32-NEXT:    retl
-; CHECK32-NEXT:  .LBB3_1: # %exit
+; CHECK32-NEXT:  .LBB3_2: # %exit
 ; CHECK32-NEXT:    movb $1, %al
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: minus_forty_two:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    movzbl M(%rip), %eax
-; CHECK64-NEXT:    andb $8, %al
-; CHECK64-NEXT:    shrb $3, %al
 ; CHECK64-NEXT:    addl $-42, L(%rip)
-; CHECK64-NEXT:    sete %cl
-; CHECK64-NEXT:    testb %al, %cl
-; CHECK64-NEXT:    je .LBB3_1
-; CHECK64-NEXT:  # %bb.2: # %exit2
+; CHECK64-NEXT:    jne .LBB3_2
+; CHECK64-NEXT:  # %bb.1: # %entry
+; CHECK64-NEXT:    andb $8, %al
+; CHECK64-NEXT:    je .LBB3_2
+; CHECK64-NEXT:  # %bb.3: # %exit2
 ; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB3_1: # %exit
+; CHECK64-NEXT:  .LBB3_2: # %exit
 ; CHECK64-NEXT:    movb $1, %al
 ; CHECK64-NEXT:    retq
 entry:
@@ -292,7 +284,7 @@ define i64 @test_two_live_flags(ptr %foo0, i64 %bar0, i64 %baz0, ptr %foo1, i64 
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK32-NEXT:    lock cmpxchg8b (%esi)
-; CHECK32-NEXT:    sete {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; CHECK32-NEXT:    setne {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    movl %ebp, %edx
 ; CHECK32-NEXT:    movl %edi, %ecx
@@ -300,15 +292,17 @@ define i64 @test_two_live_flags(ptr %foo0, i64 %bar0, i64 %baz0, ptr %foo1, i64 
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK32-NEXT:    lock cmpxchg8b (%esi)
 ; CHECK32-NEXT:    sete %al
-; CHECK32-NEXT:    andb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Folded Reload
-; CHECK32-NEXT:    cmpb $1, %al
-; CHECK32-NEXT:    jne .LBB5_3
-; CHECK32-NEXT:  # %bb.1: # %t
+; CHECK32-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
+; CHECK32-NEXT:    jne .LBB5_4
+; CHECK32-NEXT:  # %bb.1: # %entry
+; CHECK32-NEXT:    testb %al, %al
+; CHECK32-NEXT:    je .LBB5_4
+; CHECK32-NEXT:  # %bb.2: # %t
 ; CHECK32-NEXT:    movl $42, %eax
-; CHECK32-NEXT:    jmp .LBB5_2
-; CHECK32-NEXT:  .LBB5_3: # %f
+; CHECK32-NEXT:    jmp .LBB5_3
+; CHECK32-NEXT:  .LBB5_4: # %f
 ; CHECK32-NEXT:    xorl %eax, %eax
-; CHECK32-NEXT:  .LBB5_2: # %t
+; CHECK32-NEXT:  .LBB5_3: # %t
 ; CHECK32-NEXT:    xorl %edx, %edx
 ; CHECK32-NEXT:    addl $4, %esp
 ; CHECK32-NEXT:    popl %esi
@@ -321,17 +315,19 @@ define i64 @test_two_live_flags(ptr %foo0, i64 %bar0, i64 %baz0, ptr %foo1, i64 
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    movq %rsi, %rax
 ; CHECK64-NEXT:    lock cmpxchgq %rdx, (%rdi)
-; CHECK64-NEXT:    sete %dl
+; CHECK64-NEXT:    setne %dl
 ; CHECK64-NEXT:    movq %r8, %rax
 ; CHECK64-NEXT:    lock cmpxchgq %r9, (%rcx)
 ; CHECK64-NEXT:    sete %al
-; CHECK64-NEXT:    andb %dl, %al
-; CHECK64-NEXT:    cmpb $1, %al
-; CHECK64-NEXT:    jne .LBB5_2
-; CHECK64-NEXT:  # %bb.1: # %t
+; CHECK64-NEXT:    testb %dl, %dl
+; CHECK64-NEXT:    jne .LBB5_3
+; CHECK64-NEXT:  # %bb.1: # %entry
+; CHECK64-NEXT:    testb %al, %al
+; CHECK64-NEXT:    je .LBB5_3
+; CHECK64-NEXT:  # %bb.2: # %t
 ; CHECK64-NEXT:    movl $42, %eax
 ; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB5_2: # %f
+; CHECK64-NEXT:  .LBB5_3: # %f
 ; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    retq
 entry:
@@ -357,6 +353,7 @@ define i1 @asm_clobbering_flags(ptr %mem) nounwind {
 ; CHECK32-NEXT:    testl %edx, %edx
 ; CHECK32-NEXT:    setg %al
 ; CHECK32-NEXT:    #APP
+; CHECK32-NOT:     rep
 ; CHECK32-NEXT:    bsfl %edx, %edx
 ; CHECK32-NEXT:    #NO_APP
 ; CHECK32-NEXT:    movl %edx, (%ecx)
@@ -368,6 +365,7 @@ define i1 @asm_clobbering_flags(ptr %mem) nounwind {
 ; CHECK64-NEXT:    testl %ecx, %ecx
 ; CHECK64-NEXT:    setg %al
 ; CHECK64-NEXT:    #APP
+; CHECK64-NOT:     rep
 ; CHECK64-NEXT:    bsfl %ecx, %ecx
 ; CHECK64-NEXT:    #NO_APP
 ; CHECK64-NEXT:    movl %ecx, (%rdi)
