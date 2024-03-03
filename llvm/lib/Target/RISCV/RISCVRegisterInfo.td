@@ -585,9 +585,7 @@ def GPRPair : RegisterClass<"RISCV", [XLenPairFVT], 64, (add
 )>;
 
 // The register class is added for inline assembly for vector mask types.
-def VM : VReg<VMaskVTs,
-           (add (sequence "V%u", 8, 31),
-                (sequence "V%u", 0, 7)), 1>;
+def VM : VReg<VMaskVTs, (add VR), 1>;
 
 foreach m = LMULList in {
   foreach nf = NFList<m>.L in {
