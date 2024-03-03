@@ -105,6 +105,41 @@ def c(value, ty=None):
     return arith.constant(ty, value)
 
 
+def make_kernel_name(
+    input_type=np.float16,
+    output_type=np.float32,
+    M=4096,
+    N=4096,
+    K=4096,
+    BLOCK_M=128,
+    BLOCK_N=128,
+    BLOCK_K=128,
+    num_stages=3,
+    use_warp_specialization=False,
+):
+    kernelName = (
+        "warpspecialized"
+        if use_warp_specialization
+        else "multistage"
+    )
+    return (
+        kernelName
+        + "_"
+        + str(M)
+        + "x"
+        + str(N)
+        + "x"
+        + str(K)
+        + "_"
+        + str(BLOCK_M)
+        + "x"
+        + str(BLOCK_N)
+        + "x"
+        + str(BLOCK_K)
+        + "_"
+        + str(num_stages)
+    )
+
 def generate_matmul_ws(
     input_type=np.float16,
     output_type=np.float32,
@@ -114,7 +149,7 @@ def generate_matmul_ws(
     BLOCK_M=128,
     BLOCK_N=128,
     BLOCK_K=128,
-    max_num_stages=3,
+    num_stages=3,
 ):
     # Limitaitons for now
     assert input_type == np.float16
@@ -122,9 +157,6 @@ def generate_matmul_ws(
     assert M % BLOCK_M == 0
     assert N % BLOCK_N == 0
     assert K % BLOCK_K == 0
-
-    required_stages = (M * K + K * N) // (BLOCK_M * BLOCK_K + BLOCK_K * BLOCK_N)
-    num_stages = min(required_stages, max_num_stages)
 
     module = ir.Module.create()
     token_ty = ir.Type.parse("!gpu.async.token")
@@ -202,11 +234,15 @@ def generate_matmul_ws(
         + smem_space_str
         + ">>"
     )
-
+    kernelName = make_kernel_name(
+        input_type, output_type, M, N, K, BLOCK_M, BLOCK_N, BLOCK_K, num_stages, True
+    )
     with ir.InsertionPoint(module.body):
-
-        @func.FuncOp.from_py_func(a_ty, b_ty, c_ty)
-        def mlir_matmul_warpspecialized(a_host, b_host, c_host):
+        fop = func.FuncOp(kernelName, ([a_ty, b_ty, c_ty], []))
+        with ir.InsertionPoint(fop.add_entry_block()):
+            a_host = fop.arguments[0]
+            b_host = fop.arguments[1]
+            c_host = fop.arguments[2]
             lhs_tile_bytes = BLOCK_M * BLOCK_K * get_type_size(a_elem_ty)
             rhs_tile_bytes = BLOCK_N * BLOCK_K * get_type_size(b_elem_ty)
             smem_size_input = (lhs_tile_bytes + rhs_tile_bytes) * num_stages
@@ -301,6 +337,7 @@ def generate_matmul_ws(
                 nvgpu.tma_prefetch_descriptor(a_tma_desc, predicate=wgPrimaryThread)
                 nvgpu.tma_prefetch_descriptor(b_tma_desc, predicate=wgPrimaryThread)
 
+                ns = num_stages if num_stages == 1 else num_stages - 1
                 # GPU Step 5. Producer Warpgroup (TMA Warpgroup)
                 with ir.InsertionPoint(scf.IfOp(is_producer).then_block):
                     # Step 5.1. Reduce register size
@@ -319,7 +356,7 @@ def generate_matmul_ws(
 
                         # Step 5.2.1. Wait mbarDONE
                         debug_print(
-                            "[prod] {}  | mbarDONE[{}] try_wait  phase={}",
+                            "[prod] iv={}  | mbarDONE[{}] try_wait  phase={}",
                             iv,
                             stage,
                             phaseParity,
@@ -329,7 +366,7 @@ def generate_matmul_ws(
                             mbarDONE, phaseParity, ticks, mbarId=stage
                         )
                         debug_print(
-                            "[prod] {}  | mbarDONE[{}] try_wait  phase={} [done]",
+                            "[prod] iv={}  | mbarDONE[{}] try_wait  phase={} [done]",
                             iv,
                             stage,
                             phaseParity,
@@ -412,7 +449,7 @@ def generate_matmul_ws(
 
                         # Step 5.2.3. Arrive mbarTMA
                         debug_print(
-                            "[prod] {}  | mbarTMA[{}] arrive",
+                            "[prod] iv={}  | mbarTMA[{}] arrive",
                             iv,
                             stage,
                             predicate=producerPrimaryThread,
@@ -421,7 +458,7 @@ def generate_matmul_ws(
                             mbarTMA, c(txcount), stage, predicate=producerPrimaryThread
                         )
                         debug_print(
-                            "[prod] {}  | mbarTMA[{}] arrive [done]",
+                            "[prod] iv={}  | mbarTMA[{}] arrive [done]",
                             iv,
                             stage,
                             predicate=producerPrimaryThread,
@@ -450,7 +487,7 @@ def generate_matmul_ws(
                         iv = for_op.induction_variable
                         stage = arith.remui(iv, c(num_stages))
                         debug_print(
-                            "[cons] {}  | mbarTMA[{}] try_wait   phase={}",
+                            "[cons] iv={}  | mbarTMA[{}] try_wait   phase={}",
                             iv,
                             stage,
                             phaseParity,
@@ -460,7 +497,7 @@ def generate_matmul_ws(
                             mbarTMA, phaseParity, ticks, mbarId=stage
                         )
                         debug_print(
-                            "[cons] {}  | mbarTMA[{}] try_wait   phase={} [done]",
+                            "[cons] iv={}  | mbarTMA[{}] try_wait   phase={} [done]",
                             iv,
                             stage,
                             phaseParity,
@@ -509,32 +546,29 @@ def generate_matmul_ws(
                         )
 
                         # Step 6.3.4. Arrive mbarDONE
-                        p1 = arith.cmpi(arith.CmpIPredicate.sgt, iv, c(0))
-                        p_arrive = arith.andi(consumerPrimaryThread, p1)
+                        if num_stages == 1:
+                            p_arrive = consumerPrimaryThread
+                        else:
+                            p1 = arith.cmpi(arith.CmpIPredicate.sgt, iv, c(0))
+                            p_arrive = arith.andi(consumerPrimaryThread, p1)
                         with ir.InsertionPoint(scf.IfOp(p_arrive).then_block):
                             p = arith.cmpi(arith.CmpIPredicate.eq, stage, c(0))
                             barId = arith.select(
                                 p, c(num_stages - 1), arith.subi(stage, c(1))
                             )
-                            remoteCtaId = c(0)
-                            pred = consumerPrimaryThread
                             debug_print(
-                                "[cons] {}  | mbarDONE[{}] arrive.mapa  pred={} ",
+                                "[cons] iv={}  | mbarDONE[{}] arrive ",
                                 iv,
                                 barId,
-                                remoteCtaId,
-                                pred,
                                 predicate=consumerPrimaryThread,
                             )
                             nvgpu.mbarrier_arrive(
                                 ir.Type.parse("!nvgpu.mbarrier.token"), mbarDONE, barId
                             )
                             debug_print(
-                                "[cons] {}  | mbarDONE[{}] arrive  pred={} [done]",
+                                "[cons] iv={}  | mbarDONE[{}] arrive [done]",
                                 iv,
                                 barId,
-                                remoteCtaId,
-                                pred,
                                 predicate=consumerPrimaryThread,
                             )
                             scf.yield_([])
@@ -609,11 +643,13 @@ def generate_matmul_ws(
             # Step 4. Copy back to host
             t8 = gpu.wait(token_ty, [launch_op])
             t9 = gpu.memcpy(token_ty, [t8], c_host, c_device)
+            gpu.dealloc(token_ty, [t8], a_device)
+            gpu.dealloc(token_ty, [t8], b_device)            
             gpu.wait(token_ty, [t9])
+            gpu.dealloc(token_ty, [t8], c_device)
+            func.ReturnOp([])
 
-    mlir_matmul_warpspecialized.func_op.attributes[
-        "llvm.emit_c_interface"
-    ] = ir.UnitAttr.get()
+    fop.attributes["llvm.emit_c_interface"] = ir.UnitAttr.get()
     module.operation.verify()
     return module
 
@@ -627,7 +663,7 @@ def generate_matmul_multistage(
     BLOCK_M=128,
     BLOCK_N=128,
     BLOCK_K=64,
-    max_num_stages=3,
+    num_stages=3,
 ):
     # Limitaitons for now
     assert input_type == np.float16
@@ -635,9 +671,6 @@ def generate_matmul_multistage(
     assert M % BLOCK_M == 0
     assert N % BLOCK_N == 0
     assert K % BLOCK_K == 0
-
-    required_stages = (M * K + K * N) // (BLOCK_M * BLOCK_K + BLOCK_K * BLOCK_N)
-    num_stages = min(required_stages, max_num_stages)
 
     module = ir.Module.create()
     token_ty = ir.Type.parse("!gpu.async.token")
@@ -717,9 +750,23 @@ def generate_matmul_multistage(
     )
 
     with ir.InsertionPoint(module.body):
-
-        @func.FuncOp.from_py_func(a_ty, b_ty, c_ty)
-        def mlir_matmul_multistage(a_host, b_host, c_host):
+        kernelName = make_kernel_name(
+            input_type,
+            output_type,
+            M,
+            N,
+            K,
+            BLOCK_M,
+            BLOCK_N,
+            BLOCK_K,
+            num_stages,
+            False,
+        )
+        fop = func.FuncOp(kernelName, ([a_ty, b_ty, c_ty], []))
+        with ir.InsertionPoint(fop.add_entry_block()):
+            a_host = fop.arguments[0]
+            b_host = fop.arguments[1]
+            c_host = fop.arguments[2]
             lhs_tile_bytes = BLOCK_M * BLOCK_K * get_type_size(a_elem_ty)
             rhs_tile_bytes = BLOCK_N * BLOCK_K * get_type_size(b_elem_ty)
             smem_size_input = (lhs_tile_bytes + rhs_tile_bytes) * num_stages
@@ -792,7 +839,8 @@ def generate_matmul_multistage(
                 nvgpu.tma_prefetch_descriptor(b_tma_desc, predicate=primaryThread)
 
                 # GPU Step 3. Prologue (global memory --> shared memory)
-                for_op = scf.ForOp(c(0), c(num_stages - 1), c(1))
+                ns = num_stages if num_stages == 1 else num_stages - 1
+                for_op = scf.ForOp(c(0), c(ns), c(1))
                 with ir.InsertionPoint(for_op.body):
                     iv = for_op.induction_variable
 
@@ -951,104 +999,105 @@ def generate_matmul_multistage(
                     new_acc = nvgpu.WarpgroupMmaOp(
                         acc.type, da, db, carry_acc, transposeB=True
                     )
+                    if num_stages == 1:
+                        nvvm.WgmmaWaitGroupSyncOp(0)
 
                     # Step 4.4. Load TMA for next stage
                     p1 = arith.cmpi(
                         arith.CmpIPredicate.ult,
-                        arith.addi(iv, c(num_stages - 1)),
+                        arith.addi(iv, c(ns)),
                         c(K // BLOCK_K),
                     )
                     p = arith.andi(primaryThread, p1)
-                    with ir.InsertionPoint(scf.IfOp(p).then_block):
-                        nextStage = arith.addi(iv, c(num_stages - 1))
-                        nextSlot = arith.remui(nextStage, c(num_stages))
-                        a_offset = arith.muli(nextSlot, c(lhs_tile_bytes))
-                        a_tma_slice = memref.view(
-                            ir.MemRefType.get(
-                                a_tma_shape, a_elem_ty, memory_space=smem_space
-                            ),
-                            dynamic_smem,
-                            a_offset,
-                            [],
-                        )
-                        b_offset = arith.addi(
-                            arith.muli(nextSlot, c(rhs_tile_bytes)),
-                            c(lhs_tile_bytes * num_stages),
-                        )
-                        b_tma_slice_1 = memref.view(
-                            ir.MemRefType.get(
-                                b_tma_shape, b_elem_ty, memory_space=smem_space
-                            ),
-                            dynamic_smem,
-                            b_offset,
-                            [],
-                        )
-                        b_offset2 = arith.addi(
-                            b_offset,
-                            c(BLOCK_K * TMA_LAST_DIM_F16 * get_type_size(b_elem_ty)),
-                        )
-                        b_tma_slice_2 = memref.view(
-                            ir.MemRefType.get(
-                                b_tma_shape, b_elem_ty, memory_space=smem_space
-                            ),
-                            dynamic_smem,
-                            b_offset2,
-                            [],
-                        )
+                    nextStage = arith.addi(iv, c(ns))
+                    nextSlot = arith.remui(nextStage, c(num_stages))
+                    a_offset = arith.muli(nextSlot, c(lhs_tile_bytes))
 
-                        coord = arith.muli(c(64), nextStage)
-                        debug_print(
-                            "[MainLoop] iv={} TMA Load a_offset={} b_offset={} b_offset2={} @ a=({},{}) b=({},{})",
-                            iv,
-                            a_offset,
-                            b_offset,
-                            b_offset2,
-                            coord,
-                            dimX,
-                            dimY,
-                            coord,
-                            predicate=primaryThread,
-                        )
-                        nvgpu.TmaAsyncLoadOp(
-                            a_tma_slice,
-                            mbarTMA,
-                            a_tma_desc,
-                            coordinates=[coord, dimX],
-                            mbarId=nextSlot,
-                            predicate=primaryThread,
-                        )
-                        nvgpu.TmaAsyncLoadOp(
-                            b_tma_slice_1,
-                            mbarTMA,
-                            b_tma_desc,
-                            coordinates=[dimY, coord],
-                            mbarId=nextSlot,
-                            predicate=primaryThread,
-                        )
-                        dimY2 = arith.addi(dimY, c(64))
-                        nvgpu.TmaAsyncLoadOp(
-                            b_tma_slice_2,
-                            mbarTMA,
-                            b_tma_desc,
-                            coordinates=[dimY2, coord],
-                            mbarId=nextSlot,
-                            predicate=primaryThread,
-                        )
+                    debug_print(
+                        "[MainLoop] mbarTMA[{}] arrive",
+                        nextSlot,
+                        predicate=p,
+                    )
+                    nvgpu.mbarrier_arrive_expect_tx(
+                        mbarTMA, c(txcount), nextSlot, predicate=p
+                    )
+                    debug_print(
+                        "[MainLoop] mbarTMA[{}] arrive [done]",
+                        nextSlot,
+                        predicate=p,
+                    )
 
-                        debug_print(
-                            "[MainLoop] mbarTMA[{}] arrive",
-                            nextSlot,
-                            predicate=primaryThread,
-                        )
-                        nvgpu.mbarrier_arrive_expect_tx(
-                            mbarTMA, c(txcount), nextSlot, predicate=primaryThread
-                        )
-                        debug_print(
-                            "[MainLoop] mbarTMA[{}] arrive [done]",
-                            nextSlot,
-                            predicate=primaryThread,
-                        )
-                        scf.yield_([])
+                    a_tma_slice = memref.view(
+                        ir.MemRefType.get(
+                            a_tma_shape, a_elem_ty, memory_space=smem_space
+                        ),
+                        dynamic_smem,
+                        a_offset,
+                        [],
+                    )
+                    b_offset = arith.addi(
+                        arith.muli(nextSlot, c(rhs_tile_bytes)),
+                        c(lhs_tile_bytes * num_stages),
+                    )
+                    b_tma_slice_1 = memref.view(
+                        ir.MemRefType.get(
+                            b_tma_shape, b_elem_ty, memory_space=smem_space
+                        ),
+                        dynamic_smem,
+                        b_offset,
+                        [],
+                    )
+                    b_offset2 = arith.addi(
+                        b_offset,
+                        c(BLOCK_K * TMA_LAST_DIM_F16 * get_type_size(b_elem_ty)),
+                    )
+                    b_tma_slice_2 = memref.view(
+                        ir.MemRefType.get(
+                            b_tma_shape, b_elem_ty, memory_space=smem_space
+                        ),
+                        dynamic_smem,
+                        b_offset2,
+                        [],
+                    )
+
+                    coord = arith.muli(c(64), nextStage)
+                    debug_print(
+                        "[MainLoop] iv={} TMA Load a_offset={} b_offset={} b_offset2={} @ a=({},{}) b=({},{})",
+                        iv,
+                        a_offset,
+                        b_offset,
+                        b_offset2,
+                        coord,
+                        dimX,
+                        dimY,
+                        coord,
+                        predicate=p,
+                    )
+                    nvgpu.TmaAsyncLoadOp(
+                        a_tma_slice,
+                        mbarTMA,
+                        a_tma_desc,
+                        coordinates=[coord, dimX],
+                        mbarId=nextSlot,
+                        predicate=p,
+                    )
+                    nvgpu.TmaAsyncLoadOp(
+                        b_tma_slice_1,
+                        mbarTMA,
+                        b_tma_desc,
+                        coordinates=[dimY, coord],
+                        mbarId=nextSlot,
+                        predicate=p,
+                    )
+                    dimY2 = arith.addi(dimY, c(64))
+                    nvgpu.TmaAsyncLoadOp(
+                        b_tma_slice_2,
+                        mbarTMA,
+                        b_tma_desc,
+                        coordinates=[dimY2, coord],
+                        mbarId=nextSlot,
+                        predicate=p,
+                    )
                     # Step 4.5. Change the phaseParity
                     p = arith.cmpi(arith.CmpIPredicate.eq, stage, c(num_stages - 1))
                     phaseParity = arith.select(
@@ -1062,7 +1111,6 @@ def generate_matmul_multistage(
 
                 # Step 5. Wait All WGMMA groups
                 nvvm.WgmmaWaitGroupSyncOp(0)
-                gpu.barrier()
 
                 # Step 6. Epilogue (registers --> shared memory)
                 acc_smem_ty = ir.MemRefType.get(
@@ -1113,10 +1161,12 @@ def generate_matmul_multistage(
             # Step 4. Copy back to host
             t8 = gpu.wait(token_ty, [launch_op])
             t9 = gpu.memcpy(token_ty, [t8], c_host, c_device)
+            gpu.dealloc(token_ty, [t8], a_device)
+            gpu.dealloc(token_ty, [t8], b_device)            
             gpu.wait(token_ty, [t9])
+            gpu.dealloc(token_ty, [t8], c_device)
+            func.ReturnOp([])
 
-    mlir_matmul_multistage.func_op.attributes[
-        "llvm.emit_c_interface"
-    ] = ir.UnitAttr.get()
+    fop.attributes["llvm.emit_c_interface"] = ir.UnitAttr.get()
     module.operation.verify()
     return module

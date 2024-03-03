@@ -1,6 +1,6 @@
 # RUN: env SUPPORT_LIB=%mlir_cuda_runtime \
 # RUN:   %PYTHON %s | FileCheck %s
-# CHECK: PASS
+
 
 # ===--- GEMM Hopper Tensor Core Integration Test ---===
 #
@@ -168,6 +168,8 @@ def matmul(
     no_verify=False,
 ):
     # Print the configuration
+    required_stages = (M * K + K * N) // (BLOCK_M * BLOCK_K + BLOCK_K * BLOCK_N)
+    num_stages = min(required_stages, max_num_stages)
     ity = "f16" if input_type == np.float16 else "f32"
     oty = "f16" if output_type == np.float16 else "f32"
     gemmty = "Warp specialization" if use_warp_specialization else "Multistage"
@@ -193,7 +195,7 @@ def matmul(
         + "x"
         + str(BLOCK_K)
         + ", stages "
-        + str(max_num_stages)
+        + str(num_stages)
         + " --==="
     )
 
@@ -209,7 +211,7 @@ def matmul(
         BLOCK_K,
         use_warp_specialization,
         saveIR,
-        max_num_stages,
+        num_stages,
     )
 
     # Allocate matrices and invoke the matmul
@@ -219,10 +221,17 @@ def matmul(
     mem_a = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(a)))
     mem_b = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(b)))
     mem_c = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(c)))
-    kernelName = (
-        "mlir_matmul_warpspecialized"
-        if use_warp_specialization
-        else "mlir_matmul_multistage"
+    kernelName = matmulBuilder.make_kernel_name(
+        input_type,
+        output_type,
+        M,
+        N,
+        K,
+        BLOCK_M,
+        BLOCK_N,
+        BLOCK_K,
+        num_stages,
+        use_warp_specialization,
     )
 
     # Launch the MLIR generated kernel
@@ -243,24 +252,118 @@ def matmul(
 
     print("PASS ")
 
+# Takes longer time to run
+def test_long():
+    for stages in range(1,7):
+        for M in [128, 512, 1024, 4096, 8192]:
+            for N in [128, 512, 1024, 4096, 8192]:
+                for K in [64, 128, 512, 1024, 4096, 8192]:
+                    matmul(
+                        np.float16,
+                        np.float32,
+                        M,N,
+                        K,
+                        max_num_stages=stages,
+                        use_warp_specialization=False,
+                        no_verify=True,
+                        saveIR=True
+                    )
+                    matmul(
+                        np.float16,
+                        np.float32,
+                        M,N,
+                        K,
+                        max_num_stages=stages,
+                        use_warp_specialization=True,                    
+                    )
 
-# GEMM Multistage       f32 += f16 * f16
-matmul(
-    np.float16,
-    np.float32,
-    128,
-    128,
-    4096,
-    max_num_stages=3,
-    use_warp_specialization=False,
-)
-# GEMM Warp Specilized  f32 += f16 * f16
-matmul(
-    np.float16,
-    np.float32,
-    256,
-    1024,
-    512,
-    max_num_stages=3,
-    use_warp_specialization=True,
-)
+def test_short():
+    for stages in [1, 3]:
+        for M in [128, 512]:
+            for N in [128, 512]:
+                for K in [64, 512]:
+                    matmul(
+                        np.float16,
+                        np.float32,
+                        M,N,
+                        K,
+                        max_num_stages=stages,
+                        use_warp_specialization=False,
+                        no_verify=True,
+                        saveIR=True
+                    )
+                    matmul(
+                        np.float16,
+                        np.float32,
+                        M,N,
+                        K,
+                        max_num_stages=stages,
+                        use_warp_specialization=True,                    
+                    )
+
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 128x128x64, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 128x128x64, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 128x128x512, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 128x128x512, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 128x512x64, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 128x512x64, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 128x512x512, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 128x512x512, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 512x128x64, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 512x128x64, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 512x128x512, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 512x128x512, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 512x512x64, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 512x512x64, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 512x512x512, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 512x512x512, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 128x128x64, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 128x128x64, Tile 128x128x64, stages 1 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 128x128x512, Tile 128x128x64, stages 3 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 128x128x512, Tile 128x128x64, stages 3 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 128x512x64, Tile 128x128x64, stages 2 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 128x512x64, Tile 128x128x64, stages 2 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 128x512x512, Tile 128x128x64, stages 3 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 128x512x512, Tile 128x128x64, stages 3 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 512x128x64, Tile 128x128x64, stages 2 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 512x128x64, Tile 128x128x64, stages 2 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 512x128x512, Tile 128x128x64, stages 3 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 512x128x512, Tile 128x128x64, stages 3 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 512x512x64, Tile 128x128x64, stages 3 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 512x512x64, Tile 128x128x64, stages 3 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Multistage f32 += f16 * f16, Size 512x512x512, Tile 128x128x64, stages 3 --===
+# CHECK: PASS 
+# CHECK: ===-- Running GEMM Warp specialization f32 += f16 * f16, Size 512x512x512, Tile 128x128x64, stages 3 --===
+# CHECK: PASS
+
+test_short()
