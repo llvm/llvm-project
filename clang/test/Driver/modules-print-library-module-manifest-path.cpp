@@ -1,5 +1,7 @@
 // Test that -print-library-module-manifest-path finds the correct file.
 
+// FIXME: Enable on all platforms.
+
 // REQUIRES: x86-registered-target
 
 // RUN: rm -rf %t && split-file %s %t && cd %t
