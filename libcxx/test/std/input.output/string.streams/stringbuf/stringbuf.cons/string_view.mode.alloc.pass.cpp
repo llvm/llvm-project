@@ -28,7 +28,7 @@
 #include "test_allocator.h"
 #include "test_convertible.h"
 #include "test_macros.h"
-helper_
+
 #include "../../helper_string_macros.h"
 #include "../../helper_types.h"
 
