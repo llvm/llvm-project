@@ -129,6 +129,12 @@ New checks
   Replaces certain conditional statements with equivalent calls to
   ``std::min`` or ``std::max``.
 
+- New :doc:`bugprone-tagged-union-member-count
+  <clang-tidy/checks/bugprone/tagged-union-member-count>` check.
+
+  Warns about suspicious looking tagged unions where the number of enum
+  constants and the number of union data members are not equal.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
