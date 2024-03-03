@@ -37,12 +37,8 @@ enum class ErrorType {
   None,
 
   // Parser Errors
-  ParserChainedExprInvalidArg,
-  ParserChainedExprNoCloseParen,
-  ParserChainedExprNoOpenParen,
   ParserFailedToBuildMatcher,
   ParserInvalidToken,
-  ParserMalformedChainedExpr,
   ParserNoCloseParen,
   ParserNoCode,
   ParserNoComma,
@@ -54,10 +50,9 @@ enum class ErrorType {
 
   // Registry Errors
   RegistryMatcherNotFound,
-  RegistryNotBindable,
   RegistryValueNotFound,
   RegistryWrongArgCount,
-  RegistryWrongArgType,
+  RegistryWrongArgType
 };
 
 void addError(Diagnostics *error, SourceRange range, ErrorType errorType,
