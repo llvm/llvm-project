@@ -25,6 +25,8 @@
 #include "nasty_string.h"
 #include "test_macros.h"
 
+#include "../../types.h"
+
 #ifndef TEST_HAS_NO_NASTY_STRING
 void test_sfinae_with_nasty_char() {
   using SpStream = std::basic_ispanstream<nasty_char, nasty_char_traits>;
