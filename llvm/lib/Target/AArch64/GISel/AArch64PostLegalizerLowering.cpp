@@ -1022,13 +1022,17 @@ void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   bool Invert = false;
   AArch64CC::CondCode CC, CC2 = AArch64CC::AL;
-  if (Pred == CmpInst::Predicate::FCMP_ORD && IsZero) {
+  if ((Pred == CmpInst::Predicate::FCMP_ORD ||
+       Pred == CmpInst::Predicate::FCMP_UNO) &&
+      IsZero) {
     // The special case "fcmp ord %a, 0" is the canonical check that LHS isn't
     // NaN, so equivalent to a == a and doesn't need the two comparisons an
     // "ord" normally would.
+    // Similarly, "fcmp uno %a, 0" is the canonical check that LHS is NaN and is
+    // thus equivalent to a != a.
     RHS = LHS;
     IsZero = false;
-    CC = AArch64CC::EQ;
+    CC = Pred == CmpInst::Predicate::FCMP_ORD ? AArch64CC::EQ : AArch64CC::NE;
   } else
     changeVectorFCMPPredToAArch64CC(Pred, CC, CC2, Invert);
 
