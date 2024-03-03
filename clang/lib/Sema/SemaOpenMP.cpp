@@ -23356,7 +23356,7 @@ void Sema::ActOnOpenMPDeclareTargetName(NamedDecl *ND, SourceLocation Loc,
     // Only global variables can be marked as declare target.
     if (!VD->isFileVarDecl() && !VD->isStaticLocal() &&
         !VD->isStaticDataMember()) {
-      Diag(Loc, diag::warn_omp_declare_target_has_local_vars)
+      Diag(Loc, diag::err_omp_declare_target_has_local_vars)
           << VD->getNameAsString();
       return;
     }
