@@ -5536,10 +5536,10 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
 // indices from Idxs that should be left out when inserting into the resulting
 // struct. To is the result struct built so far, new insertvalue instructions
 // build on that.
-static Value *BuildSubAggregate(Value *From, Value* To, Type *IndexedType,
+static Value *BuildSubAggregate(Value *From, Value *To, Type *IndexedType,
                                 SmallVectorImpl<unsigned> &Idxs,
                                 unsigned IdxSkip,
-                                Instruction *InsertBefore) {
+                                BasicBlock::iterator InsertBefore) {
   StructType *STy = dyn_cast<StructType>(IndexedType);
   if (STy) {
     // Save the original To argument so we can modify it
@@ -5596,8 +5596,7 @@ static Value *BuildSubAggregate(Value *From, Value* To, Type *IndexedType,
 //
 // All inserted insertvalue instructions are inserted before InsertBefore
 static Value *BuildSubAggregate(Value *From, ArrayRef<unsigned> idx_range,
-                                Instruction *InsertBefore) {
-  assert(InsertBefore && "Must have someplace to insert!");
+                                BasicBlock::iterator InsertBefore) {
   Type *IndexedType = ExtractValueInst::getIndexedType(From->getType(),
                                                              idx_range);
   Value *To = PoisonValue::get(IndexedType);
@@ -5613,8 +5612,9 @@ static Value *BuildSubAggregate(Value *From, ArrayRef<unsigned> idx_range,
 ///
 /// If InsertBefore is not null, this function will duplicate (modified)
 /// insertvalues when a part of a nested struct is extracted.
-Value *llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
-                               Instruction *InsertBefore) {
+Value *
+llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
+                        std::optional<BasicBlock::iterator> InsertBefore) {
   // Nothing to index? Just return V then (this is useful at the end of our
   // recursion).
   if (idx_range.empty())
@@ -5653,7 +5653,7 @@ Value *llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
         // which allows the unused 0,0 element from the nested struct to be
         // removed.
         return BuildSubAggregate(V, ArrayRef(idx_range.begin(), req_idx),
-                                 InsertBefore);
+                                 *InsertBefore);
       }
 
       // This insert value inserts something else than what we are looking for.
@@ -5661,7 +5661,7 @@ Value *llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
       // looking for, then.
       if (*req_idx != *i)
         return FindInsertedValue(I->getAggregateOperand(), idx_range,
-                                 InsertBefore);
+                                 *InsertBefore);
     }
     // If we end up here, the indices of the insertvalue match with those
     // requested (though possibly only partially). Now we recursively look at
