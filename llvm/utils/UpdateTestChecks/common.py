@@ -1233,127 +1233,56 @@ def may_clash_with_default_check_prefix_name(check_prefix, var):
     )
 
 
-VARIABLE_TAG = "[[@@]]"
-METAVAR_RE = re.compile(r"\[\[([A-Z0-9_]+)(?::[^]]+)?\]\]")
-NUMERIC_SUFFIX_RE = re.compile(r"[0-9]*$")
-
-
-class CheckValueInfo:
-    def __init__(
-        self,
-        nameless_value: NamelessValue,
-        var: str,
-        prefix: str,
-    ):
-        self.nameless_value = nameless_value
-        self.var = var
-        self.prefix = prefix
-
-
-# Represent a check line in a way that allows us to compare check lines while
-# ignoring some or all of the FileCheck variable names.
-class CheckLineInfo:
-    def __init__(self, line, values):
-        # Line with all FileCheck variable name occurrences replaced by VARIABLE_TAG
-        self.line: str = line
-
-        # Information on each FileCheck variable name occurrences in the line
-        self.values: List[CheckValueInfo] = values
-
-    def __repr__(self):
-        return f"CheckLineInfo(line={self.line}, self.values={self.values})"
-
-
-def remap_metavar_names(
-    orig_line_infos: List[CheckLineInfo],
-    new_line_infos: List[CheckLineInfo],
-    committed_names: Set[str],
-) -> Mapping[str, str]:
+def find_diff_matching(lhs: List[str], rhs: List[str]) -> List[int]:
     """
-    Map all FileCheck variable names that appear in new_line_infos to new
-    FileCheck variable names in an attempt to reduce the diff from orig_line_infos
-    to new_line_infos.
+    Find a large ordered matching between strings in lhs and rhs.
 
-    This is done by:
-    * Committing variable names that participate in fully unchanged lines
-      (regardless of how these lines are ordered).
-    * Attempt to cause additional lines to "become unchanged" by matching
-      similar lines using a diffing algorithm.
-    * Recursing into intervals between the matched lines.
+    Think of this as finding the *unchanged* lines in a diff, where the entries
+    of lhs and rhs are lines of the files being diffed.
+
+    Returns a list of matched (lhs_idx, rhs_idx) pairs.
     """
-    # Initialize uncommitted identity mappings
-    new_mapping = {}
-    for line in new_line_infos:
-        for value in line.values:
-            new_mapping[value.var] = value.var
 
-    # Recursively commit to the identity mapping or find a better one
-    def recurse(
-        orig_line_infos: List[CheckLineInfo], new_line_infos: List[CheckLineInfo]
-    ):
-        if not new_line_infos or not orig_line_infos:
+    # Collect matches in reverse order.
+    matches = []
+
+    def recurse(lhs_start, lhs_end, rhs_start, rhs_end):
+        if lhs_start == lhs_end or rhs_start == rhs_end:
             return
 
-        lines = set()
+        # First, collect a set of candidate matching edges. We limit this to a
+        # constant multiple of the input size to avoid quadratic runtime.
+        patterns = collections.defaultdict(lambda: ([], []))
 
-        # Search for lines that are identical on both sides, including meta
-        # variable names, and commit to those names immediately
-        for line in orig_line_infos:
-            key = (line.line.strip(), tuple(value.var for value in line.values))
-            lines.add(key)
+        for idx in range(lhs_start, lhs_end):
+            patterns[lhs[idx]][0].append(idx)
+        for idx in range(rhs_start, rhs_end):
+            patterns[rhs[idx]][1].append(idx)
 
-        for line in new_line_infos:
-            key = (
-                line.line.strip(),
-                tuple(new_mapping[value.var] for value in line.values),
-            )
-            if key in lines:
-                for value in line.values:
-                    committed_names.add(new_mapping[value.var])
+        multiple_patterns = []
 
-        # Search for lines that are unique on both sides if we only consider
-        # variable names that have been committed.
-        lines = collections.defaultdict(lambda: [None, None])
-        for i, line in enumerate(orig_line_infos):
-            key = (
-                line.line.strip(),
-                tuple(
-                    value.var for value in line.values if value.var in committed_names
-                ),
-            )
-            entry = lines[key]
-            if entry[0] is None:
-                entry[0] = i
+        candidates = []
+        for pattern in patterns.values():
+            if not pattern[0] or not pattern[1]:
+                continue
+
+            if len(pattern[0]) == len(pattern[1]) == 1:
+                candidates.append((pattern[0][0], pattern[1][0]))
             else:
-                entry[0] = False
+                multiple_patterns.append(pattern)
 
-        for i, line in enumerate(new_line_infos):
-            key = (
-                line.line.strip(),
-                tuple(
-                    new_mapping[value.var]
-                    for value in line.values
-                    if new_mapping[value.var] in committed_names
-                ),
-            )
-            entry = lines[key]
-            if entry[1] is None:
-                entry[1] = i
-            else:
-                entry[1] = False
+        multiple_patterns.sort(key=lambda pattern: len(pattern[0]) * len(pattern[1]))
 
-        unique_matches = []
-        for entry in lines.values():
-            if (
-                entry[0] is not None
-                and entry[0] is not False
-                and entry[1] is not None
-                and entry[1] is not False
-            ):
-                unique_matches.append((entry[0], entry[1]))
+        for pattern in multiple_patterns:
+            if len(candidates) + len(pattern[0]) * len(pattern[1]) > 2 * (len(lhs) + len(rhs)):
+                break
+            for lhs_idx in pattern[0]:
+                for rhs_idx in pattern[1]:
+                    candidates.append((lhs_idx, rhs_idx))
 
-        if not unique_matches:
-            # There are no unique matches. This is the recursion base case.
+        if not candidates:
+            # The LHS and RHS either share nothing in common, or lines are just too
+            # identical. In that case, let's give up and not match anything.
             return
 
         # Compute a maximal crossing-free matching via an algorithm that is
@@ -1402,86 +1331,177 @@ def remap_metavar_names(
         # Therefore, the algorithm is trivially O(M log M) in the number of
         # points. Since we only consider lines that are unique, it is log-linear
         # in the problem size.
-        unique_matches.sort(key=lambda entry: entry[0])
+        candidates.sort(key=lambda candidate: (candidate[0], -candidate[1]))
 
         backlinks = []
         table = []
-        for _, new_idx in unique_matches:
-            ti = bisect.bisect_left(table, new_idx, key=lambda entry: entry[0])
+        for _, rhs_idx in candidates:
+            candidate_idx = len(backlinks)
+            ti = bisect.bisect_left(table, rhs_idx, key=lambda entry: entry[0])
             if ti < len(table):
-                table[ti] = (new_idx, len(backlinks))
+                table[ti] = (rhs_idx, candidate_idx)
             else:
-                table.append((new_idx, len(backlinks)))
+                table.append((rhs_idx, candidate_idx))
             if ti > 0:
                 backlinks.append(table[ti - 1][1])
             else:
                 backlinks.append(None)
 
-        # Commit to names in the matching, re-checking compatibility as we go along
+        # Commit to names in the matching by walking the backlinks. Recursively
+        # attempt to fill in more matches in-betweem.
+        previous = (lhs_end, rhs_end)
         match_idx = table[-1][1]
-        matches = []
         while match_idx is not None:
-            orig_idx, new_idx = unique_matches[match_idx]
+            current = candidates[match_idx]
+            recurse(current[0] + 1, previous[0], current[1] + 1, previous[1])
+            matches.append(current)
+            previous = current
+            match_idx = backlinks[match_idx]
+        recurse(lhs_start, previous[0], rhs_start, previous[1])
+
+    recurse(0, len(lhs), 0, len(rhs))
+
+    matches.reverse()
+    return matches
+
+
+VARIABLE_TAG = "[[@@]]"
+METAVAR_RE = re.compile(r"\[\[([A-Z0-9_]+)(?::[^]]+)?\]\]")
+NUMERIC_SUFFIX_RE = re.compile(r"[0-9]*$")
+
+
+class CheckValueInfo:
+    def __init__(
+        self,
+        nameless_value: NamelessValue,
+        var: str,
+        prefix: str,
+    ):
+        self.nameless_value = nameless_value
+        self.var = var
+        self.prefix = prefix
+
+
+# Represent a check line in a way that allows us to compare check lines while
+# ignoring some or all of the FileCheck variable names.
+class CheckLineInfo:
+    def __init__(self, line, values):
+        # Line with all FileCheck variable name occurrences replaced by VARIABLE_TAG
+        self.line: str = line
+
+        # Information on each FileCheck variable name occurrences in the line
+        self.values: List[CheckValueInfo] = values
+
+    def __repr__(self):
+        return f"CheckLineInfo(line={self.line}, self.values={self.values})"
+
+
+def remap_metavar_names(
+    old_line_infos: List[CheckLineInfo],
+    new_line_infos: List[CheckLineInfo],
+    committed_names: Set[str],
+) -> Mapping[str, str]:
+    """
+    Map all FileCheck variable names that appear in new_line_infos to new
+    FileCheck variable names in an attempt to reduce the diff from old_line_infos
+    to new_line_infos.
+
+    This is done by:
+    * Matching old check lines and new check lines using a diffing algorithm
+      applied after replacing names with wildcards.
+    * Committing to variable names such that the matched lines become equal
+      (without wildcards) if possible
+    * This is done recursively to handle cases where many lines are equal
+      after wildcard replacement
+    """
+    # Initialize uncommitted identity mappings
+    new_mapping = {}
+    for line in new_line_infos:
+        for value in line.values:
+            new_mapping[value.var] = value.var
+
+    # Recursively commit to the identity mapping or find a better one
+    def recurse(old_begin, old_end, new_begin, new_end):
+        if old_begin == old_end or new_begin == new_end:
+            return
+
+        # Find a matching of lines where uncommitted names are replaced
+        # with a placeholder.
+        def diffify_line(line, mapper):
+            values = []
+            for value in line.values:
+                mapped = mapper(value.var)
+                values.append(mapped if mapped in committed_names else '?')
+            return line.line.strip() + ' @@@ ' + ' @ '.join(values)
+
+        lhs_lines = [
+            diffify_line(line, lambda x: x)
+            for line in old_line_infos[old_begin:old_end]
+        ]
+        rhs_lines = [
+            diffify_line(line, lambda x: new_mapping[x])
+            for line in new_line_infos[new_begin:new_end]
+        ]
+
+        candidate_matches = find_diff_matching(lhs_lines, rhs_lines)
+
+        # Apply commits greedily on a match-by-match basis
+        matches = [(-1,-1)]
+        committed_anything = False
+        for lhs_idx, rhs_idx in candidate_matches:
+            lhs_line = old_line_infos[lhs_idx]
+            rhs_line = new_line_infos[rhs_idx]
+
             local_commits = {}
 
-            for orig_value, new_value in zip(
-                orig_line_infos[orig_idx].values, new_line_infos[new_idx].values
-            ):
-                if new_mapping[new_value.var] in committed_names:
-                    # The new value has already been committed by a previous match we considered
-                    # during the outer loop. If it was mapped to the same name as the original value,
-                    # we can consider committing other values from this line. Otherwise, we should
-                    # ignore this line.
-                    if new_mapping[new_value.var] == orig_value.var:
+            for lhs_value, rhs_value in zip(lhs_line.values, rhs_line.values):
+                if new_mapping[rhs_value.var] in committed_names:
+                    # The new value has already been committed. If it was mapped
+                    # to the same name as the original value, we can consider
+                    # # committing other values from this line. Otherwise, we
+                    # should ignore this line.
+                    if new_mapping[rhs_value.var] == lhs_value.var:
                         continue
                     else:
                         break
 
-                if new_value.var in local_commits:
+                if rhs_value.var in local_commits:
                     # Same, but for a possible commit happening on the same line
-                    if local_commits[new_value.var] == orig_value.var:
+                    if local_commits[rhs_value.var] == lhs_value.var:
                         continue
                     else:
                         break
 
-                if orig_value.var in committed_names:
+                if lhs_value.var in committed_names:
                     # We can't map this value because the name we would map it to has already been
                     # committed for something else. Give up on this line.
                     break
 
-                local_commits[new_value.var] = orig_value.var
+                local_commits[rhs_value.var] = lhs_value.var
             else:
                 # No reason not to add any commitments for this line
-                for new_var, orig_var in local_commits.items():
-                    new_mapping[new_var] = orig_var
-                    committed_names.add(orig_var)
+                for rhs_var, lhs_var in local_commits.items():
+                    new_mapping[rhs_var] = lhs_var
+                    committed_names.add(lhs_var)
+                    committed_anything = True
 
                     if (
-                        orig_var != new_var
-                        and orig_var in new_mapping
-                        and new_mapping[orig_var] == orig_var
+                        lhs_var != rhs_var
+                        and lhs_var in new_mapping
+                        and new_mapping[lhs_var] == lhs_var
                     ):
-                        new_mapping[orig_var] = "conflict_" + orig_var
+                        new_mapping[lhs_var] = "conflict_" + lhs_var
 
-                matches.append((orig_idx, new_idx))
+                matches.append((lhs_idx, rhs_idx))
 
-            match_idx = backlinks[match_idx]
+        matches.append((old_end, new_end))
 
-        # Recurse into the intervals between matches. Add sentinels to simplify
-        # the iteration over intervals.
-        matches.append((-1, -1))
-        matches.reverse()
-        matches.append((len(orig_line_infos), len(new_line_infos)))
+        # Recursively handle sequences between matches
+        if committed_anything:
+            for ((lhs_prev, rhs_prev), (lhs_next, rhs_next)) in zip(matches, matches[1:]):
+                recurse(lhs_prev + 1, lhs_next, rhs_prev + 1, rhs_next)
 
-        for ((left_orig_idx, left_new_idx), (right_orig_idx, right_new_idx)) in zip(matches, matches[1:]):
-            assert left_orig_idx < right_orig_idx
-            assert left_new_idx < right_new_idx
-            recurse(
-                orig_line_infos[left_orig_idx + 1 : right_orig_idx],
-                new_line_infos[left_new_idx + 1 : right_new_idx],
-            )
-
-    recurse(orig_line_infos, new_line_infos)
+    recurse(0, len(old_line_infos), 0, len(new_line_infos))
 
     # Commit to remaining names and resolve conflicts
     for new_name, mapped_name in new_mapping.items():
@@ -1503,6 +1523,7 @@ def remap_metavar_names(
             candidate = f"{base_name}{suffix}"
             if candidate not in committed_names:
                 new_mapping[new_name] = candidate
+                committed_names.add(candidate)
                 break
             suffix += 1
 
