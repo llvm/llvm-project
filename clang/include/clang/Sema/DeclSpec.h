@@ -2360,9 +2360,25 @@ public:
   }
 
   /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
+  /// EndLoc, which should be the last token of the chunk. This overload is for
+  /// copying a 'chunk' from another declarator, so it takes the pool that the
+  /// other Declarator owns so that it can 'take' the attributes from it.
+  void AddTypeInfo(const DeclaratorChunk &TI, AttributePool &OtherPool,
+                   SourceLocation EndLoc) {
+    DeclTypeInfo.push_back(TI);
+    getAttributePool().takeFrom(DeclTypeInfo.back().getAttrs(), OtherPool);
+
+    if (!EndLoc.isInvalid())
+      SetRangeEnd(EndLoc);
+  }
+
+  /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
   /// EndLoc, which should be the last token of the chunk.
   void AddTypeInfo(const DeclaratorChunk &TI, SourceLocation EndLoc) {
     DeclTypeInfo.push_back(TI);
+
+    assert(TI.AttrList.empty() &&
+           "Cannot add a declarator chunk with attributes with this overload");
 
     if (!EndLoc.isInvalid())
       SetRangeEnd(EndLoc);
