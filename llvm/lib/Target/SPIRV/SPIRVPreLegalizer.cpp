@@ -279,8 +279,10 @@ static void generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
-        insertAssignInstr(Reg, nullptr, AssignedPtrType, GR, MIB,
-                          MF.getRegInfo());
+        // G_GLOBAL_VALUE already has type info.
+        if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE)
+          insertAssignInstr(Reg, nullptr, AssignedPtrType, GR, MIB,
+                            MF.getRegInfo());
         ToErase.push_back(&MI);
       } else if (isSpvIntrinsic(MI, Intrinsic::spv_assign_type)) {
         Register Reg = MI.getOperand(1).getReg();

@@ -11,8 +11,7 @@
 
 ; CHECK-SPIRV:     OpName %[[#TEST:]] "test_legacy_atomics"
 ; CHECK-SPIRV-DAG: %[[#UINT:]] = OpTypeInt 32 0
-; CHECK-SPIRV-DAG: %[[#UCHAR:]] = OpTypeInt 8 0
-; CHECK-SPIRV-DAG: %[[#UCHAR_PTR:]] = OpTypePointer CrossWorkgroup %[[#UCHAR]]
+; CHECK-SPIRV-DAG: %[[#UINT_PTR:]] = OpTypePointer CrossWorkgroup %[[#UINT]]
 
 ;; In SPIR-V, atomic_add is represented as OpAtomicIAdd [2], which also includes
 ;; memory scope and memory semantic arguments. The backend applies a default
@@ -26,7 +25,7 @@
 ; CHECK-SPIRV-DAG: %[[#RELAXED:]] = OpConstant %[[#UINT]] 0
 
 ; CHECK-SPIRV:     %[[#TEST]] = OpFunction %[[#]]
-; CHECK-SPIRV:     %[[#PTR:]] = OpFunctionParameter %[[#UCHAR_PTR]]
+; CHECK-SPIRV:     %[[#PTR:]] = OpFunctionParameter %[[#UINT_PTR]]
 ; CHECK-SPIRV:     %[[#VAL:]] = OpFunctionParameter %[[#UINT]]
 ; CHECK-SPIRV:     %[[#]] = OpAtomicIAdd %[[#UINT]] %[[#PTR]] %[[#WORKGROUP_SCOPE]] %[[#RELAXED]] %[[#VAL]]
 ; CHECK-SPIRV:     %[[#]] = OpAtomicIAdd %[[#UINT]] %[[#PTR]] %[[#WORKGROUP_SCOPE]] %[[#RELAXED]] %[[#VAL]]

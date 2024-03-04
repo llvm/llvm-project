@@ -89,10 +89,6 @@ Type *getMDOperandAsType(const MDNode *N, unsigned I);
 // name, otherwise return an empty string.
 std::string getOclOrSpirvBuiltinDemangledName(StringRef Name);
 
-// If Type is a pointer type and it is not opaque pointer, return its
-// element type, otherwise return Type.
-const Type *getTypedPtrEltType(const Type *Type);
-
 // Check if a string contains a builtin prefix.
 bool hasBuiltinTypePrefix(StringRef Name);
 
@@ -101,5 +97,8 @@ bool isSpecialOpaqueType(const Type *Ty);
 
 // Check if the function is an SPIR-V entry point
 bool isEntryPoint(const Function &F);
+
+// Parse basic scalar type name, substring TypeName, and return LLVM type.
+Type *parseBasicTypeName(StringRef TypeName, LLVMContext &Ctx);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
