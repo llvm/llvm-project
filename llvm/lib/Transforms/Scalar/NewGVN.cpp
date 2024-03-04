@@ -658,7 +658,6 @@ public:
          TargetLibraryInfo *TLI, AliasAnalysis *AA, MemorySSA *MSSA,
          const DataLayout &DL)
       : F(F), DT(DT), TLI(TLI), AA(AA), MSSA(MSSA), AC(AC), DL(DL),
-        PredInfo(std::make_unique<PredicateInfo>(F, *DT, *AC)),
         SQ(DL, TLI, DT, AC, /*CtxI=*/nullptr, /*UseInstrInfo=*/false,
            /*CanUseUndef=*/false) {}
 
@@ -3426,6 +3425,7 @@ bool NewGVN::runGVN() {
     StartingVNCounter = DebugCounter::getCounterValue(VNCounter);
   bool Changed = false;
   NumFuncArgs = F.arg_size();
+  PredInfo = std::make_unique<PredicateInfo>(F, *DT, *AC);
   MSSAWalker = MSSA->getWalker();
   SingletonDeadExpression = new (ExpressionAllocator) DeadExpression();
 
