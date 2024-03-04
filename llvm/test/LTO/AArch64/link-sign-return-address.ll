@@ -6,10 +6,10 @@
 ; RUN: llvm-lto -exported-symbol main \
 ; RUN:          -exported-symbol foo \
 ; RUN:          -filetype=obj \
-; RUN:           %t1.bc %t2.bc \
-; RUN:           -o %t1.exe 2>&1 | FileCheck --allow-empty %s
+; RUN:           %t2.bc %t1.bc \
+; RUN:           -o %t1.exe 2>&1
 ; RUN: llvm-objdump -d %t1.exe | FileCheck --check-prefix=CHECK-DUMP %s
-; RUN: llvm-readelf -n %t1.exe | FileCheck --check-prefix=CHECK-PROP %s
+; RUN: llvm-readelf -n %t1.exe | FileCheck --allow-empty --check-prefix=CHECK-PROP %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
@@ -24,16 +24,20 @@ entry:
 
 !llvm.module.flags = !{!0, !1, !2, !3 }
 !0 = !{i32 8, !"branch-target-enforcement", i32 0}
-!1 = !{i32 8, !"sign-return-address", i32 1}
+!1 = !{i32 8, !"sign-return-address", i32 0}
 !2 = !{i32 8, !"sign-return-address-all", i32 0}
 !3 = !{i32 8, !"sign-return-address-with-bkey", i32 0}
 
-; CHECK-NOT: linking module flags 'branch-target-enforcement': IDs have conflicting values in
-; CHECK-DUMP: <main>:
-; CHECK-DUMP:      bl      0x8 <main+0x8>
 ; CHECK-DUMP: <foo>:
 ; CHECK-DUMP:     paciasp
+; CHECK-DUMP:     mov     w0, #0x2a
+; CHECK-DUMP:     autiasp
+; CHECK-DUMP:     ret
+; CHECK-DUMP: <main>:
+; CHECK-DUMP-NOT:  paciasp
+; CHECK-DUMP:      str     x30,
+; CHECK-DUMP:      bl      0x14 <main+0x4>
 
-; `main` doesn't support BTI while `foo` does, so in the binary
-; we should see only PAC which is supported by both.
-; CHECK-PROP:   Properties: aarch64 feature: PAC
+; `main` doesn't support PAC sign-return-address while `foo` does, so in the binary
+; we should not see anything.
+; CHECK-PROP-NOT:   Properties: aarch64 feature: PAC
