@@ -283,36 +283,38 @@ public:
   ComplexPairTy EmitComplexBinOpLibCall(StringRef LibCallName,
                                         const BinOpInfo &Op);
 
+  QualType GetHigherPrecisionFPType(QualType ElementType) {
+    const auto *CurrentBT = dyn_cast<BuiltinType>(ElementType);
+    switch (CurrentBT->getKind()) {
+    case BuiltinType::Kind::Float16:
+      return CGF.getContext().FloatTy;
+    case BuiltinType::Kind::Float:
+    case BuiltinType::Kind::BFloat16:
+      return CGF.getContext().DoubleTy;
+    case BuiltinType::Kind::Double:
+      return CGF.getContext().LongDoubleTy;
+    default:
+      return ElementType;
+    }
+  }
+
   QualType HigherPrecisionTypeForComplexArithmetic(QualType ElementType,
                                                    bool IsDivOpCode) {
-    const TargetInfo &TI = CGF.getContext().getTargetInfo();
-    const LangOptions Opts = CGF.getLangOpts();
-    if (const auto *BT = dyn_cast<BuiltinType>(ElementType)) {
-      switch (BT->getKind()) {
-      case BuiltinType::Kind::Float16: {
-        if (TI.hasFloat16Type() && !TI.hasLegalHalfType())
-          return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
-        break;
-      }
-      case BuiltinType::Kind::BFloat16: {
-        if (TI.hasBFloat16Type() && !TI.hasFullBFloat16Type())
-          return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
-        break;
-      }
-      case BuiltinType::Kind::Float:
-        return CGF.getContext().getComplexType(CGF.getContext().DoubleTy);
-        break;
-      case BuiltinType::Kind::Double: {
-        if (TI.hasLongDoubleType())
-          return CGF.getContext().getComplexType(CGF.getContext().LongDoubleTy);
-        return CGF.getContext().getComplexType(CGF.getContext().DoubleTy);
-        break;
-      }
-      default:
-        return QualType();
-      }
+    QualType HigherElementType = GetHigherPrecisionFPType(ElementType);
+    const llvm::fltSemantics &ElementTypeSemantics =
+        CGF.getContext().getFloatTypeSemantics(ElementType);
+    const llvm::fltSemantics &HigherElementTypeSemantics =
+        CGF.getContext().getFloatTypeSemantics(HigherElementType);
+    const llvm::Triple TI = CGF.getTarget().getTriple();
+    if ((llvm::APFloat::getSizeInBits(HigherElementTypeSemantics) >
+         llvm::APFloat::getSizeInBits(ElementTypeSemantics)) &&
+        !CGF.getTarget().getTriple().isOSWindows()) {
+      return CGF.getContext().getComplexType(HigherElementType);
+    } else {
+      DiagnosticsEngine &Diags = CGF.CGM.getDiags();
+      Diags.Report(diag::warn_next_larger_fp_type_same_size_than_fp);
+      return CGF.getContext().getComplexType(ElementType);
     }
-    return QualType();
   }
 
   QualType getPromotionType(QualType Ty, bool IsDivOpCode = false) {
@@ -1026,7 +1028,7 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     const BuiltinType *BT = ComplexElementTy->getAs<BuiltinType>();
     if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
         (Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted &&
-         BT->getKind() == BuiltinType::Kind::LongDouble))
+         BT->getKind() == BuiltinType::Kind::Double))
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
     else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
              Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)

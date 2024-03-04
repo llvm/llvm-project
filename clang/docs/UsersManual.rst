@@ -1871,9 +1871,9 @@ floating point semantic models: precise (the default), strict, and fast.
    * ``promoted`` Implementation of complex division using algebraic formulas at
      higher precision. Overflow is handled. Non-finite values are handled in some
      cases. If the target does not have native support for a higher precision
-     data type, an implementation for the complex operation will be used to provide
-     improved guards against intermediate overflow, but overflow and underflow may
-     still occur in some cases. NaN and infinite values are not handled.
+     data type, the implementation for the complex operation using the Smith
+     algorithm will be used. Overflow may still occur in some cases. NaN and
+     infinite values are not handled.
 
 .. option:: -fcx-limited-range:
 
