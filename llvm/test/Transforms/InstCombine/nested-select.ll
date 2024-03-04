@@ -582,3 +582,10 @@ define <2 x i8> @test_imply_type_mismatch(<2 x i8> %x, i8 %y) {
   %sel2 = select i1 %cmp2, <2 x i8> %sel1, <2 x i8> <i8 20, i8 20>
   ret <2 x i8> %sel2
 }
+
+define <4 x i1> @test_dont_crash(i1 %cond, <4 x i1> %a, <4 x i1> %b) {
+entry:
+  %sel = select i1 %cond, <4 x i1> %a, <4 x i1> zeroinitializer
+  %and = and <4 x i1> %sel, %b
+  ret <4 x i1> %and
+}

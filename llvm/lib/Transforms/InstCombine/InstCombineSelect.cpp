@@ -2663,6 +2663,8 @@ Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
                                                                  bool IsAnd) {
   assert(Op->getType()->isIntOrIntVectorTy(1) &&
          "Op must be either i1 or vector of i1.");
+  if (SI.getCondition()->getType() != Op->getType())
+    return nullptr;
   if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd, DL))
     return SelectInst::Create(Op,
                               IsAnd ? V : ConstantInt::getTrue(Op->getType()),
