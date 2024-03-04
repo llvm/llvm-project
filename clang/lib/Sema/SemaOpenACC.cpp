@@ -27,6 +27,8 @@ bool diagnoseConstructAppertainment(Sema &S, OpenACCDirectiveKind K,
     // do anything.
     break;
   case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::Kernels:
     if (!IsStmt)
       return S.Diag(StartLoc, diag::err_acc_construct_appertainment) << K;
     break;
@@ -55,6 +57,8 @@ void Sema::ActOnOpenACCConstruct(OpenACCDirectiveKind K,
     // rules anywhere.
     break;
   case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::Kernels:
     // Nothing to do here, there is no real legalization that needs to happen
     // here as these constructs do not take any arguments.
     break;
@@ -79,6 +83,8 @@ StmtResult Sema::ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Invalid:
     return StmtError();
   case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::Kernels:
     return OpenACCComputeConstruct::Create(
         getASTContext(), K, StartLoc, EndLoc,
         AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
@@ -92,6 +98,8 @@ StmtResult Sema::ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
   default:
     llvm_unreachable("Unimplemented associated statement application");
   case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::Kernels:
     // There really isn't any checking here that could happen. As long as we
     // have a statement to associate, this should be fine.
     // OpenACC 3.3 Section 6:
