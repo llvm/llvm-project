@@ -1926,7 +1926,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   if (CB.size() - StartByte > 15)
     Ctx.reportError(MI.getLoc(),
-                    "The size of instruction must be no longer than 15.");
+                    "the size of instruction must be no longer than 15");
 #ifndef NDEBUG
   // FIXME: Verify.
   if (/*!Desc.isVariadic() &&*/ CurOp != NumOps) {
