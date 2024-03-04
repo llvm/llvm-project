@@ -224,7 +224,7 @@ void RISCVInstPrinter::printXTHeadVTypeI(const MCInst *MI, unsigned OpNo,
   // Print the raw immediate for reserved values: vsew[2:0]=0b1xx,
   // or non-zero in bits 7 and above.
   if ((VSEW & 0x4) || (Imm >> 7) != 0) {
-    O << Imm;
+    O << formatImm(Imm);
     return;
   }
   // Print the text form.
