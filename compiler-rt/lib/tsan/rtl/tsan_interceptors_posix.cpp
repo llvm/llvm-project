@@ -2863,6 +2863,20 @@ void InitializeInterceptors() {
 
   new(interceptor_ctx()) InterceptorContext();
 
+  // Interpose __tls_get_addr before the common interposers. This is needed
+  // because dlsym() may call malloc on failure. And then ___interceptor_malloc
+  // can end up calling ___interceptor___tls_get_addr, which would not be
+  // initialized yet and therefore results in a crash when calling
+  // REAL(__tls_get_addr). For example, this can happen when looking up
+  // __isoc23_scanf which might not exist in some libcs.
+#ifdef NEED_TLS_GET_ADDR
+#  if !SANITIZER_S390
+  TSAN_INTERCEPT(__tls_get_addr);
+#  else
+  TSAN_INTERCEPT(__tls_get_addr_internal);
+  TSAN_INTERCEPT(__tls_get_offset);
+#  endif
+#endif
   InitializeCommonInterceptors();
   InitializeSignalInterceptors();
   InitializeLibdispatchInterceptors();
@@ -3009,15 +3023,6 @@ void InitializeInterceptors() {
   TSAN_MAYBE_INTERCEPT_ON_EXIT;
   TSAN_INTERCEPT(__cxa_atexit);
   TSAN_INTERCEPT(_exit);
-
-#ifdef NEED_TLS_GET_ADDR
-#if !SANITIZER_S390
-  TSAN_INTERCEPT(__tls_get_addr);
-#else
-  TSAN_INTERCEPT(__tls_get_addr_internal);
-  TSAN_INTERCEPT(__tls_get_offset);
-#endif
-#endif
 
   TSAN_MAYBE_INTERCEPT__LWP_EXIT;
   TSAN_MAYBE_INTERCEPT_THR_EXIT;
