@@ -1,4 +1,8 @@
-include(GNUInstallDirs)
+if(NOT ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn" OR
+        "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64"))
+  include(GNUInstallDirs)
+endif()
+
 include(LLVMDistributionSupport)
 include(LLVMProcessSources)
 include(LLVM-Config)
