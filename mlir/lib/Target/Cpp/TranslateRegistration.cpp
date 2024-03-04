@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -41,8 +40,7 @@ void registerToCppTranslation() {
       },
       [](DialectRegistry &registry) {
         // clang-format off
-        registry.insert<arith::ArithDialect,
-                        cf::ControlFlowDialect,
+        registry.insert<cf::ControlFlowDialect,
                         emitc::EmitCDialect,
                         func::FuncDialect,
                         math::MathDialect,
