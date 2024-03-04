@@ -207,13 +207,13 @@ public:
   /// Roll back the rewrite. Operations may be erased during rollback.
   virtual void rollback() = 0;
 
-  /// Commit the rewrite. Operations may be unlinked from their blocks during
-  /// the commit phase, but they must not be erased yet. This is because
-  /// internal dialect conversion state (such as `mapping`) may still be using
-  /// them. Operations must be erased during cleanup.
+  /// Commit the rewrite. Operations/blocks may be unlinked during the commit
+  /// phase, but they must not be erased yet. This is because internal dialect
+  /// conversion state (such as `mapping`) may still be using them. Operations/
+  /// blocks must be erased during cleanup.
   virtual void commit() {}
 
-  /// Cleanup operations. Cleanup is called after commit.
+  /// Cleanup operations/blocks. Cleanup is called after commit.
   virtual void cleanup() {}
 
   Kind getKind() const { return kind; }
@@ -280,9 +280,9 @@ public:
 };
 
 /// Erasure of a block. Block erasures are partially reflected in the IR. Erased
-/// blocks are immediately unlinked, but only erased when the rewrite is
-/// committed. This makes it easier to rollback a block erasure: the block is
-/// simply inserted into its original location.
+/// blocks are immediately unlinked, but only erased during cleanup. This makes
+/// it easier to rollback a block erasure: the block is simply inserted into its
+/// original location.
 class EraseBlockRewrite : public BlockRewrite {
 public:
   EraseBlockRewrite(ConversionPatternRewriterImpl &rewriterImpl, Block *block,
@@ -295,7 +295,8 @@ public:
   }
 
   ~EraseBlockRewrite() override {
-    assert(!block && "rewrite was neither rolled back nor committed");
+    assert(!block &&
+           "rewrite was neither rolled back nor committed/cleaned up");
   }
 
   void rollback() override {
@@ -310,7 +311,7 @@ public:
     block = nullptr;
   }
 
-  void commit() override {
+  void cleanup() override {
     // Erase the block.
     assert(block && "expected block");
     assert(block->empty() && "expected empty block");
@@ -437,6 +438,8 @@ public:
   materializeLiveConversions(function_ref<Operation *(Value)> findLiveUser);
 
   void commit() override;
+
+  void cleanup() override;
 
   void rollback() override;
 
@@ -985,7 +988,9 @@ void BlockTypeConversionRewrite::commit() {
           rewriterImpl.mapping.lookupOrDefault(castValue, origArg.getType()));
     }
   }
+}
 
+void BlockTypeConversionRewrite::cleanup() {
   assert(origBlock->empty() && "expected empty block");
   origBlock->dropAllDefinedValueUses();
   delete origBlock;
@@ -1483,6 +1488,11 @@ void ConversionPatternRewriterImpl::notifyBlockInserted(
     Block *block, Region *previous, Region::iterator previousIt) {
   assert(!wasOpReplaced(block->getParentOp()) &&
          "attempting to insert into a region within a replaced/erased op");
+  LLVM_DEBUG({
+    logger.startLine() << "** Insert Block into : '"
+                       << block->getParentOp()->getName() << "'("
+                       << block->getParentOp() << ")\n";
+  });
 
   if (!previous) {
     // This is a newly created block.
