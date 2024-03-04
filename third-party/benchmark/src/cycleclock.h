@@ -36,8 +36,7 @@
 // declarations of some other intrinsics, breaking compilation.
 // Therefore, we simply declare __rdtsc ourselves. See also
 // http://connect.microsoft.com/VisualStudio/feedback/details/262047
-#if defined(COMPILER_MSVC) && !defined(_M_IX86) && !defined(_M_ARM64) && \
-    !defined(_M_ARM64EC)
+#if defined(COMPILER_MSVC) && !defined(_M_IX86) && !defined(_M_ARM64)
 extern "C" uint64_t __rdtsc();
 #pragma intrinsic(__rdtsc)
 #endif
@@ -115,7 +114,7 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
   // when I know it will work.  Otherwise, I'll use __rdtsc and hope
   // the code is being compiled with a non-ancient compiler.
   _asm rdtsc
-#elif defined(COMPILER_MSVC) && (defined(_M_ARM64) || defined(_M_ARM64EC))
+#elif defined(COMPILER_MSVC) && defined(_M_ARM64)
   // See // https://docs.microsoft.com/en-us/cpp/intrinsics/arm64-intrinsics
   // and https://reviews.llvm.org/D53115
   int64_t virtual_timer_value;
@@ -133,7 +132,7 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
 
   // Native Client does not provide any API to access cycle counter.
   // Use clock_gettime(CLOCK_MONOTONIC, ...) instead of gettimeofday
-  // because is provides nanosecond resolution (which is noticeable at
+  // because is provides nanosecond resolution (which is noticable at
   // least for PNaCl modules running on x86 Mac & Linux).
   // Initialize to always return 0 if clock_gettime fails.
   struct timespec ts = {0, 0};
@@ -174,7 +173,7 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
   struct timeval tv;
   gettimeofday(&tv, nullptr);
   return static_cast<int64_t>(tv.tv_sec) * 1000000 + tv.tv_usec;
-#elif defined(__loongarch__) || defined(__csky__)
+#elif defined(__loongarch__)
   struct timeval tv;
   gettimeofday(&tv, nullptr);
   return static_cast<int64_t>(tv.tv_sec) * 1000000 + tv.tv_usec;
@@ -189,16 +188,15 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
 #endif
   return tsc;
 #elif defined(__riscv)  // RISC-V
-  // Use RDTIME (and RDTIMEH on riscv32).
-  // RDCYCLE is a privileged instruction since Linux 6.6.
+  // Use RDCYCLE (and RDCYCLEH on riscv32)
 #if __riscv_xlen == 32
   uint32_t cycles_lo, cycles_hi0, cycles_hi1;
   // This asm also includes the PowerPC overflow handling strategy, as above.
   // Implemented in assembly because Clang insisted on branching.
   asm volatile(
-      "rdtimeh %0\n"
-      "rdtime %1\n"
-      "rdtimeh %2\n"
+      "rdcycleh %0\n"
+      "rdcycle %1\n"
+      "rdcycleh %2\n"
       "sub %0, %0, %2\n"
       "seqz %0, %0\n"
       "sub %0, zero, %0\n"
@@ -207,31 +205,17 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
   return (static_cast<uint64_t>(cycles_hi1) << 32) | cycles_lo;
 #else
   uint64_t cycles;
-  asm volatile("rdtime %0" : "=r"(cycles));
+  asm volatile("rdcycle %0" : "=r"(cycles));
   return cycles;
 #endif
 #elif defined(__e2k__) || defined(__elbrus__)
   struct timeval tv;
   gettimeofday(&tv, nullptr);
   return static_cast<int64_t>(tv.tv_sec) * 1000000 + tv.tv_usec;
-#elif defined(__hexagon__)
-  uint64_t pcycle;
-  asm volatile("%0 = C15:14" : "=r"(pcycle));
-  return static_cast<double>(pcycle);
-#elif defined(__alpha__)
-  // Alpha has a cycle counter, the PCC register, but it is an unsigned 32-bit
-  // integer and thus wraps every ~4s, making using it for tick counts
-  // unreliable beyond this time range.  The real-time clock is low-precision,
-  // roughtly ~1ms, but it is the only option that can reasonable count
-  // indefinitely.
-  struct timeval tv;
-  gettimeofday(&tv, nullptr);
-  return static_cast<int64_t>(tv.tv_sec) * 1000000 + tv.tv_usec;
 #else
-  // The soft failover to a generic implementation is automatic only for ARM.
-  // For other platforms the developer is expected to make an attempt to create
-  // a fast implementation and use generic version if nothing better is
-  // available.
+// The soft failover to a generic implementation is automatic only for ARM.
+// For other platforms the developer is expected to make an attempt to create
+// a fast implementation and use generic version if nothing better is available.
 #error You need to define CycleTimer for your OS and CPU
 #endif
 }

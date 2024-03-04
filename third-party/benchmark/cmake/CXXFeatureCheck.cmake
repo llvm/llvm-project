@@ -17,8 +17,6 @@ if(__cxx_feature_check)
 endif()
 set(__cxx_feature_check INCLUDED)
 
-option(CXXFEATURECHECK_DEBUG OFF)
-
 function(cxx_feature_check FILE)
   string(TOLOWER ${FILE} FILE)
   string(TOUPPER ${FILE} VAR)
@@ -29,22 +27,18 @@ function(cxx_feature_check FILE)
     return()
   endif()
 
-  set(FEATURE_CHECK_CMAKE_FLAGS ${BENCHMARK_CXX_LINKER_FLAGS})
   if (ARGC GREATER 1)
     message(STATUS "Enabling additional flags: ${ARGV1}")
-    list(APPEND FEATURE_CHECK_CMAKE_FLAGS ${ARGV1})
+    list(APPEND BENCHMARK_CXX_LINKER_FLAGS ${ARGV1})
   endif()
 
   if (NOT DEFINED COMPILE_${FEATURE})
+    message(STATUS "Performing Test ${FEATURE}")
     if(CMAKE_CROSSCOMPILING)
-      message(STATUS "Cross-compiling to test ${FEATURE}")
       try_compile(COMPILE_${FEATURE}
               ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/${FILE}.cpp
-              CXX_STANDARD 11
-              CXX_STANDARD_REQUIRED ON
-              CMAKE_FLAGS ${FEATURE_CHECK_CMAKE_FLAGS}
-              LINK_LIBRARIES ${BENCHMARK_CXX_LIBRARIES}
-              OUTPUT_VARIABLE COMPILE_OUTPUT_VAR)
+              CMAKE_FLAGS ${BENCHMARK_CXX_LINKER_FLAGS}
+              LINK_LIBRARIES ${BENCHMARK_CXX_LIBRARIES})
       if(COMPILE_${FEATURE})
         message(WARNING
               "If you see build failures due to cross compilation, try setting HAVE_${VAR} to 0")
@@ -53,14 +47,11 @@ function(cxx_feature_check FILE)
         set(RUN_${FEATURE} 1 CACHE INTERNAL "")
       endif()
     else()
-      message(STATUS "Compiling and running to test ${FEATURE}")
+      message(STATUS "Performing Test ${FEATURE}")
       try_run(RUN_${FEATURE} COMPILE_${FEATURE}
               ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/${FILE}.cpp
-              CXX_STANDARD 11
-              CXX_STANDARD_REQUIRED ON
-              CMAKE_FLAGS ${FEATURE_CHECK_CMAKE_FLAGS}
-              LINK_LIBRARIES ${BENCHMARK_CXX_LIBRARIES}
-              COMPILE_OUTPUT_VARIABLE COMPILE_OUTPUT_VAR)
+              CMAKE_FLAGS ${BENCHMARK_CXX_LINKER_FLAGS}
+              LINK_LIBRARIES ${BENCHMARK_CXX_LIBRARIES})
     endif()
   endif()
 
@@ -70,11 +61,7 @@ function(cxx_feature_check FILE)
     add_definitions(-DHAVE_${VAR})
   else()
     if(NOT COMPILE_${FEATURE})
-      if(CXXFEATURECHECK_DEBUG)
-        message(STATUS "Performing Test ${FEATURE} -- failed to compile: ${COMPILE_OUTPUT_VAR}")
-      else()
-        message(STATUS "Performing Test ${FEATURE} -- failed to compile")
-      endif()
+      message(STATUS "Performing Test ${FEATURE} -- failed to compile")
     else()
       message(STATUS "Performing Test ${FEATURE} -- compiled but failed to run")
     endif()
