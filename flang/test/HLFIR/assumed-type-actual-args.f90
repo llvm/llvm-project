@@ -82,6 +82,26 @@ subroutine test4d(x)
   call s4d(x)
 end subroutine
 
+subroutine test5(x)
+  interface
+    subroutine s5(x)
+      type(*) :: x(..)
+    end subroutine
+  end interface
+  type(*) :: x(:)
+  call s5(x)
+end subroutine
+
+subroutine test5b(x)
+  interface
+    subroutine s5b(x)
+      type(*), optional, contiguous :: x(..)
+    end subroutine
+  end interface
+  type(*), optional :: x(:)
+  call s5b(x)
+end subroutine
+
 ! CHECK-LABEL:   func.func @_QPtest1(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<none> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest1Ex"} : (!fir.ref<none>) -> (!fir.ref<none>, !fir.ref<none>)
@@ -174,5 +194,33 @@ end subroutine
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<contiguous>, uniq_name = "_QFtest4dEx"} : (!fir.box<!fir.array<?xnone>>) -> (!fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]]#1 : (!fir.box<!fir.array<?xnone>>) -> !fir.ref<!fir.array<?xnone>>
 ! CHECK:           fir.call @_QPs4d(%[[VAL_2]]) fastmath<contract> : (!fir.ref<!fir.array<?xnone>>) -> ()
+! CHECK:           return
+! CHECK:         }
+
+! CHECK-LABEL:   func.func @_QPtest5(
+! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.box<!fir.array<?xnone>> {fir.bindc_name = "x"}) {
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest5Ex"} : (!fir.box<!fir.array<?xnone>>) -> (!fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>)
+! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.box<!fir.array<?xnone>>) -> !fir.box<!fir.array<*:none>>
+! CHECK:           fir.call @_QPs5(%[[VAL_2]]) fastmath<contract> : (!fir.box<!fir.array<*:none>>) -> ()
+! CHECK:           return
+! CHECK:         }
+
+! CHECK-LABEL:   func.func @_QPtest5b(
+! CHECK-SAME:                         %[[VAL_0:.*]]: !fir.box<!fir.array<?xnone>> {fir.bindc_name = "x", fir.optional}) {
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest5bEx"} : (!fir.box<!fir.array<?xnone>>) -> (!fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>)
+! CHECK:           %[[VAL_2:.*]] = fir.is_present %[[VAL_1]]#0 : (!fir.box<!fir.array<?xnone>>) -> i1
+! CHECK:           %[[VAL_3:.*]]:4 = fir.if %[[VAL_2]] -> (!fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>) {
+! CHECK:             %[[VAL_4:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 : (!fir.box<!fir.array<?xnone>>) -> (!fir.box<!fir.array<?xnone>>, i1)
+! CHECK:             fir.result %[[VAL_4]]#0, %[[VAL_4]]#0, %[[VAL_4]]#1, %[[VAL_1]]#0 : !fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>
+! CHECK:           } else {
+! CHECK:             %[[VAL_5:.*]] = fir.absent !fir.box<!fir.array<?xnone>>
+! CHECK:             %[[VAL_6:.*]] = fir.absent !fir.box<!fir.array<?xnone>>
+! CHECK:             %[[VAL_7:.*]] = arith.constant false
+! CHECK:             %[[VAL_8:.*]] = fir.absent !fir.box<!fir.array<?xnone>>
+! CHECK:             fir.result %[[VAL_5]], %[[VAL_6]], %[[VAL_7]], %[[VAL_8]] : !fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>
+! CHECK:           }
+! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_10:.*]]#0 : (!fir.box<!fir.array<?xnone>>) -> !fir.box<!fir.array<*:none>>
+! CHECK:           fir.call @_QPs5b(%[[VAL_9]]) fastmath<contract> : (!fir.box<!fir.array<*:none>>) -> ()
+! CHECK:           hlfir.copy_out %[[VAL_10]]#1, %[[VAL_10]]#2 to %[[VAL_10]]#3 : (!fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
