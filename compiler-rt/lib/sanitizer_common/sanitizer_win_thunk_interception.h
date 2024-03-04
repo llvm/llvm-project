@@ -60,22 +60,26 @@ void initialize_thunks(const sanitizer_thunk *begin,
 // ------------------ Weak symbol registration macros ---------------------- //
 // Use .WEAK segment to register function pointers that are iterated over during
 // startup that will replace sanitizer_export with local_function
+#ifdef __clang__
+#  define REGISTER_WEAK_OPTNONE __attribute__((optnone))
+#else
+#  define REGISTER_WEAK_OPTNONE
+#endif
 
-#define REGISTER_WEAK_FUNCTION(local_function)                           \
-  extern "C" void local_function();                                      \
-  extern "C" void WEAK_EXPORT_NAME(local_function)();                    \
-  WIN_WEAK_IMPORT_DEF(local_function)                                    \
-  __attribute__((optnone)) static int register_weak_##local_function() { \
-    if ((uintptr_t) & local_function != (uintptr_t) &                    \
-        WEAK_EXPORT_NAME(local_function)) {                              \
-      return __sanitizer::register_weak(                                 \
-          SANITIZER_STRINGIFY(WEAK_EXPORT_NAME(local_function)),         \
-          reinterpret_cast<__sanitizer::uptr>(local_function));          \
-    }                                                                    \
-    return 0;                                                            \
-  }                                                                      \
-  __pragma(section(".WEAK$M", long, read)) __declspec(allocate(          \
-      ".WEAK$M")) int (*__sanitizer_register_weak_##local_function)() =  \
+#define REGISTER_WEAK_FUNCTION(local_function)                          \
+  extern "C" void local_function();                                     \
+  extern "C" void WEAK_EXPORT_NAME(local_function)();                   \
+  WIN_WEAK_IMPORT_DEF(local_function)                                   \
+  REGISTER_WEAK_OPTNONE static int register_weak_##local_function() {   \
+    if ((uintptr_t) & local_function != (uintptr_t) &                   \
+        WEAK_EXPORT_NAME(local_function)) {                             \
+      return __sanitizer::register_weak(                                \
+          SANITIZER_STRINGIFY(WEAK_EXPORT_NAME(local_function)),        \
+          reinterpret_cast<__sanitizer::uptr>(local_function));         \
+    }                                                                   \
+    return 0;                                                           \
+  }                                                                     \
+  __pragma(section(".WEAK$M", long, read)) __declspec(allocate(         \
+      ".WEAK$M")) int (*__sanitizer_register_weak_##local_function)() = \
       register_weak_##local_function;
-
 #endif  // SANITIZER_WIN_STATIC_RUNTIME_THUNK_H
