@@ -23,6 +23,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -199,12 +200,23 @@ bool operator<(const SourceLoc lhs, const SourceLoc rhs) {
 }
 } // namespace
 
+static void
+ApplyLanguageFilters(llvm::SmallVectorImpl<SymbolContext> &sc_list) {
+  llvm::erase_if(sc_list, [](SymbolContext &sc) {
+    if (Language *lang = Language::FindPlugin(sc.GetLanguage()))
+      return !lang->IsInterestingCtxForLineBreakpoint(sc);
+    return false;
+  });
+}
+
 void BreakpointResolver::SetSCMatchesByLine(
     SearchFilter &filter, SymbolContextList &sc_list, bool skip_prologue,
     llvm::StringRef log_ident, uint32_t line, std::optional<uint16_t> column) {
   llvm::SmallVector<SymbolContext, 16> all_scs;
   for (uint32_t i = 0; i < sc_list.GetSize(); ++i)
     all_scs.push_back(sc_list[i]);
+
+  ApplyLanguageFilters(all_scs);
 
   while (all_scs.size()) {
     uint32_t closest_line = UINT32_MAX;

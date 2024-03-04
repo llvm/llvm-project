@@ -339,6 +339,10 @@ public:
 
   virtual llvm::StringRef GetInstanceVariableName() { return {}; }
 
+  virtual bool IsInterestingCtxForLineBreakpoint(const SymbolContext &) const {
+    return true;
+  }
+
 protected:
   // Classes that inherit from Language can see and modify these
 
