@@ -50,8 +50,8 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK:       #ifndef LLVM_Tdl_INC
 // CHECK-NEXT:  #define LLVM_Tdl_INC
 // CHECK-EMPTY:
+// CHECK-NEXT:  #include "llvm/ADT/ArrayRef.h"
 // CHECK-NEXT:  #include "llvm/ADT/BitmaskEnum.h"
-// CHECK-NEXT:  #include "llvm/ADT/SmallVector.h"
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm {
 // CHECK-NEXT:  class StringRef;
@@ -112,7 +112,7 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  /// Return true if \p C is a valid clause for \p D in version \p Version.
 // CHECK-NEXT:  bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
 // CHECK-EMPTY:
-// CHECK-NEXT:  const llvm::SmallVector<Directive> &getLeafConstructs(Directive D);
+// CHECK-NEXT:  llvm::ArrayRef<Directive> getLeafConstructs(Directive D);
 // CHECK-NEXT:  Association getDirectiveAssociation(Directive D);
 // CHECK-NEXT:  AKind getAKind(StringRef);
 // CHECK-NEXT:  llvm::StringRef getTdlAKindName(AKind);
@@ -285,6 +285,8 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL:       #ifdef GEN_DIRECTIVES_IMPL
 // IMPL-NEXT:  #undef GEN_DIRECTIVES_IMPL
 // IMPL-EMPTY:
+// IMPL-NEXT:  #include "llvm/Support/ErrorHandling.h"
+// IMPL-EMPTY:
 // IMPL-NEXT:  Directive llvm::tdl::getTdlDirectiveKind(llvm::StringRef Str) {
 // IMPL-NEXT:    return llvm::StringSwitch<Directive>(Str)
 // IMPL-NEXT:      .Case("dira",TDLD_dira)
@@ -356,18 +358,22 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
 // IMPL-NEXT:  }
-// IMPL-NEXT:  const llvm::SmallVector<llvm::tdl::Directive> &llvm::tdl::getLeafConstructs(llvm::tdl::Directive Dir) {
-// IMPL-NEXT:    static llvm::SmallVector<llvm::tdl::Directive> nothing {};
+// IMPL-EMPTY:
+// IMPL-NEXT:  llvm::ArrayRef<llvm::tdl::Directive> llvm::tdl::getLeafConstructs(llvm::tdl::Directive Dir) {
+// IMPL-NEXT:    static llvm::ArrayRef<llvm::tdl::Directive> nothing {};
 // IMPL-EMPTY:
 // IMPL-NEXT:    switch (Dir) {
 // IMPL-NEXT:    default:
 // IMPL-NEXT:      return nothing;
 // IMPL-NEXT:    } // switch (Dir)
 // IMPL-NEXT:  }
+// IMPL-EMPTY:
 // IMPL-NEXT:  llvm::tdl::Association llvm::tdl::getDirectiveAssociation(llvm::tdl::Directive Dir) {
 // IMPL-NEXT:    switch (Dir) {
 // IMPL-NEXT:    case llvm::tdl::Directive::TDLD_dira:
 // IMPL-NEXT:      return llvm::tdl::Association::None;
+// IMPL-NEXT:    default:
+// IMPL-NEXT:      llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:    } // switch(Dir)
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
