@@ -844,6 +844,14 @@ struct AAMDNodes {
   /// together. Different from `merge`, where different locations should
   /// overlap each other, `concat` puts non-overlapping locations together.
   AAMDNodes concat(const AAMDNodes &Other) const;
+
+  /// Create a new AAMDNode for accessing \p AccessSize bytes of this AAMDNode.
+  /// If his AAMDNode has !tbaa.struct and \p AccessSize matches the size of the
+  /// field at offset 0, get the TBAA tag describing the accessed field.
+  AAMDNodes adjustForAccess(unsigned AccessSize);
+  AAMDNodes adjustForAccess(size_t Offset, Type *AccessTy,
+                            const DataLayout &DL);
+  AAMDNodes adjustForAccess(size_t Offset, unsigned AccessSize);
 };
 
 // Specialize DenseMapInfo for AAMDNodes.
@@ -1730,7 +1738,7 @@ class NamedMDNode : public ilist_node<NamedMDNode> {
 
   explicit NamedMDNode(const Twine &N);
 
-  template <class T1, class T2> class op_iterator_impl {
+  template <class T1> class op_iterator_impl {
     friend class NamedMDNode;
 
     const NamedMDNode *Node = nullptr;
@@ -1740,10 +1748,10 @@ class NamedMDNode : public ilist_node<NamedMDNode> {
 
   public:
     using iterator_category = std::bidirectional_iterator_tag;
-    using value_type = T2;
+    using value_type = T1;
     using difference_type = std::ptrdiff_t;
     using pointer = value_type *;
-    using reference = value_type &;
+    using reference = value_type;
 
     op_iterator_impl() = default;
 
@@ -1804,12 +1812,12 @@ public:
   // ---------------------------------------------------------------------------
   // Operand Iterator interface...
   //
-  using op_iterator = op_iterator_impl<MDNode *, MDNode>;
+  using op_iterator = op_iterator_impl<MDNode *>;
 
   op_iterator op_begin() { return op_iterator(this, 0); }
   op_iterator op_end()   { return op_iterator(this, getNumOperands()); }
 
-  using const_op_iterator = op_iterator_impl<const MDNode *, MDNode>;
+  using const_op_iterator = op_iterator_impl<const MDNode *>;
 
   const_op_iterator op_begin() const { return const_op_iterator(this, 0); }
   const_op_iterator op_end()   const { return const_op_iterator(this, getNumOperands()); }

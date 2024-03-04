@@ -30,15 +30,15 @@
   target triple = "mips64-unknown-linux"
   
   ; Function Attrs: nounwind
-  define signext i32 @f1(i32 signext %a, i8* %str) local_unnamed_addr !dbg !8 {
+  define signext i32 @f1(i32 signext %a, ptr %str) local_unnamed_addr !dbg !8 {
   entry:
     call void @llvm.dbg.value(metadata i32 %a, metadata !16, metadata !DIExpression()), !dbg !18
-    call void @llvm.dbg.value(metadata i8* %str, metadata !17, metadata !DIExpression()), !dbg !18
-    %call = tail call fastcc signext i32 @foo(i8* %str, i32 signext %a, i32 signext 0), !dbg !18
+    call void @llvm.dbg.value(metadata ptr %str, metadata !17, metadata !DIExpression()), !dbg !18
+    %call = tail call fastcc signext i32 @foo(ptr %str, i32 signext %a, i32 signext 0), !dbg !18
     ret i32 %call, !dbg !18
   }
   
-  declare !dbg !21 fastcc signext i32 @foo(i8*, i32 signext, i32 signext) local_unnamed_addr
+  declare !dbg !21 fastcc signext i32 @foo(ptr, i32 signext, i32 signext) local_unnamed_addr
   
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata)

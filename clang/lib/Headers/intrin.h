@@ -551,6 +551,7 @@ static __inline__ void __DEFAULT_FN_ATTRS __nop(void) {
 #if defined(__aarch64__)
 unsigned __int64 __getReg(int);
 long _InterlockedAdd(long volatile *Addend, long Value);
+__int64 _InterlockedAdd64(__int64 volatile *Addend, __int64 Value);
 __int64 _ReadStatusReg(int);
 void _WriteStatusReg(int, __int64);
 

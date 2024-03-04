@@ -154,6 +154,47 @@ const D &d3(c); // FIXME ill-formed
 #endif
 }
 
+namespace dr2273 { // dr2273: 3.3
+#if __cplusplus >= 201103L
+struct A {
+  A(int = 0) = delete; // #dr2273-A
+};
+
+struct B : A { // #dr2273-B
+  using A::A;
+};
+
+B b;
+// since-cxx11-error@-1 {{call to implicitly-deleted default constructor of 'B'}}
+//   since-cxx11-note@#dr2273-B {{default constructor of 'B' is implicitly deleted because base class 'A' has a deleted default constructor}}
+//   since-cxx11-note@#dr2273-A {{'A' has been explicitly marked deleted here}}
+#endif
+}
+
+namespace dr2277 { // dr2277: partial
+#if __cplusplus >= 201103L
+struct A {
+  A(int, int = 0);
+  void f(int, int = 0); // #dr2277-A-f
+};
+struct B : A {
+  B(int);
+  using A::A;
+
+  void f(int); // #dr2277-B-f
+  using A::f;
+};
+
+void g() {
+  B b{0};
+  b.f(0); // FIXME: this is well-formed for the same reason as initialization of 'b' above
+  // since-cxx11-error@-1 {{call to member function 'f' is ambiguous}}
+  //   since-cxx11-note@#dr2277-A-f {{candidate function}}
+  //   since-cxx11-note@#dr2277-B-f {{candidate function}}
+}
+#endif
+}
+
 namespace dr2292 { // dr2292: 9
 #if __cplusplus >= 201103L
   template<typename T> using id = T;

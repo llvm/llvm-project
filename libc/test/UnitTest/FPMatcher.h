@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H
-#define LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H
+#ifndef LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
+#define LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -132,8 +132,8 @@ template <typename T> struct FPTest : public Test {
 #define EXPECT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = libc_errno;                                                 \
-      libc_errno = 0;                                                          \
+      int actual = LIBC_NAMESPACE::libc_errno;                                 \
+      LIBC_NAMESPACE::libc_errno = 0;                                          \
       EXPECT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)
@@ -141,8 +141,8 @@ template <typename T> struct FPTest : public Test {
 #define ASSERT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = libc_errno;                                                 \
-      libc_errno = 0;                                                          \
+      int actual = LIBC_NAMESPACE::libc_errno;                                 \
+      LIBC_NAMESPACE::libc_errno = 0;                                          \
       ASSERT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)
@@ -210,4 +210,4 @@ template <typename T> struct FPTest : public Test {
     }                                                                          \
   } while (0)
 
-#endif // LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H
+#endif // LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H

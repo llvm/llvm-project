@@ -422,7 +422,7 @@ subroutine acc_serial_loop
   END DO
 
 ! CHECK:      acc.serial {
-! CHECK:        acc.loop gang() {{.*}} {
+! CHECK:        acc.loop gang {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
 ! CHECK:        acc.yield
@@ -471,7 +471,7 @@ subroutine acc_serial_loop
     a(i) = b(i)
   END DO
 ! CHECK:      acc.serial {
-! CHECK:        acc.loop vector() {{.*}} {
+! CHECK:        acc.loop vector {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
 ! CHECK:        acc.yield
@@ -509,7 +509,7 @@ subroutine acc_serial_loop
   END DO
 
 ! CHECK:      acc.serial {
-! CHECK:        acc.loop worker() {{.*}} {
+! CHECK:        acc.loop worker {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
 ! CHECK:        acc.yield

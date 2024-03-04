@@ -25,7 +25,7 @@ using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcSinCosfTest, SpecialNumbers) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   float sin, cos;
 
   LIBC_NAMESPACE::sincosf(aNaN, &sin, &cos);

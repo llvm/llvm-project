@@ -811,29 +811,6 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *Expr, Address Dest,
   Builder.SetInsertPoint(ContBB);
 }
 
-static void
-AddDirectArgument(CodeGenFunction &CGF, CallArgList &Args,
-                  bool UseOptimizedLibcall, llvm::Value *Val, QualType ValTy,
-                  SourceLocation Loc, CharUnits SizeInChars) {
-  if (UseOptimizedLibcall) {
-    // Load value and pass it to the function directly.
-    CharUnits Align = CGF.getContext().getTypeAlignInChars(ValTy);
-    int64_t SizeInBits = CGF.getContext().toBits(SizeInChars);
-    ValTy =
-        CGF.getContext().getIntTypeForBitwidth(SizeInBits, /*Signed=*/false);
-    llvm::Type *ITy = llvm::IntegerType::get(CGF.getLLVMContext(), SizeInBits);
-    Address Ptr = Address(Val, ITy, Align);
-    Val = CGF.EmitLoadOfScalar(Ptr, false,
-                               CGF.getContext().getPointerType(ValTy),
-                               Loc);
-    // Coerce the value into an appropriately sized integer type.
-    Args.add(RValue::get(Val), ValTy);
-  } else {
-    // Non-optimized functions always take a reference.
-    Args.add(RValue::get(Val), CGF.getContext().VoidPtrTy);
-  }
-}
-
 RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   QualType AtomicTy = E->getPtr()->getType()->getPointeeType();
   QualType MemTy = AtomicTy;
@@ -857,22 +834,16 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   uint64_t Size = TInfo.Width.getQuantity();
   unsigned MaxInlineWidthInBits = getTarget().getMaxAtomicInlineWidth();
 
-  bool Oversized = getContext().toBits(TInfo.Width) > MaxInlineWidthInBits;
-  bool Misaligned = (Ptr.getAlignment() % TInfo.Width) != 0;
-  bool UseLibcall = Misaligned | Oversized;
-  bool ShouldCastToIntPtrTy = true;
-
   CharUnits MaxInlineWidth =
       getContext().toCharUnitsFromBits(MaxInlineWidthInBits);
-
   DiagnosticsEngine &Diags = CGM.getDiags();
-
+  bool Misaligned = (Ptr.getAlignment() % TInfo.Width) != 0;
+  bool Oversized = getContext().toBits(TInfo.Width) > MaxInlineWidthInBits;
   if (Misaligned) {
     Diags.Report(E->getBeginLoc(), diag::warn_atomic_op_misaligned)
         << (int)TInfo.Width.getQuantity()
         << (int)Ptr.getAlignment().getQuantity();
   }
-
   if (Oversized) {
     Diags.Report(E->getBeginLoc(), diag::warn_atomic_op_oversized)
         << (int)TInfo.Width.getQuantity() << (int)MaxInlineWidth.getQuantity();
@@ -881,6 +852,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   llvm::Value *Order = EmitScalarExpr(E->getOrder());
   llvm::Value *Scope =
       E->getScopeModel() ? EmitScalarExpr(E->getScope()) : nullptr;
+  bool ShouldCastToIntPtrTy = true;
 
   switch (E->getOp()) {
   case AtomicExpr::AO__c11_atomic_init:
@@ -1047,122 +1019,25 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       Dest = Atomics.castToAtomicIntPointer(Dest);
   }
 
-  // Use a library call.  See: http://gcc.gnu.org/wiki/Atomic/GCCMM/LIbrary .
+  bool PowerOf2Size = (Size & (Size - 1)) == 0;
+  bool UseLibcall = !PowerOf2Size || (Size > 16);
+
+  // For atomics larger than 16 bytes, emit a libcall from the frontend. This
+  // avoids the overhead of dealing with excessively-large value types in IR.
+  // Non-power-of-2 values also lower to libcall here, as they are not currently
+  // permitted in IR instructions (although that constraint could be relaxed in
+  // the future). For other cases where a libcall is required on a given
+  // platform, we let the backend handle it (this includes handling for all of
+  // the size-optimized libcall variants, which are only valid up to 16 bytes.)
+  //
+  // See: https://llvm.org/docs/Atomics.html#libcalls-atomic
   if (UseLibcall) {
-    bool UseOptimizedLibcall = false;
-    switch (E->getOp()) {
-    case AtomicExpr::AO__c11_atomic_init:
-    case AtomicExpr::AO__opencl_atomic_init:
-      llvm_unreachable("Already handled above with EmitAtomicInit!");
-
-    case AtomicExpr::AO__atomic_fetch_add:
-    case AtomicExpr::AO__atomic_fetch_and:
-    case AtomicExpr::AO__atomic_fetch_max:
-    case AtomicExpr::AO__atomic_fetch_min:
-    case AtomicExpr::AO__atomic_fetch_nand:
-    case AtomicExpr::AO__atomic_fetch_or:
-    case AtomicExpr::AO__atomic_fetch_sub:
-    case AtomicExpr::AO__atomic_fetch_xor:
-    case AtomicExpr::AO__atomic_add_fetch:
-    case AtomicExpr::AO__atomic_and_fetch:
-    case AtomicExpr::AO__atomic_max_fetch:
-    case AtomicExpr::AO__atomic_min_fetch:
-    case AtomicExpr::AO__atomic_nand_fetch:
-    case AtomicExpr::AO__atomic_or_fetch:
-    case AtomicExpr::AO__atomic_sub_fetch:
-    case AtomicExpr::AO__atomic_xor_fetch:
-    case AtomicExpr::AO__c11_atomic_fetch_add:
-    case AtomicExpr::AO__c11_atomic_fetch_and:
-    case AtomicExpr::AO__c11_atomic_fetch_max:
-    case AtomicExpr::AO__c11_atomic_fetch_min:
-    case AtomicExpr::AO__c11_atomic_fetch_nand:
-    case AtomicExpr::AO__c11_atomic_fetch_or:
-    case AtomicExpr::AO__c11_atomic_fetch_sub:
-    case AtomicExpr::AO__c11_atomic_fetch_xor:
-    case AtomicExpr::AO__hip_atomic_fetch_add:
-    case AtomicExpr::AO__hip_atomic_fetch_and:
-    case AtomicExpr::AO__hip_atomic_fetch_max:
-    case AtomicExpr::AO__hip_atomic_fetch_min:
-    case AtomicExpr::AO__hip_atomic_fetch_or:
-    case AtomicExpr::AO__hip_atomic_fetch_sub:
-    case AtomicExpr::AO__hip_atomic_fetch_xor:
-    case AtomicExpr::AO__opencl_atomic_fetch_add:
-    case AtomicExpr::AO__opencl_atomic_fetch_and:
-    case AtomicExpr::AO__opencl_atomic_fetch_max:
-    case AtomicExpr::AO__opencl_atomic_fetch_min:
-    case AtomicExpr::AO__opencl_atomic_fetch_or:
-    case AtomicExpr::AO__opencl_atomic_fetch_sub:
-    case AtomicExpr::AO__opencl_atomic_fetch_xor:
-    case AtomicExpr::AO__scoped_atomic_fetch_add:
-    case AtomicExpr::AO__scoped_atomic_fetch_and:
-    case AtomicExpr::AO__scoped_atomic_fetch_max:
-    case AtomicExpr::AO__scoped_atomic_fetch_min:
-    case AtomicExpr::AO__scoped_atomic_fetch_nand:
-    case AtomicExpr::AO__scoped_atomic_fetch_or:
-    case AtomicExpr::AO__scoped_atomic_fetch_sub:
-    case AtomicExpr::AO__scoped_atomic_fetch_xor:
-    case AtomicExpr::AO__scoped_atomic_add_fetch:
-    case AtomicExpr::AO__scoped_atomic_and_fetch:
-    case AtomicExpr::AO__scoped_atomic_max_fetch:
-    case AtomicExpr::AO__scoped_atomic_min_fetch:
-    case AtomicExpr::AO__scoped_atomic_nand_fetch:
-    case AtomicExpr::AO__scoped_atomic_or_fetch:
-    case AtomicExpr::AO__scoped_atomic_sub_fetch:
-    case AtomicExpr::AO__scoped_atomic_xor_fetch:
-      // For these, only library calls for certain sizes exist.
-      UseOptimizedLibcall = true;
-      break;
-
-    case AtomicExpr::AO__atomic_load:
-    case AtomicExpr::AO__atomic_store:
-    case AtomicExpr::AO__atomic_exchange:
-    case AtomicExpr::AO__atomic_compare_exchange:
-    case AtomicExpr::AO__scoped_atomic_load:
-    case AtomicExpr::AO__scoped_atomic_store:
-    case AtomicExpr::AO__scoped_atomic_exchange:
-    case AtomicExpr::AO__scoped_atomic_compare_exchange:
-      // Use the generic version if we don't know that the operand will be
-      // suitably aligned for the optimized version.
-      if (Misaligned)
-        break;
-      [[fallthrough]];
-    case AtomicExpr::AO__atomic_load_n:
-    case AtomicExpr::AO__atomic_store_n:
-    case AtomicExpr::AO__atomic_exchange_n:
-    case AtomicExpr::AO__atomic_compare_exchange_n:
-    case AtomicExpr::AO__c11_atomic_load:
-    case AtomicExpr::AO__c11_atomic_store:
-    case AtomicExpr::AO__c11_atomic_exchange:
-    case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
-    case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
-    case AtomicExpr::AO__hip_atomic_load:
-    case AtomicExpr::AO__hip_atomic_store:
-    case AtomicExpr::AO__hip_atomic_exchange:
-    case AtomicExpr::AO__hip_atomic_compare_exchange_weak:
-    case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
-    case AtomicExpr::AO__opencl_atomic_load:
-    case AtomicExpr::AO__opencl_atomic_store:
-    case AtomicExpr::AO__opencl_atomic_exchange:
-    case AtomicExpr::AO__opencl_atomic_compare_exchange_weak:
-    case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
-    case AtomicExpr::AO__scoped_atomic_load_n:
-    case AtomicExpr::AO__scoped_atomic_store_n:
-    case AtomicExpr::AO__scoped_atomic_exchange_n:
-    case AtomicExpr::AO__scoped_atomic_compare_exchange_n:
-      // Only use optimized library calls for sizes for which they exist.
-      // FIXME: Size == 16 optimized library functions exist too.
-      if (Size == 1 || Size == 2 || Size == 4 || Size == 8)
-        UseOptimizedLibcall = true;
-      break;
-    }
-
     CallArgList Args;
-    if (!UseOptimizedLibcall) {
-      // For non-optimized library calls, the size is the first parameter
-      Args.add(RValue::get(llvm::ConstantInt::get(SizeTy, Size)),
-               getContext().getSizeType());
-    }
-    // Atomic address is the first or second parameter
+    // For non-optimized library calls, the size is the first parameter.
+    Args.add(RValue::get(llvm::ConstantInt::get(SizeTy, Size)),
+             getContext().getSizeType());
+
+    // The atomic address is the second parameter.
     // The OpenCL atomic library functions only accept pointer arguments to
     // generic address space.
     auto CastToGenericAddrSpace = [&](llvm::Value *V, QualType PT) {
@@ -1177,18 +1052,14 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       return getTargetHooks().performAddrSpaceCast(
           *this, V, AS, LangAS::opencl_generic, DestType, false);
     };
-
     Args.add(RValue::get(CastToGenericAddrSpace(Ptr.getPointer(),
                                                 E->getPtr()->getType())),
              getContext().VoidPtrTy);
 
+    // The next 1-3 parameters are op-dependent.
     std::string LibCallName;
-    QualType LoweredMemTy =
-      MemTy->isPointerType() ? getContext().getIntPtrType() : MemTy;
     QualType RetTy;
     bool HaveRetTy = false;
-    llvm::Instruction::BinaryOps PostOp = (llvm::Instruction::BinaryOps)0;
-    bool PostOpMinMax = false;
     switch (E->getOp()) {
     case AtomicExpr::AO__c11_atomic_init:
     case AtomicExpr::AO__opencl_atomic_init:
@@ -1199,8 +1070,6 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     // and exchange.
     // bool __atomic_compare_exchange(size_t size, void *mem, void *expected,
     //                                void *desired, int success, int failure)
-    // bool __atomic_compare_exchange_N(T *mem, T *expected, T desired,
-    //                                  int success, int failure)
     case AtomicExpr::AO__atomic_compare_exchange:
     case AtomicExpr::AO__atomic_compare_exchange_n:
     case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
@@ -1217,14 +1086,14 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       Args.add(RValue::get(CastToGenericAddrSpace(Val1.getPointer(),
                                                   E->getVal1()->getType())),
                getContext().VoidPtrTy);
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val2.getPointer(),
-                        MemTy, E->getExprLoc(), TInfo.Width);
+      Args.add(RValue::get(CastToGenericAddrSpace(Val2.getPointer(),
+                                                  E->getVal2()->getType())),
+               getContext().VoidPtrTy);
       Args.add(RValue::get(Order), getContext().IntTy);
       Order = OrderFail;
       break;
     // void __atomic_exchange(size_t size, void *mem, void *val, void *return,
     //                        int order)
-    // T __atomic_exchange_N(T *mem, T val, int order)
     case AtomicExpr::AO__atomic_exchange:
     case AtomicExpr::AO__atomic_exchange_n:
     case AtomicExpr::AO__c11_atomic_exchange:
@@ -1233,11 +1102,11 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__scoped_atomic_exchange:
     case AtomicExpr::AO__scoped_atomic_exchange_n:
       LibCallName = "__atomic_exchange";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        MemTy, E->getExprLoc(), TInfo.Width);
+      Args.add(RValue::get(CastToGenericAddrSpace(Val1.getPointer(),
+                                                  E->getVal1()->getType())),
+               getContext().VoidPtrTy);
       break;
     // void __atomic_store(size_t size, void *mem, void *val, int order)
-    // void __atomic_store_N(T *mem, T val, int order)
     case AtomicExpr::AO__atomic_store:
     case AtomicExpr::AO__atomic_store_n:
     case AtomicExpr::AO__c11_atomic_store:
@@ -1248,11 +1117,11 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       LibCallName = "__atomic_store";
       RetTy = getContext().VoidTy;
       HaveRetTy = true;
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        MemTy, E->getExprLoc(), TInfo.Width);
+      Args.add(RValue::get(CastToGenericAddrSpace(Val1.getPointer(),
+                                                  E->getVal1()->getType())),
+               getContext().VoidPtrTy);
       break;
     // void __atomic_load(size_t size, void *mem, void *return, int order)
-    // T __atomic_load_N(T *mem, int order)
     case AtomicExpr::AO__atomic_load:
     case AtomicExpr::AO__atomic_load_n:
     case AtomicExpr::AO__c11_atomic_load:
@@ -1262,182 +1131,84 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__scoped_atomic_load_n:
       LibCallName = "__atomic_load";
       break;
-    // T __atomic_add_fetch_N(T *mem, T val, int order)
-    // T __atomic_fetch_add_N(T *mem, T val, int order)
     case AtomicExpr::AO__atomic_add_fetch:
     case AtomicExpr::AO__scoped_atomic_add_fetch:
-      PostOp = llvm::Instruction::Add;
-      [[fallthrough]];
     case AtomicExpr::AO__atomic_fetch_add:
     case AtomicExpr::AO__c11_atomic_fetch_add:
     case AtomicExpr::AO__hip_atomic_fetch_add:
     case AtomicExpr::AO__opencl_atomic_fetch_add:
     case AtomicExpr::AO__scoped_atomic_fetch_add:
-      LibCallName = "__atomic_fetch_add";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        LoweredMemTy, E->getExprLoc(), TInfo.Width);
-      break;
-    // T __atomic_and_fetch_N(T *mem, T val, int order)
-    // T __atomic_fetch_and_N(T *mem, T val, int order)
     case AtomicExpr::AO__atomic_and_fetch:
     case AtomicExpr::AO__scoped_atomic_and_fetch:
-      PostOp = llvm::Instruction::And;
-      [[fallthrough]];
     case AtomicExpr::AO__atomic_fetch_and:
     case AtomicExpr::AO__c11_atomic_fetch_and:
     case AtomicExpr::AO__hip_atomic_fetch_and:
     case AtomicExpr::AO__opencl_atomic_fetch_and:
     case AtomicExpr::AO__scoped_atomic_fetch_and:
-      LibCallName = "__atomic_fetch_and";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        MemTy, E->getExprLoc(), TInfo.Width);
-      break;
-    // T __atomic_or_fetch_N(T *mem, T val, int order)
-    // T __atomic_fetch_or_N(T *mem, T val, int order)
     case AtomicExpr::AO__atomic_or_fetch:
     case AtomicExpr::AO__scoped_atomic_or_fetch:
-      PostOp = llvm::Instruction::Or;
-      [[fallthrough]];
     case AtomicExpr::AO__atomic_fetch_or:
     case AtomicExpr::AO__c11_atomic_fetch_or:
     case AtomicExpr::AO__hip_atomic_fetch_or:
     case AtomicExpr::AO__opencl_atomic_fetch_or:
     case AtomicExpr::AO__scoped_atomic_fetch_or:
-      LibCallName = "__atomic_fetch_or";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        MemTy, E->getExprLoc(), TInfo.Width);
-      break;
-    // T __atomic_sub_fetch_N(T *mem, T val, int order)
-    // T __atomic_fetch_sub_N(T *mem, T val, int order)
     case AtomicExpr::AO__atomic_sub_fetch:
     case AtomicExpr::AO__scoped_atomic_sub_fetch:
-      PostOp = llvm::Instruction::Sub;
-      [[fallthrough]];
     case AtomicExpr::AO__atomic_fetch_sub:
     case AtomicExpr::AO__c11_atomic_fetch_sub:
     case AtomicExpr::AO__hip_atomic_fetch_sub:
     case AtomicExpr::AO__opencl_atomic_fetch_sub:
     case AtomicExpr::AO__scoped_atomic_fetch_sub:
-      LibCallName = "__atomic_fetch_sub";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        LoweredMemTy, E->getExprLoc(), TInfo.Width);
-      break;
-    // T __atomic_xor_fetch_N(T *mem, T val, int order)
-    // T __atomic_fetch_xor_N(T *mem, T val, int order)
     case AtomicExpr::AO__atomic_xor_fetch:
     case AtomicExpr::AO__scoped_atomic_xor_fetch:
-      PostOp = llvm::Instruction::Xor;
-      [[fallthrough]];
     case AtomicExpr::AO__atomic_fetch_xor:
     case AtomicExpr::AO__c11_atomic_fetch_xor:
     case AtomicExpr::AO__hip_atomic_fetch_xor:
     case AtomicExpr::AO__opencl_atomic_fetch_xor:
     case AtomicExpr::AO__scoped_atomic_fetch_xor:
-      LibCallName = "__atomic_fetch_xor";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        MemTy, E->getExprLoc(), TInfo.Width);
-      break;
+    case AtomicExpr::AO__atomic_nand_fetch:
+    case AtomicExpr::AO__atomic_fetch_nand:
+    case AtomicExpr::AO__c11_atomic_fetch_nand:
+    case AtomicExpr::AO__scoped_atomic_fetch_nand:
+    case AtomicExpr::AO__scoped_atomic_nand_fetch:
     case AtomicExpr::AO__atomic_min_fetch:
-    case AtomicExpr::AO__scoped_atomic_min_fetch:
-      PostOpMinMax = true;
-      [[fallthrough]];
     case AtomicExpr::AO__atomic_fetch_min:
     case AtomicExpr::AO__c11_atomic_fetch_min:
-    case AtomicExpr::AO__scoped_atomic_fetch_min:
     case AtomicExpr::AO__hip_atomic_fetch_min:
     case AtomicExpr::AO__opencl_atomic_fetch_min:
-      LibCallName = E->getValueType()->isSignedIntegerType()
-                        ? "__atomic_fetch_min"
-                        : "__atomic_fetch_umin";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        LoweredMemTy, E->getExprLoc(), TInfo.Width);
-      break;
+    case AtomicExpr::AO__scoped_atomic_fetch_min:
+    case AtomicExpr::AO__scoped_atomic_min_fetch:
     case AtomicExpr::AO__atomic_max_fetch:
-    case AtomicExpr::AO__scoped_atomic_max_fetch:
-      PostOpMinMax = true;
-      [[fallthrough]];
     case AtomicExpr::AO__atomic_fetch_max:
     case AtomicExpr::AO__c11_atomic_fetch_max:
     case AtomicExpr::AO__hip_atomic_fetch_max:
     case AtomicExpr::AO__opencl_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_fetch_max:
-      LibCallName = E->getValueType()->isSignedIntegerType()
-                        ? "__atomic_fetch_max"
-                        : "__atomic_fetch_umax";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        LoweredMemTy, E->getExprLoc(), TInfo.Width);
-      break;
-    // T __atomic_nand_fetch_N(T *mem, T val, int order)
-    // T __atomic_fetch_nand_N(T *mem, T val, int order)
-    case AtomicExpr::AO__atomic_nand_fetch:
-    case AtomicExpr::AO__scoped_atomic_nand_fetch:
-      PostOp = llvm::Instruction::And; // the NOT is special cased below
-      [[fallthrough]];
-    case AtomicExpr::AO__atomic_fetch_nand:
-    case AtomicExpr::AO__c11_atomic_fetch_nand:
-    case AtomicExpr::AO__scoped_atomic_fetch_nand:
-      LibCallName = "__atomic_fetch_nand";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        MemTy, E->getExprLoc(), TInfo.Width);
-      break;
+    case AtomicExpr::AO__scoped_atomic_max_fetch:
+      llvm_unreachable("Integral atomic operations always become atomicrmw!");
     }
 
     if (E->isOpenCL()) {
-      LibCallName = std::string("__opencl") +
-          StringRef(LibCallName).drop_front(1).str();
-
+      LibCallName =
+          std::string("__opencl") + StringRef(LibCallName).drop_front(1).str();
     }
-    // Optimized functions have the size in their name.
-    if (UseOptimizedLibcall)
-      LibCallName += "_" + llvm::utostr(Size);
     // By default, assume we return a value of the atomic type.
     if (!HaveRetTy) {
-      if (UseOptimizedLibcall) {
-        // Value is returned directly.
-        // The function returns an appropriately sized integer type.
-        RetTy = getContext().getIntTypeForBitwidth(
-            getContext().toBits(TInfo.Width), /*Signed=*/false);
-      } else {
-        // Value is returned through parameter before the order.
-        RetTy = getContext().VoidTy;
-        Args.add(RValue::get(Dest.getPointer()), getContext().VoidPtrTy);
-      }
+      // Value is returned through parameter before the order.
+      RetTy = getContext().VoidTy;
+      Args.add(RValue::get(CastToGenericAddrSpace(Dest.getPointer(), RetTy)),
+               getContext().VoidPtrTy);
     }
-    // order is always the last parameter
+    // Order is always the last parameter.
     Args.add(RValue::get(Order),
              getContext().IntTy);
     if (E->isOpenCL())
       Args.add(RValue::get(Scope), getContext().IntTy);
 
-    // PostOp is only needed for the atomic_*_fetch operations, and
-    // thus is only needed for and implemented in the
-    // UseOptimizedLibcall codepath.
-    assert(UseOptimizedLibcall || (!PostOp && !PostOpMinMax));
-
     RValue Res = emitAtomicLibcall(*this, LibCallName, RetTy, Args);
     // The value is returned directly from the libcall.
     if (E->isCmpXChg())
       return Res;
-
-    // The value is returned directly for optimized libcalls but the expr
-    // provided an out-param.
-    if (UseOptimizedLibcall && Res.getScalarVal()) {
-      llvm::Value *ResVal = Res.getScalarVal();
-      if (PostOpMinMax) {
-        llvm::Value *LoadVal1 = Args[1].getRValue(*this).getScalarVal();
-        ResVal = EmitPostAtomicMinMax(Builder, E->getOp(),
-                                      E->getValueType()->isSignedIntegerType(),
-                                      ResVal, LoadVal1);
-      } else if (PostOp) {
-        llvm::Value *LoadVal1 = Args[1].getRValue(*this).getScalarVal();
-        ResVal = Builder.CreateBinOp(PostOp, ResVal, LoadVal1);
-      }
-      if (E->getOp() == AtomicExpr::AO__atomic_nand_fetch ||
-          E->getOp() == AtomicExpr::AO__scoped_atomic_nand_fetch)
-        ResVal = Builder.CreateNot(ResVal);
-
-      Builder.CreateStore(ResVal, Dest.withElementType(ResVal->getType()));
-    }
 
     if (RValTy->isVoidType())
       return RValue::get(nullptr);

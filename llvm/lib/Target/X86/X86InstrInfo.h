@@ -77,6 +77,9 @@ unsigned getSwappedVPCOMImm(unsigned Imm);
 /// Get the VCMP immediate if the opcodes are swapped.
 unsigned getSwappedVCMPImm(unsigned Imm);
 
+/// Get the width of the vector register operand.
+unsigned getVectorRegisterWidth(const MCOperandInfo &Info);
+
 /// Check if the instruction is X87 instruction.
 bool isX87Instruction(MachineInstr &MI);
 

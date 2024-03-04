@@ -55,17 +55,17 @@ TEST(LlvmLibcDirentTest, SimpleOpenAndRead) {
 }
 
 TEST(LlvmLibcDirentTest, OpenNonExistentDir) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ::DIR *dir = LIBC_NAMESPACE::opendir("___xyz123__.non_existent__");
   ASSERT_TRUE(dir == nullptr);
   ASSERT_ERRNO_EQ(ENOENT);
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 }
 
 TEST(LlvmLibcDirentTest, OpenFile) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ::DIR *dir = LIBC_NAMESPACE::opendir("testdata/file1.txt");
   ASSERT_TRUE(dir == nullptr);
   ASSERT_ERRNO_EQ(ENOTDIR);
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 }

@@ -251,9 +251,9 @@ void SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
 
   const MCInstrDesc &NewDesc = TII->get(SOPKOpc);
 
-  if ((TII->sopkIsZext(SOPKOpc) && isKUImmOperand(Src1)) ||
-      (!TII->sopkIsZext(SOPKOpc) && isKImmOperand(Src1))) {
-    if (!TII->sopkIsZext(SOPKOpc))
+  if ((SIInstrInfo::sopkIsZext(SOPKOpc) && isKUImmOperand(Src1)) ||
+      (!SIInstrInfo::sopkIsZext(SOPKOpc) && isKImmOperand(Src1))) {
+    if (!SIInstrInfo::sopkIsZext(SOPKOpc))
       Src1.setImm(SignExtend64(Src1.getImm(), 32));
     MI.setDesc(NewDesc);
   }

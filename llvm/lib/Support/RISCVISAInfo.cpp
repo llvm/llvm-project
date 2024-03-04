@@ -109,6 +109,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 
     {"za128rs", {1, 0}},
     {"za64rs", {1, 0}},
+    {"zacas", {1, 0}},
     {"zawrs", {1, 0}},
 
     {"zba", {1, 0}},
@@ -215,11 +216,11 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"smnpm", {0, 8}},
     {"ssnpm", {0, 8}},
     {"sspm", {0, 8}},
+    {"ssqosid", {1, 0}},
     {"supm", {0, 8}},
 
     {"zaamo", {0, 2}},
     {"zabha", {1, 0}},
-    {"zacas", {1, 0}},
     {"zalasr", {0, 1}},
     {"zalrsc", {0, 2}},
 

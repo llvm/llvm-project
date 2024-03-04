@@ -49,6 +49,7 @@ class DataLayout;
 class StringRef;
 class Type;
 class Value;
+class UnreachableInst;
 
 //===----------------------------------------------------------------------===//
 //                                AllocaInst Class
@@ -73,15 +74,21 @@ protected:
 
 public:
   explicit AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
+                      const Twine &Name, BasicBlock::iterator InsertBefore);
+  explicit AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
                       const Twine &Name, Instruction *InsertBefore);
   AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
              const Twine &Name, BasicBlock *InsertAtEnd);
 
   AllocaInst(Type *Ty, unsigned AddrSpace, const Twine &Name,
+             BasicBlock::iterator InsertBefore);
+  AllocaInst(Type *Ty, unsigned AddrSpace, const Twine &Name,
              Instruction *InsertBefore);
   AllocaInst(Type *Ty, unsigned AddrSpace,
              const Twine &Name, BasicBlock *InsertAtEnd);
 
+  AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize, Align Align,
+             const Twine &Name, BasicBlock::iterator);
   AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize, Align Align,
              const Twine &Name = "", Instruction *InsertBefore = nullptr);
   AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize, Align Align,
@@ -192,16 +199,25 @@ protected:
 
 public:
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr,
+           BasicBlock::iterator InsertBefore);
+  LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr,
            Instruction *InsertBefore);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, BasicBlock *InsertAtEnd);
+  LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
+           BasicBlock::iterator InsertBefore);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
            Instruction *InsertBefore);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
            BasicBlock *InsertAtEnd);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
+           Align Align, BasicBlock::iterator InsertBefore);
+  LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
            Align Align, Instruction *InsertBefore = nullptr);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
            Align Align, BasicBlock *InsertAtEnd);
+  LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
+           Align Align, AtomicOrdering Order, SyncScope::ID SSID,
+           BasicBlock::iterator InsertBefore);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
            Align Align, AtomicOrdering Order,
            SyncScope::ID SSID = SyncScope::System,
@@ -455,6 +471,8 @@ protected:
 public:
   // Ordering may only be Acquire, Release, AcquireRelease, or
   // SequentiallyConsistent.
+  FenceInst(LLVMContext &C, AtomicOrdering Ordering, SyncScope::ID SSID,
+            BasicBlock::iterator InsertBefore);
   FenceInst(LLVMContext &C, AtomicOrdering Ordering,
             SyncScope::ID SSID = SyncScope::System,
             Instruction *InsertBefore = nullptr);
@@ -535,6 +553,10 @@ protected:
   AtomicCmpXchgInst *cloneImpl() const;
 
 public:
+  AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal, Align Alignment,
+                    AtomicOrdering SuccessOrdering,
+                    AtomicOrdering FailureOrdering, SyncScope::ID SSID,
+                    BasicBlock::iterator InsertBefore);
   AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal, Align Alignment,
                     AtomicOrdering SuccessOrdering,
                     AtomicOrdering FailureOrdering, SyncScope::ID SSID,
@@ -799,6 +821,9 @@ private:
 public:
   AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val, Align Alignment,
                 AtomicOrdering Ordering, SyncScope::ID SSID,
+                BasicBlock::iterator InsertBefore);
+  AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val, Align Alignment,
+                AtomicOrdering Ordering, SyncScope::ID SSID,
                 Instruction *InsertBefore = nullptr);
   AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val, Align Alignment,
                 AtomicOrdering Ordering, SyncScope::ID SSID,
@@ -952,9 +977,13 @@ class GetElementPtrInst : public Instruction {
   GetElementPtrInst(const GetElementPtrInst &GEPI);
 
   /// Constructors - Create a getelementptr instruction with a base pointer an
-  /// list of indices. The first ctor can optionally insert before an existing
-  /// instruction, the second appends the new instruction to the specified
-  /// BasicBlock.
+  /// list of indices. The first and second ctor can optionally insert before an
+  /// existing instruction, the third appends the new instruction to the
+  /// specified BasicBlock.
+  inline GetElementPtrInst(Type *PointeeType, Value *Ptr,
+                           ArrayRef<Value *> IdxList, unsigned Values,
+                           const Twine &NameStr,
+                           BasicBlock::iterator InsertBefore);
   inline GetElementPtrInst(Type *PointeeType, Value *Ptr,
                            ArrayRef<Value *> IdxList, unsigned Values,
                            const Twine &NameStr, Instruction *InsertBefore);
@@ -971,6 +1000,16 @@ protected:
   GetElementPtrInst *cloneImpl() const;
 
 public:
+  static GetElementPtrInst *Create(Type *PointeeType, Value *Ptr,
+                                   ArrayRef<Value *> IdxList,
+                                   const Twine &NameStr,
+                                   BasicBlock::iterator InsertBefore) {
+    unsigned Values = 1 + unsigned(IdxList.size());
+    assert(PointeeType && "Must specify element type");
+    return new (Values) GetElementPtrInst(PointeeType, Ptr, IdxList, Values,
+                                          NameStr, InsertBefore);
+  }
+
   static GetElementPtrInst *Create(Type *PointeeType, Value *Ptr,
                                    ArrayRef<Value *> IdxList,
                                    const Twine &NameStr = "",
@@ -993,6 +1032,16 @@ public:
 
   /// Create an "inbounds" getelementptr. See the documentation for the
   /// "inbounds" flag in LangRef.html for details.
+  static GetElementPtrInst *CreateInBounds(Type *PointeeType, Value *Ptr,
+                                           ArrayRef<Value *> IdxList,
+                                           const Twine &NameStr,
+                                           BasicBlock::iterator InsertBefore) {
+    GetElementPtrInst *GEP =
+        Create(PointeeType, Ptr, IdxList, NameStr, InsertBefore);
+    GEP->setIsInBounds(true);
+    return GEP;
+  }
+
   static GetElementPtrInst *
   CreateInBounds(Type *PointeeType, Value *Ptr, ArrayRef<Value *> IdxList,
                  const Twine &NameStr = "",
@@ -1154,6 +1203,18 @@ struct OperandTraits<GetElementPtrInst> :
 GetElementPtrInst::GetElementPtrInst(Type *PointeeType, Value *Ptr,
                                      ArrayRef<Value *> IdxList, unsigned Values,
                                      const Twine &NameStr,
+                                     BasicBlock::iterator InsertBefore)
+    : Instruction(getGEPReturnType(Ptr, IdxList), GetElementPtr,
+                  OperandTraits<GetElementPtrInst>::op_end(this) - Values,
+                  Values, InsertBefore),
+      SourceElementType(PointeeType),
+      ResultElementType(getIndexedType(PointeeType, IdxList)) {
+  init(Ptr, IdxList, NameStr);
+}
+
+GetElementPtrInst::GetElementPtrInst(Type *PointeeType, Value *Ptr,
+                                     ArrayRef<Value *> IdxList, unsigned Values,
+                                     const Twine &NameStr,
                                      Instruction *InsertBefore)
     : Instruction(getGEPReturnType(Ptr, IdxList), GetElementPtr,
                   OperandTraits<GetElementPtrInst>::op_end(this) - Values,
@@ -1205,6 +1266,21 @@ protected:
   ICmpInst *cloneImpl() const;
 
 public:
+  /// Constructor with insert-before-instruction semantics.
+  ICmpInst(
+    BasicBlock::iterator InsertBefore,  ///< Where to insert
+    Predicate pred,  ///< The predicate to use for the comparison
+    Value *LHS,      ///< The left-hand-side of the expression
+    Value *RHS,      ///< The right-hand-side of the expression
+    const Twine &NameStr = ""  ///< Name of the instruction
+  ) : CmpInst(makeCmpResultType(LHS->getType()),
+              Instruction::ICmp, pred, LHS, RHS, NameStr,
+              InsertBefore) {
+#ifndef NDEBUG
+  AssertOK();
+#endif
+  }
+
   /// Constructor with insert-before-instruction semantics.
   ICmpInst(
     Instruction *InsertBefore,  ///< Where to insert
@@ -1379,6 +1455,19 @@ protected:
 public:
   /// Constructor with insert-before-instruction semantics.
   FCmpInst(
+    BasicBlock::iterator InsertBefore, ///< Where to insert
+    Predicate pred,  ///< The predicate to use for the comparison
+    Value *LHS,      ///< The left-hand-side of the expression
+    Value *RHS,      ///< The right-hand-side of the expression
+    const Twine &NameStr = ""  ///< Name of the instruction
+  ) : CmpInst(makeCmpResultType(LHS->getType()),
+              Instruction::FCmp, pred, LHS, RHS, NameStr,
+              InsertBefore) {
+    AssertOK();
+  }
+
+  /// Constructor with insert-before-instruction semantics.
+  FCmpInst(
     Instruction *InsertBefore, ///< Where to insert
     Predicate pred,  ///< The predicate to use for the comparison
     Value *LHS,      ///< The left-hand-side of the expression
@@ -1476,6 +1565,15 @@ public:
 class CallInst : public CallBase {
   CallInst(const CallInst &CI);
 
+  /// Construct a CallInst from a range of arguments
+  inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
+                  ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
+                  BasicBlock::iterator InsertBefore);
+
+  inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
+                  const Twine &NameStr, BasicBlock::iterator InsertBefore)
+      : CallInst(Ty, Func, Args, std::nullopt, NameStr, InsertBefore) {}
+
   /// Construct a CallInst given a range of arguments.
   /// Construct a CallInst from a range of arguments
   inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
@@ -1491,6 +1589,9 @@ class CallInst : public CallBase {
   inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                   ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
                   BasicBlock *InsertAtEnd);
+
+  explicit CallInst(FunctionType *Ty, Value *F, const Twine &NameStr,
+                    BasicBlock::iterator InsertBefore);
 
   explicit CallInst(FunctionType *Ty, Value *F, const Twine &NameStr,
                     Instruction *InsertBefore);
@@ -1516,6 +1617,11 @@ protected:
   CallInst *cloneImpl() const;
 
 public:
+  static CallInst *Create(FunctionType *Ty, Value *F, const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore) {
+    return new (ComputeNumOperands(0)) CallInst(Ty, F, NameStr, InsertBefore);
+  }
+
   static CallInst *Create(FunctionType *Ty, Value *F, const Twine &NameStr = "",
                           Instruction *InsertBefore = nullptr) {
     return new (ComputeNumOperands(0)) CallInst(Ty, F, NameStr, InsertBefore);
@@ -1523,9 +1629,28 @@ public:
 
   static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                           const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore) {
+    return new (ComputeNumOperands(Args.size()))
+        CallInst(Ty, Func, Args, std::nullopt, NameStr, InsertBefore);
+  }
+
+  static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
+                          const Twine &NameStr,
                           Instruction *InsertBefore = nullptr) {
     return new (ComputeNumOperands(Args.size()))
         CallInst(Ty, Func, Args, std::nullopt, NameStr, InsertBefore);
+  }
+
+  static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
+                          ArrayRef<OperandBundleDef> Bundles,
+                          const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore) {
+    const int NumOperands =
+        ComputeNumOperands(Args.size(), CountBundleInputs(Bundles));
+    const unsigned DescriptorBytes = Bundles.size() * sizeof(BundleOpInfo);
+
+    return new (NumOperands, DescriptorBytes)
+        CallInst(Ty, Func, Args, Bundles, NameStr, InsertBefore);
   }
 
   static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
@@ -1562,10 +1687,24 @@ public:
         CallInst(Ty, Func, Args, Bundles, NameStr, InsertAtEnd);
   }
 
+  static CallInst *Create(FunctionCallee Func, const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore) {
+    return Create(Func.getFunctionType(), Func.getCallee(), NameStr,
+                  InsertBefore);
+  }
+
   static CallInst *Create(FunctionCallee Func, const Twine &NameStr = "",
                           Instruction *InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), NameStr,
                   InsertBefore);
+  }
+
+  static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
+                          ArrayRef<OperandBundleDef> Bundles,
+                          const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore) {
+    return Create(Func.getFunctionType(), Func.getCallee(), Args, Bundles,
+                  NameStr, InsertBefore);
   }
 
   static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
@@ -1574,6 +1713,13 @@ public:
                           Instruction *InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), Args, Bundles,
                   NameStr, InsertBefore);
+  }
+
+  static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
+                          const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore) {
+    return Create(Func.getFunctionType(), Func.getCallee(), Args, NameStr,
+                  InsertBefore);
   }
 
   static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
@@ -1608,6 +1754,8 @@ public:
   /// The returned call instruction is identical \p CI in every way except that
   /// the operand bundles for the new instruction are set to the operand bundles
   /// in \p Bundles.
+  static CallInst *Create(CallInst *CI, ArrayRef<OperandBundleDef> Bundles,
+                          BasicBlock::iterator InsertPt);
   static CallInst *Create(CallInst *CI, ArrayRef<OperandBundleDef> Bundles,
                           Instruction *InsertPt = nullptr);
 
@@ -1683,6 +1831,17 @@ CallInst::CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
 
 CallInst::CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                    ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
+                   BasicBlock::iterator InsertBefore)
+    : CallBase(Ty->getReturnType(), Instruction::Call,
+               OperandTraits<CallBase>::op_end(this) -
+                   (Args.size() + CountBundleInputs(Bundles) + 1),
+               unsigned(Args.size() + CountBundleInputs(Bundles) + 1),
+               InsertBefore) {
+  init(Ty, Func, Args, Bundles, NameStr);
+}
+
+CallInst::CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
+                   ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
                    Instruction *InsertBefore)
     : CallBase(Ty->getReturnType(), Instruction::Call,
                OperandTraits<CallBase>::op_end(this) -
@@ -1699,6 +1858,14 @@ CallInst::CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
 /// This class represents the LLVM 'select' instruction.
 ///
 class SelectInst : public Instruction {
+  SelectInst(Value *C, Value *S1, Value *S2, const Twine &NameStr,
+             BasicBlock::iterator InsertBefore)
+      : Instruction(S1->getType(), Instruction::Select, &Op<0>(), 3,
+                    InsertBefore) {
+    init(C, S1, S2);
+    setName(NameStr);
+  }
+
   SelectInst(Value *C, Value *S1, Value *S2, const Twine &NameStr,
              Instruction *InsertBefore)
     : Instruction(S1->getType(), Instruction::Select,
@@ -1729,6 +1896,16 @@ protected:
   SelectInst *cloneImpl() const;
 
 public:
+  static SelectInst *Create(Value *C, Value *S1, Value *S2,
+                            const Twine &NameStr,
+                            BasicBlock::iterator InsertBefore,
+                            Instruction *MDFrom = nullptr) {
+    SelectInst *Sel = new (3) SelectInst(C, S1, S2, NameStr, InsertBefore);
+    if (MDFrom)
+      Sel->copyMetadata(*MDFrom);
+    return Sel;
+  }
+
   static SelectInst *Create(Value *C, Value *S1, Value *S2,
                             const Twine &NameStr = "",
                             Instruction *InsertBefore = nullptr,
@@ -1801,6 +1978,12 @@ protected:
   VAArgInst *cloneImpl() const;
 
 public:
+  VAArgInst(Value *List, Type *Ty, const Twine &NameStr,
+            BasicBlock::iterator InsertBefore)
+      : UnaryInstruction(Ty, VAArg, List, InsertBefore) {
+    setName(NameStr);
+  }
+
   VAArgInst(Value *List, Type *Ty, const Twine &NameStr = "",
              Instruction *InsertBefore = nullptr)
     : UnaryInstruction(Ty, VAArg, List, InsertBefore) {
@@ -1834,6 +2017,8 @@ public:
 /// element from a VectorType value
 ///
 class ExtractElementInst : public Instruction {
+  ExtractElementInst(Value *Vec, Value *Idx, const Twine &NameStr,
+                     BasicBlock::iterator InsertBefore);
   ExtractElementInst(Value *Vec, Value *Idx, const Twine &NameStr = "",
                      Instruction *InsertBefore = nullptr);
   ExtractElementInst(Value *Vec, Value *Idx, const Twine &NameStr,
@@ -1846,6 +2031,12 @@ protected:
   ExtractElementInst *cloneImpl() const;
 
 public:
+  static ExtractElementInst *Create(Value *Vec, Value *Idx,
+                                    const Twine &NameStr,
+                                    BasicBlock::iterator InsertBefore) {
+    return new (2) ExtractElementInst(Vec, Idx, NameStr, InsertBefore);
+  }
+
   static ExtractElementInst *Create(Value *Vec, Value *Idx,
                                    const Twine &NameStr = "",
                                    Instruction *InsertBefore = nullptr) {
@@ -1898,6 +2089,8 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ExtractElementInst, Value)
 /// element into a VectorType value
 ///
 class InsertElementInst : public Instruction {
+  InsertElementInst(Value *Vec, Value *NewElt, Value *Idx, const Twine &NameStr,
+                    BasicBlock::iterator InsertBefore);
   InsertElementInst(Value *Vec, Value *NewElt, Value *Idx,
                     const Twine &NameStr = "",
                     Instruction *InsertBefore = nullptr);
@@ -1911,6 +2104,12 @@ protected:
   InsertElementInst *cloneImpl() const;
 
 public:
+  static InsertElementInst *Create(Value *Vec, Value *NewElt, Value *Idx,
+                                   const Twine &NameStr,
+                                   BasicBlock::iterator InsertBefore) {
+    return new (3) InsertElementInst(Vec, NewElt, Idx, NameStr, InsertBefore);
+  }
+
   static InsertElementInst *Create(Value *Vec, Value *NewElt, Value *Idx,
                                    const Twine &NameStr = "",
                                    Instruction *InsertBefore = nullptr) {
@@ -1980,19 +2179,27 @@ protected:
   ShuffleVectorInst *cloneImpl() const;
 
 public:
+  ShuffleVectorInst(Value *V1, Value *Mask, const Twine &NameStr,
+                    BasicBlock::iterator InsertBefore);
   ShuffleVectorInst(Value *V1, Value *Mask, const Twine &NameStr = "",
                     Instruction *InsertBefore = nullptr);
   ShuffleVectorInst(Value *V1, Value *Mask, const Twine &NameStr,
                     BasicBlock *InsertAtEnd);
+  ShuffleVectorInst(Value *V1, ArrayRef<int> Mask, const Twine &NameStr,
+                    BasicBlock::iterator InsertBefore);
   ShuffleVectorInst(Value *V1, ArrayRef<int> Mask, const Twine &NameStr = "",
                     Instruction *InsertBefore = nullptr);
   ShuffleVectorInst(Value *V1, ArrayRef<int> Mask, const Twine &NameStr,
                     BasicBlock *InsertAtEnd);
+  ShuffleVectorInst(Value *V1, Value *V2, Value *Mask, const Twine &NameStr,
+                    BasicBlock::iterator InsertBefor);
   ShuffleVectorInst(Value *V1, Value *V2, Value *Mask,
                     const Twine &NameStr = "",
                     Instruction *InsertBefor = nullptr);
   ShuffleVectorInst(Value *V1, Value *V2, Value *Mask,
                     const Twine &NameStr, BasicBlock *InsertAtEnd);
+  ShuffleVectorInst(Value *V1, Value *V2, ArrayRef<int> Mask,
+                    const Twine &NameStr, BasicBlock::iterator InsertBefor);
   ShuffleVectorInst(Value *V1, Value *V2, ArrayRef<int> Mask,
                     const Twine &NameStr = "",
                     Instruction *InsertBefor = nullptr);
@@ -2467,9 +2674,12 @@ class ExtractValueInst : public UnaryInstruction {
   ExtractValueInst(const ExtractValueInst &EVI);
 
   /// Constructors - Create a extractvalue instruction with a base aggregate
-  /// value and a list of indices.  The first ctor can optionally insert before
-  /// an existing instruction, the second appends the new instruction to the
-  /// specified BasicBlock.
+  /// value and a list of indices. The first and second ctor can optionally
+  /// insert before an existing instruction, the third appends the new
+  /// instruction to the specified BasicBlock.
+  inline ExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
+                          const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore);
   inline ExtractValueInst(Value *Agg,
                           ArrayRef<unsigned> Idxs,
                           const Twine &NameStr,
@@ -2487,6 +2697,13 @@ protected:
   ExtractValueInst *cloneImpl() const;
 
 public:
+  static ExtractValueInst *Create(Value *Agg, ArrayRef<unsigned> Idxs,
+                                  const Twine &NameStr,
+                                  BasicBlock::iterator InsertBefore) {
+    return new
+      ExtractValueInst(Agg, Idxs, NameStr, InsertBefore);
+  }
+
   static ExtractValueInst *Create(Value *Agg,
                                   ArrayRef<unsigned> Idxs,
                                   const Twine &NameStr = "",
@@ -2547,6 +2764,14 @@ public:
   }
 };
 
+ExtractValueInst::ExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
+                                   const Twine &NameStr,
+                                   BasicBlock::iterator InsertBefore)
+    : UnaryInstruction(checkGEPType(getIndexedType(Agg->getType(), Idxs)),
+                       ExtractValue, Agg, InsertBefore) {
+  init(Idxs, NameStr);
+}
+
 ExtractValueInst::ExtractValueInst(Value *Agg,
                                    ArrayRef<unsigned> Idxs,
                                    const Twine &NameStr,
@@ -2578,9 +2803,12 @@ class InsertValueInst : public Instruction {
   InsertValueInst(const InsertValueInst &IVI);
 
   /// Constructors - Create a insertvalue instruction with a base aggregate
-  /// value, a value to insert, and a list of indices.  The first ctor can
-  /// optionally insert before an existing instruction, the second appends
+  /// value, a value to insert, and a list of indices. The first and second ctor
+  /// can optionally insert before an existing instruction, the third appends
   /// the new instruction to the specified BasicBlock.
+  inline InsertValueInst(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
+                         const Twine &NameStr,
+                         BasicBlock::iterator InsertBefore);
   inline InsertValueInst(Value *Agg, Value *Val,
                          ArrayRef<unsigned> Idxs,
                          const Twine &NameStr,
@@ -2589,8 +2817,10 @@ class InsertValueInst : public Instruction {
                          ArrayRef<unsigned> Idxs,
                          const Twine &NameStr, BasicBlock *InsertAtEnd);
 
-  /// Constructors - These two constructors are convenience methods because one
-  /// and two index insertvalue instructions are so common.
+  /// Constructors - These three constructors are convenience methods because
+  /// one and two index insertvalue instructions are so common.
+  InsertValueInst(Value *Agg, Value *Val, unsigned Idx, const Twine &NameStr,
+                  BasicBlock::iterator InsertBefore);
   InsertValueInst(Value *Agg, Value *Val, unsigned Idx,
                   const Twine &NameStr = "",
                   Instruction *InsertBefore = nullptr);
@@ -2610,6 +2840,12 @@ public:
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, 2); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
+
+  static InsertValueInst *Create(Value *Agg, Value *Val,
+                                 ArrayRef<unsigned> Idxs, const Twine &NameStr,
+                                 BasicBlock::iterator InsertBefore) {
+    return new InsertValueInst(Agg, Val, Idxs, NameStr, InsertBefore);
+  }
 
   static InsertValueInst *Create(Value *Agg, Value *Val,
                                  ArrayRef<unsigned> Idxs,
@@ -2686,6 +2922,16 @@ InsertValueInst::InsertValueInst(Value *Agg,
                                  Value *Val,
                                  ArrayRef<unsigned> Idxs,
                                  const Twine &NameStr,
+                                 BasicBlock::iterator InsertBefore)
+  : Instruction(Agg->getType(), InsertValue, OperandTraits<InsertValueInst>::op_begin(this),
+                2, InsertBefore) {
+  init(Agg, Val, Idxs, NameStr);
+}
+
+InsertValueInst::InsertValueInst(Value *Agg,
+                                 Value *Val,
+                                 ArrayRef<unsigned> Idxs,
+                                 const Twine &NameStr,
                                  Instruction *InsertBefore)
   : Instruction(Agg->getType(), InsertValue,
                 OperandTraits<InsertValueInst>::op_begin(this),
@@ -2720,6 +2966,15 @@ class PHINode : public Instruction {
   unsigned ReservedSpace;
 
   PHINode(const PHINode &PN);
+
+  explicit PHINode(Type *Ty, unsigned NumReservedValues, const Twine &NameStr,
+                   BasicBlock::iterator InsertBefore)
+      : Instruction(Ty, Instruction::PHI, nullptr, 0, InsertBefore),
+        ReservedSpace(NumReservedValues) {
+    assert(!Ty->isTokenTy() && "PHI nodes cannot have token type!");
+    setName(NameStr);
+    allocHungoffUses(ReservedSpace);
+  }
 
   explicit PHINode(Type *Ty, unsigned NumReservedValues,
                    const Twine &NameStr = "",
@@ -2756,6 +3011,12 @@ protected:
 public:
   /// Constructors - NumReservedValues is a hint for the number of incoming
   /// edges that this phi node will have (use 0 if you really have no idea).
+  static PHINode *Create(Type *Ty, unsigned NumReservedValues,
+                         const Twine &NameStr,
+                         BasicBlock::iterator InsertBefore) {
+    return new PHINode(Ty, NumReservedValues, NameStr, InsertBefore);
+  }
+
   static PHINode *Create(Type *Ty, unsigned NumReservedValues,
                          const Twine &NameStr = "",
                          Instruction *InsertBefore = nullptr) {
@@ -2981,6 +3242,9 @@ public:
 
 private:
   explicit LandingPadInst(Type *RetTy, unsigned NumReservedValues,
+                          const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore);
+  explicit LandingPadInst(Type *RetTy, unsigned NumReservedValues,
                           const Twine &NameStr, Instruction *InsertBefore);
   explicit LandingPadInst(Type *RetTy, unsigned NumReservedValues,
                           const Twine &NameStr, BasicBlock *InsertAtEnd);
@@ -3002,6 +3266,9 @@ public:
 
   /// Constructors - NumReservedClauses is a hint for the number of incoming
   /// clauses that this landingpad will have (use 0 if you really have no idea).
+  static LandingPadInst *Create(Type *RetTy, unsigned NumReservedClauses,
+                                const Twine &NameStr,
+                                BasicBlock::iterator InsertBefore);
   static LandingPadInst *Create(Type *RetTy, unsigned NumReservedClauses,
                                 const Twine &NameStr = "",
                                 Instruction *InsertBefore = nullptr);
@@ -3076,6 +3343,8 @@ private:
   // ReturnInst()                  - 'ret void' instruction
   // ReturnInst(    null)          - 'ret void' instruction
   // ReturnInst(Value* X)          - 'ret X'    instruction
+  // ReturnInst(null, Iterator It) - 'ret void' instruction, insert before I
+  // ReturnInst(Value* X, Iterator It) - 'ret X'    instruction, insert before I
   // ReturnInst(    null, Inst *I) - 'ret void' instruction, insert before I
   // ReturnInst(Value* X, Inst *I) - 'ret X'    instruction, insert before I
   // ReturnInst(    null, BB *B)   - 'ret void' instruction, insert @ end of B
@@ -3083,6 +3352,8 @@ private:
   //
   // NOTE: If the Value* passed is of type void then the constructor behaves as
   // if it was passed NULL.
+  explicit ReturnInst(LLVMContext &C, Value *retVal,
+                      BasicBlock::iterator InsertBefore);
   explicit ReturnInst(LLVMContext &C, Value *retVal = nullptr,
                       Instruction *InsertBefore = nullptr);
   ReturnInst(LLVMContext &C, Value *retVal, BasicBlock *InsertAtEnd);
@@ -3095,6 +3366,11 @@ protected:
   ReturnInst *cloneImpl() const;
 
 public:
+  static ReturnInst *Create(LLVMContext &C, Value *retVal,
+                            BasicBlock::iterator InsertBefore) {
+    return new (!!retVal) ReturnInst(C, retVal, InsertBefore);
+  }
+
   static ReturnInst* Create(LLVMContext &C, Value *retVal = nullptr,
                             Instruction *InsertBefore = nullptr) {
     return new(!!retVal) ReturnInst(C, retVal, InsertBefore);
@@ -3159,10 +3435,15 @@ class BranchInst : public Instruction {
   // BranchInst constructors (where {B, T, F} are blocks, and C is a condition):
   // BranchInst(BB *B)                           - 'br B'
   // BranchInst(BB* T, BB *F, Value *C)          - 'br C, T, F'
+  // BranchInst(BB* B, Iter It)                  - 'br B'        insert before I
+  // BranchInst(BB* T, BB *F, Value *C, Iter It) - 'br C, T, F', insert before I
   // BranchInst(BB* B, Inst *I)                  - 'br B'        insert before I
   // BranchInst(BB* T, BB *F, Value *C, Inst *I) - 'br C, T, F', insert before I
   // BranchInst(BB* B, BB *I)                    - 'br B'        insert at end
   // BranchInst(BB* T, BB *F, Value *C, BB *I)   - 'br C, T, F', insert at end
+  explicit BranchInst(BasicBlock *IfTrue, BasicBlock::iterator InsertBefore);
+  BranchInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
+             BasicBlock::iterator InsertBefore);
   explicit BranchInst(BasicBlock *IfTrue, Instruction *InsertBefore = nullptr);
   BranchInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
              Instruction *InsertBefore = nullptr);
@@ -3207,8 +3488,18 @@ public:
   };
 
   static BranchInst *Create(BasicBlock *IfTrue,
+                            BasicBlock::iterator InsertBefore) {
+    return new(1) BranchInst(IfTrue, InsertBefore);
+  }
+
+  static BranchInst *Create(BasicBlock *IfTrue,
                             Instruction *InsertBefore = nullptr) {
     return new(1) BranchInst(IfTrue, InsertBefore);
+  }
+
+  static BranchInst *Create(BasicBlock *IfTrue, BasicBlock *IfFalse,
+                            Value *Cond, BasicBlock::iterator InsertBefore) {
+    return new(3) BranchInst(IfTrue, IfFalse, Cond, InsertBefore);
   }
 
   static BranchInst *Create(BasicBlock *IfTrue, BasicBlock *IfFalse,
@@ -3302,6 +3593,13 @@ class SwitchInst : public Instruction {
   // Operand[2n  ] = Value to match
   // Operand[2n+1] = BasicBlock to go to on match
   SwitchInst(const SwitchInst &SI);
+
+  /// Create a new switch instruction, specifying a value to switch on and a
+  /// default destination. The number of additional cases can be specified here
+  /// to make memory allocation more efficient. This constructor can also
+  /// auto-insert before another instruction.
+  SwitchInst(Value *Value, BasicBlock *Default, unsigned NumCases,
+             BasicBlock::iterator InsertBefore);
 
   /// Create a new switch instruction, specifying a value to switch on and a
   /// default destination. The number of additional cases can be specified here
@@ -3485,6 +3783,12 @@ public:
 
   static SwitchInst *Create(Value *Value, BasicBlock *Default,
                             unsigned NumCases,
+                            BasicBlock::iterator InsertBefore) {
+    return new SwitchInst(Value, Default, NumCases, InsertBefore);
+  }
+
+  static SwitchInst *Create(Value *Value, BasicBlock *Default,
+                            unsigned NumCases,
                             Instruction *InsertBefore = nullptr) {
     return new SwitchInst(Value, Default, NumCases, InsertBefore);
   }
@@ -3503,6 +3807,12 @@ public:
 
   BasicBlock *getDefaultDest() const {
     return cast<BasicBlock>(getOperand(1));
+  }
+
+  /// Returns true if the default branch must result in immediate undefined
+  /// behavior, false otherwise.
+  bool defaultDestUndefined() const {
+    return isa<UnreachableInst>(getDefaultDest()->getFirstNonPHIOrDbg());
   }
 
   void setDefaultDest(BasicBlock *DefaultCase) {
@@ -3701,6 +4011,13 @@ class IndirectBrInst : public Instruction {
   /// Address to jump to.  The number of expected destinations can be specified
   /// here to make memory allocation more efficient.  This constructor can also
   /// autoinsert before another instruction.
+  IndirectBrInst(Value *Address, unsigned NumDests,
+                 BasicBlock::iterator InsertBefore);
+
+  /// Create a new indirectbr instruction, specifying an
+  /// Address to jump to.  The number of expected destinations can be specified
+  /// here to make memory allocation more efficient.  This constructor can also
+  /// autoinsert before another instruction.
   IndirectBrInst(Value *Address, unsigned NumDests, Instruction *InsertBefore);
 
   /// Create a new indirectbr instruction, specifying an
@@ -3750,6 +4067,11 @@ public:
     const BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
     const BasicBlock *operator->() const { return operator*(); }
   };
+
+  static IndirectBrInst *Create(Value *Address, unsigned NumDests,
+                                BasicBlock::iterator InsertBefore) {
+    return new IndirectBrInst(Address, NumDests, InsertBefore);
+  }
 
   static IndirectBrInst *Create(Value *Address, unsigned NumDests,
                                 Instruction *InsertBefore = nullptr) {
@@ -3839,6 +4161,12 @@ class InvokeInst : public CallBase {
   InvokeInst(const InvokeInst &BI);
 
   /// Construct an InvokeInst given a range of arguments.
+  inline InvokeInst(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
+                    BasicBlock *IfException, ArrayRef<Value *> Args,
+                    ArrayRef<OperandBundleDef> Bundles, int NumOperands,
+                    const Twine &NameStr, BasicBlock::iterator InsertBefore);
+
+  /// Construct an InvokeInst given a range of arguments.
   ///
   /// Construct an InvokeInst from a range of arguments
   inline InvokeInst(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
@@ -3872,11 +4200,35 @@ public:
   static InvokeInst *Create(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
                             BasicBlock *IfException, ArrayRef<Value *> Args,
                             const Twine &NameStr,
+                            BasicBlock::iterator InsertBefore) {
+    int NumOperands = ComputeNumOperands(Args.size());
+    return new (NumOperands)
+        InvokeInst(Ty, Func, IfNormal, IfException, Args, std::nullopt,
+                   NumOperands, NameStr, InsertBefore);
+  }
+
+  static InvokeInst *Create(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
+                            BasicBlock *IfException, ArrayRef<Value *> Args,
+                            const Twine &NameStr,
                             Instruction *InsertBefore = nullptr) {
     int NumOperands = ComputeNumOperands(Args.size());
     return new (NumOperands)
         InvokeInst(Ty, Func, IfNormal, IfException, Args, std::nullopt,
                    NumOperands, NameStr, InsertBefore);
+  }
+
+  static InvokeInst *Create(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
+                            BasicBlock *IfException, ArrayRef<Value *> Args,
+                            ArrayRef<OperandBundleDef> Bundles,
+                            const Twine &NameStr,
+                            BasicBlock::iterator InsertBefore) {
+    int NumOperands =
+        ComputeNumOperands(Args.size(), CountBundleInputs(Bundles));
+    unsigned DescriptorBytes = Bundles.size() * sizeof(BundleOpInfo);
+
+    return new (NumOperands, DescriptorBytes)
+        InvokeInst(Ty, Func, IfNormal, IfException, Args, Bundles, NumOperands,
+                   NameStr, InsertBefore);
   }
 
   static InvokeInst *Create(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
@@ -3918,9 +4270,26 @@ public:
   static InvokeInst *Create(FunctionCallee Func, BasicBlock *IfNormal,
                             BasicBlock *IfException, ArrayRef<Value *> Args,
                             const Twine &NameStr,
+                            BasicBlock::iterator InsertBefore) {
+    return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
+                  IfException, Args, std::nullopt, NameStr, InsertBefore);
+  }
+
+  static InvokeInst *Create(FunctionCallee Func, BasicBlock *IfNormal,
+                            BasicBlock *IfException, ArrayRef<Value *> Args,
+                            const Twine &NameStr,
                             Instruction *InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
                   IfException, Args, std::nullopt, NameStr, InsertBefore);
+  }
+
+  static InvokeInst *Create(FunctionCallee Func, BasicBlock *IfNormal,
+                            BasicBlock *IfException, ArrayRef<Value *> Args,
+                            ArrayRef<OperandBundleDef> Bundles,
+                            const Twine &NameStr,
+                            BasicBlock::iterator InsertBefore) {
+    return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
+                  IfException, Args, Bundles, NameStr, InsertBefore);
   }
 
   static InvokeInst *Create(FunctionCallee Func, BasicBlock *IfNormal,
@@ -3953,6 +4322,8 @@ public:
   /// The returned invoke instruction is identical to \p II in every way except
   /// that the operand bundles for the new instruction are set to the operand
   /// bundles in \p Bundles.
+  static InvokeInst *Create(InvokeInst *II, ArrayRef<OperandBundleDef> Bundles,
+                            BasicBlock::iterator InsertPt);
   static InvokeInst *Create(InvokeInst *II, ArrayRef<OperandBundleDef> Bundles,
                             Instruction *InsertPt = nullptr);
 
@@ -4009,6 +4380,16 @@ private:
 InvokeInst::InvokeInst(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
                        BasicBlock *IfException, ArrayRef<Value *> Args,
                        ArrayRef<OperandBundleDef> Bundles, int NumOperands,
+                       const Twine &NameStr, BasicBlock::iterator InsertBefore)
+    : CallBase(Ty->getReturnType(), Instruction::Invoke,
+               OperandTraits<CallBase>::op_end(this) - NumOperands, NumOperands,
+               InsertBefore) {
+  init(Ty, Func, IfNormal, IfException, Args, Bundles, NameStr);
+}
+
+InvokeInst::InvokeInst(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
+                       BasicBlock *IfException, ArrayRef<Value *> Args,
+                       ArrayRef<OperandBundleDef> Bundles, int NumOperands,
                        const Twine &NameStr, Instruction *InsertBefore)
     : CallBase(Ty->getReturnType(), Instruction::Invoke,
                OperandTraits<CallBase>::op_end(this) - NumOperands, NumOperands,
@@ -4039,6 +4420,13 @@ class CallBrInst : public CallBase {
   unsigned NumIndirectDests;
 
   CallBrInst(const CallBrInst &BI);
+
+  /// Construct a CallBrInst given a range of arguments.
+  inline CallBrInst(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
+                    ArrayRef<BasicBlock *> IndirectDests,
+                    ArrayRef<Value *> Args, ArrayRef<OperandBundleDef> Bundles,
+                    int NumOperands, const Twine &NameStr,
+                    BasicBlock::iterator InsertBefore);
 
   /// Construct a CallBrInst given a range of arguments.
   ///
@@ -4078,10 +4466,35 @@ public:
                             BasicBlock *DefaultDest,
                             ArrayRef<BasicBlock *> IndirectDests,
                             ArrayRef<Value *> Args, const Twine &NameStr,
+                            BasicBlock::iterator InsertBefore) {
+    int NumOperands = ComputeNumOperands(Args.size(), IndirectDests.size());
+    return new (NumOperands)
+        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, std::nullopt,
+                   NumOperands, NameStr, InsertBefore);
+  }
+
+  static CallBrInst *Create(FunctionType *Ty, Value *Func,
+                            BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args, const Twine &NameStr,
                             Instruction *InsertBefore = nullptr) {
     int NumOperands = ComputeNumOperands(Args.size(), IndirectDests.size());
     return new (NumOperands)
         CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, std::nullopt,
+                   NumOperands, NameStr, InsertBefore);
+  }
+
+  static CallBrInst *
+  Create(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
+         ArrayRef<BasicBlock *> IndirectDests, ArrayRef<Value *> Args,
+         ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
+         BasicBlock::iterator InsertBefore) {
+    int NumOperands = ComputeNumOperands(Args.size(), IndirectDests.size(),
+                                         CountBundleInputs(Bundles));
+    unsigned DescriptorBytes = Bundles.size() * sizeof(BundleOpInfo);
+
+    return new (NumOperands, DescriptorBytes)
+        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, Bundles,
                    NumOperands, NameStr, InsertBefore);
   }
 
@@ -4128,9 +4541,27 @@ public:
   static CallBrInst *Create(FunctionCallee Func, BasicBlock *DefaultDest,
                             ArrayRef<BasicBlock *> IndirectDests,
                             ArrayRef<Value *> Args, const Twine &NameStr,
+                            BasicBlock::iterator InsertBefore) {
+    return Create(Func.getFunctionType(), Func.getCallee(), DefaultDest,
+                  IndirectDests, Args, NameStr, InsertBefore);
+  }
+
+  static CallBrInst *Create(FunctionCallee Func, BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args, const Twine &NameStr,
                             Instruction *InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), DefaultDest,
                   IndirectDests, Args, NameStr, InsertBefore);
+  }
+
+  static CallBrInst *Create(FunctionCallee Func, BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args,
+                            ArrayRef<OperandBundleDef> Bundles,
+                            const Twine &NameStr,
+                            BasicBlock::iterator InsertBefore) {
+    return Create(Func.getFunctionType(), Func.getCallee(), DefaultDest,
+                  IndirectDests, Args, Bundles, NameStr, InsertBefore);
   }
 
   static CallBrInst *Create(FunctionCallee Func, BasicBlock *DefaultDest,
@@ -4167,6 +4598,8 @@ public:
   /// The returned callbr instruction is identical to \p CBI in every way
   /// except that the operand bundles for the new instruction are set to the
   /// operand bundles in \p Bundles.
+  static CallBrInst *Create(CallBrInst *CBI, ArrayRef<OperandBundleDef> Bundles,
+                            BasicBlock::iterator InsertPt);
   static CallBrInst *Create(CallBrInst *CBI,
                             ArrayRef<OperandBundleDef> Bundles,
                             Instruction *InsertPt = nullptr);
@@ -4242,6 +4675,17 @@ CallBrInst::CallBrInst(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
                        ArrayRef<BasicBlock *> IndirectDests,
                        ArrayRef<Value *> Args,
                        ArrayRef<OperandBundleDef> Bundles, int NumOperands,
+                       const Twine &NameStr, BasicBlock::iterator InsertBefore)
+    : CallBase(Ty->getReturnType(), Instruction::CallBr,
+               OperandTraits<CallBase>::op_end(this) - NumOperands, NumOperands,
+               InsertBefore) {
+  init(Ty, Func, DefaultDest, IndirectDests, Args, Bundles, NameStr);
+}
+
+CallBrInst::CallBrInst(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
+                       ArrayRef<BasicBlock *> IndirectDests,
+                       ArrayRef<Value *> Args,
+                       ArrayRef<OperandBundleDef> Bundles, int NumOperands,
                        const Twine &NameStr, Instruction *InsertBefore)
     : CallBase(Ty->getReturnType(), Instruction::CallBr,
                OperandTraits<CallBase>::op_end(this) - NumOperands, NumOperands,
@@ -4271,6 +4715,7 @@ class ResumeInst : public Instruction {
   ResumeInst(const ResumeInst &RI);
 
   explicit ResumeInst(Value *Exn, Instruction *InsertBefore=nullptr);
+  explicit ResumeInst(Value *Exn, BasicBlock::iterator InsertBefore);
   ResumeInst(Value *Exn, BasicBlock *InsertAtEnd);
 
 protected:
@@ -4280,6 +4725,10 @@ protected:
   ResumeInst *cloneImpl() const;
 
 public:
+  static ResumeInst *Create(Value *Exn, BasicBlock::iterator InsertBefore) {
+    return new (1) ResumeInst(Exn, InsertBefore);
+  }
+
   static ResumeInst *Create(Value *Exn, Instruction *InsertBefore = nullptr) {
     return new(1) ResumeInst(Exn, InsertBefore);
   }
@@ -4342,6 +4791,14 @@ class CatchSwitchInst : public Instruction {
   /// This constructor can also autoinsert before another instruction.
   CatchSwitchInst(Value *ParentPad, BasicBlock *UnwindDest,
                   unsigned NumHandlers, const Twine &NameStr,
+                  BasicBlock::iterator InsertBefore);
+
+  /// Create a new switch instruction, specifying a
+  /// default destination.  The number of additional handlers can be specified
+  /// here to make memory allocation more efficient.
+  /// This constructor can also autoinsert before another instruction.
+  CatchSwitchInst(Value *ParentPad, BasicBlock *UnwindDest,
+                  unsigned NumHandlers, const Twine &NameStr,
                   Instruction *InsertBefore);
 
   /// Create a new switch instruction, specifying a
@@ -4366,6 +4823,13 @@ protected:
 
 public:
   void operator delete(void *Ptr) { return User::operator delete(Ptr); }
+
+  static CatchSwitchInst *Create(Value *ParentPad, BasicBlock *UnwindDest,
+                                 unsigned NumHandlers, const Twine &NameStr,
+                                 BasicBlock::iterator InsertBefore) {
+    return new CatchSwitchInst(ParentPad, UnwindDest, NumHandlers, NameStr,
+                               InsertBefore);
+  }
 
   static CatchSwitchInst *Create(Value *ParentPad, BasicBlock *UnwindDest,
                                  unsigned NumHandlers,
@@ -4506,6 +4970,11 @@ class CleanupPadInst : public FuncletPadInst {
 private:
   explicit CleanupPadInst(Value *ParentPad, ArrayRef<Value *> Args,
                           unsigned Values, const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore)
+      : FuncletPadInst(Instruction::CleanupPad, ParentPad, Args, Values,
+                       NameStr, InsertBefore) {}
+  explicit CleanupPadInst(Value *ParentPad, ArrayRef<Value *> Args,
+                          unsigned Values, const Twine &NameStr,
                           Instruction *InsertBefore)
       : FuncletPadInst(Instruction::CleanupPad, ParentPad, Args, Values,
                        NameStr, InsertBefore) {}
@@ -4516,6 +4985,14 @@ private:
                        NameStr, InsertAtEnd) {}
 
 public:
+  static CleanupPadInst *Create(Value *ParentPad, ArrayRef<Value *> Args,
+                                const Twine &NameStr,
+                                BasicBlock::iterator InsertBefore) {
+    unsigned Values = 1 + Args.size();
+    return new (Values)
+        CleanupPadInst(ParentPad, Args, Values, NameStr, InsertBefore);
+  }
+
   static CleanupPadInst *Create(Value *ParentPad,
                                 ArrayRef<Value *> Args = std::nullopt,
                                 const Twine &NameStr = "",
@@ -4548,6 +5025,11 @@ class CatchPadInst : public FuncletPadInst {
 private:
   explicit CatchPadInst(Value *CatchSwitch, ArrayRef<Value *> Args,
                         unsigned Values, const Twine &NameStr,
+                        BasicBlock::iterator InsertBefore)
+      : FuncletPadInst(Instruction::CatchPad, CatchSwitch, Args, Values,
+                       NameStr, InsertBefore) {}
+  explicit CatchPadInst(Value *CatchSwitch, ArrayRef<Value *> Args,
+                        unsigned Values, const Twine &NameStr,
                         Instruction *InsertBefore)
       : FuncletPadInst(Instruction::CatchPad, CatchSwitch, Args, Values,
                        NameStr, InsertBefore) {}
@@ -4558,6 +5040,14 @@ private:
                        NameStr, InsertAtEnd) {}
 
 public:
+  static CatchPadInst *Create(Value *CatchSwitch, ArrayRef<Value *> Args,
+                              const Twine &NameStr,
+                              BasicBlock::iterator InsertBefore) {
+    unsigned Values = 1 + Args.size();
+    return new (Values)
+        CatchPadInst(CatchSwitch, Args, Values, NameStr, InsertBefore);
+  }
+
   static CatchPadInst *Create(Value *CatchSwitch, ArrayRef<Value *> Args,
                               const Twine &NameStr = "",
                               Instruction *InsertBefore = nullptr) {
@@ -4597,6 +5087,8 @@ public:
 
 class CatchReturnInst : public Instruction {
   CatchReturnInst(const CatchReturnInst &RI);
+  CatchReturnInst(Value *CatchPad, BasicBlock *BB,
+                  BasicBlock::iterator InsertBefore);
   CatchReturnInst(Value *CatchPad, BasicBlock *BB, Instruction *InsertBefore);
   CatchReturnInst(Value *CatchPad, BasicBlock *BB, BasicBlock *InsertAtEnd);
 
@@ -4609,6 +5101,13 @@ protected:
   CatchReturnInst *cloneImpl() const;
 
 public:
+  static CatchReturnInst *Create(Value *CatchPad, BasicBlock *BB,
+                                 BasicBlock::iterator InsertBefore) {
+    assert(CatchPad);
+    assert(BB);
+    return new (2) CatchReturnInst(CatchPad, BB, InsertBefore);
+  }
+
   static CatchReturnInst *Create(Value *CatchPad, BasicBlock *BB,
                                  Instruction *InsertBefore = nullptr) {
     assert(CatchPad);
@@ -4682,6 +5181,8 @@ class CleanupReturnInst : public Instruction {
 private:
   CleanupReturnInst(const CleanupReturnInst &RI);
   CleanupReturnInst(Value *CleanupPad, BasicBlock *UnwindBB, unsigned Values,
+                    BasicBlock::iterator InsertBefore);
+  CleanupReturnInst(Value *CleanupPad, BasicBlock *UnwindBB, unsigned Values,
                     Instruction *InsertBefore = nullptr);
   CleanupReturnInst(Value *CleanupPad, BasicBlock *UnwindBB, unsigned Values,
                     BasicBlock *InsertAtEnd);
@@ -4695,6 +5196,16 @@ protected:
   CleanupReturnInst *cloneImpl() const;
 
 public:
+  static CleanupReturnInst *Create(Value *CleanupPad, BasicBlock *UnwindBB,
+                                   BasicBlock::iterator InsertBefore) {
+    assert(CleanupPad);
+    unsigned Values = 1;
+    if (UnwindBB)
+      ++Values;
+    return new (Values)
+        CleanupReturnInst(CleanupPad, UnwindBB, Values, InsertBefore);
+  }
+
   static CleanupReturnInst *Create(Value *CleanupPad,
                                    BasicBlock *UnwindBB = nullptr,
                                    Instruction *InsertBefore = nullptr) {
@@ -4792,6 +5303,7 @@ protected:
   UnreachableInst *cloneImpl() const;
 
 public:
+  explicit UnreachableInst(LLVMContext &C, BasicBlock::iterator InsertBefore);
   explicit UnreachableInst(LLVMContext &C, Instruction *InsertBefore = nullptr);
   explicit UnreachableInst(LLVMContext &C, BasicBlock *InsertAtEnd);
 
@@ -4837,6 +5349,14 @@ public:
   TruncInst(
     Value *S,                           ///< The value to be truncated
     Type *Ty,                           ///< The (smaller) type to truncate to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
+  /// Constructor with insert-before-instruction semantics
+  TruncInst(
+    Value *S,                           ///< The value to be truncated
+    Type *Ty,                           ///< The (smaller) type to truncate to
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
@@ -4872,6 +5392,14 @@ protected:
   ZExtInst *cloneImpl() const;
 
 public:
+  /// Constructor with insert-before-instruction semantics
+  ZExtInst(
+    Value *S,                           ///< The value to be zero extended
+    Type *Ty,                           ///< The type to zero extend to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
   /// Constructor with insert-before-instruction semantics
   ZExtInst(
     Value *S,                           ///< The value to be zero extended
@@ -4915,6 +5443,14 @@ public:
   SExtInst(
     Value *S,                           ///< The value to be sign extended
     Type *Ty,                           ///< The type to sign extend to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
+  /// Constructor with insert-before-instruction semantics
+  SExtInst(
+    Value *S,                           ///< The value to be sign extended
+    Type *Ty,                           ///< The type to sign extend to
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
@@ -4950,6 +5486,14 @@ protected:
   FPTruncInst *cloneImpl() const;
 
 public:
+  /// Constructor with insert-before-instruction semantics
+  FPTruncInst(
+    Value *S,                           ///< The value to be truncated
+    Type *Ty,                           ///< The type to truncate to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
   /// Constructor with insert-before-instruction semantics
   FPTruncInst(
     Value *S,                           ///< The value to be truncated
@@ -4993,6 +5537,14 @@ public:
   FPExtInst(
     Value *S,                           ///< The value to be extended
     Type *Ty,                           ///< The type to extend to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
+  /// Constructor with insert-before-instruction semantics
+  FPExtInst(
+    Value *S,                           ///< The value to be extended
+    Type *Ty,                           ///< The type to extend to
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
@@ -5028,6 +5580,14 @@ protected:
   UIToFPInst *cloneImpl() const;
 
 public:
+  /// Constructor with insert-before-instruction semantics
+  UIToFPInst(
+    Value *S,                           ///< The value to be converted
+    Type *Ty,                           ///< The type to convert to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
   /// Constructor with insert-before-instruction semantics
   UIToFPInst(
     Value *S,                           ///< The value to be converted
@@ -5071,6 +5631,14 @@ public:
   SIToFPInst(
     Value *S,                           ///< The value to be converted
     Type *Ty,                           ///< The type to convert to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
+  /// Constructor with insert-before-instruction semantics
+  SIToFPInst(
+    Value *S,                           ///< The value to be converted
+    Type *Ty,                           ///< The type to convert to
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
@@ -5106,6 +5674,14 @@ protected:
   FPToUIInst *cloneImpl() const;
 
 public:
+  /// Constructor with insert-before-instruction semantics
+  FPToUIInst(
+    Value *S,                           ///< The value to be converted
+    Type *Ty,                           ///< The type to convert to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
   /// Constructor with insert-before-instruction semantics
   FPToUIInst(
     Value *S,                           ///< The value to be converted
@@ -5149,6 +5725,14 @@ public:
   FPToSIInst(
     Value *S,                           ///< The value to be converted
     Type *Ty,                           ///< The type to convert to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
+  /// Constructor with insert-before-instruction semantics
+  FPToSIInst(
+    Value *S,                           ///< The value to be converted
+    Type *Ty,                           ///< The type to convert to
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
@@ -5179,6 +5763,14 @@ class IntToPtrInst : public CastInst {
 public:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
+
+  /// Constructor with insert-before-instruction semantics
+  IntToPtrInst(
+    Value *S,                           ///< The value to be converted
+    Type *Ty,                           ///< The type to convert to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
 
   /// Constructor with insert-before-instruction semantics
   IntToPtrInst(
@@ -5227,6 +5819,14 @@ protected:
   PtrToIntInst *cloneImpl() const;
 
 public:
+  /// Constructor with insert-before-instruction semantics
+  PtrToIntInst(
+    Value *S,                           ///< The value to be converted
+    Type *Ty,                           ///< The type to convert to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
   /// Constructor with insert-before-instruction semantics
   PtrToIntInst(
     Value *S,                           ///< The value to be converted
@@ -5282,6 +5882,14 @@ public:
   BitCastInst(
     Value *S,                           ///< The value to be casted
     Type *Ty,                           ///< The type to casted to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
+  /// Constructor with insert-before-instruction semantics
+  BitCastInst(
+    Value *S,                           ///< The value to be casted
+    Type *Ty,                           ///< The type to casted to
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
@@ -5318,6 +5926,14 @@ protected:
   AddrSpaceCastInst *cloneImpl() const;
 
 public:
+  /// Constructor with insert-before-instruction semantics
+  AddrSpaceCastInst(
+    Value *S,                           ///< The value to be casted
+    Type *Ty,                           ///< The type to casted to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
   /// Constructor with insert-before-instruction semantics
   AddrSpaceCastInst(
     Value *S,                           ///< The value to be casted
@@ -5460,6 +6076,8 @@ protected:
   FreezeInst *cloneImpl() const;
 
 public:
+  explicit FreezeInst(Value *S, const Twine &NameStr,
+                      BasicBlock::iterator InsertBefore);
   explicit FreezeInst(Value *S,
                       const Twine &NameStr = "",
                       Instruction *InsertBefore = nullptr);

@@ -5,7 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+//
+// This file implements the \c APINotesReader class that reads source
+// API notes data providing additional information about source code as
+// a separate input, such as the non-nil/nilable annotations for
+// method parameters.
+//
+//===----------------------------------------------------------------------===//
 #include "clang/APINotes/APINotesReader.h"
 #include "APINotesFormat.h"
 #include "llvm/ADT/Hashing.h"
@@ -81,9 +87,9 @@ public:
       auto version = ReadVersionTuple(Data);
       const auto *DataBefore = Data;
       (void)DataBefore;
+      auto UnversionedData = Derived::readUnversioned(Key, Data);
       assert(Data != DataBefore &&
              "Unversioned data reader didn't move pointer");
-      auto UnversionedData = Derived::readUnversioned(Key, Data);
       Result.push_back({version, UnversionedData});
     }
     return Result;
@@ -148,7 +154,7 @@ public:
   external_key_type GetExternalKey(internal_key_type Key) { return Key; }
 
   hash_value_type ComputeHash(internal_key_type Key) {
-    return llvm::hash_value(Key);
+    return llvm::djbHash(Key);
   }
 
   static bool EqualKey(internal_key_type LHS, internal_key_type RHS) {
@@ -1797,8 +1803,8 @@ APINotesReader::Create(std::unique_ptr<llvm::MemoryBuffer> InputBuffer,
 template <typename T>
 APINotesReader::VersionedInfo<T>::VersionedInfo(
     llvm::VersionTuple Version,
-    llvm::SmallVector<std::pair<llvm::VersionTuple, T>, 1> Results)
-    : Results(std::move(Results)) {
+    llvm::SmallVector<std::pair<llvm::VersionTuple, T>, 1> R)
+    : Results(std::move(R)) {
 
   assert(!Results.empty());
   assert(std::is_sorted(

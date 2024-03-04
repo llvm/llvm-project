@@ -1,5 +1,4 @@
 # RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck --strict-whitespace -check-prefix=GFX12 %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -mattr=-WavefrontSize32,+WavefrontSize64 -disassemble -show-encoding < %s | FileCheck --strict-whitespace -check-prefix=GFX12 %s
 
 # GFX12: ds_direct_load v10 wait_va_vdst:6 wait_vm_vsrc:0 ; encoding: [0x0a,0x00,0x16,0xce]
 0x0a,0x00,0x16,0xce

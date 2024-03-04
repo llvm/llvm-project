@@ -1585,6 +1585,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     static StringRef getGangNumKeyword() { return "num"; }
     static StringRef getGangDimKeyword() { return "dim"; }
     static StringRef getGangStaticKeyword() { return "static"; }
+    static StringRef getControlKeyword() { return "control"; }
 
     /// The number of private and reduction operands.
     unsigned getNumDataOperands();

@@ -144,5 +144,10 @@ func.func @entry() {
   bufferization.dealloc_tensor %filter2D_nhwc_CDCC : tensor<?x?x?x?xf32, #CDCC>
   bufferization.dealloc_tensor %in2D_nhwc_CCCC : tensor<?x?x?x?xf32, #CCCC>
   bufferization.dealloc_tensor %in2D_nhwc_CDCC : tensor<?x?x?x?xf32, #CDCC>
+
+  bufferization.dealloc_tensor %dense_ret : tensor<?x?x?x?xf32>
+  bufferization.dealloc_tensor %CCCC_ret : tensor<?x?x?x?xf32>
+  bufferization.dealloc_tensor %CDCC_ret : tensor<?x?x?x?xf32>
+
   return
 }

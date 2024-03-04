@@ -53,6 +53,14 @@ inline void registerDialects(mlir::DialectRegistry &registry) {
   registry.insert<FLANG_CODEGEN_DIALECT_LIST>();
 }
 
+// Register FIR Extensions
+inline void addFIRExtensions(mlir::DialectRegistry &registry,
+                             bool addFIRInlinerInterface = true) {
+  if (addFIRInlinerInterface)
+    addFIRInlinerExtension(registry);
+  addFIRToLLVMIRExtension(registry);
+}
+
 inline void loadNonCodegenDialects(mlir::MLIRContext &context) {
   mlir::DialectRegistry registry;
   registerNonCodegenDialects(registry);

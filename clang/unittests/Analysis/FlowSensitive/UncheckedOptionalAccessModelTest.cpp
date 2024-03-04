@@ -770,12 +770,17 @@ constexpr bool operator!=(const optional<T> &lhs, const optional<U> &rhs);
 
 template <typename T>
 constexpr bool operator==(const optional<T> &opt, nullopt_t);
+
+// C++20 and later do not define the following overloads because they are
+// provided by rewritten candidates instead.
+#if __cplusplus < 202002L
 template <typename T>
 constexpr bool operator==(nullopt_t, const optional<T> &opt);
 template <typename T>
 constexpr bool operator!=(const optional<T> &opt, nullopt_t);
 template <typename T>
 constexpr bool operator!=(nullopt_t, const optional<T> &opt);
+#endif  // __cplusplus < 202002L
 
 template <typename T, typename U>
 constexpr bool operator==(const optional<T> &opt, const U &value);
@@ -1289,6 +1294,15 @@ protected:
   template <typename FuncDeclMatcher>
   void ExpectDiagnosticsFor(std::string SourceCode,
                             FuncDeclMatcher FuncMatcher) {
+    // Run in C++17 and C++20 mode to cover differences in the AST between modes
+    // (e.g. C++20 can contain `CXXRewrittenBinaryOperator`).
+    for (const char *CxxMode : {"-std=c++17", "-std=c++20"})
+      ExpectDiagnosticsFor(SourceCode, FuncMatcher, CxxMode);
+  }
+
+  template <typename FuncDeclMatcher>
+  void ExpectDiagnosticsFor(std::string SourceCode, FuncDeclMatcher FuncMatcher,
+                            const char *CxxMode) {
     ReplaceAllOccurrences(SourceCode, "$ns", GetParam().NamespaceName);
     ReplaceAllOccurrences(SourceCode, "$optional", GetParam().TypeName);
 
@@ -1332,7 +1346,7 @@ protected:
                   llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
                 })
             .withASTBuildArgs(
-                {"-fsyntax-only", "-std=c++17", "-Wno-undefined-inline"})
+                {"-fsyntax-only", CxxMode, "-Wno-undefined-inline"})
             .withASTBuildVirtualMappedFiles(
                 tooling::FileContentMappings(Headers.begin(), Headers.end())),
         /*VerifyResults=*/[&Diagnostics](

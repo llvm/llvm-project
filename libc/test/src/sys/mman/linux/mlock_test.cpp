@@ -120,7 +120,7 @@ TEST(LlvmLibcMlockTest, MLock2) {
 
 TEST(LlvmLibcMlockTest, InvalidFlag) {
   size_t alloc_size = 128; // page size
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, alloc_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   ASSERT_ERRNO_SUCCESS();
@@ -151,8 +151,9 @@ TEST(LlvmLibcMlockTest, MLockAll) {
         Succeeds());
     auto retval = LIBC_NAMESPACE::mlockall(MCL_CURRENT);
     if (retval == -1) {
-      EXPECT_TRUE(libc_errno == ENOMEM || libc_errno == EPERM);
-      libc_errno = 0;
+      EXPECT_TRUE(LIBC_NAMESPACE::libc_errno == ENOMEM ||
+                  LIBC_NAMESPACE::libc_errno == EPERM);
+      LIBC_NAMESPACE::libc_errno = 0;
       return;
     }
     unsigned char vec;
@@ -164,8 +165,9 @@ TEST(LlvmLibcMlockTest, MLockAll) {
   {
     auto retval = LIBC_NAMESPACE::mlockall(MCL_FUTURE);
     if (retval == -1) {
-      EXPECT_TRUE(libc_errno == ENOMEM || libc_errno == EPERM);
-      libc_errno = 0;
+      EXPECT_TRUE(LIBC_NAMESPACE::libc_errno == ENOMEM ||
+                  LIBC_NAMESPACE::libc_errno == EPERM);
+      LIBC_NAMESPACE::libc_errno = 0;
       return;
     }
     PageHolder holder;
@@ -180,8 +182,9 @@ TEST(LlvmLibcMlockTest, MLockAll) {
   {
     auto retval = LIBC_NAMESPACE::mlockall(MCL_FUTURE | MCL_ONFAULT);
     if (retval == -1) {
-      EXPECT_TRUE(libc_errno == ENOMEM || libc_errno == EPERM);
-      libc_errno = 0;
+      EXPECT_TRUE(LIBC_NAMESPACE::libc_errno == ENOMEM ||
+                  LIBC_NAMESPACE::libc_errno == EPERM);
+      LIBC_NAMESPACE::libc_errno = 0;
       return;
     }
     PageHolder holder;

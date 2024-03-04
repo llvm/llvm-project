@@ -1911,7 +1911,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
     for (Instruction &BI : FI) {
       if (auto *DDI = dyn_cast<DbgDeclareInst>(&BI))
         Dbgs.push_back(DDI);
-      for (DPValue &DPV : BI.getDbgValueRange()) {
+      for (DPValue &DPV : DPValue::filter(BI.getDbgValueRange())) {
         if (DPV.getType() == DPValue::LocationType::Declare)
           DPVs.push_back(&DPV);
       }
@@ -1996,7 +1996,7 @@ static void insertDPValuesForPHIs(BasicBlock *BB,
   // Map existing PHI nodes to their DPValues.
   DenseMap<Value *, DPValue *> DbgValueMap;
   for (auto &I : *BB) {
-    for (auto &DPV : I.getDbgValueRange()) {
+    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
       for (Value *V : DPV.location_ops())
         if (auto *Loc = dyn_cast_or_null<PHINode>(V))
           DbgValueMap.insert({Loc, &DPV});
@@ -2044,7 +2044,7 @@ static void insertDPValuesForPHIs(BasicBlock *BB,
     auto InsertionPt = Parent->getFirstInsertionPt();
     assert(InsertionPt != Parent->end() && "Ill-formed basic block");
 
-    InsertionPt->DbgMarker->insertDPValue(NewDbgII, true);
+    Parent->insertDPValueBefore(NewDbgII, InsertionPt);
   }
 }
 
@@ -3369,11 +3369,17 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
 
   // Patch the replacement so that it is not more restrictive than the value
   // being replaced.
+  WithOverflowInst *UnusedWO;
+  // When replacing the result of a llvm.*.with.overflow intrinsic with a
+  // overflowing binary operator, nuw/nsw flags may no longer hold.
+  if (isa<OverflowingBinaryOperator>(ReplInst) &&
+      match(I, m_ExtractValue<0>(m_WithOverflowInst(UnusedWO))))
+    ReplInst->dropPoisonGeneratingFlags();
   // Note that if 'I' is a load being replaced by some operation,
   // for example, by an arithmetic operation, then andIRFlags()
   // would just erase all math flags from the original arithmetic
   // operation, which is clearly not wanted and not needed.
-  if (!isa<LoadInst>(I))
+  else if (!isa<LoadInst>(I))
     ReplInst->andIRFlags(I);
 
   // FIXME: If both the original and replacement value are part of the

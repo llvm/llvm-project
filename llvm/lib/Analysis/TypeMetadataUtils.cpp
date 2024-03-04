@@ -201,6 +201,26 @@ Constant *llvm::getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
   return nullptr;
 }
 
+std::pair<Function *, Constant *>
+llvm::getFunctionAtVTableOffset(GlobalVariable *GV, uint64_t Offset,
+                                Module &M) {
+  Constant *Ptr = getPointerAtOffset(GV->getInitializer(), Offset, M, GV);
+  if (!Ptr)
+    return std::pair<Function *, Constant *>(nullptr, nullptr);
+
+  auto C = Ptr->stripPointerCasts();
+  // Make sure this is a function or alias to a function.
+  auto Fn = dyn_cast<Function>(C);
+  auto A = dyn_cast<GlobalAlias>(C);
+  if (!Fn && A)
+    Fn = dyn_cast<Function>(A->getAliasee());
+
+  if (!Fn)
+    return std::pair<Function *, Constant *>(nullptr, nullptr);
+
+  return std::pair<Function *, Constant *>(Fn, C);
+}
+
 void llvm::replaceRelativePointerUsersWithZero(Function *F) {
   for (auto *U : F->users()) {
     auto *PtrExpr = dyn_cast<ConstantExpr>(U);

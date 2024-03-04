@@ -86,6 +86,15 @@ _add_capi_test_executable(mlir-capi-transform-test
     MLIRCAPITransformDialect
 )
 
+_add_capi_test_executable(mlir-capi-transform-interpreter-test
+  transform_interpreter.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIRegisterEverything
+    MLIRCAPITransformDialect
+    MLIRCAPITransformDialectTransforms
+)
+
 _add_capi_test_executable(mlir-capi-translation-test
   translation.c
   LINK_LIBS PRIVATE

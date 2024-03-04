@@ -28,6 +28,7 @@
 #include "src/__support/CPP/type_traits/is_convertible.h"
 #include "src/__support/CPP/type_traits/is_destructible.h"
 #include "src/__support/CPP/type_traits/is_enum.h"
+#include "src/__support/CPP/type_traits/is_fixed_point.h"
 #include "src/__support/CPP/type_traits/is_floating_point.h"
 #include "src/__support/CPP/type_traits/is_function.h"
 #include "src/__support/CPP/type_traits/is_integral.h"

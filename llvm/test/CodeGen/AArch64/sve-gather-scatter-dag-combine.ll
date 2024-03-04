@@ -95,7 +95,7 @@ define <vscale x 16 x i8> @narrow_i64_gather_index_i8_zext(ptr %out, ptr %in, <v
   %wide.load = load <vscale x 16 x i8>, ptr %2, align 1
   %3 = zext <vscale x 16 x i8> %wide.load to <vscale x 16 x i64>
   %4 = getelementptr inbounds i8, ptr %in, <vscale x 16 x i64> %3
-  %wide.masked.gather = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> %4, i32 1, <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i32 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer), <vscale x 16 x i8> undef)
+  %wide.masked.gather = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> %4, i32 1, <vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> undef)
   ret <vscale x 16 x i8> %wide.masked.gather
 }
 
@@ -121,7 +121,7 @@ define <vscale x 16 x i8> @narrow_i64_gather_index_i8_sext(ptr %out, ptr %in, <v
   %wide.load = load <vscale x 16 x i8>, ptr %2, align 1
   %3 = sext <vscale x 16 x i8> %wide.load to <vscale x 16 x i64>
   %4 = getelementptr inbounds i8, ptr %in, <vscale x 16 x i64> %3
-  %wide.masked.gather = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> %4, i32 1, <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i32 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer), <vscale x 16 x i8> undef)
+  %wide.masked.gather = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> %4, i32 1, <vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> undef)
   ret <vscale x 16 x i8> %wide.masked.gather
 }
 
@@ -141,7 +141,7 @@ define <vscale x 8 x i16> @narrow_i64_gather_index_i16_zext(ptr %out, ptr %in, <
   %wide.load = load <vscale x 8 x i16>, ptr %2, align 1
   %3 = zext <vscale x 8 x i16> %wide.load to <vscale x 8 x i64>
   %4 = getelementptr inbounds i16, ptr %in, <vscale x 8 x i64> %3
-  %wide.masked.gather = call <vscale x 8 x i16> @llvm.masked.gather.nxv8i16.nxv8p0(<vscale x 8 x ptr> %4, i32 1, <vscale x 8 x i1> shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i32 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer), <vscale x 8 x i16> undef)
+  %wide.masked.gather = call <vscale x 8 x i16> @llvm.masked.gather.nxv8i16.nxv8p0(<vscale x 8 x ptr> %4, i32 1, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> undef)
   ret <vscale x 8 x i16> %wide.masked.gather
 }
 
@@ -161,7 +161,7 @@ define <vscale x 8 x i16> @narrow_i64_gather_index_i16_sext(ptr %out, ptr %in, <
   %wide.load = load <vscale x 8 x i16>, ptr %2, align 1
   %3 = sext <vscale x 8 x i16> %wide.load to <vscale x 8 x i64>
   %4 = getelementptr inbounds i16, ptr %in, <vscale x 8 x i64> %3
-  %wide.masked.gather = call <vscale x 8 x i16> @llvm.masked.gather.nxv8i16.nxv8p0(<vscale x 8 x ptr> %4, i32 1, <vscale x 8 x i1> shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i32 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer), <vscale x 8 x i16> undef)
+  %wide.masked.gather = call <vscale x 8 x i16> @llvm.masked.gather.nxv8i16.nxv8p0(<vscale x 8 x ptr> %4, i32 1, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> undef)
   ret <vscale x 8 x i16> %wide.masked.gather
 }
 
@@ -177,7 +177,7 @@ define <vscale x 4 x i32> @no_narrow_i64_gather_index_i32(ptr %out, ptr %in, <vs
   %wide.load = load <vscale x 4 x i32>, ptr %2, align 1
   %3 = zext <vscale x 4 x i32> %wide.load to <vscale x 4 x i64>
   %4 = getelementptr inbounds i32, ptr %in, <vscale x 4 x i64> %3
-  %wide.masked.gather = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %4, i32 1, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> undef)
+  %wide.masked.gather = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %4, i32 1, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> undef)
   ret <vscale x 4 x i32> %wide.masked.gather
 }
 
@@ -192,7 +192,7 @@ define <vscale x 2 x i64> @no_narrow_i64_gather_index_i64(ptr %out, ptr %in, <vs
   %2 = bitcast ptr %1 to ptr
   %wide.load = load <vscale x 2 x i64>, ptr %2, align 1
   %3 = getelementptr inbounds i64, ptr %in, <vscale x 2 x i64> %wide.load
-  %wide.masked.gather = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> %3, i32 1, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i64> undef)
+  %wide.masked.gather = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> %3, i32 1, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> undef)
   ret <vscale x 2 x i64> %wide.masked.gather
 }
 
