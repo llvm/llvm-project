@@ -298,6 +298,9 @@ Bug Fixes to C++ Support
   Fixes (`#82941 <https://github.com/llvm/llvm-project/issues/82941>`_),
   (`#42411 <https://github.com/llvm/llvm-project/issues/42411>`_), and
   (`#18121 <https://github.com/llvm/llvm-project/issues/18121>`_).
+- Fixed a bug and crashes in constant evaluation when trying to access a
+  captured ``this`` pointer in a lambda with an explicit object parameter.
+  Fixes (`#80997 <https://github.com/llvm/llvm-project/issues/80997>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
