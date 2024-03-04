@@ -85,7 +85,7 @@ bool FormatToken::isTypeName(bool IsCpp) const {
 }
 
 bool FormatToken::isTypeOrIdentifier(bool IsCpp) const {
-  return isTypeName(IsCpp) || Tok.isOneOf(tok::kw_auto, tok::identifier);
+  return isTypeName(IsCpp) || isOneOf(tok::kw_auto, tok::identifier);
 }
 
 bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {

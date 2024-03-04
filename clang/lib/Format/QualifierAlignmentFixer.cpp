@@ -614,14 +614,14 @@ void prepareLeftRightOrderingForQualifierAlignmentFixer(
   }
 }
 
-bool LeftRightQualifierAlignmentFixer::isQualifierOrType(
-    const FormatToken *const Tok, bool IsCpp) {
+bool LeftRightQualifierAlignmentFixer::isQualifierOrType(const FormatToken *Tok,
+                                                         bool IsCpp) {
   return Tok &&
          (Tok->isTypeName(IsCpp) || Tok->is(tok::kw_auto) || isQualifier(Tok));
 }
 
 bool LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-    const FormatToken *const Tok, const std::vector<tok::TokenKind> &Qualifiers,
+    const FormatToken *Tok, const std::vector<tok::TokenKind> &Qualifiers,
     bool IsCpp) {
   return Tok && (Tok->isTypeName(IsCpp) || Tok->is(tok::kw_auto) ||
                  isConfiguredQualifier(Tok, Qualifiers));
