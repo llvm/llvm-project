@@ -7531,19 +7531,15 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     // vector lengths may be different.
     if (CallerFD && Context.getTargetInfo().hasFeature("sme") && !IsBuiltin) {
       ArmStreamingType CallerFnType = getArmStreamingFnType(CallerFD);
-      if (CallerFnType != ArmStreaming &&
-          CallerFnType != ArmStreamingCompatible) {
-        if (IsCalleeStreaming && AnyScalableArgsOrRet)
-          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
-      } else if (CallerFnType == ArmStreaming && !IsCalleeStreaming &&
-                 !IsCalleeStreamingCompatible) {
-        if (AnyScalableArgsOrRet)
-          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
-      } else if (CallerFnType == ArmStreamingCompatible) {
-        if ((IsCalleeStreaming || !IsCalleeStreamingCompatible) &&
-            AnyScalableArgsOrRet)
-          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
-      }
+      if ((CallerFnType != ArmStreaming &&
+           CallerFnType != ArmStreamingCompatible && IsCalleeStreaming &&
+           AnyScalableArgsOrRet) ||
+          (CallerFnType == ArmStreaming && !IsCalleeStreaming &&
+           !IsCalleeStreamingCompatible && AnyScalableArgsOrRet) ||
+          (CallerFnType == ArmStreamingCompatible &&
+           (IsCalleeStreaming || !IsCalleeStreamingCompatible) &&
+           AnyScalableArgsOrRet))
+        Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
     }
 
     // If the callee uses AArch64 SME ZA state but the caller doesn't define
