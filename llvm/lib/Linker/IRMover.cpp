@@ -1606,6 +1606,11 @@ Error IRLinker::run() {
   // Loop over all of the linked values to compute type mappings.
   computeTypeMapping();
 
+  // Convert module level attributes to function level attributes because
+  // after merging modules the attributes might change and would have different
+  // effect on the functions as the original module would have.
+  CopyModuleAttrToFunctions(*SrcM);
+
   std::reverse(Worklist.begin(), Worklist.end());
   while (!Worklist.empty()) {
     GlobalValue *GV = Worklist.back();
