@@ -8,17 +8,28 @@
 // if the *declaration* is '__restrict'; otherwise, 'this' is '__restrict' if
 // the *definition* is '__restrict'.
 
+#define Restrict(C) static_assert(__is_same(decltype(this), C* __restrict))
+#define NotRestrict(C) static_assert(__is_same(decltype(this), C*) || __is_same(decltype(this), const C*))
+
+#if MSVC
+# define RestrictIfMSVC Restrict
+# define RestrictIfGCC NotRestrict
+#else
+# define RestrictIfMSVC NotRestrict
+# define RestrictIfGCC Restrict
+#endif
+
 struct C {
   void f() __restrict {
-    static_assert(__is_same(decltype(this), C *__restrict));
+    Restrict(C);
     (void) [this]() {
-      static_assert(__is_same(decltype(this), C *__restrict));
-      (void) [this]() { static_assert(__is_same(decltype(this), C *__restrict)); };
+      Restrict(C);
+      (void) [this]() { Restrict(C); };
 
       // By-value capture means 'this' is now a different object; do not
       // make it __restrict.
-      (void) [*this]() { static_assert(__is_same(decltype(this), const C *)); };
-      (void) [*this]() mutable { static_assert(__is_same(decltype(this), C *)); };
+      (void) [*this]() { RestrictIfMSVC(C); };
+      (void) [*this]() mutable { RestrictIfMSVC(C); };
     };
   }
 
@@ -29,15 +40,15 @@ struct C {
 
 template <typename T> struct TC {
   void f() __restrict {
-    static_assert(__is_same(decltype(this), TC<int> *__restrict));
+    Restrict(TC);
     (void) [this]() {
-      static_assert(__is_same(decltype(this), TC<int> *__restrict));
-      (void) [this]() { static_assert(__is_same(decltype(this), TC<int> *__restrict)); };
+      Restrict(TC);
+      (void) [this]() { Restrict(TC); };
 
       // By-value capture means 'this' is now a different object; do not
       // make it __restrict.
-      (void) [*this]() { static_assert(__is_same(decltype(this), const TC<int> *)); };
-      (void) [*this]() mutable { static_assert(__is_same(decltype(this), TC<int> *)); };
+      (void) [*this]() { RestrictIfMSVC(TC); };
+      (void) [*this]() mutable { RestrictIfMSVC(TC); };
     };
   }
 
@@ -49,58 +60,57 @@ template <typename T> struct TC {
 // =========
 
 void C::a() __restrict {
-  static_assert(__is_same(decltype(this), C *__restrict));
+  Restrict(C);
   (void) [this]() {
-    static_assert(__is_same(decltype(this), C *__restrict));
-    (void) [this]() { static_assert(__is_same(decltype(this), C *__restrict)); };
+    Restrict(C);
+    (void) [*this]() { RestrictIfMSVC(C); };
   };
 }
 
 template <typename T>
 void TC<T>::a() __restrict {
-  static_assert(__is_same(decltype(this), TC<int> *__restrict));
+  Restrict(TC);
   (void) [this]() {
-    static_assert(__is_same(decltype(this), TC<int> *__restrict));
-    (void) [this]() { static_assert(__is_same(decltype(this), TC<int> *__restrict)); };
+    Restrict(TC);
+    (void) [*this]() { RestrictIfMSVC(TC); };
   };
 }
 
 // =========
 
 void C::b() {
-  static_assert(__is_same(decltype(this), C *__restrict) == MSVC);
+  RestrictIfMSVC(C);
   (void) [this]() {
-    static_assert(__is_same(decltype(this), C *__restrict) == MSVC);
-    (void) [this]() { static_assert(__is_same(decltype(this), C *__restrict) == MSVC); };
+    RestrictIfMSVC(C);
+    (void) [*this]() { RestrictIfMSVC(C); };
   };
 }
 
 template <typename T>
 void TC<T>::b() {
-  static_assert(__is_same(decltype(this), TC<int> *__restrict) == MSVC);
+  RestrictIfMSVC(TC);
   (void) [this]() {
-    static_assert(__is_same(decltype(this), TC<int> *__restrict)  == MSVC);
-    (void) [this]() { static_assert(__is_same(decltype(this), TC<int> *__restrict) == MSVC); };
+    RestrictIfMSVC(TC);
+    (void) [*this]() { RestrictIfMSVC(TC); };
   };
 }
 
 // =========
 
 void C::c() __restrict {
-  static_assert(__is_same(decltype(this), C *__restrict) == !MSVC);
+  RestrictIfGCC(C);
   (void) [this]() {
-    static_assert(__is_same(decltype(this), C *__restrict) == !MSVC);
-    (void) [this]() { static_assert(__is_same(decltype(this), C *__restrict) == !MSVC); };
+    RestrictIfGCC(C);
+    (void) [*this]() { NotRestrict(C); };
   };
 }
 
-
 template <typename T>
 void TC<T>::c() __restrict {
-  static_assert(__is_same(decltype(this), TC<int> *__restrict) == !MSVC);
+  RestrictIfGCC(TC);
   (void) [this]() {
-    static_assert(__is_same(decltype(this), TC<int> *__restrict)  == !MSVC);
-    (void) [this]() { static_assert(__is_same(decltype(this), TC<int> *__restrict) == !MSVC); };
+    RestrictIfGCC(TC);
+    (void) [*this]() { NotRestrict(TC); };
   };
 }
 
