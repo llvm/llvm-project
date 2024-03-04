@@ -310,6 +310,7 @@ Bug Fixes to C++ Support
   be destructed prematurely. This fixes a pair of Chromium that were brought to
   our attention by an attempt to fix in
   `#77703 <https://github.com/llvm/llvm-project/pull/77703>`_.
+  Fixes '#83611 <https://github.com/llvm/llvm-project/pull/83611>`_.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
