@@ -126,8 +126,8 @@ void ReadCommonTypeInfo(const uint8_t *&Data, CommonTypeInfo &Info) {
   unsigned SwiftBridgeLength =
       endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
   if (SwiftBridgeLength > 0) {
-    Info.setSwiftBridge(std::optional<std::string>(std::string(
-        reinterpret_cast<const char *>(Data), SwiftBridgeLength - 1)));
+    Info.setSwiftBridge(std::string(reinterpret_cast<const char *>(Data),
+                                    SwiftBridgeLength - 1));
     Data += SwiftBridgeLength - 1;
   }
 

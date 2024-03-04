@@ -847,7 +847,7 @@ public:
                          StringRef APIName) {
     convertCommonEntity(Common, Info, APIName);
     if (Common.SwiftBridge)
-      Info.setSwiftBridge(std::make_optional(std::string(*Common.SwiftBridge)));
+      Info.setSwiftBridge(std::string(*Common.SwiftBridge));
     Info.setNSErrorDomain(Common.NSErrorDomain);
   }
 
