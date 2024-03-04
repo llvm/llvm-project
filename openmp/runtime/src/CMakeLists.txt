@@ -113,6 +113,10 @@ else()
     else()
       libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S) # Unix assembly file
     endif()
+    # Apple Silicon macOS doesn't have certain functions. We need to implement them.
+    if(APPLE AND ${LIBOMP_ARCH} STREQUAL "aarch64")
+      libomp_append(LIBOMP_GNUASMFILES z_macOS_util.cpp)
+    endif()
   endif()
   libomp_append(LIBOMP_CXXFILES thirdparty/ittnotify/ittnotify_static.cpp LIBOMP_USE_ITT_NOTIFY)
   libomp_append(LIBOMP_CXXFILES kmp_debugger.cpp LIBOMP_USE_DEBUGGER)
