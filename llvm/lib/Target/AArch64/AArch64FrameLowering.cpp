@@ -1657,7 +1657,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
   // If the function contains streaming mode changes, we expect the first
   // instruction of MBB to be a CNTD. Move past this instruction if found.
-  if (AFI->hasStreamingModeChanges()) {
+  if (AFI->hasStreamingModeChanges() && F.needsUnwindTableEntry()) {
     assert(MBBI->getOpcode() == AArch64::CNTD_XPiI && "Unexpected instruction");
     MBBI = std::next(MBBI);
   }
@@ -3348,7 +3348,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   // Increase the callee-saved stack size if the function has streaming mode
   // changes, as we will need to spill the value of the VG register.
-  if (AFI->hasStreamingModeChanges())
+  const Function &F = MF.getFunction();
+  if (AFI->hasStreamingModeChanges() && F.needsUnwindTableEntry())
     CSStackSize += 8;
 
   // Save number of saved regs, so we can easily update CSStackSize later.
@@ -3488,7 +3489,8 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   // Insert VG into the list of CSRs, immediately before LR if saved.
-  if (AFI->hasStreamingModeChanges()) {
+  const Function &F = MF.getFunction();
+  if (AFI->hasStreamingModeChanges() && F.needsUnwindTableEntry()) {
     auto VGInfo = CalleeSavedInfo(AArch64::VG);
     VGInfo.setRestored(false);
     bool InsertBeforeLR = false;
