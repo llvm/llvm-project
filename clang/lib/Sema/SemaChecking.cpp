@@ -2237,7 +2237,7 @@ static bool SemaBuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
   }
 
   if (TheCall->getNumArgs() > 1) {
-    ExprResult Arg1Res = S.DefaultLvalueConversion(TheCall->getArg(1));
+    ExprResult Arg1Res = S.UsualUnaryConversions(TheCall->getArg(1));
     if (Arg1Res.isInvalid())
       return true;
 
@@ -2245,12 +2245,6 @@ static bool SemaBuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
     TheCall->setArg(1, Arg1);
 
     QualType Arg1Ty = Arg1->getType();
-
-    if (S.Context.isPromotableIntegerType(Arg1Ty)) {
-      Arg1Ty = S.Context.getPromotedIntegerType(Arg1Ty);
-      Arg1 = S.ImpCastExprToType(Arg1, Arg1Ty, CK_IntegralCast).get();
-      TheCall->setArg(1, Arg1);
-    }
 
     if (!Arg1Ty->isSpecificBuiltinType(BuiltinType::Int)) {
       S.Diag(Arg1->getBeginLoc(), diag::err_builtin_invalid_arg_type)

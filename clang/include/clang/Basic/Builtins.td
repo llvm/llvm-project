@@ -660,8 +660,6 @@ def Clz : Builtin, BitShort_Int_Long_LongLongTemplate {
   let Prototype = "int(unsigned T)";
 }
 
-// FIXME: Add int clzimax(uintmax_t)
-
 def Clzg : Builtin {
   let Spellings = ["__builtin_clzg"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -673,8 +671,6 @@ def Ctz : Builtin, BitShort_Int_Long_LongLongTemplate {
   let Attributes = [NoThrow, Const, Constexpr];
   let Prototype = "int(unsigned T)";
 }
-
-// FIXME: Add int ctzimax(uintmax_t)
 
 def Ctzg : Builtin {
   let Spellings = ["__builtin_ctzg"];
