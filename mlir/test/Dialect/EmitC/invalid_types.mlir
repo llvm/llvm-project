@@ -65,3 +65,19 @@ func.func @illegal_array_unranked(
     %arg0: !emitc.array<*xi32>
 ) {
 }
+
+// -----
+
+func.func @illegal_array_with_array_element_type(
+    // expected-error @+1 {{invalid array element type}}
+    %arg0: !emitc.array<4x!emitc.array<4xi32>>
+) {
+}
+
+// -----
+
+func.func @illegal_array_with_tensor_element_type(
+    // expected-error @+1 {{invalid array element type}}
+    %arg0: !emitc.array<4xtensor<4xi32>>
+) {
+}

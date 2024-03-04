@@ -80,6 +80,14 @@ func.func @dense_template_argument(%arg : i32) {
 
 // -----
 
+func.func @array_result() {
+    // expected-error @+1 {{'emitc.call_opaque' op cannot return array type}}
+    emitc.call_opaque "array_result"() : () -> !emitc.array<4xi32>
+    return
+}
+
+// -----
+
 func.func @empty_operator(%arg : i32) {
     // expected-error @+1 {{'emitc.apply' op applicable operator must not be empty}}
     %2 = emitc.apply ""(%arg) : (i32) -> !emitc.ptr<i32>
@@ -124,6 +132,14 @@ func.func @var_attribute_return_type_2() {
 func.func @cast_tensor(%arg : tensor<f32>) {
     // expected-error @+1 {{'emitc.cast' op operand type 'tensor<f32>' and result type 'tensor<f32>' are cast incompatible}}
     %1 = emitc.cast %arg: tensor<f32> to tensor<f32>
+    return
+}
+
+// -----
+
+func.func @cast_array(%arg : !emitc.array<4xf32>) {
+    // expected-error @+1 {{'emitc.cast' op operand type '!emitc.array<4xf32>' and result type '!emitc.array<4xf32>' are cast incompatible}}
+    %1 = emitc.cast %arg: !emitc.array<4xf32> to !emitc.array<4xf32>
     return
 }
 
@@ -235,6 +251,15 @@ func.func @test_assign_type_mismatch(%arg1: f32) {
 
 // -----
 
+func.func @test_assign_to_array(%arg1: !emitc.array<4xi32>) {
+  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<4xi32>
+  // expected-error @+1 {{'emitc.assign' op cannot assign to array type}}
+  emitc.assign %arg1 : !emitc.array<4xi32> to %v : !emitc.array<4xi32>
+  return
+}
+
+// -----
+
 func.func @test_expression_no_yield() -> i32 {
   // expected-error @+1 {{'emitc.expression' op must yield a value at termination}}
   %r = emitc.expression : i32 {
@@ -309,6 +334,13 @@ emitc.func @resulterror() -> i32 {
 emitc.func @return_type_mismatch() -> i32 {
   %0 = emitc.call_opaque "foo()"(): () -> f32
   emitc.return %0 : f32  // expected-error {{type of the return operand ('f32') doesn't match function result type ('i32') in function @return_type_mismatch}}
+}
+
+// -----
+
+// expected-error@+1 {{'emitc.func' op cannot return array type}}
+emitc.func @return_type_array(%arg : !emitc.array<4xi32>) -> !emitc.array<4xi32> {
+  emitc.return %arg : !emitc.array<4xi32>
 }
 
 // -----
