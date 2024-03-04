@@ -66,6 +66,8 @@ module {
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 20
+    // CHECK-NEXT: dim = ( 8, 8 )
+    // CHECK-NEXT: lvl = ( 8, 8 )
     // CHECK-NEXT: pos[1] : ( 0, 5, 5, 6, 7, 8, 12, 16, 20,
     // CHECK-NEXT: crd[1] : ( 0, 1, 2, 6, 7, 2, 3, 4, 1, 2, 6, 7, 1, 2, 6, 7, 1, 2, 6, 7,
     // CHECK-NEXT: values : ( 1, 39, 52, 45, 51, 16, 25, 36, 117, 158, 135, 144, 156, 318, 301, 324, 208, 430, 405, 436,
