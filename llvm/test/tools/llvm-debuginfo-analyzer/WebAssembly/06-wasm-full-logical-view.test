@@ -19,11 +19,11 @@
 ; operands, linkage names, etc.
 
 ; RUN: llvm-mc -arch=wasm32 -filetype=obj \
-; RUN:         %p/Inputs/test-clang.s -o test-clang.wasm
+; RUN:         %p/Inputs/test-clang.s -o %t.test-clang.wasm
 
 ; RUN: llvm-debuginfo-analyzer --attribute=all \
 ; RUN:                         --print=all \
-; RUN:                         test-clang.wasm 2>&1 | \
+; RUN:                         %t.test-clang.wasm 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
 ; ONE:      Logical View:
