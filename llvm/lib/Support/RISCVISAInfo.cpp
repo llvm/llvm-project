@@ -95,6 +95,8 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"xsfvfwmaccqqq", {1, 0}},
     {"xsfvqmaccdod", {1, 0}},
     {"xsfvqmaccqoq", {1, 0}},
+    {"xsifivecdiscarddlone", {1, 0}},
+    {"xsifivecflushdlone", {1, 0}},
     {"xtheadba", {1, 0}},
     {"xtheadbb", {1, 0}},
     {"xtheadbs", {1, 0}},
@@ -258,7 +260,7 @@ static void PrintExtension(StringRef Name, StringRef Version,
                            StringRef Description) {
   outs().indent(4);
   unsigned VersionWidth = Description.empty() ? 0 : 10;
-  outs() << left_justify(Name, 20) << left_justify(Version, VersionWidth)
+  outs() << left_justify(Name, 21) << left_justify(Version, VersionWidth)
          << Description << "\n";
 }
 

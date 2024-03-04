@@ -808,3 +808,25 @@ let Predicates = [HasVendorXSfvfnrclipxfqf] in {
   defm : VPatVFNRCLIP<"vfnrclip_xu_f_qf", "VFNRCLIP_XU_F_QF">;
   defm : VPatVFNRCLIP<"vfnrclip_x_f_qf", "VFNRCLIP_X_F_QF">;
 }
+
+let Predicates = [HasVendorXSiFivecdiscarddlone] in {
+  let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
+      DecoderNamespace = "XSiFivecdiscarddlone" in
+  def SF_CDISCARD_D_L1
+      : RVInstR<0b1111110, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1),
+                "cdiscard.d.l1", "$rs1">, Sched<[]> {
+    let rd = 0;
+    let rs2 = 0b00010;
+  }
+} // Predicates = [HasVendorXSifivecdiscarddlone]
+
+let Predicates = [HasVendorXSiFivecflushdlone] in {
+  let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
+      DecoderNamespace = "XSiFivecflushdlone" in
+  def SF_CFLUSH_D_L1
+      : RVInstR<0b1111110, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1),
+                "cflush.d.l1", "$rs1">, Sched<[]> {
+    let rd = 0;
+    let rs2 = 0b00000;
+  }
+} // Predicates = [HasVendorXSifivecflushdlone]

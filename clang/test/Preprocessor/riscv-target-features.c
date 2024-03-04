@@ -61,6 +61,8 @@
 // CHECK-NOT: __riscv_xsfvfwmaccqqq {{.*$}}
 // CHECK-NOT: __riscv_xsfqmaccdod {{.*$}}
 // CHECK-NOT: __riscv_xsfvqmaccqoq {{.*$}}
+// CHECK-NOT: __riscv_sifivecdiscarddlone {{.*$}}
+// CHECK-NOT: __riscv_sifivecflushdlone {{.*$}}
 // CHECK-NOT: __riscv_xtheadba {{.*$}}
 // CHECK-NOT: __riscv_xtheadbb {{.*$}}
 // CHECK-NOT: __riscv_xtheadbs {{.*$}}
@@ -556,6 +558,22 @@
 // RUN:   -march=rv64ixsfvqmaccqoq -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVQMACCQOQ-EXT %s
 // CHECK-XSFVQMACCQOQ-EXT: __riscv_xsfvqmaccqoq 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ixsifivecdiscarddlone -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSIFIVECDISCARDDLONE-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ixsifivecdiscarddlone -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSIFIVECDISCARDDLONE-EXT %s
+// CHECK-XSIFIVECDISCARDDLONE-EXT: __riscv_xsifivecdiscarddlone 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ixsifivecflushdlone -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSIFIVECFLUSHDLONE-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ixsifivecflushdlone -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSIFIVECFLUSHDLONE-EXT %s
+// CHECK-XSIFIVECFLUSHDLONE-EXT: __riscv_xsifivecflushdlone 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32ixtheadba -E -dM %s \
