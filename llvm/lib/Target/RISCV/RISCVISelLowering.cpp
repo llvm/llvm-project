@@ -4057,8 +4057,7 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
         MVT InterVT =
             MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
         auto InterVec = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, InterVT,
-                                    DAG.getUNDEF(InterVT), Lo,
-                                    DAG.getRegister(RISCV::X0, MVT::i32));
+                                    DAG.getUNDEF(InterVT), Lo, NewVL);
         return DAG.getNode(ISD::BITCAST, DL, VT, InterVec);
       }
     }
