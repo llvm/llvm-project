@@ -1827,9 +1827,9 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
         return left.first < right.first;
       }));
 
-  Selected = Results.size();
+  Selected = std::nullopt;
   for (unsigned i = 0, n = Results.size(); i != n; ++i) {
-    if (Version && Results[i].first >= Version) {
+    if (!Version.empty() && Results[i].first >= Version) {
       // If the current version is "4", then entries for 4 are better than
       // entries for 5, but both are valid. Because entries are sorted, we get
       // that behavior by picking the first match.
@@ -1841,7 +1841,7 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
   // If we didn't find a match but we have an unversioned result, use the
   // unversioned result. This will always be the first entry because we encode
   // it as version 0.
-  if (Selected == Results.size() && Results[0].first.empty())
+  if (!Selected && Results[0].first.empty())
     Selected = 0;
 }
 

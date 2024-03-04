@@ -61,12 +61,12 @@ public:
     llvm::SmallVector<std::pair<llvm::VersionTuple, T>, 1> Results;
 
     /// The index of the result that is the "selected" set based on the desired
-    /// Swift version, or \c Results.size() if nothing matched.
-    unsigned Selected;
+    /// Swift version, or null if nothing matched.
+    std::optional<unsigned> Selected;
 
   public:
     /// Form an empty set of versioned information.
-    VersionedInfo(std::nullopt_t) : Selected(0) {}
+    VersionedInfo(std::nullopt_t) : Selected(std::nullopt) {}
 
     /// Form a versioned info set given the desired version and a set of
     /// results.
@@ -75,17 +75,14 @@ public:
         llvm::SmallVector<std::pair<llvm::VersionTuple, T>, 1> Results);
 
     /// Retrieve the selected index in the result set.
-    std::optional<unsigned> getSelected() const {
-      if (Selected == Results.size())
-        return std::nullopt;
-      return Selected;
-    }
+    std::optional<unsigned> getSelected() const { return Selected; }
 
     /// Return the number of versioned results we know about.
     unsigned size() const { return Results.size(); }
 
     /// Access all versioned results.
     const std::pair<llvm::VersionTuple, T> *begin() const {
+      assert(!Results.empty());
       return Results.begin();
     }
     const std::pair<llvm::VersionTuple, T> *end() const {
@@ -94,6 +91,7 @@ public:
 
     /// Access a specific versioned result.
     const std::pair<llvm::VersionTuple, T> &operator[](unsigned index) const {
+      assert(index < Results.size());
       return Results[index];
     }
   };
