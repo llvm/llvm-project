@@ -619,7 +619,8 @@ class GroupBuiltin<string name, Op operation> {
                              !eq(operation, OpGroupNonUniformShuffleDown),
                              !eq(operation, OpGroupBroadcast),
                              !eq(operation, OpGroupNonUniformBroadcast),
-                             !eq(operation, OpGroupNonUniformBroadcastFirst));
+                             !eq(operation, OpGroupNonUniformBroadcastFirst),
+                             !eq(operation, OpGroupNonUniformRotateKHR));
   bit HasBoolArg = !or(!and(IsAllOrAny, !eq(IsAllEqual, false)), IsBallot, IsLogical);
 }
 
@@ -876,6 +877,10 @@ defm : DemangledGroupBuiltin<"group_non_uniform_reduce_logical_xors", WorkOrSub,
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_inclusive_logical_xors", WorkOrSub, OpGroupNonUniformLogicalXor>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_logical_xors", WorkOrSub, OpGroupNonUniformLogicalXor>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_logical_xor", WorkOrSub, OpGroupNonUniformLogicalXor>;
+
+// cl_khr_subgroup_rotate / SPV_KHR_subgroup_rotate
+defm : DemangledGroupBuiltin<"group_rotate", OnlySub, OpGroupNonUniformRotateKHR>;
+defm : DemangledGroupBuiltin<"group_clustered_rotate", OnlySub, OpGroupNonUniformRotateKHR>;
 
 // cl_khr_work_group_uniform_arithmetic / SPV_KHR_uniform_group_instructions
 defm : DemangledGroupBuiltin<"group_reduce_imul", OnlyWork, OpGroupIMulKHR>;
@@ -1236,18 +1241,24 @@ class VectorLoadStoreBuiltin<string name, InstructionSet set, int number> {
   string Name = name;
   InstructionSet Set = set;
   bits<32> Number = number;
+  bits<32> ElementCount = !cond(!not(!eq(!find(name, "2"), -1)) : 2,
+                                !not(!eq(!find(name, "3"), -1)) : 3,
+                                !not(!eq(!find(name, "4"), -1)) : 4,
+                                !not(!eq(!find(name, "8"), -1)) : 8,
+                                !not(!eq(!find(name, "16"), -1)) : 16,
+                                true : 1);
   bit IsRounded = !not(!eq(!find(name, "_rt"), -1));
   FPRoundingMode RoundingMode = !cond(!not(!eq(!find(name, "_rte"), -1)) : RTE,
-                                  !not(!eq(!find(name, "_rtz"), -1)) : RTZ,
-                                  !not(!eq(!find(name, "_rtp"), -1)) : RTP,
-                                  !not(!eq(!find(name, "_rtn"), -1)) : RTN,
-                                  true : RTE);
+                                      !not(!eq(!find(name, "_rtz"), -1)) : RTZ,
+                                      !not(!eq(!find(name, "_rtp"), -1)) : RTP,
+                                      !not(!eq(!find(name, "_rtn"), -1)) : RTN,
+                                      true : RTE);
 }
 
 // Table gathering all the vector data load/store builtins.
 def VectorLoadStoreBuiltins : GenericTable {
   let FilterClass = "VectorLoadStoreBuiltin";
-  let Fields = ["Name", "Set", "Number", "IsRounded", "RoundingMode"];
+  let Fields = ["Name", "Set", "Number", "ElementCount", "IsRounded", "RoundingMode"];
   string TypeOf_Set = "InstructionSet";
   string TypeOf_RoundingMode = "FPRoundingMode";
 }

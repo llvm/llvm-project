@@ -57,6 +57,13 @@ enum class ShaderStage {
   Invalid,
 };
 
+enum class PointerAuthenticationMode : unsigned {
+  None,
+  Strip,
+  SignAndStrip,
+  SignAndAuth
+};
+
 /// Bitfields of LangOptions, split out from LangOptions in order to ensure that
 /// this large collection of bitfields is a trivial class type.
 class LangOptionsBase {

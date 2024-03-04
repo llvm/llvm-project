@@ -16,6 +16,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/BuiltinTypes.td"
 include "mlir/IR/CommonAttrConstraints.td"
 include "mlir/IR/CommonTypeConstraints.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -78,7 +79,10 @@ def Mesh_MeshOp : Mesh_Op<"mesh", [Symbol]> {
 }
 
 def Mesh_MeshShapeOp : Mesh_Op<"mesh_shape", [
-  Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+    Pure,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
+  ]> {
   let summary = "Get the shape of the mesh.";
   let arguments = (ins
     FlatSymbolRefAttr:$mesh,
@@ -101,7 +105,11 @@ def Mesh_MeshShapeOp : Mesh_Op<"mesh_shape", [
   ];
 }
 
-def Mesh_ShardOp : Mesh_Op<"shard", [Pure, SameOperandsAndResultType]> {
+def Mesh_ShardOp : Mesh_Op<"shard", [
+    Pure,
+    SameOperandsAndResultType,
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
+  ]> {
   let summary = "Annotate on how a tensor is sharded across a mesh.";
   let description = [{
     The mesh.shard operation is designed to specify and guide the sharding
@@ -194,7 +202,8 @@ def Mesh_ShardOp : Mesh_Op<"shard", [Pure, SameOperandsAndResultType]> {
 
 def Mesh_ProcessMultiIndexOp : Mesh_Op<"process_multi_index", [
   Pure,
-  DeclareOpInterfaceMethods<SymbolUserOpInterface>
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+  DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
 ]> {
   let summary = "Get the multi index of current device along specified mesh axes.";
   let description = [{
@@ -221,7 +230,8 @@ def Mesh_ProcessMultiIndexOp : Mesh_Op<"process_multi_index", [
 
 def Mesh_ProcessLinearIndexOp : Mesh_Op<"process_linear_index", [
   Pure,
-  DeclareOpInterfaceMethods<SymbolUserOpInterface>
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+  DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
 ]> {
   let summary = "Get the linear index of the current device.";
   let description = [{
@@ -248,7 +258,10 @@ class Mesh_CollectiveCommunicationOpBase<
     string mnemonic, list<Trait> traits = []> :
     Mesh_Op<mnemonic,
       !listconcat(traits,
-      [DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
+        [
+          DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+          DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
+        ])> {
   dag commonArgs = (ins
     FlatSymbolRefAttr:$mesh,
     DefaultValuedAttr<Mesh_MeshAxesAttr, "{}">:$mesh_axes
@@ -258,7 +271,7 @@ class Mesh_CollectiveCommunicationOpBase<
 def Mesh_AllGatherOp : Mesh_CollectiveCommunicationOpBase<"all_gather", [
     Pure,
     SameOperandsAndResultElementType,
-    SameOperandsAndResultRank
+    SameOperandsAndResultRank,
   ]> {
   let summary = "All-gather over a device mesh.";
   let description = [{

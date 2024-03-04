@@ -57,7 +57,7 @@ define i16 @var_ctpop_i16(i16 %a) {
 
 define i8 @var_ctpop_i8(i8 %a) {
 ; NOPOPCNT-LABEL: 'var_ctpop_i8'
-; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %ctpop = call i8 @llvm.ctpop.i8(i8 %a)
+; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %ctpop = call i8 @llvm.ctpop.i8(i8 %a)
 ; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %ctpop
 ;
 ; POPCNT-LABEL: 'var_ctpop_i8'

@@ -1415,6 +1415,23 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   }
 }
 
+void SITargetLowering::CollectTargetIntrinsicOperands(
+    const CallInst &I, SmallVectorImpl<SDValue> &Ops, SelectionDAG &DAG) const {
+  switch (cast<IntrinsicInst>(I).getIntrinsicID()) {
+  case Intrinsic::amdgcn_addrspacecast_nonnull: {
+    // The DAG's ValueType loses the addrspaces.
+    // Add them as 2 extra Constant operands "from" and "to".
+    unsigned SrcAS = I.getOperand(0)->getType()->getPointerAddressSpace();
+    unsigned DstAS = I.getType()->getPointerAddressSpace();
+    Ops.push_back(DAG.getTargetConstant(SrcAS, SDLoc(), MVT::i32));
+    Ops.push_back(DAG.getTargetConstant(DstAS, SDLoc(), MVT::i32));
+    break;
+  }
+  default:
+    break;
+  }
+}
+
 bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
                                             SmallVectorImpl<Value*> &Ops,
                                             Type *&AccessTy) const {
@@ -3960,7 +3977,7 @@ SDValue SITargetLowering::lowerGET_ROUNDING(SDValue Op,
   assert(Op.getValueType() == MVT::i32);
 
   uint32_t BothRoundHwReg =
-      AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_MODE, 0, 4);
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4);
   SDValue GetRoundBothImm = DAG.getTargetConstant(BothRoundHwReg, SL, MVT::i32);
 
   SDValue IntrinID =
@@ -4195,8 +4212,8 @@ SITargetLowering::emitGWSMemViolTestLoop(MachineInstr &MI,
 
   MachineBasicBlock::iterator I = LoopBB->end();
 
-  const unsigned EncodedReg = AMDGPU::Hwreg::encodeHwreg(
-    AMDGPU::Hwreg::ID_TRAPSTS, AMDGPU::Hwreg::OFFSET_MEM_VIOL, 1);
+  const unsigned EncodedReg = AMDGPU::Hwreg::HwregEncoding::encode(
+      AMDGPU::Hwreg::ID_TRAPSTS, AMDGPU::Hwreg::OFFSET_MEM_VIOL, 1);
 
   // Clear TRAP_STS.MEM_VIOL
   BuildMI(*LoopBB, LoopBB->begin(), DL, TII->get(AMDGPU::S_SETREG_IMM32_B32))
@@ -4999,18 +5016,16 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     // Otherwise there was overflow and the result is hi2:0. In both cases the
     // result should represent the actual time at some point during the sequence
     // of three getregs.
+    using namespace AMDGPU::Hwreg;
     Register RegHi1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_GETREG_B32), RegHi1)
-        .addImm(AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_SHADER_CYCLES_HI,
-                                           0, 32));
+        .addImm(HwregEncoding::encode(ID_SHADER_CYCLES_HI, 0, 32));
     Register RegLo1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_GETREG_B32), RegLo1)
-        .addImm(
-            AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_SHADER_CYCLES, 0, 32));
+        .addImm(HwregEncoding::encode(ID_SHADER_CYCLES, 0, 32));
     Register RegHi2 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_GETREG_B32), RegHi2)
-        .addImm(AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_SHADER_CYCLES_HI,
-                                           0, 32));
+        .addImm(HwregEncoding::encode(ID_SHADER_CYCLES_HI, 0, 32));
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CMP_EQ_U32))
         .addReg(RegHi1)
         .addReg(RegHi2);
@@ -5207,8 +5222,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     // FIXME: This could be predicates on the immediate, but tablegen doesn't
     // allow you to have a no side effect instruction in the output of a
     // sideeffecting pattern.
-    unsigned ID, Offset, Width;
-    AMDGPU::Hwreg::decodeHwreg(MI.getOperand(1).getImm(), ID, Offset, Width);
+    auto [ID, Offset, Width] =
+        AMDGPU::Hwreg::HwregEncoding::decode(MI.getOperand(1).getImm());
     if (ID != AMDGPU::Hwreg::ID_MODE)
       return BB;
 
@@ -5309,18 +5324,6 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
   default:
     return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
-  }
-}
-
-bool SITargetLowering::hasAtomicFaddRtnForTy(SDValue &Op) const {
-  switch (Op.getValue(0).getSimpleValueType().SimpleTy) {
-  case MVT::f32:
-    return Subtarget->hasAtomicFaddRtnInsts();
-  case MVT::v2f16:
-  case MVT::f64:
-    return Subtarget->hasGFX90AInsts();
-  default:
-    return false;
   }
 }
 
@@ -6306,7 +6309,7 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
     return expandFMINNUM_FMAXNUM(Op.getNode(), DAG);
 
   if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
-      VT == MVT::v32f16)
+      VT == MVT::v16bf16)
     return splitBinaryVectorOp(Op, DAG);
   return Op;
 }
@@ -6649,24 +6652,36 @@ static bool isKnownNonNull(SDValue Val, SelectionDAG &DAG,
 SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
                                              SelectionDAG &DAG) const {
   SDLoc SL(Op);
-  const AddrSpaceCastSDNode *ASC = cast<AddrSpaceCastSDNode>(Op);
-
-  SDValue Src = ASC->getOperand(0);
-  SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
-  unsigned SrcAS = ASC->getSrcAddressSpace();
 
   const AMDGPUTargetMachine &TM =
     static_cast<const AMDGPUTargetMachine &>(getTargetMachine());
 
+  unsigned DestAS, SrcAS;
+  SDValue Src;
+  bool IsNonNull = false;
+  if (const auto *ASC = dyn_cast<AddrSpaceCastSDNode>(Op)) {
+    SrcAS = ASC->getSrcAddressSpace();
+    Src = ASC->getOperand(0);
+    DestAS = ASC->getDestAddressSpace();
+  } else {
+    assert(Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+           Op.getConstantOperandVal(0) ==
+               Intrinsic::amdgcn_addrspacecast_nonnull);
+    Src = Op->getOperand(1);
+    SrcAS = Op->getConstantOperandVal(2);
+    DestAS = Op->getConstantOperandVal(3);
+    IsNonNull = true;
+  }
+
+  SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
+
   // flat -> local/private
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
-    unsigned DestAS = ASC->getDestAddressSpace();
-
     if (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
         DestAS == AMDGPUAS::PRIVATE_ADDRESS) {
       SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
 
-      if (isKnownNonNull(Src, DAG, TM, SrcAS))
+      if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
         return Ptr;
 
       unsigned NullVal = TM.getNullPointerValue(DestAS);
@@ -6679,16 +6694,16 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   }
 
   // local/private -> flat
-  if (ASC->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS) {
+  if (DestAS == AMDGPUAS::FLAT_ADDRESS) {
     if (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
         SrcAS == AMDGPUAS::PRIVATE_ADDRESS) {
 
-      SDValue Aperture = getSegmentAperture(ASC->getSrcAddressSpace(), SL, DAG);
+      SDValue Aperture = getSegmentAperture(SrcAS, SL, DAG);
       SDValue CvtPtr =
           DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Aperture);
       CvtPtr = DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr);
 
-      if (isKnownNonNull(Src, DAG, TM, SrcAS))
+      if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
         return CvtPtr;
 
       unsigned NullVal = TM.getNullPointerValue(SrcAS);
@@ -6711,7 +6726,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
     return DAG.getNode(ISD::BITCAST, SL, MVT::i64, Vec);
   }
 
-  if (ASC->getDestAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT &&
+  if (DestAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT &&
       Src.getValueType() == MVT::i64)
     return DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
 
@@ -6722,7 +6737,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
     MF.getFunction(), "invalid addrspacecast", SL.getDebugLoc());
   DAG.getContext()->diagnose(InvalidAddrSpaceCast);
 
-  return DAG.getUNDEF(ASC->getValueType(0));
+  return DAG.getUNDEF(Op->getValueType(0));
 }
 
 // This lowers an INSERT_SUBVECTOR by extracting the individual elements from
@@ -8339,6 +8354,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                         Op.getOperand(3), Op.getOperand(4), Op.getOperand(5),
                         IndexKeyi32, Op.getOperand(7)});
   }
+  case Intrinsic::amdgcn_addrspacecast_nonnull:
+    return lowerADDRSPACECAST(Op, DAG);
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))
@@ -10495,9 +10512,8 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
   SDValue NegDivScale0 = DAG.getNode(ISD::FNEG, SL, MVT::f32,
                                      DenominatorScaled, Flags);
 
-  const unsigned Denorm32Reg = AMDGPU::Hwreg::ID_MODE |
-                               (4 << AMDGPU::Hwreg::OFFSET_SHIFT_) |
-                               (1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_);
+  using namespace AMDGPU::Hwreg;
+  const unsigned Denorm32Reg = HwregEncoding::encode(ID_MODE, 4, 2);
   const SDValue BitField = DAG.getTargetConstant(Denorm32Reg, SL, MVT::i32);
 
   const MachineFunction &MF = DAG.getMachineFunction();

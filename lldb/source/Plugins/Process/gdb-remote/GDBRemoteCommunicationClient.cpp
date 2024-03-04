@@ -17,6 +17,7 @@
 
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/SafeMachO.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -2147,8 +2148,20 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
           if (!value.getAsInteger(16, cpu))
             ++num_keys_decoded;
         } else if (name.equals("cpusubtype")) {
-          if (!value.getAsInteger(16, sub))
+          if (!value.getAsInteger(16, sub)) {
             ++num_keys_decoded;
+            // Workaround for pre-2024 Apple debugserver, which always
+            // returns arm64e on arm64e-capable hardware regardless of
+            // what the process is. This can be deleted at some point
+            // in the future.
+            if (cpu == llvm::MachO::CPU_TYPE_ARM64 &&
+                sub == llvm::MachO::CPU_SUBTYPE_ARM64E) {
+              if (GetGDBServerVersion())
+                if (m_gdb_server_version >= 1000 &&
+                    m_gdb_server_version <= 1504)
+                  sub = 0;
+            }
+          }
         } else if (name.equals("triple")) {
           StringExtractor extractor(value);
           extractor.GetHexByteString(triple);

@@ -3071,6 +3071,10 @@ swift::symbolgraphgen::SymbolGraphOptions &SwiftASTContext::GetSymbolGraphOption
   return GetCompilerInvocation().getSymbolGraphOptions();
 }
 
+swift::CASOptions &SwiftASTContext::GetCASOptions() {
+  return GetCompilerInvocation().getCASOptions();
+}
+
 swift::DiagnosticEngine &SwiftASTContext::GetDiagnosticEngine() {
   if (!m_diagnostic_engine_ap) {
     m_diagnostic_engine_ap.reset(
@@ -3260,7 +3264,8 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   m_ast_context_ap.reset(swift::ASTContext::get(
       GetLanguageOptions(), GetTypeCheckerOptions(), GetSILOptions(),
       GetSearchPathOptions(), GetClangImporterOptions(),
-      GetSymbolGraphOptions(), GetSourceManager(), GetDiagnosticEngine(),
+      GetSymbolGraphOptions(), GetCASOptions(), GetSourceManager(),
+      GetDiagnosticEngine(),
       /*OutputBackend=*/nullptr));
 
   if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {

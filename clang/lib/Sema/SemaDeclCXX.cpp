@@ -11433,7 +11433,9 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
         << ExplicitObjectParam->getSourceRange();
   }
 
-  if (D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static) {
+  if (D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||
+      (D.getContext() == clang::DeclaratorContext::Member &&
+       D.isStaticMember())) {
     Diag(ExplicitObjectParam->getBeginLoc(),
          diag::err_explicit_object_parameter_nonmember)
         << D.getSourceRange() << /*static=*/0 << IsLambda;
@@ -12307,9 +12309,10 @@ Decl *Sema::ActOnUsingDirective(Scope *S, SourceLocation UsingLoc,
     Diag(IdentLoc, diag::err_expected_namespace_name) << SS.getRange();
   }
 
-  if (UDir)
+  if (UDir) {
     ProcessDeclAttributeList(S, UDir, AttrList);
-  ProcessAPINotes(UDir);
+    ProcessAPINotes(UDir);
+  }
 
   return UDir;
 }

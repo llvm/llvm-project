@@ -2387,6 +2387,20 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
     return NonNull;
   }
 
+  if (match(V, m_SExtLike(m_Value(A)))) {
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateSExt(AV, V->getType()) : NonNull;
+    return nullptr;
+  }
+
+  if (match(V, m_Trunc(m_Value(A)))) {
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateTrunc(AV, V->getType()) : NonNull;
+    return nullptr;
+  }
+
   return nullptr;
 }
 
@@ -2615,10 +2629,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         Value *V;
         if ((has_single_bit(TyAllocSize) &&
              match(GEP.getOperand(1),
-                   m_Exact(m_AShr(m_Value(V),
-                                  m_SpecificInt(countr_zero(TyAllocSize)))))) ||
+                   m_Exact(m_Shr(m_Value(V),
+                                 m_SpecificInt(countr_zero(TyAllocSize)))))) ||
             match(GEP.getOperand(1),
-                  m_Exact(m_SDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
+                  m_Exact(m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
           GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
               Builder.getInt8Ty(), GEP.getPointerOperand(), V);
           NewGEP->setIsInBounds(GEP.isInBounds());
@@ -4484,7 +4498,8 @@ void InstCombinerImpl::tryToSinkInstructionDPValues(
     // For all instruction/variable pairs needing extra filtering, find the
     // latest assignment.
     for (const Instruction *Inst : DupSet) {
-      for (DPValue &DPV : llvm::reverse(Inst->getDbgValueRange())) {
+      for (DPValue &DPV :
+           llvm::reverse(DPValue::filter(Inst->getDbgValueRange()))) {
         DebugVariable DbgUserVariable =
             DebugVariable(DPV.getVariable(), DPV.getExpression(),
                           DPV.getDebugLoc()->getInlinedAt());

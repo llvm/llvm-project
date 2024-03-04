@@ -150,6 +150,9 @@ public:
     /// template scope in between), the outer scope does not increase the
     /// depth of recursion.
     LambdaScope = 0x8000000,
+    /// This is the scope of an OpenACC Compute Construct, which restricts
+    /// jumping into/out of it.
+    OpenACCComputeConstructScope = 0x10000000,
   };
 
 private:
@@ -469,6 +472,14 @@ public:
     return false;
   }
 
+  /// Return true if this scope is a loop.
+  bool isLoopScope() const {
+    // 'switch' is the only loop that is not a 'break' scope as well, so we can
+    // just check BreakScope and not SwitchScope.
+    return (getFlags() & Scope::BreakScope) &&
+           !(getFlags() & Scope::SwitchScope);
+  }
+
   /// Determines whether this scope is the OpenMP directive scope
   bool isOpenMPDirectiveScope() const {
     return (getFlags() & Scope::OpenMPDirectiveScope);
@@ -502,6 +513,44 @@ public:
   /// order clause which specifies concurrent scope.
   bool isOpenMPOrderClauseScope() const {
     return getFlags() & Scope::OpenMPOrderClauseScope;
+  }
+
+  /// Determine whether this scope is the statement associated with an OpenACC
+  /// Compute construct directive.
+  bool isOpenACCComputeConstructScope() const {
+    return getFlags() & Scope::OpenACCComputeConstructScope;
+  }
+
+  bool isInOpenACCComputeConstructScope() const {
+    for (const Scope *S = this; S; S = S->getParent()) {
+      if (S->getFlags() & Scope::OpenACCComputeConstructScope)
+        return true;
+      else if (S->getFlags() &
+               (Scope::FnScope | Scope::ClassScope | Scope::BlockScope |
+                Scope::TemplateParamScope | Scope::FunctionPrototypeScope |
+                Scope::AtCatchScope | Scope::ObjCMethodScope))
+        return false;
+    }
+    return false;
+  }
+
+  /// Determine if this scope (or its parents) are a compute construct inside of
+  /// the nearest 'switch' scope.  This is needed to check whether we are inside
+  /// of a 'duffs' device, which is an illegal branch into a compute construct.
+  bool isInOpenACCComputeConstructBeforeSwitch() const {
+    for (const Scope *S = this; S; S = S->getParent()) {
+      if (S->getFlags() & Scope::OpenACCComputeConstructScope)
+        return true;
+      if (S->getFlags() & Scope::SwitchScope)
+        return false;
+
+      if (S->getFlags() &
+          (Scope::FnScope | Scope::ClassScope | Scope::BlockScope |
+           Scope::TemplateParamScope | Scope::FunctionPrototypeScope |
+           Scope::AtCatchScope | Scope::ObjCMethodScope))
+        return false;
+    }
+    return false;
   }
 
   /// Determine whether this scope is a while/do/for statement, which can have

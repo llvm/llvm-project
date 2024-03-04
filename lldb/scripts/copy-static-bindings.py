@@ -22,13 +22,26 @@ import os
 import sys
 import shutil
 
+def find_generated_bindings(build_dir, language):
+    # First, see if we're in a standalone build of LLDB.
+    bindings_build_dir = os.path.join(build_dir, 'bindings', language)
+    if os.path.exists(bindings_build_dir):
+        return bindings_build_dir
 
-def copy_bindings(build_dir, source_dir, language, extensions=['.cpp']):
-    binding_build_dir = os.path.join(build_dir, 'bindings', language)
+    # Failing that, check if it's a unified build (i.e. build with LLVM+Clang)
+    bindings_build_dir = os.path.join(build_dir, 'tools', 'lldb', 'bindings',
+                                      language)
+    if os.path.exists(bindings_build_dir):
+        return bindings_build_dir
+
+    return None
+
+
+def copy_bindings(generated_bindings_dir, source_dir, language, extensions=['.cpp']):
     binding_source_dir = os.path.join(source_dir, 'bindings', language,
                                       'static-binding')
 
-    for root, _, files in os.walk(binding_build_dir):
+    for root, _, files in os.walk(generated_bindings_dir):
         for file in files:
             _, extension = os.path.splitext(file)
             filepath = os.path.join(root, file)
@@ -56,8 +69,17 @@ def main():
             source_dir))
         sys.exit(1)
 
-    copy_bindings(build_dir, source_dir, 'python', ['.py', '.cpp'])
-    copy_bindings(build_dir, source_dir, 'lua', ['.cpp'])
+    generated_bindings_python_dir = find_generated_bindings(build_dir, 'python')
+    if generated_bindings_python_dir is None:
+        print("error: unable to locate the python bindings in the build directory")
+    else:
+        copy_bindings(generated_bindings_python_dir, source_dir, 'python', ['.py', '.cpp'])
+
+    generated_bindings_lua_dir = find_generated_bindings(build_dir, 'lua')
+    if generated_bindings_lua_dir is None:
+        print("error: unable to locate the lua bindings in the build directory")
+    else:
+        copy_bindings(generated_bindings_lua_dir, source_dir, 'lua', ['.cpp'])
 
 
 if __name__ == "__main__":

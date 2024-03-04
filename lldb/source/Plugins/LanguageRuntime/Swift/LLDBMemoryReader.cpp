@@ -76,6 +76,11 @@ bool LLDBMemoryReader::queryDataLayout(DataLayoutQueryType type, void *inBuffer,
       *result = 0x1000;
     return true;
   }
+  case DLQ_GetObjCInteropIsEnabled: {
+    auto *result = (bool *)outBuffer;
+    *result = SwiftLanguageRuntime::GetObjCRuntime(m_process) != nullptr;
+    return true;
+  }
   }
 }
 

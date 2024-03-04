@@ -103,15 +103,18 @@ std::optional<bool> isRefCountable(const CXXRecordDecl* R)
   return hasRef && hasDeref;
 }
 
+bool isRefType(const std::string &Name) {
+  return Name == "Ref" || Name == "RefAllowingPartiallyDestroyed" ||
+         Name == "RefPtr" || Name == "RefPtrAllowingPartiallyDestroyed";
+}
+
 bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
   assert(F);
-  const auto &FunctionName = safeGetName(F);
+  const std::string &FunctionName = safeGetName(F);
 
-  return FunctionName == "Ref" || FunctionName == "makeRef"
-
-         || FunctionName == "RefPtr" || FunctionName == "makeRefPtr"
-
-         || FunctionName == "UniqueRef" || FunctionName == "makeUniqueRef" ||
+  return isRefType(FunctionName) || FunctionName == "makeRef" ||
+         FunctionName == "makeRefPtr" || FunctionName == "UniqueRef" ||
+         FunctionName == "makeUniqueRef" ||
          FunctionName == "makeUniqueRefWithoutFastMallocCheck"
 
          || FunctionName == "String" || FunctionName == "AtomString" ||
@@ -131,7 +134,7 @@ bool isReturnValueRefCounted(const clang::FunctionDecl *F) {
     if (auto *specialT = type->getAs<TemplateSpecializationType>()) {
       if (auto *decl = specialT->getTemplateName().getAsTemplateDecl()) {
         auto name = decl->getNameAsString();
-        return name == "Ref" || name == "RefPtr";
+        return isRefType(name);
       }
       return false;
     }
@@ -172,20 +175,18 @@ std::optional<bool> isGetterOfRefCounted(const CXXMethodDecl* M)
   if (isa<CXXMethodDecl>(M)) {
     const CXXRecordDecl *calleeMethodsClass = M->getParent();
     auto className = safeGetName(calleeMethodsClass);
-    auto methodName = safeGetName(M);
+    auto method = safeGetName(M);
 
-    if (((className == "Ref" || className == "RefPtr") &&
-         methodName == "get") ||
-        (className == "Ref" && methodName == "ptr") ||
+    if ((isRefType(className) && (method == "get" || method == "ptr")) ||
         ((className == "String" || className == "AtomString" ||
           className == "AtomStringImpl" || className == "UniqueString" ||
           className == "UniqueStringImpl" || className == "Identifier") &&
-         methodName == "impl"))
+         method == "impl"))
       return true;
 
     // Ref<T> -> T conversion
     // FIXME: Currently allowing any Ref<T> -> whatever cast.
-    if (className == "Ref" || className == "RefPtr") {
+    if (isRefType(className)) {
       if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
         if (auto *targetConversionType =
                 maybeRefToRawOperator->getConversionType().getTypePtrOrNull()) {
@@ -202,7 +203,7 @@ bool isRefCounted(const CXXRecordDecl *R) {
   if (auto *TmplR = R->getTemplateInstantiationPattern()) {
     // FIXME: String/AtomString/UniqueString
     const auto &ClassName = safeGetName(TmplR);
-    return ClassName == "RefPtr" || ClassName == "Ref";
+    return isRefType(ClassName);
   }
   return false;
 }
@@ -309,8 +310,12 @@ public:
         return true;
       if (isa<EnumConstantDecl>(decl))
         return true;
-      if (auto *VD = dyn_cast<VarDecl>(decl))
-        return VD->hasConstantInitialization() && VD->getEvaluatedValue();
+      if (auto *VD = dyn_cast<VarDecl>(decl)) {
+        if (VD->hasConstantInitialization() && VD->getEvaluatedValue())
+          return true;
+        auto *Init = VD->getInit();
+        return !Init || Visit(Init);
+      }
     }
     return false;
   }

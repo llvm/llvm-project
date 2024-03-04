@@ -1519,18 +1519,19 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_BASIC_TYPE: {
-    if (Record.size() < 6 || Record.size() > 7)
+    if (Record.size() < 6 || Record.size() > 8)
       return error("Invalid record");
 
     IsDistinct = Record[0];
     DINode::DIFlags Flags = (Record.size() > 6)
                                 ? static_cast<DINode::DIFlags>(Record[6])
                                 : DINode::FlagZero;
+    uint32_t NumExtraInhabitants = (Record.size() > 7) ? Record[7] : 0;
 
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIBasicType,
                         (Context, Record[1], getMDString(Record[2]), Record[3],
-                         Record[4], Record[5], Flags)),
+                         Record[4], Record[5], NumExtraInhabitants, Flags)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1588,9 +1589,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPOSITE_TYPE: {
-    if (Record.size() < 16 || Record.size() > 22)
+    // The last field is a variable sized APInt, so the metadata loader can't
+    // reliably check the end for this record.
+    if (Record.size() < 16)
       return error("Invalid record");
 
+    IsDistinct = Record[0] & 1;
+    bool IsBigInt = (Record[0] >> 3) & 1;
     // If we have a UUID and this is not a forward declaration, lookup the
     // mapping.
     IsDistinct = Record[0] & 0x1;
@@ -1606,6 +1611,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Alignment value is too large");
     uint32_t AlignInBits = Record[8];
     uint64_t OffsetInBits = 0;
+    uint32_t NumExtraInhabitants = (Record.size() > 22) ? Record[22] : 0;
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
     Metadata *Elements = nullptr;
     unsigned RuntimeLang = Record[12];
@@ -1617,6 +1623,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *Allocated = nullptr;
     Metadata *Rank = nullptr;
     Metadata *Annotations = nullptr;
+    Metadata *SpecificationOf = nullptr;
     auto *Identifier = getMDString(Record[15]);
     // If this module is being parsed so that it can be ThinLTO imported
     // into another module, composite types only need to be imported as
@@ -1665,12 +1672,31 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       if (Record.size() > 21) {
         Annotations = getMDOrNull(Record[21]);
       }
+      if (Record.size() > 23) {
+        SpecificationOf = getMDOrNull(Record[23]);
+      }
     }
     DICompositeType *CT = nullptr;
+    APInt SpareBitsMask;
+    // SpareBitsMask is an optional field so the metadata loader has to check if
+    // it was emitted before accessing it.
+    if (Record.size() > 24) {
+      if (IsBigInt) {
+        const uint64_t BitWidth = Record[24];
+        const size_t NumWords = Record.size() - 3;
+        SpareBitsMask =
+            readWideAPInt(ArrayRef(&Record[25], NumWords), BitWidth);
+      } else {
+        const uint64_t IntValue = Record[24];
+        SpareBitsMask = APInt(64, IntValue);
+      }
+    }
+
     if (Identifier)
       CT = DICompositeType::buildODRType(
           Context, *Identifier, Tag, Name, File, Line, Scope, BaseType,
-          SizeInBits, AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
+          SizeInBits, AlignInBits, OffsetInBits, SpecificationOf,
+          NumExtraInhabitants, SpareBitsMask, Flags, Elements, RuntimeLang,
           VTableHolder, TemplateParams, Discriminator, DataLocation, Associated,
           Allocated, Rank, Annotations);
 
@@ -1681,7 +1707,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                             SizeInBits, AlignInBits, OffsetInBits, Flags,
                             Elements, RuntimeLang, VTableHolder, TemplateParams,
                             Identifier, Discriminator, DataLocation, Associated,
-                            Allocated, Rank, Annotations));
+                            Allocated, Rank, Annotations, SpecificationOf,
+                            NumExtraInhabitants, SpareBitsMask));
     if (!IsNotUsedInTypeRef && Identifier)
       MetadataList.addTypeRef(*Identifier, *cast<DICompositeType>(CT));
 

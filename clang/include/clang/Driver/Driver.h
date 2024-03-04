@@ -160,7 +160,7 @@ public:
   /// Target and driver mode components extracted from clang executable name.
   ParsedClangName ClangNameParts;
 
-  /// The path to the installed clang directory, if any.
+  /// TODO: Remove this in favor of Dir.
   std::string InstalledDir;
 
   /// The path to the compiler resource directory.
@@ -250,6 +250,11 @@ public:
   /// to "only-direct-system", only system headers that are directly included
   /// from non-system headers are emitted.
   HeaderIncludeFilteringKind CCPrintHeadersFiltering = HIFIL_None;
+
+  /// Name of the library that provides implementations of
+  /// IEEE-754 128-bit float math functions used by Fortran F128
+  /// runtime library. It should be linked as needed by the linker job.
+  std::string FlangF128MathLibrary;
 
   /// Set CC_LOG_DIAGNOSTICS mode, which causes the frontend to log diagnostics
   /// to CCLogDiagnosticsFilename or to stderr, in a stable machine readable
@@ -428,7 +433,6 @@ public:
       return InstalledDir.c_str();
     return Dir.c_str();
   }
-  void setInstalledDir(StringRef Value) { InstalledDir = std::string(Value); }
 
   bool isSaveTempsEnabled() const { return SaveTemps != SaveTempsNone; }
   bool isSaveTempsObj() const { return SaveTemps == SaveTempsObj; }
@@ -439,6 +443,11 @@ public:
 
   bool offloadHostOnly() const { return Offload == OffloadHost; }
   bool offloadDeviceOnly() const { return Offload == OffloadDevice; }
+
+  void setFlangF128MathLibrary(std::string name) {
+    FlangF128MathLibrary = std::move(name);
+  }
+  StringRef getFlangF128MathLibrary() const { return FlangF128MathLibrary; }
 
   /// Compute the desired OpenMP runtime from the flags provided.
   OpenMPRuntimeKind getOpenMPRuntime(const llvm::opt::ArgList &Args) const;

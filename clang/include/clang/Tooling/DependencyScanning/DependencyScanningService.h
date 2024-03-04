@@ -76,8 +76,12 @@ enum class ScanningOptimizations {
   /// Remove unused -ivfsoverlay arguments.
   VFS = 4,
 
-  DSS_LAST_BITMASK_ENUM(VFS),
-  Default = All
+  /// Canonicalize -D and -U options.
+  Macros = 8,
+
+  DSS_LAST_BITMASK_ENUM(Macros),
+  Default = All,
+  FullIncludeTreeIrrelevant = HeaderSearch | VFS,
 };
 
 #undef DSS_LAST_BITMASK_ENUM

@@ -649,42 +649,6 @@ void fir::genMinMaxlocReductionLoop(
       reductionVal = ifOp.getResult(0);
     }
   }
-
-  // Check for case where array was full of max values.
-  // flag will be 0 if mask was never true, 1 if mask was true as some point,
-  // this is needed to avoid catching cases where we didn't access any elements
-  // e.g. mask=.FALSE.
-  mlir::Value flagValue =
-      builder.create<fir::LoadOp>(loc, resultElemType, flagRef);
-  mlir::Value flagCmp = builder.create<mlir::arith::CmpIOp>(
-      loc, mlir::arith::CmpIPredicate::eq, flagValue, flagSet);
-  fir::IfOp ifMaskTrueOp =
-      builder.create<fir::IfOp>(loc, flagCmp, /*withElseRegion=*/false);
-  builder.setInsertionPointToStart(&ifMaskTrueOp.getThenRegion().front());
-
-  mlir::Value testInit = initVal(builder, loc, elementType);
-  fir::IfOp ifMinSetOp;
-  if (elementType.isa<mlir::FloatType>()) {
-    mlir::Value cmp = builder.create<mlir::arith::CmpFOp>(
-        loc, mlir::arith::CmpFPredicate::OEQ, testInit, reductionVal);
-    ifMinSetOp = builder.create<fir::IfOp>(loc, cmp,
-                                           /*withElseRegion*/ false);
-  } else {
-    mlir::Value cmp = builder.create<mlir::arith::CmpIOp>(
-        loc, mlir::arith::CmpIPredicate::eq, testInit, reductionVal);
-    ifMinSetOp = builder.create<fir::IfOp>(loc, cmp,
-                                           /*withElseRegion*/ false);
-  }
-  builder.setInsertionPointToStart(&ifMinSetOp.getThenRegion().front());
-
-  // Load output array with 1s instead of 0s
-  for (unsigned int i = 0; i < rank; ++i) {
-    mlir::Value index = builder.createIntegerConstant(loc, idxTy, i);
-    mlir::Value resultElemAddr =
-        getAddrFn(builder, loc, resultElemType, resultArr, index);
-    builder.create<fir::StoreOp>(loc, flagSet, resultElemAddr);
-  }
-  builder.setInsertionPointAfter(ifMaskTrueOp);
 }
 
 static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
@@ -697,8 +661,8 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
                       mlir::Type elementType) {
     if (auto ty = elementType.dyn_cast<mlir::FloatType>()) {
       const llvm::fltSemantics &sem = ty.getFloatSemantics();
-      return builder.createRealConstant(
-          loc, elementType, llvm::APFloat::getLargest(sem, /*Negative=*/isMax));
+      llvm::APFloat limit = llvm::APFloat::getInf(sem, /*Negative=*/isMax);
+      return builder.createRealConstant(loc, elementType, limit);
     }
     unsigned bits = elementType.getIntOrFloatBitWidth();
     int64_t initValue = (isMax ? llvm::APInt::getSignedMinValue(bits)
@@ -770,7 +734,7 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
     // Set flag that mask was true at some point
     mlir::Value flagSet = builder.createIntegerConstant(
         loc, mlir::cast<fir::ReferenceType>(flagRef.getType()).getEleTy(), 1);
-    builder.create<fir::StoreOp>(loc, flagSet, flagRef);
+    mlir::Value isFirst = builder.create<fir::LoadOp>(loc, flagRef);
     mlir::Type eleRefTy = builder.getRefType(elementType);
     mlir::Value addr =
         builder.create<fir::CoordinateOp>(loc, eleRefTy, array, indices);
@@ -778,11 +742,22 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
 
     mlir::Value cmp;
     if (elementType.isa<mlir::FloatType>()) {
+      // For FP reductions we want the first smallest value to be used, that
+      // is not NaN. A OGL/OLT condition will usually work for this unless all
+      // the values are Nan or Inf. This follows the same logic as
+      // NumericCompare for Minloc/Maxlox in extrema.cpp.
       cmp = builder.create<mlir::arith::CmpFOp>(
           loc,
           isMax ? mlir::arith::CmpFPredicate::OGT
                 : mlir::arith::CmpFPredicate::OLT,
           elem, reduction);
+
+      mlir::Value cmpNan = builder.create<mlir::arith::CmpFOp>(
+          loc, mlir::arith::CmpFPredicate::UNE, reduction, reduction);
+      mlir::Value cmpNan2 = builder.create<mlir::arith::CmpFOp>(
+          loc, mlir::arith::CmpFPredicate::OEQ, elem, elem);
+      cmpNan = builder.create<mlir::arith::AndIOp>(loc, cmpNan, cmpNan2);
+      cmp = builder.create<mlir::arith::OrIOp>(loc, cmp, cmpNan);
     } else if (elementType.isa<mlir::IntegerType>()) {
       cmp = builder.create<mlir::arith::CmpIOp>(
           loc,
@@ -793,10 +768,16 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
       llvm_unreachable("unsupported type");
     }
 
+    // The condition used for the loop is isFirst || <the condition above>.
+    isFirst = builder.create<fir::ConvertOp>(loc, cmp.getType(), isFirst);
+    isFirst = builder.create<mlir::arith::XOrIOp>(
+        loc, isFirst, builder.createIntegerConstant(loc, cmp.getType(), 1));
+    cmp = builder.create<mlir::arith::OrIOp>(loc, cmp, isFirst);
     fir::IfOp ifOp = builder.create<fir::IfOp>(loc, elementType, cmp,
                                                /*withElseRegion*/ true);
 
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    builder.create<fir::StoreOp>(loc, flagSet, flagRef);
     mlir::Type resultElemTy = hlfir::getFortranElementType(resultArr.getType());
     mlir::Type returnRefTy = builder.getRefType(resultElemTy);
     mlir::IndexType idxTy = builder.getIndexType();

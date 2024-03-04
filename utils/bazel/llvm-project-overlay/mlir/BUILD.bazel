@@ -6,7 +6,6 @@
 #   The MLIR "Multi-Level Intermediate Representation" Compiler Infrastructure
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load(
     ":build_defs.bzl",
     "cc_headers_only",
@@ -36,7 +35,10 @@ expand_template(
         "#cmakedefine01 MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS": "#define MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS 0",
         "#cmakedefine MLIR_GREEDY_REWRITE_RANDOMIZER_SEED ${MLIR_GREEDY_REWRITE_RANDOMIZER_SEED}": "/* #undef MLIR_GREEDY_REWRITE_RANDOMIZER_SEED */",
         "#cmakedefine01 MLIR_ENABLE_PDL_IN_PATTERNMATCH": "#define MLIR_ENABLE_PDL_IN_PATTERNMATCH 1",
-    },
+    } | if_cuda_available(
+        {"#cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS": "#define MLIR_ENABLE_CUDA_CONVERSIONS 1"},
+        {"#cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS": "#define MLIR_ENABLE_CUDA_CONVERSIONS 0"},
+    ),
     template = "include/mlir/Config/mlir-config.h.cmake",
 )
 
@@ -736,6 +738,25 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":TransformDialect",
+    ],
+)
+
+mlir_c_api_cc_library(
+    name = "CAPITransformDialectTransforms",
+    srcs = [
+        "lib/CAPI/Dialect/TransformInterpreter.cpp",
+    ],
+    hdrs = [
+        "include/mlir-c/Dialect/Transform/Interpreter.h",
+    ],
+    capi_deps = [
+        ":CAPIIR",
+        ":CAPITransformDialect",
+    ],
+    includes = ["include"],
+    deps = [
+        ":TransformDialect",
+        ":TransformDialectTransforms",
     ],
 )
 
@@ -3212,9 +3233,7 @@ cc_library(
         ":Transforms",
         ":VectorToLLVM",
         ":VectorTransforms",
-    ] + if_cuda_available([
-        ":SerializeToCubin",
-    ]),
+    ],
 )
 
 ##---------------------------------------------------------------------------##
@@ -4092,6 +4111,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineDialect",
+        ":AffineTransforms",
         ":AffineUtils",
         ":ArithDialect",
         ":ConversionPassIncGen",
@@ -5451,7 +5471,6 @@ cc_library(
     srcs = ["lib/Dialect/GPU/Pipelines/GPUToNVVMPipeline.cpp"],
     hdrs = ["include/mlir/Dialect/GPU/Pipelines/Passes.h"],
     includes = ["include"],
-    local_defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     deps = [
         ":AffineToStandard",
         ":ArithToLLVM",
@@ -5475,6 +5494,7 @@ cc_library(
         ":Transforms",
         ":VectorToLLVM",
         ":VectorToSCF",
+        ":config",
     ],
 )
 
@@ -5484,9 +5504,6 @@ cc_library(
         [
             "lib/Dialect/GPU/Transforms/*.cpp",
             "lib/Dialect/GPU/Transforms/*.h",
-        ],
-        exclude = [
-            "lib/Dialect/GPU/Transforms/SerializeToCubin.cpp",
         ],
     ),
     hdrs = glob(["include/mlir/Dialect/GPU/Transforms/*.h"]),
@@ -5521,13 +5538,13 @@ cc_library(
         ":SCFDialect",
         ":SPIRVDialect",
         ":SPIRVTarget",
-        ":SerializeToCubin_stub",
         ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
         ":Transforms",
         ":VCIXToLLVMIRTranslation",
         ":VectorDialect",
+        ":config",
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Support",
@@ -5536,66 +5553,6 @@ cc_library(
         ":NVVMToLLVMIRTranslation",
         "//llvm:NVPTXCodeGen",
     ]),
-)
-
-cc_library(
-    name = "SerializeToCubin",
-    srcs = [
-        "lib/Dialect/GPU/Transforms/SerializeToCubin.cpp",
-    ],
-    local_defines = if_cuda_available(["MLIR_GPU_TO_CUBIN_PASS_ENABLE"]),
-    deps = [
-        ":GPUDialect",
-        ":GPUPassIncGen",
-        ":GPUTransforms",
-        ":NVVMDialect",
-        ":NVVMToLLVMIRTranslation",
-        ":Pass",
-        ":Support",
-        ":ToLLVMIRTranslation",
-        "//llvm:Support",
-    ] + if_cuda_available([
-        "@cuda//:cuda_headers",
-        "@cuda//:libcuda",
-    ]),
-)
-
-write_file(
-    name = "SerializeToCubin_stub_cc",
-    out = "SerializeToCubin_stub.cc",
-    content = [
-        """
-#include "mlir/Dialect/GPU/Transforms/Passes.h"
-
-// Provide a weak registration stub in case the real SerializeToCubin is not
-// linked in.
-
-#if defined(_MSC_VER)
-// This might not work correctly, but it avoids a compilation error because
-// MSVC does not support __attribute__((weak)).
-void mlir::registerGpuSerializeToCubinPass() {}
-#else
-__attribute__((weak)) void mlir::registerGpuSerializeToCubinPass() {}
-#endif
-""",
-    ],
-)
-
-cc_library(
-    name = "SerializeToCubin_stub",
-    srcs = [":SerializeToCubin_stub_cc"],
-    hdrs = glob(["include/mlir/Dialect/GPU/Transforms/*.h"]),
-    includes = ["include"],
-    deps = [
-        ":GPUDialect",
-        ":GPUPassIncGen",
-        ":IR",
-        ":Pass",
-        ":SPIRVDialect",
-        ":Support",
-        ":VectorDialect",
-        "//llvm:Support",
-    ],
 )
 
 td_library(
@@ -6223,6 +6180,7 @@ cc_library(
         ":NVVMToLLVMIRTranslation",
         ":TargetLLVM",
         ":ToLLVMIRTranslation",
+        ":config",
         "//llvm:NVPTXCodeGen",
         "//llvm:Support",
     ],
@@ -9178,6 +9136,7 @@ cc_library(
         ":VectorTransforms",
         ":X86VectorDialect",
         ":X86VectorTransforms",
+        ":config",
     ],
 )
 
@@ -9210,7 +9169,6 @@ cc_binary(
         ":Pass",
         ":QuantOps",
         ":SCFToGPU",
-        ":SerializeToCubin",
         ":Support",
         ":Transforms",
         "//llvm:AllTargetsCodeGens",
@@ -9218,6 +9176,7 @@ cc_binary(
         "//mlir/test:TestAffine",
         "//mlir/test:TestAnalysis",
         "//mlir/test:TestArith",
+        "//mlir/test:TestArmSME",
         "//mlir/test:TestBufferization",
         "//mlir/test:TestControlFlow",
         "//mlir/test:TestDLTI",
@@ -9347,7 +9306,6 @@ cc_library(
     hdrs = [
         "include/mlir/ExecutionEngine/SparseTensor/ArithmeticUtils.h",
         "include/mlir/ExecutionEngine/SparseTensor/COO.h",
-        "include/mlir/ExecutionEngine/SparseTensor/ErrorHandling.h",
         "include/mlir/ExecutionEngine/SparseTensor/File.h",
         "include/mlir/ExecutionEngine/SparseTensor/MapRef.h",
         "include/mlir/ExecutionEngine/SparseTensor/Storage.h",
@@ -13173,7 +13131,6 @@ cc_library(
         "//llvm:Support",
     ],
 )
-
 
 ##---------------------------------------------------------------------------##
 # Allocation interfaces

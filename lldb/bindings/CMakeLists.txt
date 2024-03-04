@@ -29,7 +29,11 @@ endif()
 
 set(SWIG_COMMON_FLAGS
   -c++
-  -w361,362 # Ignore warnings about ignored operator overloads
+  # Ignored warnings:
+  # 361: operator! ignored.
+  # 362: operator= ignored.
+  # 509: Overloaded method declaration effectively ignored, shadowed by previous declaration.
+  -w361,362,509
   -features autodoc
   -I${LLDB_SOURCE_DIR}/include
   -I${CMAKE_CURRENT_SOURCE_DIR}
@@ -56,4 +60,14 @@ endif()
 
 if (LLDB_ENABLE_LUA)
   add_subdirectory(lua)
+endif()
+
+if(NOT ${LLDB_USE_STATIC_BINDINGS})
+  set(copy_static_bindings_script "${LLDB_SOURCE_DIR}/scripts/copy-static-bindings.py")
+  add_custom_target(update-static-bindings
+    COMMAND ${copy_static_bindings_script} ${CMAKE_BINARY_DIR}
+    COMMENT "Copying the generated bindings to the static bindings directory in source."
+    VERBATIM
+  )
+  add_dependencies(update-static-bindings swig_wrapper_python)
 endif()

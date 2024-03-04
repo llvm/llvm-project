@@ -102,7 +102,7 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
   return I;
 }
 
-Pointer Program::getPtrGlobal(unsigned Idx) {
+Pointer Program::getPtrGlobal(unsigned Idx) const {
   assert(Idx < Globals.size());
   return Pointer(Globals[Idx]->block());
 }

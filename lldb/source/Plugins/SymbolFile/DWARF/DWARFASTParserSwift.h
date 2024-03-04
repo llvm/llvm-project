@@ -89,8 +89,17 @@ public:
   std::unique_ptr<swift::reflection::BuiltinTypeDescriptorBase>
   getBuiltinTypeDescriptor(const swift::reflection::TypeRef *TR) override;
 
+  /// Returns a builtin descriptor constructed from DWARF info.
+  std::unique_ptr<swift::reflection::MultiPayloadEnumDescriptorBase>
+  getMultiPayloadEnumDescriptor(const swift::reflection::TypeRef *TR) override;
+
+private:
+  /// Returns the canonical demangle tree of a die's type.
+  NodePointer GetCanonicalDemangleTree(DWARFDIE &die);
+
 protected:
   lldb_private::TypeSystemSwiftTypeRef &m_swift_typesystem;
+  swift::Demangle::Demangler m_dem;
 };
 
 #endif // SymbolFileDWARF_DWARFASTParserSwift_h_

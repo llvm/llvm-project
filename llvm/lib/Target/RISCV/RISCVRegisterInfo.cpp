@@ -30,6 +30,8 @@
 
 using namespace llvm;
 
+static cl::opt<bool> DisableCostPerUse("riscv-disable-cost-per-use",
+                                       cl::init(false), cl::Hidden);
 static cl::opt<bool>
     DisableRegAllocHints("riscv-disable-regalloc-hints", cl::Hidden,
                          cl::init(false),
@@ -283,8 +285,8 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   // Optimize for constant VLEN.
-  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
-    const int64_t VLENB = STI.getRealMinVLen() / 8;
+  if (auto VLEN = STI.getRealVLen()) {
+    const int64_t VLENB = *VLEN / 8;
     int64_t Offset = VLENB * LMUL;
     STI.getInstrInfo()->movImm(MBB, II, DL, VL, Offset);
   } else {
@@ -360,8 +362,8 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   // Optimize for constant VLEN.
-  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
-    const int64_t VLENB = STI.getRealMinVLen() / 8;
+  if (auto VLEN = STI.getRealVLen()) {
+    const int64_t VLENB = *VLEN / 8;
     int64_t Offset = VLENB * LMUL;
     STI.getInstrInfo()->movImm(MBB, II, DL, VL, Offset);
   } else {
@@ -712,7 +714,10 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
-  return MF.getSubtarget<RISCVSubtarget>().hasStdExtCOrZca() ? 1 : 0;
+  return MF.getSubtarget<RISCVSubtarget>().hasStdExtCOrZca() &&
+                 !DisableCostPerUse
+             ? 1
+             : 0;
 }
 
 // Add two address hints to improve chances of being able to use a compressed

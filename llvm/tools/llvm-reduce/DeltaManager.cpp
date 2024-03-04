@@ -92,7 +92,7 @@ static cl::list<std::string>
     DELTA_PASS("global-initializers", reduceGlobalsInitializersDeltaPass)      \
     DELTA_PASS("global-variables", reduceGlobalsDeltaPass)                     \
     DELTA_PASS("di-metadata", reduceDIMetadataDeltaPass)                       \
-    DELTA_PASS("dpvalues", reduceDPValuesDeltaPass)                            \
+    DELTA_PASS("dbg-records", reduceDbgRecordDeltaPass)                        \
     DELTA_PASS("metadata", reduceMetadataDeltaPass)                            \
     DELTA_PASS("named-metadata", reduceNamedMetadataDeltaPass)                 \
     DELTA_PASS("arguments", reduceArgumentsDeltaPass)                          \

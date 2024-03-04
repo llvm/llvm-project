@@ -1159,7 +1159,9 @@ public:
       if (FD) {
         FD->setWillHaveBody(true);
         S.ExprEvalContexts.back().InImmediateFunctionContext =
-            FD->isImmediateFunction();
+            FD->isImmediateFunction() ||
+            S.ExprEvalContexts[S.ExprEvalContexts.size() - 2]
+                .isConstantEvaluated();
         S.ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
             S.getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
       } else
@@ -8548,7 +8550,7 @@ public:
   /// if the arguments are dependent.
   ExprResult CheckVarTemplateId(const CXXScopeSpec &SS,
                                 const DeclarationNameInfo &NameInfo,
-                                VarTemplateDecl *Template,
+                                VarTemplateDecl *Template, NamedDecl *FoundD,
                                 SourceLocation TemplateLoc,
                                 const TemplateArgumentListInfo *TemplateArgs);
 
@@ -14071,6 +14073,7 @@ private:
   bool CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                    CallExpr *TheCall);
   bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+  bool CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckRISCVLMUL(CallExpr *TheCall, unsigned ArgNum);
   bool CheckRISCVBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                      CallExpr *TheCall);
@@ -14094,6 +14097,8 @@ private:
   bool SemaValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum);
 
 public:
+  bool IsLayoutCompatible(QualType T1, QualType T2) const;
+
   // Used by C++ template instantiation.
   ExprResult SemaBuiltinShuffleVector(CallExpr *TheCall);
   ExprResult SemaConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
@@ -14134,6 +14139,8 @@ private:
 
   bool CheckPPCMMAType(QualType Type, SourceLocation TypeLoc);
 
+  bool SemaBuiltinVectorMath(CallExpr *TheCall, QualType &Res);
+  bool SemaBuiltinVectorToScalarMath(CallExpr *TheCall);
   bool SemaBuiltinElementwiseMath(CallExpr *TheCall);
   bool SemaBuiltinElementwiseTernaryMath(CallExpr *TheCall);
   bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);

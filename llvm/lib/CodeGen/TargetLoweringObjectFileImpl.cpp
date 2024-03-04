@@ -2144,7 +2144,7 @@ static const Comdat *getWasmComdat(const GlobalValue *GV) {
   return C;
 }
 
-static unsigned getWasmSectionFlags(SectionKind K) {
+static unsigned getWasmSectionFlags(SectionKind K, bool Retain) {
   unsigned Flags = 0;
 
   if (K.isThreadLocal())
@@ -2153,9 +2153,20 @@ static unsigned getWasmSectionFlags(SectionKind K) {
   if (K.isMergeableCString())
     Flags |= wasm::WASM_SEG_FLAG_STRINGS;
 
+  if (Retain)
+    Flags |= wasm::WASM_SEG_FLAG_RETAIN;
+
   // TODO(sbc): Add suport for K.isMergeableConst()
 
   return Flags;
+}
+
+void TargetLoweringObjectFileWasm::getModuleMetadata(Module &M) {
+  SmallVector<GlobalValue *, 4> Vec;
+  collectUsedGlobalVariables(M, Vec, false);
+  for (GlobalValue *GV : Vec)
+    if (auto *GO = dyn_cast<GlobalObject>(GV))
+      Used.insert(GO);
 }
 
 MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
@@ -2181,16 +2192,18 @@ MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
     Group = C->getName();
   }
 
-  unsigned Flags = getWasmSectionFlags(Kind);
+  unsigned Flags = getWasmSectionFlags(Kind, Used.count(GO));
   MCSectionWasm *Section = getContext().getWasmSection(
       Name, Kind, Flags, Group, MCContext::GenericSectionID);
 
   return Section;
 }
 
-static MCSectionWasm *selectWasmSectionForGlobal(
-    MCContext &Ctx, const GlobalObject *GO, SectionKind Kind, Mangler &Mang,
-    const TargetMachine &TM, bool EmitUniqueSection, unsigned *NextUniqueID) {
+static MCSectionWasm *
+selectWasmSectionForGlobal(MCContext &Ctx, const GlobalObject *GO,
+                           SectionKind Kind, Mangler &Mang,
+                           const TargetMachine &TM, bool EmitUniqueSection,
+                           unsigned *NextUniqueID, bool Retain) {
   StringRef Group = "";
   if (const Comdat *C = getWasmComdat(GO)) {
     Group = C->getName();
@@ -2215,7 +2228,7 @@ static MCSectionWasm *selectWasmSectionForGlobal(
     (*NextUniqueID)++;
   }
 
-  unsigned Flags = getWasmSectionFlags(Kind);
+  unsigned Flags = getWasmSectionFlags(Kind, Retain);
   return Ctx.getWasmSection(Name, Kind, Flags, Group, UniqueID);
 }
 
@@ -2233,9 +2246,11 @@ MCSection *TargetLoweringObjectFileWasm::SelectSectionForGlobal(
   else
     EmitUniqueSection = TM.getDataSections();
   EmitUniqueSection |= GO->hasComdat();
+  bool Retain = Used.count(GO);
+  EmitUniqueSection |= Retain;
 
   return selectWasmSectionForGlobal(getContext(), GO, Kind, getMangler(), TM,
-                                    EmitUniqueSection, &NextUniqueID);
+                                    EmitUniqueSection, &NextUniqueID, Retain);
 }
 
 bool TargetLoweringObjectFileWasm::shouldPutJumpTableInFunctionSection(
@@ -2404,6 +2419,15 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForExternalReference(
 
   SmallString<128> Name;
   getNameWithPrefix(Name, GO, TM);
+
+  // AIX TLS local-dynamic does not need the external reference for the
+  // "_$TLSML" symbol.
+  if (GO->getThreadLocalMode() == GlobalVariable::LocalDynamicTLSModel &&
+      GO->hasName() && GO->getName() == "_$TLSML") {
+    return getContext().getXCOFFSection(
+        Name, SectionKind::getData(),
+        XCOFF::CsectProperties(XCOFF::XMC_TC, XCOFF::XTY_SD));
+  }
 
   XCOFF::StorageMappingClass SMC =
       isa<Function>(GO) ? XCOFF::XMC_DS : XCOFF::XMC_UA;
@@ -2662,13 +2686,17 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
   // the chance of needing -bbigtoc is decreased. Also, the toc-entry for
   // EH info is never referenced directly using instructions so it can be
   // allocated with TE storage-mapping class.
+  // The "_$TLSML" symbol for TLS local-dynamic mode requires XMC_TC, otherwise
+  // the AIX assembler will complain.
   return getContext().getXCOFFSection(
       cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(), SectionKind::getData(),
-      XCOFF::CsectProperties((TM.getCodeModel() == CodeModel::Large ||
-                              cast<MCSymbolXCOFF>(Sym)->isEHInfo())
-                                 ? XCOFF::XMC_TE
-                                 : XCOFF::XMC_TC,
-                             XCOFF::XTY_SD));
+      XCOFF::CsectProperties(
+          ((TM.getCodeModel() == CodeModel::Large &&
+            cast<MCSymbolXCOFF>(Sym)->getSymbolTableName() != "_$TLSML") ||
+           cast<MCSymbolXCOFF>(Sym)->isEHInfo())
+              ? XCOFF::XMC_TE
+              : XCOFF::XMC_TC,
+          XCOFF::XTY_SD));
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForLSDA(

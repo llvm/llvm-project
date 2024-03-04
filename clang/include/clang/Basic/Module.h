@@ -350,6 +350,11 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsInferred : 1;
 
+  /// Whether this is an inferred submodule that's missing from the umbrella
+  /// header.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsInferredMissingFromUmbrellaHeader : 1;
+
   /// Whether we should infer submodules for this module based on
   /// the headers.
   ///

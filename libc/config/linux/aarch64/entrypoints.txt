@@ -95,6 +95,41 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdbit.stdc_leading_zeros_ui
     libc.src.stdbit.stdc_leading_zeros_ul
     libc.src.stdbit.stdc_leading_zeros_ull
+    libc.src.stdbit.stdc_leading_ones_uc
+    libc.src.stdbit.stdc_leading_ones_us
+    libc.src.stdbit.stdc_leading_ones_ui
+    libc.src.stdbit.stdc_leading_ones_ul
+    libc.src.stdbit.stdc_leading_ones_ull
+    libc.src.stdbit.stdc_trailing_zeros_uc
+    libc.src.stdbit.stdc_trailing_zeros_us
+    libc.src.stdbit.stdc_trailing_zeros_ui
+    libc.src.stdbit.stdc_trailing_zeros_ul
+    libc.src.stdbit.stdc_trailing_zeros_ull
+    libc.src.stdbit.stdc_trailing_ones_uc
+    libc.src.stdbit.stdc_trailing_ones_us
+    libc.src.stdbit.stdc_trailing_ones_ui
+    libc.src.stdbit.stdc_trailing_ones_ul
+    libc.src.stdbit.stdc_trailing_ones_ull
+    libc.src.stdbit.stdc_first_leading_zero_uc
+    libc.src.stdbit.stdc_first_leading_zero_us
+    libc.src.stdbit.stdc_first_leading_zero_ui
+    libc.src.stdbit.stdc_first_leading_zero_ul
+    libc.src.stdbit.stdc_first_leading_zero_ull
+    libc.src.stdbit.stdc_first_leading_one_uc
+    libc.src.stdbit.stdc_first_leading_one_us
+    libc.src.stdbit.stdc_first_leading_one_ui
+    libc.src.stdbit.stdc_first_leading_one_ul
+    libc.src.stdbit.stdc_first_leading_one_ull
+    libc.src.stdbit.stdc_first_trailing_zero_uc
+    libc.src.stdbit.stdc_first_trailing_zero_us
+    libc.src.stdbit.stdc_first_trailing_zero_ui
+    libc.src.stdbit.stdc_first_trailing_zero_ul
+    libc.src.stdbit.stdc_first_trailing_zero_ull
+    libc.src.stdbit.stdc_first_trailing_one_uc
+    libc.src.stdbit.stdc_first_trailing_one_us
+    libc.src.stdbit.stdc_first_trailing_one_ui
+    libc.src.stdbit.stdc_first_trailing_one_ul
+    libc.src.stdbit.stdc_first_trailing_one_ull
 
     # stdlib.h entrypoints
     libc.src.stdlib.abs
@@ -306,6 +341,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.llogb
+    libc.src.math.llogbf
+    libc.src.math.llogbl
     libc.src.math.llrint
     libc.src.math.llrintf
     libc.src.math.llrintl
@@ -376,7 +414,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncl
 )
 
-if(LIBC_COMPILER_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.ceilf128
@@ -387,7 +425,10 @@ if(LIBC_COMPILER_HAS_FLOAT128)
     libc.src.math.fmaxf128
     libc.src.math.fminf128
     libc.src.math.frexpf128
+    libc.src.math.ilogbf128
     libc.src.math.ldexpf128
+    libc.src.math.llogbf128
+    libc.src.math.logbf128
     libc.src.math.roundf128
     libc.src.math.sqrtf128
     libc.src.math.truncf128

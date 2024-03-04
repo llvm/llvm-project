@@ -76,6 +76,8 @@
 #include <utility>
 #include <variant>
 
+#include "MatchContext.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "dagcombine"
@@ -886,141 +888,6 @@ public:
   // FIXME: Ideally we could add N to the worklist, but this causes exponential
   //        compile time costs in large DAGs, e.g. Halide.
   void NodeInserted(SDNode *N) override { DC.ConsiderForPruning(N); }
-};
-
-class EmptyMatchContext {
-  SelectionDAG &DAG;
-  const TargetLowering &TLI;
-
-public:
-  EmptyMatchContext(SelectionDAG &DAG, const TargetLowering &TLI, SDNode *Root)
-      : DAG(DAG), TLI(TLI) {}
-
-  bool match(SDValue OpN, unsigned Opcode) const {
-    return Opcode == OpN->getOpcode();
-  }
-
-  // Same as SelectionDAG::getNode().
-  template <typename... ArgT> SDValue getNode(ArgT &&...Args) {
-    return DAG.getNode(std::forward<ArgT>(Args)...);
-  }
-
-  bool isOperationLegalOrCustom(unsigned Op, EVT VT,
-                                bool LegalOnly = false) const {
-    return TLI.isOperationLegalOrCustom(Op, VT, LegalOnly);
-  }
-};
-
-class VPMatchContext {
-  SelectionDAG &DAG;
-  const TargetLowering &TLI;
-  SDValue RootMaskOp;
-  SDValue RootVectorLenOp;
-
-public:
-  VPMatchContext(SelectionDAG &DAG, const TargetLowering &TLI, SDNode *Root)
-      : DAG(DAG), TLI(TLI), RootMaskOp(), RootVectorLenOp() {
-    assert(Root->isVPOpcode());
-    if (auto RootMaskPos = ISD::getVPMaskIdx(Root->getOpcode()))
-      RootMaskOp = Root->getOperand(*RootMaskPos);
-    else if (Root->getOpcode() == ISD::VP_SELECT)
-      RootMaskOp = DAG.getAllOnesConstant(SDLoc(Root),
-                                          Root->getOperand(0).getValueType());
-
-    if (auto RootVLenPos =
-            ISD::getVPExplicitVectorLengthIdx(Root->getOpcode()))
-      RootVectorLenOp = Root->getOperand(*RootVLenPos);
-  }
-
-  /// whether \p OpVal is a node that is functionally compatible with the
-  /// NodeType \p Opc
-  bool match(SDValue OpVal, unsigned Opc) const {
-    if (!OpVal->isVPOpcode())
-      return OpVal->getOpcode() == Opc;
-
-    auto BaseOpc = ISD::getBaseOpcodeForVP(OpVal->getOpcode(),
-                                           !OpVal->getFlags().hasNoFPExcept());
-    if (BaseOpc != Opc)
-      return false;
-
-    // Make sure the mask of OpVal is true mask or is same as Root's.
-    unsigned VPOpcode = OpVal->getOpcode();
-    if (auto MaskPos = ISD::getVPMaskIdx(VPOpcode)) {
-      SDValue MaskOp = OpVal.getOperand(*MaskPos);
-      if (RootMaskOp != MaskOp &&
-          !ISD::isConstantSplatVectorAllOnes(MaskOp.getNode()))
-        return false;
-    }
-
-    // Make sure the EVL of OpVal is same as Root's.
-    if (auto VLenPos = ISD::getVPExplicitVectorLengthIdx(VPOpcode))
-      if (RootVectorLenOp != OpVal.getOperand(*VLenPos))
-        return false;
-    return true;
-  }
-
-  // Specialize based on number of operands.
-  // TODO emit VP intrinsics where MaskOp/VectorLenOp != null
-  // SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT) { return
-  // DAG.getNode(Opcode, DL, VT); }
-  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue Operand) {
-    unsigned VPOpcode = ISD::getVPForBaseOpcode(Opcode);
-    assert(ISD::getVPMaskIdx(VPOpcode) == 1 &&
-           ISD::getVPExplicitVectorLengthIdx(VPOpcode) == 2);
-    return DAG.getNode(VPOpcode, DL, VT,
-                       {Operand, RootMaskOp, RootVectorLenOp});
-  }
-
-  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
-                  SDValue N2) {
-    unsigned VPOpcode = ISD::getVPForBaseOpcode(Opcode);
-    assert(ISD::getVPMaskIdx(VPOpcode) == 2 &&
-           ISD::getVPExplicitVectorLengthIdx(VPOpcode) == 3);
-    return DAG.getNode(VPOpcode, DL, VT,
-                       {N1, N2, RootMaskOp, RootVectorLenOp});
-  }
-
-  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
-                  SDValue N2, SDValue N3) {
-    unsigned VPOpcode = ISD::getVPForBaseOpcode(Opcode);
-    assert(ISD::getVPMaskIdx(VPOpcode) == 3 &&
-           ISD::getVPExplicitVectorLengthIdx(VPOpcode) == 4);
-    return DAG.getNode(VPOpcode, DL, VT,
-                       {N1, N2, N3, RootMaskOp, RootVectorLenOp});
-  }
-
-  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue Operand,
-                  SDNodeFlags Flags) {
-    unsigned VPOpcode = ISD::getVPForBaseOpcode(Opcode);
-    assert(ISD::getVPMaskIdx(VPOpcode) == 1 &&
-           ISD::getVPExplicitVectorLengthIdx(VPOpcode) == 2);
-    return DAG.getNode(VPOpcode, DL, VT, {Operand, RootMaskOp, RootVectorLenOp},
-                       Flags);
-  }
-
-  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
-                  SDValue N2, SDNodeFlags Flags) {
-    unsigned VPOpcode = ISD::getVPForBaseOpcode(Opcode);
-    assert(ISD::getVPMaskIdx(VPOpcode) == 2 &&
-           ISD::getVPExplicitVectorLengthIdx(VPOpcode) == 3);
-    return DAG.getNode(VPOpcode, DL, VT, {N1, N2, RootMaskOp, RootVectorLenOp},
-                       Flags);
-  }
-
-  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
-                  SDValue N2, SDValue N3, SDNodeFlags Flags) {
-    unsigned VPOpcode = ISD::getVPForBaseOpcode(Opcode);
-    assert(ISD::getVPMaskIdx(VPOpcode) == 3 &&
-           ISD::getVPExplicitVectorLengthIdx(VPOpcode) == 4);
-    return DAG.getNode(VPOpcode, DL, VT,
-                       {N1, N2, N3, RootMaskOp, RootVectorLenOp}, Flags);
-  }
-
-  bool isOperationLegalOrCustom(unsigned Op, EVT VT,
-                                bool LegalOnly = false) const {
-    unsigned VPOp = ISD::getVPForBaseOpcode(Op);
-    return TLI.isOperationLegalOrCustom(VPOp, VT, LegalOnly);
-  }
 };
 
 } // end anonymous namespace
@@ -13996,6 +13863,13 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
 
   if (SDValue Res = tryToFoldExtendSelectLoad(N, TLI, DAG, Level))
     return Res;
+
+  // CSE zext nneg with sext if the zext is not free.
+  if (N->getFlags().hasNonNeg() && !TLI.isZExtFree(N0.getValueType(), VT)) {
+    SDNode *CSENode = DAG.getNodeIfExists(ISD::SIGN_EXTEND, N->getVTList(), N0);
+    if (CSENode)
+      return SDValue(CSENode, 0);
+  }
 
   return SDValue();
 }
@@ -27961,7 +27835,7 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
     bool IsAtomic;
     SDValue BasePtr;
     int64_t Offset;
-    std::optional<int64_t> NumBytes;
+    LocationSize NumBytes;
     MachineMemOperand *MMO;
   };
 
@@ -27969,18 +27843,18 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
     if (const auto *LSN = dyn_cast<LSBaseSDNode>(N)) {
       int64_t Offset = 0;
       if (auto *C = dyn_cast<ConstantSDNode>(LSN->getOffset()))
-        Offset = (LSN->getAddressingMode() == ISD::PRE_INC)
-                     ? C->getSExtValue()
-                     : (LSN->getAddressingMode() == ISD::PRE_DEC)
-                           ? -1 * C->getSExtValue()
-                           : 0;
+        Offset = (LSN->getAddressingMode() == ISD::PRE_INC) ? C->getSExtValue()
+                 : (LSN->getAddressingMode() == ISD::PRE_DEC)
+                     ? -1 * C->getSExtValue()
+                     : 0;
       uint64_t Size =
           MemoryLocation::getSizeOrUnknown(LSN->getMemoryVT().getStoreSize());
       return {LSN->isVolatile(),
               LSN->isAtomic(),
               LSN->getBasePtr(),
               Offset /*base offset*/,
-              std::optional<int64_t>(Size),
+              Size != ~UINT64_C(0) ? LocationSize::precise(Size)
+                                   : LocationSize::beforeOrAfterPointer(),
               LSN->getMemOperand()};
     }
     if (const auto *LN = cast<LifetimeSDNode>(N))
@@ -27988,13 +27862,15 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
               /*isAtomic*/ false,
               LN->getOperand(1),
               (LN->hasOffset()) ? LN->getOffset() : 0,
-              (LN->hasOffset()) ? std::optional<int64_t>(LN->getSize())
-                                : std::optional<int64_t>(),
+              (LN->hasOffset()) ? LocationSize::precise(LN->getSize())
+                                : LocationSize::beforeOrAfterPointer(),
               (MachineMemOperand *)nullptr};
     // Default.
     return {false /*isvolatile*/,
-            /*isAtomic*/ false,          SDValue(),
-            (int64_t)0 /*offset*/,       std::optional<int64_t>() /*size*/,
+            /*isAtomic*/ false,
+            SDValue(),
+            (int64_t)0 /*offset*/,
+            LocationSize::beforeOrAfterPointer() /*size*/,
             (MachineMemOperand *)nullptr};
   };
 
@@ -28049,18 +27925,20 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
   int64_t SrcValOffset1 = MUC1.MMO->getOffset();
   Align OrigAlignment0 = MUC0.MMO->getBaseAlign();
   Align OrigAlignment1 = MUC1.MMO->getBaseAlign();
-  auto &Size0 = MUC0.NumBytes;
-  auto &Size1 = MUC1.NumBytes;
+  LocationSize Size0 = MUC0.NumBytes;
+  LocationSize Size1 = MUC1.NumBytes;
   if (OrigAlignment0 == OrigAlignment1 && SrcValOffset0 != SrcValOffset1 &&
-      Size0.has_value() && Size1.has_value() && *Size0 == *Size1 &&
-      OrigAlignment0 > *Size0 && SrcValOffset0 % *Size0 == 0 &&
-      SrcValOffset1 % *Size1 == 0) {
+      Size0.hasValue() && Size1.hasValue() && Size0 == Size1 &&
+      OrigAlignment0 > Size0.getValue() &&
+      SrcValOffset0 % Size0.getValue() == 0 &&
+      SrcValOffset1 % Size1.getValue() == 0) {
     int64_t OffAlign0 = SrcValOffset0 % OrigAlignment0.value();
     int64_t OffAlign1 = SrcValOffset1 % OrigAlignment1.value();
 
     // There is no overlap between these relatively aligned accesses of
     // similar size. Return no alias.
-    if ((OffAlign0 + *Size0) <= OffAlign1 || (OffAlign1 + *Size1) <= OffAlign0)
+    if ((OffAlign0 + (int64_t)Size0.getValue()) <= OffAlign1 ||
+        (OffAlign1 + (int64_t)Size1.getValue()) <= OffAlign0)
       return false;
   }
 
@@ -28073,12 +27951,12 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
     UseAA = false;
 #endif
 
-  if (UseAA && AA && MUC0.MMO->getValue() && MUC1.MMO->getValue() && Size0 &&
-      Size1) {
+  if (UseAA && AA && MUC0.MMO->getValue() && MUC1.MMO->getValue() &&
+      Size0.hasValue() && Size1.hasValue()) {
     // Use alias analysis information.
     int64_t MinOffset = std::min(SrcValOffset0, SrcValOffset1);
-    int64_t Overlap0 = *Size0 + SrcValOffset0 - MinOffset;
-    int64_t Overlap1 = *Size1 + SrcValOffset1 - MinOffset;
+    int64_t Overlap0 = Size0.getValue() + SrcValOffset0 - MinOffset;
+    int64_t Overlap1 = Size1.getValue() + SrcValOffset1 - MinOffset;
     if (AA->isNoAlias(
             MemoryLocation(MUC0.MMO->getValue(), Overlap0,
                            UseTBAA ? MUC0.MMO->getAAInfo() : AAMDNodes()),

@@ -318,6 +318,10 @@ public:
   std::optional<TupleElement>
   GetTupleElement(lldb::opaque_compiler_type_t type, size_t idx);
 
+  /// Returns true if the compiler type is a Builtin (belongs to the "Builtin
+  /// module").
+  static bool IsBuiltinType(CompilerType type);
+
   /// Creates a GenericTypeParamType with the desired depth and index.
   CompilerType CreateGenericTypeParamType(unsigned int depth,
                                     unsigned int index) override;

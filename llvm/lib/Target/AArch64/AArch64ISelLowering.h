@@ -291,9 +291,6 @@ enum NodeType : unsigned {
   EORV_PRED,
   ANDV_PRED,
 
-  // Vector bitwise insertion
-  BIT,
-
   // Compare-and-branch
   CBZ,
   CBNZ,
@@ -1324,6 +1321,8 @@ private:
   bool preferScalarizeSplat(SDNode *N) const override;
 
   unsigned getMinimumJumpTableEntries() const override;
+
+  bool softPromoteHalfType() const override { return true; }
 };
 
 namespace AArch64 {

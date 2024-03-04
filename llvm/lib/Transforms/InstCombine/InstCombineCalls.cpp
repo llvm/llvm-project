@@ -1220,10 +1220,11 @@ static Instruction *foldClampRangeOfTwo(IntrinsicInst *II,
 /// If this min/max has a constant operand and an operand that is a matching
 /// min/max with a constant operand, constant-fold the 2 constant operands.
 static Value *reassociateMinMaxWithConstants(IntrinsicInst *II,
-                                             IRBuilderBase &Builder) {
+                                             IRBuilderBase &Builder,
+                                             const SimplifyQuery &SQ) {
   Intrinsic::ID MinMaxID = II->getIntrinsicID();
-  auto *LHS = dyn_cast<IntrinsicInst>(II->getArgOperand(0));
-  if (!LHS || LHS->getIntrinsicID() != MinMaxID)
+  auto *LHS = dyn_cast<MinMaxIntrinsic>(II->getArgOperand(0));
+  if (!LHS)
     return nullptr;
 
   Constant *C0, *C1;
@@ -1231,11 +1232,21 @@ static Value *reassociateMinMaxWithConstants(IntrinsicInst *II,
       !match(II->getArgOperand(1), m_ImmConstant(C1)))
     return nullptr;
 
-  // max (max X, C0), C1 --> max X, (max C0, C1) --> max X, NewC
+  // max (max X, C0), C1 --> max X, (max C0, C1)
+  // min (min X, C0), C1 --> min X, (min C0, C1)
+  // umax (smax X, nneg C0), nneg C1 --> smax X, (umax C0, C1)
+  // smin (umin X, nneg C0), nneg C1 --> umin X, (smin C0, C1)
+  Intrinsic::ID InnerMinMaxID = LHS->getIntrinsicID();
+  if (InnerMinMaxID != MinMaxID &&
+      !(((MinMaxID == Intrinsic::umax && InnerMinMaxID == Intrinsic::smax) ||
+         (MinMaxID == Intrinsic::smin && InnerMinMaxID == Intrinsic::umin)) &&
+        isKnownNonNegative(C0, SQ) && isKnownNonNegative(C1, SQ)))
+    return nullptr;
+
   ICmpInst::Predicate Pred = MinMaxIntrinsic::getPredicate(MinMaxID);
   Value *CondC = Builder.CreateICmp(Pred, C0, C1);
   Value *NewC = Builder.CreateSelect(CondC, C0, C1);
-  return Builder.CreateIntrinsic(MinMaxID, II->getType(),
+  return Builder.CreateIntrinsic(InnerMinMaxID, II->getType(),
                                  {LHS->getArgOperand(0), NewC});
 }
 
@@ -1786,7 +1797,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Instruction *SAdd = matchSAddSubSat(*II))
       return SAdd;
 
-    if (Value *NewMinMax = reassociateMinMaxWithConstants(II, Builder))
+    if (Value *NewMinMax = reassociateMinMaxWithConstants(II, Builder, SQ))
       return replaceInstUsesWith(*II, NewMinMax);
 
     if (Instruction *R = reassociateMinMaxWithConstantInOperand(II, Builder))
