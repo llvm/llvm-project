@@ -206,6 +206,10 @@ private:
   /// other template parameter scopes as parents.
   Scope *TemplateParamParent;
 
+  /// DeclScopeParent - This is a direct link to the immediately containing
+  /// DeclScope, i.e. scope which can contain declarations.
+  Scope *DeclParent;
+
   /// DeclsInScope - This keeps track of all declarations in this scope.  When
   /// the declaration is added to the scope, it is set as the current
   /// declaration for the identifier in the IdentifierTable.  When the scope is
@@ -304,6 +308,9 @@ public:
 
   Scope *getTemplateParamParent() { return TemplateParamParent; }
   const Scope *getTemplateParamParent() const { return TemplateParamParent; }
+
+  Scope *getDeclParent() { return DeclParent; }
+  const Scope *getDeclParent() const { return DeclParent; }
 
   /// Returns the depth of this scope. The translation-unit has scope depth 0.
   unsigned getDepth() const { return Depth; }

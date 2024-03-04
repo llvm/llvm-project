@@ -8386,7 +8386,21 @@ public:
                                       TemplateSpecializationKind TSK,
                                       bool Complain = true);
 
-  void DiagnoseTemplateParameterShadow(SourceLocation Loc, Decl *PrevDecl);
+  /// DiagnoseTemplateParameterShadow - Produce a diagnostic complaining
+  /// that the template parameter 'PrevDecl' is being shadowed by a new
+  /// declaration at location Loc. Returns true to indicate that this is
+  /// an error, and false otherwise.
+  ///
+  /// \param Loc The location of the declaration that shadows a template
+  ///            parameter.
+  ///
+  /// \param PrevDecl The template parameter that the declaration shadows.
+  ///
+  /// \param SupportedForCompatibility Whether to issue the diagnostic as
+  ///        a warning for compatibility with older versions of clang.
+  ///        Ignored when MSVC compatibility is enabled.
+  void DiagnoseTemplateParameterShadow(SourceLocation Loc, Decl *PrevDecl,
+                                       bool SupportedForCompatibility = false);
   TemplateDecl *AdjustDeclIfTemplate(Decl *&Decl);
 
   NamedDecl *ActOnTypeParameter(Scope *S, bool Typename,
