@@ -322,7 +322,7 @@ TEST(LlvmLibcSScanfTest, FloatConvLengthModifier) {
   EXPECT_EQ(ret_val, 1);
 // 1e600 may be larger than the maximum long double (if long double is double).
 // In that case both of these should be evaluated as inf.
-#ifdef LIBC_LONG_DOUBLE_IS_FLOAT64
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
   EXPECT_FP_EQ(ld_result, d_inf);
 #else
   EXPECT_FP_EQ(ld_result, 1.0e600L);
