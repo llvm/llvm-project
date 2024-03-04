@@ -19808,7 +19808,8 @@ bool Sema::SemaBuiltinVectorMath(CallExpr *TheCall, QualType &Res) {
   return false;
 }
 
-bool Sema::SemaBuiltinElementwiseTernaryMath(CallExpr *TheCall, bool enforceFloatingPointCheck) {
+bool Sema::SemaBuiltinElementwiseTernaryMath(CallExpr *TheCall,
+                                             bool enforceFloatingPointCheck) {
   if (checkArgCount(*this, TheCall, 3))
     return true;
 
@@ -19820,11 +19821,11 @@ bool Sema::SemaBuiltinElementwiseTernaryMath(CallExpr *TheCall, bool enforceFloa
     Args[I] = Converted.get();
   }
 
-  if(enforceFloatingPointCheck) {
+  if (enforceFloatingPointCheck) {
     int ArgOrdinal = 1;
     for (Expr *Arg : Args) {
-      if (checkFPMathBuiltinElementType(*this, Arg->getBeginLoc(), Arg->getType(),
-                                        ArgOrdinal++))
+      if (checkFPMathBuiltinElementType(*this, Arg->getBeginLoc(),
+                                        Arg->getType(), ArgOrdinal++))
         return true;
     }
   }
