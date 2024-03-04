@@ -34,6 +34,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -44,6 +45,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "correlated-value-propagation"
 
@@ -285,7 +287,41 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI, DominatorTree *DT,
   return Changed;
 }
 
+/// Given an icmp `icmp eq X, C`,
+/// if we already know that C is 2k+1 and X is in [2k, 2k+1],
+/// then we can fold it to `trunc X to i1`.
+static bool processEqualityICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
+  if (Cmp->getType()->isVectorTy() ||
+      !Cmp->getOperand(0)->getType()->isIntegerTy() || !Cmp->isEquality())
+    return false;
+
+  Value *Op0 = Cmp->getOperand(0);
+  const APInt *RHSC;
+  if (!match(Cmp->getOperand(1), m_APInt(RHSC)))
+    return false;
+
+  ConstantRange Range =
+      LVI->getConstantRangeAtUse(Cmp->getOperandUse(0), /*UndefAllowed*/ true);
+  APInt RangeSize = Range.getUpper() - Range.getLower();
+  if (RangeSize != 2 || !Range.contains(*RHSC))
+    return false;
+
+  bool ShouldBeOdd = Cmp->getPredicate() == ICmpInst::Predicate::ICMP_EQ;
+  if ((*RHSC)[0] == ShouldBeOdd) {
+    IRBuilder<> B{Cmp};
+    Value *Trunc = B.CreateTrunc(Op0, Cmp->getType());
+    Cmp->replaceAllUsesWith(Trunc);
+    Cmp->eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
 static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
+  if (processEqualityICmp(Cmp, LVI))
+    return true;
+
   // Only for signed relational comparisons of scalar integers.
   if (Cmp->getType()->isVectorTy() ||
       !Cmp->getOperand(0)->getType()->isIntegerTy())
@@ -332,39 +368,6 @@ static bool constantFoldCmp(CmpInst *Cmp, LazyValueInfo *LVI) {
   return true;
 }
 
-/// Given an icmp `icmp eq X, C`,
-/// if we already know that C is 2k+1 and X is in [2k, 2k+1],
-/// then we can fold it to `trunc X to i1`.
-static bool processEqualityICmp(CmpInst *Cmp, LazyValueInfo *LVI) {
-  if (Cmp->getType()->isVectorTy() ||
-      !Cmp->getOperand(0)->getType()->isIntegerTy() || !Cmp->isEquality())
-    return false;
-
-  Value *Op0 = Cmp->getOperand(0);
-  Value *Op1 = Cmp->getOperand(1);
-  ConstantInt *CI = dyn_cast<ConstantInt>(Op1);
-  if (!CI)
-    return false;
-
-  ConstantRange Range =
-      LVI->getConstantRangeAtUse(Cmp->getOperandUse(0), /*UndefAllowed*/ true);
-  APInt RangeSize = Range.getUpper() - Range.getLower();
-  APInt Value = CI->getValue();
-  if (RangeSize != 2 || !Range.contains(Value))
-    return false;
-
-  bool ShouldBeOdd = Cmp->getPredicate() == ICmpInst::Predicate::ICMP_EQ;
-  if ((CI->getValue() & 1) == ShouldBeOdd) {
-    IRBuilder<> B{Cmp};
-    auto *Trunc = B.CreateTruncOrBitCast(Op0, Cmp->getType());
-    Cmp->replaceAllUsesWith(Trunc);
-    Cmp->eraseFromParent();
-    return true;
-  }
-
-  return false;
-}
-
 static bool processCmp(CmpInst *Cmp, LazyValueInfo *LVI) {
   if (constantFoldCmp(Cmp, LVI))
     return true;
@@ -372,9 +375,6 @@ static bool processCmp(CmpInst *Cmp, LazyValueInfo *LVI) {
   if (auto *ICmp = dyn_cast<ICmpInst>(Cmp))
     if (processICmp(ICmp, LVI))
       return true;
-
-  if (processEqualityICmp(Cmp, LVI))
-    return true;
 
   return false;
 }
