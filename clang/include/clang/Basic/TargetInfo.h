@@ -1415,14 +1415,10 @@ public:
       switch (SignReturnAddr) {
       case LangOptions::SignReturnAddressScopeKind::None:
         return "none";
-      case LangOptions::SignReturnAddressScopeKind::NonLeaf:
         return "non-leaf";
-      case LangOptions::SignReturnAddressScopeKind::All:
-        return "all";
       }
       llvm_unreachable("Unexpected SignReturnAddressScopeKind");
     }
-
     const char *getSignKeyStr() const {
       switch (SignKey) {
       case LangOptions::SignReturnAddressKeyKind::AKey:
@@ -1441,10 +1437,7 @@ public:
               ? (LangOpts.isSignReturnAddressScopeAll()
                      ? LangOptions::SignReturnAddressScopeKind::All
                      : LangOptions::SignReturnAddressScopeKind::NonLeaf)
-              : LangOptions::SignReturnAddressScopeKind::None;
       SignKey = LangOpts.isSignReturnAddressWithAKey()
-                    ? LangOptions::SignReturnAddressKeyKind::AKey
-                    : LangOptions::SignReturnAddressKeyKind::BKey;
       BranchTargetEnforcement = LangOpts.BranchTargetEnforcement;
       BranchProtectionPAuthLR = LangOpts.BranchProtectionPAuthLR;
       GuardedControlStack = LangOpts.GuardedControlStack;
@@ -1468,19 +1461,11 @@ public:
       if (GuardedControlStack)
         FuncAttrs.addAttribute("guarded-control-stack");
     }
-  };
 
   /// Determine if the Architecture in this TargetInfo supports branch
   /// protection
   virtual bool isBranchProtectionSupportedArch(StringRef Arch) const {
     return false;
-  }
-
-  /// Determine if this TargetInfo supports the given branch protection
-  /// specification
-  virtual bool validateBranchProtection(StringRef Spec, StringRef Arch,
-                                        BranchProtectionInfo &BPI,
-                                        StringRef &Err) const {
     Err = "";
     return false;
   }
