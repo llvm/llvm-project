@@ -384,7 +384,7 @@ std::string Linux::computeSysRoot() const {
   if (getTriple().isAndroid()) {
     // Android toolchains typically include a sysroot at ../sysroot relative to
     // the clang binary.
-    const StringRef ClangDir = getDriver().getInstalledDir();
+    const StringRef ClangDir = getDriver().Dir;
     std::string AndroidSysRootPath = (ClangDir + "/../sysroot").str();
     if (getVFS().exists(AndroidSysRootPath))
       return AndroidSysRootPath;
@@ -739,7 +739,7 @@ void Linux::AddFlangSystemIncludeArgs(const ArgList &DriverArgs,
     return;
 
   {
-    SmallString<128> P(D.InstalledDir);
+    SmallString<128> P(D.Dir);
     llvm::sys::path::append(P, "../include");
     IncludePathList.push_back(DriverArgs.MakeArgString(P.str()));
   }

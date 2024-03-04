@@ -605,7 +605,7 @@ void AMDGPUOpenMPToolChain::AddFlangSystemIncludeArgs(const ArgList &DriverArgs,
     return;
 
   {
-    SmallString<128> P(D.InstalledDir);
+    SmallString<128> P(D.Dir);
     llvm::sys::path::append(P, "../include");
     IncludePathList.push_back(DriverArgs.MakeArgString(P.str()));
   }

@@ -1138,7 +1138,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     // Offloading languages will instead only use the declarations stored in
     // the resource directory at clang/lib/Headers/llvm_libc_wrappers.
     if (C.getActiveOffloadKinds() == Action::OFK_None) {
-      SmallString<128> P(llvm::sys::path::parent_path(D.InstalledDir));
+      SmallString<128> P(llvm::sys::path::parent_path(D.Dir));
       llvm::sys::path::append(P, "include");
       llvm::sys::path::append(P, getToolChain().getTripleString());
       CmdArgs.push_back("-internal-isystem");
