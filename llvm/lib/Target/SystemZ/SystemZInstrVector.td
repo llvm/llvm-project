@@ -139,7 +139,7 @@ let Predicates = [FeatureVector] in {
   // LEY and LDY offer full 20-bit displacement fields.  It's often better
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
-  let mayLoad = 1 in {
+  let mayLoad = 1, canFoldAsLoad = 1 in {
     def VL32 : UnaryAliasVRX<z_load, v32sb, bdxaddr12pair>;
     def VL64 : UnaryAliasVRX<z_load, v64db, bdxaddr12pair>;
   }
@@ -1061,15 +1061,15 @@ multiclass VectorRounding<Instruction insn, TypedReg tr> {
 let Predicates = [FeatureVector] in {
   // Add.
   let Uses = [FPC], mayRaiseFPException = 1, isCommutable = 1 in {
-    def VFA   : BinaryVRRcFloatGeneric<"vfa", 0xE7E3>;
-    def VFADB : BinaryVRRc<"vfadb", 0xE7E3, any_fadd, v128db, v128db, 3, 0>;
-    def WFADB : BinaryVRRc<"wfadb", 0xE7E3, any_fadd, v64db, v64db, 3, 8, 0,
-                           "adbr">;
+    def  VFA   : BinaryVRRcFloatGeneric<"vfa", 0xE7E3>;
+    def  VFADB : BinaryVRRc<"vfadb", 0xE7E3, any_fadd, v128db, v128db, 3, 0>;
+    defm WFADB : BinaryVRRcAndCCPseudo<"wfadb", 0xE7E3, any_fadd, v64db, v64db,
+                                       3, 8, 0, "adbr">;
     let Predicates = [FeatureVectorEnhancements1] in {
-      def VFASB : BinaryVRRc<"vfasb", 0xE7E3, any_fadd, v128sb, v128sb, 2, 0>;
-      def WFASB : BinaryVRRc<"wfasb", 0xE7E3, any_fadd, v32sb, v32sb, 2, 8, 0,
-                             "aebr">;
-      def WFAXB : BinaryVRRc<"wfaxb", 0xE7E3, any_fadd, v128xb, v128xb, 4, 8>;
+      def  VFASB : BinaryVRRc<"vfasb", 0xE7E3, any_fadd, v128sb, v128sb, 2, 0>;
+      defm WFASB : BinaryVRRcAndCCPseudo<"wfasb", 0xE7E3, any_fadd, v32sb, v32sb,
+                                         2, 8, 0, "aebr">;
+      def  WFAXB : BinaryVRRc<"wfaxb", 0xE7E3, any_fadd, v128xb, v128xb, 4, 8>;
     }
   }
 
@@ -1389,15 +1389,15 @@ let Predicates = [FeatureVector] in {
 
   // Subtract.
   let Uses = [FPC], mayRaiseFPException = 1 in {
-    def VFS   : BinaryVRRcFloatGeneric<"vfs", 0xE7E2>;
-    def VFSDB : BinaryVRRc<"vfsdb", 0xE7E2, any_fsub, v128db, v128db, 3, 0>;
-    def WFSDB : BinaryVRRc<"wfsdb", 0xE7E2, any_fsub, v64db, v64db, 3, 8, 0,
-                           "sdbr">;
+    def  VFS   : BinaryVRRcFloatGeneric<"vfs", 0xE7E2>;
+    def  VFSDB : BinaryVRRc<"vfsdb", 0xE7E2, any_fsub, v128db, v128db, 3, 0>;
+    defm WFSDB : BinaryVRRcAndCCPseudo<"wfsdb", 0xE7E2, any_fsub, v64db, v64db,
+                                       3, 8, 0, "sdbr">;
     let Predicates = [FeatureVectorEnhancements1] in {
-      def VFSSB : BinaryVRRc<"vfssb", 0xE7E2, any_fsub, v128sb, v128sb, 2, 0>;
-      def WFSSB : BinaryVRRc<"wfssb", 0xE7E2, any_fsub, v32sb, v32sb, 2, 8, 0,
-                             "sebr">;
-      def WFSXB : BinaryVRRc<"wfsxb", 0xE7E2, any_fsub, v128xb, v128xb, 4, 8>;
+      def  VFSSB : BinaryVRRc<"vfssb", 0xE7E2, any_fsub, v128sb, v128sb, 2, 0>;
+      defm WFSSB : BinaryVRRcAndCCPseudo<"wfssb", 0xE7E2, any_fsub, v32sb, v32sb,
+                                         2, 8, 0, "sebr">;
+      def  WFSXB : BinaryVRRc<"wfsxb", 0xE7E2, any_fsub, v128xb, v128xb, 4, 8>;
     }
   }
 

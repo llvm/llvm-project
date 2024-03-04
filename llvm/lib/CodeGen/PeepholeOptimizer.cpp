@@ -1868,6 +1868,7 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
       // If we run into an instruction we can't fold across, discard
       // the load candidates.  Note: We might be able to fold *into* this
       // instruction, so this needs to be after the folding logic.
+      // TODO: Try AA for a store?
       if (MI->isLoadFoldBarrier()) {
         LLVM_DEBUG(dbgs() << "Encountered load fold barrier on " << *MI);
         FoldAsLoadDefCandidates.clear();

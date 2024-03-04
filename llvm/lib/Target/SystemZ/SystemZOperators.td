@@ -744,6 +744,19 @@ defm block_and : block_op<and>;
 defm block_or  : block_op<or>;
 defm block_xor : block_op<xor>;
 
+// A load (into FPR) selected only if the vector facility (/f32 enhancement)
+// is not present.
+def z_fprload : PatFrag<(ops node:$ptr), (load node:$ptr),
+                        [{ EVT MemVT = cast<LoadSDNode>(N)->getMemoryVT();
+                           EVT LoadVT = N->getValueType(0);
+                           assert(MemVT == LoadVT && "Unexpected load.");
+                           if (MemVT == MVT::f32)
+                             return !Subtarget->hasVectorEnhancements1();
+                           return !Subtarget->hasVector();
+                         }]>;
+def z_fpr_any_extloadf32 : PatFrag<(ops node:$ptr), (any_extloadf32 node:$ptr),
+                                   [{ return !Subtarget->hasVector(); }]>;
+
 // Insertions.
 def inserti8 : PatFrag<(ops node:$src1, node:$src2),
                        (or (and node:$src1, -256), node:$src2)>;

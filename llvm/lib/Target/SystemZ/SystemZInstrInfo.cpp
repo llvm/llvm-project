@@ -611,6 +611,147 @@ void SystemZInstrInfo::insertSelect(MachineBasicBlock &MBB,
     .addImm(CCValid).addImm(CCMask);
 }
 
+static void transferDeadCC(MachineInstr *OldMI, MachineInstr *NewMI) {
+  if (OldMI->registerDefIsDead(SystemZ::CC)) {
+    MachineOperand *CCDef = NewMI->findRegisterDefOperand(SystemZ::CC);
+    if (CCDef != nullptr)
+      CCDef->setIsDead(true);
+  }
+}
+
+void SystemZInstrInfo::transferMIFlag(MachineInstr *OldMI, MachineInstr *NewMI,
+                                      MachineInstr::MIFlag Flag) const {
+  if (OldMI->getFlag(Flag))
+    NewMI->setFlag(Flag);
+}
+
+static cl::opt<bool> DISABLE_FOLDING("disable-folding", cl::init(false));
+static cl::opt<bool> FOLD_LDY("fold-ldy", cl::init(false));
+
+MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
+                                                  MachineRegisterInfo *MRI,
+                                                  Register &FoldAsLoadDefReg,
+                                                  MachineInstr *&DefMI) const {
+  // TODO: Would it be beneficial to not fold in cases of high register pressure?
+  if (DISABLE_FOLDING)
+    return nullptr;
+
+  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+
+  // Check whether we can move the DefMI load, and that it only has one use.
+  DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
+  assert(DefMI);
+  bool SawStore = false;
+  if (!DefMI->isSafeToMove(nullptr, SawStore) ||
+      !MRI->hasOneNonDBGUse(FoldAsLoadDefReg))
+    return nullptr;
+
+  unsigned LoadOpcD12 = 0;
+  unsigned LoadOpcD20 = 0;
+  unsigned RegMemOpcode = 0;
+  const TargetRegisterClass *FPRC = nullptr;
+  RegMemOpcode = MI.getOpcode() == SystemZ::WFADB_CCPseudo    ? SystemZ::ADB
+                 : MI.getOpcode() == SystemZ::WFSDB_CCPseudo  ? SystemZ::SDB
+                 : MI.getOpcode() == SystemZ::WFMDB           ? SystemZ::MDB
+                 : MI.getOpcode() == SystemZ::WFDDB           ? SystemZ::DDB
+                 : MI.getOpcode() == SystemZ::WFMADB          ? SystemZ::MADB
+                 : MI.getOpcode() == SystemZ::WFMSDB          ? SystemZ::MSDB
+                 : MI.getOpcode() == SystemZ::WFSQDB          ? SystemZ::SQDB
+                 : MI.getOpcode() == SystemZ::WFCDB           ? SystemZ::CDB
+                                                              : 0;
+  if (RegMemOpcode) {
+    LoadOpcD12 = SystemZ::VL64;
+    LoadOpcD20 = SystemZ::LDY;
+    FPRC = &SystemZ::FP64BitRegClass;
+  } else {
+    RegMemOpcode = MI.getOpcode() == SystemZ::WFASB_CCPseudo    ? SystemZ::AEB
+                   : MI.getOpcode() == SystemZ::WFSSB_CCPseudo  ? SystemZ::SEB
+                   : MI.getOpcode() == SystemZ::WFMSB           ? SystemZ::MEEB
+                   : MI.getOpcode() == SystemZ::WFDSB           ? SystemZ::DEB
+                   : MI.getOpcode() == SystemZ::WFMASB          ? SystemZ::MAEB
+                   : MI.getOpcode() == SystemZ::WFMSSB          ? SystemZ::MSEB
+                   : MI.getOpcode() == SystemZ::WFSQSB          ? SystemZ::SQEB
+                   : MI.getOpcode() == SystemZ::WFCSB           ? SystemZ::CEB
+                                                                : 0;
+    if (RegMemOpcode) {
+      LoadOpcD12 = SystemZ::VL32;
+      LoadOpcD20 = SystemZ::LEY;
+      FPRC = &SystemZ::FP32BitRegClass;
+    }
+  }
+  if (MI.getOpcode() == SystemZ::WLDEB) {
+    RegMemOpcode = SystemZ::LDEB;
+    LoadOpcD12 = SystemZ::VL32;
+    LoadOpcD20 = SystemZ::LEY;
+    FPRC = &SystemZ::FP64BitRegClass;
+  }
+
+  if (!RegMemOpcode ||
+      (DefMI->getOpcode() != LoadOpcD12 && DefMI->getOpcode() != LoadOpcD20))
+    return nullptr;
+
+  if (DefMI->getOpcode() == LoadOpcD20 && !FOLD_LDY)
+    return nullptr;
+
+  DebugLoc DL = MI.getDebugLoc();
+  Register DstReg = MI.getOperand(0).getReg();
+
+  bool IsUnary = (RegMemOpcode == SystemZ::LDEB || RegMemOpcode == SystemZ::SQEB ||
+                  RegMemOpcode == SystemZ::SQDB);
+  bool IsTernary =
+    (RegMemOpcode == SystemZ::MADB || RegMemOpcode == SystemZ::MAEB ||
+     RegMemOpcode == SystemZ::MSDB || RegMemOpcode == SystemZ::MSEB);
+  bool IsCmp = (RegMemOpcode == SystemZ::CEB ||RegMemOpcode == SystemZ::CDB);
+  // (TODO: handle also strict FP compares?)
+
+  MachineOperand LHS = MI.getOperand(1 - IsCmp);
+  MachineOperand RHS = MI.getOperand(2 - IsCmp);
+  MachineOperand &RegMO = RHS.getReg() == FoldAsLoadDefReg ? LHS : RHS;
+  MachineOperand *AccMO = IsTernary ? &MI.getOperand(3) : nullptr;
+  if ((RegMemOpcode == SystemZ::SDB || RegMemOpcode == SystemZ::SEB ||
+       RegMemOpcode == SystemZ::DDB || RegMemOpcode == SystemZ::DEB ||
+       RegMemOpcode == SystemZ::CDB || RegMemOpcode == SystemZ::CEB) &&
+      FoldAsLoadDefReg != RHS.getReg())
+    return nullptr;
+  if (IsTernary && FoldAsLoadDefReg == AccMO->getReg())
+    return nullptr;
+
+  MachineInstrBuilder MIB =
+    BuildMI(*MI.getParent(), MI, DL, get(RegMemOpcode));
+  if (!IsCmp)
+    MIB.addReg(DstReg, RegState::Define);
+  if (!IsUnary) {
+    if (IsTernary) {
+      MIB.add(*AccMO);
+      MRI->setRegClass(AccMO->getReg(), FPRC);
+    }
+    MIB.add(RegMO);
+    MRI->setRegClass(RegMO.getReg(), FPRC);
+  }
+
+  MachineOperand &Base = DefMI->getOperand(1);
+  MachineOperand &Disp = DefMI->getOperand(2);
+  MachineOperand &Indx = DefMI->getOperand(3);
+  if (Base.isReg())  // Could be a FrameIndex.
+    Base.setIsKill(false);
+  Indx.setIsKill(false);
+  if (DefMI->getOpcode() == LoadOpcD12) {
+    MIB.add(Base).add(Disp).add(Indx);
+  } else {
+    Register AddrReg = MRI->createVirtualRegister(&SystemZ::ADDR64BitRegClass);
+    BuildMI(*MI.getParent(), *MIB, DL, get(SystemZ::LAY), AddrReg)
+      .add(Base).add(Disp).add(Indx);
+    MIB.addReg(AddrReg).addImm(0).addReg(SystemZ::NoRegister);
+  }
+  MIB.addMemOperand(*DefMI->memoperands_begin());
+  transferMIFlag(&MI, MIB, MachineInstr::NoFPExcept);
+  if (!IsCmp)
+    MIB->addRegisterDead(SystemZ::CC, TRI);
+  MRI->setRegClass(DstReg, FPRC);
+
+  return MIB;
+}
+
 bool SystemZInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                      Register Reg,
                                      MachineRegisterInfo *MRI) const {
@@ -938,20 +1079,6 @@ static LogicOp interpretAndImmediate(unsigned Opcode) {
   }
 }
 
-static void transferDeadCC(MachineInstr *OldMI, MachineInstr *NewMI) {
-  if (OldMI->registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr)) {
-    MachineOperand *CCDef =
-        NewMI->findRegisterDefOperand(SystemZ::CC, /*TRI=*/nullptr);
-    if (CCDef != nullptr)
-      CCDef->setIsDead(true);
-  }
-}
-
-static void transferMIFlag(MachineInstr *OldMI, MachineInstr *NewMI,
-                           MachineInstr::MIFlag Flag) {
-  if (OldMI->getFlag(Flag))
-    NewMI->setFlag(Flag);
-}
 
 MachineInstr *
 SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,

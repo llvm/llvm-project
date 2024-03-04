@@ -195,12 +195,14 @@ FunctionPass *createSystemZShortenInstPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZLongBranchPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZLDCleanupPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZCopyPhysRegsPass(SystemZTargetMachine &TM);
+FunctionPass *createSystemZFinalizeRegMemPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZPostRewritePass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZTDCPass();
 
 void initializeSystemZCopyPhysRegsPass(PassRegistry &);
 void initializeSystemZDAGToDAGISelPass(PassRegistry &);
 void initializeSystemZElimComparePass(PassRegistry &);
+void initializeSystemZFinalizeRegMemPass(PassRegistry &);
 void initializeSystemZLDCleanupPass(PassRegistry &);
 void initializeSystemZLongBranchPass(PassRegistry &);
 void initializeSystemZPostRewritePass(PassRegistry &);

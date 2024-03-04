@@ -1388,9 +1388,9 @@ def : InstRW<[WLat3, WLat3, VecDFX, NormalGr], (instregex "WFTCIXB$")>;
 // Add / subtract
 def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VF(A|S)$")>;
 def : InstRW<[WLat7, VecBF, NormalGr], (instregex "VF(A|S)DB$")>;
-def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WF(A|S)DB$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WF(A|S)DB(_CCPseudo)?$")>;
 def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VF(A|S)SB$")>;
-def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WF(A|S)SB$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WF(A|S)SB(_CCPseudo)?$")>;
 def : InstRW<[WLat10, VecDF2, NormalGr], (instregex "WF(A|S)XB$")>;
 
 // Multiply / multiply-and-add/subtract

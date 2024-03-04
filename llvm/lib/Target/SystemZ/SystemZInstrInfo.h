@@ -254,6 +254,12 @@ public:
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
                     Register FalseReg) const override;
+  void transferMIFlag(MachineInstr *OldMI, MachineInstr *NewMI,
+                      MachineInstr::MIFlag Flag) const;
+  MachineInstr *optimizeLoadInstr(MachineInstr &MI,
+                                  MachineRegisterInfo *MRI,
+                                  Register &FoldAsLoadDefReg,
+                                  MachineInstr *&DefMI) const override;
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;
 
