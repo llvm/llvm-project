@@ -1475,3 +1475,63 @@ entry:
   %select = select i1 %cmp1, i1 %cmp2, i1 false
   ret i1 %select
 }
+
+define i1 @test_icmp_eq_on_valid_bool_range(i8 %x) {
+; CHECK-LABEL: @test_icmp_eq_on_valid_bool_range(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[X:%.*]], 2
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i1 @get_bool()
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[X]], 1
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP3]], [[BB1]] ], [ [[TMP2]], [[BB2]] ]
+; CHECK-NEXT:    ret i1 [[TMP4]]
+;
+  %1 = icmp ult i8 %x, 2
+  br i1 %1, label %bb1, label %bb2
+
+bb2:
+  %2 = tail call i1 @get_bool()
+  br label %bb3
+
+bb1:
+  %3 = icmp eq i8 %x, 1
+  br label %bb3
+
+bb3:
+  %4 = phi i1 [ %3, %bb1 ], [ %2, %bb2 ]
+  ret i1 %4
+}
+
+define i1 @test_icmp_ne_on_valid_bool_range(i8 %x) {
+; CHECK-LABEL: @test_icmp_ne_on_valid_bool_range(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[X:%.*]], 2
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i1 @get_bool()
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP3]], [[BB1]] ], [ [[TMP2]], [[BB2]] ]
+; CHECK-NEXT:    ret i1 [[TMP4]]
+;
+  %1 = icmp ult i8 %x, 2
+  br i1 %1, label %bb1, label %bb2
+
+bb2:
+  %2 = tail call i1 @get_bool()
+  br label %bb3
+
+bb1:
+  %3 = icmp ne i8 %x, 0
+  br label %bb3
+
+bb3:
+  %4 = phi i1 [ %3, %bb1 ], [ %2, %bb2 ]
+  ret i1 %4
+}
