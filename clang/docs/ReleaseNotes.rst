@@ -149,7 +149,7 @@ New Compiler Flags
 ------------------
 
 - ``-Wmissing-designated-field-initializers``, grouped under ``-Wmissing-field-initializers``.
-  This diagnostic can be disabled to make ``-Wmissing-designated-field-initializers`` behave
+  This diagnostic can be disabled to make ``-Wmissing-field-initializers`` behave
   like it did before Clang 18.x. Fixes (`#56628 <https://github.com/llvm/llvm-project/issues/68933>`_)
 
 Deprecated Compiler Flags
