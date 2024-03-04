@@ -881,20 +881,23 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
   return true;
 }
 
-/// DiagnoseTemplateParameterShadow - Produce a diagnostic complaining
-/// that the template parameter 'PrevDecl' is being shadowed by a new
-/// declaration at location Loc. Returns true to indicate that this is
-/// an error, and false otherwise.
-void Sema::DiagnoseTemplateParameterShadow(SourceLocation Loc, Decl *PrevDecl) {
+void Sema::DiagnoseTemplateParameterShadow(SourceLocation Loc, Decl *PrevDecl,
+                                           bool SupportedForCompatibility) {
   assert(PrevDecl->isTemplateParameter() && "Not a template parameter");
 
-  // C++ [temp.local]p4:
-  //   A template-parameter shall not be redeclared within its
-  //   scope (including nested scopes).
+  // C++23 [temp.local]p6:
+  //   The name of a template-parameter shall not be bound to any following.
+  //   declaration whose locus is contained by the scope to which the
+  //   template-parameter belongs.
   //
-  // Make this a warning when MSVC compatibility is requested.
-  unsigned DiagId = getLangOpts().MSVCCompat ? diag::ext_template_param_shadow
-                                             : diag::err_template_param_shadow;
+  // When MSVC compatibility is enabled, the diagnostic is always a warning
+  // by default. Otherwise, it an error unless SupportedForCompatibility is
+  // true, in which case it is a default-to-error warning.
+  unsigned DiagId =
+      getLangOpts().MSVCCompat
+          ? diag::ext_template_param_shadow
+          : (SupportedForCompatibility ? diag::ext_compat_template_param_shadow
+                                       : diag::err_template_param_shadow);
   const auto *ND = cast<NamedDecl>(PrevDecl);
   Diag(Loc, DiagId) << ND->getDeclName();
   NoteTemplateParameterLocation(*ND);
@@ -8502,9 +8505,7 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
     return false;
 
   // Find the nearest enclosing declaration scope.
-  while ((S->getFlags() & Scope::DeclScope) == 0 ||
-         (S->getFlags() & Scope::TemplateParamScope) != 0)
-    S = S->getParent();
+  S = S->getDeclParent();
 
   // C++ [temp.pre]p6: [P2096]
   //   A template, explicit specialization, or partial specialization shall not
@@ -10619,11 +10620,8 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     return true;
   }
 
-  // The scope passed in may not be a decl scope.  Zip up the scope tree until
-  // we find one that is.
-  while ((S->getFlags() & Scope::DeclScope) == 0 ||
-         (S->getFlags() & Scope::TemplateParamScope) != 0)
-    S = S->getParent();
+  // Get the innermost enclosing declaration scope.
+  S = S->getDeclParent();
 
   // Determine the type of the declaration.
   TypeSourceInfo *T = GetTypeForDeclarator(D);
