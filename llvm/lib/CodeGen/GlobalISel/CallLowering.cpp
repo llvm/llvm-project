@@ -146,9 +146,8 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   const Value *CalleeV = CB.getCalledOperand()->stripPointerCasts();
   if (const Function *F = dyn_cast<Function>(CalleeV)) {
     if (F->hasFnAttribute(Attribute::NonLazyBind)) {
-      auto Reg =
-          MRI.createGenericVirtualRegister(getLLTForType(*F->getType(), DL));
-      MIRBuilder.buildGlobalValue(Reg, F);
+      LLT Ty = getLLTForType(*F->getType(), DL);
+      Register Reg = MIRBuilder.buildGlobalValue(Ty, F).getReg(0);
       Info.Callee = MachineOperand::CreateReg(Reg, false);
     } else {
       Info.Callee = MachineOperand::CreateGA(F, 0);
@@ -194,7 +193,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   if (!lowerCall(MIRBuilder, Info))
     return false;
 
-  if (ReturnHintAlignReg && !Info.IsTailCall) {
+  if (ReturnHintAlignReg && !Info.LoweredTailCall) {
     MIRBuilder.buildAssertAlign(ResRegs[0], ReturnHintAlignReg,
                                 ReturnHintAlign);
   }

@@ -14,25 +14,25 @@ Building the GPU library
 
 LLVM's libc GPU support *must* be built with an up-to-date ``clang`` compiler
 due to heavy reliance on ``clang``'s GPU support. This can be done automatically
-using the ``LLVM_ENABLE_RUNTIMES=libc`` option. To enable libc for the GPU,
-enable the ``LIBC_GPU_BUILD`` option. By default, ``libcgpu.a`` will be built
-using every supported GPU architecture. To restrict the number of architectures
-build, either set ``LIBC_GPU_ARCHITECTURES`` to the list of desired
-architectures manually or use ``native`` to detect the GPUs on your system. A
-typical ``cmake`` configuration will look like this:
+using the LLVM runtimes support. The GPU build is done using cross-compilation
+to the GPU architecture. This project currently supports AMD and NVIDIA GPUs
+which can be targeted using the appropriate target name. The following
+invocation will enable a cross-compiling build for the GPU architecture and
+enable the ``libc`` project only for them.
 
 .. code-block:: sh
 
   $> cd llvm-project  # The llvm-project checkout
   $> mkdir build
   $> cd build
-  $> cmake ../llvm -G Ninja                                \
-     -DLLVM_ENABLE_PROJECTS="clang;lld;compiler-rt"        \
-     -DLLVM_ENABLE_RUNTIMES="libc;openmp"                  \
+  $> cmake ../llvm -G Ninja                                               \
+     -DLLVM_ENABLE_PROJECTS="clang;lld;compiler-rt"                       \
+     -DLLVM_ENABLE_RUNTIMES="openmp"                                      \
      -DCMAKE_BUILD_TYPE=<Debug|Release>   \ # Select build type
-     -DLIBC_GPU_BUILD=ON                  \ # Build in GPU mode
-     -DLIBC_GPU_ARCHITECTURES=all         \ # Build all supported architectures
      -DCMAKE_INSTALL_PREFIX=<PATH>        \ # Where 'libcgpu.a' will live
+     -DRUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES=libc             \
+     -DRUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES=libc               \
+     -DLLVM_RUNTIME_TARGETS=default;amdgcn-amd-amdhsa;nvptx64-nvidia-cuda
   $> ninja install
 
 Since we want to include ``clang``, ``lld`` and ``compiler-rt`` in our
@@ -40,13 +40,14 @@ toolchain, we list them in ``LLVM_ENABLE_PROJECTS``. To ensure ``libc`` is built
 using a compatible compiler and to support ``openmp`` offloading, we list them
 in ``LLVM_ENABLE_RUNTIMES`` to build them after the enabled projects using the
 newly built compiler. ``CMAKE_INSTALL_PREFIX`` specifies the installation
-directory in which to install the ``libcgpu.a`` library and headers along with
-LLVM. The generated headers will be placed in ``include/gpu-none-llvm``.
+directory in which to install the ``libcgpu-nvptx.a`` and ``libcgpu-amdgpu.a``
+libraries and headers along with LLVM. The generated headers will be placed in
+``include/<gpu-triple>``.
 
 Usage
 =====
 
-Once the ``libcgpu.a`` static archive has been built it can be linked directly
+Once the static archive has been built it can be linked directly
 with offloading applications as a standard library. This process is described in
 the `clang documentation <https://clang.llvm.org/docs/OffloadingDesign.html>`_.
 This linking mode is used by the OpenMP toolchain, but is currently opt-in for
@@ -68,7 +69,7 @@ supported target device. The supported architectures can be seen using LLVM's
 
   OFFLOADING IMAGE [0]:
   kind            llvm ir
-  arch            gfx90a
+  arch            generic
   triple          amdgcn-amd-amdhsa
   producer        none
 

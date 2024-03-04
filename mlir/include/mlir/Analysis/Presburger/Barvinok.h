@@ -27,7 +27,9 @@
 #include "mlir/Analysis/Presburger/GeneratingFunction.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/QuasiPolynomial.h"
+#include <bitset>
 #include <optional>
 
 namespace mlir {
@@ -47,16 +49,22 @@ using PolyhedronV = IntMatrix;
 using ConeH = PolyhedronH;
 using ConeV = PolyhedronV;
 
-inline ConeH defineHRep(int numVars) {
+inline PolyhedronH defineHRep(int numVars, int numSymbols = 0) {
   // We don't distinguish between domain and range variables, so
   // we set the number of domain variables as 0 and the number of
   // range variables as the number of actual variables.
-  // There are no symbols (we don't work with parametric cones) and no local
-  // (existentially quantified) variables.
+  //
+  // numSymbols is the number of parameters.
+  //
+  // There are no local (existentially quantified) variables.
+  //
+  // The number of symbols is the number of parameters. By default, we consider
+  // nonparametric polyhedra.
+  //
   // Once the cone is defined, we use `addInequality()` to set inequalities.
-  return ConeH(PresburgerSpace::getSetSpace(/*numDims=*/numVars,
-                                            /*numSymbols=*/0,
-                                            /*numLocals=*/0));
+  return PolyhedronH(PresburgerSpace::getSetSpace(/*numDims=*/numVars,
+                                                  /*numSymbols=*/numSymbols,
+                                                  /*numLocals=*/0));
 }
 
 /// Get the index of a cone, i.e., the volume of the parallelepiped
@@ -81,8 +89,38 @@ ConeH getDual(ConeV cone);
 
 /// Compute the generating function for a unimodular cone.
 /// The input cone must be unimodular; it assert-fails otherwise.
-GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
-                                                    ConeH cone);
+GeneratingFunction computeUnimodularConeGeneratingFunction(ParamPoint vertex,
+                                                           int sign,
+                                                           ConeH cone);
+
+/// Find the solution of a set of equations that express affine constraints
+/// between a set of variables and a set of parameters. The solution expresses
+/// each variable as an affine function of the parameters.
+///
+/// If there is no solution, return null.
+std::optional<ParamPoint> solveParametricEquations(FracMatrix equations);
+
+/// Given a list of possibly intersecting regions (PresburgerSet) and the
+/// generating functions active in each region, produce a pairwise disjoint
+/// list of regions (chambers) and identify the generating function of the
+/// polytope in each chamber.
+///
+/// "Disjoint" here means that the intersection of two chambers is no full-
+/// dimensional.
+///
+/// The returned list partitions the universe into parts depending on which
+/// subset of GFs is active there, and gives the sum of active GFs for each
+/// part.
+std::vector<std::pair<PresburgerSet, GeneratingFunction>>
+computeChamberDecomposition(
+    unsigned numSymbols, ArrayRef<std::pair<PresburgerSet, GeneratingFunction>>
+                             regionsAndGeneratingFunctions);
+
+/// Compute the generating function corresponding to a polytope.
+///
+/// All tangent cones of the polytope must be unimodular.
+std::vector<std::pair<PresburgerSet, GeneratingFunction>>
+computePolytopeGeneratingFunction(const PolyhedronH &poly);
 
 /// Find a vector that is not orthogonal to any of the given vectors,
 /// i.e., has nonzero dot product with those of the given vectors

@@ -176,6 +176,10 @@ module {
 
     // Release the resources.
     bufferization.dealloc_tensor %s0 : tensor<8xi32, #SV>
+    bufferization.dealloc_tensor %0 : tensor<i32>
+    bufferization.dealloc_tensor %1 : tensor<i32>
+    bufferization.dealloc_tensor %2 : tensor<i32>
+    bufferization.dealloc_tensor %3 : tensor<i32>
 
     return
   }

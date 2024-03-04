@@ -399,6 +399,8 @@ def NoSchedPred : MCSchedPredicate<TruePred>;
 class SchedVar<SchedPredicateBase pred, list<SchedReadWrite> selected> {
   SchedPredicateBase Predicate = pred;
   list<SchedReadWrite> Selected = selected;
+  // SchedModel silences warnings but is ignored.
+  SchedMachineModel SchedModel = ?;
 }
 
 // SchedModel silences warnings but is ignored.

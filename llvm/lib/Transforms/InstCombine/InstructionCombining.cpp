@@ -142,12 +142,6 @@ static cl::opt<unsigned>
 MaxArraySize("instcombine-maxarray-size", cl::init(1024),
              cl::desc("Maximum array size considered when doing a combine"));
 
-// TODO: Remove this option
-static cl::opt<bool> EnableSimplifyDemandedUseFPClass(
-    "instcombine-simplify-demanded-fp-class",
-    cl::desc("Enable demanded floating-point class optimizations"),
-    cl::init(false));
-
 // FIXME: Remove this flag when it is no longer necessary to convert
 // llvm.dbg.declare to avoid inaccurate debug info. Setting this to false
 // increases variable availability at the cost of accuracy. Variables that
@@ -2347,11 +2341,13 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
                   !shouldAvoidAbsorbingNotIntoSelect(*cast<SelectInst>(V));
   // Selects/min/max with invertible operands are freely invertible
   if (IsSelect || match(V, m_MaxOrMin(m_Value(A), m_Value(B)))) {
+    bool LocalDoesConsume = DoesConsume;
     if (!getFreelyInvertedImpl(B, B->hasOneUse(), /*Builder*/ nullptr,
-                               DoesConsume, Depth))
+                               LocalDoesConsume, Depth))
       return nullptr;
     if (Value *NotA = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
-                                            DoesConsume, Depth)) {
+                                            LocalDoesConsume, Depth)) {
+      DoesConsume = LocalDoesConsume;
       if (Builder != nullptr) {
         Value *NotB = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
                                             DoesConsume, Depth);
@@ -2367,12 +2363,13 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
   }
 
   if (PHINode *PN = dyn_cast<PHINode>(V)) {
+    bool LocalDoesConsume = DoesConsume;
     SmallVector<std::pair<Value *, BasicBlock *>, 8> IncomingValues;
     for (Use &U : PN->operands()) {
       BasicBlock *IncomingBlock = PN->getIncomingBlock(U);
       Value *NewIncomingVal = getFreelyInvertedImpl(
           U.get(), /*WillInvertAllUses=*/false,
-          /*Builder=*/nullptr, DoesConsume, MaxAnalysisRecursionDepth - 1);
+          /*Builder=*/nullptr, LocalDoesConsume, MaxAnalysisRecursionDepth - 1);
       if (NewIncomingVal == nullptr)
         return nullptr;
       // Make sure that we can safely erase the original PHI node.
@@ -2381,6 +2378,8 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
       if (Builder != nullptr)
         IncomingValues.emplace_back(NewIncomingVal, IncomingBlock);
     }
+
+    DoesConsume = LocalDoesConsume;
     if (Builder != nullptr) {
       IRBuilderBase::InsertPointGuard Guard(*Builder);
       Builder->SetInsertPoint(PN);
@@ -2391,6 +2390,20 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
       return NewPN;
     }
     return NonNull;
+  }
+
+  if (match(V, m_SExtLike(m_Value(A)))) {
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateSExt(AV, V->getType()) : NonNull;
+    return nullptr;
+  }
+
+  if (match(V, m_Trunc(m_Value(A)))) {
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateTrunc(AV, V->getType()) : NonNull;
+    return nullptr;
   }
 
   return nullptr;
@@ -2621,10 +2634,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         Value *V;
         if ((has_single_bit(TyAllocSize) &&
              match(GEP.getOperand(1),
-                   m_Exact(m_AShr(m_Value(V),
-                                  m_SpecificInt(countr_zero(TyAllocSize)))))) ||
+                   m_Exact(m_Shr(m_Value(V),
+                                 m_SpecificInt(countr_zero(TyAllocSize)))))) ||
             match(GEP.getOperand(1),
-                  m_Exact(m_SDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
+                  m_Exact(m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
           GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
               Builder.getInt8Ty(), GEP.getPointerOperand(), V);
           NewGEP->setIsInBounds(GEP.isInBounds());
@@ -3111,9 +3124,6 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
 }
 
 Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
-  if (!EnableSimplifyDemandedUseFPClass)
-    return nullptr;
-
   Value *RetVal = RI.getReturnValue();
   if (!RetVal || !AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
     return nullptr;
@@ -4493,7 +4503,8 @@ void InstCombinerImpl::tryToSinkInstructionDPValues(
     // For all instruction/variable pairs needing extra filtering, find the
     // latest assignment.
     for (const Instruction *Inst : DupSet) {
-      for (DPValue &DPV : llvm::reverse(Inst->getDbgValueRange())) {
+      for (DPValue &DPV :
+           llvm::reverse(DPValue::filter(Inst->getDbgValueRange()))) {
         DebugVariable DbgUserVariable =
             DebugVariable(DPV.getVariable(), DPV.getExpression(),
                           DPV.getDebugLoc()->getInlinedAt());

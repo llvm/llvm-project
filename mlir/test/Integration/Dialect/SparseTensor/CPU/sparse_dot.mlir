@@ -84,6 +84,7 @@ module {
     vector.print %noe2 : index
 
     // Release the resources.
+    bufferization.dealloc_tensor %0 : tensor<f32>
     bufferization.dealloc_tensor %s1 : tensor<1024xf32, #SparseVector>
     bufferization.dealloc_tensor %s2 : tensor<1024xf32, #SparseVector>
 

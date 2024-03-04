@@ -132,7 +132,7 @@ methods that are overridden by the `Model` that is templated on the concrete
 entity type. It is important to note that these classes should be pure, and
 should not contain non-static data members or other mutable data. To attach an
 interface to an object, the base interface classes provide a
-[`Trait`](Traits.md) class that can be appended to the trait list of that
+[`Trait`](Traits) class that can be appended to the trait list of that
 object.
 
 ```c++
@@ -420,7 +420,7 @@ comprised of the following components:
     -   A C++ code block containing additional verification applied to the
         operation that the interface is attached to.
     -   The structure of this code block corresponds 1-1 with the structure of a
-        [`Trait::verifyTrait`](Traits.md) method.
+        [`Trait::verifyTrait`](Traits) method.
 
 ##### Interface Methods
 
@@ -457,7 +457,7 @@ Interface methods are comprised of the following components:
     -   This implementation is placed within the `Trait` class that is attached
         to the IR entity, and does not directly affect any of the interface
         classes. As such, this method has the same characteristics as any other
-        [`Trait`](Traits.md) method.
+        [`Trait`](Traits) method.
     -   `ConcreteAttr`/`ConcreteOp`/`ConcreteType` is an implicitly defined
         `typename` that can be used to refer to the type of the derived IR
         entity currently being operated on.
@@ -601,7 +601,7 @@ def MyInterface : OpInterface<"MyInterface"> {
       };
       ```
 
-      As detailed in [Traits](Traits.md), given that each operation implementing
+      As detailed in [Traits](Traits), given that each operation implementing
       this interface will also add the interface trait, the methods on this
       interface are inherited by the derived operation. This allows for
       injecting a default implementation of this method into each operation that

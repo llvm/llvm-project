@@ -712,7 +712,7 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
     return e;
 
   return writeArchive(Path, Members, SymtabWritingMode::NormalSymtab,
-                      MinGW ? object::Archive::K_GNU : object::Archive::K_COFF,
+                      object::Archive::K_COFF,
                       /*Deterministic*/ true, /*Thin*/ false,
                       /*OldArchiveBuf*/ nullptr, isArm64EC(Machine));
 }

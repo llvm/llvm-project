@@ -320,6 +320,8 @@ RT_API_ATTRS static void Assign(
         if ((flags & NeedFinalization) && toDerived) {
           Finalize(to, *toDerived, &terminator);
           flags &= ~NeedFinalization;
+        } else if (toDerived && !toDerived->noDestructionNeeded()) {
+          Destroy(to, /*finalize=*/false, *toDerived, &terminator);
         }
       } else {
         to.Destroy((flags & NeedFinalization) != 0, /*destroyPointers=*/false,
@@ -389,6 +391,8 @@ RT_API_ATTRS static void Assign(
     // The target is first finalized if still necessary (7.5.6.3(1))
     if (flags & NeedFinalization) {
       Finalize(to, *updatedToDerived, &terminator);
+    } else if (updatedToDerived && !updatedToDerived->noDestructionNeeded()) {
+      Destroy(to, /*finalize=*/false, *updatedToDerived, &terminator);
     }
     // Copy the data components (incl. the parent) first.
     const Descriptor &componentDesc{updatedToDerived->component()};

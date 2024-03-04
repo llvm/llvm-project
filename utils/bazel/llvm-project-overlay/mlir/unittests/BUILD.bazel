@@ -39,6 +39,7 @@ cc_test(
     ]),
     deps = [
         "//llvm:Support",
+        "//mlir:BytecodeReader",
         "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:Parser",
@@ -60,6 +61,7 @@ cc_test(
     deps = [
         "//llvm:Support",
         "//llvm:TestingSupport",
+        "//mlir:BytecodeReader",
         "//mlir:ArithDialect",
         "//mlir:ControlFlowInterfaces",
         "//mlir:DLTIDialect",
@@ -120,6 +122,7 @@ cc_test(
     deps = [
         "//mlir:IR",
         "//mlir:Rewrite",
+        "//mlir:SideEffectInterfaces",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -151,6 +154,7 @@ cc_test(
         "//llvm:TestingSupport",
         "//mlir:IR",
         "//mlir:MemRefDialect",
+        "//mlir:SideEffectInterfaces",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -184,6 +188,7 @@ cc_test(
         "//mlir:IR",
         "//mlir:Parser",
         "//mlir:SCFDialect",
+        "//mlir:SideEffectInterfaces",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -199,6 +204,7 @@ cc_test(
     deps = [
         "//llvm:Support",
         "//llvm:TestingSupport",
+        "//mlir:SideEffectInterfaces",
         "//mlir:SparseTensorUtils",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
@@ -236,6 +242,7 @@ cc_test(
     deps = [
         "//llvm:Support",
         "//llvm:TestingSupport",
+        "//mlir:BytecodeReader",
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:MlirOptLib",
@@ -339,9 +346,11 @@ cc_test(
     ]),
     deps = [
         "//mlir:AffineAnalysis",
+        "//mlir:BytecodeReader",
         "//mlir:IR",
         "//mlir:Parser",
         "//mlir:Pass",
+        "//mlir:SideEffectInterfaces",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//third-party/unittest:gtest",
@@ -387,6 +396,7 @@ cc_test(
         "//mlir:BytecodeWriter",
         "//mlir:IR",
         "//mlir:Parser",
+        "//mlir:SideEffectInterfaces",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -428,6 +438,7 @@ cc_test(
         "//mlir:Analysis",
         "//mlir:ArithToLLVM",
         "//mlir:BuiltinToLLVMIRTranslation",
+        "//mlir:BytecodeReader",
         "//mlir:ExecutionEngine",
         "//mlir:FuncDialect",
         "//mlir:FuncToLLVM",

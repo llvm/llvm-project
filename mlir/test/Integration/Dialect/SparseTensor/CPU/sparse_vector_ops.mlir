@@ -174,6 +174,7 @@ module {
     %dv = sparse_tensor.convert %arg0 : tensor<?xf64, #SparseVector> to tensor<?xf64>
     %2 = vector.transfer_read %dv[%c0], %d0: tensor<?xf64>, vector<32xf64>
     vector.print %2 : vector<32xf64>
+    bufferization.dealloc_tensor %dv : tensor<?xf64>
     return
   }
 
@@ -253,9 +254,11 @@ module {
     bufferization.dealloc_tensor %sv1_dup : tensor<?xf64, #SparseVector>
     bufferization.dealloc_tensor %sv2 : tensor<?xf64, #SparseVector>
     bufferization.dealloc_tensor %0 : tensor<?xf64, #SparseVector>
+    // Note: No dealloc for %1 because it was inplace!
     bufferization.dealloc_tensor %2 : tensor<?xf64, #SparseVector>
     bufferization.dealloc_tensor %3 : tensor<?xf64, #SparseVector>
     bufferization.dealloc_tensor %4 : tensor<?xf64, #DenseVector>
+    bufferization.dealloc_tensor %5 : tensor<f64>
     return
   }
 }

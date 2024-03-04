@@ -5321,6 +5321,29 @@ Putting the attribute on a compound statement suppresses all warnings in scope:
     }
   }
 
+The attribute can also be placed on entire declarations of functions, classes,
+variables, member variables, and so on, to suppress warnings related
+to the declarations themselves. When used this way, the attribute additionally
+suppresses all warnings in the lexical scope of the declaration:
+
+.. code-block:: c++
+
+  class [[clang::suppress]] C {
+    int foo() {
+      int *x = nullptr;
+      ...
+      return *x;  // warnings suppressed in the entire class scope
+    }
+
+    int bar();
+  };
+
+  int C::bar() {
+    int *x = nullptr;
+    ...
+    return *x;  // warning NOT suppressed! - not lexically nested in 'class C{}'
+  }
+
 Some static analysis warnings are accompanied by one or more notes, and the
 line of code against which the warning is emitted isn't necessarily the best
 for suppression purposes. In such cases the tools are allowed to implement

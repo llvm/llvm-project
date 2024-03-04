@@ -144,13 +144,12 @@ static void EmitInstructions(std::vector<AsmWriterInst> &Insts, raw_ostream &O,
       O << "    switch (MI->getOpcode()) {\n";
       O << "    default: llvm_unreachable(\"Unexpected opcode.\");\n";
       std::vector<std::pair<std::string, AsmWriterOperand>> OpsToPrint;
-      OpsToPrint.push_back(
-          std::make_pair(FirstInst.CGI->Namespace.str() +
-                             "::" + FirstInst.CGI->TheDef->getName().str(),
-                         FirstInst.Operands[i]));
+      OpsToPrint.push_back(std::pair(FirstInst.CGI->Namespace.str() + "::" +
+                                         FirstInst.CGI->TheDef->getName().str(),
+                                     FirstInst.Operands[i]));
 
       for (const AsmWriterInst &AWI : SimilarInsts) {
-        OpsToPrint.push_back(std::make_pair(
+        OpsToPrint.push_back(std::pair(
             AWI.CGI->Namespace.str() + "::" + AWI.CGI->TheDef->getName().str(),
             AWI.Operands[i]));
       }
@@ -722,7 +721,7 @@ public:
   void addOperand(StringRef Op, int OpIdx, int PrintMethodIdx = -1) {
     assert(OpIdx >= 0 && OpIdx < 0xFE && "Idx out of range");
     assert(PrintMethodIdx >= -1 && PrintMethodIdx < 0xFF && "Idx out of range");
-    OpMap[Op] = std::make_pair(OpIdx, PrintMethodIdx);
+    OpMap[Op] = std::pair(OpIdx, PrintMethodIdx);
   }
 
   unsigned getNumMIOps() { return NumMIOps; }
@@ -753,7 +752,7 @@ public:
       Next = I;
     }
 
-    return std::make_pair(StringRef(Start, I - Start), Next);
+    return std::pair(StringRef(Start, I - Start), Next);
   }
 
   std::string formatAliasString(uint32_t &UnescapedSize) {
@@ -858,7 +857,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
     const DagInit *DI = R->getValueAsDag("ResultInst");
     AliasMap[getQualifiedName(DI->getOperatorAsDef(R->getLoc()))].insert(
-        std::make_pair(CodeGenInstAlias(R, Target), Priority));
+        std::pair(CodeGenInstAlias(R, Target), Priority));
   }
 
   // A map of which conditions need to be met for each instruction operand

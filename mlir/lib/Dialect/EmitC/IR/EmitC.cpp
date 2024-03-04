@@ -261,20 +261,20 @@ LogicalResult ExpressionOp::verify() {
 
 void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
                   Value ub, Value step, BodyBuilderFn bodyBuilder) {
+  OpBuilder::InsertionGuard g(builder);
   result.addOperands({lb, ub, step});
   Type t = lb.getType();
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block);
-  Block &bodyBlock = bodyRegion->front();
-  bodyBlock.addArgument(t, result.location);
+  Block *bodyBlock = builder.createBlock(bodyRegion);
+  bodyBlock->addArgument(t, result.location);
 
   // Create the default terminator if the builder is not provided.
   if (!bodyBuilder) {
     ForOp::ensureTerminator(*bodyRegion, builder, result.location);
   } else {
     OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(&bodyBlock);
-    bodyBuilder(builder, result.location, bodyBlock.getArgument(0));
+    builder.setInsertionPointToStart(bodyBlock);
+    bodyBuilder(builder, result.location, bodyBlock->getArgument(0));
   }
 }
 

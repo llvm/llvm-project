@@ -1277,7 +1277,7 @@ void AsmMatcherInfo::buildRegisterClasses(
 
     if (!ContainingSet.empty()) {
       RegisterSets.insert(ContainingSet);
-      RegisterMap.insert(std::make_pair(CGR.TheDef, ContainingSet));
+      RegisterMap.insert(std::pair(CGR.TheDef, ContainingSet));
     }
   }
 
@@ -1298,7 +1298,7 @@ void AsmMatcherInfo::buildRegisterClasses(
     CI->DiagnosticType = "";
     CI->IsOptional = false;
     CI->DefaultMethod = ""; // unused
-    RegisterSetClasses.insert(std::make_pair(RS, CI));
+    RegisterSetClasses.insert(std::pair(RS, CI));
     ++Index;
   }
 
@@ -1340,7 +1340,7 @@ void AsmMatcherInfo::buildRegisterClasses(
     if (!CI->DiagnosticString.empty() && CI->DiagnosticType.empty())
       CI->DiagnosticType = RC.getName();
 
-    RegisterClassClasses.insert(std::make_pair(Def, CI));
+    RegisterClassClasses.insert(std::pair(Def, CI));
   }
 
   // Populate the map for individual registers.
@@ -1976,7 +1976,8 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
           << "convertToMCInst(unsigned Kind, MCInst &Inst, "
           << "unsigned Opcode,\n"
           << "                const OperandVector &Operands,\n"
-          << "                const SmallBitVector &OptionalOperandsMask) {\n";
+          << "                const SmallBitVector &OptionalOperandsMask,\n"
+          << "                ArrayRef<unsigned> DefaultsOffset) {\n";
   } else {
     CvtOS << "void " << Target.getName() << ClassName << "::\n"
           << "convertToMCInst(unsigned Kind, MCInst &Inst, "
@@ -1985,25 +1986,13 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   }
   CvtOS << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n";
   CvtOS << "  const uint8_t *Converter = ConversionTable[Kind];\n";
-  if (HasOptionalOperands) {
-    size_t MaxNumOperands = 0;
-    for (const auto &MI : Infos) {
-      MaxNumOperands = std::max(MaxNumOperands, MI->AsmOperands.size());
-    }
-    CvtOS << "  unsigned DefaultsOffset[" << (MaxNumOperands + 1)
-          << "] = { 0 };\n";
-    CvtOS << "  assert(OptionalOperandsMask.size() == " << (MaxNumOperands)
-          << ");\n";
-    CvtOS << "  for (unsigned i = 0, NumDefaults = 0; i < " << (MaxNumOperands)
-          << "; ++i) {\n";
-    CvtOS << "    DefaultsOffset[i + 1] = NumDefaults;\n";
-    CvtOS << "    NumDefaults += (OptionalOperandsMask[i] ? 1 : 0);\n";
-    CvtOS << "  }\n";
-  }
   CvtOS << "  unsigned OpIdx;\n";
   CvtOS << "  Inst.setOpcode(Opcode);\n";
   CvtOS << "  for (const uint8_t *p = Converter; *p; p += 2) {\n";
   if (HasOptionalOperands) {
+    // When optional operands are involved, formal and actual operand indices
+    // may differ. Map the former to the latter by subtracting the number of
+    // absent optional operands.
     CvtOS << "    OpIdx = *(p + 1) - DefaultsOffset[*(p + 1)];\n";
   } else {
     CvtOS << "    OpIdx = *(p + 1);\n";
@@ -2193,7 +2182,7 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         ConversionRow.push_back(SrcOp2);
 
         // Also create an 'enum' for this combination of tied operands.
-        auto Key = std::make_tuple(TiedOp, SrcOp1, SrcOp2);
+        auto Key = std::tuple(TiedOp, SrcOp1, SrcOp2);
         TiedOperandsEnumMap.emplace(Key, TiedTupleName);
         break;
       }
@@ -2342,9 +2331,9 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
       // For a tied operand, emit a reference to the TiedAsmOperandTable
       // that contains the operand to copy, and the parsed operands to
       // check for their tied constraints.
-      auto Key = std::make_tuple((uint8_t)ConversionTable[Row][i + 1],
-                                 (uint8_t)ConversionTable[Row][i + 2],
-                                 (uint8_t)ConversionTable[Row][i + 3]);
+      auto Key = std::tuple((uint8_t)ConversionTable[Row][i + 1],
+                            (uint8_t)ConversionTable[Row][i + 2],
+                            (uint8_t)ConversionTable[Row][i + 3]);
       auto TiedOpndEnum = TiedOperandsEnumMap.find(Key);
       assert(TiedOpndEnum != TiedOperandsEnumMap.end() &&
              "No record for tied operand pair");
@@ -2617,21 +2606,24 @@ static void emitMatchRegisterName(CodeGenTarget &Target, Record *AsmParser,
   // Construct the match list.
   std::vector<StringMatcher::StringPair> Matches;
   const auto &Regs = Target.getRegBank().getRegisters();
+  std::string Namespace =
+      Regs.front().TheDef->getValueAsString("Namespace").str();
   for (const CodeGenRegister &Reg : Regs) {
-    if (Reg.TheDef->getValueAsString("AsmName").empty())
+    StringRef AsmName = Reg.TheDef->getValueAsString("AsmName");
+    if (AsmName.empty())
       continue;
 
-    Matches.emplace_back(std::string(Reg.TheDef->getValueAsString("AsmName")),
-                         "return " + utostr(Reg.EnumValue) + ";");
+    Matches.emplace_back(AsmName.str(), "return " + Namespace +
+                                            "::" + Reg.getName().str() + ';');
   }
 
-  OS << "static unsigned MatchRegisterName(StringRef Name) {\n";
+  OS << "static MCRegister MatchRegisterName(StringRef Name) {\n";
 
   bool IgnoreDuplicates =
       AsmParser->getValueAsBit("AllowDuplicateRegisterNames");
   StringMatcher("Name", Matches, OS).Emit(0, IgnoreDuplicates);
 
-  OS << "  return 0;\n";
+  OS << "  return " << Namespace << "::NoRegister;\n";
   OS << "}\n\n";
 }
 
@@ -2642,6 +2634,8 @@ static void emitMatchRegisterAltName(CodeGenTarget &Target, Record *AsmParser,
   // Construct the match list.
   std::vector<StringMatcher::StringPair> Matches;
   const auto &Regs = Target.getRegBank().getRegisters();
+  std::string Namespace =
+      Regs.front().TheDef->getValueAsString("Namespace").str();
   for (const CodeGenRegister &Reg : Regs) {
 
     auto AltNames = Reg.TheDef->getValueAsListOfStrings("AltNames");
@@ -2653,18 +2647,18 @@ static void emitMatchRegisterAltName(CodeGenTarget &Target, Record *AsmParser,
       if (AltName.empty())
         continue;
 
-      Matches.emplace_back(std::string(AltName),
-                           "return " + utostr(Reg.EnumValue) + ";");
+      Matches.emplace_back(AltName.str(), "return " + Namespace +
+                                              "::" + Reg.getName().str() + ';');
     }
   }
 
-  OS << "static unsigned MatchRegisterAltName(StringRef Name) {\n";
+  OS << "static MCRegister MatchRegisterAltName(StringRef Name) {\n";
 
   bool IgnoreDuplicates =
       AsmParser->getValueAsBit("AllowDuplicateRegisterNames");
   StringMatcher("Name", Matches, OS).Emit(0, IgnoreDuplicates);
 
-  OS << "  return 0;\n";
+  OS << "  return " << Namespace << "::NoRegister;\n";
   OS << "}\n\n";
 }
 
@@ -2812,7 +2806,7 @@ emitMnemonicAliasVariant(raw_ostream &OS, const AsmMatcherInfo &Info,
 
     MatchCode += "return;";
 
-    Cases.push_back(std::make_pair(AliasEntry.first, MatchCode));
+    Cases.push_back(std::pair(AliasEntry.first, MatchCode));
   }
   StringMatcher("Mnemonic", Cases, OS).Emit(Indent);
 }
@@ -2979,7 +2973,7 @@ emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
           "std::end(OperandMatchTable),\n";
     OS << "                     Mnemonic, LessOpcodeOperand());\n\n";
   } else {
-    OS << "  auto MnemonicRange = std::make_pair(std::begin(OperandMatchTable),"
+    OS << "  auto MnemonicRange = std::pair(std::begin(OperandMatchTable),"
           " std::end(OperandMatchTable));\n";
     OS << "  if (!Mnemonic.empty())\n";
     OS << "    MnemonicRange =\n";
@@ -3026,15 +3020,17 @@ emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
 }
 
 static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
-                                          AsmMatcherInfo &Info,
-                                          raw_ostream &OS) {
+                                          AsmMatcherInfo &Info, raw_ostream &OS,
+                                          bool HasOptionalOperands) {
   std::string AsmParserName =
       std::string(Info.AsmParser->getValueAsString("AsmParserClassName"));
   OS << "static bool ";
   OS << "checkAsmTiedOperandConstraints(const " << Target.getName()
      << AsmParserName << "&AsmParser,\n";
-  OS << "                               unsigned Kind,\n";
-  OS << "                               const OperandVector &Operands,\n";
+  OS << "                               unsigned Kind, const OperandVector "
+        "&Operands,\n";
+  if (HasOptionalOperands)
+    OS << "                               ArrayRef<unsigned> DefaultsOffset,\n";
   OS << "                               uint64_t &ErrorInfo) {\n";
   OS << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n";
   OS << "  const uint8_t *Converter = ConversionTable[Kind];\n";
@@ -3047,6 +3043,13 @@ static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
   OS << "             \"Tied operand not found\");\n";
   OS << "      unsigned OpndNum1 = TiedAsmOperandTable[OpIdx][1];\n";
   OS << "      unsigned OpndNum2 = TiedAsmOperandTable[OpIdx][2];\n";
+  if (HasOptionalOperands) {
+    // When optional operands are involved, formal and actual operand indices
+    // may differ. Map the former to the latter by subtracting the number of
+    // absent optional operands.
+    OS << "      OpndNum1 = OpndNum1 - DefaultsOffset[OpndNum1];\n";
+    OS << "      OpndNum2 = OpndNum2 - DefaultsOffset[OpndNum2];\n";
+  }
   OS << "      if (OpndNum1 != OpndNum2) {\n";
   OS << "        auto &SrcOp1 = Operands[OpndNum1];\n";
   OS << "        auto &SrcOp2 = Operands[OpndNum2];\n";
@@ -3154,7 +3157,7 @@ static void emitMnemonicChecker(raw_ostream &OS, CodeGenTarget &Target,
       OS << "  auto MnemonicRange = "
             "std::equal_range(Start, End, Mnemonic, LessOpcode());\n\n";
     } else {
-      OS << "  auto MnemonicRange = std::make_pair(Start, End);\n";
+      OS << "  auto MnemonicRange = std::pair(Start, End);\n";
       OS << "  unsigned SIndex = Mnemonic.empty() ? 0 : 1;\n";
       OS << "  if (!Mnemonic.empty())\n";
       OS << "    MnemonicRange = "
@@ -3286,7 +3289,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
        << "unsigned Opcode,\n"
        << "                       const OperandVector &Operands,\n"
        << "                       const SmallBitVector "
-          "&OptionalOperandsMask);\n";
+          "&OptionalOperandsMask,\n"
+       << "                       ArrayRef<unsigned> DefaultsOffset);\n";
   } else {
     OS << "  void convertToMCInst(unsigned Kind, MCInst &Inst, "
        << "unsigned Opcode,\n"
@@ -3400,7 +3404,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
       Info.SubtargetFeatures, OS);
 
   if (!ReportMultipleNearMisses)
-    emitAsmTiedOperandConstraints(Target, Info, OS);
+    emitAsmTiedOperandConstraints(Target, Info, OS, HasOptionalOperands);
 
   StringToOffsetTable StringTable;
 
@@ -3629,7 +3633,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "  auto MnemonicRange = "
           "std::equal_range(Start, End, Mnemonic, LessOpcode());\n\n";
   } else {
-    OS << "  auto MnemonicRange = std::make_pair(Start, End);\n";
+    OS << "  auto MnemonicRange = std::pair(Start, End);\n";
     OS << "  unsigned SIndex = Mnemonic.empty() ? 0 : 1;\n";
     OS << "  if (!Mnemonic.empty())\n";
     OS << "    MnemonicRange = "
@@ -3923,11 +3927,39 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "    }\n\n";
   }
 
+  // When converting parsed operands to MCInst we need to know whether optional
+  // operands were parsed or not so that we can choose the correct converter
+  // function. We also need to know this when checking tied operand constraints.
+  // DefaultsOffset is an array of deltas between the formal (MCInst) and the
+  // actual (parsed operand array) operand indices. When all optional operands
+  // are present, all elements of the array are zeros. If some of the optional
+  // operands are absent, the array might look like '0, 0, 1, 1, 1, 2, 2, 3',
+  // where each increment in value reflects the absence of an optional operand.
+  if (HasOptionalOperands) {
+    OS << "    unsigned DefaultsOffset[" << (MaxNumOperands + 1)
+       << "] = { 0 };\n";
+    OS << "    assert(OptionalOperandsMask.size() == " << (MaxNumOperands)
+       << ");\n";
+    OS << "    for (unsigned i = 0, NumDefaults = 0; i < " << (MaxNumOperands)
+       << "; ++i) {\n";
+    OS << "      DefaultsOffset[i + 1] = NumDefaults;\n";
+    OS << "      NumDefaults += (OptionalOperandsMask[i] ? 1 : 0);\n";
+    OS << "    }\n\n";
+  }
+
   OS << "    if (matchingInlineAsm) {\n";
   OS << "      convertToMapAndConstraints(it->ConvertFn, Operands);\n";
   if (!ReportMultipleNearMisses) {
-    OS << "      if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
-          "Operands, ErrorInfo))\n";
+    if (HasOptionalOperands) {
+      OS << "      if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
+            "Operands,\n";
+      OS << "                                          DefaultsOffset, "
+            "ErrorInfo))\n";
+    } else {
+      OS << "      if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
+            "Operands,\n";
+      OS << "                                          ErrorInfo))\n";
+    }
     OS << "        return Match_InvalidTiedOperand;\n";
     OS << "\n";
   }
@@ -3937,7 +3969,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
      << "    // operands into the appropriate MCInst.\n";
   if (HasOptionalOperands) {
     OS << "    convertToMCInst(it->ConvertFn, Inst, it->Opcode, Operands,\n"
-       << "                    OptionalOperandsMask);\n";
+       << "                    OptionalOperandsMask, DefaultsOffset);\n";
   } else {
     OS << "    convertToMCInst(it->ConvertFn, Inst, it->Opcode, Operands);\n";
   }
@@ -4017,8 +4049,16 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   }
 
   if (!ReportMultipleNearMisses) {
-    OS << "    if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
-          "Operands, ErrorInfo))\n";
+    if (HasOptionalOperands) {
+      OS << "    if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
+            "Operands,\n";
+      OS << "                                         DefaultsOffset, "
+            "ErrorInfo))\n";
+    } else {
+      OS << "    if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
+            "Operands,\n";
+      OS << "                                         ErrorInfo))\n";
+    }
     OS << "      return Match_InvalidTiedOperand;\n";
     OS << "\n";
   }

@@ -138,6 +138,8 @@ constexpr int dependent[4] = {
 static_assert(dependent[2] == dependent[0], "");
 static_assert(dependent[3] == dependent[1], "");
 
+union { char x[]; } r = {0};
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wc99-extensions"
 #pragma clang diagnostic ignored "-Winitializer-overrides"
@@ -537,3 +539,35 @@ namespace SelfComparison {
     return s3->array[t.field] == s3->array[t.field];  // both-warning {{self-comparison always evaluates to true}}
   };
 }
+
+namespace LocalIndex {
+  void test() {
+    const int const_subscript = 3;
+    int array[2]; // both-note {{declared here}}
+    array[const_subscript] = 0;  // both-warning {{array index 3 is past the end of the array (that has type 'int[2]')}}
+  }
+}
+
+namespace LocalVLA {
+  struct Foo {
+    int x;
+    Foo(int x) : x(x) {}
+  };
+  struct Elidable {
+    Elidable();
+  };
+
+  void foo(int size) {
+    Elidable elidableDynArray[size];
+#if __cplusplus >= 202002L
+     // both-note@-3 {{declared here}}
+     // both-warning@-3 {{variable length array}}
+     // both-note@-4 {{function parameter 'size' with unknown value}}
+#endif
+  }
+}
+
+char melchizedek[2200000000];
+typedef decltype(melchizedek[1] - melchizedek[0]) ptrdiff_t;
+constexpr ptrdiff_t d1 = &melchizedek[0x7fffffff] - &melchizedek[0]; // ok
+constexpr ptrdiff_t d3 = &melchizedek[0] - &melchizedek[0x80000000u]; // ok
