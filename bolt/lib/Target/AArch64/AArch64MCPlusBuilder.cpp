@@ -1629,6 +1629,9 @@ public:
     uint64_t RelType;
     if (Fixup.getKind() == MCFixupKind(AArch64::fixup_aarch64_pcrel_call26))
       RelType = ELF::R_AARCH64_CALL26;
+    else if (Fixup.getKind() ==
+             MCFixupKind(AArch64::fixup_aarch64_pcrel_branch26))
+      RelType = ELF::R_AARCH64_JUMP26;
     else if (FKI.Flags & MCFixupKindInfo::FKF_IsPCRel) {
       switch (FKI.TargetSize) {
       default:
