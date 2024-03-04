@@ -5038,7 +5038,8 @@ class CoroutineSuspendExpr : public Expr {
   OpaqueValueExpr *OpaqueValue = nullptr;
 
 public:
-  enum SuspendReturnType { SuspendVoid, SuspendBool, SuspendHandle };
+  // These types correspond to the three C++ 'await_suspend' return variants
+  enum class SuspendReturnType { SuspendVoid, SuspendBool, SuspendHandle };
 
   CoroutineSuspendExpr(StmtClass SC, SourceLocation KeywordLoc, Expr *Operand,
                        Expr *Common, Expr *Ready, Expr *Suspend, Expr *Resume,
@@ -5109,10 +5110,12 @@ public:
       return SuspendReturnType::SuspendVoid;
     if (SuspendType->isBooleanType())
       return SuspendReturnType::SuspendBool;
-    if (SuspendType->isVoidPointerType())
-      return SuspendReturnType::SuspendHandle;
 
-    llvm_unreachable("Unexpected await_suspend expression return type");
+    // Void pointer is the type of handle.address(), which is returned
+    // from the await suspend wrapper so that the temporary coroutine handle
+    // value won't go to the frame by mistake
+    assert(SuspendType->isVoidPointerType());
+    return SuspendReturnType::SuspendHandle;
   }
 
   SourceLocation getKeywordLoc() const { return KeywordLoc; }

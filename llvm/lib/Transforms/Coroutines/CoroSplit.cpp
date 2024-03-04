@@ -168,7 +168,7 @@ private:
 } // end anonymous namespace
 
 // FIXME:
-// Lower the intrinisc earlier if coroutine frame doesn't escape
+// Lower the intrinisc in CoroEarly phase if coroutine frame doesn't escape
 // and it is known that other transformations, for example, sanitizers
 // won't lead to incorrect code.
 static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB) {
@@ -206,6 +206,12 @@ static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB) {
 
   CB->replaceAllUsesWith(NewCall);
   CB->eraseFromParent();
+}
+
+static void lowerAwaitSuspends(Function &F, coro::Shape &Shape) {
+  IRBuilder<> Builder(F.getContext());
+  for (auto *AWS : Shape.CoroAwaitSuspends)
+    lowerAwaitSuspend(Builder, AWS);
 }
 
 static void maybeFreeRetconStorage(IRBuilder<> &Builder,
@@ -1360,11 +1366,6 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
 // the coroutine and if that is the case we cannot eliminate the suspend point.
 static bool hasCallsInBlockBetween(Instruction *From, Instruction *To) {
   for (Instruction *I = From; I != To; I = I->getNextNode()) {
-    // This one could resume the coroutine,
-    // but additional analysis before the check should ensure,
-    // that it can't happen
-    if (isa<CoroAwaitSuspendInst>(I))
-      continue;
     // Assume that no intrinsic can resume the coroutine.
     if (isa<IntrinsicInst>(I))
       continue;
@@ -1405,17 +1406,14 @@ static bool hasCallsInBlocksBetween(BasicBlock *SaveBB, BasicBlock *ResDesBB) {
 }
 
 static bool hasCallsBetween(Instruction *Save, Instruction *ResumeOrDestroy) {
-  if (Save == ResumeOrDestroy)
-    return false;
-
   auto *SaveBB = Save->getParent();
   auto *ResumeOrDestroyBB = ResumeOrDestroy->getParent();
 
   if (SaveBB == ResumeOrDestroyBB)
-    return hasCallsInBlockBetween(Save, ResumeOrDestroy);
+    return hasCallsInBlockBetween(Save->getNextNode(), ResumeOrDestroy);
 
   // Any calls from Save to the end of the block?
-  if (hasCallsInBlockBetween(Save, nullptr))
+  if (hasCallsInBlockBetween(Save->getNextNode(), nullptr))
     return true;
 
   // Any calls from begging of the block up to ResumeOrDestroy?
@@ -1428,39 +1426,6 @@ static bool hasCallsBetween(Instruction *Save, Instruction *ResumeOrDestroy) {
     return true;
 
   return false;
-}
-
-// Check if await-suspend wrapper is "simple".
-// The conditions are:
-// 1. The return result is exactly coroutine frame parameter, passed to wrapper
-// 2. There are no calls between any of the returns and wrapper entry that could
-// resume or destroy it
-// FIXME: perform more sophisiticated analysis?
-static bool isSimpleWrapper(CoroAwaitSuspendInst *AWS) {
-  auto *Wrapper = AWS->getWrapperFunction();
-
-  if (Wrapper->empty())
-    return false;
-
-  SmallVector<ReturnInst *, 4> Rets;
-
-  for (auto &BB : *Wrapper) {
-    if (BB.empty())
-      continue;
-    auto terminator = BB.getTerminator();
-    if (!terminator)
-      continue;
-    if (auto Ret = dyn_cast<ReturnInst>(terminator))
-      Rets.push_back(cast<ReturnInst>(terminator));
-  }
-
-  // FIXME: get rid of magical constant
-  for (auto Ret : Rets)
-    if (Ret->getReturnValue() != Wrapper->getArg(1) ||
-        hasCallsBetween(Wrapper->getEntryBlock().getFirstNonPHI(), Ret))
-      return false;
-
-  return true;
 }
 
 // If a SuspendIntrin is preceded by Resume or Destroy, we can eliminate the
@@ -1486,18 +1451,9 @@ static bool simplifySuspendPoint(CoroSuspendInst *Suspend,
   if (!SubFn)
     return false;
 
-  auto Frame = SubFn->getFrame();
-
-  // Check that frame directly always refers to the current coroutine,
-  // either directly or via wrapper
-  if (Frame != CoroBegin) {
-    auto *AWS = dyn_cast<CoroAwaitSuspendInst>(Frame);
-    if (!AWS)
-      return false;
-
-    if (AWS->getFrame() != CoroBegin || !isSimpleWrapper(AWS))
-      return false;
-  }
+  // Does not refer to the current coroutine, we cannot do anything with it.
+  if (SubFn->getFrame() != CoroBegin)
+    return false;
 
   // See if the transformation is safe. Specifically, see if there are any
   // calls in between Save and CallInstr. They can potenitally resume the
@@ -2103,7 +2059,7 @@ public:
 } // namespace
 
 static coro::Shape
-splitCoroutine(Module &M, Function &F, SmallVectorImpl<Function *> &Clones,
+splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
                TargetTransformInfo &TTI, bool OptimizeFrame,
                std::function<bool(Instruction &)> MaterializableCallback) {
   PrettyStackTraceFunction prettyStackTrace(F);
@@ -2116,13 +2072,11 @@ splitCoroutine(Module &M, Function &F, SmallVectorImpl<Function *> &Clones,
   if (!Shape.CoroBegin)
     return Shape;
 
+  lowerAwaitSuspends(F, Shape);
+
   simplifySuspendPoints(Shape);
   buildCoroutineFrame(F, Shape, TTI, MaterializableCallback);
   replaceFrameSizeAndAlignment(Shape);
-
-  IRBuilder<> Builder(M.getContext());
-  for (auto *AWS : Shape.CoroAwaitSuspends)
-    lowerAwaitSuspend(Builder, AWS);
 
   // If there are no suspend points, no split required, just remove
   // the allocation and deallocation blocks, they are not needed.
@@ -2316,7 +2270,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     SmallVector<Function *, 4> Clones;
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
     const coro::Shape Shape =
-        splitCoroutine(M, F, Clones, FAM.getResult<TargetIRAnalysis>(F),
+        splitCoroutine(F, Clones, FAM.getResult<TargetIRAnalysis>(F),
                        OptimizeFrame, MaterializableCallback);
     updateCallGraphAfterCoroutineSplit(*N, Shape, Clones, C, CG, AM, UR, FAM);
 
