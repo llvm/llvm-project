@@ -5,6 +5,7 @@
 
 @x = thread_local global i32 0, align 4
 @y = internal thread_local global i32 0, align 4
+@z = internal thread_local global i32 1, align 4
 
 define ptr @f1() nounwind {
 ; X86-LABEL: f1:
@@ -159,33 +160,47 @@ define i32 @f4() nounwind {
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:  .Ltmp3:
 ; X86-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp3-.L3$pb), %ebx
-; X86-NEXT:    movl %gs:0, %ecx
-; X86-NEXT:    leal x@tlsdesc(%ebx), %eax
-; X86-NEXT:    calll *x@tlscall(%eax)
-; X86-NEXT:    movl (%eax,%ecx), %eax
+; X86-NEXT:    leal y@tlsdesc(%ebx), %eax
+; X86-NEXT:    calll *y@tlscall(%eax)
+; X86-NEXT:    movl %gs:0, %edx
+; X86-NEXT:    movl (%eax,%edx), %ecx
+; X86-NEXT:    leal z@tlsdesc(%ebx), %eax
+; X86-NEXT:    calll *z@tlscall(%eax)
+; X86-NEXT:    addl (%eax,%edx), %ecx
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ;
 ; X32-LABEL: f4:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushq %rax
-; X32-NEXT:    movl %fs:0, %ecx
-; X32-NEXT:    leal x@tlsdesc(%rip), %eax
-; X32-NEXT:    callq *x@tlscall(%eax)
-; X32-NEXT:    movl (%eax,%ecx), %eax
+; X32-NEXT:    leal y@tlsdesc(%rip), %eax
+; X32-NEXT:    callq *y@tlscall(%eax)
+; X32-NEXT:    movl %fs:0, %edx
+; X32-NEXT:    movl (%eax,%edx), %ecx
+; X32-NEXT:    leal z@tlsdesc(%rip), %eax
+; X32-NEXT:    callq *z@tlscall(%eax)
+; X32-NEXT:    addl (%eax,%edx), %ecx
+; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    popq %rcx
 ; X32-NEXT:    retq
 ;
 ; X64-LABEL: f4:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movq %fs:0, %rcx
-; X64-NEXT:    leaq x@tlsdesc(%rip), %rax
-; X64-NEXT:    callq *x@tlscall(%rax)
-; X64-NEXT:    movl (%rax,%rcx), %eax
+; X64-NEXT:    leaq y@tlsdesc(%rip), %rax
+; X64-NEXT:    callq *y@tlscall(%rax)
+; X64-NEXT:    # kill: def $rax killed $rax killed $eax
+; X64-NEXT:    movq %fs:0, %rdx
+; X64-NEXT:    movl (%rax,%rdx), %ecx
+; X64-NEXT:    leaq z@tlsdesc(%rip), %rax
+; X64-NEXT:    callq *z@tlscall(%rax)
+; X64-NEXT:    addl (%rax,%rdx), %ecx
+; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
-  %1 = tail call ptr @llvm.threadlocal.address.p0(ptr @x)
-  %2 = load i32, ptr %1
-  ret i32 %2
+  %1 = load i32, ptr @y, align 4
+  %2 = load i32, ptr @z, align 4
+  %3 = add nsw i32 %1, %2
+  ret i32 %3
 }
