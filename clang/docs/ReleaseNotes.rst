@@ -42,6 +42,8 @@ C/C++ Language Potentially Breaking Changes
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
+- Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
+  This error can be disabled via `-Wno-strict-primary-template-shadow` for compatibility with previous versions of clang.
 
 ABI Changes in This Version
 ---------------------------
