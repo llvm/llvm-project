@@ -3007,8 +3007,9 @@ PHINode *InnerLoopVectorizer::createInductionResumeValue(
   }
 
   // Create phi nodes to merge from the  backedge-taken check block.
-  PHINode *BCResumeVal = PHINode::Create(OrigPhi->getType(), 3, "bc.resume.val",
-                                         LoopScalarPreHeader->getTerminator());
+  PHINode *BCResumeVal =
+      PHINode::Create(OrigPhi->getType(), 3, "bc.resume.val",
+                      LoopScalarPreHeader->getTerminator()->getIterator());
   // Copy original phi DL over to the new one.
   BCResumeVal->setDebugLoc(OrigPhi->getDebugLoc());
 
@@ -7415,8 +7416,9 @@ static void createAndCollectMergePhiForReduction(
   BasicBlock *LoopScalarPreHeader = OrigLoop->getLoopPreheader();
   // Create a phi node that merges control-flow from the backedge-taken check
   // block and the middle block.
-  auto *BCBlockPhi = PHINode::Create(FinalValue->getType(), 2, "bc.merge.rdx",
-                                     LoopScalarPreHeader->getTerminator());
+  auto *BCBlockPhi =
+      PHINode::Create(FinalValue->getType(), 2, "bc.merge.rdx",
+                      LoopScalarPreHeader->getTerminator()->getIterator());
 
   // If we are fixing reductions in the epilogue loop then we should already
   // have created a bc.merge.rdx Phi after the main vector body. Ensure that
@@ -9176,14 +9178,14 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   // Build a pointer phi
   Value *ScalarStartValue = getStartValue()->getLiveInIRValue();
   Type *ScStValueType = ScalarStartValue->getType();
-  PHINode *NewPointerPhi =
-      PHINode::Create(ScStValueType, 2, "pointer.phi", CanonicalIV);
+  PHINode *NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
+                                           CanonicalIV->getIterator());
 
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
   NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
 
   // A pointer induction, performed by using a gep
-  Instruction *InductionLoc = &*State.Builder.GetInsertPoint();
+  BasicBlock::iterator InductionLoc = State.Builder.GetInsertPoint();
 
   Value *ScalarStepValue = State.get(getOperand(1), VPIteration(0, 0));
   Value *RuntimeVF = getRuntimeVF(State.Builder, PhiType, State.VF);

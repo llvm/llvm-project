@@ -1143,7 +1143,8 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     assert(Base && "Can't be null");
     // The cast is needed since base traversal may strip away bitcasts
     if (Base->getType() != Input->getType() && InsertPt)
-      Base = new BitCastInst(Base, Input->getType(), "cast", InsertPt);
+      Base = new BitCastInst(Base, Input->getType(), "cast",
+                             InsertPt->getIterator());
     return Base;
   };
 
@@ -1612,7 +1613,7 @@ public:
       // Note: we've inserted instructions, so the call to llvm.deoptimize may
       // not necessarily be followed by the matching return.
       auto *RI = cast<ReturnInst>(OldI->getParent()->getTerminator());
-      new UnreachableInst(RI->getContext(), RI);
+      new UnreachableInst(RI->getContext(), RI->getIterator());
       RI->eraseFromParent();
     }
 
@@ -1976,7 +1977,7 @@ insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
     // Emit store into the related alloca.
     assert(Relocate->getNextNode() &&
            "Should always have one since it's not a terminator");
-    new StoreInst(Relocate, Alloca, Relocate->getNextNode());
+    new StoreInst(Relocate, Alloca, std::next(Relocate->getIterator()));
 
 #ifndef NDEBUG
     VisitedLiveValues.insert(OriginalValue);
@@ -1999,7 +2000,7 @@ static void insertRematerializationStores(
     Value *Alloca = AllocaMap[OriginalValue];
 
     new StoreInst(RematerializedValue, Alloca,
-                  RematerializedValue->getNextNode());
+                  std::next(RematerializedValue->getIterator()));
 
 #ifndef NDEBUG
     VisitedLiveValues.insert(OriginalValue);
@@ -2031,9 +2032,9 @@ static void relocationViaAlloca(
   // "PromotableAllocas"
   const DataLayout &DL = F.getParent()->getDataLayout();
   auto emitAllocaFor = [&](Value *LiveValue) {
-    AllocaInst *Alloca = new AllocaInst(LiveValue->getType(),
-                                        DL.getAllocaAddrSpace(), "",
-                                        F.getEntryBlock().getFirstNonPHI());
+    AllocaInst *Alloca =
+        new AllocaInst(LiveValue->getType(), DL.getAllocaAddrSpace(), "",
+                       F.getEntryBlock().getFirstNonPHIIt());
     AllocaMap[LiveValue] = Alloca;
     PromotableAllocas.push_back(Alloca);
   };
@@ -2100,7 +2101,7 @@ static void relocationViaAlloca(
         ToClobber.push_back(Alloca);
       }
 
-      auto InsertClobbersAt = [&](Instruction *IP) {
+      auto InsertClobbersAt = [&](BasicBlock::iterator IP) {
         for (auto *AI : ToClobber) {
           auto AT = AI->getAllocatedType();
           Constant *CPN;
@@ -2115,10 +2116,11 @@ static void relocationViaAlloca(
       // Insert the clobbering stores.  These may get intermixed with the
       // gc.results and gc.relocates, but that's fine.
       if (auto II = dyn_cast<InvokeInst>(Statepoint)) {
-        InsertClobbersAt(&*II->getNormalDest()->getFirstInsertionPt());
-        InsertClobbersAt(&*II->getUnwindDest()->getFirstInsertionPt());
+        InsertClobbersAt(II->getNormalDest()->getFirstInsertionPt());
+        InsertClobbersAt(II->getUnwindDest()->getFirstInsertionPt());
       } else {
-        InsertClobbersAt(cast<Instruction>(Statepoint)->getNextNode());
+        InsertClobbersAt(
+            std::next(cast<Instruction>(Statepoint)->getIterator()));
       }
     }
   }
@@ -2154,15 +2156,15 @@ static void relocationViaAlloca(
         PHINode *Phi = cast<PHINode>(Use);
         for (unsigned i = 0; i < Phi->getNumIncomingValues(); i++) {
           if (Def == Phi->getIncomingValue(i)) {
-            LoadInst *Load =
-                new LoadInst(Alloca->getAllocatedType(), Alloca, "",
-                             Phi->getIncomingBlock(i)->getTerminator());
+            LoadInst *Load = new LoadInst(
+                Alloca->getAllocatedType(), Alloca, "",
+                Phi->getIncomingBlock(i)->getTerminator()->getIterator());
             Phi->setIncomingValue(i, Load);
           }
         }
       } else {
-        LoadInst *Load =
-            new LoadInst(Alloca->getAllocatedType(), Alloca, "", Use);
+        LoadInst *Load = new LoadInst(Alloca->getAllocatedType(), Alloca, "",
+                                      Use->getIterator());
         Use->replaceUsesOfWith(Def, Load);
       }
     }
@@ -2229,16 +2231,16 @@ static void insertUseHolderAfter(CallBase *Call, const ArrayRef<Value *> Values,
   if (isa<CallInst>(Call)) {
     // For call safepoints insert dummy calls right after safepoint
     Holders.push_back(
-        CallInst::Create(Func, Values, "", &*++Call->getIterator()));
+        CallInst::Create(Func, Values, "", std::next(Call->getIterator())));
     return;
   }
   // For invoke safepooints insert dummy calls both in normal and
   // exceptional destination blocks
   auto *II = cast<InvokeInst>(Call);
   Holders.push_back(CallInst::Create(
-      Func, Values, "", &*II->getNormalDest()->getFirstInsertionPt()));
+      Func, Values, "", II->getNormalDest()->getFirstInsertionPt()));
   Holders.push_back(CallInst::Create(
-      Func, Values, "", &*II->getUnwindDest()->getFirstInsertionPt()));
+      Func, Values, "", II->getUnwindDest()->getFirstInsertionPt()));
 }
 
 static void findLiveReferences(

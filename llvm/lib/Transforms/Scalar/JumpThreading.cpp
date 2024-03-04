@@ -1037,7 +1037,7 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
 
     LLVM_DEBUG(dbgs() << "  In block '" << BB->getName()
                       << "' folding undef terminator: " << *BBTerm << '\n');
-    BranchInst::Create(BBTerm->getSuccessor(BestSucc), BBTerm);
+    BranchInst::Create(BBTerm->getSuccessor(BestSucc), BBTerm->getIterator());
     ++NumFolds;
     BBTerm->eraseFromParent();
     DTU->applyUpdatesPermissive(Updates);
@@ -1202,7 +1202,7 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
       BasicBlock *KeepSucc = BI->getSuccessor(*Implication ? 0 : 1);
       BasicBlock *RemoveSucc = BI->getSuccessor(*Implication ? 1 : 0);
       RemoveSucc->removePredecessor(BB);
-      BranchInst *UncondBI = BranchInst::Create(KeepSucc, BI);
+      BranchInst *UncondBI = BranchInst::Create(KeepSucc, BI->getIterator());
       UncondBI->setDebugLoc(BI->getDebugLoc());
       ++NumFolds;
       BI->eraseFromParent();
@@ -1280,7 +1280,7 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
       AvailableVal = PoisonValue::get(LoadI->getType());
     if (AvailableVal->getType() != LoadI->getType())
       AvailableVal = CastInst::CreateBitOrPointerCast(
-          AvailableVal, LoadI->getType(), "", LoadI);
+          AvailableVal, LoadI->getType(), "", LoadI->getIterator());
     LoadI->replaceAllUsesWith(AvailableVal);
     LoadI->eraseFromParent();
     return true;
@@ -1421,7 +1421,7 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
         LoadI->getType(), LoadedPtr->DoPHITranslation(LoadBB, UnavailablePred),
         LoadI->getName() + ".pr", false, LoadI->getAlign(),
         LoadI->getOrdering(), LoadI->getSyncScopeID(),
-        UnavailablePred->getTerminator());
+        UnavailablePred->getTerminator()->getIterator());
     NewVal->setDebugLoc(LoadI->getDebugLoc());
     if (AATags)
       NewVal->setAAMetadata(AATags);
@@ -1454,8 +1454,8 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
     // predecessor use the same bitcast.
     Value *&PredV = I->second;
     if (PredV->getType() != LoadI->getType())
-      PredV = CastInst::CreateBitOrPointerCast(PredV, LoadI->getType(), "",
-                                               P->getTerminator());
+      PredV = CastInst::CreateBitOrPointerCast(
+          PredV, LoadI->getType(), "", P->getTerminator()->getIterator());
 
     PN->addIncoming(PredV, I->first);
   }
@@ -1653,7 +1653,7 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
 
       // Finally update the terminator.
       Instruction *Term = BB->getTerminator();
-      BranchInst::Create(OnlyDest, Term);
+      BranchInst::Create(OnlyDest, Term->getIterator());
       ++NumFolds;
       Term->eraseFromParent();
       DTU->applyUpdatesPermissive(Updates);
@@ -2971,13 +2971,13 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
     // Expand the select.
     Value *Cond = SI->getCondition();
     if (!isGuaranteedNotToBeUndefOrPoison(Cond, nullptr, SI))
-      Cond = new FreezeInst(Cond, "cond.fr", SI);
+      Cond = new FreezeInst(Cond, "cond.fr", SI->getIterator());
     MDNode *BranchWeights = getBranchWeightMDNode(*SI);
     Instruction *Term =
         SplitBlockAndInsertIfThen(Cond, SI, false, BranchWeights);
     BasicBlock *SplitBB = SI->getParent();
     BasicBlock *NewBB = Term->getParent();
-    PHINode *NewPN = PHINode::Create(SI->getType(), 2, "", SI);
+    PHINode *NewPN = PHINode::Create(SI->getType(), 2, "", SI->getIterator());
     NewPN->addIncoming(SI->getTrueValue(), Term->getParent());
     NewPN->addIncoming(SI->getFalseValue(), BB);
     SI->replaceAllUsesWith(NewPN);

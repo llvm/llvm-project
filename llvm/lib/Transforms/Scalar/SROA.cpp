@@ -1853,7 +1853,7 @@ static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
   Tail->setName(Head->getName() + ".cont");
   PHINode *PN;
   if (isa<LoadInst>(I))
-    PN = PHINode::Create(I.getType(), 2, "", &I);
+    PN = PHINode::Create(I.getType(), 2, "", I.getIterator());
   for (BasicBlock *SuccBB : successors(Head)) {
     bool IsThen = SuccBB == HeadBI->getSuccessor(0);
     int SuccIdx = IsThen ? 0 : 1;
@@ -4883,7 +4883,8 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     NewAI = new AllocaInst(
         SliceTy, AI.getAddressSpace(), nullptr,
         IsUnconstrained ? DL.getPrefTypeAlign(SliceTy) : Alignment,
-        AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()), &AI);
+        AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()),
+        AI.getIterator());
     // Copy the old AI debug location over to the new one.
     NewAI->setDebugLoc(AI.getDebugLoc());
     ++NumNewAllocas;
