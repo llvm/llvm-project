@@ -2535,27 +2535,25 @@ CXXMethodDecl::overridden_methods() const {
 
 static QualType getThisObjectType(ASTContext &C, const FunctionProtoType *FPT,
                                   const CXXRecordDecl *Decl) {
-  QualType ClassTy = C.getTypeDeclType(Decl);
-  return C.getQualifiedType(ClassTy, FPT->getMethodQuals());
-}
-
-QualType CXXMethodDecl::getThisType(const FunctionProtoType *FPT,
-                                    const CXXRecordDecl *Decl) {
-  ASTContext &C = Decl->getASTContext();
-  QualType ObjectTy = ::getThisObjectType(C, FPT, Decl);
-
   // Unlike 'const' and 'volatile', a '__restrict' qualifier must be
   // attached to the pointer type, not the pointee.
-  bool Restrict = FPT->getMethodQuals().hasRestrict();
-  if (Restrict)
-    ObjectTy.removeLocalRestrict();
+  QualType ClassTy = C.getTypeDeclType(Decl);
+  Qualifiers Qs = FPT->getMethodQuals();
+  Qs.removeRestrict();
+  return C.getQualifiedType(ClassTy, Qs);
+}
 
-  ObjectTy = C.getLangOpts().HLSL ? C.getLValueReferenceType(ObjectTy)
-                                  : C.getPointerType(ObjectTy);
-
-  if (Restrict)
-    ObjectTy.addRestrict();
-  return ObjectTy;
+// This may be called in cases where we simply don't have a CXXMethodDecl,
+// in which case we don't have enough information to reason whether the type
+// of 'this' should include '__restrict', however, since we would strip
+// '__restrict' in MemberPointerTypes anyway, this ends up not being much of
+// an issue.
+QualType CXXMethodDecl::getThisTypeForMemberPtr(const FunctionProtoType *FPT,
+                                                const CXXRecordDecl *Decl) {
+  ASTContext &C = Decl->getASTContext();
+  QualType ObjectTy = ::getThisObjectType(C, FPT, Decl);
+  return C.getLangOpts().HLSL ? C.getLValueReferenceType(ObjectTy)
+                              : C.getPointerType(ObjectTy);
 }
 
 QualType CXXMethodDecl::getThisType() const {
@@ -2565,8 +2563,26 @@ QualType CXXMethodDecl::getThisType() const {
   // volatile X*, and if the member function is declared const volatile,
   // the type of this is const volatile X*.
   assert(isInstance() && "No 'this' for static methods!");
-  return CXXMethodDecl::getThisType(getType()->castAs<FunctionProtoType>(),
-                                    getParent());
+  ASTContext &C = getASTContext();
+  auto FPT = getType()->castAs<FunctionProtoType>();
+
+  QualType ObjectTy = ::getThisObjectType(C, FPT, getParent());
+  ObjectTy = C.getLangOpts().HLSL ? C.getLValueReferenceType(ObjectTy)
+                                  : C.getPointerType(ObjectTy);
+
+  if (isEffectivelyRestrict())
+    ObjectTy.addRestrict();
+  return ObjectTy;
+}
+
+bool CXXMethodDecl::isEffectivelyRestrict() const {
+  // MSVC only cares about '__restrict' on the first declaration; GCC only
+  // cares about the definition.
+  Qualifiers Qs =
+      getASTContext().getLangOpts().MSVCCompat
+          ? cast<CXXMethodDecl>(getFirstDecl())->getMethodQualifiers()
+          : getMethodQualifiers();
+  return Qs.hasRestrict();
 }
 
 QualType CXXMethodDecl::getFunctionObjectParameterReferenceType() const {

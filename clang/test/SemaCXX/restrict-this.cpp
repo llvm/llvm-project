@@ -9,7 +9,7 @@
 // the *definition* is '__restrict'.
 
 #define Restrict(C) static_assert(__is_same(decltype(this), C* __restrict))
-#define NotRestrict(C) static_assert(__is_same(decltype(this), C*) || __is_same(decltype(this), const C*))
+#define NotRestrict(C) static_assert(__is_same(decltype(this), C*))
 
 #if MSVC
 # define RestrictIfMSVC Restrict
@@ -28,7 +28,7 @@ struct C {
 
       // By-value capture means 'this' is now a different object; do not
       // make it __restrict.
-      (void) [*this]() { RestrictIfMSVC(C); };
+      (void) [*this]() { RestrictIfMSVC(const C); };
       (void) [*this]() mutable { RestrictIfMSVC(C); };
     };
   }
@@ -47,7 +47,7 @@ template <typename T> struct TC {
 
       // By-value capture means 'this' is now a different object; do not
       // make it __restrict.
-      (void) [*this]() { RestrictIfMSVC(TC); };
+      (void) [*this]() { RestrictIfMSVC(const TC); };
       (void) [*this]() mutable { RestrictIfMSVC(TC); };
     };
   }
@@ -63,7 +63,8 @@ void C::a() __restrict {
   Restrict(C);
   (void) [this]() {
     Restrict(C);
-    (void) [*this]() { RestrictIfMSVC(C); };
+    (void) [*this]() { RestrictIfMSVC(const C); };
+    (void) [*this]() mutable { RestrictIfMSVC(C); };
   };
 }
 
@@ -72,7 +73,8 @@ void TC<T>::a() __restrict {
   Restrict(TC);
   (void) [this]() {
     Restrict(TC);
-    (void) [*this]() { RestrictIfMSVC(TC); };
+    (void) [*this]() { RestrictIfMSVC(const TC); };
+    (void) [*this]() mutable { RestrictIfMSVC(TC); };
   };
 }
 
@@ -82,7 +84,8 @@ void C::b() {
   RestrictIfMSVC(C);
   (void) [this]() {
     RestrictIfMSVC(C);
-    (void) [*this]() { RestrictIfMSVC(C); };
+    (void) [*this]() { RestrictIfMSVC(const C); };
+    (void) [*this]() mutable { RestrictIfMSVC(C); };
   };
 }
 
@@ -91,7 +94,8 @@ void TC<T>::b() {
   RestrictIfMSVC(TC);
   (void) [this]() {
     RestrictIfMSVC(TC);
-    (void) [*this]() { RestrictIfMSVC(TC); };
+    (void) [*this]() { RestrictIfMSVC(const TC); };
+    (void) [*this]() mutable { RestrictIfMSVC(TC); };
   };
 }
 
@@ -101,7 +105,8 @@ void C::c() __restrict {
   RestrictIfGCC(C);
   (void) [this]() {
     RestrictIfGCC(C);
-    (void) [*this]() { NotRestrict(C); };
+    (void) [*this]() { NotRestrict(const C); };
+    (void) [*this]() mutable { NotRestrict(C); };
   };
 }
 
@@ -110,7 +115,8 @@ void TC<T>::c() __restrict {
   RestrictIfGCC(TC);
   (void) [this]() {
     RestrictIfGCC(TC);
-    (void) [*this]() { NotRestrict(TC); };
+    (void) [*this]() { NotRestrict(const TC); };
+    (void) [*this]() mutable { NotRestrict(TC); };
   };
 }
 

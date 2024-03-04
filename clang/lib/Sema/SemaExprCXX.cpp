@@ -1130,8 +1130,8 @@ static QualType adjustCVQualifiersForCXXThisWithinLambda(
   // member function.  We then start with the innermost lambda and iterate
   // outward checking to see if any lambda performs a by-copy capture of '*this'
   // - and if so, any nested lambda must respect the 'constness' of that
-  // capturing lamdbda's call operator.
-  //
+  // capturing lamdbda's call operator. In MSVCCompat mode, we also consider
+  // 'this' to be '__restrict' even if it is captured by copy.
 
   // Since the FunctionScopeInfo stack is representative of the lexical
   // nesting of the lambda expressions during initial parsing (and is the best
@@ -1174,7 +1174,10 @@ static QualType adjustCVQualifiersForCXXThisWithinLambda(
     if (C.isCopyCapture()) {
       if (CurLSI->lambdaCaptureShouldBeConst())
         ClassType.addConst();
-      return ASTCtx.getPointerType(ClassType);
+      auto Ptr = ASTCtx.getPointerType(ClassType);
+      if (ThisTy.isRestrictQualified() && ASTCtx.getLangOpts().MSVCCompat)
+        Ptr.addRestrict();
+      return Ptr;
     }
   }
 
@@ -1213,7 +1216,10 @@ static QualType adjustCVQualifiersForCXXThisWithinLambda(
       if (IsByCopyCapture) {
         if (IsConstCapture)
           ClassType.addConst();
-        return ASTCtx.getPointerType(ClassType);
+        auto Ptr = ASTCtx.getPointerType(ClassType);
+        if (ThisTy.isRestrictQualified() && ASTCtx.getLangOpts().MSVCCompat)
+          Ptr.addRestrict();
+        return Ptr;
       }
       Closure = isLambdaCallOperator(Closure->getParent())
                     ? cast<CXXRecordDecl>(Closure->getParent()->getParent())
