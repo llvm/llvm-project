@@ -170,7 +170,8 @@ void Instruction::insertBefore(BasicBlock &BB,
   // if (isTerminator()) // @OCH -- what if we always attach danglers to the
   // next inserted inst? This might be needed for the FE. Not very efficient
   // though.
-  if (getParent()->getTrailingDPValues())
+  if (isTerminator() ||
+      (getParent()->getTrailingDPValues() && InsertPos == BB.end()))
     getParent()->flushTerminatorDbgValues();
 }
 
