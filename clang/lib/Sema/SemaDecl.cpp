@@ -1115,7 +1115,8 @@ Corrected:
     bool IsFunctionTemplate;
     bool IsVarTemplate;
     TemplateName Template;
-    if (Result.end() - Result.begin() > 1) {
+
+    if ((Result.end() - Result.begin() > 1) || Result.isUnresolvableResult()) {
       IsFunctionTemplate = true;
       Template = Context.getOverloadedTemplateName(Result.begin(),
                                                    Result.end());
