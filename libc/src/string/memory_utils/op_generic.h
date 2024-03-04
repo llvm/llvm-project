@@ -453,7 +453,7 @@ public:
     if (LIBC_UNLIKELY(count >= threshold) && helper.not_aligned()) {
       if (auto value = block(p1, p2))
         return value;
-      adjust(helper.offset(), p1, p2, count);
+      adjust(helper.offset, p1, p2, count);
     }
     return loop_and_tail(p1, p2, count);
   }
@@ -533,7 +533,7 @@ template <typename T> struct Bcmp {
     if (LIBC_UNLIKELY(count >= threshold) && helper.not_aligned()) {
       if (auto value = block(p1, p2))
         return value;
-      adjust(helper.offset(), p1, p2, count);
+      adjust(helper.offset, p1, p2, count);
     }
     return loop_and_tail(p1, p2, count);
   }

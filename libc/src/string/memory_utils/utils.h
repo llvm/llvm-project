@@ -336,13 +336,10 @@ LIBC_INLINE void align_to_next_boundary(T1 *__restrict &p1, T2 *__restrict &p2,
 
 template <size_t SIZE> struct AlignHelper {
   LIBC_INLINE AlignHelper(CPtr ptr)
-      : offset_(distance_to_next_aligned<SIZE>(ptr)) {}
+      : offset(distance_to_next_aligned<SIZE>(ptr)) {}
 
-  LIBC_INLINE bool not_aligned() const { return offset_ != SIZE; }
-  LIBC_INLINE uintptr_t offset() const { return offset_; }
-
-private:
-  uintptr_t offset_;
+  LIBC_INLINE bool not_aligned() const { return offset != SIZE; }
+  uintptr_t offset;
 };
 
 LIBC_INLINE void prefetch_for_write(CPtr dst) {
