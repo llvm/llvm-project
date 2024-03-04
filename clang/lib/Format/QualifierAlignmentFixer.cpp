@@ -274,7 +274,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
   // The case `long const long int volatile` -> `long long int const volatile`
   // The case `long long volatile int const` -> `long long int const volatile`
   // The case `const long long volatile int` -> `long long int const volatile`
-  if (TypeToken->isSimpleTypeSpecifier(IsCpp)) {
+  if (TypeToken->isTypeName(IsCpp)) {
     // The case `const decltype(foo)` -> `const decltype(foo)`
     // The case `const typeof(foo)` -> `const typeof(foo)`
     // The case `const _Atomic(foo)` -> `const _Atomic(foo)`
@@ -295,7 +295,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
   // The case  `unsigned short const` -> `unsigned short const`
   // The case:
   // `unsigned short volatile const` -> `unsigned short const volatile`
-  if (PreviousCheck && PreviousCheck->isSimpleTypeSpecifier(IsCpp)) {
+  if (PreviousCheck && PreviousCheck->isTypeName(IsCpp)) {
     if (LastQual != Tok)
       rotateTokens(SourceMgr, Fixes, Tok, LastQual, /*Left=*/false);
     return Tok;
@@ -412,8 +412,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   // The case `volatile long long const int` -> `const volatile long long int`
   // The case `const long long volatile int` -> `const volatile long long int`
   // The case `long volatile long int const` -> `const volatile long long int`
-  if (const bool IsCpp = Style.isCpp();
-      TypeToken->isSimpleTypeSpecifier(IsCpp)) {
+  if (const bool IsCpp = Style.isCpp(); TypeToken->isTypeName(IsCpp)) {
     const FormatToken *LastSimpleTypeSpecifier = TypeToken;
     while (isConfiguredQualifierOrType(
         LastSimpleTypeSpecifier->getPreviousNonComment(),
@@ -617,14 +616,14 @@ void prepareLeftRightOrderingForQualifierAlignmentFixer(
 
 bool LeftRightQualifierAlignmentFixer::isQualifierOrType(
     const FormatToken *const Tok, bool IsCpp) {
-  return Tok && (Tok->isSimpleTypeSpecifier(IsCpp) || Tok->is(tok::kw_auto) ||
-                 isQualifier(Tok));
+  return Tok &&
+         (Tok->isTypeName(IsCpp) || Tok->is(tok::kw_auto) || isQualifier(Tok));
 }
 
 bool LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
     const FormatToken *const Tok, const std::vector<tok::TokenKind> &Qualifiers,
     bool IsCpp) {
-  return Tok && (Tok->isSimpleTypeSpecifier(IsCpp) || Tok->is(tok::kw_auto) ||
+  return Tok && (Tok->isTypeName(IsCpp) || Tok->is(tok::kw_auto) ||
                  isConfiguredQualifier(Tok, Qualifiers));
 }
 

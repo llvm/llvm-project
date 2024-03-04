@@ -625,6 +625,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_CastRParen);
   EXPECT_TOKEN(Tokens[11], tok::amp, TT_UnaryOperator);
+
+  Tokens = annotate("#define FOO(bar) foo((time_t) & bar)");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_BinaryOperator);
+
+  auto Style = getLLVMStyle();
+  Style.TypeNames.push_back("time_t");
+  Tokens = annotate("#define FOO(bar) foo((time_t)&bar)", Style);
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_UnaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsDynamicExceptionSpecifier) {

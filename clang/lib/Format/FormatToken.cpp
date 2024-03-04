@@ -34,15 +34,9 @@ const char *getTokenTypeName(TokenType Type) {
   return nullptr;
 }
 
-// Sorted common C++ non-keyword types.
-static SmallVector<StringRef> CppNonKeywordTypes = {
-    "int16_t",  "int32_t",  "int64_t",  "int8_t",  "intptr_t",  "size_t",
-    "uint16_t", "uint32_t", "uint64_t", "uint8_t", "uintptr_t",
-};
-
 // FIXME: This is copy&pasted from Sema. Put it in a common place and remove
 // duplication.
-bool FormatToken::isSimpleTypeSpecifier(bool IsCpp) const {
+bool FormatToken::isSimpleTypeSpecifier() const {
   switch (Tok.getKind()) {
   case tok::kw_short:
   case tok::kw_long:
@@ -72,17 +66,26 @@ bool FormatToken::isSimpleTypeSpecifier(bool IsCpp) const {
   case tok::kw_decltype:
   case tok::kw__Atomic:
     return true;
-  case tok::identifier:
-    return IsCpp && std::binary_search(CppNonKeywordTypes.begin(),
-                                       CppNonKeywordTypes.end(), TokenText);
   default:
     return false;
   }
 }
 
+// Sorted common C++ non-keyword types.
+static SmallVector<StringRef> CppNonKeywordTypes = {
+    "int16_t",  "int32_t",  "int64_t",  "int8_t",  "intptr_t",  "size_t",
+    "uint16_t", "uint32_t", "uint64_t", "uint8_t", "uintptr_t",
+};
+
+bool FormatToken::isTypeName(bool IsCpp) const {
+  return is(TT_TypeName) || isSimpleTypeSpecifier() ||
+         (IsCpp && is(tok::identifier) &&
+          std::binary_search(CppNonKeywordTypes.begin(),
+                             CppNonKeywordTypes.end(), TokenText));
+}
+
 bool FormatToken::isTypeOrIdentifier(bool IsCpp) const {
-  return isSimpleTypeSpecifier(IsCpp) ||
-         Tok.isOneOf(tok::kw_auto, tok::identifier);
+  return isTypeName(IsCpp) || Tok.isOneOf(tok::kw_auto, tok::identifier);
 }
 
 bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {

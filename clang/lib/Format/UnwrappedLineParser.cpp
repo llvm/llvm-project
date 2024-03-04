@@ -1865,8 +1865,7 @@ void UnwrappedLineParser::parseStructuralElement(
     case tok::caret:
       nextToken();
       // Block return type.
-      if (FormatTok->Tok.isAnyIdentifier() ||
-          FormatTok->isSimpleTypeSpecifier(IsCpp)) {
+      if (FormatTok->Tok.isAnyIdentifier() || FormatTok->isTypeName(IsCpp)) {
         nextToken();
         // Return types: pointers are ok too.
         while (FormatTok->is(tok::star))
@@ -2222,7 +2221,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
   bool InTemplateParameterList = false;
 
   while (FormatTok->isNot(tok::l_brace)) {
-    if (FormatTok->isSimpleTypeSpecifier(IsCpp)) {
+    if (FormatTok->isTypeName(IsCpp)) {
       nextToken();
       continue;
     }
@@ -3478,7 +3477,7 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
       --OpenAngles;
       break;
     default:
-      if (NextToken->isSimpleTypeSpecifier(IsCpp)) {
+      if (NextToken->isTypeName(IsCpp)) {
         FormatTok = Tokens->setPosition(StoredPosition);
         parseRequiresExpression(RequiresToken);
         return false;
