@@ -226,6 +226,14 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       A->claim();
       continue;
     }
+    if (A->getOption().getID() == options::OPT_HLSL_Version) {
+      // Translate -HV into -std for llvm
+      DAL->AddSeparateArg(nullptr,
+                          Opts.getOption(options::OPT_stdlibxx_isystem),
+                          A->getValue());
+      A->claim();
+      continue;
+    }
     DAL->append(A);
   }
 
