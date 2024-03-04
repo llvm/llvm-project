@@ -213,13 +213,30 @@ def AArch64fadd_p_contract : PatFrag<(ops node:$op1, node:$op2, node:$op3),
                                      (AArch64fadd_p node:$op1, node:$op2, node:$op3), [{
   return N->getFlags().hasAllowContract();
 }]>;
+def AArch64fadd_p_nostrictfp : PatFrag<(ops node:$op1, node:$op2, node:$op3),
+                                       (AArch64fadd_p node:$op1, node:$op2, node:$op3), [{
+    // We're allowed to introduce new trapping behaviour.
+    return !MF->getFunction().getAttributes().hasFnAttr(llvm::Attribute::StrictFP);
+}]>;
 def AArch64fadd_p_nsz : PatFrag<(ops node:$op1, node:$op2, node:$op3),
                                 (AArch64fadd_p node:$op1, node:$op2, node:$op3), [{
   return N->getFlags().hasNoSignedZeros();
 }]>;
+
+def AArch64fmul_p_nostrictfp : PatFrag<(ops node:$op1, node:$op2, node:$op3),
+                                       (AArch64fmul_p node:$op1, node:$op2, node:$op3), [{
+    // We're allowed to introduce new trapping behaviour.
+    return !MF->getFunction().getAttributes().hasFnAttr(llvm::Attribute::StrictFP);
+}]>;
+
 def AArch64fsub_p_contract : PatFrag<(ops node:$op1, node:$op2, node:$op3),
                                      (AArch64fsub_p node:$op1, node:$op2, node:$op3), [{
   return N->getFlags().hasAllowContract();
+}]>;
+def AArch64fsub_p_nostrictfp : PatFrag<(ops node:$op1, node:$op2, node:$op3),
+                                       (AArch64fsub_p node:$op1, node:$op2, node:$op3), [{
+    // We're allowed to introduce new trapping behaviour.
+    return !MF->getFunction().getAttributes().hasFnAttr(llvm::Attribute::StrictFP);
 }]>;
 def AArch64fsub_p_nsz : PatFrag<(ops node:$op1, node:$op2, node:$op3),
                                 (AArch64fsub_p node:$op1, node:$op2, node:$op3), [{
@@ -489,15 +506,18 @@ def AArch64fmax_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fmax, AAr
 
 def AArch64fadd : PatFrags<(ops node:$op1, node:$op2),
                             [(fadd node:$op1, node:$op2),
-                             (AArch64fadd_p (SVEAllActive), node:$op1, node:$op2)]>;
+                             (AArch64fadd_p (SVEAllActive), node:$op1, node:$op2),
+                             (AArch64fadd_p_nostrictfp (SVEAnyPredicate), node:$op1, node:$op2)]>;
 
 def AArch64fmul : PatFrags<(ops node:$op1, node:$op2),
                             [(fmul node:$op1, node:$op2),
-                             (AArch64fmul_p (SVEAllActive), node:$op1, node:$op2)]>;
+                             (AArch64fmul_p (SVEAllActive), node:$op1, node:$op2),
+                             (AArch64fmul_p_nostrictfp (SVEAnyPredicate), node:$op1, node:$op2)]>;
 
 def AArch64fsub : PatFrags<(ops node:$op1, node:$op2),
                             [(fsub node:$op1, node:$op2),
-                             (AArch64fsub_p (SVEAllActive), node:$op1, node:$op2)]>;
+                             (AArch64fsub_p (SVEAllActive), node:$op1, node:$op2),
+                             (AArch64fsub_p_nostrictfp (SVEAnyPredicate), node:$op1, node:$op2)]>;
 
 def AArch64mul : PatFrag<(ops node:$op1, node:$op2),
                          (AArch64mul_p (SVEAnyPredicate), node:$op1, node:$op2)>;

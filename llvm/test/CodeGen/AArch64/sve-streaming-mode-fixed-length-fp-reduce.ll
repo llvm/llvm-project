@@ -211,9 +211,9 @@ define half @faddv_v8f16(half %start, <8 x half> %a) {
 define half @faddv_v16f16(half %start, ptr %a) {
 ; CHECK-LABEL: faddv_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q2, q1, [x0]
-; CHECK-NEXT:    fadd z1.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    fadd z1.h, z2.h, z1.h
 ; CHECK-NEXT:    faddv h1, p0, z1.h
 ; CHECK-NEXT:    fadd h0, h0, h1
 ; CHECK-NEXT:    ret
@@ -249,9 +249,9 @@ define float @faddv_v4f32(float %start, <4 x float> %a) {
 define float @faddv_v8f32(float %start, ptr %a) {
 ; CHECK-LABEL: faddv_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q2, q1, [x0]
-; CHECK-NEXT:    fadd z1.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    fadd z1.s, z2.s, z1.s
 ; CHECK-NEXT:    faddv s1, p0, z1.s
 ; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
@@ -285,9 +285,9 @@ define double @faddv_v2f64(double %start, <2 x double> %a) {
 define double @faddv_v4f64(double %start, ptr %a) {
 ; CHECK-LABEL: faddv_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q2, q1, [x0]
-; CHECK-NEXT:    fadd z1.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    fadd z1.d, z2.d, z1.d
 ; CHECK-NEXT:    faddv d1, p0, z1.d
 ; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    ret

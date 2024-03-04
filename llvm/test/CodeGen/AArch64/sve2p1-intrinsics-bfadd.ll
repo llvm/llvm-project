@@ -27,7 +27,7 @@ define <vscale x 8 x bfloat> @bfadd_zeroing(<vscale x 8 x i1> %pg, <vscale x 8 x
 define <vscale x 8 x bfloat> @bfadd_u(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b){
 ; CHECK-LABEL: bfadd_u:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfadd z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    bfadd z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fadd.u.nxv8bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b)
   ret <vscale x 8 x bfloat> %res
@@ -57,7 +57,7 @@ define <vscale x 8 x bfloat> @bfadd_u_zeroing(<vscale x 8 x i1> %pg, <vscale x 8
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z2.h, #0 // =0x0
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
-; CHECK-NEXT:    bfadd z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    bfadd z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> zeroinitializer
   %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fadd.u.nxv8bf16(<vscale x 8 x i1> %pg,

@@ -287,15 +287,13 @@ define void @zip_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: zip_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q3, q2, [x1]
 ; CHECK-NEXT:    zip1 z4.d, z1.d, z3.d
 ; CHECK-NEXT:    zip1 z5.d, z0.d, z2.d
 ; CHECK-NEXT:    trn2 z1.d, z1.d, z3.d
 ; CHECK-NEXT:    trn2 z0.d, z0.d, z2.d
-; CHECK-NEXT:    movprfx z2, z4
-; CHECK-NEXT:    fadd z2.d, p0/m, z2.d, z5.d
-; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    fadd z2.d, z4.d, z5.d
+; CHECK-NEXT:    fadd z0.d, z1.d, z0.d
 ; CHECK-NEXT:    stp q2, q0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x double>, ptr %a
@@ -449,14 +447,13 @@ define void @trn_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: trn_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q2, [x0]
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q3, [x1]
 ; CHECK-NEXT:    zip1 z4.d, z0.d, z1.d
 ; CHECK-NEXT:    trn2 z0.d, z0.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z2.d, z3.d
 ; CHECK-NEXT:    trn2 z2.d, z2.d, z3.d
-; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z4.d
-; CHECK-NEXT:    fadd z1.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    fadd z0.d, z4.d, z0.d
+; CHECK-NEXT:    fadd z1.d, z1.d, z2.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x double>, ptr %a
@@ -471,12 +468,11 @@ define void @trn_v4f64(ptr %a, ptr %b) {
 define void @trn_v4f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: trn_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    trn1 z2.s, z0.s, z1.s
 ; CHECK-NEXT:    trn2 z0.s, z0.s, z1.s
-; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    fadd z0.s, z2.s, z0.s
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x float>, ptr %a
@@ -1025,7 +1021,6 @@ define void @uzp_v8f32(ptr %a, ptr %b) #0{
 ; CHECK-NEXT:    ldp q2, q0, [x0]
 ; CHECK-NEXT:    adrp x8, .LCPI21_0
 ; CHECK-NEXT:    ldp q4, q1, [x1]
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    mov z3.s, z0.s[2]
 ; CHECK-NEXT:    mov z5.s, z1.s[2]
 ; CHECK-NEXT:    stp s0, s3, [sp, #24]
@@ -1042,8 +1037,8 @@ define void @uzp_v8f32(ptr %a, ptr %b) #0{
 ; CHECK-NEXT:    tbl z0.s, { z4.s }, z5.s
 ; CHECK-NEXT:    str s1, [sp, #32]
 ; CHECK-NEXT:    ldr q1, [sp, #32]
-; CHECK-NEXT:    fadd z1.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z3.s
+; CHECK-NEXT:    fadd z1.s, z2.s, z1.s
+; CHECK-NEXT:    fadd z0.s, z3.s, z0.s
 ; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
@@ -1186,15 +1181,13 @@ define void @zip_vscale2_4(ptr %a, ptr %b) {
 ; CHECK-LABEL: zip_vscale2_4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q3, q2, [x1]
 ; CHECK-NEXT:    zip1 z4.d, z1.d, z3.d
 ; CHECK-NEXT:    zip1 z5.d, z0.d, z2.d
 ; CHECK-NEXT:    trn2 z1.d, z1.d, z3.d
 ; CHECK-NEXT:    trn2 z0.d, z0.d, z2.d
-; CHECK-NEXT:    movprfx z2, z4
-; CHECK-NEXT:    fadd z2.d, p0/m, z2.d, z5.d
-; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    fadd z2.d, z4.d, z5.d
+; CHECK-NEXT:    fadd z0.d, z1.d, z0.d
 ; CHECK-NEXT:    stp q2, q0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x double>, ptr %a
