@@ -14,6 +14,7 @@
 #include <__algorithm/find_end.h>
 #include <__algorithm/find_first_of.h>
 #include <__algorithm/min.h>
+#include <__assert>
 #include <__compare/ordering.h>
 #include <__config>
 #include <__functional/hash.h>

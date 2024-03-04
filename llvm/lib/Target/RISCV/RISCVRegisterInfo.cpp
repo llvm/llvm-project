@@ -30,6 +30,8 @@
 
 using namespace llvm;
 
+static cl::opt<bool> DisableCostPerUse("riscv-disable-cost-per-use",
+                                       cl::init(false), cl::Hidden);
 static cl::opt<bool>
     DisableRegAllocHints("riscv-disable-regalloc-hints", cl::Hidden,
                          cl::init(false),
@@ -154,40 +156,6 @@ bool RISCVRegisterInfo::isAsmClobberable(const MachineFunction &MF,
 
 const uint32_t *RISCVRegisterInfo::getNoPreservedMask() const {
   return CSR_NoRegs_RegMask;
-}
-
-// Frame indexes representing locations of CSRs which are given a fixed location
-// by save/restore libcalls or Zcmp Push/Pop.
-static const std::pair<unsigned, int> FixedCSRFIMap[] = {
-  {/*ra*/  RISCV::X1,   -1},
-  {/*s0*/  RISCV::X8,   -2},
-  {/*s1*/  RISCV::X9,   -3},
-  {/*s2*/  RISCV::X18,  -4},
-  {/*s3*/  RISCV::X19,  -5},
-  {/*s4*/  RISCV::X20,  -6},
-  {/*s5*/  RISCV::X21,  -7},
-  {/*s6*/  RISCV::X22,  -8},
-  {/*s7*/  RISCV::X23,  -9},
-  {/*s8*/  RISCV::X24,  -10},
-  {/*s9*/  RISCV::X25,  -11},
-  {/*s10*/ RISCV::X26,  -12},
-  {/*s11*/ RISCV::X27,  -13}
-};
-
-bool RISCVRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
-                                             Register Reg,
-                                             int &FrameIdx) const {
-  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
-  if (!RVFI->useSaveRestoreLibCalls(MF) && !RVFI->isPushable(MF))
-    return false;
-
-  const auto *FII =
-      llvm::find_if(FixedCSRFIMap, [&](auto P) { return P.first == Reg; });
-  if (FII == std::end(FixedCSRFIMap))
-    return false;
-
-  FrameIdx = FII->second;
-  return true;
 }
 
 void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
@@ -317,8 +285,8 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   // Optimize for constant VLEN.
-  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
-    const int64_t VLENB = STI.getRealMinVLen() / 8;
+  if (auto VLEN = STI.getRealVLen()) {
+    const int64_t VLENB = *VLEN / 8;
     int64_t Offset = VLENB * LMUL;
     STI.getInstrInfo()->movImm(MBB, II, DL, VL, Offset);
   } else {
@@ -394,8 +362,8 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   // Optimize for constant VLEN.
-  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
-    const int64_t VLENB = STI.getRealMinVLen() / 8;
+  if (auto VLEN = STI.getRealVLen()) {
+    const int64_t VLENB = *VLEN / 8;
     int64_t Offset = VLENB * LMUL;
     STI.getInstrInfo()->movImm(MBB, II, DL, VL, Offset);
   } else {
@@ -746,7 +714,10 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
-  return MF.getSubtarget<RISCVSubtarget>().hasStdExtCOrZca() ? 1 : 0;
+  return MF.getSubtarget<RISCVSubtarget>().hasStdExtCOrZca() &&
+                 !DisableCostPerUse
+             ? 1
+             : 0;
 }
 
 // Add two address hints to improve chances of being able to use a compressed

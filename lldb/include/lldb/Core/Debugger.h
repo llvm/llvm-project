@@ -84,6 +84,7 @@ public:
     eBroadcastBitWarning = (1 << 1),
     eBroadcastBitError = (1 << 2),
     eBroadcastSymbolChange = (1 << 3),
+    eBroadcastBitProgressCategory = (1 << 4),
   };
 
   using DebuggerList = std::vector<lldb::DebuggerSP>;

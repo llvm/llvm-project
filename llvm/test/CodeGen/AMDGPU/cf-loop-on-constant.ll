@@ -48,13 +48,13 @@ define amdgpu_kernel void @test_loop(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 1
 ; GCN_DBG-NEXT:    s_mov_b64 s[4:5], exec
 ; GCN_DBG-NEXT:    s_mov_b64 exec, -1
-; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GCN_DBG-NEXT:  ; %bb.1: ; %for.exit
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN_DBG-NEXT:    s_waitcnt expcnt(0)
-; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    ; kill: killed $vgpr0
 ; GCN_DBG-NEXT:    s_endpgm
@@ -62,7 +62,7 @@ define amdgpu_kernel void @test_loop(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN_DBG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN_DBG-NEXT:    s_waitcnt expcnt(0)
-; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    s_waitcnt vmcnt(0)
 ; GCN_DBG-NEXT:    v_readlane_b32 s0, v0, 1
@@ -87,13 +87,13 @@ define amdgpu_kernel void @test_loop(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN_DBG-NEXT:    s_and_b64 vcc, exec, s[2:3]
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 1
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    s_cbranch_vccnz .LBB0_2
 ; GCN_DBG-NEXT:  ; %bb.3: ; %DummyReturnBlock
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN_DBG-NEXT:    s_waitcnt expcnt(0)
-; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    ; kill: killed $vgpr0
 ; GCN_DBG-NEXT:    s_endpgm
@@ -151,13 +151,13 @@ define amdgpu_kernel void @loop_const_true(ptr addrspace(3) %ptr, i32 %n) nounwi
 ; GCN_DBG-NEXT:    s_mov_b32 s0, 0
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 1
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    s_branch .LBB1_2
 ; GCN_DBG-NEXT:  .LBB1_1: ; %for.exit
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN_DBG-NEXT:    s_waitcnt expcnt(0)
-; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    ; kill: killed $vgpr0
 ; GCN_DBG-NEXT:    s_endpgm
@@ -165,7 +165,7 @@ define amdgpu_kernel void @loop_const_true(ptr addrspace(3) %ptr, i32 %n) nounwi
 ; GCN_DBG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN_DBG-NEXT:    s_waitcnt expcnt(0)
-; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    s_waitcnt vmcnt(0)
 ; GCN_DBG-NEXT:    v_readlane_b32 s0, v0, 1
@@ -190,7 +190,7 @@ define amdgpu_kernel void @loop_const_true(ptr addrspace(3) %ptr, i32 %n) nounwi
 ; GCN_DBG-NEXT:    s_and_b64 vcc, exec, s[2:3]
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 1
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    s_cbranch_vccnz .LBB1_1
 ; GCN_DBG-NEXT:    s_branch .LBB1_2
@@ -239,13 +239,13 @@ define amdgpu_kernel void @loop_const_false(ptr addrspace(3) %ptr, i32 %n) nounw
 ; GCN_DBG-NEXT:    s_mov_b32 s0, 0
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 1
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    s_branch .LBB2_2
 ; GCN_DBG-NEXT:  .LBB2_1: ; %for.exit
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN_DBG-NEXT:    s_waitcnt expcnt(0)
-; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    ; kill: killed $vgpr0
 ; GCN_DBG-NEXT:    s_endpgm
@@ -253,7 +253,7 @@ define amdgpu_kernel void @loop_const_false(ptr addrspace(3) %ptr, i32 %n) nounw
 ; GCN_DBG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN_DBG-NEXT:    s_waitcnt expcnt(0)
-; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    s_waitcnt vmcnt(0)
 ; GCN_DBG-NEXT:    v_readlane_b32 s0, v0, 1
@@ -278,7 +278,7 @@ define amdgpu_kernel void @loop_const_false(ptr addrspace(3) %ptr, i32 %n) nounw
 ; GCN_DBG-NEXT:    s_and_b64 vcc, exec, s[2:3]
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 1
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    s_cbranch_vccnz .LBB2_1
 ; GCN_DBG-NEXT:    s_branch .LBB2_2
@@ -328,13 +328,13 @@ define amdgpu_kernel void @loop_const_undef(ptr addrspace(3) %ptr, i32 %n) nounw
 ; GCN_DBG-NEXT:    s_mov_b32 s0, 0
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 1
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    s_branch .LBB3_2
 ; GCN_DBG-NEXT:  .LBB3_1: ; %for.exit
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN_DBG-NEXT:    s_waitcnt expcnt(0)
-; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    ; kill: killed $vgpr0
 ; GCN_DBG-NEXT:    s_endpgm
@@ -342,7 +342,7 @@ define amdgpu_kernel void @loop_const_undef(ptr addrspace(3) %ptr, i32 %n) nounw
 ; GCN_DBG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN_DBG-NEXT:    s_waitcnt expcnt(0)
-; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    s_waitcnt vmcnt(0)
 ; GCN_DBG-NEXT:    v_readlane_b32 s0, v0, 1
@@ -365,7 +365,7 @@ define amdgpu_kernel void @loop_const_undef(ptr addrspace(3) %ptr, i32 %n) nounw
 ; GCN_DBG-NEXT:    s_add_i32 s0, s0, s1
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 1
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN_DBG-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GCN_DBG-NEXT:    s_branch .LBB3_2
@@ -441,13 +441,13 @@ define amdgpu_kernel void @loop_arg_0(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN_DBG-NEXT:    s_mov_b32 s0, 0
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 3
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN_DBG-NEXT:    s_branch .LBB4_2
 ; GCN_DBG-NEXT:  .LBB4_1: ; %for.exit
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN_DBG-NEXT:    s_waitcnt expcnt(0)
-; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN_DBG-NEXT:    ; kill: killed $vgpr0
 ; GCN_DBG-NEXT:    s_endpgm
@@ -455,7 +455,7 @@ define amdgpu_kernel void @loop_arg_0(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN_DBG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN_DBG-NEXT:    s_waitcnt expcnt(0)
-; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN_DBG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN_DBG-NEXT:    s_waitcnt vmcnt(0)
 ; GCN_DBG-NEXT:    v_readlane_b32 s0, v0, 3
@@ -481,7 +481,7 @@ define amdgpu_kernel void @loop_arg_0(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN_DBG-NEXT:    s_and_b64 vcc, exec, s[2:3]
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 3
 ; GCN_DBG-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN_DBG-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
 ; GCN_DBG-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN_DBG-NEXT:    s_cbranch_vccnz .LBB4_1
 ; GCN_DBG-NEXT:    s_branch .LBB4_2

@@ -1068,6 +1068,20 @@ def : GCNPat <
 }
 } // let OtherPredicates = [HasShaderCyclesRegister]
 
+let OtherPredicates = [HasSMemRealTime] in {
+def : GCNPat <
+  (i64 (readsteadycounter)),
+  (S_MEMREALTIME)
+>;
+} // let OtherPredicates = [HasSMemRealTime]
+
+let SubtargetPredicate = isGFX11Plus in {
+def : GCNPat <
+  (i64 (readsteadycounter)),
+  (S_SENDMSG_RTN_B64 (i32 /*MSG_RTN_GET_REALTIME=*/0x83))
+>;
+} // let SubtargetPredicate = [isGFX11Plus]
+
 def i32imm_zero : TImmLeaf <i32, [{
   return Imm == 0;
 }]>;

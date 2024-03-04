@@ -182,7 +182,9 @@ static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
   case FileFormat::Binary:
     return std::make_unique<BinaryWriter>(Obj, Out, Config);
   case FileFormat::IHex:
-    return std::make_unique<IHexWriter>(Obj, Out);
+    return std::make_unique<IHexWriter>(Obj, Out, Config.OutputFilename);
+  case FileFormat::SREC:
+    return std::make_unique<SRECWriter>(Obj, Out, Config.OutputFilename);
   default:
     return createELFWriter(Config, Obj, Out, OutputElfType);
   }
@@ -297,6 +299,10 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
           (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
          Config.SymbolsToLocalize.matches(Sym.Name)))
       Sym.Binding = STB_LOCAL;
+
+    for (auto &[Matcher, Visibility] : ELFConfig.SymbolsToSetVisibility)
+      if (Matcher.matches(Sym.Name))
+        Sym.Visibility = Visibility;
 
     // Note: these two globalize flags have very similar names but different
     // meanings:

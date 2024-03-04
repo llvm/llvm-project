@@ -1,11 +1,7 @@
+// DEFINE: %{opts} =
 // DEFINE: %{entry} = main
-// DEFINE: %{fusion_opts} = -arm-sme-outer-product-fusion
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -convert-vector-to-arm-sme -convert-arith-to-arm-sme %{fusion_opts} \
-// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za only-if-required-by-ops" \
-// DEFINE:   -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
-// DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
-// DEFINE:   -test-lower-to-llvm -o %t
+// DEFINE:   -test-lower-to-arm-sme=%{opts} -test-lower-to-llvm -o %t
 // DEFINE: %{run} = %mcr_aarch64_cmd %t \
 // DEFINE:   -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:   -e %{entry} -entry-point-result=void \
@@ -18,7 +14,7 @@
 // Check result is the same when outerproducts are not combined into widening
 // variant.
 
-// REDEFINE: %{fusion_opts} =
+// REDEFINE: %{opts} = fuse-outer-products=false
 // RUN: %{run} | FileCheck %s
 
 func.func @main() {

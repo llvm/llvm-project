@@ -1325,12 +1325,14 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
     if (fir::GlobalOp::verifyValidLinkage(linkage))
       return mlir::failure();
     mlir::StringAttr linkAttr = builder.getStringAttr(linkage);
-    result.addAttribute(fir::GlobalOp::getLinkageAttrNameStr(), linkAttr);
+    result.addAttribute(fir::GlobalOp::getLinkNameAttrName(result.name),
+                        linkAttr);
   }
 
   // Parse the name as a symbol reference attribute.
   mlir::SymbolRefAttr nameAttr;
-  if (parser.parseAttribute(nameAttr, fir::GlobalOp::getSymbolAttrNameStr(),
+  if (parser.parseAttribute(nameAttr,
+                            fir::GlobalOp::getSymrefAttrName(result.name),
                             result.attributes))
     return mlir::failure();
   result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
@@ -1339,7 +1341,8 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
   bool simpleInitializer = false;
   if (mlir::succeeded(parser.parseOptionalLParen())) {
     mlir::Attribute attr;
-    if (parser.parseAttribute(attr, "initVal", result.attributes) ||
+    if (parser.parseAttribute(attr, getInitValAttrName(result.name),
+                              result.attributes) ||
         parser.parseRParen())
       return mlir::failure();
     simpleInitializer = true;
@@ -1348,13 +1351,15 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
   if (parser.parseOptionalAttrDict(result.attributes))
     return mlir::failure();
 
-  if (succeeded(parser.parseOptionalKeyword("constant"))) {
+  if (succeeded(
+          parser.parseOptionalKeyword(getConstantAttrName(result.name)))) {
     // if "constant" keyword then mark this as a constant, not a variable
-    result.addAttribute("constant", builder.getUnitAttr());
+    result.addAttribute(getConstantAttrName(result.name),
+                        builder.getUnitAttr());
   }
 
-  if (succeeded(parser.parseOptionalKeyword("target")))
-    result.addAttribute(getTargetAttrNameStr(), builder.getUnitAttr());
+  if (succeeded(parser.parseOptionalKeyword(getTargetAttrName(result.name))))
+    result.addAttribute(getTargetAttrName(result.name), builder.getUnitAttr());
 
   mlir::Type globalType;
   if (parser.parseColonType(globalType))
@@ -1382,11 +1387,16 @@ void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
   p.printAttributeWithoutType(getSymrefAttr());
   if (auto val = getValueOrNull())
     p << '(' << val << ')';
-  p.printOptionalAttrDict((*this)->getAttrs(), (*this).getAttributeNames());
-  if (getOperation()->getAttr(fir::GlobalOp::getConstantAttrNameStr()))
-    p << " constant";
+  // Print all other attributes that are not pretty printed here.
+  p.printOptionalAttrDict((*this)->getAttrs(), /*elideAttrs=*/{
+                              getSymNameAttrName(), getSymrefAttrName(),
+                              getTypeAttrName(), getConstantAttrName(),
+                              getTargetAttrName(), getLinkNameAttrName(),
+                              getInitValAttrName()});
+  if (getOperation()->getAttr(getConstantAttrName()))
+    p << " " << getConstantAttrName().strref();
   if (getOperation()->getAttr(getTargetAttrName()))
-    p << " target";
+    p << " " << getTargetAttrName().strref();
   p << " : ";
   p.printType(getType());
   if (hasInitializationBody()) {
@@ -1410,7 +1420,7 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
   result.addAttribute(getTypeAttrName(result.name), mlir::TypeAttr::get(type));
   result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
-  result.addAttribute(getSymbolAttrNameStr(),
+  result.addAttribute(getSymrefAttrName(result.name),
                       mlir::SymbolRefAttr::get(builder.getContext(), name));
   if (isConstant)
     result.addAttribute(getConstantAttrName(result.name),
@@ -1420,7 +1430,7 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
   if (initialVal)
     result.addAttribute(getInitValAttrName(result.name), initialVal);
   if (linkage)
-    result.addAttribute(getLinkageAttrNameStr(), linkage);
+    result.addAttribute(getLinkNameAttrName(result.name), linkage);
   result.attributes.append(attrs.begin(), attrs.end());
 }
 
@@ -2279,12 +2289,11 @@ mlir::ParseResult fir::DTEntryOp::parse(mlir::OpAsmParser &parser,
   // allow `methodName` or `"methodName"`
   if (failed(parser.parseOptionalKeyword(&methodName))) {
     mlir::StringAttr methodAttr;
-    if (parser.parseAttribute(methodAttr,
-                              fir::DTEntryOp::getMethodAttrNameStr(),
+    if (parser.parseAttribute(methodAttr, getMethodAttrName(result.name),
                               result.attributes))
       return mlir::failure();
   } else {
-    result.addAttribute(fir::DTEntryOp::getMethodAttrNameStr(),
+    result.addAttribute(getMethodAttrName(result.name),
                         parser.getBuilder().getStringAttr(methodName));
   }
   mlir::SymbolRefAttr calleeAttr;
@@ -3855,6 +3864,103 @@ mlir::LogicalResult fir::DeclareOp::verify() {
   auto fortranVar =
       mlir::cast<fir::FortranVariableOpInterface>(this->getOperation());
   return fortranVar.verifyDeclareLikeOpImpl(getMemref());
+}
+
+llvm::SmallVector<mlir::Region *> fir::CUDAKernelOp::getLoopRegions() {
+  return {&getRegion()};
+}
+
+mlir::ParseResult parseCUFKernelValues(
+    mlir::OpAsmParser &parser,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &values,
+    llvm::SmallVectorImpl<mlir::Type> &types) {
+  if (mlir::succeeded(parser.parseOptionalStar()))
+    return mlir::success();
+
+  if (parser.parseOptionalLParen()) {
+    if (mlir::failed(parser.parseCommaSeparatedList(
+            mlir::AsmParser::Delimiter::None, [&]() {
+              if (parser.parseOperand(values.emplace_back()))
+                return mlir::failure();
+              return mlir::success();
+            })))
+      return mlir::failure();
+    if (parser.parseRParen())
+      return mlir::failure();
+  } else {
+    if (parser.parseOperand(values.emplace_back()))
+      return mlir::failure();
+    return mlir::success();
+  }
+  return mlir::success();
+}
+
+void printCUFKernelValues(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                          mlir::ValueRange values, mlir::TypeRange types) {
+  if (values.empty())
+    p << "*";
+
+  if (values.size() > 1)
+    p << "(";
+  llvm::interleaveComma(values, p, [&p](mlir::Value v) { p << v; });
+  if (values.size() > 1)
+    p << ")";
+}
+
+mlir::ParseResult parseCUFKernelLoopControl(
+    mlir::OpAsmParser &parser, mlir::Region &region,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &lowerbound,
+    llvm::SmallVectorImpl<mlir::Type> &lowerboundType,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &upperbound,
+    llvm::SmallVectorImpl<mlir::Type> &upperboundType,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &step,
+    llvm::SmallVectorImpl<mlir::Type> &stepType) {
+
+  llvm::SmallVector<mlir::OpAsmParser::Argument> inductionVars;
+  if (parser.parseLParen() ||
+      parser.parseArgumentList(inductionVars,
+                               mlir::OpAsmParser::Delimiter::None,
+                               /*allowType=*/true) ||
+      parser.parseRParen() || parser.parseEqual() || parser.parseLParen() ||
+      parser.parseOperandList(lowerbound, inductionVars.size(),
+                              mlir::OpAsmParser::Delimiter::None) ||
+      parser.parseColonTypeList(lowerboundType) || parser.parseRParen() ||
+      parser.parseKeyword("to") || parser.parseLParen() ||
+      parser.parseOperandList(upperbound, inductionVars.size(),
+                              mlir::OpAsmParser::Delimiter::None) ||
+      parser.parseColonTypeList(upperboundType) || parser.parseRParen() ||
+      parser.parseKeyword("step") || parser.parseLParen() ||
+      parser.parseOperandList(step, inductionVars.size(),
+                              mlir::OpAsmParser::Delimiter::None) ||
+      parser.parseColonTypeList(stepType) || parser.parseRParen())
+    return mlir::failure();
+  return parser.parseRegion(region, inductionVars);
+}
+
+void printCUFKernelLoopControl(
+    mlir::OpAsmPrinter &p, mlir::Operation *op, mlir::Region &region,
+    mlir::ValueRange lowerbound, mlir::TypeRange lowerboundType,
+    mlir::ValueRange upperbound, mlir::TypeRange upperboundType,
+    mlir::ValueRange steps, mlir::TypeRange stepType) {
+  mlir::ValueRange regionArgs = region.front().getArguments();
+  if (!regionArgs.empty()) {
+    p << "(";
+    llvm::interleaveComma(
+        regionArgs, p, [&p](mlir::Value v) { p << v << " : " << v.getType(); });
+    p << ") = (" << lowerbound << " : " << lowerboundType << ") to ("
+      << upperbound << " : " << upperboundType << ") "
+      << " step (" << steps << " : " << stepType << ") ";
+  }
+  p.printRegion(region, /*printEntryBlockArgs=*/false);
+}
+
+mlir::LogicalResult fir::CUDAKernelOp::verify() {
+  if (getLowerbound().size() != getUpperbound().size() ||
+      getLowerbound().size() != getStep().size())
+    return emitOpError(
+        "expect same number of values in lowerbound, upperbound and step");
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

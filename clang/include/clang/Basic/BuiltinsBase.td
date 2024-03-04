@@ -87,7 +87,9 @@ class CustomEntry {
 }
 
 class AtomicBuiltin : Builtin;
-class TargetBuiltin : Builtin;
+class TargetBuiltin : Builtin {
+  string Features = "";
+}
 
 class LibBuiltin<string header, string languages = "ALL_LANGUAGES"> : Builtin {
   string Header = header;

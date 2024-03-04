@@ -90,6 +90,12 @@ private:
 
 } // end anonymous namespace
 
+std::ostream &operator<<(std::ostream &Stream, const UnwrappedLine &Line) {
+  llvm::raw_os_ostream OS(Stream);
+  printLine(OS, Line);
+  return Stream;
+}
+
 class ScopedLineState {
 public:
   ScopedLineState(UnwrappedLineParser &Parser,
@@ -495,12 +501,15 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     do {
       NextTok = Tokens->getNextToken();
     } while (NextTok->is(tok::comment));
-    while (NextTok->is(tok::hash) && !Line->InMacroBody) {
-      NextTok = Tokens->getNextToken();
-      do {
+    if (!Style.isTableGen()) {
+      // InTableGen, '#' is like binary operator. Not a preprocessor directive.
+      while (NextTok->is(tok::hash) && !Line->InMacroBody) {
         NextTok = Tokens->getNextToken();
-      } while (NextTok->is(tok::comment) ||
-               (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof)));
+        do {
+          NextTok = Tokens->getNextToken();
+        } while (NextTok->is(tok::comment) ||
+                 (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof)));
+      }
     }
 
     switch (Tok->Tok.getKind()) {
@@ -2515,7 +2524,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         parseChildBlock();
       break;
     case tok::r_paren:
-      if (!MightBeStmtExpr &&
+      if (!MightBeStmtExpr && !Line->InMacroBody &&
           Style.RemoveParentheses > FormatStyle::RPS_Leave) {
         const auto *Prev = LeftParen->Previous;
         const auto *Next = Tokens->peekNextToken();

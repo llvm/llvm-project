@@ -2819,11 +2819,11 @@ def int_amdgcn_fdot2_f16_f16 :
 def int_amdgcn_fdot2_bf16_bf16 :
   ClangBuiltin<"__builtin_amdgcn_fdot2_bf16_bf16">,
   DefaultAttrsIntrinsic<
-    [llvm_i16_ty],   // %r
+    [llvm_bfloat_ty],   // %r
     [
-      llvm_v2i16_ty, // %a
-      llvm_v2i16_ty, // %b
-      llvm_i16_ty    // %c
+      llvm_v2bf16_ty, // %a
+      llvm_v2bf16_ty, // %b
+      llvm_bfloat_ty    // %c
     ],
     [IntrNoMem, IntrSpeculatable]
   >;
@@ -2835,8 +2835,8 @@ def int_amdgcn_fdot2_f32_bf16 :
   DefaultAttrsIntrinsic<
     [llvm_float_ty], // %r
     [
-      llvm_v2i16_ty, // %a
-      llvm_v2i16_ty, // %b
+      llvm_v2bf16_ty, // %a
+      llvm_v2bf16_ty, // %b
       llvm_float_ty, // %c
       llvm_i1_ty     // %clamp
     ],

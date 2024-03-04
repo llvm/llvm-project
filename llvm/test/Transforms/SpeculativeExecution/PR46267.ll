@@ -1,4 +1,5 @@
 ; RUN: opt < %s -S -passes='speculative-execution' | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators < %s -S -passes='speculative-execution' | FileCheck %s
 
 %class.B = type { ptr }
 
@@ -40,12 +41,16 @@ land.rhs:                                         ; preds = %entry
 ; CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %y
 ; CHECK-NEXT: %a0 = load i32, ptr undef, align 1
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a0
+; CHECK-NEXT: call void @llvm.dbg.label
   call void @llvm.dbg.label(metadata !11), !dbg !10
   %y = alloca i32, align 4
   call void @llvm.dbg.declare(metadata ptr %y, metadata !14, metadata !DIExpression()), !dbg !10
 
   %a0 = load i32, ptr undef, align 1
   call void @llvm.dbg.value(metadata i32 %a0, metadata !9, metadata !DIExpression()), !dbg !10
+  ;; RemoveDIs: Check a label that is attached to a hoisted instruction
+  ;; gets left behind (match intrinsic-style debug info behaviour).
+  call void @llvm.dbg.label(metadata !15), !dbg !10
 
   %a2 = add i32 %i, 0
   call void @llvm.dbg.value(metadata i32 %a2, metadata !13, metadata !DIExpression()), !dbg !10
@@ -81,3 +86,4 @@ attributes #1 = { nounwind readnone speculatable willreturn }
 !12 = !DILocalVariable(name: "x", scope: !6, file: !1, line: 3, type: !4)
 !13 = !DILocalVariable(name: "a2", scope: !6, file: !1, line: 3, type: !4)
 !14 = !DILocalVariable(name: "y", scope: !6, file: !1, line: 3, type: !4)
+!15 = !DILabel(scope: !6, name: "label2", file: !1, line: 2)

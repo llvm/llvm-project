@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 #define MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
@@ -74,6 +75,28 @@ FailureOr<std::pair<int, int>> isTranspose2DSlice(vector::TransposeOp op);
 ///        Ex. 2.4. non-contiguous slice, 2 != 3 and the leading dims != <1x1>
 ///         vector<2x1x2x2xi32> from memref<5x4x3x2xi32>)
 bool isContiguousSlice(MemRefType memrefType, VectorType vectorType);
+
+/// Returns an iterator for all positions in the leading dimensions of `vType`
+/// up to the `targetRank`. If any leading dimension before the `targetRank` is
+/// scalable (so cannot be unrolled), it will return an iterator for positions
+/// up to the first scalable dimension.
+///
+/// If no leading dimensions can be unrolled an empty optional will be returned.
+///
+/// Examples:
+///
+///   For vType = vector<2x3x4> and targetRank = 1
+///
+///   The resulting iterator will yield:
+///     [0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2]
+///
+///   For vType = vector<3x[4]x5> and targetRank = 0
+///
+///   The scalable dimension blocks unrolling so the iterator yields only:
+///     [0], [1], [2]
+///
+std::optional<StaticTileOffsetRange>
+createUnrollIterator(VectorType vType, int64_t targetRank = 1);
 
 } // namespace vector
 

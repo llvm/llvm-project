@@ -135,3 +135,17 @@ INLINE_MACRO()
 
 #define INLINE_KW inline
 INLINE_KW void fn10() { }
+
+namespace {
+class A
+{
+public:
+  static inline float test = 3.0F;
+  static inline double test2 = 3.0;
+  static inline int test3 = 3;
+
+  static inline float test4;
+  // CHECK-MESSAGES-STRICT: :[[@LINE-1]]:10: warning: variable 'test4' has inline specifier but is implicitly inlined [readability-redundant-inline-specifier]
+  // CHECK-FIXES-STRICT: static float test4;
+};
+}

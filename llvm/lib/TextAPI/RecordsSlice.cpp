@@ -12,6 +12,7 @@
 
 #include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/TextAPI/InterfaceFile.h"
 #include "llvm/TextAPI/Record.h"
 #include "llvm/TextAPI/Symbol.h"
 #include <utility>
@@ -325,28 +326,7 @@ createInterfaceFile(const Records &Slices, StringRef InstallName) {
       continue;
     const Target &Targ = S->getTarget();
     File->addTarget(Targ);
-    if (File->getFileType() == FileType::Invalid)
-      File->setFileType(BA.File);
-    if (BA.AppExtensionSafe && !File->isApplicationExtensionSafe())
-      File->setApplicationExtensionSafe();
-    if (BA.TwoLevelNamespace && !File->isTwoLevelNamespace())
-      File->setTwoLevelNamespace();
-    if (BA.OSLibNotForSharedCache && !File->isOSLibNotForSharedCache())
-      File->setOSLibNotForSharedCache();
-    if (File->getCurrentVersion().empty())
-      File->setCurrentVersion(BA.CurrentVersion);
-    if (File->getCompatibilityVersion().empty())
-      File->setCompatibilityVersion(BA.CompatVersion);
-    if (File->getSwiftABIVersion() == 0)
-      File->setSwiftABIVersion(BA.SwiftABI);
-    if (File->getPath().empty())
-      File->setPath(BA.Path);
-    if (!BA.ParentUmbrella.empty())
-      File->addParentUmbrella(Targ, BA.ParentUmbrella);
-    for (const auto &Client : BA.AllowableClients)
-      File->addAllowableClient(Client, Targ);
-    for (const auto &Lib : BA.RexportedLibraries)
-      File->addReexportedLibrary(Lib, Targ);
+    File->setFromBinaryAttrs(BA, Targ);
   }
 
   return File;

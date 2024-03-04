@@ -3,10 +3,10 @@
 target triple = "hexagon"
 
 ; CHECK-LABEL: test1:
-; CHECK-DAG: memw(r29+#4) = ##875770417
+; CHECK-DAG: memw(r29+#12) = ##875770417
 ; CHECK-DAG: memw(r29+#8) = #51
-; CHECK-DAG: memh(r29+#12) = #50
-; CHECK-DAG: memb(r29+#15) = #49
+; CHECK-DAG: memh(r29+#6) = #50
+; CHECK-DAG: memb(r29+#5) = #49
 define void @test1() {
 b0:
   %v1 = alloca [1 x i8], align 1
@@ -30,9 +30,9 @@ b0:
 }
 
 ; CHECK-LABEL: test2:
-; CHECK-DAG: memw(r29+#208) = #51
-; CHECK-DAG: memh(r29+#212) = r{{[0-9]+}}
-; CHECK-DAG: memb(r29+#215) = r{{[0-9]+}}
+; CHECK-DAG: memw(r29+#8) = #51
+; CHECK-DAG: memh(r29+#6) = r{{[0-9]+}}
+; CHECK-DAG: memb(r29+#5) = r{{[0-9]+}}
 define void @test2() {
 b0:
   %v1 = alloca [1 x i8], align 1

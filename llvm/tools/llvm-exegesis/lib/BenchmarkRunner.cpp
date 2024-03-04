@@ -309,10 +309,10 @@ private:
     }
 
     if (ParentOrChildPID == 0) {
-      // We are in the child process, close the write end of the pipe
+      // We are in the child process, close the write end of the pipe.
       close(PipeFiles[1]);
       // Unregister handlers, signal handling is now handled through ptrace in
-      // the host process
+      // the host process.
       sys::unregisterHandlers();
       prepareAndRunBenchmark(PipeFiles[0], Key);
       // The child process terminates in the above function, so we should never
@@ -371,7 +371,7 @@ private:
       int ChildExitCode = WEXITSTATUS(ChildStatus);
       if (ChildExitCode == 0) {
         // The child exited succesfully, read counter values and return
-        // success
+        // success.
         auto CounterValueOrErr = Counter->readOrError();
         if (!CounterValueOrErr)
           return CounterValueOrErr.takeError();
@@ -387,7 +387,7 @@ private:
 
         return Error::success();
       }
-      // The child exited, but not successfully
+      // The child exited, but not successfully.
       return make_error<Failure>(
           "Child benchmarking process exited with non-zero exit code: " +
           childProcessExitCodeToString(ChildExitCode));
@@ -423,7 +423,7 @@ private:
     // user inspect a core dump.
     disableCoreDumps();
 
-    // The following occurs within the benchmarking subprocess
+    // The following occurs within the benchmarking subprocess.
     pid_t ParentPID = getppid();
 
     Expected<int> CounterFileDescriptorOrError =
@@ -436,7 +436,7 @@ private:
 
 // Glibc versions greater than 2.35 automatically call rseq during
 // initialization. Unmapping the region that glibc sets up for this causes
-// segfaults in the program Unregister the rseq region so that we can safely
+// segfaults in the program. Unregister the rseq region so that we can safely
 // unmap it later
 #ifdef GLIBC_INITS_RSEQ
     long RseqDisableOutput =
@@ -559,7 +559,7 @@ BenchmarkRunner::getRunnableConfiguration(
   }
 
   // Assemble enough repetitions of the snippet so we have at least
-  // MinInstructios instructions.
+  // MinInstructions instructions.
   if (BenchmarkPhaseSelector >
       BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
     auto Snippet =
@@ -636,9 +636,10 @@ std::pair<Error, Benchmark> BenchmarkRunner::runConfiguration(
   }
   assert(BenchmarkResult.MinInstructions > 0 && "invalid MinInstructions");
   for (BenchmarkMeasure &BM : *NewMeasurements) {
-    // Scale the measurements by instruction.
+    // Scale the measurements by the number of instructions.
     BM.PerInstructionValue /= BenchmarkResult.MinInstructions;
-    // Scale the measurements by snippet.
+    // Scale the measurements by the number of times the entire snippet is
+    // repeated.
     BM.PerSnippetValue /=
         std::ceil(BenchmarkResult.MinInstructions /
                   static_cast<double>(BenchmarkResult.Key.Instructions.size()));

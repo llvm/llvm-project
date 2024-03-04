@@ -15,11 +15,14 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -176,6 +179,18 @@ static cl::opt<bool> ClWithTls(
     cl::desc("Access dynamic shadow through an thread-local pointer on "
              "platforms that support this"),
     cl::Hidden, cl::init(true));
+
+static cl::opt<bool>
+    CSkipHotCode("hwasan-skip-hot-code",
+                 cl::desc("Do not instument hot functions based on FDO."),
+                 cl::Hidden, cl::init(false));
+
+static cl::opt<int> HotPercentileCutoff("hwasan-percentile-cutoff-hot",
+                                        cl::init(0));
+
+STATISTIC(NumTotalFuncs, "Number of total funcs HWASAN");
+STATISTIC(NumInstrumentedFuncs, "Number of HWASAN instrumented funcs");
+STATISTIC(NumNoProfileSummaryFuncs, "Number of HWASAN funcs without PS");
 
 // Mode for selecting how to insert frame record info into the stack ring
 // buffer.
@@ -348,7 +363,7 @@ private:
   void instrumentGlobals();
 
   Value *getPC(IRBuilder<> &IRB);
-  Value *getSP(IRBuilder<> &IRB);
+  Value *getFP(IRBuilder<> &IRB);
   Value *getFrameRecordInfo(IRBuilder<> &IRB);
 
   void instrumentPersonalityFunctions();
@@ -1148,7 +1163,7 @@ Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
   // Extract some entropy from the stack pointer for the tags.
   // Take bits 20..28 (ASLR entropy) and xor with bits 0..8 (these differ
   // between functions).
-  Value *StackPointerLong = getSP(IRB);
+  Value *StackPointerLong = getFP(IRB);
   Value *StackTag =
       applyTagMask(IRB, IRB.CreateXor(StackPointerLong,
                                       IRB.CreateLShr(StackPointerLong, 20)));
@@ -1165,7 +1180,7 @@ Value *HWAddressSanitizer::getAllocaTag(IRBuilder<> &IRB, Value *StackTag,
 }
 
 Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB) {
-  Value *StackPointerLong = getSP(IRB);
+  Value *StackPointerLong = getFP(IRB);
   Value *UARTag =
       applyTagMask(IRB, IRB.CreateLShr(StackPointerLong, PointerTagShift));
 
@@ -1232,7 +1247,7 @@ Value *HWAddressSanitizer::getPC(IRBuilder<> &IRB) {
   return IRB.CreatePtrToInt(IRB.GetInsertBlock()->getParent(), IntptrTy);
 }
 
-Value *HWAddressSanitizer::getSP(IRBuilder<> &IRB) {
+Value *HWAddressSanitizer::getFP(IRBuilder<> &IRB) {
   if (!CachedSP) {
     // FIXME: use addressofreturnaddress (but implement it in aarch64 backend
     // first).
@@ -1251,7 +1266,7 @@ Value *HWAddressSanitizer::getSP(IRBuilder<> &IRB) {
 Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
   // Prepare ring buffer data.
   Value *PC = getPC(IRB);
-  Value *SP = getSP(IRB);
+  Value *SP = getFP(IRB);
 
   // Mix SP and PC.
   // Assumptions:
@@ -1371,6 +1386,14 @@ static bool isLifetimeIntrinsic(Value *V) {
   return II && II->isLifetimeStartOrEnd();
 }
 
+static DbgAssignIntrinsic *DynCastToDbgAssign(DbgVariableIntrinsic *DVI) {
+  return dyn_cast<DbgAssignIntrinsic>(DVI);
+}
+
+static DPValue *DynCastToDbgAssign(DPValue *DPV) {
+  return DPV->isDbgAssign() ? DPV : nullptr;
+}
+
 bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
                                          Value *StackTag, Value *UARTag,
                                          const DominatorTree &DT,
@@ -1437,6 +1460,11 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
         if (DPtr->getVariableLocationOp(LocNo) == AI)
           DPtr->setExpression(DIExpression::appendOpsToArg(
               DPtr->getExpression(), NewOps, LocNo));
+      if (auto *DAI = DynCastToDbgAssign(DPtr)) {
+        if (DAI->getAddress() == AI)
+          DAI->setAddressExpression(DIExpression::prependOpcodes(
+              DAI->getAddressExpression(), NewOps));
+      }
     };
 
     llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord);
@@ -1493,6 +1521,27 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   if (!F.hasFnAttribute(Attribute::SanitizeHWAddress))
     return;
+
+  if (F.empty())
+    return;
+
+  NumTotalFuncs++;
+  if (CSkipHotCode) {
+    auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    ProfileSummaryInfo *PSI =
+        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+    if (PSI && PSI->hasProfileSummary()) {
+      auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
+      if ((HotPercentileCutoff.getNumOccurrences() && HotPercentileCutoff >= 0)
+              ? PSI->isFunctionHotInCallGraphNthPercentile(HotPercentileCutoff,
+                                                           &F, BFI)
+              : PSI->isFunctionHotInCallGraph(&F, BFI))
+        return;
+    } else {
+      ++NumNoProfileSummaryFuncs;
+    }
+  }
+  NumInstrumentedFuncs++;
 
   LLVM_DEBUG(dbgs() << "Function: " << F.getName() << "\n");
 

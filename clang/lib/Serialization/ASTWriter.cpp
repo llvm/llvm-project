@@ -3597,8 +3597,13 @@ class ASTIdentifierTableTrait {
   /// doesn't check whether the name has macros defined; use PublicMacroIterator
   /// to check that.
   bool isInterestingIdentifier(const IdentifierInfo *II, uint64_t MacroOffset) {
-    if (MacroOffset || II->isPoisoned() ||
-        (!IsModule && II->getObjCOrBuiltinID()) ||
+    II->getObjCOrBuiltinID();
+    bool IsInteresting =
+        II->getNotableIdentifierID() !=
+            tok::NotableIdentifierKind::not_notable ||
+        II->getBuiltinID() != Builtin::ID::NotBuiltin ||
+        II->getObjCKeywordID() != tok::ObjCKeywordKind::objc_not_keyword;
+    if (MacroOffset || II->isPoisoned() || (!IsModule && IsInteresting) ||
         II->hasRevertedTokenIDToIdentifier() ||
         (NeedDecls && II->getFETokenInfo()))
       return true;
@@ -6051,6 +6056,9 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   BitsPacker DefinitionBits;
 
+  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
+  DefinitionBits.addBit(ShouldSkipCheckingODR);
+
 #define FIELD(Name, Width, Merge)                                              \
   if (!DefinitionBits.canWriteNextNBits(Width)) {                              \
     Record->push_back(DefinitionBits);                                         \
@@ -6064,11 +6072,10 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
   Record->push_back(DefinitionBits);
 
   // We only perform ODR checks for decls not in GMF.
-  if (!shouldSkipCheckingODR(D)) {
+  if (!ShouldSkipCheckingODR)
     // getODRHash will compute the ODRHash if it has not been previously
     // computed.
     Record->push_back(D->getODRHash());
-  }
 
   bool ModulesDebugInfo =
       Writer->Context->getLangOpts().ModulesDebugInfo && !D->isDependentType();
