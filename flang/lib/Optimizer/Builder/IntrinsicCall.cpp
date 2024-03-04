@@ -4195,39 +4195,45 @@ mlir::Value IntrinsicLibrary::genIeeeLogb(mlir::Type resultType,
       builder.create<mlir::arith::BitcastOp>(loc, intType, realVal);
   mlir::Type i1Ty = builder.getI1Type();
 
-  int exponentBias, significandSize;
+  int exponentBias, significandSize, nonSignificandSize;
   switch (bitWidth) {
   case 16:
     if (realType.isF16()) {
       // kind=2: 1 sign bit, 5 exponent bits, 10 significand bits
       exponentBias = (1 << (5 - 1)) - 1; // 15
       significandSize = 10;
+      nonSignificandSize = 6;
       break;
     }
     assert(realType.isBF16() && "unknown 16-bit real type");
     // kind=3: 1 sign bit, 8 exponent bits, 7 significand bits
     exponentBias = (1 << (8 - 1)) - 1; // 127
     significandSize = 7;
+    nonSignificandSize = 9;
     break;
   case 32:
     // kind=4: 1 sign bit, 8 exponent bits, 23 significand bits
     exponentBias = (1 << (8 - 1)) - 1; // 127
     significandSize = 23;
+    nonSignificandSize = 9;
     break;
   case 64:
     // kind=8: 1 sign bit, 11 exponent bits, 52 significand bits
     exponentBias = (1 << (11 - 1)) - 1; // 1023
     significandSize = 52;
+    nonSignificandSize = 12;
     break;
   case 80:
     // kind=10: 1 sign bit, 15 exponent bits, 1+63 significand bits
     exponentBias = (1 << (15 - 1)) - 1; // 16383
     significandSize = 64;
+    nonSignificandSize = 16 + 1;
     break;
   case 128:
     // kind=16: 1 sign bit, 15 exponent bits, 112 significand bits
     exponentBias = (1 << (15 - 1)) - 1; // 16383
     significandSize = 112;
+    nonSignificandSize = 16;
     break;
   default:
     llvm_unreachable("unknown real type");
@@ -4259,6 +4265,11 @@ mlir::Value IntrinsicLibrary::genIeeeLogb(mlir::Type resultType,
                                              /*withElseRegion=*/true);
   // X is non-zero finite -- result is unbiased exponent of X
   builder.setInsertionPointToStart(&innerIfOp.getThenRegion().front());
+  mlir::Value isNormal = genIsFPClass(i1Ty, args, normalTest);
+  auto normalIfOp = builder.create<fir::IfOp>(loc, resultType, isNormal,
+                                              /*withElseRegion=*/true);
+  // X is normal
+  builder.setInsertionPointToStart(&normalIfOp.getThenRegion().front());
   mlir::Value biasedExponent = builder.create<mlir::arith::ShRUIOp>(
       loc, shiftLeftOne,
       builder.createIntegerConstant(loc, intType, significandSize + 1));
@@ -4267,6 +4278,23 @@ mlir::Value IntrinsicLibrary::genIeeeLogb(mlir::Type resultType,
       builder.createIntegerConstant(loc, intType, exponentBias));
   result = builder.create<fir::ConvertOp>(loc, resultType, result);
   builder.create<fir::ResultOp>(loc, result);
+
+  // X is denormal -- result is (-exponentBias - ctlz(significand))
+  builder.setInsertionPointToStart(&normalIfOp.getElseRegion().front());
+  mlir::Value significand = builder.create<mlir::arith::ShLIOp>(
+      loc, intVal,
+      builder.createIntegerConstant(loc, intType, nonSignificandSize));
+  mlir::Value ctlz =
+      builder.create<mlir::math::CountLeadingZerosOp>(loc, significand);
+  mlir::Type i32Ty = builder.getI32Type();
+  result = builder.create<mlir::arith::SubIOp>(
+      loc, builder.createIntegerConstant(loc, i32Ty, -exponentBias),
+      builder.create<fir::ConvertOp>(loc, i32Ty, ctlz));
+  result = builder.create<fir::ConvertOp>(loc, resultType, result);
+  builder.create<fir::ResultOp>(loc, result);
+
+  builder.setInsertionPointToEnd(&innerIfOp.getThenRegion().front());
+  builder.create<fir::ResultOp>(loc, normalIfOp.getResult(0));
 
   // X is infinity or NaN -- result is +infinity or NaN
   builder.setInsertionPointToStart(&innerIfOp.getElseRegion().front());

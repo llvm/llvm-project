@@ -1270,8 +1270,8 @@ def TestOpWithRegionFoldNoMemoryEffect : TEST_Op<
 
 // Op for testing folding of outer op with inner ops.
 def TestOpWithRegionFold : TEST_Op<"op_with_region_fold"> {
-  let arguments = (ins I32:$operand);
-  let results = (outs I32);
+  let arguments = (ins AnyType:$operand);
+  let results = (outs AnyType);
   let regions = (region SizedRegion<1>:$region);
   let hasFolder = 1;
 }
