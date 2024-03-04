@@ -8517,7 +8517,7 @@ static bool GetLambdaCaptureAsLValue(EvalInfo &Info, const Expr *E,
     return false;
 
   // And if the field is of reference type (or if we captured '*this' by
-  // reference if this is a lambda), update 'Result' to refer to what
+  // reference), update 'Result' to refer to what
   // the field refers to.
   if (LValueToRValueConversion) {
     APValue RVal;
