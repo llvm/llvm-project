@@ -1281,7 +1281,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
     ConversionPatternRewriter &rewriter, Block *block,
     const TypeConverter *converter,
     TypeConverter::SignatureConversion &signatureConversion) {
-  MLIRContext *ctx = rewriter.getContext();
+  OpBuilder::InsertionGuard g(rewriter);
 
   // If no arguments are being changed or added, there is nothing to do.
   unsigned origArgCount = block->getNumArguments();
@@ -1289,14 +1289,9 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
   if (llvm::equal(block->getArgumentTypes(), convertedTypes))
     return block;
 
-  // Split the block at the beginning to get a new block to use for the updated
-  // signature.
-  Block *newBlock = rewriter.splitBlock(block, block->begin());
-  block->replaceAllUsesWith(newBlock);
-
-  // Map all new arguments to the location of the argument they originate from.
+  // Compute the locations of all block arguments in the new block.
   SmallVector<Location> newLocs(convertedTypes.size(),
-                                Builder(ctx).getUnknownLoc());
+                                rewriter.getUnknownLoc());
   for (unsigned i = 0; i < origArgCount; ++i) {
     auto inputMap = signatureConversion.getInputMapping(i);
     if (!inputMap || inputMap->replacementValue)
@@ -1306,9 +1301,16 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
       newLocs[inputMap->inputNo + j] = origLoc;
   }
 
-  SmallVector<Value, 4> newArgRange(
-      newBlock->addArguments(convertedTypes, newLocs));
-  ArrayRef<Value> newArgs(newArgRange);
+  // Insert a new block with the converted block argument types and move all ops
+  // from the old block to the new block.
+  Block *newBlock =
+      rewriter.createBlock(block->getParent(), std::next(block->getIterator()),
+                           convertedTypes, newLocs);
+  appendRewrite<InlineBlockRewrite>(newBlock, block, newBlock->end());
+  newBlock->getOperations().splice(newBlock->end(), block->getOperations());
+
+  // Replace all uses of the old block with the new block.
+  block->replaceAllUsesWith(newBlock);
 
   // Remap each of the original arguments as determined by the signature
   // conversion.
@@ -1333,7 +1335,8 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
     }
 
     // Otherwise, this is a 1->1+ mapping.
-    auto replArgs = newArgs.slice(inputMap->inputNo, inputMap->size);
+    auto replArgs =
+        newBlock->getArguments().slice(inputMap->inputNo, inputMap->size);
     Value newArg;
 
     // If this is a 1->1 mapping and the types of new and replacement arguments
