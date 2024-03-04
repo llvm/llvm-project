@@ -68,7 +68,7 @@ void test_T_ctor_sfinae() {
   }
   {
     using V = std::variant<std::string, float>;
-    static_assert(std::is_constructible<V, int>::value == VariantAllowsNarrowingConversions,
+    static_assert(!std::is_constructible<V, int>::value,
                   "no matching constructor");
   }
   {
@@ -80,10 +80,8 @@ void test_T_ctor_sfinae() {
     };
     static_assert(!std::is_constructible<V, X>::value,
                   "no boolean conversion in constructor");
-#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
     static_assert(std::is_constructible<V, std::false_type>::value,
                   "converted to bool in constructor");
-#endif
   }
   {
     struct X {};
@@ -128,13 +126,11 @@ void test_T_ctor_basic() {
     static_assert(v.index() == 1, "");
     static_assert(std::get<1>(v) == 42, "");
   }
-#ifndef TEST_VARIANT_ALLOWS_NARROWING_CONVERSIONS
   {
     constexpr std::variant<unsigned, long> v(42);
     static_assert(v.index() == 1, "");
     static_assert(std::get<1>(v) == 42, "");
   }
-#endif
   {
     std::variant<std::string, bool const> v = "foo";
     assert(v.index() == 0);
@@ -202,12 +198,10 @@ void test_construction_with_repeated_types() {
 }
 
 void test_vector_bool() {
-#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
   std::vector<bool> vec = {true};
   std::variant<bool, int> v = vec[0];
   assert(v.index() == 0);
   assert(std::get<0>(v) == true);
-#endif
 }
 
 int main(int, char**) {

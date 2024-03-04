@@ -134,8 +134,7 @@ void test_T_assignment_sfinae() {
   }
   {
     using V = std::variant<std::string, float>;
-    static_assert(std::is_assignable<V, int>::value == VariantAllowsNarrowingConversions,
-    "no matching operator=");
+    static_assert(!std::is_assignable<V, int>::value, "no matching operator=");
   }
   {
     using V = std::variant<std::unique_ptr<int>, bool>;
@@ -146,10 +145,8 @@ void test_T_assignment_sfinae() {
     };
     static_assert(!std::is_assignable<V, X>::value,
                   "no boolean conversion in operator=");
-#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
     static_assert(std::is_assignable<V, std::false_type>::value,
                   "converted to bool in operator=");
-#endif
   }
   {
     struct X {};
@@ -188,7 +185,6 @@ void test_T_assignment_basic() {
     assert(v.index() == 1);
     assert(std::get<1>(v) == 43);
   }
-#ifndef TEST_VARIANT_ALLOWS_NARROWING_CONVERSIONS
   {
     std::variant<unsigned, long> v;
     v = 42;
@@ -198,7 +194,6 @@ void test_T_assignment_basic() {
     assert(v.index() == 0);
     assert(std::get<0>(v) == 43);
   }
-#endif
   {
     std::variant<std::string, bool> v = true;
     v = "bar";
@@ -299,13 +294,11 @@ void test_T_assignment_performs_assignment() {
 }
 
 void test_T_assignment_vector_bool() {
-#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
   std::vector<bool> vec = {true};
   std::variant<bool, int> v;
   v = vec[0];
   assert(v.index() == 0);
   assert(std::get<0>(v) == true);
-#endif
 }
 
 int main(int, char**) {
