@@ -374,7 +374,7 @@ Level SparseTensorEncodingAttr::getLvlRank() const {
 
 LevelType SparseTensorEncodingAttr::getLvlType(Level l) const {
   if (!getImpl())
-    return LevelFormat::Dense;
+    return LevelFormat::Batch;
   assert(l < getLvlRank() && "Level is out of bounds");
   return getLvlTypes()[l];
 }
@@ -1755,6 +1755,8 @@ LogicalResult ConcatenateOp::verify() {
 
 LogicalResult InsertOp::verify() {
   const auto stt = getSparseTensorType(getTensor());
+  if (stt.getEncoding().getBatchLvlRank() > 0)
+    return emitOpError("batched sparse tensor insertion not implemented");
   if (stt.getLvlRank() != static_cast<Level>(getLvlCoords().size()))
     return emitOpError("incorrect number of coordinates");
   return success();
