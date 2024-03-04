@@ -1448,6 +1448,8 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>().atIndex(Idx);
+  if (Ptr.isUnknownSizeArray())
+    return false;
   if (!CheckInit(S, OpPC, Ptr))
     return false;
   Ptr.initialize();
@@ -1460,6 +1462,8 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>().atIndex(Idx);
+  if (Ptr.isUnknownSizeArray())
+    return false;
   if (!CheckInit(S, OpPC, Ptr))
     return false;
   Ptr.initialize();
