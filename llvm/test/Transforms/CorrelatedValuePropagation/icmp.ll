@@ -614,10 +614,10 @@ define void @test_cmp_phi(i8 %a) {
 ; CHECK-NEXT:    br i1 [[C0]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[P:%.*]] = phi i8 [ [[A]], [[ENTRY:%.*]] ], [ [[B:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[P]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i8 [[P]] to i1
 ; CHECK-NEXT:    [[C4:%.*]] = call i1 @get_bool()
 ; CHECK-NEXT:    [[B]] = zext i1 [[C4]] to i8
-; CHECK-NEXT:    br i1 [[C1]], label [[LOOP]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -1484,7 +1484,7 @@ define i1 @test_icmp_eq_on_valid_bool_range(i8 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i1 @get_bool()
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[X]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i8 [[X]] to i1
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP3]], [[BB1]] ], [ [[TMP2]], [[BB2]] ]
@@ -1514,7 +1514,7 @@ define i1 @test_icmp_ne_on_valid_bool_range(i8 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i1 @get_bool()
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i8 [[X]] to i1
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP3]], [[BB1]] ], [ [[TMP2]], [[BB2]] ]

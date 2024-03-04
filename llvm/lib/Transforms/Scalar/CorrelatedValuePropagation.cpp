@@ -332,12 +332,48 @@ static bool constantFoldCmp(CmpInst *Cmp, LazyValueInfo *LVI) {
   return true;
 }
 
+/// Given an icmp `icmp eq X, C`,
+/// if we already know that C is 2k+1 and X is in [2k, 2k+1],
+/// then we can fold it to `trunc X to i1`.
+static bool processEqualityICmp(CmpInst *Cmp, LazyValueInfo *LVI) {
+  if (Cmp->getType()->isVectorTy() ||
+      !Cmp->getOperand(0)->getType()->isIntegerTy() || !Cmp->isEquality())
+    return false;
+
+  Value *Op0 = Cmp->getOperand(0);
+  Value *Op1 = Cmp->getOperand(1);
+  ConstantInt *CI = dyn_cast<ConstantInt>(Op1);
+  if (!CI)
+    return false;
+
+  ConstantRange Range =
+      LVI->getConstantRangeAtUse(Cmp->getOperandUse(0), /*UndefAllowed*/ true);
+  APInt RangeSize = Range.getUpper() - Range.getLower();
+  APInt Value = CI->getValue();
+  if (RangeSize != 2 || !Range.contains(Value))
+    return false;
+
+  bool ShouldBeOdd = Cmp->getPredicate() == ICmpInst::Predicate::ICMP_EQ;
+  if ((CI->getValue() & 1) == ShouldBeOdd) {
+    IRBuilder<> B{Cmp};
+    auto *Trunc = B.CreateTruncOrBitCast(Op0, Cmp->getType());
+    Cmp->replaceAllUsesWith(Trunc);
+    Cmp->eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
 static bool processCmp(CmpInst *Cmp, LazyValueInfo *LVI) {
   if (constantFoldCmp(Cmp, LVI))
     return true;
 
   if (auto *ICmp = dyn_cast<ICmpInst>(Cmp))
     if (processICmp(ICmp, LVI))
+      return true;
+
+  if (processEqualityICmp(Cmp, LVI))
       return true;
 
   return false;
