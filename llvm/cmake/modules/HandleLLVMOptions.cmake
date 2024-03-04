@@ -122,8 +122,7 @@ endif()
 
 # If we are targeting a GPU architecture in a runtimes build we want to ignore
 # all the standard flag handling.
-if("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn" OR
-   "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
+if(LLVM_RUNTIMES_GPU_BUILD)
   return()
 endif()
 
