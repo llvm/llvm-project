@@ -141,8 +141,8 @@ Changes in existing checks
   ignoring local variable with ``[maybe_unused]`` attribute.
 
 - Improved :doc:`bugprone-unused-return-value
-   <clang-tidy/checks/bugprone/unused-return-value>` check by updating the
-   parameter `CheckedFunctions` to support regex
+  <clang-tidy/checks/bugprone/unused-return-value>` check by updating the
+  parameter `CheckedFunctions` to support regexp.
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
