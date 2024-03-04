@@ -204,10 +204,16 @@ void TC<T>::tc() __restrict {
 // =========
 
 void f() {
+  C{}.ta<int>();
+  C{}.tb<int>();
+  C{}.tc<int>();
   TC<int>{}.f();
   TC<int>{}.a();
   TC<int>{}.b();
   TC<int>{}.c();
+  TC<int>{}.ta<int>();
+  TC<int>{}.tb<int>();
+  TC<int>{}.tc<int>();
 }
 
 namespace gh18121 {
