@@ -209,7 +209,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
   }
 
   // Try to find relative to the compiler binary.
-  const char *InstallDir = D.getInstalledDir();
+  StringRef InstallDir = D.Dir;
 
   // Check both a normal Unix prefix position of the clang binary, as well as
   // the Windows-esque layout the ROCm packages use with the host architecture

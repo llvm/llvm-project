@@ -1109,7 +1109,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     if ((getToolChain().getTriple().isNVPTX() ||
          getToolChain().getTriple().isAMDGCN()) &&
         C.getActiveOffloadKinds() == Action::OFK_None) {
-      SmallString<128> P(llvm::sys::path::parent_path(D.InstalledDir));
+      SmallString<128> P(llvm::sys::path::parent_path(D.Dir));
       llvm::sys::path::append(P, "include");
       llvm::sys::path::append(P, getToolChain().getTripleString());
       CmdArgs.push_back("-internal-isystem");
