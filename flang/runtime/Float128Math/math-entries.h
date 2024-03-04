@@ -13,7 +13,15 @@
 #include "flang/Common/float128.h"
 #include "flang/Runtime/entry-names.h"
 #include <cfloat>
+#include <cmath>
 #include <type_traits>
+
+namespace {
+using namespace Fortran::runtime;
+using F128RetType = CppTypeFor<TypeCategory::Real, 16>;
+using I32RetType = CppTypeFor<TypeCategory::Integer, 4>;
+using I64RetType = CppTypeFor<TypeCategory::Integer, 8>;
+} // namespace
 
 namespace Fortran::runtime {
 
@@ -21,28 +29,24 @@ namespace Fortran::runtime {
 // there is no specialized template that implements
 // the required function via using the third-party
 // implementation.
-#define DEFINE_FALLBACK(caller) \
-  template <auto F> struct caller { \
-    template <typename... ATs> \
-    [[noreturn]] static std::invoke_result_t<decltype(F), ATs...> invoke( \
-        ATs... args) { \
+#define DEFINE_FALLBACK(caller, ret_type) \
+  template <bool = false, typename RT = ret_type> struct caller { \
+    template <typename... ATs> [[noreturn]] static RT invoke(ATs... args) { \
       Terminator terminator{__FILE__, __LINE__}; \
       terminator.Crash("Float128 variant of '%s' is unsupported", #caller); \
     } \
   };
 
 // Define template specialization that is calling the third-party
-// implementation. The template is specialized by a function pointer
-// that is the FortranFloat128Math entry point. The signatures
-// of the caller and the callee must match.
+// implementation.
 //
 // Defining the specialization for any target library requires
 // adding the generic template via DEFINE_FALLBACK, so that
 // a build with another target library that does not define
 // the same alias can gracefully fail in runtime.
 #define DEFINE_SIMPLE_ALIAS(caller, callee) \
-  template <typename RT, typename... ATs, RT (*p)(ATs...)> struct caller<p> { \
-    static RT invoke(ATs... args) { \
+  template <typename RT> struct caller<true, RT> { \
+    template <typename... ATs> static RT invoke(ATs... args) { \
       static_assert(std::is_invocable_r_v<RT, \
           decltype(callee(std::declval<ATs>()...))(ATs...), ATs...>); \
       if constexpr (std::is_same_v<RT, void>) { \
@@ -54,48 +58,58 @@ namespace Fortran::runtime {
   };
 
 // Define fallback callers.
-DEFINE_FALLBACK(Abs)
-DEFINE_FALLBACK(Acos)
-DEFINE_FALLBACK(Acosh)
-DEFINE_FALLBACK(Asin)
-DEFINE_FALLBACK(Asinh)
-DEFINE_FALLBACK(Atan)
-DEFINE_FALLBACK(Atan2)
-DEFINE_FALLBACK(Atanh)
-DEFINE_FALLBACK(Ceil)
-DEFINE_FALLBACK(Cos)
-DEFINE_FALLBACK(Cosh)
-DEFINE_FALLBACK(Erf)
-DEFINE_FALLBACK(Erfc)
-DEFINE_FALLBACK(Exp)
-DEFINE_FALLBACK(Floor)
-DEFINE_FALLBACK(Hypot)
-DEFINE_FALLBACK(J0)
-DEFINE_FALLBACK(J1)
-DEFINE_FALLBACK(Jn)
-DEFINE_FALLBACK(Lgamma)
-DEFINE_FALLBACK(Llround)
-DEFINE_FALLBACK(Lround)
-DEFINE_FALLBACK(Log)
-DEFINE_FALLBACK(Log10)
-DEFINE_FALLBACK(Pow)
-DEFINE_FALLBACK(Round)
-DEFINE_FALLBACK(Sin)
-DEFINE_FALLBACK(Sinh)
-DEFINE_FALLBACK(Sqrt)
-DEFINE_FALLBACK(Tan)
-DEFINE_FALLBACK(Tanh)
-DEFINE_FALLBACK(Tgamma)
-DEFINE_FALLBACK(Trunc)
-DEFINE_FALLBACK(Y0)
-DEFINE_FALLBACK(Y1)
-DEFINE_FALLBACK(Yn)
+#define DEFINE_FALLBACK_F128(caller) DEFINE_FALLBACK(caller, ::F128RetType)
+#define DEFINE_FALLBACK_I32(caller) DEFINE_FALLBACK(caller, ::I32RetType)
+#define DEFINE_FALLBACK_I64(caller) DEFINE_FALLBACK(caller, ::I64RetType)
+
+DEFINE_FALLBACK_F128(Abs)
+DEFINE_FALLBACK_F128(Acos)
+DEFINE_FALLBACK_F128(Acosh)
+DEFINE_FALLBACK_F128(Asin)
+DEFINE_FALLBACK_F128(Asinh)
+DEFINE_FALLBACK_F128(Atan)
+DEFINE_FALLBACK_F128(Atan2)
+DEFINE_FALLBACK_F128(Atanh)
+DEFINE_FALLBACK_F128(Ceil)
+DEFINE_FALLBACK_F128(Cos)
+DEFINE_FALLBACK_F128(Cosh)
+DEFINE_FALLBACK_F128(Erf)
+DEFINE_FALLBACK_F128(Erfc)
+DEFINE_FALLBACK_F128(Exp)
+DEFINE_FALLBACK_F128(Floor)
+DEFINE_FALLBACK_F128(Frexp)
+DEFINE_FALLBACK_F128(Hypot)
+DEFINE_FALLBACK_I32(Ilogb)
+DEFINE_FALLBACK_I32(Isinf)
+DEFINE_FALLBACK_I32(Isnan)
+DEFINE_FALLBACK_F128(J0)
+DEFINE_FALLBACK_F128(J1)
+DEFINE_FALLBACK_F128(Jn)
+DEFINE_FALLBACK_F128(Ldexp)
+DEFINE_FALLBACK_F128(Lgamma)
+DEFINE_FALLBACK_I64(Llround)
+DEFINE_FALLBACK_F128(Log)
+DEFINE_FALLBACK_F128(Log10)
+DEFINE_FALLBACK_I32(Lround)
+DEFINE_FALLBACK_F128(Nextafter)
+DEFINE_FALLBACK_F128(Pow)
+DEFINE_FALLBACK_F128(Qnan)
+DEFINE_FALLBACK_F128(Round)
+DEFINE_FALLBACK_F128(Sin)
+DEFINE_FALLBACK_F128(Sinh)
+DEFINE_FALLBACK_F128(Sqrt)
+DEFINE_FALLBACK_F128(Tan)
+DEFINE_FALLBACK_F128(Tanh)
+DEFINE_FALLBACK_F128(Tgamma)
+DEFINE_FALLBACK_F128(Trunc)
+DEFINE_FALLBACK_F128(Y0)
+DEFINE_FALLBACK_F128(Y1)
+DEFINE_FALLBACK_F128(Yn)
 
 #if HAS_LIBM
-// Define wrapper callers for libm.
-#include <ccomplex>
-#include <cmath>
+#include <limits>
 
+// Define wrapper callers for libm.
 #if LDBL_MANT_DIG == 113
 // Use STD math functions. They provide IEEE-754 128-bit float
 // support either via 'long double' or __float128.
@@ -118,15 +132,21 @@ DEFINE_SIMPLE_ALIAS(Erf, std::erf)
 DEFINE_SIMPLE_ALIAS(Erfc, std::erfc)
 DEFINE_SIMPLE_ALIAS(Exp, std::exp)
 DEFINE_SIMPLE_ALIAS(Floor, std::floor)
+DEFINE_SIMPLE_ALIAS(Frexp, std::frexp)
 DEFINE_SIMPLE_ALIAS(Hypot, std::hypot)
+DEFINE_SIMPLE_ALIAS(Ilogb, std::ilogb)
+DEFINE_SIMPLE_ALIAS(Isinf, std::isinf)
+DEFINE_SIMPLE_ALIAS(Isnan, std::isnan)
 DEFINE_SIMPLE_ALIAS(J0, j0l)
 DEFINE_SIMPLE_ALIAS(J1, j1l)
 DEFINE_SIMPLE_ALIAS(Jn, jnl)
+DEFINE_SIMPLE_ALIAS(Ldexp, std::ldexp)
 DEFINE_SIMPLE_ALIAS(Lgamma, std::lgamma)
 DEFINE_SIMPLE_ALIAS(Llround, std::llround)
-DEFINE_SIMPLE_ALIAS(Lround, std::lround)
 DEFINE_SIMPLE_ALIAS(Log, std::log)
 DEFINE_SIMPLE_ALIAS(Log10, std::log10)
+DEFINE_SIMPLE_ALIAS(Lround, std::lround)
+DEFINE_SIMPLE_ALIAS(Nextafter, std::nextafter)
 DEFINE_SIMPLE_ALIAS(Pow, std::pow)
 DEFINE_SIMPLE_ALIAS(Round, std::round)
 DEFINE_SIMPLE_ALIAS(Sin, std::sin)
@@ -139,6 +159,12 @@ DEFINE_SIMPLE_ALIAS(Trunc, std::trunc)
 DEFINE_SIMPLE_ALIAS(Y0, y0l)
 DEFINE_SIMPLE_ALIAS(Y1, y1l)
 DEFINE_SIMPLE_ALIAS(Yn, ynl)
+
+// Use numeric_limits to produce infinity of the right type.
+#define F128_RT_INFINITY \
+  (std::numeric_limits<CppTypeFor<TypeCategory::Real, 16>>::infinity())
+#define F128_RT_QNAN \
+  (std::numeric_limits<CppTypeFor<TypeCategory::Real, 16>>::quiet_NaN())
 #else // LDBL_MANT_DIG != 113
 #if !HAS_LIBMF128
 // glibc >=2.26 seems to have complete support for __float128
@@ -172,15 +198,21 @@ DEFINE_SIMPLE_ALIAS(Erf, erfq)
 DEFINE_SIMPLE_ALIAS(Erfc, erfcq)
 DEFINE_SIMPLE_ALIAS(Exp, expq)
 DEFINE_SIMPLE_ALIAS(Floor, floorq)
+DEFINE_SIMPLE_ALIAS(Frexp, frexpq)
 DEFINE_SIMPLE_ALIAS(Hypot, hypotq)
+DEFINE_SIMPLE_ALIAS(Ilogb, ilogbq)
+DEFINE_SIMPLE_ALIAS(Isinf, isinfq)
+DEFINE_SIMPLE_ALIAS(Isnan, isnanq)
 DEFINE_SIMPLE_ALIAS(J0, j0q)
 DEFINE_SIMPLE_ALIAS(J1, j1q)
 DEFINE_SIMPLE_ALIAS(Jn, jnq)
+DEFINE_SIMPLE_ALIAS(Ldexp, ldexpq)
 DEFINE_SIMPLE_ALIAS(Lgamma, lgammaq)
 DEFINE_SIMPLE_ALIAS(Llround, llroundq)
-DEFINE_SIMPLE_ALIAS(Lround, lroundq)
 DEFINE_SIMPLE_ALIAS(Log, logq)
 DEFINE_SIMPLE_ALIAS(Log10, log10q)
+DEFINE_SIMPLE_ALIAS(Lround, lroundq)
+DEFINE_SIMPLE_ALIAS(Nextafter, nextafterq)
 DEFINE_SIMPLE_ALIAS(Pow, powq)
 DEFINE_SIMPLE_ALIAS(Round, roundq)
 DEFINE_SIMPLE_ALIAS(Sin, sinq)
@@ -193,19 +225,11 @@ DEFINE_SIMPLE_ALIAS(Trunc, truncq)
 DEFINE_SIMPLE_ALIAS(Y0, y0q)
 DEFINE_SIMPLE_ALIAS(Y1, y1q)
 DEFINE_SIMPLE_ALIAS(Yn, ynq)
-#endif
 
-extern "C" {
-// Declarations of the entry points that might be referenced
-// within the Float128Math library itself.
-// Note that not all of these entry points are actually
-// defined in this library. Some of them are used just
-// as template parameters to call the corresponding callee directly.
-CppTypeFor<TypeCategory::Real, 16> RTDECL(AbsF128)(
-    CppTypeFor<TypeCategory::Real, 16> x);
-CppTypeFor<TypeCategory::Real, 16> RTDECL(SqrtF128)(
-    CppTypeFor<TypeCategory::Real, 16> x);
-} // extern "C"
+// Use cmath INFINITY/NAN definition. Rely on C implicit conversions.
+#define F128_RT_INFINITY (INFINITY)
+#define F128_RT_QNAN (NAN)
+#endif
 
 } // namespace Fortran::runtime
 

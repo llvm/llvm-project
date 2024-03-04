@@ -8,7 +8,6 @@
 
 #include "ByteCodeExprGen.h"
 #include "ByteCodeEmitter.h"
-#include "ByteCodeGenError.h"
 #include "ByteCodeStmtGen.h"
 #include "Context.h"
 #include "Floating.h"
@@ -1220,14 +1219,18 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
-  if (Initializing)
-    return this->visitInitializer(E->getSourceExpr());
+  const Expr *SourceExpr = E->getSourceExpr();
+  if (!SourceExpr)
+    return false;
 
-  PrimType SubExprT = classify(E->getSourceExpr()).value_or(PT_Ptr);
+  if (Initializing)
+    return this->visitInitializer(SourceExpr);
+
+  PrimType SubExprT = classify(SourceExpr).value_or(PT_Ptr);
   if (auto It = OpaqueExprs.find(E); It != OpaqueExprs.end())
     return this->emitGetLocal(SubExprT, It->second, E);
 
-  if (!this->visit(E->getSourceExpr()))
+  if (!this->visit(SourceExpr))
     return false;
 
   // At this point we either have the evaluated source expression or a pointer
@@ -2659,6 +2662,11 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
     if (P.getGlobal(VD))
       return true;
 
+    // Ignore external declarations. We will instead emit a dummy
+    // pointer when we see a DeclRefExpr for them.
+    if (VD->hasExternalStorage())
+      return true;
+
     std::optional<unsigned> GlobalIndex = P.createGlobal(VD, Init);
 
     if (!GlobalIndex)
@@ -2721,6 +2729,18 @@ bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
   if (!Func)
     return false;
 
+  QualType ReturnType = E->getType();
+  std::optional<PrimType> ReturnT = classify(E);
+
+  // Non-primitive return type. Prepare storage.
+  if (!Initializing && !ReturnT && !ReturnType->isVoidType()) {
+    std::optional<unsigned> LocalIndex = allocateLocal(E, /*IsExtended=*/false);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+
   if (!Func->isUnevaluatedBuiltin()) {
     // Put arguments on the stack.
     for (const auto *Arg : E->arguments()) {
@@ -2732,10 +2752,9 @@ bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
   if (!this->emitCallBI(Func, E, E))
     return false;
 
-  QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   if (DiscardResult && !ReturnType->isVoidType()) {
-    PrimType T = classifyPrim(ReturnType);
-    return this->emitPop(T, E);
+    assert(ReturnT);
+    return this->emitPop(*ReturnT, E);
   }
 
   return true;
@@ -2838,7 +2857,8 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
         return false;
     } else if (Func->isVariadic()) {
       uint32_t VarArgSize = 0;
-      unsigned NumParams = Func->getNumWrittenParams();
+      unsigned NumParams =
+          Func->getNumWrittenParams() + isa<CXXOperatorCallExpr>(E);
       for (unsigned I = NumParams, N = E->getNumArgs(); I != N; ++I)
         VarArgSize += align(primSize(classify(E->getArg(I)).value_or(PT_Ptr)));
       if (!this->emitCallVar(Func, VarArgSize, E))
@@ -2929,8 +2949,11 @@ bool ByteCodeExprGen<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   if (DiscardResult)
     return true;
 
-  if (this->LambdaThisCapture > 0)
-    return this->emitGetThisFieldPtr(this->LambdaThisCapture, E);
+  if (this->LambdaThisCapture.Offset > 0) {
+    if (this->LambdaThisCapture.IsPtr)
+      return this->emitGetThisFieldPtr(this->LambdaThisCapture.Offset, E);
+    return this->emitGetPtrThisField(this->LambdaThisCapture.Offset, E);
+  }
 
   return this->emitThis(E);
 }
@@ -3213,12 +3236,6 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   // we haven't seen yet.
   if (Ctx.getLangOpts().CPlusPlus) {
     if (const auto *VD = dyn_cast<VarDecl>(D)) {
-      // Dummy for static locals
-      if (VD->isStaticLocal()) {
-        if (std::optional<unsigned> I = P.getOrCreateDummy(D))
-          return this->emitGetPtrGlobal(*I, E);
-        return false;
-      }
       // Visit local const variables like normal.
       if (VD->isLocalVarDecl() && VD->getType().isConstQualified()) {
         if (!this->visitVarDecl(VD))
@@ -3226,6 +3243,9 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
         // Retry.
         return this->VisitDeclRefExpr(E);
       }
+
+      if (VD->hasExternalStorage())
+        return this->emitInvalidDeclRef(E, E);
     }
   } else {
     if (const auto *VD = dyn_cast<VarDecl>(D);
@@ -3235,10 +3255,10 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
       // Retry.
       return this->VisitDeclRefExpr(E);
     }
-
-    if (std::optional<unsigned> I = P.getOrCreateDummy(D))
-      return this->emitGetPtrGlobal(*I, E);
   }
+
+  if (std::optional<unsigned> I = P.getOrCreateDummy(D))
+    return this->emitGetPtrGlobal(*I, E);
 
   return this->emitInvalidDeclRef(E, E);
 }
