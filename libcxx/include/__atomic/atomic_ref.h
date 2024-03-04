@@ -46,20 +46,10 @@ template <class _Tp>
 struct __atomic_ref_base {
   _Tp* __ptr_;
 
-  // whether the object pointed to has padding AND we will actually ignore them
-  static constexpr bool __might_have_padding =
-#  if __has_builtin(__builtin_clear_padding)
-      !has_unique_object_representations_v<_Tp> && !same_as<_Tp, float> && !same_as<_Tp, double>;
-#  else
-      false;
-#  endif
-
   _LIBCPP_HIDE_FROM_ABI static _Tp* __clear_padding(_Tp& __val) noexcept {
     _Tp* __ptr = std::addressof(__val);
 #  if __has_builtin(__builtin_clear_padding)
-    if constexpr (__might_have_padding) {
-      __builtin_clear_padding(__ptr);
-    }
+    __builtin_clear_padding(__ptr);
 #  endif
     return __ptr;
   }
@@ -113,7 +103,13 @@ struct __atomic_ref_base {
 
   _LIBCPP_HIDE_FROM_ABI static bool __compare_exchange(
       _Tp* __ptr, _Tp* __expected, _Tp* __desired, bool __is_weak, int __success, int __failure) noexcept {
-    if constexpr (!__might_have_padding) {
+    if constexpr (
+#  if __has_builtin(__builtin_clear_padding)
+        has_unique_object_representations_v<_Tp> || same_as<_Tp, float> || same_as<_Tp, double>;
+#  else
+        true
+#  endif
+    ) {
       return __atomic_compare_exchange(__ptr, __expected, __desired, __is_weak, __success, __failure);
     } else { // _Tp has padding bits and __builtin_clear_padding is available
       __clear_padding(*__desired);
