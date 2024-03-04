@@ -1096,10 +1096,7 @@ DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
     if (InsertBB && InsertBefore)
       InsertBB->insertDPValueBefore(DPL, InsertBefore->getIterator());
     else if (InsertBB)
-      InsertBB->insertDPValueBefore(
-          DPL,
-          std::prev(InsertBB->end())); // this  is awkward/wrong. What to do
-                                       // about insert-at-end shinanigans?
+      InsertBB->insertDPValueBefore(DPL, InsertBB->end());
     // FIXME: Use smart pointers for DbgRecord ownership management.
     return DPL;
   } else {

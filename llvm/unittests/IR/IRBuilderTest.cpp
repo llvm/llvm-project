@@ -921,9 +921,15 @@ TEST_F(IRBuilderTest, DIBuilder) {
 
     // Insert before I and check order.
     ExpectOrder(DIB.insertLabel(Label, LabelLoc, I), I->getIterator());
-    errs() << *BB << "\n";
-    // FIXME: We can't insert at the end of an incomplete block. Oops.
-    // DbgInstPtr LabelRecord = DIB.insertLabel(Label, Loc, BB); // FIXME.,
+
+    // We should be able to insert at the end of the block, even if there's
+    // no terminator yet. Note that in RemoveDIs mode this record won't get
+    // inserted into the block untill another instruction is added.
+    DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB);
+    // Specifically do not insert a terminator, to check this works. `I` should
+    // have absorbed the DPLabel in the new debug info mode.
+    I = Builder.CreateAlloca(Builder.getInt1Ty());
+    ExpectOrder(LabelRecord, I->getIterator());
 
     DIB.finalize();
 

@@ -1040,13 +1040,14 @@ void BasicBlock::insertDPValueBefore(DbgRecord *DPV,
                                      InstListType::iterator Where) {
   // We should never directly insert at the end of the block, new DPValues
   // shouldn't be generated at times when there's no terminator.
-  assert(Where != end());
-  assert(Where->getParent() == this);
-  if (!Where->DbgMarker)
+  // assert(Where != end()); // ^ No longer true. Create seperate method if
+  // needed?
+  assert(Where == end() || Where->getParent() == this);
+  if (Where == end() || !Where->DbgMarker)
     createMarker(Where);
   bool InsertAtHead = Where.getHeadBit();
-  createMarker(&*Where);
-  Where->DbgMarker->insertDPValue(DPV, InsertAtHead);
+  DPMarker *M = createMarker(Where);
+  M->insertDPValue(DPV, InsertAtHead);
 }
 
 DPMarker *BasicBlock::getNextMarker(Instruction *I) {
