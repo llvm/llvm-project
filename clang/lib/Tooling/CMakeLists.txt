@@ -138,4 +138,5 @@ add_clang_library(clangTooling
   clangToolingCore
   clangToolingRefactor
   clangToolingRefactoring
+  ${LLVM_PTHREAD_LIB}
   )

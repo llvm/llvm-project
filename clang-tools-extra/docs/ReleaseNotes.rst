@@ -140,6 +140,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unused-local-non-trivial-variable>` check by
   ignoring local variable with ``[maybe_unused]`` attribute.
 
+- Improved :doc:`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone/unused-return-value>` check by updating the
+  parameter `CheckedFunctions` to support regexp.
+
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
   giving false positives for deleted functions.
@@ -156,6 +160,10 @@ Changes in existing checks
 - Improved :doc:`google-build-namespaces
   <clang-tidy/checks/google/build-namespaces>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
+
+- Improved :doc:`google-explicit-constructor
+  <clang-tidy/checks/google/explicit-constructor>` check to better handle
+  ``C++-20`` `explicit(bool)`.
 
 - Improved :doc:`google-global-names-in-headers
   <clang-tidy/checks/google/global-names-in-headers>` check by replacing the local
