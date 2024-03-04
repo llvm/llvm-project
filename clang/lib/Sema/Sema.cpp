@@ -135,6 +135,7 @@ namespace sema {
 class SemaPPCallbacks : public PPCallbacks {
   Sema *S = nullptr;
   llvm::SmallVector<SourceLocation, 8> IncludeStack;
+  llvm::SmallVector<llvm::TimeTraceProfilerEntry *, 8> ProfilerStack;
 
 public:
   void set(Sema &S) { this->S = &S; }
@@ -153,8 +154,8 @@ public:
       if (IncludeLoc.isValid()) {
         if (llvm::timeTraceProfilerEnabled()) {
           OptionalFileEntryRef FE = SM.getFileEntryRefForID(SM.getFileID(Loc));
-          llvm::timeTraceProfilerBegin("Source", FE ? FE->getName()
-                                                    : StringRef("<unknown>"));
+          ProfilerStack.push_back(llvm::timeTraceAsyncProfilerBegin(
+              "Source", FE ? FE->getName() : StringRef("<unknown>")));
         }
 
         IncludeStack.push_back(IncludeLoc);
@@ -166,8 +167,9 @@ public:
     }
     case ExitFile:
       if (!IncludeStack.empty()) {
-        if (llvm::timeTraceProfilerEnabled())
-          llvm::timeTraceProfilerEnd();
+        if (llvm::timeTraceProfilerEnabled()) {
+          llvm::timeTraceProfilerEnd(ProfilerStack.pop_back_val());
+        }
 
         S->DiagnoseNonDefaultPragmaAlignPack(
             Sema::PragmaAlignPackDiagnoseKind::ChangedStateAtExit,
