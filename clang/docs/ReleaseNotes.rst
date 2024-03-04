@@ -295,7 +295,9 @@ Bug Fixes to C++ Support
   of templates. Previously we were diagnosing on any non-function template
   instead of only on class, alias, and variable templates, as last updated by
   CWG2032. Fixes (#GH83461)
-
+- Fixed an issue where an attribute on a declarator would cause the attribute to
+  be destructed prematurely. This fixes a pair of Chromium that were brought to
+  our attention by an attempt to fix in (#GH77703). Fixes (#GH83611).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
