@@ -81,13 +81,6 @@ static inline int src_rep_t_clz_impl(src_rep_t a) {
 
 #define src_rep_t_clz src_rep_t_clz_impl
 
-#elif defined SRC_BFLOAT
-typedef __bf16 src_t;
-typedef uint16_t src_rep_t;
-#define SRC_REP_C UINT16_C
-static const int srcSigBits = 7;
-#define src_rep_t_clz __builtin_clz
-
 #else
 #error Source should be half, single, or double precision!
 #endif // end source precision
