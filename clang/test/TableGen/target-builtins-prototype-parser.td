@@ -2,6 +2,10 @@
 // RUN: not clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins -DERROR_EXPECTED_LANES 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_LANES
 // RUN: not clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins -DERROR_EXPECTED_COMMA 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_COMMA
 // RUN: not clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins -DERROR_EXPECTED_TYPE 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_TYPE
+// RUN: not clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins -DERROR_EXPECTED_A 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_A
+// RUN: not clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins -DERROR_EXPECTED_B 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_B
+// RUN: not clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins -DERROR_EXPECTED_C 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_C
+// RUN: not clang-tblgen -I %p/../../../clang/include/ %s --gen-clang-builtins -DERROR_EXPECTED_D 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_D
 
 include "clang/Basic/BuiltinsBase.td"
 
@@ -73,6 +77,38 @@ def : Builtin {
 def : Builtin {
 // ERROR_EXPECTED_TYPE: :[[# @LINE + 1]]:7: error: Expected '>' after scalar type in '_ExtVector<N, type>'
   let Prototype = "_ExtVector<8, int (double)";
+  let Spellings = ["__builtin_test_use_clang_extended_vectors"];
+}
+#endif
+
+#ifdef ERROR_EXPECTED_A
+def : Builtin {
+// ERROR_EXPECTED_A: :[[# @LINE + 1]]:7: error: Expected '<' after '_ExtVector'
+  let Prototype = "_ExtVector(8, int) (double)";
+  let Spellings = ["__builtin_test_use_clang_extended_vectors"];
+}
+#endif
+
+#ifdef ERROR_EXPECTED_B
+def : Builtin {
+// ERROR_EXPECTED_B: :[[# @LINE + 1]]:7: error: Expected '<' after '_ExtVector'
+  let Prototype = "double(_ExtVector(8, int))";
+  let Spellings = ["__builtin_test_use_clang_extended_vectors"];
+}
+#endif
+
+#ifdef ERROR_EXPECTED_C
+def : Builtin {
+// ERROR_EXPECTED_C: :[[# @LINE + 1]]:7: error: Unknown Type: _EtxVector<8, int>
+  let Prototype = "_EtxVector<8, int>(void)";
+  let Spellings = ["__builtin_test_use_clang_extended_vectors"];
+}
+#endif
+
+#ifdef ERROR_EXPECTED_D
+def : Builtin {
+// ERROR_EXPECTED_D: :[[# @LINE + 1]]:7: error: Expected number of lanes after '_ExtVector<'
+  let Prototype = "_ExtVector<>(void)";
   let Spellings = ["__builtin_test_use_clang_extended_vectors"];
 }
 #endif
