@@ -934,15 +934,25 @@ TEST_F(IRBuilderTest, DIBuilder) {
     DIB.finalize();
 
     // Check the labels are not/are added to Bar's retainedNodes array (AlwaysPreserve).
-    //EXPECT_EQ(Label, BarSP->getRetainedNodes(), BarSP->getRetainedNodes().end());
-    //EXPECT_NE(AlwaysPreserveLabel, BarSP->getRetainedNodes(), BarSP->getRetainedNodes().end());
+    EXPECT_EQ(find(BarSP->getRetainedNodes(), Label),
+              BarSP->getRetainedNodes().end());
+    EXPECT_NE(find(BarSP->getRetainedNodes(), AlwaysPreserveLabel),
+              BarSP->getRetainedNodes().end());
 
     EXPECT_TRUE(verifyModule(*M));
   };
+
+  // Test in old-debug mode.
+  EXPECT_FALSE(M->IsNewDbgInfoFormat);
   RunTest();
+
+  // Test in new-debug mode.
+  // Reset the test then call convertToNewDbgValues to flip the flag
+  // on the test's Module, Funciton and BasicBlock.
   TearDown();
   SetUp();
   M->convertToNewDbgValues();
+  EXPECT_TRUE(M->IsNewDbgInfoFormat);
   RunTest();
 }
 
