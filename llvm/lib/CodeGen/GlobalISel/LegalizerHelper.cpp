@@ -2495,6 +2495,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR:
   case TargetOpcode::G_SUB:
+  case TargetOpcode::G_SHUFFLE_VECTOR:
     // Perform operation at larger width (any extension is fines here, high bits
     // don't affect the result) and then truncate the result back to the
     // original type.
