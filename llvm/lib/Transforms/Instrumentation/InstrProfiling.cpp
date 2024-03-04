@@ -206,6 +206,7 @@ private:
   const bool IsCS;
 
   std::function<const TargetLibraryInfo &(Function &F)> GetTLI;
+
   const bool DataReferencedByCode;
 
   struct PerFunctionProfileData {
@@ -1199,7 +1200,6 @@ void InstrLowerer::maybeSetComdat(GlobalVariable *GV, Function *Fn,
   // (e.g. function counters) of the COMDAT function will be emitted after
   // linking.
   bool NeedComdat = needsComdatForCounter(*Fn, M);
-
   bool UseComdat = (NeedComdat || TT.isOSBinFormatELF());
 
   if (!UseComdat)
@@ -1532,7 +1532,6 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   Data->setSection(
       getInstrProfSectionName(DataSectionKind, TT.getObjectFormat()));
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
-
   maybeSetComdat(Data, Fn, CntsVarName);
 
   PD.DataVar = Data;
