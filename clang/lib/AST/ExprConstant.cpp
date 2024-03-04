@@ -2779,7 +2779,7 @@ static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
       Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                        diag::warn_integer_constant_overflow)
           << toString(Result, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
-                      /*upperCase=*/true, /*insertSeparators=*/true)
+                      /*UpperCase=*/true, /*InsertSeparators=*/true)
           << E->getType() << E->getSourceRange();
     return HandleOverflow(Info, E, Value, E->getType());
   }
@@ -13913,7 +13913,7 @@ bool IntExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
         Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                          diag::warn_integer_constant_overflow)
             << toString(Value, 10, Value.isSigned(), /*formatAsCLiteral=*/false,
-                        /*upperCase=*/true, /*insertSeparators=*/true)
+                        /*UpperCase=*/true, /*InsertSeparators=*/true)
             << E->getType() << E->getSourceRange();
 
       if (!HandleOverflow(Info, E, -Value.extend(Value.getBitWidth() + 1),

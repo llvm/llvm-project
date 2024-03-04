@@ -176,8 +176,8 @@ Improvements to Clang's diagnostics
    of ``-Wconversion``. Fixes `#69444 <https://github.com/llvm/llvm-project/issues/69444>`_.
 
 - Clang now uses thousand separators when printing large numbers in integer overflow diagnostics.
-  Fixes `#80939 <https://github.com/llvm/llvm-project/issues/80939>`_.
-  
+  Fixes #GH80939.
+
 - Clang now diagnoses friend declarations with an ``enum`` elaborated-type-specifier in language modes after C++98.
 
 - Added diagnostics for C11 keywords being incompatible with language standards

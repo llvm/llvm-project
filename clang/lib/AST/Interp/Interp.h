@@ -289,7 +289,7 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
     SmallString<32> Trunc;
     Value.trunc(Result.bitWidth())
         .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
-                  /*upperCase=*/true, /*insertSeparators=*/true);
+                  /*UpperCase=*/true, /*InsertSeparators=*/true);
     auto Loc = E->getExprLoc();
     S.report(Loc, diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
@@ -503,7 +503,7 @@ bool Neg(InterpState &S, CodePtr OpPC) {
     SmallString<32> Trunc;
     NegatedValue.trunc(Result.bitWidth())
         .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
-                  /*upperCase=*/true, /*insertSeparators=*/true);
+                  /*UpperCase=*/true, /*InsertSeparators=*/true);
     auto Loc = E->getExprLoc();
     S.report(Loc, diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
@@ -567,7 +567,7 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     SmallString<32> Trunc;
     APResult.trunc(Result.bitWidth())
         .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
-                  /*upperCase=*/true, /*insertSeparators=*/true);
+                  /*UpperCase=*/true, /*InsertSeparators=*/true);
     auto Loc = E->getExprLoc();
     S.report(Loc, diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
