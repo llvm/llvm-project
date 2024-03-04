@@ -212,8 +212,8 @@ struct InternalDeadlockDetector {
     return initialized > 0;
   }
 };
-__attribute__((tls_model("initial-exec")))
-static THREADLOCAL InternalDeadlockDetector deadlock_detector;
+__attribute__((tls_model("initial-exec"))) static THREADLOCAL
+    InternalDeadlockDetector deadlock_detector;
 
 void CheckedMutex::LockImpl(uptr pc) { deadlock_detector.Lock(type_, pc); }
 
