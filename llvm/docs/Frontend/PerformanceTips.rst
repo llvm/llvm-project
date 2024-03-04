@@ -92,7 +92,7 @@ appropriately extend them to the next byte-sized type.
 For example, when working with boolean values, store them by zero-extending
 ``i1`` to ``i8`` and load them by loading ``i8`` and truncating to ``i1``.
 
-If you do use loads/stores on non-byte-sized types, make sure that we *always*
+If you do use loads/stores on non-byte-sized types, make sure that you *always*
 use those types. For example, do not first store ``i8`` and then load ``i1``.
 
 Prefer zext over sext when legal
