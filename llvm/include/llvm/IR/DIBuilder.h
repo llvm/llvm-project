@@ -109,10 +109,11 @@ namespace llvm {
                                     Instruction *InsertBefore);
 
     /// Internal helper for insertDbgValueIntrinsic.
-    Instruction *
-    insertDbgValueIntrinsic(llvm::Value *Val, DILocalVariable *VarInfo,
-                            DIExpression *Expr, const DILocation *DL,
-                            BasicBlock *InsertBB, Instruction *InsertBefore);
+    DbgInstPtr insertDbgValueIntrinsic(llvm::Value *Val,
+                                       DILocalVariable *VarInfo,
+                                       DIExpression *Expr, const DILocation *DL,
+                                       BasicBlock *InsertBB,
+                                       Instruction *InsertBefore);
 
   public:
     /// Construct a builder for a module.
@@ -978,11 +979,10 @@ namespace llvm {
     /// \param Expr         A complex location expression.
     /// \param DL           Debug info location.
     /// \param InsertAtEnd Location for the new intrinsic.
-    Instruction *insertDbgValueIntrinsic(llvm::Value *Val,
-                                         DILocalVariable *VarInfo,
-                                         DIExpression *Expr,
-                                         const DILocation *DL,
-                                         BasicBlock *InsertAtEnd);
+    DbgInstPtr insertDbgValueIntrinsic(llvm::Value *Val,
+                                       DILocalVariable *VarInfo,
+                                       DIExpression *Expr, const DILocation *DL,
+                                       BasicBlock *InsertAtEnd);
 
     /// Insert a new llvm.dbg.value intrinsic call.
     /// \param Val          llvm::Value of the variable
@@ -990,11 +990,10 @@ namespace llvm {
     /// \param Expr         A complex location expression.
     /// \param DL           Debug info location.
     /// \param InsertBefore Location for the new intrinsic.
-    Instruction *insertDbgValueIntrinsic(llvm::Value *Val,
-                                         DILocalVariable *VarInfo,
-                                         DIExpression *Expr,
-                                         const DILocation *DL,
-                                         Instruction *InsertBefore);
+    DbgInstPtr insertDbgValueIntrinsic(llvm::Value *Val,
+                                       DILocalVariable *VarInfo,
+                                       DIExpression *Expr, const DILocation *DL,
+                                       Instruction *InsertBefore);
 
     /// Replace the vtable holder in the given type.
     ///

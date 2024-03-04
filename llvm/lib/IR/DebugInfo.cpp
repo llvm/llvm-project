@@ -1684,10 +1684,14 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueBefore(LLVMDIBuilderRef Builder,
                                                LLVMMetadataRef Expr,
                                                LLVMMetadataRef DebugLoc,
                                                LLVMValueRef Instr) {
+  return LLVMValueRef();
+  // FIXME: What to do here?
+  /*
   return wrap(unwrap(Builder)->insertDbgValueIntrinsic(
                   unwrap(Val), unwrap<DILocalVariable>(VarInfo),
                   unwrap<DIExpression>(Expr), unwrap<DILocation>(DebugLoc),
                   unwrap<Instruction>(Instr)));
+   */
 }
 
 LLVMValueRef LLVMDIBuilderInsertDbgValueAtEnd(LLVMDIBuilderRef Builder,
@@ -1696,10 +1700,14 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueAtEnd(LLVMDIBuilderRef Builder,
                                               LLVMMetadataRef Expr,
                                               LLVMMetadataRef DebugLoc,
                                               LLVMBasicBlockRef Block) {
+  return LLVMValueRef();
+  // FIXME: What to do here?
+  /*
   return wrap(unwrap(Builder)->insertDbgValueIntrinsic(
                   unwrap(Val), unwrap<DILocalVariable>(VarInfo),
                   unwrap<DIExpression>(Expr), unwrap<DILocation>(DebugLoc),
                   unwrap(Block)));
+   */
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(

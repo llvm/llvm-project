@@ -983,23 +983,24 @@ DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
   return insertLabel(LabelInfo, DL, InsertAtEnd, nullptr);
 }
 
-Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V,
-                                                DILocalVariable *VarInfo,
-                                                DIExpression *Expr,
-                                                const DILocation *DL,
-                                                Instruction *InsertBefore) {
-  Instruction *DVI = insertDbgValueIntrinsic(
+DbgInstPtr DIBuilder::insertDbgValueIntrinsic(Value *V,
+                                              DILocalVariable *VarInfo,
+                                              DIExpression *Expr,
+                                              const DILocation *DL,
+                                              Instruction *InsertBefore) {
+  DbgInstPtr DVI = insertDbgValueIntrinsic(
       V, VarInfo, Expr, DL, InsertBefore ? InsertBefore->getParent() : nullptr,
       InsertBefore);
-  cast<CallInst>(DVI)->setTailCall();
+  if (DVI.is<Instruction *>())
+    cast<CallInst>(DVI.get<Instruction *>())->setTailCall();
   return DVI;
 }
 
-Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V,
-                                                DILocalVariable *VarInfo,
-                                                DIExpression *Expr,
-                                                const DILocation *DL,
-                                                BasicBlock *InsertAtEnd) {
+DbgInstPtr DIBuilder::insertDbgValueIntrinsic(Value *V,
+                                              DILocalVariable *VarInfo,
+                                              DIExpression *Expr,
+                                              const DILocation *DL,
+                                              BasicBlock *InsertAtEnd) {
   return insertDbgValueIntrinsic(V, VarInfo, Expr, DL, InsertAtEnd, nullptr);
 }
 
@@ -1023,7 +1024,7 @@ static Function *getDeclareIntrin(Module &M) {
   return Intrinsic::getDeclaration(&M, Intrinsic::dbg_declare);
 }
 
-Instruction *DIBuilder::insertDbgValueIntrinsic(
+DbgInstPtr DIBuilder::insertDbgValueIntrinsic(
     llvm::Value *Val, DILocalVariable *VarInfo, DIExpression *Expr,
     const DILocation *DL, BasicBlock *InsertBB, Instruction *InsertBefore) {
   if (!ValueFn)
