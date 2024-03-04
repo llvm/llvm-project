@@ -84,7 +84,7 @@ public:
 
   /// Construct from an \a MDNode.
   ///
-  /// Note: if \c N does not have the template type, a verifier check will
+  /// Note: if \c Param does not have the template type, a verifier check will
   /// fail, and accessors will crash.  However, construction from other nodes
   /// is supported in order to handle forward references when reading textual
   /// IR.

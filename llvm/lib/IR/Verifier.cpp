@@ -3030,10 +3030,9 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
   }
 
   // Confirm that no issues arise from the debug program.
-  if (BB.IsNewDbgInfoFormat) {
+  if (BB.IsNewDbgInfoFormat)
     CheckDI(!BB.getTrailingDPValues(), "Basic Block has trailing DbgRecords!",
             &BB);
-  }
 }
 
 void Verifier::visitTerminator(Instruction &I) {
