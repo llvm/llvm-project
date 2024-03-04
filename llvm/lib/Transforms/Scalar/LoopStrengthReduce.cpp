@@ -6808,10 +6808,8 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   if (!matchSimpleRecurrence(LHS, ToFold, ToFoldStart, ToFoldStep))
     return std::nullopt;
 
-  // If ToFold does not have an incoming value from LoopLatch then the simple
-  // recurrence is from a prior loop unreachable from the loop we're currently
-  // considering.
-  if (L->getHeader() != ToFold->getParent())
+  // Ensure the simple recurrence is a part of the current loop.
+  if (ToFold->getParent() != L->getHeader())
     return std::nullopt;
 
   // If that IV isn't dead after we rewrite the exit condition in terms of
