@@ -90,7 +90,7 @@ unsigned stdc_bit_width_uc(unsigned char) noexcept { return 0x4AU; }
 unsigned stdc_bit_width_us(unsigned short) noexcept { return 0x4BU; }
 unsigned stdc_bit_width_ui(unsigned) noexcept { return 0x4CU; }
 unsigned stdc_bit_width_ul(unsigned long) noexcept { return 0x4DU; }
-unsigned stdc_bit_width_ull(unsigned long long) noexcept { return 0x4FU; }
+unsigned stdc_bit_width_ull(unsigned long long) noexcept { return 0x4EU; }
 }
 
 #include "include/llvm-libc-macros/stdbit-macros.h"
@@ -188,5 +188,5 @@ TEST(LlvmLibcStdbitTest, TypeGenericMacroBitWidth) {
   EXPECT_EQ(stdc_bit_width(static_cast<unsigned short>(1U)), 0x4BU);
   EXPECT_EQ(stdc_bit_width(1U), 0x4CU);
   EXPECT_EQ(stdc_bit_width(1UL), 0x4DU);
-  EXPECT_EQ(stdc_bit_width(1ULL), 0x4FU);
+  EXPECT_EQ(stdc_bit_width(1ULL), 0x4EU);
 }
