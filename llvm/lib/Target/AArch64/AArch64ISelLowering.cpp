@@ -676,11 +676,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FPOW, MVT::f64, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::f64, Custom);
   setOperationAction(ISD::FCOPYSIGN, MVT::f32, Custom);
-  if (Subtarget->hasFullFP16())
+  if (Subtarget->hasFullFP16()) {
     setOperationAction(ISD::FCOPYSIGN, MVT::f16, Custom);
-  else
+    setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Custom);
+  } else {
     setOperationAction(ISD::FCOPYSIGN, MVT::f16, Promote);
-  setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Promote);
+    setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Promote);
+  }
 
   for (auto Op : {ISD::FREM,        ISD::FPOW,         ISD::FPOWI,
                   ISD::FCOS,        ISD::FSIN,         ISD::FSINCOS,
@@ -699,22 +701,47 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   }
 
   auto LegalizeNarrowFP = [this](MVT ScalarVT) {
-    for (auto Op :
-         {ISD::SETCC,          ISD::SELECT_CC,
-          ISD::BR_CC,          ISD::FADD,           ISD::FSUB,
-          ISD::FMUL,           ISD::FDIV,           ISD::FMA,
-          ISD::FNEG,           ISD::FABS,           ISD::FCEIL,
-          ISD::FSQRT,          ISD::FFLOOR,         ISD::FNEARBYINT,
-          ISD::FRINT,          ISD::FROUND,         ISD::FROUNDEVEN,
-          ISD::FTRUNC,         ISD::FMINNUM,        ISD::FMAXNUM,
-          ISD::FMINIMUM,       ISD::FMAXIMUM,       ISD::STRICT_FADD,
-          ISD::STRICT_FSUB,    ISD::STRICT_FMUL,    ISD::STRICT_FDIV,
-          ISD::STRICT_FMA,     ISD::STRICT_FCEIL,   ISD::STRICT_FFLOOR,
-          ISD::STRICT_FSQRT,   ISD::STRICT_FRINT,   ISD::STRICT_FNEARBYINT,
-          ISD::STRICT_FROUND,  ISD::STRICT_FTRUNC,  ISD::STRICT_FROUNDEVEN,
-          ISD::STRICT_FMINNUM, ISD::STRICT_FMAXNUM, ISD::STRICT_FMINIMUM,
-          ISD::STRICT_FMAXIMUM})
+    for (auto Op : {ISD::SETCC,
+                    ISD::SELECT_CC,
+                    ISD::BR_CC,
+                    ISD::FADD,
+                    ISD::FSUB,
+                    ISD::FMUL,
+                    ISD::FDIV,
+                    ISD::FMA,
+                    ISD::FCEIL,
+                    ISD::FSQRT,
+                    ISD::FFLOOR,
+                    ISD::FNEARBYINT,
+                    ISD::FRINT,
+                    ISD::FROUND,
+                    ISD::FROUNDEVEN,
+                    ISD::FTRUNC,
+                    ISD::FMINNUM,
+                    ISD::FMAXNUM,
+                    ISD::FMINIMUM,
+                    ISD::FMAXIMUM,
+                    ISD::STRICT_FADD,
+                    ISD::STRICT_FSUB,
+                    ISD::STRICT_FMUL,
+                    ISD::STRICT_FDIV,
+                    ISD::STRICT_FMA,
+                    ISD::STRICT_FCEIL,
+                    ISD::STRICT_FFLOOR,
+                    ISD::STRICT_FSQRT,
+                    ISD::STRICT_FRINT,
+                    ISD::STRICT_FNEARBYINT,
+                    ISD::STRICT_FROUND,
+                    ISD::STRICT_FTRUNC,
+                    ISD::STRICT_FROUNDEVEN,
+                    ISD::STRICT_FMINNUM,
+                    ISD::STRICT_FMAXNUM,
+                    ISD::STRICT_FMINIMUM,
+                    ISD::STRICT_FMAXIMUM})
       setOperationAction(Op, ScalarVT, Promote);
+
+    for (auto Op : {ISD::FNEG, ISD::FABS})
+      setOperationAction(Op, ScalarVT, Legal);
 
     // Round-to-integer need custom lowering for fp16, as Promote doesn't work
     // because the result type is integer.
@@ -730,8 +757,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationPromotedToType(ISD::FMUL, V4Narrow, MVT::v4f32);
     setOperationPromotedToType(ISD::FDIV, V4Narrow, MVT::v4f32);
 
-    setOperationAction(ISD::FABS,        V4Narrow, Expand);
-    setOperationAction(ISD::FNEG,        V4Narrow, Expand);
+    setOperationAction(ISD::FABS, V4Narrow, Legal);
+    setOperationAction(ISD::FNEG, V4Narrow, Legal);
     setOperationAction(ISD::FROUND,      V4Narrow, Expand);
     setOperationAction(ISD::FROUNDEVEN,  V4Narrow, Expand);
     setOperationAction(ISD::FMA,         V4Narrow, Expand);
@@ -740,7 +767,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT,      V4Narrow, Expand);
     setOperationAction(ISD::SELECT_CC,   V4Narrow, Expand);
     setOperationAction(ISD::FTRUNC,      V4Narrow, Expand);
-    setOperationAction(ISD::FCOPYSIGN,   V4Narrow, Expand);
+    setOperationAction(ISD::FCOPYSIGN, V4Narrow, Custom);
     setOperationAction(ISD::FFLOOR,      V4Narrow, Expand);
     setOperationAction(ISD::FCEIL,       V4Narrow, Expand);
     setOperationAction(ISD::FRINT,       V4Narrow, Expand);
@@ -748,16 +775,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSQRT,       V4Narrow, Expand);
 
     auto V8Narrow = MVT::getVectorVT(ScalarVT, 8);
-    setOperationAction(ISD::FABS,        V8Narrow, Expand);
+    setOperationAction(ISD::FABS, V8Narrow, Legal);
     setOperationAction(ISD::FADD,        V8Narrow, Expand);
     setOperationAction(ISD::FCEIL,       V8Narrow, Expand);
-    setOperationAction(ISD::FCOPYSIGN,   V8Narrow, Expand);
+    setOperationAction(ISD::FCOPYSIGN, V8Narrow, Custom);
     setOperationAction(ISD::FDIV,        V8Narrow, Expand);
     setOperationAction(ISD::FFLOOR,      V8Narrow, Expand);
     setOperationAction(ISD::FMA,         V8Narrow, Expand);
     setOperationAction(ISD::FMUL,        V8Narrow, Expand);
     setOperationAction(ISD::FNEARBYINT,  V8Narrow, Expand);
-    setOperationAction(ISD::FNEG,        V8Narrow, Expand);
+    setOperationAction(ISD::FNEG, V8Narrow, Legal);
     setOperationAction(ISD::FROUND,      V8Narrow, Expand);
     setOperationAction(ISD::FROUNDEVEN,  V8Narrow, Expand);
     setOperationAction(ISD::FRINT,       V8Narrow, Expand);
@@ -1745,7 +1772,9 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
 
   // But we do support custom-lowering for FCOPYSIGN.
   if (VT == MVT::v2f32 || VT == MVT::v4f32 || VT == MVT::v2f64 ||
-      ((VT == MVT::v4f16 || VT == MVT::v8f16) && Subtarget->hasFullFP16()))
+      ((VT == MVT::v4bf16 || VT == MVT::v8bf16 || VT == MVT::v4f16 ||
+        VT == MVT::v8f16) &&
+       Subtarget->hasFullFP16()))
     setOperationAction(ISD::FCOPYSIGN, VT, Custom);
 
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
@@ -9208,7 +9237,7 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
   } else if (VT == MVT::f32) {
     VecVT = MVT::v4i32;
     SetVecVal(AArch64::ssub);
-  } else if (VT == MVT::f16) {
+  } else if (VT == MVT::f16 || VT == MVT::bf16) {
     VecVT = MVT::v8i16;
     SetVecVal(AArch64::hsub);
   } else {
@@ -9230,7 +9259,7 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
 
   SDValue BSP =
       DAG.getNode(AArch64ISD::BSP, DL, VecVT, SignMaskV, VecVal1, VecVal2);
-  if (VT == MVT::f16)
+  if (VT == MVT::f16 || VT == MVT::bf16)
     return DAG.getTargetExtractSubreg(AArch64::hsub, DL, VT, BSP);
   if (VT == MVT::f32)
     return DAG.getTargetExtractSubreg(AArch64::ssub, DL, VT, BSP);
