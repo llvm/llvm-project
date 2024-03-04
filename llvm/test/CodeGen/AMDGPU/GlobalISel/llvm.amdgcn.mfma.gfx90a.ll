@@ -277,8 +277,7 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64(ptr addrspace(1) %arg, doubl
 ; GCN-NEXT:    v_mfma_f64_16x16x4f64 a[0:7], v[0:1], v[2:3], a[0:7] cbsz:1 abid:2 blgp:3
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    global_store_dwordx4 v0, a[0:3], s[8:9]
 ; GCN-NEXT:    global_store_dwordx4 v0, a[4:7], s[8:9] offset:16
 ; GCN-NEXT:    s_endpgm
@@ -302,8 +301,7 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm(ptr addrspace(1) %
 ; GCN-NEXT:    v_mfma_f64_16x16x4f64 a[0:7], v[0:1], v[2:3], a[0:7] cbsz:1 abid:2 blgp:3
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    global_store_dwordx4 v0, a[0:3], s[4:5]
 ; GCN-NEXT:    global_store_dwordx4 v0, a[4:7], s[4:5] offset:16
 ; GCN-NEXT:    s_endpgm
@@ -338,8 +336,7 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, d
 ; GCN-NEXT:    v_mfma_f64_16x16x4f64 a[0:7], v[0:1], v[2:3], a[0:7]
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    global_store_dwordx4 v0, a[0:3], s[8:9]
 ; GCN-NEXT:    global_store_dwordx4 v0, a[4:7], s[8:9] offset:16
 ; GCN-NEXT:    s_endpgm
@@ -374,8 +371,7 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %
 ; GCN-NEXT:    v_mfma_f64_16x16x4f64 a[0:7], v[0:1], v[2:3], a[0:7]
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    global_store_dwordx4 v0, a[0:3], s[12:13]
 ; GCN-NEXT:    global_store_dwordx4 v0, a[4:7], s[12:13] offset:16
 ; GCN-NEXT:    s_endpgm
