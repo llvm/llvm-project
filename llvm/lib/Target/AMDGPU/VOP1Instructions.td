@@ -395,14 +395,13 @@ class VOP_MOVREL<RegisterOperand Src1RC, InputMods SrcModRC> : VOPProfile<[untyp
 
   let InsDPP = (ins Src0RC32:$old,
                     FPVRegInputMods:$src0_modifiers, Src0RC32:$src0,
-                    dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                    bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
+                    dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                    DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
   let InsDPP16 = (ins Src0RC32:$old, FPVRegInputMods:$src0_modifiers, Src0RC32:$src0,
-                      dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                      bank_mask:$bank_mask, bound_ctrl:$bound_ctrl, FI:$fi);
+                      dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                      DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, Dpp16FI:$fi);
   let AsmDPP16 = getAsmDPP16<1, 1, 0>.ret;
-  let InsDPP8 = (ins Src0RC32:$old, FPVRegInputMods:$src0_modifiers, Src0RC32:$src0, dpp8:$dpp8, FI:$fi);
- (ins Src0RC32:$old, Src0RC32:$src0, dpp8:$dpp8, DppFI:$fi);
+  let InsDPP8 = (ins Src0RC32:$old, FPVRegInputMods:$src0_modifiers, Src0RC32:$src0, dpp8:$dpp8, Dpp16FI:$fi);
 
   let AsmDPP8 = getAsmDPP8<1, 1, 0>.ret;
 
@@ -737,7 +736,7 @@ def V_ACCVGPR_MOV_B32 : VOP1_Pseudo<"v_accvgpr_mov_b32", VOPProfileAccMov, [], 1
 let SubtargetPredicate = isGFX11Plus in {
   // Restrict src0 to be VGPR
   def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_PERMLANE,
-                                      getVOP1Pat64<int_amdgcn_permlane64,
+                                      getVOP1Pat<int_amdgcn_permlane64,
                                                    VOP_PERMLANE>.ret,
                                       /*VOP1Only=*/ 1>;
   defm V_MOV_B16_t16    : VOP1Inst<"v_mov_b16_t16", VOPProfile_True16<VOP_I16_I16>>;
