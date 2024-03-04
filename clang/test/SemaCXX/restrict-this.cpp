@@ -36,6 +36,15 @@ struct C {
   void a() __restrict;
   void b() __restrict;
   void c();
+
+  template <typename U>
+  void ta() __restrict;
+
+  template <typename U>
+  void tb() __restrict;
+
+  template <typename U>
+  void tc();
 };
 
 template <typename T> struct TC {
@@ -55,6 +64,15 @@ template <typename T> struct TC {
   void a() __restrict;
   void b() __restrict;
   void c();
+
+  template <typename U>
+  void ta() __restrict;
+
+  template <typename U>
+  void tb() __restrict;
+
+  template <typename U>
+  void tc();
 };
 
 // =========
@@ -70,6 +88,27 @@ void C::a() __restrict {
 
 template <typename T>
 void TC<T>::a() __restrict {
+  Restrict(TC);
+  (void) [this]() {
+    Restrict(TC);
+    (void) [*this]() { RestrictIfMSVC(const TC); };
+    (void) [*this]() mutable { RestrictIfMSVC(TC); };
+  };
+}
+
+template <typename T>
+void C::ta() __restrict {
+  Restrict(C);
+  (void) [this]() {
+    Restrict(C);
+    (void) [*this]() { RestrictIfMSVC(const C); };
+    (void) [*this]() mutable { RestrictIfMSVC(C); };
+  };
+}
+
+template <typename T>
+template <typename U>
+void TC<T>::ta() __restrict {
   Restrict(TC);
   (void) [this]() {
     Restrict(TC);
@@ -99,6 +138,27 @@ void TC<T>::b() {
   };
 }
 
+template <typename T>
+void C::tb() {
+  RestrictIfMSVC(C);
+  (void) [this]() {
+    RestrictIfMSVC(C);
+    (void) [*this]() { RestrictIfMSVC(const C); };
+    (void) [*this]() mutable { RestrictIfMSVC(C); };
+  };
+}
+
+template <typename T>
+template <typename U>
+void TC<T>::tb() {
+  RestrictIfMSVC(TC);
+  (void) [this]() {
+    RestrictIfMSVC(TC);
+    (void) [*this]() { RestrictIfMSVC(const TC); };
+    (void) [*this]() mutable { RestrictIfMSVC(TC); };
+  };
+}
+
 // =========
 
 void C::c() __restrict {
@@ -119,6 +179,29 @@ void TC<T>::c() __restrict {
     (void) [*this]() mutable { NotRestrict(TC); };
   };
 }
+
+template <typename T>
+void C::tc() __restrict {
+  RestrictIfGCC(C);
+  (void) [this]() {
+    RestrictIfGCC(C);
+    (void) [*this]() { NotRestrict(const C); };
+    (void) [*this]() mutable { NotRestrict(C); };
+  };
+}
+
+template <typename T>
+template <typename U>
+void TC<T>::tc() __restrict {
+  RestrictIfGCC(TC);
+  (void) [this]() {
+    RestrictIfGCC(TC);
+    (void) [*this]() { NotRestrict(const TC); };
+    (void) [*this]() mutable { NotRestrict(TC); };
+  };
+}
+
+// =========
 
 void f() {
   TC<int>{}.f();
