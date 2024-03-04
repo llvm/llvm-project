@@ -9732,9 +9732,9 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
       ElementCount::getScalable(RemIdx) + SubVecVT.getVectorElementCount();
   VL = computeVLMax(SubVecVT, DL, DAG);
 
-  // Use tail agnostic policy if we're inserting over Vec's tail.
+  // Use tail agnostic policy if we're inserting over InterSubVT's tail.
   unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
-  if (EndIndex == VecVT.getVectorElementCount())
+  if (EndIndex == InterSubVT.getVectorElementCount())
     Policy = RISCVII::TAIL_AGNOSTIC;
 
   // If we're inserting into the lowest elements, use a tail undisturbed

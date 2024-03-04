@@ -55789,6 +55789,15 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  auto IsExtractFree = [](SDValue V) {
+    V = peekThroughBitcasts(V);
+    if (ISD::isBuildVectorOfConstantSDNodes(V.getNode()))
+      return true;
+    if (ISD::isBuildVectorOfConstantFPSDNodes(V.getNode()))
+      return true;
+    return V.isUndef();
+  };
+
   // If we're extracting the lowest subvector and we're the only user,
   // we may be able to perform this with a smaller vector width.
   unsigned InOpcode = InVec.getOpcode();
@@ -55830,14 +55839,27 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(InOpcode, DL, VT, Ext0, Ext1, Ext2);
     }
     if (IdxVal == 0 && InOpcode == ISD::TRUNCATE && Subtarget.hasVLX() &&
-        (VT.is128BitVector() || VT.is256BitVector())) {
+        (SizeInBits == 128 || SizeInBits == 256)) {
       SDValue InVecSrc = InVec.getOperand(0);
       unsigned Scale = InVecSrc.getValueSizeInBits() / InSizeInBits;
       SDValue Ext = extractSubVector(InVecSrc, 0, DAG, DL, Scale * SizeInBits);
       return DAG.getNode(InOpcode, DL, VT, Ext);
     }
+    if ((InOpcode == X86ISD::CMPP || InOpcode == X86ISD::PCMPEQ ||
+         InOpcode == X86ISD::PCMPGT) &&
+        (IsExtractFree(InVec.getOperand(0)) ||
+         IsExtractFree(InVec.getOperand(1))) &&
+        SizeInBits == 128) {
+      SDValue Ext0 =
+          extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits);
+      SDValue Ext1 =
+          extractSubVector(InVec.getOperand(1), IdxVal, DAG, DL, SizeInBits);
+      if (InOpcode == X86ISD::CMPP)
+        return DAG.getNode(InOpcode, DL, VT, Ext0, Ext1, InVec.getOperand(2));
+      return DAG.getNode(InOpcode, DL, VT, Ext0, Ext1);
+    }
     if (InOpcode == X86ISD::MOVDDUP &&
-        (VT.is128BitVector() || VT.is256BitVector())) {
+        (SizeInBits == 128 || SizeInBits == 256)) {
       SDValue Ext0 =
           extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits);
       return DAG.getNode(InOpcode, DL, VT, Ext0);
