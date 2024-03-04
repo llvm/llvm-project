@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -DMSVC=false %s
-// RUN: %clang_cc1 -fsyntax-only -verify -triple=x86_64-pc-win32 -fms-compatibility -DMSVC=true %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple=x86_64-pc-win32 -fms-compatibility %s
 // expected-no-diagnostics
 
 // GCC and MSVC allows '__restrict' in the cv-qualifier-seq of member functions
@@ -27,13 +27,14 @@ void S::a() __restrict { }
 void S::b() { }
 void S::c() __restrict { }
 
-static_assert(__is_same(void (S::*) (), void (S::*) () __restrict));
-static_assert(__is_same(void (S::*) () &, void (S::*) () __restrict &));
-static_assert(__is_same(void (S::*) () &&, void (S::*) () __restrict &&));
+void (S::*p1)() __restrict = &S::a;
+void (S::*p2)()            = &S::a;
+void (S::*p3)() __restrict = &S::c;
+void (S::*p4)()            = &S::c;
 
-static_assert(is_same<void (S::*) (), void (S::*) () __restrict>::value);
-static_assert(is_same<void (S::*) () &, void (S::*) () __restrict &>::value);
-static_assert(is_same<void (S::*) () &&, void (S::*) () __restrict &&>::value);
+static_assert(__is_same(void (S::*) (), void (S::*) () __restrict));
+static_assert(__is_same(void (S::*) () const &, void (S::*) () __restrict const &));
+static_assert(__is_same(void (S::*) () volatile &&, void (S::*) () volatile __restrict &&));
 
 static_assert(__is_same(decltype(&S::a), void (S::*) () __restrict));
 static_assert(__is_same(decltype(&S::a), void (S::*) ()));
@@ -42,12 +43,32 @@ static_assert(__is_same(decltype(&S::b), void (S::*) ()));
 static_assert(__is_same(decltype(&S::c), void (S::*) () __restrict));
 static_assert(__is_same(decltype(&S::c), void (S::*) ()));
 
-static_assert(is_same<decltype(&S::a), void (S::*) () __restrict>::value);
-static_assert(is_same<decltype(&S::a), void (S::*) ()>::value);
-static_assert(is_same<decltype(&S::b), void (S::*) () __restrict>::value);
-static_assert(is_same<decltype(&S::b), void (S::*) ()>::value);
-static_assert(is_same<decltype(&S::c), void (S::*) () __restrict>::value);
-static_assert(is_same<decltype(&S::c), void (S::*) ()>::value);
+template <typename>
+struct TS {
+    void a() __restrict;
+    void b() __restrict;
+    void c();
+};
+
+template <typename T>
+void TS<T>::b() __restrict { }
+
+template <typename T>
+void TS<T>::c() { }
+
+void (TS<int>::*p5)() __restrict = &TS<int>::a;
+void (TS<int>::*p6)()            = &TS<int>::a;
+void (TS<int>::*p7)() __restrict = &TS<int>::c;
+void (TS<int>::*p8)()            = &TS<int>::c;
+
+void h() {
+    TS<int>().a();
+    TS<int>().b();
+    TS<int>().c();
+    TS<double>().a();
+    TS<double>().b();
+    TS<double>().c();
+}
 
 // Non-member function types with '__restrict' are distinct types.
 using A = void () __restrict;
