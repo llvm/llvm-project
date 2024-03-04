@@ -419,10 +419,10 @@ def : InstRW<[TSV110Wr_12cyc_1MDU],  (instregex "^(S|U)DIVWr$")>;
 def : InstRW<[TSV110Wr_20cyc_1MDU],  (instregex "^(S|U)DIVXr$")>;
 
 def TSV110ReadMAW : SchedReadAdvance<2, [TSV110Wr_3cyc_1MDU]>;
-def : InstRW<[TSV110Wr_3cyc_1MDU, TSV110ReadMAW], (instrs MADDWrrr, MSUBWrrr)>;
+def : InstRW<[TSV110Wr_3cyc_1MDU, ReadIM, ReadIM, TSV110ReadMAW], (instrs MADDWrrr, MSUBWrrr)>;
 def TSV110ReadMAQ : SchedReadAdvance<3, [TSV110Wr_4cyc_1MDU]>;
-def : InstRW<[TSV110Wr_4cyc_1MDU, TSV110ReadMAQ], (instrs MADDXrrr, MSUBXrrr)>;
-def : InstRW<[TSV110Wr_3cyc_1MDU, TSV110ReadMAW], (instregex "(S|U)(MADDL|MSUBL)rrr")>;
+def : InstRW<[TSV110Wr_4cyc_1MDU, ReadIM, ReadIM, TSV110ReadMAQ], (instrs MADDXrrr, MSUBXrrr)>;
+def : InstRW<[TSV110Wr_3cyc_1MDU, ReadIM, ReadIM, TSV110ReadMAW], (instregex "(S|U)(MADDL|MSUBL)rrr")>;
 def : InstRW<[TSV110Wr_4cyc_1MDU], (instregex "^(S|U)MULHrr$")>;
 
 

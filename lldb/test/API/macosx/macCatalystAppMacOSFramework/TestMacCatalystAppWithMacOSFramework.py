@@ -33,7 +33,7 @@ class TestMacCatalystAppWithMacOSFramework(TestBase):
         """scan the debugserver packet log"""
         process_info = lldbutil.packetlog_get_process_info(log)
         self.assertIn("ostype", process_info)
-        self.assertEquals(process_info["ostype"], "maccatalyst")
+        self.assertEqual(process_info["ostype"], "maccatalyst")
 
         aout_info = None
         libfoo_info = None
@@ -45,5 +45,5 @@ class TestMacCatalystAppWithMacOSFramework(TestBase):
                 libfoo_info = image
         self.assertTrue(aout_info)
         self.assertTrue(libfoo_info)
-        self.assertEquals(aout_info["min_version_os_name"], "maccatalyst")
-        self.assertEquals(libfoo_info["min_version_os_name"], "macosx")
+        self.assertEqual(aout_info["min_version_os_name"], "maccatalyst")
+        self.assertEqual(libfoo_info["min_version_os_name"], "macosx")

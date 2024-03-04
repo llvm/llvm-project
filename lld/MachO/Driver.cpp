@@ -49,7 +49,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Host.h"
-#include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/PackedVersion.h"
 
 #include <algorithm>
@@ -341,7 +340,7 @@ static InputFile *addFile(StringRef path, LoadType loadType,
       }
     } else if (isCommandLineLoad && config->forceLoadObjC) {
       for (const object::Archive::Symbol &sym : file->getArchive().symbols())
-        if (sym.getName().starts_with(objc::klass))
+        if (sym.getName().starts_with(objc::symbol_names::klass))
           file->fetch(sym);
 
       // TODO: no need to look for ObjC sections for a given archive member if
@@ -396,7 +395,7 @@ static InputFile *addFile(StringRef path, LoadType loadType,
     if ((isa<ObjFile>(newFile) || isa<BitcodeFile>(newFile)) && newFile->lazy &&
         config->forceLoadObjC) {
       for (Symbol *sym : newFile->symbols)
-        if (sym && sym->getName().starts_with(objc::klass)) {
+        if (sym && sym->getName().starts_with(objc::symbol_names::klass)) {
           extract(*newFile, "-ObjC");
           break;
         }
@@ -692,6 +691,8 @@ static PlatformVersion parsePlatformVersion(const Arg *arg) {
           .Cases("tvos-simulator", "8", PLATFORM_TVOSSIMULATOR)
           .Cases("watchos-simulator", "9", PLATFORM_WATCHOSSIMULATOR)
           .Cases("driverkit", "10", PLATFORM_DRIVERKIT)
+          .Cases("xros", "11", PLATFORM_XROS)
+          .Cases("xros-simulator", "12", PLATFORM_XROS_SIMULATOR)
           .Default(PLATFORM_UNKNOWN);
   if (platformVersion.platform == PLATFORM_UNKNOWN)
     error(Twine("malformed platform: ") + platformStr);
@@ -986,6 +987,8 @@ PlatformType macho::removeSimulator(PlatformType platform) {
     return PLATFORM_TVOS;
   case PLATFORM_WATCHOSSIMULATOR:
     return PLATFORM_WATCHOS;
+  case PLATFORM_XROS_SIMULATOR:
+    return PLATFORM_XROS;
   default:
     return platform;
   }
@@ -1002,15 +1005,17 @@ static bool shouldAdhocSignByDefault(Architecture arch, PlatformType platform) {
 
   return platform == PLATFORM_MACOS || platform == PLATFORM_IOSSIMULATOR ||
          platform == PLATFORM_TVOSSIMULATOR ||
-         platform == PLATFORM_WATCHOSSIMULATOR;
+         platform == PLATFORM_WATCHOSSIMULATOR ||
+         platform == PLATFORM_XROS_SIMULATOR;
 }
 
 static bool dataConstDefault(const InputArgList &args) {
-  static const std::array<std::pair<PlatformType, VersionTuple>, 5> minVersion =
+  static const std::array<std::pair<PlatformType, VersionTuple>, 6> minVersion =
       {{{PLATFORM_MACOS, VersionTuple(10, 15)},
         {PLATFORM_IOS, VersionTuple(13, 0)},
         {PLATFORM_TVOS, VersionTuple(13, 0)},
         {PLATFORM_WATCHOS, VersionTuple(6, 0)},
+        {PLATFORM_XROS, VersionTuple(1, 0)},
         {PLATFORM_BRIDGEOS, VersionTuple(4, 0)}}};
   PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
   auto it = llvm::find_if(minVersion,
@@ -1043,53 +1048,42 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
   if (arg && arg->getOption().matches(OPT_no_fixup_chains))
     return false;
 
-  bool requested = arg && arg->getOption().matches(OPT_fixup_chains);
-  if (!config->isPic) {
-    if (requested)
-      error("-fixup_chains is incompatible with -no_pie");
+  bool isRequested = arg != nullptr;
 
-    return false;
+  // Version numbers taken from the Xcode 13.3 release notes.
+  static const std::array<std::pair<PlatformType, VersionTuple>, 5> minVersion =
+      {{{PLATFORM_MACOS, VersionTuple(11, 0)},
+        {PLATFORM_IOS, VersionTuple(13, 4)},
+        {PLATFORM_TVOS, VersionTuple(14, 0)},
+        {PLATFORM_WATCHOS, VersionTuple(7, 0)},
+        {PLATFORM_XROS, VersionTuple(1, 0)}}};
+  PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
+  auto it = llvm::find_if(minVersion,
+                          [&](const auto &p) { return p.first == platform; });
+  if (it != minVersion.end() &&
+      it->second > config->platformInfo.target.MinDeployment) {
+    if (!isRequested)
+      return false;
+
+    warn("-fixup_chains requires " + getPlatformName(config->platform()) + " " +
+         it->second.getAsString() + ", which is newer than target minimum of " +
+         config->platformInfo.target.MinDeployment.getAsString());
   }
 
   if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64}, config->arch())) {
-    if (requested)
+    if (isRequested)
       error("-fixup_chains is only supported on x86_64 and arm64 targets");
-
     return false;
   }
 
-  if (args.hasArg(OPT_preload)) {
-    if (requested)
-      error("-fixup_chains is incompatible with -preload");
-
+  if (!config->isPic) {
+    if (isRequested)
+      error("-fixup_chains is incompatible with -no_pie");
     return false;
   }
 
-  if (requested)
-    return true;
-
-  static const std::array<std::pair<PlatformType, VersionTuple>, 7> minVersion =
-      {{
-          {PLATFORM_IOS, VersionTuple(13, 4)},
-          {PLATFORM_IOSSIMULATOR, VersionTuple(16, 0)},
-          {PLATFORM_MACOS, VersionTuple(13, 0)},
-          {PLATFORM_TVOS, VersionTuple(14, 0)},
-          {PLATFORM_TVOSSIMULATOR, VersionTuple(15, 0)},
-          {PLATFORM_WATCHOS, VersionTuple(7, 0)},
-          {PLATFORM_WATCHOSSIMULATOR, VersionTuple(8, 0)},
-      }};
-  PlatformType platform = config->platformInfo.target.Platform;
-  auto it = llvm::find_if(minVersion,
-                          [&](const auto &p) { return p.first == platform; });
-
-  // We don't know the versions for other platforms, so default to disabled.
-  if (it == minVersion.end())
-    return false;
-
-  if (it->second > config->platformInfo.target.MinDeployment)
-    return false;
-
-  return true;
+  // TODO: Enable by default once stable.
+  return isRequested;
 }
 
 void SymbolPatterns::clear() {
@@ -1701,8 +1695,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   if (args.getLastArg(OPT_reproducible))
     config->zeroModTime = true;
 
-  std::array<PlatformType, 3> encryptablePlatforms{
-      PLATFORM_IOS, PLATFORM_WATCHOS, PLATFORM_TVOS};
+  std::array<PlatformType, 4> encryptablePlatforms{
+      PLATFORM_IOS, PLATFORM_WATCHOS, PLATFORM_TVOS, PLATFORM_XROS};
   config->emitEncryptionInfo =
       args.hasFlag(OPT_encryptable, OPT_no_encryption,
                    is_contained(encryptablePlatforms, config->platform()));

@@ -1122,6 +1122,8 @@ private:
   void checkCompoundToken(SourceLocation FirstTokLoc,
                           tok::TokenKind FirstTokKind, CompoundToken Op);
 
+  void diagnoseUseOfC11Keyword(const Token &Tok);
+
 public:
   //===--------------------------------------------------------------------===//
   // Scope manipulation

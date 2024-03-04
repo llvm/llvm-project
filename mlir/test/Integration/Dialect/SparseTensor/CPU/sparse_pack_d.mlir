@@ -125,6 +125,9 @@ module {
     %v2 = vector.transfer_read %d1[%c0, %c0, %c0], %f0 : tensor<4x3x2xf32>, vector<4x3x2xf32>
     vector.print %v2 : vector<4x3x2xf32>
 
+    bufferization.dealloc_tensor %d0 : tensor<4x3x2xf32>
+    bufferization.dealloc_tensor %d1 : tensor<4x3x2xf32>
+    bufferization.dealloc_tensor %d2 : tensor<4x3x2xf32>
     // FIXME: doing this explicitly crashes runtime
     // bufferization.dealloc_tensor %s0 : tensor<4x3x2xf32, #CCC>
     // bufferization.dealloc_tensor %s1 : tensor<4x3x2xf32, #BatchedCSR>

@@ -147,6 +147,9 @@ static unsigned getTypeDescFieldId(mlir::Type ty) {
   auto isArray = fir::dyn_cast_ptrOrBoxEleTy(ty).isa<fir::SequenceType>();
   return isArray ? kOptTypePtrPosInBox : kDimsPosInBox;
 }
+static unsigned getLenParamFieldId(mlir::Type ty) {
+  return getTypeDescFieldId(ty) + 1;
+}
 
 namespace {
 /// FIR conversion pattern template
@@ -1583,6 +1586,14 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
         descriptor =
             insertField(rewriter, loc, descriptor, {typeDescFieldId}, typeDesc,
                         /*bitCast=*/true);
+      // Always initialize the length parameter field to zero to avoid issues
+      // with uninitialized values in Fortran code trying to compare physical
+      // representation of derived types with pointer/allocatable components.
+      // This has been seen in hashing algorithms using TRANSFER.
+      mlir::Value zero =
+          genConstantIndex(loc, rewriter.getI64Type(), rewriter, 0);
+      descriptor = insertField(rewriter, loc, descriptor,
+                               {getLenParamFieldId(boxTy), 0}, zero);
     }
     return descriptor;
   }

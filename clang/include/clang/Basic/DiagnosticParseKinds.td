@@ -165,6 +165,9 @@ def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;
 def ext_c11_feature : Extension<
   "'%0' is a C11 extension">, InGroup<C11>;
+def warn_c11_compat_keyword : Warning<
+  "'%0' is incompatible with C standards before C11">,
+  InGroup<CPre11Compat>, DefaultIgnore;
 def warn_c23_compat_keyword : Warning<
  "'%0' is incompatible with C standards before C23">,
  InGroup<CPre23Compat>, DefaultIgnore;

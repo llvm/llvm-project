@@ -27,6 +27,7 @@ class Block;
 class ConversionPatternRewriter;
 class MLIRContext;
 class Operation;
+struct OperationConverter;
 class Type;
 class Value;
 
@@ -657,12 +658,13 @@ struct ConversionPatternRewriterImpl;
 /// hooks.
 class ConversionPatternRewriter final : public PatternRewriter {
 public:
-  explicit ConversionPatternRewriter(MLIRContext *ctx);
   ~ConversionPatternRewriter() override;
 
   /// Apply a signature conversion to the entry block of the given region. This
   /// replaces the entry block with a new block containing the updated
   /// signature. The new entry block to the region is returned for convenience.
+  /// If no block argument types are changing, the entry original block will be
+  /// left in place and returned.
   ///
   /// If provided, `converter` will be used for any materializations.
   Block *
@@ -671,8 +673,11 @@ public:
                            const TypeConverter *converter = nullptr);
 
   /// Convert the types of block arguments within the given region. This
-  /// replaces each block with a new block containing the updated signature. The
-  /// entry block may have a special conversion if `entryConversion` is
+  /// replaces each block with a new block containing the updated signature. If
+  /// an updated signature would match the current signature, the respective
+  /// block is left in place as is.
+  ///
+  /// The entry block may have a special conversion if `entryConversion` is
   /// provided. On success, the new entry block to the region is returned for
   /// convenience. Otherwise, failure is returned.
   FailureOr<Block *> convertRegionTypes(
@@ -681,7 +686,8 @@ public:
 
   /// Convert the types of block arguments within the given region except for
   /// the entry region. This replaces each non-entry block with a new block
-  /// containing the updated signature.
+  /// containing the updated signature. If an updated signature would match the
+  /// current signature, the respective block is left in place as is.
   ///
   /// If special conversion behavior is needed for the non-entry blocks (for
   /// example, we need to convert only a subset of a BB arguments), such
@@ -734,9 +740,6 @@ public:
   /// implemented for dialect conversion.
   void eraseBlock(Block *block) override;
 
-  /// PatternRewriter hook for splitting a block into two parts.
-  Block *splitBlock(Block *block, Block::iterator before) override;
-
   /// PatternRewriter hook for inlining the ops of a block into another block.
   void inlineBlockBefore(Block *source, Block *dest, Block::iterator before,
                          ValueRange argValues = std::nullopt) override;
@@ -744,8 +747,8 @@ public:
 
   /// PatternRewriter hook for updating the given operation in-place.
   /// Note: These methods only track updates to the given operation itself,
-  /// and not nested regions. Updates to regions will still require
-  /// notification through other more specific hooks above.
+  /// and not nested regions. Updates to regions will still require notification
+  /// through other more specific hooks above.
   void startOpModification(Operation *op) override;
 
   /// PatternRewriter hook for updating the given operation in-place.
@@ -758,6 +761,14 @@ public:
   detail::ConversionPatternRewriterImpl &getImpl();
 
 private:
+  // Allow OperationConverter to construct new rewriters.
+  friend struct OperationConverter;
+
+  /// Conversion pattern rewriters must not be used outside of dialect
+  /// conversions. They apply some IR rewrites in a delayed fashion and could
+  /// bring the IR into an inconsistent state when used standalone.
+  explicit ConversionPatternRewriter(MLIRContext *ctx);
+
   // Hide unsupported pattern rewriter API.
   using OpBuilder::setListener;
 
@@ -1075,7 +1086,8 @@ public:
 /// there is an op explicitly marked as illegal, the conversion terminates and
 /// the `unconvertedOps` set will not necessarily be complete.)
 LogicalResult
-applyPartialConversion(ArrayRef<Operation *> ops, const ConversionTarget &target,
+applyPartialConversion(ArrayRef<Operation *> ops,
+                       const ConversionTarget &target,
                        const FrozenRewritePatternSet &patterns,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
 LogicalResult

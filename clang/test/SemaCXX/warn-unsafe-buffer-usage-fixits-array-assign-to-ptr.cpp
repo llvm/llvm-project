@@ -15,7 +15,7 @@ void safe_array_assigned_to_unsafe_ptr(unsigned idx) {
   int buffer[10];
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
   int* ptr;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> ptr"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:7}:"std::span<int>"
   ptr = buffer;
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
   ptr[idx] = 0;

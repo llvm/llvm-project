@@ -16,6 +16,25 @@
 #include "clang/Sema/Sema.h"
 
 using namespace clang;
+
+namespace {
+bool diagnoseConstructAppertainment(Sema &S, OpenACCDirectiveKind K,
+                                    SourceLocation StartLoc, bool IsStmt) {
+  switch (K) {
+  default:
+  case OpenACCDirectiveKind::Invalid:
+    // Nothing to do here, both invalid and unimplemented don't really need to
+    // do anything.
+    break;
+  case OpenACCDirectiveKind::Parallel:
+    if (!IsStmt)
+      return S.Diag(StartLoc, diag::err_acc_construct_appertainment) << K;
+    break;
+  }
+  return false;
+}
+} // namespace
+
 bool Sema::ActOnOpenACCClause(OpenACCClauseKind ClauseKind,
                               SourceLocation StartLoc) {
   if (ClauseKind == OpenACCClauseKind::Invalid)
@@ -35,6 +54,10 @@ void Sema::ActOnOpenACCConstruct(OpenACCDirectiveKind K,
     // ensure that we can still work and don't check any construct-specific
     // rules anywhere.
     break;
+  case OpenACCDirectiveKind::Parallel:
+    // Nothing to do here, there is no real legalization that needs to happen
+    // here as these constructs do not take any arguments.
+    break;
   default:
     Diag(StartLoc, diag::warn_acc_construct_unimplemented) << K;
     break;
@@ -43,24 +66,49 @@ void Sema::ActOnOpenACCConstruct(OpenACCDirectiveKind K,
 
 bool Sema::ActOnStartOpenACCStmtDirective(OpenACCDirectiveKind K,
                                           SourceLocation StartLoc) {
-  return true;
+  return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }
 
 StmtResult Sema::ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
                                               SourceLocation StartLoc,
                                               SourceLocation EndLoc,
                                               StmtResult AssocStmt) {
-  return StmtEmpty();
+  switch (K) {
+  default:
+    return StmtEmpty();
+  case OpenACCDirectiveKind::Invalid:
+    return StmtError();
+  case OpenACCDirectiveKind::Parallel:
+    return OpenACCComputeConstruct::Create(
+        getASTContext(), K, StartLoc, EndLoc,
+        AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
+  }
+  llvm_unreachable("Unhandled case in directive handling?");
 }
 
 StmtResult Sema::ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
                                             StmtResult AssocStmt) {
-  return AssocStmt;
+  switch (K) {
+  default:
+    llvm_unreachable("Unimplemented associated statement application");
+  case OpenACCDirectiveKind::Parallel:
+    // There really isn't any checking here that could happen. As long as we
+    // have a statement to associate, this should be fine.
+    // OpenACC 3.3 Section 6:
+    // Structured Block: in C or C++, an executable statement, possibly
+    // compound, with a single entry at the top and a single exit at the
+    // bottom.
+    // FIXME: Should we reject DeclStmt's here? The standard isn't clear, and
+    // an interpretation of it is to allow this and treat the initializer as
+    // the 'structured block'.
+    return AssocStmt;
+  }
+  llvm_unreachable("Invalid associated statement application");
 }
 
 bool Sema::ActOnStartOpenACCDeclDirective(OpenACCDirectiveKind K,
                                           SourceLocation StartLoc) {
-  return true;
+  return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/false);
 }
 
 DeclGroupRef Sema::ActOnEndOpenACCDeclDirective() { return DeclGroupRef{}; }

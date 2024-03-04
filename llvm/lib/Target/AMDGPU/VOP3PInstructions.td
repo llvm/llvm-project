@@ -396,7 +396,7 @@ defm V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
 } // End OtherPredicates = [HasDot1Insts]
 
 def DOT2_BF16_Profile
-  : VOP3P_Profile<VOP_F32_V2I16_V2I16_F32, VOP3_REGULAR, /*HasDPP*/ 1> {
+  : VOP3P_Profile<VOP_F32_V2BF16_V2BF16_F32, VOP3_REGULAR, /*HasDPP*/ 1> {
   let HasSrc1Mods = 1;
 }
 
@@ -461,13 +461,13 @@ def VOP3P_DOTF8_Profile : VOP3P_Profile<VOPProfile <[f32, i32, i32, f32]>,
 
   let InsVOP3DPP8 = (ins DstRC:$old, VGPR_32:$src0, VRegSrc_32:$src1,
                          PackedF16InputMods:$src2_modifiers, VRegSrc_32:$src2,
-                         neg_lo0:$neg_lo, neg_hi0:$neg_hi, dpp8:$dpp8, DppFI:$fi);
+                         neg_lo0:$neg_lo, neg_hi0:$neg_hi, dpp8:$dpp8, Dpp8FI:$fi);
 
   let InsVOP3DPP16 = (ins DstRC:$old, VGPR_32:$src0, VRegSrc_32:$src1,
                           PackedF16InputMods:$src2_modifiers, VRegSrc_32:$src2,
                           neg_lo0:$neg_lo, neg_hi0:$neg_hi, dpp_ctrl:$dpp_ctrl,
                           DppRowMask:$row_mask, DppBankMask:$bank_mask,
-                          DppBoundCtrl:$bound_ctrl, DppFI:$fi);
+                          DppBoundCtrl:$bound_ctrl, Dpp16FI:$fi);
 }
 
 multiclass VOP3PDOTF8Inst <string OpName, SDPatternOperator intrinsic_node> {
@@ -1353,6 +1353,7 @@ class VOP3P_DPP16<bits<7> op, VOP_DPP_Pseudo ps, int subtarget,
   let AssemblerPredicate = HasDPP16;
   let SubtargetPredicate = HasDPP16;
   let OtherPredicates = ps.OtherPredicates;
+  let IsPacked = ps.IsPacked;
 }
 
 class VOP3P_DPP8_Base<bits<7> op, VOP_Pseudo ps, string opName = ps.OpName>
@@ -1362,6 +1363,7 @@ class VOP3P_DPP8_Base<bits<7> op, VOP_Pseudo ps, string opName = ps.OpName>
   let SchedRW = ps.SchedRW;
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
+  let IsPacked = ps.IsPacked;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1486,7 +1488,7 @@ multiclass VOP3P_Real_dpp<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
       : VOP3P_DPP16<op, !cast<VOP_DPP_Pseudo>(backing_ps_name #"_dpp"),
                     Gen.Subtarget> {
     let AsmString = asmName #ps.Pfl.AsmVOP3DPP16;
-    let DecoderNamespace = "DPP"#Gen.DecoderNamespace;
+    let DecoderNamespace = Gen.DecoderNamespace;
     let AssemblerPredicate = Gen.AssemblerPredicate;
   }
 }
@@ -1496,7 +1498,7 @@ multiclass VOP3P_Real_dpp8<GFXGen Gen, bits<7> op, string backing_ps_name = NAME
   defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
   def _dpp8#Gen.Suffix : VOP3P_DPP8_Base<op, ps> {
     let AsmString = asmName #ps.Pfl.AsmVOP3DPP8;
-    let DecoderNamespace = "DPP8"#Gen.DecoderNamespace;
+    let DecoderNamespace = Gen.DecoderNamespace;
     let AssemblerPredicate = Gen.AssemblerPredicate;
   }
 }
@@ -1613,7 +1615,7 @@ multiclass VOP3P_Real_MFMA_gfx940_aliases<string NameFrom, string NameTo, string
 multiclass VOP3P_Real_MFMA_gfx940<bits<7> op, string Name = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic,
                                   VOP3_Pseudo PS_ACD = !cast<VOP3_Pseudo>(NAME # "_e64"),
                                   VOP3_Pseudo PS_VCD = !cast<VOP3_Pseudo>(NAME # "_vgprcd" # "_e64")> {
-  let SubtargetPredicate = isGFX940Plus,
+  let AssemblerPredicate = isGFX940Plus,
       DecoderNamespace = "GFX940",
       AsmString = Name # PS_ACD.AsmOperands, Constraints = "" in {
   def _gfx940_acd : VOP3P_Real<PS_ACD, SIEncodingFamily.GFX940>,

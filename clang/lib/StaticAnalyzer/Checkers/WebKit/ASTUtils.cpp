@@ -23,6 +23,10 @@ tryToFindPtrOrigin(const Expr *E, bool StopAtFirstRefCountedObj) {
       E = tempExpr->getSubExpr();
       continue;
     }
+    if (auto *tempExpr = dyn_cast<CXXBindTemporaryExpr>(E)) {
+      E = tempExpr->getSubExpr();
+      continue;
+    }
     if (auto *cast = dyn_cast<CastExpr>(E)) {
       if (StopAtFirstRefCountedObj) {
         if (auto *ConversionFunc =

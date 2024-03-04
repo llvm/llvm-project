@@ -248,6 +248,35 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
   return value == cpp::numeric_limits<T>::max() ? 0 : countr_zero(value) + 1;
 }
 
+/// Count number of 1's aka population count or hamming weight.
+///
+/// Only unsigned integral types are allowed.
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int count_ones(T value) {
+  int count = 0;
+  for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
+    if ((value >> i) & 0x1)
+      ++count;
+  return count;
+}
+#define ADD_SPECIALIZATION(TYPE, BUILTIN)                                      \
+  template <>                                                                  \
+  [[nodiscard]] LIBC_INLINE constexpr int count_ones<TYPE>(TYPE value) {       \
+    return BUILTIN(value);                                                     \
+  }
+ADD_SPECIALIZATION(unsigned char, __builtin_popcount)
+ADD_SPECIALIZATION(unsigned short, __builtin_popcount)
+ADD_SPECIALIZATION(unsigned, __builtin_popcount)
+ADD_SPECIALIZATION(unsigned long, __builtin_popcountl)
+ADD_SPECIALIZATION(unsigned long long, __builtin_popcountll)
+// TODO: 128b specializations?
+#undef ADD_SPECIALIZATION
+
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int count_zeros(T value) {
+  return count_ones<T>(static_cast<T>(~value));
+}
+
 } // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H

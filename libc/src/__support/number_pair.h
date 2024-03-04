@@ -21,8 +21,8 @@ template <typename T> struct NumberPair {
 };
 
 template <typename T>
-cpp::enable_if_t<cpp::is_integral_v<T> && cpp::is_unsigned_v<T>, NumberPair<T>>
-split(T a) {
+cpp::enable_if_t<cpp::is_integral_v<T> && cpp::is_unsigned_v<T>,
+                 NumberPair<T>> constexpr split(T a) {
   constexpr size_t HALF_BIT_WIDTH = sizeof(T) * 4;
   constexpr T LOWER_HALF_MASK = (T(1) << HALF_BIT_WIDTH) - T(1);
   NumberPair<T> result;

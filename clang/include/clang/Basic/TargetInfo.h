@@ -231,7 +231,6 @@ protected:
   bool HasIbm128;
   bool HasLongDouble;
   bool HasFPReturn;
-  bool HasFPTypes;
   bool HasStrictFP;
 
   unsigned char MaxAtomicPromoteWidth, MaxAtomicInlineWidth;
@@ -689,9 +688,6 @@ public:
   /// Determine whether return of a floating point value is supported
   /// on this target.
   virtual bool hasFPReturn() const { return HasFPReturn; }
-
-  /// Determine whether floating point types are supported for this target.
-  virtual bool hasFPTypes() const { return HasFPTypes; }
 
   /// Determine whether constrained floating point is supported on this target.
   virtual bool hasStrictFP() const { return HasStrictFP; }
@@ -1335,10 +1331,6 @@ public:
     return false;
   }
 
-  /// Make changes to the supported types which depend on both the target
-  /// features and ABI.
-  virtual void setSupportedArgTypes() {}
-
   /// Use the specified unit for FP math.
   ///
   /// \return False on error (invalid unit name).
@@ -1377,13 +1369,35 @@ public:
   }
 
   struct BranchProtectionInfo {
-    LangOptions::SignReturnAddressScopeKind SignReturnAddr =
-        LangOptions::SignReturnAddressScopeKind::None;
-    LangOptions::SignReturnAddressKeyKind SignKey =
-        LangOptions::SignReturnAddressKeyKind::AKey;
-    bool BranchTargetEnforcement = false;
-    bool BranchProtectionPAuthLR = false;
-    bool GuardedControlStack = false;
+    LangOptions::SignReturnAddressScopeKind SignReturnAddr;
+    LangOptions::SignReturnAddressKeyKind SignKey;
+    bool BranchTargetEnforcement;
+    bool BranchProtectionPAuthLR;
+    bool GuardedControlStack;
+
+    BranchProtectionInfo() = default;
+
+    const char *getSignReturnAddrStr() const {
+      switch (SignReturnAddr) {
+      case LangOptions::SignReturnAddressScopeKind::None:
+        return "none";
+      case LangOptions::SignReturnAddressScopeKind::NonLeaf:
+        return "non-leaf";
+      case LangOptions::SignReturnAddressScopeKind::All:
+        return "all";
+      }
+      llvm_unreachable("Unexpected SignReturnAddressScopeKind");
+    }
+
+    const char *getSignKeyStr() const {
+      switch (SignKey) {
+      case LangOptions::SignReturnAddressKeyKind::AKey:
+        return "a_key";
+      case LangOptions::SignReturnAddressKeyKind::BKey:
+        return "b_key";
+      }
+      llvm_unreachable("Unexpected SignReturnAddressKeyKind");
+    }
   };
 
   /// Determine if the Architecture in this TargetInfo supports branch

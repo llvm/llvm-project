@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef __LLVM_LIBC_MACROS_INTTYPES_MACROS_H
-#define __LLVM_LIBC_MACROS_INTTYPES_MACROS_H
+#ifndef LLVM_LIBC_MACROS_INTTYPES_MACROS_H
+#define LLVM_LIBC_MACROS_INTTYPES_MACROS_H
 
 // fprintf/scanf format macros.
 // POSIX.1-2008, Technical Corrigendum 1, XBD/TC1-2008/0050 [211] is applied.
@@ -286,4 +286,4 @@
 #define SCNxMAX __UINTMAX_FMTx__
 #define SCNxPTR __UINTPTR_FMTx__
 
-#endif // __LLVM_LIBC_MACROS_INTTYPES_MACROS_H
+#endif // LLVM_LIBC_MACROS_INTTYPES_MACROS_H

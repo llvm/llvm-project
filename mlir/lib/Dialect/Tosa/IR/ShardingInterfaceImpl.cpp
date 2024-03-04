@@ -31,15 +31,20 @@ namespace {
 // (d0, d1, d2, d3) -> (d0, d1, d2)
 struct MatMulOpSharding
     : public ShardingInterface::ExternalModel<MatMulOpSharding, MatMulOp> {
-  SmallVector<IteratorType> getLoopIteratorTypes(Operation *op) const {
+  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     auto tensorType = op->getResult(0).getType().dyn_cast<RankedTensorType>();
     if (!tensorType)
       return {};
 
-    SmallVector<IteratorType> types(tensorType.getRank() + 1,
-                                    IteratorType::Parallel);
-    types[tensorType.getRank()] = IteratorType::ReductionSum;
+    SmallVector<utils::IteratorType> types(tensorType.getRank() + 1,
+                                           utils::IteratorType::parallel);
+    types[tensorType.getRank()] = utils::IteratorType::reduction;
     return types;
+  }
+
+  SmallVector<ReductionKind>
+  getReductionLoopIteratorKinds(Operation *op) const {
+    return SmallVector<ReductionKind>(1, ReductionKind::Sum);
   }
 
   SmallVector<AffineMap> getIndexingMaps(Operation *op) const {

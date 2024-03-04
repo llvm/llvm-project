@@ -161,6 +161,7 @@ module {
     %dm = sparse_tensor.convert %m2 : tensor<3x4xi64> to tensor<3x4xi64, #SparseMatrix>
 
     // Setup out tensors.
+    // Note: Constants bufferize to read-only buffers.
     %init_8 = tensor.empty() : tensor<8xi64>
     %init_3_4 = tensor.empty() : tensor<3x4xi64>
 
@@ -208,6 +209,14 @@ module {
     bufferization.dealloc_tensor %dv : tensor<8xi64, #SparseVector>
     bufferization.dealloc_tensor %sm : tensor<3x4xi64, #SparseMatrix>
     bufferization.dealloc_tensor %dm : tensor<3x4xi64, #SparseMatrix>
+    bufferization.dealloc_tensor %0 : tensor<8xi64>
+    bufferization.dealloc_tensor %1 : tensor<8xi64>
+    bufferization.dealloc_tensor %2 : tensor<8xi64>
+    bufferization.dealloc_tensor %3 : tensor<8xi64>
+    bufferization.dealloc_tensor %4 : tensor<3x4xi64>
+    bufferization.dealloc_tensor %5 : tensor<3x4xi64>
+    bufferization.dealloc_tensor %6 : tensor<3x4xi64>
+    bufferization.dealloc_tensor %7 : tensor<3x4xi64>
 
     return
   }
