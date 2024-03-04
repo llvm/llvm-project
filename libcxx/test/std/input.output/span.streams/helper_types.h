@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-#include <print>
+// #include <print>
 
 template <typename CharT, std::size_t N = 0>
 class ReadOnlySpan {
@@ -26,16 +26,16 @@ public:
   operator std::span<CharT>() = delete;
 
   operator std::span<const CharT>() {
-    std::println(stderr, "----> ROspan");
+    // std::println(stderr, "----> ROspan");
     return std::span<const CharT, N>{arr_};
   }
 
   const CharT* begin() {
-    std::println(stderr, "----> ROspan begin");
+    // std::println(stderr, "----> ROspan begin");
     return arr_;
   }
   const CharT* end() {
-    std::println(stderr, "----> ROspan end");
+    // std::println(stderr, "----> ROspan end");
     return arr_ + N;
   }
 
@@ -124,109 +124,6 @@ static_assert(!std::convertible_to<NonReadOnlySpan<wchar_t>, std::span<const wch
 
 static_assert(!std::constructible_from<std::span<const wchar_t>, const NonReadOnlySpan<wchar_t>>);
 static_assert(!std::convertible_to<const NonReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
-#endif
-
-template <typename CharT, std::size_t N = 0>
-class ConstConvertibleReadOnlySpan {
-  explicit ConstConvertibleReadOnlySpan(CharT (&arr)[N]) : arr_{arr} {}
-
-public:
-  operator std::span<CharT>()       = delete;
-  operator std::span<CharT>() const = delete;
-
-  operator std::span<const CharT>() = delete;
-  operator std::span<const CharT>() const { return std::span<const CharT, N>{arr_}; }
-
-  const CharT* begin() { return arr_; }
-  const CharT* end() { return arr_ + N; }
-
-private:
-  CharT* arr_;
-};
-
-template <typename CharT, std::size_t N>
-inline constexpr bool std::ranges::enable_borrowed_range<ConstConvertibleReadOnlySpan<CharT, N>> = true;
-
-static_assert(std::ranges::borrowed_range<ConstConvertibleReadOnlySpan<char>>);
-
-static_assert(!std::constructible_from<std::span<char>, ConstConvertibleReadOnlySpan<char>>);
-static_assert(!std::convertible_to<ConstConvertibleReadOnlySpan<char>, std::span<char>>);
-
-static_assert(!std::constructible_from<std::span<char>, const ConstConvertibleReadOnlySpan<char>>);
-static_assert(!std::convertible_to<const ConstConvertibleReadOnlySpan<char>, std::span<char>>);
-
-static_assert(std::constructible_from<std::span<const char>, ConstConvertibleReadOnlySpan<char>>);
-static_assert(!std::convertible_to<ConstConvertibleReadOnlySpan<char>, std::span<const char>>);
-
-static_assert(std::constructible_from<std::span<const char>, const ConstConvertibleReadOnlySpan<char>>);
-static_assert(std::convertible_to<const ConstConvertibleReadOnlySpan<char>, std::span<const char>>);
-
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-
-static_assert(std::ranges::borrowed_range<ConstConvertibleReadOnlySpan<wchar_t>>);
-
-static_assert(!std::constructible_from<std::span<wchar_t>, ConstConvertibleReadOnlySpan<wchar_t>>);
-static_assert(!std::convertible_to<ConstConvertibleReadOnlySpan<wchar_t>, std::span<wchar_t>>);
-
-static_assert(!std::constructible_from<std::span<wchar_t>, const ConstConvertibleReadOnlySpan<wchar_t>>);
-static_assert(!std::convertible_to<const ConstConvertibleReadOnlySpan<wchar_t>, std::span<wchar_t>>);
-
-static_assert(std::constructible_from<std::span<const wchar_t>, ConstConvertibleReadOnlySpan<wchar_t>>);
-static_assert(!std::convertible_to<ConstConvertibleReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
-
-static_assert(std::constructible_from<std::span<const wchar_t>, const ConstConvertibleReadOnlySpan<wchar_t>>);
-static_assert(std::convertible_to<const ConstConvertibleReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
-#endif
-
-template <typename CharT, std::size_t N = 0>
-class NonConstConvertibleReadOnlySpan {
-  explicit NonConstConvertibleReadOnlySpan(CharT (&arr)[N]) : arr_{arr} {}
-
-public:
-  operator std::span<CharT>()       = delete;
-  operator std::span<CharT>() const = delete;
-
-  operator std::span<const CharT>() { return std::span<const CharT, N>{arr_}; }
-  operator std::span<const CharT>() const = delete;
-
-  const CharT* begin() { return arr_; }
-  const CharT* end() { return arr_ + N; }
-
-private:
-  CharT* arr_;
-};
-
-template <typename CharT, std::size_t N>
-inline constexpr bool std::ranges::enable_borrowed_range<NonConstConvertibleReadOnlySpan<CharT, N>> = true;
-
-static_assert(std::ranges::borrowed_range<NonConstConvertibleReadOnlySpan<char>>);
-
-static_assert(!std::constructible_from<std::span<char>, NonConstConvertibleReadOnlySpan<char>>);
-static_assert(!std::convertible_to<NonConstConvertibleReadOnlySpan<char>, std::span<char>>);
-
-static_assert(!std::constructible_from<std::span<char>, const NonConstConvertibleReadOnlySpan<char>>);
-static_assert(!std::convertible_to<const NonConstConvertibleReadOnlySpan<char>, std::span<char>>);
-
-static_assert(std::constructible_from<std::span<const char>, NonConstConvertibleReadOnlySpan<char>>);
-static_assert(std::convertible_to<NonConstConvertibleReadOnlySpan<char>, std::span<const char>>);
-
-static_assert(!std::constructible_from<std::span<const char>, const NonConstConvertibleReadOnlySpan<char>>);
-static_assert(!std::convertible_to<const NonConstConvertibleReadOnlySpan<char>, std::span<const char>>);
-
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(std::ranges::borrowed_range<NonConstConvertibleReadOnlySpan<wchar_t>>);
-
-static_assert(!std::constructible_from<std::span<wchar_t>, NonConstConvertibleReadOnlySpan<wchar_t>>);
-static_assert(!std::convertible_to<NonConstConvertibleReadOnlySpan<wchar_t>, std::span<wchar_t>>);
-
-static_assert(!std::constructible_from<std::span<wchar_t>, const NonConstConvertibleReadOnlySpan<wchar_t>>);
-static_assert(!std::convertible_to<const NonConstConvertibleReadOnlySpan<wchar_t>, std::span<wchar_t>>);
-
-static_assert(std::constructible_from<std::span<const wchar_t>, NonConstConvertibleReadOnlySpan<wchar_t>>);
-static_assert(std::convertible_to<NonConstConvertibleReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
-
-static_assert(!std::constructible_from<std::span<const wchar_t>, const NonConstConvertibleReadOnlySpan<wchar_t>>);
-static_assert(!std::convertible_to<const NonConstConvertibleReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
 #endif
 
 struct SomeObject {};

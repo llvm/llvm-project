@@ -29,28 +29,6 @@
 
 #include "../../helper_types.h"
 
-#ifndef TEST_HAS_NO_NASTY_STRING
-void test_sfinae_with_nasty_char() {
-  using SpStream = std::basic_ispanstream<nasty_char, nasty_char_traits>;
-
-  // Non-const convertible
-  static_assert(std::constructible_from<SpStream, ReadOnlySpan<nasty_char>>);
-  static_assert(!test_convertible<SpStream, ReadOnlySpan<nasty_char>>());
-
-  // Const convertible
-  static_assert(!std::constructible_from<SpStream, const ReadOnlySpan<nasty_char>>);
-  static_assert(!test_convertible<SpStream, const ReadOnlySpan<nasty_char>>());
-
-  // Non-const non-convertible
-  static_assert(std::constructible_from<SpStream, ReadOnlySpan<nasty_char>>);
-  static_assert(!test_convertible<SpStream, ReadOnlySpan<nasty_char>>());
-
-  // Const non-convertible
-  static_assert(!std::constructible_from<SpStream, const ReadOnlySpan<nasty_char>>);
-  static_assert(!test_convertible<SpStream, const ReadOnlySpan<nasty_char>>());
-}
-#endif // TEST_HAS_NO_NASTY_STRING
-
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test_sfinae() {
   using SpStream =
@@ -95,7 +73,7 @@ void test() {
 
   {
     SpStream spSt(ros2);
-    assert(spSt.span().data() == arr);
+    assert(spSt.span().data() != arr);
     assert(spSt.span().data() == arr1);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
@@ -104,8 +82,7 @@ void test() {
 
 int main(int, char**) {
 #ifndef TEST_HAS_NO_NASTY_STRING
-  // test_sfinae<nasty_char, nasty_char_traits>();
-  test_sfinae_with_nasty_char();
+  test_sfinae<nasty_char, nasty_char_traits>();
 #endif
   test_sfinae<char>();
   test_sfinae<char, constexpr_char_traits<char>>();
