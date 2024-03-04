@@ -76,6 +76,10 @@ public:
     return StackOffset;
   }
 
+  void setMask(unsigned Mask) {
+    this->Mask = Mask;
+  }
+
   unsigned getMask() const {
     return Mask;
   }

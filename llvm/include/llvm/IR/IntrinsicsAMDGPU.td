@@ -3179,4 +3179,12 @@ def int_amdgcn_addrspacecast_nonnull : DefaultAttrsIntrinsic<
   [llvm_anyptr_ty], [llvm_anyptr_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
+
+// This intrinsic is used to track the user SGPRs that hold implicit kernel
+// arguments. The i32 argument for this intrinsic represents the offset in
+// bytes from the value pointed to by the implicitarg pointer.
+def int_amdgcn_preload_implicitarg :
+  DefaultAttrsIntrinsic<[llvm_any_ty], [llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<0>>]
+>;
 }

@@ -7,6 +7,8 @@
 ; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 | FileCheck --check-prefixes=GFX9V5 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 | FileCheck --check-prefixes=GFX9V5 %s
 
+; TODO: Add tests for lowering of group_size intrinsics.
+
 define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addrspace(3) %ptr.local) {
 ; GFX8V4-LABEL: addrspacecast:
 ; GFX8V4:       ; %bb.0:
