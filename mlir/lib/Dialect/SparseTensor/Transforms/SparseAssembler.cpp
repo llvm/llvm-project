@@ -33,7 +33,8 @@ static void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
     }
     // Convert the external representation of the values array.
     const SparseTensorType stt(cast<RankedTensorType>(type));
-    auto shape = {ShapedType::kDynamic};
+    auto shape = stt.getBatchLvlShape();
+    shape.push_back(ShapedType::kDynamic);
     auto vtp = RankedTensorType::get(shape, stt.getElementType());
     convTypes.push_back(vtp);
     if (extraTypes)
@@ -72,7 +73,8 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
     // Convert the external representation of the values array.
     auto rtp = cast<RankedTensorType>(type);
     const SparseTensorType stt(rtp);
-    auto shape = {ShapedType::kDynamic};
+    auto shape = stt.getBatchLvlShape();
+    shape.push_back(ShapedType::kDynamic);
     SmallVector<Value> inputs;
     SmallVector<Type> retTypes;
     SmallVector<Type> cntTypes;
