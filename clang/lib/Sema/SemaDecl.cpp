@@ -12403,7 +12403,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     bool UsesZA = Attr && Attr->isNewZA();
     bool UsesZT0 = Attr && Attr->isNewZT0();
 
-    if (UsesSM) {
+    if (NewFD->hasAttr<ArmLocallyStreamingAttr>()) {
       if (NewFD->getReturnType()->isSizelessVectorType() ||
           llvm::any_of(NewFD->parameters(), [](ParmVarDecl *P) {
             return P->getOriginalType()->isSizelessVectorType();
