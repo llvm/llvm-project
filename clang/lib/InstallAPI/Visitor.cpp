@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/InstallAPI/Visitor.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/InstallAPI/Frontend.h"
 #include "llvm/ADT/SmallString.h"
@@ -25,6 +26,31 @@ static bool isExported(const NamedDecl *D) {
   auto LV = D->getLinkageAndVisibility();
   return isExternallyVisible(LV.getLinkage()) &&
          (LV.getVisibility() == DefaultVisibility);
+}
+
+static bool isInlined(const FunctionDecl *D) {
+  bool HasInlineAttribute = false;
+  bool NoCXXAttr =
+      (!D->getASTContext().getLangOpts().CPlusPlus &&
+       !D->getASTContext().getTargetInfo().getCXXABI().isMicrosoft() &&
+       !D->hasAttr<DLLExportAttr>());
+
+  // Check all redeclarations to find an inline attribute or keyword.
+  for (const auto *RD : D->redecls()) {
+    if (!RD->isInlined())
+      continue;
+    HasInlineAttribute = true;
+    if (!(NoCXXAttr || RD->hasAttr<GNUInlineAttr>()))
+      continue;
+    if (RD->doesThisDeclarationHaveABody() &&
+        RD->isInlineDefinitionExternallyVisible())
+      return false;
+  }
+
+  if (!HasInlineAttribute)
+    return false;
+
+  return true;
 }
 
 static SymbolFlags getFlags(bool WeakDef, bool ThreadLocal) {
@@ -201,6 +227,58 @@ bool InstallAPIVisitor::VisitVarDecl(const VarDecl *D) {
   const AvailabilityInfo Avail = AvailabilityInfo::createFromDecl(D);
   Ctx.Slice->addGlobal(getMangledName(D), Linkage, GlobalRecord::Kind::Variable,
                        Avail, D, *Access, getFlags(WeakDef, ThreadLocal));
+  return true;
+}
+
+bool InstallAPIVisitor::VisitFunctionDecl(const FunctionDecl *D) {
+  if (const CXXMethodDecl *M = dyn_cast<CXXMethodDecl>(D)) {
+    // Skip member function in class templates.
+    if (M->getParent()->getDescribedClassTemplate() != nullptr)
+      return true;
+
+    // Skip methods in CXX RecordDecls.
+    for (auto P : D->getASTContext().getParents(*M)) {
+      if (P.get<CXXRecordDecl>())
+        return true;
+    }
+
+    // Skip CXX ConstructorDecls and DestructorDecls.
+    if (isa<CXXConstructorDecl>(M) || isa<CXXDestructorDecl>(M))
+      return true;
+  }
+
+  // Skip templated functions.
+  switch (D->getTemplatedKind()) {
+  case FunctionDecl::TK_NonTemplate:
+  case FunctionDecl::TK_DependentNonTemplate:
+    break;
+  case FunctionDecl::TK_MemberSpecialization:
+  case FunctionDecl::TK_FunctionTemplateSpecialization:
+    if (auto *TempInfo = D->getTemplateSpecializationInfo()) {
+      if (!TempInfo->isExplicitInstantiationOrSpecialization())
+        return true;
+    }
+    break;
+  case FunctionDecl::TK_FunctionTemplate:
+  case FunctionDecl::TK_DependentFunctionTemplateSpecialization:
+    return true;
+  }
+
+  auto Access = getAccessForDecl(D);
+  if (!Access)
+    return true;
+  auto Name = getMangledName(D);
+  const AvailabilityInfo Avail = AvailabilityInfo::createFromDecl(D);
+  const bool ExplicitInstantiation = D->getTemplateSpecializationKind() ==
+                                     TSK_ExplicitInstantiationDeclaration;
+  const bool WeakDef = ExplicitInstantiation || D->hasAttr<WeakAttr>();
+  const bool Inlined = isInlined(D);
+  const RecordLinkage Linkage = (Inlined || !isExported(D))
+                                    ? RecordLinkage::Internal
+                                    : RecordLinkage::Exported;
+  Ctx.Slice->addGlobal(Name, Linkage, GlobalRecord::Kind::Function, Avail, D,
+                       *Access, getFlags(WeakDef, /*ThreadLocal=*/false),
+                       Inlined);
   return true;
 }
 

@@ -37,6 +37,9 @@ public:
   /// Collect global variables.
   bool VisitVarDecl(const VarDecl *D);
 
+  /// Collect global functions.
+  bool VisitFunctionDecl(const FunctionDecl *D);
+
   /// Collect Objective-C Interface declarations.
   /// Every Objective-C class has an interface declaration that lists all the
   /// ivars, properties, and methods of the class.
