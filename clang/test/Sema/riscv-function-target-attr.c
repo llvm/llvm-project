@@ -8,7 +8,7 @@ void test_builtin() {
   __riscv_vsetvl_e8m8(1); // expected-error {{'__builtin_rvv_vsetvli' needs target feature zve32x}}
 }
 
-__attribute__((target("+zve32x")))
+__attribute__((target("arch=+zve32x")))
 void test_builtin_w_zve32x() {
   __riscv_vsetvl_e8m8(1);
 }
@@ -17,7 +17,7 @@ void test_rvv_i32_type() {
   vint32m1_t v; // expected-error {{RISC-V type 'vint32m1_t' (aka '__rvv_int32m1_t') requires the 'zve32x' extension}}
 }
 
-__attribute__((target("+zve32x")))
+__attribute__((target("arch=+zve32x")))
 void test_rvv_i32_type_w_zve32x() {
   vint32m1_t v;
 }
@@ -26,7 +26,7 @@ void test_rvv_f32_type() {
   vfloat32m1_t v; // expected-error {{RISC-V type 'vfloat32m1_t' (aka '__rvv_float32m1_t') requires the 'zve32f' extension}}
 }
 
-__attribute__((target("+zve32f")))
+__attribute__((target("arch=+zve32f")))
 void test_rvv_f32_type_w_zve32f() {
   vfloat32m1_t v;
 }
@@ -35,7 +35,7 @@ void test_rvv_f64_type() {
   vfloat64m1_t v; // expected-error {{RISC-V type 'vfloat64m1_t' (aka '__rvv_float64m1_t') requires the 'zve64x' extension}}
 }
 
-__attribute__((target("+zve64d")))
+__attribute__((target("arch=+zve64d")))
 void test_rvv_f64_type_w_zve64d() {
   vfloat64m1_t v;
 }
