@@ -119,7 +119,7 @@ TEST(LlvmLibcStdbitTest, TypeGenericMacroTrailingOnes) {
   EXPECT_EQ(stdc_trailing_ones(static_cast<unsigned short>(0U)), 0xDBU);
   EXPECT_EQ(stdc_trailing_ones(0U), 0xDCU);
   EXPECT_EQ(stdc_trailing_ones(0UL), 0xDDU);
-  EXPECT_EQ(stdc_trailing_ones(0ULL), 0xDFU);
+  EXPECT_EQ(stdc_trailing_ones(0ULL), 0xDEU);
 }
 
 TEST(LlvmLibcStdbitTest, TypeGenericMacroFirstLeadingZero) {
