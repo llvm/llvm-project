@@ -163,6 +163,13 @@ class RISCVAsmParser : public MCTargetAsmParser {
   // Helper to emit pseudo vmsge{u}.vx instruction.
   void emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc, MCStreamer &Out);
 
+  // Helper to emit pseudo vmsge{u}.vi instruction.
+  void emitVMSGE_VI(MCInst &Inst, unsigned Opcode, unsigned OpcodeImmIs0,
+                    SMLoc IDLoc, MCStreamer &Out, bool IsSigned);
+
+  // Helper to emit pseudo vmsge{u}.vx instruction for XTHeadV extension.
+  void emitVMSGE_TH(MCInst &Inst, unsigned Opcode, SMLoc IDLoc, MCStreamer &Out);
+
   // Checks that a PseudoAddTPRel is using x4/tp in its second input operand.
   // Enforcing this using a restricted register class for the second input
   // operand of PseudoAddTPRel results in a poor diagnostic due to the fact
@@ -3419,6 +3426,92 @@ void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
   }
 }
 
+
+void RISCVAsmParser::emitVMSGE_VI(MCInst &Inst, unsigned Opcode,
+                                  unsigned OpcodeImmIs0, SMLoc IDLoc,
+                                  MCStreamer &Out, bool IsSigned) {
+  int64_t Imm = Inst.getOperand(2).getImm();
+  if (IsSigned) {
+    // These instructions are signed and so is immediate so we can subtract one.
+    emitToStreamer(Out, MCInstBuilder(Opcode)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(1))
+                            .addImm(Imm - 1)
+                            .addOperand(Inst.getOperand(3)));
+  } else {
+    // Unsigned comparisons are tricky because the immediate is signed. If the
+    // immediate is 0 we can't just subtract one. vmsltu.vi v0, v1, 0 is always
+    // false, but vmsle.vi v0, v1, -1 is always true. Instead we use
+    // vmsne v0, v1, v1 which is always false.
+    if (Imm == 0) {
+      emitToStreamer(Out, MCInstBuilder(OpcodeImmIs0)
+                              .addOperand(Inst.getOperand(0))
+                              .addOperand(Inst.getOperand(1))
+                              .addOperand(Inst.getOperand(1))
+                              .addOperand(Inst.getOperand(3)));
+    } else {
+      // Other immediate values can subtract one like signed.
+      emitToStreamer(Out, MCInstBuilder(Opcode)
+                              .addOperand(Inst.getOperand(0))
+                              .addOperand(Inst.getOperand(1))
+                              .addImm(Imm - 1)
+                              .addOperand(Inst.getOperand(3)));
+    }
+  }
+}
+
+void RISCVAsmParser::emitVMSGE_TH(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
+                                MCStreamer &Out) {
+  // https://github.com/riscv/riscv-v-spec/releases/tag/0.7.1
+  if (Inst.getNumOperands() == 3) {
+    // unmasked va >= x
+    //
+    //  pseudoinstruction: vmsge{u}.vx vd, va, x
+    //  expansion: vmslt{u}.vx vd, va, x; vmnand.mm vd, vd, vd
+    emitToStreamer(Out, MCInstBuilder(Opcode)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(1))
+                            .addOperand(Inst.getOperand(2))
+                            .addReg(RISCV::NoRegister));
+    emitToStreamer(Out, MCInstBuilder(RISCV::TH_VMNAND_MM)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(0)));
+  } else if (Inst.getNumOperands() == 4) {
+    // masked va >= x, vd != v0
+    //
+    //  pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t
+    //  expansion: vmslt{u}.vx vd, va, x, v0.t; vmxor.mm vd, vd, v0
+    assert(Inst.getOperand(0).getReg() != RISCV::V0 &&
+           "The destination register should not be V0.");
+    emitToStreamer(Out, MCInstBuilder(Opcode)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(1))
+                            .addOperand(Inst.getOperand(2))
+                            .addOperand(Inst.getOperand(3)));
+    emitToStreamer(Out, MCInstBuilder(RISCV::TH_VMXOR_MM)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(0))
+                            .addReg(RISCV::V0));
+  } else if (Inst.getNumOperands() == 5) {
+    // masked va >= x, any vd
+    //
+    // pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t, vt
+    // expansion: vmslt{u}.vx vt, va, x; vmandnot.mm vd, vd, vt
+    assert(Inst.getOperand(1).getReg() != RISCV::V0 &&
+           "The temporary vector register should not be V0.");
+    emitToStreamer(Out, MCInstBuilder(Opcode)
+                            .addOperand(Inst.getOperand(1))
+                            .addOperand(Inst.getOperand(2))
+                            .addOperand(Inst.getOperand(3))
+                            .addReg(RISCV::NoRegister));
+    emitToStreamer(Out, MCInstBuilder(RISCV::TH_VMANDN_MM)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(1)));
+  }
+}
+
 bool RISCVAsmParser::checkPseudoAddTPRel(MCInst &Inst,
                                          OperandVector &Operands) {
   assert(Inst.getOpcode() == RISCV::PseudoAddTPRel && "Invalid instruction");
@@ -3465,7 +3558,9 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   unsigned Opcode = Inst.getOpcode();
 
   if (Opcode == RISCV::PseudoVMSGEU_VX_M_T ||
-      Opcode == RISCV::PseudoVMSGE_VX_M_T) {
+      Opcode == RISCV::PseudoVMSGE_VX_M_T ||
+      Opcode == RISCV::PseudoTH_VMSGEU_VX_M_T ||
+      Opcode == RISCV::PseudoTH_VMSGE_VX_M_T) {
     unsigned DestReg = Inst.getOperand(0).getReg();
     unsigned TempReg = Inst.getOperand(1).getReg();
     if (DestReg == TempReg) {
@@ -3707,49 +3802,40 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     emitVMSGE(Inst, RISCV::VMSLT_VX, IDLoc, Out);
     return false;
   case RISCV::PseudoVMSGE_VI:
-  case RISCV::PseudoVMSLT_VI: {
-    // These instructions are signed and so is immediate so we can subtract one
-    // and change the opcode.
-    int64_t Imm = Inst.getOperand(2).getImm();
-    unsigned Opc = Inst.getOpcode() == RISCV::PseudoVMSGE_VI ? RISCV::VMSGT_VI
-                                                             : RISCV::VMSLE_VI;
-    emitToStreamer(Out, MCInstBuilder(Opc)
-                            .addOperand(Inst.getOperand(0))
-                            .addOperand(Inst.getOperand(1))
-                            .addImm(Imm - 1)
-                            .addOperand(Inst.getOperand(3)));
+    emitVMSGE_VI(Inst, RISCV::VMSGT_VI, RISCV::VMSGT_VI, IDLoc, Out, true);
     return false;
-  }
+  case RISCV::PseudoVMSLT_VI:
+    emitVMSGE_VI(Inst, RISCV::VMSLE_VI, RISCV::VMSLE_VI, IDLoc, Out, true);
+    return false;
   case RISCV::PseudoVMSGEU_VI:
-  case RISCV::PseudoVMSLTU_VI: {
-    int64_t Imm = Inst.getOperand(2).getImm();
-    // Unsigned comparisons are tricky because the immediate is signed. If the
-    // immediate is 0 we can't just subtract one. vmsltu.vi v0, v1, 0 is always
-    // false, but vmsle.vi v0, v1, -1 is always true. Instead we use
-    // vmsne v0, v1, v1 which is always false.
-    if (Imm == 0) {
-      unsigned Opc = Inst.getOpcode() == RISCV::PseudoVMSGEU_VI
-                         ? RISCV::VMSEQ_VV
-                         : RISCV::VMSNE_VV;
-      emitToStreamer(Out, MCInstBuilder(Opc)
-                              .addOperand(Inst.getOperand(0))
-                              .addOperand(Inst.getOperand(1))
-                              .addOperand(Inst.getOperand(1))
-                              .addOperand(Inst.getOperand(3)));
-    } else {
-      // Other immediate values can subtract one like signed.
-      unsigned Opc = Inst.getOpcode() == RISCV::PseudoVMSGEU_VI
-                         ? RISCV::VMSGTU_VI
-                         : RISCV::VMSLEU_VI;
-      emitToStreamer(Out, MCInstBuilder(Opc)
-                              .addOperand(Inst.getOperand(0))
-                              .addOperand(Inst.getOperand(1))
-                              .addImm(Imm - 1)
-                              .addOperand(Inst.getOperand(3)));
-    }
-
+    emitVMSGE_VI(Inst, RISCV::VMSGTU_VI, RISCV::VMSEQ_VV, IDLoc, Out, false);
     return false;
-  }
+  case RISCV::PseudoVMSLTU_VI:
+    emitVMSGE_VI(Inst, RISCV::VMSLEU_VI, RISCV::VMSNE_VV, IDLoc, Out, false);
+    return false;
+  // for XTHeadVector Extension
+  case RISCV::PseudoTH_VMSGEU_VX:
+  case RISCV::PseudoTH_VMSGEU_VX_M:
+  case RISCV::PseudoTH_VMSGEU_VX_M_T:
+    emitVMSGE_TH(Inst, RISCV::TH_VMSLTU_VX, IDLoc, Out);
+    return false;
+  case RISCV::PseudoTH_VMSGE_VX:
+  case RISCV::PseudoTH_VMSGE_VX_M:
+  case RISCV::PseudoTH_VMSGE_VX_M_T:
+    emitVMSGE_TH(Inst, RISCV::TH_VMSLT_VX, IDLoc, Out);
+    return false;
+  case RISCV::PseudoTH_VMSGE_VI:
+    emitVMSGE_VI(Inst, RISCV::TH_VMSGT_VI, RISCV::TH_VMSGT_VI, IDLoc, Out, true);
+    return false;
+  case RISCV::PseudoTH_VMSLT_VI:
+    emitVMSGE_VI(Inst, RISCV::TH_VMSLE_VI, RISCV::TH_VMSLE_VI, IDLoc, Out, true);
+    return false;
+  case RISCV::PseudoTH_VMSGEU_VI:
+    emitVMSGE_VI(Inst, RISCV::TH_VMSGTU_VI, RISCV::TH_VMSEQ_VV, IDLoc, Out, false);
+    return false;
+  case RISCV::PseudoTH_VMSLTU_VI:
+    emitVMSGE_VI(Inst, RISCV::TH_VMSLEU_VI, RISCV::TH_VMSNE_VV, IDLoc, Out, false);
+    return false;
   }
 
   emitToStreamer(Out, Inst);

@@ -512,12 +512,10 @@ defm TH_VMADD_V : VMAC_MV_V_X<"th.vmadd", 0b101001>;
 defm TH_VNMSUB_V : VMAC_MV_V_X<"th.vnmsub", 0b101011>;
 
 // Vector Widening Integer Multiply-Add Instructions
-let Constraints = "@earlyclobber $vd", RVVConstraint = WidenV in {
 defm TH_VWMACCU_V : VWMAC_MV_V_X<"th.vwmaccu", 0b111100>;
 defm TH_VWMACC_V : VWMAC_MV_V_X<"th.vwmacc", 0b111101>;
 defm TH_VWMACCSU_V : VWMAC_MV_V_X<"th.vwmaccsu", 0b111110>;
 defm TH_VWMACCUS_V : VWMAC_MV_X<"th.vwmaccus", 0b111111>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV
 
 // Vector Integer Merge Instructions
 defm TH_VMERGE_V : VMRG_IV_V_X_I<"th.vmerge", 0b010111>;
@@ -553,12 +551,10 @@ defm TH_VASUB_V : VSALU_IV_V_X<"th.vasub", 0b100110>;
 defm TH_VSMUL_V : VSMUL_IV_V_X<"th.vsmul", 0b100111>;
 
 // Vector Widening Saturating Scaled Multiply-Add
-let Constraints = "@earlyclobber $vd", RVVConstraint = WidenV in {
 defm TH_VWSMACCU_V : TH_VWSMAC_V_X<"th.vwsmaccu", 0b111100>;
 defm TH_VWSMACC_V : TH_VWSMAC_V_X<"th.vwsmacc", 0b111101>;
 defm TH_VWSMACCSU_V : TH_VWSMAC_V_X<"th.vwsmaccsu", 0b111110>;
 defm TH_VWSMACCUS_V : TH_VWSMAC_X<"th.vwsmaccus", 0b111111>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV
 
 // Vector Single-Width Scaling Shift Instructions
 defm TH_VSSRL_V : VSSHF_IV_V_X_I<"th.vssrl", 0b101010>;
@@ -623,13 +619,12 @@ defm TH_VFNMSUB_V : VMAC_FV_V_F<"th.vfnmsub", 0b101011>;
 }
 
 // Vector Widening Floating-Point Fused Multiply-Add Instructions
-let Constraints = "@earlyclobber $vd", RVVConstraint = WidenV,
-    Uses = [FRM], mayRaiseFPException = true in {
+let Uses = [FRM], mayRaiseFPException = true in {
 defm TH_VFWMACC_V : VWMAC_FV_V_F<"th.vfwmacc", 0b111100>;
 defm TH_VFWNMACC_V : VWMAC_FV_V_F<"th.vfwnmacc", 0b111101>;
 defm TH_VFWMSAC_V : VWMAC_FV_V_F<"th.vfwmsac", 0b111110>;
 defm TH_VFWNMSAC_V : VWMAC_FV_V_F<"th.vfwnmsac", 0b111111>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV, Uses = [FRM], mayRaiseFPException = true
+} // Uses = [FRM], mayRaiseFPException = true
 
 // Vector Floating-Point Square-Root Instruction
 let Uses = [FRM], mayRaiseFPException = true in {
