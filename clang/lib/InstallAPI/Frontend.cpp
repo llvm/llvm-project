@@ -39,6 +39,31 @@ ObjCInterfaceRecord *FrontendRecordsSlice::addObjCInterface(
   return ObjCR;
 }
 
+ObjCCategoryRecord *FrontendRecordsSlice::addObjCCategory(
+    StringRef ClassToExtend, StringRef CategoryName,
+    const clang::AvailabilityInfo Avail, const Decl *D, HeaderType Access) {
+  auto *ObjCR =
+      llvm::MachO::RecordsSlice::addObjCCategory(ClassToExtend, CategoryName);
+  FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  return ObjCR;
+}
+
+ObjCIVarRecord *FrontendRecordsSlice::addObjCIVar(
+    ObjCContainerRecord *Container, StringRef IvarName, RecordLinkage Linkage,
+    const clang::AvailabilityInfo Avail, const Decl *D, HeaderType Access,
+    const clang::ObjCIvarDecl::AccessControl AC) {
+  // If the decl otherwise would have been exported, check their access control.
+  // Ivar's linkage is also determined by this.
+  if ((Linkage == RecordLinkage::Exported) &&
+      ((AC == ObjCIvarDecl::Private) || (AC == ObjCIvarDecl::Package)))
+    Linkage = RecordLinkage::Internal;
+  auto *ObjCR =
+      llvm::MachO::RecordsSlice::addObjCIVar(Container, IvarName, Linkage);
+  FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+
+  return nullptr;
+}
+
 std::optional<HeaderType>
 InstallAPIContext::findAndRecordFile(const FileEntry *FE,
                                      const Preprocessor &PP) {
