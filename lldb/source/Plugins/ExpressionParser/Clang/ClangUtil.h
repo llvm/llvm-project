@@ -36,6 +36,17 @@ struct ClangUtil {
 
   static clang::TagDecl *GetAsTagDecl(const CompilerType &type);
 
+  /// If the given Decl is redeclarable, return the first declaration in its
+  /// redeclaration chain. Otherwise return d itself.
+  static clang::Decl *GetFirstDecl(clang::Decl *d);
+
+  /// \see ClangUtil::GetFirstDecl
+  static const clang::Decl *GetFirstDecl(const clang::Decl *d) {
+    return GetFirstDecl(const_cast<clang::Decl *>(d));
+  }
+
+  static clang::ObjCInterfaceDecl *GetAsObjCDecl(const CompilerType &type);
+
   /// Returns a textual representation of the given Decl's AST. Does not
   /// deserialize any child nodes.
   static std::string DumpDecl(const clang::Decl *d);

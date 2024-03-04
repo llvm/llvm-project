@@ -13,6 +13,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "Plugins/ExpressionParser/Clang/NameSearchContext.h"
+#include "Plugins/TypeSystem/Clang/ImporterBackedASTSource.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
 #include "clang/AST/ExternalASTSource.h"
@@ -30,7 +31,7 @@ namespace lldb_private {
 /// knows the name it is looking for, but nothing else. The ExternalSemaSource
 /// class provides Decls (VarDecl, FunDecl, TypeDecl) to Clang for these
 /// names, consulting the ClangExpressionDeclMap to do the actual lookups.
-class ClangASTSource : public clang::ExternalASTSource,
+class ClangASTSource : public ImporterBackedASTSource,
                        public ClangASTImporter::MapCompleter {
 public:
   /// Constructor
@@ -153,6 +154,8 @@ public:
   ///     The Decl to be completed in place.
   void CompleteType(clang::ObjCInterfaceDecl *Class) override;
 
+  void CompleteRedeclChain(clang::Decl const *D) override;
+
   /// Called on entering a translation unit.  Tells Clang by calling
   /// setHasExternalVisibleStorage() and setHasExternalLexicalStorage() that
   /// this object has something to say about undefined names.
@@ -229,6 +232,10 @@ public:
 
     void CompleteType(clang::ObjCInterfaceDecl *Class) override {
       return m_original.CompleteType(Class);
+    }
+
+    void CompleteRedeclChain(clang::Decl const *D) override {
+      return m_original.CompleteRedeclChain(D);
     }
 
     bool layoutRecordType(

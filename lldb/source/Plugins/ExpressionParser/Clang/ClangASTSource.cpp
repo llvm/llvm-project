@@ -281,8 +281,11 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
   if (!m_ast_importer_sp->CompleteTagDecl(tag_decl)) {
     // We couldn't complete the type.  Maybe there's a definition somewhere
     // else that can be completed.
-    if (TagDecl *alternate = FindCompleteType(tag_decl))
+    if (TagDecl *alternate = FindCompleteType(tag_decl)) {
+      assert(alternate->getDefinition() != nullptr &&
+             "Trying to complete a TagDecl from an incomplete origin");
       m_ast_importer_sp->CompleteTagDeclWithOrigin(tag_decl, alternate);
+    }
   }
 
   LLDB_LOG(log, "      [CTD] After:\n{0}", ClangUtil::DumpDecl(tag_decl));
@@ -323,6 +326,45 @@ void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
   LLDB_LOG(log, "      [COID] {0}", ClangUtil::DumpDecl(interface_decl));
 }
 
+void ClangASTSource::CompleteRedeclChain(const Decl *d) {
+  if (!TypeSystemClang::UseRedeclCompletion())
+    return;
+
+  if (const clang::TagDecl *td = llvm::dyn_cast<TagDecl>(d)) {
+    if (td->isBeingDefined())
+      return;
+
+    if (td->getDefinition())
+      return;
+
+    m_ast_importer_sp->CompleteTagDecl(const_cast<clang::TagDecl *>(td));
+    if (!td->getDefinition() && m_ast_importer_sp->GetDeclOrigin(td).Valid()) {
+      if (TagDecl *alternate = FindCompleteType(td))
+        m_ast_importer_sp->CompleteTagDeclWithOrigin(
+            const_cast<clang::TagDecl *>(td), alternate);
+    }
+  }
+  if (const auto *od = llvm::dyn_cast<ObjCInterfaceDecl>(d)) {
+    ClangASTImporter::DeclOrigin original =
+        m_ast_importer_sp->GetDeclOrigin(od);
+    if (ObjCInterfaceDecl *orig =
+            dyn_cast_or_null<ObjCInterfaceDecl>(original.decl)) {
+      if (ObjCInterfaceDecl *i = GetCompleteObjCInterface(orig)) {
+        if (i != orig) {
+          m_ast_importer_sp->SetDeclOrigin(d, i);
+          m_ast_importer_sp->CompleteObjCInterfaceDecl(
+              const_cast<clang::ObjCInterfaceDecl *>(od));
+          return;
+        }
+      }
+    }
+    if (od->getDefinition())
+      return;
+    m_ast_importer_sp->CompleteObjCInterfaceDecl(
+        const_cast<clang::ObjCInterfaceDecl *>(od));
+  }
+}
+
 clang::ObjCInterfaceDecl *ClangASTSource::GetCompleteObjCInterface(
     const clang::ObjCInterfaceDecl *interface_decl) {
   lldb::ProcessSP process(m_target->GetProcessSP());
@@ -360,8 +402,7 @@ clang::ObjCInterfaceDecl *ClangASTSource::GetCompleteObjCInterface(
     return nullptr;
 
   ObjCInterfaceDecl *complete_iface_decl(complete_interface_type->getDecl());
-
-  return complete_iface_decl;
+  return complete_iface_decl->getDefinition();
 }
 
 void ClangASTSource::FindExternalLexicalDecls(

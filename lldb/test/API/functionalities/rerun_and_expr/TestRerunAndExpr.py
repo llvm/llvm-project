@@ -16,6 +16,7 @@ class TestRerunExpr(TestBase):
     #        the module from the ModuleList (possibly including a call to
     #        SBDebugger::MemoryPressureDetected.
     @skipIfWindows
+    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     def test(self):
         """
         Tests whether re-launching a process without destroying

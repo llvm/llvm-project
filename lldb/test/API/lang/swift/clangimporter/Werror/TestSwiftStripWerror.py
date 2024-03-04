@@ -9,6 +9,7 @@ class TestSwiftWerror(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
+    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipIf(setting=('symbols.swift-precise-compiler-invocation', 'true'))
     @skipUnlessDarwin
