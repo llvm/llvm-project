@@ -3479,7 +3479,8 @@ QualType ASTContext::getRValueReferenceType(QualType T) const {
   return QualType(New, 0);
 }
 
-QualType ASTContext::getMemberPointerTypeInternal(QualType T, const Type *Cls) const {
+QualType ASTContext::getMemberPointerTypeInternal(QualType T,
+                                                  const Type *Cls) const {
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
   llvm::FoldingSetNodeID ID;
@@ -4436,8 +4437,7 @@ QualType ASTContext::getFunctionTypeInternal(
 
   // Determine whether the type being created is already canonical or not.
   bool isCanonical = !Unique && IsCanonicalExceptionSpec &&
-                     isCanonicalResultType(ResultTy) &&
-                     !EPI.HasTrailingReturn;
+                     isCanonicalResultType(ResultTy) && !EPI.HasTrailingReturn;
   for (unsigned i = 0; i != NumArgs && isCanonical; ++i)
     if (!ArgArray[i].isCanonicalAsParam())
       isCanonical = false;
