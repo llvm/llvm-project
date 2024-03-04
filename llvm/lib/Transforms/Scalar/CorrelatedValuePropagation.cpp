@@ -374,7 +374,7 @@ static bool processCmp(CmpInst *Cmp, LazyValueInfo *LVI) {
       return true;
 
   if (processEqualityICmp(Cmp, LVI))
-      return true;
+    return true;
 
   return false;
 }
