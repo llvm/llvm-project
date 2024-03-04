@@ -767,15 +767,9 @@ inline bool operator==(const TypedefInfo &LHS, const TypedefInfo &RHS) {
 inline bool operator!=(const TypedefInfo &LHS, const TypedefInfo &RHS) {
   return !(LHS == RHS);
 }
-} // namespace api_notes
-} // namespace clang
 
-#include "llvm/ADT/ArrayRef.h"
-
-namespace clang {
-namespace api_notes {
 /// The file extension used for the source representation of API notes.
-static const char SOURCE_APINOTES_EXTENSION[] = "apinotes";
+static const constexpr char SOURCE_APINOTES_EXTENSION[] = "apinotes";
 
 /// Opaque context ID used to refer to an Objective-C class or protocol or a C++
 /// namespace.
