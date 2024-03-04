@@ -297,7 +297,7 @@ Bug Fixes to C++ Support
   CWG2032. Fixes (#GH83461)
 - Fixed an issue where an attribute on a declarator would cause the attribute to
   be destructed prematurely. This fixes a pair of Chromium that were brought to
-  our attention by an attempt to fix in (#GH77703). Fixes (#GH83611).
+  our attention by an attempt to fix in (#GH77703). Fixes (#GH83385).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
