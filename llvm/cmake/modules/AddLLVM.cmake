@@ -1,5 +1,4 @@
-if(NOT ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn" OR
-        "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64"))
+if(NOT LLVM_RUNTIMES_GPU_BUILD)
   include(GNUInstallDirs)
 endif()
 
