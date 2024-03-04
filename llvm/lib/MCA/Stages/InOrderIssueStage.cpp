@@ -258,7 +258,8 @@ llvm::Error InOrderIssueStage::tryIssue(InstRef &IR) {
 
   // If the instruction has a latency of 0, we need to handle
   // the execution and retirement now. If the instruction is issued in multiple
-  // cycles, we cannot retire until it is finished issuing.
+  // cycles, we cannot handle the instruction being executed here so we make
+  // updateCarriedOver responsible.
   if (IS.isExecuted() && !ShouldCarryOver) {
     PRF.onInstructionExecuted(&IS);
     LSU.onInstructionExecuted(IR);
@@ -295,15 +296,16 @@ void InOrderIssueStage::updateIssuedInst() {
       continue;
     }
 
-    PRF.onInstructionExecuted(&IS);
-    LSU.onInstructionExecuted(IR);
-    notifyInstructionExecuted(IR);
-    ++NumExecuted;
+    // Allow updateCarriedOver to handle the instruction being executed if the
+    // instruction takes multiple cycles to issue.
+    if (!CarriedOver) {
+      PRF.onInstructionExecuted(&IS);
+      LSU.onInstructionExecuted(IR);
+      notifyInstructionExecuted(IR);
+      ++NumExecuted;
 
-    // Allow updateCarriedOver to retire the instruction if the instruction
-    // takes multiple cycles to issue.
-    if (!CarriedOver)
       retireInstruction(*I);
+    }
 
     std::iter_swap(I, E - NumExecuted);
   }
@@ -333,9 +335,16 @@ void InOrderIssueStage::updateCarriedOver() {
   else
     Bandwidth -= CarryOver;
 
-  // updateIssuedInst did not retireInstruction if it was carried over.
-  if (CarriedOver.getInstruction()->isExecuted())
+  // updateIssuedInst did not handle executed if issue had carry over.
+  if (CarriedOver.getInstruction()->isExecuted()) {
+    PRF.onInstructionExecuted(&IS);
+    LSU.onInstructionExecuted(IR);
+    notifyEvent<HWInstructionEvent>(
+        HWInstructionEvent(HWInstructionEvent::Executed, IR));
+    LLVM_DEBUG(dbgs() << "[E] Instruction #" << IR << " is executed\n");
+
     retireInstruction(CarriedOver);
+  }
 
   CarriedOver = InstRef();
   CarryOver = 0;
