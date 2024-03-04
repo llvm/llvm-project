@@ -58,6 +58,9 @@ void tooling::dependencies::configureInvocationForCaching(
     HSOpts.ResourceDir = std::move(OriginalHSOpts.ResourceDir);
     // Preserve fmodule-file options.
     HSOpts.PrebuiltModuleFiles = std::move(OriginalHSOpts.PrebuiltModuleFiles);
+    HSOpts.UseBuiltinIncludes = false;
+    HSOpts.UseStandardSystemIncludes = false;
+    HSOpts.UseStandardCXXIncludes = false;
     auto &PPOpts = CI.getPreprocessorOpts();
     // We don't need this because we save the contents of the PCH file in the
     // include tree root.
