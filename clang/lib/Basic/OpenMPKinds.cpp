@@ -619,7 +619,7 @@ bool clang::isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind) {
 bool clang::isOpenMPNestingTeamsDirective(OpenMPDirectiveKind DKind) {
   if (DKind == OMPD_teams)
     return true;
-  auto Leafs = getLeafConstructs(DKind);
+  ArrayRef<Directive> Leafs = getLeafConstructs(DKind);
   return !Leafs.empty() && Leafs.front() == OMPD_teams;
 }
 
@@ -642,7 +642,7 @@ bool clang::isOpenMPSimdDirective(OpenMPDirectiveKind DKind) {
 bool clang::isOpenMPNestingDistributeDirective(OpenMPDirectiveKind Kind) {
   if (Kind == OMPD_distribute)
     return true;
-  auto Leafs = getLeafConstructs(Kind);
+  ArrayRef<Directive> Leafs = getLeafConstructs(Kind);
   return !Leafs.empty() && Leafs.front() == OMPD_distribute;
 }
 
@@ -654,7 +654,7 @@ bool clang::isOpenMPDistributeDirective(OpenMPDirectiveKind Kind) {
 bool clang::isOpenMPGenericLoopDirective(OpenMPDirectiveKind Kind) {
   if (Kind == OMPD_loop)
     return true;
-  auto Leafs = getLeafConstructs(Kind);
+  ArrayRef<Directive> Leafs = getLeafConstructs(Kind);
   return !Leafs.empty() && Leafs.back() == OMPD_loop;
 }
 
