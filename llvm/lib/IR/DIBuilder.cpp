@@ -1089,17 +1089,20 @@ DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
   assert(DL->getScope()->getSubprogram() ==
              LabelInfo->getScope()->getSubprogram() &&
          "Expected matching subprograms");
+
+  trackIfUnresolved(LabelInfo);
   if (M.IsNewDbgInfoFormat) {
     DPLabel *DPL = new DPLabel(LabelInfo, DL);
-    if (InsertBefore)
+    if (InsertBB && InsertBefore)
       InsertBB->insertDPValueBefore(DPL, InsertBefore->getIterator());
+    else if (InsertBB)
+      InsertBB->insertDPValueBefore(DPL, std::prev(InsertBB->end())); // this  is awkward/wrong. What to do about insert-at-end shinanigans?
     // FIXME: Use smart pointers for DbgRecord ownership management.
     return DPL;
   } else {
     if (!LabelFn)
       LabelFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_label);
 
-    trackIfUnresolved(LabelInfo);
     Value *Args[] = {MetadataAsValue::get(VMContext, LabelInfo)};
 
     IRBuilder<> B(DL->getContext());

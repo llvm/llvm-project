@@ -871,25 +871,51 @@ TEST_F(IRBuilderTest, createFunction) {
 }
 
 TEST_F(IRBuilderTest, DIBuilder) {
-  IRBuilder<> Builder(BB);
-  DIBuilder DIB(*M);
-  auto File = DIB.createFile("F.CBL", "/");
-  auto CU = DIB.createCompileUnit(dwarf::DW_LANG_Cobol74,
-                                  DIB.createFile("F.CBL", "/"), "llvm-cobol74",
-                                  true, "", 0);
-  auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
-  auto SP = DIB.createFunction(
-      CU, "foo", "", File, 1, Type, 1, DINode::FlagZero,
-      DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
-  F->setSubprogram(SP);
-  AllocaInst *I = Builder.CreateAlloca(Builder.getInt8Ty());
-  auto BarSP = DIB.createFunction(
-      CU, "bar", "", File, 1, Type, 1, DINode::FlagZero,
-      DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
-  auto BadScope = DIB.createLexicalBlockFile(BarSP, File, 0);
-  I->setDebugLoc(DILocation::get(Ctx, 2, 0, BadScope));
-  DIB.finalize();
-  EXPECT_TRUE(verifyModule(*M));
+  bool NewDebugMode[] = {false, };
+
+  for (auto IsNewMode : NewDebugMode) {
+    if (!M)
+      SetUp();
+    if (IsNewMode)
+      M->convertToNewDbgValues();
+
+    IRBuilder<> Builder(BB);
+    DIBuilder DIB(*M);
+    auto File = DIB.createFile("F.CBL", "/");
+    auto CU = DIB.createCompileUnit(dwarf::DW_LANG_Cobol74,
+                                    DIB.createFile("F.CBL", "/"), "llvm-cobol74",
+                                    true, "", 0);
+    auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+    auto SP = DIB.createFunction(
+        CU, "foo", "", File, 1, Type, 1, DINode::FlagZero,
+        DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
+    F->setSubprogram(SP);
+    AllocaInst *I = Builder.CreateAlloca(Builder.getInt8Ty());
+    auto BarSP = DIB.createFunction(
+        CU, "bar", "", File, 1, Type, 1, DINode::FlagZero,
+        DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
+    auto BarScope = DIB.createLexicalBlockFile(BarSP, File, 0);
+    I->setDebugLoc(DILocation::get(Ctx, 2, 0, BarScope));
+
+    // Label metadata and records.
+    DILocation *LabelLoc = DILocation::get(Ctx, 1, 0, BarScope);
+    DILabel *AlwaysPreserveLabel = DIB.createLabel(BarScope, "meles_meles", File, 1, /*AlwaysPreserve*/true);
+    DILabel *Label = DIB.createLabel(BarScope, "badger", File, 1, /*AlwaysPreserve*/false);
+    //DbgInstPtr LabelRecord = DIB.insertLabel(Label, Loc, BB); // FIXME., DIBuilder should track danglers?
+    // Insert before I.
+    DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, I);
+    EXPECT_FALSE(I->getDbgValueRange().empty());
+    //EXPECT_NE(find(LabelRecord.get<DbgRecord *>(), I->getDbgValueRange()), I->getDbgValueRange().end());
+
+    DIB.finalize();
+
+    // Check the labels are not/are added to Bar's retainedNodes array (AlwaysPreserve).
+    //EXPECT_EQ(Label, BarSP->getRetainedNodes(), BarSP->getRetainedNodes().end());
+    //EXPECT_NE(AlwaysPreserveLabel, BarSP->getRetainedNodes(), BarSP->getRetainedNodes().end());
+
+    EXPECT_TRUE(verifyModule(*M));
+    TearDown();
+  }
 }
 
 TEST_F(IRBuilderTest, createArtificialSubprogram) {
