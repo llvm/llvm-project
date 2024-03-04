@@ -1110,17 +1110,20 @@ Corrected:
     //   unqualified-id followed by a < and name lookup finds either one
     //   or more functions or finds nothing.
     if (!IsFilteredTemplateName)
-      FilterAcceptableTemplateNames(Result);
+      FilterAcceptableTemplateNames(Result,
+                                    /*AllowFunctionTemplates=*/true,
+                                    /*AllowDependent=*/true);
 
     bool IsFunctionTemplate;
     bool IsVarTemplate;
     TemplateName Template;
 
-    if ((Result.end() - Result.begin() > 1) || Result.isUnresolvableResult()) {
+    if (Result.end() - Result.begin() > 1) {
       IsFunctionTemplate = true;
       Template = Context.getOverloadedTemplateName(Result.begin(),
                                                    Result.end());
     } else if (!Result.empty()) {
+      assert(!Result.isUnresolvableResult());
       auto *TD = cast<TemplateDecl>(getAsTemplateNameDecl(
           *Result.begin(), /*AllowFunctionTemplates=*/true,
           /*AllowDependent=*/false));

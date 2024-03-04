@@ -9200,8 +9200,7 @@ TemplateName
 ASTContext::getOverloadedTemplateName(UnresolvedSetIterator Begin,
                                       UnresolvedSetIterator End) const {
   unsigned size = End - Begin;
-  assert((size == 1 && isa<UnresolvedUsingValueDecl>(*Begin)) ||
-         size > 1 && "set is not overloaded!");
+  assert(size > 1 && "set is not overloaded!");
 
   void *memory = Allocate(sizeof(OverloadedTemplateStorage) +
                           size * sizeof(FunctionTemplateDecl*));
