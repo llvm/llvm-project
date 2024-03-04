@@ -3869,20 +3869,23 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   // Fold nested selects if the inner condition can be implied by the outer
   // condition.
-  Value *InnerCondVal;
-  const DataLayout &DL = getDataLayout();
-  if (match(TrueVal,
-            m_Select(m_Value(InnerCondVal), m_Value(LHS), m_Value(RHS))) &&
-      CondVal->getType() == InnerCondVal->getType())
+  auto SimplifyNestedSelect = [&](Value *Arm, bool CondIsTrue) -> Value * {
+    Value *InnerCondVal, *LHS, *RHS;
+    if (!match(Arm,
+               m_Select(m_Value(InnerCondVal), m_Value(LHS), m_Value(RHS))))
+      return nullptr;
+    if (CondVal->getType() != InnerCondVal->getType())
+      return nullptr;
+    const DataLayout &DL = getDataLayout();
     if (auto Implied =
-            isImpliedCondition(CondVal, InnerCondVal, DL, /*LHSIsTrue=*/true))
-      return replaceOperand(SI, 1, *Implied ? LHS : RHS);
-  if (match(FalseVal,
-            m_Select(m_Value(InnerCondVal), m_Value(LHS), m_Value(RHS))) &&
-      CondVal->getType() == InnerCondVal->getType())
-    if (auto Implied =
-            isImpliedCondition(CondVal, InnerCondVal, DL, /*LHSIsTrue=*/false))
-      return replaceOperand(SI, 2, *Implied ? LHS : RHS);
+            isImpliedCondition(CondVal, InnerCondVal, DL, CondIsTrue))
+      return *Implied ? LHS : RHS;
+    return nullptr;
+  };
+  if (Value *V = SimplifyNestedSelect(TrueVal, /*CondIsTrue=*/true))
+    return replaceOperand(SI, 1, V);
+  if (Value *V = SimplifyNestedSelect(FalseVal, /*CondIsTrue=*/false))
+    return replaceOperand(SI, 2, V);
 
   return nullptr;
 }
