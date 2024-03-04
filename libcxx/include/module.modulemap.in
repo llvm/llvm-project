@@ -1365,7 +1365,7 @@ module std_private_functional_hash                       [system] {
   export std_private_type_traits_underlying_type
   export std_private_utility_pair
 }
-module std_private_functional_hash_fwd                   [system] { header "__fwd/hash.h" }
+module std_private_functional_fwd                        [system] { header "__fwd/functional.h" }
 module std_private_functional_identity                   [system] { header "__functional/identity.h" }
 module std_private_functional_invoke                     [system] {
   header "__functional/invoke.h"

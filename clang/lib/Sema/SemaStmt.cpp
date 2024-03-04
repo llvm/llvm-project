@@ -529,7 +529,7 @@ Sema::ActOnCaseStmt(SourceLocation CaseLoc, ExprResult LHSVal,
   }
 
   if (LangOpts.OpenACC &&
-      getCurScope()->isInOpenACCComputeConstructBeforeSwitch()) {
+      getCurScope()->isInOpenACCComputeConstructScope(Scope::SwitchScope)) {
     Diag(CaseLoc, diag::err_acc_branch_in_out_compute_construct)
         << /*branch*/ 0 << /*into*/ 1;
     return StmtError();
@@ -555,7 +555,7 @@ Sema::ActOnDefaultStmt(SourceLocation DefaultLoc, SourceLocation ColonLoc,
   }
 
   if (LangOpts.OpenACC &&
-      getCurScope()->isInOpenACCComputeConstructBeforeSwitch()) {
+      getCurScope()->isInOpenACCComputeConstructScope(Scope::SwitchScope)) {
     Diag(DefaultLoc, diag::err_acc_branch_in_out_compute_construct)
         << /*branch*/ 0 << /*into*/ 1;
     return StmtError();
