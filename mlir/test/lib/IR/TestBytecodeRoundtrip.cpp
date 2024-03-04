@@ -159,40 +159,43 @@ private:
         });
     newCtx->appendDialectRegistry(op->getContext()->getDialectRegistry());
     newCtx->allowUnregisteredDialects();
-    ParserConfig parseConfig(newCtx.get(), /*verifyAfterParse=*/true);
-    parseConfig.getBytecodeReaderConfig().attachTypeCallback(
-        [&](DialectBytecodeReader &reader, StringRef dialectName,
-            Type &entry) -> LogicalResult {
-          // Get test dialect version from the version map.
-          auto versionOr = reader.getDialectVersion<test::TestDialect>();
-          assert(succeeded(versionOr) && "expected reader to be able to access "
-                                         "the version for test dialect");
-          const auto *version =
-              reinterpret_cast<const test::TestDialectVersion *>(*versionOr);
-          if (version->major_ >= 2)
-            return success();
+    BytecodeReaderConfig readConfig;
+    readConfig.attachTypeCallback([&](DialectBytecodeReader &reader,
+                                      StringRef dialectName,
+                                      Type &entry) -> LogicalResult {
+      // Get test dialect version from the version map.
+      auto versionOr = reader.getDialectVersion<test::TestDialect>();
+      assert(succeeded(versionOr) && "expected reader to be able to access "
+                                     "the version for test dialect");
+      const auto *version =
+          reinterpret_cast<const test::TestDialectVersion *>(*versionOr);
+      if (version->major_ >= 2)
+        return success();
 
-          // `dialectName` is the name of the group we have the opportunity to
-          // override. In this case, override only the dialect group "funky",
-          // for which does not exist in memory.
-          if (dialectName != StringLiteral("funky"))
-            return success();
+      // `dialectName` is the name of the group we have the opportunity to
+      // override. In this case, override only the dialect group "funky",
+      // for which does not exist in memory.
+      if (dialectName != StringLiteral("funky"))
+        return success();
 
-          uint64_t encoding;
-          if (failed(reader.readVarInt(encoding)) || encoding != 999)
-            return success();
-          llvm::outs() << "Overriding parsing of IntegerType encoding...\n";
-          uint64_t widthAndSignedness, width;
-          IntegerType::SignednessSemantics signedness;
-          if (succeeded(reader.readVarInt(widthAndSignedness)) &&
-              ((width = widthAndSignedness >> 2), true) &&
-              ((signedness = static_cast<IntegerType::SignednessSemantics>(
-                    widthAndSignedness & 0x3)),
-               true))
-            entry = IntegerType::get(reader.getContext(), width, signedness);
-          // Return nullopt to fall through the rest of the parsing code path.
-          return success();
-        });
+      uint64_t encoding;
+      if (failed(reader.readVarInt(encoding)) || encoding != 999)
+        return success();
+      llvm::outs() << "Overriding parsing of IntegerType encoding...\n";
+      uint64_t widthAndSignedness, width;
+      IntegerType::SignednessSemantics signedness;
+      if (succeeded(reader.readVarInt(widthAndSignedness)) &&
+          ((width = widthAndSignedness >> 2), true) &&
+          ((signedness = static_cast<IntegerType::SignednessSemantics>(
+                widthAndSignedness & 0x3)),
+           true))
+        entry = IntegerType::get(reader.getContext(), width, signedness);
+      // Return nullopt to fall through the rest of the parsing code path.
+      return success();
+    });
+    ParserConfig parseConfig(newCtx.get(), /*verifyAfterParse=*/true,
+                             /*fallbackResourceMap=*/nullptr,
+                             /*bytecodeReaderConfig=*/&readConfig);
     doRoundtripWithConfigs(op, writeConfig, parseConfig);
   }
 
@@ -235,22 +238,24 @@ private:
     BytecodeDialectInterface *iface =
         builtin->getRegisteredInterface<BytecodeDialectInterface>();
     BytecodeWriterConfig writeConfig;
-    ParserConfig parseConfig(op->getContext(), /*verifyAfterParse=*/true);
-    parseConfig.getBytecodeReaderConfig().attachTypeCallback(
-        [&](DialectBytecodeReader &reader, StringRef dialectName,
-            Type &entry) -> LogicalResult {
-          if (dialectName != StringLiteral("builtin"))
-            return success();
-          Type builtinAttr = iface->readType(reader);
-          if (auto integerType =
-                  llvm::dyn_cast_or_null<IntegerType>(builtinAttr)) {
-            if (integerType.getWidth() == 32 && integerType.isSignless()) {
-              llvm::outs() << "Overriding parsing of TestI32Type encoding...\n";
-              entry = test::TestI32Type::get(reader.getContext());
-            }
-          }
-          return success();
-        });
+    BytecodeReaderConfig readConfig;
+    readConfig.attachTypeCallback([&](DialectBytecodeReader &reader,
+                                      StringRef dialectName,
+                                      Type &entry) -> LogicalResult {
+      if (dialectName != StringLiteral("builtin"))
+        return success();
+      Type builtinAttr = iface->readType(reader);
+      if (auto integerType = llvm::dyn_cast_or_null<IntegerType>(builtinAttr)) {
+        if (integerType.getWidth() == 32 && integerType.isSignless()) {
+          llvm::outs() << "Overriding parsing of TestI32Type encoding...\n";
+          entry = test::TestI32Type::get(reader.getContext());
+        }
+      }
+      return success();
+    });
+    ParserConfig parseConfig(op->getContext(), /*verifyAfterParse=*/true,
+                             /*fallbackResourceMap=*/nullptr,
+                             /*bytecodeReaderConfig=*/&readConfig);
     doRoundtripWithConfigs(op, writeConfig, parseConfig);
   }
 
@@ -301,28 +306,30 @@ private:
     auto i32Type = IntegerType::get(op->getContext(), 32,
                                     IntegerType::SignednessSemantics::Signless);
     BytecodeWriterConfig writeConfig;
-    ParserConfig parseConfig(op->getContext(), /*verifyAfterParse=*/false);
-    parseConfig.getBytecodeReaderConfig().attachAttributeCallback(
-        [&](DialectBytecodeReader &reader, StringRef dialectName,
-            Attribute &entry) -> LogicalResult {
-          // Override only the case where the return type of the builtin reader
-          // is an i32 and fall through on all the other cases, since we want to
-          // still use TestDialect normal codepath to parse the other types.
-          Attribute builtinAttr = iface->readAttribute(reader);
-          if (auto denseAttr =
-                  llvm::dyn_cast_or_null<DenseIntElementsAttr>(builtinAttr)) {
-            if (denseAttr.getType().getShape() == ArrayRef<int64_t>(2) &&
-                denseAttr.getElementType() == i32Type) {
-              llvm::outs()
-                  << "Overriding parsing of TestAttrParamsAttr encoding...\n";
-              int v0 = denseAttr.getValues<IntegerAttr>()[0].getInt();
-              int v1 = denseAttr.getValues<IntegerAttr>()[1].getInt();
-              entry =
-                  test::TestAttrParamsAttr::get(reader.getContext(), v0, v1);
-            }
-          }
-          return success();
-        });
+    BytecodeReaderConfig readConfig;
+    readConfig.attachAttributeCallback([&](DialectBytecodeReader &reader,
+                                           StringRef dialectName,
+                                           Attribute &entry) -> LogicalResult {
+      // Override only the case where the return type of the builtin reader
+      // is an i32 and fall through on all the other cases, since we want to
+      // still use TestDialect normal codepath to parse the other types.
+      Attribute builtinAttr = iface->readAttribute(reader);
+      if (auto denseAttr =
+              llvm::dyn_cast_or_null<DenseIntElementsAttr>(builtinAttr)) {
+        if (denseAttr.getType().getShape() == ArrayRef<int64_t>(2) &&
+            denseAttr.getElementType() == i32Type) {
+          llvm::outs()
+              << "Overriding parsing of TestAttrParamsAttr encoding...\n";
+          int v0 = denseAttr.getValues<IntegerAttr>()[0].getInt();
+          int v1 = denseAttr.getValues<IntegerAttr>()[1].getInt();
+          entry = test::TestAttrParamsAttr::get(reader.getContext(), v0, v1);
+        }
+      }
+      return success();
+    });
+    ParserConfig parseConfig(op->getContext(), /*verifyAfterParse=*/false,
+                             /*fallbackResourceMap=*/nullptr,
+                             /*bytecodeReaderConfig=*/&readConfig);
     doRoundtripWithConfigs(op, writeConfig, parseConfig);
   }
 
@@ -344,26 +351,29 @@ private:
             DialectBytecodeWriter &writer) -> LogicalResult {
           return iface->writeType(type, writer);
         });
-    ParserConfig parseConfig(op->getContext(), /*verifyAfterParse=*/false);
-    parseConfig.getBytecodeReaderConfig().attachAttributeCallback(
-        [&](DialectBytecodeReader &reader, StringRef dialectName,
-            Attribute &entry) -> LogicalResult {
-          Attribute builtinAttr = iface->readAttribute(reader);
-          if (!builtinAttr)
-            return failure();
-          entry = builtinAttr;
-          return success();
-        });
-    parseConfig.getBytecodeReaderConfig().attachTypeCallback(
-        [&](DialectBytecodeReader &reader, StringRef dialectName,
-            Type &entry) -> LogicalResult {
-          Type builtinType = iface->readType(reader);
-          if (!builtinType) {
-            return failure();
-          }
-          entry = builtinType;
-          return success();
-        });
+    BytecodeReaderConfig readConfig;
+    readConfig.attachAttributeCallback([&](DialectBytecodeReader &reader,
+                                           StringRef dialectName,
+                                           Attribute &entry) -> LogicalResult {
+      Attribute builtinAttr = iface->readAttribute(reader);
+      if (!builtinAttr)
+        return failure();
+      entry = builtinAttr;
+      return success();
+    });
+    readConfig.attachTypeCallback([&](DialectBytecodeReader &reader,
+                                      StringRef dialectName,
+                                      Type &entry) -> LogicalResult {
+      Type builtinType = iface->readType(reader);
+      if (!builtinType) {
+        return failure();
+      }
+      entry = builtinType;
+      return success();
+    });
+    ParserConfig parseConfig(op->getContext(), /*verifyAfterParse=*/false,
+                             /*fallbackResourceMap=*/nullptr,
+                             /*bytecodeReaderConfig=*/&readConfig);
     doRoundtripWithConfigs(op, writeConfig, parseConfig);
   }
 

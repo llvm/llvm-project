@@ -50,6 +50,7 @@ extern "C" {
 
 DEFINE_C_API_STRUCT(MlirAsmState, void);
 DEFINE_C_API_STRUCT(MlirBytecodeWriterConfig, void);
+DEFINE_C_API_STRUCT(MlirBytecodeReaderConfig, void);
 DEFINE_C_API_STRUCT(MlirContext, void);
 DEFINE_C_API_STRUCT(MlirDialect, void);
 DEFINE_C_API_STRUCT(MlirDialectRegistry, void);
@@ -469,6 +470,16 @@ mlirBytecodeWriterConfigDesiredEmitVersion(MlirBytecodeWriterConfig flags,
                                            int64_t version);
 
 //===----------------------------------------------------------------------===//
+// Bytecode parsing flags API.
+//===----------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED MlirBytecodeReaderConfig
+mlirBytecodeReaderConfigCreate(void);
+
+MLIR_CAPI_EXPORTED void
+mlirBytecodeReaderConfigDestroy(MlirBytecodeReaderConfig config);
+
+//===----------------------------------------------------------------------===//
 // Operation API.
 //===----------------------------------------------------------------------===//
 
@@ -819,6 +830,16 @@ MLIR_CAPI_EXPORTED MlirOperation mlirBlockGetTerminator(MlirBlock block);
 /// Takes an operation owned by the caller and appends it to the block.
 MLIR_CAPI_EXPORTED void mlirBlockAppendOwnedOperation(MlirBlock block,
                                                       MlirOperation operation);
+
+/// Read the operations defined within the given buffer, containing MLIR
+/// bytecode, into the provided block.
+MLIR_CAPI_EXPORTED MlirLogicalResult mlirBlockAppendParseBytecode(
+    MlirContext context, MlirBlock block, MlirStringRef buffer);
+
+/// Same as mlirBlockAppendParseBytecode but with reader config.
+MLIR_CAPI_EXPORTED MlirLogicalResult mlirBlockAppendParseBytecodeWithConfig(
+    MlirContext context, MlirBlock block, MlirStringRef buffer,
+    MlirBytecodeReaderConfig config);
 
 /// Takes an operation owned by the caller and inserts it as `pos` to the block.
 /// This is an expensive operation that scans the block linearly, prefer

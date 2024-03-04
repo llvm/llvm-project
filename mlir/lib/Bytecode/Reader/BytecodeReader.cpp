@@ -1257,35 +1257,35 @@ LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
   if (failed(entry.dialect->load(dialectReader, fileLoc.getContext())))
     return failure();
 
-  if constexpr (std::is_same_v<T, Type>) {
-    // Try parsing with callbacks first if available.
-    for (const auto &callback :
-         parserConfig.getBytecodeReaderConfig().getTypeCallbacks()) {
-      if (failed(
-              callback->read(dialectReader, entry.dialect->name, entry.entry)))
-        return failure();
-      // Early return if parsing was successful.
-      if (!!entry.entry)
-        return success();
+  if (auto *config = parserConfig.getBytecodeReaderConfig()) {
+    if constexpr (std::is_same_v<T, Type>) {
+      // Try parsing with callbacks first if available.
+      for (const auto &callback : config->getTypeCallbacks()) {
+        if (failed(callback->read(dialectReader, entry.dialect->name,
+                                  entry.entry)))
+          return failure();
+        // Early return if parsing was successful.
+        if (!!entry.entry)
+          return success();
 
-      // Reset the reader if we failed to parse, so we can fall through the
-      // other parsing functions.
-      reader = EncodingReader(entry.data, reader.getLoc());
-    }
-  } else {
-    // Try parsing with callbacks first if available.
-    for (const auto &callback :
-         parserConfig.getBytecodeReaderConfig().getAttributeCallbacks()) {
-      if (failed(
-              callback->read(dialectReader, entry.dialect->name, entry.entry)))
-        return failure();
-      // Early return if parsing was successful.
-      if (!!entry.entry)
-        return success();
+        // Reset the reader if we failed to parse, so we can fall through the
+        // other parsing functions.
+        reader = EncodingReader(entry.data, reader.getLoc());
+      }
+    } else {
+      // Try parsing with callbacks first if available.
+      for (const auto &callback : config->getAttributeCallbacks()) {
+        if (failed(callback->read(dialectReader, entry.dialect->name,
+                                  entry.entry)))
+          return failure();
+        // Early return if parsing was successful.
+        if (!!entry.entry)
+          return success();
 
-      // Reset the reader if we failed to parse, so we can fall through the
-      // other parsing functions.
-      reader = EncodingReader(entry.data, reader.getLoc());
+        // Reset the reader if we failed to parse, so we can fall through the
+        // other parsing functions.
+        reader = EncodingReader(entry.data, reader.getLoc());
+      }
     }
   }
 

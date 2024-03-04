@@ -464,9 +464,11 @@ public:
   /// `fallbackResourceMap` is an optional fallback handler that can be used to
   /// parse external resources not explicitly handled by another parser.
   ParserConfig(MLIRContext *context, bool verifyAfterParse = true,
-               FallbackAsmResourceMap *fallbackResourceMap = nullptr)
+               FallbackAsmResourceMap *fallbackResourceMap = nullptr,
+               BytecodeReaderConfig *bytecodeReaderConfig = nullptr)
       : context(context), verifyAfterParse(verifyAfterParse),
-        fallbackResourceMap(fallbackResourceMap) {
+        fallbackResourceMap(fallbackResourceMap),
+        bytecodeReaderConfig(bytecodeReaderConfig) {
     assert(context && "expected valid MLIR context");
   }
 
@@ -476,9 +478,10 @@ public:
   /// Returns if the parser should verify the IR after parsing.
   bool shouldVerifyAfterParse() const { return verifyAfterParse; }
 
-  /// Returns the parsing configurations associated to the bytecode read.
-  BytecodeReaderConfig &getBytecodeReaderConfig() const {
-    return const_cast<BytecodeReaderConfig &>(bytecodeReaderConfig);
+  /// Returns the parsing configurations associated to the bytecode read,
+  /// returns nullptr if no config was set.
+  BytecodeReaderConfig *getBytecodeReaderConfig() const {
+    return const_cast<BytecodeReaderConfig *>(bytecodeReaderConfig);
   }
 
   /// Return the resource parser registered to the given name, or nullptr if no
@@ -515,7 +518,7 @@ private:
   bool verifyAfterParse;
   DenseMap<StringRef, std::unique_ptr<AsmResourceParser>> resourceParsers;
   FallbackAsmResourceMap *fallbackResourceMap;
-  BytecodeReaderConfig bytecodeReaderConfig;
+  BytecodeReaderConfig *bytecodeReaderConfig;
 };
 
 //===----------------------------------------------------------------------===//

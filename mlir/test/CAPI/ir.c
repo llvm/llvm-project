@@ -2381,6 +2381,68 @@ void testDiagnostics(void) {
   mlirContextDestroy(ctx);
 }
 
+void callbackCollectStreamData(MlirStringRef input, void *userData) {
+  MlirStringRef *out = (MlirStringRef *)userData;
+  if (out->data == NULL) {
+    out->data = malloc(input.length);
+    memcpy(out->data, input.data, input.length);
+    out->length = input.length;
+  } else {
+    out->data = realloc(out->data, out->length + input.length);
+    memcpy(out->data + out->length, input.data, input.length);
+    out->length += input.length;
+  }
+}
+
+void testMlirBytecodeReadWrite(MlirContext ctx) {
+  const char *moduleString = "module {\n"
+                             "  func.func @mlirbc_test() {\n"
+                             "    %1 = arith.constant 114: i32\n"
+                             "    %2 = arith.constant 514: i32\n"
+                             "    arith.addi %1, %2: i32\n"
+                             "    return\n"
+                             "  }\n"
+                             "}";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+
+  MlirStringRef bytecode = mlirStringRefCreate(NULL, 0);
+  mlirOperationWriteBytecode(mlirModuleGetOperation(module),
+                             callbackCollectStreamData, &bytecode);
+
+  MlirBlock blockBc = mlirBlockCreate(0, NULL, NULL);
+  MlirLogicalResult result =
+      mlirBlockAppendParseBytecode(ctx, blockBc, bytecode);
+  assert(mlirLogicalResultIsSuccess(result));
+
+  MlirModule moduleBc =
+      mlirModuleFromOperation(mlirBlockGetFirstOperation(blockBc));
+
+  fprintf(stderr, "===== mlirbc-test manually =====\n");
+  mlirOperationDump(mlirModuleGetOperation(module));
+  fprintf(stderr, "===== mlirbc-test parsed =====\n");
+  mlirOperationDump(mlirModuleGetOperation(moduleBc));
+
+  // CHECK:      ===== mlirbc-test manually =====
+  // CHECK-NEXT: module {
+  // CHECK-NEXT:   func.func @mlirbc_test() {
+  // CHECK-NEXT:     %c114_i32 = arith.constant 114 : i32
+  // CHECK-NEXT:     %c514_i32 = arith.constant 514 : i32
+  // CHECK-NEXT:     %0 = arith.addi %c114_i32, %c514_i32 : i32
+  // CHECK-NEXT:     return
+  // CHECK-NEXT:   }
+  // CHECK-NEXT: }
+  // CHECK-NEXT: ===== mlirbc-test parsed =====
+  // CHECK-NEXT: module {
+  // CHECK-NEXT:   func.func @mlirbc_test() {
+  // CHECK-NEXT:     %c114_i32 = arith.constant 114 : i32
+  // CHECK-NEXT:     %c514_i32 = arith.constant 514 : i32
+  // CHECK-NEXT:     %0 = arith.addi %c114_i32, %c514_i32 : i32
+  // CHECK-NEXT:     return
+  // CHECK-NEXT:   }
+  // CHECK-NEXT: }
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2426,6 +2488,7 @@ int main(void) {
 
   testExplicitThreadPools();
   testDiagnostics();
+  testMlirBytecodeReadWrite(ctx);
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob

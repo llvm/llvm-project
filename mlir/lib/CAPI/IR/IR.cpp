@@ -10,6 +10,7 @@
 #include "mlir-c/Support.h"
 
 #include "mlir/AsmParser/AsmParser.h"
+#include "mlir/Bytecode/BytecodeReader.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
@@ -28,6 +29,7 @@
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser/Parser.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ThreadPool.h"
 
 #include <cstddef>
@@ -234,6 +236,18 @@ void mlirBytecodeWriterConfigDestroy(MlirBytecodeWriterConfig config) {
 void mlirBytecodeWriterConfigDesiredEmitVersion(MlirBytecodeWriterConfig flags,
                                                 int64_t version) {
   unwrap(flags)->setDesiredBytecodeVersion(version);
+}
+
+//===----------------------------------------------------------------------===//
+// Bytecode parsing flags API.
+//===----------------------------------------------------------------------===//
+
+MlirBytecodeReaderConfig mlirBytecodeReaderConfigCreate() {
+  return wrap(new BytecodeReaderConfig());
+}
+
+void mlirBytecodeReaderConfigDestroy(MlirBytecodeReaderConfig config) {
+  delete unwrap(config);
 }
 
 //===----------------------------------------------------------------------===//
@@ -838,6 +852,34 @@ MlirOperation mlirBlockGetTerminator(MlirBlock block) {
 
 void mlirBlockAppendOwnedOperation(MlirBlock block, MlirOperation operation) {
   unwrap(block)->push_back(unwrap(operation));
+}
+
+static MlirLogicalResult
+mlirBlockAppendParseBytecodeImpl(MlirContext context, MlirBlock block,
+                                 MlirStringRef buffer,
+                                 BytecodeReaderConfig *config) {
+  auto memBuffer = llvm::MemoryBuffer::getMemBuffer(
+      unwrap(buffer), /* BufferName */ __func__,
+      /* RequiresNullTerminator */ false);
+  auto parserConfig =
+      mlir::ParserConfig{unwrap(context), /* verifyAfterParse */ true,
+                         /* fallbackResourceMap */ nullptr,
+                         /* bytecodeReaderConfig */ config};
+  return wrap(mlir::readBytecodeFile(*memBuffer, unwrap(block), parserConfig));
+}
+
+MlirLogicalResult mlirBlockAppendParseBytecode(MlirContext context,
+                                               MlirBlock block,
+                                               MlirStringRef buffer) {
+  return mlirBlockAppendParseBytecodeImpl(context, block, buffer, nullptr);
+}
+
+MlirLogicalResult
+mlirBlockAppendParseBytecodeWithConfig(MlirContext context, MlirBlock block,
+                                       MlirStringRef buffer,
+                                       MlirBytecodeReaderConfig config) {
+  return mlirBlockAppendParseBytecodeImpl(context, block, buffer,
+                                          unwrap(config));
 }
 
 void mlirBlockInsertOwnedOperation(MlirBlock block, intptr_t pos,
