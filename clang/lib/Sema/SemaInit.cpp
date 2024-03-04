@@ -2358,9 +2358,10 @@ void InitListChecker::CheckStructUnionTypes(
   // Emit warnings for missing struct field initializers.
   // This check is disabled for designated initializers in C.
   // This matches gcc behaviour.
+  bool IsCDesignatedInitializer = HasDesignatedInit && !SemaRef.getLangOpts().CPlusPlus;
   if (!VerifyOnly && InitializedSomething && !RD->isUnion() &&
       !IList->isIdiomaticZeroInitializer(SemaRef.getLangOpts()) &&
-      !(HasDesignatedInit && !SemaRef.getLangOpts().CPlusPlus)) {
+      !IsCDesignatedInitializer) {
     // It is possible we have one or more unnamed bitfields remaining.
     // Find first (if any) named field and emit warning.
     for (RecordDecl::field_iterator it = HasDesignatedInit ? RD->field_begin()
