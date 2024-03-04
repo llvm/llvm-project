@@ -2121,6 +2121,7 @@ DiagnosedSilenceableFailure transform::ConvertToLoopsOp::applyToOne(
       scf::lowerToLoopsUsingSCFForOp(rewriter, target);
   if (failed(loops))
     return emitDefaultDefiniteFailure(target);
+  rewriter.eraseOp(target);
   return DiagnosedSilenceableFailure::success();
 }
 
