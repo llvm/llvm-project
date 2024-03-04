@@ -500,6 +500,11 @@ AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) {
   return TTI::PSK_Software;
 }
 
+static bool isUnpackedVectorVT(EVT VecVT) {
+  return VecVT.isScalableVector() &&
+         VecVT.getSizeInBits().getKnownMinValue() < AArch64::SVEBitsPerBlock;
+}
+
 InstructionCost
 AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                       TTI::TargetCostKind CostKind) {
@@ -579,17 +584,16 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         ICA.getReturnType()->getScalarType()->isIntegerTy(1))
       break;
     LLVMContext &C = RetTy->getContext();
-    EVT MRTy = getTLI()->getValueType(DL, RetTy);
-    EVT MPTy = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+    EVT RetVT = getTLI()->getValueType(DL, RetTy);
+    EVT VecVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
     // Skip this if either the return type or the vector argument are unpacked
     // SVE types; they may get lowered to stack stores and loads.
-    if ((MRTy.isScalableVector() &&
-         MRTy.getSizeInBits().getKnownMinValue() != AArch64::SVEBitsPerBlock) ||
-        (MPTy.isScalableVector() &&
-         MPTy.getSizeInBits().getKnownMinValue() != AArch64::SVEBitsPerBlock))
+    if (isUnpackedVectorVT(RetVT) || isUnpackedVectorVT(VecVT))
       break;
-    TargetLoweringBase::LegalizeKind RLK = getTLI()->getTypeConversion(C, MRTy);
-    TargetLoweringBase::LegalizeKind PLK = getTLI()->getTypeConversion(C, MPTy);
+    TargetLoweringBase::LegalizeKind RLK =
+        getTLI()->getTypeConversion(C, RetVT);
+    TargetLoweringBase::LegalizeKind PLK =
+        getTLI()->getTypeConversion(C, VecVT);
     const ConstantInt *Idx = dyn_cast<ConstantInt>(ICA.getArgs()[1]);
     if (RLK.first == TargetLoweringBase::TypeLegal &&
         PLK.first == TargetLoweringBase::TypeLegal && Idx &&
@@ -608,17 +612,16 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         ICA.getReturnType()->getScalarType()->isIntegerTy(1))
       break;
     LLVMContext &C = RetTy->getContext();
-    EVT MTy0 = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
-    EVT MTy1 = getTLI()->getValueType(DL, ICA.getArgTypes()[1]);
+    EVT VecVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+    EVT SubVecVT = getTLI()->getValueType(DL, ICA.getArgTypes()[1]);
     // Skip this if either type is an unpacked SVE type; they may get lowered
     // to stack stores and loads.
-    if ((MTy0.isScalableVector() &&
-         MTy0.getSizeInBits().getKnownMinValue() != AArch64::SVEBitsPerBlock) ||
-        (MTy1.isScalableVector() &&
-         MTy1.getSizeInBits().getKnownMinValue() != AArch64::SVEBitsPerBlock))
+    if (isUnpackedVectorVT(VecVT) || isUnpackedVectorVT(SubVecVT))
       break;
-    TargetLoweringBase::LegalizeKind LK0 = getTLI()->getTypeConversion(C, MTy0);
-    TargetLoweringBase::LegalizeKind LK1 = getTLI()->getTypeConversion(C, MTy1);
+    TargetLoweringBase::LegalizeKind LK0 =
+        getTLI()->getTypeConversion(C, VecVT);
+    TargetLoweringBase::LegalizeKind LK1 =
+        getTLI()->getTypeConversion(C, SubVecVT);
     const ConstantInt *Idx = dyn_cast<ConstantInt>(ICA.getArgs()[2]);
     if (LK0.first == TargetLoweringBase::TypeLegal &&
         LK1.first == TargetLoweringBase::TypeLegal && Idx &&
