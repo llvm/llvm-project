@@ -127,6 +127,9 @@ private:
       // Clang extended vector types are mangled as follows:
       //
       // '_ExtVector<' <lanes> ',' <scalar type> '>'
+
+      // Before parsing T(=<scalar type>), make sure the syntax of
+      // `_ExtVector<N, T>` is correct...
       if (!T.consume_front("<"))
         PrintFatalError(Loc, "Expected '<' after '_ExtVector'");
       unsigned long long Lanes;
@@ -139,6 +142,8 @@ private:
       if (!T.consume_back(">"))
         PrintFatalError(
             Loc, "Expected '>' after scalar type in '_ExtVector<N, type>'");
+
+      // ...all good, we can check if we have a valid `<scalar type>`.
       ParseType(T);
     } else {
       auto ReturnTypeVal = StringSwitch<std::string>(T)
