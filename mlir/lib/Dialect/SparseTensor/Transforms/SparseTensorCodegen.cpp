@@ -432,7 +432,7 @@ static Value genSliceToSize(OpBuilder &builder, Location loc, Value mem,
 static SmallVector<ReassociationIndices>
 getReassociationForFlattening(ShapedType srcTp, unsigned batchLvls) {
   SmallVector<ReassociationIndices> ret(batchLvls + 1, {});
-  // Create reassociation in form:
+  // Create reassociation in the form:
   // {0}, {1}, ..., {batchLvl - 1}, {batchLvl, ..., rank}
   for (unsigned i = 0; i < batchLvls; i++)
     ret[i].push_back(i);
