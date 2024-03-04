@@ -100,23 +100,20 @@ private:
   bool IsNonTemporal = false;
   bool IsLastUse = false;
 
-  SIMemOpInfo(AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent,
-              SIAtomicScope Scope = SIAtomicScope::SYSTEM,
-              SIAtomicAddrSpace OrderingAddrSpace = SIAtomicAddrSpace::ATOMIC,
-              SIAtomicAddrSpace InstrAddrSpace = SIAtomicAddrSpace::ALL,
-              bool IsCrossAddressSpaceOrdering = true,
-              AtomicOrdering FailureOrdering =
-                AtomicOrdering::SequentiallyConsistent,
-              bool IsVolatile = false,
-              bool IsNonTemporal = false,
-              bool IsLastUse = false)
-    : Ordering(Ordering), FailureOrdering(FailureOrdering),
-      Scope(Scope), OrderingAddrSpace(OrderingAddrSpace),
-      InstrAddrSpace(InstrAddrSpace),
-      IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
-      IsVolatile(IsVolatile),
-      IsNonTemporal(IsNonTemporal),
-      IsLastUse(IsLastUse) {
+  SIMemOpInfo(
+      AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent,
+      SIAtomicScope Scope = SIAtomicScope::SYSTEM,
+      SIAtomicAddrSpace OrderingAddrSpace = SIAtomicAddrSpace::ATOMIC,
+      SIAtomicAddrSpace InstrAddrSpace = SIAtomicAddrSpace::ALL,
+      bool IsCrossAddressSpaceOrdering = true,
+      AtomicOrdering FailureOrdering = AtomicOrdering::SequentiallyConsistent,
+      bool IsVolatile = false, bool IsNonTemporal = false,
+      bool IsLastUse = false)
+      : Ordering(Ordering), FailureOrdering(FailureOrdering), Scope(Scope),
+        OrderingAddrSpace(OrderingAddrSpace), InstrAddrSpace(InstrAddrSpace),
+        IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
+        IsVolatile(IsVolatile), IsNonTemporal(IsNonTemporal),
+        IsLastUse(IsLastUse) {
 
     if (Ordering == AtomicOrdering::NotAtomic) {
       assert(Scope == SIAtomicScope::NONE &&
@@ -206,9 +203,7 @@ public:
 
   /// \returns True if memory access of the machine instruction used to
   /// create this SIMemOpInfo is last use, false otherwise.
-  bool isLastUse() const {
-    return IsLastUse;
-  }
+  bool isLastUse() const { return IsLastUse; }
 
   /// \returns True if ordering constraint of the machine instruction used to
   /// create this SIMemOpInfo is unordered or higher, false otherwise.
@@ -638,8 +633,7 @@ public:
 
   bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const override;
 
-  bool enableLastUse(MachineInstr &MI,
-                     bool IsLastUse) const override;
+  bool enableLastUse(MachineInstr &MI, bool IsLastUse) const override;
 };
 
 class SIMemoryLegalizer final : public MachineFunctionPass {
@@ -2453,7 +2447,7 @@ bool SIGfx12CacheControl::enableLastUse(MachineInstr &MI,
   assert(MI.mayLoad() && !MI.mayStore());
 
   if (IsLastUse && !isScope(MI, AMDGPU::CPol::SCOPE_SYS))
-    return setTH(MI, AMDGPU::CPol::TH_LU);;
+    return setTH(MI, AMDGPU::CPol::TH_LU);
 
   return false;
 }
