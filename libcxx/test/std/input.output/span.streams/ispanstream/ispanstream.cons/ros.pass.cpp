@@ -19,27 +19,60 @@
 //     template<class ROS> explicit basic_ispanstream(ROS&& s);
 
 #include <cassert>
+#include <concepts>
 #include <spanstream>
 
 #include "constexpr_char_traits.h"
 #include "nasty_string.h"
+#include "test_convertible.h"
 #include "test_macros.h"
 
-#include "../../types.h"
+#include "../../helper_types.h"
 
 #ifndef TEST_HAS_NO_NASTY_STRING
 void test_sfinae_with_nasty_char() {
   using SpStream = std::basic_ispanstream<nasty_char, nasty_char_traits>;
 
-  // TODO:
+  // Non-const convertible
+  static_assert(std::constructible_from<SpStream, ReadOnlySpan<nasty_char>>);
+  static_assert(!test_convertible<SpStream, ReadOnlySpan<nasty_char>>());
+
+  // Const convertible
+  static_assert(!std::constructible_from<SpStream, const ReadOnlySpan<nasty_char>>);
+  static_assert(!test_convertible<SpStream, const ReadOnlySpan<nasty_char>>());
+
+  // Non-const non-convertible
+  static_assert(std::constructible_from<SpStream, ReadOnlySpan<nasty_char>>);
+  static_assert(!test_convertible<SpStream, ReadOnlySpan<nasty_char>>());
+
+  // Const non-convertible
+  static_assert(!std::constructible_from<SpStream, const ReadOnlySpan<nasty_char>>);
+  static_assert(!test_convertible<SpStream, const ReadOnlySpan<nasty_char>>());
 }
 #endif // TEST_HAS_NO_NASTY_STRING
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test_sfinae() {
-  using SpStream = std::basic_ispanstream<CharT, TraitsT>;
+  using SpStream =
+      std::conditional_t<std::same_as<CharT, nasty_char>,
+                         std::basic_ispanstream<nasty_char, nasty_char_traits>,
+                         std::basic_ispanstream<CharT, TraitsT>>;
 
-  // TODO:
+  // Non-const convertible
+  static_assert(std::constructible_from<SpStream, ReadOnlySpan<CharT>>);
+  static_assert(!test_convertible<SpStream, ReadOnlySpan<CharT>>());
+
+  // Const convertible
+  static_assert(!std::constructible_from<SpStream, const ReadOnlySpan<CharT>>);
+  static_assert(!test_convertible<SpStream, const ReadOnlySpan<CharT>>());
+
+  // Non-const non-convertible
+  static_assert(std::constructible_from<SpStream, NonReadOnlySpan<CharT>>);
+  static_assert(!test_convertible<SpStream, NonReadOnlySpan<CharT>>());
+
+  // Const non-convertible
+  static_assert(!std::constructible_from<SpStream, const NonReadOnlySpan<CharT>>);
+  static_assert(!test_convertible<SpStream, const NonReadOnlySpan<CharT>>());
 }
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
@@ -47,10 +80,31 @@ void test() {
   using SpStream = std::basic_ispanstream<CharT, TraitsT>;
 
   // TODO:
+  CharT arr[4];
+  ReadOnlySpan<CharT, 4> ros{arr};
+
+  {
+    SpStream spSt(ros);
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
+  }
+
+  CharT arr1[6];
+  ReadOnlySpan<CharT, 6> ros2{arr1};
+
+  {
+    SpStream spSt(ros2);
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().data() == arr1);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
+  }
 }
 
 int main(int, char**) {
 #ifndef TEST_HAS_NO_NASTY_STRING
+  // test_sfinae<nasty_char, nasty_char_traits>();
   test_sfinae_with_nasty_char();
 #endif
   test_sfinae<char>();

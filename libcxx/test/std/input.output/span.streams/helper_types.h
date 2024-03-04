@@ -16,17 +16,28 @@
 
 #include "test_macros.h"
 
+#include <print>
+
 template <typename CharT, std::size_t N = 0>
 class ReadOnlySpan {
+public:
   explicit ReadOnlySpan(CharT (&arr)[N]) : arr_{arr} {}
 
-public:
   operator std::span<CharT>() = delete;
 
-  operator std::span<const CharT>() { return std::span<const CharT, N>{arr_}; }
+  operator std::span<const CharT>() {
+    std::println(stderr, "----> ROspan");
+    return std::span<const CharT, N>{arr_};
+  }
 
-  const CharT* begin() { return arr_; }
-  const CharT* end() { return arr_ + N; }
+  const CharT* begin() {
+    std::println(stderr, "----> ROspan begin");
+    return arr_;
+  }
+  const CharT* end() {
+    std::println(stderr, "----> ROspan end");
+    return arr_ + N;
+  }
 
 private:
   CharT* arr_;
@@ -68,9 +79,9 @@ static_assert(!std::convertible_to<const ReadOnlySpan<wchar_t>, std::span<const 
 
 template <typename CharT, std::size_t N = 0>
 class NonReadOnlySpan {
+public:
   explicit NonReadOnlySpan(CharT (&arr)[N]) : arr_{arr} {}
 
-public:
   operator std::span<CharT>() { return std::span<CharT, N>{arr_}; }
 
   operator std::span<const CharT>() = delete;
