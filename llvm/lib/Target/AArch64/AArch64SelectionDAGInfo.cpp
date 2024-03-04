@@ -95,6 +95,7 @@ SDValue AArch64SelectionDAGInfo::EmitSpecializedLibcall(
   DstEntry.Node = Dst;
   Args.push_back(DstEntry);
   EVT Ty = TLI->getPointerTy(DAG.getDataLayout());
+  PointerType *RetTy;
 
   if (!LowerToSMERoutines)
     return SDValue();
@@ -106,6 +107,7 @@ SDValue AArch64SelectionDAGInfo::EmitSpecializedLibcall(
     Symbol = DAG.getExternalSymbol("__arm_sc_memcpy", Ty);
     Entry.Node = Src;
     Args.push_back(Entry);
+    RetTy = PointerType::getUnqual(*DAG.getContext());
     break;
   }
   case RTLIB::MEMMOVE: {
@@ -114,16 +116,17 @@ SDValue AArch64SelectionDAGInfo::EmitSpecializedLibcall(
     Symbol = DAG.getExternalSymbol("__arm_sc_memmove", Ty);
     Entry.Node = Src;
     Args.push_back(Entry);
+    RetTy = PointerType::getUnqual(*DAG.getContext());
     break;
   }
   case RTLIB::MEMSET: {
     TargetLowering::ArgListEntry Entry;
-    Entry.Ty = PointerType::getUnqual(*DAG.getContext());
+    Entry.Ty = Type::getInt32Ty(*DAG.getContext());
     Symbol = DAG.getExternalSymbol("__arm_sc_memset", Ty);
     Src = DAG.getZExtOrTrunc(Src, DL, MVT::i32);
     Entry.Node = Src;
-    Entry.Ty = Type::getInt32Ty(*DAG.getContext());
     Args.push_back(Entry);
+    RetTy = PointerType::getUnqual(*DAG.getContext());
     break;
   }
   default:
@@ -133,11 +136,12 @@ SDValue AArch64SelectionDAGInfo::EmitSpecializedLibcall(
   SizeEntry.Node = Size;
   SizeEntry.Ty = PointerType::getUnqual(*DAG.getContext());
   Args.push_back(SizeEntry);
+  assert(Symbol->getOpcode() == ISD::ExternalSymbol &&
+         "Function name is not set");
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-      TLI->getLibcallCallingConv(LC), Type::getVoidTy(*DAG.getContext()),
-      Symbol, std::move(Args));
+      TLI->getLibcallCallingConv(LC), RetTy, Symbol, std::move(Args));
   std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
   return CallResult.second;
 }
