@@ -317,7 +317,7 @@ private:
                                       GlobalValue::LinkageTypes Linkage);
 
   /// Set Comdat property of GV, if required.
-  void maybeSetComdat(GlobalVariable *GV, Function *Fn, StringRef VarName);
+  void maybeSetComdat(GlobalVariable *GV, GlobalObject *GO, StringRef VarName);
 
   /// Setup the sections into which counters and bitmaps are allocated.
   GlobalVariable *setupProfileSection(InstrProfInstBase *Inc,
@@ -1215,13 +1215,13 @@ static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
   return true;
 }
 
-void InstrLowerer::maybeSetComdat(GlobalVariable *GV, Function *Fn,
+void InstrLowerer::maybeSetComdat(GlobalVariable *GV, GlobalObject *GO,
                                   StringRef CounterGroupName) {
   // Place lowered global variables in a comdat group if the associated function
-  // is a COMDAT. This will make sure that only one copy of global variable
-  // (e.g. function counters) of the COMDAT function will be emitted after
-  // linking.
-  bool NeedComdat = needsComdatForCounter(*Fn, M);
+  // or global variable is a COMDAT. This will make sure that only one copy of
+  // global variable (e.g. function counters) of the COMDAT function will be
+  // emitted after linking.
+  bool NeedComdat = needsComdatForCounter(*GO, M);
   bool UseComdat = (NeedComdat || TT.isOSBinFormatELF());
 
   if (!UseComdat)
@@ -1275,7 +1275,8 @@ static inline bool shouldRecordVTableAddr(GlobalVariable *GV) {
   return true;
 }
 
-// FIXME: Does symbolic relocation from 'getFuncAddrForProfData' matter here?
+// FIXME: Introduce an internal alias like what's done for functions to reduce
+// the number of relocation entries.
 static inline Constant *getVTableAddrForProfData(GlobalVariable *GV) {
   auto *Int8PtrTy = PointerType::getUnqual(GV->getContext());
 
@@ -1342,36 +1343,7 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
   Data->setSection(getInstrProfSectionName(IPSK_vtab, TT.getObjectFormat()));
   Data->setAlignment(Align(8));
 
-  const bool NeedComdat = needsComdatForCounter(*GV, M);
-
-  // GV is the data structure to record vtable information.
-  // Place the global variable for per-vtable profile data in a comdat group
-  // if the associated vtable definition is a COMDAT. This makes sure only one
-  // copy of the variable for the vtable will be emitted after linking.
-  auto MaybeSetComdat = [&](GlobalVariable *GV, StringRef GroupName) {
-    bool UseComdat = (NeedComdat || TT.isOSBinFormatELF());
-    if (UseComdat) {
-      // Create a new comdat group using the name of the global variable as
-      // opposed to using the comdat group of the vtable.
-      Comdat *C = M.getOrInsertComdat(GroupName);
-      // For ELF, when not using COMDAT, put the vtable profile data into a
-      // nodeduplicate COMDAT which is lowered to a zero-flag zero group.
-      // This allows -z -start-stop-gc to discard the entire group when the
-      // vtable def is discarded.
-      if (!NeedComdat)
-        C->setSelectionKind(Comdat::NoDeduplicate);
-      GV->setComdat(C);
-      // COFF doesn't allow the comdat group leader to have private linkage, so
-      // upgrade private linkage to internal linkage to produce a symbol table
-      // entry.
-      if (TT.isOSBinFormatCOFF() && GV->hasPrivateLinkage())
-        GV->setLinkage(GlobalValue::InternalLinkage);
-
-      return;
-    }
-  };
-
-  MaybeSetComdat(Data, Data->getName());
+  maybeSetComdat(Data, GV, Data->getName());
 
   VTableDataMap[GV] = Data;
 
