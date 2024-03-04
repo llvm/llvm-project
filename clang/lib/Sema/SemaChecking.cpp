@@ -5303,7 +5303,7 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     if (CheckVectorElementCallArgs(this, TheCall))
       return true;
-    if (SemaBuiltinElementwiseTernaryMath(TheCall, false))
+    if (SemaBuiltinElementwiseTernaryMath(TheCall, /*CheckForFloatArgs*/ false))
       return true;
   }
   }
@@ -19809,7 +19809,7 @@ bool Sema::SemaBuiltinVectorMath(CallExpr *TheCall, QualType &Res) {
 }
 
 bool Sema::SemaBuiltinElementwiseTernaryMath(CallExpr *TheCall,
-                                             bool enforceFloatingPointCheck) {
+                                             bool CheckForFloatArgs) {
   if (checkArgCount(*this, TheCall, 3))
     return true;
 
@@ -19821,11 +19821,18 @@ bool Sema::SemaBuiltinElementwiseTernaryMath(CallExpr *TheCall,
     Args[I] = Converted.get();
   }
 
-  if (enforceFloatingPointCheck) {
+  if (CheckForFloatArgs) {
     int ArgOrdinal = 1;
     for (Expr *Arg : Args) {
       if (checkFPMathBuiltinElementType(*this, Arg->getBeginLoc(),
                                         Arg->getType(), ArgOrdinal++))
+        return true;
+    }
+  } else {
+    int ArgOrdinal = 1;
+    for (Expr *Arg : Args) {
+      if (checkMathBuiltinElementType(*this, Arg->getBeginLoc(), Arg->getType(),
+                                      ArgOrdinal++))
         return true;
     }
   }

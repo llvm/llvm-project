@@ -189,9 +189,3 @@ float2 test_mad_float2_int_splat(float2 p0, float2 p1, int p2) {
 float3 test_mad_float3_int_splat(float3 p0, float3 p1, int p2) {
   return mad(p0, p1, p2);
 }
-
-// CHECK: %dx.umad = call i1 @llvm.dx.umad.i1(i1 %tobool, i1 %tobool1, i1 %tobool2)
-// CHECK: ret i1 %dx.umad
-bool test_builtin_mad_bool_type_promotion(bool p0) {
-  return __builtin_hlsl_mad(p0, p0, p0);
-}

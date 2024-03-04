@@ -14147,7 +14147,7 @@ private:
   bool SemaBuiltinVectorToScalarMath(CallExpr *TheCall);
   bool SemaBuiltinElementwiseMath(CallExpr *TheCall);
   bool SemaBuiltinElementwiseTernaryMath(CallExpr *TheCall,
-                                         bool enforceFloatingPointCheck = true);
+                                         bool CheckForFloatArgs = true);
   bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
