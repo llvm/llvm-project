@@ -95,6 +95,9 @@ private:
   bool selectUnOp(Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
                   unsigned Opcode) const;
 
+  bool selectBitcast(Register ResVReg, const SPIRVType *ResType,
+                     MachineInstr &I) const;
+
   bool selectLoad(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
   bool selectStore(MachineInstr &I) const;
@@ -452,7 +455,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_INTTOPTR:
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpConvertUToPtr);
   case TargetOpcode::G_BITCAST:
-    return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
+    return selectBitcast(ResVReg, ResType, I);
   case TargetOpcode::G_ADDRSPACE_CAST:
     return selectAddrSpaceCast(ResVReg, ResType, I);
   case TargetOpcode::G_PTR_ADD: {
@@ -590,6 +593,16 @@ bool SPIRVInstructionSelector::selectUnOp(Register ResVReg,
                                           unsigned Opcode) const {
   return selectUnOpWithSrc(ResVReg, ResType, I, I.getOperand(1).getReg(),
                            Opcode);
+}
+
+bool SPIRVInstructionSelector::selectBitcast(Register ResVReg,
+                                             const SPIRVType *ResType,
+                                             MachineInstr &I) const {
+  Register OpReg = I.getOperand(1).getReg();
+  SPIRVType *OpType = OpReg.isValid() ? GR.getSPIRVTypeForVReg(OpReg) : nullptr;
+  if (!GR.isBitcastCompatible(ResType, OpType))
+    report_fatal_error("incompatible result and operand types in a bitcast");
+  return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
 }
 
 static SPIRV::Scope::Scope getScope(SyncScope::ID Ord) {
