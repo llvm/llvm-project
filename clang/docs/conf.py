@@ -35,8 +35,17 @@ templates_path = ["_templates"]
 
 import sphinx
 
-if sphinx.version_info >= (3, 0):
+# When building man pages, we do not use the markdown pages,
+# So, we can continue without the myst_parser dependencies.
+# Doing so reduces dependencies of some packaged llvm distributions.
+try:
+    import myst_parser
+
     extensions.append("myst_parser")
+except ImportError:
+    if not tags.has("builder-man"):
+        raise
+
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'
