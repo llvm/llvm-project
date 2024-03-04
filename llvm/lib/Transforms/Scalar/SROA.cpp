@@ -2263,6 +2263,8 @@ static VectorType *createAndCheckVectorTypesForPromotion(
     const DataLayout &DL, SmallVectorImpl<VectorType *> &CandidateTys,
     bool &HaveCommonEltTy, Type *&CommonEltTy, bool &HaveVecPtrTy,
     bool &HaveCommonVecPtrTy, VectorType *&CommonVecPtrTy) {
+  [[maybe_unused]] auto OriginalElt =
+      CandidateTysCopy.size() ? CandidateTysCopy[0] : nullptr;
   // Consider additional vector types where the element type size is a
   // multiple of load/store element size.
   for (Type *Ty : OtherTys) {
@@ -2272,6 +2274,8 @@ static VectorType *createAndCheckVectorTypesForPromotion(
     // Make a copy of CandidateTys and iterate through it, because we
     // might append to CandidateTys in the loop.
     for (VectorType *const VTy : CandidateTysCopy) {
+      // The elements in the copy should remain invariant throughout the loop
+      assert(CandidateTysCopy[0] == OriginalElt && "Different Element");
       unsigned VectorSize = DL.getTypeSizeInBits(VTy).getFixedValue();
       unsigned ElementSize =
           DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
