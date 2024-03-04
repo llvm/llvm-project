@@ -8,7 +8,6 @@
 
 #include "ByteCodeExprGen.h"
 #include "ByteCodeEmitter.h"
-#include "ByteCodeGenError.h"
 #include "ByteCodeStmtGen.h"
 #include "Context.h"
 #include "Floating.h"
