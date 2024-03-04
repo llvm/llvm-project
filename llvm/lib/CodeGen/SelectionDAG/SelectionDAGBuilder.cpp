@@ -4734,7 +4734,7 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
     Src0 = I.getArgOperand(0);
     Ptr = I.getArgOperand(1);
     Mask = I.getArgOperand(2);
-    Alignment = std::nullopt;
+    Alignment = I.getParamAlign(1).valueOrOne();
   };
 
   Value  *PtrOperand, *MaskOperand, *Src0Operand;
@@ -4898,7 +4898,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
                                  MaybeAlign &Alignment) {
     // @llvm.masked.expandload.*(Ptr, Mask, Src0)
     Ptr = I.getArgOperand(0);
-    Alignment = std::nullopt;
+    Alignment = I.getParamAlign(0).valueOrOne();
     Mask = I.getArgOperand(1);
     Src0 = I.getArgOperand(2);
   };
