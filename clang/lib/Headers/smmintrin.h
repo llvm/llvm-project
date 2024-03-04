@@ -1431,8 +1431,10 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvtepu32_epi64(__m128i __V) {
 }
 
 /* SSE4 Pack with Unsigned Saturation.  */
-/// Converts 32-bit signed integers from both 128-bit integer vector
-///    operands into 16-bit unsigned integers, and returns the packed result.
+/// Converts, with saturation, 32-bit signed integers from both 128-bit integer
+///    vector operands into 16-bit unsigned integers, and returns the packed
+///    result.
+///
 ///    Values greater than 0xFFFF are saturated to 0xFFFF. Values less than
 ///    0x0000 are saturated to 0x0000.
 ///
@@ -1441,17 +1443,11 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvtepu32_epi64(__m128i __V) {
 /// This intrinsic corresponds to the <c> VPACKUSDW / PACKUSDW </c> instruction.
 ///
 /// \param __V1
-///    A 128-bit vector of [4 x i32]. Each 32-bit element is treated as a
-///    signed integer and is converted to a 16-bit unsigned integer with
-///    saturation. Values greater than 0xFFFF are saturated to 0xFFFF. Values
-///    less than 0x0000 are saturated to 0x0000. The converted [4 x i16] values
-///    are written to the lower 64 bits of the result.
+///    A 128-bit vector of [4 x i32]. The converted [4 x i16] values are
+///    written to the lower 64 bits of the result.
 /// \param __V2
-///    A 128-bit vector of [4 x i32]. Each 32-bit element is treated as a
-///    signed integer and is converted to a 16-bit unsigned integer with
-///    saturation. Values greater than 0xFFFF are saturated to 0xFFFF. Values
-///    less than 0x0000 are saturated to 0x0000. The converted [4 x i16] values
-///    are written to the higher 64 bits of the result.
+///    A 128-bit vector of [4 x i32]. The converted [4 x i16] values are
+///    written to the higher 64 bits of the result.
 /// \returns A 128-bit vector of [8 x i16] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packus_epi32(__m128i __V1,
                                                               __m128i __V2) {

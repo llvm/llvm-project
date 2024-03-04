@@ -2687,7 +2687,18 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
 
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   unsigned IntrID = N->getConstantOperandVal(0);
-  unsigned Opcode;
+  unsigned Opcode = AMDGPU::INSTRUCTION_LIST_END;
+  SDNode *ConvGlueNode = N->getGluedNode();
+  if (ConvGlueNode) {
+    // FIXME: Possibly iterate over multiple glue nodes?
+    assert(ConvGlueNode->getOpcode() == ISD::CONVERGENCECTRL_GLUE);
+    ConvGlueNode = ConvGlueNode->getOperand(0).getNode();
+    ConvGlueNode =
+        CurDAG->getMachineNode(TargetOpcode::CONVERGENCECTRL_GLUE, {},
+                               MVT::Glue, SDValue(ConvGlueNode, 0));
+  } else {
+    ConvGlueNode = nullptr;
+  }
   switch (IntrID) {
   case Intrinsic::amdgcn_wqm:
     Opcode = AMDGPU::WQM;
@@ -2719,11 +2730,19 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
     break;
   default:
     SelectCode(N);
-    return;
+    break;
   }
 
-  SDValue Src = N->getOperand(1);
-  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), {Src});
+  if (Opcode != AMDGPU::INSTRUCTION_LIST_END) {
+    SDValue Src = N->getOperand(1);
+    CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), {Src});
+  }
+
+  if (ConvGlueNode) {
+    SmallVector<SDValue, 4> NewOps(N->op_begin(), N->op_end());
+    NewOps.push_back(SDValue(ConvGlueNode, 0));
+    CurDAG->MorphNodeTo(N, N->getOpcode(), N->getVTList(), NewOps);
+  }
 }
 
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
@@ -3261,15 +3280,16 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF32NegAbs(SDValue In, SDValue &Src,
                                                  SDValue &SrcMods) const {
   Src = In;
   unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned ModOpcode;
   SmallVector<SDValue, 8> EltsF32;
 
   if (auto *BV = dyn_cast<BuildVectorSDNode>(stripBitcast(In))) {
+    assert(BV->getNumOperands() > 0);
+    // Based on first element decide which mod we match, neg or abs
+    SDValue ElF32 = stripBitcast(BV->getOperand(0));
+    unsigned ModOpcode =
+        (ElF32.getOpcode() == ISD::FNEG) ? ISD::FNEG : ISD::FABS;
     for (unsigned i = 0; i < BV->getNumOperands(); ++i) {
       SDValue ElF32 = stripBitcast(BV->getOperand(i));
-      // Based on first element decide which mod we match, neg or abs
-      if (EltsF32.empty())
-        ModOpcode = (ElF32.getOpcode() == ISD::FNEG) ? ISD::FNEG : ISD::FABS;
       if (ElF32.getOpcode() != ModOpcode)
         break;
       EltsF32.push_back(ElF32.getOperand(0));

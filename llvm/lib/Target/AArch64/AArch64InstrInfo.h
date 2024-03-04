@@ -381,8 +381,6 @@ public:
                                                   int64_t &ByteSized,
                                                   int64_t &VGSized);
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
-
   // Return true if address of the form BaseReg + Scale * ScaledReg + Offset can
   // be used for a load/store of NumBytes. BaseReg is always present and
   // implicit.

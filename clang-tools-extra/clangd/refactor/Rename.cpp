@@ -811,8 +811,18 @@ renameWithinFile(ParsedAST &AST, const NamedDecl &RenameDecl,
       continue;
     Locs.push_back(RenameLoc);
   }
-  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl))
-    return renameObjCMethodWithinFile(AST, MD, NewName, std::move(Locs));
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
+    // The custom ObjC selector logic doesn't handle the zero arg selector
+    // case, as it relies on parsing selectors via the trailing `:`.
+    // We also choose to use regular rename logic for the single-arg selectors
+    // as the AST/Index has the right locations in that case.
+    if (MD->getSelector().getNumArgs() > 1)
+      return renameObjCMethodWithinFile(AST, MD, NewName, std::move(Locs));
+
+    // Eat trailing : for single argument methods since they're actually
+    // considered a separate token during rename.
+    NewName.consume_back(":");
+  }
   for (const auto &Loc : Locs) {
     if (auto Err = FilteredChanges.add(tooling::Replacement(
             SM, CharSourceRange::getTokenRange(Loc), NewName)))
@@ -930,10 +940,9 @@ renameOutsideFile(const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
     std::optional<Selector> Selector = std::nullopt;
     llvm::SmallVector<llvm::StringRef, 8> NewNames;
     if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
-      if (MD->getSelector().getNumArgs() > 1) {
-        RenameIdentifier = MD->getSelector().getNameForSlot(0).str();
+      RenameIdentifier = MD->getSelector().getNameForSlot(0).str();
+      if (MD->getSelector().getNumArgs() > 1)
         Selector = MD->getSelector();
-      }
     }
     NewName.split(NewNames, ":");
 

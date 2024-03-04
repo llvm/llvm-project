@@ -1943,6 +1943,144 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
   }
 }
 
+TEST(CrossFileRenameTests, ObjC) {
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags = {"-xobjective-c"};
+  // rename is runnning on all "^" points in FooH.
+  struct Case {
+    llvm::StringRef FooH;
+    llvm::StringRef FooM;
+    llvm::StringRef NewName;
+    llvm::StringRef ExpectedFooH;
+    llvm::StringRef ExpectedFooM;
+  };
+  Case Cases[] = {// --- Zero arg selector
+                  {
+                      // Input
+                      R"cpp(
+        @interface Foo
+        - (int)performA^ction;
+        @end
+      )cpp",
+                      R"cpp(
+        @implementation Foo
+        - (int)performAction {
+          [self performAction];
+        }
+        @end
+      )cpp",
+                      // New name
+                      "performNewAction",
+                      // Expected
+                      R"cpp(
+        @interface Foo
+        - (int)performNewAction;
+        @end
+      )cpp",
+                      R"cpp(
+        @implementation Foo
+        - (int)performNewAction {
+          [self performNewAction];
+        }
+        @end
+      )cpp",
+                  },
+                  // --- Single arg selector
+                  {
+                      // Input
+                      R"cpp(
+        @interface Foo
+        - (int)performA^ction:(int)action;
+        @end
+      )cpp",
+                      R"cpp(
+        @implementation Foo
+        - (int)performAction:(int)action {
+          [self performAction:action];
+        }
+        @end
+      )cpp",
+                      // New name
+                      "performNewAction:",
+                      // Expected
+                      R"cpp(
+        @interface Foo
+        - (int)performNewAction:(int)action;
+        @end
+      )cpp",
+                      R"cpp(
+        @implementation Foo
+        - (int)performNewAction:(int)action {
+          [self performNewAction:action];
+        }
+        @end
+      )cpp",
+                  },
+                  // --- Multi arg selector
+                  {
+                      // Input
+                      R"cpp(
+        @interface Foo
+        - (int)performA^ction:(int)action with:(int)value;
+        @end
+      )cpp",
+                      R"cpp(
+        @implementation Foo
+        - (int)performAction:(int)action with:(int)value {
+          [self performAction:action with:value];
+        }
+        @end
+      )cpp",
+                      // New name
+                      "performNewAction:by:",
+                      // Expected
+                      R"cpp(
+        @interface Foo
+        - (int)performNewAction:(int)action by:(int)value;
+        @end
+      )cpp",
+                      R"cpp(
+        @implementation Foo
+        - (int)performNewAction:(int)action by:(int)value {
+          [self performNewAction:action by:value];
+        }
+        @end
+      )cpp",
+                  }};
+
+  trace::TestTracer Tracer;
+  for (const auto &T : Cases) {
+    SCOPED_TRACE(T.FooH);
+    Annotations FooH(T.FooH);
+    Annotations FooM(T.FooM);
+    std::string FooHPath = testPath("foo.h");
+    std::string FooMPath = testPath("foo.m");
+
+    MockFS FS;
+    FS.Files[FooHPath] = std::string(FooH.code());
+    FS.Files[FooMPath] = std::string(FooM.code());
+
+    auto ServerOpts = ClangdServer::optsForTest();
+    ServerOpts.BuildDynamicSymbolIndex = true;
+    ClangdServer Server(CDB, FS, ServerOpts);
+
+    // Add all files to clangd server to make sure the dynamic index has been
+    // built.
+    runAddDocument(Server, FooHPath, FooH.code());
+    runAddDocument(Server, FooMPath, FooM.code());
+
+    for (const auto &RenamePos : FooH.points()) {
+      EXPECT_THAT(Tracer.takeMetric("rename_files"), SizeIs(0));
+      auto FileEditsList =
+          llvm::cantFail(runRename(Server, FooHPath, RenamePos, T.NewName, {}));
+      EXPECT_THAT(Tracer.takeMetric("rename_files"), ElementsAre(2));
+      EXPECT_THAT(applyEdits(std::move(FileEditsList.GlobalChanges)),
+                  UnorderedElementsAre(Pair(Eq(FooHPath), Eq(T.ExpectedFooH)),
+                                       Pair(Eq(FooMPath), Eq(T.ExpectedFooM))));
+    }
+  }
+}
+
 TEST(CrossFileRenameTests, CrossFileOnLocalSymbol) {
   // cross-file rename should work for function-local symbols, even there is no
   // index provided.

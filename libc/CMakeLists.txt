@@ -162,7 +162,7 @@ elseif(LIBC_CMAKE_VERBOSE_LOGGING)
   message(STATUS "Path for config files is: ${LIBC_CONFIG_PATH}")
 endif()
 
-# option(LIBC_ENABLE_WIDE_CHARACTERS 
+# option(LIBC_ENABLE_WIDE_CHARACTERS
 # "Whether to enable wide character functions on supported platforms. This may
 # also set flags to enable or disable wide character support within other
 # functions (e.g. printf)." ON)
@@ -240,7 +240,7 @@ endif()
 
 if(LIBC_TARGET_TRIPLE)
   set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBC_TARGET_TRIPLE})
-elseif(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT LIBC_GPU_BUILD)
+elseif(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
   set(LIBC_INSTALL_LIBRARY_DIR
       lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE})
 else()

@@ -371,6 +371,7 @@ def : CompatRule<"isEqual<ShadowCallStackAttr>">;
 def : CompatRule<"isEqual<UseSampleProfileAttr>">;
 def : CompatRule<"isEqual<NoProfileAttr>">;
 def : CompatRule<"checkDenormMode">;
+def : CompatRule<"checkStrictFP">;
 def : CompatRuleStrAttr<"isEqual", "sign-return-address">;
 def : CompatRuleStrAttr<"isEqual", "sign-return-address-key">;
 def : CompatRuleStrAttr<"isEqual", "branch-protection-pauth-lr">;

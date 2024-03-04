@@ -1533,9 +1533,12 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
+  case 12ull:
+    H.VTableNamesOffset = read(Buffer, offsetOf(&Header::VTableNamesOffset));
+    [[fallthrough]];
   case 11ull:
     [[fallthrough]];
   case 10ull:
@@ -1561,10 +1564,14 @@ size_t Header::size() const {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
+    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
                   "Please update the size computation below if a new field has "
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
+  case 12ull:
+    return offsetOf(&Header::VTableNamesOffset) +
+           sizeof(Header::VTableNamesOffset);
+    [[fallthrough]];
   case 11ull:
     [[fallthrough]];
   case 10ull:
