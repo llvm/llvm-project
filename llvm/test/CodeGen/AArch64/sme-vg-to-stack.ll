@@ -637,5 +637,47 @@ entry:
   ret void
 }
 
+; Ensure VG is not spilled if nounwind is used
+;
+define void @vg_nounwind_simple() #2 {
+; CHECK-LABEL: vg_nounwind_simple:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; FP-CHECK-LABEL: vg_nounwind_simple:
+; FP-CHECK:       // %bb.0:
+; FP-CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; FP-CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    add x29, sp, #64
+; FP-CHECK-NEXT:    smstop sm
+; FP-CHECK-NEXT:    bl callee
+; FP-CHECK-NEXT:    smstart sm
+; FP-CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ret
+  call void @callee();
+  ret void;
+}
+
 attributes #0 = { "aarch64_pstate_sm_enabled" uwtable(async) }
 attributes #1 = { "probe-stack"="inline-asm" "aarch64_pstate_sm_enabled" uwtable(async) }
+attributes #2 = { "aarch64_pstate_sm_enabled" nounwind }
