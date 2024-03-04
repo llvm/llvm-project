@@ -99,6 +99,29 @@ static bool hasObjCExceptionAttribute(const ObjCInterfaceDecl *D) {
 
   return false;
 }
+void InstallAPIVisitor::recordObjCInstanceVariables(
+    const ASTContext &ASTCtx, ObjCContainerRecord *Record, StringRef SuperClass,
+    const llvm::iterator_range<
+        DeclContext::specific_decl_iterator<ObjCIvarDecl>>
+        Ivars) {
+  RecordLinkage Linkage = RecordLinkage::Exported;
+  const RecordLinkage ContainerLinkage = Record->getLinkage();
+  // If fragile, set to unknown.
+  if (ASTCtx.getLangOpts().ObjCRuntime.isFragile())
+    Linkage = RecordLinkage::Unknown;
+  // Linkage should be inherited from container.
+  else if (ContainerLinkage != RecordLinkage::Unknown)
+    Linkage = ContainerLinkage;
+  for (const auto *IV : Ivars) {
+    auto Access = getAccessForDecl(IV);
+    if (!Access)
+      continue;
+    StringRef Name = IV->getName();
+    const AvailabilityInfo Avail = AvailabilityInfo::createFromDecl(IV);
+    auto AC = IV->getCanonicalAccessControl();
+    Ctx.Slice->addObjCIVar(Record, Name, Linkage, Avail, IV, *Access, AC);
+  }
+}
 
 bool InstallAPIVisitor::VisitObjCInterfaceDecl(const ObjCInterfaceDecl *D) {
   // Skip forward declaration for classes (@class)
@@ -118,7 +141,33 @@ bool InstallAPIVisitor::VisitObjCInterfaceDecl(const ObjCInterfaceDecl *D) {
       (!D->getASTContext().getLangOpts().ObjCRuntime.isFragile() &&
        hasObjCExceptionAttribute(D));
 
-  Ctx.Slice->addObjCInterface(Name, Linkage, Avail, D, *Access, IsEHType);
+  ObjCInterfaceRecord *Class =
+      Ctx.Slice->addObjCInterface(Name, Linkage, Avail, D, *Access, IsEHType);
+
+  // Get base class.
+  StringRef SuperClassName;
+  if (const auto *SuperClass = D->getSuperClass())
+    SuperClassName = SuperClass->getObjCRuntimeNameAsString();
+
+  recordObjCInstanceVariables(D->getASTContext(), Class, SuperClassName,
+                              D->ivars());
+  return true;
+}
+
+bool InstallAPIVisitor::VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
+  StringRef CategoryName = D->getName();
+  // Skip over declarations that access could not be collected for.
+  auto Access = getAccessForDecl(D);
+  if (!Access)
+    return true;
+  const AvailabilityInfo Avail = AvailabilityInfo::createFromDecl(D);
+  const ObjCInterfaceDecl *InterfaceD = D->getClassInterface();
+  const StringRef InterfaceName = InterfaceD->getName();
+
+  ObjCCategoryRecord *Category = Ctx.Slice->addObjCCategory(
+      InterfaceName, CategoryName, Avail, D, *Access);
+  recordObjCInstanceVariables(D->getASTContext(), Category, InterfaceName,
+                              D->ivars());
   return true;
 }
 
