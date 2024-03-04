@@ -1127,6 +1127,12 @@ public:
     return WrapFlags.HasNSW;
   }
 
+  bool isDisjoint() const {
+    assert(OpType == OperationType::DisjointOp &&
+           "recipe cannot have a disjoing flag");
+    return DisjointFlags.IsDisjoint;
+  }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printFlags(raw_ostream &O) const;
 #endif
@@ -2136,6 +2142,8 @@ public:
     assert(isPredicated() && "Trying to get the mask of a unpredicated recipe");
     return getOperand(getNumOperands() - 1);
   }
+
+  unsigned getOpcode() const { return getUnderlyingInstr()->getOpcode(); }
 };
 
 /// A recipe for generating conditional branches on the bits of a mask.
