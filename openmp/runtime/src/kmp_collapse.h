@@ -45,6 +45,13 @@ enum loop_type_t : kmp_int32 {
   loop_type_int64 = 7
 };
 
+// Defining loop types to handle special cases
+enum nested_loop_type_t : kmp_int32 {
+  nested_loop_type_unkown = 0,
+  nested_loop_type_lower_triangular_matrix = 1,
+  nested_loop_type_upper_triangular_matrix = 2
+};
+
 /*!
  @ingroup WORK_SHARING
  * Describes the structure for rectangular nested loops.
