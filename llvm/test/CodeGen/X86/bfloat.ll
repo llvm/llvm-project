@@ -2423,7 +2423,6 @@ define <16 x bfloat> @fptrunc_v16f32(<16 x float> %a) nounwind {
 ; AVXNC-LABEL: fptrunc_v16f32:
 ; AVXNC:       # %bb.0:
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %ymm0, %xmm0
-; AVXNC-NEXT:    vinsertf128 $0, %xmm0, %ymm0, %ymm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %ymm1, %xmm1
 ; AVXNC-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVXNC-NEXT:    retq

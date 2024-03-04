@@ -83,6 +83,7 @@ defm : subvector_subreg_lowering<VR128, v2f64, VR256, v4f64,  sub_xmm>;
 defm : subvector_subreg_lowering<VR128, v8i16, VR256, v16i16, sub_xmm>;
 defm : subvector_subreg_lowering<VR128, v16i8, VR256, v32i8,  sub_xmm>;
 defm : subvector_subreg_lowering<VR128, v8f16, VR256, v16f16, sub_xmm>;
+defm : subvector_subreg_lowering<VR128, v8bf16, VR256, v16bf16, sub_xmm>;
 
 // A 128-bit subvector extract from the first 512-bit vector position is a
 // subregister copy that needs no instruction. Likewise, a 128-bit subvector
@@ -95,6 +96,7 @@ defm : subvector_subreg_lowering<VR128, v2f64, VR512, v8f64,  sub_xmm>;
 defm : subvector_subreg_lowering<VR128, v8i16, VR512, v32i16, sub_xmm>;
 defm : subvector_subreg_lowering<VR128, v16i8, VR512, v64i8,  sub_xmm>;
 defm : subvector_subreg_lowering<VR128, v8f16, VR512, v32f16, sub_xmm>;
+defm : subvector_subreg_lowering<VR128, v8bf16, VR512, v32bf16, sub_xmm>;
 
 // A 128-bit subvector extract from the first 512-bit vector position is a
 // subregister copy that needs no instruction. Likewise, a 128-bit subvector
@@ -107,6 +109,7 @@ defm : subvector_subreg_lowering<VR256, v4f64,  VR512, v8f64,  sub_ymm>;
 defm : subvector_subreg_lowering<VR256, v16i16, VR512, v32i16, sub_ymm>;
 defm : subvector_subreg_lowering<VR256, v32i8,  VR512, v64i8,  sub_ymm>;
 defm : subvector_subreg_lowering<VR256, v16f16, VR512, v32f16, sub_ymm>;
+defm : subvector_subreg_lowering<VR256, v16bf16, VR512, v32bf16, sub_ymm>;
 
 
 // If we're inserting into an all zeros vector, just use a plain move which
