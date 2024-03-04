@@ -3569,6 +3569,25 @@ class AMDGPUWmmaIntrinsicModsC_MatrixFMT<LLVMType AB, LLVMType CD> :
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
+class AMDGPUWmmaScaleIntrinsicModsC<LLVMType AB, LLVMType CD> :
+  Intrinsic<
+    [CD], // %D
+    [
+      llvm_i32_ty,      // matrix_a_fmt
+      AB,               // %A
+      llvm_i32_ty,      // matrix_b_fmt
+      LLVMMatchType<1>, // %B
+      llvm_i16_ty,      // %C_mod: 0 - none, 1 - neg, 2 - abs, 3 - neg(abs)
+      LLVMMatchType<0>, // %C
+      llvm_i32_ty,      // matrix_a_scale
+      llvm_i32_ty,      // matrix a scale exponential
+      llvm_i32_ty,      // matrix_b_scale
+      llvm_i32_ty,      // matrix b scale exponential
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<8>>,
+     IntrWillReturn, IntrNoCallback, IntrNoFree]
+>;
+
 def int_amdgcn_wmma_f64_16x16x4_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f64_16x16x8_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x4_f32       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
@@ -3590,6 +3609,8 @@ def int_amdgcn_wmma_i32_16x16x64_iu8      : AMDGPUWmmaIntrinsicModsAB<llvm_anyin
 def int_amdgcn_wmma_i32_16x16x128_iu4     : AMDGPUWmmaIntrinsicModsAB<llvm_anyint_ty, llvm_anyint_ty>;
 def int_amdgcn_wmma_f32_16x16x128_f8f6f4  : AMDGPUWmmaIntrinsicModsC_MatrixFMT<llvm_anyint_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_bf16_16x16x128_f8f6f4 : AMDGPUWmmaIntrinsicModsC_MatrixFMT<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4  : AMDGPUWmmaScaleIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_scale_bf16_16x16x128_f8f6f4 : AMDGPUWmmaScaleIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
 
 class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
   Intrinsic<

@@ -1358,18 +1358,20 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   dag MatrixFMTOutPat = !if(HasMatrxFMT, (ins i32:$matrix_a_fmt, i32:$matrix_b_fmt), (ins));
   dag Src2InlineInPat = !con(!if(IsC_IMod1, (ins (VOP3PModsNegAbs i32:$src2_modifiers)), (ins)), (ins (Src2VT (WMMAVISrc Src2VT:$src2))));
   dag Src2InlineOutPat = !con(!if(IsIUXF32, (ins), !if(IsC_IMod1,  (ins i32:$src2_modifiers), (ins (i32 8)))), (ins Src2VT:$src2));
+  dag MatrixScaleInPat = !if(HasMatrixScale, (ins timm:$matrix_a_scale, i32:$scale_src0, timm:$matrix_b_scale, i32:$scale_src1), (ins));
+  dag MatrixScaleOutSrcPat = !if(HasMatrixScale, (ins i32:$scale_src0, i32:$scale_src1), (ins));
+  dag MatrixScaleOutModPat = !if(HasMatrixScale, (ins i32:$matrix_a_scale, i32:$matrix_b_scale), (ins));
 
-
-  dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, ClampPat);
-  dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, MatrixFMTOutPat, ClampPat);
+  dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, MatrixScaleInPat, ClampPat);
+  dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, MatrixScaleOutSrcPat, MatrixFMTOutPat, MatrixScaleOutModPat, ClampPat);
 
   dag SwmmacInPat  = !con(Src0InPat, Src1InPat, (ins Src2VT:$srcTiedDef), IndexInPat, ClampPat);
   dag SwmmacOutPat = !con(Src0OutPat, Src1OutPat, (ins Src2VT:$srcTiedDef), IndexOutPat, ClampPat);
 
   // wmma pattern where src2 is inline imm uses _threeaddr pseudo,
   // can't use _twoaddr since it would violate src2 tied to vdst constraint.
-  dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat, ClampPat);
-  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, MatrixFMTOutPat, ClampPat);
+  dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat, MatrixScaleInPat, ClampPat);
+  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, MatrixScaleOutSrcPat, MatrixFMTOutPat, MatrixScaleOutModPat, ClampPat);
 }
 
 multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string PseudoInstrSuffix, bit DiffVdstSrc2 = 0> {
@@ -1694,6 +1696,8 @@ let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Only in {
   defm : WMMAPat<"V_WMMA_I32_16X16X128_IU4_w32",     int_amdgcn_wmma_i32_16x16x128_iu4,     I32_IU4X128_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F32_16x16x128_F8F6F4_w32",  int_amdgcn_wmma_f32_16x16x128_f8f6f4,  F32_16x16x128_F8F6F4_w32>;
   defm : WMMAPat<"V_WMMA_BF16_16x16x128_F8F6F4_w32", int_amdgcn_wmma_bf16_16x16x128_f8f6f4, BF16_16x16x128_F8F6F4_w32>;
+  defm : WMMAPat<"V_WMMA_SCALE_F32_16x16x128_F8F6F4_w32",  int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4,  F32_16x16x128_F8F6F4_SCALE_w32>;
+  defm : WMMAPat<"V_WMMA_SCALE_BF16_16x16x128_F8F6F4_w32", int_amdgcn_wmma_scale_bf16_16x16x128_f8f6f4, BF16_16x16x128_F8F6F4_SCALE_w32>;
 
   def : SWMMACPat<V_SWMMAC_F32_16X16X64_F16_w32_twoaddr,      int_amdgcn_swmmac_f32_16x16x64_f16,      F32_F16X64_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_F32_16X16X64_BF16_w32_twoaddr,     int_amdgcn_swmmac_f32_16x16x64_bf16,     F32_BF16X64_SWMMAC_w32>;
