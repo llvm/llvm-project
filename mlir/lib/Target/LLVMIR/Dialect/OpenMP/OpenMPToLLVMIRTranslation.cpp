@@ -1190,16 +1190,37 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     }();
 
     if (privVar) {
+      Region &allocRegion = privatizerClone.getAllocRegion();
+
+      // If this is a `firstprivate` clause, prepare the `omp.private` op by:
       if (privatizerClone.getDataSharingType() ==
           omp::DataSharingClauseType::FirstPrivate) {
-        privatizerClone.emitOpError(
-            "TODO: delayed privatization is not "
-            "supported for `firstprivate` clauses yet.");
-        bodyGenStatus = failure();
-        return codeGenIP;
-      }
+        auto oldAllocBackBlock = std::prev(allocRegion.end());
+        omp::YieldOp oldAllocYieldOp =
+            llvm::cast<omp::YieldOp>(oldAllocBackBlock->getTerminator());
 
-      Region &allocRegion = privatizerClone.getAllocRegion();
+        Region &copyRegion = privatizerClone.getCopyRegion();
+
+        mlir::IRRewriter copyCloneBuilder(&moduleTranslation.getContext());
+        // 1. Cloning the `copy` region to the end of the `alloc` region.
+        copyCloneBuilder.cloneRegionBefore(copyRegion, allocRegion,
+                                           allocRegion.end());
+
+        auto newCopyRegionFrontBlock = std::next(oldAllocBackBlock);
+        // 2. Merging the last `alloc` block with the first block in the `copy`
+        // region clone.
+        // 3. Re-mapping the first argument of the `copy` region to be the
+        // argument of the `alloc` region and the second argument of the `copy`
+        // region to be the yielded value of the `alloc` region (this is the
+        // private clone of the privatized value).
+        copyCloneBuilder.mergeBlocks(
+            &*newCopyRegionFrontBlock, &*oldAllocBackBlock,
+            {allocRegion.getArgument(0), oldAllocYieldOp.getOperand(0)});
+
+        // 4. The old terminator of the `alloc` region is not needed anymore, so
+        // delete it.
+        oldAllocYieldOp.erase();
+      }
 
       // Replace the privatizer block argument with mlir value being privatized.
       // This way, the body of the privatizer will be changed from using the
