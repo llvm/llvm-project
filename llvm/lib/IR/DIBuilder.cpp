@@ -1089,15 +1089,23 @@ DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
   assert(DL->getScope()->getSubprogram() ==
              LabelInfo->getScope()->getSubprogram() &&
          "Expected matching subprograms");
-  if (!LabelFn)
-    LabelFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_label);
+  if (M.IsNewDbgInfoFormat) {
+    DPLabel *DPL = new DPLabel(LabelInfo, DL);
+    if (InsertBefore)
+      InsertBB->insertDPValueBefore(DPL, InsertBefore->getIterator());
+    // FIXME: Use smart pointers for DbgRecord ownership management.
+    return DPL;
+  } else {
+    if (!LabelFn)
+      LabelFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_label);
 
-  trackIfUnresolved(LabelInfo);
-  Value *Args[] = {MetadataAsValue::get(VMContext, LabelInfo)};
+    trackIfUnresolved(LabelInfo);
+    Value *Args[] = {MetadataAsValue::get(VMContext, LabelInfo)};
 
-  IRBuilder<> B(DL->getContext());
-  initIRBuilder(B, DL, InsertBB, InsertBefore);
-  return B.CreateCall(LabelFn, Args);
+    IRBuilder<> B(DL->getContext());
+    initIRBuilder(B, DL, InsertBB, InsertBefore);
+    return B.CreateCall(LabelFn, Args);
+  }
 }
 
 void DIBuilder::replaceVTableHolder(DICompositeType *&T, DIType *VTableHolder) {
