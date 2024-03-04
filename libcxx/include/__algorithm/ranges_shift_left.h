@@ -36,24 +36,19 @@ namespace ranges {
 namespace __shift_left {
 
 struct __fn {
-  template <class _Iter, class _Sent>
-  _LIBCPP_HIDE_FROM_ABI constexpr subrange<_Iter> static __shift_left_impl(
-      _Iter __first, _Sent __last, iter_difference_t<_Iter> __n) {
+  template <permutable _Iter, sentinel_for<_Iter> _Sent>
+  _LIBCPP_HIDE_FROM_ABI static constexpr subrange<_Iter>
+  operator()(_Iter __first, _Sent __last, iter_difference_t<_Iter> __n) {
     auto __ret = std::__shift_left<_RangeAlgPolicy>(std::move(__first), std::move(__last), std::move(__n));
     return {std::move(__ret.first), std::move(__ret.second)};
   }
 
-  template <permutable _Iter, sentinel_for<_Iter> _Sent>
-  _LIBCPP_HIDE_FROM_ABI constexpr subrange<_Iter>
-  operator()(_Iter __first, _Sent __last, iter_difference_t<_Iter> __n) const {
-    return __shift_left_impl(std::move(__first), std::move(__last), std::move(__n));
-  }
-
   template <forward_range _Range>
     requires permutable<iterator_t<_Range>>
-  _LIBCPP_HIDE_FROM_ABI constexpr borrowed_subrange_t<_Range>
-  operator()(_Range&& __range, range_difference_t<_Range> __n) const {
-    return __shift_left_impl(ranges::begin(__range), ranges::end(__range), std::move(__n));
+  _LIBCPP_HIDE_FROM_ABI static constexpr borrowed_subrange_t<_Range>
+  operator()(_Range&& __range, range_difference_t<_Range> __n) {
+    auto __ret = std::__shift_left<_RangeAlgPolicy>(ranges::begin(__range), ranges::end(__range), std::move(__n));
+    return {std::move(__ret.first), std::move(__ret.second)};
   }
 };
 
