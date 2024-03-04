@@ -1320,10 +1320,23 @@ range of the argument.
 
 **Parameters**
 
-The checker models functions (and emits diagnostics) from the C standard by
-default. The ``ModelPOSIX`` option enables modeling (and emit diagnostics) of
-additional functions that are defined in the POSIX standard. This option is
-disabled by default.
+The ``ModelPOSIX`` option controls if functions from the POSIX standard are
+recognized by the checker.
+
+With ``ModelPOSIX=true``, many POSIX functions are modeled according to the
+`POSIX standard`_. This includes ranges of parameters and possible return
+values. Furthermore the behavior related to ``errno`` in the POSIX case is
+often that ``errno`` is set only if a function call fails, and it becomes
+undefined after a successful function call.
+
+With ``ModelPOSIX=false``, this checker follows the C99 language standard and
+only models the functions that are described there. It is possible that the
+same functions are modeled differently in the two cases because differences in
+the standards. The C standard specifies less aspects of the functions, for
+example exact ``errno`` behavior is often unspecified (and not modeled by the
+checker).
+
+Default value of the option is ``true``.
 
 .. _osx-checkers:
 
