@@ -871,21 +871,32 @@ TEST_F(IRBuilderTest, createFunction) {
 }
 
 TEST_F(IRBuilderTest, DIBuilder) {
-  bool NewDebugMode[] = {false, };
+  auto GetLastDbgRecord = [](const Instruction *I) -> DbgRecord * {
+    if (I->getDbgValueRange().empty())
+      return nullptr;
+    return &*std::prev(I->getDbgValueRange().end());
+  };
 
-  for (auto IsNewMode : NewDebugMode) {
-    if (!M)
-      SetUp();
-    if (IsNewMode)
-      M->convertToNewDbgValues();
+  auto ExpectOrder = [&](DbgInstPtr First, BasicBlock::iterator Second) {
+    if (M->IsNewDbgInfoFormat) {
+      EXPECT_TRUE(First.is<DbgRecord *>());
+      EXPECT_FALSE(Second->getDbgValueRange().empty());
+      EXPECT_EQ(GetLastDbgRecord(&*Second), First.get<DbgRecord *>());
+    } else {
+      EXPECT_TRUE(First.is<Instruction *>());
+      EXPECT_EQ(&*std::prev(Second), First.get<Instruction *>());
+    }
+  };
 
+  auto RunTest = [&]() {
     IRBuilder<> Builder(BB);
     DIBuilder DIB(*M);
     auto File = DIB.createFile("F.CBL", "/");
     auto CU = DIB.createCompileUnit(dwarf::DW_LANG_Cobol74,
-                                    DIB.createFile("F.CBL", "/"), "llvm-cobol74",
-                                    true, "", 0);
-    auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+                                    DIB.createFile("F.CBL", "/"),
+                                    "llvm-cobol74", true, "", 0);
+    auto Type =
+        DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
     auto SP = DIB.createFunction(
         CU, "foo", "", File, 1, Type, 1, DINode::FlagZero,
         DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
@@ -897,15 +908,22 @@ TEST_F(IRBuilderTest, DIBuilder) {
     auto BarScope = DIB.createLexicalBlockFile(BarSP, File, 0);
     I->setDebugLoc(DILocation::get(Ctx, 2, 0, BarScope));
 
+    // Create another instruction so that there's one before the alloca we're
+    // inserting debug intrinsics before, to make end-checking easier.
+    I = Builder.CreateAlloca(Builder.getInt1Ty());
+
     // Label metadata and records.
     DILocation *LabelLoc = DILocation::get(Ctx, 1, 0, BarScope);
-    DILabel *AlwaysPreserveLabel = DIB.createLabel(BarScope, "meles_meles", File, 1, /*AlwaysPreserve*/true);
-    DILabel *Label = DIB.createLabel(BarScope, "badger", File, 1, /*AlwaysPreserve*/false);
-    //DbgInstPtr LabelRecord = DIB.insertLabel(Label, Loc, BB); // FIXME., DIBuilder should track danglers?
-    // Insert before I.
-    DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, I);
-    EXPECT_FALSE(I->getDbgValueRange().empty());
-    //EXPECT_NE(find(LabelRecord.get<DbgRecord *>(), I->getDbgValueRange()), I->getDbgValueRange().end());
+    DILabel *AlwaysPreserveLabel = DIB.createLabel(
+        BarScope, "meles_meles", File, 1, /*AlwaysPreserve*/ true);
+    DILabel *Label =
+        DIB.createLabel(BarScope, "badger", File, 1, /*AlwaysPreserve*/ false);
+
+    // Insert before I and check order.
+    ExpectOrder(DIB.insertLabel(Label, LabelLoc, I), I->getIterator());
+    errs() << *BB << "\n";
+    // FIXME: We can't insert at the end of an incomplete block. Oops.
+    // DbgInstPtr LabelRecord = DIB.insertLabel(Label, Loc, BB); // FIXME.,
 
     DIB.finalize();
 
@@ -914,8 +932,12 @@ TEST_F(IRBuilderTest, DIBuilder) {
     //EXPECT_NE(AlwaysPreserveLabel, BarSP->getRetainedNodes(), BarSP->getRetainedNodes().end());
 
     EXPECT_TRUE(verifyModule(*M));
-    TearDown();
-  }
+  };
+  RunTest();
+  TearDown();
+  SetUp();
+  M->convertToNewDbgValues();
+  RunTest();
 }
 
 TEST_F(IRBuilderTest, createArtificialSubprogram) {
