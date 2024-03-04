@@ -972,6 +972,7 @@ Windows Support
   around include times from MSVC STL including ``intrin.h`` under clang-cl.
   Clang-cl now provides ``intrin0.h`` for MSVC STL and therefore all intrinsic
   features without requiring enablement at compile time.
+  Fixes: (`#53520 <https://github.com/llvm/llvm-project/issues/53520>`_)
 
 - Improved compile times with MSVC STL. MSVC provides ``intrin0.h`` which is a
   header that only includes intrinsics that are used by MSVC STL to avoid the
