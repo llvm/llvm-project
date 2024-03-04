@@ -2,11 +2,7 @@ set(libc_archive_targets "")
 set(libc_archive_names "")
 set(libc_archive_entrypoint_lists "")
 if(LLVM_LIBC_FULL_BUILD)
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-    list(APPEND libc_archive_names cgpu mgpu)
-  else()
-    list(APPEND libc_archive_names c m)
-  endif()
+  list(APPEND libc_archive_names c m)
   list(APPEND libc_archive_targets libc libm)
   list(APPEND libc_archive_entrypoint_lists
        TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS)
@@ -40,6 +36,38 @@ foreach(archive IN ZIP_LISTS
     endif()
   endif()
   list(APPEND added_archive_targets ${archive_1})
+
+  # Add the offloading version of the library for offloading languages. These
+  # are installed in the standard search path separate from the other libraries.
+  if(LIBC_TARGET_OS_IS_GPU)
+    add_gpu_entrypoint_library(
+      ${archive_1}gpu
+      ${archive_1}
+      DEPENDS
+        ${${archive_2}}
+    )
+    set_target_properties(
+      ${archive_1}gpu
+      PROPERTIES
+        ARCHIVE_OUTPUT_NAME ${archive_0}gpu-${LIBC_TARGET_ARCHITECTURE}
+        ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBRARY_OUTPUT_INTDIR}
+    )
+    list(APPEND added_gpu_archive_targets ${archive_1}gpu)
+
+    add_bitcode_entrypoint_library(
+      ${archive_1}bitcode
+      ${archive_1}
+      DEPENDS
+        ${${archive_2}}
+    )
+    set_target_properties(
+      ${archive_1}bitcode
+      PROPERTIES
+        OUTPUT_NAME ${archive_1}.bc
+    )
+    add_dependencies(${archive_1}gpu ${archive_1}bitcode)
+    list(APPEND added_gpu_bitcode_targets ${archive_1}bitcode)
+  endif()
 endforeach()
 
 install(
@@ -47,6 +75,25 @@ install(
   ARCHIVE DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
   COMPONENT libc
 )
+
+if(LIBC_TARGET_OS_IS_GPU)
+  set(gpu_install_dir lib${LLVM_LIBDIR_SUFFIX})
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+    set(gpu_install_dir lib${LLVM_LIBDIR_SUFFIX}/${LLVM_HOST_TRIPLE})
+  endif()
+  install(
+    TARGETS ${added_gpu_archive_targets}
+    ARCHIVE DESTINATION ${gpu_install_dir}
+    COMPONENT libc
+  )
+  foreach(file ${added_gpu_bitcode_targets})
+    install(FILES $<TARGET_PROPERTY:${file},TARGET_OBJECT>
+            DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+            RENAME $<TARGET_PROPERTY:${file},OUTPUT_NAME>
+            COMPONENT libc
+    )
+  endforeach()
+endif()
 
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
   # For now we will disable libc-startup installation for baremetal. The

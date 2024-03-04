@@ -7033,7 +7033,6 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       // SCEVExpander for both use in preheader and latch
       const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
       SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
-      SCEVExpanderCleaner ExpCleaner(Expander);
 
       assert(Expander.isSafeToExpand(TermValueS) &&
              "Terminating value was checked safe in canFoldTerminatingCondition");
@@ -7064,10 +7063,9 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
 
       BI->setCondition(NewTermCond);
 
+      Expander.clear();
       OldTermCond->eraseFromParent();
       DeleteDeadPHIs(L->getHeader(), &TLI, MSSAU.get());
-
-      ExpCleaner.markResultUsed();
     }
   }
 

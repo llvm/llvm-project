@@ -2044,7 +2044,8 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
           return false;
 
         if (Init) {
-          const auto *Construct = dyn_cast<CXXConstructExpr>(Init);
+          const auto *Construct =
+              dyn_cast<CXXConstructExpr>(Init->IgnoreImpCasts());
           if (Construct && !Construct->isElidable()) {
             const CXXConstructorDecl *CD = Construct->getConstructor();
             if (!CD->isTrivial() && !RD->hasAttr<WarnUnusedAttr>() &&
@@ -6352,12 +6353,6 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   } else if (DiagnoseUnexpandedParameterPack(NameInfo, UPPC_DeclarationType))
     return nullptr;
 
-  // The scope passed in may not be a decl scope.  Zip up the scope tree until
-  // we find one that is.
-  while ((S->getFlags() & Scope::DeclScope) == 0 ||
-         (S->getFlags() & Scope::TemplateParamScope) != 0)
-    S = S->getParent();
-
   DeclContext *DC = CurContext;
   if (D.getCXXScopeSpec().isInvalid())
     D.setInvalidType();
@@ -6485,12 +6480,22 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     RemoveUsingDecls(Previous);
   }
 
-  if (Previous.isSingleResult() &&
-      Previous.getFoundDecl()->isTemplateParameter()) {
-    // Maybe we will complain about the shadowed template parameter.
-    if (!D.isInvalidType())
-      DiagnoseTemplateParameterShadow(D.getIdentifierLoc(),
-                                      Previous.getFoundDecl());
+  if (auto *TPD = Previous.getAsSingle<NamedDecl>();
+      TPD && TPD->isTemplateParameter()) {
+    // Older versions of clang allowed the names of function/variable templates
+    // to shadow the names of their template parameters. For the compatibility
+    // purposes we detect such cases and issue a default-to-error warning that
+    // can be disabled with -Wno-strict-primary-template-shadow.
+    if (!D.isInvalidType()) {
+      bool AllowForCompatibility = false;
+      if (Scope *DeclParent = S->getDeclParent();
+          Scope *TemplateParamParent = S->getTemplateParamParent()) {
+        AllowForCompatibility = DeclParent->Contains(*TemplateParamParent) &&
+                                TemplateParamParent->isDeclScope(TPD);
+      }
+      DiagnoseTemplateParameterShadow(D.getIdentifierLoc(), TPD,
+                                      AllowForCompatibility);
+    }
 
     // Just pretend that we didn't see the previous declaration.
     Previous.clear();
@@ -6513,6 +6518,9 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   // of a function declaration (C++ only).
   if (getLangOpts().CPlusPlus)
     CheckExtraCXXDefaultArguments(D);
+
+  /// Get the innermost enclosing declaration scope.
+  S = S->getDeclParent();
 
   NamedDecl *New;
 
@@ -16424,6 +16432,7 @@ void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
     D = TD->getTemplatedDecl();
   ProcessDeclAttributeList(S, D, Attrs);
+  ProcessAPINotes(D);
 
   if (CXXMethodDecl *Method = dyn_cast_or_null<CXXMethodDecl>(D))
     if (Method->isStatic())
@@ -19683,6 +19692,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       CDecl->setIvarRBraceLoc(RBrac);
     }
   }
+  ProcessAPINotes(Record);
 }
 
 /// Determine whether the given integral value is representable within
@@ -19997,6 +20007,7 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
   // Process attributes.
   ProcessDeclAttributeList(S, New, Attrs);
   AddPragmaAttributes(S, New);
+  ProcessAPINotes(New);
 
   // Register this decl in the current scope stack.
   New->setAccess(TheEnumDecl->getAccess());
@@ -20195,6 +20206,7 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
   QualType EnumType = Context.getTypeDeclType(Enum);
 
   ProcessDeclAttributeList(S, Enum, Attrs);
+  ProcessAPINotes(Enum);
 
   if (Enum->isDependentType()) {
     for (unsigned i = 0, e = Elements.size(); i != e; ++i) {

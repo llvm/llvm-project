@@ -19,7 +19,7 @@
 
 namespace LIBC_NAMESPACE::fputil {
 
-// A generic class to perform comuptations of high precision floating points.
+// A generic class to perform computations of high precision floating points.
 // We store the value in dyadic format, including 3 fields:
 //   sign    : boolean value - false means positive, true means negative
 //   exponent: the exponent value of the least significant bit of the mantissa.
@@ -77,6 +77,11 @@ template <size_t Bits> struct DyadicFloat {
     exponent += shift_length;
     mantissa >>= static_cast<size_t>(shift_length);
     return *this;
+  }
+
+  // Assume that it is already normalized.  Output the unbiased exponent.
+  LIBC_INLINE constexpr int get_unbiased_exponent() const {
+    return exponent + (Bits - 1);
   }
 
   // Assume that it is already normalized.

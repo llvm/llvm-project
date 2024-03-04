@@ -718,9 +718,14 @@ static int getMaxFPOffset(const ARMSubtarget &STI, const ARMFunctionInfo &AFI,
   // This is a conservative estimation: Assume the frame pointer being r7 and
   // pc("r15") up to r8 getting spilled before (= 8 registers).
   int MaxRegBytes = 8 * 4;
-  if (STI.splitFramePointerPush(MF)) {
+  if (STI.getPushPopSplitVariation(MF) ==
+      ARMSubtarget::PushPopSplitVariation::R11SplitAAPCSBranchSigning)
     // Here, r11 can be stored below all of r4-r15 (3 registers more than
-    // above), plus d8-d15.
+    // above).
+    MaxRegBytes = 11 * 4;
+  if (STI.getPushPopSplitVariation(MF) ==
+      ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind) {
+    // Here, r11 can be stored below all of r4-r15 plus d8-d15.
     MaxRegBytes = 11 * 4 + 8 * 8;
   }
   int FPCXTSaveSize =
@@ -788,7 +793,10 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Determine spill area sizes.
-  if (STI.splitFramePointerPush(MF)) {
+  if (STI.getPushPopSplitVariation(MF) ==
+          ARMSubtarget::PushPopSplitVariation::R11SplitAAPCSBranchSigning ||
+      STI.getPushPopSplitVariation(MF) ==
+          ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind) {
     for (const CalleeSavedInfo &I : CSI) {
       Register Reg = I.getReg();
       int FI = I.getFrameIdx();
@@ -834,7 +842,8 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R10:
       case ARM::R11:
       case ARM::R12:
-        if (STI.splitFramePushPop(MF)) {
+        if (STI.getPushPopSplitVariation(MF) ==
+            ARMSubtarget::PushPopSplitVariation::R7Split) {
           GPRCS2Size += 4;
           break;
         }
@@ -897,13 +906,15 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   unsigned GPRCS2Offset = GPRCS1Offset - GPRCS2Size;
   Align DPRAlign = DPRCSSize ? std::min(Align(8), Alignment) : Align(4);
   unsigned DPRGapSize = GPRCS1Size + FPCXTSaveSize + ArgRegsSaveSize;
-  if (!STI.splitFramePointerPush(MF)) {
+  if (STI.getPushPopSplitVariation(MF) !=
+      ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind) {
     DPRGapSize += GPRCS2Size;
   }
   DPRGapSize %= DPRAlign.value();
 
   unsigned DPRCSOffset;
-  if (STI.splitFramePointerPush(MF)) {
+  if (STI.getPushPopSplitVariation(MF) ==
+      ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind) {
     DPRCSOffset = GPRCS1Offset - DPRGapSize - DPRCSSize;
     GPRCS2Offset = DPRCSOffset - GPRCS2Size;
   } else {
@@ -922,8 +933,10 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   AFI->setGPRCalleeSavedArea2Offset(GPRCS2Offset);
   AFI->setDPRCalleeSavedAreaOffset(DPRCSOffset);
 
-  // Move past area 2.
-  if (GPRCS2Size > 0 && !STI.splitFramePointerPush(MF)) {
+  // Move past area 2, unless following the CSR_Win_SplitFP calling convention.
+  if (GPRCS2Size > 0 &&
+      STI.getPushPopSplitVariation(MF) !=
+          ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind) {
     GPRCS2Push = LastPush = MBBI++;
     DefCFAOffsetCandidates.addInst(LastPush, GPRCS2Size);
   }
@@ -963,13 +976,18 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   } else
     NumBytes = DPRCSOffset;
 
-  if (GPRCS2Size > 0 && STI.splitFramePointerPush(MF)) {
+  // Move past area 2 if following the CSR_Win_SplitFP calling convention.
+  if (GPRCS2Size > 0 &&
+      STI.getPushPopSplitVariation(MF) ==
+          ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind) {
     GPRCS2Push = LastPush = MBBI++;
     DefCFAOffsetCandidates.addInst(LastPush, GPRCS2Size);
   }
 
   bool NeedsWinCFIStackAlloc = NeedsWinCFI;
-  if (STI.splitFramePointerPush(MF) && HasFP)
+  if (STI.getPushPopSplitVariation(MF) ==
+          ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind &&
+      HasFP)
     NeedsWinCFIStackAlloc = false;
 
   if (STI.isTargetWindows() && WindowsRequiresStackProbe(MF, NumBytes)) {
@@ -1074,7 +1092,10 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     AfterPush = std::next(GPRCS1Push);
     unsigned PushSize = sizeOfSPAdjustment(*GPRCS1Push);
     int FPOffset = PushSize + FramePtrOffsetInPush;
-    if (STI.splitFramePointerPush(MF)) {
+    if (STI.getPushPopSplitVariation(MF) ==
+            ARMSubtarget::PushPopSplitVariation::R11SplitAAPCSBranchSigning ||
+        STI.getPushPopSplitVariation(MF) ==
+            ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind) {
       AfterPush = std::next(GPRCS2Push);
       emitRegPlusImmediate(!AFI->isThumbFunction(), MBB, AfterPush, dl, TII,
                            FramePtr, ARM::SP, 0, MachineInstr::FrameSetup);
@@ -1106,7 +1127,9 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // instructions below don't need to be replayed to unwind the stack.
   if (NeedsWinCFI && MBBI != MBB.begin()) {
     MachineBasicBlock::iterator End = MBBI;
-    if (HasFP && STI.splitFramePointerPush(MF))
+    if (HasFP &&
+        STI.getPushPopSplitVariation(MF) ==
+            ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind)
       End = AfterPush;
     insertSEHRange(MBB, {}, End, TII, MachineInstr::FrameSetup);
     BuildMI(MBB, End, dl, TII.get(ARM::SEH_PrologEnd))
@@ -1118,51 +1141,103 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // the necessary DWARF cf instructions to describe the situation. Start by
   // recording where each register ended up:
   if (GPRCS1Size > 0 && !NeedsWinCFI) {
-    MachineBasicBlock::iterator Pos = std::next(GPRCS1Push);
-    int CFIIndex;
-    for (const auto &Entry : CSI) {
-      Register Reg = Entry.getReg();
-      int FI = Entry.getFrameIdx();
-      switch (Reg) {
-      case ARM::R8:
-      case ARM::R9:
-      case ARM::R10:
-      case ARM::R11:
-      case ARM::R12:
-        if (STI.splitFramePushPop(MF))
+    if (STI.getPushPopSplitVariation(MF) ==
+        ARMSubtarget::PushPopSplitVariation::R11SplitAAPCSBranchSigning) {
+      MachineBasicBlock::iterator Pos = std::next(GPRCS1Push);
+      int CFIIndex;
+      for (const auto &Entry : CSI) {
+        Register Reg = Entry.getReg();
+        int FI = Entry.getFrameIdx();
+        switch (Reg) {
+        case ARM::R0:
+        case ARM::R1:
+        case ARM::R2:
+        case ARM::R3:
+        case ARM::R4:
+        case ARM::R5:
+        case ARM::R6:
+        case ARM::R7:
+        case ARM::R8:
+        case ARM::R9:
+        case ARM::R10:
+        case ARM::R12:
+          CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+              nullptr, MRI->getDwarfRegNum(Reg, true),
+              MFI.getObjectOffset(FI)));
+          BuildMI(MBB, Pos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
+              .addCFIIndex(CFIIndex)
+              .setMIFlags(MachineInstr::FrameSetup);
           break;
-        [[fallthrough]];
-      case ARM::R0:
-      case ARM::R1:
-      case ARM::R2:
-      case ARM::R3:
-      case ARM::R4:
-      case ARM::R5:
-      case ARM::R6:
-      case ARM::R7:
-      case ARM::LR:
-        CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-            nullptr, MRI->getDwarfRegNum(Reg, true), MFI.getObjectOffset(FI)));
-        BuildMI(MBB, Pos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-            .addCFIIndex(CFIIndex)
-            .setMIFlags(MachineInstr::FrameSetup);
-        break;
+        }
+      }
+    } else {
+      MachineBasicBlock::iterator Pos = std::next(GPRCS1Push);
+      int CFIIndex;
+      for (const auto &Entry : CSI) {
+        Register Reg = Entry.getReg();
+        int FI = Entry.getFrameIdx();
+        switch (Reg) {
+        case ARM::R8:
+        case ARM::R9:
+        case ARM::R10:
+        case ARM::R11:
+        case ARM::R12:
+          if (STI.getPushPopSplitVariation(MF) ==
+              ARMSubtarget::PushPopSplitVariation::R7Split)
+            break;
+          [[fallthrough]];
+        case ARM::R0:
+        case ARM::R1:
+        case ARM::R2:
+        case ARM::R3:
+        case ARM::R4:
+        case ARM::R5:
+        case ARM::R6:
+        case ARM::R7:
+        case ARM::LR:
+          CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+              nullptr, MRI->getDwarfRegNum(Reg, true),
+              MFI.getObjectOffset(FI)));
+          BuildMI(MBB, Pos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
+              .addCFIIndex(CFIIndex)
+              .setMIFlags(MachineInstr::FrameSetup);
+          break;
+        }
       }
     }
   }
 
   if (GPRCS2Size > 0 && !NeedsWinCFI) {
     MachineBasicBlock::iterator Pos = std::next(GPRCS2Push);
-    for (const auto &Entry : CSI) {
-      Register Reg = Entry.getReg();
-      int FI = Entry.getFrameIdx();
-      switch (Reg) {
-      case ARM::R8:
-      case ARM::R9:
-      case ARM::R10:
-      case ARM::R11:
-      case ARM::R12:
-        if (STI.splitFramePushPop(MF)) {
+    if (STI.getPushPopSplitVariation(MF) ==
+        ARMSubtarget::PushPopSplitVariation::R11SplitAAPCSBranchSigning) {
+      for (const auto &Entry : CSI) {
+        Register Reg = Entry.getReg();
+        int FI = Entry.getFrameIdx();
+        switch (Reg) {
+        case ARM::R11:
+        case ARM::LR:
+          unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
+          unsigned Offset = MFI.getObjectOffset(FI);
+          unsigned CFIIndex = MF.addFrameInst(
+              MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
+          BuildMI(MBB, Pos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
+              .addCFIIndex(CFIIndex)
+              .setMIFlags(MachineInstr::FrameSetup);
+          break;
+        }
+      }
+    } else {
+      MachineBasicBlock::iterator Pos = std::next(GPRCS2Push);
+      for (const auto &Entry : CSI) {
+        Register Reg = Entry.getReg();
+        int FI = Entry.getFrameIdx();
+        switch (Reg) {
+        case ARM::R8:
+        case ARM::R9:
+        case ARM::R10:
+        case ARM::R11:
+        case ARM::R12:
           unsigned DwarfReg = MRI->getDwarfRegNum(
               Reg == ARM::R12 ? ARM::RA_AUTH_CODE : Reg, true);
           unsigned Offset = MFI.getObjectOffset(FI);
@@ -1171,8 +1246,8 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
           BuildMI(MBB, Pos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
               .addCFIIndex(CFIIndex)
               .setMIFlags(MachineInstr::FrameSetup);
+          break;
         }
-        break;
       }
     }
   }
@@ -1382,7 +1457,9 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
                    MachineInstr::FrameDestroy);
 
     // Increment past our save areas.
-    if (AFI->getGPRCalleeSavedArea2Size() && STI.splitFramePointerPush(MF))
+    if (AFI->getGPRCalleeSavedArea2Size() &&
+        STI.getPushPopSplitVariation(MF) ==
+            ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind)
       MBBI++;
 
     if (MBBI != MBB.end() && AFI->getDPRCalleeSavedAreaSize()) {
@@ -1399,7 +1476,9 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
                    MachineInstr::FrameDestroy);
     }
 
-    if (AFI->getGPRCalleeSavedArea2Size() && !STI.splitFramePointerPush(MF))
+    if (AFI->getGPRCalleeSavedArea2Size() &&
+        STI.getPushPopSplitVariation(MF) !=
+            ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind)
       MBBI++;
     if (AFI->getGPRCalleeSavedArea1Size()) MBBI++;
 
@@ -1539,7 +1618,9 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
     unsigned LastReg = 0;
     for (; i != 0; --i) {
       Register Reg = CSI[i-1].getReg();
-      if (!(Func)(Reg, STI.splitFramePushPop(MF))) continue;
+      if (!(Func)(Reg, STI.getPushPopSplitVariation(MF) ==
+                           ARMSubtarget::PushPopSplitVariation::R7Split))
+        continue;
 
       // D-registers in the aligned area DPRCS2 are NOT spilled here.
       if (Reg >= ARM::D8 && Reg < ARM::D8 + NumAlignedDPRCS2Regs)
@@ -1632,7 +1713,9 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
     for (; i != 0; --i) {
       CalleeSavedInfo &Info = CSI[i-1];
       Register Reg = Info.getReg();
-      if (!(Func)(Reg, STI.splitFramePushPop(MF))) continue;
+      if (!(Func)(Reg, STI.getPushPopSplitVariation(MF) ==
+                           ARMSubtarget::PushPopSplitVariation::R7Split))
+        continue;
 
       // The aligned reloads from area DPRCS2 are not inserted here.
       if (Reg >= ARM::D8 && Reg < ARM::D8 + NumAlignedDPRCS2Regs)
@@ -1640,7 +1723,11 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
       if (Reg == ARM::LR && !isTailCall && !isVarArg && !isInterrupt &&
           !isCmseEntry && !isTrap && AFI->getArgumentStackToRestore() == 0 &&
           STI.hasV5TOps() && MBB.succ_empty() && !hasPAC &&
-          !STI.splitFramePointerPush(MF)) {
+          (STI.getPushPopSplitVariation(MF) !=
+               ARMSubtarget::PushPopSplitVariation::
+                   R11SplitAAPCSBranchSigning &&
+           STI.getPushPopSplitVariation(MF) !=
+               ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind)) {
         Reg = ARM::PC;
         // Fold the return instruction into the LDM.
         DeleteRet = true;
@@ -2001,7 +2088,10 @@ bool ARMFrameLowering::spillCalleeSavedRegisters(
         .addImm(-4)
         .add(predOps(ARMCC::AL));
   }
-  if (STI.splitFramePointerPush(MF)) {
+  if (STI.getPushPopSplitVariation(MF) ==
+          ARMSubtarget::PushPopSplitVariation::R11SplitAAPCSBranchSigning ||
+      STI.getPushPopSplitVariation(MF) ==
+          ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind) {
     emitPushInst(MBB, MI, CSI, PushOpc, PushOneOpc, false,
                  &isSplitFPArea1Register, 0, MachineInstr::FrameSetup);
     emitPushInst(MBB, MI, CSI, FltOpc, 0, true, &isARMArea3Register,
@@ -2046,7 +2136,10 @@ bool ARMFrameLowering::restoreCalleeSavedRegisters(
   unsigned LdrOpc =
       AFI->isThumbFunction() ? ARM::t2LDR_POST : ARM::LDR_POST_IMM;
   unsigned FltOpc = ARM::VLDMDIA_UPD;
-  if (STI.splitFramePointerPush(MF)) {
+  if (STI.getPushPopSplitVariation(MF) ==
+          ARMSubtarget::PushPopSplitVariation::R11SplitAAPCSBranchSigning ||
+      STI.getPushPopSplitVariation(MF) ==
+          ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind) {
     emitPopInst(MBB, MI, CSI, PopOpc, LdrOpc, isVarArg, false,
                 &isSplitFPArea2Register, 0);
     emitPopInst(MBB, MI, CSI, FltOpc, 0, isVarArg, true, &isARMArea3Register,
@@ -2362,7 +2455,8 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     if (Spilled) {
       NumGPRSpills++;
 
-      if (!STI.splitFramePushPop(MF)) {
+      if (STI.getPushPopSplitVariation(MF) !=
+          ARMSubtarget::PushPopSplitVariation::R7Split) {
         if (Reg == ARM::LR)
           LRSpilled = true;
         CS1Spilled = true;
@@ -2384,7 +2478,8 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
         break;
       }
     } else {
-      if (!STI.splitFramePushPop(MF)) {
+      if (STI.getPushPopSplitVariation(MF) !=
+          ARMSubtarget::PushPopSplitVariation::R7Split) {
         UnspilledCS1GPRs.push_back(Reg);
         continue;
       }
@@ -2781,10 +2876,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   AFI->setLRIsSpilled(SavedRegs.test(ARM::LR));
 }
 
-void ARMFrameLowering::processFunctionBeforeFrameFinalized(
-    MachineFunction &MF, RegScavenger *RS) const {
-  TargetFrameLowering::processFunctionBeforeFrameFinalized(MF, RS);
-
+void ARMFrameLowering::updateLRRestored(MachineFunction &MF) {
   MachineFrameInfo &MFI = MF.getFrameInfo();
   if (!MFI.isCalleeSavedInfoValid())
     return;
@@ -2806,6 +2898,12 @@ void ARMFrameLowering::processFunctionBeforeFrameFinalized(
       break;
     }
   }
+}
+
+void ARMFrameLowering::processFunctionBeforeFrameFinalized(
+    MachineFunction &MF, RegScavenger *RS) const {
+  TargetFrameLowering::processFunctionBeforeFrameFinalized(MF, RS);
+  updateLRRestored(MF);
 }
 
 void ARMFrameLowering::getCalleeSaves(const MachineFunction &MF,

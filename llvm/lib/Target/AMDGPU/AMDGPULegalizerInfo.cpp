@@ -2247,10 +2247,16 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   MachineIRBuilder &B) const {
   MachineFunction &MF = B.getMF();
 
+  // MI can either be a G_ADDRSPACE_CAST or a
+  // G_INTRINSIC @llvm.amdgcn.addrspacecast.nonnull
+  assert(MI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST ||
+         (isa<GIntrinsic>(MI) && cast<GIntrinsic>(MI).getIntrinsicID() ==
+                                     Intrinsic::amdgcn_addrspacecast_nonnull));
+
   const LLT S32 = LLT::scalar(32);
   Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-
+  Register Src = isa<GIntrinsic>(MI) ? MI.getOperand(2).getReg()
+                                     : MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src);
   unsigned DestAS = DstTy.getAddressSpace();
@@ -2271,7 +2277,9 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
       (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
        DestAS == AMDGPUAS::PRIVATE_ADDRESS)) {
-    if (isKnownNonNull(Src, MRI, TM, SrcAS)) {
+    // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
+    // G_ADDRSPACE_CAST we need to guess.
+    if (isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS)) {
       // Extract low 32-bits of the pointer.
       B.buildExtract(Dst, Src, 0);
       MI.eraseFromParent();
@@ -2308,7 +2316,9 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     // avoid the ptrtoint?
     auto BuildPtr = B.buildMergeLikeInstr(DstTy, {SrcAsInt, ApertureReg});
 
-    if (isKnownNonNull(Src, MRI, TM, SrcAS)) {
+    // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
+    // G_ADDRSPACE_CAST we need to guess.
+    if (isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS)) {
       B.buildCopy(Dst, BuildPtr);
       MI.eraseFromParent();
       return true;
@@ -4824,9 +4834,8 @@ bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
   return true;
 }
 
-static const unsigned SPDenormModeBitField =
-    AMDGPU::Hwreg::ID_MODE | (4 << AMDGPU::Hwreg::OFFSET_SHIFT_) |
-    (1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_);
+static constexpr unsigned SPDenormModeBitField =
+    AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 4, 2);
 
 // Enable or disable FP32 denorm mode. When 'Enable' is true, emit instructions
 // to enable denorm mode. When 'Enable' is false, disable denorm mode.
@@ -7021,6 +7030,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     return false;
   }
+  case Intrinsic::amdgcn_addrspacecast_nonnull:
+    return legalizeAddrSpaceCast(MI, MRI, B);
   case Intrinsic::amdgcn_make_buffer_rsrc:
     return legalizePointerAsRsrcIntrin(MI, MRI, B);
   case Intrinsic::amdgcn_kernarg_segment_ptr:

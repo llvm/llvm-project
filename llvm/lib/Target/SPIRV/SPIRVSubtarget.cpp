@@ -68,6 +68,11 @@ cl::list<SPIRV::Extension::Extension> Extensions(
                    "SPV_KHR_no_integer_wrap_decoration",
                    "Adds decorations to indicate that a given instruction does "
                    "not cause integer wrapping."),
+        clEnumValN(
+            SPIRV::Extension::SPV_KHR_float_controls, "SPV_KHR_float_controls",
+            "Provides new execution modes to control floating-point "
+            "computations by overriding an implementation’s default behavior "
+            "for rounding modes, denormals, signed zero, and infinities."),
         clEnumValN(SPIRV::Extension::SPV_KHR_expect_assume,
                    "SPV_KHR_expect_assume",
                    "Provides additional information to a compiler, similar to "
@@ -81,10 +86,18 @@ cl::list<SPIRV::Extension::Extension> Extensions(
             "Allows to use the LinkOnceODR linkage type that is to let "
             "a function or global variable to be merged with other functions "
             "or global variables of the same name when linkage occurs."),
+        clEnumValN(SPIRV::Extension::SPV_INTEL_bfloat16_conversion,
+                   "SPV_INTEL_bfloat16_conversion",
+                   "Adds instructions to convert between single-precision "
+                   "32-bit floating-point values and 16-bit bfloat16 values."),
         clEnumValN(SPIRV::Extension::SPV_KHR_subgroup_rotate,
                    "SPV_KHR_subgroup_rotate",
                    "Adds a new instruction that enables rotating values across "
                    "invocations within a subgroup."),
+        clEnumValN(SPIRV::Extension::SPV_INTEL_variable_length_array,
+                   "SPV_INTEL_variable_length_array",
+                   "Allows to allocate local arrays whose number of elements "
+                   "is unknown at compile time."),
         clEnumValN(SPIRV::Extension::SPV_INTEL_function_pointers,
                    "SPV_INTEL_function_pointers",
                    "Allows translation of function pointers.")));

@@ -160,9 +160,6 @@ public:
   /// Target and driver mode components extracted from clang executable name.
   ParsedClangName ClangNameParts;
 
-  /// The path to the installed clang directory, if any.
-  std::string InstalledDir;
-
   /// The path to the compiler resource directory.
   std::string ResourceDir;
 
@@ -429,11 +426,8 @@ public:
 
   /// Get the path to where the clang executable was installed.
   const char *getInstalledDir() const {
-    if (!InstalledDir.empty())
-      return InstalledDir.c_str();
     return Dir.c_str();
   }
-  void setInstalledDir(StringRef Value) { InstalledDir = std::string(Value); }
 
   bool isSaveTempsEnabled() const { return SaveTemps != SaveTempsNone; }
   bool isSaveTempsObj() const { return SaveTemps == SaveTempsObj; }

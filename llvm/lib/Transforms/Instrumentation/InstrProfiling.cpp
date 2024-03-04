@@ -168,13 +168,33 @@ cl::opt<bool> SkipRetExitBlock(
 
 using LoadStorePair = std::pair<Instruction *, Instruction *>;
 
+static uint64_t getIntModuleFlagOrZero(const Module &M, StringRef Flag) {
+  auto *MD = dyn_cast_or_null<ConstantAsMetadata>(M.getModuleFlag(Flag));
+  if (!MD)
+    return 0;
+
+  // If the flag is a ConstantAsMetadata, it should be an integer representable
+  // in 64-bits.
+  return cast<ConstantInt>(MD->getValue())->getZExtValue();
+}
+
+static bool enablesValueProfiling(const Module &M) {
+  return isIRPGOFlagSet(&M) ||
+         getIntModuleFlagOrZero(M, "EnableValueProfiling") != 0;
+}
+
+// Conservatively returns true if value profiling is enabled.
+static bool profDataReferencedByCode(const Module &M) {
+  return enablesValueProfiling(M);
+}
+
 class InstrLowerer final {
 public:
   InstrLowerer(Module &M, const InstrProfOptions &Options,
                std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
                bool IsCS)
       : M(M), Options(Options), TT(Triple(M.getTargetTriple())), IsCS(IsCS),
-        GetTLI(GetTLI) {}
+        GetTLI(GetTLI), DataReferencedByCode(profDataReferencedByCode(M)) {}
 
   bool lower();
 
@@ -186,6 +206,8 @@ private:
   const bool IsCS;
 
   std::function<const TargetLibraryInfo &(Function &F)> GetTLI;
+
+  const bool DataReferencedByCode;
   struct PerFunctionProfileData {
     uint32_t NumValueSites[IPVK_Last + 1] = {};
     GlobalVariable *RegionCounters = nullptr;
@@ -969,9 +991,7 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
     InstrProfMCDCTVBitmapUpdate *Update) {
   IRBuilder<> Builder(Update);
   auto *Int8Ty = Type::getInt8Ty(M.getContext());
-  auto *Int8PtrTy = PointerType::getUnqual(M.getContext());
   auto *Int32Ty = Type::getInt32Ty(M.getContext());
-  auto *Int64Ty = Type::getInt64Ty(M.getContext());
   auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
   auto *BitmapAddr = getBitmapAddress(Update);
 
@@ -984,15 +1004,9 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
   auto *BitmapByteOffset = Builder.CreateLShr(Temp, 0x3);
 
   // Add byte offset to section base byte address.
-  //  %2 = zext i32 %1 to i64
-  //  %3 = add i64 ptrtoint (ptr @__profbm_test to i64), %2
+  // %4 = getelementptr inbounds i8, ptr @__profbm_test, i32 %1
   auto *BitmapByteAddr =
-      Builder.CreateAdd(Builder.CreatePtrToInt(BitmapAddr, Int64Ty),
-                        Builder.CreateZExtOrBitCast(BitmapByteOffset, Int64Ty));
-
-  // Convert to a pointer.
-  //  %4 = inttoptr i32 %3 to ptr
-  BitmapByteAddr = Builder.CreateIntToPtr(BitmapByteAddr, Int8PtrTy);
+      Builder.CreateInBoundsPtrAdd(BitmapAddr, BitmapByteOffset);
 
   // Calculate bit offset into bitmap byte by using div8 remainder (AND ~8)
   //  %5 = and i32 %mcdc.temp, 7
@@ -1063,26 +1077,6 @@ static std::string getVarName(InstrProfInstBase *Inc, StringRef Prefix,
   if (Name.ends_with((Twine(".") + Twine(FuncHash)).toStringRef(HashPostfix)))
     return (Prefix + Name).str();
   return (Prefix + Name + "." + Twine(FuncHash)).str();
-}
-
-static uint64_t getIntModuleFlagOrZero(const Module &M, StringRef Flag) {
-  auto *MD = dyn_cast_or_null<ConstantAsMetadata>(M.getModuleFlag(Flag));
-  if (!MD)
-    return 0;
-
-  // If the flag is a ConstantAsMetadata, it should be an integer representable
-  // in 64-bits.
-  return cast<ConstantInt>(MD->getValue())->getZExtValue();
-}
-
-static bool enablesValueProfiling(const Module &M) {
-  return isIRPGOFlagSet(&M) ||
-         getIntModuleFlagOrZero(M, "EnableValueProfiling") != 0;
-}
-
-// Conservatively returns true if data variables may be referenced by code.
-static bool profDataReferencedByCode(const Module &M) {
-  return enablesValueProfiling(M);
 }
 
 static inline bool shouldRecordFunctionAddr(Function *F) {
@@ -1200,7 +1194,6 @@ static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
 
 void InstrLowerer::maybeSetComdat(GlobalVariable *GV, Function *Fn,
                                   StringRef VarName) {
-  bool DataReferencedByCode = profDataReferencedByCode(M);
   bool NeedComdat = needsComdatForCounter(*Fn, M);
   bool UseComdat = (NeedComdat || TT.isOSBinFormatELF());
 
@@ -1426,7 +1419,6 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     Visibility = GlobalValue::DefaultVisibility;
   }
 
-  bool DataReferencedByCode = profDataReferencedByCode(M);
   bool NeedComdat = needsComdatForCounter(*Fn, M);
   bool Renamed;
 
@@ -1727,7 +1719,7 @@ void InstrLowerer::emitUses() {
   // and ensure this GC property as well. Otherwise, we have to conservatively
   // make all of the sections retained by the linker.
   if (TT.isOSBinFormatELF() || TT.isOSBinFormatMachO() ||
-      (TT.isOSBinFormatCOFF() && !profDataReferencedByCode(M)))
+      (TT.isOSBinFormatCOFF() && !DataReferencedByCode))
     appendToCompilerUsed(M, CompilerUsedVars);
   else
     appendToUsed(M, CompilerUsedVars);

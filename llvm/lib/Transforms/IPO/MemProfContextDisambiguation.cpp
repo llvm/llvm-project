@@ -1381,7 +1381,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // not fully matching stack contexts. To do this, subtract any context ids
       // found in caller nodes of the last node found above.
       if (Ids.back() != getLastStackId(Call)) {
-        for (const auto &PE : CurNode->CallerEdges) {
+        for (const auto &PE : LastNode->CallerEdges) {
           set_subtract(StackSequenceContextIds, PE->getContextIds());
           if (StackSequenceContextIds.empty())
             break;

@@ -123,9 +123,12 @@ namespace FunctionPointers {
   }
 
   constexpr int applyBinOp(int a, int b, int (*op)(int, int)) {
-    return op(a, b);
+    return op(a, b); // both-note {{evaluates to a null function pointer}}
   }
   static_assert(applyBinOp(1, 2, add) == 3, "");
+  static_assert(applyBinOp(1, 2, nullptr) == 3, ""); // both-error {{not an integral constant expression}} \
+                                                     // both-note {{in call to}}
+
 
   constexpr int ignoreReturnValue() {
     int (*foo)(int, int) = add;
@@ -550,5 +553,15 @@ namespace Local {
   int a() {
     const int t=t;
     return t;
+  }
+}
+
+namespace VariadicOperator {
+  struct Callable {
+    float& operator()(...);
+  };
+
+  void test_callable(Callable c) {
+    float &fr = c(10);
   }
 }
