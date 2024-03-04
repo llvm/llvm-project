@@ -21994,7 +21994,6 @@ Sema::ActOnObjCBoolLiteral(SourceLocation OpLoc, tok::TokenKind Kind) {
 ExprResult Sema::ActOnObjCAvailabilityCheckExpr(
     llvm::ArrayRef<AvailabilitySpec> AvailSpecs, SourceLocation AtLoc,
     SourceLocation RParen) {
-
   auto FindSpecVersion = [&](StringRef Platform)
       -> std::optional<ObjCAvailabilityCheckExpr::VersionAsWritten> {
     auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {

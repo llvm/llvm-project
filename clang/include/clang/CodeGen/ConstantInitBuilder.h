@@ -30,6 +30,7 @@ class PointerAuthSchema;
 class QualType;
 
 namespace CodeGen {
+
 class CodeGenModule;
 
 /// A convenience builder class for complex constant initializers,

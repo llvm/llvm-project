@@ -4734,6 +4734,8 @@ Action *Driver::ConstructPhaseAction(
         OutputTy = Input->getInputs().front()->getType();
       else
         OutputTy = Input->getType();
+      // For these cases, the preprocessor is only translating forms, the Output
+      // still needs preprocessing.
       if (!Args.hasFlag(options::OPT_frewrite_includes,
                         options::OPT_fno_rewrite_includes, false) &&
           !Args.hasFlag(options::OPT_frewrite_imports,

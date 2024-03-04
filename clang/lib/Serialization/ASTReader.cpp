@@ -6175,6 +6175,7 @@ bool ASTReader::ParseHeaderSearchOptions(const RecordData &Record,
   HeaderSearchOptions HSOpts;
   unsigned Idx = 0;
   HSOpts.Sysroot = ReadString(Record, Idx);
+
   HSOpts.ResourceDir = ReadString(Record, Idx);
   HSOpts.ModuleCachePath = ReadString(Record, Idx);
   HSOpts.ModuleUserBuildPath = ReadString(Record, Idx);
@@ -6192,8 +6193,7 @@ bool ASTReader::ParseHeaderSearchOptions(const RecordData &Record,
                                           Complain);
 }
 
-bool ASTReader::ParseHeaderSearchPaths(const RecordData &Record,
-                                       bool Complain,
+bool ASTReader::ParseHeaderSearchPaths(const RecordData &Record, bool Complain,
                                        ASTReaderListener &Listener) {
   HeaderSearchOptions HSOpts;
   unsigned Idx = 0;

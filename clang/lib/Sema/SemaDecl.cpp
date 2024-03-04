@@ -16498,7 +16498,6 @@ void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
   // Always attach attributes to the underlying decl.
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
     D = TD->getTemplatedDecl();
-
   ProcessDeclAttributeList(S, D, Attrs);
   ProcessAPINotes(D);
 
@@ -20077,7 +20076,6 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
   // Process attributes.
   ProcessDeclAttributeList(S, New, Attrs);
   AddPragmaAttributes(S, New);
-
   ProcessAPINotes(New);
 
   // Register this decl in the current scope stack.

@@ -11,7 +11,6 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 
 namespace llvm {

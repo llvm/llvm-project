@@ -80,7 +80,7 @@ public:
                   const TargetOptions &TargetOpts,
                   const LangOptions &LangOpts,
                   const CASOptions &CASOpts,
-		  const FileManager &FileMgr,
+                  const FileManager &FileMgr,
                   const std::string &InFile,
                   SmallVector<LinkModule, 4> LinkModules,
                   std::unique_ptr<raw_pwrite_stream> OS,

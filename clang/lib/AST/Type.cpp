@@ -1309,8 +1309,8 @@ struct SubstObjCTypeArgsVisitor
       case ObjCSubstitutionContext::Result:
       case ObjCSubstitutionContext::Property: {
         // Substitute the __kindof form of the underlying type.
-        const auto *objPtr = typeParam->getUnderlyingType()
-          ->castAs<ObjCObjectPointerType>();
+        const auto *objPtr =
+            typeParam->getUnderlyingType()->castAs<ObjCObjectPointerType>();
 
         // __kindof types, id, and Class don't need an additional
         // __kindof.

@@ -6281,8 +6281,7 @@ static void handleObjCRequiresSuperAttr(Sema &S, Decl *D,
 
 static void handleNSErrorDomain(Sema &S, Decl *D, const ParsedAttr &Attr) {
   if (!isa<TagDecl>(D)) {
-    S.Diag(D->getBeginLoc(), diag::err_nserrordomain_invalid_decl)
-        << 0;
+    S.Diag(D->getBeginLoc(), diag::err_nserrordomain_invalid_decl) << 0;
     return;
   }
   IdentifierLoc *identLoc =
