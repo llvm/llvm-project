@@ -1805,7 +1805,7 @@ void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
 
   if (auto PtrAuthData = N->getPtrAuthData())
-    Record.push_back(PtrAuthData->Payload.RawData);
+    Record.push_back(PtrAuthData->RawData);
   else
     Record.push_back(0);
 

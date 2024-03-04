@@ -975,34 +975,29 @@ class DIDerivedType : public DIType {
 public:
   /// Pointer authentication (__ptrauth) metadata.
   struct PtrAuthData {
-    union {
-      struct {
-        unsigned Key : 4;
-        unsigned IsAddressDiscriminated : 1;
-        unsigned ExtraDiscriminator : 16;
-        unsigned IsaPointer : 1;
-        unsigned AuthenticatesNullValues : 1;
-      } Data;
-      unsigned RawData;
-    } Payload;
+    unsigned RawData;
 
-    PtrAuthData(unsigned FromRawData) { Payload.RawData = FromRawData; }
+    PtrAuthData(unsigned FromRawData) : RawData(FromRawData) {}
     PtrAuthData(unsigned Key, bool IsDiscr, unsigned Discriminator,
                 bool IsaPointer, bool AuthenticatesNullValues) {
       assert(Key < 16);
       assert(Discriminator <= 0xffff);
-      Payload.Data.Key = Key;
-      Payload.Data.IsAddressDiscriminated = IsDiscr;
-      Payload.Data.ExtraDiscriminator = Discriminator;
-      Payload.Data.IsaPointer = IsaPointer;
-      Payload.Data.AuthenticatesNullValues = AuthenticatesNullValues;
+      RawData = (Key << 0) | (IsDiscr ? (1 << 4) : 0) | (Discriminator << 5) |
+                (IsaPointer ? (1 << 21) : 0) |
+                (AuthenticatesNullValues ? (1 << 22) : 0);
     }
     bool operator==(struct PtrAuthData Other) const {
-      return Payload.RawData == Other.Payload.RawData;
+      return RawData == Other.RawData;
     }
     bool operator!=(struct PtrAuthData Other) const {
       return !(*this == Other);
     }
+
+    unsigned Key() { return (RawData >> 0) & 0b1111; }
+    bool IsAddressDiscriminated() { return (RawData >> 4) & 1; }
+    unsigned ExtraDiscriminator() { return (RawData >> 5) & 0xffff; }
+    bool IsaPointer() { return (RawData >> 21) & 1; }
+    bool AuthenticatesNullValues() { return (RawData >> 22) & 1; }
   };
 
 private:
@@ -1023,7 +1018,7 @@ private:
                AlignInBits, OffsetInBits, Flags, Ops),
         DWARFAddressSpace(DWARFAddressSpace) {
     if (PtrAuthData)
-      SubclassData32 = PtrAuthData->Payload.RawData;
+      SubclassData32 = PtrAuthData->RawData;
   }
   ~DIDerivedType() = default;
   static DIDerivedType *
@@ -1098,31 +1093,31 @@ public:
   /// \returns The PointerAuth key.
   std::optional<unsigned> getPtrAuthKey() const {
     if (auto PtrAuthData = getPtrAuthData())
-      return (unsigned)PtrAuthData->Payload.Data.Key;
+      return PtrAuthData->Key();
     return std::nullopt;
   }
   /// \returns The PointerAuth address discrimination bit.
   std::optional<bool> isPtrAuthAddressDiscriminated() const {
     if (auto PtrAuthData = getPtrAuthData())
-      return (bool)PtrAuthData->Payload.Data.IsAddressDiscriminated;
+      return PtrAuthData->IsAddressDiscriminated();
     return std::nullopt;
   }
   /// \returns The PointerAuth extra discriminator.
   std::optional<unsigned> getPtrAuthExtraDiscriminator() const {
     if (auto PtrAuthData = getPtrAuthData())
-      return (unsigned)PtrAuthData->Payload.Data.ExtraDiscriminator;
+      return PtrAuthData->ExtraDiscriminator();
     return std::nullopt;
   }
   /// \returns The PointerAuth IsaPointer bit.
   std::optional<bool> isPtrAuthIsaPointer() const {
     if (auto PtrAuthData = getPtrAuthData())
-      return (bool)PtrAuthData->Payload.Data.IsaPointer;
+      return PtrAuthData->IsaPointer();
     return std::nullopt;
   }
   /// \returns The PointerAuth authenticates null values bit.
   std::optional<bool> getPtrAuthAuthenticatesNullValues() const {
     if (auto PtrAuthData = getPtrAuthData())
-      return (bool)PtrAuthData->Payload.Data.AuthenticatesNullValues;
+      return PtrAuthData->AuthenticatesNullValues();
     return std::nullopt;
   }
 
