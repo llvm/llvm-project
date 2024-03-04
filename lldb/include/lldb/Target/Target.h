@@ -1362,6 +1362,12 @@ public:
       const EvaluateExpressionOptions &options = EvaluateExpressionOptions(),
       std::string *fixed_expression = nullptr, ValueObject *ctx_obj = nullptr);
 
+  lldb::addr_t FindLoadAddrForNameInSymbols(
+      ConstString name_const_str, lldb::SymbolType symbol_type);
+
+  lldb::addr_t FindLoadAddrForNameInPersistentVariables(
+    ConstString name_const_str, lldb::SymbolType symbol_type);
+
   // Look up a symbol by name and type in both the target's symbols and the
   // persistent symbols from the
   // expression parser.  The symbol_type is ignored in that case, for now we
