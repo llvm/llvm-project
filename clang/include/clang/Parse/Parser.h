@@ -3741,7 +3741,7 @@ private:
   /// \param context The name of the context in which this string is being
   /// parsed, which will be used in diagnostics.
   /// \param includeLoc The location at which this parse was triggered.
-  TypeResult parseTypeFromString(StringRef typeStr, StringRef context,
+  TypeResult ParseTypeFromString(StringRef typeStr, StringRef context,
                                  SourceLocation includeLoc);
 
   //===--------------------------------------------------------------------===//

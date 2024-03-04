@@ -15334,7 +15334,7 @@ void Sema::DiagnoseSizeOfParametersAndReturnValue(
   }
 }
 
-QualType Sema::adjustParameterTypeForObjCAutoRefCount(QualType T,
+QualType Sema::AdjustParameterTypeForObjCAutoRefCount(QualType T,
                                                       SourceLocation NameLoc,
                                                       TypeSourceInfo *TSInfo) {
   // In ARC, infer a lifetime qualifier for appropriate parameter types.
@@ -15372,7 +15372,7 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
                                   QualType T, TypeSourceInfo *TSInfo,
                                   StorageClass SC) {
   // Perform Objective-C ARC adjustments.
-  T = adjustParameterTypeForObjCAutoRefCount(T, NameLoc, TSInfo);
+  T = AdjustParameterTypeForObjCAutoRefCount(T, NameLoc, TSInfo);
 
   ParmVarDecl *New = ParmVarDecl::Create(Context, DC, StartLoc, NameLoc, Name,
                                          Context.getAdjustedParameterType(T),
