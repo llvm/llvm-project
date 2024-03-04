@@ -154,9 +154,9 @@ struct FormatStyle {
   /// For example, to align across empty lines and not across comments, either
   /// of these work.
   /// \code
-  ///   [[[NAME]]]: AcrossEmptyLines
+  ///   <option-name>: AcrossEmptyLines
   ///
-  ///   [[[NAME]]]:
+  ///   <option-name>:
   ///     Enabled: true
   ///     AcrossEmptyLines: true
   ///     AcrossComments: false
