@@ -20,13 +20,12 @@ using namespace clang::ast_matchers::internal;
 namespace clang::tidy::cppcoreguidelines {
 
 namespace {
-AST_MATCHER_P(LambdaExpr, hasCallOperator,
-              ast_matchers::internal::Matcher<CXXMethodDecl>, InnerMatcher) {
+AST_MATCHER_P(LambdaExpr, hasCallOperator, Matcher<CXXMethodDecl>,
+              InnerMatcher) {
   return InnerMatcher.matches(*Node.getCallOperator(), Finder, Builder);
 }
 
-AST_MATCHER_P(LambdaExpr, hasLambdaBody, ast_matchers::internal::Matcher<Stmt>,
-              InnerMatcher) {
+AST_MATCHER_P(LambdaExpr, hasLambdaBody, Matcher<Stmt>, InnerMatcher) {
   return InnerMatcher.matches(*Node.getBody(), Finder, Builder);
 }
 } // namespace
