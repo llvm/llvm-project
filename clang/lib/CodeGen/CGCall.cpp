@@ -2032,17 +2032,7 @@ static void getTrivialDefaultFunctionAttributes(
   }
 
   TargetInfo::BranchProtectionInfo BPI(LangOpts);
-
-  if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
-    FuncAttrs.addAttribute("sign-return-address", BPI.getSignReturnAddrStr());
-    FuncAttrs.addAttribute("sign-return-address-key", BPI.getSignKeyStr());
-  }
-  if (BPI.BranchTargetEnforcement)
-    FuncAttrs.addAttribute("branch-target-enforcement", "true");
-  if (BPI.BranchProtectionPAuthLR)
-    FuncAttrs.addAttribute("branch-protection-pauth-lr", "true");
-  if (BPI.GuardedControlStack)
-    FuncAttrs.addAttribute("guarded-control-stack", "true");
+  BPI.setFnAttributes(FuncAttrs);
 }
 
 /// Merges `target-features` from \TargetOpts and \F, and sets the result in
