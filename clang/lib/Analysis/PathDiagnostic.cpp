@@ -788,8 +788,7 @@ PathDiagnosticRange
           }
           break;
         }
-          // FIXME: Provide better range information for different
-          //  terminators.
+        // FIXME: Provide better range information for different terminators.
         case Stmt::IfStmtClass:
         case Stmt::WhileStmtClass:
         case Stmt::DoStmtClass:

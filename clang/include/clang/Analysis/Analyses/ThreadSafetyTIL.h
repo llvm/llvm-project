@@ -128,6 +128,7 @@ enum TIL_CastOpcode : unsigned char {
   CAST_objToPtr
 };
 
+// clang-format off
 const TIL_Opcode       COP_Min  = COP_Future;
 const TIL_Opcode       COP_Max  = COP_Branch;
 const TIL_UnaryOpcode  UOP_Min  = UOP_Minus;
@@ -136,6 +137,7 @@ const TIL_BinaryOpcode BOP_Min  = BOP_Add;
 const TIL_BinaryOpcode BOP_Max  = BOP_LogicOr;
 const TIL_CastOpcode   CAST_Min = CAST_none;
 const TIL_CastOpcode   CAST_Max = CAST_toInt;
+// clang-format on
 
 /// Return the name of a unary opcode.
 StringRef getUnaryOpcodeString(TIL_UnaryOpcode Op);
@@ -188,12 +190,14 @@ struct ValueType {
 
 inline ValueType::SizeType ValueType::getSizeType(unsigned nbytes) {
   switch (nbytes) {
-    case 1: return ST_8;
-    case 2: return ST_16;
-    case 4: return ST_32;
-    case 8: return ST_64;
+    // clang-format off
+    case  1: return ST_8;
+    case  2: return ST_16;
+    case  4: return ST_32;
+    case  8: return ST_64;
     case 16: return ST_128;
     default: return ST_0;
+    // clang-format on
   }
 }
 

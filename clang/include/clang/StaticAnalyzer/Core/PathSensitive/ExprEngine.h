@@ -393,8 +393,8 @@ public:
   ProgramStateRef processAssume(ProgramStateRef state, SVal cond,
                                 bool assumption);
 
-  /// processRegionChanges - Called by ProgramStateManager whenever a change is made
-  ///  to the store. Used to update checkers that track region values.
+  /// It's called by ProgramStateManager whenever a change is made to the store.
+  /// Used to update checkers that track region values.
   ProgramStateRef
   processRegionChanges(ProgramStateRef state,
                        const InvalidatedSymbols *invalidated,
@@ -587,9 +587,8 @@ public:
                                 ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst);
 
-  /// evalEagerlyAssumeBinOpBifurcation - Given the nodes in 'Src', eagerly assume symbolic
-  ///  expressions of the form 'x != 0' and generate new nodes (stored in Dst)
-  ///  with those assumptions.
+  /// Given the nodes in \p Src, eagerly assume symbolic expressions of the form
+  /// `x != 0` and generate new nodes (stored in \p Dst) with those assumptions.
   void evalEagerlyAssumeBinOpBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src,
                          const Expr *Ex);
 

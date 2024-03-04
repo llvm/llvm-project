@@ -440,6 +440,7 @@ protected:
 
   // Return the precedence of a given node, for use in pretty printing.
   unsigned precedence(const SExpr *E) {
+    // clang-format off
     switch (E->opcode()) {
       case COP_Future:     return Prec_Atom;
       case COP_Undefined:  return Prec_Atom;
@@ -479,6 +480,7 @@ protected:
       case COP_IfThenElse: return Prec_Other;
       case COP_Let:        return Prec_Decl;
     }
+    // clang-format on
     return Prec_MAX;
   }
 

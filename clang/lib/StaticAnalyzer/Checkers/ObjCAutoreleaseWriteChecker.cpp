@@ -53,6 +53,7 @@ public:
                         AnalysisManager &AM,
                         BugReporter &BR) const;
 private:
+  // clang-format off
   std::vector<std::string> SelectorsWithAutoreleasingPool = {
       // Common to NSArray,  NSSet, NSOrderedSet
       "enumerateObjectsUsingBlock:",
@@ -92,6 +93,7 @@ private:
       "indexInRange:options:passingTest:",
       "indexesInRange:options:passingTest:"
   };
+  // clang-format on
 
   std::vector<std::string> FunctionsWithAutoreleasingPool = {
       "dispatch_async", "dispatch_group_async", "dispatch_barrier_async"};

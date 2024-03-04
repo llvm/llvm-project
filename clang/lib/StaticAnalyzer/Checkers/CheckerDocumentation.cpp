@@ -33,30 +33,32 @@ namespace ento {
 /// checking.
 ///
 /// \sa CheckerContext
-class CheckerDocumentation : public Checker< check::PreStmt<ReturnStmt>,
-                                       check::PostStmt<DeclStmt>,
-                                       check::PreObjCMessage,
-                                       check::PostObjCMessage,
-                                       check::ObjCMessageNil,
-                                       check::PreCall,
-                                       check::PostCall,
-                                       check::BranchCondition,
-                                       check::NewAllocator,
-                                       check::Location,
-                                       check::Bind,
-                                       check::DeadSymbols,
-                                       check::BeginFunction,
-                                       check::EndFunction,
-                                       check::EndAnalysis,
-                                       check::EndOfTranslationUnit,
-                                       eval::Call,
-                                       eval::Assume,
-                                       check::LiveSymbols,
-                                       check::RegionChanges,
-                                       check::PointerEscape,
-                                       check::ConstPointerEscape,
-                                       check::Event<ImplicitNullDerefEvent>,
-                                       check::ASTDecl<FunctionDecl> > {
+class CheckerDocumentation : public Checker<                           //
+                                 check::PreStmt<ReturnStmt>,           //
+                                 check::PostStmt<DeclStmt>,            //
+                                 check::PreObjCMessage,                //
+                                 check::PostObjCMessage,               //
+                                 check::ObjCMessageNil,                //
+                                 check::PreCall,                       //
+                                 check::PostCall,                      //
+                                 check::BranchCondition,               //
+                                 check::NewAllocator,                  //
+                                 check::Location,                      //
+                                 check::Bind,                          //
+                                 check::DeadSymbols,                   //
+                                 check::BeginFunction,                 //
+                                 check::EndFunction,                   //
+                                 check::EndAnalysis,                   //
+                                 check::EndOfTranslationUnit,          //
+                                 eval::Call,                           //
+                                 eval::Assume,                         //
+                                 check::LiveSymbols,                   //
+                                 check::RegionChanges,                 //
+                                 check::PointerEscape,                 //
+                                 check::ConstPointerEscape,            //
+                                 check::Event<ImplicitNullDerefEvent>, //
+                                 check::ASTDecl<FunctionDecl>          //
+                                 > {
 public:
   /// Pre-visit the Statement.
   ///
