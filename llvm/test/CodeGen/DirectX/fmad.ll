@@ -10,7 +10,7 @@ target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32
 target triple = "dxil-pc-shadermodel6.7-library"
 
 ; Function Attrs: noinline nounwind optnone
-define noundef half @"?test_mad_half@@YA$f16@$f16@00@Z"(half noundef %p0, half noundef %p1, half noundef %p2) #0 {
+define noundef half @fmad_half(half noundef %p0, half noundef %p1, half noundef %p2) #0 {
 entry:
   %p2.addr = alloca half, align 2
   %p1.addr = alloca half, align 2
@@ -29,7 +29,7 @@ entry:
 declare half @llvm.fmuladd.f16(half, half, half) #2
 
 ; Function Attrs: noinline nounwind optnone
-define noundef float @"?test_mad_float@@YAMMMM@Z"(float noundef %p0, float noundef %p1, float noundef %p2) #0 {
+define noundef float @fmad_float(float noundef %p0, float noundef %p1, float noundef %p2) #0 {
 entry:
   %p2.addr = alloca float, align 4
   %p1.addr = alloca float, align 4
@@ -48,7 +48,7 @@ entry:
 declare float @llvm.fmuladd.f32(float, float, float) #2
 
 ; Function Attrs: noinline nounwind optnone
-define noundef double @"?test_mad_double@@YANNNN@Z"(double noundef %p0, double noundef %p1, double noundef %p2) #0 {
+define noundef double @fmad_double(double noundef %p0, double noundef %p1, double noundef %p2) #0 {
 entry:
   %p2.addr = alloca double, align 8
   %p1.addr = alloca double, align 8

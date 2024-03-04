@@ -8,7 +8,7 @@
 target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
 target triple = "dxil-pc-shadermodel6.7-library"
 ; Function Attrs: noinline nounwind optnone
-define noundef i16 @"?test_mad_int16_t@@YAFFFF@Z"(i16 noundef %p0, i16 noundef %p1, i16 noundef %p2) #0 {
+define noundef i16 @imad_short(i16 noundef %p0, i16 noundef %p1, i16 noundef %p2) #0 {
 entry:
   %p2.addr = alloca i16, align 2
   %p1.addr = alloca i16, align 2
@@ -27,7 +27,7 @@ entry:
 declare i16 @llvm.dx.imad.i16(i16, i16, i16) #1
 
 ; Function Attrs: noinline nounwind optnone
-define noundef i32 @"?test_mad_uint@@YAIIII@Z"(i32 noundef %p0, i32 noundef %p1, i32 noundef %p2) #0 {
+define noundef i32 @imad_int(i32 noundef %p0, i32 noundef %p1, i32 noundef %p2) #0 {
 entry:
   %p2.addr = alloca i32, align 4
   %p1.addr = alloca i32, align 4
@@ -46,7 +46,7 @@ entry:
 declare i32 @llvm.dx.imad.i32(i32, i32, i32) #1
 
 ; Function Attrs: noinline nounwind optnone
-define noundef i64 @"?test_mad_uint64_t@@YAKKKK@Z"(i64 noundef %p0, i64 noundef %p1, i64 noundef %p2) #0 {
+define noundef i64 @imad_int64(i64 noundef %p0, i64 noundef %p1, i64 noundef %p2) #0 {
 entry:
   %p2.addr = alloca i64, align 8
   %p1.addr = alloca i64, align 8
