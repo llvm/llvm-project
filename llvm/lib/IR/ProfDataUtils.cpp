@@ -190,4 +190,36 @@ void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights) {
   I.setMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
+MDNode *scaleValueProfile(const MDNode *ProfData, uint64_t S, uint64_t T) {
+  if (ProfData == nullptr)
+    return nullptr;
+  assert(
+      dyn_cast<MDString>(ProfData->getOperand(0))->getString().equals("VP") &&
+      "Expects value profile metadata");
+  LLVMContext &C = ProfData->getContext();
+  MDBuilder MDB(C);
+  APInt APS(128, S), APT(128, T);
+
+  SmallVector<Metadata *, 3> Vals;
+  Vals.push_back(ProfData->getOperand(0));
+  for (unsigned i = 1; i < ProfData->getNumOperands(); i += 2) {
+    Vals.push_back(ProfData->getOperand(i));
+    uint64_t Count =
+        mdconst::dyn_extract<ConstantInt>(ProfData->getOperand(i + 1))
+            ->getValue()
+            .getZExtValue();
+    // Don't scale the magic number.
+    if (Count == NOMORE_ICP_MAGICNUM) {
+      Vals.push_back(ProfData->getOperand(i + 1));
+      continue;
+    }
+    // Using APInt::div may be expensive, but most cases should fit 64 bits.
+    APInt Val(128, Count);
+    Val *= APS;
+    Vals.push_back(MDB.createConstant(ConstantInt::get(
+        Type::getInt64Ty(C), Val.udiv(APT).getLimitedValue())));
+  }
+  return MDNode::get(C, Vals);
+}
+
 } // namespace llvm

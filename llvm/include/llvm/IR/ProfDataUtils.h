@@ -108,5 +108,8 @@ bool extractProfTotalWeight(const Instruction &I, uint64_t &TotalWeights);
 /// a `prof` metadata reference to instruction `I`.
 void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights);
 
+/// Scaling value profile 'ProfData' using the ratio of S/T.
+MDNode *scaleValueProfile(const MDNode *ProfData, uint64_t S, uint64_t T);
+
 } // namespace llvm
 #endif
