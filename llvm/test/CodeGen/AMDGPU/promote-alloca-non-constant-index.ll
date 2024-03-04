@@ -4,32 +4,34 @@
 ; Check that promoting an alloca to a vector form works correctly when a variable
 ; vector index is used.
 
-define amdgpu_kernel void @non_constant_index(i32 %0) {
+define amdgpu_kernel void @non_constant_index(i32 %arg) {
 ; CHECK-LABEL: define amdgpu_kernel void @non_constant_index(
-; CHECK-SAME: i32 [[TMP0:%.*]]) {
-; CHECK-NEXT:    br label [[TMP2:%.*]]
-; CHECK:       2:
-; CHECK-NEXT:    br label [[TMP2]]
-; CHECK:       3:
-; CHECK-NEXT:    br label [[TMP4:%.*]]
-; CHECK:       4:
-; CHECK-NEXT:    [[PROMOTEALLOCA:%.*]] = phi <2 x float> [ [[TMP7:%.*]], [[TMP4]] ], [ undef, [[TMP3:%.*]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[PROMOTEALLOCA]], float 0.000000e+00, i32 [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP7]] = insertelement <2 x float> [[TMP5]], float 0.000000e+00, i32 [[TMP6]]
-; CHECK-NEXT:    br label [[TMP4]]
+; CHECK-SAME: i32 [[ARG:%.*]]) {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB1]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[PROMOTEALLOCA:%.*]] = phi <2 x float> [ [[TMP2:%.*]], [[BB3]] ], [ undef, [[BB2:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> [[PROMOTEALLOCA]], float 0.000000e+00, i32 [[ARG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG]], 1
+; CHECK-NEXT:    [[TMP2]] = insertelement <2 x float> [[TMP0]], float 0.000000e+00, i32 [[TMP1]]
+; CHECK-NEXT:    br label [[BB3]]
 ;
-  %2 = alloca [2 x float], align 4, addrspace(5)
-  br label %3
+bb:
+  %i = alloca [2 x float], align 4, addrspace(5)
+  br label %bb1
 
-3:
-  br label %3
+bb1:
+  br label %bb1
 
-4:
-  br label %5
+bb2:
+  br label %bb3
 
-5:
-  %6 = getelementptr float, ptr addrspace(5) %2, i32 %0
-  store <2 x float> zeroinitializer, ptr addrspace(5) %6, align 8
-  br label %5
+bb3:
+  %i4 = getelementptr float, ptr addrspace(5) %i, i32 %arg
+  store <2 x float> zeroinitializer, ptr addrspace(5) %i4, align 8
+  br label %bb3
 }
