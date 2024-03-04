@@ -98,6 +98,7 @@ private:
   bool IsCrossAddressSpaceOrdering = false;
   bool IsVolatile = false;
   bool IsNonTemporal = false;
+  bool IsLastUse = false;
 
   SIMemOpInfo(AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent,
               SIAtomicScope Scope = SIAtomicScope::SYSTEM,
@@ -107,13 +108,15 @@ private:
               AtomicOrdering FailureOrdering =
                 AtomicOrdering::SequentiallyConsistent,
               bool IsVolatile = false,
-              bool IsNonTemporal = false)
+              bool IsNonTemporal = false,
+              bool IsLastUse = false)
     : Ordering(Ordering), FailureOrdering(FailureOrdering),
       Scope(Scope), OrderingAddrSpace(OrderingAddrSpace),
       InstrAddrSpace(InstrAddrSpace),
       IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
       IsVolatile(IsVolatile),
-      IsNonTemporal(IsNonTemporal) {
+      IsNonTemporal(IsNonTemporal),
+      IsLastUse(IsLastUse) {
 
     if (Ordering == AtomicOrdering::NotAtomic) {
       assert(Scope == SIAtomicScope::NONE &&
@@ -199,6 +202,12 @@ public:
   /// create this SIMemOpInfo is nontemporal, false otherwise.
   bool isNonTemporal() const {
     return IsNonTemporal;
+  }
+
+  /// \returns True if memory access of the machine instruction used to
+  /// create this SIMemOpInfo is last use, false otherwise.
+  bool isLastUse() const {
+    return IsLastUse;
   }
 
   /// \returns True if ordering constraint of the machine instruction used to
@@ -315,6 +324,12 @@ public:
   virtual bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const {
     return false;
   };
+
+  /// Update \p MI memory instruction to indicate it is a last use. Return true
+  /// iff the instruction was modified.
+  virtual bool enableLastUse(MachineInstr &MI, bool IsLastUse) const {
+    return false;
+  }
 
   /// Inserts any necessary instructions at position \p Pos relative
   /// to instruction \p MI to ensure memory instructions before \p Pos of kind
@@ -592,6 +607,10 @@ protected:
   // MI. \returns Returns true if \p MI is modified, false otherwise.
   bool setScope(const MachineBasicBlock::iterator MI,
                 AMDGPU::CPol::CPol Value) const;
+  // Checks if CPol operand is present in instruction \p MI and if current Scope
+  // policy is same as \p Value.
+  bool isScope(const MachineBasicBlock::iterator MI,
+               AMDGPU::CPol::CPol Value) const;
 
   // Stores with system scope (SCOPE_SYS) need to wait for:
   // - loads or atomics(returning) - wait for {LOAD|SAMPLE|BVH|KM}CNT==0
@@ -618,6 +637,9 @@ public:
                                       bool IsNonTemporal) const override;
 
   bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const override;
+
+  bool enableLastUse(MachineInstr &MI,
+                     bool IsLastUse) const override;
 };
 
 class SIMemoryLegalizer final : public MachineFunctionPass {
@@ -745,12 +767,14 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   SIAtomicAddrSpace InstrAddrSpace = SIAtomicAddrSpace::NONE;
   bool IsNonTemporal = true;
   bool IsVolatile = false;
+  bool IsLastUse = false;
 
   // Validator should check whether or not MMOs cover the entire set of
   // locations accessed by the memory instruction.
   for (const auto &MMO : MI->memoperands()) {
     IsNonTemporal &= MMO->isNonTemporal();
     IsVolatile |= MMO->isVolatile();
+    IsLastUse |= MMO->getFlags() & MOLastUse;
     InstrAddrSpace |=
       toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
     AtomicOrdering OpOrdering = MMO->getSuccessOrdering();
@@ -792,7 +816,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   }
   return SIMemOpInfo(Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
                      IsCrossAddressSpaceOrdering, FailureOrdering, IsVolatile,
-                     IsNonTemporal);
+                     IsNonTemporal, IsLastUse);
 }
 
 std::optional<SIMemOpInfo>
@@ -2209,6 +2233,15 @@ bool SIGfx12CacheControl::setScope(const MachineBasicBlock::iterator MI,
   return false;
 }
 
+bool SIGfx12CacheControl::isScope(const MachineBasicBlock::iterator MI,
+                                  AMDGPU::CPol::CPol Value) const {
+  MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
+  if (!CPol)
+    return false;
+
+  return (CPol->getImm() & AMDGPU::CPol::SCOPE) == Value;
+}
+
 bool SIGfx12CacheControl::insertWaitsBeforeSystemScopeStore(
     const MachineBasicBlock::iterator MI) const {
   // TODO: implement flag for frontend to give us a hint not to insert waits.
@@ -2415,6 +2448,16 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   return Changed;
 }
 
+bool SIGfx12CacheControl::enableLastUse(MachineInstr &MI,
+                                        bool IsLastUse) const {
+  assert(MI.mayLoad() && !MI.mayStore());
+
+  if (IsLastUse && !isScope(MI, AMDGPU::CPol::SCOPE_SYS))
+    return setTH(MI, AMDGPU::CPol::TH_LU);;
+
+  return false;
+}
+
 bool SIGfx12CacheControl::expandSystemScopeStore(
     MachineBasicBlock::iterator &MI) const {
   MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
@@ -2471,12 +2514,19 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
     return Changed;
   }
 
+  // enableVolatileAndOrNonTemporal can insert instructions and advance iterator
+  // MI and we need original instruction for enabling last use.
+  MachineInstr &Inst = *MI;
+
   // Atomic instructions already bypass caches to the scope specified by the
   // SyncScope operand. Only non-atomic volatile and nontemporal instructions
   // need additional treatment.
   Changed |= CC->enableVolatileAndOrNonTemporal(MI, MOI.getInstrAddrSpace(),
                                                 SIMemOp::LOAD, MOI.isVolatile(),
                                                 MOI.isNonTemporal());
+
+  Changed |= CC->enableLastUse(Inst, MOI.isLastUse());
+
   return Changed;
 }
 
