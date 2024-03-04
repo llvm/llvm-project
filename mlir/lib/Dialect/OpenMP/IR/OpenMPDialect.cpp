@@ -1957,7 +1957,10 @@ LogicalResult PrivateClauseOp::verify() {
   Type symType = getType();
 
   auto verifyTerminator = [&](Operation *terminator) -> LogicalResult {
-    if (!terminator->hasSuccessors() && !llvm::isa<YieldOp>(terminator))
+    if (!terminator->getBlock()->getSuccessors().empty())
+      return success();
+
+    if (!llvm::isa<YieldOp>(terminator))
       return mlir::emitError(terminator->getLoc())
              << "expected exit block terminator to be an `omp.yield` op.";
 

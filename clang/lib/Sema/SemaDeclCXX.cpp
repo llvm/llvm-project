@@ -7294,7 +7294,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   bool CanPass = canPassInRegisters(*this, Record, CCK);
 
   // Do not change ArgPassingRestrictions if it has already been set to
-  // ArgPassingKind::CanNeverPassInRegs.
+  // RecordArgPassingKind::CanNeverPassInRegs.
   if (Record->getArgPassingRestrictions() !=
       RecordArgPassingKind::CanNeverPassInRegs)
     Record->setArgPassingRestrictions(
@@ -12203,10 +12203,8 @@ Decl *Sema::ActOnUsingDirective(Scope *S, SourceLocation UsingLoc,
   assert(NamespcName && "Invalid NamespcName.");
   assert(IdentLoc.isValid() && "Invalid NamespceName location.");
 
-  // This can only happen along a recovery path.
-  while (S->isTemplateParamScope())
-    S = S->getParent();
-  assert(S->getFlags() & Scope::DeclScope && "Invalid Scope.");
+  // Get the innermost enclosing declaration scope.
+  S = S->getDeclParent();
 
   UsingDirectiveDecl *UDir = nullptr;
   NestedNameSpecifier *Qualifier = nullptr;
@@ -13516,11 +13514,8 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
                                   SourceLocation UsingLoc, UnqualifiedId &Name,
                                   const ParsedAttributesView &AttrList,
                                   TypeResult Type, Decl *DeclFromDeclSpec) {
-  // Skip up to the relevant declaration scope.
-  while (S->isTemplateParamScope())
-    S = S->getParent();
-  assert((S->getFlags() & Scope::DeclScope) &&
-         "got alias-declaration outside of declaration scope");
+  // Get the innermost enclosing declaration scope.
+  S = S->getDeclParent();
 
   if (Type.isInvalid())
     return nullptr;

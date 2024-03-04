@@ -311,12 +311,12 @@ struct VPTransformState {
   void set(VPValue *Def, Value *V, const VPIteration &Instance) {
     auto Iter = Data.PerPartScalars.insert({Def, {}});
     auto &PerPartVec = Iter.first->second;
-    while (PerPartVec.size() <= Instance.Part)
-      PerPartVec.emplace_back();
+    if (PerPartVec.size() <= Instance.Part)
+      PerPartVec.resize(Instance.Part + 1);
     auto &Scalars = PerPartVec[Instance.Part];
     unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
-    while (Scalars.size() <= CacheIdx)
-      Scalars.push_back(nullptr);
+    if (Scalars.size() <= CacheIdx)
+      Scalars.resize(CacheIdx + 1);
     assert(!Scalars[CacheIdx] && "should overwrite existing value");
     Scalars[CacheIdx] = V;
   }
@@ -2929,6 +2929,14 @@ public:
   VPValue *getTripCount() const {
     assert(TripCount && "trip count needs to be set before accessing it");
     return TripCount;
+  }
+
+  /// Resets the trip count for the VPlan. The caller must make sure all uses of
+  /// the original trip count have been replaced.
+  void resetTripCount(VPValue *NewTripCount) {
+    assert(TripCount && NewTripCount && TripCount->getNumUsers() == 0 &&
+           "TripCount always must be set");
+    TripCount = NewTripCount;
   }
 
   /// The backedge taken count of the original loop.

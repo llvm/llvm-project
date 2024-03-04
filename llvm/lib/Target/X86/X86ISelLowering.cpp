@@ -406,6 +406,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(Op, MVT::f128, Expand);
   }
 
+  for (auto VT : {MVT::f32, MVT::f64, MVT::f80, MVT::f128}) {
+    setOperationAction(ISD::STRICT_FP_TO_BF16, VT, Expand);
+    setOperationAction(ISD::STRICT_BF16_TO_FP, VT, Expand);
+  }
+
   for (MVT VT : {MVT::f32, MVT::f64, MVT::f80, MVT::f128}) {
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f16, Expand);
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::bf16, Expand);
@@ -5878,13 +5883,16 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       }
     }
 
-    // Peek through trunc/aext/zext.
+    // Peek through trunc/aext/zext/bitcast.
     // TODO: aext shouldn't require SM_SentinelZero padding.
     // TODO: handle shift of scalars.
     unsigned MinBitsPerElt = Scl.getScalarValueSizeInBits();
     while (Scl.getOpcode() == ISD::TRUNCATE ||
            Scl.getOpcode() == ISD::ANY_EXTEND ||
-           Scl.getOpcode() == ISD::ZERO_EXTEND) {
+           Scl.getOpcode() == ISD::ZERO_EXTEND ||
+           (Scl.getOpcode() == ISD::BITCAST &&
+            Scl.getScalarValueSizeInBits() ==
+                Scl.getOperand(0).getScalarValueSizeInBits())) {
       Scl = Scl.getOperand(0);
       MinBitsPerElt =
           std::min<unsigned>(MinBitsPerElt, Scl.getScalarValueSizeInBits());
@@ -23419,6 +23427,20 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
         return DAG.getBitcast(VT, Result);
       }
 
+      // If the i64 elements are sign-extended enough to be representable as i32
+      // then we can compare the lower i32 bits and splat.
+      if (!FlipSigns && !Invert && DAG.ComputeNumSignBits(Op0) > 32 &&
+          DAG.ComputeNumSignBits(Op1) > 32) {
+        Op0 = DAG.getBitcast(MVT::v4i32, Op0);
+        Op1 = DAG.getBitcast(MVT::v4i32, Op1);
+
+        SDValue GT = DAG.getNode(X86ISD::PCMPGT, dl, MVT::v4i32, Op0, Op1);
+        static const int MaskLo[] = {0, 0, 2, 2};
+        SDValue Result = DAG.getVectorShuffle(MVT::v4i32, dl, GT, GT, MaskLo);
+
+        return DAG.getBitcast(VT, Result);
+      }
+
       // Since SSE has no unsigned integer comparisons, we need to flip the sign
       // bits of the inputs before performing those operations. The lower
       // compare is always unsigned.
@@ -28915,6 +28937,7 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
   SDValue R = Op.getOperand(0);
   SDValue Amt = Op.getOperand(1);
   unsigned X86Opc = getTargetVShiftUniformOpcode(Op.getOpcode(), false);
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
 
   auto ArithmeticShiftRight64 = [&](uint64_t ShiftAmt) {
     assert((VT == MVT::v2i64 || VT == MVT::v4i64) && "Unexpected SRA type");
@@ -28961,7 +28984,7 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
     return SDValue();
 
   // If the shift amount is out of range, return undef.
-  if (APIntShiftAmt.uge(VT.getScalarSizeInBits()))
+  if (APIntShiftAmt.uge(EltSizeInBits))
     return DAG.getUNDEF(VT);
 
   uint64_t ShiftAmt = APIntShiftAmt.getZExtValue();
@@ -28988,6 +29011,15 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
        (Subtarget.hasInt256() && VT == MVT::v4i64)) &&
       Op.getOpcode() == ISD::SRA)
     return ArithmeticShiftRight64(ShiftAmt);
+
+  // If we're logical shifting an all-signbits value then we can just perform as
+  // a mask.
+  if ((Op.getOpcode() == ISD::SHL || Op.getOpcode() == ISD::SRL) &&
+      DAG.ComputeNumSignBits(R) == EltSizeInBits) {
+    SDValue Mask = DAG.getAllOnesConstant(dl, VT);
+    Mask = DAG.getNode(Op.getOpcode(), dl, VT, Mask, Amt);
+    return DAG.getNode(ISD::AND, dl, VT, R, Mask);
+  }
 
   if (VT == MVT::v16i8 || (Subtarget.hasInt256() && VT == MVT::v32i8) ||
       (Subtarget.hasBWI() && VT == MVT::v64i8)) {
@@ -41259,6 +41291,20 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     KnownZero = LHSZero;
     break;
   }
+  case X86ISD::PCMPEQ:
+  case X86ISD::PCMPGT: {
+    APInt LHSUndef, LHSZero;
+    APInt RHSUndef, RHSZero;
+    SDValue LHS = Op.getOperand(0);
+    SDValue RHS = Op.getOperand(1);
+    if (SimplifyDemandedVectorElts(LHS, DemandedElts, LHSUndef, LHSZero, TLO,
+                                   Depth + 1))
+      return true;
+    if (SimplifyDemandedVectorElts(RHS, DemandedElts, RHSUndef, RHSZero, TLO,
+                                   Depth + 1))
+      return true;
+    break;
+  }
   case X86ISD::KSHIFTL: {
     SDValue Src = Op.getOperand(0);
     auto *Amt = cast<ConstantSDNode>(Op.getOperand(1));
@@ -41399,7 +41445,9 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     break;
   }
   case X86ISD::CVTSI2P:
-  case X86ISD::CVTUI2P: {
+  case X86ISD::CVTUI2P:
+  case X86ISD::CVTPH2PS:
+  case X86ISD::CVTPS2PH: {
     SDValue Src = Op.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
     APInt SrcUndef, SrcZero;
@@ -55789,6 +55837,15 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  auto IsExtractFree = [](SDValue V) {
+    V = peekThroughBitcasts(V);
+    if (ISD::isBuildVectorOfConstantSDNodes(V.getNode()))
+      return true;
+    if (ISD::isBuildVectorOfConstantFPSDNodes(V.getNode()))
+      return true;
+    return V.isUndef();
+  };
+
   // If we're extracting the lowest subvector and we're the only user,
   // we may be able to perform this with a smaller vector width.
   unsigned InOpcode = InVec.getOpcode();
@@ -55830,14 +55887,27 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(InOpcode, DL, VT, Ext0, Ext1, Ext2);
     }
     if (IdxVal == 0 && InOpcode == ISD::TRUNCATE && Subtarget.hasVLX() &&
-        (VT.is128BitVector() || VT.is256BitVector())) {
+        (SizeInBits == 128 || SizeInBits == 256)) {
       SDValue InVecSrc = InVec.getOperand(0);
       unsigned Scale = InVecSrc.getValueSizeInBits() / InSizeInBits;
       SDValue Ext = extractSubVector(InVecSrc, 0, DAG, DL, Scale * SizeInBits);
       return DAG.getNode(InOpcode, DL, VT, Ext);
     }
+    if ((InOpcode == X86ISD::CMPP || InOpcode == X86ISD::PCMPEQ ||
+         InOpcode == X86ISD::PCMPGT) &&
+        (IsExtractFree(InVec.getOperand(0)) ||
+         IsExtractFree(InVec.getOperand(1))) &&
+        SizeInBits == 128) {
+      SDValue Ext0 =
+          extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits);
+      SDValue Ext1 =
+          extractSubVector(InVec.getOperand(1), IdxVal, DAG, DL, SizeInBits);
+      if (InOpcode == X86ISD::CMPP)
+        return DAG.getNode(InOpcode, DL, VT, Ext0, Ext1, InVec.getOperand(2));
+      return DAG.getNode(InOpcode, DL, VT, Ext0, Ext1);
+    }
     if (InOpcode == X86ISD::MOVDDUP &&
-        (VT.is128BitVector() || VT.is256BitVector())) {
+        (SizeInBits == 128 || SizeInBits == 256)) {
       SDValue Ext0 =
           extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits);
       return DAG.getNode(InOpcode, DL, VT, Ext0);

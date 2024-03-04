@@ -644,7 +644,7 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   // value of the same PHI nodes if/when we continue execution.
   for (PHINode &PN : LS.Header->phis()) {
     PHINode *NewPHI = PHINode::Create(PN.getType(), 2, PN.getName() + ".copy",
-                                      BranchToContinuation);
+                                      BranchToContinuation->getIterator());
 
     NewPHI->addIncoming(PN.getIncomingValueForBlock(Preheader), Preheader);
     NewPHI->addIncoming(PN.getIncomingValueForBlock(LS.Latch),
@@ -653,7 +653,7 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   }
 
   RRI.IndVarEnd = PHINode::Create(IndVarBase->getType(), 2, "indvar.end",
-                                  BranchToContinuation);
+                                  BranchToContinuation->getIterator());
   RRI.IndVarEnd->addIncoming(IndVarStart, Preheader);
   RRI.IndVarEnd->addIncoming(IndVarBase, RRI.ExitSelector);
 

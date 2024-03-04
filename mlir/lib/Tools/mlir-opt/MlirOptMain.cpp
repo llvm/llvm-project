@@ -431,7 +431,7 @@ static LogicalResult processBuffer(raw_ostream &os,
                                    std::unique_ptr<MemoryBuffer> ownedBuffer,
                                    const MlirOptMainConfig &config,
                                    DialectRegistry &registry,
-                                   llvm::ThreadPool *threadPool) {
+                                   llvm::ThreadPoolInterface *threadPool) {
   // Tell sourceMgr about this buffer, which is what the parser will pick up.
   auto sourceMgr = std::make_shared<SourceMgr>();
   sourceMgr->AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
@@ -517,7 +517,7 @@ LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
   // up into small pieces and checks each independently.
   // We use an explicit threadpool to avoid creating and joining/destroying
   // threads for each of the split.
-  ThreadPool *threadPool = nullptr;
+  ThreadPoolInterface *threadPool = nullptr;
 
   // Create a temporary context for the sake of checking if
   // --mlir-disable-threading was passed on the command line.

@@ -1183,11 +1183,16 @@ public:
   bool clearOffset(MCInst &Inst) const;
 
   /// Return the label of \p Inst, if available.
-  MCSymbol *getLabel(const MCInst &Inst) const;
+  MCSymbol *getInstLabel(const MCInst &Inst) const;
+
+  /// Set the label of \p Inst or return the existing label for the instruction.
+  /// This label will be emitted right before \p Inst is emitted to MCStreamer.
+  MCSymbol *getOrCreateInstLabel(MCInst &Inst, const Twine &Name,
+                                 MCContext *Ctx) const;
 
   /// Set the label of \p Inst. This label will be emitted right before \p Inst
   /// is emitted to MCStreamer.
-  bool setLabel(MCInst &Inst, MCSymbol *Label) const;
+  void setInstLabel(MCInst &Inst, MCSymbol *Label) const;
 
   /// Get instruction size specified via annotation.
   std::optional<uint32_t> getSize(const MCInst &Inst) const;
