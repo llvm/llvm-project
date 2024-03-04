@@ -581,7 +581,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     // If arguments aren't actually supplied, then we cannot determine the
     // value of the index. We also want to skip predicate types.
-    if (ICA.isTypeBasedOnly() ||
+    if (ICA.getArgs().size() != ICA.getArgTypes().size() ||
         ICA.getReturnType()->getScalarType()->isIntegerTy(1))
       break;
 
