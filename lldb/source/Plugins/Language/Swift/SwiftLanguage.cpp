@@ -1814,6 +1814,17 @@ SwiftLanguage::GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
   return mangled_name;
 }
 
+bool SwiftLanguage::IgnoreForLineBreakpoints(const SymbolContext &sc) const {
+  // If we don't have a function, conservatively return false.
+  if (!sc.function)
+    return false;
+  StringRef name = sc.function->GetMangled().GetMangledName().GetStringRef();
+  // In async functions, ignore await resume ("Q") funclets, these only
+  // deallocate the async context and task_switch back to user code.
+  return SwiftLanguageRuntime::IsSwiftAsyncAwaitResumePartialFunctionSymbol(
+      name);
+}
+
 //------------------------------------------------------------------
 // Static Functions
 //------------------------------------------------------------------
