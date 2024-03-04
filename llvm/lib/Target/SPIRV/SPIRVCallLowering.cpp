@@ -165,13 +165,25 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
   if (!OriginalArgType->isPointerTy())
     return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
 
-  // In case OriginalArgType is of pointer type, there are two possibilities:
-  // 1) This is an OpenCL/SPIR-V builtin type if there is spv_assign_type
+  // In case OriginalArgType is of pointer type, there are three possibilities:
+  // 1) This is a pointer of an LLVM IR element type, passed byval/byref.
+  // 2) This is an OpenCL/SPIR-V builtin type if there is spv_assign_type
   // intrinsic assigning a TargetExtType.
-  // 2) This is a pointer, try to retrieve pointer element type from a
+  // 3) This is a pointer, try to retrieve pointer element type from a
   // spv_assign_ptr_type intrinsic or otherwise use default pointer element
   // type.
-  for (auto User : F.getArg(ArgIdx)->users()) {
+  Argument *Arg = F.getArg(ArgIdx);
+  if (Arg->hasByValAttr() || Arg->hasByRefAttr()) {
+    Type *ByValRefType = Arg->hasByValAttr() ? Arg->getParamByValType()
+                                             : Arg->getParamByRefType();
+    SPIRVType *ElementType = GR->getOrCreateSPIRVType(ByValRefType, MIRBuilder);
+    return GR->getOrCreateSPIRVPointerType(
+        ElementType, MIRBuilder,
+        addressSpaceToStorageClass(Arg->getType()->getPointerAddressSpace(),
+                                   ST));
+  }
+
+  for (auto User : Arg->users()) {
     auto *II = dyn_cast<IntrinsicInst>(User);
     // Check if this is spv_assign_type assigning OpenCL/SPIR-V builtin type.
     if (II && II->getIntrinsicID() == Intrinsic::spv_assign_type) {
