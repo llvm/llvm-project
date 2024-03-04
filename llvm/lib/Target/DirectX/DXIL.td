@@ -218,6 +218,9 @@ class DXILOpMapping<int opCode, DXILOpClass opClass, Intrinsic intrinsic, string
 // Concrete definition of DXIL Operation mapping to corresponding LLVM intrinsic
 def Sin  : DXILOpMapping<13, unary, int_sin,
                          "Returns sine(theta) for theta in radians.">;
+def Exp : DXILOpMapping<21, unary, int_exp,
+                         "Returns the base-e exponential of the x parameter."
+                         "exp(x) = e**x.">;
 def Frac : DXILOpMapping<22, unary, int_dx_frac,
                          "Returns a fraction from 0 to 1 that represents the "
                          "decimal part of the input.">;

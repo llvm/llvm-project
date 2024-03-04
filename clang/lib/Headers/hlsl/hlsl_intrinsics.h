@@ -278,6 +278,38 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
 uint64_t dot(uint64_t4, uint64_t4);
 
 //===----------------------------------------------------------------------===//
+// exp builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T exp(T x)
+/// \brief Returns the base-e exponential, or \a e**x, of the specified value.
+/// \param x The specified input value.
+///
+/// The return value is the base-e exponential of the \a x parameter.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+half exp(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+half2 exp(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+half3 exp(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+half4 exp(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+float exp(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+float2 exp(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+float3 exp(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+float4 exp(float4);
+
+//===----------------------------------------------------------------------===//
 // floor builtins
 //===----------------------------------------------------------------------===//
 
