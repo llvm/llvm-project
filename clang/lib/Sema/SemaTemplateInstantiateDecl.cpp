@@ -5052,6 +5052,25 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   Function->setInnerLocStart(PatternDecl->getInnerLocStart());
   Function->setRangeEnd(PatternDecl->getEndLoc());
 
+  // In non-MSVCCompat mode, we only care about the presence of a
+  // '__restrict' qualifier in the cv-qualifier-seq of a member
+  // function, and not its declaration.
+  if (auto MD = dyn_cast<CXXMethodDecl>(Function);
+      MD && !getLangOpts().MSVCCompat) {
+    bool Restrict =
+        cast<CXXMethodDecl>(PatternDecl)->getMethodQualifiers().hasRestrict();
+    if (Restrict != MD->getMethodQualifiers().hasRestrict()) {
+      const auto *FPT = MD->getType()->getAs<FunctionProtoType>();
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      if (Restrict)
+        EPI.TypeQuals.addRestrict();
+      else
+        EPI.TypeQuals.removeRestrict();
+      MD->setType(Context.getFunctionType(FPT->getReturnType(),
+                                          FPT->getParamTypes(), EPI));
+    }
+  }
+
   EnterExpressionEvaluationContext EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
 
