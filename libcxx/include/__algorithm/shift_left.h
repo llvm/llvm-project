@@ -27,30 +27,30 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <class _AlgPolicy, class _Iter, class _Sent>
-inline _LIBCPP_HIDE_FROM_ABI constexpr pair<_Iter, _Iter>
-__shift_left(_Iter __first, _Sent __last, typename iterator_traits<_Iter>::difference_type __n) {
-  _Iter __end = _IterOps<_AlgPolicy>::next(__first, __last);
-
+_LIBCPP_HIDE_FROM_ABI constexpr pair<_Iter, _Iter>
+__shift_left(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::template __difference_type<_Iter> __n) {
   if (__n == 0) {
+    _Iter __end = _IterOps<_AlgPolicy>::next(__first, __last);
     return {std::move(__first), std::move(__end)};
   }
 
   _Iter __m = __first;
-  if constexpr (__has_random_access_iterator_category<_Iter>::value) {
-    if (__n >= __end - __first) {
+  if constexpr (sized_sentinel_for<_Sent, _Iter>) {
+    auto __size = _IterOps<_AlgPolicy>::distance(__first, __last);
+    if (__n >= __size) {
       return {std::move(__first), std::move(__first)};
     }
-    __m += __n;
+    _IterOps<_AlgPolicy>::advance(__m, __n);
   } else {
     for (; __n > 0; --__n) {
-      if (__m == __end) {
+      if (__m == __last) {
         return {std::move(__first), std::move(__first)};
       }
       ++__m;
     }
   }
 
-  _Iter __result = std::__move<_AlgPolicy>(__m, __end, __first).second;
+  _Iter __result = std::__move<_AlgPolicy>(__m, __last, __first).second;
   return {std::move(__first), std::move(__result)};
 }
 
