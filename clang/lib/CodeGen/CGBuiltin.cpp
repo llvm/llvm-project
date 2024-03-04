@@ -17816,36 +17816,39 @@ Value *EmitAMDGPUImplicitArgPtr(CodeGenFunction &CGF) {
   return Call;
 }
 
-// \p Index is 0, 1, and 2 for x, y, and z dimension, respectively.
+/// Note: "__oclc_ABI_version" is supposed to be emitted and intialized by
+///       clang during compilation of user code.
+Value *getAMDGPUABIVersion(CodeGenFunction &CGF) {
+  StringRef Name = "__oclc_ABI_version";
+  auto *ABIVersionC = CGF.CGM.getModule().getNamedGlobal(Name);
+  if (!ABIVersionC)
+    ABIVersionC = new llvm::GlobalVariable(
+        CGF.CGM.getModule(), CGF.Int32Ty, false,
+        llvm::GlobalValue::ExternalLinkage, nullptr, Name, nullptr,
+        llvm::GlobalVariable::NotThreadLocal,
+        CGF.CGM.getContext().getTargetAddressSpace(LangAS::opencl_constant));
+
+  // This load will be eliminated by the IPSCCP because it is constant
+  // weak_odr without externally_initialized. Either changing it to weak or
+  // adding externally_initialized will keep the load.
+  return CGF.Builder.CreateAlignedLoad(CGF.Int32Ty, ABIVersionC,
+                                       CGF.CGM.getIntAlign());
+}
+
 /// Emit code based on Code Object ABI version.
 /// COV_4    : Emit code to use dispatch ptr
 /// COV_5+   : Emit code to use implicitarg ptr
 /// COV_NONE : Emit code to load a global variable "__oclc_ABI_version"
 ///            and use its value for COV_4 or COV_5+ approach. It is used for
 ///            compiling device libraries in an ABI-agnostic way.
-///
-/// Note: "__oclc_ABI_version" is supposed to be emitted and intialized by
-///       clang during compilation of user code.
 Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
+  assert(Index < 3 && "Invalid dimension argument");
   llvm::LoadInst *LD;
 
   auto Cov = CGF.getTarget().getTargetOpts().CodeObjectVersion;
 
   if (Cov == CodeObjectVersionKind::COV_None) {
-    StringRef Name = "__oclc_ABI_version";
-    auto *ABIVersionC = CGF.CGM.getModule().getNamedGlobal(Name);
-    if (!ABIVersionC)
-      ABIVersionC = new llvm::GlobalVariable(
-          CGF.CGM.getModule(), CGF.Int32Ty, false,
-          llvm::GlobalValue::ExternalLinkage, nullptr, Name, nullptr,
-          llvm::GlobalVariable::NotThreadLocal,
-          CGF.CGM.getContext().getTargetAddressSpace(LangAS::opencl_constant));
-
-    // This load will be eliminated by the IPSCCP because it is constant
-    // weak_odr without externally_initialized. Either changing it to weak or
-    // adding externally_initialized will keep the load.
-    Value *ABIVersion = CGF.Builder.CreateAlignedLoad(CGF.Int32Ty, ABIVersionC,
-                                                      CGF.CGM.getIntAlign());
+    Value *ABIVersion = getAMDGPUABIVersion(CGF);
 
     Value *IsCOV5 = CGF.Builder.CreateICmpSGE(
         ABIVersion,
@@ -17901,6 +17904,58 @@ Value *EmitAMDGPUGridSize(CodeGenFunction &CGF, unsigned Index) {
                   llvm::MDNode::get(CGF.getLLVMContext(), std::nullopt));
   return LD;
 }
+
+/// Emit code based on Code Object ABI version.
+/// COV_4    : Emit code to use dispatch ptr
+/// COV_5+   : Emit code to use implicitarg ptr
+/// COV_NONE : Emit code to load a global variable "__oclc_ABI_version"
+///            and use its value for COV_4 or COV_5+ approach. It is used for
+///            compiling device libraries in an ABI-agnostic way.
+Value *EmitAMDGPUNumWorkGroups(CodeGenFunction &CGF, unsigned Index) {
+  assert(Index < 3 && "Invalid dimension argument");
+  llvm::Instruction *I;
+
+  auto Cov = CGF.getTarget().getTargetOpts().CodeObjectVersion;
+
+  // Indexing using the implicit kernel arguments.
+  auto EmitCOV5 = [](CodeGenFunction &CGF, unsigned Index) -> llvm::Value * {
+    llvm::Value *ImplicitGEP = CGF.Builder.CreateConstGEP1_32(
+        CGF.Int8Ty, EmitAMDGPUImplicitArgPtr(CGF), Index * sizeof(uint32_t));
+    llvm::LoadInst *LD = CGF.Builder.CreateLoad(
+        Address(ImplicitGEP, CGF.Int32Ty, CharUnits::fromQuantity(2)));
+    LD->setMetadata(llvm::LLVMContext::MD_invariant_load,
+                    llvm::MDNode::get(CGF.getLLVMContext(), std::nullopt));
+    LD->setMetadata(llvm::LLVMContext::MD_noundef,
+                    llvm::MDNode::get(CGF.getLLVMContext(), std::nullopt));
+    return LD;
+  };
+
+  // Indexing into the packet arguments and dividing the grid size.
+  auto EmitCOV4 = [](CodeGenFunction &CGF, unsigned Index) -> llvm::Value * {
+    auto GridSize = EmitAMDGPUGridSize(CGF, Index);
+    auto WorkGroupSize = EmitAMDGPUWorkGroupSize(CGF, Index);
+    return CGF.Builder.CreateUDiv(
+        GridSize, CGF.Builder.CreateZExt(WorkGroupSize, GridSize->getType()));
+  };
+
+  if (Cov == CodeObjectVersionKind::COV_None) {
+    Value *ABIVersion = getAMDGPUABIVersion(CGF);
+
+    Value *ImplicitGEP = EmitCOV5(CGF, Index);
+
+    Value *IsCOV5 = CGF.Builder.CreateICmpSGE(
+        ABIVersion,
+        llvm::ConstantInt::get(CGF.Int32Ty, CodeObjectVersionKind::COV_5));
+
+    Value *DispatchGEP = EmitCOV4(CGF, Index);
+
+    return CGF.Builder.CreateSelect(IsCOV5, ImplicitGEP, DispatchGEP);
+  }
+
+  return Cov >= CodeObjectVersionKind::COV_5 ? EmitCOV5(CGF, Index)
+                                             : EmitCOV4(CGF, Index);
+}
+
 } // namespace
 
 // For processing memory ordering and memory scope arguments of various
@@ -18696,6 +18751,14 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return EmitAMDGPUWorkGroupSize(*this, 1);
   case AMDGPU::BI__builtin_amdgcn_workgroup_size_z:
     return EmitAMDGPUWorkGroupSize(*this, 2);
+
+  // amdgcn num workgroups
+  case AMDGPU::BI__builtin_amdgcn_num_workgroups_x:
+    return EmitAMDGPUNumWorkGroups(*this, 0);
+  case AMDGPU::BI__builtin_amdgcn_num_workgroups_y:
+    return EmitAMDGPUNumWorkGroups(*this, 1);
+  case AMDGPU::BI__builtin_amdgcn_num_workgroups_z:
+    return EmitAMDGPUNumWorkGroups(*this, 2);
 
   // amdgcn grid size
   case AMDGPU::BI__builtin_amdgcn_grid_size_x:

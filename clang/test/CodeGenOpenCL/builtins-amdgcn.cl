@@ -618,6 +618,24 @@ void test_get_workgroup_size(int d, global int *out)
 	}
 }
 
+// CHECK-LABEL: @test_get_num_workgroups(
+// CHECK: call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// CHECK: load i32, ptr addrspace(4) %{{.*}} align 8, !invariant.load{{.*}}, !noundef
+// CHECK: tail call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}} i64 4
+// CHECK: load i32, ptr addrspace(4) %{{.*}} align 4, !invariant.load{{.*}}, !noundef
+// CHECK: tail call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}} i64 8
+// CHECK: load i32, ptr addrspace(4) %{{.*}} align 8, !invariant.load{{.*}}, !noundef
+void test_get_num_workgroups(int d, int *out) {
+  switch (d) {
+  case 0: *out = __builtin_amdgcn_num_workgroups_x(); break;
+  case 1: *out = __builtin_amdgcn_num_workgroups_y(); break;
+  case 2: *out = __builtin_amdgcn_num_workgroups_z(); break;
+  default: *out = 0;
+  }
+}
+
 // CHECK-LABEL: @test_get_grid_size(
 // CHECK: call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 12
