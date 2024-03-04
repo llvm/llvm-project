@@ -39,11 +39,12 @@ import sphinx
 # So, we can continue without the myst_parser dependencies.
 # Doing so reduces dependencies of some packaged llvm distributions.
 try:
-  import myst_parser
-  extensions.append("myst_parser")
+    import myst_parser
+
+    extensions.append("myst_parser")
 except ImportError:
-  if not tags.has("builder-man"):
-    raise
+    if not tags.has("builder-man"):
+        raise
 
 
 # The encoding of source files.

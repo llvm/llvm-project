@@ -32,11 +32,12 @@ extensions = ["sphinx.ext.intersphinx", "sphinx.ext.todo"]
 # So, we can continue without the myst_parser dependencies.
 # Doing so reduces dependencies of some packaged llvm distributions.
 try:
-  import myst_parser
-  extensions.append("myst_parser")
+    import myst_parser
+
+    extensions.append("myst_parser")
 except ImportError:
-  if not tags.has("builder-man"):
-    raise
+    if not tags.has("builder-man"):
+        raise
 
 # Automatic anchors for markdown titles
 from llvm_slug import make_slug
