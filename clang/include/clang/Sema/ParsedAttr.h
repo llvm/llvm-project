@@ -735,7 +735,8 @@ public:
     pool.Attrs.clear();
   }
 
-  /// Take a list of attributes from another pool and add them to this pool.
+  /// Removes the attributes from \c List, which are owned by \c Pool, and adds
+  /// them at the end of this \c AttributePool.
   void takeFrom(ParsedAttributesView &List, AttributePool &Pool);
 
   ParsedAttr *create(IdentifierInfo *attrName, SourceRange attrRange,
