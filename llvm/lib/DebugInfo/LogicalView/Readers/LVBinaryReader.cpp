@@ -186,12 +186,12 @@ void LVBinaryReader::mapVirtualAddress(const object::ObjectFile &Obj) {
     }
     if ((*SectionNameOrErr).equals(".text") ||
         (*SectionNameOrErr).equals("CODE") ||
-        (*SectionNameOrErr).equals(".code"))
+        (*SectionNameOrErr).equals(".code")) {
       DotTextSectionIndex = Section.getIndex();
-    // If the object is WebAssembly, update the address offset that
-    // will be added to DWARF DW_AT_* attributes.
-    if (Obj.isWasm()) {
-      WasmOffset = Section.getAddress();
+      // If the object is WebAssembly, update the address offset that
+      // will be added to DWARF DW_AT_* attributes.
+      if (Obj.isWasm())
+        WasmOffset = Section.getAddress();
     }
   }
 
