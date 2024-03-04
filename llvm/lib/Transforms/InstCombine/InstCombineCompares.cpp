@@ -7025,9 +7025,6 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = canonicalizeICmpPredicate(I))
     return Res;
 
-  if (Instruction *Res = foldICmpWithConstant(I))
-    return Res;
-
   if (Instruction *Res = foldICmpWithDominatingICmp(I))
     return Res;
 
@@ -7056,6 +7053,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       if (SPR.Flavor != SPF_UNKNOWN)
         return nullptr;
     }
+
+  if (Instruction *Res = foldICmpWithConstant(I))
+    return Res;
 
   // Do this after checking for min/max to prevent infinite looping.
   if (Instruction *Res = foldICmpWithZero(I))
