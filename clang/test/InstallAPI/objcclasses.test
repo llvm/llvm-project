@@ -20,11 +20,30 @@
 @end
 
 __attribute__((visibility("hidden")))
-@interface Hidden 
+@interface Hidden
+@end
+
+__attribute__((visibility("hidden")))
+@interface HiddenWithIvars {
+@public 
+char _ivar;
+}
 @end
 
 __attribute__((objc_exception))
 @interface Exception 
+@end
+
+@interface PublicClass : Visible  {
+@package 
+  int _internal;
+@protected
+  int _external;
+@private
+  int private;
+@public
+char _public;
+}
 @end
 
 
@@ -46,6 +65,8 @@ __attribute__((objc_exception))
 @interface Exception () {
 @public 
   char _ivarFromExtension;
+@private 
+  int _privateIvarFromExtension;
 }
 @end
 
@@ -81,6 +102,7 @@ __attribute__((objc_exception))
       {
         "data": {
           "objc_class": [
+            "PublicClass",
             "Exception",
             "Visible",
             "ClassWithIvars"
@@ -91,8 +113,10 @@ __attribute__((objc_exception))
           "objc_ivar": [
             "Exception._ivarFromExtension",
             "ClassWithIvars._ivar2",
+            "PublicClass._external",
             "ClassWithIvars._ivar1",
-            "ClassWithIvars._externalIVar"
+            "ClassWithIvars._externalIVar",
+            "PublicClass._public"
           ]
         }
       }
