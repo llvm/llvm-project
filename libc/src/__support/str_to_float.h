@@ -51,13 +51,13 @@ template <class T> LIBC_INLINE void set_implicit_bit(fputil::FPBits<T> &) {
   return;
 }
 
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 template <>
 LIBC_INLINE void
 set_implicit_bit<long double>(fputil::FPBits<long double> &result) {
   result.set_implicit_bit(result.get_biased_exponent() != 0);
 }
-#endif
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 // This Eisel-Lemire implementation is based on the algorithm described in the
 // paper Number Parsing at a Gigabyte per Second, Software: Practice and
@@ -176,7 +176,7 @@ eisel_lemire(ExpandedFloat<T> init_num,
   return output;
 }
 
-#if !defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
 template <>
 LIBC_INLINE cpp::optional<ExpandedFloat<long double>>
 eisel_lemire<long double>(ExpandedFloat<long double> init_num,
@@ -297,7 +297,7 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   output.exponent = exp2;
   return output;
 }
-#endif
+#endif // !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
 
 // The nth item in POWERS_OF_TWO represents the greatest power of two less than
 // 10^n. This tells us how much we can safely shift without overshooting.
@@ -460,7 +460,7 @@ public:
   static constexpr double MAX_EXACT_INT = 9007199254740991.0;
 };
 
-#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
 template <> class ClingerConsts<long double> {
 public:
   static constexpr long double POWERS_OF_TEN_ARRAY[] = {
@@ -473,7 +473,7 @@ public:
   static constexpr long double MAX_EXACT_INT =
       ClingerConsts<double>::MAX_EXACT_INT;
 };
-#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 template <> class ClingerConsts<long double> {
 public:
   static constexpr long double POWERS_OF_TEN_ARRAY[] = {
@@ -484,7 +484,7 @@ public:
   static constexpr int32_t DIGITS_IN_MANTISSA = 21;
   static constexpr long double MAX_EXACT_INT = 18446744073709551615.0L;
 };
-#else
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 template <> class ClingerConsts<long double> {
 public:
   static constexpr long double POWERS_OF_TEN_ARRAY[] = {
@@ -498,6 +498,8 @@ public:
   static constexpr long double MAX_EXACT_INT =
       10384593717069655257060992658440191.0L;
 };
+#else
+#error "Unknown long double type"
 #endif
 
 // Take an exact mantissa and exponent and attempt to convert it using only
