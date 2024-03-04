@@ -393,9 +393,6 @@ Building this project is done with the following steps, assuming the files
              in `LLVM Debian/Ubuntu nightly packages <https://apt.llvm.org>`__ to install
              essential components to build this project.
 
-.. note:: The ``std`` dependencies of ``std.compat`` is not always resolved when
-          building the ``std`` target using multiple jobs.
-
 .. warning:: ``<path-to-compiler>`` should point point to the real binary and
              not to a symlink.
 
