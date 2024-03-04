@@ -2358,7 +2358,8 @@ void InitListChecker::CheckStructUnionTypes(
   // Emit warnings for missing struct field initializers.
   // This check is disabled for designated initializers in C.
   // This matches gcc behaviour.
-  bool IsCDesignatedInitializer = HasDesignatedInit && !SemaRef.getLangOpts().CPlusPlus;
+  bool IsCDesignatedInitializer =
+      HasDesignatedInit && !SemaRef.getLangOpts().CPlusPlus;
   if (!VerifyOnly && InitializedSomething && !RD->isUnion() &&
       !IList->isIdiomaticZeroInitializer(SemaRef.getLangOpts()) &&
       !IsCDesignatedInitializer) {
