@@ -38,6 +38,9 @@ namespace llvm {
   class Module;
   class Value;
   class DbgAssignIntrinsic;
+  class DbgRecord;
+
+  using DbgInstPtr = PointerUnion<Instruction *, DbgRecord *>;
 
   class DIBuilder {
     Module &M;
@@ -95,8 +98,8 @@ namespace llvm {
                                BasicBlock *InsertBB, Instruction *InsertBefore);
 
     /// Internal helper for insertLabel.
-    Instruction *insertLabel(DILabel *LabelInfo, const DILocation *DL,
-                             BasicBlock *InsertBB, Instruction *InsertBefore);
+    DbgInstPtr insertLabel(DILabel *LabelInfo, const DILocation *DL,
+                           BasicBlock *InsertBB, Instruction *InsertBefore);
 
     /// Internal helper with common code used by insertDbg{Value,Addr}Intrinsic.
     Instruction *insertDbgIntrinsic(llvm::Function *Intrinsic, llvm::Value *Val,
@@ -959,15 +962,15 @@ namespace llvm {
     /// \param LabelInfo    Label's debug info descriptor.
     /// \param DL           Debug info location.
     /// \param InsertBefore Location for the new intrinsic.
-    Instruction *insertLabel(DILabel *LabelInfo, const DILocation *DL,
-                             Instruction *InsertBefore);
+    DbgInstPtr insertLabel(DILabel *LabelInfo, const DILocation *DL,
+                           Instruction *InsertBefore);
 
     /// Insert a new llvm.dbg.label intrinsic call.
     /// \param LabelInfo    Label's debug info descriptor.
     /// \param DL           Debug info location.
     /// \param InsertAtEnd Location for the new intrinsic.
-    Instruction *insertLabel(DILabel *LabelInfo, const DILocation *DL,
-                             BasicBlock *InsertAtEnd);
+    DbgInstPtr insertLabel(DILabel *LabelInfo, const DILocation *DL,
+                           BasicBlock *InsertAtEnd);
 
     /// Insert a new llvm.dbg.value intrinsic call.
     /// \param Val          llvm::Value of the variable

@@ -971,15 +971,15 @@ DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
   return DVI;
 }
 
-Instruction *DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
-                                    Instruction *InsertBefore) {
+DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
+                                  Instruction *InsertBefore) {
   return insertLabel(LabelInfo, DL,
                      InsertBefore ? InsertBefore->getParent() : nullptr,
                      InsertBefore);
 }
 
-Instruction *DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
-                                    BasicBlock *InsertAtEnd) {
+DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
+                                  BasicBlock *InsertAtEnd) {
   return insertLabel(LabelInfo, DL, InsertAtEnd, nullptr);
 }
 
@@ -1081,9 +1081,9 @@ Instruction *DIBuilder::insertDbgIntrinsic(llvm::Function *IntrinsicFn,
   return B.CreateCall(IntrinsicFn, Args);
 }
 
-Instruction *DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
-                                    BasicBlock *InsertBB,
-                                    Instruction *InsertBefore) {
+DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
+                                  BasicBlock *InsertBB,
+                                  Instruction *InsertBefore) {
   assert(LabelInfo && "empty or invalid DILabel* passed to dbg.label");
   assert(DL && "Expected debug loc");
   assert(DL->getScope()->getSubprogram() ==
