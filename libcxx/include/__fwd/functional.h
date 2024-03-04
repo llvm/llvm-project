@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_HASH_H
-#define _LIBCPP___FWD_HASH_H
+#ifndef _LIBCPP___FWD_FUNCTIONAL_H
+#define _LIBCPP___FWD_FUNCTIONAL_H
 
 #include <__config>
 
@@ -20,6 +20,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class>
 struct _LIBCPP_TEMPLATE_VIS hash;
 
+template <class>
+class _LIBCPP_TEMPLATE_VIS reference_wrapper;
+
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_HASH_H
+#endif // _LIBCPP___FWD_FUNCTIONAL_H

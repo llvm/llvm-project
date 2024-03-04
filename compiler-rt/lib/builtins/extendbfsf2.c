@@ -1,4 +1,4 @@
-//===--- ByteCodeGenError.h - Byte code generation error --------*- C++ -*-===//
+//===-- lib/extendbfsf2.c - bfloat -> single conversion -----------*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ByteCodeGenError.h"
+#define SRC_BFLOAT16
+#define DST_SINGLE
+#include "fp_extend_impl.inc"
 
-using namespace clang;
-using namespace clang::interp;
-
-char ByteCodeGenError::ID;
+COMPILER_RT_ABI float __extendbfsf2(src_t a) { return __extendXfYf2__(a); }
