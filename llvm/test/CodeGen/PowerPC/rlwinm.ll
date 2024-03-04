@@ -14,17 +14,6 @@ entry:
 define i32 @test2(i32 %a) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rldicl 3, 3, 36, 24
-; CHECK-NEXT:    rldicl 3, 3, 28, 32
-; CHECK-NEXT:    blr
-entry:
-  %tmp.1 = and i32 %a, -268435441
-  ret i32 %tmp.1
-}
-
-define i32 @test3(i32 %a) {
-; CHECK-LABEL: test3:
-; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rlwinm 3, 3, 24, 24, 31
 ; CHECK-NEXT:    blr
 entry:
@@ -33,8 +22,8 @@ entry:
   ret i32 %tmp.3
 }
 
-define i32 @test4(i32 %a) {
-; CHECK-LABEL: test4:
+define i32 @test3(i32 %a) {
+; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rlwinm 3, 3, 24, 24, 31
 ; CHECK-NEXT:    blr
@@ -44,8 +33,8 @@ entry:
   ret i32 %tmp.4
 }
 
-define i32 @test5(i32 %a) {
-; CHECK-LABEL: test5:
+define i32 @test4(i32 %a) {
+; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rlwinm 3, 3, 8, 0, 8
 ; CHECK-NEXT:    blr
@@ -55,8 +44,8 @@ entry:
   ret i32 %tmp.3
 }
 
-define i32 @test6(i32 %a) {
-; CHECK-LABEL: test6:
+define i32 @test5(i32 %a) {
+; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rlwinm 3, 3, 24, 24, 31
 ; CHECK-NEXT:    blr
@@ -66,8 +55,8 @@ entry:
   ret i32 %tmp.2
 }
 
-define i32 @test7(i32 %a) {
-; CHECK-LABEL: test7:
+define i32 @test6(i32 %a) {
+; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rlwinm 3, 3, 24, 24, 31
 ; CHECK-NEXT:    blr
@@ -77,8 +66,8 @@ entry:
   ret i32 %tmp.2
 }
 
-define i32 @test8(i32 %a) {
-; CHECK-LABEL: test8:
+define i32 @test7(i32 %a) {
+; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rlwinm 3, 3, 8, 0, 7
 ; CHECK-NEXT:    blr
@@ -88,8 +77,8 @@ entry:
   ret i32 %tmp.2
 }
 
-define i32 @test9(i32 %a, i32 %s) {
-; CHECK-LABEL: test9:
+define i32 @test8(i32 %a, i32 %s) {
+; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rlwnm 3, 3, 4, 23, 31
 ; CHECK-NEXT:    blr
@@ -98,8 +87,8 @@ entry:
   ret i32 %r
 }
 
-define i32 @test10(i32 %a) {
-; CHECK-LABEL: test10:
+define i32 @test9(i32 %a) {
+; CHECK-LABEL: test9:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rlwinm 3, 3, 31, 23, 31
 ; CHECK-NEXT:    blr
