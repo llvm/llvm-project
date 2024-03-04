@@ -9456,6 +9456,9 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
       if (State.EVL) {
         assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                                 "explicit vector length.");
+        assert(cast<VPInstruction>(State.EVL)->getOpcode() ==
+                   VPInstruction::ExplicitVectorLength &&
+               "EVL must be VPInstruction::ExplicitVectorLength.");
         Value *EVL = State.get(State.EVL, VPIteration(0, 0));
         // If EVL is not nullptr, then EVL must be a valid value set during plan
         // creation, possibly default value = whole vector register length. EVL
@@ -9500,6 +9503,9 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
     if (State.EVL) {
       assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                               "explicit vector length.");
+      assert(cast<VPInstruction>(State.EVL)->getOpcode() ==
+                 VPInstruction::ExplicitVectorLength &&
+             "EVL must be VPInstruction::ExplicitVectorLength.");
       Value *EVL = State.get(State.EVL, VPIteration(0, 0));
       // If EVL is not nullptr, then EVL must be a valid value set during plan
       // creation, possibly default value = whole vector register length. EVL

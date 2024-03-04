@@ -97,7 +97,7 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
   DenseSet<unsigned> EVLFound;
   const VPRecipeBase *VPWidenMemRecipe = nullptr;
   const VPlan *Plan = VPBB->getPlan();
-  bool IsHeader = Plan && Plan->getEntry()->getNumSuccessors() == 1 &&
+  bool IsHeader = Plan->getEntry()->getNumSuccessors() == 1 &&
                   Plan->getVectorLoopRegion()->getEntry() == VPBB;
   auto CheckEVLRecipiesInsts = [&](const VPRecipeBase *R) {
     if (isa<VPEVLBasedIVPHIRecipe>(R)) {
