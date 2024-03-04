@@ -9,7 +9,6 @@
 #include "MissingStdForwardCheck.h"
 #include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -53,68 +52,22 @@ AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
          FuncTemplate->getTemplateParameters()->getDepth();
 }
 
-AST_MATCHER_P(NamedDecl, hasSameNameAsBoundNode, std::string, BindingID) {
-  IdentifierInfo *II = Node.getIdentifier();
-  if (nullptr == II)
-    return false;
-  StringRef Name = II->getName();
-
-  return Builder->removeBindings(
-      [this, Name](const ast_matchers::internal::BoundNodesMap &Nodes) {
-        const DynTypedNode &BN = Nodes.getNode(this->BindingID);
-        if (const auto *ND = BN.get<NamedDecl>()) {
-          if (!isa<FieldDecl, CXXMethodDecl, VarDecl>(ND))
-            return true;
-          return ND->getName() != Name;
-        }
-        return true;
-      });
-}
-
-AST_MATCHER_P(LambdaCapture, hasCaptureKind, LambdaCaptureKind, Kind) {
-  return Node.getCaptureKind() == Kind;
-}
-
-AST_MATCHER_P(LambdaExpr, hasCaptureDefaultKind, LambdaCaptureDefault, Kind) {
-  return Node.getCaptureDefault() == Kind;
-}
-
 } // namespace
 
 void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
-  auto RefToParmImplicit = allOf(
-      equalsBoundNode("var"), hasInitializer(ignoringParenImpCasts(
-                                  declRefExpr(to(equalsBoundNode("param"))))));
-  auto RefToParm = capturesVar(
-      varDecl(anyOf(hasSameNameAsBoundNode("param"), RefToParmImplicit)));
-  auto HasRefToParm = hasAnyCapture(RefToParm);
-
-  auto CaptureInRef =
-      allOf(hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByRef),
-            unless(hasAnyCapture(
-                capturesVar(varDecl(hasSameNameAsBoundNode("param"))))));
-  auto CaptureInCopy = allOf(
-      hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByCopy), HasRefToParm);
-  auto CaptureByRefExplicit = hasAnyCapture(
-      allOf(hasCaptureKind(LambdaCaptureKind::LCK_ByRef), RefToParm));
-
-  auto CapturedInBody =
-      lambdaExpr(anyOf(CaptureInRef, CaptureInCopy, CaptureByRefExplicit));
-  auto CapturedInCaptureList = hasAnyCapture(capturesVar(
-      varDecl(hasInitializer(ignoringParenImpCasts(equalsBoundNode("call"))))));
-
   auto CapturedInLambda = hasDeclContext(cxxRecordDecl(
       isLambda(),
-      hasParent(lambdaExpr(forCallable(equalsBoundNode("func")),
-                           anyOf(CapturedInCaptureList, CapturedInBody)))));
+      hasParent(
+          lambdaExpr(forCallable(equalsBoundNode("func")),
+                     hasAnyCapture(capturesVar(varDecl(hasInitializer(
+                         ignoringParenImpCasts(equalsBoundNode("call"))))))))));
 
   auto ToParam = hasAnyParameter(parmVarDecl(equalsBoundNode("param")));
 
   auto ForwardCallMatcher = callExpr(
       callExpr().bind("call"), argumentCountIs(1),
       hasArgument(
-          0, declRefExpr(to(
-                 varDecl(optionally(equalsBoundNode("param"))).bind("var")))),
+          0, declRefExpr(to(varDecl(equalsBoundNode("param")).bind("var")))),
       forCallable(anyOf(equalsBoundNode("func"), CapturedInLambda)),
       callee(unresolvedLookupExpr(hasAnyDeclaration(
           namedDecl(hasUnderlyingDecl(hasName("::std::forward")))))),

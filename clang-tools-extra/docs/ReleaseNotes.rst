@@ -142,7 +142,9 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
-  giving false positives for deleted functions.
+  giving false positives for deleted functions, avoiding false negative when
+  multiple arguments in a function, reporting diagnostics when using forward in
+  body of lambdas.
 
 - Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
