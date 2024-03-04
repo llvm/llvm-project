@@ -2199,7 +2199,7 @@ name:            xdl_mfma_4pass_write_vgpr_sgemm_mfma_read_overlap_srcb
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16F16_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 1, 2, 3, implicit $mode, implicit $exec
-    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr8, $vgpr1, $vgpr6_vgpr7_vgpr8_vgpr9, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr8, $vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, 0, implicit $mode, implicit $exec
 
 ...
 
