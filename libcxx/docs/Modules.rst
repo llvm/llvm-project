@@ -118,8 +118,8 @@ installation of modules and install the modules into ``<install_prefix>``.
   $ cd llvm-project
   $ mkdir build
   $ cmake -G Ninja -S runtimes -B build -DLIBCXX_INSTALL_MODULES=ON -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
-  $ ninja --build build -- -j $(nproc)
-  $ ninja --install build --prefix <install_prefix>
+  $ cmake --build build -- -j $(nproc)
+  $ cmake --install build --prefix <install_prefix>
 
 The above ``build`` directory will be referred to as ``<build>`` in the
 rest of these instructions.
