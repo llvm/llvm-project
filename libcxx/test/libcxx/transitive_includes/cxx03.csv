@@ -7,7 +7,6 @@ algorithm cstdint
 algorithm cstdlib
 algorithm cstring
 algorithm cwchar
-algorithm execution
 algorithm initializer_list
 algorithm iosfwd
 algorithm iterator

@@ -69,18 +69,20 @@ namespace std {
 
 */
 
-#include <__charconv/chars_format.h>
-#include <__charconv/from_chars_integral.h>
-#include <__charconv/from_chars_result.h>
-#include <__charconv/tables.h>
-#include <__charconv/to_chars.h>
-#include <__charconv/to_chars_base_10.h>
-#include <__charconv/to_chars_floating_point.h>
-#include <__charconv/to_chars_integral.h>
-#include <__charconv/to_chars_result.h>
-#include <__charconv/traits.h>
+#if _LIBCPP_STD_VER >= 17
+#  include <__charconv/chars_format.h>
+#  include <__charconv/from_chars_integral.h>
+#  include <__charconv/from_chars_result.h>
+#  include <__charconv/tables.h>
+#  include <__charconv/to_chars.h>
+#  include <__charconv/to_chars_base_10.h>
+#  include <__charconv/to_chars_floating_point.h>
+#  include <__charconv/to_chars_integral.h>
+#  include <__charconv/to_chars_result.h>
+#  include <__charconv/traits.h>
+#endif // _LIBCPP_STD_VER >= 17
+
 #include <__config>
-#include <__system_error/errc.h>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
