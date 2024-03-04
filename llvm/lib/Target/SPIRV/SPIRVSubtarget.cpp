@@ -68,6 +68,11 @@ cl::list<SPIRV::Extension::Extension> Extensions(
                    "SPV_KHR_no_integer_wrap_decoration",
                    "Adds decorations to indicate that a given instruction does "
                    "not cause integer wrapping."),
+        clEnumValN(
+            SPIRV::Extension::SPV_KHR_float_controls, "SPV_KHR_float_controls",
+            "Provides new execution modes to control floating-point "
+            "computations by overriding an implementation’s default behavior "
+            "for rounding modes, denormals, signed zero, and infinities."),
         clEnumValN(SPIRV::Extension::SPV_KHR_expect_assume,
                    "SPV_KHR_expect_assume",
                    "Provides additional information to a compiler, similar to "
