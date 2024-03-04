@@ -3815,7 +3815,22 @@ void TokenAnnotator::walkLine1(AnnotatedLine& Line) {
                     IsStructScope = true;
                     const FormatToken* Next = MyToken->getNextNonComment();
                     if (Next) {
-                        StructScopeName = Next->TokenText;
+                        if (Next->is(tok::kw_alignas) && Next->Next && Next->Next->is(tok::l_paren)
+                            && Next->Next->Next && Next->Next->Next->Next && Next->Next->Next->Next->is(tok::r_paren)
+                            && Next->Next->Next->Next->Next) {
+
+                            Next = Next->Next->Next->Next->Next;
+                            if (Next->Next && (Next->Next->isOneOf(tok::l_brace, tok::colon) ||
+                                    (Next->Next->is(tok::kw___is_final) && Next->Next->Next && Next->Next->Next->isOneOf(tok::l_brace, tok::colon))))
+                                Next = Next;
+                        }
+
+                        if (Next && Next->Next && Next->Next->is(tok::l_brace))
+                            StructScopeName = Next->TokenText;
+                        else if (Next && Next->is(tok::l_brace))
+                            StructScopeName = StructScopeName; // struct without name.
+                        else
+                            IsStructScope = false; // It many be inside function definition. 
                     }
                 }
                 if (MyToken->is(tok::kw_union)) {
@@ -4077,7 +4092,7 @@ void TokenAnnotator::walkLine2(AnnotatedLine& Line) {
 
                 while (Next != nullptr && Next->isNot (tok::semi)) {
                     if (Next->isOneOf(tok::l_paren, tok::r_paren, tok::less, tok::lessless, tok::lesslessequal,
-                                      tok::greater, tok::greatergreater, tok::greatergreaterequal,
+                                      tok::greater, tok::greatergreater, tok::greatergreaterequal, tok::kw_return,
                                       tok::period, tok::periodstar, tok::arrow, tok::arrowstar, tok::kw_goto,
                                       tok::pipe, tok::pipeequal,tok::pipepipe, tok::caret, tok::caretequal,
                                       tok::ampamp, tok::ampequal, tok::starequal, tok::plusequal, tok::plusplus,
