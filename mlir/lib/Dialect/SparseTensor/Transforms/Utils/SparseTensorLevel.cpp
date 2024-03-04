@@ -69,7 +69,7 @@ public:
       : SparseTensorLevel(tid, lvl, LevelFormat::Dense, lvlSize) {}
 
   Value peekCrdAt(OpBuilder &, Location, ValueRange, Value) const override {
-    llvm_unreachable("locate dense level instead");
+    llvm_unreachable("locate random-accessible level instead");
   }
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange, Value p,
@@ -85,7 +85,7 @@ public:
       : SparseTensorLevel(tid, lvl, LevelFormat::Batch, lvlSize) {}
 
   Value peekCrdAt(OpBuilder &, Location, ValueRange, Value) const override {
-    llvm_unreachable("locate dense level instead");
+    llvm_unreachable("locate random-accessible level instead");
   }
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange, Value p,
@@ -547,7 +547,8 @@ public:
       assert(p->lvl + 1 == lvl);
       maxTupleCnt = MULI(p->maxTupleCnt, p->subSectSz);
     }
-    // We don't need an extra buffer to find subsections on dense levels.
+    // We don't need an extra buffer to find subsections on random-accessible
+    // levels.
     if (randomAccessible())
       return;
     subSectPosBuf = allocSubSectPosBuf(b, l);
@@ -826,7 +827,7 @@ void SparseIterator::genInit(OpBuilder &b, Location l,
     seek(begin->getResults());
     return;
   }
-  // Inherent batch coordinates from parents
+  // Inherent batch coordinates from parents.
   if (p)
     inherentBatch(*p);
   // TODO: support lowering to function call.
