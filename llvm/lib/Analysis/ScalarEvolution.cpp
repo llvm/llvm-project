@@ -80,6 +80,7 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/Utils/EnzymeFunctionUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Argument.h"
@@ -508,6 +509,8 @@ const SCEV *ScalarEvolution::getVScale(Type *Ty) {
   UniqueSCEVs.InsertNode(S, IP);
   return S;
 }
+
+void ScalarEvolution::setAssumeLoopExists() { this->AssumeLoopExists = true; }
 
 SCEVCastExpr::SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                            const SCEV *op, Type *ty)
@@ -7413,7 +7416,8 @@ bool ScalarEvolution::loopIsFiniteByAssumption(const Loop *L) {
   // A mustprogress loop without side effects must be finite.
   // TODO: The check used here is very conservative.  It's only *specific*
   // side effects which are well defined in infinite loops.
-  return isFinite(L) || (isMustProgress(L) && loopHasNoSideEffects(L));
+  return AssumeLoopExists || isFinite(L) ||
+         (isMustProgress(L) && loopHasNoSideEffects(L));
 }
 
 const SCEV *ScalarEvolution::createSCEVIter(Value *V) {
@@ -8828,6 +8832,26 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
 ScalarEvolution::ExitLimit
 ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
                                       bool AllowPredicates) {
+  if (AssumeLoopExists) {
+    SmallVector<BasicBlock *, 8> ExitingBlocks;
+    L->getExitingBlocks(ExitingBlocks);
+    for (auto &ExitingBlock : ExitingBlocks) {
+      BasicBlock *Exit = nullptr;
+      for (auto *SBB : successors(ExitingBlock)) {
+        if (!L->contains(SBB)) {
+          if (GuaranteedUnreachable.count(SBB))
+            continue;
+          Exit = SBB;
+          break;
+        }
+      }
+      if (!Exit)
+        ExitingBlock = nullptr;
+    }
+    ExitingBlocks.erase(
+        std::remove(ExitingBlocks.begin(), ExitingBlocks.end(), nullptr),
+        ExitingBlocks.end());
+  }
   assert(L->contains(ExitingBlock) && "Exit count for non-loop block?");
   // If our exiting block does not dominate the latch, then its connection with
   // loop's exit limit may be far from trivial.
@@ -8853,6 +8877,8 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
     BasicBlock *Exit = nullptr;
     for (auto *SBB : successors(ExitingBlock))
       if (!L->contains(SBB)) {
+        if (AssumeLoopExists and GuaranteedUnreachable.count(SBB))
+          continue;
         if (Exit) // Multiple exit successors.
           return getCouldNotCompute();
         Exit = SBB;
@@ -8923,10 +8949,104 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondCached(
 ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
     ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
     bool ControlsOnlyExit, bool AllowPredicates) {
-  // Handle BinOp conditions (And, Or).
-  if (auto LimitFromBinOp = computeExitLimitFromCondFromBinOp(
-          Cache, L, ExitCond, ExitIfTrue, ControlsOnlyExit, AllowPredicates))
-    return *LimitFromBinOp;
+  if (!AssumeLoopExists) {
+    // Handle BinOp conditions (And, Or).
+    if (auto LimitFromBinOp = computeExitLimitFromCondFromBinOp(
+            Cache, L, ExitCond, ExitIfTrue, ControlsOnlyExit, AllowPredicates))
+      return *LimitFromBinOp;
+  } else {
+    // Check if the controlling expression for this loop is an And or Or.
+    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(ExitCond)) {
+      if (BO->getOpcode() == Instruction::And) {
+        // Recurse on the operands of the and.
+        bool EitherMayExit = !ExitIfTrue;
+        ExitLimit EL0 = computeExitLimitFromCondCached(
+            Cache, L, BO->getOperand(0), ExitIfTrue,
+            ControlsOnlyExit && !EitherMayExit, AllowPredicates);
+        ExitLimit EL1 = computeExitLimitFromCondCached(
+            Cache, L, BO->getOperand(1), ExitIfTrue,
+            ControlsOnlyExit && !EitherMayExit, AllowPredicates);
+        const SCEV *BECount = getCouldNotCompute();
+        const SCEV *MaxBECount = getCouldNotCompute();
+        if (EitherMayExit) {
+          // Both conditions must be true for the loop to continue executing.
+          // Choose the less conservative count.
+          if (EL0.ExactNotTaken == getCouldNotCompute() ||
+              EL1.ExactNotTaken == getCouldNotCompute())
+            BECount = getCouldNotCompute();
+          else
+            BECount = getUMinFromMismatchedTypes(EL0.ExactNotTaken,
+                                                 EL1.ExactNotTaken);
+
+          if (EL0.ConstantMaxNotTaken == getCouldNotCompute())
+            MaxBECount = EL1.ConstantMaxNotTaken;
+          else if (EL1.ConstantMaxNotTaken == getCouldNotCompute())
+            MaxBECount = EL0.ConstantMaxNotTaken;
+          else
+            MaxBECount = getUMinFromMismatchedTypes(EL0.ConstantMaxNotTaken,
+                                                    EL1.ConstantMaxNotTaken);
+        } else {
+          // Both conditions must be true at the same time for the loop to exit.
+          // For now, be conservative.
+          if (EL0.ConstantMaxNotTaken == EL1.ConstantMaxNotTaken)
+            MaxBECount = EL0.ConstantMaxNotTaken;
+          if (EL0.ExactNotTaken == EL1.ExactNotTaken)
+            BECount = EL0.ExactNotTaken;
+        }
+
+        // There are cases (e.g. PR26207) where computeExitLimitFromCond is able
+        // to be more aggressive when computing BECount than when computing
+        // MaxBECount.  In these cases it is possible for EL0.ExactNotTaken and
+        // EL1.ExactNotTaken to match, but for EL0.ConstantMaxNotTaken and
+        // EL1.ConstantMaxNotTaken to not.
+        if (isa<SCEVCouldNotCompute>(MaxBECount) &&
+            !isa<SCEVCouldNotCompute>(BECount))
+          MaxBECount = getConstant(getUnsignedRangeMax(BECount));
+
+        return ExitLimit(BECount, MaxBECount, MaxBECount, false,
+                         {&EL0.Predicates, &EL1.Predicates});
+      }
+      if (BO->getOpcode() == Instruction::Or) {
+        // Recurse on the operands of the or.
+        bool EitherMayExit = ExitIfTrue;
+        ExitLimit EL0 = computeExitLimitFromCondCached(
+            Cache, L, BO->getOperand(0), ExitIfTrue,
+            ControlsOnlyExit && !EitherMayExit, AllowPredicates);
+        ExitLimit EL1 = computeExitLimitFromCondCached(
+            Cache, L, BO->getOperand(1), ExitIfTrue,
+            ControlsOnlyExit && !EitherMayExit, AllowPredicates);
+        const SCEV *BECount = getCouldNotCompute();
+        const SCEV *MaxBECount = getCouldNotCompute();
+        if (EitherMayExit) {
+          // Both conditions must be false for the loop to continue executing.
+          // Choose the less conservative count.
+          if (EL0.ExactNotTaken == getCouldNotCompute() ||
+              EL1.ExactNotTaken == getCouldNotCompute())
+            BECount = getCouldNotCompute();
+          else
+            BECount = getUMinFromMismatchedTypes(EL0.ExactNotTaken,
+                                                 EL1.ExactNotTaken);
+
+          if (EL0.ConstantMaxNotTaken == getCouldNotCompute())
+            MaxBECount = EL1.ConstantMaxNotTaken;
+          else if (EL1.ConstantMaxNotTaken == getCouldNotCompute())
+            MaxBECount = EL0.ConstantMaxNotTaken;
+          else
+            MaxBECount = getUMinFromMismatchedTypes(EL0.ConstantMaxNotTaken,
+                                                    EL1.ConstantMaxNotTaken);
+        } else {
+          // Both conditions must be false at the same time for the loop to
+          // exit. For now, be conservative.
+          if (EL0.ConstantMaxNotTaken == EL1.ConstantMaxNotTaken)
+            MaxBECount = EL0.ConstantMaxNotTaken;
+          if (EL0.ExactNotTaken == EL1.ExactNotTaken)
+            BECount = EL0.ExactNotTaken;
+        }
+        return ExitLimit(BECount, MaxBECount, MaxBECount, false,
+                         {&EL0.Predicates, &EL1.Predicates});
+      }
+    }
+  }
 
   // With an icmp, it may be feasible to compute an exact backedge-taken count.
   // Proceed to the next level to examine the icmp.
@@ -8947,37 +9067,39 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
   // preserve the CFG and is temporarily leaving constant conditions
   // in place.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(ExitCond)) {
-    if (ExitIfTrue == !CI->getZExtValue())
+    if (ExitIfTrue == !CI->getZExtValue()) {
       // The backedge is always taken.
       return getCouldNotCompute();
+    }
     // The backedge is never taken.
     return getZero(CI->getType());
   }
 
-  // If we're exiting based on the overflow flag of an x.with.overflow intrinsic
-  // with a constant step, we can form an equivalent icmp predicate and figure
-  // out how many iterations will be taken before we exit.
-  const WithOverflowInst *WO;
-  const APInt *C;
-  if (match(ExitCond, m_ExtractValue<1>(m_WithOverflowInst(WO))) &&
-      match(WO->getRHS(), m_APInt(C))) {
-    ConstantRange NWR =
-      ConstantRange::makeExactNoWrapRegion(WO->getBinaryOp(), *C,
-                                           WO->getNoWrapKind());
-    CmpInst::Predicate Pred;
-    APInt NewRHSC, Offset;
-    NWR.getEquivalentICmp(Pred, NewRHSC, Offset);
-    if (!ExitIfTrue)
-      Pred = ICmpInst::getInversePredicate(Pred);
-    auto *LHS = getSCEV(WO->getLHS());
-    if (Offset != 0)
-      LHS = getAddExpr(LHS, getConstant(Offset));
-    auto EL = computeExitLimitFromICmp(L, Pred, LHS, getConstant(NewRHSC),
-                                       ControlsOnlyExit, AllowPredicates);
-    if (EL.hasAnyInfo())
-      return EL;
+  // block was never executed in MustExitScalarEvolution code
+  if (!AssumeLoopExists) {
+    // If we're exiting based on the overflow flag of an x.with.overflow
+    // intrinsic with a constant step, we can form an equivalent icmp predicate
+    // and figure out how many iterations will be taken before we exit.
+    const WithOverflowInst *WO;
+    const APInt *C;
+    if (match(ExitCond, m_ExtractValue<1>(m_WithOverflowInst(WO))) &&
+        match(WO->getRHS(), m_APInt(C))) {
+      ConstantRange NWR = ConstantRange::makeExactNoWrapRegion(
+          WO->getBinaryOp(), *C, WO->getNoWrapKind());
+      CmpInst::Predicate Pred;
+      APInt NewRHSC, Offset;
+      NWR.getEquivalentICmp(Pred, NewRHSC, Offset);
+      if (!ExitIfTrue)
+        Pred = ICmpInst::getInversePredicate(Pred);
+      auto *LHS = getSCEV(WO->getLHS());
+      if (Offset != 0)
+        LHS = getAddExpr(LHS, getConstant(Offset));
+      auto EL = computeExitLimitFromICmp(L, Pred, LHS, getConstant(NewRHSC),
+                                         ControlsOnlyExit, AllowPredicates);
+      if (EL.hasAnyInfo())
+        return EL;
+    }
   }
-
   // If it's not an integer or pointer comparison then compute it the hard way.
   return computeExitCountExhaustively(L, ExitCond, ExitIfTrue);
 }
@@ -9076,12 +9198,134 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
 
   const SCEV *LHS = getSCEV(ExitCond->getOperand(0));
   const SCEV *RHS = getSCEV(ExitCond->getOperand(1));
+  if (!AssumeLoopExists) {
+    ExitLimit EL = computeExitLimitFromICmp(L, Pred, LHS, RHS, ControlsOnlyExit,
+                                            AllowPredicates);
+    if (EL.hasAnyInfo())
+      return EL;
+  } else {
+#define PROP_PHI(LHS)                                                          \
+  if (auto un = dyn_cast<SCEVUnknown>(LHS)) {                                  \
+    if (auto pn = dyn_cast_or_null<PHINode>(un->getValue())) {                 \
+      const SCEV *sc = nullptr;                                                \
+      bool failed = false;                                                     \
+      for (auto &a : pn->incoming_values()) {                                  \
+        auto subsc = getSCEV(a);                                               \
+        if (sc == nullptr) {                                                   \
+          sc = subsc;                                                          \
+          continue;                                                            \
+        }                                                                      \
+        if (subsc != sc) {                                                     \
+          failed = true;                                                       \
+          break;                                                               \
+        }                                                                      \
+      }                                                                        \
+      if (!failed) {                                                           \
+        LHS = sc;                                                              \
+      }                                                                        \
+    }                                                                          \
+  }
+    PROP_PHI(LHS)
+    PROP_PHI(RHS)
 
-  ExitLimit EL = computeExitLimitFromICmp(L, Pred, LHS, RHS, ControlsOnlyExit,
-                                          AllowPredicates);
-  if (EL.hasAnyInfo())
-    return EL;
+    // Try to evaluate any dependencies out of the loop.
+    LHS = getSCEVAtScope(LHS, L);
+    RHS = getSCEVAtScope(RHS, L);
 
+    // At this point, we would like to compute how many iterations of the
+    // loop the predicate will return true for these inputs.
+    if (isLoopInvariant(LHS, L) && !isLoopInvariant(RHS, L)) {
+      // If there is a loop-invariant, force it into the RHS.
+      std::swap(LHS, RHS);
+      Pred = ICmpInst::getSwappedPredicate(Pred);
+    }
+
+    // Simplify the operands before analyzing them.
+    (void)SimplifyICmpOperands(Pred, LHS, RHS);
+
+    // If we have a comparison of a chrec against a constant, try to use value
+    // ranges to answer this query.
+    if (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS))
+      if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(LHS))
+        if (AddRec->getLoop() == L) {
+          // Form the constant range.
+          ConstantRange CompRange =
+              ConstantRange::makeExactICmpRegion(Pred, RHSC->getAPInt());
+
+          const SCEV *Ret = AddRec->getNumIterationsInRange(CompRange, *this);
+          if (!isa<SCEVCouldNotCompute>(Ret))
+            return Ret;
+        }
+
+    switch (Pred) {
+    case ICmpInst::ICMP_NE: { // while (X != Y)
+      // Convert to: while (X-Y != 0)
+      ExitLimit EL = howFarToZero(getMinusSCEV(LHS, RHS), L, ControlsOnlyExit,
+                                  AllowPredicates);
+      if (EL.hasAnyInfo())
+        return EL;
+      break;
+    }
+    case ICmpInst::ICMP_EQ: { // while (X == Y)
+      // Convert to: while (X-Y == 0)
+      ExitLimit EL = howFarToNonZero(getMinusSCEV(LHS, RHS), L);
+      if (EL.hasAnyInfo())
+        return EL;
+      break;
+    }
+    case ICmpInst::ICMP_SLT:
+    case ICmpInst::ICMP_ULT:
+    case ICmpInst::ICMP_SLE:
+    case ICmpInst::ICMP_ULE: { // while (X < Y)
+      bool IsSigned = Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SLE;
+
+      if (Pred == ICmpInst::ICMP_SLE || Pred == ICmpInst::ICMP_ULE) {
+        if (!isa<IntegerType>(RHS->getType()))
+          break;
+        SmallVector<const SCEV *, 2> sv = {
+            RHS, getConstant(
+                     ConstantInt::get(cast<IntegerType>(RHS->getType()), 1))};
+        // Since this is not an infinite loop by induction, RHS cannot be
+        // int_max/uint_max Therefore adding 1 does not wrap.
+        if (IsSigned)
+          RHS = getAddExpr(sv, SCEV::FlagNSW);
+        else
+          RHS = getAddExpr(sv, SCEV::FlagNUW);
+      }
+      ExitLimit EL = howManyLessThans(LHS, RHS, L, IsSigned, ControlsOnlyExit,
+                                      AllowPredicates);
+      if (EL.hasAnyInfo())
+        return EL;
+      break;
+    }
+    case ICmpInst::ICMP_SGT:
+    case ICmpInst::ICMP_UGT:
+    case ICmpInst::ICMP_SGE:
+    case ICmpInst::ICMP_UGE: { // while (X > Y)
+      bool IsSigned = Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLE;
+      if (Pred == ICmpInst::ICMP_SGE || Pred == ICmpInst::ICMP_UGE) {
+        if (!isa<IntegerType>(RHS->getType()))
+          break;
+        SmallVector<const SCEV *, 2> sv = {
+            RHS, getConstant(
+                     ConstantInt::get(cast<IntegerType>(RHS->getType()), -1))};
+        // Since this is not an infinite loop by induction, RHS cannot be
+        // int_min/uint_min Therefore subtracting 1 does not wrap.
+        if (IsSigned)
+          RHS = getAddExpr(sv, SCEV::FlagNSW);
+        else
+          RHS = getAddExpr(sv, SCEV::FlagNUW);
+      }
+      ExitLimit EL = howManyGreaterThans(LHS, RHS, L, IsSigned,
+                                         ControlsOnlyExit, AllowPredicates);
+      if (EL.hasAnyInfo())
+        return EL;
+      break;
+    }
+    default:
+      break;
+    }
+  }
   auto *ExhaustiveCount =
       computeExitCountExhaustively(L, ExitCond, ExitIfTrue);
 
@@ -9238,8 +9482,14 @@ ScalarEvolution::computeExitLimitFromSingleExitSwitch(const Loop *L,
   if (Switch->getDefaultDest() == ExitingBlock)
     return getCouldNotCompute();
 
-  assert(L->contains(Switch->getDefaultDest()) &&
-         "Default case must not exit the loop!");
+  // if not using enzyme executes by default
+  // if using enzyme and the code is guaranteed unreachable,
+  // the default destination doesn't matter
+  if (!AssumeLoopExists ||
+      !GuaranteedUnreachable.count(Switch->getDefaultDest())) {
+    assert(L->contains(Switch->getDefaultDest()) &&
+           "Default case must not exit the loop!");
+  }
   const SCEV *LHS = getSCEVAtScope(Switch->getCondition(), L);
   const SCEV *RHS = getConstant(Switch->findCaseDest(ExitingBlock));
 
@@ -12733,38 +12983,50 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     if (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS)) {
       const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(ZExt->getOperand());
       if (AR && AR->getLoop() == L && AR->isAffine()) {
-        auto canProveNUW = [&]() {
-          // We can use the comparison to infer no-wrap flags only if it fully
-          // controls the loop exit.
-          if (!ControlsOnlyExit)
-            return false;
+        if (!AssumeLoopExists) {
+          auto canProveNUW = [&]() {
+            // We can use the comparison to infer no-wrap flags only if it fully
+            // controls the loop exit.
+            if (!ControlsOnlyExit)
+              return false;
 
-          if (!isLoopInvariant(RHS, L))
-            return false;
+            if (!isLoopInvariant(RHS, L))
+              return false;
 
-          if (!isKnownNonZero(AR->getStepRecurrence(*this)))
-            // We need the sequence defined by AR to strictly increase in the
-            // unsigned integer domain for the logic below to hold.
-            return false;
+            if (!isKnownNonZero(AR->getStepRecurrence(*this)))
+              // We need the sequence defined by AR to strictly increase in the
+              // unsigned integer domain for the logic below to hold.
+              return false;
 
-          const unsigned InnerBitWidth = getTypeSizeInBits(AR->getType());
-          const unsigned OuterBitWidth = getTypeSizeInBits(RHS->getType());
-          // If RHS <=u Limit, then there must exist a value V in the sequence
-          // defined by AR (e.g. {Start,+,Step}) such that V >u RHS, and
-          // V <=u UINT_MAX.  Thus, we must exit the loop before unsigned
-          // overflow occurs.  This limit also implies that a signed comparison
-          // (in the wide bitwidth) is equivalent to an unsigned comparison as
-          // the high bits on both sides must be zero.
-          APInt StrideMax = getUnsignedRangeMax(AR->getStepRecurrence(*this));
-          APInt Limit = APInt::getMaxValue(InnerBitWidth) - (StrideMax - 1);
-          Limit = Limit.zext(OuterBitWidth);
-          return getUnsignedRangeMax(applyLoopGuards(RHS, L)).ule(Limit);
-        };
-        auto Flags = AR->getNoWrapFlags();
-        if (!hasFlags(Flags, SCEV::FlagNUW) && canProveNUW())
-          Flags = setFlags(Flags, SCEV::FlagNUW);
+            const unsigned InnerBitWidth = getTypeSizeInBits(AR->getType());
+            const unsigned OuterBitWidth = getTypeSizeInBits(RHS->getType());
+            // If RHS <=u Limit, then there must exist a value V in the sequence
+            // defined by AR (e.g. {Start,+,Step}) such that V >u RHS, and
+            // V <=u UINT_MAX.  Thus, we must exit the loop before unsigned
+            // overflow occurs.  This limit also implies that a signed
+            // comparison (in the wide bitwidth) is equivalent to an unsigned
+            // comparison as the high bits on both sides must be zero.
+            APInt StrideMax = getUnsignedRangeMax(AR->getStepRecurrence(*this));
+            APInt Limit = APInt::getMaxValue(InnerBitWidth) - (StrideMax - 1);
+            Limit = Limit.zext(OuterBitWidth);
+            return getUnsignedRangeMax(applyLoopGuards(RHS, L)).ule(Limit);
+          };
+          auto Flags = AR->getNoWrapFlags();
+          if (!hasFlags(Flags, SCEV::FlagNUW) && canProveNUW())
+            Flags = setFlags(Flags, SCEV::FlagNUW);
 
-        setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
+          setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
+        } else {
+          auto Flags = AR->getNoWrapFlags();
+          if (!hasFlags(Flags, SCEV::FlagNW) && canAssumeNoSelfWrap(AR)) {
+            Flags = setFlags(Flags, SCEV::FlagNW);
+
+            SmallVector<const SCEV *, 4> Operands{AR->operands()};
+            Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
+
+            setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
+          }
+        }
         if (AR->hasNoUnsignedWrap()) {
           // Emulate what getZeroExtendExpr would have done during construction
           // if we'd been able to infer the fact just above at that time.
@@ -12846,6 +13108,13 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     //
     if (PredicatedIV || !NoWrap || !loopIsFiniteByAssumption(L) ||
         !loopHasNoAbnormalExits(L))
+      return getCouldNotCompute();
+
+    // This bailout is protecting the logic in computeMaxBECountForLT which
+    // has not yet been sufficiently auditted or tested with negative strides.
+    // We used to filter out all known-non-positive cases here, we're in the
+    // process of being less restrictive bit by bit.
+    if (AssumeLoopExists && IsSigned && isKnownNonPositive(Stride))
       return getCouldNotCompute();
 
     if (!isKnownNonZero(Stride)) {
@@ -12977,13 +13246,20 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   if (!BECount) {
     auto canProveRHSGreaterThanEqualStart = [&]() {
       auto CondGE = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
-      const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
-      const SCEV *GuardedStart = applyLoopGuards(OrigStart, L);
 
-      if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart) ||
-          isKnownPredicate(CondGE, GuardedRHS, GuardedStart))
+      if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart)) {
         return true;
+      }
+      // In the Enzyme MustExitScalarEvolutionCode, this check was missing
+      // I do not have enough context to know if these two checks should be
+      // mutually Exclusive. If they aren't then this bool check is unnecessary
+      if (!AssumeLoopExists) {
+        const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
+        const SCEV *GuardedStart = applyLoopGuards(OrigStart, L);
 
+        if (isKnownPredicate(CondGE, GuardedRHS, GuardedStart))
+          return true;
+      }
       // (RHS > Start - 1) implies RHS >= Start.
       // * "RHS >= Start" is trivially equivalent to "RHS > Start - 1" if
       //   "Start - 1" doesn't overflow.
@@ -13120,7 +13396,10 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   if (isa<SCEVCouldNotCompute>(ConstantMaxBECount) &&
       !isa<SCEVCouldNotCompute>(BECount))
     ConstantMaxBECount = getConstant(getUnsignedRangeMax(BECount));
-
+  if (AssumeLoopExists) {
+    return ExitLimit(BECount, ConstantMaxBECount, ConstantMaxBECount, MaxOrZero,
+                     Predicates);
+  }
   const SCEV *SymbolicMaxBECount =
       isa<SCEVCouldNotCompute>(BECount) ? ConstantMaxBECount : BECount;
   return ExitLimit(BECount, ConstantMaxBECount, SymbolicMaxBECount, MaxOrZero,
