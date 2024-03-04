@@ -25,7 +25,7 @@ int foo() {
 }
 
 inline int __attribute__((target_version("sha1+pmull+f64mm"))) fmv_inline(void) { return 1; }
-inline int __attribute__((target_version("fp16+fcma+sme+ fp16 "))) fmv_inline(void) { return 2; }
+inline int __attribute__((target_version("fp16+fcma+rdma+sme+ fp16 "))) fmv_inline(void) { return 2; }
 inline int __attribute__((target_version("sha3+i8mm+f32mm"))) fmv_inline(void) { return 12; }
 inline int __attribute__((target_version("dit+sve-ebf16"))) fmv_inline(void) { return 8; }
 inline int __attribute__((target_version("dpb+rcpc2 "))) fmv_inline(void) { return 6; }
@@ -261,12 +261,12 @@ int hoo(void) {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 4398048608256
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 4398048608256
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 4398048608320
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 4398048608320
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @fmv_inline._MfcmaMfp16Mfp16Msme
+// CHECK-NEXT:    ret ptr @fmv_inline._MfcmaMfp16Mfp16MrdmMsme
 // CHECK:       resolver_else:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 864726312827224064
@@ -575,7 +575,7 @@ int hoo(void) {
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv_inline._MfcmaMfp16Mfp16Msme
+// CHECK-LABEL: define {{[^@]+}}@fmv_inline._MfcmaMfp16Mfp16MrdmMsme
 // CHECK-SAME: () #[[ATTR13:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
@@ -829,7 +829,7 @@ int hoo(void) {
 // CHECK: attributes #[[ATTR10]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fullfp16,+ls64,+sme,+sme2" }
 // CHECK: attributes #[[ATTR11]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ccpp,+fullfp16,+ls64" }
 // CHECK: attributes #[[ATTR12]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+aes,+f64mm,+fp-armv8,+fullfp16,+ls64,+neon,+sve" }
-// CHECK: attributes #[[ATTR13]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+complxnum,+fp-armv8,+fullfp16,+ls64,+neon,+sme" }
+// CHECK: attributes #[[ATTR13]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+complxnum,+fp-armv8,+fullfp16,+ls64,+neon,+rdm,+sme" }
 // CHECK: attributes #[[ATTR14]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+f32mm,+fp-armv8,+fullfp16,+i8mm,+ls64,+neon,+sha2,+sha3,+sve" }
 // CHECK: attributes #[[ATTR15]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+dit,+fp-armv8,+fullfp16,+ls64,+neon,+sve" }
 // CHECK: attributes #[[ATTR16]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ccpp,+fullfp16,+ls64,+rcpc" }

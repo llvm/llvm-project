@@ -99,6 +99,7 @@ class AMDGPUCodeGenPrepareImpl
     : public InstVisitor<AMDGPUCodeGenPrepareImpl, bool> {
 public:
   const GCNSubtarget *ST = nullptr;
+  const AMDGPUTargetMachine *TM = nullptr;
   const TargetLibraryInfo *TLInfo = nullptr;
   AssumptionCache *AC = nullptr;
   DominatorTree *DT = nullptr;
@@ -310,6 +311,7 @@ public:
   bool visitICmpInst(ICmpInst &I);
   bool visitSelectInst(SelectInst &I);
   bool visitPHINode(PHINode &I);
+  bool visitAddrSpaceCastInst(AddrSpaceCastInst &I);
 
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitBitreverseIntrinsicInst(IntrinsicInst &I);
@@ -2013,6 +2015,75 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   return true;
 }
 
+/// \param V  Value to check
+/// \param DL DataLayout
+/// \param TM TargetMachine (TODO: remove once DL contains nullptr values)
+/// \param AS Target Address Space
+/// \return true if \p V cannot be the null value of \p AS, false otherwise.
+static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
+                                const AMDGPUTargetMachine &TM, unsigned AS) {
+  // Pointer cannot be null if it's a block address, GV or alloca.
+  // NOTE: We don't support extern_weak, but if we did, we'd need to check for
+  // it as the symbol could be null in such cases.
+  if (isa<BlockAddress>(V) || isa<GlobalValue>(V) || isa<AllocaInst>(V))
+    return true;
+
+  // Check nonnull arguments.
+  if (const auto *Arg = dyn_cast<Argument>(V); Arg && Arg->hasNonNullAttr())
+    return true;
+
+  // TODO: Calls that return nonnull?
+
+  // For all other things, use KnownBits.
+  // We either use 0 or all bits set to indicate null, so check whether the
+  // value can be zero or all ones.
+  //
+  // TODO: Use ValueTracking's isKnownNeverNull if it becomes aware that some
+  // address spaces have non-zero null values.
+  auto SrcPtrKB = computeKnownBits(V, DL).trunc(DL.getPointerSizeInBits(AS));
+  const auto NullVal = TM.getNullPointerValue(AS);
+  assert((NullVal == 0 || NullVal == -1) &&
+         "don't know how to check for this null value!");
+  return NullVal ? !SrcPtrKB.getMaxValue().isAllOnes() : SrcPtrKB.isNonZero();
+}
+
+bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
+  // Intrinsic doesn't support vectors, also it seems that it's often difficult
+  // to prove that a vector cannot have any nulls in it so it's unclear if it's
+  // worth supporting.
+  if (I.getType()->isVectorTy())
+    return false;
+
+  // Check if this can be lowered to a amdgcn.addrspacecast.nonnull.
+  // This is only worthwhile for casts from/to priv/local to flat.
+  const unsigned SrcAS = I.getSrcAddressSpace();
+  const unsigned DstAS = I.getDestAddressSpace();
+
+  bool CanLower = false;
+  if (SrcAS == AMDGPUAS::FLAT_ADDRESS)
+    CanLower = (DstAS == AMDGPUAS::LOCAL_ADDRESS ||
+                DstAS == AMDGPUAS::PRIVATE_ADDRESS);
+  else if (DstAS == AMDGPUAS::FLAT_ADDRESS)
+    CanLower = (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
+                SrcAS == AMDGPUAS::PRIVATE_ADDRESS);
+  if (!CanLower)
+    return false;
+
+  SmallVector<const Value *, 4> WorkList;
+  getUnderlyingObjects(I.getOperand(0), WorkList);
+  if (!all_of(WorkList, [&](const Value *V) {
+        return isPtrKnownNeverNull(V, *DL, *TM, SrcAS);
+      }))
+    return false;
+
+  IRBuilder<> B(&I);
+  auto *Intrin = B.CreateIntrinsic(
+      I.getType(), Intrinsic::amdgcn_addrspacecast_nonnull, {I.getOperand(0)});
+  I.replaceAllUsesWith(Intrin);
+  I.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
   switch (I.getIntrinsicID()) {
   case Intrinsic::bitreverse:
@@ -2196,6 +2267,7 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
     return false;
 
   const AMDGPUTargetMachine &TM = TPC->getTM<AMDGPUTargetMachine>();
+  Impl.TM = &TM;
   Impl.TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   Impl.ST = &TM.getSubtarget<GCNSubtarget>(F);
   Impl.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
@@ -2214,6 +2286,7 @@ PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
   AMDGPUCodeGenPrepareImpl Impl;
   Impl.Mod = F.getParent();
   Impl.DL = &Impl.Mod->getDataLayout();
+  Impl.TM = static_cast<const AMDGPUTargetMachine *>(&TM);
   Impl.TLInfo = &FAM.getResult<TargetLibraryAnalysis>(F);
   Impl.ST = &TM.getSubtarget<GCNSubtarget>(F);
   Impl.AC = &FAM.getResult<AssumptionAnalysis>(F);

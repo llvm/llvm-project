@@ -16,7 +16,8 @@ declare i32 @printf(ptr nocapture readonly, ...)
 ;CHECK: cmpl
 ;CHECK: setl
 ;CHECK: orb
-;CHECK: je
+;CHECK: testb
+;CHECK: jne
 
 @.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 ; Function Attrs: optsize ssp uwtable

@@ -108,8 +108,12 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
         this->LambdaCaptures[Cap.first] = {
             Offset, Cap.second->getType()->isReferenceType()};
       }
-      if (LTC)
-        this->LambdaThisCapture = R->getField(LTC)->Offset;
+      if (LTC) {
+        QualType CaptureType = R->getField(LTC)->Decl->getType();
+        this->LambdaThisCapture = {R->getField(LTC)->Offset,
+                                   CaptureType->isReferenceType() ||
+                                       CaptureType->isPointerType()};
+      }
     }
   }
 

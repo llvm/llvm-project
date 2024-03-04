@@ -832,6 +832,40 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint64_t4 reversebits(uint64_t4);
 
 //===----------------------------------------------------------------------===//
+// round builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T round(T x)
+/// \brief Rounds the specified value \a x to the nearest integer.
+/// \param x The specified input value.
+///
+/// The return value is the \a x parameter, rounded to the nearest integer
+/// within a floating-point type. Halfway cases are
+/// rounded to the nearest even value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+half round(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+half2 round(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+half3 round(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+half4 round(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+float round(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+float2 round(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+float3 round(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+float4 round(float4);
+
+//===----------------------------------------------------------------------===//
 // sin builtins
 //===----------------------------------------------------------------------===//
 
