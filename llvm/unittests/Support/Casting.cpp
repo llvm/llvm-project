@@ -284,12 +284,13 @@ TEST(CastingTest, dyn_cast_if_present) {
 
 TEST(CastingTest, isa_check_predicates) {
   auto IsaFoo = IsaPred<foo>;
-  auto IsaAndPresentFoo = IsaAndPresentPred<foo>;
   EXPECT_TRUE(IsaFoo(B1));
   EXPECT_TRUE(IsaFoo(B2));
   EXPECT_TRUE(IsaFoo(B3));
   EXPECT_TRUE(IsaPred<foo>(B4));
   EXPECT_TRUE((IsaPred<foo, bar>(B4)));
+
+  auto IsaAndPresentFoo = IsaAndPresentPred<foo>;
   EXPECT_TRUE(IsaAndPresentFoo(B2));
   EXPECT_TRUE(IsaAndPresentFoo(B4));
   EXPECT_FALSE(IsaAndPresentPred<foo>(fub()));

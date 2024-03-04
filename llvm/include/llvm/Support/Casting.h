@@ -840,7 +840,7 @@ inline constexpr detail::IsaCheckPredicate<Types...> IsaPred{};
 /// in `Types`, or if the value is not present (e.g., nullptr). Example:
 /// ```
 /// SmallVector<Type> myTypes = ...;
-/// if (llvm::all_of(myTypes, llvm::IsaAndPresnetPred<VectorType>))
+/// if (llvm::all_of(myTypes, llvm::IsaAndPresentPred<VectorType>))
 ///   ...
 /// ```
 template <typename... Types>
