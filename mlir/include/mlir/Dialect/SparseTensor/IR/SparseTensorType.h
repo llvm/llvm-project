@@ -249,14 +249,14 @@ public:
 
   /// Returns the Level-shape.
   SmallVector<Size> getLvlShape() const {
-    return getEncoding().tranlateShape(getDimShape(),
-                                       CrdTransDirectionKind::dim2lvl);
+    return getEncoding().translateShape(getDimShape(),
+                                        CrdTransDirectionKind::dim2lvl);
   }
 
   /// Returns the Level-shape.
   SmallVector<Size> getBatchLvlShape() const {
-    auto lvlShape = getEncoding().tranlateShape(getDimShape(),
-                                                CrdTransDirectionKind::dim2lvl);
+    auto lvlShape = getEncoding().translateShape(
+        getDimShape(), CrdTransDirectionKind::dim2lvl);
     lvlShape.truncate(getEncoding().getBatchLvlRank());
     return lvlShape;
   }
