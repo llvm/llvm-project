@@ -477,4 +477,443 @@ define <8 x half> @test_copysign_v8f16_v8f32(<8 x half> %a, <8 x float> %b) #0 {
 
 declare <8 x half> @llvm.copysign.v8f16(<8 x half> %a, <8 x half> %b) #0
 
+;============ v4bf16
+
+define <4 x bfloat> @test_copysign_v4bf16_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) #0 {
+; CHECK-LABEL: test_copysign_v4bf16_v4bf16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov h3, v1[1]
+; CHECK-NEXT:    mov h4, v0[1]
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    mov h5, v1[2]
+; CHECK-NEXT:    mov h6, v0[2]
+; CHECK-NEXT:    fmov w11, s0
+; CHECK-NEXT:    mvni.4s v2, #128, lsl #24
+; CHECK-NEXT:    mov h1, v1[3]
+; CHECK-NEXT:    mov h0, v0[3]
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    fmov w9, s3
+; CHECK-NEXT:    lsl w11, w11, #16
+; CHECK-NEXT:    fmov w10, s4
+; CHECK-NEXT:    fmov s7, w8
+; CHECK-NEXT:    fmov w8, s5
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    lsl w10, w10, #16
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    fmov s3, w9
+; CHECK-NEXT:    fmov s4, w10
+; CHECK-NEXT:    fmov w9, s6
+; CHECK-NEXT:    fmov w10, s1
+; CHECK-NEXT:    bit.16b v3, v4, v2
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    fmov s4, w11
+; CHECK-NEXT:    fmov w11, s0
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    lsl w10, w10, #16
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    bif.16b v4, v7, v2
+; CHECK-NEXT:    fmov w8, s3
+; CHECK-NEXT:    lsl w11, w11, #16
+; CHECK-NEXT:    bif.16b v1, v0, v2
+; CHECK-NEXT:    fmov s5, w11
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov w9, s4
+; CHECK-NEXT:    fmov s4, w10
+; CHECK-NEXT:    fmov s3, w8
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    mov.16b v1, v2
+; CHECK-NEXT:    lsr w9, w9, #16
+; CHECK-NEXT:    bsl.16b v1, v5, v4
+; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s2, w8
+; CHECK-NEXT:    mov.h v0[1], v3[0]
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    mov.h v0[2], v2[0]
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov.h v0[3], v1[0]
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+  %r = call <4 x bfloat> @llvm.copysign.v4bf16(<4 x bfloat> %a, <4 x bfloat> %b)
+  ret <4 x bfloat> %r
+}
+
+define <4 x bfloat> @test_copysign_v4bf16_v4f32(<4 x bfloat> %a, <4 x float> %b) #0 {
+; CHECK-LABEL: test_copysign_v4bf16_v4f32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    movi.4s v2, #127, msl #8
+; CHECK-NEXT:    movi.4s v3, #1
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    ushr.4s v4, v1, #16
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov h5, v0[2]
+; CHECK-NEXT:    mov h6, v0[3]
+; CHECK-NEXT:    add.4s v2, v1, v2
+; CHECK-NEXT:    and.16b v3, v4, v3
+; CHECK-NEXT:    fcmeq.4s v4, v1, v1
+; CHECK-NEXT:    orr.4s v1, #64, lsl #16
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    add.4s v2, v3, v2
+; CHECK-NEXT:    mov h3, v0[1]
+; CHECK-NEXT:    bit.16b v1, v2, v4
+; CHECK-NEXT:    fmov w8, s3
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    shrn.4h v2, v1, #16
+; CHECK-NEXT:    mvni.4s v1, #128, lsl #24
+; CHECK-NEXT:    fmov s3, w8
+; CHECK-NEXT:    fmov w8, s5
+; CHECK-NEXT:    fmov s5, w9
+; CHECK-NEXT:    mov h4, v2[1]
+; CHECK-NEXT:    mov h0, v2[2]
+; CHECK-NEXT:    fmov w11, s2
+; CHECK-NEXT:    mov h2, v2[3]
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    lsl w11, w11, #16
+; CHECK-NEXT:    fmov w10, s4
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    fmov w8, s2
+; CHECK-NEXT:    lsl w10, w10, #16
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    fmov s4, w10
+; CHECK-NEXT:    fmov w10, s6
+; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    bif.16b v3, v4, v1
+; CHECK-NEXT:    fmov s4, w11
+; CHECK-NEXT:    bit.16b v2, v0, v1
+; CHECK-NEXT:    lsl w10, w10, #16
+; CHECK-NEXT:    bit.16b v4, v5, v1
+; CHECK-NEXT:    fmov s5, w8
+; CHECK-NEXT:    fmov w9, s3
+; CHECK-NEXT:    fmov w8, s2
+; CHECK-NEXT:    fmov w11, s4
+; CHECK-NEXT:    fmov s4, w10
+; CHECK-NEXT:    lsr w9, w9, #16
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s3, w9
+; CHECK-NEXT:    lsr w11, w11, #16
+; CHECK-NEXT:    bsl.16b v1, v4, v5
+; CHECK-NEXT:    fmov s2, w8
+; CHECK-NEXT:    fmov s0, w11
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    mov.h v0[1], v3[0]
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    mov.h v0[2], v2[0]
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov.h v0[3], v1[0]
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+  %tmp0 = fptrunc <4 x float> %b to <4 x bfloat>
+  %r = call <4 x bfloat> @llvm.copysign.v4bf16(<4 x bfloat> %a, <4 x bfloat> %tmp0)
+  ret <4 x bfloat> %r
+}
+
+define <4 x bfloat> @test_copysign_v4bf16_v4f64(<4 x bfloat> %a, <4 x double> %b) #0 {
+; CHECK-LABEL: test_copysign_v4bf16_v4f64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov h4, v0[1]
+; CHECK-NEXT:    mov h5, v0[2]
+; CHECK-NEXT:    mov d3, v1[1]
+; CHECK-NEXT:    fcvt s1, d1
+; CHECK-NEXT:    mov h0, v0[3]
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    fmov w9, s4
+; CHECK-NEXT:    mvni.4s v4, #128, lsl #24
+; CHECK-NEXT:    fmov s6, w8
+; CHECK-NEXT:    fmov w8, s5
+; CHECK-NEXT:    fcvt s3, d3
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    bit.16b v1, v6, v4
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    mov d6, v2[1]
+; CHECK-NEXT:    fmov s7, w9
+; CHECK-NEXT:    fcvt s2, d2
+; CHECK-NEXT:    lsl w10, w10, #16
+; CHECK-NEXT:    fmov s5, w8
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    mov.16b v1, v4
+; CHECK-NEXT:    bit.16b v3, v7, v4
+; CHECK-NEXT:    bsl.16b v1, v5, v2
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fcvt s2, d6
+; CHECK-NEXT:    fmov w9, s3
+; CHECK-NEXT:    fmov s5, w10
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    mov.16b v1, v4
+; CHECK-NEXT:    lsr w9, w9, #16
+; CHECK-NEXT:    fmov s3, w9
+; CHECK-NEXT:    bsl.16b v1, v5, v2
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    mov.h v0[1], v3[0]
+; CHECK-NEXT:    fmov s2, w8
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    mov.h v0[2], v2[0]
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov.h v0[3], v1[0]
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+  %tmp0 = fptrunc <4 x double> %b to <4 x bfloat>
+  %r = call <4 x bfloat> @llvm.copysign.v4bf16(<4 x bfloat> %a, <4 x bfloat> %tmp0)
+  ret <4 x bfloat> %r
+}
+
+declare <4 x bfloat> @llvm.copysign.v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) #0
+
+;============ v8bf16
+
+define <8 x bfloat> @test_copysign_v8bf16_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
+; CHECK-LABEL: test_copysign_v8bf16_v8bf16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    mov h2, v1[1]
+; CHECK-NEXT:    mov h4, v0[1]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov h6, v1[2]
+; CHECK-NEXT:    mov h7, v0[2]
+; CHECK-NEXT:    mvni.4s v3, #128, lsl #24
+; CHECK-NEXT:    mov h5, v1[3]
+; CHECK-NEXT:    mov h16, v0[3]
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    mov h17, v1[4]
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    fmov w10, s4
+; CHECK-NEXT:    mov h4, v0[4]
+; CHECK-NEXT:    fmov s18, w8
+; CHECK-NEXT:    fmov w8, s2
+; CHECK-NEXT:    fmov w11, s7
+; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    lsl w9, w10, #16
+; CHECK-NEXT:    fmov w10, s6
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    fmov s7, w9
+; CHECK-NEXT:    bif.16b v2, v18, v3
+; CHECK-NEXT:    lsl w9, w11, #16
+; CHECK-NEXT:    fmov s6, w8
+; CHECK-NEXT:    lsl w8, w10, #16
+; CHECK-NEXT:    fmov w10, s5
+; CHECK-NEXT:    fmov w11, s16
+; CHECK-NEXT:    fmov s16, w9
+; CHECK-NEXT:    mov h18, v0[5]
+; CHECK-NEXT:    fmov s5, w8
+; CHECK-NEXT:    bit.16b v6, v7, v3
+; CHECK-NEXT:    fmov w8, s2
+; CHECK-NEXT:    lsl w9, w10, #16
+; CHECK-NEXT:    lsl w10, w11, #16
+; CHECK-NEXT:    mov h7, v1[5]
+; CHECK-NEXT:    bit.16b v5, v16, v3
+; CHECK-NEXT:    fmov s16, w10
+; CHECK-NEXT:    fmov w10, s4
+; CHECK-NEXT:    mov.16b v4, v3
+; CHECK-NEXT:    fmov w11, s6
+; CHECK-NEXT:    fmov s6, w9
+; CHECK-NEXT:    fmov w9, s17
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    lsr w11, w11, #16
+; CHECK-NEXT:    fmov s2, w8
+; CHECK-NEXT:    lsl w8, w9, #16
+; CHECK-NEXT:    bsl.16b v4, v16, v6
+; CHECK-NEXT:    lsl w9, w10, #16
+; CHECK-NEXT:    fmov w10, s5
+; CHECK-NEXT:    fmov s6, w11
+; CHECK-NEXT:    fmov s5, w8
+; CHECK-NEXT:    lsr w8, w10, #16
+; CHECK-NEXT:    fmov w10, s7
+; CHECK-NEXT:    mov.h v2[1], v6[0]
+; CHECK-NEXT:    fmov s6, w9
+; CHECK-NEXT:    fmov w9, s18
+; CHECK-NEXT:    fmov s7, w8
+; CHECK-NEXT:    fmov w8, s4
+; CHECK-NEXT:    mov h4, v1[6]
+; CHECK-NEXT:    lsl w10, w10, #16
+; CHECK-NEXT:    mov h1, v1[7]
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    bit.16b v5, v6, v3
+; CHECK-NEXT:    mov h6, v0[6]
+; CHECK-NEXT:    mov.h v2[2], v7[0]
+; CHECK-NEXT:    fmov s7, w10
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s16, w9
+; CHECK-NEXT:    fmov w9, s4
+; CHECK-NEXT:    mov h0, v0[7]
+; CHECK-NEXT:    fmov w10, s6
+; CHECK-NEXT:    bit.16b v7, v16, v3
+; CHECK-NEXT:    fmov s16, w8
+; CHECK-NEXT:    fmov w8, s5
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    lsl w10, w10, #16
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    mov.h v2[3], v16[0]
+; CHECK-NEXT:    fmov s5, w9
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    fmov s4, w8
+; CHECK-NEXT:    fmov w8, s7
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    mov.h v2[4], v4[0]
+; CHECK-NEXT:    fmov s4, w10
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    bif.16b v4, v5, v3
+; CHECK-NEXT:    lsl w10, w10, #16
+; CHECK-NEXT:    fmov s5, w10
+; CHECK-NEXT:    mov.h v2[5], v0[0]
+; CHECK-NEXT:    mov.16b v0, v3
+; CHECK-NEXT:    fmov w8, s4
+; CHECK-NEXT:    bsl.16b v0, v5, v1
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov.h v2[6], v1[0]
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    mov.h v2[7], v0[0]
+; CHECK-NEXT:    mov.16b v0, v2
+; CHECK-NEXT:    ret
+  %r = call <8 x bfloat> @llvm.copysign.v8bf16(<8 x bfloat> %a, <8 x bfloat> %b)
+  ret <8 x bfloat> %r
+}
+
+define <8 x bfloat> @test_copysign_v8bf16_v8f32(<8 x bfloat> %a, <8 x float> %b) #0 {
+; CHECK-LABEL: test_copysign_v8bf16_v8f32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    movi.4s v3, #127, msl #8
+; CHECK-NEXT:    movi.4s v4, #1
+; CHECK-NEXT:    ushr.4s v5, v1, #16
+; CHECK-NEXT:    fcmeq.4s v7, v1, v1
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    add.4s v6, v1, v3
+; CHECK-NEXT:    and.16b v5, v5, v4
+; CHECK-NEXT:    orr.4s v1, #64, lsl #16
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    add.4s v5, v5, v6
+; CHECK-NEXT:    ushr.4s v6, v2, #16
+; CHECK-NEXT:    and.16b v4, v6, v4
+; CHECK-NEXT:    mov h6, v0[2]
+; CHECK-NEXT:    bit.16b v1, v5, v7
+; CHECK-NEXT:    add.4s v7, v2, v3
+; CHECK-NEXT:    mov h5, v0[1]
+; CHECK-NEXT:    fcmeq.4s v3, v2, v2
+; CHECK-NEXT:    orr.4s v2, #64, lsl #16
+; CHECK-NEXT:    shrn.4h v1, v1, #16
+; CHECK-NEXT:    add.4s v4, v4, v7
+; CHECK-NEXT:    fmov w8, s5
+; CHECK-NEXT:    mov h7, v0[3]
+; CHECK-NEXT:    mov h5, v0[4]
+; CHECK-NEXT:    mov h16, v1[1]
+; CHECK-NEXT:    fmov w10, s1
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    bsl.16b v3, v4, v2
+; CHECK-NEXT:    mov h4, v1[2]
+; CHECK-NEXT:    mov h17, v1[3]
+; CHECK-NEXT:    mvni.4s v2, #128, lsl #24
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    fmov w9, s6
+; CHECK-NEXT:    lsl w10, w10, #16
+; CHECK-NEXT:    fmov s6, w8
+; CHECK-NEXT:    fmov w8, s7
+; CHECK-NEXT:    fmov w11, s16
+; CHECK-NEXT:    fmov s7, w10
+; CHECK-NEXT:    fmov w10, s4
+; CHECK-NEXT:    mov.16b v4, v2
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    shrn.4h v3, v3, #16
+; CHECK-NEXT:    lsl w11, w11, #16
+; CHECK-NEXT:    bif.16b v1, v7, v2
+; CHECK-NEXT:    fmov s16, w8
+; CHECK-NEXT:    fmov s7, w11
+; CHECK-NEXT:    bsl.16b v4, v6, v7
+; CHECK-NEXT:    fmov s7, w9
+; CHECK-NEXT:    lsl w9, w10, #16
+; CHECK-NEXT:    fmov w10, s17
+; CHECK-NEXT:    mov h6, v0[5]
+; CHECK-NEXT:    lsl w8, w10, #16
+; CHECK-NEXT:    fmov w10, s1
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    lsr w9, w10, #16
+; CHECK-NEXT:    fmov w10, s4
+; CHECK-NEXT:    fmov s4, w8
+; CHECK-NEXT:    bif.16b v7, v1, v2
+; CHECK-NEXT:    fmov w8, s5
+; CHECK-NEXT:    mov h5, v3[1]
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    fmov w9, s3
+; CHECK-NEXT:    lsr w10, w10, #16
+; CHECK-NEXT:    bit.16b v4, v16, v2
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    fmov s16, w10
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    fmov w10, s7
+; CHECK-NEXT:    mov h7, v0[6]
+; CHECK-NEXT:    mov h0, v0[7]
+; CHECK-NEXT:    mov.h v1[1], v16[0]
+; CHECK-NEXT:    fmov s16, w8
+; CHECK-NEXT:    fmov w8, s6
+; CHECK-NEXT:    fmov s6, w9
+; CHECK-NEXT:    fmov w9, s5
+; CHECK-NEXT:    lsr w10, w10, #16
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    bit.16b v6, v16, v2
+; CHECK-NEXT:    fmov s16, w10
+; CHECK-NEXT:    fmov w10, s4
+; CHECK-NEXT:    fmov s5, w8
+; CHECK-NEXT:    fmov w8, s7
+; CHECK-NEXT:    fmov s7, w9
+; CHECK-NEXT:    mov h4, v3[2]
+; CHECK-NEXT:    mov h3, v3[3]
+; CHECK-NEXT:    mov.h v1[2], v16[0]
+; CHECK-NEXT:    lsr w10, w10, #16
+; CHECK-NEXT:    fmov w9, s6
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    bif.16b v5, v7, v2
+; CHECK-NEXT:    fmov s16, w10
+; CHECK-NEXT:    fmov w10, s4
+; CHECK-NEXT:    fmov s4, w8
+; CHECK-NEXT:    lsr w9, w9, #16
+; CHECK-NEXT:    mov.h v1[3], v16[0]
+; CHECK-NEXT:    fmov w8, s5
+; CHECK-NEXT:    lsl w10, w10, #16
+; CHECK-NEXT:    fmov s6, w9
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    fmov s5, w10
+; CHECK-NEXT:    fmov w10, s3
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    mov.h v1[4], v6[0]
+; CHECK-NEXT:    lsl w9, w9, #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    bif.16b v4, v5, v2
+; CHECK-NEXT:    lsl w10, w10, #16
+; CHECK-NEXT:    fmov s3, w9
+; CHECK-NEXT:    fmov s5, w10
+; CHECK-NEXT:    mov.h v1[5], v0[0]
+; CHECK-NEXT:    mov.16b v0, v2
+; CHECK-NEXT:    fmov w8, s4
+; CHECK-NEXT:    bsl.16b v0, v3, v5
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s2, w8
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov.h v1[6], v2[0]
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    mov.h v1[7], v0[0]
+; CHECK-NEXT:    mov.16b v0, v1
+; CHECK-NEXT:    ret
+  %tmp0 = fptrunc <8 x float> %b to <8 x bfloat>
+  %r = call <8 x bfloat> @llvm.copysign.v8bf16(<8 x bfloat> %a, <8 x bfloat> %tmp0)
+  ret <8 x bfloat> %r
+}
+
+declare <8 x bfloat> @llvm.copysign.v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) #0
+
 attributes #0 = { nounwind }

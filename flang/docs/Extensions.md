@@ -481,6 +481,11 @@ end
 * Many compilers disallow a `VALUE` assumed-length character dummy
   argument, which has been standard since F'2008.
   We accept this usage with an optional portability warning.
+* The `ASYNCHRONOUS` attribute can be implied by usage in data
+  transfer I/O statements.  Only one other compiler supports this
+  correctly.  This compiler does, apart from objects in asynchronous
+  NAMELIST I/O, for which an actual asynchronous runtime implementation
+  seems unlikely.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 
@@ -686,6 +691,20 @@ end
 * For real `MAXVAL`, `MINVAL`, `MAXLOC`, and `MINLOC`, NaN values are
   essentially ignored unless there are some unmasked array entries and
   *all* of them are NaNs.
+
+* When `INDEX` is used as an unrestricted specific intrinsic function
+  in the context of an actual procedure, as the explicit interface in
+  a `PROCEDURE` declaration statement, or as the target of a procedure
+  pointer assignment, its interface has exactly two dummy arguments
+  (`STRING=` and `SUBSTRING=`), and includes neither `BACK=` nor
+  `KIND=`.
+  This is how `INDEX` as an unrestricted specific intrinsic function was
+  documented in FORTRAN '77 and Fortran '90; later revisions of the
+  standard deleted the argument information from the section on
+  unrestricted specific intrinsic functions.
+  At least one other compiler (XLF) seems to expect that the interface for
+  `INDEX` include an optional `BACK=` argument, but it doesn't actually
+  work.
 
 ## De Facto Standard Features
 
