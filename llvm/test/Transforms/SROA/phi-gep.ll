@@ -638,6 +638,44 @@ bb3:
   ret i1 %icmp
 }
 
+define i64 @test_unfold_phi_duplicate_phi_entry(ptr %arg, i8 %arg1, i1 %arg2) {
+; CHECK-LABEL: @test_unfold_phi_duplicate_phi_entry(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[ALLOCA_SROA_0:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    [[PHI_SROA_GEP:%.*]] = getelementptr i64, ptr [[ARG:%.*]], i64 1
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB5:%.*]], label [[BB3:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    switch i8 [[ARG1:%.*]], label [[BB4:%.*]] [
+; CHECK-NEXT:      i8 0, label [[BB5]]
+; CHECK-NEXT:      i8 1, label [[BB5]]
+; CHECK-NEXT:    ]
+; CHECK:       bb4:
+; CHECK-NEXT:    ret i64 0
+; CHECK:       bb5:
+; CHECK-NEXT:    [[PHI_SROA_PHI:%.*]] = phi ptr [ [[PHI_SROA_GEP]], [[BB3]] ], [ [[PHI_SROA_GEP]], [[BB3]] ], [ [[ALLOCA_SROA_0]], [[BB:%.*]] ]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[PHI_SROA_PHI]], align 4
+; CHECK-NEXT:    ret i64 [[LOAD]]
+;
+bb:
+  %alloca = alloca [2 x i64], align 8
+  br i1 %arg2, label %bb5, label %bb3
+
+bb3:                                              ; preds = %bb
+  switch i8 %arg1, label %bb4 [
+  i8 0, label %bb5
+  i8 1, label %bb5
+  ]
+
+bb4:                                              ; preds = %bb5, %bb3
+  ret i64 0
+
+bb5:                                              ; preds = %bb3, %bb3, %bb
+  %phi = phi ptr [ %arg, %bb3 ], [ %arg, %bb3 ], [ %alloca, %bb ]
+  %getelementptr = getelementptr i64, ptr %phi, i64 1
+  %load = load i64, ptr %getelementptr
+  ret i64 %load
+}
+
 declare void @f()
 
 declare ptr @foo()
