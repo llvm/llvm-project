@@ -573,59 +573,36 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     return Cost;
   }
-  case Intrinsic::vector_extract: {
-    // If both the vector argument and the return type are legal types and the
-    // index is 0, then this should be a no-op or simple operation; return a
-    // relatively low cost.
-
-    // If arguments aren't actually supplied, then we cannot determine the
-    // value of the index. We also want to skip this on predicate types.
-    if (ICA.getArgs().size() != 2 ||
-        ICA.getReturnType()->getScalarType()->isIntegerTy(1))
-      break;
-    LLVMContext &C = RetTy->getContext();
-    EVT RetVT = getTLI()->getValueType(DL, RetTy);
-    EVT VecVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
-    // Skip this if either the return type or the vector argument are unpacked
-    // SVE types; they may get lowered to stack stores and loads.
-    if (isUnpackedVectorVT(RetVT) || isUnpackedVectorVT(VecVT))
-      break;
-    TargetLoweringBase::LegalizeKind RLK =
-        getTLI()->getTypeConversion(C, RetVT);
-    TargetLoweringBase::LegalizeKind PLK =
-        getTLI()->getTypeConversion(C, VecVT);
-    const ConstantInt *Idx = dyn_cast<ConstantInt>(ICA.getArgs()[1]);
-    if (RLK.first == TargetLoweringBase::TypeLegal &&
-        PLK.first == TargetLoweringBase::TypeLegal && Idx &&
-        Idx->getZExtValue() == 0)
-      return TTI::TCC_Free;
-    break;
-  }
+  case Intrinsic::vector_extract:
   case Intrinsic::vector_insert: {
-    // If both the vector and subvector arguments are legal types and the index
+    // If both the vector and subvector types are legal types and the index
     // is 0, then this should be a no-op or simple operation; return a
     // relatively low cost.
 
     // If arguments aren't actually supplied, then we cannot determine the
-    // value of the index. We also want to skip this on predicate types.
-    if (ICA.getArgs().size() != 3 ||
+    // value of the index. We also want to skip predicate types.
+    if (ICA.isTypeBasedOnly() ||
         ICA.getReturnType()->getScalarType()->isIntegerTy(1))
       break;
+
     LLVMContext &C = RetTy->getContext();
     EVT VecVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
-    EVT SubVecVT = getTLI()->getValueType(DL, ICA.getArgTypes()[1]);
-    // Skip this if either type is an unpacked SVE type; they may get lowered
-    // to stack stores and loads.
+    bool IsExtract = ICA.getID() == Intrinsic::vector_extract;
+    EVT SubVecVT = IsExtract ? getTLI()->getValueType(DL, RetTy)
+                             : getTLI()->getValueType(DL, ICA.getArgTypes()[1]);
+    // Skip this if either the vector or subvector types are unpacked
+    // SVE types; they may get lowered to stack stores and loads.
     if (isUnpackedVectorVT(VecVT) || isUnpackedVectorVT(SubVecVT))
       break;
-    TargetLoweringBase::LegalizeKind LK0 =
-        getTLI()->getTypeConversion(C, VecVT);
-    TargetLoweringBase::LegalizeKind LK1 =
+
+    TargetLoweringBase::LegalizeKind SubVecLK =
         getTLI()->getTypeConversion(C, SubVecVT);
-    const ConstantInt *Idx = dyn_cast<ConstantInt>(ICA.getArgs()[2]);
-    if (LK0.first == TargetLoweringBase::TypeLegal &&
-        LK1.first == TargetLoweringBase::TypeLegal && Idx &&
-        Idx->getZExtValue() == 0)
+    TargetLoweringBase::LegalizeKind VecLK =
+        getTLI()->getTypeConversion(C, VecVT);
+    const Value *Idx = IsExtract ? ICA.getArgs()[1] : ICA.getArgs()[2];
+    const ConstantInt *CIdx = dyn_cast<ConstantInt>(Idx);
+    if (SubVecLK.first == TargetLoweringBase::TypeLegal &&
+        VecLK.first == TargetLoweringBase::TypeLegal && CIdx && CIdx->isZero())
       return TTI::TCC_Free;
     break;
   }
