@@ -604,50 +604,51 @@ define void @as_cast(ptr %arg) {
 ;
 ; CWRLD-LABEL: @as_cast(
 ; CWRLD-NEXT:    [[FP:%.*]] = load ptr addrspace(1), ptr [[ARG:%.*]], align 8
-; CWRLD-NEXT:    [[FP_AS0:%.*]] = addrspacecast ptr addrspace(1) [[FP]] to ptr
-; CWRLD-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP_AS0]], @func3
-; CWRLD-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; CWRLD:       2:
+; CWRLD-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[FP]] to i64
+; CWRLD-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CWRLD-NEXT:    [[TMP3:%.*]] = icmp eq ptr [[TMP2]], @func3
+; CWRLD-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]
+; CWRLD:       4:
 ; CWRLD-NEXT:    tail call void @func3()
-; CWRLD-NEXT:    br label [[TMP21:%.*]]
-; CWRLD:       3:
-; CWRLD-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP_AS0]], @func4
-; CWRLD-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
+; CWRLD-NEXT:    br label [[TMP23:%.*]]
 ; CWRLD:       5:
+; CWRLD-NEXT:    [[TMP6:%.*]] = icmp eq ptr [[TMP2]], @func4
+; CWRLD-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP8:%.*]]
+; CWRLD:       7:
 ; CWRLD-NEXT:    tail call void @func4()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       6:
-; CWRLD-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[FP_AS0]], @retI32
-; CWRLD-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]]
+; CWRLD-NEXT:    br label [[TMP23]]
 ; CWRLD:       8:
+; CWRLD-NEXT:    [[TMP9:%.*]] = icmp eq ptr [[TMP2]], @retI32
+; CWRLD-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]]
+; CWRLD:       10:
 ; CWRLD-NEXT:    call void @retI32()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       9:
-; CWRLD-NEXT:    [[TMP10:%.*]] = icmp eq ptr [[FP_AS0]], @takeI32
-; CWRLD-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]]
+; CWRLD-NEXT:    br label [[TMP23]]
 ; CWRLD:       11:
+; CWRLD-NEXT:    [[TMP12:%.*]] = icmp eq ptr [[TMP2]], @takeI32
+; CWRLD-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP14:%.*]]
+; CWRLD:       13:
 ; CWRLD-NEXT:    call void @takeI32()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       12:
-; CWRLD-NEXT:    [[TMP13:%.*]] = icmp eq ptr [[FP_AS0]], @retFloatTakeFloat
-; CWRLD-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]]
+; CWRLD-NEXT:    br label [[TMP23]]
 ; CWRLD:       14:
+; CWRLD-NEXT:    [[TMP15:%.*]] = icmp eq ptr [[TMP2]], @retFloatTakeFloat
+; CWRLD-NEXT:    br i1 [[TMP15]], label [[TMP16:%.*]], label [[TMP17:%.*]]
+; CWRLD:       16:
 ; CWRLD-NEXT:    call void @retFloatTakeFloat()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       15:
-; CWRLD-NEXT:    [[TMP16:%.*]] = icmp eq ptr [[FP_AS0]], @retFloatTakeFloatFloatNoundef
-; CWRLD-NEXT:    br i1 [[TMP16]], label [[TMP17:%.*]], label [[TMP18:%.*]]
+; CWRLD-NEXT:    br label [[TMP23]]
 ; CWRLD:       17:
-; CWRLD-NEXT:    call void @retFloatTakeFloatFloatNoundef()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       18:
-; CWRLD-NEXT:    br i1 true, label [[TMP19:%.*]], label [[TMP20:%.*]]
+; CWRLD-NEXT:    [[TMP18:%.*]] = icmp eq ptr [[TMP2]], @retFloatTakeFloatFloatNoundef
+; CWRLD-NEXT:    br i1 [[TMP18]], label [[TMP19:%.*]], label [[TMP20:%.*]]
 ; CWRLD:       19:
-; CWRLD-NEXT:    tail call void @void()
-; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD-NEXT:    call void @retFloatTakeFloatFloatNoundef()
+; CWRLD-NEXT:    br label [[TMP23]]
 ; CWRLD:       20:
-; CWRLD-NEXT:    unreachable
+; CWRLD-NEXT:    br i1 true, label [[TMP21:%.*]], label [[TMP22:%.*]]
 ; CWRLD:       21:
+; CWRLD-NEXT:    tail call void @void()
+; CWRLD-NEXT:    br label [[TMP23]]
+; CWRLD:       22:
+; CWRLD-NEXT:    unreachable
+; CWRLD:       23:
 ; CWRLD-NEXT:    ret void
 ;
   %fp = load ptr addrspace(1), ptr %arg, align 8
