@@ -4421,6 +4421,21 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
       useSVEForFixedLengthVectorVT(InVT, !Subtarget->isNeonAvailable()))
     return LowerFixedLengthIntToFPToSVE(Op, DAG);
 
+  // Promote bf16 conversions to f32.
+  if (VT.getVectorElementType() == MVT::bf16) {
+    EVT F32 = VT.changeElementType(MVT::f32);
+    if (IsStrict) {
+      SDValue Val = DAG.getNode(Op.getOpcode(), dl, {F32, MVT::Other},
+                                {Op.getOperand(0), In});
+      return DAG.getNode(
+          ISD::STRICT_FP_ROUND, dl, {Op.getValueType(), MVT::Other},
+          {Val.getValue(1), Val.getValue(0), DAG.getIntPtrConstant(0, dl)});
+    }
+    return DAG.getNode(ISD::FP_ROUND, dl, Op.getValueType(),
+                       DAG.getNode(Op.getOpcode(), dl, F32, In),
+                       DAG.getIntPtrConstant(0, dl));
+  }
+
   uint64_t VTSize = VT.getFixedSizeInBits();
   uint64_t InVTSize = InVT.getFixedSizeInBits();
   if (VTSize < InVTSize) {
