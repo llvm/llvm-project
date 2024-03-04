@@ -525,7 +525,9 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
 
   // Output decorations for the GV.
   // TODO: maybe move to GenerateDecorations pass.
-  if (IsConst)
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (IsConst && ST.isOpenCLEnv())
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::Constant, {});
 
   if (GVar && GVar->getAlign().valueOrOne().value() != 1) {
