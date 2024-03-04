@@ -17,7 +17,7 @@
 
 #include "sanitizer_internal_defs.h"
 
-inline void *operator new(__sanitizer::operator_new_size_type sz, void *p) {
+inline void *operator new(__sanitizer::usize sz, void *p) {
   return p;
 }
 
