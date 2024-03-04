@@ -211,6 +211,7 @@ class TypeSourceInfo;
 
     /// Whether to perform a minimal import.
     bool Minimal;
+    bool LLDBRedeclCompletion = false;
 
     ODRHandlingType ODRHandling;
 
@@ -296,8 +297,10 @@ class TypeSourceInfo;
     /// Whether the importer will perform a minimal import, creating
     /// to-be-completed forward declarations when possible.
     bool isMinimalImport() const { return Minimal; }
+    bool hasLLDBRedeclCompletion() const { return LLDBRedeclCompletion; }
 
     void setODRHandling(ODRHandlingType T) { ODRHandling = T; }
+    void setLLDBRedeclCompletion(bool Val) { LLDBRedeclCompletion = Val; }
 
     /// \brief Import the given object, returns the result.
     ///
