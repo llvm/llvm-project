@@ -2578,11 +2578,13 @@ QualType CXXMethodDecl::getThisType() const {
 bool CXXMethodDecl::isEffectivelyRestrict() const {
   // MSVC only cares about '__restrict' on the first declaration; GCC only
   // cares about the definition.
-  Qualifiers Qs =
-      getASTContext().getLangOpts().MSVCCompat
-          ? cast<CXXMethodDecl>(getFirstDecl())->getMethodQualifiers()
-          : getMethodQualifiers();
-  return Qs.hasRestrict();
+  if (getASTContext().getLangOpts().MSVCCompat) {
+    Qualifiers Qs = cast<CXXMethodDecl>(getFirstDecl())->getMethodQualifiers();
+    return Qs.hasRestrict();
+  }
+
+  const auto *D = getDefinition();
+  return D && cast<CXXMethodDecl>(D)->getMethodQualifiers().hasRestrict();
 }
 
 QualType CXXMethodDecl::getFunctionObjectParameterReferenceType() const {
