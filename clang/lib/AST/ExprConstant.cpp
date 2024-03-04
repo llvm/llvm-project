@@ -8481,10 +8481,9 @@ public:
 } // end anonymous namespace
 
 /// Get an lvalue to a field of a lambda's closure type.
-static bool GetLambdaCaptureAsLValue(EvalInfo &Info, const Expr *E,
-                                     LValue &Result, const CXXMethodDecl *MD,
-                                     const FieldDecl *FD,
-                                     bool LValueToRValueConversion) {
+static bool HandleLambdaCapture(EvalInfo &Info, const Expr *E, LValue &Result,
+                                const CXXMethodDecl *MD, const FieldDecl *FD,
+                                bool LValueToRValueConversion) {
   // Static lambda function call operators can't have captures. We already
   // diagnosed this, so bail out here.
   if (MD->isStatic()) {
@@ -8572,8 +8571,8 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
 
     if (auto *FD = Info.CurrentCall->LambdaCaptureFields.lookup(VD)) {
       const auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
-      return GetLambdaCaptureAsLValue(Info, E, Result, MD, FD,
-                                      FD->getType()->isReferenceType());
+      return HandleLambdaCapture(Info, E, Result, MD, FD,
+                                 FD->getType()->isReferenceType());
     }
   }
 
@@ -9088,7 +9087,7 @@ public:
       }
 
       const auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
-      return GetLambdaCaptureAsLValue(
+      return HandleLambdaCapture(
           Info, E, Result, MD, Info.CurrentCall->LambdaThisCaptureField,
           Info.CurrentCall->LambdaThisCaptureField->getType()->isPointerType());
     }
