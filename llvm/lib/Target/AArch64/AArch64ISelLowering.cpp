@@ -1571,7 +1571,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
     }
 
-    if (!Subtarget->isNeonAvailable()) {// TODO(majnemer)
+    if (!Subtarget->isNeonAvailable()) {
+      setTruncStoreAction(MVT::v2f32, MVT::v2bf16, Custom);
+      setTruncStoreAction(MVT::v4f32, MVT::v4bf16, Custom);
+      setTruncStoreAction(MVT::v8f32, MVT::v8bf16, Custom);
+      setTruncStoreAction(MVT::v2f64, MVT::v2bf16, Custom);
+      setTruncStoreAction(MVT::v4f64, MVT::v4bf16, Custom);
       setTruncStoreAction(MVT::v2f32, MVT::v2f16, Custom);
       setTruncStoreAction(MVT::v4f32, MVT::v4f16, Custom);
       setTruncStoreAction(MVT::v8f32, MVT::v8f16, Custom);
@@ -10385,13 +10390,17 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   bool IsLegal = false;
   // We can materialize #0.0 as fmov $Rd, XZR for 64-bit, 32-bit cases, and
   // 16-bit case when target has full fp16 support.
+  // We encode bf16 bit patterns as if they were fp16. This results in very
+  // strange looking assembly but should populate the register with appropriate
+  // values. Let's say we wanted to encode 0xR3FC0 which is 1.5 in BF16. We will
+  // end up encoding this as the imm8 0x7f. This imm8 will be expanded to the
+  // FP16 1.9375 which shares the same bit pattern as BF16 1.5.
   // FIXME: We should be able to handle f128 as well with a clever lowering.
   const APInt ImmInt = Imm.bitcastToAPInt();
   if (VT == MVT::f64)
     IsLegal = AArch64_AM::getFP64Imm(ImmInt) != -1 || Imm.isPosZero();
   else if (VT == MVT::f32)
     IsLegal = AArch64_AM::getFP32Imm(ImmInt) != -1 || Imm.isPosZero();
-  // TODO(majnemer): double check this...
   else if (VT == MVT::f16 || VT == MVT::bf16)
     IsLegal =
         (Subtarget->hasFullFP16() && AArch64_AM::getFP16Imm(ImmInt) != -1) ||
