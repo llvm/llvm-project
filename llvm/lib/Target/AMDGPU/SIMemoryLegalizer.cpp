@@ -602,10 +602,6 @@ protected:
   // MI. \returns Returns true if \p MI is modified, false otherwise.
   bool setScope(const MachineBasicBlock::iterator MI,
                 AMDGPU::CPol::CPol Value) const;
-  // Checks if CPol operand is present in instruction \p MI and if current Scope
-  // policy is same as \p Value.
-  bool isScope(const MachineBasicBlock::iterator MI,
-               AMDGPU::CPol::CPol Value) const;
 
   // Stores with system scope (SCOPE_SYS) need to wait for:
   // - loads or atomics(returning) - wait for {LOAD|SAMPLE|BVH|KM}CNT==0
@@ -2227,15 +2223,6 @@ bool SIGfx12CacheControl::setScope(const MachineBasicBlock::iterator MI,
   return false;
 }
 
-bool SIGfx12CacheControl::isScope(const MachineBasicBlock::iterator MI,
-                                  AMDGPU::CPol::CPol Value) const {
-  MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
-  if (!CPol)
-    return false;
-
-  return (CPol->getImm() & AMDGPU::CPol::SCOPE) == Value;
-}
-
 bool SIGfx12CacheControl::insertWaitsBeforeSystemScopeStore(
     const MachineBasicBlock::iterator MI) const {
   // TODO: implement flag for frontend to give us a hint not to insert waits.
@@ -2445,11 +2432,7 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
 bool SIGfx12CacheControl::enableLastUse(MachineInstr &MI,
                                         bool IsLastUse) const {
   assert(MI.mayLoad() && !MI.mayStore());
-
-  if (IsLastUse && !isScope(MI, AMDGPU::CPol::SCOPE_SYS))
-    return setTH(MI, AMDGPU::CPol::TH_LU);
-
-  return false;
+  return IsLastUse ? setTH(MI, AMDGPU::CPol::TH_LU) : false;
 }
 
 bool SIGfx12CacheControl::expandSystemScopeStore(

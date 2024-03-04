@@ -47,7 +47,7 @@ define amdgpu_kernel void @flat_last_use_volatile_load(ptr %in, ptr %out) {
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX12-NEXT:    flat_load_b32 v2, v[0:1] scope:SCOPE_SYS
+; GFX12-NEXT:    flat_load_b32 v2, v[0:1] th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    s_wait_dscnt 0x0
