@@ -1072,6 +1072,10 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   if (Reject)
     return makeError(*Reject);
 
+  static constexpr trace::Metric RenameTriggerCounter(
+      "rename_trigger_count", trace::Metric::Counter, "decl_kind");
+  RenameTriggerCounter.record(1, RenameDecl.getDeclKindName());
+
   // We have two implementations of the rename:
   //   - AST-based rename: used for renaming local symbols, e.g. variables
   //     defined in a function body;
