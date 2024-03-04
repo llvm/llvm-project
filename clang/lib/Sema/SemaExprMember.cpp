@@ -719,7 +719,6 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
                                      CXXScopeSpec &SS, bool HasTemplateArgs,
                                      SourceLocation TemplateKWLoc,
                                      TypoExpr *&TE) {
-  RecordDecl *RDecl = RTy->getAsRecordDecl();
   DeclContext *DC = SemaRef.computeDeclContext(RTy);
   // If the object expression is dependent and isn't the current instantiation,
   // lookup will not find anything and we must defer until instantiation.
@@ -1058,7 +1057,9 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                                bool SuppressQualifierCheck,
                                ActOnMemberAccessExtraArgs *ExtraArgs) {
 
-  if (R.wasNotFoundInCurrentInstantiation() || (SS.isValid() && !computeDeclContext(SS, false))) {
+  if (R.wasNotFoundInCurrentInstantiation() ||
+      (SS.isValid() && !computeDeclContext(SS, false)) ||
+      (R.isUnresolvableResult() && R.isClassLookup() && R.getNamingClass()->isDependentContext())) {
     return ActOnDependentMemberExpr(BaseExpr, BaseExprType,
                                     IsArrow, OpLoc,
                                     SS, TemplateKWLoc, FirstQualifierInScope,
