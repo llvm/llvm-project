@@ -583,7 +583,7 @@ def ACC_KernelsLoop : Directive<"kernels loop"> {
     VersionedClause<ACCC_Independent>,
     VersionedClause<ACCC_Seq>
   ];
-  let leafs = [ACC_Kernels, ACC_Loop];
+  let leafConstructs = [ACC_Kernels, ACC_Loop];
 }
 
 // 2.11
@@ -622,7 +622,7 @@ def ACC_ParallelLoop : Directive<"parallel loop"> {
     VersionedClause<ACCC_Independent>,
     VersionedClause<ACCC_Seq>
   ];
-  let leafs = [ACC_Parallel, ACC_Loop];
+  let leafConstructs = [ACC_Parallel, ACC_Loop];
 }
 
 // 2.11
@@ -658,7 +658,7 @@ def ACC_SerialLoop : Directive<"serial loop"> {
     VersionedClause<ACCC_Independent>,
     VersionedClause<ACCC_Seq>
   ];
-  let leafs = [ACC_Serial, ACC_Loop];
+  let leafConstructs = [ACC_Serial, ACC_Loop];
 }
 
 def ACC_Unknown : Directive<"unknown"> {

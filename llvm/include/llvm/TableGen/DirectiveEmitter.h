@@ -127,7 +127,7 @@ public:
   }
 
   std::vector<Record *> getLeafConstructs() const {
-    return Def->getValueAsListOfDefs("leafs");
+    return Def->getValueAsListOfDefs("leafConstructs");
   }
 
   Record *getAssociation() const { return Def->getValueAsDef("association"); }

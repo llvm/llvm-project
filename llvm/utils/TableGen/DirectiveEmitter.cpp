@@ -207,7 +207,7 @@ static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
   llvm::copy_if(
       DirLang.getAssociations(), std::back_inserter(associations),
       // Skip the "special" value
-      [](const Record *Def) { return Def->getName() != "AS_FromLeafs"; });
+      [](const Record *Def) { return Def->getName() != "AS_FromLeaves"; });
   GenerateEnumClass(associations, OS, "Association",
                     /*Prefix=*/"", DirLang, /*ExportEnums=*/false);
 
@@ -459,7 +459,7 @@ static void GenerateGetLeafConstructs(const DirectiveLanguage &DirLang,
         .str();
   };
 
-  // For each list of leafs, generate a static local object, then
+  // For each list of leaves, generate a static local object, then
   // return a reference to that object for a given directive, e.g.
   //
   //   static ListTy leafConstructs_A_B = { A, B };
@@ -472,7 +472,7 @@ static void GenerateGetLeafConstructs(const DirectiveLanguage &DirLang,
   //   }
 
   // Map from a record that defines a directive to the name of the
-  // local object with the list of its leafs.
+  // local object with the list of its leaves.
   DenseMap<Record *, std::string> ListNames;
 
   std::string DirectiveTypeName =
@@ -533,7 +533,7 @@ static void GenerateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
     Delimited,
     Loop,
     Separating,
-    FromLeafs,
+    FromLeaves,
     Invalid,
   };
 
@@ -547,12 +547,12 @@ static void GenerateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
         .Case("AS_Loop", Association::Loop)
         .Case("AS_None", Association::None)
         .Case("AS_Separating", Association::Separating)
-        .Case("AS_FromLeafs", Association::FromLeafs)
+        .Case("AS_FromLeaves", Association::FromLeaves)
         .Default(Association::Invalid);
   };
 
   auto getAssocName = [&](Association A) -> StringRef {
-    if (A != Association::Invalid && A != Association::FromLeafs) {
+    if (A != Association::Invalid && A != Association::FromLeaves) {
       auto F = llvm::find_if(associations, [&](const Record *R) {
         return getAssocValue(R->getName()) == A;
       });
@@ -598,33 +598,33 @@ static void GenerateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
                       "has an unrecognized value for association: '" +
                       D.getAssociation()->getName() + "'");
     }
-    if (AS != Association::FromLeafs) {
+    if (AS != Association::FromLeaves) {
       AsMap.insert(std::make_pair(R, AS));
       return AS;
     }
     // Compute the association from leaf constructs.
-    std::vector<Record *> leafs = D.getLeafConstructs();
-    if (leafs.empty()) {
+    std::vector<Record *> leaves = D.getLeafConstructs();
+    if (leaves.empty()) {
       llvm::errs() << D.getName() << '\n';
       PrintFatalError(errorPrefixFor(D) +
-                      "requests association to be computed from leafs, "
-                      "but it has no leafs");
+                      "requests association to be computed from leaves, "
+                      "but it has no leaves");
     }
 
-    Association Result = Self(leafs[0], Self);
-    for (int I = 1, E = leafs.size(); I < E; ++I) {
-      Association A = Self(leafs[I], Self);
+    Association Result = Self(leaves[0], Self);
+    for (int I = 1, E = leaves.size(); I < E; ++I) {
+      Association A = Self(leaves[I], Self);
       Association R = reduce(Result, A);
       if (R == Association::Invalid) {
         PrintFatalError(errorPrefixFor(D) +
-                        "has leafs with incompatible association values: " +
+                        "has leaves with incompatible association values: " +
                         getAssocName(A) + " and " + getAssocName(R));
       }
       Result = R;
     }
 
     assert(Result != Association::Invalid);
-    assert(Result != Association::FromLeafs);
+    assert(Result != Association::FromLeaves);
     AsMap.insert(std::make_pair(R, Result));
     return Result;
   };

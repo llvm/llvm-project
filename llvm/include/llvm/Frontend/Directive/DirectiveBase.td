@@ -132,7 +132,7 @@ class Association<string n> {
   string name = n;  // Name of the enum value in enum class Association.
 }
 // All of the AS_Xyz names are recognized by TableGen in order to calculate
-// the association in the AS_FromLeafs case.
+// the association in the AS_FromLeaves case.
 def AS_None : Association<"None"> {}              // No association
 def AS_Block : Association<"Block"> {}            // Block (incl. single
                                                   // statement)
@@ -143,8 +143,8 @@ def AS_Loop : Association<"Loop"> {}              // Loop
 def AS_Separating : Association<"Separating"> {}  // Separates parts of a
                                                   // construct
 
-def AS_FromLeafs : Association<"FromLeafs"> {}    // See below
-// AS_FromLeafs can be used for combined/composite directives, and the actual
+def AS_FromLeaves : Association<"FromLeaves"> {}    // See below
+// AS_FromLeaves can be used for combined/composite directives, and the actual
 // association will be computed based on associations of the leaf constructs:
 //   (x + y) + z = x + (y + z)
 //   x + y = y + x
@@ -153,7 +153,7 @@ def AS_FromLeafs : Association<"FromLeafs"> {}    // See below
 //   AS_Block + AS_Loop = AS_Loop
 // Other combinations are not allowed.
 // This association is not valid for leaf constructs.
-// The name "AS_FromLeafs" is recognized by TableGen, and there is no enum
+// The name "AS_FromLeaves" is recognized by TableGen, and there is no enum
 // generated for it.
 
 // Information about a specific directive.
@@ -183,11 +183,11 @@ class Directive<string d> {
 
   // List of leaf constituent directives in the order in which they appear
   // in the combined/composite directive.
-  list<Directive> leafs = [];
+  list<Directive> leafConstructs = [];
 
   // Set directive used by default when unknown.
   bit isDefault = false;
 
   // What the directive is associated with.
-  Association association = AS_FromLeafs;
+  Association association = AS_FromLeaves;
 }
