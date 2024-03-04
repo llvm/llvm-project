@@ -820,6 +820,15 @@ bool SPIRVGlobalRegistry::isScalarOrVectorOfType(Register VReg,
 }
 
 unsigned
+SPIRVGlobalRegistry::getScalarOrVectorComponentCount(Register VReg) const {
+  if (SPIRVType *Type = getSPIRVTypeForVReg(VReg))
+    return Type->getOpcode() == SPIRV::OpTypeVector
+               ? static_cast<unsigned>(Type->getOperand(2).getImm())
+               : 1;
+  return 0;
+}
+
+unsigned
 SPIRVGlobalRegistry::getScalarOrVectorBitWidth(const SPIRVType *Type) const {
   assert(Type && "Invalid Type pointer");
   if (Type->getOpcode() == SPIRV::OpTypeVector) {

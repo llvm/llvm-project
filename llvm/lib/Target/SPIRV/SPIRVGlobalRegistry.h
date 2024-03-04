@@ -197,6 +197,10 @@ public:
   // opcode (e.g. OpTypeBool, or OpTypeVector %x 4, where %x is OpTypeBool).
   bool isScalarOrVectorOfType(Register VReg, unsigned TypeOpcode) const;
 
+  // Return number of elements in a vector if the given VReg is associated with
+  // a vector type. Return 1 for a scalar type, and 0 for a missing type.
+  unsigned getScalarOrVectorComponentCount(Register VReg) const;
+
   // For vectors or scalars of booleans, integers and floats, return the scalar
   // type's bitwidth. Otherwise calls llvm_unreachable().
   unsigned getScalarOrVectorBitWidth(const SPIRVType *Type) const;

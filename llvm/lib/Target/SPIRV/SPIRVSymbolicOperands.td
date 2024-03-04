@@ -297,6 +297,7 @@ defm SPV_INTEL_fpga_argument_interfaces : ExtensionOperand<102>;
 defm SPV_INTEL_optnone : ExtensionOperand<103>;
 defm SPV_INTEL_function_pointers : ExtensionOperand<104>;
 defm SPV_INTEL_variable_length_array : ExtensionOperand<105>;
+defm SPV_INTEL_bfloat16_conversion : ExtensionOperand<106>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -466,6 +467,7 @@ defm AtomicFloat64MinMaxEXT : CapabilityOperand<5613, 0, 0, [SPV_EXT_shader_atom
 defm VariableLengthArrayINTEL : CapabilityOperand<5817, 0, 0, [SPV_INTEL_variable_length_array], []>;
 defm GroupUniformArithmeticKHR : CapabilityOperand<6400, 0, 0, [SPV_KHR_uniform_group_instructions], []>;
 defm USMStorageClassesINTEL : CapabilityOperand<5935, 0, 0, [SPV_INTEL_usm_storage_classes], [Kernel]>;
+defm BFloat16ConversionINTEL : CapabilityOperand<6115, 0, 0, [SPV_INTEL_bfloat16_conversion], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time

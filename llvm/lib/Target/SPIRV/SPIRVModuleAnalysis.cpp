@@ -1110,6 +1110,13 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpAtomicFMaxEXT:
     AddAtomicFloatRequirements(MI, Reqs, ST);
     break;
+  case SPIRV::OpConvertBF16ToFINTEL:
+  case SPIRV::OpConvertFToBF16INTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_conversion)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_conversion);
+      Reqs.addCapability(SPIRV::Capability::BFloat16ConversionINTEL);
+    }
+    break;
   case SPIRV::OpVariableLengthArrayINTEL:
   case SPIRV::OpSaveMemoryINTEL:
   case SPIRV::OpRestoreMemoryINTEL:
