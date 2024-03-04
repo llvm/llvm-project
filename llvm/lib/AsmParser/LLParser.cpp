@@ -6422,9 +6422,7 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
   // Parse the instructions and debug values in this block until we get a
   // terminator.
   Instruction *Inst;
-  auto DeleteDbgRecord = [](DbgRecord *DR) {
-    DR->deleteRecord();
-  };
+  auto DeleteDbgRecord = [](DbgRecord *DR) { DR->deleteRecord(); };
   using DbgRecordPtr = std::unique_ptr<DbgRecord, decltype(DeleteDbgRecord)>;
   SmallVector<DbgRecordPtr> TrailingDbgRecord;
   do {
@@ -6514,10 +6512,10 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
   if (Lex.getKind() != lltok::DbgRecordType)
     return error(DPVLoc, "expected debug record type here");
   RecordKind RecordType = StringSwitch<RecordKind>(Lex.getStrVal())
-                  .Case("declare", RecordKind::ValueKind)
-                  .Case("value", RecordKind::ValueKind)
-                  .Case("assign", RecordKind::ValueKind)
-                  .Case("label", RecordKind::LabelKind);
+                              .Case("declare", RecordKind::ValueKind)
+                              .Case("value", RecordKind::ValueKind)
+                              .Case("assign", RecordKind::ValueKind)
+                              .Case("label", RecordKind::LabelKind);
 
   // Parsing labels is trivial; parse here and early exit, otherwise go into the
   // full DPValue processing stage.
@@ -6540,9 +6538,9 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
   }
 
   LocType ValueType = StringSwitch<LocType>(Lex.getStrVal())
-                  .Case("declare", LocType::Declare)
-                  .Case("value", LocType::Value)
-                  .Case("assign", LocType::Assign);
+                          .Case("declare", LocType::Declare)
+                          .Case("value", LocType::Value)
+                          .Case("assign", LocType::Assign);
 
   Lex.Lex();
   if (parseToken(lltok::lparen, "Expected '(' here"))
@@ -6600,9 +6598,9 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
 
   if (parseToken(lltok::rparen, "Expected ')' here"))
     return true;
-  DR = DPValue::createUnresolvedDPValue(
-      ValueType, ValLocMD, Variable, Expression, AssignID,
-      AddressLocation, AddressExpression, DebugLoc);
+  DR = DPValue::createUnresolvedDPValue(ValueType, ValLocMD, Variable,
+                                        Expression, AssignID, AddressLocation,
+                                        AddressExpression, DebugLoc);
   return false;
 }
 //===----------------------------------------------------------------------===//

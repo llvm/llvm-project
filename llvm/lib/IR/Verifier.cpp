@@ -684,7 +684,7 @@ void Verifier::visitDbgRecords(Instruction &I) {
           &I);
   CheckDI(!isa<PHINode>(&I) || !I.hasDbgValues(),
           "PHI Node must not have any attached DbgRecords", &I);
-  //for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+  // for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
   for (DbgRecord &DR : I.getDbgValueRange()) {
     CheckDI(DR.getMarker() == I.DbgMarker, "DbgRecord had invalid DbgMarker",
             &I, &DR);

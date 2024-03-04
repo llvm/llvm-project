@@ -138,11 +138,11 @@ DbgRecord::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
   llvm_unreachable("unsupported DbgRecord kind");
 }
 
-
 DPLabel::DPLabel(MDNode *Label, MDNode *DL)
     : DbgRecord(LabelKind, DebugLoc(DL)), Label(Label) {
   assert(Label && "Unexpected nullptr");
-  assert((isa<DILabel>(Label) || Label->isTemporary()) && "Label type must be or resolve to a DILabel");
+  assert((isa<DILabel>(Label) || Label->isTemporary()) &&
+         "Label type must be or resolve to a DILabel");
 }
 DPLabel::DPLabel(DILabel *Label, DebugLoc DL)
     : DbgRecord(LabelKind, DL), Label(Label) {
@@ -156,13 +156,14 @@ DPLabel *DPLabel::createUnresolvedDPLabel(MDNode *Label, MDNode *DL) {
 DPValue::DPValue(DPValue::LocationType Type, Metadata *Val, MDNode *Variable,
                  MDNode *Expression, MDNode *AssignID, Metadata *Address,
                  MDNode *AddressExpression, MDNode *DI)
-    : DbgRecord(ValueKind, DebugLoc(DI)), DebugValueUser({Val, Address, AssignID}), Type(Type), Variable(Variable),
+    : DbgRecord(ValueKind, DebugLoc(DI)),
+      DebugValueUser({Val, Address, AssignID}), Type(Type), Variable(Variable),
       Expression(Expression), AddressExpression(AddressExpression) {}
 
 DPValue *DPValue::createUnresolvedDPValue(DPValue::LocationType Type,
                                           Metadata *Val, MDNode *Variable,
-                                          MDNode *Expression,
-                                          MDNode *AssignID, Metadata *Address,
+                                          MDNode *Expression, MDNode *AssignID,
+                                          Metadata *Address,
                                           MDNode *AddressExpression,
                                           MDNode *DI) {
   return new DPValue(Type, Val, Variable, Expression, AssignID, Address,

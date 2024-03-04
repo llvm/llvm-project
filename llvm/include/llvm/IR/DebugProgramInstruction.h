@@ -227,6 +227,7 @@ class DPLabel : public DbgRecord {
   /// "createUnresolvedDPLabel", which clearly expresses that it is for parsing
   /// only.
   DPLabel(MDNode *Label, MDNode *DL);
+
 public:
   DPLabel(DILabel *Label, DebugLoc DL);
 
@@ -313,8 +314,7 @@ public:
   /// necessary fields are empty or unused fields are not empty, i.e. if the
   /// #dbg_assign fields are used for a non-dbg-assign type.
   static DPValue *createUnresolvedDPValue(LocationType Type, Metadata *Val,
-                                          MDNode *Variable,
-                                          MDNode *Expression,
+                                          MDNode *Variable, MDNode *Expression,
                                           MDNode *AssignID, Metadata *Address,
                                           MDNode *AddressExpression,
                                           MDNode *DI);
