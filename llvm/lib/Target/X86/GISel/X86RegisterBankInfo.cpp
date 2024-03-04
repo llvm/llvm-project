@@ -222,7 +222,7 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FPTRUNC:
   case TargetOpcode::G_FCONSTANT:
     // Instruction having only floating-point operands (all scalars in VECRReg)
-    getInstrPartialMappingIdxs(MI, MRI, /* isFP */ true, OpRegBankIdx);
+    getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ true, OpRegBankIdx);
     break;
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_FPTOSI: {
@@ -235,8 +235,8 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     bool FirstArgIsFP = Opc == TargetOpcode::G_SITOFP;
     bool SecondArgIsFP = Opc == TargetOpcode::G_FPTOSI;
-    OpRegBankIdx[0] = getPartialMappingIdx(MI, Ty0, /* isFP */ FirstArgIsFP);
-    OpRegBankIdx[1] = getPartialMappingIdx(MI, Ty1, /* isFP */ SecondArgIsFP);
+    OpRegBankIdx[0] = getPartialMappingIdx(MI, Ty0, /* isFP= */ FirstArgIsFP);
+    OpRegBankIdx[1] = getPartialMappingIdx(MI, Ty1, /* isFP= */ SecondArgIsFP);
     break;
   }
   case TargetOpcode::G_FCMP: {
@@ -250,7 +250,7 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     (void)Size;
     assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
 
-    auto FpRegBank = getPartialMappingIdx(MI, Ty1, /* isFP */ true);
+    auto FpRegBank = getPartialMappingIdx(MI, Ty1, /* isFP= */ true);
     OpRegBankIdx = {PMI_GPR8,
                     /* Predicate */ PMI_None, FpRegBank, FpRegBank};
     break;
@@ -269,12 +269,12 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         (Ty1.getSizeInBits() == 32 || Ty1.getSizeInBits() == 64) &&
         Opc == TargetOpcode::G_ANYEXT;
 
-    getInstrPartialMappingIdxs(MI, MRI, /* isFP */ isFPTrunc || isFPAnyExt,
+    getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ isFPTrunc || isFPAnyExt,
                                OpRegBankIdx);
   } break;
   default:
     // Track the bank of each register, use NotFP mapping (all scalars in GPRs)
-    getInstrPartialMappingIdxs(MI, MRI, /* isFP */ false, OpRegBankIdx);
+    getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ false, OpRegBankIdx);
     break;
   }
 
@@ -313,7 +313,7 @@ X86RegisterBankInfo::getInstrAlternativeMappings(const MachineInstr &MI) const {
 
     // Track the bank of each register, use FP mapping (all scalars in VEC)
     SmallVector<PartialMappingIdx, 4> OpRegBankIdx(NumOperands);
-    getInstrPartialMappingIdxs(MI, MRI, /* isFP */ true, OpRegBankIdx);
+    getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ true, OpRegBankIdx);
 
     // Finally construct the computed mapping.
     SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);
