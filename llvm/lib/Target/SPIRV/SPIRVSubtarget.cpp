@@ -86,6 +86,10 @@ cl::list<SPIRV::Extension::Extension> Extensions(
             "Allows to use the LinkOnceODR linkage type that is to let "
             "a function or global variable to be merged with other functions "
             "or global variables of the same name when linkage occurs."),
+        clEnumValN(SPIRV::Extension::SPV_INTEL_bfloat16_conversion,
+                   "SPV_INTEL_bfloat16_conversion",
+                   "Adds instructions to convert between single-precision "
+                   "32-bit floating-point values and 16-bit bfloat16 values."),
         clEnumValN(SPIRV::Extension::SPV_KHR_subgroup_rotate,
                    "SPV_KHR_subgroup_rotate",
                    "Adds a new instruction that enables rotating values across "
