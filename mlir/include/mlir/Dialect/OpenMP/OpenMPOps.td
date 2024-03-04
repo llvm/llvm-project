@@ -162,7 +162,7 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
     and how to initialize the copy from the original item in the copy region.
 
     Examples:
-    ---------
+
     * `private(x)` would be emitted as:
     ```mlir
     omp.private {type = private} @x.privatizer : !fir.ref<i32> alloc {
