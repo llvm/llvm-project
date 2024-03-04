@@ -344,21 +344,26 @@ Changes to the LLVM tools
 * Fixed big-endian support in llvm-symbolizer's DWARF location parser.
 * llvm-readelf now supports ``--extra-sym-info`` (``-X``) to display extra
   information (section name) when showing symbols.
-
-* ``llvm-nm`` now supports the ``--line-numbers`` (``-l``) option to use
-  debugging information to print symbols' filenames and line numbers.
+* ``llvm-readobj``/``llvm-readelf`` now supports ``--decompress``/``-z`` with
+  string and hex dump for ELF object files.
 
 * llvm-symbolizer and llvm-addr2line now support addresses specified as symbol names.
 
 * llvm-objcopy now supports ``--gap-fill`` and ``--pad-to`` options, for
   ELF input and binary output files only.
+* ``llvm-objcopy`` now supports ``-O elf64-s390`` for SystemZ.
 
 * Supported parsing XCOFF auxiliary symbols in obj2yaml.
 
 * ``llvm-ranlib`` now supports ``-X`` on AIX to specify the type of object file
   ranlib should examine.
 
+* ``llvm-cxxfilt`` now supports ``--no-params``/``-p`` to skip function
+  parameters.
+
 * ``llvm-nm`` now supports ``--export-symbol`` to ignore the import symbol file.
+* ``llvm-nm`` now supports the ``--line-numbers`` (``-l``) option to use
+  debugging information to print symbols' filenames and line numbers.
 
 * llvm-rc and llvm-windres now accept file path references in ``.rc`` files
   concatenated from multiple string literals.
