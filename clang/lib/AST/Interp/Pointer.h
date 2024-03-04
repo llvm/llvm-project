@@ -215,7 +215,6 @@ public:
       assert(Offset == PastEndMark && "cannot get base of a block");
       return Pointer(Pointee, Base, 0);
     }
-    assert(Offset == Base && "not an inner field");
     unsigned NewBase = Base - getInlineDesc()->Offset;
     return Pointer(Pointee, NewBase, NewBase);
   }
