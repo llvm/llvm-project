@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_TESTUTILS_TIMER_H
-#define LLVM_LIBC_UTILS_TESTUTILS_TIMER_H
+#ifndef LLVM_LIBC_TEST_SRC_MATH_DIFFERENTIAL_TESTING_TIMER_H
+#define LLVM_LIBC_TEST_SRC_MATH_DIFFERENTIAL_TESTING_TIMER_H
 
 #include <stdint.h>
 
@@ -30,4 +30,4 @@ public:
 } // namespace testing
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_UTILS_TESTUTILS_TIMER_H
+#endif // LLVM_LIBC_TEST_SRC_MATH_DIFFERENTIAL_TESTING_TIMER_H

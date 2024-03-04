@@ -205,6 +205,8 @@ LockFileManager::LockFileManager(StringRef FileName)
       S.append(std::string(UniqueLockFileName));
       setError(Out.error(), S);
       sys::fs::remove(UniqueLockFileName);
+      // Don't call report_fatal_error.
+      Out.clear_error();
       return;
     }
   }

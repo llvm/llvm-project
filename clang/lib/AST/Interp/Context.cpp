@@ -41,8 +41,8 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
 }
 
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
-  assert(Stk.empty());
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
+  bool Recursing = !Stk.empty();
+  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue());
 
@@ -51,12 +51,14 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
     return false;
   }
 
-  assert(Stk.empty());
+  if (!Recursing) {
+    assert(Stk.empty());
 #ifndef NDEBUG
-  // Make sure we don't rely on some value being still alive in
-  // InterpStack memory.
-  Stk.clear();
+    // Make sure we don't rely on some value being still alive in
+    // InterpStack memory.
+    Stk.clear();
 #endif
+  }
 
   Result = Res.toAPValue();
 
@@ -64,8 +66,8 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
 }
 
 bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
-  assert(Stk.empty());
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
+  bool Recursing = !Stk.empty();
+  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto Res = C.interpretExpr(E);
   if (Res.isInvalid()) {
@@ -73,20 +75,23 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
     return false;
   }
 
-  assert(Stk.empty());
+  if (!Recursing) {
+    assert(Stk.empty());
 #ifndef NDEBUG
-  // Make sure we don't rely on some value being still alive in
-  // InterpStack memory.
-  Stk.clear();
+    // Make sure we don't rely on some value being still alive in
+    // InterpStack memory.
+    Stk.clear();
 #endif
+  }
+
   Result = Res.toAPValue();
   return true;
 }
 
 bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
                                     APValue &Result) {
-  assert(Stk.empty());
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
+  bool Recursing = !Stk.empty();
+  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
 
   bool CheckGlobalInitialized =
       shouldBeGloballyIndexed(VD) &&
@@ -97,12 +102,14 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
     return false;
   }
 
-  assert(Stk.empty());
+  if (!Recursing) {
+    assert(Stk.empty());
 #ifndef NDEBUG
-  // Make sure we don't rely on some value being still alive in
-  // InterpStack memory.
-  Stk.clear();
+    // Make sure we don't rely on some value being still alive in
+    // InterpStack memory.
+    Stk.clear();
 #endif
+  }
 
   Result = Res.toAPValue();
   return true;
@@ -160,7 +167,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isReferenceType() || T->isPointerType())
     return PT_Ptr;
 
-  if (const auto *AT = dyn_cast<AtomicType>(T))
+  if (const auto *AT = T->getAs<AtomicType>())
     return classify(AT->getValueType());
 
   if (const auto *DT = dyn_cast<DecltypeType>(T))
@@ -217,6 +224,9 @@ const CXXMethodDecl *
 Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
                                const CXXRecordDecl *StaticDecl,
                                const CXXMethodDecl *InitialFunction) const {
+  assert(DynamicDecl);
+  assert(StaticDecl);
+  assert(InitialFunction);
 
   const CXXRecordDecl *CurRecord = DynamicDecl;
   const CXXMethodDecl *FoundFunction = InitialFunction;

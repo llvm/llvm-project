@@ -364,37 +364,37 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"copysign", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"copysignf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"copysignl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
-          GuardedFunctionSpec<"copysignf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
+          GuardedFunctionSpec<"copysignf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"ceil", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"ceilf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"ceill", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
-          GuardedFunctionSpec<"ceilf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
+          GuardedFunctionSpec<"ceilf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"fabs", RetValSpec<DoubleType>, [ArgSpec<DoubleType>], [ConstAttr]>,
           FunctionSpec<"fabsf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"fabsl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
-          GuardedFunctionSpec<"fabsf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
+          GuardedFunctionSpec<"fabsf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"fdim", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"fdimf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"fdiml", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
-          GuardedFunctionSpec<"fdimf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
+          GuardedFunctionSpec<"fdimf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"floor", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"floorf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"floorl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
-          GuardedFunctionSpec<"floorf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
+          GuardedFunctionSpec<"floorf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"fmin", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"fminf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"fminl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
-          GuardedFunctionSpec<"fminf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
+          GuardedFunctionSpec<"fminf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"fmax", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"fmaxf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"fmaxl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
-          GuardedFunctionSpec<"fmaxf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
+          GuardedFunctionSpec<"fmaxf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"fma", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"fmaf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>, ArgSpec<FloatType>]>,
@@ -406,7 +406,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"frexp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntPtr>]>,
           FunctionSpec<"frexpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntPtr>]>,
           FunctionSpec<"frexpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntPtr>]>,
-          GuardedFunctionSpec<"frexpf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<IntPtr>], "LIBC_COMPILER_HAS_FLOAT128">,
+          GuardedFunctionSpec<"frexpf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<IntPtr>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"hypot", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"hypotf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
@@ -414,11 +414,17 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"ilogb", RetValSpec<IntType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"ilogbf", RetValSpec<IntType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"ilogbl", RetValSpec<IntType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"ilogbf128", RetValSpec<IntType>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+
+          FunctionSpec<"llogb", RetValSpec<LongType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"llogbf", RetValSpec<LongType>, [ArgSpec<FloatType>]>,
+          FunctionSpec<"llogbl", RetValSpec<LongType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"llogbf128", RetValSpec<LongType>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"ldexp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>]>,
           FunctionSpec<"ldexpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>]>,
           FunctionSpec<"ldexpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>]>,
-          GuardedFunctionSpec<"ldexpf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FLOAT128">,
+          GuardedFunctionSpec<"ldexpf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<IntType>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"log10", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"log10f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
@@ -435,6 +441,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"logb", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"logbf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"logbl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"logbf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"modf", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoublePtr>]>,
           FunctionSpec<"modff", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatPtr>]>,
@@ -469,7 +476,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"round", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"roundf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"roundl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
-          GuardedFunctionSpec<"roundf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
+          GuardedFunctionSpec<"roundf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"lround", RetValSpec<LongType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"lroundf", RetValSpec<LongType>, [ArgSpec<FloatType>]>,
@@ -494,12 +501,12 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"sqrt", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"sqrtf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"sqrtl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
-          GuardedFunctionSpec<"sqrtf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
+          GuardedFunctionSpec<"sqrtf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"trunc", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"truncf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"truncl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
-          GuardedFunctionSpec<"truncf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
+          GuardedFunctionSpec<"truncf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"nearbyint", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"nearbyintf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
@@ -790,7 +797,10 @@ def StdC : StandardSpec<"stdc"> {
         Macro<"stdc_first_leading_zero">,
         Macro<"stdc_first_leading_one">,
         Macro<"stdc_first_trailing_zero">,
-        Macro<"stdc_first_trailing_one">
+        Macro<"stdc_first_trailing_one">,
+        Macro<"stdc_count_zeros">,
+        Macro<"stdc_count_ones">,
+        Macro<"stdc_has_single_bit">
       ], // Macros
       [], // Types
       [], // Enumerations
@@ -829,7 +839,22 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"stdc_first_trailing_one_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
           FunctionSpec<"stdc_first_trailing_one_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
           FunctionSpec<"stdc_first_trailing_one_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
-          FunctionSpec<"stdc_first_trailing_one_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>
+          FunctionSpec<"stdc_first_trailing_one_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>,
+          FunctionSpec<"stdc_count_zeros_uc", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_count_zeros_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_count_zeros_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_count_zeros_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_count_zeros_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>,
+          FunctionSpec<"stdc_count_ones_uc", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_count_ones_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_count_ones_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_count_ones_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_count_ones_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>,
+          FunctionSpec<"stdc_has_single_bit_uc", RetValSpec<BoolType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_has_single_bit_us", RetValSpec<BoolType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_has_single_bit_ui", RetValSpec<BoolType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_has_single_bit_ul", RetValSpec<BoolType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_has_single_bit_ull", RetValSpec<BoolType>, [ArgSpec<UnsignedLongLongType>]>
       ] // Functions
   >;
 

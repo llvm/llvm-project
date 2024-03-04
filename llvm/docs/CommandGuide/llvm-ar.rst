@@ -262,8 +262,9 @@ Other
 .. option:: --format=<type>
 
  This option allows for default, gnu, darwin or bsd ``<type>`` to be selected.
- When creating an ``archive``, ``<type>`` will default to that of the host
- machine.
+ When creating an ``archive`` with the default ``<type>``, :program:``llvm-ar``
+ will attempt to infer it from the input files and fallback to the default
+ toolchain target if unable to do so.
 
 .. option:: -h, --help
 

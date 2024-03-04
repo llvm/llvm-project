@@ -414,6 +414,26 @@ struct FormatStyle {
   /// \version 17
   ShortCaseStatementsAlignmentStyle AlignConsecutiveShortCaseStatements;
 
+  /// Style of aligning consecutive TableGen cond operator colons.
+  /// Align the colons of cases inside !cond operators.
+  /// \code
+  ///   !cond(!eq(size, 1) : 1,
+  ///         !eq(size, 16): 1,
+  ///         true         : 0)
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenCondOperatorColons;
+
+  /// Style of aligning consecutive TableGen definition colons.
+  /// This aligns the inheritance colons of consecutive definitions.
+  /// \code
+  ///   def Def       : Parent {}
+  ///   def DefDef    : Parent {}
+  ///   def DefDefDef : Parent {}
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenDefinitionColons;
+
   /// Different styles for aligning escaped newlines.
   enum EscapedNewlineAlignmentStyle : int8_t {
     /// Don't align escaped newlines.
@@ -4805,6 +4825,10 @@ struct FormatStyle {
            AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
            AlignConsecutiveShortCaseStatements ==
                R.AlignConsecutiveShortCaseStatements &&
+           AlignConsecutiveTableGenCondOperatorColons ==
+               R.AlignConsecutiveTableGenCondOperatorColons &&
+           AlignConsecutiveTableGenDefinitionColons ==
+               R.AlignConsecutiveTableGenDefinitionColons &&
            AlignEscapedNewlines == R.AlignEscapedNewlines &&
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&

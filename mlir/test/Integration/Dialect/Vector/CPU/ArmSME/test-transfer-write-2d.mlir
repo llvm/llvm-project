@@ -51,7 +51,7 @@ func.func @transfer_write_2d_mask_transposed(%A : memref<?x?xf32>, %base1: index
 func.func @load_and_print(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %0 = vector.load %A[%base1, %base2] : memref<?x?xf32>, vector<[4]x[4]xf32>
 
-  vector.print str "TILE BEGIN:"
+  vector.print str "TILE BEGIN:\n"
   vector.print %0: vector<[4]x[4]xf32>
 
   return
