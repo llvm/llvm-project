@@ -19,11 +19,11 @@
 
 // 'long double' properties.
 #if (LDBL_MANT_DIG == 53)
-#define LIBC_LONG_DOUBLE_IS_FLOAT64
+#define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 #elif (LDBL_MANT_DIG == 64)
-#define LIBC_LONG_DOUBLE_IS_X86_FLOAT80
+#define LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #elif (LDBL_MANT_DIG == 113)
-#define LIBC_LONG_DOUBLE_IS_FLOAT128
+#define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
 #endif
 
 // -- float16 support ---------------------------------------------------------
