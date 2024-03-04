@@ -5,17 +5,16 @@
 #include "output_test.h"
 
 class TestMemoryManager : public benchmark::MemoryManager {
-  void Start() override {}
-  void Stop(Result& result) override {
-    result.num_allocs = 42;
-    result.max_bytes_used = 42000;
+  void Start() BENCHMARK_OVERRIDE {}
+  void Stop(Result* result) BENCHMARK_OVERRIDE {
+    result->num_allocs = 42;
+    result->max_bytes_used = 42000;
   }
 };
 
 void BM_empty(benchmark::State& state) {
   for (auto _ : state) {
-    auto iterations = double(state.iterations()) * double(state.iterations());
-    benchmark::DoNotOptimize(iterations);
+    benchmark::DoNotOptimize(state.iterations());
   }
 }
 BENCHMARK(BM_empty);

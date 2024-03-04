@@ -2,10 +2,10 @@
 """
 import json
 import os
-import re
+import tempfile
 import subprocess
 import sys
-import tempfile
+import functools
 
 # Input file type enumeration
 IT_Invalid = 0
@@ -58,7 +58,7 @@ def classify_input_file(filename):
     """
     Return a tuple (type, msg) where 'type' specifies the classified type
     of 'filename'. If 'type' is 'IT_Invalid' then 'msg' is a human readable
-    string representing the error.
+    string represeting the error.
     """
     ftype = IT_Invalid
     err_msg = None
@@ -72,8 +72,7 @@ def classify_input_file(filename):
         ftype = IT_JSON
     else:
         err_msg = (
-            "'%s' does not name a valid benchmark executable or JSON file"
-            % filename
+            "'%s' does not name a valid benchmark executable or JSON file" % filename
         )
     return ftype, err_msg
 
@@ -114,41 +113,13 @@ def remove_benchmark_flags(prefix, benchmark_flags):
     return [f for f in benchmark_flags if not f.startswith(prefix)]
 
 
-def load_benchmark_results(fname, benchmark_filter):
+def load_benchmark_results(fname):
     """
     Read benchmark output from a file and return the JSON object.
-
-    Apply benchmark_filter, a regular expression, with nearly the same
-    semantics of the --benchmark_filter argument.  May be None.
-    Note: the Python regular expression engine is used instead of the
-    one used by the C++ code, which may produce different results
-    in complex cases.
-
     REQUIRES: 'fname' names a file containing JSON benchmark output.
     """
-
-    def benchmark_wanted(benchmark):
-        if benchmark_filter is None:
-            return True
-        name = benchmark.get("run_name", None) or benchmark["name"]
-        return re.search(benchmark_filter, name) is not None
-
     with open(fname, "r") as f:
-        results = json.load(f)
-        if "context" in results:
-            if "json_schema_version" in results["context"]:
-                json_schema_version = results["context"]["json_schema_version"]
-                if json_schema_version != 1:
-                    print(
-                        "In %s, got unnsupported JSON schema version: %i, expected 1"
-                        % (fname, json_schema_version)
-                    )
-                    sys.exit(1)
-        if "benchmarks" in results:
-            results["benchmarks"] = list(
-                filter(benchmark_wanted, results["benchmarks"])
-            )
-        return results
+        return json.load(f)
 
 
 def sort_benchmark_results(result):
@@ -197,9 +168,7 @@ def run_benchmark(exe_name, benchmark_flags):
         is_temp_output = True
         thandle, output_name = tempfile.mkstemp()
         os.close(thandle)
-        benchmark_flags = list(benchmark_flags) + [
-            "--benchmark_out=%s" % output_name
-        ]
+        benchmark_flags = list(benchmark_flags) + ["--benchmark_out=%s" % output_name]
 
     cmd = [exe_name] + benchmark_flags
     print("RUNNING: %s" % " ".join(cmd))
@@ -207,7 +176,7 @@ def run_benchmark(exe_name, benchmark_flags):
     if exitCode != 0:
         print("TEST FAILED...")
         sys.exit(exitCode)
-    json_res = load_benchmark_results(output_name, None)
+    json_res = load_benchmark_results(output_name)
     if is_temp_output:
         os.unlink(output_name)
     return json_res
@@ -222,10 +191,7 @@ def run_or_load_benchmark(filename, benchmark_flags):
     """
     ftype = check_input_file(filename)
     if ftype == IT_JSON:
-        benchmark_filter = find_benchmark_flag(
-            "--benchmark_filter=", benchmark_flags
-        )
-        return load_benchmark_results(filename, benchmark_filter)
+        return load_benchmark_results(filename)
     if ftype == IT_Executable:
         return run_benchmark(filename, benchmark_flags)
     raise ValueError("Unknown file type %s" % ftype)

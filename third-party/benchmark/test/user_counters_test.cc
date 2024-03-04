@@ -67,8 +67,7 @@ int num_calls1 = 0;
 void BM_Counters_WithBytesAndItemsPSec(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    auto iterations = double(state.iterations()) * double(state.iterations());
-    benchmark::DoNotOptimize(iterations);
+    benchmark::DoNotOptimize(state.iterations());
   }
   state.counters["foo"] = 1;
   state.counters["bar"] = ++num_calls1;
@@ -119,8 +118,7 @@ CHECK_BENCHMARK_RESULTS("BM_Counters_WithBytesAndItemsPSec",
 void BM_Counters_Rate(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    auto iterations = double(state.iterations()) * double(state.iterations());
-    benchmark::DoNotOptimize(iterations);
+    benchmark::DoNotOptimize(state.iterations());
   }
   namespace bm = benchmark;
   state.counters["foo"] = bm::Counter{1, bm::Counter::kIsRate};
@@ -163,8 +161,7 @@ CHECK_BENCHMARK_RESULTS("BM_Counters_Rate", &CheckRate);
 void BM_Invert(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    auto iterations = double(state.iterations()) * double(state.iterations());
-    benchmark::DoNotOptimize(iterations);
+    benchmark::DoNotOptimize(state.iterations());
   }
   namespace bm = benchmark;
   state.counters["foo"] = bm::Counter{0.0001, bm::Counter::kInvert};
@@ -198,14 +195,14 @@ void CheckInvert(Results const& e) {
 CHECK_BENCHMARK_RESULTS("BM_Invert", &CheckInvert);
 
 // ========================================================================= //
-// --------------------- InvertedRate Counters Output ---------------------- //
+// ------------------------- InvertedRate Counters Output
+// -------------------------- //
 // ========================================================================= //
 
 void BM_Counters_InvertedRate(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    auto iterations = double(state.iterations()) * double(state.iterations());
-    benchmark::DoNotOptimize(iterations);
+    benchmark::DoNotOptimize(state.iterations());
   }
   namespace bm = benchmark;
   state.counters["foo"] =
@@ -333,8 +330,7 @@ CHECK_BENCHMARK_RESULTS("BM_Counters_AvgThreads/threads:%int",
 void BM_Counters_AvgThreadsRate(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    auto iterations = double(state.iterations()) * double(state.iterations());
-    benchmark::DoNotOptimize(iterations);
+    benchmark::DoNotOptimize(state.iterations());
   }
   namespace bm = benchmark;
   state.counters["foo"] = bm::Counter{1, bm::Counter::kAvgThreadsRate};
@@ -421,8 +417,7 @@ CHECK_BENCHMARK_RESULTS("BM_Counters_IterationInvariant",
 void BM_Counters_kIsIterationInvariantRate(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    auto iterations = double(state.iterations()) * double(state.iterations());
-    benchmark::DoNotOptimize(iterations);
+    benchmark::DoNotOptimize(state.iterations());
   }
   namespace bm = benchmark;
   state.counters["foo"] =
@@ -465,7 +460,7 @@ CHECK_BENCHMARK_RESULTS("BM_Counters_kIsIterationInvariantRate",
                         &CheckIsIterationInvariantRate);
 
 // ========================================================================= //
-// --------------------- AvgIterations Counters Output --------------------- //
+// ------------------- AvgIterations Counters Output ------------------ //
 // ========================================================================= //
 
 void BM_Counters_AvgIterations(benchmark::State& state) {
@@ -507,14 +502,13 @@ void CheckAvgIterations(Results const& e) {
 CHECK_BENCHMARK_RESULTS("BM_Counters_AvgIterations", &CheckAvgIterations);
 
 // ========================================================================= //
-// ------------------- AvgIterationsRate Counters Output ------------------- //
+// ----------------- AvgIterationsRate Counters Output ---------------- //
 // ========================================================================= //
 
 void BM_Counters_kAvgIterationsRate(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    auto iterations = double(state.iterations()) * double(state.iterations());
-    benchmark::DoNotOptimize(iterations);
+    benchmark::DoNotOptimize(state.iterations());
   }
   namespace bm = benchmark;
   state.counters["foo"] = bm::Counter{1, bm::Counter::kAvgIterationsRate};

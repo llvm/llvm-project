@@ -1,7 +1,3 @@
-"""
-This file contains some build definitions for C++ extensions used in the Google Benchmark Python bindings.
-"""
-
 _SHARED_LIB_SUFFIX = {
     "//conditions:default": ".so",
     "//:windows": ".dll",
@@ -12,8 +8,8 @@ def py_extension(name, srcs, hdrs = [], copts = [], features = [], deps = []):
         shared_lib_name = name + shared_lib_suffix
         native.cc_binary(
             name = shared_lib_name,
-            linkshared = True,
-            linkstatic = True,
+            linkshared = 1,
+            linkstatic = 1,
             srcs = srcs + hdrs,
             copts = copts,
             features = features,

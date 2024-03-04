@@ -5,8 +5,7 @@
 
 void BM_empty(benchmark::State& state) {
   for (auto _ : state) {
-    auto iterations = double(state.iterations()) * double(state.iterations());
-    benchmark::DoNotOptimize(iterations);
+    benchmark::DoNotOptimize(state.iterations());
   }
 }
 BENCHMARK(BM_empty);
@@ -148,7 +147,7 @@ void BM_OneTemplateFunc(benchmark::State& state) {
   auto arg = state.range(0);
   T sum = 0;
   for (auto _ : state) {
-    sum += static_cast<T>(arg);
+    sum += arg;
   }
 }
 BENCHMARK(BM_OneTemplateFunc<int>)->Arg(1);
@@ -160,8 +159,8 @@ void BM_TwoTemplateFunc(benchmark::State& state) {
   A sum = 0;
   B prod = 1;
   for (auto _ : state) {
-    sum += static_cast<A>(arg);
-    prod *= static_cast<B>(arg);
+    sum += arg;
+    prod *= arg;
   }
 }
 BENCHMARK(BM_TwoTemplateFunc<int, double>)->Arg(1);

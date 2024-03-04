@@ -1,7 +1,19 @@
-# Require CMake 3.10. If available, use the policies up to CMake 3.22.
-cmake_minimum_required (VERSION 3.10...3.22)
+cmake_minimum_required (VERSION 3.5.1)
 
-project (benchmark VERSION 1.8.3 LANGUAGES CXX)
+foreach(p
+    CMP0048 # OK to clear PROJECT_VERSION on project()
+    CMP0054 # CMake 3.1
+    CMP0056 # export EXE_LINKER_FLAGS to try_run
+    CMP0057 # Support no if() IN_LIST operator
+    CMP0063 # Honor visibility properties for all targets
+    CMP0077 # Allow option() overrides in importing projects
+    )
+  if(POLICY ${p})
+    cmake_policy(SET ${p} NEW)
+  endif()
+endforeach()
+
+project (benchmark VERSION 1.6.0 LANGUAGES CXX)
 
 option(BENCHMARK_ENABLE_TESTING "Enable testing of the benchmark library." ON)
 option(BENCHMARK_ENABLE_EXCEPTIONS "Enable the use of exceptions in the benchmark library." ON)
@@ -14,14 +26,11 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "PGI")
   # PGC++ maybe reporting false positives.
   set(BENCHMARK_ENABLE_WERROR OFF)
 endif()
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "NVHPC")
-  set(BENCHMARK_ENABLE_WERROR OFF)
-endif()
 if(BENCHMARK_FORCE_WERROR)
   set(BENCHMARK_ENABLE_WERROR ON)
 endif(BENCHMARK_FORCE_WERROR)
 
-if(NOT (MSVC OR CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC"))
+if(NOT MSVC)
   option(BENCHMARK_BUILD_32_BITS "Build a 32 bit version of the library." OFF)
 else()
   set(BENCHMARK_BUILD_32_BITS OFF CACHE BOOL "Build a 32 bit version of the library - unsupported when using MSVC)" FORCE)
@@ -41,11 +50,8 @@ option(BENCHMARK_USE_BUNDLED_GTEST "Use bundled GoogleTest. If disabled, the fin
 
 option(BENCHMARK_ENABLE_LIBPFM "Enable performance counters provided by libpfm" OFF)
 
-# Export only public symbols
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
-
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+if(MSVC)
     # As of CMake 3.18, CMAKE_SYSTEM_PROCESSOR is not set properly for MSVC and
     # cross-compilation (e.g. Host=x86_64, target=aarch64) requires using the
     # undocumented, but working variable.
@@ -66,7 +72,7 @@ function(should_enable_assembly_tests)
       return()
     endif()
   endif()
-  if (MSVC OR CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+  if (MSVC)
     return()
   elseif(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
     return()
@@ -105,48 +111,28 @@ get_git_version(GIT_VERSION)
 # If no git version can be determined, use the version
 # from the project() command
 if ("${GIT_VERSION}" STREQUAL "0.0.0")
-  set(VERSION "v${benchmark_VERSION}")
+  set(VERSION "${benchmark_VERSION}")
 else()
   set(VERSION "${GIT_VERSION}")
 endif()
-
-# Normalize version: drop "v" prefix, replace first "-" with ".",
-# drop everything after second "-" (including said "-").
-string(STRIP ${VERSION} VERSION)
-if(VERSION MATCHES v[^-]*-)
-   string(REGEX REPLACE "v([^-]*)-([0-9]+)-.*" "\\1.\\2"  NORMALIZED_VERSION ${VERSION})
-else()
-   string(REGEX REPLACE "v(.*)" "\\1" NORMALIZED_VERSION ${VERSION})
-endif()
-
 # Tell the user what versions we are using
-message(STATUS "Google Benchmark version: ${VERSION}, normalized to ${NORMALIZED_VERSION}")
+message(STATUS "Version: ${VERSION}")
 
 # The version of the libraries
-set(GENERIC_LIB_VERSION ${NORMALIZED_VERSION})
-string(SUBSTRING ${NORMALIZED_VERSION} 0 1 GENERIC_LIB_SOVERSION)
+set(GENERIC_LIB_VERSION ${VERSION})
+string(SUBSTRING ${VERSION} 0 1 GENERIC_LIB_SOVERSION)
 
 # Import our CMake modules
-include(AddCXXCompilerFlag)
 include(CheckCXXCompilerFlag)
-include(CheckLibraryExists)
+include(AddCXXCompilerFlag)
 include(CXXFeatureCheck)
+include(CheckLibraryExists)
 
 check_library_exists(rt shm_open "" HAVE_LIB_RT)
 
 if (BENCHMARK_BUILD_32_BITS)
   add_required_cxx_compiler_flag(-m32)
 endif()
-
-if (MSVC OR CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
-  set(BENCHMARK_CXX_STANDARD 14)
-else()
-  set(BENCHMARK_CXX_STANDARD 11)
-endif()
-
-set(CMAKE_CXX_STANDARD ${BENCHMARK_CXX_STANDARD})
-set(CMAKE_CXX_STANDARD_REQUIRED YES)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
 if (MSVC)
   # Turn compiler warnings up to 11
@@ -180,18 +166,21 @@ if (MSVC)
     set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "${CMAKE_EXE_LINKER_FLAGS_MINSIZEREL} /LTCG")
   endif()
 else()
-  # Turn on Large-file Support
-  add_definitions(-D_FILE_OFFSET_BITS=64)
-  add_definitions(-D_LARGEFILE64_SOURCE)
-  add_definitions(-D_LARGEFILE_SOURCE)
+  # Try and enable C++11. Don't use C++14 because it doesn't work in some
+  # configurations.
+  add_cxx_compiler_flag(-std=c++11)
+  if (NOT HAVE_CXX_FLAG_STD_CXX11)
+    add_cxx_compiler_flag(-std=c++0x)
+  endif()
+
   # Turn compiler warnings up to 11
   add_cxx_compiler_flag(-Wall)
   add_cxx_compiler_flag(-Wextra)
   add_cxx_compiler_flag(-Wshadow)
-  add_cxx_compiler_flag(-Wfloat-equal)
-  add_cxx_compiler_flag(-Wold-style-cast)
   if(BENCHMARK_ENABLE_WERROR)
-      add_cxx_compiler_flag(-Werror)
+      add_cxx_compiler_flag(-Werror RELEASE)
+      add_cxx_compiler_flag(-Werror RELWITHDEBINFO)
+      add_cxx_compiler_flag(-Werror MINSIZEREL)
   endif()
   if (NOT BENCHMARK_ENABLE_TESTING)
     # Disable warning when compiling tests as gtest does not use 'override'.
@@ -204,23 +193,24 @@ else()
   # Disable warnings regarding deprecated parts of the library while building
   # and testing those parts of the library.
   add_cxx_compiler_flag(-Wno-deprecated-declarations)
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "Intel" OR CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
     # Intel silently ignores '-Wno-deprecated-declarations',
     # warning no. 1786 must be explicitly disabled.
     # See #631 for rationale.
     add_cxx_compiler_flag(-wd1786)
-    add_cxx_compiler_flag(-fno-finite-math-only)
   endif()
   # Disable deprecation warnings for release builds (when -Werror is enabled).
   if(BENCHMARK_ENABLE_WERROR)
-      add_cxx_compiler_flag(-Wno-deprecated)
+      add_cxx_compiler_flag(-Wno-deprecated RELEASE)
+      add_cxx_compiler_flag(-Wno-deprecated RELWITHDEBINFO)
+      add_cxx_compiler_flag(-Wno-deprecated MINSIZEREL)
   endif()
   if (NOT BENCHMARK_ENABLE_EXCEPTIONS)
     add_cxx_compiler_flag(-fno-exceptions)
   endif()
 
   if (HAVE_CXX_FLAG_FSTRICT_ALIASING)
-    if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Intel" AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM") #ICC17u2: Many false positives for Wstrict-aliasing
+    if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Intel") #ICC17u2: Many false positives for Wstrict-aliasing
       add_cxx_compiler_flag(-Wstrict-aliasing)
     endif()
   endif()
@@ -229,12 +219,12 @@ else()
   add_cxx_compiler_flag(-wd654)
   add_cxx_compiler_flag(-Wthread-safety)
   if (HAVE_CXX_FLAG_WTHREAD_SAFETY)
-    cxx_feature_check(THREAD_SAFETY_ATTRIBUTES "-DINCLUDE_DIRECTORIES=${PROJECT_SOURCE_DIR}/include")
+    cxx_feature_check(THREAD_SAFETY_ATTRIBUTES)
   endif()
 
   # On most UNIX like platforms g++ and clang++ define _GNU_SOURCE as a
   # predefined macro, which turns on all of the wonderful libc extensions.
-  # However g++ doesn't do this in Cygwin so we have to define it ourselves
+  # However g++ doesn't do this in Cygwin so we have to define it ourselfs
   # since we depend on GNU/POSIX/BSD extensions.
   if (CYGWIN)
     add_definitions(-D_GNU_SOURCE=1)
@@ -285,8 +275,7 @@ if (BENCHMARK_USE_LIBCXX)
   if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     add_cxx_compiler_flag(-stdlib=libc++)
   elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR
-          "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel" OR
-          "${CMAKE_CXX_COMPILER_ID}" STREQUAL "IntelLLVM")
+          "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
     add_cxx_compiler_flag(-nostdinc++)
     message(WARNING "libc++ header path must be manually specified using CMAKE_CXX_FLAGS")
     # Adding -nodefaultlibs directly to CMAKE_<TYPE>_LINKER_FLAGS will break
@@ -323,10 +312,9 @@ cxx_feature_check(STEADY_CLOCK)
 # Ensure we have pthreads
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-cxx_feature_check(PTHREAD_AFFINITY)
 
 if (BENCHMARK_ENABLE_LIBPFM)
-  find_package(PFM REQUIRED)
+  find_package(PFM)
 endif()
 
 # Set up directories

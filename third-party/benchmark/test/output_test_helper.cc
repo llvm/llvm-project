@@ -45,7 +45,7 @@ SubMap& GetSubstitutions() {
   static SubMap map = {
       {"%float", "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?"},
       // human-readable float
-      {"%hrfloat", "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?[kKMGTPEZYmunpfazy]?i?"},
+      {"%hrfloat", "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?[kMGTPEZYmunpfazy]?"},
       {"%percentage", percentage_re},
       {"%int", "[ ]*[0-9]+"},
       {" %s ", "[ ]+"},
@@ -65,7 +65,6 @@ SubMap& GetSubstitutions() {
       {"%csv_us_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",us,,,,,"},
       {"%csv_ms_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ms,,,,,"},
       {"%csv_s_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",s,,,,,"},
-      {"%csv_cv_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",,,,,,"},
       {"%csv_bytes_report",
        "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ns," + safe_dec_re + ",,,,"},
       {"%csv_items_report",
@@ -144,7 +143,7 @@ class TestReporter : public benchmark::BenchmarkReporter {
   TestReporter(std::vector<benchmark::BenchmarkReporter*> reps)
       : reporters_(std::move(reps)) {}
 
-  bool ReportContext(const Context& context) override {
+  virtual bool ReportContext(const Context& context) BENCHMARK_OVERRIDE {
     bool last_ret = false;
     bool first = true;
     for (auto rep : reporters_) {
@@ -158,10 +157,10 @@ class TestReporter : public benchmark::BenchmarkReporter {
     return last_ret;
   }
 
-  void ReportRuns(const std::vector<Run>& report) override {
+  void ReportRuns(const std::vector<Run>& report) BENCHMARK_OVERRIDE {
     for (auto rep : reporters_) rep->ReportRuns(report);
   }
-  void Finalize() override {
+  void Finalize() BENCHMARK_OVERRIDE {
     for (auto rep : reporters_) rep->Finalize();
   }
 
@@ -249,8 +248,9 @@ void ResultsChecker::CheckResults(std::stringstream& output) {
       if (!p.regex->Match(r.name)) {
         BM_VLOG(2) << p.regex_str << " is not matched by " << r.name << "\n";
         continue;
+      } else {
+        BM_VLOG(2) << p.regex_str << " is matched by " << r.name << "\n";
       }
-      BM_VLOG(2) << p.regex_str << " is matched by " << r.name << "\n";
       BM_VLOG(1) << "Checking results of " << r.name << ": ... \n";
       p.fn(r);
       BM_VLOG(1) << "Checking results of " << r.name << ": OK.\n";
@@ -300,7 +300,7 @@ std::vector<std::string> ResultsChecker::SplitCsv_(const std::string& line) {
 
 }  // end namespace internal
 
-size_t AddChecker(const std::string& bm_name, const ResultsCheckFn& fn) {
+size_t AddChecker(const char* bm_name, const ResultsCheckFn& fn) {
   auto& rc = internal::GetResultsChecker();
   rc.Add(bm_name, fn);
   return rc.results.size();
@@ -328,18 +328,16 @@ double Results::GetTime(BenchmarkTime which) const {
   BM_CHECK(unit);
   if (*unit == "ns") {
     return val * 1.e-9;
-  }
-  if (*unit == "us") {
+  } else if (*unit == "us") {
     return val * 1.e-6;
-  }
-  if (*unit == "ms") {
+  } else if (*unit == "ms") {
     return val * 1.e-3;
-  }
-  if (*unit == "s") {
+  } else if (*unit == "s") {
     return val;
+  } else {
+    BM_CHECK(1 == 0) << "unknown time unit: " << *unit;
+    return 0;
   }
-  BM_CHECK(1 == 0) << "unknown time unit: " << *unit;
-  return 0;
 }
 
 // ========================================================================= //
@@ -395,14 +393,14 @@ void RunOutputTests(int argc, char* argv[]) {
   benchmark::JSONReporter JR;
   benchmark::CSVReporter CSVR;
   struct ReporterTest {
-    std::string name;
+    const char* name;
     std::vector<TestCase>& output_cases;
     std::vector<TestCase>& error_cases;
     benchmark::BenchmarkReporter& reporter;
     std::stringstream out_stream;
     std::stringstream err_stream;
 
-    ReporterTest(const std::string& n, std::vector<TestCase>& out_tc,
+    ReporterTest(const char* n, std::vector<TestCase>& out_tc,
                  std::vector<TestCase>& err_tc,
                  benchmark::BenchmarkReporter& br)
         : name(n), output_cases(out_tc), error_cases(err_tc), reporter(br) {
@@ -410,12 +408,12 @@ void RunOutputTests(int argc, char* argv[]) {
       reporter.SetErrorStream(&err_stream);
     }
   } TestCases[] = {
-      {std::string("ConsoleReporter"), GetTestCaseList(TC_ConsoleOut),
+      {"ConsoleReporter", GetTestCaseList(TC_ConsoleOut),
        GetTestCaseList(TC_ConsoleErr), CR},
-      {std::string("JSONReporter"), GetTestCaseList(TC_JSONOut),
-       GetTestCaseList(TC_JSONErr), JR},
-      {std::string("CSVReporter"), GetTestCaseList(TC_CSVOut),
-       GetTestCaseList(TC_CSVErr), CSVR},
+      {"JSONReporter", GetTestCaseList(TC_JSONOut), GetTestCaseList(TC_JSONErr),
+       JR},
+      {"CSVReporter", GetTestCaseList(TC_CSVOut), GetTestCaseList(TC_CSVErr),
+       CSVR},
   };
 
   // Create the test reporter and run the benchmarks.
@@ -424,8 +422,7 @@ void RunOutputTests(int argc, char* argv[]) {
   benchmark::RunSpecifiedBenchmarks(&test_rep);
 
   for (auto& rep_test : TestCases) {
-    std::string msg =
-        std::string("\nTesting ") + rep_test.name + std::string(" Output\n");
+    std::string msg = std::string("\nTesting ") + rep_test.name + " Output\n";
     std::string banner(msg.size() - 1, '-');
     std::cout << banner << msg << banner << "\n";
 
@@ -442,7 +439,7 @@ void RunOutputTests(int argc, char* argv[]) {
   // the checks to subscribees.
   auto& csv = TestCases[2];
   // would use == but gcc spits a warning
-  BM_CHECK(csv.name == std::string("CSVReporter"));
+  BM_CHECK(std::strcmp(csv.name, "CSVReporter") == 0);
   internal::GetResultsChecker().CheckResults(csv.out_stream);
 }
 

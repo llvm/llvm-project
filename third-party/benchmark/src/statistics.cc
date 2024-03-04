@@ -32,7 +32,7 @@ auto StatisticsSum = [](const std::vector<double>& v) {
 
 double StatisticsMean(const std::vector<double>& v) {
   if (v.empty()) return 0.0;
-  return StatisticsSum(v) * (1.0 / static_cast<double>(v.size()));
+  return StatisticsSum(v) * (1.0 / v.size());
 }
 
 double StatisticsMedian(const std::vector<double>& v) {
@@ -42,13 +42,13 @@ double StatisticsMedian(const std::vector<double>& v) {
   auto center = copy.begin() + v.size() / 2;
   std::nth_element(copy.begin(), center, copy.end());
 
-  // Did we have an odd number of samples?  If yes, then center is the median.
-  // If not, then we are looking for the average between center and the value
-  // before.  Instead of resorting, we just look for the max value before it,
-  // which is not necessarily the element immediately preceding `center` Since
-  // `copy` is only partially sorted by `nth_element`.
+  // did we have an odd number of samples?
+  // if yes, then center is the median
+  // it no, then we are looking for the average between center and the value
+  // before
   if (v.size() % 2 == 1) return *center;
-  auto center2 = std::max_element(copy.begin(), center);
+  auto center2 = copy.begin() + v.size() / 2 - 1;
+  std::nth_element(copy.begin(), center2, copy.end());
   return (*center + *center2) / 2.0;
 }
 
@@ -71,11 +71,8 @@ double StatisticsStdDev(const std::vector<double>& v) {
   // Sample standard deviation is undefined for n = 1
   if (v.size() == 1) return 0.0;
 
-  const double avg_squares =
-      SumSquares(v) * (1.0 / static_cast<double>(v.size()));
-  return Sqrt(static_cast<double>(v.size()) /
-              (static_cast<double>(v.size()) - 1.0) *
-              (avg_squares - Sqr(mean)));
+  const double avg_squares = SumSquares(v) * (1.0 / v.size());
+  return Sqrt(v.size() / (v.size() - 1.0) * (avg_squares - Sqr(mean)));
 }
 
 double StatisticsCV(const std::vector<double>& v) {
@@ -83,8 +80,6 @@ double StatisticsCV(const std::vector<double>& v) {
 
   const auto stddev = StatisticsStdDev(v);
   const auto mean = StatisticsMean(v);
-
-  if (std::fpclassify(mean) == FP_ZERO) return 0.0;
 
   return stddev / mean;
 }
@@ -94,8 +89,9 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
   typedef BenchmarkReporter::Run Run;
   std::vector<Run> results;
 
-  auto error_count = std::count_if(reports.begin(), reports.end(),
-                                   [](Run const& run) { return run.skipped; });
+  auto error_count =
+      std::count_if(reports.begin(), reports.end(),
+                    [](Run const& run) { return run.error_occurred; });
 
   if (reports.size() - error_count < 2) {
     // We don't report aggregated data if there was a single run.
@@ -122,13 +118,11 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
     for (auto const& cnt : r.counters) {
       auto it = counter_stats.find(cnt.first);
       if (it == counter_stats.end()) {
-        it = counter_stats
-                 .emplace(cnt.first,
-                          CounterStat{cnt.second, std::vector<double>{}})
-                 .first;
+        counter_stats.insert({cnt.first, {cnt.second, std::vector<double>{}}});
+        it = counter_stats.find(cnt.first);
         it->second.s.reserve(reports.size());
       } else {
-        BM_CHECK_EQ(it->second.c.flags, cnt.second.flags);
+        BM_CHECK_EQ(counter_stats[cnt.first].c.flags, cnt.second.flags);
       }
     }
   }
@@ -137,7 +131,7 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
   for (Run const& run : reports) {
     BM_CHECK_EQ(reports[0].benchmark_name(), run.benchmark_name());
     BM_CHECK_EQ(run_iterations, run.iterations);
-    if (run.skipped) continue;
+    if (run.error_occurred) continue;
     real_accumulated_time_stat.emplace_back(run.real_accumulated_time);
     cpu_accumulated_time_stat.emplace_back(run.cpu_accumulated_time);
     // user counters

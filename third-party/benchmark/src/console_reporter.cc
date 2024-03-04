@@ -33,7 +33,6 @@
 
 namespace benchmark {
 
-BENCHMARK_EXPORT
 bool ConsoleReporter::ReportContext(const Context& context) {
   name_field_width_ = context.name_field_width;
   printed_header_ = false;
@@ -42,22 +41,17 @@ bool ConsoleReporter::ReportContext(const Context& context) {
   PrintBasicContext(&GetErrorStream(), context);
 
 #ifdef BENCHMARK_OS_WINDOWS
-  if ((output_options_ & OO_Color)) {
-    auto stdOutBuf = std::cout.rdbuf();
-    auto outStreamBuf = GetOutputStream().rdbuf();
-    if (stdOutBuf != outStreamBuf) {
-      GetErrorStream()
-          << "Color printing is only supported for stdout on windows."
-             " Disabling color printing\n";
-      output_options_ = static_cast<OutputOptions>(output_options_ & ~OO_Color);
-    }
+  if ((output_options_ & OO_Color) && &std::cout != &GetOutputStream()) {
+    GetErrorStream()
+        << "Color printing is only supported for stdout on windows."
+           " Disabling color printing\n";
+    output_options_ = static_cast<OutputOptions>(output_options_ & ~OO_Color);
   }
 #endif
 
   return true;
 }
 
-BENCHMARK_EXPORT
 void ConsoleReporter::PrintHeader(const Run& run) {
   std::string str =
       FormatString("%-*s %13s %15s %12s", static_cast<int>(name_field_width_),
@@ -75,7 +69,6 @@ void ConsoleReporter::PrintHeader(const Run& run) {
   GetOutputStream() << line << "\n" << str << "\n" << line << "\n";
 }
 
-BENCHMARK_EXPORT
 void ConsoleReporter::ReportRuns(const std::vector<Run>& reports) {
   for (const auto& run : reports) {
     // print the header:
@@ -106,9 +99,6 @@ static void IgnoreColorPrint(std::ostream& out, LogColor, const char* fmt,
 }
 
 static std::string FormatTime(double time) {
-  // For the time columns of the console printer 13 digits are reserved. One of
-  // them is a space and max two of them are the time unit (e.g ns). That puts
-  // us at 10 digits usable for the number.
   // Align decimal places...
   if (time < 1.0) {
     return FormatString("%10.3f", time);
@@ -119,15 +109,9 @@ static std::string FormatTime(double time) {
   if (time < 100.0) {
     return FormatString("%10.1f", time);
   }
-  // Assuming the time is at max 9.9999e+99 and we have 10 digits for the
-  // number, we get 10-1(.)-1(e)-1(sign)-2(exponent) = 5 digits to print.
-  if (time > 9999999999 /*max 10 digit number*/) {
-    return FormatString("%1.4e", time);
-  }
   return FormatString("%10.0f", time);
 }
 
-BENCHMARK_EXPORT
 void ConsoleReporter::PrintRunData(const Run& result) {
   typedef void(PrinterFn)(std::ostream&, LogColor, const char*, ...);
   auto& Out = GetOutputStream();
@@ -139,13 +123,9 @@ void ConsoleReporter::PrintRunData(const Run& result) {
   printer(Out, name_color, "%-*s ", name_field_width_,
           result.benchmark_name().c_str());
 
-  if (internal::SkippedWithError == result.skipped) {
+  if (result.error_occurred) {
     printer(Out, COLOR_RED, "ERROR OCCURRED: \'%s\'",
-            result.skip_message.c_str());
-    printer(Out, COLOR_DEFAULT, "\n");
-    return;
-  } else if (internal::SkippedWithMessage == result.skipped) {
-    printer(Out, COLOR_WHITE, "SKIPPED: \'%s\'", result.skip_message.c_str());
+            result.error_message.c_str());
     printer(Out, COLOR_DEFAULT, "\n");
     return;
   }

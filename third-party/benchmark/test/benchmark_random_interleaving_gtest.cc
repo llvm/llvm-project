@@ -51,9 +51,10 @@ class BenchmarkTest : public testing::Test {
   void Execute(const std::string& pattern) {
     queue->Clear();
 
-    std::unique_ptr<BenchmarkReporter> reporter(new NullReporter());
+    BenchmarkReporter* reporter = new NullReporter;
     FLAGS_benchmark_filter = pattern;
-    RunSpecifiedBenchmarks(reporter.get());
+    RunSpecifiedBenchmarks(reporter);
+    delete reporter;
 
     queue->Put("DONE");  // End marker
   }

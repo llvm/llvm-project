@@ -4,12 +4,7 @@
 #include <iostream>
 #include <ostream>
 
-// NOTE: this is also defined in benchmark.h but we're trying to avoid a
-// dependency.
-// The _MSVC_LANG check should detect Visual Studio 2015 Update 3 and newer.
-#if __cplusplus >= 201103L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201103L)
-#define BENCHMARK_HAS_CXX11
-#endif
+#include "benchmark/benchmark.h"
 
 namespace benchmark {
 namespace internal {
@@ -28,16 +23,7 @@ class LogType {
  private:
   LogType(std::ostream* out) : out_(out) {}
   std::ostream* out_;
-
-  // NOTE: we could use BENCHMARK_DISALLOW_COPY_AND_ASSIGN but we shouldn't have
-  // a dependency on benchmark.h from here.
-#ifndef BENCHMARK_HAS_CXX11
-  LogType(const LogType&);
-  LogType& operator=(const LogType&);
-#else
-  LogType(const LogType&) = delete;
-  LogType& operator=(const LogType&) = delete;
-#endif
+  BENCHMARK_DISALLOW_COPY_AND_ASSIGN(LogType);
 };
 
 template <class Tp>
@@ -61,13 +47,13 @@ inline int& LogLevel() {
 }
 
 inline LogType& GetNullLogInstance() {
-  static LogType null_log(static_cast<std::ostream*>(nullptr));
-  return null_log;
+  static LogType log(nullptr);
+  return log;
 }
 
 inline LogType& GetErrorLogInstance() {
-  static LogType error_log(&std::clog);
-  return error_log;
+  static LogType log(&std::clog);
+  return log;
 }
 
 inline LogType& GetLogInstanceForLevel(int level) {
