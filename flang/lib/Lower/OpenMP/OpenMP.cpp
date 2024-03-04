@@ -1121,7 +1121,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
           eleType = refType.getElementType();
 
         // If a variable is specified in declare target link and if device
-        // type is nohost, it needs to be mapped tofrom
+        // type is not specified as `nohost`, it needs to be mapped tofrom
         mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
         mlir::Operation *op = mod.lookupSymbol(converter.mangleName(sym));
         auto declareTargetOp =
