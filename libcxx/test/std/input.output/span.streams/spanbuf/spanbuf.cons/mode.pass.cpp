@@ -28,7 +28,7 @@
 #include "test_convertible.h"
 #include "test_macros.h"
 
-#include "../../types.h"
+#include "../../helper_types.h"
 
 #ifndef TEST_HAS_NO_NASTY_STRING
 void test_sfinae_with_nasty_char() {

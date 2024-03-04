@@ -66,6 +66,7 @@
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <iostream>
+#include <print>
 #include <span>
 #include <streambuf>
 #include <version>
@@ -266,8 +267,14 @@ public:
     requires(!convertible_to<_ROSeq, std::span<_CharT>>) && convertible_to<_ROSeq, std::span<const _CharT>>
   _LIBCPP_HIDE_FROM_ABI explicit basic_ispanstream(_ROSeq&& __s)
       : basic_istream<_CharT, _Traits>(std::addressof(__sb_)) {
+    std::println(stderr, "ispanstream");
     std::span<const _CharT> __sp(std::forward<_ROSeq>(__s));
+    std::println(stderr, "span __sb_ {} {}", __sb_.span().empty(), __sb_.span().size());
+    std::println(stderr, "span data {} {}", __sp.empty(), __sp.size());
+    std::println(stderr, "ispanstream 2");
     this->span(std::span<_CharT>(std::span<_CharT>(const_cast<_CharT*>(__sp.data()), __sp.size())));
+    std::println(stderr, "span __sb_ {} {}", __sb_.span().empty(), __sb_.span().size());
+    std::println(stderr, "ispanstream 3");
   }
 
   basic_ispanstream& operator=(const basic_ispanstream&) = delete;
