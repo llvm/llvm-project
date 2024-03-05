@@ -1918,6 +1918,9 @@ public:
       return b;
     }
 
+    mlir::cir::ReturnOp buildReturn(mlir::Location loc);
+    void buildImplicitReturn();
+
   public:
     void updateCurrentSwitchCaseRegion() { CurrentSwitchRegionIdx++; }
     llvm::ArrayRef<mlir::Block *> getRetBlocks() { return RetBlocks; }
