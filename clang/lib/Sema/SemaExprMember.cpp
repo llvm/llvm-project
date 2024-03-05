@@ -845,16 +845,6 @@ Sema::BuildMemberReferenceExpr(Expr *Base, QualType BaseType,
                                const TemplateArgumentListInfo *TemplateArgs,
                                const Scope *S,
                                ActOnMemberAccessExtraArgs *ExtraArgs) {
-  #if 0
-  if (BaseType->isDependentType() ||
-      (SS.isSet() && isDependentScopeSpecifier(SS)) ||
-      NameInfo.getName().isDependentName())
-    return ActOnDependentMemberExpr(Base, BaseType,
-                                    IsArrow, OpLoc,
-                                    SS, TemplateKWLoc, FirstQualifierInScope,
-                                    NameInfo, TemplateArgs);
-  #endif
-
   LookupResult R(*this, NameInfo, LookupMemberName);
 
   // Implicit member accesses.
@@ -1868,15 +1858,6 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
   ExprResult Result = MaybeConvertParenListExprToParenExpr(S, Base);
   if (Result.isInvalid()) return ExprError();
   Base = Result.get();
-
-  #if 0
-  if (Base->getType()->isDependentType() || Name.isDependentName() ||
-      isDependentScopeSpecifier(SS)) {
-    return ActOnDependentMemberExpr(Base, Base->getType(), IsArrow, OpLoc, SS,
-                                    TemplateKWLoc, FirstQualifierInScope,
-                                    NameInfo, TemplateArgs);
-  }
-  #endif
 
   ActOnMemberAccessExtraArgs ExtraArgs = {S, Id, ObjCImpDecl};
   ExprResult Res = BuildMemberReferenceExpr(
