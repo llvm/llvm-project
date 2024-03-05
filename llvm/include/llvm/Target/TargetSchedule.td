@@ -620,7 +620,7 @@ class SecondFusionPredicateWithMCInstPredicate<MCInstPredicate pred>
   : FusionPredicateWithMCInstPredicate<second_fusion_target, pred>;
 // The pred will be applied on both firstMI and secondMI.
 class BothFusionPredicateWithMCInstPredicate<MCInstPredicate pred>
-  : FusionPredicateWithMCInstPredicate<second_fusion_target, pred>;
+  : FusionPredicateWithMCInstPredicate<both_fusion_target, pred>;
 
 // Tie firstOpIdx and secondOpIdx. The operand of `FirstMI` at position
 // `firstOpIdx` should be the same as the operand of `SecondMI` at position
