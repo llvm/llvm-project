@@ -211,8 +211,9 @@ or `D3D12_ROOT_SIGNATURE_DESC1 (for rootsig_1_1)
 <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_signature_desc1>`_ 
 structure in the Direct3D 12 API. (With the pointers translated to offsets.)
 
-DXC implementation of the serialization could be find `here
-<https://github.com/microsoft/DirectXShaderCompiler/blob/main/lib/DxilRootSignature/DxilRootSignatureSerializer.cpp#L41>`_
+TODO: replace the following link with actual serialized format. 
+    DXC implementation of the serialization could be find `here
+    <https://github.com/microsoft/DirectXShaderCompiler/blob/main/lib/DxilRootSignature/DxilRootSignatureSerializer.cpp#L41>`_
 
 Implementation Details
 ======================
