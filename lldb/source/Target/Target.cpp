@@ -4886,9 +4886,9 @@ bool TargetProperties::GetSwiftAllowExplicitModules() const {
   if (exp_values)
     return exp_values
         ->GetPropertyAtIndexAs<bool>(ePropertySwiftAllowExplicitModules)
-        .value_or(false);
+        .value_or(true);
 
-  return false;
+  return true;
 }
 
 Args TargetProperties::GetSwiftPluginServerForPath() const {

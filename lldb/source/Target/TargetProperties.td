@@ -31,7 +31,7 @@ let Definition = "target_experimental" in {
     DefaultFalse,
     Desc<"Read full debug information from DWARF for Swift debugging, whenever possible">;
   def SwiftAllowExplicitModules: Property<"swift-allow-explicit-modules", "Boolean">,
-    DefaultFalse,
+    DefaultTrue,
     Desc<"Allows explicit module flags to be passed through to ClangImporter.">;
 }
 
