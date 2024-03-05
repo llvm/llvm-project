@@ -323,22 +323,6 @@ void CIRGenFunction::LexicalScope::cleanup() {
   auto &builder = CGF.builder;
   auto *localScope = CGF.currLexScope;
 
-  auto buildReturn = [&](mlir::Location loc) {
-    // If we are on a coroutine, add the coro_end builtin call.
-    auto Fn = dyn_cast<mlir::cir::FuncOp>(CGF.CurFn);
-    assert(Fn && "other callables NYI");
-    if (Fn.getCoroutine())
-      CGF.buildCoroEndBuiltinCall(
-          loc, builder.getNullPtr(builder.getVoidPtrTy(), loc));
-
-    if (CGF.FnRetCIRTy.has_value()) {
-      // If there's anything to return, load it first.
-      auto val = builder.create<LoadOp>(loc, *CGF.FnRetCIRTy, *CGF.FnRetAlloca);
-      return builder.create<ReturnOp>(loc, llvm::ArrayRef(val.getResult()));
-    }
-    return builder.create<ReturnOp>(loc);
-  };
-
   // Handle pending gotos and the solved labels in this scope.
   while (!localScope->PendingGotos.empty()) {
     auto gotoInfo = localScope->PendingGotos.back();
@@ -381,15 +365,18 @@ void CIRGenFunction::LexicalScope::cleanup() {
     // Leverage and defers to RunCleanupsScope's dtor and scope handling.
     applyCleanup();
 
-    if (localScope->Depth != 0) { // end of any local scope != function
-      // Ternary ops have to deal with matching arms for yielding types
-      // and do return a value, it must do its own cir.yield insertion.
-      if (!localScope->isTernary()) {
-        !retVal ? builder.create<YieldOp>(localScope->EndLoc)
-                : builder.create<YieldOp>(localScope->EndLoc, retVal);
-      }
-    } else
-      (void)buildReturn(localScope->EndLoc);
+    if (localScope->Depth == 0) {
+      buildImplicitReturn();
+      return;
+    }
+
+    // End of any local scope != function
+    // Ternary ops have to deal with matching arms for yielding types
+    // and do return a value, it must do its own cir.yield insertion.
+    if (!localScope->isTernary()) {
+      !retVal ? builder.create<YieldOp>(localScope->EndLoc)
+              : builder.create<YieldOp>(localScope->EndLoc, retVal);
+    }
   };
 
   // If a cleanup block has been created at some point, branch to it
@@ -432,6 +419,64 @@ void CIRGenFunction::LexicalScope::cleanup() {
 
   // No pre-existent cleanup block, emit cleanup code and yield/return.
   insertCleanupAndLeave(currBlock);
+}
+
+mlir::cir::ReturnOp
+CIRGenFunction::LexicalScope::buildReturn(mlir::Location loc) {
+  auto &builder = CGF.getBuilder();
+
+  // If we are on a coroutine, add the coro_end builtin call.
+  auto Fn = dyn_cast<mlir::cir::FuncOp>(CGF.CurFn);
+  assert(Fn && "other callables NYI");
+  if (Fn.getCoroutine())
+    CGF.buildCoroEndBuiltinCall(
+        loc, builder.getNullPtr(builder.getVoidPtrTy(), loc));
+
+  if (CGF.FnRetCIRTy.has_value()) {
+    // If there's anything to return, load it first.
+    auto val = builder.create<LoadOp>(loc, *CGF.FnRetCIRTy, *CGF.FnRetAlloca);
+    return builder.create<ReturnOp>(loc, llvm::ArrayRef(val.getResult()));
+  }
+  return builder.create<ReturnOp>(loc);
+}
+
+void CIRGenFunction::LexicalScope::buildImplicitReturn() {
+  auto &builder = CGF.getBuilder();
+  auto *localScope = CGF.currLexScope;
+
+  const auto *FD = cast<clang::FunctionDecl>(CGF.CurGD.getDecl());
+
+  // C++11 [stmt.return]p2:
+  //   Flowing off the end of a function [...] results in undefined behavior
+  //   in a value-returning function.
+  // C11 6.9.1p12:
+  //   If the '}' that terminates a function is reached, and the value of the
+  //   function call is used by the caller, the behavior is undefined.
+  if (CGF.getLangOpts().CPlusPlus && !FD->hasImplicitReturnZero() &&
+      !CGF.SawAsmBlock && !FD->getReturnType()->isVoidType() &&
+      builder.getInsertionBlock()) {
+    bool shouldEmitUnreachable = CGF.CGM.getCodeGenOpts().StrictReturn ||
+                                 !CGF.CGM.MayDropFunctionReturn(
+                                     FD->getASTContext(), FD->getReturnType());
+
+    if (CGF.SanOpts.has(SanitizerKind::Return)) {
+      assert(!UnimplementedFeature::sanitizerReturn());
+      llvm_unreachable("NYI");
+    } else if (shouldEmitUnreachable) {
+      if (CGF.CGM.getCodeGenOpts().OptimizationLevel == 0) {
+        // TODO: buildTrapCall(llvm::Intrinsic::trap);
+        assert(!UnimplementedFeature::trap());
+      }
+    }
+
+    if (CGF.SanOpts.has(SanitizerKind::Return) || shouldEmitUnreachable) {
+      builder.create<mlir::cir::UnreachableOp>(localScope->EndLoc);
+      builder.clearInsertionPoint();
+      return;
+    }
+  }
+
+  (void)buildReturn(localScope->EndLoc);
 }
 
 void CIRGenFunction::finishFunction(SourceLocation EndLoc) {
@@ -660,31 +705,6 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
 
   if (mlir::failed(Fn.verifyBody()))
     return nullptr;
-
-  // C++11 [stmt.return]p2:
-  //   Flowing off the end of a function [...] results in undefined behavior
-  //   in a value-returning function.
-  // C11 6.9.1p12:
-  //   If the '}' that terminates a function is reached, and the value of the
-  //   function call is used by the caller, the behavior is undefined.
-  if (getLangOpts().CPlusPlus && !FD->hasImplicitReturnZero() && !SawAsmBlock &&
-      !FD->getReturnType()->isVoidType() && builder.getInsertionBlock()) {
-    bool shouldEmitUnreachable =
-        CGM.getCodeGenOpts().StrictReturn ||
-        !CGM.MayDropFunctionReturn(FD->getASTContext(), FD->getReturnType());
-
-    if (SanOpts.has(SanitizerKind::Return)) {
-      llvm_unreachable("NYI");
-    } else if (shouldEmitUnreachable) {
-      if (CGM.getCodeGenOpts().OptimizationLevel == 0)
-        ; // TODO: buildTrapCall(llvm::Intrinsic::trap);
-    }
-    if (SanOpts.has(SanitizerKind::Return) || shouldEmitUnreachable) {
-      // TODO: builder.createUnreachable();
-      assert(!UnimplementedFeature::unreachableOp());
-      builder.clearInsertionPoint();
-    }
-  }
 
   // Emit the standard function epilogue.
   finishFunction(BodyRange.getEnd());
