@@ -1609,7 +1609,12 @@ struct CStructNoUniqueAddress2 {
   [[no_unique_address]] int two;
 };
 
-struct CStructAlignment {
+struct alignas(64) CStructAlignment {
+  int one;
+  int two;
+};
+
+struct CStructAlignedMembers {
   int one;
   alignas(16) int two;
 };
@@ -1711,13 +1716,17 @@ void is_layout_compatible(int n)
 {
   static_assert(__is_layout_compatible(void, void), "");
   static_assert(!__is_layout_compatible(void, int), "");
-  static_assert(!__is_layout_compatible(void, const void), ""); // FIXME: this is CWG1719
-  static_assert(!__is_layout_compatible(void, volatile void), ""); // FIXME: this is CWG1719
-  static_assert(!__is_layout_compatible(const int, volatile int), ""); // FIXME: this is CWG1719
+  static_assert(__is_layout_compatible(void, const void), "");
+  static_assert(__is_layout_compatible(void, volatile void), "");
+  static_assert(__is_layout_compatible(const int, volatile int), "");
   static_assert(__is_layout_compatible(int, int), "");
-  static_assert(!__is_layout_compatible(int, const int), ""); // FIXME: this is CWG1719
-  static_assert(!__is_layout_compatible(int, volatile int), ""); // FIXME: this is CWG1719
-  static_assert(!__is_layout_compatible(const int, volatile int), ""); // FIXME: this is CWG1719
+  static_assert(__is_layout_compatible(int, const int), "");
+  static_assert(__is_layout_compatible(int, volatile int), "");
+  static_assert(__is_layout_compatible(const int, volatile int), "");
+  static_assert(__is_layout_compatible(int *, int * __restrict), "");
+  // Note: atomic qualification matters for layout compatibility.
+  static_assert(!__is_layout_compatible(int, _Atomic int), "");
+  static_assert(__is_layout_compatible(_Atomic(int), _Atomic int), "");
   static_assert(!__is_layout_compatible(int, unsigned int), "");
   static_assert(!__is_layout_compatible(char, unsigned char), "");
   static_assert(!__is_layout_compatible(char, signed char), "");
@@ -1758,10 +1767,11 @@ void is_layout_compatible(int n)
   static_assert(!__is_layout_compatible(CppStructNonStandardByVirtBase, CppStructNonStandardByVirtBase2), "");
   static_assert(!__is_layout_compatible(CppStructNonStandardBySameBase, CppStructNonStandardBySameBase2), "");
   static_assert(!__is_layout_compatible(CppStructNonStandardBy2ndVirtBase, CppStructNonStandardBy2ndVirtBase2), "");
-  static_assert(!__is_layout_compatible(CStruct, CStructWithQualifiers), ""); // FIXME: this is CWG1719
-  static_assert(__is_layout_compatible(CStruct, CStructNoUniqueAddress) == bool(__has_cpp_attribute(no_unique_address)), ""); // FIXME: this is CWG2759
-  static_assert(__is_layout_compatible(CStructNoUniqueAddress, CStructNoUniqueAddress2) == bool(__has_cpp_attribute(no_unique_address)), ""); // FIXME: this is CWG2759
+  static_assert(__is_layout_compatible(CStruct, CStructWithQualifiers), "");
+  static_assert(__is_layout_compatible(CStruct, CStructNoUniqueAddress) != bool(__has_cpp_attribute(no_unique_address)), "");
+  static_assert(__is_layout_compatible(CStructNoUniqueAddress, CStructNoUniqueAddress2) != bool(__has_cpp_attribute(no_unique_address)), "");
   static_assert(__is_layout_compatible(CStruct, CStructAlignment), "");
+  static_assert(__is_layout_compatible(CStruct, CStructAlignedMembers), ""); // FIXME: alignment of members impact common initial sequence
   static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds), "");
   static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds2), "");
   static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds3), "");
@@ -1772,10 +1782,10 @@ void is_layout_compatible(int n)
   static_assert(!__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(char)), "");
   static_assert(__is_layout_compatible(CStructNested, CStructNested2), "");
   static_assert(__is_layout_compatible(UnionLayout, UnionLayout), "");
-  static_assert(__is_layout_compatible(UnionLayout, UnionLayout2), "");
+  static_assert(!__is_layout_compatible(UnionLayout, UnionLayout2), "");
   static_assert(!__is_layout_compatible(UnionLayout, UnionLayout3), "");
-  static_assert(__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion2), "");
-  static_assert(__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3), "");
+  static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion2), "");
+  static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3), "");
   static_assert(__is_layout_compatible(EnumLayout, EnumClassLayout), "");
   static_assert(__is_layout_compatible(EnumForward, EnumForward), "");
   static_assert(__is_layout_compatible(EnumForward, EnumClassForward), "");

@@ -233,10 +233,7 @@ linux_projects=$(add-dependencies ${linux_projects_to_test} | sort | uniq)
 
 windows_projects_to_test=$(exclude-windows $(compute-projects-to-test ${modified_projects}))
 windows_check_targets=$(check-targets ${windows_projects_to_test} | sort | uniq)
-# Temporary disable the windows job.
-# See https://discourse.llvm.org/t/rfc-future-of-windows-pre-commit-ci/76840
-#windows_projects=$(add-dependencies ${windows_projects_to_test} | sort | uniq)
-windows_projects=""
+windows_projects=$(add-dependencies ${windows_projects_to_test} | sort | uniq)
 
 # Generate the appropriate pipeline
 if [[ "${linux_projects}" != "" ]]; then

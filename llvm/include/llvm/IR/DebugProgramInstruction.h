@@ -62,10 +62,59 @@ class BasicBlock;
 class MDNode;
 class Module;
 class DbgVariableIntrinsic;
+class DbgInfoIntrinsic;
+class DbgLabelInst;
 class DIAssignID;
 class DPMarker;
 class DPValue;
 class raw_ostream;
+
+/// A typed tracking MDNode reference that does not require a definition for its
+/// parameter type. Necessary to avoid including DebugInfoMetadata.h, which has
+/// a significant impact on compile times if included in this file.
+template <typename T> class DbgRecordParamRef {
+  TrackingMDNodeRef Ref;
+
+public:
+public:
+  DbgRecordParamRef() = default;
+
+  /// Construct from the templated type.
+  DbgRecordParamRef(const T *Param);
+
+  /// Construct from an \a MDNode.
+  ///
+  /// Note: if \c Param does not have the template type, a verifier check will
+  /// fail, and accessors will crash.  However, construction from other nodes
+  /// is supported in order to handle forward references when reading textual
+  /// IR.
+  explicit DbgRecordParamRef(const MDNode *Param);
+
+  /// Get the underlying type.
+  ///
+  /// \pre !*this or \c isa<T>(getAsMDNode()).
+  /// @{
+  T *get() const;
+  operator T *() const { return get(); }
+  T *operator->() const { return get(); }
+  T &operator*() const { return *get(); }
+  /// @}
+
+  /// Check for null.
+  ///
+  /// Check for null in a way that is safe with broken debug info.
+  explicit operator bool() const { return Ref; }
+
+  /// Return \c this as a \a MDNode.
+  MDNode *getAsMDNode() const { return Ref; }
+
+  bool operator==(const DbgRecordParamRef &Other) const {
+    return Ref == Other.Ref;
+  }
+  bool operator!=(const DbgRecordParamRef &Other) const {
+    return Ref != Other.Ref;
+  }
+};
 
 /// Base class for non-instruction debug metadata records that have positions
 /// within IR. Features various methods copied across from the Instruction
@@ -79,14 +128,14 @@ class raw_ostream;
 ///   deleteRecord
 ///   clone
 ///   isIdenticalToWhenDefined
-///   isEquivalentTo
 ///   both print methods
+///   createDebugIntrinsic
 class DbgRecord : public ilist_node<DbgRecord> {
 public:
   /// Marker that this DbgRecord is linked into.
   DPMarker *Marker = nullptr;
   /// Subclass discriminator.
-  enum Kind : uint8_t { ValueKind };
+  enum Kind : uint8_t { ValueKind, LabelKind };
 
 protected:
   DebugLoc DbgLoc;
@@ -104,8 +153,15 @@ public:
   void print(raw_ostream &O, bool IsForDebug = false) const;
   void print(raw_ostream &O, ModuleSlotTracker &MST, bool IsForDebug) const;
   bool isIdenticalToWhenDefined(const DbgRecord &R) const;
-  bool isEquivalentTo(const DbgRecord &R) const;
+  /// Convert this DbgRecord back into an appropriate llvm.dbg.* intrinsic.
+  /// \p InsertBefore Optional position to insert this intrinsic.
+  /// \returns A new llvm.dbg.* intrinsic representiung this DbgRecord.
+  DbgInfoIntrinsic *createDebugIntrinsic(Module *M,
+                                         Instruction *InsertBefore) const;
   ///@}
+
+  /// Same as isIdenticalToWhenDefined but checks DebugLoc too.
+  bool isEquivalentTo(const DbgRecord &R) const;
 
   Kind getRecordKind() const { return RecordKind; }
 
@@ -156,6 +212,36 @@ protected:
   ~DbgRecord() = default;
 };
 
+inline raw_ostream &operator<<(raw_ostream &OS, const DbgRecord &R) {
+  R.print(OS);
+  return OS;
+}
+
+/// Records a position in IR for a source label (DILabel). Corresponds to the
+/// llvm.dbg.label intrinsic.
+/// FIXME: Rename DbgLabelRecord when DPValue is renamed to DbgVariableRecord.
+class DPLabel : public DbgRecord {
+  DbgRecordParamRef<DILabel> Label;
+
+public:
+  DPLabel(DILabel *Label, DebugLoc DL);
+
+  DPLabel *clone() const;
+  void print(raw_ostream &O, bool IsForDebug = false) const;
+  void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
+  DbgLabelInst *createDebugIntrinsic(Module *M,
+                                     Instruction *InsertBefore) const;
+
+  void setLabel(DILabel *NewLabel) { Label = NewLabel; }
+  DILabel *getLabel() const { return Label.get(); }
+  MDNode *getRawLabel() const { return Label.getAsMDNode(); };
+
+  /// Support type inquiry through isa, cast, and dyn_cast.
+  static bool classof(const DbgRecord *E) {
+    return E->getRecordKind() == LabelKind;
+  }
+};
+
 /// Record of a variable value-assignment, aka a non instruction representation
 /// of the dbg.value intrinsic.
 ///
@@ -183,9 +269,9 @@ public:
   // DebugValueUser superclass instead. The referred to Value can either be a
   // ValueAsMetadata or a DIArgList.
 
-  DILocalVariable *Variable;
-  DIExpression *Expression;
-  DIExpression *AddressExpression;
+  DbgRecordParamRef<DILocalVariable> Variable;
+  DbgRecordParamRef<DIExpression> Expression;
+  DbgRecordParamRef<DIExpression> AddressExpression;
 
 public:
   /// Create a new DPValue representing the intrinsic \p DVI, for example the
@@ -290,10 +376,6 @@ public:
   void addVariableLocationOps(ArrayRef<Value *> NewValues,
                               DIExpression *NewExpr);
 
-  void setVariable(DILocalVariable *NewVar) { Variable = NewVar; }
-
-  void setExpression(DIExpression *NewExpr) { Expression = NewExpr; }
-
   unsigned getNumVariableLocationOps() const;
 
   bool hasArgList() const { return isa<DIArgList>(getRawLocation()); }
@@ -308,9 +390,13 @@ public:
   void setKillLocation();
   bool isKillLocation() const;
 
-  DILocalVariable *getVariable() const { return Variable; }
+  void setVariable(DILocalVariable *NewVar) { Variable = NewVar; }
+  DILocalVariable *getVariable() const { return Variable.get(); };
+  MDNode *getRawVariable() const { return Variable.getAsMDNode(); }
 
-  DIExpression *getExpression() const { return Expression; }
+  void setExpression(DIExpression *NewExpr) { Expression = NewExpr; }
+  DIExpression *getExpression() const { return Expression.get(); }
+  MDNode *getRawExpression() const { return Expression.getAsMDNode(); }
 
   /// Returns the metadata operand for the first location description. i.e.,
   /// dbg intrinsic dbg.value,declare operand and dbg.assign 1st location
@@ -359,7 +445,10 @@ public:
   }
   Metadata *getRawAssignID() const { return DebugValues[2]; }
   DIAssignID *getAssignID() const;
-  DIExpression *getAddressExpression() const { return AddressExpression; }
+  DIExpression *getAddressExpression() const { return AddressExpression.get(); }
+  MDNode *getRawAddressExpression() const {
+    return AddressExpression.getAsMDNode();
+  }
   void setAddressExpression(DIExpression *NewExpr) {
     AddressExpression = NewExpr;
   }
@@ -507,11 +596,6 @@ public:
 
 inline raw_ostream &operator<<(raw_ostream &OS, const DPMarker &Marker) {
   Marker.print(OS);
-  return OS;
-}
-
-inline raw_ostream &operator<<(raw_ostream &OS, const DPValue &Value) {
-  Value.print(OS);
   return OS;
 }
 

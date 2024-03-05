@@ -4,7 +4,7 @@ set(LIBC_INCLUDE_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 include(LLVMLibCHeaderRules)
 
 # The GPU build wants to install files in the compiler's resource directory.
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LIBC_TARGET_OS_IS_GPU)
   include(GetClangResourceDir)
 endif()
 
@@ -82,6 +82,14 @@ add_gen_header(
   GEN_HDR float.h
   DEPENDS
     .llvm-libc-macros.float_macros
+)
+
+add_gen_header(
+  stdint
+  DEF_FILE stdint.h.def
+  GEN_HDR stdint.h
+  DEPENDS
+    .llvm-libc-macros.stdint_macros
 )
 
 add_gen_header(
@@ -586,7 +594,7 @@ add_gen_header(
     .llvm-libc-types.wchar_t
 )
 
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LIBC_TARGET_OS_IS_GPU)
   file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/gpu)
 
   add_gen_header(
@@ -638,7 +646,7 @@ foreach(target IN LISTS all_install_header_targets)
   # The GPU optionally provides the supported declarations externally so
   # offloading languages like CUDA and OpenMP know what is supported by libc. We
   # install these in the compiler's resource directory at a preset location.
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND PACKAGE_VERSION)
+  if(LIBC_TARGET_OS_IS_GPU AND PACKAGE_VERSION)
     get_target_property(decls_file ${target} DECLS_FILE_PATH)
     if(NOT decls_file)
       continue()

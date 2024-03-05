@@ -619,7 +619,8 @@ class GroupBuiltin<string name, Op operation> {
                              !eq(operation, OpGroupNonUniformShuffleDown),
                              !eq(operation, OpGroupBroadcast),
                              !eq(operation, OpGroupNonUniformBroadcast),
-                             !eq(operation, OpGroupNonUniformBroadcastFirst));
+                             !eq(operation, OpGroupNonUniformBroadcastFirst),
+                             !eq(operation, OpGroupNonUniformRotateKHR));
   bit HasBoolArg = !or(!and(IsAllOrAny, !eq(IsAllEqual, false)), IsBallot, IsLogical);
 }
 
@@ -876,6 +877,10 @@ defm : DemangledGroupBuiltin<"group_non_uniform_reduce_logical_xors", WorkOrSub,
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_inclusive_logical_xors", WorkOrSub, OpGroupNonUniformLogicalXor>;
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_logical_xors", WorkOrSub, OpGroupNonUniformLogicalXor>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_logical_xor", WorkOrSub, OpGroupNonUniformLogicalXor>;
+
+// cl_khr_subgroup_rotate / SPV_KHR_subgroup_rotate
+defm : DemangledGroupBuiltin<"group_rotate", OnlySub, OpGroupNonUniformRotateKHR>;
+defm : DemangledGroupBuiltin<"group_clustered_rotate", OnlySub, OpGroupNonUniformRotateKHR>;
 
 // cl_khr_work_group_uniform_arithmetic / SPV_KHR_uniform_group_instructions
 defm : DemangledGroupBuiltin<"group_reduce_imul", OnlyWork, OpGroupIMulKHR>;
@@ -1172,6 +1177,8 @@ class ConvertBuiltin<string name, InstructionSet set> {
   bit IsDestinationSigned = !eq(!find(name, "convert_u"), -1);
   bit IsSaturated = !not(!eq(!find(name, "_sat"), -1));
   bit IsRounded = !not(!eq(!find(name, "_rt"), -1));
+  bit IsBfloat16 = !or(!not(!eq(!find(name, "BF16"), -1)),
+                       !not(!eq(!find(name, "bfloat16"), -1)));
   FPRoundingMode RoundingMode = !cond(!not(!eq(!find(name, "_rte"), -1)) : RTE,
                                   !not(!eq(!find(name, "_rtz"), -1)) : RTZ,
                                   !not(!eq(!find(name, "_rtp"), -1)) : RTP,
@@ -1182,7 +1189,8 @@ class ConvertBuiltin<string name, InstructionSet set> {
 // Table gathering all the convert builtins.
 def ConvertBuiltins : GenericTable {
   let FilterClass = "ConvertBuiltin";
-  let Fields = ["Name", "Set", "IsDestinationSigned", "IsSaturated", "IsRounded", "RoundingMode"];
+  let Fields = ["Name", "Set", "IsDestinationSigned", "IsSaturated",
+                "IsRounded", "IsBfloat16", "RoundingMode"];
   string TypeOf_Set = "InstructionSet";
   string TypeOf_RoundingMode = "FPRoundingMode";
 }
@@ -1224,6 +1232,25 @@ defm : DemangledConvertBuiltin<"convert_long", OpenCL_std>;
 defm : DemangledConvertBuiltin<"convert_ulong", OpenCL_std>;
 defm : DemangledConvertBuiltin<"convert_float", OpenCL_std>;
 
+// cl_intel_bfloat16_conversions / SPV_INTEL_bfloat16_conversion
+// Multiclass used to define at the same time both a demangled builtin records
+// and a corresponding convert builtin records.
+multiclass DemangledBF16ConvertBuiltin<string name1, string name2> {
+  // Create records for scalar and vector conversions.
+  foreach i = ["", "2", "3", "4", "8", "16"] in {
+    def : DemangledBuiltin<!strconcat("intel_convert_", name1, i, name2, i), OpenCL_std, Convert, 1, 1>;
+    def : ConvertBuiltin<!strconcat("intel_convert_", name1, i, name2, i), OpenCL_std>;
+  }
+}
+
+defm : DemangledBF16ConvertBuiltin<"bfloat16", "_as_ushort">;
+defm : DemangledBF16ConvertBuiltin<"as_bfloat16", "_float">;
+
+foreach conv = ["FToBF16INTEL", "BF16ToFINTEL"] in {
+  def : DemangledBuiltin<!strconcat("__spirv_Convert", conv), OpenCL_std, Convert, 1, 1>;
+  def : ConvertBuiltin<!strconcat("__spirv_Convert", conv), OpenCL_std>;
+}
+
 //===----------------------------------------------------------------------===//
 // Class defining a vector data load/store builtin record used for lowering
 // into OpExtInst instruction.
@@ -1236,18 +1263,24 @@ class VectorLoadStoreBuiltin<string name, InstructionSet set, int number> {
   string Name = name;
   InstructionSet Set = set;
   bits<32> Number = number;
+  bits<32> ElementCount = !cond(!not(!eq(!find(name, "2"), -1)) : 2,
+                                !not(!eq(!find(name, "3"), -1)) : 3,
+                                !not(!eq(!find(name, "4"), -1)) : 4,
+                                !not(!eq(!find(name, "8"), -1)) : 8,
+                                !not(!eq(!find(name, "16"), -1)) : 16,
+                                true : 1);
   bit IsRounded = !not(!eq(!find(name, "_rt"), -1));
   FPRoundingMode RoundingMode = !cond(!not(!eq(!find(name, "_rte"), -1)) : RTE,
-                                  !not(!eq(!find(name, "_rtz"), -1)) : RTZ,
-                                  !not(!eq(!find(name, "_rtp"), -1)) : RTP,
-                                  !not(!eq(!find(name, "_rtn"), -1)) : RTN,
-                                  true : RTE);
+                                      !not(!eq(!find(name, "_rtz"), -1)) : RTZ,
+                                      !not(!eq(!find(name, "_rtp"), -1)) : RTP,
+                                      !not(!eq(!find(name, "_rtn"), -1)) : RTN,
+                                      true : RTE);
 }
 
 // Table gathering all the vector data load/store builtins.
 def VectorLoadStoreBuiltins : GenericTable {
   let FilterClass = "VectorLoadStoreBuiltin";
-  let Fields = ["Name", "Set", "Number", "IsRounded", "RoundingMode"];
+  let Fields = ["Name", "Set", "Number", "ElementCount", "IsRounded", "RoundingMode"];
   string TypeOf_Set = "InstructionSet";
   string TypeOf_RoundingMode = "FPRoundingMode";
 }

@@ -24,6 +24,7 @@ struct COOSegment {
   std::pair<Level, Level> lvlRange; // [low, high)
   bool isSoA;
 
+  bool isAoS() const { return !isSoA; }
   bool isSegmentStart(Level l) const { return l == lvlRange.first; }
   bool inSegment(Level l) const {
     return l >= lvlRange.first && l < lvlRange.second;
@@ -246,10 +247,21 @@ public:
   /// Returns the dimension-shape.
   ArrayRef<Size> getDimShape() const { return rtp.getShape(); }
 
-  /// Returns the Level-shape.
+  /// Returns the level-shape.
   SmallVector<Size> getLvlShape() const {
-    return getEncoding().tranlateShape(getDimShape(),
-                                       CrdTransDirectionKind::dim2lvl);
+    return getEncoding().translateShape(getDimShape(),
+                                        CrdTransDirectionKind::dim2lvl);
+  }
+
+  /// Returns the batched level-rank.
+  unsigned getBatchLvlRank() const { return getEncoding().getBatchLvlRank(); }
+
+  /// Returns the batched level-shape.
+  SmallVector<Size> getBatchLvlShape() const {
+    auto lvlShape = getEncoding().translateShape(
+        getDimShape(), CrdTransDirectionKind::dim2lvl);
+    lvlShape.truncate(getEncoding().getBatchLvlRank());
+    return lvlShape;
   }
 
   /// Returns the type with an identity mapping.
@@ -337,7 +349,9 @@ public:
   /// Returns the starting level of this sparse tensor type for a
   /// trailing COO region that spans **at least** two levels. If
   /// no such COO region is found, then returns the level-rank.
-  Level getCOOStart() const;
+  ///
+  /// DEPRECATED: use getCOOSegment instead;
+  Level getAoSCOOStart() const;
 
   /// Returns [un]ordered COO type for this sparse tensor type.
   RankedTensorType getCOOType(bool ordered) const;

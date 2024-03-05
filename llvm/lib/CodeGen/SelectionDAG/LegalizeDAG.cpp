@@ -1047,6 +1047,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
                                     Node->getOperand(0).getValueType());
     break;
   case ISD::STRICT_FP_TO_FP16:
+  case ISD::STRICT_FP_TO_BF16:
   case ISD::STRICT_SINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
   case ISD::STRICT_LRINT:
@@ -3217,10 +3218,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   case ISD::FP_ROUND: {
-    EVT VT = Node->getValueType(0);
-    if (VT.getScalarType() == MVT::bf16) {
-      Results.push_back(
-          DAG.getNode(ISD::FP_TO_BF16, SDLoc(Node), VT, Node->getOperand(0)));
+    if ((Tmp1 = TLI.expandFP_ROUND(Node, DAG))) {
+      Results.push_back(Tmp1);
       break;
     }
 
@@ -3293,6 +3292,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (Op.getValueType() != MVT::f32)
       Op = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, Op,
                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+    // Certain SNaNs will turn into infinities if we do a simple shift right.
+    if (!DAG.isKnownNeverSNaN(Op)) {
+      Op = DAG.getNode(ISD::FCANONICALIZE, dl, MVT::f32, Op, Node->getFlags());
+    }
     Op = DAG.getNode(
         ISD::SRL, dl, MVT::i32, DAG.getNode(ISD::BITCAST, dl, MVT::i32, Op),
         DAG.getConstant(16, dl,
@@ -3643,14 +3646,14 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
           DAG.getNode(ISD::FP_EXTEND, dl, Node->getValueType(0), Res));
     }
     break;
+  case ISD::STRICT_BF16_TO_FP:
   case ISD::STRICT_FP16_TO_FP:
     if (Node->getValueType(0) != MVT::f32) {
       // We can extend to types bigger than f32 in two steps without changing
       // the result. Since "f16 -> f32" is much more commonly available, give
       // CodeGen the option of emitting that before resorting to a libcall.
-      SDValue Res =
-          DAG.getNode(ISD::STRICT_FP16_TO_FP, dl, {MVT::f32, MVT::Other},
-                      {Node->getOperand(0), Node->getOperand(1)});
+      SDValue Res = DAG.getNode(Node->getOpcode(), dl, {MVT::f32, MVT::Other},
+                                {Node->getOperand(0), Node->getOperand(1)});
       Res = DAG.getNode(ISD::STRICT_FP_EXTEND, dl,
                         {Node->getValueType(0), MVT::Other},
                         {Res.getValue(1), Res});
@@ -4649,6 +4652,16 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
       Results.push_back(ExpandLibCall(RTLIB::FPEXT_F16_F32, Node, false).first);
     }
     break;
+  case ISD::STRICT_BF16_TO_FP:
+    if (Node->getValueType(0) == MVT::f32) {
+      TargetLowering::MakeLibCallOptions CallOptions;
+      std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(
+          DAG, RTLIB::FPEXT_BF16_F32, MVT::f32, Node->getOperand(1),
+          CallOptions, SDLoc(Node), Node->getOperand(0));
+      Results.push_back(Tmp.first);
+      Results.push_back(Tmp.second);
+    }
+    break;
   case ISD::STRICT_FP16_TO_FP: {
     if (Node->getValueType(0) == MVT::f32) {
       TargetLowering::MakeLibCallOptions CallOptions;
@@ -4790,12 +4803,17 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     break;
   }
   case ISD::STRICT_FP_EXTEND:
-  case ISD::STRICT_FP_TO_FP16: {
-    RTLIB::Libcall LC =
-        Node->getOpcode() == ISD::STRICT_FP_TO_FP16
-            ? RTLIB::getFPROUND(Node->getOperand(1).getValueType(), MVT::f16)
-            : RTLIB::getFPEXT(Node->getOperand(1).getValueType(),
-                              Node->getValueType(0));
+  case ISD::STRICT_FP_TO_FP16:
+  case ISD::STRICT_FP_TO_BF16: {
+    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+    if (Node->getOpcode() == ISD::STRICT_FP_TO_FP16)
+      LC = RTLIB::getFPROUND(Node->getOperand(1).getValueType(), MVT::f16);
+    else if (Node->getOpcode() == ISD::STRICT_FP_TO_BF16)
+      LC = RTLIB::getFPROUND(Node->getOperand(1).getValueType(), MVT::bf16);
+    else
+      LC = RTLIB::getFPEXT(Node->getOperand(1).getValueType(),
+                           Node->getValueType(0));
+
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unable to legalize as libcall");
 
     TargetLowering::MakeLibCallOptions CallOptions;

@@ -59,6 +59,9 @@
 #include <sys/sysctl.h>
 #include <sys/user.h>
 #include <pthread_np.h>
+#if KMP_OS_DRAGONFLY
+#include <kvm.h>
+#endif
 #elif KMP_OS_NETBSD || KMP_OS_OPENBSD
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -1042,9 +1045,7 @@ extern "C" void __kmp_reap_monitor(kmp_info_t *th) {
 #else
 // Empty symbol to export (see exports_so.txt) when
 // monitor thread feature is disabled
-extern "C" void __kmp_reap_monitor(kmp_info_t *th) {
-  (void)th;
-}
+extern "C" void __kmp_reap_monitor(kmp_info_t *th) { (void)th; }
 #endif // KMP_USE_MONITOR
 
 void __kmp_reap_worker(kmp_info_t *th) {
@@ -2133,7 +2134,47 @@ int __kmp_is_address_mapped(void *addr) {
     lw += cursz;
   }
   kmpc_free(buf);
+#elif KMP_OS_DRAGONFLY
+  char err[_POSIX2_LINE_MAX];
+  kinfo_proc *proc;
+  vmspace sp;
+  vm_map *cur;
+  vm_map_entry entry, *c;
+  struct proc p;
+  kvm_t *fd;
+  uintptr_t uaddr;
+  int num;
 
+  fd = kvm_openfiles(nullptr, nullptr, nullptr, O_RDONLY, err);
+  if (!fd) {
+    return 0;
+  }
+
+  proc = kvm_getprocs(fd, KERN_PROC_PID, getpid(), &num);
+
+  if (kvm_read(fd, static_cast<uintptr_t>(proc->kp_paddr), &p, sizeof(p)) !=
+          sizeof(p) ||
+      kvm_read(fd, reinterpret_cast<uintptr_t>(p.p_vmspace), &sp, sizeof(sp)) !=
+          sizeof(sp)) {
+    kvm_close(fd);
+    return 0;
+  }
+
+  (void)rc;
+  cur = &sp.vm_map;
+  uaddr = reinterpret_cast<uintptr_t>(addr);
+  for (c = kvm_vm_map_entry_first(fd, cur, &entry); c;
+       c = kvm_vm_map_entry_next(fd, c, &entry)) {
+    if ((uaddr >= entry.ba.start) && (uaddr <= entry.ba.end)) {
+      if ((entry.protection & VM_PROT_READ) != 0 &&
+          (entry.protection & VM_PROT_WRITE) != 0) {
+        found = 1;
+        break;
+      }
+    }
+  }
+
+  kvm_close(fd);
 #elif KMP_OS_DARWIN
 
   /* On OS X*, /proc pseudo filesystem is not available. Try to read memory
@@ -2212,9 +2253,9 @@ int __kmp_is_address_mapped(void *addr) {
   }
 #elif KMP_OS_WASI
   found = (int)addr < (__builtin_wasm_memory_size(0) * PAGESIZE);
-#elif KMP_OS_DRAGONFLY || KMP_OS_SOLARIS || KMP_OS_AIX
+#elif KMP_OS_SOLARIS || KMP_OS_AIX
 
-  // FIXME(DragonFly, Solaris, AIX): Implement this
+  // FIXME(Solaris, AIX): Implement this
   found = 1;
 
 #else

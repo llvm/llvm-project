@@ -1,5 +1,7 @@
 VERS1.0 {
   global:
+    __tgt_rtl_init;
+    __tgt_rtl_deinit;
     __tgt_register_requires;
     __tgt_register_lib;
     __tgt_unregister_lib;

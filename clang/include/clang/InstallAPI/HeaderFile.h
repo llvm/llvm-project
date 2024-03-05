@@ -15,12 +15,15 @@
 
 #include "clang/Basic/LangStandard.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include <optional>
 #include <string>
 
 namespace clang::installapi {
 enum class HeaderType {
+  /// Unset or unknown type.
+  Unknown,
   /// Represents declarations accessible to all clients.
   Public,
   /// Represents declarations accessible to a disclosed set of clients.
@@ -29,6 +32,20 @@ enum class HeaderType {
   /// input library.
   Project,
 };
+
+inline StringRef getName(const HeaderType T) {
+  switch (T) {
+  case HeaderType::Public:
+    return "Public";
+  case HeaderType::Private:
+    return "Private";
+  case HeaderType::Project:
+    return "Project";
+  case HeaderType::Unknown:
+    return "Unknown";
+  }
+  llvm_unreachable("unexpected header type");
+}
 
 class HeaderFile {
   /// Full input path to header.
@@ -41,6 +58,7 @@ class HeaderFile {
   std::optional<clang::Language> Language;
 
 public:
+  HeaderFile() = delete;
   HeaderFile(StringRef FullPath, HeaderType Type,
              StringRef IncludeName = StringRef(),
              std::optional<clang::Language> Language = std::nullopt)
@@ -48,6 +66,14 @@ public:
         Language(Language) {}
 
   static llvm::Regex getFrameworkIncludeRule();
+
+  HeaderType getType() const { return Type; }
+  StringRef getIncludeName() const { return IncludeName; }
+  StringRef getPath() const { return FullPath; }
+
+  bool useIncludeName() const {
+    return Type != HeaderType::Project && !IncludeName.empty();
+  }
 
   bool operator==(const HeaderFile &Other) const {
     return std::tie(Type, FullPath, IncludeName, Language) ==

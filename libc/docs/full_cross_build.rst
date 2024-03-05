@@ -87,7 +87,7 @@ After configuring the build with the above ``cmake`` command, one can build the
 the libc for the target with the following command:
 
 .. code-block:: sh
-   
+
    $> ninja libc libm
 
 The above ``ninja`` command will build the libc static archives ``libc.a`` and

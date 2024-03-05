@@ -16,7 +16,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.toascii
     libc.src.ctype.tolower
     libc.src.ctype.toupper
-    
+
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bzero

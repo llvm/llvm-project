@@ -4092,12 +4092,9 @@ void RewriteInstance::rewriteNoteSections() {
       return getNewValueForSymbol(S->getName());
     });
 
-    // Set/modify section info.
-    BinarySection &NewSection = BC->registerOrUpdateNoteSection(
-        SectionName, SectionData, Size, Section.sh_addralign,
-        !BSec->isWritable(), BSec->getELFType());
-    NewSection.setOutputAddress(0);
-    NewSection.setOutputFileOffset(NextAvailableOffset);
+    // Section contents are no longer needed, but we need to update the size so
+    // that it will be reflected in the section header table.
+    BSec->updateContents(nullptr, Size);
 
     NextAvailableOffset += Size;
   }

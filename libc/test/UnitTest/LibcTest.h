@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
-#define LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
+#ifndef LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H
+#define LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H
 
 // This is defined as a simple macro in test.h so that it exists for platforms
 // that don't use our test infrastructure. It's defined as a proper function
@@ -493,4 +493,4 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #define WITH_SIGNAL(X) X
 
-#endif // LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
+#endif // LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H

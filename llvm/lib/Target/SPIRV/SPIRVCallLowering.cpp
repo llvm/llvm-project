@@ -22,6 +22,8 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/ModRef.h"
 
 using namespace llvm;
@@ -150,35 +152,62 @@ getKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
 
 static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
                                   SPIRVGlobalRegistry *GR,
-                                  MachineIRBuilder &MIRBuilder) {
+                                  MachineIRBuilder &MIRBuilder,
+                                  const SPIRVSubtarget &ST) {
   // Read argument's access qualifier from metadata or default.
   SPIRV::AccessQualifier::AccessQualifier ArgAccessQual =
       getArgAccessQual(F, ArgIdx);
 
   Type *OriginalArgType = getOriginalFunctionType(F)->getParamType(ArgIdx);
 
-  // In case of non-kernel SPIR-V function or already TargetExtType, use the
-  // original IR type.
-  if (F.getCallingConv() != CallingConv::SPIR_KERNEL ||
-      isSpecialOpaqueType(OriginalArgType))
+  // If OriginalArgType is non-pointer, use the OriginalArgType (the type cannot
+  // be legally reassigned later).
+  if (!OriginalArgType->isPointerTy())
     return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
 
-  SPIRVType *ResArgType = nullptr;
-  if (MDString *MDKernelArgType = getOCLKernelArgType(F, ArgIdx)) {
-    StringRef MDTypeStr = MDKernelArgType->getString();
-    if (MDTypeStr.ends_with("*"))
-      ResArgType = GR->getOrCreateSPIRVTypeByName(
-          MDTypeStr, MIRBuilder,
-          addressSpaceToStorageClass(
-              OriginalArgType->getPointerAddressSpace()));
-    else if (MDTypeStr.ends_with("_t"))
-      ResArgType = GR->getOrCreateSPIRVTypeByName(
-          "opencl." + MDTypeStr.str(), MIRBuilder,
-          SPIRV::StorageClass::Function, ArgAccessQual);
+  // In case OriginalArgType is of pointer type, there are three possibilities:
+  // 1) This is a pointer of an LLVM IR element type, passed byval/byref.
+  // 2) This is an OpenCL/SPIR-V builtin type if there is spv_assign_type
+  // intrinsic assigning a TargetExtType.
+  // 3) This is a pointer, try to retrieve pointer element type from a
+  // spv_assign_ptr_type intrinsic or otherwise use default pointer element
+  // type.
+  Argument *Arg = F.getArg(ArgIdx);
+  if (Arg->hasByValAttr() || Arg->hasByRefAttr()) {
+    Type *ByValRefType = Arg->hasByValAttr() ? Arg->getParamByValType()
+                                             : Arg->getParamByRefType();
+    SPIRVType *ElementType = GR->getOrCreateSPIRVType(ByValRefType, MIRBuilder);
+    return GR->getOrCreateSPIRVPointerType(
+        ElementType, MIRBuilder,
+        addressSpaceToStorageClass(Arg->getType()->getPointerAddressSpace(),
+                                   ST));
   }
-  return ResArgType ? ResArgType
-                    : GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder,
-                                               ArgAccessQual);
+
+  for (auto User : Arg->users()) {
+    auto *II = dyn_cast<IntrinsicInst>(User);
+    // Check if this is spv_assign_type assigning OpenCL/SPIR-V builtin type.
+    if (II && II->getIntrinsicID() == Intrinsic::spv_assign_type) {
+      MetadataAsValue *VMD = cast<MetadataAsValue>(II->getOperand(1));
+      Type *BuiltinType =
+          cast<ConstantAsMetadata>(VMD->getMetadata())->getType();
+      assert(BuiltinType->isTargetExtTy() && "Expected TargetExtType");
+      return GR->getOrCreateSPIRVType(BuiltinType, MIRBuilder, ArgAccessQual);
+    }
+
+    // Check if this is spv_assign_ptr_type assigning pointer element type.
+    if (!II || II->getIntrinsicID() != Intrinsic::spv_assign_ptr_type)
+      continue;
+
+    MetadataAsValue *VMD = cast<MetadataAsValue>(II->getOperand(1));
+    SPIRVType *ElementType = GR->getOrCreateSPIRVType(
+        cast<ConstantAsMetadata>(VMD->getMetadata())->getType(), MIRBuilder);
+    return GR->getOrCreateSPIRVPointerType(
+        ElementType, MIRBuilder,
+        addressSpaceToStorageClass(
+            cast<ConstantInt>(II->getOperand(2))->getZExtValue(), ST));
+  }
+
+  return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
 }
 
 static SPIRV::ExecutionModel::ExecutionModel
@@ -206,6 +235,10 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   assert(GR && "Must initialize the SPIRV type registry before lowering args.");
   GR->setCurrentFunc(MIRBuilder.getMF());
 
+  // Get access to information about available extensions
+  const SPIRVSubtarget *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+
   // Assign types and names to all args, and store their types for later.
   FunctionType *FTy = getOriginalFunctionType(F);
   SmallVector<SPIRVType *, 4> ArgTypeVRegs;
@@ -216,7 +249,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       // TODO: handle the case of multiple registers.
       if (VRegs[i].size() > 1)
         return false;
-      auto *SpirvTy = getArgSPIRVType(F, i, GR, MIRBuilder);
+      auto *SpirvTy = getArgSPIRVType(F, i, GR, MIRBuilder, *ST);
       GR->assignSPIRVTypeToVReg(SpirvTy, VRegs[i][0], MIRBuilder.getMF());
       ArgTypeVRegs.push_back(SpirvTy);
 
@@ -317,10 +350,6 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   // Name the function.
   if (F.hasName())
     buildOpName(FuncVReg, F.getName(), MIRBuilder);
-
-  // Get access to information about available extensions
-  const auto *ST =
-      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
 
   // Handle entry points and function linkage.
   if (isEntryPoint(F)) {
