@@ -97,7 +97,7 @@ private:
   ///   Given the placeholder returned by `translateImplGetPlaceholder`, fill
   ///   any holes by recursively translating nested DI attrs. This method must
   ///   mutate the placeholder that is passed in, instead of creating a new one.
-  llvm::DIType *translateImpl(DIRecursiveTypeAttr attr);
+  llvm::DIType *translateRecursive(DIRecursiveTypeAttrInterface attr);
 
   /// Get a placeholder DICompositeType without recursing into the elements.
   llvm::DICompositeType *translateImplGetPlaceholder(DICompositeTypeAttr attr);

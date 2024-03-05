@@ -35,6 +35,7 @@ static LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
 static void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
                                ArrayRef<uint64_t> args);
 
+#include "mlir/Dialect/LLVMIR/LLVMAttrInterfaces.cpp.inc"
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
@@ -86,9 +87,8 @@ bool DILocalScopeAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool DITypeAttr::classof(Attribute attr) {
-  return llvm::isa<DIRecursiveTypeAttr, DINullTypeAttr, DIBasicTypeAttr,
-                   DICompositeTypeAttr, DIDerivedTypeAttr,
-                   DISubroutineTypeAttr>(attr);
+  return llvm::isa<DINullTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
+                   DIDerivedTypeAttr, DISubroutineTypeAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -187,17 +187,21 @@ void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
 }
 
 //===----------------------------------------------------------------------===//
-// DIRecursiveTypeAttr
+// DICompositeTypeAttr
 //===----------------------------------------------------------------------===//
 
-DITypeAttr DIRecursiveTypeAttr::getUnfoldedBaseType() {
-  assert(!isRecSelf() && "cannot get baseType from a rec-self type");
-  return llvm::cast<DITypeAttr>(getBaseType().replace(
-      [&](DIRecursiveTypeAttr rec) -> std::optional<DIRecursiveTypeAttr> {
-        if (rec.getRecId() == getRecId())
-          return *this;
-        return std::nullopt;
-      }));
+DIRecursiveTypeAttrInterface
+DICompositeTypeAttr::withRecId(DistinctAttr recId) {
+  return DICompositeTypeAttr::get(getContext(), getTag(), recId, getName(),
+                                  getFile(), getLine(), getScope(),
+                                  getBaseType(), getFlags(), getSizeInBits(),
+                                  getAlignInBits(), getElements());
+}
+
+DIRecursiveTypeAttrInterface
+DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
+  return DICompositeTypeAttr::get(recId.getContext(), 0, recId, {}, {}, 0, {},
+                                  {}, DIFlags(), 0, 0, {});
 }
 
 //===----------------------------------------------------------------------===//

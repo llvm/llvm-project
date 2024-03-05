@@ -13,6 +13,7 @@
 #include "mlir/IR/Location.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -72,14 +73,15 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
   if (node->getTag() == llvm::dwarf::DW_TAG_array_type && !baseType)
     return nullptr;
   return DICompositeTypeAttr::get(
-      context, node->getTag(), getStringAttrOrNull(node->getRawName()),
-      translate(node->getFile()), node->getLine(), translate(node->getScope()),
-      baseType, flags.value_or(DIFlags::Zero), node->getSizeInBits(),
+      context, node->getTag(), /*recId=*/{},
+      getStringAttrOrNull(node->getRawName()), translate(node->getFile()),
+      node->getLine(), translate(node->getScope()), baseType,
+      flags.value_or(DIFlags::Zero), node->getSizeInBits(),
       node->getAlignInBits(), elements);
 }
 
 DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
-  // Return nullptr if the base type invalid.
+  // Return nullptr if the base type is invalid.
   DITypeAttr baseType = translate(node->getBaseType());
   if (node->getBaseType() && !baseType)
     return nullptr;
@@ -178,10 +180,10 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   std::optional<DISubprogramFlags> subprogramFlags =
       symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
   // Return nullptr if the scope or type is invalid.
-  auto scope = translate(node->getScope());
+  DIScopeAttr scope = translate(node->getScope());
   if (node->getScope() && !scope)
     return nullptr;
-  DIRecursiveTypeAttrOf<DISubroutineTypeAttr> type = translate(node->getType());
+  DISubroutineTypeAttr type = translate(node->getType());
   if (node->getType() && !type)
     return nullptr;
   return DISubprogramAttr::get(context, id, translate(node->getUnit()), scope,
@@ -242,12 +244,13 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
   if (DINodeAttr attr = nodeToAttr.lookup(node))
     return attr;
 
-  // If a cyclic dependency is detected since the same node is being traversed
-  // twice, emit a recursive self type, and mark the duplicate node on the
-  // translationStack so it can emit a recursive decl type.
-  auto *typeNode = dyn_cast<llvm::DIType>(node);
-  if (typeNode) {
-    auto [iter, inserted] = typeTranslationStack.try_emplace(typeNode, nullptr);
+  // If the node type is capable of being recursive, check if it's seen before.
+  auto recSelfCtor = getRecSelfConstructor(node);
+  if (recSelfCtor) {
+    // If a cyclic dependency is detected since the same node is being traversed
+    // twice, emit a recursive self type, and mark the duplicate node on the
+    // translationStack so it can emit a recursive decl type.
+    auto [iter, inserted] = translationStack.try_emplace(node, nullptr);
     if (!inserted) {
       // The original node may have already been assigned a recursive ID from
       // a different self-reference. Use that if possible.
@@ -257,21 +260,16 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
         iter->second = recId;
       }
       unboundRecursiveSelfRefs.back().insert(recId);
-      return DIRecursiveTypeAttr::get(recId);
+
+      return cast<DINodeAttr>(recSelfCtor(recId));
     }
-  } else {
-    bool inserted =
-        nonTypeTranslationStack.insert({node, typeTranslationStack.size()});
-    assert(inserted && "recursion is only supported via DITypes");
   }
 
   unboundRecursiveSelfRefs.emplace_back();
 
   auto guard = llvm::make_scope_exit([&]() {
-    if (typeNode)
-      typeTranslationStack.pop_back();
-    else
-      nonTypeTranslationStack.pop_back();
+    if (recSelfCtor)
+      translationStack.pop_back();
 
     // Copy unboundRecursiveSelfRefs down to the previous level.
     if (unboundRecursiveSelfRefs.size() == 1)
@@ -319,12 +317,10 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     return nullptr;
   };
   if (DINodeAttr attr = translateNode(node)) {
-    // If this node was marked as recursive, wrap with a recursive type.
-    if (typeNode) {
-      if (DistinctAttr id = typeTranslationStack.lookup(typeNode)) {
-        DITypeAttr typeAttr = cast<DITypeAttr>(attr);
-        attr = DIRecursiveTypeAttr::get(context, id, typeAttr);
-
+    // If this node was marked as recursive, set its recId.
+    if (auto recType = dyn_cast<DIRecursiveTypeAttrInterface>(attr)) {
+      if (DistinctAttr id = translationStack.lookup(node)) {
+        attr = cast<DINodeAttr>(recType.withRecId(id));
         // Remove the unbound recursive DistinctAttr ID.
         unboundRecursiveSelfRefs.back().erase(id);
       }
@@ -395,4 +391,15 @@ DistinctAttr DebugImporter::getOrCreateDistinctID(llvm::DINode *node) {
   if (!id)
     id = DistinctAttr::create(UnitAttr::get(context));
   return id;
+}
+
+llvm::function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
+DebugImporter::getRecSelfConstructor(llvm::DINode *node) {
+  using CtorType =
+      llvm::function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>;
+  return TypeSwitch<llvm::DINode *, CtorType>(node)
+      .Case<llvm::DICompositeType>([](auto *concreteNode) {
+        return CtorType(decltype(translateImpl(concreteNode))::getRecSelf);
+      })
+      .Default(CtorType());
 }

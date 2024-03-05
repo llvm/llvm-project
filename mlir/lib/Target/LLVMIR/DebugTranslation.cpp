@@ -213,7 +213,8 @@ DebugTranslation::translateImpl(DIGlobalVariableAttr attr) {
       attr.getIsDefined(), nullptr, nullptr, attr.getAlignInBits(), nullptr);
 }
 
-llvm::DIType *DebugTranslation::translateImpl(DIRecursiveTypeAttr attr) {
+llvm::DIType *
+DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
   DistinctAttr recursiveId = attr.getRecId();
   if (attr.isRecSelf()) {
     auto *iter = recursiveTypeMap.find(recursiveId);
@@ -221,26 +222,26 @@ llvm::DIType *DebugTranslation::translateImpl(DIRecursiveTypeAttr attr) {
     return iter->second;
   }
 
-  llvm::DIType *placeholder =
-      TypeSwitch<DITypeAttr, llvm::DIType *>(attr.getBaseType())
-          .Case<DICompositeTypeAttr>(
-              [&](auto attr) { return translateImplGetPlaceholder(attr); });
+  auto setRecursivePlaceholder = [&](llvm::DIType *placeholder) {
+    auto [iter, inserted] =
+        recursiveTypeMap.try_emplace(recursiveId, placeholder);
+    assert(inserted && "illegal reuse of recursive id");
+  };
 
-  auto [iter, inserted] =
-      recursiveTypeMap.try_emplace(recursiveId, placeholder);
-  assert(inserted && "illegal reuse of recursive id");
-
-  TypeSwitch<DITypeAttr>(attr.getBaseType())
-      .Case<DICompositeTypeAttr>([&](auto attr) {
-        translateImplFillPlaceholder(attr,
-                                     cast<llvm::DICompositeType>(placeholder));
-      });
+  llvm::DIType *result =
+      TypeSwitch<DIRecursiveTypeAttrInterface, llvm::DIType *>(attr)
+          .Case<DICompositeTypeAttr>([&](auto attr) {
+            auto *placeholder = translateImplGetPlaceholder(attr);
+            setRecursivePlaceholder(placeholder);
+            translateImplFillPlaceholder(attr, placeholder);
+            return placeholder;
+          });
 
   assert(recursiveTypeMap.back().first == recursiveId &&
          "internal inconsistency: unexpected recursive translation stack");
   recursiveTypeMap.pop_back();
 
-  return placeholder;
+  return result;
 }
 
 llvm::DIScope *DebugTranslation::translateImpl(DIScopeAttr attr) {
@@ -329,15 +330,23 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
   if (llvm::DINode *node = attrToNode.lookup(attr))
     return node;
 
-  llvm::DINode *node =
-      TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
-          .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
-                DILabelAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
-                DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
-                DINullTypeAttr, DIRecursiveTypeAttr, DISubprogramAttr,
-                DISubrangeAttr, DISubroutineTypeAttr>(
-              [&](auto attr) { return translateImpl(attr); });
+  llvm::DINode *node = nullptr;
+  // Recursive types go through a dedicated handler. All other types are
+  // dispatched directly to their specific handlers.
+  if (auto recTypeAttr = dyn_cast<DIRecursiveTypeAttrInterface>(attr))
+    if (recTypeAttr.getRecId())
+      node = translateRecursive(recTypeAttr);
+
+  if (!node)
+    node = TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
+               .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
+                     DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
+                     DILabelAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
+                     DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
+                     DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
+                     DISubroutineTypeAttr>(
+                   [&](auto attr) { return translateImpl(attr); });
+
   attrToNode.insert({attr, node});
   return node;
 }

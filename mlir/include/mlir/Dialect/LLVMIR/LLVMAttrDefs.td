@@ -12,6 +12,7 @@
 include "mlir/Dialect/LLVMIR/LLVMDialect.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/CommonAttrConstraints.td"
+include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
 
 // All of the attributes will extend this class.
 class LLVM_Attr<string name, string attrMnemonic,
@@ -238,7 +239,7 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
 //===----------------------------------------------------------------------===//
 
 class LLVM_DIParameter<string summary, string default, string parseName,
-                       string printName = parseName>
+                       string errorCase, string printName = parseName>
     : AttrOrTypeParameter<"unsigned", "debug info " # summary> {
   let parser = [{ [&]() -> FailureOr<unsigned> {
     SMLoc tagLoc = $_parser.getCurrentLocation();
@@ -246,33 +247,35 @@ class LLVM_DIParameter<string summary, string default, string parseName,
     if ($_parser.parseKeyword(&name))
       return failure();
 
-    if (unsigned tag = llvm::dwarf::get}] # parseName # [{(name))
-      return tag;
-    return $_parser.emitError(tagLoc)
-      << "invalid debug info }] # summary # [{ name: " << name;
+    unsigned tag = llvm::dwarf::get}] # parseName # [{(name);
+    if (tag == }] # errorCase # [{)
+      return $_parser.emitError(tagLoc)
+        << "invalid debug info }] # summary # [{ name: " << name;
+    return tag;
   }() }];
   let printer = "$_printer << llvm::dwarf::" # printName # "String($_self)";
   let defaultValue = default;
 }
 
 def LLVM_DICallingConventionParameter : LLVM_DIParameter<
-  "calling convention", /*default=*/"0", "CallingConvention", "Convention"
+  "calling convention", /*default=*/"0", "CallingConvention", /*errorCase=*/"0",
+  "Convention"
 >;
 
 def LLVM_DIEncodingParameter : LLVM_DIParameter<
-  "encoding", /*default=*/"0", "AttributeEncoding"
+  "encoding", /*default=*/"0", "AttributeEncoding", /*errorCase=*/"0"
 >;
 
 def LLVM_DILanguageParameter : LLVM_DIParameter<
-  "language", /*default=*/"", "Language"
+  "language", /*default=*/"", "Language", /*errorCase=*/"0"
 >;
 
 def LLVM_DITagParameter : LLVM_DIParameter<
-  "tag", /*default=*/"", "Tag"
+  "tag", /*default=*/"", "Tag", /*errorCase=*/"llvm::dwarf::DW_TAG_invalid"
 >;
 
 def LLVM_DIOperationEncodingParameter : LLVM_DIParameter<
-  "operation encoding", /*default=*/"", "OperationEncoding"
+  "operation encoding", /*default=*/"", "OperationEncoding", /*errorCase=*/"0"
 >;
 
 //===----------------------------------------------------------------------===//
@@ -299,70 +302,6 @@ def LLVM_DIExpressionAttr : LLVM_Attr<"DIExpression", "di_expression"> {
   let constBuilderCall =
             "::mlir::LLVM::DIExpressionAttr::get($_builder.getContext(), $0)";
   let assemblyFormat = "`<` ( `[` $operations^ `]` ) : (``)? `>`";
-}
-
-//===----------------------------------------------------------------------===//
-// DIRecursiveTypeAttr
-//===----------------------------------------------------------------------===//
-
-def LLVM_DIRecursiveTypeAttr : LLVM_Attr<"DIRecursiveType", "di_recursive_type",
-                                          /*traits=*/[], "DITypeAttr"> {
-  let description = [{
-    This attribute enables recursive DITypes. There are two modes for this
-    attribute.
-
-    1. If `baseType` is present:
-      - This type is considered a recursive declaration (rec-decl).
-      - The `baseType` is a self-recursive type identified by the `recId` field.
-
-    2. If `baseType` is not present:
-      - This type is considered a recursive self reference (rec-self).
-      - This DIRecursiveType itself is a placeholder type that should be
-        conceptually replaced with the closet parent DIRecursiveType with the
-        same `recId` field.
-
-    e.g. To represent a linked list struct:
-
-      #rec_self = di_recursive_type<recId = 0>
-      #ptr = di_derived_type<baseType: #rec_self, ...>
-      #field = di_derived_type<name = "next", baseType: #ptr, ...>
-      #struct = di_composite_type<name = "Node", elements: #field, ...>
-      #rec = di_recursive_type<recId = 0, baseType: #struct>
-
-      #var = di_local_variable<type = #struct_type, ...>
-
-    Note that a rec-self without an outer rec-decl with the same recId is
-    conceptually the same as an "unbound" variable. The context needs to provide
-    meaning to the rec-self.
-
-    This can be avoided by calling the `getUnfoldedBaseType()` method on a
-    rec-decl, which returns the `baseType` with all matching rec-self instances
-    replaced with this rec-decl again. This is useful, for example, for fetching
-    a field out of a recursive struct and maintaining the legality of the field
-    type.
-  }];
-
-  let parameters = (ins
-    "DistinctAttr":$recId,
-    OptionalParameter<"DITypeAttr">:$baseType
-  );
-
-  let builders = [
-    AttrBuilderWithInferredContext<(ins "DistinctAttr":$recId), [{
-      return $_get(recId.getContext(), recId, nullptr);
-    }]>
-  ];
-
-  let extraClassDeclaration = [{
-    /// Whether this node represents a self-reference.
-    bool isRecSelf() { return !getBaseType(); }
-
-    /// Get the `baseType` with all instances of the corresponding rec-self
-    /// replaced with this attribute. This can only be called if `!isRecSelf()`.
-    DITypeAttr getUnfoldedBaseType();
-  }];
-
-  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -421,9 +360,11 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
-                                         /*traits=*/[], "DITypeAttr"> {
+                                         [LLVM_DIRecursiveTypeAttrInterface],
+                                         "DITypeAttr"> {
   let parameters = (ins
     LLVM_DITagParameter:$tag,
+    OptionalParameter<"DistinctAttr">:$recId,
     OptionalParameter<"StringAttr">:$name,
     OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"uint32_t">:$line,
@@ -435,6 +376,21 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     OptionalArrayRefParameter<"DINodeAttr">:$elements
   );
   let assemblyFormat = "`<` struct(params) `>`";
+  let extraClassDeclaration = [{
+    /// Requirements of DIRecursiveTypeAttrInterface.
+    /// @{
+
+    /// Get whether this attr describes a recursive self reference.
+    bool isRecSelf() { return getTag() == 0; }
+
+    /// Get a copy of this type attr but with the recursive ID set to `recId`.
+    DIRecursiveTypeAttrInterface withRecId(DistinctAttr recId);
+
+    /// Build a rec-self instance using the provided recId.
+    static DIRecursiveTypeAttrInterface getRecSelf(DistinctAttr recId);
+
+    /// @}
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -590,15 +546,14 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
     OptionalParameter<"unsigned">:$line,
     OptionalParameter<"unsigned">:$scopeLine,
     "DISubprogramFlags":$subprogramFlags,
-    OptionalParameter<"DIRecursiveTypeAttrOf<DISubroutineTypeAttr>">:$type
+    OptionalParameter<"DISubroutineTypeAttr">:$type
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
       "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
       "DIScopeAttr":$scope, "StringRef":$name, "StringRef":$linkageName,
       "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
-      "DISubprogramFlags":$subprogramFlags,
-      "DIRecursiveTypeAttrOf<DISubroutineTypeAttr>":$type
+      "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type
     ), [{
       MLIRContext *ctx = file.getContext();
       return $_get(ctx, id, compileUnit, scope, StringAttr::get(ctx, name),
