@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // clang-format off
+#include <sys/param.h>
 #include <sys/types.h>
 #include <machine/reg.h>
 #if defined(__arm__)
@@ -362,7 +363,15 @@ TEST(RegisterContextFreeBSDTest, arm64) {
   EXPECT_GPR_ARM64(lr, lr);
   EXPECT_GPR_ARM64(sp, sp);
   EXPECT_GPR_ARM64(pc, elr);
+#if __FreeBSD_version >= 1400084
+  // LLDB assumes that cpsr is 32 bit but the kernel stores it as a 64 bit
+  // value.
+  EXPECT_THAT(GetRegParams(reg_ctx, gpr_cpsr_arm64),
+              ::testing::Pair(offsetof(reg, spsr), 4));
+#else
+  // Older kernels stored spsr as a 32 bit value.
   EXPECT_GPR_ARM64(cpsr, spsr);
+#endif
 
   size_t base_offset = reg_ctx.GetRegisterInfo()[fpu_v0_arm64].byte_offset;
 
