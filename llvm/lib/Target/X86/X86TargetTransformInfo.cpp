@@ -6080,6 +6080,10 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 
   for (const Instruction &I : instructions(Callee)) {
     if (const auto *CB = dyn_cast<CallBase>(&I)) {
+      // Having more target features is fine for inline ASM.
+      if (CB->isInlineAsm())
+        continue;
+
       SmallVector<Type *, 8> Types;
       for (Value *Arg : CB->args())
         Types.push_back(Arg->getType());
