@@ -239,8 +239,8 @@ signature blob case.
 
 In LLVM DirectX backend, the global variable will be serialized and saved as another 
 global variable with section 'RTS0' with the serialized root signature as initializer.
-Then 'RTS0' global variable will be translated to the root signature part of dx 
-container.
+The MC ObjectWriter for DXContainer will take the global and write it to the correct 
+part based on the section name given to the global.
 
 In DXIL validation, the root signature part will be deserialized and check if 
 the resource binding in the root signature exists in the resource table.
