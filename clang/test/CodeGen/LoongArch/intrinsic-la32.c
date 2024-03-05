@@ -169,8 +169,8 @@ unsigned int cpucfg(unsigned int a) {
 
 // LA32-LABEL: @rdtime(
 // LA32-NEXT:  entry:
-// LA32-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimeh.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1:[0-9]+]], !srcloc !2
-// LA32-NEXT:    [[TMP1:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimel.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc !3
+// LA32-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimeh.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1:[0-9]+]], !srcloc [[META2:![0-9]+]]
+// LA32-NEXT:    [[TMP1:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimel.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc [[META3:![0-9]+]]
 // LA32-NEXT:    ret void
 //
 void rdtime() {
@@ -201,13 +201,28 @@ void loongarch_movgr2fcsr(int a) {
   __builtin_loongarch_movgr2fcsr(1, a);
 }
 
-// CHECK-LABEL: @cacop_w(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.loongarch.cacop.w(i32 1, i32 [[A:%.*]], i32 1024)
-// CHECK-NEXT:    tail call void @llvm.loongarch.cacop.w(i32 1, i32 [[A]], i32 1024)
-// CHECK-NEXT:    ret void
+// LA32-LABEL: @cacop_w(
+// LA32-NEXT:  entry:
+// LA32-NEXT:    tail call void @llvm.loongarch.cacop.w(i32 1, i32 [[A:%.*]], i32 1024)
+// LA32-NEXT:    tail call void @llvm.loongarch.cacop.w(i32 1, i32 [[A]], i32 1024)
+// LA32-NEXT:    ret void
 //
 void cacop_w(unsigned long int a) {
   __cacop_w(1, a, 1024);
   __builtin_loongarch_cacop_w(1, a, 1024);
+}
+
+// LA32-LABEL: @iocsrrd_h_result(
+// LA32-NEXT:  entry:
+// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 [[A:%.*]])
+// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 [[A]])
+// LA32-NEXT:    [[CONV2:%.*]] = and i32 [[TMP0]], 255
+// LA32-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], [[CONV2]]
+// LA32-NEXT:    [[CONV4:%.*]] = trunc i32 [[ADD]] to i16
+// LA32-NEXT:    ret i16 [[CONV4]]
+//
+unsigned short iocsrrd_h_result(unsigned int a) {
+  unsigned short b = __iocsrrd_h(a);
+  unsigned short c = __builtin_loongarch_iocsrrd_h(a);
+  return b+c;
 }
