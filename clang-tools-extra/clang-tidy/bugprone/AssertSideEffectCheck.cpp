@@ -13,6 +13,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -67,6 +68,16 @@ AST_MATCHER_P2(Expr, hasSideEffect, bool, CheckFunctionCalls,
           IgnoredFunctionsMatcher.matches(*FuncDecl, Finder,
                                           Builder)) // exceptions come here
         return false;
+      for (size_t I = 0; I < FuncDecl->getNumParams(); I++) {
+        const ParmVarDecl *P = FuncDecl->getParamDecl(I);
+        const Expr *ArgExpr =
+            I < CExpr->getNumArgs() ? CExpr->getArg(I) : nullptr;
+        QualType PT = P->getType().getCanonicalType();
+        if (PT->isReferenceType() &&
+            !PT.getNonReferenceType().isConstQualified() && ArgExpr &&
+            !ArgExpr->isXValue())
+          return true;
+      }
       if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FuncDecl))
         return !MethodDecl->isConst();
     }
