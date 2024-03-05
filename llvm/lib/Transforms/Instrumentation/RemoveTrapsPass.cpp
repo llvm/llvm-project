@@ -39,48 +39,54 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
   SmallVector<IntrinsicInst *, 16> Remove;
   std::unique_ptr<RandomNumberGenerator> Rng;
 
+  auto ShouldRemove = [&](bool IsHot) {
+    if (IsHot && !RandomRate.getNumOccurrences())
+      return true;
+    if (!Rng) {
+      if (!RandomRate.getNumOccurrences())
+        return false;
+      Rng = F.getParent()->createRNG(F.getName());
+    }
+    std::bernoulli_distribution D(RandomRate);
+    return D(*Rng);
+  };
+
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
       if (!II)
         continue;
       auto ID = II->getIntrinsicID();
-      if (ID != Intrinsic::ubsantrap)
-        continue;
-      ++NumChecksTotal;
+      switch (ID) {
+      case Intrinsic::ubsantrap: {
+        ++NumChecksTotal;
 
-      bool IsHot = false;
-      if (PSI) {
-        uint64_t Count = 0;
-        for (const auto *PR : predecessors(&BB))
-          Count += BFI.getBlockProfileCount(PR).value_or(0);
+        bool IsHot = false;
+        if (PSI) {
+          uint64_t Count = 0;
+          for (const auto *PR : predecessors(&BB))
+            Count += BFI.getBlockProfileCount(PR).value_or(0);
 
-        IsHot = HotPercentileCutoff.getNumOccurrences()
-                    ? (HotPercentileCutoff > 0 &&
-                       PSI->isHotCountNthPercentile(HotPercentileCutoff, Count))
-                    : PSI->isHotCount(Count);
-      }
-
-      auto ShouldRemove = [&]() {
-        if (IsHot)
-          return true;
-        if (!Rng) {
-          if (!RandomRate.getNumOccurrences())
-            return false;
-          Rng = F.getParent()->createRNG(F.getName());
+          IsHot =
+              HotPercentileCutoff.getNumOccurrences()
+                  ? (HotPercentileCutoff > 0 &&
+                     PSI->isHotCountNthPercentile(HotPercentileCutoff, Count))
+                  : PSI->isHotCount(Count);
         }
-        std::bernoulli_distribution D(RandomRate);
-        return D(*Rng);
-      };
 
-      if (ShouldRemove()) {
-        Remove.push_back(II);
-        ++NumChecksRemoved;
+        if (ShouldRemove(IsHot)) {
+          Remove.push_back(II);
+          ++NumChecksRemoved;
+        }
+        break;
+      }
+      default:
+        break;
       }
     }
   }
 
-  for (auto *I : Remove)
+  for (IntrinsicInst *I : Remove)
     I->eraseFromParent();
 
   return !Remove.empty();
@@ -96,5 +102,5 @@ PreservedAnalyses RemoveTrapsPass::run(Function &F,
   BlockFrequencyInfo &BFI = AM.getResult<BlockFrequencyAnalysis>(F);
 
   return removeUbsanTraps(F, BFI, PSI) ? PreservedAnalyses::none()
-                                             : PreservedAnalyses::all();
+                                       : PreservedAnalyses::all();
 }
