@@ -3891,7 +3891,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Handle result values, copying them out of physregs into vregs that we
   // return.
   return LowerCallResult(Chain, InGlue, CallConv, IsVarArg, Ins, DL, DAG,
-                         InVals, false, SDValue());
+                         InVals, /*IsThisReturn=*/false, SDValue());
 }
 
 // This is identical to the default implementation in ExpandDYNAMIC_STACKALLOC,
