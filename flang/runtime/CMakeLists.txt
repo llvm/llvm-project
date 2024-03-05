@@ -57,12 +57,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     REAL(16) is mapped to __float128, or libm for targets where REAL(16) \
     is mapped to long double, etc."
     )
-
-  if (NOT FLANG_RUNTIME_F128_MATH_LIB STREQUAL "")
-    add_compile_definitions(
-      -DFLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}"
-      )
-  endif()
 endif()
 
 include(CheckCXXSymbolExists)
@@ -77,6 +71,16 @@ check_cxx_source_compiles(
    }
   "
   HAVE_DECL_STRERROR_S)
+
+# Check if 128-bit float computations can be done via long double.
+check_cxx_source_compiles(
+  "#include <cfloat>
+   #if LDBL_MANT_DIG != 113
+   #error LDBL_MANT_DIG != 113
+   #endif
+   int main() { return 0; }
+  "
+  HAVE_LDBL_MANT_DIG_113)
 
 check_cxx_compiler_flag(-fno-lto FLANG_RUNTIME_HAS_FNO_LTO_FLAG)
 if (FLANG_RUNTIME_HAS_FNO_LTO_FLAG)
@@ -100,9 +104,7 @@ add_definitions(-U_GLIBCXX_ASSERTIONS)
 add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
 
 add_subdirectory(FortranMain)
-if (NOT ${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "")
-  add_subdirectory(Float128Math)
-endif()
+add_subdirectory(Float128Math)
 
 set(sources
   ISO_Fortran_binding.cpp
@@ -316,6 +318,29 @@ if (NOT FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD STREQUAL "off")
       "Flang runtime build is not supported for these compilers:\n"
       "CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}\n"
       "CMAKE_C_COMPILER_ID: ${CMAKE_C_COMPILER_ID}")
+  endif()
+endif()
+
+if (NOT TARGET FortranFloat128Math)
+  # If FortranFloat128Math is not defined, then we are not building
+  # standalone FortranFloat128Math library. Instead, include
+  # the relevant sources into FortranRuntime itself.
+  # The information is provided via FortranFloat128MathILib
+  # interface library.
+  get_target_property(f128_sources
+    FortranFloat128MathILib INTERFACE_SOURCES
+    )
+  if (f128_sources)
+    # The interface may define special macros for Float128Math files,
+    # so we need to propagate them.
+    get_target_property(f128_defs
+      FortranFloat128MathILib INTERFACE_COMPILE_DEFINITIONS
+      )
+    set_property(SOURCE ${f128_sources}
+      APPEND PROPERTY COMPILE_DEFINITIONS
+      ${f128_defs}
+      )
+    list(APPEND sources ${f128_sources})
   endif()
 endif()
 
