@@ -179,8 +179,7 @@ static bool checkBuiltinVerboseTrap(CallExpr *Call, Sema &S) {
 
   // FIXME: Add more checks and reject strings that can't be handled by
   // debuggers.
-  std::string Result;
-  if (!Arg->tryEvaluateString(Result, S.Context)) {
+  if (!Arg->tryEvaluateString(S.Context).has_value()) {
     S.Diag(Arg->getBeginLoc(), diag::err_builtin_verbose_trap_arg)
         << Arg->getSourceRange();
     return false;

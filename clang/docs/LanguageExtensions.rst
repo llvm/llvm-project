@@ -3430,6 +3430,9 @@ users need to enable debug information to enable this feature. A call to this
 builtin is equivalent to a call to ``__builtin_trap`` if debug information isn't
 enabled.
 
+The optimizer can merge calls to trap with different messages, which degrades
+the debugging experience.
+
 ``__builtin_nondeterministic_value``
 ------------------------------------
 
