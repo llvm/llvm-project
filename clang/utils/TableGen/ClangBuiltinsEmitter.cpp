@@ -47,9 +47,47 @@ private:
     if (!Prototype.ends_with(")"))
       PrintFatalError(Loc, "Expected closing brace at end of prototype");
     Prototype = Prototype.drop_back();
-    for (auto T = Prototype.split(','); !T.first.empty();
-         Prototype = T.second, T = Prototype.split(','))
-      ParseType(T.first);
+
+    // Look through the input parameters.
+    const size_t end = Prototype.size();
+    for (size_t I = 0; I != end;) {
+      const StringRef Current = Prototype.substr(I, end);
+      // Skip any leading space or commas
+      if (Current.starts_with(" ") || Current.starts_with(",")) {
+        ++I;
+        continue;
+      }
+
+      // Check if we are in _ExtVector. We do this first because
+      // extended vectors are written in template form with the syntax
+      // _ExtVector< ..., ...>, so we need to make sure we are not
+      // detecting the comma of the template class as a separator for
+      // the parameters of the prototype. Note: the assumption is that
+      // we cannot have nested _ExtVector.
+      if (Current.starts_with("_ExtVector<")) {
+        const size_t EndTemplate = Current.find('>', 0);
+        ParseType(Current.substr(0, EndTemplate + 1));
+        // Move the prototype beyond _ExtVector<...>
+        I += EndTemplate + 1;
+        continue;
+      }
+
+      // We know that we are past _ExtVector, therefore the first seen
+      // comma is the boundary of a parameter in the prototype.
+      if (size_t CommaPos = Current.find(',', 0)) {
+        if (CommaPos != StringRef::npos) {
+          StringRef T = Current.substr(0, CommaPos);
+          ParseType(T);
+          // Move the prototype beyond the comma.
+          I += CommaPos + 1;
+          continue;
+        }
+      }
+
+      // No more commas, parse final parameter.
+      ParseType(Current);
+      I = end;
+    }
   }
 
   void ParseType(StringRef T) {
@@ -85,6 +123,28 @@ private:
       if (Substitution.empty())
         PrintFatalError(Loc, "Not a template");
       ParseType(Substitution);
+    } else if (T.consume_front("_ExtVector")) {
+      // Clang extended vector types are mangled as follows:
+      //
+      // '_ExtVector<' <lanes> ',' <scalar type> '>'
+
+      // Before parsing T(=<scalar type>), make sure the syntax of
+      // `_ExtVector<N, T>` is correct...
+      if (!T.consume_front("<"))
+        PrintFatalError(Loc, "Expected '<' after '_ExtVector'");
+      unsigned long long Lanes;
+      if (llvm::consumeUnsignedInteger(T, 10, Lanes))
+        PrintFatalError(Loc, "Expected number of lanes after '_ExtVector<'");
+      Type += "E" + std::to_string(Lanes);
+      if (!T.consume_front(","))
+        PrintFatalError(Loc,
+                        "Expected ',' after number of lanes in '_ExtVector<'");
+      if (!T.consume_back(">"))
+        PrintFatalError(
+            Loc, "Expected '>' after scalar type in '_ExtVector<N, type>'");
+
+      // ...all good, we can check if we have a valid `<scalar type>`.
+      ParseType(T);
     } else {
       auto ReturnTypeVal = StringSwitch<std::string>(T)
                                .Case("__builtin_va_list_ref", "A")
