@@ -1,16 +1,21 @@
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -stats 2>&1 \
-; RUN:   -hwasan-skip-hot-code=1 | FileCheck %s --check-prefix=DEFAULT
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -stats 2>&1 \
-; RUN:   -hwasan-skip-hot-code=1 -hwasan-percentile-cutoff-hot=700000 | FileCheck %s --check-prefix=PERCENT
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-skip-hot-code=1 \
+; RUN:    | FileCheck %s --check-prefix=DEFAULT
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-skip-hot-code=1 \
+; RUN:    -hwasan-percentile-cutoff-hot=700000 | FileCheck %s --check-prefix=PERCENT
 
-; REQUIRES: asserts
+; DEFAULT: @sanitized
+; DEFAULT-NEXT: %x = alloca i8, i64 4
 
-; DEFAULT: 1 hwasan - Number of total funcs HWASAN
+; PERCENT: @sanitized
+; PERCENT-SAME: @__hwasan_personality_thunk
 
-; PERCENT: 1 hwasan - Number of HWASAN instrumented funcs
-; PERCENT: 1 hwasan - Number of total funcs HWASAN
+declare void @use(ptr)
 
-define void @sanitized() sanitize_hwaddress !prof !36 { ret void }
+define void @sanitized(i32 noundef %0) sanitize_hwaddress !prof !36 {
+  %x = alloca i8, i64 4
+  call void @use(ptr %x)
+  ret void
+}
 
 !llvm.module.flags = !{!6}
 !6 = !{i32 1, !"ProfileSummary", !7}

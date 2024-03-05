@@ -83,6 +83,8 @@ static const uint64_t kDynamicShadowSentinel =
 
 static const unsigned kShadowBaseAlignment = 32;
 
+static constexpr unsigned MaxRandomRate = 1000;
+
 static cl::opt<std::string>
     ClMemoryAccessCallbackPrefix("hwasan-memory-access-callback-prefix",
                                  cl::desc("Prefix for memory access callbacks"),
@@ -188,9 +190,13 @@ static cl::opt<bool>
 static cl::opt<int> HotPercentileCutoff("hwasan-percentile-cutoff-hot",
                                         cl::init(0));
 
-STATISTIC(NumTotalFuncs, "Number of total funcs HWASAN");
-STATISTIC(NumInstrumentedFuncs, "Number of HWASAN instrumented funcs");
-STATISTIC(NumNoProfileSummaryFuncs, "Number of HWASAN funcs without PS");
+static cl::opt<float> SkipInstRandomRate(
+    "hwasan-skip-inst-random-rate", cl::init(0.0),
+    cl::desc("Probability to skip instrumentation of a function."));
+
+STATISTIC(NumTotalFuncs, "Number of total funcs");
+STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
+STATISTIC(NumNoProfileSummaryFuncs, "Number of funcs without PS");
 
 // Mode for selecting how to insert frame record info into the stack ring
 // buffer.
@@ -1527,6 +1533,9 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   NumTotalFuncs++;
   if (CSkipHotCode) {
+    if ((F.getGUID() % MaxRandomRate) < SkipInstRandomRate) {
+      return;
+    }
     auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
     ProfileSummaryInfo *PSI =
         MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
