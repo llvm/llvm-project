@@ -640,7 +640,7 @@ std::vector<QuasiPolynomial> getBinomialCoefficients(QuasiPolynomial n,
   unsigned numParams = n.getNumInputs();
   std::vector<QuasiPolynomial> coefficients;
   coefficients.reserve(r + 1);
-  coefficients.push_back(QuasiPolynomial(numParams, 1));
+  coefficients.emplace_back(numParams, 1);
   for (unsigned j = 1; j <= r; ++j)
     // We use the recursive formula for binomial coefficients here and below.
     coefficients.push_back(
@@ -655,7 +655,7 @@ std::vector<QuasiPolynomial> getBinomialCoefficients(QuasiPolynomial n,
 std::vector<Fraction> getBinomialCoefficients(Fraction n, Fraction r) {
   std::vector<Fraction> coefficients;
   coefficients.reserve((int64_t)floor(r));
-  coefficients.push_back(1);
+  coefficients.emplace_back(1);
   for (unsigned j = 1; j <= r; ++j)
     coefficients.push_back(coefficients[j - 1] * (n - (j - 1)) / (j));
   return coefficients;
