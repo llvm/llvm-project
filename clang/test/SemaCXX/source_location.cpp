@@ -832,3 +832,21 @@ void test() {
 }
 
 }
+
+namespace GH80630 {
+
+#define GH80630_LAMBDA \
+    []( char const* fn ) { \
+        static constexpr std::source_location loc = std::source_location::current(); \
+        return &loc; \
+    }( std::source_location::current().function() )
+
+auto f( std::source_location const* loc = GH80630_LAMBDA ) {
+    return loc;
+}
+
+auto g() {
+    return f();
+}
+
+}
