@@ -95,7 +95,7 @@ int chooseexpr[__builtin_choose_expr(1, 1, expr)];
 
 int somefunc(int i) {
   return (i, 65537) * 65537; // all-warning {{left operand of comma operator has no effect}} \
-                             // all-warning {{overflow in expression; result is 131073}}
+                             // all-warning {{overflow in expression; result is 131'073 with type 'int'}}
 }
 
 /// FIXME: The following test is incorrect in the new interpreter.
