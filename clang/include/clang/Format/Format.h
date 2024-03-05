@@ -154,9 +154,9 @@ struct FormatStyle {
   /// For example, to align across empty lines and not across comments, either
   /// of these work.
   /// \code
-  ///   AlignConsecutiveMacros: AcrossEmptyLines
+  ///   <option-name>: AcrossEmptyLines
   ///
-  ///   AlignConsecutiveMacros:
+  ///   <option-name>:
   ///     Enabled: true
   ///     AcrossEmptyLines: true
   ///     AcrossComments: false

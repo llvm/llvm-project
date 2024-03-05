@@ -13952,6 +13952,8 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
 Value *CodeGenFunction::EmitX86CpuSupports(const CallExpr *E) {
   const Expr *FeatureExpr = E->getArg(0)->IgnoreParenCasts();
   StringRef FeatureStr = cast<StringLiteral>(FeatureExpr)->getString();
+  if (!getContext().getTargetInfo().validateCpuSupports(FeatureStr))
+    return Builder.getFalse();
   return EmitX86CpuSupports(FeatureStr);
 }
 
@@ -14041,6 +14043,8 @@ Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
   ArgStr.split(Features, "+");
   for (auto &Feature : Features) {
     Feature = Feature.trim();
+    if (!llvm::AArch64::parseArchExtension(Feature))
+      return Builder.getFalse();
     if (Feature != "default")
       Features.push_back(Feature);
   }
@@ -16639,7 +16643,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   .Case(Name, {FA_WORD, Bitmask})
 #include "llvm/TargetParser/PPCTargetParser.def"
             .Default({0, 0});
-    assert(BitMask && "Invalid target feature string. Missed by SemaChecking?");
+    if (!BitMask)
+      return Builder.getFalse();
     Value *Op0 = llvm::ConstantInt::get(Int32Ty, FeatureWord);
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_fixed_addr_ld);
     Value *TheCall = Builder.CreateCall(F, {Op0}, "cpu_supports");
@@ -17086,37 +17091,24 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     }
     return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
   }
-  // Rotate and insert under mask operation.
-  // __rldimi(rs, is, shift, mask)
-  // (rotl64(rs, shift) & mask) | (is & ~mask)
-  // __rlwimi(rs, is, shift, mask)
-  // (rotl(rs, shift) & mask) | (is & ~mask)
   case PPC::BI__builtin_ppc_rldimi:
   case PPC::BI__builtin_ppc_rlwimi: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     Value *Op2 = EmitScalarExpr(E->getArg(2));
     Value *Op3 = EmitScalarExpr(E->getArg(3));
-    llvm::Type *Ty = Op0->getType();
-    Function *F = CGM.getIntrinsic(Intrinsic::fshl, Ty);
-    if (BuiltinID == PPC::BI__builtin_ppc_rldimi)
-      Op2 = Builder.CreateZExt(Op2, Int64Ty);
-    Value *Shift = Builder.CreateCall(F, {Op0, Op0, Op2});
-    Value *X = Builder.CreateAnd(Shift, Op3);
-    Value *Y = Builder.CreateAnd(Op1, Builder.CreateNot(Op3));
-    return Builder.CreateOr(X, Y);
+    return Builder.CreateCall(
+        CGM.getIntrinsic(BuiltinID == PPC::BI__builtin_ppc_rldimi
+                             ? Intrinsic::ppc_rldimi
+                             : Intrinsic::ppc_rlwimi),
+        {Op0, Op1, Op2, Op3});
   }
-  // Rotate and insert under mask operation.
-  // __rlwnm(rs, shift, mask)
-  // rotl(rs, shift) & mask
   case PPC::BI__builtin_ppc_rlwnm: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     Value *Op2 = EmitScalarExpr(E->getArg(2));
-    llvm::Type *Ty = Op0->getType();
-    Function *F = CGM.getIntrinsic(Intrinsic::fshl, Ty);
-    Value *Shift = Builder.CreateCall(F, {Op0, Op0, Op1});
-    return Builder.CreateAnd(Shift, Op2);
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_rlwnm),
+                              {Op0, Op1, Op2});
   }
   case PPC::BI__builtin_ppc_poppar4:
   case PPC::BI__builtin_ppc_poppar8: {

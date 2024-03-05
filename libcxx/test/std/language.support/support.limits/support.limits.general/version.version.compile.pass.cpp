@@ -7394,17 +7394,11 @@
 #   error "__cpp_lib_ssize should have the value 201902L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_sstream_from_string_view
-#     error "__cpp_lib_sstream_from_string_view should be defined in c++26"
-#   endif
-#   if __cpp_lib_sstream_from_string_view != 202306L
-#     error "__cpp_lib_sstream_from_string_view should have the value 202306L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_sstream_from_string_view
-#     error "__cpp_lib_sstream_from_string_view should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_sstream_from_string_view
+#   error "__cpp_lib_sstream_from_string_view should be defined in c++26"
+# endif
+# if __cpp_lib_sstream_from_string_view != 202306L
+#   error "__cpp_lib_sstream_from_string_view should have the value 202306L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

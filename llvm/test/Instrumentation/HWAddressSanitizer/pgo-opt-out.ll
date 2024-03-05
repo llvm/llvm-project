@@ -3,6 +3,8 @@
 ; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -stats 2>&1 \
 ; RUN:   -hwasan-skip-hot-code=1 -hwasan-percentile-cutoff-hot=700000 | FileCheck %s --check-prefix=PERCENT
 
+; REQUIRES: asserts
+
 ; DEFAULT: 1 hwasan - Number of total funcs HWASAN
 
 ; PERCENT: 1 hwasan - Number of HWASAN instrumented funcs

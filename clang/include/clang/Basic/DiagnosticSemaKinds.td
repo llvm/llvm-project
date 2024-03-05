@@ -765,7 +765,7 @@ def err_builtin_redeclare : Error<"cannot redeclare builtin function %0">;
 def err_arm_invalid_specialreg : Error<"invalid special register for builtin">;
 def err_arm_invalid_coproc : Error<"coprocessor %0 must be configured as "
   "%select{GCP|CDE}1">;
-def err_invalid_cpu_supports : Error<"invalid cpu feature string for builtin">;
+def warn_invalid_cpu_supports : Warning<"invalid cpu feature string for builtin">;
 def err_invalid_cpu_is : Error<"invalid cpu name for builtin">;
 def err_invalid_cpu_specific_dispatch_value : Error<
 "invalid option '%0' for %select{cpu_specific|cpu_dispatch}1">;
@@ -4989,6 +4989,9 @@ def err_template_param_shadow : Error<
   "declaration of %0 shadows template parameter">;
 def ext_template_param_shadow : ExtWarn<
   err_template_param_shadow.Summary>, InGroup<MicrosoftTemplateShadow>;
+def ext_compat_template_param_shadow : ExtWarn<
+  err_template_param_shadow.Summary>, InGroup<
+  DiagGroup<"strict-primary-template-shadow">>, DefaultError;
 def note_template_param_here : Note<"template parameter is declared here">;
 def note_template_param_external : Note<
   "template parameter from hidden source: %0">;
@@ -9910,7 +9913,7 @@ def err_lifetimebound_ctor_dtor : Error<
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
   "%select{address of|reference to}0 stack memory associated with "
-  "%select{local variable|parameter}2 %1 returned">,
+  "%select{local variable|parameter|compound literal}2 %1 returned">,
   InGroup<ReturnStackAddress>;
 def warn_ret_local_temp_addr_ref : Warning<
   "returning %select{address of|reference to}0 local temporary object">,
@@ -10278,15 +10281,10 @@ def err_block_on_vm : Error<
 def err_sizeless_nonlocal : Error<
   "non-local variable with sizeless type %0">;
 
-def err_vec_builtin_non_vector_all : Error<
- "all arguments to %0 must be vectors">;
-def err_vec_builtin_incompatible_vector_all : Error<
-  "all arguments to %0 must have vectors of the same type">;
-
 def err_vec_builtin_non_vector : Error<
- "first two arguments to %0 must be vectors">;
+ "%select{first two|all}1 arguments to %0 must be vectors">;
 def err_vec_builtin_incompatible_vector : Error<
-  "first two arguments to %0 must have the same type">;
+  "%select{first two|all}1 arguments to %0 must have the same type">;
 def err_vsx_builtin_nonconstant_argument : Error<
   "argument %0 to %1 must be a 2-bit unsigned literal (i.e. 0, 1, 2 or 3)">;
 
@@ -12229,8 +12227,8 @@ def err_acc_construct_appertainment
     : Error<"OpenACC construct '%0' cannot be used here; it can only "
             "be used in a statement context">;
 def err_acc_branch_in_out_compute_construct
-    : Error<"invalid %select{branch|return}0 %select{out of|into}1 OpenACC "
-            "Compute Construct">;
+    : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
+            "OpenACC Compute Construct">;
 def note_acc_branch_into_compute_construct
     : Note<"invalid branch into OpenACC Compute Construct">;
 def note_acc_branch_out_of_compute_construct

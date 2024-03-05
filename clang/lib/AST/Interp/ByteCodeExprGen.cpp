@@ -8,7 +8,6 @@
 
 #include "ByteCodeExprGen.h"
 #include "ByteCodeEmitter.h"
-#include "ByteCodeGenError.h"
 #include "ByteCodeStmtGen.h"
 #include "Context.h"
 #include "Floating.h"
@@ -2663,6 +2662,11 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
     if (P.getGlobal(VD))
       return true;
 
+    // Ignore external declarations. We will instead emit a dummy
+    // pointer when we see a DeclRefExpr for them.
+    if (VD->hasExternalStorage())
+      return true;
+
     std::optional<unsigned> GlobalIndex = P.createGlobal(VD, Init);
 
     if (!GlobalIndex)
@@ -2725,6 +2729,18 @@ bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
   if (!Func)
     return false;
 
+  QualType ReturnType = E->getType();
+  std::optional<PrimType> ReturnT = classify(E);
+
+  // Non-primitive return type. Prepare storage.
+  if (!Initializing && !ReturnT && !ReturnType->isVoidType()) {
+    std::optional<unsigned> LocalIndex = allocateLocal(E, /*IsExtended=*/false);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+
   if (!Func->isUnevaluatedBuiltin()) {
     // Put arguments on the stack.
     for (const auto *Arg : E->arguments()) {
@@ -2736,10 +2752,9 @@ bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
   if (!this->emitCallBI(Func, E, E))
     return false;
 
-  QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   if (DiscardResult && !ReturnType->isVoidType()) {
-    PrimType T = classifyPrim(ReturnType);
-    return this->emitPop(T, E);
+    assert(ReturnT);
+    return this->emitPop(*ReturnT, E);
   }
 
   return true;
@@ -2842,7 +2857,8 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
         return false;
     } else if (Func->isVariadic()) {
       uint32_t VarArgSize = 0;
-      unsigned NumParams = Func->getNumWrittenParams();
+      unsigned NumParams =
+          Func->getNumWrittenParams() + isa<CXXOperatorCallExpr>(E);
       for (unsigned I = NumParams, N = E->getNumArgs(); I != N; ++I)
         VarArgSize += align(primSize(classify(E->getArg(I)).value_or(PT_Ptr)));
       if (!this->emitCallVar(Func, VarArgSize, E))
@@ -2933,8 +2949,11 @@ bool ByteCodeExprGen<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   if (DiscardResult)
     return true;
 
-  if (this->LambdaThisCapture > 0)
-    return this->emitGetThisFieldPtr(this->LambdaThisCapture, E);
+  if (this->LambdaThisCapture.Offset > 0) {
+    if (this->LambdaThisCapture.IsPtr)
+      return this->emitGetThisFieldPtr(this->LambdaThisCapture.Offset, E);
+    return this->emitGetPtrThisField(this->LambdaThisCapture.Offset, E);
+  }
 
   return this->emitThis(E);
 }
