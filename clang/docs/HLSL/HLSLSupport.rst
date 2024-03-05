@@ -114,6 +114,39 @@ not re-targetable, we want to share the Clang CodeGen implementation for HLSL
 with other GPU graphics targets like SPIR-V and possibly other GPU and even CPU
 targets.
 
+hlsl.h
+------
+
+HLSL has an extensive library of built in functionality. This is similar to
+OpenCL and CUDA. The implementation approach for the HLSL library functionality
+draws from patterns in use by OpenCL and other built-in headers.
+
+Similar to OpenCL, the HLSL library functionality is implicitly declared in
+translation units without needing to include a header to provide declarations.
+In Clang this is handled by making ``hlsl.h`` an implicitly included header.
+
+Similar to OpenCL, HLSL's implicit header will explicitly declare all overloads,
+and each overload will map to a corresponding builtin that is used for code
+generation. CUDA uses a similar pattern although many CUDA built-in functions
+have full definitions in the included headers which in turn call builtins. By
+not having bodies we avoid the need for the inliner to clean up and inline the
+small library functions.
+
+HLSL's implicit headers also define some of HLSL's built-in typedefs. This is
+consistent with how the AVX vector header is implemented.
+
+Concerns have been expressed that this approach may result in slower compile
+times than the approach DXC uses where built-in functions are treated more like
+Clang builtins. While this might be true we have no existing shaders where
+parsing is a significant compile-time overhead. Further, by treating these
+built-in functions as functions rather than builtins the language behaviors are
+more consistent and aligned with user expectation because normal overload
+resolution rules and implicit conversions apply as expected.
+
+It is a feature of this design that clangd-powered "go to declaration" for
+library functions will jump to a valid header declaration and all overloads will
+be user readable.
+
 HLSL Language
 =============
 
