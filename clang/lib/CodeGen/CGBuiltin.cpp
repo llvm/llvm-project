@@ -18044,6 +18044,25 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType*/ Op0->getType(), Intrinsic::dx_frac,
         ArrayRef<Value *>{Op0}, nullptr, "dx.frac");
   }
+  case Builtin::BI__builtin_hlsl_mad: {
+    Value *M = EmitScalarExpr(E->getArg(0));
+    Value *A = EmitScalarExpr(E->getArg(1));
+    Value *B = EmitScalarExpr(E->getArg(2));
+    if (E->getArg(0)->getType()->hasFloatingRepresentation()) {
+      return Builder.CreateIntrinsic(
+          /*ReturnType*/ M->getType(), Intrinsic::fmuladd,
+          ArrayRef<Value *>{M, A, B}, nullptr, "dx.fmad");
+    }
+    if (E->getArg(0)->getType()->hasSignedIntegerRepresentation()) {
+      return Builder.CreateIntrinsic(
+          /*ReturnType*/ M->getType(), Intrinsic::dx_imad,
+          ArrayRef<Value *>{M, A, B}, nullptr, "dx.imad");
+    }
+    assert(E->getArg(0)->getType()->hasUnsignedIntegerRepresentation());
+    return Builder.CreateIntrinsic(
+        /*ReturnType*/ M->getType(), Intrinsic::dx_umad,
+        ArrayRef<Value *>{M, A, B}, nullptr, "dx.umad");
+  }
   }
   return nullptr;
 }

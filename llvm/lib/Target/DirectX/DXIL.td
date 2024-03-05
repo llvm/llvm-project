@@ -226,6 +226,12 @@ def Round : DXILOpMapping<26, unary, int_round,
                          "within a floating-point type.">;
 def UMax : DXILOpMapping<39, binary, int_umax,
                          "Unsigned integer maximum. UMax(a,b) = a > b ? a : b">;
+def FMad : DXILOpMapping<46, tertiary, int_fmuladd,
+                         "Floating point arithmetic multiply/add operation. fmad(m,a,b) = m * a + b.">;
+def IMad : DXILOpMapping<48, tertiary, int_dx_imad,
+                         "Signed integer arithmetic multiply/add operation. imad(m,a,b) = m * a + b.">;
+def UMad : DXILOpMapping<49, tertiary, int_dx_umad,
+                         "Unsigned integer arithmetic multiply/add operation. umad(m,a,b) = m * a + b.">;
 def ThreadId : DXILOpMapping<93, threadId, int_dx_thread_id,
                              "Reads the thread ID">;
 def GroupId  : DXILOpMapping<94, groupId, int_dx_group_id,

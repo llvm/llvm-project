@@ -512,6 +512,111 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
 double4 log2(double4);
 
 //===----------------------------------------------------------------------===//
+// mad builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T mad(T M, T A, T B)
+/// \brief The result of \a M * \a A + \a B.
+/// \param M The multiplication value.
+/// \param A The first addition value.
+/// \param B The second addition value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+half mad(half, half, half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+half2 mad(half2, half2, half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+half3 mad(half3, half3, half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+half4 mad(half4, half4, half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int16_t mad(int16_t, int16_t, int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int16_t2 mad(int16_t2, int16_t2, int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int16_t3 mad(int16_t3, int16_t3, int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int16_t4 mad(int16_t4, int16_t4, int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint16_t mad(uint16_t, uint16_t, uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint16_t2 mad(uint16_t2, uint16_t2, uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint16_t3 mad(uint16_t3, uint16_t3, uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint16_t4 mad(uint16_t4, uint16_t4, uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int mad(int, int, int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int2 mad(int2, int2, int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int3 mad(int3, int3, int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int4 mad(int4, int4, int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint mad(uint, uint, uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint2 mad(uint2, uint2, uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint3 mad(uint3, uint3, uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint4 mad(uint4, uint4, uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int64_t mad(int64_t, int64_t, int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int64_t2 mad(int64_t2, int64_t2, int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int64_t3 mad(int64_t3, int64_t3, int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int64_t4 mad(int64_t4, int64_t4, int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint64_t mad(uint64_t, uint64_t, uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint64_t2 mad(uint64_t2, uint64_t2, uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint64_t3 mad(uint64_t3, uint64_t3, uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint64_t4 mad(uint64_t4, uint64_t4, uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+float mad(float, float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+float2 mad(float2, float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+float3 mad(float3, float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+float4 mad(float4, float4, float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+double mad(double, double, double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+double2 mad(double2, double2, double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+double3 mad(double3, double3, double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+double4 mad(double4, double4, double4);
+
+//===----------------------------------------------------------------------===//
 // max builtins
 //===----------------------------------------------------------------------===//
 

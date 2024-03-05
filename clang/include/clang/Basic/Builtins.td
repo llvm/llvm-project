@@ -4572,6 +4572,12 @@ def HLSLLerp : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLMad : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_mad"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 // Builtins for XRay.
 def XRayCustomEvent : Builtin {
   let Spellings = ["__xray_customevent"];
