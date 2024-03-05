@@ -9,19 +9,19 @@ from lldbsuite.test.lldbtest import *
 
 
 class DebugInfodTests(TestBase):
-    # If your test case doesn't stress debug info, then
-    # set this to true.  That way it won't be run once for
-    # each debug info format.
+    # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_stuff(self):
         """This should test stuff."""
+        print("I am in test_stuff")
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.sample_test()
 
     def setUp(self):
         # Call super's setUp().
+        print("I am in setUp")
         TestBase.setUp(self)
         # Set up your test case here. If your test doesn't need any set up then
         # remove this method from your TestCase class.
