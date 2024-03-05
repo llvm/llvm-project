@@ -1117,7 +1117,6 @@ Corrected:
     bool IsFunctionTemplate;
     bool IsVarTemplate;
     TemplateName Template;
-
     if (Result.end() - Result.begin() > 1) {
       IsFunctionTemplate = true;
       Template = Context.getOverloadedTemplateName(Result.begin(),
