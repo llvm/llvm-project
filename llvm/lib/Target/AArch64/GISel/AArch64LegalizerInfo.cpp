@@ -1345,6 +1345,9 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   // By splitting this here, we can optimize accesses in the small code model by
   // folding in the G_ADD_LOW into the load/store offset.
   auto &GlobalOp = MI.getOperand(1);
+  // Don't modify an intrinsic call.
+  if (GlobalOp.isSymbol())
+    return true;
   const auto* GV = GlobalOp.getGlobal();
   if (GV->isThreadLocal())
     return true; // Don't want to modify TLS vars.

@@ -8211,13 +8211,14 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, OpFlags);
     }
   } else if (auto *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-        Subtarget->isTargetMachO()) {
-      const char *Sym = S->getSymbol();
+    bool UseGot = (getTargetMachine().getCodeModel() == CodeModel::Large &&
+                   Subtarget->isTargetMachO()) ||
+                  MF.getFunction().getParent()->getRtLibUseGOT();
+    const char *Sym = S->getSymbol();
+    if (UseGot) {
       Callee = DAG.getTargetExternalSymbol(Sym, PtrVT, AArch64II::MO_GOT);
       Callee = DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, Callee);
     } else {
-      const char *Sym = S->getSymbol();
       Callee = DAG.getTargetExternalSymbol(Sym, PtrVT, 0);
     }
   }
