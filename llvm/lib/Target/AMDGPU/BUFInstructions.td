@@ -2301,7 +2301,8 @@ class MUBUF_Real_gfx11<bits<8> op, MUBUF_Pseudo ps,
                        string real_name = ps.Mnemonic> :
   Base_MUBUF_Real_gfx6_gfx7_gfx10_gfx11<ps, SIEncodingFamily.GFX11, real_name> {
   let Inst{12}    = !if(ps.has_slc, cpol{CPolBit.SLC}, ?);
-  let Inst{13}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, ps.dlc_value);
+  // In GFX11 dlc is applicable to all loads/stores/atomics.
+  let Inst{13}    = !if(!or(ps.mayLoad, ps.mayStore), cpol{CPolBit.DLC}, ps.dlc_value);
   let Inst{14}    = !if(ps.has_glc, cpol{CPolBit.GLC}, ps.glc_value);
   let Inst{25-18} = op;
   let Inst{53}    = ps.tfe;
@@ -2309,12 +2310,6 @@ class MUBUF_Real_gfx11<bits<8> op, MUBUF_Pseudo ps,
   let Inst{55}    = ps.idxen;
   let AssemblerPredicate = isGFX11Only;
   let DecoderNamespace = "GFX11";
-}
-
-class Base_MUBUF_Real_Atomic_gfx11<bits<8> op, MUBUF_Pseudo ps,
-                                   string real_name> :
-  MUBUF_Real_gfx11<op, ps, real_name> {
-  let Inst{13} = cpol{CPolBit.DLC};
 }
 
 class Base_MUBUF_Real_gfx6_gfx7_gfx10<bits<7> op, MUBUF_Pseudo ps, int ef> :
@@ -2499,7 +2494,7 @@ multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<bits<8> op, string real_name> 
 
 class MUBUF_Real_Atomic_gfx11_impl<bits<8> op, string ps_name,
                                    string real_name> :
-  Base_MUBUF_Real_Atomic_gfx11<op, !cast<MUBUF_Pseudo>(ps_name), real_name>;
+  MUBUF_Real_gfx11<op, !cast<MUBUF_Pseudo>(ps_name), real_name>;
 
 class MUBUF_Real_Atomic_gfx12_impl<bits<8> op, string ps_name,
                                    string real_name> :
